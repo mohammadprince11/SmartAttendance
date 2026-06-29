@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Persistence\Configurations\" />
+    <Folder Include="Persistence\Migrations\" />
+    <Folder Include="Persistence\Seed\" />
+    <Folder Include="Services\" />
+    <Folder Include="Repositories\" />
+    <Folder Include="Persistence\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SmartAttendance.Application\SmartAttendance.Application.csproj" />
+    <ProjectReference Include="..\SmartAttendance.Domain\SmartAttendance.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
