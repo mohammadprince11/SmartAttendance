@@ -1,0 +1,71 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Branches.EditModel
+
+@{
+    ViewData["Title"] = "Edit Branch";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Edit Branch</h1>
+        <p>Update branch information</p>
+    </div>
+
+    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert-danger">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="form-card">
+    <form method="post">
+        <input type="hidden" asp-for="Branch.Id" />
+
+        <div class="form-group">
+            <label asp-for="Branch.CompanyId">Company</label>
+            <select asp-for="Branch.CompanyId" class="form-control">
+                <option value="">-- Select Company --</option>
+
+                @foreach (var company in Model.Companies)
+                {
+                    <option value="@company.Id">@company.Name</option>
+                }
+            </select>
+            <span asp-validation-for="Branch.CompanyId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Branch.Code">Branch Code</label>
+            <input asp-for="Branch.Code" class="form-control" />
+            <span asp-validation-for="Branch.Code" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Branch.Name">Branch Name</label>
+            <input asp-for="Branch.Name" class="form-control" />
+            <span asp-validation-for="Branch.Name" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Branch.Address">Address</label>
+            <input asp-for="Branch.Address" class="form-control" />
+            <span asp-validation-for="Branch.Address" class="text-danger"></span>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <label>
+                <input asp-for="Branch.IsActive" />
+                Active
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Update</button>
+            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>

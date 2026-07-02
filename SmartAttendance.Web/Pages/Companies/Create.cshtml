@@ -1,45 +1,55 @@
 ﻿@page
 @model SmartAttendance.Web.Pages.Companies.CreateModel
+
 @{
     ViewData["Title"] = "Add Company";
 }
 
-<div class="dashboard-header">
-    <h1>Add Company</h1>
-    <p>Create a new company in the system</p>
+<div class="page-header">
+    <div>
+        <h1>Add Company</h1>
+        <p>Create a new company in the system</p>
+    </div>
+
+    <a asp-page="./Index" class="btn-secondary">Back to List</a>
 </div>
 
-<div class="stat-card">
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert-danger">
+        @Model.ErrorMessage
+    </div>
+}
 
-    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
-    {
-        <div class="alert-danger">
-            @Model.ErrorMessage
-        </div>
-    }
-
+<div class="form-card">
     <form method="post">
         <div class="form-group">
-            <label class="form-label">Code</label>
+            <label asp-for="Company.Code">Code</label>
             <input asp-for="Company.Code" class="form-control" />
+            <span asp-validation-for="Company.Code" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label class="form-label">Company Name</label>
+            <label asp-for="Company.Name">Company Name</label>
             <input asp-for="Company.Name" class="form-control" />
+            <span asp-validation-for="Company.Name" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label class="form-label">Email</label>
+            <label asp-for="Company.Email">Email</label>
             <input asp-for="Company.Email" class="form-control" />
+            <span asp-validation-for="Company.Email" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label class="form-label">Phone</label>
+            <label asp-for="Company.Phone">Phone</label>
             <input asp-for="Company.Phone" class="form-control" />
+            <span asp-validation-for="Company.Phone" class="text-danger"></span>
         </div>
 
-        <button type="submit" class="btn-primary">Save Company</button>
-        <a asp-page="/Companies/Index" class="action-link">Cancel</a>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Company</button>
+            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+        </div>
     </form>
 </div>

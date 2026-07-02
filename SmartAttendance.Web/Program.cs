@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Application.Branches.Mappings;
+using SmartAttendance.Application.Branches.Services;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.Companies.Mappings;
 using SmartAttendance.Application.Companies.Services;
@@ -19,6 +21,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddAutoMapper(cfg =>
 {
     cfg.AddProfile<CompanyProfile>();
+    cfg.AddProfile<BranchProfile>();
 });
 
 // Register Repositories
@@ -26,6 +29,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Register Services
 builder.Services.AddScoped<ICompanyService, CompanyService>();
+builder.Services.AddScoped<IBranchService, BranchService>();
 
 var app = builder.Build();
 

@@ -1,0 +1,85 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Branches.IndexModel
+
+@{
+    ViewData["Title"] = "Branches";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Branches</h1>
+        <p>Manage company branches and locations</p>
+    </div>
+
+    <a asp-page="./Create" class="btn-primary">+ Add Branch</a>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<div class="table-card">
+    <form method="get" class="search-form">
+        <input type="text"
+               name="SearchTerm"
+               value="@Model.SearchTerm"
+               placeholder="Search by code, name, company, or address..." />
+
+        <button type="submit" class="btn-primary">Search</button>
+
+        <a asp-page="./Index" class="btn-secondary">Clear</a>
+    </form>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Branch Name</th>
+                <th>Company</th>
+                <th>Address</th>
+                <th>Status</th>
+                <th style="width: 160px;">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.Branches.Any())
+            {
+                foreach (var branch in Model.Branches)
+                {
+                    <tr>
+                        <td>@branch.Code</td>
+                        <td>@branch.Name</td>
+                        <td>@branch.CompanyName</td>
+                        <td>@branch.Address</td>
+                        <td>
+                            @if (branch.IsActive)
+                            {
+                                <span>Active</span>
+                            }
+                            else
+                            {
+                                <span>Inactive</span>
+                            }
+                        </td>
+                        <td>
+                            <a asp-page="./Edit" asp-route-id="@branch.Id" class="btn-table btn-edit">Edit</a>
+                            <a asp-page="./Delete" asp-route-id="@branch.Id" class="btn-table btn-delete">Delete</a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="6" style="text-align:center;">
+                        No branches found.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
