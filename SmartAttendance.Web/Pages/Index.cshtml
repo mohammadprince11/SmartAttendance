@@ -1,9 +1,34 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Dashboard";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Smart Attendance System</h1>
+<div class="dashboard-header">
+    <div>
+        <h1>Dashboard</h1>
+        <p>Welcome back, Mohammed Ali</p>
+    </div>
+</div>
+
+<div class="dashboard-cards">
+    <div class="stat-card">
+        <span>Companies</span>
+        <strong>3</strong>
+    </div>
+
+    <div class="stat-card">
+        <span>Branches</span>
+        <strong>12</strong>
+    </div>
+
+    <div class="stat-card">
+        <span>Employees</span>
+        <strong>520</strong>
+    </div>
+
+    <div class="stat-card">
+        <span>Devices</span>
+        <strong>18</strong>
+    </div>
 </div>

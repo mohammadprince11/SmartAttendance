@@ -14,8 +14,9 @@ public class Company : AuditableEntity
 
     public string? Address { get; set; }
 
+    public string? LogoPath { get; set; }
+
     public bool IsActive { get; set; } = true;
 
-    // Navigation Property
     public ICollection<Branch> Branches { get; set; } = new List<Branch>();
 }

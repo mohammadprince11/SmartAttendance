@@ -1,0 +1,39 @@
+﻿@page "{id:int}"
+@model SmartAttendance.Web.Pages.Companies.EditModel
+@{
+    ViewData["Title"] = "Edit Company";
+}
+
+<div class="dashboard-header">
+    <h1>Edit Company</h1>
+    <p>Update company information</p>
+</div>
+
+<div class="stat-card">
+    <form method="post">
+        <input type="hidden" asp-for="Company.Id" />
+
+        <div class="form-group">
+            <label class="form-label">Code</label>
+            <input asp-for="Company.Code" class="form-control" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Company Name</label>
+            <input asp-for="Company.Name" class="form-control" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Email</label>
+            <input asp-for="Company.Email" class="form-control" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input asp-for="Company.Phone" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn-primary">Update Company</button>
+        <a asp-page="/Companies/Index" class="action-link">Cancel</a>
+    </form>
+</div>

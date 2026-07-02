@@ -1,0 +1,45 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Companies.CreateModel
+@{
+    ViewData["Title"] = "Add Company";
+}
+
+<div class="dashboard-header">
+    <h1>Add Company</h1>
+    <p>Create a new company in the system</p>
+</div>
+
+<div class="stat-card">
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert-danger">
+            @Model.ErrorMessage
+        </div>
+    }
+
+    <form method="post">
+        <div class="form-group">
+            <label class="form-label">Code</label>
+            <input asp-for="Company.Code" class="form-control" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Company Name</label>
+            <input asp-for="Company.Name" class="form-control" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Email</label>
+            <input asp-for="Company.Email" class="form-control" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input asp-for="Company.Phone" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn-primary">Save Company</button>
+        <a asp-page="/Companies/Index" class="action-link">Cancel</a>
+    </form>
+</div>

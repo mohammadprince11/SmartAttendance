@@ -12,7 +12,13 @@ public class Device : AuditableEntity
 
     public string SerialNumber { get; set; } = string.Empty;
 
+    public string? Model { get; set; }
+
+    public string? FirmwareVersion { get; set; }
+
     public bool IsActive { get; set; } = true;
+
+    public bool IsEnabled { get; set; } = true;
 
     public int BranchId { get; set; }
 
