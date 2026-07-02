@@ -1,0 +1,79 @@
+@page
+@model SmartAttendance.Web.Pages.LeaveRequests.DeleteModel
+
+@{
+    ViewData["Title"] = "Delete Leave Request";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Delete Leave Request</h1>
+        <p>Confirm leave request deletion</p>
+    </div>
+
+    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert-danger">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="form-card">
+    <div class="alert-danger">
+        Are you sure you want to delete this leave request?
+    </div>
+
+    <div class="details-grid">
+        <div class="form-group">
+            <label>Employee No</label>
+            <div class="form-control">@Model.LeaveRequest.EmployeeNo</div>
+        </div>
+
+        <div class="form-group">
+            <label>Employee Name</label>
+            <div class="form-control">@Model.LeaveRequest.EmployeeName</div>
+        </div>
+
+        <div class="form-group">
+            <label>Leave Type</label>
+            <div class="form-control">@Model.LeaveRequest.LeaveType</div>
+        </div>
+
+        <div class="form-group">
+            <label>Status</label>
+            <div class="form-control">@Model.LeaveRequest.Status</div>
+        </div>
+
+        <div class="form-group">
+            <label>From Date</label>
+            <div class="form-control">@Model.LeaveRequest.FromDate</div>
+        </div>
+
+        <div class="form-group">
+            <label>To Date</label>
+            <div class="form-control">@Model.LeaveRequest.ToDate</div>
+        </div>
+
+        <div class="form-group">
+            <label>Total Days</label>
+            <div class="form-control">@Model.LeaveRequest.TotalDays</div>
+        </div>
+
+        <div class="form-group">
+            <label>Reason</label>
+            <div class="form-control">@Model.LeaveRequest.Reason</div>
+        </div>
+    </div>
+
+    <form method="post">
+        <input type="hidden" name="id" value="@Model.LeaveRequest.Id" />
+
+        <div class="form-actions">
+            <button type="submit" class="btn-table btn-delete">Delete</button>
+            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>

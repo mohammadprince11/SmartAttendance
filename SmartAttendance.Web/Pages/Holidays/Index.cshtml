@@ -1,0 +1,73 @@
+@page
+@model SmartAttendance.Web.Pages.Holidays.IndexModel
+
+@{
+    ViewData["Title"] = "Holidays";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Holidays</h1>
+        <p>Manage official holidays</p>
+    </div>
+
+    <a asp-page="./Create" class="btn-primary">+ Add Holiday</a>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<div class="table-card">
+    <form method="get" class="search-form">
+        <input type="text"
+               name="SearchTerm"
+               value="@Model.SearchTerm"
+               placeholder="Search by holiday name or description..." />
+
+        <button type="submit" class="btn-primary">Search</button>
+        <a asp-page="./Index" class="btn-secondary">Clear</a>
+    </form>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Holiday Name</th>
+                <th>Date</th>
+                <th>Recurring</th>
+                <th>Description</th>
+                <th style="width: 160px;">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.Holidays.Any())
+            {
+                foreach (var holiday in Model.Holidays)
+                {
+                    <tr>
+                        <td>@holiday.Name</td>
+                        <td>@holiday.HolidayDate</td>
+                        <td>@(holiday.IsRecurring ? "Yes" : "No")</td>
+                        <td>@holiday.Description</td>
+                        <td>
+                            <a asp-page="./Edit" asp-route-id="@holiday.Id" class="btn-table btn-edit">Edit</a>
+                            <a asp-page="./Delete" asp-route-id="@holiday.Id" class="btn-table btn-delete">Delete</a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="5" style="text-align:center;">
+                        No holidays found.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

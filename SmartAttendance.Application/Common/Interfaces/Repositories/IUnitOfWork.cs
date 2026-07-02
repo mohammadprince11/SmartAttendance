@@ -22,5 +22,7 @@ public interface IUnitOfWork : IDisposable
 
     IGenericRepository<Holiday> Holidays { get; }
 
+    IGenericRepository<LeaveRequest> LeaveRequests { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

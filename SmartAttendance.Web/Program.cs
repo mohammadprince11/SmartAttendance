@@ -15,6 +15,10 @@ using SmartAttendance.Application.EmployeeShifts.Mappings;
 using SmartAttendance.Application.EmployeeShifts.Services;
 using SmartAttendance.Application.Employees.Mappings;
 using SmartAttendance.Application.Employees.Services;
+using SmartAttendance.Application.Holidays.Mappings;
+using SmartAttendance.Application.Holidays.Services;
+using SmartAttendance.Application.LeaveRequests.Mappings;
+using SmartAttendance.Application.LeaveRequests.Services;
 using SmartAttendance.Application.Shifts.Mappings;
 using SmartAttendance.Application.Shifts.Services;
 using SmartAttendance.Infrastructure.Persistence;
@@ -40,6 +44,8 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<ShiftProfile>();
     cfg.AddProfile<EmployeeShiftProfile>();
     cfg.AddProfile<AttendanceRecordProfile>();
+    cfg.AddProfile<HolidayProfile>();
+    cfg.AddProfile<LeaveRequestProfile>();
 });
 
 // Repositories
@@ -55,6 +61,8 @@ builder.Services.AddScoped<IShiftService, ShiftService>();
 builder.Services.AddScoped<IEmployeeShiftService, EmployeeShiftService>();
 builder.Services.AddScoped<IAttendanceRecordService, AttendanceRecordService>();
 builder.Services.AddScoped<IAttendanceProcessingService, AttendanceProcessingService>();
+builder.Services.AddScoped<IHolidayService, HolidayService>();
+builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
 
 var app = builder.Build();
 

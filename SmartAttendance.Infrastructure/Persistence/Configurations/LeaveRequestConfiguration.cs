@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SmartAttendance.Domain.Entities;
 
@@ -12,8 +12,11 @@ public class LeaveRequestConfiguration : IEntityTypeConfiguration<LeaveRequest>
 
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.Reason)
-            .HasMaxLength(500);
+        builder.Property(x => x.LeaveType)
+            .IsRequired();
+
+        builder.Property(x => x.Status)
+            .IsRequired();
 
         builder.Property(x => x.FromDate)
             .IsRequired();
@@ -21,22 +24,18 @@ public class LeaveRequestConfiguration : IEntityTypeConfiguration<LeaveRequest>
         builder.Property(x => x.ToDate)
             .IsRequired();
 
-        builder.Property(x => x.LeaveType)
-            .IsRequired();
-
-        builder.Property(x => x.Status)
-            .IsRequired();
+        builder.Property(x => x.Reason)
+            .HasMaxLength(500);
 
         builder.HasOne(x => x.Employee)
             .WithMany()
             .HasForeignKey(x => x.EmployeeId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(x => new
-        {
-            x.EmployeeId,
-            x.FromDate,
-            x.ToDate
-        });
+        builder.HasIndex(x => x.EmployeeId);
+        builder.HasIndex(x => x.FromDate);
+        builder.HasIndex(x => x.ToDate);
+
+        builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

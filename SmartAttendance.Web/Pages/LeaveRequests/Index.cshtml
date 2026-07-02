@@ -1,0 +1,79 @@
+@page
+@model SmartAttendance.Web.Pages.LeaveRequests.IndexModel
+
+@{
+    ViewData["Title"] = "Leave Requests";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Leave Requests</h1>
+        <p>Manage employee leave requests</p>
+    </div>
+
+    <a asp-page="./Create" class="btn-primary">+ Add Leave</a>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<div class="table-card">
+    <form method="get" class="search-form">
+        <input type="text"
+               name="SearchTerm"
+               value="@Model.SearchTerm"
+               placeholder="Search by employee, leave type, status, or reason..." />
+
+        <button type="submit" class="btn-primary">Search</button>
+        <a asp-page="./Index" class="btn-secondary">Clear</a>
+    </form>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Employee No</th>
+                <th>Employee Name</th>
+                <th>Leave Type</th>
+                <th>Status</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Total Days</th>
+                <th style="width: 160px;">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.LeaveRequests.Any())
+            {
+                foreach (var leave in Model.LeaveRequests)
+                {
+                    <tr>
+                        <td>@leave.EmployeeNo</td>
+                        <td>@leave.EmployeeName</td>
+                        <td>@leave.LeaveType</td>
+                        <td>@leave.Status</td>
+                        <td>@leave.FromDate</td>
+                        <td>@leave.ToDate</td>
+                        <td>@leave.TotalDays</td>
+                        <td>
+                            <a asp-page="./Edit" asp-route-id="@leave.Id" class="btn-table btn-edit">Edit</a>
+                            <a asp-page="./Delete" asp-route-id="@leave.Id" class="btn-table btn-delete">Delete</a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="8" style="text-align:center;">
+                        No leave requests found.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
