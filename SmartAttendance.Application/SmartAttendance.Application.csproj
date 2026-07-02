@@ -11,7 +11,6 @@
     <Folder Include="Common\Models\" />
     <Folder Include="Companies\Validators\" />
     <Folder Include="Employees\" />
-    <Folder Include="Departments\" />
     <Folder Include="Common\Mappings\" />
     <Folder Include="Attendance\" />
     <Folder Include="Leaves\" />

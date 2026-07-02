@@ -1,0 +1,75 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Departments.IndexModel
+
+@{
+    ViewData["Title"] = "Departments";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Departments</h1>
+        <p>Manage departments under branches</p>
+    </div>
+
+    <a asp-page="./Create" class="btn-primary">+ Add Department</a>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<div class="table-card">
+    <form method="get" class="search-form">
+        <input type="text"
+               name="SearchTerm"
+               value="@Model.SearchTerm"
+               placeholder="Search by code, name, or branch..." />
+
+        <button type="submit" class="btn-primary">Search</button>
+        <a asp-page="./Index" class="btn-secondary">Clear</a>
+    </form>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Department Name</th>
+                <th>Branch</th>
+                <th>Status</th>
+                <th style="width: 160px;">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.Departments.Any())
+            {
+                foreach (var department in Model.Departments)
+                {
+                    <tr>
+                        <td>@department.Code</td>
+                        <td>@department.Name</td>
+                        <td>@department.BranchName</td>
+                        <td>
+                            @(department.IsActive ? "Active" : "Inactive")
+                        </td>
+                        <td>
+                            <a asp-page="./Edit" asp-route-id="@department.Id" class="btn-table btn-edit">Edit</a>
+                            <a asp-page="./Delete" asp-route-id="@department.Id" class="btn-table btn-delete">Delete</a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="5" style="text-align:center;">
+                        No departments found.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

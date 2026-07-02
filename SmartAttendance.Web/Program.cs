@@ -4,32 +4,35 @@ using SmartAttendance.Application.Branches.Services;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.Companies.Mappings;
 using SmartAttendance.Application.Companies.Services;
+using SmartAttendance.Application.Departments.Mappings;
+using SmartAttendance.Application.Departments.Services;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Infrastructure.Repositories;
 using SmartAttendance.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorPages();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register AutoMapper
+// AutoMapper
 builder.Services.AddAutoMapper(cfg =>
 {
     cfg.AddProfile<CompanyProfile>();
     cfg.AddProfile<BranchProfile>();
+    cfg.AddProfile<DepartmentProfile>();
 });
 
-// Register Repositories
+// Repositories
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-// Register Services
+// Services
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IBranchService, BranchService>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 
 var app = builder.Build();
 
