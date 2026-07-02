@@ -12,9 +12,13 @@ public class ShiftConfiguration : IEntityTypeConfiguration<Shift>
 
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.Code)
+            .IsRequired()
+            .HasMaxLength(50);
+
         builder.Property(x => x.Name)
-            .HasMaxLength(100)
-            .IsRequired();
+            .IsRequired()
+            .HasMaxLength(150);
 
         builder.Property(x => x.StartTime)
             .IsRequired();
@@ -22,9 +26,25 @@ public class ShiftConfiguration : IEntityTypeConfiguration<Shift>
         builder.Property(x => x.EndTime)
             .IsRequired();
 
-        builder.Property(x => x.GracePeriodMinutes)
+        builder.Property(x => x.WorkingHours)
+            .HasPrecision(5, 2)
             .IsRequired();
 
-        builder.HasIndex(x => x.Name);
+        builder.Property(x => x.GraceInMinutes)
+            .IsRequired();
+
+        builder.Property(x => x.GraceOutMinutes)
+            .IsRequired();
+
+        builder.Property(x => x.IsNightShift)
+            .HasDefaultValue(false);
+
+        builder.Property(x => x.IsActive)
+            .HasDefaultValue(true);
+
+        builder.HasIndex(x => x.Code)
+            .IsUnique();
+
+        builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

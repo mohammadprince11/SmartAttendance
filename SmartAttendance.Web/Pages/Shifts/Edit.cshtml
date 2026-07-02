@@ -1,0 +1,89 @@
+@page
+@model SmartAttendance.Web.Pages.Shifts.EditModel
+
+@{
+    ViewData["Title"] = "Edit Shift";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Edit Shift</h1>
+        <p>Update shift information</p>
+    </div>
+
+    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert-danger">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="form-card">
+    <form method="post">
+        <input type="hidden" asp-for="Shift.Id" />
+
+        <div class="form-group">
+            <label asp-for="Shift.Code">Shift Code</label>
+            <input asp-for="Shift.Code" class="form-control" />
+            <span asp-validation-for="Shift.Code" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Shift.Name">Shift Name</label>
+            <input asp-for="Shift.Name" class="form-control" />
+            <span asp-validation-for="Shift.Name" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Shift.StartTime">Start Time</label>
+            <input asp-for="Shift.StartTime" type="time" class="form-control" />
+            <span asp-validation-for="Shift.StartTime" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Shift.EndTime">End Time</label>
+            <input asp-for="Shift.EndTime" type="time" class="form-control" />
+            <span asp-validation-for="Shift.EndTime" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Shift.WorkingHours">Working Hours</label>
+            <input asp-for="Shift.WorkingHours" type="number" step="0.25" class="form-control" />
+            <span asp-validation-for="Shift.WorkingHours" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Shift.GraceInMinutes">Grace In Minutes</label>
+            <input asp-for="Shift.GraceInMinutes" type="number" class="form-control" />
+            <span asp-validation-for="Shift.GraceInMinutes" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Shift.GraceOutMinutes">Grace Out Minutes</label>
+            <input asp-for="Shift.GraceOutMinutes" type="number" class="form-control" />
+            <span asp-validation-for="Shift.GraceOutMinutes" class="text-danger"></span>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <label>
+                <input asp-for="Shift.IsNightShift" />
+                Night Shift
+            </label>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <label>
+                <input asp-for="Shift.IsActive" />
+                Active
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Update</button>
+            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>

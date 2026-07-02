@@ -1,8 +1,6 @@
-﻿using SmartAttendance.Domain.Common;
+namespace SmartAttendance.Application.Shifts.ViewModels;
 
-namespace SmartAttendance.Domain.Entities;
-
-public class Shift : AuditableEntity
+public class ShiftCreateViewModel
 {
     public string Code { get; set; } = string.Empty;
 
@@ -19,8 +17,4 @@ public class Shift : AuditableEntity
     public int GraceOutMinutes { get; set; } = 0;
 
     public bool IsNightShift { get; set; } = false;
-
-    public bool IsActive { get; set; } = true;
-
-    public ICollection<EmployeeShift> EmployeeShifts { get; set; } = new List<EmployeeShift>();
 }
