@@ -1,0 +1,78 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeeShifts.EditModel
+
+@{
+    ViewData["Title"] = "Edit Employee Shift";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Edit Employee Shift</h1>
+        <p>Update employee shift assignment</p>
+    </div>
+
+    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert-danger">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="form-card">
+    <form method="post">
+        <input type="hidden" asp-for="EmployeeShift.Id" />
+
+        <div class="form-group">
+            <label asp-for="EmployeeShift.EmployeeId">Employee</label>
+            <select asp-for="EmployeeShift.EmployeeId" class="form-control">
+                <option value="">-- Select Employee --</option>
+
+                @foreach (var employee in Model.Employees)
+                {
+                    <option value="@employee.Id">@employee.EmployeeNo - @employee.FullName</option>
+                }
+            </select>
+            <span asp-validation-for="EmployeeShift.EmployeeId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="EmployeeShift.ShiftId">Shift</label>
+            <select asp-for="EmployeeShift.ShiftId" class="form-control">
+                <option value="">-- Select Shift --</option>
+
+                @foreach (var shift in Model.Shifts)
+                {
+                    <option value="@shift.Id">@shift.Code - @shift.Name (@shift.StartTime.ToString("HH:mm") - @shift.EndTime.ToString("HH:mm"))</option>
+                }
+            </select>
+            <span asp-validation-for="EmployeeShift.ShiftId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="EmployeeShift.EffectiveFrom">Effective From</label>
+            <input asp-for="EmployeeShift.EffectiveFrom" type="date" class="form-control" />
+            <span asp-validation-for="EmployeeShift.EffectiveFrom" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="EmployeeShift.EffectiveTo">Effective To</label>
+            <input asp-for="EmployeeShift.EffectiveTo" type="date" class="form-control" />
+            <span asp-validation-for="EmployeeShift.EffectiveTo" class="text-danger"></span>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <label>
+                <input asp-for="EmployeeShift.IsCurrent" />
+                Current Shift
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Update</button>
+            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>

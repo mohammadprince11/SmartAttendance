@@ -1,0 +1,69 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeeShifts.DeleteModel
+
+@{
+    ViewData["Title"] = "Delete Employee Shift";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Delete Employee Shift</h1>
+        <p>Confirm employee shift deletion</p>
+    </div>
+
+    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert-danger">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="form-card">
+    <div class="alert-danger">
+        Are you sure you want to delete this employee shift?
+    </div>
+
+    <div class="details-grid">
+        <div class="form-group">
+            <label>Employee No</label>
+            <div class="form-control">@Model.EmployeeShift.EmployeeNo</div>
+        </div>
+
+        <div class="form-group">
+            <label>Employee Name</label>
+            <div class="form-control">@Model.EmployeeShift.EmployeeName</div>
+        </div>
+
+        <div class="form-group">
+            <label>Shift</label>
+            <div class="form-control">@Model.EmployeeShift.ShiftCode - @Model.EmployeeShift.ShiftName</div>
+        </div>
+
+        <div class="form-group">
+            <label>Effective From</label>
+            <div class="form-control">@Model.EmployeeShift.EffectiveFrom</div>
+        </div>
+
+        <div class="form-group">
+            <label>Effective To</label>
+            <div class="form-control">@(Model.EmployeeShift.EffectiveTo?.ToString() ?? "-")</div>
+        </div>
+
+        <div class="form-group">
+            <label>Current</label>
+            <div class="form-control">@(Model.EmployeeShift.IsCurrent ? "Yes" : "No")</div>
+        </div>
+    </div>
+
+    <form method="post">
+        <input type="hidden" name="id" value="@Model.EmployeeShift.Id" />
+
+        <div class="form-actions">
+            <button type="submit" class="btn-table btn-delete">Delete</button>
+            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>

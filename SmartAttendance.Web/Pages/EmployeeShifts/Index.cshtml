@@ -1,0 +1,77 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeeShifts.IndexModel
+
+@{
+    ViewData["Title"] = "Employee Shifts";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Employee Shifts</h1>
+        <p>Assign shifts to employees with effective dates</p>
+    </div>
+
+    <a asp-page="./Create" class="btn-primary">+ Assign Shift</a>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<div class="table-card">
+    <form method="get" class="search-form">
+        <input type="text"
+               name="SearchTerm"
+               value="@Model.SearchTerm"
+               placeholder="Search by employee no, employee name, shift code, or shift name..." />
+
+        <button type="submit" class="btn-primary">Search</button>
+        <a asp-page="./Index" class="btn-secondary">Clear</a>
+    </form>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Employee No</th>
+                <th>Employee Name</th>
+                <th>Shift</th>
+                <th>Effective From</th>
+                <th>Effective To</th>
+                <th>Current</th>
+                <th style="width: 160px;">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.EmployeeShifts.Any())
+            {
+                foreach (var item in Model.EmployeeShifts)
+                {
+                    <tr>
+                        <td>@item.EmployeeNo</td>
+                        <td>@item.EmployeeName</td>
+                        <td>@item.ShiftCode - @item.ShiftName</td>
+                        <td>@item.EffectiveFrom</td>
+                        <td>@(item.EffectiveTo?.ToString() ?? "-")</td>
+                        <td>@(item.IsCurrent ? "Yes" : "No")</td>
+                        <td>
+                            <a asp-page="./Edit" asp-route-id="@item.Id" class="btn-table btn-edit">Edit</a>
+                            <a asp-page="./Delete" asp-route-id="@item.Id" class="btn-table btn-delete">Delete</a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="7" style="text-align:center;">
+                        No employee shifts found.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

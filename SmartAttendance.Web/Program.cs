@@ -8,6 +8,8 @@ using SmartAttendance.Application.Departments.Mappings;
 using SmartAttendance.Application.Departments.Services;
 using SmartAttendance.Application.Devices.Mappings;
 using SmartAttendance.Application.Devices.Services;
+using SmartAttendance.Application.EmployeeShifts.Mappings;
+using SmartAttendance.Application.EmployeeShifts.Services;
 using SmartAttendance.Application.Employees.Mappings;
 using SmartAttendance.Application.Employees.Services;
 using SmartAttendance.Application.Shifts.Mappings;
@@ -33,6 +35,7 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<EmployeeProfile>();
     cfg.AddProfile<DeviceProfile>();
     cfg.AddProfile<ShiftProfile>();
+    cfg.AddProfile<EmployeeShiftProfile>();
 });
 
 // Repositories
@@ -45,6 +48,7 @@ builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IDeviceService, DeviceService>();
 builder.Services.AddScoped<IShiftService, ShiftService>();
+builder.Services.AddScoped<IEmployeeShiftService, EmployeeShiftService>();
 
 var app = builder.Build();
 
