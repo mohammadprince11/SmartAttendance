@@ -1,0 +1,95 @@
+@page
+@model SmartAttendance.Web.Pages.Employees.EditModel
+
+@{
+    ViewData["Title"] = "Edit Employee";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Edit Employee</h1>
+        <p>Update employee profile</p>
+    </div>
+
+    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert-danger">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="form-card">
+    <form method="post">
+        <input type="hidden" asp-for="Employee.Id" />
+
+        <div class="form-group">
+            <label asp-for="Employee.DepartmentId">Department</label>
+            <select asp-for="Employee.DepartmentId" class="form-control">
+                <option value="">-- Select Department --</option>
+
+                @foreach (var department in Model.Departments)
+                {
+                    <option value="@department.Id">@department.Name - @department.BranchName</option>
+                }
+            </select>
+            <span asp-validation-for="Employee.DepartmentId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Employee.EmployeeNo">Employee No</label>
+            <input asp-for="Employee.EmployeeNo" class="form-control" />
+            <span asp-validation-for="Employee.EmployeeNo" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Employee.FullName">Full Name</label>
+            <input asp-for="Employee.FullName" class="form-control" />
+            <span asp-validation-for="Employee.FullName" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Employee.NationalId">National ID</label>
+            <input asp-for="Employee.NationalId" class="form-control" />
+            <span asp-validation-for="Employee.NationalId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Employee.Phone">Phone</label>
+            <input asp-for="Employee.Phone" class="form-control" />
+            <span asp-validation-for="Employee.Phone" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Employee.Email">Email</label>
+            <input asp-for="Employee.Email" class="form-control" />
+            <span asp-validation-for="Employee.Email" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Employee.HireDate">Hire Date</label>
+            <input asp-for="Employee.HireDate" type="date" class="form-control" />
+            <span asp-validation-for="Employee.HireDate" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Employee.BirthDate">Birth Date</label>
+            <input asp-for="Employee.BirthDate" type="date" class="form-control" />
+            <span asp-validation-for="Employee.BirthDate" class="text-danger"></span>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <label>
+                <input asp-for="Employee.IsActive" />
+                Active
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Update</button>
+            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>

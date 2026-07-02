@@ -1,0 +1,58 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using SmartAttendance.Application.Departments.ViewModels;
+using SmartAttendance.Application.Employees.Services;
+using SmartAttendance.Application.Employees.ViewModels;
+
+namespace SmartAttendance.Web.Pages.Employees;
+
+public class EditModel : PageModel
+{
+    private readonly IEmployeeService _employeeService;
+
+    public EditModel(IEmployeeService employeeService)
+    {
+        _employeeService = employeeService;
+    }
+
+    [BindProperty]
+    public EmployeeEditViewModel Employee { get; set; } = new();
+
+    public IEnumerable<DepartmentListViewModel> Departments { get; set; } = new List<DepartmentListViewModel>();
+
+    public string? ErrorMessage { get; set; }
+
+    public async Task<IActionResult> OnGetAsync(int id)
+    {
+        Departments = await _employeeService.GetDepartmentsForDropdownAsync();
+
+        var employee = await _employeeService.GetEditByIdAsync(id);
+
+        if (employee == null)
+            return NotFound();
+
+        Employee = employee;
+
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostAsync()
+    {
+        Departments = await _employeeService.GetDepartmentsForDropdownAsync();
+
+        if (!ModelState.IsValid)
+            return Page();
+
+        var updated = await _employeeService.UpdateAsync(Employee);
+
+        if (!updated)
+        {
+            ErrorMessage = "Employee not found, employee number already exists, or selected department is invalid.";
+            return Page();
+        }
+
+        TempData["SuccessMessage"] = "Employee updated successfully.";
+
+        return RedirectToPage("./Index");
+    }
+}
