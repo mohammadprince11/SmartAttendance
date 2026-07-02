@@ -1,0 +1,93 @@
+@page
+@model SmartAttendance.Web.Pages.AttendanceRecords.CreateModel
+
+@{
+    ViewData["Title"] = "Add Attendance Record";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Add Attendance Record</h1>
+        <p>Create a manual attendance record</p>
+    </div>
+
+    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert-danger">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="form-card">
+    <form method="post">
+        <div class="form-group">
+            <label asp-for="AttendanceRecord.EmployeeId">Employee</label>
+            <select asp-for="AttendanceRecord.EmployeeId" class="form-control">
+                <option value="">-- Select Employee --</option>
+
+                @foreach (var employee in Model.Employees)
+                {
+                    <option value="@employee.Id">@employee.EmployeeNo - @employee.FullName</option>
+                }
+            </select>
+            <span asp-validation-for="AttendanceRecord.EmployeeId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="AttendanceRecord.AttendanceDate">Attendance Date</label>
+            <input asp-for="AttendanceRecord.AttendanceDate" type="date" class="form-control" />
+            <span asp-validation-for="AttendanceRecord.AttendanceDate" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="AttendanceRecord.CheckIn">Check In</label>
+            <input asp-for="AttendanceRecord.CheckIn" type="datetime-local" class="form-control" />
+            <span asp-validation-for="AttendanceRecord.CheckIn" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="AttendanceRecord.CheckOut">Check Out</label>
+            <input asp-for="AttendanceRecord.CheckOut" type="datetime-local" class="form-control" />
+            <span asp-validation-for="AttendanceRecord.CheckOut" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="AttendanceRecord.Source">Source</label>
+            <select asp-for="AttendanceRecord.Source" asp-items="Model.Sources" class="form-control"></select>
+            <span asp-validation-for="AttendanceRecord.Source" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="AttendanceRecord.Status">Status</label>
+            <select asp-for="AttendanceRecord.Status" asp-items="Model.Statuses" class="form-control"></select>
+            <span asp-validation-for="AttendanceRecord.Status" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="AttendanceRecord.DeviceId">Device</label>
+            <select asp-for="AttendanceRecord.DeviceId" class="form-control">
+                <option value="">-- No Device / Manual --</option>
+
+                @foreach (var device in Model.Devices)
+                {
+                    <option value="@device.Id">@device.Name - @device.BranchName</option>
+                }
+            </select>
+            <span asp-validation-for="AttendanceRecord.DeviceId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="AttendanceRecord.Notes">Notes</label>
+            <input asp-for="AttendanceRecord.Notes" class="form-control" />
+            <span asp-validation-for="AttendanceRecord.Notes" class="text-danger"></span>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save</button>
+            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>

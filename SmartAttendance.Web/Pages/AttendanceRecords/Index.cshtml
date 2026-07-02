@@ -1,0 +1,81 @@
+@page
+@model SmartAttendance.Web.Pages.AttendanceRecords.IndexModel
+
+@{
+    ViewData["Title"] = "Attendance Records";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Attendance Records</h1>
+        <p>Manage employee check-in and check-out records</p>
+    </div>
+
+    <a asp-page="./Create" class="btn-primary">+ Add Record</a>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<div class="table-card">
+    <form method="get" class="search-form">
+        <input type="text"
+               name="SearchTerm"
+               value="@Model.SearchTerm"
+               placeholder="Search by employee, source, status, device, or notes..." />
+
+        <button type="submit" class="btn-primary">Search</button>
+        <a asp-page="./Index" class="btn-secondary">Clear</a>
+    </form>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Employee No</th>
+                <th>Employee Name</th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th>Status</th>
+                <th>Source</th>
+                <th>Device</th>
+                <th style="width: 160px;">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.AttendanceRecords.Any())
+            {
+                foreach (var item in Model.AttendanceRecords)
+                {
+                    <tr>
+                        <td>@item.AttendanceDate</td>
+                        <td>@item.EmployeeNo</td>
+                        <td>@item.EmployeeName</td>
+                        <td>@item.CheckIn.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>@(item.CheckOut?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                        <td>@item.Status</td>
+                        <td>@item.Source</td>
+                        <td>@(string.IsNullOrWhiteSpace(item.DeviceName) ? "-" : item.DeviceName)</td>
+                        <td>
+                            <a asp-page="./Edit" asp-route-id="@item.Id" class="btn-table btn-edit">Edit</a>
+                            <a asp-page="./Delete" asp-route-id="@item.Id" class="btn-table btn-delete">Delete</a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="9" style="text-align:center;">
+                        No attendance records found.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Application.AttendanceRecords.Mappings;
+using SmartAttendance.Application.AttendanceRecords.Services;
 using SmartAttendance.Application.Branches.Mappings;
 using SmartAttendance.Application.Branches.Services;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
@@ -36,6 +38,7 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<DeviceProfile>();
     cfg.AddProfile<ShiftProfile>();
     cfg.AddProfile<EmployeeShiftProfile>();
+    cfg.AddProfile<AttendanceRecordProfile>();
 });
 
 // Repositories
@@ -49,6 +52,7 @@ builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IDeviceService, DeviceService>();
 builder.Services.AddScoped<IShiftService, ShiftService>();
 builder.Services.AddScoped<IEmployeeShiftService, EmployeeShiftService>();
+builder.Services.AddScoped<IAttendanceRecordService, AttendanceRecordService>();
 
 var app = builder.Build();
 
