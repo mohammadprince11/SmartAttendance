@@ -8,7 +8,7 @@
 <div class="page-header">
     <div>
         <h1>Attendance Processing</h1>
-        <p>Calculate working hours, lateness, early leave, and missing check-out</p>
+        <p>Calculate attendance status using records, shifts, approved leaves, and holidays</p>
     </div>
 
     <a asp-page="/AttendanceRecords/Index" class="btn-secondary">Attendance Records</a>
@@ -23,7 +23,7 @@
         <input type="text"
                name="SearchTerm"
                value="@Model.SearchTerm"
-               placeholder="Search employee, shift, source, status..." />
+               placeholder="Search employee, shift, status, leave, holiday..." />
 
         <button type="submit" class="btn-primary">Process</button>
         <a asp-page="./Index" class="btn-secondary">Clear</a>
@@ -42,6 +42,8 @@
                 <th>Late</th>
                 <th>Early Leave</th>
                 <th>Calculated Status</th>
+                <th>Leave Type</th>
+                <th>Holiday</th>
                 <th>Original Status</th>
             </tr>
         </thead>
@@ -65,12 +67,14 @@
                                 <span>-</span>
                             }
                         </td>
-                        <td>@item.CheckIn.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>@(item.CheckIn?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
                         <td>@(item.CheckOut?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
                         <td>@(item.WorkingHours?.ToString("0.00") ?? "-")</td>
                         <td>@item.LateMinutes min</td>
                         <td>@(item.EarlyLeaveMinutes.HasValue ? item.EarlyLeaveMinutes + " min" : "-")</td>
                         <td>@item.CalculatedStatus</td>
+                        <td>@(item.LeaveType ?? "-")</td>
+                        <td>@(item.HolidayName ?? "-")</td>
                         <td>@item.OriginalStatus</td>
                     </tr>
                 }
@@ -78,7 +82,7 @@
             else
             {
                 <tr>
-                    <td colspan="11" style="text-align:center;">
+                    <td colspan="13" style="text-align:center;">
                         No processed attendance records found.
                     </td>
                 </tr>

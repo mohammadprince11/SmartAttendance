@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.AttendanceProcessing.Services;
 using SmartAttendance.Application.AttendanceRecords.Mappings;
 using SmartAttendance.Application.AttendanceRecords.Services;
+using SmartAttendance.Application.AttendanceReports.Services;
 using SmartAttendance.Application.Branches.Mappings;
 using SmartAttendance.Application.Branches.Services;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
@@ -61,6 +62,7 @@ builder.Services.AddScoped<IShiftService, ShiftService>();
 builder.Services.AddScoped<IEmployeeShiftService, EmployeeShiftService>();
 builder.Services.AddScoped<IAttendanceRecordService, AttendanceRecordService>();
 builder.Services.AddScoped<IAttendanceProcessingService, AttendanceProcessingService>();
+builder.Services.AddScoped<IAttendanceReportService, AttendanceReportService>();
 builder.Services.AddScoped<IHolidayService, HolidayService>();
 builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
 

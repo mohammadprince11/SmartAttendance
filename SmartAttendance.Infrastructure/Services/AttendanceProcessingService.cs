@@ -20,39 +20,66 @@ public class AttendanceProcessingService : IAttendanceProcessingService
         DateOnly? toDate,
         string? searchTerm = null)
     {
+        var startDate = fromDate ?? DateOnly.FromDateTime(DateTime.Today.AddDays(-30));
+        var endDate = toDate ?? DateOnly.FromDateTime(DateTime.Today);
+
+        if (endDate < startDate)
+            return new List<AttendanceProcessingResultViewModel>();
+
         var records = await _unitOfWork.AttendanceRecords.GetAllAsync();
         var employees = await _unitOfWork.Employees.GetAllAsync();
         var employeeShifts = await _unitOfWork.EmployeeShifts.GetAllAsync();
         var shifts = await _unitOfWork.Shifts.GetAllAsync();
+        var holidays = await _unitOfWork.Holidays.GetAllAsync();
+        var leaveRequests = await _unitOfWork.LeaveRequests.GetAllAsync();
 
-        var employeeLookup = employees.ToDictionary(x => x.Id);
+        var activeEmployees = employees
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.FullName)
+            .ToList();
+
+        var recordsLookup = records
+            .Where(x => x.AttendanceDate >= startDate && x.AttendanceDate <= endDate)
+            .GroupBy(x => new { x.EmployeeId, x.AttendanceDate })
+            .ToDictionary(
+                x => x.Key,
+                x => x.OrderBy(r => r.CheckIn).First());
+
         var shiftLookup = shifts.ToDictionary(x => x.Id);
-
-        if (fromDate.HasValue)
-            records = records.Where(x => x.AttendanceDate >= fromDate.Value);
-
-        if (toDate.HasValue)
-            records = records.Where(x => x.AttendanceDate <= toDate.Value);
 
         var result = new List<AttendanceProcessingResultViewModel>();
 
-        foreach (var record in records)
+        foreach (var attendanceDate in GetDateRange(startDate, endDate))
         {
-            employeeLookup.TryGetValue(record.EmployeeId, out var employee);
+            var holiday = FindHoliday(holidays, attendanceDate);
 
-            var employeeShift = FindApplicableEmployeeShift(
-                employeeShifts,
-                record.EmployeeId,
-                record.AttendanceDate);
+            foreach (var employee in activeEmployees)
+            {
+                recordsLookup.TryGetValue(
+                    new { EmployeeId = employee.Id, AttendanceDate = attendanceDate },
+                    out var record);
 
-            Shift? shift = null;
+                var employeeShift = FindApplicableEmployeeShift(
+                    employeeShifts,
+                    employee.Id,
+                    attendanceDate);
 
-            if (employeeShift != null)
-                shiftLookup.TryGetValue(employeeShift.ShiftId, out shift);
+                Shift? shift = null;
 
-            var processed = BuildProcessedRecord(record, employee, shift);
+                if (employeeShift != null)
+                    shiftLookup.TryGetValue(employeeShift.ShiftId, out shift);
 
-            result.Add(processed);
+                var approvedLeave = FindApprovedLeave(
+                    leaveRequests,
+                    employee.Id,
+                    attendanceDate);
+
+                var processed = record != null
+                    ? BuildProcessedRecord(record, employee, shift, holiday, approvedLeave)
+                    : BuildGeneratedRecord(employee, attendanceDate, shift, holiday, approvedLeave);
+
+                result.Add(processed);
+            }
         }
 
         IEnumerable<AttendanceProcessingResultViewModel> filtered = result;
@@ -67,14 +94,21 @@ public class AttendanceProcessingService : IAttendanceProcessingService
                 x.CalculatedStatus.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 x.OriginalStatus.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 x.Source.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                (x.LeaveType != null && x.LeaveType.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                (x.HolidayName != null && x.HolidayName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
                 (x.Notes != null && x.Notes.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)));
         }
 
         return filtered
             .OrderByDescending(x => x.AttendanceDate)
             .ThenBy(x => x.EmployeeName)
-            .ThenBy(x => x.CheckIn)
             .ToList();
+    }
+
+    private static IEnumerable<DateOnly> GetDateRange(DateOnly fromDate, DateOnly toDate)
+    {
+        for (var date = fromDate; date <= toDate; date = date.AddDays(1))
+            yield return date;
     }
 
     private static EmployeeShift? FindApplicableEmployeeShift(
@@ -92,25 +126,98 @@ public class AttendanceProcessingService : IAttendanceProcessingService
             .FirstOrDefault();
     }
 
+    private static Holiday? FindHoliday(IEnumerable<Holiday> holidays, DateOnly attendanceDate)
+    {
+        return holidays.FirstOrDefault(x =>
+            x.HolidayDate == attendanceDate ||
+            (x.IsRecurring &&
+             x.HolidayDate.Month == attendanceDate.Month &&
+             x.HolidayDate.Day == attendanceDate.Day));
+    }
+
+    private static LeaveRequest? FindApprovedLeave(
+        IEnumerable<LeaveRequest> leaveRequests,
+        int employeeId,
+        DateOnly attendanceDate)
+    {
+        return leaveRequests
+            .Where(x =>
+                x.EmployeeId == employeeId &&
+                x.Status == LeaveStatus.Approved &&
+                x.FromDate <= attendanceDate &&
+                x.ToDate >= attendanceDate)
+            .OrderByDescending(x => x.FromDate)
+            .FirstOrDefault();
+    }
+
+    private static AttendanceProcessingResultViewModel BuildGeneratedRecord(
+        Employee employee,
+        DateOnly attendanceDate,
+        Shift? shift,
+        Holiday? holiday,
+        LeaveRequest? approvedLeave)
+    {
+        var model = new AttendanceProcessingResultViewModel
+        {
+            EmployeeId = employee.Id,
+            EmployeeNo = employee.EmployeeNo,
+            EmployeeName = employee.FullName,
+            AttendanceDate = attendanceDate,
+            Source = "System",
+            OriginalStatus = "-",
+            LateMinutes = 0,
+            EarlyLeaveMinutes = null,
+            MissingCheckOut = false
+        };
+
+        FillShiftData(model, shift);
+
+        if (holiday != null)
+        {
+            model.CalculatedStatus = "Holiday";
+            model.HolidayName = holiday.Name;
+            model.Notes = holiday.Description;
+            return model;
+        }
+
+        if (approvedLeave != null)
+        {
+            model.CalculatedStatus = "Leave";
+            model.LeaveType = approvedLeave.LeaveType.ToString();
+            model.Notes = approvedLeave.Reason;
+            return model;
+        }
+
+        model.CalculatedStatus = "Absent";
+
+        return model;
+    }
+
     private static AttendanceProcessingResultViewModel BuildProcessedRecord(
         AttendanceRecord record,
-        Employee? employee,
-        Shift? shift)
+        Employee employee,
+        Shift? shift,
+        Holiday? holiday,
+        LeaveRequest? approvedLeave)
     {
         var model = new AttendanceProcessingResultViewModel
         {
             AttendanceRecordId = record.Id,
             EmployeeId = record.EmployeeId,
-            EmployeeNo = employee?.EmployeeNo ?? string.Empty,
-            EmployeeName = employee?.FullName ?? string.Empty,
+            EmployeeNo = employee.EmployeeNo,
+            EmployeeName = employee.FullName,
             AttendanceDate = record.AttendanceDate,
             CheckIn = record.CheckIn,
             CheckOut = record.CheckOut,
             Source = record.Source.ToString(),
             OriginalStatus = record.Status.ToString(),
             Notes = record.Notes,
-            MissingCheckOut = !record.CheckOut.HasValue
+            MissingCheckOut = !record.CheckOut.HasValue,
+            HolidayName = holiday?.Name,
+            LeaveType = approvedLeave?.LeaveType.ToString()
         };
+
+        FillShiftData(model, shift);
 
         if (shift == null)
         {
@@ -123,11 +230,6 @@ public class AttendanceProcessingService : IAttendanceProcessingService
 
             return model;
         }
-
-        model.ShiftCode = shift.Code;
-        model.ShiftName = shift.Name;
-        model.ShiftStartTime = shift.StartTime;
-        model.ShiftEndTime = shift.EndTime;
 
         var scheduledStart = record.AttendanceDate.ToDateTime(shift.StartTime);
         var scheduledEnd = record.AttendanceDate.ToDateTime(shift.EndTime);
@@ -146,6 +248,17 @@ public class AttendanceProcessingService : IAttendanceProcessingService
         model.CalculatedStatus = CalculateStatus(record, model.LateMinutes, model.EarlyLeaveMinutes, model.MissingCheckOut);
 
         return model;
+    }
+
+    private static void FillShiftData(AttendanceProcessingResultViewModel model, Shift? shift)
+    {
+        if (shift == null)
+            return;
+
+        model.ShiftCode = shift.Code;
+        model.ShiftName = shift.Name;
+        model.ShiftStartTime = shift.StartTime;
+        model.ShiftEndTime = shift.EndTime;
     }
 
     private static int CalculateLateMinutes(DateTime checkIn, DateTime scheduledStart, int graceInMinutes)
@@ -184,6 +297,7 @@ public class AttendanceProcessingService : IAttendanceProcessingService
         int? earlyLeaveMinutes,
         bool missingCheckOut)
     {
+        // Keep manual HR status untouched for these cases.
         if (record.Status is AttendanceStatus.Absent or AttendanceStatus.Leave or AttendanceStatus.Holiday)
             return record.Status.ToString();
 

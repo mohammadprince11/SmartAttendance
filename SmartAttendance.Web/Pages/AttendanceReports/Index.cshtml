@@ -1,0 +1,112 @@
+@page
+@model SmartAttendance.Web.Pages.AttendanceReports.IndexModel
+
+@{
+    ViewData["Title"] = "Attendance Reports";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Attendance Reports</h1>
+        <p>Monthly attendance summary by employee</p>
+    </div>
+
+    <a asp-page="/AttendanceProcessing/Index" class="btn-secondary">Attendance Processing</a>
+</div>
+
+<div class="table-card" style="margin-bottom: 20px;">
+    <form method="get" class="search-form">
+        <input asp-for="FromDate" type="date" class="form-control" />
+
+        <input asp-for="ToDate" type="date" class="form-control" />
+
+        <input type="text"
+               name="SearchTerm"
+               value="@Model.SearchTerm"
+               placeholder="Search employee..." />
+
+        <button type="submit" class="btn-primary">Generate</button>
+        <a asp-page="./Index" class="btn-secondary">Clear</a>
+    </form>
+</div>
+
+<div class="table-card" style="margin-bottom: 20px;">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Total Employees</th>
+                <th>Present Days</th>
+                <th>Absent Days</th>
+                <th>Leave Days</th>
+                <th>Holiday Days</th>
+                <th>Late Minutes</th>
+                <th>Working Hours</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>@Model.TotalEmployees</td>
+                <td>@Model.TotalPresentDays</td>
+                <td>@Model.TotalAbsentDays</td>
+                <td>@Model.TotalLeaveDays</td>
+                <td>@Model.TotalHolidayDays</td>
+                <td>@Model.TotalLateMinutes</td>
+                <td>@Model.TotalWorkingHours.ToString("0.00")</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Employee No</th>
+                <th>Employee Name</th>
+                <th>Total Days</th>
+                <th>Present</th>
+                <th>Late Days</th>
+                <th>Absent</th>
+                <th>Leave</th>
+                <th>Holiday</th>
+                <th>Early Leave</th>
+                <th>Missing Out</th>
+                <th>Late Min</th>
+                <th>Early Min</th>
+                <th>Work Hours</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.ReportRows.Any())
+            {
+                foreach (var row in Model.ReportRows)
+                {
+                    <tr>
+                        <td>@row.EmployeeNo</td>
+                        <td>@row.EmployeeName</td>
+                        <td>@row.TotalDays</td>
+                        <td>@row.PresentDays</td>
+                        <td>@row.LateDays</td>
+                        <td>@row.AbsentDays</td>
+                        <td>@row.LeaveDays</td>
+                        <td>@row.HolidayDays</td>
+                        <td>@row.EarlyLeaveDays</td>
+                        <td>@row.MissingCheckOutDays</td>
+                        <td>@row.TotalLateMinutes</td>
+                        <td>@row.TotalEarlyLeaveMinutes</td>
+                        <td>@row.TotalWorkingHours.ToString("0.00")</td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="13" style="text-align:center;">
+                        No report data found.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

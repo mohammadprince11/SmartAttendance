@@ -20,7 +20,7 @@ public class AttendanceProcessingResultViewModel
 
     public TimeOnly? ShiftEndTime { get; set; }
 
-    public DateTime CheckIn { get; set; }
+    public DateTime? CheckIn { get; set; }
 
     public DateTime? CheckOut { get; set; }
 
@@ -37,6 +37,10 @@ public class AttendanceProcessingResultViewModel
     public string OriginalStatus { get; set; } = string.Empty;
 
     public string CalculatedStatus { get; set; } = string.Empty;
+
+    public string? LeaveType { get; set; }
+
+    public string? HolidayName { get; set; }
 
     public string? Notes { get; set; }
 }
