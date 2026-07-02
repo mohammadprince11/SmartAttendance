@@ -1,0 +1,68 @@
+@page
+@model SmartAttendance.Web.Pages.Permissions.CreateModel
+
+@{
+    ViewData["Title"] = "Add Permission";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Add Permission</h1>
+        <p>Create a new flexible permission</p>
+    </div>
+
+    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert-danger">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="form-card">
+    <form method="post">
+        <div class="form-group">
+            <label asp-for="Permission.Module">Module</label>
+            <input asp-for="Permission.Module" class="form-control" placeholder="Employees" />
+            <span asp-validation-for="Permission.Module" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Permission.Code">Code</label>
+            <input asp-for="Permission.Code" class="form-control" placeholder="Employees.View" />
+            <span asp-validation-for="Permission.Code" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Permission.Name">Name</label>
+            <input asp-for="Permission.Name" class="form-control" placeholder="View Employees" />
+            <span asp-validation-for="Permission.Name" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Permission.DisplayOrder">Display Order</label>
+            <input asp-for="Permission.DisplayOrder" type="number" class="form-control" />
+            <span asp-validation-for="Permission.DisplayOrder" class="text-danger"></span>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <label>
+                <input asp-for="Permission.IsActive" />
+                Active
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Permission.Description">Description</label>
+            <input asp-for="Permission.Description" class="form-control" />
+            <span asp-validation-for="Permission.Description" class="text-danger"></span>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save</button>
+            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>

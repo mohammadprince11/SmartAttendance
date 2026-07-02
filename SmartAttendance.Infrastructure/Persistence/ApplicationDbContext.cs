@@ -30,6 +30,12 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
 
+    public DbSet<SystemUser> SystemUsers => Set<SystemUser>();
+
+    public DbSet<Permission> Permissions => Set<Permission>();
+
+    public DbSet<SystemUserPermission> SystemUserPermissions => Set<SystemUserPermission>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

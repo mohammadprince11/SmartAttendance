@@ -1,0 +1,70 @@
+@page
+@model SmartAttendance.Web.Pages.SystemUsers.EditModel
+
+@{
+    ViewData["Title"] = "Edit System User";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Edit System User</h1>
+        <p>Update system user role information</p>
+    </div>
+
+    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert-danger">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="form-card">
+    <form method="post">
+        <input type="hidden" asp-for="SystemUser.Id" />
+
+        <div class="form-group">
+            <label asp-for="SystemUser.FullName">Full Name</label>
+            <input asp-for="SystemUser.FullName" class="form-control" />
+            <span asp-validation-for="SystemUser.FullName" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="SystemUser.UserName">User Name</label>
+            <input asp-for="SystemUser.UserName" class="form-control" />
+            <span asp-validation-for="SystemUser.UserName" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="SystemUser.Email">Email</label>
+            <input asp-for="SystemUser.Email" class="form-control" />
+            <span asp-validation-for="SystemUser.Email" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="SystemUser.Role">Role</label>
+            <select asp-for="SystemUser.Role" asp-items="Model.Roles" class="form-control"></select>
+            <span asp-validation-for="SystemUser.Role" class="text-danger"></span>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <label>
+                <input asp-for="SystemUser.IsActive" />
+                Active
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="SystemUser.Notes">Notes</label>
+            <input asp-for="SystemUser.Notes" class="form-control" />
+            <span asp-validation-for="SystemUser.Notes" class="text-danger"></span>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Update</button>
+            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>

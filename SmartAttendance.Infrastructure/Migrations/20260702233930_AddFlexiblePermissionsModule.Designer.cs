@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SmartAttendance.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using SmartAttendance.Infrastructure.Persistence;
 namespace SmartAttendance.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260702233930_AddFlexiblePermissionsModule")]
+    partial class AddFlexiblePermissionsModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -673,9 +676,6 @@ namespace SmartAttendance.Infrastructure.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
-                    b.Property<int?>("EmployeeId")
-                        .HasColumnType("int");
-
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -710,10 +710,6 @@ namespace SmartAttendance.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Email");
-
-                    b.HasIndex("EmployeeId")
-                        .IsUnique()
-                        .HasFilter("[EmployeeId] IS NOT NULL");
 
                     b.HasIndex("UserName")
                         .IsUnique();
@@ -851,16 +847,6 @@ namespace SmartAttendance.Infrastructure.Migrations
                         .HasForeignKey("EmployeeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("Employee");
-                });
-
-            modelBuilder.Entity("SmartAttendance.Domain.Entities.SystemUser", b =>
-                {
-                    b.HasOne("SmartAttendance.Domain.Entities.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Employee");
                 });

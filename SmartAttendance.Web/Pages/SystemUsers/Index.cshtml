@@ -1,0 +1,77 @@
+@page
+@model SmartAttendance.Web.Pages.SystemUsers.IndexModel
+
+@{
+    ViewData["Title"] = "System Users";
+}
+
+<div class="page-header">
+    <div>
+        <h1>System Users</h1>
+        <p>Manage application users and roles</p>
+    </div>
+
+    <a asp-page="./Create" class="btn-primary">+ Add User</a>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<div class="table-card">
+    <form method="get" class="search-form">
+        <input type="text"
+               name="SearchTerm"
+               value="@Model.SearchTerm"
+               placeholder="Search by name, username, email, or role..." />
+
+        <button type="submit" class="btn-primary">Search</button>
+        <a asp-page="./Index" class="btn-secondary">Clear</a>
+    </form>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Full Name</th>
+                <th>User Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Active</th>
+                <th>Notes</th>
+                <th style="width: 160px;">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.Users.Any())
+            {
+                foreach (var user in Model.Users)
+                {
+                    <tr>
+                        <td>@user.FullName</td>
+                        <td>@user.UserName</td>
+                        <td>@user.Email</td>
+                        <td>@user.Role</td>
+                        <td>@(user.IsActive ? "Yes" : "No")</td>
+                        <td>@user.Notes</td>
+                        <td>
+                            <a asp-page="./Edit" asp-route-id="@user.Id" class="btn-table btn-edit">Edit</a>
+                            <a asp-page="./Delete" asp-route-id="@user.Id" class="btn-table btn-delete">Delete</a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="7" style="text-align:center;">
+                        No system users found.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -12,6 +12,7 @@ using SmartAttendance.Application.Departments.Mappings;
 using SmartAttendance.Application.Departments.Services;
 using SmartAttendance.Application.Devices.Mappings;
 using SmartAttendance.Application.Devices.Services;
+using SmartAttendance.Application.EmployeePermissions.Services;
 using SmartAttendance.Application.EmployeeShifts.Mappings;
 using SmartAttendance.Application.EmployeeShifts.Services;
 using SmartAttendance.Application.Employees.Mappings;
@@ -20,8 +21,13 @@ using SmartAttendance.Application.Holidays.Mappings;
 using SmartAttendance.Application.Holidays.Services;
 using SmartAttendance.Application.LeaveRequests.Mappings;
 using SmartAttendance.Application.LeaveRequests.Services;
+using SmartAttendance.Application.Permissions.Mappings;
+using SmartAttendance.Application.Permissions.Services;
 using SmartAttendance.Application.Shifts.Mappings;
 using SmartAttendance.Application.Shifts.Services;
+using SmartAttendance.Application.SystemUsers.Mappings;
+using SmartAttendance.Application.SystemUsers.Services;
+using SmartAttendance.Application.UserPermissions.Services;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Infrastructure.Repositories;
 using SmartAttendance.Infrastructure.Services;
@@ -47,6 +53,8 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<AttendanceRecordProfile>();
     cfg.AddProfile<HolidayProfile>();
     cfg.AddProfile<LeaveRequestProfile>();
+    cfg.AddProfile<SystemUserProfile>();
+    cfg.AddProfile<PermissionProfile>();
 });
 
 // Repositories
@@ -65,6 +73,10 @@ builder.Services.AddScoped<IAttendanceProcessingService, AttendanceProcessingSer
 builder.Services.AddScoped<IAttendanceReportService, AttendanceReportService>();
 builder.Services.AddScoped<IHolidayService, HolidayService>();
 builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
+builder.Services.AddScoped<ISystemUserService, SystemUserService>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<IUserPermissionService, UserPermissionService>();
+builder.Services.AddScoped<IEmployeePermissionService, EmployeePermissionService>();
 
 var app = builder.Build();
 

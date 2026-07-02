@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SmartAttendance.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using SmartAttendance.Infrastructure.Persistence;
 namespace SmartAttendance.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260702233411_AddSystemUsersModule")]
+    partial class AddSystemUsersModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -526,68 +529,6 @@ namespace SmartAttendance.Infrastructure.Migrations
                     b.ToTable("LeaveRequests", (string)null);
                 });
 
-            modelBuilder.Entity("SmartAttendance.Domain.Entities.Permission", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("DisplayOrder")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Module")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.HasIndex("Module");
-
-                    b.ToTable("Permissions", (string)null);
-                });
-
             modelBuilder.Entity("SmartAttendance.Domain.Entities.Shift", b =>
                 {
                     b.Property<int>("Id")
@@ -673,9 +614,6 @@ namespace SmartAttendance.Infrastructure.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
-                    b.Property<int?>("EmployeeId")
-                        .HasColumnType("int");
-
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -711,52 +649,10 @@ namespace SmartAttendance.Infrastructure.Migrations
 
                     b.HasIndex("Email");
 
-                    b.HasIndex("EmployeeId")
-                        .IsUnique()
-                        .HasFilter("[EmployeeId] IS NOT NULL");
-
                     b.HasIndex("UserName")
                         .IsUnique();
 
                     b.ToTable("SystemUsers", (string)null);
-                });
-
-            modelBuilder.Entity("SmartAttendance.Domain.Entities.SystemUserPermission", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("PermissionId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SystemUserId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PermissionId");
-
-                    b.HasIndex("SystemUserId");
-
-                    b.ToTable("SystemUserPermissions", (string)null);
                 });
 
             modelBuilder.Entity("SmartAttendance.Domain.Entities.AttendanceRecord", b =>
@@ -855,35 +751,6 @@ namespace SmartAttendance.Infrastructure.Migrations
                     b.Navigation("Employee");
                 });
 
-            modelBuilder.Entity("SmartAttendance.Domain.Entities.SystemUser", b =>
-                {
-                    b.HasOne("SmartAttendance.Domain.Entities.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Employee");
-                });
-
-            modelBuilder.Entity("SmartAttendance.Domain.Entities.SystemUserPermission", b =>
-                {
-                    b.HasOne("SmartAttendance.Domain.Entities.Permission", "Permission")
-                        .WithMany()
-                        .HasForeignKey("PermissionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SmartAttendance.Domain.Entities.SystemUser", "SystemUser")
-                        .WithMany("UserPermissions")
-                        .HasForeignKey("SystemUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Permission");
-
-                    b.Navigation("SystemUser");
-                });
-
             modelBuilder.Entity("SmartAttendance.Domain.Entities.Branch", b =>
                 {
                     b.Navigation("Departments");
@@ -904,11 +771,6 @@ namespace SmartAttendance.Infrastructure.Migrations
             modelBuilder.Entity("SmartAttendance.Domain.Entities.Shift", b =>
                 {
                     b.Navigation("EmployeeShifts");
-                });
-
-            modelBuilder.Entity("SmartAttendance.Domain.Entities.SystemUser", b =>
-                {
-                    b.Navigation("UserPermissions");
                 });
 #pragma warning restore 612, 618
         }

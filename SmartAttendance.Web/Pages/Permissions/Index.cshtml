@@ -1,0 +1,83 @@
+@page
+@model SmartAttendance.Web.Pages.Permissions.IndexModel
+
+@{
+    ViewData["Title"] = "Permissions";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Permissions</h1>
+        <p>Manage flexible permission codes used by the system</p>
+    </div>
+
+    <div class="form-actions">
+        <form method="post" asp-page-handler="Seed">
+            <button type="submit" class="btn-secondary">Seed Default Permissions</button>
+        </form>
+
+        <a asp-page="./Create" class="btn-primary">+ Add Permission</a>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<div class="table-card">
+    <form method="get" class="search-form">
+        <input type="text"
+               name="SearchTerm"
+               value="@Model.SearchTerm"
+               placeholder="Search by module, code, or name..." />
+
+        <button type="submit" class="btn-primary">Search</button>
+        <a asp-page="./Index" class="btn-secondary">Clear</a>
+    </form>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Module</th>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Active</th>
+                <th>Order</th>
+                <th>Description</th>
+                <th style="width: 160px;">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.Permissions.Any())
+            {
+                foreach (var permission in Model.Permissions)
+                {
+                    <tr>
+                        <td>@permission.Module</td>
+                        <td>@permission.Code</td>
+                        <td>@permission.Name</td>
+                        <td>@(permission.IsActive ? "Yes" : "No")</td>
+                        <td>@permission.DisplayOrder</td>
+                        <td>@permission.Description</td>
+                        <td>
+                            <a asp-page="./Edit" asp-route-id="@permission.Id" class="btn-table btn-edit">Edit</a>
+                            <a asp-page="./Delete" asp-route-id="@permission.Id" class="btn-table btn-delete">Delete</a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="7" style="text-align:center;">
+                        No permissions found. Click "Seed Default Permissions" to add the standard list.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

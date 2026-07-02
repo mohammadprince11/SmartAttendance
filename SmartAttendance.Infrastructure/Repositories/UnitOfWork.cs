@@ -29,6 +29,12 @@ public class UnitOfWork : IUnitOfWork
 
     public IGenericRepository<LeaveRequest> LeaveRequests { get; }
 
+    public IGenericRepository<SystemUser> SystemUsers { get; }
+
+    public IGenericRepository<Permission> Permissions { get; }
+
+    public IGenericRepository<SystemUserPermission> SystemUserPermissions { get; }
+
     public UnitOfWork(ApplicationDbContext context)
     {
         _context = context;
@@ -43,6 +49,9 @@ public class UnitOfWork : IUnitOfWork
         AttendanceRecords = new GenericRepository<AttendanceRecord>(context);
         Holidays = new GenericRepository<Holiday>(context);
         LeaveRequests = new GenericRepository<LeaveRequest>(context);
+        SystemUsers = new GenericRepository<SystemUser>(context);
+        Permissions = new GenericRepository<Permission>(context);
+        SystemUserPermissions = new GenericRepository<SystemUserPermission>(context);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

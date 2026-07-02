@@ -1,0 +1,241 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeePermissions.IndexModel
+
+@{
+    ViewData["Title"] = "Employee Permissions";
+}
+
+<style>
+    .permissions-layout {
+        display: grid;
+        grid-template-columns: 330px 1fr;
+        gap: 20px;
+        align-items: start;
+    }
+
+    .employee-list {
+        display: grid;
+        gap: 10px;
+        max-height: 75vh;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .employee-card {
+        display: block;
+        padding: 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #ffffff;
+        color: #0f172a;
+        text-decoration: none;
+    }
+
+    .employee-card.active {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .employee-card .name {
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+
+    .employee-card .meta {
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .employee-card .badge {
+        display: inline-flex;
+        margin-top: 8px;
+        padding: 3px 8px;
+        font-size: 11px;
+        border-radius: 999px;
+        background: #e0f2fe;
+        color: #075985;
+    }
+
+    .permission-group {
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 14px;
+        background: #ffffff;
+    }
+
+    .permission-group h3 {
+        margin: 0 0 12px;
+        font-size: 16px;
+    }
+
+    .permission-check {
+        display: grid;
+        grid-template-columns: 24px 1fr;
+        gap: 10px;
+        padding: 9px 0;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .permission-check:first-of-type {
+        border-top: 0;
+    }
+
+    .permission-code {
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .permission-desc {
+        color: #64748b;
+        font-size: 12px;
+        margin-top: 3px;
+    }
+
+    @@media (max-width: 1000px) {
+        .permissions-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1>Employee Permissions</h1>
+        <p>Select an employee and grant permissions directly from one page</p>
+    </div>
+
+    <form method="post" asp-page-handler="Seed">
+        <input type="hidden" name="EmployeeId" value="@Model.EmployeeId" />
+        <input type="hidden" name="SearchTerm" value="@Model.SearchTerm" />
+        <button type="submit" class="btn-secondary">Seed Default Permissions</button>
+    </form>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert-danger">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="permissions-layout">
+    <div class="table-card">
+        <div class="page-header" style="margin-bottom: 12px;">
+            <div>
+                <h2>Employees</h2>
+                <p>Search and select employee</p>
+            </div>
+        </div>
+
+        <form method="get" class="search-form" style="display:grid;">
+            <input type="text"
+                   name="SearchTerm"
+                   value="@Model.SearchTerm"
+                   placeholder="Search employee no, name, email..." />
+
+            <button type="submit" class="btn-primary">Search</button>
+            <a asp-page="./Index" class="btn-secondary">Clear</a>
+        </form>
+
+        <div class="employee-list">
+            @if (Model.Employees.Any())
+            {
+                foreach (var employee in Model.Employees)
+                {
+                    var activeClass = Model.EmployeeId == employee.EmployeeId ? "active" : "";
+
+                    <a asp-page="./Index"
+                       asp-route-EmployeeId="@employee.EmployeeId"
+                       asp-route-SearchTerm="@Model.SearchTerm"
+                       class="employee-card @activeClass">
+                        <div class="name">@employee.FullName</div>
+                        <div class="meta">@employee.EmployeeNo | @(employee.Email ?? "-")</div>
+                        <div class="meta">@(employee.IsActive ? "Active" : "Inactive")</div>
+
+                        @if (employee.HasSystemUser)
+                        {
+                            <span class="badge">Has Permissions Profile</span>
+                        }
+                    </a>
+                }
+            }
+            else
+            {
+                <div style="text-align:center;">No employees found.</div>
+            }
+        </div>
+    </div>
+
+    <div class="table-card">
+        @if (Model.Assignment != null)
+        {
+            <div class="page-header" style="margin-bottom: 12px;">
+                <div>
+                    <h2>@Model.Assignment.FullName</h2>
+                    <p>
+                        Employee No: @Model.Assignment.EmployeeNo |
+                        User Name: @Model.Assignment.UserName |
+                        @(Model.Assignment.HasSystemUser ? "Existing permissions profile" : "Profile will be created on save")
+                    </p>
+                </div>
+            </div>
+
+            @if (!Model.Assignment.Groups.Any())
+            {
+                <div class="alert-danger">
+                    No active permissions found. Click "Seed Default Permissions" first.
+                </div>
+            }
+
+            <form method="post" asp-route-employeeId="@Model.Assignment.EmployeeId">
+                <input type="hidden" name="SearchTerm" value="@Model.SearchTerm" />
+
+                @foreach (var group in Model.Assignment.Groups)
+                {
+                    <div class="permission-group">
+                        <h3>@group.Module</h3>
+
+                        @foreach (var permission in group.Permissions)
+                        {
+                            <label class="permission-check">
+                                <input type="checkbox"
+                                       name="SelectedPermissionIds"
+                                       value="@permission.PermissionId"
+                                       checked="@permission.IsGranted" />
+
+                                <span>
+                                    <span class="permission-code">@permission.Code</span>
+                                    <span> - @permission.Name</span>
+
+                                    @if (!string.IsNullOrWhiteSpace(permission.Description))
+                                    {
+                                        <div class="permission-desc">@permission.Description</div>
+                                    }
+                                </span>
+                            </label>
+                        }
+                    </div>
+                }
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save Permissions</button>
+                    <a asp-page="./Index" asp-route-EmployeeId="@Model.Assignment.EmployeeId" asp-route-SearchTerm="@Model.SearchTerm" class="btn-secondary">Cancel</a>
+                </div>
+            </form>
+        }
+        else
+        {
+            <div style="text-align:center;">
+                Select an employee to manage permissions.
+            </div>
+        }
+    </div>
+</div>

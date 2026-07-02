@@ -24,5 +24,11 @@ public interface IUnitOfWork : IDisposable
 
     IGenericRepository<LeaveRequest> LeaveRequests { get; }
 
+    IGenericRepository<SystemUser> SystemUsers { get; }
+
+    IGenericRepository<Permission> Permissions { get; }
+
+    IGenericRepository<SystemUserPermission> SystemUserPermissions { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

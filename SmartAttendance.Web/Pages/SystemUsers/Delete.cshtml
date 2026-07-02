@@ -1,0 +1,69 @@
+@page
+@model SmartAttendance.Web.Pages.SystemUsers.DeleteModel
+
+@{
+    ViewData["Title"] = "Delete System User";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Delete System User</h1>
+        <p>Confirm system user deletion</p>
+    </div>
+
+    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert-danger">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="form-card">
+    <div class="alert-danger">
+        Are you sure you want to delete this system user?
+    </div>
+
+    <div class="details-grid">
+        <div class="form-group">
+            <label>Full Name</label>
+            <div class="form-control">@Model.SystemUser.FullName</div>
+        </div>
+
+        <div class="form-group">
+            <label>User Name</label>
+            <div class="form-control">@Model.SystemUser.UserName</div>
+        </div>
+
+        <div class="form-group">
+            <label>Email</label>
+            <div class="form-control">@Model.SystemUser.Email</div>
+        </div>
+
+        <div class="form-group">
+            <label>Role</label>
+            <div class="form-control">@Model.SystemUser.Role</div>
+        </div>
+
+        <div class="form-group">
+            <label>Active</label>
+            <div class="form-control">@(Model.SystemUser.IsActive ? "Yes" : "No")</div>
+        </div>
+
+        <div class="form-group">
+            <label>Notes</label>
+            <div class="form-control">@Model.SystemUser.Notes</div>
+        </div>
+    </div>
+
+    <form method="post">
+        <input type="hidden" name="id" value="@Model.SystemUser.Id" />
+
+        <div class="form-actions">
+            <button type="submit" class="btn-table btn-delete">Delete</button>
+            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
