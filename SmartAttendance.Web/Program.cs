@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Application.AttendanceProcessing.Services;
 using SmartAttendance.Application.AttendanceRecords.Mappings;
 using SmartAttendance.Application.AttendanceRecords.Services;
 using SmartAttendance.Application.Branches.Mappings;
@@ -53,6 +54,7 @@ builder.Services.AddScoped<IDeviceService, DeviceService>();
 builder.Services.AddScoped<IShiftService, ShiftService>();
 builder.Services.AddScoped<IEmployeeShiftService, EmployeeShiftService>();
 builder.Services.AddScoped<IAttendanceRecordService, AttendanceRecordService>();
+builder.Services.AddScoped<IAttendanceProcessingService, AttendanceProcessingService>();
 
 var app = builder.Build();
 
