@@ -1,0 +1,81 @@
+@page
+@model SmartAttendance.Web.Pages.Devices.IndexModel
+
+@{
+    ViewData["Title"] = "Devices";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Devices</h1>
+        <p>Manage attendance devices and branch connections</p>
+    </div>
+
+    <a asp-page="./Create" class="btn-primary">+ Add Device</a>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<div class="table-card">
+    <form method="get" class="search-form">
+        <input type="text"
+               name="SearchTerm"
+               value="@Model.SearchTerm"
+               placeholder="Search by name, IP, serial, model, or branch..." />
+
+        <button type="submit" class="btn-primary">Search</button>
+        <a asp-page="./Index" class="btn-secondary">Clear</a>
+    </form>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Device Name</th>
+                <th>Branch</th>
+                <th>IP Address</th>
+                <th>Port</th>
+                <th>Serial Number</th>
+                <th>Model</th>
+                <th>Active</th>
+                <th>Enabled</th>
+                <th style="width: 160px;">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.Devices.Any())
+            {
+                foreach (var device in Model.Devices)
+                {
+                    <tr>
+                        <td>@device.Name</td>
+                        <td>@device.BranchName</td>
+                        <td>@device.IpAddress</td>
+                        <td>@device.Port</td>
+                        <td>@device.SerialNumber</td>
+                        <td>@device.Model</td>
+                        <td>@(device.IsActive ? "Active" : "Inactive")</td>
+                        <td>@(device.IsEnabled ? "Enabled" : "Disabled")</td>
+                        <td>
+                            <a asp-page="./Edit" asp-route-id="@device.Id" class="btn-table btn-edit">Edit</a>
+                            <a asp-page="./Delete" asp-route-id="@device.Id" class="btn-table btn-delete">Delete</a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="9" style="text-align:center;">
+                        No devices found.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

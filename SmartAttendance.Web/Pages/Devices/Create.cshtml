@@ -1,0 +1,80 @@
+@page
+@model SmartAttendance.Web.Pages.Devices.CreateModel
+
+@{
+    ViewData["Title"] = "Add Device";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Add Device</h1>
+        <p>Create a new attendance device under a branch</p>
+    </div>
+
+    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert-danger">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="form-card">
+    <form method="post">
+        <div class="form-group">
+            <label asp-for="Device.BranchId">Branch</label>
+            <select asp-for="Device.BranchId" class="form-control">
+                <option value="">-- Select Branch --</option>
+
+                @foreach (var branch in Model.Branches)
+                {
+                    <option value="@branch.Id">@branch.Name</option>
+                }
+            </select>
+            <span asp-validation-for="Device.BranchId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Device.Name">Device Name</label>
+            <input asp-for="Device.Name" class="form-control" />
+            <span asp-validation-for="Device.Name" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Device.IpAddress">IP Address</label>
+            <input asp-for="Device.IpAddress" class="form-control" />
+            <span asp-validation-for="Device.IpAddress" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Device.Port">Port</label>
+            <input asp-for="Device.Port" class="form-control" />
+            <span asp-validation-for="Device.Port" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Device.SerialNumber">Serial Number</label>
+            <input asp-for="Device.SerialNumber" class="form-control" />
+            <span asp-validation-for="Device.SerialNumber" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Device.Model">Model</label>
+            <input asp-for="Device.Model" class="form-control" />
+            <span asp-validation-for="Device.Model" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Device.FirmwareVersion">Firmware Version</label>
+            <input asp-for="Device.FirmwareVersion" class="form-control" />
+            <span asp-validation-for="Device.FirmwareVersion" class="text-danger"></span>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save</button>
+            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>

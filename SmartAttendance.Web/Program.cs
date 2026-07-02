@@ -6,6 +6,8 @@ using SmartAttendance.Application.Companies.Mappings;
 using SmartAttendance.Application.Companies.Services;
 using SmartAttendance.Application.Departments.Mappings;
 using SmartAttendance.Application.Departments.Services;
+using SmartAttendance.Application.Devices.Mappings;
+using SmartAttendance.Application.Devices.Services;
 using SmartAttendance.Application.Employees.Mappings;
 using SmartAttendance.Application.Employees.Services;
 using SmartAttendance.Infrastructure.Persistence;
@@ -27,6 +29,7 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<BranchProfile>();
     cfg.AddProfile<DepartmentProfile>();
     cfg.AddProfile<EmployeeProfile>();
+    cfg.AddProfile<DeviceProfile>();
 });
 
 // Repositories
@@ -37,6 +40,7 @@ builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IBranchService, BranchService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+builder.Services.AddScoped<IDeviceService, DeviceService>();
 
 var app = builder.Build();
 
