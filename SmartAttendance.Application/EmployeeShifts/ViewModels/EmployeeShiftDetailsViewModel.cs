@@ -21,4 +21,6 @@ public class EmployeeShiftDetailsViewModel
     public DateOnly? EffectiveTo { get; set; }
 
     public bool IsCurrent { get; set; }
+
+    public string? WeeklyOffDays { get; set; }
 }

@@ -1,10 +1,13 @@
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.AttendanceRecords.Services;
 using SmartAttendance.Application.AttendanceRecords.ViewModels;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.Devices.ViewModels;
 using SmartAttendance.Application.Employees.ViewModels;
 using SmartAttendance.Domain.Entities;
+using SmartAttendance.Domain.Enums;
+using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Infrastructure.Services;
 
@@ -12,58 +15,74 @@ public class AttendanceRecordService : IAttendanceRecordService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly ApplicationDbContext _dbContext;
 
-    public AttendanceRecordService(IUnitOfWork unitOfWork, IMapper mapper)
+    public AttendanceRecordService(
+        IUnitOfWork unitOfWork,
+        IMapper mapper,
+        ApplicationDbContext dbContext)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _dbContext = dbContext;
     }
 
-    public async Task<IEnumerable<AttendanceRecordListViewModel>> GetAllAsync(string? searchTerm = null)
+    public async Task<int> CountAsync(string? searchTerm = null)
     {
-        var records = await _unitOfWork.AttendanceRecords.GetAllAsync();
-        var employees = await _unitOfWork.Employees.GetAllAsync();
-        var devices = await _unitOfWork.Devices.GetAllAsync();
+        return await ApplySearch(_dbContext.AttendanceRecords.AsNoTracking(), searchTerm)
+            .CountAsync();
+    }
 
-        var employeeLookup = employees.ToDictionary(x => x.Id, x => new
-        {
-            x.EmployeeNo,
-            x.FullName
-        });
+    public async Task<IEnumerable<AttendanceRecordListViewModel>> GetAllAsync(string? searchTerm = null, int maxResults = 50)
+    {
+        maxResults = maxResults <= 0 ? 50 : Math.Min(maxResults, 100);
 
-        var deviceLookup = devices.ToDictionary(x => x.Id, x => x.Name);
+        var query = ApplySearch(
+            _dbContext.AttendanceRecords
+                .AsNoTracking()
+                .Include(x => x.Employee)
+                .Include(x => x.Device),
+            searchTerm);
 
-        var result = records.Select(record =>
-        {
-            var model = _mapper.Map<AttendanceRecordListViewModel>(record);
-
-            if (employeeLookup.TryGetValue(record.EmployeeId, out var employee))
-            {
-                model.EmployeeNo = employee.EmployeeNo;
-                model.EmployeeName = employee.FullName;
-            }
-
-            if (record.DeviceId.HasValue && deviceLookup.TryGetValue(record.DeviceId.Value, out var deviceName))
-                model.DeviceName = deviceName;
-
-            return model;
-        });
-
-        if (!string.IsNullOrWhiteSpace(searchTerm))
-        {
-            result = result.Where(x =>
-                x.EmployeeNo.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                x.EmployeeName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                x.DeviceName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                (x.Notes != null && x.Notes.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
-                x.Status.ToString().Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                x.Source.ToString().Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
-        }
-
-        return result
+        return await query
             .OrderByDescending(x => x.AttendanceDate)
-            .ThenBy(x => x.EmployeeName)
-            .ToList();
+            .ThenByDescending(x => x.CheckIn)
+            .Take(maxResults)
+            .Select(x => new AttendanceRecordListViewModel
+            {
+                Id = x.Id,
+                EmployeeId = x.EmployeeId,
+                EmployeeNo = x.Employee.EmployeeNo,
+                EmployeeName = x.Employee.FullName,
+                AttendanceDate = x.AttendanceDate,
+                CheckIn = x.CheckIn,
+                CheckOut = x.CheckOut,
+                Source = x.Source,
+                Status = x.Status,
+                DeviceId = x.DeviceId,
+                DeviceName = x.Device != null ? x.Device.Name : string.Empty,
+                Notes = x.Notes
+            })
+            .ToListAsync();
+    }
+
+    private IQueryable<AttendanceRecord> ApplySearch(IQueryable<AttendanceRecord> query, string? searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+            return query;
+
+        var term = searchTerm.Trim();
+
+        var hasStatus = Enum.TryParse<AttendanceStatus>(term, true, out var parsedStatus);
+        var hasSource = Enum.TryParse<AttendanceSource>(term, true, out var parsedSource);
+
+        return query.Where(x =>
+            x.Employee.EmployeeNo.Contains(term) ||
+            x.Employee.FullName.Contains(term) ||
+            (x.Device != null && x.Device.Name.Contains(term)) ||
+            (x.Notes != null && x.Notes.Contains(term)) ||
+            (hasStatus && x.Status == parsedStatus) ||
+            (hasSource && x.Source == parsedSource));
     }
 
     public async Task<AttendanceRecordDetailsViewModel?> GetByIdAsync(int id)

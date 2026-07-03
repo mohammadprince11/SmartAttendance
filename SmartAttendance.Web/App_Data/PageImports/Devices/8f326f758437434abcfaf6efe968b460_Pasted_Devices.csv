@@ -1,0 +1,4 @@
+﻿Name,IpAddress,BranchCode,Port,SerialNumber,Model,IsActive,IsEnabled
+Device 1,192.168.1.10,BR-001,4370,DEV001,ZKTeco,TRUE,TRUE
+Device 2,192.168.1.11,BR-002,4370,DEV002,ZKTeco,TRUE,TRUE
+Device 3,192.168.1.12,BR-003,4370,DEV003,ZKTeco,TRUE,TRUE

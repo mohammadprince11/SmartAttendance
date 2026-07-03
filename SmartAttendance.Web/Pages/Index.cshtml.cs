@@ -1,216 +1,194 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using SmartAttendance.Application.Common.Interfaces.Repositories;
-using SmartAttendance.Domain.Entities;
-using SmartAttendance.Domain.Enums;
+using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages;
 
 public class IndexModel : PageModel
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly ApplicationDbContext _dbContext;
 
-    public IndexModel(IUnitOfWork unitOfWork)
+    public IndexModel(ApplicationDbContext dbContext)
     {
-        _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
     }
 
-    public DashboardCards Cards { get; set; } = new();
+    public int Companies { get; set; }
+    public int Branches { get; set; }
+    public int Departments { get; set; }
+    public int Employees { get; set; }
+    public int ActiveEmployees { get; set; }
+    public int InactiveEmployees { get; set; }
+    public int Devices { get; set; }
+    public int Shifts { get; set; }
+    public int AttendanceRecords { get; set; }
 
-    public List<RecentAttendanceRow> RecentAttendance { get; set; } = new();
+    public int TodayPresent { get; set; }
+    public int TodayLate { get; set; }
+    public int TodayAbsent { get; set; }
+    public int TodayMissingOut { get; set; }
 
-    public List<UpcomingHolidayRow> UpcomingHolidays { get; set; } = new();
+    public int PendingRequests { get; set; }
+    public int ApprovedRequests30 { get; set; }
+    public int RejectedRequests30 { get; set; }
 
-    public List<CurrentLeaveRow> CurrentLeaves { get; set; } = new();
+    public int Contracts30 { get; set; }
+    public int MissingPunches30 { get; set; }
+    public int Late30 { get; set; }
+    public int Absent30 { get; set; }
 
-    public DateOnly Today { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+    public List<NameCountRow> ByBranch { get; set; } = new();
+    public List<NameCountRow> ByDepartment { get; set; } = new();
+    public List<NameCountRow> ByGender { get; set; } = new();
+    public List<NameCountRow> ByCountry { get; set; } = new();
+    public List<NameCountRow> ByNationality { get; set; } = new();
+    public List<NameCountRow> ByContractType { get; set; } = new();
+    public List<NameCountRow> RequestsByStatus { get; set; } = new();
+    public List<ContractRow> ExpiringContracts { get; set; } = new();
+    public List<RequestRow> LatestRequests { get; set; } = new();
 
     public async Task OnGetAsync()
     {
-        var companies = await _unitOfWork.Companies.GetAllAsync();
-        var branches = await _unitOfWork.Branches.GetAllAsync();
-        var departments = await _unitOfWork.Departments.GetAllAsync();
-        var employees = await _unitOfWork.Employees.GetAllAsync();
-        var devices = await _unitOfWork.Devices.GetAllAsync();
-        var shifts = await _unitOfWork.Shifts.GetAllAsync();
-        var attendanceRecords = await _unitOfWork.AttendanceRecords.GetAllAsync();
-        var holidays = await _unitOfWork.Holidays.GetAllAsync();
-        var leaveRequests = await _unitOfWork.LeaveRequests.GetAllAsync();
+        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
-        var employeeLookup = employees.ToDictionary(x => x.Id);
+        Companies = await CountAsync("SELECT COUNT(*) FROM Companies");
+        Branches = await CountAsync("SELECT COUNT(*) FROM Branches");
+        Departments = await CountAsync("SELECT COUNT(*) FROM Departments");
+        Employees = await CountAsync("SELECT COUNT(*) FROM Employees");
+        ActiveEmployees = await CountAsync("SELECT COUNT(*) FROM Employees WHERE IsActive = 1");
+        InactiveEmployees = await CountAsync("SELECT COUNT(*) FROM Employees WHERE IsActive = 0");
+        Devices = await CountAsync("SELECT COUNT(*) FROM Devices");
+        Shifts = await CountAsync("SELECT COUNT(*) FROM Shifts");
+        AttendanceRecords = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords");
 
-        var todayRecords = attendanceRecords
-            .Where(x => x.AttendanceDate == Today)
-            .ToList();
+        TodayPresent = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate = CAST(GETDATE() AS date) AND Status = 1");
+        TodayLate = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate = CAST(GETDATE() AS date) AND Status = 2");
+        TodayAbsent = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate = CAST(GETDATE() AS date) AND Status = 3");
+        TodayMissingOut = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate = CAST(GETDATE() AS date) AND CheckOut IS NULL");
 
-        var todayLeaves = leaveRequests
-            .Where(x =>
-                x.Status == LeaveStatus.Approved &&
-                x.FromDate <= Today &&
-                x.ToDate >= Today)
-            .ToList();
+        PendingRequests = await CountAsync("SELECT COUNT(*) FROM SelfServiceRequests WHERE Status = 'Pending'");
+        ApprovedRequests30 = await CountAsync("SELECT COUNT(*) FROM SelfServiceRequests WHERE Status = 'Approved' AND CreatedAt >= DATEADD(day, -30, SYSUTCDATETIME())");
+        RejectedRequests30 = await CountAsync("SELECT COUNT(*) FROM SelfServiceRequests WHERE Status = 'Rejected' AND CreatedAt >= DATEADD(day, -30, SYSUTCDATETIME())");
 
-        var todayHoliday = holidays.FirstOrDefault(x =>
-            x.HolidayDate == Today ||
-            (x.IsRecurring && x.HolidayDate.Month == Today.Month && x.HolidayDate.Day == Today.Day));
+        Contracts30 = await CountAsync("SELECT COUNT(*) FROM Employees WHERE ContractEndDate IS NOT NULL AND ContractEndDate >= CAST(GETDATE() AS date) AND ContractEndDate <= DATEADD(day, 30, CAST(GETDATE() AS date))");
+        MissingPunches30 = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate >= DATEADD(day, -30, CAST(GETDATE() AS date)) AND CheckOut IS NULL");
+        Late30 = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate >= DATEADD(day, -30, CAST(GETDATE() AS date)) AND Status = 2");
+        Absent30 = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate >= DATEADD(day, -30, CAST(GETDATE() AS date)) AND Status = 3");
 
-        Cards = new DashboardCards
-        {
-            CompaniesCount = companies.Count(),
-            BranchesCount = branches.Count(),
-            DepartmentsCount = departments.Count(),
-            EmployeesCount = employees.Count(),
-            ActiveEmployeesCount = employees.Count(x => x.IsActive),
-            DevicesCount = devices.Count(),
-            ActiveDevicesCount = devices.Count(x => x.IsActive),
-            ShiftsCount = shifts.Count(),
-            AttendanceRecordsCount = attendanceRecords.Count(),
-            HolidaysCount = holidays.Count(),
-            ApprovedLeavesCount = leaveRequests.Count(x => x.Status == LeaveStatus.Approved),
+        ByBranch = await LoadNameCountsAsync("""
+SELECT TOP 10 ISNULL(b.Name, 'Not Set') AS Name, COUNT(*) AS Total
+FROM Employees e
+LEFT JOIN Departments d ON e.DepartmentId = d.Id
+LEFT JOIN Branches b ON d.BranchId = b.Id
+GROUP BY ISNULL(b.Name, 'Not Set')
+ORDER BY Total DESC;
+""");
 
-            TodayPresentCount = todayRecords.Count(x =>
-                x.Status == AttendanceStatus.Present ||
-                x.Status == AttendanceStatus.Late),
+        ByDepartment = await LoadNameCountsAsync("""
+SELECT TOP 10 ISNULL(d.Name, 'Not Set') AS Name, COUNT(*) AS Total
+FROM Employees e
+LEFT JOIN Departments d ON e.DepartmentId = d.Id
+GROUP BY ISNULL(d.Name, 'Not Set')
+ORDER BY Total DESC;
+""");
 
-            TodayLeaveCount = todayLeaves.Count,
-            TodayHolidayCount = todayHoliday == null ? 0 : 1,
+        ByGender = await LoadNameCountsAsync("SELECT TOP 10 ISNULL(NULLIF(Gender, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(Gender, ''), 'Not Set') ORDER BY Total DESC");
+        ByCountry = await LoadNameCountsAsync("SELECT TOP 10 ISNULL(NULLIF(Country, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(Country, ''), 'Not Set') ORDER BY Total DESC");
+        ByNationality = await LoadNameCountsAsync("SELECT TOP 10 ISNULL(NULLIF(Nationality, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(Nationality, ''), 'Not Set') ORDER BY Total DESC");
+        ByContractType = await LoadNameCountsAsync("SELECT TOP 10 ISNULL(NULLIF(ContractType, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(ContractType, ''), 'Not Set') ORDER BY Total DESC");
+        RequestsByStatus = await LoadNameCountsAsync("SELECT Status AS Name, COUNT(*) AS Total FROM SelfServiceRequests GROUP BY Status ORDER BY Total DESC");
 
-            TodayMissingCheckOutCount = todayRecords.Count(x => !x.CheckOut.HasValue)
-        };
-
-        RecentAttendance = attendanceRecords
-            .OrderByDescending(x => x.AttendanceDate)
-            .ThenByDescending(x => x.CheckIn)
-            .Take(10)
-            .Select(x =>
+        ExpiringContracts = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT TOP 12
+    EmployeeNo,
+    FullName,
+    ISNULL(Position, '') AS Position,
+    ContractEndDate
+FROM Employees
+WHERE ContractEndDate IS NOT NULL
+  AND ContractEndDate >= CAST(GETDATE() AS date)
+  AND ContractEndDate <= DATEADD(day, 60, CAST(GETDATE() AS date))
+ORDER BY ContractEndDate;
+""",
+            null,
+            reader => new ContractRow
             {
-                employeeLookup.TryGetValue(x.EmployeeId, out var employee);
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+                Position = HrmsDatabase.GetString(reader, "Position"),
+                ContractEndDate = HrmsDatabase.GetDateOnly(reader, "ContractEndDate")
+            });
 
-                return new RecentAttendanceRow
-                {
-                    AttendanceDate = x.AttendanceDate,
-                    EmployeeNo = employee?.EmployeeNo ?? "-",
-                    EmployeeName = employee?.FullName ?? "-",
-                    CheckIn = x.CheckIn,
-                    CheckOut = x.CheckOut,
-                    Status = x.Status.ToString(),
-                    Source = x.Source.ToString()
-                };
-            })
-            .ToList();
-
-        UpcomingHolidays = holidays
-            .Select(x => new UpcomingHolidayRow
+        LatestRequests = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT TOP 10
+    r.Id,
+    e.EmployeeNo,
+    e.FullName,
+    r.RequestType,
+    r.Status,
+    ISNULL(r.CurrentStep, '') AS CurrentStep,
+    r.CreatedAt
+FROM SelfServiceRequests r
+INNER JOIN Employees e ON r.EmployeeId = e.Id
+ORDER BY r.CreatedAt DESC;
+""",
+            null,
+            reader => new RequestRow
             {
-                Name = x.Name,
-                HolidayDate = ResolveUpcomingHolidayDate(x, Today),
-                IsRecurring = x.IsRecurring
-            })
-            .Where(x => x.HolidayDate >= Today)
-            .OrderBy(x => x.HolidayDate)
-            .Take(5)
-            .ToList();
-
-        CurrentLeaves = todayLeaves
-            .OrderBy(x => x.FromDate)
-            .Take(10)
-            .Select(x =>
-            {
-                employeeLookup.TryGetValue(x.EmployeeId, out var employee);
-
-                return new CurrentLeaveRow
-                {
-                    EmployeeNo = employee?.EmployeeNo ?? "-",
-                    EmployeeName = employee?.FullName ?? "-",
-                    LeaveType = x.LeaveType.ToString(),
-                    FromDate = x.FromDate,
-                    ToDate = x.ToDate
-                };
-            })
-            .ToList();
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+                RequestType = HrmsDatabase.GetString(reader, "RequestType"),
+                Status = HrmsDatabase.GetString(reader, "Status"),
+                CurrentStep = HrmsDatabase.GetString(reader, "CurrentStep"),
+                CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt")
+            });
     }
 
-    private static DateOnly ResolveUpcomingHolidayDate(Holiday holiday, DateOnly today)
+    private async Task<int> CountAsync(string sql)
     {
-        if (!holiday.IsRecurring)
-            return holiday.HolidayDate;
-
-        var thisYearDate = new DateOnly(today.Year, holiday.HolidayDate.Month, holiday.HolidayDate.Day);
-
-        if (thisYearDate >= today)
-            return thisYearDate;
-
-        return new DateOnly(today.Year + 1, holiday.HolidayDate.Month, holiday.HolidayDate.Day);
+        return await HrmsDatabase.ScalarAsync<int>(_dbContext, sql);
     }
-}
 
-public class DashboardCards
-{
-    public int CompaniesCount { get; set; }
+    private async Task<List<NameCountRow>> LoadNameCountsAsync(string sql)
+    {
+        return await HrmsDatabase.QueryAsync(
+            _dbContext,
+            sql,
+            null,
+            reader => new NameCountRow
+            {
+                Name = HrmsDatabase.GetString(reader, "Name"),
+                Total = HrmsDatabase.GetInt(reader, "Total")
+            });
+    }
 
-    public int BranchesCount { get; set; }
+    public class NameCountRow
+    {
+        public string Name { get; set; } = string.Empty;
+        public int Total { get; set; }
+    }
 
-    public int DepartmentsCount { get; set; }
+    public class ContractRow
+    {
+        public string EmployeeNo { get; set; } = string.Empty;
+        public string EmployeeName { get; set; } = string.Empty;
+        public string Position { get; set; } = string.Empty;
+        public DateOnly? ContractEndDate { get; set; }
+    }
 
-    public int EmployeesCount { get; set; }
-
-    public int ActiveEmployeesCount { get; set; }
-
-    public int DevicesCount { get; set; }
-
-    public int ActiveDevicesCount { get; set; }
-
-    public int ShiftsCount { get; set; }
-
-    public int AttendanceRecordsCount { get; set; }
-
-    public int HolidaysCount { get; set; }
-
-    public int ApprovedLeavesCount { get; set; }
-
-    public int TodayPresentCount { get; set; }
-
-    public int TodayLeaveCount { get; set; }
-
-    public int TodayHolidayCount { get; set; }
-
-    public int TodayMissingCheckOutCount { get; set; }
-}
-
-public class RecentAttendanceRow
-{
-    public DateOnly AttendanceDate { get; set; }
-
-    public string EmployeeNo { get; set; } = string.Empty;
-
-    public string EmployeeName { get; set; } = string.Empty;
-
-    public DateTime CheckIn { get; set; }
-
-    public DateTime? CheckOut { get; set; }
-
-    public string Status { get; set; } = string.Empty;
-
-    public string Source { get; set; } = string.Empty;
-}
-
-public class UpcomingHolidayRow
-{
-    public string Name { get; set; } = string.Empty;
-
-    public DateOnly HolidayDate { get; set; }
-
-    public bool IsRecurring { get; set; }
-}
-
-public class CurrentLeaveRow
-{
-    public string EmployeeNo { get; set; } = string.Empty;
-
-    public string EmployeeName { get; set; } = string.Empty;
-
-    public string LeaveType { get; set; } = string.Empty;
-
-    public DateOnly FromDate { get; set; }
-
-    public DateOnly ToDate { get; set; }
+    public class RequestRow
+    {
+        public int Id { get; set; }
+        public string EmployeeNo { get; set; } = string.Empty;
+        public string EmployeeName { get; set; } = string.Empty;
+        public string RequestType { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string CurrentStep { get; set; } = string.Empty;
+        public DateTime? CreatedAt { get; set; }
+    }
 }

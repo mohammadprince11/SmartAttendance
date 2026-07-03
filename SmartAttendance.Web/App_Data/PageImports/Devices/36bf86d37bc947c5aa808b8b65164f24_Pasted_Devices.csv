@@ -1,0 +1,8 @@
+﻿Name,IpAddress,BranchCode,SerialNumber
+AL-Bayaa Device,192.168.1.10,3,DEV-ALBAYAA-01
+AL-Dabbash Device,192.168.1.11,1,DEV-DABBASH-01
+AL-Salhiyah Device,192.168.1.12,5,DEV-SALHIYAH-01
+Al-Shaab Device,192.168.1.13,7,DEV-SHAAB-01
+AL-Wood Device,192.168.1.14,8,DEV-WOOD-01
+Jamila Device,192.168.1.16,4,DEV-JAMILA-01
+Rusafa Device,192.168.1.17,6,DEV-RUSAFA-01

@@ -1,0 +1,106 @@
+/* Sidebar module grouping */
+
+.sidebar-modules-nav {
+    display: grid;
+    gap: 8px;
+    padding-bottom: 24px;
+}
+
+.sidebar-single-link,
+.nav-module summary,
+.nav-module-links a {
+    min-height: 42px;
+    border-radius: 13px;
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--sa-muted) !important;
+    font-weight: 1000;
+    padding: 0 12px;
+}
+
+.sidebar-single-link:hover,
+.nav-module summary:hover,
+.nav-module-links a:hover {
+    background: var(--sa-surface-2) !important;
+    color: var(--sa-text) !important;
+}
+
+.nav-module {
+    border: 1px solid transparent;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.nav-module[open] {
+    background: rgba(37, 99, 235, 0.04);
+    border-color: var(--sa-border);
+}
+
+.nav-module summary {
+    cursor: pointer;
+    list-style: none;
+    color: var(--sa-text) !important;
+}
+
+.nav-module summary::-webkit-details-marker {
+    display: none;
+}
+
+.nav-chevron {
+    margin-inline-start: auto;
+    color: var(--sa-muted);
+    transition: transform 160ms ease;
+}
+
+.nav-module[open] .nav-chevron {
+    transform: rotate(180deg);
+}
+
+.nav-module-links {
+    display: grid;
+    gap: 2px;
+    padding: 4px 8px 8px;
+}
+
+.nav-module-links a {
+    min-height: 38px;
+    padding-inline-start: 18px;
+    font-size: 13px;
+}
+
+html[dir="rtl"] .nav-module-links a {
+    padding-inline-start: 12px;
+    padding-inline-end: 18px;
+}
+
+.nav-disabled-link {
+    opacity: 0.48;
+    cursor: not-allowed;
+}
+
+html[data-theme="dark"] .nav-module[open] {
+    background: rgba(91, 140, 255, 0.07);
+    border-color: #2b3a55;
+}
+
+html[data-sidebar="collapsed"] .nav-module {
+    border-color: transparent !important;
+    background: transparent !important;
+}
+
+html[data-sidebar="collapsed"] .nav-module summary,
+html[data-sidebar="collapsed"] .sidebar-single-link {
+    justify-content: center;
+    padding: 0;
+}
+
+html[data-sidebar="collapsed"] .nav-module-links {
+    display: none;
+}
+
+html[data-sidebar="collapsed"] .nav-text,
+html[data-sidebar="collapsed"] .nav-chevron {
+    display: none !important;
+}

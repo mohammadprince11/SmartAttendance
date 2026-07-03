@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.Departments.IndexModel
 
 @{
@@ -8,10 +8,13 @@
 <div class="page-header">
     <div>
         <h1>Departments</h1>
-        <p>Manage departments under branches</p>
+        <p>Manage departments</p>
     </div>
 
-    <a asp-page="./Create" class="btn-primary">+ Add Department</a>
+    <div class="form-actions">
+        <a asp-page="./Import" class="btn-secondary">Import Excel</a>
+        <a asp-page="./Create" class="btn-primary">+ Add Department</a>
+    </div>
 </div>
 
 @if (TempData["SuccessMessage"] != null)
@@ -26,7 +29,7 @@
         <input type="text"
                name="SearchTerm"
                value="@Model.SearchTerm"
-               placeholder="Search by code, name, or branch..." />
+               placeholder="Search by department name or code..." />
 
         <button type="submit" class="btn-primary">Search</button>
         <a asp-page="./Index" class="btn-secondary">Clear</a>
@@ -38,7 +41,7 @@
                 <th>Code</th>
                 <th>Department Name</th>
                 <th>Branch</th>
-                <th>Status</th>
+                <th>Active</th>
                 <th style="width: 160px;">Actions</th>
             </tr>
         </thead>
@@ -52,9 +55,7 @@
                         <td>@department.Code</td>
                         <td>@department.Name</td>
                         <td>@department.BranchName</td>
-                        <td>
-                            @(department.IsActive ? "Active" : "Inactive")
-                        </td>
+                        <td>@(department.IsActive ? "Yes" : "No")</td>
                         <td>
                             <a asp-page="./Edit" asp-route-id="@department.Id" class="btn-table btn-edit">Edit</a>
                             <a asp-page="./Delete" asp-route-id="@department.Id" class="btn-table btn-delete">Delete</a>
@@ -65,9 +66,7 @@
             else
             {
                 <tr>
-                    <td colspan="5" style="text-align:center;">
-                        No departments found.
-                    </td>
+                    <td colspan="5" style="text-align:center;">No departments found.</td>
                 </tr>
             }
         </tbody>

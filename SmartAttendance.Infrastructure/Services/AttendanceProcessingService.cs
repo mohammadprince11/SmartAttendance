@@ -69,14 +69,16 @@ public class AttendanceProcessingService : IAttendanceProcessingService
                 if (employeeShift != null)
                     shiftLookup.TryGetValue(employeeShift.ShiftId, out shift);
 
+                var isWeeklyOff = IsWeeklyOff(employeeShift, attendanceDate);
+
                 var approvedLeave = FindApprovedLeave(
                     leaveRequests,
                     employee.Id,
                     attendanceDate);
 
                 var processed = record != null
-                    ? BuildProcessedRecord(record, employee, shift, holiday, approvedLeave)
-                    : BuildGeneratedRecord(employee, attendanceDate, shift, holiday, approvedLeave);
+                    ? BuildProcessedRecord(record, employee, shift, holiday, approvedLeave, employeeShift?.WeeklyOffDays, isWeeklyOff)
+                    : BuildGeneratedRecord(employee, attendanceDate, shift, holiday, approvedLeave, employeeShift?.WeeklyOffDays, isWeeklyOff);
 
                 result.Add(processed);
             }
@@ -91,6 +93,7 @@ public class AttendanceProcessingService : IAttendanceProcessingService
                 x.EmployeeName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 x.ShiftCode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 x.ShiftName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                (x.WeeklyOffDays != null && x.WeeklyOffDays.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
                 x.CalculatedStatus.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 x.OriginalStatus.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 x.Source.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
@@ -155,7 +158,9 @@ public class AttendanceProcessingService : IAttendanceProcessingService
         DateOnly attendanceDate,
         Shift? shift,
         Holiday? holiday,
-        LeaveRequest? approvedLeave)
+        LeaveRequest? approvedLeave,
+        string? weeklyOffDays,
+        bool isWeeklyOff)
     {
         var model = new AttendanceProcessingResultViewModel
         {
@@ -167,7 +172,9 @@ public class AttendanceProcessingService : IAttendanceProcessingService
             OriginalStatus = "-",
             LateMinutes = 0,
             EarlyLeaveMinutes = null,
-            MissingCheckOut = false
+            MissingCheckOut = false,
+            WeeklyOffDays = weeklyOffDays,
+            IsWeeklyOff = isWeeklyOff
         };
 
         FillShiftData(model, shift);
@@ -188,6 +195,13 @@ public class AttendanceProcessingService : IAttendanceProcessingService
             return model;
         }
 
+        if (isWeeklyOff)
+        {
+            model.CalculatedStatus = "Weekly Off";
+            model.Notes = $"Weekly off day: {attendanceDate.DayOfWeek}";
+            return model;
+        }
+
         model.CalculatedStatus = "Absent";
 
         return model;
@@ -198,7 +212,9 @@ public class AttendanceProcessingService : IAttendanceProcessingService
         Employee employee,
         Shift? shift,
         Holiday? holiday,
-        LeaveRequest? approvedLeave)
+        LeaveRequest? approvedLeave,
+        string? weeklyOffDays,
+        bool isWeeklyOff)
     {
         var model = new AttendanceProcessingResultViewModel
         {
@@ -214,19 +230,52 @@ public class AttendanceProcessingService : IAttendanceProcessingService
             Notes = record.Notes,
             MissingCheckOut = !record.CheckOut.HasValue,
             HolidayName = holiday?.Name,
-            LeaveType = approvedLeave?.LeaveType.ToString()
+            LeaveType = approvedLeave?.LeaveType.ToString(),
+            WeeklyOffDays = weeklyOffDays,
+            IsWeeklyOff = isWeeklyOff
         };
 
         FillShiftData(model, shift);
+
+        if (record.CheckOut.HasValue)
+            model.WorkingHours = CalculateWorkingHours(record.CheckIn, record.CheckOut.Value);
+
+        if (holiday != null)
+        {
+            model.CalculatedStatus = "Holiday Work";
+            model.Notes = string.IsNullOrWhiteSpace(model.Notes)
+                ? $"Worked on holiday: {holiday.Name}"
+                : model.Notes;
+            return model;
+        }
+
+        if (approvedLeave != null)
+        {
+            model.CalculatedStatus = "Leave Work";
+            model.Notes = string.IsNullOrWhiteSpace(model.Notes)
+                ? "Worked during approved leave."
+                : model.Notes;
+            return model;
+        }
+
+        if (isWeeklyOff)
+        {
+            model.LateMinutes = 0;
+            model.EarlyLeaveMinutes = null;
+            model.CalculatedStatus = record.CheckOut.HasValue
+                ? "Work On Weekly Off"
+                : "Weekly Off Missing Check Out";
+            model.Notes = string.IsNullOrWhiteSpace(model.Notes)
+                ? $"Worked on weekly off day: {record.AttendanceDate.DayOfWeek}"
+                : model.Notes;
+            return model;
+        }
 
         if (shift == null)
         {
             model.CalculatedStatus = record.CheckOut.HasValue
                 ? record.Status.ToString()
                 : "Missing Check Out";
-
-            if (record.CheckOut.HasValue)
-                model.WorkingHours = CalculateWorkingHours(record.CheckIn, record.CheckOut.Value);
 
             return model;
         }
@@ -241,7 +290,6 @@ public class AttendanceProcessingService : IAttendanceProcessingService
 
         if (record.CheckOut.HasValue)
         {
-            model.WorkingHours = CalculateWorkingHours(record.CheckIn, record.CheckOut.Value);
             model.EarlyLeaveMinutes = CalculateEarlyLeaveMinutes(record.CheckOut.Value, scheduledEnd, shift.GraceOutMinutes);
         }
 
@@ -259,6 +307,18 @@ public class AttendanceProcessingService : IAttendanceProcessingService
         model.ShiftName = shift.Name;
         model.ShiftStartTime = shift.StartTime;
         model.ShiftEndTime = shift.EndTime;
+    }
+
+    private static bool IsWeeklyOff(EmployeeShift? employeeShift, DateOnly attendanceDate)
+    {
+        if (employeeShift == null || string.IsNullOrWhiteSpace(employeeShift.WeeklyOffDays))
+            return false;
+
+        var currentDay = attendanceDate.DayOfWeek.ToString();
+
+        return employeeShift.WeeklyOffDays
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(day => day.Equals(currentDay, StringComparison.OrdinalIgnoreCase));
     }
 
     private static int CalculateLateMinutes(DateTime checkIn, DateTime scheduledStart, int graceInMinutes)

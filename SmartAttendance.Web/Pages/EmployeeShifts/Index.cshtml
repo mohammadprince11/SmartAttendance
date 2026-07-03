@@ -8,7 +8,7 @@
 <div class="page-header">
     <div>
         <h1>Employee Shifts</h1>
-        <p>Assign shifts to employees with effective dates</p>
+        <p>Assign shifts and weekly off days to employees with effective dates</p>
     </div>
 
     <a asp-page="./Create" class="btn-primary">+ Assign Shift</a>
@@ -26,7 +26,7 @@
         <input type="text"
                name="SearchTerm"
                value="@Model.SearchTerm"
-               placeholder="Search by employee no, employee name, shift code, or shift name..." />
+               placeholder="Search by employee, shift, or weekly off..." />
 
         <button type="submit" class="btn-primary">Search</button>
         <a asp-page="./Index" class="btn-secondary">Clear</a>
@@ -38,6 +38,7 @@
                 <th>Employee No</th>
                 <th>Employee Name</th>
                 <th>Shift</th>
+                <th>Weekly Off</th>
                 <th>Effective From</th>
                 <th>Effective To</th>
                 <th>Current</th>
@@ -54,6 +55,7 @@
                         <td>@item.EmployeeNo</td>
                         <td>@item.EmployeeName</td>
                         <td>@item.ShiftCode - @item.ShiftName</td>
+                        <td>@(string.IsNullOrWhiteSpace(item.WeeklyOffDays) ? "-" : item.WeeklyOffDays)</td>
                         <td>@item.EffectiveFrom</td>
                         <td>@(item.EffectiveTo?.ToString() ?? "-")</td>
                         <td>@(item.IsCurrent ? "Yes" : "No")</td>
@@ -67,7 +69,7 @@
             else
             {
                 <tr>
-                    <td colspan="7" style="text-align:center;">
+                    <td colspan="8" style="text-align:center;">
                         No employee shifts found.
                     </td>
                 </tr>

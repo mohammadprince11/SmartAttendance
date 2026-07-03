@@ -1,0 +1,72 @@
+/* Access denied */
+
+.access-denied-page {
+    min-height: calc(100vh - 150px);
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.access-denied-card {
+    width: min(480px, 100%);
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    box-shadow: var(--sa-shadow);
+    border-radius: 24px;
+    padding: 28px;
+    text-align: center;
+}
+
+.access-denied-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 22px;
+    margin: 0 auto 14px;
+    background: var(--sa-danger-soft);
+    color: var(--sa-danger);
+    display: grid;
+    place-items: center;
+    font-size: 34px;
+}
+
+.access-denied-card h1 {
+    margin: 0;
+    color: var(--sa-text);
+    font-weight: 1000;
+}
+
+.access-denied-card p {
+    color: var(--sa-muted);
+    font-weight: 900;
+}
+
+.access-denied-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+.access-btn-primary,
+.access-btn-secondary {
+    min-height: 42px;
+    border-radius: 13px;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 1000;
+    text-decoration: none;
+}
+
+.access-btn-primary {
+    background: var(--sa-primary);
+    color: #fff !important;
+}
+
+.access-btn-secondary {
+    background: var(--sa-surface-2);
+    color: var(--sa-text) !important;
+    border: 1px solid var(--sa-border);
+}

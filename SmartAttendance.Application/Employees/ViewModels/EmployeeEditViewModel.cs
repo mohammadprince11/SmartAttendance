@@ -14,6 +14,8 @@ public class EmployeeEditViewModel
 
     public string? Email { get; set; }
 
+    public string? Position { get; set; }
+
     public DateOnly HireDate { get; set; }
 
     public DateOnly? BirthDate { get; set; }

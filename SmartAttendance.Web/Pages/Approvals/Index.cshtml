@@ -1,0 +1,113 @@
+@page
+@model SmartAttendance.Web.Pages.Approvals.IndexModel
+
+@{
+    ViewData["Title"] = "Approvals";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page">
+    <div class="page-header">
+        <div>
+            <h1>الموافقات</h1>
+            <p>مسار موافقات على مرحلتين: المدير المباشر ثم HR.</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Message))
+    {
+        <div class="hrms-alert success">@Model.Message</div>
+    }
+
+    <form method="get" class="hrms-filter-card">
+        <div class="hrms-grid-3">
+            <div class="hrms-field">
+                <label>مرحلة الموافقة</label>
+                <select asp-for="Step">
+                    <option value="Manager">المدير المباشر</option>
+                    <option value="HR">HR</option>
+                    <option value="All">الكل</option>
+                </select>
+            </div>
+
+            <div class="hrms-field">
+                <label>الحالة</label>
+                <select asp-for="Status">
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                    <option value="All">All</option>
+                </select>
+            </div>
+
+            <div class="hrms-actions" style="align-self:end;">
+                <button class="hrms-btn-primary">تطبيق</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="hrms-table-card">
+        <div class="hrms-table-wrap">
+            <table class="hrms-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>رقم الموظف</th>
+                        <th class="text-start">الاسم</th>
+                        <th>المدير المباشر</th>
+                        <th>نوع الطلب</th>
+                        <th>الفترة</th>
+                        <th>الحالة</th>
+                        <th>المرحلة</th>
+                        <th>موافقة المدير</th>
+                        <th>موافقة HR</th>
+                        <th>السبب</th>
+                        <th>قرار</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var request in Model.Requests)
+                    {
+                        var decisionStep = request.CurrentStep == "HR" ? "HR" : "Manager";
+
+                        <tr>
+                            <td>@request.Id</td>
+                            <td>@request.EmployeeNo</td>
+                            <td class="text-start">@request.EmployeeName</td>
+                            <td>@(string.IsNullOrWhiteSpace(request.DirectManager) ? "-" : request.DirectManager)</td>
+                            <td>@request.RequestType</td>
+                            <td>@request.FromDate?.ToString("yyyy-MM-dd") - @request.ToDate?.ToString("yyyy-MM-dd")</td>
+                            <td><span class="hrms-badge @request.Status.ToLower()">@request.Status</span></td>
+                            <td>@request.CurrentStep</td>
+                            <td>@(string.IsNullOrWhiteSpace(request.ManagerStatus) ? "-" : request.ManagerStatus)</td>
+                            <td>@(string.IsNullOrWhiteSpace(request.HrStatus) ? "-" : request.HrStatus)</td>
+                            <td class="text-start">@request.Reason</td>
+                            <td>
+                                @if (request.Status == "Pending")
+                                {
+                                    <form method="post" class="hrms-actions" style="justify-content:center;">
+                                        <input asp-for="Note" placeholder="ملاحظة" style="min-height:34px;border-radius:10px;border:1px solid var(--sa-border);background:var(--sa-input);color:var(--sa-text);" />
+                                        <button asp-page-handler="Approve" asp-route-id="@request.Id" asp-route-step="@decisionStep" class="hrms-btn-success">موافقة</button>
+                                        <button asp-page-handler="Reject" asp-route-id="@request.Id" asp-route-step="@decisionStep" class="hrms-btn-danger">رفض</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+
+                    @if (!Model.Requests.Any())
+                    {
+                        <tr>
+                            <td colspan="12" class="hrms-empty">لا توجد طلبات حسب الفلاتر.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

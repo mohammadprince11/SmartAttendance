@@ -1,0 +1,73 @@
+@page
+@model SmartAttendance.Web.Pages.Notifications.IndexModel
+
+@{
+    ViewData["Title"] = "Notifications";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page">
+    <div class="page-header">
+        <div>
+            <h1>الإشعارات</h1>
+            <p>تنبيهات الطلبات والتعديلات والأحداث المهمة.</p>
+        </div>
+    </div>
+
+    <div class="hrms-table-card">
+        <div class="hrms-table-wrap">
+            <table class="hrms-table">
+                <thead>
+                    <tr>
+                        <th>الحالة</th>
+                        <th class="text-start">العنوان</th>
+                        <th class="text-start">الرسالة</th>
+                        <th>الدور</th>
+                        <th>التاريخ</th>
+                        <th>فتح</th>
+                        <th>قراءة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Notifications)
+                    {
+                        <tr>
+                            <td>
+                                <span class="hrms-badge @(item.IsRead ? "approved" : "pending")">
+                                    @(item.IsRead ? "مقروء" : "جديد")
+                                </span>
+                            </td>
+                            <td class="text-start">@item.Title</td>
+                            <td class="text-start">@item.Message</td>
+                            <td>@item.TargetRole</td>
+                            <td>@item.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(item.Url))
+                                {
+                                    <a href="@item.Url" class="hrms-btn-secondary">فتح</a>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!item.IsRead)
+                                {
+                                    <form method="post" asp-page-handler="MarkRead" asp-route-id="@item.Id">
+                                        <button class="hrms-btn-primary">تم</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

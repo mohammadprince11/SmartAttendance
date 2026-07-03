@@ -20,6 +20,10 @@ public class AttendanceProcessingResultViewModel
 
     public TimeOnly? ShiftEndTime { get; set; }
 
+    public string? WeeklyOffDays { get; set; }
+
+    public bool IsWeeklyOff { get; set; }
+
     public DateTime? CheckIn { get; set; }
 
     public DateTime? CheckOut { get; set; }

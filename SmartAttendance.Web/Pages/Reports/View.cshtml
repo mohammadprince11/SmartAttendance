@@ -1,0 +1,200 @@
+@page
+@model SmartAttendance.Web.Pages.Reports.ViewModel
+
+@{
+    ViewData["Title"] = Model.ReportTitle;
+}
+
+<link rel="stylesheet" href="~/css/reports-rebuild.css" asp-append-version="true" />
+
+<div class="reports-page">
+    <div class="page-header reports-header">
+        <div>
+            <h1>@Model.ReportTitle</h1>
+            <p>
+                <span data-reports-text="standaloneReportHint">تقرير مستقل مع فلاتر وتصدير Excel.</span>
+                <strong>@Model.TotalRows</strong>
+                <span data-reports-text="records">سجل</span>
+            </p>
+        </div>
+
+        <div class="report-view-actions">
+            <a asp-page="./Index" class="reports-secondary-action" data-reports-text="backToReports">الرجوع للتقارير</a>
+
+            <a asp-page-handler="Export"
+               asp-route-Source="@Model.Source"
+               asp-route-Fields="@Model.Fields"
+               asp-route-Name="@Model.Name"
+               asp-route-SystemKey="@Model.SystemKey"
+               asp-route-Search="@Model.Search"
+               asp-route-Branch="@Model.Branch"
+               asp-route-Department="@Model.Department"
+               asp-route-FromDate="@Model.FromDate"
+               asp-route-ToDate="@Model.ToDate"
+               class="reports-primary-action">
+                <span data-reports-text="exportExcel">تصدير Excel</span>
+            </a>
+        </div>
+    </div>
+
+    <form method="get" class="report-filter-card">
+        <input type="hidden" asp-for="Source" />
+        <input type="hidden" asp-for="Fields" />
+        <input type="hidden" asp-for="Name" />
+        <input type="hidden" asp-for="SystemKey" />
+        <input type="hidden" name="PageNumber" value="1" />
+
+        <div class="report-form-group">
+            <label data-reports-text="search">بحث</label>
+            <input asp-for="Search" placeholder="بحث..." data-reports-placeholder="generalSearch" />
+        </div>
+
+        <div class="report-form-group">
+            <label data-reports-text="branch">الفرع</label>
+            <select asp-for="Branch">
+                <option value="" data-reports-text="all">الكل</option>
+                @foreach (var branch in Model.Branches)
+                {
+                    <option value="@branch">@branch</option>
+                }
+            </select>
+        </div>
+
+        <div class="report-form-group">
+            <label data-reports-text="department">القسم</label>
+            <select asp-for="Department">
+                <option value="" data-reports-text="all">الكل</option>
+                @foreach (var department in Model.Departments)
+                {
+                    <option value="@department">@department</option>
+                }
+            </select>
+        </div>
+
+        <div class="report-form-group">
+            <label data-reports-text="fromDate">من تاريخ</label>
+            <input asp-for="FromDate" type="date" />
+        </div>
+
+        <div class="report-form-group">
+            <label data-reports-text="toDate">إلى تاريخ</label>
+            <input asp-for="ToDate" type="date" />
+        </div>
+
+        <div class="report-form-group">
+            <label data-reports-text="rowsPerPage">عدد الصفوف</label>
+            <select asp-for="PageSize">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+
+        <div class="report-filter-actions">
+            <button type="submit" class="reports-primary-action" data-reports-text="apply">تطبيق</button>
+            <a asp-page="./View"
+               asp-route-Source="@Model.Source"
+               asp-route-Fields="@Model.Fields"
+               asp-route-Name="@Model.Name"
+               asp-route-SystemKey="@Model.SystemKey"
+               class="reports-secondary-action"
+               data-reports-text="clear">مسح</a>
+        </div>
+    </form>
+
+    <div class="report-data-toolbar">
+        <div>
+            <strong data-reports-text="displayDataOnly">عرض البيانات</strong>
+            <span>
+                @Model.StartRow - @Model.EndRow
+                <span data-reports-text="of">من</span>
+                @Model.TotalRows
+            </span>
+        </div>
+
+        <div class="report-pagination">
+            <a class="reports-secondary-action @(Model.PageNumber <= 1 ? "disabled" : "")"
+               asp-page="./View"
+               asp-route-Source="@Model.Source"
+               asp-route-Fields="@Model.Fields"
+               asp-route-Name="@Model.Name"
+               asp-route-SystemKey="@Model.SystemKey"
+               asp-route-Search="@Model.Search"
+               asp-route-Branch="@Model.Branch"
+               asp-route-Department="@Model.Department"
+               asp-route-FromDate="@Model.FromDate"
+               asp-route-ToDate="@Model.ToDate"
+               asp-route-PageSize="@Model.PageSize"
+               asp-route-PageNumber="@(Model.PageNumber - 1)"
+               data-reports-text="previous">السابق</a>
+
+            <span class="report-page-badge">
+                @Model.PageNumber / @Model.TotalPages
+            </span>
+
+            <a class="reports-secondary-action @(Model.PageNumber >= Model.TotalPages ? "disabled" : "")"
+               asp-page="./View"
+               asp-route-Source="@Model.Source"
+               asp-route-Fields="@Model.Fields"
+               asp-route-Name="@Model.Name"
+               asp-route-SystemKey="@Model.SystemKey"
+               asp-route-Search="@Model.Search"
+               asp-route-Branch="@Model.Branch"
+               asp-route-Department="@Model.Department"
+               asp-route-FromDate="@Model.FromDate"
+               asp-route-ToDate="@Model.ToDate"
+               asp-route-PageSize="@Model.PageSize"
+               asp-route-PageNumber="@(Model.PageNumber + 1)"
+               data-reports-text="next">التالي</a>
+        </div>
+    </div>
+
+    @if (Model.IsLimited)
+    {
+        <div class="reports-warning">
+            <span data-reports-text="exportLimitedRows">تصدير Excel محدود بـ 20000 سجل لتحسين الأداء. استخدم الفلاتر للحصول على نتائج أدق.</span>
+        </div>
+    }
+
+    <div class="report-table-card">
+        <table class="report-view-table">
+            <thead>
+                <tr>
+                    @foreach (var field in Model.SelectedFields)
+                    {
+                        <th>
+                            <span class="label-ar">@field.LabelAr</span>
+                            <span class="label-en">@field.LabelEn</span>
+                        </th>
+                    }
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model.Rows.Any())
+                {
+                    foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            @foreach (var field in Model.SelectedFields)
+                            {
+                                <td>@(row.TryGetValue(field.Key, out var value) ? value : "")</td>
+                            }
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="@Model.SelectedFields.Count" class="reports-empty-cell" data-reports-text="noData">لا توجد بيانات.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/reports-index.js" asp-append-version="true"></script>
+}

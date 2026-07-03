@@ -1,277 +1,293 @@
 @page
-@model IndexModel
+@model SmartAttendance.Web.Pages.IndexModel
 
 @{
     ViewData["Title"] = "Dashboard";
 }
 
-<style>
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-        gap: 16px;
-        margin-bottom: 22px;
-    }
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/dashboard-unified.css" asp-append-version="true" />
 
-    .dashboard-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 16px;
-        padding: 18px;
-        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-    }
-
-    .dashboard-card .label {
-        font-size: 13px;
-        color: #64748b;
-        margin-bottom: 8px;
-    }
-
-    .dashboard-card .value {
-        font-size: 30px;
-        font-weight: 800;
-        color: #0f172a;
-        line-height: 1;
-    }
-
-    .dashboard-card .hint {
-        margin-top: 8px;
-        font-size: 12px;
-        color: #64748b;
-    }
-
-    .dashboard-sections {
-        display: grid;
-        grid-template-columns: 1.4fr 1fr;
-        gap: 20px;
-        align-items: start;
-    }
-
-    .dashboard-side {
-        display: grid;
-        gap: 20px;
-    }
-
-    @@media (max-width: 1100px) {
-        .dashboard-sections {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
-
-<div class="page-header">
-    <div>
-        <h1>Dashboard</h1>
-        <p>SmartAttendance overview for @Model.Today</p>
-    </div>
-
-    <a asp-page="/AttendanceProcessing/Index" class="btn-primary">Attendance Processing</a>
-</div>
-
-<div class="dashboard-grid">
-    <div class="dashboard-card">
-        <div class="label">Companies</div>
-        <div class="value">@Model.Cards.CompaniesCount</div>
-        <div class="hint">Registered companies</div>
-    </div>
-
-    <div class="dashboard-card">
-        <div class="label">Branches</div>
-        <div class="value">@Model.Cards.BranchesCount</div>
-        <div class="hint">Active structure level</div>
-    </div>
-
-    <div class="dashboard-card">
-        <div class="label">Departments</div>
-        <div class="value">@Model.Cards.DepartmentsCount</div>
-        <div class="hint">Departments under branches</div>
-    </div>
-
-    <div class="dashboard-card">
-        <div class="label">Employees</div>
-        <div class="value">@Model.Cards.EmployeesCount</div>
-        <div class="hint">Active: @Model.Cards.ActiveEmployeesCount</div>
-    </div>
-
-    <div class="dashboard-card">
-        <div class="label">Devices</div>
-        <div class="value">@Model.Cards.DevicesCount</div>
-        <div class="hint">Active: @Model.Cards.ActiveDevicesCount</div>
-    </div>
-
-    <div class="dashboard-card">
-        <div class="label">Shifts</div>
-        <div class="value">@Model.Cards.ShiftsCount</div>
-        <div class="hint">Configured work shifts</div>
-    </div>
-
-    <div class="dashboard-card">
-        <div class="label">Attendance Records</div>
-        <div class="value">@Model.Cards.AttendanceRecordsCount</div>
-        <div class="hint">Raw attendance records</div>
-    </div>
-
-    <div class="dashboard-card">
-        <div class="label">Approved Leaves</div>
-        <div class="value">@Model.Cards.ApprovedLeavesCount</div>
-        <div class="hint">All approved leave entries</div>
-    </div>
-</div>
-
-<div class="dashboard-grid">
-    <div class="dashboard-card">
-        <div class="label">Today Present / Late</div>
-        <div class="value">@Model.Cards.TodayPresentCount</div>
-        <div class="hint">Based on today attendance records</div>
-    </div>
-
-    <div class="dashboard-card">
-        <div class="label">Today On Leave</div>
-        <div class="value">@Model.Cards.TodayLeaveCount</div>
-        <div class="hint">Approved leaves covering today</div>
-    </div>
-
-    <div class="dashboard-card">
-        <div class="label">Today Holiday</div>
-        <div class="value">@Model.Cards.TodayHolidayCount</div>
-        <div class="hint">Official holiday indicator</div>
-    </div>
-
-    <div class="dashboard-card">
-        <div class="label">Missing Check Out</div>
-        <div class="value">@Model.Cards.TodayMissingCheckOutCount</div>
-        <div class="hint">Today records without Check Out</div>
-    </div>
-</div>
-
-<div class="dashboard-sections">
-    <div class="table-card">
-        <div class="page-header" style="margin-bottom: 12px;">
-            <div>
-                <h2>Recent Attendance</h2>
-                <p>Last 10 attendance records</p>
-            </div>
-            <a asp-page="/AttendanceRecords/Index" class="btn-secondary">View All</a>
+<div class="dashboard-page">
+    <div class="page-header">
+        <div>
+            <h1>لوحة التحكم</h1>
+            <p>ملخص النظام، الموظفين، الحضور، الطلبات، والعقود في صفحة واحدة.</p>
         </div>
 
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Employee No</th>
-                    <th>Employee Name</th>
-                    <th>Check In</th>
-                    <th>Check Out</th>
-                    <th>Status</th>
-                    <th>Source</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @if (Model.RecentAttendance.Any())
-                {
-                    foreach (var item in Model.RecentAttendance)
-                    {
-                        <tr>
-                            <td>@item.AttendanceDate</td>
-                            <td>@item.EmployeeNo</td>
-                            <td>@item.EmployeeName</td>
-                            <td>@item.CheckIn.ToString("yyyy-MM-dd HH:mm")</td>
-                            <td>@(item.CheckOut?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
-                            <td>@item.Status</td>
-                            <td>@item.Source</td>
-                        </tr>
-                    }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="7" style="text-align:center;">No attendance records found.</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="dashboard-actions">
+            <a asp-page="/SelfServices/Index" class="hrms-btn-primary">تقديم طلب</a>
+            <a asp-page="/Approvals/Index" class="hrms-btn-secondary">الموافقات</a>
+            <a asp-page="/Reports/Index" class="hrms-btn-secondary">التقارير</a>
+        </div>
     </div>
 
-    <div class="dashboard-side">
-        <div class="table-card">
-            <div class="page-header" style="margin-bottom: 12px;">
-                <div>
-                    <h2>Current Leaves</h2>
-                    <p>Approved leaves for today</p>
-                </div>
-                <a asp-page="/LeaveRequests/Index" class="btn-secondary">View</a>
-            </div>
+    <section class="dashboard-kpi-grid">
+        <div class="dashboard-kpi">
+            <span>إجمالي الموظفين</span>
+            <strong>@Model.Employees</strong>
+            <small>فعال: @Model.ActiveEmployees | غير فعال: @Model.InactiveEmployees</small>
+        </div>
 
-            <table class="data-table">
+        <div class="dashboard-kpi">
+            <span>الفروع</span>
+            <strong>@Model.Branches</strong>
+            <small>الشركات: @Model.Companies</small>
+        </div>
+
+        <div class="dashboard-kpi">
+            <span>الأقسام</span>
+            <strong>@Model.Departments</strong>
+            <small>حسب الهيكل التنظيمي</small>
+        </div>
+
+        <div class="dashboard-kpi">
+            <span>الأجهزة</span>
+            <strong>@Model.Devices</strong>
+            <small>الشفتات: @Model.Shifts</small>
+        </div>
+
+        <div class="dashboard-kpi">
+            <span>سجلات الحضور</span>
+            <strong>@Model.AttendanceRecords</strong>
+            <small>إجمالي السجلات</small>
+        </div>
+
+        <div class="dashboard-kpi warning">
+            <span>طلبات معلقة</span>
+            <strong>@Model.PendingRequests</strong>
+            <small>بانتظار موافقة</small>
+        </div>
+    </section>
+
+    <section class="dashboard-kpi-grid">
+        <div class="dashboard-kpi success">
+            <span>حضور اليوم</span>
+            <strong>@Model.TodayPresent</strong>
+            <small>حاضر</small>
+        </div>
+
+        <div class="dashboard-kpi warning">
+            <span>تأخير اليوم</span>
+            <strong>@Model.TodayLate</strong>
+            <small>متأخر</small>
+        </div>
+
+        <div class="dashboard-kpi danger">
+            <span>غياب اليوم</span>
+            <strong>@Model.TodayAbsent</strong>
+            <small>غائب</small>
+        </div>
+
+        <div class="dashboard-kpi danger">
+            <span>بصمات ناقصة اليوم</span>
+            <strong>@Model.TodayMissingOut</strong>
+            <small>خروج مفقود</small>
+        </div>
+
+        <div class="dashboard-kpi warning">
+            <span>عقود تنتهي خلال 30 يوم</span>
+            <strong>@Model.Contracts30</strong>
+            <small>تحتاج متابعة</small>
+        </div>
+
+        <div class="dashboard-kpi danger">
+            <span>بصمات ناقصة 30 يوم</span>
+            <strong>@Model.MissingPunches30</strong>
+            <small>آخر 30 يوم</small>
+        </div>
+    </section>
+
+    <section class="dashboard-kpi-grid compact">
+        <div class="dashboard-kpi warning">
+            <span>تأخير آخر 30 يوم</span>
+            <strong>@Model.Late30</strong>
+        </div>
+
+        <div class="dashboard-kpi danger">
+            <span>غياب آخر 30 يوم</span>
+            <strong>@Model.Absent30</strong>
+        </div>
+
+        <div class="dashboard-kpi success">
+            <span>طلبات مقبولة 30 يوم</span>
+            <strong>@Model.ApprovedRequests30</strong>
+        </div>
+
+        <div class="dashboard-kpi danger">
+            <span>طلبات مرفوضة 30 يوم</span>
+            <strong>@Model.RejectedRequests30</strong>
+        </div>
+    </section>
+
+    <section class="dashboard-grid">
+        <div class="dashboard-panel">
+            <h2>الموظفون حسب الفرع</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.ByBranch)
+                {
+                    <div class="dashboard-list-row">
+                        <span>@(string.IsNullOrWhiteSpace(row.Name) || row.Name == "Not Set" ? "غير محدد" : row.Name)</span>
+                        <strong>@row.Total</strong>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <h2>الموظفون حسب القسم</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.ByDepartment)
+                {
+                    <div class="dashboard-list-row">
+                        <span>@(string.IsNullOrWhiteSpace(row.Name) || row.Name == "Not Set" ? "غير محدد" : row.Name)</span>
+                        <strong>@row.Total</strong>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <h2>الموظفون حسب الجنس</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.ByGender)
+                {
+                    <div class="dashboard-list-row">
+                        <span>@(string.IsNullOrWhiteSpace(row.Name) || row.Name == "Not Set" ? "غير محدد" : row.Name)</span>
+                        <strong>@row.Total</strong>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <h2>الموظفون حسب البلد</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.ByCountry)
+                {
+                    <div class="dashboard-list-row">
+                        <span>@(string.IsNullOrWhiteSpace(row.Name) || row.Name == "Not Set" ? "غير محدد" : row.Name)</span>
+                        <strong>@row.Total</strong>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <h2>الموظفون حسب الجنسية</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.ByNationality)
+                {
+                    <div class="dashboard-list-row">
+                        <span>@(string.IsNullOrWhiteSpace(row.Name) || row.Name == "Not Set" ? "غير محدد" : row.Name)</span>
+                        <strong>@row.Total</strong>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <h2>الموظفون حسب نوع العقد</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.ByContractType)
+                {
+                    <div class="dashboard-list-row">
+                        <span>@(string.IsNullOrWhiteSpace(row.Name) || row.Name == "Not Set" ? "غير محدد" : row.Name)</span>
+                        <strong>@row.Total</strong>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <h2>حالة طلبات الخدمات الذاتية</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.RequestsByStatus)
+                {
+                    <div class="dashboard-list-row">
+                        <span>@(row.Name == "Pending" ? "معلق" : row.Name == "Approved" ? "مقبول" : row.Name == "Rejected" ? "مرفوض" : row.Name)</span>
+                        <strong>@row.Total</strong>
+                    </div>
+                }
+
+                @if (!Model.RequestsByStatus.Any())
+                {
+                    <div class="dashboard-empty">لا توجد طلبات حالياً.</div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <h2>عقود قريبة الانتهاء خلال 60 يوم</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.ExpiringContracts)
+                {
+                    <div class="dashboard-list-row warning-row">
+                        <span>
+                            @row.EmployeeNo - @row.EmployeeName
+                            <small>@row.Position</small>
+                        </span>
+                        <strong>@row.ContractEndDate?.ToString("yyyy-MM-dd")</strong>
+                    </div>
+                }
+
+                @if (!Model.ExpiringContracts.Any())
+                {
+                    <div class="dashboard-empty">لا توجد عقود قريبة الانتهاء.</div>
+                }
+            </div>
+        </div>
+    </section>
+
+    <section class="dashboard-panel">
+        <div class="dashboard-panel-head">
+            <h2>آخر طلبات الخدمات الذاتية</h2>
+            <a asp-page="/Approvals/Index" class="hrms-btn-secondary">عرض الموافقات</a>
+        </div>
+
+        <div class="dashboard-table-wrap">
+            <table class="dashboard-table">
                 <thead>
                     <tr>
-                        <th>Employee</th>
-                        <th>Type</th>
-                        <th>Period</th>
+                        <th>#</th>
+                        <th>رقم الموظف</th>
+                        <th class="text-start">الاسم</th>
+                        <th>نوع الطلب</th>
+                        <th>الحالة</th>
+                        <th>المرحلة</th>
+                        <th>التاريخ</th>
                     </tr>
                 </thead>
-
                 <tbody>
-                    @if (Model.CurrentLeaves.Any())
+                    @foreach (var request in Model.LatestRequests)
                     {
-                        foreach (var item in Model.CurrentLeaves)
-                        {
-                            <tr>
-                                <td>@item.EmployeeNo - @item.EmployeeName</td>
-                                <td>@item.LeaveType</td>
-                                <td>@item.FromDate to @item.ToDate</td>
-                            </tr>
-                        }
+                        var statusText = request.Status == "Pending"
+                            ? "معلق"
+                            : request.Status == "Approved"
+                                ? "مقبول"
+                                : request.Status == "Rejected"
+                                    ? "مرفوض"
+                                    : request.Status;
+
+                        <tr>
+                            <td>@request.Id</td>
+                            <td>@request.EmployeeNo</td>
+                            <td class="text-start">@request.EmployeeName</td>
+                            <td>@request.RequestType</td>
+                            <td><span class="hrms-badge @request.Status.ToLower()">@statusText</span></td>
+                            <td>@request.CurrentStep</td>
+                            <td>@request.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</td>
+                        </tr>
                     }
-                    else
+
+                    @if (!Model.LatestRequests.Any())
                     {
                         <tr>
-                            <td colspan="3" style="text-align:center;">No employees on leave today.</td>
+                            <td colspan="7" class="dashboard-empty-cell">لا توجد طلبات حديثة.</td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
-
-        <div class="table-card">
-            <div class="page-header" style="margin-bottom: 12px;">
-                <div>
-                    <h2>Upcoming Holidays</h2>
-                    <p>Next official holidays</p>
-                </div>
-                <a asp-page="/Holidays/Index" class="btn-secondary">View</a>
-            </div>
-
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Holiday</th>
-                        <th>Date</th>
-                        <th>Recurring</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @if (Model.UpcomingHolidays.Any())
-                    {
-                        foreach (var item in Model.UpcomingHolidays)
-                        {
-                            <tr>
-                                <td>@item.Name</td>
-                                <td>@item.HolidayDate</td>
-                                <td>@(item.IsRecurring ? "Yes" : "No")</td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="3" style="text-align:center;">No upcoming holidays found.</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
+    </section>
 </div>

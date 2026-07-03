@@ -6,7 +6,9 @@ namespace SmartAttendance.Application.AttendanceRecords.Services;
 
 public interface IAttendanceRecordService
 {
-    Task<IEnumerable<AttendanceRecordListViewModel>> GetAllAsync(string? searchTerm = null);
+    Task<IEnumerable<AttendanceRecordListViewModel>> GetAllAsync(string? searchTerm = null, int maxResults = 50);
+
+    Task<int> CountAsync(string? searchTerm = null);
 
     Task<AttendanceRecordDetailsViewModel?> GetByIdAsync(int id);
 

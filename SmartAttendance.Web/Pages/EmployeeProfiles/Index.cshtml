@@ -1,0 +1,187 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeeProfiles.IndexModel
+
+@{
+    ViewData["Title"] = "Employee Profiles";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page">
+    <div class="page-header">
+        <div>
+            <h1>ملف الموظف المتقدم</h1>
+            <p>إكمال بيانات المنصب والجنس والجنسية ونوع العقد والحالة الوظيفية والمدير المباشر.</p>
+        </div>
+
+        <a asp-page="/HrAnalytics/Index" class="hrms-btn-primary">لوحة المؤشرات</a>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Message))
+    {
+        <div class="hrms-alert success">@Model.Message</div>
+    }
+
+    <form method="get" class="hrms-filter-card">
+        <div class="hrms-grid-2">
+            <div class="hrms-field">
+                <label>بحث</label>
+                <input asp-for="Search" placeholder="رقم الموظف، الاسم، القسم، الفرع، المنصب..." />
+            </div>
+            <div class="hrms-actions" style="align-self:end;">
+                <button class="hrms-btn-primary" type="submit">بحث</button>
+                <a asp-page="./Index" class="hrms-btn-secondary">مسح</a>
+            </div>
+        </div>
+    </form>
+
+    <div class="hrms-table-card">
+        <div class="hrms-table-wrap">
+            <table class="hrms-table">
+                <thead>
+                    <tr>
+                        <th>رقم الموظف</th>
+                        <th class="text-start">الاسم</th>
+                        <th>الفرع</th>
+                        <th>القسم</th>
+                        <th>المنصب</th>
+                        <th>الجنس</th>
+                        <th>الجنسية</th>
+                        <th>البلد</th>
+                        <th>نوع العقد</th>
+                        <th>انتهاء العقد</th>
+                        <th>الحالة</th>
+                        <th>المدير المباشر</th>
+                        <th>تعديل</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var employee in Model.Employees)
+                    {
+                        <tr>
+                            <td>@employee.EmployeeNo</td>
+                            <td class="text-start">@employee.FullName</td>
+                            <td>@employee.Branch</td>
+                            <td>@employee.Department</td>
+                            <td>@employee.Position</td>
+                            <td>@employee.Gender</td>
+                            <td>@employee.Nationality</td>
+                            <td>@employee.Country</td>
+                            <td>@employee.ContractType</td>
+                            <td>@employee.ContractEndDate?.ToString("yyyy-MM-dd")</td>
+                            <td>@employee.EmploymentStatus</td>
+                            <td>@employee.DirectManager</td>
+                            <td>
+                                <button type="button"
+                                        class="hrms-btn-secondary"
+                                        data-fill-profile
+                                        data-id="@employee.Id"
+                                        data-position="@employee.Position"
+                                        data-gender="@employee.Gender"
+                                        data-nationality="@employee.Nationality"
+                                        data-country="@employee.Country"
+                                        data-contracttype="@employee.ContractType"
+                                        data-contractenddate="@employee.ContractEndDate?.ToString("yyyy-MM-dd")"
+                                        data-employmentstatus="@employee.EmploymentStatus"
+                                        data-directmanagerid="@employee.DirectManagerId">
+                                    تعديل
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <form method="post" asp-page-handler="Save" class="hrms-form-card">
+        <div class="hrms-section-head">
+            <div>
+                <h2>تحديث بيانات الموظف</h2>
+                <p>اختر تعديل من الجدول ثم املأ البيانات.</p>
+            </div>
+        </div>
+
+        <input asp-for="Input.Id" type="hidden" id="profileId" />
+
+        <div class="hrms-grid-4">
+            <div class="hrms-field">
+                <label>المنصب</label>
+                <input asp-for="Input.Position" id="profilePosition" />
+            </div>
+            <div class="hrms-field">
+                <label>الجنس</label>
+                <select asp-for="Input.Gender" id="profileGender">
+                    <option value="">--</option>
+                    <option>Male</option>
+                    <option>Female</option>
+                </select>
+            </div>
+            <div class="hrms-field">
+                <label>الجنسية</label>
+                <input asp-for="Input.Nationality" id="profileNationality" />
+            </div>
+            <div class="hrms-field">
+                <label>البلد</label>
+                <input asp-for="Input.Country" id="profileCountry" />
+            </div>
+            <div class="hrms-field">
+                <label>نوع العقد</label>
+                <select asp-for="Input.ContractType" id="profileContractType">
+                    <option value="">--</option>
+                    <option>Permanent</option>
+                    <option>Temporary</option>
+                    <option>Part Time</option>
+                    <option>Internship</option>
+                </select>
+            </div>
+            <div class="hrms-field">
+                <label>تاريخ انتهاء العقد</label>
+                <input asp-for="Input.ContractEndDate" id="profileContractEndDate" type="date" />
+            </div>
+            <div class="hrms-field">
+                <label>الحالة الوظيفية</label>
+                <select asp-for="Input.EmploymentStatus" id="profileEmploymentStatus">
+                    <option value="">--</option>
+                    <option>Active</option>
+                    <option>Suspended</option>
+                    <option>Resigned</option>
+                    <option>Terminated</option>
+                </select>
+            </div>
+            <div class="hrms-field">
+                <label>المدير المباشر</label>
+                <select asp-for="Input.DirectManagerId" id="profileDirectManagerId">
+                    <option value="">-- بدون --</option>
+                    @foreach (var manager in Model.Managers)
+                    {
+                        <option value="@manager.Id">@manager.Text</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="hrms-actions" style="margin-top:14px;">
+            <button type="submit" class="hrms-btn-primary">حفظ</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll("[data-fill-profile]").forEach(button => {
+            button.addEventListener("click", () => {
+                document.querySelector("#profileId").value = button.dataset.id || "";
+                document.querySelector("#profilePosition").value = button.dataset.position || "";
+                document.querySelector("#profileGender").value = button.dataset.gender || "";
+                document.querySelector("#profileNationality").value = button.dataset.nationality || "";
+                document.querySelector("#profileCountry").value = button.dataset.country || "";
+                document.querySelector("#profileContractType").value = button.dataset.contracttype || "";
+                document.querySelector("#profileContractEndDate").value = button.dataset.contractenddate || "";
+                document.querySelector("#profileEmploymentStatus").value = button.dataset.employmentstatus || "";
+                document.querySelector("#profileDirectManagerId").value = button.dataset.directmanagerid || "";
+                window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+            });
+        });
+    </script>
+}

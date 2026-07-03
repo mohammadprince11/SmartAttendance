@@ -1,0 +1,35 @@
+@page
+@model SmartAttendance.Web.Pages.SystemMaintenance.IndexModel
+
+@{
+    ViewData["Title"] = "System Maintenance";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page">
+    <div class="page-header">
+        <div>
+            <h1>الصيانة والنسخ الاحتياطي</h1>
+            <p>تحضير نقاط صيانة وتوثيق عمليات النسخ الاحتياطي.</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Message))
+    {
+        <div class="hrms-alert success">@Model.Message</div>
+    }
+
+    <div class="hrms-card">
+        <div class="hrms-section-head">
+            <div>
+                <h2>Backup Checkpoint</h2>
+                <p>هذه الصفحة توثق طلب النسخ الاحتياطي داخل سجل العمليات. النسخة الفعلية من SQL Server أو السيرفر.</p>
+            </div>
+        </div>
+
+        <form method="post" asp-page-handler="Prepare">
+            <button class="hrms-btn-primary">تسجيل نقطة Backup</button>
+        </form>
+    </div>
+</div>

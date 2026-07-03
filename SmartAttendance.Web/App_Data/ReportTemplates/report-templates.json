@@ -1,0 +1,25 @@
+[
+  {
+    "Id": "822c55a674574f679e39b0b9b6961cd5",
+    "Name": "mohammed",
+    "ReportType": "Employees",
+    "FromDate": null,
+    "ToDate": null,
+    "SearchTerm": null,
+    "BranchId": null,
+    "DepartmentId": null,
+    "ShiftId": null,
+    "StatusFilter": null,
+    "ActiveFilter": null,
+    "SelectedColumns": [
+      "EmployeeNo",
+      "EmployeeName",
+      "Branch",
+      "Department",
+      "HireDate",
+      "IsActive"
+    ],
+    "CreatedAt": "2026-07-03T15:18:26.6988543+03:00",
+    "UpdatedAt": "2026-07-03T15:18:26.6988962+03:00"
+  }
+]

@@ -1,0 +1,329 @@
+/* My Profile employee page */
+
+.my-profile-page {
+    display: grid;
+    gap: 14px;
+}
+
+.my-profile-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.my-btn-primary,
+.my-btn-secondary {
+    min-height: 40px;
+    border-radius: 12px;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 1000;
+    text-decoration: none;
+}
+
+.my-btn-primary {
+    background: var(--sa-primary);
+    color: #fff !important;
+}
+
+.my-btn-secondary {
+    background: var(--sa-surface-2);
+    color: var(--sa-text) !important;
+    border: 1px solid var(--sa-border);
+}
+
+.my-hero-card,
+.my-card,
+.my-tabs,
+.my-stat {
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 18px;
+    box-shadow: var(--sa-shadow);
+}
+
+.my-hero-card {
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.my-avatar {
+    width: 70px;
+    height: 70px;
+    border-radius: 22px;
+    background: var(--sa-primary-soft);
+    display: grid;
+    place-items: center;
+    font-size: 32px;
+}
+
+.my-hero-card h2 {
+    margin: 0;
+    color: var(--sa-text);
+    font-weight: 1000;
+    font-size: 26px;
+}
+
+.my-hero-card p {
+    margin: 6px 0 0;
+    color: var(--sa-muted);
+    font-weight: 900;
+}
+
+.my-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.my-chips span {
+    min-height: 28px;
+    border-radius: 999px;
+    background: var(--sa-surface-2);
+    border: 1px solid var(--sa-border);
+    color: var(--sa-text);
+    display: inline-flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.my-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.my-stat {
+    padding: 16px;
+    min-height: 90px;
+}
+
+.my-stat span {
+    color: var(--sa-muted);
+    font-size: 12px;
+    font-weight: 1000;
+}
+
+.my-stat strong {
+    display: block;
+    margin-top: 6px;
+    color: var(--sa-text);
+    font-size: 28px;
+    font-weight: 1000;
+}
+
+.my-stat small {
+    display: block;
+    margin-top: 4px;
+    color: var(--sa-muted);
+    font-weight: 850;
+}
+
+.my-tabs {
+    padding: 8px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.my-tabs button {
+    min-height: 44px;
+    border-radius: 14px;
+    border: 1px solid var(--sa-border);
+    background: var(--sa-surface-2);
+    color: var(--sa-text);
+    font-family: inherit;
+    font-weight: 1000;
+    cursor: pointer;
+}
+
+.my-tabs button.active {
+    background: var(--sa-primary);
+    border-color: var(--sa-primary);
+    color: #fff;
+}
+
+.my-panel {
+    display: none;
+}
+
+.my-panel.active {
+    display: block;
+}
+
+.my-card {
+    padding: 16px;
+}
+
+.my-card-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px solid var(--sa-border);
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+}
+
+.my-card-head h2 {
+    margin: 0;
+    color: var(--sa-text);
+    font-size: 20px;
+    font-weight: 1000;
+}
+
+.my-card-head p {
+    margin: 4px 0 0;
+    color: var(--sa-muted);
+    font-weight: 850;
+}
+
+.my-info-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.my-info-grid div {
+    min-height: 72px;
+    border-radius: 14px;
+    background: var(--sa-surface-2);
+    border: 1px solid var(--sa-border);
+    padding: 12px;
+}
+
+.my-info-grid span {
+    display: block;
+    color: var(--sa-muted);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.my-info-grid strong {
+    display: block;
+    margin-top: 8px;
+    color: var(--sa-text);
+    font-weight: 1000;
+}
+
+.my-table-wrap {
+    overflow-x: auto;
+}
+
+.my-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.my-table th {
+    background: var(--sa-surface-2);
+    color: var(--sa-text);
+    padding: 12px;
+    font-weight: 1000;
+    border-bottom: 1px solid var(--sa-border);
+}
+
+.my-table td {
+    color: var(--sa-text);
+    padding: 12px;
+    border-bottom: 1px solid var(--sa-border);
+    text-align: center;
+    font-weight: 850;
+}
+
+.text-start {
+    text-align: start !important;
+}
+
+.my-badge {
+    min-height: 28px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 1000;
+    background: var(--sa-primary-soft);
+    color: var(--sa-primary-hover);
+}
+
+.status-2 {
+    background: rgba(245, 158, 11, .16);
+    color: var(--sa-warning);
+}
+
+.status-3 {
+    background: var(--sa-danger-soft);
+    color: var(--sa-danger);
+}
+
+.status-4,
+.status-5 {
+    background: rgba(34, 197, 94, .14);
+    color: var(--sa-success);
+}
+
+.my-empty {
+    color: var(--sa-muted) !important;
+    text-align: center !important;
+    padding: 22px !important;
+    font-weight: 1000;
+}
+
+html[data-theme="dark"] .my-hero-card,
+html[data-theme="dark"] .my-card,
+html[data-theme="dark"] .my-tabs,
+html[data-theme="dark"] .my-stat {
+    background: #111a2c !important;
+    border-color: #30415f !important;
+}
+
+html[data-theme="dark"] .my-chips span,
+html[data-theme="dark"] .my-tabs button,
+html[data-theme="dark"] .my-info-grid div,
+html[data-theme="dark"] .my-table th,
+html[data-theme="dark"] .my-btn-secondary {
+    background: #162238 !important;
+    border-color: #30415f !important;
+    color: #e6edf7 !important;
+}
+
+html[data-theme="dark"] .my-tabs button.active {
+    background: var(--sa-primary) !important;
+    color: #fff !important;
+}
+
+html[dir="rtl"] .my-profile-page,
+html[dir="rtl"] .my-hero-card,
+html[dir="rtl"] .my-tabs,
+html[dir="rtl"] .my-card {
+    direction: rtl;
+}
+
+@media (max-width: 1200px) {
+    .my-stats-grid,
+    .my-info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 760px) {
+    .my-hero-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .my-stats-grid,
+    .my-info-grid,
+    .my-tabs {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,53 @@
+/* Hide sidebar symbols/icons completely - final clean view */
+
+.sidebar .nav-icon,
+.sidebar .nav-icon::before,
+.sidebar .nav-icon::after {
+    display: none !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: transparent !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+.sidebar-nav a,
+.sidebar-nav summary {
+    gap: 0 !important;
+}
+
+html[dir="rtl"] .sidebar-nav a,
+html[dir="rtl"] .sidebar-nav summary {
+    justify-content: flex-start !important;
+    text-align: right !important;
+}
+
+html[dir="ltr"] .sidebar-nav a,
+html[dir="ltr"] .sidebar-nav summary {
+    justify-content: flex-start !important;
+    text-align: left !important;
+}
+
+.sidebar .nav-text {
+    width: 100% !important;
+}
+
+/* Keep menu button clean */
+.sidebar-local-toggle,
+.sa-sidebar-toggle {
+    font-size: 0 !important;
+}
+
+.sidebar-local-toggle::before,
+.sa-sidebar-toggle::before {
+    content: "☰";
+    font-size: 16px !important;
+    line-height: 1 !important;
+}

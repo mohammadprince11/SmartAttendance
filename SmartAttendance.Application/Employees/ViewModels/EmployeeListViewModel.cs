@@ -14,6 +14,8 @@ public class EmployeeListViewModel
 
     public string? Email { get; set; }
 
+    public string? Position { get; set; }
+
     public DateOnly HireDate { get; set; }
 
     public DateOnly? BirthDate { get; set; }
@@ -21,6 +23,8 @@ public class EmployeeListViewModel
     public bool IsActive { get; set; }
 
     public int DepartmentId { get; set; }
+
+    public string DepartmentCode { get; set; } = string.Empty;
 
     public string DepartmentName { get; set; } = string.Empty;
 

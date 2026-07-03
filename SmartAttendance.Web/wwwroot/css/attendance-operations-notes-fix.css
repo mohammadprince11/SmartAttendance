@@ -1,0 +1,20 @@
+/* Attendance Operations notes display */
+
+.attendance-table th:nth-child(11),
+.attendance-table td:nth-child(11) {
+    width: 220px;
+}
+
+.attendance-table th:nth-child(12),
+.attendance-table td:nth-child(12) {
+    width: 85px;
+}
+
+.attendance-note-cell {
+    white-space: normal !important;
+    text-align: center !important;
+    line-height: 1.5;
+    color: var(--sa-muted);
+    font-weight: 900;
+    max-width: 240px;
+}

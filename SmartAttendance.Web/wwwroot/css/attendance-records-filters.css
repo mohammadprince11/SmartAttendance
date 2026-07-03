@@ -1,0 +1,200 @@
+/* Attendance Records Advanced Filters */
+
+.attendance-records-page {
+    display: grid;
+    gap: 14px;
+}
+
+.att-filter-card,
+.att-results-toolbar,
+.att-table-card {
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 18px;
+    box-shadow: var(--sa-shadow);
+}
+
+.att-filter-card {
+    padding: 16px;
+}
+
+.att-filter-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--sa-border);
+}
+
+.att-filter-head h2 {
+    margin: 0;
+    color: var(--sa-text);
+    font-size: 20px;
+    font-weight: 1000;
+}
+
+.att-filter-head p {
+    margin: 4px 0 0;
+    color: var(--sa-muted);
+    font-weight: 800;
+}
+
+.att-filter-actions,
+.att-pagination {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.att-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+.filter-field {
+    display: grid;
+    gap: 7px;
+}
+
+.filter-field-wide {
+    grid-column: span 2;
+}
+
+.filter-field label {
+    color: var(--sa-text);
+    font-size: 12px;
+    font-weight: 1000;
+}
+
+.filter-field input,
+.filter-field select {
+    width: 100%;
+    min-height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--sa-border);
+    background: var(--sa-input);
+    color: var(--sa-text);
+    padding: 0 12px;
+    font-weight: 800;
+}
+
+.filter-field input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.att-results-toolbar {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.att-results-toolbar strong {
+    color: var(--sa-text);
+    font-size: 16px;
+    font-weight: 1000;
+}
+
+.att-results-toolbar span {
+    color: var(--sa-muted);
+    font-weight: 900;
+}
+
+.att-page-badge {
+    min-height: 38px;
+    border-radius: 999px;
+    padding: 0 14px;
+    background: var(--sa-primary);
+    color: #ffffff !important;
+    display: inline-flex;
+    align-items: center;
+    font-weight: 1000;
+}
+
+.btn-secondary.disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.att-table-card {
+    padding: 16px;
+    overflow-x: auto;
+}
+
+.att-records-table th,
+.att-records-table td {
+    white-space: nowrap;
+    text-align: center;
+}
+
+.att-records-table td:nth-child(3) {
+    text-align: start;
+}
+
+.row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.empty-cell {
+    text-align: center !important;
+    color: var(--sa-muted) !important;
+    font-weight: 1000;
+    padding: 28px !important;
+}
+
+html[data-theme="dark"] .att-filter-card,
+html[data-theme="dark"] .att-results-toolbar,
+html[data-theme="dark"] .att-table-card {
+    background: #111a2c !important;
+    border-color: #30415f !important;
+}
+
+html[data-theme="dark"] .filter-field input,
+html[data-theme="dark"] .filter-field select {
+    background: #0f1a2e !important;
+    border-color: #30415f !important;
+    color: #e6edf7 !important;
+}
+
+html[dir="rtl"] .att-filter-card,
+html[dir="rtl"] .att-filter-head,
+html[dir="rtl"] .att-filter-grid,
+html[dir="rtl"] .att-results-toolbar,
+html[dir="rtl"] .att-records-table {
+    direction: rtl;
+}
+
+@media (max-width: 1400px) {
+    .att-filter-grid {
+        grid-template-columns: repeat(3, minmax(150px, 1fr));
+    }
+
+    .filter-field-wide {
+        grid-column: span 3;
+    }
+}
+
+@media (max-width: 900px) {
+    .att-filter-head,
+    .att-results-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .att-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-field-wide {
+        grid-column: span 1;
+    }
+}

@@ -1,0 +1,96 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeeDocuments.IndexModel
+
+@{
+    ViewData["Title"] = "Employee Documents";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page">
+    <div class="page-header">
+        <div>
+            <h1>مستندات الموظفين</h1>
+            <p>رفع وحفظ مستندات الموظف مثل الهوية والعقد والشهادات.</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Message))
+    {
+        <div class="hrms-alert success">@Model.Message</div>
+    }
+
+    <form method="post" asp-page-handler="Upload" enctype="multipart/form-data" class="hrms-form-card">
+        <div class="hrms-grid-4">
+            <div class="hrms-field">
+                <label>الموظف</label>
+                <select asp-for="Input.EmployeeId" required>
+                    <option value="">-- اختر الموظف --</option>
+                    @foreach (var employee in Model.Employees)
+                    {
+                        <option value="@employee.Id">@employee.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="hrms-field">
+                <label>نوع المستند</label>
+                <select asp-for="Input.DocumentType">
+                    <option>ID</option>
+                    <option>Contract</option>
+                    <option>Passport</option>
+                    <option>Health Card</option>
+                    <option>Certificate</option>
+                    <option>Memo</option>
+                </select>
+            </div>
+            <div class="hrms-field">
+                <label>تاريخ الانتهاء</label>
+                <input asp-for="Input.ExpiryDate" type="date" />
+            </div>
+            <div class="hrms-field">
+                <label>الملف</label>
+                <input asp-for="Input.File" type="file" />
+            </div>
+            <div class="hrms-field" style="grid-column:span 4;">
+                <label>ملاحظات</label>
+                <input asp-for="Input.Notes" />
+            </div>
+        </div>
+
+        <div class="hrms-actions" style="margin-top:14px;">
+            <button type="submit" class="hrms-btn-primary">رفع المستند</button>
+        </div>
+    </form>
+
+    <div class="hrms-table-card">
+        <div class="hrms-table-wrap">
+            <table class="hrms-table">
+                <thead>
+                    <tr>
+                        <th>رقم الموظف</th>
+                        <th class="text-start">الاسم</th>
+                        <th>النوع</th>
+                        <th class="text-start">الملف</th>
+                        <th>انتهاء</th>
+                        <th>رفع</th>
+                        <th>فتح</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var doc in Model.Documents)
+                    {
+                        <tr>
+                            <td>@doc.EmployeeNo</td>
+                            <td class="text-start">@doc.EmployeeName</td>
+                            <td>@doc.DocumentType</td>
+                            <td class="text-start">@doc.FileName</td>
+                            <td>@doc.ExpiryDate?.ToString("yyyy-MM-dd")</td>
+                            <td>@doc.UploadedAt?.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td><a href="@doc.StoredPath" target="_blank" class="hrms-btn-secondary">فتح</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

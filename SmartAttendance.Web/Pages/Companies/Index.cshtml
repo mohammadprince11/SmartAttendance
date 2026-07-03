@@ -1,5 +1,6 @@
-@page "/Companies"
+@page
 @model SmartAttendance.Web.Pages.Companies.IndexModel
+
 @{
     ViewData["Title"] = "Companies";
 }
@@ -7,78 +8,65 @@
 <div class="page-header">
     <div>
         <h1>Companies</h1>
-        <p>Manage all companies in the system</p>
+        <p>Manage companies</p>
     </div>
 
-    <a asp-page="/Companies/Create" class="btn-primary">+ Add Company</a>
+    <div class="form-actions">
+        <a asp-page="./Import" class="btn-secondary">Import Excel</a>
+        <a asp-page="./Create" class="btn-primary">+ Add Company</a>
+    </div>
 </div>
 
-<form method="get" class="search-box">
-    <input type="text"
-           name="SearchTerm"
-           value="@Model.SearchTerm"
-           placeholder="Search by name or code..."
-           class="form-control" />
-
-    <button type="submit" class="btn-primary">Search</button>
-
-    @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
-    {
-        <a asp-page="/Companies/Index" class="btn-secondary">Clear</a>
-    }
-</form>
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
 
 <div class="table-card">
-    <div class="table-card-header">
-        <h2>Companies List</h2>
-    </div>
+    <form method="get" class="search-form">
+        <input type="text"
+               name="SearchTerm"
+               value="@Model.SearchTerm"
+               placeholder="Search by company name or code..." />
 
-    <div class="table-wrapper">
-        <table class="app-table">
-            <thead>
-                <tr>
-                    <th>Code</th>
-                    <th>Company Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Status</th>
-                    <th class="text-end">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (!Model.Companies.Any())
+        <button type="submit" class="btn-primary">Search</button>
+        <a asp-page="./Index" class="btn-secondary">Clear</a>
+    </form>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Company Name</th>
+                <th>Active</th>
+                <th style="width: 160px;">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.Companies.Any())
+            {
+                foreach (var company in Model.Companies)
                 {
                     <tr>
-                        <td colspan="6" class="empty-row">No companies found.</td>
+                        <td>@company.Code</td>
+                        <td>@company.Name</td>
+                        <td>@(company.IsActive ? "Yes" : "No")</td>
+                        <td>
+                            <a asp-page="./Edit" asp-route-id="@company.Id" class="btn-table btn-edit">Edit</a>
+                            <a asp-page="./Delete" asp-route-id="@company.Id" class="btn-table btn-delete">Delete</a>
+                        </td>
                     </tr>
                 }
-                else
-                {
-                    @foreach (var company in Model.Companies)
-                    {
-                        <tr>
-                            <td>@company.Code</td>
-                            <td>@company.Name</td>
-                            <td>@company.Email</td>
-                            <td>@company.Phone</td>
-                            <td>
-                                @if (company.IsActive)
-                                {
-                                    <span class="badge-success">Active</span>
-                                }
-                                else
-                                {
-                                    <span class="badge-muted">Inactive</span>
-                                }
-                            </td>
-                            <td class="text-end">
-                                <a asp-page="/Companies/Edit" asp-route-id="@company.Id" class="btn-table btn-edit">Edit</a>
-                                <a asp-page="/Companies/Delete" asp-route-id="@company.Id" class="btn-table btn-delete">Delete</a>
-                            </td>
-                        </tr>
-                    }
-                }
-            </tbody>
-        </table>
-    </div>
+            }
+            else
+            {
+                <tr>
+                    <td colspan="4" style="text-align:center;">No companies found.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
 </div>

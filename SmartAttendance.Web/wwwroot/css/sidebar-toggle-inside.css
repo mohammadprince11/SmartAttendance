@@ -1,0 +1,75 @@
+/* Sidebar toggle should live inside the sidebar, not beside language/theme buttons */
+
+.sidebar-brand-with-toggle {
+    display: grid !important;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.sidebar-brand-with-toggle .brand-text {
+    min-width: 0;
+}
+
+.sidebar-local-toggle {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+    border-radius: 12px !important;
+    font-size: 18px;
+    line-height: 1;
+}
+
+/* Topbar controls should only contain EN/AR + Light/Dark + user */
+.topbar .sa-sidebar-toggle:not(.sidebar-local-toggle) {
+    display: none !important;
+}
+
+/* Collapsed sidebar: keep only the collapse button and icons */
+html[data-sidebar="collapsed"] .sidebar-brand-with-toggle {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 8px;
+}
+
+html[data-sidebar="collapsed"] .sidebar-brand-with-toggle .brand-logo,
+html[data-sidebar="collapsed"] .sidebar-brand-with-toggle .brand-text {
+    display: none !important;
+}
+
+html[data-sidebar="collapsed"] .sidebar-local-toggle {
+    margin: 0 auto;
+}
+
+/* Expanded sidebar: keep the button aligned with the tab itself */
+html[dir="rtl"] .sidebar-brand-with-toggle {
+    direction: rtl;
+}
+
+html[dir="ltr"] .sidebar-brand-with-toggle {
+    direction: ltr;
+}
+
+/* Better hover for the sidebar local toggle */
+.sidebar-local-toggle:hover {
+    background: var(--sa-primary-soft) !important;
+    color: var(--sa-primary-hover) !important;
+}
+
+/* In dark mode make it visible but calm */
+html[data-theme="dark"] .sidebar-local-toggle {
+    background: #162238 !important;
+    color: #e6edf7 !important;
+    border-color: #2b3a55 !important;
+}
+
+/* In light mode */
+html[data-theme="light"] .sidebar-local-toggle {
+    background: #f1f5f9 !important;
+    color: #102033 !important;
+    border-color: #d8e0ea !important;
+}

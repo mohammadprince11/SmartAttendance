@@ -5,13 +5,64 @@
     ViewData["Title"] = "Employees";
 }
 
+<style>
+    .employees-table th,
+    .employees-table td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .employee-name-ar {
+        direction: rtl;
+        unicode-bidi: plaintext;
+        text-align: center;
+        font-weight: 900;
+        color: var(--sa-text) !important;
+    }
+
+    .department-name,
+    .position-name,
+    .branch-name {
+        color: var(--sa-text) !important;
+        font-weight: 900;
+        text-align: center;
+        opacity: 1 !important;
+    }
+
+    .position-name.empty,
+    .department-name.empty,
+    .branch-name.empty {
+        color: var(--sa-muted) !important;
+        font-weight: 800;
+    }
+
+    html[data-theme="dark"] .employees-table td,
+    html[data-theme="dark"] .employees-table th,
+    html[data-theme="dark"] .employees-table .department-name,
+    html[data-theme="dark"] .employees-table .position-name,
+    html[data-theme="dark"] .employees-table .branch-name,
+    html[data-theme="dark"] .employees-table .employee-name-ar {
+        color: #e6edf7 !important;
+        opacity: 1 !important;
+    }
+
+    html[data-theme="dark"] .employees-table .position-name.empty,
+    html[data-theme="dark"] .employees-table .department-name.empty,
+    html[data-theme="dark"] .employees-table .branch-name.empty {
+        color: #9fb0c7 !important;
+    }
+</style>
+
 <div class="page-header">
     <div>
         <h1>Employees</h1>
-        <p>Manage employee master data</p>
+        <p>Manage employees</p>
     </div>
 
-    <a asp-page="./Create" class="btn-primary">+ Add Employee</a>
+    <div class="form-actions">
+        <a asp-page="./Import" class="btn-secondary">Import Excel</a>
+        <a asp-page="./Create" class="btn-primary">+ Add Employee</a>
+    </div>
 </div>
 
 @if (TempData["SuccessMessage"] != null)
@@ -26,22 +77,24 @@
         <input type="text"
                name="SearchTerm"
                value="@Model.SearchTerm"
-               placeholder="Search by employee no, name, department, branch, phone..." />
+               placeholder="Search by employee no, name, department, position, branch, phone, or email..." />
 
         <button type="submit" class="btn-primary">Search</button>
         <a asp-page="./Index" class="btn-secondary">Clear</a>
     </form>
 
-    <table class="data-table">
+    <table class="data-table employees-table">
         <thead>
             <tr>
                 <th>Employee No</th>
                 <th>Full Name</th>
                 <th>Department</th>
+                <th>Position</th>
                 <th>Branch</th>
                 <th>Phone</th>
+                <th>Email</th>
                 <th>Hire Date</th>
-                <th>Status</th>
+                <th>Active</th>
                 <th style="width: 160px;">Actions</th>
             </tr>
         </thead>
@@ -51,16 +104,34 @@
             {
                 foreach (var employee in Model.Employees)
                 {
+                    var departmentClass = string.IsNullOrWhiteSpace(employee.DepartmentName) ? "department-name empty" : "department-name";
+                    var positionClass = string.IsNullOrWhiteSpace(employee.Position) ? "position-name empty" : "position-name";
+                    var branchClass = string.IsNullOrWhiteSpace(employee.BranchName) ? "branch-name empty" : "branch-name";
+
                     <tr>
                         <td>@employee.EmployeeNo</td>
-                        <td>@employee.FullName</td>
-                        <td>@employee.DepartmentName</td>
-                        <td>@employee.BranchName</td>
-                        <td>@employee.Phone</td>
-                        <td>@employee.HireDate.ToString("yyyy-MM-dd")</td>
                         <td>
-                            @(employee.IsActive ? "Active" : "Inactive")
+                            <div class="employee-name-ar">@employee.FullName</div>
                         </td>
+                        <td>
+                            <div class="@departmentClass">
+                                @(!string.IsNullOrWhiteSpace(employee.DepartmentName) ? employee.DepartmentName : "-")
+                            </div>
+                        </td>
+                        <td>
+                            <div class="@positionClass">
+                                @(!string.IsNullOrWhiteSpace(employee.Position) ? employee.Position : "-")
+                            </div>
+                        </td>
+                        <td>
+                            <div class="@branchClass">
+                                @(!string.IsNullOrWhiteSpace(employee.BranchName) ? employee.BranchName : "-")
+                            </div>
+                        </td>
+                        <td>@(!string.IsNullOrWhiteSpace(employee.Phone) ? employee.Phone : "-")</td>
+                        <td>@(!string.IsNullOrWhiteSpace(employee.Email) ? employee.Email : "-")</td>
+                        <td>@employee.HireDate.ToString("yyyy-MM-dd")</td>
+                        <td>@(employee.IsActive ? "Yes" : "No")</td>
                         <td>
                             <a asp-page="./Edit" asp-route-id="@employee.Id" class="btn-table btn-edit">Edit</a>
                             <a asp-page="./Delete" asp-route-id="@employee.Id" class="btn-table btn-delete">Delete</a>
@@ -71,9 +142,7 @@
             else
             {
                 <tr>
-                    <td colspan="8" style="text-align:center;">
-                        No employees found.
-                    </td>
+                    <td colspan="10" style="text-align:center;">No employees found.</td>
                 </tr>
             }
         </tbody>

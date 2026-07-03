@@ -1,0 +1,292 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeeFile.IndexModel
+
+@{
+    ViewData["Title"] = "Employee File";
+    var employee = Model.Employee;
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/employee-file.css" asp-append-version="true" />
+
+@if (employee != null)
+{
+    <div class="employee-file-page">
+        <div class="page-header">
+            <div>
+                <h1>تعديل الموظف</h1>
+                <p>@employee.EmployeeNo - @employee.FullName</p>
+            </div>
+
+            <div class="employee-file-actions">
+                <a asp-page="/Positions/Index" class="hrms-btn-secondary">إدارة المناصب</a>
+                <a asp-page="/Employees/Index" class="hrms-btn-secondary">الرجوع للموظفين</a>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+        {
+            <div class="hrms-alert success">@Model.SuccessMessage</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+        {
+            <div class="hrms-alert error">@Model.ErrorMessage</div>
+        }
+
+        <section class="employee-file-card employee-hero">
+            <div class="employee-avatar">👤</div>
+
+            <div>
+                <h2>@employee.FullName</h2>
+                <p>@employee.EmployeeNo · @employee.Branch · @employee.Department</p>
+                <div class="employee-chips">
+                    <span>@(string.IsNullOrWhiteSpace(employee.Position) ? "No Position" : employee.Position)</span>
+                    <span>@(employee.IsActive ? "Active" : "Inactive")</span>
+                    <span>@(string.IsNullOrWhiteSpace(employee.DirectManager) ? "No Manager" : employee.DirectManager)</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="employee-file-tabs">
+            <button type="button" class="active" data-employee-file-tab="employee">بيانات الموظف</button>
+            <button type="button" data-employee-file-tab="documents">المستندات</button>
+        </section>
+
+        <section class="employee-file-panel active" data-employee-file-panel="employee">
+            <form method="post" asp-page-handler="SaveEmployee" class="employee-file-card">
+                <div class="hrms-section-head">
+                    <div>
+                        <h2>بيانات الموظف</h2>
+                        <p>البيانات الأساسية والمتقدمة بنفس صفحة التعديل.</p>
+                    </div>
+                </div>
+
+                <input asp-for="Input.Id" type="hidden" />
+                <input asp-for="Input.OldEmployeeNo" type="hidden" />
+
+                <div class="hrms-grid-4">
+                    <div class="hrms-field">
+                        <label>رقم الموظف</label>
+                        <input asp-for="Input.EmployeeNo" required />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>الاسم الكامل</label>
+                        <input asp-for="Input.FullName" required />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>القسم</label>
+                        <select asp-for="Input.DepartmentId" required>
+                            <option value="">-- اختر القسم --</option>
+                            @foreach (var department in Model.Departments)
+                            {
+                                <option value="@department.Id">@department.Text</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>المنصب</label>
+                        <select asp-for="Input.Position">
+                            <option value="">-- اختر المنصب --</option>
+                            @foreach (var position in Model.Positions)
+                            {
+                                <option value="@position.Name">@position.Name</option>
+                            }
+                        </select>
+                        @if (!Model.Positions.Any())
+                        {
+                            <small class="position-warning">لا توجد مناصب. اضغط إدارة المناصب لإضافتها.</small>
+                        }
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>الهاتف</label>
+                        <input asp-for="Input.Phone" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>الإيميل</label>
+                        <input asp-for="Input.Email" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>رقم الهوية</label>
+                        <input asp-for="Input.NationalId" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>تاريخ المباشرة</label>
+                        <input asp-for="Input.HireDate" type="date" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>تاريخ الميلاد</label>
+                        <input asp-for="Input.BirthDate" type="date" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>الجنس</label>
+                        <select asp-for="Input.Gender">
+                            <option value="">--</option>
+                            <option>Male</option>
+                            <option>Female</option>
+                        </select>
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>الجنسية</label>
+                        <input asp-for="Input.Nationality" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>البلد</label>
+                        <input asp-for="Input.Country" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>نوع العقد</label>
+                        <select asp-for="Input.ContractType">
+                            <option value="">--</option>
+                            <option>Permanent</option>
+                            <option>Temporary</option>
+                            <option>Part Time</option>
+                            <option>Internship</option>
+                        </select>
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>تاريخ انتهاء العقد</label>
+                        <input asp-for="Input.ContractEndDate" type="date" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>الحالة الوظيفية</label>
+                        <select asp-for="Input.EmploymentStatus">
+                            <option value="">--</option>
+                            <option>Active</option>
+                            <option>Suspended</option>
+                            <option>Resigned</option>
+                            <option>Terminated</option>
+                        </select>
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>المدير المباشر</label>
+                        <select asp-for="Input.DirectManagerId">
+                            <option value="">-- بدون --</option>
+                            @foreach (var manager in Model.Managers)
+                            {
+                                <option value="@manager.Id">@manager.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <label class="employee-active-check">
+                    <input asp-for="Input.IsActive" />
+                    <span>الموظف فعال</span>
+                </label>
+
+                <div class="hrms-actions" style="margin-top:14px;">
+                    <button type="submit" class="hrms-btn-primary">حفظ التعديل</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="employee-file-panel" data-employee-file-panel="documents">
+            <form method="post" asp-page-handler="UploadDocument" enctype="multipart/form-data" class="employee-file-card">
+                <div class="hrms-section-head">
+                    <div>
+                        <h2>رفع مستند</h2>
+                        <p>المستندات محفوظة داخل ملف الموظف فقط.</p>
+                    </div>
+                </div>
+
+                <input asp-for="Document.EmployeeId" type="hidden" />
+                <input asp-for="Document.EmployeeNo" type="hidden" />
+
+                <div class="hrms-grid-4">
+                    <div class="hrms-field">
+                        <label>نوع المستند</label>
+                        <select asp-for="Document.DocumentType">
+                            <option>ID</option>
+                            <option>Contract</option>
+                            <option>Passport</option>
+                            <option>Health Card</option>
+                            <option>Certificate</option>
+                            <option>Memo</option>
+                        </select>
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>تاريخ الانتهاء</label>
+                        <input asp-for="Document.ExpiryDate" type="date" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>الملف</label>
+                        <input asp-for="Document.File" type="file" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>ملاحظات</label>
+                        <input asp-for="Document.Notes" />
+                    </div>
+                </div>
+
+                <div class="hrms-actions" style="margin-top:14px;">
+                    <button type="submit" class="hrms-btn-primary">رفع المستند</button>
+                </div>
+            </form>
+
+            <div class="employee-file-card">
+                <div class="hrms-section-head">
+                    <div>
+                        <h2>مستندات الموظف</h2>
+                        <p>كل المستندات الخاصة بهذا الموظف.</p>
+                    </div>
+                </div>
+
+                <div class="hrms-table-wrap">
+                    <table class="hrms-table">
+                        <thead>
+                            <tr>
+                                <th>النوع</th>
+                                <th class="text-start">الملف</th>
+                                <th>انتهاء</th>
+                                <th>رفع</th>
+                                <th>فتح</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var doc in Model.Documents)
+                            {
+                                <tr>
+                                    <td>@doc.DocumentType</td>
+                                    <td class="text-start">@doc.FileName</td>
+                                    <td>@doc.ExpiryDate?.ToString("yyyy-MM-dd")</td>
+                                    <td>@doc.UploadedAt?.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td><a href="@doc.StoredPath" target="_blank" class="hrms-btn-secondary">فتح</a></td>
+                                </tr>
+                            }
+
+                            @if (!Model.Documents.Any())
+                            {
+                                <tr>
+                                    <td colspan="5" class="employee-empty">لا توجد مستندات لهذا الموظف.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/employee-file-tabs.js" asp-append-version="true"></script>
+}

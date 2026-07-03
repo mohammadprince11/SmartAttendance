@@ -1,0 +1,221 @@
+/* Stable Attendance Operations layout - rollback clean */
+
+.attendance-header-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.attendance-filter-card,
+.attendance-results-card {
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 18px;
+    padding: 14px;
+    margin-bottom: 14px;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: 160px 160px minmax(220px, 1fr) 130px auto;
+    gap: 10px;
+    align-items: end;
+}
+
+.filter-actions,
+.modal-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.results-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px solid var(--sa-border);
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+.results-head h2 {
+    margin: 0;
+    color: var(--sa-text);
+    font-weight: 1000;
+}
+
+.results-head p {
+    margin: 4px 0 0;
+    color: var(--sa-muted);
+    font-weight: 850;
+}
+
+.results-head p span {
+    color: #fbbf24;
+    font-weight: 1000;
+}
+
+.attendance-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.attendance-table {
+    width: 100%;
+    min-width: 1180px;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.attendance-table th,
+.attendance-table td {
+    text-align: center !important;
+    vertical-align: middle !important;
+    padding: 12px 8px !important;
+    border-bottom: 1px solid var(--sa-border);
+    white-space: nowrap;
+}
+
+.attendance-table thead th {
+    background: var(--sa-surface-2);
+    color: var(--sa-text);
+    font-weight: 1000;
+}
+
+.attendance-table tbody tr:nth-child(even) td {
+    background: rgba(96, 165, 250, .055);
+}
+
+.attendance-table th:nth-child(1),
+.attendance-table td:nth-child(1) { width: 110px; }
+
+.attendance-table th:nth-child(2),
+.attendance-table td:nth-child(2) { width: 95px; }
+
+.attendance-table th:nth-child(3),
+.attendance-table td:nth-child(3) { width: 180px; }
+
+.attendance-table th:nth-child(4),
+.attendance-table td:nth-child(4) { width: 180px; }
+
+.attendance-table th:nth-child(5),
+.attendance-table td:nth-child(5),
+.attendance-table th:nth-child(6),
+.attendance-table td:nth-child(6) { width: 80px; }
+
+.attendance-table th:nth-child(7),
+.attendance-table td:nth-child(7),
+.attendance-table th:nth-child(8),
+.attendance-table td:nth-child(8),
+.attendance-table th:nth-child(9),
+.attendance-table td:nth-child(9) { width: 105px; }
+
+.attendance-table th:nth-child(10),
+.attendance-table td:nth-child(10) { width: 120px; }
+
+.attendance-table th:nth-child(11),
+.attendance-table td:nth-child(11) { width: 85px; }
+
+.attendance-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 82px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--sa-surface-2);
+    border: 1px solid var(--sa-border);
+    font-weight: 1000;
+}
+
+.attendance-modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.62);
+    z-index: 9999;
+    place-items: center;
+    padding: 20px;
+}
+
+.attendance-modal-backdrop.is-open {
+    display: grid;
+}
+
+.attendance-modal {
+    width: min(860px, 96vw);
+    max-height: 90vh;
+    overflow: auto;
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 22px;
+    box-shadow: var(--sa-shadow);
+    padding: 18px;
+}
+
+.attendance-import-modal {
+    width: min(1100px, 96vw);
+}
+
+.attendance-modal-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--sa-border);
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+}
+
+.attendance-modal-head h2 {
+    margin: 0;
+    color: var(--sa-text);
+    font-weight: 1000;
+}
+
+.attendance-modal-head p {
+    margin: 4px 0 0;
+    color: var(--sa-muted);
+    font-weight: 850;
+}
+
+.attendance-modal-head button {
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--sa-border);
+    border-radius: 12px;
+    background: var(--sa-surface-2);
+    color: var(--sa-text);
+    cursor: pointer;
+    font-weight: 1000;
+}
+
+.modal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.edit-help-note,
+.hint-box {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(34, 197, 94, .35);
+    background: rgba(34, 197, 94, .10);
+    color: var(--sa-success);
+    font-weight: 900;
+}
+
+.inside-modal {
+    margin-top: 14px;
+}
+
+@media (max-width: 900px) {
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-grid {
+        grid-template-columns: 1fr;
+    }
+}

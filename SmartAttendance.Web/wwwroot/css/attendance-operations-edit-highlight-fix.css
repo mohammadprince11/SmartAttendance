@@ -1,0 +1,25 @@
+/* Show notes only for manual edits + highlight edited rows */
+
+.attendance-table tr.manual-edit-row td {
+    color: #fbbf24 !important;
+    font-weight: 1000 !important;
+}
+
+.attendance-table tr.manual-edit-row td:first-child {
+    border-inline-start: 4px solid #fbbf24;
+}
+
+.attendance-table tr.manual-edit-row .attendance-status {
+    border-color: rgba(251, 191, 36, .65);
+    background: rgba(251, 191, 36, .14);
+    color: #fbbf24;
+}
+
+.attendance-note-cell {
+    white-space: normal !important;
+    text-align: center !important;
+    line-height: 1.5;
+    color: inherit !important;
+    font-weight: 1000;
+    max-width: 240px;
+}

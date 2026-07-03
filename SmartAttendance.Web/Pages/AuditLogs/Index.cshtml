@@ -1,0 +1,64 @@
+@page
+@model SmartAttendance.Web.Pages.AuditLogs.IndexModel
+
+@{
+    ViewData["Title"] = "Audit Logs";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page">
+    <div class="page-header">
+        <div>
+            <h1>سجل العمليات</h1>
+            <p>متابعة التعديلات والموافقات والتغييرات المهمة داخل النظام.</p>
+        </div>
+    </div>
+
+    <form method="get" class="hrms-filter-card">
+        <div class="hrms-grid-2">
+            <div class="hrms-field">
+                <label>بحث</label>
+                <input asp-for="Search" placeholder="الكيان، العملية، المستخدم..." />
+            </div>
+            <div class="hrms-actions" style="align-self:end;">
+                <button class="hrms-btn-primary">بحث</button>
+                <a asp-page="./Index" class="hrms-btn-secondary">مسح</a>
+            </div>
+        </div>
+    </form>
+
+    <div class="hrms-table-card">
+        <div class="hrms-table-wrap">
+            <table class="hrms-table">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>الكيان</th>
+                        <th>رقم</th>
+                        <th>العملية</th>
+                        <th>قبل</th>
+                        <th>بعد</th>
+                        <th>المستخدم</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in Model.Logs)
+                    {
+                        <tr>
+                            <td>@log.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@log.EntityName</td>
+                            <td>@log.EntityId</td>
+                            <td>@log.Action</td>
+                            <td class="text-start">@log.OldValues</td>
+                            <td class="text-start">@log.NewValues</td>
+                            <td>@log.UserName</td>
+                            <td>@log.IpAddress</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

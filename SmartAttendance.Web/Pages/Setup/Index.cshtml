@@ -1,0 +1,152 @@
+@page
+@model SmartAttendance.Web.Pages.Setup.IndexModel
+
+@{
+    ViewData["Title"] = "System Setup";
+}
+
+<style>
+    .setup-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 14px;
+        margin-bottom: 22px;
+    }
+
+    .setup-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
+    }
+
+    .setup-card .label {
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 800;
+        margin-bottom: 6px;
+    }
+
+    .setup-card .value {
+        color: #0f172a;
+        font-size: 28px;
+        font-weight: 900;
+    }
+
+    .status-ready {
+        color: #166534;
+        font-weight: 900;
+    }
+
+    .status-warning {
+        color: #92400e;
+        font-weight: 900;
+    }
+
+    .status-missing {
+        color: #991b1b;
+        font-weight: 900;
+    }
+
+    .setup-actions-box {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        padding: 18px;
+        margin-bottom: 22px;
+    }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1>System Setup</h1>
+        <p>Check system readiness before attendance import and processing</p>
+    </div>
+
+    <a asp-page="/AttendanceImports/Index" class="btn-primary">Attendance Import</a>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-success">@TempData["SuccessMessage"]</div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert-danger">@TempData["ErrorMessage"]</div>
+}
+
+<div class="setup-grid">
+    <div class="setup-card"><div class="label">Companies</div><div class="value">@Model.SetupStatus.CompaniesCount</div></div>
+    <div class="setup-card"><div class="label">Branches</div><div class="value">@Model.SetupStatus.BranchesCount</div></div>
+    <div class="setup-card"><div class="label">Departments</div><div class="value">@Model.SetupStatus.DepartmentsCount</div></div>
+    <div class="setup-card"><div class="label">Employees</div><div class="value">@Model.SetupStatus.EmployeesCount</div></div>
+    <div class="setup-card"><div class="label">Devices</div><div class="value">@Model.SetupStatus.DevicesCount</div></div>
+    <div class="setup-card"><div class="label">Shifts</div><div class="value">@Model.SetupStatus.ShiftsCount</div></div>
+    <div class="setup-card"><div class="label">Employees Without Shift</div><div class="value">@Model.SetupStatus.EmployeesWithoutCurrentShiftCount</div></div>
+    <div class="setup-card"><div class="label">Attendance Records</div><div class="value">@Model.SetupStatus.AttendanceRecordsCount</div></div>
+</div>
+
+<div class="setup-actions-box">
+    <h2>Bulk Assign Shift</h2>
+    <p>Use this when all active employees should receive the same default shift and weekly off day.</p>
+
+    <form method="post" asp-page-handler="BulkAssignShift" class="search-form">
+        <select asp-for="BulkAssignShift.ShiftId" class="form-control" style="max-width: 380px;">
+            @foreach (var shift in Model.SetupStatus.Shifts)
+            {
+                <option value="@shift.Id">@shift.Text</option>
+            }
+        </select>
+
+        <input asp-for="BulkAssignShift.EffectiveFrom" type="date" class="form-control" style="max-width: 180px;" />
+
+        <input asp-for="BulkAssignShift.WeeklyOffDays"
+               class="form-control"
+               style="max-width: 240px;"
+               placeholder="Weekly Off: Friday or Friday,Saturday" />
+
+        <label style="display:flex;align-items:center;gap:8px;font-weight:800;">
+            <input asp-for="BulkAssignShift.OnlyEmployeesWithoutCurrentShift" />
+            Only employees without current shift
+        </label>
+
+        <button type="submit" class="btn-primary">Assign Shift</button>
+    </form>
+</div>
+
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Step</th>
+                <th>Item</th>
+                <th>Status</th>
+                <th>Message</th>
+                <th>Open</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var step in Model.SetupStatus.Steps)
+            {
+                var statusClass = step.Status == "Ready"
+                    ? "status-ready"
+                    : step.Status == "Missing"
+                        ? "status-missing"
+                        : "status-warning";
+
+                <tr>
+                    <td>@step.Order</td>
+                    <td>@step.Title</td>
+                    <td class="@statusClass">@step.Status</td>
+                    <td>@step.Message</td>
+                    <td>
+                        <a href="@step.LinkUrl" class="btn-table btn-edit">@step.LinkText</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

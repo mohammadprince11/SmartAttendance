@@ -11,7 +11,10 @@
         <p>Manage official holidays</p>
     </div>
 
-    <a asp-page="./Create" class="btn-primary">+ Add Holiday</a>
+    <div class="form-actions">
+        <a asp-page="./Import" class="btn-secondary">Import Excel</a>
+        <a asp-page="./Create" class="btn-primary">+ Add Holiday</a>
+    </div>
 </div>
 
 @if (TempData["SuccessMessage"] != null)
@@ -63,9 +66,7 @@
             else
             {
                 <tr>
-                    <td colspan="5" style="text-align:center;">
-                        No holidays found.
-                    </td>
+                    <td colspan="5" style="text-align:center;">No holidays found.</td>
                 </tr>
             }
         </tbody>

@@ -358,6 +358,9 @@ namespace SmartAttendance.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("Position")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -413,6 +416,9 @@ namespace SmartAttendance.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("WeeklyOffDays")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");

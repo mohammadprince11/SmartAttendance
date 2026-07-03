@@ -1,55 +1,329 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="dark" data-sidebar="expanded" class="sa-preload">
 <head>
     <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <title>@ViewData["Title"] - Smart Attendance</title>
 
-    <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
-</head>
+    <script>
+            (function () {
+                var theme = localStorage.getItem("SmartAttendance.Theme") || "dark";
+                var language = localStorage.getItem("SmartAttendance.Language") || "ar";
+                var sidebar = localStorage.getItem("SmartAttendance.Sidebar") || "expanded";
 
+                document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "dark");
+                document.documentElement.setAttribute("data-sidebar", sidebar === "collapsed" ? "collapsed" : "expanded");
+                document.documentElement.setAttribute("lang", language === "ar" ? "ar" : "en");
+                document.documentElement.setAttribute("dir", language === "ar" ? "rtl" : "ltr");
+            })();
+    </script>
+
+    <style>
+            html[data-theme="dark"], html[data-theme="dark"] body {
+                background: #0b1220;
+                color: #e6edf7;
+            }
+
+            html[data-theme="light"], html[data-theme="light"] body {
+                background: #f6f8fb;
+                color: #102033;
+            }
+
+            html.sa-preload body {
+                opacity: 0;
+            }
+
+            html.sa-ready body {
+                opacity: 1;
+                transition: opacity 160ms ease;
+            }
+    </style>
+
+    <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/layout-pagination-fix.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme-localization.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/sidebar-toggle-inside.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/sidebar-modules.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/report-builder-clean.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/encoding-safe-language.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/hide-sidebar-icons-final.css" asp-append-version="true" />
+</head>
 <body>
+    @{
+        var loginUser = Context.Request.Cookies["SA.UserName"];
+        var displayNameCookie = Context.Request.Cookies["SA.DisplayName"];
+        var loginDisplayName = !string.IsNullOrWhiteSpace(displayNameCookie) ? displayNameCookie : loginUser;
+        var loginRole = Context.Request.Cookies["SA.Role"] ?? "";
+        var loginEmployeeId = Context.Request.Cookies["SA.EmployeeId"] ?? "";
+        var isLoggedIn = !string.IsNullOrWhiteSpace(loginUser);
+
+        var isAdmin = loginRole.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+        var isHrManager = loginRole.Equals("HR Manager", StringComparison.OrdinalIgnoreCase);
+        var isHrOfficer = loginRole.Equals("HR Officer", StringComparison.OrdinalIgnoreCase);
+        var isBranchManager = loginRole.Equals("Branch Manager", StringComparison.OrdinalIgnoreCase);
+        var isEmployee = loginRole.Equals("Employee", StringComparison.OrdinalIgnoreCase);
+        var isFinanceViewer = loginRole.Equals("Finance Viewer", StringComparison.OrdinalIgnoreCase);
+
+        var showOrg = isAdmin || isHrManager || isHrOfficer || isBranchManager || isFinanceViewer;
+        var showHr = isAdmin || isHrManager || isHrOfficer || isBranchManager;
+        var showAttendance = isAdmin || isHrManager || isHrOfficer;
+        var showReports = isAdmin || isHrManager || isHrOfficer || isBranchManager || isFinanceViewer;
+        var showSettings = isAdmin || isHrManager;
+        var showSelfServices = isAdmin || isHrManager || isHrOfficer || isBranchManager || isEmployee;
+    }
+
     <div class="app-shell">
         <aside class="sidebar">
-            <div class="brand">
-                <div class="brand-icon">SA</div>
-                <div>
+            <div class="brand sidebar-brand-with-toggle">
+                <div class="brand-logo">SA</div>
+
+                <div class="brand-text">
                     <div class="brand-title">Smart Attendance</div>
-                    <div class="brand-subtitle">Enterprise HRMS</div>
+                    <div class="brand-subtitle" data-i18n="enterprise">Human Resources System</div>
                 </div>
+
+                <button type="button"
+                        class="sa-sidebar-toggle sidebar-local-toggle"
+                        data-sidebar-toggle
+                        aria-label="Toggle menu"
+                        title="Toggle menu">
+                    Menu
+                </button>
             </div>
 
-            <nav class="menu">
-                <a asp-page="/Index">Dashboard</a>
-                <a asp-page="/Companies/Index">Companies</a>
-                <a href="/Branches">Branches</a>
-                <a href="/Departments">Departments</a>
-                <a href="/Employees">Employees</a>
-                <a href="/Devices">Devices</a>
-                <a href="/Shifts">Shifts</a>
-                <a href="/EmployeeShifts">Employee Shifts</a>
-                <a href="/AttendanceRecords">Attendance</a>
-                <a href="/AttendanceProcessing">Attendance Processing</a>
-                <a href="/Holidays">Holidays</a>
-                <a href="/LeaveRequests">Leave Requests</a>
-                <a href="/AttendanceReports">Attendance Reports</a>
-                <a href="/EmployeePermissions">Employee Permissions</a>
-                <a href="#">Settings</a>
+            <nav class="sidebar-nav sidebar-modules-nav">
+                <a asp-page="/Index" class="sidebar-single-link">
+                    <span class="nav-icon">Home</span>
+                    <span class="nav-text" data-i18n="dashboard">Dashboard</span>
+                </a>
+
+                @if (showOrg)
+                {
+                    <a asp-page="/Organization/Index" class="sidebar-single-link">
+                        <span class="nav-icon">Org</span>
+                        <span class="nav-text" data-i18n="organization">Organization</span>
+                    </a>
+                }
+
+                @if (showHr)
+                {
+                    <details class="nav-module" open>
+                        <summary>
+                            <span class="nav-icon">HR</span>
+                            <span class="nav-text" data-i18n="hrAffairs">HR Affairs</span>
+                            <span class="nav-chevron"></span>
+                        </summary>
+
+                        <div class="nav-module-links">
+                            <a asp-page="/Employees/Index">
+                                <span class="nav-icon">Emp</span>
+                                <span class="nav-text" data-i18n="employees">Employees</span>
+                            </a>
+
+                            @if (showReports)
+                            {
+                                <a asp-page="/Reports/Index" asp-route-Area="hr">
+                                    <span class="nav-icon">Rpt</span>
+                                    <span class="nav-text" data-i18n="hrReports">HR Reports</span>
+                                </a>
+                            }
+                        </div>
+                    </details>
+                }
+
+                @if (showAttendance)
+                {
+                    <details class="nav-module" open>
+                        <summary>
+                            <span class="nav-icon">Time</span>
+                            <span class="nav-text" data-i18n="attendanceModule">Attendance & Time</span>
+                            <span class="nav-chevron"></span>
+                        </summary>
+
+                        <div class="nav-module-links">
+                            @if (isAdmin || isHrManager)
+                            {
+                                <a asp-page="/Devices/Index">
+                                    <span class="nav-icon">Dev</span>
+                                    <span class="nav-text" data-i18n="devices">Devices</span>
+                                </a>
+
+                                <a asp-page="/Shifts/Index">
+                                    <span class="nav-icon">Shift</span>
+                                    <span class="nav-text" data-i18n="shifts">Shifts</span>
+                                </a>
+
+                                <a asp-page="/EmployeeShifts/Index">
+                                    <span class="nav-icon">ES</span>
+                                    <span class="nav-text" data-i18n="employeeShifts">Employee Shifts</span>
+                                </a>
+                            }
+                            <a asp-page="/AttendanceOperations/Index">
+                                <span class="nav-icon">Ops</span>
+                                <span class="nav-text" data-i18n="attendanceOperations">Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø­Ø¶ÙˆØ±</span>
+                            </a>
+
+                            @if (showReports)
+                            {
+                                <a asp-page="/Reports/Index" asp-route-Area="attendance">
+                                    <span class="nav-icon">Rpt</span>
+                                    <span class="nav-text" data-i18n="attendanceReports">Attendance Reports</span>
+                                </a>
+                            }
+                        </div>
+                    </details>
+                }
+
+                @if (showSettings)
+                {
+                    <details class="nav-module" open>
+                        <summary>
+                            <span class="nav-icon">Set</span>
+                            <span class="nav-text" data-i18n="settingsModule">Settings</span>
+                            <span class="nav-chevron"></span>
+                        </summary>
+
+                        <div class="nav-module-links">
+                            <a asp-page="/OrganizationSettings/Index">
+                                <span class="nav-icon">Org</span>
+                                <span class="nav-text" data-i18n="organizationSettings">Organization Settings</span>
+                            </a>
+
+                            @if (isAdmin)
+                            {
+                                <a asp-page="/UserAccess/Index">
+                                    <span class="nav-icon">User</span>
+                                    <span class="nav-text" data-i18n="systemUsers">System Users</span>
+                                </a>
+                            }
+
+                            <a asp-page="/Holidays/Index">
+                                <span class="nav-icon">Hol</span>
+                                <span class="nav-text" data-i18n="holidays">Holidays</span>
+                            </a>
+
+                            @if (isAdmin)
+                            {
+                                <a asp-page="/EmployeePermissions/Index">
+                                    <span class="nav-icon">Perm</span>
+                                    <span class="nav-text" data-i18n="systemPermissions">System Permissions</span>
+                                </a>
+                            }
+
+                            <a asp-page="/Approvals/Index">
+                                <span class="nav-icon">OK</span>
+                                <span class="nav-text" data-i18n="approvals">Approvals</span>
+                            </a>
+
+                            @if (isAdmin)
+                            {
+                                <a asp-page="/AuditLogs/Index">
+                                    <span class="nav-icon">Log</span>
+                                    <span class="nav-text" data-i18n="auditLogs">Audit Logs</span>
+                                </a>
+                            }
+
+                            <a asp-page="/Notifications/Index">
+                                <span class="nav-icon">Bell</span>
+                                <span class="nav-text" data-i18n="notifications">Notifications</span>
+                            </a>
+
+                            @if (isAdmin)
+                            {
+                                <a asp-page="/SystemMaintenance/Index">
+                                    <span class="nav-icon">Bak</span>
+                                    <span class="nav-text" data-i18n="maintenance">Maintenance & Backup</span>
+                                </a>
+                            }
+
+                            <a asp-page="/Settings/Index">
+                                <span class="nav-icon">Set</span>
+                                <span class="nav-text" data-i18n="settings">Settings</span>
+                            </a>
+                        </div>
+                    </details>
+                }
+
+                @if (showSelfServices)
+                {
+                    <details class="nav-module" open>
+                        <summary>
+                            <span class="nav-icon">Self</span>
+                            <span class="nav-text" data-i18n="selfServices">Self Services</span>
+                            <span class="nav-chevron"></span>
+                        </summary>
+
+                        <div class="nav-module-links">
+                            <a asp-page="/MyProfile/Index">
+                                <span class="nav-icon">Me</span>
+                                <span class="nav-text" data-i18n="myPage">My Page</span>
+                            </a>
+
+                            <a asp-page="/SelfServices/Index">
+                                <span class="nav-icon">Req</span>
+                                <span class="nav-text" data-i18n="selfServices">Self Services</span>
+                            </a>
+
+                            <a asp-page="/LeaveRequests/Index">
+                                <span class="nav-icon">Leave</span>
+                                <span class="nav-text" data-i18n="leaveRequests">Leave Requests</span>
+                            </a>
+                        </div>
+                    </details>
+                }
             </nav>
         </aside>
 
-        <main class="main">
+        <div class="main-area">
             <header class="topbar">
-                <div class="page-title">@ViewData["Title"]</div>
-                <div class="user-box">Mohammed Ali</div>
+                <div class="topbar-title">
+                    @(ViewData["Title"] ?? "Smart Attendance")
+                </div>
+
+                <div class="sa-ui-controls">
+                    <button type="button" class="sa-toggle-btn" data-language-button="en">EN</button>
+                    <button type="button" class="sa-toggle-btn" data-language-button="ar">AR</button>
+
+                    <button type="button" class="sa-toggle-btn" data-theme-button="light" data-i18n="themeLight">Light</button>
+                    <button type="button" class="sa-toggle-btn" data-theme-button="dark" data-i18n="themeDark">Dark</button>
+
+                    @if (isLoggedIn)
+                    {
+                        <div class="topbar-user">@loginDisplayName</div>
+                        <a asp-page="/Account/Logout" class="sa-toggle-btn" style="text-decoration:none;" data-i18n="logout">Logout</a>
+                    }
+                    else
+                    {
+                        <a asp-page="/Account/Login" class="sa-toggle-btn" style="text-decoration:none;" data-i18n="login">Login</a>
+                    }
+                </div>
             </header>
 
-            <section class="content">
+            <main class="page-content">
                 @RenderBody()
-            </section>
-        </main>
+            </main>
+        </div>
     </div>
+
+    <script>
+            window.SA_AUTH = {
+                role: "@loginRole",
+                employeeId: "@loginEmployeeId"
+            };
+    </script>
+
+    <script src="~/js/table-pagination.js" asp-append-version="true"></script>
+    <script src="~/js/theme-localization.js" asp-append-version="true"></script>
+    <script src="~/js/sidebar-design-repair.js" asp-append-version="true"></script>
+    <script src="~/js/sidebar-modules.js" asp-append-version="true"></script>
+    <script src="~/js/employee-file-button.js" asp-append-version="true"></script>
+    <script src="~/js/self-service-own-employee.js" asp-append-version="true"></script>
+    <script src="~/js/report-builder-clean.js" asp-append-version="true"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+
+

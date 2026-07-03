@@ -13,4 +13,7 @@ public class EmployeeShiftEditViewModel
     public DateOnly? EffectiveTo { get; set; }
 
     public bool IsCurrent { get; set; } = true;
+
+    // Examples: Friday / Friday,Saturday
+    public string? WeeklyOffDays { get; set; }
 }

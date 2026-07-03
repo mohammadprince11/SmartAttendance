@@ -12,6 +12,8 @@ public class EmployeeCreateViewModel
 
     public string? Email { get; set; }
 
+    public string? Position { get; set; }
+
     public DateOnly HireDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
 
     public DateOnly? BirthDate { get; set; }

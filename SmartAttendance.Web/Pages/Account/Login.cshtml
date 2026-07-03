@@ -1,0 +1,50 @@
+@page
+@model SmartAttendance.Web.Pages.Account.LoginModel
+
+@{
+    ViewData["Title"] = "Login";
+}
+
+<link rel="stylesheet" href="~/css/login-foundation.css" asp-append-version="true" />
+
+<div class="login-page">
+    <div class="login-card">
+        <div class="login-logo">SA</div>
+
+        <h1>تسجيل الدخول</h1>
+        <p>دخول مستخدمي نظام Smart Attendance.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+        {
+            <div class="login-error">@Model.ErrorMessage</div>
+        }
+
+        <form method="post" class="login-form">
+            <input asp-for="ReturnUrl" type="hidden" />
+
+            <div class="login-field">
+                <label>اسم المستخدم</label>
+                <input asp-for="Username" autocomplete="username" autofocus />
+            </div>
+
+            <div class="login-field">
+                <label>كلمة المرور</label>
+                <input asp-for="Password" type="password" autocomplete="current-password" />
+            </div>
+
+            <label class="login-check">
+                <input asp-for="RememberMe" />
+                <span>تذكرني</span>
+            </label>
+
+            <button type="submit" class="login-button">دخول</button>
+        </form>
+
+        <div class="login-note">
+            أول دخول افتراضي:
+            <strong>admin</strong>
+            /
+            <strong>Admin@12345</strong>
+        </div>
+    </div>
+</div>

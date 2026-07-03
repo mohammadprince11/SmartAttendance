@@ -1,0 +1,137 @@
+/* Unified Attendance Operations */
+
+.attendance-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 18px;
+    padding: 8px;
+    margin-bottom: 14px;
+}
+
+.attendance-tabs a {
+    text-align: center;
+    text-decoration: none;
+    color: var(--sa-text);
+    border: 1px solid var(--sa-border);
+    background: var(--sa-surface-2);
+    border-radius: 12px;
+    padding: 12px;
+    font-weight: 1000;
+}
+
+.attendance-tabs a.active {
+    background: var(--sa-primary);
+    border-color: var(--sa-primary);
+    color: white;
+}
+
+.attendance-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin: 14px 0;
+}
+
+.attendance-summary-grid > div {
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 16px;
+    padding: 14px;
+}
+
+.attendance-summary-grid span {
+    display: block;
+    color: var(--sa-muted);
+    font-weight: 900;
+    margin-bottom: 6px;
+}
+
+.attendance-summary-grid strong {
+    color: var(--sa-text);
+    font-size: 24px;
+    font-weight: 1000;
+}
+
+.warning-text {
+    color: #fbbf24;
+    font-weight: 1000;
+}
+
+.hint-field div {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    color: var(--sa-muted);
+    font-weight: 850;
+}
+
+.attendance-modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.62);
+    z-index: 9999;
+    place-items: center;
+    padding: 20px;
+}
+
+.attendance-modal-backdrop.is-open {
+    display: grid;
+}
+
+.attendance-modal {
+    width: min(860px, 96vw);
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 22px;
+    box-shadow: var(--sa-shadow);
+    padding: 18px;
+}
+
+.attendance-modal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 12px;
+    border-bottom: 1px solid var(--sa-border);
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+}
+
+.attendance-modal-head h2 {
+    margin: 0;
+    color: var(--sa-text);
+    font-weight: 1000;
+}
+
+.attendance-modal-head p {
+    margin: 4px 0 0;
+    color: var(--sa-muted);
+    font-weight: 850;
+}
+
+.attendance-modal-head button {
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--sa-border);
+    border-radius: 12px;
+    background: var(--sa-surface-2);
+    color: var(--sa-text);
+    cursor: pointer;
+    font-weight: 1000;
+}
+
+.attendance-operations-page .hrms-table th,
+.attendance-operations-page .hrms-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+@media (max-width: 800px) {
+    .attendance-tabs {
+        grid-template-columns: 1fr;
+    }
+}

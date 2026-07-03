@@ -1,0 +1,53 @@
+/* User Access */
+
+.user-access-page {
+    display: grid;
+    gap: 14px;
+}
+
+.user-access-grid {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.user-access-warning {
+    background: rgba(245, 158, 11, .12);
+    color: var(--sa-warning);
+    border: 1px solid rgba(245, 158, 11, .35);
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-weight: 900;
+}
+
+.user-access-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--sa-text);
+    font-weight: 1000;
+}
+
+.user-access-check input {
+    width: 18px;
+    height: 18px;
+}
+
+.user-access-list {
+    display: grid;
+    gap: 14px;
+}
+
+.user-access-empty {
+    text-align: center !important;
+    color: var(--sa-muted) !important;
+    font-weight: 1000;
+    padding: 24px !important;
+}
+
+@media (max-width: 1200px) {
+    .user-access-grid {
+        grid-template-columns: 1fr;
+    }
+}

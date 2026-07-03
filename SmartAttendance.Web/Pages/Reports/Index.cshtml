@@ -1,0 +1,132 @@
+@page
+@model SmartAttendance.Web.Pages.Reports.IndexModel
+
+@{
+    ViewData["Title"] = "Reports";
+}
+
+<link rel="stylesheet" href="~/css/reports-rebuild.css" asp-append-version="true" />
+
+<div class="reports-page" data-report-area="@Model.NormalizedArea">
+    <div class="page-header reports-header">
+        <div>
+            <h1 data-reports-text="reports">تقارير</h1>
+            <p data-reports-text="reportsSubtitle">إدارة تقارير النظام والتقارير الخاصة والتقارير المشاركة.</p>
+        </div>
+    </div>
+
+    <div class="reports-tabs" role="tablist">
+        <button type="button" class="reports-tab active" data-report-tab="system">
+            📌 <span data-reports-text="systemReports">تقارير النظام</span>
+        </button>
+        <button type="button" class="reports-tab" data-report-tab="mine">
+            📄 <span data-reports-text="myReports">تقاريري</span>
+        </button>
+        <button type="button" class="reports-tab" data-report-tab="shared">
+            🤝 <span data-reports-text="sharedReports">تقارير تمت مشاركتها معي</span>
+        </button>
+    </div>
+
+    <section class="reports-tab-panel active" data-report-panel="system">
+        <div class="reports-section-card">
+            <div class="reports-section-head">
+                <div>
+                    <h2 data-reports-text="systemReports">تقارير النظام</h2>
+                    @if (Model.NormalizedArea == "hr")
+                    {
+                        <p data-reports-text="hrReportsHint">تقارير شؤون الموظفين فقط.</p>
+                    }
+                    else if (Model.NormalizedArea == "attendance")
+                    {
+                        <p data-reports-text="attendanceReportsHint">تقارير الحضور والانصراف فقط.</p>
+                    }
+                    else
+                    {
+                        <p data-reports-text="systemReportsHint">قوالب جاهزة تفتح بصفحة مستقلة. يمكن فلترتها وتصديرها Excel.</p>
+                    }
+                </div>
+
+                <div class="reports-search-box">
+                    <span>🔎</span>
+                    <input type="text" id="systemReportSearch" placeholder="ابحث في تقارير النظام..." data-reports-placeholder="searchSystemReports" />
+                </div>
+            </div>
+
+            <div class="reports-grid" id="systemReportsGrid">
+                @foreach (var report in Model.SystemReports)
+                {
+                    <a class="report-card"
+                       data-system-report-card
+                       data-report-search="@($"{report.TitleAr} {report.TitleEn} {report.DescriptionAr} {report.DescriptionEn} {report.CategoryAr} {report.CategoryEn}".ToLower())"
+                       asp-page="./View"
+                       asp-route-SystemKey="@report.Key"
+                       asp-route-Source="@report.Source"
+                       asp-route-Fields="@report.Fields"
+                       asp-route-Name="@report.TitleAr">
+                        <div class="report-card-main">
+                            <div class="report-icon">@report.Icon</div>
+                            <div>
+                                <div class="report-title">
+                                    <span class="report-title-ar">@report.TitleAr</span>
+                                    <span class="report-title-en">@report.TitleEn</span>
+                                </div>
+                                <p>
+                                    <span class="report-desc-ar">@report.DescriptionAr</span>
+                                    <span class="report-desc-en">@report.DescriptionEn</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="report-card-footer">
+                            <span class="report-chip">
+                                <span class="report-category-ar">@report.CategoryAr</span>
+                                <span class="report-category-en">@report.CategoryEn</span>
+                            </span>
+                            <span class="report-open"><span data-reports-text="openReport">فتح التقرير</span></span>
+                        </div>
+                    </a>
+                }
+            </div>
+        </div>
+    </section>
+
+    <section class="reports-tab-panel" data-report-panel="mine">
+        <div class="reports-section-card">
+            <div class="reports-section-head">
+                <div>
+                    <h2 data-reports-text="myReports">تقاريري</h2>
+                    <p data-reports-text="myReportsHint">التقارير التي تنشئها بنفسك تظهر هنا ككروت مستقلة.</p>
+                </div>
+                <a asp-page="./Create" class="reports-primary-action small">
+                    + <span data-reports-text="createReport">إنشاء تقرير</span>
+                </a>
+            </div>
+
+            <div class="reports-grid" id="myReportsGrid"></div>
+
+            <div class="reports-empty" id="myReportsEmpty">
+                <strong data-reports-text="noMyReports">لا توجد تقارير خاصة حالياً.</strong>
+                <span data-reports-text="createFirstReport">اضغط إنشاء تقرير حتى تختار الأعمدة وتحفظ التقرير الخاص بك.</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="reports-tab-panel" data-report-panel="shared">
+        <div class="reports-section-card">
+            <div class="reports-section-head">
+                <div>
+                    <h2 data-reports-text="sharedReports">تقارير تمت مشاركتها معي</h2>
+                    <p data-reports-text="sharedReportsHint">هنا تظهر التقارير التي يشاركها الأدمن أو مستخدم آخر معك لاحقاً.</p>
+                </div>
+            </div>
+            <div class="reports-empty">
+                <strong data-reports-text="noSharedReports">لا توجد تقارير مشاركة حالياً.</strong>
+                <span data-reports-text="sharedLater">نربط هذه الصفحة بالصلاحيات والمشاركة في مرحلة لاحقة.</span>
+            </div>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/reports-index.js" asp-append-version="true"></script>
+}

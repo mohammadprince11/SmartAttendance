@@ -1,0 +1,177 @@
+@page
+@model SmartAttendance.Web.Pages.Organization.IndexModel
+
+@{
+    ViewData["Title"] = "Organization";
+}
+
+<link rel="stylesheet" href="~/css/organization-view-only.css" asp-append-version="true" />
+
+<div class="org-view-page">
+    <div class="page-header">
+        <div>
+            <h1>الهيكل التنظيمي</h1>
+            <p>عرض هيكل الشركة والفروع والأقسام وعدد الموظفين.</p>
+        </div>
+
+        <a asp-page="/OrganizationSettings/Index" class="org-btn-secondary">إعدادات الهيكل التنظيمي</a>
+    </div>
+
+    <section class="org-summary-grid">
+        <div class="org-summary-card">
+            <div>
+                <span>الشركات</span>
+                <strong>@Model.TotalCompanies</strong>
+            </div>
+            <div class="org-summary-icon">🏢</div>
+        </div>
+
+        <div class="org-summary-card">
+            <div>
+                <span>الفروع</span>
+                <strong>@Model.TotalBranches</strong>
+            </div>
+            <div class="org-summary-icon">📍</div>
+        </div>
+
+        <div class="org-summary-card">
+            <div>
+                <span>الأقسام</span>
+                <strong>@Model.TotalDepartments</strong>
+            </div>
+            <div class="org-summary-icon">🧩</div>
+        </div>
+
+        <div class="org-summary-card">
+            <div>
+                <span>الموظفون</span>
+                <strong>@Model.TotalEmployees</strong>
+                <small>فعال @Model.ActiveEmployees / غير فعال @Model.InactiveEmployees</small>
+            </div>
+            <div class="org-summary-icon">👥</div>
+        </div>
+    </section>
+
+    <form method="get" class="org-search-panel">
+        <div class="org-search-input">
+            <span>🔎</span>
+            <input asp-for="Search" placeholder="ابحث عن شركة أو فرع أو قسم..." />
+        </div>
+
+        <button type="submit" class="org-btn-primary">بحث</button>
+        <a asp-page="./Index" class="org-btn-secondary">مسح</a>
+        <button type="button" class="org-btn-secondary" data-expand-all>فتح الأقسام</button>
+        <button type="button" class="org-btn-secondary" data-collapse-all>إغلاق الأقسام</button>
+    </form>
+
+    <section class="org-companies">
+        @foreach (var company in Model.Companies)
+        {
+            <article class="org-company">
+                <div class="org-company-header">
+                    <div class="org-company-info">
+                        <div class="org-company-icon">🏢</div>
+                        <div>
+                            <h2>@company.Name</h2>
+                            <p>@company.Code · @company.BranchCount فروع · @company.DepartmentCount أقسام · @company.EmployeeCount موظفين</p>
+                        </div>
+                    </div>
+
+                    <span class="org-status @(company.IsActive ? "active" : "inactive")">
+                        @(company.IsActive ? "فعال" : "غير فعال")
+                    </span>
+                </div>
+
+                <div class="org-table">
+                    <div class="org-table-head">
+                        <div>الفرع</div>
+                        <div>الأقسام</div>
+                        <div>الموظفون</div>
+                        <div>الحالة</div>
+                        <div>عرض</div>
+                    </div>
+
+                    @foreach (var branch in company.Branches)
+                    {
+                        <div class="org-branch">
+                            <div class="org-branch-name">
+                                <span class="org-branch-icon">📍</span>
+                                <div>
+                                    <strong>@branch.Name</strong>
+                                    <small>@branch.Code</small>
+                                </div>
+                            </div>
+
+                            <div class="org-count">
+                                <strong>@branch.DepartmentCount</strong>
+                                <small>أقسام</small>
+                            </div>
+
+                            <div class="org-count">
+                                <strong>@branch.EmployeeCount</strong>
+                                <small>موظفين</small>
+                            </div>
+
+                            <div>
+                                <span class="org-status @(branch.IsActive ? "active" : "inactive")">
+                                    @(branch.IsActive ? "فعال" : "غير فعال")
+                                </span>
+                            </div>
+
+                            <div>
+                                <button type="button" class="org-toggle" data-toggle-departments>⌄</button>
+                            </div>
+                        </div>
+
+                        <div class="org-departments" hidden>
+                            @if (branch.Departments.Any())
+                            {
+                                @foreach (var department in branch.Departments)
+                                {
+                                    <div class="org-department">
+                                        <div class="org-department-name">
+                                            <span>🧩</span>
+                                            <div>
+                                                <strong>@department.Name</strong>
+                                                <small>@department.Code</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="org-count">
+                                            <strong>@department.EmployeeCount</strong>
+                                            <small>موظف</small>
+                                        </div>
+
+                                        <div>
+                                            <span class="org-status @(department.IsActive ? "active" : "inactive")">
+                                                @(department.IsActive ? "فعال" : "غير فعال")
+                                            </span>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="org-empty-line">لا توجد أقسام داخل هذا الفرع.</div>
+                            }
+                        </div>
+                    }
+
+                    @if (!company.Branches.Any())
+                    {
+                        <div class="org-empty-line">لا توجد فروع داخل هذه الشركة.</div>
+                    }
+                </div>
+            </article>
+        }
+
+        @if (!Model.Companies.Any())
+        {
+            <div class="org-empty">لا توجد نتائج حسب البحث الحالي.</div>
+        }
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/organization-view-only.js" asp-append-version="true"></script>
+}

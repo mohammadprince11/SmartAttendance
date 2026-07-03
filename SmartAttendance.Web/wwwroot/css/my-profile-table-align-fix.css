@@ -1,0 +1,69 @@
+/* MyProfile table alignment fix */
+
+.my-profile-page .my-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.my-profile-page .my-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.my-profile-page .my-table th,
+.my-profile-page .my-table td {
+    text-align: center !important;
+    vertical-align: middle !important;
+    padding: 14px 10px !important;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.my-profile-page .my-table thead th {
+    font-weight: 1000;
+}
+
+.my-profile-page .my-table tbody td {
+    font-weight: 900;
+}
+
+/* Attendance table: date / in / out / status */
+.my-profile-page [data-my-panel="attendance"] .my-table th,
+.my-profile-page [data-my-panel="attendance"] .my-table td {
+    width: 25%;
+}
+
+/* Requests table: keep all columns aligned under headers */
+.my-profile-page [data-my-panel="requests"] .my-table th,
+.my-profile-page [data-my-panel="requests"] .my-table td {
+    width: 14.285%;
+}
+
+.my-profile-page [data-my-panel="requests"] .my-table td:nth-child(4) {
+    direction: ltr;
+    unicode-bidi: plaintext;
+    font-variant-numeric: tabular-nums;
+}
+
+.my-profile-page [data-my-panel="attendance"] .my-table td:nth-child(2),
+.my-profile-page [data-my-panel="attendance"] .my-table td:nth-child(3) {
+    direction: ltr;
+    unicode-bidi: plaintext;
+    font-variant-numeric: tabular-nums;
+}
+
+.my-profile-page .stacked-th {
+    display: inline-flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    line-height: 1.15 !important;
+}
+
+.my-profile-page .stacked-th span,
+.my-profile-page .stacked-th strong {
+    display: block !important;
+    text-align: center !important;
+}

@@ -1,0 +1,209 @@
+/* SmartAttendance Unified Dashboard */
+
+.dashboard-page {
+    display: grid;
+    gap: 14px;
+}
+
+.dashboard-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.dashboard-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(140px, 1fr));
+    gap: 10px;
+}
+
+.dashboard-kpi-grid.compact {
+    grid-template-columns: repeat(4, minmax(140px, 1fr));
+}
+
+.dashboard-kpi,
+.dashboard-panel {
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 18px;
+    box-shadow: var(--sa-shadow);
+    padding: 14px;
+}
+
+.dashboard-kpi {
+    min-height: 112px;
+}
+
+.dashboard-kpi span {
+    color: var(--sa-muted);
+    font-size: 12px;
+    font-weight: 1000;
+}
+
+.dashboard-kpi strong {
+    display: block;
+    color: var(--sa-text);
+    font-size: 30px;
+    line-height: 1.2;
+    font-weight: 1000;
+    margin-top: 10px;
+}
+
+.dashboard-kpi small {
+    color: var(--sa-muted);
+    font-weight: 800;
+}
+
+.dashboard-kpi.warning strong {
+    color: var(--sa-warning);
+}
+
+.dashboard-kpi.danger strong {
+    color: var(--sa-danger);
+}
+
+.dashboard-kpi.success strong {
+    color: var(--sa-success);
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.dashboard-panel h2,
+.dashboard-panel-head h2 {
+    margin: 0 0 12px;
+    color: var(--sa-text);
+    font-size: 18px;
+    font-weight: 1000;
+}
+
+.dashboard-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.dashboard-list {
+    display: grid;
+    gap: 8px;
+}
+
+.dashboard-list-row {
+    min-height: 42px;
+    background: var(--sa-surface-2);
+    border: 1px solid var(--sa-border);
+    border-radius: 13px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.dashboard-list-row span {
+    color: var(--sa-text);
+    font-weight: 900;
+}
+
+.dashboard-list-row span small {
+    display: block;
+    color: var(--sa-muted);
+    margin-top: 2px;
+}
+
+.dashboard-list-row strong {
+    color: var(--sa-primary-hover);
+    font-weight: 1000;
+}
+
+.dashboard-list-row.warning-row strong {
+    color: var(--sa-warning);
+}
+
+.dashboard-empty,
+.dashboard-empty-cell {
+    background: var(--sa-surface-2);
+    border: 1px dashed var(--sa-border);
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+    color: var(--sa-muted);
+    font-weight: 900;
+}
+
+.dashboard-table-wrap {
+    overflow-x: auto;
+}
+
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.dashboard-table th,
+.dashboard-table td {
+    border-bottom: 1px solid var(--sa-border);
+    padding: 11px 12px;
+    white-space: nowrap;
+    text-align: center;
+    color: var(--sa-text);
+}
+
+.dashboard-table th {
+    background: var(--sa-surface-2);
+    font-weight: 1000;
+}
+
+.dashboard-table .text-start {
+    text-align: start;
+}
+
+html[data-theme="dark"] .dashboard-kpi,
+html[data-theme="dark"] .dashboard-panel {
+    background: #111a2c !important;
+    border-color: #30415f !important;
+}
+
+html[data-theme="dark"] .dashboard-list-row,
+html[data-theme="dark"] .dashboard-empty,
+html[data-theme="dark"] .dashboard-empty-cell,
+html[data-theme="dark"] .dashboard-table th {
+    background: #162238 !important;
+    border-color: #30415f !important;
+}
+
+html[dir="rtl"] .dashboard-page,
+html[dir="rtl"] .dashboard-grid,
+html[dir="rtl"] .dashboard-list-row,
+html[dir="rtl"] .dashboard-table {
+    direction: rtl;
+}
+
+@media (max-width: 1500px) {
+    .dashboard-kpi-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .dashboard-kpi-grid.compact {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 1000px) {
+    .dashboard-grid,
+    .dashboard-kpi-grid,
+    .dashboard-kpi-grid.compact {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-panel-head {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

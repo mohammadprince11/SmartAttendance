@@ -8,10 +8,13 @@
 <div class="page-header">
     <div>
         <h1>Shifts</h1>
-        <p>Manage working shifts and grace periods</p>
+        <p>Manage work shifts</p>
     </div>
 
-    <a asp-page="./Create" class="btn-primary">+ Add Shift</a>
+    <div class="form-actions">
+        <a asp-page="./Import" class="btn-secondary">Import Excel</a>
+        <a asp-page="./Create" class="btn-primary">+ Add Shift</a>
+    </div>
 </div>
 
 @if (TempData["SuccessMessage"] != null)
@@ -26,7 +29,7 @@
         <input type="text"
                name="SearchTerm"
                value="@Model.SearchTerm"
-               placeholder="Search by code or shift name..." />
+               placeholder="Search by shift code or name..." />
 
         <button type="submit" class="btn-primary">Search</button>
         <a asp-page="./Index" class="btn-secondary">Clear</a>
@@ -36,14 +39,14 @@
         <thead>
             <tr>
                 <th>Code</th>
-                <th>Shift Name</th>
+                <th>Name</th>
                 <th>Start</th>
                 <th>End</th>
                 <th>Hours</th>
                 <th>Grace In</th>
                 <th>Grace Out</th>
                 <th>Night</th>
-                <th>Status</th>
+                <th>Active</th>
                 <th style="width: 160px;">Actions</th>
             </tr>
         </thead>
@@ -56,13 +59,13 @@
                     <tr>
                         <td>@shift.Code</td>
                         <td>@shift.Name</td>
-                        <td>@shift.StartTime.ToString("HH:mm")</td>
-                        <td>@shift.EndTime.ToString("HH:mm")</td>
+                        <td>@shift.StartTime</td>
+                        <td>@shift.EndTime</td>
                         <td>@shift.WorkingHours</td>
-                        <td>@shift.GraceInMinutes min</td>
-                        <td>@shift.GraceOutMinutes min</td>
+                        <td>@shift.GraceInMinutes</td>
+                        <td>@shift.GraceOutMinutes</td>
                         <td>@(shift.IsNightShift ? "Yes" : "No")</td>
-                        <td>@(shift.IsActive ? "Active" : "Inactive")</td>
+                        <td>@(shift.IsActive ? "Yes" : "No")</td>
                         <td>
                             <a asp-page="./Edit" asp-route-id="@shift.Id" class="btn-table btn-edit">Edit</a>
                             <a asp-page="./Delete" asp-route-id="@shift.Id" class="btn-table btn-delete">Delete</a>
@@ -73,9 +76,7 @@
             else
             {
                 <tr>
-                    <td colspan="10" style="text-align:center;">
-                        No shifts found.
-                    </td>
+                    <td colspan="10" style="text-align:center;">No shifts found.</td>
                 </tr>
             }
         </tbody>

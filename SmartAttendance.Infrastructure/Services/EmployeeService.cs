@@ -33,6 +33,7 @@ public class EmployeeService : IEmployeeService
 
             if (departmentLookup.TryGetValue(employee.DepartmentId, out var department))
             {
+                model.DepartmentCode = department.Code;
                 model.DepartmentName = department.Name;
                 model.BranchName = branchLookup.TryGetValue(department.BranchId, out var branchName)
                     ? branchName
@@ -49,11 +50,16 @@ public class EmployeeService : IEmployeeService
                 x.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 (x.NationalId != null && x.NationalId.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
                 (x.Phone != null && x.Phone.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                (x.Email != null && x.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                (x.Position != null && x.Position.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                x.DepartmentCode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 x.DepartmentName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 x.BranchName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
         }
 
-        return result.OrderBy(x => x.FullName).ToList();
+        return result
+            .OrderBy(x => x.FullName)
+            .ToList();
     }
 
     public async Task<EmployeeDetailsViewModel?> GetByIdAsync(int id)
@@ -127,6 +133,7 @@ public class EmployeeService : IEmployeeService
         employee.NationalId = model.NationalId;
         employee.Phone = model.Phone;
         employee.Email = model.Email;
+        employee.Position = model.Position;
         employee.HireDate = model.HireDate;
         employee.BirthDate = model.BirthDate;
         employee.IsActive = model.IsActive;

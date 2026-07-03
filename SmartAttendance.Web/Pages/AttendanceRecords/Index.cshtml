@@ -3,79 +3,239 @@
 
 @{
     ViewData["Title"] = "Attendance Records";
+
+    var routeValues = new Dictionary<string, string?>
+    {
+        ["Search"] = Model.Search,
+        ["EmployeeNo"] = Model.EmployeeNo,
+        ["EmployeeName"] = Model.EmployeeName,
+        ["Branch"] = Model.Branch,
+        ["Department"] = Model.Department,
+        ["Position"] = Model.Position,
+        ["Status"] = Model.Status,
+        ["Source"] = Model.Source,
+        ["FromDate"] = Model.FromDate?.ToString("yyyy-MM-dd"),
+        ["ToDate"] = Model.ToDate?.ToString("yyyy-MM-dd"),
+        ["PageSize"] = Model.PageSize.ToString()
+    };
 }
 
-<div class="page-header">
-    <div>
-        <h1>Attendance Records</h1>
-        <p>Manage employee check-in and check-out records</p>
+<link rel="stylesheet" href="~/css/attendance-records-filters.css" asp-append-version="true" />
+
+<div class="attendance-records-page">
+    <div class="page-header">
+        <div>
+            <h1 data-att-text="title">سجلات الحضور</h1>
+            <p data-att-text="subtitle">إدارة سجلات دخول وخروج الموظفين مع فلاتر متقدمة.</p>
+        </div>
+
+        <a asp-page="./Create" class="btn-primary">
+            + <span data-att-text="addRecord">إضافة سجل</span>
+        </a>
     </div>
 
-    <a asp-page="./Create" class="btn-primary">+ Add Record</a>
-</div>
+    <form method="get" class="att-filter-card">
+        <input type="hidden" name="PageNumber" value="1" />
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert-success">
-        @TempData["SuccessMessage"]
-    </div>
-}
+        <div class="att-filter-head">
+            <div>
+                <h2 data-att-text="filters">فلاتر البحث</h2>
+                <p data-att-text="filtersHint">ابحث حسب رقم الموظف، الاسم، التاريخ، القسم، الفرع، المنصب، الحالة والمصدر.</p>
+            </div>
 
-<div class="table-card">
-    <form method="get" class="search-form">
-        <input type="text"
-               name="SearchTerm"
-               value="@Model.SearchTerm"
-               placeholder="Search by employee, source, status, device, or notes..." />
+            <div class="att-filter-actions">
+                <button type="submit" class="btn-primary" data-att-text="apply">تطبيق</button>
+                <a asp-page="./Index" class="btn-secondary" data-att-text="clear">مسح</a>
+            </div>
+        </div>
 
-        <button type="submit" class="btn-primary">Search</button>
-        <a asp-page="./Index" class="btn-secondary">Clear</a>
+        <div class="att-filter-grid">
+            <div class="filter-field">
+                <label data-att-text="employeeNo">رقم الموظف</label>
+                <input asp-for="EmployeeNo" placeholder="11230" data-att-placeholder="employeeNoPlaceholder" />
+            </div>
+
+            <div class="filter-field">
+                <label data-att-text="employeeName">اسم الموظف</label>
+                <input asp-for="EmployeeName" placeholder="اسم الموظف..." data-att-placeholder="employeeNamePlaceholder" />
+            </div>
+
+            <div class="filter-field">
+                <label data-att-text="fromDate">من تاريخ</label>
+                <input asp-for="FromDate" type="date" />
+            </div>
+
+            <div class="filter-field">
+                <label data-att-text="toDate">إلى تاريخ</label>
+                <input asp-for="ToDate" type="date" />
+            </div>
+
+            <div class="filter-field">
+                <label data-att-text="branch">الفرع</label>
+                <select asp-for="Branch">
+                    <option value="" data-att-text="all">الكل</option>
+                    @foreach (var branch in Model.Branches)
+                    {
+                        <option value="@branch">@branch</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label data-att-text="department">القسم</label>
+                <select asp-for="Department">
+                    <option value="" data-att-text="all">الكل</option>
+                    @foreach (var department in Model.Departments)
+                    {
+                        <option value="@department">@department</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label data-att-text="position">المنصب</label>
+                @if (Model.HasPositionField)
+                {
+                    <select asp-for="Position">
+                        <option value="" data-att-text="all">الكل</option>
+                        @foreach (var position in Model.Positions)
+                        {
+                            <option value="@position">@position</option>
+                        }
+                    </select>
+                }
+                else
+                {
+                    <input disabled value="يضاف بعد إضافة حقل المنصب للموظفين" data-att-value="positionNotAvailable" />
+                }
+            </div>
+
+            <div class="filter-field">
+                <label data-att-text="status">الحالة</label>
+                <select asp-for="Status">
+                    <option value="" data-att-text="all">الكل</option>
+                    <option value="Present" data-att-text="present">حاضر</option>
+                    <option value="Late" data-att-text="late">متأخر</option>
+                    <option value="Absent" data-att-text="absent">غائب</option>
+                    <option value="Leave" data-att-text="leave">إجازة</option>
+                    <option value="Holiday" data-att-text="holiday">عطلة</option>
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label data-att-text="source">المصدر</label>
+                <select asp-for="Source">
+                    <option value="" data-att-text="all">الكل</option>
+                    <option value="Device" data-att-text="device">جهاز</option>
+                    <option value="Mobile" data-att-text="mobile">موبايل</option>
+                    <option value="Manual" data-att-text="manual">يدوي</option>
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label data-att-text="rowsPerPage">عدد الصفوف</label>
+                <select asp-for="PageSize">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+
+            <div class="filter-field filter-field-wide">
+                <label data-att-text="generalSearch">بحث عام</label>
+                <input asp-for="Search" placeholder="بحث عام بالموظف، القسم، الفرع، الجهاز أو الملاحظات..." data-att-placeholder="generalSearchPlaceholder" />
+            </div>
+        </div>
     </form>
 
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Employee No</th>
-                <th>Employee Name</th>
-                <th>Check In</th>
-                <th>Check Out</th>
-                <th>Status</th>
-                <th>Source</th>
-                <th>Device</th>
-                <th style="width: 160px;">Actions</th>
-            </tr>
-        </thead>
+    <div class="att-results-toolbar">
+        <div>
+            <strong data-att-text="displayData">عرض البيانات</strong>
+            <span>
+                @Model.StartRow - @Model.EndRow
+                <span data-att-text="of">من</span>
+                @Model.TotalRows
+            </span>
+        </div>
 
-        <tbody>
-            @if (Model.AttendanceRecords.Any())
-            {
-                foreach (var item in Model.AttendanceRecords)
+        <div class="att-pagination">
+            <a class="btn-secondary @(Model.PageNumber <= 1 ? "disabled" : "")"
+               asp-page="./Index"
+               asp-all-route-data="routeValues"
+               asp-route-PageNumber="@(Model.PageNumber - 1)"
+               data-att-text="previous">السابق</a>
+
+            <span class="att-page-badge">@Model.PageNumber / @Model.TotalPages</span>
+
+            <a class="btn-secondary @(Model.PageNumber >= Model.TotalPages ? "disabled" : "")"
+               asp-page="./Index"
+               asp-all-route-data="routeValues"
+               asp-route-PageNumber="@(Model.PageNumber + 1)"
+               data-att-text="next">التالي</a>
+        </div>
+    </div>
+
+    <div class="table-card att-table-card">
+        <table class="data-table att-records-table">
+            <thead>
+                <tr>
+                    <th data-att-text="actions">الإجراءات</th>
+                    <th data-att-text="employeeNo">رقم الموظف</th>
+                    <th data-att-text="employeeName">اسم الموظف</th>
+                    <th data-att-text="branch">الفرع</th>
+                    <th data-att-text="department">القسم</th>
+                    @if (Model.HasPositionField)
+                    {
+                        <th data-att-text="position">المنصب</th>
+                    }
+                    <th data-att-text="date">التاريخ</th>
+                    <th data-att-text="checkIn">دخول</th>
+                    <th data-att-text="checkOut">خروج</th>
+                    <th data-att-text="status">الحالة</th>
+                    <th data-att-text="source">المصدر</th>
+                    <th data-att-text="device">جهاز</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model.Records.Any())
+                {
+                    foreach (var record in Model.Records)
+                    {
+                        <tr>
+                            <td class="row-actions">
+                                <a asp-page="./Edit" asp-route-id="@record.Id" class="btn-table btn-edit" data-att-text="edit">تعديل</a>
+                                <a asp-page="./Delete" asp-route-id="@record.Id" class="btn-table btn-delete" data-att-text="delete">حذف</a>
+                            </td>
+                            <td>@record.EmployeeNo</td>
+                            <td>@record.EmployeeName</td>
+                            <td>@record.Branch</td>
+                            <td>@record.Department</td>
+                            @if (Model.HasPositionField)
+                            {
+                                <td>@record.Position</td>
+                            }
+                            <td>@record.Date</td>
+                            <td>@record.CheckIn</td>
+                            <td>@record.CheckOut</td>
+                            <td>@record.Status</td>
+                            <td>@record.Source</td>
+                            <td>@record.Device</td>
+                        </tr>
+                    }
+                }
+                else
                 {
                     <tr>
-                        <td>@item.AttendanceDate</td>
-                        <td>@item.EmployeeNo</td>
-                        <td>@item.EmployeeName</td>
-                        <td>@item.CheckIn.ToString("yyyy-MM-dd HH:mm")</td>
-                        <td>@(item.CheckOut?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
-                        <td>@item.Status</td>
-                        <td>@item.Source</td>
-                        <td>@(string.IsNullOrWhiteSpace(item.DeviceName) ? "-" : item.DeviceName)</td>
-                        <td>
-                            <a asp-page="./Edit" asp-route-id="@item.Id" class="btn-table btn-edit">Edit</a>
-                            <a asp-page="./Delete" asp-route-id="@item.Id" class="btn-table btn-delete">Delete</a>
-                        </td>
+                        <td colspan="@(Model.HasPositionField ? 12 : 11)" class="empty-cell" data-att-text="noData">لا توجد بيانات حسب الفلاتر المحددة.</td>
                     </tr>
                 }
-            }
-            else
-            {
-                <tr>
-                    <td colspan="9" style="text-align:center;">
-                        No attendance records found.
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/attendance-records-filters.js" asp-append-version="true"></script>
+}

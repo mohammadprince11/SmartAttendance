@@ -1,0 +1,167 @@
+/* MyProfile phase 1 additions */
+
+.my-alert {
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-weight: 900;
+    border: 1px solid var(--sa-border);
+}
+
+.my-alert.success {
+    background: rgba(34, 197, 94, .13);
+    color: var(--sa-success);
+}
+
+.my-alert.error {
+    background: var(--sa-danger-soft);
+    color: var(--sa-danger);
+}
+
+.my-edit-form [data-edit],
+.my-edit-actions {
+    display: none;
+}
+
+.my-edit-form.is-editing [data-view] {
+    display: none;
+}
+
+.my-edit-form.is-editing [data-edit],
+.my-edit-form.is-editing .my-edit-actions {
+    display: block;
+}
+
+.my-info-grid input,
+.my-filter input,
+.my-filter select,
+.my-request-form input,
+.my-request-form select,
+.my-request-form textarea {
+    width: 100%;
+    min-height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--sa-border);
+    background: var(--sa-input);
+    color: var(--sa-text);
+    padding: 0 10px;
+    font-family: inherit;
+    font-weight: 900;
+}
+
+.my-request-form textarea {
+    padding: 10px;
+    resize: vertical;
+}
+
+.my-edit-actions {
+    margin-top: 14px;
+    display: none;
+    gap: 8px;
+}
+
+.my-edit-form.is-editing .my-edit-actions {
+    display: flex;
+}
+
+.my-filter {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 14px;
+}
+
+.my-filter-field {
+    display: grid;
+    gap: 6px;
+}
+
+.my-filter-field label {
+    color: var(--sa-text);
+    font-weight: 1000;
+    font-size: 12px;
+}
+
+.my-filter-field small {
+    color: var(--sa-muted);
+    font-weight: 850;
+    margin-top: 4px;
+}
+
+.my-filter-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.my-modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .58);
+    z-index: 9999;
+    place-items: center;
+    padding: 20px;
+}
+
+.my-modal-backdrop.is-open {
+    display: grid;
+}
+
+.my-modal {
+    width: min(760px, 96vw);
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 22px;
+    box-shadow: var(--sa-shadow);
+    padding: 18px;
+}
+
+.my-modal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--sa-border);
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+}
+
+.my-modal-head h2 {
+    margin: 0;
+    color: var(--sa-text);
+    font-weight: 1000;
+}
+
+.my-modal-head button {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    border: 1px solid var(--sa-border);
+    background: var(--sa-surface-2);
+    color: var(--sa-text);
+    cursor: pointer;
+    font-weight: 1000;
+}
+
+.my-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.my-form-grid .full {
+    grid-column: 1 / -1;
+}
+
+.my-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+@media (max-width: 760px) {
+    .my-filter,
+    .my-form-grid {
+        grid-template-columns: 1fr;
+    }
+}

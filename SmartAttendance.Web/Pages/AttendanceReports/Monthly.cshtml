@@ -1,0 +1,69 @@
+@page
+@model SmartAttendance.Web.Pages.AttendanceReports.MonthlyModel
+
+@{
+    ViewData["Title"] = "Monthly Attendance Report";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Monthly Attendance Report</h1>
+        <p>Employee attendance summary by period</p>
+    </div>
+
+    <a asp-page="./Daily" class="btn-secondary">Daily Report</a>
+</div>
+
+<div class="table-card">
+    <form method="get" class="search-form">
+        <input type="date" name="fromDate" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
+        <input type="date" name="toDate" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
+        <input type="text" name="searchTerm" value="@Model.SearchTerm" placeholder="Search employee, department, branch..." />
+        <button type="submit" class="btn-primary">Search</button>
+        <a asp-page="./Monthly" class="btn-secondary">Clear</a>
+    </form>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Employee No</th>
+                <th>Employee Name</th>
+                <th>Department</th>
+                <th>Branch</th>
+                <th>Present</th>
+                <th>Late</th>
+                <th>Absent</th>
+                <th>Leave</th>
+                <th>Holiday</th>
+                <th>Missing Out</th>
+                <th>Total Records</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.Report.Rows.Any())
+            {
+                foreach (var row in Model.Report.Rows)
+                {
+                    <tr>
+                        <td>@row.EmployeeNo</td>
+                        <td style="direction:rtl">@row.EmployeeName</td>
+                        <td>@row.DepartmentName</td>
+                        <td>@row.BranchName</td>
+                        <td>@row.Present</td>
+                        <td>@row.Late</td>
+                        <td>@row.Absent</td>
+                        <td>@row.Leave</td>
+                        <td>@row.Holiday</td>
+                        <td>@row.MissingCheckOut</td>
+                        <td>@row.TotalRecords</td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr><td colspan="11" style="text-align:center;">No records found.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>

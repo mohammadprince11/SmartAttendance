@@ -1,0 +1,169 @@
+@page
+@model SmartAttendance.Web.Pages.UserAccess.IndexModel
+
+@{
+    ViewData["Title"] = "User Access";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/user-access.css" asp-append-version="true" />
+
+<div class="user-access-page">
+    <div class="page-header">
+        <div>
+            <h1>مستخدمي النظام</h1>
+            <p>إنشاء حسابات الدخول وربطها بالأدوار. حالياً مرحلة تأسيس بدون إجبار تسجيل الدخول على كل الصفحات.</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+    {
+        <div class="hrms-alert success">@Model.SuccessMessage</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="hrms-alert error">@Model.ErrorMessage</div>
+    }
+
+    <div class="user-access-warning">
+        المستخدم الافتراضي أول مرة:
+        <strong>admin</strong>
+        /
+        <strong>Admin@12345</strong>
+        — غيّر كلمة المرور بعد الدخول.
+    </div>
+
+    <section class="user-access-grid">
+        <form method="post" asp-page-handler="Save" class="hrms-form-card">
+            <div class="hrms-section-head">
+                <div>
+                    <h2>إضافة / تعديل مستخدم</h2>
+                    <p>حدد الموظف والدور واسم الدخول.</p>
+                </div>
+            </div>
+
+            <input asp-for="Input.Id" type="hidden" id="userId" />
+
+            <div class="hrms-field">
+                <label>الموظف</label>
+                <select asp-for="Input.EmployeeId" id="userEmployeeId">
+                    <option value="">-- بدون ربط --</option>
+                    @foreach (var employee in Model.Employees)
+                    {
+                        <option value="@employee.Id">@employee.Text</option>
+                    }
+                </select>
+            </div>
+
+            <div class="hrms-field">
+                <label>اسم المستخدم</label>
+                <input asp-for="Input.Username" id="userUsername" required />
+            </div>
+
+            <div class="hrms-field">
+                <label>كلمة المرور</label>
+                <input asp-for="Input.Password" id="userPassword" type="password" />
+                <small>عند التعديل اتركها فارغة إذا لا تريد تغييرها.</small>
+            </div>
+
+            <div class="hrms-field">
+                <label>الدور</label>
+                <select asp-for="Input.Role" id="userRole" required>
+                    @foreach (var role in Model.Roles)
+                    {
+                        <option value="@role">@role</option>
+                    }
+                </select>
+            </div>
+
+            <label class="user-access-check">
+                <input asp-for="Input.IsActive" id="userIsActive" checked />
+                <span>فعال</span>
+            </label>
+
+            <div class="hrms-actions">
+                <button type="submit" class="hrms-btn-primary">حفظ</button>
+                <button type="button" class="hrms-btn-secondary" data-clear-user>جديد</button>
+            </div>
+        </form>
+
+        <div class="user-access-list">
+            <form method="get" class="hrms-filter-card">
+                <div class="hrms-grid-2">
+                    <div class="hrms-field">
+                        <label>بحث</label>
+                        <input asp-for="Search" placeholder="بحث بالمستخدم، الدور، رقم أو اسم الموظف..." />
+                    </div>
+
+                    <div class="hrms-actions" style="align-self:end;">
+                        <button type="submit" class="hrms-btn-primary">بحث</button>
+                        <a asp-page="./Index" class="hrms-btn-secondary">مسح</a>
+                    </div>
+                </div>
+            </form>
+
+            <div class="hrms-table-card">
+                <div class="hrms-table-wrap">
+                    <table class="hrms-table">
+                        <thead>
+                            <tr>
+                                <th>المستخدم</th>
+                                <th class="text-start">الموظف</th>
+                                <th>الدور</th>
+                                <th>الحالة</th>
+                                <th>آخر دخول</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in Model.Users)
+                            {
+                                <tr>
+                                    <td>@user.Username</td>
+                                    <td class="text-start">
+                                        @(string.IsNullOrWhiteSpace(user.EmployeeName) ? "-" : $"{user.EmployeeNo} - {user.EmployeeName}")
+                                    </td>
+                                    <td>@user.Role</td>
+                                    <td><span class="hrms-badge @(user.IsActive ? "approved" : "rejected")">@(user.IsActive ? "فعال" : "غير فعال")</span></td>
+                                    <td>@user.LastLoginAt?.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td>
+                                        <div class="hrms-actions" style="justify-content:center;">
+                                            <button type="button"
+                                                    class="hrms-btn-secondary"
+                                                    data-edit-user
+                                                    data-id="@user.Id"
+                                                    data-employee-id="@user.EmployeeId"
+                                                    data-username="@user.Username"
+                                                    data-role="@user.Role"
+                                                    data-active="@user.IsActive.ToString().ToLower()">
+                                                تعديل
+                                            </button>
+
+                                            <form method="post" asp-page-handler="Toggle" asp-route-id="@user.Id">
+                                                <button type="submit" class="hrms-btn-secondary">
+                                                    @(user.IsActive ? "تعطيل" : "تفعيل")
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+
+                            @if (!Model.Users.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="user-access-empty">لا توجد حسابات دخول.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/user-access.js" asp-append-version="true"></script>
+}

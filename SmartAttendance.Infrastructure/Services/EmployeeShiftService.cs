@@ -62,7 +62,8 @@ public class EmployeeShiftService : IEmployeeShiftService
                 x.EmployeeNo.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 x.EmployeeName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 x.ShiftCode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                x.ShiftName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+                x.ShiftName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                (x.WeeklyOffDays != null && x.WeeklyOffDays.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)));
         }
 
         return result
@@ -129,6 +130,7 @@ public class EmployeeShiftService : IEmployeeShiftService
         }
 
         var employeeShift = _mapper.Map<EmployeeShift>(model);
+        employeeShift.WeeklyOffDays = NormalizeWeeklyOffDays(model.WeeklyOffDays);
 
         await _unitOfWork.EmployeeShifts.AddAsync(employeeShift);
         await _unitOfWork.SaveChangesAsync();
@@ -157,6 +159,7 @@ public class EmployeeShiftService : IEmployeeShiftService
         employeeShift.EffectiveFrom = model.EffectiveFrom;
         employeeShift.EffectiveTo = model.EffectiveTo;
         employeeShift.IsCurrent = model.IsCurrent;
+        employeeShift.WeeklyOffDays = NormalizeWeeklyOffDays(model.WeeklyOffDays);
 
         _unitOfWork.EmployeeShifts.Update(employeeShift);
         await _unitOfWork.SaveChangesAsync();
@@ -221,5 +224,32 @@ public class EmployeeShiftService : IEmployeeShiftService
                 IsActive = x.IsActive
             })
             .ToList();
+    }
+
+    private static string? NormalizeWeeklyOffDays(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        return string.Join(",",
+            value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(NormalizeDayName)
+                .Distinct(StringComparer.OrdinalIgnoreCase));
+    }
+
+    private static string NormalizeDayName(string day)
+    {
+        return day.Trim().ToLowerInvariant() switch
+        {
+            "sun" or "sunday" or "الاحد" or "الأحد" => "Sunday",
+            "mon" or "monday" or "الاثنين" or "الإثنين" => "Monday",
+            "tue" or "tuesday" or "الثلاثاء" => "Tuesday",
+            "wed" or "wednesday" or "الاربعاء" or "الأربعاء" => "Wednesday",
+            "thu" or "thursday" or "الخميس" => "Thursday",
+            "fri" or "friday" or "الجمعة" => "Friday",
+            "sat" or "saturday" or "السبت" => "Saturday",
+            _ => day.Trim()
+        };
     }
 }

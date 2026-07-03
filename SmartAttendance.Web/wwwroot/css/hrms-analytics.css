@@ -1,0 +1,130 @@
+/* HR Analytics Dashboard */
+
+.hr-analytics-page {
+    display: grid;
+    gap: 14px;
+}
+
+.hr-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(140px, 1fr));
+    gap: 10px;
+}
+
+.hr-kpi {
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 18px;
+    box-shadow: var(--sa-shadow);
+    padding: 14px;
+    min-height: 112px;
+}
+
+.hr-kpi span {
+    color: var(--sa-muted);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.hr-kpi strong {
+    display: block;
+    color: var(--sa-text);
+    font-size: 30px;
+    line-height: 1.2;
+    font-weight: 1000;
+    margin-top: 10px;
+}
+
+.hr-kpi small {
+    color: var(--sa-muted);
+    font-weight: 800;
+}
+
+.hr-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.hr-panel {
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 18px;
+    box-shadow: var(--sa-shadow);
+    padding: 16px;
+}
+
+.hr-panel h2 {
+    margin: 0 0 12px;
+    color: var(--sa-text);
+    font-size: 18px;
+    font-weight: 1000;
+}
+
+.hr-list {
+    display: grid;
+    gap: 8px;
+}
+
+.hr-list-row {
+    min-height: 42px;
+    background: var(--sa-surface-2);
+    border: 1px solid var(--sa-border);
+    border-radius: 13px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.hr-list-row span {
+    color: var(--sa-text);
+    font-weight: 900;
+}
+
+.hr-list-row strong {
+    color: var(--sa-primary-hover);
+    font-weight: 1000;
+}
+
+.hr-warning-row strong {
+    color: var(--sa-warning);
+}
+
+.hr-danger-row strong {
+    color: var(--sa-danger);
+}
+
+html[data-theme="dark"] .hr-kpi,
+html[data-theme="dark"] .hr-panel {
+    background: #111a2c !important;
+    border-color: #30415f !important;
+}
+
+html[data-theme="dark"] .hr-list-row {
+    background: #162238 !important;
+    border-color: #30415f !important;
+}
+
+html[dir="rtl"] .hr-analytics-page,
+html[dir="rtl"] .hr-dashboard-grid,
+html[dir="rtl"] .hr-list-row {
+    direction: rtl;
+}
+
+@media (max-width: 1400px) {
+    .hr-kpi-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .hr-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 800px) {
+    .hr-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+}

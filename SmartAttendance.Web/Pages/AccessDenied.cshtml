@@ -1,0 +1,21 @@
+@page
+@model SmartAttendance.Web.Pages.AccessDeniedModel
+
+@{
+    ViewData["Title"] = "Access Denied";
+}
+
+<link rel="stylesheet" href="~/css/access-denied.css" asp-append-version="true" />
+
+<div class="access-denied-page">
+    <div class="access-denied-card">
+        <div class="access-denied-icon">🔒</div>
+        <h1>غير مصرح</h1>
+        <p>ليس لديك صلاحية للوصول إلى هذه الصفحة.</p>
+
+        <div class="access-denied-actions">
+            <a asp-page="/Index" class="access-btn-primary">الرجوع للرئيسية</a>
+            <a asp-page="/Account/Logout" class="access-btn-secondary">تسجيل خروج</a>
+        </div>
+    </div>
+</div>

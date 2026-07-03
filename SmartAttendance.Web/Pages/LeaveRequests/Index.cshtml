@@ -8,10 +8,13 @@
 <div class="page-header">
     <div>
         <h1>Leave Requests</h1>
-        <p>Manage employee leave requests</p>
+        <p>Manage approved employee leaves</p>
     </div>
 
-    <a asp-page="./Create" class="btn-primary">+ Add Leave</a>
+    <div class="form-actions">
+        <a asp-page="./Import" class="btn-secondary">Import Excel</a>
+        <a asp-page="./Create" class="btn-primary">+ Add Leave</a>
+    </div>
 </div>
 
 @if (TempData["SuccessMessage"] != null)
@@ -69,9 +72,7 @@
             else
             {
                 <tr>
-                    <td colspan="8" style="text-align:center;">
-                        No leave requests found.
-                    </td>
+                    <td colspan="8" style="text-align:center;">No leave requests found.</td>
                 </tr>
             }
         </tbody>

@@ -1,4 +1,4 @@
-﻿using SmartAttendance.Domain.Common;
+using SmartAttendance.Domain.Common;
 
 namespace SmartAttendance.Domain.Entities;
 
@@ -13,6 +13,8 @@ public class Employee : AuditableEntity
     public string? Phone { get; set; }
 
     public string? Email { get; set; }
+
+    public string? Position { get; set; }
 
     public DateOnly HireDate { get; set; }
 

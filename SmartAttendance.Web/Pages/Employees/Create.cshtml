@@ -37,6 +37,12 @@
         </div>
 
         <div class="form-group">
+            <label asp-for="Employee.Position">Position</label>
+            <input asp-for="Employee.Position" class="form-control" placeholder="Example: Cashier, Accountant, Supervisor..." />
+            <span asp-validation-for="Employee.Position" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
             <label asp-for="Employee.EmployeeNo">Employee No</label>
             <input asp-for="Employee.EmployeeNo" class="form-control" />
             <span asp-validation-for="Employee.EmployeeNo" class="text-danger"></span>

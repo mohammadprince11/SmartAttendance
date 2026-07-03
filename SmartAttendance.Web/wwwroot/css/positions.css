@@ -1,0 +1,111 @@
+/* Positions page */
+
+.positions-page {
+    display: grid;
+    gap: 14px;
+}
+
+.positions-empty {
+    text-align: center !important;
+    color: var(--sa-muted) !important;
+    font-weight: 1000;
+    padding: 24px !important;
+}
+
+.positions-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--sa-text);
+    font-weight: 1000;
+}
+
+.positions-check input {
+    width: 18px;
+    height: 18px;
+}
+
+/* Modal */
+.position-modal-backdrop[hidden],
+.position-modal[hidden] {
+    display: none !important;
+}
+
+.position-modal-backdrop:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    z-index: 9990;
+    display: block;
+    background: rgba(2, 6, 23, .62);
+    backdrop-filter: blur(3px);
+}
+
+.position-modal:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    z-index: 9991;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.position-modal-card {
+    width: min(540px, 100%);
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    background: var(--sa-surface);
+    color: var(--sa-text);
+    border: 1px solid var(--sa-border);
+    border-radius: 20px;
+    box-shadow: 0 28px 70px rgba(0, 0, 0, .35);
+}
+
+.position-modal-head {
+    min-height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--sa-border);
+}
+
+.position-modal-head h2 {
+    margin: 0;
+    color: var(--sa-text);
+    font-size: 20px;
+    font-weight: 1000;
+}
+
+.position-modal-close {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--sa-border);
+    border-radius: 12px;
+    background: var(--sa-surface-2);
+    color: var(--sa-text);
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.position-modal-form {
+    display: grid;
+    gap: 12px;
+    padding: 18px;
+}
+
+html[data-theme="dark"] .position-modal-card {
+    background: #111a2c !important;
+    border-color: #30415f !important;
+}
+
+html[data-theme="dark"] .position-modal-close {
+    background: #162238 !important;
+    border-color: #30415f !important;
+    color: #e6edf7 !important;
+}
+
+html[dir="rtl"] .positions-page,
+html[dir="rtl"] .position-modal {
+    direction: rtl;
+}

@@ -1,4 +1,6 @@
+﻿using SmartAttendance.Web.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Application.AttendanceImports.Services;
 using SmartAttendance.Application.AttendanceProcessing.Services;
 using SmartAttendance.Application.AttendanceRecords.Mappings;
 using SmartAttendance.Application.AttendanceRecords.Services;
@@ -21,8 +23,11 @@ using SmartAttendance.Application.Holidays.Mappings;
 using SmartAttendance.Application.Holidays.Services;
 using SmartAttendance.Application.LeaveRequests.Mappings;
 using SmartAttendance.Application.LeaveRequests.Services;
+using SmartAttendance.Application.MasterDataImports.Services;
 using SmartAttendance.Application.Permissions.Mappings;
 using SmartAttendance.Application.Permissions.Services;
+using SmartAttendance.Application.ReportBuilder.Services;
+using SmartAttendance.Application.Setup.Services;
 using SmartAttendance.Application.Shifts.Mappings;
 using SmartAttendance.Application.Shifts.Services;
 using SmartAttendance.Application.SystemUsers.Mappings;
@@ -30,6 +35,7 @@ using SmartAttendance.Application.SystemUsers.Services;
 using SmartAttendance.Application.UserPermissions.Services;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Infrastructure.Repositories;
+using SmartAttendance.Infrastructure.Seeding;
 using SmartAttendance.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -71,14 +77,22 @@ builder.Services.AddScoped<IEmployeeShiftService, EmployeeShiftService>();
 builder.Services.AddScoped<IAttendanceRecordService, AttendanceRecordService>();
 builder.Services.AddScoped<IAttendanceProcessingService, AttendanceProcessingService>();
 builder.Services.AddScoped<IAttendanceReportService, AttendanceReportService>();
+builder.Services.AddScoped<IAttendanceAdvancedReportService, AttendanceAdvancedReportService>();
+builder.Services.AddScoped<IReportBuilderService, ReportBuilderService>();
+builder.Services.AddScoped<IReportTemplateService, ReportTemplateService>();
 builder.Services.AddScoped<IHolidayService, HolidayService>();
 builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
 builder.Services.AddScoped<ISystemUserService, SystemUserService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IUserPermissionService, UserPermissionService>();
 builder.Services.AddScoped<IEmployeePermissionService, EmployeePermissionService>();
+builder.Services.AddScoped<IAttendanceImportService, AttendanceImportService>();
+builder.Services.AddScoped<IMasterDataImportService, MasterDataImportService>();
+builder.Services.AddScoped<ISetupService, SetupService>();
 
 var app = builder.Build();
+
+await DefaultShiftSeeder.SeedAsync(app.Services);
 
 if (!app.Environment.IsDevelopment())
 {
@@ -89,6 +103,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseRouting();
+app.UseMiddleware<RoleSecurityMiddleware>();
 
 app.UseAuthorization();
 
@@ -97,3 +112,4 @@ app.MapRazorPages()
    .WithStaticAssets();
 
 app.Run();
+

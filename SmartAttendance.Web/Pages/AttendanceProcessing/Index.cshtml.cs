@@ -25,14 +25,47 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string? SearchTerm { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public int MaxRows { get; set; } = 500;
+
+    public int TotalResults { get; set; }
+
+    public bool IsLimited { get; set; }
+
     public async Task OnGetAsync()
     {
-        FromDate ??= DateOnly.FromDateTime(DateTime.Today.AddDays(-30));
-        ToDate ??= DateOnly.FromDateTime(DateTime.Today);
+        FromDate ??= DateOnly.FromDateTime(DateTime.Today);
+        ToDate ??= FromDate;
 
-        Records = await _attendanceProcessingService.GetProcessedRecordsAsync(
+        if (ToDate < FromDate)
+            ToDate = FromDate;
+
+        MaxRows = NormalizeMaxRows(MaxRows);
+
+        var processedRecords = await _attendanceProcessingService.GetProcessedRecordsAsync(
             FromDate,
             ToDate,
             SearchTerm);
+
+        var materialized = processedRecords.ToList();
+
+        TotalResults = materialized.Count;
+        IsLimited = TotalResults > MaxRows;
+
+        Records = materialized
+            .Take(MaxRows)
+            .ToList();
+    }
+
+    private static int NormalizeMaxRows(int value)
+    {
+        return value switch
+        {
+            100 => 100,
+            250 => 250,
+            500 => 500,
+            1000 => 1000,
+            _ => 500
+        };
     }
 }

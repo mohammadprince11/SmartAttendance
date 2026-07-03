@@ -1,0 +1,267 @@
+﻿@page
+@model SmartAttendance.Web.Pages.AttendanceOperations.IndexModel
+
+@{
+    ViewData["Title"] = "إدارة الحضور";
+    var importOpen = (Model.Tab ?? "").Equals("import", StringComparison.OrdinalIgnoreCase) || Model.Preview != null || Model.ImportResult != null;
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/attendance-operations-stable.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/attendance-operations-edit-highlight-fix.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/attendance-operations-notes-fix.css" asp-append-version="true" />
+
+<div class="hrms-page attendance-operations-page">
+    <div class="page-header">
+        <div>
+            <h1>إدارة الحضور</h1>
+            <p>معالجة الحضور مع التعديل والاستيراد من نفس الصفحة.</p>
+        </div>
+
+        <div class="attendance-header-actions">
+            <button type="button" class="hrms-btn-primary" data-open-import>استيراد ملف</button>
+            <a asp-page="/AttendanceRecords/Index" class="hrms-btn-secondary">سجلات الحضور الخام</a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+    {
+        <div class="hrms-alert success">@Model.SuccessMessage</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="hrms-alert danger">@Model.ErrorMessage</div>
+    }
+
+    <section class="attendance-filter-card">
+        <form method="get" class="attendance-filter-form">
+            <input type="hidden" name="Tab" value="process" />
+
+            <div class="filter-grid">
+                <div class="hrms-field">
+                    <label>من تاريخ</label>
+                    <input asp-for="ProcessFromDate" type="date" />
+                </div>
+
+                <div class="hrms-field">
+                    <label>إلى تاريخ</label>
+                    <input asp-for="ProcessToDate" type="date" />
+                </div>
+
+                <div class="hrms-field">
+                    <label>بحث</label>
+                    <input asp-for="ProcessSearchTerm" placeholder="كود الموظف أو الاسم" />
+                </div>
+
+                <div class="hrms-field">
+                    <label>عدد النتائج</label>
+                    <select asp-for="MaxRows">
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="250">250</option>
+                        <option value="500">500</option>
+                    </select>
+                </div>
+
+                <div class="filter-actions">
+                    <button class="hrms-btn-primary" type="submit">معالجة</button>
+                    <a asp-page="./Index" class="hrms-btn-secondary">مسح</a>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    <section class="attendance-results-card">
+        <div class="results-head">
+            <div>
+                <h2>نتائج معالجة الحضور</h2>
+                <p>
+                    عرض @Model.ProcessedRecords.Count من @Model.ProcessTotalResults سجل.
+                    @if (Model.ProcessIsLimited)
+                    {
+                        <span>النتائج محدودة للأداء، استخدم البحث أو فترة أصغر.</span>
+                    }
+                </p>
+            </div>
+        </div>
+
+        <div class="attendance-table-wrap">
+            <table class="attendance-table">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>كود الموظف</th>
+                        <th>اسم الموظف</th>
+                        <th>الشفت</th>
+                        <th>الدخول</th>
+                        <th>الخروج</th>
+                        <th>ساعات العمل</th>
+                        <th>التأخير</th>
+                        <th>الخروج المبكر</th>
+                        <th>الحالة</th>
+                        <th>الملاحظة</th>
+                        <th>تعديل</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.ProcessedRecords)
+                    {
+                        var statusText = SmartAttendance.Web.Pages.AttendanceOperations.IndexModel.ProcessingAutoStatusText(item.CheckIn, item.CheckOut, item.CalculatedStatus);
+                        var statusValue = SmartAttendance.Web.Pages.AttendanceOperations.IndexModel.ProcessingStatusValueForEdit(item.CheckIn, item.CheckOut, item.CalculatedStatus);
+                        var shiftText = string.IsNullOrWhiteSpace(item.ShiftName) ? "-" : $"{item.ShiftCode} - {item.ShiftName}";
+
+                        <tr class="@(Model.IsAttendanceEdited(item.EmployeeNo, item.AttendanceDate) ? "manual-edit-row" : "")">
+                            <td>@item.AttendanceDate.ToString("yyyy-MM-dd")</td>
+                            <td>@item.EmployeeNo</td>
+                            <td>@item.EmployeeName</td>
+                            <td>@shiftText</td>
+                            <td>@(item.CheckIn?.ToString("HH:mm") ?? "-")</td>
+                            <td>@(item.CheckOut?.ToString("HH:mm") ?? "-")</td>
+                            <td>@(item.WorkingHours?.ToString("0.##") ?? "-")</td>
+                            <td>@item.LateMinutes دقيقة</td>
+                            <td>@(item.EarlyLeaveMinutes.HasValue ? $"{item.EarlyLeaveMinutes} دقيقة" : "-")</td>
+                            <td><span class="attendance-status">@statusText</span></td>
+                            <td class="attendance-note-cell">@Model.GetAttendanceNote(item.EmployeeNo, item.AttendanceDate)</td>
+                            <td>
+                                <button type="button"
+                                        class="hrms-btn-secondary"
+                                        data-edit-attendance
+                                        data-employeeno="@item.EmployeeNo"
+                                        data-employee="@item.EmployeeName"
+                                        data-date="@item.AttendanceDate.ToString("yyyy-MM-dd")"
+                                        data-checkin="@(item.CheckIn?.ToString("HH:mm") ?? "")"
+                                        data-checkout="@(item.CheckOut?.ToString("HH:mm") ?? "")"
+                                        data-status="@statusValue">
+                                    تعديل
+                                </button>
+                            </td>
+                        </tr>
+                    }
+
+                    @if (!Model.ProcessedRecords.Any())
+                    {
+                        <tr>
+                            <td colspan="12" class="hrms-empty">لا توجد نتائج معالجة.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="attendance-modal-backdrop" data-edit-modal>
+        <div class="attendance-modal">
+            <div class="attendance-modal-head">
+                <div>
+                    <h2>تعديل الحضور</h2>
+                    <p data-edit-selected>اختر سجل من الجدول.</p>
+                </div>
+                <button type="button" data-close-edit>×</button>
+            </div>
+
+            <form method="post" asp-page-handler="Upsert" data-preserve-filter="true">
+                <input type="hidden" name="Tab" value="process" />
+                <input type="hidden" name="ProcessFromDate" value="@Model.ProcessFromDate?.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="ProcessToDate" value="@Model.ProcessToDate?.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="ProcessSearchTerm" value="@Model.ProcessSearchTerm" />
+                <input type="hidden" name="MaxRows" value="@Model.MaxRows" />
+
+                <input asp-for="Correction.Id" type="hidden" value="0" />
+                <input asp-for="Correction.EmployeeNo" type="hidden" id="editEmployeeNo" />
+                <input asp-for="Correction.Date" type="hidden" id="editDate" />
+
+                <div class="modal-grid">
+                    <div class="hrms-field">
+                        <label>الدخول</label>
+                        <input asp-for="Correction.CheckIn" id="editCheckIn" type="time" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>الخروج</label>
+                        <input asp-for="Correction.CheckOut" id="editCheckOut" type="time" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>الحالة</label>
+                        <select asp-for="Correction.Status" id="editStatus">
+                            <option value="1">حاضر</option>
+                            <option value="2">متأخر</option>
+                            <option value="3">غائب</option>
+                            <option value="4">إجازة</option>
+                            <option value="5">عطلة</option>
+                        </select>
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>ملاحظة</label>
+                        <input asp-for="Correction.Notes" id="editNotes" placeholder="اكتب سبب التعديل حتى يظهر في سجل العمليات" />
+                    </div>
+                </div>
+
+                <div class="edit-help-note">سيتم حفظ التعديل كمصدر يدوي مع الملاحظة في سجل العمليات.</div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="hrms-btn-primary">حفظ التعديل</button>
+                    <button type="button" class="hrms-btn-secondary" data-close-edit>إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="attendance-modal-backdrop @(importOpen ? "is-open" : "")" data-import-modal>
+        <div class="attendance-modal attendance-import-modal">
+            <div class="attendance-modal-head">
+                <div>
+                    <h2>استيراد الحضور</h2>
+                    <p>رفع ملف Excel أو CSV ثم معاينة السجلات قبل الاستيراد.</p>
+                </div>
+                <button type="button" data-close-import>×</button>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" asp-page-handler="Preview">
+                <input type="hidden" name="Tab" value="import" />
+
+                <div class="modal-grid">
+                    <div class="hrms-field">
+                        <label>ملف الحضور</label>
+                        <input asp-for="AttendanceFile" type="file" accept=".xlsx,.csv" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>الأعمدة المطلوبة</label>
+                        <div class="hint-box">EmployeeCardNumber, AttendanceDate, FunctionType, MachineName</div>
+                    </div>
+
+                    <div class="modal-actions compact">
+                        <button type="submit" class="hrms-btn-primary">معاينة الملف</button>
+                    </div>
+                </div>
+            </form>
+
+            @if (Model.Preview != null)
+            {
+                <div class="results-head inside-modal">
+                    <div>
+                        <h2>معاينة: @Model.Preview.FileName</h2>
+                        <p>جاهز: @Model.Preview.ReadyToImportCount | تحذيرات: @Model.Preview.WarningCount | أخطاء: @Model.Preview.ErrorCount</p>
+                    </div>
+
+                    @if (Model.Preview.ReadyToImportCount > 0)
+                    {
+                        <form method="post" asp-page-handler="Import">
+                            <input type="hidden" name="Tab" value="import" />
+                            <input type="hidden" name="token" value="@Model.Preview.Token" />
+                            <button type="submit" class="hrms-btn-primary">استيراد السجلات الصالحة</button>
+                        </form>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/attendance-operations-final.js" asp-append-version="true"></script>
+}

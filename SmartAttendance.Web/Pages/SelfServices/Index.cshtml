@@ -1,0 +1,131 @@
+@page
+@model SmartAttendance.Web.Pages.SelfServices.IndexModel
+
+@{
+    ViewData["Title"] = "Self Services";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page">
+    <div class="page-header">
+        <div>
+            <h1>الخدمات الذاتية</h1>
+            <p>طلبات الإجازة، نسيان البصمة، الخروج أثناء الدوام، والعمل الإضافي.</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Message))
+    {
+        <div class="hrms-alert success">@Model.Message</div>
+    }
+
+    <form method="post" asp-page-handler="Create" class="hrms-form-card">
+        <div class="hrms-section-head">
+            <div>
+                <h2>تقديم طلب جديد</h2>
+                <p>يذهب الطلب إلى الموافقات.</p>
+            </div>
+        </div>
+
+        <div class="hrms-grid-4">
+            <div class="hrms-field">
+                <label>الموظف</label>
+                <select asp-for="Input.EmployeeId" required>
+                    <option value="">-- اختر الموظف --</option>
+                    @foreach (var employee in Model.Employees)
+                    {
+                        <option value="@employee.Id">@employee.Text</option>
+                    }
+                </select>
+            </div>
+
+            <div class="hrms-field">
+                <label>نوع الطلب</label>
+                <select asp-for="Input.RequestType">
+                    <option value="Leave">إجازة</option>
+                    <option value="MissingPunch">نسيان بصمة</option>
+                    <option value="ExitPermission">خروج أثناء الدوام</option>
+                    <option value="Overtime">عمل إضافي</option>
+                </select>
+            </div>
+
+            <div class="hrms-field">
+                <label>تاريخ الطلب</label>
+                <input asp-for="Input.RequestDate" type="date" />
+            </div>
+
+            <div class="hrms-field">
+                <label>من تاريخ</label>
+                <input asp-for="Input.FromDate" type="date" />
+            </div>
+
+            <div class="hrms-field">
+                <label>إلى تاريخ</label>
+                <input asp-for="Input.ToDate" type="date" />
+            </div>
+
+            <div class="hrms-field">
+                <label>من وقت</label>
+                <input asp-for="Input.StartTime" type="time" />
+            </div>
+
+            <div class="hrms-field">
+                <label>إلى وقت</label>
+                <input asp-for="Input.EndTime" type="time" />
+            </div>
+
+            <div class="hrms-field">
+                <label>السبب</label>
+                <input asp-for="Input.Reason" />
+            </div>
+        </div>
+
+        <div class="hrms-actions" style="margin-top:14px;">
+            <button type="submit" class="hrms-btn-primary">إرسال الطلب</button>
+        </div>
+    </form>
+
+    <div class="hrms-table-card">
+        <div class="hrms-section-head">
+            <div>
+                <h2>آخر الطلبات</h2>
+                <p>متابعة حالة الطلبات.</p>
+            </div>
+        </div>
+
+        <div class="hrms-table-wrap">
+            <table class="hrms-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>رقم الموظف</th>
+                        <th class="text-start">الاسم</th>
+                        <th>النوع</th>
+                        <th>التاريخ</th>
+                        <th>الفترة</th>
+                        <th>الوقت</th>
+                        <th>الحالة</th>
+                        <th>المرحلة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var request in Model.Requests)
+                    {
+                        <tr>
+                            <td>@request.Id</td>
+                            <td>@request.EmployeeNo</td>
+                            <td class="text-start">@request.EmployeeName</td>
+                            <td>@request.RequestType</td>
+                            <td>@request.RequestDate?.ToString("yyyy-MM-dd")</td>
+                            <td>@request.FromDate?.ToString("yyyy-MM-dd") - @request.ToDate?.ToString("yyyy-MM-dd")</td>
+                            <td>@request.StartTime - @request.EndTime</td>
+                            <td><span class="hrms-badge @request.Status.ToLower()">@request.Status</span></td>
+                            <td>@request.CurrentStep</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

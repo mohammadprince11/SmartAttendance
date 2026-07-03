@@ -1,0 +1,134 @@
+/* Encoding-safe language helpers + sidebar design repair */
+
+html[dir="rtl"] body,
+html[dir="rtl"] .sidebar,
+html[dir="rtl"] .main-area,
+html[dir="rtl"] .page-content {
+    direction: rtl;
+}
+
+html[dir="ltr"] body,
+html[dir="ltr"] .sidebar,
+html[dir="ltr"] .main-area,
+html[dir="ltr"] .page-content {
+    direction: ltr;
+}
+
+.nav-text,
+.sidebar-nav a,
+.sidebar-nav summary,
+.topbar,
+.topbar-title {
+    unicode-bidi: plaintext;
+}
+
+/* 
+   Previous language patch used safe English text inside .nav-icon
+   مثل Home / Org / HR / Dev.
+   هذه القاعدة تخفيها حتى لا تخرب شكل القائمة.
+*/
+.sidebar .nav-icon {
+    width: 22px !important;
+    min-width: 22px !important;
+    height: 22px !important;
+    display: inline-grid !important;
+    place-items: center !important;
+    overflow: hidden !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    color: transparent !important;
+    flex: 0 0 22px !important;
+    border-radius: 8px !important;
+    background: rgba(96, 165, 250, .12) !important;
+    border: 1px solid rgba(96, 165, 250, .16) !important;
+}
+
+.sidebar .nav-icon::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    display: block;
+    background: currentColor;
+    color: #93c5fd;
+    opacity: .95;
+}
+
+.sidebar .brand-logo {
+    flex: 0 0 auto !important;
+}
+
+/* زر المنيو داخل الشعار لا يظهر كلمة Menu */
+.sidebar-local-toggle,
+.sa-sidebar-toggle {
+    font-size: 0 !important;
+    overflow: hidden !important;
+}
+
+.sidebar-local-toggle::before,
+.sa-sidebar-toggle::before {
+    content: "☰";
+    font-size: 16px;
+    line-height: 1;
+    color: inherit;
+}
+
+/* إصلاح تباعد عناصر القائمة */
+.sidebar-nav a,
+.sidebar-nav summary {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-height: 38px !important;
+    white-space: normal !important;
+}
+
+.sidebar .nav-text {
+    display: inline-block !important;
+    min-width: 0 !important;
+    overflow-wrap: anywhere !important;
+    color: inherit !important;
+}
+
+/* RTL: النص يمين والأيقونة يسارها بشكل مرتب */
+html[dir="rtl"] .sidebar-nav a,
+html[dir="rtl"] .sidebar-nav summary {
+    flex-direction: row-reverse !important;
+    text-align: right !important;
+    justify-content: flex-start !important;
+}
+
+html[dir="rtl"] .sidebar .nav-text {
+    text-align: right !important;
+}
+
+/* LTR */
+html[dir="ltr"] .sidebar-nav a,
+html[dir="ltr"] .sidebar-nav summary {
+    flex-direction: row !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+}
+
+html[dir="ltr"] .sidebar .nav-text {
+    text-align: left !important;
+}
+
+/* الشعار */
+html[dir="rtl"] .brand {
+    direction: ltr;
+}
+
+html[dir="rtl"] .brand-text {
+    direction: rtl;
+    text-align: right;
+}
+
+/* إذا السايدبار صار ضيق جداً، نحافظ على النص */
+.sidebar {
+    min-width: 260px;
+}
+
+html[data-sidebar="collapsed"] .sidebar {
+    min-width: 76px;
+}
