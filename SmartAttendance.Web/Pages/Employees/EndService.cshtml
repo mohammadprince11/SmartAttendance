@@ -1,0 +1,157 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Employees.EndServiceModel
+
+@{
+    ViewData["Title"] = "إنهاء خدمة";
+}
+
+<link rel="stylesheet" href="~/css/employee-end-service.css" asp-append-version="true" />
+
+<div class="endservice-page">
+    
+    <div asp-validation-summary="All" class="endservice-alert danger"></div>
+<div class="endservice-head">
+        <div>
+            <div class="endservice-eyebrow">NEXORA Employee Lifecycle</div>
+            <h1>إنهاء خدمة موظف</h1>
+            <p>إجراء رسمي لإنهاء خدمة الموظف مع الحفاظ على كامل التاريخ الوظيفي والحضور والطلبات والسجلات.</p>
+        </div>
+
+        <div class="endservice-head-actions">
+            <a asp-page="./Profile" asp-route-id="@Model.Id" class="endservice-btn ghost">رجوع لملف الموظف</a>
+            <a asp-page="./Index" class="endservice-btn ghost">قائمة الموظفين</a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="endservice-alert danger">@Model.ErrorMessage</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+    {
+        <div class="endservice-alert success">@Model.SuccessMessage</div>
+    }
+
+    @if (Model.Employee != null)
+    {
+        <section class="endservice-employee-card">
+            <div class="endservice-avatar">
+                @(!string.IsNullOrWhiteSpace(Model.Employee.FullName) ? Model.Employee.FullName.Trim()[0] : 'N')
+            </div>
+
+            <div class="endservice-identity">
+                <h2>@Model.Employee.FullName</h2>
+                <div class="endservice-meta">
+                    <span>@Model.Employee.EmployeeNo</span>
+                    <span>@Model.Display(Model.Employee.Position)</span>
+                    <span>@Model.Display(Model.Employee.DepartmentName)</span>
+                    <span>@Model.Display(Model.Employee.BranchName)</span>
+                    <span>تاريخ التعيين: @Model.DisplayDate(Model.Employee.HireDate)</span>
+                </div>
+            </div>
+
+            <div class="endservice-state">
+                <span class="endservice-status @(Model.Employee.IsActive ? "active" : "inactive")">
+                    @(Model.Employee.IsActive ? "فعال" : "غير فعال")
+                </span>
+                <small>@Model.Display(Model.Employee.EmploymentStatus)</small>
+            </div>
+        </section>
+
+        @if (!Model.Employee.IsActive)
+        {
+            <div class="endservice-alert danger">
+                هذا الموظف غير فعال حالياً. تحقق من السجل قبل تنفيذ إجراء جديد.
+            </div>
+        }
+
+        <section class="endservice-warning">
+            <strong>تنبيه مهم</strong>
+            <span>
+                إنهاء الخدمة لا يحذف الموظف من النظام. يتم فقط تحديث حالته إلى منتهي الخدمة، وتبقى كل سجلات الحضور والطلبات والمستندات محفوظة.
+            </span>
+        </section>
+
+        <form method="post" class="endservice-layout" id="endServiceForm" novalidate>
+            
+            @Html.AntiForgeryToken()
+<input type="hidden" asp-for="Id" />
+
+            <div class="endservice-card">
+                <div class="endservice-card-head">
+                    <h3>بيانات إنهاء الخدمة</h3>
+                    <p>اختر نوع الإنهاء وحدد آخر يوم عمل والسبب الرسمي.</p>
+                </div>
+
+                <div class="endservice-form-grid">
+                    <div class="endservice-field">
+                        <label asp-for="EndServiceType">نوع إنهاء الخدمة</label>
+                        <select asp-for="EndServiceType">
+                            <option value="">اختر النوع</option>
+                            <option value="Resignation">استقالة</option>
+                            <option value="ContractEnd">انتهاء عقد</option>
+                            <option value="Termination">فصل</option>
+                            <option value="NonRenewal">عدم تجديد عقد</option>
+                            <option value="JobAbandonment">ترك عمل</option>
+                            <option value="Death">وفاة</option>
+                            <option value="Other">أخرى</option>
+                        </select>
+                        <span asp-validation-for="EndServiceType" class="endservice-validation"></span>
+                    </div>
+
+                    <div class="endservice-field">
+                        <label asp-for="LastWorkingDate">آخر يوم عمل</label>
+                        <input asp-for="LastWorkingDate" type="date" />
+                        <span asp-validation-for="LastWorkingDate" class="endservice-validation"></span>
+                    </div>
+
+                    <div class="endservice-field full">
+                        <label asp-for="Reason">سبب إنهاء الخدمة</label>
+                        <textarea asp-for="Reason" rows="4" placeholder="اكتب السبب الرسمي لإنهاء الخدمة..."></textarea>
+                        <span asp-validation-for="Reason" class="endservice-validation"></span>
+                    </div>
+
+                    <div class="endservice-field full">
+                        <label asp-for="HrNotes">ملاحظات HR</label>
+                        <textarea asp-for="HrNotes" rows="3" placeholder="ملاحظات داخلية اختيارية..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="endservice-card">
+                <div class="endservice-card-head">
+                    <h3>قائمة التسليم والتصفية</h3>
+                    <p>هذه القائمة تساعد HR على متابعة التصفية، حتى لو لم تكتمل كلها الآن.</p>
+                </div>
+
+                <div class="endservice-checklist">
+                    <label><input asp-for="ClearanceAssets" /> تسليم العهدة</label>
+                    <label><input asp-for="ClearanceDocuments" /> تسليم المستندات</label>
+                    <label><input asp-for="ClearanceAccommodation" /> السكن / الإقامة</label>
+                    <label><input asp-for="ClearanceDevices" /> الأجهزة والمعدات</label>
+                    <label><input asp-for="ClearanceBadge" /> بطاقة التعريف / الوصول</label>
+                    <label><input asp-for="ClearanceFinance" /> التصفية المالية</label>
+                </div>
+            </div>
+
+            <div class="endservice-card danger-zone">
+                <div class="endservice-card-head">
+                    <h3>اعتماد الإجراء النهائي</h3>
+                    <p>بعد الاعتماد سيتم جعل الموظف غير فعال وتسجيل العملية في Audit Log.</p>
+                </div>
+
+                <label class="endservice-confirm">
+                    <input asp-for="ConfirmFinalAction" />
+                    <span>أؤكد أن هذا الإجراء رسمي ونهائي، وأن بيانات الموظف وتاريخه يجب أن تبقى محفوظة بدون حذف.</span>
+                </label>
+                <span asp-validation-for="ConfirmFinalAction" class="endservice-validation"></span>
+
+                <div class="endservice-actions">
+                    <button type="submit" class="endservice-btn danger" id="endServiceSubmit">اعتماد إنهاء الخدمة</button>
+                    <a asp-page="./Profile" asp-route-id="@Model.Id" class="endservice-btn ghost">إلغاء</a>
+                </div>
+            </div>
+        </form>
+    }
+</div>

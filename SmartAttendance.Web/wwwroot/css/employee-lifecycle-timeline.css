@@ -1,0 +1,399 @@
+/* NEXORA Employee Lifecycle Timeline Phase 1 */
+
+.lifecycle-timeline-page,
+.lifecycle-timeline-page * {
+    box-sizing: border-box;
+}
+
+.lifecycle-timeline-page {
+    direction: rtl;
+    display: grid;
+    gap: 18px;
+    width: 100%;
+    max-width: 100%;
+}
+
+.lifecycle-timeline-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 18px;
+}
+
+.lifecycle-timeline-eyebrow {
+    display: inline-flex;
+    margin-bottom: 8px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    border: 1px solid rgba(215,178,109,.30);
+    background: rgba(215,178,109,.08);
+    color: #D7B26D;
+    font-weight: 1000;
+}
+
+.lifecycle-timeline-head h1 {
+    margin: 0;
+    color: var(--sa-text, #E6EAEE);
+    font-size: 34px;
+    line-height: 1.1;
+    font-weight: 1000;
+}
+
+.lifecycle-timeline-head p,
+.lifecycle-timeline-card-head p {
+    margin: 8px 0 0;
+    color: var(--sa-muted, #9FB0BE);
+    font-weight: 850;
+    line-height: 1.8;
+}
+
+.lifecycle-timeline-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.lifecycle-timeline-btn {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(230,234,238,.14);
+    background: rgba(255,255,255,.035);
+    color: var(--sa-text, #E6EAEE) !important;
+    font-weight: 1000;
+    text-decoration: none !important;
+    cursor: pointer;
+}
+
+.lifecycle-timeline-btn.primary {
+    color: #07121F !important;
+    border-color: rgba(18,217,227,.50);
+    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+}
+
+.lifecycle-timeline-hero,
+.lifecycle-timeline-card,
+.lifecycle-timeline-kpi {
+    border: 1px solid rgba(230,234,238,.12);
+    border-radius: 22px;
+    background:
+        linear-gradient(135deg, rgba(18,217,227,.045), rgba(215,178,109,.025)),
+        rgba(15,34,51,.88);
+    box-shadow: 0 22px 58px rgba(0,0,0,.22);
+}
+
+.lifecycle-timeline-hero {
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr) auto;
+    gap: 16px;
+    align-items: center;
+    padding: 22px;
+}
+
+.lifecycle-timeline-avatar {
+    width: 74px;
+    height: 74px;
+    display: grid;
+    place-items: center;
+    border-radius: 24px;
+    background: linear-gradient(135deg, #12D9E3, #D7B26D);
+    color: #07121F;
+    font-size: 34px;
+    font-weight: 1000;
+}
+
+.lifecycle-timeline-identity h2 {
+    margin: 0;
+    color: var(--sa-text, #E6EAEE);
+    font-size: clamp(25px, 3.5vw, 40px);
+    font-weight: 1000;
+}
+
+.lifecycle-timeline-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.lifecycle-timeline-meta span,
+.lifecycle-timeline-status,
+.lifecycle-timeline-badge {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(18,217,227,.22);
+    background: rgba(18,217,227,.07);
+    color: #12D9E3;
+    font-weight: 1000;
+}
+
+.lifecycle-timeline-status.ok,
+.lifecycle-timeline-badge.ok {
+    color: #07121F;
+    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+}
+
+.lifecycle-timeline-status.danger {
+    color: #ffd1d1;
+    border-color: rgba(239,68,68,.28);
+    background: rgba(239,68,68,.13);
+}
+
+.lifecycle-timeline-badge.warn {
+    color: #D7B26D;
+    border-color: rgba(215,178,109,.30);
+    background: rgba(215,178,109,.09);
+}
+
+.lifecycle-timeline-state {
+    display: grid;
+    gap: 6px;
+    justify-items: center;
+}
+
+.lifecycle-timeline-state small {
+    color: var(--sa-muted, #9FB0BE);
+    font-weight: 850;
+}
+
+.lifecycle-timeline-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.lifecycle-timeline-kpi {
+    min-height: 108px;
+    padding: 16px;
+}
+
+.lifecycle-timeline-kpi span {
+    display: block;
+    color: var(--sa-muted, #9FB0BE);
+    font-weight: 900;
+}
+
+.lifecycle-timeline-kpi strong {
+    display: block;
+    margin-top: 10px;
+    color: #12D9E3;
+    font-size: 26px;
+    line-height: 1;
+    font-weight: 1000;
+}
+
+.lifecycle-timeline-kpi.danger strong {
+    color: #ff9b9b;
+}
+
+.lifecycle-timeline-kpi.ok strong {
+    color: #12D9E3;
+}
+
+.lifecycle-timeline-kpi small {
+    display: block;
+    margin-top: 8px;
+    color: var(--sa-muted, #9FB0BE);
+    font-weight: 800;
+}
+
+.lifecycle-timeline-card {
+    padding: 20px;
+}
+
+.lifecycle-timeline-card h3 {
+    margin: 0;
+    color: var(--sa-text, #E6EAEE);
+    font-weight: 1000;
+}
+
+.lifecycle-timeline {
+    position: relative;
+    display: grid;
+    gap: 14px;
+    margin-top: 16px;
+    padding-inline-start: 20px;
+}
+
+.lifecycle-timeline::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 8px;
+    width: 2px;
+    background: linear-gradient(to bottom, rgba(18,217,227,.70), rgba(215,178,109,.55), rgba(239,68,68,.45));
+    border-radius: 999px;
+}
+
+.lifecycle-timeline-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 12px;
+}
+
+.lifecycle-timeline-dot {
+    width: 16px;
+    height: 16px;
+    margin-top: 20px;
+    border-radius: 50%;
+    border: 3px solid rgba(7,18,31,1);
+    background: #12D9E3;
+    box-shadow: 0 0 0 4px rgba(18,217,227,.14), 0 0 22px rgba(18,217,227,.35);
+    z-index: 1;
+}
+
+.lifecycle-timeline-item.end .lifecycle-timeline-dot {
+    background: #ff8a8a;
+    box-shadow: 0 0 0 4px rgba(239,68,68,.14), 0 0 22px rgba(239,68,68,.30);
+}
+
+.lifecycle-timeline-item.rehire .lifecycle-timeline-dot {
+    background: #D7B26D;
+    box-shadow: 0 0 0 4px rgba(215,178,109,.14), 0 0 22px rgba(215,178,109,.30);
+}
+
+.lifecycle-timeline-content {
+    padding: 16px;
+    border: 1px solid rgba(230,234,238,.10);
+    border-radius: 18px;
+    background: rgba(255,255,255,.026);
+}
+
+.lifecycle-timeline-item-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.lifecycle-timeline-item h4 {
+    margin: 0;
+    color: var(--sa-text, #E6EAEE);
+    font-size: 20px;
+    font-weight: 1000;
+}
+
+.lifecycle-timeline-item p {
+    margin: 6px 0 0;
+    color: var(--sa-muted, #9FB0BE);
+    font-weight: 850;
+}
+
+.lifecycle-timeline-date {
+    display: grid;
+    justify-items: end;
+    gap: 4px;
+    min-width: 140px;
+}
+
+.lifecycle-timeline-date strong {
+    color: #D7B26D;
+    font-weight: 1000;
+}
+
+.lifecycle-timeline-date small,
+.lifecycle-timeline-footer {
+    color: var(--sa-muted, #9FB0BE);
+    font-weight: 800;
+}
+
+.lifecycle-timeline-badge {
+    margin-top: 12px;
+}
+
+.lifecycle-timeline-details {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(7,18,31,.32);
+    border: 1px solid rgba(230,234,238,.08);
+}
+
+.lifecycle-timeline-details strong {
+    color: #D7B26D;
+    font-weight: 1000;
+}
+
+.lifecycle-timeline-details span {
+    color: var(--sa-text, #E6EAEE);
+    font-weight: 850;
+    line-height: 1.8;
+}
+
+.lifecycle-timeline-details.info strong {
+    color: #12D9E3;
+}
+
+.lifecycle-timeline-details.muted strong {
+    color: var(--sa-muted, #9FB0BE);
+}
+
+.lifecycle-timeline-footer {
+    margin-top: 12px;
+}
+
+.lifecycle-timeline-empty,
+.lifecycle-timeline-alert.danger {
+    padding: 16px;
+    border-radius: 16px;
+    font-weight: 1000;
+}
+
+.lifecycle-timeline-empty {
+    color: var(--sa-muted, #9FB0BE);
+    border: 1px solid rgba(230,234,238,.10);
+    background: rgba(255,255,255,.025);
+}
+
+.lifecycle-timeline-alert.danger {
+    color: #ffd1d1;
+    border: 1px solid rgba(239,68,68,.28);
+    background: rgba(239,68,68,.10);
+}
+
+@media (max-width: 1040px) {
+    .lifecycle-timeline-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .lifecycle-timeline-head,
+    .lifecycle-timeline-hero,
+    .lifecycle-timeline-item-head {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .lifecycle-timeline-kpis {
+        grid-template-columns: 1fr;
+    }
+
+    .lifecycle-timeline-avatar {
+        margin: auto;
+    }
+
+    .lifecycle-timeline-identity {
+        text-align: center;
+    }
+
+    .lifecycle-timeline-meta {
+        justify-content: center;
+    }
+
+    .lifecycle-timeline-date {
+        justify-items: start;
+    }
+}

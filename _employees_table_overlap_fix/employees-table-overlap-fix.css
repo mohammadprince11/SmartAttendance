@@ -1,0 +1,108 @@
+
+/* =========================================================
+   Employees Table Overlap Fix
+   Fixes Email / Hire Date overlap and gives stable widths.
+========================================================= */
+
+.nx-employees-page .nx-table-wrap {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+}
+
+.nx-employees-page .nx-employees-table {
+    min-width: 1580px !important;
+    table-layout: fixed !important;
+}
+
+.nx-employees-page .nx-employees-table th,
+.nx-employees-page .nx-employees-table td {
+    white-space: normal !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+    line-height: 1.45 !important;
+}
+
+/* Column widths */
+.nx-employees-page .nx-employees-table th:nth-child(1),
+.nx-employees-page .nx-employees-table td:nth-child(1) {
+    width: 125px !important;
+}
+
+.nx-employees-page .nx-employees-table th:nth-child(2),
+.nx-employees-page .nx-employees-table td:nth-child(2) {
+    width: 230px !important;
+}
+
+.nx-employees-page .nx-employees-table th:nth-child(3),
+.nx-employees-page .nx-employees-table td:nth-child(3) {
+    width: 150px !important;
+}
+
+.nx-employees-page .nx-employees-table th:nth-child(4),
+.nx-employees-page .nx-employees-table td:nth-child(4) {
+    width: 220px !important;
+}
+
+.nx-employees-page .nx-employees-table th:nth-child(5),
+.nx-employees-page .nx-employees-table td:nth-child(5) {
+    width: 110px !important;
+}
+
+.nx-employees-page .nx-employees-table th:nth-child(6),
+.nx-employees-page .nx-employees-table td:nth-child(6) {
+    width: 150px !important;
+    white-space: nowrap !important;
+}
+
+.nx-employees-page .nx-employees-table th:nth-child(7),
+.nx-employees-page .nx-employees-table td:nth-child(7) {
+    width: 280px !important;
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
+    direction: ltr !important;
+    unicode-bidi: plaintext !important;
+    text-align: center !important;
+}
+
+.nx-employees-page .nx-employees-table th:nth-child(8),
+.nx-employees-page .nx-employees-table td:nth-child(8) {
+    width: 145px !important;
+    white-space: nowrap !important;
+    direction: ltr !important;
+    text-align: center !important;
+}
+
+.nx-employees-page .nx-employees-table th:nth-child(9),
+.nx-employees-page .nx-employees-table td:nth-child(9) {
+    width: 115px !important;
+}
+
+.nx-employees-page .nx-employees-table th:nth-child(10),
+.nx-employees-page .nx-employees-table td:nth-child(10) {
+    width: 235px !important;
+}
+
+/* Keep action buttons inside their own column */
+.nx-employees-page .nx-row-actions {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 7px !important;
+    flex-wrap: nowrap !important;
+}
+
+.nx-employees-page .nx-action {
+    flex: 0 0 auto !important;
+}
+
+/* Better wrapping for long position names */
+.nx-employees-page .nx-employees-table td:nth-child(4) {
+    word-break: normal !important;
+    overflow-wrap: anywhere !important;
+}
+
+/* Avoid old table/pagination scripts forcing narrow widths */
+.nx-employees-page table,
+.nx-employees-page .nx-table-wrap table {
+    max-width: none !important;
+}

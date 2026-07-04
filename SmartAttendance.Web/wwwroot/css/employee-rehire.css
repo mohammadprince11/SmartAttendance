@@ -1,0 +1,328 @@
+/* NEXORA Employee Rehire Phase 1 */
+
+.rehire-page,
+.rehire-page * {
+    box-sizing: border-box;
+}
+
+.rehire-page {
+    direction: rtl;
+    display: grid;
+    gap: 18px;
+    width: 100%;
+    max-width: 100%;
+}
+
+.rehire-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 18px;
+}
+
+.rehire-eyebrow {
+    display: inline-flex;
+    margin-bottom: 8px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    border: 1px solid rgba(18,217,227,.30);
+    background: rgba(18,217,227,.08);
+    color: #12D9E3;
+    font-weight: 1000;
+}
+
+.rehire-head h1 {
+    margin: 0;
+    color: var(--sa-text, #E6EAEE);
+    font-size: 34px;
+    line-height: 1.1;
+    font-weight: 1000;
+}
+
+.rehire-head p,
+.rehire-card-head p {
+    margin: 8px 0 0;
+    color: var(--sa-muted, #9FB0BE);
+    font-weight: 850;
+    line-height: 1.8;
+}
+
+.rehire-head-actions,
+.rehire-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.rehire-btn {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(230,234,238,.14);
+    background: rgba(255,255,255,.035);
+    color: var(--sa-text, #E6EAEE) !important;
+    font-weight: 1000;
+    text-decoration: none !important;
+    cursor: pointer;
+}
+
+.rehire-btn.primary {
+    color: #07121F !important;
+    border-color: rgba(18,217,227,.50);
+    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+}
+
+.rehire-employee-card,
+.rehire-card,
+.rehire-warning {
+    border: 1px solid rgba(230,234,238,.12);
+    border-radius: 22px;
+    background:
+        linear-gradient(135deg, rgba(18,217,227,.045), rgba(215,178,109,.025)),
+        rgba(15,34,51,.88);
+    box-shadow: 0 22px 58px rgba(0,0,0,.22);
+}
+
+.rehire-employee-card {
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr) auto;
+    gap: 16px;
+    align-items: center;
+    padding: 22px;
+}
+
+.rehire-avatar {
+    width: 74px;
+    height: 74px;
+    display: grid;
+    place-items: center;
+    border-radius: 24px;
+    background: linear-gradient(135deg, #12D9E3, #D7B26D);
+    color: #07121F;
+    font-size: 34px;
+    font-weight: 1000;
+}
+
+.rehire-identity h2 {
+    margin: 0;
+    color: var(--sa-text, #E6EAEE);
+    font-size: clamp(25px, 3.5vw, 40px);
+    font-weight: 1000;
+}
+
+.rehire-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.rehire-meta span,
+.rehire-status {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(18,217,227,.22);
+    background: rgba(18,217,227,.07);
+    color: #12D9E3;
+    font-weight: 1000;
+}
+
+.rehire-status.active {
+    color: #07121F;
+    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+}
+
+.rehire-status.inactive {
+    color: #D7B26D;
+    border-color: rgba(215,178,109,.30);
+    background: rgba(215,178,109,.09);
+}
+
+.rehire-state {
+    display: grid;
+    gap: 6px;
+    justify-items: center;
+}
+
+.rehire-state small {
+    color: var(--sa-muted, #9FB0BE);
+    font-weight: 850;
+}
+
+.rehire-warning {
+    display: grid;
+    gap: 6px;
+    padding: 16px 18px;
+    border-color: rgba(18,217,227,.28);
+    background: rgba(18,217,227,.08);
+}
+
+.rehire-warning strong {
+    color: #12D9E3;
+    font-weight: 1000;
+}
+
+.rehire-warning span {
+    color: var(--sa-text, #E6EAEE);
+    font-weight: 850;
+    line-height: 1.8;
+}
+
+.rehire-layout {
+    display: grid;
+    gap: 14px;
+}
+
+.rehire-card {
+    padding: 18px;
+}
+
+.rehire-card h3 {
+    margin: 0;
+    color: var(--sa-text, #E6EAEE);
+    font-weight: 1000;
+}
+
+.rehire-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.rehire-field {
+    display: grid;
+    gap: 7px;
+}
+
+.rehire-field.full {
+    grid-column: 1 / -1;
+}
+
+.rehire-field label {
+    color: #D7B26D;
+    font-weight: 1000;
+}
+
+.rehire-field input,
+.rehire-field textarea {
+    width: 100%;
+    border-radius: 14px !important;
+    border: 1px solid rgba(230,234,238,.14) !important;
+    background: rgba(7,18,31,.45) !important;
+    color: var(--sa-text, #E6EAEE) !important;
+    padding: 12px 13px !important;
+    font-weight: 850 !important;
+    outline: none !important;
+}
+
+.rehire-field textarea {
+    resize: vertical;
+    min-height: 92px;
+}
+
+.rehire-change-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.rehire-change-grid div,
+.rehire-confirm {
+    padding: 13px;
+    border: 1px solid rgba(230,234,238,.10);
+    border-radius: 14px;
+    background: rgba(255,255,255,.025);
+}
+
+.rehire-change-grid span {
+    display: block;
+    color: var(--sa-muted, #9FB0BE);
+    font-weight: 850;
+    margin-bottom: 6px;
+}
+
+.rehire-change-grid strong {
+    display: block;
+    color: #12D9E3;
+    font-weight: 1000;
+}
+
+.danger-zone {
+    border-color: rgba(18,217,227,.24);
+}
+
+.rehire-confirm {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    color: var(--sa-text, #E6EAEE);
+    font-weight: 900;
+    line-height: 1.8;
+}
+
+.rehire-confirm input {
+    width: 18px;
+    height: 18px;
+    accent-color: #12D9E3;
+}
+
+.rehire-actions {
+    margin-top: 14px;
+}
+
+.rehire-validation {
+    color: #ffb4b4;
+    font-weight: 900;
+    font-size: 13px;
+}
+
+.rehire-alert {
+    padding: 14px 16px;
+    border-radius: 16px;
+    font-weight: 1000;
+    line-height: 1.8;
+}
+
+.rehire-alert.danger {
+    border: 1px solid rgba(239,68,68,.28);
+    background: rgba(239,68,68,.10);
+    color: #ffd1d1;
+}
+
+.rehire-page .validation-summary-valid {
+    display: none !important;
+}
+
+@media (max-width: 900px) {
+    .rehire-head,
+    .rehire-employee-card {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rehire-form-grid,
+    .rehire-change-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rehire-avatar {
+        margin: auto;
+    }
+
+    .rehire-identity {
+        text-align: center;
+    }
+
+    .rehire-meta {
+        justify-content: center;
+    }
+}

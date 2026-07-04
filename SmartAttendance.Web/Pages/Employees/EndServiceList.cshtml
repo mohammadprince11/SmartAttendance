@@ -1,0 +1,106 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Employees.EndServiceListModel
+
+@{
+    ViewData["Title"] = "منتهية خدماتهم";
+}
+
+<link rel="stylesheet" href="~/css/employee-end-service-list.css" asp-append-version="true" />
+
+<div class="esl-page">
+    <div class="esl-head">
+        <div>
+            <div class="esl-eyebrow">NEXORA Employee Lifecycle</div>
+            <h1>سجل إنهاء الخدمات</h1>
+            <p>متابعة إجراءات إنهاء الخدمة وحالة التصفية مع إمكانية الرجوع إلى ملف الموظف.</p>
+        </div>
+        <a asp-page="./Index" class="esl-btn ghost">قائمة الموظفين</a>
+    </div>
+
+    <section class="esl-kpis">
+        <div class="esl-kpi"><span>إجمالي السجلات</span><strong>@Model.TotalRecords</strong><small>كل الإجراءات</small></div>
+        <div class="esl-kpi ok"><span>تصفية مكتملة</span><strong>@Model.CompletedClearance</strong><small>جاهزة للأرشفة</small></div>
+        <div class="esl-kpi warn"><span>تصفية معلقة</span><strong>@Model.PendingClearance</strong><small>تحتاج متابعة</small></div>
+        <div class="esl-kpi"><span>هذا الشهر</span><strong>@Model.CurrentMonthRecords</strong><small>إجراءات حديثة</small></div>
+    </section>
+
+    <section class="esl-card">
+        <form method="get" class="esl-filter">
+            <div class="esl-search">
+                <label>بحث</label>
+                <input type="text" name="SearchTerm" value="@Model.SearchTerm" placeholder="ابحث بالكود، الاسم، القسم، الفرع، المنصب أو السبب..." />
+            </div>
+
+            <div class="esl-field">
+                <label>نوع الإنهاء</label>
+                <select name="EndServiceType">
+                    <option value="">الكل</option>
+                    <option value="Resignation">استقالة</option>
+                    <option value="ContractEnd">انتهاء عقد</option>
+                    <option value="Termination">فصل</option>
+                    <option value="NonRenewal">عدم تجديد عقد</option>
+                    <option value="JobAbandonment">ترك عمل</option>
+                    <option value="Death">وفاة</option>
+                    <option value="Other">أخرى</option>
+                </select>
+            </div>
+
+            <div class="esl-field">
+                <label>حالة التصفية</label>
+                <select name="ClearanceStatus">
+                    <option value="">الكل</option>
+                    <option value="Completed">مكتملة</option>
+                    <option value="Pending">معلقة</option>
+                </select>
+            </div>
+
+            <div class="esl-actions">
+                <button type="submit" class="esl-btn primary">بحث</button>
+                <a asp-page="./EndServiceList" class="esl-btn ghost">مسح</a>
+            </div>
+        </form>
+
+        <div class="esl-toolbar">عدد النتائج: <strong>@Model.Records.Count</strong></div>
+
+        <div class="esl-table-wrap">
+            <table class="esl-table">
+                <thead>
+                    <tr>
+                        <th>الموظف</th>
+                        <th>الكود</th>
+                        <th>القسم / الفرع</th>
+                        <th>نوع الإنهاء</th>
+                        <th>آخر يوم عمل</th>
+                        <th>السبب</th>
+                        <th>التصفية</th>
+                        <th>تم بواسطة</th>
+                        <th>تاريخ الإنشاء</th>
+                        <th>الإجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Records)
+                    {
+                        <tr>
+                            <td><div class="esl-name">@row.EmployeeName</div><small>@Model.Display(row.Position)</small></td>
+                            <td><span class="esl-code">@row.EmployeeNo</span></td>
+                            <td><div>@Model.Display(row.DepartmentName)</div><small>@Model.Display(row.BranchName)</small></td>
+                            <td>@Model.TypeText(row.EndServiceType, row.EndServiceTypeText)</td>
+                            <td>@Model.DisplayDate(row.LastWorkingDate)</td>
+                            <td class="esl-reason">@Model.Display(row.Reason)</td>
+                            <td><span class="esl-badge @Model.ClearanceClass(row.ClearanceStatus)">@Model.ClearanceText(row.ClearanceStatus)</span></td>
+                            <td>@Model.Display(row.CreatedBy)</td>
+                            <td>@Model.DisplayDateTime(row.CreatedAt)</td>
+                            <td><a asp-page="./Profile" asp-route-id="@row.EmployeeId" class="esl-mini-btn">فتح الملف</a></td>
+                        </tr>
+                    }
+
+                    @if (!Model.Records.Any())
+                    {
+                        <tr><td colspan="10" class="esl-empty">لا توجد سجلات إنهاء خدمة حالياً.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

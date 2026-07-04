@@ -1,0 +1,162 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Employees.RehireModel
+
+@{
+    ViewData["Title"] = "إعادة تعيين";
+}
+
+<link rel="stylesheet" href="~/css/employee-rehire.css" asp-append-version="true" />
+
+<div class="rehire-page">
+    <div class="rehire-head">
+        <div>
+            <div class="rehire-eyebrow">NEXORA Employee Lifecycle</div>
+            <h1>إعادة تعيين موظف</h1>
+            <p>إعادة تفعيل الموظف بنفس بياناته السابقة مع تسجيل تاريخ مباشرة جديد وحفظ التاريخ السابق بالكامل.</p>
+        </div>
+
+        <div class="rehire-head-actions">
+            <a asp-page="./Profile" asp-route-id="@Model.Id" class="rehire-btn ghost">رجوع لملف الموظف</a>
+            <a asp-page="./Index" class="rehire-btn ghost">قائمة الموظفين</a>
+        </div>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div asp-validation-summary="All" class="rehire-alert danger"></div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="rehire-alert danger">@Model.ErrorMessage</div>
+    }
+
+    @if (Model.Employee != null)
+    {
+        <section class="rehire-employee-card">
+            <div class="rehire-avatar">
+                @(!string.IsNullOrWhiteSpace(Model.Employee.FullName) ? Model.Employee.FullName.Trim()[0] : 'N')
+            </div>
+
+            <div class="rehire-identity">
+                <h2>@Model.Employee.FullName</h2>
+                <div class="rehire-meta">
+                    <span>@Model.Employee.EmployeeNo</span>
+                    <span>@Model.Display(Model.Employee.Position)</span>
+                    <span>@Model.Display(Model.Employee.DepartmentName)</span>
+                    <span>@Model.Display(Model.Employee.BranchName)</span>
+                    <span>تاريخ التعيين السابق: @Model.DisplayDate(Model.Employee.HireDate)</span>
+                    <span>تاريخ إنهاء الخدمة: @Model.DisplayDate(Model.Employee.ServiceEndDate)</span>
+                </div>
+            </div>
+
+            <div class="rehire-state">
+                <span class="rehire-status @(Model.Employee.IsActive ? "active" : "inactive")">
+                    @(Model.Employee.IsActive ? "فعال" : "غير فعال")
+                </span>
+                <small>@Model.Display(Model.Employee.EmploymentStatus)</small>
+            </div>
+        </section>
+
+        @if (Model.Employee.IsActive)
+        {
+            <div class="rehire-alert danger">
+                هذا الموظف فعال حالياً. إعادة التعيين تستخدم فقط للموظف المنتهي الخدمة أو غير الفعال.
+            </div>
+        }
+
+        <section class="rehire-warning">
+            <strong>تنبيه مهم</strong>
+            <span>
+                إعادة التعيين لا تنشئ موظف جديد ولا تحذف السجل القديم. يتم تفعيل نفس الموظف بنفس الكود والبيانات السابقة، مع تحديث تاريخ المباشرة الجديد وتسجيل العملية في Audit Log.
+            </span>
+        </section>
+
+        <form method="post" class="rehire-layout" novalidate>
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+
+            <div class="rehire-card">
+                <div class="rehire-card-head">
+                    <h3>بيانات إعادة التعيين</h3>
+                    <p>حدد تاريخ المباشرة الجديد والسبب الرسمي لإعادة التعيين.</p>
+                </div>
+
+                <div class="rehire-form-grid">
+                    <div class="rehire-field">
+                        <label asp-for="RehireDate">تاريخ المباشرة الجديد</label>
+                        <input asp-for="RehireDate" type="date" />
+                        <span asp-validation-for="RehireDate" class="rehire-validation"></span>
+                    </div>
+
+                    <div class="rehire-field">
+                        <label>الحالة بعد الاعتماد</label>
+                        <input value="Active / فعال" readonly />
+                    </div>
+
+                    <div class="rehire-field full">
+                        <label asp-for="Reason">سبب إعادة التعيين</label>
+                        <textarea asp-for="Reason" rows="4" placeholder="مثال: إعادة تعيين بعد انتهاء عقد سابق / عودة للعمل / مباشرة جديدة..."></textarea>
+                        <span asp-validation-for="Reason" class="rehire-validation"></span>
+                    </div>
+
+                    <div class="rehire-field full">
+                        <label asp-for="HrNotes">ملاحظات HR</label>
+                        <textarea asp-for="HrNotes" rows="3" placeholder="ملاحظات داخلية اختيارية..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rehire-card rehire-summary">
+                <div class="rehire-card-head">
+                    <h3>ما الذي سيتغير؟</h3>
+                </div>
+
+                <div class="rehire-change-grid">
+                    <div>
+                        <span>الكود</span>
+                        <strong>يبقى نفسه</strong>
+                    </div>
+                    <div>
+                        <span>البيانات الأساسية</span>
+                        <strong>تبقى نفسها</strong>
+                    </div>
+                    <div>
+                        <span>الحضور القديم</span>
+                        <strong>يبقى محفوظ</strong>
+                    </div>
+                    <div>
+                        <span>تاريخ المباشرة</span>
+                        <strong>يتحدث للتاريخ الجديد</strong>
+                    </div>
+                    <div>
+                        <span>الحالة</span>
+                        <strong>تصبح فعال</strong>
+                    </div>
+                    <div>
+                        <span>إنهاء الخدمة السابق</span>
+                        <strong>ينمسح من الحالة الحالية فقط ويبقى بالسجل</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rehire-card danger-zone">
+                <div class="rehire-card-head">
+                    <h3>اعتماد إعادة التعيين</h3>
+                    <p>بعد الاعتماد سيعود الموظف فعالاً بنفس بياناته السابقة وبتاريخ مباشرة جديد.</p>
+                </div>
+
+                <label class="rehire-confirm">
+                    <input asp-for="ConfirmRehire" />
+                    <span>أؤكد إعادة تعيين هذا الموظف بنفس الكود والبيانات السابقة مع تاريخ مباشرة جديد.</span>
+                </label>
+                <span asp-validation-for="ConfirmRehire" class="rehire-validation"></span>
+
+                <div class="rehire-actions">
+                    <button type="submit" class="rehire-btn primary">اعتماد إعادة التعيين</button>
+                    <a asp-page="./Profile" asp-route-id="@Model.Id" class="rehire-btn ghost">إلغاء</a>
+                </div>
+            </div>
+        </form>
+    }
+</div>

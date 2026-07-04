@@ -1,0 +1,293 @@
+/* NEXORA Employees Page Layout Fix */
+
+.nx-employees-page {
+    display: grid;
+    gap: 18px;
+    direction: rtl;
+}
+
+.nx-page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 18px;
+}
+
+.nx-eyebrow {
+    display: inline-flex;
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(18, 217, 227, .26);
+    background: rgba(18, 217, 227, .07);
+    color: #12D9E3;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-weight: 1000;
+    letter-spacing: .04em;
+}
+
+.nx-page-head h1 {
+    margin: 0;
+    color: var(--sa-text, #E6EAEE);
+    font-size: 34px;
+    line-height: 1.1;
+    font-weight: 1000;
+}
+
+.nx-page-head p {
+    margin: 8px 0 0;
+    color: var(--sa-muted, #9FB0BE);
+    font-weight: 850;
+}
+
+.nx-head-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.nx-card {
+    padding: 22px;
+    border: 1px solid rgba(230, 234, 238, .12);
+    border-radius: 22px;
+    background:
+        linear-gradient(135deg, rgba(18, 217, 227, .035), rgba(215, 178, 109, .025)),
+        rgba(15, 34, 51, .88);
+    box-shadow: 0 22px 58px rgba(0, 0, 0, .22);
+}
+
+.nx-alert {
+    padding: 14px 16px;
+    border-radius: 16px;
+    font-weight: 1000;
+}
+
+.nx-alert.success {
+    border: 1px solid rgba(18, 217, 227, .28);
+    background: rgba(18, 217, 227, .09);
+    color: #12D9E3;
+}
+
+.nx-search-form {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 16px;
+}
+
+.nx-search-box {
+    display: grid;
+    gap: 7px;
+}
+
+.nx-search-box span {
+    color: #D7B26D;
+    font-weight: 1000;
+    font-size: 13px;
+}
+
+.nx-search-box input {
+    width: 100%;
+    min-height: 46px;
+    border-radius: 14px !important;
+    text-align: right;
+}
+
+.nx-search-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.nx-table-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    color: var(--sa-muted, #9FB0BE);
+    font-weight: 900;
+}
+
+.nx-count strong {
+    color: #12D9E3;
+}
+
+.nx-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border: 1px solid rgba(230, 234, 238, .10);
+    border-radius: 18px;
+}
+
+.nx-employees-table {
+    width: 100%;
+    min-width: 1180px;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.nx-employees-table th,
+.nx-employees-table td {
+    padding: 14px 12px;
+    text-align: center;
+    vertical-align: middle;
+    border-bottom: 1px solid rgba(230, 234, 238, .10);
+    color: var(--sa-text, #E6EAEE);
+    font-weight: 850;
+}
+
+.nx-employees-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: rgba(7, 18, 31, .48);
+    color: #D7B26D;
+    font-weight: 1000;
+    white-space: nowrap;
+}
+
+.nx-employees-table tr:hover td {
+    background: rgba(18, 217, 227, .045);
+}
+
+.nx-employees-table .col-code {
+    width: 125px;
+}
+
+.nx-employees-table .col-name {
+    width: 220px;
+}
+
+.nx-employees-table .col-actions {
+    width: 245px;
+}
+
+.nx-code {
+    display: inline-flex;
+    justify-content: center;
+    min-width: 76px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(18, 217, 227, .22);
+    background: rgba(18, 217, 227, .06);
+    color: #12D9E3;
+    font-weight: 1000;
+}
+
+.nx-employee-name {
+    direction: rtl;
+    unicode-bidi: plaintext;
+    color: #FFFFFF;
+    font-weight: 1000;
+    white-space: normal;
+    line-height: 1.45;
+}
+
+.nx-status {
+    display: inline-flex;
+    min-width: 74px;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-weight: 1000;
+}
+
+.nx-status.active {
+    color: #07121F;
+    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+}
+
+.nx-status.inactive {
+    color: #ffd1d1;
+    border: 1px solid rgba(239, 68, 68, .28);
+    background: rgba(239, 68, 68, .12);
+}
+
+.nx-row-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: nowrap;
+}
+
+.nx-action {
+    min-width: 62px;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 10px;
+    border: 1px solid rgba(230, 234, 238, .14);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, .035);
+    color: var(--sa-text, #E6EAEE) !important;
+    font-size: 12px;
+    font-weight: 1000;
+    text-decoration: none !important;
+    white-space: nowrap;
+}
+
+.nx-action.primary {
+    color: #07121F !important;
+    border-color: rgba(18, 217, 227, .46);
+    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+}
+
+.nx-action.danger {
+    color: #ffd1d1 !important;
+    border-color: rgba(239, 68, 68, .25);
+    background: rgba(239, 68, 68, .12);
+}
+
+.nx-empty {
+    padding: 28px !important;
+    color: var(--sa-muted, #9FB0BE) !important;
+    font-weight: 1000 !important;
+}
+
+/* Disable old pagination overlay if table-pagination script injects controls in wrong place */
+.nx-employees-page .pagination,
+.nx-employees-page .table-pagination,
+.nx-employees-page .dataTables_paginate {
+    position: static !important;
+    margin-top: 12px !important;
+}
+
+/* If old data-table rules affect this page, neutralize them */
+.nx-employees-page .data-table,
+.nx-employees-page .table-card {
+    width: auto !important;
+}
+
+@media (max-width: 900px) {
+    .nx-page-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .nx-head-actions {
+        justify-content: stretch;
+    }
+
+    .nx-head-actions a {
+        flex: 1;
+    }
+
+    .nx-search-form {
+        grid-template-columns: 1fr;
+    }
+
+    .nx-search-actions {
+        justify-content: stretch;
+    }
+
+    .nx-search-actions button,
+    .nx-search-actions a {
+        flex: 1;
+    }
+}

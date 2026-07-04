@@ -5,50 +5,33 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>@ViewData["Title"] - Smart Attendance</title>
+    <title>@(ViewData["Title"] ?? "NEXORA") - NEXORA</title>
 
     <script>
-            (function () {
-                var theme = localStorage.getItem("SmartAttendance.Theme") || "dark";
-                var language = localStorage.getItem("SmartAttendance.Language") || "ar";
-                var sidebar = localStorage.getItem("SmartAttendance.Sidebar") || "expanded";
+        (function () {
+            var theme = localStorage.getItem("SmartAttendance.Theme") || "dark";
+            var language = localStorage.getItem("SmartAttendance.Language") || "ar";
+            var sidebar = localStorage.getItem("SmartAttendance.Sidebar") || "expanded";
 
-                document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "dark");
-                document.documentElement.setAttribute("data-sidebar", sidebar === "collapsed" ? "collapsed" : "expanded");
-                document.documentElement.setAttribute("lang", language === "ar" ? "ar" : "en");
-                document.documentElement.setAttribute("dir", language === "ar" ? "rtl" : "ltr");
-            })();
+            document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "dark");
+            document.documentElement.setAttribute("data-sidebar", sidebar === "collapsed" ? "collapsed" : "expanded");
+            document.documentElement.setAttribute("lang", language === "ar" ? "ar" : "en");
+            document.documentElement.setAttribute("dir", language === "ar" ? "rtl" : "ltr");
+        })();
     </script>
 
     <style>
-            html[data-theme="dark"], html[data-theme="dark"] body {
-                background: #0b1220;
-                color: #e6edf7;
-            }
-
-            html[data-theme="light"], html[data-theme="light"] body {
-                background: #f6f8fb;
-                color: #102033;
-            }
-
-            html.sa-preload body {
-                opacity: 0;
-            }
-
-            html.sa-ready body {
-                opacity: 1;
-                transition: opacity 160ms ease;
-            }
+        html[data-theme="dark"], html[data-theme="dark"] body { background:#07121F; color:#E6EAEE; }
+        html[data-theme="light"], html[data-theme="light"] body { background:#F4F7FA; color:#07121F; }
+        html.sa-preload body { opacity:0; }
+        html.sa-ready body { opacity:1; transition:opacity 160ms ease; }
     </style>
 
+    <link rel="icon" type="image/svg+xml" href="~/brand/nexora-symbol.svg" />
     <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/layout-pagination-fix.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/theme-localization.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/sidebar-toggle-inside.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/sidebar-modules.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/report-builder-clean.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/encoding-safe-language.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/hide-sidebar-icons-final.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-brand.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-sidebar-brand-active-fix.css" asp-append-version="true" />
 </head>
 <body>
     @{
@@ -72,61 +55,61 @@
         var showReports = isAdmin || isHrManager || isHrOfficer || isBranchManager || isFinanceViewer;
         var showSettings = isAdmin || isHrManager;
         var showSelfServices = isAdmin || isHrManager || isHrOfficer || isBranchManager || isEmployee;
+        var pageTitle = ViewData["Title"]?.ToString() ?? "NEXORA";
     }
 
-    <div class="app-shell">
-        <aside class="sidebar">
-            <div class="brand sidebar-brand-with-toggle">
-                <div class="brand-logo">SA</div>
-
-                <div class="brand-text">
-                    <div class="brand-title">Smart Attendance</div>
-                    <div class="brand-subtitle" data-i18n="enterprise">Human Resources System</div>
-                </div>
+    <div class="nexora-shell">
+        <aside class="nexora-sidebar">
+            <div class="nexora-brand-card">
+                <a asp-page="/Index" class="nexora-brand-link" aria-label="NEXORA Home">
+                    <img class="nexora-brand-symbol" src="~/brand/nexora-symbol.svg" alt="NEXORA" />
+                    <div class="nexora-brand-copy">
+                        <div class="nexora-wordmark">NEXORA</div>
+                        <div class="nexora-arabic">نيكسورا</div>
+                        <div class="nexora-tagline">Intelligent Solutions. Limitless Impact.</div>
+                    </div>
+                </a>
 
                 <button type="button"
-                        class="sa-sidebar-toggle sidebar-local-toggle"
+                        class="nexora-icon-button"
                         data-sidebar-toggle
-                        aria-label="Toggle menu"
-                        title="Toggle menu">
-                    Menu
+                        aria-label="Toggle sidebar">
+                    <span></span>
                 </button>
             </div>
 
-            <nav class="sidebar-nav sidebar-modules-nav">
-                <a asp-page="/Index" class="sidebar-single-link">
-                    <span class="nav-icon">Home</span>
-                    <span class="nav-text" data-i18n="dashboard">Dashboard</span>
+            <nav class="nexora-nav">
+                <a asp-page="/Index" class="nexora-nav-link">
+                    <span class="nexora-nav-dot"></span>
+                    <span class="nexora-nav-text" data-i18n="dashboard">Dashboard</span>
                 </a>
 
                 @if (showOrg)
                 {
-                    <a asp-page="/Organization/Index" class="sidebar-single-link">
-                        <span class="nav-icon">Org</span>
-                        <span class="nav-text" data-i18n="organization">Organization</span>
+                    <a asp-page="/Organization/Index" class="nexora-nav-link">
+                        <span class="nexora-nav-dot"></span>
+                        <span class="nexora-nav-text" data-i18n="organization">Organization</span>
                     </a>
                 }
 
                 @if (showHr)
                 {
-                    <details class="nav-module" open>
+                    <details class="nexora-nav-group">
                         <summary>
-                            <span class="nav-icon">HR</span>
-                            <span class="nav-text" data-i18n="hrAffairs">HR Affairs</span>
-                            <span class="nav-chevron"></span>
+                            <span class="nexora-nav-dot gold"></span>
+                            <span class="nexora-nav-text" data-i18n="hrAffairs">HR Affairs</span>
+                            <span class="nexora-chevron"></span>
                         </summary>
 
-                        <div class="nav-module-links">
-                            <a asp-page="/Employees/Index">
-                                <span class="nav-icon">Emp</span>
-                                <span class="nav-text" data-i18n="employees">Employees</span>
+                        <div class="nexora-nav-group-links">
+                            <a asp-page="/Employees/Index" class="nexora-nav-link">
+                                <span data-i18n="employees">Employees</span>
                             </a>
 
                             @if (showReports)
                             {
-                                <a asp-page="/Reports/Index" asp-route-Area="hr">
-                                    <span class="nav-icon">Rpt</span>
-                                    <span class="nav-text" data-i18n="hrReports">HR Reports</span>
+                                <a asp-page="/Reports/Index" asp-route-Area="hr" class="nexora-nav-link">
+                                    <span data-i18n="hrReports">HR Reports</span>
                                 </a>
                             }
                         </div>
@@ -135,41 +118,69 @@
 
                 @if (showAttendance)
                 {
-                    <details class="nav-module" open>
+                    <details class="nexora-nav-group">
                         <summary>
-                            <span class="nav-icon">Time</span>
-                            <span class="nav-text" data-i18n="attendanceModule">Attendance & Time</span>
-                            <span class="nav-chevron"></span>
+                            <span class="nexora-nav-dot"></span>
+                            <span class="nexora-nav-text" data-i18n="attendanceModule">Attendance & Time</span>
+                            <span class="nexora-chevron"></span>
                         </summary>
 
-                        <div class="nav-module-links">
+                        <div class="nexora-nav-group-links">
                             @if (isAdmin || isHrManager)
                             {
-                                <a asp-page="/Devices/Index">
-                                    <span class="nav-icon">Dev</span>
-                                    <span class="nav-text" data-i18n="devices">Devices</span>
+                                <a asp-page="/Devices/Index" class="nexora-nav-link">
+                                    <span data-i18n="devices">Devices</span>
                                 </a>
 
-                                <a asp-page="/Shifts/Index">
-                                    <span class="nav-icon">Shift</span>
-                                    <span class="nav-text" data-i18n="shifts">Shifts</span>
+                                <a asp-page="/Shifts/Index" class="nexora-nav-link">
+                                    <span data-i18n="shifts">Shifts</span>
                                 </a>
 
-                                <a asp-page="/EmployeeShifts/Index">
-                                    <span class="nav-icon">ES</span>
-                                    <span class="nav-text" data-i18n="employeeShifts">Employee Shifts</span>
+                                <a asp-page="/EmployeeShifts/Index" class="nexora-nav-link">
+                                    <span data-i18n="employeeShifts">Employee Shifts</span>
                                 </a>
                             }
-                            <a asp-page="/AttendanceOperations/Index">
-                                <span class="nav-icon">Ops</span>
-                                <span class="nav-text" data-i18n="attendanceOperations">Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø­Ø¶ÙˆØ±</span>
+
+                            <a asp-page="/AttendanceOperations/Index" class="nexora-nav-link nexora-primary-link">
+                                <span data-i18n="attendanceOperations">Attendance Management</span>
                             </a>
 
                             @if (showReports)
                             {
-                                <a asp-page="/Reports/Index" asp-route-Area="attendance">
-                                    <span class="nav-icon">Rpt</span>
-                                    <span class="nav-text" data-i18n="attendanceReports">Attendance Reports</span>
+                                <a asp-page="/Reports/Index" asp-route-Area="attendance" class="nexora-nav-link">
+                                    <span data-i18n="attendanceReports">Attendance Reports</span>
+                                </a>
+                            }
+                        </div>
+                    </details>
+                }
+
+                @if (showSelfServices)
+                {
+                    <details class="nexora-nav-group">
+                        <summary>
+                            <span class="nexora-nav-dot"></span>
+                            <span class="nexora-nav-text" data-i18n="selfServices">Self Services</span>
+                            <span class="nexora-chevron"></span>
+                        </summary>
+
+                        <div class="nexora-nav-group-links">
+                            <a asp-page="/MyProfile/Index" class="nexora-nav-link">
+                                <span data-i18n="myPage">My Page</span>
+                            </a>
+
+                            <a asp-page="/SelfServices/Index" class="nexora-nav-link">
+                                <span data-i18n="selfServices">Self Services</span>
+                            </a>
+
+                            <a asp-page="/LeaveRequests/Index" class="nexora-nav-link">
+                                <span data-i18n="leaveRequests">Leave Requests</span>
+                            </a>
+
+                            @if (isAdmin || isHrManager || isHrOfficer || isBranchManager)
+                            {
+                                <a asp-page="/Approvals/Index" class="nexora-nav-link">
+                                    <span data-i18n="approvals">Approvals</span>
                                 </a>
                             }
                         </div>
@@ -178,152 +189,117 @@
 
                 @if (showSettings)
                 {
-                    <details class="nav-module" open>
+                    <details class="nexora-nav-group">
                         <summary>
-                            <span class="nav-icon">Set</span>
-                            <span class="nav-text" data-i18n="settingsModule">Settings</span>
-                            <span class="nav-chevron"></span>
+                            <span class="nexora-nav-dot gold"></span>
+                            <span class="nexora-nav-text" data-i18n="settingsModule">Settings</span>
+                            <span class="nexora-chevron"></span>
                         </summary>
 
-                        <div class="nav-module-links">
-                            <a asp-page="/OrganizationSettings/Index">
-                                <span class="nav-icon">Org</span>
-                                <span class="nav-text" data-i18n="organizationSettings">Organization Settings</span>
+                        <div class="nexora-nav-group-links">
+                            <a asp-page="/OrganizationSettings/Index" class="nexora-nav-link">
+                                <span data-i18n="organizationSettings">Organization Settings</span>
+                            </a>
+
+                            <a asp-page="/Holidays/Index" class="nexora-nav-link">
+                                <span data-i18n="holidays">Holidays</span>
                             </a>
 
                             @if (isAdmin)
                             {
-                                <a asp-page="/UserAccess/Index">
-                                    <span class="nav-icon">User</span>
-                                    <span class="nav-text" data-i18n="systemUsers">System Users</span>
+                                <a asp-page="/UserAccess/Index" class="nexora-nav-link">
+                                    <span data-i18n="systemUsers">System Users</span>
+                                </a>
+
+                                <a asp-page="/EmployeePermissions/Index" class="nexora-nav-link">
+                                    <span data-i18n="systemPermissions">System Permissions</span>
+                                </a>
+
+                                <a asp-page="/AuditLogs/Index" class="nexora-nav-link">
+                                    <span data-i18n="auditLogs">Audit Logs</span>
+                                </a>
+
+                                <a asp-page="/SystemMaintenance/Index" class="nexora-nav-link">
+                                    <span data-i18n="maintenance">Maintenance & Backup</span>
                                 </a>
                             }
 
-                            <a asp-page="/Holidays/Index">
-                                <span class="nav-icon">Hol</span>
-                                <span class="nav-text" data-i18n="holidays">Holidays</span>
+                            <a asp-page="/Notifications/Index" class="nexora-nav-link">
+                                <span data-i18n="notifications">Notifications</span>
                             </a>
 
-                            @if (isAdmin)
-                            {
-                                <a asp-page="/EmployeePermissions/Index">
-                                    <span class="nav-icon">Perm</span>
-                                    <span class="nav-text" data-i18n="systemPermissions">System Permissions</span>
-                                </a>
-                            }
-
-                            <a asp-page="/Approvals/Index">
-                                <span class="nav-icon">OK</span>
-                                <span class="nav-text" data-i18n="approvals">Approvals</span>
-                            </a>
-
-                            @if (isAdmin)
-                            {
-                                <a asp-page="/AuditLogs/Index">
-                                    <span class="nav-icon">Log</span>
-                                    <span class="nav-text" data-i18n="auditLogs">Audit Logs</span>
-                                </a>
-                            }
-
-                            <a asp-page="/Notifications/Index">
-                                <span class="nav-icon">Bell</span>
-                                <span class="nav-text" data-i18n="notifications">Notifications</span>
-                            </a>
-
-                            @if (isAdmin)
-                            {
-                                <a asp-page="/SystemMaintenance/Index">
-                                    <span class="nav-icon">Bak</span>
-                                    <span class="nav-text" data-i18n="maintenance">Maintenance & Backup</span>
-                                </a>
-                            }
-
-                            <a asp-page="/Settings/Index">
-                                <span class="nav-icon">Set</span>
-                                <span class="nav-text" data-i18n="settings">Settings</span>
+                            <a asp-page="/Settings/Index" class="nexora-nav-link">
+                                <span data-i18n="settings">Settings</span>
                             </a>
                         </div>
                     </details>
                 }
 
-                @if (showSelfServices)
-                {
-                    <details class="nav-module" open>
-                        <summary>
-                            <span class="nav-icon">Self</span>
-                            <span class="nav-text" data-i18n="selfServices">Self Services</span>
-                            <span class="nav-chevron"></span>
-                        </summary>
-
-                        <div class="nav-module-links">
-                            <a asp-page="/MyProfile/Index">
-                                <span class="nav-icon">Me</span>
-                                <span class="nav-text" data-i18n="myPage">My Page</span>
-                            </a>
-
-                            <a asp-page="/SelfServices/Index">
-                                <span class="nav-icon">Req</span>
-                                <span class="nav-text" data-i18n="selfServices">Self Services</span>
-                            </a>
-
-                            <a asp-page="/LeaveRequests/Index">
-                                <span class="nav-icon">Leave</span>
-                                <span class="nav-text" data-i18n="leaveRequests">Leave Requests</span>
-                            </a>
-                        </div>
-                    </details>
-                }
+                <a asp-page="/Brand/Index" class="nexora-nav-link nexora-brand-guide-link">
+                    <span class="nexora-nav-dot gold"></span>
+                    <span class="nexora-nav-text">NEXORA Brand</span>
+                </a>
             </nav>
         </aside>
 
-        <div class="main-area">
-            <header class="topbar">
-                <div class="topbar-title">
-                    @(ViewData["Title"] ?? "Smart Attendance")
+        <div class="nexora-main">
+            <header class="nexora-topbar">
+                <div class="nexora-topbar-left">
+                    <button type="button"
+                            class="nexora-icon-button nexora-mobile-button"
+                            data-sidebar-toggle
+                            aria-label="Toggle menu">
+                        <span></span>
+                    </button>
+
+                    <div>
+                        <div class="nexora-page-title">@pageTitle</div>
+                        <div class="nexora-page-subtitle">NEXORA · Intelligent Operations Platform</div>
+                    </div>
                 </div>
 
-                <div class="sa-ui-controls">
-                    <button type="button" class="sa-toggle-btn" data-language-button="en">EN</button>
-                    <button type="button" class="sa-toggle-btn" data-language-button="ar">AR</button>
+                <div class="nexora-controls">
+                    <button type="button" class="nexora-pill-button" data-language-button="ar">AR</button>
+                    <button type="button" class="nexora-pill-button" data-language-button="en">EN</button>
 
-                    <button type="button" class="sa-toggle-btn" data-theme-button="light" data-i18n="themeLight">Light</button>
-                    <button type="button" class="sa-toggle-btn" data-theme-button="dark" data-i18n="themeDark">Dark</button>
+                    <button type="button" class="nexora-pill-button" data-theme-button="dark" data-i18n="themeDark">Dark</button>
+                    <button type="button" class="nexora-pill-button" data-theme-button="light" data-i18n="themeLight">Light</button>
 
                     @if (isLoggedIn)
                     {
-                        <div class="topbar-user">@loginDisplayName</div>
-                        <a asp-page="/Account/Logout" class="sa-toggle-btn" style="text-decoration:none;" data-i18n="logout">Logout</a>
+                        <div class="nexora-user-chip">
+                            <span class="nexora-user-avatar">@(string.IsNullOrWhiteSpace(loginDisplayName) ? "N" : loginDisplayName.Trim()[0])</span>
+                            <span class="nexora-user-name">@loginDisplayName</span>
+                            <span class="nexora-user-role">@loginRole</span>
+                        </div>
+
+                        <a asp-page="/Account/Logout" class="nexora-pill-button" data-i18n="logout">Logout</a>
                     }
                     else
                     {
-                        <a asp-page="/Account/Login" class="sa-toggle-btn" style="text-decoration:none;" data-i18n="login">Login</a>
+                        <a asp-page="/Account/Login" class="nexora-pill-button" data-i18n="login">Login</a>
                     }
                 </div>
             </header>
 
-            <main class="page-content">
+            <main class="nexora-content">
                 @RenderBody()
             </main>
         </div>
     </div>
 
     <script>
-            window.SA_AUTH = {
-                role: "@loginRole",
-                employeeId: "@loginEmployeeId"
-            };
+        window.SA_AUTH = {
+            role: "@loginRole",
+            employeeId: "@loginEmployeeId"
+        };
     </script>
 
     <script src="~/js/table-pagination.js" asp-append-version="true"></script>
     <script src="~/js/theme-localization.js" asp-append-version="true"></script>
-    <script src="~/js/sidebar-design-repair.js" asp-append-version="true"></script>
-    <script src="~/js/sidebar-modules.js" asp-append-version="true"></script>
-    <script src="~/js/employee-file-button.js" asp-append-version="true"></script>
-    <script src="~/js/self-service-own-employee.js" asp-append-version="true"></script>
-    <script src="~/js/report-builder-clean.js" asp-append-version="true"></script>
+    <script src="~/js/nexora-brand.js" asp-append-version="true"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
+    <script src="~/js/nexora-sidebar-brand-active-fix.js" asp-append-version="true"></script>
 </body>
 </html>
-
-

@@ -1,0 +1,63 @@
+/* NEXORA Dashboard Layer */
+
+.dashboard-hero {
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 18% 10%, rgba(18,217,227,.22), transparent 36%),
+        radial-gradient(circle at 90% 4%, rgba(215,178,109,.16), transparent 30%),
+        linear-gradient(135deg, rgba(15,34,51,.96), rgba(7,18,31,.96)) !important;
+    border-color: rgba(215,178,109,.18) !important;
+}
+
+.dashboard-hero::after {
+    content: "N";
+    position: absolute;
+    inset-inline-end: 38px;
+    inset-block-end: -72px;
+    color: rgba(230,234,238,.035);
+    font-family: var(--nx-font-en);
+    font-size: 260px;
+    font-weight: 900;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.hero-eyebrow {
+    color: #07121F !important;
+    background: linear-gradient(135deg, var(--nx-teal), #7CEAF0) !important;
+    border-color: rgba(18,217,227,.35) !important;
+}
+
+.dashboard-hero h1 {
+    color: var(--sa-text) !important;
+}
+
+.dashboard-hero p {
+    color: var(--sa-muted) !important;
+}
+
+.product-kpi {
+    background:
+        linear-gradient(135deg, rgba(18,217,227,.05), rgba(215,178,109,.035)),
+        var(--sa-surface) !important;
+}
+
+.product-kpi strong {
+    color: var(--nx-teal) !important;
+}
+
+.product-kpi.warning strong,
+.product-kpi.danger strong {
+    color: var(--nx-gold) !important;
+}
+
+.bar-fill {
+    background: linear-gradient(90deg, var(--nx-teal), var(--nx-gold)) !important;
+}
+
+.status-badge {
+    border-color: rgba(18,217,227,.26) !important;
+    color: var(--nx-teal) !important;
+    background: rgba(18,217,227,.08) !important;
+}

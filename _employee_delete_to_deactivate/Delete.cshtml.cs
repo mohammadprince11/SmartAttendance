@@ -44,7 +44,7 @@ public class DeleteModel : PageModel
 
         if (employee == null)
         {
-            ErrorMessage = "\u0644\u0645 \u064a\u062a\u0645 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0648\u0638\u0641.";
+            ErrorMessage = "لم يتم العثور على الموظف.";
             return Page();
         }
 
@@ -78,7 +78,7 @@ END;",
                 HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
             });
 
-        TempData["SuccessMessage"] = "\u062a\u0645 \u0625\u064a\u0642\u0627\u0641 \u0627\u0644\u0645\u0648\u0638\u0641 \u0645\u0639 \u0627\u0644\u062d\u0641\u0627\u0638 \u0639\u0644\u0649 \u062c\u0645\u064a\u0639 \u0628\u064a\u0627\u0646\u0627\u062a\u0647 \u0648\u0633\u062c\u0644\u0627\u062a\u0647 \u0627\u0644\u062a\u0627\u0631\u064a\u062e\u064a\u0629.";
+        TempData["SuccessMessage"] = "تم إيقاف الموظف مع الحفاظ على جميع بياناته وسجلاته التاريخية.";
 
         return RedirectToPage("./Index");
     }

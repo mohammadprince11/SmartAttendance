@@ -1,0 +1,150 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Employees.LifecycleModel
+
+@{
+    ViewData["Title"] = "السجل الوظيفي";
+}
+
+<link rel="stylesheet" href="~/css/employee-lifecycle-timeline.css" asp-append-version="true" />
+
+<div class="lifecycle-timeline-page">
+    <div class="lifecycle-timeline-head">
+        <div>
+            <div class="lifecycle-timeline-eyebrow">NEXORA Employee Lifecycle</div>
+            <h1>السجل الوظيفي</h1>
+            <p>خط زمني يوضح تعيين الموظف، إنهاء الخدمة، وإعادة التعيين بنفس الكود والبيانات السابقة.</p>
+        </div>
+
+        <div class="lifecycle-timeline-actions">
+            <a asp-page="./Profile" asp-route-id="@Model.Id" class="lifecycle-timeline-btn primary">ملف الموظف</a>
+            <a asp-page="./Index" class="lifecycle-timeline-btn ghost">قائمة الموظفين</a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="lifecycle-timeline-alert danger">@Model.ErrorMessage</div>
+    }
+
+    @if (Model.Employee != null)
+    {
+        <section class="lifecycle-timeline-hero">
+            <div class="lifecycle-timeline-avatar">
+                @(!string.IsNullOrWhiteSpace(Model.Employee.FullName) ? Model.Employee.FullName.Trim()[0] : 'N')
+            </div>
+
+            <div class="lifecycle-timeline-identity">
+                <h2>@Model.Employee.FullName</h2>
+                <div class="lifecycle-timeline-meta">
+                    <span>@Model.Employee.EmployeeNo</span>
+                    <span>@Model.Display(Model.Employee.Position)</span>
+                    <span>@Model.Display(Model.Employee.DepartmentName)</span>
+                    <span>@Model.Display(Model.Employee.BranchName)</span>
+                </div>
+            </div>
+
+            <div class="lifecycle-timeline-state">
+                <span class="lifecycle-timeline-status @(Model.Employee.IsActive ? "ok" : "danger")">
+                    @(Model.Employee.IsActive ? "فعال" : "غير فعال")
+                </span>
+                <small>@Model.Display(Model.Employee.EmploymentStatus)</small>
+            </div>
+        </section>
+
+        <section class="lifecycle-timeline-kpis">
+            <div class="lifecycle-timeline-kpi">
+                <span>تاريخ التعيين الحالي</span>
+                <strong>@Model.DisplayDate(Model.Employee.HireDate)</strong>
+                <small>حسب بيانات الموظف الحالية</small>
+            </div>
+
+            <div class="lifecycle-timeline-kpi danger">
+                <span>مرات إنهاء الخدمة</span>
+                <strong>@Model.EndServiceCount</strong>
+                <small>سجلات محفوظة</small>
+            </div>
+
+            <div class="lifecycle-timeline-kpi ok">
+                <span>مرات إعادة التعيين</span>
+                <strong>@Model.RehireCount</strong>
+                <small>عودة بنفس الكود</small>
+            </div>
+
+            <div class="lifecycle-timeline-kpi">
+                <span>آخر مباشرة جديدة</span>
+                <strong>@Model.DisplayDate(Model.Employee.LastRehireDate)</strong>
+                <small>إن وجدت</small>
+            </div>
+        </section>
+
+        <section class="lifecycle-timeline-card">
+            <div class="lifecycle-timeline-card-head">
+                <h3>خط الحياة الوظيفية</h3>
+                <p>يتم ترتيب الأحداث من الأقدم إلى الأحدث حتى تظهر قصة الموظف كاملة.</p>
+            </div>
+
+            <div class="lifecycle-timeline">
+                @foreach (var row in Model.TimelineRows)
+                {
+                    <article class="lifecycle-timeline-item @row.EventClass">
+                        <div class="lifecycle-timeline-dot"></div>
+
+                        <div class="lifecycle-timeline-content">
+                            <div class="lifecycle-timeline-item-head">
+                                <div>
+                                    <h4>@row.Title</h4>
+                                    <p>@row.Subtitle</p>
+                                </div>
+
+                                <div class="lifecycle-timeline-date">
+                                    <strong>@Model.DisplayDate(row.EventDate)</strong>
+                                    <small>@Model.DisplayDateTime(row.CreatedAt)</small>
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(row.BadgeText))
+                            {
+                                <span class="lifecycle-timeline-badge @row.BadgeClass">@row.BadgeText</span>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(row.Details))
+                            {
+                                <div class="lifecycle-timeline-details">
+                                    <strong>التفاصيل</strong>
+                                    <span>@row.Details</span>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(row.Notes))
+                            {
+                                <div class="lifecycle-timeline-details muted">
+                                    <strong>ملاحظات HR</strong>
+                                    <span>@row.Notes</span>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(row.ExtraInfo))
+                            {
+                                <div class="lifecycle-timeline-details info">
+                                    <strong>معلومة</strong>
+                                    <span>@row.ExtraInfo</span>
+                                </div>
+                            }
+
+                            <div class="lifecycle-timeline-footer">
+                                <span>تم بواسطة: @Model.Display(row.CreatedBy)</span>
+                            </div>
+                        </div>
+                    </article>
+                }
+
+                @if (!Model.TimelineRows.Any())
+                {
+                    <div class="lifecycle-timeline-empty">
+                        لا يوجد سجل وظيفي لهذا الموظف حالياً.
+                    </div>
+                }
+            </div>
+        </section>
+    }
+</div>

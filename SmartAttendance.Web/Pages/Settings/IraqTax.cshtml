@@ -1,0 +1,191 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Settings.IraqTaxModel
+
+@{
+    ViewData["Title"] = "ضريبة الدخل العراقية";
+}
+
+<link rel="stylesheet" href="~/css/iraq-tax-settings.css" asp-append-version="true" />
+
+<div class="iraq-tax-page">
+    <div class="iraq-tax-head">
+        <div>
+            <div class="iraq-tax-eyebrow">NEXORA Iraq Tax Engine</div>
+            <h1>إعدادات ضريبة الدخل العراقية</h1>
+            <p>تطبيق ضريبة الرواتب بطريقة مرنة حسب السماحات والشرائح القانونية، بدون تثبيت القيم داخل الكود.</p>
+        </div>
+
+        <div class="iraq-tax-actions">
+            <a asp-page="/Settings/HrPolicy" class="iraq-tax-btn ghost">إعدادات HR</a>
+            <a asp-page="/Employees/Index" class="iraq-tax-btn ghost">شؤون الموظفين</a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+    {
+        <div class="iraq-tax-alert success">@Model.SuccessMessage</div>
+    }
+
+    <section class="iraq-tax-note">
+        <strong>ملاحظة تطبيقية</strong>
+        <span>
+            هذه الصفحة تعتمد كأساس إعدادات النظام. الحساب النهائي في الرواتب لاحقاً يحتاج ربط مكونات الدخل الفعلية للموظف والسماحات الشخصية والوثائق المؤيدة.
+        </span>
+    </section>
+
+    <form method="post" asp-page-handler="SaveSettings" class="iraq-tax-card">
+        <div class="iraq-tax-card-head">
+            <h3>السماحات والحدود القانونية</h3>
+            <p>القيم الافتراضية مبنية على دليل ضريبة الدخل المنشور من الهيئة العامة للضرائب، وتبقى قابلة للتعديل من الإعدادات.</p>
+        </div>
+
+        <div class="iraq-tax-grid">
+            <label class="iraq-tax-check">
+                <input asp-for="Setting.IsEnabled" />
+                <span>تفعيل ضريبة الدخل</span>
+            </label>
+
+            <div class="iraq-tax-field">
+                <label>أساس الاحتساب</label>
+                <select asp-for="Setting.TaxBasis">
+                    <option value="Annual">سنوي</option>
+                    <option value="Monthly">شهري لاحقاً</option>
+                </select>
+            </div>
+
+            <div class="iraq-tax-field">
+                <label>سماح الذات</label>
+                <input asp-for="Setting.SelfAllowance" type="number" step="1000" />
+            </div>
+
+            <div class="iraq-tax-field">
+                <label>سماح الزوجة ربة البيت</label>
+                <input asp-for="Setting.WifeHousewifeAllowance" type="number" step="1000" />
+            </div>
+
+            <div class="iraq-tax-field">
+                <label>سماح كل ولد / بنت</label>
+                <input asp-for="Setting.ChildAllowance" type="number" step="1000" />
+            </div>
+
+            <div class="iraq-tax-field">
+                <label>سماح المطلقة / الأرملة</label>
+                <input asp-for="Setting.WidowOrDivorcedAllowance" type="number" step="1000" />
+            </div>
+
+            <div class="iraq-tax-field">
+                <label>سماح العمر</label>
+                <input asp-for="Setting.AgeAllowance" type="number" step="1000" />
+            </div>
+
+            <div class="iraq-tax-field">
+                <label>يبدأ سماح العمر من سن</label>
+                <input asp-for="Setting.AgeAllowanceFrom" type="number" />
+            </div>
+
+            <div class="iraq-tax-field">
+                <label>حد إعفاء مخصصات القطاع الخاص %</label>
+                <input asp-for="Setting.PrivateSectorAllowanceExemptPercent" type="number" step="0.01" />
+            </div>
+
+            <div class="iraq-tax-field">
+                <label>تاريخ التطبيق</label>
+                <input asp-for="Setting.EffectiveFrom" type="date" />
+            </div>
+        </div>
+
+        <div class="iraq-tax-table-wrap">
+            <table class="iraq-tax-table">
+                <thead>
+                    <tr>
+                        <th>من</th>
+                        <th>إلى</th>
+                        <th>النسبة %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Brackets.Count; i++)
+                    {
+                        <tr>
+                            <td><input asp-for="Brackets[i].FromAmount" type="number" step="1000" /></td>
+                            <td><input asp-for="Brackets[i].ToAmount" type="number" step="1000" /></td>
+                            <td><input asp-for="Brackets[i].Rate" type="number" step="0.01" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="iraq-tax-save">
+            <button type="submit" class="iraq-tax-btn primary">حفظ إعدادات الضريبة العراقية</button>
+        </div>
+    </form>
+
+    <section class="iraq-tax-grid-2">
+        <form method="post" asp-page-handler="Calculate" class="iraq-tax-card">
+            <div class="iraq-tax-card-head">
+                <h3>حاسبة اختبارية</h3>
+                <p>تستخدم فقط للتأكد من منطق السماحات والشرائح قبل ربطها بملف الموظف.</p>
+            </div>
+
+            <div class="iraq-tax-grid">
+                <div class="iraq-tax-field">
+                    <label>الدخل السنوي قبل السماحات</label>
+                    <input asp-for="Sample.AnnualTaxableIncomeBeforeAllowances" type="number" step="1000" />
+                </div>
+
+                <label class="iraq-tax-check">
+                    <input asp-for="Sample.HasHousewifeSpouse" />
+                    <span>زوجة ربة بيت</span>
+                </label>
+
+                <label class="iraq-tax-check">
+                    <input asp-for="Sample.IsWidowOrDivorced" />
+                    <span>مطلقة / أرملة</span>
+                </label>
+
+                <div class="iraq-tax-field">
+                    <label>عدد الأولاد المستحقين</label>
+                    <input asp-for="Sample.ChildrenCount" type="number" />
+                </div>
+
+                <div class="iraq-tax-field">
+                    <label>العمر</label>
+                    <input asp-for="Sample.Age" type="number" />
+                </div>
+
+                <div class="iraq-tax-field">
+                    <label>تنزيلات أخرى مؤيدة</label>
+                    <input asp-for="Sample.OtherDeductions" type="number" step="1000" />
+                </div>
+            </div>
+
+            <div class="iraq-tax-save">
+                <button type="submit" class="iraq-tax-btn primary">احتساب تجريبي</button>
+            </div>
+        </form>
+
+        <div class="iraq-tax-card result">
+            <div class="iraq-tax-card-head">
+                <h3>نتيجة الاحتساب</h3>
+            </div>
+
+            @if (Model.Result != null)
+            {
+                <div class="iraq-tax-result">
+                    <div><span>الدخل السنوي</span><strong>@Model.Result.AnnualIncome.ToString("N0")</strong></div>
+                    <div><span>إجمالي السماحات</span><strong>@Model.Result.TotalAllowances.ToString("N0")</strong></div>
+                    <div><span>الدخل الخاضع بعد السماحات</span><strong>@Model.Result.NetTaxableIncome.ToString("N0")</strong></div>
+                    <div><span>الضريبة السنوية</span><strong>@Model.Result.AnnualTax.ToString("N0")</strong></div>
+                    <div><span>تقدير شهري</span><strong>@Model.Result.MonthlyEstimatedTax.ToString("N0")</strong></div>
+                </div>
+            }
+            else
+            {
+                <div class="iraq-tax-empty">
+                    أدخل دخلاً سنوياً واضغط احتساب تجريبي.
+                </div>
+            }
+        </div>
+    </section>
+</div>

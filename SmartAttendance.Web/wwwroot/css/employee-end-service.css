@@ -1,0 +1,332 @@
+/* NEXORA Employee End Service Phase 1 */
+
+.endservice-page,
+.endservice-page * {
+    box-sizing: border-box;
+}
+
+.endservice-page {
+    direction: rtl;
+    display: grid;
+    gap: 18px;
+    width: 100%;
+    max-width: 100%;
+}
+
+.endservice-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 18px;
+}
+
+.endservice-eyebrow {
+    display: inline-flex;
+    margin-bottom: 8px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    border: 1px solid rgba(215,178,109,.30);
+    background: rgba(215,178,109,.08);
+    color: #D7B26D;
+    font-weight: 1000;
+}
+
+.endservice-head h1 {
+    margin: 0;
+    color: var(--sa-text, #E6EAEE);
+    font-size: 34px;
+    line-height: 1.1;
+    font-weight: 1000;
+}
+
+.endservice-head p,
+.endservice-card-head p {
+    margin: 8px 0 0;
+    color: var(--sa-muted, #9FB0BE);
+    font-weight: 850;
+    line-height: 1.8;
+}
+
+.endservice-head-actions,
+.endservice-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.endservice-btn {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(230,234,238,.14);
+    background: rgba(255,255,255,.035);
+    color: var(--sa-text, #E6EAEE) !important;
+    font-weight: 1000;
+    text-decoration: none !important;
+    cursor: pointer;
+}
+
+.endservice-btn.danger {
+    color: #ffd1d1 !important;
+    border-color: rgba(239,68,68,.36);
+    background: rgba(239,68,68,.14);
+}
+
+.endservice-btn.primary {
+    color: #07121F !important;
+    border-color: rgba(18,217,227,.50);
+    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+}
+
+.endservice-employee-card,
+.endservice-card,
+.endservice-warning {
+    border: 1px solid rgba(230,234,238,.12);
+    border-radius: 22px;
+    background:
+        linear-gradient(135deg, rgba(215,178,109,.045), rgba(18,217,227,.025)),
+        rgba(15,34,51,.88);
+    box-shadow: 0 22px 58px rgba(0,0,0,.22);
+}
+
+.endservice-employee-card {
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr) auto;
+    gap: 16px;
+    align-items: center;
+    padding: 22px;
+}
+
+.endservice-avatar {
+    width: 74px;
+    height: 74px;
+    display: grid;
+    place-items: center;
+    border-radius: 24px;
+    background: linear-gradient(135deg, #D7B26D, #12D9E3);
+    color: #07121F;
+    font-size: 34px;
+    font-weight: 1000;
+}
+
+.endservice-identity h2 {
+    margin: 0;
+    color: var(--sa-text, #E6EAEE);
+    font-size: clamp(25px, 3.5vw, 40px);
+    font-weight: 1000;
+}
+
+.endservice-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.endservice-meta span,
+.endservice-status {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(18,217,227,.22);
+    background: rgba(18,217,227,.07);
+    color: #12D9E3;
+    font-weight: 1000;
+}
+
+.endservice-status.active {
+    color: #07121F;
+    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+}
+
+.endservice-status.inactive {
+    color: #ffd1d1;
+    border-color: rgba(239,68,68,.28);
+    background: rgba(239,68,68,.13);
+}
+
+.endservice-state {
+    display: grid;
+    gap: 6px;
+    justify-items: center;
+}
+
+.endservice-state small {
+    color: var(--sa-muted, #9FB0BE);
+    font-weight: 850;
+}
+
+.endservice-warning {
+    display: grid;
+    gap: 6px;
+    padding: 16px 18px;
+    border-color: rgba(215,178,109,.30);
+    background: rgba(215,178,109,.08);
+}
+
+.endservice-warning strong {
+    color: #D7B26D;
+    font-weight: 1000;
+}
+
+.endservice-warning span {
+    color: var(--sa-text, #E6EAEE);
+    font-weight: 850;
+    line-height: 1.8;
+}
+
+.endservice-layout {
+    display: grid;
+    gap: 14px;
+}
+
+.endservice-card {
+    padding: 18px;
+}
+
+.endservice-card h3 {
+    margin: 0;
+    color: var(--sa-text, #E6EAEE);
+    font-weight: 1000;
+}
+
+.endservice-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.endservice-field {
+    display: grid;
+    gap: 7px;
+}
+
+.endservice-field.full {
+    grid-column: 1 / -1;
+}
+
+.endservice-field label {
+    color: #D7B26D;
+    font-weight: 1000;
+}
+
+.endservice-field input,
+.endservice-field select,
+.endservice-field textarea {
+    width: 100%;
+    border-radius: 14px !important;
+    border: 1px solid rgba(230,234,238,.14) !important;
+    background: rgba(7,18,31,.45) !important;
+    color: var(--sa-text, #E6EAEE) !important;
+    padding: 12px 13px !important;
+    font-weight: 850 !important;
+    outline: none !important;
+}
+
+.endservice-field textarea {
+    resize: vertical;
+    min-height: 92px;
+}
+
+.endservice-checklist {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.endservice-checklist label,
+.endservice-confirm {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 13px;
+    border: 1px solid rgba(230,234,238,.10);
+    border-radius: 14px;
+    background: rgba(255,255,255,.025);
+    color: var(--sa-text, #E6EAEE);
+    font-weight: 900;
+}
+
+.endservice-checklist input,
+.endservice-confirm input {
+    width: 18px;
+    height: 18px;
+    accent-color: #12D9E3;
+}
+
+.danger-zone {
+    border-color: rgba(239,68,68,.24);
+}
+
+.endservice-confirm {
+    align-items: flex-start;
+    line-height: 1.8;
+}
+
+.endservice-actions {
+    margin-top: 14px;
+}
+
+.endservice-validation {
+    color: #ffb4b4;
+    font-weight: 900;
+    font-size: 13px;
+}
+
+.endservice-alert {
+    padding: 14px 16px;
+    border-radius: 16px;
+    font-weight: 1000;
+    line-height: 1.8;
+}
+
+.endservice-alert.danger {
+    border: 1px solid rgba(239,68,68,.28);
+    background: rgba(239,68,68,.10);
+    color: #ffd1d1;
+}
+
+.endservice-alert.success {
+    border: 1px solid rgba(18,217,227,.28);
+    background: rgba(18,217,227,.10);
+    color: #12D9E3;
+}
+
+@media (max-width: 900px) {
+    .endservice-head,
+    .endservice-employee-card {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .endservice-form-grid,
+    .endservice-checklist {
+        grid-template-columns: 1fr;
+    }
+
+    .endservice-avatar {
+        margin: auto;
+    }
+
+    .endservice-identity {
+        text-align: center;
+    }
+
+    .endservice-meta {
+        justify-content: center;
+    }
+}
+
+
+/* EndService Submit Fix V2 */
+.endservice-page .validation-summary-valid { display: none !important; }
+.endservice-page .validation-summary-errors { display: block !important; }
+.endservice-btn[disabled] { opacity: .65; cursor: wait; }

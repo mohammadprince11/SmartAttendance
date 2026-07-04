@@ -1,0 +1,331 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Settings.HrPolicyModel
+
+@{
+    ViewData["Title"] = "إعدادات سياسات HR";
+}
+
+<link rel="stylesheet" href="~/css/hr-policy-settings.css" asp-append-version="true" />
+
+<div class="hr-policy-page">
+    <div class="hr-policy-head">
+        <div>
+            <div class="hr-policy-eyebrow">NEXORA HR Policy Engine</div>
+            <h1>إعدادات سياسات الموارد البشرية</h1>
+            <p>تثبيت آلية مرنة للضمان والضريبة والإجازات وفترة الإنذار والعقوبات قبل عكسها على ملف الموظف.</p>
+        </div>
+        <div class="hr-policy-actions">
+            <a asp-page="/Settings/IraqTax" class="hr-policy-btn primary">ضريبة الدخل العراقية</a>
+            <a asp-page="/Employees/Index" class="hr-policy-btn ghost">شؤون الموظفين</a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+    {
+        <div class="hr-policy-alert success">@Model.SuccessMessage</div>
+    }
+
+    <section class="hr-policy-kpis">
+        <div class="hr-policy-kpi">
+            <span>محرك السياسات</span>
+            <strong>مرن</strong>
+            <small>بدون أرقام ثابتة بالكود</small>
+        </div>
+        <div class="hr-policy-kpi">
+            <span>الإجازات</span>
+            <strong>@Model.LeavePolicies.Count(x => !string.IsNullOrWhiteSpace(x.LeaveType))</strong>
+            <small>أنواع معرفة</small>
+        </div>
+        <div class="hr-policy-kpi">
+            <span>العقوبات</span>
+            <strong>@Model.Penalties.Count(x => !string.IsNullOrWhiteSpace(x.PenaltyName))</strong>
+            <small>جزاءات معرفة</small>
+        </div>
+        <div class="hr-policy-kpi">
+            <span>فترة الإنذار</span>
+            <strong>@Model.Notice.NoticeDays</strong>
+            <small>يوم</small>
+        </div>
+    </section>
+
+    <section class="hr-policy-grid">
+        <form method="post" asp-page-handler="SaveSocial" class="hr-policy-card">
+            <div class="hr-policy-card-head">
+                <h3>إعدادات الضمان الاجتماعي</h3>
+                <p>النسب والحدود تكون من هنا، وتنعكس لاحقاً على ملف الموظف.</p>
+            </div>
+
+            <div class="hr-policy-form-grid">
+                <label class="hr-policy-check">
+                    <input asp-for="Social.IsEnabled" />
+                    <span>الضمان مفعل</span>
+                </label>
+
+                <div class="hr-policy-field">
+                    <label>نسبة الموظف %</label>
+                    <input asp-for="Social.EmployeeRate" type="number" step="0.01" />
+                </div>
+
+                <div class="hr-policy-field">
+                    <label>نسبة الشركة %</label>
+                    <input asp-for="Social.CompanyRate" type="number" step="0.01" />
+                </div>
+
+                <div class="hr-policy-field">
+                    <label>الحد الأدنى للراتب</label>
+                    <input asp-for="Social.MinSalary" type="number" step="1000" />
+                </div>
+
+                <div class="hr-policy-field">
+                    <label>الحد الأعلى للراتب</label>
+                    <input asp-for="Social.MaxSalary" type="number" step="1000" />
+                </div>
+
+                <div class="hr-policy-field">
+                    <label>نطاق التطبيق</label>
+                    <select asp-for="Social.ScopeType">
+                        <option value="Company">كل الشركة</option>
+                        <option value="Branch">فرع محدد لاحقاً</option>
+                        <option value="EmployeeType">نوع موظف لاحقاً</option>
+                    </select>
+                </div>
+
+                <div class="hr-policy-field">
+                    <label>تاريخ التطبيق</label>
+                    <input asp-for="Social.EffectiveFrom" type="date" />
+                </div>
+            </div>
+
+            <div class="hr-policy-save">
+                <button type="submit" class="hr-policy-btn primary">حفظ الضمان</button>
+            </div>
+        </form>
+
+        <form method="post" asp-page-handler="SaveTax" class="hr-policy-card">
+            <div class="hr-policy-card-head">
+                <h3>إعدادات الضريبة</h3>
+                <p>تعريف الإعفاء والشرائح الضريبية بطريقة مرنة.</p>
+            </div>
+
+            <div class="hr-policy-form-grid">
+                <label class="hr-policy-check">
+                    <input asp-for="Tax.IsEnabled" />
+                    <span>الضريبة مفعلة</span>
+                </label>
+
+                <div class="hr-policy-field">
+                    <label>مبلغ الإعفاء</label>
+                    <input asp-for="Tax.ExemptionAmount" type="number" step="1000" />
+                </div>
+
+                <div class="hr-policy-field">
+                    <label>طريقة الاحتساب</label>
+                    <select asp-for="Tax.CalculationMethod">
+                        <option value="Brackets">شرائح</option>
+                        <option value="FlatRate">نسبة ثابتة لاحقاً</option>
+                    </select>
+                </div>
+
+                <div class="hr-policy-field">
+                    <label>نطاق التطبيق</label>
+                    <select asp-for="Tax.ScopeType">
+                        <option value="Company">كل الشركة</option>
+                        <option value="Branch">فرع محدد لاحقاً</option>
+                        <option value="EmployeeType">نوع موظف لاحقاً</option>
+                    </select>
+                </div>
+
+                <div class="hr-policy-field">
+                    <label>تاريخ التطبيق</label>
+                    <input asp-for="Tax.EffectiveFrom" type="date" />
+                </div>
+            </div>
+
+            <div class="hr-policy-table-wrap mini">
+                <table class="hr-policy-table">
+                    <thead>
+                        <tr>
+                            <th>من</th>
+                            <th>إلى</th>
+                            <th>النسبة %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < 3; i++)
+                        {
+                            <tr>
+                                <td><input asp-for="TaxBrackets[i].FromAmount" type="number" step="1000" /></td>
+                                <td><input asp-for="TaxBrackets[i].ToAmount" type="number" step="1000" /></td>
+                                <td><input asp-for="TaxBrackets[i].Rate" type="number" step="0.01" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="hr-policy-save">
+                <button type="submit" class="hr-policy-btn primary">حفظ الضريبة</button>
+            </div>
+        </form>
+    </section>
+
+    <form method="post" asp-page-handler="SaveLeaves" class="hr-policy-card wide">
+        <div class="hr-policy-card-head">
+            <h3>إعدادات رصيد الإجازات</h3>
+            <p>كل نوع إجازة ورصيده وطريقة احتسابه من الإعدادات، وليس من الكود.</p>
+        </div>
+
+        <div class="hr-policy-table-wrap">
+            <table class="hr-policy-table">
+                <thead>
+                    <tr>
+                        <th>نوع الإجازة</th>
+                        <th>الرصيد السنوي</th>
+                        <th>طريقة الاحتساب</th>
+                        <th>ترحيل؟</th>
+                        <th>أقصى ترحيل</th>
+                        <th>مدفوعة؟</th>
+                        <th>موافقة؟</th>
+                        <th>تاريخ التطبيق</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.LeavePolicies.Count; i++)
+                    {
+                        <tr>
+                            <td><input asp-for="LeavePolicies[i].LeaveType" /></td>
+                            <td><input asp-for="LeavePolicies[i].AnnualBalance" type="number" step="0.5" /></td>
+                            <td>
+                                <select asp-for="LeavePolicies[i].AccrualMethod">
+                                    <option value="Annual">سنوي</option>
+                                    <option value="Monthly">شهري</option>
+                                    <option value="HireDate">حسب تاريخ التعيين</option>
+                                    <option value="Manual">يدوي</option>
+                                </select>
+                            </td>
+                            <td><input asp-for="LeavePolicies[i].AllowCarryForward" /></td>
+                            <td><input asp-for="LeavePolicies[i].MaxCarryForward" type="number" step="0.5" /></td>
+                            <td><input asp-for="LeavePolicies[i].IsPaid" /></td>
+                            <td><input asp-for="LeavePolicies[i].RequiresApproval" /></td>
+                            <td><input asp-for="LeavePolicies[i].EffectiveFrom" type="date" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="hr-policy-save">
+            <button type="submit" class="hr-policy-btn primary">حفظ الإجازات</button>
+        </div>
+    </form>
+
+    <section class="hr-policy-grid">
+        <form method="post" asp-page-handler="SaveNotice" class="hr-policy-card">
+            <div class="hr-policy-card-head">
+                <h3>فترة الإنذار قبل الاستقالة</h3>
+                <p>تستخدم لاحقاً عند إجراءات الاستقالة وإنهاء الخدمة.</p>
+            </div>
+
+            <div class="hr-policy-form-grid">
+                <div class="hr-policy-field">
+                    <label>اسم السياسة</label>
+                    <input asp-for="Notice.PolicyName" />
+                </div>
+
+                <div class="hr-policy-field">
+                    <label>عدد أيام الإنذار</label>
+                    <input asp-for="Notice.NoticeDays" type="number" />
+                </div>
+
+                <div class="hr-policy-field">
+                    <label>تطبق على</label>
+                    <input asp-for="Notice.AppliesTo" />
+                </div>
+
+                <div class="hr-policy-field">
+                    <label>تاريخ التطبيق</label>
+                    <input asp-for="Notice.EffectiveFrom" type="date" />
+                </div>
+            </div>
+
+            <div class="hr-policy-save">
+                <button type="submit" class="hr-policy-btn primary">حفظ فترة الإنذار</button>
+            </div>
+        </form>
+
+        <div class="hr-policy-card">
+            <div class="hr-policy-card-head">
+                <h3>ملاحظات المرحلة</h3>
+                <p>هذه الصفحة هي أساس محرك السياسات. المرحلة القادمة تجعل هذه الإعدادات تظهر داخل ملف الموظف.</p>
+            </div>
+
+            <div class="hr-policy-notes">
+                <div><strong>الضمان</strong><span>سيظهر بملف الموظف كنسب ومبلغ تقديري.</span></div>
+                <div><strong>الضريبة</strong><span>ستستخدم الشرائح بدون Payroll تفصيلي.</span></div>
+                <div><strong>الإجازات</strong><span>الرصيد يقرأ من السياسة وليس ثابت.</span></div>
+                <div><strong>العقوبات</strong><span>تستخدم لاحقاً عند تطبيق جزاء على موظف.</span></div>
+            </div>
+        </div>
+    </section>
+
+    <form method="post" asp-page-handler="SavePenalties" class="hr-policy-card wide">
+        <div class="hr-policy-card-head">
+            <h3>إعدادات العقوبات والجزاءات</h3>
+            <p>تعريف نوع الجزاء وقيمته ومدة سقوطه وتأثيره على تجديد العقد.</p>
+        </div>
+
+        <div class="hr-policy-table-wrap">
+            <table class="hr-policy-table penalties">
+                <thead>
+                    <tr>
+                        <th>الكود</th>
+                        <th>اسم الجزاء</th>
+                        <th>التصنيف</th>
+                        <th>نوع العقوبة</th>
+                        <th>القيمة</th>
+                        <th>السقوط / شهر</th>
+                        <th>يؤثر على العقد؟</th>
+                        <th>موافقة؟</th>
+                        <th>مرفق؟</th>
+                        <th>فعال؟</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Penalties.Count; i++)
+                    {
+                        <tr>
+                            <td><input asp-for="Penalties[i].Code" /></td>
+                            <td><input asp-for="Penalties[i].PenaltyName" /></td>
+                            <td>
+                                <select asp-for="Penalties[i].Category">
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="C">C</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select asp-for="Penalties[i].PenaltyType">
+                                    <option value="Warning">تنبيه / إنذار</option>
+                                    <option value="DeductHours">خصم ساعات</option>
+                                    <option value="DeductDay">خصم يوم</option>
+                                    <option value="FinalWarning">إنذار بالفصل</option>
+                                    <option value="Termination">إنهاء خدمة</option>
+                                </select>
+                            </td>
+                            <td><input asp-for="Penalties[i].PenaltyValue" type="number" step="0.5" /></td>
+                            <td><input asp-for="Penalties[i].ExpiryMonths" type="number" /></td>
+                            <td><input asp-for="Penalties[i].AffectsContractRenewal" /></td>
+                            <td><input asp-for="Penalties[i].RequiresApproval" /></td>
+                            <td><input asp-for="Penalties[i].RequiresAttachment" /></td>
+                            <td><input asp-for="Penalties[i].IsActive" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="hr-policy-save">
+            <button type="submit" class="hr-policy-btn primary">حفظ العقوبات</button>
+        </div>
+    </form>
+</div>

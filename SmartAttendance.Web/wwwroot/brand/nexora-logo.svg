@@ -1,0 +1,14 @@
+<svg width="540" height="128" viewBox="0 0 540 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="30" fill="#07121F"/>
+  <path d="M31 91V37C31 33.134 34.134 30 38 30H45.75L82 84.5V37C82 33.134 85.134 30 89 30H97V91C97 94.866 93.866 98 90 98H82.25L46 43.5V91C46 94.866 42.866 98 39 98H31Z" fill="url(#paint0_linear)"/>
+  <path d="M45.5 30L83 98" stroke="#D7B26D" stroke-width="4" stroke-linecap="round"/>
+  <text x="154" y="57" fill="#E6EAEE" font-size="38" font-family="Segoe UI, Arial, sans-serif" font-weight="800" letter-spacing="4">NEXORA</text>
+  <text x="154" y="91" fill="#D7B26D" font-size="20" font-family="Segoe UI, Arial, sans-serif" font-weight="700">Intelligent Solutions. Limitless Impact.</text>
+  <defs>
+    <linearGradient id="paint0_linear" x1="31" y1="30" x2="99" y2="96.5" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#12D9E3"/>
+      <stop offset=".5" stop-color="#7CEAF0"/>
+      <stop offset="1" stop-color="#D7B26D"/>
+    </linearGradient>
+  </defs>
+</svg>
