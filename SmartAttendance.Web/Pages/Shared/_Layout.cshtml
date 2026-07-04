@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿
+<!DOCTYPE html>
 <html lang="en" dir="ltr" data-theme="dark" data-sidebar="expanded" class="sa-preload">
 <head>
     <meta charset="utf-8" />
@@ -33,6 +34,7 @@
     <link rel="stylesheet" href="~/css/nexora-brand.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-sidebar-brand-active-fix.css" asp-append-version="true" />
 </head>
+
 <body>
     @{
         var loginUser = Context.Request.Cookies["SA.UserName"];
@@ -228,6 +230,10 @@
                                 <span data-i18n="notifications">Notifications</span>
                             </a>
 
+                            <a asp-page="/Payroll/TaxSocialSecurity" class="nexora-nav-link">
+                                <span>الضريبة والضمان</span>
+                            </a>
+
                             <a asp-page="/Settings/Index" class="nexora-nav-link">
                                 <span data-i18n="settings">Settings</span>
                             </a>
@@ -239,7 +245,7 @@
                     <span class="nexora-nav-dot gold"></span>
                     <span class="nexora-nav-text">NEXORA Brand</span>
                 </a>
-            </nav>
+</nav>
         </aside>
 
         <div class="nexora-main">
@@ -303,3 +309,5 @@
     <script src="~/js/nexora-sidebar-brand-active-fix.js" asp-append-version="true"></script>
 </body>
 </html>
+
+
