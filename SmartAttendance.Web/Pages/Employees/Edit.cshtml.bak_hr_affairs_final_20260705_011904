@@ -10,10 +10,10 @@
 <div class="employee-edit-page" dir="rtl">
     <section class="employee-edit-hero">
         <div>
-            <span class="employee-edit-eyebrow">NEXORA HR Affairs</span>
+            <span class="employee-edit-eyebrow">NEXORA Employee Data</span>
             <h1>تعديل بيانات الموظف</h1>
             <p>
-                صفحة مخصصة لتعديل البيانات الأساسية للموظف، مع إبقاء ملف الموظف الشامل هو مركز المتابعة الرئيسي.
+                تحديث البيانات الأساسية للموظف بشكل منظم، مع الحفاظ على ملف الموظف الشامل كمركز رئيسي للمتابعة.
             </p>
         </div>
 
@@ -57,7 +57,7 @@
             <div class="employee-edit-section-head">
                 <div>
                     <h2>البيانات التنظيمية</h2>
-                    <p>تحديد القسم والفرع والمنصب الذي يظهر داخل ملف الموظف والتقارير.</p>
+                    <p>تحديد القسم والفرع والمنصب الذي يظهر في ملف الموظف والتقارير.</p>
                 </div>
                 <span>Organization</span>
             </div>
@@ -95,7 +95,7 @@
             <div class="employee-edit-section-head">
                 <div>
                     <h2>البيانات الشخصية</h2>
-                    <p>البيانات الأساسية المستخدمة للتعريف والاتصال وسجلات الموارد البشرية.</p>
+                    <p>البيانات الأساسية التي تستخدم للتعريف والاتصال وسجلات الموارد البشرية.</p>
                 </div>
                 <span>Personal</span>
             </div>

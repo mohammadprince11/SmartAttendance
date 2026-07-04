@@ -1,0 +1,106 @@
+﻿@page
+@model SmartAttendance.Web.Pages.HRAffairs.DocumentsRiskModel
+
+@{
+    ViewData["Title"] = "العقود والمستندات";
+}
+
+<link rel="stylesheet" href="~/css/hr-affairs-final.css" asp-append-version="true" />
+
+<div class="hr-final-page">
+    <section class="hr-final-hero">
+        <div>
+            <span class="hr-final-eyebrow">NEXORA Documents Risk</span>
+            <h1>العقود والمستندات</h1>
+            <p>متابعة مستندات الموظفين المنتهية أو القريبة من الانتهاء وربطها بملف الموظف الشامل.</p>
+        </div>
+        <div class="hr-final-actions">
+            <a asp-page="/HRAffairs/Index" class="hr-final-btn secondary">شؤون الموظفين</a>
+            <a asp-page="/Employees/Index" class="hr-final-btn primary">الموظفون</a>
+        </div>
+    </section>
+
+    <section class="hr-final-kpis">
+        <div class="hr-final-kpi"><span>المعروض</span><strong>@Model.TotalRows</strong><small>مستند</small></div>
+        <div class="hr-final-kpi danger"><span>منتهي</span><strong>@Model.ExpiredCount</strong><small>يحتاج إجراء</small></div>
+        <div class="hr-final-kpi warn"><span>ينتهي قريباً</span><strong>@Model.ExpiringCount</strong><small>خلال 30 يوم</small></div>
+    </section>
+
+    <form method="get" class="hr-final-filter">
+        <div class="hr-final-field">
+            <label>نوع المخاطر</label>
+            <select name="RiskType">
+                <option value="all" selected="@(Model.RiskType == "all")">الكل</option>
+                <option value="expired" selected="@(Model.RiskType == "expired")">منتهي</option>
+                <option value="expiring" selected="@(Model.RiskType == "expiring")">ينتهي قريباً</option>
+            </select>
+        </div>
+        <div class="hr-final-field">
+            <label>بحث</label>
+            <input type="text" name="SearchTerm" value="@Model.SearchTerm" placeholder="كود، اسم، نوع مستند..." />
+        </div>
+        <div class="hr-final-field">
+            <label>عدد النتائج</label>
+            <select name="MaxRows">
+                <option value="100" selected="@(Model.MaxRows == 100)">100</option>
+                <option value="200" selected="@(Model.MaxRows == 200)">200</option>
+                <option value="500" selected="@(Model.MaxRows == 500)">500</option>
+                <option value="1000" selected="@(Model.MaxRows == 1000)">1000</option>
+            </select>
+        </div>
+        <div class="hr-final-actions">
+            <button type="submit" class="hr-final-btn primary">تطبيق</button>
+            <a asp-page="./DocumentsRisk" class="hr-final-btn secondary">مسح</a>
+        </div>
+    </form>
+
+    <section class="hr-final-table-card">
+        <div class="hr-final-table-head">
+            <div>
+                <h2>قائمة مخاطر المستندات</h2>
+                <p>مرتبة حسب تاريخ الانتهاء الأقرب.</p>
+            </div>
+        </div>
+
+        <div class="hr-final-table-wrap">
+            <table class="hr-final-table">
+                <thead>
+                    <tr>
+                        <th>الكود</th>
+                        <th>الموظف</th>
+                        <th>الفرع</th>
+                        <th>نوع المستند</th>
+                        <th>اسم الملف</th>
+                        <th>تاريخ الانتهاء</th>
+                        <th>الأيام</th>
+                        <th>الحالة</th>
+                        <th>ملف</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Rows.Any())
+                    {
+                        foreach (var row in Model.Rows)
+                        {
+                            <tr>
+                                <td>@row.EmployeeNo</td>
+                                <td class="hr-final-name">@row.FullName</td>
+                                <td>@row.BranchName</td>
+                                <td>@row.DocumentType</td>
+                                <td>@row.FileName</td>
+                                <td>@Model.DisplayDate(row.ExpiryDate)</td>
+                                <td>@row.DaysLeft</td>
+                                <td><span class="hr-final-pill @row.RiskClass">@row.RiskText</span></td>
+                                <td><a asp-page="/Employees/Profile" asp-route-id="@row.EmployeeId" class="hr-final-btn secondary">ملف</a></td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="9" class="hr-final-empty">لا توجد مستندات مطابقة.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

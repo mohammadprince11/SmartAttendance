@@ -58,9 +58,9 @@
 <div class="employee360v2-page">
     <div class="employee360v2-head">
         <div>
-            <div class="employee360v2-eyebrow">NEXORA Employee 360 Final</div>
+            <div class="employee360v2-eyebrow">NEXORA Employee 360 V1.2</div>
             <h1>ملف الموظف الشامل</h1>
-            <p>Employee 360 Final: ملف موحد للبيانات، الحضور، الطلبات، المستندات، وجاهزية الراتب قبل الإغلاق.</p>
+            <p>Employee 360 V1.2: ملف موحد للبيانات، الحضور، الطلبات، المستندات، وجاهزية الراتب قبل الإغلاق.</p>
         </div>
 
         <div class="employee360v2-actions">
@@ -621,7 +621,6 @@
 
 
 </div>
-
 
 
 

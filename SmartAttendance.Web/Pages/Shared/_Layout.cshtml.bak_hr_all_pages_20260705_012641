@@ -107,27 +107,6 @@
                             <a asp-page="/Employees/Index" class="nexora-nav-link">
                                 <span data-i18n="employees">Employees</span>
                             </a>
-                            <!-- HR_AFFAIRS_FINAL_LINKS_START -->
-                            <a asp-page="/HRAffairs/Index" class="nexora-nav-link nexora-primary-link">
-                                <span>شؤون الموظفين</span>
-                            </a>
-
-                            <a asp-page="/HRAffairs/PayrollReadiness" class="nexora-nav-link">
-                                <span>جاهزية الراتب</span>
-                            </a>
-
-                            <a asp-page="/HRAffairs/AttendanceExceptions" class="nexora-nav-link">
-                                <span>استثناءات الحضور</span>
-                            </a>
-
-                            <a asp-page="/HRAffairs/DocumentsRisk" class="nexora-nav-link">
-                                <span>العقود والمستندات</span>
-                            </a>
-
-                            <a asp-page="/HRAffairs/RequestsCenter" class="nexora-nav-link">
-                                <span>طلبات شؤون الموظفين</span>
-                            </a>
-                            <!-- HR_AFFAIRS_FINAL_LINKS_END -->
 
                             @if (showReports)
                             {
@@ -330,6 +309,5 @@
     <script src="~/js/nexora-sidebar-brand-active-fix.js" asp-append-version="true"></script>
 </body>
 </html>
-
 
 

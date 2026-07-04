@@ -513,32 +513,6 @@ public int Employee360HealthScore
             : "خطر تشغيلي";
 
     public bool HasPayrollBlockingIssues => AbsentCount > 0 || MissingCheckoutCount > 0 || PendingRequests > 0 || ExpiredDocumentsCount > 0;
-    public string AttendanceStatusName(int status)
-    {
-        return status switch
-        {
-            1 => "حاضر",
-            2 => "متأخر",
-            3 => "غياب",
-            4 => "بصمة ناقصة",
-            5 => "عطلة",
-            _ => "غير محدد"
-        };
-    }
-    public string AttendanceSourceName(int source)
-    {
-        return source switch
-        {
-            1 => "جهاز بصمة",
-            2 => "إدخال يدوي",
-            3 => "استيراد",
-            4 => "طلب",
-            5 => "نظام",
-            _ => "غير محدد"
-        };
-    }
-
-
 public class EmployeeProfileCard
     {
         public int Id { get; set; }
@@ -685,9 +659,6 @@ public class EmployeeProfileCard
         public DateTime? CreatedAt { get; set; }
     }
 }
-
-
-
 
 
 

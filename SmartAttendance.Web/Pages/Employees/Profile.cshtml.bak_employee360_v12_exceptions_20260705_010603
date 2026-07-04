@@ -58,9 +58,9 @@
 <div class="employee360v2-page">
     <div class="employee360v2-head">
         <div>
-            <div class="employee360v2-eyebrow">NEXORA Employee 360 Final</div>
+            <div class="employee360v2-eyebrow">NEXORA Employee 360 V1.1</div>
             <h1>ملف الموظف الشامل</h1>
-            <p>Employee 360 Final: ملف موحد للبيانات، الحضور، الطلبات، المستندات، وجاهزية الراتب قبل الإغلاق.</p>
+            <p>Employee 360 V1.1: ملف موحد للبيانات، الحضور، الطلبات، المستندات، وجاهزية الراتب قبل الإغلاق.</p>
         </div>
 
         <div class="employee360v2-actions">
@@ -200,19 +200,13 @@
                 <span>مستندات تحتاج متابعة</span>
                 <strong>@(Model.ExpiredDocumentsCount + Model.ExpiringDocumentsCount)</strong>
                 <small>منتهية أو خلال 30 يوم</small>
-            </div>            <div class="employee360v2-kpi @Model.AttendanceExceptionClass">
-                <span>استثناءات الحضور</span>
-                <strong>@Model.AttendanceExceptionsCount</strong>
-                <small>تأخير، غياب، بصمة ناقصة أو ملاحظات</small>
             </div>
-
 
         </section>
 
         <section class="employee360v2-tabs">
             <a href="#basic">البيانات</a>
             <a href="#attendance">الحضور</a>
-            <a href="#exceptions">استثناءات الحضور</a>
             <a href="#shifts">الشفتات</a>
             <a href="#requests">الطلبات</a>
             <a href="#documents">المستندات</a>
@@ -257,73 +251,7 @@
                 </div>
             </div>
         </section>
-        <section id="exceptions" class="employee360v2-card employee360v12-exceptions-panel">
-            <div class="employee360v2-card-head">
-                <h3>استثناءات الحضور</h3>
-                <span class="employee360v2-status @Model.AttendanceExceptionClass">@Model.AttendanceExceptionsCount حالة</span>
-            </div>
 
-            <div class="employee360v12-exception-summary">
-                <div>
-                    <strong>@Model.LateCount</strong>
-                    <span>تأخير</span>
-                </div>
-                <div>
-                    <strong>@Model.AbsentCount</strong>
-                    <span>غياب</span>
-                </div>
-                <div>
-                    <strong>@Model.MissingCheckoutCount</strong>
-                    <span>بصمة ناقصة</span>
-                </div>
-                <div>
-                    <strong>@Model.AttendanceExceptionRows.Count</strong>
-                    <span>معروضة الآن</span>
-                </div>
-            </div>
-
-            <div class="employee360v2-table-wrap">
-                <table class="employee360v2-table">
-                    <thead>
-                        <tr>
-                            <th>التاريخ</th>
-                            <th>الدخول</th>
-                            <th>الخروج</th>
-                            <th>الحالة</th>
-                            <th>المصدر</th>
-                            <th>الملاحظة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (Model.AttendanceExceptionRows.Any())
-                        {
-                            foreach (var row in Model.AttendanceExceptionRows)
-                            {
-                                <tr>
-                                    <td>@Model.DisplayDate(row.AttendanceDate)</td>
-                                    <td>@Model.DisplayTime(row.CheckIn)</td>
-                                    <td>@Model.DisplayTime(row.CheckOut)</td>
-                                    <td><span class="employee360v2-status @StatusClass(row.Status)">@Model.AttendanceStatusName(row.Status)</span></td>
-                                    <td>@Model.AttendanceSourceName(row.Source)</td>
-                                    <td>@Model.Display(row.Notes)</td>
-                                </tr>
-                            }
-                        }
-                        else
-                        {
-                            <tr>
-                                <td colspan="6">لا توجد استثناءات حضور ضمن الفترة المحددة.</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="employee360v2-payroll-note">
-                <strong>استخدام عملي:</strong>
-                هذه القائمة تساعد HR على معرفة السجلات التي يجب مراجعتها قبل اعتماد الراتب أو إغلاق فترة الحضور.
-            </div>
-        </section>
         <section id="attendance" class="employee360v2-card">
             <div class="employee360v2-card-head split">
                 <div>
@@ -621,7 +549,5 @@
 
 
 </div>
-
-
 
 
