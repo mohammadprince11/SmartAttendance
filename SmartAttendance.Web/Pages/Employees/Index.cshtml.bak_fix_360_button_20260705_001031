@@ -63,7 +63,7 @@
                                 <td>@(!string.IsNullOrWhiteSpace(employee.Email) ? employee.Email : "-")</td>
                                 <td>@employee.HireDate.ToString("yyyy-MM-dd")</td>
                                 <td><span class="nx-status @(employee.IsActive ? "active" : "inactive")">@(employee.IsActive ? "فعال" : "غير فعال")</span></td>
-                                <td class="col-actions"><div class="nx-row-actions"><a asp-page="./Profile" asp-route-id="@employee.Id" class="nx-action primary">ملف</a></div></td>
+                                <td class="col-actions"><div class="nx-row-actions"><a asp-page="/Employee360/Index" asp-route-id="@employee.Id" class="nx-action primary">360</a><a asp-page="./Profile" asp-route-id="@employee.Id" class="nx-action">ملف</a><a asp-page="./Edit" asp-route-id="@employee.Id" class="nx-action">تعديل</a></div></td>
                             </tr>
                         }
                     }
@@ -76,4 +76,3 @@
         </div>
     </div>
 </div>
-

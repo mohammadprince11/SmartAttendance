@@ -56,4 +56,3 @@ public class EditModel : PageModel
         return RedirectToPage("./Profile", new { id = Employee.Id });
     }
 }
-
