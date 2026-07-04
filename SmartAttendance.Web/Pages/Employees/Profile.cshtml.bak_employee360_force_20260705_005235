@@ -120,19 +120,6 @@
             <span>@contractText</span>
             <small>نهاية العقد: @Model.DisplayDate(Model.Employee.ContractEndDate)</small>
         </section>
-        <section class="employee360v2-readiness-card @Model.PayrollReadinessClass">
-            <div>
-                <span class="employee360v2-mini-label">Payroll Readiness</span>
-                <h3>@Model.PayrollReadinessText</h3>
-                <p>
-                    يتم احتساب المؤشر من الغياب، البصمات الناقصة، الطلبات المعلقة، والمستندات المنتهية أو القريبة من الانتهاء.
-                </p>
-            </div>
-            <div class="employee360v2-readiness-score">
-                <strong>@Model.PayrollRiskItems</strong>
-                <span>نقاط تحتاج مراجعة</span>
-            </div>
-        </section>
 
         <section class="employee360v2-kpis">
             <div class="employee360v2-kpi">
@@ -169,24 +156,7 @@
                 <span>ساعات العمل</span>
                 <strong>@Model.TotalWorkingHours</strong>
                 <small>ساعة محسوبة</small>
-            </div>            <div class="employee360v2-kpi @Model.PayrollReadinessClass">
-                <span>جاهزية الراتب</span>
-                <strong>@Model.PayrollRiskItems</strong>
-                <small>@Model.PayrollReadinessText</small>
             </div>
-
-            <div class="employee360v2-kpi @Model.AttendanceRiskClass">
-                <span>مخاطر الحضور</span>
-                <strong>@Model.AttendanceRiskItems</strong>
-                <small>غياب + تأخير + بصمة ناقصة</small>
-            </div>
-
-            <div class="employee360v2-kpi warn">
-                <span>مستندات تحتاج متابعة</span>
-                <strong>@(Model.ExpiredDocumentsCount + Model.ExpiringDocumentsCount)</strong>
-                <small>منتهية أو خلال 30 يوم</small>
-            </div>
-
         </section>
 
         <section class="employee360v2-tabs">
@@ -195,7 +165,6 @@
             <a href="#shifts">الشفتات</a>
             <a href="#requests">الطلبات</a>
             <a href="#documents">المستندات</a>
-            <a href="#readiness">جاهزية الراتب</a>
             <a href="#audit">السجل</a>
         </section>
 
@@ -462,50 +431,4 @@
             </div>
         </section>
     }
-            <div id="readiness" class="employee360v2-card employee360v2-readiness-panel">
-                <div class="employee360v2-card-head">
-                    <h3>جاهزية الراتب</h3>
-                    <span class="employee360v2-status @Model.PayrollReadinessClass">@Model.PayrollReadinessText</span>
-                </div>
-
-                <div class="employee360v2-risk-grid">
-                    <div class="employee360v2-risk-item">
-                        <span>غياب</span>
-                        <strong>@Model.AbsentCount</strong>
-                        <small>سجلات غياب ضمن الفترة</small>
-                    </div>
-
-                    <div class="employee360v2-risk-item">
-                        <span>بصمات ناقصة</span>
-                        <strong>@Model.MissingCheckoutCount</strong>
-                        <small>تحتاج تصحيح قبل الراتب</small>
-                    </div>
-
-                    <div class="employee360v2-risk-item">
-                        <span>طلبات معلقة</span>
-                        <strong>@Model.PendingRequests</strong>
-                        <small>بانتظار موافقة</small>
-                    </div>
-
-                    <div class="employee360v2-risk-item">
-                        <span>مستندات منتهية</span>
-                        <strong>@Model.ExpiredDocumentsCount</strong>
-                        <small>تحتاج تحديث</small>
-                    </div>
-
-                    <div class="employee360v2-risk-item">
-                        <span>مستندات خلال 30 يوم</span>
-                        <strong>@Model.ExpiringDocumentsCount</strong>
-                        <small>تنبيه مبكر</small>
-                    </div>
-                </div>
-
-                <div class="employee360v2-payroll-note">
-                    <strong>ملاحظة تشغيلية:</strong>
-                    لا تعتمد هذه البطاقة كراتب نهائي. وظيفتها كشف المخاطر قبل إغلاق الراتب وربط ملف الموظف بالحضور والطلبات.
-                </div>
-            </div>
-
-
 </div>
-

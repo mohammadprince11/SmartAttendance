@@ -605,4 +605,3 @@ ORDER BY CreatedAt DESC;",
         public DateTime? CreatedAt { get; set; }
     }
 }
-
