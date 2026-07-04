@@ -459,42 +459,7 @@ ORDER BY CreatedAt DESC;",
 
     public string AttendanceRiskClass => AttendanceRiskItems == 0 ? "ok" : "warn";
 
-    
-    public int Employee360HealthScore
-    {
-        get
-        {
-            var score = 100;
-
-            score -= AbsentCount * 8;
-            score -= MissingCheckoutCount * 10;
-            score -= PendingRequests * 6;
-            score -= ExpiredDocumentsCount * 12;
-            score -= ExpiringDocumentsCount * 4;
-
-            if (score < 0)
-            {
-                return 0;
-            }
-
-            return score;
-        }
-    }
-
-    public string Employee360HealthClass => Employee360HealthScore >= 85
-        ? "ok"
-        : Employee360HealthScore >= 60
-            ? "warn"
-            : "danger";
-
-    public string Employee360HealthText => Employee360HealthScore >= 85
-        ? "مستقر"
-        : Employee360HealthScore >= 60
-            ? "يحتاج متابعة"
-            : "خطر تشغيلي";
-
-    public bool HasPayrollBlockingIssues => AbsentCount > 0 || MissingCheckoutCount > 0 || PendingRequests > 0 || ExpiredDocumentsCount > 0;
-public class EmployeeProfileCard
+    public class EmployeeProfileCard
     {
         public int Id { get; set; }
 
@@ -640,5 +605,4 @@ public class EmployeeProfileCard
         public DateTime? CreatedAt { get; set; }
     }
 }
-
 

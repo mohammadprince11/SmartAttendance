@@ -58,14 +58,13 @@
 <div class="employee360v2-page">
     <div class="employee360v2-head">
         <div>
-            <div class="employee360v2-eyebrow">NEXORA Employee 360 V1.1</div>
+            <div class="employee360v2-eyebrow">NEXORA Employee 360 V1</div>
             <h1>ملف الموظف الشامل</h1>
-            <p>Employee 360 V1.1: ملف موحد للبيانات، الحضور، الطلبات، المستندات، وجاهزية الراتب قبل الإغلاق.</p>
+            <p>Employee 360 V1: ملف موحد للبيانات، الحضور، الطلبات، المستندات، وجاهزية الراتب قبل الإغلاق.</p>
         </div>
 
         <div class="employee360v2-actions">
             <a asp-page="./Index" class="employee360v2-btn ghost">رجوع</a>
-            <a href="#readiness" class="employee360v2-btn primary">مراجعة الراتب</a>
 
             @if (Model.Employee != null)
             {
@@ -132,20 +131,6 @@
             <div class="employee360v2-readiness-score">
                 <strong>@Model.PayrollRiskItems</strong>
                 <span>نقاط تحتاج مراجعة</span>
-            </div>
-        </section>
-        <section class="employee360v11-health-card @Model.Employee360HealthClass">
-            <div>
-                <span class="employee360v2-mini-label">Employee Health Score</span>
-                <h3>مؤشر استقرار الموظف: @Model.Employee360HealthText</h3>
-                <p>
-                    مؤشر تشغيلي سريع يجمع الغياب، البصمات الناقصة، الطلبات المعلقة، والمستندات. الهدف منه مساعدة HR قبل الراتب، وليس اتخاذ قرار نهائي.
-                </p>
-            </div>
-
-            <div class="employee360v11-score-ring">
-                <strong>@Model.Employee360HealthScore</strong>
-                <span>من 100</span>
             </div>
         </section>
 
@@ -514,32 +499,6 @@
                         <small>تنبيه مبكر</small>
                     </div>
                 </div>
-                <div class="employee360v11-closure-checklist">
-                    <div class="employee360v11-check @(Model.AbsentCount == 0 ? "ok" : "warn")">
-                        <strong>الغياب</strong>
-                        <span>@(Model.AbsentCount == 0 ? "لا توجد غيابات ضمن الفترة" : "توجد غيابات تحتاج مراجعة")</span>
-                    </div>
-
-                    <div class="employee360v11-check @(Model.MissingCheckoutCount == 0 ? "ok" : "warn")">
-                        <strong>البصمات الناقصة</strong>
-                        <span>@(Model.MissingCheckoutCount == 0 ? "لا توجد بصمات ناقصة" : "توجد بصمات ناقصة قبل الراتب")</span>
-                    </div>
-
-                    <div class="employee360v11-check @(Model.PendingRequests == 0 ? "ok" : "warn")">
-                        <strong>الطلبات المعلقة</strong>
-                        <span>@(Model.PendingRequests == 0 ? "لا توجد طلبات معلقة" : "توجد طلبات بانتظار الموافقة")</span>
-                    </div>
-
-                    <div class="employee360v11-check @(Model.ExpiredDocumentsCount == 0 ? "ok" : "warn")">
-                        <strong>المستندات المنتهية</strong>
-                        <span>@(Model.ExpiredDocumentsCount == 0 ? "لا توجد مستندات منتهية" : "توجد مستندات منتهية")</span>
-                    </div>
-
-                    <div class="employee360v11-check @(Model.HasPayrollBlockingIssues ? "warn" : "ok")">
-                        <strong>قرار الإغلاق</strong>
-                        <span>@(Model.HasPayrollBlockingIssues ? "لا تغلق قبل المراجعة" : "جاهز للمراجعة النهائية")</span>
-                    </div>
-                </div>
 
                 <div class="employee360v2-payroll-note">
                     <strong>ملاحظة تشغيلية:</strong>
@@ -549,5 +508,4 @@
 
 
 </div>
-
 
