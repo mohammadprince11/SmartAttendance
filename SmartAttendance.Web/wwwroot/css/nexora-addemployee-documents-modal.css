@@ -1,0 +1,164 @@
+/* NEXORA - Add Employee Documents Modal */
+
+.nxr-documents-modal-trigger-card {
+    display: none !important;
+}
+
+.nxr-documents-modal-open {
+    border-color: rgba(215,178,109,.28) !important;
+    background: rgba(215,178,109,.08) !important;
+    color: var(--nxr-gold, #D7B26D) !important;
+}
+
+.nxr-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: none;
+    place-items: center;
+    padding: 22px;
+    background: rgba(2, 8, 16, .72);
+    backdrop-filter: blur(12px);
+}
+
+.nxr-modal-overlay.open {
+    display: grid;
+}
+
+.nxr-modal-panel {
+    width: min(760px, calc(100vw - 32px));
+    max-height: min(720px, calc(100vh - 44px));
+    overflow: auto;
+    border: 1px solid rgba(18,217,227,.24);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 100% 0%, rgba(18,217,227,.12), transparent 36%),
+        radial-gradient(circle at 0% 100%, rgba(215,178,109,.08), transparent 32%),
+        linear-gradient(180deg, rgba(15,34,51,.98), rgba(7,18,31,.98));
+    box-shadow: 0 32px 90px rgba(0,0,0,.46);
+}
+
+.nxr-modal-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 20px;
+    border-bottom: 1px solid rgba(157,184,204,.12);
+}
+
+.nxr-modal-head h2 {
+    margin: 0;
+    color: var(--nxr-text, #E6EAEE);
+    font-size: 24px;
+    font-weight: 1000;
+}
+
+.nxr-modal-head p {
+    margin: 7px 0 0;
+    color: var(--nxr-muted, #9FB0BE);
+    font-weight: 850;
+    line-height: 1.75;
+}
+
+.nxr-modal-close {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    border: 1px solid rgba(157,184,204,.18);
+    color: var(--nxr-text, #E6EAEE);
+    background: rgba(157,184,204,.07);
+    cursor: pointer;
+    font-size: 22px;
+    font-weight: 1000;
+}
+
+.nxr-modal-close:hover {
+    border-color: rgba(18,217,227,.34);
+    background: rgba(18,217,227,.08);
+}
+
+.nxr-modal-body {
+    padding: 20px;
+    display: grid;
+    gap: 14px;
+}
+
+.nxr-modal-note {
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(215,178,109,.22);
+    background: rgba(215,178,109,.07);
+    color: var(--nxr-muted, #9FB0BE);
+    line-height: 1.85;
+    font-weight: 850;
+}
+
+.nxr-modal-note strong {
+    color: var(--nxr-gold, #D7B26D);
+}
+
+.nxr-modal-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.nxr-modal-step {
+    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(157,184,204,.13);
+    background: rgba(7,18,31,.34);
+}
+
+.nxr-modal-step span {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    color: #07121F;
+    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+    font-weight: 1000;
+    margin-bottom: 10px;
+}
+
+.nxr-modal-step strong {
+    display: block;
+    color: var(--nxr-text, #E6EAEE);
+    font-weight: 1000;
+}
+
+.nxr-modal-step small {
+    display: block;
+    margin-top: 6px;
+    color: var(--nxr-muted, #9FB0BE);
+    font-weight: 800;
+    line-height: 1.6;
+}
+
+.nxr-modal-actions {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 0 20px 20px;
+}
+
+@media (max-width: 720px) {
+    .nxr-modal-steps {
+        grid-template-columns: 1fr;
+    }
+
+    .nxr-modal-head {
+        flex-direction: column;
+    }
+
+    .nxr-modal-actions a,
+    .nxr-modal-actions button {
+        width: 100%;
+    }
+}

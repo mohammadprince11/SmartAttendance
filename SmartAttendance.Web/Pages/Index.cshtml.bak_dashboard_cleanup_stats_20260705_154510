@@ -1,0 +1,343 @@
+﻿@page
+@model SmartAttendance.Web.Pages.IndexModel
+
+@{
+    ViewData["Title"] = "لوحة التحكم";
+
+    static string SafeName(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) || value == "Not Set"
+            ? "غير محدد"
+            : value;
+    }
+
+    static string StatusText(string? status)
+    {
+        return status switch
+        {
+            "Pending" => "معلق",
+            "Approved" => "مقبول",
+            "Rejected" => "مرفوض",
+            _ => string.IsNullOrWhiteSpace(status) ? "-" : status
+        };
+    }
+
+    static string StatusClass(string? status)
+    {
+        return string.IsNullOrWhiteSpace(status)
+            ? "unknown"
+            : status.ToLowerInvariant();
+    }
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/dashboard-unified.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/dashboard-nexora.css" asp-append-version="true" />
+
+<div class="dashboard-page">
+    <div class="page-header">
+        <div>
+            <h1>لوحة التحكم</h1>
+            <p>ملخص النظام، الموظفين، الحضور، الطلبات، والعقود في صفحة واحدة.</p>
+        </div>
+
+        <div class="dashboard-actions">
+            <a asp-page="/SelfServices/Index" class="hrms-btn-primary">تقديم طلب</a>
+</div>
+    </div>
+
+    <section class="dashboard-kpi-grid">
+        <div class="dashboard-kpi">
+            <span>إجمالي الموظفين</span>
+            <strong>@Model.Employees</strong>
+            <small>فعال: @Model.ActiveEmployees | غير فعال: @Model.InactiveEmployees</small>
+        </div>
+
+        <div class="dashboard-kpi">
+            <span>الفروع</span>
+            <strong>@Model.Branches</strong>
+            <small>الشركات: @Model.Companies</small>
+        </div>
+
+        <div class="dashboard-kpi">
+            <span>الأقسام</span>
+            <strong>@Model.Departments</strong>
+            <small>حسب الهيكل التنظيمي</small>
+        </div>
+
+        <div class="dashboard-kpi">
+            <span>الأجهزة</span>
+            <strong>@Model.Devices</strong>
+            <small>الشفتات: @Model.Shifts</small>
+        </div>
+
+        <div class="dashboard-kpi">
+            <span>سجلات الحضور</span>
+            <strong>@Model.AttendanceRecords</strong>
+            <small>إجمالي السجلات</small>
+        </div>
+
+        <div class="dashboard-kpi warning">
+            <span>طلبات معلقة</span>
+            <strong>@Model.PendingRequests</strong>
+            <small>بانتظار موافقة</small>
+        </div>
+    </section>
+
+    <section class="dashboard-kpi-grid">
+        <div class="dashboard-kpi success">
+            <span>حضور اليوم</span>
+            <strong>@Model.TodayPresent</strong>
+            <small>حاضر</small>
+        </div>
+
+        <div class="dashboard-kpi warning">
+            <span>تأخير اليوم</span>
+            <strong>@Model.TodayLate</strong>
+            <small>متأخر</small>
+        </div>
+
+        <div class="dashboard-kpi danger">
+            <span>غياب اليوم</span>
+            <strong>@Model.TodayAbsent</strong>
+            <small>غائب</small>
+        </div>
+
+        <div class="dashboard-kpi danger">
+            <span>بصمات ناقصة اليوم</span>
+            <strong>@Model.TodayMissingOut</strong>
+            <small>خروج مفقود</small>
+        </div>
+
+        <div class="dashboard-kpi warning">
+            <span>عقود تنتهي خلال 30 يوم</span>
+            <strong>@Model.Contracts30</strong>
+            <small>تحتاج متابعة</small>
+        </div>
+
+        <div class="dashboard-kpi danger">
+            <span>بصمات ناقصة خلال 30 يوم</span>
+            <strong>@Model.MissingPunches30</strong>
+            <small>آخر 30 يوم</small>
+        </div>
+    </section>
+
+    <section class="dashboard-kpi-grid compact">
+        <div class="dashboard-kpi warning">
+            <span>تأخير آخر 30 يوم</span>
+            <strong>@Model.Late30</strong>
+        </div>
+
+        <div class="dashboard-kpi danger">
+            <span>غياب آخر 30 يوم</span>
+            <strong>@Model.Absent30</strong>
+        </div>
+
+        <div class="dashboard-kpi success">
+            <span>طلبات مقبولة خلال 30 يوم</span>
+            <strong>@Model.ApprovedRequests30</strong>
+        </div>
+
+        <div class="dashboard-kpi danger">
+            <span>طلبات مرفوضة خلال 30 يوم</span>
+            <strong>@Model.RejectedRequests30</strong>
+        </div>
+    </section>
+
+    <section class="dashboard-grid">
+        <div class="dashboard-panel">
+            <h2>الموظفون حسب الفرع</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.ByBranch)
+                {
+                    <div class="dashboard-list-row">
+                        <span>@SafeName(row.Name)</span>
+                        <strong>@row.Total</strong>
+                    </div>
+                }
+
+                @if (!Model.ByBranch.Any())
+                {
+                    <div class="dashboard-empty">لا توجد بيانات فروع حالياً.</div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <h2>الموظفون حسب القسم</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.ByDepartment)
+                {
+                    <div class="dashboard-list-row">
+                        <span>@SafeName(row.Name)</span>
+                        <strong>@row.Total</strong>
+                    </div>
+                }
+
+                @if (!Model.ByDepartment.Any())
+                {
+                    <div class="dashboard-empty">لا توجد بيانات أقسام حالياً.</div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <h2>الموظفون حسب الجنس</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.ByGender)
+                {
+                    <div class="dashboard-list-row">
+                        <span>@SafeName(row.Name)</span>
+                        <strong>@row.Total</strong>
+                    </div>
+                }
+
+                @if (!Model.ByGender.Any())
+                {
+                    <div class="dashboard-empty">لا توجد بيانات حالياً.</div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <h2>الموظفون حسب البلد</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.ByCountry)
+                {
+                    <div class="dashboard-list-row">
+                        <span>@SafeName(row.Name)</span>
+                        <strong>@row.Total</strong>
+                    </div>
+                }
+
+                @if (!Model.ByCountry.Any())
+                {
+                    <div class="dashboard-empty">لا توجد بيانات حالياً.</div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <h2>الموظفون حسب الجنسية</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.ByNationality)
+                {
+                    <div class="dashboard-list-row">
+                        <span>@SafeName(row.Name)</span>
+                        <strong>@row.Total</strong>
+                    </div>
+                }
+
+                @if (!Model.ByNationality.Any())
+                {
+                    <div class="dashboard-empty">لا توجد بيانات حالياً.</div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <h2>الموظفون حسب نوع العقد</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.ByContractType)
+                {
+                    <div class="dashboard-list-row">
+                        <span>@SafeName(row.Name)</span>
+                        <strong>@row.Total</strong>
+                    </div>
+                }
+
+                @if (!Model.ByContractType.Any())
+                {
+                    <div class="dashboard-empty">لا توجد بيانات عقود حالياً.</div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <h2>حالة طلبات الخدمات الذاتية</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.RequestsByStatus)
+                {
+                    <div class="dashboard-list-row">
+                        <span>@StatusText(row.Name)</span>
+                        <strong>@row.Total</strong>
+                    </div>
+                }
+
+                @if (!Model.RequestsByStatus.Any())
+                {
+                    <div class="dashboard-empty">لا توجد طلبات حالياً.</div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <h2>عقود قريبة الانتهاء خلال 60 يوم</h2>
+            <div class="dashboard-list">
+                @foreach (var row in Model.ExpiringContracts)
+                {
+                    <div class="dashboard-list-row warning-row">
+                        <span>
+                            @row.EmployeeNo - @row.EmployeeName
+                            <small>@row.Position</small>
+                        </span>
+                        <strong>@row.ContractEndDate?.ToString("yyyy-MM-dd")</strong>
+                    </div>
+                }
+
+                @if (!Model.ExpiringContracts.Any())
+                {
+                    <div class="dashboard-empty">لا توجد عقود قريبة الانتهاء.</div>
+                }
+            </div>
+        </div>
+    </section>
+
+    <section class="dashboard-panel">
+        <div class="dashboard-panel-head">
+            <h2>آخر طلبات الخدمات الذاتية</h2>
+            <a asp-page="/Approvals/Index" class="hrms-btn-secondary">عرض الموافقات</a>
+        </div>
+
+        <div class="dashboard-table-wrap">
+            <table class="dashboard-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>رقم الموظف</th>
+                        <th class="text-start">الاسم</th>
+                        <th>نوع الطلب</th>
+                        <th>الحالة</th>
+                        <th>المرحلة</th>
+                        <th>التاريخ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var request in Model.LatestRequests)
+                    {
+                        var statusText = StatusText(request.Status);
+                        var statusClass = StatusClass(request.Status);
+
+                        <tr>
+                            <td>@request.Id</td>
+                            <td>@request.EmployeeNo</td>
+                            <td class="text-start">@request.EmployeeName</td>
+                            <td>@request.RequestType</td>
+                            <td><span class="hrms-badge @statusClass">@statusText</span></td>
+                            <td>@request.CurrentStep</td>
+                            <td>@request.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</td>
+                        </tr>
+                    }
+
+                    @if (!Model.LatestRequests.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="dashboard-empty-cell">لا توجد طلبات حديثة.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+

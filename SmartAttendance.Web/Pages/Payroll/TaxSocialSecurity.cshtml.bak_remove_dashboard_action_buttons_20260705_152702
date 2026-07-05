@@ -1,0 +1,382 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Payroll.TaxSocialSecurityModel
+
+@{
+    ViewData["Title"] = "الضريبة والضمان";
+}
+
+<link rel="stylesheet" href="~/css/tax-social-security.css" asp-append-version="true" />
+
+<div class="tax-social-page" dir="rtl">
+    <section class="tax-hero">
+        <div>
+            <span class="tax-eyebrow">NEXORA Payroll Control</span>
+            <h1>الضريبة والضمان</h1>
+            <p>
+                نسخة محسّنة لإدارة إعدادات الضريبة والضمان شهرياً، إدخال السجلات، الاحتساب التلقائي، وتطبيق الإعدادات على السجلات المحفوظة.
+            </p>
+        </div>
+
+        <div class="tax-hero-actions">
+            <a asp-page="/Employees/Index" class="hrms-btn-secondary">الموظفون</a>
+            <a asp-page="/Reports/Index" class="hrms-btn-secondary">التقارير</a>
+        </div>
+    </section>
+
+    @if (TempData["TaxSocialSuccess"] != null)
+    {
+        <div class="hrms-alert success">@TempData["TaxSocialSuccess"]</div>
+    }
+
+    @if (TempData["TaxSocialError"] != null)
+    {
+        <div class="hrms-alert danger">@TempData["TaxSocialError"]</div>
+    }
+
+    <section class="tax-kpis">
+        <div class="tax-kpi-card">
+            <span>الموظفون المعروضون</span>
+            <strong>@Model.TotalEmployees</strong>
+            <small>حسب الفلتر الحالي</small>
+        </div>
+
+        <div class="tax-kpi-card gold">
+            <span>السجلات المحفوظة</span>
+            <strong>@Model.RecordedEmployees</strong>
+            <small>لشهر @Model.NormalizedMonth</small>
+        </div>
+
+        <div class="tax-kpi-card danger">
+            <span>غير مدخل</span>
+            <strong>@Model.MissingRecords</strong>
+            <small>تحتاج مراجعة</small>
+        </div>
+
+        <div class="tax-kpi-card">
+            <span>إجمالي الراتب</span>
+            <strong>@Model.TotalGrossSalary.ToString("N0")</strong>
+            <small>Gross Salary</small>
+        </div>
+
+        <div class="tax-kpi-card gold">
+            <span>إجمالي الاستقطاعات</span>
+            <strong>@Model.TotalDeductions.ToString("N0")</strong>
+            <small>Tax + Employee Share</small>
+        </div>
+
+        <div class="tax-kpi-card">
+            <span>إجمالي الصافي</span>
+            <strong>@Model.TotalNetSalary.ToString("N0")</strong>
+            <small>Net Salary</small>
+        </div>
+    </section>
+
+    <section class="tax-settings-card">
+        <div class="tax-section-head">
+            <div>
+                <h2>إعدادات الشهر</h2>
+                <p>
+                    لا توجد نسب قانونية افتراضية داخل النظام. أدخل النسب حسب السياسة المعتمدة، ثم احفظ الإعدادات وطبقها على السجلات التي تحتوي راتب إجمالي.
+                </p>
+            </div>
+            <span class="tax-pill">Month Settings</span>
+        </div>
+
+        <form method="post" asp-page-handler="SaveSettings" class="tax-settings-form">
+            <input type="hidden" name="SearchTerm" value="@Model.SearchTerm" />
+            <input type="hidden" name="MaxRows" value="@Model.MaxRows" />
+
+            <div>
+                <label>الشهر</label>
+                <input type="month" asp-for="SettingsInput.PayrollMonth" value="@Model.NormalizedMonth" />
+            </div>
+
+            <div>
+                <label>نسبة الضريبة %</label>
+                <input type="number" step="0.0001" min="0" max="100" asp-for="SettingsInput.TaxRate" />
+            </div>
+
+            <div>
+                <label>إعفاء / حد غير خاضع</label>
+                <input type="number" step="0.01" min="0" asp-for="SettingsInput.TaxExemptionAmount" />
+            </div>
+
+            <div>
+                <label>ضمان الموظف %</label>
+                <input type="number" step="0.0001" min="0" max="100" asp-for="SettingsInput.EmployeeSocialSecurityRate" />
+            </div>
+
+            <div>
+                <label>ضمان الشركة %</label>
+                <input type="number" step="0.0001" min="0" max="100" asp-for="SettingsInput.CompanySocialSecurityRate" />
+            </div>
+
+            <div>
+                <label>سقف الضمان</label>
+                <input type="number" step="0.01" min="0" asp-for="SettingsInput.SocialSecurityCeiling" />
+            </div>
+
+            <div class="tax-check-field">
+                <label>تقريب المبالغ</label>
+                <label class="tax-switch">
+                    <input type="checkbox" asp-for="SettingsInput.RoundAmounts" />
+                    <span>تقريب إلى رقم صحيح</span>
+                </label>
+            </div>
+
+            <div class="tax-settings-notes">
+                <label>ملاحظات الإعدادات</label>
+                <textarea asp-for="SettingsInput.Notes" rows="2"></textarea>
+            </div>
+
+            <div class="tax-settings-actions">
+                <button type="submit" class="hrms-btn-primary">حفظ الإعدادات</button>
+            </div>
+        </form>
+
+        <form method="post"
+              asp-page-handler="ApplySettings"
+              class="tax-apply-form"
+              onsubmit="return confirm('سيتم تطبيق إعدادات الشهر على السجلات المحفوظة التي تحتوي راتب إجمالي فقط. هل تريد المتابعة؟');">
+            <input type="hidden" name="SettingsInput.PayrollMonth" value="@Model.NormalizedMonth" />
+            <input type="hidden" name="SearchTerm" value="@Model.SearchTerm" />
+            <input type="hidden" name="MaxRows" value="@Model.MaxRows" />
+            <button type="submit" class="tax-apply-btn">
+                تطبيق الإعدادات على السجلات المحفوظة
+            </button>
+            <span>
+                سيتم تحديث الضريبة والضمان والصافي للسجلات التي لديها راتب إجمالي أكبر من صفر.
+            </span>
+        </form>
+    </section>
+
+    <section class="tax-filter-card">
+        <form method="get" class="tax-filter-form">
+            <div>
+                <label>الشهر</label>
+                <input type="month" name="PayrollMonth" value="@Model.NormalizedMonth" />
+            </div>
+
+            <div>
+                <label>بحث</label>
+                <input type="text"
+                       name="SearchTerm"
+                       value="@Model.SearchTerm"
+                       placeholder="كود، اسم، فرع، قسم، منصب..." />
+            </div>
+
+            <div>
+                <label>عدد السجلات</label>
+                <select name="MaxRows">
+                    <option value="50" selected="@(Model.MaxRows == 50)">50</option>
+                    <option value="100" selected="@(Model.MaxRows == 100)">100</option>
+                    <option value="250" selected="@(Model.MaxRows == 250)">250</option>
+                    <option value="500" selected="@(Model.MaxRows == 500)">500</option>
+                    <option value="1000" selected="@(Model.MaxRows == 1000)">1000</option>
+                </select>
+            </div>
+
+            <div class="tax-filter-actions">
+                <button type="submit" class="hrms-btn-primary">تطبيق</button>
+                <a asp-page="./TaxSocialSecurity" class="hrms-btn-secondary">مسح</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="tax-entry-card" id="recordForm">
+        <div class="tax-section-head">
+            <div>
+                <h2>إضافة / تعديل سجل</h2>
+                <p>
+                    أدخل الراتب الإجمالي ثم اضغط "احتساب حسب الإعدادات" لملء الضريبة والضمان تلقائياً. يمكنك تعديل أي رقم يدوياً قبل الحفظ.
+                </p>
+            </div>
+            <span class="tax-pill">Manual Record</span>
+        </div>
+
+        <form method="post" asp-page-handler="Save" class="tax-entry-form">
+            <input type="hidden" name="SearchTerm" value="@Model.SearchTerm" />
+            <input type="hidden" name="MaxRows" value="@Model.MaxRows" />
+
+            <input type="hidden" id="settingsTaxRate" value="@Model.Settings.TaxRate" />
+            <input type="hidden" id="settingsTaxExemption" value="@Model.Settings.TaxExemptionAmount" />
+            <input type="hidden" id="settingsEmployeeRate" value="@Model.Settings.EmployeeSocialSecurityRate" />
+            <input type="hidden" id="settingsCompanyRate" value="@Model.Settings.CompanySocialSecurityRate" />
+            <input type="hidden" id="settingsSocialCeiling" value="@Model.Settings.SocialSecurityCeiling" />
+            <input type="hidden" id="settingsRound" value="@(Model.Settings.RoundAmounts ? "1" : "0")" />
+
+            <div>
+                <label>الموظف</label>
+                <select asp-for="Input.EmployeeId" id="recordEmployeeId">
+                    <option value="">اختر الموظف</option>
+                    @foreach (var employee in Model.EmployeeOptions)
+                    {
+                        <option value="@employee.Id">@employee.DisplayName</option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label>الشهر</label>
+                <input type="month" asp-for="Input.PayrollMonth" id="recordPayrollMonth" value="@Model.NormalizedMonth" />
+            </div>
+
+            <div>
+                <label>الراتب الإجمالي</label>
+                <input type="number" step="0.01" min="0" asp-for="Input.GrossSalary" id="grossSalaryInput" />
+            </div>
+
+            <div>
+                <label>الخاضع للضريبة</label>
+                <input type="number" step="0.01" min="0" asp-for="Input.TaxableSalary" id="taxableSalaryInput" />
+            </div>
+
+            <div>
+                <label>مبلغ الضريبة</label>
+                <input type="number" step="0.01" min="0" asp-for="Input.TaxAmount" id="taxAmountInput" />
+            </div>
+
+            <div>
+                <label>ضمان الموظف</label>
+                <input type="number" step="0.01" min="0" asp-for="Input.SocialSecurityEmployeeAmount" id="employeeSocialInput" />
+            </div>
+
+            <div>
+                <label>ضمان الشركة</label>
+                <input type="number" step="0.01" min="0" asp-for="Input.SocialSecurityCompanyAmount" id="companySocialInput" />
+            </div>
+
+            <div>
+                <label>الصافي المتوقع</label>
+                <input type="number" step="0.01" id="netSalaryPreview" readonly />
+            </div>
+
+            <div class="tax-notes-field">
+                <label>ملاحظات</label>
+                <textarea asp-for="Input.Notes" id="notesInput" rows="2" placeholder="سبب التعديل أو أي ملاحظة..."></textarea>
+            </div>
+
+            <div class="tax-entry-actions">
+                <button type="button" class="hrms-btn-secondary" id="calculateBySettingsBtn">احتساب حسب الإعدادات</button>
+                <button type="button" class="hrms-btn-secondary" id="clearRecordBtn">تفريغ</button>
+                <button type="submit" class="hrms-btn-primary">حفظ السجل</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="tax-table-card">
+        <div class="tax-section-head">
+            <div>
+                <h2>جدول الضريبة والضمان</h2>
+                <p>
+                    استخدم زر "تعديل" لنقل بيانات الموظف إلى نموذج الإدخال، ثم عدّل واحفظ.
+                </p>
+            </div>
+            <span class="tax-pill">@Model.RowsWithGrossSalary سجل يحتوي راتب إجمالي</span>
+        </div>
+
+        <div class="tax-table-wrap">
+            <table class="tax-table">
+                <thead>
+                    <tr>
+                        <th>الكود</th>
+                        <th>الموظف</th>
+                        <th>الفرع</th>
+                        <th>القسم</th>
+                        <th>المنصب</th>
+                        <th>الراتب الإجمالي</th>
+                        <th>الخاضع للضريبة</th>
+                        <th>الضريبة</th>
+                        <th>ضمان الموظف</th>
+                        <th>ضمان الشركة</th>
+                        <th>الصافي</th>
+                        <th>الحالة</th>
+                        <th>الملاحظات</th>
+                        <th>آخر تحديث</th>
+                        <th>إجراء</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model.Rows.Any())
+                    {
+                        foreach (var row in Model.Rows)
+                        {
+                            <tr class="@(row.HasRecord ? "recorded-row" : "missing-row")">
+                                <td><span class="tax-code">@row.EmployeeNo</span></td>
+                                <td class="tax-employee-name">@row.FullName</td>
+                                <td>@(string.IsNullOrWhiteSpace(row.BranchName) ? "-" : row.BranchName)</td>
+                                <td>@(string.IsNullOrWhiteSpace(row.DepartmentName) ? "-" : row.DepartmentName)</td>
+                                <td>@(string.IsNullOrWhiteSpace(row.Position) ? "-" : row.Position)</td>
+                                <td>@row.GrossSalary.ToString("N0")</td>
+                                <td>@row.TaxableSalary.ToString("N0")</td>
+                                <td>@row.TaxAmount.ToString("N0")</td>
+                                <td>@row.SocialSecurityEmployeeAmount.ToString("N0")</td>
+                                <td>@row.SocialSecurityCompanyAmount.ToString("N0")</td>
+                                <td><strong>@row.NetSalary.ToString("N0")</strong></td>
+                                <td>
+                                    @if (!row.HasRecord)
+                                    {
+                                        <span class="tax-status missing">غير مدخل</span>
+                                    }
+                                    else if (!row.HasGrossSalary)
+                                    {
+                                        <span class="tax-status warning">بدون راتب</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="tax-status done">محفوظ</span>
+                                    }
+                                </td>
+                                <td class="tax-notes-cell">@(string.IsNullOrWhiteSpace(row.Notes) ? "-" : row.Notes)</td>
+                                <td>
+                                    @{
+                                        var lastDate = row.UpdatedAt ?? row.CreatedAt;
+                                    }
+                                    @(lastDate.HasValue ? lastDate.Value.ToString("yyyy-MM-dd HH:mm") : "-")
+                                </td>
+                                <td>
+                                    <div class="tax-row-actions">
+                                        <button type="button"
+                                                class="tax-edit-btn"
+                                                data-employee-id="@row.EmployeeId"
+                                                data-month="@Model.NormalizedMonth"
+                                                data-gross="@row.GrossSalary"
+                                                data-taxable="@row.TaxableSalary"
+                                                data-tax="@row.TaxAmount"
+                                                data-employee-social="@row.SocialSecurityEmployeeAmount"
+                                                data-company-social="@row.SocialSecurityCompanyAmount"
+                                                data-notes="@row.Notes">
+                                            تعديل
+                                        </button>
+
+                                        @if (row.HasRecord)
+                                        {
+                                            <form method="post"
+                                                  asp-page-handler="Delete"
+                                                  asp-route-id="@row.RecordId"
+                                                  onsubmit="return confirm('هل تريد حذف سجل الضريبة والضمان لهذا الموظف؟');">
+                                                <input type="hidden" name="PayrollMonth" value="@Model.NormalizedMonth" />
+                                                <input type="hidden" name="SearchTerm" value="@Model.SearchTerm" />
+                                                <input type="hidden" name="MaxRows" value="@Model.MaxRows" />
+                                                <button type="submit" class="tax-delete-btn">حذف</button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="15" class="tax-empty-cell">لا توجد بيانات مطابقة.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<script src="~/js/tax-social-security.js" asp-append-version="true"></script>

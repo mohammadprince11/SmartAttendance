@@ -1,0 +1,203 @@
+/* NEXORA Dashboard Distribution Layer */
+
+.distribution-summary-grid .distribution-card .dashboard-list {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+.distribution-panel-head {
+    align-items: flex-start !important;
+    margin-bottom: 10px !important;
+}
+
+.distribution-panel-head > div {
+    display: grid;
+    gap: 2px;
+}
+
+.distribution-panel-head p,
+.distribution-note {
+    margin: 0;
+    color: var(--sa-muted);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.distribution-details-link,
+.distribution-back-link,
+.distribution-filter-form a,
+.distribution-filter-form button {
+    border: 1px solid rgba(18, 217, 227, .26);
+    background: rgba(18, 217, 227, .08);
+    color: var(--nx-teal, #12d9e3);
+    border-radius: 999px;
+    padding: 8px 12px;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 1000;
+    white-space: nowrap;
+    transition: .18s ease;
+}
+
+.distribution-details-link:hover,
+.distribution-back-link:hover,
+.distribution-filter-form a:hover,
+.distribution-filter-form button:hover {
+    background: rgba(18, 217, 227, .14);
+    border-color: rgba(18, 217, 227, .42);
+    transform: translateY(-1px);
+}
+
+.dashboard-list-row.other-row {
+    border-style: dashed !important;
+    background: linear-gradient(135deg, rgba(215, 178, 109, .10), rgba(18, 217, 227, .05)), var(--sa-surface-2) !important;
+}
+
+.dashboard-list-row.other-row strong {
+    color: var(--nx-gold, #d7b26d) !important;
+}
+
+.distribution-page {
+    display: grid;
+    gap: 14px;
+}
+
+.distribution-header {
+    align-items: center;
+}
+
+.distribution-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.distribution-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--sa-border);
+    background: var(--sa-surface);
+    color: var(--sa-muted);
+    font-weight: 1000;
+    text-decoration: none;
+    transition: .18s ease;
+}
+
+.distribution-tab:hover,
+.distribution-tab.active {
+    color: #07121F;
+    border-color: rgba(18, 217, 227, .45);
+    background: linear-gradient(135deg, var(--nx-teal, #12d9e3), #7ceaf0);
+    box-shadow: 0 12px 30px rgba(18, 217, 227, .15);
+}
+
+.distribution-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(160px, 1fr));
+    gap: 10px;
+}
+
+.distribution-stat {
+    min-height: 96px !important;
+}
+
+.distribution-filter-panel {
+    padding: 12px !important;
+}
+
+.distribution-filter-form {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) auto auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.distribution-filter-form input[type="search"] {
+    min-height: 42px;
+    border-radius: 14px;
+    border: 1px solid var(--sa-border);
+    background: var(--sa-surface-2);
+    color: var(--sa-text);
+    padding: 8px 12px;
+    font-weight: 900;
+    outline: none;
+}
+
+.distribution-filter-form input[type="search"]:focus {
+    border-color: rgba(18, 217, 227, .42);
+    box-shadow: 0 0 0 3px rgba(18, 217, 227, .10);
+}
+
+.distribution-filter-form button {
+    cursor: pointer;
+    min-height: 42px;
+}
+
+.distribution-table-panel .dashboard-table-wrap {
+    border: 1px solid var(--sa-border);
+    border-radius: 16px;
+    overflow: auto;
+}
+
+.distribution-name-cell {
+    font-weight: 1000;
+}
+
+.distribution-bar {
+    width: 160px;
+    max-width: 100%;
+    height: 9px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, .16);
+    overflow: hidden;
+    margin-inline: auto;
+}
+
+.distribution-bar span {
+    display: block;
+    height: 100%;
+    min-width: 4px;
+    max-width: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--nx-teal, #12d9e3), var(--nx-gold, #d7b26d));
+}
+
+html[data-theme="dark"] .distribution-tab,
+html[data-theme="dark"] .distribution-filter-form input[type="search"] {
+    background: #162238 !important;
+    border-color: #30415f !important;
+}
+
+html[data-theme="dark"] .distribution-tab.active,
+html[data-theme="dark"] .distribution-tab:hover {
+    background: linear-gradient(135deg, var(--nx-teal, #12d9e3), #7ceaf0) !important;
+    color: #07121F !important;
+}
+
+@media (max-width: 1200px) {
+    .distribution-stat-grid {
+        grid-template-columns: repeat(2, minmax(160px, 1fr));
+    }
+}
+
+@media (max-width: 780px) {
+    .distribution-stat-grid,
+    .distribution-filter-form {
+        grid-template-columns: 1fr;
+    }
+
+    .distribution-back-link,
+    .distribution-filter-form a,
+    .distribution-filter-form button {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .distribution-panel-head {
+        display: grid !important;
+    }
+}

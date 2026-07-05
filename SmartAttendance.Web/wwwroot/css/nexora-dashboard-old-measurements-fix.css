@@ -1,0 +1,105 @@
+﻿/* NEXORA Dashboard Old Measurements Fix
+   Purpose: restore compact dashboard sizing while keeping lists scrollable. */
+
+.dashboard-page {
+    gap: 14px !important;
+}
+
+.dashboard-kpi-grid {
+    grid-template-columns: repeat(6, minmax(140px, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.dashboard-kpi-grid.compact {
+    grid-template-columns: repeat(4, minmax(140px, 1fr)) !important;
+}
+
+.dashboard-kpi,
+.dashboard-panel {
+    border-radius: 18px !important;
+    padding: 14px !important;
+}
+
+.dashboard-kpi {
+    min-height: 96px !important;
+}
+
+.dashboard-kpi span {
+    font-size: 12px !important;
+}
+
+.dashboard-kpi strong {
+    font-size: 28px !important;
+    margin-top: 8px !important;
+}
+
+.dashboard-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+    align-items: start !important;
+    grid-auto-rows: auto !important;
+}
+
+.dashboard-grid > .dashboard-panel {
+    align-self: start !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+.dashboard-panel h2,
+.dashboard-panel-head h2 {
+    font-size: 18px !important;
+    margin: 0 0 12px !important;
+    line-height: 1.35 !important;
+}
+
+.dashboard-list {
+    display: grid !important;
+    gap: 8px !important;
+    max-height: 158px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-inline-end: 2px !important;
+    scrollbar-width: thin;
+}
+
+.dashboard-list-row {
+    min-height: 42px !important;
+    height: auto !important;
+    padding: 8px 12px !important;
+    align-items: center !important;
+}
+
+.dashboard-list-row span,
+.dashboard-list-row strong {
+    line-height: 1.35 !important;
+}
+
+.nx-breakdown-toolbar {
+    display: none !important;
+}
+
+.nx-compact-breakdown-card {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+@media (max-width: 1500px) {
+    .dashboard-kpi-grid {
+        grid-template-columns: repeat(3, minmax(140px, 1fr)) !important;
+    }
+
+    .dashboard-kpi-grid.compact {
+        grid-template-columns: repeat(2, minmax(140px, 1fr)) !important;
+    }
+}
+
+@media (max-width: 1000px) {
+    .dashboard-grid,
+    .dashboard-kpi-grid,
+    .dashboard-kpi-grid.compact {
+        grid-template-columns: 1fr !important;
+    }
+}

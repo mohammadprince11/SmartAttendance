@@ -1,0 +1,151 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Employees.IndexModel
+
+@{
+    ViewData["Title"] = "شؤون الموظفين";
+
+    var employees = Model.Employees.ToList();
+    var totalEmployees = employees.Count;
+    var activeEmployees = employees.Count(x => x.IsActive);
+    var inactiveEmployees = employees.Count(x => !x.IsActive);
+    var newThisYear = employees.Count(x => x.HireDate.Year == DateTime.Today.Year);
+}
+
+<link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
+
+<div class="nxr-page">
+    <section class="nxr-topline">
+        <div class="nxr-title">
+            <div class="nxr-brand-mini">NEXORA HR PLATFORM</div>
+            <h1>شؤون الموظفين</h1>
+            <p>إدارة بيانات الموظفين ومتابعة أوضاعهم الوظيفية من مكان واحد.</p>
+        </div>
+
+        <div class="nxr-actions">
+            <a asp-page="./Create" class="nxr-btn primary">إضافة موظف</a>
+            <a asp-page="./Import" class="nxr-btn">استيراد Excel</a>
+            <a asp-page="./EndServiceList" class="nxr-btn">منتهية خدماتهم</a>
+        </div>
+    </section>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxr-success">@TempData["SuccessMessage"]</div>
+    }
+
+    <section class="nxr-kpis">
+        <div class="nxr-kpi">
+            <div class="nxr-kpi-icon">👥</div>
+            <span>إجمالي الموظفين</span>
+            <strong>@totalEmployees</strong>
+            <small>كل الفروع والأقسام</small>
+        </div>
+
+        <div class="nxr-kpi ok">
+            <div class="nxr-kpi-icon">✓</div>
+            <span>الموظفون النشطون</span>
+            <strong>@activeEmployees</strong>
+            <small>فعال داخل النظام</small>
+        </div>
+
+        <div class="nxr-kpi warn">
+            <div class="nxr-kpi-icon">↻</div>
+            <span>قيد المتابعة</span>
+            <strong>@inactiveEmployees</strong>
+            <small>غير فعال أو يحتاج مراجعة</small>
+        </div>
+
+        <div class="nxr-kpi">
+            <div class="nxr-kpi-icon">＋</div>
+            <span>تعيينات السنة</span>
+            <strong>@newThisYear</strong>
+            <small>تمت إضافتهم هذه السنة</small>
+        </div>
+    </section>
+
+    <section class="nxr-card">
+        <form method="get" class="nxr-filter">
+            <div class="nxr-field">
+                <label>البحث</label>
+                <input class="nxr-input" type="text" name="SearchTerm" value="@Model.SearchTerm" placeholder="ابحث بالكود أو الاسم أو الفرع أو القسم..." />
+            </div>
+
+            <div class="nxr-field">
+                <label>الحالة</label>
+                <select>
+                    <option>الكل</option>
+                    <option>نشط</option>
+                    <option>غير فعال</option>
+                </select>
+            </div>
+
+            <div class="nxr-field">
+                <label>طريقة العرض</label>
+                <select>
+                    <option>جدول تفصيلي</option>
+                    <option>مختصر</option>
+                </select>
+            </div>
+
+            <div class="nxr-actions">
+                <button type="submit" class="nxr-btn primary">بحث</button>
+                <a asp-page="./Index" class="nxr-btn">إعادة تعيين</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="nxr-card">
+        <div class="nxr-table-wrap">
+            <table class="nxr-table">
+                <thead>
+                    <tr>
+                        <th>كود الموظف</th>
+                        <th>اسم الموظف</th>
+                        <th>القسم</th>
+                        <th>المنصب</th>
+                        <th>الفرع</th>
+                        <th>الهاتف</th>
+                        <th>الإيميل</th>
+                        <th>تاريخ التعيين</th>
+                        <th>الحالة</th>
+                        <th>الإجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (employees.Any())
+                    {
+                        foreach (var employee in employees)
+                        {
+                            var initial = string.IsNullOrWhiteSpace(employee.FullName) ? "N" : employee.FullName.Trim()[0].ToString();
+                            <tr>
+                                <td><span class="nxr-code">@employee.EmployeeNo</span></td>
+                                <td>
+                                    <div class="nxr-name-cell">
+                                        <span class="nxr-avatar-sm">@initial</span>
+                                        <strong>@employee.FullName</strong>
+                                    </div>
+                                </td>
+                                <td>@(!string.IsNullOrWhiteSpace(employee.DepartmentName) ? employee.DepartmentName : "-")</td>
+                                <td>@(!string.IsNullOrWhiteSpace(employee.Position) ? employee.Position : "-")</td>
+                                <td>@(!string.IsNullOrWhiteSpace(employee.BranchName) ? employee.BranchName : "-")</td>
+                                <td>@(!string.IsNullOrWhiteSpace(employee.Phone) ? employee.Phone : "-")</td>
+                                <td>@(!string.IsNullOrWhiteSpace(employee.Email) ? employee.Email : "-")</td>
+                                <td>@employee.HireDate.ToString("yyyy-MM-dd")</td>
+                                <td><span class="nxr-status @(employee.IsActive ? "active" : "inactive")">@(employee.IsActive ? "نشط" : "غير فعال")</span></td>
+                                <td>
+                                    <a asp-page="./Profile" asp-route-id="@employee.Id" class="nxr-btn">ملف</a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="10" class="nxr-empty">لا توجد بيانات موظفين حالياً.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

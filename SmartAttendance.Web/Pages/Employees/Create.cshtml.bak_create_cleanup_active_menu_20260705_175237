@@ -1,0 +1,222 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Employees.CreateModel
+
+@{
+    ViewData["Title"] = "إضافة موظف جديد";
+}
+
+<link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-employee-create-documents-final.css" asp-append-version="true" />
+
+<div class="nxr-page">
+    <section class="nxr-topline">
+        <div class="nxr-title">
+            <div class="nxr-brand-mini">NEXORA HR PLATFORM</div>
+            <h1>إضافة موظف جديد</h1>
+            <p>إنشاء ملف موظف متكامل مع إمكانية اختيار ورفع المستمسكات الأولية أثناء الإنشاء.</p>
+        </div>
+
+        <div class="nxr-actions">
+            <a asp-page="./Index" class="nxr-btn">رجوع</a>
+            <button form="employee-create-form" type="submit" class="nxr-btn primary">إنشاء الموظف</button>
+        </div>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="nxr-error">@Model.ErrorMessage</div>
+    }
+
+    <div class="nxr-create-layout">
+        <aside class="nxr-card nxr-progress-card">
+            <div class="nxr-readiness-hero">
+                <span class="nxr-readiness-badge">Onboarding Readiness</span>
+                <h3>جاهزية البيانات</h3>
+                <p>مؤشر ذكي يساعدك على إكمال الحقول الأساسية قبل إنشاء الموظف.</p>
+            </div>
+
+            <div class="nxr-readiness-body">
+                <div class="nxr-readiness-score-row">
+                    <div class="nxr-progress-ring">
+                        <div>
+                            <strong data-nxr-readiness-percent>0%</strong>
+                            <span>جاهز</span>
+                        </div>
+                    </div>
+
+                    <div class="nxr-readiness-summary">
+                        <strong data-nxr-readiness-score>0 / 7</strong>
+                        <span data-nxr-readiness-summary>أكمل الحقول الرئيسية حتى يصبح ملف الموظف جاهزاً.</span>
+                    </div>
+                </div>
+
+                <div class="nxr-checklist">
+                    <div class="nxr-check"><span>البيانات الأساسية</span><strong>مطلوب</strong></div>
+                    <div class="nxr-check"><span>المعلومات الوظيفية</span><strong>مطلوب</strong></div>
+                    <div class="nxr-check"><span>بيانات الاتصال</span><strong>مهم</strong></div>
+                    <div class="nxr-check"><span>المستمسكات</span><strong>اختياري</strong></div>
+                </div>
+
+                <div class="nxr-readiness-tip">
+                    المستمسكات المختارة هنا تُحفظ مباشرة عند إنشاء الموظف وترتبط بملفه تلقائياً.
+                </div>
+            </div>
+        </aside>
+
+        <form id="employee-create-form" method="post" enctype="multipart/form-data" class="nxr-form">
+            <section class="nxr-card nxr-form-section">
+                <div class="nxr-section-title">
+                    <h2>البيانات الأساسية</h2>
+                    <span class="nxr-chip">Basic Data</span>
+                </div>
+
+                <div class="nxr-form-grid">
+                    <div class="nxr-field">
+                        <label asp-for="Employee.EmployeeNo">كود الموظف</label>
+                        <input asp-for="Employee.EmployeeNo" placeholder="مثال: EMP-250601" />
+                        <span asp-validation-for="Employee.EmployeeNo" class="text-danger"></span>
+                    </div>
+
+                    <div class="nxr-field wide">
+                        <label asp-for="Employee.FullName">الاسم الكامل</label>
+                        <input asp-for="Employee.FullName" placeholder="أدخل الاسم الكامل" />
+                        <span asp-validation-for="Employee.FullName" class="text-danger"></span>
+                    </div>
+
+                    <div class="nxr-field">
+                        <label asp-for="Employee.NationalId">رقم الهوية</label>
+                        <input asp-for="Employee.NationalId" placeholder="أدخل رقم الهوية" />
+                        <span asp-validation-for="Employee.NationalId" class="text-danger"></span>
+                    </div>
+
+                    <div class="nxr-field">
+                        <label asp-for="Employee.BirthDate">تاريخ الميلاد</label>
+                        <input asp-for="Employee.BirthDate" type="date" />
+                        <span asp-validation-for="Employee.BirthDate" class="text-danger"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="nxr-card nxr-form-section">
+                <div class="nxr-section-title">
+                    <h2>المعلومات الوظيفية</h2>
+                    <span class="nxr-chip">Job Information</span>
+                </div>
+
+                <div class="nxr-form-grid">
+                    <div class="nxr-field wide">
+                        <label asp-for="Employee.DepartmentId">القسم / الفرع</label>
+                        <select asp-for="Employee.DepartmentId">
+                            <option value="">اختر القسم</option>
+                            @foreach (var department in Model.Departments)
+                            {
+                                <option value="@department.Id">@department.Name - @department.BranchName</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Employee.DepartmentId" class="text-danger"></span>
+                    </div>
+
+                    <div class="nxr-field">
+                        <label asp-for="Employee.Position">المنصب</label>
+                        <input asp-for="Employee.Position" placeholder="مثال: محاسب، مشرف، كاشير..." />
+                        <span asp-validation-for="Employee.Position" class="text-danger"></span>
+                    </div>
+
+                    <div class="nxr-field">
+                        <label asp-for="Employee.HireDate">تاريخ التعيين</label>
+                        <input asp-for="Employee.HireDate" type="date" />
+                        <span asp-validation-for="Employee.HireDate" class="text-danger"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="nxr-card nxr-form-section">
+                <div class="nxr-section-title">
+                    <h2>بيانات الاتصال</h2>
+                    <span class="nxr-chip">Contact</span>
+                </div>
+
+                <div class="nxr-form-grid">
+                    <div class="nxr-field">
+                        <label asp-for="Employee.Phone">الهاتف</label>
+                        <input asp-for="Employee.Phone" placeholder="07xxxxxxxxx" />
+                        <span asp-validation-for="Employee.Phone" class="text-danger"></span>
+                    </div>
+
+                    <div class="nxr-field">
+                        <label asp-for="Employee.Email">البريد الإلكتروني</label>
+                        <input asp-for="Employee.Email" placeholder="name@example.com" />
+                        <span asp-validation-for="Employee.Email" class="text-danger"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="nxr-card nxr-form-section nxr-documents-section">
+                <div class="nxr-section-title">
+                    <h2>المستمسكات الأولية</h2>
+                    <span class="nxr-chip gold">تحفظ عند الإنشاء</span>
+                </div>
+
+                <p class="nxr-document-note">
+                    اختر نوع المستمسك ثم اختر الملف. الملفات المدعومة: PDF, JPG, PNG, Word, Excel وبحد أقصى 10MB لكل ملف.
+                </p>
+
+                <div class="nxr-selected-documents" data-nxr-documents-preview>
+                    لم يتم اختيار أي مستمسك بعد.
+                </div>
+
+                <div class="nxr-actions" style="margin-top:14px;">
+                    <button type="button" class="nxr-btn nxr-documents-modal-open" data-nxr-documents-open>
+                        اختيار المستمسكات والملفات
+                    </button>
+                </div>
+            </section>
+
+            <div id="nxrDocumentsModal" class="nxr-documents-modal" data-nxr-documents-modal aria-hidden="true">
+                <div class="nxr-documents-modal-panel" role="dialog" aria-modal="true" aria-label="المستمسكات الأولية">
+                    <div class="nxr-documents-modal-head">
+                        <div>
+                            <span class="nxr-force-modal-badge">NEXORA Employee Documents</span>
+                            <h2>اختيار المستمسكات الأولية</h2>
+                            <p>كل صف يحتوي نوع المستمسك، حالة المطلوب، واختيار الملف الذي سيُحفظ عند إنشاء الموظف.</p>
+                        </div>
+
+                        <button type="button" class="nxr-documents-modal-close" data-nxr-documents-close aria-label="إغلاق">×</button>
+                    </div>
+
+                    <div class="nxr-documents-modal-body">
+                        <div class="nxr-force-modal-note">
+                            <strong>ملاحظة:</strong>
+                            عند الضغط على إنشاء الموظف سيتم رفع الملفات وربطها بملف الموظف الجديد تلقائياً.
+                        </div>
+
+                        <div class="nxr-document-summary">
+                            عدد المستمسكات المحددة: <strong data-nxr-documents-count>0</strong>
+                        </div>
+
+                        <div class="nxr-documents-list-modal" data-nxr-documents-list></div>
+
+                        <button type="button" class="nxr-force-btn gold nxr-document-add" data-nxr-document-add>
+                            + إضافة مستمسك
+                        </button>
+                    </div>
+
+                    <div class="nxr-documents-modal-actions">
+                        <button type="button" class="nxr-force-btn gold" data-nxr-document-add>+ إضافة مستمسك آخر</button>
+                        <button type="button" class="nxr-force-btn" data-nxr-documents-close>تم</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nxr-actions">
+                <button type="submit" class="nxr-btn primary">إنشاء الموظف</button>
+                <a asp-page="./Index" class="nxr-btn">إلغاء</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/nexora-employee-create-documents-final.js" asp-append-version="true"></script>
+}

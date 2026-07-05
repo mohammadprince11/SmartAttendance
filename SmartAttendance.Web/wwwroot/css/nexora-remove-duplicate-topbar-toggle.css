@@ -1,0 +1,45 @@
+/* NEXORA - Remove duplicate page-side collapse/toggle button */
+
+/*
+   يوجد زر تقليص صحيح داخل كارد NEXORA في السايدبار.
+   هذا الملف يخفي الزر الثاني الموجود قرب عنوان الصفحة مثل:
+   إضافة موظف جديد / ملف الموظف الشامل / باقي الصفحات.
+*/
+
+/* Hide duplicate hamburger/toggle in topbar/page title area */
+.nexora-topbar .nexora-icon-button[data-sidebar-toggle],
+.nexora-topbar button[data-sidebar-toggle],
+.nexora-topbar [data-sidebar-toggle],
+.nexora-page-title-wrap [data-sidebar-toggle],
+.nexora-page-title [data-sidebar-toggle],
+.nexora-topbar-right [data-sidebar-toggle],
+.nexora-topbar-left [data-sidebar-toggle] {
+    display: none !important;
+}
+
+/* Hide common icon-only duplicate button near page title */
+.nexora-topbar button[aria-label*="sidebar" i],
+.nexora-topbar button[aria-label*="menu" i],
+.nexora-topbar .nexora-menu-toggle,
+.nexora-topbar .sidebar-toggle,
+.nexora-topbar .navbar-toggler {
+    display: none !important;
+}
+
+/* Keep the sidebar brand toggle visible */
+.nexora-sidebar .nexora-icon-button[data-sidebar-toggle],
+.nexora-sidebar button[data-sidebar-toggle],
+.nexora-sidebar [data-sidebar-toggle],
+.nexora-brand-card [data-sidebar-toggle] {
+    display: inline-flex !important;
+}
+
+/* If topbar title had extra spacing because of removed button */
+.nexora-topbar {
+    gap: 12px !important;
+}
+
+.nexora-topbar-left,
+.nexora-topbar-right {
+    gap: 8px !important;
+}

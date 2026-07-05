@@ -2,79 +2,210 @@
 @model SmartAttendance.Web.Pages.Employees.IndexModel
 
 @{
-    ViewData["Title"] = "الموظفون";
+    ViewData["Title"] = "قائمة الموظفين";
+
+    var employees = Model.Employees;
+    var hasFilters = !string.IsNullOrWhiteSpace(Model.SearchTerm)
+        || !string.IsNullOrWhiteSpace(Model.BranchFilter)
+        || !string.IsNullOrWhiteSpace(Model.DepartmentFilter)
+        || !string.IsNullOrWhiteSpace(Model.StatusFilter)
+        || !string.IsNullOrWhiteSpace(Model.SortBy);
 }
 
-<link rel="stylesheet" href="~/css/employees-nexora-clean.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-employees-index-pro.css" asp-append-version="true" />
 
-<div class="nx-employees-page">
-    <div class="nx-page-head">
-        <div>
-            <div class="nx-eyebrow">NEXORA HR Affairs</div>
-            <h1>الموظفون</h1>
-            <p>إدارة بيانات الموظفين والوصول السريع إلى ملف الموظف الشامل.</p>
+<div class="nxr-page nxr-emp-page">
+    <section class="nxr-topline nxr-emp-hero">
+        <div class="nxr-title">
+            <div class="nxr-brand-mini">NEXORA HR PLATFORM</div>
+            <h1>قائمة الموظفين</h1>
+            <p>بحث وفلترة الموظفين حسب الفرع والقسم والحالة مع إبقاء الإجراء الأساسي داخل القائمة: ملف الموظف.</p>
         </div>
 
-        <div class="nx-head-actions">
-            <a asp-page="./EndServiceList" class="hrms-btn-secondary">منتهية خدماتهم</a>
-            <a asp-page="./Import" class="hrms-btn-secondary">استيراد Excel</a>
-            <a asp-page="./Create" class="hrms-btn-primary">إضافة موظف +</a>
+        <div class="nxr-actions nxr-emp-actions">
+            <a asp-page="./Create" class="nxr-btn primary">إضافة موظف</a>
+            <a asp-page="/EmployeeDocuments/Index" class="nxr-btn">مستندات الموظفين</a>
         </div>
-    </div>
+    </section>
 
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="nx-alert success">@TempData["SuccessMessage"]</div>
+        <div class="nxr-success">@TempData["SuccessMessage"]</div>
     }
 
-    <div class="nx-card">
-        <form method="get" class="nx-search-form">
-            <div class="nx-search-box">
-                <span>بحث</span>
-                <input type="text" name="SearchTerm" value="@Model.SearchTerm" placeholder="ابحث بالكود، الاسم، القسم، المنصب، الفرع، الهاتف أو الإيميل..." />
+    <section class="nxr-emp-kpis">
+        <div class="nxr-emp-kpi">
+            <span>إجمالي الموظفين</span>
+            <strong>@Model.TotalEmployees</strong>
+            <small>كل السجلات</small>
+        </div>
+        <div class="nxr-emp-kpi ok">
+            <span>فعال</span>
+            <strong>@Model.ActiveEmployees</strong>
+            <small>موظفون نشطون</small>
+        </div>
+        <div class="nxr-emp-kpi warn">
+            <span>غير فعال</span>
+            <strong>@Model.InactiveEmployees</strong>
+            <small>قيد المراجعة</small>
+        </div>
+        <div class="nxr-emp-kpi info">
+            <span>تعيينات السنة</span>
+            <strong>@Model.NewThisYear</strong>
+            <small>@DateTime.Today.Year</small>
+        </div>
+        <div class="nxr-emp-kpi filter">
+            <span>النتائج الحالية</span>
+            <strong>@Model.FilteredEmployees</strong>
+            <small>حسب البحث والفلترة</small>
+        </div>
+    </section>
+
+    <section class="nxr-card nxr-emp-filter-card">
+        <form method="get" class="nxr-emp-filter">
+            <div class="nxr-emp-field search">
+                <label>بحث سريع</label>
+                <input class="nxr-input" type="text" name="SearchTerm" value="@Model.SearchTerm" placeholder="الكود، الاسم، الهاتف، المنصب، الفرع أو القسم..." />
             </div>
-            <div class="nx-search-actions">
-                <button type="submit" class="hrms-btn-primary">بحث</button>
-                <a asp-page="./Index" class="hrms-btn-secondary">مسح</a>
+
+            <div class="nxr-emp-field">
+                <label>الفرع</label>
+                <select name="BranchFilter" class="nxr-input">
+                    <option value="" selected="@(string.IsNullOrWhiteSpace(Model.BranchFilter) ? "selected" : null)">كل الفروع</option>
+                    @foreach (var branch in Model.BranchOptions)
+                    {
+                        <option value="@branch" selected="@(string.Equals(Model.BranchFilter, branch, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@branch</option>
+                    }
+                </select>
+            </div>
+
+            <div class="nxr-emp-field">
+                <label>القسم</label>
+                <select name="DepartmentFilter" class="nxr-input">
+                    <option value="" selected="@(string.IsNullOrWhiteSpace(Model.DepartmentFilter) ? "selected" : null)">كل الأقسام</option>
+                    @foreach (var department in Model.DepartmentOptions)
+                    {
+                        <option value="@department" selected="@(string.Equals(Model.DepartmentFilter, department, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@department</option>
+                    }
+                </select>
+            </div>
+
+            <div class="nxr-emp-field">
+                <label>الحالة</label>
+                <select name="StatusFilter" class="nxr-input">
+                    <option value="" selected="@(string.IsNullOrWhiteSpace(Model.StatusFilter) ? "selected" : null)">كل الحالات</option>
+                    <option value="active" selected="@(string.Equals(Model.StatusFilter, "active", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">فعال</option>
+                    <option value="inactive" selected="@(string.Equals(Model.StatusFilter, "inactive", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">غير فعال</option>
+                </select>
+            </div>
+
+            <div class="nxr-emp-field">
+                <label>ترتيب</label>
+                <select name="SortBy" class="nxr-input">
+                    <option value="name" selected="@((Model.SortBy ?? "name").Equals("name", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الاسم</option>
+                    <option value="code" selected="@(string.Equals(Model.SortBy, "code", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الكود</option>
+                    <option value="branch" selected="@(string.Equals(Model.SortBy, "branch", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الفرع</option>
+                    <option value="department" selected="@(string.Equals(Model.SortBy, "department", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب القسم</option>
+                    <option value="hireDate" selected="@(string.Equals(Model.SortBy, "hireDate", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">الأحدث تعييناً</option>
+                    <option value="status" selected="@(string.Equals(Model.SortBy, "status", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الحالة</option>
+                </select>
+            </div>
+
+            <div class="nxr-emp-filter-actions">
+                <button type="submit" class="nxr-btn primary">تطبيق</button>
+                <a asp-page="./Index" class="nxr-btn">إعادة تعيين</a>
             </div>
         </form>
+    </section>
 
-        <div class="nx-table-toolbar"><div class="nx-count">عدد النتائج: <strong>@Model.Employees.Count()</strong></div></div>
+    <section class="nxr-card nxr-emp-list-card">
+        <div class="nxr-emp-list-head">
+            <div>
+                <h2>سجل الموظفين</h2>
+                <p>
+                    @if (hasFilters)
+                    {
+                        <span>تم عرض @Model.FilteredEmployees من أصل @Model.TotalEmployees موظف.</span>
+                    }
+                    else
+                    {
+                        <span>عرض كل الموظفين المسجلين في النظام.</span>
+                    }
+                </p>
+            </div>
+            <span class="nxr-emp-count">@Model.FilteredEmployees نتيجة</span>
+        </div>
 
-        <div class="nx-table-wrap">
-            <table class="nx-employees-table">
+        <div class="nxr-table-wrap nxr-emp-table-wrap">
+            <table class="nxr-table nxr-emp-table">
                 <thead>
                     <tr>
-                        <th class="col-code">كود الموظف</th><th class="col-name">اسم الموظف</th><th>القسم</th><th>المنصب</th><th>الفرع</th><th>الهاتف</th><th>الإيميل</th><th>تاريخ التعيين</th><th>الحالة</th><th class="col-actions">الإجراءات</th>
+                        <th>الموظف</th>
+                        <th>الكود</th>
+                        <th>الفرع</th>
+                        <th>القسم</th>
+                        <th>المنصب</th>
+                        <th>تاريخ التعيين</th>
+                        <th>الحالة</th>
+                        <th>الإجراء</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model.Employees.Any())
+                    @if (employees.Any())
                     {
-                        foreach (var employee in Model.Employees)
+                        foreach (var employee in employees)
                         {
+                            var initial = string.IsNullOrWhiteSpace(employee.FullName) ? "N" : employee.FullName.Trim()[0].ToString();
                             <tr>
-                                <td class="col-code"><span class="nx-code">@employee.EmployeeNo</span></td>
-                                <td class="col-name"><div class="nx-employee-name">@employee.FullName</div></td>
-                                <td>@(!string.IsNullOrWhiteSpace(employee.DepartmentName) ? employee.DepartmentName : "-")</td>
+                                <td class="nxr-emp-person-cell">
+                                    <div class="nxr-emp-person">
+                                        <span class="nxr-avatar-sm">@initial</span>
+                                        <div>
+                                            <strong>@employee.FullName</strong>
+                                            <small>
+                                                @if (!string.IsNullOrWhiteSpace(employee.Phone))
+                                                {
+                                                    <span>@employee.Phone</span>
+                                                }
+                                                else if (!string.IsNullOrWhiteSpace(employee.Email))
+                                                {
+                                                    <span>@employee.Email</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>لا توجد بيانات تواصل</span>
+                                                }
+                                            </small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="nxr-code">@employee.EmployeeNo</span></td>
+                                <td>@(!string.IsNullOrWhiteSpace(employee.BranchName) ? employee.BranchName : "غير محدد")</td>
+                                <td>@(!string.IsNullOrWhiteSpace(employee.DepartmentName) ? employee.DepartmentName : "غير محدد")</td>
                                 <td>@(!string.IsNullOrWhiteSpace(employee.Position) ? employee.Position : "-")</td>
-                                <td>@(!string.IsNullOrWhiteSpace(employee.BranchName) ? employee.BranchName : "-")</td>
-                                <td>@(!string.IsNullOrWhiteSpace(employee.Phone) ? employee.Phone : "-")</td>
-                                <td>@(!string.IsNullOrWhiteSpace(employee.Email) ? employee.Email : "-")</td>
                                 <td>@employee.HireDate.ToString("yyyy-MM-dd")</td>
-                                <td><span class="nx-status @(employee.IsActive ? "active" : "inactive")">@(employee.IsActive ? "فعال" : "غير فعال")</span></td>
-                                <td class="col-actions"><div class="nx-row-actions"><a asp-page="./Profile" asp-route-id="@employee.Id" class="nx-action primary">ملف</a></div></td>
+                                <td>
+                                    <span class="nxr-status @(employee.IsActive ? "active" : "inactive")">
+                                        @(employee.IsActive ? "فعال" : "غير فعال")
+                                    </span>
+                                </td>
+                                <td>
+                                    <a asp-page="./Profile" asp-route-id="@employee.Id" class="nxr-btn nxr-emp-profile-btn">ملف</a>
+                                </td>
                             </tr>
                         }
                     }
                     else
                     {
-                        <tr><td colspan="10" class="nx-empty">لا توجد بيانات موظفين حالياً.</td></tr>
+                        <tr>
+                            <td colspan="8" class="nxr-empty nxr-emp-empty">
+                                لا توجد نتائج مطابقة للبحث أو الفلترة الحالية.
+                            </td>
+                        </tr>
                     }
                 </tbody>
             </table>
         </div>
-    </div>
+    </section>
 </div>
-
-

@@ -1,0 +1,79 @@
+/* NEXORA Force Expanded Sidebar Fix
+   Fixes collapsed sidebar showing only dots/icons.
+*/
+
+/* Always keep sidebar full width */
+html[data-sidebar="collapsed"] .nexora-shell,
+.nexora-shell {
+    grid-template-columns: minmax(0, 1fr) var(--nxr-sidebar, 286px) !important;
+}
+
+/* Always show sidebar text */
+html[data-sidebar="collapsed"] .nexora-brand-copy,
+html[data-sidebar="collapsed"] .nexora-nav-text,
+html[data-sidebar="collapsed"] .nexora-nav-link span:not(.nexora-nav-dot),
+html[data-sidebar="collapsed"] .nexora-nav-group-links,
+html[data-sidebar="collapsed"] .nexora-chevron,
+.nexora-brand-copy,
+.nexora-nav-text,
+.nexora-nav-link span:not(.nexora-nav-dot),
+.nexora-nav-group-links,
+.nexora-chevron {
+    display: inherit !important;
+}
+
+/* Force proper display types */
+.nexora-brand-copy {
+    display: block !important;
+}
+
+.nexora-nav-text,
+.nexora-nav-link span:not(.nexora-nav-dot) {
+    display: inline !important;
+}
+
+.nexora-nav-group-links {
+    display: grid !important;
+}
+
+.nexora-chevron {
+    display: inline-block !important;
+}
+
+/* Restore alignment */
+html[data-sidebar="collapsed"] .nexora-brand-card,
+html[data-sidebar="collapsed"] .nexora-nav-group,
+html[data-sidebar="collapsed"] .nexora-nav-link,
+html[data-sidebar="collapsed"] .nexora-nav-group > summary,
+.nexora-brand-card,
+.nexora-nav-link,
+.nexora-nav-group > summary {
+    justify-content: flex-start !important;
+}
+
+/* Keep logo normal */
+html[data-sidebar="collapsed"] .nexora-brand-symbol,
+.nexora-brand-symbol {
+    width: 44px !important;
+    height: 44px !important;
+}
+
+/* Hide only duplicate topbar toggle, keep sidebar brand toggle if needed */
+.nexora-topbar [data-sidebar-toggle],
+.nexora-topbar .nexora-menu-toggle,
+.nexora-topbar .sidebar-toggle,
+.nexora-topbar .navbar-toggler {
+    display: none !important;
+}
+
+/* Disable visual collapse caused by body classes */
+body.sidebar-collapsed .nexora-brand-copy,
+body.sidebar-collapsed .nexora-nav-text,
+body.sidebar-collapsed .nexora-nav-link span:not(.nexora-nav-dot),
+body.sidebar-collapsed .nexora-nav-group-links {
+    display: inherit !important;
+}
+
+body.sidebar-collapsed .nexora-shell {
+    grid-template-columns: minmax(0, 1fr) var(--nxr-sidebar, 286px) !important;
+}

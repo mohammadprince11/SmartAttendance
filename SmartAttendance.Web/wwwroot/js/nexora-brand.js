@@ -4,19 +4,26 @@
         document.documentElement.classList.add("sa-ready");
     }
 
-    function toggleSidebar() {
-        var isSmall = window.matchMedia("(max-width: 980px)").matches;
-
-        if (isSmall) {
-            var open = document.documentElement.getAttribute("data-sidebar-mobile") === "open";
-            document.documentElement.setAttribute("data-sidebar-mobile", open ? "closed" : "open");
-            return;
+    function toggleSidebar(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
         }
 
-        var current = document.documentElement.getAttribute("data-sidebar") || "expanded";
-        var next = current === "collapsed" ? "expanded" : "collapsed";
-        document.documentElement.setAttribute("data-sidebar", next);
-        localStorage.setItem("SmartAttendance.Sidebar", next);
+        document.documentElement.setAttribute("data-sidebar", "expanded");
+        document.documentElement.setAttribute("data-sidebar-mobile", "open");
+
+        try {
+            localStorage.removeItem("SmartAttendance.Sidebar");
+            localStorage.removeItem("NEXORA.Sidebar.Final.Working");
+            localStorage.removeItem("NEXORA.SidebarMode.Final");
+            localStorage.removeItem("NEXORA.V2.Sidebar");
+            localStorage.removeItem("NEXORA.Sidebar");
+            localStorage.removeItem("SidebarCollapsed");
+            localStorage.removeItem("sidebar");
+        } catch (_) { }
+
+        return false;
     }
 
     function bindSidebar() {
@@ -33,7 +40,7 @@
             if (!sidebar || toggle) return;
 
             if (!sidebar.contains(event.target)) {
-                document.documentElement.setAttribute("data-sidebar-mobile", "closed");
+                document.documentElement.setAttribute("data-sidebar-mobile", "open");
             }
         });
     }

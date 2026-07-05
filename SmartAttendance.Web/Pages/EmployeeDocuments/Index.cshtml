@@ -1,96 +1,154 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.EmployeeDocuments.IndexModel
 
 @{
-    ViewData["Title"] = "Employee Documents";
+    ViewData["Title"] = "مستندات الموظفين";
 }
 
-<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-v3-hotfix.css" asp-append-version="true" />
 
-<div class="hrms-page">
-    <div class="page-header">
-        <div>
+<div class="nxr-page">
+    <section class="nxr-topline">
+        <div class="nxr-title">
+            <div class="nxr-brand-mini">NEXORA Documents Center</div>
             <h1>مستندات الموظفين</h1>
-            <p>رفع وحفظ مستندات الموظف مثل الهوية والعقد والشهادات.</p>
+            <p>رفع وحفظ مستندات الموظف مثل الهوية، العقد، الجواز، الشهادات، والبطاقة الصحية.</p>
         </div>
-    </div>
+
+        <div class="nxr-actions">
+            @if (Model.EmployeeId > 0)
+            {
+                <a asp-page="/Employees/Profile" asp-route-id="@Model.EmployeeId" class="nxr-btn primary">رجوع لملف الموظف</a>
+            }
+            <a asp-page="/Employees/Index" class="nxr-btn">الموظفون</a>
+        </div>
+    </section>
 
     @if (!string.IsNullOrWhiteSpace(Model.Message))
     {
-        <div class="hrms-alert success">@Model.Message</div>
+        <div class="@(Model.IsError ? "nxr-error" : "nxr-success")">@Model.Message</div>
     }
 
-    <form method="post" asp-page-handler="Upload" enctype="multipart/form-data" class="hrms-form-card">
-        <div class="hrms-grid-4">
-            <div class="hrms-field">
-                <label>الموظف</label>
-                <select asp-for="Input.EmployeeId" required>
-                    <option value="">-- اختر الموظف --</option>
-                    @foreach (var employee in Model.Employees)
-                    {
-                        <option value="@employee.Id">@employee.Text</option>
-                    }
-                </select>
-            </div>
-            <div class="hrms-field">
-                <label>نوع المستند</label>
-                <select asp-for="Input.DocumentType">
-                    <option>ID</option>
-                    <option>Contract</option>
-                    <option>Passport</option>
-                    <option>Health Card</option>
-                    <option>Certificate</option>
-                    <option>Memo</option>
-                </select>
-            </div>
-            <div class="hrms-field">
-                <label>تاريخ الانتهاء</label>
-                <input asp-for="Input.ExpiryDate" type="date" />
-            </div>
-            <div class="hrms-field">
-                <label>الملف</label>
-                <input asp-for="Input.File" type="file" />
-            </div>
-            <div class="hrms-field" style="grid-column:span 4;">
-                <label>ملاحظات</label>
-                <input asp-for="Input.Notes" />
-            </div>
-        </div>
+    @if (Model.EmployeeId > 0)
+    {
+        <div class="nxr-success">تم تحديد الموظف تلقائياً من ملف الموظف. اختر نوع المستند والملف ثم اضغط رفع المستند.</div>
+    }
 
-        <div class="hrms-actions" style="margin-top:14px;">
-            <button type="submit" class="hrms-btn-primary">رفع المستند</button>
-        </div>
-    </form>
+    <section class="nxr-document-layout">
+        <aside class="nxr-card nxr-upload-panel">
+            <div class="nxr-panel-title">
+                <div>
+                    <h3>رفع مستند جديد</h3>
+                    <p>اختر الموظف ونوع المستند ثم ارفع الملف.</p>
+                </div>
+            </div>
 
-    <div class="hrms-table-card">
-        <div class="hrms-table-wrap">
-            <table class="hrms-table">
-                <thead>
-                    <tr>
-                        <th>رقم الموظف</th>
-                        <th class="text-start">الاسم</th>
-                        <th>النوع</th>
-                        <th class="text-start">الملف</th>
-                        <th>انتهاء</th>
-                        <th>رفع</th>
-                        <th>فتح</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var doc in Model.Documents)
-                    {
+            <form method="post" asp-page-handler="Upload" enctype="multipart/form-data" class="nxr-form">
+                @Html.AntiForgeryToken()
+
+                <div class="nxr-field">
+                    <label>الموظف</label>
+                    <select asp-for="Input.EmployeeId" required>
+                        <option value="">اختر الموظف</option>
+                        @foreach (var employee in Model.Employees)
+                        {
+                            <option value="@employee.Id">@employee.Text</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="nxr-field">
+                    <label>نوع المستند</label>
+                    <select asp-for="Input.DocumentType" required>
+                        <option value="ID">هوية / بطاقة وطنية</option>
+                        <option value="Contract">عقد عمل</option>
+                        <option value="Passport">جواز سفر</option>
+                        <option value="Health Card">بطاقة صحية</option>
+                        <option value="Certificate">شهادة / مؤهل</option>
+                        <option value="Memo">كتاب / مذكرة</option>
+                        <option value="Other">أخرى</option>
+                    </select>
+                </div>
+
+                <div class="nxr-field">
+                    <label>تاريخ الانتهاء</label>
+                    <input asp-for="Input.ExpiryDate" type="date" />
+                </div>
+
+                                <div class="nxr-upload-zone-final">
+                    <label class="nxr-file-picker" for="Input_File">
+                        <span class="nxr-file-picker-inner">
+                            <span class="nxr-file-icon">⇧</span>
+                            <strong>اختر الملف</strong>
+                            <span>PDF, JPG, PNG, DOC, DOCX, XLS, XLSX — الحد الأعلى 10MB</span>
+                        </span>
+                    </label>
+                    <input asp-for="Input.File" id="Input_File" type="file" class="nxr-file-input" required />
+                    <div class="nxr-file-name empty">لم يتم اختيار ملف</div>
+                </div>
+
+                <div class="nxr-field">
+                    <label>ملاحظات</label>
+                    <textarea asp-for="Input.Notes" placeholder="ملاحظات اختيارية عن المستند"></textarea>
+                </div>
+
+                <div class="nxr-actions">
+                    <button type="submit" class="nxr-btn primary">رفع المستند</button>
+                    <a asp-page="./Index" class="nxr-btn">مسح</a>
+                </div>
+            </form>
+        </aside>
+
+        <section class="nxr-card">
+            <div class="nxr-table-wrap">
+                <table class="nxr-table">
+                    <thead>
                         <tr>
-                            <td>@doc.EmployeeNo</td>
-                            <td class="text-start">@doc.EmployeeName</td>
-                            <td>@doc.DocumentType</td>
-                            <td class="text-start">@doc.FileName</td>
-                            <td>@doc.ExpiryDate?.ToString("yyyy-MM-dd")</td>
-                            <td>@doc.UploadedAt?.ToString("yyyy-MM-dd HH:mm")</td>
-                            <td><a href="@doc.StoredPath" target="_blank" class="hrms-btn-secondary">فتح</a></td>
+                            <th>كود الموظف</th>
+                            <th>اسم الموظف</th>
+                            <th>نوع المستند</th>
+                            <th>اسم الملف</th>
+                            <th>تاريخ الانتهاء</th>
+                            <th>تاريخ الرفع</th>
+                            <th>فتح</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
+                    </thead>
+                    <tbody>
+                        @if (Model.Documents.Any())
+                        {
+                            foreach (var doc in Model.Documents)
+                            {
+                                <tr>
+                                    <td><span class="nxr-code">@doc.EmployeeNo</span></td>
+                                    <td class="nxr-name">@doc.EmployeeName</td>
+                                    <td><span class="nxr-status info nxr-doc-type">@doc.DocumentType</span></td>
+                                    <td class="ltr">@doc.FileName</td>
+                                    <td>@doc.ExpiryDate?.ToString("yyyy-MM-dd")</td>
+                                    <td>@doc.UploadedAt?.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(doc.StoredPath))
+                                        {
+                                            <a href="@doc.StoredPath" target="_blank" class="nxr-btn">فتح</a>
+                                        }
+                                        else
+                                        {
+                                            <span>-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="nxr-empty">لا توجد مستندات مرفوعة حالياً.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </section>
 </div>
+

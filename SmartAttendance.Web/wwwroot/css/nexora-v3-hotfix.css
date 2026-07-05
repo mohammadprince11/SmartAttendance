@@ -1,0 +1,140 @@
+/* NEXORA V3 Hotfix: RTL/LTR + profile cleanup + documents page */
+
+/* Fix physical layout: keep navigation on the right, content on the left */
+.nexora-shell {
+    direction: ltr !important;
+    grid-template-columns: minmax(0, 1fr) var(--nxr-sidebar, 286px) !important;
+}
+
+.nexora-main {
+    direction: rtl !important;
+    grid-column: 1 !important;
+}
+
+.nexora-sidebar {
+    direction: rtl !important;
+    grid-column: 2 !important;
+}
+
+/* Arabic reads RTL; English/code/email/URLs read LTR */
+.nexora-content,
+.nxr-page,
+.nxr-card,
+.nxr-panel,
+.nxr-table,
+.nxr-form,
+.nxr-filter {
+    direction: rtl !important;
+    unicode-bidi: isolate !important;
+}
+
+.nexora-wordmark,
+.nexora-tagline,
+.nxr-brand-mini,
+.nxr-code,
+.nxr-chip,
+.nxr-kpi small,
+.nxr-field input[type="email"],
+.nxr-field input[name*="Email"],
+input[type="email"],
+input[type="url"],
+.ltr,
+[data-ltr] {
+    direction: ltr !important;
+    unicode-bidi: isolate !important;
+}
+
+.nxr-field input,
+.nxr-field select,
+.nxr-field textarea,
+.nxr-form input,
+.nxr-form select,
+.nxr-form textarea {
+    text-align: right !important;
+}
+
+.nxr-field input[type="email"],
+input[type="email"] {
+    text-align: left !important;
+}
+
+.nxr-name-cell {
+    justify-content: flex-start !important;
+    text-align: right !important;
+    direction: rtl !important;
+}
+
+/* Remove visual space of legacy profile tab bar if it remains from cache */
+.nxr-tabs,
+.employee360v2-tabs {
+    display: none !important;
+}
+
+/* Document upload final style */
+.nxr-document-layout {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: 16px;
+}
+
+.nxr-upload-panel {
+    padding: 18px;
+}
+
+.nxr-upload-zone-final {
+    min-height: 180px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    border: 1px dashed rgba(18,217,227,.34);
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 50% 0%, rgba(18,217,227,.14), transparent 40%),
+        rgba(18,217,227,.045);
+    color: var(--nxr-muted, #9FB0BE);
+    font-weight: 850;
+}
+
+.nxr-upload-zone-final strong {
+    display: block;
+    color: var(--nxr-text, #E6EAEE);
+    font-size: 18px;
+    font-weight: 1000;
+    margin-bottom: 8px;
+}
+
+.nxr-upload-zone-final input[type=file] {
+    margin-top: 14px;
+    width: 100%;
+}
+
+.nxr-doc-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.nxr-doc-type {
+    min-width: 112px;
+}
+
+.nxr-document-note {
+    color: var(--nxr-muted, #9FB0BE);
+    line-height: 1.8;
+    font-weight: 850;
+}
+
+@media (max-width: 1100px) {
+    .nexora-shell {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nexora-sidebar {
+        display: none !important;
+    }
+
+    .nxr-document-layout {
+        grid-template-columns: 1fr;
+    }
+}

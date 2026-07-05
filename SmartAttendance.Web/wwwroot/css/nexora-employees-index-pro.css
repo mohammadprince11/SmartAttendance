@@ -1,0 +1,256 @@
+/* NEXORA Employees Index - compact pro list */
+
+.nxr-emp-page {
+    padding-bottom: 28px;
+}
+
+.nxr-emp-hero {
+    align-items: flex-start;
+}
+
+.nxr-emp-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.nxr-emp-kpis {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 14px 0;
+}
+
+.nxr-emp-kpi {
+    min-height: 82px;
+    border: 1px solid rgba(52, 211, 223, .22);
+    background: rgba(15, 25, 44, .88);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .12);
+}
+
+.nxr-emp-kpi span,
+.nxr-emp-kpi small {
+    color: rgba(226, 232, 240, .72);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.nxr-emp-kpi strong {
+    color: #f8fafc;
+    font-size: 25px;
+    line-height: 1;
+    font-weight: 950;
+}
+
+.nxr-emp-kpi.ok {
+    border-color: rgba(45, 212, 191, .34);
+}
+
+.nxr-emp-kpi.warn {
+    border-color: rgba(245, 158, 11, .34);
+}
+
+.nxr-emp-kpi.info,
+.nxr-emp-kpi.filter {
+    border-color: rgba(148, 163, 184, .24);
+}
+
+.nxr-emp-filter-card {
+    margin-top: 12px;
+    padding: 12px;
+}
+
+.nxr-emp-filter {
+    display: grid;
+    grid-template-columns: minmax(240px, 1.6fr) repeat(4, minmax(130px, 1fr)) auto;
+    gap: 10px;
+    align-items: end;
+}
+
+.nxr-emp-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nxr-emp-field label {
+    color: rgba(226, 232, 240, .72);
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.nxr-emp-field .nxr-input,
+.nxr-emp-field select.nxr-input {
+    height: 38px;
+    border-radius: 12px;
+    border: 1px solid rgba(52, 211, 223, .18);
+    background: rgba(5, 13, 25, .42);
+    color: #e5eefb;
+    padding: 0 12px;
+    outline: none;
+    font-weight: 800;
+    width: 100%;
+}
+
+.nxr-emp-field select.nxr-input option {
+    background: #0b1424;
+    color: #e5eefb;
+}
+
+.nxr-emp-field .nxr-input:focus,
+.nxr-emp-field select.nxr-input:focus {
+    border-color: rgba(34, 211, 238, .58);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .10);
+}
+
+.nxr-emp-filter-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-start;
+    white-space: nowrap;
+}
+
+.nxr-emp-list-card {
+    margin-top: 12px;
+    padding: 12px;
+}
+
+.nxr-emp-list-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 3px 4px 12px;
+}
+
+.nxr-emp-list-head h2 {
+    margin: 0;
+    color: #f8fafc;
+    font-size: 16px;
+    font-weight: 950;
+}
+
+.nxr-emp-list-head p {
+    margin: 4px 0 0;
+    color: rgba(226, 232, 240, .68);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.nxr-emp-count {
+    color: #22d3ee;
+    border: 1px solid rgba(34, 211, 238, .25);
+    background: rgba(34, 211, 238, .08);
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 950;
+    white-space: nowrap;
+}
+
+.nxr-emp-table-wrap {
+    max-height: calc(100vh - 360px);
+    min-height: 240px;
+    overflow: auto;
+    border-radius: 14px;
+}
+
+.nxr-emp-table {
+    min-width: 980px;
+}
+
+.nxr-emp-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: rgba(17, 30, 52, .98);
+    color: #f6d98b;
+    font-size: 12px;
+    font-weight: 950;
+    border-bottom: 1px solid rgba(52, 211, 223, .22);
+}
+
+.nxr-emp-table tbody tr {
+    transition: background .15s ease, transform .15s ease;
+}
+
+.nxr-emp-table tbody tr:hover {
+    background: rgba(34, 211, 238, .055);
+}
+
+.nxr-emp-table td {
+    vertical-align: middle;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.nxr-emp-person {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 240px;
+}
+
+.nxr-emp-person strong {
+    color: #f8fafc;
+    display: block;
+    font-weight: 950;
+    line-height: 1.35;
+}
+
+.nxr-emp-person small {
+    color: rgba(226, 232, 240, .62);
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.nxr-emp-profile-btn {
+    min-width: 56px;
+    justify-content: center;
+    padding-inline: 12px;
+}
+
+.nxr-emp-empty {
+    padding: 32px !important;
+    color: rgba(226, 232, 240, .72) !important;
+}
+
+@media (max-width: 1280px) {
+    .nxr-emp-kpis {
+        grid-template-columns: repeat(3, minmax(150px, 1fr));
+    }
+
+    .nxr-emp-filter {
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+    }
+
+    .nxr-emp-field.search,
+    .nxr-emp-filter-actions {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 760px) {
+    .nxr-emp-kpis,
+    .nxr-emp-filter {
+        grid-template-columns: 1fr;
+    }
+
+    .nxr-emp-list-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .nxr-emp-table-wrap {
+        max-height: none;
+    }
+}

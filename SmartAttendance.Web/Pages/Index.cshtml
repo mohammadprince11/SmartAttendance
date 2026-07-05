@@ -33,18 +33,13 @@
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/dashboard-unified.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/dashboard-nexora.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-dashboard-distribution.css" asp-append-version="true" />
 
 <div class="dashboard-page">
     <div class="page-header">
         <div>
             <h1>لوحة التحكم</h1>
             <p>ملخص النظام، الموظفين، الحضور، الطلبات، والعقود في صفحة واحدة.</p>
-        </div>
-
-        <div class="dashboard-actions">
-            <a asp-page="/SelfServices/Index" class="hrms-btn-primary">تقديم طلب</a>
-            <a asp-page="/Approvals/Index" class="hrms-btn-secondary">الموافقات</a>
-            <a asp-page="/Reports/Index" class="hrms-btn-secondary">التقارير</a>
         </div>
     </div>
 
@@ -146,13 +141,20 @@
         </div>
     </section>
 
-    <section class="dashboard-grid">
-        <div class="dashboard-panel">
-            <h2>الموظفون حسب الفرع</h2>
+    <section class="dashboard-grid distribution-summary-grid">
+        <div class="dashboard-panel distribution-card">
+            <div class="dashboard-panel-head distribution-panel-head">
+                <div>
+                    <h2>الموظفون حسب الفرع</h2>
+                    <p>أعلى 5 فروع + أخرى</p>
+                </div>
+                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="branches">عرض التفاصيل</a>
+            </div>
             <div class="dashboard-list">
                 @foreach (var row in Model.ByBranch)
                 {
-                    <div class="dashboard-list-row">
+                    var isOther = SafeName(row.Name) == "أخرى";
+                    <div class="dashboard-list-row @(isOther ? "other-row" : "")">
                         <span>@SafeName(row.Name)</span>
                         <strong>@row.Total</strong>
                     </div>
@@ -165,12 +167,19 @@
             </div>
         </div>
 
-        <div class="dashboard-panel">
-            <h2>الموظفون حسب القسم</h2>
+        <div class="dashboard-panel distribution-card">
+            <div class="dashboard-panel-head distribution-panel-head">
+                <div>
+                    <h2>الموظفون حسب القسم</h2>
+                    <p>أعلى 5 أقسام + أخرى</p>
+                </div>
+                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="departments">عرض التفاصيل</a>
+            </div>
             <div class="dashboard-list">
                 @foreach (var row in Model.ByDepartment)
                 {
-                    <div class="dashboard-list-row">
+                    var isOther = SafeName(row.Name) == "أخرى";
+                    <div class="dashboard-list-row @(isOther ? "other-row" : "")">
                         <span>@SafeName(row.Name)</span>
                         <strong>@row.Total</strong>
                     </div>
@@ -183,12 +192,19 @@
             </div>
         </div>
 
-        <div class="dashboard-panel">
-            <h2>الموظفون حسب الجنس</h2>
+        <div class="dashboard-panel distribution-card">
+            <div class="dashboard-panel-head distribution-panel-head">
+                <div>
+                    <h2>الموظفون حسب الجنس</h2>
+                    <p>أعلى 5 + أخرى</p>
+                </div>
+                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="gender">عرض التفاصيل</a>
+            </div>
             <div class="dashboard-list">
                 @foreach (var row in Model.ByGender)
                 {
-                    <div class="dashboard-list-row">
+                    var isOther = SafeName(row.Name) == "أخرى";
+                    <div class="dashboard-list-row @(isOther ? "other-row" : "")">
                         <span>@SafeName(row.Name)</span>
                         <strong>@row.Total</strong>
                     </div>
@@ -201,12 +217,19 @@
             </div>
         </div>
 
-        <div class="dashboard-panel">
-            <h2>الموظفون حسب البلد</h2>
+        <div class="dashboard-panel distribution-card">
+            <div class="dashboard-panel-head distribution-panel-head">
+                <div>
+                    <h2>الموظفون حسب البلد</h2>
+                    <p>أعلى 5 بلدان + أخرى</p>
+                </div>
+                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="country">عرض التفاصيل</a>
+            </div>
             <div class="dashboard-list">
                 @foreach (var row in Model.ByCountry)
                 {
-                    <div class="dashboard-list-row">
+                    var isOther = SafeName(row.Name) == "أخرى";
+                    <div class="dashboard-list-row @(isOther ? "other-row" : "")">
                         <span>@SafeName(row.Name)</span>
                         <strong>@row.Total</strong>
                     </div>
@@ -219,12 +242,19 @@
             </div>
         </div>
 
-        <div class="dashboard-panel">
-            <h2>الموظفون حسب الجنسية</h2>
+        <div class="dashboard-panel distribution-card">
+            <div class="dashboard-panel-head distribution-panel-head">
+                <div>
+                    <h2>الموظفون حسب الجنسية</h2>
+                    <p>أعلى 5 جنسيات + أخرى</p>
+                </div>
+                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="nationality">عرض التفاصيل</a>
+            </div>
             <div class="dashboard-list">
                 @foreach (var row in Model.ByNationality)
                 {
-                    <div class="dashboard-list-row">
+                    var isOther = SafeName(row.Name) == "أخرى";
+                    <div class="dashboard-list-row @(isOther ? "other-row" : "")">
                         <span>@SafeName(row.Name)</span>
                         <strong>@row.Total</strong>
                     </div>
@@ -237,12 +267,19 @@
             </div>
         </div>
 
-        <div class="dashboard-panel">
-            <h2>الموظفون حسب نوع العقد</h2>
+        <div class="dashboard-panel distribution-card">
+            <div class="dashboard-panel-head distribution-panel-head">
+                <div>
+                    <h2>الموظفون حسب نوع العقد</h2>
+                    <p>أعلى 5 أنواع + أخرى</p>
+                </div>
+                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="contractType">عرض التفاصيل</a>
+            </div>
             <div class="dashboard-list">
                 @foreach (var row in Model.ByContractType)
                 {
-                    <div class="dashboard-list-row">
+                    var isOther = SafeName(row.Name) == "أخرى";
+                    <div class="dashboard-list-row @(isOther ? "other-row" : "")">
                         <span>@SafeName(row.Name)</span>
                         <strong>@row.Total</strong>
                     </div>
@@ -298,7 +335,6 @@
     <section class="dashboard-panel">
         <div class="dashboard-panel-head">
             <h2>آخر طلبات الخدمات الذاتية</h2>
-            <a asp-page="/Approvals/Index" class="hrms-btn-secondary">عرض الموافقات</a>
         </div>
 
         <div class="dashboard-table-wrap">

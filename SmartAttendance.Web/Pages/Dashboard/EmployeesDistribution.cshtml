@@ -1,0 +1,111 @@
+@page
+@using System.Globalization
+@model SmartAttendance.Web.Pages.Dashboard.EmployeesDistributionModel
+
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/dashboard-unified.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/dashboard-nexora.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-dashboard-distribution.css" asp-append-version="true" />
+
+<div class="distribution-page">
+    <div class="page-header distribution-header">
+        <div>
+            <h1>@Model.PageTitle</h1>
+            <p>صفحة تفصيلية للبحث والفرز بدل عرض كل البيانات داخل لوحة التحكم.</p>
+        </div>
+        <a class="distribution-back-link" asp-page="/Index">رجوع للوحة التحكم</a>
+    </div>
+
+    <section class="distribution-tabs" aria-label="Distribution Tabs">
+        @foreach (var tab in Model.Tabs)
+        {
+            <a class="distribution-tab @(Model.Type == tab.Key ? "active" : "")"
+               asp-page="/Dashboard/EmployeesDistribution"
+               asp-route-type="@tab.Key">
+                @tab.Label
+            </a>
+        }
+    </section>
+
+    <section class="distribution-stat-grid">
+        <div class="dashboard-kpi distribution-stat">
+            <span>إجمالي الموظفين</span>
+            <strong>@Model.TotalEmployees</strong>
+            <small>حسب قاعدة البيانات الحالية</small>
+        </div>
+        <div class="dashboard-kpi distribution-stat">
+            <span>عدد البنود</span>
+            <strong>@Model.TotalCategoriesBeforeSearch</strong>
+            <small>قبل البحث</small>
+        </div>
+        <div class="dashboard-kpi distribution-stat">
+            <span>المعروض حالياً</span>
+            <strong>@Model.DisplayedCategories</strong>
+            <small>بعد البحث الحالي</small>
+        </div>
+        <div class="dashboard-kpi distribution-stat warning">
+            <span>الأعلى</span>
+            <strong>@Model.TopTotal</strong>
+            <small>@Model.TopName</small>
+        </div>
+    </section>
+
+    <section class="dashboard-panel distribution-filter-panel">
+        <form method="get" class="distribution-filter-form">
+            <input type="hidden" name="type" value="@Model.Type" />
+            <input type="search" name="search" value="@Model.Search" placeholder="بحث داخل النتائج..." />
+            <button type="submit">بحث</button>
+            <a asp-page="/Dashboard/EmployeesDistribution" asp-route-type="@Model.Type">مسح</a>
+        </form>
+    </section>
+
+    <section class="dashboard-panel distribution-table-panel">
+        <div class="dashboard-panel-head">
+            <h2>تفاصيل التوزيع</h2>
+            <span class="distribution-note">النسبة محسوبة من إجمالي الموظفين.</span>
+        </div>
+
+        <div class="dashboard-table-wrap">
+            <table class="dashboard-table distribution-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th class="text-start">البند</th>
+                        <th>عدد الموظفين</th>
+                        <th>النسبة</th>
+                        <th>المؤشر</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Rows.Count; i++)
+                    {
+                        var row = Model.Rows[i];
+                        var percentStyle = row.Percent.ToString("0.##", CultureInfo.InvariantCulture);
+                        <tr>
+                            <td>@(i + 1)</td>
+                            <td class="text-start distribution-name-cell">@row.Name</td>
+                            <td><strong>@row.Total</strong></td>
+                            <td>@row.Percent.ToString("0.##")%</td>
+                            <td>
+                                <div class="distribution-bar" title="@row.Percent.ToString("0.##")%">
+                                    <span style="width:@percentStyle%"></span>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                    @if (!Model.Rows.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="dashboard-empty-cell">لا توجد نتائج مطابقة للبحث الحالي.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

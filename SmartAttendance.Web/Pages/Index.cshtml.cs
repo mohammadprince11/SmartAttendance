@@ -6,6 +6,7 @@ namespace SmartAttendance.Web.Pages;
 
 public class IndexModel : PageModel
 {
+    private const int DistributionTopLimit = 5;
     private readonly ApplicationDbContext _dbContext;
 
     public IndexModel(ApplicationDbContext dbContext)
@@ -75,27 +76,27 @@ public class IndexModel : PageModel
         Late30 = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate >= DATEADD(day, -30, CAST(GETDATE() AS date)) AND Status = 2");
         Absent30 = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate >= DATEADD(day, -30, CAST(GETDATE() AS date)) AND Status = 3");
 
-        ByBranch = await LoadNameCountsAsync("""
-SELECT TOP 10 ISNULL(b.Name, 'Not Set') AS Name, COUNT(*) AS Total
+        ByBranch = await LoadDistributionSummaryAsync("""
+SELECT ISNULL(NULLIF(b.Name, ''), 'Not Set') AS Name, COUNT(*) AS Total
 FROM Employees e
 LEFT JOIN Departments d ON e.DepartmentId = d.Id
 LEFT JOIN Branches b ON d.BranchId = b.Id
-GROUP BY ISNULL(b.Name, 'Not Set')
-ORDER BY Total DESC;
+GROUP BY ISNULL(NULLIF(b.Name, ''), 'Not Set')
+ORDER BY Total DESC, Name;
 """);
 
-        ByDepartment = await LoadNameCountsAsync("""
-SELECT TOP 10 ISNULL(d.Name, 'Not Set') AS Name, COUNT(*) AS Total
+        ByDepartment = await LoadDistributionSummaryAsync("""
+SELECT ISNULL(NULLIF(d.Name, ''), 'Not Set') AS Name, COUNT(*) AS Total
 FROM Employees e
 LEFT JOIN Departments d ON e.DepartmentId = d.Id
-GROUP BY ISNULL(d.Name, 'Not Set')
-ORDER BY Total DESC;
+GROUP BY ISNULL(NULLIF(d.Name, ''), 'Not Set')
+ORDER BY Total DESC, Name;
 """);
 
-        ByGender = await LoadNameCountsAsync("SELECT TOP 10 ISNULL(NULLIF(Gender, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(Gender, ''), 'Not Set') ORDER BY Total DESC");
-        ByCountry = await LoadNameCountsAsync("SELECT TOP 10 ISNULL(NULLIF(Country, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(Country, ''), 'Not Set') ORDER BY Total DESC");
-        ByNationality = await LoadNameCountsAsync("SELECT TOP 10 ISNULL(NULLIF(Nationality, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(Nationality, ''), 'Not Set') ORDER BY Total DESC");
-        ByContractType = await LoadNameCountsAsync("SELECT TOP 10 ISNULL(NULLIF(ContractType, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(ContractType, ''), 'Not Set') ORDER BY Total DESC");
+        ByGender = await LoadDistributionSummaryAsync("SELECT ISNULL(NULLIF(Gender, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(Gender, ''), 'Not Set') ORDER BY Total DESC, Name");
+        ByCountry = await LoadDistributionSummaryAsync("SELECT ISNULL(NULLIF(Country, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(Country, ''), 'Not Set') ORDER BY Total DESC, Name");
+        ByNationality = await LoadDistributionSummaryAsync("SELECT ISNULL(NULLIF(Nationality, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(Nationality, ''), 'Not Set') ORDER BY Total DESC, Name");
+        ByContractType = await LoadDistributionSummaryAsync("SELECT ISNULL(NULLIF(ContractType, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(ContractType, ''), 'Not Set') ORDER BY Total DESC, Name");
         RequestsByStatus = await LoadNameCountsAsync("SELECT Status AS Name, COUNT(*) AS Total FROM SelfServiceRequests GROUP BY Status ORDER BY Total DESC");
 
         ExpiringContracts = await HrmsDatabase.QueryAsync(
@@ -165,6 +166,53 @@ ORDER BY r.CreatedAt DESC;
                 Name = HrmsDatabase.GetString(reader, "Name"),
                 Total = HrmsDatabase.GetInt(reader, "Total")
             });
+    }
+
+    private async Task<List<NameCountRow>> LoadDistributionSummaryAsync(string sql)
+    {
+        var rows = await LoadNameCountsAsync(sql);
+
+        var normalizedRows = rows
+            .Select(row => new NameCountRow
+            {
+                Name = NormalizeDistributionName(row.Name),
+                Total = row.Total
+            })
+            .GroupBy(row => row.Name)
+            .Select(group => new NameCountRow
+            {
+                Name = group.Key,
+                Total = group.Sum(row => row.Total)
+            })
+            .OrderByDescending(row => row.Total)
+            .ThenBy(row => row.Name)
+            .ToList();
+
+        if (normalizedRows.Count <= DistributionTopLimit)
+        {
+            return normalizedRows;
+        }
+
+        var topRows = normalizedRows.Take(DistributionTopLimit).ToList();
+        var otherTotal = normalizedRows.Skip(DistributionTopLimit).Sum(row => row.Total);
+
+        if (otherTotal > 0)
+        {
+            topRows.Add(new NameCountRow
+            {
+                Name = "أخرى",
+                Total = otherTotal
+            });
+        }
+
+        return topRows;
+    }
+
+    private static string NormalizeDistributionName(string? name)
+    {
+        return string.IsNullOrWhiteSpace(name) || name.Trim().Equals("Not Set", StringComparison.OrdinalIgnoreCase)
+            ? "غير محدد"
+            : name.Trim();
     }
 
     public class NameCountRow

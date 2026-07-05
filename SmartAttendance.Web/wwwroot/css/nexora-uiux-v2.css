@@ -1,0 +1,826 @@
+/* =========================================================
+   NEXORA UI/UX REDESIGN V2
+   Product-grade visual system for SmartAttendance / NEXORA
+   ========================================================= */
+
+:root {
+    --nxv2-bg: #07121F;
+    --nxv2-bg-2: #0B1826;
+    --nxv2-surface: rgba(15, 34, 51, .82);
+    --nxv2-surface-strong: rgba(15, 34, 51, .96);
+    --nxv2-card: rgba(15, 34, 51, .74);
+    --nxv2-card-2: rgba(7, 18, 31, .42);
+    --nxv2-text: #E6EAEE;
+    --nxv2-muted: #9FB0BE;
+    --nxv2-faint: #718392;
+    --nxv2-line: rgba(230, 234, 238, .11);
+    --nxv2-line-strong: rgba(230, 234, 238, .18);
+    --nxv2-teal: #12D9E3;
+    --nxv2-teal-2: #7CEAF0;
+    --nxv2-gold: #D7B26D;
+    --nxv2-gold-2: #F0D89A;
+    --nxv2-green: #8FF0C2;
+    --nxv2-red: #FFB4B4;
+    --nxv2-red-strong: #EF4444;
+    --nxv2-warn-bg: rgba(215, 178, 109, .10);
+    --nxv2-ok-bg: rgba(34, 197, 94, .10);
+    --nxv2-danger-bg: rgba(239, 68, 68, .10);
+    --nxv2-radius-xs: 10px;
+    --nxv2-radius-sm: 14px;
+    --nxv2-radius-md: 18px;
+    --nxv2-radius-lg: 24px;
+    --nxv2-radius-xl: 32px;
+    --nxv2-shadow-soft: 0 14px 34px rgba(0,0,0,.22);
+    --nxv2-shadow: 0 24px 64px rgba(0,0,0,.34);
+    --nxv2-glow: 0 0 0 4px rgba(18, 217, 227, .10);
+    --nxv2-font-ar: "Tajawal", "Segoe UI", Tahoma, Arial, sans-serif;
+    --nxv2-font-en: "Sora", "Segoe UI", Arial, sans-serif;
+    --nxv2-sidebar-w: 300px;
+    --nxv2-sidebar-w-collapsed: 86px;
+    --nxv2-topbar-h: 82px;
+}
+
+html[data-theme="light"] {
+    --nxv2-bg: #F4F7FA;
+    --nxv2-bg-2: #FFFFFF;
+    --nxv2-surface: rgba(255,255,255,.88);
+    --nxv2-surface-strong: rgba(255,255,255,.98);
+    --nxv2-card: rgba(255,255,255,.86);
+    --nxv2-card-2: rgba(244,247,250,.86);
+    --nxv2-text: #07121F;
+    --nxv2-muted: #587082;
+    --nxv2-faint: #7B8D9B;
+    --nxv2-line: rgba(7,18,31,.10);
+    --nxv2-line-strong: rgba(7,18,31,.16);
+    --nxv2-shadow-soft: 0 14px 34px rgba(7,18,31,.08);
+    --nxv2-shadow: 0 24px 64px rgba(7,18,31,.12);
+}
+
+html,
+body {
+    min-height: 100%;
+}
+
+body {
+    font-family: var(--nxv2-font-ar);
+    background:
+        radial-gradient(circle at 8% -4%, rgba(18,217,227,.13), transparent 30%),
+        radial-gradient(circle at 88% 0%, rgba(215,178,109,.09), transparent 31%),
+        linear-gradient(180deg, var(--nxv2-bg), var(--nxv2-bg-2));
+    color: var(--nxv2-text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(230,234,238,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(230,234,238,.025) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(circle at 50% 0%, black, transparent 72%);
+    z-index: 0;
+}
+
+body * {
+    box-sizing: border-box;
+}
+
+/* App shell */
+.nexora-shell {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: var(--nxv2-sidebar-w) minmax(0, 1fr);
+    gap: 0;
+}
+
+.nexora-sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: auto;
+    padding: 18px 14px;
+    border-inline-end: 1px solid var(--nxv2-line);
+    background:
+        linear-gradient(180deg, rgba(7,18,31,.96), rgba(7,18,31,.84)),
+        radial-gradient(circle at 40% 0%, rgba(18,217,227,.12), transparent 36%);
+    backdrop-filter: blur(18px);
+    box-shadow: 18px 0 55px rgba(0,0,0,.20);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(18,217,227,.28) transparent;
+}
+
+html[data-theme="light"] .nexora-sidebar {
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.94), rgba(244,247,250,.88)),
+        radial-gradient(circle at 40% 0%, rgba(18,217,227,.10), transparent 36%);
+}
+
+.nexora-main {
+    min-width: 0;
+    display: grid;
+    grid-template-rows: auto 1fr;
+}
+
+.nexora-content {
+    width: 100%;
+    max-width: 1720px;
+    margin-inline: auto;
+    padding: 20px 24px 34px;
+}
+
+/* Brand */
+.nexora-brand-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(18,217,227,.18);
+    border-radius: 24px;
+    padding: 12px;
+    background:
+        radial-gradient(circle at 18% 0%, rgba(18,217,227,.20), transparent 34%),
+        radial-gradient(circle at 100% 0%, rgba(215,178,109,.14), transparent 34%),
+        rgba(15,34,51,.76);
+    box-shadow: var(--nxv2-shadow-soft);
+    margin-bottom: 16px;
+}
+
+.nexora-brand-card::after {
+    content: "";
+    position: absolute;
+    inset: auto -20px -26px auto;
+    width: 96px;
+    height: 96px;
+    border-radius: 999px;
+    background: rgba(18,217,227,.12);
+    filter: blur(12px);
+}
+
+.nexora-brand-link {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+}
+
+.nexora-brand-symbol {
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+    filter: drop-shadow(0 12px 26px rgba(18,217,227,.22));
+}
+
+.nexora-wordmark {
+    font-family: var(--nxv2-font-en);
+    letter-spacing: 2px;
+    font-size: 18px;
+    font-weight: 1000;
+    color: var(--nxv2-text);
+}
+
+.nexora-arabic {
+    color: var(--nxv2-gold);
+    font-weight: 1000;
+}
+
+.nexora-tagline {
+    color: var(--nxv2-muted);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+/* Sidebar nav */
+.nexora-nav {
+    display: grid;
+    gap: 8px;
+    padding-bottom: 28px;
+}
+
+.nexora-nav-link,
+.nexora-nav-group > summary {
+    position: relative;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    color: var(--nxv2-muted);
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+    transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease;
+}
+
+.nexora-nav-link:hover,
+.nexora-nav-group > summary:hover {
+    transform: translateY(-1px);
+    color: var(--nxv2-text);
+    border-color: rgba(18,217,227,.16);
+    background: rgba(18,217,227,.055);
+}
+
+.nexora-nav-link.nexora-active,
+.nexora-nav-link[aria-current="page"] {
+    color: #07121F;
+    background: linear-gradient(135deg, var(--nxv2-teal), var(--nxv2-teal-2));
+    box-shadow: 0 14px 28px rgba(18,217,227,.18);
+}
+
+.nexora-nav-link.nexora-active span,
+.nexora-nav-link[aria-current="page"] span {
+    color: #07121F !important;
+}
+
+.nexora-nav-dot {
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--nxv2-teal);
+    box-shadow: 0 0 0 4px rgba(18,217,227,.10);
+}
+
+.nexora-nav-dot.gold,
+.gold .nexora-nav-dot {
+    background: var(--nxv2-gold);
+    box-shadow: 0 0 0 4px rgba(215,178,109,.10);
+}
+
+.nexora-nav-text,
+.nexora-nav-link span {
+    font-weight: 950;
+}
+
+.nexora-nav-group {
+    border: 1px solid var(--nxv2-line);
+    border-radius: 20px;
+    background: rgba(15,34,51,.30);
+    overflow: hidden;
+}
+
+html[data-theme="light"] .nexora-nav-group {
+    background: rgba(255,255,255,.50);
+}
+
+.nexora-nav-group[open] {
+    border-color: rgba(18,217,227,.14);
+    background:
+        radial-gradient(circle at 100% 0%, rgba(18,217,227,.07), transparent 28%),
+        rgba(15,34,51,.38);
+}
+
+.nexora-nav-group > summary {
+    list-style: none;
+    border-radius: 18px;
+}
+
+.nexora-nav-group > summary::-webkit-details-marker {
+    display: none;
+}
+
+.nexora-chevron {
+    margin-inline-start: auto;
+    width: 8px;
+    height: 8px;
+    border-inline-end: 2px solid currentColor;
+    border-block-end: 2px solid currentColor;
+    transform: rotate(45deg);
+    opacity: .75;
+    transition: transform .18s ease;
+}
+
+.nexora-nav-group[open] .nexora-chevron {
+    transform: rotate(225deg);
+}
+
+.nexora-nav-group-links {
+    display: grid;
+    gap: 5px;
+    padding: 0 8px 9px;
+}
+
+.nexora-nav-group-links .nexora-nav-link {
+    min-height: 38px;
+    padding: 8px 12px;
+    border-radius: 13px;
+    font-size: 13px;
+}
+
+/* Topbar */
+.nexora-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    min-height: var(--nxv2-topbar-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--nxv2-line);
+    background: rgba(7,18,31,.74);
+    backdrop-filter: blur(18px);
+}
+
+html[data-theme="light"] .nexora-topbar {
+    background: rgba(255,255,255,.76);
+}
+
+.nexora-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.nexora-page-title {
+    color: var(--nxv2-text);
+    font-size: 20px;
+    font-weight: 1000;
+    letter-spacing: -.3px;
+}
+
+.nexora-page-subtitle {
+    margin-top: 3px;
+    color: var(--nxv2-muted);
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.nexora-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.nexora-pill-button,
+.nexora-icon-button {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--nxv2-line-strong);
+    border-radius: 999px;
+    padding: 8px 12px;
+    color: var(--nxv2-text);
+    background: rgba(230,234,238,.06);
+    text-decoration: none;
+    font-weight: 950;
+    cursor: pointer;
+    transition: transform .18s ease, background .18s ease, border-color .18s ease;
+}
+
+.nexora-pill-button:hover,
+.nexora-icon-button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(18,217,227,.32);
+    background: rgba(18,217,227,.08);
+}
+
+.nexora-user-chip {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(18,217,227,.18);
+    background: rgba(18,217,227,.06);
+}
+
+.nexora-user-avatar {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    color: #07121F;
+    background: linear-gradient(135deg, var(--nxv2-teal), var(--nxv2-gold));
+    font-weight: 1000;
+}
+
+.nexora-user-name {
+    color: var(--nxv2-text);
+    font-weight: 1000;
+}
+
+.nexora-user-role {
+    color: var(--nxv2-gold);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+/* Global product components */
+.nexora-content h1,
+.nexora-content h2,
+.nexora-content h3 {
+    letter-spacing: -.3px;
+}
+
+.card,
+.nexora-card,
+.employee360v2-card,
+.employee-edit-card,
+.hr-final-card,
+.nx-card {
+    border: 1px solid var(--nxv2-line) !important;
+    border-radius: var(--nxv2-radius-lg) !important;
+    background:
+        radial-gradient(circle at 100% 0%, rgba(18,217,227,.055), transparent 30%),
+        var(--nxv2-card) !important;
+    box-shadow: var(--nxv2-shadow-soft) !important;
+    backdrop-filter: blur(12px);
+}
+
+.table,
+.nexora-table,
+.employee360v2-table,
+.hr-final-table,
+.nx-table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+}
+
+.table th,
+.nexora-table th,
+.employee360v2-table th,
+.hr-final-table th,
+.nx-table th {
+    color: var(--nxv2-gold) !important;
+    background: rgba(7,18,31,.72) !important;
+    font-weight: 1000 !important;
+}
+
+.table td,
+.nexora-table td,
+.employee360v2-table td,
+.hr-final-table td,
+.nx-table td {
+    color: var(--nxv2-text) !important;
+    border-color: var(--nxv2-line) !important;
+}
+
+input,
+select,
+textarea,
+.form-control,
+.form-select,
+.nexora-input,
+.employee-edit-input {
+    border: 1px solid var(--nxv2-line-strong) !important;
+    border-radius: 13px !important;
+    color: var(--nxv2-text) !important;
+    background: rgba(7,18,31,.36) !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.form-control:focus,
+.form-select:focus,
+.nexora-input:focus,
+.employee-edit-input:focus {
+    border-color: rgba(18,217,227,.55) !important;
+    box-shadow: var(--nxv2-glow) !important;
+}
+
+label {
+    color: var(--nxv2-gold);
+    font-weight: 950;
+}
+
+.btn,
+.nexora-btn,
+.employee360v2-btn,
+.employee-edit-btn,
+.hr-final-btn,
+.nx-btn {
+    border-radius: 13px !important;
+    font-weight: 1000 !important;
+    text-decoration: none !important;
+}
+
+.btn-primary,
+.nexora-btn.primary,
+.employee360v2-btn.primary,
+.employee-edit-btn.primary,
+.hr-final-btn.primary,
+.nx-btn.primary {
+    border-color: transparent !important;
+    color: #07121F !important;
+    background: linear-gradient(135deg, var(--nxv2-teal), var(--nxv2-teal-2)) !important;
+    box-shadow: 0 14px 30px rgba(18,217,227,.18) !important;
+}
+
+.status-ok,
+.ok,
+.nx-pill.ok,
+.hr-final-pill.ok,
+.employee360v2-status.ok {
+    --nx-state: var(--nxv2-green);
+}
+
+.warn,
+.nx-pill.warn,
+.hr-final-pill.warn,
+.employee360v2-status.warn {
+    --nx-state: var(--nxv2-gold);
+}
+
+.danger,
+.nx-pill.danger,
+.hr-final-pill.danger,
+.employee360v2-status.danger {
+    --nx-state: var(--nxv2-red);
+}
+
+/* Page rhythm */
+.nexora-content > *:first-child {
+    margin-top: 0;
+}
+
+.nx-page,
+.hr-final-page,
+.employee360v2-page,
+.employee-edit-page {
+    animation: nxv2PageIn .28s ease both;
+}
+
+@keyframes nxv2PageIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.nxv2-reveal {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity .35s ease, transform .35s ease;
+}
+
+.nxv2-reveal.nxv2-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Command bar */
+.nxv2-command-fab {
+    position: fixed;
+    inset-inline-end: 22px;
+    inset-block-end: 22px;
+    z-index: 999;
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(18,217,227,.32);
+    border-radius: 22px;
+    color: #07121F;
+    background: linear-gradient(135deg, var(--nxv2-teal), var(--nxv2-gold));
+    box-shadow: 0 22px 46px rgba(18,217,227,.20);
+    cursor: pointer;
+    font-weight: 1000;
+}
+
+.nxv2-command-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    place-items: start center;
+    padding-top: 8vh;
+    background: rgba(7,18,31,.68);
+    backdrop-filter: blur(10px);
+}
+
+.nxv2-command-overlay.open {
+    display: grid;
+}
+
+.nxv2-command-panel {
+    width: min(760px, calc(100vw - 28px));
+    overflow: hidden;
+    border: 1px solid rgba(18,217,227,.24);
+    border-radius: 26px;
+    background: var(--nxv2-surface-strong);
+    box-shadow: var(--nxv2-shadow);
+}
+
+.nxv2-command-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px;
+    border-bottom: 1px solid var(--nxv2-line);
+}
+
+.nxv2-command-head input {
+    flex: 1;
+    min-height: 48px;
+    border: 0 !important;
+    background: rgba(230,234,238,.055) !important;
+    font-size: 16px;
+}
+
+.nxv2-command-close {
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--nxv2-line);
+    border-radius: 13px;
+    color: var(--nxv2-text);
+    background: rgba(230,234,238,.06);
+    cursor: pointer;
+    font-weight: 1000;
+}
+
+.nxv2-command-list {
+    max-height: 58vh;
+    overflow: auto;
+    padding: 10px;
+}
+
+.nxv2-command-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    color: var(--nxv2-text);
+    text-decoration: none;
+}
+
+.nxv2-command-item:hover {
+    border-color: rgba(18,217,227,.20);
+    background: rgba(18,217,227,.07);
+}
+
+.nxv2-command-item strong {
+    display: block;
+    font-weight: 1000;
+}
+
+.nxv2-command-item span {
+    display: block;
+    margin-top: 3px;
+    color: var(--nxv2-muted);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.nxv2-command-item kbd {
+    border: 1px solid var(--nxv2-line);
+    border-radius: 9px;
+    padding: 4px 7px;
+    color: var(--nxv2-gold);
+    background: rgba(7,18,31,.32);
+}
+
+/* Density */
+body.nxv2-compact .nexora-content {
+    padding-top: 14px;
+}
+
+body.nxv2-compact .nx-kpi,
+body.nxv2-compact .hr-final-kpi,
+body.nxv2-compact .employee360v2-kpi {
+    min-height: 92px;
+    padding: 13px;
+}
+
+body.nxv2-compact .nx-table th,
+body.nxv2-compact .nx-table td,
+body.nxv2-compact .hr-final-table th,
+body.nxv2-compact .hr-final-table td,
+body.nxv2-compact .employee360v2-table th,
+body.nxv2-compact .employee360v2-table td {
+    padding: 8px 9px;
+}
+
+/* Collapsed sidebar */
+html[data-sidebar="collapsed"] .nexora-shell {
+    grid-template-columns: var(--nxv2-sidebar-w-collapsed) minmax(0, 1fr);
+}
+
+html[data-sidebar="collapsed"] .nexora-brand-copy,
+html[data-sidebar="collapsed"] .nexora-nav-text,
+html[data-sidebar="collapsed"] .nexora-nav-link span:not(.nexora-nav-dot),
+html[data-sidebar="collapsed"] .nexora-nav-group-links,
+html[data-sidebar="collapsed"] .nexora-chevron {
+    display: none !important;
+}
+
+html[data-sidebar="collapsed"] .nexora-brand-card,
+html[data-sidebar="collapsed"] .nexora-nav-group,
+html[data-sidebar="collapsed"] .nexora-nav-link,
+html[data-sidebar="collapsed"] .nexora-nav-group > summary {
+    justify-content: center;
+}
+
+html[data-sidebar="collapsed"] .nexora-brand-symbol {
+    width: 42px;
+    height: 42px;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+    .nexora-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .nexora-sidebar {
+        position: fixed;
+        z-index: 100;
+        inset-block: 0;
+        inset-inline-start: 0;
+        width: min(320px, 86vw);
+        transform: translateX(-105%);
+        transition: transform .24s ease;
+    }
+
+    html[dir="rtl"] .nexora-sidebar {
+        inset-inline-start: auto;
+        inset-inline-end: 0;
+        transform: translateX(105%);
+    }
+
+    body.nexora-sidebar-open .nexora-sidebar {
+        transform: translateX(0);
+    }
+
+    .nexora-content {
+        padding: 16px;
+    }
+
+    .nexora-topbar {
+        padding: 12px 16px;
+    }
+}
+
+@media (max-width: 740px) {
+    .nexora-controls {
+        justify-content: flex-start;
+    }
+
+    .nexora-user-role,
+    .nexora-page-subtitle {
+        display: none;
+    }
+
+    .nxv2-command-fab {
+        width: 52px;
+        height: 52px;
+        inset-inline-end: 16px;
+        inset-block-end: 16px;
+    }
+}
+
+/* Print */
+@media print {
+    .nexora-sidebar,
+    .nexora-topbar,
+    .nxv2-command-fab,
+    .nxv2-command-overlay {
+        display: none !important;
+    }
+
+    .nexora-shell {
+        display: block;
+    }
+
+    .nexora-content {
+        max-width: none;
+        padding: 0;
+    }
+
+    body {
+        background: white;
+        color: black;
+    }
+
+    .card,
+    .nx-card,
+    .hr-final-card,
+    .employee360v2-card {
+        box-shadow: none !important;
+        border-color: #ddd !important;
+    }
+}
