@@ -1,0 +1,173 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeePortal.IndexModel
+@{
+    Layout = "_EmployeePortalLayout";
+    ViewData["Title"] = "بوابة الموظف";
+    var tab = Model.Tab;
+}
+
+<link rel="stylesheet" href="~/css/nexora-employee-portal-official.css" asp-append-version="true" />
+
+<section class="nxep-page" dir="rtl">
+    <header class="nxep-hero">
+        <div class="nxep-mark">NX</div>
+        <div>
+            <h1>بوابة الموظف</h1>
+            <p>صفحة الموظف الرسمية مرتبطة بقاعدة البيانات: الإعلانات، الشكاوي، الطلبات، الحضور والملف الشخصي.</p>
+        </div>
+        <div class="nxep-user-badges">
+            <span>الموظف <strong>@Model.Employee.FullName</strong></span>
+            <span>الصلاحية <strong>@Model.RoleDisplay</strong></span>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="nxep-alert">@Model.StatusMessage</div>
+    }
+
+    <nav class="nxep-tabs">
+        <a class="@(tab == "home" ? "active" : "")" asp-page="./Index" asp-route-tab="home">الرئيسية<small>حائط الموظف</small></a>
+        <a class="@(tab == "profile" ? "active" : "")" asp-page="./Index" asp-route-tab="profile">ملفي الشخصي<small>بياناتي</small></a>
+        <a class="@(tab == "compensation" ? "active" : "")" asp-page="./Index" asp-route-tab="compensation">التعويضات<small>بيانات مالية</small></a>
+        <a class="@(tab == "requests" ? "active" : "")" asp-page="./Index" asp-route-tab="requests">طلباتي<small>الخدمة الذاتية</small></a>
+        <a class="@(tab == "polls" ? "active" : "")" asp-page="./Index" asp-route-tab="polls">الاستطلاعات<small>تصويت داخلي</small></a>
+        <a class="@(tab == "team" ? "active" : "")" asp-page="./Index" asp-route-tab="team">فريقي<small>الفريق المباشر</small></a>
+        <a class="@(tab == "attendance" ? "active" : "")" asp-page="./Index" asp-route-tab="attendance">حضوري<small>السجل</small></a>
+        <a class="@(tab == "feedback" ? "active" : "")" asp-page="./Index" asp-route-tab="feedback">الشكاوي والمقترحات<small>إرسال ومتابعة</small></a>
+    </nav>
+
+    @if (tab == "home")
+    {
+        <section class="nxep-layout-main">
+            <article class="nxep-card nxep-wall">
+                <div class="nxep-card-head"><h2>حائط الموظف</h2><span>@Model.Announcements.Count إعلان</span></div>
+                @if (Model.Announcements.Count == 0)
+                {
+                    <div class="nxep-empty">لا توجد إعلانات منشورة حالياً.</div>
+                }
+                @foreach (var item in Model.Announcements)
+                {
+                    <article class="nxep-wall-post">
+                        <div><span class="nxep-chip">@item.Category</span><time>@Model.DisplayDate(item.PublishDate)</time></div>
+                        <h3>@item.Title</h3>
+                        <p>@item.Body</p>
+                    </article>
+                }
+            </article>
+            <aside class="nxep-side-stack">
+                <article class="nxep-card"><div class="nxep-card-head"><h2>مختصر الطلبات</h2></div><strong class="nxep-big">@Model.Requests.Count</strong><span>طلبات مسجلة</span></article>
+                <article class="nxep-card"><div class="nxep-card-head"><h2>الشكاوي والمقترحات</h2></div><strong class="nxep-big">@Model.FeedbackItems.Count</strong><span>طلبات متابعة</span></article>
+            </aside>
+        </section>
+    }
+    else if (tab == "profile")
+    {
+        <section class="nxep-profile-grid">
+            <aside class="nxep-profile-card">
+                <div class="nxep-avatar">@Model.Initials</div>
+                <h2>@Model.Employee.FullName</h2>
+                <p>@Model.Employee.Position</p>
+                <span>@Model.Employee.EmployeeNo</span>
+            </aside>
+            <article class="nxep-card">
+                <div class="nxep-card-head"><h2>المعلومات الشخصية</h2></div>
+                <div class="nxep-info-grid">
+                    <div><span>القسم</span><strong>@Model.Employee.DepartmentName</strong></div>
+                    <div><span>الفرع</span><strong>@Model.Employee.BranchName</strong></div>
+                    <div><span>المدير المباشر</span><strong>@Model.Employee.ManagerName</strong></div>
+                    <div><span>الهاتف</span><strong>@Model.Employee.Phone</strong></div>
+                    <div><span>البريد</span><strong>@Model.Employee.Email</strong></div>
+                    <div><span>تاريخ التعيين</span><strong>@Model.DisplayDate(Model.Employee.HireDate)</strong></div>
+                    <div><span>تاريخ الولادة</span><strong>@Model.DisplayDate(Model.Employee.BirthDate)</strong></div>
+                    <div><span>الهوية</span><strong>@Model.Employee.NationalId</strong></div>
+                </div>
+            </article>
+        </section>
+    }
+    else if (tab == "compensation")
+    {
+        <section class="nxep-kpis">
+            <div><span>الراتب الأساسي</span><strong>@Model.DisplayMoney(Model.Compensation.BasicSalary)</strong></div>
+            <div><span>العلاوات</span><strong>@Model.DisplayMoney(Model.Compensation.Allowances)</strong></div>
+            <div><span>الاستقطاعات</span><strong>@Model.DisplayMoney(Model.Compensation.Deductions)</strong></div>
+            <div><span>طريقة الدفع</span><strong>@Model.Compensation.PaymentMethod</strong></div>
+        </section>
+        <article class="nxep-card"><div class="nxep-card-head"><h2>معلومات الدفع</h2></div><div class="nxep-info-grid"><div><span>البنك</span><strong>@Model.Compensation.BankName</strong></div><div><span>الحساب</span><strong>@Model.Compensation.BankAccount</strong></div><div><span>العملة</span><strong>@Model.Compensation.Currency</strong></div></div></article>
+    }
+    else if (tab == "requests")
+    {
+        <section class="nxep-card"><div class="nxep-card-head"><h2>طلباتي</h2><span>@Model.Requests.Count</span></div><table class="nxep-table"><thead><tr><th>النوع</th><th>الفترة</th><th>الحالة</th><th>السبب</th></tr></thead><tbody>@foreach (var item in Model.Requests){<tr><td>@item.RequestType</td><td>@Model.DisplayDate(item.FromDate) - @Model.DisplayDate(item.ToDate)</td><td><span class="nxep-chip">@item.Status</span></td><td>@item.Reason</td></tr>}</tbody></table></section>
+    }
+    else if (tab == "polls")
+    {
+        <section class="nxep-card nxep-polls">
+            <div class="nxep-card-head"><h2>الانتخابات والاستطلاعات</h2><span>@Model.Polls.Count</span></div>
+            @if (Model.Polls.Count == 0)
+            {
+                <div class="nxep-empty">لا توجد استطلاعات منشورة حالياً.</div>
+            }
+            @foreach (var poll in Model.Polls)
+            {
+                <article class="nxep-poll-card">
+                    <div class="nxep-poll-head"><span class="nxep-chip">@poll.Category</span><time>@Model.DisplayDate(poll.PublishDate)</time></div>
+                    <h3>@poll.Title</h3>
+                    <p>@poll.Question</p>
+                    <div class="nxep-poll-options">
+                        @foreach (var option in poll.Options)
+                        {
+                            <form method="post" asp-page-handler="VotePoll" asp-route-pollId="@poll.Id" asp-route-optionId="@option.Id">
+                                <button type="submit" class="@(poll.SelectedOptionId == option.Id ? "selected" : "")">
+                                    <span>@option.OptionText</span>
+                                    <small>@option.VotesCount صوت</small>
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </article>
+            }
+        </section>
+    }
+    else if (tab == "team")
+    {
+        <section class="nxep-card"><div class="nxep-card-head"><h2>فريقي</h2><span>@Model.Team.Count</span></div><div class="nxep-team">@foreach (var item in Model.Team){<div><strong>@item.FullName</strong><span>@item.Position</span><small>@item.EmployeeNo</small></div>}</div></section>
+    }
+    else if (tab == "attendance")
+    {
+        <section class="nxep-card"><div class="nxep-card-head"><h2>حضوري</h2><span>@Model.Attendance.Count</span></div><table class="nxep-table"><thead><tr><th>التاريخ</th><th>الدخول</th><th>الخروج</th><th>الحالة</th><th>ملاحظة</th></tr></thead><tbody>@foreach (var item in Model.Attendance){<tr><td>@Model.DisplayDate(item.AttendanceDate)</td><td>@Model.DisplayTime(item.CheckIn)</td><td>@Model.DisplayTime(item.CheckOut)</td><td><span class="nxep-chip">@item.Status</span></td><td>@item.Notes</td></tr>}</tbody></table></section>
+    }
+    else if (tab == "feedback")
+    {
+        <section class="nxep-feedback-grid">
+            <form method="post" asp-page-handler="Feedback" class="nxep-card nxep-form">
+                <div class="nxep-card-head"><h2>إرسال شكوى أو مقترح</h2><span class="nxep-chip">موظف</span></div>
+                <label>النوع</label>
+                <select asp-for="Feedback.Type"><option>اقتراح</option><option>شكوى</option></select>
+                <label>الأولوية</label>
+                <select asp-for="Feedback.Priority"><option>متوسط</option><option>عالي</option><option>منخفض</option></select>
+                <label>العنوان</label>
+                <input asp-for="Feedback.Title" placeholder="اكتب عنوان مختصر" />
+                <label>التفاصيل</label>
+                <textarea asp-for="Feedback.Message" placeholder="اكتب تفاصيل الشكوى أو المقترح"></textarea>
+                <button type="submit">إرسال</button>
+            </form>
+            <article class="nxep-card">
+                <div class="nxep-card-head"><h2>متابعة الردود</h2><span>@Model.FeedbackItems.Count</span></div>
+                <div class="nxep-feedback-list">
+                    @foreach (var item in Model.FeedbackItems)
+                    {
+                        <article>
+                            <div><span class="nxep-chip @Model.StatusClass(item.Status)">@Model.FeedbackStatusText(item.Status)</span><span class="nxep-chip">@item.Type</span><span class="nxep-chip">@item.Priority</span></div>
+                            <h3>@item.Title</h3>
+                            <p>@item.Message</p>
+                            @if (!string.IsNullOrWhiteSpace(item.AdminReply))
+                            {
+                                <div class="nxep-reply"><strong>رد الإدارة - @item.RepliedBy</strong><span>@item.AdminReply</span></div>
+                            }
+                        </article>
+                    }
+                </div>
+            </article>
+        </section>
+    }
+</section>

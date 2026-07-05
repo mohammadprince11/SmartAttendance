@@ -34,6 +34,8 @@
     <link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-ui-stabilization-phase1.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-force-right-sidebar.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-employee-portal-shell-nav.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-stop-explosion-cleanup.css" asp-append-version="true" />
 </head>
 
 <body dir="rtl">
@@ -216,5 +218,7 @@
     <script src="~/js/table-pagination.js" asp-append-version="true"></script>
     <script src="~/js/nexora-ui-stabilization-phase1.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
+    <script src="~/js/nexora-employee-portal-shell-nav.js" asp-append-version="true"></script>
+    <script src="~/js/nexora-stop-explosion-cleanup.js" asp-append-version="true"></script>
 </body>
 </html>

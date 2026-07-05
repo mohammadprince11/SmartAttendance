@@ -1,0 +1,826 @@
+
+/* NEXORA HR Operations Professional UI Phase 3 */
+
+.nxhr-page,
+.nxhr-page * {
+    box-sizing: border-box !important;
+}
+
+.nxhr-page {
+    width: 100% !important;
+    min-height: 100vh !important;
+    padding: 18px !important;
+    color: #eef6fb !important;
+    direction: rtl !important;
+}
+
+.nxhr-pro-hero {
+    min-height: 112px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 18px !important;
+    padding: 22px 24px !important;
+    border-radius: 24px !important;
+    border: 1px solid rgba(73,111,151,.22) !important;
+    background:
+        radial-gradient(circle at top right, rgba(25,211,224,.12), transparent 34%),
+        linear-gradient(135deg, rgba(10,32,53,.84), rgba(5,17,31,.82)) !important;
+    overflow: hidden !important;
+}
+
+.nxhr-hero-text {
+    min-width: 0 !important;
+}
+
+.nxhr-hero span,
+.nxhr-hero-text span {
+    color: #d7b26d !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+    letter-spacing: .04em !important;
+}
+
+.nxhr-hero h1,
+.nxhr-hero-text h1 {
+    margin: 6px 0 0 !important;
+    color: #fff !important;
+    font-size: clamp(24px, 2.3vw, 36px) !important;
+    font-weight: 1000 !important;
+    line-height: 1.2 !important;
+}
+
+.nxhr-hero p,
+.nxhr-hero-text p {
+    margin: 8px 0 0 !important;
+    color: #a7b7c8 !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    line-height: 1.8 !important;
+}
+
+.nxhr-mark {
+    width: 58px !important;
+    height: 58px !important;
+    display: grid !important;
+    place-items: center !important;
+    flex: 0 0 auto !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(25,211,224,.38) !important;
+    background: rgba(25,211,224,.13) !important;
+    color: #9eebf1 !important;
+    font-weight: 1000 !important;
+    box-shadow: 0 16px 38px rgba(0,0,0,.22) !important;
+}
+
+.nxhr-layout {
+    display: grid !important;
+    grid-template-columns: 300px minmax(0, 1fr) !important;
+    gap: 18px !important;
+    margin-top: 18px !important;
+    align-items: start !important;
+}
+
+.nxhr-side {
+    position: sticky !important;
+    top: 16px !important;
+    display: grid !important;
+    gap: 10px !important;
+    padding: 14px !important;
+    border-radius: 24px !important;
+    border: 1px solid rgba(73,111,151,.20) !important;
+    background: rgba(5,15,28,.42) !important;
+}
+
+.nxhr-side a {
+    display: grid !important;
+    gap: 5px !important;
+    padding: 15px 16px !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(73,111,151,.18) !important;
+    background: rgba(255,255,255,.025) !important;
+    color: #dce7f2 !important;
+    text-decoration: none !important;
+    min-height: 72px !important;
+}
+
+.nxhr-side a.active {
+    border-color: rgba(25,211,224,.62) !important;
+    background: rgba(25,211,224,.11) !important;
+    box-shadow: inset 4px 0 0 rgba(25,211,224,.90) !important;
+}
+
+.nxhr-side strong {
+    font-size: 13px !important;
+    font-weight: 1000 !important;
+}
+
+.nxhr-side small {
+    color: #8fa6bb !important;
+    font-size: 11px !important;
+    font-weight: 850 !important;
+}
+
+.nxhr-side a.disabled {
+    opacity: .62 !important;
+}
+
+.nxhr-main {
+    min-width: 0 !important;
+    display: grid !important;
+    gap: 14px !important;
+}
+
+.nxhr-card {
+    border-radius: 24px !important;
+    border: 1px solid rgba(73,111,151,.22) !important;
+    background:
+        radial-gradient(circle at top right, rgba(25,211,224,.055), transparent 36%),
+        rgba(5,15,28,.42) !important;
+    box-shadow: 0 18px 42px rgba(0,0,0,.12) !important;
+}
+
+.nxhr-pro-head {
+    min-height: 86px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 420px) !important;
+    align-items: center !important;
+    gap: 16px !important;
+    padding: 16px !important;
+}
+
+.nxhr-pro-head h2 {
+    margin: 0 !important;
+    color: #fff !important;
+    font-size: 24px !important;
+    font-weight: 1000 !important;
+}
+
+.nxhr-pro-head p {
+    margin: 6px 0 0 !important;
+    color: #a7b7c8 !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+    line-height: 1.7 !important;
+}
+
+.nxhr-search {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) auto !important;
+    gap: 8px !important;
+    align-items: center !important;
+}
+
+.nxhr-search input,
+.nxhr-form input,
+.nxhr-form textarea,
+.nxhr-form select,
+.nxhr-reply-form textarea,
+.nxhr-reply-form select {
+    width: 100% !important;
+    min-width: 0 !important;
+    border-radius: 15px !important;
+    border: 1px solid rgba(73,111,151,.34) !important;
+    background: rgba(3,13,25,.74) !important;
+    color: #eef6fb !important;
+    font-family: inherit !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+    outline: none !important;
+}
+
+.nxhr-search input,
+.nxhr-form input,
+.nxhr-form select,
+.nxhr-reply-form select {
+    height: 42px !important;
+    padding: 0 13px !important;
+}
+
+.nxhr-form textarea,
+.nxhr-reply-form textarea {
+    min-height: 92px !important;
+    padding: 12px 13px !important;
+    resize: vertical !important;
+}
+
+.nxhr-options-text {
+    min-height: 120px !important;
+}
+
+.nxhr-search button,
+.nxhr-primary,
+.nxhr-record-actions button,
+.nxhr-reply-form button,
+.nxhr-feedback-actions > form > button {
+    min-height: 39px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(25,211,224,.42) !important;
+    background: rgba(25,211,224,.14) !important;
+    color: #d7fbff !important;
+    font-family: inherit !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+    cursor: pointer !important;
+    padding: 0 14px !important;
+}
+
+button.danger,
+.nxhr-record-actions button.danger,
+.nxhr-feedback-actions button.danger {
+    border-color: rgba(224,73,73,.34) !important;
+    background: rgba(224,73,73,.11) !important;
+    color: #ffc7c7 !important;
+}
+
+.nxhr-pro-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+.nxhr-pro-tabs a {
+    min-height: 66px !important;
+    display: grid !important;
+    align-content: center !important;
+    gap: 5px !important;
+    padding: 12px 14px !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(73,111,151,.24) !important;
+    background: rgba(255,255,255,.025) !important;
+    color: #dce7f2 !important;
+    text-decoration: none !important;
+    text-align: center !important;
+}
+
+.nxhr-pro-tabs a.active {
+    border-color: rgba(25,211,224,.64) !important;
+    background: rgba(25,211,224,.12) !important;
+}
+
+.nxhr-pro-tabs strong {
+    font-size: 13px !important;
+    font-weight: 1000 !important;
+}
+
+.nxhr-pro-tabs small {
+    color: #8fa6bb !important;
+    font-size: 10px !important;
+    font-weight: 850 !important;
+}
+
+.nxhr-pro-kpis {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.nxhr-pro-kpis div {
+    min-height: 86px !important;
+    display: grid !important;
+    align-content: center !important;
+    gap: 8px !important;
+    padding: 15px !important;
+    border-radius: 19px !important;
+    border: 1px solid rgba(73,111,151,.22) !important;
+    background: rgba(255,255,255,.028) !important;
+}
+
+.nxhr-pro-kpis span {
+    color: #a7b7c8 !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+}
+
+.nxhr-pro-kpis strong {
+    color: #9eebf1 !important;
+    font-size: 30px !important;
+    font-weight: 1000 !important;
+    line-height: 1 !important;
+}
+
+.nxhr-pro-workbench {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(380px, 460px) !important;
+    gap: 16px !important;
+    align-items: start !important;
+}
+
+.nxhr-side-form {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+}
+
+.nxhr-list-panel {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+}
+
+.nxhr-pro-form {
+    display: grid !important;
+    gap: 11px !important;
+    padding: 16px !important;
+}
+
+.nxhr-form-title {
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid rgba(73,111,151,.18) !important;
+}
+
+.nxhr-form-title span {
+    display: inline-flex !important;
+    min-height: 26px !important;
+    align-items: center !important;
+    padding: 4px 10px !important;
+    border-radius: 999px !important;
+    background: rgba(25,211,224,.10) !important;
+    border: 1px solid rgba(25,211,224,.25) !important;
+    color: #9eebf1 !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+}
+
+.nxhr-form-title h3 {
+    margin: 10px 0 0 !important;
+    color: #fff !important;
+    font-size: 20px !important;
+    font-weight: 1000 !important;
+}
+
+.nxhr-form-title p {
+    margin: 6px 0 0 !important;
+    color: #a7b7c8 !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+    line-height: 1.7 !important;
+}
+
+.nxhr-pro-form label,
+.nxhr-picker-head label,
+.nxhr-reply-form label {
+    color: #c9d8e7 !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+    margin: 0 !important;
+}
+
+.nxhr-pro-form small,
+.nxhr-picker-head small {
+    color: #88a0b8 !important;
+    font-size: 10px !important;
+    font-weight: 850 !important;
+    line-height: 1.6 !important;
+}
+
+.nxhr-form-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 10px !important;
+}
+
+.nxhr-picker-block {
+    display: grid !important;
+    gap: 8px !important;
+}
+
+.nxhr-picker-head {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    align-items: center !important;
+}
+
+.nxhr-pro-picker {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    max-height: 178px !important;
+    overflow: auto !important;
+    padding: 8px !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(73,111,151,.22) !important;
+    background: rgba(3,13,25,.50) !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(25,211,224,.60) rgba(3,13,25,.72) !important;
+}
+
+.nxhr-pro-picker.compact {
+    max-height: 136px !important;
+}
+
+.nxhr-pro-picker label {
+    position: relative !important;
+    display: grid !important;
+    grid-template-columns: 22px minmax(0,1fr) !important;
+    grid-template-areas:
+        "check name"
+        "check code" !important;
+    gap: 3px 8px !important;
+    align-items: center !important;
+    min-height: 52px !important;
+    padding: 9px !important;
+    border-radius: 15px !important;
+    border: 1px solid rgba(73,111,151,.18) !important;
+    background: rgba(255,255,255,.025) !important;
+    cursor: pointer !important;
+}
+
+.nxhr-pro-picker input {
+    grid-area: check !important;
+    width: 16px !important;
+    height: 16px !important;
+    accent-color: #19d3e0 !important;
+}
+
+.nxhr-pro-picker span {
+    grid-area: name !important;
+    color: #eef6fb !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.nxhr-pro-picker small {
+    grid-area: code !important;
+    color: #9eebf1 !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+}
+
+.nxhr-pro-check {
+    min-height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 9px !important;
+    padding: 10px 12px !important;
+    border-radius: 15px !important;
+    border: 1px solid rgba(25,211,224,.22) !important;
+    background: rgba(25,211,224,.07) !important;
+}
+
+.nxhr-pro-check input {
+    width: 16px !important;
+    height: 16px !important;
+    accent-color: #19d3e0 !important;
+}
+
+/* Lists */
+.nxhr-list-panel,
+.nxhr-feedback-panel,
+.nxhr-wall {
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+.nxhr-card-title,
+.nxhr-pro-title {
+    min-height: 62px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    padding: 14px 16px !important;
+    border-bottom: 1px solid rgba(73,111,151,.18) !important;
+    background: rgba(255,255,255,.018) !important;
+}
+
+.nxhr-pro-title h3 {
+    margin: 0 !important;
+    color: #fff !important;
+    font-size: 18px !important;
+    font-weight: 1000 !important;
+}
+
+.nxhr-pro-title p {
+    margin: 5px 0 0 !important;
+    color: #8fa6bb !important;
+    font-size: 11px !important;
+    font-weight: 850 !important;
+}
+
+.nxhr-pro-title > span {
+    flex: 0 0 auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 30px !important;
+    padding: 5px 10px !important;
+    border-radius: 999px !important;
+    background: rgba(25,211,224,.08) !important;
+    border: 1px solid rgba(25,211,224,.22) !important;
+    color: #9eebf1 !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+}
+
+.nxhr-card-list,
+.nxhr-feedback-list {
+    display: grid !important;
+    gap: 10px !important;
+    padding: 12px !important;
+    max-height: 640px !important;
+    overflow: auto !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(25,211,224,.60) rgba(3,13,25,.72) !important;
+}
+
+.nxhr-record-card,
+.nxhr-feedback-card {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) auto !important;
+    gap: 14px !important;
+    align-items: stretch !important;
+    padding: 14px !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(73,111,151,.18) !important;
+    background:
+        radial-gradient(circle at top right, rgba(25,211,224,.055), transparent 32%),
+        rgba(255,255,255,.025) !important;
+}
+
+.nxhr-record-main,
+.nxhr-feedback-content {
+    min-width: 0 !important;
+    display: grid !important;
+    gap: 8px !important;
+}
+
+.nxhr-record-top {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 7px !important;
+}
+
+.nxhr-chip {
+    min-height: 27px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 4px 10px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(73,111,151,.25) !important;
+    background: rgba(255,255,255,.035) !important;
+    color: #dce7f2 !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+}
+
+.nxhr-chip.green,
+.nxhr-chip.answered {
+    border-color: rgba(85,217,138,.30) !important;
+    background: rgba(85,217,138,.10) !important;
+    color: #bfffd8 !important;
+}
+
+.nxhr-chip.gold,
+.nxhr-chip.pending,
+.nxhr-chip.open {
+    border-color: rgba(247,185,85,.30) !important;
+    background: rgba(247,185,85,.10) !important;
+    color: #f4dca7 !important;
+}
+
+.nxhr-chip.closed {
+    color: #a7b7c8 !important;
+}
+
+.nxhr-record-top time {
+    color: #8fa6bb !important;
+    font-size: 11px !important;
+    font-weight: 850 !important;
+}
+
+.nxhr-record-card h3,
+.nxhr-feedback-card h3 {
+    margin: 0 !important;
+    color: #fff !important;
+    font-size: 16px !important;
+    font-weight: 1000 !important;
+    line-height: 1.45 !important;
+}
+
+.nxhr-record-card p,
+.nxhr-feedback-card p {
+    margin: 0 !important;
+    color: #c9d8e7 !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+    line-height: 1.8 !important;
+    max-width: 1100px !important;
+}
+
+.nxhr-record-meta {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+}
+
+.nxhr-record-meta span {
+    min-height: 26px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 4px 9px !important;
+    border-radius: 999px !important;
+    background: rgba(3,13,25,.48) !important;
+    color: #8fa6bb !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+}
+
+.nxhr-record-actions {
+    min-width: 150px !important;
+    display: grid !important;
+    align-content: center !important;
+    gap: 8px !important;
+}
+
+.nxhr-record-actions form {
+    margin: 0 !important;
+}
+
+.nxhr-record-actions button,
+.nxhr-feedback-actions button {
+    width: 100% !important;
+}
+
+.nxhr-empty-card {
+    min-height: 150px !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 20px !important;
+    border: 1px dashed rgba(73,111,151,.26) !important;
+    color: #8fa6bb !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    background: rgba(255,255,255,.018) !important;
+}
+
+/* Feedback */
+.nxhr-feedback-card {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px) !important;
+}
+
+.nxhr-admin-reply {
+    display: grid !important;
+    gap: 5px !important;
+    padding: 11px !important;
+    border-radius: 15px !important;
+    border: 1px solid rgba(85,217,138,.20) !important;
+    background: rgba(85,217,138,.065) !important;
+}
+
+.nxhr-admin-reply strong {
+    color: #bfffd8 !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+}
+
+.nxhr-admin-reply span {
+    color: #dce7f2 !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+    line-height: 1.7 !important;
+}
+
+.nxhr-feedback-actions {
+    display: grid !important;
+    gap: 8px !important;
+    align-content: start !important;
+}
+
+.nxhr-feedback-actions form {
+    margin: 0 !important;
+}
+
+.nxhr-reply-form {
+    display: grid !important;
+    gap: 7px !important;
+}
+
+.nxhr-reply-form textarea {
+    min-height: 78px !important;
+}
+
+/* Wall */
+.nxhr-wall-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 12px !important;
+    padding: 14px !important;
+}
+
+.nxhr-wall-grid article {
+    display: grid !important;
+    gap: 9px !important;
+    padding: 16px !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(73,111,151,.20) !important;
+    background: rgba(255,255,255,.025) !important;
+}
+
+.nxhr-wall-grid article h3 {
+    margin: 0 !important;
+    color: #fff !important;
+    font-size: 16px !important;
+    font-weight: 1000 !important;
+}
+
+.nxhr-wall-grid article p {
+    margin: 0 !important;
+    color: #c9d8e7 !important;
+    line-height: 1.8 !important;
+}
+
+/* Old table safety if any remains */
+.nxhr-table-wrap {
+    max-width: 100% !important;
+    overflow: auto !important;
+}
+
+.nxhr-table {
+    width: 100% !important;
+}
+
+.nxhr-table th,
+.nxhr-table td {
+    white-space: normal !important;
+    vertical-align: top !important;
+}
+
+.nxhr-alert {
+    margin-top: 12px !important;
+    padding: 13px 16px !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(247,185,85,.28) !important;
+    background: rgba(247,185,85,.08) !important;
+    color: #f4dca7 !important;
+    font-weight: 1000 !important;
+}
+
+@media (max-width: 1360px) {
+    .nxhr-layout {
+        grid-template-columns: 260px minmax(0,1fr) !important;
+    }
+    .nxhr-pro-workbench {
+        grid-template-columns: minmax(0,1fr) minmax(340px, 420px) !important;
+    }
+    .nxhr-feedback-card {
+        grid-template-columns: minmax(0, 1fr) 320px !important;
+    }
+}
+
+@media (max-width: 1160px) {
+    .nxhr-layout,
+    .nxhr-pro-head,
+    .nxhr-pro-workbench,
+    .nxhr-record-card,
+    .nxhr-feedback-card {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxhr-side,
+    .nxhr-side-form,
+    .nxhr-list-panel {
+        position: static !important;
+        grid-column: auto !important;
+        grid-row: auto !important;
+    }
+
+    .nxhr-pro-tabs,
+    .nxhr-pro-kpis,
+    .nxhr-wall-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 720px) {
+    .nxhr-page {
+        padding: 10px !important;
+    }
+
+    .nxhr-pro-tabs,
+    .nxhr-pro-kpis,
+    .nxhr-form-grid,
+    .nxhr-pro-picker,
+    .nxhr-wall-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxhr-pro-hero {
+        align-items: flex-start !important;
+        flex-direction: column !important;
+    }
+
+    .nxhr-record-actions {
+        min-width: 0 !important;
+    }
+}

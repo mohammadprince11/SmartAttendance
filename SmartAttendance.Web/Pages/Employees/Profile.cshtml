@@ -80,6 +80,7 @@
 <link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-profile-pro.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-profile-kayan-style.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-profile-kayan-pages.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-profile-polish-requirements.css" asp-append-version="true" />
 
 <div class="nxr-page nxr-profile-pro-page">
@@ -457,7 +458,249 @@
             </div>
         </section>
 
-        <section class="nxr-profile-pro-filter nxr-card">
+                <!-- NEXORA_PROFILE_KAYAN_PAGES_START -->
+        <section class="nxr-profile-kayan-pages nxr-card" data-nxr-profile-kayan-pages>
+            <div class="nxr-profile-kayan-topbar">
+                <div class="nxr-profile-kayan-tabs" role="tablist" aria-label="صفحات ملف الموظف">
+                    <button type="button" class="active" data-nxr-profile-tab="personal">الملف الشخصي</button>
+                    <button type="button" data-nxr-profile-tab="finance">الملف المالي</button>
+                    <button type="button" data-nxr-profile-tab="activity">الأنشطة الأخيرة</button>
+                </div>
+
+                <div class="nxr-profile-kayan-tools">
+                    <a asp-page="/EmployeeDocuments/Index" asp-route-employeeId="@employee.Id" class="primary">الملفات الإلكترونية</a>
+                    <a asp-page="./Lifecycle" asp-route-id="@employee.Id">سجل الموظف</a>
+                    <button type="button" data-nxr-profile-tab="activity">عرض النشاط</button>
+                </div>
+            </div>
+
+            <div class="nxr-profile-kayan-body">
+                <div class="nxr-profile-kayan-pane active" data-nxr-profile-pane="personal">
+                    <div class="nxr-profile-kayan-grid">
+                        <article class="nxr-profile-kayan-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>الكفاءات</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">⚙</span><strong>لا يوجد بيانات</strong><small>سيتم ربط الكفاءات والتقييمات في مرحلة لاحقة.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>الخبرات</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▣</span><strong>لا يوجد بيانات</strong><small>خبرات الموظف السابقة والحالية.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>الشهادات</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▤</span><strong>لا يوجد بيانات</strong><small>الشهادات الأكاديمية والمهنية.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>الملفات الطبية</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">✚</span><strong>لا يوجد بيانات</strong><small>الفحوصات، البطاقة الصحية، الملاحظات الطبية.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>دورات تدريبية</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▥</span><strong>لا يوجد بيانات</strong><small>الدورات والتدريبات المرتبطة بالموظف.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>التعليم</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▱</span><strong>لا يوجد بيانات</strong><small>المؤهل الدراسي والتخصص وسنة التخرج.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>العنوان</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-list">
+                                <div class="nxr-profile-kayan-row">
+                                    <div><strong>البلد</strong><span>@Model.Display(employee.Country)</span></div>
+                                    <span class="nxr-profile-kayan-chip">بيانات حالية</span>
+                                </div>
+                                <div class="nxr-profile-kayan-row">
+                                    <div><strong>رقم الهاتف</strong><span>@Model.Display(employee.Phone)</span></div>
+                                    <span class="nxr-profile-kayan-chip">اتصال</span>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>العهد</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▰</span><strong>لا يوجد بيانات</strong><small>اللابتوبات، الأجهزة، العهد التشغيلية.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>الوثائق</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            @if (Model.DocumentRows.Any())
+                            {
+                                <div class="nxr-profile-kayan-list">
+                                    @foreach (var doc in Model.DocumentRows.Take(4))
+                                    {
+                                        <div class="nxr-profile-kayan-row">
+                                            <div>
+                                                <strong>@Model.Display(doc.DocumentType)</strong>
+                                                <span>@Model.Display(doc.FileName)</span>
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(doc.StoredPath))
+                                            {
+                                                <a href="@doc.StoredPath" target="_blank" class="nxr-profile-kayan-chip">فتح</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="nxr-profile-kayan-chip warn">بدون ملف</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="nxr-profile-kayan-empty"><div><span class="icon">▤</span><strong>لا يوجد بيانات</strong><small>الهوية، العقد، الجواز، الإقامة، البطاقة الصحية.</small></div></div>
+                            }
+                        </article>
+                    </div>
+                </div>
+
+                <div class="nxr-profile-kayan-pane" data-nxr-profile-pane="finance">
+                    <div class="nxr-profile-kayan-grid">
+                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>العلاوات</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">＋</span><strong>لا يوجد بيانات</strong><small>العلاوات الدائمة أو المؤقتة.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>الدخل القائم على الحصص</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">＋</span><strong>لا يوجد بيانات</strong><small>العمولات والحوافز المتغيرة.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>امتيازات خارج الراتب</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">＋</span><strong>لا يوجد بيانات</strong><small>السكن، النقل، التغذية، امتيازات أخرى.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>الإجازات</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-list">
+                                <div class="nxr-profile-kayan-row">
+                                    <div><strong>طلبات معلقة</strong><span>ضمن ملف الموظف</span></div>
+                                    <span class="nxr-profile-kayan-chip warn">@Model.PendingRequests</span>
+                                </div>
+                                <div class="nxr-profile-kayan-row">
+                                    <div><strong>طلبات مقبولة</strong><span>إجازات وخدمات ذاتية</span></div>
+                                    <span class="nxr-profile-kayan-chip">@Model.ApprovedRequests</span>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>التأمين الصحي</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">✚</span><strong>لا يوجد بيانات</strong><small>معلومات التأمين الصحي والاشتراكات.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>الاقتطاعات الدائمة</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">－</span><strong>لا يوجد بيانات</strong><small>السلف، القروض، أو الاستقطاعات الشهرية.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>البنوك الأخرى</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▦</span><strong>لا يوجد بيانات</strong><small>حسابات مصرفية إضافية.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>إعفاءات إضافية</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">%</span><strong>لا يوجد بيانات</strong><small>إعفاءات أو معالجات مالية خاصة.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>مراكز الكلفة</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-list">
+                                <div class="nxr-profile-kayan-row">
+                                    <div><strong>الفرع</strong><span>@Model.Display(employee.BranchName)</span></div>
+                                    <span class="nxr-profile-kayan-chip">Cost</span>
+                                </div>
+                                <div class="nxr-profile-kayan-row">
+                                    <div><strong>القسم</strong><span>@Model.Display(employee.DepartmentName)</span></div>
+                                    <span class="nxr-profile-kayan-chip">Dept</span>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>امتيازات خارجية</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▧</span><strong>لا يوجد بيانات</strong><small>امتيازات غير مرتبطة بالراتب المباشر.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>تسديدات</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">↺</span><strong>لا يوجد بيانات</strong><small>تسديدات مالية أو استردادات.</small></div></div>
+                        </article>
+
+                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
+                            <div class="nxr-profile-kayan-card-head"><h3>مخصصات متغيرة</h3><span class="nxr-profile-kayan-menu">☰</span></div>
+                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▨</span><strong>لا يوجد بيانات</strong><small>مخصصات تتغير حسب الشهر أو الموقع.</small></div></div>
+                        </article>
+                    </div>
+                </div>
+
+                <div class="nxr-profile-kayan-pane" data-nxr-profile-pane="activity">
+                    <div class="nxr-profile-kayan-activity-head">
+                        <div>
+                            <h3>الأنشطة الأخيرة</h3>
+                            <p>آخر الحركات المسجلة على ملف الموظف، ويمكن لاحقاً ربطها بكل أوامر شؤون الموظفين.</p>
+                        </div>
+                        <span class="nxr-profile-kayan-chip">@Model.AuditRows.Count حركة</span>
+                    </div>
+
+                    <div class="nxr-profile-kayan-activity-table-wrap">
+                        <table class="nxr-profile-kayan-activity-table">
+                            <thead>
+                                <tr>
+                                    <th>اسم المستخدم</th>
+                                    <th>الإجراء</th>
+                                    <th>تاريخ الحركة</th>
+                                    <th>تفاصيل</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @if (Model.AuditRows.Any())
+                            {
+                                foreach (var row in Model.AuditRows.Take(40))
+                                {
+                                    var userInitial = string.IsNullOrWhiteSpace(row.UserName) ? "N" : row.UserName.Trim()[0].ToString();
+
+                                    <tr>
+                                        <td>
+                                            <span class="nxr-profile-kayan-user">
+                                                <span class="nxr-profile-kayan-user-avatar">@userInitial</span>
+                                                @Model.Display(row.UserName)
+                                            </span>
+                                        </td>
+                                        <td>@Model.Display(row.Action)</td>
+                                        <td>@Model.DisplayDateTime(row.CreatedAt)</td>
+                                        <td><span class="nxr-profile-kayan-chip">عرض</span></td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4">
+                                        <div class="nxr-profile-kayan-empty">
+                                            <div>
+                                                <span class="icon">◷</span>
+                                                <strong>لا توجد أنشطة مسجلة</strong>
+                                                <small>ستظهر هنا الحركات مثل تعديل البيانات، رفع مستند، تغيير قسم، أو إنهاء خدمة.</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- NEXORA_PROFILE_KAYAN_PAGES_END -->
+<section class="nxr-profile-pro-filter nxr-card">
             <form method="get">
                 <input type="hidden" name="Id" value="@employee.Id" />
                 <div>
@@ -727,6 +970,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/nexora-profile-kayan-pages.js" asp-append-version="true"></script>
     <script src="~/js/nexora-employee-profile-kayan-style.js" asp-append-version="true"></script>
     <script src="~/js/nexora-profile-remove-extra-links-tabs.js" asp-append-version="true"></script>
 }

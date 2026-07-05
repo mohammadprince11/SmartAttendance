@@ -1,0 +1,308 @@
+
+/* NEXORA HR Operations Tabs Page */
+
+.nxr-hr-ops-page,
+.nxr-hr-ops-page * {
+    box-sizing: border-box !important;
+    transition: none !important;
+    animation: none !important;
+}
+
+.nxr-hr-ops-hero {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+    padding: 20px !important;
+    margin-bottom: 16px !important;
+    border-radius: 26px !important;
+    border: 1px solid rgba(73, 111, 151, .26) !important;
+    background:
+        radial-gradient(circle at top right, rgba(25, 211, 224, .10), transparent 34%),
+        linear-gradient(180deg, rgba(12, 34, 58, .88), rgba(8, 24, 39, .92)) !important;
+    box-shadow: 0 16px 38px rgba(0, 0, 0, .16) !important;
+}
+
+.nxr-hr-ops-hero h1 {
+    margin: 0 !important;
+    color: #EEF6FB !important;
+    font-size: 28px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-hr-ops-hero p {
+    margin: 6px 0 0 !important;
+    color: #A7B7C8 !important;
+    font-size: 13px !important;
+    font-weight: 850 !important;
+}
+
+.nxr-hr-ops-hero-actions {
+    display: flex !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+}
+
+.nxr-hr-ops-shell {
+    display: grid !important;
+    grid-template-columns: 360px minmax(0, 1fr) !important;
+    gap: 16px !important;
+    align-items: start !important;
+}
+
+.nxr-hr-ops-tabs {
+    position: sticky !important;
+    top: 92px !important;
+    display: grid !important;
+    gap: 8px !important;
+    max-height: calc(100vh - 115px) !important;
+    overflow: auto !important;
+    padding: 14px !important;
+    border-radius: 24px !important;
+    border: 1px solid rgba(73, 111, 151, .26) !important;
+    background:
+        radial-gradient(circle at top right, rgba(25, 211, 224, .07), transparent 34%),
+        rgba(7, 22, 38, .88) !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(25, 211, 224, .55) rgba(3, 13, 25, .72) !important;
+}
+
+.nxr-hr-ops-tabs::-webkit-scrollbar {
+    width: 9px !important;
+}
+
+.nxr-hr-ops-tabs::-webkit-scrollbar-track {
+    background: rgba(3, 13, 25, .85) !important;
+}
+
+.nxr-hr-ops-tabs::-webkit-scrollbar-thumb {
+    background: rgba(25, 211, 224, .56) !important;
+    border-radius: 999px !important;
+    border: 2px solid rgba(3, 13, 25, .85) !important;
+}
+
+.nxr-hr-ops-tabs button {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 38px minmax(0, 1fr) !important;
+    gap: 10px !important;
+    align-items: center !important;
+    min-height: 62px !important;
+    padding: 10px !important;
+    border-radius: 17px !important;
+    border: 1px solid rgba(73, 111, 151, .20) !important;
+    background: rgba(255, 255, 255, .035) !important;
+    color: #DCE7F2 !important;
+    text-align: right !important;
+    cursor: pointer !important;
+    font-family: inherit !important;
+}
+
+.nxr-hr-ops-tabs button.active {
+    border-color: rgba(25, 211, 224, .45) !important;
+    background: rgba(25, 211, 224, .10) !important;
+    box-shadow: inset 3px 0 0 rgba(25, 211, 224, .75) !important;
+}
+
+.nxr-hr-ops-tabs .tab-icon {
+    width: 38px !important;
+    height: 38px !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(25, 211, 224, .22) !important;
+    background: rgba(25, 211, 224, .075) !important;
+    color: #9EEBF1 !important;
+    font-size: 14px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-hr-ops-tabs strong {
+    display: block !important;
+    color: #EEF6FB !important;
+    font-size: 13px !important;
+    font-weight: 1000 !important;
+    line-height: 1.4 !important;
+}
+
+.nxr-hr-ops-tabs small {
+    display: block !important;
+    margin-top: 3px !important;
+    color: #8FA6BB !important;
+    font-size: 11px !important;
+    font-weight: 850 !important;
+}
+
+.nxr-hr-ops-content {
+    min-height: 680px !important;
+    padding: 18px !important;
+    border-radius: 26px !important;
+    border: 1px solid rgba(73, 111, 151, .26) !important;
+    background:
+        radial-gradient(circle at top right, rgba(25, 211, 224, .06), transparent 36%),
+        linear-gradient(180deg, rgba(12, 34, 58, .86), rgba(7, 22, 38, .92)) !important;
+    box-shadow: 0 16px 42px rgba(0, 0, 0, .16) !important;
+}
+
+.nxr-hr-ops-pane {
+    display: none !important;
+}
+
+.nxr-hr-ops-pane.active {
+    display: grid !important;
+    gap: 16px !important;
+}
+
+.nxr-ops-pane-head {
+    display: grid !important;
+    grid-template-columns: 62px minmax(0, 1fr) !important;
+    gap: 14px !important;
+    align-items: center !important;
+    padding: 18px !important;
+    border-radius: 22px !important;
+    border: 1px solid rgba(73, 111, 151, .20) !important;
+    background: rgba(255, 255, 255, .035) !important;
+}
+
+.nxr-ops-pane-head .pane-icon {
+    width: 62px !important;
+    height: 62px !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 20px !important;
+    background: linear-gradient(135deg, rgba(25, 211, 224, .86), rgba(215, 178, 109, .72)) !important;
+    color: #06111F !important;
+    font-size: 22px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-ops-pane-head h2 {
+    margin: 0 !important;
+    color: #EEF6FB !important;
+    font-size: 24px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-ops-pane-head p {
+    margin: 6px 0 0 !important;
+    color: #A7B7C8 !important;
+    font-size: 13px !important;
+    font-weight: 850 !important;
+    line-height: 1.7 !important;
+}
+
+.nxr-ops-cards,
+.nxr-ops-kpis,
+.nxr-ops-action-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+}
+
+.nxr-ops-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+.nxr-ops-cards article,
+.nxr-ops-kpis div,
+.nxr-ops-action-grid a,
+.nxr-ops-action-grid button,
+.nxr-ops-empty {
+    min-height: 120px !important;
+    display: grid !important;
+    align-content: center !important;
+    gap: 7px !important;
+    padding: 16px !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(73, 111, 151, .22) !important;
+    background: rgba(5, 15, 28, .40) !important;
+    color: #DCE7F2 !important;
+    text-decoration: none !important;
+    font-family: inherit !important;
+}
+
+.nxr-ops-cards strong,
+.nxr-ops-empty strong {
+    color: #EEF6FB !important;
+    font-size: 15px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-ops-cards span,
+.nxr-ops-empty span {
+    color: #A7B7C8 !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+}
+
+.nxr-ops-kpis div {
+    min-height: 118px !important;
+    text-align: center !important;
+    place-items: center !important;
+}
+
+.nxr-ops-kpis span {
+    color: #A7B7C8 !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+}
+
+.nxr-ops-kpis strong {
+    color: #9EEBF1 !important;
+    font-size: 34px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-ops-kpis.danger strong {
+    color: #FFC1C1 !important;
+}
+
+.nxr-ops-action-grid a,
+.nxr-ops-action-grid button {
+    min-height: 88px !important;
+    cursor: pointer !important;
+    text-align: center !important;
+    color: #D7FBFF !important;
+    font-size: 13px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-ops-action-grid a:hover,
+.nxr-ops-action-grid button:hover {
+    border-color: rgba(25, 211, 224, .42) !important;
+    background: rgba(25, 211, 224, .075) !important;
+}
+
+@media (max-width: 1200px) {
+    .nxr-hr-ops-shell {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxr-hr-ops-tabs {
+        position: static !important;
+        max-height: none !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 760px) {
+    .nxr-hr-ops-hero {
+        flex-direction: column !important;
+    }
+
+    .nxr-hr-ops-tabs,
+    .nxr-ops-cards,
+    .nxr-ops-kpis,
+    .nxr-ops-action-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxr-ops-pane-head {
+        grid-template-columns: 1fr !important;
+        text-align: center !important;
+    }
+
+    .nxr-ops-pane-head .pane-icon {
+        margin: 0 auto !important;
+    }
+}

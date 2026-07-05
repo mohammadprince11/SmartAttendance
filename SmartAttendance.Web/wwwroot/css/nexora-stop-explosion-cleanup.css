@@ -1,0 +1,18 @@
+
+/* NEXORA Stop Explosion Cleanup */
+/* Safety layer to hide duplicated experimental injected blocks if old browser cache still loads them. */
+
+[data-unified-announcements],
+[data-unified-wall-posts],
+[data-unified-admin-feedback],
+[data-unified-employee-wall],
+[data-unified-feedback-list],
+[data-nx-ann-sync-panel],
+[data-nx-wall-sync-panel],
+[data-nx-ann-wall-list],
+.nx-ann-sync-panel,
+.nx-ann-sync-table-card,
+.nx-ann-published-card,
+.nx-ann-wall-list {
+    display: none !important;
+}

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Security;
@@ -97,6 +97,11 @@ public class LoginModel : PageModel
         if (!string.IsNullOrWhiteSpace(ReturnUrl) && ReturnUrl.StartsWith("/", StringComparison.Ordinal))
         {
             return Redirect(ReturnUrl);
+        }
+
+        if (user.Role.Equals("Employee", StringComparison.OrdinalIgnoreCase))
+        {
+            return RedirectToPage("/EmployeePortal/Index");
         }
 
         return RedirectToPage("/Index");

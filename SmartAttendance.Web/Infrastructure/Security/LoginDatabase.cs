@@ -1,4 +1,4 @@
-using SmartAttendance.Infrastructure.Persistence;
+﻿using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Infrastructure.Security;
@@ -7,6 +7,8 @@ public static class LoginDatabase
 {
     public const string DefaultAdminUsername = "admin";
     public const string DefaultAdminPassword = "Admin@12345";
+    public const string DefaultEmployeeUsername = "employee";
+    public const string DefaultEmployeePassword = "Employee@12345";
 
     public static async Task EnsureCreatedAsync(ApplicationDbContext dbContext)
     {
@@ -58,6 +60,83 @@ VALUES ('AppLoginUsers', 'admin', 'Seed Default Admin User', 'Default admin user
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@Username", DefaultAdminUsername);
+                    HrmsDatabase.AddParameter(command, "@PasswordHash", hash);
+                    HrmsDatabase.AddParameter(command, "@PasswordSalt", salt);
+                });
+        }
+
+        await EnsureDefaultEmployeeUserAsync(dbContext);
+    }
+
+    private static async Task EnsureDefaultEmployeeUserAsync(ApplicationDbContext dbContext)
+    {
+        var employeeId = await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            """
+SELECT TOP 1 Id
+FROM Employees
+WHERE IsDeleted = 0 AND IsActive = 1
+ORDER BY
+    CASE
+        WHEN EmployeeNo = '11230' THEN 0
+        WHEN FullName LIKE N'%Ù…Ø­Ù…Ø¯ Ø¹Ù„ÙŠ Ø²ÙŠØ¯Ø§Ù†%' THEN 1
+        ELSE 2
+    END,
+    Id;
+""");
+
+        if (employeeId <= 0)
+        {
+            return;
+        }
+
+        var salt = SimplePasswordHasher.CreateSalt();
+        var hash = SimplePasswordHasher.HashPassword(DefaultEmployeePassword, salt);
+
+        var existing = await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            "SELECT COUNT(*) FROM AppLoginUsers WHERE Username = @Username",
+            command => HrmsDatabase.AddParameter(command, "@Username", DefaultEmployeeUsername));
+
+        if (existing == 0)
+        {
+            await HrmsDatabase.ExecuteAsync(
+                dbContext,
+                """
+INSERT INTO AppLoginUsers
+(EmployeeId, Username, PasswordHash, PasswordSalt, Role, IsActive, CreatedAt)
+VALUES
+(@EmployeeId, @Username, @PasswordHash, @PasswordSalt, 'Employee', 1, SYSUTCDATETIME());
+
+INSERT INTO AuditLogs (EntityName, EntityId, Action, NewValues, UserName)
+VALUES ('AppLoginUsers', @Username, 'Seed Official Employee User', 'Official employee portal account created', 'System');
+""",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                    HrmsDatabase.AddParameter(command, "@Username", DefaultEmployeeUsername);
+                    HrmsDatabase.AddParameter(command, "@PasswordHash", hash);
+                    HrmsDatabase.AddParameter(command, "@PasswordSalt", salt);
+                });
+        }
+        else
+        {
+            await HrmsDatabase.ExecuteAsync(
+                dbContext,
+                """
+UPDATE AppLoginUsers
+SET EmployeeId = @EmployeeId,
+    Role = 'Employee',
+    IsActive = 1,
+    PasswordHash = @PasswordHash,
+    PasswordSalt = @PasswordSalt,
+    UpdatedAt = SYSUTCDATETIME()
+WHERE Username = @Username;
+""",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                    HrmsDatabase.AddParameter(command, "@Username", DefaultEmployeeUsername);
                     HrmsDatabase.AddParameter(command, "@PasswordHash", hash);
                     HrmsDatabase.AddParameter(command, "@PasswordSalt", salt);
                 });

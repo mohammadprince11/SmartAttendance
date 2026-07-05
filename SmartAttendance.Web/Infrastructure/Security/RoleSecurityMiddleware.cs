@@ -1,4 +1,4 @@
-using SmartAttendance.Infrastructure.Persistence;
+﻿using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Infrastructure.Security;
@@ -163,6 +163,11 @@ public class RoleSecurityMiddleware
 
         if (role.Equals("Employee", StringComparison.OrdinalIgnoreCase))
         {
+            if (path.StartsWith("/employeeportal"))
+            {
+                return HasEmployeeId(employeeId);
+            }
+
             if (path.StartsWith("/myprofile"))
             {
                 return HasEmployeeId(employeeId);

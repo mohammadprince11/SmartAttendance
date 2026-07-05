@@ -1,187 +1,438 @@
 @page
 @model SmartAttendance.Web.Pages.EmployeeProfiles.IndexModel
-
 @{
-    ViewData["Title"] = "Employee Profiles";
+    ViewData["Title"] = "عمليات الموارد البشرية";
+    var tab = Model.Tab;
 }
 
-<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-hr-operations-official.css" asp-append-version="true" />
 
-<div class="hrms-page">
-    <div class="page-header">
-        <div>
-            <h1>ملف الموظف المتقدم</h1>
-            <p>إكمال بيانات المنصب والجنس والجنسية ونوع العقد والحالة الوظيفية والمدير المباشر.</p>
+<section class="nxhr-page" dir="rtl">
+    <header class="nxhr-hero nxhr-pro-hero">
+        <div class="nxhr-hero-text">
+            <span>NEXORA PEOPLE OPERATIONS</span>
+            <h1>عمليات الموارد البشرية</h1>
+            <p>تفاعل الموظفين مربوط رسمياً بقاعدة البيانات: الإعلانات، الشكاوي والمقترحات، منشورات الحائط، والاستطلاعات.</p>
         </div>
+        <div class="nxhr-mark">NX</div>
+    </header>
 
-        <a asp-page="/HrAnalytics/Index" class="hrms-btn-primary">لوحة المؤشرات</a>
-    </div>
-
-    @if (!string.IsNullOrWhiteSpace(Model.Message))
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="hrms-alert success">@Model.Message</div>
+        <div class="nxhr-alert">@Model.StatusMessage</div>
     }
 
-    <form method="get" class="hrms-filter-card">
-        <div class="hrms-grid-2">
-            <div class="hrms-field">
-                <label>بحث</label>
-                <input asp-for="Search" placeholder="رقم الموظف، الاسم، القسم، الفرع، المنصب..." />
-            </div>
-            <div class="hrms-actions" style="align-self:end;">
-                <button class="hrms-btn-primary" type="submit">بحث</button>
-                <a asp-page="./Index" class="hrms-btn-secondary">مسح</a>
-            </div>
-        </div>
-    </form>
+    <div class="nxhr-layout">
+        <aside class="nxhr-side">
+            <a class="active" asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements">
+                <strong>تفاعل الموظفين</strong>
+                <small>الإعلانات، الشكاوي، الحائط</small>
+            </a>
+            <a class="disabled" href="javascript:void(0)"><strong>تحديثات الموظف</strong><small>لاحقاً</small></a>
+            <a class="disabled" href="javascript:void(0)"><strong>عقود الموظفين</strong><small>لاحقاً</small></a>
+            <a class="disabled" href="javascript:void(0)"><strong>إدارة العهد</strong><small>لاحقاً</small></a>
+        </aside>
 
-    <div class="hrms-table-card">
-        <div class="hrms-table-wrap">
-            <table class="hrms-table">
-                <thead>
-                    <tr>
-                        <th>رقم الموظف</th>
-                        <th class="text-start">الاسم</th>
-                        <th>الفرع</th>
-                        <th>القسم</th>
-                        <th>المنصب</th>
-                        <th>الجنس</th>
-                        <th>الجنسية</th>
-                        <th>البلد</th>
-                        <th>نوع العقد</th>
-                        <th>انتهاء العقد</th>
-                        <th>الحالة</th>
-                        <th>المدير المباشر</th>
-                        <th>تعديل</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var employee in Model.Employees)
-                    {
-                        <tr>
-                            <td>@employee.EmployeeNo</td>
-                            <td class="text-start">@employee.FullName</td>
-                            <td>@employee.Branch</td>
-                            <td>@employee.Department</td>
-                            <td>@employee.Position</td>
-                            <td>@employee.Gender</td>
-                            <td>@employee.Nationality</td>
-                            <td>@employee.Country</td>
-                            <td>@employee.ContractType</td>
-                            <td>@employee.ContractEndDate?.ToString("yyyy-MM-dd")</td>
-                            <td>@employee.EmploymentStatus</td>
-                            <td>@employee.DirectManager</td>
-                            <td>
-                                <button type="button"
-                                        class="hrms-btn-secondary"
-                                        data-fill-profile
-                                        data-id="@employee.Id"
-                                        data-position="@employee.Position"
-                                        data-gender="@employee.Gender"
-                                        data-nationality="@employee.Nationality"
-                                        data-country="@employee.Country"
-                                        data-contracttype="@employee.ContractType"
-                                        data-contractenddate="@employee.ContractEndDate?.ToString("yyyy-MM-dd")"
-                                        data-employmentstatus="@employee.EmploymentStatus"
-                                        data-directmanagerid="@employee.DirectManagerId">
-                                    تعديل
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+        <main class="nxhr-main">
+            <section class="nxhr-card nxhr-section-head nxhr-pro-head">
+                <div>
+                    <h2>تفاعل الموظفين</h2>
+                    <p>هذه الصفحة تعتمد على قاعدة البيانات فقط. لا يوجد LocalStorage ولا سكربتات مزامنة مؤقتة.</p>
+                </div>
+                <form method="get" class="nxhr-search">
+                    <input type="hidden" name="section" value="engagement" />
+                    <input type="hidden" name="tab" value="@tab" />
+                    <input name="Search" value="@Model.Search" placeholder="بحث بالعنوان، الموظف، أو الوصف..." />
+                    <button type="submit">بحث</button>
+                </form>
+            </section>
+
+            <nav class="nxhr-tabs nxhr-pro-tabs">
+                <a class="@(tab == "announcements" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements">
+                    <strong>الإعلانات</strong>
+                    <small>نشر داخلي</small>
+                </a>
+                <a class="@(tab == "polls" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="polls">
+                    <strong>الانتخابات والاستطلاعات</strong>
+                    <small>تصويت الموظفين</small>
+                </a>
+                <a class="@(tab == "feedback" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="feedback">
+                    <strong>اقتراحات وشكاوي</strong>
+                    <small>وارد الموظفين</small>
+                </a>
+                <a class="@(tab == "wall" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="wall">
+                    <strong>متابعة منشورات الحائط</strong>
+                    <small>المحتوى المنشور</small>
+                </a>
+            </nav>
+
+            @if (tab == "announcements")
+            {
+                <section class="nxhr-kpis nxhr-pro-kpis">
+                    <div><span>إجمالي الإعلانات</span><strong>@Model.TotalAnnouncements</strong></div>
+                    <div><span>منشورة</span><strong>@Model.PublishedAnnouncements</strong></div>
+                    <div><span>مسودات</span><strong>@Model.DraftAnnouncements</strong></div>
+                    <div><span>منشورات الحائط</span><strong>@Model.WallPosts</strong></div>
+                </section>
+
+                <section class="nxhr-pro-workbench">
+                    <form method="post" asp-page-handler="CreateAnnouncement" class="nxhr-card nxhr-pro-form nxhr-side-form">
+                        <div class="nxhr-form-title">
+                            <span>إعلان جديد</span>
+                            <h3>إنشاء إعلان داخلي</h3>
+                            <p>الإعلان المنشور يظهر مباشرة في حائط الموظف حسب الجهة المستهدفة.</p>
+                        </div>
+
+                        <label>عنوان الإعلان</label>
+                        <input asp-for="Announcement.Title" placeholder="مثال: مراجعة الحضور والانصراف" />
+
+                        <label>وصف الإعلان</label>
+                        <textarea asp-for="Announcement.Body" placeholder="اكتب تفاصيل الإعلان التي ستظهر للموظفين"></textarea>
+
+                        <div class="nxhr-form-grid">
+                            <div>
+                                <label>الفئة</label>
+                                <select asp-for="Announcement.Category">
+                                    <option value="عام">عام</option>
+                                    <option value="تهنئة">تهنئة</option>
+                                    <option value="تعزية">تعزية</option>
+                                    <option value="تعليمات">تعليمات</option>
+                                    <option value="فرصة">فرصة</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>التوجيه</label>
+                                <select asp-for="Announcement.TargetType">
+                                    <option value="All">جميع الموظفين</option>
+                                    <option value="Employee">موظفون محددون</option>
+                                    <option value="Department">قسم محدد</option>
+                                    <option value="Branch">فرع محدد</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="nxhr-picker-block">
+                            <div class="nxhr-picker-head">
+                                <label>الموظفون المحددون</label>
+                                <small>يستخدم فقط عند اختيار: موظفون محددون</small>
+                            </div>
+                            <div class="nxhr-employee-picker nxhr-pro-picker">
+                                @foreach (var employee in Model.Employees)
+                                {
+                                    <label>
+                                        <input type="checkbox" name="Announcement.EmployeeIds" value="@employee.Id" />
+                                        <span>@employee.FullName</span>
+                                        <small>@employee.EmployeeNo</small>
+                                    </label>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="nxhr-form-grid">
+                            <div>
+                                <label>القسم</label>
+                                <select asp-for="Announcement.DepartmentId">
+                                    <option value="">اختر قسم</option>
+                                    @foreach (var department in Model.Departments)
+                                    {
+                                        <option value="@department.Id">@department.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div>
+                                <label>الفرع</label>
+                                <select asp-for="Announcement.BranchId">
+                                    <option value="">اختر فرع</option>
+                                    @foreach (var branch in Model.Branches)
+                                    {
+                                        <option value="@branch.Id">@branch.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <label class="nxhr-check nxhr-pro-check"><input asp-for="Announcement.PublishNow" /> نشر الإعلان الآن</label>
+                        <button type="submit" class="nxhr-primary">حفظ الإعلان</button>
+                    </form>
+
+                    <section class="nxhr-card nxhr-list-panel">
+                        <div class="nxhr-card-title nxhr-pro-title">
+                            <div>
+                                <h3>قائمة الإعلانات</h3>
+                                <p>إدارة الإعلانات المنشورة والمسودات من قاعدة البيانات.</p>
+                            </div>
+                            <span>عرض @Model.Announcements.Count من @Model.Announcements.Count</span>
+                        </div>
+
+                        <div class="nxhr-card-list">
+                            @if (Model.Announcements.Count == 0)
+                            {
+                                <div class="nxhr-empty-card">لا توجد إعلانات حالياً.</div>
+                            }
+
+                            @foreach (var item in Model.Announcements)
+                            {
+                                <article class="nxhr-record-card">
+                                    <div class="nxhr-record-main">
+                                        <div class="nxhr-record-top">
+                                            <span class="nxhr-chip">@item.Category</span>
+                                            <span class="nxhr-chip @(item.IsPublished ? "green" : "gold")">@Model.PublishText(item.IsPublished)</span>
+                                            <time>@Model.DisplayDate(item.PublishDate)</time>
+                                        </div>
+                                        <h3>@item.Title</h3>
+                                        <p>@item.Body</p>
+                                        <div class="nxhr-record-meta">
+                                            <span>التوجيه: @Model.TargetText(item)</span>
+                                            <span>الناشر: @item.CreatedBy</span>
+                                        </div>
+                                    </div>
+                                    <div class="nxhr-record-actions">
+                                        <form method="post" asp-page-handler="ToggleAnnouncement" asp-route-id="@item.Id" asp-route-publish="@(!item.IsPublished)">
+                                            <button type="submit">@(item.IsPublished ? "تحويل لمسودة" : "نشر")</button>
+                                        </form>
+                                        <form method="post" asp-page-handler="DeleteAnnouncement" asp-route-id="@item.Id" onsubmit="return confirm('هل تريد حذف الإعلان؟');">
+                                            <button type="submit" class="danger">حذف</button>
+                                        </form>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    </section>
+                </section>
+            }
+            else if (tab == "polls")
+            {
+                <section class="nxhr-kpis nxhr-pro-kpis">
+                    <div><span>إجمالي الاستطلاعات</span><strong>@Model.TotalPolls</strong></div>
+                    <div><span>منشورة</span><strong>@Model.PublishedPolls</strong></div>
+                    <div><span>مسودات</span><strong>@Model.DraftPolls</strong></div>
+                    <div><span>التصويتات</span><strong>@Model.TotalPollVotes</strong></div>
+                </section>
+
+                <section class="nxhr-pro-workbench">
+                    <form method="post" asp-page-handler="CreatePoll" class="nxhr-card nxhr-pro-form nxhr-side-form">
+                        <div class="nxhr-form-title">
+                            <span>تصويت داخلي</span>
+                            <h3>إنشاء استطلاع / انتخاب</h3>
+                            <p>الاستطلاع المنشور يظهر للموظفين حسب الجهة المستهدفة ويقبل التصويت من بوابة الموظف.</p>
+                        </div>
+
+                        <label>عنوان الاستطلاع</label>
+                        <input asp-for="Poll.Title" placeholder="مثال: استطلاع رضا الموظفين" />
+
+                        <label>السؤال</label>
+                        <textarea asp-for="Poll.Question" placeholder="اكتب سؤال الاستطلاع أو الانتخاب"></textarea>
+
+                        <label>الخيارات</label>
+                        <textarea asp-for="Poll.OptionsText" class="nxhr-options-text" placeholder="اكتب كل خيار بسطر مستقل&#10;مثال: ممتاز&#10;جيد&#10;يحتاج تحسين"></textarea>
+                        <small>يجب إدخال خيارين على الأقل. كل سطر يمثل خياراً مستقلاً.</small>
+
+                        <div class="nxhr-form-grid">
+                            <div>
+                                <label>الفئة</label>
+                                <select asp-for="Poll.Category">
+                                    <option value="استطلاع">استطلاع</option>
+                                    <option value="انتخاب">انتخاب</option>
+                                    <option value="تصويت داخلي">تصويت داخلي</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>التوجيه</label>
+                                <select asp-for="Poll.TargetType">
+                                    <option value="All">جميع الموظفين</option>
+                                    <option value="Employee">موظفون محددون</option>
+                                    <option value="Department">قسم محدد</option>
+                                    <option value="Branch">فرع محدد</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="nxhr-picker-block">
+                            <div class="nxhr-picker-head">
+                                <label>الموظفون المحددون</label>
+                                <small>اختيار اختياري حسب التوجيه</small>
+                            </div>
+                            <div class="nxhr-employee-picker nxhr-pro-picker compact">
+                                @foreach (var employee in Model.Employees)
+                                {
+                                    <label>
+                                        <input type="checkbox" name="Poll.EmployeeIds" value="@employee.Id" />
+                                        <span>@employee.FullName</span>
+                                        <small>@employee.EmployeeNo</small>
+                                    </label>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="nxhr-form-grid">
+                            <div>
+                                <label>القسم</label>
+                                <select asp-for="Poll.DepartmentId">
+                                    <option value="">اختر قسم</option>
+                                    @foreach (var department in Model.Departments)
+                                    {
+                                        <option value="@department.Id">@department.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div>
+                                <label>الفرع</label>
+                                <select asp-for="Poll.BranchId">
+                                    <option value="">اختر فرع</option>
+                                    @foreach (var branch in Model.Branches)
+                                    {
+                                        <option value="@branch.Id">@branch.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <label class="nxhr-check nxhr-pro-check"><input asp-for="Poll.PublishNow" /> نشر الاستطلاع الآن</label>
+                        <button type="submit" class="nxhr-primary">حفظ / نشر الاستطلاع</button>
+                    </form>
+
+                    <section class="nxhr-card nxhr-list-panel">
+                        <div class="nxhr-card-title nxhr-pro-title">
+                            <div>
+                                <h3>قائمة الانتخابات والاستطلاعات</h3>
+                                <p>إدارة التصويتات المنشورة والمسودات.</p>
+                            </div>
+                            <span>عرض @Model.Polls.Count من @Model.Polls.Count</span>
+                        </div>
+
+                        <div class="nxhr-card-list">
+                            @if (Model.Polls.Count == 0)
+                            {
+                                <div class="nxhr-empty-card">لا توجد استطلاعات أو انتخابات حالياً.</div>
+                            }
+
+                            @foreach (var item in Model.Polls)
+                            {
+                                <article class="nxhr-record-card">
+                                    <div class="nxhr-record-main">
+                                        <div class="nxhr-record-top">
+                                            <span class="nxhr-chip">@item.Category</span>
+                                            <span class="nxhr-chip @(item.IsPublished ? "green" : "gold")">@Model.PublishText(item.IsPublished)</span>
+                                            <time>@Model.DisplayDate(item.PublishDate)</time>
+                                        </div>
+                                        <h3>@item.Title</h3>
+                                        <p>@item.Question</p>
+                                        <div class="nxhr-record-meta">
+                                            <span>التوجيه: @Model.TargetText(item)</span>
+                                            <span>الخيارات: @item.OptionsCount</span>
+                                            <span>التصويتات: @item.VotesCount</span>
+                                        </div>
+                                    </div>
+                                    <div class="nxhr-record-actions">
+                                        <form method="post" asp-page-handler="TogglePoll" asp-route-id="@item.Id" asp-route-publish="@(!item.IsPublished)">
+                                            <button type="submit">@(item.IsPublished ? "تحويل لمسودة" : "نشر")</button>
+                                        </form>
+                                        <form method="post" asp-page-handler="DeletePoll" asp-route-id="@item.Id" onsubmit="return confirm('هل تريد حذف الاستطلاع؟');">
+                                            <button type="submit" class="danger">حذف</button>
+                                        </form>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    </section>
+                </section>
+            }
+            else if (tab == "feedback")
+            {
+                <section class="nxhr-kpis nxhr-pro-kpis">
+                    <div><span>إجمالي الوارد</span><strong>@Model.TotalFeedback</strong></div>
+                    <div><span>مفتوحة</span><strong>@Model.OpenFeedback</strong></div>
+                    <div><span>قيد المعالجة</span><strong>@Model.PendingFeedback</strong></div>
+                    <div><span>تم الرد / مغلقة</span><strong>@Model.AnsweredFeedback</strong></div>
+                </section>
+
+                <section class="nxhr-card nxhr-feedback-panel">
+                    <div class="nxhr-card-title nxhr-pro-title">
+                        <div>
+                            <h3>الوارد من الموظفين</h3>
+                            <p>الشكاوي والمقترحات مرئية هنا مع إمكانية الرد وتغيير الحالة.</p>
+                        </div>
+                        <span>عرض @Model.FeedbackItems.Count من @Model.FeedbackItems.Count</span>
+                    </div>
+
+                    <div class="nxhr-feedback-list">
+                        @if (Model.FeedbackItems.Count == 0)
+                        {
+                            <div class="nxhr-empty-card">لا توجد شكاوي أو مقترحات.</div>
+                        }
+
+                        @foreach (var item in Model.FeedbackItems)
+                        {
+                            <article class="nxhr-feedback-card">
+                                <div class="nxhr-feedback-content">
+                                    <div class="nxhr-record-top">
+                                        <span class="nxhr-chip">@item.Type</span>
+                                        <span class="nxhr-chip @Model.StatusClass(item.Status)">@Model.StatusText(item.Status)</span>
+                                        <span class="nxhr-chip gold">@item.Priority</span>
+                                        <time>@Model.DisplayDate(item.CreatedAt)</time>
+                                    </div>
+                                    <h3>@item.Title</h3>
+                                    <p>@item.Message</p>
+                                    <div class="nxhr-record-meta">
+                                        <span>الموظف: @item.EmployeeName</span>
+                                        <span>الرقم: @item.EmployeeNo</span>
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(item.AdminReply))
+                                    {
+                                        <div class="nxhr-admin-reply">
+                                            <strong>رد الإدارة - @item.RepliedBy</strong>
+                                            <span>@item.AdminReply</span>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="nxhr-feedback-actions">
+                                    <form method="post" asp-page-handler="ReplyFeedback" class="nxhr-reply-form">
+                                        <input type="hidden" name="FeedbackReply.Id" value="@item.Id" />
+                                        <label>حالة الطلب</label>
+                                        <select name="FeedbackReply.Status">
+                                            <option value="Answered">تم الرد</option>
+                                            <option value="Pending">قيد المعالجة</option>
+                                            <option value="Closed">مغلقة</option>
+                                        </select>
+                                        <label>رد الإدارة</label>
+                                        <textarea name="FeedbackReply.Reply" placeholder="اكتب الرد بشكل مختصر وواضح"></textarea>
+                                        <button type="submit">حفظ الرد</button>
+                                    </form>
+                                    <form method="post" asp-page-handler="CloseFeedback" asp-route-id="@item.Id">
+                                        <button type="submit" class="danger">إغلاق الطلب</button>
+                                    </form>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                </section>
+            }
+            else if (tab == "wall")
+            {
+                <section class="nxhr-card nxhr-wall">
+                    <div class="nxhr-card-title nxhr-pro-title">
+                        <div>
+                            <h3>متابعة منشورات الحائط</h3>
+                            <p>كل إعلان منشور يظهر هنا كمنشور حائط.</p>
+                        </div>
+                        <span>@Model.Announcements.Count(x => x.IsPublished) منشور</span>
+                    </div>
+                    <div class="nxhr-wall-grid">
+                        @foreach (var item in Model.Announcements.Where(x => x.IsPublished))
+                        {
+                            <article>
+                                <span class="nxhr-chip">@item.Category</span>
+                                <time>@Model.DisplayDate(item.PublishDate)</time>
+                                <h3>@item.Title</h3>
+                                <p>@item.Body</p>
+                                <small>@Model.TargetText(item)</small>
+                            </article>
+                        }
+                    </div>
+                </section>
+            }
+        </main>
     </div>
-
-    <form method="post" asp-page-handler="Save" class="hrms-form-card">
-        <div class="hrms-section-head">
-            <div>
-                <h2>تحديث بيانات الموظف</h2>
-                <p>اختر تعديل من الجدول ثم املأ البيانات.</p>
-            </div>
-        </div>
-
-        <input asp-for="Input.Id" type="hidden" id="profileId" />
-
-        <div class="hrms-grid-4">
-            <div class="hrms-field">
-                <label>المنصب</label>
-                <input asp-for="Input.Position" id="profilePosition" />
-            </div>
-            <div class="hrms-field">
-                <label>الجنس</label>
-                <select asp-for="Input.Gender" id="profileGender">
-                    <option value="">--</option>
-                    <option>Male</option>
-                    <option>Female</option>
-                </select>
-            </div>
-            <div class="hrms-field">
-                <label>الجنسية</label>
-                <input asp-for="Input.Nationality" id="profileNationality" />
-            </div>
-            <div class="hrms-field">
-                <label>البلد</label>
-                <input asp-for="Input.Country" id="profileCountry" />
-            </div>
-            <div class="hrms-field">
-                <label>نوع العقد</label>
-                <select asp-for="Input.ContractType" id="profileContractType">
-                    <option value="">--</option>
-                    <option>Permanent</option>
-                    <option>Temporary</option>
-                    <option>Part Time</option>
-                    <option>Internship</option>
-                </select>
-            </div>
-            <div class="hrms-field">
-                <label>تاريخ انتهاء العقد</label>
-                <input asp-for="Input.ContractEndDate" id="profileContractEndDate" type="date" />
-            </div>
-            <div class="hrms-field">
-                <label>الحالة الوظيفية</label>
-                <select asp-for="Input.EmploymentStatus" id="profileEmploymentStatus">
-                    <option value="">--</option>
-                    <option>Active</option>
-                    <option>Suspended</option>
-                    <option>Resigned</option>
-                    <option>Terminated</option>
-                </select>
-            </div>
-            <div class="hrms-field">
-                <label>المدير المباشر</label>
-                <select asp-for="Input.DirectManagerId" id="profileDirectManagerId">
-                    <option value="">-- بدون --</option>
-                    @foreach (var manager in Model.Managers)
-                    {
-                        <option value="@manager.Id">@manager.Text</option>
-                    }
-                </select>
-            </div>
-        </div>
-
-        <div class="hrms-actions" style="margin-top:14px;">
-            <button type="submit" class="hrms-btn-primary">حفظ</button>
-        </div>
-    </form>
-</div>
-
-@section Scripts {
-    <script>
-        document.querySelectorAll("[data-fill-profile]").forEach(button => {
-            button.addEventListener("click", () => {
-                document.querySelector("#profileId").value = button.dataset.id || "";
-                document.querySelector("#profilePosition").value = button.dataset.position || "";
-                document.querySelector("#profileGender").value = button.dataset.gender || "";
-                document.querySelector("#profileNationality").value = button.dataset.nationality || "";
-                document.querySelector("#profileCountry").value = button.dataset.country || "";
-                document.querySelector("#profileContractType").value = button.dataset.contracttype || "";
-                document.querySelector("#profileContractEndDate").value = button.dataset.contractenddate || "";
-                document.querySelector("#profileEmploymentStatus").value = button.dataset.employmentstatus || "";
-                document.querySelector("#profileDirectManagerId").value = button.dataset.directmanagerid || "";
-                window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-            });
-        });
-    </script>
-}
+</section>

@@ -1,0 +1,8 @@
+
+/* NEXORA HR Operations Remove Top Buttons
+   يخفي أزرار قائمة الموظفين / إضافة موظف أعلى صفحة عمليات الموارد البشرية.
+*/
+
+.nxr-hr-ops-page .nxr-hr-ops-hero-actions {
+    display: none !important;
+}

@@ -1,0 +1,241 @@
+
+/* NEXORA Announcements Employee Multi Select
+   يجعل اختيار الموظفين في توجيه الإعلان Dropdown متعدد الاختيار.
+*/
+
+.nxra-employee-select,
+.nxra-employee-select * {
+    box-sizing: border-box !important;
+}
+
+.nxra-employee-select {
+    position: relative !important;
+    width: 100% !important;
+    display: grid !important;
+    gap: 8px !important;
+}
+
+.nxra-employee-select-toggle {
+    width: 100% !important;
+    min-height: 46px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 0 14px !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(25, 211, 224, .34) !important;
+    background: rgba(3, 13, 25, .82) !important;
+    color: #EEF6FB !important;
+    cursor: pointer !important;
+    font-family: inherit !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+}
+
+.nxra-employee-select-toggle:hover,
+.nxra-employee-select.open .nxra-employee-select-toggle {
+    border-color: rgba(25, 211, 224, .58) !important;
+    box-shadow: 0 0 0 4px rgba(25, 211, 224, .09) !important;
+}
+
+.nxra-employee-select-toggle .label {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.nxra-employee-select-toggle .count {
+    min-width: 26px !important;
+    height: 26px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 999px !important;
+    background: rgba(25, 211, 224, .13) !important;
+    color: #9EEBF1 !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+}
+
+.nxra-employee-dropdown {
+    display: none !important;
+    position: absolute !important;
+    z-index: 200 !important;
+    top: calc(100% + 8px) !important;
+    inset-inline: 0 !important;
+    max-height: 360px !important;
+    padding: 10px !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(73, 111, 151, .30) !important;
+    background:
+        radial-gradient(circle at top right, rgba(25, 211, 224, .08), transparent 34%),
+        rgba(5, 15, 28, .98) !important;
+    box-shadow: 0 22px 48px rgba(0, 0, 0, .34) !important;
+}
+
+.nxra-employee-select.open .nxra-employee-dropdown {
+    display: grid !important;
+    gap: 9px !important;
+}
+
+.nxra-employee-search {
+    width: 100% !important;
+    height: 40px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(73, 111, 151, .30) !important;
+    background: rgba(3, 13, 25, .86) !important;
+    color: #EEF6FB !important;
+    padding: 0 12px !important;
+    outline: none !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+}
+
+.nxra-employee-search:focus {
+    border-color: rgba(25, 211, 224, .56) !important;
+    box-shadow: 0 0 0 4px rgba(25, 211, 224, .08) !important;
+}
+
+.nxra-employee-list {
+    display: grid !important;
+    gap: 6px !important;
+    max-height: 230px !important;
+    overflow: auto !important;
+    padding-inline-end: 3px !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(25, 211, 224, .55) rgba(3, 13, 25, .72) !important;
+}
+
+.nxra-employee-list::-webkit-scrollbar {
+    width: 8px !important;
+}
+
+.nxra-employee-list::-webkit-scrollbar-track {
+    background: rgba(3, 13, 25, .84) !important;
+    border-radius: 999px !important;
+}
+
+.nxra-employee-list::-webkit-scrollbar-thumb {
+    background: rgba(25, 211, 224, .56) !important;
+    border-radius: 999px !important;
+}
+
+.nxra-employee-item {
+    min-height: 46px !important;
+    display: grid !important;
+    grid-template-columns: 22px minmax(0, 1fr) !important;
+    gap: 9px !important;
+    align-items: center !important;
+    padding: 8px 10px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(73, 111, 151, .18) !important;
+    background: rgba(255, 255, 255, .028) !important;
+    cursor: pointer !important;
+}
+
+.nxra-employee-item:hover {
+    border-color: rgba(25, 211, 224, .30) !important;
+    background: rgba(25, 211, 224, .055) !important;
+}
+
+.nxra-employee-item input {
+    width: 16px !important;
+    height: 16px !important;
+    accent-color: #19D3E0 !important;
+}
+
+.nxra-employee-item strong {
+    display: block !important;
+    color: #EEF6FB !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.nxra-employee-item span {
+    display: block !important;
+    margin-top: 2px !important;
+    color: #8FA6BB !important;
+    font-size: 11px !important;
+    font-weight: 850 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.nxra-employee-select-actions {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding-top: 3px !important;
+}
+
+.nxra-employee-select-actions button {
+    min-height: 30px !important;
+    padding: 0 10px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(73, 111, 151, .24) !important;
+    background: rgba(255, 255, 255, .035) !important;
+    color: #DCE7F2 !important;
+    cursor: pointer !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+}
+
+.nxra-employee-select-actions button.primary {
+    border-color: rgba(25, 211, 224, .32) !important;
+    background: rgba(25, 211, 224, .10) !important;
+    color: #D7FBFF !important;
+}
+
+.nxra-employee-selected {
+    min-height: 46px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    flex-wrap: wrap !important;
+    padding: 9px !important;
+    border-radius: 15px !important;
+    border: 1px dashed rgba(73, 111, 151, .24) !important;
+    background: rgba(255, 255, 255, .020) !important;
+}
+
+.nxra-employee-selected:empty::before {
+    content: "لم يتم اختيار أي موظف بعد" !important;
+    color: #8FA6BB !important;
+    font-size: 11px !important;
+    font-weight: 850 !important;
+}
+
+.nxra-employee-chip {
+    min-height: 28px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 0 8px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(25, 211, 224, .28) !important;
+    background: rgba(25, 211, 224, .075) !important;
+    color: #D7FBFF !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+}
+
+.nxra-employee-chip button {
+    width: 18px !important;
+    height: 18px !important;
+    display: inline-grid !important;
+    place-items: center !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, .10) !important;
+    color: #D7FBFF !important;
+    cursor: pointer !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+}
