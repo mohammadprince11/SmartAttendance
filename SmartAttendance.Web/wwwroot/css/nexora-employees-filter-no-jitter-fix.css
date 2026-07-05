@@ -1,0 +1,208 @@
+
+/* NEXORA Employees Filter No Jitter Fix
+   يوقف أي حركة/اهتزاز في شريط فلاتر الموظفين ويثبت التصميم.
+*/
+
+body.nxr-employees-no-jitter .nxr-emp-filter,
+body.nxr-employees-no-jitter .nxr-emp-filter *,
+body.nxr-employees-no-jitter .nxr-emp-page-size-wrap,
+body.nxr-employees-no-jitter .nxr-emp-page-size-wrap * {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+}
+
+/* Stable filter bar */
+body.nxr-employees-no-jitter .nxr-emp-filter {
+    display: grid !important;
+    grid-template-columns:
+        minmax(320px, 1.5fr)
+        minmax(170px, .8fr)
+        minmax(170px, .8fr)
+        minmax(170px, .8fr)
+        minmax(170px, .8fr)
+        minmax(360px, 1fr) !important;
+    gap: 10px !important;
+    align-items: end !important;
+    padding: 14px !important;
+    border-radius: 22px !important;
+    overflow: visible !important;
+}
+
+/* All fields same height */
+body.nxr-employees-no-jitter .nxr-emp-filter .nxr-field {
+    height: 62px !important;
+    display: grid !important;
+    grid-template-rows: 17px 42px !important;
+    gap: 3px !important;
+    min-width: 0 !important;
+}
+
+body.nxr-employees-no-jitter .nxr-emp-filter .nxr-field label {
+    height: 17px !important;
+    line-height: 17px !important;
+    margin: 0 !important;
+    padding: 0 3px !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+}
+
+body.nxr-employees-no-jitter .nxr-emp-filter input,
+body.nxr-employees-no-jitter .nxr-emp-filter select {
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+    box-sizing: border-box !important;
+}
+
+/* Actions column stable */
+body.nxr-employees-no-jitter .nxr-emp-filter-actions {
+    height: 42px !important;
+    align-self: end !important;
+    display: grid !important;
+    grid-template-columns: 210px 92px !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+    justify-content: end !important;
+    flex-wrap: nowrap !important;
+    min-width: 0 !important;
+}
+
+/* Page size + counter in one fixed block */
+body.nxr-employees-no-jitter .nxr-emp-page-size-wrap {
+    height: 42px !important;
+    display: grid !important;
+    grid-template-columns: 112px 90px !important;
+    gap: 8px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    width: 210px !important;
+    min-width: 210px !important;
+    max-width: 210px !important;
+}
+
+body.nxr-employees-no-jitter .nxr-emp-page-size-control {
+    height: 42px !important;
+    display: grid !important;
+    grid-template-columns: 1fr 50px !important;
+    gap: 5px !important;
+    align-items: center !important;
+    padding: 0 8px !important;
+    margin: 0 !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(25, 211, 224, .30) !important;
+    background: rgba(25, 211, 224, .08) !important;
+    box-sizing: border-box !important;
+}
+
+body.nxr-employees-no-jitter .nxr-emp-page-size-control span {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+}
+
+body.nxr-employees-no-jitter .nxr-emp-page-size-control select {
+    width: 50px !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    padding: 0 5px !important;
+    border-radius: 11px !important;
+    text-align: center !important;
+}
+
+/* Fixed width counter prevents horizontal movement */
+body.nxr-employees-no-jitter .nxr-emp-page-size-status {
+    height: 42px !important;
+    width: 90px !important;
+    min-width: 90px !important;
+    max-width: 90px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 6px !important;
+    margin: 0 !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(73, 111, 151, .28) !important;
+    background: rgba(255, 255, 255, .04) !important;
+    color: #DCE7F2 !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* Reset button fixed */
+body.nxr-employees-no-jitter .nxr-emp-filter-actions > a,
+body.nxr-employees-no-jitter .nxr-emp-filter-actions > button {
+    height: 42px !important;
+    width: 92px !important;
+    min-width: 92px !important;
+    max-width: 92px !important;
+    padding: 0 8px !important;
+    margin: 0 !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+}
+
+/* Hidden old hints should not occupy space */
+body.nxr-employees-no-jitter .nxr-filter-auto-hint,
+body.nxr-employees-no-jitter .nxr-live-filter-hint,
+body.nxr-employees-no-jitter .nxr-emp-filter button[type="submit"],
+body.nxr-employees-no-jitter .nxr-emp-filter .nxr-live-submit {
+    display: none !important;
+}
+
+/* Medium */
+@media (max-width: 1500px) {
+    body.nxr-employees-no-jitter .nxr-emp-filter {
+        grid-template-columns:
+            minmax(300px, 1.5fr)
+            repeat(2, minmax(160px, 1fr))
+            minmax(360px, 1fr) !important;
+    }
+}
+
+/* Mobile */
+@media (max-width: 980px) {
+    body.nxr-employees-no-jitter .nxr-emp-filter {
+        grid-template-columns: 1fr !important;
+    }
+
+    body.nxr-employees-no-jitter .nxr-emp-filter-actions {
+        height: auto !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    body.nxr-employees-no-jitter .nxr-emp-page-size-wrap {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    body.nxr-employees-no-jitter .nxr-emp-page-size-status {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+
+    body.nxr-employees-no-jitter .nxr-emp-filter-actions > a,
+    body.nxr-employees-no-jitter .nxr-emp-filter-actions > button {
+        width: 100% !important;
+        max-width: none !important;
+    }
+}

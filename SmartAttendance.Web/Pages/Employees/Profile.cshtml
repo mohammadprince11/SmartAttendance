@@ -246,6 +246,61 @@
                 </div>
             </div>
         </section>
+        var documentHasId = Model.DocumentRows.Any(d =>
+            string.Equals(d.DocumentType, "ID", StringComparison.OrdinalIgnoreCase) ||
+            (d.DocumentType ?? "").Contains("هوية", StringComparison.OrdinalIgnoreCase) ||
+            (d.DocumentType ?? "").Contains("بطاقة", StringComparison.OrdinalIgnoreCase));
+
+        var documentHasContract = Model.DocumentRows.Any(d =>
+            string.Equals(d.DocumentType, "Contract", StringComparison.OrdinalIgnoreCase) ||
+            (d.DocumentType ?? "").Contains("Contract", StringComparison.OrdinalIgnoreCase) ||
+            (d.DocumentType ?? "").Contains("عقد", StringComparison.OrdinalIgnoreCase));
+
+        var documentHasPassport = Model.DocumentRows.Any(d =>
+            string.Equals(d.DocumentType, "Passport", StringComparison.OrdinalIgnoreCase) ||
+            (d.DocumentType ?? "").Contains("Passport", StringComparison.OrdinalIgnoreCase) ||
+            (d.DocumentType ?? "").Contains("جواز", StringComparison.OrdinalIgnoreCase));
+
+        var documentHasVisa = Model.DocumentRows.Any(d =>
+            string.Equals(d.DocumentType, "Visa", StringComparison.OrdinalIgnoreCase) ||
+            (d.DocumentType ?? "").Contains("Visa", StringComparison.OrdinalIgnoreCase) ||
+            (d.DocumentType ?? "").Contains("إقامة", StringComparison.OrdinalIgnoreCase) ||
+            (d.DocumentType ?? "").Contains("اقامة", StringComparison.OrdinalIgnoreCase));
+
+        var documentHasHealthCard = Model.DocumentRows.Any(d =>
+            string.Equals(d.DocumentType, "Health Card", StringComparison.OrdinalIgnoreCase) ||
+            (d.DocumentType ?? "").Contains("Health", StringComparison.OrdinalIgnoreCase) ||
+            (d.DocumentType ?? "").Contains("صحية", StringComparison.OrdinalIgnoreCase));
+
+        var documentEmployeeGeo = $"{employee.Nationality} {employee.Country}".ToLowerInvariant();
+        var documentIsExpat =
+            !string.IsNullOrWhiteSpace(documentEmployeeGeo) &&
+            !(documentEmployeeGeo.Contains("iraq") || documentEmployeeGeo.Contains("iraqi") || documentEmployeeGeo.Contains("العراق") || documentEmployeeGeo.Contains("عراقي") || documentEmployeeGeo.Contains("عراقية"));
+
+        var documentWorkContext = $"{employee.CompanyName} {employee.BranchName} {employee.DepartmentName} {employee.Position}".ToLowerInvariant();
+        var documentNeedsHealthCard =
+            documentWorkContext.Contains("food") ||
+            documentWorkContext.Contains("restaurant") ||
+            documentWorkContext.Contains("cafe") ||
+            documentWorkContext.Contains("coffee") ||
+            documentWorkContext.Contains("kitchen") ||
+            documentWorkContext.Contains("hotel") ||
+            documentWorkContext.Contains("patchi") ||
+            documentWorkContext.Contains("rixos") ||
+            documentWorkContext.Contains("movenpick") ||
+            documentWorkContext.Contains("مطعم") ||
+            documentWorkContext.Contains("كافيه") ||
+            documentWorkContext.Contains("مطبخ") ||
+            documentWorkContext.Contains("فندق") ||
+            documentWorkContext.Contains("اغذية") ||
+            documentWorkContext.Contains("أغذية");
+
+        var documentMissingRequiredCount = 0;
+        if (!documentHasId) { documentMissingRequiredCount++; }
+        if (!documentHasContract) { documentMissingRequiredCount++; }
+        if (documentIsExpat && !documentHasPassport) { documentMissingRequiredCount++; }
+        if (documentIsExpat && !documentHasVisa) { documentMissingRequiredCount++; }
+        if (documentNeedsHealthCard && !documentHasHealthCard) { documentMissingRequiredCount++; }
 
         var contractNeedsReview = employee.ContractEndDate.HasValue && employee.ContractEndDate.Value <= today.AddDays(30);
         var hasEmployeeRequirements =
@@ -254,8 +309,8 @@
             Model.PendingRequests > 0 ||
             Model.ExpiredDocumentsCount > 0 ||
             Model.ExpiringDocumentsCount > 0 ||
+            documentMissingRequiredCount > 0 ||
             contractNeedsReview;
-
 
         <section class="nxr-employee-requirements @(hasEmployeeRequirements ? "" : "is-clear")">
             <div class="nxr-requirements-head">
@@ -270,6 +325,51 @@
             </div>
 
             <div class="nxr-requirements-grid">
+                @if (!documentHasId)
+                {
+                    <div class="nxr-requirement-item danger">
+                        <strong>مستند ناقص: هوية / بطاقة وطنية</strong>
+                        <span>هذا المستند مطلوب لكل موظف.</span>
+                        <small>Document Rules</small>
+                    </div>
+                }
+
+                @if (!documentHasContract)
+                {
+                    <div class="nxr-requirement-item danger">
+                        <strong>مستند ناقص: عقد عمل</strong>
+                        <span>العقد مطلوب لاكتمال ملف الموظف.</span>
+                        <small>Document Rules</small>
+                    </div>
+                }
+
+                @if (documentIsExpat && !documentHasPassport)
+                {
+                    <div class="nxr-requirement-item danger">
+                        <strong>مستند ناقص: جواز سفر</strong>
+                        <span>مطلوب للموظفين الوافدين.</span>
+                        <small>Expats Documents</small>
+                    </div>
+                }
+
+                @if (documentIsExpat && !documentHasVisa)
+                {
+                    <div class="nxr-requirement-item danger">
+                        <strong>مستند ناقص: إقامة / فيزا</strong>
+                        <span>مطلوب للموظفين الوافدين.</span>
+                        <small>Expats Documents</small>
+                    </div>
+                }
+
+                @if (documentNeedsHealthCard && !documentHasHealthCard)
+                {
+                    <div class="nxr-requirement-item warn">
+                        <strong>مستند ناقص: بطاقة صحية</strong>
+                        <span>مطلوبة للمطاعم، الكافيهات، الفنادق، والمواقع الغذائية.</span>
+                        <small>Health Compliance</small>
+                    </div>
+                }
+
                 @if (Model.PayrollRiskItems > 0)
                 {
                     <div class="nxr-requirement-item warn">

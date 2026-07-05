@@ -1,0 +1,170 @@
+
+/* NEXORA Document Rules Phase 1 */
+
+.nxr-document-rules-center {
+    margin-bottom: 14px !important;
+    padding: 16px !important;
+    border-radius: 22px !important;
+    border: 1px solid rgba(73, 111, 151, .26) !important;
+    background:
+        radial-gradient(circle at top right, rgba(25, 211, 224, .08), transparent 34%),
+        linear-gradient(180deg, rgba(12, 34, 58, .88), rgba(8, 24, 39, .90)) !important;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .16) !important;
+}
+
+.nxr-document-rules-center.is-neutral {
+    border-color: rgba(73, 111, 151, .20) !important;
+}
+
+.nxr-document-rules-head {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    gap: 14px !important;
+    margin-bottom: 12px !important;
+}
+
+.nxr-document-rules-head h3 {
+    margin: 0 !important;
+    color: #EEF6FB !important;
+    font-size: 18px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-document-rules-head p {
+    margin: 4px 0 0 !important;
+    color: #A7B7C8 !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+}
+
+.nxr-document-rules-count {
+    min-height: 34px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 7px 12px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(73, 111, 151, .26) !important;
+    background: rgba(255, 255, 255, .04) !important;
+    color: #DCE7F2 !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+    white-space: nowrap !important;
+}
+
+.nxr-document-rules-count.ok {
+    color: #BFFFD8 !important;
+    background: rgba(85, 217, 138, .10) !important;
+    border-color: rgba(85, 217, 138, .30) !important;
+}
+
+.nxr-document-rules-count.warn {
+    color: #F4DCA7 !important;
+    background: rgba(247, 185, 85, .11) !important;
+    border-color: rgba(247, 185, 85, .30) !important;
+}
+
+.nxr-document-rules-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.nxr-doc-rule-card {
+    min-height: 118px !important;
+    display: grid !important;
+    gap: 8px !important;
+    padding: 12px !important;
+    border-radius: 17px !important;
+    border: 1px solid rgba(73, 111, 151, .24) !important;
+    background: rgba(255, 255, 255, .035) !important;
+}
+
+.nxr-doc-rule-card strong {
+    display: block !important;
+    color: #EEF6FB !important;
+    font-size: 13px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-doc-rule-card span,
+.nxr-doc-rule-card small {
+    display: block !important;
+    color: #A7B7C8 !important;
+    font-size: 11px !important;
+    font-weight: 850 !important;
+    line-height: 1.55 !important;
+}
+
+.nxr-doc-rule-card b {
+    justify-self: start !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    min-height: 26px !important;
+    padding: 5px 9px !important;
+    border-radius: 999px !important;
+    color: #DCE7F2 !important;
+    background: rgba(255, 255, 255, .045) !important;
+    border: 1px solid rgba(73, 111, 151, .20) !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-doc-rule-card.complete {
+    border-color: rgba(85, 217, 138, .26) !important;
+    background: rgba(85, 217, 138, .07) !important;
+}
+
+.nxr-doc-rule-card.complete b {
+    color: #BFFFD8 !important;
+    background: rgba(85, 217, 138, .10) !important;
+    border-color: rgba(85, 217, 138, .26) !important;
+}
+
+.nxr-doc-rule-card.expiring,
+.nxr-doc-rule-card.review {
+    border-color: rgba(247, 185, 85, .28) !important;
+    background: rgba(247, 185, 85, .08) !important;
+}
+
+.nxr-doc-rule-card.expiring b,
+.nxr-doc-rule-card.review b {
+    color: #F4DCA7 !important;
+    background: rgba(247, 185, 85, .11) !important;
+    border-color: rgba(247, 185, 85, .28) !important;
+}
+
+.nxr-doc-rule-card.missing,
+.nxr-doc-rule-card.expired {
+    border-color: rgba(255, 107, 107, .30) !important;
+    background: rgba(255, 107, 107, .075) !important;
+}
+
+.nxr-doc-rule-card.missing b,
+.nxr-doc-rule-card.expired b {
+    color: #FFD0D0 !important;
+    background: rgba(255, 107, 107, .11) !important;
+    border-color: rgba(255, 107, 107, .30) !important;
+}
+
+@media (max-width: 1300px) {
+    .nxr-document-rules-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 760px) {
+    .nxr-document-rules-head {
+        flex-direction: column !important;
+    }
+
+    .nxr-document-rules-count,
+    .nxr-document-rules-grid {
+        width: 100% !important;
+    }
+
+    .nxr-document-rules-grid {
+        grid-template-columns: 1fr !important;
+    }
+}

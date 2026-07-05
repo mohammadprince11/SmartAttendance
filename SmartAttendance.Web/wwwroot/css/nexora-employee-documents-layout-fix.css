@@ -1,0 +1,245 @@
+
+/* NEXORA Employee Documents Layout Fix
+   إصلاح توزيع صفحة مستندات الموظفين بعد Document Rules Phase 1.
+   الهدف: نموذج الرفع يمين، سجل المستندات يسار، بدون فراغات كبيرة.
+*/
+
+.nxr-documents-kayan-page {
+    width: 100% !important;
+    max-width: none !important;
+    direction: rtl !important;
+}
+
+/* Header */
+.nxr-documents-topline {
+    min-height: auto !important;
+    padding: 16px 18px !important;
+    margin-bottom: 14px !important;
+}
+
+/* Requirements area: compact */
+.nxr-document-rules-center {
+    margin: 0 0 14px !important;
+    padding: 14px !important;
+    min-height: auto !important;
+}
+
+.nxr-document-rules-head {
+    margin-bottom: 10px !important;
+}
+
+.nxr-document-rules-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+}
+
+.nxr-doc-rule-card {
+    min-height: 86px !important;
+    padding: 11px 12px !important;
+    align-content: start !important;
+}
+
+.nxr-doc-rule-card strong {
+    font-size: 13px !important;
+}
+
+.nxr-doc-rule-card span,
+.nxr-doc-rule-card small {
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+}
+
+/* KPI cards: compact row */
+.nxr-documents-kpis {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    margin: 0 0 14px !important;
+}
+
+.nxr-doc-kpi {
+    min-height: 82px !important;
+    padding: 12px !important;
+}
+
+.nxr-doc-kpi strong {
+    font-size: 22px !important;
+}
+
+/* Main layout: upload form must be on the right, table on the left */
+.nxr-documents-kayan-layout,
+.nxr-document-layout {
+    display: grid !important;
+    grid-template-columns: 340px minmax(0, 1fr) !important;
+    grid-template-areas: "upload list" !important;
+    gap: 14px !important;
+    align-items: start !important;
+    direction: rtl !important;
+    margin-top: 0 !important;
+}
+
+/* In RTL, first grid area is the right column */
+.nxr-documents-upload-panel,
+.nxr-upload-panel {
+    grid-area: upload !important;
+    grid-column: auto !important;
+    grid-row: auto !important;
+    width: 100% !important;
+    max-width: 340px !important;
+    min-width: 0 !important;
+    position: sticky !important;
+    top: 88px !important;
+    padding: 15px !important;
+    margin: 0 !important;
+    align-self: start !important;
+}
+
+/* The documents list/table sits immediately beside the upload panel */
+.nxr-documents-list-card {
+    grid-area: list !important;
+    grid-column: auto !important;
+    grid-row: auto !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 15px !important;
+    align-self: start !important;
+}
+
+.nxr-documents-list-head {
+    margin-bottom: 10px !important;
+}
+
+.nxr-documents-filters {
+    grid-template-columns: minmax(240px, 1fr) 210px 175px auto !important;
+    gap: 9px !important;
+    padding: 10px !important;
+    margin-bottom: 10px !important;
+}
+
+.nxr-documents-table-wrap {
+    max-height: calc(100vh - 390px) !important;
+    min-height: 260px !important;
+    overflow: auto !important;
+}
+
+/* Fix upload panel proportions */
+.nxr-documents-upload-form {
+    gap: 10px !important;
+}
+
+.nxr-documents-upload-panel .nxr-panel-title {
+    margin-bottom: 10px !important;
+}
+
+.nxr-documents-upload-panel .nxr-panel-title h3 {
+    font-size: 16px !important;
+}
+
+.nxr-documents-upload-panel .nxr-panel-title p {
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+}
+
+.nxr-documents-upload-panel .nxr-field {
+    gap: 6px !important;
+}
+
+.nxr-documents-upload-panel .nxr-field label {
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-documents-upload-zone {
+    padding: 12px !important;
+    min-height: auto !important;
+}
+
+.nxr-file-picker-inner {
+    gap: 4px !important;
+}
+
+.nxr-file-picker-inner strong {
+    font-size: 13px !important;
+}
+
+.nxr-file-picker-inner span {
+    font-size: 11px !important;
+}
+
+.nxr-file-name {
+    min-height: 30px !important;
+    padding: 7px 9px !important;
+    font-size: 11px !important;
+}
+
+.nxr-upload-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+}
+
+/* Remove old rule box if any duplicate remains inside upload panel */
+.nxr-document-rules {
+    display: none !important;
+}
+
+/* Table readability */
+.nxr-documents-table th,
+.nxr-documents-table td {
+    white-space: nowrap !important;
+}
+
+.nxr-doc-file-name {
+    max-width: 320px !important;
+}
+
+/* Prevent old CSS from pushing cards down */
+.nxr-documents-kayan-layout > * {
+    margin-top: 0 !important;
+}
+
+/* Responsive */
+@media (max-width: 1300px) {
+    .nxr-documents-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .nxr-documents-kayan-layout,
+    .nxr-document-layout {
+        grid-template-columns: 1fr !important;
+        grid-template-areas:
+            "upload"
+            "list" !important;
+    }
+
+    .nxr-documents-upload-panel,
+    .nxr-upload-panel {
+        position: relative !important;
+        top: auto !important;
+        max-width: none !important;
+    }
+
+    .nxr-documents-list-card {
+        width: 100% !important;
+    }
+
+    .nxr-documents-table-wrap {
+        max-height: none !important;
+    }
+}
+
+@media (max-width: 780px) {
+    .nxr-document-rules-grid,
+    .nxr-documents-kpis,
+    .nxr-documents-filters {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxr-document-rules-head,
+    .nxr-documents-list-head {
+        flex-direction: column !important;
+    }
+}

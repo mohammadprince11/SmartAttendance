@@ -1,0 +1,92 @@
+
+/* NEXORA Document Rules Actions Phase 2
+   يجعل كروت متطلبات المستندات تفاعلية.
+*/
+
+.nxr-document-rules-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    margin-top: 10px !important;
+}
+
+.nxr-doc-rule-action-btn,
+.nxr-doc-rule-filter-btn {
+    min-height: 30px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    padding: 6px 10px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(25, 211, 224, .28) !important;
+    background: rgba(25, 211, 224, .09) !important;
+    color: #9EEBF1 !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+    cursor: pointer !important;
+    font-family: inherit !important;
+}
+
+.nxr-doc-rule-action-btn:hover,
+.nxr-doc-rule-filter-btn:hover {
+    border-color: rgba(25, 211, 224, .48) !important;
+    background: rgba(25, 211, 224, .15) !important;
+}
+
+.nxr-doc-rule-action-btn.warn {
+    border-color: rgba(247, 185, 85, .34) !important;
+    background: rgba(247, 185, 85, .11) !important;
+    color: #F4DCA7 !important;
+}
+
+.nxr-doc-rule-action-btn.danger {
+    border-color: rgba(255, 107, 107, .34) !important;
+    background: rgba(255, 107, 107, .11) !important;
+    color: #FFD0D0 !important;
+}
+
+.nxr-doc-rule-card.is-complete-hidden {
+    display: none !important;
+}
+
+.nxr-document-rules-center.is-focus-mode .nxr-doc-rule-card.complete {
+    display: none !important;
+}
+
+.nxr-doc-rule-card.is-selected-rule {
+    outline: 2px solid rgba(25, 211, 224, .45) !important;
+    box-shadow: 0 0 0 5px rgba(25, 211, 224, .08) !important;
+}
+
+.nxr-documents-upload-panel.is-targeted-upload {
+    outline: 2px solid rgba(25, 211, 224, .42) !important;
+    box-shadow: 0 0 0 5px rgba(25, 211, 224, .08), 0 18px 44px rgba(0, 0, 0, .20) !important;
+}
+
+.nxr-upload-autofill-note {
+    margin-bottom: 10px !important;
+    padding: 10px 12px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(25, 211, 224, .26) !important;
+    background: rgba(25, 211, 224, .075) !important;
+    color: #D7FBFF !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    line-height: 1.6 !important;
+}
+
+.nxr-upload-autofill-note strong {
+    color: #9EEBF1 !important;
+    font-weight: 1000 !important;
+}
+
+@media (max-width: 780px) {
+    .nxr-document-rules-actions,
+    .nxr-doc-rule-action-btn,
+    .nxr-doc-rule-filter-btn {
+        width: 100% !important;
+    }
+}

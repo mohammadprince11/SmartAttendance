@@ -1,19 +1,17 @@
 
-# NEXORA Profile Remove Links + Tabs
+# NEXORA Employees Table Modern Rebuild
 
-هذا الباتش ينظف ملف الموظف من الروابط الزائدة:
+هذا الباتش يعيد تصميم جدول قائمة الموظفين بشكل حديث.
 
-- حذف "فتح سجلات الحضور"
-- حذف "فتح الطلبات"
-- حذف "+ رفع مستند"
-- حذف شريط التبويبات:
-  - الملخص
-  - البيانات
-  - الحضور
-  - الطلبات
-  - المستندات
-  - الشفتات
-  - السجل
+## شنو يصلح؟
+
+- إزالة شكل Scrollbar الأبيض القديم.
+- Scrollbar داكن بتدرج NEXORA.
+- هيدر جدول ثابت وحديث.
+- صفوف أنظف.
+- زر "ملف" بتصميم حديث.
+- تحسين عرض الأعمدة.
+- منع الشكل القديم الضيق.
 
 ## التشغيل
 
@@ -21,14 +19,14 @@
 
 `C:\Projects\SmartAttendance`
 
-- `Apply_NEXORA_Profile_Remove_Links_Tabs.ps1`
+- `Apply_NEXORA_Employees_Table_Modern_Rebuild.ps1`
 - `files`
 
 ثم شغل:
 
 ```powershell
 cd C:\Projects\SmartAttendance
-powershell -ExecutionPolicy Bypass -File .\Apply_NEXORA_Profile_Remove_Links_Tabs.ps1
+powershell -ExecutionPolicy Bypass -File .\Apply_NEXORA_Employees_Table_Modern_Rebuild.ps1
 ```
 
 ## أوامر منفصلة بعد السكربت
@@ -45,5 +43,5 @@ dotnet run --project SmartAttendance.Web
 ## تطبيق + Build فقط
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\Apply_NEXORA_Profile_Remove_Links_Tabs.ps1 -SkipRun
+powershell -ExecutionPolicy Bypass -File .\Apply_NEXORA_Employees_Table_Modern_Rebuild.ps1 -SkipRun
 ```
