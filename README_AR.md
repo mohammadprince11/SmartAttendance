@@ -1,7 +1,19 @@
 
-# NEXORA Force Right Sidebar
+# NEXORA Profile Remove Links + Tabs
 
-هذا الباتش يصلح مشكلة ظهور القائمة الجانبية في جهة اليسار، خصوصاً في صفحة مستندات الموظفين.
+هذا الباتش ينظف ملف الموظف من الروابط الزائدة:
+
+- حذف "فتح سجلات الحضور"
+- حذف "فتح الطلبات"
+- حذف "+ رفع مستند"
+- حذف شريط التبويبات:
+  - الملخص
+  - البيانات
+  - الحضور
+  - الطلبات
+  - المستندات
+  - الشفتات
+  - السجل
 
 ## التشغيل
 
@@ -9,14 +21,14 @@
 
 `C:\Projects\SmartAttendance`
 
-- `Apply_NEXORA_Force_Right_Sidebar.ps1`
+- `Apply_NEXORA_Profile_Remove_Links_Tabs.ps1`
 - `files`
 
 ثم شغل:
 
 ```powershell
 cd C:\Projects\SmartAttendance
-powershell -ExecutionPolicy Bypass -File .\Apply_NEXORA_Force_Right_Sidebar.ps1
+powershell -ExecutionPolicy Bypass -File .\Apply_NEXORA_Profile_Remove_Links_Tabs.ps1
 ```
 
 ## أوامر منفصلة بعد السكربت
@@ -33,5 +45,5 @@ dotnet run --project SmartAttendance.Web
 ## تطبيق + Build فقط
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\Apply_NEXORA_Force_Right_Sidebar.ps1 -SkipRun
+powershell -ExecutionPolicy Bypass -File .\Apply_NEXORA_Profile_Remove_Links_Tabs.ps1 -SkipRun
 ```

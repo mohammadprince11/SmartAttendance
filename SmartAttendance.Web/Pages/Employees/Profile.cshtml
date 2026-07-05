@@ -334,17 +334,7 @@
                 }
             </div>
         </section>
-        <section class="nxr-profile-pro-nav nxr-card">
-            <a href="#overview">الملخص</a>
-            <a href="#data">البيانات</a>
-            <a href="#attendance">الحضور</a>
-            <a href="#requests">الطلبات</a>
-            <a href="#documents">المستندات</a>
-            <a href="#shifts">الشفتات</a>
-            <a href="#audit">السجل</a>
-        </section>
-
-        <section id="overview" class="nxr-profile-pro-status-grid nxr-kayan-risk-grid">
+<section id="overview" class="nxr-profile-pro-status-grid nxr-kayan-risk-grid">
             <div class="nxr-card nxr-profile-pro-status @readinessClass">
                 <span>جاهزية الراتب</span>
                 <strong>@readinessText</strong>
@@ -433,9 +423,7 @@
                 <div>
                     <h3>الحضور والانصراف</h3>
                     <p>آخر السجلات ضمن الفترة المحددة.</p>
-                </div>
-                <a asp-page="/AttendanceRecords/Index" class="nxr-mini-link">فتح سجلات الحضور</a>
-            </div>
+                </div></div>
 
             <div class="nxr-profile-pro-table-wrap">
                 <table class="nxr-profile-pro-table">
@@ -479,9 +467,7 @@
                     <div>
                         <h3>الطلبات</h3>
                         <p>آخر طلبات الخدمة الذاتية والإجازات.</p>
-                    </div>
-                    <a asp-page="/SelfServices/Index" class="nxr-mini-link">فتح الطلبات</a>
-                </div>
+                    </div></div>
 
                 <div class="nxr-profile-pro-list">
                 @if (Model.RequestRows.Any())
@@ -509,9 +495,7 @@
                     <div>
                         <h3>المستندات</h3>
                         <p>آخر المستندات المرتبطة بالموظف.</p>
-                    </div>
-                    <a asp-page="/EmployeeDocuments/Index" asp-route-employeeId="@employee.Id" class="nxr-mini-link">+ رفع مستند</a>
-                </div>
+                    </div></div>
 
                 <div class="nxr-profile-pro-docs">
                 @if (Model.DocumentRows.Any())
@@ -644,4 +628,7 @@
 
 @section Scripts {
     <script src="~/js/nexora-employee-profile-kayan-style.js" asp-append-version="true"></script>
+    <script src="~/js/nexora-profile-remove-extra-links-tabs.js" asp-append-version="true"></script>
 }
+
+<link rel="stylesheet" href="~/css/nexora-profile-remove-extra-links-tabs.css" asp-append-version="true" />

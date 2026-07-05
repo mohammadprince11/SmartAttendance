@@ -3,17 +3,86 @@
 
 @{
     ViewData["Title"] = "مستندات الموظفين";
+
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var selectedEmployeeText = Model.EmployeeId > 0
+        ? Model.Employees.FirstOrDefault(e => e.Id == Model.EmployeeId)?.Text
+        : null;
+
+    string DocumentTypeText(string? type)
+    {
+        return type switch
+        {
+            "ID" => "هوية / بطاقة وطنية",
+            "Contract" => "عقد عمل",
+            "Passport" => "جواز سفر",
+            "Health Card" => "بطاقة صحية",
+            "Certificate" => "شهادة / مؤهل",
+            "Memo" => "كتاب / مذكرة",
+            "Other" => "أخرى",
+            _ => string.IsNullOrWhiteSpace(type) ? "غير محدد" : type
+        };
+    }
+
+    string DocumentStatusKey(DateOnly? expiryDate)
+    {
+        if (!expiryDate.HasValue)
+        {
+            return "no-expiry";
+        }
+
+        if (expiryDate.Value < today)
+        {
+            return "expired";
+        }
+
+        if (expiryDate.Value <= today.AddDays(30))
+        {
+            return "expiring";
+        }
+
+        return "valid";
+    }
+
+    string DocumentStatusText(DateOnly? expiryDate)
+    {
+        return DocumentStatusKey(expiryDate) switch
+        {
+            "expired" => "منتهي",
+            "expiring" => "قرب الانتهاء",
+            "valid" => "صالح",
+            _ => "بدون تاريخ"
+        };
+    }
+
+    string DocumentStatusClass(DateOnly? expiryDate)
+    {
+        return DocumentStatusKey(expiryDate) switch
+        {
+            "expired" => "danger",
+            "expiring" => "warn",
+            "valid" => "ok",
+            _ => "muted"
+        };
+    }
+
+    var totalDocs = Model.Documents.Count;
+    var expiredDocs = Model.Documents.Count(d => DocumentStatusKey(d.ExpiryDate) == "expired");
+    var expiringDocs = Model.Documents.Count(d => DocumentStatusKey(d.ExpiryDate) == "expiring");
+    var noExpiryDocs = Model.Documents.Count(d => DocumentStatusKey(d.ExpiryDate) == "no-expiry");
+    var validDocs = Model.Documents.Count(d => DocumentStatusKey(d.ExpiryDate) == "valid");
 }
 
 <link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-v3-hotfix.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-employee-documents-kayan-style.css" asp-append-version="true" />
 
-<div class="nxr-page">
-    <section class="nxr-topline">
+<div class="nxr-page nxr-documents-kayan-page">
+    <section class="nxr-topline nxr-documents-topline">
         <div class="nxr-title">
             <div class="nxr-brand-mini">NEXORA Documents Center</div>
             <h1>مستندات الموظفين</h1>
-            <p>رفع وحفظ مستندات الموظف مثل الهوية، العقد، الجواز، الشهادات، والبطاقة الصحية.</p>
+            <p>مركز حفظ ومتابعة مستندات الموظفين حسب النوع، الحالة، وتاريخ الانتهاء.</p>
         </div>
 
         <div class="nxr-actions">
@@ -21,7 +90,7 @@
             {
                 <a asp-page="/Employees/Profile" asp-route-id="@Model.EmployeeId" class="nxr-btn primary">رجوع لملف الموظف</a>
             }
-            <a asp-page="/Employees/Index" class="nxr-btn">الموظفون</a>
+            <a asp-page="/Employees/Index" class="nxr-btn">قائمة الموظفين</a>
         </div>
     </section>
 
@@ -32,11 +101,46 @@
 
     @if (Model.EmployeeId > 0)
     {
-        <div class="nxr-success">تم تحديد الموظف تلقائياً من ملف الموظف. اختر نوع المستند والملف ثم اضغط رفع المستند.</div>
+        <div class="nxr-documents-focus-banner">
+            <strong>تم تحديد الموظف تلقائياً</strong>
+            <span>@(string.IsNullOrWhiteSpace(selectedEmployeeText) ? "اختر نوع المستند والملف ثم اضغط رفع المستند." : selectedEmployeeText)</span>
+        </div>
     }
 
-    <section class="nxr-document-layout">
-        <aside class="nxr-card nxr-upload-panel">
+    <section class="nxr-documents-kpis">
+        <div class="nxr-doc-kpi">
+            <span>إجمالي المستندات</span>
+            <strong>@totalDocs</strong>
+            <small>ضمن مركز المستندات</small>
+        </div>
+
+        <div class="nxr-doc-kpi ok">
+            <span>صالحة</span>
+            <strong>@validDocs</strong>
+            <small>مستندات فعالة</small>
+        </div>
+
+        <div class="nxr-doc-kpi warn">
+            <span>قرب الانتهاء</span>
+            <strong>@expiringDocs</strong>
+            <small>خلال 30 يوم</small>
+        </div>
+
+        <div class="nxr-doc-kpi danger">
+            <span>منتهية</span>
+            <strong>@expiredDocs</strong>
+            <small>تحتاج تحديث</small>
+        </div>
+
+        <div class="nxr-doc-kpi muted">
+            <span>بدون تاريخ</span>
+            <strong>@noExpiryDocs</strong>
+            <small>تحتاج مراجعة إذا كانت مطلوبة</small>
+        </div>
+    </section>
+
+    <section class="nxr-document-layout nxr-documents-kayan-layout">
+        <aside class="nxr-card nxr-upload-panel nxr-documents-upload-panel">
             <div class="nxr-panel-title">
                 <div>
                     <h3>رفع مستند جديد</h3>
@@ -44,7 +148,7 @@
                 </div>
             </div>
 
-            <form method="post" asp-page-handler="Upload" enctype="multipart/form-data" class="nxr-form">
+            <form method="post" asp-page-handler="Upload" enctype="multipart/form-data" class="nxr-form nxr-documents-upload-form">
                 @Html.AntiForgeryToken()
 
                 <div class="nxr-field">
@@ -76,7 +180,7 @@
                     <input asp-for="Input.ExpiryDate" type="date" />
                 </div>
 
-                                <div class="nxr-upload-zone-final">
+                <div class="nxr-upload-zone-final nxr-documents-upload-zone">
                     <label class="nxr-file-picker" for="Input_File">
                         <span class="nxr-file-picker-inner">
                             <span class="nxr-file-icon">⇧</span>
@@ -84,8 +188,8 @@
                             <span>PDF, JPG, PNG, DOC, DOCX, XLS, XLSX — الحد الأعلى 10MB</span>
                         </span>
                     </label>
-                    <input asp-for="Input.File" id="Input_File" type="file" class="nxr-file-input" required />
-                    <div class="nxr-file-name empty">لم يتم اختيار ملف</div>
+                    <input asp-for="Input.File" id="Input_File" type="file" class="nxr-file-input" required data-nxr-file-input />
+                    <div class="nxr-file-name empty" data-nxr-file-name>لم يتم اختيار ملف</div>
                 </div>
 
                 <div class="nxr-field">
@@ -93,23 +197,86 @@
                     <textarea asp-for="Input.Notes" placeholder="ملاحظات اختيارية عن المستند"></textarea>
                 </div>
 
-                <div class="nxr-actions">
+                <div class="nxr-actions nxr-upload-actions">
                     <button type="submit" class="nxr-btn primary">رفع المستند</button>
                     <a asp-page="./Index" class="nxr-btn">مسح</a>
                 </div>
             </form>
+
+            <div class="nxr-document-rules">
+                <h4>متطلبات المستندات</h4>
+                <div>
+                    <span class="required">مطلوب</span>
+                    <strong>هوية / بطاقة وطنية</strong>
+                </div>
+                <div>
+                    <span class="required">مطلوب</span>
+                    <strong>عقد عمل</strong>
+                </div>
+                <div>
+                    <span>حسب الحالة</span>
+                    <strong>جواز / إقامة للوافدين</strong>
+                </div>
+                <div>
+                    <span>حسب الموقع</span>
+                    <strong>بطاقة صحية</strong>
+                </div>
+            </div>
         </aside>
 
-        <section class="nxr-card">
-            <div class="nxr-table-wrap">
-                <table class="nxr-table">
+        <section class="nxr-card nxr-documents-list-card">
+            <div class="nxr-documents-list-head">
+                <div>
+                    <h3>سجل المستندات</h3>
+                    <p>عرض وفرز المستندات حسب الموظف، النوع، والحالة.</p>
+                </div>
+                <span class="nxr-documents-count" data-nxr-documents-count>@totalDocs نتيجة</span>
+            </div>
+
+            <div class="nxr-documents-filters" data-nxr-documents-filters>
+                <div class="nxr-field">
+                    <label>بحث سريع</label>
+                    <input type="search" placeholder="اسم الموظف، الكود، نوع المستند، اسم الملف..." data-nxr-doc-search />
+                </div>
+
+                <div class="nxr-field">
+                    <label>نوع المستند</label>
+                    <select data-nxr-doc-type>
+                        <option value="">كل الأنواع</option>
+                        <option value="ID">هوية / بطاقة وطنية</option>
+                        <option value="Contract">عقد عمل</option>
+                        <option value="Passport">جواز سفر</option>
+                        <option value="Health Card">بطاقة صحية</option>
+                        <option value="Certificate">شهادة / مؤهل</option>
+                        <option value="Memo">كتاب / مذكرة</option>
+                        <option value="Other">أخرى</option>
+                    </select>
+                </div>
+
+                <div class="nxr-field">
+                    <label>الحالة</label>
+                    <select data-nxr-doc-status>
+                        <option value="">كل الحالات</option>
+                        <option value="valid">صالح</option>
+                        <option value="expiring">قرب الانتهاء</option>
+                        <option value="expired">منتهي</option>
+                        <option value="no-expiry">بدون تاريخ</option>
+                    </select>
+                </div>
+
+                <button type="button" class="nxr-btn" data-nxr-doc-reset>إعادة تعيين</button>
+            </div>
+
+            <div class="nxr-table-wrap nxr-documents-table-wrap">
+                <table class="nxr-table nxr-documents-table" data-nxr-documents-table>
                     <thead>
                         <tr>
+                            <th>الموظف</th>
                             <th>كود الموظف</th>
-                            <th>اسم الموظف</th>
                             <th>نوع المستند</th>
                             <th>اسم الملف</th>
                             <th>تاريخ الانتهاء</th>
+                            <th>الحالة</th>
                             <th>تاريخ الرفع</th>
                             <th>فتح</th>
                         </tr>
@@ -119,12 +286,18 @@
                         {
                             foreach (var doc in Model.Documents)
                             {
-                                <tr>
-                                    <td><span class="nxr-code">@doc.EmployeeNo</span></td>
+                                var statusKey = DocumentStatusKey(doc.ExpiryDate);
+                                var searchText = $"{doc.EmployeeNo} {doc.EmployeeName} {doc.DocumentType} {DocumentTypeText(doc.DocumentType)} {doc.FileName} {doc.Notes}";
+                                <tr data-nxr-doc-row
+                                    data-doc-type="@doc.DocumentType"
+                                    data-doc-status="@statusKey"
+                                    data-doc-search="@searchText">
                                     <td class="nxr-name">@doc.EmployeeName</td>
-                                    <td><span class="nxr-status info nxr-doc-type">@doc.DocumentType</span></td>
-                                    <td class="ltr">@doc.FileName</td>
-                                    <td>@doc.ExpiryDate?.ToString("yyyy-MM-dd")</td>
+                                    <td><span class="nxr-code">@doc.EmployeeNo</span></td>
+                                    <td><span class="nxr-status info nxr-doc-type">@DocumentTypeText(doc.DocumentType)</span></td>
+                                    <td class="ltr nxr-doc-file-name">@doc.FileName</td>
+                                    <td>@(doc.ExpiryDate.HasValue ? doc.ExpiryDate.Value.ToString("yyyy-MM-dd") : "-")</td>
+                                    <td><span class="nxr-doc-status @DocumentStatusClass(doc.ExpiryDate)">@DocumentStatusText(doc.ExpiryDate)</span></td>
                                     <td>@doc.UploadedAt?.ToString("yyyy-MM-dd HH:mm")</td>
                                     <td>
                                         @if (!string.IsNullOrWhiteSpace(doc.StoredPath))
@@ -142,7 +315,7 @@
                         else
                         {
                             <tr>
-                                <td colspan="7" class="nxr-empty">لا توجد مستندات مرفوعة حالياً.</td>
+                                <td colspan="8" class="nxr-empty">لا توجد مستندات مرفوعة حالياً.</td>
                             </tr>
                         }
                     </tbody>
@@ -152,3 +325,6 @@
     </section>
 </div>
 
+@section Scripts {
+    <script src="~/js/nexora-employee-documents-kayan-style.js" asp-append-version="true"></script>
+}
