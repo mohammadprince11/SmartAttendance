@@ -1,11 +1,32 @@
 .vs/
-bin/
-obj/
+.vscode/
+**/bin/
+**/obj/
 *.user
 *.suo
-*.logfiles/
+*.cache
+*.log
+*.log.*
+TestResults/
+
+# Patch and temporary files
 *.zip
+files/
 Apply_NEXORA_*.ps1
 Remove_NEXORA_*.ps1
 *.bak_*
+*.before_*
 NEXORA_ARCHIVED_PAGES/
+NEXORA_BACKUPS_PreGit/
+
+# Database files - never commit real company data
+*.mdf
+*.ldf
+*.bak
+*.bacpac
+*.trn
+
+# Local settings / secrets
+appsettings.Development.json
+secrets.json
+.env

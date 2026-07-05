@@ -7,14 +7,18 @@
 
 <link rel="stylesheet" href="~/css/nexora-hr-operations-official.css" asp-append-version="true" />
 
-<section class="nxhr-page" dir="rtl">
-    <header class="nxhr-hero nxhr-pro-hero">
-        <div class="nxhr-hero-text">
+<section class="nxhr-page nxhr-page-clean" dir="rtl">
+    <header class="nxhr-hero">
+        <div class="nxhr-hero-main">
             <span>NEXORA PEOPLE OPERATIONS</span>
-            <h1>عمليات الموارد البشرية</h1>
-            <p>تفاعل الموظفين مربوط رسمياً بقاعدة البيانات: الإعلانات، الشكاوي والمقترحات، منشورات الحائط، والاستطلاعات.</p>
+            <h1>تفاعل الموظفين</h1>
+            <p>مركز رسمي لإدارة الإعلانات، الاستطلاعات، الشكاوي والمقترحات، ومنشورات الحائط. البيانات مرتبطة بقاعدة البيانات فقط.</p>
         </div>
-        <div class="nxhr-mark">NX</div>
+        <div class="nxhr-hero-stats">
+            <div><span>الإعلانات</span><strong>@Model.TotalAnnouncements</strong></div>
+            <div><span>الوارد</span><strong>@Model.TotalFeedback</strong></div>
+            <div><span>الاستطلاعات</span><strong>@Model.TotalPolls</strong></div>
+        </div>
     </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
@@ -22,417 +26,325 @@
         <div class="nxhr-alert">@Model.StatusMessage</div>
     }
 
-    <div class="nxhr-layout">
-        <aside class="nxhr-side">
-            <a class="active" asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements">
-                <strong>تفاعل الموظفين</strong>
-                <small>الإعلانات، الشكاوي، الحائط</small>
+    <section class="nxhr-toolbar-card">
+        <nav class="nxhr-tabs">
+            <a class="@(tab == "announcements" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements">
+                <strong>الإعلانات</strong><small>نشر داخلي</small>
             </a>
-            <a class="disabled" href="javascript:void(0)"><strong>تحديثات الموظف</strong><small>لاحقاً</small></a>
-            <a class="disabled" href="javascript:void(0)"><strong>عقود الموظفين</strong><small>لاحقاً</small></a>
-            <a class="disabled" href="javascript:void(0)"><strong>إدارة العهد</strong><small>لاحقاً</small></a>
-        </aside>
+            <a class="@(tab == "polls" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="polls">
+                <strong>الانتخابات والاستطلاعات</strong><small>تصويت الموظفين</small>
+            </a>
+            <a class="@(tab == "feedback" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="feedback">
+                <strong>اقتراحات وشكاوي</strong><small>وارد الموظفين</small>
+            </a>
+            <a class="@(tab == "wall" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="wall">
+                <strong>متابعة منشورات الحائط</strong><small>المحتوى المنشور</small>
+            </a>
+        </nav>
 
-        <main class="nxhr-main">
-            <section class="nxhr-card nxhr-section-head nxhr-pro-head">
-                <div>
-                    <h2>تفاعل الموظفين</h2>
-                    <p>هذه الصفحة تعتمد على قاعدة البيانات فقط. لا يوجد LocalStorage ولا سكربتات مزامنة مؤقتة.</p>
+        <form method="get" class="nxhr-search">
+            <input type="hidden" name="section" value="engagement" />
+            <input type="hidden" name="tab" value="@tab" />
+            <input name="Search" value="@Model.Search" placeholder="بحث بالعنوان، الموظف، أو الوصف..." />
+            <button type="submit">بحث</button>
+        </form>
+    </section>
+
+    @if (tab == "announcements")
+    {
+        <section class="nxhr-kpis">
+            <div><span>إجمالي الإعلانات</span><strong>@Model.TotalAnnouncements</strong></div>
+            <div><span>منشورة</span><strong>@Model.PublishedAnnouncements</strong></div>
+            <div><span>مسودات</span><strong>@Model.DraftAnnouncements</strong></div>
+            <div><span>منشورات الحائط</span><strong>@Model.WallPosts</strong></div>
+        </section>
+
+        <section class="nxhr-composer-card">
+            <div class="nxhr-card-title">
+                <div><h2>إنشاء إعلان جديد</h2><p>اكتب الإعلان وحدد الجهة المستهدفة. يظهر المنشور في حائط الموظف حسب التوجيه.</p></div>
+                <span>قاعدة البيانات</span>
+            </div>
+            <form method="post" asp-page-handler="CreateAnnouncement" class="nxhr-composer-form">
+                <div class="nxhr-form-section main">
+                    <label>عنوان الإعلان</label>
+                    <input asp-for="Announcement.Title" placeholder="مثال: مراجعة الحضور والانصراف" />
+                    <label>وصف الإعلان</label>
+                    <textarea asp-for="Announcement.Body" placeholder="اكتب تفاصيل الإعلان التي ستظهر للموظفين"></textarea>
                 </div>
-                <form method="get" class="nxhr-search">
-                    <input type="hidden" name="section" value="engagement" />
-                    <input type="hidden" name="tab" value="@tab" />
-                    <input name="Search" value="@Model.Search" placeholder="بحث بالعنوان، الموظف، أو الوصف..." />
-                    <button type="submit">بحث</button>
-                </form>
-            </section>
 
-            <nav class="nxhr-tabs nxhr-pro-tabs">
-                <a class="@(tab == "announcements" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements">
-                    <strong>الإعلانات</strong>
-                    <small>نشر داخلي</small>
-                </a>
-                <a class="@(tab == "polls" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="polls">
-                    <strong>الانتخابات والاستطلاعات</strong>
-                    <small>تصويت الموظفين</small>
-                </a>
-                <a class="@(tab == "feedback" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="feedback">
-                    <strong>اقتراحات وشكاوي</strong>
-                    <small>وارد الموظفين</small>
-                </a>
-                <a class="@(tab == "wall" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="wall">
-                    <strong>متابعة منشورات الحائط</strong>
-                    <small>المحتوى المنشور</small>
-                </a>
-            </nav>
-
-            @if (tab == "announcements")
-            {
-                <section class="nxhr-kpis nxhr-pro-kpis">
-                    <div><span>إجمالي الإعلانات</span><strong>@Model.TotalAnnouncements</strong></div>
-                    <div><span>منشورة</span><strong>@Model.PublishedAnnouncements</strong></div>
-                    <div><span>مسودات</span><strong>@Model.DraftAnnouncements</strong></div>
-                    <div><span>منشورات الحائط</span><strong>@Model.WallPosts</strong></div>
-                </section>
-
-                <section class="nxhr-pro-workbench">
-                    <form method="post" asp-page-handler="CreateAnnouncement" class="nxhr-card nxhr-pro-form nxhr-side-form">
-                        <div class="nxhr-form-title">
-                            <span>إعلان جديد</span>
-                            <h3>إنشاء إعلان داخلي</h3>
-                            <p>الإعلان المنشور يظهر مباشرة في حائط الموظف حسب الجهة المستهدفة.</p>
-                        </div>
-
-                        <label>عنوان الإعلان</label>
-                        <input asp-for="Announcement.Title" placeholder="مثال: مراجعة الحضور والانصراف" />
-
-                        <label>وصف الإعلان</label>
-                        <textarea asp-for="Announcement.Body" placeholder="اكتب تفاصيل الإعلان التي ستظهر للموظفين"></textarea>
-
-                        <div class="nxhr-form-grid">
-                            <div>
-                                <label>الفئة</label>
-                                <select asp-for="Announcement.Category">
-                                    <option value="عام">عام</option>
-                                    <option value="تهنئة">تهنئة</option>
-                                    <option value="تعزية">تعزية</option>
-                                    <option value="تعليمات">تعليمات</option>
-                                    <option value="فرصة">فرصة</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label>التوجيه</label>
-                                <select asp-for="Announcement.TargetType">
-                                    <option value="All">جميع الموظفين</option>
-                                    <option value="Employee">موظفون محددون</option>
-                                    <option value="Department">قسم محدد</option>
-                                    <option value="Branch">فرع محدد</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="nxhr-picker-block">
-                            <div class="nxhr-picker-head">
-                                <label>الموظفون المحددون</label>
-                                <small>يستخدم فقط عند اختيار: موظفون محددون</small>
-                            </div>
-                            <div class="nxhr-employee-picker nxhr-pro-picker">
-                                @foreach (var employee in Model.Employees)
-                                {
-                                    <label>
-                                        <input type="checkbox" name="Announcement.EmployeeIds" value="@employee.Id" />
-                                        <span>@employee.FullName</span>
-                                        <small>@employee.EmployeeNo</small>
-                                    </label>
-                                }
-                            </div>
-                        </div>
-
-                        <div class="nxhr-form-grid">
-                            <div>
-                                <label>القسم</label>
-                                <select asp-for="Announcement.DepartmentId">
-                                    <option value="">اختر قسم</option>
-                                    @foreach (var department in Model.Departments)
-                                    {
-                                        <option value="@department.Id">@department.Name</option>
-                                    }
-                                </select>
-                            </div>
-                            <div>
-                                <label>الفرع</label>
-                                <select asp-for="Announcement.BranchId">
-                                    <option value="">اختر فرع</option>
-                                    @foreach (var branch in Model.Branches)
-                                    {
-                                        <option value="@branch.Id">@branch.Name</option>
-                                    }
-                                </select>
-                            </div>
-                        </div>
-
-                        <label class="nxhr-check nxhr-pro-check"><input asp-for="Announcement.PublishNow" /> نشر الإعلان الآن</label>
-                        <button type="submit" class="nxhr-primary">حفظ الإعلان</button>
-                    </form>
-
-                    <section class="nxhr-card nxhr-list-panel">
-                        <div class="nxhr-card-title nxhr-pro-title">
-                            <div>
-                                <h3>قائمة الإعلانات</h3>
-                                <p>إدارة الإعلانات المنشورة والمسودات من قاعدة البيانات.</p>
-                            </div>
-                            <span>عرض @Model.Announcements.Count من @Model.Announcements.Count</span>
-                        </div>
-
-                        <div class="nxhr-card-list">
-                            @if (Model.Announcements.Count == 0)
-                            {
-                                <div class="nxhr-empty-card">لا توجد إعلانات حالياً.</div>
-                            }
-
-                            @foreach (var item in Model.Announcements)
-                            {
-                                <article class="nxhr-record-card">
-                                    <div class="nxhr-record-main">
-                                        <div class="nxhr-record-top">
-                                            <span class="nxhr-chip">@item.Category</span>
-                                            <span class="nxhr-chip @(item.IsPublished ? "green" : "gold")">@Model.PublishText(item.IsPublished)</span>
-                                            <time>@Model.DisplayDate(item.PublishDate)</time>
-                                        </div>
-                                        <h3>@item.Title</h3>
-                                        <p>@item.Body</p>
-                                        <div class="nxhr-record-meta">
-                                            <span>التوجيه: @Model.TargetText(item)</span>
-                                            <span>الناشر: @item.CreatedBy</span>
-                                        </div>
-                                    </div>
-                                    <div class="nxhr-record-actions">
-                                        <form method="post" asp-page-handler="ToggleAnnouncement" asp-route-id="@item.Id" asp-route-publish="@(!item.IsPublished)">
-                                            <button type="submit">@(item.IsPublished ? "تحويل لمسودة" : "نشر")</button>
-                                        </form>
-                                        <form method="post" asp-page-handler="DeleteAnnouncement" asp-route-id="@item.Id" onsubmit="return confirm('هل تريد حذف الإعلان؟');">
-                                            <button type="submit" class="danger">حذف</button>
-                                        </form>
-                                    </div>
-                                </article>
-                            }
-                        </div>
-                    </section>
-                </section>
-            }
-            else if (tab == "polls")
-            {
-                <section class="nxhr-kpis nxhr-pro-kpis">
-                    <div><span>إجمالي الاستطلاعات</span><strong>@Model.TotalPolls</strong></div>
-                    <div><span>منشورة</span><strong>@Model.PublishedPolls</strong></div>
-                    <div><span>مسودات</span><strong>@Model.DraftPolls</strong></div>
-                    <div><span>التصويتات</span><strong>@Model.TotalPollVotes</strong></div>
-                </section>
-
-                <section class="nxhr-pro-workbench">
-                    <form method="post" asp-page-handler="CreatePoll" class="nxhr-card nxhr-pro-form nxhr-side-form">
-                        <div class="nxhr-form-title">
-                            <span>تصويت داخلي</span>
-                            <h3>إنشاء استطلاع / انتخاب</h3>
-                            <p>الاستطلاع المنشور يظهر للموظفين حسب الجهة المستهدفة ويقبل التصويت من بوابة الموظف.</p>
-                        </div>
-
-                        <label>عنوان الاستطلاع</label>
-                        <input asp-for="Poll.Title" placeholder="مثال: استطلاع رضا الموظفين" />
-
-                        <label>السؤال</label>
-                        <textarea asp-for="Poll.Question" placeholder="اكتب سؤال الاستطلاع أو الانتخاب"></textarea>
-
-                        <label>الخيارات</label>
-                        <textarea asp-for="Poll.OptionsText" class="nxhr-options-text" placeholder="اكتب كل خيار بسطر مستقل&#10;مثال: ممتاز&#10;جيد&#10;يحتاج تحسين"></textarea>
-                        <small>يجب إدخال خيارين على الأقل. كل سطر يمثل خياراً مستقلاً.</small>
-
-                        <div class="nxhr-form-grid">
-                            <div>
-                                <label>الفئة</label>
-                                <select asp-for="Poll.Category">
-                                    <option value="استطلاع">استطلاع</option>
-                                    <option value="انتخاب">انتخاب</option>
-                                    <option value="تصويت داخلي">تصويت داخلي</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label>التوجيه</label>
-                                <select asp-for="Poll.TargetType">
-                                    <option value="All">جميع الموظفين</option>
-                                    <option value="Employee">موظفون محددون</option>
-                                    <option value="Department">قسم محدد</option>
-                                    <option value="Branch">فرع محدد</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="nxhr-picker-block">
-                            <div class="nxhr-picker-head">
-                                <label>الموظفون المحددون</label>
-                                <small>اختيار اختياري حسب التوجيه</small>
-                            </div>
-                            <div class="nxhr-employee-picker nxhr-pro-picker compact">
-                                @foreach (var employee in Model.Employees)
-                                {
-                                    <label>
-                                        <input type="checkbox" name="Poll.EmployeeIds" value="@employee.Id" />
-                                        <span>@employee.FullName</span>
-                                        <small>@employee.EmployeeNo</small>
-                                    </label>
-                                }
-                            </div>
-                        </div>
-
-                        <div class="nxhr-form-grid">
-                            <div>
-                                <label>القسم</label>
-                                <select asp-for="Poll.DepartmentId">
-                                    <option value="">اختر قسم</option>
-                                    @foreach (var department in Model.Departments)
-                                    {
-                                        <option value="@department.Id">@department.Name</option>
-                                    }
-                                </select>
-                            </div>
-                            <div>
-                                <label>الفرع</label>
-                                <select asp-for="Poll.BranchId">
-                                    <option value="">اختر فرع</option>
-                                    @foreach (var branch in Model.Branches)
-                                    {
-                                        <option value="@branch.Id">@branch.Name</option>
-                                    }
-                                </select>
-                            </div>
-                        </div>
-
-                        <label class="nxhr-check nxhr-pro-check"><input asp-for="Poll.PublishNow" /> نشر الاستطلاع الآن</label>
-                        <button type="submit" class="nxhr-primary">حفظ / نشر الاستطلاع</button>
-                    </form>
-
-                    <section class="nxhr-card nxhr-list-panel">
-                        <div class="nxhr-card-title nxhr-pro-title">
-                            <div>
-                                <h3>قائمة الانتخابات والاستطلاعات</h3>
-                                <p>إدارة التصويتات المنشورة والمسودات.</p>
-                            </div>
-                            <span>عرض @Model.Polls.Count من @Model.Polls.Count</span>
-                        </div>
-
-                        <div class="nxhr-card-list">
-                            @if (Model.Polls.Count == 0)
-                            {
-                                <div class="nxhr-empty-card">لا توجد استطلاعات أو انتخابات حالياً.</div>
-                            }
-
-                            @foreach (var item in Model.Polls)
-                            {
-                                <article class="nxhr-record-card">
-                                    <div class="nxhr-record-main">
-                                        <div class="nxhr-record-top">
-                                            <span class="nxhr-chip">@item.Category</span>
-                                            <span class="nxhr-chip @(item.IsPublished ? "green" : "gold")">@Model.PublishText(item.IsPublished)</span>
-                                            <time>@Model.DisplayDate(item.PublishDate)</time>
-                                        </div>
-                                        <h3>@item.Title</h3>
-                                        <p>@item.Question</p>
-                                        <div class="nxhr-record-meta">
-                                            <span>التوجيه: @Model.TargetText(item)</span>
-                                            <span>الخيارات: @item.OptionsCount</span>
-                                            <span>التصويتات: @item.VotesCount</span>
-                                        </div>
-                                    </div>
-                                    <div class="nxhr-record-actions">
-                                        <form method="post" asp-page-handler="TogglePoll" asp-route-id="@item.Id" asp-route-publish="@(!item.IsPublished)">
-                                            <button type="submit">@(item.IsPublished ? "تحويل لمسودة" : "نشر")</button>
-                                        </form>
-                                        <form method="post" asp-page-handler="DeletePoll" asp-route-id="@item.Id" onsubmit="return confirm('هل تريد حذف الاستطلاع؟');">
-                                            <button type="submit" class="danger">حذف</button>
-                                        </form>
-                                    </div>
-                                </article>
-                            }
-                        </div>
-                    </section>
-                </section>
-            }
-            else if (tab == "feedback")
-            {
-                <section class="nxhr-kpis nxhr-pro-kpis">
-                    <div><span>إجمالي الوارد</span><strong>@Model.TotalFeedback</strong></div>
-                    <div><span>مفتوحة</span><strong>@Model.OpenFeedback</strong></div>
-                    <div><span>قيد المعالجة</span><strong>@Model.PendingFeedback</strong></div>
-                    <div><span>تم الرد / مغلقة</span><strong>@Model.AnsweredFeedback</strong></div>
-                </section>
-
-                <section class="nxhr-card nxhr-feedback-panel">
-                    <div class="nxhr-card-title nxhr-pro-title">
+                <div class="nxhr-form-section target">
+                    <div class="nxhr-form-grid two">
                         <div>
-                            <h3>الوارد من الموظفين</h3>
-                            <p>الشكاوي والمقترحات مرئية هنا مع إمكانية الرد وتغيير الحالة.</p>
+                            <label>الفئة</label>
+                            <select asp-for="Announcement.Category">
+                                <option value="عام">عام</option>
+                                <option value="تهنئة">تهنئة</option>
+                                <option value="تعزية">تعزية</option>
+                                <option value="تعليمات">تعليمات</option>
+                                <option value="فرصة">فرصة</option>
+                            </select>
                         </div>
-                        <span>عرض @Model.FeedbackItems.Count من @Model.FeedbackItems.Count</span>
-                    </div>
-
-                    <div class="nxhr-feedback-list">
-                        @if (Model.FeedbackItems.Count == 0)
-                        {
-                            <div class="nxhr-empty-card">لا توجد شكاوي أو مقترحات.</div>
-                        }
-
-                        @foreach (var item in Model.FeedbackItems)
-                        {
-                            <article class="nxhr-feedback-card">
-                                <div class="nxhr-feedback-content">
-                                    <div class="nxhr-record-top">
-                                        <span class="nxhr-chip">@item.Type</span>
-                                        <span class="nxhr-chip @Model.StatusClass(item.Status)">@Model.StatusText(item.Status)</span>
-                                        <span class="nxhr-chip gold">@item.Priority</span>
-                                        <time>@Model.DisplayDate(item.CreatedAt)</time>
-                                    </div>
-                                    <h3>@item.Title</h3>
-                                    <p>@item.Message</p>
-                                    <div class="nxhr-record-meta">
-                                        <span>الموظف: @item.EmployeeName</span>
-                                        <span>الرقم: @item.EmployeeNo</span>
-                                    </div>
-
-                                    @if (!string.IsNullOrWhiteSpace(item.AdminReply))
-                                    {
-                                        <div class="nxhr-admin-reply">
-                                            <strong>رد الإدارة - @item.RepliedBy</strong>
-                                            <span>@item.AdminReply</span>
-                                        </div>
-                                    }
-                                </div>
-
-                                <div class="nxhr-feedback-actions">
-                                    <form method="post" asp-page-handler="ReplyFeedback" class="nxhr-reply-form">
-                                        <input type="hidden" name="FeedbackReply.Id" value="@item.Id" />
-                                        <label>حالة الطلب</label>
-                                        <select name="FeedbackReply.Status">
-                                            <option value="Answered">تم الرد</option>
-                                            <option value="Pending">قيد المعالجة</option>
-                                            <option value="Closed">مغلقة</option>
-                                        </select>
-                                        <label>رد الإدارة</label>
-                                        <textarea name="FeedbackReply.Reply" placeholder="اكتب الرد بشكل مختصر وواضح"></textarea>
-                                        <button type="submit">حفظ الرد</button>
-                                    </form>
-                                    <form method="post" asp-page-handler="CloseFeedback" asp-route-id="@item.Id">
-                                        <button type="submit" class="danger">إغلاق الطلب</button>
-                                    </form>
-                                </div>
-                            </article>
-                        }
-                    </div>
-                </section>
-            }
-            else if (tab == "wall")
-            {
-                <section class="nxhr-card nxhr-wall">
-                    <div class="nxhr-card-title nxhr-pro-title">
                         <div>
-                            <h3>متابعة منشورات الحائط</h3>
-                            <p>كل إعلان منشور يظهر هنا كمنشور حائط.</p>
+                            <label>التوجيه</label>
+                            <select asp-for="Announcement.TargetType">
+                                <option value="All">جميع الموظفين</option>
+                                <option value="Employee">موظفون محددون</option>
+                                <option value="Department">قسم محدد</option>
+                                <option value="Branch">فرع محدد</option>
+                            </select>
                         </div>
-                        <span>@Model.Announcements.Count(x => x.IsPublished) منشور</span>
                     </div>
-                    <div class="nxhr-wall-grid">
-                        @foreach (var item in Model.Announcements.Where(x => x.IsPublished))
-                        {
-                            <article>
+
+                    <div class="nxhr-form-grid two">
+                        <div>
+                            <label>القسم</label>
+                            <select asp-for="Announcement.DepartmentId">
+                                <option value="">اختر قسم</option>
+                                @foreach (var department in Model.Departments)
+                                {
+                                    <option value="@department.Id">@department.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div>
+                            <label>الفرع</label>
+                            <select asp-for="Announcement.BranchId">
+                                <option value="">اختر فرع</option>
+                                @foreach (var branch in Model.Branches)
+                                {
+                                    <option value="@branch.Id">@branch.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <details class="nxhr-picker-details">
+                        <summary>اختيار موظفين محددين <small>يفتح فقط عند الحاجة</small></summary>
+                        <div class="nxhr-employee-picker">
+                            @foreach (var employee in Model.Employees)
+                            {
+                                <label>
+                                    <input type="checkbox" name="Announcement.EmployeeIds" value="@employee.Id" />
+                                    <span>@employee.FullName</span>
+                                    <small>@employee.EmployeeNo</small>
+                                </label>
+                            }
+                        </div>
+                    </details>
+
+                    <label class="nxhr-check"><input asp-for="Announcement.PublishNow" /> نشر الإعلان الآن</label>
+                </div>
+
+                <div class="nxhr-form-actions">
+                    <button type="submit" class="nxhr-primary">حفظ الإعلان</button>
+                    <span>في حالة اختيار موظفين / قسم / فرع، يجب تحديد الجهة قبل الحفظ.</span>
+                </div>
+            </form>
+        </section>
+
+        <section class="nxhr-list-card">
+            <div class="nxhr-card-title"><div><h2>قائمة الإعلانات</h2><p>إدارة المنشورات والمسودات.</p></div><span>عرض @Model.Announcements.Count من @Model.Announcements.Count</span></div>
+            <div class="nxhr-record-list">
+                @if (Model.Announcements.Count == 0)
+                {
+                    <div class="nxhr-empty-card">لا توجد إعلانات حالياً.</div>
+                }
+                @foreach (var item in Model.Announcements)
+                {
+                    <article class="nxhr-record-card">
+                        <div class="nxhr-record-body">
+                            <div class="nxhr-record-top">
                                 <span class="nxhr-chip">@item.Category</span>
+                                <span class="nxhr-chip @(item.IsPublished ? "green" : "gold")">@Model.PublishText(item.IsPublished)</span>
                                 <time>@Model.DisplayDate(item.PublishDate)</time>
-                                <h3>@item.Title</h3>
-                                <p>@item.Body</p>
-                                <small>@Model.TargetText(item)</small>
-                            </article>
-                        }
+                            </div>
+                            <h3>@item.Title</h3>
+                            <p>@item.Body</p>
+                            <div class="nxhr-record-meta"><span>التوجيه: @Model.TargetText(item)</span><span>الناشر: @item.CreatedBy</span></div>
+                        </div>
+                        <div class="nxhr-actions">
+                            <form method="post" asp-page-handler="ToggleAnnouncement" asp-route-id="@item.Id" asp-route-publish="@(!item.IsPublished)">
+                                <button type="submit">@(item.IsPublished ? "تحويل لمسودة" : "نشر")</button>
+                            </form>
+                            <form method="post" asp-page-handler="DeleteAnnouncement" asp-route-id="@item.Id" onsubmit="return confirm('هل تريد حذف الإعلان؟');">
+                                <button type="submit" class="danger">حذف</button>
+                            </form>
+                        </div>
+                    </article>
+                }
+            </div>
+        </section>
+    }
+    else if (tab == "polls")
+    {
+        <section class="nxhr-kpis">
+            <div><span>إجمالي الاستطلاعات</span><strong>@Model.TotalPolls</strong></div>
+            <div><span>منشورة</span><strong>@Model.PublishedPolls</strong></div>
+            <div><span>مسودات</span><strong>@Model.DraftPolls</strong></div>
+            <div><span>التصويتات</span><strong>@Model.TotalPollVotes</strong></div>
+        </section>
+
+        <section class="nxhr-composer-card">
+            <div class="nxhr-card-title"><div><h2>إنشاء استطلاع / انتخاب</h2><p>اكتب السؤال والخيارات، ثم حدد الجهة المستهدفة للنشر.</p></div><span>تصويت داخلي</span></div>
+            <form method="post" asp-page-handler="CreatePoll" class="nxhr-composer-form">
+                <div class="nxhr-form-section main">
+                    <label>عنوان الاستطلاع</label>
+                    <input asp-for="Poll.Title" placeholder="مثال: استطلاع رضا الموظفين" />
+                    <label>السؤال</label>
+                    <textarea asp-for="Poll.Question" placeholder="اكتب سؤال الاستطلاع أو الانتخاب"></textarea>
+                    <label>الخيارات</label>
+                    <textarea asp-for="Poll.OptionsText" class="nxhr-options-text" placeholder="اكتب كل خيار بسطر مستقل&#10;مثال: ممتاز&#10;جيد&#10;يحتاج تحسين"></textarea>
+                    <small>يجب إدخال خيارين على الأقل. كل سطر يمثل خياراً مستقلاً.</small>
+                </div>
+
+                <div class="nxhr-form-section target">
+                    <div class="nxhr-form-grid two">
+                        <div>
+                            <label>الفئة</label>
+                            <select asp-for="Poll.Category">
+                                <option value="استطلاع">استطلاع</option>
+                                <option value="انتخاب">انتخاب</option>
+                                <option value="تصويت داخلي">تصويت داخلي</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>التوجيه</label>
+                            <select asp-for="Poll.TargetType">
+                                <option value="All">جميع الموظفين</option>
+                                <option value="Employee">موظفون محددون</option>
+                                <option value="Department">قسم محدد</option>
+                                <option value="Branch">فرع محدد</option>
+                            </select>
+                        </div>
                     </div>
-                </section>
-            }
-        </main>
-    </div>
+                    <div class="nxhr-form-grid two">
+                        <div>
+                            <label>القسم</label>
+                            <select asp-for="Poll.DepartmentId">
+                                <option value="">اختر قسم</option>
+                                @foreach (var department in Model.Departments)
+                                {
+                                    <option value="@department.Id">@department.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div>
+                            <label>الفرع</label>
+                            <select asp-for="Poll.BranchId">
+                                <option value="">اختر فرع</option>
+                                @foreach (var branch in Model.Branches)
+                                {
+                                    <option value="@branch.Id">@branch.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <details class="nxhr-picker-details">
+                        <summary>اختيار موظفين محددين <small>اختياري حسب التوجيه</small></summary>
+                        <div class="nxhr-employee-picker compact">
+                            @foreach (var employee in Model.Employees)
+                            {
+                                <label>
+                                    <input type="checkbox" name="Poll.EmployeeIds" value="@employee.Id" />
+                                    <span>@employee.FullName</span>
+                                    <small>@employee.EmployeeNo</small>
+                                </label>
+                            }
+                        </div>
+                    </details>
+                    <label class="nxhr-check"><input asp-for="Poll.PublishNow" /> نشر الاستطلاع الآن</label>
+                </div>
+
+                <div class="nxhr-form-actions"><button type="submit" class="nxhr-primary">حفظ / نشر الاستطلاع</button><span>سيظهر للموظف داخل تبويب الاستطلاعات.</span></div>
+            </form>
+        </section>
+
+        <section class="nxhr-list-card">
+            <div class="nxhr-card-title"><div><h2>قائمة الانتخابات والاستطلاعات</h2><p>إدارة التصويتات المنشورة والمسودات.</p></div><span>عرض @Model.Polls.Count من @Model.Polls.Count</span></div>
+            <div class="nxhr-record-list">
+                @if (Model.Polls.Count == 0)
+                {
+                    <div class="nxhr-empty-card">لا توجد استطلاعات أو انتخابات حالياً.</div>
+                }
+                @foreach (var item in Model.Polls)
+                {
+                    <article class="nxhr-record-card">
+                        <div class="nxhr-record-body">
+                            <div class="nxhr-record-top"><span class="nxhr-chip">@item.Category</span><span class="nxhr-chip @(item.IsPublished ? "green" : "gold")">@Model.PublishText(item.IsPublished)</span><time>@Model.DisplayDate(item.PublishDate)</time></div>
+                            <h3>@item.Title</h3>
+                            <p>@item.Question</p>
+                            <div class="nxhr-record-meta"><span>التوجيه: @Model.TargetText(item)</span><span>الخيارات: @item.OptionsCount</span><span>التصويتات: @item.VotesCount</span></div>
+                        </div>
+                        <div class="nxhr-actions">
+                            <form method="post" asp-page-handler="TogglePoll" asp-route-id="@item.Id" asp-route-publish="@(!item.IsPublished)"><button type="submit">@(item.IsPublished ? "تحويل لمسودة" : "نشر")</button></form>
+                            <form method="post" asp-page-handler="DeletePoll" asp-route-id="@item.Id" onsubmit="return confirm('هل تريد حذف الاستطلاع؟');"><button type="submit" class="danger">حذف</button></form>
+                        </div>
+                    </article>
+                }
+            </div>
+        </section>
+    }
+    else if (tab == "feedback")
+    {
+        <section class="nxhr-kpis">
+            <div><span>إجمالي الوارد</span><strong>@Model.TotalFeedback</strong></div>
+            <div><span>مفتوحة</span><strong>@Model.OpenFeedback</strong></div>
+            <div><span>قيد المعالجة</span><strong>@Model.PendingFeedback</strong></div>
+            <div><span>تم الرد / مغلقة</span><strong>@Model.AnsweredFeedback</strong></div>
+        </section>
+
+        <section class="nxhr-list-card">
+            <div class="nxhr-card-title"><div><h2>الوارد من الموظفين</h2><p>الشكاوي والمقترحات تظهر كبطاقات مع رد مختصر داخل نفس الطلب.</p></div><span>عرض @Model.FeedbackItems.Count من @Model.FeedbackItems.Count</span></div>
+            <div class="nxhr-feedback-list">
+                @if (Model.FeedbackItems.Count == 0)
+                {
+                    <div class="nxhr-empty-card">لا توجد شكاوي أو مقترحات.</div>
+                }
+                @foreach (var item in Model.FeedbackItems)
+                {
+                    <article class="nxhr-feedback-card">
+                        <div class="nxhr-feedback-main">
+                            <div class="nxhr-record-top"><span class="nxhr-chip">@item.Type</span><span class="nxhr-chip @Model.StatusClass(item.Status)">@Model.StatusText(item.Status)</span><span class="nxhr-chip gold">@item.Priority</span><time>@Model.DisplayDate(item.CreatedAt)</time></div>
+                            <h3>@item.Title</h3>
+                            <p>@item.Message</p>
+                            <div class="nxhr-record-meta"><span>الموظف: @item.EmployeeName</span><span>الرقم: @item.EmployeeNo</span></div>
+                            @if (!string.IsNullOrWhiteSpace(item.AdminReply))
+                            {
+                                <div class="nxhr-admin-reply"><strong>رد الإدارة - @item.RepliedBy</strong><span>@item.AdminReply</span></div>
+                            }
+                        </div>
+                        <details class="nxhr-reply-details">
+                            <summary>الرد / تحديث الحالة</summary>
+                            <form method="post" asp-page-handler="ReplyFeedback" class="nxhr-reply-form">
+                                <input type="hidden" name="FeedbackReply.Id" value="@item.Id" />
+                                <label>حالة الطلب</label>
+                                <select name="FeedbackReply.Status"><option value="Answered">تم الرد</option><option value="Pending">قيد المعالجة</option><option value="Closed">مغلقة</option></select>
+                                <label>رد الإدارة</label>
+                                <textarea name="FeedbackReply.Reply" placeholder="اكتب الرد بشكل مختصر وواضح"></textarea>
+                                <button type="submit">حفظ الرد</button>
+                            </form>
+                            <form method="post" asp-page-handler="CloseFeedback" asp-route-id="@item.Id"><button type="submit" class="danger">إغلاق الطلب</button></form>
+                        </details>
+                    </article>
+                }
+            </div>
+        </section>
+    }
+    else if (tab == "wall")
+    {
+        <section class="nxhr-list-card">
+            <div class="nxhr-card-title"><div><h2>متابعة منشورات الحائط</h2><p>كل إعلان منشور يظهر هنا بنفس شكل حائط الموظف.</p></div><span>@(Model.Announcements.Count(x => x.IsPublished)) منشور</span></div>
+            <div class="nxhr-wall-grid">
+                @foreach (var item in Model.Announcements.Where(x => x.IsPublished))
+                {
+                    <article class="nxhr-wall-card">
+                        <div class="nxhr-record-top"><span class="nxhr-chip">@item.Category</span><time>@Model.DisplayDate(item.PublishDate)</time></div>
+                        <h3>@item.Title</h3>
+                        <p>@item.Body</p>
+                        <small>@Model.TargetText(item)</small>
+                    </article>
+                }
+            </div>
+        </section>
+    }
 </section>

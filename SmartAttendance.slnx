@@ -1,7 +1,0 @@
-<Solution>
-  <Project Path="SmartAttendance.API/SmartAttendance.API.csproj" />
-  <Project Path="SmartAttendance.Application/SmartAttendance.Application.csproj" />
-  <Project Path="SmartAttendance.Domain/SmartAttendance.Domain.csproj" />
-  <Project Path="SmartAttendance.Infrastructure/SmartAttendance.Infrastructure.csproj" />
-  <Project Path="SmartAttendance.Web/SmartAttendance.Web.csproj" />
-</Solution>

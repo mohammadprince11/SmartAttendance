@@ -78,6 +78,13 @@ public class IndexModel : PageModel
         }
 
         var targetType = string.IsNullOrWhiteSpace(Announcement.TargetType) ? "All" : Announcement.TargetType.Trim();
+        var targetError = ValidateTarget(targetType, Announcement.EmployeeIds, Announcement.DepartmentId, Announcement.BranchId);
+        if (!string.IsNullOrWhiteSpace(targetError))
+        {
+            StatusMessage = targetError;
+            return RedirectToPage(new { section = "engagement", tab = "announcements" });
+        }
+
         var targetValue = BuildTargetValue(targetType, Announcement.EmployeeIds, Announcement.DepartmentId, Announcement.BranchId);
         var category = string.IsNullOrWhiteSpace(Announcement.Category) ? "عام" : Announcement.Category.Trim();
         var isPublished = Announcement.PublishNow;
@@ -191,6 +198,13 @@ VALUES ('EmployeePortalAnnouncement', CAST(@Id AS nvarchar(80)), 'Toggle Announc
         }
 
         var targetType = string.IsNullOrWhiteSpace(Poll.TargetType) ? "All" : Poll.TargetType.Trim();
+        var targetError = ValidateTarget(targetType, Poll.EmployeeIds, Poll.DepartmentId, Poll.BranchId);
+        if (!string.IsNullOrWhiteSpace(targetError))
+        {
+            StatusMessage = targetError;
+            return RedirectToPage(new { section = "engagement", tab = "polls" });
+        }
+
         var targetValue = BuildTargetValue(targetType, Poll.EmployeeIds, Poll.DepartmentId, Poll.BranchId);
         var category = string.IsNullOrWhiteSpace(Poll.Category) ? "استطلاع" : Poll.Category.Trim();
         var isPublished = Poll.PublishNow;
@@ -666,10 +680,31 @@ ORDER BY FullName;
         null,
         reader => new BranchOption { Id = HrmsDatabase.GetInt(reader, "Id"), Name = HrmsDatabase.GetString(reader, "Name") });
 
+    private string? ValidateTarget(string targetType, int[]? employeeIds, int? departmentId, int? branchId)
+    {
+        if (targetType.Equals("Employee", StringComparison.OrdinalIgnoreCase))
+        {
+            var selectedEmployees = (employeeIds ?? Array.Empty<int>()).Where(x => x > 0).Distinct().ToArray();
+            return selectedEmployees.Length == 0 ? "يرجى اختيار موظف واحد على الأقل عند توجيه الإعلان أو الاستطلاع إلى موظفين محددين." : null;
+        }
+
+        if (targetType.Equals("Department", StringComparison.OrdinalIgnoreCase) && (!departmentId.HasValue || departmentId.Value <= 0))
+        {
+            return "يرجى اختيار القسم عند توجيه الإعلان أو الاستطلاع إلى قسم محدد.";
+        }
+
+        if (targetType.Equals("Branch", StringComparison.OrdinalIgnoreCase) && (!branchId.HasValue || branchId.Value <= 0))
+        {
+            return "يرجى اختيار الفرع عند توجيه الإعلان أو الاستطلاع إلى فرع محدد.";
+        }
+
+        return null;
+    }
+
     private string BuildTargetValue(string targetType, int[]? employeeIds, int? departmentId, int? branchId)
     {
         if (targetType.Equals("All", StringComparison.OrdinalIgnoreCase)) return string.Empty;
-        if (targetType.Equals("Employee", StringComparison.OrdinalIgnoreCase)) return string.Join(',', employeeIds ?? Array.Empty<int>());
+        if (targetType.Equals("Employee", StringComparison.OrdinalIgnoreCase)) return string.Join(',', (employeeIds ?? Array.Empty<int>()).Where(x => x > 0).Distinct());
         if (targetType.Equals("Department", StringComparison.OrdinalIgnoreCase)) return departmentId?.ToString() ?? string.Empty;
         if (targetType.Equals("Branch", StringComparison.OrdinalIgnoreCase)) return branchId?.ToString() ?? string.Empty;
         return string.Empty;
