@@ -1,0 +1,221 @@
+
+/* NEXORA Employee Profile Polish + Requirements
+   هدف الملف: تحسين توزيع ملف الموظف وإضافة صندوق متطلبات الموظف.
+*/
+
+/* تحسين كرت كيان حتى لا يبقى فراغ كبير بين الأقسام */
+.nxr-kayan-profile-card {
+    grid-template-columns:
+        minmax(330px, 1.15fr)
+        minmax(260px, .95fr)
+        minmax(260px, .95fr)
+        minmax(260px, .95fr) !important;
+    align-items: stretch !important;
+    min-height: 0 !important;
+}
+
+.nxr-kayan-identity,
+.nxr-kayan-section {
+    min-height: 100% !important;
+    padding: 18px 20px !important;
+}
+
+.nxr-kayan-financial {
+    border-inline-start: 1px solid var(--kayan-line) !important;
+}
+
+.nxr-kayan-avatar {
+    width: 126px !important;
+    height: 126px !important;
+    font-size: 28px !important;
+}
+
+.nxr-kayan-identity {
+    grid-template-columns: 126px minmax(0, 1fr) !important;
+}
+
+.nxr-kayan-main h2 {
+    font-size: 20px !important;
+    margin-top: 2px !important;
+}
+
+.nxr-kayan-contact {
+    gap: 7px !important;
+    margin-top: 10px !important;
+    padding-top: 12px !important;
+}
+
+.nxr-kayan-info-grid {
+    gap: 12px 18px !important;
+}
+
+.nxr-kayan-section-head {
+    margin-bottom: 12px !important;
+}
+
+.nxr-kayan-section-head h3 {
+    font-size: 15px !important;
+}
+
+.nxr-profile-pro-nav {
+    margin-top: 14px !important;
+}
+
+/* Employee Requirements */
+.nxr-employee-requirements {
+    margin-top: 14px !important;
+    border-radius: 22px !important;
+    border: 1px solid rgba(247, 185, 85, .22) !important;
+    background:
+        radial-gradient(circle at top right, rgba(247, 185, 85, .10), transparent 35%),
+        linear-gradient(180deg, rgba(12, 34, 58, .88), rgba(8, 24, 39, .90)) !important;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .16) !important;
+    padding: 16px !important;
+}
+
+.nxr-employee-requirements.is-clear {
+    border-color: rgba(85, 217, 138, .22) !important;
+    background:
+        radial-gradient(circle at top right, rgba(85, 217, 138, .08), transparent 35%),
+        linear-gradient(180deg, rgba(12, 34, 58, .78), rgba(8, 24, 39, .82)) !important;
+}
+
+.nxr-requirements-head {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 14px !important;
+    margin-bottom: 12px !important;
+}
+
+.nxr-requirements-title {
+    display: grid !important;
+    gap: 4px !important;
+}
+
+.nxr-requirements-title h3 {
+    margin: 0 !important;
+    color: #EEF6FB !important;
+    font-size: 17px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-requirements-title p {
+    margin: 0 !important;
+    color: #A7B7C8 !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+    line-height: 1.6 !important;
+}
+
+.nxr-requirements-badge {
+    min-height: 32px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 7px 12px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(247, 185, 85, .30) !important;
+    background: rgba(247, 185, 85, .10) !important;
+    color: #F4DCA7 !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+    white-space: nowrap !important;
+}
+
+.nxr-employee-requirements.is-clear .nxr-requirements-badge {
+    border-color: rgba(85, 217, 138, .30) !important;
+    background: rgba(85, 217, 138, .10) !important;
+    color: #C9FFE0 !important;
+}
+
+.nxr-requirements-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.nxr-requirement-item {
+    min-height: 88px !important;
+    display: grid !important;
+    gap: 6px !important;
+    padding: 12px !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(73, 111, 151, .24) !important;
+    background: rgba(255, 255, 255, .035) !important;
+}
+
+.nxr-requirement-item strong {
+    color: #EEF6FB !important;
+    font-size: 13px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-requirement-item span {
+    color: #A7B7C8 !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+    line-height: 1.55 !important;
+}
+
+.nxr-requirement-item.warn {
+    border-color: rgba(247, 185, 85, .30) !important;
+    background: rgba(247, 185, 85, .08) !important;
+}
+
+.nxr-requirement-item.danger {
+    border-color: rgba(255, 107, 107, .32) !important;
+    background: rgba(255, 107, 107, .08) !important;
+}
+
+.nxr-requirement-item.ok {
+    border-color: rgba(85, 217, 138, .28) !important;
+    background: rgba(85, 217, 138, .07) !important;
+}
+
+.nxr-requirement-item small {
+    color: #8FA6BB !important;
+    font-size: 11px !important;
+    font-weight: 850 !important;
+}
+
+/* تحسين الأقسام السفلية */
+.nxr-kayan-details-section,
+.nxr-kayan-future-modules,
+.nxr-profile-pro-two-col {
+    margin-top: 14px !important;
+}
+
+.nxr-profile-pro-panel {
+    border-radius: 22px !important;
+}
+
+@media (max-width: 1550px) {
+    .nxr-kayan-profile-card {
+        grid-template-columns: 1.15fr 1fr !important;
+    }
+
+    .nxr-kayan-financial {
+        border-inline-start: 0 !important;
+        border-top: 1px solid var(--kayan-line) !important;
+    }
+}
+
+@media (max-width: 980px) {
+    .nxr-kayan-profile-card,
+    .nxr-requirements-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxr-kayan-identity {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxr-requirements-head {
+        flex-direction: column !important;
+    }
+
+    .nxr-requirements-badge {
+        width: 100% !important;
+    }
+}

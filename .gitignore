@@ -3,4 +3,9 @@ bin/
 obj/
 *.user
 *.suo
-*.log
+*.logfiles/
+*.zip
+Apply_NEXORA_*.ps1
+Remove_NEXORA_*.ps1
+*.bak_*
+NEXORA_ARCHIVED_PAGES/

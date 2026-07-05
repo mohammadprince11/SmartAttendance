@@ -1,0 +1,365 @@
+
+/* NEXORA Employee Profile - Kayan Style */
+
+.nxr-profile-pro-page {
+    --kayan-card-bg: linear-gradient(180deg, rgba(12, 34, 58, .88), rgba(8, 24, 39, .90));
+    --kayan-card-border: rgba(73, 111, 151, .28);
+    --kayan-line: rgba(73, 111, 151, .18);
+    --kayan-text: #EEF6FB;
+    --kayan-muted: #A7B7C8;
+    --kayan-teal: #19D3E0;
+    --kayan-gold: #D7B26D;
+}
+
+.nxr-kayan-top-actions {
+    align-items: center !important;
+}
+
+.nxr-action-menu {
+    position: relative !important;
+    display: inline-flex !important;
+}
+
+.nxr-action-menu-button::after {
+    content: "▾";
+    margin-inline-start: 7px;
+    font-size: 11px;
+    opacity: .85;
+}
+
+.nxr-action-menu-panel {
+    position: absolute !important;
+    top: calc(100% + 10px) !important;
+    inset-inline-end: 0 !important;
+    width: min(360px, calc(100vw - 40px)) !important;
+    display: none !important;
+    z-index: 80 !important;
+    padding: 10px !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(73, 111, 151, .34) !important;
+    background:
+        radial-gradient(circle at top right, rgba(25, 211, 224, .12), transparent 38%),
+        rgba(6, 17, 31, .98) !important;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .38) !important;
+    backdrop-filter: blur(16px) !important;
+}
+
+.nxr-action-menu.is-open .nxr-action-menu-panel {
+    display: grid !important;
+    gap: 7px !important;
+}
+
+.nxr-action-menu-head {
+    padding: 8px 10px 10px !important;
+    border-bottom: 1px solid rgba(73, 111, 151, .20) !important;
+    margin-bottom: 4px !important;
+}
+
+.nxr-action-menu-head strong {
+    display: block !important;
+    color: var(--kayan-text) !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-action-menu-head span {
+    display: block !important;
+    color: var(--kayan-muted) !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    margin-top: 3px !important;
+}
+
+.nxr-action-item {
+    width: 100% !important;
+    display: grid !important;
+    gap: 3px !important;
+    padding: 10px 12px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(73, 111, 151, .20) !important;
+    background: rgba(255, 255, 255, .035) !important;
+    text-decoration: none !important;
+    color: var(--kayan-text) !important;
+    text-align: right !important;
+    cursor: pointer !important;
+    font-family: inherit !important;
+}
+
+.nxr-action-item:hover {
+    background: rgba(25, 211, 224, .08) !important;
+    border-color: rgba(25, 211, 224, .30) !important;
+}
+
+.nxr-action-item span {
+    font-size: 13px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-action-item small {
+    color: var(--kayan-muted) !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+}
+
+.nxr-action-item.danger {
+    background: rgba(255, 107, 107, .10) !important;
+    border-color: rgba(255, 107, 107, .30) !important;
+}
+
+.nxr-action-item.danger span {
+    color: #FFD3D3 !important;
+}
+
+.nxr-action-item.is-disabled {
+    opacity: .78 !important;
+}
+
+.nxr-kayan-profile-card {
+    display: grid !important;
+    grid-template-columns: 1.1fr 1fr 1fr !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border-top: 4px solid var(--kayan-teal) !important;
+    background: var(--kayan-card-bg) !important;
+    border-color: var(--kayan-card-border) !important;
+}
+
+.nxr-kayan-identity {
+    display: grid !important;
+    grid-template-columns: 150px minmax(0, 1fr) !important;
+    gap: 16px !important;
+    padding: 22px !important;
+    border-inline-start: 1px solid var(--kayan-line) !important;
+    align-items: start !important;
+}
+
+.nxr-kayan-avatar {
+    width: 150px !important;
+    height: 150px !important;
+    border-radius: 4px !important;
+    display: grid !important;
+    place-items: center !important;
+    background: linear-gradient(135deg, rgba(25, 211, 224, .90), rgba(215, 178, 109, .78)) !important;
+    color: #06111F !important;
+    font-size: 30px !important;
+    font-weight: 1000 !important;
+    box-shadow: 0 18px 36px rgba(25, 211, 224, .16) !important;
+}
+
+.nxr-kayan-main {
+    min-width: 0 !important;
+}
+
+.nxr-kayan-code {
+    color: var(--kayan-gold) !important;
+    font-size: 13px !important;
+    font-weight: 1000 !important;
+    margin-bottom: 6px !important;
+}
+
+.nxr-kayan-main h2 {
+    margin: 0 !important;
+    color: var(--kayan-text) !important;
+    font-size: 19px !important;
+    font-weight: 1000 !important;
+    line-height: 1.45 !important;
+}
+
+.nxr-kayan-main p {
+    margin: 4px 0 12px !important;
+    color: var(--kayan-muted) !important;
+    font-size: 13px !important;
+    font-weight: 850 !important;
+}
+
+.nxr-kayan-status-row {
+    display: flex !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+    margin-bottom: 14px !important;
+}
+
+.nxr-kayan-contact {
+    display: grid !important;
+    gap: 9px !important;
+    padding-top: 14px !important;
+    border-top: 1px solid var(--kayan-line) !important;
+}
+
+.nxr-kayan-contact div,
+.nxr-kayan-info-grid div {
+    min-width: 0 !important;
+}
+
+.nxr-kayan-contact span,
+.nxr-kayan-info-grid span {
+    display: block !important;
+    color: #8FA6BB !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+    margin-bottom: 4px !important;
+}
+
+.nxr-kayan-contact strong,
+.nxr-kayan-info-grid strong {
+    display: block !important;
+    color: var(--kayan-text) !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    overflow-wrap: anywhere !important;
+}
+
+.nxr-kayan-section {
+    padding: 22px !important;
+    border-inline-start: 1px solid var(--kayan-line) !important;
+}
+
+.nxr-kayan-financial {
+    border-inline-start: 0 !important;
+}
+
+.nxr-kayan-section-head {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    margin-bottom: 14px !important;
+}
+
+.nxr-kayan-section-head h3 {
+    margin: 0 !important;
+    color: var(--kayan-text) !important;
+    font-size: 16px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-kayan-edit {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(73, 111, 151, .24) !important;
+    background: rgba(255, 255, 255, .04) !important;
+    color: #BFD6E8 !important;
+    display: inline-grid !important;
+    place-items: center !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-kayan-edit:hover {
+    color: var(--kayan-teal) !important;
+    border-color: rgba(25, 211, 224, .34) !important;
+}
+
+.nxr-kayan-info-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 16px 20px !important;
+}
+
+.nxr-kayan-risk-grid {
+    margin-top: 16px !important;
+}
+
+.nxr-profile-pro-nav {
+    margin-top: 16px !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    scrollbar-width: thin !important;
+}
+
+.nxr-profile-pro-nav a {
+    min-width: max-content !important;
+}
+
+.nxr-kayan-details-section {
+    margin-top: 16px !important;
+}
+
+.nxr-profile-pro-three-col {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+    margin-top: 16px !important;
+}
+
+.nxr-kayan-coming-soon {
+    display: grid !important;
+    gap: 8px !important;
+    padding: 16px !important;
+    border-radius: 16px !important;
+    background: rgba(255, 255, 255, .035) !important;
+    border: 1px dashed rgba(73, 111, 151, .30) !important;
+}
+
+.nxr-kayan-coming-soon strong {
+    color: var(--kayan-text) !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-kayan-coming-soon span {
+    color: var(--kayan-muted) !important;
+    font-size: 12px !important;
+    line-height: 1.7 !important;
+    font-weight: 800 !important;
+}
+
+.nxr-mini-link.disabled {
+    opacity: .70 !important;
+    cursor: default !important;
+    pointer-events: none !important;
+}
+
+.nxr-kayan-details-section .nxr-profile-pro-panel {
+    background: rgba(9, 27, 47, .55) !important;
+}
+
+@media (max-width: 1300px) {
+    .nxr-kayan-profile-card {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxr-kayan-section,
+    .nxr-kayan-financial,
+    .nxr-kayan-identity {
+        border-inline-start: 0 !important;
+        border-bottom: 1px solid var(--kayan-line) !important;
+    }
+
+    .nxr-kayan-financial {
+        border-bottom: 0 !important;
+    }
+
+    .nxr-profile-pro-three-col {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 740px) {
+    .nxr-kayan-identity {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxr-kayan-avatar {
+        width: 112px !important;
+        height: 112px !important;
+    }
+
+    .nxr-kayan-info-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxr-action-menu {
+        width: 100% !important;
+    }
+
+    .nxr-action-menu-button {
+        width: 100% !important;
+    }
+
+    .nxr-action-menu-panel {
+        inset-inline-start: 0 !important;
+        inset-inline-end: auto !important;
+    }
+}

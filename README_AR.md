@@ -1,36 +1,37 @@
 
-# NEXORA Create Employee Cleanup + Active Menu Fix
+# NEXORA Force Right Sidebar
 
-هذا الباتش يعالج ملاحظتين:
-
-1. عند فتح **إضافة موظف** لا يبقى رابط **قائمة الموظفين** مضيئاً.
-2. يرجع صفحة **إضافة موظف جديد** إلى تصميم أنظف وبسيط بدل الشكل الجانبي المزعج.
-
-## الملفات
-
-انسخ هذين إلى داخل مجلد المشروع:
-
-`C:\Users\Lenovo\SmartAttendance`
-
-- `Apply_NEXORA_Create_Cleanup_Active_Menu.ps1`
-- `files`
+هذا الباتش يصلح مشكلة ظهور القائمة الجانبية في جهة اليسار، خصوصاً في صفحة مستندات الموظفين.
 
 ## التشغيل
 
+انسخ إلى:
+
+`C:\Projects\SmartAttendance`
+
+- `Apply_NEXORA_Force_Right_Sidebar.ps1`
+- `files`
+
+ثم شغل:
+
 ```powershell
-cd C:\Users\Lenovo\SmartAttendance
-powershell -ExecutionPolicy Bypass -File .\Apply_NEXORA_Create_Cleanup_Active_Menu.ps1
+cd C:\Projects\SmartAttendance
+powershell -ExecutionPolicy Bypass -File .\Apply_NEXORA_Force_Right_Sidebar.ps1
 ```
 
-## تطبيق + Build فقط بدون تشغيل
+## أوامر منفصلة بعد السكربت
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\Apply_NEXORA_Create_Cleanup_Active_Menu.ps1 -SkipRun
+taskkill /F /IM SmartAttendance.Web.exe
+taskkill /F /IM dotnet.exe
+
+dotnet clean
+dotnet build
+dotnet run --project SmartAttendance.Web
 ```
 
-## الاختبار بعد التشغيل
+## تطبيق + Build فقط
 
-1. افتح شؤون الموظفين > إضافة موظف.
-2. تأكد أن **إضافة موظف** فقط مضيئة وليس **قائمة الموظفين**.
-3. تأكد أن صفحة الإضافة أصبحت أبسط بدون لوحة الجاهزية الجانبية.
-4. جرّب زر **اختيار المستمسكات والملفات** وتأكد أن المودال يفتح.
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Apply_NEXORA_Force_Right_Sidebar.ps1 -SkipRun
+```

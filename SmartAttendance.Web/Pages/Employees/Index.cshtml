@@ -25,8 +25,7 @@
 
         <div class="nxr-actions nxr-emp-actions">
             <a asp-page="./Create" class="nxr-btn primary">إضافة موظف</a>
-            <a asp-page="/EmployeeDocuments/Index" class="nxr-btn">مستندات الموظفين</a>
-        </div>
+</div>
     </section>
 
     @if (TempData["SuccessMessage"] != null)
@@ -63,15 +62,15 @@
     </section>
 
     <section class="nxr-card nxr-emp-filter-card">
-        <form method="get" class="nxr-emp-filter">
+        <form method="get" class="nxr-emp-filter nxr-live-filter" data-nxr-live-filter autocomplete="off">
             <div class="nxr-emp-field search">
                 <label>بحث سريع</label>
-                <input class="nxr-input" type="text" name="SearchTerm" value="@Model.SearchTerm" placeholder="الكود، الاسم، الهاتف، المنصب، الفرع أو القسم..." />
+                <input class="nxr-input" type="text" name="SearchTerm" value="@Model.SearchTerm" placeholder="الكود، الاسم، الهاتف، المنصب، الفرع أو القسم..." data-nxr-live-search />
             </div>
 
             <div class="nxr-emp-field">
                 <label>الفرع</label>
-                <select name="BranchFilter" class="nxr-input">
+                <select name="BranchFilter" class="nxr-input" data-nxr-live-select>
                     <option value="" selected="@(string.IsNullOrWhiteSpace(Model.BranchFilter) ? "selected" : null)">كل الفروع</option>
                     @foreach (var branch in Model.BranchOptions)
                     {
@@ -82,7 +81,7 @@
 
             <div class="nxr-emp-field">
                 <label>القسم</label>
-                <select name="DepartmentFilter" class="nxr-input">
+                <select name="DepartmentFilter" class="nxr-input" data-nxr-live-select>
                     <option value="" selected="@(string.IsNullOrWhiteSpace(Model.DepartmentFilter) ? "selected" : null)">كل الأقسام</option>
                     @foreach (var department in Model.DepartmentOptions)
                     {
@@ -93,7 +92,7 @@
 
             <div class="nxr-emp-field">
                 <label>الحالة</label>
-                <select name="StatusFilter" class="nxr-input">
+                <select name="StatusFilter" class="nxr-input" data-nxr-live-select>
                     <option value="" selected="@(string.IsNullOrWhiteSpace(Model.StatusFilter) ? "selected" : null)">كل الحالات</option>
                     <option value="active" selected="@(string.Equals(Model.StatusFilter, "active", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">فعال</option>
                     <option value="inactive" selected="@(string.Equals(Model.StatusFilter, "inactive", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">غير فعال</option>
@@ -102,7 +101,7 @@
 
             <div class="nxr-emp-field">
                 <label>ترتيب</label>
-                <select name="SortBy" class="nxr-input">
+                <select name="SortBy" class="nxr-input" data-nxr-live-select>
                     <option value="name" selected="@((Model.SortBy ?? "name").Equals("name", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الاسم</option>
                     <option value="code" selected="@(string.Equals(Model.SortBy, "code", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الكود</option>
                     <option value="branch" selected="@(string.Equals(Model.SortBy, "branch", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الفرع</option>
@@ -209,3 +208,7 @@
         </div>
     </section>
 </div>
+
+
+@section Scripts {
+}

@@ -1,6 +1,5 @@
-﻿
-<!DOCTYPE html>
-<html lang="en" dir="ltr" data-theme="dark" data-sidebar="expanded" class="sa-preload">
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark" data-sidebar="expanded">
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -10,10 +9,9 @@
 
     <script>
         (function () {
-            var theme = localStorage.getItem("SmartAttendance.Theme") || "dark";
-            var language = localStorage.getItem("SmartAttendance.Language") || "ar";
-
             try {
+                localStorage.setItem("SmartAttendance.Language", "ar");
+                localStorage.setItem("SmartAttendance.Theme", "dark");
                 localStorage.removeItem("SmartAttendance.Sidebar");
                 localStorage.removeItem("NEXORA.Sidebar.Final.Working");
                 localStorage.removeItem("NEXORA.SidebarMode.Final");
@@ -23,38 +21,23 @@
                 localStorage.removeItem("sidebar");
             } catch (e) { }
 
-            document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "dark");
+            document.documentElement.setAttribute("lang", "ar");
+            document.documentElement.setAttribute("dir", "rtl");
+            document.documentElement.setAttribute("data-theme", "dark");
             document.documentElement.setAttribute("data-sidebar", "expanded");
-            document.documentElement.setAttribute("lang", language === "ar" ? "ar" : "en");
-            document.documentElement.setAttribute("dir", language === "ar" ? "rtl" : "ltr");
         })();
     </script>
 
-    <style>
-        html[data-theme="dark"], html[data-theme="dark"] body { background:#07121F; color:#E6EAEE; }
-        html[data-theme="light"], html[data-theme="light"] body { background:#F4F7FA; color:#07121F; }
-        html.sa-preload body { opacity:0; }
-        html.sa-ready body { opacity:1; transition:opacity 160ms ease; }
-    </style>
-
     <link rel="icon" type="image/svg+xml" href="~/brand/nexora-symbol.svg" />
     <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/theme-localization.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-brand.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-sidebar-brand-active-fix.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-uiux-v2.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-v3-hotfix.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-v3-profile-documents-polish.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-v3-ui-details-hotfix.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-final-cleanup.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-dashboard-old-measurements-fix.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-clean-navbar.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-navbar-final-cleanup.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-employee-create-clean-fix.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-ui-stabilization-phase1.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-employees-filter-sidebar-forcefix.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-force-right-sidebar.css" asp-append-version="true" />
 </head>
 
-<body>
+<body dir="rtl">
     @{
         var loginUser = Context.Request.Cookies["SA.UserName"];
         var displayNameCookie = Context.Request.Cookies["SA.DisplayName"];
@@ -63,129 +46,161 @@
         var loginEmployeeId = Context.Request.Cookies["SA.EmployeeId"] ?? "";
         var isLoggedIn = !string.IsNullOrWhiteSpace(loginUser);
 
-        var isAdmin = loginRole.Equals("Admin", StringComparison.OrdinalIgnoreCase);
-        var isHrManager = loginRole.Equals("HR Manager", StringComparison.OrdinalIgnoreCase);
-        var isHrOfficer = loginRole.Equals("HR Officer", StringComparison.OrdinalIgnoreCase);
-        var isBranchManager = loginRole.Equals("Branch Manager", StringComparison.OrdinalIgnoreCase);
-        var isEmployee = loginRole.Equals("Employee", StringComparison.OrdinalIgnoreCase);
-        var isFinanceViewer = loginRole.Equals("Finance Viewer", StringComparison.OrdinalIgnoreCase);
-
-        var showOrg = isAdmin || isHrManager || isHrOfficer || isBranchManager || isFinanceViewer;
-        var showHr = isAdmin || isHrManager || isHrOfficer || isBranchManager;
-        var showAttendance = isAdmin || isHrManager || isHrOfficer;
-        var showReports = isAdmin || isHrManager || isHrOfficer || isBranchManager || isFinanceViewer;
-        var showSettings = isAdmin || isHrManager;
-        var showSelfServices = isAdmin || isHrManager || isHrOfficer || isBranchManager || isEmployee;
         var pageTitle = ViewData["Title"]?.ToString() ?? "NEXORA";
+
+        var rawPath = (Context.Request.Path.Value ?? "/").TrimEnd('/');
+        if (string.IsNullOrWhiteSpace(rawPath))
+        {
+            rawPath = "/";
+        }
+
+        var currentPath = rawPath.ToLowerInvariant();
+
+        Func<string, string> NormalizePath = path =>
+        {
+            var value = (path ?? "/").TrimEnd('/').ToLowerInvariant();
+            return string.IsNullOrWhiteSpace(value) ? "/" : value;
+        };
+
+        Func<string, bool> IsCurrent = path =>
+        {
+            var normalized = NormalizePath(path);
+            if (currentPath == normalized)
+            {
+                return true;
+            }
+
+            if (normalized.EndsWith("/index", StringComparison.OrdinalIgnoreCase))
+            {
+                var withoutIndex = normalized.Substring(0, normalized.Length - "/index".Length);
+                if (string.IsNullOrWhiteSpace(withoutIndex))
+                {
+                    withoutIndex = "/";
+                }
+
+                return currentPath == withoutIndex;
+            }
+
+            return false;
+        };
+
+        Func<string, bool> IsUnder = path =>
+        {
+            var normalized = NormalizePath(path);
+            if (normalized == "/")
+            {
+                return currentPath == "/";
+            }
+
+            return currentPath == normalized || currentPath.StartsWith(normalized + "/", StringComparison.OrdinalIgnoreCase);
+        };
+
+        Func<string, string> ActiveClass = path => IsCurrent(path) ? "active nexora-active" : "";
+
+        var employeesOpen = IsUnder("/Employees") || IsUnder("/EmployeeDocuments");
+        var attendanceOpen = IsUnder("/AttendanceOperations") || IsUnder("/AttendanceRecords") || IsUnder("/AttendanceImports") || IsUnder("/Shifts") || IsUnder("/Devices");
+        var requestsOpen = IsUnder("/LeaveRequests") || IsUnder("/Approvals") || IsUnder("/SelfServices");
+        var systemOpen = IsUnder("/Branches") || IsUnder("/Departments") || IsUnder("/SystemUsers") || IsUnder("/Permissions");
+        var reportsOpen = IsUnder("/AttendanceReports") || IsUnder("/Reports");
     }
 
     <div class="nexora-shell">
-        <aside class="nexora-sidebar">
+        <aside class="nexora-sidebar" aria-label="القائمة الجانبية">
             <div class="nexora-brand-card">
                 <a asp-page="/Index" class="nexora-brand-link" aria-label="NEXORA Home">
                     <img class="nexora-brand-symbol" src="~/brand/nexora-symbol.svg" alt="NEXORA" />
                     <div class="nexora-brand-copy">
                         <div class="nexora-wordmark">NEXORA</div>
                         <div class="nexora-arabic">نيكسورا</div>
-                        <div class="nexora-tagline">Intelligent Solutions. Limitless Impact.</div>
+                        <div class="nexora-tagline">HR Operations Platform</div>
                     </div>
                 </a>
-</div>
+            </div>
 
-            <nav class="nexora-nav nexora-clean-nav" aria-label="Main navigation">
-                <!-- NEXORA_CLEAN_NAV_START -->
-                <a asp-page="/Index" class="nexora-nav-link nexora-root-link" data-nav-area="dashboard">
+            <nav class="nexora-nav nexora-stable-nav" aria-label="القائمة الرئيسية">
+                <a asp-page="/Index" class="nexora-nav-link nexora-root-link @(ActiveClass("/Index"))">
                     <span class="nexora-nav-dot"></span>
                     <span>لوحة التحكم</span>
                 </a>
 
-                <details class="nexora-nav-group">
+                <details class="nexora-nav-group" open="@employeesOpen">
                     <summary>
                         <span class="nexora-nav-dot gold"></span>
                         <span class="nexora-nav-text">شؤون الموظفين</span>
                         <span class="nexora-chevron"></span>
                     </summary>
                     <div class="nexora-nav-group-links">
-                        <a asp-page="/Employees/Index" class="nexora-nav-link"><span>قائمة الموظفين</span></a>
-                        <a asp-page="/Employees/Create" class="nexora-nav-link"><span>إضافة موظف</span></a>
-                        <a asp-page="/EmployeeDocuments/Index" class="nexora-nav-link"><span>مستندات الموظفين</span></a>
-</div>
+                        <a asp-page="/Employees/Index" class="nexora-nav-link @(ActiveClass("/Employees/Index"))"><span>قائمة الموظفين</span></a>
+                    </div>
                 </details>
 
-                <details class="nexora-nav-group">
+                <details class="nexora-nav-group" open="@attendanceOpen">
                     <summary>
                         <span class="nexora-nav-dot gold"></span>
                         <span class="nexora-nav-text">الحضور والانصراف</span>
                         <span class="nexora-chevron"></span>
                     </summary>
                     <div class="nexora-nav-group-links">
-                        <a asp-page="/AttendanceOperations/Index" class="nexora-nav-link"><span>مراقبة الحضور</span></a>
-                        <a asp-page="/AttendanceRecords/Index" class="nexora-nav-link"><span>سجلات الحضور</span></a>
-                        <a asp-page="/AttendanceImports/Index" class="nexora-nav-link"><span>استيراد البصمات</span></a>
-                        <a asp-page="/Shifts/Index" class="nexora-nav-link"><span>الشفتات</span></a>
-                        <a asp-page="/Devices/Index" class="nexora-nav-link"><span>الأجهزة</span></a>
+                        <a asp-page="/AttendanceOperations/Index" class="nexora-nav-link @(ActiveClass("/AttendanceOperations/Index"))"><span>مراقبة الحضور</span></a>
+                        <a asp-page="/AttendanceRecords/Index" class="nexora-nav-link @(ActiveClass("/AttendanceRecords/Index"))"><span>سجلات الحضور</span></a>
+                        <a asp-page="/AttendanceImports/Index" class="nexora-nav-link @(ActiveClass("/AttendanceImports/Index"))"><span>استيراد البصمات</span></a>
+                        <a asp-page="/Shifts/Index" class="nexora-nav-link @(ActiveClass("/Shifts/Index"))"><span>الشفتات</span></a>
+                        <a asp-page="/Devices/Index" class="nexora-nav-link @(ActiveClass("/Devices/Index"))"><span>الأجهزة</span></a>
                     </div>
                 </details>
 
-                <details class="nexora-nav-group">
+                <details class="nexora-nav-group" open="@requestsOpen">
                     <summary>
                         <span class="nexora-nav-dot gold"></span>
                         <span class="nexora-nav-text">الطلبات والإجازات</span>
                         <span class="nexora-chevron"></span>
                     </summary>
                     <div class="nexora-nav-group-links">
-                        <a asp-page="/LeaveRequests/Index" class="nexora-nav-link"><span>طلبات الإجازات</span></a>
-                        <a asp-page="/Approvals/Index" class="nexora-nav-link"><span>الموافقات</span></a>
-                        <a asp-page="/SelfServices/Index" class="nexora-nav-link"><span>الخدمات الذاتية</span></a>
+                        <a asp-page="/LeaveRequests/Index" class="nexora-nav-link @(ActiveClass("/LeaveRequests/Index"))"><span>طلبات الإجازات</span></a>
+                        <a asp-page="/Approvals/Index" class="nexora-nav-link @(ActiveClass("/Approvals/Index"))"><span>الموافقات</span></a>
+                        <a asp-page="/SelfServices/Index" class="nexora-nav-link @(ActiveClass("/SelfServices/Index"))"><span>الخدمات الذاتية</span></a>
                     </div>
                 </details>
 
-                <details class="nexora-nav-group">
+                <details class="nexora-nav-group" open="@systemOpen">
                     <summary>
                         <span class="nexora-nav-dot gold"></span>
                         <span class="nexora-nav-text">إدارة النظام</span>
                         <span class="nexora-chevron"></span>
                     </summary>
                     <div class="nexora-nav-group-links">
-                        <a asp-page="/Branches/Index" class="nexora-nav-link"><span>الفروع</span></a>
-                        <a asp-page="/Departments/Index" class="nexora-nav-link"><span>الأقسام</span></a>
-                        <a asp-page="/SystemUsers/Index" class="nexora-nav-link"><span>المستخدمون</span></a>
-                        <a asp-page="/Permissions/Index" class="nexora-nav-link"><span>الصلاحيات</span></a>
+                        <a asp-page="/Branches/Index" class="nexora-nav-link @(ActiveClass("/Branches/Index"))"><span>الفروع</span></a>
+                        <a asp-page="/Departments/Index" class="nexora-nav-link @(ActiveClass("/Departments/Index"))"><span>الأقسام</span></a>
+                        <a asp-page="/SystemUsers/Index" class="nexora-nav-link @(ActiveClass("/SystemUsers/Index"))"><span>المستخدمون</span></a>
+                        <a asp-page="/Permissions/Index" class="nexora-nav-link @(ActiveClass("/Permissions/Index"))"><span>الصلاحيات</span></a>
                     </div>
                 </details>
 
-                <details class="nexora-nav-group">
+                <details class="nexora-nav-group" open="@reportsOpen">
                     <summary>
                         <span class="nexora-nav-dot gold"></span>
                         <span class="nexora-nav-text">التقارير</span>
                         <span class="nexora-chevron"></span>
                     </summary>
                     <div class="nexora-nav-group-links">
-                        <a asp-page="/AttendanceReports/Index" class="nexora-nav-link"><span>تقارير الحضور</span></a>
-                        <a asp-page="/Reports/Index" class="nexora-nav-link"><span>التقارير العامة</span></a>
+                        <a asp-page="/AttendanceReports/Index" class="nexora-nav-link @(ActiveClass("/AttendanceReports/Index"))"><span>تقارير الحضور</span></a>
+                        <a asp-page="/Reports/Index" class="nexora-nav-link @(ActiveClass("/Reports/Index"))"><span>التقارير العامة</span></a>
                     </div>
                 </details>
-                <!-- NEXORA_CLEAN_NAV_END -->
             </nav>
         </aside>
 
         <div class="nexora-main">
             <header class="nexora-topbar">
                 <div class="nexora-topbar-left">
-                    
-
                     <div>
                         <div class="nexora-page-title">@pageTitle</div>
-                        <div class="nexora-page-subtitle">NEXORA · Intelligent Operations Platform</div>
+                        <div class="nexora-page-subtitle">نيكسورا · منصة تشغيل الموارد البشرية</div>
                     </div>
                 </div>
 
                 <div class="nexora-controls">
-                    <button type="button" class="nexora-pill-button" data-language-button="ar">AR</button>
-                    <button type="button" class="nexora-pill-button" data-language-button="en">EN</button>
-
-                    <button type="button" class="nexora-pill-button" data-theme-button="dark" data-i18n="themeDark">Dark</button>
-                    <button type="button" class="nexora-pill-button" data-theme-button="light" data-i18n="themeLight">Light</button>
+                    <span class="nexora-mode-chip">عربي · داكن</span>
 
                     @if (isLoggedIn)
                     {
@@ -195,11 +210,11 @@
                             <span class="nexora-user-role">@loginRole</span>
                         </div>
 
-                        <a asp-page="/Account/Logout" class="nexora-pill-button" data-i18n="logout">Logout</a>
+                        <a asp-page="/Account/Logout" class="nexora-pill-button">خروج</a>
                     }
                     else
                     {
-                        <a asp-page="/Account/Login" class="nexora-pill-button" data-i18n="login">Login</a>
+                        <a asp-page="/Account/Login" class="nexora-pill-button">دخول</a>
                     }
                 </div>
             </header>
@@ -218,34 +233,8 @@
     </script>
 
     <script src="~/js/table-pagination.js" asp-append-version="true"></script>
-    <script src="~/js/theme-localization.js" asp-append-version="true"></script>
-    <script src="~/js/nexora-brand.js" asp-append-version="true"></script>
-    <script src="~/js/nexora-uiux-v2.js" asp-append-version="true"></script>
-
-        <script src="~/js/nexora-reference-redesign-v3.js" asp-append-version="true"></script>
-        <script src="~/js/nexora-v3-hotfix.js" asp-append-version="true"></script>
-        <script src="~/js/nexora-v3-ui-details-hotfix.js" asp-append-version="true"></script>
+    <script src="~/js/nexora-ui-stabilization-phase1.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
-    <script src="~/js/nexora-sidebar-brand-active-fix.js" asp-append-version="true"></script>
-    <script src="~/js/nexora-active-menu-precision-fix.js" asp-append-version="true"></script>
+    <script src="~/js/nexora-employees-filter-sidebar-forcefix.js" asp-append-version="true"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

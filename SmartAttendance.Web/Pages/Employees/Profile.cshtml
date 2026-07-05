@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.Employees.ProfileModel
 
 @{
@@ -79,6 +79,8 @@
 
 <link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-profile-pro.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-employee-profile-kayan-style.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-employee-profile-polish-requirements.css" asp-append-version="true" />
 
 <div class="nxr-page nxr-profile-pro-page">
     <section class="nxr-profile-pro-topline">
@@ -88,17 +90,65 @@
             <p>مركز مختصر لبيانات الموظف، الحضور، الطلبات، المستندات، والشفتات.</p>
         </div>
 
-        <div class="nxr-actions nxr-profile-pro-actions">
+        <div class="nxr-actions nxr-profile-pro-actions nxr-kayan-top-actions">
             <a asp-page="./Index" class="nxr-btn">رجوع للقائمة</a>
             @if (employee != null)
             {
-                <a asp-page="./Edit" asp-route-id="@employee.Id" class="nxr-btn primary">تعديل البيانات</a>
-                <a asp-page="/EmployeeDocuments/Index" asp-route-employeeId="@employee.Id" class="nxr-btn">رفع مستند</a>
-                <a asp-page="./Lifecycle" asp-route-id="@employee.Id" class="nxr-btn">السجل الوظيفي</a>
-                @if (employee.IsActive)
-                {
-                    <a asp-page="./EndService" asp-route-id="@employee.Id" class="nxr-btn danger">إنهاء خدمة</a>
-                }
+                <div class="nxr-action-menu" data-nxr-action-menu>
+                    <button type="button" class="nxr-btn primary nxr-action-menu-button" data-nxr-action-toggle>
+                        إجراءات الموظف
+                    </button>
+
+                    <div class="nxr-action-menu-panel" data-nxr-action-panel>
+                        <div class="nxr-action-menu-head">
+                            <strong>مركز إجراءات الموظف</strong>
+                            <span>أوامر شؤون الموظفين</span>
+                        </div>
+
+                        <a asp-page="./Edit" asp-route-id="@employee.Id" class="nxr-action-item">
+                            <span>تعديل البيانات</span>
+                            <small>تحديث المعلومات الشخصية والوظيفية</small>
+                        </a>
+
+                        <a asp-page="/EmployeeDocuments/Index" asp-route-employeeId="@employee.Id" class="nxr-action-item">
+                            <span>رفع مستند</span>
+                            <small>إضافة مستمسك أو ملف جديد</small>
+                        </a>
+
+                        <a asp-page="./Lifecycle" asp-route-id="@employee.Id" class="nxr-action-item">
+                            <span>السجل الوظيفي</span>
+                            <small>الحركات والتغييرات الوظيفية</small>
+                        </a>
+
+                        <button type="button" class="nxr-action-item is-disabled">
+                            <span>إضافة عقد / تجديد عقد</span>
+                            <small>قريباً ضمن مركز العقود</small>
+                        </button>
+
+                        <button type="button" class="nxr-action-item is-disabled">
+                            <span>حركة وظيفية</span>
+                            <small>نقل فرع، قسم، منصب أو مدير مباشر</small>
+                        </button>
+
+                        <button type="button" class="nxr-action-item is-disabled">
+                            <span>إضافة عهدة</span>
+                            <small>ربط جهاز، بطاقة، زي أو عهدة بالموظف</small>
+                        </button>
+
+                        <button type="button" class="nxr-action-item is-disabled">
+                            <span>مخالفة / كتاب HR</span>
+                            <small>إنذار، عقوبة، شكر، أو كتاب إداري</small>
+                        </button>
+
+                        @if (employee.IsActive)
+                        {
+                            <a asp-page="./EndService" asp-route-id="@employee.Id" class="nxr-action-item danger">
+                                <span>إنهاء خدمة</span>
+                                <small>إجراء رسمي لإنهاء خدمة الموظف</small>
+                            </a>
+                        }
+                    </div>
+                </div>
             }
         </div>
     </section>
@@ -114,35 +164,176 @@
     }
     else if (employee != null)
     {
-        <section class="nxr-profile-pro-hero nxr-card">
-            <div class="nxr-profile-pro-id">
-                <div class="nxr-profile-pro-avatar">@initial</div>
-                <div class="nxr-profile-pro-namebox">
-                    <div class="nxr-profile-pro-eyebrow">@Model.Display(employee.EmployeeNo)</div>
+        <section class="nxr-kayan-profile-card nxr-card">
+            <div class="nxr-kayan-identity">
+                <div class="nxr-kayan-avatar">@initial</div>
+
+                <div class="nxr-kayan-main">
+                    <div class="nxr-kayan-code">@Model.Display(employee.EmployeeNo)</div>
                     <h2>@employee.FullName</h2>
-                    <div class="nxr-profile-pro-chips">
-                        <span>@Model.Display(employee.BranchName)</span>
-                        <span>@Model.Display(employee.DepartmentName)</span>
-                        <span>@Model.Display(employee.Position)</span>
-                        <span class="@(employee.IsActive ? "ok" : "danger")">@employeeStatusText</span>
+                    <p>@Model.Display(employee.Position)</p>
+
+                    <div class="nxr-kayan-status-row">
+                        <span class="nxr-profile-pro-badge @(employee.IsActive ? "ok" : "danger")">@employeeStatusText</span>
+                        <span class="nxr-profile-pro-badge muted">@Model.Display(employee.BranchName)</span>
+                        <span class="nxr-profile-pro-badge muted">@Model.Display(employee.DepartmentName)</span>
+                    </div>
+
+                    <div class="nxr-kayan-contact">
+                        <div>
+                            <span>البريد الإلكتروني</span>
+                            <strong>@Model.Display(employee.Email)</strong>
+                        </div>
+                        <div>
+                            <span>الهاتف</span>
+                            <strong>@Model.Display(employee.Phone)</strong>
+                        </div>
+                        <div>
+                            <span>المدير المباشر</span>
+                            <strong>@Model.Display(employee.DirectManager)</strong>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="nxr-profile-pro-health @Model.Employee360HealthClass">
-                <span>مؤشر الاستقرار</span>
-                <strong>@Model.Employee360HealthScore%</strong>
-                <small>@Model.Employee360HealthText</small>
+            <div class="nxr-kayan-section">
+                <div class="nxr-kayan-section-head">
+                    <h3>المعلومات الشخصية</h3>
+                    <a asp-page="./Edit" asp-route-id="@employee.Id" class="nxr-kayan-edit" title="تعديل">✎</a>
+                </div>
+
+                <div class="nxr-kayan-info-grid">
+                    <div><span>رقم الهوية</span><strong>@Model.Display(employee.NationalId)</strong></div>
+                    <div><span>تاريخ الميلاد</span><strong>@Model.DisplayDate(employee.BirthDate)</strong></div>
+                    <div><span>الجنس</span><strong>@Model.Display(employee.Gender)</strong></div>
+                    <div><span>الجنسية</span><strong>@Model.Display(employee.Nationality)</strong></div>
+                    <div><span>البلد</span><strong>@Model.Display(employee.Country)</strong></div>
+                    <div><span>الحالة</span><strong>@employeeStatusText</strong></div>
+                </div>
             </div>
 
-            <div class="nxr-profile-pro-quick">
-                <div><span>تاريخ التعيين</span><strong>@Model.DisplayDate(employee.HireDate)</strong></div>
-                <div><span>نوع العقد</span><strong>@Model.Display(employee.ContractType)</strong></div>
-                <div><span>نهاية العقد</span><strong>@Model.DisplayDate(employee.ContractEndDate)</strong></div>
-                <div><span>المدير المباشر</span><strong>@Model.Display(employee.DirectManager)</strong></div>
+            <div class="nxr-kayan-section">
+                <div class="nxr-kayan-section-head">
+                    <h3>المعلومات الوظيفية</h3>
+                    <a asp-page="./Lifecycle" asp-route-id="@employee.Id" class="nxr-kayan-edit" title="السجل الوظيفي">↗</a>
+                </div>
+
+                <div class="nxr-kayan-info-grid">
+                    <div><span>الشركة</span><strong>@Model.Display(employee.CompanyName)</strong></div>
+                    <div><span>الفرع</span><strong>@Model.Display(employee.BranchName)</strong></div>
+                    <div><span>القسم</span><strong>@Model.Display(employee.DepartmentName)</strong></div>
+                    <div><span>المنصب</span><strong>@Model.Display(employee.Position)</strong></div>
+                    <div><span>تاريخ التعيين</span><strong>@Model.DisplayDate(employee.HireDate)</strong></div>
+                    <div><span>مدة الخدمة</span><strong>@Model.DisplayDate(employee.HireDate)</strong></div>
+                    <div><span>نوع العقد</span><strong>@Model.Display(employee.ContractType)</strong></div>
+                    <div><span>نهاية العقد</span><strong>@Model.DisplayDate(employee.ContractEndDate)</strong></div>
+                </div>
+            </div>
+
+            <div class="nxr-kayan-section nxr-kayan-financial">
+                <div class="nxr-kayan-section-head">
+                    <h3>المعلومات المالية</h3>
+                    <button type="button" class="nxr-kayan-edit" title="مخفي حسب الصلاحية">◎</button>
+                </div>
+
+                <div class="nxr-kayan-info-grid">
+                    <div><span>الراتب الأساسي</span><strong>مخفي حسب الصلاحية</strong></div>
+                    <div><span>الراتب الكلي</span><strong>مخفي حسب الصلاحية</strong></div>
+                    <div><span>العملة</span><strong>IQD / USD لاحقاً</strong></div>
+                    <div><span>طريقة الدفع</span><strong>قريباً</strong></div>
+                    <div><span>القروض والسلف</span><strong>قريباً</strong></div>
+                    <div><span>جاهزية الراتب</span><strong>@readinessText</strong></div>
+                </div>
             </div>
         </section>
 
+        var contractNeedsReview = employee.ContractEndDate.HasValue && employee.ContractEndDate.Value <= today.AddDays(30);
+        var hasEmployeeRequirements =
+            Model.PayrollRiskItems > 0 ||
+            Model.AttendanceExceptionsCount > 0 ||
+            Model.PendingRequests > 0 ||
+            Model.ExpiredDocumentsCount > 0 ||
+            Model.ExpiringDocumentsCount > 0 ||
+            contractNeedsReview;
+
+
+        <section class="nxr-employee-requirements @(hasEmployeeRequirements ? "" : "is-clear")">
+            <div class="nxr-requirements-head">
+                <div class="nxr-requirements-title">
+                    <h3>متطلبات الموظف</h3>
+                    <p>الملاحظات التي تحتاج متابعة من شؤون الموظفين قبل اعتماد الملف أو جاهزية الراتب.</p>
+                </div>
+
+                <span class="nxr-requirements-badge">
+                    @(hasEmployeeRequirements ? "توجد متطلبات تحتاج متابعة" : "لا توجد متطلبات حالياً")
+                </span>
+            </div>
+
+            <div class="nxr-requirements-grid">
+                @if (Model.PayrollRiskItems > 0)
+                {
+                    <div class="nxr-requirement-item warn">
+                        <strong>جاهزية الراتب</strong>
+                        <span>يوجد @Model.PayrollRiskItems ملاحظة تحتاج مراجعة قبل إغلاق الراتب.</span>
+                        <small>Payroll Readiness</small>
+                    </div>
+                }
+
+                @if (Model.AttendanceExceptionsCount > 0)
+                {
+                    <div class="nxr-requirement-item warn">
+                        <strong>استثناءات الحضور</strong>
+                        <span>يوجد @Model.AttendanceExceptionsCount حالة حضور تحتاج تدقيق أو معالجة.</span>
+                        <small>Attendance Exceptions</small>
+                    </div>
+                }
+
+                @if (Model.PendingRequests > 0)
+                {
+                    <div class="nxr-requirement-item warn">
+                        <strong>طلبات معلقة</strong>
+                        <span>يوجد @Model.PendingRequests طلب بانتظار الموافقة أو الإغلاق.</span>
+                        <small>Pending Requests</small>
+                    </div>
+                }
+
+                @if (Model.ExpiredDocumentsCount > 0)
+                {
+                    <div class="nxr-requirement-item danger">
+                        <strong>مستندات منتهية</strong>
+                        <span>يوجد @Model.ExpiredDocumentsCount مستند منتهي يحتاج تحديث.</span>
+                        <small>Documents Risk</small>
+                    </div>
+                }
+
+                @if (Model.ExpiringDocumentsCount > 0)
+                {
+                    <div class="nxr-requirement-item warn">
+                        <strong>مستندات قرب الانتهاء</strong>
+                        <span>يوجد @Model.ExpiringDocumentsCount مستند قريب الانتهاء.</span>
+                        <small>Documents Follow-up</small>
+                    </div>
+                }
+
+                @if (contractNeedsReview)
+                {
+                    <div class="nxr-requirement-item warn">
+                        <strong>العقد يحتاج متابعة</strong>
+                        <span>نهاية العقد: @Model.DisplayDate(employee.ContractEndDate)</span>
+                        <small>Contract Follow-up</small>
+                    </div>
+                }
+
+                @if (!hasEmployeeRequirements)
+                {
+                    <div class="nxr-requirement-item ok">
+                        <strong>الملف مكتمل حالياً</strong>
+                        <span>لا توجد متطلبات ظاهرة حسب البيانات الحالية.</span>
+                        <small>HR Status</small>
+                    </div>
+                }
+            </div>
+        </section>
         <section class="nxr-profile-pro-nav nxr-card">
             <a href="#overview">الملخص</a>
             <a href="#data">البيانات</a>
@@ -153,7 +344,7 @@
             <a href="#audit">السجل</a>
         </section>
 
-        <section id="overview" class="nxr-profile-pro-status-grid">
+        <section id="overview" class="nxr-profile-pro-status-grid nxr-kayan-risk-grid">
             <div class="nxr-card nxr-profile-pro-status @readinessClass">
                 <span>جاهزية الراتب</span>
                 <strong>@readinessText</strong>
@@ -201,7 +392,7 @@
             <div class="nxr-kpi"><span>ساعات العمل</span><strong>@Model.TotalWorkingHours</strong><small>ساعة</small></div>
         </section>
 
-        <section id="data" class="nxr-profile-pro-two-col">
+        <section id="data" class="nxr-profile-pro-two-col nxr-kayan-details-section">
             <div class="nxr-card nxr-profile-pro-panel">
                 <div class="nxr-profile-pro-panel-title">
                     <h3>البيانات الشخصية</h3>
@@ -348,6 +539,50 @@
             </div>
         </section>
 
+        <section class="nxr-profile-pro-three-col nxr-kayan-future-modules">
+            <div id="assets" class="nxr-card nxr-profile-pro-panel">
+                <div class="nxr-profile-pro-panel-title with-action">
+                    <div>
+                        <h3>العهد</h3>
+                        <p>الأجهزة والبطاقات والمعدات المسلّمة للموظف.</p>
+                    </div>
+                    <button type="button" class="nxr-mini-link disabled">قريباً</button>
+                </div>
+                <div class="nxr-kayan-coming-soon">
+                    <strong>مركز العهد</strong>
+                    <span>لابتوب، موبايل، سيم كارد، زي عمل، بطاقة دخول، أو أي عهدة أخرى.</span>
+                </div>
+            </div>
+
+            <div id="discipline" class="nxr-card nxr-profile-pro-panel">
+                <div class="nxr-profile-pro-panel-title with-action">
+                    <div>
+                        <h3>المخالفات</h3>
+                        <p>المخالفات والإجراءات التأديبية حسب سياسة الشركة.</p>
+                    </div>
+                    <button type="button" class="nxr-mini-link disabled">قريباً</button>
+                </div>
+                <div class="nxr-kayan-coming-soon">
+                    <strong>المخالفات والعقوبات</strong>
+                    <span>لفت نظر، إنذار، إنذار بالفصل، عقوبة، أو إيقاف تكليف.</span>
+                </div>
+            </div>
+
+            <div id="letters" class="nxr-card nxr-profile-pro-panel">
+                <div class="nxr-profile-pro-panel-title with-action">
+                    <div>
+                        <h3>كتب HR</h3>
+                        <p>قوالب الكتب الرسمية المرتبطة بملف الموظف.</p>
+                    </div>
+                    <button type="button" class="nxr-mini-link disabled">قريباً</button>
+                </div>
+                <div class="nxr-kayan-coming-soon">
+                    <strong>رسائل وقوالب HR</strong>
+                    <span>مباشرة، شكر، إنذار، عدم تجديد عقد، إنهاء خدمة، أو طلب صرف.</span>
+                </div>
+            </div>
+        </section>
+
         <section class="nxr-profile-pro-two-col">
             <div id="shifts" class="nxr-card nxr-profile-pro-panel">
                 <div class="nxr-profile-pro-panel-title">
@@ -406,3 +641,7 @@
         </section>
     }
 </div>
+
+@section Scripts {
+    <script src="~/js/nexora-employee-profile-kayan-style.js" asp-append-version="true"></script>
+}
