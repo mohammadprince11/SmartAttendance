@@ -1,0 +1,624 @@
+@page
+@model SmartAttendance.Web.Pages.DisciplinaryRules.IndexModel
+@{
+    ViewData["Title"] = "إعدادات المخالفات";
+    var activeTab = Model.Tab;
+    var selectedCategory = Model.SelectedCategoryId;
+    var visibleTypes = Model.ViolationTypes.Where(x => selectedCategory <= 0 || x.CategoryId == selectedCategory).ToList();
+    var visibleRules = Model.PenaltyRules.Where(x => selectedCategory <= 0 || x.CategoryId == selectedCategory).ToList();
+}
+
+<link rel="stylesheet" href="~/css/nexora-disciplinary-rules.css" asp-append-version="true" />
+
+<section class="nxpen-page nxpen-wide" dir="rtl">
+    <header class="nxpen-hero">
+        <div class="nxpen-hero-copy">
+            <span>HR SETTINGS / DISCIPLINARY CONFIGURATION</span>
+            <h1>إعدادات المخالفات</h1>
+            <p>نبني هنا دستور المخالفات للشركة: هل تحتاج لجنة موافقات؟ هل يحق للموظف الاعتراض؟ ما هي الفئات والمخالفات؟ وما هو شكل فورمة العقوبة التي ستصدر باسم الشركة؟</p>
+        </div>
+        <div class="nxpen-hero-actions">
+            <a asp-page="./Index" asp-route-tab="setup">إعدادات عامة</a>
+            <a asp-page="./Index" asp-route-tab="library">إدارة الفئات والمخالفات</a>
+            <a asp-page="./Index" asp-route-tab="designer">مصمم الفورمة</a>
+            <a asp-page="./Index" asp-route-tab="templates">قوالب الفورم</a>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="nxpen-alert">@Model.StatusMessage</div>
+    }
+
+    <nav class="nxpen-tabs">
+        <a class="@(activeTab == "setup" ? "active" : "")" asp-page="./Index" asp-route-tab="setup">تهيئة</a>
+        <a class="@(activeTab == "library" ? "active" : "")" asp-page="./Index" asp-route-tab="library" asp-route-categoryId="@selectedCategory">فئة المخالفة وقائمة المخالفات</a>
+        <a class="@(activeTab == "designer" ? "active" : "")" asp-page="./Index" asp-route-tab="designer">مصمم الفورمة</a>
+        <a class="@(activeTab == "templates" ? "active" : "")" asp-page="./Index" asp-route-tab="templates">قوالب الرسائل والفورم</a>
+    </nav>
+
+    <main class="nxpen-layout">
+        <section class="nxpen-content">
+            @if (activeTab == "setup")
+            {
+                <section class="nxpen-card">
+                    <header class="nxpen-card-head relaxed">
+                        <div>
+                            <span>Configuration</span>
+                            <h2>تهيئة نظام المخالفات</h2>
+                            <p>هذه الصفحة تحدد طريقة عمل المخالفات قبل تسجيلها على الموظفين: الاعتماد، اعتراض الموظف، وصيغة الفورمة الرسمية.</p>
+                        </div>
+                    </header>
+
+                    <form method="post" asp-page-handler="SaveSettings" class="nxpen-settings-grid">
+                        <article class="nxpen-setting-card">
+                            <div class="nxpen-setting-copy"><strong>لجنة الموافقات</strong><p>عند التفعيل، المخالفة لا تُقفل مباشرة إلا بعد المرور بمسار لجنة الموافقات.</p></div>
+                            <label class="nxpen-switch"><input type="checkbox" name="requiresCommitteeApproval" value="true" checked="@Model.Settings.RequiresCommitteeApproval" /><span></span></label>
+                        </article>
+
+                        <article class="nxpen-setting-card">
+                            <div class="nxpen-setting-copy"><strong>اعتراض الموظف</strong><p>السماح للموظف بتقديم اعتراض من بوابة الموظف بعد صدور المخالفة.</p></div>
+                            <label class="nxpen-switch"><input type="checkbox" name="allowEmployeeAppeal" value="true" checked="@Model.Settings.AllowEmployeeAppeal" /><span></span></label>
+                        </article>
+
+                        <article class="nxpen-setting-card">
+                            <div class="nxpen-setting-copy"><strong>مدة الاعتراض</strong><p>عدد الأيام المتاحة للموظف لتقديم اعتراض بعد استلام إشعار المخالفة.</p></div>
+                            <input name="appealWindowDays" type="number" min="0" value="@Model.Settings.AppealWindowDays" />
+                        </article>
+
+                        <article class="nxpen-setting-card">
+                            <div class="nxpen-setting-copy"><strong>القالب الافتراضي</strong><p>إذا لم يتم اختيار قالب محدد، يستخدم النظام القالب الافتراضي لإشعار العقوبة.</p></div>
+                            <select name="defaultTemplateType">
+                                @foreach (var templateType in Model.TemplateTypes.Where(x => x.IsActive))
+                                {
+                                    <option value="@templateType.Code" selected="@(templateType.Code == Model.Settings.DefaultTemplateType)">@templateType.Name</option>
+                                }
+                            </select>
+                        </article>
+
+                        <article class="nxpen-setting-card">
+                            <div class="nxpen-setting-copy"><strong>اسم الجهة المعتمدة</strong><p>يظهر في أسفل الفورمة مثل قسم الموارد البشرية أو لجنة الانضباط.</p></div>
+                            <input name="approvingAuthorityName" value="@Model.Settings.ApprovingAuthorityName" placeholder="قسم الموارد البشرية" />
+                        </article>
+
+                        <article class="nxpen-setting-card">
+                            <div class="nxpen-setting-copy"><strong>صيغة رقم الكتاب</strong><p>تُستخدم لاحقاً عند توليد أرقام كتب المخالفات، مثال: DISC-{yyyy}-{0000}</p></div>
+                            <input name="documentNumberFormat" value="@Model.Settings.DocumentNumberFormat" placeholder="DISC-{yyyy}-{0000}" />
+                        </article>
+
+                        <article class="nxpen-form-shell">
+                            <header><div><strong>هيدر الفورمة</strong><p>إذا تركته فارغاً سيظهر هيدر تلقائي يحتوي شعار NEXORA وبيانات النظام.</p></div><small>Header</small></header>
+                            <textarea name="formHeader" rows="7" placeholder="شركة الرغد الدولية\nقسم الموارد البشرية\nإشعار مخالفة وجزاء">@Model.Settings.FormHeader</textarea>
+                        </article>
+
+                        <article class="nxpen-form-shell">
+                            <header><div><strong>فوتر الفورمة</strong><p>يظهر أسفل رسالة العقوبة، مثل التوقيعات أو ملاحظات قانونية.</p></div><small>Footer</small></header>
+                            <textarea name="formFooter" rows="7" placeholder="قسم الموارد البشرية\nيعتمد هذا الإشعار حسب لائحة الجزاءات المعتمدة في الشركة.">@Model.Settings.FormFooter</textarea>
+                        </article>
+
+                        <footer class="nxpen-settings-actions"><button type="submit">حفظ إعدادات التهيئة</button></footer>
+                    </form>
+
+                    <section class="nxpen-form-preview">
+                        <div class="nxpen-form-paper">
+                            <header class="nxpen-paper-header">
+                                @if (string.IsNullOrWhiteSpace(Model.Settings.FormHeader))
+                                {
+                                    <div class="nxpen-auto-header"><div class="nxpen-logo-mark">N</div><div><strong>NEXORA HR</strong><small>Disciplinary Notice / إشعار مخالفة وجزاء</small></div></div>
+                                }
+                                else
+                                {
+                                    <pre>@Model.Settings.FormHeader</pre>
+                                }
+                            </header>
+                            <main class="nxpen-paper-body"><h3>معاينة شكل الفورمة</h3><p>السيد/ة: {EmployeeName}<br />تم تسجيل مخالفة: {ViolationName}<br />العقوبة: {PenaltyAction}<br />الأثر المالي: {FinancialImpact}</p></main>
+                            <footer class="nxpen-paper-footer">
+                                @if (string.IsNullOrWhiteSpace(Model.Settings.FormFooter))
+                                {
+                                    <span>@Model.Settings.ApprovingAuthorityName</span><small>تم إنشاء هذا الإشعار من نظام NEXORA HR</small>
+                                }
+                                else
+                                {
+                                    <pre>@Model.Settings.FormFooter</pre>
+                                }
+                            </footer>
+                        </div>
+                    </section>
+                </section>
+            }
+            else if (activeTab == "library")
+            {
+                <section class="nxpen-card">
+                    <header class="nxpen-card-head">
+                        <div><span>Violation Library</span><h2>فئة المخالفة وقائمة المخالفات</h2><p>اختر الفئة حتى تظهر مخالفاتها فقط. هذا يجعل الصفحة مرتبة حتى لو وصلت المخالفات إلى أكثر من 100 نوع.</p></div>
+                        <b>@visibleTypes.Count مخالفة ظاهرة</b>
+                    </header>
+
+                    <section class="nxpen-category-filter">
+                        <a class="@(selectedCategory <= 0 ? "active" : "")" asp-page="./Index" asp-route-tab="library">كل الفئات</a>
+                        @foreach (var category in Model.Categories)
+                        {
+                            <a class="@(selectedCategory == category.Id ? "active" : "")" asp-page="./Index" asp-route-tab="library" asp-route-categoryId="@category.Id">@category.Name</a>
+                        }
+                    </section>
+
+                    <div class="nxpen-split">
+                        <section class="nxpen-subcard">
+                            <header><h3>فئات المخالفات</h3><small>إضافة وتعديل أبواب المخالفات.</small></header>
+                            <form method="post" asp-page-handler="CreateCategory" class="nxpen-grid-form compact">
+                                <input name="name" required placeholder="اسم الفئة" />
+                                <input name="displayOrder" type="number" value="10" placeholder="الترتيب" />
+                                <textarea name="description" placeholder="وصف الفئة"></textarea>
+                                <button type="submit">إضافة فئة</button>
+                            </form>
+                            <div class="nxpen-edit-list">
+                                @foreach (var category in Model.Categories)
+                                {
+                                    <details class="nxpen-edit-item @(category.IsActive ? "" : "disabled")">
+                                        <summary><span>@category.DisplayOrder.ToString("00")</span><strong>@category.Name</strong><small>@category.TypesCount مخالفة</small></summary>
+                                        <form method="post" asp-page-handler="UpdateCategory" class="nxpen-grid-form edit">
+                                            <input type="hidden" name="id" value="@category.Id" />
+                                            <div><label>اسم الفئة</label><input name="name" value="@category.Name" required /></div>
+                                            <div><label>الترتيب</label><input name="displayOrder" type="number" value="@category.DisplayOrder" /></div>
+                                            <div class="wide"><label>الوصف</label><textarea name="description">@category.Description</textarea></div>
+                                            <div class="wide nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked="@category.IsActive" /><span></span><b>فعالة</b></label></div>
+                                            <footer class="wide"><button type="submit">حفظ تعديل الفئة</button></footer>
+                                        </form>
+                                    </details>
+                                }
+                            </div>
+                        </section>
+
+                        <section class="nxpen-subcard">
+                            <header><h3>قائمة المخالفات</h3><small>كل مخالفة مرتبطة بفئة وصلاحية وتقييم.</small></header>
+                            <form method="post" asp-page-handler="CreateViolationType" class="nxpen-grid-form">
+                                <div><label>الفئة</label><select name="categoryId" required><option value="">اختر الفئة</option>@foreach (var category in Model.Categories.Where(x => x.IsActive)){<option value="@category.Id" selected="@(selectedCategory == category.Id)">@category.Name</option>}</select></div>
+                                <div><label>الخطورة</label><select name="severity"><option value="A">A - بسيطة</option><option value="B" selected>B - متوسطة</option><option value="C">C - جسيمة</option><option value="FinalWarning">إنذار بالفصل</option></select></div>
+                                <div><label>الصلاحية</label><input name="validityMonths" type="number" min="1" value="6" /></div>
+                                <div><label>فترة التكرار</label><select name="countingPeriod"><option value="Monthly" selected>شهرية</option><option value="SixMonths">خلال 6 أشهر</option><option value="Yearly">خلال سنة</option><option value="Contract">مدة العقد</option></select></div>
+                                <div class="wide"><label>اسم المخالفة</label><input name="name" required placeholder="مثال: الإهمال في المحافظة على أصول الشركة." /></div>
+                                <div class="wide"><label>الوصف</label><textarea name="description" placeholder="مثال: استخدام معدات زملاء العمل دون إذن، أو إتلافها عمدًا، أو عدم إعادتها."></textarea></div>
+                                <div class="wide nxpen-checks">
+                                    <label class="nxpen-check-pill"><input type="checkbox" name="includeInEvaluation" value="true" checked /><span></span><b>تدخل بالتقييم</b></label>
+                                    <label class="nxpen-check-pill"><input type="checkbox" name="showToEmployee" value="true" checked /><span></span><b>تظهر للموظف</b></label>
+                                    <label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked /><span></span><b>فعالة</b></label>
+                                </div>
+                                <footer class="wide"><button type="submit">إضافة مخالفة</button></footer>
+                            </form>
+                            <div class="nxpen-edit-list">
+                                @foreach (var violation in visibleTypes)
+                                {
+                                    <details class="nxpen-edit-item @(violation.IsActive ? "" : "disabled")">
+                                        <summary><span>@Model.DisplaySeverityShort(violation.Severity)</span><strong>@violation.Name</strong><small>@violation.CategoryName / @violation.RulesCount جزاء</small></summary>
+                                        <form method="post" asp-page-handler="UpdateViolationType" class="nxpen-grid-form edit">
+                                            <input type="hidden" name="id" value="@violation.Id" />
+                                            <div><label>الفئة</label><select name="categoryId">@foreach (var category in Model.Categories){<option value="@category.Id" selected="@(category.Id == violation.CategoryId)">@category.Name</option>}</select></div>
+                                            <div><label>الخطورة</label><select name="severity"><option value="A" selected="@(violation.Severity == "A")">A - بسيطة</option><option value="B" selected="@(violation.Severity == "B")">B - متوسطة</option><option value="C" selected="@(violation.Severity == "C")">C - جسيمة</option><option value="FinalWarning" selected="@(violation.Severity == "FinalWarning")">إنذار بالفصل</option></select></div>
+                                            <div><label>الصلاحية</label><input name="validityMonths" type="number" min="1" value="@violation.ValidityMonths" /></div>
+                                            <div><label>فترة التكرار</label><select name="countingPeriod"><option value="Monthly" selected="@(violation.CountingPeriod == "Monthly")">شهرية</option><option value="SixMonths" selected="@(violation.CountingPeriod == "SixMonths")">خلال 6 أشهر</option><option value="Yearly" selected="@(violation.CountingPeriod == "Yearly")">خلال سنة</option><option value="Contract" selected="@(violation.CountingPeriod == "Contract")">مدة العقد</option></select></div>
+                                            <div class="wide"><label>اسم المخالفة</label><input name="name" value="@violation.Name" required /></div>
+                                            <div class="wide"><label>الوصف</label><textarea name="description">@violation.Description</textarea></div>
+                                            <div class="wide nxpen-checks">
+                                                <label class="nxpen-check-pill"><input type="checkbox" name="includeInEvaluation" value="true" checked="@violation.IncludeInEvaluation" /><span></span><b>تدخل بالتقييم</b></label>
+                                                <label class="nxpen-check-pill"><input type="checkbox" name="showToEmployee" value="true" checked="@violation.ShowToEmployee" /><span></span><b>تظهر للموظف</b></label>
+                                                <label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked="@violation.IsActive" /><span></span><b>فعالة</b></label>
+                                            </div>
+                                            <footer class="wide"><button type="submit">حفظ تعديل المخالفة</button></footer>
+                                        </form>
+                                    </details>
+                                }
+                            </div>
+                        </section>
+                    </div>
+
+                    <section class="nxpen-subcard">
+                        <header><h3>سلم الجزاءات حسب التكرار</h3><small>اختر الفئة أولاً، ثم تظهر فقط المخالفات التابعة لها داخل القائمة.</small></header>
+                        <form method="post" asp-page-handler="CreatePenaltyRule" class="nxpen-grid-form" data-nxpen-rule-form>
+                            <div><label>الفئة</label><select name="categoryFilter" data-nxpen-category-filter><option value="">كل الفئات</option>@foreach (var category in Model.Categories.Where(x => x.IsActive)){<option value="@category.Id" selected="@(selectedCategory == category.Id)">@category.Name</option>}</select></div>
+                            <div class="wide-2"><label>المخالفة</label><select name="violationTypeId" required data-nxpen-violation-list><option value="">اختر المخالفة</option>@foreach (var violation in Model.ViolationTypes.Where(x => x.IsActive)){<option value="@violation.Id" data-category-id="@violation.CategoryId">@violation.CategoryName — @violation.Name</option>}</select></div>
+                            <div><label>فترة الاحتساب</label><select name="countingPeriod"><option value="Monthly" selected>شهرية</option><option value="SixMonths">خلال 6 أشهر</option><option value="Yearly">خلال سنة</option><option value="Contract">مدة العقد</option></select></div>
+                            <div><label>من تكرار</label><input name="occurrenceFrom" type="number" min="1" value="1" required /></div>
+                            <div><label>إلى تكرار</label><input name="occurrenceTo" type="number" min="1" value="1" required /></div>
+                            <div class="wide-2"><label>العقوبة / الإجراء</label><input name="penaltyAction" required placeholder="مثال: خصم نصف يوم من الراتب" /></div>
+                            <div><label>الأثر المالي</label><select name="financialImpactType"><option value="None">لا يوجد</option><option value="Days" selected>أيام</option><option value="Hours">ساعات</option><option value="Amount">مبلغ ثابت</option></select></div>
+                            <div><label>قيمة الأثر</label><input name="financialValue" type="number" step="0.01" value="0.5" /></div>
+                            <div><label>صلاحية الجزاء</label><input name="validityMonths" type="number" min="1" value="6" /></div>
+                            <div><label>طريقة الاحتساب</label><select name="calculationMode"><option value="Cumulative" selected>تراكمي</option><option value="ReplacePrevious">استبدال السابق</option><option value="DifferenceOnly">فرق فقط</option></select></div>
+                            <div class="nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="requiresApproval" value="true" /><span></span><b>اعتماد إضافي</b></label></div>
+                            <footer class="wide"><button type="submit">إضافة جزاء</button></footer>
+                        </form>
+
+                        <div class="nxpen-edit-list rules">
+                            @foreach (var rule in visibleRules)
+                            {
+                                <details class="nxpen-edit-item">
+                                    <summary><span>@Model.DisplayOccurrenceRange(rule.OccurrenceFrom, rule.OccurrenceTo)</span><strong>@rule.PenaltyAction</strong><small>@rule.CategoryName / @rule.ViolationName / @Model.DisplayFinancialImpact(rule.FinancialImpactType, rule.FinancialValue)</small></summary>
+                                    <form method="post" asp-page-handler="UpdatePenaltyRule" class="nxpen-grid-form edit">
+                                        <input type="hidden" name="id" value="@rule.Id" />
+                                        <div class="wide"><label>المخالفة</label><select name="violationTypeId">@foreach (var violation in Model.ViolationTypes){<option value="@violation.Id" selected="@(violation.Id == rule.ViolationTypeId)">@violation.CategoryName — @violation.Name</option>}</select></div>
+                                        <div><label>من</label><input name="occurrenceFrom" type="number" min="1" value="@rule.OccurrenceFrom" /></div>
+                                        <div><label>إلى</label><input name="occurrenceTo" type="number" min="1" value="@rule.OccurrenceTo" /></div>
+                                        <div><label>فترة الاحتساب</label><select name="countingPeriod"><option value="Monthly" selected="@(rule.CountingPeriod == "Monthly")">شهرية</option><option value="SixMonths" selected="@(rule.CountingPeriod == "SixMonths")">خلال 6 أشهر</option><option value="Yearly" selected="@(rule.CountingPeriod == "Yearly")">خلال سنة</option><option value="Contract" selected="@(rule.CountingPeriod == "Contract")">مدة العقد</option></select></div>
+                                        <div><label>طريقة الاحتساب</label><select name="calculationMode"><option value="Cumulative" selected="@(rule.CalculationMode == "Cumulative")">تراكمي</option><option value="ReplacePrevious" selected="@(rule.CalculationMode == "ReplacePrevious")">استبدال السابق</option><option value="DifferenceOnly" selected="@(rule.CalculationMode == "DifferenceOnly")">فرق فقط</option></select></div>
+                                        <div class="wide"><label>العقوبة</label><input name="penaltyAction" value="@rule.PenaltyAction" required /></div>
+                                        <div><label>الأثر المالي</label><select name="financialImpactType"><option value="None" selected="@(rule.FinancialImpactType == "None")">لا يوجد</option><option value="Days" selected="@(rule.FinancialImpactType == "Days")">أيام</option><option value="Hours" selected="@(rule.FinancialImpactType == "Hours")">ساعات</option><option value="Amount" selected="@(rule.FinancialImpactType == "Amount")">مبلغ ثابت</option></select></div>
+                                        <div><label>قيمة الأثر</label><input name="financialValue" type="number" step="0.01" value="@rule.FinancialValue" /></div>
+                                        <div><label>الصلاحية</label><input name="validityMonths" type="number" min="1" value="@rule.ValidityMonths" /></div>
+                                        <div class="nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="requiresApproval" value="true" checked="@rule.RequiresApproval" /><span></span><b>اعتماد إضافي</b></label></div>
+                                        <footer class="wide"><button type="submit">حفظ تعديل الجزاء</button><button class="danger-outline" type="submit" formaction="?handler=DeletePenaltyRule" formmethod="post" name="id" value="@rule.Id">حذف الجزاء</button></footer>
+                                    </form>
+                                </details>
+                            }
+                        </div>
+                    </section>
+                </section>
+            }
+            
+            else if (activeTab == "designer")
+            {
+                <section class="nxpen-card">
+                    <header class="nxpen-card-head relaxed">
+                        <div>
+                            <span>Company Form Designer</span>
+                            <h2>مصمم فورمة العقوبة</h2>
+                            <p>
+                                ارفع صورة الهيدر والفوتر، ثم أضف مربعات نص في المكان الذي تريده مع التحكم بنوع وحجم ولون الخط.
+                                إذا لم ترفع صورة، يظهر هيدر وفوتر تلقائي من النظام.
+                            </p>
+                        </div>
+                    </header>
+
+                    <section class="nxpen-designer-grid">
+                        <div class="nxpen-designer-panel">
+                            <section class="nxpen-subcard">
+                                <header>
+                                    <h3>صور الهيدر والفوتر</h3>
+                                    <small>يفضل استخدام صورة عريضة للهيدر والفوتر بعرض صفحة A4.</small>
+                                </header>
+
+                                <form method="post" asp-page-handler="SaveFormImages" enctype="multipart/form-data" class="nxpen-grid-form">
+                                    <div class="wide">
+                                        <label>صورة الهيدر</label>
+                                        <input type="file" name="headerImage" accept="image/*" />
+                                    </div>
+                                    <div class="wide">
+                                        <label>صورة الفوتر</label>
+                                        <input type="file" name="footerImage" accept="image/*" />
+                                    </div>
+                                    <footer class="wide">
+                                        <button type="submit">حفظ صور الفورمة</button>
+                                    </footer>
+                                </form>
+                            </section>
+
+                            <section class="nxpen-subcard">
+                                <header>
+                                    <h3>إضافة صندوق نص</h3>
+                                    <small>حدد مكان النص بالنسبة للفورمة، ثم اختر الحجم والخط واللون.</small>
+                                </header>
+
+                                <form method="post" asp-page-handler="CreateTextBlock" class="nxpen-grid-form">
+                                    <div>
+                                        <label>المنطقة</label>
+                                        <select name="area">
+                                            <option value="Header">الهيدر</option>
+                                            <option value="Body" selected>المتن</option>
+                                            <option value="Footer">الفوتر</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label>نوع الخط</label>
+                                        <select name="fontFamily">
+                                            @foreach (var font in Model.FontFamilies)
+                                            {
+                                                <option value="@font">@font</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label>حجم الخط</label>
+                                        <input name="fontSize" type="number" min="8" max="60" value="14" />
+                                    </div>
+                                    <div>
+                                        <label>لون الخط</label>
+                                        <input name="fontColor" type="color" value="#0b1d31" />
+                                    </div>
+                                    <div>
+                                        <label>من اليمين %</label>
+                                        <input name="xPercent" type="number" min="0" max="100" step="0.1" value="8" />
+                                    </div>
+                                    <div>
+                                        <label>من الأعلى %</label>
+                                        <input name="yPercent" type="number" min="0" max="100" step="0.1" value="25" />
+                                    </div>
+                                    <div>
+                                        <label>العرض %</label>
+                                        <input name="widthPercent" type="number" min="5" max="100" step="0.1" value="84" />
+                                    </div>
+                                    <div>
+                                        <label>المحاذاة</label>
+                                        <select name="textAlign">
+                                            <option value="right" selected>يمين</option>
+                                            <option value="center">وسط</option>
+                                            <option value="left">يسار</option>
+                                        </select>
+                                    </div>
+                                    <div class="wide">
+                                        <label>النص</label>
+                                        <textarea name="text" rows="4" placeholder="مثال: السيد/ة {EmployeeName}"></textarea>
+                                    </div>
+                                    <div class="wide nxpen-checks">
+                                        <label class="nxpen-check-pill">
+                                            <input type="checkbox" name="isBold" value="true" />
+                                            <span></span>
+                                            <b>Bold</b>
+                                        </label>
+                                        <label class="nxpen-check-pill">
+                                            <input type="checkbox" name="isActive" value="true" checked />
+                                            <span></span>
+                                            <b>فعال</b>
+                                        </label>
+                                    </div>
+                                    <footer class="wide">
+                                        <button type="submit">إضافة صندوق نص</button>
+                                    </footer>
+                                </form>
+                            </section>
+
+                            <section class="nxpen-subcard">
+                                <header>
+                                    <h3>صناديق النص الحالية</h3>
+                                    <small>يمكن تعديل كل صندوق نص بشكل كامل.</small>
+                                </header>
+
+                                <div class="nxpen-edit-list">
+                                    @foreach (var block in Model.TextBlocks)
+                                    {
+                                        <details class="nxpen-edit-item @(block.IsActive ? "" : "disabled")">
+                                            <summary>
+                                                <span>@block.Area</span>
+                                                <strong>@block.Text</strong>
+                                                <small>@block.FontFamily / @block.FontSize px / @block.FontColor</small>
+                                            </summary>
+                                            <form method="post" asp-page-handler="UpdateTextBlock" class="nxpen-grid-form edit">
+                                                <input type="hidden" name="id" value="@block.Id" />
+                                                <div>
+                                                    <label>المنطقة</label>
+                                                    <select name="area">
+                                                        <option value="Header" selected="@(block.Area == "Header")">الهيدر</option>
+                                                        <option value="Body" selected="@(block.Area == "Body")">المتن</option>
+                                                        <option value="Footer" selected="@(block.Area == "Footer")">الفوتر</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label>نوع الخط</label>
+                                                    <select name="fontFamily">
+                                                        @foreach (var font in Model.FontFamilies)
+                                                        {
+                                                            <option value="@font" selected="@(block.FontFamily == font)">@font</option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label>حجم الخط</label>
+                                                    <input name="fontSize" type="number" min="8" max="60" value="@block.FontSize" />
+                                                </div>
+                                                <div>
+                                                    <label>لون الخط</label>
+                                                    <input name="fontColor" type="color" value="@block.FontColor" />
+                                                </div>
+                                                <div>
+                                                    <label>من اليمين %</label>
+                                                    <input name="xPercent" type="number" min="0" max="100" step="0.1" value="@block.XPercent" />
+                                                </div>
+                                                <div>
+                                                    <label>من الأعلى %</label>
+                                                    <input name="yPercent" type="number" min="0" max="100" step="0.1" value="@block.YPercent" />
+                                                </div>
+                                                <div>
+                                                    <label>العرض %</label>
+                                                    <input name="widthPercent" type="number" min="5" max="100" step="0.1" value="@block.WidthPercent" />
+                                                </div>
+                                                <div>
+                                                    <label>المحاذاة</label>
+                                                    <select name="textAlign">
+                                                        <option value="right" selected="@(block.TextAlign == "right")">يمين</option>
+                                                        <option value="center" selected="@(block.TextAlign == "center")">وسط</option>
+                                                        <option value="left" selected="@(block.TextAlign == "left")">يسار</option>
+                                                    </select>
+                                                </div>
+                                                <div class="wide">
+                                                    <label>النص</label>
+                                                    <textarea name="text" rows="4">@block.Text</textarea>
+                                                </div>
+                                                <div class="wide nxpen-checks">
+                                                    <label class="nxpen-check-pill">
+                                                        <input type="checkbox" name="isBold" value="true" checked="@block.IsBold" />
+                                                        <span></span>
+                                                        <b>Bold</b>
+                                                    </label>
+                                                    <label class="nxpen-check-pill">
+                                                        <input type="checkbox" name="isActive" value="true" checked="@block.IsActive" />
+                                                        <span></span>
+                                                        <b>فعال</b>
+                                                    </label>
+                                                </div>
+                                                <footer class="wide">
+                                                    <button type="submit">حفظ صندوق النص</button>
+                                                    <button class="danger-outline"
+                                                            type="submit"
+                                                            formaction="?handler=DeleteTextBlock"
+                                                            formmethod="post"
+                                                            name="id"
+                                                            value="@block.Id">
+                                                        حذف
+                                                    </button>
+                                                </footer>
+                                            </form>
+                                        </details>
+                                    }
+                                </div>
+                            </section>
+                        </div>
+
+                        <section class="nxpen-live-preview">
+                            <header>
+                                <h3>معاينة واضحة للفورمة</h3>
+                                <small>هذه المعاينة تظهر الهيدر والفوتر وصناديق النص كما ستظهر في فورمة الموظف.</small>
+                            </header>
+
+                            <div class="nxpen-a4-paper">
+                                <div class="nxpen-a4-section nxpen-a4-header">
+                                    @if (!string.IsNullOrWhiteSpace(Model.Settings.HeaderImagePath))
+                                    {
+                                        <img src="@Model.Settings.HeaderImagePath" alt="Header" />
+                                    }
+                                    else
+                                    {
+                                        <div class="nxpen-auto-header"><div class="nxpen-logo-mark">N</div><div><strong>NEXORA HR</strong><small>Disciplinary Notice / إشعار مخالفة وجزاء</small></div></div>
+                                    }
+
+                                    @foreach (var block in Model.TextBlocks.Where(x => x.Area == "Header" && x.IsActive))
+                                    {
+                                        <div class="nxpen-text-block" style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
+                                    }
+                                </div>
+
+                                <div class="nxpen-a4-section nxpen-a4-body">
+                                    <h2>إشعار مخالفة وجزاء</h2>
+                                    <p>
+                                        السيد/ة: <strong>{EmployeeName}</strong><br />
+                                        الرقم الوظيفي: {EmployeeCode}<br />
+                                        القسم: {Department}<br />
+                                        تاريخ المخالفة: {ViolationDate}
+                                    </p>
+                                    <p>
+                                        المخالفة: <strong>{ViolationName}</strong><br />
+                                        فئة المخالفة: {ViolationCategory}<br />
+                                        العقوبة: {PenaltyAction}<br />
+                                        الأثر المالي: {FinancialImpact}
+                                    </p>
+
+                                    @foreach (var block in Model.TextBlocks.Where(x => x.Area == "Body" && x.IsActive))
+                                    {
+                                        <div class="nxpen-text-block" style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
+                                    }
+                                </div>
+
+                                <div class="nxpen-a4-section nxpen-a4-footer">
+                                    @if (!string.IsNullOrWhiteSpace(Model.Settings.FooterImagePath))
+                                    {
+                                        <img src="@Model.Settings.FooterImagePath" alt="Footer" />
+                                    }
+                                    else
+                                    {
+                                        <div class="nxpen-auto-footer"><strong>@Model.Settings.ApprovingAuthorityName</strong><small>تم إنشاء هذا الإشعار من نظام NEXORA HR</small></div>
+                                    }
+
+                                    @foreach (var block in Model.TextBlocks.Where(x => x.Area == "Footer" && x.IsActive))
+                                    {
+                                        <div class="nxpen-text-block" style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
+                                    }
+                                </div>
+                            </div>
+                        </section>
+                    </section>
+                </section>
+            }
+else
+            {
+                <section class="nxpen-card">
+                    <header class="nxpen-card-head">
+                        <div><span>Dynamic Company Forms</span><h2>قوالب الرسائل والفورم</h2><p>القالب يمثل نص العقوبة، ويأخذ الهيدر والفوتر من إعدادات التهيئة. إذا لم تحدد هيدر، سيستخدم النظام هيدر تلقائي بشعار النظام وتفاصيله.</p></div>
+                    </header>
+                    <section class="nxpen-template-type-box">
+                        <header><div><h3>أنواع القوالب</h3><small>أضف أنواع قوالب جديدة حسب سياسة الشركة، مثل إنذار، استقطاع، إنذار نهائي، إحالة للجنة.</small></div></header>
+                        <form method="post" asp-page-handler="CreateTemplateType" class="nxpen-grid-form compact">
+                            <input name="name" required placeholder="اسم نوع القالب" />
+                            <input name="code" required placeholder="Code مثل CommitteeReferral" />
+                            <textarea name="description" placeholder="وصف النوع"></textarea>
+                            <button type="submit">إضافة نوع قالب</button>
+                        </form>
+                        <div class="nxpen-template-type-list">
+                            @foreach (var templateType in Model.TemplateTypes)
+                            {
+                                <form method="post" asp-page-handler="UpdateTemplateType" class="nxpen-template-type-row">
+                                    <input type="hidden" name="id" value="@templateType.Id" />
+                                    <input name="name" value="@templateType.Name" required />
+                                    <input name="code" value="@templateType.Code" required />
+                                    <input name="description" value="@templateType.Description" />
+                                    <label class="nxpen-switch small"><input type="checkbox" name="isActive" value="true" checked="@templateType.IsActive" /><span></span></label>
+                                    <button type="submit">حفظ</button>
+                                </form>
+                            }
+                        </div>
+                    </section>
+                    <section class="nxpen-template-vars"><strong>المتغيرات</strong>@foreach (var token in Model.TemplateTokens){<button type="button" data-nxpen-token="@token">@token</button>}</section>
+                    <form method="post" asp-page-handler="CreateTemplate" class="nxpen-grid-form template-form">
+                        <div><label>اسم القالب</label><input name="name" required placeholder="مثال: نموذج إشعار عقوبة" /></div>
+                        <div><label>نوع القالب</label><select name="templateType">
+                                        @foreach (var templateType in Model.TemplateTypes.Where(x => x.IsActive))
+                                        {
+                                            <option value="@templateType.Code" selected="@(templateType.Code == Model.Settings.DefaultTemplateType)">@templateType.Name</option>
+                                        }
+                                    </select></div>
+                        <div class="wide-2"><label>عنوان الرسالة</label><input name="subject" required value="إشعار مخالفة وجزاء - {EmployeeName}" /></div>
+                        <div class="wide"><label>نص القالب</label><textarea name="body" rows="12">@Model.DefaultTemplateBody</textarea></div>
+                        <div class="wide nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="isDefault" value="true" /><span></span><b>قالب افتراضي</b></label><label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked /><span></span><b>فعال</b></label></div>
+                        <footer class="wide"><button type="submit">إضافة قالب</button></footer>
+                    </form>
+                    <section class="nxpen-form-preview">
+                        <div class="nxpen-form-paper">
+                            <header class="nxpen-paper-header">
+                                @if (string.IsNullOrWhiteSpace(Model.Settings.FormHeader))
+                                {
+                                    <div class="nxpen-auto-header"><div class="nxpen-logo-mark">N</div><div><strong>NEXORA HR</strong><small>Disciplinary Notice / إشعار مخالفة وجزاء</small></div></div>
+                                }
+                                else
+                                {
+                                    <pre>@Model.Settings.FormHeader</pre>
+                                }
+                            </header>
+                            <main class="nxpen-paper-body"><h3>نص القالب يظهر هنا داخل فورمة الشركة</h3><p>السيد/ة: {EmployeeName}<br />المخالفة: {ViolationName}<br />العقوبة: {PenaltyAction}<br />الأثر المالي: {FinancialImpact}</p></main>
+                            <footer class="nxpen-paper-footer">
+                                @if (string.IsNullOrWhiteSpace(Model.Settings.FormFooter))
+                                {
+                                    <span>@Model.Settings.ApprovingAuthorityName</span><small>تم إنشاء هذا الإشعار من نظام NEXORA HR</small>
+                                }
+                                else
+                                {
+                                    <pre>@Model.Settings.FormFooter</pre>
+                                }
+                            </footer>
+                        </div>
+                    </section>
+
+                    <div class="nxpen-edit-list">
+                        @foreach (var template in Model.MessageTemplates)
+                        {
+                            <details class="nxpen-edit-item @(template.IsActive ? "" : "disabled")">
+                                <summary><span>@(template.IsDefault ? "★" : "✉")</span><strong>@template.Name</strong><small>@Model.DisplayTemplateType(template.TemplateType) / @template.Subject</small></summary>
+                                <form method="post" asp-page-handler="UpdateTemplate" class="nxpen-grid-form edit template-form">
+                                    <input type="hidden" name="id" value="@template.Id" />
+                                    <div><label>اسم القالب</label><input name="name" value="@template.Name" required /></div>
+                                    <div><label>نوع القالب</label><select name="templateType">
+                                        @foreach (var templateType in Model.TemplateTypes.Where(x => x.IsActive))
+                                        {
+                                            <option value="@templateType.Code" selected="@(templateType.Code == template.TemplateType)">@templateType.Name</option>
+                                        }
+                                    </select></div>
+                                    <div class="wide-2"><label>العنوان</label><input name="subject" value="@template.Subject" required /></div>
+                                    <div class="wide"><label>نص القالب</label><textarea name="body" rows="12">@template.Body</textarea></div>
+                                    <div class="wide nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="isDefault" value="true" checked="@template.IsDefault" /><span></span><b>افتراضي</b></label><label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked="@template.IsActive" /><span></span><b>فعال</b></label></div>
+                                    <footer class="wide"><button type="submit">حفظ تعديل القالب</button></footer>
+                                </form>
+                            </details>
+                        }
+                    </div>
+                </section>
+            }
+        </section>
+    </main>
+</section>
+
+<script src="~/js/nexora-disciplinary-rules.js" asp-append-version="true"></script>

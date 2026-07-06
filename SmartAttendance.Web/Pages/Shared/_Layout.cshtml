@@ -96,7 +96,7 @@
 
         Func<string, string> ActiveClass = path => IsCurrent(path) ? "active nexora-active" : "";
 
-        var employeesOpen = IsUnder("/Employees") || IsUnder("/EmployeeUpdates") || IsUnder("/EmployeeProfiles") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization");
+        var employeesOpen = IsUnder("/Employees") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfiles") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization");
         var attendanceOpen = IsUnder("/AttendanceOperations") || IsUnder("/AttendanceRecords") || IsUnder("/AttendanceImports") || IsUnder("/AttendanceProcessing") || IsUnder("/AttendanceCorrections") || IsUnder("/Shifts") || IsUnder("/Devices");
         var requestsOpen = IsUnder("/LeaveRequests") || IsUnder("/Approvals") || IsUnder("/SelfServices");
         var systemOpen = IsUnder("/Branches") || IsUnder("/Departments") || IsUnder("/SystemUsers") || IsUnder("/Permissions");
@@ -136,6 +136,9 @@
                         </a>
                         <a asp-page="/EmployeeUpdates/Index" class="nexora-nav-link @(IsUnder("/EmployeeUpdates") ? "active nexora-active" : "")">
                             <span>تحديثات الموظف</span>
+                        </a>
+                        <a asp-page="/DisciplinaryRules/Index" class="nexora-nav-link @(IsUnder("/DisciplinaryRules") ? "active nexora-active" : "")">
+                            <span>إعدادات الموارد البشرية</span>
                         </a>
                         <a asp-page="/EmployeeProfiles/Index" class="nexora-nav-link @(IsUnder("/EmployeeProfiles") ? "active nexora-active" : "")">
                             <span>عمليات الموارد البشرية</span>
@@ -196,8 +199,14 @@
                         <a asp-page="/EmployeeUpdates/Index" asp-route-section="financial" class="nexora-nav-link">
                             <span>تحديث المعلومات المالية</span>
                         </a>
+                        <a asp-page="/DisciplinaryRules/Index" class="nexora-nav-link @(IsUnder("/DisciplinaryRules") ? "active nexora-active" : "")">
+                            <span>إعدادات الموارد البشرية</span>
+                        </a>
                         <a asp-page="/EmployeeUpdates/Index" asp-route-section="payment" class="nexora-nav-link">
                             <span>معلومات الدفع</span>
+                        </a>
+                        <a asp-page="/DisciplinaryRules/Index" class="nexora-nav-link @(IsUnder("/DisciplinaryRules") ? "active nexora-active" : "")">
+                            <span>إعدادات الموارد البشرية</span>
                         </a>
                     </div>
                 </details>
@@ -252,4 +261,6 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+
+
 
