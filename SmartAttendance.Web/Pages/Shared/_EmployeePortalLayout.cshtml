@@ -1,36 +1,60 @@
 @{
-    var displayName = Context.Request.Cookies["SA.DisplayName"] ?? "موظف";
-    var username = Context.Request.Cookies["SA.UserName"] ?? "employee";
+    Layout = null;
+    var userName = Context.Request.Cookies["SA.UserName"] ?? "employee";
+    var role = Context.Request.Cookies["SA.Role"] ?? "Employee";
 }
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - NEXORA</title>
-    <link rel="stylesheet" href="~/css/nexora-employee-portal-shell.css" asp-append-version="true" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - NEXORA Employee Experience</title>
+    <link rel="stylesheet" href="~/css/nexora-employee-experience.css" asp-append-version="true" />
 </head>
-<body>
-    <div class="nx-emp-shell">
-        <aside class="nx-emp-sidebar">
-            <div class="nx-emp-brand"><div>N</div><strong>NEXORA</strong><span>Employee Self Service</span></div>
-            <div class="nx-emp-user"><span>المستخدم الحالي</span><strong>@username</strong><small>@displayName</small></div>
-            <nav>
-                <a asp-page="/EmployeePortal/Index" asp-route-tab="home">الصفحة الرئيسية</a>
-                <a asp-page="/EmployeePortal/Index" asp-route-tab="profile">ملفي الشخصي</a>
-                <a asp-page="/EmployeePortal/Index" asp-route-tab="compensation">التعويضات</a>
-                <a asp-page="/EmployeePortal/Index" asp-route-tab="requests">طلباتي</a>
-                <a asp-page="/EmployeePortal/Index" asp-route-tab="polls">الاستطلاعات</a>
-                <a asp-page="/EmployeePortal/Index" asp-route-tab="team">فريقي</a>
-                <a asp-page="/EmployeePortal/Index" asp-route-tab="attendance">حضوري</a>
-                <a asp-page="/EmployeePortal/Index" asp-route-tab="feedback">الشكاوي والمقترحات</a>
-            </nav>
-            <div class="nx-emp-note">هذه الواجهة مخصصة لحسابات الموظفين فقط.</div>
-        </aside>
-        <main class="nx-emp-main">
-            <header class="nx-emp-top"><strong>بوابة الموظف</strong><div><a href="/">الرئيسية</a><a href="/Account/Logout">خروج</a></div></header>
-            @RenderBody()
-        </main>
-    </div>
+<body class="nxex-body">
+    <aside class="nxex-shell-sidebar">
+        <div class="nxex-brand">
+            <div class="nxex-brand-symbol">NX</div>
+            <div>
+                <strong>NEXORA</strong>
+                <span>Employee Experience</span>
+            </div>
+        </div>
+
+        <div class="nxex-user-mini">
+            <span>المستخدم الحالي</span>
+            <strong>@userName</strong>
+            <small>@role</small>
+        </div>
+
+        <nav class="nxex-side-nav">
+            <a href="/EmployeePortal?tab=home">الرئيسية</a>
+            <a href="/EmployeePortal?tab=profile">ملفي الشخصي</a>
+            <a href="/EmployeePortal?tab=attendance">الحضور</a>
+            <a href="/EmployeePortal?tab=compensation">الراتب والتعويضات</a>
+            <a href="/EmployeePortal?tab=requests">طلباتي</a>
+            <a href="/EmployeePortal?tab=pulse">الاستبيانات</a>
+            <a href="/EmployeePortal?tab=feedback">الشكاوي والمقترحات</a>
+            <a href="/EmployeePortal?tab=performance">التقييم والانضباط</a>
+        </nav>
+
+        <div class="nxex-side-note">
+            <strong>بوابة الموظف</strong>
+            <span>واجهة السينك الرسمية لكل ما ينشر أو يسجل من الإدارة.</span>
+        </div>
+    </aside>
+
+    <main class="nxex-shell-main">
+        <div class="nxex-topbar">
+            <div>
+                <strong>بوابة الموظف الذكية</strong>
+                <span>Employee Experience Portal</span>
+            </div>
+            <a href="/Account/Logout">خروج</a>
+        </div>
+        @RenderBody()
+    </main>
+
+    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

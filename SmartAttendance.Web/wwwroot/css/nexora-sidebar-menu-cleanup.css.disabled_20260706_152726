@@ -1,0 +1,68 @@
+﻿/* NEXORA Sidebar Main Menu Cleanup */
+:root{
+    --nx-menu-teal:#12b8c7;
+    --nx-menu-blue:#2d83e6;
+    --nx-menu-green:#62bc12;
+    --nx-menu-orange:#f48a00;
+}
+
+.nx-menu-hidden,
+[data-nx-menu-hidden="true"]{
+    display:none!important;
+}
+
+.nx-sidebar-section-title,
+.nx-menu-section-title{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:10px!important;
+    padding:10px 14px!important;
+    margin:4px 0 8px!important;
+    color:#1e4c73!important;
+    font-weight:900!important;
+    font-size:14px!important;
+    border-bottom:1px solid rgba(44,78,112,.16)!important;
+}
+
+.nx-sidebar-section-title::after,
+.nx-menu-section-title::after{
+    content:"↗";
+    color:#93a9bd;
+    font-weight:900;
+}
+
+.nx-main-menu-item{
+    position:relative!important;
+}
+
+.nx-main-menu-item::before{
+    content:"";
+    position:absolute;
+    inset-inline-end:10px;
+    top:50%;
+    width:34px;
+    height:34px;
+    transform:translateY(-50%);
+    border-radius:10px;
+    background:var(--nx-menu-blue);
+    opacity:.98;
+    z-index:0;
+}
+
+.nx-main-menu-item[data-nx-menu-key="people"]::before{background:var(--nx-menu-orange)}
+.nx-main-menu-item[data-nx-menu-key="payroll"]::before{background:var(--nx-menu-teal)}
+.nx-main-menu-item[data-nx-menu-key="attendance"]::before{background:var(--nx-menu-blue)}
+.nx-main-menu-item[data-nx-menu-key="selfservice"]::before{background:var(--nx-menu-green)}
+
+.nx-main-menu-item > *,
+.nx-main-menu-item{
+    isolation:isolate;
+}
+
+.nx-main-menu-item .nx-menu-icon,
+.nx-main-menu-item i,
+.nx-main-menu-item svg{
+    position:relative!important;
+    z-index:1!important;
+}

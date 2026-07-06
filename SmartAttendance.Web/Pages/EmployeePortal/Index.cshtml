@@ -2,172 +2,451 @@
 @model SmartAttendance.Web.Pages.EmployeePortal.IndexModel
 @{
     Layout = "_EmployeePortalLayout";
-    ViewData["Title"] = "بوابة الموظف";
-    var tab = Model.Tab;
+    ViewData["Title"] = "بوابة الموظف الذكية";
+    var emp = Model.Employee;
+    var activeTab = Model.Tab;
 }
 
-<link rel="stylesheet" href="~/css/nexora-employee-portal-official.css" asp-append-version="true" />
-
-<section class="nxep-page" dir="rtl">
-    <header class="nxep-hero">
-        <div class="nxep-mark">NX</div>
-        <div>
-            <h1>بوابة الموظف</h1>
-            <p>صفحة الموظف الرسمية مرتبطة بقاعدة البيانات: الإعلانات، الشكاوي، الطلبات، الحضور والملف الشخصي.</p>
+<section class="nxex-page" dir="rtl" data-nxex-page data-active-tab="@activeTab">
+    <header class="nxex-hero">
+        <div class="nxex-hero-copy">
+            <span>EMPLOYEE EXPERIENCE PORTAL</span>
+            <h1>أهلاً @emp.FullName</h1>
+            <p>هذه هي صفحة السينك الرسمية: الإعلانات، الاستبيانات، الحضور، الراتب، الطلبات، الشكاوي، والتقييمات تظهر هنا من قاعدة البيانات.</p>
         </div>
-        <div class="nxep-user-badges">
-            <span>الموظف <strong>@Model.Employee.FullName</strong></span>
-            <span>الصلاحية <strong>@Model.RoleDisplay</strong></span>
+
+        <div class="nxex-identity-card">
+            <div class="nxex-avatar">@Model.Initials</div>
+            <div>
+                <strong>@emp.FullName</strong>
+                <span>@Model.DisplayValue(emp.Position)</span>
+                <small>@emp.EmployeeNo · @Model.DisplayValue(emp.DepartmentName)</small>
+            </div>
         </div>
     </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="nxep-alert">@Model.StatusMessage</div>
+        <div class="nxex-alert">@Model.StatusMessage</div>
     }
 
-    <nav class="nxep-tabs">
-        <a class="@(tab == "home" ? "active" : "")" asp-page="./Index" asp-route-tab="home">الرئيسية<small>حائط الموظف</small></a>
-        <a class="@(tab == "profile" ? "active" : "")" asp-page="./Index" asp-route-tab="profile">ملفي الشخصي<small>بياناتي</small></a>
-        <a class="@(tab == "compensation" ? "active" : "")" asp-page="./Index" asp-route-tab="compensation">التعويضات<small>بيانات مالية</small></a>
-        <a class="@(tab == "requests" ? "active" : "")" asp-page="./Index" asp-route-tab="requests">طلباتي<small>الخدمة الذاتية</small></a>
-        <a class="@(tab == "polls" ? "active" : "")" asp-page="./Index" asp-route-tab="polls">الاستطلاعات<small>تصويت داخلي</small></a>
-        <a class="@(tab == "team" ? "active" : "")" asp-page="./Index" asp-route-tab="team">فريقي<small>الفريق المباشر</small></a>
-        <a class="@(tab == "attendance" ? "active" : "")" asp-page="./Index" asp-route-tab="attendance">حضوري<small>السجل</small></a>
-        <a class="@(tab == "feedback" ? "active" : "")" asp-page="./Index" asp-route-tab="feedback">الشكاوي والمقترحات<small>إرسال ومتابعة</small></a>
+    @if (Model.IsDemoMode)
+    {
+        <div class="nxex-warning">
+            <strong>وضع تجريبي</strong>
+            <span>لم يتم العثور على مستخدم موظف مرتبط بشكل مباشر، لذلك تم عرض أول موظف متوفر للاختبار.</span>
+        </div>
+    }
+
+    <section class="nxex-command-center">
+        <article>
+            <span>دوام اليوم</span>
+            <strong>@Model.LastAttendanceText</strong>
+            <small>@Model.AttendanceTodayStatus</small>
+        </article>
+        <article>
+            <span>إعلانات جديدة</span>
+            <strong>@Model.Announcements.Count</strong>
+            <small>منشورات موجهة لك</small>
+        </article>
+        <article>
+            <span>استبيانات مطلوبة</span>
+            <strong>@Model.OpenPollsCount</strong>
+            <small>بانتظار التصويت</small>
+        </article>
+        <article>
+            <span>طلبات قيد المتابعة</span>
+            <strong>@Model.PendingRequestsCount</strong>
+            <small>خدمة ذاتية</small>
+        </article>
+        <article>
+            <span>شكاوي مفتوحة</span>
+            <strong>@Model.OpenFeedbackCount</strong>
+            <small>بانتظار الرد</small>
+        </article>
+    </section>
+
+    <nav class="nxex-tabs">
+        <button type="button" data-nxex-tab="home"><span>الرئيسية</span><small>ملخص اليوم</small></button>
+        <button type="button" data-nxex-tab="profile"><span>ملفي الشخصي</span><small>بيانات الموظف</small></button>
+        <button type="button" data-nxex-tab="attendance"><span>الحضور</span><small>السجل الشهري</small></button>
+        <button type="button" data-nxex-tab="compensation"><span>الراتب والتعويضات</span><small>مالي</small></button>
+        <button type="button" data-nxex-tab="requests"><span>طلباتي</span><small>الخدمة الذاتية</small></button>
+        <button type="button" data-nxex-tab="pulse"><span>الاستبيانات</span><small>نبض الموظفين</small></button>
+        <button type="button" data-nxex-tab="feedback"><span>الشكاوي والمقترحات</span><small>إرسال ومتابعة</small></button>
+        <button type="button" data-nxex-tab="performance"><span>التقييم والانضباط</span><small>أداء وعقوبات</small></button>
     </nav>
 
-    @if (tab == "home")
-    {
-        <section class="nxep-layout-main">
-            <article class="nxep-card nxep-wall">
-                <div class="nxep-card-head"><h2>حائط الموظف</h2><span>@Model.Announcements.Count إعلان</span></div>
-                @if (Model.Announcements.Count == 0)
-                {
-                    <div class="nxep-empty">لا توجد إعلانات منشورة حالياً.</div>
-                }
-                @foreach (var item in Model.Announcements)
-                {
-                    <article class="nxep-wall-post">
-                        <div><span class="nxep-chip">@item.Category</span><time>@Model.DisplayDate(item.PublishDate)</time></div>
-                        <h3>@item.Title</h3>
-                        <p>@item.Body</p>
+    <main class="nxex-content">
+        <section class="nxex-pane" data-nxex-pane="home">
+            <div class="nxex-home-grid">
+                <section class="nxex-card nxex-wall-card">
+                    <header class="nxex-card-head">
+                        <div>
+                            <h2>حائط الموظف</h2>
+                            <p>كل إعلان منشور من الإدارة وموجه لك يظهر هنا.</p>
+                        </div>
+                        <span class="nxex-chip live">@Model.Announcements.Count منشور</span>
+                    </header>
+
+                    @if (Model.Announcements.Count == 0)
+                    {
+                        <div class="nxex-empty">لا توجد إعلانات منشورة حالياً.</div>
+                    }
+                    else
+                    {
+                        <div class="nxex-wall-list">
+                            @foreach (var item in Model.Announcements.Take(5))
+                            {
+                                <article class="nxex-ann-card @Model.AnnouncementTheme(item.Category)">
+                                    <div>
+                                        <span class="nxex-chip">@item.Category</span>
+                                        <small>@Model.DisplayDate(item.PublishDate)</small>
+                                    </div>
+                                    <h3>@item.Title</h3>
+                                    <p>@item.Body</p>
+                                </article>
+                            }
+                        </div>
+                    }
+                </section>
+
+                <aside class="nxex-smart-rail">
+                    <article class="nxex-card">
+                        <header class="nxex-card-head compact"><h2>المهام المطلوبة</h2><span class="nxex-chip pending">اليوم</span></header>
+                        <div class="nxex-action-list">
+                            <button type="button" data-nxex-jump="pulse">التصويت على الاستبيانات</button>
+                            <button type="button" data-nxex-jump="attendance">مراجعة الحضور</button>
+                            <button type="button" data-nxex-jump="requests">متابعة الطلبات</button>
+                            <button type="button" data-nxex-jump="feedback">إرسال مقترح</button>
+                        </div>
                     </article>
-                }
-            </article>
-            <aside class="nxep-side-stack">
-                <article class="nxep-card"><div class="nxep-card-head"><h2>مختصر الطلبات</h2></div><strong class="nxep-big">@Model.Requests.Count</strong><span>طلبات مسجلة</span></article>
-                <article class="nxep-card"><div class="nxep-card-head"><h2>الشكاوي والمقترحات</h2></div><strong class="nxep-big">@Model.FeedbackItems.Count</strong><span>طلبات متابعة</span></article>
-            </aside>
+
+                    <article class="nxex-card nxex-ai-card">
+                        <span>HR INSIGHT</span>
+                        <strong>@Model.EmployeeInsight</strong>
+                        <p>هذه قراءة مبدئية من بيانات الحضور والطلبات والشكاوي.</p>
+                    </article>
+                </aside>
+            </div>
         </section>
-    }
-    else if (tab == "profile")
-    {
-        <section class="nxep-profile-grid">
-            <aside class="nxep-profile-card">
-                <div class="nxep-avatar">@Model.Initials</div>
-                <h2>@Model.Employee.FullName</h2>
-                <p>@Model.Employee.Position</p>
-                <span>@Model.Employee.EmployeeNo</span>
-            </aside>
-            <article class="nxep-card">
-                <div class="nxep-card-head"><h2>المعلومات الشخصية</h2></div>
-                <div class="nxep-info-grid">
-                    <div><span>القسم</span><strong>@Model.Employee.DepartmentName</strong></div>
-                    <div><span>الفرع</span><strong>@Model.Employee.BranchName</strong></div>
-                    <div><span>المدير المباشر</span><strong>@Model.Employee.ManagerName</strong></div>
-                    <div><span>الهاتف</span><strong>@Model.Employee.Phone</strong></div>
-                    <div><span>البريد</span><strong>@Model.Employee.Email</strong></div>
-                    <div><span>تاريخ التعيين</span><strong>@Model.DisplayDate(Model.Employee.HireDate)</strong></div>
-                    <div><span>تاريخ الولادة</span><strong>@Model.DisplayDate(Model.Employee.BirthDate)</strong></div>
-                    <div><span>الهوية</span><strong>@Model.Employee.NationalId</strong></div>
-                </div>
-            </article>
-        </section>
-    }
-    else if (tab == "compensation")
-    {
-        <section class="nxep-kpis">
-            <div><span>الراتب الأساسي</span><strong>@Model.DisplayMoney(Model.Compensation.BasicSalary)</strong></div>
-            <div><span>العلاوات</span><strong>@Model.DisplayMoney(Model.Compensation.Allowances)</strong></div>
-            <div><span>الاستقطاعات</span><strong>@Model.DisplayMoney(Model.Compensation.Deductions)</strong></div>
-            <div><span>طريقة الدفع</span><strong>@Model.Compensation.PaymentMethod</strong></div>
-        </section>
-        <article class="nxep-card"><div class="nxep-card-head"><h2>معلومات الدفع</h2></div><div class="nxep-info-grid"><div><span>البنك</span><strong>@Model.Compensation.BankName</strong></div><div><span>الحساب</span><strong>@Model.Compensation.BankAccount</strong></div><div><span>العملة</span><strong>@Model.Compensation.Currency</strong></div></div></article>
-    }
-    else if (tab == "requests")
-    {
-        <section class="nxep-card"><div class="nxep-card-head"><h2>طلباتي</h2><span>@Model.Requests.Count</span></div><table class="nxep-table"><thead><tr><th>النوع</th><th>الفترة</th><th>الحالة</th><th>السبب</th></tr></thead><tbody>@foreach (var item in Model.Requests){<tr><td>@item.RequestType</td><td>@Model.DisplayDate(item.FromDate) - @Model.DisplayDate(item.ToDate)</td><td><span class="nxep-chip">@item.Status</span></td><td>@item.Reason</td></tr>}</tbody></table></section>
-    }
-    else if (tab == "polls")
-    {
-        <section class="nxep-card nxep-polls">
-            <div class="nxep-card-head"><h2>الانتخابات والاستطلاعات</h2><span>@Model.Polls.Count</span></div>
-            @if (Model.Polls.Count == 0)
-            {
-                <div class="nxep-empty">لا توجد استطلاعات منشورة حالياً.</div>
-            }
-            @foreach (var poll in Model.Polls)
-            {
-                <article class="nxep-poll-card">
-                    <div class="nxep-poll-head"><span class="nxep-chip">@poll.Category</span><time>@Model.DisplayDate(poll.PublishDate)</time></div>
-                    <h3>@poll.Title</h3>
-                    <p>@poll.Question</p>
-                    <div class="nxep-poll-options">
-                        @foreach (var option in poll.Options)
-                        {
-                            <form method="post" asp-page-handler="VotePoll" asp-route-pollId="@poll.Id" asp-route-optionId="@option.Id">
-                                <button type="submit" class="@(poll.SelectedOptionId == option.Id ? "selected" : "")">
-                                    <span>@option.OptionText</span>
-                                    <small>@option.VotesCount صوت</small>
-                                </button>
-                            </form>
-                        }
+
+        <section class="nxex-pane" data-nxex-pane="profile">
+            <div class="nxex-profile-grid">
+                <aside class="nxex-profile-card">
+                    <div class="nxex-profile-cover"></div>
+                    <div class="nxex-avatar big">@Model.Initials</div>
+                    <h2>@emp.FullName</h2>
+                    <p>@Model.DisplayValue(emp.Position)</p>
+                    <div class="nxex-profile-meta">
+                        <div><span>الرقم الوظيفي</span><strong>@emp.EmployeeNo</strong></div>
+                        <div><span>القسم</span><strong>@Model.DisplayValue(emp.DepartmentName)</strong></div>
+                        <div><span>الفرع</span><strong>@Model.DisplayValue(emp.BranchName)</strong></div>
+                        <div><span>الخدمة</span><strong>@Model.ServicePeriodText</strong></div>
                     </div>
-                </article>
-            }
+                </aside>
+
+                <section class="nxex-card">
+                    <header class="nxex-card-head">
+                        <div>
+                            <h2>بيانات الموظف</h2>
+                            <p>مقروءة من جداول الموظفين والفروع والأقسام.</p>
+                        </div>
+                        <span class="nxex-chip live">DB Linked</span>
+                    </header>
+
+                    <div class="nxex-info-grid">
+                        <div><span>الاسم</span><strong>@emp.FullName</strong></div>
+                        <div><span>الرقم الوظيفي</span><strong>@emp.EmployeeNo</strong></div>
+                        <div><span>المنصب</span><strong>@Model.DisplayValue(emp.Position)</strong></div>
+                        <div><span>القسم</span><strong>@Model.DisplayValue(emp.DepartmentName)</strong></div>
+                        <div><span>الفرع</span><strong>@Model.DisplayValue(emp.BranchName)</strong></div>
+                        <div><span>المدير المباشر</span><strong>@Model.DisplayValue(emp.ManagerName)</strong></div>
+                        <div><span>تاريخ التعيين</span><strong>@Model.DisplayDate(emp.HireDate)</strong></div>
+                        <div><span>الحالة</span><strong>@(emp.IsActive ? "فعال" : "غير فعال")</strong></div>
+                        <div><span>الهاتف</span><strong>@Model.DisplayValue(emp.Phone)</strong></div>
+                        <div><span>البريد</span><strong>@Model.DisplayValue(emp.Email)</strong></div>
+                    </div>
+                </section>
+            </div>
         </section>
-    }
-    else if (tab == "team")
-    {
-        <section class="nxep-card"><div class="nxep-card-head"><h2>فريقي</h2><span>@Model.Team.Count</span></div><div class="nxep-team">@foreach (var item in Model.Team){<div><strong>@item.FullName</strong><span>@item.Position</span><small>@item.EmployeeNo</small></div>}</div></section>
-    }
-    else if (tab == "attendance")
-    {
-        <section class="nxep-card"><div class="nxep-card-head"><h2>حضوري</h2><span>@Model.Attendance.Count</span></div><table class="nxep-table"><thead><tr><th>التاريخ</th><th>الدخول</th><th>الخروج</th><th>الحالة</th><th>ملاحظة</th></tr></thead><tbody>@foreach (var item in Model.Attendance){<tr><td>@Model.DisplayDate(item.AttendanceDate)</td><td>@Model.DisplayTime(item.CheckIn)</td><td>@Model.DisplayTime(item.CheckOut)</td><td><span class="nxep-chip">@item.Status</span></td><td>@item.Notes</td></tr>}</tbody></table></section>
-    }
-    else if (tab == "feedback")
-    {
-        <section class="nxep-feedback-grid">
-            <form method="post" asp-page-handler="Feedback" class="nxep-card nxep-form">
-                <div class="nxep-card-head"><h2>إرسال شكوى أو مقترح</h2><span class="nxep-chip">موظف</span></div>
-                <label>النوع</label>
-                <select asp-for="Feedback.Type"><option>اقتراح</option><option>شكوى</option></select>
-                <label>الأولوية</label>
-                <select asp-for="Feedback.Priority"><option>متوسط</option><option>عالي</option><option>منخفض</option></select>
-                <label>العنوان</label>
-                <input asp-for="Feedback.Title" placeholder="اكتب عنوان مختصر" />
-                <label>التفاصيل</label>
-                <textarea asp-for="Feedback.Message" placeholder="اكتب تفاصيل الشكوى أو المقترح"></textarea>
-                <button type="submit">إرسال</button>
-            </form>
-            <article class="nxep-card">
-                <div class="nxep-card-head"><h2>متابعة الردود</h2><span>@Model.FeedbackItems.Count</span></div>
-                <div class="nxep-feedback-list">
+
+        <section class="nxex-pane" data-nxex-pane="attendance">
+            <div class="nxex-grid-2">
+                <section class="nxex-card">
+                    <header class="nxex-card-head">
+                        <div><h2>ملخص الحضور</h2><p>قراءة سريعة من سجلات الحضور.</p></div>
+                        <span class="nxex-chip">@Model.Attendance.Count سجل</span>
+                    </header>
+                    <div class="nxex-attendance-summary">
+                        <article><strong>@Model.CompletedAttendanceCount</strong><span>بصمة مكتملة</span></article>
+                        <article><strong>@Model.MissingCheckoutCount</strong><span>خروج غير مكتمل</span></article>
+                        <article><strong>@Model.LastAttendanceText</strong><span>آخر يوم مسجل</span></article>
+                    </div>
+                </section>
+
+                <section class="nxex-card">
+                    <header class="nxex-card-head"><h2>آخر سجلات الحضور</h2></header>
+                    <div class="nxex-table-wrap">
+                        <table class="nxex-table">
+                            <thead><tr><th>التاريخ</th><th>دخول</th><th>خروج</th><th>الحالة</th></tr></thead>
+                            <tbody>
+                            @if (Model.Attendance.Count == 0)
+                            {
+                                <tr><td colspan="4">لا توجد سجلات حضور.</td></tr>
+                            }
+                            @foreach (var row in Model.Attendance.Take(10))
+                            {
+                                <tr>
+                                    <td>@Model.DisplayDate(row.AttendanceDate)</td>
+                                    <td>@Model.DisplayTime(row.CheckIn)</td>
+                                    <td>@Model.DisplayTime(row.CheckOut)</td>
+                                    <td><span class="nxex-chip">@Model.DisplayValue(row.Status)</span></td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section class="nxex-pane" data-nxex-pane="compensation">
+            <div class="nxex-comp-grid">
+                <section class="nxex-card nxex-pay-card">
+                    <header class="nxex-card-head">
+                        <div><h2>الراتب والتعويضات</h2><p>@Model.CompensationNote</p></div>
+                        <span class="nxex-chip pending">خاص بالموظف</span>
+                    </header>
+                    <div class="nxex-pay-amount">
+                        <span>صافي تقديري</span>
+                        <strong>@Model.DisplayMoney(Model.Compensation.NetAmount)</strong>
+                    </div>
+                    <div class="nxex-pay-breakdown">
+                        <div><span>الراتب الأساسي</span><strong>@Model.DisplayMoney(Model.Compensation.BasicSalary)</strong></div>
+                        <div><span>البدلات / التعويضات</span><strong>@Model.DisplayMoney(Model.Compensation.Allowances)</strong></div>
+                        <div><span>الاستقطاعات</span><strong>@Model.DisplayMoney(Model.Compensation.Deductions)</strong></div>
+                        <div><span>طريقة الدفع</span><strong>@Model.DisplayValue(Model.Compensation.PaymentMethod)</strong></div>
+                    </div>
+                </section>
+
+                <section class="nxex-card">
+                    <header class="nxex-card-head"><h2>ملاحظة مالية</h2></header>
+                    <div class="nxex-note-box">
+                        تظهر تفاصيل الراتب بعد اعتماد الكشف من الإدارة المالية والموارد البشرية.
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section class="nxex-pane" data-nxex-pane="requests">
+            <div class="nxex-request-studio">
+                <section class="nxex-card nxex-request-create">
+                    <header class="nxex-card-head">
+                        <div>
+                            <h2>إنشاء طلب خدمة ذاتية</h2>
+                            <p>أرسل طلبك مباشرة للموارد البشرية، ويظهر في لوحة الإدارة للمتابعة والاعتماد.</p>
+                        </div>
+                        <span class="nxex-chip live">DB Sync</span>
+                    </header>
+
+                    <div class="nxex-request-type-grid" data-request-type-grid>
+                        <button type="button" class="active" data-request-type="إجازة">🌴<span>طلب إجازة</span></button>
+                        <button type="button" data-request-type="نسيان بصمة">☝️<span>نسيان بصمة</span></button>
+                        <button type="button" data-request-type="خروج شخصي">🚶<span>خروج شخصي</span></button>
+                        <button type="button" data-request-type="خروج عمل">💼<span>خروج عمل</span></button>
+                        <button type="button" data-request-type="أوفر تايم">⏱️<span>أوفر تايم</span></button>
+                    </div>
+
+                    <form method="post" asp-page-handler="CreateRequest" class="nxex-form nxex-request-form" data-request-form>
+                        <input type="hidden" name="returnTab" value="requests" />
+                        <input type="hidden" asp-for="RequestInput.RequestType" value="إجازة" data-request-type-input />
+
+                        <div class="nxex-request-preview">
+                            <span>نوع الطلب الحالي</span>
+                            <strong data-request-type-title>طلب إجازة</strong>
+                            <small data-request-type-help>اختر تاريخ البداية والنهاية وسبب الإجازة.</small>
+                        </div>
+
+                        <div class="nxex-form-row">
+                            <div>
+                                <label>من تاريخ *</label>
+                                <input asp-for="RequestInput.FromDate" type="date" />
+                            </div>
+                            <div>
+                                <label>إلى تاريخ</label>
+                                <input asp-for="RequestInput.ToDate" type="date" />
+                            </div>
+                        </div>
+
+                        <label>السبب / الملاحظات *</label>
+                        <textarea asp-for="RequestInput.Reason" placeholder="اكتب تفاصيل الطلب هنا..."></textarea>
+
+                        <button type="submit">إرسال الطلب للموارد البشرية</button>
+                    </form>
+                </section>
+
+                <section class="nxex-card nxex-request-list-card">
+                    <header class="nxex-card-head">
+                        <div>
+                            <h2>متابعة الطلبات</h2>
+                            <p>آخر الطلبات المرسلة من بوابة الموظف.</p>
+                        </div>
+                        <span class="nxex-chip pending">@Model.Requests.Count طلب</span>
+                    </header>
+
+                    <div class="nxex-request-timeline">
+                    @if (Model.Requests.Count == 0)
+                    {
+                        <div class="nxex-empty">لا توجد طلبات حالياً.</div>
+                    }
+                    @foreach (var row in Model.Requests)
+                    {
+                        <article class="@Model.StatusClass(row.Status)">
+                            <div class="nxex-request-icon">@Model.RequestIcon(row.RequestType)</div>
+                            <div>
+                                <div class="nxex-request-row-head">
+                                    <strong>@row.RequestType</strong>
+                                    <span class="nxex-chip @Model.StatusClass(row.Status)">@Model.StatusText(row.Status)</span>
+                                </div>
+                                <p>@Model.DisplayValue(row.Reason)</p>
+                                <small>من @Model.DisplayDate(row.FromDate) إلى @Model.DisplayDate(row.ToDate) · تم الإرسال @Model.DisplayDate(row.CreatedAt)</small>
+                            </div>
+                        </article>
+                    }
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section class="nxex-pane" data-nxex-pane="pulse">
+            <div class="nxex-pulse-grid">
+                <section class="nxex-card nxex-pulse-list">
+                    <header class="nxex-card-head">
+                        <div><h2>الاستبيانات والانتخابات</h2><p>الاستبيانات المنشورة والموجهة لك من Employee Pulse Studio.</p></div>
+                        <span class="nxex-chip live">@Model.OpenPollsCount مطلوب</span>
+                    </header>
+
+                    @if (Model.Polls.Count == 0)
+                    {
+                        <div class="nxex-empty">لا توجد استبيانات منشورة حالياً.</div>
+                    }
+
+                    @foreach (var poll in Model.Polls)
+                    {
+                        <article class="nxex-poll-card">
+                            <div class="nxex-poll-head">
+                                <span class="nxex-chip">@poll.Category</span>
+                                <small>@Model.DisplayDate(poll.PublishDate)</small>
+                            </div>
+                            <h3>@poll.Title</h3>
+                            <p>@poll.Question</p>
+
+                            @if (poll.HasVoted)
+                            {
+                                <div class="nxex-voted">تم تسجيل تصويتك مسبقاً. شكراً لمشاركتك.</div>
+                            }
+                            else
+                            {
+                                <form method="post" asp-page-handler="VotePoll" class="nxex-vote-form">
+                                    <input type="hidden" name="PollVote.PollId" value="@poll.Id" />
+                                    <input type="hidden" name="returnTab" value="pulse" />
+                                    <div class="nxex-options">
+                                        @foreach (var option in poll.Options)
+                                        {
+                                            <label>
+                                                <input type="radio" name="PollVote.OptionId" value="@option.Id" required />
+                                                <span>@option.OptionText</span>
+                                            </label>
+                                        }
+                                    </div>
+                                    <button type="submit">إرسال التصويت</button>
+                                </form>
+                            }
+                        </article>
+                    }
+                </section>
+
+                <aside class="nxex-card nxex-pulse-insight">
+                    <header class="nxex-card-head compact"><h2>مؤشر نبضك</h2><span class="nxex-chip">Pulse</span></header>
+                    <div class="nxex-ring"><strong>78%</strong><span>نبض عام جيد</span></div>
+                    <p>كل مشاركة منك تساعد الموارد البشرية على تحسين بيئة العمل.</p>
+                </aside>
+            </div>
+        </section>
+
+        <section class="nxex-pane" data-nxex-pane="feedback">
+            <div class="nxex-feedback-grid">
+                <section class="nxex-card">
+                    <header class="nxex-card-head"><h2>إرسال شكوى أو مقترح</h2><span class="nxex-chip">موظف</span></header>
+                    <form method="post" asp-page-handler="Feedback" class="nxex-form">
+                        <input type="hidden" name="returnTab" value="feedback" />
+                        <label>النوع</label>
+                        <select asp-for="Feedback.Type">
+                            <option value="اقتراح">اقتراح</option>
+                            <option value="شكوى">شكوى</option>
+                            <option value="استفسار">استفسار</option>
+                        </select>
+                        <label>الأولوية</label>
+                        <select asp-for="Feedback.Priority">
+                            <option value="منخفض">منخفض</option>
+                            <option value="متوسط">متوسط</option>
+                            <option value="عالي">عالي</option>
+                        </select>
+                        <label>العنوان</label>
+                        <input asp-for="Feedback.Title" placeholder="اكتب عنوان مختصر" />
+                        <label>التفاصيل</label>
+                        <textarea asp-for="Feedback.Message" placeholder="اكتب التفاصيل"></textarea>
+                        <button type="submit">إرسال</button>
+                    </form>
+                </section>
+
+                <section class="nxex-card">
+                    <header class="nxex-card-head"><h2>متابعة الردود</h2><span class="nxex-chip">@Model.FeedbackItems.Count</span></header>
+                    <div class="nxex-feedback-list">
+                    @if (Model.FeedbackItems.Count == 0)
+                    {
+                        <div class="nxex-empty">لا توجد شكاوي أو مقترحات.</div>
+                    }
                     @foreach (var item in Model.FeedbackItems)
                     {
                         <article>
-                            <div><span class="nxep-chip @Model.StatusClass(item.Status)">@Model.FeedbackStatusText(item.Status)</span><span class="nxep-chip">@item.Type</span><span class="nxep-chip">@item.Priority</span></div>
+                            <div><span class="nxex-chip">@item.Type</span><span class="nxex-chip @Model.StatusClass(item.Status)">@Model.FeedbackStatusText(item.Status)</span></div>
                             <h3>@item.Title</h3>
                             <p>@item.Message</p>
                             @if (!string.IsNullOrWhiteSpace(item.AdminReply))
                             {
-                                <div class="nxep-reply"><strong>رد الإدارة - @item.RepliedBy</strong><span>@item.AdminReply</span></div>
+                                <div class="nxex-reply"><strong>رد الإدارة - @item.RepliedBy</strong><span>@item.AdminReply</span></div>
                             }
                         </article>
                     }
-                </div>
-            </article>
+                    </div>
+                </section>
+            </div>
         </section>
-    }
+
+        <section class="nxex-pane" data-nxex-pane="performance">
+            <div class="nxex-grid-2">
+                <section class="nxex-card">
+                    <header class="nxex-card-head"><h2>التقييم والأداء</h2><span class="nxex-chip pending">قادم</span></header>
+                    <div class="nxex-performance">
+                        <article><strong>آخر تقييم</strong><span>لم يتم ربط جدول التقييم بعد</span></article>
+                        <article><strong>نقاط القوة</strong><span>الالتزام، التعاون، سرعة التعلم</span></article>
+                        <article><strong>نقاط التطوير</strong><span>تظهر بعد اعتماد تقييم الإدارة</span></article>
+                    </div>
+                </section>
+
+                <section class="nxex-card">
+                    <header class="nxex-card-head"><h2>الانضباط والعقوبات</h2><span class="nxex-chip">Discipline</span></header>
+                    <div class="nxex-note-box">
+                        هنا سيتم عرض العقوبات، الإنذارات، والمكافآت بعد ربط جدول الانضباط الرسمي.
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
 </section>
+
+@section Scripts {
+    <script src="~/js/nexora-employee-experience.js" asp-append-version="true"></script>
+}

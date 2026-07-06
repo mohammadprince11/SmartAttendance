@@ -96,11 +96,12 @@
 
         Func<string, string> ActiveClass = path => IsCurrent(path) ? "active nexora-active" : "";
 
-        var employeesOpen = IsUnder("/Employees") || IsUnder("/EmployeeDocuments");
-        var attendanceOpen = IsUnder("/AttendanceOperations") || IsUnder("/AttendanceRecords") || IsUnder("/AttendanceImports") || IsUnder("/Shifts") || IsUnder("/Devices");
+        var employeesOpen = IsUnder("/Employees") || IsUnder("/EmployeeUpdates") || IsUnder("/EmployeeProfiles") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization");
+        var attendanceOpen = IsUnder("/AttendanceOperations") || IsUnder("/AttendanceRecords") || IsUnder("/AttendanceImports") || IsUnder("/AttendanceProcessing") || IsUnder("/AttendanceCorrections") || IsUnder("/Shifts") || IsUnder("/Devices");
         var requestsOpen = IsUnder("/LeaveRequests") || IsUnder("/Approvals") || IsUnder("/SelfServices");
         var systemOpen = IsUnder("/Branches") || IsUnder("/Departments") || IsUnder("/SystemUsers") || IsUnder("/Permissions");
         var reportsOpen = IsUnder("/AttendanceReports") || IsUnder("/Reports");
+        var payrollOpen = IsUnder("/Payroll");
     }
 
     <div class="nexora-shell">
@@ -116,58 +117,91 @@
                 </a>
             </div>
 
-            <nav class="nexora-nav nexora-stable-nav" aria-label="القائمة الرئيسية">
-                <!-- NEXORA_PEOPLE_NAV_START -->
-                <a asp-page="/Index" class="nexora-nav-link nexora-root-link" data-nav-area="dashboard">
+                        <nav class="nexora-nav nexora-stable-nav" aria-label="القائمة الرئيسية">
+                <!-- NEXORA_SAFE_MAIN_MENU_START -->
+                <a asp-page="/Index" class="nexora-nav-link nexora-root-link @ActiveClass("/Index")" data-nav-area="dashboard">
                     <span class="nexora-nav-dot"></span>
-                    <span>لوحة التحكم</span>
+                    <span>لوحة البيانات</span>
                 </a>
 
-                <details class="nexora-nav-group" open>
+                <details class="nexora-nav-group" @(employeesOpen ? "open" : "")>
                     <summary>
                         <span class="nexora-nav-dot gold"></span>
                         <span class="nexora-nav-text">أشخاص</span>
                         <span class="nexora-chevron"></span>
                     </summary>
                     <div class="nexora-nav-group-links">
-                        <a asp-page="/Employees/Index" class="nexora-nav-link"><span>قائمة الموظفين</span></a>
-                        <a asp-page="/EmployeeProfiles/Index" class="nexora-nav-link"><span>عمليات الموارد البشرية</span></a>
-                        <a asp-page="/Organization/Index" class="nexora-nav-link"><span>الهياكل التنظيمية</span></a>
-                        <a asp-page="/EmployeeDocuments/Index" class="nexora-nav-link"><span>مركز الوثائق</span></a>
-                        <a asp-page="/EmployeePermissions/Index" class="nexora-nav-link"><span>مركز بطاقات الموظفين</span></a>
-                        <a asp-page="/Reports/Index" class="nexora-nav-link"><span>التقارير</span></a>
-                        <a asp-page="/Permissions/Index" class="nexora-nav-link"><span>إعدادات الموارد البشرية</span></a>
+                        <a asp-page="/Employees/Index" class="nexora-nav-link @ActiveClass("/Employees/Index")">
+                            <span>قائمة الموظفين</span>
+                        </a>
+                        <a asp-page="/EmployeeUpdates/Index" class="nexora-nav-link @(IsUnder("/EmployeeUpdates") ? "active nexora-active" : "")">
+                            <span>تحديثات الموظف</span>
+                        </a>
+                        <a asp-page="/EmployeeProfiles/Index" class="nexora-nav-link @(IsUnder("/EmployeeProfiles") ? "active nexora-active" : "")">
+                            <span>عمليات الموارد البشرية</span>
+                        </a>
+                        <a asp-page="/Organization/Index" class="nexora-nav-link @(IsUnder("/Organization") ? "active nexora-active" : "")">
+                            <span>الهياكل التنظيمية</span>
+                        </a>
+                        <a asp-page="/EmployeeDocuments/Index" class="nexora-nav-link @(IsUnder("/EmployeeDocuments") ? "active nexora-active" : "")">
+                            <span>مركز الوثائق</span>
+                        </a>
+                        <a asp-page="/EmployeePermissions/Index" class="nexora-nav-link @(IsUnder("/EmployeePermissions") ? "active nexora-active" : "")">
+                            <span>بطاقات الموظفين</span>
+                        </a>
                     </div>
                 </details>
 
-                <details class="nexora-nav-group">
+                <details class="nexora-nav-group" @(attendanceOpen ? "open" : "")>
                     <summary>
                         <span class="nexora-nav-dot gold"></span>
                         <span class="nexora-nav-text">الحضور والانصراف</span>
                         <span class="nexora-chevron"></span>
                     </summary>
                     <div class="nexora-nav-group-links">
-                        <a asp-page="/AttendanceOperations/Index" class="nexora-nav-link"><span>مراقبة الحضور</span></a>
-                        <a asp-page="/AttendanceRecords/Index" class="nexora-nav-link"><span>سجلات الحضور</span></a>
-                        <a asp-page="/AttendanceImports/Index" class="nexora-nav-link"><span>استيراد البصمات</span></a>
-                        <a asp-page="/Shifts/Index" class="nexora-nav-link"><span>الشفتات</span></a>
-                        <a asp-page="/Devices/Index" class="nexora-nav-link"><span>الأجهزة</span></a>
+                        <a asp-page="/AttendanceOperations/Index" class="nexora-nav-link @(IsUnder("/AttendanceOperations") ? "active nexora-active" : "")">
+                            <span>مراقبة الحضور</span>
+                        </a>
+                        <a asp-page="/AttendanceRecords/Index" class="nexora-nav-link @(IsUnder("/AttendanceRecords") ? "active nexora-active" : "")">
+                            <span>سجلات الحضور</span>
+                        </a>
+                        <a asp-page="/AttendanceImports/Index" class="nexora-nav-link @(IsUnder("/AttendanceImports") ? "active nexora-active" : "")">
+                            <span>استيراد البصمات</span>
+                        </a>
+                        <a asp-page="/AttendanceProcessing/Index" class="nexora-nav-link @(IsUnder("/AttendanceProcessing") ? "active nexora-active" : "")">
+                            <span>معالجة الحضور</span>
+                        </a>
+                        <a asp-page="/AttendanceCorrections/Index" class="nexora-nav-link @(IsUnder("/AttendanceCorrections") ? "active nexora-active" : "")">
+                            <span>تصحيحات الحضور</span>
+                        </a>
+                        <a asp-page="/Shifts/Index" class="nexora-nav-link @(IsUnder("/Shifts") ? "active nexora-active" : "")">
+                            <span>الشفتات</span>
+                        </a>
+                        <a asp-page="/Devices/Index" class="nexora-nav-link @(IsUnder("/Devices") ? "active nexora-active" : "")">
+                            <span>الأجهزة</span>
+                        </a>
                     </div>
                 </details>
 
-                <details class="nexora-nav-group">
+                <details class="nexora-nav-group" @(payrollOpen ? "open" : "")>
                     <summary>
                         <span class="nexora-nav-dot gold"></span>
-                        <span class="nexora-nav-text">الطلبات والإجازات</span>
+                        <span class="nexora-nav-text">الرواتب</span>
                         <span class="nexora-chevron"></span>
                     </summary>
                     <div class="nexora-nav-group-links">
-                        <a asp-page="/LeaveRequests/Index" class="nexora-nav-link"><span>طلبات الإجازات</span></a>
-                        <a asp-page="/Approvals/Index" class="nexora-nav-link"><span>الموافقات</span></a>
-                        <a asp-page="/SelfServices/Index" class="nexora-nav-link"><span>الخدمات الذاتية</span></a>
+                        <a asp-page="/Payroll/TaxSocialSecurity" class="nexora-nav-link @(IsUnder("/Payroll") ? "active nexora-active" : "")">
+                            <span>الضرائب والضمان</span>
+                        </a>
+                        <a asp-page="/EmployeeUpdates/Index" asp-route-section="financial" class="nexora-nav-link">
+                            <span>تحديث المعلومات المالية</span>
+                        </a>
+                        <a asp-page="/EmployeeUpdates/Index" asp-route-section="payment" class="nexora-nav-link">
+                            <span>معلومات الدفع</span>
+                        </a>
                     </div>
                 </details>
-                <!-- NEXORA_PEOPLE_NAV_END -->
+                <!-- NEXORA_SAFE_MAIN_MENU_END -->
             </nav>
         </aside>
 
@@ -218,3 +252,4 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+

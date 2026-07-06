@@ -1,4 +1,3 @@
-using System.Data.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
@@ -15,41 +14,57 @@ public class IndexModel : PageModel
         _dbContext = dbContext;
     }
 
-    [BindProperty(SupportsGet = true)]
-    public string Tab { get; set; } = "home";
+    public string Tab { get; private set; } = "home";
+    public EmployeePortalEmployee Employee { get; private set; } = EmployeePortalEmployee.Empty;
+    public EmployeePortalCompensation Compensation { get; private set; } = new();
+    public List<EmployeePortalAnnouncement> Announcements { get; private set; } = new();
+    public List<EmployeePortalPoll> Polls { get; private set; } = new();
+    public List<EmployeePortalRequest> Requests { get; private set; } = new();
+    public List<EmployeePortalAttendance> Attendance { get; private set; } = new();
+    public List<EmployeePortalTeamMember> Team { get; private set; } = new();
+    public List<EmployeePortalFeedback> FeedbackItems { get; private set; } = new();
 
     [BindProperty]
     public FeedbackInput Feedback { get; set; } = new();
 
+    [BindProperty]
+    public PollVoteInput PollVote { get; set; } = new();
+
+    [BindProperty]
+    public SelfServiceRequestInput RequestInput { get; set; } = new();
+
     [TempData]
     public string? StatusMessage { get; set; }
 
-    public EmployeeRow Employee { get; private set; } = EmployeeRow.Empty;
-    public CompensationRow Compensation { get; private set; } = new();
-    public List<AnnouncementRow> Announcements { get; private set; } = new();
-    public List<FeedbackRow> FeedbackItems { get; private set; } = new();
-    public List<PollRow> Polls { get; private set; } = new();
-    public List<RequestRow> Requests { get; private set; } = new();
-    public List<AttendanceRow> Attendance { get; private set; } = new();
-    public List<TeamRow> Team { get; private set; } = new();
-
-    public string RoleDisplay => Request.Cookies["SA.Role"] ?? "Employee";
+    public bool IsDemoMode { get; private set; }
     public string Initials => GetInitials(Employee.FullName);
+    public int PendingRequestsCount => Requests.Count(x => !IsFinalStatus(x.Status));
+    public int OpenFeedbackCount => FeedbackItems.Count(x => x.Status.Equals("Open", StringComparison.OrdinalIgnoreCase) || x.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase));
+    public int CompletedAttendanceCount => Attendance.Count(x => x.CheckOut.HasValue);
+    public int MissingCheckoutCount => Attendance.Count(x => !x.CheckOut.HasValue);
+    public int OpenPollsCount => Polls.Count(x => !x.HasVoted);
+    public string LastAttendanceText => Attendance.FirstOrDefault()?.AttendanceDate is DateTime d ? DisplayDate(d) : "لا يوجد";
+    public string AttendanceTodayStatus => Attendance.FirstOrDefault()?.Status is string s && !string.IsNullOrWhiteSpace(s) ? s : "بانتظار السجل";
+    public string ServicePeriodText => BuildServicePeriod(Employee.HireDate);
+    public string CompensationNote => Compensation.HasData ? "بيانات التعويضات مدخلة في النظام." : "لا توجد بيانات تعويضات مدخلة لهذا الموظف حالياً.";
+    public string EmployeeInsight => MissingCheckoutCount > 0 ? "يوجد سجلات حضور تحتاج مراجعة" : OpenPollsCount > 0 ? "يوجد استبيان بانتظار مشاركتك" : "لا توجد إجراءات عاجلة حالياً";
 
-    public async Task<IActionResult> OnGetAsync()
+    public async Task<IActionResult> OnGetAsync(string? tab)
     {
+        Tab = NormalizeTab(tab);
         await LoadAsync();
         return Page();
     }
 
-    public async Task<IActionResult> OnPostFeedbackAsync()
+    public async Task<IActionResult> OnPostFeedbackAsync(string? returnTab)
     {
-        await EnsureTablesAsync();
+        await EnsurePortalTablesAsync();
+
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
         {
-            StatusMessage = "لا يمكن إرسال الطلب لأن الحساب غير مربوط بموظف.";
-            return RedirectToPage(new { tab = "feedback" });
+            StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";
+            return RedirectToPage(new { tab = returnTab ?? "feedback" });
         }
 
         var type = string.IsNullOrWhiteSpace(Feedback.Type) ? "اقتراح" : Feedback.Type.Trim();
@@ -60,10 +75,11 @@ public class IndexModel : PageModel
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(message))
         {
             StatusMessage = "يرجى إدخال العنوان والتفاصيل.";
-            return RedirectToPage(new { tab = "feedback" });
+            return RedirectToPage(new { tab = returnTab ?? "feedback" });
         }
 
-        await HrmsDatabase.ExecuteAsync(_dbContext,
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
             """
 INSERT INTO EmployeeFeedbackItems
 (EmployeeId, Type, Title, Message, Priority, Status, CreatedAt)
@@ -79,77 +95,163 @@ VALUES
                 HrmsDatabase.AddParameter(command, "@Priority", priority);
             });
 
-        StatusMessage = "تم إرسال الطلب وسيظهر لمسؤول النظام للرد عليه.";
-        return RedirectToPage(new { tab = "feedback" });
+        StatusMessage = "تم إرسال الطلب وسيظهر لمسؤول النظام أو صاحب الصلاحية للرد عليه.";
+        return RedirectToPage(new { tab = returnTab ?? "feedback" });
     }
 
-    public async Task<IActionResult> OnPostVotePollAsync(int pollId, int optionId)
+    public async Task<IActionResult> OnPostVotePollAsync(string? returnTab)
     {
-        await EnsureTablesAsync();
+        await EnsurePortalTablesAsync();
+
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
         {
-            StatusMessage = "لا يمكن التصويت لأن الحساب غير مربوط بموظف.";
-            return RedirectToPage(new { tab = "polls" });
+            StatusMessage = "لا يمكن التصويت لأن المستخدم غير مرتبط بموظف.";
+            return RedirectToPage(new { tab = returnTab ?? "pulse" });
         }
 
-        await HrmsDatabase.ExecuteAsync(_dbContext,
-            """
-IF EXISTS (SELECT 1 FROM EmployeePollVotes WHERE PollId = @PollId AND EmployeeId = @EmployeeId)
-BEGIN
-    UPDATE EmployeePollVotes
-    SET OptionId = @OptionId,
-        VotedAt = SYSUTCDATETIME()
-    WHERE PollId = @PollId AND EmployeeId = @EmployeeId;
-END
-ELSE
-BEGIN
-    INSERT INTO EmployeePollVotes (PollId, OptionId, EmployeeId, VotedAt)
-    VALUES (@PollId, @OptionId, @EmployeeId, SYSUTCDATETIME());
-END;
-""",
+        if (PollVote.PollId <= 0 || PollVote.OptionId <= 0)
+        {
+            StatusMessage = "يرجى اختيار إجابة قبل الإرسال.";
+            return RedirectToPage(new { tab = returnTab ?? "pulse" });
+        }
+
+        var exists = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            "SELECT COUNT(1) FROM EmployeePollVotes WHERE PollId = @PollId AND EmployeeId = @EmployeeId",
             command =>
             {
-                HrmsDatabase.AddParameter(command, "@PollId", pollId);
-                HrmsDatabase.AddParameter(command, "@OptionId", optionId);
+                HrmsDatabase.AddParameter(command, "@PollId", PollVote.PollId);
                 HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
             });
 
-        StatusMessage = "تم تسجيل التصويت بنجاح.";
-        return RedirectToPage(new { tab = "polls" });
+        if (exists > 0)
+        {
+            StatusMessage = "تم تسجيل تصويتك مسبقاً لهذا الاستطلاع.";
+            return RedirectToPage(new { tab = returnTab ?? "pulse" });
+        }
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+INSERT INTO EmployeePollVotes (PollId, OptionId, EmployeeId, VotedAt)
+VALUES (@PollId, @OptionId, @EmployeeId, SYSUTCDATETIME());
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@PollId", PollVote.PollId);
+                HrmsDatabase.AddParameter(command, "@OptionId", PollVote.OptionId);
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+            });
+
+        StatusMessage = "تم تسجيل تصويتك بنجاح. شكراً لمشاركتك.";
+        return RedirectToPage(new { tab = returnTab ?? "pulse" });
+    }
+
+
+    public async Task<IActionResult> OnPostCreateRequestAsync(string? returnTab)
+    {
+        await EnsurePortalTablesAsync();
+
+        var employeeId = await ResolveEmployeeIdAsync();
+        if (employeeId <= 0)
+        {
+            StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";
+            return RedirectToPage(new { tab = returnTab ?? "requests" });
+        }
+
+        var type = (RequestInput.RequestType ?? string.Empty).Trim();
+        var fromDate = RequestInput.FromDate;
+        var toDate = RequestInput.ToDate;
+        var reason = (RequestInput.Reason ?? string.Empty).Trim();
+
+        var allowedTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "إجازة",
+            "نسيان بصمة",
+            "خروج شخصي",
+            "خروج عمل",
+            "أوفر تايم"
+        };
+
+        if (string.IsNullOrWhiteSpace(type) || !allowedTypes.Contains(type))
+        {
+            StatusMessage = "يرجى اختيار نوع طلب صحيح.";
+            return RedirectToPage(new { tab = returnTab ?? "requests" });
+        }
+
+        if (!fromDate.HasValue)
+        {
+            StatusMessage = "يرجى إدخال تاريخ بداية الطلب.";
+            return RedirectToPage(new { tab = returnTab ?? "requests" });
+        }
+
+        if (toDate.HasValue && toDate.Value.Date < fromDate.Value.Date)
+        {
+            StatusMessage = "تاريخ النهاية لا يمكن أن يكون قبل تاريخ البداية.";
+            return RedirectToPage(new { tab = returnTab ?? "requests" });
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            reason = "تم الإرسال من بوابة الموظف";
+        }
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+INSERT INTO SelfServiceRequests
+(EmployeeId, RequestType, CreatedAt, FromDate, ToDate, Reason, Status)
+VALUES
+(@EmployeeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @Reason, 'Pending');
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                HrmsDatabase.AddParameter(command, "@RequestType", type);
+                HrmsDatabase.AddParameter(command, "@FromDate", fromDate.Value);
+                HrmsDatabase.AddParameter(command, "@ToDate", toDate);
+                HrmsDatabase.AddParameter(command, "@Reason", reason);
+            });
+
+        StatusMessage = $"تم إرسال طلب {type} بنجاح وهو الآن قيد المراجعة.";
+        return RedirectToPage(new { tab = returnTab ?? "requests" });
     }
 
     private async Task LoadAsync()
     {
-        await EnsureTablesAsync();
-        if (string.IsNullOrWhiteSpace(Tab)) Tab = "home";
+        await EnsurePortalTablesAsync();
 
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
         {
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees WHERE IsActive = 1 ORDER BY Id");
+            IsDemoMode = true;
+            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
         }
 
         if (employeeId <= 0)
         {
-            Employee = EmployeeRow.Empty;
+            Employee = EmployeePortalEmployee.Empty with { FullName = "موظف تجريبي", Position = "Employee" };
+            IsDemoMode = true;
             return;
         }
 
-        Employee = await LoadEmployeeAsync(employeeId) ?? EmployeeRow.Empty;
+        Employee = await LoadEmployeeAsync(employeeId) ?? EmployeePortalEmployee.Empty;
         Compensation = await LoadCompensationAsync(employeeId);
         Announcements = await LoadAnnouncementsAsync(Employee);
         Polls = await LoadPollsAsync(Employee);
-        FeedbackItems = await LoadFeedbackAsync(employeeId);
         Requests = await LoadRequestsAsync(employeeId);
         Attendance = await LoadAttendanceAsync(employeeId);
-        Team = await LoadTeamAsync(employeeId);
+        Team = await LoadTeamAsync(Employee);
+        FeedbackItems = await LoadFeedbackAsync(employeeId);
     }
 
-    private async Task EnsureTablesAsync()
+    private async Task EnsurePortalTablesAsync()
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        await HrmsDatabase.ExecuteAsync(_dbContext,
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
             """
 IF OBJECT_ID('EmployeePortalAnnouncements', 'U') IS NULL
 BEGIN
@@ -161,11 +263,17 @@ BEGIN
         Category nvarchar(80) NULL,
         TargetType nvarchar(50) NULL,
         TargetValue nvarchar(max) NULL,
+        TemplateKey nvarchar(80) NULL,
         IsPublished bit NOT NULL DEFAULT(1),
         PublishDate datetime2 NOT NULL DEFAULT(SYSUTCDATETIME()),
         CreatedBy nvarchar(150) NULL,
         CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
     );
+END;
+
+IF COL_LENGTH('EmployeePortalAnnouncements', 'TemplateKey') IS NULL
+BEGIN
+    ALTER TABLE EmployeePortalAnnouncements ADD TemplateKey nvarchar(80) NULL;
 END;
 
 IF OBJECT_ID('EmployeeFeedbackItems', 'U') IS NULL
@@ -248,7 +356,72 @@ BEGIN
     CREATE UNIQUE INDEX UX_EmployeePollVotes_PollEmployee ON EmployeePollVotes(PollId, EmployeeId);
 END;
 
+IF OBJECT_ID('SelfServiceRequests', 'U') IS NULL
+BEGIN
+    CREATE TABLE SelfServiceRequests
+    (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        EmployeeId int NOT NULL,
+        RequestType nvarchar(80) NOT NULL,
+        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME()),
+        FromDate datetime2 NULL,
+        ToDate datetime2 NULL,
+        Reason nvarchar(max) NULL,
+        Status nvarchar(50) NOT NULL DEFAULT('Pending')
+    );
+END;
+
+IF OBJECT_ID('AttendanceRecords', 'U') IS NULL
+BEGIN
+    CREATE TABLE AttendanceRecords
+    (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        EmployeeId int NOT NULL,
+        AttendanceDate datetime2 NOT NULL,
+        CheckIn datetime2 NULL,
+        CheckOut datetime2 NULL,
+        Status nvarchar(50) NULL,
+        Source nvarchar(50) NULL,
+        Notes nvarchar(max) NULL
+    );
+END;
 """);
+
+        var announcementsCount = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT COUNT(*) FROM EmployeePortalAnnouncements");
+        if (announcementsCount == 0)
+        {
+            await HrmsDatabase.ExecuteAsync(
+                _dbContext,
+                """
+INSERT INTO EmployeePortalAnnouncements (Title, Body, Category, TargetType, TargetValue, TemplateKey, IsPublished, PublishDate, CreatedBy)
+VALUES
+(N'مراجعة الحضور والانصراف', N'يرجى مراجعة سجلات الحضور قبل إغلاق النظام لضمان اعتماد البيانات بشكل صحيح.', N'تعليمات', N'All', NULL, N'custom', 1, SYSUTCDATETIME(), N'System'),
+(N'مرحباً بكم في بوابة الموظف الذكية', N'تم تفعيل صفحة الموظف لتكون مركز متابعة الإعلانات والاستبيانات والطلبات والشكاوي.', N'عام', N'All', NULL, N'welcome', 1, DATEADD(day, -1, SYSUTCDATETIME()), N'System');
+""");
+        }
+
+        var pollsCount = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT COUNT(*) FROM EmployeePolls");
+        if (pollsCount == 0)
+        {
+            await HrmsDatabase.ExecuteAsync(
+                _dbContext,
+                """
+DECLARE @PollId int;
+
+INSERT INTO EmployeePolls (Title, Question, Category, TargetType, TargetValue, IsPublished, PublishDate, CreatedBy)
+VALUES (N'استطلاع رضا الموظفين', N'ما مدى رضاك عن بيئة العمل في شركتنا؟', N'نبض الموظفين', N'All', NULL, 1, SYSUTCDATETIME(), N'System');
+
+SET @PollId = SCOPE_IDENTITY();
+
+INSERT INTO EmployeePollOptions (PollId, OptionText, DisplayOrder)
+VALUES
+(@PollId, N'غير راض إطلاقاً', 1),
+(@PollId, N'غير راض', 2),
+(@PollId, N'محايد', 3),
+(@PollId, N'راض', 4),
+(@PollId, N'راض جداً', 5);
+""");
+        }
     }
 
     private async Task<int> ResolveEmployeeIdAsync()
@@ -261,7 +434,8 @@ END;
         var username = Request.Cookies["SA.UserName"];
         if (!string.IsNullOrWhiteSpace(username))
         {
-            return await HrmsDatabase.ScalarAsync<int>(_dbContext,
+            return await HrmsDatabase.ScalarAsync<int>(
+                _dbContext,
                 "SELECT TOP 1 ISNULL(EmployeeId, 0) FROM AppLoginUsers WHERE Username = @Username AND IsActive = 1",
                 command => HrmsDatabase.AddParameter(command, "@Username", username));
         }
@@ -269,9 +443,10 @@ END;
         return 0;
     }
 
-    private async Task<EmployeeRow?> LoadEmployeeAsync(int employeeId)
+    private async Task<EmployeePortalEmployee?> LoadEmployeeAsync(int employeeId)
     {
-        var list = await HrmsDatabase.QueryAsync(_dbContext,
+        var list = await HrmsDatabase.QueryAsync(
+            _dbContext,
             """
 SELECT TOP 1
     e.Id,
@@ -284,19 +459,16 @@ SELECT TOP 1
     e.HireDate,
     e.BirthDate,
     e.IsActive,
-    e.DepartmentId,
-    ISNULL(d.BranchId, 0) AS BranchId,
     ISNULL(d.Name, '') AS DepartmentName,
     ISNULL(b.Name, '') AS BranchName,
-    ISNULL(m.FullName, '') AS ManagerName
+    '' AS ManagerName
 FROM Employees e
 LEFT JOIN Departments d ON e.DepartmentId = d.Id
 LEFT JOIN Branches b ON d.BranchId = b.Id
-LEFT JOIN Employees m ON m.Id = e.DirectManagerId
 WHERE e.Id = @EmployeeId;
 """,
             command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
-            reader => new EmployeeRow
+            reader => new EmployeePortalEmployee
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
                 EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
@@ -308,8 +480,6 @@ WHERE e.Id = @EmployeeId;
                 HireDate = HrmsDatabase.GetDateTime(reader, "HireDate"),
                 BirthDate = HrmsDatabase.GetDateTime(reader, "BirthDate"),
                 IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
-                DepartmentId = HrmsDatabase.GetInt(reader, "DepartmentId"),
-                BranchId = HrmsDatabase.GetInt(reader, "BranchId"),
                 DepartmentName = HrmsDatabase.GetString(reader, "DepartmentName"),
                 BranchName = HrmsDatabase.GetString(reader, "BranchName"),
                 ManagerName = HrmsDatabase.GetString(reader, "ManagerName")
@@ -318,9 +488,10 @@ WHERE e.Id = @EmployeeId;
         return list.FirstOrDefault();
     }
 
-    private async Task<CompensationRow> LoadCompensationAsync(int employeeId)
+    private async Task<EmployeePortalCompensation> LoadCompensationAsync(int employeeId)
     {
-        var list = await HrmsDatabase.QueryAsync(_dbContext,
+        var list = await HrmsDatabase.QueryAsync(
+            _dbContext,
             """
 SELECT TOP 1
     ISNULL(BasicSalary, 0) AS BasicSalary,
@@ -329,13 +500,13 @@ SELECT TOP 1
     ISNULL(PaymentMethod, '') AS PaymentMethod,
     ISNULL(BankName, '') AS BankName,
     ISNULL(BankAccount, '') AS BankAccount,
-    ISNULL(Currency, '') AS Currency
+    ISNULL(Currency, 'IQD') AS Currency
 FROM EmployeeCompensations
 WHERE EmployeeId = @EmployeeId
-ORDER BY Id DESC;
+ORDER BY UpdatedAt DESC, Id DESC;
 """,
             command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
-            reader => new CompensationRow
+            reader => new EmployeePortalCompensation
             {
                 BasicSalary = GetDecimal(reader, "BasicSalary"),
                 Allowances = GetDecimal(reader, "Allowances"),
@@ -345,32 +516,44 @@ ORDER BY Id DESC;
                 BankAccount = HrmsDatabase.GetString(reader, "BankAccount"),
                 Currency = HrmsDatabase.GetString(reader, "Currency")
             });
-        return list.FirstOrDefault() ?? new CompensationRow();
+
+        return list.FirstOrDefault() ?? new EmployeePortalCompensation();
     }
 
-    private async Task<List<AnnouncementRow>> LoadAnnouncementsAsync(EmployeeRow employee)
+    private async Task<List<EmployeePortalAnnouncement>> LoadAnnouncementsAsync(EmployeePortalEmployee employee)
     {
-        return await HrmsDatabase.QueryAsync(_dbContext,
+        return await HrmsDatabase.QueryAsync(
+            _dbContext,
             """
-SELECT TOP 20 Id, Title, ISNULL(Body, '') AS Body, ISNULL(Category, N'عام') AS Category, ISNULL(TargetType, 'All') AS TargetType, ISNULL(TargetValue, '') AS TargetValue, PublishDate
+SELECT TOP 20
+    Id,
+    Title,
+    ISNULL(Body, '') AS Body,
+    ISNULL(Category, N'عام') AS Category,
+    ISNULL(TargetType, N'All') AS TargetType,
+    ISNULL(TargetValue, '') AS TargetValue,
+    PublishDate
 FROM EmployeePortalAnnouncements
 WHERE IsPublished = 1
   AND
   (
-      ISNULL(TargetType, 'All') IN ('All', 'الجميع')
-      OR (TargetType = 'Employee' AND (',' + TargetValue + ',') LIKE '%,' + CAST(@EmployeeId AS nvarchar(20)) + ',%')
-      OR (TargetType = 'Department' AND TargetValue = @DepartmentId)
-      OR (TargetType = 'Branch' AND TargetValue = @BranchId)
+      TargetType IS NULL
+      OR TargetType = 'All'
+      OR (TargetType = 'Employee' AND (TargetValue = @EmployeeIdText OR TargetValue = @EmployeeNo OR TargetValue LIKE @EmployeeIdLike))
+      OR (TargetType = 'Department' AND TargetValue = @DepartmentName)
+      OR (TargetType = 'Branch' AND TargetValue = @BranchName)
   )
 ORDER BY PublishDate DESC, Id DESC;
 """,
             command =>
             {
-                HrmsDatabase.AddParameter(command, "@EmployeeId", employee.Id);
-                HrmsDatabase.AddParameter(command, "@DepartmentId", employee.DepartmentId.ToString());
-                HrmsDatabase.AddParameter(command, "@BranchId", employee.BranchId.ToString());
+                HrmsDatabase.AddParameter(command, "@EmployeeIdText", employee.Id.ToString());
+                HrmsDatabase.AddParameter(command, "@EmployeeNo", employee.EmployeeNo);
+                HrmsDatabase.AddParameter(command, "@EmployeeIdLike", $"%{employee.Id}%");
+                HrmsDatabase.AddParameter(command, "@DepartmentName", employee.DepartmentName);
+                HrmsDatabase.AddParameter(command, "@BranchName", employee.BranchName);
             },
-            reader => new AnnouncementRow
+            reader => new EmployeePortalAnnouncement
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
                 Title = HrmsDatabase.GetString(reader, "Title"),
@@ -382,142 +565,200 @@ ORDER BY PublishDate DESC, Id DESC;
             });
     }
 
-    private async Task<List<PollRow>> LoadPollsAsync(EmployeeRow employee)
+    private async Task<List<EmployeePortalPoll>> LoadPollsAsync(EmployeePortalEmployee employee)
     {
-        var polls = await HrmsDatabase.QueryAsync(_dbContext,
+        var polls = await HrmsDatabase.QueryAsync(
+            _dbContext,
             """
-SELECT TOP 20
+SELECT TOP 10
     p.Id,
     p.Title,
     ISNULL(p.Question, '') AS Question,
     ISNULL(p.Category, N'استطلاع') AS Category,
+    ISNULL(p.TargetType, N'All') AS TargetType,
+    ISNULL(p.TargetValue, '') AS TargetValue,
     p.PublishDate,
-    (SELECT TOP 1 OptionId FROM EmployeePollVotes v WHERE v.PollId = p.Id AND v.EmployeeId = @EmployeeId) AS SelectedOptionId
+    CASE WHEN EXISTS (SELECT 1 FROM EmployeePollVotes v WHERE v.PollId = p.Id AND v.EmployeeId = @EmployeeId) THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS HasVoted
 FROM EmployeePolls p
 WHERE p.IsPublished = 1
   AND
   (
-      ISNULL(p.TargetType, 'All') IN ('All', 'الجميع')
-      OR (p.TargetType = 'Employee' AND (',' + p.TargetValue + ',') LIKE '%,' + CAST(@EmployeeId AS nvarchar(20)) + ',%')
-      OR (p.TargetType = 'Department' AND p.TargetValue = @DepartmentId)
-      OR (p.TargetType = 'Branch' AND p.TargetValue = @BranchId)
+      p.TargetType IS NULL
+      OR p.TargetType = 'All'
+      OR (p.TargetType = 'Employee' AND (p.TargetValue = @EmployeeIdText OR p.TargetValue = @EmployeeNo OR p.TargetValue LIKE @EmployeeIdLike))
+      OR (p.TargetType = 'Department' AND p.TargetValue = @DepartmentName)
+      OR (p.TargetType = 'Branch' AND p.TargetValue = @BranchName)
   )
 ORDER BY p.PublishDate DESC, p.Id DESC;
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@EmployeeId", employee.Id);
-                HrmsDatabase.AddParameter(command, "@DepartmentId", employee.DepartmentId.ToString());
-                HrmsDatabase.AddParameter(command, "@BranchId", employee.BranchId.ToString());
+                HrmsDatabase.AddParameter(command, "@EmployeeIdText", employee.Id.ToString());
+                HrmsDatabase.AddParameter(command, "@EmployeeNo", employee.EmployeeNo);
+                HrmsDatabase.AddParameter(command, "@EmployeeIdLike", $"%{employee.Id}%");
+                HrmsDatabase.AddParameter(command, "@DepartmentName", employee.DepartmentName);
+                HrmsDatabase.AddParameter(command, "@BranchName", employee.BranchName);
             },
-            reader => new PollRow
+            reader => new EmployeePortalPoll
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
                 Title = HrmsDatabase.GetString(reader, "Title"),
                 Question = HrmsDatabase.GetString(reader, "Question"),
                 Category = HrmsDatabase.GetString(reader, "Category"),
+                TargetType = HrmsDatabase.GetString(reader, "TargetType"),
+                TargetValue = HrmsDatabase.GetString(reader, "TargetValue"),
                 PublishDate = HrmsDatabase.GetDateTime(reader, "PublishDate"),
-                SelectedOptionId = HrmsDatabase.GetInt(reader, "SelectedOptionId")
+                HasVoted = HrmsDatabase.GetBool(reader, "HasVoted")
             });
 
         foreach (var poll in polls)
         {
-            poll.Options = await HrmsDatabase.QueryAsync(_dbContext,
-                """
-SELECT o.Id, o.OptionText, o.DisplayOrder,
-       (SELECT COUNT(1) FROM EmployeePollVotes v WHERE v.OptionId = o.Id) AS VotesCount
-FROM EmployeePollOptions o
-WHERE o.PollId = @PollId
-ORDER BY o.DisplayOrder, o.Id;
-""",
-                command => HrmsDatabase.AddParameter(command, "@PollId", poll.Id),
-                reader => new PollOptionRow
-                {
-                    Id = HrmsDatabase.GetInt(reader, "Id"),
-                    OptionText = HrmsDatabase.GetString(reader, "OptionText"),
-                    DisplayOrder = HrmsDatabase.GetInt(reader, "DisplayOrder"),
-                    VotesCount = HrmsDatabase.GetInt(reader, "VotesCount")
-                });
+            poll.Options = await LoadPollOptionsAsync(poll.Id);
         }
 
         return polls;
     }
 
-    private async Task<List<FeedbackRow>> LoadFeedbackAsync(int employeeId) => await HrmsDatabase.QueryAsync(_dbContext,
-        """
-SELECT TOP 20 Id, Type, Title, ISNULL(Message, '') AS Message, ISNULL(Priority, '') AS Priority, Status, ISNULL(AdminReply, '') AS AdminReply, ISNULL(RepliedBy, '') AS RepliedBy, RepliedAt, CreatedAt
-FROM EmployeeFeedbackItems
-WHERE EmployeeId = @EmployeeId
-ORDER BY CreatedAt DESC, Id DESC;
+    private async Task<List<EmployeePortalPollOption>> LoadPollOptionsAsync(int pollId)
+    {
+        return await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT Id, OptionText, DisplayOrder
+FROM EmployeePollOptions
+WHERE PollId = @PollId
+ORDER BY DisplayOrder, Id;
 """,
-        command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
-        reader => new FeedbackRow
-        {
-            Id = HrmsDatabase.GetInt(reader, "Id"),
-            Type = HrmsDatabase.GetString(reader, "Type"),
-            Title = HrmsDatabase.GetString(reader, "Title"),
-            Message = HrmsDatabase.GetString(reader, "Message"),
-            Priority = HrmsDatabase.GetString(reader, "Priority"),
-            Status = HrmsDatabase.GetString(reader, "Status"),
-            AdminReply = HrmsDatabase.GetString(reader, "AdminReply"),
-            RepliedBy = HrmsDatabase.GetString(reader, "RepliedBy"),
-            RepliedAt = HrmsDatabase.GetDateTime(reader, "RepliedAt"),
-            CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt")
-        });
+            command => HrmsDatabase.AddParameter(command, "@PollId", pollId),
+            reader => new EmployeePortalPollOption
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                OptionText = HrmsDatabase.GetString(reader, "OptionText"),
+                DisplayOrder = HrmsDatabase.GetInt(reader, "DisplayOrder")
+            });
+    }
 
-    private async Task<List<RequestRow>> LoadRequestsAsync(int employeeId) => await HrmsDatabase.QueryAsync(_dbContext,
-        """
-SELECT TOP 15 Id, RequestType, Status, CreatedAt, FromDate, ToDate, ISNULL(Reason, '') AS Reason
+    private async Task<List<EmployeePortalRequest>> LoadRequestsAsync(int employeeId)
+    {
+        return await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT TOP 15
+    Id,
+    RequestType,
+    CreatedAt,
+    FromDate,
+    ToDate,
+    ISNULL(Reason, '') AS Reason,
+    Status
 FROM SelfServiceRequests
 WHERE EmployeeId = @EmployeeId
 ORDER BY CreatedAt DESC, Id DESC;
 """,
-        command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
-        reader => new RequestRow
-        {
-            Id = HrmsDatabase.GetInt(reader, "Id"),
-            RequestType = HrmsDatabase.GetString(reader, "RequestType"),
-            Status = HrmsDatabase.GetString(reader, "Status"),
-            CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt"),
-            FromDate = HrmsDatabase.GetDateTime(reader, "FromDate"),
-            ToDate = HrmsDatabase.GetDateTime(reader, "ToDate"),
-            Reason = HrmsDatabase.GetString(reader, "Reason")
-        });
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => new EmployeePortalRequest
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                RequestType = HrmsDatabase.GetString(reader, "RequestType"),
+                CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt"),
+                FromDate = HrmsDatabase.GetDateTime(reader, "FromDate"),
+                ToDate = HrmsDatabase.GetDateTime(reader, "ToDate"),
+                Reason = HrmsDatabase.GetString(reader, "Reason"),
+                Status = HrmsDatabase.GetString(reader, "Status")
+            });
+    }
 
-    private async Task<List<AttendanceRow>> LoadAttendanceAsync(int employeeId) => await HrmsDatabase.QueryAsync(_dbContext,
-        """
-SELECT TOP 20 AttendanceDate, CheckIn, CheckOut, CAST(Status AS nvarchar(50)) AS Status, ISNULL(Notes, '') AS Notes
+    private async Task<List<EmployeePortalAttendance>> LoadAttendanceAsync(int employeeId)
+    {
+        return await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT TOP 20
+    AttendanceDate,
+    CheckIn,
+    CheckOut,
+    CAST(ISNULL(Status, '') AS nvarchar(50)) AS Status,
+    CAST(ISNULL(Source, '') AS nvarchar(50)) AS Source,
+    ISNULL(Notes, '') AS Notes
 FROM AttendanceRecords
 WHERE EmployeeId = @EmployeeId
 ORDER BY AttendanceDate DESC, Id DESC;
 """,
-        command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
-        reader => new AttendanceRow
-        {
-            AttendanceDate = HrmsDatabase.GetDateTime(reader, "AttendanceDate"),
-            CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn"),
-            CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut"),
-            Status = HrmsDatabase.GetString(reader, "Status"),
-            Notes = HrmsDatabase.GetString(reader, "Notes")
-        });
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => new EmployeePortalAttendance
+            {
+                AttendanceDate = HrmsDatabase.GetDateTime(reader, "AttendanceDate"),
+                CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn"),
+                CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut"),
+                Status = HrmsDatabase.GetString(reader, "Status"),
+                Source = HrmsDatabase.GetString(reader, "Source"),
+                Notes = HrmsDatabase.GetString(reader, "Notes")
+            });
+    }
 
-    private async Task<List<TeamRow>> LoadTeamAsync(int employeeId) => await HrmsDatabase.QueryAsync(_dbContext,
-        """
-SELECT TOP 8 Id, EmployeeNo, FullName, ISNULL(Position, '') AS Position
-FROM Employees
-WHERE Id <> @EmployeeId AND IsActive = 1 AND DepartmentId = (SELECT DepartmentId FROM Employees WHERE Id = @EmployeeId)
-ORDER BY FullName;
+    private async Task<List<EmployeePortalTeamMember>> LoadTeamAsync(EmployeePortalEmployee employee)
+    {
+        return await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT TOP 8
+    e.Id,
+    e.EmployeeNo,
+    e.FullName,
+    ISNULL(e.Position, '') AS Position
+FROM Employees e
+WHERE e.Id <> @EmployeeId
+  AND e.IsActive = 1
+ORDER BY e.FullName;
 """,
-        command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
-        reader => new TeamRow
-        {
-            Id = HrmsDatabase.GetInt(reader, "Id"),
-            EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
-            FullName = HrmsDatabase.GetString(reader, "FullName"),
-            Position = HrmsDatabase.GetString(reader, "Position")
-        });
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employee.Id),
+            reader => new EmployeePortalTeamMember
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                FullName = HrmsDatabase.GetString(reader, "FullName"),
+                Position = HrmsDatabase.GetString(reader, "Position")
+            });
+    }
 
-    private static decimal GetDecimal(DbDataReader reader, string name)
+    private async Task<List<EmployeePortalFeedback>> LoadFeedbackAsync(int employeeId)
+    {
+        return await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT TOP 20
+    Id,
+    Type,
+    Title,
+    ISNULL(Message, '') AS Message,
+    ISNULL(Priority, '') AS Priority,
+    Status,
+    ISNULL(AdminReply, '') AS AdminReply,
+    ISNULL(RepliedBy, '') AS RepliedBy,
+    RepliedAt,
+    CreatedAt
+FROM EmployeeFeedbackItems
+WHERE EmployeeId = @EmployeeId
+ORDER BY CreatedAt DESC, Id DESC;
+""",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => new EmployeePortalFeedback
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                Type = HrmsDatabase.GetString(reader, "Type"),
+                Title = HrmsDatabase.GetString(reader, "Title"),
+                Message = HrmsDatabase.GetString(reader, "Message"),
+                Priority = HrmsDatabase.GetString(reader, "Priority"),
+                Status = HrmsDatabase.GetString(reader, "Status"),
+                AdminReply = HrmsDatabase.GetString(reader, "AdminReply"),
+                RepliedBy = HrmsDatabase.GetString(reader, "RepliedBy"),
+                RepliedAt = HrmsDatabase.GetDateTime(reader, "RepliedAt"),
+                CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt")
+            });
+    }
+
+    private static decimal GetDecimal(System.Data.Common.DbDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? 0 : Convert.ToDecimal(reader.GetValue(ordinal));
@@ -525,19 +766,103 @@ ORDER BY FullName;
 
     public string DisplayDate(DateTime? date) => date.HasValue ? date.Value.ToString("dd/MM/yyyy") : "-";
     public string DisplayTime(DateTime? date) => date.HasValue ? date.Value.ToString("HH:mm") : "-";
+    public string DisplayValue(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
     public string DisplayMoney(decimal value) => value <= 0 ? "غير مدخل" : $"IQD {value:N0}";
-    public string FeedbackStatusText(string status) => status.Equals("Open", StringComparison.OrdinalIgnoreCase) ? "مفتوحة" : status.Equals("Pending", StringComparison.OrdinalIgnoreCase) ? "قيد المعالجة" : status.Equals("Answered", StringComparison.OrdinalIgnoreCase) ? "تم الرد" : status.Equals("Closed", StringComparison.OrdinalIgnoreCase) ? "مغلقة" : status;
-    public string StatusClass(string status) => status.Equals("Open", StringComparison.OrdinalIgnoreCase) ? "pending" : status.Equals("Answered", StringComparison.OrdinalIgnoreCase) ? "live" : status.Equals("Closed", StringComparison.OrdinalIgnoreCase) ? "danger" : string.Empty;
+
     public string GetInitials(string? fullName)
     {
         if (string.IsNullOrWhiteSpace(fullName)) return "م";
         var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length == 1 ? parts[0][0].ToString() : $"{parts[0][0]}{parts[^1][0]}";
+        if (parts.Length == 1) return parts[0][0].ToString();
+        return $"{parts[0][0]}{parts[^1][0]}";
     }
 
-    public record EmployeeRow
+    public string StatusText(string status)
     {
-        public static EmployeeRow Empty => new() { FullName = "موظف", EmployeeNo = "-", Position = "Employee", DepartmentName = "-", BranchName = "-" };
+        if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase)) return "موافق عليه";
+        if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase)) return "مرفوض";
+        if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase)) return "قيد الموافقة";
+        if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)) return "ملغي";
+        return string.IsNullOrWhiteSpace(status) ? "-" : status;
+    }
+
+    public string FeedbackStatusText(string status)
+    {
+        if (status.Equals("Open", StringComparison.OrdinalIgnoreCase)) return "مفتوحة";
+        if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase)) return "قيد المعالجة";
+        if (status.Equals("Answered", StringComparison.OrdinalIgnoreCase)) return "تم الرد";
+        if (status.Equals("Closed", StringComparison.OrdinalIgnoreCase)) return "مغلقة";
+        return string.IsNullOrWhiteSpace(status) ? "-" : status;
+    }
+
+    public string StatusClass(string status)
+    {
+        if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase) || status.Equals("Answered", StringComparison.OrdinalIgnoreCase)) return "live";
+        if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase) || status.Equals("Open", StringComparison.OrdinalIgnoreCase)) return "pending";
+        if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) || status.Equals("Closed", StringComparison.OrdinalIgnoreCase) || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)) return "danger";
+        return string.Empty;
+    }
+
+    public string RequestIcon(string requestType)
+    {
+        if (requestType.Contains("إجازة", StringComparison.OrdinalIgnoreCase)) return "🌴";
+        if (requestType.Contains("بصمة", StringComparison.OrdinalIgnoreCase)) return "☝️";
+        if (requestType.Contains("شخصي", StringComparison.OrdinalIgnoreCase)) return "🚶";
+        if (requestType.Contains("عمل", StringComparison.OrdinalIgnoreCase)) return "💼";
+        if (requestType.Contains("أوفر", StringComparison.OrdinalIgnoreCase)) return "⏱️";
+        return "📝";
+    }
+
+    public string AnnouncementTheme(string category)
+    {
+        if (category.Contains("تهنئة", StringComparison.OrdinalIgnoreCase)) return "theme-congrats";
+        if (category.Contains("تعزية", StringComparison.OrdinalIgnoreCase)) return "theme-condolence";
+        if (category.Contains("تعليمات", StringComparison.OrdinalIgnoreCase)) return "theme-policy";
+        if (category.Contains("عطلة", StringComparison.OrdinalIgnoreCase)) return "theme-holiday";
+        return "theme-general";
+    }
+
+    private bool IsFinalStatus(string status) =>
+        status.Equals("Approved", StringComparison.OrdinalIgnoreCase) ||
+        status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) ||
+        status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase);
+
+    private string BuildServicePeriod(DateTime? hireDate)
+    {
+        if (!hireDate.HasValue) return "-";
+        var start = hireDate.Value.Date;
+        var today = DateTime.Today;
+        if (start > today) return "-";
+        var months = ((today.Year - start.Year) * 12) + today.Month - start.Month;
+        if (today.Day < start.Day) months--;
+        var years = Math.Max(0, months / 12);
+        var restMonths = Math.Max(0, months % 12);
+        if (years == 0 && restMonths == 0) return "أقل من شهر";
+        if (years == 0) return $"{restMonths} شهر";
+        if (restMonths == 0) return $"{years} سنة";
+        return $"{years} سنة و {restMonths} شهر";
+    }
+
+    private string NormalizeTab(string? tab)
+    {
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "home", "profile", "attendance", "compensation", "requests", "pulse", "feedback", "performance"
+        };
+        return !string.IsNullOrWhiteSpace(tab) && allowed.Contains(tab) ? tab : "home";
+    }
+
+    public record EmployeePortalEmployee
+    {
+        public static EmployeePortalEmployee Empty => new()
+        {
+            FullName = "موظف",
+            EmployeeNo = "-",
+            Position = "Employee",
+            DepartmentName = "-",
+            BranchName = "-"
+        };
+
         public int Id { get; init; }
         public string EmployeeNo { get; init; } = string.Empty;
         public string FullName { get; init; } = string.Empty;
@@ -551,17 +876,114 @@ ORDER BY FullName;
         public string DepartmentName { get; init; } = string.Empty;
         public string BranchName { get; init; } = string.Empty;
         public string ManagerName { get; init; } = string.Empty;
-        public int DepartmentId { get; init; }
-        public int BranchId { get; init; }
     }
 
-    public class CompensationRow { public decimal BasicSalary { get; set; } public decimal Allowances { get; set; } public decimal Deductions { get; set; } public string PaymentMethod { get; set; } = string.Empty; public string BankName { get; set; } = string.Empty; public string BankAccount { get; set; } = string.Empty; public string Currency { get; set; } = string.Empty; }
-    public class AnnouncementRow { public int Id { get; set; } public string Title { get; set; } = string.Empty; public string Body { get; set; } = string.Empty; public string Category { get; set; } = string.Empty; public string TargetType { get; set; } = string.Empty; public string TargetValue { get; set; } = string.Empty; public DateTime? PublishDate { get; set; } }
-    public class FeedbackRow { public int Id { get; set; } public string Type { get; set; } = string.Empty; public string Title { get; set; } = string.Empty; public string Message { get; set; } = string.Empty; public string Priority { get; set; } = string.Empty; public string Status { get; set; } = string.Empty; public string AdminReply { get; set; } = string.Empty; public string RepliedBy { get; set; } = string.Empty; public DateTime? RepliedAt { get; set; } public DateTime? CreatedAt { get; set; } }
-    public class PollRow { public int Id { get; set; } public string Title { get; set; } = string.Empty; public string Question { get; set; } = string.Empty; public string Category { get; set; } = string.Empty; public DateTime? PublishDate { get; set; } public int SelectedOptionId { get; set; } public List<PollOptionRow> Options { get; set; } = new(); }
-    public class PollOptionRow { public int Id { get; set; } public string OptionText { get; set; } = string.Empty; public int DisplayOrder { get; set; } public int VotesCount { get; set; } }
-    public class RequestRow { public int Id { get; set; } public string RequestType { get; set; } = string.Empty; public string Status { get; set; } = string.Empty; public DateTime? CreatedAt { get; set; } public DateTime? FromDate { get; set; } public DateTime? ToDate { get; set; } public string Reason { get; set; } = string.Empty; }
-    public class AttendanceRow { public DateTime? AttendanceDate { get; set; } public DateTime? CheckIn { get; set; } public DateTime? CheckOut { get; set; } public string Status { get; set; } = string.Empty; public string Notes { get; set; } = string.Empty; }
-    public class TeamRow { public int Id { get; set; } public string EmployeeNo { get; set; } = string.Empty; public string FullName { get; set; } = string.Empty; public string Position { get; set; } = string.Empty; }
-    public class FeedbackInput { public string Type { get; set; } = "اقتراح"; public string Priority { get; set; } = "متوسط"; public string Title { get; set; } = string.Empty; public string Message { get; set; } = string.Empty; }
+    public class EmployeePortalCompensation
+    {
+        public decimal BasicSalary { get; set; }
+        public decimal Allowances { get; set; }
+        public decimal Deductions { get; set; }
+        public string PaymentMethod { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
+        public string BankAccount { get; set; } = string.Empty;
+        public string Currency { get; set; } = string.Empty;
+        public decimal NetAmount => BasicSalary + Allowances - Deductions;
+        public bool HasData => BasicSalary > 0 || Allowances > 0 || Deductions > 0 || !string.IsNullOrWhiteSpace(PaymentMethod);
+    }
+
+    public class EmployeePortalAnnouncement
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Body { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string TargetType { get; set; } = string.Empty;
+        public string TargetValue { get; set; } = string.Empty;
+        public DateTime? PublishDate { get; set; }
+    }
+
+    public class EmployeePortalPoll
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Question { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string TargetType { get; set; } = string.Empty;
+        public string TargetValue { get; set; } = string.Empty;
+        public DateTime? PublishDate { get; set; }
+        public bool HasVoted { get; set; }
+        public List<EmployeePortalPollOption> Options { get; set; } = new();
+    }
+
+    public class EmployeePortalPollOption
+    {
+        public int Id { get; set; }
+        public string OptionText { get; set; } = string.Empty;
+        public int DisplayOrder { get; set; }
+    }
+
+    public class EmployeePortalRequest
+    {
+        public int Id { get; set; }
+        public string RequestType { get; set; } = string.Empty;
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public string Reason { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+    }
+
+    public class EmployeePortalAttendance
+    {
+        public DateTime? AttendanceDate { get; set; }
+        public DateTime? CheckIn { get; set; }
+        public DateTime? CheckOut { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string Source { get; set; } = string.Empty;
+        public string Notes { get; set; } = string.Empty;
+    }
+
+    public class EmployeePortalTeamMember
+    {
+        public int Id { get; set; }
+        public string EmployeeNo { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string Position { get; set; } = string.Empty;
+    }
+
+    public class EmployeePortalFeedback
+    {
+        public int Id { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public string Priority { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string AdminReply { get; set; } = string.Empty;
+        public string RepliedBy { get; set; } = string.Empty;
+        public DateTime? RepliedAt { get; set; }
+        public DateTime? CreatedAt { get; set; }
+    }
+
+    public class FeedbackInput
+    {
+        public string Type { get; set; } = "اقتراح";
+        public string Priority { get; set; } = "متوسط";
+        public string Title { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+    }
+
+    public class SelfServiceRequestInput
+    {
+        public string RequestType { get; set; } = "إجازة";
+        public DateTime? FromDate { get; set; } = DateTime.Today;
+        public DateTime? ToDate { get; set; } = DateTime.Today;
+        public string Reason { get; set; } = string.Empty;
+    }
+
+    public class PollVoteInput
+    {
+        public int PollId { get; set; }
+        public int OptionId { get; set; }
+    }
 }

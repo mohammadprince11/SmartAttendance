@@ -218,3 +218,170 @@
 
     render('holiday', true);
 })();
+
+
+(function(){
+    const root = document.getElementById('nxEmployeePulseStudio');
+    if(!root) return;
+
+    const templates = {
+        satisfaction: {
+            title: 'استطلاع رضا الموظفين - مايو 2026',
+            question: 'ما مدى رضاك عن بيئة العمل في شركتنا؟',
+            options: ['غير راض إطلاقاً','غير راض','محايد','راض','راض جداً'],
+            category: 'استطلاع',
+            label: 'رضا الموظفين',
+            privacy: 'anonymous'
+        },
+        workplace: {
+            title: 'تقييم بيئة العمل',
+            question: 'كيف تقيم بيئة العمل من حيث الراحة والتنظيم والتعاون؟',
+            options: ['ضعيفة','مقبولة','جيدة','جيدة جداً','ممتازة'],
+            category: 'نبض الموظفين',
+            label: 'بيئة العمل',
+            privacy: 'anonymous'
+        },
+        supervisor: {
+            title: 'تقييم المشرف المباشر',
+            question: 'كيف تقيم تواصل ودعم المشرف المباشر؟',
+            options: ['ضعيف','مقبول','جيد','جيد جداً','ممتاز'],
+            category: 'استطلاع',
+            label: 'تقييم المشرف',
+            privacy: 'anonymous'
+        },
+        transport: {
+            title: 'تقييم النقل والسكن',
+            question: 'ما مدى رضاك عن خدمات النقل والسكن؟',
+            options: ['غير راض','أحتاج متابعة','محايد','راض','راض جداً'],
+            category: 'استطلاع',
+            label: 'النقل والسكن',
+            privacy: 'anonymous'
+        },
+        meals: {
+            title: 'تقييم الوجبات',
+            question: 'كيف تقيم جودة الوجبات والخدمات الغذائية؟',
+            options: ['ضعيفة','مقبولة','جيدة','جيدة جداً','ممتازة'],
+            category: 'استطلاع',
+            label: 'الوجبات',
+            privacy: 'anonymous'
+        },
+        employee_month: {
+            title: 'انتخاب موظف الشهر',
+            question: 'من هو الموظف الذي ترشحه كموظف الشهر؟',
+            options: ['الموظف الأول','الموظف الثاني','الموظف الثالث','الموظف الرابع'],
+            category: 'انتخاب',
+            label: 'موظف الشهر',
+            privacy: 'visible'
+        },
+        ideas: {
+            title: 'اقتراحات تحسين',
+            question: 'ما أكثر مجال يحتاج إلى تحسين من وجهة نظرك؟',
+            options: ['جدول الدوام','التواصل الداخلي','النقل','الوجبات','فرص التطوير'],
+            category: 'تصويت داخلي',
+            label: 'اقتراحات تحسين',
+            privacy: 'anonymous'
+        },
+        custom: {
+            title: '',
+            question: '',
+            options: ['الخيار الأول','الخيار الثاني'],
+            category: 'استطلاع',
+            label: 'تصميم مخصص',
+            privacy: 'anonymous'
+        }
+    };
+
+    const form = document.getElementById('nxPulseForm');
+    const q = document.getElementById('nxPulseQuestion');
+    const desc = document.getElementById('nxPulseDescription');
+    const faces = document.getElementById('nxPulseFaces');
+    const step = document.getElementById('nxPulseStep');
+
+    function field(name){
+        return form ? form.querySelector(`[data-pulse-field="${name}"]`) : null;
+    }
+
+    function setValue(name, value){
+        const el = field(name);
+        if(el) el.value = value || '';
+    }
+
+    function value(name){
+        const el = field(name);
+        return el ? (el.value || '').trim() : '';
+    }
+
+    function currentOptions(){
+        return (value('options') || '').split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+    }
+
+    function iconFor(i, total){
+        if(total === 5){
+            return ['😡','☹️','😐','🙂','😀'][i] || '•';
+        }
+        return ['①','②','③','④','⑤','⑥','⑦','⑧'][i] || '•';
+    }
+
+    function renderPreview(){
+        const question = value('question') || 'اكتب سؤال الاستطلاع';
+        const options = currentOptions();
+        const privacy = value('privacy');
+
+        q.textContent = question;
+        desc.textContent = privacy === 'visible'
+            ? 'هذا الاستطلاع ظاهر للإدارة بالأسماء'
+            : 'هذا الاستطلاع سري ولا تظهر أسماء في النتائج';
+
+        faces.innerHTML = '';
+        options.slice(0, 5).forEach((opt, i) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.innerHTML = `<strong>${iconFor(i, options.length)}</strong><small>${opt}</small>`;
+            faces.appendChild(btn);
+        });
+
+        step.textContent = 'سؤال 1/1';
+    }
+
+    function applyTemplate(key){
+        const t = templates[key] || templates.satisfaction;
+        root.querySelectorAll('.nx-pulse-template').forEach(card => {
+            card.classList.toggle('active', card.dataset.pulseTemplate === key);
+            const input = card.querySelector('input');
+            if(input) input.checked = card.dataset.pulseTemplate === key;
+        });
+
+        setValue('title', t.title);
+        setValue('question', t.question);
+        setValue('options', t.options.join('\n'));
+        setValue('category', t.category);
+        setValue('label', t.label);
+        setValue('privacy', t.privacy);
+        renderPreview();
+    }
+
+    root.querySelectorAll('.nx-pulse-template').forEach(card => {
+        card.addEventListener('click', () => applyTemplate(card.dataset.pulseTemplate));
+    });
+
+    root.querySelectorAll('[data-pulse-field]').forEach(el => {
+        el.addEventListener('input', renderPreview);
+        el.addEventListener('change', renderPreview);
+    });
+
+    const customMode = form ? form.querySelector('input[name="PulseMode"][value="custom"]') : null;
+    const templateMode = form ? form.querySelector('input[name="PulseMode"][value="template"]') : null;
+
+    if(customMode){
+        customMode.addEventListener('change', () => {
+            if(customMode.checked) applyTemplate('custom');
+        });
+    }
+    if(templateMode){
+        templateMode.addEventListener('change', () => {
+            if(templateMode.checked) applyTemplate('satisfaction');
+        });
+    }
+
+    applyTemplate('satisfaction');
+})();
