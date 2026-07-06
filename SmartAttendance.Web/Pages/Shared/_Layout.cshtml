@@ -134,7 +134,9 @@
                         <a asp-page="/Employees/Index" class="nexora-nav-link @ActiveClass("/Employees/Index")">
                             <span>قائمة الموظفين</span>
                         </a>
-                        <a asp-page="/EmployeeUpdates/Index" class="nexora-nav-link @(IsUnder("/EmployeeUpdates") ? "active nexora-active" : "")">
+                        <a asp-page="/Violations/Index" class="nexora-nav-link @(IsUnder("/Violations") ? "active nexora-active" : "")">
+                            <span>حالات المخالفات</span>
+                        </a><a asp-page="/EmployeeUpdates/Index" class="nexora-nav-link @(IsUnder("/EmployeeUpdates") ? "active nexora-active" : "")">
                             <span>تحديثات الموظف</span>
                         </a>
                         <a asp-page="/DisciplinaryRules/Index" class="nexora-nav-link @(IsUnder("/DisciplinaryRules") ? "active nexora-active" : "")">
@@ -261,6 +263,8 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+
+
 
 
 

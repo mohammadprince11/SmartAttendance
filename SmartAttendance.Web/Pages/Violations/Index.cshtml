@@ -1,0 +1,261 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Violations.IndexModel
+
+@{
+    ViewData["Title"] = "حالات المخالفات";
+
+    var rows = Model.Items;
+    var pendingCount = rows.Count(x => x.ActionStatus == "بانتظار الإجراء");
+    var approvedCount = rows.Count(x => x.Status == "موافق عليه");
+    var directCount = rows.Count(x => x.Source == "مباشر");
+    var completedCount = rows.Count(x => x.Status == "تم اتخاذ الإجراء");
+}
+
+<link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-violations-phase1-v14.css" asp-append-version="true" />
+<script src="~/js/nexora-violations-phase1-v14.js" asp-append-version="true" defer></script>
+
+<div class="nxr-page nxv-page" dir="rtl">
+    <section class="nxv-hero">
+        <div>
+            <div class="nxv-brand">NEXORA HR DISCIPLINARY</div>
+            <h1>حالات المخالفات</h1>
+            <p>تسجيل ومتابعة المخالفات المثبتة على الموظفين، مع متابعة حالة الإجراء قبل إصدار فورمة المخالفة.</p>
+        </div>
+
+        <div class="nxv-hero-actions">
+            <button type="button" class="nxv-btn primary" data-nxv-open-modal>+ إضافة مخالفة</button>
+            <button type="button" class="nxv-btn" data-nxv-print>طباعة السجل</button>
+        </div>
+    </section>
+
+    <section class="nxv-tabs-card">
+        <div class="nxv-tabs" aria-label="تبويبات المخالفات">
+            <button type="button" class="active" data-nxv-tab="all">كل الحالات</button>
+            <button type="button" data-nxv-tab="pending">بانتظار الإجراء</button>
+            <button type="button" data-nxv-tab="approved">موافق عليه</button>
+            <button type="button" data-nxv-tab="completed">تم اتخاذ الإجراء</button>
+        </div>
+    </section>
+
+    <section class="nxv-kpis">
+        <div class="nxv-kpi">
+            <span>إجمالي الحالات</span>
+            <strong>@Model.TotalCount</strong>
+            <small>كل المخالفات الحالية</small>
+        </div>
+
+        <div class="nxv-kpi warn">
+            <span>بانتظار الإجراء</span>
+            <strong>@pendingCount</strong>
+            <small>تحتاج مراجعة HR</small>
+        </div>
+
+        <div class="nxv-kpi ok">
+            <span>موافق عليه</span>
+            <strong>@approvedCount</strong>
+            <small>تم اعتماد الإجراء</small>
+        </div>
+
+        <div class="nxv-kpi done">
+            <span>تم اتخاذ الإجراء</span>
+            <strong>@completedCount</strong>
+            <small>حالات مكتملة</small>
+        </div>
+
+        <div class="nxv-kpi info">
+            <span>مصدر مباشر</span>
+            <strong>@directCount</strong>
+            <small>من الإدارة أو المسؤول المباشر</small>
+        </div>
+    </section>
+
+    <section class="nxv-filter-card">
+        <div class="nxv-search">
+            <span>⌕</span>
+            <input type="search"
+                   placeholder="ابحث عن الموظف، الرقم المرجعي، نوع المخالفة، الفرع أو القسم..."
+                   data-nxv-search />
+        </div>
+
+        <select data-nxv-filter="status">
+            <option value="">كل الحالات</option>
+            <option value="مسودة">مسودة</option>
+            <option value="بانتظار الاعتماد">بانتظار الاعتماد</option>
+            <option value="موافق عليه">موافق عليه</option>
+            <option value="مرفوض">مرفوض</option>
+            <option value="تم اتخاذ الإجراء">تم اتخاذ الإجراء</option>
+        </select>
+
+        <select data-nxv-filter="source">
+            <option value="">كل المصادر</option>
+            <option value="مباشر">مباشر</option>
+            <option value="النظام">النظام</option>
+            <option value="HR">HR</option>
+            <option value="فرع">فرع</option>
+        </select>
+
+        <button type="button" class="nxv-btn ghost" data-nxv-reset>إعادة تعيين</button>
+    </section>
+
+    <section class="nxv-card nxv-table-card">
+        <div class="nxv-table-head">
+            <div>
+                <h2>سجل المخالفات</h2>
+                <p>القائمة المقترحة لمتابعة المخالفات قبل ربطها بقاعدة البيانات وفورمة A4.</p>
+            </div>
+
+            <span class="nxv-count" data-nxv-count>@rows.Count حالة</span>
+        </div>
+
+        <div class="nxv-table-wrap">
+            <table class="nxv-table">
+                <colgroup>
+                    <col class="nxv-col-ref" />
+                    <col class="nxv-col-employee" />
+                    <col class="nxv-col-violation" />
+                    <col class="nxv-col-date" />
+                    <col class="nxv-col-source" />
+                    <col class="nxv-col-action" />
+                    <col class="nxv-col-status" />
+                    <col class="nxv-col-options" />
+                </colgroup>
+
+                <thead>
+                    <tr>
+                        <th>الرقم المرجعي</th>
+                        <th>الموظف</th>
+                        <th>المخالفة</th>
+                        <th>تاريخ الحدث</th>
+                        <th>المصدر</th>
+                        <th>حالة الإجراء</th>
+                        <th>الحالة</th>
+                        <th>خيارات</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var item in rows)
+                    {
+                        <tr data-nxv-row
+                            data-status="@item.Status"
+                            data-action="@item.ActionStatus"
+                            data-source="@item.Source"
+                            data-search="@($"{item.ReferenceNo} {item.EmployeeCode} {item.EmployeeName} {item.Position} {item.Branch} {item.Department} {item.ViolationTitle} {item.ViolationCategory} {item.Source} {item.Status} {item.ActionStatus}")">
+                            <td>
+                                <span class="nxv-ref">@item.ReferenceNo</span>
+                            </td>
+
+                            <td>
+                                <div class="nxv-employee">
+                                    <span class="nxv-avatar">@item.EmployeeName.Trim()[0]</span>
+                                    <div>
+                                        <strong>@item.EmployeeCode - @item.EmployeeName</strong>
+                                        <small>@item.Position · @item.Branch / @item.Department</small>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td>
+                                <div class="nxv-violation">
+                                    <strong>@item.ViolationCategory</strong>
+                                    <small>@item.ViolationTitle</small>
+                                </div>
+                            </td>
+
+                            <td>@item.EventDate.ToString("dd/MM/yyyy")</td>
+
+                            <td>
+                                <span class="nxv-chip source">@item.Source</span>
+                            </td>
+
+                            <td>@item.ActionStatus</td>
+
+                            <td>
+                                <span class="nxv-status @item.StatusCss">@item.Status</span>
+                            </td>
+
+                            <td>
+                                <div class="nxv-options">
+                                    <button type="button" title="فتح ملف المخالفة">•••</button>
+                                    <a asp-page="/DisciplinaryRules/PrintForm" title="عرض فورمة A4">فورمة</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                    <tr class="nxv-empty" data-nxv-empty hidden>
+                        <td colspan="8">لا توجد نتائج مطابقة للبحث أو الفلترة الحالية.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="nxv-modal" data-nxv-modal hidden>
+        <div class="nxv-modal-backdrop" data-nxv-close-modal></div>
+
+        <section class="nxv-modal-panel" role="dialog" aria-modal="true" aria-labelledby="nxv-modal-title">
+            <div class="nxv-modal-head">
+                <div>
+                    <div class="nxv-modal-eyebrow">NEW VIOLATION</div>
+                    <h2 id="nxv-modal-title">إضافة مخالفة جديدة</h2>
+                    <p>مرحلة واجهة فقط. في المرحلة التالية نربطها بالموظف وقاعدة البيانات.</p>
+                </div>
+
+                <button type="button" class="nxv-modal-close" data-nxv-close-modal aria-label="إغلاق">×</button>
+            </div>
+
+            <div class="nxv-form-grid">
+                <label>
+                    <span>الموظف</span>
+                    <input type="text" placeholder="ابحث باسم الموظف أو الكود" disabled />
+                </label>
+
+                <label>
+                    <span>نوع المخالفة</span>
+                    <input type="text" placeholder="مثال: عدم تنفيذ تعليمات نظام العمل" disabled />
+                </label>
+
+                <label>
+                    <span>فئة المخالفة</span>
+                    <select disabled>
+                        <option>A</option>
+                        <option>B</option>
+                        <option>C</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>تاريخ الحدث</span>
+                    <input type="date" disabled />
+                </label>
+
+                <label>
+                    <span>المصدر</span>
+                    <select disabled>
+                        <option>مباشر</option>
+                        <option>النظام</option>
+                        <option>HR</option>
+                        <option>فرع</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>الإجراء المقترح</span>
+                    <input type="text" placeholder="مثال: إنذار / خصم / تعهد" disabled />
+                </label>
+            </div>
+
+            <div class="nxv-modal-note">
+                <strong>المرحلة التالية:</strong>
+                نربط الحقول بقاعدة البيانات، ثم زر حفظ، وبعدها توليد فورمة A4 الخاصة بالموظف.
+            </div>
+
+            <div class="nxv-modal-actions">
+                <button type="button" class="nxv-btn ghost" data-nxv-close-modal>إلغاء</button>
+                <button type="button" class="nxv-btn primary" disabled>حفظ المخالفة</button>
+            </div>
+        </section>
+    </div>
+</div>

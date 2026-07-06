@@ -1,0 +1,652 @@
+/* ==========================================================================
+   NEXORA Violations Refine Modal V14.1
+   ========================================================================== */
+
+.nxv-page {
+    --nxv-bg: #071625;
+    --nxv-card: rgba(8, 25, 43, .86);
+    --nxv-card2: rgba(6, 19, 34, .94);
+    --nxv-line: rgba(73, 111, 151, .24);
+    --nxv-text: #DCEAF4;
+    --nxv-muted: #8FA8BC;
+    --nxv-cyan: #19D3E0;
+    --nxv-gold: #D7B26D;
+    --nxv-green: #55D98A;
+    --nxv-red: #F87171;
+    --nxv-orange: #FB923C;
+    color: var(--nxv-text);
+}
+
+.nxv-page * {
+    box-sizing: border-box;
+}
+
+.nxv-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 26px;
+    border: 1px solid var(--nxv-line);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 88% 14%, rgba(25, 211, 224, .15), transparent 34%),
+        radial-gradient(circle at 10% 100%, rgba(215, 178, 109, .10), transparent 30%),
+        linear-gradient(135deg, rgba(9, 31, 52, .96), rgba(5, 16, 29, .96));
+    box-shadow: 0 24px 58px rgba(0, 0, 0, .24), inset 0 1px 0 rgba(255, 255, 255, .045);
+}
+
+.nxv-brand,
+.nxv-modal-eyebrow {
+    color: var(--nxv-cyan);
+    font-size: 11px;
+    font-weight: 1000;
+    letter-spacing: .12em;
+    margin-bottom: 8px;
+}
+
+.nxv-hero h1 {
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.2;
+    font-weight: 1000;
+    color: #F2F8FC;
+}
+
+.nxv-hero p {
+    margin: 8px 0 0;
+    color: #A7BED2;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.nxv-hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.nxv-btn {
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(25, 211, 224, .28);
+    border-radius: 15px;
+    padding: 0 16px;
+    background: rgba(25, 211, 224, .075);
+    color: #D7FBFF;
+    font-size: 12px;
+    font-weight: 1000;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .15s ease, border-color .15s ease, background .15s ease;
+}
+
+.nxv-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: rgba(25, 211, 224, .46);
+    background: rgba(25, 211, 224, .12);
+}
+
+.nxv-btn:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.nxv-btn.primary {
+    border-color: rgba(25, 211, 224, .46);
+    background:
+        radial-gradient(circle at 20% 10%, rgba(255, 255, 255, .30), transparent 30%),
+        linear-gradient(135deg, #19D3E0, #16B8C4);
+    color: #042231;
+    box-shadow: 0 16px 32px rgba(25, 211, 224, .18), inset 0 1px 0 rgba(255, 255, 255, .38);
+}
+
+.nxv-btn.ghost {
+    background: rgba(255, 255, 255, .035);
+}
+
+/* Clean, consistent tab container */
+.nxv-tabs-card {
+    margin: 18px 0;
+    padding: 10px;
+    border: 1px solid rgba(73, 111, 151, .24);
+    border-radius: 22px;
+    background:
+        linear-gradient(180deg, rgba(6, 19, 34, .74), rgba(3, 13, 25, .82));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+.nxv-tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(130px, 1fr));
+    gap: 8px;
+    padding: 0;
+    margin: 0;
+}
+
+.nxv-tabs button {
+    min-height: 42px;
+    border: 1px solid rgba(73, 111, 151, .18);
+    border-radius: 15px;
+    padding: 0 14px;
+    background: rgba(7, 22, 38, .66);
+    color: #9EB5C9;
+    font-size: 12px;
+    font-weight: 1000;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease;
+}
+
+.nxv-tabs button:hover {
+    transform: translateY(-1px);
+    color: #DDF8FF;
+    border-color: rgba(25, 211, 224, .32);
+}
+
+.nxv-tabs button.active {
+    border-color: rgba(25, 211, 224, .48);
+    background:
+        radial-gradient(circle at 25% 12%, rgba(255, 255, 255, .16), transparent 30%),
+        linear-gradient(135deg, rgba(25, 211, 224, .24), rgba(25, 211, 224, .10));
+    color: #E9FCFF;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 10px 22px rgba(25, 211, 224, .08);
+}
+
+.nxv-kpis {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.nxv-kpi {
+    min-height: 112px;
+    padding: 16px;
+    border: 1px solid var(--nxv-line);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(9, 29, 49, .86), rgba(5, 16, 29, .92));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+.nxv-kpi span {
+    display: block;
+    color: var(--nxv-muted);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.nxv-kpi strong {
+    display: block;
+    margin-top: 8px;
+    color: #F1F8FC;
+    font-size: 30px;
+    font-weight: 1000;
+}
+
+.nxv-kpi small {
+    display: block;
+    margin-top: 4px;
+    color: #7791A7;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.nxv-kpi.ok strong { color: var(--nxv-green); }
+.nxv-kpi.warn strong { color: var(--nxv-orange); }
+.nxv-kpi.done strong { color: var(--nxv-gold); }
+.nxv-kpi.info strong { color: var(--nxv-cyan); }
+
+.nxv-filter-card {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) 180px 160px auto;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 18px;
+    padding: 14px;
+    border: 1px solid var(--nxv-line);
+    border-radius: 22px;
+    background: rgba(7, 22, 38, .86);
+}
+
+.nxv-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid rgba(73, 111, 151, .28);
+    border-radius: 16px;
+    background: rgba(3, 13, 25, .64);
+}
+
+.nxv-search span {
+    color: var(--nxv-cyan);
+    font-size: 16px;
+}
+
+.nxv-search input,
+.nxv-filter-card select,
+.nxv-form-grid input,
+.nxv-form-grid select {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid rgba(73, 111, 151, .28);
+    border-radius: 16px;
+    background: rgba(3, 13, 25, .64);
+    color: #E6F2FA;
+    font-size: 12px;
+    font-weight: 850;
+    outline: none;
+    padding: 0 13px;
+}
+
+.nxv-search input {
+    border: 0;
+    background: transparent;
+    padding: 0;
+}
+
+.nxv-card {
+    border: 1px solid var(--nxv-line);
+    border-radius: 26px;
+    background:
+        radial-gradient(circle at top right, rgba(25, 211, 224, .07), transparent 34%),
+        linear-gradient(180deg, rgba(8, 25, 43, .88), rgba(5, 16, 29, .94));
+    box-shadow: 0 22px 48px rgba(0, 0, 0, .20), inset 0 1px 0 rgba(255, 255, 255, .035);
+    overflow: hidden;
+}
+
+.nxv-table-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 20px 22px;
+    border-bottom: 1px solid var(--nxv-line);
+}
+
+.nxv-table-head h2 {
+    margin: 0;
+    color: #F3F8FC;
+    font-size: 21px;
+    font-weight: 1000;
+}
+
+.nxv-table-head p {
+    margin: 5px 0 0;
+    color: #91A8BB;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.nxv-count {
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(25, 211, 224, .30);
+    border-radius: 999px;
+    padding: 0 13px;
+    background: rgba(25, 211, 224, .08);
+    color: #BFFAFF;
+    font-size: 12px;
+    font-weight: 1000;
+}
+
+.nxv-table-wrap {
+    max-height: calc(100vh - 430px);
+    min-height: 520px;
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(25, 211, 224, .55) rgba(3, 13, 25, .75);
+}
+
+.nxv-table {
+    width: 100%;
+    min-width: 1220px;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+}
+
+.nxv-col-ref { width: 10%; }
+.nxv-col-employee { width: 24%; }
+.nxv-col-violation { width: 25%; }
+.nxv-col-date { width: 10%; }
+.nxv-col-source { width: 9%; }
+.nxv-col-action { width: 12%; }
+.nxv-col-status { width: 10%; }
+.nxv-col-options { width: 8%; }
+
+.nxv-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    height: 52px;
+    padding: 0 13px;
+    border-bottom: 1px solid rgba(73, 111, 151, .30);
+    background: rgba(5, 15, 28, .98);
+    color: #AFC2D4;
+    font-size: 12px;
+    font-weight: 1000;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.nxv-table tbody td {
+    height: 62px;
+    padding: 10px 13px;
+    border-bottom: 1px solid rgba(73, 111, 151, .14);
+    color: #DCEAF4;
+    font-size: 12px;
+    font-weight: 850;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nxv-table tbody tr {
+    background: rgba(10, 31, 52, .54);
+}
+
+.nxv-table tbody tr:nth-child(even) {
+    background: rgba(7, 25, 43, .54);
+}
+
+.nxv-table tbody tr:hover {
+    background: rgba(25, 211, 224, .065);
+}
+
+.nxv-ref {
+    color: #9ECBF7;
+    font-weight: 1000;
+}
+
+.nxv-employee {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    text-align: right;
+    min-width: 0;
+}
+
+.nxv-avatar {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    border-radius: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(25, 211, 224, .28), rgba(215, 178, 109, .22));
+    border: 1px solid rgba(25, 211, 224, .30);
+    color: #F0FBFF;
+    font-weight: 1000;
+}
+
+.nxv-employee div,
+.nxv-violation {
+    min-width: 0;
+}
+
+.nxv-employee strong,
+.nxv-violation strong {
+    display: block;
+    color: #F0F7FC;
+    font-size: 12px;
+    font-weight: 1000;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nxv-employee small,
+.nxv-violation small {
+    display: block;
+    margin-top: 3px;
+    color: #87A0B6;
+    font-size: 11px;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nxv-chip,
+.nxv-status {
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 1000;
+}
+
+.nxv-chip.source {
+    border: 1px solid rgba(251, 146, 60, .32);
+    background: rgba(251, 146, 60, .12);
+    color: #FFD5B4;
+}
+
+.nxv-status.ok,
+.nxv-status.done {
+    border: 1px solid rgba(85, 217, 138, .32);
+    background: rgba(85, 217, 138, .12);
+    color: #BFFFD8;
+}
+
+.nxv-status.pending {
+    border: 1px solid rgba(251, 146, 60, .34);
+    background: rgba(251, 146, 60, .12);
+    color: #FFD5B4;
+}
+
+.nxv-status.rejected {
+    border: 1px solid rgba(248, 113, 113, .34);
+    background: rgba(248, 113, 113, .12);
+    color: #FFC4C4;
+}
+
+.nxv-status.draft {
+    border: 1px solid rgba(148, 163, 184, .28);
+    background: rgba(148, 163, 184, .10);
+    color: #D0DAE3;
+}
+
+.nxv-options {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.nxv-options button,
+.nxv-options a {
+    min-width: 40px;
+    height: 30px;
+    border: 1px solid rgba(25, 211, 224, .25);
+    border-radius: 11px;
+    background: rgba(25, 211, 224, .08);
+    color: #D9FBFF;
+    font-size: 11px;
+    font-weight: 1000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.nxv-options a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 9px;
+}
+
+.nxv-empty td {
+    height: 150px;
+    color: #A7B7C8;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+/* Modal */
+.nxv-modal[hidden] {
+    display: none !important;
+}
+
+.nxv-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.nxv-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(1, 7, 14, .70);
+    backdrop-filter: blur(10px);
+}
+
+.nxv-modal-panel {
+    position: relative;
+    width: min(980px, 96vw);
+    max-height: min(760px, 92vh);
+    overflow: auto;
+    border: 1px solid rgba(25, 211, 224, .28);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at top right, rgba(25, 211, 224, .12), transparent 36%),
+        linear-gradient(180deg, rgba(9, 29, 49, .98), rgba(4, 14, 26, .98));
+    box-shadow: 0 34px 90px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .055);
+}
+
+.nxv-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 24px;
+    border-bottom: 1px solid rgba(73, 111, 151, .22);
+}
+
+.nxv-modal-head h2 {
+    margin: 0;
+    color: #F3F8FC;
+    font-size: 24px;
+    font-weight: 1000;
+}
+
+.nxv-modal-head p {
+    margin: 6px 0 0;
+    color: #9EB5C9;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.nxv-modal-close {
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(248, 113, 113, .26);
+    border-radius: 14px;
+    background: rgba(248, 113, 113, .09);
+    color: #FFC4C4;
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.nxv-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+    gap: 12px;
+    padding: 22px 24px;
+}
+
+.nxv-form-grid label span {
+    display: block;
+    margin-bottom: 7px;
+    color: #9DB4C8;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.nxv-form-grid input:disabled,
+.nxv-form-grid select:disabled {
+    opacity: .62;
+    cursor: not-allowed;
+}
+
+.nxv-modal-note {
+    margin: 0 24px 18px;
+    padding: 14px 16px;
+    border: 1px solid rgba(215, 178, 109, .28);
+    border-radius: 18px;
+    background: rgba(215, 178, 109, .075);
+    color: #DCEAF4;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.nxv-modal-note strong {
+    color: #F3D596;
+}
+
+.nxv-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 0 24px 24px;
+}
+
+body.nxv-modal-open {
+    overflow: hidden;
+}
+
+@media (max-width: 1200px) {
+    .nxv-kpis {
+        grid-template-columns: repeat(2, minmax(150px, 1fr));
+    }
+
+    .nxv-filter-card {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .nxv-form-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 760px) {
+    .nxv-hero,
+    .nxv-table-head,
+    .nxv-modal-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .nxv-tabs {
+        grid-template-columns: 1fr;
+    }
+
+    .nxv-kpis,
+    .nxv-filter-card,
+    .nxv-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .nxv-modal {
+        padding: 12px;
+    }
+
+    .nxv-modal-panel {
+        width: 100%;
+    }
+}
