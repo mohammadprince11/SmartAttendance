@@ -42,6 +42,7 @@ public class IndexModel : PageModel
     public List<EmployeeOption> Employees { get; private set; } = new();
     public List<DepartmentOption> Departments { get; private set; } = new();
     public List<BranchOption> Branches { get; private set; } = new();
+    public IReadOnlyList<AnnouncementTemplateDefinition> AnnouncementTemplates { get; } = AnnouncementTemplateDefinition.All;
 
     public int TotalAnnouncements => Announcements.Count;
     public int PublishedAnnouncements => Announcements.Count(x => x.IsPublished);
@@ -70,6 +71,26 @@ public class IndexModel : PageModel
 
         var title = Announcement.Title?.Trim() ?? string.Empty;
         var body = Announcement.Body?.Trim() ?? string.Empty;
+        var templateKey = NormalizeTemplateKey(Announcement.TemplateKey);
+        var template = GetTemplate(templateKey);
+
+        if (!templateKey.Equals("custom", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(Announcement.Category) || Announcement.Category.Equals("عام", StringComparison.OrdinalIgnoreCase))
+            {
+                Announcement.Category = template.Category;
+            }
+
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                title = BuildTemplateTitle(templateKey, Announcement.PersonName, Announcement.SecondaryName);
+            }
+
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                body = BuildTemplateBody(templateKey, Announcement.PersonName, Announcement.SecondaryName, Announcement.DepartmentName, Announcement.EffectiveDateText);
+            }
+        }
 
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(body))
         {
@@ -94,9 +115,9 @@ public class IndexModel : PageModel
             _dbContext,
             """
 INSERT INTO EmployeePortalAnnouncements
-(Title, Body, Category, TargetType, TargetValue, IsPublished, PublishDate, CreatedBy, CreatedAt)
+(Title, Body, Category, TargetType, TargetValue, TemplateKey, IsPublished, PublishDate, CreatedBy, CreatedAt)
 VALUES
-(@Title, @Body, @Category, @TargetType, @TargetValue, @IsPublished, SYSUTCDATETIME(), @CreatedBy, SYSUTCDATETIME());
+(@Title, @Body, @Category, @TargetType, @TargetValue, @TemplateKey, @IsPublished, SYSUTCDATETIME(), @CreatedBy, SYSUTCDATETIME());
 
 INSERT INTO AuditLogs (EntityName, EntityId, Action, NewValues, UserName, IpAddress)
 VALUES ('EmployeePortalAnnouncement', NULL, 'Create Announcement', @NewValues, @UserName, @IpAddress);
@@ -108,6 +129,7 @@ VALUES ('EmployeePortalAnnouncement', NULL, 'Create Announcement', @NewValues, @
                 HrmsDatabase.AddParameter(command, "@Category", category);
                 HrmsDatabase.AddParameter(command, "@TargetType", targetType);
                 HrmsDatabase.AddParameter(command, "@TargetValue", targetValue);
+                HrmsDatabase.AddParameter(command, "@TemplateKey", templateKey);
                 HrmsDatabase.AddParameter(command, "@IsPublished", isPublished);
                 HrmsDatabase.AddParameter(command, "@CreatedBy", user);
                 HrmsDatabase.AddParameter(command, "@NewValues", HrmsDatabase.JsonLine(
@@ -115,6 +137,7 @@ VALUES ('EmployeePortalAnnouncement', NULL, 'Create Announcement', @NewValues, @
                     ("Category", category),
                     ("TargetType", targetType),
                     ("TargetValue", targetValue),
+                    ("TemplateKey", templateKey),
                     ("Published", isPublished)));
                 HrmsDatabase.AddParameter(command, "@UserName", user);
                 HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
@@ -433,6 +456,11 @@ BEGIN
         ALTER TABLE EmployeePortalAnnouncements ALTER COLUMN TargetValue nvarchar(max) NULL;
 END;
 
+IF COL_LENGTH('EmployeePortalAnnouncements', 'TemplateKey') IS NULL
+BEGIN
+    ALTER TABLE EmployeePortalAnnouncements ADD TemplateKey nvarchar(80) NULL;
+END;
+
 IF OBJECT_ID('EmployeeFeedbackItems', 'U') IS NULL
 BEGIN
     CREATE TABLE EmployeeFeedbackItems
@@ -529,6 +557,7 @@ SELECT TOP 100
     ISNULL(Category, N'عام') AS Category,
     ISNULL(TargetType, N'All') AS TargetType,
     ISNULL(TargetValue, '') AS TargetValue,
+    ISNULL(TemplateKey, 'custom') AS TemplateKey,
     IsPublished,
     PublishDate,
     ISNULL(CreatedBy, '') AS CreatedBy
@@ -551,6 +580,7 @@ ORDER BY PublishDate DESC, Id DESC;
                 Category = HrmsDatabase.GetString(reader, "Category"),
                 TargetType = HrmsDatabase.GetString(reader, "TargetType"),
                 TargetValue = HrmsDatabase.GetString(reader, "TargetValue"),
+                TemplateKey = HrmsDatabase.GetString(reader, "TemplateKey"),
                 IsPublished = HrmsDatabase.GetBool(reader, "IsPublished"),
                 PublishDate = HrmsDatabase.GetDateTime(reader, "PublishDate"),
                 CreatedBy = HrmsDatabase.GetString(reader, "CreatedBy")
@@ -710,6 +740,59 @@ ORDER BY FullName;
         return string.Empty;
     }
 
+
+    private string NormalizeTemplateKey(string? key)
+    {
+        var normalized = string.IsNullOrWhiteSpace(key) ? "custom" : key.Trim().ToLowerInvariant();
+        return AnnouncementTemplates.Any(x => x.Key.Equals(normalized, StringComparison.OrdinalIgnoreCase)) ? normalized : "custom";
+    }
+
+    private AnnouncementTemplateDefinition GetTemplate(string? key)
+    {
+        var normalized = NormalizeTemplateKey(key);
+        return AnnouncementTemplates.First(x => x.Key.Equals(normalized, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public string TemplateName(string? key) => GetTemplate(key).Name;
+    public string TemplateIcon(string? key) => GetTemplate(key).Icon;
+    public string TemplateCss(string? key) => GetTemplate(key).CssClass;
+
+    private string BuildTemplateTitle(string templateKey, string? personName, string? secondaryName)
+    {
+        var name = string.IsNullOrWhiteSpace(personName) ? "أحد موظفينا" : personName.Trim();
+        return templateKey switch
+        {
+            "marriage" => $"تهنئة بمناسبة الزواج - {name}",
+            "condolence" => $"تعزية - {name}",
+            "newborn" => $"مولود جديد - {name}",
+            "holiday" => "عطلة رسمية",
+            "promotion" => $"تهنئة بالترقية - {name}",
+            "welcome" => $"ترحيب بموظف جديد - {name}",
+            "farewell" => $"وداع وشكر - {name}",
+            _ => Announcement.Title?.Trim() ?? string.Empty
+        };
+    }
+
+    private string BuildTemplateBody(string templateKey, string? personName, string? secondaryName, string? departmentName, string? effectiveDateText)
+    {
+        var name = string.IsNullOrWhiteSpace(personName) ? "زميلنا العزيز" : personName.Trim();
+        var extra = string.IsNullOrWhiteSpace(secondaryName) ? string.Empty : secondaryName.Trim();
+        var department = string.IsNullOrWhiteSpace(departmentName) ? "قسم الموارد البشرية" : departmentName.Trim();
+        var date = string.IsNullOrWhiteSpace(effectiveDateText) ? string.Empty : effectiveDateText.Trim();
+
+        return templateKey switch
+        {
+            "marriage" => $"تتقدم الشركة بخالص التهاني والتبريكات إلى {name} بمناسبة الزواج. نتمنى له حياة سعيدة مليئة بالمودة والنجاح، ودوام الفرح والتوفيق.",
+            "condolence" => $"تتقدم الشركة بخالص العزاء والمواساة إلى {name}. سائلين الله أن يتغمد الفقيد بواسع رحمته، وأن يلهم أهله وذويه الصبر والسلوان.",
+            "newborn" => $"تتقدم الشركة بأصدق التهاني إلى {name} بمناسبة المولود الجديد{(string.IsNullOrWhiteSpace(extra) ? "" : $" ({extra})")}. نسأل الله أن يجعله من مواليد السعادة والبركة.",
+            "holiday" => $"تعلن إدارة الشركة عن عطلة رسمية{(string.IsNullOrWhiteSpace(date) ? "" : $" بتاريخ {date}")}. يرجى من جميع الموظفين الالتزام بالتعليمات الخاصة بالدوام حسب توجيهات الإدارة.",
+            "promotion" => $"نبارك إلى {name} ترقيته{(string.IsNullOrWhiteSpace(extra) ? "" : $" إلى منصب {extra}")}. نتمنى له دوام النجاح والتوفيق في مهامه الجديدة، مع الشكر والتقدير لجهوده المميزة.",
+            "welcome" => $"نرحب بانضمام {name} إلى فريق العمل{(string.IsNullOrWhiteSpace(extra) ? "" : $" بمنصب {extra}")}. نتمنى له بداية موفقة ومسيرة ناجحة ضمن عائلة الشركة.",
+            "farewell" => $"تتقدم الشركة بالشكر والتقدير إلى {name} على ما قدمه من جهود خلال فترة عمله. نتمنى له دوام التوفيق والنجاح في مسيرته القادمة.",
+            _ => Announcement.Body?.Trim() ?? string.Empty
+        } + $"\n\n{department}";
+    }
+
     public string DisplayDate(DateTime? date) => date.HasValue ? date.Value.ToString("dd/MM/yyyy") : "-";
     public string StatusText(string status) => status.Equals("Open", StringComparison.OrdinalIgnoreCase) ? "مفتوحة" : status.Equals("Pending", StringComparison.OrdinalIgnoreCase) ? "قيد المعالجة" : status.Equals("Answered", StringComparison.OrdinalIgnoreCase) ? "تم الرد" : status.Equals("Closed", StringComparison.OrdinalIgnoreCase) ? "مغلقة" : status;
     public string StatusClass(string status) => status.Equals("Open", StringComparison.OrdinalIgnoreCase) ? "open" : status.Equals("Pending", StringComparison.OrdinalIgnoreCase) ? "pending" : status.Equals("Answered", StringComparison.OrdinalIgnoreCase) ? "answered" : status.Equals("Closed", StringComparison.OrdinalIgnoreCase) ? "closed" : string.Empty;
@@ -730,6 +813,12 @@ ORDER BY FullName;
         public string Title { get; set; } = string.Empty;
         public string Body { get; set; } = string.Empty;
         public string Category { get; set; } = "عام";
+        public string TemplateKey { get; set; } = "custom";
+        public string UseTemplateMode { get; set; } = "Template";
+        public string PersonName { get; set; } = string.Empty;
+        public string SecondaryName { get; set; } = string.Empty;
+        public string DepartmentName { get; set; } = string.Empty;
+        public string EffectiveDateText { get; set; } = string.Empty;
         public string TargetType { get; set; } = "All";
         public int[]? EmployeeIds { get; set; }
         public int? DepartmentId { get; set; }
@@ -765,6 +854,7 @@ ORDER BY FullName;
         public string Category { get; set; } = string.Empty;
         public string TargetType { get; set; } = string.Empty;
         public string TargetValue { get; set; } = string.Empty;
+        public string TemplateKey { get; set; } = "custom";
         public bool IsPublished { get; set; }
         public DateTime? PublishDate { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
@@ -800,6 +890,29 @@ ORDER BY FullName;
         public string RepliedBy { get; set; } = string.Empty;
         public DateTime? RepliedAt { get; set; }
         public DateTime? CreatedAt { get; set; }
+    }
+
+
+    public class AnnouncementTemplateDefinition
+    {
+        public string Key { get; init; } = "custom";
+        public string Name { get; init; } = "مخصص";
+        public string Description { get; init; } = string.Empty;
+        public string Category { get; init; } = "عام";
+        public string Icon { get; init; } = "📣";
+        public string CssClass { get; init; } = "custom";
+
+        public static IReadOnlyList<AnnouncementTemplateDefinition> All { get; } = new List<AnnouncementTemplateDefinition>
+        {
+            new() { Key = "custom", Name = "مخصص", Description = "إعلان حر", Category = "عام", Icon = "📣", CssClass = "custom" },
+            new() { Key = "marriage", Name = "زواج", Description = "تهنئة رسمية", Category = "تهنئة", Icon = "💍", CssClass = "marriage" },
+            new() { Key = "condolence", Name = "وفاة", Description = "تعزية ومواساة", Category = "تعزية", Icon = "🕊️", CssClass = "condolence" },
+            new() { Key = "newborn", Name = "مولود جديد", Description = "تهنئة مولود", Category = "تهنئة", Icon = "👶", CssClass = "newborn" },
+            new() { Key = "holiday", Name = "عطلة رسمية", Description = "إشعار عطلة", Category = "عطلة رسمية", Icon = "📅", CssClass = "holiday" },
+            new() { Key = "promotion", Name = "ترقية", Description = "تهنئة وظيفية", Category = "تهنئة", Icon = "📈", CssClass = "promotion" },
+            new() { Key = "welcome", Name = "ترحيب بموظف جديد", Description = "انضمام جديد", Category = "ترحيب", Icon = "🤝", CssClass = "welcome" },
+            new() { Key = "farewell", Name = "وداع موظف", Description = "شكر وتقدير", Category = "وداع", Icon = "🧳", CssClass = "farewell" }
+        };
     }
 
     public class EmployeeOption
