@@ -1,14 +1,18 @@
 ﻿@page
 @model SmartAttendance.Web.Pages.Employees.CreateModel
 
+.Web.Pages.Employees.CreateModel
+
 @{
     ViewData["Title"] = "إضافة موظف جديد";
+    var employeePhotoFallback = Url.Content("~/brand/employee-photo-placeholder.svg");
 }
 
 <link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-create-documents-final.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-create-clean-fix.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-create-stable.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-employee-photo-upload.css" asp-append-version="true" />
 
 <div class="nxr-page nxr-create-clean-page">
     <section class="nxr-topline nxr-create-clean-header">
@@ -30,6 +34,34 @@
     }
 
     <form id="employee-create-form" method="post" enctype="multipart/form-data" class="nxr-form nxr-create-clean-form">
+
+        <section class="nxr-card nxr-form-section nxr-create-section nxr-photo-upload-card">
+            <div class="nxr-section-title">
+                <div>
+                    <h2>صورة الموظف</h2>
+                    <p>اضغط على مساحة الصورة نفسها أو اسحب الصورة فوقها. لا يوجد زر رفع منفصل.</p>
+                </div>
+                <span class="nxr-chip">اختياري</span>
+            </div>
+
+            <div class="nxr-photo-upload-wrap">
+                <label class="nxr-photo-drop has-image has-brand-placeholder" data-employee-photo-drop>
+                    <input asp-for="EmployeePhoto" type="file" accept="image/png,image/jpeg,image/webp" />
+                    <img class="nxr-photo-preview" src="@employeePhotoFallback" data-employee-photo-preview data-placeholder-src="@employeePhotoFallback" alt="Employee photo preview" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
+                    <span class="nxr-photo-placeholder">
+                        <strong>+</strong>
+                        <span>اضغط لإضافة صورة</span>
+                    </span>
+                </label>
+
+                <div class="nxr-photo-hint">
+                    <strong>مساحة الصورة هي زر الرفع</strong>
+                    <span>ارفع صورة واضحة للموظف بصيغة PNG أو JPG أو WEBP.</span>
+                    <small>الحد الأقصى 5MB. سيتم حفظ الصورة داخل ملف الموظف بعد الإنشاء.</small>
+                </div>
+            </div>
+        </section>
+
         <section class="nxr-card nxr-form-section nxr-create-section">
             <div class="nxr-section-title">
                 <div>
@@ -197,4 +229,23 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/nexora-employee-create-documents-final.js" asp-append-version="true"></script>
+    <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
 }
+
+
+
+
+
+<style>
+    .nxr-page.nxr-create-clean-page, 
+    .nxr-form.nxr-create-clean-form,
+    #employee-create-form {
+        max-width: 1400px !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+    }
+    .nxr-card.nxr-form-section {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+</style>

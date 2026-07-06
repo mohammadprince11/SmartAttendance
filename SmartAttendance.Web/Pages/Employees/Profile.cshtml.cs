@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -7,11 +9,21 @@ namespace SmartAttendance.Web.Pages.Employees;
 
 public class ProfileModel : PageModel
 {
-    private readonly ApplicationDbContext _dbContext;
+    private static readonly HashSet<string> AllowedEmployeePhotoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp"
+    };
 
-    public ProfileModel(ApplicationDbContext dbContext)
+    private readonly ApplicationDbContext _dbContext;
+    private readonly IWebHostEnvironment _environment;
+
+    public ProfileModel(ApplicationDbContext dbContext, IWebHostEnvironment environment)
     {
         _dbContext = dbContext;
+        _environment = environment;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -58,9 +70,13 @@ public class ProfileModel : PageModel
 
     public string? ErrorMessage { get; set; }
 
+    [BindProperty]
+    public IFormFile? EmployeePhoto { get; set; }
+
     public async Task<IActionResult> OnGetAsync()
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
+        await EnsureEmployeePhotoColumnAsync();
 
         if (!FromDate.HasValue)
         {
@@ -89,6 +105,87 @@ public class ProfileModel : PageModel
         return Page();
     }
 
+
+    public async Task<IActionResult> OnPostUploadProfilePhotoAsync(int id)
+    {
+        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
+        await EnsureEmployeePhotoColumnAsync();
+
+        if (id <= 0)
+        {
+            TempData["ErrorMessage"] = "لم يتم تحديد الموظف.";
+            return RedirectToPage("./Index");
+        }
+
+        var result = await SaveEmployeePhotoAsync(id, EmployeePhoto);
+
+        if (string.IsNullOrWhiteSpace(result))
+        {
+            TempData["ErrorMessage"] = "اختر صورة صحيحة بصيغة PNG أو JPG أو WEBP وبحجم لا يتجاوز 5MB.";
+        }
+        else
+        {
+            TempData["SuccessMessage"] = "تم تحديث صورة الموظف بنجاح.";
+        }
+
+        return RedirectToPage(new { id });
+    }
+
+    private async Task EnsureEmployeePhotoColumnAsync()
+    {
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+IF COL_LENGTH('Employees', 'PhotoPath') IS NULL
+BEGIN
+    ALTER TABLE Employees ADD PhotoPath nvarchar(500) NULL;
+END;
+""");
+    }
+
+    private async Task<string> SaveEmployeePhotoAsync(int employeeId, IFormFile? file)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var extension = Path.GetExtension(file.FileName);
+        if (string.IsNullOrWhiteSpace(extension) || !AllowedEmployeePhotoExtensions.Contains(extension))
+        {
+            return string.Empty;
+        }
+
+        if (file.Length > 5 * 1024 * 1024)
+        {
+            return string.Empty;
+        }
+
+        var uploadsRoot = Path.Combine(_environment.WebRootPath, "uploads", "employee-photos");
+        Directory.CreateDirectory(uploadsRoot);
+
+        var fileName = $"employee_{employeeId}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{extension.ToLowerInvariant()}";
+        var fullPath = Path.Combine(uploadsRoot, fileName);
+
+        await using (var stream = System.IO.File.Create(fullPath))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var relativePath = $"/uploads/employee-photos/{fileName}";
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            "UPDATE Employees SET PhotoPath = @PhotoPath WHERE Id = @EmployeeId;",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@PhotoPath", relativePath);
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+            });
+
+        return relativePath;
+    }
+
     private async Task<EmployeeProfileCard?> LoadEmployeeAsync()
     {
         var rows = await HrmsDatabase.QueryAsync(
@@ -105,6 +202,7 @@ SELECT TOP 1
     e.BirthDate,
     e.IsActive,
     ISNULL(e.Position, '') AS Position,
+    ISNULL(e.PhotoPath, '') AS PhotoPath,
     ISNULL(e.Gender, '') AS Gender,
     ISNULL(e.Nationality, '') AS Nationality,
     ISNULL(e.Country, '') AS Country,
@@ -141,6 +239,7 @@ WHERE
                 BirthDate = HrmsDatabase.GetDateOnly(reader, "BirthDate"),
                 IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
                 Position = HrmsDatabase.GetString(reader, "Position"),
+                PhotoPath = HrmsDatabase.GetString(reader, "PhotoPath"),
                 Gender = HrmsDatabase.GetString(reader, "Gender"),
                 Nationality = HrmsDatabase.GetString(reader, "Nationality"),
                 Country = HrmsDatabase.GetString(reader, "Country"),
@@ -560,6 +659,8 @@ public class EmployeeProfileCard
         public bool IsActive { get; set; }
 
         public string Position { get; set; } = string.Empty;
+
+        public string PhotoPath { get; set; } = string.Empty;
 
         public string Gender { get; set; } = string.Empty;
 

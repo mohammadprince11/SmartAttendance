@@ -8,6 +8,7 @@
     var today = DateOnly.FromDateTime(DateTime.Today);
     var initial = employee == null || string.IsNullOrWhiteSpace(employee.FullName) ? "N" : employee.FullName.Trim()[0].ToString();
 
+    var employeePhotoFallback = Url.Content("~/brand/employee-photo-placeholder.svg");
     string StatusClass(int status)
     {
         return status switch
@@ -81,6 +82,7 @@
 <link rel="stylesheet" href="~/css/nexora-employee-profile-pro.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-profile-kayan-style.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-profile-kayan-pages.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-employee-photo-upload.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-profile-polish-requirements.css" asp-append-version="true" />
 
 <div class="nxr-page nxr-profile-pro-page">
@@ -159,6 +161,11 @@
         <div class="nxr-success">@TempData["SuccessMessage"]</div>
     }
 
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="nxr-error">@TempData["ErrorMessage"]</div>
+    }
+
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
         <div class="nxr-error">@Model.ErrorMessage</div>
@@ -167,7 +174,18 @@
     {
         <section class="nxr-kayan-profile-card nxr-card">
             <div class="nxr-kayan-identity">
-                <div class="nxr-kayan-avatar">@initial</div>
+                <form method="post" asp-page-handler="UploadProfilePhoto" asp-route-id="@employee.Id" enctype="multipart/form-data" class="nxr-profile-photo-form" data-employee-photo-form data-auto-submit-photo>
+                    <label class="nxr-kayan-avatar nxr-profile-photo-drop @(string.IsNullOrWhiteSpace(employee.PhotoPath) ? "has-image has-brand-placeholder" : "has-image")" data-employee-photo-drop title="اضغط لتحديث صورة الموظف">
+                        <input asp-for="EmployeePhoto" type="file" accept="image/png,image/jpeg,image/webp" />
+                        <img class="nxr-profile-photo-preview"
+                             src="@(string.IsNullOrWhiteSpace(employee.PhotoPath) ? employeePhotoFallback : employee.PhotoPath)"
+                             alt="Employee photo"
+                             data-employee-photo-preview
+                             data-placeholder-src="@employeePhotoFallback"
+                             onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
+                        <span class="nxr-profile-photo-change">اضغط لتحديث الصورة</span>
+                    </label>
+                </form>
 
                 <div class="nxr-kayan-main">
                     <div class="nxr-kayan-code">@Model.Display(employee.EmployeeNo)</div>
@@ -973,6 +991,7 @@
     <script src="~/js/nexora-profile-kayan-pages.js" asp-append-version="true"></script>
     <script src="~/js/nexora-employee-profile-kayan-style.js" asp-append-version="true"></script>
     <script src="~/js/nexora-profile-remove-extra-links-tabs.js" asp-append-version="true"></script>
+    <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
 }
 
 <link rel="stylesheet" href="~/css/nexora-profile-remove-extra-links-tabs.css" asp-append-version="true" />

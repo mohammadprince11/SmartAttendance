@@ -2,10 +2,14 @@
 @model SmartAttendance.Web.Pages.Employees.EditModel
 
 @{
+    var employeePhotoFallback = Url.Content("~/brand/employee-photo-placeholder.svg");
+    var employeePhotoSrc = string.IsNullOrWhiteSpace(Model.CurrentPhotoPath) ? employeePhotoFallback : Model.CurrentPhotoPath;
+
     ViewData["Title"] = "تعديل بيانات الموظف";
 }
 
 <link rel="stylesheet" href="~/css/employee-edit-nexora.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-employee-photo-upload.css" asp-append-version="true" />
 
 <div class="employee-edit-page" dir="rtl">
     <section class="employee-edit-hero">
@@ -32,12 +36,12 @@
 
     <section class="employee-edit-summary">
         <div class="employee-edit-avatar">
-            @{
-                var initial = string.IsNullOrWhiteSpace(Model.Employee.FullName)
-                    ? "N"
-                    : Model.Employee.FullName.Trim()[0].ToString();
+
+            var initial = string.IsNullOrWhiteSpace(Model.Employee.FullName)
+            ? "N"
+            : Model.Employee.FullName.Trim()[0].ToString();
             }
-            @initial
+            <img src="@employeePhotoSrc" alt="Employee photo" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
         </div>
 
         <div class="employee-edit-summary-main">
@@ -49,9 +53,36 @@
             </div>
         </div>
     </section>
-
-    <form method="post" class="employee-edit-form">
+    <form method="post" enctype="multipart/form-data" class="employee-edit-form">
         <input type="hidden" asp-for="Employee.Id" />
+
+        <section class="employee-edit-card employee-edit-photo-card">
+            <div class="employee-edit-section-head">
+                <div>
+                    <h2>صورة الموظف</h2>
+                    <p>اضغط على مساحة الصورة نفسها أو اسحب صورة جديدة فوقها لتغيير صورة الموظف.</p>
+                </div>
+                <span>Photo</span>
+            </div>
+
+            <div class="employee-edit-photo-wrap">
+                <label class="employee-photo-drop @(string.IsNullOrWhiteSpace(Model.CurrentPhotoPath) ? "has-image has-brand-placeholder" : "has-image")" data-employee-photo-drop>
+                    <input asp-for="EmployeePhoto" type="file" accept="image/png,image/jpeg,image/webp" />
+                    <img class="employee-photo-preview" data-employee-photo-preview data-placeholder-src="@employeePhotoFallback" src="@employeePhotoSrc" alt="Employee photo" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
+                    <span class="employee-photo-placeholder">
+                        <strong>+</strong>
+                        <span>اضغط لتغيير الصورة</span>
+                    </span>
+                </label>
+
+                <div class="employee-photo-hint">
+                    <strong>مساحة الصورة هي زر الرفع</strong>
+                    <span>اختر صورة PNG أو JPG أو WEBP، وستُحفظ عند الضغط على حفظ التعديل.</span>
+                    <small>الحد الأقصى 5MB.</small>
+                </div>
+            </div>
+        </section>
+
 
         <section class="employee-edit-card">
             <div class="employee-edit-section-head">
@@ -166,4 +197,7 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
 }
+
+

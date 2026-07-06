@@ -30,3 +30,9 @@ NEXORA_BACKUPS_PreGit/
 appsettings.Development.json
 secrets.json
 .env
+
+# NEXORA temporary patch/backups
+*.bak_*
+_NEXORA_CLEANUP_QUARANTINE_*/
+*.ps1
+README_V*.md

@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Data.Common;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +13,9 @@ public static class HrmsDatabase
         var sql = """
 IF COL_LENGTH('Employees', 'Position') IS NULL
     ALTER TABLE Employees ADD Position nvarchar(150) NULL;
+
+IF COL_LENGTH('Employees', 'PhotoPath') IS NULL
+    ALTER TABLE Employees ADD PhotoPath nvarchar(500) NULL;
 
 IF COL_LENGTH('Employees', 'Gender') IS NULL
     ALTER TABLE Employees ADD Gender nvarchar(30) NULL;

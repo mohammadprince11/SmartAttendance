@@ -393,3 +393,83 @@
     font-weight: 900;
     line-height: 1.9;
 }
+/* ==========================================================================
+   A4 full paper text layer space V13.2
+   Root-cause fix:
+   The old designer used Header / Body / Footer sections as movement boundaries.
+   When a full A4 company form is uploaded, all text sections must become
+   transparent full-paper layers so text can move anywhere on the A4 paper.
+   ========================================================================== */
+
+.nxpen-a4-paper {
+    position: relative !important;
+}
+
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) {
+    position: relative !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+}
+
+/* Uploaded A4 template must stay behind everything. */
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) .nxpen-a4-form-layer {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+    border: 0 !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+}
+
+/* When a full A4 template exists, every old section becomes a full-paper transparent layer. */
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) .nxpen-a4-section,
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) .nxpen-a4-header,
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) .nxpen-a4-body,
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) .nxpen-a4-footer {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    outline: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    z-index: 5 !important;
+    pointer-events: none !important;
+}
+
+/* Hide generated header/footer blocks when the full A4 image already contains them. */
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) .nxpen-auto-header,
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) .nxpen-auto-footer,
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) .nxpen-a4-header img:not(.nxpen-a4-form-layer),
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) .nxpen-a4-footer img:not(.nxpen-a4-form-layer) {
+    display: none !important;
+}
+
+/* Text must always stay above the uploaded form/footer image. */
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) .nxpen-text-block {
+    position: absolute !important;
+    z-index: 40 !important;
+    pointer-events: auto !important;
+    max-width: 96% !important;
+}
+
+/* While dragging, put the selected layer at the very top. */
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) .nxpen-text-block.nxpen-layer-selected,
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) .nxpen-text-block.nxpen-layer-dragging {
+    z-index: 80 !important;
+}
+
+/* The dashed selection should not be covered by any template/footer area. */
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) .nxpen-layer-selected {
+    outline: 1px dashed rgba(25, 211, 224, .95) !important;
+    outline-offset: 2px !important;
+}

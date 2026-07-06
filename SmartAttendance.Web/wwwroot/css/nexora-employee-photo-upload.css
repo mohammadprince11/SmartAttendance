@@ -1,0 +1,239 @@
+﻿/* NEXORA employee photo upload - click the photo area itself */
+.nxr-photo-upload-card,
+.employee-edit-photo-card{
+    margin-bottom:18px;
+}
+
+.nxr-photo-upload-wrap,
+.employee-edit-photo-wrap{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
+}
+
+.nxr-photo-drop,
+.employee-photo-drop{
+    width:132px;
+    height:132px;
+    border-radius:28px;
+    border:1px dashed rgba(20,185,199,.55);
+    background:
+        radial-gradient(circle at 30% 15%,rgba(20,185,199,.22),transparent 42%),
+        linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.025));
+    display:grid;
+    place-items:center;
+    position:relative;
+    overflow:hidden;
+    cursor:pointer;
+    user-select:none;
+    box-shadow:0 18px 48px rgba(0,0,0,.18);
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+
+.nxr-photo-drop:hover,
+.employee-photo-drop:hover,
+.nxr-photo-drop.is-dragover,
+.employee-photo-drop.is-dragover{
+    transform:translateY(-2px);
+    border-color:rgba(215,168,79,.95);
+    box-shadow:0 20px 60px rgba(20,185,199,.16);
+}
+
+.nxr-photo-drop input[type="file"],
+.employee-photo-drop input[type="file"]{
+    position:absolute;
+    width:1px;
+    height:1px;
+    opacity:0;
+    pointer-events:none;
+}
+
+.nxr-photo-preview,
+.employee-photo-preview{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:none;
+    z-index:2;
+}
+
+.nxr-photo-drop.has-image .nxr-photo-preview,
+.employee-photo-drop.has-image .employee-photo-preview{
+    display:block;
+}
+
+.nxr-photo-placeholder,
+.employee-photo-placeholder{
+    z-index:1;
+    text-align:center;
+    color:#d9faff;
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+    align-items:center;
+    justify-content:center;
+    padding:12px;
+}
+
+.nxr-photo-placeholder strong,
+.employee-photo-placeholder strong{
+    width:48px;
+    height:48px;
+    border-radius:18px;
+    display:grid;
+    place-items:center;
+    background:rgba(20,185,199,.14);
+    color:#ffffff;
+    font-size:26px;
+    font-weight:1000;
+}
+
+.nxr-photo-placeholder span,
+.employee-photo-placeholder span{
+    font-size:12px;
+    font-weight:900;
+    line-height:1.5;
+}
+
+.nxr-photo-hint,
+.employee-photo-hint{
+    flex:1;
+    min-width:240px;
+    color:#b8c6d6;
+    line-height:1.8;
+    font-weight:700;
+}
+
+.nxr-photo-hint strong,
+.employee-photo-hint strong{
+    display:block;
+    color:#ffffff;
+    font-size:16px;
+    margin-bottom:4px;
+}
+
+.nxr-photo-hint small,
+.employee-photo-hint small{
+    display:block;
+    color:#8fa5ba;
+    margin-top:3px;
+    font-weight:800;
+}
+
+.employee-edit-avatar img,
+.nxr-kayan-avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    border-radius:inherit;
+}
+
+.nxr-kayan-avatar{
+    overflow:hidden;
+}
+
+
+/* Existing employee profile photo upload */
+.nxr-profile-photo-form{
+    margin:0;
+    flex:0 0 auto;
+}
+
+.nxr-profile-photo-drop{
+    position:relative;
+    cursor:pointer;
+    overflow:hidden;
+    border:1px dashed rgba(20,185,199,.48);
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+
+.nxr-profile-photo-drop:hover,
+.nxr-profile-photo-drop.is-dragover{
+    transform:translateY(-2px);
+    border-color:rgba(215,168,79,.90);
+    box-shadow:0 22px 60px rgba(20,185,199,.18);
+}
+
+.nxr-profile-photo-drop input[type="file"]{
+    position:absolute;
+    width:1px;
+    height:1px;
+    opacity:0;
+    pointer-events:none;
+}
+
+.nxr-profile-photo-preview{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:none;
+    z-index:2;
+    border-radius:inherit;
+}
+
+.nxr-profile-photo-drop.has-image .nxr-profile-photo-preview{
+    display:block;
+}
+
+.nxr-profile-photo-initial{
+    position:relative;
+    z-index:1;
+}
+
+.nxr-profile-photo-change{
+    position:absolute;
+    left:8px;
+    right:8px;
+    bottom:8px;
+    z-index:4;
+    padding:6px 7px;
+    border-radius:999px;
+    background:rgba(6,21,36,.78);
+    color:#fff;
+    font-size:10px;
+    font-weight:900;
+    text-align:center;
+    opacity:0;
+    transform:translateY(8px);
+    transition:opacity .18s ease, transform .18s ease;
+    pointer-events:none;
+}
+
+.nxr-profile-photo-drop:hover .nxr-profile-photo-change,
+.nxr-profile-photo-drop.is-dragover .nxr-profile-photo-change{
+    opacity:1;
+    transform:translateY(0);
+}
+
+/* NEXORA brand placeholder V11.2 */
+.nxr-photo-drop.has-brand-placeholder .nxr-photo-preview,
+.employee-photo-drop.has-brand-placeholder .employee-photo-preview,
+.nxr-profile-photo-drop.has-brand-placeholder .nxr-profile-photo-preview{
+    display:block !important;
+    object-fit:cover;
+}
+
+.nxr-photo-drop.has-brand-placeholder .nxr-photo-placeholder,
+.employee-photo-drop.has-brand-placeholder .employee-photo-placeholder,
+.nxr-profile-photo-drop.has-brand-placeholder .nxr-profile-photo-initial{
+    display:none !important;
+}
+
+.nxr-profile-photo-preview,
+.nxr-photo-preview,
+.employee-photo-preview{
+    background:#061524;
+}
+
+.nxr-profile-photo-drop img,
+.nxr-kayan-avatar img,
+.nxr-photo-drop img,
+.employee-photo-drop img{
+    object-fit:cover;
+}

@@ -19,6 +19,12 @@ public class CreateModel : PageModel
         ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx", ".xls", ".xlsx"
     };
 
+
+    private static readonly HashSet<string> AllowedEmployeePhotoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".webp"
+    };
+
     public CreateModel(
         IEmployeeService employeeService,
         ApplicationDbContext dbContext,
@@ -31,6 +37,10 @@ public class CreateModel : PageModel
 
     [BindProperty]
     public EmployeeCreateViewModel Employee { get; set; } = new();
+
+
+    [BindProperty]
+    public IFormFile? EmployeePhoto { get; set; }
 
     [BindProperty]
     public List<string> InitialDocumentTypes { get; set; } = new();
@@ -74,11 +84,13 @@ public class CreateModel : PageModel
 
         if (employeeId > 0)
         {
+            var photoResult = await SaveEmployeePhotoAsync(employeeId);
             var documentResult = await SaveInitialDocumentsAsync(employeeId);
+            var extraResult = string.Join(" ", new[] { photoResult, documentResult }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
-            if (!string.IsNullOrWhiteSpace(documentResult))
+            if (!string.IsNullOrWhiteSpace(extraResult))
             {
-                TempData["SuccessMessage"] = $"تم إنشاء الموظف بنجاح. {documentResult}";
+                TempData["SuccessMessage"] = $"تم إنشاء الموظف بنجاح. {extraResult}";
             }
             else
             {
@@ -91,6 +103,43 @@ public class CreateModel : PageModel
         }
 
         return RedirectToPage("./Index");
+    }
+
+    private async Task<string> SaveEmployeePhotoAsync(int employeeId)
+    {
+        if (EmployeePhoto == null || EmployeePhoto.Length == 0)
+            return string.Empty;
+
+        var extension = Path.GetExtension(EmployeePhoto.FileName);
+
+        if (string.IsNullOrWhiteSpace(extension) || !AllowedEmployeePhotoExtensions.Contains(extension))
+            return "لم يتم حفظ صورة الموظف لأن الصيغة غير مدعومة.";
+
+        if (EmployeePhoto.Length > 5 * 1024 * 1024)
+            return "لم يتم حفظ صورة الموظف لأن حجمها أكبر من 5MB.";
+
+        var uploadRoot = Path.Combine(_environment.WebRootPath, "uploads", "employee-photos");
+        Directory.CreateDirectory(uploadRoot);
+
+        var storedName = $"employee_{employeeId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}{extension}";
+        var physicalPath = Path.Combine(uploadRoot, storedName);
+        var relativePath = $"/uploads/employee-photos/{storedName}";
+
+        await using (var stream = System.IO.File.Create(physicalPath))
+        {
+            await EmployeePhoto.CopyToAsync(stream);
+        }
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            "UPDATE Employees SET PhotoPath = @PhotoPath WHERE Id = @EmployeeId;",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@PhotoPath", relativePath);
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+            });
+
+        return "تم حفظ صورة الموظف.";
     }
 
     private async Task<string> SaveInitialDocumentsAsync(int employeeId)

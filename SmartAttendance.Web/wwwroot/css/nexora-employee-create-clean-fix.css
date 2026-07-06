@@ -1,4 +1,4 @@
-
+﻿
 /* NEXORA Employee Create Clean Fix
    Purpose: restore a clean compact create page and remove the rejected onboarding sidebar layout.
 */
@@ -243,3 +243,5 @@ html[data-theme="light"] .nexora-nav-group-links .nexora-nav-link:not(.active):n
         align-items: stretch !important;
     }
 }
+
+.nxr-create-clean-form { max-width: 1400px !important; margin: 0 auto !important; width: 100% !important; }

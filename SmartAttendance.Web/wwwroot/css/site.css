@@ -1,3 +1,42 @@
+:root {
+    --nx-bg-main: #0B111E;
+    --nx-bg-card: #131B2E;
+    --nx-cyan: #00f0ff;
+    --nx-gold: #d4af37;
+    --nx-border: #1E293B;
+    --nx-transition: all 0.3s ease-in-out;
+}
+
+/* NEXORA Modern Logical Properties for RTL Support */
+.nx-card {
+    background-color: var(--nx-bg-card) !important;
+    border: 1px solid var(--nx-border) !important;
+    transition: var(--nx-transition) !important;
+    padding-inline-start: 15px;
+    padding-inline-end: 15px;
+}
+.nx-tabs .nav-link {
+    transition: var(--nx-transition) !important;
+}
+.nx-tabs .nav-link.active {
+    color: var(--nx-cyan) !important;
+    border-bottom: 2px solid var(--nx-cyan) !important;
+}
+.nx-input {
+    background-color: var(--nx-bg-main) !important;
+    border: 1px solid var(--nx-border) !important;
+    transition: var(--nx-transition) !important;
+}
+.nx-input:focus {
+    border-color: var(--nx-cyan) !important;
+    box-shadow: 0 0 5px rgba(0, 240, 255, 0.5) !important;
+}
+.text-gold {
+    color: var(--nx-gold) !important;
+}
+.text-cyan {
+    color: var(--nx-cyan) !important;
+}
 .dashboard-header {
     margin-bottom: 24px;
 }
@@ -54,4 +93,31 @@
     .app-sidebar {
         width: 220px;
     }
+}
+
+
+/* NEXORA Announcement Template Image Fix */
+.nx-card img, 
+.template-card img,
+[class*="card"] img {
+    object-fit: contain !important; /* يضمن احتواء الصورة بالكامل دون قطع الحواف */
+    object-position: center top !important; /* يضمن محاذاة الصورة بشكل صحيح من الأعلى */
+    max-height: 100% !important;
+}
+
+.nx-card, 
+.template-card {
+    overflow: visible !important; /* يمنع الحاوية من قطع الأجزاء العلوية والسفلية الخارجة قليلاً */
+    padding-top: 5px !important; /* يعطي مساحة أمان علوية ناعمة داخل البطاقة */
+}
+
+
+/* NEXORA Employee List UI Optimization */
+.filters-container, .filter-box {
+    gap: 12px !important; /* إضافة مساحة أمان بصرية بين الحقول */
+}
+.header-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-inline-end: 0px !important; /* ضبط محاذاة زر إضافة موظف مع حافة الجدول */
 }
