@@ -1,4 +1,4 @@
-using System.Data.Common;
+﻿using System.Data.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Http;
@@ -63,6 +63,20 @@ public class IndexModel : PageModel
 قسم الموارد البشرية
 """;
 
+    public string DefaultMainBodyText { get; } = """
+إشعار مخالفة وجزاء
+
+السيد/ة: {EmployeeName}
+الرقم الوظيفي: {EmployeeCode}
+القسم: {Department}
+تاريخ المخالفة: {ViolationDate}
+
+المخالفة: {ViolationName}
+فئة المخالفة: {ViolationCategory}
+العقوبة: {PenaltyAction}
+الأثر المالي: {FinancialImpact}
+""";
+
     [TempData]
     public string? StatusMessage { get; set; }
 
@@ -97,6 +111,34 @@ public class IndexModel : PageModel
     }
 
 
+    public async Task<IActionResult> OnPostSeedBodyTextLayersAsync()
+    {
+        await EnsureTablesAsync();
+        await SeedBodyTextLayersAsync(forceRebuild: true);
+
+        
+        await UpsertSettingAsync("BodyTextLayersSeeded", "true");StatusMessage = "تم إنشاء النصوص الأساسية كطبقات منفصلة. افتح كل طبقة وعدّلها مثل Word.";
+        return RedirectToPage(new { tab = "designer" });
+    }
+
+    public async Task<IActionResult> OnPostSaveA4FormAsync(IFormFile? a4FormFile)
+    {
+        await EnsureTablesAsync();
+
+        var saved = await SaveA4FormFileAsync(a4FormFile);
+        if (!string.IsNullOrWhiteSpace(saved.Path))
+        {
+            await UpsertSettingAsync("A4FormFilePath", saved.Path);
+            await UpsertSettingAsync("A4FormFileType", saved.Type);
+            StatusMessage = "A4 form saved.";
+        }
+        else
+        {
+            StatusMessage = "Choose an A4 form as PNG, JPG, WEBP, or PDF.";
+        }
+
+        return RedirectToPage(new { tab = "designer" });
+    }
     public async Task<IActionResult> OnPostSaveFormImagesAsync(IFormFile? headerImage, IFormFile? footerImage)
     {
         await EnsureTablesAsync();
@@ -114,6 +156,32 @@ public class IndexModel : PageModel
         }
 
         StatusMessage = "تم حفظ صور الهيدر والفوتر.";
+        return RedirectToPage(new { tab = "designer" });
+    }
+
+    public async Task<IActionResult> OnPostSaveMainBodyDesignAsync(
+        string? mainBodyText,
+        decimal mainBodyXPercent,
+        decimal mainBodyYPercent,
+        decimal mainBodyWidthPercent,
+        string mainBodyFontFamily,
+        int mainBodyFontSize,
+        string mainBodyFontColor,
+        string mainBodyTextAlign)
+    {
+        await EnsureTablesAsync();
+
+        await UpsertSettingAsync("MainBodyText", string.IsNullOrWhiteSpace(mainBodyText) ? DefaultMainBodyText : mainBodyText.Trim());
+        await UpsertSettingAsync("MainBodyXPercent", Clamp(mainBodyXPercent, 0, 100).ToString("0.##"));
+        await UpsertSettingAsync("MainBodyYPercent", Clamp(mainBodyYPercent, 0, 100).ToString("0.##"));
+        await UpsertSettingAsync("MainBodyWidthPercent", Clamp(mainBodyWidthPercent, 5, 100).ToString("0.##"));
+        await UpsertSettingAsync("MainBodyFontFamily", NormalizeFont(mainBodyFontFamily));
+        await UpsertSettingAsync("MainBodyFontSize", Math.Clamp(mainBodyFontSize, 8, 60).ToString());
+        await UpsertSettingAsync("MainBodyFontColor", NormalizeColor(mainBodyFontColor));
+        await UpsertSettingAsync("MainBodyIsBold", Request.Form.ContainsKey("mainBodyIsBold") ? "true" : "false");
+        await UpsertSettingAsync("MainBodyTextAlign", NormalizeTextAlign(mainBodyTextAlign));
+
+        StatusMessage = "تم حفظ تعديل النص الأساسي داخل الورقة.";
         return RedirectToPage(new { tab = "designer" });
     }
 
@@ -229,6 +297,36 @@ WHERE Id = @Id;
         HrmsDatabase.AddParameter(command, "@IsActive", Request.Form.ContainsKey("isActive"));
     }
 
+    private async Task<(string Path, string Type)> SaveA4FormFileAsync(IFormFile? file)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return (string.Empty, string.Empty);
+        }
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".png", ".jpg", ".jpeg", ".webp", ".pdf"
+        };
+
+        if (!allowed.Contains(extension))
+        {
+            return (string.Empty, string.Empty);
+        }
+
+        var uploadsRoot = Path.Combine(_environment.WebRootPath, "uploads", "disciplinary-forms");
+        Directory.CreateDirectory(uploadsRoot);
+
+        var fileName = $"a4-form_{DateTime.UtcNow:yyyyMMddHHmmssfff}{extension}";
+        var fullPath = Path.Combine(uploadsRoot, fileName);
+
+        await using var stream = System.IO.File.Create(fullPath);
+        await file.CopyToAsync(stream);
+
+        var type = extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase) ? "Pdf" : "Image";
+        return ($"/uploads/disciplinary-forms/{fileName}", type);
+    }
     private async Task<string> SaveImageAsync(IFormFile? file, string prefix)
     {
         if (file == null || file.Length == 0)
@@ -264,6 +362,12 @@ WHERE Id = @Id;
     {
         var fontWeight = block.IsBold ? "900" : "700";
         return $"right:{block.XPercent:0.##}%;top:{block.YPercent:0.##}%;width:{block.WidthPercent:0.##}%;font-family:'{block.FontFamily}',Tahoma,Arial,sans-serif;font-size:{block.FontSize}px;color:{block.FontColor};font-weight:{fontWeight};text-align:{block.TextAlign};";
+    }
+
+    public string BuildMainBodyStyle()
+    {
+        var fontWeight = Settings.MainBodyIsBold ? "900" : "700";
+        return $"right:{Settings.MainBodyXPercent:0.##}%;top:{Settings.MainBodyYPercent:0.##}%;width:{Settings.MainBodyWidthPercent:0.##}%;font-family:'{Settings.MainBodyFontFamily}',Tahoma,Arial,sans-serif;font-size:{Settings.MainBodyFontSize}px;color:{Settings.MainBodyFontColor};font-weight:{fontWeight};text-align:{Settings.MainBodyTextAlign};";
     }
 
     public async Task<IActionResult> OnPostCreateCategoryAsync(string name, string? description, int displayOrder = 10)
@@ -823,6 +927,53 @@ IF NOT EXISTS (SELECT 1 FROM DisciplinaryTemplateTypes WHERE Code = N'FinalWarni
         await UpsertSettingIfMissingAsync("FormFooter", "");
         await UpsertSettingIfMissingAsync("HeaderImagePath", "");
         await UpsertSettingIfMissingAsync("FooterImagePath", "");
+        await UpsertSettingIfMissingAsync("A4FormFilePath", "");
+        await UpsertSettingIfMissingAsync("A4FormFileType", "");
+        await UpsertSettingIfMissingAsync("MainBodyText", DefaultMainBodyText);
+        await UpsertSettingIfMissingAsync("MainBodyXPercent", "8");
+        await UpsertSettingIfMissingAsync("MainBodyYPercent", "8");
+        await UpsertSettingIfMissingAsync("MainBodyWidthPercent", "84");
+        await UpsertSettingIfMissingAsync("MainBodyFontFamily", "Tahoma");
+        await UpsertSettingIfMissingAsync("MainBodyFontSize", "13");
+        await UpsertSettingIfMissingAsync("MainBodyFontColor", "#0b1d31");
+        await UpsertSettingIfMissingAsync("MainBodyIsBold", "true");
+        await UpsertSettingIfMissingAsync("MainBodyTextAlign", "right");
+}
+
+    private async Task SeedBodyTextLayersAsync(bool forceRebuild)
+    {
+        if (forceRebuild)
+        {
+            await HrmsDatabase.ExecuteAsync(
+                _dbContext,
+                "DELETE FROM DisciplinaryFormTextBlocks WHERE Area = 'Body';");
+        }
+
+        var bodyCount = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            "SELECT COUNT(1) FROM DisciplinaryFormTextBlocks WHERE Area = 'Body';");
+
+        if (bodyCount > 0)
+        {
+            return;
+        }
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+INSERT INTO DisciplinaryFormTextBlocks
+(Area, Text, XPercent, YPercent, WidthPercent, FontFamily, FontSize, FontColor, IsBold, TextAlign, IsActive, CreatedAt)
+VALUES
+(N'Body', N'إشعار مخالفة وجزاء', 0, 7, 100, N'Tahoma', 20, N'#0b1d31', 1, N'center', 1, SYSUTCDATETIME()),
+(N'Body', N'السيد/ة: {EmployeeName}', 8, 20, 84, N'Tahoma', 13, N'#0b1d31', 1, N'right', 1, SYSUTCDATETIME()),
+(N'Body', N'الرقم الوظيفي: {EmployeeCode}', 8, 26, 84, N'Tahoma', 13, N'#0b1d31', 1, N'right', 1, SYSUTCDATETIME()),
+(N'Body', N'القسم: {Department}', 8, 32, 84, N'Tahoma', 13, N'#0b1d31', 1, N'right', 1, SYSUTCDATETIME()),
+(N'Body', N'تاريخ المخالفة: {ViolationDate}', 8, 38, 84, N'Tahoma', 13, N'#0b1d31', 1, N'right', 1, SYSUTCDATETIME()),
+(N'Body', N'المخالفة: {ViolationName}', 8, 50, 84, N'Tahoma', 13, N'#0b1d31', 1, N'right', 1, SYSUTCDATETIME()),
+(N'Body', N'فئة المخالفة: {ViolationCategory}', 8, 56, 84, N'Tahoma', 13, N'#0b1d31', 1, N'right', 1, SYSUTCDATETIME()),
+(N'Body', N'العقوبة: {PenaltyAction}', 8, 68, 84, N'Tahoma', 13, N'#0b1d31', 1, N'right', 1, SYSUTCDATETIME()),
+(N'Body', N'الأثر المالي: {FinancialImpact}', 8, 74, 84, N'Tahoma', 13, N'#0b1d31', 1, N'right', 1, SYSUTCDATETIME());
+""");
     }
 
     private async Task UpsertSettingIfMissingAsync(string key, string value)
@@ -873,7 +1024,18 @@ ELSE
             FormHeader = GetString(map, "FormHeader", string.Empty),
             FormFooter = GetString(map, "FormFooter", string.Empty),
             HeaderImagePath = GetString(map, "HeaderImagePath", string.Empty),
-            FooterImagePath = GetString(map, "FooterImagePath", string.Empty)
+            FooterImagePath = GetString(map, "FooterImagePath", string.Empty),
+            A4FormFilePath = GetString(map, "A4FormFilePath", string.Empty),
+            A4FormFileType = GetString(map, "A4FormFileType", string.Empty),
+            MainBodyText = GetString(map, "MainBodyText", DefaultMainBodyText),
+            MainBodyXPercent = GetDecimalSetting(map, "MainBodyXPercent", 8),
+            MainBodyYPercent = GetDecimalSetting(map, "MainBodyYPercent", 8),
+            MainBodyWidthPercent = GetDecimalSetting(map, "MainBodyWidthPercent", 84),
+            MainBodyFontFamily = GetString(map, "MainBodyFontFamily", "Tahoma"),
+            MainBodyFontSize = GetInt(map, "MainBodyFontSize", 13),
+            MainBodyFontColor = GetString(map, "MainBodyFontColor", "#0b1d31"),
+            MainBodyIsBold = GetBool(map, "MainBodyIsBold", true),
+            MainBodyTextAlign = GetString(map, "MainBodyTextAlign", "right")
         };
     }
 
@@ -1141,6 +1303,13 @@ ORDER BY
         return map.TryGetValue(key, out var value) && int.TryParse(value, out var result) ? result : defaultValue;
     }
 
+    private static decimal GetDecimalSetting(Dictionary<string, string> map, string key, decimal defaultValue)
+    {
+        return map.TryGetValue(key, out var value) && decimal.TryParse(value, out var result)
+            ? result
+            : defaultValue;
+    }
+
     private static string GetString(Dictionary<string, string> map, string key, string defaultValue)
     {
         return map.TryGetValue(key, out var value) ? value : defaultValue;
@@ -1166,6 +1335,17 @@ public sealed class DisciplinarySettings
     public string FormFooter { get; set; } = "";
     public string HeaderImagePath { get; set; } = "";
     public string FooterImagePath { get; set; } = "";
+    public string A4FormFilePath { get; set; } = "";
+    public string A4FormFileType { get; set; } = "";
+    public string MainBodyText { get; set; } = "";
+    public decimal MainBodyXPercent { get; set; } = 8;
+    public decimal MainBodyYPercent { get; set; } = 8;
+    public decimal MainBodyWidthPercent { get; set; } = 84;
+    public string MainBodyFontFamily { get; set; } = "Tahoma";
+    public int MainBodyFontSize { get; set; } = 13;
+    public string MainBodyFontColor { get; set; } = "#0b1d31";
+    public bool MainBodyIsBold { get; set; } = true;
+    public string MainBodyTextAlign { get; set; } = "right";
 }
 
 public sealed class ViolationCategory
@@ -1256,3 +1436,5 @@ public sealed class FormTextBlock
     public bool IsActive { get; set; }
     public DateTime? CreatedAt { get; set; }
 }
+
+

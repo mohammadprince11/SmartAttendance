@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.DisciplinaryRules.IndexModel
 @{
     ViewData["Title"] = "إعدادات المخالفات";
@@ -17,13 +17,7 @@
             <h1>إعدادات المخالفات</h1>
             <p>نبني هنا دستور المخالفات للشركة: هل تحتاج لجنة موافقات؟ هل يحق للموظف الاعتراض؟ ما هي الفئات والمخالفات؟ وما هو شكل فورمة العقوبة التي ستصدر باسم الشركة؟</p>
         </div>
-        <div class="nxpen-hero-actions">
-            <a asp-page="./Index" asp-route-tab="setup">إعدادات عامة</a>
-            <a asp-page="./Index" asp-route-tab="library">إدارة الفئات والمخالفات</a>
-            <a asp-page="./Index" asp-route-tab="designer">مصمم الفورمة</a>
-            <a asp-page="./Index" asp-route-tab="templates">قوالب الفورم</a>
-        </div>
-    </header>
+</header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
@@ -270,6 +264,23 @@
 
                     <section class="nxpen-designer-grid">
                         <div class="nxpen-designer-panel">
+                    <section class="nxpen-subcard nxpen-a4-form-card" data-nxpen-a4-form-upload>
+                        <header>
+                            <h3>&#1585;&#1601;&#1593; &#1601;&#1608;&#1585;&#1605;&#1577; &#1575;&#1604;&#1588;&#1585;&#1603;&#1577; A4</h3>
+                            <small>&#1575;&#1585;&#1601;&#1593; &#1601;&#1608;&#1585;&#1605;&#1577; &#1601;&#1575;&#1585;&#1594;&#1577; &#1603;&#1575;&#1605;&#1604;&#1577; &#1576;&#1602;&#1610;&#1575;&#1587; A4. &#1610;&#1583;&#1593;&#1605; PDF &#1571;&#1608; &#1589;&#1608;&#1585;&#1577;. &#1575;&#1604;&#1606;&#1589;&#1608;&#1589; &#1587;&#1578;&#1592;&#1607;&#1585; &#1601;&#1608;&#1602;&#1607;&#1575;.</small>
+                        </header>
+
+                        <form method="post" asp-page-handler="SaveA4Form" enctype="multipart/form-data" class="nxpen-grid-form">
+                            <div class="wide">
+                                <label>&#1601;&#1608;&#1585;&#1605;&#1577; A4 &#1601;&#1575;&#1585;&#1594;&#1577;</label>
+                                <input type="file" name="a4FormFile" accept=".png,.jpg,.jpeg,.webp,.pdf" />
+                            </div>
+                            <footer class="wide">
+                                <button type="submit">&#1581;&#1601;&#1592; &#1601;&#1608;&#1585;&#1605;&#1577; A4</button>
+                            </footer>
+                        </form>
+                    </section>
+
                             <section class="nxpen-subcard">
                                 <header>
                                     <h3>صور الهيدر والفوتر</h3>
@@ -291,10 +302,45 @@
                                 </form>
                             </section>
 
+                            <section class="nxpen-subcard nxpen-main-text-card">
+                                <header>
+                                    <h3>تعديل النص كطبقات مستقلة</h3>
+                                    <small>
+                                        كل سطر داخل الورقة صار Text Layer مستقل مثل Word:
+                                        العنوان، اسم الموظف، الكود، القسم، تاريخ المخالفة، العقوبة، والأثر المالي.
+                                        عدّل كل واحد من قائمة "طبقات النص الحالية" بالأسفل.
+                                    </small>
+                                </header>
+
+                                <div class="nxpen-layer-guide">
+                                    <article>
+                                        <strong>الفكرة</strong>
+                                        <p>بدل نص واحد كبير، كل عنصر داخل الورقة إله مكان وخط وحجم ولون ومحاذاة مستقلة.</p>
+                                    </article>
+                                    <article>
+                                        <strong>طريقة التعديل</strong>
+                                        <p>افتح أي عنصر من طبقات النص الحالية، وعدّل النص أو المكان أو الخط مثل Word.</p>
+                                    </article>
+                                </div>
+
+                                <form method="post" asp-page-handler="SeedBodyTextLayers" class="nxpen-grid-form">
+                                    <div class="wide">
+                                        <label>إعادة بناء النصوص الأساسية كطبقات منفصلة</label>
+                                        <small class="nxpen-form-note">
+                                            يستخدم هذا الزر مرة واحدة إذا تريد إنشاء عناصر الورقة الأساسية بشكل منفصل.
+                                            لا يحذف النصوص الإضافية في الهيدر أو الفوتر.
+                                        </small>
+                                    </div>
+                                    <footer class="wide">
+                                        <button type="submit">إنشاء / تحديث طبقات النص الأساسية</button>
+                                    </footer>
+                                </form>
+                            </section>
+
                             <section class="nxpen-subcard">
                                 <header>
-                                    <h3>إضافة صندوق نص</h3>
-                                    <small>حدد مكان النص بالنسبة للفورمة، ثم اختر الحجم والخط واللون.</small>
+                                    <h3>إضافة طبقة نص جديدة</h3>
+                                    <small>استخدم هذا الخيار لإضافة أي نص جديد فوق الهيدر أو المتن أو الفوتر.</small>
                                 </header>
 
                                 <form method="post" asp-page-handler="CreateTextBlock" class="nxpen-grid-form">
@@ -360,7 +406,7 @@
                                         </label>
                                     </div>
                                     <footer class="wide">
-                                        <button type="submit">إضافة صندوق نص</button>
+                                        <button type="submit">إضافة صندوق نص إضافي</button>
                                     </footer>
                                 </form>
                             </section>
@@ -374,13 +420,13 @@
                                 <div class="nxpen-edit-list">
                                     @foreach (var block in Model.TextBlocks)
                                     {
-                                        <details class="nxpen-edit-item @(block.IsActive ? "" : "disabled")">
+                                        <details class="nxpen-edit-item @(block.IsActive ? "" : "disabled")" data-layer-details="@block.Id">
                                             <summary>
                                                 <span>@block.Area</span>
                                                 <strong>@block.Text</strong>
                                                 <small>@block.FontFamily / @block.FontSize px / @block.FontColor</small>
                                             </summary>
-                                            <form method="post" asp-page-handler="UpdateTextBlock" class="nxpen-grid-form edit">
+                                            <form method="post" asp-page-handler="UpdateTextBlock" class="nxpen-grid-form edit" data-layer-form data-layer-id="@block.Id">
                                                 <input type="hidden" name="id" value="@block.Id" />
                                                 <div>
                                                     <label>المنطقة</label>
@@ -444,7 +490,7 @@
                                                     </label>
                                                 </div>
                                                 <footer class="wide">
-                                                    <button type="submit">حفظ صندوق النص</button>
+                                                    <button type="submit">حفظ طبقة النص</button>
                                                     <button class="danger-outline"
                                                             type="submit"
                                                             formaction="?handler=DeleteTextBlock"
@@ -466,8 +512,20 @@
                                 <h3>معاينة واضحة للفورمة</h3>
                                 <small>هذه المعاينة تظهر الهيدر والفوتر وصناديق النص كما ستظهر في فورمة الموظف.</small>
                             </header>
+                        <div class="nxpen-drag-help" data-nxpen-drag-help>Drag any text directly on the paper. Hold Shift to move without snap. Save the layer after moving.</div>
 
                             <div class="nxpen-a4-paper">
+                             @if (!string.IsNullOrWhiteSpace(Model.Settings.A4FormFilePath) && Model.Settings.A4FormFileType != "Pdf")
+{
+    <img class="nxpen-a4-form-layer" src="@Model.Settings.A4FormFilePath" alt="A4 Form" />
+}
+else if (Model.Settings.A4FormFileType == "Pdf")
+{
+    <div class="nxpen-a4-pdf-note">
+        تم رفع ملف PDF بنجاح، لكن المعاينة داخل المصمم تحتاج تحويل PDF إلى صورة A4.
+        حالياً ارفع الفورمة كصورة PNG / JPG حتى تظهر كخلفية.
+    </div>
+}
                                 <div class="nxpen-a4-section nxpen-a4-header">
                                     @if (!string.IsNullOrWhiteSpace(Model.Settings.HeaderImagePath))
                                     {
@@ -480,28 +538,21 @@
 
                                     @foreach (var block in Model.TextBlocks.Where(x => x.Area == "Header" && x.IsActive))
                                     {
-                                        <div class="nxpen-text-block" style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
+                                        <div class="nxpen-text-block" data-layer-id="@block.Id" data-layer-area="@block.Area" style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
                                     }
                                 </div>
 
                                 <div class="nxpen-a4-section nxpen-a4-body">
-                                    <h2>إشعار مخالفة وجزاء</h2>
-                                    <p>
-                                        السيد/ة: <strong>{EmployeeName}</strong><br />
-                                        الرقم الوظيفي: {EmployeeCode}<br />
-                                        القسم: {Department}<br />
-                                        تاريخ المخالفة: {ViolationDate}
-                                    </p>
-                                    <p>
-                                        المخالفة: <strong>{ViolationName}</strong><br />
-                                        فئة المخالفة: {ViolationCategory}<br />
-                                        العقوبة: {PenaltyAction}<br />
-                                        الأثر المالي: {FinancialImpact}
-                                    </p>
+                                    @if (!Model.TextBlocks.Any(x => x.Area == "Body" && x.IsActive))
+                                    {
+                                        <div class="nxpen-empty-paper-note">
+                                            اضغط "إنشاء / تحديث طبقات النص الأساسية" حتى تظهر عناصر الورقة كطبقات مستقلة قابلة للتعديل.
+                                        </div>
+                                    }
 
                                     @foreach (var block in Model.TextBlocks.Where(x => x.Area == "Body" && x.IsActive))
                                     {
-                                        <div class="nxpen-text-block" style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
+                                        <div class="nxpen-text-block" data-layer-id="@block.Id" data-layer-area="@block.Area" style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
                                     }
                                 </div>
 
@@ -517,7 +568,7 @@
 
                                     @foreach (var block in Model.TextBlocks.Where(x => x.Area == "Footer" && x.IsActive))
                                     {
-                                        <div class="nxpen-text-block" style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
+                                        <div class="nxpen-text-block" data-layer-id="@block.Id" data-layer-area="@block.Area" style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
                                     }
                                 </div>
                             </div>
@@ -622,3 +673,7 @@ else
 </section>
 
 <script src="~/js/nexora-disciplinary-rules.js" asp-append-version="true"></script>
+
+
+
+

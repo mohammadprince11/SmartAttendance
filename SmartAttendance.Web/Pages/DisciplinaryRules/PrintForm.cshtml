@@ -1,0 +1,353 @@
+﻿@page
+@model SmartAttendance.Web.Pages.DisciplinaryRules.PrintFormModel
+@{
+    Layout = null;
+    ViewData["Title"] = "طباعة نموذج المخالفة";
+}
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <title>طباعة نموذج المخالفة</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background: #e8eef5;
+            font-family: Tahoma, Arial, sans-serif;
+            color: #0b1d31;
+        }
+
+        .print-toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            min-height: 64px;
+            padding: 12px 18px;
+            background: #061524;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, .20);
+        }
+
+        .print-toolbar strong {
+            display: block;
+            font-size: 16px;
+        }
+
+        .print-toolbar small {
+            display: block;
+            color: #9fb3c7;
+            margin-top: 4px;
+            font-weight: 700;
+        }
+
+        .print-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .print-actions button,
+        .print-actions a {
+            min-height: 40px;
+            border: 0;
+            border-radius: 12px;
+            padding: 0 16px;
+            background: linear-gradient(90deg, #14b9c7, #22d5c8);
+            color: white;
+            text-decoration: none;
+            font-family: inherit;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        .print-actions a {
+            background: rgba(255,255,255,.10);
+            display: flex;
+            align-items: center;
+        }
+
+        .paper-wrap {
+            padding: 24px;
+            display: grid;
+            place-items: center;
+        }
+
+        .a4-paper {
+            width: 210mm;
+            height: 297mm;
+            background: #fff;
+            box-shadow: 0 18px 70px rgba(0, 0, 0, .22);
+            overflow: hidden;
+            display: grid;
+            grid-template-rows: 22% 1fr 18%;
+            position: relative;
+        }
+
+        .a4-section {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .a4-header,
+        .a4-footer {
+            background: #edf4fb;
+        }
+
+        .a4-section img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .a4-body {
+            background: #fff;
+        }
+
+        .auto-header {
+            height: 100%;
+            padding: 18mm 18mm;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border-bottom: 1px solid #dbe7f2;
+        }
+
+        .logo-mark {
+            width: 54px;
+            height: 54px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #0b1d31, #14b9c7);
+            display: grid;
+            place-items: center;
+            color: white;
+            font-size: 28px;
+            font-weight: 1000;
+        }
+
+        .auto-header strong {
+            display: block;
+            font-size: 20px;
+            font-weight: 1000;
+        }
+
+        .auto-header small {
+            display: block;
+            color: #496075;
+            margin-top: 6px;
+            font-weight: 800;
+        }
+
+        .auto-footer {
+            height: 100%;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            border-top: 1px solid #dbe7f2;
+            color: #0b1d31;
+        }
+
+        .auto-footer strong {
+            display: block;
+            font-size: 15px;
+            font-weight: 1000;
+        }
+
+        .auto-footer small {
+            display: block;
+            color: #496075;
+            margin-top: 6px;
+            font-weight: 800;
+        }
+
+        .text-layer {
+            position: absolute;
+            white-space: pre-wrap;
+            line-height: 1.55;
+            z-index: 5;
+        }
+
+        .empty-note {
+            position: absolute;
+            inset: 22% 10%;
+            border: 1px dashed #9fb3c7;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            color: #40576f;
+            font-weight: 900;
+            line-height: 1.8;
+            padding: 18px;
+            background: rgba(237,244,251,.72);
+        }
+
+
+        /* Print A4 form PDF image V9.1 */
+        .a4-paper { position: relative; }
+
+        .a4-form-layer {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            object-fit: cover;
+            display: block;
+            z-index: 0;
+            pointer-events: none;
+            background: #fff;
+        }
+
+        .a4-paper.has-a4-form .a4-section {
+            background: transparent !important;
+            position: relative;
+            z-index: 2;
+        }
+
+        .a4-paper.has-a4-form .auto-header,
+        .a4-paper.has-a4-form .auto-footer {
+            display: none !important;
+        }
+
+        .a4-paper.has-a4-form .a4-header img:not(.a4-form-layer),
+        .a4-paper.has-a4-form .a4-footer img:not(.a4-form-layer) {
+            display: none !important;
+        }
+
+        .a4-paper.has-a4-form .text-layer {
+            z-index: 10 !important;
+        }
+        @@page {
+            size: A4;
+            margin: 0;
+        }
+
+        @@media print {
+            html,
+            body {
+                width: 210mm;
+                height: 297mm;
+                background: #fff;
+            }
+
+            .print-toolbar {
+                display: none !important;
+            }
+
+            .paper-wrap {
+                padding: 0;
+                display: block;
+            }
+
+            .a4-paper {
+                width: 210mm;
+                height: 297mm;
+                box-shadow: none;
+                margin: 0;
+                page-break-after: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-toolbar">
+        <div>
+            <strong>طباعة نموذج المخالفة</strong>
+            <small>هذه نسخة طباعة A4 بدون القائمة الجانبية وبدون عناصر التصميم.</small>
+        </div>
+
+        <div class="print-actions">
+            <a href="/DisciplinaryRules?tab=designer">رجوع للمصمم</a>
+            <button type="button" onclick="window.print()">طباعة النموذج</button>
+        </div>
+    </div>
+
+    <main class="paper-wrap">
+        <section class="a4-paper @(string.IsNullOrWhiteSpace(Model.Settings.A4FormFilePath) ? "" : "has-a4-form")">
+            @if (!string.IsNullOrWhiteSpace(Model.Settings.A4FormFilePath))
+            {
+                if (Model.Settings.A4FormFileType == "Pdf")
+                {
+                    <iframe class="a4-form-layer" src="@Model.Settings.A4FormFilePath#toolbar=0&navpanes=0&scrollbar=0"></iframe>
+                }
+                else
+                {
+                    <img class="a4-form-layer" src="@Model.Settings.A4FormFilePath" alt="A4 Form" />
+                }
+            }
+            <header class="a4-section a4-header">
+                @if (!string.IsNullOrWhiteSpace(Model.Settings.HeaderImagePath))
+                {
+                    <img src="@Model.Settings.HeaderImagePath" alt="Header" />
+                }
+                else
+                {
+                    <div class="auto-header">
+                        <div class="logo-mark">N</div>
+                        <div>
+                            <strong>NEXORA HR</strong>
+                            <small>Disciplinary Notice / إشعار مخالفة وجزاء</small>
+                        </div>
+                    </div>
+                }
+
+                @foreach (var block in Model.TextBlocks.Where(x => x.Area == "Header" && x.IsActive))
+                {
+                    <div class="text-layer" style="@Model.BuildTextBlockStyle(block)">@Model.ReplaceSampleTokens(block.Text)</div>
+                }
+            </header>
+
+            <section class="a4-section a4-body">
+                @if (!Model.TextBlocks.Any(x => x.Area == "Body" && x.IsActive))
+                {
+                    <div class="empty-note">
+                        لا توجد طبقات نص داخل المتن.
+                        <br />
+                        ارجع إلى المصمم واضغط إنشاء / تحديث طبقات النص الأساسية.
+                    </div>
+                }
+
+                @foreach (var block in Model.TextBlocks.Where(x => x.Area == "Body" && x.IsActive))
+                {
+                    <div class="text-layer" style="@Model.BuildTextBlockStyle(block)">@Model.ReplaceSampleTokens(block.Text)</div>
+                }
+            </section>
+
+            <footer class="a4-section a4-footer">
+                @if (!string.IsNullOrWhiteSpace(Model.Settings.FooterImagePath))
+                {
+                    <img src="@Model.Settings.FooterImagePath" alt="Footer" />
+                }
+                else
+                {
+                    <div class="auto-footer">
+                        <div>
+                            <strong>@Model.Settings.ApprovingAuthorityName</strong>
+                            <small>تم إنشاء هذا الإشعار من نظام NEXORA HR</small>
+                        </div>
+                    </div>
+                }
+
+                @foreach (var block in Model.TextBlocks.Where(x => x.Area == "Footer" && x.IsActive))
+                {
+                    <div class="text-layer" style="@Model.BuildTextBlockStyle(block)">@Model.ReplaceSampleTokens(block.Text)</div>
+                }
+            </footer>
+        </section>
+    </main>
+</body>
+</html>
+
+
