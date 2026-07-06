@@ -1,0 +1,130 @@
+﻿@page
+@model SmartAttendance.Web.Pages.HrSettings.NoticePeriodModel
+
+@{
+    ViewData["Title"] = "فترة الإنذار";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+
+<section class="nxhs-page nxhs-simple" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">إعدادات الموارد البشرية</a>
+        <h1>فترة الإنذار</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <form method="post" class="nxhs-panel nxhs-notice-panel">
+        <header>
+            <span>التهيئة</span>
+            <h2>فترة الإنذار على مستوى الشركة</h2>
+        </header>
+
+        <div class="nxhs-duration-row">
+            <label class="nxhs-field">
+                <span>فترة الإنذار تكون</span>
+                <input asp-for="NoticeValue" type="number" min="0" />
+            </label>
+
+            <div class="nxhs-segment nxhs-unit-segment">
+                <input id="notice-day" asp-for="NoticeUnit" type="radio" value="Day" />
+                <label for="notice-day">يوم</label>
+
+                <input id="notice-month" asp-for="NoticeUnit" type="radio" value="Month" />
+                <label for="notice-month">شهر</label>
+            </div>
+
+            <label class="nxhs-field">
+                <span>من</span>
+                <select asp-for="NoticeBasis">
+                    <option value="TerminationDate">تاريخ الإيقاف</option>
+                    <option value="ResignationDate">تاريخ الاستقالة</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="nxhs-option-row">
+            <strong>استثناء أيام العطل الرسمية</strong>
+            <div class="nxhs-segment">
+                <input id="hol-yes" asp-for="ExcludeOfficialHolidays" type="radio" value="true" />
+                <label for="hol-yes">نعم</label>
+                <input id="hol-no" asp-for="ExcludeOfficialHolidays" type="radio" value="false" />
+                <label for="hol-no">لا</label>
+            </div>
+        </div>
+
+        <section class="nxhs-subbox">
+            <h3>أيام العطل مستثناة من فترة الإنذار</h3>
+
+            <label class="nxhs-field-row">
+                <span>موظفين بدون مناوبة</span>
+                <select asp-for="NoAttendanceException">
+                    <option value="None">لا شيء</option>
+                    <option value="Holidays">العطل الرسمية</option>
+                </select>
+            </label>
+
+            <label class="nxhs-field-row">
+                <span>موظفين الحضور المنتظم</span>
+                <select asp-for="RegularAttendanceException">
+                    <option value="None">لا شيء</option>
+                    <option value="Holidays">العطل الرسمية</option>
+                </select>
+            </label>
+
+            <label class="nxhs-field-row">
+                <span>موظفين الحضور المجدول</span>
+                <select asp-for="ScheduledAttendanceException">
+                    <option value="None">لا شيء</option>
+                    <option value="Holidays">العطل الرسمية</option>
+                </select>
+            </label>
+        </section>
+
+        <section class="nxhs-subbox">
+            <h3>الإجراءات المطلوبة للموظفين المغادرين قبل انتهاء فترة الإنذار</h3>
+
+            <label class="nxhs-field-row">
+                <span>الراتب المستحق</span>
+                <select asp-for="SalaryAction">
+                    <option value="LastWorkingDay">احتساب حتى آخر يوم عمل</option>
+                    <option value="TerminationDate">احتساب حتى تاريخ الإيقاف</option>
+                </select>
+            </label>
+
+            <label class="nxhs-field-row">
+                <span>مكافأة نهاية الخدمة</span>
+                <select asp-for="EndOfServiceAction">
+                    <option value="LastWorkingDay">احتساب حتى آخر يوم عمل</option>
+                    <option value="TerminationDate">احتساب حتى تاريخ الإيقاف</option>
+                </select>
+            </label>
+
+            <label class="nxhs-field-row">
+                <span>بدل الإجازة</span>
+                <select asp-for="LeaveAllowanceAction">
+                    <option value="LastWorkingDay">احتساب حتى آخر يوم عمل</option>
+                    <option value="TerminationDate">احتساب حتى تاريخ الإيقاف</option>
+                </select>
+            </label>
+
+            <label class="nxhs-field-row">
+                <span>صرف التذاكر نقداً</span>
+                <select asp-for="TicketAction">
+                    <option value="LastWorkingDay">احتساب حتى آخر يوم عمل</option>
+                    <option value="TerminationDate">احتساب حتى تاريخ الإيقاف</option>
+                </select>
+            </label>
+        </section>
+
+        <footer class="nxhs-actions">
+            <button type="submit">حفظ الإعدادات</button>
+        </footer>
+    </form>
+</section>
+
+<script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>

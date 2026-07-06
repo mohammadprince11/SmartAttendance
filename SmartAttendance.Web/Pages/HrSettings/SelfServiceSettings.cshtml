@@ -1,0 +1,108 @@
+﻿@page
+@model SmartAttendance.Web.Pages.HrSettings.SelfServiceSettingsModel
+
+@{
+    ViewData["Title"] = "إعدادات الخدمة الذاتية";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+
+<section class="nxhs-page nxhs-simple" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">إعدادات الموارد البشرية</a>
+        <h1>إعدادات الخدمة الذاتية</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <form method="post" class="nxhs-panel nxhs-self-panel">
+        <section class="nxhs-setting-section">
+            <h2>إعدادات منشورات الحائط</h2>
+            <label class="nxhs-check-line">
+                <input asp-for="AllowWallPosts" type="checkbox" />
+                <b>السماح بمشاركة المنشورات على جدار كيان الاجتماعي من خلال بوابة الخدمة الذاتية</b>
+            </label>
+        </section>
+
+        <section class="nxhs-setting-section">
+            <h2>اقتراحات وشكاوي</h2>
+            <label class="nxhs-check-line">
+                <input asp-for="DisableAnonymousSuggestions" type="checkbox" />
+                <b>عدم السماح بتقديم اقتراحات وشكاوي كمجهول</b>
+            </label>
+        </section>
+
+        <section class="nxhs-setting-section">
+            <h2>حالات الموظفات</h2>
+            <label class="nxhs-field-row">
+                <span>السماح للموظف باختيار الشعور من</span>
+                <select asp-for="EmployeeFeelingAudience">
+                    <option value="AllEmployees">جميع الموظفين</option>
+                    <option value="SameBranch">نفس الفرع</option>
+                    <option value="TeamOnly">الفريق فقط</option>
+                </select>
+            </label>
+        </section>
+
+        <section class="nxhs-setting-section">
+            <h2>مستويات فريقي</h2>
+
+            <div class="nxhs-team-access-row">
+                <label class="nxhs-check-line">
+                    <input asp-for="AllowManagersTeamAccess" type="checkbox" />
+                    <b>السماح للمديرين بالحصول على صلاحية على الموظفين بـ</b>
+                </label>
+
+                <label class="nxhs-level-select">
+                    <span>مستويات أدناه</span>
+                    <select asp-for="ManagerAccessLevel">
+                        <option value="LastUnit">آخر وحدة</option>
+                        <option value="OneLevel">مستوى واحد</option>
+                        <option value="AllLevels">كل المستويات</option>
+                    </select>
+                </label>
+            </div>
+
+            <p class="nxhs-helper">اختر الأقسام التي سيحصل المدير على صلاحية لها:</p>
+
+            <div class="nxhs-permission-grid">
+                <label><input asp-for="AccessEvaluations" type="checkbox" /> <span>التقييم و الرسومات البيانية</span></label>
+                <label><input asp-for="AccessEmployees" type="checkbox" /> <span>قائمة وملفات الموظفين</span></label>
+                <label><input asp-for="AccessRequests" type="checkbox" /> <span>الطلبات</span></label>
+                <label><input asp-for="AccessAttendance" type="checkbox" /> <span>الحضور دخول/خروج</span></label>
+                <label><input asp-for="AccessReports" type="checkbox" /> <span>التقارير</span></label>
+                <label><input asp-for="AccessCards" type="checkbox" /> <span>بطاقات المواهب</span></label>
+            </div>
+        </section>
+
+        <section class="nxhs-setting-section">
+            <h2>تصفية طلبات تعديل المعلومات</h2>
+            <label class="nxhs-check-line"><input asp-for="RequireAttachmentOnInfoChange" type="checkbox" /><b>المرفق مطلوب عند طلب الموظف تعديل</b></label>
+            <label class="nxhs-check-line"><input asp-for="RequireBankAttachment" type="checkbox" /><b>ملف الالتزام البنكي إلزامي عند طلب الموظف تعديل معلومات الدفع</b></label>
+        </section>
+
+        <section class="nxhs-setting-section">
+            <h2>طلب نقل موظف</h2>
+            <label class="nxhs-check-line"><input asp-for="AllowDirectManagerTransfer" type="checkbox" /><b>السماح للمديرين باختيار مدير مباشر جديد من قائمة الموظفين كاملة عند طلب نقل الموظف</b></label>
+        </section>
+
+        <section class="nxhs-setting-section">
+            <h2>تطبيق الهاتف المحمول</h2>
+            <label class="nxhs-check-line"><input asp-for="AllowMobileScreenshots" type="checkbox" /><b>السماح بأخذ لقطات الشاشة وتسجيلها داخل التطبيق</b></label>
+        </section>
+
+        <section class="nxhs-setting-section">
+            <h2>دليل الموظفين</h2>
+            <label class="nxhs-check-line"><input asp-for="ShowDailyStatus" type="checkbox" /><b>إظهار الحالة اليومية للموظف</b></label>
+        </section>
+
+        <footer class="nxhs-actions">
+            <button type="submit">حفظ الإعدادات</button>
+        </footer>
+    </form>
+</section>
+
+<script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>

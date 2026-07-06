@@ -1,0 +1,207 @@
+﻿@page
+@model SmartAttendance.Web.Pages.Violations.PrintFormModel
+
+@{
+    Layout = null;
+    var violation = Model.Violation!;
+}
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <title>فورمة المخالفة - @violation.ReferenceNo</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+            background: #06111f;
+            color: #e6eef8;
+            font-family: Tahoma, Arial, sans-serif;
+        }
+
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            align-items: center;
+            padding: 14px 22px;
+            background: rgba(6, 17, 31, .94);
+            border-bottom: 1px solid rgba(25, 211, 224, .24);
+        }
+
+        .toolbar strong {
+            display: block;
+            font-size: 14px;
+            color: #f3f8fc;
+        }
+
+        .toolbar small {
+            color: #9db5c8;
+            font-size: 11px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .actions a,
+        .actions button {
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(25, 211, 224, .32);
+            border-radius: 12px;
+            background: rgba(25, 211, 224, .10);
+            color: #d9fbff;
+            padding: 0 13px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        .actions button {
+            background: linear-gradient(135deg, #19d3e0, #16b8c4);
+            color: #042231;
+        }
+
+        .page-wrap {
+            display: grid;
+            place-items: start center;
+            padding: 28px;
+        }
+
+        .a4-paper {
+            position: relative;
+            width: 210mm;
+            height: 297mm;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, .45);
+        }
+
+        .a4-template {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+        }
+
+        .fallback-paper {
+            position: absolute;
+            inset: 0;
+            background: #ffffff;
+            z-index: 0;
+        }
+
+        .fallback-head {
+            position: absolute;
+            top: 28mm;
+            left: 18mm;
+            right: 18mm;
+            height: 22mm;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #0f172a;
+            font-weight: 900;
+            z-index: 1;
+        }
+
+        .fallback-foot {
+            position: absolute;
+            bottom: 18mm;
+            left: 18mm;
+            right: 18mm;
+            color: #0f172a;
+            font-size: 10px;
+            z-index: 1;
+        }
+
+        .form-layer {
+            position: absolute;
+            white-space: pre-line;
+            line-height: 1.55;
+            z-index: 5;
+        }
+        @@page {
+            size: A4;
+            margin: 0;
+        }
+        @@media print {
+            html,
+            body {
+                background: #ffffff;
+            }
+
+            .toolbar {
+                display: none !important;
+            }
+
+            .page-wrap {
+                padding: 0;
+                display: block;
+            }
+
+            .a4-paper {
+                width: 210mm;
+                height: 297mm;
+                box-shadow: none;
+                page-break-after: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <div>
+            <strong>فورمة المخالفة: @violation.ReferenceNo</strong>
+            <small>@violation.EmployeeName - @violation.EventDate.ToString("yyyy-MM-dd")</small>
+        </div>
+
+        <div class="actions">
+            <a href="/Violations">رجوع لحالات المخالفات</a>
+            <button type="button" onclick="window.print()">طباعة</button>
+        </div>
+    </div>
+
+    <main class="page-wrap">
+        <section class="a4-paper">
+            @if (!string.IsNullOrWhiteSpace(Model.Settings.A4FormFilePath))
+            {
+                <img class="a4-template" src="@Model.Settings.A4FormFilePath" alt="A4 template" />
+            }
+            else
+            {
+                <div class="fallback-paper"></div>
+                <div class="fallback-head">
+                    <span>AL-RAGHAD INTERNATIONAL GROUP</span>
+                    <span>إشعار مخالفة وجزاء</span>
+                </div>
+                <div class="fallback-foot">
+                    Al-Raghad International Group
+                </div>
+            }
+
+            @foreach (var block in Model.TextBlocks)
+            {
+                <div class="form-layer" style="@Model.BlockStyle(block)">@Model.ReplaceTokens(block.Text)</div>
+            }
+        </section>
+    </main>
+</body>
+</html>
+

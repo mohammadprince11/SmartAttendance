@@ -142,6 +142,21 @@
                         <a asp-page="/DisciplinaryRules/Index" class="nexora-nav-link @(IsUnder("/DisciplinaryRules") ? "active nexora-active" : "")">
                             <span>إعدادات الموارد البشرية</span>
                         </a>
+                        <a asp-page="/HrSettings/ProbationPeriod" class="nexora-nav-link @(IsUnder("/HrSettings/ProbationPeriod") ? "active nexora-active" : "")">
+                            <span>فترة التجربة</span>
+                        </a>
+                        <a asp-page="/HrSettings/NoticePeriod" class="nexora-nav-link @(IsUnder("/HrSettings/NoticePeriod") ? "active nexora-active" : "")">
+                            <span>فترة الإنذار</span>
+                        </a>
+                        <a asp-page="/HrSettings/SelfServiceSettings" class="nexora-nav-link @(IsUnder("/HrSettings/SelfServiceSettings") ? "active nexora-active" : "")">
+                            <span>إعدادات الخدمة الذاتية</span>
+                        </a>
+                        <a asp-page="/HrSettings/TerminationReasons" class="nexora-nav-link @(IsUnder("/HrSettings/TerminationReasons") ? "active nexora-active" : "")">
+                            <span>أسباب الإيقاف</span>
+                        </a>
+                        <a asp-page="/HrSettings/NotificationCenter" class="nexora-nav-link @(IsUnder("/HrSettings/NotificationCenter") ? "active nexora-active" : "")">
+                            <span>مركز الإشعارات</span>
+                        </a>
                         <a asp-page="/EmployeeProfiles/Index" class="nexora-nav-link @(IsUnder("/EmployeeProfiles") ? "active nexora-active" : "")">
                             <span>عمليات الموارد البشرية</span>
                         </a>
@@ -204,11 +219,41 @@
                         <a asp-page="/DisciplinaryRules/Index" class="nexora-nav-link @(IsUnder("/DisciplinaryRules") ? "active nexora-active" : "")">
                             <span>إعدادات الموارد البشرية</span>
                         </a>
+                        <a asp-page="/HrSettings/ProbationPeriod" class="nexora-nav-link @(IsUnder("/HrSettings/ProbationPeriod") ? "active nexora-active" : "")">
+                            <span>فترة التجربة</span>
+                        </a>
+                        <a asp-page="/HrSettings/NoticePeriod" class="nexora-nav-link @(IsUnder("/HrSettings/NoticePeriod") ? "active nexora-active" : "")">
+                            <span>فترة الإنذار</span>
+                        </a>
+                        <a asp-page="/HrSettings/SelfServiceSettings" class="nexora-nav-link @(IsUnder("/HrSettings/SelfServiceSettings") ? "active nexora-active" : "")">
+                            <span>إعدادات الخدمة الذاتية</span>
+                        </a>
+                        <a asp-page="/HrSettings/TerminationReasons" class="nexora-nav-link @(IsUnder("/HrSettings/TerminationReasons") ? "active nexora-active" : "")">
+                            <span>أسباب الإيقاف</span>
+                        </a>
+                        <a asp-page="/HrSettings/NotificationCenter" class="nexora-nav-link @(IsUnder("/HrSettings/NotificationCenter") ? "active nexora-active" : "")">
+                            <span>مركز الإشعارات</span>
+                        </a>
                         <a asp-page="/EmployeeUpdates/Index" asp-route-section="payment" class="nexora-nav-link">
                             <span>معلومات الدفع</span>
                         </a>
                         <a asp-page="/DisciplinaryRules/Index" class="nexora-nav-link @(IsUnder("/DisciplinaryRules") ? "active nexora-active" : "")">
                             <span>إعدادات الموارد البشرية</span>
+                        </a>
+                        <a asp-page="/HrSettings/ProbationPeriod" class="nexora-nav-link @(IsUnder("/HrSettings/ProbationPeriod") ? "active nexora-active" : "")">
+                            <span>فترة التجربة</span>
+                        </a>
+                        <a asp-page="/HrSettings/NoticePeriod" class="nexora-nav-link @(IsUnder("/HrSettings/NoticePeriod") ? "active nexora-active" : "")">
+                            <span>فترة الإنذار</span>
+                        </a>
+                        <a asp-page="/HrSettings/SelfServiceSettings" class="nexora-nav-link @(IsUnder("/HrSettings/SelfServiceSettings") ? "active nexora-active" : "")">
+                            <span>إعدادات الخدمة الذاتية</span>
+                        </a>
+                        <a asp-page="/HrSettings/TerminationReasons" class="nexora-nav-link @(IsUnder("/HrSettings/TerminationReasons") ? "active nexora-active" : "")">
+                            <span>أسباب الإيقاف</span>
+                        </a>
+                        <a asp-page="/HrSettings/NotificationCenter" class="nexora-nav-link @(IsUnder("/HrSettings/NotificationCenter") ? "active nexora-active" : "")">
+                            <span>مركز الإشعارات</span>
                         </a>
                     </div>
                 </details>
@@ -263,6 +308,7 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+
 
 
 

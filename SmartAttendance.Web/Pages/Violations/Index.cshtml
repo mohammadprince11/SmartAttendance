@@ -20,7 +20,7 @@
         <div>
             <div class="nxv-brand">NEXORA HR DISCIPLINARY</div>
             <h1>حالات المخالفات</h1>
-            <p>تسجيل ومتابعة المخالفات المثبتة على الموظفين، مع متابعة حالة الإجراء قبل إصدار فورمة المخالفة.</p>
+            <p>تسجيل ومتابعة المخالفات المثبتة على الموظفين، مع متابعة العقوبة ومبلغ الخصم وفورمة المخالفة.</p>
         </div>
 
         <div class="nxv-hero-actions">
@@ -28,6 +28,16 @@
             <button type="button" class="nxv-btn" data-nxv-print>طباعة السجل</button>
         </div>
     </section>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxv-alert success">@TempData["SuccessMessage"]</div>
+    }
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="nxv-alert danger">يرجى مراجعة الحقول المطلوبة داخل نافذة إضافة مخالفة.</div>
+    }
 
     <section class="nxv-tabs-card">
         <div class="nxv-tabs" aria-label="تبويبات المخالفات">
@@ -74,7 +84,7 @@
         <div class="nxv-search">
             <span>⌕</span>
             <input type="search"
-                   placeholder="ابحث عن الموظف، الرقم المرجعي، نوع المخالفة، الفرع أو القسم..."
+                   placeholder="ابحث عن الموظف، الرقم المرجعي، نوع المخالفة، العقوبة أو مبلغ الخصم..."
                    data-nxv-search />
         </div>
 
@@ -102,21 +112,22 @@
         <div class="nxv-table-head">
             <div>
                 <h2>سجل المخالفات</h2>
-                <p>القائمة المقترحة لمتابعة المخالفات قبل ربطها بقاعدة البيانات وفورمة A4.</p>
+                <p>اختيار الفئة يفلتر أنواع المخالفات، والفورمة مربوطة ببيانات الموظف والمخالفة.</p>
             </div>
 
             <span class="nxv-count" data-nxv-count>@rows.Count حالة</span>
         </div>
 
         <div class="nxv-table-wrap">
-            <table class="nxv-table">
+            <table class="nxv-table nxv-table-v15">
                 <colgroup>
                     <col class="nxv-col-ref" />
                     <col class="nxv-col-employee" />
                     <col class="nxv-col-violation" />
                     <col class="nxv-col-date" />
                     <col class="nxv-col-source" />
-                    <col class="nxv-col-action" />
+                    <col class="nxv-col-penalty" />
+                    <col class="nxv-col-deduction" />
                     <col class="nxv-col-status" />
                     <col class="nxv-col-options" />
                 </colgroup>
@@ -128,7 +139,8 @@
                         <th>المخالفة</th>
                         <th>تاريخ الحدث</th>
                         <th>المصدر</th>
-                        <th>حالة الإجراء</th>
+                        <th>العقوبة</th>
+                        <th>مبلغ الخصم</th>
                         <th>الحالة</th>
                         <th>خيارات</th>
                     </tr>
@@ -141,25 +153,25 @@
                             data-status="@item.Status"
                             data-action="@item.ActionStatus"
                             data-source="@item.Source"
-                            data-search="@($"{item.ReferenceNo} {item.EmployeeCode} {item.EmployeeName} {item.Position} {item.Branch} {item.Department} {item.ViolationTitle} {item.ViolationCategory} {item.Source} {item.Status} {item.ActionStatus}")">
+                            data-search="@($"{item.ReferenceNo} {item.EmployeeCode} {item.EmployeeName} {item.Position} {item.Branch} {item.Department} {item.ViolationTitle} {item.ViolationCategory} {item.Source} {item.Status} {item.ActionStatus} {item.FinalPenaltyAction} {item.DeductionAmount}")">
                             <td>
                                 <span class="nxv-ref">@item.ReferenceNo</span>
                             </td>
 
                             <td>
                                 <div class="nxv-employee">
-                                    <span class="nxv-avatar">@item.EmployeeName.Trim()[0]</span>
+                                    <span class="nxv-avatar">@item.Avatar</span>
                                     <div>
-                                        <strong>@item.EmployeeCode - @item.EmployeeName</strong>
-                                        <small>@item.Position · @item.Branch / @item.Department</small>
+                                        <strong>@item.EmployeeName</strong>
+                                        <small>@item.EmployeeCode</small>
                                     </div>
                                 </div>
                             </td>
 
                             <td>
                                 <div class="nxv-violation">
-                                    <strong>@item.ViolationCategory</strong>
-                                    <small>@item.ViolationTitle</small>
+                                    <strong>@item.ViolationTitle</strong>
+                                    <small>@item.ViolationCategory</small>
                                 </div>
                             </td>
 
@@ -169,7 +181,16 @@
                                 <span class="nxv-chip source">@item.Source</span>
                             </td>
 
-                            <td>@item.ActionStatus</td>
+                            <td>
+                                <div class="nxv-violation">
+                                    <strong>@(!string.IsNullOrWhiteSpace(item.FinalPenaltyAction) ? item.FinalPenaltyAction : "-")</strong>
+                                    <small>@item.DisplayFinancialImpact</small>
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="nxv-money">@item.DeductionAmount.ToString("N0") د.ع</span>
+                            </td>
 
                             <td>
                                 <span class="nxv-status @item.StatusCss">@item.Status</span>
@@ -177,85 +198,176 @@
 
                             <td>
                                 <div class="nxv-options">
-                                    <button type="button" title="فتح ملف المخالفة">•••</button>
-                                    <a asp-page="/DisciplinaryRules/PrintForm" title="عرض فورمة A4">فورمة</a>
+                                    <a asp-page="/Employees/Profile" asp-route-id="@item.EmployeeId" title="فتح ملف الموظف">موظف</a>
+                                    <a asp-page="/Violations/PrintForm" asp-route-id="@item.Id" title="عرض فورمة A4 المربوطة">فورمة</a>
                                 </div>
                             </td>
                         </tr>
                     }
 
-                    <tr class="nxv-empty" data-nxv-empty hidden>
-                        <td colspan="8">لا توجد نتائج مطابقة للبحث أو الفلترة الحالية.</td>
+                    <tr class="nxv-empty" data-nxv-empty @(rows.Any() ? "hidden" : "")>
+                        <td colspan="9">لا توجد مخالفات مسجلة حالياً.</td>
                     </tr>
                 </tbody>
             </table>
         </div>
     </section>
 
-    <div class="nxv-modal" data-nxv-modal hidden>
+    <div class="nxv-modal" data-nxv-modal data-nxv-open-on-load="@Model.OpenCreateModal.ToString().ToLowerInvariant()" hidden>
         <div class="nxv-modal-backdrop" data-nxv-close-modal></div>
 
         <section class="nxv-modal-panel" role="dialog" aria-modal="true" aria-labelledby="nxv-modal-title">
-            <div class="nxv-modal-head">
-                <div>
-                    <div class="nxv-modal-eyebrow">NEW VIOLATION</div>
-                    <h2 id="nxv-modal-title">إضافة مخالفة جديدة</h2>
-                    <p>مرحلة واجهة فقط. في المرحلة التالية نربطها بالموظف وقاعدة البيانات.</p>
+            <form method="post" asp-page-handler="Create" class="nxv-modal-form">
+                <div class="nxv-modal-head">
+                    <div>
+                        <div class="nxv-modal-eyebrow">NEW VIOLATION</div>
+                        <h2 id="nxv-modal-title">إضافة مخالفة جديدة</h2>
+                        <p>ابحث عن الموظف بالكود أو الاسم، اختر الفئة ثم نوع المخالفة، وبعدها عدّل العقوبة أو مبلغ الخصم إذا احتجت.</p>
+                    </div>
+
+                    <button type="button" class="nxv-modal-close" data-nxv-close-modal aria-label="إغلاق">×</button>
                 </div>
 
-                <button type="button" class="nxv-modal-close" data-nxv-close-modal aria-label="إغلاق">×</button>
-            </div>
+                <div asp-validation-summary="ModelOnly" class="nxv-validation-summary"></div>
 
-            <div class="nxv-form-grid">
-                <label>
-                    <span>الموظف</span>
-                    <input type="text" placeholder="ابحث باسم الموظف أو الكود" disabled />
-                </label>
+                <div class="nxv-form-scroll">
+                    <div class="nxv-form-grid">
+                        <label class="wide">
+                            <span>الموظف</span>
+                            <input type="search"
+                                   list="nxv-employees-list"
+                                   autocomplete="off"
+                                   data-nxv-employee-search
+                                   placeholder="اكتب الكود أو اسم الموظف..." />
+                            <input asp-for="Input.EmployeeId" type="hidden" data-nxv-employee-id />
+                            <datalist id="nxv-employees-list">
+                                @foreach (var employee in Model.EmployeeOptions)
+                                {
+                                    <option value="@employee.SearchText" data-id="@employee.Id"></option>
+                                }
+                            </datalist>
+                            <small asp-validation-for="Input.EmployeeId"></small>
+                        </label>
 
-                <label>
-                    <span>نوع المخالفة</span>
-                    <input type="text" placeholder="مثال: عدم تنفيذ تعليمات نظام العمل" disabled />
-                </label>
+                        <label>
+                            <span>الفئة</span>
+                            <select asp-for="Input.CategoryId" data-nxv-category-select>
+                                <option value="">اختر الفئة أولاً</option>
+                                @foreach (var category in Model.CategoryOptions)
+                                {
+                                    <option value="@category.Id">@category.Name</option>
+                                }
+                            </select>
+                            <small asp-validation-for="Input.CategoryId"></small>
+                        </label>
 
-                <label>
-                    <span>فئة المخالفة</span>
-                    <select disabled>
-                        <option>A</option>
-                        <option>B</option>
-                        <option>C</option>
-                    </select>
-                </label>
+                        <label class="wide">
+                            <span>نوع المخالفة</span>
+                            <select asp-for="Input.ViolationTypeId" data-nxv-violation-type disabled>
+                                <option value="">اختر الفئة حتى تظهر المخالفات</option>
+                                @foreach (var violation in Model.ViolationOptions)
+                                {
+                                    <option value="@violation.Id"
+                                            data-category-id="@violation.CategoryId"
+                                            data-category="@violation.CategoryName"
+                                            data-penalty="@violation.PenaltyAction"
+                                            data-impact-type="@violation.FinancialImpactType"
+                                            data-impact-value="@violation.FinancialValue.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                                        @violation.ViolationName
+                                    </option>
+                                }
+                            </select>
+                            <small asp-validation-for="Input.ViolationTypeId"></small>
+                        </label>
 
-                <label>
-                    <span>تاريخ الحدث</span>
-                    <input type="date" disabled />
-                </label>
+                        <label>
+                            <span>تاريخ الحدث</span>
+                            <input asp-for="Input.EventDate" type="date" />
+                            <small asp-validation-for="Input.EventDate"></small>
+                        </label>
 
-                <label>
-                    <span>المصدر</span>
-                    <select disabled>
-                        <option>مباشر</option>
-                        <option>النظام</option>
-                        <option>HR</option>
-                        <option>فرع</option>
-                    </select>
-                </label>
+                        <label>
+                            <span>المصدر</span>
+                            <select asp-for="Input.Source">
+                                <option>مباشر</option>
+                                <option>النظام</option>
+                                <option>HR</option>
+                                <option>فرع</option>
+                            </select>
+                            <small asp-validation-for="Input.Source"></small>
+                        </label>
 
-                <label>
-                    <span>الإجراء المقترح</span>
-                    <input type="text" placeholder="مثال: إنذار / خصم / تعهد" disabled />
-                </label>
-            </div>
+                        <label>
+                            <span>حالة الإجراء</span>
+                            <select asp-for="Input.ActionStatus">
+                                <option>بانتظار الإجراء</option>
+                                <option>اتخذ الإجراء</option>
+                                <option>قيد المراجعة</option>
+                            </select>
+                            <small asp-validation-for="Input.ActionStatus"></small>
+                        </label>
 
-            <div class="nxv-modal-note">
-                <strong>المرحلة التالية:</strong>
-                نربط الحقول بقاعدة البيانات، ثم زر حفظ، وبعدها توليد فورمة A4 الخاصة بالموظف.
-            </div>
+                        <label>
+                            <span>الحالة</span>
+                            <select asp-for="Input.Status">
+                                <option>مسودة</option>
+                                <option>بانتظار الاعتماد</option>
+                                <option>موافق عليه</option>
+                                <option>مرفوض</option>
+                                <option>تم اتخاذ الإجراء</option>
+                            </select>
+                            <small asp-validation-for="Input.Status"></small>
+                        </label>
 
-            <div class="nxv-modal-actions">
-                <button type="button" class="nxv-btn ghost" data-nxv-close-modal>إلغاء</button>
-                <button type="button" class="nxv-btn primary" disabled>حفظ المخالفة</button>
-            </div>
+                        <label class="wide">
+                            <span>العقوبة</span>
+                            <input asp-for="Input.FinalPenaltyAction" data-nxv-penalty-action placeholder="تظهر العقوبة تلقائياً ويمكن تعديلها" />
+                            <small asp-validation-for="Input.FinalPenaltyAction"></small>
+                        </label>
+
+                        <div class="nxv-impact-box wide">
+                            <strong>أثر اللائحة</strong>
+                            <span data-nxv-impact-preview>اختر نوع المخالفة حتى يظهر أثر اللائحة.</span>
+                            <small>هذا وصف الجزاء من إعدادات المخالفات مثل: يوم، ساعة، أو مبلغ ثابت. لا يعني بالضرورة المبلغ النهائي في الراتب.</small>
+                        </div>
+
+                        <input asp-for="Input.FinancialImpactType" type="hidden" data-nxv-impact-type />
+                        <input asp-for="Input.FinancialImpactValue" type="hidden" data-nxv-impact-value />
+
+                        <label>
+                            <span>مبلغ الخصم بالدينار</span>
+                            <input asp-for="Input.DeductionAmount" type="number" min="0" step="0.01" data-nxv-deduction-amount placeholder="مثال: 25000" />
+                            <small asp-validation-for="Input.DeductionAmount"></small>
+                        </label>
+
+                        <label class="wide">
+                            <span>الإجراء المقترح</span>
+                            <input asp-for="Input.ProposedAction" placeholder="مثال: إنذار / تعهد / خصم" />
+                            <small asp-validation-for="Input.ProposedAction"></small>
+                        </label>
+
+                        <label class="wide">
+                            <span>ملاحظات</span>
+                            <textarea asp-for="Input.Notes" rows="3" placeholder="ملاحظات إضافية اختيارية"></textarea>
+                            <small asp-validation-for="Input.Notes"></small>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="nxv-modal-note">
+                    <strong>توضيح:</strong>
+                    أثر اللائحة هو القاعدة المسجلة في إعدادات المخالفات. مبلغ الخصم بالدينار هو الرقم الذي سيُستخدم لاحقاً في الرواتب والاستقطاعات.
+                </div>
+
+                <div class="nxv-modal-actions">
+                    <button type="button" class="nxv-btn ghost" data-nxv-close-modal>إلغاء</button>
+                    <button type="submit" class="nxv-btn primary">حفظ المخالفة</button>
+                </div>
+            </form>
         </section>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

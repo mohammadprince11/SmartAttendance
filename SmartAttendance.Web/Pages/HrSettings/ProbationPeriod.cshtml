@@ -1,0 +1,74 @@
+﻿@page
+@model SmartAttendance.Web.Pages.HrSettings.ProbationPeriodModel
+
+@{
+    ViewData["Title"] = "فترة التجربة";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+
+<section class="nxhs-page nxhs-simple" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">إعدادات الموارد البشرية</a>
+        <h1>فترة التجربة</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <form method="post" class="nxhs-panel nxhs-probation-panel">
+        <header>
+            <span>التهيئة</span>
+            <h2>فترة التجربة على مستوى الشركة</h2>
+            <p>تغيير فترة التجربة على مستوى وحدة العمل، وتحديد بداية الاحتساب والاستثناءات.</p>
+        </header>
+
+        <div class="nxhs-duration-row">
+            <label class="nxhs-field">
+                <span>فترة التجربة تكون</span>
+                <input asp-for="DurationValue" type="number" min="0" />
+            </label>
+
+            <div class="nxhs-segment nxhs-unit-segment">
+                <input id="unit-day" asp-for="DurationUnit" type="radio" value="Day" />
+                <label for="unit-day">يوم</label>
+
+                <input id="unit-month" asp-for="DurationUnit" type="radio" value="Month" />
+                <label for="unit-month">شهر</label>
+            </div>
+
+            <label class="nxhs-field">
+                <span>من</span>
+                <select asp-for="StartBasis">
+                    <option value="HireDate">تاريخ التعيين</option>
+                    <option value="JoiningDate">تاريخ الانضمام</option>
+                </select>
+            </label>
+        </div>
+
+        <label class="nxhs-check-line">
+            <input asp-for="ExcludeHolidays" type="checkbox" />
+            <b>استثناء العطل، عطلة نهاية الأسبوع و/أو الإجازات من فترة التجربة</b>
+        </label>
+
+        <div class="nxhs-extension-row">
+            <label class="nxhs-check-line nxhs-extension-check">
+                <input asp-for="AllowExtension" type="checkbox" data-nxhs-toggle-target="#ExtensionDays" />
+                <b>في تقييم الأداء، السماح بتمديد فترة التجربة لـ</b>
+            </label>
+
+            <label class="nxhs-days-field">
+                <input asp-for="ExtensionDays" id="ExtensionDays" type="number" min="0" data-nxhs-extension-days />
+                <span>أيام</span>
+            </label>
+        </div>
+
+        <footer class="nxhs-actions">
+            <button type="submit">حفظ الإعدادات</button>
+        </footer>
+    </form>
+</section>
+
+<script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>

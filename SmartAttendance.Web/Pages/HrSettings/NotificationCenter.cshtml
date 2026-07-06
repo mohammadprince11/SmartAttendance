@@ -1,0 +1,84 @@
+﻿@page
+@model SmartAttendance.Web.Pages.HrSettings.NotificationCenterModel
+
+@{
+    ViewData["Title"] = "مركز الإشعارات";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+
+<section class="nxhs-page nxhs-simple" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">إعدادات الموارد البشرية</a>
+        <h1>مركز الإشعارات</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <section class="nxhs-panel nxhs-notification-panel">
+        @foreach (var rule in Model.Rules)
+        {
+            <article class="nxhs-notification-item @(rule.IsEnabled ? "is-open" : "")">
+                <header>
+                    <h3>@rule.Name</h3>
+
+                    <form method="post" asp-page-handler="ToggleRule" class="nxhs-switch-form">
+                        <input type="hidden" name="id" value="@rule.Id" />
+                        <button type="submit" class="nxhs-switch-button @(rule.IsEnabled ? "on" : "")" aria-label="تبديل الإشعار">
+                            <span></span>
+                        </button>
+                    </form>
+                </header>
+
+                @if (rule.IsEnabled)
+                {
+                    <form method="post" asp-page-handler="UpdateRule" class="nxhs-notification-details">
+                        <input type="hidden" name="id" value="@rule.Id" />
+
+                        <div class="nxhs-notif-grid">
+                            <label>
+                                <span>تذكير</span>
+                                <select name="audience">
+                                    <option selected="@(rule.Audience == "المشرفين")">المشرفين</option>
+                                    <option selected="@(rule.Audience == "المدير المباشر والمشرفون")">المدير المباشر والمشرفون</option>
+                                    <option selected="@(rule.Audience == "الموظف")">الموظف</option>
+                                </select>
+                            </label>
+
+                            <label>
+                                <span>عدد الأيام</span>
+                                <input name="daysBefore" type="number" min="0" value="@rule.DaysBefore" />
+                            </label>
+
+                            <label class="wide">
+                                <span>الوصف</span>
+                                <b>@rule.TriggerDescription</b>
+                            </label>
+
+                            <label>
+                                <span>العناصر</span>
+                                <select name="selectedItems">
+                                    <option selected="@(rule.SelectedItems == "كل العناصر المختارة")">كل العناصر المختارة</option>
+                                    <option selected="@(rule.SelectedItems == "كل الموظفين")">كل الموظفين</option>
+                                    <option selected="@(rule.SelectedItems == "كل الوثائق")">كل الوثائق</option>
+                                </select>
+                            </label>
+
+                            <label>
+                                <span>اختر المستخدم المشرف</span>
+                                <input name="supervisorName" value="@rule.SupervisorName" placeholder="اسم المشرف" />
+                            </label>
+
+                            <button type="submit">حفظ</button>
+                        </div>
+                    </form>
+                }
+            </article>
+        }
+    </section>
+</section>
+
+<script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>

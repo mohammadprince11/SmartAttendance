@@ -650,3 +650,317 @@ body.nxv-modal-open {
         width: 100%;
     }
 }
+
+
+/* Database phase V15 additions */
+.nxv-alert {
+    margin: 14px 0;
+    padding: 13px 16px;
+    border-radius: 18px;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.nxv-alert.success {
+    border: 1px solid rgba(85, 217, 138, .30);
+    background: rgba(85, 217, 138, .10);
+    color: #CFFFE2;
+}
+
+.nxv-alert.danger {
+    border: 1px solid rgba(248, 113, 113, .30);
+    background: rgba(248, 113, 113, .10);
+    color: #FFD0D0;
+}
+
+.nxv-modal-form {
+    margin: 0;
+}
+
+.nxv-form-grid label.wide {
+    grid-column: span 2;
+}
+
+.nxv-form-grid textarea {
+    width: 100%;
+    min-height: 96px;
+    resize: vertical;
+    border: 1px solid rgba(73, 111, 151, .28);
+    border-radius: 16px;
+    background: rgba(3, 13, 25, .64);
+    color: #E6F2FA;
+    font-size: 12px;
+    font-weight: 850;
+    outline: none;
+    padding: 12px 13px;
+    font-family: inherit;
+}
+
+.nxv-form-grid input:focus,
+.nxv-form-grid select:focus,
+.nxv-form-grid textarea:focus {
+    border-color: rgba(25, 211, 224, .48);
+    box-shadow: 0 0 0 3px rgba(25, 211, 224, .08);
+}
+
+.nxv-form-grid label small,
+.nxv-validation-summary {
+    display: block;
+    margin-top: 6px;
+    color: #FFB4B4;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.nxv-validation-summary ul {
+    margin: 10px 24px 0;
+    padding: 0 18px;
+}
+
+.nxv-modal-panel {
+    max-height: min(820px, 92vh);
+}
+
+@media (max-width: 760px) {
+    .nxv-form-grid label.wide {
+        grid-column: span 1;
+    }
+}
+
+
+/* NEXORA Violations Rule/Penalty V15.1 */
+.nxv-table-v15 {
+    min-width: 1320px;
+}
+
+.nxv-table-v15 .nxv-col-ref { width: 9%; }
+.nxv-table-v15 .nxv-col-employee { width: 18%; }
+.nxv-table-v15 .nxv-col-violation { width: 22%; }
+.nxv-table-v15 .nxv-col-date { width: 9%; }
+.nxv-table-v15 .nxv-col-source { width: 8%; }
+.nxv-table-v15 .nxv-col-penalty { width: 17%; }
+.nxv-table-v15 .nxv-col-deduction { width: 8%; }
+.nxv-table-v15 .nxv-col-status { width: 8%; }
+.nxv-table-v15 .nxv-col-options { width: 8%; }
+
+.nxv-money {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    min-height: 30px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(215, 178, 109, .34);
+    background: rgba(215, 178, 109, .10);
+    color: #F3D596;
+    font-size: 12px;
+    font-weight: 1000;
+}
+
+.nxv-alert {
+    margin: 14px 0;
+    padding: 13px 16px;
+    border-radius: 18px;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.nxv-alert.success {
+    border: 1px solid rgba(85, 217, 138, .30);
+    background: rgba(85, 217, 138, .10);
+    color: #CFFFE2;
+}
+
+.nxv-alert.danger {
+    border: 1px solid rgba(248, 113, 113, .30);
+    background: rgba(248, 113, 113, .10);
+    color: #FFD0D0;
+}
+
+.nxv-modal-form {
+    margin: 0;
+}
+
+.nxv-form-grid label.wide {
+    grid-column: span 2;
+}
+
+.nxv-form-grid textarea {
+    width: 100%;
+    min-height: 96px;
+    resize: vertical;
+    border: 1px solid rgba(73, 111, 151, .28);
+    border-radius: 16px;
+    background: rgba(3, 13, 25, .64);
+    color: #E6F2FA;
+    font-size: 12px;
+    font-weight: 850;
+    outline: none;
+    padding: 12px 13px;
+    font-family: inherit;
+}
+
+.nxv-form-grid input:focus,
+.nxv-form-grid select:focus,
+.nxv-form-grid textarea:focus {
+    border-color: rgba(25, 211, 224, .48);
+    box-shadow: 0 0 0 3px rgba(25, 211, 224, .08);
+}
+
+.nxv-form-grid input[readonly] {
+    opacity: .78;
+    border-color: rgba(215, 178, 109, .22);
+    background: rgba(215, 178, 109, .055);
+}
+
+.nxv-form-grid label small,
+.nxv-validation-summary {
+    display: block;
+    margin-top: 6px;
+    color: #FFB4B4;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.nxv-validation-summary ul {
+    margin: 10px 24px 0;
+    padding: 0 18px;
+}
+
+.nxv-modal-panel {
+    max-height: min(860px, 92vh);
+}
+
+@media (max-width: 760px) {
+    .nxv-form-grid label.wide {
+        grid-column: span 1;
+    }
+}
+
+
+/* NEXORA Violations V15.2 flow, scroll and form binding */
+.nxv-modal {
+    align-items: center !important;
+    justify-items: center !important;
+    padding: 18px !important;
+    overflow: hidden !important;
+}
+
+.nxv-modal-panel {
+    width: min(1040px, calc(100vw - 38px)) !important;
+    max-height: calc(100vh - 36px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+.nxv-modal-form {
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.nxv-modal-head {
+    flex: 0 0 auto !important;
+}
+
+.nxv-form-scroll {
+    min-height: 0 !important;
+    max-height: calc(100vh - 300px) !important;
+    overflow: auto !important;
+    padding: 22px 24px 10px !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(25, 211, 224, .55) rgba(3, 13, 25, .78) !important;
+}
+
+.nxv-form-scroll::-webkit-scrollbar {
+    width: 10px !important;
+}
+
+.nxv-form-scroll::-webkit-scrollbar-track {
+    background: rgba(3, 13, 25, .78) !important;
+    border-radius: 999px !important;
+}
+
+.nxv-form-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(25, 211, 224, .62), rgba(215, 178, 109, .42)) !important;
+    border-radius: 999px !important;
+}
+
+.nxv-form-scroll .nxv-form-grid {
+    padding: 0 !important;
+}
+
+.nxv-impact-box {
+    min-height: 82px;
+    padding: 13px 15px;
+    border: 1px solid rgba(215, 178, 109, .26);
+    border-radius: 18px;
+    background: rgba(215, 178, 109, .075);
+}
+
+.nxv-impact-box strong {
+    display: block;
+    color: #F3D596;
+    font-size: 12px;
+    font-weight: 1000;
+    margin-bottom: 6px;
+}
+
+.nxv-impact-box span {
+    display: block;
+    color: #EAF6FC;
+    font-size: 13px;
+    font-weight: 1000;
+}
+
+.nxv-impact-box small {
+    display: block;
+    margin-top: 5px;
+    color: #9EB5C9;
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.nxv-form-grid input[type="search"] {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid rgba(73, 111, 151, .28);
+    border-radius: 16px;
+    background: rgba(3, 13, 25, .64);
+    color: #E6F2FA;
+    font-size: 12px;
+    font-weight: 850;
+    outline: none;
+    padding: 0 13px;
+}
+
+.nxv-form-grid select:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.nxv-money {
+    white-space: nowrap;
+}
+
+body.nxv-modal-open {
+    overflow: hidden !important;
+}
+
+@media (max-width: 760px) {
+    .nxv-modal {
+        padding: 8px !important;
+    }
+
+    .nxv-modal-panel {
+        width: calc(100vw - 16px) !important;
+        max-height: calc(100vh - 16px) !important;
+    }
+
+    .nxv-form-scroll {
+        max-height: calc(100vh - 330px) !important;
+        padding: 16px !important;
+    }
+}

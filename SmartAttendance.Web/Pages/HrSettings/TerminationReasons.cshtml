@@ -1,0 +1,122 @@
+﻿@page
+@model SmartAttendance.Web.Pages.HrSettings.TerminationReasonsModel
+
+@{
+    ViewData["Title"] = "أسباب الإيقاف";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+
+<section class="nxhs-page nxhs-simple" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">إعدادات الموارد البشرية</a>
+        <h1>أسباب الإيقاف</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <section class="nxhs-panel">
+        <header class="nxhs-search-head">
+            <h2>أسباب الإيقاف</h2>
+            <input type="search" placeholder="بحث" data-nxhs-table-search />
+        </header>
+
+        <form method="post" asp-page-handler="Add" class="nxhs-inline-add">
+            <input asp-for="Name" placeholder="اسم السبب" required />
+            <select asp-for="IsMandatory"><option value="false">اختياري</option><option value="true">إلزامي</option></select>
+            <select asp-for="RequiresSelfService"><option value="true">يطلب من الخدمة الذاتية</option><option value="false">لا يطلب</option></select>
+            <input asp-for="EndOfServicePercent" type="number" min="0" max="100" step="1" />
+            <button type="submit">إضافة</button>
+        </form>
+
+        <div class="nxhs-table-wrap">
+            <table class="nxhs-table nxhs-edit-table" data-nxhs-table>
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>اختياري</th>
+                        <th>النسبة المستحقة</th>
+                        <th>يطلب من الخدمة الذاتية</th>
+                        <th>الحالة</th>
+                        <th>الإجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var reason in Model.Reasons)
+                    {
+                        <tr>
+                            <td colspan="6">
+                                <div class="nxhs-reason-shell">
+                                    <form method="post" asp-page-handler="Update" class="nxhs-reason-row">
+                                        <input type="hidden" name="id" value="@reason.Id" />
+
+                                        <input name="name" value="@reason.Name" />
+
+                                        <select name="isMandatory">
+                                            <option value="false" selected="@(!reason.IsMandatory)">اختياري</option>
+                                            <option value="true" selected="@reason.IsMandatory">إلزامي</option>
+                                        </select>
+
+                                        <input name="endOfServicePercent" type="number" min="0" max="100" step="1" value="@reason.EndOfServicePercent.ToString("0")" />
+
+                                        <select name="requiresSelfService">
+                                            <option value="true" selected="@reason.RequiresSelfService">نعم</option>
+                                            <option value="false" selected="@(!reason.RequiresSelfService)">لا</option>
+                                        </select>
+
+                                        <select name="isActive">
+                                            <option value="true" selected="@reason.IsActive">نشط</option>
+                                            <option value="false" selected="@(!reason.IsActive)">متوقف</option>
+                                        </select>
+
+                                        <button type="submit">حفظ</button>
+                                    </form>
+
+                                    <button type="button"
+                                            class="nxhs-delete-trigger"
+                                            data-nxhs-delete-open
+                                            data-id="@reason.Id"
+                                            data-name="@reason.Name">
+                                        حذف
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="nxhs-delete-modal" data-nxhs-delete-modal hidden>
+        <div class="nxhs-delete-backdrop" data-nxhs-delete-close></div>
+
+        <section class="nxhs-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="nxhs-delete-title">
+            <button type="button" class="nxhs-delete-x" data-nxhs-delete-close aria-label="إغلاق">×</button>
+
+            <div class="nxhs-delete-icon">!</div>
+
+            <h2 id="nxhs-delete-title">تأكيد حذف سبب الإيقاف</h2>
+
+            <p>
+                هل تريد حذف سبب الإيقاف التالي؟
+                <strong data-nxhs-delete-name></strong>
+            </p>
+
+            <div class="nxhs-delete-warning">
+                بعد الحذف لن يظهر السبب ضمن قائمة أسباب الإيقاف.
+            </div>
+
+            <form method="post" asp-page-handler="Delete" class="nxhs-delete-confirm-form">
+                <input type="hidden" name="id" data-nxhs-delete-id />
+                <button type="button" class="nxhs-modal-cancel" data-nxhs-delete-close>إلغاء</button>
+                <button type="submit" class="nxhs-modal-delete">نعم، حذف السبب</button>
+            </form>
+        </section>
+    </div>
+</section>
+
+<script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>

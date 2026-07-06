@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Domain.Entities;
 
 namespace SmartAttendance.Infrastructure.Persistence;
@@ -36,6 +36,8 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<SystemUserPermission> SystemUserPermissions => Set<SystemUserPermission>();
 
+    public DbSet<EmployeeViolationCase> EmployeeViolationCases => Set<EmployeeViolationCase>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -43,3 +45,4 @@ public class ApplicationDbContext : DbContext
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
     }
 }
+

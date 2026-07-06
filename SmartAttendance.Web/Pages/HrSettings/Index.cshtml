@@ -1,0 +1,47 @@
+﻿@page
+@model SmartAttendance.Web.Pages.HrSettings.IndexModel
+
+@{
+    ViewData["Title"] = "إعدادات الموارد البشرية";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-hero">
+        <div>
+            <span>NEXORA HR SETTINGS</span>
+            <h1>إعدادات الموارد البشرية</h1>
+            <p>مركز إعدادات السياسات التشغيلية للموارد البشرية: فترة التجربة، الإنذار، الخدمة الذاتية، أسباب الإيقاف، والإشعارات.</p>
+        </div>
+    </header>
+
+    <section class="nxhs-cards">
+        <a asp-page="./ProbationPeriod" class="nxhs-card">
+            <strong>فترة التجربة</strong>
+            <small>إعداد مدة التجربة، بداية الاحتساب، والاستثناءات.</small>
+        </a>
+
+        <a asp-page="./NoticePeriod" class="nxhs-card">
+            <strong>فترة الإنذار</strong>
+            <small>إعداد مدة الإنذار وإجراءات المغادرة قبل نهاية الإنذار.</small>
+        </a>
+
+        <a asp-page="./SelfServiceSettings" class="nxhs-card">
+            <strong>إعدادات الخدمة الذاتية</strong>
+            <small>صلاحيات البوابة، الطلبات، الاقتراحات، ومديري الفرق.</small>
+        </a>
+
+        <a asp-page="./TerminationReasons" class="nxhs-card">
+            <strong>أسباب الإيقاف</strong>
+            <small>تعريف أسباب الإيقاف ونسب الاستحقاق وحالة السبب.</small>
+        </a>
+
+        <a asp-page="./NotificationCenter" class="nxhs-card">
+            <strong>مركز الإشعارات</strong>
+            <small>إدارة تنبيهات العقود، التجربة، الشكاوى، والوثائق.</small>
+        </a>
+    </section>
+</section>
+
+<script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>

@@ -5,7 +5,7 @@
     var employeePhotoFallback = Url.Content("~/brand/employee-photo-placeholder.svg");
     var employeePhotoSrc = string.IsNullOrWhiteSpace(Model.CurrentPhotoPath) ? employeePhotoFallback : Model.CurrentPhotoPath;
 
-    ViewData["Title"] = "تعديل بيانات الموظف";
+ViewData["Title"] = "تعديل بيانات الموظف";
 }
 
 <link rel="stylesheet" href="~/css/employee-edit-nexora.css" asp-append-version="true" />
@@ -36,12 +36,7 @@
 
     <section class="employee-edit-summary">
         <div class="employee-edit-avatar">
-
-            var initial = string.IsNullOrWhiteSpace(Model.Employee.FullName)
-            ? "N"
-            : Model.Employee.FullName.Trim()[0].ToString();
-            }
-            <img src="@employeePhotoSrc" alt="Employee photo" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
+            <img src="@employeePhotoSrc" alt="صورة الموظف" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
         </div>
 
         <div class="employee-edit-summary-main">
@@ -68,7 +63,7 @@
             <div class="employee-edit-photo-wrap">
                 <label class="employee-photo-drop @(string.IsNullOrWhiteSpace(Model.CurrentPhotoPath) ? "has-image has-brand-placeholder" : "has-image")" data-employee-photo-drop>
                     <input asp-for="EmployeePhoto" type="file" accept="image/png,image/jpeg,image/webp" />
-                    <img class="employee-photo-preview" data-employee-photo-preview data-placeholder-src="@employeePhotoFallback" src="@employeePhotoSrc" alt="Employee photo" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
+                    <img class="employee-photo-preview" data-employee-photo-preview data-placeholder-src="@employeePhotoFallback" src="@employeePhotoSrc" alt="صورة الموظف" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
                     <span class="employee-photo-placeholder">
                         <strong>+</strong>
                         <span>اضغط لتغيير الصورة</span>
@@ -196,8 +191,9 @@
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-    <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
+    
+    <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script><partial name="_ValidationScriptsPartial" />
+
 }
 
 
