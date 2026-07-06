@@ -36,3 +36,6 @@ secrets.json
 _NEXORA_CLEANUP_QUARANTINE_*/
 *.ps1
 README_V*.md
+
+# Employee uploaded photos
+SmartAttendance.Web/wwwroot/uploads/employee-photos/
