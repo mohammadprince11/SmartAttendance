@@ -20,7 +20,15 @@ public class EmployeeDetailsViewModel
 
     public DateOnly? BirthDate { get; set; }
 
-    public bool IsActive { get; set; }
+    
+    
+    
+    
+    public string? Country { get; set; }
+public string? Nationality { get; set; }
+public string? Gender { get; set; }
+public string? MaritalStatus { get; set; }
+public bool IsActive { get; set; }
 
     public int DepartmentId { get; set; }
 

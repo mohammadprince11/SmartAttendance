@@ -1,0 +1,287 @@
+/* NEXORA_EDIT_CUSTOM_DATEPICKER_START */
+
+input[data-nexora-date-field="true"] {
+    direction: ltr !important;
+    text-align: center !important;
+    letter-spacing: .03em !important;
+    cursor: pointer !important;
+}
+
+.nx-edit-datepicker {
+    position: fixed;
+    z-index: 999999;
+    width: 316px;
+    max-width: calc(100vw - 24px);
+    border: 1px solid rgba(34, 211, 238, .34);
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at 88% 10%, rgba(34, 211, 238, .12), transparent 34%),
+        linear-gradient(180deg, rgba(7, 24, 40, .98), rgba(3, 12, 24, .98));
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .42), 0 0 0 1px rgba(255, 255, 255, .03) inset;
+    padding: 12px;
+    color: #eaf7ff;
+    direction: rtl;
+    display: none;
+}
+
+.nx-edit-datepicker.is-open {
+    display: block;
+}
+
+.nx-edit-datepicker__head {
+    display: grid;
+    grid-template-columns: 36px 1fr 36px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.nx-edit-datepicker__title {
+    min-height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, .18);
+    background: rgba(2, 6, 23, .28);
+    color: #f8fbff;
+    font-weight: 1000;
+    font-size: 13px;
+}
+
+.nx-edit-datepicker__nav {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    border: 1px solid rgba(34, 211, 238, .26);
+    background: rgba(34, 211, 238, .10);
+    color: #dffcff;
+    font-weight: 1000;
+    cursor: pointer;
+}
+
+.nx-edit-datepicker__week,
+.nx-edit-datepicker__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.nx-edit-datepicker__week {
+    margin-bottom: 6px;
+}
+
+.nx-edit-datepicker__week span {
+    text-align: center;
+    color: #9fb5c8;
+    font-size: 10px;
+    font-weight: 1000;
+}
+
+.nx-edit-datepicker__day {
+    height: 34px;
+    border: 1px solid rgba(148, 163, 184, .14);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, .025);
+    color: #eaf7ff;
+    font-size: 12px;
+    font-weight: 1000;
+    cursor: pointer;
+}
+
+.nx-edit-datepicker__day:hover {
+    border-color: rgba(34, 211, 238, .48);
+    background: rgba(34, 211, 238, .10);
+}
+
+.nx-edit-datepicker__day.is-muted {
+    opacity: .32;
+}
+
+.nx-edit-datepicker__day.is-today {
+    border-color: rgba(215, 168, 79, .55);
+    color: #ffe0a0;
+}
+
+.nx-edit-datepicker__day.is-selected {
+    border-color: rgba(34, 211, 238, .86);
+    background: linear-gradient(135deg, rgba(34, 211, 238, .28), rgba(20, 184, 166, .16));
+    color: #ffffff;
+    box-shadow: 0 0 18px rgba(34, 211, 238, .14);
+}
+
+.nx-edit-datepicker__footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.nx-edit-datepicker__footer button {
+    flex: 1;
+    min-height: 34px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, .20);
+    background: rgba(255, 255, 255, .035);
+    color: #dceaf7;
+    font-weight: 1000;
+    cursor: pointer;
+}
+
+.nx-edit-datepicker__footer button:hover {
+    border-color: rgba(34, 211, 238, .40);
+    background: rgba(34, 211, 238, .09);
+}
+
+/* NEXORA_EDIT_CUSTOM_DATEPICKER_END */
+
+/* NEXORA_EDIT_DATEPICKER_YEAR_SELECT_START */
+
+.nx-edit-datepicker__head--selects {
+    grid-template-columns: 36px minmax(0, 1fr) 36px !important;
+}
+
+.nx-edit-datepicker__selectors {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) 90px;
+    gap: 8px;
+}
+
+.nx-edit-datepicker__selectors select {
+    width: 100%;
+    min-width: 0;
+    height: 36px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, .20);
+    background: rgba(2, 6, 23, .46);
+    color: #f8fbff;
+    font-family: inherit;
+    font-weight: 1000;
+    font-size: 12px;
+    outline: none;
+    padding: 0 10px;
+    cursor: pointer;
+}
+
+.nx-edit-datepicker__selectors select:focus {
+    border-color: rgba(34, 211, 238, .72);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .10);
+}
+
+.nx-edit-datepicker__selectors option {
+    background: #061426;
+    color: #eefaff;
+    font-weight: 900;
+}
+
+@media (max-width: 520px) {
+    .nx-edit-datepicker__selectors {
+        grid-template-columns: 1fr;
+    }
+
+    .nx-edit-datepicker {
+        width: min(316px, calc(100vw - 18px));
+    }
+}
+
+/* NEXORA_EDIT_DATEPICKER_YEAR_SELECT_END */
+
+/* NEXORA_EDIT_DATEPICKER_ZOOM_GRID_START */
+
+.nx-edit-datepicker__head--zoom {
+    grid-template-columns: 36px minmax(0, 1fr) 36px !important;
+}
+
+.nx-edit-datepicker__zoom-title {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 94px;
+    gap: 8px;
+}
+
+.nx-edit-datepicker__month-btn,
+.nx-edit-datepicker__year-btn {
+    min-width: 0;
+    height: 36px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, .20);
+    background: rgba(2, 6, 23, .46);
+    color: #f8fbff;
+    font-family: inherit;
+    font-weight: 1000;
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+    padding: 0 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nx-edit-datepicker__month-btn:hover,
+.nx-edit-datepicker__year-btn:hover,
+.nx-edit-datepicker__month-btn:focus,
+.nx-edit-datepicker__year-btn:focus {
+    border-color: rgba(34, 211, 238, .72);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .10);
+}
+
+.nx-edit-datepicker__year-grid,
+.nx-edit-datepicker__month-grid {
+    display: none;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    min-height: 238px;
+}
+
+.nx-edit-datepicker__year-cell,
+.nx-edit-datepicker__month-cell {
+    height: 48px;
+    border-radius: 13px;
+    border: 1px solid rgba(148, 163, 184, .16);
+    background: rgba(255, 255, 255, .025);
+    color: #eaf7ff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 1000;
+    cursor: pointer;
+}
+
+.nx-edit-datepicker__year-cell:hover,
+.nx-edit-datepicker__month-cell:hover {
+    border-color: rgba(34, 211, 238, .52);
+    background: rgba(34, 211, 238, .10);
+}
+
+.nx-edit-datepicker__year-cell.is-selected,
+.nx-edit-datepicker__month-cell.is-selected {
+    border-color: rgba(34, 211, 238, .88);
+    background: linear-gradient(135deg, rgba(34, 211, 238, .30), rgba(20, 184, 166, .18));
+    color: #ffffff;
+    box-shadow: 0 0 18px rgba(34, 211, 238, .14);
+}
+
+.nx-edit-datepicker__year-cell.is-disabled,
+.nx-edit-datepicker__year-cell:disabled {
+    opacity: .25;
+    cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+    .nx-edit-datepicker__zoom-title {
+        grid-template-columns: 1fr 82px;
+    }
+
+    .nx-edit-datepicker__year-grid,
+    .nx-edit-datepicker__month-grid {
+        gap: 6px;
+    }
+
+    .nx-edit-datepicker__year-cell,
+    .nx-edit-datepicker__month-cell {
+        height: 44px;
+        font-size: 12px;
+    }
+}
+
+/* NEXORA_EDIT_DATEPICKER_ZOOM_GRID_END */

@@ -1,0 +1,55 @@
+/* NEXORA_GLOBAL_SCROLL_SYSTEM_START */
+
+html,
+body {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-gutter: stable !important;
+}
+
+.nexora-main,
+.nexora-content,
+main,
+.nxr-page,
+.sa-page,
+.page-content,
+.content-wrapper {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+.nexora-sidebar,
+.sidebar,
+.sidebar-nav,
+aside,
+nav {
+    max-height: 100dvh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+.table-responsive,
+.table-wrap,
+.table-wrapper,
+.nxr-table-wrap,
+.nxr-emp-table-wrap,
+.nxr-modern-emp-table-wrap,
+.positions-table-wrap,
+.org-table-wrap {
+    overflow: auto !important;
+    max-width: 100% !important;
+}
+
+* {
+    scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+/* NEXORA_GLOBAL_SCROLL_SYSTEM_END */

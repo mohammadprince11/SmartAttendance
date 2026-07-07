@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Application.Employees.Services;
@@ -39,7 +39,9 @@ public class EditModel : PageModel
 
     public IEnumerable<DepartmentListViewModel> Departments { get; set; } = new List<DepartmentListViewModel>();
 
-    public string? ErrorMessage { get; set; }
+    
+    public List<string> PositionOptions { get; set; } = new();
+public string? ErrorMessage { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
@@ -52,7 +54,9 @@ public class EditModel : PageModel
             return NotFound();
 
         Employee = employee;
-        CurrentPhotoPath = await GetEmployeePhotoPathAsync(Employee.Id);
+        
+        PositionOptions = await LoadPositionOptionsAsync(Employee.Position);
+CurrentPhotoPath = await GetEmployeePhotoPathAsync(Employee.Id);
 
         return Page();
     }
@@ -82,6 +86,46 @@ public class EditModel : PageModel
 
         return RedirectToPage("./Profile", new { id = Employee.Id });
     }
+    private async Task<List<string>> LoadPositionOptionsAsync(string? currentPosition)
+    {
+        var positions = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            @"
+IF OBJECT_ID(N'[dbo].[JobPositions]', N'U') IS NOT NULL
+BEGIN
+    SELECT DISTINCT LTRIM(RTRIM([Name])) AS [Name]
+    FROM [dbo].[JobPositions]
+    WHERE LTRIM(RTRIM(ISNULL([Name], ''))) <> ''
+      AND (COL_LENGTH('dbo.JobPositions', 'IsActive') IS NULL OR ISNULL([IsActive], 1) = 1)
+    ORDER BY [Name];
+END
+ELSE
+BEGIN
+    SELECT DISTINCT LTRIM(RTRIM([Position])) AS [Name]
+    FROM [dbo].[Employees]
+    WHERE LTRIM(RTRIM(ISNULL([Position], ''))) <> ''
+    ORDER BY [Name];
+END
+",
+            command => { },
+            reader => HrmsDatabase.GetString(reader, "Name"));
+
+        var result = positions
+            .Where(position => !string.IsNullOrWhiteSpace(position))
+            .Select(position => position.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(position => position)
+            .ToList();
+
+        if (!string.IsNullOrWhiteSpace(currentPosition) &&
+            !result.Contains(currentPosition.Trim(), StringComparer.OrdinalIgnoreCase))
+        {
+            result.Insert(0, currentPosition.Trim());
+        }
+
+        return result;
+    }
+
 
     private async Task<string> GetEmployeePhotoPathAsync(int employeeId)
     {

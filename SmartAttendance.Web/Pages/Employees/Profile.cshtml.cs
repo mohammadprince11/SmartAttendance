@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
@@ -7,7 +7,7 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
-public class ProfileModel : PageModel
+public partial class ProfileModel : PageModel
 {
     private static readonly HashSet<string> AllowedEmployeePhotoExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -77,6 +77,7 @@ public class ProfileModel : PageModel
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         await EnsureEmployeePhotoColumnAsync();
+        await EnsureProfileFilesTableAsync();
 
         if (!FromDate.HasValue)
         {
@@ -99,6 +100,7 @@ public class ProfileModel : PageModel
         await LoadAttendanceAsync(Employee.Id);
         await LoadRequestsAsync(Employee.Id);
         await LoadDocumentsAsync(Employee.Id);
+        await LoadProfileFilesAsync(Employee.Id);
         await LoadShiftsAsync(Employee.Id);
         await LoadAuditAsync(Employee.Id);
 
@@ -200,6 +202,7 @@ SELECT TOP 1
     ISNULL(e.Email, '') AS Email,
     e.HireDate,
     e.BirthDate,
+    ISNULL(e.MaritalStatus, '') AS MaritalStatus,
     e.IsActive,
     ISNULL(e.Position, '') AS Position,
     ISNULL(e.PhotoPath, '') AS PhotoPath,
@@ -237,6 +240,7 @@ WHERE
                 Email = HrmsDatabase.GetString(reader, "Email"),
                 HireDate = HrmsDatabase.GetDateOnly(reader, "HireDate"),
                 BirthDate = HrmsDatabase.GetDateOnly(reader, "BirthDate"),
+                MaritalStatus = HrmsDatabase.GetString(reader, "MaritalStatus"),
                 IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
                 Position = HrmsDatabase.GetString(reader, "Position"),
                 PhotoPath = HrmsDatabase.GetString(reader, "PhotoPath"),
@@ -656,7 +660,9 @@ public class EmployeeProfileCard
 
         public DateOnly? BirthDate { get; set; }
 
-        public bool IsActive { get; set; }
+        
+        public string MaritalStatus { get; set; } = string.Empty;
+public bool IsActive { get; set; }
 
         public string Position { get; set; } = string.Empty;
 

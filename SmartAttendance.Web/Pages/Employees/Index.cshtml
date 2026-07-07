@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.Employees.IndexModel
 
 @{
@@ -23,7 +23,7 @@
         <div class="nxr-title">
             <div class="nxr-brand-mini">NEXORA HR PLATFORM</div>
             <h1>قائمة الموظفين</h1>
-          @*   <p>بحث وفلترة الموظفين حسب الفرع والقسم والحالة مع إبقاء الإجراء الأساسي داخل القائمة: ملف الموظف.</p> *@
+          @*   <p>بحث وفلترة الموظفين حسب موقع العمل والقسم والحالة مع إبقاء الإجراء الأساسي داخل القائمة: ملف الموظف.</p> *@
         </div>
 
         <div class="nxr-actions nxr-emp-actions">
@@ -76,14 +76,14 @@
                        type="text"
                        name="SearchTerm"
                        value="@Model.SearchTerm"
-                       placeholder="الكود، الاسم، الهاتف، المنصب، الفرع أو القسم..."
+                       placeholder="الكود، الاسم، الهاتف، المنصب، موقع العمل أو القسم..."
                        data-nxr-live-search />
             </div>
 
             <div class="nxr-emp-field">
-                <label>الفرع</label>
+                <label>موقع العمل</label>
                 <select data-nexora-select="true" name="BranchFilter" class="nxr-input" data-nxr-live-select>
-                    <option value="" selected="@(string.IsNullOrWhiteSpace(Model.BranchFilter) ? "selected" : null)">كل الفروع</option>
+                    <option value="" selected="@(string.IsNullOrWhiteSpace(Model.BranchFilter) ? "selected" : null)">كل مواقع العمل</option>
                     @foreach (var branch in Model.BranchOptions)
                     {
                         <option value="@branch" selected="@(string.Equals(Model.BranchFilter, branch, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
@@ -120,7 +120,7 @@
                 <select data-nexora-select="true" name="SortBy" class="nxr-input" data-nxr-live-select>
                     <option value="name" selected="@((Model.SortBy ?? "name").Equals("name", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الاسم</option>
                     <option value="code" selected="@(string.Equals(Model.SortBy, "code", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الكود</option>
-                    <option value="branch" selected="@(string.Equals(Model.SortBy, "branch", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الفرع</option>
+                    <option value="branch" selected="@(string.Equals(Model.SortBy, "branch", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب موقع العمل</option>
                     <option value="department" selected="@(string.Equals(Model.SortBy, "department", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب القسم</option>
                     <option value="hireDate" selected="@(string.Equals(Model.SortBy, "hireDate", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">الأحدث تعييناً</option>
                     <option value="status" selected="@(string.Equals(Model.SortBy, "status", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الحالة</option>
@@ -170,7 +170,7 @@
                     <tr>
                         <th>الموظف</th>
                         <th>الكود</th>
-                        <th>الفرع</th>
+                        <th>موقع العمل</th>
                         <th>القسم</th>
                         <th>المنصب</th>
                         <th>تاريخ التعيين</th>

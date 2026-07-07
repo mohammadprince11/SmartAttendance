@@ -34,13 +34,11 @@
     <link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-ui-stabilization-phase1.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-force-right-sidebar.css" asp-append-version="true" />
-
-    
-    <link rel="stylesheet" href="~/css/nexora-select-optional-v17.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-calendar-v18.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-calendar-v18.css" asp-append-version="true" />
 
     @await RenderSectionAsync("Styles", required: false)
-    <link rel="stylesheet" href="~/css/nexora-scroll-fix.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-global-scroll-system.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-select-optional-v17.css" asp-append-version="true" />
 </head>
 
 <body dir="rtl">
@@ -277,13 +275,9 @@
     <script src="~/js/table-pagination.js" asp-append-version="true"></script>
     <script src="~/js/nexora-ui-stabilization-phase1.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
-
-    
-    <script src="~/js/nexora-select-optional-v17.js" asp-append-version="true" defer></script>
-    <script src="~/js/nexora-calendar-v18.js" asp-append-version="true" defer></script>
-
-    <script src="~/js/nexora-scroll-fix.js" asp-append-version="true"></script>
-
+<script src="~/js/nexora-calendar-v18.js" asp-append-version="true" defer></script>
+    <script src="~/js/nexora-select-optional-v17.js" asp-append-version="true"></script>
+    <script src="~/js/nexora-country-nationality-link.js" asp-append-version="true"></script>
 </body>
 </html>
 

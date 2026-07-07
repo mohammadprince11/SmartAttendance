@@ -1,0 +1,376 @@
+/* NEXORA_EMPLOYEE_EDIT_FINAL_ORDER_START */
+
+.nxr-edit-final-page {
+    display: grid;
+    gap: 16px;
+}
+
+.nxr-edit-final-hero,
+.nxr-edit-final-summary,
+.nxr-edit-final-card {
+    border: 1px solid rgba(34, 211, 238, .20);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at 92% 8%, rgba(34, 211, 238, .09), transparent 34%),
+        linear-gradient(180deg, rgba(8, 30, 48, .64), rgba(5, 18, 32, .72));
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.025);
+}
+
+.nxr-edit-final-hero {
+    padding: 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+}
+
+.nxr-edit-final-hero span,
+.nxr-edit-final-card-head span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 27px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(215, 168, 79, .32);
+    background: rgba(215, 168, 79, .08);
+    color: #f3cd7a;
+    font-size: 11px;
+    font-weight: 1000;
+    margin-bottom: 8px;
+}
+
+.nxr-edit-final-hero h1,
+.nxr-edit-final-card-head h2 {
+    margin: 0 0 4px;
+    color: #eefaff;
+    font-size: 22px;
+    font-weight: 1000;
+}
+
+.nxr-edit-final-hero p,
+.nxr-edit-final-card-head p {
+    margin: 0;
+    color: #9fb5c8;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.nxr-edit-final-hero-actions,
+.nxr-edit-final-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.nxr-edit-btn {
+    min-height: 40px;
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, .20);
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-weight: 1000;
+    cursor: pointer;
+}
+
+.nxr-edit-btn.primary {
+    background: linear-gradient(135deg, #22d3ee, #2dd4bf);
+    color: #04202a;
+    border-color: rgba(34, 211, 238, .60);
+}
+
+.nxr-edit-btn.secondary,
+.nxr-edit-btn.ghost {
+    background: rgba(255,255,255,.035);
+    color: #eaf7ff;
+}
+
+.nxr-edit-final-summary {
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.nxr-edit-final-summary img {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    object-fit: cover;
+    border: 1px solid rgba(34, 211, 238, .24);
+}
+
+.nxr-edit-final-summary h2 {
+    margin: 0 0 8px;
+    color: #eefaff;
+    font-size: 18px;
+    font-weight: 1000;
+}
+
+.nxr-edit-final-summary p {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.nxr-edit-final-summary span {
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, .14);
+    background: rgba(2, 10, 20, .30);
+    color: #9fb5c8;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.nxr-edit-final-summary strong {
+    color: #22d3ee;
+    margin-inline-start: 4px;
+}
+
+.nxr-edit-final-card {
+    padding: 18px;
+}
+
+.nxr-edit-final-card-head {
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(148, 163, 184, .14);
+}
+
+.nxr-edit-photo-status-row {
+    display: grid;
+    grid-template-columns: 116px minmax(0, 1fr) 280px;
+    gap: 16px;
+    align-items: center;
+    padding: 14px;
+    margin-bottom: 18px;
+    border: 1px solid rgba(148, 163, 184, .14);
+    border-radius: 22px;
+    background: rgba(2, 10, 20, .28);
+}
+
+.nxr-edit-photo-box {
+    width: 104px;
+    height: 104px;
+    border-radius: 22px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px dashed rgba(34, 211, 238, .40);
+    background: rgba(2, 10, 20, .45);
+}
+
+.nxr-edit-photo-box input {
+    display: none;
+}
+
+.nxr-edit-photo-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.nxr-edit-photo-info {
+    display: grid;
+    gap: 4px;
+}
+
+.nxr-edit-photo-info strong {
+    color: #eefaff;
+    font-weight: 1000;
+}
+
+.nxr-edit-photo-info span,
+.nxr-edit-photo-info small {
+    color: #9fb5c8;
+    font-weight: 800;
+}
+
+.nxr-edit-status-near-photo {
+    display: grid;
+    gap: 8px;
+}
+
+.nxr-edit-status-near-photo > label:first-child,
+.nxr-edit-field label {
+    color: #d7a84f;
+    font-size: 13px;
+    font-weight: 1000;
+}
+
+.nxr-edit-status-switch {
+    min-height: 44px;
+    border-radius: 14px;
+    border: 1px solid rgba(34, 211, 238, .26);
+    background: rgba(34, 211, 238, .08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 14px;
+    color: #eefaff;
+    font-size: 13px;
+    font-weight: 1000;
+}
+
+.nxr-edit-status-switch input {
+    width: 26px;
+    height: 26px;
+    accent-color: #22d3ee;
+}
+
+.nxr-edit-final-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 15px 16px;
+    align-items: end;
+}
+
+.nxr-edit-field {
+    min-width: 0;
+    display: grid;
+    gap: 7px;
+}
+
+.nxr-span-2 {
+    grid-column: span 2;
+}
+
+.nxr-edit-field input,
+.nxr-edit-field select {
+    width: 100%;
+    min-height: 42px;
+    border-radius: 14px;
+    border: 1px solid rgba(34, 211, 238, .18);
+    background: rgba(2, 10, 20, .55);
+    color: #eefaff;
+    padding: 0 13px;
+    box-sizing: border-box;
+    outline: none;
+    font-weight: 900;
+}
+
+.nxr-edit-field input:focus,
+.nxr-edit-field select:focus {
+    border-color: rgba(34, 211, 238, .70);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .10);
+}
+
+.nxr-native-select {
+    appearance: auto !important;
+    -webkit-appearance: auto !important;
+    max-height: 42px !important;
+}
+
+.nxr-edit-field span {
+    color: #f87171;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.nxr-edit-final-actions {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(148, 163, 184, .14);
+    justify-content: flex-start;
+}
+
+.nxr-edit-alert {
+    padding: 12px 14px;
+    border-radius: 16px;
+    font-weight: 900;
+}
+
+.nxr-edit-alert.danger {
+    border: 1px solid rgba(248, 113, 113, .36);
+    background: rgba(127, 29, 29, .18);
+    color: #fecaca;
+}
+
+@media (max-width: 1400px) {
+    .nxr-edit-final-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1050px) {
+    .nxr-edit-photo-status-row {
+        grid-template-columns: 116px minmax(0, 1fr);
+    }
+
+    .nxr-edit-status-near-photo {
+        grid-column: 1 / -1;
+    }
+
+    .nxr-edit-final-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .nxr-span-2 {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 720px) {
+    .nxr-edit-final-hero,
+    .nxr-edit-final-summary {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .nxr-edit-photo-status-row {
+        grid-template-columns: 1fr;
+        justify-items: stretch;
+    }
+
+    .nxr-edit-photo-box {
+        justify-self: center;
+    }
+
+    .nxr-edit-final-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .nxr-span-2 {
+        grid-column: span 1;
+    }
+
+    .nxr-edit-final-actions,
+    .nxr-edit-final-hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* NEXORA_EMPLOYEE_EDIT_FINAL_ORDER_END */
+
+/* NEXORA_EDIT_DROPDOWN_OVERRIDE_START */
+
+.nxr-edit-final-card .nxos span,
+.nxr-edit-final-card .nxos__menu span,
+.nxr-edit-final-card .nxos .nxos__value,
+.nxr-edit-final-card .nxos .nxos__arrow {
+    color: #eefaff !important;
+}
+
+.nxr-edit-final-card .nxos__arrow::before {
+    color: transparent !important;
+}
+
+.nxr-edit-final-card .nxos__option {
+    color: #eefaff !important;
+}
+
+.nxr-edit-final-card .nxos__option:hover,
+.nxr-edit-final-card .nxos__option.is-hovered {
+    background: rgba(34, 211, 238, .14) !important;
+    border-color: rgba(34, 211, 238, .26) !important;
+}
+
+/* NEXORA_EDIT_DROPDOWN_OVERRIDE_END */

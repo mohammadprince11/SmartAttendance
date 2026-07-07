@@ -1,5 +1,146 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.Employees.ProfileModel
+<link rel="stylesheet" href="~/css/nexora-profile-file-cards.css" asp-append-version="true" />
+
+@* NEXORA_PROFILE_MARITAL_BY_GENDER_START *@
+@functions {
+    private static string NxrDisplayMaritalStatusByGender(string? value, string? gender)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "-";
+        }
+
+        var normalized = value.Trim();
+        var genderValue = (gender ?? string.Empty).Trim();
+
+        var isFemale =
+            string.Equals(genderValue, "Female", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(genderValue, "\u0623\u0646\u062B\u0649", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(genderValue, "\u0627\u0646\u062B\u0649", StringComparison.OrdinalIgnoreCase);
+
+        return normalized switch
+        {
+            "Single" => isFemale ? "\u0639\u0632\u0628\u0627\u0621" : "\u0623\u0639\u0632\u0628",
+            "Married" => isFemale ? "\u0645\u062A\u0632\u0648\u062C\u0629" : "\u0645\u062A\u0632\u0648\u062C",
+            "Divorced" => isFemale ? "\u0645\u0637\u0644\u0642\u0629" : "\u0645\u0637\u0644\u0642",
+            "Widowed" => isFemale ? "\u0623\u0631\u0645\u0644\u0629" : "\u0623\u0631\u0645\u0644",
+            "Separated" => isFemale ? "\u0645\u0646\u0641\u0635\u0644\u0629" : "\u0645\u0646\u0641\u0635\u0644",
+            _ => normalized
+        };
+    }
+}
+@* NEXORA_PROFILE_MARITAL_BY_GENDER_END *@
+
+@* NEXORA_PROFILE_STATIC_FUNCTIONS_START *@
+@functions {
+    private static string NxrDisplayAge(DateOnly? birthDate)
+    {
+        if (!birthDate.HasValue)
+        {
+            return "-";
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var age = today.Year - birthDate.Value.Year;
+
+        if (birthDate.Value > today.AddYears(-age))
+        {
+            age--;
+        }
+
+        return age < 0 ? "-" : age.ToString();
+    }
+
+    private static string NxrDisplayWorkDuration(DateOnly? hireDate)
+    {
+        if (!hireDate.HasValue)
+        {
+            return "-";
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var start = hireDate.Value;
+
+        if (start > today)
+        {
+            return "-";
+        }
+
+        var years = today.Year - start.Year;
+        var months = today.Month - start.Month;
+
+        if (today.Day < start.Day)
+        {
+            months--;
+        }
+
+        if (months < 0)
+        {
+            years--;
+            months += 12;
+        }
+
+        if (years <= 0 && months <= 0)
+        {
+            return "\u0623\u0642\u0644 \u0645\u0646 \u0634\u0647\u0631";
+        }
+
+        if (years <= 0)
+        {
+            return months.ToString() + " \u0634\u0647\u0631";
+        }
+
+        if (months <= 0)
+        {
+            return years.ToString() + " \u0633\u0646\u0629";
+        }
+
+        return years.ToString() + " \u0633\u0646\u0629 \u0648 " + months.ToString() + " \u0634\u0647\u0631";
+    }
+
+    private static string NxrDisplayMaritalStatus(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "-";
+        }
+
+        var normalized = value.Trim();
+
+        return normalized switch
+        {
+            "Single" => "\u0623\u0639\u0632\u0628",
+            "Married" => "\u0645\u062A\u0632\u0648\u062C",
+            "Divorced" => "\u0645\u0637\u0644\u0642",
+            "Widowed" => "\u0623\u0631\u0645\u0644",
+            "Separated" => "\u0645\u0646\u0641\u0635\u0644",
+            _ => normalized
+        };
+    }
+
+    private static string NxrDisplayGender(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "-";
+        }
+
+        var normalized = value.Trim();
+
+        return normalized switch
+        {
+            "Male" => "\u0630\u0643\u0631",
+            "Female" => "\u0623\u0646\u062B\u0649",
+            _ => normalized
+        };
+    }
+}
+@* NEXORA_PROFILE_STATIC_FUNCTIONS_END *@
+
+
+
+
 
 @{
     ViewData["Title"] = "ملف الموظف";
@@ -224,10 +365,14 @@
                 <div class="nxr-kayan-info-grid">
                     <div><span>رقم الهوية</span><strong>@Model.Display(employee.NationalId)</strong></div>
                     <div><span>تاريخ الميلاد</span><strong>@Model.DisplayDate(employee.BirthDate)</strong></div>
-                    <div><span>الجنس</span><strong>@Model.Display(employee.Gender)</strong></div>
+@* NEXORA_PROFILE_PERSONAL_STATIC_EXTRA_START *@
+<div><span>&#x0627;&#x0644;&#x0639;&#x0645;&#x0631;</span><strong>@NxrDisplayAge(employee.BirthDate)</strong></div>
+<div><span>&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629; &#x0627;&#x0644;&#x0627;&#x062C;&#x062A;&#x0645;&#x0627;&#x0639;&#x064A;&#x0629;</span><strong>@NxrDisplayMaritalStatusByGender(employee.MaritalStatus, employee.Gender)</strong></div>
+@* NEXORA_PROFILE_PERSONAL_STATIC_EXTRA_END *@
+
+                    <div><span>الجنس</span><strong>@NxrDisplayGender(employee.Gender)</strong></div>
                     <div><span>الجنسية</span><strong>@Model.Display(employee.Nationality)</strong></div>
                     <div><span>البلد</span><strong>@Model.Display(employee.Country)</strong></div>
-                    <div><span>الحالة</span><strong>@employeeStatusText</strong></div>
                 </div>
             </div>
 
@@ -239,11 +384,11 @@
 
                 <div class="nxr-kayan-info-grid">
                     <div><span>الشركة</span><strong>@Model.Display(employee.CompanyName)</strong></div>
-                    <div><span>الفرع</span><strong>@Model.Display(employee.BranchName)</strong></div>
+                    <div><span>موقع العمل</span><strong>@Model.Display(employee.BranchName)</strong></div>
                     <div><span>القسم</span><strong>@Model.Display(employee.DepartmentName)</strong></div>
                     <div><span>المنصب</span><strong>@Model.Display(employee.Position)</strong></div>
-                    <div><span>تاريخ التعيين</span><strong>@Model.DisplayDate(employee.HireDate)</strong></div>
-                    <div><span>مدة الخدمة</span><strong>@Model.DisplayDate(employee.HireDate)</strong></div>
+                    <div><span>&#x0645;&#x062F;&#x0629; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span><strong>@NxrDisplayWorkDuration(employee.HireDate)</strong></div>
+                    <div><span>&#x0645;&#x062F;&#x0629; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span><strong>@NxrDisplayWorkDuration(employee.HireDate)</strong></div>
                     <div><span>نوع العقد</span><strong>@Model.Display(employee.ContractType)</strong></div>
                     <div><span>نهاية العقد</span><strong>@Model.DisplayDate(employee.ContractEndDate)</strong></div>
                 </div>
@@ -495,37 +640,77 @@
             <div class="nxr-profile-kayan-body">
                 <div class="nxr-profile-kayan-pane active" data-nxr-profile-pane="personal">
                     <div class="nxr-profile-kayan-grid">
-                        <article class="nxr-profile-kayan-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>الكفاءات</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">⚙</span><strong>لا يوجد بيانات</strong><small>سيتم ربط الكفاءات والتقييمات في مرحلة لاحقة.</small></div></div>
-                        </article>
+                        @* NEXORA_PROFILE_FILE_CARDS_START *@
+                        @{
+                            var nxrProfileFileCards = new[]
+                            {
+                                new { Category = "Experience", Title = "\u0627\u0644\u062e\u0628\u0631\u0627\u062a", Description = "\u0627\u0631\u0641\u0639 \u0645\u0644\u0641\u0627\u062a \u0627\u0644\u062e\u0628\u0631\u0627\u062a \u0627\u0644\u0633\u0627\u0628\u0642\u0629 \u0648\u0627\u0644\u062d\u0627\u0644\u064a\u0629.", Icon = "\u25a3" },
+                                new { Category = "Certificates", Title = "\u0627\u0644\u0634\u0647\u0627\u062f\u0627\u062a", Description = "\u0627\u0631\u0641\u0639 \u0627\u0644\u0634\u0647\u0627\u062f\u0627\u062a \u0627\u0644\u0623\u0643\u0627\u062f\u064a\u0645\u064a\u0629 \u0648\u0627\u0644\u0645\u0647\u0646\u064a\u0629.", Icon = "\u25a4" },
+                                new { Category = "Medical", Title = "\u0627\u0644\u0645\u0644\u0641\u0627\u062a \u0627\u0644\u0637\u0628\u064a\u0629", Description = "\u0627\u0631\u0641\u0639 \u0627\u0644\u0641\u062d\u0648\u0635\u0627\u062a \u0648\u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0635\u062d\u064a\u0629 \u0648\u0627\u0644\u0645\u0644\u0627\u062d\u0638\u0627\u062a.", Icon = "\u271a" },
+                                new { Category = "Training", Title = "\u062f\u0648\u0631\u0627\u062a \u062a\u062f\u0631\u064a\u0628\u064a\u0629", Description = "\u0627\u0631\u0641\u0639 \u0645\u0644\u0641\u0627\u062a \u0627\u0644\u062f\u0648\u0631\u0627\u062a \u0648\u0627\u0644\u062a\u062f\u0631\u064a\u0628\u0627\u062a.", Icon = "\u25a5" },
+                                new { Category = "Education", Title = "\u0627\u0644\u062a\u0639\u0644\u064a\u0645", Description = "\u0627\u0631\u0641\u0639 \u0645\u0644\u0641\u0627\u062a \u0627\u0644\u0645\u0624\u0647\u0644 \u0627\u0644\u062f\u0631\u0627\u0633\u064a \u0648\u0627\u0644\u062a\u062e\u0635\u0635.", Icon = "\u25b1" }
+                            };
+                        }
 
-                        <article class="nxr-profile-kayan-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>الخبرات</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▣</span><strong>لا يوجد بيانات</strong><small>خبرات الموظف السابقة والحالية.</small></div></div>
-                        </article>
+                        @foreach (var fileCard in nxrProfileFileCards)
+                        {
+                            var cardFiles = Model.ProfileFilesByCategory(fileCard.Category);
+                            var uploadInputId = $"nxrProfileUpload_{fileCard.Category}_{employee.Id}";
 
-                        <article class="nxr-profile-kayan-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>الشهادات</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▤</span><strong>لا يوجد بيانات</strong><small>الشهادات الأكاديمية والمهنية.</small></div></div>
-                        </article>
+                            <article class="nxr-profile-kayan-card nxr-profile-upload-card">
+                                <div class="nxr-profile-kayan-card-head">
+                                    <h3>@fileCard.Title</h3>
+                                    <label for="@uploadInputId" class="nxr-profile-upload-menu" title="Upload file">+</label>
+                                </div>
 
-                        <article class="nxr-profile-kayan-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>الملفات الطبية</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">✚</span><strong>لا يوجد بيانات</strong><small>الفحوصات، البطاقة الصحية، الملاحظات الطبية.</small></div></div>
-                        </article>
+                                <form method="post"
+                                      enctype="multipart/form-data"
+                                      asp-page-handler="UploadProfileAreaFile"
+                                      asp-route-id="@employee.Id"
+                                      class="nxr-profile-upload-hidden-form">
+                                    <input type="hidden" name="ProfileAreaCategory" value="@fileCard.Category" />
+                                    <input id="@uploadInputId"
+                                           type="file"
+                                           name="ProfileAreaFile"
+                                           accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx"
+                                           onchange="this.form.submit()" />
+                                </form>
 
-                        <article class="nxr-profile-kayan-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>دورات تدريبية</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▥</span><strong>لا يوجد بيانات</strong><small>الدورات والتدريبات المرتبطة بالموظف.</small></div></div>
-                        </article>
+                                <label for="@uploadInputId" class="nxr-profile-upload-drop">
+                                    <span class="icon">@fileCard.Icon</span>
+                                    <strong>@(cardFiles.Any() ? "\u0625\u0636\u0627\u0641\u0629 \u0645\u0644\u0641 \u0622\u062e\u0631" : "\u0627\u0631\u0641\u0639 \u0645\u0644\u0641")</strong>
+                                    <small>@fileCard.Description</small>
+                                </label>
 
-                        <article class="nxr-profile-kayan-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>التعليم</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▱</span><strong>لا يوجد بيانات</strong><small>المؤهل الدراسي والتخصص وسنة التخرج.</small></div></div>
-                        </article>
+                                @if (cardFiles.Any())
+                                {
+                                    <div class="nxr-profile-file-list">
+                                        @foreach (var file in cardFiles.Take(5))
+                                        {
+                                            <div class="nxr-profile-file-row">
+                                                <div>
+                                                    <strong>@Model.Display(file.FileName)</strong>
+                                                    <span>@(file.UploadedAt.HasValue ? file.UploadedAt.Value.ToString("yyyy-MM-dd HH:mm") : "-")</span>
+                                                </div>
 
-                        <article class="nxr-profile-kayan-card">
+                                                <div class="nxr-profile-file-actions">
+                                                    <a href="@file.StoredPath" target="_blank">&#x0641;&#x062A;&#x062D;</a>
+                                                    <form method="post"
+                                                          asp-page-handler="DeleteProfileAreaFile"
+                                                          asp-route-id="@employee.Id"
+                                                          asp-route-fileId="@file.Id"
+                                                          onsubmit="return confirm('Delete this file?');">
+                                                        <button type="submit">&#x062D;&#x0630;&#x0641;</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </article>
+                        }
+                        @* NEXORA_PROFILE_FILE_CARDS_END *@
+<article class="nxr-profile-kayan-card">
                             <div class="nxr-profile-kayan-card-head"><h3>العنوان</h3><span class="nxr-profile-kayan-menu">☰</span></div>
                             <div class="nxr-profile-kayan-list">
                                 <div class="nxr-profile-kayan-row">
@@ -631,7 +816,7 @@
                             <div class="nxr-profile-kayan-card-head"><h3>مراكز الكلفة</h3><span class="nxr-profile-kayan-menu">☰</span></div>
                             <div class="nxr-profile-kayan-list">
                                 <div class="nxr-profile-kayan-row">
-                                    <div><strong>الفرع</strong><span>@Model.Display(employee.BranchName)</span></div>
+                                    <div><strong>موقع العمل</strong><span>@Model.Display(employee.BranchName)</span></div>
                                     <span class="nxr-profile-kayan-chip">Cost</span>
                                 </div>
                                 <div class="nxr-profile-kayan-row">
@@ -752,7 +937,11 @@
                     <div><span>الاسم الكامل</span><strong>@employee.FullName</strong></div>
                     <div><span>رقم الموظف</span><strong>@Model.Display(employee.EmployeeNo)</strong></div>
                     <div><span>تاريخ الميلاد</span><strong>@Model.DisplayDate(employee.BirthDate)</strong></div>
-                    <div><span>الجنس</span><strong>@Model.Display(employee.Gender)</strong></div>
+@* NEXORA_PROFILE_PERSONAL_STATIC_EXTRA_START *@
+<div><span>&#x0627;&#x0644;&#x0639;&#x0645;&#x0631;</span><strong>@NxrDisplayAge(employee.BirthDate)</strong></div>
+<div><span>&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629; &#x0627;&#x0644;&#x0627;&#x062C;&#x062A;&#x0645;&#x0627;&#x0639;&#x064A;&#x0629;</span><strong>@NxrDisplayMaritalStatusByGender(employee.MaritalStatus, employee.Gender)</strong></div>
+@* NEXORA_PROFILE_PERSONAL_STATIC_EXTRA_END *@
+                    <div><span>الجنس</span><strong>@NxrDisplayGender(employee.Gender)</strong></div>
                     <div><span>الجنسية</span><strong>@Model.Display(employee.Nationality)</strong></div>
                     <div><span>البلد</span><strong>@Model.Display(employee.Country)</strong></div>
                     <div><span>رقم الهوية</span><strong>@Model.Display(employee.NationalId)</strong></div>
@@ -767,12 +956,12 @@
                 </div>
                 <div class="nxr-profile-pro-info">
                     <div><span>الشركة</span><strong>@Model.Display(employee.CompanyName)</strong></div>
-                    <div><span>الفرع</span><strong>@Model.Display(employee.BranchName)</strong></div>
+                    <div><span>موقع العمل</span><strong>@Model.Display(employee.BranchName)</strong></div>
                     <div><span>القسم</span><strong>@Model.Display(employee.DepartmentName)</strong></div>
                     <div><span>المنصب</span><strong>@Model.Display(employee.Position)</strong></div>
                     <div><span>الحالة الوظيفية</span><strong>@Model.Display(employee.EmploymentStatus)</strong></div>
                     <div><span>نوع التوظيف</span><strong>@Model.Display(employee.ContractType)</strong></div>
-                    <div><span>تاريخ التعيين</span><strong>@Model.DisplayDate(employee.HireDate)</strong></div>
+                    <div><span>&#x0645;&#x062F;&#x0629; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span><strong>@NxrDisplayWorkDuration(employee.HireDate)</strong></div>
                     <div><span>نهاية العقد</span><strong>@Model.DisplayDate(employee.ContractEndDate)</strong></div>
                     <div><span>المدير المباشر</span><strong>@Model.Display(employee.DirectManager)</strong></div>
                 </div>

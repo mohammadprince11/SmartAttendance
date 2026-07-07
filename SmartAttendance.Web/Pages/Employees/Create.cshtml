@@ -1,6 +1,6 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.Employees.CreateModel
-
+<link rel="stylesheet" href="~/css/nexora-edit-custom-datepicker.css" asp-append-version="true" />
 @{
     ViewData["Title"] = "إضافة موظف جديد";
     var employeePhotoFallback = Url.Content("~/brand/employee-photo-placeholder.svg");
@@ -90,8 +90,71 @@
 
                 <div class="nxr-field">
                     <label asp-for="Employee.BirthDate">تاريخ الميلاد</label>
-                    <input asp-for="Employee.BirthDate" type="date" />
+                    <input data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" asp-for="Employee.BirthDate" type="text" />
                     <span asp-validation-for="Employee.BirthDate" class="text-danger"></span>
+@* NEXORA_DEMOGRAPHIC_FIELDS_START *@
+<div class="nxr-field">
+    <label asp-for="Employee.Gender">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;</label>
+    <select asp-for="Employee.Gender">
+        <option value="">&#x0627;&#x062E;&#x062A;&#x0631;...</option>
+        <option value="Male">&#x0630;&#x0643;&#x0631;</option>
+        <option value="Female">&#x0623;&#x0646;&#x062B;&#x0649;</option>
+    </select>
+    <span asp-validation-for="Employee.Gender" class="text-danger"></span>
+</div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.Nationality">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</label>
+                    <select asp-for="Employee.Nationality" class="nxr-native-select">
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</option>
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Nationality) &&
+                             !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownNationality(Model.Employee.Nationality))
+                        {
+                            <option value="@Model.Employee.Nationality">@Model.Employee.Nationality</option>
+                        }
+                        @foreach (var nationality in SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.Nationalities)
+                        {
+                            <option value="@nationality">@nationality</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Employee.Nationality"></span>
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.Country">&#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</label>
+                    <select asp-for="Employee.Country" class="nxr-native-select">
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</option>
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Country) &&
+                             !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownCountry(Model.Employee.Country))
+                        {
+                            <option value="@Model.Employee.Country">@Model.Employee.Country</option>
+                        }
+                        @foreach (var country in SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.Countries)
+                        {
+                            <option value="@country">@country</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Employee.Country"></span>
+                </div>
+@* NEXORA_DEMOGRAPHIC_FIELDS_END *@
+
+@* NEXORA_MARITAL_STATUS_FIELD_START *@
+<div class="nxr-marital-status-field">
+    <label asp-for="Employee.MaritalStatus">&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629; &#x0627;&#x0644;&#x0627;&#x062C;&#x062A;&#x0645;&#x0627;&#x0639;&#x064A;&#x0629;</label>
+    <select asp-for="Employee.MaritalStatus">
+        <option value="">&#x0627;&#x062E;&#x062A;&#x0631;...</option>
+        <option value="Single">&#x0623;&#x0639;&#x0632;&#x0628;</option>
+        <option value="Married">&#x0645;&#x062A;&#x0632;&#x0648;&#x062C;</option>
+        <option value="Divorced">&#x0645;&#x0637;&#x0644;&#x0642;</option>
+        <option value="Widowed">&#x0623;&#x0631;&#x0645;&#x0644;</option>
+        <option value="Separated">&#x0645;&#x0646;&#x0641;&#x0635;&#x0644;</option>
+    </select>
+    <span asp-validation-for="Employee.MaritalStatus" class="text-danger"></span>
+</div>
+@* NEXORA_MARITAL_STATUS_FIELD_END *@
+
+
+
+
+
                 </div>
             </div>
         </section>
@@ -107,7 +170,7 @@
 
             <div class="nxr-form-grid nxr-create-grid">
                 <div class="nxr-field wide">
-                    <label asp-for="Employee.DepartmentId">القسم / الفرع</label>
+                    <label asp-for="Employee.DepartmentId">القسم / موقع العمل</label>
                     <select data-nexora-select="true" asp-for="Employee.DepartmentId">
                         <option value="">اختر القسم</option>
                         @foreach (var department in Model.Departments)
@@ -126,7 +189,7 @@
 
                 <div class="nxr-field">
                     <label asp-for="Employee.HireDate">تاريخ التعيين</label>
-                    <input asp-for="Employee.HireDate" type="date" />
+                    <input data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" asp-for="Employee.HireDate" type="text" />
                     <span asp-validation-for="Employee.HireDate" class="text-danger"></span>
                 </div>
             </div>
@@ -223,8 +286,93 @@
         </section>
     </form>
 </div>
-
+<script src="~/js/nexora-edit-custom-datepicker.js" asp-append-version="true" defer></script>
 @section Scripts {
+    
+    <!-- NEXORA_MARITAL_BY_GENDER_START -->
+    <script>
+        (() => {
+            const labels = {
+                Male: {
+                    Single: "\u0623\u0639\u0632\u0628",
+                    Married: "\u0645\u062A\u0632\u0648\u062C",
+                    Divorced: "\u0645\u0637\u0644\u0642",
+                    Widowed: "\u0623\u0631\u0645\u0644",
+                    Separated: "\u0645\u0646\u0641\u0635\u0644"
+                },
+                Female: {
+                    Single: "\u0639\u0632\u0628\u0627\u0621",
+                    Married: "\u0645\u062A\u0632\u0648\u062C\u0629",
+                    Divorced: "\u0645\u0637\u0644\u0642\u0629",
+                    Widowed: "\u0623\u0631\u0645\u0644\u0629",
+                    Separated: "\u0645\u0646\u0641\u0635\u0644\u0629"
+                }
+            };
+
+            const placeholder = "\u0627\u062E\u062A\u0631...";
+
+            function getGenderGroup(genderValue) {
+                const value = (genderValue || "").trim();
+
+                if (value === "Female" || value === "\u0623\u0646\u062B\u0649" || value === "\u0627\u0646\u062B\u0649") {
+                    return labels.Female;
+                }
+
+                return labels.Male;
+            }
+
+            function applyMaritalLabels() {
+                const gender = document.getElementById("Employee_Gender");
+                const marital = document.getElementById("Employee_MaritalStatus");
+
+                if (!gender || !marital) {
+                    return;
+                }
+
+                const group = getGenderGroup(gender.value);
+
+                Array.from(marital.options).forEach(option => {
+                    if (!option.value) {
+                        option.textContent = placeholder;
+                        return;
+                    }
+
+                    if (group[option.value]) {
+                        option.textContent = group[option.value];
+                    }
+                });
+
+                if (window.NexoraSelect && typeof window.NexoraSelect.refresh === "function") {
+                    window.NexoraSelect.refresh(marital);
+                } else {
+                    marital.dispatchEvent(new Event("change", { bubbles: true }));
+                }
+            }
+
+            function bind() {
+                const gender = document.getElementById("Employee_Gender");
+
+                if (gender && !gender.dataset.maritalGenderBound) {
+                    gender.dataset.maritalGenderBound = "1";
+                    gender.addEventListener("change", applyMaritalLabels);
+                    gender.addEventListener("input", applyMaritalLabels);
+                }
+
+                applyMaritalLabels();
+            }
+
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", bind);
+            } else {
+                bind();
+            }
+
+            setTimeout(bind, 100);
+            setTimeout(bind, 400);
+            setTimeout(bind, 900);
+        })();
+    </script>
+    <!-- NEXORA_MARITAL_BY_GENDER_END -->
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/nexora-employee-create-documents-final.js" asp-append-version="true"></script>
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>

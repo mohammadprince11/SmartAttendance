@@ -20,7 +20,15 @@ public class Employee : AuditableEntity
 
     public DateOnly? BirthDate { get; set; }
 
-    public bool IsActive { get; set; } = true;
+    
+    
+    
+    
+    public string? Country { get; set; }
+public string? Nationality { get; set; }
+public string? Gender { get; set; }
+public string? MaritalStatus { get; set; }
+public bool IsActive { get; set; } = true;
 
     public int DepartmentId { get; set; }
 

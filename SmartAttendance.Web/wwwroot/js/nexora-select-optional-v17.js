@@ -1,108 +1,222 @@
-﻿// NEXORA Optional Select V17.1
-// Only converts <select data-nexora-select="true">.
-// Normal selects are untouched.
+(function () {
+    "use strict";
 
-(() => {
-    const SELECTOR = 'select[data-nexora-select="true"]:not([multiple]):not([data-nexora-built="1"])';
+    const SELECTOR = 'select:not([multiple]):not([data-nexora-native="true"])';
+    const registry = new Map();
+    let idCounter = 0;
 
-    function textOf(option) {
-        return (option?.textContent || option?.value || "لا شيء").trim();
+    function getText(option) {
+        return ((option && option.textContent) || (option && option.value) || "-").trim();
     }
 
-    function closeAll(except = null) {
-        document.querySelectorAll(".nxos.is-open").forEach((dropdown) => {
-            if (dropdown !== except) {
-                dropdown.classList.remove("is-open");
-                dropdown.querySelector(".nxos__button")?.setAttribute("aria-expanded", "false");
-            }
+    function visibleOptions(select) {
+        return Array.from(select.options).filter(option => !option.hidden && !option.disabled);
+    }
+
+    function closeAll(except) {
+        registry.forEach((state, select) => {
+            if (select === except) return;
+
+            state.root.classList.remove("is-open");
+            state.button.setAttribute("aria-expanded", "false");
+            state.menu.classList.remove("is-open");
         });
     }
 
-    function rebuildOptions(select, dropdown) {
-        const menu = dropdown.querySelector(".nxos__menu");
-        if (!menu) return;
+    function positionMenu(select) {
+        const state = registry.get(select);
+        if (!state) return;
 
-        menu.innerHTML = "";
+        const rect = state.button.getBoundingClientRect();
+        const gap = 7;
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        const vw = window.innerWidth || document.documentElement.clientWidth;
 
-        Array.from(select.options).forEach((option, index) => {
-            const item = document.createElement("div");
-            item.className = "nxos__option";
-            item.dataset.index = String(index);
-            item.setAttribute("role", "option");
-            item.textContent = textOf(option);
+        state.menu.style.minWidth = Math.max(170, Math.round(rect.width)) + "px";
+        state.menu.style.maxWidth = Math.max(170, Math.round(rect.width)) + "px";
 
-            if (option.disabled) {
-                item.classList.add("is-disabled");
-                item.setAttribute("aria-disabled", "true");
-            }
+        state.menu.style.visibility = "hidden";
+        state.menu.classList.add("is-open");
 
-            item.addEventListener("click", () => {
-                if (option.disabled || select.disabled) return;
+        const mr = state.menu.getBoundingClientRect();
 
-                select.selectedIndex = index;
-                select.value = option.value;
+        let top = rect.bottom + gap;
 
-                select.dispatchEvent(new Event("input", { bubbles: true }));
-                select.dispatchEvent(new Event("change", { bubbles: true }));
+        if (top + mr.height > vh - 12) {
+            top = rect.top - mr.height - gap;
+        }
 
-                sync(select, dropdown);
-                closeAll();
-                dropdown.querySelector(".nxos__button")?.focus();
-            });
+        if (top < 12) {
+            top = Math.max(12, vh - mr.height - 12);
+        }
 
-            menu.appendChild(item);
-        });
+        let left = rect.left;
 
-        dropdown.dataset.optionCount = String(select.options.length);
+        if (left + mr.width > vw - 12) {
+            left = vw - mr.width - 12;
+        }
+
+        if (left < 12) {
+            left = 12;
+        }
+
+        state.menu.style.top = Math.round(top) + "px";
+        state.menu.style.left = Math.round(left) + "px";
+        state.menu.style.visibility = "visible";
     }
 
-    function sync(select, dropdown) {
-        const value = dropdown.querySelector(".nxos__value");
+    function sync(select) {
+        const state = registry.get(select);
+        if (!state) return;
+
         const selected = select.options[select.selectedIndex];
+        const hasValue = selected && String(selected.value || "").length > 0;
 
-        if (value) value.textContent = selected ? textOf(selected) : "لا شيء";
+        state.value.textContent = selected ? getText(selected) : "-";
+        state.value.classList.toggle("is-placeholder", !hasValue);
+        state.root.classList.toggle("is-disabled", select.disabled);
 
-        dropdown.classList.toggle("is-disabled", select.disabled);
-
-        dropdown.querySelectorAll(".nxos__option").forEach((item) => {
+        state.menu.querySelectorAll(".nxos__option").forEach(item => {
             item.classList.toggle("is-selected", Number(item.dataset.index) === select.selectedIndex);
         });
     }
 
-    function openDropdown(select, dropdown) {
-        closeAll(dropdown);
+    function choose(select, optionIndex) {
+        const option = select.options[optionIndex];
 
-        if (Number(dropdown.dataset.optionCount || "0") !== select.options.length) {
-            rebuildOptions(select, dropdown);
-        }
+        if (!option || option.disabled || option.hidden || select.disabled) return;
 
-        dropdown.classList.add("is-open");
-        dropdown.querySelector(".nxos__button")?.setAttribute("aria-expanded", "true");
-        sync(select, dropdown);
+        select.selectedIndex = optionIndex;
 
-        const selected = dropdown.querySelector(".nxos__option.is-selected");
-        if (selected) selected.scrollIntoView({ block: "nearest" });
+        select.dispatchEvent(new Event("input", { bubbles: true }));
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+
+        rebuild(select);
+        sync(select);
+        closeAll();
+
+        const state = registry.get(select);
+        if (state) state.button.focus();
     }
 
-    function markParents(dropdown) {
-        let node = dropdown.parentElement;
-        let depth = 0;
+    function markHover(menu, item) {
+        menu.querySelectorAll(".nxos__option.is-hovered").forEach(x => x.classList.remove("is-hovered"));
+        item.classList.add("is-hovered");
+    }
 
-        while (node && node !== document.body && depth < 6) {
-            node.classList.add("nxos-ready");
-            node = node.parentElement;
-            depth++;
+    function rebuild(select) {
+        const state = registry.get(select);
+        if (!state) return;
+
+        state.menu.innerHTML = "";
+
+        const options = visibleOptions(select);
+
+        if (options.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "nxos__option is-disabled";
+            empty.textContent = "-";
+            state.menu.appendChild(empty);
+            sync(select);
+            return;
         }
+
+        options.forEach(option => {
+            const item = document.createElement("div");
+            item.className = "nxos__option";
+            item.setAttribute("role", "option");
+            item.dataset.index = String(option.index);
+            item.dataset.value = option.value;
+            item.textContent = getText(option);
+
+            if (option.selected) {
+                item.classList.add("is-selected");
+            }
+
+            item.addEventListener("mouseenter", () => {
+                markHover(state.menu, item);
+            });
+
+            item.addEventListener("mousemove", () => {
+                markHover(state.menu, item);
+            });
+
+            item.addEventListener("mouseleave", () => {
+                item.classList.remove("is-hovered");
+            });
+
+            item.addEventListener("mousedown", event => {
+                event.preventDefault();
+                event.stopPropagation();
+                choose(select, option.index);
+            });
+
+            item.addEventListener("click", event => {
+                event.preventDefault();
+                event.stopPropagation();
+            });
+
+            state.menu.appendChild(item);
+        });
+
+        sync(select);
+    }
+
+    function open(select) {
+        const state = registry.get(select);
+        if (!state || select.disabled) return;
+
+        closeAll(select);
+        rebuild(select);
+        sync(select);
+
+        state.root.classList.add("is-open");
+        state.button.setAttribute("aria-expanded", "true");
+        state.menu.classList.add("is-open");
+
+        positionMenu(select);
+
+        const selected = state.menu.querySelector(".nxos__option.is-selected");
+        if (selected) {
+            selected.scrollIntoView({ block: "nearest" });
+        }
+    }
+
+    function destroyOldShell(select) {
+        const next = select.nextElementSibling;
+
+        if (next && next.classList && next.classList.contains("nxos")) {
+            next.remove();
+        }
+
+        if (select.dataset.nxosId) {
+            document.querySelectorAll(".nxos__menu[data-for-select='" + select.dataset.nxosId + "']").forEach(menu => menu.remove());
+        }
+
+        select.classList.remove("nxos-native");
+        select.removeAttribute("data-nexora-built");
+        select.removeAttribute("data-nxos-id");
     }
 
     function build(select) {
-        if (!select || select.multiple || select.dataset.nexoraBuilt === "1") return;
+        if (!select || select.multiple || select.dataset.nexoraNative === "true") return;
 
+        if (registry.has(select)) {
+            rebuild(select);
+            sync(select);
+            return;
+        }
+
+        if (select.dataset.nexoraBuilt === "1") {
+            destroyOldShell(select);
+        }
+
+        const id = "nxos_" + (++idCounter);
+        select.dataset.nxosId = id;
         select.dataset.nexoraBuilt = "1";
 
-        const dropdown = document.createElement("div");
-        dropdown.className = "nxos";
-        dropdown.dataset.for = select.name || select.id || "";
+        const root = document.createElement("div");
+        root.className = "nxos";
 
         const button = document.createElement("button");
         button.type = "button";
@@ -120,105 +234,115 @@
         const menu = document.createElement("div");
         menu.className = "nxos__menu";
         menu.setAttribute("role", "listbox");
+        menu.setAttribute("data-for-select", id);
 
         button.appendChild(value);
         button.appendChild(arrow);
-        dropdown.appendChild(button);
-        dropdown.appendChild(menu);
+        root.appendChild(button);
 
-        select.insertAdjacentElement("afterend", dropdown);
+        select.insertAdjacentElement("afterend", root);
+        document.body.appendChild(menu);
+
         select.classList.add("nxos-native");
-        markParents(dropdown);
 
-        rebuildOptions(select, dropdown);
-        sync(select, dropdown);
+        registry.set(select, { root, button, value, arrow, menu });
 
-        button.addEventListener("click", (event) => {
+        rebuild(select);
+        sync(select);
+
+        button.addEventListener("mousedown", event => {
             event.preventDefault();
             event.stopPropagation();
 
-            if (select.disabled) return;
-
-            if (dropdown.classList.contains("is-open")) {
+            if (root.classList.contains("is-open")) {
                 closeAll();
             } else {
-                openDropdown(select, dropdown);
+                open(select);
             }
         });
 
-        button.addEventListener("keydown", (event) => {
-            const key = event.key;
-
-            if (key === "Escape") {
+        button.addEventListener("keydown", event => {
+            if (event.key === "Escape") {
                 closeAll();
                 return;
             }
 
-            if (!["ArrowDown", "ArrowUp", "Enter", " "].includes(key)) return;
-
-            event.preventDefault();
-
-            if (!dropdown.classList.contains("is-open")) {
-                openDropdown(select, dropdown);
+            if (event.key === "Enter" || event.key === " " || event.key === "ArrowDown") {
+                event.preventDefault();
+                open(select);
                 return;
             }
-
-            const items = Array.from(dropdown.querySelectorAll(".nxos__option:not(.is-disabled)"));
-            if (!items.length) return;
-
-            let currentIndex = items.findIndex((item) => item.classList.contains("is-active"));
-            if (currentIndex < 0) {
-                currentIndex = items.findIndex((item) => item.classList.contains("is-selected"));
-            }
-
-            if (key === "ArrowDown") currentIndex = Math.min(items.length - 1, currentIndex + 1);
-            if (key === "ArrowUp") currentIndex = Math.max(0, currentIndex - 1);
-
-            items.forEach((item) => item.classList.remove("is-active"));
-
-            const current = items[currentIndex >= 0 ? currentIndex : 0];
-            current.classList.add("is-active");
-            current.scrollIntoView({ block: "nearest" });
-
-            if (key === "Enter" || key === " ") current.click();
         });
 
         select.addEventListener("change", () => {
-            if (Number(dropdown.dataset.optionCount || "0") !== select.options.length) {
-                rebuildOptions(select, dropdown);
-            }
-            sync(select, dropdown);
+            rebuild(select);
+            sync(select);
         });
+    }
 
-        select.addEventListener("focus", () => button.focus());
+    function refresh(target) {
+        if (!target) {
+            buildAll();
+            return;
+        }
+
+        const select = typeof target === "string" ? document.querySelector(target) : target;
+
+        if (!select) return;
+
+        build(select);
+        rebuild(select);
+        sync(select);
+
+        const state = registry.get(select);
+
+        if (state && state.root.classList.contains("is-open")) {
+            positionMenu(select);
+        }
     }
 
     function buildAll() {
         document.querySelectorAll(SELECTOR).forEach(build);
     }
 
-    document.addEventListener("click", (event) => {
-        if (!event.target.closest(".nxos")) closeAll();
+    window.NexoraSelect = {
+        refresh: refresh,
+        refreshAll: buildAll
+    };
+
+    document.addEventListener("mousedown", event => {
+        if (event.target.closest(".nxos") || event.target.closest(".nxos__menu")) {
+            return;
+        }
+
+        closeAll();
+    }, true);
+
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+            closeAll();
+        }
     });
 
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") closeAll();
+    window.addEventListener("resize", () => {
+        registry.forEach((state, select) => {
+            if (state.root.classList.contains("is-open")) {
+                positionMenu(select);
+            }
+        });
     });
 
-    window.addEventListener("resize", closeAll, { passive: true });
-    window.addEventListener("scroll", closeAll, true);
+    window.addEventListener("scroll", () => {
+        registry.forEach((state, select) => {
+            if (state.root.classList.contains("is-open")) {
+                positionMenu(select);
+            }
+        });
+    }, true);
 
     document.addEventListener("DOMContentLoaded", () => {
         buildAll();
         setTimeout(buildAll, 250);
         setTimeout(buildAll, 900);
     });
-
-    new MutationObserver(() => {
-        window.requestAnimationFrame(buildAll);
-    }).observe(document.documentElement, {
-        childList: true,
-        subtree: true
-    });
 })();
-

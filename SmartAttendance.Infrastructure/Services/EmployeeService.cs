@@ -136,7 +136,11 @@ public class EmployeeService : IEmployeeService
         employee.Position = model.Position;
         employee.HireDate = model.HireDate;
         employee.BirthDate = model.BirthDate;
-        employee.IsActive = model.IsActive;
+                employee.MaritalStatus = model.MaritalStatus;
+        employee.Gender = model.Gender;
+        employee.Nationality = model.Nationality;
+        employee.Country = model.Country;
+employee.IsActive = model.IsActive;
         employee.DepartmentId = model.DepartmentId;
 
         _unitOfWork.Employees.Update(employee);

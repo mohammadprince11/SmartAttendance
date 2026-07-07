@@ -1,200 +1,380 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.Employees.EditModel
-
 @{
-    var employeePhotoFallback = Url.Content("~/brand/employee-photo-placeholder.svg");
-    var employeePhotoSrc = string.IsNullOrWhiteSpace(Model.CurrentPhotoPath) ? employeePhotoFallback : Model.CurrentPhotoPath;
+    ViewData["Title"] = "\u062A\u0639\u062F\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641";
 
-ViewData["Title"] = "تعديل بيانات الموظف";
+    var employeePhotoFallback = Url.Content("~/brand/employee-photo-placeholder.svg");
+    var employeePhotoSrc = string.IsNullOrWhiteSpace(Model.CurrentPhotoPath)
+        ? employeePhotoFallback
+        : Model.CurrentPhotoPath;
+
+    var selectedDepartment = Model.Departments.FirstOrDefault(x => x.Id == Model.Employee.DepartmentId);
+    var selectedWorkLocationId = selectedDepartment?.BranchId ?? 0;
+
+    var workLocations = Model.Departments
+        .Where(x => x.BranchId > 0)
+        .GroupBy(x => new { x.BranchId, x.BranchName })
+        .OrderBy(x => x.Key.BranchName)
+        .ToList();
 }
 
-<link rel="stylesheet" href="~/css/employee-edit-nexora.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-edit-custom-datepicker.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-photo-upload.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-employee-edit-clean-layout.css" asp-append-version="true" />
 
-<div class="employee-edit-page" dir="rtl">
-    <section class="employee-edit-hero">
+<div class="nxr-edit-final-page" dir="rtl">
+    <section class="nxr-edit-final-hero">
         <div>
-            <span class="employee-edit-eyebrow">NEXORA HR Affairs</span>
-            <h1>تعديل بيانات الموظف</h1>
-            <p>
-                صفحة مخصصة لتعديل البيانات الأساسية للموظف، مع إبقاء ملف الموظف الشامل هو مركز المتابعة الرئيسي.
-            </p>
+            <span>Employee Data</span>
+            <h1>&#x062A;&#x0639;&#x062F;&#x064A;&#x0644; &#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h1>
+            <p>&#x062A;&#x0631;&#x062A;&#x064A;&#x0628; &#x0627;&#x0644;&#x062D;&#x0642;&#x0648;&#x0644; &#x062D;&#x0633;&#x0628; &#x0627;&#x0644;&#x0623;&#x0647;&#x0645;&#x064A;&#x0629; &#x0628;&#x0628;&#x0644;&#x0648;&#x0643; &#x0648;&#x0627;&#x062D;&#x062F;.</p>
         </div>
 
-        <div class="employee-edit-hero-actions">
-            <a asp-page="./Profile" asp-route-id="@Model.Employee.Id" class="employee-edit-btn secondary">العودة إلى الملف</a>
-            <a asp-page="./Index" class="employee-edit-btn ghost">قائمة الموظفين</a>
+        <div class="nxr-edit-final-hero-actions">
+            <a asp-page="./Profile" asp-route-id="@Model.Employee.Id" class="nxr-edit-btn secondary">&#x0627;&#x0644;&#x0639;&#x0648;&#x062F;&#x0629; &#x0644;&#x0644;&#x0645;&#x0644;&#x0641;</a>
+            <a asp-page="./Index" class="nxr-edit-btn ghost">&#x0642;&#x0627;&#x0626;&#x0645;&#x0629; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;</a>
         </div>
     </section>
 
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
-        <div class="employee-edit-alert danger">
-            @Model.ErrorMessage
-        </div>
+        <div class="nxr-edit-alert danger">@Model.ErrorMessage</div>
     }
 
-    <section class="employee-edit-summary">
-        <div class="employee-edit-avatar">
-            <img src="@employeePhotoSrc" alt="صورة الموظف" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
-        </div>
-
-        <div class="employee-edit-summary-main">
-            <h2>@(string.IsNullOrWhiteSpace(Model.Employee.FullName) ? "موظف" : Model.Employee.FullName)</h2>
-            <div class="employee-edit-meta">
-                <span>الكود: <strong>@Model.Employee.EmployeeNo</strong></span>
-                <span>المنصب: <strong>@(string.IsNullOrWhiteSpace(Model.Employee.Position) ? "-" : Model.Employee.Position)</strong></span>
-                <span>الحالة: <strong>@(Model.Employee.IsActive ? "فعال" : "غير فعال")</strong></span>
-            </div>
+    <section class="nxr-edit-final-summary">
+        <img src="@employeePhotoSrc" alt="Employee photo" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
+        <div>
+            <h2>@Model.Employee.FullName</h2>
+            <p>
+                <span>&#x0627;&#x0644;&#x0643;&#x0648;&#x062F;: <strong>@Model.Employee.EmployeeNo</strong></span>
+                <span>&#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;: <strong>@(string.IsNullOrWhiteSpace(Model.Employee.Position) ? "-" : Model.Employee.Position)</strong></span>
+                <span>&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629;: <strong>@(Model.Employee.IsActive ? "\u0641\u0639\u0627\u0644" : "\u063A\u064A\u0631 \u0641\u0639\u0627\u0644")</strong></span>
+            </p>
         </div>
     </section>
-    <form method="post" enctype="multipart/form-data" class="employee-edit-form">
+
+    <form method="post" enctype="multipart/form-data" class="nxr-edit-final-form">
         <input type="hidden" asp-for="Employee.Id" />
 
-        <section class="employee-edit-card employee-edit-photo-card">
-            <div class="employee-edit-section-head">
+        <section class="nxr-edit-final-card">
+            <div class="nxr-edit-final-card-head">
                 <div>
-                    <h2>صورة الموظف</h2>
-                    <p>اضغط على مساحة الصورة نفسها أو اسحب صورة جديدة فوقها لتغيير صورة الموظف.</p>
+                    <span>Employee Data</span>
+                    <h2>&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h2>
+                    <p>&#x0643;&#x0644; &#x0627;&#x0644;&#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0631;&#x062A;&#x0628;&#x0629; &#x062D;&#x0633;&#x0628; &#x0627;&#x0644;&#x0623;&#x0647;&#x0645;&#x064A;&#x0629;.</p>
                 </div>
-                <span>Photo</span>
             </div>
 
-            <div class="employee-edit-photo-wrap">
-                <label class="employee-photo-drop @(string.IsNullOrWhiteSpace(Model.CurrentPhotoPath) ? "has-image has-brand-placeholder" : "has-image")" data-employee-photo-drop>
+            <div class="nxr-edit-photo-status-row">
+                <label class="nxr-edit-photo-box" data-employee-photo-drop>
                     <input asp-for="EmployeePhoto" type="file" accept="image/png,image/jpeg,image/webp" />
-                    <img class="employee-photo-preview" data-employee-photo-preview data-placeholder-src="@employeePhotoFallback" src="@employeePhotoSrc" alt="صورة الموظف" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
-                    <span class="employee-photo-placeholder">
-                        <strong>+</strong>
-                        <span>اضغط لتغيير الصورة</span>
-                    </span>
+                    <img data-employee-photo-preview data-placeholder-src="@employeePhotoFallback" src="@employeePhotoSrc" alt="Employee photo" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
                 </label>
 
-                <div class="employee-photo-hint">
-                    <strong>مساحة الصورة هي زر الرفع</strong>
-                    <span>اختر صورة PNG أو JPG أو WEBP، وستُحفظ عند الضغط على حفظ التعديل.</span>
-                    <small>الحد الأقصى 5MB.</small>
-                </div>
-            </div>
-        </section>
-
-
-        <section class="employee-edit-card">
-            <div class="employee-edit-section-head">
-                <div>
-                    <h2>البيانات التنظيمية</h2>
-                    <p>تحديد القسم والفرع والمنصب الذي يظهر داخل ملف الموظف والتقارير.</p>
-                </div>
-                <span>Organization</span>
-            </div>
-
-            <div class="employee-edit-grid">
-                <div class="employee-edit-field wide">
-                    <label asp-for="Employee.DepartmentId">القسم / الفرع</label>
-                    <select data-nexora-select="true" asp-for="Employee.DepartmentId" class="employee-edit-input">
-                        <option value="">اختر القسم</option>
-                        @foreach (var department in Model.Departments)
-                        {
-                            <option value="@department.Id">@department.Name - @department.BranchName</option>
-                        }
-                    </select>
-                    <span asp-validation-for="Employee.DepartmentId" class="employee-edit-validation"></span>
+                <div class="nxr-edit-photo-info">
+                    <strong>&#x0635;&#x0648;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</strong>
+                    <span>&#x0627;&#x062E;&#x062A;&#x0631; &#x0635;&#x0648;&#x0631;&#x0629; PNG &#x0623;&#x0648; JPG &#x0623;&#x0648; WEBP.</span>
+                    <small>Max 5MB</small>
                 </div>
 
-                <div class="employee-edit-field">
-                    <label asp-for="Employee.Position">المنصب</label>
-                    <input asp-for="Employee.Position" class="employee-edit-input" placeholder="مثال: مشرف، محاسب، كاشير..." />
-                    <span asp-validation-for="Employee.Position" class="employee-edit-validation"></span>
-                </div>
-
-                <div class="employee-edit-field status-field">
-                    <label>حالة الموظف</label>
-                    <label class="employee-edit-switch">
+                <div class="nxr-edit-status-near-photo">
+                    <label>&#x062D;&#x0627;&#x0644;&#x0629; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</label>
+                    <label class="nxr-edit-status-switch">
                         <input asp-for="Employee.IsActive" />
-                        <span>فعال داخل النظام</span>
+                        <span>&#x0641;&#x0639;&#x0627;&#x0644; &#x062F;&#x0627;&#x062E;&#x0644; &#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</span>
                     </label>
                 </div>
             </div>
+
+            <div class="nxr-edit-final-grid">
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.EmployeeNo">&#x0643;&#x0648;&#x062F; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</label>
+                    <input asp-for="Employee.EmployeeNo" />
+                    <span asp-validation-for="Employee.EmployeeNo"></span>
+                </div>
+
+                <div class="nxr-edit-field nxr-span-2">
+                    <label asp-for="Employee.FullName">&#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</label>
+                    <input asp-for="Employee.FullName" />
+                    <span asp-validation-for="Employee.FullName"></span>
+                </div>
+
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.NationalId">&#x0627;&#x0644;&#x0631;&#x0642;&#x0645; &#x0627;&#x0644;&#x0648;&#x0637;&#x0646;&#x064A; / &#x0627;&#x0644;&#x0628;&#x0637;&#x0627;&#x0642;&#x0629;</label>
+                    <input asp-for="Employee.NationalId" />
+                    <span asp-validation-for="Employee.NationalId"></span>
+                </div>
+
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.Phone">&#x0627;&#x0644;&#x0647;&#x0627;&#x062A;&#x0641;</label>
+                    <input asp-for="Employee.Phone" />
+                    <span asp-validation-for="Employee.Phone"></span>
+                </div>
+
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.Email">&#x0627;&#x0644;&#x0625;&#x064A;&#x0645;&#x064A;&#x0644;</label>
+                    <input asp-for="Employee.Email" />
+                    <span asp-validation-for="Employee.Email"></span>
+                </div>
+
+                <div class="nxr-edit-field">
+                    <label for="WorkLocationId">&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</label>
+                    <select id="WorkLocationId" class="nxr-native-select">
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</option>
+                        @foreach (var location in workLocations)
+                        {
+                            <option value="@location.Key.BranchId" selected="@(location.Key.BranchId == selectedWorkLocationId ? "selected" : null)">
+                                @location.Key.BranchName
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.DepartmentId">&#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</label>
+                    <select asp-for="Employee.DepartmentId" class="nxr-native-select" id="Employee_DepartmentId">
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</option>
+                        @foreach (var department in Model.Departments.OrderBy(x => x.BranchName).ThenBy(x => x.Name))
+                        {
+                            <option value="@department.Id" data-work-location-id="@department.BranchId">
+                                @department.Name
+                            </option>
+                        }
+                    </select>
+                    <span asp-validation-for="Employee.DepartmentId"></span>
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.Position">&#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</label>
+                    <select asp-for="Employee.Position" class="nxr-native-select">
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</option>
+                        @foreach (var position in Model.PositionOptions)
+                        {
+                            <option value="@position">@position</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Employee.Position"></span>
+                </div>
+
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.HireDate">&#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0627;&#x0644;&#x062A;&#x0639;&#x064A;&#x064A;&#x0646;</label>
+                    <input name="Employee.HireDate" id="Employee_HireDate" value="@Model.Employee.HireDate.ToString("yyyy-MM-dd")" type="text" data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" />
+                    <span asp-validation-for="Employee.HireDate"></span>
+                </div>
+
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.BirthDate">&#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0627;&#x0644;&#x0645;&#x064A;&#x0644;&#x0627;&#x062F;</label>
+                    <input name="Employee.BirthDate" id="Employee_BirthDate" value="@(Model.Employee.BirthDate?.ToString("yyyy-MM-dd"))" type="text" data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" />
+                    <span asp-validation-for="Employee.BirthDate"></span>
+                </div>
+
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.Gender">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;</label>
+                    <select asp-for="Employee.Gender" class="nxr-native-select">
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631;...</option>
+                        <option value="Male">&#x0630;&#x0643;&#x0631;</option>
+                        <option value="Female">&#x0623;&#x0646;&#x062B;&#x0649;</option>
+                    </select>
+                    <span asp-validation-for="Employee.Gender"></span>
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.Nationality">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</label>
+                    <select asp-for="Employee.Nationality" class="nxr-native-select">
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</option>
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Nationality) &&
+                             !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownNationality(Model.Employee.Nationality))
+                        {
+                            <option value="@Model.Employee.Nationality">@Model.Employee.Nationality</option>
+                        }
+                        @foreach (var nationality in SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.Nationalities)
+                        {
+                            <option value="@nationality">@nationality</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Employee.Nationality"></span>
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.Country">&#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</label>
+                    <select asp-for="Employee.Country" class="nxr-native-select">
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</option>
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Country) &&
+                             !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownCountry(Model.Employee.Country))
+                        {
+                            <option value="@Model.Employee.Country">@Model.Employee.Country</option>
+                        }
+                        @foreach (var country in SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.Countries)
+                        {
+                            <option value="@country">@country</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Employee.Country"></span>
+                </div>
+
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.MaritalStatus">&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629; &#x0627;&#x0644;&#x0627;&#x062C;&#x062A;&#x0645;&#x0627;&#x0639;&#x064A;&#x0629;</label>
+                    <select asp-for="Employee.MaritalStatus" class="nxr-native-select">
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631;...</option>
+                        <option value="Single">&#x0623;&#x0639;&#x0632;&#x0628;</option>
+                        <option value="Married">&#x0645;&#x062A;&#x0632;&#x0648;&#x062C;</option>
+                        <option value="Divorced">&#x0645;&#x0637;&#x0644;&#x0642;</option>
+                        <option value="Widowed">&#x0623;&#x0631;&#x0645;&#x0644;</option>
+                        <option value="Separated">&#x0645;&#x0646;&#x0641;&#x0635;&#x0644;</option>
+                    </select>
+                    <span asp-validation-for="Employee.MaritalStatus"></span>
+                </div>
+            </div>
+
+            <div class="nxr-edit-final-actions">
+                <button type="submit" class="nxr-edit-btn primary">&#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;</button>
+                <a asp-page="./Profile" asp-route-id="@Model.Employee.Id" class="nxr-edit-btn secondary">&#x0625;&#x0644;&#x063A;&#x0627;&#x0621; &#x0648;&#x0627;&#x0644;&#x0639;&#x0648;&#x062F;&#x0629; &#x0644;&#x0644;&#x0645;&#x0644;&#x0641;</a>
+            </div>
         </section>
-
-        <section class="employee-edit-card">
-            <div class="employee-edit-section-head">
-                <div>
-                    <h2>البيانات الشخصية</h2>
-                    <p>البيانات الأساسية المستخدمة للتعريف والاتصال وسجلات الموارد البشرية.</p>
-                </div>
-                <span>Personal</span>
-            </div>
-
-            <div class="employee-edit-grid">
-                <div class="employee-edit-field">
-                    <label asp-for="Employee.EmployeeNo">كود الموظف</label>
-                    <input asp-for="Employee.EmployeeNo" class="employee-edit-input" />
-                    <span asp-validation-for="Employee.EmployeeNo" class="employee-edit-validation"></span>
-                </div>
-
-                <div class="employee-edit-field wide">
-                    <label asp-for="Employee.FullName">اسم الموظف</label>
-                    <input asp-for="Employee.FullName" class="employee-edit-input" />
-                    <span asp-validation-for="Employee.FullName" class="employee-edit-validation"></span>
-                </div>
-
-                <div class="employee-edit-field">
-                    <label asp-for="Employee.NationalId">الرقم الوطني / البطاقة</label>
-                    <input asp-for="Employee.NationalId" class="employee-edit-input" />
-                    <span asp-validation-for="Employee.NationalId" class="employee-edit-validation"></span>
-                </div>
-
-                <div class="employee-edit-field">
-                    <label asp-for="Employee.Phone">الهاتف</label>
-                    <input asp-for="Employee.Phone" class="employee-edit-input" />
-                    <span asp-validation-for="Employee.Phone" class="employee-edit-validation"></span>
-                </div>
-
-                <div class="employee-edit-field">
-                    <label asp-for="Employee.Email">الإيميل</label>
-                    <input asp-for="Employee.Email" class="employee-edit-input" />
-                    <span asp-validation-for="Employee.Email" class="employee-edit-validation"></span>
-                </div>
-            </div>
-        </section>
-
-        <section class="employee-edit-card">
-            <div class="employee-edit-section-head">
-                <div>
-                    <h2>التواريخ</h2>
-                    <p>تواريخ مهمة تدخل في ملف الموظف والتقارير ومتابعة الخدمة.</p>
-                </div>
-                <span>Dates</span>
-            </div>
-
-            <div class="employee-edit-grid compact">
-                <div class="employee-edit-field">
-                    <label asp-for="Employee.HireDate">تاريخ التعيين</label>
-                    <input asp-for="Employee.HireDate" type="date" class="employee-edit-input" />
-                    <span asp-validation-for="Employee.HireDate" class="employee-edit-validation"></span>
-                </div>
-
-                <div class="employee-edit-field">
-                    <label asp-for="Employee.BirthDate">تاريخ الميلاد</label>
-                    <input asp-for="Employee.BirthDate" type="date" class="employee-edit-input" />
-                    <span asp-validation-for="Employee.BirthDate" class="employee-edit-validation"></span>
-                </div>
-            </div>
-        </section>
-
-        <div class="employee-edit-actions">
-            <button type="submit" class="employee-edit-btn primary">حفظ التعديل</button>
-            <a asp-page="./Profile" asp-route-id="@Model.Employee.Id" class="employee-edit-btn secondary">إلغاء والعودة للملف</a>
-        </div>
     </form>
 </div>
 
 @section Scripts {
+    <script src="~/js/nexora-edit-custom-datepicker.js" asp-append-version="true" defer></script>
+    <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
+
     
-    <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script><partial name="_ValidationScriptsPartial" />
+    <!-- NEXORA_DEPARTMENT_FILTER_START -->
+    <script>
+        (() => {
+            const workLocation = document.getElementById("WorkLocationId");
+            const department = document.getElementById("Employee_DepartmentId");
 
+            if (!workLocation || !department) {
+                return;
+            }
+
+            function refreshSelect(select) {
+                if (window.NexoraSelect && typeof window.NexoraSelect.refresh === "function") {
+                    window.NexoraSelect.refresh(select);
+                }
+
+                select.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+
+            function filterDepartments() {
+                const selectedLocation = workLocation.value;
+                let currentIsValid = false;
+
+                Array.from(department.options).forEach(option => {
+                    if (!option.value) {
+                        option.hidden = false;
+                        option.disabled = false;
+                        return;
+                    }
+
+                    const belongsToLocation =
+                        !selectedLocation ||
+                        option.dataset.workLocationId === selectedLocation;
+
+                    option.hidden = !belongsToLocation;
+                    option.disabled = !belongsToLocation;
+
+                    if (belongsToLocation && option.value === department.value) {
+                        currentIsValid = true;
+                    }
+                });
+
+                if (!currentIsValid) {
+                    department.value = "";
+                }
+
+                refreshSelect(department);
+            }
+
+            workLocation.addEventListener("change", filterDepartments);
+            filterDepartments();
+
+            window.NexoraEditFilterDepartments = filterDepartments;
+        })();
+    </script>
+    <!-- NEXORA_DEPARTMENT_FILTER_END -->
+    
+    <!-- NEXORA_MARITAL_BY_GENDER_START -->
+    <script>
+        (() => {
+            const labels = {
+                Male: {
+                    Single: "\u0623\u0639\u0632\u0628",
+                    Married: "\u0645\u062A\u0632\u0648\u062C",
+                    Divorced: "\u0645\u0637\u0644\u0642",
+                    Widowed: "\u0623\u0631\u0645\u0644",
+                    Separated: "\u0645\u0646\u0641\u0635\u0644"
+                },
+                Female: {
+                    Single: "\u0639\u0632\u0628\u0627\u0621",
+                    Married: "\u0645\u062A\u0632\u0648\u062C\u0629",
+                    Divorced: "\u0645\u0637\u0644\u0642\u0629",
+                    Widowed: "\u0623\u0631\u0645\u0644\u0629",
+                    Separated: "\u0645\u0646\u0641\u0635\u0644\u0629"
+                }
+            };
+
+            const placeholder = "\u0627\u062E\u062A\u0631...";
+
+            function getGenderGroup(genderValue) {
+                const value = (genderValue || "").trim();
+
+                if (value === "Female" || value === "\u0623\u0646\u062B\u0649" || value === "\u0627\u0646\u062B\u0649") {
+                    return labels.Female;
+                }
+
+                return labels.Male;
+            }
+
+            function applyMaritalLabels() {
+                const gender = document.getElementById("Employee_Gender");
+                const marital = document.getElementById("Employee_MaritalStatus");
+
+                if (!gender || !marital) {
+                    return;
+                }
+
+                const group = getGenderGroup(gender.value);
+
+                Array.from(marital.options).forEach(option => {
+                    if (!option.value) {
+                        option.textContent = placeholder;
+                        return;
+                    }
+
+                    if (group[option.value]) {
+                        option.textContent = group[option.value];
+                    }
+                });
+
+                if (window.NexoraSelect && typeof window.NexoraSelect.refresh === "function") {
+                    window.NexoraSelect.refresh(marital);
+                } else {
+                    marital.dispatchEvent(new Event("change", { bubbles: true }));
+                }
+            }
+
+            function bind() {
+                const gender = document.getElementById("Employee_Gender");
+
+                if (gender && !gender.dataset.maritalGenderBound) {
+                    gender.dataset.maritalGenderBound = "1";
+                    gender.addEventListener("change", applyMaritalLabels);
+                    gender.addEventListener("input", applyMaritalLabels);
+                }
+
+                applyMaritalLabels();
+            }
+
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", bind);
+            } else {
+                bind();
+            }
+
+            setTimeout(bind, 100);
+            setTimeout(bind, 400);
+            setTimeout(bind, 900);
+        })();
+    </script>
+    <!-- NEXORA_MARITAL_BY_GENDER_END -->
+    <partial name="_ValidationScriptsPartial" />
 }
-
-
-
