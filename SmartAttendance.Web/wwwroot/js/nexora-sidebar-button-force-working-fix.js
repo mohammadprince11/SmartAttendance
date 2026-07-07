@@ -1,4 +1,4 @@
-/* NEXORA Sidebar Button Force Working Fix */
+﻿/* NEXORA Sidebar Button Force Working Fix */
 (function () {
     "use strict";
 
@@ -98,3 +98,4 @@
     window.NexoraSidebarToggleForce = toggle;
     window.NexoraSidebarSetModeForce = setMode;
 })();
+

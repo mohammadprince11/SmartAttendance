@@ -1,4 +1,4 @@
-/* NEXORA Dashboard Cleanup + Stats Cards Fix */
+﻿/* NEXORA Dashboard Cleanup + Stats Cards Fix */
 (function () {
     "use strict";
 
@@ -82,3 +82,4 @@
     setTimeout(init, 150);
     setTimeout(init, 700);
 })();
+

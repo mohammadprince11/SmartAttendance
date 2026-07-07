@@ -1,4 +1,4 @@
-/* NEXORA Reference Redesign V3 */
+﻿/* NEXORA Reference Redesign V3 */
 (function () {
     function normalize(value) {
         return (value || "").toLowerCase().replace(/\/index$/, "").replace(/\/$/, "");
@@ -33,3 +33,4 @@
         enhanceSearchShortcuts();
     });
 })();
+

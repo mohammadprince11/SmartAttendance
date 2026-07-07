@@ -1,4 +1,4 @@
-
+﻿
 (function () {
     "use strict";
 
@@ -102,3 +102,4 @@
 
     window.addEventListener("popstate", init);
 })();
+

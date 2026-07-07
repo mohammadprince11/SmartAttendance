@@ -1,4 +1,4 @@
-/* NEXORA Force Expanded Sidebar Fix */
+﻿/* NEXORA Force Expanded Sidebar Fix */
 (function () {
     "use strict";
 
@@ -30,3 +30,4 @@
     setTimeout(forceExpandedSidebar, 100);
     setTimeout(forceExpandedSidebar, 500);
 })();
+

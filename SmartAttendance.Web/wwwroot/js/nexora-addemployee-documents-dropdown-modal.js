@@ -1,4 +1,4 @@
-/* NEXORA Add Employee - Documents Dropdown Modal */
+﻿/* NEXORA Add Employee - Documents Dropdown Modal */
 (function () {
     "use strict";
 
@@ -100,3 +100,4 @@
 
     document.addEventListener("DOMContentLoaded", setupDocumentDropdowns);
 })();
+

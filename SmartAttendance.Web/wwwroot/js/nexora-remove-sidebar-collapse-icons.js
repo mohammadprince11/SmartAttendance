@@ -1,4 +1,4 @@
-/* NEXORA Remove Sidebar Collapse And Icons */
+﻿/* NEXORA Remove Sidebar Collapse And Icons */
 (function () {
     "use strict";
 
@@ -72,3 +72,4 @@
     setTimeout(init, 1000);
     setTimeout(init, 1800);
 })();
+

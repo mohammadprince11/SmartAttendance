@@ -1,4 +1,4 @@
-
+﻿
 (function () {
     const root = document.getElementById('nxApprovedAnnouncementStudio');
     if (!root) return;
@@ -114,3 +114,4 @@
 
     render('holiday', true);
 })();
+

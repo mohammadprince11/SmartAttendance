@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
     const page = document.querySelector('.nxupd-page');
     if (!page) return;
 
@@ -95,3 +95,4 @@
         }
     });
 })();
+

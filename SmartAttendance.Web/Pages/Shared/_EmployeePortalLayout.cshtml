@@ -1,4 +1,4 @@
-@{
+﻿@{
     Layout = null;
     var userName = Context.Request.Cookies["SA.UserName"] ?? "employee";
     var role = Context.Request.Cookies["SA.Role"] ?? "Employee";
@@ -58,3 +58,4 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+

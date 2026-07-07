@@ -1,4 +1,4 @@
-/* NEXORA V3 UI Details Hotfix */
+﻿/* NEXORA V3 UI Details Hotfix */
 (function () {
     "use strict";
 
@@ -66,3 +66,4 @@
         fixRulesButton();
     });
 })();
+

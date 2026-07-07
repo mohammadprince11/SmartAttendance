@@ -1,4 +1,4 @@
-using System.Data.Common;
+﻿using System.Data.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
@@ -934,3 +934,4 @@ ORDER BY FullName;
         public string Name { get; set; } = string.Empty;
     }
 }
+

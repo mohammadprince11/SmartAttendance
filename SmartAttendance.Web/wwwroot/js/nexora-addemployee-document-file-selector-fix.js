@@ -1,4 +1,4 @@
-/* NEXORA Add Employee - Documents Dropdown + File Selector */
+﻿/* NEXORA Add Employee - Documents Dropdown + File Selector */
 (function () {
     "use strict";
 
@@ -154,3 +154,4 @@
         patchModalText();
     });
 })();
+

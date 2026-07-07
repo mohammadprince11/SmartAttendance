@@ -41,7 +41,7 @@
 
             <label class="nxhs-field">
                 <span>من</span>
-                <select asp-for="StartBasis">
+                <select data-nexora-select="true" asp-for="StartBasis">
                     <option value="HireDate">تاريخ التعيين</option>
                     <option value="JoiningDate">تاريخ الانضمام</option>
                 </select>
@@ -72,3 +72,10 @@
 </section>
 
 <script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+
+}
+
+
+

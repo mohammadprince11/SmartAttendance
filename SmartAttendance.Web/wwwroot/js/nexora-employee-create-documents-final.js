@@ -1,4 +1,4 @@
-/* NEXORA Employee Create Documents - Final */
+﻿/* NEXORA Employee Create Documents - Final */
 (function () {
     "use strict";
 
@@ -213,3 +213,4 @@
 
     document.addEventListener("DOMContentLoaded", initDocumentsModal);
 })();
+

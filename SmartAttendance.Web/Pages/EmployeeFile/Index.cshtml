@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.EmployeeFile.IndexModel
 
 @{
@@ -78,7 +78,7 @@
 
                     <div class="hrms-field">
                         <label>القسم</label>
-                        <select asp-for="Input.DepartmentId" required>
+                        <select data-nexora-select="true" asp-for="Input.DepartmentId" required>
                             <option value="">-- اختر القسم --</option>
                             @foreach (var department in Model.Departments)
                             {
@@ -89,7 +89,7 @@
 
                     <div class="hrms-field">
                         <label>المنصب</label>
-                        <select asp-for="Input.Position">
+                        <select data-nexora-select="true" asp-for="Input.Position">
                             <option value="">-- اختر المنصب --</option>
                             @foreach (var position in Model.Positions)
                             {
@@ -129,7 +129,7 @@
 
                     <div class="hrms-field">
                         <label>الجنس</label>
-                        <select asp-for="Input.Gender">
+                        <select data-nexora-select="true" asp-for="Input.Gender">
                             <option value="">--</option>
                             <option>Male</option>
                             <option>Female</option>
@@ -148,7 +148,7 @@
 
                     <div class="hrms-field">
                         <label>نوع العقد</label>
-                        <select asp-for="Input.ContractType">
+                        <select data-nexora-select="true" asp-for="Input.ContractType">
                             <option value="">--</option>
                             <option>Permanent</option>
                             <option>Temporary</option>
@@ -164,7 +164,7 @@
 
                     <div class="hrms-field">
                         <label>الحالة الوظيفية</label>
-                        <select asp-for="Input.EmploymentStatus">
+                        <select data-nexora-select="true" asp-for="Input.EmploymentStatus">
                             <option value="">--</option>
                             <option>Active</option>
                             <option>Suspended</option>
@@ -175,7 +175,7 @@
 
                     <div class="hrms-field">
                         <label>المدير المباشر</label>
-                        <select asp-for="Input.DirectManagerId">
+                        <select data-nexora-select="true" asp-for="Input.DirectManagerId">
                             <option value="">-- بدون --</option>
                             @foreach (var manager in Model.Managers)
                             {
@@ -211,7 +211,7 @@
                 <div class="hrms-grid-4">
                     <div class="hrms-field">
                         <label>نوع المستند</label>
-                        <select asp-for="Document.DocumentType">
+                        <select data-nexora-select="true" asp-for="Document.DocumentType">
                             <option>ID</option>
                             <option>Contract</option>
                             <option>Passport</option>
@@ -290,3 +290,4 @@
 @section Scripts {
     <script src="~/js/employee-file-tabs.js" asp-append-version="true"></script>
 }
+

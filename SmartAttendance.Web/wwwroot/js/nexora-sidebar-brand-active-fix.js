@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
     "use strict";
 
     function normalizePath(path) {
@@ -90,3 +90,4 @@
         init();
     }
 })();
+

@@ -39,7 +39,7 @@
             <h2>حالات الموظفات</h2>
             <label class="nxhs-field-row">
                 <span>السماح للموظف باختيار الشعور من</span>
-                <select asp-for="EmployeeFeelingAudience">
+                <select data-nexora-select="true" asp-for="EmployeeFeelingAudience">
                     <option value="AllEmployees">جميع الموظفين</option>
                     <option value="SameBranch">نفس الفرع</option>
                     <option value="TeamOnly">الفريق فقط</option>
@@ -58,7 +58,7 @@
 
                 <label class="nxhs-level-select">
                     <span>مستويات أدناه</span>
-                    <select asp-for="ManagerAccessLevel">
+                    <select data-nexora-select="true" asp-for="ManagerAccessLevel">
                         <option value="LastUnit">آخر وحدة</option>
                         <option value="OneLevel">مستوى واحد</option>
                         <option value="AllLevels">كل المستويات</option>
@@ -106,3 +106,10 @@
 </section>
 
 <script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+
+}
+
+
+

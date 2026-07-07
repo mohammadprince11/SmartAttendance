@@ -1,4 +1,4 @@
-
+﻿
 (function () {
     const root = document.getElementById('nxAnnouncementComposer');
     if (!root) return;
@@ -95,3 +95,4 @@
     if (button) button.addEventListener('click', updatePreview);
     updatePreview();
 })();
+

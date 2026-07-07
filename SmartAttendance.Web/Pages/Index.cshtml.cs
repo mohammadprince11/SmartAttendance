@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc.RazorPages;
+﻿using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -240,3 +240,4 @@ ORDER BY r.CreatedAt DESC;
         public DateTime? CreatedAt { get; set; }
     }
 }
+

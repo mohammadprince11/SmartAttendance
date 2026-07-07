@@ -40,7 +40,7 @@
 
             <label class="nxhs-field">
                 <span>من</span>
-                <select asp-for="NoticeBasis">
+                <select data-nexora-select="true" asp-for="NoticeBasis">
                     <option value="TerminationDate">تاريخ الإيقاف</option>
                     <option value="ResignationDate">تاريخ الاستقالة</option>
                 </select>
@@ -62,7 +62,7 @@
 
             <label class="nxhs-field-row">
                 <span>موظفين بدون مناوبة</span>
-                <select asp-for="NoAttendanceException">
+                <select data-nexora-select="true" asp-for="NoAttendanceException">
                     <option value="None">لا شيء</option>
                     <option value="Holidays">العطل الرسمية</option>
                 </select>
@@ -70,7 +70,7 @@
 
             <label class="nxhs-field-row">
                 <span>موظفين الحضور المنتظم</span>
-                <select asp-for="RegularAttendanceException">
+                <select data-nexora-select="true" asp-for="RegularAttendanceException">
                     <option value="None">لا شيء</option>
                     <option value="Holidays">العطل الرسمية</option>
                 </select>
@@ -78,7 +78,7 @@
 
             <label class="nxhs-field-row">
                 <span>موظفين الحضور المجدول</span>
-                <select asp-for="ScheduledAttendanceException">
+                <select data-nexora-select="true" asp-for="ScheduledAttendanceException">
                     <option value="None">لا شيء</option>
                     <option value="Holidays">العطل الرسمية</option>
                 </select>
@@ -90,7 +90,7 @@
 
             <label class="nxhs-field-row">
                 <span>الراتب المستحق</span>
-                <select asp-for="SalaryAction">
+                <select data-nexora-select="true" asp-for="SalaryAction">
                     <option value="LastWorkingDay">احتساب حتى آخر يوم عمل</option>
                     <option value="TerminationDate">احتساب حتى تاريخ الإيقاف</option>
                 </select>
@@ -98,7 +98,7 @@
 
             <label class="nxhs-field-row">
                 <span>مكافأة نهاية الخدمة</span>
-                <select asp-for="EndOfServiceAction">
+                <select data-nexora-select="true" asp-for="EndOfServiceAction">
                     <option value="LastWorkingDay">احتساب حتى آخر يوم عمل</option>
                     <option value="TerminationDate">احتساب حتى تاريخ الإيقاف</option>
                 </select>
@@ -106,7 +106,7 @@
 
             <label class="nxhs-field-row">
                 <span>بدل الإجازة</span>
-                <select asp-for="LeaveAllowanceAction">
+                <select data-nexora-select="true" asp-for="LeaveAllowanceAction">
                     <option value="LastWorkingDay">احتساب حتى آخر يوم عمل</option>
                     <option value="TerminationDate">احتساب حتى تاريخ الإيقاف</option>
                 </select>
@@ -114,7 +114,7 @@
 
             <label class="nxhs-field-row">
                 <span>صرف التذاكر نقداً</span>
-                <select asp-for="TicketAction">
+                <select data-nexora-select="true" asp-for="TicketAction">
                     <option value="LastWorkingDay">احتساب حتى آخر يوم عمل</option>
                     <option value="TerminationDate">احتساب حتى تاريخ الإيقاف</option>
                 </select>
@@ -128,3 +128,10 @@
 </section>
 
 <script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+
+}
+
+
+

@@ -1,4 +1,4 @@
-
+﻿
 (function () {
     const root = document.getElementById('nxAnnouncementStudio');
     const form = document.getElementById('nxAnnCreateForm');
@@ -131,3 +131,4 @@
     if (initialRadio) initialRadio.checked = true;
     applyTemplate(initial, true);
 })();
+

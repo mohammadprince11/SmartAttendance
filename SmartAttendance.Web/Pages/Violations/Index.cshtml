@@ -88,7 +88,7 @@
                    data-nxv-search />
         </div>
 
-        <select data-nxv-filter="status">
+        <select data-nexora-select="true" data-nxv-filter="status">
             <option value="">كل الحالات</option>
             <option value="مسودة">مسودة</option>
             <option value="بانتظار الاعتماد">بانتظار الاعتماد</option>
@@ -97,7 +97,7 @@
             <option value="تم اتخاذ الإجراء">تم اتخاذ الإجراء</option>
         </select>
 
-        <select data-nxv-filter="source">
+        <select data-nexora-select="true" data-nxv-filter="source">
             <option value="">كل المصادر</option>
             <option value="مباشر">مباشر</option>
             <option value="النظام">النظام</option>
@@ -251,7 +251,7 @@
 
                         <label>
                             <span>الفئة</span>
-                            <select asp-for="Input.CategoryId" data-nxv-category-select>
+                            <select data-nexora-select="true" asp-for="Input.CategoryId" data-nxv-category-select>
                                 <option value="">اختر الفئة أولاً</option>
                                 @foreach (var category in Model.CategoryOptions)
                                 {
@@ -263,7 +263,7 @@
 
                         <label class="wide">
                             <span>نوع المخالفة</span>
-                            <select asp-for="Input.ViolationTypeId" data-nxv-violation-type disabled>
+                            <select data-nexora-select="true" asp-for="Input.ViolationTypeId" data-nxv-violation-type disabled>
                                 <option value="">اختر الفئة حتى تظهر المخالفات</option>
                                 @foreach (var violation in Model.ViolationOptions)
                                 {
@@ -288,7 +288,7 @@
 
                         <label>
                             <span>المصدر</span>
-                            <select asp-for="Input.Source">
+                            <select data-nexora-select="true" asp-for="Input.Source">
                                 <option>مباشر</option>
                                 <option>النظام</option>
                                 <option>HR</option>
@@ -299,7 +299,7 @@
 
                         <label>
                             <span>حالة الإجراء</span>
-                            <select asp-for="Input.ActionStatus">
+                            <select data-nexora-select="true" asp-for="Input.ActionStatus">
                                 <option>بانتظار الإجراء</option>
                                 <option>اتخذ الإجراء</option>
                                 <option>قيد المراجعة</option>
@@ -309,7 +309,7 @@
 
                         <label>
                             <span>الحالة</span>
-                            <select asp-for="Input.Status">
+                            <select data-nexora-select="true" asp-for="Input.Status">
                                 <option>مسودة</option>
                                 <option>بانتظار الاعتماد</option>
                                 <option>موافق عليه</option>
@@ -369,5 +369,10 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/nexora-violations-dropdowns.js" asp-append-version="true"></script>
     <partial name="_ValidationScriptsPartial" />
 }
+
+
+
+

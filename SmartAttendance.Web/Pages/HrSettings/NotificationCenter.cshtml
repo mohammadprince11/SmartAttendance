@@ -41,7 +41,7 @@
                         <div class="nxhs-notif-grid">
                             <label>
                                 <span>تذكير</span>
-                                <select name="audience">
+                                <select data-nexora-select="true" name="audience">
                                     <option selected="@(rule.Audience == "المشرفين")">المشرفين</option>
                                     <option selected="@(rule.Audience == "المدير المباشر والمشرفون")">المدير المباشر والمشرفون</option>
                                     <option selected="@(rule.Audience == "الموظف")">الموظف</option>
@@ -60,7 +60,7 @@
 
                             <label>
                                 <span>العناصر</span>
-                                <select name="selectedItems">
+                                <select data-nexora-select="true" name="selectedItems">
                                     <option selected="@(rule.SelectedItems == "كل العناصر المختارة")">كل العناصر المختارة</option>
                                     <option selected="@(rule.SelectedItems == "كل الموظفين")">كل الموظفين</option>
                                     <option selected="@(rule.SelectedItems == "كل الوثائق")">كل الوثائق</option>
@@ -82,3 +82,10 @@
 </section>
 
 <script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+
+}
+
+
+

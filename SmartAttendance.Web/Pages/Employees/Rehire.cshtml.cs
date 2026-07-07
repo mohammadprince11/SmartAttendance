@@ -353,3 +353,4 @@ END;");
         public string CompanyName { get; set; } = string.Empty;
     }
 }
+

@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
     function ready() {
         document.documentElement.classList.remove("sa-preload");
         document.documentElement.classList.add("sa-ready");
@@ -78,3 +78,4 @@
         init();
     }
 })();
+

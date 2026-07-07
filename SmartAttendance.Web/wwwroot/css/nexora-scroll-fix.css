@@ -1,0 +1,117 @@
+/* NEXORA refined global scroll fix - navbar safe */
+
+html {
+    min-height: 100% !important;
+    height: auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+body {
+    min-height: 100vh !important;
+    height: auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+/* Page content only */
+main,
+.nx-main,
+.nexora-main,
+.nx-content,
+.nexora-content,
+.page-content,
+.app-content,
+.content-wrapper,
+.layout-content {
+    min-height: auto !important;
+}
+
+/* Do not force scroll on sidebar/navbar panels */
+aside,
+nav,
+.sidebar,
+.side-bar,
+.app-sidebar,
+.layout-sidebar,
+.nx-sidebar,
+.nexora-sidebar,
+.nx-navbar,
+.nexora-navbar,
+.nx-menu,
+.nexora-menu,
+[role="navigation"] {
+    overflow-x: hidden !important;
+    scrollbar-width: none !important;
+}
+
+aside::-webkit-scrollbar,
+nav::-webkit-scrollbar,
+.sidebar::-webkit-scrollbar,
+.side-bar::-webkit-scrollbar,
+.app-sidebar::-webkit-scrollbar,
+.layout-sidebar::-webkit-scrollbar,
+.nx-sidebar::-webkit-scrollbar,
+.nexora-sidebar::-webkit-scrollbar,
+.nx-navbar::-webkit-scrollbar,
+.nexora-navbar::-webkit-scrollbar,
+.nx-menu::-webkit-scrollbar,
+.nexora-menu::-webkit-scrollbar,
+[role="navigation"]::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* Dialogs only */
+[role="dialog"],
+.modal,
+.modal-dialog,
+.modal-content,
+.offcanvas,
+.nx-modal,
+.nexora-modal,
+.nx-dialog,
+.nexora-dialog,
+.nx-drawer,
+.nexora-drawer {
+    max-height: calc(100vh - 24px) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Dropdowns / custom select menus */
+[role="listbox"],
+.dropdown-menu,
+.select-menu,
+.select-dropdown,
+.nx-select-menu,
+.nexora-select-menu,
+.nx-dropdown-menu,
+.nexora-dropdown-menu,
+.choices__list--dropdown,
+.choices__list[aria-expanded],
+.select2-results__options {
+    max-height: 320px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    pointer-events: auto;
+}
+
+/* Better scrollbar only for real dropdowns/modals */
+[role="listbox"],
+.dropdown-menu,
+.select-menu,
+.select-dropdown,
+.nx-select-menu,
+.nexora-select-menu,
+.nx-dropdown-menu,
+.nexora-dropdown-menu,
+.modal,
+.modal-content,
+.offcanvas {
+    scrollbar-width: thin;
+}

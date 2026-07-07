@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Application.Employees.Services;
 using SmartAttendance.Application.Employees.ViewModels;
@@ -127,3 +127,4 @@ public class IndexModel : PageModel
                value.Contains(term, StringComparison.OrdinalIgnoreCase);
     }
 }
+

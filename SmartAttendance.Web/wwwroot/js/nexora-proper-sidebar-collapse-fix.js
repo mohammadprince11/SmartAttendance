@@ -1,4 +1,4 @@
-/* NEXORA Proper Sidebar Collapse Fix */
+﻿/* NEXORA Proper Sidebar Collapse Fix */
 (function () {
     "use strict";
 
@@ -110,3 +110,4 @@
     window.NexoraToggleSidebar = toggleSidebar;
     window.NexoraApplySidebarMode = applySidebarMode;
 })();
+

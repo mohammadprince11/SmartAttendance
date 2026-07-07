@@ -82,7 +82,7 @@
 
             <div class="nxr-emp-field">
                 <label>الفرع</label>
-                <select name="BranchFilter" class="nxr-input" data-nxr-live-select>
+                <select data-nexora-select="true" name="BranchFilter" class="nxr-input" data-nxr-live-select>
                     <option value="" selected="@(string.IsNullOrWhiteSpace(Model.BranchFilter) ? "selected" : null)">كل الفروع</option>
                     @foreach (var branch in Model.BranchOptions)
                     {
@@ -95,7 +95,7 @@
 
             <div class="nxr-emp-field">
                 <label>القسم</label>
-                <select name="DepartmentFilter" class="nxr-input" data-nxr-live-select>
+                <select data-nexora-select="true" name="DepartmentFilter" class="nxr-input" data-nxr-live-select>
                     <option value="" selected="@(string.IsNullOrWhiteSpace(Model.DepartmentFilter) ? "selected" : null)">كل الأقسام</option>
                     @foreach (var department in Model.DepartmentOptions)
                     {
@@ -108,7 +108,7 @@
 
             <div class="nxr-emp-field">
                 <label>الحالة</label>
-                <select name="StatusFilter" class="nxr-input" data-nxr-live-select>
+                <select data-nexora-select="true" name="StatusFilter" class="nxr-input" data-nxr-live-select>
                     <option value="" selected="@(string.IsNullOrWhiteSpace(Model.StatusFilter) ? "selected" : null)">كل الحالات</option>
                     <option value="active" selected="@(string.Equals(Model.StatusFilter, "active", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">فعال</option>
                     <option value="inactive" selected="@(string.Equals(Model.StatusFilter, "inactive", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">غير فعال</option>
@@ -117,7 +117,7 @@
 
             <div class="nxr-emp-field">
                 <label>ترتيب</label>
-                <select name="SortBy" class="nxr-input" data-nxr-live-select>
+                <select data-nexora-select="true" name="SortBy" class="nxr-input" data-nxr-live-select>
                     <option value="name" selected="@((Model.SortBy ?? "name").Equals("name", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الاسم</option>
                     <option value="code" selected="@(string.Equals(Model.SortBy, "code", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الكود</option>
                     <option value="branch" selected="@(string.Equals(Model.SortBy, "branch", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الفرع</option>
@@ -129,7 +129,7 @@
 
             <div class="nxr-emp-filter-actions">
                 <button type="submit" class="nxr-btn primary">تطبيق</button>
-                <a asp-page="./Index" class="nxr-btn">إعادة تعيين</a>
+                <a asp-page="./Index" class="nxr-btn">مسح الفلاتر</a>
             </div>
         </form>
     </section>
@@ -246,3 +246,5 @@
     <script src="~/js/nexora-employees-master-filter.js" asp-append-version="true"></script>
     <script src="~/js/nexora-employees-table-modern-rebuild.js" asp-append-version="true"></script>
 }
+
+

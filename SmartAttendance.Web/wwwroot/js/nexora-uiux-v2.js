@@ -1,4 +1,4 @@
-/* NEXORA UI/UX REDESIGN V2 */
+﻿/* NEXORA UI/UX REDESIGN V2 */
 (function () {
     "use strict";
 
@@ -202,3 +202,4 @@
         improveMobileSidebar();
     });
 })();
+

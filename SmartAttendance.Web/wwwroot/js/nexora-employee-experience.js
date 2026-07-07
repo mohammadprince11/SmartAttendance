@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
     const page = document.querySelector('[data-nxex-page]');
     if (!page) return;
 
@@ -83,3 +83,4 @@
 
     setType(input ? input.value || "إجازة" : "إجازة");
 })();
+

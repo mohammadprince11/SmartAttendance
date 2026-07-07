@@ -1,4 +1,4 @@
-/* NEXORA Documents Modal Force Fix */
+﻿/* NEXORA Documents Modal Force Fix */
 (function () {
     "use strict";
 
@@ -63,3 +63,4 @@
         }
     });
 })();
+

@@ -1,4 +1,4 @@
-
+﻿
 (function () {
     const root = document.getElementById('nxApprovedAnnouncementStudio');
     if (!root) return;
@@ -385,3 +385,4 @@
 
     applyTemplate('satisfaction');
 })();
+

@@ -1,4 +1,4 @@
-/* NEXORA Add Employee - Save Documents From Modal */
+﻿/* NEXORA Add Employee - Save Documents From Modal */
 (function () {
     "use strict";
 
@@ -154,3 +154,4 @@
         patchModal();
     });
 })();
+

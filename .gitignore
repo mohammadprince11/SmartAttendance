@@ -39,3 +39,13 @@ README_V*.md
 
 # Employee uploaded photos
 SmartAttendance.Web/wwwroot/uploads/employee-photos/
+# NEXORA local cleanup/archive
+__Cleanup_Archive/
+*.bak*
+*.tmp
+# Build outputs
+bin/
+obj/
+# Uploaded employee files
+SmartAttendance.Web/wwwroot/uploads/employee-documents/
+__Archive_RemovedPages/

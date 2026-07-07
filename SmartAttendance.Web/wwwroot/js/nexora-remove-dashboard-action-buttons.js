@@ -1,4 +1,4 @@
-/* NEXORA Remove Dashboard Action Buttons
+﻿/* NEXORA Remove Dashboard Action Buttons
    Removes page action buttons:
    - تقديم الطلبات
    - الموافقات
@@ -29,3 +29,4 @@
     setTimeout(removeButtons, 150);
     setTimeout(removeButtons, 600);
 })();
+

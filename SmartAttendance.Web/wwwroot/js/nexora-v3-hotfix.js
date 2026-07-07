@@ -1,4 +1,4 @@
-/* NEXORA V3 Hotfix */
+﻿/* NEXORA V3 Hotfix */
 (function () {
     "use strict";
 
@@ -23,3 +23,4 @@
         hideProfileTabs();
     });
 })();
+

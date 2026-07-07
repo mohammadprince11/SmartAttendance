@@ -1,4 +1,4 @@
-/* NEXORA Add Employee Modal + Readiness Fix */
+﻿/* NEXORA Add Employee Modal + Readiness Fix */
 (function () {
     "use strict";
 
@@ -103,3 +103,4 @@
         updateReadiness();
     });
 })();
+

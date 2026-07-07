@@ -26,8 +26,8 @@
 
         <form method="post" asp-page-handler="Add" class="nxhs-inline-add">
             <input asp-for="Name" placeholder="اسم السبب" required />
-            <select asp-for="IsMandatory"><option value="false">اختياري</option><option value="true">إلزامي</option></select>
-            <select asp-for="RequiresSelfService"><option value="true">يطلب من الخدمة الذاتية</option><option value="false">لا يطلب</option></select>
+            <select data-nexora-select="true" asp-for="IsMandatory"><option value="false">اختياري</option><option value="true">إلزامي</option></select>
+            <select data-nexora-select="true" asp-for="RequiresSelfService"><option value="true">يطلب من الخدمة الذاتية</option><option value="false">لا يطلب</option></select>
             <input asp-for="EndOfServicePercent" type="number" min="0" max="100" step="1" />
             <button type="submit">إضافة</button>
         </form>
@@ -55,19 +55,19 @@
 
                                         <input name="name" value="@reason.Name" />
 
-                                        <select name="isMandatory">
+                                        <select data-nexora-select="true" name="isMandatory">
                                             <option value="false" selected="@(!reason.IsMandatory)">اختياري</option>
                                             <option value="true" selected="@reason.IsMandatory">إلزامي</option>
                                         </select>
 
                                         <input name="endOfServicePercent" type="number" min="0" max="100" step="1" value="@reason.EndOfServicePercent.ToString("0")" />
 
-                                        <select name="requiresSelfService">
+                                        <select data-nexora-select="true" name="requiresSelfService">
                                             <option value="true" selected="@reason.RequiresSelfService">نعم</option>
                                             <option value="false" selected="@(!reason.RequiresSelfService)">لا</option>
                                         </select>
 
-                                        <select name="isActive">
+                                        <select data-nexora-select="true" name="isActive">
                                             <option value="true" selected="@reason.IsActive">نشط</option>
                                             <option value="false" selected="@(!reason.IsActive)">متوقف</option>
                                         </select>
@@ -120,3 +120,10 @@
 </section>
 
 <script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+
+}
+
+
+

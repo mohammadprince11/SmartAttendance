@@ -1,4 +1,4 @@
-/* NEXORA Add Employee - Selected Documents Preview */
+﻿/* NEXORA Add Employee - Selected Documents Preview */
 (function () {
     "use strict";
 
@@ -205,3 +205,4 @@
         setTimeout(renderPreview, 120);
     });
 })();
+

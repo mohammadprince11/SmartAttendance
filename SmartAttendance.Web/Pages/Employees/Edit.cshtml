@@ -91,7 +91,7 @@ ViewData["Title"] = "تعديل بيانات الموظف";
             <div class="employee-edit-grid">
                 <div class="employee-edit-field wide">
                     <label asp-for="Employee.DepartmentId">القسم / الفرع</label>
-                    <select asp-for="Employee.DepartmentId" class="employee-edit-input">
+                    <select data-nexora-select="true" asp-for="Employee.DepartmentId" class="employee-edit-input">
                         <option value="">اختر القسم</option>
                         @foreach (var department in Model.Departments)
                         {
@@ -195,5 +195,6 @@ ViewData["Title"] = "تعديل بيانات الموظف";
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script><partial name="_ValidationScriptsPartial" />
 
 }
+
 
 

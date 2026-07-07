@@ -1,4 +1,4 @@
-/* NEXORA - Add Employee Documents Modal */
+﻿/* NEXORA - Add Employee Documents Modal */
 (function () {
     "use strict";
 
@@ -45,3 +45,4 @@
 
     document.addEventListener("DOMContentLoaded", setupDocumentsModal);
 })();
+

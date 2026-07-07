@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.EmployeeUpdates.IndexModel
 @{
     ViewData["Title"] = "تحديثات الموظف";
@@ -30,7 +30,7 @@
             <input type="hidden" name="tab" value="@Model.Tab" />
             <input type="hidden" name="section" value="@Model.ActiveSectionKey" />
             <label>الموظف</label>
-            <select name="employeeId" onchange="this.form.submit()">
+            <select data-nexora-select="true" name="employeeId" onchange="this.form.submit()">
                 @foreach (var employee in Model.Employees)
                 {
                     if (employee.Id == Model.SelectedEmployeeId)
@@ -110,7 +110,7 @@
 
                                     @if (field.InputType == "select-department")
                                     {
-                                        <select name="@field.Key">
+                                        <select data-nexora-select="true" name="@field.Key">
                                             <option value="">اختر القسم</option>
                                             @foreach (var dept in Model.Departments)
                                             {
@@ -127,7 +127,7 @@
                                     }
                                     else if (field.InputType == "select-active")
                                     {
-                                        <select name="@field.Key">
+                                        <select data-nexora-select="true" name="@field.Key">
                                             @if (Model.FieldValue(field.Key).Equals("true", System.StringComparison.OrdinalIgnoreCase))
                                             {
                                                 <option value="true" selected>فعال</option>
@@ -332,3 +332,5 @@
 </div>
 
 <script src="~/js/nexora-employee-updates.js" asp-append-version="true"></script>
+
+

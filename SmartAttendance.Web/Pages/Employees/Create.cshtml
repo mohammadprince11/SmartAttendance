@@ -108,7 +108,7 @@
             <div class="nxr-form-grid nxr-create-grid">
                 <div class="nxr-field wide">
                     <label asp-for="Employee.DepartmentId">القسم / الفرع</label>
-                    <select asp-for="Employee.DepartmentId">
+                    <select data-nexora-select="true" asp-for="Employee.DepartmentId">
                         <option value="">اختر القسم</option>
                         @foreach (var department in Model.Departments)
                         {
@@ -243,5 +243,6 @@
         max-width: 100% !important;
     }
 </style>
+
 
 

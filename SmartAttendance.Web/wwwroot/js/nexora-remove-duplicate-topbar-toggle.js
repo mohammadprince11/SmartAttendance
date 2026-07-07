@@ -1,4 +1,4 @@
-/* NEXORA - Remove duplicate topbar toggle button */
+﻿/* NEXORA - Remove duplicate topbar toggle button */
 (function () {
     "use strict";
 
@@ -21,3 +21,4 @@
     setTimeout(removeDuplicateTopbarToggle, 250);
     setTimeout(removeDuplicateTopbarToggle, 800);
 })();
+
