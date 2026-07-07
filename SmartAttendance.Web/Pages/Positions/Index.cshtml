@@ -2,4 +2,104 @@
 @model SmartAttendance.Web.Pages.Positions.IndexModel
 @{
     ViewData["Title"] = "Positions";
+    var searchValue = Model.Search ?? string.Empty;
 }
+
+<link rel="stylesheet" href="~/css/positions.css" asp-append-version="true" />
+
+<div class="positions-page" dir="rtl">
+    <section class="positions-hero">
+        <div>
+            <p class="positions-eyebrow">NEXORA HR</p>
+            <h1>&#x0627;&#x0644;&#x0645;&#x0646;&#x0627;&#x0635;&#x0628; &#x0627;&#x0644;&#x0648;&#x0638;&#x064A;&#x0641;&#x064A;&#x0629;</h1>
+            <span>&#x0642;&#x0627;&#x0626;&#x0645;&#x0629; &#x0627;&#x0644;&#x0645;&#x0646;&#x0627;&#x0635;&#x0628; &#x0627;&#x0644;&#x0645;&#x0633;&#x062A;&#x062E;&#x062F;&#x0645;&#x0629; &#x062D;&#x0627;&#x0644;&#x064A;&#x0627;&#x064B; &#x062F;&#x0627;&#x062E;&#x0644; &#x0645;&#x0644;&#x0641;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;.</span>
+        </div>
+
+        <form method="get" class="positions-search">
+            <input type="search"
+                   name="Search"
+                   value="@searchValue"
+                   placeholder="&#x0627;&#x0628;&#x062D;&#x062B; &#x0639;&#x0646; &#x0645;&#x0646;&#x0635;&#x0628;..." />
+
+            <button type="submit">&#x0628;&#x062D;&#x062B;</button>
+
+            @if (!string.IsNullOrWhiteSpace(Model.Search))
+            {
+                <a asp-page="/Positions/Index">&#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x0636;&#x0628;&#x0637;</a>
+            }
+        </form>
+    </section>
+
+    <section class="positions-kpis">
+        <article>
+            <span>&#x0625;&#x062C;&#x0645;&#x0627;&#x0644;&#x064A; &#x0627;&#x0644;&#x0645;&#x0646;&#x0627;&#x0635;&#x0628;</span>
+            <strong>@Model.TotalPositions</strong>
+        </article>
+
+        <article>
+            <span>&#x0645;&#x0648;&#x0638;&#x0641;&#x0648;&#x0646; &#x0644;&#x062F;&#x064A;&#x0647;&#x0645; &#x0645;&#x0646;&#x0635;&#x0628;</span>
+            <strong>@Model.TotalEmployeesWithPositions</strong>
+        </article>
+
+        <article>
+            <span>&#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x0648;&#x0646; &#x0627;&#x0644;&#x0641;&#x0639;&#x0627;&#x0644;&#x0648;&#x0646;</span>
+            <strong>@Model.ActiveEmployeesWithPositions</strong>
+        </article>
+    </section>
+
+    <section class="positions-panel">
+        <div class="positions-panel-head">
+            <div>
+                <h2>&#x0642;&#x0627;&#x0626;&#x0645;&#x0629; &#x0627;&#x0644;&#x0645;&#x0646;&#x0627;&#x0635;&#x0628;</h2>
+                <p>&#x062A;&#x0645; &#x0627;&#x0644;&#x0627;&#x0639;&#x062A;&#x0645;&#x0627;&#x062F; &#x0639;&#x0644;&#x0649; &#x062D;&#x0642;&#x0644; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628; &#x062F;&#x0627;&#x062E;&#x0644; &#x062C;&#x062F;&#x0648;&#x0644; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;.</p>
+            </div>
+        </div>
+
+        @if (!Model.Positions.Any())
+        {
+            <div class="positions-empty">
+                &#x0644;&#x0627; &#x062A;&#x0648;&#x062C;&#x062F; &#x0645;&#x0646;&#x0627;&#x0635;&#x0628; &#x0645;&#x0633;&#x062C;&#x0644;&#x0629; &#x062D;&#x0627;&#x0644;&#x064A;&#x0627;&#x064B;.
+            </div>
+        }
+        else
+        {
+            <div class="positions-table-wrap">
+                <table class="positions-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>&#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</th>
+                            <th>&#x0625;&#x062C;&#x0645;&#x0627;&#x0644;&#x064A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;</th>
+                            <th>&#x0641;&#x0639;&#x0627;&#x0644;</th>
+                            <th>&#x063A;&#x064A;&#x0631; &#x0641;&#x0639;&#x0627;&#x0644;</th>
+                            <th>&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629;</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            var index = 1;
+                        }
+
+                        @foreach (var position in Model.Positions)
+                        {
+                            <tr>
+                                <td>@index</td>
+                                <td>
+                                    <strong>@position.Name</strong>
+                                </td>
+                                <td>@position.EmployeeCount</td>
+                                <td>@position.ActiveEmployeeCount</td>
+                                <td>@position.InactiveEmployeeCount</td>
+                                <td>
+                                    <span class="positions-status">&#x0645;&#x0633;&#x062A;&#x062E;&#x062F;&#x0645;</span>
+                                </td>
+                            </tr>
+
+                            index++;
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

@@ -326,3 +326,25 @@ html[dir="rtl"] .org-department {
         flex-direction: column;
     }
 }
+
+/* NEXORA_ORG_HEADER_ACTIONS_START */
+
+.org-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 760px) {
+    .org-header-actions {
+        justify-content: stretch;
+    }
+
+    .org-header-actions .org-btn-secondary {
+        flex: 1 1 100%;
+    }
+}
+
+/* NEXORA_ORG_HEADER_ACTIONS_END */
