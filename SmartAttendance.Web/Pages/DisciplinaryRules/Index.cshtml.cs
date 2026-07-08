@@ -1,4 +1,4 @@
-﻿using System.Data.Common;
+using System.Data.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Http;
@@ -684,7 +684,7 @@ VALUES
     private async Task LoadPageAsync(string? tab, int? categoryId)
     {
         await EnsureTablesAsync();
-        await SeedDefaultLibraryAsync(true);
+        // NEXORA: auto seed disabled for clean database reset.
         Tab = NormalizeTab(tab);
         SelectedCategoryId = categoryId.GetValueOrDefault();
         Settings = await LoadSettingsAsync();
@@ -699,7 +699,7 @@ VALUES
 
     private async Task EnsureTablesAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
+await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         await HrmsDatabase.ExecuteAsync(_dbContext,
             """
 IF OBJECT_ID('DisciplinaryViolationCategories', 'U') IS NULL
@@ -816,7 +816,7 @@ END;
 
     private async Task SeedDefaultLibraryAsync(bool onlyIfEmpty)
     {
-        var count = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT COUNT(1) FROM DisciplinaryViolationCategories;");
+var count = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT COUNT(1) FROM DisciplinaryViolationCategories;");
         if (onlyIfEmpty && count > 0) { await SeedTemplateTypesAndSettingsAsync(); return; }
 
         await HrmsDatabase.ExecuteAsync(_dbContext,
@@ -906,7 +906,7 @@ END;
 
     private async Task SeedTemplateTypesAndSettingsAsync()
     {
-        await HrmsDatabase.ExecuteAsync(_dbContext,
+await HrmsDatabase.ExecuteAsync(_dbContext,
             """
 IF NOT EXISTS (SELECT 1 FROM DisciplinaryTemplateTypes WHERE Code = N'PenaltyNotice')
     INSERT INTO DisciplinaryTemplateTypes(Name, Code, Description, IsActive) VALUES(N'إشعار عقوبة', N'PenaltyNotice', N'القالب الأساسي لإشعار الموظف بالمخالفة والجزاء.', 1);
@@ -942,7 +942,7 @@ IF NOT EXISTS (SELECT 1 FROM DisciplinaryTemplateTypes WHERE Code = N'FinalWarni
 
     private async Task SeedBodyTextLayersAsync(bool forceRebuild)
     {
-        if (forceRebuild)
+if (forceRebuild)
         {
             await HrmsDatabase.ExecuteAsync(
                 _dbContext,
@@ -1220,7 +1220,7 @@ ORDER BY
 
     private async Task ClearDefaultTemplateAsync(string templateType)
     {
-        await HrmsDatabase.ExecuteAsync(_dbContext, "UPDATE DisciplinaryMessageTemplates SET IsDefault = 0 WHERE TemplateType = @TemplateType;", command => HrmsDatabase.AddParameter(command, "@TemplateType", templateType));
+await HrmsDatabase.ExecuteAsync(_dbContext, "UPDATE DisciplinaryMessageTemplates SET IsDefault = 0 WHERE TemplateType = @TemplateType;", command => HrmsDatabase.AddParameter(command, "@TemplateType", templateType));
     }
 
     public string DisplaySeverityShort(string severity) => severity == "FinalWarning" ? "FW" : severity;

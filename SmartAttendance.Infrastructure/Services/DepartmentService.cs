@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.Departments.Services;

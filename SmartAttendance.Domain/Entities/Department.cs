@@ -1,4 +1,4 @@
-﻿using SmartAttendance.Domain.Common;
+using SmartAttendance.Domain.Common;
 
 namespace SmartAttendance.Domain.Entities;
 

@@ -1,39 +1,55 @@
-﻿@page "{id:int}"
+@page "{id:int}"
 @model SmartAttendance.Web.Pages.Companies.EditModel
+
 @{
-    ViewData["Title"] = "Edit Company";
+    ViewData["Title"] = "تعديل شركة";
 }
 
-<div class="dashboard-header">
-    <h1>Edit Company</h1>
-    <p>Update company information</p>
-</div>
-
-<div class="stat-card">
-    <form method="post">
-        <input type="hidden" asp-for="Company.Id" />
-
-        <div class="form-group">
-            <label class="form-label">Code</label>
-            <input asp-for="Company.Code" class="form-control" />
+<div class="nexora-setup-page nx-setup-form-page">
+    <section class="nexora-setup-hero">
+        <div>
+            <span class="nexora-setup-kicker">إعداد الشركة</span>
+            <h1>تعديل شركة</h1>
+            <p>تحديث بيانات الشركة الأساسية.</p>
         </div>
+        <a asp-page="./Index" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">الرجوع للقائمة</a>
+    </section>
 
-        <div class="form-group">
-            <label class="form-label">Company Name</label>
-            <input asp-for="Company.Name" class="form-control" />
-        </div>
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert-danger nx-setup-alert-danger">@Model.ErrorMessage</div>
+    }
 
-        <div class="form-group">
-            <label class="form-label">Email</label>
-            <input asp-for="Company.Email" class="form-control" />
-        </div>
+    <section class="nexora-setup-card">
+        <form method="post" class="nx-setup-modal-form">
+            <input type="hidden" asp-for="Company.Id" />
 
-        <div class="form-group">
-            <label class="form-label">Phone</label>
-            <input asp-for="Company.Phone" class="form-control" />
-        </div>
+            <div class="nx-setup-form-grid">
+                <label class="nx-setup-field">
+                    <span>كود الشركة</span>
+                    <input asp-for="Company.Code" />
+                </label>
 
-        <button type="submit" class="btn-primary">Update Company</button>
-        <a asp-page="/Companies/Index" class="action-link">Cancel</a>
-    </form>
+                <label class="nx-setup-field">
+                    <span>اسم الشركة</span>
+                    <input asp-for="Company.Name" />
+                </label>
+
+                <label class="nx-setup-field">
+                    <span>البريد الإلكتروني</span>
+                    <input asp-for="Company.Email" />
+                </label>
+
+                <label class="nx-setup-field">
+                    <span>رقم الهاتف</span>
+                    <input asp-for="Company.Phone" />
+                </label>
+            </div>
+
+            <div class="nx-setup-modal__actions">
+                <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">إلغاء</a>
+                <button type="submit" class="nx-setup-btn nx-setup-btn-primary">حفظ التعديل</button>
+            </div>
+        </form>
+    </section>
 </div>

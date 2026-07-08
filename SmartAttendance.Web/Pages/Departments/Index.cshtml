@@ -2,73 +2,143 @@
 @model SmartAttendance.Web.Pages.Departments.IndexModel
 
 @{
-    ViewData["Title"] = "Departments";
+    ViewData["Title"] = "الأقسام";
 }
 
-<div class="page-header">
-    <div>
-        <h1>Departments</h1>
-        <p>Manage departments</p>
-    </div>
+<div class="nexora-setup-page" data-setup-page="departments">
+    <section class="nexora-setup-hero">
+        <div>
+            <span class="nexora-setup-kicker">الخطوة الثالثة</span>
+            <h1>الأقسام</h1>
+            <p>أنشئ الأقسام وربطها بمواقع العمل حتى تصبح جاهزة لربط المناصب والموظفين.</p>
+        </div>
 
-    <div class="form-actions">
-        <a asp-page="./Import" class="btn-secondary">Import Excel</a>
-        <a asp-page="./Create" class="btn-primary">+ Add Department</a>
-    </div>
+        <div class="nexora-setup-actions">
+            <a asp-page="./Import" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">استيراد Excel</a>
+            <button type="button" class="btn-primary nx-setup-btn nx-setup-btn-primary" data-nx-setup-open="department-create-modal">+ إضافة قسم</button>
+        </div>
+    </section>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert-success nx-setup-alert">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    <section class="table-card nexora-setup-card">
+        <div class="nexora-setup-card-head">
+            <div>
+                <span>سجل الأقسام</span>
+                <strong>الأقسام المعرفة داخل مواقع العمل</strong>
+            </div>
+            <small>كل منصب وموظف سيتم ربطه لاحقاً بقسم محدد.</small>
+        </div>
+
+        <form method="get" class="search-form nexora-setup-search">
+            <input type="search"
+                   name="SearchTerm"
+                   value="@Model.SearchTerm"
+                   placeholder="ابحث عن اسم القسم أو الكود..." />
+
+            <button type="submit" class="btn-primary nx-setup-btn nx-setup-btn-primary">بحث</button>
+            <a asp-page="./Index" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">مسح</a>
+        </form>
+
+        <div class="nexora-setup-table-wrap">
+            <table class="data-table nexora-setup-table">
+                <thead>
+                    <tr>
+                        <th>الكود</th>
+                        <th>اسم القسم</th>
+                        <th>موقع العمل</th>
+                        <th>الحالة</th>
+                        <th style="width: 170px;">الإجراءات</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model.Departments.Any())
+                    {
+                        foreach (var department in Model.Departments)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="nx-setup-code">@department.Code</span>
+                                </td>
+                                <td>
+                                    <strong class="nx-setup-title">@department.Name</strong>
+                                </td>
+                                <td>@department.BranchName</td>
+                                <td>
+                                    <span class="nx-setup-status @(department.IsActive ? "is-active" : "is-inactive")">
+                                        @(department.IsActive ? "فعال" : "غير فعال")
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="nx-setup-row-actions">
+                                        <a asp-page="./Edit" asp-route-id="@department.Id" class="btn-table btn-edit">تعديل</a>
+                                        <a asp-page="./Delete" asp-route-id="@department.Id" class="btn-table btn-delete">حذف</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="nx-setup-empty">لا توجد أقسام مسجلة حالياً.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
 </div>
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert-success">
-        @TempData["SuccessMessage"]
+<div class="nx-setup-modal" id="department-create-modal" aria-hidden="true">
+    <div class="nx-setup-modal__panel" role="dialog" aria-modal="true" aria-labelledby="department-create-title">
+        <button type="button" class="nx-setup-modal__close" data-nx-setup-close aria-label="إغلاق">×</button>
+
+        <div class="nx-setup-modal__head">
+            <span>الأقسام</span>
+            <h2 id="department-create-title">إضافة قسم جديد</h2>
+            <p>اربط القسم بموقع العمل حتى يمكن استخدامه لاحقاً في المناصب والموظفين.</p>
+        </div>
+
+        @if (!Model.Branches.Any())
+        {
+            <div class="nx-setup-modal-note">يجب إضافة موقع عمل أولاً قبل إنشاء قسم.</div>
+        }
+
+        <form method="post" asp-page="./Create" class="nx-setup-modal-form">
+            <div class="nx-setup-form-grid">
+                <label class="nx-setup-field">
+                    <span>موقع العمل</span>
+                    <select name="Department.BranchId" required>
+                        <option value="">اختر موقع العمل</option>
+                        @foreach (var branch in Model.Branches)
+                        {
+                            <option value="@branch.Id">@branch.Name</option>
+                        }
+                    </select>
+                </label>
+
+                <label class="nx-setup-field">
+                    <span>كود القسم</span>
+                    <input name="Department.Code" autocomplete="off" placeholder="مثال: HR" required />
+                </label>
+
+                <label class="nx-setup-field nx-setup-field-wide">
+                    <span>اسم القسم</span>
+                    <input name="Department.Name" autocomplete="off" placeholder="مثال: الموارد البشرية" required />
+                </label>
+            </div>
+
+            <div class="nx-setup-modal__actions">
+                <button type="button" class="nx-setup-btn nx-setup-btn-secondary" data-nx-setup-close>إلغاء</button>
+                <button type="submit" class="nx-setup-btn nx-setup-btn-primary" @(Model.Branches.Any() ? null : "disabled")>حفظ القسم</button>
+            </div>
+        </form>
     </div>
-}
-
-<div class="table-card">
-    <form method="get" class="search-form">
-        <input type="text"
-               name="SearchTerm"
-               value="@Model.SearchTerm"
-               placeholder="Search by department name or code..." />
-
-        <button type="submit" class="btn-primary">Search</button>
-        <a asp-page="./Index" class="btn-secondary">Clear</a>
-    </form>
-
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Code</th>
-                <th>Department Name</th>
-                <th>Branch</th>
-                <th>Active</th>
-                <th style="width: 160px;">Actions</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            @if (Model.Departments.Any())
-            {
-                foreach (var department in Model.Departments)
-                {
-                    <tr>
-                        <td>@department.Code</td>
-                        <td>@department.Name</td>
-                        <td>@department.BranchName</td>
-                        <td>@(department.IsActive ? "Yes" : "No")</td>
-                        <td>
-                            <a asp-page="./Edit" asp-route-id="@department.Id" class="btn-table btn-edit">Edit</a>
-                            <a asp-page="./Delete" asp-route-id="@department.Id" class="btn-table btn-delete">Delete</a>
-                        </td>
-                    </tr>
-                }
-            }
-            else
-            {
-                <tr>
-                    <td colspan="5" style="text-align:center;">No departments found.</td>
-                </tr>
-            }
-        </tbody>
-    </table>
 </div>

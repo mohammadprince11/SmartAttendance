@@ -2,12 +2,9 @@
     const DEFAULT_PAGE_SIZE = 10;
     const PAGE_SIZE_KEY = "smartAttendance.defaultPageSize";
     const PAGE_SIZES = [10, 25, 50, 100, "All"];
-    const floatingGroups = [];
 
     document.addEventListener("DOMContentLoaded", () => {
         setupAllTables();
-        bindFloatingEvents();
-        updateFloatingControls();
     });
 
     function setupAllTables() {
@@ -58,7 +55,7 @@
 
             const label = document.createElement("span");
             label.className = "sa-pagination-label";
-            label.textContent = "Rows per page";
+            label.textContent = "عدد الصفوف";
 
             const select = document.createElement("select");
             select.className = "sa-page-size";
@@ -66,7 +63,7 @@
             PAGE_SIZES.forEach(size => {
                 const option = document.createElement("option");
                 option.value = String(size);
-                option.textContent = String(size);
+                option.textContent = size === "All" ? "الكل" : String(size);
                 select.appendChild(option);
             });
 
@@ -82,12 +79,12 @@
             const right = document.createElement("div");
             right.className = "sa-pagination-right";
 
-            const firstBtn = createButton("First");
-            const prevBtn = createButton("Prev");
+            const firstBtn = createButton("الأول");
+            const prevBtn = createButton("السابق");
             const pageNumber = document.createElement("span");
             pageNumber.className = "sa-page-number";
-            const nextBtn = createButton("Next");
-            const lastBtn = createButton("Last");
+            const nextBtn = createButton("التالي");
+            const lastBtn = createButton("الأخير");
 
             right.appendChild(firstBtn);
             right.appendChild(prevBtn);
@@ -106,7 +103,7 @@
 
             const noResultsCell = document.createElement("td");
             noResultsCell.colSpan = getColumnCount(table);
-            noResultsCell.textContent = "No matching results found.";
+            noResultsCell.textContent = "لا توجد نتائج مطابقة.";
 
             noResultsRow.appendChild(noResultsCell);
             tbody.appendChild(noResultsRow);
@@ -146,8 +143,8 @@
                 const to = totalRows === 0 ? 0 : endIndex;
 
                 info.textContent = currentQuery
-                    ? `Showing ${from}-${to} of ${totalRows} filtered`
-                    : `Showing ${from}-${to} of ${totalRows}`;
+                    ? `عرض ${from}-${to} من ${totalRows} نتيجة`
+                    : `عرض ${from}-${to} من ${totalRows}`;
 
                 pageNumber.textContent = `${currentPage} / ${totalPages}`;
 
@@ -155,8 +152,6 @@
                 prevBtn.disabled = currentPage <= 1 || allSelected || totalRows === 0;
                 nextBtn.disabled = currentPage >= totalPages || allSelected || totalRows === 0;
                 lastBtn.disabled = currentPage >= totalPages || allSelected || totalRows === 0;
-
-                updateFloatingControls();
             }
 
             select.addEventListener("change", () => {
@@ -187,12 +182,6 @@
                 render();
             });
 
-            /*
-             * Important:
-             * Live client-side search must NOT hijack server action forms.
-             * Pages like Attendance Processing, Import, Setup, Reports use date/file/select/post forms.
-             * If we preventDefault on those forms, buttons like Process/Preview/Import will not send the selected dates to the server.
-             */
             if (canUseLiveClientSearch && searchForm && searchInput) {
                 searchForm.addEventListener("submit", (event) => {
                     event.preventDefault();
@@ -218,7 +207,6 @@
                 }
             }
 
-            setupFloatingGroup(tableCard, searchForm, wrapper);
             render();
         });
     }
@@ -253,112 +241,26 @@
             "create",
             "update",
             "delete",
-            "export"
+            "export",
+            "معالجة",
+            "معاينة",
+            "استيراد",
+            "رفع",
+            "تعيين",
+            "إنشاء",
+            "حفظ",
+            "تحديث",
+            "حذف",
+            "تصدير"
         ];
 
-        if (serverActionWords.some(word => buttonsText.includes(word))) {
+        if (serverActionWords.some(word => buttonsText.includes(normalizeText(word)))) {
             return false;
         }
 
         const textInputs = Array.from(form.querySelectorAll("input[type='text'], input[type='search']"));
 
         return textInputs.length === 1;
-    }
-
-    function setupFloatingGroup(tableCard, searchForm, paginationWrapper) {
-        if (!tableCard || !paginationWrapper) {
-            return;
-        }
-
-        const controls = [];
-
-        if (searchForm) {
-            controls.push(searchForm);
-        }
-
-        controls.push(paginationWrapper);
-
-        const placeholders = controls.map(control => {
-            const placeholder = document.createElement("div");
-            placeholder.className = "sa-floating-placeholder";
-            control.parentNode.insertBefore(placeholder, control);
-            return placeholder;
-        });
-
-        floatingGroups.push({
-            tableCard,
-            controls,
-            placeholders
-        });
-    }
-
-    function bindFloatingEvents() {
-        window.addEventListener("scroll", updateFloatingControls, { passive: true });
-        window.addEventListener("resize", updateFloatingControls);
-        document.addEventListener("input", updateFloatingControls);
-    }
-
-    function updateFloatingControls() {
-        const topbar = document.querySelector(".topbar");
-        const topOffset = (topbar ? topbar.getBoundingClientRect().height : 58) + 8;
-
-        floatingGroups.forEach(group => {
-            const cardRect = group.tableCard.getBoundingClientRect();
-            const cardBottom = cardRect.bottom;
-            const cardTop = cardRect.top;
-
-            const totalControlsHeight = group.controls.reduce((sum, control) => {
-                return sum + getElementOuterHeight(control);
-            }, 0);
-
-            const shouldFloat =
-                cardTop < topOffset &&
-                cardBottom > topOffset + totalControlsHeight + 80;
-
-            if (!shouldFloat) {
-                group.controls.forEach((control, index) => {
-                    releaseControl(control, group.placeholders[index]);
-                });
-                return;
-            }
-
-            let currentTop = topOffset;
-
-            group.controls.forEach((control, index) => {
-                fixControl(control, group.placeholders[index], cardRect.left, cardRect.width, currentTop);
-                currentTop += getElementOuterHeight(control);
-            });
-        });
-    }
-
-    function fixControl(control, placeholder, left, width, top) {
-        if (!control.classList.contains("sa-fixed-control")) {
-            placeholder.style.height = `${getElementOuterHeight(control)}px`;
-            placeholder.style.display = "block";
-            control.classList.add("sa-fixed-control");
-        }
-
-        control.style.top = `${top}px`;
-        control.style.left = `${left}px`;
-        control.style.width = `${width}px`;
-    }
-
-    function releaseControl(control, placeholder) {
-        placeholder.style.display = "none";
-        placeholder.style.height = "0px";
-
-        control.classList.remove("sa-fixed-control");
-        control.style.top = "";
-        control.style.left = "";
-        control.style.width = "";
-    }
-
-    function getElementOuterHeight(element) {
-        const style = window.getComputedStyle(element);
-        const marginTop = parseFloat(style.marginTop) || 0;
-        const marginBottom = parseFloat(style.marginBottom) || 0;
-
-        return element.getBoundingClientRect().height + marginTop + marginBottom;
     }
 
     function createButton(text) {
@@ -422,15 +324,24 @@
             text.includes("no data") ||
             text.includes("no preview") ||
             text.includes("no matching") ||
-            text.includes("not found.");
+            text.includes("not found.") ||
+            text.includes("لا توجد") ||
+            text.includes("لا يوجد") ||
+            text.includes("لا نتائج");
     }
 
     function findClearElement(form) {
         const candidates = Array.from(form.querySelectorAll("a, button"));
 
-        return candidates.find(element =>
-            normalizeText(element.innerText) === "clear" ||
-            normalizeText(element.innerText) === "cancel" ||
-            normalizeText(element.innerText) === "reset");
+        return candidates.find(element => {
+            const text = normalizeText(element.innerText);
+            return text === "clear" ||
+                text === "cancel" ||
+                text === "reset" ||
+                text === "مسح" ||
+                text === "إلغاء" ||
+                text === "اعادة ضبط" ||
+                text === "إعادة ضبط";
+        });
     }
 })();

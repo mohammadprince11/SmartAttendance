@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Domain.Entities;
 

@@ -1,4 +1,4 @@
-﻿namespace SmartAttendance.Application.Departments.ViewModels;
+namespace SmartAttendance.Application.Departments.ViewModels;
 
 public class DepartmentListViewModel
 {

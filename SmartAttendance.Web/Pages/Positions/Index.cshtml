@@ -1,101 +1,240 @@
 @page
 @model SmartAttendance.Web.Pages.Positions.IndexModel
 @{
-    ViewData["Title"] = "Positions";
-    var searchValue = Model.Search ?? string.Empty;
+    ViewData["Title"] = "المناصب الوظيفية";
 }
 
 <link rel="stylesheet" href="~/css/positions.css" asp-append-version="true" />
 
-<div class="positions-page" dir="rtl">
-    <section class="positions-hero">
-        <div>
-            <p class="positions-eyebrow">NEXORA HR</p>
-            <h1>&#x0627;&#x0644;&#x0645;&#x0646;&#x0627;&#x0635;&#x0628; &#x0627;&#x0644;&#x0648;&#x0638;&#x064A;&#x0641;&#x064A;&#x0629;</h1>
-            <span>&#x0642;&#x0627;&#x0626;&#x0645;&#x0629; &#x0627;&#x0644;&#x0645;&#x0646;&#x0627;&#x0635;&#x0628; &#x0627;&#x0644;&#x0645;&#x0633;&#x062A;&#x062E;&#x062F;&#x0645;&#x0629; &#x062D;&#x0627;&#x0644;&#x064A;&#x0627;&#x064B; &#x062F;&#x0627;&#x062E;&#x0644; &#x0645;&#x0644;&#x0641;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;.</span>
+<div class="nxp-positions-page" dir="rtl">
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="nxp-alert nxp-alert--success">@successMessage</div>
+    }
+
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="nxp-alert nxp-alert--error">@errorMessage</div>
+    }
+
+    <section class="nxp-hero">
+        <div class="nxp-hero__content">
+            <p class="nxp-eyebrow">NEXORA HR</p>
+            <h1>المناصب الوظيفية</h1>
+            <span>إدارة المناصب الرسمية وربطها بالقسم والفئة والمستوى، مع منع حذف أي منصب مستخدم داخل ملفات الموظفين.</span>
+        </div>
+        <div class="nxp-hero__links" aria-label="إعدادات المناصب">
+            <a asp-page="/PositionCategories/Index">إدارة الفئات</a>
+            <a asp-page="/PositionLevels/Index">إدارة المستويات</a>
+        </div>
+    </section>
+
+    <section class="nxp-kpis" aria-label="ملخص المناصب الوظيفية">
+        <article>
+            <span>إجمالي المناصب</span>
+            <strong>@Model.TotalPositions</strong>
+        </article>
+        <article>
+            <span>المناصب الفعالة</span>
+            <strong>@Model.ActivePositions</strong>
+        </article>
+        <article>
+            <span>مناصب مرتبطة بموظفين</span>
+            <strong>@Model.LinkedPositions</strong>
+        </article>
+        <article>
+            <span>موظفون مثبتون على مناصب</span>
+            <strong>@Model.TotalLinkedEmployees</strong>
+        </article>
+    </section>
+
+    <section class="nxp-card nxp-form-card" id="positionFormArea">
+        <div class="nxp-card__head">
+            <div>
+                <h2>@(Model.Input.Id > 0 ? "تعديل منصب وظيفي" : "بيانات المنصب الوظيفي")</h2>
+                <p>نفس النموذج يستخدم للإضافة والتعديل. المنصب الجديد يكون فعال تلقائياً.</p>
+            </div>
         </div>
 
-        <form method="get" class="positions-search">
-            <input type="search"
-                   name="Search"
-                   value="@searchValue"
-                   placeholder="&#x0627;&#x0628;&#x062D;&#x062B; &#x0639;&#x0646; &#x0645;&#x0646;&#x0635;&#x0628;..." />
+        <form method="post" asp-page-handler="Save" id="positionForm" class="nxp-form" autocomplete="off">
+            <input asp-for="Input.Id" type="hidden" />
+            <input asp-for="Input.OriginalArabicName" type="hidden" />
 
-            <button type="submit">&#x0628;&#x062D;&#x062B;</button>
+            <label class="nxp-field nxp-field--wide">
+                <span>اسم المنصب <b>*</b></span>
+                <input asp-for="Input.ArabicName" required maxlength="200" placeholder="مثال: مشرف عمليات الموارد البشرية" />
+            </label>
 
-            @if (!string.IsNullOrWhiteSpace(Model.Search))
-            {
-                <a asp-page="/Positions/Index">&#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x0636;&#x0628;&#x0637;</a>
-            }
+            <label class="nxp-field">
+                <span>القسم</span>
+                <select asp-for="Input.DepartmentId">
+                    <option value="">بدون قسم محدد</option>
+                    @foreach (var department in Model.Departments)
+                    {
+                        <option value="@department.Id">@department.Name</option>
+                    }
+                </select>
+            </label>
+
+            <label class="nxp-field">
+                <span>الفئة <a asp-page="/PositionCategories/Index">إدارة</a></span>
+                <select asp-for="Input.Category">
+                    <option value="">غير محدد</option>
+                    @foreach (var category in Model.Categories.Where(item => item.IsActive || item.Name == Model.Input.Category))
+                    {
+                        <option value="@category.Name">@category.Name</option>
+                    }
+                </select>
+            </label>
+
+            <label class="nxp-field">
+                <span>المستوى <a asp-page="/PositionLevels/Index">إدارة</a></span>
+                <select asp-for="Input.Level">
+                    <option value="">غير محدد</option>
+                    @foreach (var level in Model.Levels.Where(item => item.IsActive || item.Name == Model.Input.Level))
+                    {
+                        <option value="@level.Name">@level.Name</option>
+                    }
+                </select>
+            </label>
+
+            <label class="nxp-field nxp-field--wide">
+                <span>وصف مختصر</span>
+                <textarea asp-for="Input.Description" rows="3" maxlength="1200" placeholder="اكتب وصفاً مختصراً للمنصب أو نطاق المسؤوليات..."></textarea>
+            </label>
+
+            <label class="nxp-check">
+                <input type="hidden" name="Input.IsActive" value="false" />
+                <input asp-for="Input.IsActive" value="true" />
+                <span>المنصب فعال</span>
+            </label>
+
+            <div class="nxp-form-actions">
+                <button type="submit" class="nxp-btn nxp-btn--primary">حفظ المنصب</button>
+                <a asp-page="/Positions/Index" class="nxp-btn nxp-btn--ghost">تفريغ النموذج</a>
+            </div>
         </form>
     </section>
 
-    <section class="positions-kpis">
-        <article>
-            <span>&#x0625;&#x062C;&#x0645;&#x0627;&#x0644;&#x064A; &#x0627;&#x0644;&#x0645;&#x0646;&#x0627;&#x0635;&#x0628;</span>
-            <strong>@Model.TotalPositions</strong>
-        </article>
-
-        <article>
-            <span>&#x0645;&#x0648;&#x0638;&#x0641;&#x0648;&#x0646; &#x0644;&#x062F;&#x064A;&#x0647;&#x0645; &#x0645;&#x0646;&#x0635;&#x0628;</span>
-            <strong>@Model.TotalEmployeesWithPositions</strong>
-        </article>
-
-        <article>
-            <span>&#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x0648;&#x0646; &#x0627;&#x0644;&#x0641;&#x0639;&#x0627;&#x0644;&#x0648;&#x0646;</span>
-            <strong>@Model.ActiveEmployeesWithPositions</strong>
-        </article>
-    </section>
-
-    <section class="positions-panel">
-        <div class="positions-panel-head">
+    <section class="nxp-card">
+        <div class="nxp-card__head nxp-card__head--filters">
             <div>
-                <h2>&#x0642;&#x0627;&#x0626;&#x0645;&#x0629; &#x0627;&#x0644;&#x0645;&#x0646;&#x0627;&#x0635;&#x0628;</h2>
-                <p>&#x062A;&#x0645; &#x0627;&#x0644;&#x0627;&#x0639;&#x062A;&#x0645;&#x0627;&#x062F; &#x0639;&#x0644;&#x0649; &#x062D;&#x0642;&#x0644; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628; &#x062F;&#x0627;&#x062E;&#x0644; &#x062C;&#x062F;&#x0648;&#x0644; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;.</p>
+                <h2>قائمة المناصب</h2>
+                <p>الفلاتر تعمل مباشرة بدون زر بحث.</p>
+            </div>
+
+            <div class="nxp-filters nxp-filters--positions" aria-label="فلاتر المناصب">
+                <input id="positionSearch" type="search" placeholder="بحث مباشر عن منصب..." />
+
+                <select id="departmentFilter">
+                    <option value="all">كل الأقسام</option>
+                    @foreach (var department in Model.Departments)
+                    {
+                        <option value="@department.Id">@department.Name</option>
+                    }
+                    <option value="none">بدون قسم</option>
+                </select>
+
+                <select id="categoryFilter">
+                    <option value="all">كل الفئات</option>
+                    @foreach (var category in Model.Categories)
+                    {
+                        <option value="@category.Name">@category.Name</option>
+                    }
+                    <option value="none">بدون فئة</option>
+                </select>
+
+                <select id="levelFilter">
+                    <option value="all">كل المستويات</option>
+                    @foreach (var level in Model.Levels)
+                    {
+                        <option value="@level.Name">@level.Name</option>
+                    }
+                    <option value="none">بدون مستوى</option>
+                </select>
+
+                <select id="statusFilter">
+                    <option value="all">كل الحالات</option>
+                    <option value="active">فعال</option>
+                    <option value="inactive">غير فعال</option>
+                    <option value="linked">مرتبط بموظفين</option>
+                    <option value="unlinked">غير مرتبط</option>
+                </select>
             </div>
         </div>
 
         @if (!Model.Positions.Any())
         {
-            <div class="positions-empty">
-                &#x0644;&#x0627; &#x062A;&#x0648;&#x062C;&#x062F; &#x0645;&#x0646;&#x0627;&#x0635;&#x0628; &#x0645;&#x0633;&#x062C;&#x0644;&#x0629; &#x062D;&#x0627;&#x0644;&#x064A;&#x0627;&#x064B;.
-            </div>
+            <div class="nxp-empty">لا توجد مناصب مسجلة حالياً.</div>
         }
         else
         {
-            <div class="positions-table-wrap">
-                <table class="positions-table">
+            <div class="nxp-table-wrap">
+                <table class="nxp-table" id="positionsTable">
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>&#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</th>
-                            <th>&#x0625;&#x062C;&#x0645;&#x0627;&#x0644;&#x064A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;</th>
-                            <th>&#x0641;&#x0639;&#x0627;&#x0644;</th>
-                            <th>&#x063A;&#x064A;&#x0631; &#x0641;&#x0639;&#x0627;&#x0644;</th>
-                            <th>&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629;</th>
+                            <th>المنصب</th>
+                            <th>القسم</th>
+                            <th>الفئة</th>
+                            <th>المستوى</th>
+                            <th>الموظفون</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @{
-                            var index = 1;
-                        }
-
-                        @foreach (var position in Model.Positions)
+                        @for (var i = 0; i < Model.Positions.Count; i++)
                         {
-                            <tr>
-                                <td>@index</td>
+                            var position = Model.Positions[i];
+                            var canDelete = position.EmployeeCount == 0;
+                            <tr data-position-row
+                                data-search="@position.SearchText"
+                                data-department="@(position.DepartmentId?.ToString() ?? "none")"
+                                data-category="@(string.IsNullOrWhiteSpace(position.Category) ? "none" : position.Category)"
+                                data-level="@(string.IsNullOrWhiteSpace(position.Level) ? "none" : position.Level)"
+                                data-status="@(position.IsActive ? "active" : "inactive")"
+                                data-linked="@(position.EmployeeCount > 0 ? "linked" : "unlinked")">
+                                <td>@(i + 1)</td>
                                 <td>
-                                    <strong>@position.Name</strong>
+                                    <div class="nxp-position-name">
+                                        <strong>@position.ArabicName</strong>
+                                        @if (!string.IsNullOrWhiteSpace(position.Description))
+                                        {
+                                            <span>@position.Description</span>
+                                        }
+                                    </div>
                                 </td>
-                                <td>@position.EmployeeCount</td>
-                                <td>@position.ActiveEmployeeCount</td>
-                                <td>@position.InactiveEmployeeCount</td>
+                                <td>@(position.DepartmentName ?? "بدون قسم")</td>
+                                <td>@(string.IsNullOrWhiteSpace(position.Category) ? "غير محدد" : position.Category)</td>
+                                <td>@(string.IsNullOrWhiteSpace(position.Level) ? "غير محدد" : position.Level)</td>
                                 <td>
-                                    <span class="positions-status">&#x0645;&#x0633;&#x062A;&#x062E;&#x062F;&#x0645;</span>
+                                    <div class="nxp-employee-count">
+                                        <strong>@position.EmployeeCount</strong>
+                                        <span>موظف</span>
+                                    </div>
+                                    @if (position.EmployeeCount > 0)
+                                    {
+                                        <button type="button" class="nxp-link-btn" data-employees-button data-position-id="@position.Id">عرض الموظفين</button>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="nxp-status @(position.IsActive ? "is-active" : "is-inactive")">@(position.IsActive ? "فعال" : "غير فعال")</span>
+                                </td>
+                                <td>
+                                    <div class="nxp-actions">
+                                        <a class="nxp-icon-btn" asp-page="/Positions/Index" asp-route-editId="@position.Id" asp-fragment="positionFormArea">تعديل</a>
+
+                                        <form method="post" asp-page-handler="Toggle" asp-route-id="@position.Id" class="nxp-inline-form">
+                                            <button type="submit" class="nxp-icon-btn nxp-icon-btn--muted">@(position.IsActive ? "إيقاف" : "تفعيل")</button>
+                                        </form>
+
+                                        <form method="post" asp-page-handler="Delete" asp-route-id="@position.Id" class="nxp-inline-form">
+                                            <button type="submit" class="nxp-icon-btn nxp-icon-btn--danger" disabled="@(!canDelete)" title="@(canDelete ? "حذف المنصب" : "لا يمكن حذف منصب مرتبط بموظفين")">حذف</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
-
-                            index++;
                         }
                     </tbody>
                 </table>
@@ -103,3 +242,127 @@
         }
     </section>
 </div>
+
+<div class="nxp-modal-backdrop" data-employees-backdrop hidden></div>
+<section class="nxp-modal" data-employees-modal hidden aria-hidden="true">
+    <div class="nxp-modal__card" dir="rtl">
+        <div class="nxp-modal__head">
+            <div>
+                <span>NEXORA HR</span>
+                <h2 data-employees-title>الموظفون المرتبطون</h2>
+            </div>
+            <button type="button" data-employees-close aria-label="إغلاق">×</button>
+        </div>
+        <div class="nxp-modal__body">
+            <div class="nxp-loading" data-employees-loading hidden>جاري تحميل البيانات...</div>
+            <div class="nxp-employee-list" data-employees-list></div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        (() => {
+            const normalize = value => (value || '').toString().trim().toLowerCase();
+            const search = document.getElementById('positionSearch');
+            const department = document.getElementById('departmentFilter');
+            const category = document.getElementById('categoryFilter');
+            const level = document.getElementById('levelFilter');
+            const status = document.getElementById('statusFilter');
+            const rows = Array.from(document.querySelectorAll('[data-position-row]'));
+
+            function applyFilters() {
+                const q = normalize(search?.value);
+                const departmentValue = department?.value || 'all';
+                const categoryValue = category?.value || 'all';
+                const levelValue = level?.value || 'all';
+                const statusValue = status?.value || 'all';
+
+                rows.forEach(row => {
+                    const matchesSearch = !q || normalize(row.dataset.search).includes(q);
+                    const matchesDepartment = departmentValue === 'all' || row.dataset.department === departmentValue;
+                    const matchesCategory = categoryValue === 'all' || row.dataset.category === categoryValue;
+                    const matchesLevel = levelValue === 'all' || row.dataset.level === levelValue;
+                    const matchesStatus = statusValue === 'all'
+                        || row.dataset.status === statusValue
+                        || row.dataset.linked === statusValue;
+
+                    row.hidden = !(matchesSearch && matchesDepartment && matchesCategory && matchesLevel && matchesStatus);
+                });
+            }
+
+            [search, department, category, level, status].forEach(element => {
+                element?.addEventListener('input', applyFilters);
+                element?.addEventListener('change', applyFilters);
+            });
+
+            applyFilters();
+
+            const modal = document.querySelector('[data-employees-modal]');
+            const backdrop = document.querySelector('[data-employees-backdrop]');
+            const closeButton = document.querySelector('[data-employees-close]');
+            const title = document.querySelector('[data-employees-title]');
+            const loading = document.querySelector('[data-employees-loading]');
+            const list = document.querySelector('[data-employees-list]');
+
+            function closeModal() {
+                modal.hidden = true;
+                backdrop.hidden = true;
+                modal.setAttribute('aria-hidden', 'true');
+                document.documentElement.classList.remove('nxp-modal-open');
+                document.body.classList.remove('nxp-modal-open');
+            }
+
+            function openModal() {
+                modal.hidden = false;
+                backdrop.hidden = false;
+                modal.setAttribute('aria-hidden', 'false');
+                document.documentElement.classList.add('nxp-modal-open');
+                document.body.classList.add('nxp-modal-open');
+            }
+
+            closeButton?.addEventListener('click', closeModal);
+            backdrop?.addEventListener('click', closeModal);
+
+            document.querySelectorAll('[data-employees-button]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const id = button.dataset.positionId;
+                    list.innerHTML = '';
+                    loading.hidden = false;
+                    openModal();
+
+                    try {
+                        const response = await fetch(`/Positions?handler=Employees&id=${encodeURIComponent(id)}`, {
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        const data = await response.json();
+
+                        loading.hidden = true;
+                        if (!data.ok) {
+                            list.innerHTML = `<div class="nxp-empty">${data.message || 'تعذر تحميل البيانات.'}</div>`;
+                            return;
+                        }
+
+                        title.textContent = `الموظفون المرتبطون - ${data.position}`;
+
+                        if (!data.employees || data.employees.length === 0) {
+                            list.innerHTML = '<div class="nxp-empty">لا يوجد موظفون مرتبطون بهذا المنصب.</div>';
+                            return;
+                        }
+
+                        list.innerHTML = data.employees.map(employee => `
+                            <article>
+                                <strong>${employee.name}</strong>
+                                <span>${employee.employeeNo || 'بدون رقم وظيفي'}</span>
+                                <small>${employee.status}</small>
+                            </article>
+                        `).join('');
+                    } catch (error) {
+                        loading.hidden = true;
+                        list.innerHTML = '<div class="nxp-empty">حدث خطأ أثناء تحميل الموظفين.</div>';
+                    }
+                });
+            });
+        })();
+    </script>
+}

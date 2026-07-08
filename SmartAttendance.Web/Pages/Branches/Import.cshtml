@@ -2,416 +2,233 @@
 @model SmartAttendance.Web.Pages.Branches.ImportModel
 
 @{
-    ViewData["Title"] = Model.PageTitle;
+    ViewData["Title"] = "استيراد مواقع العمل والفروع";
 }
 
-<style>
-    .import-v3-wrap {
-        max-width: 1180px;
-        margin: 0 auto;
-    }
-
-    .import-v3-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-        margin-bottom: 22px;
-    }
-
-    .import-v3-head h1 {
-        margin: 0 0 8px 0;
-        font-size: 30px;
-        font-weight: 900;
-        color: #0f172a;
-    }
-
-    .import-v3-head p {
-        margin: 0;
-        color: #64748b;
-        font-size: 15px;
-    }
-
-    .import-v3-card {
-        background: #ffffff;
-        border: 1px solid #dbe4f0;
-        border-radius: 22px;
-        padding: 24px;
-        box-shadow: 0 22px 55px rgba(15, 23, 42, 0.08);
-        margin-bottom: 22px;
-    }
-
-    .import-v3-two {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 18px;
-    }
-
-    @@media (max-width: 900px) {
-        .import-v3-two {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    .import-v3-box {
-        background: #f8fafc;
-        border: 1px solid #dbe4f0;
-        border-radius: 18px;
-        padding: 18px;
-        min-height: 330px;
-    }
-
-    .import-v3-box-title {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 17px;
-        font-weight: 900;
-        color: #0f172a;
-        margin-bottom: 8px;
-    }
-
-    .import-v3-step {
-        width: 32px;
-        height: 32px;
-        border-radius: 12px;
-        background: #2563eb;
-        color: #ffffff;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 900;
-    }
-
-    .import-v3-help {
-        color: #64748b;
-        font-size: 13px;
-        line-height: 1.6;
-        margin-bottom: 14px;
-    }
-
-    .import-v3-file {
-        width: 100%;
-        background: #ffffff;
-        border: 2px dashed #93c5fd;
-        border-radius: 16px;
-        padding: 18px;
-        min-height: 64px;
-    }
-
-    .import-v3-paste {
-        width: 100%;
-        min-height: 210px;
-        resize: vertical;
-        background: #ffffff;
-        border: 2px solid #cbd5e1;
-        border-radius: 16px;
-        padding: 14px;
-        font-family: Consolas, "Courier New", monospace;
-        font-size: 13px;
-        line-height: 1.5;
-        outline: none;
-        direction: ltr;
-    }
-
-    .import-v3-paste:focus,
-    .import-v3-file:focus {
-        border-color: #2563eb;
-        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-    }
-
-    .import-v3-required {
-        margin: 18px 0;
-        padding: 16px;
-        border-radius: 18px;
-        border: 1px solid #86efac;
-        background: linear-gradient(135deg, #ecfdf5, #eff6ff);
-    }
-
-    .import-v3-required-title {
-        color: #065f46;
-        font-weight: 900;
-        margin-bottom: 10px;
-    }
-
-    .import-v3-badges {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    .import-v3-badge {
-        background: #ffffff;
-        color: #075985;
-        border: 1px solid #bae6fd;
-        border-radius: 999px;
-        padding: 7px 12px;
-        font-size: 12px;
-        font-weight: 900;
-    }
-
-    .import-v3-note {
-        background: #fff7ed;
-        border: 1px solid #fed7aa;
-        color: #9a3412;
-        border-radius: 16px;
-        padding: 12px 14px;
-        font-size: 13px;
-        line-height: 1.6;
-        margin-bottom: 18px;
-    }
-
-    .import-v3-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        align-items: center;
-    }
-
-    .import-v3-summary {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 14px;
-        margin-top: 18px;
-    }
-
-    .import-v3-summary-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 16px;
-        padding: 16px;
-    }
-
-    .import-v3-summary-card .label {
-        font-size: 12px;
-        color: #64748b;
-        font-weight: 800;
-        margin-bottom: 6px;
-    }
-
-    .import-v3-summary-card .value {
-        font-size: 28px;
-        color: #0f172a;
-        font-weight: 900;
-    }
-
-    .status-ready {
-        color: #166534;
-        font-weight: 900;
-    }
-
-    .status-error {
-        color: #991b1b;
-        font-weight: 900;
-    }
-
-    .paste-visible-banner {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: #dbeafe;
-        color: #1e40af;
-        border: 1px solid #93c5fd;
-        border-radius: 999px;
-        padding: 7px 12px;
-        font-size: 12px;
-        font-weight: 900;
-        margin-bottom: 10px;
-    }
-</style>
-
-<div class="import-v3-wrap">
-    <div class="import-v3-head">
+<div class="nexora-import-page" data-import-page="branches">
+    <section class="nexora-import-hero">
         <div>
-            <div class="paste-visible-banner">Paste From Excel Enabled</div>
-            <h1>@Model.PageTitle</h1>
-            <p>Use file upload or copy rows from Excel and paste them directly here.</p>
+            <span class="nexora-setup-kicker">استيراد البيانات</span>
+            <h1>استيراد مواقع العمل والفروع</h1>
+            <p>ارفع بيانات مواقع العمل والفروع وربطها بالشركة قبل إنشاء الأقسام والموظفين.</p>
         </div>
 
-        <a asp-page="./Index" class="btn-secondary">Back to Branches</a>
-    </div>
+        <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">العودة إلى مواقع العمل</a>
+    </section>
 
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="alert-success">
+        <div class="nx-setup-alert">
             @TempData["SuccessMessage"]
         </div>
     }
 
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
-        <div class="alert-danger">
+        <div class="nexora-import-alert is-error">
             @Model.ErrorMessage
         </div>
     }
 
     @if (Model.ImportResult != null)
     {
-        <div class="import-v3-card">
-            <h2>Import Result</h2>
-
-            <div class="import-v3-summary">
-                <div class="import-v3-summary-card">
-                    <div class="label">Created</div>
-                    <div class="value">@Model.ImportResult.CreatedCount</div>
-                </div>
-
-                <div class="import-v3-summary-card">
-                    <div class="label">Updated</div>
-                    <div class="value">@Model.ImportResult.UpdatedCount</div>
-                </div>
-
-                <div class="import-v3-summary-card">
-                    <div class="label">Skipped</div>
-                    <div class="value">@Model.ImportResult.SkippedCount</div>
-                </div>
-
-                <div class="import-v3-summary-card">
-                    <div class="label">Errors</div>
-                    <div class="value">@Model.ImportResult.ErrorCount</div>
+        <section class="nexora-import-card">
+            <div class="nexora-import-card-head">
+                <div>
+                    <span>نتيجة الاستيراد</span>
+                    <strong>ملخص العملية بعد الحفظ</strong>
                 </div>
             </div>
-        </div>
+
+            <div class="nexora-import-summary">
+                <div class="nexora-import-summary-card">
+                    <span>تمت الإضافة</span>
+                    <strong>@Model.ImportResult.CreatedCount</strong>
+                </div>
+
+                <div class="nexora-import-summary-card">
+                    <span>تم التحديث</span>
+                    <strong>@Model.ImportResult.UpdatedCount</strong>
+                </div>
+
+                <div class="nexora-import-summary-card">
+                    <span>تم التخطي</span>
+                    <strong>@Model.ImportResult.SkippedCount</strong>
+                </div>
+
+                <div class="nexora-import-summary-card">
+                    <span>الأخطاء</span>
+                    <strong>@Model.ImportResult.ErrorCount</strong>
+                </div>
+            </div>
+        </section>
     }
 
-    <div class="import-v3-card">
+    <section class="nexora-import-card">
+        <div class="nexora-import-card-head">
+            <div>
+                <span>مصدر البيانات</span>
+                <strong>اختر ملف Excel أو الصق البيانات مباشرة</strong>
+            </div>
+            <small>استخدم نفس أسماء الأعمدة المطلوبة حتى تتم قراءة الملف بشكل صحيح.</small>
+        </div>
+
         <form method="post" enctype="multipart/form-data" asp-page-handler="Preview">
-            <div class="import-v3-two">
-                <div class="import-v3-box">
-                    <div class="import-v3-box-title">
-                        <span class="import-v3-step">1</span>
-                        Upload Excel / CSV
+            <div class="nexora-import-two">
+                <div class="nexora-import-box">
+                    <div class="nexora-import-box-title">
+                        <span class="nexora-import-step">1</span>
+                        رفع ملف Excel / CSV
                     </div>
 
-                    <div class="import-v3-help">
-                        Choose a prepared .xlsx or .csv file. Use this when you already saved the template as a file.
-                    </div>
+                    <p class="nexora-import-help">
+                        اختر ملفاً جاهزاً بصيغة .xlsx أو .csv يحتوي على أعمدة مواقع العمل والفروع.
+                    </p>
 
-                    <input asp-for="ImportFile" type="file" accept=".xlsx,.csv" class="import-v3-file" />
+                    <input asp-for="ImportFile" type="file" accept=".xlsx,.csv" class="nexora-import-file" />
 
-                    <div class="import-v3-note" style="margin-top: 14px;">
-                        If you upload a file and paste data at the same time, the uploaded file will be used.
+                    <div class="nexora-import-note">
+                        إذا قمت برفع ملف ولصق بيانات في نفس الوقت، سيتم اعتماد الملف المرفوع.
                     </div>
                 </div>
 
-                <div class="import-v3-box">
-                    <div class="import-v3-box-title">
-                        <span class="import-v3-step">2</span>
-                        Paste From Excel
+                <div class="nexora-import-box">
+                    <div class="nexora-import-box-title">
+                        <span class="nexora-import-step">2</span>
+                        لصق من Excel
                     </div>
 
-                    <div class="import-v3-help">
-                        Select the header row and data rows in Excel, press Ctrl + C, then paste here with Ctrl + V.
-                    </div>
+                    <p class="nexora-import-help">
+                        حدد الصفوف من Excel ثم اضغط Ctrl + C، وبعدها الصقها هنا باستخدام Ctrl + V.
+                    </p>
 
                     <textarea asp-for="PastedData"
-                              class="import-v3-paste"
-                              placeholder="Code    Name    CompanyCode&#10;BR-001    HQ    COMP-001&#10;BR-002    Rixos    COMP-001"></textarea>
+                              class="nexora-import-paste"
+                              placeholder="Code    Name    CompanyCode    Address&#10;HQ    المكتب الرئيسي    COMP-001    Baghdad"></textarea>
                 </div>
             </div>
 
-            <div class="import-v3-required">
-                <div class="import-v3-required-title">Required columns for @Model.ImportType</div>
+            <div class="nexora-import-required">
+                <div>
+                    <span>الأعمدة المطلوبة</span>
+                    <strong>يجب أن يحتوي الملف على هذه الأعمدة</strong>
+                </div>
 
-                <div class="import-v3-badges">
+                <div class="nexora-import-badges">
                     @foreach (var column in Model.RequiredColumns)
                     {
-                        <span class="import-v3-badge">@column</span>
+                        <span class="nexora-import-badge">@column</span>
                     }
                 </div>
             </div>
 
-            <div class="import-v3-actions">
-                <button type="submit" class="btn-primary">Preview Data</button>
-                <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <div class="nexora-import-actions">
+                <button type="submit" class="nx-setup-btn nx-setup-btn-primary">معاينة البيانات</button>
+                <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">إلغاء</a>
             </div>
         </form>
-    </div>
+    </section>
 
     @if (Model.Preview != null)
     {
-        <div class="import-v3-card">
-            <div class="import-v3-head" style="margin-bottom: 0;">
+        <section class="nexora-import-card">
+            <div class="nexora-import-card-head">
                 <div>
-                    <h2>Preview: @Model.Preview.FileName</h2>
-                    <p>Showing first @Model.Preview.PreviewLimit rows only. Import will process all valid rows.</p>
+                    <span>معاينة البيانات</span>
+                    <strong>@Model.Preview.FileName</strong>
                 </div>
-
-                @if (Model.Preview.ReadyCount > 0)
-                {
-                    <form method="post" asp-page-handler="Import">
-                        <input type="hidden" name="token" value="@Model.Preview.Token" />
-                        <button type="submit" class="btn-primary">Import Valid Rows</button>
-                    </form>
-                }
+                <small>يتم عرض أول @Model.Preview.PreviewLimit صف فقط، لكن الاستيراد سيعالج كل الصفوف الصالحة.</small>
             </div>
 
-            <div class="import-v3-summary">
-                <div class="import-v3-summary-card">
-                    <div class="label">Total Rows</div>
-                    <div class="value">@Model.Preview.TotalRows</div>
+            <div class="nexora-import-summary">
+                <div class="nexora-import-summary-card">
+                    <span>إجمالي الصفوف</span>
+                    <strong>@Model.Preview.TotalRows</strong>
                 </div>
 
-                <div class="import-v3-summary-card">
-                    <div class="label">Ready</div>
-                    <div class="value">@Model.Preview.ReadyCount</div>
+                <div class="nexora-import-summary-card">
+                    <span>جاهزة</span>
+                    <strong>@Model.Preview.ReadyCount</strong>
                 </div>
 
-                <div class="import-v3-summary-card">
-                    <div class="label">Create</div>
-                    <div class="value">@Model.Preview.CreateCount</div>
+                <div class="nexora-import-summary-card">
+                    <span>إضافة</span>
+                    <strong>@Model.Preview.CreateCount</strong>
                 </div>
 
-                <div class="import-v3-summary-card">
-                    <div class="label">Update</div>
-                    <div class="value">@Model.Preview.UpdateCount</div>
+                <div class="nexora-import-summary-card">
+                    <span>تحديث</span>
+                    <strong>@Model.Preview.UpdateCount</strong>
                 </div>
 
-                <div class="import-v3-summary-card">
-                    <div class="label">Errors</div>
-                    <div class="value">@Model.Preview.ErrorCount</div>
+                <div class="nexora-import-summary-card">
+                    <span>أخطاء</span>
+                    <strong>@Model.Preview.ErrorCount</strong>
                 </div>
             </div>
-        </div>
 
-        <div class="table-card">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Row</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                        <th>Key</th>
-                        <th>Message</th>
-                    </tr>
-                </thead>
+            @if (Model.Preview.ReadyCount > 0)
+            {
+                <form method="post" asp-page-handler="Import" class="nexora-import-confirm">
+                    <input type="hidden" name="token" value="@Model.Preview.Token" />
+                    <button type="submit" class="nx-setup-btn nx-setup-btn-primary">استيراد الصفوف الصالحة</button>
+                </form>
+            }
+        </section>
 
-                <tbody>
-                    @if (Model.Preview.Rows.Any())
-                    {
-                        foreach (var row in Model.Preview.Rows)
+        <section class="table-card nexora-setup-card">
+            <div class="nexora-setup-card-head">
+                <div>
+                    <span>تفاصيل المعاينة</span>
+                    <strong>حالة كل صف قبل الاستيراد</strong>
+                </div>
+            </div>
+
+            <div class="nexora-setup-table-wrap">
+                <table class="data-table nexora-setup-table">
+                    <thead>
+                        <tr>
+                            <th>الصف</th>
+                            <th>الحالة</th>
+                            <th>الإجراء</th>
+                            <th>المفتاح</th>
+                            <th>الرسالة</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (Model.Preview.Rows.Any())
                         {
-                            var statusClass = row.Status == "Ready" ? "status-ready" : "status-error";
+                            foreach (var row in Model.Preview.Rows)
+                            {
+                                var statusClass = row.Status == "Ready" ? "status-ready" : "status-error";
+                                var statusText = row.Status == "Ready" ? "جاهز" : "خطأ";
+                                var actionText = row.Action == "Create"
+                                    ? "إضافة"
+                                    : row.Action == "Update"
+                                        ? "تحديث"
+                                        : row.Action == "Skip"
+                                            ? "تخطي"
+                                            : row.Action;
 
+                                <tr>
+                                    <td>@row.RowNumber</td>
+                                    <td class="@statusClass">@statusText</td>
+                                    <td>@actionText</td>
+                                    <td>@row.Key</td>
+                                    <td>@row.Message</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
                             <tr>
-                                <td>@row.RowNumber</td>
-                                <td class="@statusClass">@row.Status</td>
-                                <td>@row.Action</td>
-                                <td>@row.Key</td>
-                                <td>@row.Message</td>
+                                <td colspan="5" class="nx-setup-empty">لا توجد صفوف للمعاينة.</td>
                             </tr>
                         }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="5" style="text-align:center;">
-                                No preview rows found.
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                    </tbody>
+                </table>
+            </div>
+        </section>
     }
 </div>

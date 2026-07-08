@@ -2,75 +2,150 @@
 @model SmartAttendance.Web.Pages.Branches.IndexModel
 
 @{
-    ViewData["Title"] = "Branches";
+    ViewData["Title"] = "مواقع العمل والفروع";
 }
 
-<div class="page-header">
-    <div>
-        <h1>Branches</h1>
-        <p>Manage company branches</p>
-    </div>
+<div class="nexora-setup-page" data-setup-page="branches">
+    <section class="nexora-setup-hero">
+        <div>
+            <span class="nexora-setup-kicker">الخطوة الثانية</span>
+            <h1>مواقع العمل والفروع</h1>
+            <p>أضف المكتب الرئيسي، الفروع، المواقع التشغيلية، المشاريع أو نقاط العمل التابعة للشركة.</p>
+        </div>
 
-    <div class="form-actions">
-        <a asp-page="./Import" class="btn-secondary">Import Excel</a>
-        <a asp-page="./Create" class="btn-primary">+ Add Branch</a>
-    </div>
+        <div class="nexora-setup-actions">
+            <a asp-page="./Import" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">استيراد Excel</a>
+            <button type="button" class="btn-primary nx-setup-btn nx-setup-btn-primary" data-nx-setup-open="branch-create-modal">+ إضافة موقع عمل</button>
+        </div>
+    </section>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert-success nx-setup-alert">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    <section class="table-card nexora-setup-card">
+        <div class="nexora-setup-card-head">
+            <div>
+                <span>سجل مواقع العمل</span>
+                <strong>الفروع والمواقع المعرفة داخل النظام</strong>
+            </div>
+            <small>كل قسم وموظف سيتم ربطه لاحقاً بموقع عمل محدد.</small>
+        </div>
+
+        <form method="get" class="search-form nexora-setup-search">
+            <input type="search"
+                   name="SearchTerm"
+                   value="@Model.SearchTerm"
+                   placeholder="ابحث عن اسم الموقع أو الكود..." />
+
+            <button type="submit" class="btn-primary nx-setup-btn nx-setup-btn-primary">بحث</button>
+            <a asp-page="./Index" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">مسح</a>
+        </form>
+
+        <div class="nexora-setup-table-wrap">
+            <table class="data-table nexora-setup-table">
+                <thead>
+                    <tr>
+                        <th>الكود</th>
+                        <th>موقع العمل</th>
+                        <th>الشركة</th>
+                        <th>العنوان</th>
+                        <th>الحالة</th>
+                        <th style="width: 170px;">الإجراءات</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model.Branches.Any())
+                    {
+                        foreach (var branch in Model.Branches)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="nx-setup-code">@branch.Code</span>
+                                </td>
+                                <td>
+                                    <strong class="nx-setup-title">@branch.Name</strong>
+                                </td>
+                                <td>@branch.CompanyName</td>
+                                <td>@branch.Address</td>
+                                <td>
+                                    <span class="nx-setup-status @(branch.IsActive ? "is-active" : "is-inactive")">
+                                        @(branch.IsActive ? "فعال" : "غير فعال")
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="nx-setup-row-actions">
+                                        <a asp-page="./Edit" asp-route-id="@branch.Id" class="btn-table btn-edit">تعديل</a>
+                                        <a asp-page="./Delete" asp-route-id="@branch.Id" class="btn-table btn-delete">حذف</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="nx-setup-empty">لا توجد مواقع عمل مسجلة حالياً.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
 </div>
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert-success">
-        @TempData["SuccessMessage"]
+<div class="nx-setup-modal" id="branch-create-modal" aria-hidden="true">
+    <div class="nx-setup-modal__panel" role="dialog" aria-modal="true" aria-labelledby="branch-create-title">
+        <button type="button" class="nx-setup-modal__close" data-nx-setup-close aria-label="إغلاق">×</button>
+
+        <div class="nx-setup-modal__head">
+            <span>مواقع العمل</span>
+            <h2 id="branch-create-title">إضافة موقع عمل جديد</h2>
+            <p>اربط الموقع بالشركة حتى يمكن إضافة الأقسام والموظفين لاحقاً.</p>
+        </div>
+
+        @if (!Model.Companies.Any())
+        {
+            <div class="nx-setup-modal-note">يجب إضافة شركة أولاً قبل إنشاء موقع عمل.</div>
+        }
+
+        <form method="post" asp-page="./Create" class="nx-setup-modal-form">
+            <div class="nx-setup-form-grid">
+                <label class="nx-setup-field">
+                    <span>الشركة</span>
+                    <select name="Branch.CompanyId" required>
+                        <option value="">اختر الشركة</option>
+                        @foreach (var company in Model.Companies)
+                        {
+                            <option value="@company.Id">@company.Name</option>
+                        }
+                    </select>
+                </label>
+
+                <label class="nx-setup-field">
+                    <span>كود الموقع</span>
+                    <input name="Branch.Code" autocomplete="off" placeholder="مثال: BR-001" required />
+                </label>
+
+                <label class="nx-setup-field">
+                    <span>اسم موقع العمل</span>
+                    <input name="Branch.Name" autocomplete="off" placeholder="مثال: المكتب الرئيسي" required />
+                </label>
+
+                <label class="nx-setup-field">
+                    <span>العنوان</span>
+                    <input name="Branch.Address" autocomplete="off" placeholder="العنوان أو الموقع الجغرافي" />
+                </label>
+            </div>
+
+            <div class="nx-setup-modal__actions">
+                <button type="button" class="nx-setup-btn nx-setup-btn-secondary" data-nx-setup-close>إلغاء</button>
+                <button type="submit" class="nx-setup-btn nx-setup-btn-primary" @(Model.Companies.Any() ? null : "disabled")>حفظ موقع العمل</button>
+            </div>
+        </form>
     </div>
-}
-
-<div class="table-card">
-    <form method="get" class="search-form">
-        <input type="text"
-               name="SearchTerm"
-               value="@Model.SearchTerm"
-               placeholder="Search by branch name or code..." />
-
-        <button type="submit" class="btn-primary">Search</button>
-        <a asp-page="./Index" class="btn-secondary">Clear</a>
-    </form>
-
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Code</th>
-                <th>Branch Name</th>
-                <th>Company</th>
-                <th>Address</th>
-                <th>Active</th>
-                <th style="width: 160px;">Actions</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            @if (Model.Branches.Any())
-            {
-                foreach (var branch in Model.Branches)
-                {
-                    <tr>
-                        <td>@branch.Code</td>
-                        <td>@branch.Name</td>
-                        <td>@branch.CompanyName</td>
-                        <td>@branch.Address</td>
-                        <td>@(branch.IsActive ? "Yes" : "No")</td>
-                        <td>
-                            <a asp-page="./Edit" asp-route-id="@branch.Id" class="btn-table btn-edit">Edit</a>
-                            <a asp-page="./Delete" asp-route-id="@branch.Id" class="btn-table btn-delete">Delete</a>
-                        </td>
-                    </tr>
-                }
-            }
-            else
-            {
-                <tr>
-                    <td colspan="6" style="text-align:center;">No branches found.</td>
-                </tr>
-            }
-        </tbody>
-    </table>
 </div>

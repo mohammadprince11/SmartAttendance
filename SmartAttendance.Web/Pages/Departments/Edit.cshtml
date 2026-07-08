@@ -1,65 +1,64 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.Departments.EditModel
 
 @{
-    ViewData["Title"] = "Edit Department";
+    ViewData["Title"] = "تعديل قسم";
 }
 
-<div class="page-header">
-    <div>
-        <h1>Edit Department</h1>
-        <p>Update department information</p>
-    </div>
-
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
-</div>
-
-@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
-{
-    <div class="alert-danger">
-        @Model.ErrorMessage
-    </div>
-}
-
-<div class="form-card">
-    <form method="post">
-        <input type="hidden" asp-for="Department.Id" />
-
-        <div class="form-group">
-            <label asp-for="Department.BranchId">Branch</label>
-            <select asp-for="Department.BranchId" class="form-control">
-                <option value="">-- Select Branch --</option>
-
-                @foreach (var branch in Model.Branches)
-                {
-                    <option value="@branch.Id">@branch.Name</option>
-                }
-            </select>
-            <span asp-validation-for="Department.BranchId" class="text-danger"></span>
+<div class="nexora-setup-page nx-setup-form-page">
+    <section class="nexora-setup-hero">
+        <div>
+            <span class="nexora-setup-kicker">الأقسام</span>
+            <h1>تعديل قسم</h1>
+            <p>تحديث بيانات القسم وربطه بموقع العمل الصحيح.</p>
         </div>
+        <a asp-page="./Index" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">الرجوع للقائمة</a>
+    </section>
 
-        <div class="form-group">
-            <label asp-for="Department.Code">Department Code</label>
-            <input asp-for="Department.Code" class="form-control" />
-            <span asp-validation-for="Department.Code" class="text-danger"></span>
-        </div>
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert-danger nx-setup-alert-danger">@Model.ErrorMessage</div>
+    }
 
-        <div class="form-group">
-            <label asp-for="Department.Name">Department Name</label>
-            <input asp-for="Department.Name" class="form-control" />
-            <span asp-validation-for="Department.Name" class="text-danger"></span>
-        </div>
+    <section class="nexora-setup-card">
+        <form method="post" class="nx-setup-modal-form">
+            <input type="hidden" asp-for="Department.Id" />
 
-        <div class="form-group checkbox-group">
-            <label>
-                <input asp-for="Department.IsActive" />
-                Active
-            </label>
-        </div>
+            <div class="nx-setup-form-grid">
+                <label class="nx-setup-field">
+                    <span>موقع العمل</span>
+                    <select asp-for="Department.BranchId">
+                        <option value="">اختر موقع العمل</option>
+                        @foreach (var branch in Model.Branches)
+                        {
+                            <option value="@branch.Id">@branch.Name</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Department.BranchId" class="text-danger"></span>
+                </label>
 
-        <div class="form-actions">
-            <button type="submit" class="btn-primary">Update</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
-        </div>
-    </form>
+                <label class="nx-setup-field">
+                    <span>كود القسم</span>
+                    <input asp-for="Department.Code" />
+                    <span asp-validation-for="Department.Code" class="text-danger"></span>
+                </label>
+
+                <label class="nx-setup-field nx-setup-field-wide">
+                    <span>اسم القسم</span>
+                    <input asp-for="Department.Name" />
+                    <span asp-validation-for="Department.Name" class="text-danger"></span>
+                </label>
+
+                <label class="nx-setup-check">
+                    <input asp-for="Department.IsActive" />
+                    <span>القسم فعال ويمكن استخدامه داخل النظام</span>
+                </label>
+            </div>
+
+            <div class="nx-setup-modal__actions">
+                <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">إلغاء</a>
+                <button type="submit" class="nx-setup-btn nx-setup-btn-primary">حفظ التعديل</button>
+            </div>
+        </form>
+    </section>
 </div>

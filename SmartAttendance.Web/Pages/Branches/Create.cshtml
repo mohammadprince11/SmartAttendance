@@ -1,62 +1,63 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.Branches.CreateModel
 
 @{
-    ViewData["Title"] = "Add Branch";
+    ViewData["Title"] = "إضافة موقع عمل";
 }
 
-<div class="page-header">
-    <div>
-        <h1>Add Branch</h1>
-        <p>Create a new branch under a company</p>
-    </div>
-
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
-</div>
-
-@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
-{
-    <div class="alert-danger">
-        @Model.ErrorMessage
-    </div>
-}
-
-<div class="form-card">
-    <form method="post">
-        <div class="form-group">
-            <label asp-for="Branch.CompanyId">Company</label>
-            <select asp-for="Branch.CompanyId" class="form-control">
-                <option value="">-- Select Company --</option>
-
-                @foreach (var company in Model.Companies)
-                {
-                    <option value="@company.Id">@company.Name</option>
-                }
-            </select>
-            <span asp-validation-for="Branch.CompanyId" class="text-danger"></span>
+<div class="nexora-setup-page nx-setup-form-page">
+    <section class="nexora-setup-hero">
+        <div>
+            <span class="nexora-setup-kicker">مواقع العمل</span>
+            <h1>إضافة موقع عمل</h1>
+            <p>هذه الصفحة احتياطية، ويمكنك الإضافة مباشرة من النافذة المنبثقة في صفحة مواقع العمل.</p>
         </div>
+        <a asp-page="./Index" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">الرجوع للقائمة</a>
+    </section>
 
-        <div class="form-group">
-            <label asp-for="Branch.Code">Branch Code</label>
-            <input asp-for="Branch.Code" class="form-control" />
-            <span asp-validation-for="Branch.Code" class="text-danger"></span>
-        </div>
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert-danger nx-setup-alert-danger">@Model.ErrorMessage</div>
+    }
 
-        <div class="form-group">
-            <label asp-for="Branch.Name">Branch Name</label>
-            <input asp-for="Branch.Name" class="form-control" />
-            <span asp-validation-for="Branch.Name" class="text-danger"></span>
-        </div>
+    <section class="nexora-setup-card">
+        <form method="post" class="nx-setup-modal-form">
+            <div class="nx-setup-form-grid">
+                <label class="nx-setup-field">
+                    <span>الشركة</span>
+                    <select asp-for="Branch.CompanyId">
+                        <option value="">اختر الشركة</option>
+                        @foreach (var company in Model.Companies)
+                        {
+                            <option value="@company.Id">@company.Name</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Branch.CompanyId" class="text-danger"></span>
+                </label>
 
-        <div class="form-group">
-            <label asp-for="Branch.Address">Address</label>
-            <input asp-for="Branch.Address" class="form-control" />
-            <span asp-validation-for="Branch.Address" class="text-danger"></span>
-        </div>
+                <label class="nx-setup-field">
+                    <span>كود الموقع</span>
+                    <input asp-for="Branch.Code" placeholder="مثال: BR-001" />
+                    <span asp-validation-for="Branch.Code" class="text-danger"></span>
+                </label>
 
-        <div class="form-actions">
-            <button type="submit" class="btn-primary">Save</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
-        </div>
-    </form>
+                <label class="nx-setup-field">
+                    <span>اسم موقع العمل</span>
+                    <input asp-for="Branch.Name" placeholder="مثال: المكتب الرئيسي" />
+                    <span asp-validation-for="Branch.Name" class="text-danger"></span>
+                </label>
+
+                <label class="nx-setup-field">
+                    <span>العنوان</span>
+                    <input asp-for="Branch.Address" placeholder="العنوان أو الموقع الجغرافي" />
+                    <span asp-validation-for="Branch.Address" class="text-danger"></span>
+                </label>
+            </div>
+
+            <div class="nx-setup-modal__actions">
+                <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">إلغاء</a>
+                <button type="submit" class="nx-setup-btn nx-setup-btn-primary">حفظ موقع العمل</button>
+            </div>
+        </form>
+    </section>
 </div>

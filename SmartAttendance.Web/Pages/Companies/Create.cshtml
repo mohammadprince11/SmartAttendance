@@ -1,55 +1,57 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.Companies.CreateModel
 
 @{
-    ViewData["Title"] = "Add Company";
+    ViewData["Title"] = "إضافة شركة";
 }
 
-<div class="page-header">
-    <div>
-        <h1>Add Company</h1>
-        <p>Create a new company in the system</p>
-    </div>
-
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
-</div>
-
-@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
-{
-    <div class="alert-danger">
-        @Model.ErrorMessage
-    </div>
-}
-
-<div class="form-card">
-    <form method="post">
-        <div class="form-group">
-            <label asp-for="Company.Code">Code</label>
-            <input asp-for="Company.Code" class="form-control" />
-            <span asp-validation-for="Company.Code" class="text-danger"></span>
+<div class="nexora-setup-page nx-setup-form-page">
+    <section class="nexora-setup-hero">
+        <div>
+            <span class="nexora-setup-kicker">إعداد الشركة</span>
+            <h1>إضافة شركة</h1>
+            <p>هذه الصفحة احتياطية، ويمكنك الإضافة مباشرة من النافذة المنبثقة في صفحة الشركات.</p>
         </div>
+        <a asp-page="./Index" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">الرجوع للقائمة</a>
+    </section>
 
-        <div class="form-group">
-            <label asp-for="Company.Name">Company Name</label>
-            <input asp-for="Company.Name" class="form-control" />
-            <span asp-validation-for="Company.Name" class="text-danger"></span>
-        </div>
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert-danger nx-setup-alert-danger">@Model.ErrorMessage</div>
+    }
 
-        <div class="form-group">
-            <label asp-for="Company.Email">Email</label>
-            <input asp-for="Company.Email" class="form-control" />
-            <span asp-validation-for="Company.Email" class="text-danger"></span>
-        </div>
+    <section class="nexora-setup-card">
+        <form method="post" class="nx-setup-modal-form">
+            <div class="nx-setup-form-grid">
+                <label class="nx-setup-field">
+                    <span>كود الشركة</span>
+                    <input asp-for="Company.Code" placeholder="مثال: HQ" />
+                    <span asp-validation-for="Company.Code" class="text-danger"></span>
+                </label>
 
-        <div class="form-group">
-            <label asp-for="Company.Phone">Phone</label>
-            <input asp-for="Company.Phone" class="form-control" />
-            <span asp-validation-for="Company.Phone" class="text-danger"></span>
-        </div>
+                <label class="nx-setup-field">
+                    <span>اسم الشركة</span>
+                    <input asp-for="Company.Name" placeholder="مثال: شركة الرغد" />
+                    <span asp-validation-for="Company.Name" class="text-danger"></span>
+                </label>
 
-        <div class="form-actions">
-            <button type="submit" class="btn-primary">Save Company</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
-        </div>
-    </form>
+                <label class="nx-setup-field">
+                    <span>البريد الإلكتروني</span>
+                    <input asp-for="Company.Email" placeholder="company@example.com" />
+                    <span asp-validation-for="Company.Email" class="text-danger"></span>
+                </label>
+
+                <label class="nx-setup-field">
+                    <span>رقم الهاتف</span>
+                    <input asp-for="Company.Phone" placeholder="07xx xxx xxxx" />
+                    <span asp-validation-for="Company.Phone" class="text-danger"></span>
+                </label>
+            </div>
+
+            <div class="nx-setup-modal__actions">
+                <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">إلغاء</a>
+                <button type="submit" class="nx-setup-btn nx-setup-btn-primary">حفظ الشركة</button>
+            </div>
+        </form>
+    </section>
 </div>

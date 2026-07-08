@@ -1,0 +1,151 @@
+@page
+@model SmartAttendance.Web.Pages.PositionLevels.IndexModel
+@{
+    ViewData["Title"] = "مستويات المناصب";
+}
+
+<link rel="stylesheet" href="~/css/positions.css" asp-append-version="true" />
+
+<div class="nxp-positions-page" dir="rtl">
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="nxp-alert nxp-alert--success">@successMessage</div>
+    }
+
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="nxp-alert nxp-alert--error">@errorMessage</div>
+    }
+
+    <section class="nxp-hero">
+        <div class="nxp-hero__content">
+            <p class="nxp-eyebrow">NEXORA HR</p>
+            <h1>مستويات المناصب</h1>
+            <span>إدارة مستويات المناصب المستخدمة داخل صفحة المناصب الوظيفية.</span>
+        </div>
+        <div class="nxp-hero__links">
+            <a asp-page="/Positions/Index">الرجوع للمناصب</a>
+            <a asp-page="/PositionCategories/Index">إدارة الفئات</a>
+        </div>
+    </section>
+
+    <section class="nxp-card nxp-form-card" id="categoryFormArea">
+        <div class="nxp-card__head">
+            <div>
+                <h2>@(Model.Input.Id > 0 ? "تعديل مستوى" : "بيانات المستوى")</h2>
+                <p>لا يمكن حذف مستوى مستخدم داخل أي منصب.</p>
+            </div>
+        </div>
+
+        <form method="post" asp-page-handler="Save" class="nxp-form nxp-form--compact" autocomplete="off">
+            <input asp-for="Input.Id" type="hidden" />
+            <input asp-for="Input.OriginalName" type="hidden" />
+
+            <label class="nxp-field nxp-field--wide">
+                <span>اسم المستوى <b>*</b></span>
+                <input asp-for="Input.Name" required maxlength="120" placeholder="مثال: Senior" />
+            </label>
+
+            <label class="nxp-check">
+                <input type="hidden" name="Input.IsActive" value="false" />
+                <input asp-for="Input.IsActive" value="true" />
+                <span>المستوى فعال</span>
+            </label>
+
+            <div class="nxp-form-actions">
+                <button type="submit" class="nxp-btn nxp-btn--primary">حفظ المستوى</button>
+                <a asp-page="/PositionLevels/Index" class="nxp-btn nxp-btn--ghost">تفريغ النموذج</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="nxp-card">
+        <div class="nxp-card__head nxp-card__head--filters">
+            <div>
+                <h2>قائمة المستويات</h2>
+                <p>الفلاتر تعمل مباشرة بدون زر بحث.</p>
+            </div>
+            <div class="nxp-filters nxp-filters--simple">
+                <input id="lookupSearch" type="search" placeholder="بحث مباشر..." />
+                <select id="lookupStatus">
+                    <option value="all">كل الحالات</option>
+                    <option value="active">فعال</option>
+                    <option value="inactive">غير فعال</option>
+                    <option value="used">مستخدمة</option>
+                    <option value="unused">غير مستخدمة</option>
+                </select>
+            </div>
+        </div>
+
+        @if (!Model.Items.Any())
+        {
+            <div class="nxp-empty">لا توجد مستويات مسجلة حالياً.</div>
+        }
+        else
+        {
+            <div class="nxp-table-wrap">
+                <table class="nxp-table nxp-table--lookup">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>المستوى</th>
+                            <th>المناصب المستخدمة</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.Items.Count; i++)
+                        {
+                            var item = Model.Items[i];
+                            var canDelete = item.UsageCount == 0;
+                            <tr data-lookup-row data-search="@item.SearchText" data-status="@(item.IsActive ? "active" : "inactive")" data-used="@(item.UsageCount > 0 ? "used" : "unused")">
+                                <td>@(i + 1)</td>
+                                <td><strong>@item.Name</strong></td>
+                                <td>@item.UsageCount</td>
+                                <td><span class="nxp-status @(item.IsActive ? "is-active" : "is-inactive")">@(item.IsActive ? "فعال" : "غير فعال")</span></td>
+                                <td>
+                                    <div class="nxp-actions">
+                                        <a class="nxp-icon-btn" asp-page="/PositionLevels/Index" asp-route-editId="@item.Id" asp-fragment="categoryFormArea">تعديل</a>
+                                        <form method="post" asp-page-handler="Toggle" asp-route-id="@item.Id" class="nxp-inline-form">
+                                            <button type="submit" class="nxp-icon-btn nxp-icon-btn--muted">@(item.IsActive ? "إيقاف" : "تفعيل")</button>
+                                        </form>
+                                        <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" class="nxp-inline-form">
+                                            <button type="submit" class="nxp-icon-btn nxp-icon-btn--danger" disabled="@(!canDelete)" title="@(canDelete ? "حذف المستوى" : "لا يمكن حذف مستوى مستخدم بمنصب")">حذف</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const normalize = value => (value || '').toString().trim().toLowerCase();
+            const search = document.getElementById('lookupSearch');
+            const status = document.getElementById('lookupStatus');
+            const rows = Array.from(document.querySelectorAll('[data-lookup-row]'));
+
+            function applyFilters() {
+                const q = normalize(search?.value);
+                const statusValue = status?.value || 'all';
+
+                rows.forEach(row => {
+                    const matchesSearch = !q || normalize(row.dataset.search).includes(q);
+                    const matchesStatus = statusValue === 'all' || row.dataset.status === statusValue || row.dataset.used === statusValue;
+                    row.hidden = !(matchesSearch && matchesStatus);
+                });
+            }
+
+            search?.addEventListener('input', applyFilters);
+            status?.addEventListener('change', applyFilters);
+            applyFilters();
+        })();
+    </script>
+}

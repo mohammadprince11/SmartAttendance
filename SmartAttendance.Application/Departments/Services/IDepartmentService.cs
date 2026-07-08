@@ -1,4 +1,4 @@
-﻿using SmartAttendance.Application.Branches.ViewModels;
+using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Departments.ViewModels;
 
 namespace SmartAttendance.Application.Departments.Services;

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Departments.Services;
 using SmartAttendance.Application.Departments.ViewModels;
 
@@ -16,11 +17,14 @@ public class IndexModel : PageModel
 
     public IEnumerable<DepartmentListViewModel> Departments { get; set; } = new List<DepartmentListViewModel>();
 
+    public IEnumerable<BranchListViewModel> Branches { get; set; } = new List<BranchListViewModel>();
+
     [BindProperty(SupportsGet = true)]
     public string? SearchTerm { get; set; }
 
     public async Task OnGetAsync()
     {
         Departments = await _departmentService.GetAllAsync(SearchTerm);
+        Branches = await _departmentService.GetBranchesForDropdownAsync();
     }
 }
