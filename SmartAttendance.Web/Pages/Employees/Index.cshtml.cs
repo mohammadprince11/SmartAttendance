@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Application.Employees.Services;
 using SmartAttendance.Application.Employees.ViewModels;
@@ -54,6 +54,8 @@ public class IndexModel : PageModel
         InactiveEmployees = allEmployees.Count(x => !x.IsActive);
         NewThisYear = allEmployees.Count(x => x.HireDate.Year == DateTime.Today.Year);
 
+        StatusFilter = NormalizeStatusFilter(StatusFilter);
+
         BranchOptions = allEmployees
             .Select(x => x.BranchName)
             .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -97,14 +99,13 @@ public class IndexModel : PageModel
         {
             query = query.Where(x => string.Equals(x.DepartmentName, DepartmentFilter, StringComparison.OrdinalIgnoreCase));
         }
-
-        if (!string.IsNullOrWhiteSpace(StatusFilter))
+        if (string.Equals(StatusFilter, "active", StringComparison.OrdinalIgnoreCase))
         {
-            query = StatusFilter.Equals("active", StringComparison.OrdinalIgnoreCase)
-                ? query.Where(x => x.IsActive)
-                : StatusFilter.Equals("inactive", StringComparison.OrdinalIgnoreCase)
-                    ? query.Where(x => !x.IsActive)
-                    : query;
+            query = query.Where(x => x.IsActive);
+        }
+        else if (string.Equals(StatusFilter, "inactive", StringComparison.OrdinalIgnoreCase))
+        {
+            query = query.Where(x => !x.IsActive);
         }
 
         query = (SortBy ?? "name").ToLowerInvariant() switch
@@ -121,6 +122,24 @@ public class IndexModel : PageModel
         FilteredEmployees = Employees.Count;
     }
 
+
+    private static string NormalizeStatusFilter(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "active";
+        }
+
+        var normalized = value.Trim().ToLowerInvariant();
+
+        return normalized switch
+        {
+            "all" => "all",
+            "inactive" => "inactive",
+            "active" => "active",
+            _ => "active"
+        };
+    }
     private static bool Contains(string? value, string term)
     {
         return !string.IsNullOrWhiteSpace(value) &&

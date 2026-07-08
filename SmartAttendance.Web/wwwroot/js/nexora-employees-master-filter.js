@@ -142,6 +142,20 @@
         if (["10", "25", "50", "100", "all"].indexOf(savedPageSize) < 0) savedPageSize = "25";
         pageSizeSelect.value = savedPageSize;
 
+        // NEXORA_STATUS_DEFAULT_ACTIVE_START
+        if (statusSelect) {
+            var initialStatus = getValue(statusSelect);
+
+            if (!initialStatus || ["all", "active", "inactive"].indexOf(initialStatus) < 0) {
+                statusSelect.value = "active";
+            }
+        }
+
+        if (window.NexoraSelect && window.NexoraSelect.refreshAll) {
+            window.NexoraSelect.refreshAll();
+        }
+        // NEXORA_STATUS_DEFAULT_ACTIVE_END
+
         var emptyRow = tbody.querySelector("tr[data-nxr-master-empty]");
         if (!emptyRow) {
             emptyRow = document.createElement("tr");
@@ -208,7 +222,7 @@
                 if (search && d.searchText.indexOf(search) < 0) ok = false;
                 if (branch && d.branch !== branch) ok = false;
                 if (department && d.department !== department) ok = false;
-                if (status && d.status !== status) ok = false;
+                if (status && status !== "all" && d.status !== status) ok = false;
 
                 if (!ok) {
                     row.classList.add("nxr-master-row-hidden");
@@ -255,6 +269,12 @@
                     localStorage.setItem("NEXORA.EmployeeList.PageSize", pageSizeSelect.value);
                 }
 
+                // NEXORA_REFRESH_SELECT_AFTER_RESET_START
+                if (window.NexoraSelect && window.NexoraSelect.refreshAll) {
+                    window.NexoraSelect.refreshAll();
+                }
+                // NEXORA_REFRESH_SELECT_AFTER_RESET_END
+
                 applyMasterFilter();
             });
         });
@@ -264,12 +284,18 @@
                 if (searchInput) searchInput.value = "";
                 if (branchSelect) branchSelect.value = "";
                 if (departmentSelect) departmentSelect.value = "";
-                if (statusSelect) statusSelect.value = "";
+                if (statusSelect) statusSelect.value = "active";
                 if (sortSelect) sortSelect.value = "name";
                 if (pageSizeSelect) {
                     pageSizeSelect.value = "25";
                     localStorage.setItem("NEXORA.EmployeeList.PageSize", "25");
                 }
+
+                // NEXORA_REFRESH_SELECT_AFTER_RESET_START
+                if (window.NexoraSelect && window.NexoraSelect.refreshAll) {
+                    window.NexoraSelect.refreshAll();
+                }
+                // NEXORA_REFRESH_SELECT_AFTER_RESET_END
 
                 applyMasterFilter();
 

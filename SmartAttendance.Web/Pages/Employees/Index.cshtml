@@ -110,9 +110,9 @@
             <div class="nxr-emp-field">
                 <label>الحالة</label>
                 <select data-nexora-select="true" name="StatusFilter" class="nxr-input" data-nxr-live-select>
-                    <option value="" selected="@(string.IsNullOrWhiteSpace(Model.StatusFilter) ? "selected" : null)">كل الحالات</option>
-                    <option value="active" selected="@(string.Equals(Model.StatusFilter, "active", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">فعال</option>
-                    <option value="inactive" selected="@(string.Equals(Model.StatusFilter, "inactive", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">غير فعال</option>
+                    <option value="all" selected="@(string.Equals(Model.StatusFilter, "all", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">&#x0643;&#x0644; &#x0627;&#x0644;&#x062d;&#x0627;&#x0644;&#x0627;&#x062a;</option>
+                    <option value="active" selected="@((string.IsNullOrWhiteSpace(Model.StatusFilter) || string.Equals(Model.StatusFilter, "active", StringComparison.OrdinalIgnoreCase)) ? "selected" : null)">&#x0641;&#x0639;&#x0627;&#x0644;</option>
+                    <option value="inactive" selected="@(string.Equals(Model.StatusFilter, "inactive", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">&#x063a;&#x064a;&#x0631; &#x0641;&#x0639;&#x0627;&#x0644;</option>
                 </select>
             </div>
 
