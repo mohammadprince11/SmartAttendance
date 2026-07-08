@@ -32,8 +32,17 @@
         const vh = window.innerHeight || document.documentElement.clientHeight;
         const vw = window.innerWidth || document.documentElement.clientWidth;
 
-        state.menu.style.minWidth = Math.max(170, Math.round(rect.width)) + "px";
-        state.menu.style.maxWidth = Math.max(170, Math.round(rect.width)) + "px";
+        const isCompactPageSize =
+            select.matches("[data-nxr-master-page-size]") ||
+            select.closest(".nxr-emp-master-page-size") ||
+            select.dataset.nxosCompact === "page-size";
+
+        const menuWidth = isCompactPageSize
+            ? Math.max(74, Math.round(rect.width))
+            : Math.max(170, Math.round(rect.width));
+
+        state.menu.style.minWidth = menuWidth + "px";
+        state.menu.style.maxWidth = menuWidth + "px";
 
         state.menu.style.visibility = "hidden";
         state.menu.classList.add("is-open");
@@ -218,6 +227,15 @@
         const root = document.createElement("div");
         root.className = "nxos";
 
+        const isPageSizeSelect =
+            select.matches("[data-nxr-master-page-size]") ||
+            select.closest(".nxr-emp-master-page-size") ||
+            select.dataset.nxosCompact === "page-size";
+
+        if (isPageSizeSelect) {
+            root.classList.add("nxos--page-size");
+        }
+
         const button = document.createElement("button");
         button.type = "button";
         button.className = "nxos__button";
@@ -233,6 +251,10 @@
 
         const menu = document.createElement("div");
         menu.className = "nxos__menu";
+
+        if (isPageSizeSelect) {
+            menu.classList.add("nxos__menu--page-size");
+        }
         menu.setAttribute("role", "listbox");
         menu.setAttribute("data-for-select", id);
 

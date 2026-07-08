@@ -92,6 +92,7 @@
                     <label asp-for="Employee.BirthDate">تاريخ الميلاد</label>
                     <input data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" asp-for="Employee.BirthDate" type="text" />
                     <span asp-validation-for="Employee.BirthDate" class="text-danger"></span>
+                </div>
 @* NEXORA_DEMOGRAPHIC_FIELDS_START *@
 <div class="nxr-field">
     <label asp-for="Employee.Gender">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;</label>
@@ -150,12 +151,6 @@
     <span asp-validation-for="Employee.MaritalStatus" class="text-danger"></span>
 </div>
 @* NEXORA_MARITAL_STATUS_FIELD_END *@
-
-
-
-
-
-                </div>
             </div>
         </section>
 

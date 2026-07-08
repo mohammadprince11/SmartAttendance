@@ -1,0 +1,134 @@
+/* NEXORA Employees Filter Toolbar Fix V1 */
+
+body.nxr-employees-master-filter-active .nxr-emp-master-toolbar {
+    align-items: center !important;
+}
+
+body.nxr-employees-master-filter-active .nxr-emp-master-actions {
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+body.nxr-employees-master-filter-active .nxr-emp-master-page-size {
+    height: 38px !important;
+    min-width: 150px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    padding: 0 12px !important;
+    border-radius: 999px !important;
+    position: relative !important;
+    overflow: visible !important;
+}
+
+body.nxr-employees-master-filter-active .nxr-emp-master-page-size span {
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    white-space: nowrap !important;
+}
+
+body.nxr-employees-master-filter-active .nxr-emp-master-page-size select,
+body.nxr-employees-master-filter-active .nxr-emp-master-page-size-select {
+    width: 62px !important;
+    min-width: 62px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    line-height: 30px !important;
+    border-radius: 999px !important;
+    padding: 0 10px !important;
+    margin: 0 !important;
+    text-align: center !important;
+    text-align-last: center !important;
+    direction: ltr !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+}
+
+body.nxr-employees-master-filter-active .nxr-emp-master-page-size select option {
+    text-align: center !important;
+    direction: ltr !important;
+    font-weight: 900 !important;
+}
+
+body.nxr-employees-master-filter-active .nxr-emp-master-reset {
+    height: 38px !important;
+    min-width: 112px !important;
+    padding: 0 16px !important;
+    line-height: 1 !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+@media (max-width: 700px) {
+    body.nxr-employees-master-filter-active .nxr-emp-master-page-size,
+    body.nxr-employees-master-filter-active .nxr-emp-master-reset {
+        width: 100% !important;
+    }
+
+    body.nxr-employees-master-filter-active .nxr-emp-master-page-size {
+        justify-content: center !important;
+    }
+}
+
+/* NEXORA_EMPLOYEES_PAGE_SIZE_CUSTOM_NXOS_START */
+
+body.nxr-employees-master-filter-active .nxr-emp-master-page-size {
+    width: auto !important;
+    min-width: 154px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 9px !important;
+    padding: 0 12px !important;
+    border-radius: 999px !important;
+    overflow: visible !important;
+    white-space: nowrap !important;
+}
+
+body.nxr-employees-master-filter-active .nxr-emp-master-page-size > span {
+    height: 30px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    white-space: nowrap !important;
+}
+
+body.nxr-employees-master-filter-active .nxr-emp-master-page-size > .nxos.nxos--page-size {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+body.nxr-employees-master-filter-active .nxr-emp-master-page-size > select.nxos-native {
+    position: absolute !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 1px !important;
+    height: 1px !important;
+    min-height: 1px !important;
+    max-height: 1px !important;
+}
+
+body.nxr-employees-master-filter-active .nxr-emp-master-reset {
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+}
+
+/* NEXORA_EMPLOYEES_PAGE_SIZE_CUSTOM_NXOS_END */

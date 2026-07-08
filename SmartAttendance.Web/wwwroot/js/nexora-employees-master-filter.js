@@ -126,7 +126,7 @@
                         '<option value="all">الكل</option>' +
                     '</select>' +
                 '</label>' +
-                '<button type="button" class="nxr-emp-master-reset" data-nxr-master-reset>إعادة تعيين</button>' +
+                '<button type="button" class="nxr-emp-master-reset" data-nxr-master-reset>\u0645\u0633\u062d \u0627\u0644\u0641\u0644\u0627\u062a\u0631</button>' +
             '</div>';
 
         form.innerHTML = "";

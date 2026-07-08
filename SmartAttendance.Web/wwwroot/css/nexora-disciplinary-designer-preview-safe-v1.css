@@ -1,0 +1,26 @@
+/* NEXORA Disciplinary Designer Preview Safe V1 */
+
+.nxpen-live-preview {
+    display: grid !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.nxpen-live-preview .nxpen-a4-paper {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+}
+
+.nxpen-live-preview .nxpen-a4-form-layer,
+.nxpen-live-preview .nxpen-a4-section,
+.nxpen-live-preview .nxpen-text-block,
+.nxpen-live-preview .nxpen-a4-pdf-note {
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.nxpen-live-preview .nxpen-text-block {
+    pointer-events: auto !important;
+}
