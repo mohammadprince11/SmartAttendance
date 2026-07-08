@@ -1,0 +1,1059 @@
+/* NEXORA Profile Reassign Modal */
+
+.nxr-reassign-backdrop[hidden] {
+    display: none !important;
+}
+
+.nxr-reassign-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 999998;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(0, 8, 18, .74);
+    backdrop-filter: blur(14px);
+}
+
+.nxr-reassign-dialog {
+    width: min(920px, calc(100vw - 36px));
+    max-height: calc(100vh - 42px);
+    overflow: auto;
+    border-radius: 24px;
+    border: 1px solid rgba(34, 211, 238, .24);
+    background:
+        radial-gradient(circle at 96% 4%, rgba(34, 211, 238, .14), transparent 28%),
+        linear-gradient(180deg, rgba(10, 32, 52, .98), rgba(3, 12, 24, .98));
+    box-shadow: 0 30px 90px rgba(0, 0, 0, .50);
+    color: #eaf7ff;
+    direction: rtl;
+}
+
+.nxr-reassign-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 22px 24px;
+    border-bottom: 1px solid rgba(148, 163, 184, .14);
+}
+
+.nxr-reassign-head strong {
+    display: block;
+    font-size: 20px;
+    font-weight: 1000;
+    color: #f8fafc;
+}
+
+.nxr-reassign-head span {
+    display: block;
+    margin-top: 7px;
+    color: #9fb5c8;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.8;
+}
+
+.nxr-reassign-head button {
+    width: 34px;
+    height: 34px;
+    border-radius: 13px;
+    border: 1px solid rgba(34, 211, 238, .25);
+    background: rgba(34, 211, 238, .08);
+    color: #eaf7ff;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.nxr-reassign-form {
+    display: grid;
+    gap: 16px;
+    padding: 18px 24px 24px;
+}
+
+.nxr-reassign-section {
+    border-radius: 20px;
+    border: 1px solid rgba(148, 163, 184, .14);
+    background: rgba(2, 10, 20, .34);
+    padding: 16px;
+}
+
+.nxr-reassign-section h4 {
+    margin: 0 0 14px;
+    color: #22d3ee;
+    font-size: 13px;
+    font-weight: 1000;
+}
+
+.nxr-reassign-old-grid,
+.nxr-reassign-edit-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.nxr-reassign-old-grid div,
+.nxr-reassign-edit-grid label {
+    min-height: 74px;
+    border-radius: 16px;
+    border: 1px solid rgba(34, 211, 238, .12);
+    background: rgba(1, 12, 24, .36);
+    padding: 12px;
+}
+
+.nxr-reassign-old-grid span,
+.nxr-reassign-edit-grid span {
+    display: block;
+    color: #91a5b7;
+    font-size: 11px;
+    font-weight: 900;
+    margin-bottom: 8px;
+}
+
+.nxr-reassign-old-grid strong {
+    display: block;
+    color: #f8fafc;
+    font-size: 13px;
+    font-weight: 1000;
+    overflow-wrap: anywhere;
+}
+
+.nxr-reassign-edit-grid .wide {
+    grid-column: 1 / -1;
+}
+
+.nxr-reassign-edit-grid input,
+.nxr-reassign-edit-grid textarea {
+    width: 100%;
+    border-radius: 14px;
+    border: 1px solid rgba(34, 211, 238, .24);
+    background: rgba(2, 10, 20, .64);
+    color: #eaf7ff;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 900;
+    outline: none;
+    padding: 10px 12px;
+}
+
+.nxr-reassign-edit-grid textarea {
+    resize: vertical;
+    min-height: 82px;
+}
+
+.nxr-reassign-edit-grid input:focus,
+.nxr-reassign-edit-grid textarea:focus {
+    border-color: rgba(34, 211, 238, .74);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .12);
+}
+
+.nxr-reassign-confirm {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #dbeafe;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.nxr-reassign-confirm input {
+    width: 18px;
+    height: 18px;
+    accent-color: #22d3ee;
+}
+
+.nxr-reassign-actions {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+    padding-top: 4px;
+}
+
+.nxr-reassign-actions button {
+    min-height: 40px;
+    border-radius: 999px;
+    padding: 0 18px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 1000;
+    cursor: pointer;
+}
+
+.nxr-reassign-actions .primary {
+    border: 1px solid rgba(34, 211, 238, .60);
+    background: linear-gradient(135deg, #22d3ee, #0e7490);
+    color: #00111d;
+}
+
+.nxr-reassign-actions .ghost {
+    border: 1px solid rgba(148, 163, 184, .20);
+    background: rgba(15, 23, 42, .36);
+    color: #eaf7ff;
+}
+
+@media (max-width: 780px) {
+    .nxr-reassign-backdrop {
+        padding: 12px;
+    }
+
+    .nxr-reassign-old-grid,
+    .nxr-reassign-edit-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .nxr-reassign-head,
+    .nxr-reassign-form {
+        padding-inline: 16px;
+    }
+}
+
+/* NEXORA_REASSIGN_MODAL_CENTER_FIX_START */
+
+html.nxr-modal-open,
+body.nxr-modal-open {
+    overflow: hidden !important;
+}
+
+.nxr-reassign-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2147483000 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 24px !important;
+    background: rgba(0, 8, 18, .78) !important;
+    backdrop-filter: blur(16px) !important;
+    overflow: auto !important;
+    transform: none !important;
+}
+
+.nxr-reassign-backdrop[hidden] {
+    display: none !important;
+}
+
+.nxr-reassign-dialog {
+    width: min(960px, calc(100vw - 48px)) !important;
+    max-width: 960px !important;
+    max-height: calc(100vh - 48px) !important;
+    margin: auto !important;
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    overflow: auto !important;
+    border-radius: 24px !important;
+}
+
+.nxr-reassign-dialog,
+.nxr-reassign-dialog * {
+    box-sizing: border-box !important;
+}
+
+.nxr-reassign-head {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 2 !important;
+    background:
+        radial-gradient(circle at 96% 4%, rgba(34, 211, 238, .14), transparent 28%),
+        linear-gradient(180deg, rgba(10, 32, 52, .99), rgba(5, 18, 32, .99)) !important;
+}
+
+.nxr-reassign-actions {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 2 !important;
+    background: linear-gradient(180deg, rgba(3, 12, 24, .72), rgba(3, 12, 24, .98)) !important;
+    padding: 14px 0 0 !important;
+}
+
+@media (max-width: 780px) {
+    .nxr-reassign-backdrop {
+        padding: 12px !important;
+        align-items: start !important;
+    }
+
+    .nxr-reassign-dialog {
+        width: calc(100vw - 24px) !important;
+        max-height: calc(100vh - 24px) !important;
+        border-radius: 20px !important;
+    }
+}
+
+/* NEXORA_REASSIGN_MODAL_CENTER_FIX_END */
+
+/* NEXORA_REASSIGN_EDITABLE_ORG_STYLE_START */
+
+.nxr-reassign-head > button[data-nxr-reassign-close] {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    border-radius: 14px !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+    font-size: 0 !important;
+}
+
+.nxr-reassign-head > button[data-nxr-reassign-close] span {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    line-height: 34px !important;
+    text-align: center !important;
+    font-size: 24px !important;
+    font-weight: 900 !important;
+    color: #eaf7ff !important;
+}
+
+.nxr-reassign-edit-grid select {
+    width: 100% !important;
+    min-height: 42px !important;
+}
+
+.nxr-reassign-edit-grid .nxos {
+    width: 100% !important;
+}
+
+.nxr-reassign-edit-grid .nxos__button {
+    min-height: 42px !important;
+    border-radius: 14px !important;
+}
+
+.nxr-reassign-old-grid div,
+.nxr-reassign-edit-grid label {
+    min-width: 0 !important;
+}
+
+/* NEXORA_REASSIGN_EDITABLE_ORG_STYLE_END */
+
+/* NEXORA_REASSIGN_CREATE_STYLE_START */
+
+html.nxr-modal-open,
+body.nxr-modal-open {
+    overflow: hidden !important;
+}
+
+.nxr-reassign-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2147483000 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 22px !important;
+    background:
+        radial-gradient(circle at 85% 10%, rgba(34, 211, 238, .12), transparent 34%),
+        rgba(0, 8, 18, .80) !important;
+    backdrop-filter: blur(16px) !important;
+    overflow: auto !important;
+    overflow-x: hidden !important;
+}
+
+.nxr-reassign-backdrop[hidden] {
+    display: none !important;
+}
+
+.nxr-reassign-dialog {
+    width: min(1180px, calc(100vw - 44px)) !important;
+    max-width: 1180px !important;
+    max-height: calc(100vh - 44px) !important;
+    margin: auto !important;
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+    border-radius: 26px !important;
+    border: 1px solid rgba(34, 211, 238, .24) !important;
+    background:
+        radial-gradient(circle at 96% 4%, rgba(34, 211, 238, .16), transparent 28%),
+        linear-gradient(180deg, rgba(10, 32, 52, .98), rgba(3, 12, 24, .98)) !important;
+    box-shadow: 0 30px 90px rgba(0, 0, 0, .52) !important;
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
+}
+
+.nxr-reassign-dialog,
+.nxr-reassign-dialog * {
+    box-sizing: border-box !important;
+}
+
+.nxr-reassign-head {
+    position: relative !important;
+    top: auto !important;
+    z-index: 4 !important;
+    min-height: 100px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 18px !important;
+    padding: 22px 28px !important;
+    border-bottom: 1px solid rgba(148, 163, 184, .16) !important;
+    background:
+        radial-gradient(circle at 92% 8%, rgba(34, 211, 238, .16), transparent 30%),
+        linear-gradient(180deg, rgba(8, 30, 49, .99), rgba(5, 18, 32, .99)) !important;
+}
+
+.nxr-reassign-head strong {
+    font-size: 22px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-reassign-head > button[data-nxr-reassign-close] {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    border-radius: 15px !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+    font-size: 0 !important;
+    border: 1px solid rgba(34, 211, 238, .34) !important;
+    background: rgba(34, 211, 238, .10) !important;
+}
+
+.nxr-reassign-head > button[data-nxr-reassign-close] span {
+    display: grid !important;
+    place-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    line-height: 1 !important;
+    text-align: center !important;
+    font-size: 26px !important;
+    font-weight: 900 !important;
+    color: #eaf7ff !important;
+}
+
+.nxr-reassign-form {
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 22px 28px 0 !important;
+    display: grid !important;
+    gap: 18px !important;
+}
+
+.nxr-reassign-section {
+    border-radius: 22px !important;
+    border: 1px solid rgba(34, 211, 238, .16) !important;
+    background:
+        radial-gradient(circle at 96% 8%, rgba(34, 211, 238, .07), transparent 30%),
+        rgba(2, 10, 20, .36) !important;
+    padding: 18px !important;
+}
+
+.nxr-reassign-section h4 {
+    margin-bottom: 16px !important;
+    color: #22d3ee !important;
+    font-size: 14px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-reassign-old-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(170px, 1fr)) !important;
+    gap: 12px !important;
+}
+
+.nxr-reassign-edit-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(220px, 1fr)) !important;
+    gap: 14px !important;
+}
+
+.nxr-reassign-old-grid div,
+.nxr-reassign-edit-grid label {
+    min-height: 78px !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(34, 211, 238, .14) !important;
+    background: rgba(1, 12, 24, .42) !important;
+    padding: 13px !important;
+    min-width: 0 !important;
+}
+
+.nxr-reassign-edit-grid .wide {
+    grid-column: 1 / -1 !important;
+}
+
+.nxr-reassign-edit-grid input,
+.nxr-reassign-edit-grid textarea,
+.nxr-reassign-edit-grid select {
+    width: 100% !important;
+    min-height: 44px !important;
+    border-radius: 15px !important;
+    border: 1px solid rgba(34, 211, 238, .24) !important;
+    background: rgba(2, 10, 20, .64) !important;
+    color: #eaf7ff !important;
+    font-family: inherit !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    outline: none !important;
+    padding: 10px 12px !important;
+}
+
+.nxr-reassign-edit-grid .nxos {
+    width: 100% !important;
+}
+
+.nxr-reassign-edit-grid .nxos__button {
+    min-height: 44px !important;
+    border-radius: 15px !important;
+}
+
+.nxr-reassign-confirm {
+    border-radius: 18px !important;
+    border: 1px solid rgba(34, 211, 238, .16) !important;
+    background: rgba(34, 211, 238, .055) !important;
+    padding: 13px !important;
+}
+
+.nxr-reassign-actions {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 5 !important;
+    margin: 0 -28px !important;
+    padding: 16px 28px 18px !important;
+    border-top: 1px solid rgba(148, 163, 184, .14) !important;
+    background:
+        linear-gradient(180deg, rgba(3, 12, 24, .84), rgba(3, 12, 24, .99)) !important;
+}
+
+.nxr-reassign-actions button {
+    min-height: 42px !important;
+}
+
+@media (max-width: 980px) {
+    .nxr-reassign-old-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .nxr-reassign-edit-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 680px) {
+    .nxr-reassign-backdrop {
+        padding: 10px !important;
+        align-items: start !important;
+    }
+
+    .nxr-reassign-dialog {
+        width: calc(100vw - 20px) !important;
+        max-height: calc(100vh - 20px) !important;
+        border-radius: 20px !important;
+    }
+
+    .nxr-reassign-head,
+    .nxr-reassign-form {
+        padding-inline: 14px !important;
+    }
+
+    .nxr-reassign-actions {
+        margin-inline: -14px !important;
+        padding-inline: 14px !important;
+    }
+
+    .nxr-reassign-old-grid,
+    .nxr-reassign-edit-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* NEXORA_REASSIGN_CREATE_STYLE_END */
+
+/* NEXORA_REASSIGN_MODAL_DROPDOWN_LAYER_START */
+
+/*
+   Root cause:
+   NEXORA select menus are appended to document.body as .nxos__menu.
+   The reassign modal has a very high z-index, so the dropdown menu can appear behind it.
+   This raises only dropdown menus while the modal is open.
+*/
+
+body.nxr-modal-open .nxos__menu,
+body.nxr-modal-open .nxos__menu.is-open {
+    z-index: 2147483646 !important;
+}
+
+body.nxr-modal-open .nxos__menu.is-open {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.nxr-reassign-dialog .nxos,
+.nxr-reassign-dialog .nxos__button {
+    position: relative !important;
+    z-index: 5 !important;
+}
+
+.nxr-reassign-dialog {
+    overflow: hidden !important;
+}
+
+.nxr-reassign-form {
+    overflow-x: hidden !important;
+}
+
+/* NEXORA_REASSIGN_MODAL_DROPDOWN_LAYER_END */
+
+/* NEXORA_REASSIGN_FIELD_HEIGHTS_FIX_START */
+
+/* Previous data cards: closer to input-field height and cleaner spacing */
+.nxr-reassign-old-grid div {
+    min-height: 68px !important;
+    height: auto !important;
+    padding: 10px 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 5px !important;
+}
+
+.nxr-reassign-old-grid span {
+    margin: 0 !important;
+    font-size: 10.5px !important;
+    line-height: 1.25 !important;
+}
+
+.nxr-reassign-old-grid strong {
+    margin: 0 !important;
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+}
+
+/* Edit fields: consistent input-like blocks */
+.nxr-reassign-edit-grid label {
+    min-height: 78px !important;
+    height: auto !important;
+    padding: 11px 12px !important;
+}
+
+.nxr-reassign-edit-grid label > span {
+    margin-bottom: 7px !important;
+    line-height: 1.25 !important;
+}
+
+/* Textareas: no clipping, text starts from top */
+.nxr-reassign-edit-grid textarea {
+    min-height: 104px !important;
+    height: 104px !important;
+    line-height: 1.65 !important;
+    padding: 12px 14px !important;
+    resize: vertical !important;
+    overflow-y: auto !important;
+}
+
+/* Give the form enough bottom space so sticky action bar never covers HR notes */
+.nxr-reassign-form {
+    padding-bottom: 96px !important;
+}
+
+.nxr-reassign-actions {
+    min-height: 72px !important;
+    align-items: center !important;
+}
+
+/* Keep the modal body clean without horizontal scroll */
+.nxr-reassign-dialog,
+.nxr-reassign-form {
+    overflow-x: hidden !important;
+}
+
+/* NEXORA_REASSIGN_FIELD_HEIGHTS_FIX_END */
+
+/* NEXORA_REASSIGN_PREVIOUS_DATA_COMPACT_START */
+
+/* Make previous-data cards closer to normal input height */
+.nxr-reassign-section {
+    padding: 14px !important;
+}
+
+.nxr-reassign-section h4 {
+    margin: 0 0 10px !important;
+    line-height: 1.2 !important;
+}
+
+.nxr-reassign-old-grid {
+    gap: 10px !important;
+}
+
+.nxr-reassign-old-grid div {
+    min-height: 54px !important;
+    height: 54px !important;
+    padding: 7px 11px !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    border-radius: 15px !important;
+}
+
+.nxr-reassign-old-grid span {
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    margin: 0 !important;
+}
+
+.nxr-reassign-old-grid strong {
+    font-size: 11.5px !important;
+    line-height: 1.25 !important;
+    margin: 0 !important;
+    max-height: 30px !important;
+    overflow: hidden !important;
+}
+
+/* Keep edit section breathable and prevent sticky footer from covering notes */
+.nxr-reassign-edit-grid {
+    gap: 12px !important;
+}
+
+.nxr-reassign-form {
+    padding-bottom: 128px !important;
+}
+
+.nxr-reassign-actions {
+    min-height: 76px !important;
+}
+
+/* NEXORA_REASSIGN_PREVIOUS_DATA_COMPACT_END */
+
+/* NEXORA_REASSIGN_MODAL_FOOTER_NO_OVERLAP_START */
+
+/* The action bar must not cover the confirmation text. */
+.nxr-reassign-form {
+    padding-bottom: 22px !important;
+}
+
+.nxr-reassign-confirm {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-height: 48px !important;
+    margin: 4px 0 0 !important;
+    padding: 13px 14px !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+.nxr-reassign-confirm input {
+    flex: 0 0 auto !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin: 0 !important;
+}
+
+.nxr-reassign-confirm span {
+    display: block !important;
+    line-height: 1.7 !important;
+    white-space: normal !important;
+    color: #dbeafe !important;
+}
+
+/* Keep buttons in the normal form flow, not overlaying content. */
+.nxr-reassign-actions {
+    position: static !important;
+    bottom: auto !important;
+    margin: 8px 0 0 !important;
+    padding: 14px 0 0 !important;
+    min-height: 56px !important;
+    border-top: 1px solid rgba(148, 163, 184, .14) !important;
+    background: transparent !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    z-index: 1 !important;
+}
+
+.nxr-reassign-actions button {
+    min-height: 42px !important;
+}
+
+/* Prevent the modal from creating a horizontal scrollbar. */
+.nxr-reassign-dialog,
+.nxr-reassign-form,
+.nxr-reassign-section {
+    overflow-x: hidden !important;
+}
+
+/* NEXORA_REASSIGN_MODAL_FOOTER_NO_OVERLAP_END */
+
+/* NEXORA_REASSIGN_RESPONSIVE_FIT_START */
+
+/*
+   Goal:
+   The reassign modal must fit normal browser zoom and all common screen sizes.
+   No browser zoom-out should be required.
+*/
+
+html.nxr-modal-open,
+body.nxr-modal-open {
+    overflow: hidden !important;
+}
+
+.nxr-reassign-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: clamp(8px, 1.8dvh, 18px) !important;
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+}
+
+.nxr-reassign-dialog {
+    width: min(1120px, calc(100vw - 24px)) !important;
+    max-width: calc(100vw - 24px) !important;
+    height: auto !important;
+    max-height: calc(100dvh - 24px) !important;
+    min-height: 0 !important;
+    margin: 0 auto !important;
+
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
+
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+    border-radius: clamp(18px, 2vw, 24px) !important;
+}
+
+.nxr-reassign-head {
+    min-height: auto !important;
+    padding: clamp(14px, 2dvh, 20px) clamp(16px, 2.2vw, 24px) !important;
+}
+
+.nxr-reassign-head strong {
+    font-size: clamp(17px, 1.8vw, 21px) !important;
+}
+
+.nxr-reassign-head span {
+    margin-top: 5px !important;
+    line-height: 1.55 !important;
+}
+
+.nxr-reassign-form {
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: clamp(14px, 1.8dvh, 20px) clamp(14px, 2.2vw, 24px) 18px !important;
+    gap: clamp(12px, 1.6dvh, 16px) !important;
+}
+
+.nxr-reassign-section {
+    padding: clamp(12px, 1.6dvh, 16px) !important;
+    border-radius: 20px !important;
+}
+
+.nxr-reassign-section h4 {
+    margin: 0 0 10px !important;
+    line-height: 1.2 !important;
+}
+
+/* Previous data: compact but readable */
+.nxr-reassign-old-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.nxr-reassign-old-grid div {
+    min-height: 54px !important;
+    height: auto !important;
+    padding: 8px 11px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    border-radius: 15px !important;
+}
+
+.nxr-reassign-old-grid span {
+    margin: 0 !important;
+    font-size: 10px !important;
+    line-height: 1.15 !important;
+}
+
+.nxr-reassign-old-grid strong {
+    margin: 0 !important;
+    font-size: 11.5px !important;
+    line-height: 1.25 !important;
+    overflow-wrap: anywhere !important;
+}
+
+/* Edit fields: flexible create-page style */
+.nxr-reassign-edit-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+    gap: 12px !important;
+}
+
+.nxr-reassign-edit-grid label {
+    min-height: 72px !important;
+    height: auto !important;
+    padding: 10px 12px !important;
+    border-radius: 16px !important;
+}
+
+.nxr-reassign-edit-grid label > span {
+    margin-bottom: 7px !important;
+    line-height: 1.25 !important;
+}
+
+.nxr-reassign-edit-grid .wide {
+    grid-column: 1 / -1 !important;
+}
+
+.nxr-reassign-edit-grid input,
+.nxr-reassign-edit-grid textarea,
+.nxr-reassign-edit-grid select,
+.nxr-reassign-edit-grid .nxos__button {
+    min-height: 42px !important;
+    border-radius: 14px !important;
+}
+
+.nxr-reassign-edit-grid textarea {
+    min-height: 92px !important;
+    height: 92px !important;
+    max-height: 160px !important;
+    resize: vertical !important;
+    overflow-y: auto !important;
+    line-height: 1.55 !important;
+}
+
+/* Confirmation and buttons must be visible in normal flow */
+.nxr-reassign-confirm {
+    min-height: 44px !important;
+    margin: 2px 0 0 !important;
+    padding: 11px 13px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    position: static !important;
+}
+
+.nxr-reassign-confirm span {
+    line-height: 1.6 !important;
+    white-space: normal !important;
+}
+
+.nxr-reassign-actions {
+    position: static !important;
+    bottom: auto !important;
+    margin: 8px 0 0 !important;
+    padding: 12px 0 0 !important;
+    min-height: 52px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    background: transparent !important;
+}
+
+.nxr-reassign-actions button {
+    min-height: 40px !important;
+}
+
+/* Make NEXORA select menus appear above the modal */
+body.nxr-modal-open .nxos__menu,
+body.nxr-modal-open .nxos__menu.is-open {
+    z-index: 2147483646 !important;
+}
+
+/* Medium screens */
+@media (max-width: 900px) {
+    .nxr-reassign-dialog {
+        width: calc(100vw - 16px) !important;
+        max-width: calc(100vw - 16px) !important;
+        max-height: calc(100dvh - 16px) !important;
+    }
+
+    .nxr-reassign-edit-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+    }
+
+    .nxr-reassign-old-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+    }
+}
+
+/* Small screens */
+@media (max-width: 640px) {
+    .nxr-reassign-backdrop {
+        padding: 6px !important;
+        align-items: start !important;
+    }
+
+    .nxr-reassign-dialog {
+        width: calc(100vw - 12px) !important;
+        max-width: calc(100vw - 12px) !important;
+        max-height: calc(100dvh - 12px) !important;
+        border-radius: 18px !important;
+    }
+
+    .nxr-reassign-head,
+    .nxr-reassign-form {
+        padding-inline: 12px !important;
+    }
+
+    .nxr-reassign-old-grid,
+    .nxr-reassign-edit-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxr-reassign-actions {
+        flex-wrap: wrap !important;
+    }
+
+    .nxr-reassign-actions button {
+        flex: 1 1 150px !important;
+    }
+}
+
+/* Very short screens: reduce vertical density */
+@media (max-height: 760px) {
+    .nxr-reassign-head {
+        padding-block: 12px !important;
+    }
+
+    .nxr-reassign-form {
+        padding-block: 12px 14px !important;
+        gap: 10px !important;
+    }
+
+    .nxr-reassign-section {
+        padding: 11px !important;
+    }
+
+    .nxr-reassign-old-grid div {
+        min-height: 48px !important;
+        padding-block: 6px !important;
+    }
+
+    .nxr-reassign-edit-grid label {
+        min-height: 66px !important;
+        padding-block: 8px !important;
+    }
+
+    .nxr-reassign-edit-grid textarea {
+        min-height: 74px !important;
+        height: 74px !important;
+    }
+
+    .nxr-reassign-confirm {
+        min-height: 40px !important;
+        padding-block: 9px !important;
+    }
+
+    .nxr-reassign-actions {
+        min-height: 46px !important;
+        padding-top: 8px !important;
+    }
+}
+
+/* NEXORA_REASSIGN_RESPONSIVE_FIT_END */

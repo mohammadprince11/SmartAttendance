@@ -97,6 +97,7 @@ public partial class ProfileModel : PageModel
             return Page();
         }
 
+        await LoadProfileReassignLookupsAsync();
         await LoadAttendanceAsync(Employee.Id);
         await LoadRequestsAsync(Employee.Id);
         await LoadDocumentsAsync(Employee.Id);
@@ -107,6 +108,365 @@ public partial class ProfileModel : PageModel
         return Page();
     }
 
+    public async Task<IActionResult> OnPostReassignFromModalAsync(
+        int id,
+        string? reassignDate,
+        string? reassignPosition,
+        string? reassignReason,
+        string? reassignNotes,
+        string? confirmReassign)
+    {
+        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
+        await EnsureProfileReassignSchemaAsync();
+
+        if (id <= 0)
+        {
+            TempData["ErrorMessage"] = "\u0644\u0645 \u064a\u062a\u0645 \u062a\u062d\u062f\u064a\u062f \u0627\u0644\u0645\u0648\u0638\u0641.";
+            return RedirectToPage("./Index");
+        }
+
+        var employee = await LoadProfileReassignEmployeeAsync(id);
+
+        if (employee == null)
+        {
+            TempData["ErrorMessage"] = "\u0644\u0645 \u064a\u062a\u0645 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0648\u0638\u0641.";
+            return RedirectToPage("./Index");
+        }
+
+        if (employee.IsActive)
+        {
+            TempData["ErrorMessage"] = "\u0627\u0644\u0645\u0648\u0638\u0641 \u0641\u0639\u0627\u0644 \u062d\u0627\u0644\u064a\u0627\u064b \u0648\u0644\u0627 \u064a\u062d\u062a\u0627\u062c \u0625\u0644\u0649 \u0625\u0639\u0627\u062f\u0629 \u062a\u0639\u064a\u064a\u0646.";
+            return RedirectToPage(new { id });
+        }
+
+        if (!DateOnly.TryParse(reassignDate, out var reassignDateValue))
+        {
+            TempData["ErrorMessage"] = "\u062d\u062f\u062f \u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u0629 \u0627\u0644\u062c\u062f\u064a\u062f.";
+            return RedirectToPage(new { id });
+        }
+
+        if (string.IsNullOrWhiteSpace(reassignReason))
+        {
+            TempData["ErrorMessage"] = "\u0627\u0643\u062a\u0628 \u0633\u0628\u0628 \u0625\u0639\u0627\u062f\u0629 \u0627\u0644\u062a\u0639\u064a\u064a\u0646.";
+            return RedirectToPage(new { id });
+        }
+
+        var isConfirmed =
+            string.Equals(confirmReassign, "true", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(confirmReassign, "on", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(confirmReassign, "1", StringComparison.OrdinalIgnoreCase);
+
+        if (!isConfirmed)
+        {
+            TempData["ErrorMessage"] = "\u064a\u062c\u0628 \u062a\u0623\u0643\u064a\u062f \u0625\u0639\u0627\u062f\u0629 \u0627\u0644\u062a\u0639\u064a\u064a\u0646 \u0642\u0628\u0644 \u0627\u0644\u062d\u0641\u0638.";
+            return RedirectToPage(new { id });
+        }
+
+        var newPosition = string.IsNullOrWhiteSpace(reassignPosition)
+            ? employee.Position
+            : reassignPosition.Trim();
+
+        var reason = reassignReason.Trim();
+        var notes = BuildProfileReassignNotes(employee.Position, newPosition, reassignNotes);
+        var userName = Request.Cookies["SA.UserName"] ?? "System";
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
+
+        object? previousHireDateSql = employee.HireDate.HasValue
+            ? employee.HireDate.Value.ToDateTime(TimeOnly.MinValue)
+            : null;
+
+        var reassignDateSql = reassignDateValue.ToDateTime(TimeOnly.MinValue);
+
+        var oldValues =
+            $"IsActive: {employee.IsActive}; HireDate: {DisplayDate(employee.HireDate)}; Position: {employee.Position}; EmploymentStatus: {employee.EmploymentStatus}; ServiceEndDate: {DisplayDate(employee.ServiceEndDate)}";
+
+        var newValues =
+            $"IsActive: True; HireDate/ReassignDate: {reassignDateValue:yyyy-MM-dd}; Position: {newPosition}; EmploymentStatus: Active";
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            @"
+INSERT INTO EmployeeRehires
+(
+    EmployeeId,
+    EmployeeNo,
+    EmployeeName,
+    PreviousHireDate,
+    RehireDate,
+    PreviousEmploymentStatus,
+    Reason,
+    HrNotes,
+    CreatedBy,
+    IpAddress,
+    CreatedAt
+)
+VALUES
+(
+    @EmployeeId,
+    @EmployeeNo,
+    @EmployeeName,
+    @PreviousHireDate,
+    @RehireDate,
+    @PreviousEmploymentStatus,
+    @Reason,
+    @HrNotes,
+    @CreatedBy,
+    @IpAddress,
+    GETDATE()
+);
+
+UPDATE Employees
+SET
+    IsActive = 1,
+    HireDate = @RehireDate,
+    Position = @Position,
+    EmploymentStatus = N'Active',
+    ServiceEndDate = NULL,
+    ServiceEndType = NULL,
+    ServiceEndReason = NULL,
+    ServiceEndNotes = NULL,
+    ClearanceStatus = NULL,
+    LastRehireDate = @RehireDate,
+    RehireReason = @Reason,
+    RehireNotes = @HrNotes,
+    RehireCount = ISNULL(RehireCount, 0) + 1
+WHERE Id = @EmployeeId;
+
+IF OBJECT_ID('AuditLogs', 'U') IS NOT NULL
+BEGIN
+    INSERT INTO AuditLogs
+    (
+        EntityName,
+        EntityId,
+        Action,
+        OldValues,
+        NewValues,
+        UserName,
+        IpAddress
+    )
+    VALUES
+    (
+        'Employee',
+        CAST(@EmployeeId AS nvarchar(80)),
+        'Employee Reassigned From Profile Modal',
+        @OldValues,
+        @NewValues,
+        @CreatedBy,
+        @IpAddress
+    );
+END;",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", id);
+                HrmsDatabase.AddParameter(command, "@EmployeeNo", employee.EmployeeNo);
+                HrmsDatabase.AddParameter(command, "@EmployeeName", employee.FullName);
+                HrmsDatabase.AddParameter(command, "@PreviousHireDate", previousHireDateSql);
+                HrmsDatabase.AddParameter(command, "@RehireDate", reassignDateSql);
+                HrmsDatabase.AddParameter(command, "@PreviousEmploymentStatus", employee.EmploymentStatus);
+                HrmsDatabase.AddParameter(command, "@Position", newPosition);
+                HrmsDatabase.AddParameter(command, "@Reason", reason);
+                HrmsDatabase.AddParameter(command, "@HrNotes", string.IsNullOrWhiteSpace(notes) ? null : notes);
+                HrmsDatabase.AddParameter(command, "@CreatedBy", userName);
+                HrmsDatabase.AddParameter(command, "@IpAddress", ipAddress);
+                HrmsDatabase.AddParameter(command, "@OldValues", oldValues);
+                HrmsDatabase.AddParameter(command, "@NewValues", newValues);
+            });
+
+        TempData["SuccessMessage"] = "\u062a\u0645\u062a \u0625\u0639\u0627\u062f\u0629 \u062a\u0639\u064a\u064a\u0646 \u0627\u0644\u0645\u0648\u0638\u0641 \u0648\u062d\u0641\u0638 \u0627\u0644\u062d\u0631\u0643\u0629 \u0641\u064a \u0627\u0644\u0633\u062c\u0644 \u0627\u0644\u0648\u0638\u064a\u0641\u064a.";
+        return RedirectToPage(new { id });
+    }
+
+    private async Task EnsureProfileReassignSchemaAsync()
+    {
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            @"
+IF COL_LENGTH('Employees', 'Position') IS NULL
+BEGIN
+    ALTER TABLE Employees ADD Position nvarchar(150) NULL;
+END;
+
+IF COL_LENGTH('Employees', 'EmploymentStatus') IS NULL
+BEGIN
+    ALTER TABLE Employees ADD EmploymentStatus nvarchar(80) NULL;
+END;
+
+IF COL_LENGTH('Employees', 'ServiceEndDate') IS NULL
+BEGIN
+    ALTER TABLE Employees ADD ServiceEndDate date NULL;
+END;
+
+IF COL_LENGTH('Employees', 'ServiceEndType') IS NULL
+BEGIN
+    ALTER TABLE Employees ADD ServiceEndType nvarchar(80) NULL;
+END;
+
+IF COL_LENGTH('Employees', 'ServiceEndReason') IS NULL
+BEGIN
+    ALTER TABLE Employees ADD ServiceEndReason nvarchar(1000) NULL;
+END;
+
+IF COL_LENGTH('Employees', 'ServiceEndNotes') IS NULL
+BEGIN
+    ALTER TABLE Employees ADD ServiceEndNotes nvarchar(2000) NULL;
+END;
+
+IF COL_LENGTH('Employees', 'ClearanceStatus') IS NULL
+BEGIN
+    ALTER TABLE Employees ADD ClearanceStatus nvarchar(80) NULL;
+END;
+
+IF COL_LENGTH('Employees', 'LastRehireDate') IS NULL
+BEGIN
+    ALTER TABLE Employees ADD LastRehireDate date NULL;
+END;
+
+IF COL_LENGTH('Employees', 'RehireReason') IS NULL
+BEGIN
+    ALTER TABLE Employees ADD RehireReason nvarchar(1000) NULL;
+END;
+
+IF COL_LENGTH('Employees', 'RehireNotes') IS NULL
+BEGIN
+    ALTER TABLE Employees ADD RehireNotes nvarchar(2000) NULL;
+END;
+
+IF COL_LENGTH('Employees', 'RehireCount') IS NULL
+BEGIN
+    ALTER TABLE Employees ADD RehireCount int NOT NULL CONSTRAINT DF_Employees_RehireCount DEFAULT(0);
+END;
+
+IF OBJECT_ID('EmployeeRehires', 'U') IS NULL
+BEGIN
+    CREATE TABLE EmployeeRehires
+    (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        EmployeeId int NOT NULL,
+        EmployeeNo nvarchar(80) NULL,
+        EmployeeName nvarchar(250) NULL,
+        PreviousHireDate date NULL,
+        RehireDate date NOT NULL,
+        PreviousEmploymentStatus nvarchar(80) NULL,
+        Reason nvarchar(1000) NOT NULL,
+        HrNotes nvarchar(2000) NULL,
+        CreatedBy nvarchar(200) NULL,
+        IpAddress nvarchar(80) NULL,
+        CreatedAt datetime2 NOT NULL DEFAULT(GETDATE())
+    );
+END;
+
+IF COL_LENGTH('EmployeeRehires', 'EmployeeNo') IS NULL
+BEGIN
+    ALTER TABLE EmployeeRehires ADD EmployeeNo nvarchar(80) NULL;
+END;
+
+IF COL_LENGTH('EmployeeRehires', 'EmployeeName') IS NULL
+BEGIN
+    ALTER TABLE EmployeeRehires ADD EmployeeName nvarchar(250) NULL;
+END;
+
+IF COL_LENGTH('EmployeeRehires', 'PreviousHireDate') IS NULL
+BEGIN
+    ALTER TABLE EmployeeRehires ADD PreviousHireDate date NULL;
+END;
+
+IF COL_LENGTH('EmployeeRehires', 'PreviousEmploymentStatus') IS NULL
+BEGIN
+    ALTER TABLE EmployeeRehires ADD PreviousEmploymentStatus nvarchar(80) NULL;
+END;
+
+IF COL_LENGTH('EmployeeRehires', 'HrNotes') IS NULL
+BEGIN
+    ALTER TABLE EmployeeRehires ADD HrNotes nvarchar(2000) NULL;
+END;
+
+IF COL_LENGTH('EmployeeRehires', 'CreatedBy') IS NULL
+BEGIN
+    ALTER TABLE EmployeeRehires ADD CreatedBy nvarchar(200) NULL;
+END;
+
+IF COL_LENGTH('EmployeeRehires', 'IpAddress') IS NULL
+BEGIN
+    ALTER TABLE EmployeeRehires ADD IpAddress nvarchar(80) NULL;
+END;
+
+IF COL_LENGTH('EmployeeRehires', 'CreatedAt') IS NULL
+BEGIN
+    ALTER TABLE EmployeeRehires ADD CreatedAt datetime2 NOT NULL CONSTRAINT DF_EmployeeRehires_CreatedAt DEFAULT(GETDATE());
+END;");
+    }
+
+    private async Task<ProfileReassignEmployeeRow?> LoadProfileReassignEmployeeAsync(int employeeId)
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            @"
+SELECT TOP 1
+    e.Id,
+    e.EmployeeNo,
+    e.FullName,
+    e.HireDate,
+    e.IsActive,
+    ISNULL(e.Position, '') AS Position,
+    ISNULL(e.EmploymentStatus, '') AS EmploymentStatus,
+    e.ServiceEndDate,
+    ISNULL(e.ServiceEndReason, '') AS ServiceEndReason
+FROM Employees e
+WHERE e.Id = @EmployeeId;",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => new ProfileReassignEmployeeRow
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                FullName = HrmsDatabase.GetString(reader, "FullName"),
+                HireDate = HrmsDatabase.GetDateOnly(reader, "HireDate"),
+                IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
+                Position = HrmsDatabase.GetString(reader, "Position"),
+                EmploymentStatus = HrmsDatabase.GetString(reader, "EmploymentStatus"),
+                ServiceEndDate = HrmsDatabase.GetDateOnly(reader, "ServiceEndDate"),
+                ServiceEndReason = HrmsDatabase.GetString(reader, "ServiceEndReason")
+            });
+
+        return rows.FirstOrDefault();
+    }
+
+    private static string BuildProfileReassignNotes(string previousPosition, string newPosition, string? hrNotes)
+    {
+        var items = new List<string>();
+
+        if (!string.Equals(previousPosition?.Trim(), newPosition?.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            items.Add($"Position changed from '{previousPosition}' to '{newPosition}'.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(hrNotes))
+        {
+            items.Add(hrNotes.Trim());
+        }
+
+        return string.Join(" | ", items);
+    }
+
+    private class ProfileReassignEmployeeRow
+    {
+        public int Id { get; set; }
+
+        public string EmployeeNo { get; set; } = string.Empty;
+
+        public string FullName { get; set; } = string.Empty;
+
+        public DateOnly? HireDate { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public string Position { get; set; } = string.Empty;
+
+        public string EmploymentStatus { get; set; } = string.Empty;
+
+        public DateOnly? ServiceEndDate { get; set; }
+
+        public string ServiceEndReason { get; set; } = string.Empty;
+    }
 
     public async Task<IActionResult> OnPostUploadProfilePhotoAsync(int id)
     {

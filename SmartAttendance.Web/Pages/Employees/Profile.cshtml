@@ -2,7 +2,7 @@
 @model SmartAttendance.Web.Pages.Employees.ProfileModel
 <link rel="stylesheet" href="~/css/nexora-profile-file-cards.css" asp-append-version="true" />
 
-@* NEXORA_PROFILE_MARITAL_BY_GENDER_START *@
+<link rel="stylesheet" href="~/css/nexora-profile-reassign-modal.css" asp-append-version="true" />@* NEXORA_PROFILE_MARITAL_BY_GENDER_START *@
 @functions {
     private static string NxrDisplayMaritalStatusByGender(string? value, string? gender)
     {
@@ -283,13 +283,116 @@
                             <span>مخالفة / كتاب HR</span>
                             <small>إنذار، عقوبة، شكر، أو كتاب إداري</small>
                         </button>
-
                         @if (employee.IsActive)
                         {
                             <a asp-page="./EndService" asp-route-id="@employee.Id" class="nxr-action-item danger">
-                                <span>إنهاء خدمة</span>
-                                <small>إجراء رسمي لإنهاء خدمة الموظف</small>
+                                <span>&#x0625;&#x0646;&#x0647;&#x0627;&#x0621; &#x062E;&#x062F;&#x0645;&#x0629;</span>
+                                <small>&#x0625;&#x062C;&#x0631;&#x0627;&#x0621; &#x0631;&#x0633;&#x0645;&#x064A; &#x0644;&#x0625;&#x0646;&#x0647;&#x0627;&#x0621; &#x062E;&#x062F;&#x0645;&#x0629; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</small>
                             </a>
+                        }
+                        else
+                        {
+                            <button type="button" class="nxr-action-item" data-nxr-reassign-open>
+                                <span>&#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x062A;&#x0639;&#x064A;&#x064A;&#x0646;</span>
+                                <small>&#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x062A;&#x0641;&#x0639;&#x064A;&#x0644; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641; &#x0645;&#x0639; &#x0645;&#x0631;&#x0627;&#x062C;&#x0639;&#x0629; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0633;&#x0627;&#x0628;&#x0642;&#x0629;</small>
+                            </button>
+
+                            <div class="nxr-reassign-backdrop" data-nxr-reassign-modal hidden>
+                                <div class="nxr-reassign-dialog" role="dialog" aria-modal="true">
+                                    <div class="nxr-reassign-head">
+                                        <div>
+                                            <strong>&#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x062A;&#x0639;&#x064A;&#x064A;&#x0646; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</strong>
+                                            <span>&#x064A;&#x0639;&#x0631;&#x0636; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0633;&#x0627;&#x0628;&#x0642;&#x0629; &#x0642;&#x0628;&#x0644; &#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x0627;&#x0644;&#x062A;&#x0641;&#x0639;&#x064A;&#x0644;. &#x0639;&#x062F;&#x0651;&#x0644; &#x0645;&#x0627; &#x064A;&#x0644;&#x0632;&#x0645; &#x062B;&#x0645; &#x0627;&#x062D;&#x0641;&#x0638; &#x062D;&#x062A;&#x0649; &#x064A;&#x0633;&#x062C;&#x0644; &#x0641;&#x064A; &#x0627;&#x0644;&#x0633;&#x062C;&#x0644; &#x0627;&#x0644;&#x0648;&#x0638;&#x064A;&#x0641;&#x064A;.</span>
+                                        </div>
+                                        <button type="button" data-nxr-reassign-close aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                    </div>
+
+                                    <form method="post"
+                                          asp-page-handler="ReassignFromModalV2"
+                                          asp-route-id="@employee.Id"
+                                          class="nxr-reassign-form">
+                                        <section class="nxr-reassign-section">
+                                            <h4>&#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0633;&#x0627;&#x0628;&#x0642;&#x0629;</h4>
+                                            <div class="nxr-reassign-old-grid">
+                                                <div><span>&#x0627;&#x0644;&#x0643;&#x0648;&#x062F;</span><strong>@Model.Display(employee.EmployeeNo)</strong></div>
+                                                <div><span>&#x0627;&#x0644;&#x0627;&#x0633;&#x0645;</span><strong>@Model.Display(employee.FullName)</strong></div>
+                                                <div><span>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span><strong>@Model.Display(employee.CompanyName)</strong></div>
+                                                <div><span>&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span><strong>@Model.Display(employee.BranchName)</strong></div>
+                                                <div><span>&#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</span><strong>@Model.Display(employee.DepartmentName)</strong></div>
+                                                <div><span>&#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628; &#x0627;&#x0644;&#x0633;&#x0627;&#x0628;&#x0642;/&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x064A;</span><strong>@Model.Display(employee.Position)</strong></div>
+                                                <div><span>&#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0627;&#x0644;&#x062A;&#x0639;&#x064A;&#x064A;&#x0646; &#x0627;&#x0644;&#x0633;&#x0627;&#x0628;&#x0642;</span><strong>@Model.DisplayDate(employee.HireDate)</strong></div>
+                                                <div><span>&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629; &#x0627;&#x0644;&#x0633;&#x0627;&#x0628;&#x0642;&#x0629;</span><strong>@Model.Display(employee.EmploymentStatus)</strong></div>
+                                            </div>
+                                        </section>
+
+                                        <section class="nxr-reassign-section">
+                                            <h4>&#x0627;&#x0644;&#x062A;&#x0639;&#x062F;&#x064A;&#x0644; &#x0642;&#x0628;&#x0644; &#x0627;&#x0644;&#x062D;&#x0641;&#x0638;</h4>
+                                            <div class="nxr-reassign-edit-grid">
+                                                @* NEXORA_REASSIGN_EDITABLE_ORG_START *@
+                                                <label>
+                                                    <span>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
+                                                    <select name="ReassignCompanyId" data-nxr-reassign-company>
+                                                        @foreach (var company in Model.ReassignCompanies)
+                                                        {
+                                                            <option value="@company.Id" selected="@(company.Id == Model.CurrentReassignCompanyId ? "selected" : null)">@Model.Display(company.Name)</option>
+                                                        }
+                                                    </select>
+                                                </label>
+
+                                                <label>
+                                                    <span>&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span>
+                                                    <select name="ReassignBranchId" data-nxr-reassign-branch>
+                                                        @foreach (var branch in Model.ReassignBranches)
+                                                        {
+                                                            <option value="@branch.Id" data-company-id="@branch.CompanyId" selected="@(branch.Id == Model.CurrentReassignBranchId ? "selected" : null)">@Model.Display(branch.Name)</option>
+                                                        }
+                                                    </select>
+                                                </label>
+
+                                                <label>
+                                                    <span>&#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</span>
+                                                    <select name="ReassignDepartmentId" data-nxr-reassign-department>
+                                                        @foreach (var department in Model.ReassignDepartments)
+                                                        {
+                                                            <option value="@department.Id" data-branch-id="@department.BranchId" selected="@(department.Id == Model.CurrentReassignDepartmentId ? "selected" : null)">@Model.Display(department.Name)</option>
+                                                        }
+                                                    </select>
+                                                </label>
+                                                @* NEXORA_REASSIGN_EDITABLE_ORG_END *@
+                                                <label>
+                                                    <span>&#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0627;&#x0644;&#x0645;&#x0628;&#x0627;&#x0634;&#x0631;&#x0629; &#x0627;&#x0644;&#x062C;&#x062F;&#x064A;&#x062F;</span>
+                                                    <input type="date" name="ReassignDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                                                </label>
+
+                                                <label>
+                                                    <span>&#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628; &#x0628;&#x0639;&#x062F; &#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x0627;&#x0644;&#x062A;&#x0639;&#x064A;&#x064A;&#x0646;</span>
+                                                    <input type="text" name="ReassignPosition" value="@employee.Position" />
+                                                </label>
+
+                                                <label class="wide">
+                                                    <span>&#x0633;&#x0628;&#x0628; &#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x0627;&#x0644;&#x062A;&#x0639;&#x064A;&#x064A;&#x0646;</span>
+                                                    <textarea name="ReassignReason" rows="3" required placeholder="&#x0645;&#x062B;&#x0627;&#x0644;: &#x0631;&#x062C;&#x0648;&#x0639; &#x0644;&#x0644;&#x0639;&#x0645;&#x0644;&#x060C; &#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x0645;&#x0628;&#x0627;&#x0634;&#x0631;&#x0629;&#x060C; &#x062A;&#x0635;&#x062D;&#x064A;&#x062D; &#x062D;&#x0627;&#x0644;&#x0629;..."></textarea>
+                                                </label>
+
+                                                <label class="wide">
+                                                    <span>&#x0645;&#x0644;&#x0627;&#x062D;&#x0638;&#x0627;&#x062A; HR / &#x0627;&#x0644;&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0637;&#x0644;&#x0648;&#x0628;&#x0629;</span>
+                                                    <textarea name="ReassignNotes" rows="3" placeholder="&#x0627;&#x0643;&#x062A;&#x0628; &#x0623;&#x064A; &#x062A;&#x0639;&#x062F;&#x064A;&#x0644; &#x0645;&#x0637;&#x0644;&#x0648;&#x0628; &#x0623;&#x0648; &#x0645;&#x0644;&#x0627;&#x062D;&#x0638;&#x0629; &#x062A;&#x062D;&#x0641;&#x0638; &#x0645;&#x0639; &#x0627;&#x0644;&#x0633;&#x062C;&#x0644;"></textarea>
+                                                </label>
+                                            </div>
+
+                                            <label class="nxr-reassign-confirm">
+                                                <input type="checkbox" name="ConfirmReassign" value="true" />
+                                                <span>&#x0623;&#x0624;&#x0643;&#x062F; &#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x062A;&#x0639;&#x064A;&#x064A;&#x0646; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641; &#x0648;&#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x062D;&#x0631;&#x0643;&#x0629; &#x0641;&#x064A; &#x0627;&#x0644;&#x0633;&#x062C;&#x0644; &#x0627;&#x0644;&#x0648;&#x0638;&#x064A;&#x0641;&#x064A;.</span>
+                                            </label>
+                                        </section>
+
+                                        <div class="nxr-reassign-actions">
+                                            <button type="button" class="ghost" data-nxr-reassign-close>&#x0625;&#x0644;&#x063A;&#x0627;&#x0621;</button>
+                                            <button type="submit" class="primary">&#x062D;&#x0641;&#x0638; &#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x0627;&#x0644;&#x062A;&#x0639;&#x064A;&#x064A;&#x0646;</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
                         }
                     </div>
                 </div>
@@ -1180,6 +1283,7 @@
     <script src="~/js/nexora-employee-profile-kayan-style.js" asp-append-version="true"></script>
     <script src="~/js/nexora-profile-remove-extra-links-tabs.js" asp-append-version="true"></script>
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
-}
+
+    <script src="~/js/nexora-profile-reassign-modal.js" asp-append-version="true"></script>}
 
 <link rel="stylesheet" href="~/css/nexora-profile-remove-extra-links-tabs.css" asp-append-version="true" />

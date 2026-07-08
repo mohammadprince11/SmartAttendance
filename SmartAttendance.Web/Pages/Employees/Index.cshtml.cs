@@ -72,6 +72,15 @@ public class IndexModel : PageModel
             .OrderBy(x => x)
             .ToList();
 
+        // NEXORA_STATUS_UI_DEFAULT_ACTIVE_START
+        // Status filtering is handled client-side so inactive rows remain available
+        // when the user selects the inactive filter.
+        if (string.IsNullOrWhiteSpace(StatusFilter))
+        {
+            StatusFilter = "active";
+        }
+        // NEXORA_STATUS_UI_DEFAULT_ACTIVE_END
+
         var query = allEmployees.AsEnumerable();
 
         if (!string.IsNullOrWhiteSpace(SearchTerm))
@@ -99,16 +108,7 @@ public class IndexModel : PageModel
         {
             query = query.Where(x => string.Equals(x.DepartmentName, DepartmentFilter, StringComparison.OrdinalIgnoreCase));
         }
-        if (string.Equals(StatusFilter, "active", StringComparison.OrdinalIgnoreCase))
-        {
-            query = query.Where(x => x.IsActive);
-        }
-        else if (string.Equals(StatusFilter, "inactive", StringComparison.OrdinalIgnoreCase))
-        {
-            query = query.Where(x => !x.IsActive);
-        }
-
-        query = (SortBy ?? "name").ToLowerInvariant() switch
+query = (SortBy ?? "name").ToLowerInvariant() switch
         {
             "code" => query.OrderBy(x => x.EmployeeNo),
             "branch" => query.OrderBy(x => x.BranchName).ThenBy(x => x.FullName),
