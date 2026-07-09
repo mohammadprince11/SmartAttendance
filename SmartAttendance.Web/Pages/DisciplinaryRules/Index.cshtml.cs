@@ -88,7 +88,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostSeedLibraryAsync()
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         await SeedDefaultLibraryAsync(false);
         StatusMessage = "تم تحميل / تحديث مكتبة إعدادات المخالفات الأولية.";
         return RedirectToPage(new { tab = "setup" });
@@ -97,7 +97,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostSaveSettingsAsync(int appealWindowDays, string? defaultTemplateType, string? approvingAuthorityName, string? documentNumberFormat, string? formHeader, string? formFooter)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         await UpsertSettingAsync("RequiresCommitteeApproval", Request.Form.ContainsKey("requiresCommitteeApproval") ? "true" : "false");
         await UpsertSettingAsync("AllowEmployeeAppeal", Request.Form.ContainsKey("allowEmployeeAppeal") ? "true" : "false");
         await UpsertSettingAsync("AppealWindowDays", Math.Max(0, appealWindowDays).ToString());
@@ -113,7 +113,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostSeedBodyTextLayersAsync()
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         await SeedBodyTextLayersAsync();
 
         
@@ -123,7 +123,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostSaveA4FormAsync(IFormFile? a4FormFile)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
 
         var saved = await SaveA4FormFileAsync(a4FormFile);
         if (!string.IsNullOrWhiteSpace(saved.Path))
@@ -141,7 +141,7 @@ public class IndexModel : PageModel
     }
     public async Task<IActionResult> OnPostSaveFormImagesAsync(IFormFile? headerImage, IFormFile? footerImage)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
 
         var headerPath = await SaveImageAsync(headerImage, "header");
         if (!string.IsNullOrWhiteSpace(headerPath))
@@ -169,7 +169,7 @@ public class IndexModel : PageModel
         string mainBodyFontColor,
         string mainBodyTextAlign)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
 
         await UpsertSettingAsync("MainBodyText", string.IsNullOrWhiteSpace(mainBodyText) ? DefaultMainBodyText : mainBodyText.Trim());
         await UpsertSettingAsync("MainBodyXPercent", Clamp(mainBodyXPercent, 0, 100).ToString("0.##"));
@@ -196,7 +196,7 @@ public class IndexModel : PageModel
         string fontColor,
         string textAlign)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
 
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -230,7 +230,7 @@ VALUES
         string fontColor,
         string textAlign)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
 
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
@@ -261,7 +261,7 @@ WHERE Id = @Id;
 
     public async Task<IActionResult> OnPostDeleteTextBlockAsync(int id)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
 
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
@@ -372,7 +372,7 @@ WHERE Id = @Id;
 
     public async Task<IActionResult> OnPostCreateCategoryAsync(string name, string? description, int displayOrder = 10)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         if (string.IsNullOrWhiteSpace(name))
         {
             StatusMessage = "اكتب اسم الفئة أولاً.";
@@ -397,7 +397,7 @@ VALUES (@Name, @Description, @DisplayOrder, 1, SYSUTCDATETIME());
 
     public async Task<IActionResult> OnPostUpdateCategoryAsync(int id, string name, string? description, int displayOrder)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         await HrmsDatabase.ExecuteAsync(_dbContext,
             """
 UPDATE DisciplinaryViolationCategories
@@ -419,7 +419,7 @@ WHERE Id = @Id;
 
     public async Task<IActionResult> OnPostCreateViolationTypeAsync(int categoryId, string name, string? description, string severity, int validityMonths, string countingPeriod)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         if (categoryId <= 0 || string.IsNullOrWhiteSpace(name))
         {
             StatusMessage = "اختر الفئة واكتب اسم المخالفة.";
@@ -452,7 +452,7 @@ VALUES
 
     public async Task<IActionResult> OnPostUpdateViolationTypeAsync(int id, int categoryId, string name, string? description, string severity, int validityMonths, string countingPeriod)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         await HrmsDatabase.ExecuteAsync(_dbContext,
             """
 UPDATE DisciplinaryViolationTypes
@@ -487,7 +487,7 @@ WHERE Id = @Id;
 
     public async Task<IActionResult> OnPostCreatePenaltyRuleAsync(int violationTypeId, int occurrenceFrom, int occurrenceTo, string countingPeriod, string penaltyAction, string financialImpactType, decimal financialValue, int validityMonths, string calculationMode)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         if (violationTypeId <= 0 || string.IsNullOrWhiteSpace(penaltyAction))
         {
             StatusMessage = "اختر المخالفة واكتب العقوبة.";
@@ -502,7 +502,7 @@ WHERE Id = @Id;
 
     public async Task<IActionResult> OnPostUpdatePenaltyRuleAsync(int id, int violationTypeId, int occurrenceFrom, int occurrenceTo, string countingPeriod, string penaltyAction, string financialImpactType, decimal financialValue, int validityMonths, string calculationMode)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         await SavePenaltyRuleAsync(id, violationTypeId, occurrenceFrom, occurrenceTo, countingPeriod, penaltyAction, financialImpactType, financialValue, validityMonths, calculationMode);
         var categoryId = await GetViolationCategoryIdAsync(violationTypeId);
         StatusMessage = "تم تعديل جزاء التكرار.";
@@ -511,7 +511,7 @@ WHERE Id = @Id;
 
     public async Task<IActionResult> OnPostDeletePenaltyRuleAsync(int id)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         var categoryId = await HrmsDatabase.ScalarAsync<int>(_dbContext,
             """
 SELECT TOP 1 t.CategoryId
@@ -529,7 +529,7 @@ WHERE r.Id = @Id;
 
     public async Task<IActionResult> OnPostCreateTemplateTypeAsync(string name, string code, string? description)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(code))
         {
             StatusMessage = "اكتب اسم ونوع القالب.";
@@ -557,7 +557,7 @@ END
 
     public async Task<IActionResult> OnPostUpdateTemplateTypeAsync(int id, string name, string code, string? description)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         await HrmsDatabase.ExecuteAsync(_dbContext,
             """
 UPDATE DisciplinaryTemplateTypes
@@ -582,7 +582,7 @@ WHERE Id = @Id;
 
     public async Task<IActionResult> OnPostCreateTemplateAsync(string name, string templateType, string subject, string body)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         var normalizedType = NormalizeTemplateCode(templateType);
         if (Request.Form.ContainsKey("isDefault")) await ClearDefaultTemplateAsync(normalizedType);
 
@@ -607,7 +607,7 @@ VALUES (@Name, @TemplateType, @Subject, @Body, @IsDefault, @IsActive, SYSUTCDATE
 
     public async Task<IActionResult> OnPostUpdateTemplateAsync(int id, string name, string templateType, string subject, string body)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         var normalizedType = NormalizeTemplateCode(templateType);
         if (Request.Form.ContainsKey("isDefault")) await ClearDefaultTemplateAsync(normalizedType);
 
@@ -683,7 +683,7 @@ VALUES
 
     private async Task LoadPageAsync(string? tab, int? categoryId)
     {
-        await EnsureTablesAsync();
+        await DisciplinarySchema.EnsureAsync(_dbContext);
         // NEXORA: auto seed disabled for clean database reset.
         Tab = NormalizeTab(tab);
         SelectedCategoryId = categoryId.GetValueOrDefault();
@@ -695,123 +695,6 @@ VALUES
         TemplateTypes = await LoadTemplateTypesAsync();
         MessageTemplates = await LoadMessageTemplatesAsync();
         TextBlocks = await LoadTextBlocksAsync();
-    }
-
-    private async Task EnsureTablesAsync()
-    {
-await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        await HrmsDatabase.ExecuteAsync(_dbContext,
-            """
-IF OBJECT_ID('DisciplinaryViolationCategories', 'U') IS NULL
-BEGIN
-    CREATE TABLE DisciplinaryViolationCategories
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        Name nvarchar(180) NOT NULL,
-        Description nvarchar(max) NULL,
-        DisplayOrder int NOT NULL DEFAULT(10),
-        IsActive bit NOT NULL DEFAULT(1),
-        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
-    );
-END;
-
-IF OBJECT_ID('DisciplinaryViolationTypes', 'U') IS NULL
-BEGIN
-    CREATE TABLE DisciplinaryViolationTypes
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        CategoryId int NOT NULL,
-        Name nvarchar(250) NOT NULL,
-        Description nvarchar(max) NULL,
-        Severity nvarchar(40) NOT NULL DEFAULT('B'),
-        ValidityMonths int NOT NULL DEFAULT(6),
-        CountingPeriod nvarchar(40) NOT NULL DEFAULT('Monthly'),
-        IncludeInEvaluation bit NOT NULL DEFAULT(1),
-        ShowToEmployee bit NOT NULL DEFAULT(1),
-        IsActive bit NOT NULL DEFAULT(1),
-        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
-    );
-END;
-
-IF OBJECT_ID('DisciplinaryPenaltyRules', 'U') IS NULL
-BEGIN
-    CREATE TABLE DisciplinaryPenaltyRules
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        ViolationTypeId int NOT NULL,
-        OccurrenceFrom int NOT NULL,
-        OccurrenceTo int NOT NULL,
-        CountingPeriod nvarchar(40) NOT NULL DEFAULT('Monthly'),
-        PenaltyAction nvarchar(250) NOT NULL,
-        FinancialImpactType nvarchar(40) NOT NULL DEFAULT('None'),
-        FinancialValue decimal(18,2) NOT NULL DEFAULT(0),
-        ValidityMonths int NOT NULL DEFAULT(6),
-        CalculationMode nvarchar(40) NOT NULL DEFAULT('Cumulative'),
-        RequiresApproval bit NOT NULL DEFAULT(0),
-        IsActive bit NOT NULL DEFAULT(1),
-        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
-    );
-END;
-
-IF OBJECT_ID('DisciplinaryMessageTemplates', 'U') IS NULL
-BEGIN
-    CREATE TABLE DisciplinaryMessageTemplates
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        Name nvarchar(180) NOT NULL,
-        TemplateType nvarchar(60) NOT NULL DEFAULT('PenaltyNotice'),
-        Subject nvarchar(250) NOT NULL,
-        Body nvarchar(max) NOT NULL,
-        IsDefault bit NOT NULL DEFAULT(0),
-        IsActive bit NOT NULL DEFAULT(1),
-        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
-    );
-END;
-
-IF OBJECT_ID('DisciplinaryTemplateTypes', 'U') IS NULL
-BEGIN
-    CREATE TABLE DisciplinaryTemplateTypes
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        Name nvarchar(180) NOT NULL,
-        Code nvarchar(80) NOT NULL,
-        Description nvarchar(max) NULL,
-        IsActive bit NOT NULL DEFAULT(1),
-        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
-    );
-END;
-
-IF OBJECT_ID('DisciplinarySettings', 'U') IS NULL
-BEGIN
-    CREATE TABLE DisciplinarySettings
-    (
-        [Key] nvarchar(120) NOT NULL PRIMARY KEY,
-        [Value] nvarchar(max) NULL,
-        UpdatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
-    );
-END;
-
-
-IF OBJECT_ID('DisciplinaryFormTextBlocks', 'U') IS NULL
-BEGIN
-    CREATE TABLE DisciplinaryFormTextBlocks
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        Area nvarchar(30) NOT NULL DEFAULT('Body'),
-        Text nvarchar(max) NOT NULL,
-        XPercent decimal(18,2) NOT NULL DEFAULT(8),
-        YPercent decimal(18,2) NOT NULL DEFAULT(25),
-        WidthPercent decimal(18,2) NOT NULL DEFAULT(84),
-        FontFamily nvarchar(80) NOT NULL DEFAULT('Tahoma'),
-        FontSize int NOT NULL DEFAULT(14),
-        FontColor nvarchar(20) NOT NULL DEFAULT('#0b1d31'),
-        IsBold bit NOT NULL DEFAULT(0),
-        TextAlign nvarchar(20) NOT NULL DEFAULT('right'),
-        IsActive bit NOT NULL DEFAULT(1),
-        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
-    );
-END;
-""");
     }
 
     private async Task SeedDefaultLibraryAsync(bool onlyIfEmpty)
