@@ -79,7 +79,27 @@ public class IndexModel : PageModel
         {
             var validPosition = await HrmsDatabase.ScalarAsync<int>(
                 _dbContext,
-                "SELECT COUNT(*) FROM JobPositions WHERE Name = @Name AND IsActive = 1",
+                """
+DECLARE @PositionCount int = 0;
+
+IF OBJECT_ID(N'dbo.HrJobPositions', N'U') IS NOT NULL
+BEGIN
+    SELECT @PositionCount = @PositionCount + COUNT(1)
+    FROM dbo.HrJobPositions
+    WHERE LTRIM(RTRIM(ISNULL(ArabicName, N''))) = @Name
+      AND ISNULL(IsActive, 1) = 1;
+END;
+
+IF OBJECT_ID(N'dbo.JobPositions', N'U') IS NOT NULL
+BEGIN
+    SELECT @PositionCount = @PositionCount + COUNT(1)
+    FROM dbo.JobPositions
+    WHERE LTRIM(RTRIM(ISNULL(Name, N''))) = @Name
+      AND ISNULL(IsActive, 1) = 1;
+END;
+
+SELECT @PositionCount;
+""",
                 command => HrmsDatabase.AddParameter(command, "@Name", Input.Position.Trim()));
 
             if (validPosition <= 0)
@@ -263,9 +283,39 @@ ORDER BY b.Name, d.Name;
         Positions = await HrmsDatabase.QueryAsync(
             _dbContext,
             """
-SELECT Id, Name
-FROM JobPositions
-WHERE IsActive = 1
+CREATE TABLE #PositionOptions
+(
+    Id int NOT NULL,
+    Name nvarchar(400) NOT NULL
+);
+
+IF OBJECT_ID(N'dbo.HrJobPositions', N'U') IS NOT NULL
+BEGIN
+    INSERT INTO #PositionOptions (Id, Name)
+    SELECT Id, LTRIM(RTRIM(ArabicName))
+    FROM dbo.HrJobPositions
+    WHERE LTRIM(RTRIM(ISNULL(ArabicName, N''))) <> N''
+      AND ISNULL(IsActive, 1) = 1;
+END;
+
+IF OBJECT_ID(N'dbo.JobPositions', N'U') IS NOT NULL
+BEGIN
+    INSERT INTO #PositionOptions (Id, Name)
+    SELECT j.Id, LTRIM(RTRIM(j.Name))
+    FROM dbo.JobPositions j
+    WHERE LTRIM(RTRIM(ISNULL(j.Name, N''))) <> N''
+      AND ISNULL(j.IsActive, 1) = 1
+      AND NOT EXISTS
+      (
+          SELECT 1
+          FROM #PositionOptions existing
+          WHERE existing.Name = LTRIM(RTRIM(j.Name))
+      );
+END;
+
+SELECT MIN(Id) AS Id, Name
+FROM #PositionOptions
+GROUP BY Name
 ORDER BY Name;
 """,
             null,

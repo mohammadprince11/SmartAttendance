@@ -91,21 +91,52 @@ CurrentPhotoPath = await GetEmployeePhotoPathAsync(Employee.Id);
         var positions = await HrmsDatabase.QueryAsync(
             _dbContext,
             @"
-IF OBJECT_ID(N'[dbo].[JobPositions]', N'U') IS NOT NULL
+CREATE TABLE #PositionOptions
+(
+    [Name] nvarchar(400) NOT NULL
+);
+
+IF OBJECT_ID(N'dbo.HrJobPositions', N'U') IS NOT NULL
 BEGIN
-    SELECT DISTINCT LTRIM(RTRIM([Name])) AS [Name]
-    FROM [dbo].[JobPositions]
-    WHERE LTRIM(RTRIM(ISNULL([Name], ''))) <> ''
-      AND (COL_LENGTH('dbo.JobPositions', 'IsActive') IS NULL OR ISNULL([IsActive], 1) = 1)
-    ORDER BY [Name];
-END
-ELSE
+    INSERT INTO #PositionOptions ([Name])
+    SELECT DISTINCT LTRIM(RTRIM([ArabicName]))
+    FROM [dbo].[HrJobPositions]
+    WHERE LTRIM(RTRIM(ISNULL([ArabicName], N''))) <> N''
+      AND ISNULL([IsActive], 1) = 1;
+END;
+
+IF OBJECT_ID(N'dbo.JobPositions', N'U') IS NOT NULL
 BEGIN
-    SELECT DISTINCT LTRIM(RTRIM([Position])) AS [Name]
-    FROM [dbo].[Employees]
-    WHERE LTRIM(RTRIM(ISNULL([Position], ''))) <> ''
-    ORDER BY [Name];
-END
+    INSERT INTO #PositionOptions ([Name])
+    SELECT DISTINCT LTRIM(RTRIM(j.[Name]))
+    FROM [dbo].[JobPositions] j
+    WHERE LTRIM(RTRIM(ISNULL(j.[Name], N''))) <> N''
+      AND ISNULL(j.[IsActive], 1) = 1
+      AND NOT EXISTS
+      (
+          SELECT 1
+          FROM #PositionOptions existing
+          WHERE existing.[Name] = LTRIM(RTRIM(j.[Name]))
+      );
+END;
+
+IF OBJECT_ID(N'dbo.Employees', N'U') IS NOT NULL
+BEGIN
+    INSERT INTO #PositionOptions ([Name])
+    SELECT DISTINCT LTRIM(RTRIM(e.[Position]))
+    FROM [dbo].[Employees] e
+    WHERE LTRIM(RTRIM(ISNULL(e.[Position], N''))) <> N''
+      AND NOT EXISTS
+      (
+          SELECT 1
+          FROM #PositionOptions existing
+          WHERE existing.[Name] = LTRIM(RTRIM(e.[Position]))
+      );
+END;
+
+SELECT DISTINCT [Name]
+FROM #PositionOptions
+ORDER BY [Name];
 ",
             command => { },
             reader => HrmsDatabase.GetString(reader, "Name"));
