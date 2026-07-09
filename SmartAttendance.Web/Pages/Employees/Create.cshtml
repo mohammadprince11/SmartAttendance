@@ -5,6 +5,7 @@
     var selectedDepartment = Model.Departments.FirstOrDefault(x => x.Id == Model.Employee.DepartmentId);
     var selectedWorkLocationId = selectedDepartment?.BranchId ?? 0;
     var workLocations = Model.Departments
+        .Where(x => x.BranchId > 0)
         .GroupBy(x => new { x.BranchId, x.BranchName })
         .OrderBy(x => x.Key.BranchName)
         .ToList();
@@ -21,7 +22,7 @@
 <link rel="stylesheet" href="~/css/nexora-employee-create-stable.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-photo-upload.css" asp-append-version="true" />
 
-<div class="nxr-page nxr-create-clean-page">
+<div class="nxr-page nxr-create-clean-page" dir="rtl">
     <section class="nxr-topline nxr-create-clean-header">
         <div class="nxr-title">
             <div class="nxr-brand-mini">NEXORA HR</div>
@@ -209,10 +210,10 @@
 <div class="nxr-field wide">
                     <label asp-for="Employee.DepartmentId">&#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</label>
                     <select data-nexora-select="true" asp-for="Employee.DepartmentId" class="nxr-native-select" id="Employee_DepartmentId">
-                        <option value="">اختر القسم</option>
-                        @foreach (var department in Model.Departments)
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</option>
+                        @foreach (var department in Model.Departments.OrderBy(x => x.BranchName).ThenBy(x => x.Name))
                         {
-                            <option value="@department.Id" data-work-location-id="@department.BranchId">@department.Name - @department.BranchName</option>
+                            <option value="@department.Id" data-work-location-id="@department.BranchId">@department.Name</option>
                         }
                     </select>
                     <span asp-validation-for="Employee.DepartmentId" class="text-danger"></span>
@@ -487,7 +488,254 @@
     .nxr-card.nxr-form-section {
         width: 100% !important;
         max-width: 100% !important;
-    }</style>
+    }
+    /* NEXORA_FIX05C_CREATE_EDIT_VISUAL_ALIGNMENT_START */
+    .nxr-page.nxr-create-clean-page {
+        display: grid !important;
+        gap: 16px !important;
+        max-width: 1400px !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+    }
+
+    .nxr-create-clean-header,
+    .nxr-card.nxr-form-section,
+    .nxr-create-submit-bar {
+        border: 1px solid rgba(34, 211, 238, .20) !important;
+        border-radius: 24px !important;
+        background:
+            radial-gradient(circle at 92% 8%, rgba(34, 211, 238, .09), transparent 34%),
+            linear-gradient(180deg, rgba(8, 30, 48, .64), rgba(5, 18, 32, .72)) !important;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,.025) !important;
+    }
+
+    .nxr-create-clean-header {
+        padding: 18px !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        gap: 16px !important;
+        align-items: center !important;
+        margin-bottom: 0 !important;
+    }
+
+    .nxr-create-clean-header .nxr-brand-mini,
+    .nxr-create-section .nxr-chip {
+        display: inline-flex !important;
+        align-items: center !important;
+        min-height: 27px !important;
+        padding: 4px 10px !important;
+        border-radius: 999px !important;
+        border: 1px solid rgba(215, 168, 79, .32) !important;
+        background: rgba(215, 168, 79, .08) !important;
+        color: #f3cd7a !important;
+        font-size: 12px !important;
+        font-weight: 900 !important;
+        letter-spacing: .02em !important;
+    }
+
+    .nxr-create-clean-header .nxr-title h1 {
+        margin: 8px 0 6px !important;
+        color: #f8fafc !important;
+        font-size: clamp(24px, 3vw, 34px) !important;
+        line-height: 1.2 !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-create-clean-header .nxr-title p,
+    .nxr-create-section .nxr-section-title p {
+        margin: 0 !important;
+        color: rgba(226, 232, 240, .72) !important;
+        line-height: 1.75 !important;
+    }
+
+    .nxr-create-section {
+        padding: 18px !important;
+        margin: 0 !important;
+    }
+
+    .nxr-create-section .nxr-section-title {
+        display: flex !important;
+        align-items: flex-start !important;
+        justify-content: space-between !important;
+        gap: 14px !important;
+        margin: 0 0 16px !important;
+        padding: 0 0 14px !important;
+        border-bottom: 1px solid rgba(148, 163, 184, .16) !important;
+    }
+
+    .nxr-create-section .nxr-section-title h2 {
+        margin: 6px 0 4px !important;
+        color: #f8fafc !important;
+        font-size: 20px !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-form.nxr-create-clean-form {
+        display: grid !important;
+        gap: 16px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .nxr-form-grid.nxr-create-grid,
+    .nxr-form-grid.nxr-create-grid.two {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 14px !important;
+        align-items: start !important;
+    }
+
+    .nxr-create-grid .wide,
+    .nxr-create-grid .nxr-field.wide {
+        grid-column: span 2 !important;
+    }
+
+    .nxr-create-clean-form .nxr-field {
+        display: grid !important;
+        gap: 7px !important;
+    }
+
+    .nxr-create-clean-form .nxr-field label {
+        color: rgba(226, 232, 240, .82) !important;
+        font-size: 13px !important;
+        font-weight: 900 !important;
+    }
+
+    .nxr-create-clean-form .nxr-field input,
+    .nxr-create-clean-form .nxr-field select,
+    .nxr-create-clean-form .nxr-field textarea,
+    .nxr-create-clean-form .nxr-native-select {
+        min-height: 46px !important;
+        width: 100% !important;
+        border-radius: 16px !important;
+        border: 1px solid rgba(148, 163, 184, .20) !important;
+        background: rgba(2, 13, 24, .46) !important;
+        color: #f8fafc !important;
+        padding: 10px 12px !important;
+        outline: none !important;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,.018) !important;
+        box-sizing: border-box !important;
+    }
+
+    .nxr-create-clean-form .nxr-field input:focus,
+    .nxr-create-clean-form .nxr-field select:focus,
+    .nxr-create-clean-form .nxr-field textarea:focus {
+        border-color: rgba(34, 211, 238, .55) !important;
+        box-shadow:
+            0 0 0 3px rgba(34, 211, 238, .10),
+            inset 0 0 0 1px rgba(255,255,255,.025) !important;
+    }
+
+    .nxr-create-clean-form .text-danger,
+    .nxr-create-clean-form [data-valmsg-for] {
+        min-height: 16px !important;
+        color: #fca5a5 !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
+    }
+
+    .nxr-actions,
+    .nxr-create-submit-bar {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 10px !important;
+    }
+
+    .nxr-create-submit-bar {
+        padding: 14px 18px !important;
+    }
+
+    .nxr-btn {
+        min-height: 42px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        padding: 10px 16px !important;
+        border-radius: 999px !important;
+        border: 1px solid rgba(148, 163, 184, .22) !important;
+        background: rgba(15, 23, 42, .62) !important;
+        color: #e2e8f0 !important;
+        font-weight: 950 !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
+    }
+
+    .nxr-btn.primary {
+        border-color: rgba(215, 168, 79, .55) !important;
+        background: linear-gradient(135deg, #c9963e, #f3cd7a) !important;
+        color: #101827 !important;
+        box-shadow: 0 14px 30px rgba(215, 168, 79, .18) !important;
+    }
+
+    .nxr-doc-clean-box,
+    .nxr-selected-documents {
+        border-radius: 20px !important;
+        border-color: rgba(34, 211, 238, .18) !important;
+        background: rgba(2, 13, 24, .30) !important;
+    }
+
+    html[data-theme="light"] .nxr-create-clean-header,
+    html[data-theme="light"] .nxr-card.nxr-form-section,
+    html[data-theme="light"] .nxr-create-submit-bar {
+        background: #ffffff !important;
+        border-color: #d8e5ef !important;
+        box-shadow: 0 16px 40px rgba(15, 23, 42, .08) !important;
+    }
+
+    html[data-theme="light"] .nxr-create-clean-header .nxr-title h1,
+    html[data-theme="light"] .nxr-create-section .nxr-section-title h2 {
+        color: #102033 !important;
+    }
+
+    html[data-theme="light"] .nxr-create-clean-header .nxr-title p,
+    html[data-theme="light"] .nxr-create-section .nxr-section-title p {
+        color: #607286 !important;
+    }
+
+    html[data-theme="light"] .nxr-create-clean-form .nxr-field label {
+        color: #334155 !important;
+    }
+
+    html[data-theme="light"] .nxr-create-clean-form .nxr-field input,
+    html[data-theme="light"] .nxr-create-clean-form .nxr-field select,
+    html[data-theme="light"] .nxr-create-clean-form .nxr-field textarea,
+    html[data-theme="light"] .nxr-create-clean-form .nxr-native-select {
+        background: #ffffff !important;
+        color: #102033 !important;
+        border-color: #d8e5ef !important;
+    }
+
+    @@media (max-width: 980px) {
+        .nxr-create-clean-header {
+            align-items: stretch !important;
+            flex-direction: column !important;
+        }
+
+        .nxr-actions,
+        .nxr-create-submit-bar {
+            justify-content: stretch !important;
+            flex-direction: column !important;
+        }
+
+        .nxr-actions .nxr-btn,
+        .nxr-create-submit-bar .nxr-btn {
+            width: 100% !important;
+        }
+
+        .nxr-form-grid.nxr-create-grid,
+        .nxr-form-grid.nxr-create-grid.two {
+            grid-template-columns: 1fr !important;
+        }
+
+        .nxr-create-grid .wide,
+        .nxr-create-grid .nxr-field.wide {
+            grid-column: auto !important;
+        }
+    }
+    /* NEXORA_FIX05C_CREATE_EDIT_VISUAL_ALIGNMENT_END */
+</style>
 
 
 
