@@ -10,6 +10,8 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
 
+    private const int FieldLabelMaxLength = 150;
+
     private static readonly ProfileSectionDefinition[] FixedSections =
     {
         new("basic", "\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629", "Basic Data"),
@@ -44,8 +46,8 @@ public class IndexModel : PageModel
     {
         await EnsureSchemaAsync();
 
-        Field.FieldLabel = (Field.FieldLabel ?? string.Empty).Trim();
-        Field.SectionKey = (Field.SectionKey ?? string.Empty).Trim();
+        Field.SectionKey = NormalizeSectionKey(Field.SectionKey);
+        Field.FieldLabel = NormalizeLabel(Field.FieldLabel);
         Field.FieldType = NormalizeFieldType(Field.FieldType);
 
         if (!IsValidSection(Field.SectionKey))
@@ -54,11 +56,21 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        if (string.IsNullOrWhiteSpace(Field.FieldLabel))
+        if (!ValidateLabel(Field.FieldLabel, out var labelError))
         {
-            TempData["ProfileSettingsError"] = "\u0627\u0633\u0645 \u0627\u0644\u062D\u0642\u0644 \u0645\u0637\u0644\u0648\u0628.";
+            TempData["ProfileSettingsError"] = labelError;
             return RedirectToPage();
         }
+
+        if (await FieldLabelExistsAsync(Field.SectionKey, Field.FieldLabel, null))
+        {
+            TempData["ProfileSettingsError"] = "\u064A\u0648\u062C\u062F \u062D\u0642\u0644 \u0628\u0646\u0641\u0633 \u0627\u0644\u0627\u0633\u0645 \u062F\u0627\u062E\u0644 \u0646\u0641\u0633 \u0627\u0644\u0642\u0633\u0645.";
+            return RedirectToPage();
+        }
+
+        var sortOrder = Field.SortOrder > 0
+            ? Field.SortOrder
+            : await GetNextSortOrderAsync(Field.SectionKey);
 
         var fieldKey = GenerateFieldKey(Field.SectionKey);
 
@@ -97,7 +109,7 @@ VALUES
                 HrmsDatabase.AddParameter(command, "@FieldLabel", Field.FieldLabel);
                 HrmsDatabase.AddParameter(command, "@FieldType", Field.FieldType);
                 HrmsDatabase.AddParameter(command, "@IsRequired", Field.IsRequired ? 1 : 0);
-                HrmsDatabase.AddParameter(command, "@SortOrder", Field.SortOrder);
+                HrmsDatabase.AddParameter(command, "@SortOrder", sortOrder);
             });
 
         TempData["ProfileSettingsMessage"] = "\u062A\u0645\u062A \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062D\u0642\u0644 \u0628\u0646\u062C\u0627\u062D.";
@@ -108,9 +120,10 @@ VALUES
     {
         await EnsureSchemaAsync();
 
-        EditField.FieldLabel = (EditField.FieldLabel ?? string.Empty).Trim();
-        EditField.SectionKey = (EditField.SectionKey ?? string.Empty).Trim();
+        EditField.SectionKey = NormalizeSectionKey(EditField.SectionKey);
+        EditField.FieldLabel = NormalizeLabel(EditField.FieldLabel);
         EditField.FieldType = NormalizeFieldType(EditField.FieldType);
+        EditField.SortOrder = Math.Max(0, EditField.SortOrder);
 
         if (id <= 0)
         {
@@ -124,15 +137,33 @@ VALUES
             return RedirectToPage();
         }
 
-        if (string.IsNullOrWhiteSpace(EditField.FieldLabel))
+        if (!await FieldExistsAsync(id))
         {
-            TempData["ProfileSettingsError"] = "\u0627\u0633\u0645 \u0627\u0644\u062D\u0642\u0644 \u0645\u0637\u0644\u0648\u0628.";
+            TempData["ProfileSettingsError"] = "\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062D\u0642\u0644.";
+            return RedirectToPage();
+        }
+
+        if (!ValidateLabel(EditField.FieldLabel, out var labelError))
+        {
+            TempData["ProfileSettingsError"] = labelError;
+            return RedirectToPage();
+        }
+
+        if (await FieldLabelExistsAsync(EditField.SectionKey, EditField.FieldLabel, id))
+        {
+            TempData["ProfileSettingsError"] = "\u064A\u0648\u062C\u062F \u062D\u0642\u0644 \u0622\u062E\u0631 \u0628\u0646\u0641\u0633 \u0627\u0644\u0627\u0633\u0645 \u062F\u0627\u062E\u0644 \u0646\u0641\u0633 \u0627\u0644\u0642\u0633\u0645.";
             return RedirectToPage();
         }
 
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
             """
+DECLARE @FieldKey nvarchar(120);
+
+SELECT @FieldKey = FieldKey
+FROM EmployeeProfileFieldDefinitions
+WHERE Id = @Id;
+
 UPDATE EmployeeProfileFieldDefinitions
 SET SectionKey = @SectionKey,
     FieldLabel = @FieldLabel,
@@ -142,15 +173,13 @@ SET SectionKey = @SectionKey,
     UpdatedAt = SYSUTCDATETIME()
 WHERE Id = @Id;
 
-UPDATE EmployeeCustomFields
-SET FieldLabel = @FieldLabel,
-    UpdatedAt = SYSUTCDATETIME()
-WHERE FieldKey =
-(
-    SELECT FieldKey
-    FROM EmployeeProfileFieldDefinitions
-    WHERE Id = @Id
-);
+IF @FieldKey IS NOT NULL
+BEGIN
+    UPDATE EmployeeCustomFields
+    SET FieldLabel = @FieldLabel,
+        UpdatedAt = SYSUTCDATETIME()
+    WHERE FieldKey = @FieldKey;
+END;
 """,
             command =>
             {
@@ -170,6 +199,12 @@ WHERE FieldKey =
     {
         await EnsureSchemaAsync();
 
+        if (id <= 0 || !await FieldExistsAsync(id))
+        {
+            TempData["ProfileSettingsError"] = "\u0627\u0644\u062D\u0642\u0644 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D.";
+            return RedirectToPage();
+        }
+
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
             """
@@ -188,7 +223,7 @@ WHERE Id = @Id;
     {
         await EnsureSchemaAsync();
 
-        if (id <= 0)
+        if (id <= 0 || !await FieldExistsAsync(id))
         {
             TempData["ProfileSettingsError"] = "\u0627\u0644\u062D\u0642\u0644 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D.";
             return RedirectToPage();
@@ -233,7 +268,17 @@ SELECT
     IsActive,
     SortOrder
 FROM EmployeeProfileFieldDefinitions
-ORDER BY SectionKey, SortOrder, Id;
+ORDER BY
+    CASE SectionKey
+        WHEN 'basic' THEN 10
+        WHEN 'personal' THEN 20
+        WHEN 'job' THEN 30
+        WHEN 'financial' THEN 40
+        WHEN 'additional' THEN 50
+        ELSE 99
+    END,
+    SortOrder,
+    Id;
 """,
             command => { },
             reader => new ProfileFieldView
@@ -309,6 +354,18 @@ BEGIN
     ON [dbo].[EmployeeProfileFieldDefinitions] ([SectionKey], [SortOrder], [Id]);
 END;
 
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = N'IX_EmployeeProfileFieldDefinitions_Section_Label'
+      AND object_id = OBJECT_ID(N'[dbo].[EmployeeProfileFieldDefinitions]')
+)
+BEGIN
+    CREATE INDEX IX_EmployeeProfileFieldDefinitions_Section_Label
+    ON [dbo].[EmployeeProfileFieldDefinitions] ([SectionKey], [FieldLabel]);
+END;
+
 IF OBJECT_ID(N'[dbo].[EmployeeCustomFields]', N'U') IS NULL
 BEGIN
     CREATE TABLE [dbo].[EmployeeCustomFields]
@@ -336,9 +393,97 @@ END;
 """);
     }
 
+    private async Task<bool> FieldExistsAsync(int id)
+    {
+        var result = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT COUNT(1) AS CountValue
+FROM EmployeeProfileFieldDefinitions
+WHERE Id = @Id;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", id),
+            reader => GetInt(reader, "CountValue"));
+
+        return result.FirstOrDefault() > 0;
+    }
+
+    private async Task<bool> FieldLabelExistsAsync(string sectionKey, string fieldLabel, int? excludeId)
+    {
+        var result = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT COUNT(1) AS CountValue
+FROM EmployeeProfileFieldDefinitions
+WHERE LOWER(LTRIM(RTRIM(SectionKey))) = LOWER(@SectionKey)
+  AND LOWER(LTRIM(RTRIM(FieldLabel))) = LOWER(@FieldLabel)
+  AND (@ExcludeId IS NULL OR Id <> @ExcludeId);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@SectionKey", NormalizeSectionKey(sectionKey));
+                HrmsDatabase.AddParameter(command, "@FieldLabel", NormalizeLabel(fieldLabel));
+                HrmsDatabase.AddParameter(command, "@ExcludeId", excludeId.HasValue ? excludeId.Value : DBNull.Value);
+            },
+            reader => GetInt(reader, "CountValue"));
+
+        return result.FirstOrDefault() > 0;
+    }
+
+    private async Task<int> GetNextSortOrderAsync(string sectionKey)
+    {
+        var result = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT ISNULL(MAX(SortOrder), 0) + 10 AS NextSortOrder
+FROM EmployeeProfileFieldDefinitions
+WHERE LOWER(LTRIM(RTRIM(SectionKey))) = LOWER(@SectionKey);
+""",
+            command => HrmsDatabase.AddParameter(command, "@SectionKey", NormalizeSectionKey(sectionKey)),
+            reader => GetInt(reader, "NextSortOrder"));
+
+        var next = result.FirstOrDefault();
+        return next > 0 ? next : 10;
+    }
+
+    private static bool ValidateLabel(string fieldLabel, out string error)
+    {
+        if (string.IsNullOrWhiteSpace(fieldLabel))
+        {
+            error = "\u0627\u0633\u0645 \u0627\u0644\u062D\u0642\u0644 \u0645\u0637\u0644\u0648\u0628.";
+            return false;
+        }
+
+        if (fieldLabel.Length > FieldLabelMaxLength)
+        {
+            error = "\u0627\u0633\u0645 \u0627\u0644\u062D\u0642\u0644 \u0637\u0648\u064A\u0644 \u062C\u062F\u0627\u064B.";
+            return false;
+        }
+
+        error = string.Empty;
+        return true;
+    }
+
     private static bool IsValidSection(string sectionKey)
     {
         return FixedSections.Any(section => section.Key.Equals(sectionKey, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string NormalizeSectionKey(string? sectionKey)
+    {
+        return (sectionKey ?? string.Empty).Trim().ToLowerInvariant();
+    }
+
+    private static string NormalizeLabel(string? value)
+    {
+        var label = (value ?? string.Empty).Trim();
+
+        while (label.Contains("  ", StringComparison.Ordinal))
+        {
+            label = label.Replace("  ", " ", StringComparison.Ordinal);
+        }
+
+        return label;
     }
 
     private static string GenerateFieldKey(string sectionKey)
