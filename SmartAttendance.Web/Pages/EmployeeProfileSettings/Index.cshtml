@@ -1,7 +1,7 @@
 @page
 @model SmartAttendance.Web.Pages.EmployeeProfileSettings.IndexModel
 @{
-    ViewData["Title"] = "Employee Profile Settings";
+    ViewData["Title"] = "\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u062D\u0642\u0648\u0644 \u0645\u0644\u0641 \u0627\u0644\u0645\u0648\u0638\u0641";
     var message = TempData["ProfileSettingsMessage"] as string;
     var error = TempData["ProfileSettingsError"] as string;
 }
@@ -13,12 +13,14 @@
 
 @section Scripts {
     <script src="~/js/nexora-employee-profile-settings-modals.js" asp-append-version="true"></script>
-}<div class="nxr-profile-settings-page" dir="rtl">
+}
+
+<div class="nxr-profile-settings-page nxr-profile-settings-page-v2" dir="rtl">
     <section class="nxr-profile-settings-hero">
         <div>
-            <span>NEXORA Employee Profile Settings</span>
+            <span>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x062D;&#x0642;&#x0648;&#x0644; &#x0627;&#x0644;&#x062F;&#x064A;&#x0646;&#x0627;&#x0645;&#x064A;&#x0643;&#x064A;&#x0629;</span>
             <h1>&#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h1>
-            <p>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629;&#x060C; &#x062A;&#x0639;&#x062F;&#x064A;&#x0644;&#x060C; &#x062A;&#x0641;&#x0639;&#x064A;&#x0644; &#x0648;&#x062D;&#x0630;&#x0641; &#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;.</p>
+            <p>&#x062A;&#x062D;&#x0643;&#x0645; &#x0628;&#x0627;&#x0644;&#x062D;&#x0642;&#x0648;&#x0644; &#x0627;&#x0644;&#x0625;&#x0636;&#x0627;&#x0641;&#x064A;&#x0629; &#x0627;&#x0644;&#x062A;&#x064A; &#x062A;&#x0638;&#x0647;&#x0631; &#x062F;&#x0627;&#x062E;&#x0644; &#x0635;&#x0641;&#x062D;&#x0627;&#x062A; &#x0625;&#x0636;&#x0627;&#x0641;&#x0629;&#x060C; &#x062A;&#x0639;&#x062F;&#x064A;&#x0644;&#x060C; &#x0648;&#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;.</p>
         </div>
         <div class="nxr-profile-settings-badge">
             <strong>@Model.TotalFields</strong>
@@ -26,6 +28,24 @@
         </div>
     </section>
 
+    <!-- NEXORA_FIX08B_PROFILE_SETTINGS_UI_MARKER -->
+    <section class="nxr-profile-settings-guide" aria-label="Profile fields guide">
+        <div class="nxr-profile-settings-guide-item">
+            <strong>01</strong>
+            <span>&#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</span>
+            <p>&#x062D;&#x062F;&#x062F; &#x0645;&#x0643;&#x0627;&#x0646; &#x0638;&#x0647;&#x0648;&#x0631; &#x0627;&#x0644;&#x062D;&#x0642;&#x0644; &#x062F;&#x0627;&#x062E;&#x0644; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;.</p>
+        </div>
+        <div class="nxr-profile-settings-guide-item">
+            <strong>02</strong>
+            <span>&#x0646;&#x0648;&#x0639; &#x0627;&#x0644;&#x062D;&#x0642;&#x0644;</span>
+            <p>&#x0646;&#x0635;&#x060C; &#x0631;&#x0642;&#x0645;&#x060C; &#x062A;&#x0627;&#x0631;&#x064A;&#x062E;&#x060C; &#x0623;&#x0648; &#x0646;&#x0635; &#x0637;&#x0648;&#x064A;&#x0644;.</p>
+        </div>
+        <div class="nxr-profile-settings-guide-item">
+            <strong>03</strong>
+            <span>&#x0627;&#x0644;&#x062A;&#x0631;&#x062A;&#x064A;&#x0628;</span>
+            <p>&#x0627;&#x0644;&#x0631;&#x0642;&#x0645; &#x0627;&#x0644;&#x0623;&#x0635;&#x063A;&#x0631; &#x064A;&#x0638;&#x0647;&#x0631; &#x0623;&#x0648;&#x0644;&#x0627;&#x064B; &#x062F;&#x0627;&#x062E;&#x0644; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;.</p>
+        </div>
+    </section>
     @if (!string.IsNullOrWhiteSpace(message))
     {
         <div class="nxr-profile-settings-alert success">@message</div>
@@ -39,9 +59,9 @@
     <section class="nxr-profile-settings-card">
         <div class="nxr-profile-settings-card-head">
             <div>
-                <span>Field Builder</span>
+                <span>&#x0628;&#x0646;&#x0627;&#x0621; &#x0627;&#x0644;&#x062D;&#x0642;&#x0648;&#x0644;</span>
                 <h2>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x062D;&#x0642;&#x0644; &#x062C;&#x062F;&#x064A;&#x062F;</h2>
-                <p>&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0648;&#x0627;&#x0643;&#x062A;&#x0628; &#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x062D;&#x0642;&#x0644;. &#x0645;&#x0641;&#x062A;&#x0627;&#x062D; &#x0627;&#x0644;&#x062D;&#x0642;&#x0644; &#x064A;&#x062A;&#x0648;&#x0644;&#x062F; &#x062A;&#x0644;&#x0642;&#x0627;&#x0626;&#x064A;&#x0627;&#x064B;.</p>
+                <p>&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;&#x060C; &#x0627;&#x0643;&#x062A;&#x0628; &#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x062D;&#x0642;&#x0644;&#x060C; &#x0648;&#x062D;&#x062F;&#x062F; &#x0646;&#x0648;&#x0639;&#x0647;. &#x0627;&#x0644;&#x0645;&#x0641;&#x062A;&#x0627;&#x062D; &#x064A;&#x062A;&#x0648;&#x0644;&#x062F; &#x062A;&#x0644;&#x0642;&#x0627;&#x0626;&#x064A;&#x0627;&#x064B; &#x0644;&#x062D;&#x0645;&#x0627;&#x064A;&#x0629; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A;.</p>
             </div>
         </div>
 
@@ -87,6 +107,13 @@
         </form>
     </section>
 
+    <section class="nxr-profile-settings-list-head">
+        <div>
+            <span>&#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645; &#x0627;&#x0644;&#x0645;&#x0639;&#x062A;&#x0645;&#x062F;&#x0629;</span>
+            <h2>&#x0627;&#x0644;&#x062D;&#x0642;&#x0648;&#x0644; &#x0627;&#x0644;&#x0645;&#x0636;&#x0627;&#x0641;&#x0629;</h2>
+        </div>
+        <small>@Model.TotalFields &#x062D;&#x0642;&#x0644;</small>
+    </section>
     <section class="nxr-profile-settings-sections">
         @foreach (var profileSection in Model.Sections)
         {
@@ -111,7 +138,7 @@
                         @foreach (var field in profileSection.Fields)
                         {
                             <div class="nxr-profile-settings-field-row @(field.IsActive ? "" : "is-disabled")">
-                                <div>
+                                <div class="nxr-profile-settings-field-main">
                                     <b>@field.FieldLabel</b>
                                     <span>@field.FieldTypeLabel</span>
                                 </div>

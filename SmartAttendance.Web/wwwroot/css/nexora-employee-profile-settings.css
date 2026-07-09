@@ -560,3 +560,250 @@ body.nxr-profile-settings-modal-active {
     }
 }
 /* NEXORA_FIX07G_PROFILE_SETTINGS_MODALS_END */
+
+/* NEXORA_FIX08B_PROFILE_SETTINGS_UI_START */
+.nxr-profile-settings-page-v2 {
+    width: min(1280px, calc(100vw - 340px));
+    padding-top: 22px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-hero {
+    position: relative;
+    overflow: hidden;
+    min-height: 150px;
+    border-color: rgba(245, 201, 107, .20);
+    background:
+        radial-gradient(circle at top left, rgba(245, 201, 107, .16), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(34, 211, 238, .14), transparent 38%),
+        linear-gradient(135deg, rgba(10, 35, 54, .97), rgba(4, 17, 29, .99));
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-hero::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: -80px;
+    top: -110px;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    border: 1px solid rgba(34, 211, 238, .18);
+    background: rgba(34, 211, 238, .05);
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-hero > * {
+    position: relative;
+    z-index: 1;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-hero h1 {
+    font-size: clamp(28px, 3vw, 38px);
+    line-height: 1.35;
+}
+
+.nxr-profile-settings-guide {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin: 0 0 20px;
+}
+
+.nxr-profile-settings-guide-item {
+    border: 1px solid rgba(34, 211, 238, .16);
+    border-radius: 20px;
+    background: rgba(6, 22, 34, .62);
+    padding: 16px;
+    display: grid;
+    gap: 6px;
+    min-height: 116px;
+}
+
+.nxr-profile-settings-guide-item strong {
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    color: #03202c;
+    background: linear-gradient(135deg, #f5c96b, #22d3ee);
+    font-weight: 1000;
+}
+
+.nxr-profile-settings-guide-item span {
+    color: #fff;
+    font-weight: 1000;
+}
+
+.nxr-profile-settings-guide-item p {
+    margin: 0;
+    color: #9fb8c9;
+    font-weight: 800;
+    line-height: 1.7;
+    font-size: 13px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-card {
+    border-color: rgba(245, 201, 107, .18);
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-form {
+    grid-template-columns: 1.05fr 1.7fr .95fr .75fr .85fr auto;
+    gap: 12px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field.span-2 {
+    grid-column: span 1;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field input,
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field select {
+    min-height: 50px;
+    border-radius: 16px;
+    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field input:hover,
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field select:hover {
+    border-color: rgba(245, 201, 107, .36);
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-actions button {
+    min-width: 148px;
+    box-shadow: 0 12px 28px rgba(34, 211, 238, .16);
+}
+
+.nxr-profile-settings-list-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 14px;
+    margin: 8px 0 14px;
+    padding: 0 4px;
+}
+
+.nxr-profile-settings-list-head span {
+    color: #f5c96b;
+    font-size: 12px;
+    font-weight: 1000;
+    letter-spacing: .08em;
+}
+
+.nxr-profile-settings-list-head h2 {
+    margin: 5px 0 0;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 1000;
+}
+
+.nxr-profile-settings-list-head small {
+    border: 1px solid rgba(34, 211, 238, .18);
+    border-radius: 999px;
+    background: rgba(34, 211, 238, .08);
+    color: #dff9ff;
+    padding: 8px 13px;
+    font-weight: 1000;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section {
+    padding: 18px;
+    min-height: 240px;
+    transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section:hover {
+    border-color: rgba(34, 211, 238, .28);
+    transform: translateY(-2px);
+    box-shadow: 0 28px 80px rgba(0, 0, 0, .34);
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section header h3 {
+    font-size: 19px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field-row {
+    grid-template-columns: minmax(220px, 1fr) minmax(220px, auto) auto;
+    padding: 14px;
+    border-radius: 18px;
+    background:
+        linear-gradient(135deg, rgba(34, 211, 238, .055), rgba(245, 201, 107, .035)),
+        rgba(6, 22, 34, .64);
+}
+
+.nxr-profile-settings-field-main {
+    min-width: 0;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field-row b {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-pills {
+    justify-content: flex-end;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-pills small {
+    background: rgba(255, 255, 255, .025);
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-row-actions {
+    gap: 7px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-edit-shell summary,
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field-row form button {
+    min-height: 38px;
+    border-radius: 13px;
+    transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-edit-shell summary:hover,
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field-row form button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(245, 201, 107, .38);
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field-row form button.danger:hover {
+    border-color: rgba(255, 92, 122, .60);
+    background: rgba(255, 92, 122, .18);
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-empty {
+    min-height: 132px;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, .018);
+}
+
+@media (max-width: 1320px) {
+    .nxr-profile-settings-page-v2 {
+        width: min(100%, calc(100vw - 40px));
+    }
+
+    .nxr-profile-settings-page-v2 .nxr-profile-settings-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .nxr-profile-settings-guide {
+        grid-template-columns: 1fr;
+    }
+
+    .nxr-profile-settings-page-v2 .nxr-profile-settings-form {
+        grid-template-columns: 1fr;
+    }
+
+    .nxr-profile-settings-page-v2 .nxr-profile-settings-field-row {
+        grid-template-columns: 1fr;
+    }
+
+    .nxr-profile-settings-page-v2 .nxr-profile-settings-pills {
+        justify-content: flex-start;
+    }
+
+    .nxr-profile-settings-list-head {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+/* NEXORA_FIX08B_PROFILE_SETTINGS_UI_END */
