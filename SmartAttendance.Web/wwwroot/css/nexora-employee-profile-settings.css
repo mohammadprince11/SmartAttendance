@@ -1,0 +1,320 @@
+.nxr-profile-settings-page {
+    width: min(1120px, calc(100vw - 340px));
+    margin-inline: auto;
+    padding: 28px 24px 64px;
+    color: #eaf7ff;
+}
+
+.nxr-profile-settings-hero,
+.nxr-profile-settings-card,
+.nxr-profile-settings-section {
+    border: 1px solid rgba(34, 211, 238, .18);
+    background:
+        linear-gradient(135deg, rgba(13, 40, 60, .94), rgba(6, 22, 34, .98)),
+        rgba(7, 20, 32, .96);
+    border-radius: 24px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .28);
+}
+
+.nxr-profile-settings-hero {
+    min-height: 138px;
+    padding: 28px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 20px;
+}
+
+.nxr-profile-settings-hero span,
+.nxr-profile-settings-card-head span,
+.nxr-profile-settings-section header span {
+    display: inline-flex;
+    color: #f5c96b;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .08em;
+}
+
+.nxr-profile-settings-hero h1,
+.nxr-profile-settings-card h2,
+.nxr-profile-settings-section h3 {
+    margin: 8px 0 6px;
+    color: #fff;
+    font-weight: 1000;
+}
+
+.nxr-profile-settings-hero h1 {
+    font-size: clamp(30px, 4vw, 44px);
+}
+
+.nxr-profile-settings-hero p,
+.nxr-profile-settings-card p {
+    margin: 0;
+    color: #9fb8c9;
+    font-weight: 800;
+    line-height: 1.8;
+}
+
+.nxr-profile-settings-badge {
+    min-width: 130px;
+    min-height: 100px;
+    border: 1px solid rgba(34, 211, 238, .25);
+    border-radius: 22px;
+    background: rgba(34, 211, 238, .08);
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 18px;
+}
+
+.nxr-profile-settings-badge strong {
+    display: block;
+    color: #22d3ee;
+    font-size: 36px;
+    line-height: 1;
+}
+
+.nxr-profile-settings-badge span {
+    color: #d7e8f3;
+    letter-spacing: 0;
+}
+
+.nxr-profile-settings-alert {
+    border-radius: 18px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    font-weight: 900;
+}
+
+.nxr-profile-settings-alert.success {
+    border: 1px solid rgba(60, 220, 160, .28);
+    background: rgba(60, 220, 160, .10);
+    color: #98ffd6;
+}
+
+.nxr-profile-settings-alert.danger {
+    border: 1px solid rgba(255, 92, 122, .35);
+    background: rgba(255, 92, 122, .10);
+    color: #ffc3cf;
+}
+
+.nxr-profile-settings-card {
+    padding: 26px;
+    margin-bottom: 22px;
+}
+
+.nxr-profile-settings-card-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(160, 190, 210, .12);
+    margin-bottom: 18px;
+}
+
+.nxr-profile-settings-form {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    align-items: end;
+}
+
+.nxr-profile-settings-field {
+    display: grid;
+    gap: 8px;
+}
+
+.nxr-profile-settings-field.span-2 {
+    grid-column: span 2;
+}
+
+.nxr-profile-settings-field label,
+.nxr-profile-settings-check span {
+    color: #f5c96b;
+    font-weight: 950;
+    font-size: 13px;
+}
+
+.nxr-profile-settings-field input,
+.nxr-profile-settings-field select {
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid rgba(34, 211, 238, .25);
+    border-radius: 15px;
+    background: rgba(4, 18, 29, .75);
+    color: #fff;
+    padding: 0 14px;
+    font: inherit;
+    font-weight: 850;
+    outline: none;
+}
+
+.nxr-profile-settings-field input:focus,
+.nxr-profile-settings-field select:focus {
+    border-color: rgba(34, 211, 238, .75);
+    box-shadow: 0 0 0 4px rgba(34, 211, 238, .12);
+}
+
+.nxr-profile-settings-check {
+    min-height: 48px;
+    border: 1px solid rgba(34, 211, 238, .18);
+    border-radius: 15px;
+    background: rgba(34, 211, 238, .07);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+}
+
+.nxr-profile-settings-check input {
+    width: 18px;
+    height: 18px;
+    accent-color: #22d3ee;
+}
+
+.nxr-profile-settings-actions {
+    display: flex;
+}
+
+.nxr-profile-settings-actions button,
+.nxr-profile-settings-field-row form button {
+    border: 1px solid rgba(34, 211, 238, .30);
+    border-radius: 15px;
+    background: linear-gradient(135deg, #22d3ee, #29d5d8);
+    color: #03202c;
+    min-height: 48px;
+    padding: 0 18px;
+    font: inherit;
+    font-weight: 1000;
+    cursor: pointer;
+}
+
+.nxr-profile-settings-sections {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.nxr-profile-settings-section {
+    min-height: 220px;
+    padding: 20px;
+}
+
+.nxr-profile-settings-section header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid rgba(160, 190, 210, .12);
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+}
+
+.nxr-profile-settings-section header strong {
+    min-width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    background: rgba(34, 211, 238, .10);
+    border: 1px solid rgba(34, 211, 238, .22);
+    color: #22d3ee;
+    font-size: 20px;
+}
+
+.nxr-profile-settings-empty {
+    border: 1px dashed rgba(140, 170, 190, .22);
+    border-radius: 18px;
+    padding: 24px;
+    color: #9fb8c9;
+    font-weight: 850;
+    text-align: center;
+}
+
+.nxr-profile-settings-field-list {
+    display: grid;
+    gap: 10px;
+}
+
+.nxr-profile-settings-field-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid rgba(34, 211, 238, .16);
+    background: rgba(6, 22, 34, .58);
+    border-radius: 16px;
+    padding: 12px;
+}
+
+.nxr-profile-settings-field-row.is-disabled {
+    opacity: .58;
+}
+
+.nxr-profile-settings-field-row b {
+    display: block;
+    color: #fff;
+    font-weight: 1000;
+}
+
+.nxr-profile-settings-field-row span {
+    color: #94aebe;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.nxr-profile-settings-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.nxr-profile-settings-pills small {
+    border: 1px solid rgba(160, 190, 210, .16);
+    border-radius: 999px;
+    padding: 5px 9px;
+    color: #b6c8d4;
+    font-weight: 900;
+}
+
+.nxr-profile-settings-pills small.required {
+    color: #f5c96b;
+    border-color: rgba(245, 201, 107, .28);
+}
+
+.nxr-profile-settings-pills small.active {
+    color: #73ffd8;
+    border-color: rgba(115, 255, 216, .25);
+}
+
+.nxr-profile-settings-field-row form button {
+    min-height: 36px;
+    padding: 0 14px;
+    background: rgba(34, 211, 238, .10);
+    color: #dff9ff;
+}
+
+@media (max-width: 1180px) {
+    .nxr-profile-settings-page {
+        width: min(100%, calc(100vw - 40px));
+    }
+
+    .nxr-profile-settings-form,
+    .nxr-profile-settings-sections {
+        grid-template-columns: 1fr;
+    }
+
+    .nxr-profile-settings-field.span-2 {
+        grid-column: span 1;
+    }
+
+    .nxr-profile-settings-hero {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .nxr-profile-settings-field-row {
+        grid-template-columns: 1fr;
+    }
+}

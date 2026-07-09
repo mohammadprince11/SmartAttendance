@@ -1,0 +1,150 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeeProfileSettings.IndexModel
+@{
+    ViewData["Title"] = "Employee Profile Settings";
+    var message = TempData["ProfileSettingsMessage"] as string;
+    var error = TempData["ProfileSettingsError"] as string;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/nexora-employee-profile-settings.css" asp-append-version="true" />
+}
+
+<div class="nxr-profile-settings-page" dir="rtl">
+    <section class="nxr-profile-settings-hero">
+        <div>
+            <span>NEXORA Employee Profile Settings</span>
+            <h1>&#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h1>
+            <p>&#x062A;&#x062B;&#x0628;&#x064A;&#x062A; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645; &#x0627;&#x0644;&#x062E;&#x0645;&#x0633;&#x0629; &#x0648;&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0627;&#x0644;&#x062D;&#x0642;&#x0648;&#x0644; &#x0628;&#x062F;&#x0648;&#x0646; &#x062A;&#x063A;&#x064A;&#x064A;&#x0631; &#x0647;&#x064A;&#x0643;&#x0644; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;.</p>
+        </div>
+        <div class="nxr-profile-settings-badge">
+            <strong>@Model.TotalFields</strong>
+            <span>&#x062D;&#x0642;&#x0644; &#x0645;&#x0639;&#x0631;&#x0651;&#x0641;</span>
+        </div>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <div class="nxr-profile-settings-alert success">@message</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(error))
+    {
+        <div class="nxr-profile-settings-alert danger">@error</div>
+    }
+
+    <section class="nxr-profile-settings-card">
+        <div class="nxr-profile-settings-card-head">
+            <div>
+                <span>Field Builder</span>
+                <h2>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x062D;&#x0642;&#x0644; &#x062C;&#x062F;&#x064A;&#x062F;</h2>
+                <p>&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0648;&#x0627;&#x0643;&#x062A;&#x0628; &#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x062D;&#x0642;&#x0644;. &#x0645;&#x0641;&#x062A;&#x0627;&#x062D; &#x0627;&#x0644;&#x062D;&#x0642;&#x0644; &#x064A;&#x062A;&#x0648;&#x0644;&#x062F; &#x062A;&#x0644;&#x0642;&#x0627;&#x0626;&#x064A;&#x0627;&#x064B;.</p>
+            </div>
+        </div>
+
+        <form method="post" asp-page-handler="AddField" class="nxr-profile-settings-form">
+            <div class="nxr-profile-settings-field">
+                <label asp-for="Field.SectionKey">&#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</label>
+                <select asp-for="Field.SectionKey">
+                    @foreach (var profileSection in Model.Sections)
+                    {
+                        <option value="@profileSection.Key">@profileSection.Label</option>
+                    }
+                </select>
+            </div>
+
+            <div class="nxr-profile-settings-field span-2">
+                <label asp-for="Field.FieldLabel">&#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x062D;&#x0642;&#x0644;</label>
+                <input asp-for="Field.FieldLabel" placeholder="&#x0645;&#x062B;&#x0627;&#x0644;: &#x0631;&#x0642;&#x0645; &#x062C;&#x0648;&#x0627;&#x0632; &#x0627;&#x0644;&#x0633;&#x0641;&#x0631;" />
+            </div>
+
+            <div class="nxr-profile-settings-field">
+                <label asp-for="Field.FieldType">&#x0646;&#x0648;&#x0639; &#x0627;&#x0644;&#x062D;&#x0642;&#x0644;</label>
+                <select asp-for="Field.FieldType">
+                    <option value="text">&#x0646;&#x0635;</option>
+                    <option value="number">&#x0631;&#x0642;&#x0645;</option>
+                    <option value="date">&#x062A;&#x0627;&#x0631;&#x064A;&#x062E;</option>
+                    <option value="textarea">&#x0646;&#x0635; &#x0637;&#x0648;&#x064A;&#x0644;</option>
+                </select>
+            </div>
+
+            <div class="nxr-profile-settings-field">
+                <label asp-for="Field.SortOrder">&#x0627;&#x0644;&#x062A;&#x0631;&#x062A;&#x064A;&#x0628;</label>
+                <input asp-for="Field.SortOrder" type="number" min="0" />
+            </div>
+
+            <label class="nxr-profile-settings-check">
+                <input asp-for="Field.IsRequired" />
+                <span>&#x062D;&#x0642;&#x0644; &#x0645;&#x0637;&#x0644;&#x0648;&#x0628;</span>
+            </label>
+
+            <div class="nxr-profile-settings-actions">
+                <button type="submit">&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0627;&#x0644;&#x062D;&#x0642;&#x0644;</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="nxr-profile-settings-sections">
+        @foreach (var profileSection in Model.Sections)
+        {
+            <article class="nxr-profile-settings-section">
+                <header>
+                    <div>
+                        <span>@profileSection.Description</span>
+                        <h3>@profileSection.Label</h3>
+                    </div>
+                    <strong>@profileSection.Fields.Count</strong>
+                </header>
+
+                @if (profileSection.Fields.Count == 0)
+                {
+                    <div class="nxr-profile-settings-empty">
+                        &#x0644;&#x0627; &#x062A;&#x0648;&#x062C;&#x062F; &#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0636;&#x0627;&#x0641;&#x0629; &#x062D;&#x0627;&#x0644;&#x064A;&#x0627;&#x064B; &#x062F;&#x0627;&#x062E;&#x0644; &#x0647;&#x0630;&#x0627; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;.
+                    </div>
+                }
+                else
+                {
+                    <div class="nxr-profile-settings-field-list">
+                        @foreach (var field in profileSection.Fields)
+                        {
+                            <div class="nxr-profile-settings-field-row @(field.IsActive ? "" : "is-disabled")">
+                                <div>
+                                    <b>@field.FieldLabel</b>
+                                    <span>@field.FieldTypeLabel</span>
+                                </div>
+
+                                <div class="nxr-profile-settings-pills">
+                                    @if (field.IsRequired)
+                                    {
+                                        <small class="required">&#x0645;&#x0637;&#x0644;&#x0648;&#x0628;</small>
+                                    }
+                                    else
+                                    {
+                                        <small>&#x0627;&#x062E;&#x062A;&#x064A;&#x0627;&#x0631;&#x064A;</small>
+                                    }
+
+                                    @if (field.IsActive)
+                                    {
+                                        <small class="active">&#x0641;&#x0639;&#x0627;&#x0644;</small>
+                                    }
+                                    else
+                                    {
+                                        <small>&#x0645;&#x0639;&#x0637;&#x0644;</small>
+                                    }
+
+                                    <small>#@field.SortOrder</small>
+                                </div>
+
+                                <form method="post" asp-page-handler="ToggleField" asp-route-id="@field.Id">
+                                    <button type="submit">
+                                        @(field.IsActive ? "\u062A\u0639\u0637\u064A\u0644" : "\u062A\u0641\u0639\u064A\u0644")
+                                    </button>
+                                </form>
+                            </div>
+                        }
+                    </div>
+                }
+            </article>
+        }
+    </section>
+</div>

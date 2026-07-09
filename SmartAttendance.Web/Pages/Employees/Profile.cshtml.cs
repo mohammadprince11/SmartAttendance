@@ -50,6 +50,8 @@ public partial class ProfileModel : PageModel
 
     public List<AuditRow> AuditRows { get; set; } = new();
 
+    public List<EmployeeProfileDynamicSection> ProfileDynamicSections { get; set; } = new();
+
     public int AttendanceCount { get; set; }
 
     public int PresentCount { get; set; }
@@ -89,6 +91,11 @@ public partial class ProfileModel : PageModel
         }
 
         Employee = await LoadEmployeeAsync();
+
+        if (Employee != null)
+        {
+            ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, Employee.Id);
+        }
 
         if (Employee == null)
         {

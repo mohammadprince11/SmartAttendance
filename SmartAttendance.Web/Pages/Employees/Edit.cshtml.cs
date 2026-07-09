@@ -41,6 +41,8 @@ public class EditModel : PageModel
 
     
     public List<string> PositionOptions { get; set; } = new();
+
+    public List<EmployeeProfileDynamicSection> ProfileDynamicSections { get; set; } = new();
 public string? ErrorMessage { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
@@ -57,6 +59,7 @@ public string? ErrorMessage { get; set; }
         
         PositionOptions = await LoadPositionOptionsAsync(Employee.Position);
 CurrentPhotoPath = await GetEmployeePhotoPathAsync(Employee.Id);
+        ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, Employee.Id);
 
         return Page();
     }
@@ -66,6 +69,7 @@ CurrentPhotoPath = await GetEmployeePhotoPathAsync(Employee.Id);
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
         CurrentPhotoPath = Employee.Id > 0 ? await GetEmployeePhotoPathAsync(Employee.Id) : string.Empty;
+        ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, Employee.Id > 0 ? Employee.Id : 0);
 
         if (!ModelState.IsValid)
             return Page();
@@ -79,6 +83,7 @@ CurrentPhotoPath = await GetEmployeePhotoPathAsync(Employee.Id);
         }
 
         var photoResult = await SaveEmployeePhotoAsync(Employee.Id);
+        await EmployeeProfileDynamicFields.SaveAsync(_dbContext, Employee.Id, Request.Form);
 
         TempData["SuccessMessage"] = string.IsNullOrWhiteSpace(photoResult)
             ? "تم تحديث بيانات الموظف بنجاح."

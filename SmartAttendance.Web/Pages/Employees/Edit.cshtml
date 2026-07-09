@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="~/css/nexora-edit-custom-datepicker.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-photo-upload.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-edit-clean-layout.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-employee-profile-dynamic-fields.css" asp-append-version="true" />
 
 <div class="nxr-edit-final-page" dir="rtl">
     <section class="nxr-edit-final-hero">
@@ -255,7 +256,68 @@
                 </div>
             </div>
 
-            <div class="nxr-edit-final-actions">
+            
+        @* NEXORA_DYNAMIC_PROFILE_EDIT_MARKER *@
+
+        @if (Model.ProfileDynamicSections.Any(profileSection => profileSection.Fields.Count > 0))
+        {
+            <section class="nxr-edit-final-card nxr-profile-dynamic-edit-card">
+                <div class="nxr-edit-final-card-head">
+                    <div>
+                        <span>Dynamic Profile Fields</span>
+                        <h2>&#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h2>
+                        <p>&#x0627;&#x0644;&#x062D;&#x0642;&#x0648;&#x0644; &#x0627;&#x0644;&#x0645;&#x0636;&#x0627;&#x0641;&#x0629; &#x0645;&#x0646; &#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;.</p>
+                    </div>
+                </div>
+
+                <div class="nxr-profile-dynamic-sections">
+                    @foreach (var profileSection in Model.ProfileDynamicSections.Where(item => item.Fields.Count > 0))
+                    {
+                        <article class="nxr-profile-dynamic-edit-section">
+                            <div class="nxr-profile-dynamic-section-head">
+                                <h3>@profileSection.Label</h3>
+                                <span>@profileSection.Fields.Count &#x062D;&#x0642;&#x0644;</span>
+                            </div>
+
+                            <div class="nxr-edit-final-grid">
+                                @foreach (var field in profileSection.Fields)
+                                {
+                                    var inputId = $"ProfileCustomValues_{field.FieldKey}";
+                                    var requiredValue = field.IsRequired ? "required" : null;
+
+                                    <div class="nxr-edit-field @(field.IsTextArea ? "nxr-span-2" : "")">
+                                        <label for="@inputId">
+                                            @field.FieldLabel
+                                            @if (field.IsRequired)
+                                            {
+                                                <span>*</span>
+                                            }
+                                        </label>
+
+                                        @if (field.IsTextArea)
+                                        {
+                                            <textarea id="@inputId"
+                                                      name="ProfileCustomValues[@field.FieldKey]"
+                                                      required="@requiredValue"
+                                                      rows="3">@field.FieldValue</textarea>
+                                        }
+                                        else
+                                        {
+                                            <input id="@inputId"
+                                                   name="ProfileCustomValues[@field.FieldKey]"
+                                                   type="@field.InputType"
+                                                   value="@field.FieldValue"
+                                                   required="@requiredValue" />
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+        <div class="nxr-edit-final-actions">
                 <button type="submit" class="nxr-edit-btn primary">&#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;</button>
                 <a asp-page="./Profile" asp-route-id="@Model.Employee.Id" class="nxr-edit-btn secondary">&#x0625;&#x0644;&#x063A;&#x0627;&#x0621; &#x0648;&#x0627;&#x0644;&#x0639;&#x0648;&#x062F;&#x0629; &#x0644;&#x0644;&#x0645;&#x0644;&#x0641;</a>
             </div>

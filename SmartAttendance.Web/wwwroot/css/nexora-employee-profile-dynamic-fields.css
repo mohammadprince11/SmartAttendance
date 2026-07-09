@@ -1,0 +1,148 @@
+.nxr-profile-dynamic-edit-card {
+    margin-top: 18px;
+}
+
+.nxr-profile-dynamic-sections {
+    display: grid;
+    gap: 18px;
+}
+
+.nxr-profile-dynamic-edit-section {
+    border: 1px solid rgba(34, 211, 238, .16);
+    background: rgba(4, 18, 29, .42);
+    border-radius: 20px;
+    padding: 18px;
+}
+
+.nxr-profile-dynamic-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(160, 190, 210, .12);
+}
+
+.nxr-profile-dynamic-section-head h3 {
+    margin: 0;
+    color: #fff;
+    font-weight: 1000;
+}
+
+.nxr-profile-dynamic-section-head span {
+    color: #f5c96b;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.nxr-profile-dynamic-view-card-wide {
+    grid-column: span 2;
+}
+
+.nxr-profile-dynamic-view-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.nxr-profile-dynamic-view-row {
+    border: 1px solid rgba(34, 211, 238, .14);
+    border-radius: 16px;
+    background: rgba(4, 18, 29, .48);
+    padding: 12px 14px;
+}
+
+.nxr-profile-dynamic-view-row strong {
+    display: block;
+    color: #9fb8c9;
+    font-size: 12px;
+    font-weight: 900;
+    margin-bottom: 4px;
+}
+
+.nxr-profile-dynamic-view-row span {
+    display: block;
+    color: #fff;
+    font-weight: 950;
+    word-break: break-word;
+}
+
+.nxr-profile-dynamic-empty-value {
+    color: #7f98aa !important;
+}
+
+@media (max-width: 980px) {
+    .nxr-profile-dynamic-view-card-wide {
+        grid-column: span 1;
+    }
+
+    .nxr-profile-dynamic-view-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* NEXORA_FIX07D_DYNAMIC_SUMMARY_START */
+.nxr-profile-dynamic-summary-item {
+    border: 1px solid rgba(34, 211, 238, .14);
+    border-radius: 14px;
+    background: rgba(4, 18, 29, .38);
+    padding: 10px 12px;
+}
+
+.nxr-profile-dynamic-summary-item span {
+    display: block;
+    color: #9fb8c9;
+    font-size: 12px;
+    font-weight: 900;
+    margin-bottom: 4px;
+}
+
+.nxr-profile-dynamic-summary-item strong {
+    display: block;
+    color: #fff;
+    font-weight: 1000;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.nxr-profile-dynamic-summary-extra {
+    margin-top: 0;
+}
+
+.nxr-profile-dynamic-empty-value {
+    color: #7f98aa !important;
+}
+/* NEXORA_FIX07D_DYNAMIC_SUMMARY_END */
+
+/* NEXORA_FIX07E_ALIGN_DYNAMIC_SUMMARY_STYLE_START */
+.nxr-kayan-info-grid .nxr-profile-dynamic-summary-item {
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    min-height: auto !important;
+}
+
+.nxr-kayan-info-grid .nxr-profile-dynamic-summary-item span {
+    display: block !important;
+    color: inherit;
+    opacity: .72;
+    font-size: inherit;
+    font-weight: inherit;
+    margin: 0 0 4px !important;
+}
+
+.nxr-kayan-info-grid .nxr-profile-dynamic-summary-item strong {
+    display: block !important;
+    color: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    word-break: break-word;
+}
+
+.nxr-kayan-info-grid .nxr-profile-dynamic-summary-item .nxr-profile-dynamic-empty-value {
+    opacity: .55;
+}
+/* NEXORA_FIX07E_ALIGN_DYNAMIC_SUMMARY_STYLE_END */
