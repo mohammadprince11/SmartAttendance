@@ -1,4 +1,4 @@
-﻿/* NEXORA Employee Create Documents - Final */
+/* NEXORA Employee Create Documents - Final */
 (function () {
     "use strict";
 
@@ -147,7 +147,8 @@
                 </div>
                 <div>
                     <label>اختيار الملف</label>
-                    <input id="InitialDocumentFiles_${index}" type="file" name="InitialDocumentFiles[${index}]" data-document-file accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" />
+                    <button type="button" class="nxr-document-file-trigger" data-document-file-trigger>&#1575;&#1582;&#1578;&#1610;&#1575;&#1585; &#1605;&#1604;&#1601;</button>
+                    <input id="InitialDocumentFiles_${index}" type="file" class="nxr-document-file-input" name="InitialDocumentFiles[${index}]" data-document-file accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" />
                     <div class="nxr-document-file-name" data-document-file-name></div>
                 </div>
                 <button type="button" class="nxr-document-remove" data-document-remove aria-label="حذف المستمسك">×</button>
@@ -184,6 +185,15 @@
         });
 
         list.addEventListener("click", function (event) {
+            const trigger = event.target.closest("[data-document-file-trigger]");
+            if (!trigger) return;
+
+            event.preventDefault();
+            const row = trigger.closest(".nxr-document-row");
+            const file = row ? qs("[data-document-file]", row) : null;
+            if (file) file.click();
+        });
+        list.addEventListener("click", function (event) {
             const remove = event.target.closest("[data-document-remove]");
             if (!remove) return;
             event.preventDefault();
@@ -192,6 +202,21 @@
             updateSummary();
         });
 
+        list.addEventListener("change", function (event) {
+            if (!event.target.matches("[data-document-file]")) return;
+
+            const row = event.target.closest(".nxr-document-row");
+            const trigger = row ? qs("[data-document-file-trigger]", row) : null;
+            if (!trigger) return;
+
+            if (event.target.files && event.target.files.length) {
+                trigger.textContent = event.target.files[0].name;
+                trigger.classList.add("is-selected");
+            } else {
+                trigger.textContent = "\u0627\u062e\u062a\u064a\u0627\u0631 \u0645\u0644\u0641";
+                trigger.classList.remove("is-selected");
+            }
+        });
         list.addEventListener("change", function (event) {
             const row = event.target.closest(".nxr-document-row");
             if (!row) return;
