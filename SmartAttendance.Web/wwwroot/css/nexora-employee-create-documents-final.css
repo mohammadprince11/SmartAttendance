@@ -379,3 +379,80 @@
     display: none !important;
 }
 /* NEXORA_FIX04S_DOCUMENT_VALIDATION_END */
+
+/* NEXORA_FIX05K_DOCUMENT_MODAL_CENTER_ONLY_START */
+#nxrDocumentsModal.nxr-documents-modal-centered-fix,
+.nxr-documents-modal-centered-fix {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    margin: 0 !important;
+    padding: 24px !important;
+    z-index: 99999 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    background: rgba(2, 8, 15, .72) !important;
+}
+
+#nxrDocumentsModal.nxr-documents-modal-centered-fix[aria-hidden="true"] {
+    display: none !important;
+    pointer-events: none !important;
+}
+
+#nxrDocumentsModal.nxr-documents-modal-centered-fix.open,
+#nxrDocumentsModal.nxr-documents-modal-centered-fix[aria-hidden="false"] {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    pointer-events: auto !important;
+}
+
+#nxrDocumentsModal.nxr-documents-modal-centered-fix .nxr-documents-modal-panel {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
+    margin: 0 auto !important;
+    width: min(780px, calc(100vw - 48px)) !important;
+    max-width: min(780px, calc(100vw - 48px)) !important;
+    max-height: min(620px, calc(100vh - 48px)) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+#nxrDocumentsModal.nxr-documents-modal-centered-fix .nxr-documents-modal-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: visible !important;
+}
+
+#nxrDocumentsModal.nxr-documents-modal-centered-fix .nxr-documents-modal-head,
+#nxrDocumentsModal.nxr-documents-modal-centered-fix .nxr-documents-modal-actions {
+    flex: 0 0 auto !important;
+}
+
+#nxrDocumentsModal.nxr-documents-modal-centered-fix .nxr-doc-custom-select.open {
+    z-index: 70000 !important;
+}
+
+#nxrDocumentsModal.nxr-documents-modal-centered-fix .nxr-doc-custom-select-panel {
+    z-index: 70001 !important;
+}
+
+@media (max-height: 760px) {
+    #nxrDocumentsModal.nxr-documents-modal-centered-fix {
+        padding: 14px !important;
+        align-items: center !important;
+    }
+
+    #nxrDocumentsModal.nxr-documents-modal-centered-fix .nxr-documents-modal-panel {
+        max-height: calc(100vh - 28px) !important;
+    }
+}
+/* NEXORA_FIX05K_DOCUMENT_MODAL_CENTER_ONLY_END */

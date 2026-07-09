@@ -284,3 +284,62 @@
     document.addEventListener("DOMContentLoaded", initDocumentsModal);
 })();
 
+// NEXORA_FIX05K_DOCUMENT_MODAL_CENTER_ONLY_START
+(function () {
+    function qs(selector, scope) {
+        return (scope || document).querySelector(selector);
+    }
+
+    function qsa(selector, scope) {
+        return Array.prototype.slice.call((scope || document).querySelectorAll(selector));
+    }
+
+    function getModal() {
+        return qs("#nxrDocumentsModal") || qs("[data-nxr-documents-modal]");
+    }
+
+    function attachModalFieldsToForm(modal) {
+        var form = qs("#employee-create-form");
+        if (!modal || !form || !form.id) {
+            return;
+        }
+
+        qsa("input, select, textarea", modal).forEach(function (field) {
+            if (field.name && field.getAttribute("form") !== form.id) {
+                field.setAttribute("form", form.id);
+            }
+        });
+    }
+
+    function centerDocumentModal() {
+        var modal = getModal();
+
+        if (!modal || !document.body) {
+            return;
+        }
+
+        if (modal.parentNode !== document.body) {
+            document.body.appendChild(modal);
+        }
+
+        modal.classList.add("nxr-documents-modal-centered-fix");
+        attachModalFieldsToForm(modal);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", centerDocumentModal);
+    } else {
+        centerDocumentModal();
+    }
+
+    document.addEventListener("click", function (event) {
+        if (event.target && event.target.closest && event.target.closest("[data-nxr-documents-open]")) {
+            centerDocumentModal();
+            setTimeout(centerDocumentModal, 0);
+            setTimeout(centerDocumentModal, 80);
+        }
+    }, true);
+
+    window.NexoraCenterDocumentsModal = centerDocumentModal;
+})();
+// NEXORA_FIX05K_DOCUMENT_MODAL_CENTER_ONLY_END
