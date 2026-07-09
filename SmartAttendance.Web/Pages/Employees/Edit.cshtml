@@ -165,9 +165,7 @@
                     <label asp-for="Employee.BirthDate">&#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0627;&#x0644;&#x0645;&#x064A;&#x0644;&#x0627;&#x062F;</label>
                     <input name="Employee.BirthDate" id="Employee_BirthDate" value="@(Model.Employee.BirthDate?.ToString("yyyy-MM-dd"))" type="text" data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" />
                     <span asp-validation-for="Employee.BirthDate"></span>
-                </div>
-
-                <div class="nxr-edit-field">
+                </div>                <div class="nxr-edit-field">
                     <label asp-for="Employee.Gender">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;</label>
                     <select asp-for="Employee.Gender" class="nxr-native-select">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631;...</option>
@@ -175,38 +173,6 @@
                         <option value="Female">&#x0623;&#x0646;&#x062B;&#x0649;</option>
                     </select>
                     <span asp-validation-for="Employee.Gender"></span>
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.Nationality">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</label>
-                    <select asp-for="Employee.Nationality" class="nxr-native-select">
-                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</option>
-                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Nationality) &&
-                             !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownNationality(Model.Employee.Nationality))
-                        {
-                            <option value="@Model.Employee.Nationality">@Model.Employee.Nationality</option>
-                        }
-                        @foreach (var nationality in SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.Nationalities)
-                        {
-                            <option value="@nationality">@nationality</option>
-                        }
-                    </select>
-                    <span asp-validation-for="Employee.Nationality"></span>
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.Country">&#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</label>
-                    <select asp-for="Employee.Country" class="nxr-native-select">
-                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</option>
-                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Country) &&
-                             !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownCountry(Model.Employee.Country))
-                        {
-                            <option value="@Model.Employee.Country">@Model.Employee.Country</option>
-                        }
-                        @foreach (var country in SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.Countries)
-                        {
-                            <option value="@country">@country</option>
-                        }
-                    </select>
-                    <span asp-validation-for="Employee.Country"></span>
                 </div>
 
                 <div class="nxr-edit-field">
@@ -220,6 +186,70 @@
                         <option value="Separated">&#x0645;&#x0646;&#x0641;&#x0635;&#x0644;</option>
                     </select>
                     <span asp-validation-for="Employee.MaritalStatus"></span>
+                </div>
+
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.Country">&#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</label>
+                    <select asp-for="Employee.Country" class="nxr-native-select">
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</option>
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Country) &&
+                            !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownCountry(Model.Employee.Country))
+                        {
+                            <option value="@Model.Employee.Country">@Model.Employee.Country</option>
+                        }
+                        <option value="Iraq">&#x0627;&#x0644;&#x0639;&#x0631;&#x0627;&#x0642;</option>
+                        <option value="Syria">&#x0633;&#x0648;&#x0631;&#x064A;&#x0627;</option>
+                        <option value="Jordan">&#x0627;&#x0644;&#x0623;&#x0631;&#x062F;&#x0646;</option>
+                        <option value="Lebanon">&#x0644;&#x0628;&#x0646;&#x0627;&#x0646;</option>
+                        <option value="Saudi Arabia">&#x0627;&#x0644;&#x0633;&#x0639;&#x0648;&#x062F;&#x064A;&#x0629;</option>
+                        <option value="United Arab Emirates">&#x0627;&#x0644;&#x0625;&#x0645;&#x0627;&#x0631;&#x0627;&#x062A;</option>
+                        <option value="Qatar">&#x0642;&#x0637;&#x0631;</option>
+                        <option value="Kuwait">&#x0627;&#x0644;&#x0643;&#x0648;&#x064A;&#x062A;</option>
+                        <option value="Bahrain">&#x0627;&#x0644;&#x0628;&#x062D;&#x0631;&#x064A;&#x0646;</option>
+                        <option value="Oman">&#x0639;&#x0645;&#x0627;&#x0646;</option>
+                        <option value="Egypt">&#x0645;&#x0635;&#x0631;</option>
+                        <option value="Turkey">&#x062A;&#x0631;&#x0643;&#x064A;&#x0627;</option>
+                        <option value="Iran">&#x0625;&#x064A;&#x0631;&#x0627;&#x0646;</option>
+                        <option value="India">&#x0627;&#x0644;&#x0647;&#x0646;&#x062F;</option>
+                        <option value="Pakistan">&#x0628;&#x0627;&#x0643;&#x0633;&#x062A;&#x0627;&#x0646;</option>
+                        <option value="Bangladesh">&#x0628;&#x0646;&#x063A;&#x0644;&#x0627;&#x062F;&#x0634;</option>
+                        <option value="Philippines">&#x0627;&#x0644;&#x0641;&#x0644;&#x0628;&#x064A;&#x0646;</option>
+                        <option value="Nepal">&#x0646;&#x064A;&#x0628;&#x0627;&#x0644;</option>
+                        <option value="Other">&#x0623;&#x062E;&#x0631;&#x0649;</option>
+                    </select>
+                    <span asp-validation-for="Employee.Country"></span>
+                </div>
+
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.Nationality">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</label>
+                    <select asp-for="Employee.Nationality" class="nxr-native-select">
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</option>
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Nationality) &&
+                            !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownNationality(Model.Employee.Nationality))
+                        {
+                            <option value="@Model.Employee.Nationality">@Model.Employee.Nationality</option>
+                        }
+                        <option value="Iraqi">&#x0639;&#x0631;&#x0627;&#x0642;&#x064A;</option>
+                        <option value="Syrian">&#x0633;&#x0648;&#x0631;&#x064A;</option>
+                        <option value="Jordanian">&#x0623;&#x0631;&#x062F;&#x0646;&#x064A;</option>
+                        <option value="Lebanese">&#x0644;&#x0628;&#x0646;&#x0627;&#x0646;&#x064A;</option>
+                        <option value="Saudi">&#x0633;&#x0639;&#x0648;&#x062F;&#x064A;</option>
+                        <option value="Emirati">&#x0625;&#x0645;&#x0627;&#x0631;&#x0627;&#x062A;&#x064A;</option>
+                        <option value="Qatari">&#x0642;&#x0637;&#x0631;&#x064A;</option>
+                        <option value="Kuwaiti">&#x0643;&#x0648;&#x064A;&#x062A;&#x064A;</option>
+                        <option value="Bahraini">&#x0628;&#x062D;&#x0631;&#x064A;&#x0646;&#x064A;</option>
+                        <option value="Omani">&#x0639;&#x0645;&#x0627;&#x0646;&#x064A;</option>
+                        <option value="Egyptian">&#x0645;&#x0635;&#x0631;&#x064A;</option>
+                        <option value="Turkish">&#x062A;&#x0631;&#x0643;&#x064A;</option>
+                        <option value="Iranian">&#x0625;&#x064A;&#x0631;&#x0627;&#x0646;&#x064A;</option>
+                        <option value="Indian">&#x0647;&#x0646;&#x062F;&#x064A;</option>
+                        <option value="Pakistani">&#x0628;&#x0627;&#x0643;&#x0633;&#x062A;&#x0627;&#x0646;&#x064A;</option>
+                        <option value="Bangladeshi">&#x0628;&#x0646;&#x063A;&#x0644;&#x0627;&#x062F;&#x0634;&#x064A;</option>
+                        <option value="Filipino">&#x0641;&#x0644;&#x0628;&#x064A;&#x0646;&#x064A;</option>
+                        <option value="Nepali">&#x0646;&#x064A;&#x0628;&#x0627;&#x0644;&#x064A;</option>
+                        <option value="Other">&#x0623;&#x062E;&#x0631;&#x0649;</option>
+                    </select>
+                    <span asp-validation-for="Employee.Nationality"></span>
                 </div>
             </div>
 
