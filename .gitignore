@@ -49,3 +49,7 @@ obj/
 # Uploaded employee files
 SmartAttendance.Web/wwwroot/uploads/employee-documents/
 __Archive_RemovedPages/
+appsettings.json
+appsettings.*.json
+!appsettings.example.json
+_nexora_backups/
