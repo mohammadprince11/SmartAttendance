@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -114,7 +115,7 @@ END",
                     ("BirthDate", ProfileInput.BirthDate),
                     ("Nationality", ProfileInput.Nationality),
                     ("Country", ProfileInput.Country)));
-                HrmsDatabase.AddParameter(command, "@UserName", Request.Cookies["SA.UserName"]);
+                HrmsDatabase.AddParameter(command, "@UserName", User.Identity?.Name ?? "System");
                 HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
             });
 
@@ -169,7 +170,7 @@ END",
 
     private int GetCurrentEmployeeId()
     {
-        var employeeIdText = Request.Cookies["SA.EmployeeId"] ?? "";
+        var employeeIdText = User.FindFirstValue("EmployeeId") ?? "";
         return int.TryParse(employeeIdText, out var employeeId) ? employeeId : 0;
     }
 

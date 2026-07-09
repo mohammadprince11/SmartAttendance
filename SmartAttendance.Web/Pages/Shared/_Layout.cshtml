@@ -44,11 +44,11 @@
 
 <body dir="rtl">
     @{
-        var loginUser = Context.Request.Cookies["SA.UserName"];
-        var displayNameCookie = Context.Request.Cookies["SA.DisplayName"];
+        var loginUser = Context.User.Identity?.Name;
+        var displayNameCookie = Context.Request.Cookies["SA.DisplayName"] ?? Context.User.FindFirst("DisplayName")?.Value;
         var loginDisplayName = !string.IsNullOrWhiteSpace(displayNameCookie) ? displayNameCookie : loginUser;
-        var loginRole = Context.Request.Cookies["SA.Role"] ?? "";
-        var loginEmployeeId = Context.Request.Cookies["SA.EmployeeId"] ?? "";
+        var loginRole = Context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+        var loginEmployeeId = Context.User.FindFirst("EmployeeId")?.Value ?? "";
         var isLoggedIn = !string.IsNullOrWhiteSpace(loginUser);
 
         var pageTitle = ViewData["Title"]?.ToString() ?? "NEXORA";

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -26,10 +27,16 @@ public class RoleSecurityMiddleware
             return;
         }
 
-        var userId = context.Request.Cookies["SA.UserId"];
-        var username = context.Request.Cookies["SA.UserName"];
-        var role = context.Request.Cookies["SA.Role"];
-        var employeeId = context.Request.Cookies["SA.EmployeeId"];
+        if (context.User?.Identity?.IsAuthenticated != true)
+        {
+            RedirectToLogin(context);
+            return;
+        }
+
+        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var username = context.User.Identity?.Name ?? context.User.FindFirstValue(ClaimTypes.Name);
+        var role = context.User.FindFirstValue(ClaimTypes.Role);
+        var employeeId = context.User.FindFirstValue("EmployeeId");
 
         if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(role))
         {

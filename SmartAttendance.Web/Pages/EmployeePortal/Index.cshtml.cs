@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -426,12 +427,14 @@ VALUES
 
     private async Task<int> ResolveEmployeeIdAsync()
     {
-        if (int.TryParse(Request.Cookies["SA.EmployeeId"], out var cookieEmployeeId) && cookieEmployeeId > 0)
+        var employeeIdClaim = User.FindFirstValue("EmployeeId");
+
+        if (int.TryParse(employeeIdClaim, out var claimEmployeeId) && claimEmployeeId > 0)
         {
-            return cookieEmployeeId;
+            return claimEmployeeId;
         }
 
-        var username = Request.Cookies["SA.UserName"];
+        var username = User.Identity?.Name ?? User.FindFirstValue(ClaimTypes.Name);
         if (!string.IsNullOrWhiteSpace(username))
         {
             return await HrmsDatabase.ScalarAsync<int>(

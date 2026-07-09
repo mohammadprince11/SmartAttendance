@@ -1,4 +1,5 @@
-﻿using SmartAttendance.Web.Infrastructure.Security;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using SmartAttendance.Web.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.AttendanceImports.Services;
 using SmartAttendance.Application.AttendanceProcessing.Services;
@@ -42,6 +43,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
 
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.AccessDeniedPath = "/AccessDenied";
+        options.Cookie.Name = "NEXORA.Auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.SlidingExpiration = true;
+    });
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -103,6 +115,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseRouting();
+app.UseAuthentication();
 app.UseMiddleware<RoleSecurityMiddleware>();
 
 app.UseAuthorization();

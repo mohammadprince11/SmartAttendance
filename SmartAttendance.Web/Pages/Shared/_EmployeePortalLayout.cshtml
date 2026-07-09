@@ -1,7 +1,7 @@
-﻿@{
+@{
     Layout = null;
-    var userName = Context.Request.Cookies["SA.UserName"] ?? "employee";
-    var role = Context.Request.Cookies["SA.Role"] ?? "Employee";
+    var userName = Context.User.Identity?.Name ?? "employee";
+    var role = Context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Employee";
 }
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">

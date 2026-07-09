@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Security;
@@ -85,6 +88,27 @@ public class LoginModel : PageModel
         var displayName = !string.IsNullOrWhiteSpace(user.EmployeeName)
             ? user.EmployeeName
             : user.Username;
+
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Name, user.Username),
+            new(ClaimTypes.Role, user.Role),
+            new("DisplayName", displayName),
+            new("EmployeeId", user.EmployeeId?.ToString() ?? string.Empty)
+        };
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        var authProperties = new AuthenticationProperties
+        {
+            IsPersistent = RememberMe,
+            ExpiresUtc = expiry,
+            AllowRefresh = true
+        };
+
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);
 
         Response.Cookies.Append("SA.UserId", user.Id.ToString(), cookieOptions);
         Response.Cookies.Append("SA.UserName", user.Username, cookieOptions);
