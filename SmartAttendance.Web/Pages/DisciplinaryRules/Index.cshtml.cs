@@ -114,7 +114,7 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostSeedBodyTextLayersAsync()
     {
         await EnsureTablesAsync();
-        await SeedBodyTextLayersAsync(forceRebuild: true);
+        await SeedBodyTextLayersAsync();
 
         
         await UpsertSettingAsync("BodyTextLayersSeeded", "true");StatusMessage = "تم إنشاء النصوص الأساسية كطبقات منفصلة. افتح كل طبقة وعدّلها مثل Word.";
@@ -940,15 +940,8 @@ IF NOT EXISTS (SELECT 1 FROM DisciplinaryTemplateTypes WHERE Code = N'FinalWarni
         await UpsertSettingIfMissingAsync("MainBodyTextAlign", "right");
 }
 
-    private async Task SeedBodyTextLayersAsync(bool forceRebuild)
+    private async Task SeedBodyTextLayersAsync()
     {
-if (forceRebuild)
-        {
-            await HrmsDatabase.ExecuteAsync(
-                _dbContext,
-                "DELETE FROM DisciplinaryFormTextBlocks WHERE Area = 'Body';");
-        }
-
         var bodyCount = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
             "SELECT COUNT(1) FROM DisciplinaryFormTextBlocks WHERE Area = 'Body';");
