@@ -46,7 +46,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        await EnsureReadyAsync();
+        await PositionSchema.EnsureAsync(_dbContext);
 
         await LoadAsync();
 
@@ -61,7 +61,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostSaveEmployeeAsync()
     {
-        await EnsureReadyAsync();
+        await PositionSchema.EnsureAsync(_dbContext);
 
         if (Input.Id <= 0)
         {
@@ -193,7 +193,7 @@ VALUES ('Employee', CAST(@Id AS nvarchar(80)), 'Update Full Employee File', @Old
 
     public async Task<IActionResult> OnPostUploadDocumentAsync()
     {
-        await EnsureReadyAsync();
+        await PositionSchema.EnsureAsync(_dbContext);
 
         if (Document.EmployeeId <= 0)
         {
@@ -451,32 +451,6 @@ ORDER BY UploadedAt DESC;
                 Notes = HrmsDatabase.GetString(reader, "Notes"),
                 UploadedAt = HrmsDatabase.GetDateTime(reader, "UploadedAt")
             });
-    }
-
-    private async Task EnsureReadyAsync()
-    {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            """
-IF OBJECT_ID('JobPositions', 'U') IS NULL
-BEGIN
-    CREATE TABLE JobPositions
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        Code nvarchar(50) NOT NULL,
-        Name nvarchar(150) NOT NULL,
-        Description nvarchar(500) NULL,
-        IsActive bit NOT NULL DEFAULT(1),
-        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME()),
-        UpdatedAt datetime2 NULL
-    );
-
-    CREATE UNIQUE INDEX IX_JobPositions_Code ON JobPositions(Code);
-    CREATE UNIQUE INDEX IX_JobPositions_Name ON JobPositions(Name);
-END;
-""");
     }
 
     public class EmployeeFileInput
