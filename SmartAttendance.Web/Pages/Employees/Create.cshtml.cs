@@ -53,6 +53,8 @@ public class CreateModel : PageModel
 
     public IEnumerable<DepartmentListViewModel> Departments { get; set; } = new List<DepartmentListViewModel>();
 
+    public List<EmployeeProfileDynamicSection> ProfileDynamicSections { get; set; } = new();
+
     public List<string> PositionOptions { get; set; } = new();
 
     public string? ErrorMessage { get; set; }
@@ -62,6 +64,7 @@ public class CreateModel : PageModel
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
         PositionOptions = await LoadPositionOptionsAsync(Employee.Position);
+        ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -69,6 +72,7 @@ public class CreateModel : PageModel
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
         PositionOptions = await LoadPositionOptionsAsync(Employee.Position);
+        ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
 
         if (!ModelState.IsValid)
             return Page();
@@ -88,6 +92,7 @@ public class CreateModel : PageModel
 
         if (employeeId > 0)
         {
+            await EmployeeProfileDynamicFields.SaveAsync(_dbContext, employeeId, Request.Form);
             var photoResult = await SaveEmployeePhotoAsync(employeeId);
             var documentResult = await SaveInitialDocumentsAsync(employeeId);
             var extraResult = string.Join(" ", new[] { photoResult, documentResult }.Where(x => !string.IsNullOrWhiteSpace(x)));

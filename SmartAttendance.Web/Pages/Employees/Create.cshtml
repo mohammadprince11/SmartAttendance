@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="~/css/nexora-employee-create-clean-fix.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-create-stable.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-photo-upload.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-employee-profile-dynamic-fields.css" asp-append-version="true" />
 
 <div class="nxr-page nxr-create-clean-page" dir="rtl">
     <section class="nxr-topline nxr-create-clean-header">
@@ -263,6 +264,64 @@
             </div>
         </section>
 
+
+        @* NEXORA_CREATE_DYNAMIC_PROFILE_FIELDS_MARKER *@
+        @if (Model.ProfileDynamicSections.Any(profileSection => profileSection.Fields.Count > 0))
+        {
+            <section class="nxr-card nxr-form-section nxr-create-section nxr-create-dynamic-profile-section">
+                <div class="nxr-section-title">
+                    <div>
+                        <h2>&#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h2>
+                        <p>&#x0627;&#x0644;&#x062D;&#x0642;&#x0648;&#x0644; &#x0627;&#x0644;&#x0625;&#x0636;&#x0627;&#x0641;&#x064A;&#x0629; &#x0627;&#x0644;&#x062A;&#x064A; &#x062A;&#x0645;&#x062A; &#x0625;&#x0636;&#x0627;&#x0641;&#x062A;&#x0647;&#x0627; &#x0645;&#x0646; &#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;.</p>
+                    </div>
+                    <span class="nxr-chip gold">&#x062A;&#x062D;&#x0641;&#x0638; &#x0639;&#x0646;&#x062F; &#x0627;&#x0644;&#x0625;&#x0646;&#x0634;&#x0627;&#x0621;</span>
+                </div>
+
+                <div class="nxr-create-dynamic-profile-groups">
+                    @foreach (var profileSection in Model.ProfileDynamicSections.Where(item => item.Fields.Count > 0))
+                    {
+                        <div class="nxr-create-dynamic-profile-group">
+<div class="nxr-form-grid nxr-create-grid">
+                                @foreach (var field in profileSection.Fields)
+                                {
+                                    var inputId = $"CreateProfileCustomValues_{field.FieldKey}";
+                                    var requiredAttribute = field.IsRequired ? "required" : null;
+                                    var fieldClass = field.IsTextArea ? "nxr-field wide" : "nxr-field";
+
+                                    <div class="@fieldClass">
+                                        <label for="@inputId">
+                                            @field.FieldLabel
+                                            @if (field.IsRequired)
+                                            {
+                                                <span>*</span>
+                                            }
+                                        </label>
+
+                                        @if (field.IsTextArea)
+                                        {
+                                            <textarea id="@inputId"
+                                                      name="ProfileCustomValues[@field.FieldKey]"
+                                                      required="@requiredAttribute"
+                                                      rows="3"
+                                                      placeholder="@field.FieldLabel">@field.FieldValue</textarea>
+                                        }
+                                        else
+                                        {
+                                            <input id="@inputId"
+                                                   name="ProfileCustomValues[@field.FieldKey]"
+                                                   type="@field.InputType"
+                                                   value="@field.FieldValue"
+                                                   required="@requiredAttribute"
+                                                   placeholder="@field.FieldLabel" />
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
         <section class="nxr-card nxr-form-section nxr-create-section nxr-documents-section">
             <div class="nxr-section-title">
                 <div>

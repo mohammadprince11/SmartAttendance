@@ -146,3 +146,60 @@
     opacity: .55;
 }
 /* NEXORA_FIX07E_ALIGN_DYNAMIC_SUMMARY_STYLE_END */
+
+/* NEXORA_FIX07H_CREATE_DYNAMIC_FIELDS_START */
+.nxr-create-dynamic-profile-section {
+    overflow: visible;
+}
+
+.nxr-create-dynamic-profile-groups {
+    display: grid;
+    gap: 18px;
+}
+
+.nxr-create-dynamic-profile-group {
+    border: 1px solid rgba(34, 211, 238, .14);
+    background: rgba(4, 18, 29, .30);
+    border-radius: 20px;
+    padding: 16px;
+}
+
+.nxr-create-dynamic-profile-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(160, 190, 210, .12);
+}
+
+.nxr-create-dynamic-profile-head span {
+    display: block;
+    color: #f5c96b;
+    font-size: 12px;
+    font-weight: 1000;
+    margin-bottom: 4px;
+}
+
+.nxr-create-dynamic-profile-head strong {
+    color: #eaf7ff;
+    font-weight: 1000;
+}
+
+.nxr-create-dynamic-profile-section textarea {
+    min-height: 92px;
+    resize: vertical;
+}
+/* NEXORA_FIX07H_CREATE_DYNAMIC_FIELDS_END */
+
+/* NEXORA_FIX07J_CREATE_DYNAMIC_GROUP_HEADER_START */
+.nxr-create-dynamic-profile-group {
+    padding-top: 16px;
+}
+
+.nxr-create-dynamic-profile-group .nxr-create-grid,
+.nxr-create-dynamic-profile-group .nxr-form-grid {
+    margin-top: 0;
+}
+/* NEXORA_FIX07J_CREATE_DYNAMIC_GROUP_HEADER_END */
