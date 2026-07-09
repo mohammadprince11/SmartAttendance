@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -29,7 +29,7 @@ public class EndServiceListModel : PageModel
         ClearanceStatus = clearanceStatus?.Trim();
 
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        await EnsureSchemaAsync();
+        await EmployeeLifecycleSchema.EnsureAsync(_dbContext);
         await LoadKpisAsync();
         await LoadRecordsAsync();
     }
@@ -100,36 +100,6 @@ ORDER BY es.CreatedAt DESC;",
                 DepartmentName = HrmsDatabase.GetString(reader, "DepartmentName"),
                 BranchName = HrmsDatabase.GetString(reader, "BranchName")
             });
-    }
-
-    private async Task EnsureSchemaAsync()
-    {
-        await HrmsDatabase.ExecuteAsync(_dbContext, @"
-IF OBJECT_ID('EmployeeEndServices','U') IS NULL
-BEGIN
-    CREATE TABLE EmployeeEndServices
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        EmployeeId int NOT NULL,
-        EmployeeNo nvarchar(80) NULL,
-        EmployeeName nvarchar(250) NULL,
-        EndServiceType nvarchar(80) NOT NULL,
-        EndServiceTypeText nvarchar(150) NULL,
-        LastWorkingDate date NOT NULL,
-        Reason nvarchar(1000) NOT NULL,
-        HrNotes nvarchar(2000) NULL,
-        ClearanceAssets bit NOT NULL DEFAULT(0),
-        ClearanceDocuments bit NOT NULL DEFAULT(0),
-        ClearanceAccommodation bit NOT NULL DEFAULT(0),
-        ClearanceDevices bit NOT NULL DEFAULT(0),
-        ClearanceBadge bit NOT NULL DEFAULT(0),
-        ClearanceFinance bit NOT NULL DEFAULT(0),
-        ClearanceStatus nvarchar(80) NULL,
-        CreatedBy nvarchar(200) NULL,
-        IpAddress nvarchar(80) NULL,
-        CreatedAt datetime2 NOT NULL DEFAULT(GETDATE())
-    );
-END;");
     }
 
     public string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;

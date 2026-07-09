@@ -117,7 +117,7 @@ public partial class ProfileModel : PageModel
         string? confirmReassign)
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        await EnsureProfileReassignSchemaAsync();
+        await EmployeeLifecycleSchema.EnsureAsync(_dbContext);
 
         if (id <= 0)
         {
@@ -274,126 +274,6 @@ END;",
 
         TempData["SuccessMessage"] = "\u062a\u0645\u062a \u0625\u0639\u0627\u062f\u0629 \u062a\u0639\u064a\u064a\u0646 \u0627\u0644\u0645\u0648\u0638\u0641 \u0648\u062d\u0641\u0638 \u0627\u0644\u062d\u0631\u0643\u0629 \u0641\u064a \u0627\u0644\u0633\u062c\u0644 \u0627\u0644\u0648\u0638\u064a\u0641\u064a.";
         return RedirectToPage(new { id });
-    }
-
-    private async Task EnsureProfileReassignSchemaAsync()
-    {
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            @"
-IF COL_LENGTH('Employees', 'Position') IS NULL
-BEGIN
-    ALTER TABLE Employees ADD Position nvarchar(150) NULL;
-END;
-
-IF COL_LENGTH('Employees', 'EmploymentStatus') IS NULL
-BEGIN
-    ALTER TABLE Employees ADD EmploymentStatus nvarchar(80) NULL;
-END;
-
-IF COL_LENGTH('Employees', 'ServiceEndDate') IS NULL
-BEGIN
-    ALTER TABLE Employees ADD ServiceEndDate date NULL;
-END;
-
-IF COL_LENGTH('Employees', 'ServiceEndType') IS NULL
-BEGIN
-    ALTER TABLE Employees ADD ServiceEndType nvarchar(80) NULL;
-END;
-
-IF COL_LENGTH('Employees', 'ServiceEndReason') IS NULL
-BEGIN
-    ALTER TABLE Employees ADD ServiceEndReason nvarchar(1000) NULL;
-END;
-
-IF COL_LENGTH('Employees', 'ServiceEndNotes') IS NULL
-BEGIN
-    ALTER TABLE Employees ADD ServiceEndNotes nvarchar(2000) NULL;
-END;
-
-IF COL_LENGTH('Employees', 'ClearanceStatus') IS NULL
-BEGIN
-    ALTER TABLE Employees ADD ClearanceStatus nvarchar(80) NULL;
-END;
-
-IF COL_LENGTH('Employees', 'LastRehireDate') IS NULL
-BEGIN
-    ALTER TABLE Employees ADD LastRehireDate date NULL;
-END;
-
-IF COL_LENGTH('Employees', 'RehireReason') IS NULL
-BEGIN
-    ALTER TABLE Employees ADD RehireReason nvarchar(1000) NULL;
-END;
-
-IF COL_LENGTH('Employees', 'RehireNotes') IS NULL
-BEGIN
-    ALTER TABLE Employees ADD RehireNotes nvarchar(2000) NULL;
-END;
-
-IF COL_LENGTH('Employees', 'RehireCount') IS NULL
-BEGIN
-    ALTER TABLE Employees ADD RehireCount int NOT NULL CONSTRAINT DF_Employees_RehireCount DEFAULT(0);
-END;
-
-IF OBJECT_ID('EmployeeRehires', 'U') IS NULL
-BEGIN
-    CREATE TABLE EmployeeRehires
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        EmployeeId int NOT NULL,
-        EmployeeNo nvarchar(80) NULL,
-        EmployeeName nvarchar(250) NULL,
-        PreviousHireDate date NULL,
-        RehireDate date NOT NULL,
-        PreviousEmploymentStatus nvarchar(80) NULL,
-        Reason nvarchar(1000) NOT NULL,
-        HrNotes nvarchar(2000) NULL,
-        CreatedBy nvarchar(200) NULL,
-        IpAddress nvarchar(80) NULL,
-        CreatedAt datetime2 NOT NULL DEFAULT(GETDATE())
-    );
-END;
-
-IF COL_LENGTH('EmployeeRehires', 'EmployeeNo') IS NULL
-BEGIN
-    ALTER TABLE EmployeeRehires ADD EmployeeNo nvarchar(80) NULL;
-END;
-
-IF COL_LENGTH('EmployeeRehires', 'EmployeeName') IS NULL
-BEGIN
-    ALTER TABLE EmployeeRehires ADD EmployeeName nvarchar(250) NULL;
-END;
-
-IF COL_LENGTH('EmployeeRehires', 'PreviousHireDate') IS NULL
-BEGIN
-    ALTER TABLE EmployeeRehires ADD PreviousHireDate date NULL;
-END;
-
-IF COL_LENGTH('EmployeeRehires', 'PreviousEmploymentStatus') IS NULL
-BEGIN
-    ALTER TABLE EmployeeRehires ADD PreviousEmploymentStatus nvarchar(80) NULL;
-END;
-
-IF COL_LENGTH('EmployeeRehires', 'HrNotes') IS NULL
-BEGIN
-    ALTER TABLE EmployeeRehires ADD HrNotes nvarchar(2000) NULL;
-END;
-
-IF COL_LENGTH('EmployeeRehires', 'CreatedBy') IS NULL
-BEGIN
-    ALTER TABLE EmployeeRehires ADD CreatedBy nvarchar(200) NULL;
-END;
-
-IF COL_LENGTH('EmployeeRehires', 'IpAddress') IS NULL
-BEGIN
-    ALTER TABLE EmployeeRehires ADD IpAddress nvarchar(80) NULL;
-END;
-
-IF COL_LENGTH('EmployeeRehires', 'CreatedAt') IS NULL
-BEGIN
-    ALTER TABLE EmployeeRehires ADD CreatedAt datetime2 NOT NULL CONSTRAINT DF_EmployeeRehires_CreatedAt DEFAULT(GETDATE());
-END;");
     }
 
     private async Task<ProfileReassignEmployeeRow?> LoadProfileReassignEmployeeAsync(int employeeId)
