@@ -43,11 +43,28 @@
         const list = qs("[data-nxr-documents-list]");
         const preview = qs("[data-nxr-documents-preview]");
         const count = qs("[data-nxr-documents-count]");
+        const validation = qs("[data-nxr-documents-validation]");
 
         if (!form || !modal || !list) return;
 
         function rows() {
             return qsa(".nxr-document-row", list);
+        }
+
+        function showValidation(message) {
+            if (!validation) return;
+
+            validation.textContent = message;
+            validation.hidden = false;
+            validation.classList.add("open");
+        }
+
+        function hideValidation() {
+            if (!validation) return;
+
+            validation.textContent = "";
+            validation.hidden = true;
+            validation.classList.remove("open");
         }
 
         function openModal(event) {
@@ -57,6 +74,7 @@
             }
 
             if (rows().length === 0) addRow();
+            hideValidation();
             modal.classList.add("open");
             modal.setAttribute("aria-hidden", "false");
             document.body.style.overflow = "hidden";
@@ -69,6 +87,20 @@
                 event.stopPropagation();
             }
 
+            const isSaveAction = event &&
+                event.currentTarget &&
+                event.currentTarget.closest &&
+                event.currentTarget.closest(".nxr-documents-modal-actions");
+
+            if (isSaveAction) {
+                updateSummary();
+
+                if (!hasSelectedFiles()) {
+                    showValidation("\u064a\u0631\u062c\u0649 \u0627\u062e\u062a\u064a\u0627\u0631 \u0645\u0644\u0641 \u0648\u0627\u062d\u062f \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0642\u0628\u0644 \u0627\u0644\u062d\u0641\u0638.");
+                    return false;
+                }
+            }
+            hideValidation();
             modal.classList.remove("open");
             modal.setAttribute("aria-hidden", "true");
             document.body.style.overflow = "";
@@ -103,6 +135,11 @@
             });
         }
 
+        function hasSelectedFiles() {
+            return selectedRows().some(function (item) {
+                return item.hasFile;
+            });
+        }
         function updateSummary() {
             updateIndexes();
             const selected = selectedRows();
@@ -200,6 +237,14 @@
             const row = remove.closest(".nxr-document-row");
             if (row) row.remove();
             updateSummary();
+        });
+
+        list.addEventListener("change", function () {
+            updateSummary();
+
+            if (hasSelectedFiles()) {
+                hideValidation();
+            }
         });
 
         list.addEventListener("change", function (event) {
