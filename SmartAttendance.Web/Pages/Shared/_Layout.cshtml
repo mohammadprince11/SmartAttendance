@@ -102,7 +102,7 @@
 
         Func<string, string> ActiveClass = path => IsCurrent(path) ? "active nexora-active" : "";
 
-        var employeesOpen = IsUnder("/Employees") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfiles") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization");
+        var employeesOpen = IsUnder("/Employees") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/EmployeeProfiles") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization");
         var attendanceOpen = IsUnder("/AttendanceOperations") || IsUnder("/AttendanceRecords") || IsUnder("/AttendanceImports") || IsUnder("/AttendanceProcessing") || IsUnder("/AttendanceCorrections") || IsUnder("/Shifts") || IsUnder("/Devices");
         var requestsOpen = IsUnder("/LeaveRequests") || IsUnder("/Approvals") || IsUnder("/SelfServices");
         var systemOpen = IsUnder("/Branches") || IsUnder("/Departments") || IsUnder("/SystemUsers") || IsUnder("/Permissions");
@@ -147,6 +147,10 @@
                         </a>
                         <a asp-page="/DisciplinaryRules/Index" class="nexora-nav-link @(IsUnder("/DisciplinaryRules") ? "active nexora-active" : "")">
                             <span>إعدادات الموارد البشرية</span>
+                        </a>
+                        @* NEXORA_EMPLOYEE_PROFILE_SETTINGS_NAV_LINK *@
+                        <a asp-page="/EmployeeProfileSettings/Index" class="nexora-nav-link @(IsUnder("/EmployeeProfileSettings") ? "active nexora-active" : "")">
+                            <span>&#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</span>
                         </a>
                         <a asp-page="/HrSettings/ProbationPeriod" class="nexora-nav-link @(IsUnder("/HrSettings/ProbationPeriod") ? "active nexora-active" : "")">
                             <span>فترة التجربة</span>
