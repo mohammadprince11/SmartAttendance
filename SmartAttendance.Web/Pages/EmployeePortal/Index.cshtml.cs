@@ -388,41 +388,7 @@ BEGIN
 END;
 """);
 
-        var announcementsCount = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT COUNT(*) FROM EmployeePortalAnnouncements");
-        if (announcementsCount == 0)
-        {
-            await HrmsDatabase.ExecuteAsync(
-                _dbContext,
-                """
-INSERT INTO EmployeePortalAnnouncements (Title, Body, Category, TargetType, TargetValue, TemplateKey, IsPublished, PublishDate, CreatedBy)
-VALUES
-(N'مراجعة الحضور والانصراف', N'يرجى مراجعة سجلات الحضور قبل إغلاق النظام لضمان اعتماد البيانات بشكل صحيح.', N'تعليمات', N'All', NULL, N'custom', 1, SYSUTCDATETIME(), N'System'),
-(N'مرحباً بكم في بوابة الموظف الذكية', N'تم تفعيل صفحة الموظف لتكون مركز متابعة الإعلانات والاستبيانات والطلبات والشكاوي.', N'عام', N'All', NULL, N'welcome', 1, DATEADD(day, -1, SYSUTCDATETIME()), N'System');
-""");
-        }
-
-        var pollsCount = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT COUNT(*) FROM EmployeePolls");
-        if (pollsCount == 0)
-        {
-            await HrmsDatabase.ExecuteAsync(
-                _dbContext,
-                """
-DECLARE @PollId int;
-
-INSERT INTO EmployeePolls (Title, Question, Category, TargetType, TargetValue, IsPublished, PublishDate, CreatedBy)
-VALUES (N'استطلاع رضا الموظفين', N'ما مدى رضاك عن بيئة العمل في شركتنا؟', N'نبض الموظفين', N'All', NULL, 1, SYSUTCDATETIME(), N'System');
-
-SET @PollId = SCOPE_IDENTITY();
-
-INSERT INTO EmployeePollOptions (PollId, OptionText, DisplayOrder)
-VALUES
-(@PollId, N'غير راض إطلاقاً', 1),
-(@PollId, N'غير راض', 2),
-(@PollId, N'محايد', 3),
-(@PollId, N'راض', 4),
-(@PollId, N'راض جداً', 5);
-""");
-        }
+        // NEXORA: demo seed disabled. The employee portal must not auto-create announcements or polls.
     }
 
     private async Task<int> ResolveEmployeeIdAsync()
