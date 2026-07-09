@@ -1,4 +1,4 @@
-﻿using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Infrastructure.Security;
@@ -6,6 +6,8 @@ namespace SmartAttendance.Web.Infrastructure.Security;
 public class RoleSecurityMiddleware
 {
     private readonly RequestDelegate _next;
+    private static readonly System.Threading.SemaphoreSlim LoginDatabaseEnsureLock = new(1, 1);
+    private static volatile bool LoginDatabaseIsReady;
 
     public RoleSecurityMiddleware(RequestDelegate next)
     {
@@ -14,7 +16,7 @@ public class RoleSecurityMiddleware
 
     public async Task InvokeAsync(HttpContext context, ApplicationDbContext dbContext)
     {
-        await LoginDatabase.EnsureCreatedAsync(dbContext);
+        await EnsureLoginDatabaseCreatedAsync(dbContext);
 
         var path = context.Request.Path.Value?.ToLowerInvariant() ?? "/";
 
@@ -44,6 +46,31 @@ public class RoleSecurityMiddleware
         }
 
         await _next(context);
+    }
+
+    private static async Task EnsureLoginDatabaseCreatedAsync(ApplicationDbContext dbContext)
+    {
+        if (LoginDatabaseIsReady)
+        {
+            return;
+        }
+
+        await LoginDatabaseEnsureLock.WaitAsync();
+
+        try
+        {
+            if (LoginDatabaseIsReady)
+            {
+                return;
+            }
+
+            await LoginDatabase.EnsureCreatedAsync(dbContext);
+            LoginDatabaseIsReady = true;
+        }
+        finally
+        {
+            LoginDatabaseEnsureLock.Release();
+        }
     }
 
     private static bool IsPublicPath(string path)

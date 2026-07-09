@@ -1,4 +1,4 @@
-﻿using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Infrastructure.Security;
@@ -90,9 +90,6 @@ ORDER BY
             return;
         }
 
-        var salt = SimplePasswordHasher.CreateSalt();
-        var hash = SimplePasswordHasher.HashPassword(DefaultEmployeePassword, salt);
-
         var existing = await HrmsDatabase.ScalarAsync<int>(
             dbContext,
             "SELECT COUNT(*) FROM AppLoginUsers WHERE Username = @Username",
@@ -100,6 +97,9 @@ ORDER BY
 
         if (existing == 0)
         {
+            var salt = SimplePasswordHasher.CreateSalt();
+            var hash = SimplePasswordHasher.HashPassword(DefaultEmployeePassword, salt);
+
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
                 """
@@ -126,19 +126,14 @@ VALUES ('AppLoginUsers', @Username, 'Seed Official Employee User', 'Official emp
                 """
 UPDATE AppLoginUsers
 SET EmployeeId = @EmployeeId,
-    Role = 'Employee',
-    IsActive = 1,
-    PasswordHash = @PasswordHash,
-    PasswordSalt = @PasswordSalt,
     UpdatedAt = SYSUTCDATETIME()
-WHERE Username = @Username;
+WHERE Username = @Username
+  AND (EmployeeId IS NULL OR EmployeeId = 0);
 """,
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
                     HrmsDatabase.AddParameter(command, "@Username", DefaultEmployeeUsername);
-                    HrmsDatabase.AddParameter(command, "@PasswordHash", hash);
-                    HrmsDatabase.AddParameter(command, "@PasswordSalt", salt);
                 });
         }
     }
