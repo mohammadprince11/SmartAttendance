@@ -31,6 +31,9 @@ public class IndexModel : PageModel
     [BindProperty]
     public NewFieldInput Field { get; set; } = new();
 
+    [BindProperty]
+    public EditFieldInput EditField { get; set; } = new();
+
     public async Task OnGetAsync()
     {
         await EnsureSchemaAsync();
@@ -45,7 +48,7 @@ public class IndexModel : PageModel
         Field.SectionKey = (Field.SectionKey ?? string.Empty).Trim();
         Field.FieldType = NormalizeFieldType(Field.FieldType);
 
-        if (!FixedSections.Any(section => section.Key.Equals(Field.SectionKey, StringComparison.OrdinalIgnoreCase)))
+        if (!IsValidSection(Field.SectionKey))
         {
             TempData["ProfileSettingsError"] = "\u0627\u0644\u0642\u0633\u0645 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D.";
             return RedirectToPage();
@@ -101,6 +104,68 @@ VALUES
         return RedirectToPage();
     }
 
+    public async Task<IActionResult> OnPostUpdateFieldAsync(int id)
+    {
+        await EnsureSchemaAsync();
+
+        EditField.FieldLabel = (EditField.FieldLabel ?? string.Empty).Trim();
+        EditField.SectionKey = (EditField.SectionKey ?? string.Empty).Trim();
+        EditField.FieldType = NormalizeFieldType(EditField.FieldType);
+
+        if (id <= 0)
+        {
+            TempData["ProfileSettingsError"] = "\u0627\u0644\u062D\u0642\u0644 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D.";
+            return RedirectToPage();
+        }
+
+        if (!IsValidSection(EditField.SectionKey))
+        {
+            TempData["ProfileSettingsError"] = "\u0627\u0644\u0642\u0633\u0645 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D.";
+            return RedirectToPage();
+        }
+
+        if (string.IsNullOrWhiteSpace(EditField.FieldLabel))
+        {
+            TempData["ProfileSettingsError"] = "\u0627\u0633\u0645 \u0627\u0644\u062D\u0642\u0644 \u0645\u0637\u0644\u0648\u0628.";
+            return RedirectToPage();
+        }
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+UPDATE EmployeeProfileFieldDefinitions
+SET SectionKey = @SectionKey,
+    FieldLabel = @FieldLabel,
+    FieldType = @FieldType,
+    IsRequired = @IsRequired,
+    SortOrder = @SortOrder,
+    UpdatedAt = SYSUTCDATETIME()
+WHERE Id = @Id;
+
+UPDATE EmployeeCustomFields
+SET FieldLabel = @FieldLabel,
+    UpdatedAt = SYSUTCDATETIME()
+WHERE FieldKey =
+(
+    SELECT FieldKey
+    FROM EmployeeProfileFieldDefinitions
+    WHERE Id = @Id
+);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", id);
+                HrmsDatabase.AddParameter(command, "@SectionKey", EditField.SectionKey);
+                HrmsDatabase.AddParameter(command, "@FieldLabel", EditField.FieldLabel);
+                HrmsDatabase.AddParameter(command, "@FieldType", EditField.FieldType);
+                HrmsDatabase.AddParameter(command, "@IsRequired", EditField.IsRequired ? 1 : 0);
+                HrmsDatabase.AddParameter(command, "@SortOrder", EditField.SortOrder);
+            });
+
+        TempData["ProfileSettingsMessage"] = "\u062A\u0645 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u062D\u0642\u0644.";
+        return RedirectToPage();
+    }
+
     public async Task<IActionResult> OnPostToggleFieldAsync(int id)
     {
         await EnsureSchemaAsync();
@@ -116,6 +181,40 @@ WHERE Id = @Id;
             command => HrmsDatabase.AddParameter(command, "@Id", id));
 
         TempData["ProfileSettingsMessage"] = "\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u062D\u0642\u0644.";
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostDeleteFieldAsync(int id)
+    {
+        await EnsureSchemaAsync();
+
+        if (id <= 0)
+        {
+            TempData["ProfileSettingsError"] = "\u0627\u0644\u062D\u0642\u0644 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D.";
+            return RedirectToPage();
+        }
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+DECLARE @FieldKey nvarchar(120);
+
+SELECT @FieldKey = FieldKey
+FROM EmployeeProfileFieldDefinitions
+WHERE Id = @Id;
+
+IF @FieldKey IS NOT NULL
+BEGIN
+    DELETE FROM EmployeeCustomFields
+    WHERE FieldKey = @FieldKey;
+
+    DELETE FROM EmployeeProfileFieldDefinitions
+    WHERE Id = @Id;
+END;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", id));
+
+        TempData["ProfileSettingsMessage"] = "\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u062D\u0642\u0644.";
         return RedirectToPage();
     }
 
@@ -209,12 +308,42 @@ BEGIN
     CREATE INDEX IX_EmployeeProfileFieldDefinitions_Section
     ON [dbo].[EmployeeProfileFieldDefinitions] ([SectionKey], [SortOrder], [Id]);
 END;
+
+IF OBJECT_ID(N'[dbo].[EmployeeCustomFields]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[EmployeeCustomFields]
+    (
+        [Id] int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [EmployeeId] int NOT NULL,
+        [FieldKey] nvarchar(120) NOT NULL,
+        [FieldLabel] nvarchar(150) NULL,
+        [FieldValue] nvarchar(max) NULL,
+        [UpdatedAt] datetime2 NULL
+    );
+END;
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = N'UX_EmployeeCustomFields_Employee_Field'
+      AND object_id = OBJECT_ID(N'[dbo].[EmployeeCustomFields]')
+)
+BEGIN
+    CREATE UNIQUE INDEX UX_EmployeeCustomFields_Employee_Field
+    ON [dbo].[EmployeeCustomFields] ([EmployeeId], [FieldKey]);
+END;
 """);
+    }
+
+    private static bool IsValidSection(string sectionKey)
+    {
+        return FixedSections.Any(section => section.Key.Equals(sectionKey, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string GenerateFieldKey(string sectionKey)
     {
-        var safeSection = FixedSections.Any(section => section.Key.Equals(sectionKey, StringComparison.OrdinalIgnoreCase))
+        var safeSection = IsValidSection(sectionKey)
             ? sectionKey.ToLowerInvariant()
             : "additional";
 
@@ -255,6 +384,15 @@ END;
     private sealed record ProfileSectionDefinition(string Key, string Label, string Description);
 
     public sealed class NewFieldInput
+    {
+        public string SectionKey { get; set; } = "basic";
+        public string FieldLabel { get; set; } = string.Empty;
+        public string FieldType { get; set; } = "text";
+        public bool IsRequired { get; set; }
+        public int SortOrder { get; set; }
+    }
+
+    public sealed class EditFieldInput
     {
         public string SectionKey { get; set; } = "basic";
         public string FieldLabel { get; set; } = string.Empty;

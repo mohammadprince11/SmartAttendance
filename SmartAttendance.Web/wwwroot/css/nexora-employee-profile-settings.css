@@ -318,3 +318,245 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* NEXORA_FIX07F_EDIT_DELETE_FIELDS_START */
+.nxr-profile-settings-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.nxr-profile-settings-edit-shell {
+    position: relative;
+}
+
+.nxr-profile-settings-edit-shell summary {
+    list-style: none;
+    cursor: pointer;
+    border: 1px solid rgba(34, 211, 238, .30);
+    border-radius: 14px;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    color: #e8fbff;
+    background: rgba(34, 211, 238, .10);
+    font-weight: 1000;
+}
+
+.nxr-profile-settings-edit-shell summary::-webkit-details-marker {
+    display: none;
+}
+
+.nxr-profile-settings-edit-form {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 10px);
+    left: 0;
+    width: min(720px, calc(100vw - 80px));
+    border: 1px solid rgba(34, 211, 238, .24);
+    background: linear-gradient(135deg, rgba(13, 40, 60, .98), rgba(6, 22, 34, .99));
+    border-radius: 20px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .42);
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.nxr-profile-settings-edit-form .nxr-profile-settings-actions {
+    grid-column: 1 / -1;
+}
+
+.nxr-profile-settings-row-actions form button.danger {
+    border-color: rgba(255, 92, 122, .35);
+    color: #ffd7df;
+    background: rgba(255, 92, 122, .12);
+}
+
+@media (max-width: 760px) {
+    .nxr-profile-settings-edit-form {
+        position: fixed;
+        inset: 80px 16px auto 16px;
+        width: auto;
+        grid-template-columns: 1fr;
+    }
+
+    .nxr-profile-settings-field-row {
+        grid-template-columns: 1fr;
+    }
+}
+/* NEXORA_FIX07F_EDIT_DELETE_FIELDS_END */
+
+/* NEXORA_FIX07G_PROFILE_SETTINGS_MODALS_START */
+body.nxr-profile-settings-modal-active {
+    overflow: hidden;
+}
+
+.nxr-profile-settings-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(1, 10, 18, .58);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.nxr-profile-settings-modal-backdrop[hidden] {
+    display: none !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 10020 !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 24px !important;
+    pointer-events: none !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open > summary {
+    display: none !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-form {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    width: min(780px, calc(100vw - 44px)) !important;
+    max-height: calc(100vh - 70px) !important;
+    overflow: auto !important;
+    pointer-events: auto !important;
+    border-radius: 24px !important;
+    border: 1px solid rgba(34, 211, 238, .28) !important;
+    background:
+        linear-gradient(135deg, rgba(13, 40, 60, .98), rgba(6, 22, 34, .99)),
+        rgba(7, 20, 32, .98) !important;
+    box-shadow: 0 34px 110px rgba(0, 0, 0, .58) !important;
+}
+
+.nxr-profile-settings-edit-modal-head,
+.nxr-profile-settings-delete-head {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 14px;
+    padding-bottom: 14px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid rgba(160, 190, 210, .14);
+}
+
+.nxr-profile-settings-edit-modal-head strong,
+.nxr-profile-settings-delete-head strong {
+    color: #fff;
+    font-size: 22px;
+    font-weight: 1000;
+}
+
+.nxr-profile-settings-delete-head span {
+    display: block;
+    color: #f5c96b;
+    font-size: 11px;
+    font-weight: 1000;
+    letter-spacing: .08em;
+    margin-bottom: 4px;
+}
+
+.nxr-profile-settings-modal-close {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    border: 1px solid rgba(160, 190, 210, .22);
+    background: rgba(11, 29, 45, .90);
+    color: #dff9ff;
+    font-size: 24px;
+    line-height: 1;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.nxr-profile-settings-cancel-button,
+.nxr-profile-settings-delete-actions .cancel {
+    border: 1px solid rgba(160, 190, 210, .22) !important;
+    border-radius: 15px !important;
+    background: rgba(11, 29, 45, .90) !important;
+    color: #dff9ff !important;
+    min-height: 48px !important;
+    padding: 0 18px !important;
+    font: inherit !important;
+    font-weight: 1000 !important;
+    cursor: pointer !important;
+}
+
+.nxr-profile-settings-delete-modal {
+    position: fixed;
+    z-index: 10030;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(520px, calc(100vw - 44px));
+    border: 1px solid rgba(34, 211, 238, .28);
+    border-radius: 24px;
+    background:
+        linear-gradient(135deg, rgba(13, 40, 60, .98), rgba(6, 22, 34, .99)),
+        rgba(7, 20, 32, .98);
+    box-shadow: 0 34px 110px rgba(0, 0, 0, .58);
+    padding: 20px;
+    color: #eaf7ff;
+}
+
+.nxr-profile-settings-delete-modal[hidden] {
+    display: none !important;
+}
+
+.nxr-profile-settings-delete-modal p {
+    margin: 14px 0 18px;
+    color: #b8ccda;
+    font-weight: 850;
+    line-height: 1.9;
+}
+
+.nxr-profile-settings-delete-actions {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+}
+
+.nxr-profile-settings-delete-actions .danger {
+    border: 1px solid rgba(255, 92, 122, .40);
+    border-radius: 15px;
+    background: linear-gradient(135deg, rgba(255, 92, 122, .95), rgba(190, 45, 72, .95));
+    color: #fff;
+    min-height: 48px;
+    padding: 0 18px;
+    font: inherit;
+    font-weight: 1000;
+    cursor: pointer;
+}
+
+@media (max-width: 760px) {
+    .nxr-profile-settings-edit-shell.is-modal-open {
+        padding: 14px !important;
+    }
+
+    .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-form {
+        grid-template-columns: 1fr !important;
+        width: calc(100vw - 28px) !important;
+        max-height: calc(100vh - 28px) !important;
+    }
+
+    .nxr-profile-settings-delete-actions {
+        flex-direction: column-reverse;
+    }
+
+    .nxr-profile-settings-delete-actions button {
+        width: 100%;
+    }
+}
+/* NEXORA_FIX07G_PROFILE_SETTINGS_MODALS_END */

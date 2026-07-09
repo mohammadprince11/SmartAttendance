@@ -10,12 +10,15 @@
     <link rel="stylesheet" href="~/css/nexora-employee-profile-settings.css" asp-append-version="true" />
 }
 
-<div class="nxr-profile-settings-page" dir="rtl">
+
+@section Scripts {
+    <script src="~/js/nexora-employee-profile-settings-modals.js" asp-append-version="true"></script>
+}<div class="nxr-profile-settings-page" dir="rtl">
     <section class="nxr-profile-settings-hero">
         <div>
             <span>NEXORA Employee Profile Settings</span>
             <h1>&#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h1>
-            <p>&#x062A;&#x062B;&#x0628;&#x064A;&#x062A; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645; &#x0627;&#x0644;&#x062E;&#x0645;&#x0633;&#x0629; &#x0648;&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0627;&#x0644;&#x062D;&#x0642;&#x0648;&#x0644; &#x0628;&#x062F;&#x0648;&#x0646; &#x062A;&#x063A;&#x064A;&#x064A;&#x0631; &#x0647;&#x064A;&#x0643;&#x0644; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;.</p>
+            <p>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629;&#x060C; &#x062A;&#x0639;&#x062F;&#x064A;&#x0644;&#x060C; &#x062A;&#x0641;&#x0639;&#x064A;&#x0644; &#x0648;&#x062D;&#x0630;&#x0641; &#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;.</p>
         </div>
         <div class="nxr-profile-settings-badge">
             <strong>@Model.TotalFields</strong>
@@ -135,11 +138,67 @@
                                     <small>#@field.SortOrder</small>
                                 </div>
 
-                                <form method="post" asp-page-handler="ToggleField" asp-route-id="@field.Id">
-                                    <button type="submit">
-                                        @(field.IsActive ? "\u062A\u0639\u0637\u064A\u0644" : "\u062A\u0641\u0639\u064A\u0644")
-                                    </button>
-                                </form>
+                                <div class="nxr-profile-settings-row-actions">
+                                    <details class="nxr-profile-settings-edit-shell">
+                                        <summary>&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;</summary>
+
+                                        <form method="post"
+                                              asp-page-handler="UpdateField"
+                                              asp-route-id="@field.Id"
+                                              class="nxr-profile-settings-edit-form">
+                                            <div class="nxr-profile-settings-field">
+                                                <label>&#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</label>
+                                                <select name="EditField.SectionKey">
+                                                    @foreach (var editSection in Model.Sections)
+                                                    {
+                                                        <option value="@editSection.Key" selected="@(editSection.Key.Equals(field.SectionKey, System.StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@editSection.Label</option>
+                                                    }
+                                                </select>
+                                            </div>
+
+                                            <div class="nxr-profile-settings-field">
+                                                <label>&#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x062D;&#x0642;&#x0644;</label>
+                                                <input name="EditField.FieldLabel" value="@field.FieldLabel" />
+                                            </div>
+
+                                            <div class="nxr-profile-settings-field">
+                                                <label>&#x0646;&#x0648;&#x0639; &#x0627;&#x0644;&#x062D;&#x0642;&#x0644;</label>
+                                                <select name="EditField.FieldType">
+                                                    <option value="text" selected="@(field.FieldType == "text" ? "selected" : null)">&#x0646;&#x0635;</option>
+                                                    <option value="number" selected="@(field.FieldType == "number" ? "selected" : null)">&#x0631;&#x0642;&#x0645;</option>
+                                                    <option value="date" selected="@(field.FieldType == "date" ? "selected" : null)">&#x062A;&#x0627;&#x0631;&#x064A;&#x062E;</option>
+                                                    <option value="textarea" selected="@(field.FieldType == "textarea" ? "selected" : null)">&#x0646;&#x0635; &#x0637;&#x0648;&#x064A;&#x0644;</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="nxr-profile-settings-field">
+                                                <label>&#x0627;&#x0644;&#x062A;&#x0631;&#x062A;&#x064A;&#x0628;</label>
+                                                <input name="EditField.SortOrder" type="number" min="0" value="@field.SortOrder" />
+                                            </div>
+
+                                            <label class="nxr-profile-settings-check">
+                                                <input type="hidden" name="EditField.IsRequired" value="false" />
+                                                <input type="checkbox" name="EditField.IsRequired" value="true" checked="@(field.IsRequired ? "checked" : null)" />
+                                                <span>&#x062D;&#x0642;&#x0644; &#x0645;&#x0637;&#x0644;&#x0648;&#x0628;</span>
+                                            </label>
+
+                                            <div class="nxr-profile-settings-actions">
+                                                <button type="submit">&#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;</button>
+                                            </div>
+                                        </form>
+                                    </details>
+
+                                    <form method="post" asp-page-handler="ToggleField" asp-route-id="@field.Id">
+                                        <button type="submit">
+                                            @(field.IsActive ? "\u062A\u0639\u0637\u064A\u0644" : "\u062A\u0641\u0639\u064A\u0644")
+                                        </button>
+                                    </form>
+
+                                    <form method="post" data-nxr-field-delete-form asp-page-handler="DeleteField"
+                                          asp-route-id="@field.Id">
+                                        <button type="submit" class="danger">&#x062D;&#x0630;&#x0641;</button>
+                                    </form>
+                                </div>
                             </div>
                         }
                     </div>
