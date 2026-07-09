@@ -1808,3 +1808,44 @@ button.danger,
     .nx-pulse-arrow{display:none!important}
     .nx-phone-preview{width:100%!important}
 }
+
+/* NEXORA_FIX06E_EMPLOYEE_PROFILES_OVERFLOW_START */
+.nx-ann-studio select.nxos-native,
+.nx-ann-studio .nx-field select.nxos-native,
+.nx-ann-studio .nx-simple-form select.nxos-native,
+.nx-ann-studio .nx-feedback-actions select.nxos-native,
+.nx-ann-studio .nx-pulse-field select.nxos-native,
+#nxApprovedAnnouncementStudio select.nxos-native,
+#nxAnnStudioTotal select.nxos-native {
+    position: absolute !important;
+    display: block !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 1px !important;
+    min-width: 1px !important;
+    max-width: 1px !important;
+    inline-size: 1px !important;
+    min-inline-size: 1px !important;
+    max-inline-size: 1px !important;
+    height: 1px !important;
+    min-height: 1px !important;
+    max-height: 1px !important;
+    block-size: 1px !important;
+    min-block-size: 1px !important;
+    max-block-size: 1px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+    transform: none !important;
+}
+
+.nx-ann-studio,
+.nx-ann-studio * {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+/* NEXORA_FIX06E_EMPLOYEE_PROFILES_OVERFLOW_END */
