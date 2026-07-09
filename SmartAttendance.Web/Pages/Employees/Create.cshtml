@@ -96,14 +96,14 @@
 @* NEXORA_DEMOGRAPHIC_FIELDS_START *@
 <div class="nxr-field">
     <label asp-for="Employee.Gender">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;</label>
-    <select asp-for="Employee.Gender">
+    <select asp-for="Employee.Gender" class="nxr-native-select">
         <option value="">&#x0627;&#x062E;&#x062A;&#x0631;...</option>
         <option value="Male">&#x0630;&#x0643;&#x0631;</option>
         <option value="Female">&#x0623;&#x0646;&#x062B;&#x0649;</option>
     </select>
     <span asp-validation-for="Employee.Gender" class="text-danger"></span>
 </div>
-                <div class="nxr-edit-field">
+                <div class="nxr-field">
                     <label asp-for="Employee.Nationality">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</label>
                     <select asp-for="Employee.Nationality" class="nxr-native-select">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</option>
@@ -119,7 +119,7 @@
                     </select>
                     <span asp-validation-for="Employee.Nationality"></span>
                 </div>
-                <div class="nxr-edit-field">
+                <div class="nxr-field">
                     <label asp-for="Employee.Country">&#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</label>
                     <select asp-for="Employee.Country" class="nxr-native-select">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</option>
@@ -138,9 +138,9 @@
 @* NEXORA_DEMOGRAPHIC_FIELDS_END *@
 
 @* NEXORA_MARITAL_STATUS_FIELD_START *@
-<div class="nxr-marital-status-field">
+<div class="nxr-field">
     <label asp-for="Employee.MaritalStatus">&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629; &#x0627;&#x0644;&#x0627;&#x062C;&#x062A;&#x0645;&#x0627;&#x0639;&#x064A;&#x0629;</label>
-    <select asp-for="Employee.MaritalStatus">
+    <select asp-for="Employee.MaritalStatus" class="nxr-native-select">
         <option value="">&#x0627;&#x062E;&#x062A;&#x0631;...</option>
         <option value="Single">&#x0623;&#x0639;&#x0632;&#x0628;</option>
         <option value="Married">&#x0645;&#x062A;&#x0632;&#x0648;&#x062C;</option>
