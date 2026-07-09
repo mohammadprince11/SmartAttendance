@@ -23,6 +23,27 @@
     const impactPreview = document.querySelector('[data-nxv-impact-preview]');
     const deductionAmount = document.querySelector('[data-nxv-deduction-amount]');
 
+    const VIOLATION_TEXT = {
+        chooseCategoryFirst: "\u0627\u062e\u062a\u0631 \u0627\u0644\u0641\u0626\u0629 \u062d\u062a\u0649 \u062a\u0638\u0647\u0631 \u0627\u0644\u0645\u062e\u0627\u0644\u0641\u0627\u062a",
+        chooseViolationType: "\u0627\u062e\u062a\u0631 \u0646\u0648\u0639 \u0627\u0644\u0645\u062e\u0627\u0644\u0641\u0629",
+        noTypes: "\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u062e\u0627\u0644\u0641\u0627\u062a \u062f\u0627\u062e\u0644 \u0647\u0630\u0647 \u0627\u0644\u0641\u0626\u0629"
+    };
+
+    const violationOptionCache = violationType
+        ? Array.from(violationType.options)
+            .map((option, index) => ({
+                index,
+                value: option.value || '',
+                text: (option.textContent || '').trim(),
+                categoryId: option.dataset.categoryId || option.getAttribute('data-category-id') || '',
+                category: option.dataset.category || option.getAttribute('data-category') || '',
+                penalty: option.dataset.penalty || option.getAttribute('data-penalty') || '',
+                impactType: option.dataset.impactType || option.getAttribute('data-impact-type') || 'None',
+                impactValue: option.dataset.impactValue || option.getAttribute('data-impact-value') || '0'
+            }))
+            .filter((option) => option.index > 0 && option.value && option.categoryId)
+        : [];
+
     let activeTab = 'all';
 
     function normalize(value) {
@@ -104,48 +125,76 @@
         if (deductionAmount && !deductionAmount.value) deductionAmount.value = '0';
     }
 
+    function createViolationOption(item) {
+        const option = document.createElement('option');
+        option.value = item.value;
+        option.textContent = item.text;
+
+        option.dataset.categoryId = item.categoryId;
+        option.setAttribute('data-category-id', item.categoryId);
+
+        option.dataset.category = item.category;
+        option.setAttribute('data-category', item.category);
+
+        option.dataset.penalty = item.penalty;
+        option.setAttribute('data-penalty', item.penalty);
+
+        option.dataset.impactType = item.impactType;
+        option.setAttribute('data-impact-type', item.impactType);
+
+        option.dataset.impactValue = item.impactValue;
+        option.setAttribute('data-impact-value', item.impactValue);
+
+        return option;
+    }
+
+    function appendViolationPlaceholder(text) {
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = text;
+        violationType.appendChild(placeholder);
+        return placeholder;
+    }
+
     function filterViolationTypes() {
         if (!categorySelect || !violationType) return;
 
-        const categoryId = categorySelect.value;
-        const options = Array.from(violationType.options);
+        const categoryId = categorySelect.value || '';
+        const previousValue = violationType.value || '';
 
-        violationType.value = '';
+        violationType.innerHTML = '';
         resetPenalty();
+
+        const placeholder = appendViolationPlaceholder(categoryId ? VIOLATION_TEXT.chooseViolationType : VIOLATION_TEXT.chooseCategoryFirst);
 
         if (!categoryId) {
             violationType.disabled = true;
-            options.forEach((option, index) => {
-                option.hidden = index !== 0;
-                option.disabled = index !== 0;
-            });
-            options[0].textContent = 'اختر الفئة حتى تظهر المخالفات';
+            violationType.value = '';
             return;
         }
 
-        let visibleCount = 0;
+        const matched = violationOptionCache.filter((item) => String(item.categoryId) === String(categoryId));
 
-        options.forEach((option, index) => {
-            if (index === 0) {
-                option.hidden = false;
-                option.disabled = false;
-                option.textContent = 'اختر نوع المخالفة';
-                return;
-            }
-
-            const show = option.dataset.categoryId === categoryId;
-            option.hidden = !show;
-            option.disabled = !show;
-            if (show) visibleCount++;
+        matched.forEach((item) => {
+            violationType.appendChild(createViolationOption(item));
         });
 
-        violationType.disabled = visibleCount === 0;
+        violationType.disabled = matched.length === 0;
 
-        if (visibleCount === 0) {
-            options[0].textContent = 'لا توجد مخالفات داخل هذه الفئة';
+        if (matched.length === 0) {
+            placeholder.textContent = VIOLATION_TEXT.noTypes;
+            violationType.value = '';
+            return;
         }
-    }
 
+        if (previousValue && matched.some((item) => String(item.value) === String(previousValue))) {
+            violationType.value = previousValue;
+            fillPenaltyFromViolation();
+            return;
+        }
+
+        violationType.value = '';
+    }
     function displayImpact(type, value) {
         const numeric = Number(value || 0);
         if (type === 'Days') return `${numeric.toLocaleString('ar-IQ')} يوم حسب اللائحة`;
