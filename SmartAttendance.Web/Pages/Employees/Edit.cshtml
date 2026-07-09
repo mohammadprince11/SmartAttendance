@@ -165,7 +165,9 @@
                     <label asp-for="Employee.BirthDate">&#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0627;&#x0644;&#x0645;&#x064A;&#x0644;&#x0627;&#x062F;</label>
                     <input name="Employee.BirthDate" id="Employee_BirthDate" value="@(Model.Employee.BirthDate?.ToString("yyyy-MM-dd"))" type="text" data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" />
                     <span asp-validation-for="Employee.BirthDate"></span>
-                </div>                <div class="nxr-edit-field">
+                </div>
+
+                <div class="nxr-edit-field">
                     <label asp-for="Employee.Gender">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;</label>
                     <select asp-for="Employee.Gender" class="nxr-native-select">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631;...</option>
