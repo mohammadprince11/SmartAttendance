@@ -16,6 +16,10 @@ BEGIN
     ALTER TABLE Employees ADD Position nvarchar(150) NULL;
 END;
 
+IF COL_LENGTH('Employees', 'PhotoPath') IS NULL
+BEGIN
+    ALTER TABLE Employees ADD PhotoPath nvarchar(500) NULL;
+END;
 IF COL_LENGTH('Employees', 'EmploymentStatus') IS NULL
 BEGIN
     ALTER TABLE Employees ADD EmploymentStatus nvarchar(80) NULL;

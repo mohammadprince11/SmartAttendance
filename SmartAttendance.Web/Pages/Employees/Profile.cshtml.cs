@@ -75,8 +75,7 @@ public partial class ProfileModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        await EnsureEmployeePhotoColumnAsync();
+        await EmployeeLifecycleSchema.EnsureAsync(_dbContext);
         await EnsureProfileFilesTableAsync();
 
         if (!FromDate.HasValue)
@@ -350,8 +349,7 @@ WHERE e.Id = @EmployeeId;",
 
     public async Task<IActionResult> OnPostUploadProfilePhotoAsync(int id)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        await EnsureEmployeePhotoColumnAsync();
+        await EmployeeLifecycleSchema.EnsureAsync(_dbContext);
 
         if (id <= 0)
         {
@@ -371,18 +369,6 @@ WHERE e.Id = @EmployeeId;",
         }
 
         return RedirectToPage(new { id });
-    }
-
-    private async Task EnsureEmployeePhotoColumnAsync()
-    {
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            """
-IF COL_LENGTH('Employees', 'PhotoPath') IS NULL
-BEGIN
-    ALTER TABLE Employees ADD PhotoPath nvarchar(500) NULL;
-END;
-""");
     }
 
     private async Task<string> SaveEmployeePhotoAsync(int employeeId, IFormFile? file)
