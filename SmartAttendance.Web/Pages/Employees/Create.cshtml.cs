@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Application.Employees.Services;
@@ -53,18 +53,22 @@ public class CreateModel : PageModel
 
     public IEnumerable<DepartmentListViewModel> Departments { get; set; } = new List<DepartmentListViewModel>();
 
+    public List<string> PositionOptions { get; set; } = new();
+
     public string? ErrorMessage { get; set; }
 
     public async Task OnGetAsync()
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
+        PositionOptions = await LoadPositionOptionsAsync(Employee.Position);
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
+        PositionOptions = await LoadPositionOptionsAsync(Employee.Position);
 
         if (!ModelState.IsValid)
             return Page();
@@ -103,6 +107,77 @@ public class CreateModel : PageModel
         }
 
         return RedirectToPage("./Index");
+    }
+
+    private async Task<List<string>> LoadPositionOptionsAsync(string? currentPosition)
+    {
+        var positions = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            @"
+CREATE TABLE #PositionOptions
+(
+    [Name] nvarchar(400) NOT NULL
+);
+
+IF OBJECT_ID(N'dbo.HrJobPositions', N'U') IS NOT NULL
+BEGIN
+    INSERT INTO #PositionOptions ([Name])
+    SELECT DISTINCT LTRIM(RTRIM([ArabicName]))
+    FROM [dbo].[HrJobPositions]
+    WHERE LTRIM(RTRIM(ISNULL([ArabicName], N''))) <> N''
+      AND ISNULL([IsActive], 1) = 1;
+END;
+
+IF OBJECT_ID(N'dbo.JobPositions', N'U') IS NOT NULL
+BEGIN
+    INSERT INTO #PositionOptions ([Name])
+    SELECT DISTINCT LTRIM(RTRIM(j.[Name]))
+    FROM [dbo].[JobPositions] j
+    WHERE LTRIM(RTRIM(ISNULL(j.[Name], N''))) <> N''
+      AND ISNULL(j.[IsActive], 1) = 1
+      AND NOT EXISTS
+      (
+          SELECT 1
+          FROM #PositionOptions existing
+          WHERE existing.[Name] = LTRIM(RTRIM(j.[Name]))
+      );
+END;
+
+IF OBJECT_ID(N'dbo.Employees', N'U') IS NOT NULL
+BEGIN
+    INSERT INTO #PositionOptions ([Name])
+    SELECT DISTINCT LTRIM(RTRIM(e.[Position]))
+    FROM [dbo].[Employees] e
+    WHERE LTRIM(RTRIM(ISNULL(e.[Position], N''))) <> N''
+      AND NOT EXISTS
+      (
+          SELECT 1
+          FROM #PositionOptions existing
+          WHERE existing.[Name] = LTRIM(RTRIM(e.[Position]))
+      );
+END;
+
+SELECT DISTINCT [Name]
+FROM #PositionOptions
+ORDER BY [Name];
+",
+            command => { },
+            reader => HrmsDatabase.GetString(reader, "Name"));
+
+        var result = positions
+            .Where(position => !string.IsNullOrWhiteSpace(position))
+            .Select(position => position.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(position => position)
+            .ToList();
+
+        if (!string.IsNullOrWhiteSpace(currentPosition) &&
+            !result.Contains(currentPosition.Trim(), StringComparer.OrdinalIgnoreCase))
+        {
+            result.Insert(0, currentPosition.Trim());
+        }
+
+        return result;
     }
 
     private async Task<string> SaveEmployeePhotoAsync(int employeeId)

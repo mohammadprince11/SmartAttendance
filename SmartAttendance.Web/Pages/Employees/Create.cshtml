@@ -178,7 +178,13 @@
 
                 <div class="nxr-field">
                     <label asp-for="Employee.Position">المنصب</label>
-                    <input asp-for="Employee.Position" placeholder="مثال: محاسب، مشرف، كاشير..." />
+                    <select asp-for="Employee.Position" class="nxr-native-select">
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</option>
+                        @foreach (var position in Model.PositionOptions)
+                        {
+                            <option value="@position">@position</option>
+                        }
+                    </select>
                     <span asp-validation-for="Employee.Position" class="text-danger"></span>
                 </div>
 
