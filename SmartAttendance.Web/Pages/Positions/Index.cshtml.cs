@@ -91,9 +91,6 @@ WHERE LTRIM(RTRIM(ArabicName)) = @ArabicName
             await ExecuteNonQueryAsync(@"
 UPDATE dbo.HrJobPositions
 SET ArabicName = @ArabicName,
-    EnglishName = NULL,
-    JobCode = NULL,
-    Grade = NULL,
     DepartmentId = @DepartmentId,
     Category = @Category,
     Level = @Level,
@@ -429,7 +426,6 @@ IF COL_LENGTH(N'dbo.HrJobPositions', N'UpdatedAt') IS NULL
 
 UPDATE dbo.HrJobPositions SET IsActive = 1 WHERE IsActive IS NULL;
 UPDATE dbo.HrJobPositions SET CreatedAt = SYSDATETIME() WHERE CreatedAt IS NULL;
-UPDATE dbo.HrJobPositions SET JobCode = NULL, Grade = NULL;
 ");
     }
 
