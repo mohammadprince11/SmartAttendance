@@ -24,14 +24,14 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync(int? editId)
     {
-        await EnsureSchemaAsync();
+        await SmartAttendance.Web.Infrastructure.Hrms.PositionSchema.EnsureAsync(_db);
         await SyncExistingValuesAsync();
         await LoadPageAsync(editId);
     }
 
     public async Task<IActionResult> OnPostSaveAsync()
     {
-        await EnsureSchemaAsync();
+        await SmartAttendance.Web.Infrastructure.Hrms.PositionSchema.EnsureAsync(_db);
         Input.Name = NormalizeText(Input.Name);
         Input.OriginalName = NormalizeText(Input.OriginalName);
 
@@ -104,7 +104,7 @@ VALUES (@Name, 1, SYSDATETIME());
 
     public async Task<IActionResult> OnPostToggleAsync(int id)
     {
-        await EnsureSchemaAsync();
+        await SmartAttendance.Web.Infrastructure.Hrms.PositionSchema.EnsureAsync(_db);
 
         await ExecuteNonQueryAsync(@"
 UPDATE dbo.HrJobPositionLevels
@@ -119,7 +119,7 @@ WHERE Id = @Id;
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
-        await EnsureSchemaAsync();
+        await SmartAttendance.Web.Infrastructure.Hrms.PositionSchema.EnsureAsync(_db);
 
         var name = await GetNameAsync(id);
         if (string.IsNullOrWhiteSpace(name))
@@ -162,42 +162,6 @@ WHERE Id = @Id;
                 };
             }
         }
-    }
-
-    private async Task EnsureSchemaAsync()
-    {
-        await ExecuteNonQueryAsync(@"
-IF OBJECT_ID(N'dbo.HrJobPositionLevels', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.HrJobPositionLevels
-    (
-        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_HrJobPositionLevels PRIMARY KEY,
-        Name NVARCHAR(200) NOT NULL,
-        IsActive BIT NOT NULL CONSTRAINT DF_HrJobPositionLevels_IsActive DEFAULT(1),
-        CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_HrJobPositionLevels_CreatedAt DEFAULT(SYSDATETIME()),
-        UpdatedAt DATETIME2 NULL
-    );
-END;
-
-IF OBJECT_ID(N'dbo.HrJobPositions', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.HrJobPositions
-    (
-        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_HrJobPositions PRIMARY KEY,
-        ArabicName NVARCHAR(400) NOT NULL,
-        EnglishName NVARCHAR(400) NULL,
-        JobCode NVARCHAR(160) NULL,
-        DepartmentId INT NULL,
-        Grade NVARCHAR(160) NULL,
-        Category NVARCHAR(160) NULL,
-        Level NVARCHAR(160) NULL,
-        Description NVARCHAR(MAX) NULL,
-        IsActive BIT NOT NULL CONSTRAINT DF_HrJobPositions_IsActive DEFAULT(1),
-        CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_HrJobPositions_CreatedAt DEFAULT(SYSDATETIME()),
-        UpdatedAt DATETIME2 NULL
-    );
-END;
-");
     }
 
     private async Task SyncExistingValuesAsync()
