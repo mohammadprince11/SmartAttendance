@@ -203,3 +203,64 @@
     margin-top: 0;
 }
 /* NEXORA_FIX07J_CREATE_DYNAMIC_GROUP_HEADER_END */
+
+/* NEXORA_FIX10D_ADDITIONAL_BLOCK_CELL_POLISH_START */
+.nxr-profile-dynamic-summary-extra .nxr-kayan-info-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.nxr-profile-dynamic-summary-extra .nxr-kayan-info-grid > .nxr-profile-dynamic-summary-item,
+.nxr-kayan-info-grid > .nxr-profile-dynamic-summary-item {
+    min-width: 0 !important;
+    min-height: 58px !important;
+    padding: 10px 12px !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(73, 111, 151, .16) !important;
+    background: rgba(3, 16, 28, .26) !important;
+    box-shadow: none !important;
+}
+
+.nxr-profile-dynamic-summary-extra .nxr-kayan-info-grid > .nxr-profile-dynamic-summary-item span,
+.nxr-kayan-info-grid > .nxr-profile-dynamic-summary-item span {
+    display: block !important;
+    margin-bottom: 5px !important;
+    color: #91aabe !important;
+    opacity: 1 !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+}
+
+.nxr-profile-dynamic-summary-extra .nxr-kayan-info-grid > .nxr-profile-dynamic-summary-item strong,
+.nxr-kayan-info-grid > .nxr-profile-dynamic-summary-item strong {
+    display: block !important;
+    color: #f5f9ff !important;
+    opacity: 1 !important;
+    font-size: 13px !important;
+    font-weight: 1000 !important;
+    line-height: 1.45 !important;
+    overflow-wrap: anywhere !important;
+}
+
+.nxr-profile-dynamic-summary-extra .nxr-kayan-info-grid > .nxr-profile-dynamic-summary-item .nxr-profile-dynamic-empty-value,
+.nxr-kayan-info-grid > .nxr-profile-dynamic-summary-item .nxr-profile-dynamic-empty-value {
+    color: #7f98aa !important;
+    opacity: 1 !important;
+}
+
+.nxr-profile-dynamic-summary-extra {
+    display: grid !important;
+    align-content: start !important;
+}
+
+.nxr-profile-dynamic-summary-extra .nxr-kayan-section-head {
+    margin-bottom: 14px !important;
+}
+
+@media (max-width: 900px) {
+    .nxr-profile-dynamic-summary-extra .nxr-kayan-info-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+/* NEXORA_FIX10D_ADDITIONAL_BLOCK_CELL_POLISH_END */

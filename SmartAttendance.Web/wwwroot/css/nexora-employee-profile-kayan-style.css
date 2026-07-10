@@ -363,3 +363,299 @@
         inset-inline-end: auto !important;
     }
 }
+
+/* NEXORA_FIX10B_PROFILE_CARD_SAFE_LAYOUT_START */
+.nxr-kayan-profile-card {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    padding: 18px !important;
+    overflow: visible !important;
+    align-items: stretch !important;
+}
+
+.nxr-kayan-profile-card > .nxr-kayan-identity {
+    grid-column: 1 / -1 !important;
+    border: 1px solid rgba(73, 111, 151, .22) !important;
+    border-radius: 18px !important;
+    background:
+        radial-gradient(circle at top right, rgba(34, 211, 238, .10), transparent 36%),
+        rgba(5, 20, 34, .58) !important;
+}
+
+.nxr-kayan-profile-card > .nxr-kayan-section,
+.nxr-kayan-profile-card > .nxr-profile-dynamic-summary-extra {
+    grid-column: auto !important;
+    border: 1px solid rgba(73, 111, 151, .22) !important;
+    border-radius: 18px !important;
+    background: rgba(5, 20, 34, .48) !important;
+    border-inline-start: 0 !important;
+    min-height: 220px !important;
+}
+
+.nxr-kayan-identity {
+    display: grid !important;
+    grid-template-columns: 138px minmax(0, 1fr) !important;
+    gap: 18px !important;
+    padding: 20px !important;
+    align-items: start !important;
+    border-inline-start: 0 !important;
+}
+
+.nxr-kayan-avatar {
+    width: 138px !important;
+    height: 138px !important;
+}
+
+.nxr-kayan-main {
+    min-width: 0 !important;
+}
+
+.nxr-kayan-main h2 {
+    font-size: 21px !important;
+    line-height: 1.35 !important;
+}
+
+.nxr-kayan-status-row {
+    margin-bottom: 12px !important;
+}
+
+.nxr-kayan-contact {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px 12px !important;
+    padding-top: 14px !important;
+}
+
+.nxr-kayan-contact > div {
+    min-width: 0 !important;
+    padding: 8px 10px !important;
+    border-radius: 12px !important;
+    background: rgba(4, 16, 27, .26) !important;
+    border: 1px solid rgba(73, 111, 151, .12) !important;
+}
+
+.nxr-kayan-section {
+    padding: 18px !important;
+}
+
+.nxr-kayan-section-head {
+    margin-bottom: 12px !important;
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid rgba(143, 166, 187, .12) !important;
+}
+
+.nxr-kayan-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px 14px !important;
+}
+
+.nxr-profile-dynamic-summary-extra {
+    margin-top: 0 !important;
+}
+
+@media (max-width: 1500px) {
+    .nxr-kayan-profile-card {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .nxr-kayan-profile-card > .nxr-kayan-identity {
+        grid-column: 1 / -1 !important;
+    }
+
+    .nxr-kayan-contact {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .nxr-kayan-profile-card {
+        grid-template-columns: 1fr !important;
+        padding: 12px !important;
+    }
+
+    .nxr-kayan-identity {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxr-kayan-avatar {
+        width: 120px !important;
+        height: 120px !important;
+    }
+
+    .nxr-kayan-contact,
+    .nxr-kayan-info-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+/* NEXORA_FIX10B_PROFILE_CARD_SAFE_LAYOUT_END */
+/* NEXORA_FIX10C_PROFILE_CARD_PREMIUM_POLISH_START */
+.nxr-kayan-profile-card {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(360px, 1fr)) !important;
+    gap: 18px !important;
+    padding: 18px !important;
+    overflow: visible !important;
+    align-items: start !important;
+    background:
+        radial-gradient(circle at top right, rgba(34, 211, 238, .08), transparent 34%),
+        linear-gradient(135deg, rgba(7, 24, 39, .92), rgba(4, 15, 27, .98)) !important;
+}
+
+.nxr-kayan-profile-card > .nxr-kayan-identity {
+    grid-column: 1 / -1 !important;
+    min-height: unset !important;
+    border: 1px solid rgba(34, 211, 238, .20) !important;
+    border-radius: 22px !important;
+    background:
+        radial-gradient(circle at top right, rgba(34, 211, 238, .13), transparent 36%),
+        linear-gradient(135deg, rgba(9, 35, 55, .88), rgba(5, 20, 33, .96)) !important;
+    box-shadow: 0 22px 70px rgba(0, 0, 0, .22) !important;
+}
+
+.nxr-kayan-identity {
+    display: grid !important;
+    grid-template-columns: 138px minmax(0, 1fr) !important;
+    gap: 18px !important;
+    padding: 20px !important;
+    align-items: start !important;
+    border-inline-start: 0 !important;
+}
+
+.nxr-kayan-avatar {
+    width: 138px !important;
+    height: 138px !important;
+    border-radius: 18px !important;
+}
+
+.nxr-kayan-main {
+    min-width: 0 !important;
+    display: grid !important;
+    gap: 10px !important;
+}
+
+.nxr-kayan-main h2 {
+    margin: 0 !important;
+    font-size: 22px !important;
+    line-height: 1.3 !important;
+}
+
+.nxr-kayan-main p {
+    margin: 0 !important;
+}
+
+.nxr-kayan-status-row {
+    margin: 0 !important;
+}
+
+.nxr-kayan-contact {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    padding-top: 14px !important;
+    border-top: 1px solid rgba(143, 166, 187, .14) !important;
+}
+
+.nxr-kayan-contact > div {
+    min-width: 0 !important;
+    min-height: 58px !important;
+    padding: 10px 12px !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(73, 111, 151, .18) !important;
+    background: rgba(3, 16, 28, .34) !important;
+}
+
+.nxr-kayan-profile-card > .nxr-kayan-section,
+.nxr-kayan-profile-card > .nxr-profile-dynamic-summary-extra {
+    grid-column: auto !important;
+    min-height: 245px !important;
+    border: 1px solid rgba(73, 111, 151, .22) !important;
+    border-radius: 22px !important;
+    background:
+        radial-gradient(circle at top right, rgba(34, 211, 238, .08), transparent 32%),
+        rgba(5, 20, 34, .58) !important;
+    border-inline-start: 0 !important;
+    box-shadow: 0 18px 54px rgba(0, 0, 0, .18) !important;
+}
+
+.nxr-kayan-section {
+    padding: 20px !important;
+}
+
+.nxr-kayan-section-head {
+    min-height: 42px !important;
+    margin-bottom: 14px !important;
+    padding-bottom: 12px !important;
+    border-bottom: 1px solid rgba(143, 166, 187, .14) !important;
+}
+
+.nxr-kayan-section-head h3 {
+    font-size: 18px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-kayan-info-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.nxr-kayan-info-grid > div {
+    min-height: 58px !important;
+    padding: 10px 12px !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(73, 111, 151, .16) !important;
+    background: rgba(3, 16, 28, .26) !important;
+}
+
+.nxr-kayan-contact span,
+.nxr-kayan-info-grid span {
+    color: #91aabe !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    margin-bottom: 5px !important;
+}
+
+.nxr-kayan-contact strong,
+.nxr-kayan-info-grid strong {
+    color: #f5f9ff !important;
+    font-size: 13px !important;
+    font-weight: 1000 !important;
+    line-height: 1.45 !important;
+}
+
+.nxr-profile-dynamic-summary-extra {
+    margin-top: 0 !important;
+}
+
+@media (max-width: 1500px) {
+    .nxr-kayan-profile-card {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxr-kayan-contact {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .nxr-kayan-profile-card {
+        padding: 12px !important;
+    }
+
+    .nxr-kayan-identity {
+        grid-template-columns: 1fr !important;
+        padding: 16px !important;
+    }
+
+    .nxr-kayan-avatar {
+        width: 120px !important;
+        height: 120px !important;
+    }
+
+    .nxr-kayan-contact,
+    .nxr-kayan-info-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+/* NEXORA_FIX10C_PROFILE_CARD_PREMIUM_POLISH_END */
