@@ -794,6 +794,307 @@
         }
     }
     /* NEXORA_FIX05C_CREATE_EDIT_VISUAL_ALIGNMENT_END */
+
+    /* NEXORA_FIX12A_CREATE_PAGE_PREMIUM_POLISH_START */
+    .nxr-page.nxr-create-clean-page {
+        max-width: 1240px !important;
+        margin-inline: auto !important;
+        display: grid !important;
+        gap: 18px !important;
+    }
+
+    .nxr-form.nxr-create-clean-form,
+    #employee-create-form {
+        max-width: 1240px !important;
+        display: grid !important;
+        gap: 18px !important;
+    }
+
+    .nxr-create-clean-header,
+    .nxr-card.nxr-form-section,
+    .nxr-create-submit-bar {
+        border-radius: 24px !important;
+        border: 1px solid rgba(34, 211, 238, .22) !important;
+        background:
+            radial-gradient(circle at top right, rgba(34, 211, 238, .12), transparent 34%),
+            linear-gradient(135deg, rgba(8, 31, 50, .90), rgba(4, 16, 28, .98)) !important;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, .22) !important;
+    }
+
+    .nxr-create-clean-header {
+        padding: 22px 24px !important;
+        align-items: center !important;
+    }
+
+    .nxr-create-clean-header .nxr-title h1 {
+        margin: 8px 0 6px !important;
+        color: #f5f9ff !important;
+        font-size: clamp(28px, 3vw, 42px) !important;
+        line-height: 1.15 !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-create-clean-header .nxr-title p {
+        color: #a9bfd2 !important;
+        font-weight: 850 !important;
+    }
+
+    .nxr-create-section {
+        padding: 22px !important;
+        overflow: visible !important;
+    }
+
+    .nxr-create-section .nxr-section-title {
+        margin: 0 0 18px !important;
+        padding-bottom: 14px !important;
+        border-bottom: 1px solid rgba(143, 166, 187, .14) !important;
+        align-items: center !important;
+    }
+
+    .nxr-create-section .nxr-section-title h2 {
+        margin: 6px 0 4px !important;
+        color: #f5f9ff !important;
+        font-size: 26px !important;
+        line-height: 1.2 !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-create-section .nxr-section-title p {
+        color: #9fb8c9 !important;
+        font-weight: 850 !important;
+    }
+
+    .nxr-create-clean-header .nxr-brand-mini,
+    .nxr-create-section .nxr-chip {
+        min-height: 29px !important;
+        border-color: rgba(245, 201, 107, .34) !important;
+        background: rgba(245, 201, 107, .09) !important;
+        color: #f5c96b !important;
+        font-weight: 1000 !important;
+        letter-spacing: .04em !important;
+    }
+
+    .nxr-photo-upload-card .nxr-photo-upload-wrap {
+        display: grid !important;
+        grid-template-columns: 118px minmax(0, 1fr) !important;
+        gap: 16px !important;
+        align-items: center !important;
+        padding: 14px !important;
+        border: 1px solid rgba(73, 111, 151, .18) !important;
+        border-radius: 20px !important;
+        background: rgba(3, 16, 28, .26) !important;
+    }
+
+    .nxr-photo-upload-card .nxr-photo-drop {
+        width: 118px !important;
+        height: 118px !important;
+        border-radius: 22px !important;
+        border: 1px dashed rgba(34, 211, 238, .38) !important;
+        overflow: hidden !important;
+    }
+
+    .nxr-photo-upload-card .nxr-photo-preview {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+    }
+
+    .nxr-photo-upload-card .nxr-photo-hint {
+        display: grid !important;
+        gap: 6px !important;
+        align-content: center !important;
+    }
+
+    .nxr-photo-upload-card .nxr-photo-hint strong {
+        color: #f5f9ff !important;
+        font-size: 17px !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-photo-upload-card .nxr-photo-hint span,
+    .nxr-photo-upload-card .nxr-photo-hint small {
+        color: #91aabe !important;
+        font-weight: 850 !important;
+    }
+
+    .nxr-form-grid.nxr-create-grid,
+    .nxr-form-grid.nxr-create-grid.two {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 14px !important;
+        align-items: start !important;
+    }
+
+    .nxr-create-grid .wide,
+    .nxr-create-grid .nxr-field.wide {
+        grid-column: span 2 !important;
+    }
+
+    .nxr-create-clean-form .nxr-field {
+        min-width: 0 !important;
+        display: grid !important;
+        gap: 8px !important;
+    }
+
+    .nxr-create-clean-form .nxr-field label {
+        color: #f5c96b !important;
+        font-size: 13px !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-create-clean-form .nxr-field input,
+    .nxr-create-clean-form .nxr-field select,
+    .nxr-create-clean-form .nxr-field textarea,
+    .nxr-create-clean-form .nxr-native-select,
+    .nxr-create-clean-form .nxos__button {
+        width: 100% !important;
+        min-height: 50px !important;
+        border-radius: 16px !important;
+        border: 1px solid rgba(34, 211, 238, .22) !important;
+        background: rgba(3, 16, 28, .50) !important;
+        color: #f5f9ff !important;
+        font-weight: 950 !important;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03) !important;
+    }
+
+    .nxr-create-clean-form .nxr-field textarea {
+        min-height: 112px !important;
+        resize: vertical !important;
+    }
+
+    .nxr-create-clean-form .nxr-field input:focus,
+    .nxr-create-clean-form .nxr-field select:focus,
+    .nxr-create-clean-form .nxr-field textarea:focus,
+    .nxr-create-clean-form .nxos__button:focus {
+        outline: none !important;
+        border-color: rgba(34, 211, 238, .62) !important;
+        box-shadow: 0 0 0 4px rgba(34, 211, 238, .12) !important;
+    }
+
+    .nxr-create-dynamic-profile-section {
+        border-color: rgba(245, 201, 107, .24) !important;
+        background:
+            radial-gradient(circle at top right, rgba(245, 201, 107, .10), transparent 34%),
+            linear-gradient(135deg, rgba(8, 31, 50, .90), rgba(4, 16, 28, .98)) !important;
+    }
+
+    .nxr-create-dynamic-profile-groups {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 14px !important;
+    }
+
+    .nxr-create-dynamic-profile-group {
+        min-width: 0 !important;
+        padding: 16px !important;
+        border-radius: 20px !important;
+        border: 1px solid rgba(73, 111, 151, .22) !important;
+        background:
+            linear-gradient(135deg, rgba(7, 27, 43, .82), rgba(3, 16, 28, .94)) !important;
+    }
+
+    .nxr-create-dynamic-profile-group .nxr-form-grid.nxr-create-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 12px !important;
+    }
+
+    .nxr-create-dynamic-profile-group .nxr-field.wide {
+        grid-column: 1 / -1 !important;
+    }
+
+    .nxr-documents-section .nxr-doc-clean-box {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 16px !important;
+        padding: 16px !important;
+        border-radius: 20px !important;
+        border: 1px solid rgba(73, 111, 151, .22) !important;
+        background: rgba(3, 16, 28, .34) !important;
+    }
+
+    .nxr-documents-section .nxr-doc-clean-box strong {
+        color: #f5f9ff !important;
+        font-size: 16px !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-documents-section .nxr-doc-clean-box p,
+    .nxr-selected-documents {
+        color: #91aabe !important;
+        font-weight: 850 !important;
+    }
+
+    .nxr-selected-documents {
+        margin-top: 12px !important;
+        min-height: 48px !important;
+        padding: 14px !important;
+        border-radius: 18px !important;
+        border: 1px dashed rgba(34, 211, 238, .22) !important;
+        background: rgba(3, 16, 28, .28) !important;
+    }
+
+    .nxr-create-submit-bar {
+        padding: 16px !important;
+        justify-content: flex-start !important;
+        gap: 12px !important;
+    }
+
+    .nxr-btn {
+        min-height: 48px !important;
+        min-width: 148px !important;
+        border-radius: 16px !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-btn.primary {
+        background: linear-gradient(135deg, #22d3ee, #67e8f9) !important;
+        color: #06111f !important;
+        border-color: rgba(34, 211, 238, .44) !important;
+        box-shadow: 0 16px 34px rgba(34, 211, 238, .18) !important;
+    }
+
+    @@media (max-width: 1200px) {
+        .nxr-form-grid.nxr-create-grid,
+        .nxr-form-grid.nxr-create-grid.two {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+
+        .nxr-create-dynamic-profile-groups {
+            grid-template-columns: 1fr !important;
+        }
+    }
+
+    @@media (max-width: 760px) {
+        .nxr-create-clean-header,
+        .nxr-documents-section .nxr-doc-clean-box {
+            display: grid !important;
+        }
+
+        .nxr-photo-upload-card .nxr-photo-upload-wrap,
+        .nxr-form-grid.nxr-create-grid,
+        .nxr-form-grid.nxr-create-grid.two,
+        .nxr-create-dynamic-profile-group .nxr-form-grid.nxr-create-grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        .nxr-create-grid .wide,
+        .nxr-create-grid .nxr-field.wide {
+            grid-column: auto !important;
+        }
+
+        .nxr-actions,
+        .nxr-create-submit-bar {
+            justify-content: stretch !important;
+            flex-direction: column !important;
+        }
+
+        .nxr-actions .nxr-btn,
+        .nxr-create-submit-bar .nxr-btn {
+            width: 100% !important;
+        }
+    }
+    /* NEXORA_FIX12A_CREATE_PAGE_PREMIUM_POLISH_END */
 </style>
 
 
