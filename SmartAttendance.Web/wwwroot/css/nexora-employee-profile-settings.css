@@ -807,3 +807,748 @@ body.nxr-profile-settings-modal-active {
     }
 }
 /* NEXORA_FIX08B_PROFILE_SETTINGS_UI_END */
+/* NEXORA_FIX08C_PROFILE_SETTINGS_CARDS_LAYOUT_START */
+.nxr-profile-settings-page-v2 .nxr-profile-settings-sections {
+    align-items: start;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section {
+    min-height: unset;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field-list {
+    gap: 12px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 8px 14px;
+    padding: 14px 16px;
+    min-height: 96px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field-main {
+    grid-column: 1;
+    grid-row: 1;
+    display: grid;
+    gap: 3px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field-main b {
+    font-size: 17px;
+    line-height: 1.4;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field-main span {
+    font-size: 12px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-pills {
+    grid-column: 1;
+    grid-row: 2;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-row-actions {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: max-content;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-row-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-edit-shell {
+    display: inline-flex;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-edit-shell summary,
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field-row form button {
+    min-width: 74px;
+    min-height: 38px;
+    padding: 0 13px;
+    white-space: nowrap;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section header {
+    align-items: center;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section header strong {
+    order: -1;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-empty {
+    min-height: 96px;
+}
+
+@media (max-width: 900px) {
+    .nxr-profile-settings-page-v2 .nxr-profile-settings-field-row {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+    }
+
+    .nxr-profile-settings-page-v2 .nxr-profile-settings-field-main,
+    .nxr-profile-settings-page-v2 .nxr-profile-settings-pills,
+    .nxr-profile-settings-page-v2 .nxr-profile-settings-row-actions {
+        grid-column: 1;
+        grid-row: auto;
+    }
+
+    .nxr-profile-settings-page-v2 .nxr-profile-settings-row-actions {
+        justify-content: flex-start;
+        flex-wrap: wrap !important;
+        min-width: 0;
+    }
+}
+/* NEXORA_FIX08C_PROFILE_SETTINGS_CARDS_LAYOUT_END */
+/* NEXORA_FIX08D_PROFILE_SETTINGS_EDIT_MODAL_LAYOUT_START */
+.nxr-profile-settings-edit-shell.is-modal-open {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 10020 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 24px !important;
+    box-sizing: border-box !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open > summary {
+    display: none !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-form {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: min(820px, calc(100vw - 56px)) !important;
+    max-height: calc(100vh - 96px) !important;
+    overflow: auto !important;
+    border: 1px solid rgba(34, 211, 238, .26) !important;
+    border-radius: 24px !important;
+    background:
+        radial-gradient(circle at top right, rgba(34, 211, 238, .13), transparent 34%),
+        linear-gradient(135deg, rgba(13, 40, 60, .98), rgba(5, 18, 30, .99)) !important;
+    box-shadow: 0 30px 90px rgba(0, 0, 0, .48) !important;
+    padding: 22px !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    direction: rtl !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-modal-head {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    padding-bottom: 16px !important;
+    margin-bottom: 4px !important;
+    border-bottom: 1px solid rgba(160, 190, 210, .14) !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-modal-head strong {
+    color: #fff !important;
+    font-size: 26px !important;
+    line-height: 1.25 !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-modal-close {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    border-radius: 15px !important;
+    border: 1px solid rgba(34, 211, 238, .26) !important;
+    background: rgba(34, 211, 238, .08) !important;
+    color: #eafcff !important;
+    font-size: 22px !important;
+    font-weight: 1000 !important;
+    cursor: pointer !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-field {
+    min-width: 0 !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-field label {
+    display: block !important;
+    margin-bottom: 8px !important;
+    color: #f5c96b !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-field input,
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-field select {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 50px !important;
+    border-radius: 16px !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxos,
+.nxr-profile-settings-edit-shell.is-modal-open .nxos__button {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxos__button {
+    min-height: 50px !important;
+    justify-content: space-between !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-check {
+    min-height: 50px !important;
+    align-self: end !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-actions {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding-top: 6px !important;
+    border-top: 1px solid rgba(160, 190, 210, .10) !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-actions button {
+    min-width: 132px !important;
+    min-height: 48px !important;
+    border-radius: 16px !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-cancel-button {
+    border: 1px solid rgba(160, 190, 210, .22) !important;
+    background: rgba(12, 29, 45, .86) !important;
+    color: #dceeff !important;
+}
+
+@media (max-width: 820px) {
+    .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-form {
+        grid-template-columns: 1fr !important;
+        width: min(620px, calc(100vw - 32px)) !important;
+        padding: 18px !important;
+    }
+
+    .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-actions {
+        flex-direction: column-reverse !important;
+        align-items: stretch !important;
+    }
+
+    .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-actions button {
+        width: 100% !important;
+    }
+}
+/* NEXORA_FIX08D_PROFILE_SETTINGS_EDIT_MODAL_LAYOUT_END */
+/* NEXORA_FIX08E_STABLE_EDIT_MODAL_START */
+body.nxr-profile-settings-modal-active .nxr-profile-settings-section:hover {
+    transform: none !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 10030 !important;
+    display: block !important;
+    pointer-events: none !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open > summary {
+    display: none !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-form {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 10060 !important;
+    width: min(860px, calc(100vw - 64px)) !important;
+    max-height: calc(100vh - 96px) !important;
+    overflow: auto !important;
+    pointer-events: auto !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    padding: 22px !important;
+    border-radius: 24px !important;
+    border: 1px solid rgba(34, 211, 238, .30) !important;
+    background:
+        radial-gradient(circle at top right, rgba(34, 211, 238, .16), transparent 34%),
+        linear-gradient(135deg, rgba(13, 40, 60, .99), rgba(5, 18, 30, 1)) !important;
+    box-shadow: 0 32px 100px rgba(0, 0, 0, .56) !important;
+    direction: rtl !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-modal-head {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    padding-bottom: 16px !important;
+    border-bottom: 1px solid rgba(160, 190, 210, .14) !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-modal-head strong {
+    color: #fff !important;
+    font-size: 26px !important;
+    line-height: 1.25 !important;
+    font-weight: 1000 !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-modal-close {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    border-radius: 15px !important;
+    border: 1px solid rgba(34, 211, 238, .30) !important;
+    background: rgba(34, 211, 238, .10) !important;
+    color: #eafcff !important;
+    font-size: 22px !important;
+    font-weight: 1000 !important;
+    cursor: pointer !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-field {
+    min-width: 0 !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-field label {
+    display: block !important;
+    margin-bottom: 8px !important;
+    color: #f5c96b !important;
+    font-weight: 1000 !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-field input,
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-field select {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 50px !important;
+    border-radius: 16px !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-check {
+    min-height: 50px !important;
+    align-self: end !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-actions {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding-top: 8px !important;
+    border-top: 1px solid rgba(160, 190, 210, .12) !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-actions button {
+    min-width: 138px !important;
+    min-height: 48px !important;
+    border-radius: 16px !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-cancel-button {
+    border: 1px solid rgba(160, 190, 210, .22) !important;
+    background: rgba(12, 29, 45, .88) !important;
+    color: #dceeff !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-modal-backdrop {
+    pointer-events: auto !important;
+}
+
+@media (max-width: 820px) {
+    body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-form {
+        grid-template-columns: 1fr !important;
+        width: min(620px, calc(100vw - 32px)) !important;
+        max-height: calc(100vh - 32px) !important;
+        padding: 18px !important;
+    }
+
+    body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-actions {
+        flex-direction: column-reverse !important;
+        align-items: stretch !important;
+    }
+
+    body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-actions button {
+        width: 100% !important;
+    }
+}
+/* NEXORA_FIX08E_STABLE_EDIT_MODAL_END */
+/* NEXORA_FIX08F_MODAL_FLICKER_SCROLL_START */
+.nxr-profile-settings-edit-shell:not(.is-modal-open) .nxr-profile-settings-edit-form {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-form,
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-form {
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-form * {
+    box-sizing: border-box !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-form {
+    width: min(820px, calc(100vw - 96px)) !important;
+    max-width: calc(100vw - 96px) !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-field input,
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-field select,
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxos,
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxos__button {
+    max-width: 100% !important;
+    min-width: 0 !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-actions {
+    overflow-x: hidden !important;
+}
+
+@media (max-width: 820px) {
+    body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-form {
+        width: min(620px, calc(100vw - 32px)) !important;
+        max-width: calc(100vw - 32px) !important;
+    }
+}
+/* NEXORA_FIX08F_MODAL_FLICKER_SCROLL_END */
+/* NEXORA_FIX08G_REMOVE_DETAILS_EDIT_MODAL_START */
+.nxr-profile-settings-edit-shell {
+    display: inline-flex;
+}
+
+.nxr-profile-settings-edit-trigger {
+    list-style: none;
+    cursor: pointer;
+    border: 1px solid rgba(34, 211, 238, .30);
+    border-radius: 14px;
+    min-height: 38px;
+    min-width: 74px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    color: #e8fbff;
+    background: rgba(34, 211, 238, .10);
+    font: inherit;
+    font-weight: 1000;
+}
+
+.nxr-profile-settings-edit-shell:not(.is-modal-open) .nxr-profile-settings-edit-form {
+    display: none !important;
+}
+
+.nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-trigger {
+    display: none !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 10030 !important;
+    pointer-events: none !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-form {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 10060 !important;
+    width: min(820px, calc(100vw - 96px)) !important;
+    max-width: calc(100vw - 96px) !important;
+    max-height: calc(100vh - 96px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    pointer-events: auto !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    box-sizing: border-box !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    padding: 22px !important;
+    border-radius: 24px !important;
+    border: 1px solid rgba(34, 211, 238, .30) !important;
+    background:
+        radial-gradient(circle at top right, rgba(34, 211, 238, .16), transparent 34%),
+        linear-gradient(135deg, rgba(13, 40, 60, .99), rgba(5, 18, 30, 1)) !important;
+    box-shadow: 0 32px 100px rgba(0, 0, 0, .56) !important;
+    direction: rtl !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-form * {
+    box-sizing: border-box !important;
+    min-width: 0;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-modal-head {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    padding-bottom: 16px !important;
+    border-bottom: 1px solid rgba(160, 190, 210, .14) !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-modal-head strong {
+    color: #fff !important;
+    font-size: 26px !important;
+    line-height: 1.25 !important;
+    font-weight: 1000 !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-modal-close {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    border-radius: 15px !important;
+    border: 1px solid rgba(34, 211, 238, .30) !important;
+    background: rgba(34, 211, 238, .10) !important;
+    color: #eafcff !important;
+    font-size: 22px !important;
+    font-weight: 1000 !important;
+    cursor: pointer !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-field input,
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-field select,
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxos,
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxos__button {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 50px !important;
+    border-radius: 16px !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-check {
+    min-height: 50px !important;
+    align-self: end !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-actions {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding-top: 8px !important;
+    border-top: 1px solid rgba(160, 190, 210, .12) !important;
+    overflow-x: hidden !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-actions button {
+    min-width: 138px !important;
+    min-height: 48px !important;
+    border-radius: 16px !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-cancel-button {
+    border: 1px solid rgba(160, 190, 210, .22) !important;
+    background: rgba(12, 29, 45, .88) !important;
+    color: #dceeff !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-section:hover {
+    transform: none !important;
+}
+
+@media (max-width: 820px) {
+    body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-edit-form {
+        grid-template-columns: 1fr !important;
+        width: min(620px, calc(100vw - 32px)) !important;
+        max-width: calc(100vw - 32px) !important;
+        max-height: calc(100vh - 32px) !important;
+        padding: 18px !important;
+    }
+
+    body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-actions {
+        flex-direction: column-reverse !important;
+        align-items: stretch !important;
+    }
+
+    body.nxr-profile-settings-modal-active .nxr-profile-settings-edit-shell.is-modal-open .nxr-profile-settings-actions button {
+        width: 100% !important;
+    }
+}
+/* NEXORA_FIX08G_REMOVE_DETAILS_EDIT_MODAL_END */
+/* NEXORA_FIX08H2_TRUE_BODY_EDIT_MODAL_START */
+.nxr-profile-settings-edit-shell .nxr-profile-settings-edit-form:not(.nxr-profile-settings-body-modal) {
+    display: none !important;
+}
+
+.nxr-profile-settings-body-modal {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate3d(-50%, -50%, 0) !important;
+    z-index: 10070 !important;
+    width: min(760px, calc(100vw - 96px)) !important;
+    max-width: calc(100vw - 96px) !important;
+    max-height: calc(100vh - 96px) !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+    padding: 22px !important;
+    border-radius: 24px !important;
+    border: 1px solid rgba(34, 211, 238, .30) !important;
+    background:
+        radial-gradient(circle at top right, rgba(34, 211, 238, .16), transparent 34%),
+        linear-gradient(135deg, rgba(13, 40, 60, .99), rgba(5, 18, 30, 1)) !important;
+    box-shadow: 0 34px 100px rgba(0, 0, 0, .58) !important;
+    direction: rtl !important;
+    transition: none !important;
+    animation: none !important;
+}
+
+.nxr-profile-settings-body-modal *,
+.nxr-profile-settings-body-modal *::before,
+.nxr-profile-settings-body-modal *::after {
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+}
+
+.nxr-profile-settings-body-modal .nxr-profile-settings-edit-modal-head {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    padding-bottom: 14px !important;
+    border-bottom: 1px solid rgba(160, 190, 210, .14) !important;
+}
+
+.nxr-profile-settings-body-modal .nxr-profile-settings-edit-modal-head strong {
+    color: #fff !important;
+    font-size: 26px !important;
+    line-height: 1.25 !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-profile-settings-body-modal .nxr-profile-settings-modal-close {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    border-radius: 15px !important;
+    border: 1px solid rgba(34, 211, 238, .30) !important;
+    background: rgba(34, 211, 238, .10) !important;
+    color: #eafcff !important;
+    font-size: 22px !important;
+    font-weight: 1000 !important;
+    cursor: pointer !important;
+}
+
+.nxr-profile-settings-body-modal .nxr-profile-settings-field {
+    display: grid !important;
+    gap: 8px !important;
+}
+
+.nxr-profile-settings-body-modal .nxr-profile-settings-field label {
+    display: block !important;
+    color: #f5c96b !important;
+    font-weight: 1000 !important;
+    font-size: 13px !important;
+}
+
+.nxr-profile-settings-body-modal .nxr-profile-settings-field input,
+.nxr-profile-settings-body-modal .nxr-profile-settings-field select,
+.nxr-profile-settings-body-modal .nxos,
+.nxr-profile-settings-body-modal .nxos__button {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 50px !important;
+    border-radius: 16px !important;
+}
+
+.nxr-profile-settings-body-modal .nxr-profile-settings-check {
+    min-height: 50px !important;
+    align-self: end !important;
+}
+
+.nxr-profile-settings-body-modal .nxr-profile-settings-actions {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding-top: 8px !important;
+    border-top: 1px solid rgba(160, 190, 210, .12) !important;
+    overflow: visible !important;
+}
+
+.nxr-profile-settings-body-modal .nxr-profile-settings-actions button {
+    min-width: 138px !important;
+    min-height: 48px !important;
+    border-radius: 16px !important;
+}
+
+.nxr-profile-settings-body-modal .nxr-profile-settings-cancel-button {
+    border: 1px solid rgba(160, 190, 210, .22) !important;
+    background: rgba(12, 29, 45, .88) !important;
+    color: #dceeff !important;
+}
+
+body.nxr-profile-settings-modal-active .nxr-profile-settings-section:hover {
+    transform: none !important;
+}
+
+@media (max-width: 820px) {
+    .nxr-profile-settings-body-modal {
+        grid-template-columns: 1fr !important;
+        width: min(620px, calc(100vw - 32px)) !important;
+        max-width: calc(100vw - 32px) !important;
+        max-height: calc(100vh - 32px) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        padding: 18px !important;
+    }
+
+    .nxr-profile-settings-body-modal .nxr-profile-settings-actions {
+        flex-direction: column-reverse !important;
+        align-items: stretch !important;
+    }
+
+    .nxr-profile-settings-body-modal .nxr-profile-settings-actions button {
+        width: 100% !important;
+    }
+}
+/* NEXORA_FIX08H2_TRUE_BODY_EDIT_MODAL_END */

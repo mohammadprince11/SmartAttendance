@@ -2,17 +2,16 @@
     "use strict";
 
     const editShellSelector = ".nxr-profile-settings-edit-shell";
+    const editTriggerSelector = ".nxr-profile-settings-edit-trigger";
     const deleteFormSelector = "form[data-nxr-field-delete-form]";
 
     let backdrop = null;
     let deleteModal = null;
-    let activeDetails = null;
+    let activeEdit = null;
     let pendingDeleteForm = null;
 
     function ensureBackdrop() {
-        if (backdrop) {
-            return backdrop;
-        }
+        if (backdrop) return backdrop;
 
         backdrop = document.createElement("div");
         backdrop.className = "nxr-profile-settings-modal-backdrop";
@@ -34,26 +33,19 @@
     }
 
     function hideBackdropIfIdle() {
-        const hasOpenEdit = Boolean(activeDetails && activeDetails.open);
+        const hasEdit = Boolean(activeEdit);
         const hasDelete = Boolean(deleteModal && !deleteModal.hidden);
 
-        if (!hasOpenEdit && !hasDelete) {
-            if (backdrop) {
-                backdrop.hidden = true;
-            }
-
+        if (!hasEdit && !hasDelete) {
+            if (backdrop) backdrop.hidden = true;
             document.body.classList.remove("nxr-profile-settings-modal-active");
         }
     }
 
-    function ensureEditButtons(details) {
-        const form = details.querySelector(".nxr-profile-settings-edit-form");
+    function ensureEditHeader(form) {
+        if (!form || form.dataset.nxrBodyModalReady === "true") return;
 
-        if (!form || form.dataset.nxrModalButtonsReady === "true") {
-            return;
-        }
-
-        form.dataset.nxrModalButtonsReady = "true";
+        form.dataset.nxrBodyModalReady = "true";
 
         const head = document.createElement("div");
         head.className = "nxr-profile-settings-edit-modal-head";
@@ -74,7 +66,7 @@
 
         const actions = form.querySelector(".nxr-profile-settings-actions");
 
-        if (actions) {
+        if (actions && !actions.querySelector(".nxr-profile-settings-cancel-button")) {
             const cancelButton = document.createElement("button");
             cancelButton.type = "button";
             cancelButton.className = "nxr-profile-settings-cancel-button";
@@ -82,40 +74,61 @@
             cancelButton.addEventListener("click", closeEditModal);
             actions.insertBefore(cancelButton, actions.firstChild);
         }
+
+        form.addEventListener("click", function (event) {
+            event.stopPropagation();
+        });
     }
 
-    function openEditModal(details) {
-        document.querySelectorAll(editShellSelector).forEach(function (item) {
-            if (item !== details) {
-                item.open = false;
-                item.classList.remove("is-modal-open");
-            }
-        });
+    function openEditModal(shell) {
+        if (!shell) return;
 
-        activeDetails = details;
-        ensureEditButtons(details);
-        details.classList.add("is-modal-open");
+        const form = shell.querySelector(".nxr-profile-settings-edit-form");
+        if (!form) return;
+
+        closeEditModal();
+
+        const placeholder = document.createComment("NEXORA_EDIT_FORM_PLACEHOLDER");
+        shell.insertBefore(placeholder, form);
+
+        ensureEditHeader(form);
+
+        activeEdit = {
+            shell: shell,
+            form: form,
+            placeholder: placeholder
+        };
+
+        form.classList.add("nxr-profile-settings-body-modal");
+        document.body.appendChild(form);
         showBackdrop();
+
+        window.setTimeout(function () {
+            const firstInput = form.querySelector("input, select, button");
+            if (firstInput) firstInput.focus({ preventScroll: true });
+        }, 40);
     }
 
     function closeEditModal() {
-        if (activeDetails) {
-            activeDetails.open = false;
-            activeDetails.classList.remove("is-modal-open");
-            activeDetails = null;
-        }
+        if (!activeEdit) return;
 
-        document.querySelectorAll(editShellSelector).forEach(function (item) {
-            item.classList.remove("is-modal-open");
-        });
+        const item = activeEdit;
+        activeEdit = null;
+
+        item.form.classList.remove("nxr-profile-settings-body-modal");
+
+        if (item.placeholder && item.placeholder.parentNode) {
+            item.placeholder.parentNode.insertBefore(item.form, item.placeholder);
+            item.placeholder.remove();
+        } else {
+            item.shell.appendChild(item.form);
+        }
 
         hideBackdropIfIdle();
     }
 
     function ensureDeleteModal() {
-        if (deleteModal) {
-            return deleteModal;
-        }
+        if (deleteModal) return deleteModal;
 
         deleteModal = document.createElement("div");
         deleteModal.className = "nxr-profile-settings-delete-modal";
@@ -153,12 +166,15 @@
             pendingDeleteForm.submit();
         });
 
+        deleteModal.addEventListener("click", function (event) {
+            event.stopPropagation();
+        });
+
         return deleteModal;
     }
 
     function openDeleteModal(form) {
         closeEditModal();
-
         pendingDeleteForm = form;
         ensureDeleteModal();
         deleteModal.hidden = false;
@@ -166,32 +182,25 @@
     }
 
     function closeDeleteModal() {
-        if (deleteModal) {
-            deleteModal.hidden = true;
-        }
-
+        if (deleteModal) deleteModal.hidden = true;
         pendingDeleteForm = null;
         hideBackdropIfIdle();
     }
 
     function wireEditModals() {
-        document.querySelectorAll(editShellSelector).forEach(function (details) {
-            if (details.dataset.nxrModalReady === "true") {
-                return;
+        document.querySelectorAll(editShellSelector).forEach(function (shell) {
+            if (shell.dataset.nxrBodyModalWire === "true") return;
+
+            shell.dataset.nxrBodyModalWire = "true";
+
+            const trigger = shell.querySelector(editTriggerSelector);
+            if (trigger) {
+                trigger.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openEditModal(shell);
+                });
             }
-
-            details.dataset.nxrModalReady = "true";
-
-            details.addEventListener("toggle", function () {
-                if (details.open) {
-                    openEditModal(details);
-                }
-                else if (activeDetails === details) {
-                    details.classList.remove("is-modal-open");
-                    activeDetails = null;
-                    hideBackdropIfIdle();
-                }
-            });
         });
     }
 
@@ -199,16 +208,12 @@
         document.querySelectorAll(deleteFormSelector).forEach(function (form) {
             form.removeAttribute("onsubmit");
 
-            if (form.dataset.nxrDeleteReady === "true") {
-                return;
-            }
+            if (form.dataset.nxrDeleteReady === "true") return;
 
             form.dataset.nxrDeleteReady = "true";
 
             form.addEventListener("submit", function (event) {
-                if (form.dataset.nxrConfirmed === "true") {
-                    return;
-                }
+                if (form.dataset.nxrConfirmed === "true") return;
 
                 event.preventDefault();
                 event.stopPropagation();

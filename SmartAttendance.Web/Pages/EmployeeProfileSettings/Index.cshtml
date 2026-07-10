@@ -166,10 +166,11 @@
                                 </div>
 
                                 <div class="nxr-profile-settings-row-actions">
-                                    <details class="nxr-profile-settings-edit-shell">
-                                        <summary>&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;</summary>
+                                    <div class="nxr-profile-settings-edit-shell" data-nxr-edit-shell>
+                                            @* NEXORA_FIX08G_STABLE_EDIT_MODAL_MARKER *@
+                                            <button type="button" class="nxr-profile-settings-edit-trigger">&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;</button>
 
-                                        <form method="post"
+                                            <form method="post"
                                               asp-page-handler="UpdateField"
                                               asp-route-id="@field.Id"
                                               class="nxr-profile-settings-edit-form">
@@ -213,7 +214,7 @@
                                                 <button type="submit">&#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;</button>
                                             </div>
                                         </form>
-                                    </details>
+                                        </div>
 
                                     <form method="post" asp-page-handler="ToggleField" asp-route-id="@field.Id">
                                         <button type="submit">
