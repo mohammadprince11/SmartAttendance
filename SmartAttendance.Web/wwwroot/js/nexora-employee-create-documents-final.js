@@ -343,3 +343,45 @@
     window.NexoraCenterDocumentsModal = centerDocumentModal;
 })();
 // NEXORA_FIX05K_DOCUMENT_MODAL_CENTER_ONLY_END
+
+// NEXORA_FIX12D_DOCUMENT_MODAL_NO_FREEZE_START
+(function () {
+    "use strict";
+
+    function normalizeSelectedFile(input) {
+        if (!input) return;
+
+        var row = input.closest(".nxr-document-row");
+        if (!row) return;
+
+        var trigger = row.querySelector("[data-document-file-trigger]");
+        var fileNameLabel = row.querySelector("[data-document-file-name]");
+
+        if (fileNameLabel) {
+            fileNameLabel.textContent = "";
+            fileNameLabel.hidden = true;
+            fileNameLabel.style.display = "none";
+        }
+
+        if (!trigger) return;
+
+        if (input.files && input.files.length) {
+            var selectedFileName = input.files[0].name;
+            trigger.textContent = "\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0645\u0644\u0641";
+            trigger.title = selectedFileName;
+            trigger.setAttribute("aria-label", "\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0645\u0644\u0641: " + selectedFileName);
+            trigger.classList.add("is-selected");
+        } else {
+            trigger.textContent = "\u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0644\u0641";
+            trigger.removeAttribute("title");
+            trigger.setAttribute("aria-label", "\u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0644\u0641");
+            trigger.classList.remove("is-selected");
+        }
+    }
+
+    document.addEventListener("change", function (event) {
+        if (!event.target || !event.target.matches("[data-document-file]")) return;
+        normalizeSelectedFile(event.target);
+    }, false);
+})();
+// NEXORA_FIX12D_DOCUMENT_MODAL_NO_FREEZE_END
