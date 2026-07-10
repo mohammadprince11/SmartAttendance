@@ -104,7 +104,7 @@
 
                     <textarea asp-for="PastedData"
                               class="nexora-import-paste"
-                              placeholder="Code    Name&#10;COMP-001    NEXORA Demo"></textarea>
+                              placeholder="Name    Email    Phone&#10;NEXORA Demo    company@example.com    07xx xxx xxxx"></textarea>
                 </div>
             </div>
 
@@ -119,6 +119,8 @@
                     {
                         <span class="nexora-import-badge">@column</span>
                     }
+                    <span class="nexora-import-badge nxr-import-optional-badge">Email</span>
+                    <span class="nexora-import-badge nxr-import-optional-badge">Phone</span>
                 </div>
             </div>
 
@@ -232,3 +234,20 @@
         </section>
     }
 </div>
+
+<style>
+/* NEXORA_FIX19B_COMPANY_IMPORT_OPTIONAL_BADGES */
+[data-import-page="companies"] .nxr-import-optional-badge {
+    border-color: rgba(212, 175, 55, .34) !important;
+    color: #f7e7a6 !important;
+    background: rgba(212, 175, 55, .08) !important;
+}
+
+[data-import-page="companies"] .nexora-import-file {
+    color: #e8f3ff !important;
+}
+
+[data-import-page="companies"] .nexora-import-paste {
+    min-height: 128px !important;
+}
+</style>

@@ -620,3 +620,616 @@ body.nxp-modal-open {
         grid-template-columns: 1fr;
     }
 }
+
+/* NEXORA_FIX20B_POSITIONS_FORM_ONE_ROW_START */
+#positionForm {
+    display: grid !important;
+    grid-template-columns: minmax(320px, 1.35fr) repeat(3, minmax(190px, 1fr)) !important;
+    gap: 16px !important;
+    align-items: end !important;
+}
+
+#positionForm > .nxp-field,
+#positionForm > label.nxp-field {
+    min-width: 0 !important;
+}
+
+#positionForm > .nxp-field--wide:first-of-type,
+#positionForm > label.nxp-field--wide:first-of-type {
+    grid-column: auto !important;
+}
+
+#positionForm > .nxp-field--wide:not(:first-of-type),
+#positionForm > label.nxp-field--wide:not(:first-of-type) {
+    grid-column: 1 / -1 !important;
+}
+
+#positionForm > .nxp-check,
+#positionForm > .nxp-form-actions,
+#positionForm > .validation-summary-valid,
+#positionForm > .validation-summary-errors {
+    grid-column: 1 / -1 !important;
+}
+
+#positionForm .nxp-field input,
+#positionForm .nxp-field select {
+    width: 100% !important;
+    min-height: 48px !important;
+}
+
+@media (max-width: 1280px) {
+    #positionForm {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    #positionForm > .nxp-field--wide:first-of-type,
+    #positionForm > label.nxp-field--wide:first-of-type {
+        grid-column: 1 / -1 !important;
+    }
+}
+
+@media (max-width: 760px) {
+    #positionForm {
+        grid-template-columns: 1fr !important;
+    }
+
+    #positionForm > .nxp-field,
+    #positionForm > label.nxp-field {
+        grid-column: 1 / -1 !important;
+    }
+}
+/* NEXORA_FIX20B_POSITIONS_FORM_ONE_ROW_END */
+/* NEXORA_FIX20C_V2_POSITION_PROFILE_POPUPS_START */
+#positionForm > .nxp-position-profile-launchers {
+    grid-column: 1 / -1 !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    margin-top: 4px !important;
+}
+
+.nxp-profile-launcher {
+    min-height: 86px !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(34, 211, 238, .22) !important;
+    background:
+        radial-gradient(circle at 12% 12%, rgba(34, 211, 238, .12), transparent 38%),
+        rgba(3, 15, 26, .72) !important;
+    color: #e8f3ff !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 14px 16px !important;
+    cursor: pointer !important;
+    text-align: right !important;
+    transition: transform .18s ease, border-color .18s ease, background .18s ease !important;
+}
+
+.nxp-profile-launcher:hover {
+    transform: translateY(-1px) !important;
+    border-color: rgba(34, 211, 238, .42) !important;
+    background: rgba(34, 211, 238, .10) !important;
+}
+
+.nxp-profile-launcher span {
+    color: #22d3ee !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+}
+
+.nxp-profile-launcher strong {
+    color: #ffffff !important;
+    font-size: 14px !important;
+    font-weight: 1000 !important;
+}
+
+.nxp-profile-modal-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 10040 !important;
+    background: rgba(1, 8, 14, .72) !important;
+    backdrop-filter: blur(8px) !important;
+}
+
+.nxp-profile-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 10050 !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 24px !important;
+}
+
+.nxp-profile-modal[hidden],
+.nxp-profile-modal-backdrop[hidden] {
+    display: none !important;
+}
+
+.nxp-profile-modal__card {
+    width: min(920px, 100%) !important;
+    max-height: min(82vh, 760px) !important;
+    overflow: auto !important;
+    border-radius: 26px !important;
+    border: 1px solid rgba(34, 211, 238, .26) !important;
+    background:
+        radial-gradient(circle at 12% 8%, rgba(34, 211, 238, .12), transparent 34%),
+        linear-gradient(145deg, rgba(8, 31, 50, .98), rgba(4, 16, 28, .98)) !important;
+    box-shadow: 0 28px 90px rgba(0, 0, 0, .42) !important;
+    color: #e8f3ff !important;
+}
+
+.nxp-profile-modal--small .nxp-profile-modal__card {
+    width: min(680px, 100%) !important;
+}
+
+.nxp-profile-modal__head {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+    padding: 22px 24px !important;
+    border-bottom: 1px solid rgba(157, 184, 204, .12) !important;
+}
+
+.nxp-profile-modal__head span {
+    display: block !important;
+    color: #22d3ee !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+    margin-bottom: 6px !important;
+}
+
+.nxp-profile-modal__head h3 {
+    color: #ffffff !important;
+    font-size: 28px !important;
+    line-height: 1.1 !important;
+    font-weight: 1000 !important;
+    margin: 0 !important;
+}
+
+.nxp-profile-modal__head button {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(34, 211, 238, .22) !important;
+    background: rgba(7, 18, 31, .72) !important;
+    color: #e8f3ff !important;
+    font-size: 24px !important;
+    cursor: pointer !important;
+}
+
+.nxp-profile-modal__body {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    padding: 22px 24px 24px !important;
+}
+
+.nxp-profile-modal__body .nxp-field--wide {
+    grid-column: 1 / -1 !important;
+}
+
+.nxp-profile-modal__body textarea {
+    min-height: 130px !important;
+    resize: vertical !important;
+    line-height: 1.8 !important;
+}
+
+.nxp-profile-ready-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: fit-content !important;
+    margin-top: 8px !important;
+    padding: 5px 10px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(34, 211, 238, .28) !important;
+    background: rgba(34, 211, 238, .08) !important;
+    color: #bdf4ff !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+}
+
+.nxp-profile-modal-open {
+    overflow: hidden !important;
+}
+
+@media (max-width: 1100px) {
+    #positionForm > .nxp-position-profile-launchers {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 720px) {
+    #positionForm > .nxp-position-profile-launchers,
+    .nxp-profile-modal__body {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxp-profile-modal {
+        padding: 14px !important;
+    }
+
+    .nxp-profile-modal__card {
+        max-height: 88vh !important;
+    }
+}
+/* NEXORA_FIX20C_V2_POSITION_PROFILE_POPUPS_END */
+/* NEXORA_FIX20D_REFERENCE_DROPDOWNS_START */
+#positionForm {
+    grid-template-columns: minmax(220px, 1.35fr) repeat(6, minmax(130px, 1fr)) !important;
+    align-items: end !important;
+}
+
+#positionForm > .nxp-field,
+#positionForm > label.nxp-field {
+    min-width: 0 !important;
+}
+
+#positionForm > .nxp-field--wide:first-of-type,
+#positionForm > label.nxp-field--wide:first-of-type {
+    grid-column: auto !important;
+}
+
+#positionForm > .nxp-field--wide:not(:first-of-type),
+#positionForm > label.nxp-field--wide:not(:first-of-type),
+#positionForm > .nxp-position-profile-launchers,
+#positionForm > .nxp-check,
+#positionForm > .nxp-form-actions {
+    grid-column: 1 / -1 !important;
+}
+
+.nxp-field span {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+}
+
+.nxp-label-manage {
+    border: 0 !important;
+    background: transparent !important;
+    color: #22d3ee !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+}
+
+.nxp-label-manage:hover {
+    color: #ffffff !important;
+    text-decoration: underline !important;
+}
+
+.nxp-field--reference select {
+    min-width: 0 !important;
+    width: 100% !important;
+}
+
+.nxp-reference-modal-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 10060 !important;
+    background: rgba(1, 8, 14, .72) !important;
+    backdrop-filter: blur(8px) !important;
+}
+
+.nxp-reference-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 10070 !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 24px !important;
+}
+
+.nxp-reference-modal[hidden],
+.nxp-reference-modal-backdrop[hidden] {
+    display: none !important;
+}
+
+.nxp-reference-modal__card {
+    width: min(640px, 100%) !important;
+    max-height: min(82vh, 680px) !important;
+    overflow: auto !important;
+    border-radius: 26px !important;
+    border: 1px solid rgba(34, 211, 238, .26) !important;
+    background:
+        radial-gradient(circle at 12% 8%, rgba(34, 211, 238, .12), transparent 34%),
+        linear-gradient(145deg, rgba(8, 31, 50, .98), rgba(4, 16, 28, .98)) !important;
+    box-shadow: 0 28px 90px rgba(0, 0, 0, .42) !important;
+    color: #e8f3ff !important;
+}
+
+.nxp-reference-modal__head {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+    padding: 22px 24px !important;
+    border-bottom: 1px solid rgba(157, 184, 204, .12) !important;
+}
+
+.nxp-reference-modal__head span {
+    display: block !important;
+    color: #22d3ee !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+    margin-bottom: 6px !important;
+}
+
+.nxp-reference-modal__head h3 {
+    color: #ffffff !important;
+    font-size: 26px !important;
+    line-height: 1.1 !important;
+    font-weight: 1000 !important;
+    margin: 0 !important;
+}
+
+.nxp-reference-modal__head button {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(34, 211, 238, .22) !important;
+    background: rgba(7, 18, 31, .72) !important;
+    color: #e8f3ff !important;
+    font-size: 24px !important;
+    cursor: pointer !important;
+}
+
+.nxp-reference-modal__body {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    gap: 12px !important;
+    align-items: end !important;
+    padding: 22px 24px 16px !important;
+}
+
+.nxp-reference-modal__body .nxp-field {
+    margin: 0 !important;
+}
+
+.nxp-reference-modal__list {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 0 24px 24px !important;
+}
+
+.nxp-reference-modal__list span {
+    display: inline-flex !important;
+    align-items: center !important;
+    min-height: 32px !important;
+    border-radius: 999px !important;
+    padding: 0 12px !important;
+    border: 1px solid rgba(34, 211, 238, .20) !important;
+    background: rgba(34, 211, 238, .08) !important;
+    color: #dff8ff !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+}
+
+.nxp-reference-modal-open {
+    overflow: hidden !important;
+}
+
+@media (max-width: 1500px) {
+    #positionForm {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+
+    #positionForm > .nxp-field--wide:first-of-type,
+    #positionForm > label.nxp-field--wide:first-of-type {
+        grid-column: span 2 !important;
+    }
+}
+
+@media (max-width: 980px) {
+    #positionForm {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    #positionForm > .nxp-field--wide:first-of-type,
+    #positionForm > label.nxp-field--wide:first-of-type {
+        grid-column: 1 / -1 !important;
+    }
+
+    .nxp-reference-modal__body {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 640px) {
+    #positionForm {
+        grid-template-columns: 1fr !important;
+    }
+
+    #positionForm > .nxp-field,
+    #positionForm > label.nxp-field {
+        grid-column: 1 / -1 !important;
+    }
+}
+/* NEXORA_FIX20D_REFERENCE_DROPDOWNS_END */
+/* NEXORA_FIX20F_POSITIONS_DETAILS_SAFE_LAYOUT_START */
+#positionForm {
+    grid-template-columns: minmax(210px, 1.25fr) repeat(7, minmax(118px, 1fr)) !important;
+    align-items: end !important;
+}
+
+#positionForm > .nxp-field,
+#positionForm > label.nxp-field {
+    min-width: 0 !important;
+}
+
+#positionForm > .nxp-field--wide:first-of-type,
+#positionForm > label.nxp-field--wide:first-of-type {
+    grid-column: auto !important;
+}
+
+#positionForm > .nxp-field--wide:not(:first-of-type),
+#positionForm > label.nxp-field--wide:not(:first-of-type),
+#positionForm > .nxp-check,
+#positionForm > .nxp-form-actions {
+    grid-column: 1 / -1 !important;
+}
+
+#positionForm > .nxp-position-profile-launchers {
+    grid-column: auto !important;
+    display: block !important;
+    margin: 0 !important;
+    align-self: end !important;
+    min-width: 0 !important;
+}
+
+#positionForm > .nxp-position-profile-launchers:empty {
+    display: none !important;
+}
+
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher {
+    width: 100% !important;
+    min-height: 86px !important;
+    height: 100% !important;
+    border-radius: 18px !important;
+    padding: 12px 14px !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    text-align: right !important;
+}
+
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher span {
+    font-size: 11px !important;
+}
+
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher strong {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+}
+
+html.nxp-profile-modal-open,
+body.nxp-profile-modal-open {
+    overflow: hidden !important;
+}
+
+.nxp-profile-modal {
+    overflow: hidden !important;
+    padding: 20px !important;
+}
+
+.nxp-profile-modal__card {
+    display: flex !important;
+    flex-direction: column !important;
+    width: min(980px, 100%) !important;
+    max-height: 86vh !important;
+    overflow: hidden !important;
+}
+
+.nxp-profile-modal--small .nxp-profile-modal__card {
+    width: min(680px, 100%) !important;
+}
+
+.nxp-profile-modal__body {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    max-height: calc(86vh - 170px) !important;
+    padding-bottom: 18px !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(34, 211, 238, .48) rgba(3, 15, 26, .70) !important;
+}
+
+.nxp-profile-modal__body::-webkit-scrollbar {
+    width: 10px !important;
+}
+
+.nxp-profile-modal__body::-webkit-scrollbar-track {
+    background: rgba(3, 15, 26, .70) !important;
+    border-radius: 999px !important;
+}
+
+.nxp-profile-modal__body::-webkit-scrollbar-thumb {
+    background: rgba(34, 211, 238, .42) !important;
+    border-radius: 999px !important;
+}
+
+.nxp-profile-modal__footer {
+    flex: 0 0 auto !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 16px 24px 22px !important;
+    border-top: 1px solid rgba(157, 184, 204, .12) !important;
+    background: linear-gradient(180deg, rgba(4, 16, 28, .86), rgba(4, 16, 28, .98)) !important;
+}
+
+.nxp-profile-modal__footer .nxp-btn {
+    min-width: 140px !important;
+    min-height: 44px !important;
+    border-radius: 15px !important;
+}
+
+@media (max-width: 1700px) {
+    #positionForm {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+
+    #positionForm > .nxp-field--wide:first-of-type,
+    #positionForm > label.nxp-field--wide:first-of-type {
+        grid-column: span 2 !important;
+    }
+
+    #positionForm > .nxp-position-profile-launchers {
+        grid-column: span 2 !important;
+    }
+}
+
+@media (max-width: 1100px) {
+    #positionForm {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    #positionForm > .nxp-field--wide:first-of-type,
+    #positionForm > label.nxp-field--wide:first-of-type,
+    #positionForm > .nxp-position-profile-launchers {
+        grid-column: 1 / -1 !important;
+    }
+}
+
+@media (max-width: 720px) {
+    #positionForm {
+        grid-template-columns: 1fr !important;
+    }
+
+    #positionForm > .nxp-field,
+    #positionForm > label.nxp-field,
+    #positionForm > .nxp-position-profile-launchers {
+        grid-column: 1 / -1 !important;
+    }
+
+    .nxp-profile-modal {
+        padding: 12px !important;
+    }
+
+    .nxp-profile-modal__card {
+        max-height: 88vh !important;
+    }
+
+    .nxp-profile-modal__body {
+        max-height: calc(88vh - 170px) !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxp-profile-modal__footer {
+        flex-direction: column-reverse !important;
+        align-items: stretch !important;
+    }
+
+    .nxp-profile-modal__footer .nxp-btn {
+        width: 100% !important;
+    }
+}
+/* NEXORA_FIX20F_POSITIONS_DETAILS_SAFE_LAYOUT_END */

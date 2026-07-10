@@ -16,7 +16,7 @@ public class MasterDataImportService : IMasterDataImportService
 
     private static readonly Dictionary<string, string[]> RequiredColumns = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Companies"] = new[] { "Code", "Name" },
+        ["Companies"] = new[] { "Name" },
         ["Branches"] = new[] { "Code", "Name", "CompanyCode" },
         ["Departments"] = new[] { "Code", "Name", "BranchCode" },
         ["Employees"] = new[] { "EmployeeNo", "FullName", "DepartmentCode", "HireDate" },
@@ -184,18 +184,16 @@ public class MasterDataImportService : IMasterDataImportService
 
     private async Task<MasterDataImportPreviewRowViewModel> ValidateCompanyAsync(FileRow record)
     {
-        var code = Get(record, "Code");
         var name = Get(record, "Name");
 
-        if (IsBlank(code) || IsBlank(name))
-            return BuildError(record, code, "Code and Name are required.");
+        if (IsBlank(name))
+            return BuildError(record, name, "Name is required.");
 
         var companies = await _unitOfWork.Companies.GetAllAsync();
-        var exists = companies.Any(x => Same(x.Code, code));
+        var exists = companies.Any(x => Same(x.Name, name));
 
-        return BuildReady(record, code, exists ? "Update" : "Create", exists ? "Company will be updated." : "Company will be created.");
+        return BuildReady(record, name, exists ? "Update" : "Create", exists ? "Company will be updated." : "Company will be created.");
     }
-
     private async Task<MasterDataImportPreviewRowViewModel> ValidateBranchAsync(FileRow record)
     {
         var code = Get(record, "Code");
@@ -410,16 +408,32 @@ public class MasterDataImportService : IMasterDataImportService
 
     private async Task<bool> ImportCompanyAsync(Dictionary<string, string> values)
     {
-        var code = Get(values, "Code");
+        var name = Get(values, "Name").Trim();
         var companies = await _unitOfWork.Companies.GetAllAsync();
-        var company = companies.FirstOrDefault(x => Same(x.Code, code));
+        var company = companies.FirstOrDefault(x => Same(x.Name, name));
 
         var created = company == null;
 
         company ??= new Company();
 
-        company.Code = NormalizeCodeText(code);
-        company.Name = Get(values, "Name").Trim();
+        if (created)
+        {
+            var seed = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff", CultureInfo.InvariantCulture);
+            var code = $"COMP-{seed}";
+            var counter = 1;
+
+            while (companies.Any(x => Same(x.Code, code)))
+            {
+                code = $"COMP-{seed}-{counter}";
+                counter++;
+            }
+
+            company.Code = NormalizeCodeText(code);
+        }
+
+        company.Name = name;
+        company.Email = NullIfBlank(Get(values, "Email"));
+        company.Phone = NullIfBlank(Get(values, "Phone"));
         company.IsActive = ParseBool(Get(values, "IsActive"), true);
 
         if (created)
@@ -429,7 +443,6 @@ public class MasterDataImportService : IMasterDataImportService
 
         return created;
     }
-
     private async Task<bool> ImportBranchAsync(Dictionary<string, string> values)
     {
         var code = Get(values, "Code");

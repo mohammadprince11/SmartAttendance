@@ -20,6 +20,9 @@ public class IndexModel : PageModel
     [BindProperty]
     public JobPositionForm Input { get; set; } = new();
 
+    [BindProperty]
+    public PositionReferenceForm ReferenceInput { get; set; } = new();
+
     public List<JobPositionRow> Positions { get; set; } = new();
 
     public List<DepartmentOption> Departments { get; set; } = new();
@@ -27,6 +30,12 @@ public class IndexModel : PageModel
     public List<NameOption> Categories { get; set; } = new();
 
     public List<NameOption> Levels { get; set; } = new();
+
+    public List<NameOption> CompetencyOptions { get; set; } = new();
+
+    public List<NameOption> EducationOptions { get; set; } = new();
+
+    public List<NameOption> CertificationOptions { get; set; } = new();
 
     public int TotalPositions { get; set; }
 
@@ -39,7 +48,9 @@ public class IndexModel : PageModel
     public async Task OnGetAsync(int? editId)
     {
         await SmartAttendance.Web.Infrastructure.Hrms.PositionSchema.EnsureAsync(_db);
-        await SyncLookupTablesAsync();
+                await EnsurePositionProfileColumnsAsync();
+        await EnsurePositionReferenceTablesAsync();
+await SyncLookupTablesAsync();
         await SyncEmployeePositionsAsync();
         await LoadPageAsync(editId);
     }
@@ -47,12 +58,23 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostSaveAsync()
     {
         await SmartAttendance.Web.Infrastructure.Hrms.PositionSchema.EnsureAsync(_db);
-        await SyncLookupTablesAsync();
+                await EnsurePositionProfileColumnsAsync();
+        await EnsurePositionReferenceTablesAsync();
+await SyncLookupTablesAsync();
 
         Input.ArabicName = NormalizeText(Input.ArabicName);
         Input.OriginalArabicName = NormalizeText(Input.OriginalArabicName);
         Input.Category = NormalizeText(Input.Category);
         Input.Level = NormalizeText(Input.Level);
+        Input.Description = NormalizeText(Input.Description);
+        Input.JobPurpose = NormalizeText(Input.JobPurpose);
+        Input.KeyResponsibilities = NormalizeText(Input.KeyResponsibilities);
+        Input.JobRequirements = NormalizeText(Input.JobRequirements);
+        Input.RequiredSkills = NormalizeText(Input.RequiredSkills);
+        Input.JobKpis = NormalizeText(Input.JobKpis);
+        Input.Competencies = NormalizeText(Input.Competencies);
+        Input.Education = NormalizeText(Input.Education);
+        Input.Certifications = NormalizeText(Input.Certifications);
 
         if (string.IsNullOrWhiteSpace(Input.ArabicName))
         {
@@ -155,16 +177,67 @@ VALUES
             });
 
             TempData["SuccessMessage"] = "تم حفظ المنصب بنجاح.";
-        }
+        }        await SavePositionProfileAsync(Input.Id, Input.ArabicName);
+
 
         return RedirectToPage();
     }
 
+
+    public async Task<IActionResult> OnPostSaveReferenceAsync(string type)
+    {
+        await SmartAttendance.Web.Infrastructure.Hrms.PositionSchema.EnsureAsync(_db);
+        await EnsurePositionProfileColumnsAsync();
+        await EnsurePositionReferenceTablesAsync();
+
+        var tableName = ResolvePositionReferenceTable(type);
+        ReferenceInput.Name = NormalizeText(ReferenceInput.Name);
+
+        if (string.IsNullOrWhiteSpace(tableName))
+        {
+            TempData["ErrorMessage"] = "Invalid reference type.";
+            return RedirectToPage();
+        }
+
+        if (string.IsNullOrWhiteSpace(ReferenceInput.Name))
+        {
+            TempData["ErrorMessage"] = "Reference name is required.";
+            return RedirectToPage();
+        }
+
+        await ExecuteNonQueryAsync($@"
+IF EXISTS
+(
+    SELECT 1
+    FROM {tableName}
+    WHERE LTRIM(RTRIM(Name)) = @Name
+)
+BEGIN
+    UPDATE {tableName}
+    SET IsActive = 1,
+        UpdatedAt = SYSDATETIME()
+    WHERE LTRIM(RTRIM(Name)) = @Name;
+END
+ELSE
+BEGIN
+    INSERT INTO {tableName} (Name, IsActive, CreatedAt)
+    VALUES (@Name, 1, SYSDATETIME());
+END;
+", command =>
+        {
+            AddParameter(command, "@Name", ReferenceInput.Name);
+        });
+
+        TempData["SuccessMessage"] = "Reference option saved successfully.";
+        return RedirectToPage();
+    }
     public async Task<IActionResult> OnPostToggleAsync(int id)
     {
         await SmartAttendance.Web.Infrastructure.Hrms.PositionSchema.EnsureAsync(_db);
 
-        await ExecuteNonQueryAsync(@"
+                await EnsurePositionProfileColumnsAsync();
+        await EnsurePositionReferenceTablesAsync();
+await ExecuteNonQueryAsync(@"
 UPDATE dbo.HrJobPositions
 SET IsActive = CASE WHEN IsActive = 1 THEN 0 ELSE 1 END,
     UpdatedAt = SYSDATETIME()
@@ -179,7 +252,9 @@ WHERE Id = @Id;
     {
         await SmartAttendance.Web.Infrastructure.Hrms.PositionSchema.EnsureAsync(_db);
 
-        var positionName = await GetPositionNameAsync(id);
+                await EnsurePositionProfileColumnsAsync();
+        await EnsurePositionReferenceTablesAsync();
+var positionName = await GetPositionNameAsync(id);
         if (string.IsNullOrWhiteSpace(positionName))
         {
             TempData["ErrorMessage"] = "المنصب المطلوب حذفه غير موجود.";
@@ -206,7 +281,9 @@ WHERE Id = @Id;
     {
         await SmartAttendance.Web.Infrastructure.Hrms.PositionSchema.EnsureAsync(_db);
 
-        var positionName = await GetPositionNameAsync(id);
+                await EnsurePositionProfileColumnsAsync();
+        await EnsurePositionReferenceTablesAsync();
+var positionName = await GetPositionNameAsync(id);
         if (string.IsNullOrWhiteSpace(positionName))
         {
             return new JsonResult(new
@@ -263,6 +340,9 @@ WHERE Id = @Id;
 
         Categories = await ReadNameOptionsAsync("dbo.HrJobPositionCategories");
         Levels = await ReadNameOptionsAsync("dbo.HrJobPositionLevels");
+        CompetencyOptions = await ReadNameOptionsAsync("dbo.HrJobPositionCompetencyOptions");
+        EducationOptions = await ReadNameOptionsAsync("dbo.HrJobPositionEducationOptions");
+        CertificationOptions = await ReadNameOptionsAsync("dbo.HrJobPositionCertificationOptions");
 
         var departmentNames = Departments.ToDictionary(department => department.Id, department => department.Name);
         var positionRows = await ReadPositionRowsAsync();
@@ -319,7 +399,15 @@ WHERE Id = @Id;
                 position.DepartmentName,
                 position.Category,
                 position.Level,
-                position.Description
+                position.Description,
+                position.JobPurpose,
+                position.KeyResponsibilities,
+                position.JobRequirements,
+                position.RequiredSkills,
+                position.JobKpis,
+                position.Competencies,
+                position.Education,
+                position.Certifications
             }.Where(value => !string.IsNullOrWhiteSpace(value))));
         }
 
@@ -347,6 +435,14 @@ WHERE Id = @Id;
                     Category = editRow.Category,
                     Level = editRow.Level,
                     Description = editRow.Description,
+                    JobPurpose = editRow.JobPurpose,
+                    KeyResponsibilities = editRow.KeyResponsibilities,
+                    JobRequirements = editRow.JobRequirements,
+                    RequiredSkills = editRow.RequiredSkills,
+                    JobKpis = editRow.JobKpis,
+                    Competencies = editRow.Competencies,
+                    Education = editRow.Education,
+                    Certifications = editRow.Certifications,
                     IsActive = editRow.IsActive
                 };
             }
@@ -455,6 +551,156 @@ WHERE employee.Position IS NOT NULL
 ");
     }
 
+
+    private async Task EnsurePositionProfileColumnsAsync()
+    {
+        await ExecuteNonQueryAsync(@"
+IF COL_LENGTH('dbo.HrJobPositions', 'JobPurpose') IS NULL
+    ALTER TABLE dbo.HrJobPositions ADD JobPurpose NVARCHAR(MAX) NULL;
+
+IF COL_LENGTH('dbo.HrJobPositions', 'KeyResponsibilities') IS NULL
+    ALTER TABLE dbo.HrJobPositions ADD KeyResponsibilities NVARCHAR(MAX) NULL;
+
+IF COL_LENGTH('dbo.HrJobPositions', 'JobRequirements') IS NULL
+    ALTER TABLE dbo.HrJobPositions ADD JobRequirements NVARCHAR(MAX) NULL;
+
+IF COL_LENGTH('dbo.HrJobPositions', 'RequiredSkills') IS NULL
+    ALTER TABLE dbo.HrJobPositions ADD RequiredSkills NVARCHAR(MAX) NULL;
+
+IF COL_LENGTH('dbo.HrJobPositions', 'JobKpis') IS NULL
+    ALTER TABLE dbo.HrJobPositions ADD JobKpis NVARCHAR(MAX) NULL;
+
+IF COL_LENGTH('dbo.HrJobPositions', 'Competencies') IS NULL
+    ALTER TABLE dbo.HrJobPositions ADD Competencies NVARCHAR(MAX) NULL;
+
+IF COL_LENGTH('dbo.HrJobPositions', 'Education') IS NULL
+    ALTER TABLE dbo.HrJobPositions ADD Education NVARCHAR(MAX) NULL;
+
+IF COL_LENGTH('dbo.HrJobPositions', 'Certifications') IS NULL
+    ALTER TABLE dbo.HrJobPositions ADD Certifications NVARCHAR(MAX) NULL;
+");
+    }
+
+    private async Task SavePositionProfileAsync(int id, string positionName)
+    {
+        await EnsurePositionProfileColumnsAsync();
+
+                await EnsurePositionReferenceTablesAsync();
+await ExecuteNonQueryAsync(@"
+UPDATE dbo.HrJobPositions
+SET JobPurpose = @JobPurpose,
+    KeyResponsibilities = @KeyResponsibilities,
+    JobRequirements = @JobRequirements,
+    RequiredSkills = @RequiredSkills,
+    JobKpis = @JobKpis,
+    Competencies = @Competencies,
+    Education = @Education,
+    Certifications = @Certifications,
+    UpdatedAt = SYSDATETIME()
+WHERE (@Id > 0 AND Id = @Id)
+   OR (@Id <= 0 AND LTRIM(RTRIM(ArabicName)) = @ArabicName);
+", command =>
+        {
+            AddParameter(command, "@Id", id);
+            AddParameter(command, "@ArabicName", NormalizeText(positionName));
+            AddParameter(command, "@JobPurpose", EmptyToNull(Input.JobPurpose));
+            AddParameter(command, "@KeyResponsibilities", EmptyToNull(Input.KeyResponsibilities));
+            AddParameter(command, "@JobRequirements", EmptyToNull(Input.JobRequirements));
+            AddParameter(command, "@RequiredSkills", EmptyToNull(Input.RequiredSkills));
+            AddParameter(command, "@JobKpis", EmptyToNull(Input.JobKpis));
+            AddParameter(command, "@Competencies", EmptyToNull(Input.Competencies));
+            AddParameter(command, "@Education", EmptyToNull(Input.Education));
+            AddParameter(command, "@Certifications", EmptyToNull(Input.Certifications));
+        });
+    }
+
+    private async Task EnsurePositionReferenceTablesAsync()
+    {
+        await ExecuteNonQueryAsync(@"
+IF OBJECT_ID('dbo.HrJobPositionCompetencyOptions', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.HrJobPositionCompetencyOptions
+    (
+        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_HrJobPositionCompetencyOptions PRIMARY KEY,
+        Name NVARCHAR(240) NOT NULL,
+        IsActive BIT NOT NULL CONSTRAINT DF_HrJobPositionCompetencyOptions_IsActive DEFAULT(1),
+        CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_HrJobPositionCompetencyOptions_CreatedAt DEFAULT(SYSDATETIME()),
+        UpdatedAt DATETIME2 NULL
+    );
+END;
+
+IF OBJECT_ID('dbo.HrJobPositionEducationOptions', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.HrJobPositionEducationOptions
+    (
+        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_HrJobPositionEducationOptions PRIMARY KEY,
+        Name NVARCHAR(240) NOT NULL,
+        IsActive BIT NOT NULL CONSTRAINT DF_HrJobPositionEducationOptions_IsActive DEFAULT(1),
+        CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_HrJobPositionEducationOptions_CreatedAt DEFAULT(SYSDATETIME()),
+        UpdatedAt DATETIME2 NULL
+    );
+END;
+
+IF OBJECT_ID('dbo.HrJobPositionCertificationOptions', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.HrJobPositionCertificationOptions
+    (
+        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_HrJobPositionCertificationOptions PRIMARY KEY,
+        Name NVARCHAR(240) NOT NULL,
+        IsActive BIT NOT NULL CONSTRAINT DF_HrJobPositionCertificationOptions_IsActive DEFAULT(1),
+        CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_HrJobPositionCertificationOptions_CreatedAt DEFAULT(SYSDATETIME()),
+        UpdatedAt DATETIME2 NULL
+    );
+END;
+
+INSERT INTO dbo.HrJobPositionCompetencyOptions (Name, IsActive, CreatedAt)
+SELECT DISTINCT LTRIM(RTRIM(CONVERT(NVARCHAR(240), p.Competencies))), 1, SYSDATETIME()
+FROM dbo.HrJobPositions p
+WHERE p.Competencies IS NOT NULL
+  AND LTRIM(RTRIM(CONVERT(NVARCHAR(MAX), p.Competencies))) <> N''
+  AND NOT EXISTS
+  (
+      SELECT 1
+      FROM dbo.HrJobPositionCompetencyOptions x
+      WHERE LTRIM(RTRIM(x.Name)) = LTRIM(RTRIM(CONVERT(NVARCHAR(240), p.Competencies)))
+  );
+
+INSERT INTO dbo.HrJobPositionEducationOptions (Name, IsActive, CreatedAt)
+SELECT DISTINCT LTRIM(RTRIM(CONVERT(NVARCHAR(240), p.Education))), 1, SYSDATETIME()
+FROM dbo.HrJobPositions p
+WHERE p.Education IS NOT NULL
+  AND LTRIM(RTRIM(CONVERT(NVARCHAR(MAX), p.Education))) <> N''
+  AND NOT EXISTS
+  (
+      SELECT 1
+      FROM dbo.HrJobPositionEducationOptions x
+      WHERE LTRIM(RTRIM(x.Name)) = LTRIM(RTRIM(CONVERT(NVARCHAR(240), p.Education)))
+  );
+
+INSERT INTO dbo.HrJobPositionCertificationOptions (Name, IsActive, CreatedAt)
+SELECT DISTINCT LTRIM(RTRIM(CONVERT(NVARCHAR(240), p.Certifications))), 1, SYSDATETIME()
+FROM dbo.HrJobPositions p
+WHERE p.Certifications IS NOT NULL
+  AND LTRIM(RTRIM(CONVERT(NVARCHAR(MAX), p.Certifications))) <> N''
+  AND NOT EXISTS
+  (
+      SELECT 1
+      FROM dbo.HrJobPositionCertificationOptions x
+      WHERE LTRIM(RTRIM(x.Name)) = LTRIM(RTRIM(CONVERT(NVARCHAR(240), p.Certifications)))
+  );
+");
+    }
+
+    private static string? ResolvePositionReferenceTable(string? type)
+    {
+        return NormalizeText(type).ToLowerInvariant() switch
+        {
+            "competencies" => "dbo.HrJobPositionCompetencyOptions",
+            "education" => "dbo.HrJobPositionEducationOptions",
+            "certifications" => "dbo.HrJobPositionCertificationOptions",
+            _ => null
+        };
+    }
     private async Task<List<JobPositionRow>> ReadPositionRowsAsync()
     {
         var rows = new List<JobPositionRow>();
@@ -477,6 +723,14 @@ SELECT
     Category,
     Level,
     Description,
+    JobPurpose,
+    KeyResponsibilities,
+    JobRequirements,
+    RequiredSkills,
+    JobKpis,
+    Competencies,
+    Education,
+    Certifications,
     IsActive
 FROM dbo.HrJobPositions
 ORDER BY ArabicName;";
@@ -492,7 +746,15 @@ ORDER BY ArabicName;";
                     Category = reader.IsDBNull(3) ? null : reader.GetString(3),
                     Level = reader.IsDBNull(4) ? null : reader.GetString(4),
                     Description = reader.IsDBNull(5) ? null : reader.GetString(5),
-                    IsActive = !reader.IsDBNull(6) && reader.GetBoolean(6)
+                    JobPurpose = reader.IsDBNull(6) ? null : reader.GetString(6),
+                    KeyResponsibilities = reader.IsDBNull(7) ? null : reader.GetString(7),
+                    JobRequirements = reader.IsDBNull(8) ? null : reader.GetString(8),
+                    RequiredSkills = reader.IsDBNull(9) ? null : reader.GetString(9),
+                    JobKpis = reader.IsDBNull(10) ? null : reader.GetString(10),
+                    Competencies = reader.IsDBNull(11) ? null : reader.GetString(11),
+                    Education = reader.IsDBNull(12) ? null : reader.GetString(12),
+                    Certifications = reader.IsDBNull(13) ? null : reader.GetString(13),
+                    IsActive = !reader.IsDBNull(14) && reader.GetBoolean(14)
                 });
             }
         }
@@ -678,7 +940,23 @@ public sealed class JobPositionForm
 
     public string? Description { get; set; }
 
-    public bool IsActive { get; set; } = true;
+    
+    public string? JobPurpose { get; set; }
+
+    public string? KeyResponsibilities { get; set; }
+
+    public string? JobRequirements { get; set; }
+
+    public string? RequiredSkills { get; set; }
+
+    public string? JobKpis { get; set; }
+
+    public string? Competencies { get; set; }
+
+    public string? Education { get; set; }
+
+    public string? Certifications { get; set; }
+public bool IsActive { get; set; } = true;
 }
 
 public sealed class JobPositionRow
@@ -697,7 +975,33 @@ public sealed class JobPositionRow
 
     public string? Description { get; set; }
 
-    public bool IsActive { get; set; }
+    
+    public string? JobPurpose { get; set; }
+
+    public string? KeyResponsibilities { get; set; }
+
+    public string? JobRequirements { get; set; }
+
+    public string? RequiredSkills { get; set; }
+
+    public string? JobKpis { get; set; }
+
+    public string? Competencies { get; set; }
+
+    public string? Education { get; set; }
+
+    public string? Certifications { get; set; }
+
+    public bool HasJobProfile =>
+        !string.IsNullOrWhiteSpace(JobPurpose) ||
+        !string.IsNullOrWhiteSpace(KeyResponsibilities) ||
+        !string.IsNullOrWhiteSpace(JobRequirements) ||
+        !string.IsNullOrWhiteSpace(RequiredSkills) ||
+        !string.IsNullOrWhiteSpace(JobKpis) ||
+        !string.IsNullOrWhiteSpace(Competencies) ||
+        !string.IsNullOrWhiteSpace(Education) ||
+        !string.IsNullOrWhiteSpace(Certifications);
+public bool IsActive { get; set; }
 
     public int EmployeeCount { get; set; }
 
@@ -731,4 +1035,10 @@ public sealed class EmployeeCountSummary
     public int Active { get; set; }
 
     public int Inactive { get; set; }
+}
+
+
+public sealed class PositionReferenceForm
+{
+    public string? Name { get; set; }
 }

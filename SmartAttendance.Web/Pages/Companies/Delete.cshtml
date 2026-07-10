@@ -1,48 +1,277 @@
-﻿@page "{id:int}"
+@page "{id:int}"
 @model SmartAttendance.Web.Pages.Companies.DeleteModel
 @{
     ViewData["Title"] = "Delete Company";
 }
 
-<div class="delete-page">
-    <div class="delete-card">
-        <div class="delete-icon">!</div>
+<style>
+/* NEXORA_FIX19D_SMART_COMPANY_DELETE_START */
+.nxr-company-delete-page {
+    min-height: calc(100vh - 120px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 48px 18px;
+    direction: rtl;
+    color: #e8f3ff;
+}
 
-        <h1>Delete Company</h1>
+.nxr-company-delete-card {
+    width: min(900px, 100%);
+    border: 1px solid rgba(34, 211, 238, .24);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 12% 8%, rgba(34, 211, 238, .12), transparent 34%),
+        linear-gradient(145deg, rgba(8, 31, 50, .98), rgba(4, 16, 28, .98));
+    box-shadow: 0 26px 80px rgba(0, 0, 0, .35);
+    padding: 28px;
+}
 
-        <p class="delete-message">
-            Are you sure you want to delete this company?
-            <br />
-            This action will hide the company from the system.
-        </p>
+.nxr-company-delete-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 24px;
+}
 
-        <div class="delete-details">
+.nxr-company-delete-kicker {
+    display: block;
+    color: #22d3ee;
+    font-size: 13px;
+    font-weight: 1000;
+    margin-bottom: 8px;
+}
+
+.nxr-company-delete-title {
+    color: #ffffff;
+    font-size: clamp(30px, 4vw, 46px);
+    line-height: 1.1;
+    font-weight: 1000;
+    margin: 0 0 10px;
+    letter-spacing: -.02em;
+}
+
+.nxr-company-delete-subtitle {
+    color: rgba(218, 232, 244, .80);
+    font-size: 14px;
+    font-weight: 800;
+    margin: 0;
+}
+
+.nxr-company-delete-icon {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    border-radius: 18px;
+    display: grid;
+    place-items: center;
+    color: #fecaca;
+    background: rgba(239, 68, 68, .12);
+    border: 1px solid rgba(248, 113, 113, .32);
+    font-size: 28px;
+    font-weight: 1000;
+    box-shadow: 0 16px 38px rgba(239, 68, 68, .10);
+}
+
+.nxr-company-delete-mode {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    border-radius: 18px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+    border: 1px solid rgba(212, 175, 55, .28);
+    background: rgba(212, 175, 55, .08);
+    color: #f7e7a6;
+    font-size: 13px;
+    font-weight: 950;
+    line-height: 1.8;
+}
+
+.nxr-company-delete-mode.safe {
+    border-color: rgba(34, 197, 94, .30);
+    background: rgba(34, 197, 94, .08);
+    color: #bbf7d0;
+}
+
+.nxr-company-delete-mode-badge {
+    min-width: 142px;
+    min-height: 34px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid currentColor;
+    padding: 0 14px;
+    font-size: 12px;
+    font-weight: 1000;
+    white-space: nowrap;
+}
+
+.nxr-company-delete-details {
+    border: 1px solid rgba(34, 211, 238, .18);
+    border-radius: 22px;
+    background: rgba(3, 15, 26, .72);
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.nxr-company-delete-row {
+    display: grid;
+    grid-template-columns: 190px 1fr;
+    gap: 16px;
+    padding: 17px 20px;
+    border-bottom: 1px solid rgba(157, 184, 204, .10);
+}
+
+.nxr-company-delete-row:last-child {
+    border-bottom: 0;
+}
+
+.nxr-company-delete-label {
+    color: rgba(205, 220, 235, .72);
+    font-size: 13px;
+    font-weight: 1000;
+}
+
+.nxr-company-delete-value {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 950;
+    text-align: left;
+    direction: ltr;
+    overflow-wrap: anywhere;
+}
+
+.nxr-company-delete-value.name {
+    text-align: right;
+    direction: rtl;
+}
+
+.nxr-company-delete-actions {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
+    padding-top: 6px;
+}
+
+.nxr-company-delete-btn {
+    min-height: 46px;
+    min-width: 148px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+    font-weight: 1000;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease;
+}
+
+.nxr-company-delete-btn:hover {
+    transform: translateY(-1px);
+}
+
+.nxr-company-delete-btn-secondary {
+    border: 1px solid rgba(157, 184, 204, .18);
+    background: rgba(7, 18, 31, .72);
+    color: #e8f3ff;
+}
+
+.nxr-company-delete-btn-secondary:hover {
+    border-color: rgba(34, 211, 238, .32);
+    background: rgba(34, 211, 238, .08);
+    color: #ffffff;
+}
+
+.nxr-company-delete-btn-danger {
+    border: 1px solid rgba(248, 113, 113, .38);
+    background: rgba(239, 68, 68, .14);
+    color: #fecaca;
+}
+
+.nxr-company-delete-btn-danger:hover {
+    border-color: rgba(248, 113, 113, .62);
+    background: rgba(239, 68, 68, .22);
+    color: #ffffff;
+}
+
+.nxr-company-delete-error {
+    border: 1px solid rgba(248, 113, 113, .32);
+    border-radius: 16px;
+    background: rgba(239, 68, 68, .10);
+    color: #fecaca;
+    padding: 14px 16px;
+    font-weight: 900;
+    margin-bottom: 18px;
+}
+/* NEXORA_FIX19D_SMART_COMPANY_DELETE_END */
+</style>
+
+<div class="nxr-company-delete-page">
+    <section class="nxr-company-delete-card">
+        <div class="nxr-company-delete-top">
             <div>
-                <span>Code</span>
-                <strong>@Model.Company.Code</strong>
+                <span class="nxr-company-delete-kicker">&#x0625;&#x0639;&#x062F;&#x0627;&#x062F; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
+                <h1 class="nxr-company-delete-title">&#x062D;&#x0630;&#x0641; &#x0634;&#x0631;&#x0643;&#x0629;</h1>
+                <p class="nxr-company-delete-subtitle">
+                    &#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645; &#x0633;&#x064A;&#x062D;&#x062F;&#x062F; &#x0646;&#x0648;&#x0639; &#x0627;&#x0644;&#x062D;&#x0630;&#x0641; &#x062A;&#x0644;&#x0642;&#x0627;&#x0626;&#x064A;&#x0627;&#x064B; &#x062D;&#x0633;&#x0628; &#x0648;&#x062C;&#x0648;&#x062F; &#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0645;&#x0631;&#x062A;&#x0628;&#x0637;&#x0629;.
+                </p>
             </div>
 
-            <div>
-                <span>Company Name</span>
-                <strong>@Model.Company.Name</strong>
+            <div class="nxr-company-delete-icon">!</div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+        {
+            <div class="nxr-company-delete-error">@Model.ErrorMessage</div>
+        }
+
+        @if (Model.HasLinkedData)
+        {
+            <div class="nxr-company-delete-mode">
+                <span>
+                    &#x0647;&#x0630;&#x0647; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629; &#x0639;&#x0644;&#x064A;&#x0647;&#x0627; &#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0645;&#x0631;&#x062A;&#x0628;&#x0637;&#x0629;. &#x0633;&#x064A;&#x062A;&#x0645; &#x0625;&#x062E;&#x0641;&#x0627;&#x0624;&#x0647;&#x0627; &#x0641;&#x0642;&#x0637; &#x062D;&#x0641;&#x0627;&#x0638;&#x0627;&#x064B; &#x0639;&#x0644;&#x0649; &#x0627;&#x0644;&#x0633;&#x062C;&#x0644;&#x0627;&#x062A; &#x0648;&#x0627;&#x0644;&#x0639;&#x0644;&#x0627;&#x0642;&#x0627;&#x062A;.
+                </span>
+                <strong class="nxr-company-delete-mode-badge">&#x062D;&#x0630;&#x0641; &#x0622;&#x0645;&#x0646;</strong>
+            </div>
+        }
+        else
+        {
+            <div class="nxr-company-delete-mode safe">
+                <span>
+                    &#x0644;&#x0627; &#x062A;&#x0648;&#x062C;&#x062F; &#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0645;&#x0631;&#x062A;&#x0628;&#x0637;&#x0629; &#x0628;&#x0647;&#x0630;&#x0647; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;. &#x0633;&#x064A;&#x062A;&#x0645; &#x062D;&#x0630;&#x0641;&#x0647;&#x0627; &#x0646;&#x0647;&#x0627;&#x0626;&#x064A;&#x0627;&#x064B; &#x0645;&#x0646; &#x0642;&#x0627;&#x0639;&#x062F;&#x0629; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A;.
+                </span>
+                <strong class="nxr-company-delete-mode-badge">&#x062D;&#x0630;&#x0641; &#x0646;&#x0647;&#x0627;&#x0626;&#x064A;</strong>
+            </div>
+        }
+
+        <div class="nxr-company-delete-details">
+            <div class="nxr-company-delete-row">
+                <span class="nxr-company-delete-label">&#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
+                <strong class="nxr-company-delete-value name">@Model.Company.Name</strong>
             </div>
 
-            <div>
-                <span>Email</span>
-                <strong>@Model.Company.Email</strong>
+            <div class="nxr-company-delete-row">
+                <span class="nxr-company-delete-label">&#x0627;&#x0644;&#x0628;&#x0631;&#x064A;&#x062F; &#x0627;&#x0644;&#x0625;&#x0644;&#x0643;&#x062A;&#x0631;&#x0648;&#x0646;&#x064A;</span>
+                <strong class="nxr-company-delete-value">@(string.IsNullOrWhiteSpace(Model.Company.Email) ? "-" : Model.Company.Email)</strong>
             </div>
 
-            <div>
-                <span>Phone</span>
-                <strong>@Model.Company.Phone</strong>
+            <div class="nxr-company-delete-row">
+                <span class="nxr-company-delete-label">&#x0631;&#x0642;&#x0645; &#x0627;&#x0644;&#x0647;&#x0627;&#x062A;&#x0641;</span>
+                <strong class="nxr-company-delete-value">@(string.IsNullOrWhiteSpace(Model.Company.Phone) ? "-" : Model.Company.Phone)</strong>
             </div>
         </div>
 
-        <form method="post" class="delete-actions">
+        <form method="post" class="nxr-company-delete-actions">
             <input type="hidden" asp-for="Company.Id" />
 
-            <a asp-page="/Companies/Index" class="btn-secondary">Cancel</a>
-            <button type="submit" class="btn-danger">Delete Company</button>
+            <button type="submit" class="nxr-company-delete-btn nxr-company-delete-btn-danger">&#x062D;&#x0630;&#x0641; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</button>
+            <a asp-page="/Companies/Index" class="nxr-company-delete-btn nxr-company-delete-btn-secondary">&#x0625;&#x0644;&#x063A;&#x0627;&#x0621;</a>
         </form>
-    </div>
+    </section>
 </div>

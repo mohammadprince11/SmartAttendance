@@ -5,6 +5,61 @@
     ViewData["Title"] = "إعداد الشركة";
 }
 
+
+<style>
+/* NEXORA_FIX19A_V2_COMPANIES_UI_START */
+[data-setup-page="companies"] .nexora-setup-table th,
+[data-setup-page="companies"] .nexora-setup-table td {
+    vertical-align: middle !important;
+}
+
+[data-setup-page="companies"] .nexora-setup-table th:last-child,
+[data-setup-page="companies"] .nexora-setup-table td:last-child {
+    width: 220px !important;
+    min-width: 220px !important;
+    text-align: center !important;
+}
+
+[data-setup-page="companies"] .nx-setup-row-actions {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+}
+
+[data-setup-page="companies"] .nx-setup-row-actions .btn-table {
+    min-width: 74px !important;
+    height: 34px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+}
+
+[data-setup-page="companies"] .nexora-setup-search {
+    align-items: end !important;
+}
+
+[data-setup-page="companies"] .nexora-setup-search input[type="search"] {
+    min-height: 48px !important;
+}
+
+[data-setup-page="companies"] .nexora-setup-card-head {
+    align-items: flex-start !important;
+}
+
+#company-create-modal .nx-setup-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+#company-create-modal .nx-setup-field:first-child {
+    grid-column: auto !important;
+}
+/* NEXORA_FIX19A_V2_COMPANIES_UI_END */
+</style>
 <div class="nexora-setup-page" data-setup-page="companies">
     <section class="nexora-setup-hero">
         <div>
@@ -39,7 +94,7 @@
             <input type="search"
                    name="SearchTerm"
                    value="@Model.SearchTerm"
-                   placeholder="ابحث عن اسم الشركة أو الكود..." />
+                   placeholder="&#x0627;&#x0628;&#x062D;&#x062B; &#x0639;&#x0646; &#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;..." />
 
             <button type="submit" class="btn-primary nx-setup-btn nx-setup-btn-primary">بحث</button>
             <a asp-page="./Index" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">مسح</a>
@@ -49,7 +104,6 @@
             <table class="data-table nexora-setup-table">
                 <thead>
                     <tr>
-                        <th>الكود</th>
                         <th>اسم الشركة</th>
                         <th>الحالة</th>
                         <th style="width: 170px;">الإجراءات</th>
@@ -62,9 +116,6 @@
                         foreach (var company in Model.Companies)
                         {
                             <tr>
-                                <td>
-                                    <span class="nx-setup-code">@company.Code</span>
-                                </td>
                                 <td>
                                     <strong class="nx-setup-title">@company.Name</strong>
                                 </td>
@@ -85,7 +136,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="4" class="nx-setup-empty">لا توجد شركات مسجلة حالياً.</td>
+                            <td colspan="3" class="nx-setup-empty">لا توجد شركات مسجلة حالياً.</td>
                         </tr>
                     }
                 </tbody>
@@ -107,13 +158,8 @@
         <form method="post" asp-page="./Create" class="nx-setup-modal-form">
             <div class="nx-setup-form-grid">
                 <label class="nx-setup-field">
-                    <span>كود الشركة</span>
-                    <input name="Company.Code" autocomplete="off" placeholder="مثال: HQ" required />
-                </label>
-
-                <label class="nx-setup-field">
                     <span>اسم الشركة</span>
-                    <input name="Company.Name" autocomplete="off" placeholder="مثال: شركة الرغد" required />
+                    <input name="Company.Name" autocomplete="off" placeholder="مثال: نيكسوراد" required />
                 </label>
 
                 <label class="nx-setup-field">

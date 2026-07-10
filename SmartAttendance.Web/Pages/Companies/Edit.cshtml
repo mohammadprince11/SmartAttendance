@@ -23,13 +23,9 @@
     <section class="nexora-setup-card">
         <form method="post" class="nx-setup-modal-form">
             <input type="hidden" asp-for="Company.Id" />
+            <input type="hidden" asp-for="Company.Code" />
 
             <div class="nx-setup-form-grid">
-                <label class="nx-setup-field">
-                    <span>كود الشركة</span>
-                    <input asp-for="Company.Code" />
-                </label>
-
                 <label class="nx-setup-field">
                     <span>اسم الشركة</span>
                     <input asp-for="Company.Name" />

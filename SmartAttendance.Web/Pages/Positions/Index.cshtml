@@ -21,7 +21,7 @@
         <div class="nxp-hero__content">
             <p class="nxp-eyebrow">NEXORA HR</p>
             <h1>المناصب الوظيفية</h1>
-            <span>إدارة المناصب الرسمية وربطها بالقسم والفئة والمستوى، مع منع حذف أي منصب مستخدم داخل ملفات الموظفين.</span>
+           @*  <span>إدارة المناصب الرسمية وربطها بالقسم والفئة والمستوى، مع منع حذف أي منصب مستخدم داخل ملفات الموظفين.</span> *@
         </div>
         <div class="nxp-hero__links" aria-label="إعدادات المناصب">
             <a asp-page="/PositionCategories/Index">إدارة الفئات</a>
@@ -98,10 +98,95 @@
                 </select>
             </label>
 
-            <label class="nxp-field nxp-field--wide">
-                <span>وصف مختصر</span>
-                <textarea asp-for="Input.Description" rows="3" maxlength="1200" placeholder="اكتب وصفاً مختصراً للمنصب أو نطاق المسؤوليات..."></textarea>
+            <label class="nxp-field nxp-field--reference">
+                <span>&#x0627;&#x0644;&#x0643;&#x0641;&#x0627;&#x0621;&#x0627;&#x062A; <button type="button" class="nxp-label-manage" data-nxp-reference-open="competencies">&#x0625;&#x062F;&#x0627;&#x0631;&#x0629;</button></span>
+                <select asp-for="Input.Competencies">
+                    <option value="">&#x063A;&#x064A;&#x0631; &#x0645;&#x062D;&#x062F;&#x062F;</option>
+                    @foreach (var item in Model.CompetencyOptions.Where(item => item.IsActive || item.Name == Model.Input.Competencies))
+                    {
+                        <option value="@item.Name">@item.Name</option>
+                    }
+                </select>
             </label>
+
+            <label class="nxp-field nxp-field--reference">
+                <span>&#x0627;&#x0644;&#x062A;&#x0639;&#x0644;&#x064A;&#x0645; <button type="button" class="nxp-label-manage" data-nxp-reference-open="education">&#x0625;&#x062F;&#x0627;&#x0631;&#x0629;</button></span>
+                <select asp-for="Input.Education">
+                    <option value="">&#x063A;&#x064A;&#x0631; &#x0645;&#x062D;&#x062F;&#x062F;</option>
+                    @foreach (var item in Model.EducationOptions.Where(item => item.IsActive || item.Name == Model.Input.Education))
+                    {
+                        <option value="@item.Name">@item.Name</option>
+                    }
+                </select>
+            </label>
+
+            <label class="nxp-field nxp-field--reference">
+                <span>&#x0627;&#x0644;&#x0634;&#x0647;&#x0627;&#x062F;&#x0627;&#x062A; <button type="button" class="nxp-label-manage" data-nxp-reference-open="certifications">&#x0625;&#x062F;&#x0627;&#x0631;&#x0629;</button></span>
+                <select asp-for="Input.Certifications">
+                    <option value="">&#x063A;&#x064A;&#x0631; &#x0645;&#x062D;&#x062F;&#x062F;</option>
+                    @foreach (var item in Model.CertificationOptions.Where(item => item.IsActive || item.Name == Model.Input.Certifications))
+                    {
+                        <option value="@item.Name">@item.Name</option>
+                    }
+                </select>
+            </label>
+            @* NEXORA_FIX20D_REFERENCE_DROPDOWN_FIELDS *@
+
+            <div class="nxp-position-profile-launchers" data-nxp-profile-launchers>
+                <button type="button" class="nxp-profile-launcher" data-nxp-profile-open="job">
+                    <span>&#x0627;&#x0644;&#x0648;&#x0635;&#x0641; &#x0627;&#x0644;&#x0648;&#x0638;&#x064A;&#x0641;&#x064A;</span>
+                    <strong>&#x0627;&#x0644;&#x0647;&#x062F;&#x0641; &#x0648;&#x0627;&#x0644;&#x0645;&#x0647;&#x0627;&#x0645; &#x0648;KPI</strong>
+                </button>
+
+                </div>
+
+            <div class="nxp-profile-modal-backdrop" data-nxp-profile-backdrop hidden></div>
+
+            <section class="nxp-profile-modal" data-nxp-profile-modal="job" hidden aria-hidden="true">
+                <div class="nxp-profile-modal__card" dir="rtl">
+                    <header class="nxp-profile-modal__head">
+                        <div>
+                            <span>&#x0628;&#x0637;&#x0627;&#x0642;&#x0629; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</span>
+                            <h3>&#x0627;&#x0644;&#x0648;&#x0635;&#x0641; &#x0627;&#x0644;&#x0648;&#x0638;&#x064A;&#x0641;&#x064A;</h3>
+                        </div>
+                        <button type="button" data-nxp-profile-close>&times;</button>
+                    </header>
+
+                    <div class="nxp-profile-modal__body">
+                        <label class="nxp-field nxp-field--wide">
+                            <span>&#x0647;&#x062F;&#x0641; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</span>
+                            <textarea asp-for="Input.JobPurpose" rows="3" maxlength="2000" placeholder="&#x0645;&#x0627; &#x0627;&#x0644;&#x063A;&#x0631;&#x0636; &#x0645;&#x0646; &#x0647;&#x0630;&#x0627; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;&#x061F;"></textarea>
+                        </label>
+
+                        <label class="nxp-field nxp-field--wide">
+                            <span>&#x0627;&#x0644;&#x0645;&#x0647;&#x0627;&#x0645; &#x0648;&#x0627;&#x0644;&#x0645;&#x0633;&#x0624;&#x0648;&#x0644;&#x064A;&#x0627;&#x062A;</span>
+                            <textarea asp-for="Input.KeyResponsibilities" rows="5" maxlength="4000" placeholder="&#x0627;&#x0643;&#x062A;&#x0628; &#x0627;&#x0644;&#x0645;&#x0647;&#x0627;&#x0645; &#x0627;&#x0644;&#x0631;&#x0626;&#x064A;&#x0633;&#x064A;&#x0629;..."></textarea>
+                        </label>
+
+                        <label class="nxp-field">
+                            <span>&#x0627;&#x0644;&#x0645;&#x062A;&#x0637;&#x0644;&#x0628;&#x0627;&#x062A;</span>
+                            <textarea asp-for="Input.JobRequirements" rows="4" maxlength="3000" placeholder="&#x0627;&#x0644;&#x062E;&#x0628;&#x0631;&#x0629;&#x060C; &#x0627;&#x0644;&#x0634;&#x0647;&#x0627;&#x062F;&#x0629;&#x060C; &#x0627;&#x0644;&#x0644;&#x063A;&#x0627;&#x062A;..."></textarea>
+                        </label>
+
+                        <label class="nxp-field">
+                            <span>&#x0627;&#x0644;&#x0645;&#x0647;&#x0627;&#x0631;&#x0627;&#x062A;</span>
+                            <textarea asp-for="Input.RequiredSkills" rows="4" maxlength="3000" placeholder="&#x0627;&#x0644;&#x0645;&#x0647;&#x0627;&#x0631;&#x0627;&#x062A; &#x0627;&#x0644;&#x0641;&#x0646;&#x064A;&#x0629; &#x0648;&#x0627;&#x0644;&#x0634;&#x062E;&#x0635;&#x064A;&#x0629;..."></textarea>
+                        </label>
+
+                        <label class="nxp-field nxp-field--wide">
+                            <span>KPI</span>
+                            <textarea asp-for="Input.JobKpis" rows="4" maxlength="3000" placeholder="&#x0645;&#x0624;&#x0634;&#x0631;&#x0627;&#x062A; &#x0627;&#x0644;&#x0623;&#x062F;&#x0627;&#x0621; &#x0627;&#x0644;&#x0631;&#x0626;&#x064A;&#x0633;&#x064A;&#x0629;..."></textarea>
+                        </label>
+                    </div>
+                
+                    <footer class="nxp-profile-modal__footer" data-nxp-profile-footer="job">
+                        <button type="button" class="nxp-btn nxp-btn--ghost" data-nxp-profile-close>&#x0625;&#x0644;&#x063A;&#x0627;&#x0621;</button>
+                        <button type="submit" class="nxp-btn nxp-btn--primary">&#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</button>
+                    </footer>
+                    @* NEXORA_FIX20F_JOB_MODAL_FOOTER *@</div>
+            </section>
+
+            @* NEXORA_FIX20C_V2_PROFILE_POPUPS_FIELDS *@
 
             <label class="nxp-check">
                 <input type="hidden" name="Input.IsActive" value="false" />
@@ -243,6 +328,91 @@
     </section>
 </div>
 
+
+<div class="nxp-reference-modal-backdrop" data-nxp-reference-backdrop hidden></div>
+
+<section class="nxp-reference-modal" data-nxp-reference-modal="competencies" hidden aria-hidden="true">
+    <div class="nxp-reference-modal__card" dir="rtl">
+        <header class="nxp-reference-modal__head">
+            <div>
+                <span>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0631;&#x0627;&#x062C;&#x0639;</span>
+                <h3>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0643;&#x0641;&#x0627;&#x0621;&#x0627;&#x062A;</h3>
+            </div>
+            <button type="button" data-nxp-reference-close>&times;</button>
+        </header>
+
+        <form method="post" asp-page-handler="SaveReference" asp-route-type="competencies" class="nxp-reference-modal__body">
+            <label class="nxp-field nxp-field--wide">
+                <span>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0643;&#x0641;&#x0627;&#x0621;&#x0629;</span>
+                <input name="ReferenceInput.Name" maxlength="240" placeholder="&#x0645;&#x062B;&#x0627;&#x0644;: &#x0627;&#x0644;&#x0642;&#x064A;&#x0627;&#x062F;&#x0629;" />
+            </label>
+            <button type="submit" class="nxp-btn nxp-btn--primary">&#x062D;&#x0641;&#x0638;</button>
+        </form>
+
+        <div class="nxp-reference-modal__list">
+            @foreach (var item in Model.CompetencyOptions)
+            {
+                <span>@item.Name</span>
+            }
+        </div>
+    </div>
+</section>
+
+<section class="nxp-reference-modal" data-nxp-reference-modal="education" hidden aria-hidden="true">
+    <div class="nxp-reference-modal__card" dir="rtl">
+        <header class="nxp-reference-modal__head">
+            <div>
+                <span>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0631;&#x0627;&#x062C;&#x0639;</span>
+                <h3>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x062A;&#x0639;&#x0644;&#x064A;&#x0645;</h3>
+            </div>
+            <button type="button" data-nxp-reference-close>&times;</button>
+        </header>
+
+        <form method="post" asp-page-handler="SaveReference" asp-route-type="education" class="nxp-reference-modal__body">
+            <label class="nxp-field nxp-field--wide">
+                <span>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0645;&#x0633;&#x062A;&#x0648;&#x0649; &#x062A;&#x0639;&#x0644;&#x064A;&#x0645;</span>
+                <input name="ReferenceInput.Name" maxlength="240" placeholder="&#x0645;&#x062B;&#x0627;&#x0644;: &#x0628;&#x0643;&#x0627;&#x0644;&#x0648;&#x0631;&#x064A;&#x0648;&#x0633;" />
+            </label>
+            <button type="submit" class="nxp-btn nxp-btn--primary">&#x062D;&#x0641;&#x0638;</button>
+        </form>
+
+        <div class="nxp-reference-modal__list">
+            @foreach (var item in Model.EducationOptions)
+            {
+                <span>@item.Name</span>
+            }
+        </div>
+    </div>
+</section>
+
+<section class="nxp-reference-modal" data-nxp-reference-modal="certifications" hidden aria-hidden="true">
+    <div class="nxp-reference-modal__card" dir="rtl">
+        <header class="nxp-reference-modal__head">
+            <div>
+                <span>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0631;&#x0627;&#x062C;&#x0639;</span>
+                <h3>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0634;&#x0647;&#x0627;&#x062F;&#x0627;&#x062A;</h3>
+            </div>
+            <button type="button" data-nxp-reference-close>&times;</button>
+        </header>
+
+        <form method="post" asp-page-handler="SaveReference" asp-route-type="certifications" class="nxp-reference-modal__body">
+            <label class="nxp-field nxp-field--wide">
+                <span>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0634;&#x0647;&#x0627;&#x062F;&#x0629;</span>
+                <input name="ReferenceInput.Name" maxlength="240" placeholder="&#x0645;&#x062B;&#x0627;&#x0644;: PMP" />
+            </label>
+            <button type="submit" class="nxp-btn nxp-btn--primary">&#x062D;&#x0641;&#x0638;</button>
+        </form>
+
+        <div class="nxp-reference-modal__list">
+            @foreach (var item in Model.CertificationOptions)
+            {
+                <span>@item.Name</span>
+            }
+        </div>
+    </div>
+</section>
+@* NEXORA_FIX20D_REFERENCE_MANAGE_MODALS *@
+
 <div class="nxp-modal-backdrop" data-employees-backdrop hidden></div>
 <section class="nxp-modal" data-employees-modal hidden aria-hidden="true">
     <div class="nxp-modal__card" dir="rtl">
@@ -260,6 +430,123 @@
     </div>
 </section>
 
+
+<script>
+/* NEXORA_FIX20C_V2_PROFILE_POPUPS_SCRIPT */
+(() => {
+    const backdrop = document.querySelector('[data-nxp-profile-backdrop]');
+    const modals = Array.from(document.querySelectorAll('[data-nxp-profile-modal]'));
+
+    function closeAll() {
+        modals.forEach(modal => {
+            modal.hidden = true;
+            modal.setAttribute('aria-hidden', 'true');
+        });
+
+        if (backdrop) {
+            backdrop.hidden = true;
+        }
+
+        document.documentElement.classList.remove('nxp-profile-modal-open');
+        document.body.classList.remove('nxp-profile-modal-open');
+    }
+
+    function openModal(key) {
+        const modal = document.querySelector(`[data-nxp-profile-modal="${key}"]`);
+        if (!modal) return;
+
+        closeAll();
+        modal.hidden = false;
+        modal.setAttribute('aria-hidden', 'false');
+
+        if (backdrop) {
+            backdrop.hidden = false;
+        }
+
+        document.documentElement.classList.add('nxp-profile-modal-open');
+        document.body.classList.add('nxp-profile-modal-open');
+
+        const firstField = modal.querySelector('textarea, input, select, button');
+        window.setTimeout(() => firstField?.focus(), 80);
+    }
+
+    document.querySelectorAll('[data-nxp-profile-open]').forEach(button => {
+        button.addEventListener('click', () => openModal(button.dataset.nxpProfileOpen));
+    });
+
+    document.querySelectorAll('[data-nxp-profile-close]').forEach(button => {
+        button.addEventListener('click', closeAll);
+    });
+
+    backdrop?.addEventListener('click', closeAll);
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+            closeAll();
+        }
+    });
+})();
+</script>
+
+<script>
+/* NEXORA_FIX20D_REFERENCE_MODAL_SCRIPT */
+(() => {
+    const backdrop = document.querySelector('[data-nxp-reference-backdrop]');
+    const modals = Array.from(document.querySelectorAll('[data-nxp-reference-modal]'));
+
+    function closeAll() {
+        modals.forEach(modal => {
+            modal.hidden = true;
+            modal.setAttribute('aria-hidden', 'true');
+        });
+
+        if (backdrop) {
+            backdrop.hidden = true;
+        }
+
+        document.documentElement.classList.remove('nxp-reference-modal-open');
+        document.body.classList.remove('nxp-reference-modal-open');
+    }
+
+    function openModal(key) {
+        const modal = document.querySelector(`[data-nxp-reference-modal="${key}"]`);
+        if (!modal) return;
+
+        closeAll();
+        modal.hidden = false;
+        modal.setAttribute('aria-hidden', 'false');
+
+        if (backdrop) {
+            backdrop.hidden = false;
+        }
+
+        document.documentElement.classList.add('nxp-reference-modal-open');
+        document.body.classList.add('nxp-reference-modal-open');
+
+        const firstInput = modal.querySelector('input, button');
+        window.setTimeout(() => firstInput?.focus(), 80);
+    }
+
+    document.querySelectorAll('[data-nxp-reference-open]').forEach(button => {
+        button.addEventListener('click', event => {
+            event.preventDefault();
+            openModal(button.dataset.nxpReferenceOpen);
+        });
+    });
+
+    document.querySelectorAll('[data-nxp-reference-close]').forEach(button => {
+        button.addEventListener('click', closeAll);
+    });
+
+    backdrop?.addEventListener('click', closeAll);
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+            closeAll();
+        }
+    });
+})();
+</script>
 @section Scripts {
     <script>
         (() => {
