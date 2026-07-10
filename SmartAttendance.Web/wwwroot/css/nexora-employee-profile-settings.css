@@ -1552,3 +1552,124 @@ body.nxr-profile-settings-modal-active .nxr-profile-settings-section:hover {
     }
 }
 /* NEXORA_FIX08H2_TRUE_BODY_EDIT_MODAL_END */
+/* NEXORA_FIX08I_PROFILE_SETTINGS_ACCORDION_CAPSULES_START */
+.nxr-profile-settings-page-v2 .nxr-profile-settings-sections {
+    display: block !important;
+    column-count: 2;
+    column-gap: 18px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section {
+    display: inline-block !important;
+    width: 100% !important;
+    min-height: unset !important;
+    margin: 0 0 18px !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    vertical-align: top !important;
+    padding: 16px !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section header {
+    cursor: pointer;
+    user-select: none;
+    align-items: center !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+    border-bottom: 0 !important;
+    min-height: 56px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section header:focus {
+    outline: none;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section header:focus-visible {
+    box-shadow: 0 0 0 4px rgba(34, 211, 238, .14);
+    border-radius: 16px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section header::after {
+    content: "+";
+    width: 34px;
+    height: 34px;
+    border-radius: 13px;
+    border: 1px solid rgba(34, 211, 238, .24);
+    background: rgba(34, 211, 238, .08);
+    color: #22d3ee;
+    display: grid;
+    place-items: center;
+    font-weight: 1000;
+    font-size: 20px;
+    margin-inline-start: 8px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section.is-open header {
+    margin-bottom: 14px !important;
+    padding-bottom: 14px !important;
+    border-bottom: 1px solid rgba(160, 190, 210, .12) !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section.is-open header::after {
+    content: "-";
+    color: #f5c96b;
+    border-color: rgba(245, 201, 107, .32);
+    background: rgba(245, 201, 107, .08);
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section:not(.is-open) {
+    border-radius: 22px !important;
+    background:
+        linear-gradient(135deg, rgba(13, 40, 60, .88), rgba(6, 22, 34, .96)),
+        rgba(7, 20, 32, .96) !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section:not(.is-open) .nxr-profile-settings-field-list,
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section:not(.is-open) .nxr-profile-settings-empty {
+    display: none !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section.is-open {
+    border-color: rgba(34, 211, 238, .32) !important;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, .34) !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section header strong {
+    order: -1;
+    min-width: 44px;
+    height: 44px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section:not(.is-open) header strong {
+    min-width: 40px;
+    height: 40px;
+    font-size: 18px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section:not(.is-open) header span {
+    font-size: 11px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section:not(.is-open) header h3 {
+    font-size: 18px;
+    margin-bottom: 0;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section:hover {
+    transform: none !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-field-row {
+    min-height: 82px;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-empty {
+    min-height: 90px !important;
+}
+
+@media (max-width: 1100px) {
+    .nxr-profile-settings-page-v2 .nxr-profile-settings-sections {
+        column-count: 1;
+    }
+}
+/* NEXORA_FIX08I_PROFILE_SETTINGS_ACCORDION_CAPSULES_END */

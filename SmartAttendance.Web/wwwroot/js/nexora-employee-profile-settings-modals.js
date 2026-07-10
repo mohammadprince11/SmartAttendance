@@ -236,3 +236,85 @@
         wireDeleteModals();
     });
 })();
+/* NEXORA_FIX08I_PROFILE_SETTINGS_ACCORDION_CAPSULES_START */
+(function () {
+    "use strict";
+
+    const sectionSelector = ".nxr-profile-settings-section";
+
+    function getFieldCount(section) {
+        const countNode = section.querySelector(":scope > header strong");
+        const value = countNode ? parseInt((countNode.textContent || "0").trim(), 10) : 0;
+        return Number.isFinite(value) ? value : 0;
+    }
+
+    function openSection(targetSection) {
+        const sections = Array.from(document.querySelectorAll(sectionSelector));
+
+        sections.forEach(function (section) {
+            const isOpen = section === targetSection;
+            section.classList.toggle("is-open", isOpen);
+
+            const header = section.querySelector(":scope > header");
+            if (header) {
+                header.setAttribute("aria-expanded", isOpen ? "true" : "false");
+            }
+        });
+    }
+
+    function initProfileSettingsAccordion() {
+        const sections = Array.from(document.querySelectorAll(sectionSelector));
+
+        if (!sections.length) {
+            return;
+        }
+
+        sections.forEach(function (section) {
+            if (section.dataset.nxrAccordionReady === "true") {
+                return;
+            }
+
+            section.dataset.nxrAccordionReady = "true";
+
+            const header = section.querySelector(":scope > header");
+
+            if (!header) {
+                return;
+            }
+
+            header.setAttribute("role", "button");
+            header.setAttribute("tabindex", "0");
+            header.setAttribute("aria-expanded", "false");
+
+            header.addEventListener("click", function () {
+                openSection(section);
+            });
+
+            header.addEventListener("keydown", function (event) {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openSection(section);
+                }
+            });
+        });
+
+        const alreadyOpen = sections.find(function (section) {
+            return section.classList.contains("is-open");
+        });
+
+        if (!alreadyOpen) {
+            const firstWithFields = sections.find(function (section) {
+                return getFieldCount(section) > 0;
+            });
+
+            openSection(firstWithFields || sections[0]);
+        }
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initProfileSettingsAccordion);
+    } else {
+        initProfileSettingsAccordion();
+    }
+})();
+ /* NEXORA_FIX08I_PROFILE_SETTINGS_ACCORDION_CAPSULES_END */
