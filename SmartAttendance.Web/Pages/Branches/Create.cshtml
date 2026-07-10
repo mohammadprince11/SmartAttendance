@@ -23,23 +23,6 @@
     <section class="nexora-setup-card">
         <form method="post" class="nx-setup-modal-form">
             <div class="nx-setup-form-grid">
-                <label class="nx-setup-field">
-                    <span>الشركة</span>
-                    <select asp-for="Branch.CompanyId">
-                        <option value="">اختر الشركة</option>
-                        @foreach (var company in Model.Companies)
-                        {
-                            <option value="@company.Id">@company.Name</option>
-                        }
-                    </select>
-                    <span asp-validation-for="Branch.CompanyId" class="text-danger"></span>
-                </label>
-
-                <label class="nx-setup-field">
-                    <span>كود الموقع</span>
-                    <input asp-for="Branch.Code" placeholder="مثال: BR-001" />
-                    <span asp-validation-for="Branch.Code" class="text-danger"></span>
-                </label>
 
                 <label class="nx-setup-field">
                     <span>اسم موقع العمل</span>

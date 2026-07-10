@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Departments.Services;
 using SmartAttendance.Application.Departments.ViewModels;
 
@@ -18,18 +17,18 @@ public class CreateModel : PageModel
     [BindProperty]
     public DepartmentCreateViewModel Department { get; set; } = new();
 
-    public IEnumerable<BranchListViewModel> Branches { get; set; } = new List<BranchListViewModel>();
-
     public string? ErrorMessage { get; set; }
 
-    public async Task OnGetAsync()
+    public void OnGet()
     {
-        Branches = await _departmentService.GetBranchesForDropdownAsync();
+        ModelState.Remove("Department.Code");
+        ModelState.Remove("Department.BranchId");
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
-        Branches = await _departmentService.GetBranchesForDropdownAsync();
+        ModelState.Remove("Department.Code");
+        ModelState.Remove("Department.BranchId");
 
         if (!ModelState.IsValid)
             return Page();
@@ -38,7 +37,7 @@ public class CreateModel : PageModel
 
         if (!created)
         {
-            ErrorMessage = "Department code already exists or selected branch is invalid.";
+            ErrorMessage = "Department already exists or code already exists.";
             return Page();
         }
 

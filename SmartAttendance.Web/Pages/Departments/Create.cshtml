@@ -2,17 +2,17 @@
 @model SmartAttendance.Web.Pages.Departments.CreateModel
 
 @{
-    ViewData["Title"] = "إضافة قسم";
+    ViewData["Title"] = "Create Department";
 }
 
 <div class="nexora-setup-page nx-setup-form-page">
     <section class="nexora-setup-hero">
         <div>
-            <span class="nexora-setup-kicker">الأقسام</span>
-            <h1>إضافة قسم</h1>
-            <p>هذه الصفحة احتياطية، ويمكنك الإضافة مباشرة من النافذة المنبثقة في صفحة الأقسام.</p>
+            <span class="nexora-setup-kicker">&#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;</span>
+            <h1>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0642;&#x0633;&#x0645;</h1>
+            <p>&#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0645;&#x0633;&#x062A;&#x0642;&#x0644; &#x0639;&#x0646; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;.</p>
         </div>
-        <a asp-page="./Index" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">الرجوع للقائمة</a>
+        <a asp-page="./Index" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0644;&#x0631;&#x062C;&#x0648;&#x0639;</a>
     </section>
 
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -23,34 +23,16 @@
     <section class="nexora-setup-card">
         <form method="post" class="nx-setup-modal-form">
             <div class="nx-setup-form-grid">
-                <label class="nx-setup-field">
-                    <span>موقع العمل</span>
-                    <select asp-for="Department.BranchId">
-                        <option value="">اختر موقع العمل</option>
-                        @foreach (var branch in Model.Branches)
-                        {
-                            <option value="@branch.Id">@branch.Name</option>
-                        }
-                    </select>
-                    <span asp-validation-for="Department.BranchId" class="text-danger"></span>
-                </label>
-
-                <label class="nx-setup-field">
-                    <span>كود القسم</span>
-                    <input asp-for="Department.Code" placeholder="مثال: HR" />
-                    <span asp-validation-for="Department.Code" class="text-danger"></span>
-                </label>
-
                 <label class="nx-setup-field nx-setup-field-wide">
-                    <span>اسم القسم</span>
-                    <input asp-for="Department.Name" placeholder="مثال: الموارد البشرية" />
+                    <span>&#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</span>
+                    <input asp-for="Department.Name" placeholder="Human Resources" />
                     <span asp-validation-for="Department.Name" class="text-danger"></span>
                 </label>
             </div>
 
             <div class="nx-setup-modal__actions">
-                <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">إلغاء</a>
-                <button type="submit" class="nx-setup-btn nx-setup-btn-primary">حفظ القسم</button>
+                <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">&#x0625;&#x0644;&#x063A;&#x0627;&#x0621;</a>
+                <button type="submit" class="nx-setup-btn nx-setup-btn-primary">&#x062D;&#x0641;&#x0638;</button>
             </div>
         </form>
     </section>

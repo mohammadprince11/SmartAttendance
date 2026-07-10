@@ -52,12 +52,12 @@ public class ReportBuilderService : IReportBuilderService
         var branchLookup = branches.ToDictionary(x => x.Id, x => x.Name);
 
         return departments
-            .OrderBy(x => branchLookup.TryGetValue(x.BranchId, out var branchName) ? branchName : string.Empty)
+            .OrderBy(x => x.BranchId.HasValue && branchLookup.TryGetValue(x.BranchId.Value, out var branchName) ? branchName : string.Empty)
             .ThenBy(x => x.Name)
             .Select(x => new ReportBuilderDropdownItemViewModel
             {
                 Value = x.Id.ToString(),
-                Text = $"{(branchLookup.TryGetValue(x.BranchId, out var branchName) ? branchName : "-")} / {x.Name}"
+                Text = x.Name
             })
             .ToList();
     }
@@ -154,7 +154,7 @@ public class ReportBuilderService : IReportBuilderService
             string branchName = string.Empty;
             string branchCode = string.Empty;
 
-            if (department != null && branchLookup.TryGetValue(department.BranchId, out var branch))
+            if (department?.BranchId != null && branchLookup.TryGetValue(department.BranchId.Value, out var branch))
             {
                 branchName = branch.Name;
                 branchCode = branch.Code;
@@ -190,7 +190,8 @@ public class ReportBuilderService : IReportBuilderService
                 .Select(x =>
                 {
                     if (departmentLookup.TryGetValue(x.DepartmentId, out var department) &&
-                        branchLookup.TryGetValue(department.BranchId, out var branch))
+                        department.BranchId.HasValue &&
+                        branchLookup.TryGetValue(department.BranchId.Value, out var branch))
                         return branch.Id;
 
                     return 0;
@@ -288,7 +289,7 @@ public class ReportBuilderService : IReportBuilderService
             {
                 departmentName = department.Name;
 
-                if (branchLookup.TryGetValue(department.BranchId, out var branch))
+                if (department.BranchId.HasValue && branchLookup.TryGetValue(department.BranchId.Value, out var branch))
                 {
                     branchName = branch.Name;
                     branchCode = branch.Code;

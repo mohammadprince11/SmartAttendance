@@ -212,7 +212,7 @@ public class IndexModel : PageModel
             .Select(x => new DepartmentViewModel
             {
                 Id = x.Id,
-                BranchId = x.BranchId,
+                BranchId = x.BranchId ?? 0,
                 Name = x.Name,
                 Code = x.Code,
                 IsActive = x.IsActive
@@ -222,7 +222,8 @@ public class IndexModel : PageModel
 
         var employeeCountsByBranch = await _dbContext.Employees
             .AsNoTracking()
-            .GroupBy(x => x.Department.BranchId)
+            .Where(x => x.Department.BranchId.HasValue)
+            .GroupBy(x => x.Department.BranchId!.Value)
             .Select(x => new
             {
                 BranchId = x.Key,

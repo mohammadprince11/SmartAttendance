@@ -10,10 +10,13 @@
         <div>
             <span class="nexora-setup-kicker">استيراد البيانات</span>
             <h1>استيراد الأقسام</h1>
-            <p>ارفع الأقسام وربطها بمواقع العمل حتى تصبح جاهزة للمناصب والموظفين.</p>
+            <p>&#x0627;&#x0631;&#x0641;&#x0639; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645; &#x0643;&#x0642;&#x0627;&#x0626;&#x0645;&#x0629; &#x0645;&#x0633;&#x062A;&#x0642;&#x0644;&#x0629; &#x0639;&#x0646; &#x0645;&#x0648;&#x0627;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;.</p>
         </div>
 
-        <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">العودة إلى الأقسام</a>
+        <div class="nexora-import-hero-actions"> @* NEXORA_FIX22A_TEMPLATE_LINK *@
+            <a href="?handler=Template" class="nx-setup-btn nx-setup-btn-primary">Excel Template</a>
+            <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0644;&#x0639;&#x0648;&#x062F;&#x0629; &#x0625;&#x0644;&#x0649; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;</a>
+        </div>
     </section>
 
     @if (TempData["SuccessMessage"] != null)
@@ -104,7 +107,7 @@
 
                     <textarea asp-for="PastedData"
                               class="nexora-import-paste"
-                              placeholder="Code    Name    BranchCode&#10;HR    الموارد البشرية    HQ"></textarea>
+                              placeholder="Name&#10;Human Resources"></textarea>
                 </div>
             </div>
 
@@ -124,7 +127,10 @@
 
             <div class="nexora-import-actions">
                 <button type="submit" class="nx-setup-btn nx-setup-btn-primary">معاينة البيانات</button>
-                <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">إلغاء</a>
+                <div class="nexora-import-hero-actions"> @* NEXORA_FIX22A_TEMPLATE_LINK *@
+            <a href="?handler=Template" class="nx-setup-btn nx-setup-btn-primary">Excel Template</a>
+            <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0644;&#x0639;&#x0648;&#x062F;&#x0629; &#x0625;&#x0644;&#x0649; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;</a>
+        </div>
             </div>
         </form>
     </section>

@@ -25,6 +25,7 @@ public class EditModel : PageModel
     public async Task<IActionResult> OnGetAsync(int id)
     {
         Companies = await _branchService.GetCompaniesForDropdownAsync();
+        ModelState.Remove("Branch.Code");
 
         var branch = await _branchService.GetEditByIdAsync(id);
 
@@ -39,6 +40,7 @@ public class EditModel : PageModel
     public async Task<IActionResult> OnPostAsync()
     {
         Companies = await _branchService.GetCompaniesForDropdownAsync();
+        ModelState.Remove("Branch.Code");
 
         if (!ModelState.IsValid)
             return Page();

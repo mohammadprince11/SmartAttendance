@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -217,5 +218,101 @@ public class ImportModel : PageModel
             value = $"\"{value}\"";
 
         return value;
+    }
+    // NEXORA_FIX22A_TEMPLATE_HELPERS
+    private static byte[] BuildTemplateWorkbook(string sheetName, string[] headers, string[] sample)
+    {
+        using var memory = new MemoryStream();
+        using (var archive = new ZipArchive(memory, ZipArchiveMode.Create, true))
+        {
+            AddZipEntry(archive, "[Content_Types].xml", @"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Types xmlns=""http://schemas.openxmlformats.org/package/2006/content-types"">
+  <Default Extension=""rels"" ContentType=""application/vnd.openxmlformats-package.relationships+xml""/>
+  <Default Extension=""xml"" ContentType=""application/xml""/>
+  <Override PartName=""/xl/workbook.xml"" ContentType=""application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml""/>
+  <Override PartName=""/xl/worksheets/sheet1.xml"" ContentType=""application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml""/>
+</Types>");
+
+            AddZipEntry(archive, "_rels/.rels", @"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Relationships xmlns=""http://schemas.openxmlformats.org/package/2006/relationships"">
+  <Relationship Id=""rId1"" Type=""http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"" Target=""xl/workbook.xml""/>
+</Relationships>");
+
+            AddZipEntry(archive, "xl/workbook.xml", $@"<?xml version=""1.0"" encoding=""UTF-8""?>
+<workbook xmlns=""http://schemas.openxmlformats.org/spreadsheetml/2006/main"" xmlns:r=""http://schemas.openxmlformats.org/officeDocument/2006/relationships"">
+  <sheets>
+    <sheet name=""{EscapeXml(sheetName)}"" sheetId=""1"" r:id=""rId1""/>
+  </sheets>
+</workbook>");
+
+            AddZipEntry(archive, "xl/_rels/workbook.xml.rels", @"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Relationships xmlns=""http://schemas.openxmlformats.org/package/2006/relationships"">
+  <Relationship Id=""rId1"" Type=""http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"" Target=""worksheets/sheet1.xml""/>
+</Relationships>");
+
+            AddZipEntry(archive, "xl/worksheets/sheet1.xml", BuildWorksheetXml(headers, sample));
+        }
+
+        return memory.ToArray();
+    }
+
+    private static string BuildWorksheetXml(IReadOnlyList<string> headers, IReadOnlyList<string> sample)
+    {
+        var builder = new StringBuilder();
+        builder.Append(@"<?xml version=""1.0"" encoding=""UTF-8""?><worksheet xmlns=""http://schemas.openxmlformats.org/spreadsheetml/2006/main""><sheetData>");
+        builder.Append(BuildRowXml(1, headers));
+        builder.Append(BuildRowXml(2, sample));
+        builder.Append("</sheetData></worksheet>");
+        return builder.ToString();
+    }
+
+    private static string BuildRowXml(int rowIndex, IReadOnlyList<string> values)
+    {
+        var builder = new StringBuilder();
+        builder.Append($"<row r=\"{rowIndex}\">");
+
+        for (var i = 0; i < values.Count; i++)
+        {
+            var cellRef = $"{GetColumnName(i + 1)}{rowIndex}";
+            builder.Append($"<c r=\"{cellRef}\" t=\"inlineStr\"><is><t>{EscapeXml(values[i])}</t></is></c>");
+        }
+
+        builder.Append("</row>");
+        return builder.ToString();
+    }
+
+    private static void AddZipEntry(ZipArchive archive, string name, string content)
+    {
+        var entry = archive.CreateEntry(name, CompressionLevel.Fastest);
+        using var writer = new StreamWriter(entry.Open(), new UTF8Encoding(false));
+        writer.Write(content);
+    }
+
+    private static string GetColumnName(int index)
+    {
+        var name = string.Empty;
+        while (index > 0)
+        {
+            index--;
+            name = (char)('A' + index % 26) + name;
+            index /= 26;
+        }
+
+        return name;
+    }
+
+    private static string EscapeXml(string? value)
+    {
+        return System.Security.SecurityElement.Escape(value ?? string.Empty) ?? string.Empty;
+    }
+
+    // NEXORA_FIX22C_TEMPLATE_HANDLER_ONLY
+    public IActionResult OnGetTemplate()
+    {
+        var bytes = BuildTemplateWorkbook("Departments", new[] { "Name" }, new[] { "Human Resources" });
+        return File(
+            bytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "NEXORA_Departments_Template.xlsx");
     }
 }

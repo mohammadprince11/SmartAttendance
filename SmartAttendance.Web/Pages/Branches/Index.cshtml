@@ -49,7 +49,6 @@
             <table class="data-table nexora-setup-table">
                 <thead>
                     <tr>
-                        <th>الكود</th>
                         <th>موقع العمل</th>
                         <th>الشركة</th>
                         <th>العنوان</th>
@@ -64,9 +63,6 @@
                         foreach (var branch in Model.Branches)
                         {
                             <tr>
-                                <td>
-                                    <span class="nx-setup-code">@branch.Code</span>
-                                </td>
                                 <td>
                                     <strong class="nx-setup-title">@branch.Name</strong>
                                 </td>
@@ -89,7 +85,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="6" class="nx-setup-empty">لا توجد مواقع عمل مسجلة حالياً.</td>
+                            <td colspan="5" class="nx-setup-empty">لا توجد مواقع عمل مسجلة حالياً.</td>
                         </tr>
                     }
                 </tbody>
@@ -115,21 +111,6 @@
 
         <form method="post" asp-page="./Create" class="nx-setup-modal-form">
             <div class="nx-setup-form-grid">
-                <label class="nx-setup-field">
-                    <span>الشركة</span>
-                    <select name="Branch.CompanyId" required>
-                        <option value="">اختر الشركة</option>
-                        @foreach (var company in Model.Companies)
-                        {
-                            <option value="@company.Id">@company.Name</option>
-                        }
-                    </select>
-                </label>
-
-                <label class="nx-setup-field">
-                    <span>كود الموقع</span>
-                    <input name="Branch.Code" autocomplete="off" placeholder="مثال: BR-001" required />
-                </label>
 
                 <label class="nx-setup-field">
                     <span>اسم موقع العمل</span>

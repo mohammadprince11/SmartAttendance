@@ -35,7 +35,7 @@ public class AttendanceAdvancedReportService : IAttendanceAdvancedReportService
             if (employee != null && departmentLookup.TryGetValue(employee.DepartmentId, out var department))
             {
                 departmentName = department.Name;
-                branchName = branchLookup.TryGetValue(department.BranchId, out var branch)
+                branchName = department.BranchId.HasValue && branchLookup.TryGetValue(department.BranchId.Value, out var branch)
                     ? branch
                     : string.Empty;
             }

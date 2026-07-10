@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.Departments.DeleteModel
 
 @{
@@ -8,10 +8,10 @@
 <div class="page-header">
     <div>
         <h1>Delete Department</h1>
-        <p>Confirm department deletion</p>
+        <p>Confirm department deletion.</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">Back</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -28,25 +28,13 @@
 
     <div class="details-grid">
         <div class="form-group">
-            <label>Branch</label>
-            <div class="form-control">@Model.Department.BranchName</div>
-        </div>
-
-        <div class="form-group">
-            <label>Department Code</label>
-            <div class="form-control">@Model.Department.Code</div>
-        </div>
-
-        <div class="form-group">
             <label>Department Name</label>
             <div class="form-control">@Model.Department.Name</div>
         </div>
 
         <div class="form-group">
             <label>Status</label>
-            <div class="form-control">
-                @(Model.Department.IsActive ? "Active" : "Inactive")
-            </div>
+            <div class="form-control">@(Model.Department.IsActive ? "Active" : "Inactive")</div>
         </div>
     </div>
 

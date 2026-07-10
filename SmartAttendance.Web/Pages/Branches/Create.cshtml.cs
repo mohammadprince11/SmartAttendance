@@ -25,11 +25,13 @@ public class CreateModel : PageModel
     public async Task OnGetAsync()
     {
         Companies = await _branchService.GetCompaniesForDropdownAsync();
+        ModelState.Remove("Branch.Code");
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
         Companies = await _branchService.GetCompaniesForDropdownAsync();
+        ModelState.Remove("Branch.Code");
 
         if (!ModelState.IsValid)
             return Page();

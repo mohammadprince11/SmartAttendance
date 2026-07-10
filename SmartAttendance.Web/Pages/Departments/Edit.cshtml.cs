@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Departments.Services;
 using SmartAttendance.Application.Departments.ViewModels;
 
@@ -18,13 +17,12 @@ public class EditModel : PageModel
     [BindProperty]
     public DepartmentEditViewModel Department { get; set; } = new();
 
-    public IEnumerable<BranchListViewModel> Branches { get; set; } = new List<BranchListViewModel>();
-
     public string? ErrorMessage { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
-        Branches = await _departmentService.GetBranchesForDropdownAsync();
+        ModelState.Remove("Department.Code");
+        ModelState.Remove("Department.BranchId");
 
         var department = await _departmentService.GetEditByIdAsync(id);
 
@@ -38,7 +36,8 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        Branches = await _departmentService.GetBranchesForDropdownAsync();
+        ModelState.Remove("Department.Code");
+        ModelState.Remove("Department.BranchId");
 
         if (!ModelState.IsValid)
             return Page();
@@ -47,7 +46,7 @@ public class EditModel : PageModel
 
         if (!updated)
         {
-            ErrorMessage = "Department not found, department code already exists, or selected branch is invalid.";
+            ErrorMessage = "Department not found, duplicated, or code already exists.";
             return Page();
         }
 

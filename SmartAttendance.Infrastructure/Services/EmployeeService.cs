@@ -35,7 +35,7 @@ public class EmployeeService : IEmployeeService
             {
                 model.DepartmentCode = department.Code;
                 model.DepartmentName = department.Name;
-                model.BranchName = branchLookup.TryGetValue(department.BranchId, out var branchName)
+                model.BranchName = department.BranchId.HasValue && branchLookup.TryGetValue(department.BranchId.Value, out var branchName)
                     ? branchName
                     : string.Empty;
             }
@@ -70,7 +70,7 @@ public class EmployeeService : IEmployeeService
             return null;
 
         var department = await _unitOfWork.Departments.GetByIdAsync(employee.DepartmentId);
-        var branch = department == null ? null : await _unitOfWork.Branches.GetByIdAsync(department.BranchId);
+        var branch = department?.BranchId == null ? null : await _unitOfWork.Branches.GetByIdAsync(department.BranchId.Value);
 
         var model = _mapper.Map<EmployeeDetailsViewModel>(employee);
         model.DepartmentName = department?.Name ?? string.Empty;
@@ -186,8 +186,8 @@ employee.IsActive = model.IsActive;
                 Code = x.Code,
                 Name = x.Name,
                 IsActive = x.IsActive,
-                BranchId = x.BranchId,
-                BranchName = branchLookup.TryGetValue(x.BranchId, out var branchName)
+                BranchId = x.BranchId ?? 0,
+                BranchName = x.BranchId.HasValue && branchLookup.TryGetValue(x.BranchId.Value, out var branchName)
                     ? branchName
                     : string.Empty
             })

@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using SmartAttendance.Application.Branches.Services;
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
@@ -73,25 +73,33 @@ public class BranchService : IBranchService
         return _mapper.Map<BranchEditViewModel>(branch);
     }
 
-    public async Task<bool> CreateAsync(BranchCreateViewModel model)
+        public async Task<bool> CreateAsync(BranchCreateViewModel model)
     {
-        if (await CodeExistsAsync(model.Code))
-            return false;
-
         var company = await _unitOfWork.Companies.GetByIdAsync(model.CompanyId);
 
         if (company == null)
             return false;
 
+        var branches = await _unitOfWork.Branches.GetAllAsync();
+        var code = string.IsNullOrWhiteSpace(model.Code)
+            ? GenerateUniqueSetupCode("BR", branches.Select(x => x.Code))
+            : model.Code.Trim();
+
+        if (branches.Any(x => SameSetupCode(x.Code, code)))
+            return false;
+
         var branch = _mapper.Map<Branch>(model);
+        branch.Code = code;
+        branch.Name = model.Name.Trim();
+        branch.Address = string.IsNullOrWhiteSpace(model.Address) ? null : model.Address.Trim();
+        branch.CompanyId = model.CompanyId;
 
         await _unitOfWork.Branches.AddAsync(branch);
         await _unitOfWork.SaveChangesAsync();
 
         return true;
     }
-
-    public async Task<bool> UpdateAsync(BranchEditViewModel model)
+        public async Task<bool> UpdateAsync(BranchEditViewModel model)
     {
         var branch = await _unitOfWork.Branches.GetByIdAsync(model.Id);
 
@@ -104,17 +112,18 @@ public class BranchService : IBranchService
             return false;
 
         var branches = await _unitOfWork.Branches.GetAllAsync();
+        var code = string.IsNullOrWhiteSpace(model.Code) ? branch.Code : model.Code.Trim();
 
         var duplicateCode = branches.Any(x =>
             x.Id != model.Id &&
-            x.Code.Equals(model.Code, StringComparison.OrdinalIgnoreCase));
+            SameSetupCode(x.Code, code));
 
         if (duplicateCode)
             return false;
 
-        branch.Code = model.Code;
-        branch.Name = model.Name;
-        branch.Address = model.Address;
+        branch.Code = code;
+        branch.Name = model.Name.Trim();
+        branch.Address = string.IsNullOrWhiteSpace(model.Address) ? null : model.Address.Trim();
         branch.IsActive = model.IsActive;
         branch.CompanyId = model.CompanyId;
 
@@ -123,7 +132,6 @@ public class BranchService : IBranchService
 
         return true;
     }
-
     public async Task<bool> DeleteAsync(int id)
     {
         var branch = await _unitOfWork.Branches.GetByIdAsync(id);
@@ -162,5 +170,29 @@ public class BranchService : IBranchService
                 IsActive = x.IsActive
             })
             .ToList();
+    }
+    // NEXORA_FIX22A_BRANCH_CODE_HELPERS
+    private static string GenerateUniqueSetupCode(string prefix, IEnumerable<string> existingCodes)
+    {
+        var existing = existingCodes
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var seed = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+        var code = $"{prefix}-{seed}";
+        var counter = 1;
+
+        while (existing.Contains(code))
+        {
+            code = $"{prefix}-{seed}-{counter}";
+            counter++;
+        }
+
+        return code;
+    }
+
+    private static bool SameSetupCode(string? left, string? right)
+    {
+        return string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 }

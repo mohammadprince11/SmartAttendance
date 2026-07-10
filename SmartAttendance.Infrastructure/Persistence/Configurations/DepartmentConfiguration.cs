@@ -20,12 +20,13 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
             .HasMaxLength(50)
             .IsRequired();
 
-        builder.HasIndex(x => new { x.BranchId, x.Code })
-            .IsUnique();
+        builder.Property(x => x.BranchId)
+            .IsRequired(false);
 
         builder.HasOne(x => x.Branch)
             .WithMany(x => x.Departments)
             .HasForeignKey(x => x.BranchId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

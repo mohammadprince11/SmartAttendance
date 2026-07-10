@@ -8,17 +8,20 @@ using SmartAttendance.Application.MasterDataImports.ViewModels;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Domain.Enums;
 
+using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Infrastructure.Persistence;
 namespace SmartAttendance.Infrastructure.Services;
 
 public class MasterDataImportService : IMasterDataImportService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ApplicationDbContext _dbContext;
 
     private static readonly Dictionary<string, string[]> RequiredColumns = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Companies"] = new[] { "Name" },
-        ["Branches"] = new[] { "Code", "Name", "CompanyCode" },
-        ["Departments"] = new[] { "Code", "Name", "BranchCode" },
+        ["Branches"] = new[] { "Name", "CompanyName" },
+        ["Departments"] = new[] { "Name" },
         ["Employees"] = new[] { "EmployeeNo", "FullName", "DepartmentCode", "HireDate" },
         ["Devices"] = new[] { "Name", "IpAddress", "BranchCode" },
         ["Shifts"] = new[] { "Code", "Name", "StartTime", "EndTime" },
@@ -27,9 +30,10 @@ public class MasterDataImportService : IMasterDataImportService
         ["LeaveRequests"] = new[] { "EmployeeNo", "LeaveType", "FromDate", "ToDate" }
     };
 
-    public MasterDataImportService(IUnitOfWork unitOfWork)
+    public MasterDataImportService(IUnitOfWork unitOfWork, ApplicationDbContext dbContext)
     {
         _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
     }
 
     public List<string> GetSupportedImportTypes()
@@ -52,6 +56,14 @@ public class MasterDataImportService : IMasterDataImportService
         string importType,
         int previewLimit = 500)
     {
+        if (importType.Equals("Departments", StringComparison.OrdinalIgnoreCase))
+            await EnsureIndependentDepartmentSchemaAsync();
+
+        // NEXORA_FIX23A_PREVIEW_SCHEMA_CALL
+        if (importType.Equals("Departments", StringComparison.OrdinalIgnoreCase))
+            await EnsureIndependentDepartmentSchemaAsync();
+
+        // NEXORA_FIX23A_IMPORT_SCHEMA_CALL
         var rows = await BuildPreviewRowsAsync(filePath, importType);
 
         return new MasterDataImportPreviewViewModel
@@ -146,15 +158,42 @@ public class MasterDataImportService : IMasterDataImportService
         return rows;
     }
 
-    private void ValidateHeaders(List<string> headers, string importType)
+            private void ValidateHeaders(List<string> headers, string importType)
     {
         var normalizedHeaders = headers
             .Select(NormalizeHeader)
             .ToHashSet();
 
-        var missingColumns = RequiredColumns[importType]
-            .Where(required => !normalizedHeaders.Contains(NormalizeHeader(required)))
-            .ToList();
+        bool HasAny(params string[] columns)
+        {
+            return columns.Any(column => normalizedHeaders.Contains(NormalizeHeader(column)));
+        }
+
+        List<string> missingColumns;
+
+        if (importType.Equals("Branches", StringComparison.OrdinalIgnoreCase))
+        {
+            missingColumns = new List<string>();
+
+            if (!HasAny("Name"))
+                missingColumns.Add("Name");
+
+            if (!HasAny("CompanyName", "Company", "CompanyCode"))
+                missingColumns.Add("CompanyName");
+        }
+        else if (importType.Equals("Departments", StringComparison.OrdinalIgnoreCase))
+        {
+            missingColumns = new List<string>();
+
+            if (!HasAny("Name"))
+                missingColumns.Add("Name");
+        }
+        else
+        {
+            missingColumns = RequiredColumns[importType]
+                .Where(required => !normalizedHeaders.Contains(NormalizeHeader(required)))
+                .ToList();
+        }
 
         if (missingColumns.Any())
         {
@@ -162,7 +201,6 @@ public class MasterDataImportService : IMasterDataImportService
                 $"Missing required columns for {importType}: {string.Join(", ", missingColumns)}");
         }
     }
-
     private async Task<MasterDataImportPreviewRowViewModel> ValidateRowAsync(
         string importType,
         FileRow record)
@@ -194,44 +232,38 @@ public class MasterDataImportService : IMasterDataImportService
 
         return BuildReady(record, name, exists ? "Update" : "Create", exists ? "Company will be updated." : "Company will be created.");
     }
-    private async Task<MasterDataImportPreviewRowViewModel> ValidateBranchAsync(FileRow record)
+        private async Task<MasterDataImportPreviewRowViewModel> ValidateBranchAsync(FileRow record)
     {
-        var code = Get(record, "Code");
         var name = Get(record, "Name");
-        var companyCode = Get(record, "CompanyCode");
+        var companyKey = GetAny(record, "CompanyName", "Company", "CompanyCode");
 
-        if (IsBlank(code) || IsBlank(name) || IsBlank(companyCode))
-            return BuildError(record, code, "Code, Name and CompanyCode are required.");
+        if (IsBlank(name) || IsBlank(companyKey))
+            return BuildError(record, name, "Name and CompanyName are required.");
 
         var companies = await _unitOfWork.Companies.GetAllAsync();
-        if (!companies.Any(x => Same(x.Code, companyCode)))
-            return BuildError(record, code, $"CompanyCode not found: {companyCode}");
+        var company = companies.FirstOrDefault(x => Same(x.Name, companyKey) || Same(x.Code, companyKey));
+
+        if (company == null)
+            return BuildError(record, name, $"Company was not found: {companyKey}");
 
         var branches = await _unitOfWork.Branches.GetAllAsync();
-        var exists = branches.Any(x => Same(x.Code, code));
+        var exists = branches.Any(x => x.CompanyId == company.Id && Same(x.Name, name));
 
-        return BuildReady(record, code, exists ? "Update" : "Create", exists ? "Branch will be updated." : "Branch will be created.");
+        var key = $"{company.Name} / {name}";
+        return BuildReady(record, key, exists ? "Update" : "Create", exists ? "Branch will be updated." : "Branch will be created.");
     }
-
-    private async Task<MasterDataImportPreviewRowViewModel> ValidateDepartmentAsync(FileRow record)
+            private async Task<MasterDataImportPreviewRowViewModel> ValidateDepartmentAsync(FileRow record)
     {
-        var code = Get(record, "Code");
         var name = Get(record, "Name");
-        var branchCode = Get(record, "BranchCode");
 
-        if (IsBlank(code) || IsBlank(name) || IsBlank(branchCode))
-            return BuildError(record, code, "Code, Name and BranchCode are required.");
-
-        var branches = await _unitOfWork.Branches.GetAllAsync();
-        if (!branches.Any(x => Same(x.Code, branchCode)))
-            return BuildError(record, code, $"BranchCode not found: {branchCode}");
+        if (IsBlank(name))
+            return BuildError(record, name, "Name is required.");
 
         var departments = await _unitOfWork.Departments.GetAllAsync();
-        var exists = departments.Any(x => Same(x.Code, code));
+        var exists = departments.Any(x => Same(x.Name, name));
 
-        return BuildReady(record, code, exists ? "Update" : "Create", exists ? "Department will be updated." : "Department will be created.");
+        return BuildReady(record, name, exists ? "Update" : "Create", exists ? "Department will be updated." : "Department will be created.");
     }
-
     private async Task<MasterDataImportPreviewRowViewModel> ValidateEmployeeAsync(FileRow record)
     {
         var employeeNo = Get(record, "EmployeeNo");
@@ -443,23 +475,43 @@ public class MasterDataImportService : IMasterDataImportService
 
         return created;
     }
-    private async Task<bool> ImportBranchAsync(Dictionary<string, string> values)
+        private async Task<bool> ImportBranchAsync(Dictionary<string, string> values)
     {
-        var code = Get(values, "Code");
-        var companyCode = Get(values, "CompanyCode");
+        var name = Get(values, "Name").Trim();
+        var companyKey = GetAny(values, "CompanyName", "Company", "CompanyCode");
 
         var companies = await _unitOfWork.Companies.GetAllAsync();
-        var company = companies.First(x => Same(x.Code, companyCode));
+        var company = companies.First(x => Same(x.Name, companyKey) || Same(x.Code, companyKey));
 
         var branches = await _unitOfWork.Branches.GetAllAsync();
-        var branch = branches.FirstOrDefault(x => Same(x.Code, code));
+        var branch = branches.FirstOrDefault(x => x.CompanyId == company.Id && Same(x.Name, name));
 
         var created = branch == null;
-
         branch ??= new Branch();
 
-        branch.Code = NormalizeCodeText(code);
-        branch.Name = Get(values, "Name").Trim();
+        var incomingCode = Get(values, "Code");
+        if (created)
+        {
+            branch.Code = IsBlank(incomingCode)
+                ? GenerateUniqueImportCode("BR", branches.Select(x => x.Code))
+                : NormalizeCodeText(incomingCode);
+
+            if (branches.Any(x => Same(x.Code, branch.Code)))
+                branch.Code = GenerateUniqueImportCode("BR", branches.Select(x => x.Code));
+        }
+        else if (!IsBlank(incomingCode))
+        {
+            var normalizedIncomingCode = NormalizeCodeText(incomingCode);
+            branch.Code = branches.Any(x => x.Id != branch.Id && Same(x.Code, normalizedIncomingCode))
+                ? branch.Code
+                : normalizedIncomingCode;
+        }
+        else if (IsBlank(branch.Code))
+        {
+            branch.Code = GenerateUniqueImportCode("BR", branches.Select(x => x.Code));
+        }
+
+        branch.Name = name;
         branch.CompanyId = company.Id;
         branch.Address = NullIfBlank(Get(values, "Address"));
         branch.IsActive = ParseBool(Get(values, "IsActive"), true);
@@ -471,25 +523,40 @@ public class MasterDataImportService : IMasterDataImportService
 
         return created;
     }
-
-    private async Task<bool> ImportDepartmentAsync(Dictionary<string, string> values)
+            private async Task<bool> ImportDepartmentAsync(Dictionary<string, string> values)
     {
-        var code = Get(values, "Code");
-        var branchCode = Get(values, "BranchCode");
-
-        var branches = await _unitOfWork.Branches.GetAllAsync();
-        var branch = branches.First(x => Same(x.Code, branchCode));
+        var name = Get(values, "Name").Trim();
 
         var departments = await _unitOfWork.Departments.GetAllAsync();
-        var department = departments.FirstOrDefault(x => Same(x.Code, code));
+        var department = departments.FirstOrDefault(x => Same(x.Name, name));
 
         var created = department == null;
-
         department ??= new Department();
 
-        department.Code = NormalizeCodeText(code);
-        department.Name = Get(values, "Name").Trim();
-        department.BranchId = branch.Id;
+        var incomingCode = Get(values, "Code");
+        if (created)
+        {
+            department.Code = IsBlank(incomingCode)
+                ? GenerateUniqueImportCode("DEP", departments.Select(x => x.Code))
+                : NormalizeCodeText(incomingCode);
+
+            if (departments.Any(x => Same(x.Code, department.Code)))
+                department.Code = GenerateUniqueImportCode("DEP", departments.Select(x => x.Code));
+        }
+        else if (!IsBlank(incomingCode))
+        {
+            var normalizedIncomingCode = NormalizeCodeText(incomingCode);
+            department.Code = departments.Any(x => x.Id != department.Id && Same(x.Code, normalizedIncomingCode))
+                ? department.Code
+                : normalizedIncomingCode;
+        }
+        else if (IsBlank(department.Code))
+        {
+            department.Code = GenerateUniqueImportCode("DEP", departments.Select(x => x.Code));
+        }
+
+        department.Name = name;
+        department.BranchId = null;
         department.IsActive = ParseBool(Get(values, "IsActive"), true);
 
         if (created)
@@ -499,7 +566,6 @@ public class MasterDataImportService : IMasterDataImportService
 
         return created;
     }
-
     private async Task<bool> ImportEmployeeAsync(Dictionary<string, string> values)
     {
         var employeeNo = Get(values, "EmployeeNo");
@@ -723,6 +789,24 @@ public class MasterDataImportService : IMasterDataImportService
         return string.Empty;
     }
 
+
+    // NEXORA_FIX22A_GETANY_HELPER
+    private static string GetAny(FileRow row, params string[] columnNames)
+    {
+        return GetAny(row.Values, columnNames);
+    }
+
+    private static string GetAny(Dictionary<string, string> values, params string[] columnNames)
+    {
+        foreach (var columnName in columnNames)
+        {
+            var value = Get(values, columnName);
+            if (!IsBlank(value))
+                return value;
+        }
+
+        return string.Empty;
+    }
     private static bool IsValidWeeklyOffDays(string? value)
     {
         if (IsBlank(value))
@@ -796,6 +880,26 @@ public class MasterDataImportService : IMasterDataImportService
         return cleaned.Trim();
     }
 
+
+    // NEXORA_FIX22A_UNIQUE_IMPORT_CODE
+    private static string GenerateUniqueImportCode(string prefix, IEnumerable<string> existingCodes)
+    {
+        var existing = existingCodes
+            .Select(NormalizeCodeText)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var seed = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+        var code = $"{prefix}-{seed}";
+        var counter = 1;
+
+        while (existing.Contains(code))
+        {
+            code = $"{prefix}-{seed}-{counter}";
+            counter++;
+        }
+
+        return code;
+    }
     private static bool IsBlank(string? value)
     {
         return string.IsNullOrWhiteSpace(value);
@@ -1235,5 +1339,53 @@ public class MasterDataImportService : IMasterDataImportService
         public int RowNumber { get; set; }
 
         public Dictionary<string, string> Values { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+    // NEXORA_FIX23A_DEPARTMENT_INDEPENDENT_SCHEMA
+    private async Task EnsureIndependentDepartmentSchemaAsync()
+    {
+        await _dbContext.Database.ExecuteSqlRawAsync(@"
+IF COL_LENGTH('dbo.Departments', 'BranchId') IS NOT NULL
+BEGIN
+    DECLARE @dropFkSql NVARCHAR(MAX) = N'';
+
+    SELECT @dropFkSql = @dropFkSql + N'ALTER TABLE dbo.Departments DROP CONSTRAINT ' + QUOTENAME(fk.name) + N';'
+    FROM sys.foreign_keys fk
+    WHERE fk.parent_object_id = OBJECT_ID(N'dbo.Departments')
+      AND fk.referenced_object_id = OBJECT_ID(N'dbo.Branches');
+
+    IF LEN(@dropFkSql) > 0
+        EXEC sp_executesql @dropFkSql;
+
+    DECLARE @dropIndexSql NVARCHAR(MAX) = N'';
+
+    SELECT @dropIndexSql = @dropIndexSql + N'DROP INDEX ' + QUOTENAME(i.name) + N' ON dbo.Departments;'
+    FROM sys.indexes i
+    INNER JOIN sys.index_columns ic
+        ON i.object_id = ic.object_id
+       AND i.index_id = ic.index_id
+    INNER JOIN sys.columns c
+        ON ic.object_id = c.object_id
+       AND ic.column_id = c.column_id
+    WHERE i.object_id = OBJECT_ID(N'dbo.Departments')
+      AND i.is_primary_key = 0
+      AND i.name IS NOT NULL
+      AND c.name = N'BranchId';
+
+    IF LEN(@dropIndexSql) > 0
+        EXEC sp_executesql @dropIndexSql;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM sys.columns
+        WHERE object_id = OBJECT_ID(N'dbo.Departments')
+          AND name = N'BranchId'
+          AND is_nullable = 0
+    )
+    BEGIN
+        ALTER TABLE dbo.Departments ALTER COLUMN BranchId INT NULL;
+    END
+END;
+");
     }
 }

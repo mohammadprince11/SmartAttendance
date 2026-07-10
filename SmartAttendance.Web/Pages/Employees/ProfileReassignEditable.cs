@@ -61,10 +61,10 @@ ORDER BY CompanyId, Name;",
         ReassignDepartments = await HrmsDatabase.QueryAsync(
             _dbContext,
             @"
-SELECT Id, Name, BranchId
+SELECT Id, Name, ISNULL(BranchId, 0) AS BranchId
 FROM Departments
-WHERE IsActive = 1 OR BranchId = @CurrentBranchId OR Id = @CurrentDepartmentId
-ORDER BY BranchId, Name;",
+WHERE IsActive = 1 OR Id = @CurrentDepartmentId
+ORDER BY Name;",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@CurrentBranchId", CurrentReassignBranchId);
