@@ -140,6 +140,9 @@
                         <a asp-page="/Employees/Index" class="nexora-nav-link @ActiveClass("/Employees/Index")">
                             <span>قائمة الموظفين</span>
                         </a>
+                        <a asp-page="/Employees/Import" class="nexora-nav-link @(IsUnder("/Employees/Import") ? "active nexora-active" : "")">
+                            <span>&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;</span>
+                        </a>
                         <a asp-page="/Violations/Index" class="nexora-nav-link @(IsUnder("/Violations") ? "active nexora-active" : "")">
                             <span>حالات المخالفات</span>
                         </a><a asp-page="/EmployeeUpdates/Index" class="nexora-nav-link @(IsUnder("/EmployeeUpdates") ? "active nexora-active" : "")">

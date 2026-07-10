@@ -1673,3 +1673,156 @@ body.nxr-profile-settings-modal-active .nxr-profile-settings-section:hover {
     }
 }
 /* NEXORA_FIX08I_PROFILE_SETTINGS_ACCORDION_CAPSULES_END */
+/* NEXORA_FIX18D_PROFILE_SETTINGS_SMOOTH_SECTIONS_START */
+.nxr-profile-settings-page-v2 .nxr-profile-settings-sections {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-areas:
+        "job basic"
+        "financial personal"
+        "additional additional" !important;
+    align-items: start !important;
+    gap: 18px !important;
+    column-count: initial !important;
+    direction: ltr !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section {
+    direction: rtl !important;
+    min-height: 92px !important;
+    align-self: start !important;
+    transition:
+        border-color .28s ease,
+        box-shadow .28s ease,
+        background .28s ease,
+        transform .28s ease,
+        min-height .28s ease !important;
+    will-change: transform, min-height !important;
+    overflow: hidden !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section.nxr-profile-section-key-basic {
+    grid-area: basic !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section.nxr-profile-section-key-personal {
+    grid-area: personal !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section.nxr-profile-section-key-job {
+    grid-area: job !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section.nxr-profile-section-key-financial {
+    grid-area: financial !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section.nxr-profile-section-key-additional {
+    grid-area: additional !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section.is-open {
+    min-height: 210px !important;
+    transform: translateY(0) !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section:not(.is-open) {
+    min-height: 82px !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section .nxr-profile-settings-field-list,
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section .nxr-profile-settings-empty {
+    display: grid !important;
+    overflow: hidden !important;
+    transition:
+        max-height .38s cubic-bezier(.22, .61, .36, 1),
+        opacity .26s ease,
+        transform .32s ease,
+        margin-top .32s ease,
+        padding-top .32s ease !important;
+    will-change: max-height, opacity, transform !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section:not(.is-open) .nxr-profile-settings-field-list,
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section:not(.is-open) .nxr-profile-settings-empty {
+    max-height: 0 !important;
+    opacity: 0 !important;
+    transform: translateY(-8px) !important;
+    pointer-events: none !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-width: 0 !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section.is-open .nxr-profile-settings-field-list,
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section.is-open .nxr-profile-settings-empty {
+    max-height: 1200px !important;
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+    pointer-events: auto !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section header {
+    transition:
+        margin-bottom .30s ease,
+        padding-bottom .30s ease,
+        border-color .30s ease !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section header::after {
+    transition:
+        transform .28s ease,
+        background .28s ease,
+        border-color .28s ease,
+        color .28s ease !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section.is-open header::after {
+    transform: rotate(180deg) !important;
+}
+
+@media (max-width: 1100px) {
+    .nxr-profile-settings-page-v2 .nxr-profile-settings-sections {
+        grid-template-columns: 1fr !important;
+        grid-template-areas:
+            "basic"
+            "personal"
+            "job"
+            "financial"
+            "additional" !important;
+        direction: rtl !important;
+    }
+}
+/* NEXORA_FIX18D_PROFILE_SETTINGS_SMOOTH_SECTIONS_END */
+/* NEXORA_FIX18E_PROFILE_SETTINGS_CLOSE_TOGGLE_STYLE_START */
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section header,
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section button {
+    cursor: pointer !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section button[aria-expanded="true"] {
+    border-color: rgba(251,191,36,.46) !important;
+    color: #fde68a !important;
+    background: rgba(251,191,36,.10) !important;
+}
+
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section button[aria-expanded="false"] {
+    border-color: rgba(34,211,238,.28) !important;
+    color: #22d3ee !important;
+    background: rgba(34,211,238,.08) !important;
+}
+/* NEXORA_FIX18E_PROFILE_SETTINGS_CLOSE_TOGGLE_STYLE_END */
+/* NEXORA_FIX18F_PROFILE_SETTINGS_DEFAULT_CLOSED_STYLE_START */
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section:not(.is-open) .nxr-profile-settings-field-list,
+.nxr-profile-settings-page-v2 .nxr-profile-settings-section:not(.is-open) .nxr-profile-settings-empty {
+    max-height: 0 !important;
+    opacity: 0 !important;
+    transform: translateY(-8px) !important;
+    pointer-events: none !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-width: 0 !important;
+}
+/* NEXORA_FIX18F_PROFILE_SETTINGS_DEFAULT_CLOSED_STYLE_END */
