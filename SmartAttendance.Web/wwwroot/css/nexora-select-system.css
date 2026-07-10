@@ -1,14 +1,39 @@
-/* NEXORA_FIX13A_GLOBAL_CUSTOM_SELECT_SYSTEM_START */
-.nxcs-native {
+/* NEXORA_FIX15C_GLOBAL_SELECT_SYSTEM_START */
+.nxos,
+.nxos__menu {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+select.nxos-native,
+select.nxcs-native,
+select[data-nexora-built="1"],
+select[data-nxcs-enhanced="true"] {
     position: absolute !important;
-    inset-inline-start: -9999px !important;
+    inset-inline-start: -10000px !important;
+    left: -10000px !important;
+    top: auto !important;
     width: 1px !important;
     height: 1px !important;
     min-width: 1px !important;
     min-height: 1px !important;
+    max-width: 1px !important;
+    max-height: 1px !important;
     opacity: 0 !important;
     pointer-events: none !important;
     overflow: hidden !important;
+    clip-path: inset(50%) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    z-index: -1 !important;
+}
+
+.nxcs-select,
+.nxcs-select * {
+    box-sizing: border-box !important;
 }
 
 .nxcs-select {
@@ -16,95 +41,119 @@
     display: block !important;
     width: 100% !important;
     min-width: 0 !important;
-    isolation: isolate !important;
-}
-
-.nxcs-select.is-disabled {
-    opacity: .58 !important;
-    cursor: not-allowed !important;
+    max-width: 100% !important;
+    direction: rtl !important;
 }
 
 .nxcs-trigger {
     width: 100% !important;
-    min-height: 46px !important;
-    height: 46px !important;
-    display: grid !important;
-    grid-template-columns: 1fr 28px !important;
+    min-width: 0 !important;
+    min-height: 42px !important;
+    display: flex !important;
     align-items: center !important;
-    gap: 8px !important;
-    padding: 0 14px !important;
-    border-radius: 16px !important;
-    border: 1px solid rgba(34, 211, 238, .26) !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(18, 217, 227, .34) !important;
     background:
-        radial-gradient(circle at top right, rgba(34, 211, 238, .08), transparent 34%),
-        rgba(3, 16, 28, .62) !important;
-    color: #f5f9ff !important;
-    font-size: 13px !important;
+        linear-gradient(135deg, rgba(3, 16, 28, .92), rgba(5, 24, 39, .94)) !important;
+    color: var(--sa-text, #E6EAEE) !important;
+    padding: 0 14px !important;
     font-weight: 950 !important;
     line-height: 1.25 !important;
-    text-align: start !important;
     cursor: pointer !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03) !important;
-}
-
-.nxcs-trigger:hover {
-    border-color: rgba(34, 211, 238, .46) !important;
-    background:
-        radial-gradient(circle at top right, rgba(34, 211, 238, .13), transparent 34%),
-        rgba(3, 16, 28, .72) !important;
-}
-
-.nxcs-select.is-open .nxcs-trigger,
-.nxcs-trigger:focus-visible {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035) !important;
     outline: none !important;
-    border-color: rgba(34, 211, 238, .68) !important;
-    box-shadow: 0 0 0 4px rgba(34, 211, 238, .12), inset 0 1px 0 rgba(255, 255, 255, .04) !important;
+    text-align: right !important;
 }
 
-.nxcs-select.is-disabled .nxcs-trigger {
-    cursor: not-allowed !important;
+.nxcs-trigger:hover,
+.nxcs-select.is-open .nxcs-trigger,
+.nxcs-trigger:focus {
+    border-color: rgba(34, 211, 238, .72) !important;
+    box-shadow:
+        0 0 0 4px rgba(34, 211, 238, .10),
+        inset 0 1px 0 rgba(255, 255, 255, .06) !important;
 }
 
 .nxcs-value {
     min-width: 0 !important;
+    flex: 1 1 auto !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
+    color: inherit !important;
 }
 
 .nxcs-caret {
-    width: 28px !important;
-    height: 28px !important;
+    width: 26px !important;
+    height: 26px !important;
+    flex: 0 0 26px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     border-radius: 999px !important;
-    display: inline-grid !important;
-    place-items: center !important;
-    background: rgba(34, 211, 238, .13) !important;
-    border: 1px solid rgba(34, 211, 238, .26) !important;
-    color: #22d3ee !important;
-    font-size: 12px !important;
-    transition: transform .16s ease !important;
-}
-
-.nxcs-select.is-open .nxcs-caret {
-    transform: rotate(180deg) !important;
+    border: 1px solid rgba(34, 211, 238, .45) !important;
+    background: rgba(34, 211, 238, .12) !important;
+    color: #22D3EE !important;
+    font-size: 11px !important;
+    line-height: 1 !important;
 }
 
 .nxcs-panel {
     position: fixed !important;
-    z-index: 2147483000 !important;
-    max-height: min(320px, calc(100dvh - 40px)) !important;
-    overflow: auto !important;
+    z-index: 2147482500 !important;
+    display: grid !important;
+    gap: 5px !important;
     padding: 8px !important;
-    border-radius: 18px !important;
+    border-radius: 16px !important;
     border: 1px solid rgba(34, 211, 238, .28) !important;
     background:
-        radial-gradient(circle at top right, rgba(34, 211, 238, .10), transparent 34%),
-        linear-gradient(135deg, rgba(8, 31, 50, .98), rgba(3, 14, 24, .99)) !important;
-    box-shadow: 0 30px 90px rgba(0, 0, 0, .42) !important;
-    backdrop-filter: blur(18px) !important;
-    scrollbar-width: thin !important;
-    scrollbar-color: rgba(34, 211, 238, .42) rgba(3, 16, 28, .65) !important;
+        linear-gradient(135deg, rgba(7, 18, 31, .98), rgba(6, 30, 46, .98)) !important;
+    box-shadow: 0 28px 70px rgba(0, 0, 0, .42) !important;
+    overflow: auto !important;
     direction: rtl !important;
+}
+
+.nxcs-option {
+    min-height: 34px !important;
+    width: 100% !important;
+    border: 0 !important;
+    border-radius: 11px !important;
+    padding: 8px 10px !important;
+    background: transparent !important;
+    color: var(--sa-text, #E6EAEE) !important;
+    font-weight: 900 !important;
+    text-align: right !important;
+    cursor: pointer !important;
+}
+
+.nxcs-option:hover,
+.nxcs-option:focus {
+    background: rgba(34, 211, 238, .12) !important;
+    color: #FFFFFF !important;
+}
+
+.nxcs-option.is-selected {
+    background: linear-gradient(135deg, rgba(34, 211, 238, .95), rgba(124, 234, 240, .88)) !important;
+    color: #07121F !important;
+}
+
+.nxcs-option:disabled {
+    opacity: .45 !important;
+    cursor: not-allowed !important;
+}
+
+.nxcs-select.is-disabled {
+    opacity: .72 !important;
+    pointer-events: none !important;
+}
+/* NEXORA_FIX15C_GLOBAL_SELECT_SYSTEM_END */
+/* NEXORA_FIX15D_DROPDOWN_POSITION_START */
+.nxcs-panel {
+    overscroll-behavior: contain !important;
+    scrollbar-color: rgba(34, 211, 238, .45) rgba(7, 18, 31, .85) !important;
+    scrollbar-width: thin !important;
 }
 
 .nxcs-panel::-webkit-scrollbar {
@@ -112,72 +161,12 @@
 }
 
 .nxcs-panel::-webkit-scrollbar-track {
-    background: rgba(3, 16, 28, .65) !important;
+    background: rgba(7, 18, 31, .85) !important;
     border-radius: 999px !important;
 }
 
 .nxcs-panel::-webkit-scrollbar-thumb {
-    background: rgba(34, 211, 238, .42) !important;
+    background: rgba(34, 211, 238, .50) !important;
     border-radius: 999px !important;
 }
-
-.nxcs-option {
-    width: 100% !important;
-    min-height: 38px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 8px !important;
-    padding: 9px 12px !important;
-    border: 0 !important;
-    border-radius: 13px !important;
-    background: transparent !important;
-    color: #e8f2fb !important;
-    font-size: 13px !important;
-    font-weight: 900 !important;
-    text-align: start !important;
-    cursor: pointer !important;
-}
-
-.nxcs-option:hover,
-.nxcs-option.is-active {
-    background: rgba(34, 211, 238, .13) !important;
-    color: #ffffff !important;
-}
-
-.nxcs-option.is-selected {
-    background: linear-gradient(135deg, rgba(34, 211, 238, .95), rgba(103, 232, 249, .92)) !important;
-    color: #06111f !important;
-}
-
-.nxcs-option.is-disabled {
-    opacity: .45 !important;
-    cursor: not-allowed !important;
-}
-
-html[data-theme="light"] .nxcs-trigger {
-    background: #ffffff !important;
-    color: #102033 !important;
-    border-color: #d8e5ef !important;
-}
-
-html[data-theme="light"] .nxcs-panel {
-    background: #ffffff !important;
-    border-color: #d8e5ef !important;
-}
-
-html[data-theme="light"] .nxcs-option {
-    color: #102033 !important;
-}
-
-html[data-theme="light"] .nxcs-option:hover,
-html[data-theme="light"] .nxcs-option.is-active {
-    background: #e8f6fb !important;
-}
-
-@media (max-width: 760px) {
-    .nxcs-panel {
-        max-height: 260px !important;
-    }
-}
-/* NEXORA_FIX13A_GLOBAL_CUSTOM_SELECT_SYSTEM_END */
+/* NEXORA_FIX15D_DROPDOWN_POSITION_END */

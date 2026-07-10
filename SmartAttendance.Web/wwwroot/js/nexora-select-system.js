@@ -1,149 +1,251 @@
-/* NEXORA_FIX13A_GLOBAL_CUSTOM_SELECT_SYSTEM_START */
+/* NEXORA_FIX15C_GLOBAL_SELECT_SYSTEM_START */
 (function () {
     "use strict";
 
-    var SELECTOR = [
-        "select[data-nexora-select='true']",
-        "select.nxr-native-select",
-        "select.nxr-select",
-        "select.nxr-filter-select",
-        "select.form-control",
-        "select.form-select",
-        ".nxr-documents-modal select",
-        ".nxr-document-row select",
-        "select[data-document-type]",
-        "select[data-document-required]",
-        "select[data-document-select]",
-        "select[name^='InitialDocumentTypes']",
-        "select[name^='InitialDocumentRequired']",
-        "select:not([multiple]):not([size])"
-    ].join(",");
-
     var openState = null;
-    var scheduleToken = 0;
+    var refreshToken = 0;
+    var uid = 0;
 
-    function isEligible(select) {
-        if (!select || select.tagName !== "SELECT") return false;
-        if (select.multiple) return false;
-        if (select.size && select.size > 1) return false;
-        if (select.dataset.nexoraNativeOnly === "true") return false;
-        if (select.closest("[data-nexora-select-skip='true']")) return false;
-        return true;
+    function closest(element, selector) {
+        return element && element.closest ? element.closest(selector) : null;
+    }
+
+    function isNativeOnly(select) {
+        if (!select) return true;
+        if (select.multiple) return true;
+        if (select.size && select.size > 1) return true;
+        if (select.dataset.nexoraNativeOnly === "true") return true;
+        if (select.dataset.nexoraNative === "true") return true;
+        if (select.classList.contains("nxcs-skip")) return true;
+        if (select.classList.contains("nexora-native-only")) return true;
+        if (closest(select, "[data-nexora-native-selects='true']")) return true;
+        return false;
+    }
+
+    function selectedOption(select) {
+        if (!select) return null;
+        return select.options[select.selectedIndex] || select.options[0] || null;
     }
 
     function optionText(option) {
-        if (!option) return "\u2014";
-        var text = (option.textContent || "").trim();
-        return text || "\u2014";
+        if (!option) return "";
+        return (option.textContent || option.label || option.value || "").trim();
     }
 
-    function getSelectedOption(select) {
-        if (!select) return null;
-        if (select.selectedIndex >= 0 && select.options[select.selectedIndex]) {
-            return select.options[select.selectedIndex];
+    function setImportantStyle(element, name, value) {
+        try {
+            element.style.setProperty(name, value, "important");
+        } catch (_) {
+            element.style[name] = value;
         }
-        return select.options.length ? select.options[0] : null;
     }
 
-    function closeOpen() {
-        if (!openState) return;
+    function hideNative(select) {
+        select.classList.remove("nxos-native");
+        select.classList.add("nxcs-native");
+        select.dataset.nxcsEnhanced = "true";
+        select.setAttribute("aria-hidden", "true");
+        select.tabIndex = -1;
 
-        openState.wrapper.classList.remove("is-open");
-        openState.trigger.setAttribute("aria-expanded", "false");
-
-        if (openState.panel && openState.panel.parentNode) {
-            openState.panel.parentNode.removeChild(openState.panel);
-        }
-
-        openState = null;
+        setImportantStyle(select, "position", "absolute");
+        setImportantStyle(select, "inset-inline-start", "-10000px");
+        setImportantStyle(select, "left", "-10000px");
+        setImportantStyle(select, "top", "auto");
+        setImportantStyle(select, "width", "1px");
+        setImportantStyle(select, "height", "1px");
+        setImportantStyle(select, "min-width", "1px");
+        setImportantStyle(select, "min-height", "1px");
+        setImportantStyle(select, "max-width", "1px");
+        setImportantStyle(select, "max-height", "1px");
+        setImportantStyle(select, "opacity", "0");
+        setImportantStyle(select, "pointer-events", "none");
+        setImportantStyle(select, "overflow", "hidden");
+        setImportantStyle(select, "clip-path", "inset(50%)");
+        setImportantStyle(select, "margin", "0");
+        setImportantStyle(select, "padding", "0");
+        setImportantStyle(select, "border", "0");
+        setImportantStyle(select, "z-index", "-1");
     }
 
-    function placePanel(state) {
-        if (!state || !state.panel || !state.trigger) return;
+    function removeLegacyShells() {
+        document.querySelectorAll(".nxos__menu, .nxos").forEach(function (element) {
+            element.remove();
+        });
 
-        var rect = state.trigger.getBoundingClientRect();
-        var viewportWidth = document.documentElement.clientWidth || window.innerWidth;
-        var viewportHeight = document.documentElement.clientHeight || window.innerHeight;
-        var gap = 8;
-        var width = Math.max(160, Math.round(rect.width));
-        var left = Math.round(rect.left);
-        var top = Math.round(rect.bottom + gap);
+        document.querySelectorAll("select.nxos-native, select[data-nexora-built='1']").forEach(function (select) {
+            select.classList.remove("nxos-native");
+            delete select.dataset.nexoraBuilt;
+            delete select.dataset.nxosId;
+        });
+    }
 
-        if (left + width > viewportWidth - 12) {
-            left = Math.max(12, viewportWidth - width - 12);
+    function removeOrphanCustomShells() {
+        document.querySelectorAll(".nxcs-select").forEach(function (wrapper) {
+            var previous = wrapper.previousElementSibling;
+            if (!previous || previous.tagName !== "SELECT" || previous._nxcsWrapper !== wrapper) {
+                wrapper.remove();
+            }
+        });
+    }
+
+    function cleanupNear(select) {
+        if (!select) return;
+
+        var next = select.nextElementSibling;
+        while (next && next.classList && (next.classList.contains("nxcs-select") || next.classList.contains("nxos"))) {
+            var candidate = next;
+            next = next.nextElementSibling;
+
+            if (select._nxcsWrapper !== candidate) {
+                candidate.remove();
+            }
         }
 
-        var remainingBottom = viewportHeight - rect.bottom - gap - 12;
-        var remainingTop = rect.top - gap - 12;
+        if (select._nxcsWrapper && !document.body.contains(select._nxcsWrapper)) {
+            delete select._nxcsWrapper;
+            delete select.dataset.nxcsEnhanced;
+            select.classList.remove("nxcs-native");
+        }
+    }
 
-        if (remainingBottom < 170 && remainingTop > remainingBottom) {
-            state.panel.style.maxHeight = Math.max(140, Math.min(320, remainingTop)) + "px";
-            top = Math.round(rect.top - gap);
-            state.panel.style.transform = "translateY(-100%)";
-        } else {
-            state.panel.style.maxHeight = Math.max(140, Math.min(320, remainingBottom)) + "px";
-            state.panel.style.transform = "none";
+    function sync(select) {
+        if (!select || !select._nxcsWrapper) return;
+
+        var wrapper = select._nxcsWrapper;
+        var trigger = wrapper.querySelector(".nxcs-trigger");
+        var value = wrapper.querySelector(".nxcs-value");
+        var option = selectedOption(select);
+
+        if (value) {
+            value.textContent = optionText(option);
+            value.title = optionText(option);
         }
 
-        state.panel.style.width = width + "px";
-        state.panel.style.left = left + "px";
-        state.panel.style.top = top + "px";
+        if (trigger) {
+            trigger.disabled = !!select.disabled;
+            trigger.setAttribute("aria-disabled", select.disabled ? "true" : "false");
+        }
+
+        wrapper.classList.toggle("is-disabled", !!select.disabled);
+        wrapper.dataset.nxcsValue = select.value || "";
+        wrapper.dataset.nxcsCount = String(select.options.length);
+        wrapper.dataset.nxcsDisabled = select.disabled ? "true" : "false";
+
+        hideNative(select);
     }
 
     function buildPanel(select, wrapper, trigger) {
         var panel = document.createElement("div");
         panel.className = "nxcs-panel";
+        panel.dir = document.documentElement.dir || "rtl";
+        panel.id = "nxcs-panel-" + (++uid);
         panel.setAttribute("role", "listbox");
 
         Array.prototype.forEach.call(select.options, function (option, index) {
-            if (option.hidden) return;
-
             var item = document.createElement("button");
             item.type = "button";
             item.className = "nxcs-option";
             item.setAttribute("role", "option");
             item.dataset.value = option.value;
-            item.dataset.index = String(index);
             item.textContent = optionText(option);
+            item.disabled = !!option.disabled;
 
-            if (option.disabled) {
-                item.classList.add("is-disabled");
-                item.disabled = true;
-            }
-
-            if (option.selected) {
+            if (index === select.selectedIndex) {
                 item.classList.add("is-selected");
                 item.setAttribute("aria-selected", "true");
-            } else {
-                item.setAttribute("aria-selected", "false");
             }
 
             item.addEventListener("click", function (event) {
                 event.preventDefault();
                 event.stopPropagation();
 
-                if (option.disabled) return;
+                if (item.disabled) return;
 
                 select.selectedIndex = index;
                 select.value = option.value;
-
                 select.dispatchEvent(new Event("input", { bubbles: true }));
                 select.dispatchEvent(new Event("change", { bubbles: true }));
-
-                syncOne(select);
+                sync(select);
                 closeOpen();
-                trigger.focus();
             });
 
             panel.appendChild(item);
         });
 
+        trigger.setAttribute("aria-controls", panel.id);
         return panel;
     }
 
+    function placePanel(state) {
+        if (!state || !state.panel || !state.trigger) return;
+
+        var triggerRect = state.trigger.getBoundingClientRect();
+        var viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+        var viewportHeight = document.documentElement.clientHeight || window.innerHeight;
+        var gap = 8;
+        var edge = 12;
+
+        var width = Math.max(triggerRect.width, 180);
+        width = Math.min(width, viewportWidth - (edge * 2));
+
+        var spaceBelow = Math.max(0, viewportHeight - triggerRect.bottom - gap - edge);
+        var spaceAbove = Math.max(0, triggerRect.top - gap - edge);
+
+        var preferBelow = spaceBelow >= 220 || spaceBelow >= spaceAbove;
+        var availableSpace = preferBelow ? spaceBelow : spaceAbove;
+
+        if (availableSpace < 160 && spaceAbove > spaceBelow) {
+            preferBelow = false;
+            availableSpace = spaceAbove;
+        }
+
+        var maxPanelHeight = Math.max(150, Math.min(340, availableSpace, viewportHeight - (edge * 2)));
+
+        state.panel.style.visibility = "hidden";
+        state.panel.style.display = "block";
+        state.panel.style.width = Math.round(width) + "px";
+        state.panel.style.maxHeight = Math.round(maxPanelHeight) + "px";
+
+        var measuredHeight = state.panel.getBoundingClientRect().height || maxPanelHeight;
+        var height = Math.min(measuredHeight, maxPanelHeight);
+
+        var left = document.documentElement.dir === "rtl"
+            ? triggerRect.right - width
+            : triggerRect.left;
+
+        left = Math.max(edge, Math.min(left, viewportWidth - width - edge));
+
+        var top = preferBelow
+            ? triggerRect.bottom + gap
+            : triggerRect.top - height - gap;
+
+        top = Math.max(edge, Math.min(top, viewportHeight - height - edge));
+
+        state.panel.style.left = Math.round(left) + "px";
+        state.panel.style.top = Math.round(top) + "px";
+        state.panel.style.visibility = "visible";
+    }
+
+    function closeOpen() {
+        if (!openState) return;
+
+        if (openState.wrapper) {
+            openState.wrapper.classList.remove("is-open");
+        }
+
+        if (openState.trigger) {
+            openState.trigger.setAttribute("aria-expanded", "false");
+        }
+
+        if (openState.panel) {
+            openState.panel.remove();
+        }
+
+        openState = null;
+    }
+
     function openSelect(select) {
-        var wrapper = select._nxcsWrapper;
-        if (!wrapper || select.disabled) return;
+        if (!select || !select._nxcsWrapper || select.disabled) return;
 
         if (openState && openState.select === select) {
             closeOpen();
@@ -152,6 +254,7 @@
 
         closeOpen();
 
+        var wrapper = select._nxcsWrapper;
         var trigger = wrapper.querySelector(".nxcs-trigger");
         var panel = buildPanel(select, wrapper, trigger);
 
@@ -166,6 +269,7 @@
 
         wrapper.classList.add("is-open");
         trigger.setAttribute("aria-expanded", "true");
+
         placePanel(openState);
 
         var selected = panel.querySelector(".nxcs-option.is-selected");
@@ -174,38 +278,13 @@
         }
     }
 
-    function syncOne(select) {
-        if (!select || !select._nxcsWrapper) return;
-
-        var wrapper = select._nxcsWrapper;
-        var trigger = wrapper.querySelector(".nxcs-trigger");
-        var value = wrapper.querySelector(".nxcs-value");
-        var selected = getSelectedOption(select);
-
-        if (value) {
-            value.textContent = optionText(selected);
-            value.title = optionText(selected);
-        }
-
-        if (trigger) {
-            trigger.disabled = select.disabled;
-            trigger.setAttribute("aria-disabled", select.disabled ? "true" : "false");
-        }
-
-        wrapper.classList.toggle("is-disabled", !!select.disabled);
-        wrapper.dataset.nxcsValue = select.value || "";
-        wrapper.dataset.nxcsCount = String(select.options.length);
-        wrapper.dataset.nxcsDisabled = select.disabled ? "true" : "false";
-
-        if (openState && openState.select === select) {
-            closeOpen();
-        }
-    }
-
     function enhance(select) {
-        if (!isEligible(select)) return;
-        if (select.dataset.nxcsEnhanced === "true") {
-            syncOne(select);
+        if (!select || isNativeOnly(select)) return;
+
+        cleanupNear(select);
+
+        if (select.dataset.nxcsEnhanced === "true" && select._nxcsWrapper && document.body.contains(select._nxcsWrapper)) {
+            sync(select);
             return;
         }
 
@@ -231,9 +310,8 @@
         trigger.appendChild(caret);
         wrapper.appendChild(trigger);
 
-        select.classList.add("nxcs-native");
-        select.dataset.nxcsEnhanced = "true";
         select._nxcsWrapper = wrapper;
+        hideNative(select);
 
         if (select.parentNode) {
             select.parentNode.insertBefore(wrapper, select.nextSibling);
@@ -258,38 +336,30 @@
         });
 
         select.addEventListener("change", function () {
-            syncOne(select);
+            sync(select);
         });
 
-        syncOne(select);
+        sync(select);
     }
 
     function refreshAll() {
-        document.querySelectorAll(SELECTOR).forEach(function (select) {
+        removeLegacyShells();
+        removeOrphanCustomShells();
+
+        document.querySelectorAll("select").forEach(function (select) {
             enhance(select);
         });
 
         document.querySelectorAll("select[data-nxcs-enhanced='true']").forEach(function (select) {
-            if (!select._nxcsWrapper || !document.body.contains(select)) return;
-            var value = select.value || "";
-            var count = String(select.options.length);
-            var disabled = select.disabled ? "true" : "false";
-
-            if (
-                select._nxcsWrapper.dataset.nxcsValue !== value ||
-                select._nxcsWrapper.dataset.nxcsCount !== count ||
-                select._nxcsWrapper.dataset.nxcsDisabled !== disabled
-            ) {
-                syncOne(select);
-            }
+            sync(select);
         });
     }
 
     function scheduleRefresh() {
-        if (scheduleToken) return;
+        if (refreshToken) return;
 
-        scheduleToken = window.requestAnimationFrame(function () {
-            scheduleToken = 0;
+        refreshToken = window.requestAnimationFrame(function () {
+            refreshToken = 0;
             refreshAll();
         });
     }
@@ -297,20 +367,14 @@
     document.addEventListener("click", function (event) {
         if (!openState) return;
 
-        if (
-            openState.wrapper.contains(event.target) ||
-            (openState.panel && openState.panel.contains(event.target))
-        ) {
-            return;
-        }
+        if (openState.panel && openState.panel.contains(event.target)) return;
+        if (openState.wrapper && openState.wrapper.contains(event.target)) return;
 
         closeOpen();
     }, true);
 
     document.addEventListener("keydown", function (event) {
-        if (event.key === "Escape") {
-            closeOpen();
-        }
+        if (event.key === "Escape") closeOpen();
     }, true);
 
     window.addEventListener("resize", function () {
@@ -327,11 +391,7 @@
 
             mutations.forEach(function (mutation) {
                 if (mutation.type === "childList") {
-                    mutation.addedNodes.forEach(function (node) {
-                        if (!node || node.nodeType !== 1) return;
-                        if (node.matches && node.matches("select")) needsRefresh = true;
-                        if (node.querySelector && node.querySelector("select")) needsRefresh = true;
-                    });
+                    needsRefresh = true;
                 }
 
                 if (mutation.type === "attributes" && mutation.target && mutation.target.tagName === "SELECT") {
@@ -346,7 +406,7 @@
             childList: true,
             subtree: true,
             attributes: true,
-            attributeFilter: ["disabled"]
+            attributeFilter: ["disabled", "class", "style"]
         });
     }
 
@@ -356,6 +416,11 @@
         refreshAll();
     }
 
+    setTimeout(refreshAll, 50);
+    setTimeout(refreshAll, 200);
+    setTimeout(refreshAll, 700);
+    setTimeout(refreshAll, 1500);
+
     window.NexoraRefreshSelectSystem = refreshAll;
 })();
-/* NEXORA_FIX13A_GLOBAL_CUSTOM_SELECT_SYSTEM_END */
+/* NEXORA_FIX15C_GLOBAL_SELECT_SYSTEM_END */

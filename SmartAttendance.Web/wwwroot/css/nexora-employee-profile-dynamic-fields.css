@@ -347,3 +347,51 @@
     }
 }
 /* NEXORA_FIX11A_EDIT_DYNAMIC_FIELDS_POLISH_END */
+/* NEXORA_FIX16_PROFILE_EMPTY_ADDITIONAL_FIELDS_START */
+.nxr-profile-dynamic-empty-section {
+    border-style: dashed !important;
+    opacity: .92 !important;
+}
+
+.nxr-profile-dynamic-empty-value {
+    color: var(--sa-muted, #9FB0BE) !important;
+    font-weight: 950 !important;
+}
+/* NEXORA_FIX16_PROFILE_EMPTY_ADDITIONAL_FIELDS_END */
+/* NEXORA_FIX16B_EMPTY_ADDITIONAL_BOX_START */
+.nxr-profile-dynamic-summary-extra .nxr-kayan-info-grid:empty {
+    min-height: 170px !important;
+    border: 1px dashed rgba(157,184,204,.16) !important;
+    border-radius: 16px !important;
+    background: rgba(7,18,31,.18) !important;
+}
+/* NEXORA_FIX16B_EMPTY_ADDITIONAL_BOX_END */
+/* NEXORA_FIX17_EMPLOYEE_EDIT_EMPTY_DYNAMIC_SECTIONS_START */
+.nxr-profile-dynamic-edit-section .nxr-edit-final-grid:has(.nxr-profile-dynamic-edit-empty-box) {
+    min-height: 120px !important;
+}
+
+.nxr-profile-dynamic-edit-empty-box {
+    min-height: 94px !important;
+    border: 1px dashed rgba(157,184,204,.16) !important;
+    border-radius: 16px !important;
+    background: rgba(7,18,31,.18) !important;
+    grid-column: 1 / -1 !important;
+}
+/* NEXORA_FIX17_EMPLOYEE_EDIT_EMPTY_DYNAMIC_SECTIONS_END */
+/* NEXORA_FIX17B_DYNAMIC_FIELDS_DISPLAY_RULES_START */
+.nxr-profile-dynamic-edit-empty-box {
+    display: none !important;
+}
+
+.nxr-profile-dynamic-edit-section:has(.nxr-profile-dynamic-edit-empty-box) {
+    display: none !important;
+}
+
+.nxr-profile-dynamic-summary-extra .nxr-kayan-info-grid:empty {
+    min-height: 170px !important;
+    border: 1px dashed rgba(157,184,204,.16) !important;
+    border-radius: 16px !important;
+    background: rgba(7,18,31,.18) !important;
+}
+/* NEXORA_FIX17B_DYNAMIC_FIELDS_DISPLAY_RULES_END */
