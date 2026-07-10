@@ -35,6 +35,8 @@ public class IndexModel : PageModel
 
     public List<NameOption> EducationOptions { get; set; } = new();
 
+    public List<NameOption> EducationSpecializationOptions { get; set; } = new();
+
     public List<NameOption> CertificationOptions { get; set; } = new();
 
     public int TotalPositions { get; set; }
@@ -74,6 +76,7 @@ await SyncLookupTablesAsync();
         Input.JobKpis = NormalizeText(Input.JobKpis);
         Input.Competencies = NormalizeText(Input.Competencies);
         Input.Education = NormalizeText(Input.Education);
+        Input.EducationSpecialization = NormalizeText(Input.EducationSpecialization);
         Input.Certifications = NormalizeText(Input.Certifications);
 
         if (string.IsNullOrWhiteSpace(Input.ArabicName))
@@ -342,6 +345,7 @@ var positionName = await GetPositionNameAsync(id);
         Levels = await ReadNameOptionsAsync("dbo.HrJobPositionLevels");
         CompetencyOptions = await ReadNameOptionsAsync("dbo.HrJobPositionCompetencyOptions");
         EducationOptions = await ReadNameOptionsAsync("dbo.HrJobPositionEducationOptions");
+        EducationSpecializationOptions = await ReadNameOptionsAsync("dbo.HrJobPositionEducationSpecializationOptions");
         CertificationOptions = await ReadNameOptionsAsync("dbo.HrJobPositionCertificationOptions");
 
         var departmentNames = Departments.ToDictionary(department => department.Id, department => department.Name);
@@ -407,6 +411,7 @@ var positionName = await GetPositionNameAsync(id);
                 position.JobKpis,
                 position.Competencies,
                 position.Education,
+                position.EducationSpecialization,
                 position.Certifications
             }.Where(value => !string.IsNullOrWhiteSpace(value))));
         }
@@ -442,6 +447,7 @@ var positionName = await GetPositionNameAsync(id);
                     JobKpis = editRow.JobKpis,
                     Competencies = editRow.Competencies,
                     Education = editRow.Education,
+                    EducationSpecialization = editRow.EducationSpecialization,
                     Certifications = editRow.Certifications,
                     IsActive = editRow.IsActive
                 };
@@ -576,6 +582,9 @@ IF COL_LENGTH('dbo.HrJobPositions', 'Competencies') IS NULL
 IF COL_LENGTH('dbo.HrJobPositions', 'Education') IS NULL
     ALTER TABLE dbo.HrJobPositions ADD Education NVARCHAR(MAX) NULL;
 
+IF COL_LENGTH('dbo.HrJobPositions', 'EducationSpecialization') IS NULL
+    ALTER TABLE dbo.HrJobPositions ADD EducationSpecialization NVARCHAR(MAX) NULL;
+
 IF COL_LENGTH('dbo.HrJobPositions', 'Certifications') IS NULL
     ALTER TABLE dbo.HrJobPositions ADD Certifications NVARCHAR(MAX) NULL;
 ");
@@ -595,6 +604,7 @@ SET JobPurpose = @JobPurpose,
     JobKpis = @JobKpis,
     Competencies = @Competencies,
     Education = @Education,
+    EducationSpecialization = @EducationSpecialization,
     Certifications = @Certifications,
     UpdatedAt = SYSDATETIME()
 WHERE (@Id > 0 AND Id = @Id)
@@ -610,6 +620,7 @@ WHERE (@Id > 0 AND Id = @Id)
             AddParameter(command, "@JobKpis", EmptyToNull(Input.JobKpis));
             AddParameter(command, "@Competencies", EmptyToNull(Input.Competencies));
             AddParameter(command, "@Education", EmptyToNull(Input.Education));
+            AddParameter(command, "@EducationSpecialization", EmptyToNull(Input.EducationSpecialization));
             AddParameter(command, "@Certifications", EmptyToNull(Input.Certifications));
         });
     }
@@ -641,6 +652,30 @@ BEGIN
     );
 END;
 
+IF OBJECT_ID('dbo.HrJobPositionEducationSpecializationOptions', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.HrJobPositionEducationSpecializationOptions
+    (
+        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_HrJobPositionEducationSpecializationOptions PRIMARY KEY,
+        Name NVARCHAR(240) NOT NULL,
+        IsActive BIT NOT NULL CONSTRAINT DF_HrJobPositionEducationSpecializationOptions_IsActive DEFAULT(1),
+        CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_HrJobPositionEducationSpecializationOptions_CreatedAt DEFAULT(SYSDATETIME()),
+        UpdatedAt DATETIME2 NULL
+    );
+END;
+
+INSERT INTO dbo.HrJobPositionEducationSpecializationOptions (Name, IsActive, CreatedAt)
+SELECT DISTINCT LTRIM(RTRIM(CONVERT(NVARCHAR(240), p.EducationSpecialization))), 1, SYSDATETIME()
+FROM dbo.HrJobPositions p
+WHERE COL_LENGTH('dbo.HrJobPositions', 'EducationSpecialization') IS NOT NULL
+  AND p.EducationSpecialization IS NOT NULL
+  AND LTRIM(RTRIM(CONVERT(NVARCHAR(MAX), p.EducationSpecialization))) <> N''
+  AND NOT EXISTS
+  (
+      SELECT 1
+      FROM dbo.HrJobPositionEducationSpecializationOptions x
+      WHERE LTRIM(RTRIM(x.Name)) = LTRIM(RTRIM(CONVERT(NVARCHAR(240), p.EducationSpecialization)))
+  );
 IF OBJECT_ID('dbo.HrJobPositionCertificationOptions', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.HrJobPositionCertificationOptions
@@ -697,6 +732,7 @@ WHERE p.Certifications IS NOT NULL
         {
             "competencies" => "dbo.HrJobPositionCompetencyOptions",
             "education" => "dbo.HrJobPositionEducationOptions",
+            "specializations" => "dbo.HrJobPositionEducationSpecializationOptions",
             "certifications" => "dbo.HrJobPositionCertificationOptions",
             _ => null
         };
@@ -730,6 +766,7 @@ SELECT
     JobKpis,
     Competencies,
     Education,
+    EducationSpecialization,
     Certifications,
     IsActive
 FROM dbo.HrJobPositions
@@ -753,8 +790,9 @@ ORDER BY ArabicName;";
                     JobKpis = reader.IsDBNull(10) ? null : reader.GetString(10),
                     Competencies = reader.IsDBNull(11) ? null : reader.GetString(11),
                     Education = reader.IsDBNull(12) ? null : reader.GetString(12),
-                    Certifications = reader.IsDBNull(13) ? null : reader.GetString(13),
-                    IsActive = !reader.IsDBNull(14) && reader.GetBoolean(14)
+                    EducationSpecialization = reader.IsDBNull(13) ? null : reader.GetString(13),
+                    Certifications = reader.IsDBNull(14) ? null : reader.GetString(14),
+                    IsActive = !reader.IsDBNull(15) && reader.GetBoolean(15)
                 });
             }
         }
@@ -955,6 +993,8 @@ public sealed class JobPositionForm
 
     public string? Education { get; set; }
 
+    public string? EducationSpecialization { get; set; }
+
     public string? Certifications { get; set; }
 public bool IsActive { get; set; } = true;
 }
@@ -990,6 +1030,8 @@ public sealed class JobPositionRow
 
     public string? Education { get; set; }
 
+    public string? EducationSpecialization { get; set; }
+
     public string? Certifications { get; set; }
 
     public bool HasJobProfile =>
@@ -1000,6 +1042,7 @@ public sealed class JobPositionRow
         !string.IsNullOrWhiteSpace(JobKpis) ||
         !string.IsNullOrWhiteSpace(Competencies) ||
         !string.IsNullOrWhiteSpace(Education) ||
+        !string.IsNullOrWhiteSpace(EducationSpecialization) ||
         !string.IsNullOrWhiteSpace(Certifications);
 public bool IsActive { get; set; }
 

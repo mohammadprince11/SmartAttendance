@@ -24,6 +24,7 @@
            @*  <span>إدارة المناصب الرسمية وربطها بالقسم والفئة والمستوى، مع منع حذف أي منصب مستخدم داخل ملفات الموظفين.</span> *@
         </div>
         <div class="nxp-hero__links" aria-label="إعدادات المناصب">
+            <a asp-page="/Positions/Import" class="nxp-hero__import-link">&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; Excel</a> @* NEXORA_FIX21A_POSITIONS_IMPORT_LINK *@
             <a asp-page="/PositionCategories/Index">إدارة الفئات</a>
             <a asp-page="/PositionLevels/Index">إدارة المستويات</a>
         </div>
@@ -110,7 +111,7 @@
             </label>
 
             <label class="nxp-field nxp-field--reference">
-                <span>&#x0627;&#x0644;&#x062A;&#x0639;&#x0644;&#x064A;&#x0645; <button type="button" class="nxp-label-manage" data-nxp-reference-open="education">&#x0625;&#x062F;&#x0627;&#x0631;&#x0629;</button></span>
+                <span>&#x0627;&#x0644;&#x062F;&#x0631;&#x062C;&#x0629; &#x0627;&#x0644;&#x0639;&#x0644;&#x0645;&#x064A;&#x0629; <button type="button" class="nxp-label-manage" data-nxp-reference-open="education">&#x0625;&#x062F;&#x0627;&#x0631;&#x0629;</button></span>
                 <select asp-for="Input.Education">
                     <option value="">&#x063A;&#x064A;&#x0631; &#x0645;&#x062D;&#x062F;&#x062F;</option>
                     @foreach (var item in Model.EducationOptions.Where(item => item.IsActive || item.Name == Model.Input.Education))
@@ -119,6 +120,18 @@
                     }
                 </select>
             </label>
+
+            <label class="nxp-field nxp-field--reference">
+                <span>&#x0627;&#x0644;&#x062A;&#x062E;&#x0635;&#x0635; <button type="button" class="nxp-label-manage" data-nxp-reference-open="specializations">&#x0625;&#x062F;&#x0627;&#x0631;&#x0629;</button></span>
+                <select asp-for="Input.EducationSpecialization">
+                    <option value="">&#x063A;&#x064A;&#x0631; &#x0645;&#x062D;&#x062F;&#x062F;</option>
+                    @foreach (var item in Model.EducationSpecializationOptions.Where(item => item.IsActive || item.Name == Model.Input.EducationSpecialization))
+                    {
+                        <option value="@item.Name">@item.Name</option>
+                    }
+                </select>
+            </label>
+            @* NEXORA_FIX20G_SPECIALIZATION_FIELD *@
 
             <label class="nxp-field nxp-field--reference">
                 <span>&#x0627;&#x0644;&#x0634;&#x0647;&#x0627;&#x062F;&#x0627;&#x062A; <button type="button" class="nxp-label-manage" data-nxp-reference-open="certifications">&#x0625;&#x062F;&#x0627;&#x0631;&#x0629;</button></span>
@@ -363,14 +376,14 @@
         <header class="nxp-reference-modal__head">
             <div>
                 <span>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0631;&#x0627;&#x062C;&#x0639;</span>
-                <h3>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x062A;&#x0639;&#x0644;&#x064A;&#x0645;</h3>
+                <h3>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x062F;&#x0631;&#x062C;&#x0627;&#x062A; &#x0627;&#x0644;&#x0639;&#x0644;&#x0645;&#x064A;&#x0629;</h3>
             </div>
             <button type="button" data-nxp-reference-close>&times;</button>
         </header>
 
         <form method="post" asp-page-handler="SaveReference" asp-route-type="education" class="nxp-reference-modal__body">
             <label class="nxp-field nxp-field--wide">
-                <span>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0645;&#x0633;&#x062A;&#x0648;&#x0649; &#x062A;&#x0639;&#x0644;&#x064A;&#x0645;</span>
+                <span>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x062F;&#x0631;&#x062C;&#x0629; &#x0639;&#x0644;&#x0645;&#x064A;&#x0629;</span>
                 <input name="ReferenceInput.Name" maxlength="240" placeholder="&#x0645;&#x062B;&#x0627;&#x0644;: &#x0628;&#x0643;&#x0627;&#x0644;&#x0648;&#x0631;&#x064A;&#x0648;&#x0633;" />
             </label>
             <button type="submit" class="nxp-btn nxp-btn--primary">&#x062D;&#x0641;&#x0638;</button>
@@ -385,6 +398,34 @@
     </div>
 </section>
 
+
+<section class="nxp-reference-modal" data-nxp-reference-modal="specializations" hidden aria-hidden="true">
+    <div class="nxp-reference-modal__card" dir="rtl">
+        <header class="nxp-reference-modal__head">
+            <div>
+                <span>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0631;&#x0627;&#x062C;&#x0639;</span>
+                <h3>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x062A;&#x062E;&#x0635;&#x0635;&#x0627;&#x062A;</h3>
+            </div>
+            <button type="button" data-nxp-reference-close>&times;</button>
+        </header>
+
+        <form method="post" asp-page-handler="SaveReference" asp-route-type="specializations" class="nxp-reference-modal__body">
+            <label class="nxp-field nxp-field--wide">
+                <span>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x062A;&#x062E;&#x0635;&#x0635;</span>
+                <input name="ReferenceInput.Name" maxlength="240" placeholder="&#x0645;&#x062B;&#x0627;&#x0644;: &#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0623;&#x0639;&#x0645;&#x0627;&#x0644;" />
+            </label>
+            <button type="submit" class="nxp-btn nxp-btn--primary">&#x062D;&#x0641;&#x0638;</button>
+        </form>
+
+        <div class="nxp-reference-modal__list">
+            @foreach (var item in Model.EducationSpecializationOptions)
+            {
+                <span>@item.Name</span>
+            }
+        </div>
+    </div>
+</section>
+@* NEXORA_FIX20G_SPECIALIZATION_MODAL *@
 <section class="nxp-reference-modal" data-nxp-reference-modal="certifications" hidden aria-hidden="true">
     <div class="nxp-reference-modal__card" dir="rtl">
         <header class="nxp-reference-modal__head">

@@ -1233,3 +1233,627 @@ body.nxp-profile-modal-open {
     }
 }
 /* NEXORA_FIX20F_POSITIONS_DETAILS_SAFE_LAYOUT_END */
+/* NEXORA_FIX20G_EDUCATION_DEGREE_SPECIALIZATION_START */
+#positionForm {
+    grid-template-columns: minmax(200px, 1.35fr) repeat(8, minmax(108px, 1fr)) !important;
+}
+
+@media (max-width: 1800px) {
+    #positionForm {
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    }
+
+    #positionForm > .nxp-field--wide:first-of-type,
+    #positionForm > label.nxp-field--wide:first-of-type {
+        grid-column: span 2 !important;
+    }
+
+    #positionForm > .nxp-position-profile-launchers {
+        grid-column: span 2 !important;
+    }
+}
+
+@media (max-width: 1250px) {
+    #positionForm {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
+    #positionForm > .nxp-field--wide:first-of-type,
+    #positionForm > label.nxp-field--wide:first-of-type,
+    #positionForm > .nxp-position-profile-launchers {
+        grid-column: 1 / -1 !important;
+    }
+}
+
+@media (max-width: 820px) {
+    #positionForm {
+        grid-template-columns: 1fr !important;
+    }
+
+    #positionForm > .nxp-field,
+    #positionForm > label.nxp-field,
+    #positionForm > .nxp-position-profile-launchers {
+        grid-column: 1 / -1 !important;
+    }
+}
+/* NEXORA_FIX20G_EDUCATION_DEGREE_SPECIALIZATION_END */
+/* NEXORA_FIX20H_POSITIONS_TWO_ROWS_START */
+/* Layout: keep position setup fields readable by splitting them into two rows. */
+#positionForm {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    align-items: end !important;
+}
+
+#positionForm > .nxp-field,
+#positionForm > label.nxp-field,
+#positionForm > .nxp-position-profile-launchers {
+    min-width: 0 !important;
+    grid-column: auto !important;
+}
+
+#positionForm > .nxp-field--wide,
+#positionForm > label.nxp-field--wide {
+    grid-column: auto !important;
+}
+
+/* The job description card becomes one normal field in the grid, not a full row. */
+#positionForm > .nxp-position-profile-launchers {
+    display: block !important;
+    margin: 0 !important;
+    align-self: stretch !important;
+}
+
+#positionForm > .nxp-position-profile-launchers:empty {
+    display: none !important;
+}
+
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 88px !important;
+    border-radius: 18px !important;
+    padding: 12px 14px !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    text-align: right !important;
+}
+
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher span {
+    font-size: 11px !important;
+}
+
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher strong {
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+}
+
+/* Hide IsActive in the form. New positions are already active by default and status can be managed from the list. */
+#positionForm > .nxp-check {
+    display: none !important;
+}
+
+/* Keep actions on their own final row. */
+#positionForm > .nxp-form-actions,
+#positionForm > .validation-summary-valid,
+#positionForm > .validation-summary-errors {
+    grid-column: 1 / -1 !important;
+}
+
+/* Make all Manage buttons match the reference/category style. */
+.nxp-field span .nxp-label-manage,
+.nxp-label-manage {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 24px !important;
+    min-width: 54px !important;
+    padding: 0 10px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(34, 211, 238, .32) !important;
+    background: rgba(34, 211, 238, .10) !important;
+    color: #22d3ee !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important;
+    transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease !important;
+}
+
+.nxp-field span .nxp-label-manage:hover,
+.nxp-label-manage:hover {
+    transform: translateY(-1px) !important;
+    border-color: rgba(34, 211, 238, .58) !important;
+    background: rgba(34, 211, 238, .16) !important;
+    color: #ffffff !important;
+    text-decoration: none !important;
+}
+
+.nxp-field span .nxp-label-manage:focus-visible,
+.nxp-label-manage:focus-visible {
+    outline: 0 !important;
+    box-shadow: 0 0 0 4px rgba(34, 211, 238, .12) !important;
+}
+
+/* Keep label text aligned nicely with the manage button. */
+#positionForm .nxp-field > span {
+    min-height: 26px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+}
+
+/* Make select boxes consistent after adding more references. */
+#positionForm .nxp-field select,
+#positionForm .nxp-field input {
+    width: 100% !important;
+}
+
+@media (min-width: 1701px) {
+    #positionForm {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 1400px) {
+    #positionForm {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 980px) {
+    #positionForm {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 640px) {
+    #positionForm {
+        grid-template-columns: 1fr !important;
+    }
+
+    #positionForm > .nxp-field,
+    #positionForm > label.nxp-field,
+    #positionForm > .nxp-position-profile-launchers {
+        grid-column: 1 / -1 !important;
+    }
+}
+/* NEXORA_FIX20H_POSITIONS_TWO_ROWS_END */
+
+
+
+
+/* NEXORA_FIX20M_POSITIONS_CLEAN_SELECT_CSS_START */
+/*
+Diagnosis:
+The custom select is built by the global NEXORA select system:
+select + .nxcs-select > .nxcs-trigger > .nxcs-value + .nxcs-caret
+
+The previous Position-only fixes targeted generic button[aria-haspopup] and child spans.
+That confused .nxcs-value with .nxcs-caret and moved the selected text next to the arrow.
+This block only handles the Positions form layout and the explicit .nxp-label-manage buttons.
+It does not override the global .nxcs trigger structure.
+*/
+
+#positionForm {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    align-items: end !important;
+}
+
+#positionForm > .nxp-field,
+#positionForm > label.nxp-field,
+#positionForm > .nxp-position-profile-launchers {
+    min-width: 0 !important;
+    grid-column: auto !important;
+}
+
+#positionForm > .nxp-field--wide,
+#positionForm > label.nxp-field--wide {
+    grid-column: auto !important;
+}
+
+#positionForm > .nxp-check {
+    display: none !important;
+}
+
+#positionForm > .nxp-form-actions,
+#positionForm > .validation-summary-valid,
+#positionForm > .validation-summary-errors {
+    grid-column: 1 / -1 !important;
+}
+
+#positionForm .nxp-field > span {
+    min-height: 26px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+}
+
+#positionForm .nxp-field > span > .nxp-label-manage,
+#positionForm .nxp-field > span > button.nxp-label-manage {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #22d3ee !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-width: auto !important;
+    min-height: auto !important;
+    width: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+    line-height: 1.2 !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+}
+
+#positionForm .nxp-field > span > .nxp-label-manage:hover,
+#positionForm .nxp-field > span > button.nxp-label-manage:hover {
+    color: #ffffff !important;
+    text-decoration: none !important;
+}
+
+/* Restore and protect the global NEXORA custom select inside Positions. */
+#positionForm .nxcs-select {
+    width: 100% !important;
+    max-width: 100% !important;
+    direction: rtl !important;
+}
+
+#positionForm .nxcs-trigger {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 42px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    direction: rtl !important;
+    text-align: right !important;
+    padding: 0 14px !important;
+}
+
+#positionForm .nxcs-value {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    order: 0 !important;
+    direction: rtl !important;
+    text-align: right !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
+}
+
+#positionForm .nxcs-caret {
+    flex: 0 0 26px !important;
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+    max-width: 26px !important;
+    order: 0 !important;
+    margin: 0 !important;
+}
+
+/* The job description card stays as a normal field in the grid. */
+#positionForm > .nxp-position-profile-launchers {
+    display: block !important;
+    margin: 0 !important;
+    align-self: stretch !important;
+}
+
+#positionForm > .nxp-position-profile-launchers:empty {
+    display: none !important;
+}
+
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 88px !important;
+    border-radius: 18px !important;
+    padding: 12px 14px !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    text-align: right !important;
+}
+
+@media (max-width: 1400px) {
+    #positionForm {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 980px) {
+    #positionForm {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 640px) {
+    #positionForm {
+        grid-template-columns: 1fr !important;
+    }
+
+    #positionForm > .nxp-field,
+    #positionForm > label.nxp-field,
+    #positionForm > .nxp-position-profile-launchers {
+        grid-column: 1 / -1 !important;
+    }
+}
+/* NEXORA_FIX20M_POSITIONS_CLEAN_SELECT_CSS_END */
+
+/* NEXORA_FIX20O_POSITIONS_SELECT_CARET_LEFT_MANAGE_MATCH_START */
+/*
+Diagnosis:
+The global NEXORA select DOM is:
+.nxcs-trigger > .nxcs-value + .nxcs-caret
+
+In RTL flex, this naturally renders:
+value on the right, caret on the left.
+
+Fix20N changed the trigger to CSS Grid. In RTL grid, column 1 is visually right,
+so the caret moved right. This block restores the global flex behavior.
+*/
+
+#positionForm .nxp-field .nxcs-select {
+    width: 100% !important;
+    max-width: 100% !important;
+    direction: rtl !important;
+}
+
+#positionForm .nxp-field .nxcs-trigger {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 44px !important;
+    height: 44px !important;
+    box-sizing: border-box !important;
+
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+
+    direction: rtl !important;
+    text-align: right !important;
+    padding: 0 14px !important;
+
+    border-radius: 15px !important;
+    border: 1px solid rgba(34, 211, 238, .55) !important;
+    background: rgba(1, 18, 28, .88) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03) !important;
+    color: #e8f3ff !important;
+    overflow: hidden !important;
+}
+
+/* Value remains first in DOM and right in RTL flex. */
+#positionForm .nxp-field .nxcs-value {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    max-width: calc(100% - 40px) !important;
+    order: 0 !important;
+    direction: rtl !important;
+    text-align: right !important;
+    color: #ffffff !important;
+    font-weight: 900 !important;
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+    display: block !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
+}
+
+/* Caret remains second in DOM and left in RTL flex, matching Work Location. */
+#positionForm .nxp-field .nxcs-caret {
+    flex: 0 0 30px !important;
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    max-width: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    order: 0 !important;
+    margin: 0 !important;
+
+    border-radius: 999px !important;
+    border: 1px solid rgba(34, 211, 238, .55) !important;
+    background: rgba(34, 211, 238, .10) !important;
+    color: #67e8f9 !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+}
+
+/* Make the new modal manage buttons visually match the original category/level manage link. */
+#positionForm .nxp-field > span > a,
+#positionForm .nxp-field > span > .nxp-label-manage,
+#positionForm .nxp-field > span > button.nxp-label-manage {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-width: auto !important;
+    min-height: auto !important;
+    width: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+
+    color: #2dd4bf !important;
+    text-decoration: none !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+    line-height: 1.2 !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+}
+
+#positionForm .nxp-field > span > a:hover,
+#positionForm .nxp-field > span > .nxp-label-manage:hover,
+#positionForm .nxp-field > span > button.nxp-label-manage:hover {
+    color: #ffffff !important;
+    text-decoration: none !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+#positionForm .nxp-field > span {
+    min-height: 26px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+}
+/* NEXORA_FIX20O_POSITIONS_SELECT_CARET_LEFT_MANAGE_MATCH_END */
+/* NEXORA_FIX21A_POSITIONS_IMPORT_START */
+.nxp-import-page .nxp-hero__links {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+}
+
+.nxp-import-form {
+    display: grid !important;
+    gap: 16px !important;
+}
+
+.nxp-import-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+}
+
+.nxp-import-box {
+    border: 1px solid rgba(34, 211, 238, .18) !important;
+    background: rgba(3, 15, 26, .58) !important;
+    border-radius: 22px !important;
+    padding: 16px !important;
+    display: grid !important;
+    gap: 10px !important;
+}
+
+.nxp-import-box strong {
+    color: #ffffff !important;
+    font-size: 16px !important;
+    font-weight: 1000 !important;
+}
+
+.nxp-import-box p {
+    margin: 0 !important;
+}
+
+.nxp-import-box input[type="file"],
+.nxp-import-box textarea {
+    width: 100% !important;
+    border: 1px solid rgba(34, 211, 238, .26) !important;
+    border-radius: 16px !important;
+    background: rgba(1, 12, 22, .86) !important;
+    color: #e8f3ff !important;
+    padding: 12px !important;
+    font-weight: 800 !important;
+}
+
+.nxp-import-box textarea {
+    resize: vertical !important;
+    min-height: 150px !important;
+    direction: ltr !important;
+    text-align: left !important;
+}
+
+.nxp-import-columns {
+    display: grid !important;
+    grid-template-columns: 1fr 2fr !important;
+    gap: 14px !important;
+    border: 1px solid rgba(34, 211, 238, .16) !important;
+    border-radius: 20px !important;
+    padding: 14px !important;
+    background: rgba(3, 15, 26, .42) !important;
+}
+
+.nxp-import-columns div {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    align-items: center !important;
+}
+
+.nxp-import-columns small {
+    width: 100% !important;
+    color: #22d3ee !important;
+    font-weight: 1000 !important;
+}
+
+.nxp-import-columns span {
+    display: inline-flex !important;
+    align-items: center !important;
+    min-height: 30px !important;
+    padding: 0 10px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(34, 211, 238, .22) !important;
+    background: rgba(34, 211, 238, .08) !important;
+    color: #dff8ff !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+}
+
+.nxp-import-status {
+    display: inline-flex !important;
+    align-items: center !important;
+    min-height: 28px !important;
+    padding: 0 10px !important;
+    border-radius: 999px !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+}
+
+.nxp-import-status--ready {
+    color: #bbf7d0 !important;
+    background: rgba(34, 197, 94, .12) !important;
+    border: 1px solid rgba(34, 197, 94, .28) !important;
+}
+
+.nxp-import-status--error {
+    color: #fecaca !important;
+    background: rgba(239, 68, 68, .12) !important;
+    border: 1px solid rgba(248, 113, 113, .28) !important;
+}
+
+button[disabled].nxp-btn {
+    opacity: .45 !important;
+    cursor: not-allowed !important;
+}
+
+@media (max-width: 900px) {
+    .nxp-import-grid,
+    .nxp-import-columns {
+        grid-template-columns: 1fr !important;
+    }
+}
+/* NEXORA_FIX21A_POSITIONS_IMPORT_END */
