@@ -23,6 +23,7 @@ public class IndexModel : PageModel
     public List<UpdateSection> Sections { get; private set; } = BuildSections();
     public UpdateSection ActiveSection => Sections.FirstOrDefault(x => x.Key == ActiveSectionKey) ?? Sections[0];
     public List<UpdateField> CurrentFields => ActiveSection.Fields;
+    public List<UpdateSection> StageBlocks => BuildStageBlocks(Sections);
     public Dictionary<string, string> CurrentValues { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
     public List<UpdateBatch> OpenBatches { get; private set; } = new();
     public List<UpdateBatch> HistoryBatches { get; private set; } = new();
@@ -38,16 +39,24 @@ public class IndexModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostStageAsync(int employeeId, string sectionKey, string? note)
+    // NEXORA_FIX14B_STAGE_METHOD_START
+    public async Task<IActionResult> OnPostStageAsync(int employeeId, string sectionKey, DateTime? effectiveDate, string? note)
     {
         await EmployeeUpdateSchema.EnsureAsync(_dbContext);
+        await EnsureMovementColumnsAsync();
 
-        var sections = BuildSections();
-        var section = sections.FirstOrDefault(x => x.Key.Equals(sectionKey ?? string.Empty, StringComparison.OrdinalIgnoreCase)) ?? sections[0];
+        var sections = await BuildSectionsWithDynamicFieldsAsync();
+        var stageBlocks = BuildStageBlocks(sections);
+        var stagedFields = stageBlocks
+            .SelectMany(block => block.Fields)
+            .GroupBy(field => field.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToList();
+
         var current = await BuildCurrentValuesAsync(employeeId);
 
         var changes = new List<UpdateChange>();
-        foreach (var field in section.Fields)
+        foreach (var field in stagedFields)
         {
             var oldValue = NormalizeValue(current.GetValueOrDefault(field.Key, string.Empty));
             var newValue = NormalizeValue(Request.Form[field.Key].FirstOrDefault() ?? string.Empty);
@@ -71,28 +80,30 @@ public class IndexModel : PageModel
 
         if (changes.Count == 0)
         {
-            StatusMessage = "لا توجد تغييرات لإنشاء حركة.";
-            return RedirectToPage(new { employeeId, tab = "stage", section = section.Key });
+            StatusMessage = "\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u063A\u064A\u064A\u0631\u0627\u062A \u0644\u0625\u0646\u0634\u0627\u0621 \u062D\u0631\u0643\u0629.";
+            return RedirectToPage(new { employeeId, tab = "stage", section = "employee-master" });
         }
 
         var requestedBy = Request.Cookies["SA.UserName"] ?? User.Identity?.Name ?? "System";
+        var resolvedEffectiveDate = (effectiveDate ?? DateTime.Today).Date;
+        var sectionName = "\u062A\u062D\u062F\u064A\u062B \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641";
 
         var batchId = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
             """
 INSERT INTO EmployeeUpdateBatches
-(EmployeeId, SectionKey, SectionName, Status, RequestedBy, RequestedAt, Note)
+(EmployeeId, SectionKey, SectionName, Status, RequestedBy, RequestedAt, EffectiveDate, Note)
 VALUES
-(@EmployeeId, @SectionKey, @SectionName, 'Open', @RequestedBy, SYSUTCDATETIME(), @Note);
+(@EmployeeId, 'employee-master', @SectionName, 'Open', @RequestedBy, SYSUTCDATETIME(), @EffectiveDate, @Note);
 
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-                HrmsDatabase.AddParameter(command, "@SectionKey", section.Key);
-                HrmsDatabase.AddParameter(command, "@SectionName", section.Name);
+                HrmsDatabase.AddParameter(command, "@SectionName", sectionName);
                 HrmsDatabase.AddParameter(command, "@RequestedBy", requestedBy);
+                HrmsDatabase.AddParameter(command, "@EffectiveDate", resolvedEffectiveDate);
                 HrmsDatabase.AddParameter(command, "@Note", note ?? string.Empty);
             });
 
@@ -116,13 +127,14 @@ VALUES
                 });
         }
 
-        StatusMessage = $"تم إنشاء حركة غير مقفلة رقم {batchId}. راجعها في صفحة التأكيد قبل القفل.";
-        return RedirectToPage(new { employeeId, tab = "confirm", section = section.Key });
+        StatusMessage = $"\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u062D\u0631\u0643\u0629 \u063A\u064A\u0631 \u0645\u0642\u0641\u0644\u0629 \u0631\u0642\u0645 {batchId}. \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0633\u0631\u064A\u0627\u0646: {resolvedEffectiveDate:dd/MM/yyyy}.";
+        return RedirectToPage(new { employeeId, tab = "confirm", section = "employee-master" });
     }
-
+    // NEXORA_FIX14B_STAGE_METHOD_END
     public async Task<IActionResult> OnPostLockAsync(int batchId, int employeeId)
     {
         await EmployeeUpdateSchema.EnsureAsync(_dbContext);
+        await EnsureMovementColumnsAsync();
 
         var batch = await LoadSingleBatchAsync(batchId);
         if (batch is null || !batch.Status.Equals("Open", StringComparison.OrdinalIgnoreCase))
@@ -178,6 +190,7 @@ WHERE Id = @BatchId AND Status = 'Open';
     public async Task<IActionResult> OnPostDeleteOpenAsync(int batchId, int employeeId)
     {
         await EmployeeUpdateSchema.EnsureAsync(_dbContext);
+        await EnsureMovementColumnsAsync();
 
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
@@ -194,11 +207,26 @@ WHERE Id = @BatchId AND Status = 'Open';
         return RedirectToPage(new { employeeId, tab = "confirm" });
     }
 
+    // NEXORA_FIX14B_MOVEMENT_COLUMNS_START
+    private async Task EnsureMovementColumnsAsync()
+    {
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+IF COL_LENGTH('EmployeeUpdateBatches', 'EffectiveDate') IS NULL
+BEGIN
+    ALTER TABLE EmployeeUpdateBatches ADD EffectiveDate date NULL;
+END;
+""");
+    }
+    // NEXORA_FIX14B_MOVEMENT_COLUMNS_END
     private async Task LoadPageAsync(int? employeeId, string? tab, string? section)
     {
         await EmployeeUpdateSchema.EnsureAsync(_dbContext);
+        await EnsureMovementColumnsAsync();
 
-        Tab = NormalizeTab(tab);
+        Sections = await BuildSectionsWithDynamicFieldsAsync(); // NEXORA_FIX14A_LOAD_DYNAMIC_SECTIONS
+Tab = NormalizeTab(tab);
         ActiveSectionKey = NormalizeSection(section);
 
         Employees = await LoadEmployeesAsync();
@@ -399,7 +427,8 @@ SELECT TOP 50
     RequestedAt,
     ISNULL(LockedBy, '') AS LockedBy,
     LockedAt,
-    ISNULL(Note, '') AS Note
+    ISNULL(Note, '') AS Note,
+    ISNULL(EffectiveDate, CAST(RequestedAt AS date)) AS EffectiveDate
 FROM EmployeeUpdateBatches
 WHERE EmployeeId = @EmployeeId AND Status = @Status
 ORDER BY ISNULL(LockedAt, RequestedAt) DESC, Id DESC;
@@ -418,6 +447,7 @@ ORDER BY ISNULL(LockedAt, RequestedAt) DESC, Id DESC;
                 Status = HrmsDatabase.GetString(reader, "Status"),
                 RequestedBy = HrmsDatabase.GetString(reader, "RequestedBy"),
                 RequestedAt = HrmsDatabase.GetDateTime(reader, "RequestedAt"),
+                EffectiveDate = HrmsDatabase.GetDateTime(reader, "EffectiveDate"),
                 LockedBy = HrmsDatabase.GetString(reader, "LockedBy"),
                 LockedAt = HrmsDatabase.GetDateTime(reader, "LockedAt"),
                 Note = HrmsDatabase.GetString(reader, "Note")
@@ -446,7 +476,8 @@ SELECT TOP 1
     RequestedAt,
     ISNULL(LockedBy, '') AS LockedBy,
     LockedAt,
-    ISNULL(Note, '') AS Note
+    ISNULL(Note, '') AS Note,
+    ISNULL(EffectiveDate, CAST(RequestedAt AS date)) AS EffectiveDate
 FROM EmployeeUpdateBatches
 WHERE Id = @BatchId;
 """,
@@ -460,6 +491,7 @@ WHERE Id = @BatchId;
                 Status = HrmsDatabase.GetString(reader, "Status"),
                 RequestedBy = HrmsDatabase.GetString(reader, "RequestedBy"),
                 RequestedAt = HrmsDatabase.GetDateTime(reader, "RequestedAt"),
+                EffectiveDate = HrmsDatabase.GetDateTime(reader, "EffectiveDate"),
                 LockedBy = HrmsDatabase.GetString(reader, "LockedBy"),
                 LockedAt = HrmsDatabase.GetDateTime(reader, "LockedAt"),
                 Note = HrmsDatabase.GetString(reader, "Note")
@@ -704,6 +736,7 @@ END;
 
     public string DisplayValue(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
     public string DisplayDateTime(DateTime? value) => value.HasValue ? value.Value.ToString("dd/MM/yyyy HH:mm") : "-";
+    public string DisplayDate(DateTime? value) => value.HasValue ? value.Value.ToString("dd/MM/yyyy") : "-";
 
     private static string ToInputDate(DateTime? value) => value.HasValue ? value.Value.ToString("yyyy-MM-dd") : string.Empty;
 
@@ -809,6 +842,283 @@ END;
         };
     }
 
+    // NEXORA_FIX14A_DYNAMIC_PROFILE_FIELDS_METHOD_START
+    private async Task<List<UpdateSection>> BuildSectionsWithDynamicFieldsAsync()
+    {
+        var sections = BuildSections();
+        var existingKeys = sections
+            .SelectMany(section => section.Fields)
+            .Select(field => field.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var definitions = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+IF OBJECT_ID(N'[dbo].[EmployeeProfileFieldDefinitions]', N'U') IS NULL
+BEGIN
+    SELECT
+        CAST('' AS nvarchar(80)) AS SectionKey,
+        CAST('' AS nvarchar(120)) AS FieldKey,
+        CAST('' AS nvarchar(150)) AS FieldLabel,
+        CAST('text' AS nvarchar(40)) AS FieldType,
+        CAST(0 AS int) AS SortOrder
+    WHERE 1 = 0;
+END
+ELSE
+BEGIN
+    SELECT
+        ISNULL(SectionKey, '') AS SectionKey,
+        ISNULL(FieldKey, '') AS FieldKey,
+        ISNULL(FieldLabel, '') AS FieldLabel,
+        ISNULL(FieldType, 'text') AS FieldType,
+        ISNULL(SortOrder, 0) AS SortOrder
+    FROM EmployeeProfileFieldDefinitions
+    WHERE IsActive = 1
+    ORDER BY
+        CASE SectionKey
+            WHEN 'basic' THEN 10
+            WHEN 'personal' THEN 20
+            WHEN 'job' THEN 30
+            WHEN 'financial' THEN 40
+            WHEN 'additional' THEN 50
+            ELSE 99
+        END,
+        SortOrder,
+        Id;
+END
+""",
+            null,
+            reader => new DynamicUpdateFieldDefinition
+            {
+                SectionKey = HrmsDatabase.GetString(reader, "SectionKey"),
+                FieldKey = HrmsDatabase.GetString(reader, "FieldKey"),
+                FieldLabel = HrmsDatabase.GetString(reader, "FieldLabel"),
+                FieldType = HrmsDatabase.GetString(reader, "FieldType"),
+                SortOrder = HrmsDatabase.GetInt(reader, "SortOrder")
+            });
+
+        foreach (var group in definitions
+            .Where(field => !string.IsNullOrWhiteSpace(field.FieldKey))
+            .Where(field => !existingKeys.Contains(field.FieldKey))
+            .GroupBy(field => NormalizeProfileSectionKey(field.SectionKey), StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => ProfileSectionOrder(group.Key)))
+        {
+            var fields = group
+                .OrderBy(field => field.SortOrder)
+                .ThenBy(field => field.FieldLabel)
+                .Select(field => new UpdateField(
+                    field.FieldKey,
+                    string.IsNullOrWhiteSpace(field.FieldLabel) ? field.FieldKey : field.FieldLabel,
+                    "custom",
+                    NormalizeDynamicFieldInputType(field.FieldType),
+                    string.Empty))
+                .ToList();
+
+            if (fields.Count > 0)
+            {
+                sections.Add(new UpdateSection(
+                    "profile-" + group.Key,
+                    ProfileSectionName(group.Key),
+                    ProfileSectionDescription(group.Key),
+                    fields));
+            }
+        }
+
+        return sections;
+    }
+
+    private static string NormalizeProfileSectionKey(string? key)
+    {
+        return (key ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            "basic" => "basic",
+            "personal" => "personal",
+            "job" => "job",
+            "financial" => "financial",
+            "additional" => "additional",
+            _ => "additional"
+        };
+    }
+
+    private static int ProfileSectionOrder(string key)
+    {
+        return key switch
+        {
+            "basic" => 10,
+            "personal" => 20,
+            "job" => 30,
+            "financial" => 40,
+            "additional" => 50,
+            _ => 99
+        };
+    }
+
+    private static string ProfileSectionName(string key)
+    {
+        return key switch
+        {
+            "basic" => "\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629",
+            "personal" => "\u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0634\u062E\u0635\u064A\u0629",
+            "job" => "\u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0648\u0638\u064A\u0641\u064A\u0629",
+            "financial" => "\u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629",
+            _ => "\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629"
+        };
+    }
+
+    private static string ProfileSectionDescription(string key)
+    {
+        return key switch
+        {
+            "basic" => "\u062D\u0642\u0648\u0644 \u0645\u0644\u0641 \u0627\u0644\u0645\u0648\u0638\u0641 \u0627\u0644\u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0629 \u0636\u0645\u0646 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629",
+            "personal" => "\u062D\u0642\u0648\u0644 \u0645\u0644\u0641 \u0627\u0644\u0645\u0648\u0638\u0641 \u0627\u0644\u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0629 \u0636\u0645\u0646 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0634\u062E\u0635\u064A\u0629",
+            "job" => "\u062D\u0642\u0648\u0644 \u0645\u0644\u0641 \u0627\u0644\u0645\u0648\u0638\u0641 \u0627\u0644\u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0629 \u0636\u0645\u0646 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0648\u0638\u064A\u0641\u064A\u0629",
+            "financial" => "\u062D\u0642\u0648\u0644 \u0645\u0644\u0641 \u0627\u0644\u0645\u0648\u0638\u0641 \u0627\u0644\u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0629 \u0636\u0645\u0646 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629",
+            _ => "\u062D\u0642\u0648\u0644 \u0645\u0644\u0641 \u0627\u0644\u0645\u0648\u0638\u0641 \u0627\u0644\u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u064A\u0629"
+        };
+    }
+
+    private static string NormalizeDynamicFieldInputType(string? type)
+    {
+        return (type ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            "number" => "number",
+            "date" => "date",
+            "textarea" => "textarea",
+            _ => "text"
+        };
+    }
+    // NEXORA_FIX14A_DYNAMIC_PROFILE_FIELDS_METHOD_END
+    // NEXORA_FIX14C_STAGE_BLOCKS_START
+    private static List<UpdateSection> BuildStageBlocks(List<UpdateSection> sections)
+    {
+        var result = new List<UpdateSection>();
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        UpdateSection? FindSection(string key) =>
+            sections.FirstOrDefault(section => section.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+
+        void AddField(List<UpdateField> target, UpdateField? field)
+        {
+            if (field is null)
+            {
+                return;
+            }
+
+            if (used.Add(field.Key))
+            {
+                target.Add(field);
+            }
+        }
+
+        void AddByKeys(List<UpdateField> target, string sectionKey, params string[] keys)
+        {
+            var source = FindSection(sectionKey);
+            if (source is null)
+            {
+                return;
+            }
+
+            foreach (var key in keys)
+            {
+                AddField(target, source.Fields.FirstOrDefault(field => field.Key.Equals(key, StringComparison.OrdinalIgnoreCase)));
+            }
+        }
+
+        void AddFromSection(List<UpdateField> target, string sectionKey)
+        {
+            var source = FindSection(sectionKey);
+            if (source is null)
+            {
+                return;
+            }
+
+            foreach (var field in source.Fields)
+            {
+                AddField(target, field);
+            }
+        }
+
+        var basic = new List<UpdateField>();
+        AddByKeys(basic, "employee-info", "EmployeeNo", "FullName", "NationalId", "BirthDate", "IsActive");
+        AddFromSection(basic, "profile-basic");
+        if (basic.Count > 0)
+        {
+            result.Add(new UpdateSection(
+                "stage-basic",
+                "\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629",
+                "\u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 \u0645\u0646 \u0645\u0644\u0641 \u0627\u0644\u0645\u0648\u0638\u0641.",
+                basic));
+        }
+
+        var personal = new List<UpdateField>();
+        AddByKeys(personal, "employee-info", "Phone", "Email");
+        AddByKeys(personal, "extra", "Nationality", "Accommodation", "EmergencyContact");
+        AddFromSection(personal, "profile-personal");
+        if (personal.Count > 0)
+        {
+            result.Add(new UpdateSection(
+                "stage-personal",
+                "\u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0634\u062E\u0635\u064A\u0629",
+                "\u062D\u0642\u0648\u0644 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0648\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0634\u062E\u0635\u064A\u0629.",
+                personal));
+        }
+
+        var job = new List<UpdateField>();
+        AddByKeys(job, "employee-info", "Position", "DepartmentId", "ManagerName", "HireDate");
+        AddByKeys(job, "extra", "ContractType");
+        AddFromSection(job, "profile-job");
+        if (job.Count > 0)
+        {
+            result.Add(new UpdateSection(
+                "stage-job",
+                "\u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0648\u0638\u064A\u0641\u064A\u0629",
+                "\u0627\u0644\u0645\u0646\u0635\u0628 \u0648\u0627\u0644\u0642\u0633\u0645 \u0648\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u062A\u0648\u0638\u064A\u0641.",
+                job));
+        }
+
+        var financial = new List<UpdateField>();
+        AddFromSection(financial, "financial");
+        AddFromSection(financial, "payment");
+        AddFromSection(financial, "profile-financial");
+        if (financial.Count > 0)
+        {
+            result.Add(new UpdateSection(
+                "stage-financial",
+                "\u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629",
+                "\u0627\u0644\u0631\u0627\u062A\u0628 \u0648\u0627\u0644\u062F\u0641\u0639 \u0648\u0627\u0644\u0628\u062F\u0644\u0627\u062A \u0648\u0627\u0644\u0627\u0633\u062A\u0642\u0637\u0627\u0639\u0627\u062A.",
+                financial));
+        }
+
+        var additional = new List<UpdateField>();
+        AddFromSection(additional, "profile-additional");
+        AddFromSection(additional, "extra");
+
+        foreach (var section in sections)
+        {
+            foreach (var field in section.Fields)
+            {
+                AddField(additional, field);
+            }
+        }
+
+        if (additional.Count > 0)
+        {
+            result.Add(new UpdateSection(
+                "stage-additional",
+                "\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629",
+                "\u0623\u064A \u062D\u0642\u0648\u0644 \u0623\u062E\u0631\u0649 \u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0645\u0644\u0641 \u0627\u0644\u0645\u0648\u0638\u0641.",
+                additional));
+        }
+
+        if (result.Count == 0)
+        {
+            var fallback = FindSection("employee-info") ?? sections.First();
+            result.Add(fallback);
+        }
+
+        return result;
+    }
+    // NEXORA_FIX14C_STAGE_BLOCKS_END
     private Dictionary<string, UpdateField> BuildFieldDictionary()
     {
         return BuildSections()
@@ -817,6 +1127,16 @@ END;
             .ToDictionary(x => x.Key, x => x.First(), StringComparer.OrdinalIgnoreCase);
     }
 
+    // NEXORA_FIX14A_DYNAMIC_PROFILE_FIELD_RECORD_START
+    private sealed class DynamicUpdateFieldDefinition
+    {
+        public string SectionKey { get; set; } = string.Empty;
+        public string FieldKey { get; set; } = string.Empty;
+        public string FieldLabel { get; set; } = string.Empty;
+        public string FieldType { get; set; } = "text";
+        public int SortOrder { get; set; }
+    }
+    // NEXORA_FIX14A_DYNAMIC_PROFILE_FIELD_RECORD_END
     public record UpdateSection(string Key, string Name, string Description, List<UpdateField> Fields);
     public record UpdateField(string Key, string Label, string Target, string InputType, string Placeholder);
 
@@ -846,6 +1166,7 @@ END;
         public string Status { get; set; } = string.Empty;
         public string RequestedBy { get; set; } = string.Empty;
         public DateTime? RequestedAt { get; set; }
+        public DateTime? EffectiveDate { get; set; }
         public string LockedBy { get; set; } = string.Empty;
         public DateTime? LockedAt { get; set; }
         public string Note { get; set; } = string.Empty;

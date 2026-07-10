@@ -881,3 +881,484 @@ body.nxupd-modal-open{
     from{opacity:0;transform:translateY(12px) scale(.96)}
     to{opacity:1;transform:translateY(0) scale(1)}
 }
+
+/* NEXORA_FIX14A_EMPLOYEE_UPDATES_DUPLICATES_START */
+.nxupd-page select.nxcs-native,
+.nxupd-page .nxupd-field select.nxcs-native,
+.nxupd-page .nxupd-employee-select select.nxcs-native {
+    position: absolute !important;
+    inset-inline-start: -9999px !important;
+    top: auto !important;
+    width: 1px !important;
+    max-width: 1px !important;
+    min-width: 1px !important;
+    height: 1px !important;
+    max-height: 1px !important;
+    min-height: 1px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+}
+
+.nxupd-page .nxcs-select {
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+.nxupd-page .nxupd-employee-summary {
+    display: none !important;
+}
+
+.nxupd-page .nxupd-selector-card {
+    grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.nxupd-page .nxupd-field textarea {
+    width: 100% !important;
+    min-height: 110px !important;
+    border-radius: 15px !important;
+    border: 1px solid rgba(91,132,176,.35) !important;
+    background: #05111f !important;
+    color: #eef7ff !important;
+    outline: none !important;
+    font-family: inherit !important;
+    font-weight: 900 !important;
+    padding: 12px !important;
+    resize: vertical !important;
+}
+
+.nxupd-page .nxupd-field textarea:focus {
+    border-color: rgba(34,211,238,.65) !important;
+    box-shadow: 0 0 0 4px rgba(34,211,238,.12) !important;
+}
+/* NEXORA_FIX14A_EMPLOYEE_UPDATES_DUPLICATES_END */
+/* NEXORA_FIX14B_EMPLOYEE_UPDATES_SINGLE_PAGE_HISTORY_START */
+.nxupd-page-v14b select,
+.nxupd-page-v14b select.nxos-native,
+.nxupd-page-v14b select.nxcs-native,
+.nxupd-page-v14b .nxupd-field select,
+.nxupd-page-v14b .nxupd-employee-select select {
+    position: absolute !important;
+    inset-inline-start: -9999px !important;
+    top: auto !important;
+    width: 1px !important;
+    max-width: 1px !important;
+    min-width: 1px !important;
+    height: 1px !important;
+    max-height: 1px !important;
+    min-height: 1px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+}
+
+.nxupd-page-v14b .nxupd-selector-card-single {
+    display: block !important;
+}
+
+.nxupd-page-v14b .nxupd-employee-summary,
+.nxupd-page-v14b .nxupd-side-menu {
+    display: none !important;
+}
+
+.nxupd-page-v14b .nxupd-layout,
+.nxupd-page-v14b .nxupd-layout-single {
+    display: block !important;
+}
+
+.nxupd-page-v14b .nxupd-content {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-card {
+    display: grid !important;
+    gap: 18px !important;
+}
+
+.nxupd-page-v14b .nxupd-movement-meta {
+    display: grid !important;
+    grid-template-columns: minmax(220px, .7fr) minmax(0, 1.3fr) !important;
+    gap: 14px !important;
+    padding: 16px !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(245, 201, 107, .22) !important;
+    background: rgba(245, 201, 107, .06) !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-blocks {
+    display: grid !important;
+    gap: 14px !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block {
+    border: 1px solid rgba(34, 211, 238, .18) !important;
+    border-radius: 22px !important;
+    padding: 16px !important;
+    background:
+        radial-gradient(circle at top right, rgba(34, 211, 238, .08), transparent 34%),
+        rgba(3, 16, 28, .34) !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block > header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 14px !important;
+    border-bottom: 1px solid rgba(143, 166, 187, .14) !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block > header h3 {
+    margin: 4px 0 0 !important;
+    color: #f5f9ff !important;
+    font-size: 21px !important;
+    font-weight: 1000 !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block > header span {
+    color: #9fb8c9 !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block > header strong {
+    min-width: 72px !important;
+    height: 34px !important;
+    display: inline-grid !important;
+    place-items: center !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(34, 211, 238, .28) !important;
+    background: rgba(34, 211, 238, .10) !important;
+    color: #22d3ee !important;
+    font-weight: 1000 !important;
+}
+
+.nxupd-page-v14b .nxupd-fields {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+}
+
+.nxupd-page-v14b .nxupd-field {
+    min-width: 0 !important;
+}
+
+.nxupd-page-v14b .nxupd-field input,
+.nxupd-page-v14b .nxupd-field textarea,
+.nxupd-page-v14b .nxcs-trigger {
+    width: 100% !important;
+    min-height: 48px !important;
+}
+
+.nxupd-page-v14b .nxupd-note textarea,
+.nxupd-page-v14b .nxupd-field textarea {
+    min-height: 104px !important;
+}
+
+.nxupd-page-v14b .nxupd-batch header small,
+.nxupd-page-v14b .nxupd-history-body header small {
+    color: #f5c96b !important;
+    font-weight: 900 !important;
+}
+
+@media (max-width: 1200px) {
+    .nxupd-page-v14b .nxupd-fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 760px) {
+    .nxupd-page-v14b .nxupd-fields,
+    .nxupd-page-v14b .nxupd-movement-meta {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxupd-page-v14b .nxupd-stage-block > header {
+        align-items: flex-start !important;
+        flex-direction: column !important;
+    }
+}
+/* NEXORA_FIX14B_EMPLOYEE_UPDATES_SINGLE_PAGE_HISTORY_END */
+/* NEXORA_FIX14C_EMPLOYEE_UPDATES_DEDUPE_NOTE_START */
+.nxupd-page-v14b .nxos__button,
+.nxupd-page-v14b .nxos__trigger,
+.nxupd-page-v14b .nxos__menu,
+.nxupd-page-v14b .nxos__panel,
+.nxupd-page-v14b .nxos-menu,
+.nxupd-page-v14b .nxos-panel,
+.nxupd-page-v14b .nxos-dropdown,
+.nxupd-page-v14b .nxos__dropdown {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    max-width: 0 !important;
+    min-width: 0 !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    min-height: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+}
+
+.nxupd-page-v14b select,
+.nxupd-page-v14b select.nxcs-native,
+.nxupd-page-v14b select.nxos-native,
+.nxupd-page-v14b .nxupd-field select,
+.nxupd-page-v14b .nxupd-employee-select select {
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    inset-inline-start: -99999px !important;
+    top: auto !important;
+    width: 1px !important;
+    max-width: 1px !important;
+    min-width: 1px !important;
+    height: 1px !important;
+    max-height: 1px !important;
+    min-height: 1px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+}
+
+.nxupd-page-v14b .nxupd-employee-select > .nxcs-select,
+.nxupd-page-v14b .nxupd-field > .nxcs-select {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+.nxupd-page-v14b .nxupd-note input[type="text"] {
+    width: 100% !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    border-radius: 15px !important;
+    border: 1px solid rgba(91, 132, 176, .35) !important;
+    background: #05111f !important;
+    color: #eef7ff !important;
+    outline: none !important;
+    font-family: inherit !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    padding: 0 14px !important;
+}
+
+.nxupd-page-v14b .nxupd-note input[type="text"]:focus {
+    border-color: rgba(34, 211, 238, .65) !important;
+    box-shadow: 0 0 0 4px rgba(34, 211, 238, .12) !important;
+}
+
+.nxupd-page-v14b .nxupd-note textarea {
+    display: none !important;
+}
+
+.nxupd-page-v14b .nxupd-movement-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: end !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-blocks {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+    align-items: start !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block {
+    align-self: start !important;
+}
+
+@media (max-width: 1100px) {
+    .nxupd-page-v14b .nxupd-stage-blocks,
+    .nxupd-page-v14b .nxupd-movement-meta {
+        grid-template-columns: 1fr !important;
+    }
+}
+/* NEXORA_FIX14C_EMPLOYEE_UPDATES_DEDUPE_NOTE_END */
+/* NEXORA_FIX14D_EMPLOYEE_UPDATES_PERFECT_LAYOUT_START */
+
+/* 1) Movement metadata: note and effective date on one visual level */
+.nxupd-page-v14b .nxupd-movement-meta {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 12px !important;
+    align-items: start !important;
+}
+
+.nxupd-page-v14b .nxupd-movement-meta > .nxupd-field,
+.nxupd-page-v14b .nxupd-movement-meta > .nxupd-note {
+    display: grid !important;
+    grid-template-rows: 18px 46px 18px !important;
+    gap: 7px !important;
+    align-items: start !important;
+    min-width: 0 !important;
+}
+
+.nxupd-page-v14b .nxupd-movement-meta > .nxupd-note::after {
+    content: "" !important;
+    display: block !important;
+    min-height: 18px !important;
+}
+
+.nxupd-page-v14b .nxupd-movement-meta input[name="effectiveDate"],
+.nxupd-page-v14b .nxupd-movement-meta input[name="note"],
+.nxupd-page-v14b .nxupd-movement-meta textarea[name="note"] {
+    width: 100% !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+    padding: 0 12px !important;
+    resize: none !important;
+    line-height: 46px !important;
+    box-sizing: border-box !important;
+}
+
+/* 2) Masonry-like cards: remove empty vertical gap between uneven blocks */
+.nxupd-page-v14b .nxupd-stage-blocks {
+    display: block !important;
+    column-count: 2 !important;
+    column-gap: 14px !important;
+    width: 100% !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block {
+    display: inline-block !important;
+    width: 100% !important;
+    margin: 0 0 14px !important;
+    vertical-align: top !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    box-sizing: border-box !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block header,
+.nxupd-page-v14b .nxupd-stage-block .nxupd-fields {
+    break-inside: avoid !important;
+}
+
+/* 3) Financial block: accounting-style layout */
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] {
+    border-color: rgba(215, 168, 79, .34) !important;
+    background:
+        radial-gradient(circle at top left, rgba(215, 168, 79, .09), transparent 34%),
+        linear-gradient(135deg, rgba(8, 31, 50, .96), rgba(3, 16, 28, .98)) !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] header {
+    border-bottom-color: rgba(215, 168, 79, .20) !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] header h3 {
+    color: #fff8e8 !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] header span {
+    color: #f4d18d !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] .nxupd-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] .nxupd-field {
+    border: 1px solid rgba(215, 168, 79, .16) !important;
+    border-radius: 16px !important;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .025), rgba(255, 255, 255, .006)),
+        rgba(3, 16, 28, .28) !important;
+    padding: 10px !important;
+    min-height: 112px !important;
+    align-content: start !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] .nxupd-field label {
+    color: #f4d18d !important;
+    font-size: 11px !important;
+    letter-spacing: .01em !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] .nxupd-field input {
+    height: 44px !important;
+    border-color: rgba(215, 168, 79, .22) !important;
+    background: rgba(2, 12, 22, .58) !important;
+    color: #ffffff !important;
+    font-family: Consolas, "Cascadia Mono", "Courier New", Tahoma, Arial, sans-serif !important;
+    font-size: 15px !important;
+    font-weight: 1000 !important;
+    direction: ltr !important;
+    text-align: right !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] .nxupd-field small {
+    min-height: 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    padding: 5px 8px !important;
+    border-radius: 12px !important;
+    background: rgba(215, 168, 79, .07) !important;
+    color: #cbd7e4 !important;
+    direction: rtl !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] .nxupd-field small b {
+    color: #f4d18d !important;
+    font-family: Consolas, "Cascadia Mono", "Courier New", Tahoma, Arial, sans-serif !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] [data-field-key="BasicSalary"],
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] [data-field-key="Allowances"],
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] [data-field-key="Deductions"] {
+    background:
+        radial-gradient(circle at top right, rgba(215, 168, 79, .08), transparent 40%),
+        rgba(3, 16, 28, .34) !important;
+}
+
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] [data-field-key="Currency"] input {
+    text-transform: uppercase !important;
+    letter-spacing: .04em !important;
+}
+
+@media (max-width: 1300px) {
+    .nxupd-page-v14b .nxupd-stage-blocks {
+        column-count: 1 !important;
+    }
+
+    .nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] .nxupd-fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 780px) {
+    .nxupd-page-v14b .nxupd-movement-meta {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] .nxupd-fields {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* NEXORA_FIX14D_EMPLOYEE_UPDATES_PERFECT_LAYOUT_END */

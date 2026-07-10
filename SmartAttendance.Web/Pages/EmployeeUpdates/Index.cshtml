@@ -1,22 +1,22 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.EmployeeUpdates.IndexModel
 @{
-    ViewData["Title"] = "تحديثات الموظف";
+    ViewData["Title"] = "\u062A\u062D\u062F\u064A\u062B\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641";
     var emp = Model.SelectedEmployee;
 }
 
 <link rel="stylesheet" href="~/css/nexora-employee-updates.css" asp-append-version="true" />
 
-<section class="nxupd-page" dir="rtl">
+<section class="nxupd-page nxupd-page-v14b" dir="rtl">
     <header class="nxupd-hero">
         <div>
-            <span>EMPLOYEE UPDATE CONTROL</span>
-            <h1>تحديثات الموظف</h1>
-            <p>كل تغيير على الموظف يتحول إلى حركة غير مقفلة أولاً، وبعد المراجعة يتم قفل الحركة وتطبيقها على ملف الموظف مع حفظ الهستري.</p>
+            <span>EMPLOYEE UPDATE HISTORY</span>
+            <h1>&#x062A;&#x062D;&#x062F;&#x064A;&#x062B;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h1>
+            <p>&#x0625;&#x0646;&#x0634;&#x0627;&#x0621; &#x062D;&#x0631;&#x0643;&#x0629; &#x0628;&#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0633;&#x0631;&#x064A;&#x0627;&#x0646;&#x060C; &#x0645;&#x0631;&#x0627;&#x062C;&#x0639;&#x0629; &#x0642;&#x0628;&#x0644; &#x0627;&#x0644;&#x0642;&#x0641;&#x0644;&#x060C; &#x062B;&#x0645; &#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x0623;&#x062B;&#x0631; &#x062F;&#x0627;&#x062E;&#x0644; &#x0627;&#x0644;&#x0647;&#x0633;&#x062A;&#x0631;&#x064A;.</p>
         </div>
         <div class="nxupd-hero-status">
             <strong>@Model.OpenBatches.Count</strong>
-            <small>حركة غير مقفلة</small>
+            <small>&#x062D;&#x0631;&#x0643;&#x0629; &#x063A;&#x064A;&#x0631; &#x0645;&#x0642;&#x0641;&#x0644;&#x0629;</small>
         </div>
     </header>
 
@@ -25,11 +25,11 @@
         <div class="nxupd-alert">@Model.StatusMessage</div>
     }
 
-    <section class="nxupd-selector-card">
+    <section class="nxupd-selector-card nxupd-selector-card-single">
         <form method="get" class="nxupd-employee-select">
             <input type="hidden" name="tab" value="@Model.Tab" />
-            <input type="hidden" name="section" value="@Model.ActiveSectionKey" />
-            <label>الموظف</label>
+            <input type="hidden" name="section" value="employee-master" />
+            <label>&#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</label>
             <select data-nexora-select="true" name="employeeId" onchange="this.form.submit()">
                 @foreach (var employee in Model.Employees)
                 {
@@ -44,128 +44,128 @@
                 }
             </select>
         </form>
-
-        <div class="nxupd-employee-summary">
-            <div class="nxupd-avatar">@Model.Initials</div>
-            <div>
-                <strong>@emp.FullName</strong>
-                <span>@Model.DisplayValue(emp.Position)</span>
-                <small>@emp.EmployeeNo · @Model.DisplayValue(emp.DepartmentName) · @Model.DisplayValue(emp.BranchName)</small>
-            </div>
-        </div>
     </section>
 
     <nav class="nxupd-top-tabs">
-        <a class="@(Model.Tab == "stage" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="stage" asp-route-section="@Model.ActiveSectionKey">إدخال حركة جديدة</a>
-        <a class="@(Model.Tab == "confirm" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="confirm" asp-route-section="@Model.ActiveSectionKey">التأكيد قبل القفل</a>
-        <a class="@(Model.Tab == "history" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="history" asp-route-section="@Model.ActiveSectionKey">الهستري</a>
+        <a class="@(Model.Tab == "stage" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="stage" asp-route-section="employee-master">&#x0625;&#x062F;&#x062E;&#x0627;&#x0644; &#x062D;&#x0631;&#x0643;&#x0629; &#x062C;&#x062F;&#x064A;&#x062F;&#x0629;</a>
+        <a class="@(Model.Tab == "confirm" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="confirm" asp-route-section="employee-master">&#x0627;&#x0644;&#x062A;&#x0623;&#x0643;&#x064A;&#x062F; &#x0642;&#x0628;&#x0644; &#x0627;&#x0644;&#x0642;&#x0641;&#x0644;</a>
+        <a class="@(Model.Tab == "history" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="history" asp-route-section="employee-master">&#x0627;&#x0644;&#x0647;&#x0633;&#x062A;&#x0631;&#x064A;</a>
     </nav>
 
-    <main class="nxupd-layout">
-        <aside class="nxupd-side-menu">
-            <div class="nxupd-side-title">
-                <span>تحديثات الموظف</span>
-                <strong>الأقسام</strong>
-            </div>
-
-            @foreach (var updateSection in Model.Sections)
-            {
-                <a class="@(updateSection.Key == Model.ActiveSectionKey ? "active" : "")"
-                   asp-page="./Index"
-                   asp-route-employeeId="@Model.SelectedEmployeeId"
-                   asp-route-tab="stage"
-                   asp-route-section="@updateSection.Key">
-                    <span>@updateSection.Name</span>
-                    <small>@updateSection.Description</small>
-                </a>
-            }
-        </aside>
-
+    <main class="nxupd-layout nxupd-layout-single">
         <section class="nxupd-content">
             @if (Model.Tab == "stage")
             {
-                <section class="nxupd-card">
+                <section class="nxupd-card nxupd-stage-card">
                     <header class="nxupd-card-head">
                         <div>
-                            <h2>@Model.ActiveSection.Name</h2>
-                            <p>@Model.ActiveSection.Description</p>
+                            <h2>&#x0645;&#x0639;&#x0644;&#x0648;&#x0645;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h2>
+                            <p>&#x0643;&#x0644; &#x0627;&#x0644;&#x062D;&#x0642;&#x0648;&#x0644; &#x0627;&#x0644;&#x0645;&#x0637;&#x0644;&#x0648;&#x0628;&#x0629; &#x0641;&#x064A; &#x0635;&#x0641;&#x062D;&#x0629; &#x0648;&#x0627;&#x062D;&#x062F;&#x0629;&#x060C; &#x0645;&#x0642;&#x0633;&#x0645;&#x0629; &#x0625;&#x0644;&#x0649; &#x0628;&#x0644;&#x0648;&#x0643;&#x0627;&#x062A;.</p>
                         </div>
-                        <span class="nxupd-pill">حركة غير مقفلة</span>
+                        <span class="nxupd-pill">&#x062D;&#x0631;&#x0643;&#x0629; &#x063A;&#x064A;&#x0631; &#x0645;&#x0642;&#x0641;&#x0644;&#x0629;</span>
                     </header>
 
                     <div class="nxupd-rule-box">
-                        <strong>طريقة العمل</strong>
-                        <span>أي تعديل هنا لا يغير ملف الموظف مباشرة. يمكنك تغيير أكثر من حقل بنفس الحركة، وبعد القفل يتم تطبيقها دفعة واحدة مع حفظ الهستري.</span>
+                        <strong>&#x0637;&#x0631;&#x064A;&#x0642;&#x0629; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</strong>
+                        <span>&#x0627;&#x0644;&#x062A;&#x0639;&#x062F;&#x064A;&#x0644; &#x064A;&#x0646;&#x0634;&#x0626; &#x062D;&#x0631;&#x0643;&#x0629; &#x0623;&#x0648;&#x0644;&#x0627;&#x064B;&#x060C; &#x0648;&#x064A;&#x064F;&#x0637;&#x0628;&#x0642; &#x0639;&#x0644;&#x0649; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641; &#x0628;&#x0639;&#x062F; &#x0627;&#x0644;&#x0642;&#x0641;&#x0644; &#x0648;&#x0627;&#x0644;&#x062A;&#x0623;&#x0643;&#x064A;&#x062F;.</span>
                     </div>
 
                     <form method="post" asp-page-handler="Stage" class="nxupd-form">
                         <input type="hidden" name="employeeId" value="@Model.SelectedEmployeeId" />
-                        <input type="hidden" name="sectionKey" value="@Model.ActiveSectionKey" />
+                        <input type="hidden" name="sectionKey" value="employee-master" />
 
-                        <div class="nxupd-fields">
-                            @foreach (var field in Model.CurrentFields)
+                        <section class="nxupd-movement-meta">
+                            <div class="nxupd-field">
+                                <label>&#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0633;&#x0631;&#x064A;&#x0627;&#x0646; &#x0627;&#x0644;&#x062D;&#x0631;&#x0643;&#x0629;</label>
+                                <input type="date" name="effectiveDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                                <small>&#x064A;&#x0645;&#x0643;&#x0646; &#x0627;&#x062E;&#x062A;&#x064A;&#x0627;&#x0631; &#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0633;&#x0627;&#x0628;&#x0642; &#x0623;&#x0648; &#x0645;&#x0633;&#x062A;&#x0642;&#x0628;&#x0644;&#x064A; &#x0644;&#x062D;&#x0641;&#x0638; &#x0623;&#x062B;&#x0631; &#x0627;&#x0644;&#x062D;&#x0631;&#x0643;&#x0629;.</small>
+                            </div>
+                            <div class="nxupd-note">
+                                <label>&#x0645;&#x0644;&#x0627;&#x062D;&#x0638;&#x0629; &#x0627;&#x0644;&#x062D;&#x0631;&#x0643;&#x0629;</label>
+                                @* NEXORA_FIX14C_NOTE_INPUT_START *@
+                                <input type="text" name="note" placeholder="Movement reason or HR note..." />
+                                @* NEXORA_FIX14C_NOTE_INPUT_END *@
+                            </div>
+                        </section>
+
+                        <div class="nxupd-stage-blocks">
+                            @foreach (var updateSection in Model.StageBlocks)
                             {
-                                <div class="nxupd-field">
-                                    <label>@field.Label</label>
+                                <section class="nxupd-stage-block" data-section-key="@updateSection.Key">
+                                    <header>
+                                        <div>
+                                            <span>@updateSection.Description</span>
+                                            <h3>@updateSection.Name</h3>
+                                        </div>
+                                        <strong>@updateSection.Fields.Count &#x062D;&#x0642;&#x0644;</strong>
+                                    </header>
 
-                                    @if (field.InputType == "select-department")
-                                    {
-                                        <select data-nexora-select="true" name="@field.Key">
-                                            <option value="">اختر القسم</option>
-                                            @foreach (var dept in Model.Departments)
-                                            {
-                                                if (Model.FieldValue(field.Key) == dept.Id.ToString())
+                                    <div class="nxupd-fields">
+                                        @foreach (var field in updateSection.Fields)
+                                        {
+                                            <div class="nxupd-field" data-field-key="@field.Key" data-field-type="@field.InputType">
+                                                <label>@field.Label</label>
+
+                                                @if (field.InputType == "select-department")
                                                 {
-                                                    <option value="@dept.Id" selected>@dept.Name</option>
+                                                    <select data-nexora-select="true" name="@field.Key">
+                                                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</option>
+                                                        @foreach (var dept in Model.Departments)
+                                                        {
+                                                            if (Model.FieldValue(field.Key) == dept.Id.ToString())
+                                                            {
+                                                                <option value="@dept.Id" selected>@dept.Name</option>
+                                                            }
+                                                            else
+                                                            {
+                                                                <option value="@dept.Id">@dept.Name</option>
+                                                            }
+                                                        }
+                                                    </select>
+                                                }
+                                                else if (field.InputType == "select-active")
+                                                {
+                                                    <select data-nexora-select="true" name="@field.Key">
+                                                        @if (Model.FieldValue(field.Key).Equals("true", System.StringComparison.OrdinalIgnoreCase))
+                                                        {
+                                                            <option value="true" selected>&#x0641;&#x0639;&#x0627;&#x0644;</option>
+                                                            <option value="false">&#x063A;&#x064A;&#x0631; &#x0641;&#x0639;&#x0627;&#x0644;</option>
+                                                        }
+                                                        else
+                                                        {
+                                                            <option value="true">&#x0641;&#x0639;&#x0627;&#x0644;</option>
+                                                            <option value="false" selected>&#x063A;&#x064A;&#x0631; &#x0641;&#x0639;&#x0627;&#x0644;</option>
+                                                        }
+                                                    </select>
+                                                }
+                                                else if (field.InputType == "number")
+                                                {
+                                                    <input type="number" step="0.01" name="@field.Key" value="@Model.FieldValue(field.Key)" placeholder="@field.Placeholder" />
+                                                }
+                                                else if (field.InputType == "date")
+                                                {
+                                                    <input type="date" name="@field.Key" value="@Model.FieldValue(field.Key)" />
+                                                }
+                                                else if (field.InputType == "textarea")
+                                                {
+                                                    <textarea name="@field.Key" placeholder="@field.Placeholder">@Model.FieldValue(field.Key)</textarea>
                                                 }
                                                 else
                                                 {
-                                                    <option value="@dept.Id">@dept.Name</option>
+                                                    <input type="text" name="@field.Key" value="@Model.FieldValue(field.Key)" placeholder="@field.Placeholder" />
                                                 }
-                                            }
-                                        </select>
-                                    }
-                                    else if (field.InputType == "select-active")
-                                    {
-                                        <select data-nexora-select="true" name="@field.Key">
-                                            @if (Model.FieldValue(field.Key).Equals("true", System.StringComparison.OrdinalIgnoreCase))
-                                            {
-                                                <option value="true" selected>فعال</option>
-                                                <option value="false">غير فعال</option>
-                                            }
-                                            else
-                                            {
-                                                <option value="true">فعال</option>
-                                                <option value="false" selected>غير فعال</option>
-                                            }
-                                        </select>
-                                    }
-                                    else if (field.InputType == "number")
-                                    {
-                                        <input type="number" step="0.01" name="@field.Key" value="@Model.FieldValue(field.Key)" placeholder="@field.Placeholder" />
-                                    }
-                                    else if (field.InputType == "date")
-                                    {
-                                        <input type="date" name="@field.Key" value="@Model.FieldValue(field.Key)" />
-                                    }
-                                    else
-                                    {
-                                        <input type="text" name="@field.Key" value="@Model.FieldValue(field.Key)" placeholder="@field.Placeholder" />
-                                    }
 
-                                    <small>القيمة الحالية: <b>@Model.FieldDisplayValue(field.Key, Model.FieldValue(field.Key))</b></small>
-                                </div>
+                                                <small>&#x0627;&#x0644;&#x0642;&#x064A;&#x0645;&#x0629; &#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x064A;&#x0629;: <b>@Model.FieldDisplayValue(field.Key, Model.FieldValue(field.Key))</b></small>
+                                            </div>
+                                        }
+                                    </div>
+                                </section>
                             }
                         </div>
 
-                        <div class="nxupd-note">
-                            <label>ملاحظة الحركة</label>
-                            <textarea name="note" placeholder="مثال: نقل الموظف من فرع إلى فرع، تعديل راتب، تحديث معلومات اتصال..."></textarea>
-                        </div>
-
                         <footer class="nxupd-form-footer">
-                            <button type="submit">إنشاء حركة غير مقفلة</button>
-                            <a asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="confirm" asp-route-section="@Model.ActiveSectionKey">الذهاب إلى صفحة التأكيد</a>
+                            <button type="submit">&#x0625;&#x0646;&#x0634;&#x0627;&#x0621; &#x062D;&#x0631;&#x0643;&#x0629; &#x063A;&#x064A;&#x0631; &#x0645;&#x0642;&#x0641;&#x0644;&#x0629;</button>
+                            <a asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="confirm" asp-route-section="employee-master">&#x0627;&#x0644;&#x0630;&#x0647;&#x0627;&#x0628; &#x0625;&#x0644;&#x0649; &#x0635;&#x0641;&#x062D;&#x0629; &#x0627;&#x0644;&#x062A;&#x0623;&#x0643;&#x064A;&#x062F;</a>
                         </footer>
                     </form>
                 </section>
@@ -175,15 +175,15 @@
                 <section class="nxupd-card">
                     <header class="nxupd-card-head">
                         <div>
-                            <h2>الحركات غير المقفلة</h2>
-                            <p>راجع التغييرات جيداً. عند القفل سيتم تطبيقها على ملف الموظف وحفظها في الهستري.</p>
+                            <h2>&#x0627;&#x0644;&#x062D;&#x0631;&#x0643;&#x0627;&#x062A; &#x063A;&#x064A;&#x0631; &#x0627;&#x0644;&#x0645;&#x0642;&#x0641;&#x0644;&#x0629;</h2>
+                            <p>&#x0631;&#x0627;&#x062C;&#x0639; &#x0627;&#x0644;&#x062A;&#x063A;&#x064A;&#x064A;&#x0631;&#x0627;&#x062A; &#x0648;&#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0627;&#x0644;&#x0633;&#x0631;&#x064A;&#x0627;&#x0646; &#x0642;&#x0628;&#x0644; &#x0627;&#x0644;&#x0642;&#x0641;&#x0644;.</p>
                         </div>
-                        <span class="nxupd-pill gold">@Model.OpenBatches.Count بانتظار القفل</span>
+                        <span class="nxupd-pill gold">@Model.OpenBatches.Count &#x0628;&#x0627;&#x0646;&#x062A;&#x0638;&#x0627;&#x0631; &#x0627;&#x0644;&#x0642;&#x0641;&#x0644;</span>
                     </header>
 
                     @if (Model.OpenBatches.Count == 0)
                     {
-                        <div class="nxupd-empty">لا توجد حركات غير مقفلة لهذا الموظف.</div>
+                        <div class="nxupd-empty">&#x0644;&#x0627; &#x062A;&#x0648;&#x062C;&#x062F; &#x062D;&#x0631;&#x0643;&#x0627;&#x062A; &#x063A;&#x064A;&#x0631; &#x0645;&#x0642;&#x0641;&#x0644;&#x0629; &#x0644;&#x0647;&#x0630;&#x0627; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;.</div>
                     }
 
                     <div class="nxupd-batch-list">
@@ -193,10 +193,10 @@
                                 <header>
                                     <div>
                                         <span>@batch.SectionName</span>
-                                        <h3>حركة رقم @batch.Id</h3>
-                                        <small>أنشئت بواسطة @batch.RequestedBy بتاريخ @Model.DisplayDateTime(batch.RequestedAt)</small>
+                                        <h3>&#x062D;&#x0631;&#x0643;&#x0629; &#x0631;&#x0642;&#x0645; @batch.Id</h3>
+                                        <small>&#x0623;&#x0646;&#x0634;&#x0626;&#x062A; @Model.DisplayDateTime(batch.RequestedAt) &#x00B7; &#x0633;&#x0631;&#x064A;&#x0627;&#x0646; @Model.DisplayDate(batch.EffectiveDate) &#x00B7; @batch.RequestedBy</small>
                                     </div>
-                                    <strong>غير مقفلة</strong>
+                                    <strong>&#x063A;&#x064A;&#x0631; &#x0645;&#x0642;&#x0641;&#x0644;&#x0629;</strong>
                                 </header>
 
                                 @if (!string.IsNullOrWhiteSpace(batch.Note))
@@ -208,9 +208,9 @@
                                     <table>
                                         <thead>
                                             <tr>
-                                                <th>الحقل</th>
-                                                <th>القيمة السابقة</th>
-                                                <th>القيمة الجديدة</th>
+                                                <th>&#x0627;&#x0644;&#x062D;&#x0642;&#x0644;</th>
+                                                <th>&#x0627;&#x0644;&#x0642;&#x064A;&#x0645;&#x0629; &#x0627;&#x0644;&#x0633;&#x0627;&#x0628;&#x0642;&#x0629;</th>
+                                                <th>&#x0627;&#x0644;&#x0642;&#x064A;&#x0645;&#x0629; &#x0627;&#x0644;&#x062C;&#x062F;&#x064A;&#x062F;&#x0629;</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -227,27 +227,13 @@
                                 </div>
 
                                 <footer>
-                                    <form method="post"
-                                          asp-page-handler="Lock"
-                                          asp-route-batchId="@batch.Id"
-                                          data-nxupd-confirm
-                                          data-nxupd-confirm-tone="lock"
-                                          data-nxupd-confirm-title="قفل وتطبيق الحركة"
-                                          data-nxupd-confirm-message="بعد القفل سيتم تطبيق التغييرات على ملف الموظف وحفظها في الهستري. لا يمكن اعتبار الحركة غير مقفلة بعد هذه الخطوة."
-                                          data-nxupd-confirm-button="قفل وتطبيق">
+                                    <form method="post" asp-page-handler="Lock" asp-route-batchId="@batch.Id" data-nxupd-confirm data-nxupd-confirm-tone="lock" data-nxupd-confirm-title="&#x0642;&#x0641;&#x0644; &#x0648;&#x062A;&#x0637;&#x0628;&#x064A;&#x0642; &#x0627;&#x0644;&#x062D;&#x0631;&#x0643;&#x0629;" data-nxupd-confirm-message="&#x0628;&#x0639;&#x062F; &#x0627;&#x0644;&#x0642;&#x0641;&#x0644; &#x0633;&#x064A;&#x062A;&#x0645; &#x062A;&#x0637;&#x0628;&#x064A;&#x0642; &#x0627;&#x0644;&#x062A;&#x063A;&#x064A;&#x064A;&#x0631;&#x0627;&#x062A; &#x0639;&#x0644;&#x0649; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;." data-nxupd-confirm-button="&#x0642;&#x0641;&#x0644; &#x0648;&#x062A;&#x0637;&#x0628;&#x064A;&#x0642;">
                                         <input type="hidden" name="employeeId" value="@Model.SelectedEmployeeId" />
-                                        <button type="submit">قفل وتطبيق الحركة</button>
+                                        <button type="submit">&#x0642;&#x0641;&#x0644; &#x0648;&#x062A;&#x0637;&#x0628;&#x064A;&#x0642; &#x0627;&#x0644;&#x062D;&#x0631;&#x0643;&#x0629;</button>
                                     </form>
-                                    <form method="post"
-                                          asp-page-handler="DeleteOpen"
-                                          asp-route-batchId="@batch.Id"
-                                          data-nxupd-confirm
-                                          data-nxupd-confirm-tone="danger"
-                                          data-nxupd-confirm-title="حذف الحركة غير المقفلة"
-                                          data-nxupd-confirm-message="سيتم حذف هذه الحركة وكل تفاصيل التغيير المرتبطة بها. ملف الموظف لن يتأثر لأن الحركة غير مقفلة."
-                                          data-nxupd-confirm-button="حذف الحركة">
+                                    <form method="post" asp-page-handler="DeleteOpen" asp-route-batchId="@batch.Id" data-nxupd-confirm data-nxupd-confirm-tone="danger" data-nxupd-confirm-title="&#x062D;&#x0630;&#x0641; &#x0627;&#x0644;&#x062D;&#x0631;&#x0643;&#x0629;" data-nxupd-confirm-message="&#x0633;&#x064A;&#x062A;&#x0645; &#x062D;&#x0630;&#x0641; &#x0647;&#x0630;&#x0647; &#x0627;&#x0644;&#x062D;&#x0631;&#x0643;&#x0629; &#x0648;&#x062A;&#x0641;&#x0627;&#x0635;&#x064A;&#x0644;&#x0647;&#x0627;." data-nxupd-confirm-button="&#x062D;&#x0630;&#x0641;">
                                         <input type="hidden" name="employeeId" value="@Model.SelectedEmployeeId" />
-                                        <button class="danger" type="submit">حذف الحركة</button>
+                                        <button class="danger" type="submit">&#x062D;&#x0630;&#x0641; &#x0627;&#x0644;&#x062D;&#x0631;&#x0643;&#x0629;</button>
                                     </form>
                                 </footer>
                             </article>
@@ -260,15 +246,15 @@
                 <section class="nxupd-card">
                     <header class="nxupd-card-head">
                         <div>
-                            <h2>هستري تحديثات الموظف</h2>
-                            <p>كل حركة تم قفلها تبقى محفوظة مع تفاصيل الحقول التي تغيرت ووقت القفل.</p>
+                            <h2>&#x0647;&#x0633;&#x062A;&#x0631;&#x064A; &#x062A;&#x062D;&#x062F;&#x064A;&#x062B;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h2>
+                            <p>&#x0643;&#x0644; &#x062D;&#x0631;&#x0643;&#x0629; &#x0645;&#x0642;&#x0641;&#x0644;&#x0629; &#x062A;&#x0628;&#x0642;&#x0649; &#x0645;&#x062D;&#x0641;&#x0648;&#x0638;&#x0629; &#x0645;&#x0639; &#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0627;&#x0644;&#x0625;&#x0646;&#x0634;&#x0627;&#x0621; &#x0648;&#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0627;&#x0644;&#x0633;&#x0631;&#x064A;&#x0627;&#x0646;.</p>
                         </div>
-                        <span class="nxupd-pill">@Model.HistoryBatches.Count حركة مقفلة</span>
+                        <span class="nxupd-pill">@Model.HistoryBatches.Count &#x062D;&#x0631;&#x0643;&#x0629; &#x0645;&#x0642;&#x0641;&#x0644;&#x0629;</span>
                     </header>
 
                     @if (Model.HistoryBatches.Count == 0)
                     {
-                        <div class="nxupd-empty">لا يوجد هستري تحديثات لهذا الموظف.</div>
+                        <div class="nxupd-empty">&#x0644;&#x0627; &#x064A;&#x0648;&#x062C;&#x062F; &#x0647;&#x0633;&#x062A;&#x0631;&#x064A; &#x062A;&#x062D;&#x062F;&#x064A;&#x062B;&#x0627;&#x062A; &#x0644;&#x0647;&#x0630;&#x0627; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;.</div>
                     }
 
                     <div class="nxupd-history">
@@ -280,9 +266,9 @@
                                     <header>
                                         <div>
                                             <strong>@batch.SectionName</strong>
-                                            <span>حركة رقم @batch.Id</span>
+                                            <span>&#x062D;&#x0631;&#x0643;&#x0629; &#x0631;&#x0642;&#x0645; @batch.Id</span>
                                         </div>
-                                        <small>قفل بواسطة @batch.LockedBy · @Model.DisplayDateTime(batch.LockedAt)</small>
+                                        <small>&#x0642;&#x0641;&#x0644; @Model.DisplayDateTime(batch.LockedAt) &#x00B7; &#x0633;&#x0631;&#x064A;&#x0627;&#x0646; @Model.DisplayDate(batch.EffectiveDate)</small>
                                     </header>
 
                                     <ul>
@@ -291,7 +277,7 @@
                                             <li>
                                                 <b>@change.FieldLabel</b>
                                                 <span>@Model.FieldDisplayValue(change.FieldKey, change.OldValue)</span>
-                                                <i>←</i>
+                                                <i>&#x2190;</i>
                                                 <strong>@Model.FieldDisplayValue(change.FieldKey, change.NewValue)</strong>
                                             </li>
                                         }
@@ -306,31 +292,28 @@
     </main>
 </section>
 
-
 <div class="nxupd-modal-backdrop" data-nxupd-modal hidden>
     <div class="nxupd-modal" role="dialog" aria-modal="true" aria-labelledby="nxupdModalTitle">
-        <button type="button" class="nxupd-modal-close" data-nxupd-modal-cancel aria-label="إغلاق">×</button>
+        <button type="button" class="nxupd-modal-close" data-nxupd-modal-cancel aria-label="Close">Ã—</button>
 
-        <div class="nxupd-modal-icon" data-nxupd-modal-icon>✓</div>
+        <div class="nxupd-modal-icon" data-nxupd-modal-icon>âœ“</div>
 
         <div class="nxupd-modal-copy">
-            <span>تأكيد الإجراء</span>
-            <h2 id="nxupdModalTitle" data-nxupd-modal-title>تأكيد</h2>
-            <p data-nxupd-modal-message>هل أنت متأكد من تنفيذ هذا الإجراء؟</p>
+            <span>&#x062A;&#x0623;&#x0643;&#x064A;&#x062F; &#x0627;&#x0644;&#x0625;&#x062C;&#x0631;&#x0627;&#x0621;</span>
+            <h2 id="nxupdModalTitle" data-nxupd-modal-title>&#x062A;&#x0623;&#x0643;&#x064A;&#x062F;</h2>
+            <p data-nxupd-modal-message>&#x0647;&#x0644; &#x0623;&#x0646;&#x062A; &#x0645;&#x062A;&#x0623;&#x0643;&#x062F; &#x0645;&#x0646; &#x062A;&#x0646;&#x0641;&#x064A;&#x0630; &#x0647;&#x0630;&#x0627; &#x0627;&#x0644;&#x0625;&#x062C;&#x0631;&#x0627;&#x0621;&#x061F;</p>
         </div>
 
         <div class="nxupd-modal-warning">
-            <strong>ملاحظة مهمة</strong>
-            <small>راجع التفاصيل قبل التأكيد. النظام سيحفظ الأثر داخل سجل الحركات.</small>
+            <strong>&#x0645;&#x0644;&#x0627;&#x062D;&#x0638;&#x0629; &#x0645;&#x0647;&#x0645;&#x0629;</strong>
+            <small>&#x0631;&#x0627;&#x062C;&#x0639; &#x0627;&#x0644;&#x062A;&#x0641;&#x0627;&#x0635;&#x064A;&#x0644; &#x0642;&#x0628;&#x0644; &#x0627;&#x0644;&#x062A;&#x0623;&#x0643;&#x064A;&#x062F;.</small>
         </div>
 
         <footer class="nxupd-modal-actions">
-            <button type="button" class="ghost" data-nxupd-modal-cancel>إلغاء</button>
-            <button type="button" class="confirm" data-nxupd-modal-confirm>تأكيد</button>
+            <button type="button" class="ghost" data-nxupd-modal-cancel>&#x0625;&#x0644;&#x063A;&#x0627;&#x0621;</button>
+            <button type="button" class="confirm" data-nxupd-modal-confirm>&#x062A;&#x0623;&#x0643;&#x064A;&#x062F;</button>
         </footer>
     </div>
 </div>
 
 <script src="~/js/nexora-employee-updates.js" asp-append-version="true"></script>
-
-
