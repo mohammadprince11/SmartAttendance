@@ -20,6 +20,9 @@ public class IndexModel : PageModel
     public UpdateEmployee SelectedEmployee { get; private set; } = UpdateEmployee.Empty;
     public List<UpdateEmployee> Employees { get; private set; } = new();
     public List<DepartmentOption> Departments { get; private set; } = new();
+    public List<string> PositionOptions { get; private set; } = new(); // NEXORA_FIX14G_LOOKUP_PROPERTIES
+    public List<string> NationalityOptions { get; private set; } = new();
+    public List<EmployeeLookupOption> ManagerOptions { get; private set; } = new();
     public List<UpdateSection> Sections { get; private set; } = BuildSections();
     public UpdateSection ActiveSection => Sections.FirstOrDefault(x => x.Key == ActiveSectionKey) ?? Sections[0];
     public List<UpdateField> CurrentFields => ActiveSection.Fields;
@@ -239,6 +242,9 @@ Tab = NormalizeTab(tab);
         }
 
         SelectedEmployee = await LoadEmployeeAsync(SelectedEmployeeId) ?? UpdateEmployee.Empty;
+        PositionOptions = await LoadPositionOptionsAsync(SelectedEmployee.Position); // NEXORA_FIX14G_LOAD_LOOKUPS
+        NationalityOptions = await LoadNationalityOptionsAsync();
+        ManagerOptions = await LoadActiveManagersAsync(SelectedEmployeeId);
         CurrentValues = await BuildCurrentValuesAsync(SelectedEmployeeId);
         OpenBatches = await LoadBatchesAsync(SelectedEmployeeId, "Open");
         HistoryBatches = await LoadBatchesAsync(SelectedEmployeeId, "Locked");
@@ -322,6 +328,145 @@ ORDER BY b.Name, d.Name;
             });
     }
 
+    // NEXORA_FIX14G_LOOKUP_METHODS_START
+    private async Task<List<string>> LoadPositionOptionsAsync(string? currentPosition)
+    {
+        return await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+CREATE TABLE #PositionOptions
+(
+    [Name] nvarchar(400) NOT NULL
+);
+
+IF OBJECT_ID(N'dbo.HrJobPositions', N'U') IS NOT NULL
+BEGIN
+    INSERT INTO #PositionOptions ([Name])
+    SELECT DISTINCT LTRIM(RTRIM([ArabicName]))
+    FROM [dbo].[HrJobPositions]
+    WHERE LTRIM(RTRIM(ISNULL([ArabicName], N''))) <> N''
+      AND ISNULL([IsActive], 1) = 1;
+END;
+
+IF OBJECT_ID(N'dbo.JobPositions', N'U') IS NOT NULL
+BEGIN
+    INSERT INTO #PositionOptions ([Name])
+    SELECT DISTINCT LTRIM(RTRIM(j.[Name]))
+    FROM [dbo].[JobPositions] j
+    WHERE LTRIM(RTRIM(ISNULL(j.[Name], N''))) <> N''
+      AND ISNULL(j.[IsActive], 1) = 1
+      AND NOT EXISTS
+      (
+          SELECT 1
+          FROM #PositionOptions existing
+          WHERE existing.[Name] = LTRIM(RTRIM(j.[Name]))
+      );
+END;
+
+IF OBJECT_ID(N'dbo.Employees', N'U') IS NOT NULL
+BEGIN
+    INSERT INTO #PositionOptions ([Name])
+    SELECT DISTINCT LTRIM(RTRIM(e.[Position]))
+    FROM [dbo].[Employees] e
+    WHERE LTRIM(RTRIM(ISNULL(e.[Position], N''))) <> N''
+      AND NOT EXISTS
+      (
+          SELECT 1
+          FROM #PositionOptions existing
+          WHERE existing.[Name] = LTRIM(RTRIM(e.[Position]))
+      );
+END;
+
+IF LTRIM(RTRIM(ISNULL(@CurrentPosition, N''))) <> N''
+   AND NOT EXISTS
+   (
+       SELECT 1
+       FROM #PositionOptions existing
+       WHERE existing.[Name] = LTRIM(RTRIM(@CurrentPosition))
+   )
+BEGIN
+    INSERT INTO #PositionOptions ([Name])
+    VALUES (LTRIM(RTRIM(@CurrentPosition)));
+END;
+
+SELECT [Name]
+FROM #PositionOptions
+ORDER BY [Name];
+
+DROP TABLE #PositionOptions;
+""",
+            command => HrmsDatabase.AddParameter(command, "@CurrentPosition", currentPosition ?? string.Empty),
+            reader => HrmsDatabase.GetString(reader, "Name"));
+    }
+
+    private async Task<List<string>> LoadNationalityOptionsAsync()
+    {
+        return await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+CREATE TABLE #NationalityOptions
+(
+    [Name] nvarchar(400) NOT NULL
+);
+
+IF OBJECT_ID(N'dbo.Nationalities', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Nationalities', N'Name') IS NOT NULL
+BEGIN
+    INSERT INTO #NationalityOptions ([Name])
+    EXEC(N'SELECT DISTINCT LTRIM(RTRIM([Name])) AS [Name] FROM [dbo].[Nationalities] WHERE LTRIM(RTRIM(ISNULL([Name], N''''))) <> N''''');
+END;
+
+IF OBJECT_ID(N'dbo.HrNationalities', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.HrNationalities', N'Name') IS NOT NULL
+BEGIN
+    INSERT INTO #NationalityOptions ([Name])
+    EXEC(N'SELECT DISTINCT LTRIM(RTRIM([Name])) AS [Name] FROM [dbo].[HrNationalities] WHERE LTRIM(RTRIM(ISNULL([Name], N''''))) <> N''''');
+END;
+
+IF OBJECT_ID(N'dbo.Employees', N'U') IS NOT NULL
+BEGIN
+    INSERT INTO #NationalityOptions ([Name])
+    SELECT DISTINCT LTRIM(RTRIM(e.[Nationality]))
+    FROM [dbo].[Employees] e
+    WHERE LTRIM(RTRIM(ISNULL(e.[Nationality], N''))) <> N''
+      AND NOT EXISTS
+      (
+          SELECT 1
+          FROM #NationalityOptions existing
+          WHERE existing.[Name] = LTRIM(RTRIM(e.[Nationality]))
+      );
+END;
+
+SELECT [Name]
+FROM #NationalityOptions
+GROUP BY [Name]
+ORDER BY [Name];
+
+DROP TABLE #NationalityOptions;
+""",
+            null,
+            reader => HrmsDatabase.GetString(reader, "Name"));
+    }
+
+    private async Task<List<EmployeeLookupOption>> LoadActiveManagersAsync(int currentEmployeeId)
+    {
+        return await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT TOP 500
+    e.Id,
+    CONCAT(ISNULL(e.FullName, ''), N' - ', ISNULL(e.EmployeeNo, '')) AS Name
+FROM Employees e
+WHERE ISNULL(e.IsActive, 0) = 1
+  AND e.Id <> @EmployeeId
+ORDER BY e.FullName, e.EmployeeNo;
+""",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", currentEmployeeId),
+            reader => new EmployeeLookupOption
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                Name = HrmsDatabase.GetString(reader, "Name").Trim(' ', '-')
+            });
+    }
+    // NEXORA_FIX14G_LOOKUP_METHODS_END
     private async Task<Dictionary<string, string>> BuildCurrentValuesAsync(int employeeId)
     {
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -336,10 +481,12 @@ SELECT TOP 1
     ISNULL(Phone, '') AS Phone,
     ISNULL(Email, '') AS Email,
     ISNULL(Position, '') AS Position,
+    ISNULL(Nationality, '') AS Nationality,
+    ISNULL(DirectManagerId, 0) AS DirectManagerId,
     HireDate,
     BirthDate,
     ISNULL(IsActive, 0) AS IsActive,
-    ISNULL(DepartmentId, 0) AS DepartmentId
+    ISNULL(DepartmentId, 0) AS DepartmentId -- NEXORA_FIX14G_EMPLOYEE_VALUES_QUERY
 FROM Employees
 WHERE Id = @EmployeeId;
 """,
@@ -352,6 +499,9 @@ WHERE Id = @EmployeeId;
                 values["Phone"] = HrmsDatabase.GetString(reader, "Phone");
                 values["Email"] = HrmsDatabase.GetString(reader, "Email");
                 values["Position"] = HrmsDatabase.GetString(reader, "Position");
+                values["Nationality"] = HrmsDatabase.GetString(reader, "Nationality");
+                var managerIdValue = HrmsDatabase.GetInt(reader, "DirectManagerId");
+                values["DirectManagerId"] = managerIdValue > 0 ? managerIdValue.ToString() : string.Empty;
                 values["HireDate"] = ToInputDate(HrmsDatabase.GetDateTime(reader, "HireDate"));
                 values["BirthDate"] = ToInputDate(HrmsDatabase.GetDateTime(reader, "BirthDate"));
                 values["IsActive"] = HrmsDatabase.GetBool(reader, "IsActive") ? "true" : "false";
@@ -397,7 +547,11 @@ WHERE EmployeeId = @EmployeeId;
             command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
             reader =>
             {
-                values[HrmsDatabase.GetString(reader, "FieldKey")] = HrmsDatabase.GetString(reader, "FieldValue");
+                var customKey = HrmsDatabase.GetString(reader, "FieldKey");
+                if (!values.ContainsKey(customKey))
+                {
+                    values[customKey] = HrmsDatabase.GetString(reader, "FieldValue");
+                } // NEXORA_FIX14G_SAFE_CUSTOM_VALUES
                 return true;
             });
 
@@ -550,6 +704,19 @@ ORDER BY Id;
             case "Position":
                 await UpdateEmployeeStringAsync(employeeId, "Position", value);
                 break;
+            case "Nationality": // NEXORA_FIX14G_APPLY_NATIONALITY
+                await UpdateEmployeeStringAsync(employeeId, "Nationality", value);
+                break;
+            case "DirectManagerId":
+                await HrmsDatabase.ExecuteAsync(
+                    _dbContext,
+                    "UPDATE Employees SET DirectManagerId = NULLIF(@Value, 0) WHERE Id = @EmployeeId;",
+                    command =>
+                    {
+                        HrmsDatabase.AddParameter(command, "@Value", int.TryParse(value, out var managerId) ? managerId : 0);
+                        HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                    });
+                break;
             case "DepartmentId":
                 await HrmsDatabase.ExecuteAsync(
                     _dbContext,
@@ -589,6 +756,7 @@ ORDER BY Id;
             "Phone" => "UPDATE Employees SET Phone = @Value WHERE Id = @EmployeeId;",
             "Email" => "UPDATE Employees SET Email = @Value WHERE Id = @EmployeeId;",
             "Position" => "UPDATE Employees SET Position = @Value WHERE Id = @EmployeeId;",
+            "Nationality" => "UPDATE Employees SET Nationality = @Value WHERE Id = @EmployeeId;",
             _ => throw new InvalidOperationException("Unsupported employee field.")
         };
 
@@ -721,6 +889,11 @@ END;
             return Departments.FirstOrDefault(x => x.Id.ToString() == value)?.Name ?? "-";
         }
 
+        if (key.Equals("DirectManagerId", StringComparison.OrdinalIgnoreCase)) // NEXORA_FIX14G_DISPLAY_MANAGER
+        {
+            return ManagerOptions.FirstOrDefault(x => x.Id.ToString() == value)?.Name ?? "-";
+        }
+
         if (string.IsNullOrWhiteSpace(value))
         {
             return "-";
@@ -796,9 +969,9 @@ END;
                     new("EmployeeNo", "الرقم الوظيفي", "employee", "text", "مثال: EMP-001"),
                     new("NationalId", "رقم الهوية / البطاقة", "employee", "text", "مثال: 123456"),
                     new("BirthDate", "تاريخ الميلاد", "employee", "date", ""),
-                    new("Position", "المنصب", "employee", "text", "مثال: HR Officer"),
+                    new("Position", "\u0627\u0644\u0645\u0646\u0635\u0628", "employee", "select-position", ""),
                     new("DepartmentId", "القسم / الفرع", "employee", "select-department", ""),
-                    new("ManagerName", "المدير المباشر", "custom", "text", "مثال: اسم المدير المباشر"),
+                    new("DirectManagerId", "\u0627\u0644\u0645\u062f\u064a\u0631 \u0627\u0644\u0645\u0628\u0627\u0634\u0631", "employee", "select-manager", ""),
                     new("HireDate", "تاريخ المباشرة", "employee", "date", ""),
                     new("Phone", "رقم الهاتف", "employee", "text", "مثال: 0770xxxxxxx"),
                     new("Email", "البريد الإلكتروني", "employee", "text", "name@company.com"),
@@ -835,7 +1008,7 @@ END;
                 new()
                 {
                     new("ContractType", "نوع العقد", "custom", "text", "دوام كامل / جزئي / مؤقت"),
-                    new("Nationality", "الجنسية", "custom", "text", "مثال: عراقي"),
+                    new("Nationality", "\u0627\u0644\u062c\u0646\u0633\u064a\u0629", "employee", "select-nationality", ""),
                     new("Accommodation", "السكن", "custom", "text", "داخلي / خارجي"),
                     new("EmergencyContact", "جهة اتصال للطوارئ", "custom", "text", "الاسم والرقم")
                 })
@@ -1064,7 +1237,7 @@ END
         }
 
         var job = new List<UpdateField>();
-        AddByKeys(job, "employee-info", "Position", "DepartmentId", "ManagerName", "HireDate");
+        AddByKeys(job, "employee-info", "Position", "DepartmentId", "DirectManagerId", "HireDate");
         AddByKeys(job, "extra", "ContractType");
         AddFromSection(job, "profile-job");
         if (job.Count > 0)
@@ -1156,6 +1329,14 @@ END
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
     }
+
+    // NEXORA_FIX14G_LOOKUP_RECORD_START
+    public class EmployeeLookupOption
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+    // NEXORA_FIX14G_LOOKUP_RECORD_END
 
     public class UpdateBatch
     {
