@@ -144,9 +144,6 @@ public class SetupService : ISetupService
         if (company == null)
             return null;
 
-        var payrollSettings = await _dbContext.CompanyPayrollSettings
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.CompanyId == companyId);
 
         var cutoffPolicies = await GetPayrollCutoffPoliciesAsync(companyId);
 
@@ -155,16 +152,6 @@ public class SetupService : ISetupService
             CompanyId = company.Id,
             CompanyCode = company.Code,
             Profile = MapCompanyProfile(company),
-            PayrollSettings = payrollSettings == null
-                ? new CompanyPayrollSettingsViewModel
-                {
-                    CompanyId = company.Id,
-                    PayrollFrequency = PayrollFrequency.Monthly,
-                    PeriodStartDay = 1,
-                    PeriodEndDay = 30,
-                    IsActive = true
-                }
-                : MapPayrollSettings(payrollSettings),
             CutoffPolicies = cutoffPolicies.ToList()
         };
     }
@@ -197,67 +184,27 @@ public class SetupService : ISetupService
         return Success("Company setup profile was updated successfully.", 1);
     }
 
-    public async Task<SetupActionResultViewModel> SavePayrollSettingsAsync(CompanyPayrollSettingsViewModel model)
-    {
-        var validation = ValidatePayrollSettings(model);
-        if (validation != null)
-            return Failure(validation);
 
-        var companyExists = await _dbContext.Companies
-            .AsNoTracking()
-            .AnyAsync(x => x.Id == model.CompanyId && !x.IsDeleted);
-
-        if (!companyExists)
-            return Failure("Company was not found.");
-
-        var settings = await _dbContext.CompanyPayrollSettings
-            .FirstOrDefaultAsync(x => x.CompanyId == model.CompanyId);
-
-        if (settings == null)
-        {
-            settings = new CompanyPayrollSetting
-            {
-                CompanyId = model.CompanyId,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await _dbContext.CompanyPayrollSettings.AddAsync(settings);
-        }
-
-        settings.PayrollFrequency = model.PayrollFrequency;
-        settings.PeriodStartDay = model.PeriodStartDay;
-        settings.PeriodEndDay = model.PeriodEndDay;
-        settings.PaymentDay = model.PaymentDay;
-        settings.IsActive = model.IsActive;
-        settings.UpdatedAt = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync();
-
-        return Success("Company payroll settings were saved successfully.", 1);
-    }
 
     public async Task<IReadOnlyList<PayrollCutoffPolicyViewModel>> GetPayrollCutoffPoliciesAsync(int companyId)
     {
         return await _dbContext.PayrollCutoffPolicies
             .AsNoTracking()
             .Where(x => x.CompanyId == companyId)
-            .OrderBy(x => x.PolicyType)
-            .ThenBy(x => x.Priority)
-            .ThenByDescending(x => x.EffectiveFrom)
-            .ThenBy(x => x.Name)
+            .OrderBy(x => x.Name)
+            .ThenBy(x => x.FromDay)
+            .ThenBy(x => x.ToDay)
             .Select(x => new PayrollCutoffPolicyViewModel
             {
                 Id = x.Id,
                 CompanyId = x.CompanyId,
                 Name = x.Name,
-                PolicyType = x.PolicyType,
-                CutoffBasis = x.CutoffBasis,
-                DayOfMonth = x.DayOfMonth,
-                OffsetDays = x.OffsetDays,
-                CutoffTime = x.CutoffTime,
-                EffectiveFrom = x.EffectiveFrom,
-                EffectiveTo = x.EffectiveTo,
-                Priority = x.Priority,
+                FromDay = x.FromDay,
+                ToDay = x.ToDay,
+                PolicyTypes = x.PolicyTypes
+                    .OrderBy(t => t.PolicyType)
+                    .Select(t => t.PolicyType)
+                    .ToList(),
                 Notes = x.Notes,
                 IsActive = x.IsActive
             })
@@ -274,23 +221,29 @@ public class SetupService : ISetupService
                 Id = x.Id,
                 CompanyId = x.CompanyId,
                 Name = x.Name,
-                PolicyType = x.PolicyType,
-                CutoffBasis = x.CutoffBasis,
-                DayOfMonth = x.DayOfMonth,
-                OffsetDays = x.OffsetDays,
-                CutoffTime = x.CutoffTime,
-                EffectiveFrom = x.EffectiveFrom,
-                EffectiveTo = x.EffectiveTo,
-                Priority = x.Priority,
+                FromDay = x.FromDay,
+                ToDay = x.ToDay,
+                PolicyTypes = x.PolicyTypes
+                    .OrderBy(t => t.PolicyType)
+                    .Select(t => t.PolicyType)
+                    .ToList(),
                 Notes = x.Notes,
                 IsActive = x.IsActive
             })
             .FirstOrDefaultAsync();
     }
 
-    public async Task<SetupActionResultViewModel> SavePayrollCutoffPolicyAsync(PayrollCutoffPolicyViewModel model)
+    public async Task<SetupActionResultViewModel> SavePayrollCutoffPolicyAsync(
+        PayrollCutoffPolicyViewModel model,
+        IReadOnlyCollection<PayrollCutoffType> policyTypes)
     {
-        var validation = ValidateCutoffPolicy(model);
+        var normalizedTypes = policyTypes
+            .Where(Enum.IsDefined)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+
+        var validation = ValidateCutoffPolicy(model, normalizedTypes);
         if (validation != null)
             return Failure(validation);
 
@@ -306,6 +259,7 @@ public class SetupService : ISetupService
         if (model.Id > 0)
         {
             var existingPolicy = await _dbContext.PayrollCutoffPolicies
+                .Include(x => x.PolicyTypes)
                 .FirstOrDefaultAsync(x => x.Id == model.Id && x.CompanyId == model.CompanyId);
 
             if (existingPolicy == null)
@@ -324,35 +278,99 @@ public class SetupService : ISetupService
             await _dbContext.PayrollCutoffPolicies.AddAsync(policy);
         }
 
-        policy.Name = model.Name.Trim();
-        policy.PolicyType = model.PolicyType;
-        policy.CutoffBasis = model.CutoffBasis;
-        policy.DayOfMonth = model.CutoffBasis == PayrollCutoffBasis.DayOfMonth
-            ? model.DayOfMonth
-            : null;
-        policy.OffsetDays = model.CutoffBasis == PayrollCutoffBasis.DayOfMonth
-            ? null
-            : model.OffsetDays;
-        policy.CutoffTime = model.CutoffTime;
-        policy.EffectiveFrom = model.EffectiveFrom;
-        policy.EffectiveTo = model.EffectiveTo;
-        policy.Priority = model.Priority;
-        policy.Notes = NormalizeNullable(model.Notes);
-        policy.IsActive = model.IsActive;
-        policy.UpdatedAt = DateTime.UtcNow;
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable);
 
-        await _dbContext.SaveChangesAsync();
+        try
+        {
+            // NEXORA_ACTIVE_CUTOFF_TYPE_GUARD_START
+            var conflictingAssignments = await _dbContext.PayrollCutoffPolicyTypes
+                .AsNoTracking()
+                .Where(x =>
+                    normalizedTypes.Contains(x.PolicyType) &&
+                    x.PayrollCutoffPolicy.CompanyId == model.CompanyId &&
+                    x.PayrollCutoffPolicy.IsActive &&
+                    !x.PayrollCutoffPolicy.IsDeleted &&
+                    x.PayrollCutoffPolicy.Id != model.Id)
+                .OrderBy(x => x.PayrollCutoffPolicy.Name)
+                .ThenBy(x => x.PolicyType)
+                .Select(x => new
+                {
+                    x.PolicyType,
+                    PolicyName = x.PayrollCutoffPolicy.Name
+                })
+                .ToListAsync();
 
-        return Success(
-            model.Id > 0
-                ? "Payroll cutoff policy was updated successfully."
-                : "Payroll cutoff policy was created successfully.",
-            1);
+            if (conflictingAssignments.Count > 0)
+            {
+                await transaction.RollbackAsync();
+
+                var conflictPolicies = string.Join(
+                    ", ",
+                    conflictingAssignments
+                        .Select(x => x.PolicyName)
+                        .Distinct(StringComparer.OrdinalIgnoreCase));
+
+                return Failure(
+                    "\u0644\u0627 \u064a\u0645\u0643\u0646 \u062d\u0641\u0638 \u0627\u0644\u0633\u064a\u0627\u0633\u0629. " +
+                    "\u0623\u062d\u062f \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0645\u062d\u062f\u062f\u0629 \u0645\u0633\u062a\u062e\u062f\u0645 " +
+                    "\u0636\u0645\u0646 \u0633\u064a\u0627\u0633\u0629 \u0641\u0639\u0627\u0644\u0629 \u0623\u062e\u0631\u0649: " +
+                    conflictPolicies +
+                    ".");
+            }
+            // NEXORA_ACTIVE_CUTOFF_TYPE_GUARD_END
+
+            if (policy.PolicyTypes.Count > 0)
+            {
+                _dbContext.PayrollCutoffPolicyTypes.RemoveRange(policy.PolicyTypes);
+                await _dbContext.SaveChangesAsync();
+                policy.PolicyTypes.Clear();
+            }
+
+            policy.Name = model.Name.Trim();
+            policy.FromDay = model.FromDay;
+            policy.ToDay = model.ToDay;
+            policy.PolicyType = normalizedTypes[0];
+            policy.CutoffBasis = PayrollCutoffBasis.DayOfMonth;
+            policy.DayOfMonth = model.ToDay;
+            policy.OffsetDays = null;
+            policy.CutoffTime = null;
+            policy.EffectiveFrom = new DateOnly(2000, 1, 1);
+            policy.EffectiveTo = null;
+            policy.Priority = 0;
+            policy.Notes = NormalizeNullable(model.Notes);
+            policy.IsActive = model.IsActive;
+            policy.UpdatedAt = DateTime.UtcNow;
+
+            foreach (var policyType in normalizedTypes)
+            {
+                policy.PolicyTypes.Add(new PayrollCutoffPolicyType
+                {
+                    PolicyType = policyType,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            await _dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return Success(
+                model.Id > 0
+                    ? "Payroll cutoff policy was updated successfully."
+                    : "Payroll cutoff policy was created successfully.",
+                1);
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<SetupActionResultViewModel> DeletePayrollCutoffPolicyAsync(int companyId, int policyId)
     {
         var policy = await _dbContext.PayrollCutoffPolicies
+            .Include(x => x.PolicyTypes)
             .FirstOrDefaultAsync(x => x.CompanyId == companyId && x.Id == policyId);
 
         if (policy == null)
@@ -362,10 +380,17 @@ public class SetupService : ISetupService
         policy.IsActive = false;
         policy.UpdatedAt = DateTime.UtcNow;
 
+        foreach (var policyType in policy.PolicyTypes)
+        {
+            policyType.IsDeleted = true;
+            policyType.UpdatedAt = DateTime.UtcNow;
+        }
+
         await _dbContext.SaveChangesAsync();
 
         return Success("Payroll cutoff policy was deleted successfully.", 1);
     }
+
 
     private static CompanySetupProfileViewModel MapCompanyProfile(Company company)
     {
@@ -385,19 +410,6 @@ public class SetupService : ISetupService
         };
     }
 
-    private static CompanyPayrollSettingsViewModel MapPayrollSettings(CompanyPayrollSetting settings)
-    {
-        return new CompanyPayrollSettingsViewModel
-        {
-            Id = settings.Id,
-            CompanyId = settings.CompanyId,
-            PayrollFrequency = settings.PayrollFrequency,
-            PeriodStartDay = settings.PeriodStartDay,
-            PeriodEndDay = settings.PeriodEndDay,
-            PaymentDay = settings.PaymentDay,
-            IsActive = settings.IsActive
-        };
-    }
 
     private static string? ValidateCompanyProfile(CompanySetupProfileViewModel model)
     {
@@ -439,27 +451,11 @@ public class SetupService : ISetupService
         return null;
     }
 
-    private static string? ValidatePayrollSettings(CompanyPayrollSettingsViewModel model)
-    {
-        if (model.CompanyId <= 0)
-            return "A valid company is required.";
 
-        if (!Enum.IsDefined(model.PayrollFrequency))
-            return "Payroll frequency is invalid.";
 
-        if (model.PeriodStartDay is < 1 or > 31)
-            return "Payroll period start day must be between 1 and 31.";
-
-        if (model.PeriodEndDay is < 1 or > 31)
-            return "Payroll period end day must be between 1 and 31.";
-
-        if (model.PaymentDay.HasValue && model.PaymentDay.Value is < 1 or > 31)
-            return "Payroll payment day must be between 1 and 31.";
-
-        return null;
-    }
-
-    private static string? ValidateCutoffPolicy(PayrollCutoffPolicyViewModel model)
+    private static string? ValidateCutoffPolicy(
+        PayrollCutoffPolicyViewModel model,
+        IReadOnlyCollection<PayrollCutoffType> policyTypes)
     {
         if (model.CompanyId <= 0)
             return "A valid company is required.";
@@ -470,34 +466,24 @@ public class SetupService : ISetupService
         if (model.Name.Trim().Length > 150)
             return "Policy name cannot exceed 150 characters.";
 
-        if (!Enum.IsDefined(model.PolicyType))
-            return "Payroll cutoff policy type is invalid.";
+        if (model.FromDay is < 1 or > 31)
+            return "From day must be between 1 and 31.";
 
-        if (!Enum.IsDefined(model.CutoffBasis))
-            return "Payroll cutoff basis is invalid.";
+        if (model.ToDay is < 1 or > 31)
+            return "To day must be between 1 and 31.";
 
-        if (model.CutoffBasis == PayrollCutoffBasis.DayOfMonth)
-        {
-            if (!model.DayOfMonth.HasValue || model.DayOfMonth.Value is < 1 or > 31)
-                return "Day of month must be between 1 and 31 for this cutoff basis.";
-        }
-        else
-        {
-            if (!model.OffsetDays.HasValue || model.OffsetDays.Value is < 0 or > 3660)
-                return "Offset days must be between 0 and 3660 for this cutoff basis.";
-        }
+        if (policyTypes.Count == 0)
+            return "At least one payroll cutoff policy type is required.";
 
-        if (model.EffectiveTo.HasValue && model.EffectiveTo.Value < model.EffectiveFrom)
-            return "Effective-to date cannot be earlier than effective-from date.";
-
-        if (model.Priority is < 0 or > 9999)
-            return "Priority must be between 0 and 9999.";
+        if (policyTypes.Any(x => !Enum.IsDefined(x)))
+            return "One or more payroll cutoff policy types are invalid.";
 
         if (NormalizeNullable(model.Notes)?.Length > 1000)
             return "Policy notes cannot exceed 1000 characters.";
 
         return null;
     }
+
 
     private static SetupActionResultViewModel Success(string message, int affectedCount)
     {

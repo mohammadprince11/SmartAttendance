@@ -11,6 +11,14 @@ public class PayrollCutoffPolicyConfiguration : IEntityTypeConfiguration<Payroll
         builder.ToTable("PayrollCutoffPolicies", table =>
         {
             table.HasCheckConstraint(
+                "CK_PayrollCutoffPolicies_FromDay",
+                "[FromDay] BETWEEN 1 AND 31");
+
+            table.HasCheckConstraint(
+                "CK_PayrollCutoffPolicies_ToDay",
+                "[ToDay] BETWEEN 1 AND 31");
+
+            table.HasCheckConstraint(
                 "CK_PayrollCutoffPolicies_DayOfMonth",
                 "[DayOfMonth] IS NULL OR [DayOfMonth] BETWEEN 1 AND 31");
 
@@ -27,6 +35,14 @@ public class PayrollCutoffPolicyConfiguration : IEntityTypeConfiguration<Payroll
 
         builder.Property(x => x.Name)
             .HasMaxLength(150)
+            .IsRequired();
+
+        builder.Property(x => x.FromDay)
+            .HasDefaultValue(1)
+            .IsRequired();
+
+        builder.Property(x => x.ToDay)
+            .HasDefaultValue(30)
             .IsRequired();
 
         builder.Property(x => x.PolicyType)
@@ -58,8 +74,8 @@ public class PayrollCutoffPolicyConfiguration : IEntityTypeConfiguration<Payroll
         builder.HasIndex(x => new
         {
             x.CompanyId,
-            x.PolicyType,
-            x.IsActive
+            x.IsActive,
+            x.Name
         });
 
         builder.HasOne(x => x.Company)

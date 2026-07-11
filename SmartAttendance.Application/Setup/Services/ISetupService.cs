@@ -1,4 +1,5 @@
 using SmartAttendance.Application.Setup.ViewModels;
+using SmartAttendance.Domain.Enums;
 
 namespace SmartAttendance.Application.Setup.Services;
 
@@ -12,13 +13,13 @@ public interface ISetupService
 
     Task<SetupActionResultViewModel> UpdateCompanyProfileAsync(CompanySetupProfileViewModel model);
 
-    Task<SetupActionResultViewModel> SavePayrollSettingsAsync(CompanyPayrollSettingsViewModel model);
-
     Task<IReadOnlyList<PayrollCutoffPolicyViewModel>> GetPayrollCutoffPoliciesAsync(int companyId);
 
     Task<PayrollCutoffPolicyViewModel?> GetPayrollCutoffPolicyAsync(int companyId, int policyId);
 
-    Task<SetupActionResultViewModel> SavePayrollCutoffPolicyAsync(PayrollCutoffPolicyViewModel model);
+    Task<SetupActionResultViewModel> SavePayrollCutoffPolicyAsync(
+        PayrollCutoffPolicyViewModel model,
+        IReadOnlyCollection<PayrollCutoffType> policyTypes);
 
     Task<SetupActionResultViewModel> DeletePayrollCutoffPolicyAsync(int companyId, int policyId);
 }

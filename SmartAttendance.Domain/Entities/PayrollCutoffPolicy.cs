@@ -11,6 +11,10 @@ public class PayrollCutoffPolicy : AuditableEntity
 
     public string Name { get; set; } = string.Empty;
 
+    public int FromDay { get; set; } = 1;
+
+    public int ToDay { get; set; } = 30;
+
     public PayrollCutoffType PolicyType { get; set; }
 
     public PayrollCutoffBasis CutoffBasis { get; set; } = PayrollCutoffBasis.DayOfMonth;
@@ -21,7 +25,7 @@ public class PayrollCutoffPolicy : AuditableEntity
 
     public TimeOnly? CutoffTime { get; set; }
 
-    public DateOnly EffectiveFrom { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
+    public DateOnly EffectiveFrom { get; set; } = new(2000, 1, 1);
 
     public DateOnly? EffectiveTo { get; set; }
 
@@ -30,4 +34,6 @@ public class PayrollCutoffPolicy : AuditableEntity
     public string? Notes { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    public ICollection<PayrollCutoffPolicyType> PolicyTypes { get; set; } = new List<PayrollCutoffPolicyType>();
 }

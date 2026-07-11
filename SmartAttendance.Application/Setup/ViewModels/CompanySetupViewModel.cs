@@ -8,7 +8,5 @@ public class CompanySetupViewModel
 
     public CompanySetupProfileViewModel Profile { get; set; } = new();
 
-    public CompanyPayrollSettingsViewModel PayrollSettings { get; set; } = new();
-
     public List<PayrollCutoffPolicyViewModel> CutoffPolicies { get; set; } = new();
 }

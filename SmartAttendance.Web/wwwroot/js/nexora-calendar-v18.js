@@ -1,4 +1,4 @@
-﻿// NEXORA Calendar V18.5
+// NEXORA Calendar V18.5
 // Arrows-only month navigation. Display format: yyyy-MM-dd.
 
 (() => {
@@ -110,7 +110,27 @@
             value.textContent = displayValue(input.value);
         }
 
-        function changeMonth(delta) {
+
+        function positionPanel() {
+            if (!picker.classList.contains("is-open")) return;
+
+            const buttonRect = button.getBoundingClientRect();
+            const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
+            const edge = 12;
+            const gap = 9;
+            const spaceBelow = Math.max(0, viewportHeight - buttonRect.bottom - gap - edge);
+            const spaceAbove = Math.max(0, buttonRect.top - gap - edge);
+            const preferAbove = spaceBelow < 360 && spaceAbove > spaceBelow;
+            const availableSpace = preferAbove ? spaceAbove : spaceBelow;
+            const maxHeight = Math.max(160, Math.min(420, availableSpace));
+
+            panel.style.setProperty("top", preferAbove ? "auto" : "calc(100% + 9px)", "important");
+            panel.style.setProperty("bottom", preferAbove ? "calc(100% + 9px)" : "auto", "important");
+            panel.style.setProperty("max-height", Math.round(maxHeight) + "px", "important");
+            panel.style.setProperty("overflow-y", "auto", "important");
+            picker.classList.toggle("is-above", preferAbove);
+        }
+function changeMonth(delta) {
             state.view = new Date(state.view.getFullYear(), state.view.getMonth() + delta, 1);
             render();
         }
@@ -261,6 +281,7 @@
                 render();
                 picker.classList.add("is-open");
                 button.setAttribute("aria-expanded", "true");
+                window.requestAnimationFrame(positionPanel);
             }
         });
 

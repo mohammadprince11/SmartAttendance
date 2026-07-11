@@ -13,24 +13,13 @@ public class PayrollCutoffPolicyViewModel
     [StringLength(150)]
     public string Name { get; set; } = string.Empty;
 
-    public PayrollCutoffType PolicyType { get; set; }
-
-    public PayrollCutoffBasis CutoffBasis { get; set; } = PayrollCutoffBasis.DayOfMonth;
+    [Range(1, 31)]
+    public int FromDay { get; set; } = 1;
 
     [Range(1, 31)]
-    public int? DayOfMonth { get; set; }
+    public int ToDay { get; set; } = 30;
 
-    [Range(0, 3660)]
-    public int? OffsetDays { get; set; }
-
-    public TimeOnly? CutoffTime { get; set; }
-
-    public DateOnly EffectiveFrom { get; set; } = DateOnly.FromDateTime(DateTime.Today);
-
-    public DateOnly? EffectiveTo { get; set; }
-
-    [Range(0, 9999)]
-    public int Priority { get; set; }
+    public List<PayrollCutoffType> PolicyTypes { get; set; } = new();
 
     [StringLength(1000)]
     public string? Notes { get; set; }

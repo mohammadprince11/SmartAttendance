@@ -42,6 +42,8 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<PayrollCutoffPolicy> PayrollCutoffPolicies => Set<PayrollCutoffPolicy>();
 
+    public DbSet<PayrollCutoffPolicyType> PayrollCutoffPolicyTypes => Set<PayrollCutoffPolicyType>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

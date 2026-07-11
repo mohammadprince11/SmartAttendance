@@ -130,6 +130,13 @@
                     <span>لوحة البيانات</span>
                 </a>
 
+                @if (loginRole.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    <a asp-page="/Setup/Index" class="nexora-nav-link nexora-root-link @(IsUnder("/Setup") ? "active nexora-active" : "")" data-nav-area="setup">
+                        <span class="nexora-nav-dot gold"></span>
+                        <span>&#x0625;&#x0639;&#x062F;&#x0627;&#x062F; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
+                    </a>
+                }
                 <details name="nexora-main-menu" class="nexora-nav-group" @(employeesOpen ? "open" : "")>
                     <summary>
                         <span class="nexora-nav-dot gold"></span>
