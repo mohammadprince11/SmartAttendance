@@ -1,4 +1,4 @@
-﻿using SmartAttendance.Domain.Common;
+using SmartAttendance.Domain.Common;
 
 namespace SmartAttendance.Domain.Entities;
 
@@ -16,7 +16,17 @@ public class Company : AuditableEntity
 
     public string? LogoPath { get; set; }
 
+    public string? CountryCode { get; set; }
+
+    public string? CurrencyCode { get; set; }
+
+    public string? TimeZoneId { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     public ICollection<Branch> Branches { get; set; } = new List<Branch>();
+
+    public CompanyPayrollSetting? PayrollSettings { get; set; }
+
+    public ICollection<PayrollCutoffPolicy> PayrollCutoffPolicies { get; set; } = new List<PayrollCutoffPolicy>();
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Domain.Entities;
 
 namespace SmartAttendance.Infrastructure.Persistence;
@@ -38,6 +38,10 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<EmployeeViolationCase> EmployeeViolationCases => Set<EmployeeViolationCase>();
 
+    public DbSet<CompanyPayrollSetting> CompanyPayrollSettings => Set<CompanyPayrollSetting>();
+
+    public DbSet<PayrollCutoffPolicy> PayrollCutoffPolicies => Set<PayrollCutoffPolicy>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -45,4 +49,3 @@ public class ApplicationDbContext : DbContext
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
     }
 }
-

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SmartAttendance.Domain.Entities;
 
@@ -31,6 +31,15 @@ public class CompanyConfiguration : IEntityTypeConfiguration<Company>
 
         builder.Property(x => x.LogoPath)
             .HasMaxLength(500);
+
+        builder.Property(x => x.CountryCode)
+            .HasMaxLength(2);
+
+        builder.Property(x => x.CurrencyCode)
+            .HasMaxLength(3);
+
+        builder.Property(x => x.TimeZoneId)
+            .HasMaxLength(100);
 
         builder.HasIndex(x => x.Code)
             .IsUnique();
