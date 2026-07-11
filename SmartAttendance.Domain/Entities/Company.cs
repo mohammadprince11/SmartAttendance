@@ -26,6 +26,8 @@ public class Company : AuditableEntity
 
     public ICollection<Branch> Branches { get; set; } = new List<Branch>();
 
+    public ICollection<Department> Departments { get; set; } = new List<Department>();
+
     public CompanyPayrollSetting? PayrollSettings { get; set; }
 
     public ICollection<PayrollCutoffPolicy> PayrollCutoffPolicies { get; set; } = new List<PayrollCutoffPolicy>();

@@ -21,7 +21,7 @@
         <div class="nxp-hero__content">
             <p class="nxp-eyebrow">NEXORA HR</p>
             <h1>&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; &#x0627;&#x0644;&#x0645;&#x0646;&#x0627;&#x0635;&#x0628;</h1>
-            <span>&#x0627;&#x0631;&#x0641;&#x0639; Excel Template &#x0623;&#x0648; &#x0627;&#x0644;&#x0635;&#x0642; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A;. &#x0627;&#x0644;&#x0645;&#x0637;&#x0644;&#x0648;&#x0628; &#x0641;&#x0642;&#x0637;: PositionName &#x0648 Department.</span>
+            <span>&#x0627;&#x0631;&#x0641;&#x0639; Excel Template &#x0623;&#x0648; &#x0627;&#x0644;&#x0635;&#x0642; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A;. &#x0627;&#x0644;&#x0645;&#x0637;&#x0644;&#x0648;&#x0628; &#x0641;&#x0642;&#x0637;: PositionName &#x0648 CompanyCode.</span>
         </div>
 
         <div class="nxp-hero__links" aria-label="Positions import actions">
@@ -49,7 +49,7 @@
                 <article class="nxp-import-box">
                     <strong>2 - Paste</strong>
                     <p>&#x0646;&#x0633;&#x062E; &#x0645;&#x0628;&#x0627;&#x0634;&#x0631; &#x0645;&#x0646; Excel.</p>
-                    <textarea asp-for="PasteData" rows="7" placeholder="PositionName&#9;Department&#10;HR Operations Supervisor&#9;Human Resources"></textarea>
+                    <textarea asp-for="PasteData" rows="7" placeholder="PositionName&#9;CompanyCode&#10;HR Operations Supervisor&#9;COMP-001"></textarea>
                 </article>
             </div>
 
@@ -106,7 +106,7 @@
                         <tr>
                             <th>Row</th>
                             <th>Position</th>
-                            <th>Department</th>
+                            <th>Company</th>
                             <th>Action</th>
                             <th>Status</th>
                             <th>Message</th>
@@ -118,7 +118,7 @@
                         <tr>
                             <td>@row.RowNumber</td>
                             <td>@row.Key</td>
-                            <td>@row.Department</td>
+                            <td>@row.Company</td>
                             <td>@row.Action</td>
                             <td><span class="nxp-import-status nxp-import-status--@row.Status.ToLowerInvariant()">@row.Status</span></td>
                             <td>@row.Message</td>

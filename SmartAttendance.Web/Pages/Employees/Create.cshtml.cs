@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Application.Employees.Services;
 using SmartAttendance.Application.Employees.ViewModels;
@@ -51,27 +52,31 @@ public class CreateModel : PageModel
     [BindProperty]
     public List<IFormFile> InitialDocumentFiles { get; set; } = new();
 
+    public IEnumerable<BranchListViewModel> Branches { get; set; } = new List<BranchListViewModel>();
+
     public IEnumerable<DepartmentListViewModel> Departments { get; set; } = new List<DepartmentListViewModel>();
 
     public List<EmployeeProfileDynamicSection> ProfileDynamicSections { get; set; } = new();
 
-    public List<string> PositionOptions { get; set; } = new();
+    public IEnumerable<PositionOptionViewModel> PositionOptions { get; set; } = new List<PositionOptionViewModel>();
 
     public string? ErrorMessage { get; set; }
 
     public async Task OnGetAsync()
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
+        Branches = await _employeeService.GetBranchesForDropdownAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
-        PositionOptions = await LoadPositionOptionsAsync(Employee.Position);
+        PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
+        Branches = await _employeeService.GetBranchesForDropdownAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
-        PositionOptions = await LoadPositionOptionsAsync(Employee.Position);
+        PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
 
         if (!ModelState.IsValid)
@@ -81,7 +86,7 @@ public class CreateModel : PageModel
 
         if (!created)
         {
-            ErrorMessage = "كود الموظف موجود مسبقاً أو القسم المحدد غير صحيح.";
+            ErrorMessage = "\u062a\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0648\u0638\u0641. \u062a\u0623\u0643\u062f \u0645\u0646 \u0643\u0648\u062f \u0627\u0644\u0645\u0648\u0638\u0641 \u0648\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0645\u0644 \u0648\u0627\u0644\u0642\u0633\u0645 \u0648\u0623\u0646\u0647\u0627 \u062a\u062a\u0628\u0639 \u0625\u0644\u0649 \u0646\u0641\u0633 \u0627\u0644\u0634\u0631\u0643\u0629.";
             return Page();
         }
 
@@ -99,91 +104,21 @@ public class CreateModel : PageModel
 
             if (!string.IsNullOrWhiteSpace(extraResult))
             {
-                TempData["SuccessMessage"] = $"تم إنشاء الموظف بنجاح. {extraResult}";
+                TempData["SuccessMessage"] = $"\u062a\u0645 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0648\u0638\u0641 \u0628\u0646\u062c\u0627\u062d. {extraResult}";
             }
             else
             {
-                TempData["SuccessMessage"] = "تم إنشاء الموظف بنجاح.";
+                TempData["SuccessMessage"] = "\u062a\u0645 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0648\u0638\u0641 \u0628\u0646\u062c\u0627\u062d.";
             }
         }
         else
         {
-            TempData["SuccessMessage"] = "تم إنشاء الموظف بنجاح.";
+            TempData["SuccessMessage"] = "\u062a\u0645 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0648\u0638\u0641 \u0628\u0646\u062c\u0627\u062d.";
         }
 
         return RedirectToPage("./Index");
     }
 
-    private async Task<List<string>> LoadPositionOptionsAsync(string? currentPosition)
-    {
-        var positions = await HrmsDatabase.QueryAsync(
-            _dbContext,
-            @"
-CREATE TABLE #PositionOptions
-(
-    [Name] nvarchar(400) NOT NULL
-);
-
-IF OBJECT_ID(N'dbo.HrJobPositions', N'U') IS NOT NULL
-BEGIN
-    INSERT INTO #PositionOptions ([Name])
-    SELECT DISTINCT LTRIM(RTRIM([ArabicName]))
-    FROM [dbo].[HrJobPositions]
-    WHERE LTRIM(RTRIM(ISNULL([ArabicName], N''))) <> N''
-      AND ISNULL([IsActive], 1) = 1;
-END;
-
-IF OBJECT_ID(N'dbo.JobPositions', N'U') IS NOT NULL
-BEGIN
-    INSERT INTO #PositionOptions ([Name])
-    SELECT DISTINCT LTRIM(RTRIM(j.[Name]))
-    FROM [dbo].[JobPositions] j
-    WHERE LTRIM(RTRIM(ISNULL(j.[Name], N''))) <> N''
-      AND ISNULL(j.[IsActive], 1) = 1
-      AND NOT EXISTS
-      (
-          SELECT 1
-          FROM #PositionOptions existing
-          WHERE existing.[Name] = LTRIM(RTRIM(j.[Name]))
-      );
-END;
-
-IF OBJECT_ID(N'dbo.Employees', N'U') IS NOT NULL
-BEGIN
-    INSERT INTO #PositionOptions ([Name])
-    SELECT DISTINCT LTRIM(RTRIM(e.[Position]))
-    FROM [dbo].[Employees] e
-    WHERE LTRIM(RTRIM(ISNULL(e.[Position], N''))) <> N''
-      AND NOT EXISTS
-      (
-          SELECT 1
-          FROM #PositionOptions existing
-          WHERE existing.[Name] = LTRIM(RTRIM(e.[Position]))
-      );
-END;
-
-SELECT DISTINCT [Name]
-FROM #PositionOptions
-ORDER BY [Name];
-",
-            command => { },
-            reader => HrmsDatabase.GetString(reader, "Name"));
-
-        var result = positions
-            .Where(position => !string.IsNullOrWhiteSpace(position))
-            .Select(position => position.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(position => position)
-            .ToList();
-
-        if (!string.IsNullOrWhiteSpace(currentPosition) &&
-            !result.Contains(currentPosition.Trim(), StringComparer.OrdinalIgnoreCase))
-        {
-            result.Insert(0, currentPosition.Trim());
-        }
-
-        return result;
-    }
 
     private async Task<string> SaveEmployeePhotoAsync(int employeeId)
     {
@@ -193,10 +128,10 @@ ORDER BY [Name];
         var extension = Path.GetExtension(EmployeePhoto.FileName);
 
         if (string.IsNullOrWhiteSpace(extension) || !AllowedEmployeePhotoExtensions.Contains(extension))
-            return "لم يتم حفظ صورة الموظف لأن الصيغة غير مدعومة.";
+            return "\u0644\u0645 \u064a\u062a\u0645 \u062d\u0641\u0638 \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u0648\u0638\u0641 \u0644\u0623\u0646 \u0627\u0644\u0635\u064a\u063a\u0629 \u063a\u064a\u0631 \u0645\u062f\u0639\u0648\u0645\u0629.";
 
         if (EmployeePhoto.Length > 5 * 1024 * 1024)
-            return "لم يتم حفظ صورة الموظف لأن حجمها أكبر من 5MB.";
+            return "\u0644\u0645 \u064a\u062a\u0645 \u062d\u0641\u0638 \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u0648\u0638\u0641 \u0644\u0623\u0646 \u062d\u062c\u0645\u0647\u0627 \u0623\u0643\u0628\u0631 \u0645\u0646 5MB.";
 
         var uploadRoot = Path.Combine(_environment.WebRootPath, "uploads", "employee-photos");
         Directory.CreateDirectory(uploadRoot);
@@ -219,7 +154,7 @@ ORDER BY [Name];
                 HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
             });
 
-        return "تم حفظ صورة الموظف.";
+        return "\u062a\u0645 \u062d\u0641\u0638 \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u0648\u0638\u0641.";
     }
 
     private async Task<string> SaveInitialDocumentsAsync(int employeeId)
@@ -306,10 +241,10 @@ VALUES ('EmployeeDocument', CAST(@EmployeeId AS nvarchar(80)), 'Upload Document 
         }
 
         if (savedCount == 0)
-            return skippedCount > 0 ? "لم يتم حفظ أي مستمسك لأن الملفات غير صالحة أو فارغة." : string.Empty;
+            return skippedCount > 0 ? "\u0644\u0645 \u064a\u062a\u0645 \u062d\u0641\u0638 \u0623\u064a \u0645\u0633\u062a\u0645\u0633\u0643 \u0644\u0623\u0646 \u0627\u0644\u0645\u0644\u0641\u0627\u062a \u063a\u064a\u0631 \u0635\u0627\u0644\u062d\u0629 \u0623\u0648 \u0641\u0627\u0631\u063a\u0629." : string.Empty;
 
         return skippedCount > 0
-            ? $"تم حفظ {savedCount} مستمسك، وتم تجاوز {skippedCount} ملف غير صالح."
-            : $"تم حفظ {savedCount} مستمسك.";
+            ? $"\u062a\u0645 \u062d\u0641\u0638 {savedCount} \u0645\u0633\u062a\u0645\u0633\u0643\u060c \u0648\u062a\u0645 \u062a\u062c\u0627\u0648\u0632 {skippedCount} \u0645\u0644\u0641 \u063a\u064a\u0631 \u0635\u0627\u0644\u062d."
+            : $"\u062a\u0645 \u062d\u0641\u0638 {savedCount} \u0645\u0633\u062a\u0645\u0633\u0643.";
     }
 }

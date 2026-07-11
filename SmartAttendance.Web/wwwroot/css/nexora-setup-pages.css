@@ -191,6 +191,128 @@
     background: rgba(14, 45, 68, .42);
 }
 
+/* NEXORA_DEPARTMENTS_TABLE_LAYOUT_START */
+.nexora-setup-page[data-setup-page="departments"] .nexora-setup-table {
+    min-width: 720px;
+    table-layout: fixed;
+}
+
+.nexora-setup-page[data-setup-page="departments"] .nexora-setup-table th,
+.nexora-setup-page[data-setup-page="departments"] .nexora-setup-table td {
+    padding: 11px 12px !important;
+    vertical-align: middle !important;
+}
+
+.nexora-setup-page[data-setup-page="departments"] .nexora-setup-table th:nth-child(1),
+.nexora-setup-page[data-setup-page="departments"] .nexora-setup-table td:nth-child(1) {
+    width: 36%;
+}
+
+.nexora-setup-page[data-setup-page="departments"] .nexora-setup-table th:nth-child(2),
+.nexora-setup-page[data-setup-page="departments"] .nexora-setup-table td:nth-child(2) {
+    width: 30%;
+}
+
+.nexora-setup-page[data-setup-page="departments"] .nexora-setup-table th:nth-child(3),
+.nexora-setup-page[data-setup-page="departments"] .nexora-setup-table td:nth-child(3) {
+    width: 14%;
+    text-align: center !important;
+}
+
+.nexora-setup-page[data-setup-page="departments"] .nexora-setup-table th:nth-child(4),
+.nexora-setup-page[data-setup-page="departments"] .nexora-setup-table td:nth-child(4) {
+    width: 20%;
+    min-width: 150px;
+}
+
+.nexora-setup-page[data-setup-page="departments"] .nx-setup-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
+
+.nexora-setup-page[data-setup-page="departments"] .nx-setup-row-actions .btn-table {
+    min-width: 64px;
+    min-height: 32px;
+    padding: 0 10px !important;
+    margin: 0;
+    flex: 0 0 auto;
+}
+
+.nexora-setup-page[data-setup-page="departments"] .nx-setup-title,
+.nexora-setup-page[data-setup-page="departments"] .nx-policy-note {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* NEXORA_DEPARTMENTS_TABLE_LAYOUT_END */
+/* NEXORA_BRANCHES_TABLE_LAYOUT_START */
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table {
+    min-width: 820px;
+    table-layout: fixed;
+}
+
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table th,
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table td {
+    padding: 11px 10px !important;
+    vertical-align: middle !important;
+}
+
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table th:nth-child(1),
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table td:nth-child(1) {
+    width: 25%;
+}
+
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table th:nth-child(2),
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table td:nth-child(2) {
+    width: 22%;
+}
+
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table th:nth-child(3),
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table td:nth-child(3) {
+    width: 23%;
+}
+
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table th:nth-child(4),
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table td:nth-child(4) {
+    width: 12%;
+    text-align: center !important;
+}
+
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table th:nth-child(5),
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table td:nth-child(5) {
+    width: 18% !important;
+    min-width: 150px;
+}
+
+.nexora-setup-page[data-setup-page="branches"] .nx-setup-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
+
+.nexora-setup-page[data-setup-page="branches"] .nx-setup-row-actions .btn-table {
+    min-width: 64px;
+    min-height: 32px;
+    padding: 0 10px !important;
+    margin: 0;
+    flex: 0 0 auto;
+}
+
+.nexora-setup-page[data-setup-page="branches"] .nx-setup-title,
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table td:nth-child(2),
+.nexora-setup-page[data-setup-page="branches"] .nexora-setup-table td:nth-child(3) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* NEXORA_BRANCHES_TABLE_LAYOUT_END */
+
+
 .nx-setup-title {
     color: #ffffff;
     font-weight: 950;
@@ -1000,9 +1122,9 @@ html.nx-setup-modal-open body .nxos__menu.is-open {
 }
 
 .nx-company-setup-nav {
-    position: sticky;
-    top: 76px;
-    z-index: 20;
+    position: static;
+    top: auto;
+    z-index: auto;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -1037,33 +1159,33 @@ html.nx-setup-modal-open body .nxos__menu.is-open {
 .nx-company-setup-summary {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
+    gap: 10px;
 }
 
 .nx-company-setup-summary article {
-    min-height: 112px;
+    min-height: 72px;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 8px;
-    padding: 18px;
+    gap: 3px;
+    padding: 10px 12px;
     border: 1px solid rgba(34, 211, 238, .16);
-    border-radius: 20px;
+    border-radius: 14px;
     background:
         radial-gradient(circle at top right, rgba(34, 211, 238, .10), transparent 38%),
         linear-gradient(145deg, rgba(11, 30, 49, .94), rgba(4, 14, 26, .98));
-    box-shadow: 0 16px 38px rgba(0, 0, 0, .20);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .14);
 }
 
 .nx-company-setup-summary span {
     color: #8faec8;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 900;
 }
 
 .nx-company-setup-summary strong {
     color: #ffffff;
-    font-size: 22px;
+    font-size: 19px;
     font-weight: 950;
 }
 
@@ -1079,8 +1201,8 @@ html.nx-setup-modal-open body .nxos__menu.is-open {
 }
 
 .nx-company-logo-card {
-    position: sticky;
-    top: 150px;
+    position: static;
+    top: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1728,10 +1850,6 @@ body.nx-setup-modal-open .nxcs-panel {
 /* NEXORA_SETUP_MODAL_STATE_FIX_END */
 
 /* NEXORA_CUTOFF_POLICY_REDESIGN_START */
-.nx-company-setup-summary {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
 .nx-cutoff-policy-table th:nth-child(2),
 .nx-cutoff-policy-table td:nth-child(2) {
     min-width: 160px;
@@ -1805,12 +1923,6 @@ body.nx-setup-modal-open .nxcs-panel {
     text-align: center;
     font-size: 16px;
     font-weight: 950;
-}
-
-@media (max-width: 860px) {
-    .nx-company-setup-summary {
-        grid-template-columns: 1fr;
-    }
 }
 
 @media (max-width: 720px) {

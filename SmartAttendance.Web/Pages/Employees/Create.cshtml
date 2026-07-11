@@ -1,22 +1,12 @@
 @page
 @model SmartAttendance.Web.Pages.Employees.CreateModel
 
-@{
-    var selectedDepartment = Model.Departments.FirstOrDefault(x => x.Id == Model.Employee.DepartmentId);
-    var selectedWorkLocationId = selectedDepartment?.BranchId ?? 0;
-    var workLocations = Model.Departments
-        .Where(x => x.BranchId > 0)
-        .GroupBy(x => new { x.BranchId, x.BranchName })
-        .OrderBy(x => x.Key.BranchName)
-        .ToList();
-}
 <link rel="stylesheet" href="~/css/nexora-edit-custom-datepicker.css" asp-append-version="true" />
 @{
     ViewData["Title"] = "إضافة موظف جديد";
     var employeePhotoFallback = Url.Content("~/brand/employee-photo-placeholder.svg");
 }
 
-<link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-create-documents-final.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-create-clean-fix.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-create-stable.css" asp-append-version="true" />
@@ -80,14 +70,14 @@
                 <span class="nxr-chip gold">مطلوب</span>
             </div>
 
-            <div class="nxr-form-grid nxr-create-grid">
+            <div class="nxr-form-grid nxr-create-grid nxr-basic-grid">
                 <div class="nxr-field">
                     <label asp-for="Employee.EmployeeNo">كود الموظف</label>
                     <input asp-for="Employee.EmployeeNo" placeholder="مثال: EMP-250601" />
                     <span asp-validation-for="Employee.EmployeeNo" class="text-danger"></span>
                 </div>
 
-                <div class="nxr-field wide">
+                <div class="nxr-field">
                     <label asp-for="Employee.FullName">الاسم الكامل</label>
                     <input asp-for="Employee.FullName" placeholder="أدخل الاسم الكامل" />
                     <span asp-validation-for="Employee.FullName" class="text-danger"></span>
@@ -195,41 +185,53 @@
                 <span class="nxr-chip gold">مطلوب</span>
             </div>
 
-            <div class="nxr-form-grid nxr-create-grid">
+            <div class="nxr-form-grid nxr-create-grid nxr-employment-grid">
                 <div class="nxr-field">
-                    <label for="WorkLocationId">&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</label>
-                    <select id="WorkLocationId" class="nxr-native-select">
+                    <label asp-for="Employee.BranchId">&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</label>
+                    <select asp-for="Employee.BranchId" class="nxr-native-select" id="Employee_BranchId">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</option>
-                        @foreach (var location in workLocations)
+                        @foreach (var branch in Model.Branches.OrderBy(x => x.Name))
                         {
-                            <option value="@location.Key.BranchId" selected="@(location.Key.BranchId == selectedWorkLocationId ? "selected" : null)">
-                                @location.Key.BranchName
+                            <option value="@branch.Id"
+                                    data-company-id="@branch.CompanyId"
+                                    selected="@(branch.Id == Model.Employee.BranchId ? "selected" : null)">
+                                @branch.Name
                             </option>
                         }
                     </select>
+                    <span asp-validation-for="Employee.BranchId" class="text-danger"></span>
                 </div>
-<div class="nxr-field wide">
+
+                <div class="nxr-field">
                     <label asp-for="Employee.DepartmentId">&#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</label>
                     <select data-nexora-select="true" asp-for="Employee.DepartmentId" class="nxr-native-select" id="Employee_DepartmentId">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</option>
-                        @foreach (var department in Model.Departments.OrderBy(x => x.BranchName).ThenBy(x => x.Name))
+                        @foreach (var department in Model.Departments.OrderBy(x => x.CompanyName).ThenBy(x => x.Name))
                         {
-                            <option value="@department.Id" data-work-location-id="@department.BranchId">@department.Name</option>
+                            <option value="@department.Id"
+                                    data-company-id="@department.CompanyId"
+                                    selected="@(department.Id == Model.Employee.DepartmentId ? "selected" : null)">
+                                @department.Name
+                            </option>
                         }
                     </select>
                     <span asp-validation-for="Employee.DepartmentId" class="text-danger"></span>
                 </div>
 
                 <div class="nxr-field">
-                    <label asp-for="Employee.Position">المنصب</label>
-                    <select asp-for="Employee.Position" class="nxr-native-select">
+                    <label asp-for="Employee.PositionId">&#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</label>
+                    <select asp-for="Employee.PositionId" class="nxr-native-select" id="Employee_PositionId">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</option>
-                        @foreach (var position in Model.PositionOptions)
+                        @foreach (var position in Model.PositionOptions.OrderBy(x => x.Name))
                         {
-                            <option value="@position">@position</option>
+                            <option value="@position.Id"
+                                    data-company-id="@position.CompanyId"
+                                    selected="@(position.Id == Model.Employee.PositionId ? "selected" : null)">
+                                @position.Name
+                            </option>
                         }
                     </select>
-                    <span asp-validation-for="Employee.Position" class="text-danger"></span>
+                    <span asp-validation-for="Employee.PositionId" class="text-danger"></span>
                 </div>
 
                 <div class="nxr-field">
@@ -387,17 +389,18 @@
             <a asp-page="./Index" class="nxr-btn">إلغاء</a>
             <button type="submit" class="nxr-btn primary">إنشاء الموظف</button>
         </section>
-    </form>
+</form>
 </div>
 <script src="~/js/nexora-edit-custom-datepicker.js" asp-append-version="true" defer></script>
 @section Scripts {
-    <!-- NEXORA_CREATE_DEPARTMENT_FILTER_START -->
+    <!-- NEXORA_CREATE_ORGANIZATION_FILTER_START -->
     <script>
         (() => {
-            const workLocation = document.getElementById("WorkLocationId");
+            const workLocation = document.getElementById("Employee_BranchId");
             const department = document.getElementById("Employee_DepartmentId");
+            const position = document.getElementById("Employee_PositionId");
 
-            if (!workLocation || !department) {
+            if (!workLocation || !department || !position) {
                 return;
             }
 
@@ -409,44 +412,51 @@
                 select.dispatchEvent(new Event("change", { bubbles: true }));
             }
 
-            function filterDepartments() {
-                const selectedLocation = workLocation.value;
+            function filterByCompany(select, companyId) {
                 let currentIsValid = false;
 
-                Array.from(department.options).forEach(option => {
+                Array.from(select.options).forEach(option => {
                     if (!option.value) {
                         option.hidden = false;
                         option.disabled = false;
                         return;
                     }
 
-                    const belongsToLocation =
-                        !selectedLocation ||
-                        option.dataset.workLocationId === selectedLocation;
+                    const belongsToCompany =
+                        companyId &&
+                        option.dataset.companyId === companyId;
 
-                    option.hidden = !belongsToLocation;
-                    option.disabled = !belongsToLocation;
+                    option.hidden = !belongsToCompany;
+                    option.disabled = !belongsToCompany;
 
-                    if (belongsToLocation && option.value === department.value) {
+                    if (belongsToCompany && option.value === select.value) {
                         currentIsValid = true;
                     }
                 });
 
                 if (!currentIsValid) {
-                    department.value = "";
+                    select.value = "";
                 }
 
-                refreshSelect(department);
+                refreshSelect(select);
             }
 
-            workLocation.addEventListener("change", filterDepartments);
-            filterDepartments();
+            function filterOrganization() {
+                const selectedOption = workLocation.options[workLocation.selectedIndex];
+                const companyId = selectedOption?.dataset.companyId || "";
 
-            window.NexoraCreateFilterDepartments = filterDepartments;
+                filterByCompany(department, companyId);
+                filterByCompany(position, companyId);
+            }
+
+            workLocation.addEventListener("change", filterOrganization);
+            filterOrganization();
+
+            window.NexoraCreateFilterOrganization = filterOrganization;
         })();
     </script>
-    <!-- NEXORA_CREATE_DEPARTMENT_FILTER_END -->
-    
+    <!-- NEXORA_CREATE_ORGANIZATION_FILTER_END -->
+
     <!-- NEXORA_MARITAL_BY_GENDER_START -->
     <script>
         (() => {
@@ -537,7 +547,7 @@
 }
 
 <style>
-    .nxr-page.nxr-create-clean-page, 
+    .nxr-page.nxr-create-clean-page,
     .nxr-form.nxr-create-clean-form,
     #employee-create-form {
         max-width: 1400px !important;
@@ -962,6 +972,16 @@
         resize: vertical !important;
     }
 
+    .nxr-create-clean-form input[data-nexora-date-field="true"] {
+        height: 50px !important;
+        min-height: 50px !important;
+        max-height: 50px !important;
+        padding-block: 0 !important;
+        padding-inline: 12px !important;
+        line-height: 1.2 !important;
+        box-sizing: border-box !important;
+    }
+
     .nxr-create-clean-form .nxr-field input:focus,
     .nxr-create-clean-form .nxr-field select:focus,
     .nxr-create-clean-form .nxr-field textarea:focus,
@@ -1095,7 +1115,216 @@
         }
     }
     /* NEXORA_FIX12A_CREATE_PAGE_PREMIUM_POLISH_END */
+
+    /* NEXORA_RESPONSIVE_EMPLOYEE_CREATE_FOUNDATION_START */
+    .nxr-page.nxr-create-clean-page {
+        width: min(100%, 1240px) !important;
+        min-width: 0 !important;
+        max-width: 1240px !important;
+        container-type: inline-size !important;
+        container-name: employee-create !important;
+    }
+
+    .nxr-create-clean-page *,
+    .nxr-create-clean-form,
+    .nxr-create-clean-header,
+    .nxr-create-section,
+    .nxr-form-grid.nxr-create-grid,
+    .nxr-photo-upload-wrap,
+    .nxr-create-dynamic-profile-groups,
+    .nxr-create-dynamic-profile-group,
+    .nxr-doc-clean-box {
+        min-width: 0 !important;
+        max-width: 100%;
+        box-sizing: border-box !important;
+    }
+
+    .nxr-create-clean-header {
+        flex-wrap: wrap !important;
+    }
+
+    .nxr-create-clean-header .nxr-title {
+        flex: 1 1 520px !important;
+        min-width: 0 !important;
+    }
+
+    .nxr-create-clean-header .nxr-actions {
+        flex: 0 1 auto !important;
+        min-width: 0 !important;
+    }
+
+    .nxr-create-clean-form input,
+    .nxr-create-clean-form select,
+    .nxr-create-clean-form textarea,
+    .nxr-create-clean-form .nxr-native-select,
+    .nxr-create-clean-form .nxos__button {
+        max-width: 100% !important;
+    }
+
+    .nxr-form-grid.nxr-create-grid.nxr-basic-grid,
+    .nxr-form-grid.nxr-create-grid.nxr-employment-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 12px !important;
+    }
+
+    @@container employee-create (max-width: 1080px) {
+        .nxr-form-grid.nxr-create-grid,
+        .nxr-form-grid.nxr-create-grid.two,
+        .nxr-form-grid.nxr-create-grid.nxr-basic-grid,
+        .nxr-form-grid.nxr-create-grid.nxr-employment-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+
+        .nxr-create-dynamic-profile-groups {
+            grid-template-columns: 1fr !important;
+        }
+
+        .nxr-create-clean-header .nxr-title {
+            flex-basis: 420px !important;
+        }
+    }
+
+    @@container employee-create (max-width: 760px) {
+        .nxr-create-clean-header,
+        .nxr-documents-section .nxr-doc-clean-box {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            align-items: stretch !important;
+        }
+
+        .nxr-create-clean-header .nxr-title,
+        .nxr-create-clean-header .nxr-actions {
+            width: 100% !important;
+            flex: 1 1 auto !important;
+        }
+
+        .nxr-create-clean-header .nxr-actions {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+        }
+
+        .nxr-photo-upload-card .nxr-photo-upload-wrap,
+        .nxr-form-grid.nxr-create-grid,
+        .nxr-form-grid.nxr-create-grid.two,
+        .nxr-create-dynamic-profile-group .nxr-form-grid.nxr-create-grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        .nxr-form-grid.nxr-create-grid.nxr-basic-grid,
+        .nxr-form-grid.nxr-create-grid.nxr-employment-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+
+        .nxr-create-grid .wide,
+        .nxr-create-grid .nxr-field.wide,
+        .nxr-create-dynamic-profile-group .nxr-field.wide {
+            grid-column: auto !important;
+        }
+
+        .nxr-photo-upload-card .nxr-photo-upload-wrap {
+            justify-items: center !important;
+            text-align: center !important;
+        }
+
+        .nxr-photo-upload-card .nxr-photo-hint {
+            width: 100% !important;
+        }
+
+        .nxr-actions,
+        .nxr-create-submit-bar {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            justify-content: stretch !important;
+        }
+
+        .nxr-actions .nxr-btn,
+        .nxr-create-submit-bar .nxr-btn {
+            width: 100% !important;
+            min-width: 0 !important;
+        }
+    }
+
+    @@container employee-create (max-width: 520px) {
+        .nxr-create-clean-header,
+        .nxr-create-section,
+        .nxr-create-submit-bar {
+            padding: 13px !important;
+            border-radius: 18px !important;
+        }
+
+        .nxr-create-clean-header .nxr-title h1 {
+            font-size: clamp(24px, 9vw, 32px) !important;
+        }
+
+        .nxr-create-section .nxr-section-title {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            align-items: stretch !important;
+        }
+
+        .nxr-create-section .nxr-section-title h2 {
+            font-size: 21px !important;
+        }
+    }
+        /* NEXORA_FIXED_EMPLOYEE_CREATE_ACTION_BAR_START */
+    /* Canonical end-of-form action bar, visible only at form end. */
+    #employee-create-form,
+    .nxr-form.nxr-create-clean-form {
+        padding-bottom: 24px !important;
+    }
+
+    .nxr-create-submit-bar {
+        position: static !important;
+        inset: auto !important;
+        left: auto !important;
+        right: auto !important;
+        top: auto !important;
+        bottom: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        min-height: 72px !important;
+        margin: 18px 0 0 !important;
+        z-index: auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 12px !important;
+        overflow: visible !important;
+    }
+
+    .nxr-create-submit-bar .nxr-btn {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        min-width: 128px !important;
+        margin: 0 !important;
+    }
+
+    @@container employee-create (max-width: 520px) {
+        .nxr-form-grid.nxr-create-grid.nxr-basic-grid,
+        .nxr-form-grid.nxr-create-grid.nxr-employment-grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        .nxr-create-submit-bar {
+            min-height: 0 !important;
+            padding: 12px !important;
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+        }
+
+        .nxr-create-submit-bar .nxr-btn {
+            width: 100% !important;
+            min-width: 0 !important;
+        }
+    }
+
+    @@container employee-create (max-width: 360px) {
+        .nxr-create-submit-bar {
+            grid-template-columns: 1fr !important;
+        }
+    }
+/* NEXORA_FIXED_EMPLOYEE_CREATE_ACTION_BAR_END */
+    /* NEXORA_RESPONSIVE_EMPLOYEE_CREATE_FOUNDATION_END */
 </style>
-
-
-

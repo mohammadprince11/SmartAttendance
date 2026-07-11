@@ -1,8 +1,13 @@
 @page
 @model SmartAttendance.Web.Pages.Departments.IndexModel
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/nexora-setup-pages.css" asp-append-version="true" />
+}
+
 @{
     ViewData["Title"] = "Departments";
+    var hasCompanies = Model.Companies.Any();
 }
 
 <div class="nexora-setup-page" data-setup-page="departments">
@@ -10,12 +15,17 @@
         <div>
             <span class="nexora-setup-kicker">&#x0627;&#x0644;&#x062E;&#x0637;&#x0648;&#x0629; &#x0627;&#x0644;&#x062B;&#x0627;&#x0644;&#x062B;&#x0629;</span>
             <h1>&#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;</h1>
-            <p>&#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645; &#x0642;&#x0627;&#x0626;&#x0645;&#x0629; &#x0645;&#x0633;&#x062A;&#x0642;&#x0644;&#x0629; &#x0639;&#x0646; &#x0645;&#x0648;&#x0627;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;.</p>
+            <p>&#x0623;&#x0636;&#x0641; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645; &#x0639;&#x0644;&#x0649; &#x0645;&#x0633;&#x062A;&#x0648;&#x0649; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;. &#x064A;&#x0645;&#x0643;&#x0646; &#x0627;&#x0633;&#x062A;&#x062E;&#x062F;&#x0627;&#x0645; &#x0646;&#x0641;&#x0633; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0641;&#x064A; &#x0623;&#x0643;&#x062B;&#x0631; &#x0645;&#x0646; &#x0645;&#x0648;&#x0642;&#x0639; &#x0639;&#x0645;&#x0644;.</p>
         </div>
 
         <div class="nexora-setup-actions">
             <a asp-page="./Import" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; Excel</a>
-            <button type="button" class="btn-primary nx-setup-btn nx-setup-btn-primary" data-nx-setup-open="department-create-modal">+ &#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0642;&#x0633;&#x0645;</button>
+            <button type="button"
+                    class="btn-primary nx-setup-btn nx-setup-btn-primary"
+                    data-nx-setup-open="department-create-modal"
+                    @(hasCompanies ? null : "disabled")>
+                + &#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0642;&#x0633;&#x0645;
+            </button>
         </div>
     </section>
 
@@ -26,20 +36,27 @@
         </div>
     }
 
+    @if (!hasCompanies)
+    {
+        <div class="nx-setup-modal-note">
+            &#x064A;&#x062C;&#x0628; &#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0634;&#x0631;&#x0643;&#x0629; &#x0623;&#x0648;&#x0644;&#x0627; &#x0642;&#x0628;&#x0644; &#x0625;&#x0646;&#x0634;&#x0627;&#x0621; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;.
+        </div>
+    }
+
     <section class="table-card nexora-setup-card">
         <div class="nexora-setup-card-head">
             <div>
                 <span>&#x0633;&#x062C;&#x0644; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;</span>
-                <strong>&#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645; &#x0627;&#x0644;&#x0645;&#x0639;&#x0631;&#x0641;&#x0629; &#x062F;&#x0627;&#x062E;&#x0644; &#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</strong>
+                <strong>&#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645; &#x0627;&#x0644;&#x0645;&#x0639;&#x0631;&#x0641;&#x0629; &#x062F;&#x0627;&#x062E;&#x0644; &#x0643;&#x0644; &#x0634;&#x0631;&#x0643;&#x0629;</strong>
             </div>
-            <small>&#x0644;&#x0627; &#x064A;&#x0648;&#x062C;&#x062F; &#x0631;&#x0628;&#x0637; &#x0628;&#x0627;&#x0644;&#x0641;&#x0631;&#x0648;&#x0639;.</small>
+            <small>&#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0645;&#x0633;&#x062A;&#x0642;&#x0644; &#x0639;&#x0646; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;.</small>
         </div>
 
         <form method="get" class="search-form nexora-setup-search">
             <input type="search"
                    name="SearchTerm"
                    value="@Model.SearchTerm"
-                   placeholder="Search department..." />
+                   placeholder="&#x0627;&#x0628;&#x062D;&#x062B; &#x0639;&#x0646; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0623;&#x0648; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;..." />
 
             <button type="submit" class="btn-primary nx-setup-btn nx-setup-btn-primary">&#x0628;&#x062D;&#x062B;</button>
             <a asp-page="./Index" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">&#x0645;&#x0633;&#x062D;</a>
@@ -50,6 +67,7 @@
                 <thead>
                     <tr>
                         <th>&#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</th>
+                        <th>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</th>
                         <th>&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629;</th>
                         <th style="width: 170px;">&#x0627;&#x0644;&#x0625;&#x062C;&#x0631;&#x0627;&#x0621;&#x0627;&#x062A;</th>
                     </tr>
@@ -62,10 +80,12 @@
                             <tr>
                                 <td>
                                     <strong class="nx-setup-title">@department.Name</strong>
+                                    <small class="nx-policy-note">@department.Code</small>
                                 </td>
+                                <td>@department.CompanyName</td>
                                 <td>
                                     <span class="nx-setup-status @(department.IsActive ? "is-active" : "is-inactive")">
-                                        @(department.IsActive ? "Active" : "Inactive")
+                                        @(department.IsActive ? "\u0641\u0639\u0627\u0644" : "\u063a\u064a\u0631 \u0641\u0639\u0627\u0644")
                                     </span>
                                 </td>
                                 <td>
@@ -80,7 +100,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="3" class="nx-setup-empty">&#x0644;&#x0627; &#x062A;&#x0648;&#x062C;&#x062F; &#x0623;&#x0642;&#x0633;&#x0627;&#x0645; &#x0645;&#x0633;&#x062C;&#x0644;&#x0629;.</td>
+                            <td colspan="4" class="nx-setup-empty">&#x0644;&#x0627; &#x062A;&#x0648;&#x062C;&#x062F; &#x0623;&#x0642;&#x0633;&#x0627;&#x0645; &#x0645;&#x0633;&#x062C;&#x0644;&#x0629;.</td>
                         </tr>
                     }
                 </tbody>
@@ -96,20 +116,35 @@
         <div class="nx-setup-modal__head">
             <span>&#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;</span>
             <h2 id="department-create-title">&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0642;&#x0633;&#x0645; &#x062C;&#x062F;&#x064A;&#x062F;</h2>
-            <p>&#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0645;&#x0633;&#x062A;&#x0642;&#x0644; &#x0648;&#x0644;&#x0627; &#x064A;&#x062D;&#x062A;&#x0627;&#x062C; &#x0631;&#x0628;&#x0637; &#x0628;&#x0645;&#x0648;&#x0642;&#x0639; &#x0639;&#x0645;&#x0644;.</p>
+            <p>&#x0627;&#x0631;&#x0628;&#x0637; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0628;&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629; &#x0641;&#x0642;&#x0637;&#x060C; &#x0648;&#x064A;&#x0645;&#x0643;&#x0646; &#x0627;&#x0633;&#x062A;&#x062E;&#x062F;&#x0627;&#x0645;&#x0647; &#x0641;&#x064A; &#x062C;&#x0645;&#x064A;&#x0639; &#x0645;&#x0648;&#x0627;&#x0642;&#x0639;&#x0647;&#x0627;.</p>
         </div>
 
         <form method="post" asp-page="./Create" class="nx-setup-modal-form">
             <div class="nx-setup-form-grid">
-                <label class="nx-setup-field nx-setup-field-wide">
+                <label class="nx-setup-field">
                     <span>&#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</span>
                     <input name="Department.Name" autocomplete="off" placeholder="Human Resources" required />
+                </label>
+
+                <label class="nx-setup-field">
+                    <span>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
+                    <select name="Department.CompanyId" data-nexora-select="true" required>
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</option>
+                        @foreach (var company in Model.Companies)
+                        {
+                            <option value="@company.Id">@company.Name</option>
+                        }
+                    </select>
                 </label>
             </div>
 
             <div class="nx-setup-modal__actions">
                 <button type="button" class="nx-setup-btn nx-setup-btn-secondary" data-nx-setup-close>&#x0625;&#x0644;&#x063A;&#x0627;&#x0621;</button>
-                <button type="submit" class="nx-setup-btn nx-setup-btn-primary">&#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</button>
+                <button type="submit"
+                        class="nx-setup-btn nx-setup-btn-primary"
+                        @(hasCompanies ? null : "disabled")>
+                    &#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;
+                </button>
             </div>
         </form>
     </div>

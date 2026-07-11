@@ -20,7 +20,7 @@ public class ImportModel : PageModel
     private static readonly string[] TemplateColumns =
     {
         "PositionName",
-        "Department",
+        "CompanyCode",
         "Category",
         "Level",
         "Competencies",
@@ -37,7 +37,7 @@ public class ImportModel : PageModel
     private static readonly HashSet<string> RequiredColumnKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         "PositionName",
-        "Department"
+        "CompanyCode"
     };
 
     public ImportModel(ApplicationDbContext db, IWebHostEnvironment environment)
@@ -147,11 +147,9 @@ public class ImportModel : PageModel
         return RedirectToPage("./Index");
     }
 
-    private async Task EnsureReadyAsync()
+    private Task EnsureReadyAsync()
     {
-        await SmartAttendance.Web.Infrastructure.Hrms.PositionSchema.EnsureAsync(_db);
-        await EnsurePositionProfileColumnsAsync();
-        await EnsurePositionReferenceTablesAsync();
+        return Task.CompletedTask;
     }
 
     private async Task<(string Token, string OriginalName)?> SaveSubmittedSourceAsync()
@@ -206,57 +204,86 @@ public class ImportModel : PageModel
         return ReadDelimitedText(text);
     }
 
-    private async Task<List<PositionImportPreviewRow>> BuildPreviewRowsAsync(List<PositionImportRecord> records)
+    private async Task<List<PositionImportPreviewRow>> BuildPreviewRowsAsync(
+        List<PositionImportRecord> records)
     {
         var result = new List<PositionImportPreviewRow>();
-        var departments = await _db.Departments
+
+        var companies = await _db.Companies
             .AsNoTracking()
-            .Where(department => !department.IsDeleted)
-            .Select(department => new
+            .Where(company => !company.IsDeleted)
+            .Select(company => new
             {
-                department.Id,
-                department.Name
+                company.Id,
+                company.Code,
+                company.Name,
+                company.IsActive
             })
             .ToListAsync();
 
-        var departmentsByName = departments
-            .GroupBy(department => NormalizeKey(department.Name), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        var companiesByCode = companies
+            .Where(company => !string.IsNullOrWhiteSpace(company.Code))
+            .GroupBy(
+                company => NormalizeKey(company.Code),
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First(),
+                StringComparer.OrdinalIgnoreCase);
 
-        var existingPositions = await ReadExistingPositionNamesAsync();
+        var existingPositions = await ReadExistingPositionKeysAsync();
 
         foreach (var record in records)
         {
             var messages = new List<string>();
             var positionName = NormalizeText(record.PositionName);
-            var departmentName = NormalizeText(record.Department);
+            var companyCode = NormalizeText(record.CompanyCode);
+            int? companyId = null;
+            string companyName = companyCode;
 
             if (string.IsNullOrWhiteSpace(positionName))
             {
                 messages.Add("PositionName is required.");
             }
 
-            if (string.IsNullOrWhiteSpace(departmentName))
+            if (string.IsNullOrWhiteSpace(companyCode))
             {
-                messages.Add("Department is required.");
+                messages.Add("CompanyCode is required.");
+            }
+            else if (!companiesByCode.TryGetValue(
+                         NormalizeKey(companyCode),
+                         out var company))
+            {
+                messages.Add("CompanyCode was not found.");
+            }
+            else
+            {
+                companyId = company.Id;
+                companyName = company.Name;
+
+                if (!company.IsActive)
+                {
+                    messages.Add("Company is inactive.");
+                }
             }
 
-            if (!string.IsNullOrWhiteSpace(departmentName) && !departmentsByName.ContainsKey(NormalizeKey(departmentName)))
-            {
-                messages.Add("Department was not found.");
-            }
-
-            var exists = !string.IsNullOrWhiteSpace(positionName) && existingPositions.Contains(NormalizeKey(positionName));
+            var key = companyId.HasValue
+                ? BuildPositionKey(companyId.Value, positionName)
+                : string.Empty;
+            var exists = !string.IsNullOrWhiteSpace(key) &&
+                         existingPositions.Contains(key);
 
             result.Add(new PositionImportPreviewRow
             {
                 RowNumber = record.RowNumber,
                 Key = positionName,
-                Department = departmentName,
+                Company = companyName,
                 Action = exists ? "Update" : "Create",
                 Status = messages.Count == 0 ? "Ready" : "Error",
                 Message = messages.Count == 0
-                    ? (exists ? "Position will be updated." : "Position will be created.")
+                    ? (exists
+                        ? "Position will be updated."
+                        : "Position will be created.")
                     : string.Join(" ", messages),
                 Record = record
             });
@@ -274,151 +301,234 @@ public class ImportModel : PageModel
         UpdateRows = PreviewRows.Count(row => row.Status == "Ready" && row.Action == "Update");
     }
 
-    private async Task<string> UpsertPositionAsync(PositionImportRecord record)
+    private async Task<string> UpsertPositionAsync(
+        PositionImportRecord record)
     {
         var positionName = NormalizeText(record.PositionName);
-        var departmentName = NormalizeText(record.Department);
-        var departmentId = await FindDepartmentIdByNameAsync(departmentName);
+        var companyCode = NormalizeText(record.CompanyCode);
+        var companyId = await FindCompanyIdByCodeAsync(companyCode);
 
-        if (departmentId == null)
+        if (!companyId.HasValue)
         {
             return "Error";
         }
 
-        var existingId = await FindPositionIdByNameAsync(positionName);
+        var existingId = await FindPositionIdAsync(
+            companyId.Value,
+            positionName);
 
-        await EnsureReferenceOptionAsync("dbo.HrJobPositionCategories", record.Category);
-        await EnsureReferenceOptionAsync("dbo.HrJobPositionLevels", record.Level);
-        await EnsureReferenceOptionAsync("dbo.HrJobPositionCompetencyOptions", record.Competencies);
-        await EnsureReferenceOptionAsync("dbo.HrJobPositionEducationOptions", record.EducationDegree);
-        await EnsureReferenceOptionAsync("dbo.HrJobPositionEducationSpecializationOptions", record.EducationSpecialization);
-        await EnsureReferenceOptionAsync("dbo.HrJobPositionCertificationOptions", record.Certifications);
+        await EnsureReferenceOptionAsync(
+            "dbo.HrJobPositionCategories",
+            record.Category);
+        await EnsureReferenceOptionAsync(
+            "dbo.HrJobPositionLevels",
+            record.Level);
+        await EnsureReferenceOptionAsync(
+            "dbo.HrJobPositionCompetencyOptions",
+            record.Competencies);
+        await EnsureReferenceOptionAsync(
+            "dbo.HrJobPositionEducationOptions",
+            record.EducationDegree);
+        await EnsureReferenceOptionAsync(
+            "dbo.HrJobPositionEducationSpecializationOptions",
+            record.EducationSpecialization);
+        await EnsureReferenceOptionAsync(
+            "dbo.HrJobPositionCertificationOptions",
+            record.Certifications);
 
         if (existingId.HasValue)
         {
-            await ExecuteNonQueryAsync(@"
-UPDATE dbo.HrJobPositions
-SET DepartmentId = @DepartmentId,
-    Category = @Category,
-    Level = @Level,
-    JobPurpose = @JobPurpose,
-    KeyResponsibilities = @KeyResponsibilities,
-    JobRequirements = @JobRequirements,
-    RequiredSkills = @RequiredSkills,
-    JobKpis = @JobKpis,
-    Competencies = @Competencies,
-    Education = @Education,
-    EducationSpecialization = @EducationSpecialization,
-    Certifications = @Certifications,
-    IsActive = 1,
-    UpdatedAt = SYSDATETIME()
-WHERE Id = @Id;
-", command =>
-            {
-                AddParameter(command, "@Id", existingId.Value);
-                AddPositionParameters(command, record, departmentId.Value);
-            });
+            await ExecuteNonQueryAsync(
+                """
+                UPDATE dbo.HrJobPositions
+                SET DepartmentId = NULL,
+                    Category = @Category,
+                    Level = @Level,
+                    JobPurpose = @JobPurpose,
+                    KeyResponsibilities = @KeyResponsibilities,
+                    JobRequirements = @JobRequirements,
+                    RequiredSkills = @RequiredSkills,
+                    JobKpis = @JobKpis,
+                    Competencies = @Competencies,
+                    Education = @Education,
+                    EducationSpecialization = @EducationSpecialization,
+                    Certifications = @Certifications,
+                    IsActive = 1,
+                    UpdatedAt = SYSDATETIME()
+                WHERE Id = @Id
+                  AND CompanyId = @CompanyId;
+                """,
+                command =>
+                {
+                    AddParameter(command, "@Id", existingId.Value);
+                    AddParameter(
+                        command,
+                        "@CompanyId",
+                        companyId.Value);
+                    AddPositionParameters(command, record);
+                });
 
             return "Update";
         }
 
-        await ExecuteNonQueryAsync(@"
-INSERT INTO dbo.HrJobPositions
-(
-    ArabicName,
-    DepartmentId,
-    Category,
-    Level,
-    Description,
-    JobPurpose,
-    KeyResponsibilities,
-    JobRequirements,
-    RequiredSkills,
-    JobKpis,
-    Competencies,
-    Education,
-    EducationSpecialization,
-    Certifications,
-    IsActive,
-    CreatedAt
-)
-VALUES
-(
-    @ArabicName,
-    @DepartmentId,
-    @Category,
-    @Level,
-    NULL,
-    @JobPurpose,
-    @KeyResponsibilities,
-    @JobRequirements,
-    @RequiredSkills,
-    @JobKpis,
-    @Competencies,
-    @Education,
-    @EducationSpecialization,
-    @Certifications,
-    1,
-    SYSDATETIME()
-);
-", command =>
-        {
-            AddParameter(command, "@ArabicName", positionName);
-            AddPositionParameters(command, record, departmentId.Value);
-        });
+        await ExecuteNonQueryAsync(
+            """
+            INSERT INTO dbo.HrJobPositions
+            (
+                CompanyId,
+                ArabicName,
+                DepartmentId,
+                Category,
+                Level,
+                Description,
+                JobPurpose,
+                KeyResponsibilities,
+                JobRequirements,
+                RequiredSkills,
+                JobKpis,
+                Competencies,
+                Education,
+                EducationSpecialization,
+                Certifications,
+                IsActive,
+                CreatedAt
+            )
+            VALUES
+            (
+                @CompanyId,
+                @ArabicName,
+                NULL,
+                @Category,
+                @Level,
+                NULL,
+                @JobPurpose,
+                @KeyResponsibilities,
+                @JobRequirements,
+                @RequiredSkills,
+                @JobKpis,
+                @Competencies,
+                @Education,
+                @EducationSpecialization,
+                @Certifications,
+                1,
+                SYSDATETIME()
+            );
+            """,
+            command =>
+            {
+                AddParameter(command, "@CompanyId", companyId.Value);
+                AddParameter(command, "@ArabicName", positionName);
+                AddPositionParameters(command, record);
+            });
 
         return "Create";
     }
 
-    private void AddPositionParameters(DbCommand command, PositionImportRecord record, int departmentId)
+    private static void AddPositionParameters(
+        DbCommand command,
+        PositionImportRecord record)
     {
-        AddParameter(command, "@DepartmentId", departmentId);
-        AddParameter(command, "@Category", EmptyToNull(record.Category));
-        AddParameter(command, "@Level", EmptyToNull(record.Level));
-        AddParameter(command, "@JobPurpose", EmptyToNull(record.JobPurpose));
-        AddParameter(command, "@KeyResponsibilities", EmptyToNull(record.KeyResponsibilities));
-        AddParameter(command, "@JobRequirements", EmptyToNull(record.JobRequirements));
-        AddParameter(command, "@RequiredSkills", EmptyToNull(record.RequiredSkills));
-        AddParameter(command, "@JobKpis", EmptyToNull(record.JobKpis));
-        AddParameter(command, "@Competencies", EmptyToNull(record.Competencies));
-        AddParameter(command, "@Education", EmptyToNull(record.EducationDegree));
-        AddParameter(command, "@EducationSpecialization", EmptyToNull(record.EducationSpecialization));
-        AddParameter(command, "@Certifications", EmptyToNull(record.Certifications));
+        AddParameter(
+            command,
+            "@Category",
+            EmptyToNull(record.Category));
+        AddParameter(
+            command,
+            "@Level",
+            EmptyToNull(record.Level));
+        AddParameter(
+            command,
+            "@JobPurpose",
+            EmptyToNull(record.JobPurpose));
+        AddParameter(
+            command,
+            "@KeyResponsibilities",
+            EmptyToNull(record.KeyResponsibilities));
+        AddParameter(
+            command,
+            "@JobRequirements",
+            EmptyToNull(record.JobRequirements));
+        AddParameter(
+            command,
+            "@RequiredSkills",
+            EmptyToNull(record.RequiredSkills));
+        AddParameter(
+            command,
+            "@JobKpis",
+            EmptyToNull(record.JobKpis));
+        AddParameter(
+            command,
+            "@Competencies",
+            EmptyToNull(record.Competencies));
+        AddParameter(
+            command,
+            "@Education",
+            EmptyToNull(record.EducationDegree));
+        AddParameter(
+            command,
+            "@EducationSpecialization",
+            EmptyToNull(record.EducationSpecialization));
+        AddParameter(
+            command,
+            "@Certifications",
+            EmptyToNull(record.Certifications));
     }
 
-    private async Task<int?> FindDepartmentIdByNameAsync(string name)
+    private async Task<int?> FindCompanyIdByCodeAsync(string code)
     {
-        var departments = await _db.Departments
+        var companies = await _db.Companies
             .AsNoTracking()
-            .Where(department => !department.IsDeleted)
-            .Select(department => new
+            .Where(company =>
+                !company.IsDeleted &&
+                company.IsActive)
+            .Select(company => new
             {
-                department.Id,
-                department.Name
+                company.Id,
+                company.Code
             })
             .ToListAsync();
 
-        var normalized = NormalizeKey(name);
-        var department = departments.FirstOrDefault(item =>
-            string.Equals(NormalizeKey(item.Name), normalized, StringComparison.OrdinalIgnoreCase));
+        var normalizedCode = NormalizeKey(code);
+        var company = companies.FirstOrDefault(item =>
+            string.Equals(
+                NormalizeKey(item.Code),
+                normalizedCode,
+                StringComparison.OrdinalIgnoreCase));
 
-        return department?.Id;
+        return company?.Id;
     }
 
-    private async Task<int?> FindPositionIdByNameAsync(string name)
+    private async Task<int?> FindPositionIdAsync(
+        int companyId,
+        string name)
     {
-        var value = await ExecuteScalarAsync(@"
-SELECT TOP 1 Id
-FROM dbo.HrJobPositions
-WHERE LTRIM(RTRIM(ArabicName)) = @ArabicName;
-", command => AddParameter(command, "@ArabicName", NormalizeText(name)));
+        var value = await ExecuteScalarAsync(
+            """
+            SELECT TOP 1 Id
+            FROM dbo.HrJobPositions
+            WHERE CompanyId = @CompanyId
+              AND LTRIM(RTRIM(ArabicName)) = @ArabicName;
+            """,
+            command =>
+            {
+                AddParameter(command, "@CompanyId", companyId);
+                AddParameter(
+                    command,
+                    "@ArabicName",
+                    NormalizeText(name));
+            });
 
-        return value == null || value == DBNull.Value ? null : Convert.ToInt32(value, CultureInfo.InvariantCulture);
+        return value == null || value == DBNull.Value
+            ? null
+            : Convert.ToInt32(
+                value,
+                CultureInfo.InvariantCulture);
     }
 
-    private async Task<HashSet<string>> ReadExistingPositionNamesAsync()
+    private async Task<HashSet<string>> ReadExistingPositionKeysAsync()
     {
-        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var keys = new HashSet<string>(
+            StringComparer.OrdinalIgnoreCase);
         var connection = _db.Database.GetDbConnection();
         var shouldClose = connection.State != ConnectionState.Open;
 
@@ -430,26 +540,45 @@ WHERE LTRIM(RTRIM(ArabicName)) = @ArabicName;
             }
 
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT ArabicName FROM dbo.HrJobPositions;";
+            command.CommandText =
+                """
+                SELECT CompanyId, ArabicName
+                FROM dbo.HrJobPositions;
+                """;
 
             using var reader = await command.ExecuteReaderAsync();
+
             while (await reader.ReadAsync())
             {
-                if (!reader.IsDBNull(0))
+                if (!reader.IsDBNull(0) &&
+                    !reader.IsDBNull(1))
                 {
-                    names.Add(NormalizeKey(reader.GetString(0)));
+                    keys.Add(BuildPositionKey(
+                        reader.GetInt32(0),
+                        reader.GetString(1)));
                 }
             }
         }
         finally
         {
-            if (shouldClose && connection.State == ConnectionState.Open)
+            if (shouldClose &&
+                connection.State == ConnectionState.Open)
             {
                 await connection.CloseAsync();
             }
         }
 
-        return names;
+        return keys;
+    }
+
+    private static string BuildPositionKey(
+        int companyId,
+        string? positionName)
+    {
+        return companyId.ToString(
+                   CultureInfo.InvariantCulture) +
+               "|" +
+               NormalizeKey(positionName);
     }
 
     private async Task EnsureReferenceOptionAsync(string tableName, string? value)
@@ -481,102 +610,40 @@ END;
 ", command => AddParameter(command, "@Name", name));
     }
 
-    private async Task EnsurePositionProfileColumnsAsync()
+    private Task EnsurePositionProfileColumnsAsync()
     {
-        await ExecuteNonQueryAsync(@"
-IF COL_LENGTH('dbo.HrJobPositions', 'JobPurpose') IS NULL
-    ALTER TABLE dbo.HrJobPositions ADD JobPurpose NVARCHAR(MAX) NULL;
-
-IF COL_LENGTH('dbo.HrJobPositions', 'KeyResponsibilities') IS NULL
-    ALTER TABLE dbo.HrJobPositions ADD KeyResponsibilities NVARCHAR(MAX) NULL;
-
-IF COL_LENGTH('dbo.HrJobPositions', 'JobRequirements') IS NULL
-    ALTER TABLE dbo.HrJobPositions ADD JobRequirements NVARCHAR(MAX) NULL;
-
-IF COL_LENGTH('dbo.HrJobPositions', 'RequiredSkills') IS NULL
-    ALTER TABLE dbo.HrJobPositions ADD RequiredSkills NVARCHAR(MAX) NULL;
-
-IF COL_LENGTH('dbo.HrJobPositions', 'JobKpis') IS NULL
-    ALTER TABLE dbo.HrJobPositions ADD JobKpis NVARCHAR(MAX) NULL;
-
-IF COL_LENGTH('dbo.HrJobPositions', 'Competencies') IS NULL
-    ALTER TABLE dbo.HrJobPositions ADD Competencies NVARCHAR(MAX) NULL;
-
-IF COL_LENGTH('dbo.HrJobPositions', 'Education') IS NULL
-    ALTER TABLE dbo.HrJobPositions ADD Education NVARCHAR(MAX) NULL;
-
-IF COL_LENGTH('dbo.HrJobPositions', 'EducationSpecialization') IS NULL
-    ALTER TABLE dbo.HrJobPositions ADD EducationSpecialization NVARCHAR(MAX) NULL;
-
-IF COL_LENGTH('dbo.HrJobPositions', 'Certifications') IS NULL
-    ALTER TABLE dbo.HrJobPositions ADD Certifications NVARCHAR(MAX) NULL;
-");
+        return Task.CompletedTask;
     }
 
-    private async Task EnsurePositionReferenceTablesAsync()
+    private Task EnsurePositionReferenceTablesAsync()
     {
-        await ExecuteNonQueryAsync(@"
-IF OBJECT_ID('dbo.HrJobPositionCompetencyOptions', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.HrJobPositionCompetencyOptions
-    (
-        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_HrJobPositionCompetencyOptions PRIMARY KEY,
-        Name NVARCHAR(240) NOT NULL,
-        IsActive BIT NOT NULL CONSTRAINT DF_HrJobPositionCompetencyOptions_IsActive DEFAULT(1),
-        CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_HrJobPositionCompetencyOptions_CreatedAt DEFAULT(SYSDATETIME()),
-        UpdatedAt DATETIME2 NULL
-    );
-END;
-
-IF OBJECT_ID('dbo.HrJobPositionEducationOptions', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.HrJobPositionEducationOptions
-    (
-        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_HrJobPositionEducationOptions PRIMARY KEY,
-        Name NVARCHAR(240) NOT NULL,
-        IsActive BIT NOT NULL CONSTRAINT DF_HrJobPositionEducationOptions_IsActive DEFAULT(1),
-        CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_HrJobPositionEducationOptions_CreatedAt DEFAULT(SYSDATETIME()),
-        UpdatedAt DATETIME2 NULL
-    );
-END;
-
-IF OBJECT_ID('dbo.HrJobPositionEducationSpecializationOptions', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.HrJobPositionEducationSpecializationOptions
-    (
-        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_HrJobPositionEducationSpecializationOptions PRIMARY KEY,
-        Name NVARCHAR(240) NOT NULL,
-        IsActive BIT NOT NULL CONSTRAINT DF_HrJobPositionEducationSpecializationOptions_IsActive DEFAULT(1),
-        CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_HrJobPositionEducationSpecializationOptions_CreatedAt DEFAULT(SYSDATETIME()),
-        UpdatedAt DATETIME2 NULL
-    );
-END;
-
-IF OBJECT_ID('dbo.HrJobPositionCertificationOptions', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.HrJobPositionCertificationOptions
-    (
-        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_HrJobPositionCertificationOptions PRIMARY KEY,
-        Name NVARCHAR(240) NOT NULL,
-        IsActive BIT NOT NULL CONSTRAINT DF_HrJobPositionCertificationOptions_IsActive DEFAULT(1),
-        CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_HrJobPositionCertificationOptions_CreatedAt DEFAULT(SYSDATETIME()),
-        UpdatedAt DATETIME2 NULL
-    );
-END;
-");
+        return Task.CompletedTask;
     }
 
     private async Task SyncEmployeePositionsAsync()
     {
-        await ExecuteNonQueryAsync(@"
-UPDATE e
-SET e.PositionId = p.Id,
-    e.UpdatedAt = SYSDATETIME()
-FROM dbo.Employees e
-INNER JOIN dbo.HrJobPositions p
-    ON LTRIM(RTRIM(CONVERT(NVARCHAR(MAX), e.Position))) = LTRIM(RTRIM(p.ArabicName))
-WHERE e.PositionId IS NULL OR e.PositionId <> p.Id;
-");
+        await ExecuteNonQueryAsync(
+            """
+            UPDATE employee
+            SET employee.PositionId = position.Id,
+                employee.Position = position.ArabicName,
+                employee.UpdatedAt = SYSDATETIME()
+            FROM dbo.Employees employee
+            INNER JOIN dbo.Branches branch
+                ON branch.Id = employee.BranchId
+            INNER JOIN dbo.HrJobPositions position
+                ON position.CompanyId = branch.CompanyId
+               AND LTRIM(RTRIM(
+                       CONVERT(NVARCHAR(MAX), employee.Position))) =
+                   LTRIM(RTRIM(position.ArabicName))
+            WHERE employee.Position IS NOT NULL
+              AND LTRIM(RTRIM(
+                      CONVERT(NVARCHAR(MAX), employee.Position))) <> N''
+              AND (
+                  employee.PositionId IS NULL
+                  OR employee.PositionId <> position.Id
+              );
+            """);
     }
 
     private byte[] BuildTemplateWorkbook()
@@ -620,7 +687,7 @@ WHERE e.PositionId IS NULL OR e.PositionId <> p.Id;
         var sample = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["PositionName"] = "HR Operations Supervisor",
-            ["Department"] = "Human Resources",
+            ["CompanyCode"] = "COMP-001",
             ["Category"] = "Senior Management",
             ["Level"] = "Director",
             ["Competencies"] = "Leadership",
@@ -818,7 +885,7 @@ WHERE e.PositionId IS NULL OR e.PositionId <> p.Id;
         return normalized switch
         {
             "positionname" or "position" or "arabicname" or "jobtitle" => "PositionName",
-            "department" or "departmentname" => "Department",
+            "companycode" or "company" or "companyid" => "CompanyCode",
             "category" => "Category",
             "level" => "Level",
             "competencies" or "competency" => "Competencies",
@@ -1005,7 +1072,7 @@ public sealed class PositionImportRecord
 
     public string? PositionName { get; set; }
 
-    public string? Department { get; set; }
+    public string? CompanyCode { get; set; }
 
     public string? Category { get; set; }
 
@@ -1036,8 +1103,8 @@ public sealed class PositionImportRecord
             case "PositionName":
                 PositionName = value;
                 break;
-            case "Department":
-                Department = value;
+            case "CompanyCode":
+                CompanyCode = value;
                 break;
             case "Category":
                 Category = value;
@@ -1082,7 +1149,7 @@ public sealed class PositionImportPreviewRow
 
     public string Key { get; set; } = string.Empty;
 
-    public string Department { get; set; } = string.Empty;
+    public string Company { get; set; } = string.Empty;
 
     public string Action { get; set; } = string.Empty;
 

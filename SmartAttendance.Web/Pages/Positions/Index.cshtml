@@ -17,17 +17,34 @@
         <div class="nxp-alert nxp-alert--error">@errorMessage</div>
     }
 
-    <section class="nxp-hero">
-        <div class="nxp-hero__content">
-            <p class="nxp-eyebrow">NEXORA HR</p>
-            <h1>المناصب الوظيفية</h1>
-           @*  <span>إدارة المناصب الرسمية وربطها بالقسم والفئة والمستوى، مع منع حذف أي منصب مستخدم داخل ملفات الموظفين.</span> *@
+    <section class="nxp-admin-header" aria-labelledby="positionsAdminTitle">
+        <div class="nxp-admin-header__top">
+            <div class="nxp-admin-header__identity">
+                <span class="nxp-admin-header__eyebrow">إدارة الهيكل الوظيفي</span>
+                <h1 id="positionsAdminTitle">المناصب الوظيفية</h1>
+                <p>إدارة المسميات الوظيفية وتصنيفها وربطها بالموظفين ضمن شركة محددة.</p>
+            </div>
+
+            <nav class="nxp-admin-header__actions" aria-label="إجراءات إدارة المناصب">
+                <a asp-page="/Positions/Import" asp-route-companyId="@Model.CompanyId">استيراد Excel</a>
+                <a asp-page="/PositionCategories/Index">إدارة الفئات</a>
+                <a asp-page="/PositionLevels/Index">إدارة المستويات</a>
+            </nav>
         </div>
-        <div class="nxp-hero__links" aria-label="إعدادات المناصب">
-            <a asp-page="/Positions/Import" class="nxp-hero__import-link">&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; Excel</a> @* NEXORA_FIX21A_POSITIONS_IMPORT_LINK *@
-            <a asp-page="/PositionCategories/Index">إدارة الفئات</a>
-            <a asp-page="/PositionLevels/Index">إدارة المستويات</a>
-        </div>
+
+        @if (Model.Companies.Count > 0)
+        {
+            <form method="get" class="nxp-admin-header__company" aria-label="اختيار الشركة">
+                <label for="CompanyId">الشركة الحالية</label>
+                <select asp-for="CompanyId">
+                    @foreach (var company in Model.Companies)
+                    {
+                        <option value="@company.Id">@company.Name</option>
+                    }
+                </select>
+                <button type="submit" class="nxp-btn nxp-btn--ghost">تطبيق</button>
+            </form>
+        }
     </section>
 
     <section class="nxp-kpis" aria-label="ملخص المناصب الوظيفية">
@@ -59,6 +76,7 @@
 
         <form method="post" asp-page-handler="Save" id="positionForm" class="nxp-form" autocomplete="off">
             <input asp-for="Input.Id" type="hidden" />
+            <input asp-for="Input.CompanyId" type="hidden" />
             <input asp-for="Input.OriginalArabicName" type="hidden" />
 
             <label class="nxp-field nxp-field--wide">
@@ -67,14 +85,8 @@
             </label>
 
             <label class="nxp-field">
-                <span>القسم</span>
-                <select asp-for="Input.DepartmentId">
-                    <option value="">بدون قسم محدد</option>
-                    @foreach (var department in Model.Departments)
-                    {
-                        <option value="@department.Id">@department.Name</option>
-                    }
-                </select>
+                <span>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
+                <input value="@Model.SelectedCompanyName" readonly />
             </label>
 
             <label class="nxp-field">
@@ -191,7 +203,7 @@
                             <textarea asp-for="Input.JobKpis" rows="4" maxlength="3000" placeholder="&#x0645;&#x0624;&#x0634;&#x0631;&#x0627;&#x062A; &#x0627;&#x0644;&#x0623;&#x062F;&#x0627;&#x0621; &#x0627;&#x0644;&#x0631;&#x0626;&#x064A;&#x0633;&#x064A;&#x0629;..."></textarea>
                         </label>
                     </div>
-                
+
                     <footer class="nxp-profile-modal__footer" data-nxp-profile-footer="job">
                         <button type="button" class="nxp-btn nxp-btn--ghost" data-nxp-profile-close>&#x0625;&#x0644;&#x063A;&#x0627;&#x0621;</button>
                         <button type="submit" class="nxp-btn nxp-btn--primary">&#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</button>
@@ -209,7 +221,7 @@
 
             <div class="nxp-form-actions">
                 <button type="submit" class="nxp-btn nxp-btn--primary">حفظ المنصب</button>
-                <a asp-page="/Positions/Index" class="nxp-btn nxp-btn--ghost">تفريغ النموذج</a>
+                <a asp-page="/Positions/Index" asp-route-companyId="@Model.CompanyId" class="nxp-btn nxp-btn--ghost">تفريغ النموذج</a>
             </div>
         </form>
     </section>
@@ -223,15 +235,6 @@
 
             <div class="nxp-filters nxp-filters--positions" aria-label="فلاتر المناصب">
                 <input id="positionSearch" type="search" placeholder="بحث مباشر عن منصب..." />
-
-                <select id="departmentFilter">
-                    <option value="all">كل الأقسام</option>
-                    @foreach (var department in Model.Departments)
-                    {
-                        <option value="@department.Id">@department.Name</option>
-                    }
-                    <option value="none">بدون قسم</option>
-                </select>
 
                 <select id="categoryFilter">
                     <option value="all">كل الفئات</option>
@@ -273,7 +276,7 @@
                         <tr>
                             <th>#</th>
                             <th>المنصب</th>
-                            <th>القسم</th>
+                            <th>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</th>
                             <th>الفئة</th>
                             <th>المستوى</th>
                             <th>الموظفون</th>
@@ -288,12 +291,11 @@
                             var canDelete = position.EmployeeCount == 0;
                             <tr data-position-row
                                 data-search="@position.SearchText"
-                                data-department="@(position.DepartmentId?.ToString() ?? "none")"
                                 data-category="@(string.IsNullOrWhiteSpace(position.Category) ? "none" : position.Category)"
                                 data-level="@(string.IsNullOrWhiteSpace(position.Level) ? "none" : position.Level)"
                                 data-status="@(position.IsActive ? "active" : "inactive")"
                                 data-linked="@(position.EmployeeCount > 0 ? "linked" : "unlinked")">
-                                <td>@(i + 1)</td>
+                                <td data-position-sequence>@(i + 1)</td>
                                 <td>
                                     <div class="nxp-position-name">
                                         <strong>@position.ArabicName</strong>
@@ -303,7 +305,7 @@
                                         }
                                     </div>
                                 </td>
-                                <td>@(position.DepartmentName ?? "بدون قسم")</td>
+                                <td>@position.CompanyName</td>
                                 <td>@(string.IsNullOrWhiteSpace(position.Category) ? "غير محدد" : position.Category)</td>
                                 <td>@(string.IsNullOrWhiteSpace(position.Level) ? "غير محدد" : position.Level)</td>
                                 <td>
@@ -321,13 +323,15 @@
                                 </td>
                                 <td>
                                     <div class="nxp-actions">
-                                        <a class="nxp-icon-btn" asp-page="/Positions/Index" asp-route-editId="@position.Id" asp-fragment="positionFormArea">تعديل</a>
+                                        <a class="nxp-icon-btn" asp-page="/Positions/Index" asp-route-companyId="@Model.CompanyId" asp-route-editId="@position.Id" asp-fragment="positionFormArea">تعديل</a>
 
                                         <form method="post" asp-page-handler="Toggle" asp-route-id="@position.Id" class="nxp-inline-form">
+                                            <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
                                             <button type="submit" class="nxp-icon-btn nxp-icon-btn--muted">@(position.IsActive ? "إيقاف" : "تفعيل")</button>
                                         </form>
 
                                         <form method="post" asp-page-handler="Delete" asp-route-id="@position.Id" class="nxp-inline-form">
+                                            <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
                                             <button type="submit" class="nxp-icon-btn nxp-icon-btn--danger" disabled="@(!canDelete)" title="@(canDelete ? "حذف المنصب" : "لا يمكن حذف منصب مرتبط بموظفين")">حذف</button>
                                         </form>
                                     </div>
@@ -336,6 +340,15 @@
                         }
                     </tbody>
                 </table>
+            </div>
+
+            <div class="nxp-pagination" id="positionsPager" hidden>
+                <div class="nxp-pagination__summary" id="positionsPageSummary"></div>
+                <div class="nxp-pagination__controls">
+                    <button type="button" class="nxp-pagination__button" id="positionsPrevPage">السابق</button>
+                    <span class="nxp-pagination__indicator" id="positionsPageIndicator"></span>
+                    <button type="button" class="nxp-pagination__button" id="positionsNextPage">التالي</button>
+                </div>
             </div>
         }
     </section>
@@ -593,38 +606,112 @@
         (() => {
             const normalize = value => (value || '').toString().trim().toLowerCase();
             const search = document.getElementById('positionSearch');
-            const department = document.getElementById('departmentFilter');
             const category = document.getElementById('categoryFilter');
             const level = document.getElementById('levelFilter');
             const status = document.getElementById('statusFilter');
             const rows = Array.from(document.querySelectorAll('[data-position-row]'));
+            const pager = document.getElementById('positionsPager');
+            const pageSummary = document.getElementById('positionsPageSummary');
+            const pageIndicator = document.getElementById('positionsPageIndicator');
+            const previousPageButton = document.getElementById('positionsPrevPage');
+            const nextPageButton = document.getElementById('positionsNextPage');
+            const pageSize = 25;
+            let currentPage = 1;
+            let filteredRows = [];
 
-            function applyFilters() {
+            function renderPage() {
+                const totalItems = filteredRows.length;
+                const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+                if (currentPage > totalPages) {
+                    currentPage = totalPages;
+                }
+
+                const startIndex = (currentPage - 1) * pageSize;
+                const endIndex = Math.min(startIndex + pageSize, totalItems);
+
+                rows.forEach(row => {
+                    row.hidden = true;
+                });
+
+                filteredRows.slice(startIndex, endIndex).forEach((row, index) => {
+                    row.hidden = false;
+                    const sequenceCell = row.querySelector('[data-position-sequence]');
+
+                    if (sequenceCell) {
+                        sequenceCell.textContent = (startIndex + index + 1).toString();
+                    }
+                });
+
+                if (pager) {
+                    pager.hidden = totalItems <= pageSize;
+                }
+
+                if (pageSummary) {
+                    pageSummary.textContent = totalItems === 0
+                        ? 'لا توجد نتائج مطابقة'
+                        : `عرض ${startIndex + 1}-${endIndex} من ${totalItems}`;
+                }
+
+                if (pageIndicator) {
+                    pageIndicator.textContent = `${currentPage} / ${totalPages}`;
+                }
+
+                if (previousPageButton) {
+                    previousPageButton.disabled = currentPage <= 1;
+                }
+
+                if (nextPageButton) {
+                    nextPageButton.disabled = currentPage >= totalPages;
+                }
+            }
+
+            function applyFilters(resetPage = true) {
                 const q = normalize(search?.value);
-                const departmentValue = department?.value || 'all';
                 const categoryValue = category?.value || 'all';
                 const levelValue = level?.value || 'all';
                 const statusValue = status?.value || 'all';
 
-                rows.forEach(row => {
+                filteredRows = rows.filter(row => {
                     const matchesSearch = !q || normalize(row.dataset.search).includes(q);
-                    const matchesDepartment = departmentValue === 'all' || row.dataset.department === departmentValue;
                     const matchesCategory = categoryValue === 'all' || row.dataset.category === categoryValue;
                     const matchesLevel = levelValue === 'all' || row.dataset.level === levelValue;
                     const matchesStatus = statusValue === 'all'
                         || row.dataset.status === statusValue
                         || row.dataset.linked === statusValue;
 
-                    row.hidden = !(matchesSearch && matchesDepartment && matchesCategory && matchesLevel && matchesStatus);
+                    return matchesSearch && matchesCategory && matchesLevel && matchesStatus;
                 });
+
+                if (resetPage) {
+                    currentPage = 1;
+                }
+
+                renderPage();
             }
 
-            [search, department, category, level, status].forEach(element => {
-                element?.addEventListener('input', applyFilters);
-                element?.addEventListener('change', applyFilters);
+            [search, category, level, status].forEach(element => {
+                element?.addEventListener('input', () => applyFilters(true));
+                element?.addEventListener('change', () => applyFilters(true));
             });
 
-            applyFilters();
+            previousPageButton?.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage -= 1;
+                    renderPage();
+                }
+            });
+
+            nextPageButton?.addEventListener('click', () => {
+                const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+
+                if (currentPage < totalPages) {
+                    currentPage += 1;
+                    renderPage();
+                }
+            });
+
+            applyFilters(true);
 
             const modal = document.querySelector('[data-employees-modal]');
             const backdrop = document.querySelector('[data-employees-backdrop]');

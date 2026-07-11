@@ -20,8 +20,16 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
             .HasMaxLength(50)
             .IsRequired();
 
+        builder.Property(x => x.CompanyId)
+            .IsRequired();
+
         builder.Property(x => x.BranchId)
             .IsRequired(false);
+
+        builder.HasOne(x => x.Company)
+            .WithMany(x => x.Departments)
+            .HasForeignKey(x => x.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Branch)
             .WithMany(x => x.Departments)

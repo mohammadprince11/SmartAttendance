@@ -6,6 +6,202 @@
     color: var(--sa-text, #e5edf8);
 }
 
+/* Compact administrative header for the Positions page. */
+.nxp-admin-header {
+    display: grid;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at top right, rgba(45, 212, 191, .10), transparent 34%),
+        linear-gradient(145deg, rgba(15, 23, 42, .96), rgba(17, 24, 39, .90));
+    border: 1px solid rgba(148, 163, 184, .16);
+    box-shadow: 0 16px 36px rgba(2, 6, 23, .18);
+}
+
+.nxp-admin-header__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.nxp-admin-header__identity {
+    min-width: 0;
+}
+
+.nxp-admin-header__eyebrow {
+    display: block;
+    margin-bottom: 3px;
+    color: #2dd4bf;
+    font-size: 11px;
+    font-weight: 1000;
+}
+
+.nxp-admin-header h1 {
+    margin: 0;
+    color: #f8fafc;
+    font-size: clamp(22px, 2vw, 28px);
+    line-height: 1.25;
+    font-weight: 1000;
+}
+
+.nxp-admin-header__identity p {
+    margin: 4px 0 0;
+    color: #94a3b8;
+    font-size: 12px;
+    line-height: 1.6;
+    font-weight: 750;
+}
+
+.nxp-admin-header__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
+
+.nxp-admin-header__actions a {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(45, 212, 191, .22);
+    background: rgba(45, 212, 191, .10);
+    color: #99f6e4;
+    text-decoration: none;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 1000;
+}
+
+.nxp-admin-header__actions a:hover {
+    border-color: rgba(45, 212, 191, .42);
+    background: rgba(45, 212, 191, .16);
+    color: #ffffff;
+}
+
+.nxp-admin-header__company {
+    display: grid;
+    grid-template-columns: auto minmax(240px, 420px) auto;
+    align-items: center;
+    justify-content: start;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(148, 163, 184, .12);
+}
+
+.nxp-admin-header__company label {
+    color: #cbd5e1;
+    font-size: 12px;
+    font-weight: 1000;
+    white-space: nowrap;
+}
+
+.nxp-admin-header__company select {
+    width: 100%;
+    min-height: 40px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, .18);
+    background: rgba(2, 6, 23, .32);
+    color: #f8fafc;
+    padding: 0 12px;
+    outline: none;
+    font-weight: 850;
+}
+
+.nxp-admin-header__company .nxp-btn {
+    min-height: 40px;
+    border-radius: 12px;
+    padding-inline: 16px;
+}
+
+.nxp-kpis {
+    gap: 10px;
+}
+
+.nxp-kpis article {
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-radius: 16px;
+    padding: 10px 14px;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, .14);
+}
+
+.nxp-kpis span {
+    font-size: 11px;
+}
+
+.nxp-kpis strong {
+    margin-top: 0;
+    font-size: 20px;
+}
+
+@media (max-width: 1100px) {
+    .nxp-admin-header__top {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .nxp-admin-header__actions {
+        flex-wrap: wrap;
+    }
+
+    .nxp-admin-header__company {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+}
+
+@media (max-width: 720px) {
+    .nxp-admin-header {
+        padding: 14px;
+        border-radius: 18px;
+    }
+
+    .nxp-admin-header__actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .nxp-admin-header__actions a:first-child {
+        grid-column: 1 / -1;
+    }
+
+    .nxp-admin-header__company {
+        grid-template-columns: 1fr;
+    }
+
+    .nxp-admin-header__company label {
+        white-space: normal;
+    }
+
+    .nxp-admin-header__company .nxp-btn {
+        width: 100%;
+    }
+
+    .nxp-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 460px) {
+    .nxp-admin-header__actions,
+    .nxp-kpis {
+        grid-template-columns: 1fr;
+    }
+
+    .nxp-admin-header__actions a:first-child {
+        grid-column: auto;
+    }
+}
+
+
 .nxp-alert {
     border-radius: 18px;
     padding: 13px 16px;
@@ -264,12 +460,13 @@
 .nxp-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 980px;
+    min-width: 900px;
+    table-layout: fixed;
 }
 
 .nxp-table th,
 .nxp-table td {
-    padding: 14px;
+    padding: 10px 8px;
     border-bottom: 1px solid rgba(148, 163, 184, .10);
     vertical-align: middle;
     text-align: right;
@@ -285,6 +482,88 @@
 .nxp-table td {
     color: #e5edf8;
     font-weight: 800;
+}
+
+.nxp-table th:nth-child(1),
+.nxp-table td:nth-child(1) {
+    width: 5%;
+    text-align: center;
+}
+
+.nxp-table th:nth-child(2),
+.nxp-table td:nth-child(2) {
+    width: 24%;
+}
+
+.nxp-table th:nth-child(3),
+.nxp-table td:nth-child(3) {
+    width: 13%;
+}
+
+.nxp-table th:nth-child(4),
+.nxp-table td:nth-child(4),
+.nxp-table th:nth-child(5),
+.nxp-table td:nth-child(5) {
+    width: 11%;
+}
+
+.nxp-table th:nth-child(6),
+.nxp-table td:nth-child(6) {
+    width: 10%;
+}
+
+.nxp-table th:nth-child(7),
+.nxp-table td:nth-child(7) {
+    width: 9%;
+    text-align: center;
+}
+
+.nxp-table th:nth-child(8),
+.nxp-table td:nth-child(8) {
+    width: 17%;
+    min-width: 205px;
+}
+
+.nxp-pagination {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.nxp-pagination[hidden] {
+    display: none !important;
+}
+
+.nxp-pagination__summary,
+.nxp-pagination__indicator {
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.nxp-pagination__controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nxp-pagination__button {
+    min-width: 72px;
+    min-height: 34px;
+    border-radius: 11px;
+    border: 1px solid rgba(45, 212, 191, .20);
+    background: rgba(45, 212, 191, .10);
+    color: #ccfbf1;
+    font-weight: 1000;
+    cursor: pointer;
+}
+
+.nxp-pagination__button:disabled {
+    opacity: .42;
+    cursor: not-allowed;
 }
 
 .nxp-position-name {
@@ -368,22 +647,29 @@
 .nxp-actions {
     display: flex;
     align-items: center;
-    gap: 7px;
-    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 6px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
 }
 
 .nxp-inline-form {
-    display: inline;
+    display: inline-flex;
     margin: 0;
+    flex: 0 0 auto;
 }
 
 .nxp-icon-btn {
-    min-height: 34px;
-    border-radius: 12px;
-    padding: 0 11px;
+    min-height: 32px;
+    border-radius: 11px;
+    padding: 0 9px;
     background: rgba(45, 212, 191, .12);
     color: #99f6e4;
     border: 1px solid rgba(45, 212, 191, .20);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
 }
 
 .nxp-icon-btn--muted {
@@ -545,6 +831,20 @@ body.nxp-modal-open {
         border-radius: 20px;
         padding: 16px;
     }
+
+    .nxp-pagination {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .nxp-pagination__controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .nxp-pagination__button {
+        flex: 1 1 0;
+    }
 }
 
 
@@ -679,57 +979,69 @@ body.nxp-modal-open {
     }
 }
 /* NEXORA_FIX20B_POSITIONS_FORM_ONE_ROW_END */
-/* NEXORA_FIX20C_V2_POSITION_PROFILE_POPUPS_START */
+/* NEXORA_POSITIONS_JOB_MODAL_CANONICAL_START */
 #positionForm > .nxp-position-profile-launchers {
-    grid-column: 1 / -1 !important;
-    display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 12px !important;
-    margin-top: 4px !important;
+    grid-column: auto !important;
+    display: block !important;
+    margin: 0 !important;
+    align-self: end !important;
+    min-width: 0 !important;
 }
 
-.nxp-profile-launcher {
+#positionForm > .nxp-position-profile-launchers:empty {
+    display: none !important;
+}
+
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher {
+    width: 100% !important;
     min-height: 86px !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    padding: 12px 14px !important;
     border-radius: 18px !important;
     border: 1px solid rgba(34, 211, 238, .22) !important;
     background:
         radial-gradient(circle at 12% 12%, rgba(34, 211, 238, .12), transparent 38%),
         rgba(3, 15, 26, .72) !important;
     color: #e8f3ff !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    justify-content: center !important;
-    gap: 8px !important;
-    padding: 14px 16px !important;
-    cursor: pointer !important;
     text-align: right !important;
+    cursor: pointer !important;
     transition: transform .18s ease, border-color .18s ease, background .18s ease !important;
 }
 
-.nxp-profile-launcher:hover {
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher:hover {
     transform: translateY(-1px) !important;
     border-color: rgba(34, 211, 238, .42) !important;
     background: rgba(34, 211, 238, .10) !important;
 }
 
-.nxp-profile-launcher span {
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher span {
     color: #22d3ee !important;
-    font-size: 12px !important;
+    font-size: 11px !important;
     font-weight: 1000 !important;
 }
 
-.nxp-profile-launcher strong {
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher strong {
     color: #ffffff !important;
-    font-size: 14px !important;
+    font-size: 13px !important;
+    line-height: 1.4 !important;
     font-weight: 1000 !important;
+}
+
+html.nxp-profile-modal-open,
+body.nxp-profile-modal-open {
+    overflow: hidden !important;
 }
 
 .nxp-profile-modal-backdrop {
     position: fixed !important;
     inset: 0 !important;
     z-index: 10040 !important;
-    background: rgba(1, 8, 14, .72) !important;
+    background: rgba(1, 8, 14, .76) !important;
     backdrop-filter: blur(8px) !important;
 }
 
@@ -739,7 +1051,8 @@ body.nxp-modal-open {
     z-index: 10050 !important;
     display: grid !important;
     place-items: center !important;
-    padding: 24px !important;
+    padding: 18px !important;
+    overflow: hidden !important;
 }
 
 .nxp-profile-modal[hidden],
@@ -748,116 +1061,255 @@ body.nxp-modal-open {
 }
 
 .nxp-profile-modal__card {
-    width: min(920px, 100%) !important;
-    max-height: min(82vh, 760px) !important;
-    overflow: auto !important;
-    border-radius: 26px !important;
+    width: min(980px, calc(100vw - 36px)) !important;
+    max-width: 980px !important;
+    height: min(86vh, 720px) !important;
+    max-height: 86vh !important;
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    overflow: hidden !important;
+    border-radius: 24px !important;
     border: 1px solid rgba(34, 211, 238, .26) !important;
     background:
-        radial-gradient(circle at 12% 8%, rgba(34, 211, 238, .12), transparent 34%),
-        linear-gradient(145deg, rgba(8, 31, 50, .98), rgba(4, 16, 28, .98)) !important;
-    box-shadow: 0 28px 90px rgba(0, 0, 0, .42) !important;
+        radial-gradient(circle at 12% 8%, rgba(34, 211, 238, .11), transparent 34%),
+        linear-gradient(145deg, rgba(8, 31, 50, .985), rgba(4, 16, 28, .99)) !important;
+    box-shadow: 0 28px 90px rgba(0, 0, 0, .46) !important;
     color: #e8f3ff !important;
-}
-
-.nxp-profile-modal--small .nxp-profile-modal__card {
-    width: min(680px, 100%) !important;
 }
 
 .nxp-profile-modal__head {
     display: flex !important;
+    align-items: center !important;
     justify-content: space-between !important;
-    align-items: flex-start !important;
     gap: 16px !important;
-    padding: 22px 24px !important;
+    padding: 18px 20px !important;
     border-bottom: 1px solid rgba(157, 184, 204, .12) !important;
 }
 
 .nxp-profile-modal__head span {
     display: block !important;
+    margin-bottom: 4px !important;
     color: #22d3ee !important;
-    font-size: 12px !important;
-    font-weight: 1000 !important;
-    margin-bottom: 6px !important;
-}
-
-.nxp-profile-modal__head h3 {
-    color: #ffffff !important;
-    font-size: 28px !important;
-    line-height: 1.1 !important;
-    font-weight: 1000 !important;
-    margin: 0 !important;
-}
-
-.nxp-profile-modal__head button {
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
-    border-radius: 14px !important;
-    border: 1px solid rgba(34, 211, 238, .22) !important;
-    background: rgba(7, 18, 31, .72) !important;
-    color: #e8f3ff !important;
-    font-size: 24px !important;
-    cursor: pointer !important;
-}
-
-.nxp-profile-modal__body {
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 16px !important;
-    padding: 22px 24px 24px !important;
-}
-
-.nxp-profile-modal__body .nxp-field--wide {
-    grid-column: 1 / -1 !important;
-}
-
-.nxp-profile-modal__body textarea {
-    min-height: 130px !important;
-    resize: vertical !important;
-    line-height: 1.8 !important;
-}
-
-.nxp-profile-ready-badge {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: fit-content !important;
-    margin-top: 8px !important;
-    padding: 5px 10px !important;
-    border-radius: 999px !important;
-    border: 1px solid rgba(34, 211, 238, .28) !important;
-    background: rgba(34, 211, 238, .08) !important;
-    color: #bdf4ff !important;
     font-size: 11px !important;
     font-weight: 1000 !important;
 }
 
-.nxp-profile-modal-open {
-    overflow: hidden !important;
+.nxp-profile-modal__head h3 {
+    margin: 0 !important;
+    color: #ffffff !important;
+    font-size: 26px !important;
+    line-height: 1.2 !important;
+    font-weight: 1000 !important;
+}
+
+.nxp-profile-modal__head button {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 13px !important;
+    border: 1px solid rgba(34, 211, 238, .22) !important;
+    background: rgba(7, 18, 31, .72) !important;
+    color: #e8f3ff !important;
+    font-size: 23px !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+}
+
+.nxp-profile-modal__body {
+    min-height: 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-rows: max-content !important;
+    align-content: start !important;
+    align-items: start !important;
+    gap: 12px !important;
+    padding: 16px 20px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(34, 211, 238, .48) rgba(3, 15, 26, .70) !important;
+}
+
+.nxp-profile-modal__body::-webkit-scrollbar {
+    width: 9px !important;
+}
+
+.nxp-profile-modal__body::-webkit-scrollbar-track {
+    background: rgba(3, 15, 26, .70) !important;
+    border-radius: 999px !important;
+}
+
+.nxp-profile-modal__body::-webkit-scrollbar-thumb {
+    background: rgba(34, 211, 238, .42) !important;
+    border-radius: 999px !important;
+}
+
+#positionForm .nxp-profile-modal__body .nxp-field {
+    min-width: 0 !important;
+    min-height: auto !important;
+    height: auto !important;
+    display: grid !important;
+    grid-template-rows: auto auto !important;
+    align-content: start !important;
+    align-self: start !important;
+    gap: 6px !important;
+    padding: 10px 12px !important;
+    border-radius: 15px !important;
+    background: rgba(15, 23, 42, .48) !important;
+    border: 1px solid rgba(148, 163, 184, .14) !important;
+    overflow: visible !important;
+}
+
+#positionForm .nxp-profile-modal__body .nxp-field--wide {
+    grid-column: 1 / -1 !important;
+}
+
+#positionForm .nxp-profile-modal__body .nxp-field > span {
+    min-height: 0 !important;
+    display: block !important;
+    color: #cbd5e1 !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+    line-height: 1.4 !important;
+}
+
+#positionForm .nxp-profile-modal__body textarea {
+    width: 100% !important;
+    height: 96px !important;
+    min-height: 96px !important;
+    max-height: 180px !important;
+    display: block !important;
+    align-self: start !important;
+    box-sizing: border-box !important;
+    padding: 10px 12px !important;
+    border-radius: 13px !important;
+    resize: vertical !important;
+    line-height: 1.65 !important;
+}
+
+#positionForm .nxp-profile-modal__body .nxp-field:nth-child(2) textarea {
+    height: 118px !important;
+    min-height: 118px !important;
+}
+
+#positionForm .nxp-profile-modal__body .nxp-field:nth-child(3) textarea,
+#positionForm .nxp-profile-modal__body .nxp-field:nth-child(4) textarea {
+    height: 100px !important;
+    min-height: 100px !important;
+}
+
+#positionForm .nxp-profile-modal__body .nxp-field:nth-child(5) textarea {
+    height: 104px !important;
+    min-height: 104px !important;
+}
+
+.nxp-profile-modal__footer {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    padding: 14px 20px 18px !important;
+    border-top: 1px solid rgba(157, 184, 204, .12) !important;
+    background: linear-gradient(180deg, rgba(4, 16, 28, .90), rgba(4, 16, 28, .99)) !important;
+}
+
+.nxp-profile-modal__footer .nxp-btn {
+    min-width: 136px !important;
+    min-height: 42px !important;
+    border-radius: 14px !important;
+}
+
+@media (max-width: 1700px) {
+    #positionForm {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+
+    #positionForm > .nxp-field--wide:first-of-type,
+    #positionForm > label.nxp-field--wide:first-of-type {
+        grid-column: span 2 !important;
+    }
+
+    #positionForm > .nxp-position-profile-launchers {
+        grid-column: span 2 !important;
+    }
 }
 
 @media (max-width: 1100px) {
-    #positionForm > .nxp-position-profile-launchers {
+    #positionForm {
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    #positionForm > .nxp-field--wide:first-of-type,
+    #positionForm > label.nxp-field--wide:first-of-type,
+    #positionForm > .nxp-position-profile-launchers {
+        grid-column: 1 / -1 !important;
     }
 }
 
 @media (max-width: 720px) {
-    #positionForm > .nxp-position-profile-launchers,
-    .nxp-profile-modal__body {
+    #positionForm {
         grid-template-columns: 1fr !important;
     }
 
+    #positionForm > .nxp-field,
+    #positionForm > label.nxp-field,
+    #positionForm > .nxp-position-profile-launchers {
+        grid-column: 1 / -1 !important;
+    }
+
     .nxp-profile-modal {
-        padding: 14px !important;
+        padding: 10px !important;
     }
 
     .nxp-profile-modal__card {
-        max-height: 88vh !important;
+        width: calc(100vw - 20px) !important;
+        height: 92vh !important;
+        max-height: 92vh !important;
+        border-radius: 18px !important;
+    }
+
+    .nxp-profile-modal__head {
+        padding: 14px 16px !important;
+    }
+
+    .nxp-profile-modal__head h3 {
+        font-size: 22px !important;
+    }
+
+    .nxp-profile-modal__body {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+        padding: 12px 14px !important;
+    }
+
+    #positionForm .nxp-profile-modal__body .nxp-field--wide {
+        grid-column: auto !important;
+    }
+
+    #positionForm .nxp-profile-modal__body textarea,
+    #positionForm .nxp-profile-modal__body .nxp-field:nth-child(2) textarea,
+    #positionForm .nxp-profile-modal__body .nxp-field:nth-child(3) textarea,
+    #positionForm .nxp-profile-modal__body .nxp-field:nth-child(4) textarea,
+    #positionForm .nxp-profile-modal__body .nxp-field:nth-child(5) textarea {
+        height: 94px !important;
+        min-height: 94px !important;
+    }
+
+    .nxp-profile-modal__footer {
+        flex-direction: column-reverse !important;
+        align-items: stretch !important;
+        padding: 12px 14px 14px !important;
+    }
+
+    .nxp-profile-modal__footer .nxp-btn {
+        width: 100% !important;
+        min-width: 0 !important;
     }
 }
-/* NEXORA_FIX20C_V2_POSITION_PROFILE_POPUPS_END */
+/* NEXORA_POSITIONS_JOB_MODAL_CANONICAL_END */
 /* NEXORA_FIX20D_REFERENCE_DROPDOWNS_START */
 #positionForm {
     grid-template-columns: minmax(220px, 1.35fr) repeat(6, minmax(130px, 1fr)) !important;
@@ -1054,185 +1506,7 @@ body.nxp-modal-open {
     }
 }
 /* NEXORA_FIX20D_REFERENCE_DROPDOWNS_END */
-/* NEXORA_FIX20F_POSITIONS_DETAILS_SAFE_LAYOUT_START */
-#positionForm {
-    grid-template-columns: minmax(210px, 1.25fr) repeat(7, minmax(118px, 1fr)) !important;
-    align-items: end !important;
-}
 
-#positionForm > .nxp-field,
-#positionForm > label.nxp-field {
-    min-width: 0 !important;
-}
-
-#positionForm > .nxp-field--wide:first-of-type,
-#positionForm > label.nxp-field--wide:first-of-type {
-    grid-column: auto !important;
-}
-
-#positionForm > .nxp-field--wide:not(:first-of-type),
-#positionForm > label.nxp-field--wide:not(:first-of-type),
-#positionForm > .nxp-check,
-#positionForm > .nxp-form-actions {
-    grid-column: 1 / -1 !important;
-}
-
-#positionForm > .nxp-position-profile-launchers {
-    grid-column: auto !important;
-    display: block !important;
-    margin: 0 !important;
-    align-self: end !important;
-    min-width: 0 !important;
-}
-
-#positionForm > .nxp-position-profile-launchers:empty {
-    display: none !important;
-}
-
-#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher {
-    width: 100% !important;
-    min-height: 86px !important;
-    height: 100% !important;
-    border-radius: 18px !important;
-    padding: 12px 14px !important;
-    justify-content: center !important;
-    align-items: flex-start !important;
-    text-align: right !important;
-}
-
-#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher span {
-    font-size: 11px !important;
-}
-
-#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher strong {
-    font-size: 13px !important;
-    line-height: 1.4 !important;
-}
-
-html.nxp-profile-modal-open,
-body.nxp-profile-modal-open {
-    overflow: hidden !important;
-}
-
-.nxp-profile-modal {
-    overflow: hidden !important;
-    padding: 20px !important;
-}
-
-.nxp-profile-modal__card {
-    display: flex !important;
-    flex-direction: column !important;
-    width: min(980px, 100%) !important;
-    max-height: 86vh !important;
-    overflow: hidden !important;
-}
-
-.nxp-profile-modal--small .nxp-profile-modal__card {
-    width: min(680px, 100%) !important;
-}
-
-.nxp-profile-modal__body {
-    flex: 1 1 auto !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    max-height: calc(86vh - 170px) !important;
-    padding-bottom: 18px !important;
-    scrollbar-width: thin !important;
-    scrollbar-color: rgba(34, 211, 238, .48) rgba(3, 15, 26, .70) !important;
-}
-
-.nxp-profile-modal__body::-webkit-scrollbar {
-    width: 10px !important;
-}
-
-.nxp-profile-modal__body::-webkit-scrollbar-track {
-    background: rgba(3, 15, 26, .70) !important;
-    border-radius: 999px !important;
-}
-
-.nxp-profile-modal__body::-webkit-scrollbar-thumb {
-    background: rgba(34, 211, 238, .42) !important;
-    border-radius: 999px !important;
-}
-
-.nxp-profile-modal__footer {
-    flex: 0 0 auto !important;
-    display: flex !important;
-    justify-content: flex-start !important;
-    align-items: center !important;
-    gap: 12px !important;
-    padding: 16px 24px 22px !important;
-    border-top: 1px solid rgba(157, 184, 204, .12) !important;
-    background: linear-gradient(180deg, rgba(4, 16, 28, .86), rgba(4, 16, 28, .98)) !important;
-}
-
-.nxp-profile-modal__footer .nxp-btn {
-    min-width: 140px !important;
-    min-height: 44px !important;
-    border-radius: 15px !important;
-}
-
-@media (max-width: 1700px) {
-    #positionForm {
-        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    }
-
-    #positionForm > .nxp-field--wide:first-of-type,
-    #positionForm > label.nxp-field--wide:first-of-type {
-        grid-column: span 2 !important;
-    }
-
-    #positionForm > .nxp-position-profile-launchers {
-        grid-column: span 2 !important;
-    }
-}
-
-@media (max-width: 1100px) {
-    #positionForm {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    }
-
-    #positionForm > .nxp-field--wide:first-of-type,
-    #positionForm > label.nxp-field--wide:first-of-type,
-    #positionForm > .nxp-position-profile-launchers {
-        grid-column: 1 / -1 !important;
-    }
-}
-
-@media (max-width: 720px) {
-    #positionForm {
-        grid-template-columns: 1fr !important;
-    }
-
-    #positionForm > .nxp-field,
-    #positionForm > label.nxp-field,
-    #positionForm > .nxp-position-profile-launchers {
-        grid-column: 1 / -1 !important;
-    }
-
-    .nxp-profile-modal {
-        padding: 12px !important;
-    }
-
-    .nxp-profile-modal__card {
-        max-height: 88vh !important;
-    }
-
-    .nxp-profile-modal__body {
-        max-height: calc(88vh - 170px) !important;
-        grid-template-columns: 1fr !important;
-    }
-
-    .nxp-profile-modal__footer {
-        flex-direction: column-reverse !important;
-        align-items: stretch !important;
-    }
-
-    .nxp-profile-modal__footer .nxp-btn {
-        width: 100% !important;
-    }
-}
-/* NEXORA_FIX20F_POSITIONS_DETAILS_SAFE_LAYOUT_END */
 /* NEXORA_FIX20G_EDUCATION_DEGREE_SPECIALIZATION_START */
 #positionForm {
     grid-template-columns: minmax(200px, 1.35fr) repeat(8, minmax(108px, 1fr)) !important;

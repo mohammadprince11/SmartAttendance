@@ -10,6 +10,10 @@ public class Department : AuditableEntity
 
     public bool IsActive { get; set; } = true;
 
+    public int CompanyId { get; set; }
+
+    public Company Company { get; set; } = null!;
+
     public int? BranchId { get; set; }
 
     public Branch? Branch { get; set; }

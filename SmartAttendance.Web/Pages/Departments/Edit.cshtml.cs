@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using SmartAttendance.Application.Companies.ViewModels;
 using SmartAttendance.Application.Departments.Services;
 using SmartAttendance.Application.Departments.ViewModels;
 
@@ -17,17 +18,22 @@ public class EditModel : PageModel
     [BindProperty]
     public DepartmentEditViewModel Department { get; set; } = new();
 
+    public IEnumerable<CompanyListViewModel> Companies { get; set; } =
+        new List<CompanyListViewModel>();
+
     public string? ErrorMessage { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
+        Companies = await _departmentService.GetCompaniesForDropdownAsync();
         ModelState.Remove("Department.Code");
-        ModelState.Remove("Department.BranchId");
 
         var department = await _departmentService.GetEditByIdAsync(id);
 
         if (department == null)
+        {
             return NotFound();
+        }
 
         Department = department;
 
@@ -36,21 +42,29 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        Companies = await _departmentService.GetCompaniesForDropdownAsync();
         ModelState.Remove("Department.Code");
         ModelState.Remove("Department.BranchId");
 
         if (!ModelState.IsValid)
+        {
             return Page();
+        }
 
         var updated = await _departmentService.UpdateAsync(Department);
 
         if (!updated)
         {
-            ErrorMessage = "Department not found, duplicated, or code already exists.";
+            ErrorMessage =
+                "تعذر تحديث القسم. " +
+                "تأكد من الشركة " +
+                "وعدم تكرار الاسم أو الكود.";
+
             return Page();
         }
 
-        TempData["SuccessMessage"] = "Department updated successfully.";
+        TempData["SuccessMessage"] =
+            "تم تحديث القسم بنجاح.";
 
         return RedirectToPage("./Index");
     }

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SmartAttendance.Domain.Entities;
 
@@ -31,6 +31,13 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
 
         builder.HasIndex(x => x.EmployeeNo)
             .IsUnique();
+
+        builder.HasIndex(x => x.PositionId);
+
+        builder.HasOne(x => x.Branch)
+            .WithMany(x => x.Employees)
+            .HasForeignKey(x => x.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Department)
             .WithMany(x => x.Employees)

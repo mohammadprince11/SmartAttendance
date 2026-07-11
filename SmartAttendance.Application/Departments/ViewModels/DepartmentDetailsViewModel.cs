@@ -10,6 +10,10 @@ public class DepartmentDetailsViewModel
 
     public bool IsActive { get; set; }
 
+    public int CompanyId { get; set; }
+
+    public string CompanyName { get; set; } = string.Empty;
+
     public int BranchId { get; set; }
 
     public string BranchName { get; set; } = string.Empty;

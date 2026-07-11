@@ -6,5 +6,7 @@ public class DepartmentCreateViewModel
 
     public string Name { get; set; } = string.Empty;
 
+    public int CompanyId { get; set; }
+
     public int BranchId { get; set; }
 }

@@ -1,35 +1,28 @@
-using AutoMapper;
-using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
+using SmartAttendance.Application.Companies.ViewModels;
 using SmartAttendance.Application.Departments.Services;
 using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Domain.Entities;
-using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Infrastructure.Services;
 
 public class DepartmentService : IDepartmentService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
-    private readonly ApplicationDbContext _dbContext;
 
-    public DepartmentService(
-        IUnitOfWork unitOfWork,
-        IMapper mapper,
-        ApplicationDbContext dbContext)
+    public DepartmentService(IUnitOfWork unitOfWork)
     {
         _unitOfWork = unitOfWork;
-        _mapper = mapper;
-        _dbContext = dbContext;
     }
 
-    public async Task<IEnumerable<DepartmentListViewModel>> GetAllAsync(string? searchTerm = null)
+    public async Task<IEnumerable<DepartmentListViewModel>> GetAllAsync(
+        string? searchTerm = null)
     {
-        await EnsureIndependentDepartmentSchemaAsync();
-
         var departments = await _unitOfWork.Departments.GetAllAsync();
+        var companies = await _unitOfWork.Companies.GetAllAsync();
+
+        var companyLookup = companies.ToDictionary(x => x.Id, x => x.Name);
 
         var result = departments.Select(department => new DepartmentListViewModel
         {
@@ -37,6 +30,12 @@ public class DepartmentService : IDepartmentService
             Code = department.Code,
             Name = department.Name,
             IsActive = department.IsActive,
+            CompanyId = department.CompanyId,
+            CompanyName = companyLookup.TryGetValue(
+                department.CompanyId,
+                out var companyName)
+                ? companyName
+                : string.Empty,
             BranchId = 0,
             BranchName = string.Empty
         });
@@ -45,20 +44,29 @@ public class DepartmentService : IDepartmentService
         {
             result = result.Where(x =>
                 x.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                x.Code.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+                x.Code.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                x.CompanyName.Contains(
+                    searchTerm,
+                    StringComparison.OrdinalIgnoreCase));
         }
 
-        return result.OrderBy(x => x.Name).ToList();
+        return result
+            .OrderBy(x => x.CompanyName)
+            .ThenBy(x => x.Name)
+            .ToList();
     }
 
     public async Task<DepartmentDetailsViewModel?> GetByIdAsync(int id)
     {
-        await EnsureIndependentDepartmentSchemaAsync();
-
         var department = await _unitOfWork.Departments.GetByIdAsync(id);
 
         if (department == null)
+        {
             return null;
+        }
+
+        var company = await _unitOfWork.Companies.GetByIdAsync(
+            department.CompanyId);
 
         return new DepartmentDetailsViewModel
         {
@@ -66,6 +74,8 @@ public class DepartmentService : IDepartmentService
             Code = department.Code,
             Name = department.Name,
             IsActive = department.IsActive,
+            CompanyId = department.CompanyId,
+            CompanyName = company?.Name ?? string.Empty,
             BranchId = 0,
             BranchName = string.Empty
         };
@@ -73,12 +83,12 @@ public class DepartmentService : IDepartmentService
 
     public async Task<DepartmentEditViewModel?> GetEditByIdAsync(int id)
     {
-        await EnsureIndependentDepartmentSchemaAsync();
-
         var department = await _unitOfWork.Departments.GetByIdAsync(id);
 
         if (department == null)
+        {
             return null;
+        }
 
         return new DepartmentEditViewModel
         {
@@ -86,33 +96,52 @@ public class DepartmentService : IDepartmentService
             Code = department.Code,
             Name = department.Name,
             IsActive = department.IsActive,
+            CompanyId = department.CompanyId,
             BranchId = 0
         };
     }
 
     public async Task<bool> CreateAsync(DepartmentCreateViewModel model)
     {
-        await EnsureIndependentDepartmentSchemaAsync();
+        var normalizedName = model.Name?.Trim() ?? string.Empty;
+
+        if (model.CompanyId <= 0 ||
+            string.IsNullOrWhiteSpace(normalizedName))
+        {
+            return false;
+        }
+
+        var company = await _unitOfWork.Companies.GetByIdAsync(
+            model.CompanyId);
+
+        if (company == null || !company.IsActive)
+        {
+            return false;
+        }
 
         var departments = await _unitOfWork.Departments.GetAllAsync();
         var code = string.IsNullOrWhiteSpace(model.Code)
             ? GenerateUniqueSetupCode("DEP", departments.Select(x => x.Code))
             : model.Code.Trim();
 
-        if (departments.Any(x => SameSetupCode(x.Code, code)))
-            return false;
+        var duplicate = departments.Any(x =>
+            SameSetupCode(x.Code, code) ||
+            (x.CompanyId == model.CompanyId &&
+             x.Name.Equals(
+                 normalizedName,
+                 StringComparison.OrdinalIgnoreCase)));
 
-        var duplicateName = departments.Any(x =>
-            x.Name.Equals(model.Name.Trim(), StringComparison.OrdinalIgnoreCase));
-
-        if (duplicateName)
+        if (duplicate)
+        {
             return false;
+        }
 
         var department = new Department
         {
             Code = code,
-            Name = model.Name.Trim(),
+            Name = normalizedName,
             IsActive = true,
+            CompanyId = model.CompanyId,
             BranchId = null
         };
 
@@ -124,33 +153,52 @@ public class DepartmentService : IDepartmentService
 
     public async Task<bool> UpdateAsync(DepartmentEditViewModel model)
     {
-        await EnsureIndependentDepartmentSchemaAsync();
+        var normalizedName = model.Name?.Trim() ?? string.Empty;
 
-        var department = await _unitOfWork.Departments.GetByIdAsync(model.Id);
+        if (model.CompanyId <= 0 ||
+            string.IsNullOrWhiteSpace(normalizedName))
+        {
+            return false;
+        }
+
+        var department = await _unitOfWork.Departments.GetByIdAsync(
+            model.Id);
 
         if (department == null)
+        {
             return false;
+        }
+
+        var company = await _unitOfWork.Companies.GetByIdAsync(
+            model.CompanyId);
+
+        if (company == null)
+        {
+            return false;
+        }
 
         var departments = await _unitOfWork.Departments.GetAllAsync();
-        var code = string.IsNullOrWhiteSpace(model.Code) ? department.Code : model.Code.Trim();
+        var code = string.IsNullOrWhiteSpace(model.Code)
+            ? department.Code
+            : model.Code.Trim();
 
-        var duplicateCode = departments.Any(x =>
+        var duplicate = departments.Any(x =>
             x.Id != model.Id &&
-            SameSetupCode(x.Code, code));
+            (SameSetupCode(x.Code, code) ||
+             (x.CompanyId == model.CompanyId &&
+              x.Name.Equals(
+                  normalizedName,
+                  StringComparison.OrdinalIgnoreCase))));
 
-        if (duplicateCode)
+        if (duplicate)
+        {
             return false;
-
-        var duplicateName = departments.Any(x =>
-            x.Id != model.Id &&
-            x.Name.Equals(model.Name.Trim(), StringComparison.OrdinalIgnoreCase));
-
-        if (duplicateName)
-            return false;
+        }
 
         department.Code = code;
-        department.Name = model.Name.Trim();
+        department.Name = normalizedName;
         department.IsActive = model.IsActive;
+        department.CompanyId = model.CompanyId;
         department.BranchId = null;
 
         _unitOfWork.Departments.Update(department);
@@ -161,12 +209,19 @@ public class DepartmentService : IDepartmentService
 
     public async Task<bool> DeleteAsync(int id)
     {
-        await EnsureIndependentDepartmentSchemaAsync();
-
         var department = await _unitOfWork.Departments.GetByIdAsync(id);
 
         if (department == null)
+        {
             return false;
+        }
+
+        var employees = await _unitOfWork.Employees.GetAllAsync();
+
+        if (employees.Any(x => x.DepartmentId == id))
+        {
+            return false;
+        }
 
         _unitOfWork.Departments.Delete(department);
         await _unitOfWork.SaveChangesAsync();
@@ -182,7 +237,28 @@ public class DepartmentService : IDepartmentService
             x.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
     }
 
-    public async Task<IEnumerable<BranchListViewModel>> GetBranchesForDropdownAsync()
+    public async Task<IEnumerable<CompanyListViewModel>>
+        GetCompaniesForDropdownAsync()
+    {
+        var companies = await _unitOfWork.Companies.GetAllAsync();
+
+        return companies
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Name)
+            .Select(x => new CompanyListViewModel
+            {
+                Id = x.Id,
+                Code = x.Code,
+                Name = x.Name,
+                Email = x.Email,
+                Phone = x.Phone,
+                IsActive = x.IsActive
+            })
+            .ToList();
+    }
+
+    public async Task<IEnumerable<BranchListViewModel>>
+        GetBranchesForDropdownAsync()
     {
         var branches = await _unitOfWork.Branches.GetAllAsync();
 
@@ -201,55 +277,9 @@ public class DepartmentService : IDepartmentService
             .ToList();
     }
 
-    private async Task EnsureIndependentDepartmentSchemaAsync()
-    {
-        await _dbContext.Database.ExecuteSqlRawAsync(@"
-IF COL_LENGTH('dbo.Departments', 'BranchId') IS NOT NULL
-BEGIN
-    DECLARE @dropFkSql NVARCHAR(MAX) = N'';
-
-    SELECT @dropFkSql = @dropFkSql + N'ALTER TABLE dbo.Departments DROP CONSTRAINT ' + QUOTENAME(fk.name) + N';'
-    FROM sys.foreign_keys fk
-    WHERE fk.parent_object_id = OBJECT_ID(N'dbo.Departments')
-      AND fk.referenced_object_id = OBJECT_ID(N'dbo.Branches');
-
-    IF LEN(@dropFkSql) > 0
-        EXEC sp_executesql @dropFkSql;
-
-    DECLARE @dropIndexSql NVARCHAR(MAX) = N'';
-
-    SELECT @dropIndexSql = @dropIndexSql + N'DROP INDEX ' + QUOTENAME(i.name) + N' ON dbo.Departments;'
-    FROM sys.indexes i
-    INNER JOIN sys.index_columns ic
-        ON i.object_id = ic.object_id
-       AND i.index_id = ic.index_id
-    INNER JOIN sys.columns c
-        ON ic.object_id = c.object_id
-       AND ic.column_id = c.column_id
-    WHERE i.object_id = OBJECT_ID(N'dbo.Departments')
-      AND i.is_primary_key = 0
-      AND i.name IS NOT NULL
-      AND c.name = N'BranchId';
-
-    IF LEN(@dropIndexSql) > 0
-        EXEC sp_executesql @dropIndexSql;
-
-    IF EXISTS
-    (
-        SELECT 1
-        FROM sys.columns
-        WHERE object_id = OBJECT_ID(N'dbo.Departments')
-          AND name = N'BranchId'
-          AND is_nullable = 0
-    )
-    BEGIN
-        ALTER TABLE dbo.Departments ALTER COLUMN BranchId INT NULL;
-    END
-END;
-");
-    }
-
-    private static string GenerateUniqueSetupCode(string prefix, IEnumerable<string> existingCodes)
+    private static string GenerateUniqueSetupCode(
+        string prefix,
+        IEnumerable<string> existingCodes)
     {
         var existing = existingCodes
             .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -270,6 +300,9 @@ END;
 
     private static bool SameSetupCode(string? left, string? right)
     {
-        return string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
+        return string.Equals(
+            left?.Trim(),
+            right?.Trim(),
+            StringComparison.OrdinalIgnoreCase);
     }
 }

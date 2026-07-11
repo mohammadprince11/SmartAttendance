@@ -1,18 +1,22 @@
 @page
 @model SmartAttendance.Web.Pages.Branches.CreateModel
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/nexora-setup-pages.css" asp-append-version="true" />
+}
+
 @{
-    ViewData["Title"] = "إضافة موقع عمل";
+    ViewData["Title"] = "Create Work Location";
 }
 
 <div class="nexora-setup-page nx-setup-form-page">
     <section class="nexora-setup-hero">
         <div>
-            <span class="nexora-setup-kicker">مواقع العمل</span>
-            <h1>إضافة موقع عمل</h1>
-            <p>هذه الصفحة احتياطية، ويمكنك الإضافة مباشرة من النافذة المنبثقة في صفحة مواقع العمل.</p>
+            <span class="nexora-setup-kicker">&#x0645;&#x0648;&#x0627;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span>
+            <h1>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0645;&#x0648;&#x0642;&#x0639; &#x0639;&#x0645;&#x0644;</h1>
+            <p>&#x062D;&#x062F;&#x062F; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629; &#x0648;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0642;&#x0639;.</p>
         </div>
-        <a asp-page="./Index" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">الرجوع للقائمة</a>
+        <a asp-page="./Index" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0644;&#x0631;&#x062C;&#x0648;&#x0639;</a>
     </section>
 
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -23,23 +27,38 @@
     <section class="nexora-setup-card">
         <form method="post" class="nx-setup-modal-form">
             <div class="nx-setup-form-grid">
-
                 <label class="nx-setup-field">
-                    <span>اسم موقع العمل</span>
-                    <input asp-for="Branch.Name" placeholder="مثال: المكتب الرئيسي" />
-                    <span asp-validation-for="Branch.Name" class="text-danger"></span>
+                    <span>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
+                    <select asp-for="Branch.CompanyId" data-nexora-select="true">
+                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</option>
+                        @foreach (var company in Model.Companies)
+                        {
+                            <option value="@company.Id">@company.Name</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Branch.CompanyId" class="text-danger"></span>
                 </label>
 
                 <label class="nx-setup-field">
-                    <span>العنوان</span>
-                    <input asp-for="Branch.Address" placeholder="العنوان أو الموقع الجغرافي" />
+                    <span>&#x0627;&#x0633;&#x0645; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span>
+                    <input asp-for="Branch.Name" placeholder="Main Office" />
+                    <span asp-validation-for="Branch.Name" class="text-danger"></span>
+                </label>
+
+                <label class="nx-setup-field nx-setup-field-wide">
+                    <span>&#x0627;&#x0644;&#x0639;&#x0646;&#x0648;&#x0627;&#x0646;</span>
+                    <input asp-for="Branch.Address" placeholder="Address or geographic location" />
                     <span asp-validation-for="Branch.Address" class="text-danger"></span>
                 </label>
             </div>
 
             <div class="nx-setup-modal__actions">
-                <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">إلغاء</a>
-                <button type="submit" class="nx-setup-btn nx-setup-btn-primary">حفظ موقع العمل</button>
+                <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">&#x0625;&#x0644;&#x063A;&#x0627;&#x0621;</a>
+                <button type="submit"
+                        class="nx-setup-btn nx-setup-btn-primary"
+                        @(Model.Companies.Any() ? null : "disabled")>
+                    &#x062D;&#x0641;&#x0638; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;
+                </button>
             </div>
         </form>
     </section>

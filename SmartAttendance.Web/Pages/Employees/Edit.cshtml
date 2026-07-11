@@ -8,14 +8,6 @@
         ? employeePhotoFallback
         : Model.CurrentPhotoPath;
 
-    var selectedDepartment = Model.Departments.FirstOrDefault(x => x.Id == Model.Employee.DepartmentId);
-    var selectedWorkLocationId = selectedDepartment?.BranchId ?? 0;
-
-    var workLocations = Model.Departments
-        .Where(x => x.BranchId > 0)
-        .GroupBy(x => new { x.BranchId, x.BranchName })
-        .OrderBy(x => x.Key.BranchName)
-        .ToList();
 }
 
 <link rel="stylesheet" href="~/css/nexora-edit-custom-datepicker.css" asp-append-version="true" />
@@ -119,25 +111,30 @@
                 </div>
 
                 <div class="nxr-edit-field">
-                    <label for="WorkLocationId">&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</label>
-                    <select id="WorkLocationId" class="nxr-native-select">
+                    <label asp-for="Employee.BranchId">&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</label>
+                    <select asp-for="Employee.BranchId" class="nxr-native-select" id="Employee_BranchId">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</option>
-                        @foreach (var location in workLocations)
+                        @foreach (var branch in Model.Branches.OrderBy(x => x.Name))
                         {
-                            <option value="@location.Key.BranchId" selected="@(location.Key.BranchId == selectedWorkLocationId ? "selected" : null)">
-                                @location.Key.BranchName
+                            <option value="@branch.Id"
+                                    data-company-id="@branch.CompanyId"
+                                    selected="@(branch.Id == Model.Employee.BranchId ? "selected" : null)">
+                                @branch.Name
                             </option>
                         }
                     </select>
+                    <span asp-validation-for="Employee.BranchId"></span>
                 </div>
 
                 <div class="nxr-edit-field">
                     <label asp-for="Employee.DepartmentId">&#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</label>
                     <select asp-for="Employee.DepartmentId" class="nxr-native-select" id="Employee_DepartmentId">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</option>
-                        @foreach (var department in Model.Departments.OrderBy(x => x.BranchName).ThenBy(x => x.Name))
+                        @foreach (var department in Model.Departments.OrderBy(x => x.CompanyName).ThenBy(x => x.Name))
                         {
-                            <option value="@department.Id" data-work-location-id="@department.BranchId">
+                            <option value="@department.Id"
+                                    data-company-id="@department.CompanyId"
+                                    selected="@(department.Id == Model.Employee.DepartmentId ? "selected" : null)">
                                 @department.Name
                             </option>
                         }
@@ -145,15 +142,19 @@
                     <span asp-validation-for="Employee.DepartmentId"></span>
                 </div>
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.Position">&#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</label>
-                    <select asp-for="Employee.Position" class="nxr-native-select">
+                    <label asp-for="Employee.PositionId">&#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</label>
+                    <select asp-for="Employee.PositionId" class="nxr-native-select" id="Employee_PositionId">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</option>
-                        @foreach (var position in Model.PositionOptions)
+                        @foreach (var position in Model.PositionOptions.OrderBy(x => x.Name))
                         {
-                            <option value="@position">@position</option>
+                            <option value="@position.Id"
+                                    data-company-id="@position.CompanyId"
+                                    selected="@(position.Id == Model.Employee.PositionId ? "selected" : null)">
+                                @position.Name
+                            </option>
                         }
                     </select>
-                    <span asp-validation-for="Employee.Position"></span>
+                    <span asp-validation-for="Employee.PositionId"></span>
                 </div>
 
                 <div class="nxr-edit-field">
@@ -256,7 +257,7 @@
                 </div>
             </div>
 
-            
+
         @* NEXORA_DYNAMIC_PROFILE_EDIT_MARKER *@
 
         @if (Model.ProfileDynamicSections.Any(profileSection => profileSection.Fields.Count > 0))
@@ -329,14 +330,15 @@
     <script src="~/js/nexora-edit-custom-datepicker.js" asp-append-version="true" defer></script>
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
 
-    
-    <!-- NEXORA_DEPARTMENT_FILTER_START -->
+
+    <!-- NEXORA_EDIT_ORGANIZATION_FILTER_START -->
     <script>
         (() => {
-            const workLocation = document.getElementById("WorkLocationId");
+            const workLocation = document.getElementById("Employee_BranchId");
             const department = document.getElementById("Employee_DepartmentId");
+            const position = document.getElementById("Employee_PositionId");
 
-            if (!workLocation || !department) {
+            if (!workLocation || !department || !position) {
                 return;
             }
 
@@ -348,44 +350,51 @@
                 select.dispatchEvent(new Event("change", { bubbles: true }));
             }
 
-            function filterDepartments() {
-                const selectedLocation = workLocation.value;
+            function filterByCompany(select, companyId) {
                 let currentIsValid = false;
 
-                Array.from(department.options).forEach(option => {
+                Array.from(select.options).forEach(option => {
                     if (!option.value) {
                         option.hidden = false;
                         option.disabled = false;
                         return;
                     }
 
-                    const belongsToLocation =
-                        !selectedLocation ||
-                        option.dataset.workLocationId === selectedLocation;
+                    const belongsToCompany =
+                        companyId &&
+                        option.dataset.companyId === companyId;
 
-                    option.hidden = !belongsToLocation;
-                    option.disabled = !belongsToLocation;
+                    option.hidden = !belongsToCompany;
+                    option.disabled = !belongsToCompany;
 
-                    if (belongsToLocation && option.value === department.value) {
+                    if (belongsToCompany && option.value === select.value) {
                         currentIsValid = true;
                     }
                 });
 
                 if (!currentIsValid) {
-                    department.value = "";
+                    select.value = "";
                 }
 
-                refreshSelect(department);
+                refreshSelect(select);
             }
 
-            workLocation.addEventListener("change", filterDepartments);
-            filterDepartments();
+            function filterOrganization() {
+                const selectedOption = workLocation.options[workLocation.selectedIndex];
+                const companyId = selectedOption?.dataset.companyId || "";
 
-            window.NexoraEditFilterDepartments = filterDepartments;
+                filterByCompany(department, companyId);
+                filterByCompany(position, companyId);
+            }
+
+            workLocation.addEventListener("change", filterOrganization);
+            filterOrganization();
+
+            window.NexoraEditFilterOrganization = filterOrganization;
         })();
     </script>
-    <!-- NEXORA_DEPARTMENT_FILTER_END -->
-    
+    <!-- NEXORA_EDIT_ORGANIZATION_FILTER_END -->
+
     <!-- NEXORA_MARITAL_BY_GENDER_START -->
     <script>
         (() => {

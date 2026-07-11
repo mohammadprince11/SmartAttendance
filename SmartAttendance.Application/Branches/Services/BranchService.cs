@@ -41,11 +41,12 @@ public class BranchService : IBranchService
             result = result.Where(x =>
                 x.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 x.Code.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                (x.Address != null && x.Address.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                (x.Address != null &&
+                 x.Address.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
                 x.CompanyName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
         }
 
-        return result.OrderBy(x => x.Name).ToList();
+        return result.OrderBy(x => x.CompanyName).ThenBy(x => x.Name).ToList();
     }
 
     public async Task<BranchDetailsViewModel?> GetByIdAsync(int id)
@@ -53,7 +54,9 @@ public class BranchService : IBranchService
         var branch = await _unitOfWork.Branches.GetByIdAsync(id);
 
         if (branch == null)
+        {
             return null;
+        }
 
         var company = await _unitOfWork.Companies.GetByIdAsync(branch.CompanyId);
 
@@ -67,63 +70,101 @@ public class BranchService : IBranchService
     {
         var branch = await _unitOfWork.Branches.GetByIdAsync(id);
 
-        if (branch == null)
-            return null;
-
-        return _mapper.Map<BranchEditViewModel>(branch);
+        return branch == null
+            ? null
+            : _mapper.Map<BranchEditViewModel>(branch);
     }
 
-        public async Task<bool> CreateAsync(BranchCreateViewModel model)
+    public async Task<bool> CreateAsync(BranchCreateViewModel model)
     {
+        var normalizedName = model.Name?.Trim() ?? string.Empty;
+
+        if (model.CompanyId <= 0 || string.IsNullOrWhiteSpace(normalizedName))
+        {
+            return false;
+        }
+
         var company = await _unitOfWork.Companies.GetByIdAsync(model.CompanyId);
 
-        if (company == null)
+        if (company == null || !company.IsActive)
+        {
             return false;
+        }
 
         var branches = await _unitOfWork.Branches.GetAllAsync();
         var code = string.IsNullOrWhiteSpace(model.Code)
             ? GenerateUniqueSetupCode("BR", branches.Select(x => x.Code))
             : model.Code.Trim();
 
-        if (branches.Any(x => SameSetupCode(x.Code, code)))
+        var duplicate = branches.Any(x =>
+            SameSetupCode(x.Code, code) ||
+            (x.CompanyId == model.CompanyId &&
+             x.Name.Equals(normalizedName, StringComparison.OrdinalIgnoreCase)));
+
+        if (duplicate)
+        {
             return false;
+        }
 
         var branch = _mapper.Map<Branch>(model);
         branch.Code = code;
-        branch.Name = model.Name.Trim();
-        branch.Address = string.IsNullOrWhiteSpace(model.Address) ? null : model.Address.Trim();
+        branch.Name = normalizedName;
+        branch.Address = string.IsNullOrWhiteSpace(model.Address)
+            ? null
+            : model.Address.Trim();
         branch.CompanyId = model.CompanyId;
+        branch.IsActive = true;
 
         await _unitOfWork.Branches.AddAsync(branch);
         await _unitOfWork.SaveChangesAsync();
 
         return true;
     }
-        public async Task<bool> UpdateAsync(BranchEditViewModel model)
+
+    public async Task<bool> UpdateAsync(BranchEditViewModel model)
     {
+        var normalizedName = model.Name?.Trim() ?? string.Empty;
+
+        if (model.CompanyId <= 0 || string.IsNullOrWhiteSpace(normalizedName))
+        {
+            return false;
+        }
+
         var branch = await _unitOfWork.Branches.GetByIdAsync(model.Id);
 
         if (branch == null)
+        {
             return false;
+        }
 
         var company = await _unitOfWork.Companies.GetByIdAsync(model.CompanyId);
 
         if (company == null)
+        {
             return false;
+        }
 
         var branches = await _unitOfWork.Branches.GetAllAsync();
-        var code = string.IsNullOrWhiteSpace(model.Code) ? branch.Code : model.Code.Trim();
+        var code = string.IsNullOrWhiteSpace(model.Code)
+            ? branch.Code
+            : model.Code.Trim();
 
-        var duplicateCode = branches.Any(x =>
+        var duplicate = branches.Any(x =>
             x.Id != model.Id &&
-            SameSetupCode(x.Code, code));
+            (SameSetupCode(x.Code, code) ||
+             (x.CompanyId == model.CompanyId &&
+              x.Name.Equals(normalizedName, StringComparison.OrdinalIgnoreCase))));
 
-        if (duplicateCode)
+        if (duplicate)
+        {
             return false;
+        }
 
         branch.Code = code;
-        branch.Name = model.Name.Trim();
-        branch.Address = string.IsNullOrWhiteSpace(model.Address) ? null : model.Address.Trim();
+        branch.Name = normalizedName;
+        branch.Address = string.IsNullOrWhiteSpace(model.Address)
+            ? null
+            : model.Address.Trim();
         branch.IsActive = model.IsActive;
         branch.CompanyId = model.CompanyId;
 
@@ -132,12 +173,26 @@ public class BranchService : IBranchService
 
         return true;
     }
+
     public async Task<bool> DeleteAsync(int id)
     {
         var branch = await _unitOfWork.Branches.GetByIdAsync(id);
 
         if (branch == null)
+        {
             return false;
+        }
+
+        var departments = await _unitOfWork.Departments.GetAllAsync();
+        var devices = await _unitOfWork.Devices.GetAllAsync();
+        var employees = await _unitOfWork.Employees.GetAllAsync();
+
+        if (departments.Any(x => x.BranchId == id) ||
+            devices.Any(x => x.BranchId == id) ||
+            employees.Any(x => x.BranchId == id))
+        {
+            return false;
+        }
 
         _unitOfWork.Branches.Delete(branch);
         await _unitOfWork.SaveChangesAsync();
@@ -171,8 +226,10 @@ public class BranchService : IBranchService
             })
             .ToList();
     }
-    // NEXORA_FIX22A_BRANCH_CODE_HELPERS
-    private static string GenerateUniqueSetupCode(string prefix, IEnumerable<string> existingCodes)
+
+    private static string GenerateUniqueSetupCode(
+        string prefix,
+        IEnumerable<string> existingCodes)
     {
         var existing = existingCodes
             .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -193,6 +250,9 @@ public class BranchService : IBranchService
 
     private static bool SameSetupCode(string? left, string? right)
     {
-        return string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
+        return string.Equals(
+            left?.Trim(),
+            right?.Trim(),
+            StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -1,3 +1,4 @@
+using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Application.Employees.ViewModels;
 
@@ -20,4 +21,8 @@ public interface IEmployeeService
     Task<bool> EmployeeNoExistsAsync(string employeeNo);
 
     Task<IEnumerable<DepartmentListViewModel>> GetDepartmentsForDropdownAsync();
+
+    Task<IEnumerable<BranchListViewModel>> GetBranchesForDropdownAsync();
+
+    Task<IEnumerable<PositionOptionViewModel>> GetPositionsForDropdownAsync();
 }

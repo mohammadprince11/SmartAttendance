@@ -10,5 +10,7 @@ public class DepartmentEditViewModel
 
     public bool IsActive { get; set; } = true;
 
+    public int CompanyId { get; set; }
+
     public int BranchId { get; set; }
 }

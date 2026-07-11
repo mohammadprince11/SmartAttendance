@@ -1,32 +1,46 @@
-﻿/* ==========================================================================
-   NEXORA Employees Table Alignment V12
-   Purpose:
-   - Remove first-letter employee avatar from the employees list.
-   - Keep every column header aligned exactly above its data.
-   - Use stable column widths through colgroup/nth-child.
+/* ==========================================================================
+   NEXORA Employees Table - Canonical Compact Layout
+   Scope:
+   - Keep the employee register aligned inside the available desktop width.
+   - Remove the forced desktop horizontal scrollbar.
+   - Preserve horizontal scrolling only on smaller viewports.
+   - Keep employee rows clickable and preserve the current visual language.
    ========================================================================== */
+
+body.nxr-employees-table-modern .nxr-emp-list-card {
+    border-radius: 24px !important;
+    overflow: hidden !important;
+}
+
+body.nxr-employees-table-modern .nxr-emp-list-head {
+    padding-bottom: 10px !important;
+}
 
 body.nxr-employees-table-modern .nxr-emp-table-wrap,
 body.nxr-employees-table-modern .nxr-modern-emp-table-wrap {
     position: relative !important;
     width: 100% !important;
-    max-height: calc(100vh - 380px) !important;
-    min-height: 520px !important;
-    overflow: auto !important;
-    border-radius: 24px !important;
+    max-width: 100% !important;
+    max-height: calc(100vh - 350px) !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    border-radius: 20px !important;
     border: 1px solid rgba(73, 111, 151, .28) !important;
     background:
         radial-gradient(circle at top right, rgba(25, 211, 224, .06), transparent 35%),
         linear-gradient(180deg, rgba(8, 25, 43, .90), rgba(5, 16, 29, .94)) !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035), 0 18px 42px rgba(0, 0, 0, .16) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .035),
+        0 14px 32px rgba(0, 0, 0, .14) !important;
     scrollbar-width: thin !important;
     scrollbar-color: rgba(25, 211, 224, .55) rgba(3, 13, 25, .72) !important;
 }
 
 body.nxr-employees-table-modern .nxr-emp-table-wrap::-webkit-scrollbar,
 body.nxr-employees-table-modern .nxr-modern-emp-table-wrap::-webkit-scrollbar {
-    width: 10px !important;
-    height: 10px !important;
+    width: 9px !important;
+    height: 9px !important;
 }
 
 body.nxr-employees-table-modern .nxr-emp-table-wrap::-webkit-scrollbar-track,
@@ -37,63 +51,84 @@ body.nxr-employees-table-modern .nxr-modern-emp-table-wrap::-webkit-scrollbar-tr
 
 body.nxr-employees-table-modern .nxr-emp-table-wrap::-webkit-scrollbar-thumb,
 body.nxr-employees-table-modern .nxr-modern-emp-table-wrap::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, rgba(25, 211, 224, .65), rgba(215, 178, 109, .55)) !important;
-    border-radius: 999px !important;
+    background:
+        linear-gradient(
+            180deg,
+            rgba(25, 211, 224, .65),
+            rgba(215, 178, 109, .55)
+        ) !important;
     border: 2px solid rgba(3, 13, 25, .85) !important;
+    border-radius: 999px !important;
 }
 
 body.nxr-employees-table-modern .nxr-emp-table {
     width: 100% !important;
-    min-width: 1180px !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
     table-layout: fixed !important;
     border-collapse: separate !important;
     border-spacing: 0 !important;
     background: transparent !important;
 }
 
-/* Fixed column map: header and data use the same geometry. */
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-employee { width: 27% !important; }
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-code { width: 10% !important; }
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-branch { width: 14% !important; }
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-department { width: 14% !important; }
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-position { width: 13% !important; }
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-hire { width: 10% !important; }
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-status { width: 7% !important; }
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-action { width: 5% !important; }
+/* One desktop column map. Total width = 100%. */
+body.nxr-employees-table-modern .nxr-emp-table .nxr-col-employee {
+    width: 23% !important;
+}
+
+body.nxr-employees-table-modern .nxr-emp-table .nxr-col-code {
+    width: 9% !important;
+}
+
+body.nxr-employees-table-modern .nxr-emp-table .nxr-col-branch {
+    width: 13% !important;
+}
+
+body.nxr-employees-table-modern .nxr-emp-table .nxr-col-department {
+    width: 13% !important;
+}
+
+body.nxr-employees-table-modern .nxr-emp-table .nxr-col-position {
+    width: 23% !important;
+}
+
+body.nxr-employees-table-modern .nxr-emp-table .nxr-col-hire {
+    width: 11% !important;
+}
+
+body.nxr-employees-table-modern .nxr-emp-table .nxr-col-status {
+    width: 8% !important;
+}
+
+body.nxr-employees-table-modern .nxr-emp-table .nxr-col-action {
+    display: none !important;
+}
 
 /* Header */
 body.nxr-employees-table-modern .nxr-emp-table thead th {
     position: sticky !important;
     top: 0 !important;
     z-index: 5 !important;
-    height: 50px !important;
-    padding: 0 14px !important;
+    height: 46px !important;
+    padding: 0 8px !important;
     border-bottom: 1px solid rgba(73, 111, 151, .32) !important;
-    background: linear-gradient(180deg, rgba(7, 20, 35, .98), rgba(5, 15, 28, .98)) !important;
+    background:
+        linear-gradient(
+            180deg,
+            rgba(7, 20, 35, .98),
+            rgba(5, 15, 28, .98)
+        ) !important;
     color: #AFC2D4 !important;
-    font-size: 12px !important;
+    font-size: 11px !important;
     font-weight: 1000 !important;
+    line-height: 1.25 !important;
     text-align: center !important;
-    white-space: nowrap !important;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, .16) !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .14) !important;
 }
 
-/* Data cells */
-body.nxr-employees-table-modern .nxr-emp-table tbody td {
-    height: 58px !important;
-    padding: 9px 14px !important;
-    border-bottom: 1px solid rgba(73, 111, 151, .14) !important;
-    color: #DCE7F2 !important;
-    font-size: 12px !important;
-    font-weight: 850 !important;
-    vertical-align: middle !important;
-    text-align: center !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-}
-
-/* Rows */
+/* Rows and cells */
 body.nxr-employees-table-modern .nxr-emp-table tbody tr {
     background: rgba(11, 33, 55, .58) !important;
     transition: background .15s ease !important;
@@ -107,10 +142,30 @@ body.nxr-employees-table-modern .nxr-emp-table tbody tr:hover {
     background: rgba(25, 211, 224, .065) !important;
 }
 
-/* Employee column: no avatar, text block only. Header and data both align to the right in RTL. */
+body.nxr-employees-table-modern .nxr-emp-table tbody td {
+    height: 54px !important;
+    padding: 7px 8px !important;
+    border-bottom: 1px solid rgba(73, 111, 151, .14) !important;
+    color: #DCE7F2 !important;
+    font-size: 11px !important;
+    font-weight: 850 !important;
+    line-height: 1.35 !important;
+    vertical-align: middle !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* Employee and position receive the space needed for readable data. */
 body.nxr-employees-table-modern .nxr-emp-table thead th:nth-child(1),
 body.nxr-employees-table-modern .nxr-emp-table tbody td:nth-child(1) {
     text-align: right !important;
+}
+
+body.nxr-employees-table-modern .nxr-emp-table tbody td:nth-child(5) {
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
 }
 
 body.nxr-employees-table-modern .nxr-emp-person-cell {
@@ -119,8 +174,8 @@ body.nxr-employees-table-modern .nxr-emp-person-cell {
 
 body.nxr-employees-table-modern .nxr-emp-person {
     display: block !important;
-    min-width: 0 !important;
     width: 100% !important;
+    min-width: 0 !important;
 }
 
 body.nxr-employees-table-modern .nxr-emp-person .nxr-avatar-sm,
@@ -131,46 +186,46 @@ body.nxr-employees-table-modern .nxr-emp-person .nxr-emp-avatar {
 body.nxr-employees-table-modern .nxr-emp-person strong {
     display: block !important;
     color: #EEF6FB !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     font-weight: 1000 !important;
     line-height: 1.35 !important;
+    white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    white-space: nowrap !important;
 }
 
 body.nxr-employees-table-modern .nxr-emp-person small {
     display: block !important;
-    margin-top: 3px !important;
+    margin-top: 2px !important;
     color: #8FA6BB !important;
-    font-size: 11px !important;
+    font-size: 10px !important;
     font-weight: 850 !important;
+    white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    white-space: nowrap !important;
 }
 
-/* Code */
 body.nxr-employees-table-modern .nxr-code {
     color: #19D3E0 !important;
     font-weight: 1000 !important;
     text-shadow: 0 0 14px rgba(25, 211, 224, .14) !important;
 }
 
-/* Status */
 body.nxr-employees-table-modern .nxr-status {
-    min-width: 64px !important;
-    min-height: 28px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border-radius: 999px !important;
-    padding: 5px 10px !important;
-    font-size: 11px !important;
-    font-weight: 1000 !important;
+    width: auto !important;
+    min-width: 52px !important;
+    min-height: 26px !important;
+    padding: 4px 8px !important;
     border: 1px solid rgba(85, 217, 138, .28) !important;
+    border-radius: 999px !important;
     background: rgba(85, 217, 138, .10) !important;
     color: #BFFFD8 !important;
+    font-size: 10px !important;
+    font-weight: 1000 !important;
+    white-space: nowrap !important;
 }
 
 body.nxr-employees-table-modern .nxr-status.inactive {
@@ -179,57 +234,15 @@ body.nxr-employees-table-modern .nxr-status.inactive {
     color: #FFE1A3 !important;
 }
 
-/* File button */
-body.nxr-employees-table-modern .nxr-emp-table .nxr-btn,
-body.nxr-employees-table-modern .nxr-emp-table a.nxr-btn {
-    min-width: 58px !important;
-    height: 34px !important;
-    min-height: 34px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    border-radius: 13px !important;
-    border: 1px solid rgba(25, 211, 224, .30) !important;
-    background: rgba(25, 211, 224, .075) !important;
-    color: #D7FBFF !important;
-    font-size: 12px !important;
-    font-weight: 1000 !important;
-    text-decoration: none !important;
-    padding: 0 12px !important;
-}
-
-body.nxr-employees-table-modern .nxr-emp-table .nxr-btn:hover,
-body.nxr-employees-table-modern .nxr-emp-table a.nxr-btn:hover {
-    border-color: rgba(25, 211, 224, .50) !important;
-    background: rgba(25, 211, 224, .13) !important;
-}
-
-/* Empty row */
 body.nxr-employees-table-modern .nxr-master-empty,
 body.nxr-employees-table-modern .nxr-empty {
-    text-align: center !important;
+    padding: 28px !important;
     color: #A7B7C8 !important;
-    padding: 34px !important;
     font-weight: 900 !important;
+    text-align: center !important;
 }
 
-body.nxr-employees-table-modern .nxr-emp-list-card {
-    border-radius: 26px !important;
-    overflow: hidden !important;
-}
-
-body.nxr-employees-table-modern .nxr-emp-list-head {
-    padding-bottom: 12px !important;
-}
-
-/* Mobile: keep table readable through horizontal scroll. */
-@media (max-width: 900px) {
-    body.nxr-employees-table-modern .nxr-emp-table {
-        min-width: 1080px !important;
-    }
-}
-
-/* Employee row click V12.1 */
+/* Employee row click */
 body.nxr-employees-table-modern .nxr-clickable-employee-row {
     cursor: pointer !important;
 }
@@ -245,23 +258,35 @@ body.nxr-employees-table-modern .nxr-clickable-employee-row:hover td {
 
 body.nxr-employees-table-modern .nxr-clickable-employee-row td:last-child,
 body.nxr-employees-table-modern .nxr-clickable-employee-row td:last-child * {
-    cursor: default !important;
-}
-
-/* Remove employee file action column V12.2 */
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-employee { width: 28% !important; }
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-code { width: 10% !important; }
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-branch { width: 14% !important; }
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-department { width: 15% !important; }
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-position { width: 15% !important; }
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-hire { width: 11% !important; }
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-status { width: 7% !important; }
-
-body.nxr-employees-table-modern .nxr-emp-table .nxr-col-action {
-    display: none !important;
-}
-
-body.nxr-employees-table-modern .nxr-clickable-employee-row td:last-child,
-body.nxr-employees-table-modern .nxr-clickable-employee-row td:last-child * {
     cursor: pointer !important;
+}
+
+/* Smaller viewports: preserve readability through controlled scrolling. */
+@media (max-width: 1180px) {
+    body.nxr-employees-table-modern .nxr-emp-table-wrap,
+    body.nxr-employees-table-modern .nxr-modern-emp-table-wrap {
+        overflow-x: auto !important;
+    }
+
+    body.nxr-employees-table-modern .nxr-emp-table {
+        min-width: 920px !important;
+    }
+}
+
+@media (max-width: 720px) {
+    body.nxr-employees-table-modern .nxr-emp-table {
+        min-width: 860px !important;
+    }
+
+    body.nxr-employees-table-modern .nxr-emp-table thead th {
+        height: 44px !important;
+        padding-inline: 7px !important;
+        font-size: 10px !important;
+    }
+
+    body.nxr-employees-table-modern .nxr-emp-table tbody td {
+        height: 50px !important;
+        padding: 6px 7px !important;
+        font-size: 10px !important;
+    }
 }

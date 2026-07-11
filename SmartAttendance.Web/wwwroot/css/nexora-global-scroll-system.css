@@ -1,34 +1,110 @@
-/* NEXORA_GLOBAL_SCROLL_SYSTEM_START */
+/* NEXORA_GLOBAL_SCROLL_SYSTEM_START
+   Canonical responsive shell and scroll ownership.
+*/
+
+:root {
+    --nx-responsive-sidebar-width: var(--nx-sidebar-width, 292px);
+}
 
 html,
 body {
-    height: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
     min-height: 100% !important;
+    overflow: hidden !important;
+}
+
+body {
+    max-width: 100vw !important;
+}
+
+.nexora-shell {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    overflow: hidden !important;
+    direction: ltr !important;
+}
+
+.nexora-main {
+    order: 1 !important;
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - var(--nx-responsive-sidebar-width)) !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    direction: rtl !important;
+}
+
+.nexora-sidebar {
+    order: 2 !important;
+    flex: 0 0 var(--nx-responsive-sidebar-width) !important;
+    width: var(--nx-responsive-sidebar-width) !important;
+    min-width: var(--nx-responsive-sidebar-width) !important;
+    max-width: var(--nx-responsive-sidebar-width) !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    position: sticky !important;
+    top: 0 !important;
+    right: 0 !important;
+    left: auto !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
+    direction: ltr !important;
     scrollbar-gutter: stable !important;
 }
 
-.nexora-main,
-.nexora-content,
-main,
+.nexora-sidebar > * {
+    direction: rtl !important;
+}
+
+.nexora-topbar {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    direction: rtl !important;
+}
+
+.nexora-topbar-left,
+.nexora-controls,
+.nexora-user-chip {
+    min-width: 0 !important;
+}
+
+.nexora-content {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    direction: rtl !important;
+    scrollbar-gutter: stable !important;
+    padding: clamp(14px, 1.55vw, 22px) !important;
+}
+
 .nxr-page,
 .sa-page,
 .page-content,
 .content-wrapper {
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-}
-
-.nexora-sidebar,
-.sidebar,
-.sidebar-nav,
-aside,
-nav {
-    max-height: 100dvh !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
 }
 
 .table-responsive,
@@ -39,17 +115,201 @@ nav {
 .nxr-modern-emp-table-wrap,
 .positions-table-wrap,
 .org-table-wrap {
-    overflow: auto !important;
     max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
 }
 
-* {
+.nexora-main,
+.nexora-sidebar,
+.nexora-content,
+.table-responsive,
+.table-wrap,
+.table-wrapper,
+.nxr-table-wrap,
+.nxr-emp-table-wrap,
+.nxr-modern-emp-table-wrap,
+.positions-table-wrap,
+.org-table-wrap {
     scrollbar-width: thin;
 }
 
-*::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+.nexora-main::-webkit-scrollbar,
+.nexora-sidebar::-webkit-scrollbar,
+.nexora-content::-webkit-scrollbar,
+.table-responsive::-webkit-scrollbar,
+.table-wrap::-webkit-scrollbar,
+.table-wrapper::-webkit-scrollbar,
+.nxr-table-wrap::-webkit-scrollbar,
+.nxr-emp-table-wrap::-webkit-scrollbar,
+.nxr-modern-emp-table-wrap::-webkit-scrollbar,
+.positions-table-wrap::-webkit-scrollbar,
+.org-table-wrap::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+}
+
+.nexora-main::-webkit-scrollbar-track,
+.nexora-sidebar::-webkit-scrollbar-track,
+.nexora-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.nexora-main::-webkit-scrollbar-thumb,
+.nexora-sidebar::-webkit-scrollbar-thumb,
+.nexora-content::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(124, 234, 240, .34);
+}
+
+@media (max-width: 1440px) {
+    :root {
+        --nx-responsive-sidebar-width: 252px;
+        --nx-sidebar-width: 252px;
+    }
+
+    .nexora-sidebar {
+        padding: 12px 10px !important;
+    }
+
+    .nexora-brand-card {
+        padding: 10px !important;
+    }
+
+    .nexora-nav-link,
+    .nexora-nav-group > summary {
+        padding-inline: 10px !important;
+        font-size: 12px !important;
+    }
+
+    .nexora-topbar {
+        min-height: 64px !important;
+        height: auto !important;
+        padding: 10px 14px !important;
+    }
+
+    .nexora-content {
+        padding: 14px !important;
+    }
+}
+
+@media (max-width: 1180px) and (min-width: 981px) {
+    :root {
+        --nx-responsive-sidebar-width: 228px;
+        --nx-sidebar-width: 228px;
+    }
+
+    .nexora-wordmark {
+        font-size: 15px !important;
+    }
+
+    .nexora-arabic,
+    .nexora-tagline {
+        font-size: 10px !important;
+    }
+
+    .nexora-topbar {
+        flex-wrap: wrap !important;
+    }
+
+    .nexora-controls {
+        gap: 6px !important;
+    }
+
+    .nexora-user-name {
+        max-width: 110px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+}
+
+@media (max-width: 980px) {
+    html,
+    body {
+        height: auto !important;
+        min-height: 100% !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
+
+    .nexora-shell {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        min-height: 100dvh !important;
+        overflow: visible !important;
+        direction: rtl !important;
+    }
+
+    .nexora-sidebar {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: 42dvh !important;
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        left: auto !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        border-right: 0 !important;
+        border-left: 0 !important;
+        border-bottom: 1px solid rgba(73, 111, 151, .24) !important;
+    }
+
+    .nexora-main {
+        display: flex !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .nexora-topbar {
+        position: sticky !important;
+        top: 0 !important;
+        width: 100% !important;
+        z-index: 90 !important;
+    }
+
+    .nexora-content {
+        overflow: visible !important;
+        min-height: 0 !important;
+        padding: 12px !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .nexora-topbar {
+        align-items: stretch !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .nexora-controls {
+        width: 100% !important;
+        justify-content: stretch !important;
+    }
+
+    .nexora-controls > * {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+    }
+
+    .nexora-page-title {
+        font-size: 16px !important;
+    }
+
+    .nexora-page-subtitle {
+        font-size: 11px !important;
+    }
 }
 
 /* NEXORA_GLOBAL_SCROLL_SYSTEM_END */

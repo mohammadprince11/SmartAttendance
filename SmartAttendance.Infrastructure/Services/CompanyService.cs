@@ -56,15 +56,16 @@ public class CompanyService : ICompanyService
 
         public async Task<bool> CreateAsync(CompanyCreateViewModel model)
     {
-        var seed = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
         var code = string.IsNullOrWhiteSpace(model.Code)
-            ? $"COMP-{seed}"
+            ? await GenerateNextCompanyCodeAsync()
             : model.Code.Trim();
 
         var baseCode = code;
         var counter = 1;
 
-        while (await _unitOfWork.Companies.ExistsByCodeAsync(code))
+        while (await _dbContext.Companies
+            .IgnoreQueryFilters()
+            .AnyAsync(x => x.Code == code))
         {
             code = $"{baseCode}-{counter}";
             counter++;
@@ -77,6 +78,38 @@ public class CompanyService : ICompanyService
         await _unitOfWork.SaveChangesAsync();
 
         return true;
+    }
+
+    private async Task<string> GenerateNextCompanyCodeAsync()
+    {
+        const string prefix = "COMP-";
+
+        var existingCodes = await _dbContext.Companies
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(x => x.Code.StartsWith(prefix))
+            .Select(x => x.Code)
+            .ToListAsync();
+
+        var maxNumber = existingCodes
+            .Select(code => int.TryParse(code[prefix.Length..], out var number) ? number : 0)
+            .DefaultIfEmpty(0)
+            .Max();
+
+        var nextNumber = maxNumber + 1;
+
+        while (true)
+        {
+            var candidate = $"{prefix}{nextNumber:000}";
+            var exists = await _dbContext.Companies
+                .IgnoreQueryFilters()
+                .AnyAsync(x => x.Code == candidate);
+
+            if (!exists)
+                return candidate;
+
+            nextNumber++;
+        }
     }
 
     public async Task<bool> UpdateAsync(CompanyEditViewModel model)

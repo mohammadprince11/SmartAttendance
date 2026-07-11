@@ -1,6 +1,10 @@
 @page
 @model SmartAttendance.Web.Pages.Departments.ImportModel
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/nexora-setup-pages.css" asp-append-version="true" />
+}
+
 @{
     ViewData["Title"] = "استيراد الأقسام";
 }
@@ -10,7 +14,7 @@
         <div>
             <span class="nexora-setup-kicker">استيراد البيانات</span>
             <h1>استيراد الأقسام</h1>
-            <p>&#x0627;&#x0631;&#x0641;&#x0639; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645; &#x0643;&#x0642;&#x0627;&#x0626;&#x0645;&#x0629; &#x0645;&#x0633;&#x062A;&#x0642;&#x0644;&#x0629; &#x0639;&#x0646; &#x0645;&#x0648;&#x0627;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;.</p>
+            <p>&#x0627;&#x0631;&#x0641;&#x0639; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645; &#x0645;&#x0639; &#x0643;&#x0648;&#x062F; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629; &#x0627;&#x0644;&#x062A;&#x0627;&#x0628;&#x0639; &#x0644;&#x0647;&#x0627; &#x0643;&#x0644; &#x0642;&#x0633;&#x0645;.</p>
         </div>
 
         <div class="nexora-import-hero-actions"> @* NEXORA_FIX22A_TEMPLATE_LINK *@
@@ -107,7 +111,7 @@
 
                     <textarea asp-for="PastedData"
                               class="nexora-import-paste"
-                              placeholder="Name&#10;Human Resources"></textarea>
+                              placeholder="Name&#9;CompanyCode&#10;Human Resources&#9;COMP-001"></textarea>
                 </div>
             </div>
 

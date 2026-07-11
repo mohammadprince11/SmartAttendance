@@ -14,18 +14,23 @@ public class EmployeeCreateViewModel
 
     public string? Position { get; set; }
 
+    public int? PositionId { get; set; }
+
     public DateOnly HireDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
 
     public DateOnly? BirthDate { get; set; }
 
-    
-    
-    
-    
     public string? Country { get; set; }
-public string? Nationality { get; set; }
-public string? Gender { get; set; }
-public string? MaritalStatus { get; set; }
-public bool IsActive { get; set; } = true;
-public int DepartmentId { get; set; }
+
+    public string? Nationality { get; set; }
+
+    public string? Gender { get; set; }
+
+    public string? MaritalStatus { get; set; }
+
+    public bool IsActive { get; set; } = true;
+
+    public int BranchId { get; set; }
+
+    public int DepartmentId { get; set; }
 }
