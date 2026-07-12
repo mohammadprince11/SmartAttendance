@@ -1,0 +1,337 @@
+/* NEXORA_BUTTON_INTERACTIONS_START
+   Canonical hover, active, focus, and disabled behavior for action controls.
+*/
+
+:root {
+    --nx-button-motion-duration: 170ms;
+    --nx-button-motion-easing: cubic-bezier(.2, .8, .2, 1);
+}
+
+html[data-theme] body :where(
+    button:not(.nxcs-trigger):not(.nxcs-option):not([role="option"]):not([data-nexora-hover="off"]),
+    input[type="button"]:not([data-nexora-hover="off"]),
+    input[type="submit"]:not([data-nexora-hover="off"]),
+    input[type="reset"]:not([data-nexora-hover="off"]),
+    a:where(
+        [class*="btn"],
+        [class*="button"],
+        [class*="action"],
+        [class*="edit"],
+        [class*="delete"],
+        [class*="save"],
+        [class*="cancel"],
+        [class*="submit"],
+        [class*="add"],
+        [class*="create"],
+        [class*="import"],
+        [class*="export"],
+        [class*="upload"],
+        [class*="publish"],
+        [class*="approve"],
+        [class*="reject"],
+        [class*="back"],
+        [class*="close"],
+        [class*="toggle"]
+    ):not([data-nexora-hover="off"]),
+    [role="button"]:not(.nxcs-trigger):not(.nxcs-option):not([data-nexora-hover="off"])
+) {
+    --nx-button-hover-border: rgba(34, 211, 238, .58);
+    --nx-button-hover-shadow:
+        0 10px 24px rgba(34, 211, 238, .16),
+        0 0 0 1px rgba(34, 211, 238, .10);
+    --nx-button-active-shadow:
+        0 4px 12px rgba(34, 211, 238, .12);
+    --nx-button-focus-ring: rgba(34, 211, 238, .22);
+
+    transform-origin: center center !important;
+    transition-property:
+        transform,
+        box-shadow,
+        filter,
+        border-color,
+        background-color,
+        color !important;
+    transition-duration: var(--nx-button-motion-duration) !important;
+    transition-timing-function: var(--nx-button-motion-easing) !important;
+}
+
+html[data-theme] body :where(
+    button,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"],
+    a,
+    [role="button"]
+):where(
+    [class*="danger"],
+    [class*="delete"],
+    [class*="remove"],
+    [class*="reject"],
+    [class*="decline"],
+    [class*="terminate"],
+    [data-nx-setup-delete]
+) {
+    --nx-button-hover-border: rgba(248, 113, 113, .68);
+    --nx-button-hover-shadow:
+        0 10px 24px rgba(239, 68, 68, .18),
+        0 0 0 1px rgba(248, 113, 113, .12);
+    --nx-button-active-shadow:
+        0 4px 12px rgba(239, 68, 68, .14);
+    --nx-button-focus-ring: rgba(248, 113, 113, .22);
+}
+
+html[data-theme] body :where(
+    button,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"],
+    a,
+    [role="button"]
+):where(
+    [class*="secondary"],
+    [class*="cancel"],
+    [class*="back"],
+    [class*="close"],
+    [class*="outline"],
+    [class*="ghost"]
+) {
+    --nx-button-hover-border: rgba(215, 178, 109, .56);
+    --nx-button-hover-shadow:
+        0 10px 22px rgba(215, 178, 109, .14),
+        0 0 0 1px rgba(215, 178, 109, .10);
+    --nx-button-active-shadow:
+        0 4px 12px rgba(215, 178, 109, .11);
+    --nx-button-focus-ring: rgba(215, 178, 109, .20);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    html[data-theme] body :where(
+    button:not(.nxcs-trigger):not(.nxcs-option):not([role="option"]):not([data-nexora-hover="off"]),
+    input[type="button"]:not([data-nexora-hover="off"]),
+    input[type="submit"]:not([data-nexora-hover="off"]),
+    input[type="reset"]:not([data-nexora-hover="off"]),
+    a:where(
+        [class*="btn"],
+        [class*="button"],
+        [class*="action"],
+        [class*="edit"],
+        [class*="delete"],
+        [class*="save"],
+        [class*="cancel"],
+        [class*="submit"],
+        [class*="add"],
+        [class*="create"],
+        [class*="import"],
+        [class*="export"],
+        [class*="upload"],
+        [class*="publish"],
+        [class*="approve"],
+        [class*="reject"],
+        [class*="back"],
+        [class*="close"],
+        [class*="toggle"]
+    ):not([data-nexora-hover="off"]),
+    [role="button"]:not(.nxcs-trigger):not(.nxcs-option):not([data-nexora-hover="off"])
+):not(:disabled):not([aria-disabled="true"]):not(.disabled):hover {
+        transform: translateY(-1px) !important;
+        filter: brightness(1.07) saturate(1.04) !important;
+        border-color: var(--nx-button-hover-border) !important;
+        box-shadow: var(--nx-button-hover-shadow) !important;
+    }
+}
+
+html[data-theme] body :where(
+    button:not(.nxcs-trigger):not(.nxcs-option):not([role="option"]):not([data-nexora-hover="off"]),
+    input[type="button"]:not([data-nexora-hover="off"]),
+    input[type="submit"]:not([data-nexora-hover="off"]),
+    input[type="reset"]:not([data-nexora-hover="off"]),
+    a:where(
+        [class*="btn"],
+        [class*="button"],
+        [class*="action"],
+        [class*="edit"],
+        [class*="delete"],
+        [class*="save"],
+        [class*="cancel"],
+        [class*="submit"],
+        [class*="add"],
+        [class*="create"],
+        [class*="import"],
+        [class*="export"],
+        [class*="upload"],
+        [class*="publish"],
+        [class*="approve"],
+        [class*="reject"],
+        [class*="back"],
+        [class*="close"],
+        [class*="toggle"]
+    ):not([data-nexora-hover="off"]),
+    [role="button"]:not(.nxcs-trigger):not(.nxcs-option):not([data-nexora-hover="off"])
+):not(:disabled):not([aria-disabled="true"]):not(.disabled):active {
+    transform: translateY(0) scale(.985) !important;
+    filter: brightness(.98) !important;
+    box-shadow: var(--nx-button-active-shadow) !important;
+    transition-duration: 80ms !important;
+}
+
+html[data-theme] body :where(
+    button:not(.nxcs-trigger):not(.nxcs-option):not([role="option"]):not([data-nexora-hover="off"]),
+    input[type="button"]:not([data-nexora-hover="off"]),
+    input[type="submit"]:not([data-nexora-hover="off"]),
+    input[type="reset"]:not([data-nexora-hover="off"]),
+    a:where(
+        [class*="btn"],
+        [class*="button"],
+        [class*="action"],
+        [class*="edit"],
+        [class*="delete"],
+        [class*="save"],
+        [class*="cancel"],
+        [class*="submit"],
+        [class*="add"],
+        [class*="create"],
+        [class*="import"],
+        [class*="export"],
+        [class*="upload"],
+        [class*="publish"],
+        [class*="approve"],
+        [class*="reject"],
+        [class*="back"],
+        [class*="close"],
+        [class*="toggle"]
+    ):not([data-nexora-hover="off"]),
+    [role="button"]:not(.nxcs-trigger):not(.nxcs-option):not([data-nexora-hover="off"])
+):focus-visible {
+    outline: 0 !important;
+    box-shadow:
+        0 0 0 3px var(--nx-button-focus-ring),
+        var(--nx-button-hover-shadow) !important;
+}
+
+html[data-theme] body :where(
+    button:not(.nxcs-trigger):not(.nxcs-option):not([role="option"]):not([data-nexora-hover="off"]),
+    input[type="button"]:not([data-nexora-hover="off"]),
+    input[type="submit"]:not([data-nexora-hover="off"]),
+    input[type="reset"]:not([data-nexora-hover="off"]),
+    a:where(
+        [class*="btn"],
+        [class*="button"],
+        [class*="action"],
+        [class*="edit"],
+        [class*="delete"],
+        [class*="save"],
+        [class*="cancel"],
+        [class*="submit"],
+        [class*="add"],
+        [class*="create"],
+        [class*="import"],
+        [class*="export"],
+        [class*="upload"],
+        [class*="publish"],
+        [class*="approve"],
+        [class*="reject"],
+        [class*="back"],
+        [class*="close"],
+        [class*="toggle"]
+    ):not([data-nexora-hover="off"]),
+    [role="button"]:not(.nxcs-trigger):not(.nxcs-option):not([data-nexora-hover="off"])
+):is(:disabled, [aria-disabled="true"], .disabled) {
+    transform: none !important;
+    filter: none !important;
+    box-shadow: none !important;
+    cursor: not-allowed !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-theme] body :where(
+    button:not(.nxcs-trigger):not(.nxcs-option):not([role="option"]):not([data-nexora-hover="off"]),
+    input[type="button"]:not([data-nexora-hover="off"]),
+    input[type="submit"]:not([data-nexora-hover="off"]),
+    input[type="reset"]:not([data-nexora-hover="off"]),
+    a:where(
+        [class*="btn"],
+        [class*="button"],
+        [class*="action"],
+        [class*="edit"],
+        [class*="delete"],
+        [class*="save"],
+        [class*="cancel"],
+        [class*="submit"],
+        [class*="add"],
+        [class*="create"],
+        [class*="import"],
+        [class*="export"],
+        [class*="upload"],
+        [class*="publish"],
+        [class*="approve"],
+        [class*="reject"],
+        [class*="back"],
+        [class*="close"],
+        [class*="toggle"]
+    ):not([data-nexora-hover="off"]),
+    [role="button"]:not(.nxcs-trigger):not(.nxcs-option):not([data-nexora-hover="off"])
+) {
+        transition-duration: 0.01ms !important;
+    }
+
+    html[data-theme] body :where(
+    button:not(.nxcs-trigger):not(.nxcs-option):not([role="option"]):not([data-nexora-hover="off"]),
+    input[type="button"]:not([data-nexora-hover="off"]),
+    input[type="submit"]:not([data-nexora-hover="off"]),
+    input[type="reset"]:not([data-nexora-hover="off"]),
+    a:where(
+        [class*="btn"],
+        [class*="button"],
+        [class*="action"],
+        [class*="edit"],
+        [class*="delete"],
+        [class*="save"],
+        [class*="cancel"],
+        [class*="submit"],
+        [class*="add"],
+        [class*="create"],
+        [class*="import"],
+        [class*="export"],
+        [class*="upload"],
+        [class*="publish"],
+        [class*="approve"],
+        [class*="reject"],
+        [class*="back"],
+        [class*="close"],
+        [class*="toggle"]
+    ):not([data-nexora-hover="off"]),
+    [role="button"]:not(.nxcs-trigger):not(.nxcs-option):not([data-nexora-hover="off"])
+):hover,
+    html[data-theme] body :where(
+    button:not(.nxcs-trigger):not(.nxcs-option):not([role="option"]):not([data-nexora-hover="off"]),
+    input[type="button"]:not([data-nexora-hover="off"]),
+    input[type="submit"]:not([data-nexora-hover="off"]),
+    input[type="reset"]:not([data-nexora-hover="off"]),
+    a:where(
+        [class*="btn"],
+        [class*="button"],
+        [class*="action"],
+        [class*="edit"],
+        [class*="delete"],
+        [class*="save"],
+        [class*="cancel"],
+        [class*="submit"],
+        [class*="add"],
+        [class*="create"],
+        [class*="import"],
+        [class*="export"],
+        [class*="upload"],
+        [class*="publish"],
+        [class*="approve"],
+        [class*="reject"],
+        [class*="back"],
+        [class*="close"],
+        [class*="toggle"]
+    ):not([data-nexora-hover="off"]),
+    [role="button"]:not(.nxcs-trigger):not(.nxcs-option):not([data-nexora-hover="off"])
+):active {
+        transform: none !important;
+    }
+}
+
+/* NEXORA_BUTTON_INTERACTIONS_END */

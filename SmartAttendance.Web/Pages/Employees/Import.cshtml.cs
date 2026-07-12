@@ -4,27 +4,28 @@ using System.IO.Compression;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using SmartAttendance.Application.MasterDataImports.Services;
 using SmartAttendance.Application.MasterDataImports.ViewModels;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Imports;
 namespace SmartAttendance.Web.Pages.Employees;
 
 public class ImportModel : PageModel
 {
     private const string FixedImportType = "Employees";
 
-    private readonly IMasterDataImportService _masterDataImportService;
     private readonly IWebHostEnvironment _environment;
     private readonly ApplicationDbContext _dbContext;
-public ImportModel(
-        IMasterDataImportService masterDataImportService,
+    private readonly EmployeeBootstrapImportEngine _bootstrapImportEngine;
+
+    public ImportModel(
         IWebHostEnvironment environment,
         ApplicationDbContext dbContext)
     {
-        _masterDataImportService = masterDataImportService;
         _environment = environment;
         _dbContext = dbContext;
+        _bootstrapImportEngine =
+            new EmployeeBootstrapImportEngine(dbContext);
     }
 
     [BindProperty]
@@ -35,7 +36,7 @@ public ImportModel(
 
     public string ImportType { get; private set; } = FixedImportType;
 
-    public string PageTitle { get; private set; } = "Employee Data Import";
+    public string PageTitle { get; private set; } = "Smart Employee Bootstrap Import";
 
     public List<string> RequiredColumns { get; set; } = new();
 
@@ -60,6 +61,24 @@ public ImportModel(
         if (!hasFile && !hasPastedData)
         {
             ErrorMessage = "Please upload an Excel / CSV file or paste data copied from Excel.";
+            return Page();
+        }
+
+        if (hasFile &&
+            ImportFile!.Length >
+            EmployeeBootstrapImportEngine.MaxFileBytes)
+        {
+            ErrorMessage =
+                "The file is larger than the allowed 10 MB limit.";
+            return Page();
+        }
+
+        if (hasPastedData &&
+            Encoding.UTF8.GetByteCount(PastedData!) >
+            EmployeeBootstrapImportEngine.MaxFileBytes)
+        {
+            ErrorMessage =
+                "The pasted data is larger than the allowed 10 MB limit.";
             return Page();
         }
 
@@ -99,11 +118,10 @@ public ImportModel(
                 await System.IO.File.WriteAllTextAsync(filePath, csvContent, Encoding.UTF8);
             }
 
-            Preview = await _masterDataImportService.PreviewAsync(
+            Preview = await _bootstrapImportEngine.PreviewAsync(
                 filePath,
                 token,
                 originalFileName,
-                FixedImportType,
                 previewLimit: 500);
         }
         catch (Exception ex)
@@ -136,17 +154,9 @@ public ImportModel(
         {
             var originalFileName = GetOriginalFileNameFromStoredPath(filePath, token);
 
-            ImportResult = await _masterDataImportService.ImportAsync(
+            ImportResult = await _bootstrapImportEngine.ImportAsync(
                 filePath,
-                originalFileName,
-                FixedImportType);
-
-            var nxrDynamicImportResult = await ImportEmployeeDynamicFieldsFromFileAsync(filePath);
-            if (nxrDynamicImportResult.MatchedColumns > 0)
-            {
-                TempData["SuccessMessage"] =
-                    $"Employee import completed. Dynamic custom fields saved: {nxrDynamicImportResult.SavedValues}. Matched custom columns: {nxrDynamicImportResult.MatchedColumns}. Skipped rows: {nxrDynamicImportResult.SkippedRows}.";
-            }
+                originalFileName);
 
             TempData["SuccessMessage"] = ImportResult.Message;
         }
@@ -160,7 +170,9 @@ public ImportModel(
 
     private void LoadRequiredColumns()
     {
-        RequiredColumns = _masterDataImportService.GetRequiredColumns(FixedImportType);
+        RequiredColumns =
+            EmployeeBootstrapImportEngine.RequiredColumnNames
+                .ToList();
     }
 
     private string GetImportFolder()
@@ -237,9 +249,12 @@ public ImportModel(
     {
         LoadRequiredColumns();
 
-        var columns = await BuildEmployeeTemplateColumnsAsync();
-        var workbookBytes = BuildEmployeeTemplateWorkbook(columns);
-        var fileName = $"NEXORA_Employees_Import_Template_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+        var workbookBytes =
+            await _bootstrapImportEngine
+                .BuildTemplateWorkbookAsync();
+        var fileName =
+            $"NEXORA_Employee_Bootstrap_Template_" +
+            $"{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
 
         return File(
             workbookBytes,
@@ -249,11 +264,18 @@ public ImportModel(
 
     public async Task<IActionResult> OnGetTemplateColumnsAsync()
     {
-        var columns = await BuildEmployeeTemplateColumnsAsync();
+        var columns =
+            await _bootstrapImportEngine
+                .GetTemplateColumnsAsync();
+
+        var requiredColumns =
+            await _bootstrapImportEngine
+                .GetRequiredTemplateColumnsAsync();
 
         return new JsonResult(new
         {
-            columns
+            columns,
+            requiredColumns
         });
     }
     private async Task<List<string>> BuildEmployeeTemplateColumnsAsync()

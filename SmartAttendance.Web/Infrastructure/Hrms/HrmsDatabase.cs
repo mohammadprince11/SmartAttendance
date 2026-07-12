@@ -2,6 +2,7 @@
 using System.Data.Common;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
@@ -164,12 +165,13 @@ END;
         {
             await using var command = connection.CreateCommand();
             command.CommandText = sql;
+            command.Transaction = dbContext.Database.CurrentTransaction?.GetDbTransaction();
             configure?.Invoke(command);
             await command.ExecuteNonQueryAsync();
         }
         finally
         {
-            if (shouldClose)
+            if (shouldClose && dbContext.Database.CurrentTransaction == null)
             {
                 await connection.CloseAsync();
             }
@@ -195,6 +197,7 @@ END;
         {
             await using var command = connection.CreateCommand();
             command.CommandText = sql;
+            command.Transaction = dbContext.Database.CurrentTransaction?.GetDbTransaction();
             configure?.Invoke(command);
 
             await using var reader = await command.ExecuteReaderAsync();
@@ -208,7 +211,7 @@ END;
         }
         finally
         {
-            if (shouldClose)
+            if (shouldClose && dbContext.Database.CurrentTransaction == null)
             {
                 await connection.CloseAsync();
             }
@@ -229,6 +232,7 @@ END;
         {
             await using var command = connection.CreateCommand();
             command.CommandText = sql;
+            command.Transaction = dbContext.Database.CurrentTransaction?.GetDbTransaction();
             configure?.Invoke(command);
             var value = await command.ExecuteScalarAsync();
 
@@ -241,7 +245,7 @@ END;
         }
         finally
         {
-            if (shouldClose)
+            if (shouldClose && dbContext.Database.CurrentTransaction == null)
             {
                 await connection.CloseAsync();
             }

@@ -32,6 +32,30 @@
         return (option.textContent || option.label || option.value || "").trim();
     }
 
+    function selectVariant(select) {
+        var value = select && select.dataset
+            ? (select.dataset.nexoraSelectVariant || "")
+            : "";
+
+        value = value.trim().toLowerCase();
+
+        return /^[a-z0-9_-]+$/.test(value)
+            ? value
+            : "";
+    }
+
+    function selectPanelMinWidth(select) {
+        var raw = select && select.dataset
+            ? select.dataset.nexoraSelectPanelMinWidth
+            : "";
+
+        var value = Number.parseInt(raw || "", 10);
+
+        return Number.isFinite(value) && value >= 64 && value <= 640
+            ? value
+            : 180;
+    }
+
     function setImportantStyle(element, name, value) {
         try {
             element.style.setProperty(name, value, "important");
@@ -137,6 +161,12 @@
     function buildPanel(select, wrapper, trigger) {
         var panel = document.createElement("div");
         panel.className = "nxcs-panel";
+
+        var variant = selectVariant(select);
+        if (variant) {
+            panel.classList.add("nxcs-panel--" + variant);
+        }
+
         panel.dir = document.documentElement.dir || "rtl";
         panel.id = "nxcs-panel-" + (++uid);
         panel.setAttribute("role", "listbox");
@@ -182,10 +212,20 @@
         var triggerRect = state.trigger.getBoundingClientRect();
         var viewportWidth = document.documentElement.clientWidth || window.innerWidth;
         var viewportHeight = document.documentElement.clientHeight || window.innerHeight;
+
+        if (
+            triggerRect.bottom <= 0 ||
+            triggerRect.top >= viewportHeight
+        ) {
+            closeOpen();
+            return;
+        }
+
         var gap = 8;
         var edge = 12;
 
-        var width = Math.max(triggerRect.width, 180);
+        var minimumPanelWidth = selectPanelMinWidth(state.select);
+        var width = Math.max(triggerRect.width, minimumPanelWidth);
         width = Math.min(width, viewportWidth - (edge * 2));
 
         var spaceBelow = Math.max(0, viewportHeight - triggerRect.bottom - gap - edge);
@@ -273,8 +313,20 @@
         placePanel(openState);
 
         var selected = panel.querySelector(".nxcs-option.is-selected");
-        if (selected) {
-            selected.scrollIntoView({ block: "nearest" });
+        if (selected && panel.scrollHeight > panel.clientHeight) {
+            var selectedTop = selected.offsetTop;
+            var selectedBottom = selectedTop + selected.offsetHeight;
+            var visibleTop = panel.scrollTop;
+            var visibleBottom = visibleTop + panel.clientHeight;
+
+            if (selectedTop < visibleTop) {
+                panel.scrollTop = Math.max(0, selectedTop - 8);
+            } else if (selectedBottom > visibleBottom) {
+                panel.scrollTop = Math.max(
+                    0,
+                    selectedBottom - panel.clientHeight + 8
+                );
+            }
         }
     }
 
@@ -290,6 +342,12 @@
 
         var wrapper = document.createElement("span");
         wrapper.className = "nxcs-select";
+
+        var variant = selectVariant(select);
+        if (variant) {
+            wrapper.classList.add("nxcs-select--" + variant);
+        }
+
         wrapper.dir = document.documentElement.dir || "rtl";
 
         var trigger = document.createElement("button");
@@ -381,8 +439,20 @@
         if (openState) placePanel(openState);
     }, true);
 
-    window.addEventListener("scroll", function () {
-        if (openState) placePanel(openState);
+    window.addEventListener("scroll", function (event) {
+        if (!openState) return;
+
+        if (
+            openState.panel &&
+            (
+                event.target === openState.panel ||
+                openState.panel.contains(event.target)
+            )
+        ) {
+            return;
+        }
+
+        closeOpen();
     }, true);
 
     if (window.MutationObserver) {

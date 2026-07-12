@@ -1,19 +1,25 @@
+﻿using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.Companies.ViewModels;
 using SmartAttendance.Application.Departments.Services;
 using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Domain.Entities;
+using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Infrastructure.Services;
 
 public class DepartmentService : IDepartmentService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ApplicationDbContext _dbContext;
 
-    public DepartmentService(IUnitOfWork unitOfWork)
+    public DepartmentService(
+        IUnitOfWork unitOfWork,
+        ApplicationDbContext dbContext)
     {
         _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
     }
 
     public async Task<IEnumerable<DepartmentListViewModel>> GetAllAsync(
@@ -177,6 +183,40 @@ public class DepartmentService : IDepartmentService
             return false;
         }
 
+        if (model.IsActive && !company.IsActive)
+        {
+            return false;
+        }
+
+        if (department.CompanyId != model.CompanyId)
+        {
+            var hasLinkedEmployees = await _dbContext.Employees
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    !x.IsDeleted &&
+                    x.DepartmentId == department.Id);
+
+            if (hasLinkedEmployees)
+            {
+                return false;
+            }
+        }
+
+        if (department.IsActive && !model.IsActive)
+        {
+            var hasActiveEmployees = await _dbContext.Employees
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    !x.IsDeleted &&
+                    x.IsActive &&
+                    x.DepartmentId == department.Id);
+
+            if (hasActiveEmployees)
+            {
+                return false;
+            }
+        }
+
         var departments = await _unitOfWork.Departments.GetAllAsync();
         var code = string.IsNullOrWhiteSpace(model.Code)
             ? department.Code
@@ -216,9 +256,13 @@ public class DepartmentService : IDepartmentService
             return false;
         }
 
-        var employees = await _unitOfWork.Employees.GetAllAsync();
+        var hasLinkedEmployees = await _dbContext.Employees
+            .AsNoTracking()
+            .AnyAsync(x =>
+                !x.IsDeleted &&
+                x.DepartmentId == id);
 
-        if (employees.Any(x => x.DepartmentId == id))
+        if (hasLinkedEmployees)
         {
             return false;
         }
@@ -281,18 +325,37 @@ public class DepartmentService : IDepartmentService
         string prefix,
         IEnumerable<string> existingCodes)
     {
+        var codePrefix = $"{prefix}-";
         var existing = existingCodes
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var seed = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
-        var code = $"{prefix}-{seed}";
-        var counter = 1;
+        var maxNumber = existing
+            .Select(code =>
+            {
+                if (!code.StartsWith(
+                        codePrefix,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return 0;
+                }
+
+                return int.TryParse(
+                    code[codePrefix.Length..],
+                    out var number)
+                    ? number
+                    : 0;
+            })
+            .DefaultIfEmpty(0)
+            .Max();
+
+        var nextNumber = maxNumber + 1;
+        var code = $"{codePrefix}{nextNumber:000}";
 
         while (existing.Contains(code))
         {
-            code = $"{prefix}-{seed}-{counter}";
-            counter++;
+            nextNumber++;
+            code = $"{codePrefix}{nextNumber:000}";
         }
 
         return code;

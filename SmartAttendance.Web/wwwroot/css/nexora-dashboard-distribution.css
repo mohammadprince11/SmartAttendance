@@ -1,4 +1,4 @@
-/* NEXORA Dashboard Distribution Layer */
+﻿/* NEXORA Dashboard Distribution Layer */
 
 .distribution-summary-grid .distribution-card .dashboard-list {
     max-height: none !important;
@@ -201,3 +201,59 @@ html[data-theme="dark"] .distribution-tab:hover {
         display: grid !important;
     }
 }
+
+/* NEXORA_DASHBOARD_COMPANY_CONTEXT_FIX_V1_START */
+.dashboard-company-context {
+    display: grid !important;
+    grid-template-columns: minmax(240px, 280px) auto !important;
+    grid-template-rows: auto auto !important;
+    grid-template-areas:
+        "company-label company-action"
+        "company-select company-action" !important;
+    align-items: end !important;
+    justify-content: end !important;
+    column-gap: 10px !important;
+    row-gap: 6px !important;
+    width: auto !important;
+    min-width: 0 !important;
+}
+
+.dashboard-company-context > label {
+    grid-area: company-label !important;
+    display: block !important;
+    margin: 0 !important;
+    color: var(--sa-muted) !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    font-weight: 1000 !important;
+    text-align: start !important;
+    white-space: nowrap !important;
+}
+
+.dashboard-company-context > select,
+.dashboard-company-context > .nxcs-select {
+    grid-area: company-select !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 280px !important;
+}
+
+.dashboard-company-context > button {
+    grid-area: company-action !important;
+    align-self: end !important;
+    min-height: 42px !important;
+}
+
+@media (max-width: 780px) {
+    .dashboard-company-context {
+        grid-template-columns: minmax(0, 1fr) auto !important;
+        width: 100% !important;
+        justify-content: stretch !important;
+    }
+
+    .dashboard-company-context > select,
+    .dashboard-company-context > .nxcs-select {
+        max-width: none !important;
+    }
+}
+/* NEXORA_DASHBOARD_COMPANY_CONTEXT_FIX_V1_END */

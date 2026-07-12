@@ -1,5 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc.RazorPages;
+﻿using System.Data;
+using System.Data.Common;
+using System.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.CompanyContext;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages;
@@ -7,12 +14,28 @@ namespace SmartAttendance.Web.Pages;
 public class IndexModel : PageModel
 {
     private const int DistributionTopLimit = 5;
-    private readonly ApplicationDbContext _dbContext;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    private readonly ApplicationDbContext _dbContext;
+    private readonly ILogger<IndexModel> _logger;
+
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        ILogger<IndexModel> logger)
     {
         _dbContext = dbContext;
+        _logger = logger;
     }
+
+    [BindProperty(SupportsGet = true)]
+    public int? CompanyId { get; set; }
+
+    public List<CompanyOption> CompanyOptions { get; set; } = new();
+
+    public string SelectedCompanyName =>
+        CompanyId.HasValue
+            ? CompanyOptions.FirstOrDefault(x =>
+                  x.Id == CompanyId.Value)?.Name ?? "-"
+            : "-";
 
     public int Companies { get; set; }
     public int Branches { get; set; }
@@ -50,81 +73,328 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
+        var stopwatch = Stopwatch.StartNew();
 
-        Companies = await CountAsync("SELECT COUNT(*) FROM Companies");
-        Branches = await CountAsync("SELECT COUNT(*) FROM Branches");
-        Departments = await CountAsync("SELECT COUNT(*) FROM Departments");
-        Employees = await CountAsync("SELECT COUNT(*) FROM Employees");
-        ActiveEmployees = await CountAsync("SELECT COUNT(*) FROM Employees WHERE IsActive = 1");
-        InactiveEmployees = await CountAsync("SELECT COUNT(*) FROM Employees WHERE IsActive = 0");
-        Devices = await CountAsync("SELECT COUNT(*) FROM Devices");
-        Shifts = await CountAsync("SELECT COUNT(*) FROM Shifts");
-        AttendanceRecords = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords");
+        CompanyOptions = await _dbContext.Companies
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted && x.IsActive)
+            .OrderBy(x => x.Name)
+            .ThenBy(x => x.Code)
+            .Select(x => new CompanyOption
+            {
+                Id = x.Id,
+                Name = x.Name,
+                IsActive = x.IsActive
+            })
+            .ToListAsync();
 
-        TodayPresent = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate = CAST(GETDATE() AS date) AND Status = 1");
-        TodayLate = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate = CAST(GETDATE() AS date) AND Status = 2");
-        TodayAbsent = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate = CAST(GETDATE() AS date) AND Status = 3");
-        TodayMissingOut = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate = CAST(GETDATE() AS date) AND CheckOut IS NULL");
+        CompanyId = CompanySelectionContext.Resolve(
+            HttpContext,
+            CompanyId,
+            CompanyOptions.Select(x => x.Id).ToArray());
 
-        PendingRequests = await CountAsync("SELECT COUNT(*) FROM SelfServiceRequests WHERE Status = 'Pending'");
-        ApprovedRequests30 = await CountAsync("SELECT COUNT(*) FROM SelfServiceRequests WHERE Status = 'Approved' AND CreatedAt >= DATEADD(day, -30, SYSUTCDATETIME())");
-        RejectedRequests30 = await CountAsync("SELECT COUNT(*) FROM SelfServiceRequests WHERE Status = 'Rejected' AND CreatedAt >= DATEADD(day, -30, SYSUTCDATETIME())");
+        if (!CompanyId.HasValue)
+        {
+            stopwatch.Stop();
+            _logger.LogInformation(
+                "Dashboard loaded without a company in {ElapsedMilliseconds} ms.",
+                stopwatch.ElapsedMilliseconds);
+            return;
+        }
 
-        Contracts30 = await CountAsync("SELECT COUNT(*) FROM Employees WHERE ContractEndDate IS NOT NULL AND ContractEndDate >= CAST(GETDATE() AS date) AND ContractEndDate <= DATEADD(day, 30, CAST(GETDATE() AS date))");
-        MissingPunches30 = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate >= DATEADD(day, -30, CAST(GETDATE() AS date)) AND CheckOut IS NULL");
-        Late30 = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate >= DATEADD(day, -30, CAST(GETDATE() AS date)) AND Status = 2");
-        Absent30 = await CountAsync("SELECT COUNT(*) FROM AttendanceRecords WHERE AttendanceDate >= DATEADD(day, -30, CAST(GETDATE() AS date)) AND Status = 3");
+        await LoadDashboardDataAsync();
 
-        ByBranch = await LoadDistributionSummaryAsync("""
+        stopwatch.Stop();
+        _logger.LogInformation(
+            "Dashboard loaded for company {CompanyId} in {ElapsedMilliseconds} ms using one dashboard SQL batch.",
+            CompanyId.Value,
+            stopwatch.ElapsedMilliseconds);
+    }
+
+    private async Task LoadDashboardDataAsync()
+    {
+        const string sql = """
+SET NOCOUNT ON;
+
+DECLARE @Today date = CAST(GETDATE() AS date);
+DECLARE @FromDate date = DATEADD(day, -30, @Today);
+DECLARE @UtcFrom datetime2 = DATEADD(day, -30, SYSUTCDATETIME());
+
+SELECT
+    Companies = (
+        SELECT COUNT(*)
+        FROM Companies
+        WHERE IsDeleted = 0
+          AND Id = @CompanyId
+    ),
+    Branches = (
+        SELECT COUNT(*)
+        FROM Branches
+        WHERE IsDeleted = 0
+          AND CompanyId = @CompanyId
+    ),
+    Departments = (
+        SELECT COUNT(*)
+        FROM Departments
+        WHERE IsDeleted = 0
+          AND CompanyId = @CompanyId
+    ),
+    Employees = (
+        SELECT COUNT(*)
+        FROM Employees e
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE e.IsDeleted = 0
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+    ),
+    ActiveEmployees = (
+        SELECT COUNT(*)
+        FROM Employees e
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE e.IsDeleted = 0
+          AND e.IsActive = 1
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+    ),
+    Devices = (
+        SELECT COUNT(*)
+        FROM Devices d
+        INNER JOIN Branches b ON d.BranchId = b.Id
+        WHERE d.IsDeleted = 0
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+    ),
+    Shifts = (
+        SELECT COUNT(*)
+        FROM Shifts
+        WHERE IsDeleted = 0
+    ),
+    AttendanceRecords = (
+        SELECT COUNT(*)
+        FROM AttendanceRecords a
+        INNER JOIN Employees e ON a.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE a.IsDeleted = 0
+          AND e.IsDeleted = 0
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+    ),
+    TodayPresent = (
+        SELECT COUNT(*)
+        FROM AttendanceRecords a
+        INNER JOIN Employees e ON a.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE a.IsDeleted = 0
+          AND e.IsDeleted = 0
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+          AND a.AttendanceDate = @Today
+          AND a.Status = 1
+    ),
+    TodayLate = (
+        SELECT COUNT(*)
+        FROM AttendanceRecords a
+        INNER JOIN Employees e ON a.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE a.IsDeleted = 0
+          AND e.IsDeleted = 0
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+          AND a.AttendanceDate = @Today
+          AND a.Status = 2
+    ),
+    TodayAbsent = (
+        SELECT COUNT(*)
+        FROM AttendanceRecords a
+        INNER JOIN Employees e ON a.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE a.IsDeleted = 0
+          AND e.IsDeleted = 0
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+          AND a.AttendanceDate = @Today
+          AND a.Status = 3
+    ),
+    TodayMissingOut = (
+        SELECT COUNT(*)
+        FROM AttendanceRecords a
+        INNER JOIN Employees e ON a.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE a.IsDeleted = 0
+          AND e.IsDeleted = 0
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+          AND a.AttendanceDate = @Today
+          AND a.Status IN (1, 2)
+          AND a.CheckIn IS NOT NULL
+          AND a.CheckOut IS NULL
+    ),
+    PendingRequests = (
+        SELECT COUNT(*)
+        FROM SelfServiceRequests r
+        INNER JOIN Employees e ON r.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE e.IsDeleted = 0
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+          AND r.Status = 'Pending'
+    ),
+    ApprovedRequests30 = (
+        SELECT COUNT(*)
+        FROM SelfServiceRequests r
+        INNER JOIN Employees e ON r.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE e.IsDeleted = 0
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+          AND r.Status = 'Approved'
+          AND r.CreatedAt >= @UtcFrom
+    ),
+    RejectedRequests30 = (
+        SELECT COUNT(*)
+        FROM SelfServiceRequests r
+        INNER JOIN Employees e ON r.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE e.IsDeleted = 0
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+          AND r.Status = 'Rejected'
+          AND r.CreatedAt >= @UtcFrom
+    ),
+    Contracts30 = (
+        SELECT COUNT(*)
+        FROM Employees e
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE e.IsDeleted = 0
+          AND e.IsActive = 1
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+          AND e.ContractEndDate IS NOT NULL
+          AND e.ContractEndDate >= @Today
+          AND e.ContractEndDate <= DATEADD(day, 30, @Today)
+    ),
+    MissingPunches30 = (
+        SELECT COUNT(*)
+        FROM AttendanceRecords a
+        INNER JOIN Employees e ON a.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE a.IsDeleted = 0
+          AND e.IsDeleted = 0
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+          AND a.AttendanceDate >= @FromDate
+          AND a.Status IN (1, 2)
+          AND a.CheckIn IS NOT NULL
+          AND a.CheckOut IS NULL
+    ),
+    Late30 = (
+        SELECT COUNT(*)
+        FROM AttendanceRecords a
+        INNER JOIN Employees e ON a.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE a.IsDeleted = 0
+          AND e.IsDeleted = 0
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+          AND a.AttendanceDate >= @FromDate
+          AND a.Status = 2
+    ),
+    Absent30 = (
+        SELECT COUNT(*)
+        FROM AttendanceRecords a
+        INNER JOIN Employees e ON a.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE a.IsDeleted = 0
+          AND e.IsDeleted = 0
+          AND b.IsDeleted = 0
+          AND b.CompanyId = @CompanyId
+          AND a.AttendanceDate >= @FromDate
+          AND a.Status = 3
+    );
+
 SELECT ISNULL(NULLIF(b.Name, ''), 'Not Set') AS Name, COUNT(*) AS Total
 FROM Employees e
-LEFT JOIN Departments d ON e.DepartmentId = d.Id
-LEFT JOIN Branches b ON d.BranchId = b.Id
+INNER JOIN Branches b ON e.BranchId = b.Id
+WHERE e.IsDeleted = 0
+  AND b.IsDeleted = 0
+  AND b.CompanyId = @CompanyId
 GROUP BY ISNULL(NULLIF(b.Name, ''), 'Not Set')
 ORDER BY Total DESC, Name;
-""");
 
-        ByDepartment = await LoadDistributionSummaryAsync("""
 SELECT ISNULL(NULLIF(d.Name, ''), 'Not Set') AS Name, COUNT(*) AS Total
 FROM Employees e
-LEFT JOIN Departments d ON e.DepartmentId = d.Id
+INNER JOIN Branches b ON e.BranchId = b.Id
+LEFT JOIN Departments d
+    ON e.DepartmentId = d.Id
+   AND d.IsDeleted = 0
+WHERE e.IsDeleted = 0
+  AND b.IsDeleted = 0
+  AND b.CompanyId = @CompanyId
 GROUP BY ISNULL(NULLIF(d.Name, ''), 'Not Set')
 ORDER BY Total DESC, Name;
-""");
 
-        ByGender = await LoadDistributionSummaryAsync("SELECT ISNULL(NULLIF(Gender, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(Gender, ''), 'Not Set') ORDER BY Total DESC, Name");
-        ByCountry = await LoadDistributionSummaryAsync("SELECT ISNULL(NULLIF(Country, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(Country, ''), 'Not Set') ORDER BY Total DESC, Name");
-        ByNationality = await LoadDistributionSummaryAsync("SELECT ISNULL(NULLIF(Nationality, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(Nationality, ''), 'Not Set') ORDER BY Total DESC, Name");
-        ByContractType = await LoadDistributionSummaryAsync("SELECT ISNULL(NULLIF(ContractType, ''), 'Not Set') AS Name, COUNT(*) AS Total FROM Employees GROUP BY ISNULL(NULLIF(ContractType, ''), 'Not Set') ORDER BY Total DESC, Name");
-        RequestsByStatus = await LoadNameCountsAsync("SELECT Status AS Name, COUNT(*) AS Total FROM SelfServiceRequests GROUP BY Status ORDER BY Total DESC");
+SELECT ISNULL(NULLIF(e.Gender, ''), 'Not Set') AS Name, COUNT(*) AS Total
+FROM Employees e
+INNER JOIN Branches b ON e.BranchId = b.Id
+WHERE e.IsDeleted = 0
+  AND b.IsDeleted = 0
+  AND b.CompanyId = @CompanyId
+GROUP BY ISNULL(NULLIF(e.Gender, ''), 'Not Set')
+ORDER BY Total DESC, Name;
 
-        ExpiringContracts = await HrmsDatabase.QueryAsync(
-            _dbContext,
-            """
+SELECT ISNULL(NULLIF(e.Country, ''), 'Not Set') AS Name, COUNT(*) AS Total
+FROM Employees e
+INNER JOIN Branches b ON e.BranchId = b.Id
+WHERE e.IsDeleted = 0
+  AND b.IsDeleted = 0
+  AND b.CompanyId = @CompanyId
+GROUP BY ISNULL(NULLIF(e.Country, ''), 'Not Set')
+ORDER BY Total DESC, Name;
+
+SELECT ISNULL(NULLIF(e.Nationality, ''), 'Not Set') AS Name, COUNT(*) AS Total
+FROM Employees e
+INNER JOIN Branches b ON e.BranchId = b.Id
+WHERE e.IsDeleted = 0
+  AND b.IsDeleted = 0
+  AND b.CompanyId = @CompanyId
+GROUP BY ISNULL(NULLIF(e.Nationality, ''), 'Not Set')
+ORDER BY Total DESC, Name;
+
+SELECT ISNULL(NULLIF(e.ContractType, ''), 'Not Set') AS Name, COUNT(*) AS Total
+FROM Employees e
+INNER JOIN Branches b ON e.BranchId = b.Id
+WHERE e.IsDeleted = 0
+  AND b.IsDeleted = 0
+  AND b.CompanyId = @CompanyId
+GROUP BY ISNULL(NULLIF(e.ContractType, ''), 'Not Set')
+ORDER BY Total DESC, Name;
+
+SELECT ISNULL(NULLIF(r.Status, ''), 'Not Set') AS Name, COUNT(*) AS Total
+FROM SelfServiceRequests r
+INNER JOIN Employees e ON r.EmployeeId = e.Id
+INNER JOIN Branches b ON e.BranchId = b.Id
+WHERE e.IsDeleted = 0
+  AND b.IsDeleted = 0
+  AND b.CompanyId = @CompanyId
+GROUP BY ISNULL(NULLIF(r.Status, ''), 'Not Set')
+ORDER BY Total DESC, Name;
+
 SELECT TOP 12
-    EmployeeNo,
-    FullName,
-    ISNULL(Position, '') AS Position,
-    ContractEndDate
-FROM Employees
-WHERE ContractEndDate IS NOT NULL
-  AND ContractEndDate >= CAST(GETDATE() AS date)
-  AND ContractEndDate <= DATEADD(day, 60, CAST(GETDATE() AS date))
-ORDER BY ContractEndDate;
-""",
-            null,
-            reader => new ContractRow
-            {
-                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
-                EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
-                Position = HrmsDatabase.GetString(reader, "Position"),
-                ContractEndDate = HrmsDatabase.GetDateOnly(reader, "ContractEndDate")
-            });
+    e.EmployeeNo,
+    e.FullName,
+    ISNULL(e.Position, '') AS Position,
+    e.ContractEndDate
+FROM Employees e
+INNER JOIN Branches b ON e.BranchId = b.Id
+WHERE e.IsDeleted = 0
+  AND e.IsActive = 1
+  AND b.IsDeleted = 0
+  AND b.CompanyId = @CompanyId
+  AND e.ContractEndDate IS NOT NULL
+  AND e.ContractEndDate >= @Today
+  AND e.ContractEndDate <= DATEADD(day, 60, @Today)
+ORDER BY e.ContractEndDate;
 
-        LatestRequests = await HrmsDatabase.QueryAsync(
-            _dbContext,
-            """
 SELECT TOP 10
     r.Id,
     e.EmployeeNo,
@@ -135,10 +405,157 @@ SELECT TOP 10
     r.CreatedAt
 FROM SelfServiceRequests r
 INNER JOIN Employees e ON r.EmployeeId = e.Id
+INNER JOIN Branches b ON e.BranchId = b.Id
+WHERE e.IsDeleted = 0
+  AND b.IsDeleted = 0
+  AND b.CompanyId = @CompanyId
 ORDER BY r.CreatedAt DESC;
-""",
-            null,
-            reader => new RequestRow
+""";
+
+        var connection = _dbContext.Database.GetDbConnection();
+        var shouldClose = connection.State != ConnectionState.Open;
+
+        if (shouldClose)
+        {
+            await connection.OpenAsync();
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = sql;
+            command.Transaction = _dbContext.Database
+                .CurrentTransaction?
+                .GetDbTransaction();
+
+            HrmsDatabase.AddParameter(
+                command,
+                "@CompanyId",
+                CompanyId!.Value);
+
+            await using var reader = await command.ExecuteReaderAsync();
+
+            if (await reader.ReadAsync())
+            {
+                Companies = HrmsDatabase.GetInt(reader, "Companies");
+                Branches = HrmsDatabase.GetInt(reader, "Branches");
+                Departments = HrmsDatabase.GetInt(reader, "Departments");
+                Employees = HrmsDatabase.GetInt(reader, "Employees");
+                ActiveEmployees = HrmsDatabase.GetInt(reader, "ActiveEmployees");
+                InactiveEmployees = Employees - ActiveEmployees;
+                Devices = HrmsDatabase.GetInt(reader, "Devices");
+                Shifts = HrmsDatabase.GetInt(reader, "Shifts");
+                AttendanceRecords = HrmsDatabase.GetInt(reader, "AttendanceRecords");
+                TodayPresent = HrmsDatabase.GetInt(reader, "TodayPresent");
+                TodayLate = HrmsDatabase.GetInt(reader, "TodayLate");
+                TodayAbsent = HrmsDatabase.GetInt(reader, "TodayAbsent");
+                TodayMissingOut = HrmsDatabase.GetInt(reader, "TodayMissingOut");
+                PendingRequests = HrmsDatabase.GetInt(reader, "PendingRequests");
+                ApprovedRequests30 = HrmsDatabase.GetInt(reader, "ApprovedRequests30");
+                RejectedRequests30 = HrmsDatabase.GetInt(reader, "RejectedRequests30");
+                Contracts30 = HrmsDatabase.GetInt(reader, "Contracts30");
+                MissingPunches30 = HrmsDatabase.GetInt(reader, "MissingPunches30");
+                Late30 = HrmsDatabase.GetInt(reader, "Late30");
+                Absent30 = HrmsDatabase.GetInt(reader, "Absent30");
+            }
+
+            await reader.NextResultAsync();
+            ByBranch = NormalizeDistributionRows(
+                await ReadNameCountRowsAsync(reader),
+                limitToTopRows: true);
+
+            await reader.NextResultAsync();
+            ByDepartment = NormalizeDistributionRows(
+                await ReadNameCountRowsAsync(reader),
+                limitToTopRows: true);
+
+            await reader.NextResultAsync();
+            ByGender = NormalizeDistributionRows(
+                await ReadNameCountRowsAsync(reader),
+                limitToTopRows: true);
+
+            await reader.NextResultAsync();
+            ByCountry = NormalizeDistributionRows(
+                await ReadNameCountRowsAsync(reader),
+                limitToTopRows: true);
+
+            await reader.NextResultAsync();
+            ByNationality = NormalizeDistributionRows(
+                await ReadNameCountRowsAsync(reader),
+                limitToTopRows: true);
+
+            await reader.NextResultAsync();
+            ByContractType = NormalizeDistributionRows(
+                await ReadNameCountRowsAsync(reader),
+                limitToTopRows: true);
+
+            await reader.NextResultAsync();
+            RequestsByStatus = NormalizeDistributionRows(
+                await ReadNameCountRowsAsync(reader),
+                limitToTopRows: false);
+
+            await reader.NextResultAsync();
+            ExpiringContracts = await ReadContractRowsAsync(reader);
+
+            await reader.NextResultAsync();
+            LatestRequests = await ReadRequestRowsAsync(reader);
+        }
+        finally
+        {
+            if (shouldClose &&
+                _dbContext.Database.CurrentTransaction == null)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static async Task<List<NameCountRow>>
+        ReadNameCountRowsAsync(DbDataReader reader)
+    {
+        var rows = new List<NameCountRow>();
+
+        while (await reader.ReadAsync())
+        {
+            rows.Add(new NameCountRow
+            {
+                Name = HrmsDatabase.GetString(reader, "Name"),
+                Total = HrmsDatabase.GetInt(reader, "Total")
+            });
+        }
+
+        return rows;
+    }
+
+    private static async Task<List<ContractRow>>
+        ReadContractRowsAsync(DbDataReader reader)
+    {
+        var rows = new List<ContractRow>();
+
+        while (await reader.ReadAsync())
+        {
+            rows.Add(new ContractRow
+            {
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+                Position = HrmsDatabase.GetString(reader, "Position"),
+                ContractEndDate = HrmsDatabase.GetDateOnly(
+                    reader,
+                    "ContractEndDate")
+            });
+        }
+
+        return rows;
+    }
+
+    private static async Task<List<RequestRow>>
+        ReadRequestRowsAsync(DbDataReader reader)
+    {
+        var rows = new List<RequestRow>();
+
+        while (await reader.ReadAsync())
+        {
+            rows.Add(new RequestRow
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
                 EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
@@ -148,30 +565,15 @@ ORDER BY r.CreatedAt DESC;
                 CurrentStep = HrmsDatabase.GetString(reader, "CurrentStep"),
                 CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt")
             });
+        }
+
+        return rows;
     }
 
-    private async Task<int> CountAsync(string sql)
+    private static List<NameCountRow> NormalizeDistributionRows(
+        IEnumerable<NameCountRow> rows,
+        bool limitToTopRows)
     {
-        return await HrmsDatabase.ScalarAsync<int>(_dbContext, sql);
-    }
-
-    private async Task<List<NameCountRow>> LoadNameCountsAsync(string sql)
-    {
-        return await HrmsDatabase.QueryAsync(
-            _dbContext,
-            sql,
-            null,
-            reader => new NameCountRow
-            {
-                Name = HrmsDatabase.GetString(reader, "Name"),
-                Total = HrmsDatabase.GetInt(reader, "Total")
-            });
-    }
-
-    private async Task<List<NameCountRow>> LoadDistributionSummaryAsync(string sql)
-    {
-        var rows = await LoadNameCountsAsync(sql);
-
         var normalizedRows = rows
             .Select(row => new NameCountRow
             {
@@ -188,13 +590,18 @@ ORDER BY r.CreatedAt DESC;
             .ThenBy(row => row.Name)
             .ToList();
 
-        if (normalizedRows.Count <= DistributionTopLimit)
+        if (!limitToTopRows ||
+            normalizedRows.Count <= DistributionTopLimit)
         {
             return normalizedRows;
         }
 
-        var topRows = normalizedRows.Take(DistributionTopLimit).ToList();
-        var otherTotal = normalizedRows.Skip(DistributionTopLimit).Sum(row => row.Total);
+        var topRows = normalizedRows
+            .Take(DistributionTopLimit)
+            .ToList();
+        var otherTotal = normalizedRows
+            .Skip(DistributionTopLimit)
+            .Sum(row => row.Total);
 
         if (otherTotal > 0)
         {
@@ -208,11 +615,24 @@ ORDER BY r.CreatedAt DESC;
         return topRows;
     }
 
-    private static string NormalizeDistributionName(string? name)
+    private static string NormalizeDistributionName(
+        string? name)
     {
-        return string.IsNullOrWhiteSpace(name) || name.Trim().Equals("Not Set", StringComparison.OrdinalIgnoreCase)
+        return string.IsNullOrWhiteSpace(name) ||
+               name.Trim().Equals(
+                   "Not Set",
+                   StringComparison.OrdinalIgnoreCase)
             ? "غير محدد"
             : name.Trim();
+    }
+
+    public class CompanyOption
+    {
+        public int Id { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+
+        public bool IsActive { get; set; }
     }
 
     public class NameCountRow
@@ -240,4 +660,3 @@ ORDER BY r.CreatedAt DESC;
         public DateTime? CreatedAt { get; set; }
     }
 }
-

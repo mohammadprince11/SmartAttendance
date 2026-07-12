@@ -39,8 +39,29 @@
     <div class="page-header">
         <div>
             <h1>لوحة التحكم</h1>
-            <p>ملخص النظام، الموظفين، الحضور، الطلبات، والعقود في صفحة واحدة.</p>
+            <p>ملخص الشركة الحالية: @Model.SelectedCompanyName</p>
         </div>
+
+        @if (Model.CompanyOptions.Count > 0)
+        {
+            <form method="get"
+                  class="distribution-filter-form dashboard-company-context"
+                  aria-label="اختيار الشركة">
+                <label for="dashboardCompanyId">الشركة</label>
+                <select id="dashboardCompanyId"
+                        name="CompanyId"
+                        data-nexora-select="true">
+                    @foreach (var company in Model.CompanyOptions)
+                    {
+                        <option value="@company.Id"
+                                selected="@(Model.CompanyId == company.Id ? "selected" : null)">
+                            @company.Name
+                        </option>
+                    }
+                </select>
+                <button type="submit">عرض</button>
+            </form>
+        }
     </div>
 
     <section class="dashboard-kpi-grid">
@@ -53,7 +74,7 @@
         <div class="dashboard-kpi">
             <span>الفروع</span>
             <strong>@Model.Branches</strong>
-            <small>الشركات: @Model.Companies</small>
+            <small>الشركة: @Model.SelectedCompanyName</small>
         </div>
 
         <div class="dashboard-kpi">
@@ -65,7 +86,7 @@
         <div class="dashboard-kpi">
             <span>الأجهزة</span>
             <strong>@Model.Devices</strong>
-            <small>الشفتات: @Model.Shifts</small>
+            <small>الشفتات العامة: @Model.Shifts</small>
         </div>
 
         <div class="dashboard-kpi">
@@ -148,7 +169,7 @@
                     <h2>الموظفون حسب الفرع</h2>
                     <p>أعلى 5 فروع + أخرى</p>
                 </div>
-                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="branches">عرض التفاصيل</a>
+                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="branches" asp-route-companyId="@Model.CompanyId">عرض التفاصيل</a>
             </div>
             <div class="dashboard-list">
                 @foreach (var row in Model.ByBranch)
@@ -173,7 +194,7 @@
                     <h2>الموظفون حسب القسم</h2>
                     <p>أعلى 5 أقسام + أخرى</p>
                 </div>
-                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="departments">عرض التفاصيل</a>
+                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="departments" asp-route-companyId="@Model.CompanyId">عرض التفاصيل</a>
             </div>
             <div class="dashboard-list">
                 @foreach (var row in Model.ByDepartment)
@@ -198,7 +219,7 @@
                     <h2>الموظفون حسب الجنس</h2>
                     <p>أعلى 5 + أخرى</p>
                 </div>
-                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="gender">عرض التفاصيل</a>
+                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="gender" asp-route-companyId="@Model.CompanyId">عرض التفاصيل</a>
             </div>
             <div class="dashboard-list">
                 @foreach (var row in Model.ByGender)
@@ -223,7 +244,7 @@
                     <h2>الموظفون حسب البلد</h2>
                     <p>أعلى 5 بلدان + أخرى</p>
                 </div>
-                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="country">عرض التفاصيل</a>
+                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="country" asp-route-companyId="@Model.CompanyId">عرض التفاصيل</a>
             </div>
             <div class="dashboard-list">
                 @foreach (var row in Model.ByCountry)
@@ -248,7 +269,7 @@
                     <h2>الموظفون حسب الجنسية</h2>
                     <p>أعلى 5 جنسيات + أخرى</p>
                 </div>
-                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="nationality">عرض التفاصيل</a>
+                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="nationality" asp-route-companyId="@Model.CompanyId">عرض التفاصيل</a>
             </div>
             <div class="dashboard-list">
                 @foreach (var row in Model.ByNationality)
@@ -273,7 +294,7 @@
                     <h2>الموظفون حسب نوع العقد</h2>
                     <p>أعلى 5 أنواع + أخرى</p>
                 </div>
-                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="contractType">عرض التفاصيل</a>
+                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="contractType" asp-route-companyId="@Model.CompanyId">عرض التفاصيل</a>
             </div>
             <div class="dashboard-list">
                 @foreach (var row in Model.ByContractType)

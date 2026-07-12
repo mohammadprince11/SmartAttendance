@@ -1,9 +1,10 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Branches.Services;
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Companies.Services;
@@ -13,6 +14,8 @@ using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Application.Setup.Services;
 using SmartAttendance.Application.Setup.ViewModels;
 using SmartAttendance.Domain.Enums;
+using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.CompanyContext;
 
 namespace SmartAttendance.Web.Pages.Setup;
 
@@ -32,6 +35,7 @@ public class IndexModel : PageModel
     private readonly ICompanyService _companyService;
     private readonly IBranchService _branchService;
     private readonly IDepartmentService _departmentService;
+    private readonly ApplicationDbContext _dbContext;
     private readonly IWebHostEnvironment _environment;
 
     public IndexModel(
@@ -39,12 +43,14 @@ public class IndexModel : PageModel
         ICompanyService companyService,
         IBranchService branchService,
         IDepartmentService departmentService,
+        ApplicationDbContext dbContext,
         IWebHostEnvironment environment)
     {
         _setupService = setupService;
         _companyService = companyService;
         _branchService = branchService;
         _departmentService = departmentService;
+        _dbContext = dbContext;
         _environment = environment;
     }
 
@@ -64,6 +70,12 @@ public class IndexModel : PageModel
     public DepartmentCreateViewModel NewDepartment { get; set; } = new();
 
     [BindProperty]
+    public BranchEditViewModel EditBranch { get; set; } = new();
+
+    [BindProperty]
+    public DepartmentEditViewModel EditDepartment { get; set; } = new();
+
+    [BindProperty]
     public IFormFile? LogoFile { get; set; }
 
     [BindProperty]
@@ -74,6 +86,24 @@ public class IndexModel : PageModel
     public IReadOnlyList<BranchListViewModel> Branches { get; private set; } = Array.Empty<BranchListViewModel>();
 
     public IReadOnlyList<DepartmentListViewModel> Departments { get; private set; } = Array.Empty<DepartmentListViewModel>();
+
+    public int ActiveEmployeeCount { get; private set; }
+
+    public int ActiveBranchCount { get; private set; }
+
+    public int ActiveDepartmentCount { get; private set; }
+
+    public IReadOnlyDictionary<int, int> ActiveEmployeeCountByBranch { get; private set; } =
+        new Dictionary<int, int>();
+
+    public IReadOnlyDictionary<int, int> ActiveEmployeeCountByDepartment { get; private set; } =
+        new Dictionary<int, int>();
+
+    public bool IsCompanyDeactivationLocked =>
+        (Setup?.Profile.IsActive ?? Profile.IsActive) &&
+        (ActiveEmployeeCount > 0 ||
+         ActiveBranchCount > 0 ||
+         ActiveDepartmentCount > 0);
 
     public CompanySetupViewModel? Setup { get; private set; }
 
@@ -97,11 +127,17 @@ public class IndexModel : PageModel
             return Page();
         }
 
-        var selectedCompanyId = CompanyId.HasValue && Companies.Any(x => x.Id == CompanyId.Value)
-            ? CompanyId.Value
-            : Companies[0].Id;
+        var selectedCompanyId = CompanySelectionContext.Resolve(
+            HttpContext,
+            CompanyId,
+            Companies.Select(x => x.Id).ToArray());
 
-        if (!await LoadSetupAsync(selectedCompanyId))
+        if (!selectedCompanyId.HasValue)
+        {
+            return Page();
+        }
+
+        if (!await LoadSetupAsync(selectedCompanyId.Value))
         {
             return NotFound();
         }
@@ -116,15 +152,15 @@ public class IndexModel : PageModel
                     "\u062c\u0645\u064a\u0639 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a \u0645\u0631\u062a\u0628\u0637\u0629 \u0628\u0633\u064a\u0627\u0633\u0627\u062a \u063a\u0644\u0642 \u0641\u0639\u0627\u0644\u0629. " +
                     "\u0639\u0637\u0644 \u0625\u062d\u062f\u0649 \u0627\u0644\u0633\u064a\u0627\u0633\u0627\u062a \u0623\u0648 \u062d\u0631\u0631 \u0646\u0648\u0639\u0627 \u0642\u0628\u0644 \u0625\u0636\u0627\u0641\u0629 \u0633\u064a\u0627\u0633\u0629 \u062c\u062f\u064a\u062f\u0629.";
 
-                return RedirectToPage("./Index", new { companyId = selectedCompanyId });
+                return RedirectToPage("./Index", new { companyId = selectedCompanyId.Value });
             }
 
-            CutoffPolicy = CreateNewPolicy(selectedCompanyId);
+            CutoffPolicy = CreateNewPolicy(selectedCompanyId.Value);
             OpenPolicyModal = true;
         }
         else if (editPolicyId.HasValue)
         {
-            var policy = await _setupService.GetPayrollCutoffPolicyAsync(selectedCompanyId, editPolicyId.Value);
+            var policy = await _setupService.GetPayrollCutoffPolicyAsync(selectedCompanyId.Value, editPolicyId.Value);
 
             if (policy != null)
             {
@@ -134,12 +170,12 @@ public class IndexModel : PageModel
             else
             {
                 TempData["ErrorMessage"] = "\u0644\u0645 \u064a\u062a\u0645 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u063a\u0644\u0642.";
-                CutoffPolicy = CreateNewPolicy(selectedCompanyId);
+                CutoffPolicy = CreateNewPolicy(selectedCompanyId.Value);
             }
         }
         else
         {
-            CutoffPolicy = CreateNewPolicy(selectedCompanyId);
+            CutoffPolicy = CreateNewPolicy(selectedCompanyId.Value);
         }
 
         return Page();
@@ -209,6 +245,153 @@ public class IndexModel : PageModel
         return RedirectToSetupSection(companyId, "departments");
     }
 
+    public async Task<IActionResult> OnPostUpdateBranchAsync()
+    {
+        var requestedCompanyId = EditBranch.CompanyId;
+        var existing = await _branchService.GetEditByIdAsync(EditBranch.Id);
+
+        if (existing == null ||
+            existing.CompanyId != requestedCompanyId)
+        {
+            TempData["ErrorMessage"] =
+                "\u062a\u0639\u0630\u0631 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0645\u0644 \u0627\u0644\u0645\u062d\u062f\u062f.";
+
+            return RedirectToSetupSection(
+                requestedCompanyId,
+                "work-locations");
+        }
+
+        EditBranch.Name = EditBranch.Name?.Trim() ?? string.Empty;
+        EditBranch.Address = string.IsNullOrWhiteSpace(EditBranch.Address)
+            ? null
+            : EditBranch.Address.Trim();
+        EditBranch.CompanyId = existing.CompanyId;
+        EditBranch.Code = existing.Code;
+
+        if (string.IsNullOrWhiteSpace(EditBranch.Name))
+        {
+            TempData["ErrorMessage"] =
+                "\u064a\u062c\u0628 \u0625\u062f\u062e\u0627\u0644 \u0627\u0633\u0645 \u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0645\u0644.";
+
+            return RedirectToSetupSection(
+                existing.CompanyId,
+                "work-locations");
+        }
+
+        var updated = await _branchService.UpdateAsync(EditBranch);
+
+        TempData[updated ? "SuccessMessage" : "ErrorMessage"] = updated
+            ? "\u062a\u0645 \u062a\u062d\u062f\u064a\u062b \u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0645\u0644 \u0628\u0646\u062c\u0627\u062d."
+            : "\u062a\u0639\u0630\u0631 \u062a\u062d\u062f\u064a\u062b \u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0645\u0644. \u062a\u0623\u0643\u062f \u0645\u0646 \u0639\u062f\u0645 \u062a\u0643\u0631\u0627\u0631 \u0627\u0644\u0627\u0633\u0645\u060c \u0648\u0623\u0646 \u0627\u0644\u0634\u0631\u0643\u0629 \u0641\u0639\u0627\u0644\u0629\u060c \u0648\u0639\u062f\u0645 \u0648\u062c\u0648\u062f \u0645\u0648\u0638\u0641\u064a\u0646 \u0641\u0639\u0627\u0644\u064a\u0646 \u0639\u0646\u062f \u0645\u062d\u0627\u0648\u0644\u0629 \u0627\u0644\u062a\u0639\u0637\u064a\u0644.";
+
+        return RedirectToSetupSection(
+            existing.CompanyId,
+            "work-locations");
+    }
+
+    public async Task<IActionResult> OnPostDeleteBranchAsync(
+        int companyId,
+        int branchId)
+    {
+        var branch = await _branchService.GetByIdAsync(branchId);
+
+        if (branch == null ||
+            branch.CompanyId != companyId)
+        {
+            TempData["ErrorMessage"] =
+                "\u062a\u0639\u0630\u0631 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0645\u0644 \u0627\u0644\u0645\u062d\u062f\u062f.";
+
+            return RedirectToSetupSection(
+                companyId,
+                "work-locations");
+        }
+
+        var deleted = await _branchService.DeleteAsync(branchId);
+
+        TempData[deleted ? "SuccessMessage" : "ErrorMessage"] = deleted
+            ? "\u062a\u0645 \u062d\u0630\u0641 \u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0645\u0644 \u0628\u0646\u062c\u0627\u062d."
+            : "\u062a\u0639\u0630\u0631 \u062d\u0630\u0641 \u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0645\u0644 \u0644\u0648\u062c\u0648\u062f \u0628\u064a\u0627\u0646\u0627\u062a \u0645\u0631\u062a\u0628\u0637\u0629 \u0628\u0647.";
+
+        return RedirectToSetupSection(
+            companyId,
+            "work-locations");
+    }
+
+    public async Task<IActionResult> OnPostUpdateDepartmentAsync()
+    {
+        var requestedCompanyId = EditDepartment.CompanyId;
+        var existing = await _departmentService.GetEditByIdAsync(
+            EditDepartment.Id);
+
+        if (existing == null ||
+            existing.CompanyId != requestedCompanyId)
+        {
+            TempData["ErrorMessage"] =
+                "\u062a\u0639\u0630\u0631 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0645\u062d\u062f\u062f.";
+
+            return RedirectToSetupSection(
+                requestedCompanyId,
+                "departments");
+        }
+
+        EditDepartment.Name =
+            EditDepartment.Name?.Trim() ?? string.Empty;
+        EditDepartment.CompanyId = existing.CompanyId;
+        EditDepartment.Code = existing.Code;
+        EditDepartment.BranchId = 0;
+
+        if (string.IsNullOrWhiteSpace(EditDepartment.Name))
+        {
+            TempData["ErrorMessage"] =
+                "\u064a\u062c\u0628 \u0625\u062f\u062e\u0627\u0644 \u0627\u0633\u0645 \u0627\u0644\u0642\u0633\u0645.";
+
+            return RedirectToSetupSection(
+                existing.CompanyId,
+                "departments");
+        }
+
+        var updated = await _departmentService.UpdateAsync(
+            EditDepartment);
+
+        TempData[updated ? "SuccessMessage" : "ErrorMessage"] = updated
+            ? "\u062a\u0645 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0642\u0633\u0645 \u0628\u0646\u062c\u0627\u062d."
+            : "\u062a\u0639\u0630\u0631 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0642\u0633\u0645. \u062a\u0623\u0643\u062f \u0645\u0646 \u0639\u062f\u0645 \u062a\u0643\u0631\u0627\u0631 \u0627\u0644\u0627\u0633\u0645\u060c \u0648\u0623\u0646 \u0627\u0644\u0634\u0631\u0643\u0629 \u0641\u0639\u0627\u0644\u0629\u060c \u0648\u0639\u062f\u0645 \u0648\u062c\u0648\u062f \u0645\u0648\u0638\u0641\u064a\u0646 \u0641\u0639\u0627\u0644\u064a\u0646 \u0639\u0646\u062f \u0645\u062d\u0627\u0648\u0644\u0629 \u0627\u0644\u062a\u0639\u0637\u064a\u0644.";
+
+        return RedirectToSetupSection(
+            existing.CompanyId,
+            "departments");
+    }
+
+    public async Task<IActionResult> OnPostDeleteDepartmentAsync(
+        int companyId,
+        int departmentId)
+    {
+        var department = await _departmentService.GetByIdAsync(
+            departmentId);
+
+        if (department == null ||
+            department.CompanyId != companyId)
+        {
+            TempData["ErrorMessage"] =
+                "\u062a\u0639\u0630\u0631 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0645\u062d\u062f\u062f.";
+
+            return RedirectToSetupSection(
+                companyId,
+                "departments");
+        }
+
+        var deleted = await _departmentService.DeleteAsync(
+            departmentId);
+
+        TempData[deleted ? "SuccessMessage" : "ErrorMessage"] = deleted
+            ? "\u062a\u0645 \u062d\u0630\u0641 \u0627\u0644\u0642\u0633\u0645 \u0628\u0646\u062c\u0627\u062d."
+            : "\u062a\u0639\u0630\u0631 \u062d\u0630\u0641 \u0627\u0644\u0642\u0633\u0645 \u0644\u0648\u062c\u0648\u062f \u0628\u064a\u0627\u0646\u0627\u062a \u0645\u0631\u062a\u0628\u0637\u0629 \u0628\u0647.";
+
+        return RedirectToSetupSection(
+            companyId,
+            "departments");
+    }
+
     public async Task<IActionResult> OnPostSaveProfileAsync()
     {
         CompanyId = Profile.CompanyId;
@@ -260,9 +443,11 @@ public class IndexModel : PageModel
                     DeleteStoredLogo(newLogoPath);
                 }
 
-                ModelState.AddModelError(string.Empty, result.Message);
-                CutoffPolicy = CreateNewPolicy(Profile.CompanyId);
-                return Page();
+                TempData["ErrorMessage"] = result.Message;
+
+                return RedirectToSetupSection(
+                    Profile.CompanyId,
+                    "company-profile");
             }
         }
         catch
@@ -380,6 +565,20 @@ public class IndexModel : PageModel
             .FirstOrDefault();
     }
 
+    public int GetActiveEmployeeCountForBranch(int branchId)
+    {
+        return ActiveEmployeeCountByBranch.TryGetValue(branchId, out var count)
+            ? count
+            : 0;
+    }
+
+    public int GetActiveEmployeeCountForDepartment(int departmentId)
+    {
+        return ActiveEmployeeCountByDepartment.TryGetValue(departmentId, out var count)
+            ? count
+            : 0;
+    }
+
     public bool HasAvailableCutoffTypes(int currentPolicyId = 0)
     {
         if (Setup == null)
@@ -396,7 +595,16 @@ public class IndexModel : PageModel
     {
         Companies = await LoadCompaniesAsync();
         BuildOptions();
+
+        if (!Companies.Any(x => x.Id == companyId))
+        {
+            Branches = Array.Empty<BranchListViewModel>();
+            Departments = Array.Empty<DepartmentListViewModel>();
+            return false;
+        }
+
         CompanyId = companyId;
+        CompanySelectionContext.Persist(HttpContext, companyId);
         Setup = await _setupService.GetCompanySetupAsync(companyId);
 
         if (Setup == null)
@@ -418,6 +626,30 @@ public class IndexModel : PageModel
             .ThenBy(x => x.Name)
             .ToList();
 
+        var activeAssignments = await _dbContext.Employees
+            .AsNoTracking()
+            .Where(x =>
+                !x.IsDeleted &&
+                x.IsActive &&
+                !x.Branch.IsDeleted &&
+                x.Branch.CompanyId == companyId)
+            .Select(x => new
+            {
+                x.BranchId,
+                x.DepartmentId
+            })
+            .ToListAsync();
+
+        ActiveEmployeeCount = activeAssignments.Count;
+        ActiveBranchCount = Branches.Count(x => x.IsActive);
+        ActiveDepartmentCount = Departments.Count(x => x.IsActive);
+        ActiveEmployeeCountByBranch = activeAssignments
+            .GroupBy(x => x.BranchId)
+            .ToDictionary(x => x.Key, x => x.Count());
+        ActiveEmployeeCountByDepartment = activeAssignments
+            .GroupBy(x => x.DepartmentId)
+            .ToDictionary(x => x.Key, x => x.Count());
+
         NewBranch.CompanyId = companyId;
         NewDepartment.CompanyId = companyId;
         NewDepartment.BranchId = 0;
@@ -435,13 +667,13 @@ public class IndexModel : PageModel
 
     private IActionResult RedirectToSetupSection(int companyId, string sectionId)
     {
-        var pageUrl = Url.Page("./Index", new { companyId }) ??
-                      string.Format(
-                          CultureInfo.InvariantCulture,
-                          "/Setup?companyId={0}",
-                          companyId);
-
-        return Redirect(pageUrl + "#" + sectionId);
+        return RedirectToPage(
+            "./Index",
+            new
+            {
+                companyId,
+                focusSection = sectionId
+            });
     }
 
     private static PayrollCutoffPolicyViewModel CreateNewPolicy(int companyId)

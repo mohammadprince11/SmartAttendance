@@ -27,6 +27,160 @@ public class EmployeeService : IEmployeeService
         _dbContext = dbContext;
     }
 
+    public async Task<EmployeePagedResultViewModel> GetPagedAsync(
+        EmployeeListQueryViewModel query)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var pageSize = NormalizePageSize(query.PageSize);
+        var requestedPage = Math.Max(query.PageNumber, 1);
+        var statusFilter = NormalizeStatusFilter(query.StatusFilter);
+        var sortBy = NormalizeSortBy(query.SortBy);
+        var searchTerm = string.IsNullOrWhiteSpace(query.SearchTerm)
+            ? null
+            : query.SearchTerm.Trim();
+
+        var employeesQuery = _dbContext.Employees
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted);
+
+        if (query.CompanyId.HasValue &&
+            query.CompanyId.Value > 0)
+        {
+            employeesQuery = employeesQuery.Where(x =>
+                !x.Branch.IsDeleted &&
+                x.Branch.CompanyId == query.CompanyId.Value);
+        }
+        else
+        {
+            employeesQuery = employeesQuery.Where(x => false);
+        }
+
+        var startOfYear = new DateOnly(DateTime.Today.Year, 1, 1);
+        var startOfNextYear = startOfYear.AddYears(1);
+
+        var totalEmployees = await employeesQuery.CountAsync();
+        var activeEmployees = await employeesQuery.CountAsync(x => x.IsActive);
+        var inactiveEmployees = totalEmployees - activeEmployees;
+        var newThisYear = await employeesQuery.CountAsync(x =>
+            x.HireDate >= startOfYear &&
+            x.HireDate < startOfNextYear);
+
+        var filteredQuery = employeesQuery;
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredQuery = filteredQuery.Where(x =>
+                x.EmployeeNo.Contains(searchTerm) ||
+                x.FullName.Contains(searchTerm) ||
+                (x.NationalId != null && x.NationalId.Contains(searchTerm)) ||
+                (x.Phone != null && x.Phone.Contains(searchTerm)) ||
+                (x.Email != null && x.Email.Contains(searchTerm)) ||
+                (x.Position != null && x.Position.Contains(searchTerm)) ||
+                (!x.Department.IsDeleted &&
+                 (x.Department.Code.Contains(searchTerm) ||
+                  x.Department.Name.Contains(searchTerm))) ||
+                (!x.Branch.IsDeleted &&
+                 x.Branch.Name.Contains(searchTerm)));
+        }
+
+        if (query.BranchId.HasValue && query.BranchId.Value > 0)
+        {
+            filteredQuery = filteredQuery.Where(x =>
+                x.BranchId == query.BranchId.Value);
+        }
+
+        if (query.DepartmentId.HasValue && query.DepartmentId.Value > 0)
+        {
+            filteredQuery = filteredQuery.Where(x =>
+                x.DepartmentId == query.DepartmentId.Value);
+        }
+
+        filteredQuery = statusFilter switch
+        {
+            "all" => filteredQuery,
+            "inactive" => filteredQuery.Where(x => !x.IsActive),
+            _ => filteredQuery.Where(x => x.IsActive)
+        };
+
+        filteredQuery = sortBy switch
+        {
+            "code" => filteredQuery
+                .OrderBy(x => x.EmployeeNo)
+                .ThenBy(x => x.FullName),
+            "branch" => filteredQuery
+                .OrderBy(x => x.Branch.Name)
+                .ThenBy(x => x.FullName),
+            "department" => filteredQuery
+                .OrderBy(x => x.Department.Name)
+                .ThenBy(x => x.FullName),
+            "hiredate" => filteredQuery
+                .OrderByDescending(x => x.HireDate)
+                .ThenBy(x => x.FullName),
+            "status" => filteredQuery
+                .OrderByDescending(x => x.IsActive)
+                .ThenBy(x => x.FullName),
+            _ => filteredQuery
+                .OrderBy(x => x.FullName)
+                .ThenBy(x => x.EmployeeNo)
+        };
+
+        var filteredEmployees = await filteredQuery.CountAsync();
+        var totalPages = filteredEmployees == 0
+            ? 0
+            : (int)Math.Ceiling(filteredEmployees / (double)pageSize);
+        var pageNumber = totalPages == 0
+            ? 1
+            : Math.Min(requestedPage, totalPages);
+
+        var items = await filteredQuery
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new EmployeeListViewModel
+            {
+                Id = x.Id,
+                EmployeeNo = x.EmployeeNo,
+                FullName = x.FullName,
+                NationalId = x.NationalId,
+                Phone = x.Phone,
+                Email = x.Email,
+                Position = x.Position,
+                PositionId = x.PositionId,
+                HireDate = x.HireDate,
+                BirthDate = x.BirthDate,
+                Country = x.Country,
+                Nationality = x.Nationality,
+                Gender = x.Gender,
+                MaritalStatus = x.MaritalStatus,
+                IsActive = x.IsActive,
+                BranchId = x.BranchId,
+                DepartmentId = x.DepartmentId,
+                DepartmentCode = x.Department.IsDeleted
+                    ? string.Empty
+                    : x.Department.Code,
+                DepartmentName = x.Department.IsDeleted
+                    ? string.Empty
+                    : x.Department.Name,
+                BranchName = x.Branch.IsDeleted
+                    ? string.Empty
+                    : x.Branch.Name
+            })
+            .ToListAsync();
+
+        return new EmployeePagedResultViewModel
+        {
+            Items = items,
+            TotalEmployees = totalEmployees,
+            FilteredEmployees = filteredEmployees,
+            ActiveEmployees = activeEmployees,
+            InactiveEmployees = inactiveEmployees,
+            NewThisYear = newThisYear,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalPages = totalPages
+        };
+    }
+
     public async Task<IEnumerable<EmployeeListViewModel>> GetAllAsync(
         string? searchTerm = null)
     {
@@ -289,19 +443,23 @@ public class EmployeeService : IEmployeeService
     }
 
     public async Task<IEnumerable<DepartmentListViewModel>>
-        GetDepartmentsForDropdownAsync()
+        GetDepartmentsForDropdownAsync(
+            int? companyId = null)
     {
         var departments = await _unitOfWork.Departments.GetAllAsync();
         var companies = await _unitOfWork.Companies.GetAllAsync();
 
         var companyLookup = companies
-            .Where(x => x.IsActive)
+            .Where(x =>
+                x.IsActive &&
+                (!companyId.HasValue || x.Id == companyId.Value))
             .ToDictionary(x => x.Id, x => x.Name);
 
         return departments
             .Where(x =>
                 x.IsActive &&
-                companyLookup.ContainsKey(x.CompanyId))
+                companyLookup.ContainsKey(x.CompanyId) &&
+                (!companyId.HasValue || x.CompanyId == companyId.Value))
             .OrderBy(x => companyLookup[x.CompanyId])
             .ThenBy(x => x.Name)
             .Select(x => new DepartmentListViewModel
@@ -319,12 +477,15 @@ public class EmployeeService : IEmployeeService
     }
 
     public async Task<IEnumerable<BranchListViewModel>>
-        GetBranchesForDropdownAsync()
+        GetBranchesForDropdownAsync(
+            int? companyId = null)
     {
         var branches = await _unitOfWork.Branches.GetAllAsync();
 
         return branches
-            .Where(x => x.IsActive)
+            .Where(x =>
+                x.IsActive &&
+                (!companyId.HasValue || x.CompanyId == companyId.Value))
             .OrderBy(x => x.Name)
             .Select(x => new BranchListViewModel
             {
@@ -414,6 +575,40 @@ public class EmployeeService : IEmployeeService
         }
 
         return result;
+    }
+
+    private static int NormalizePageSize(int value)
+    {
+        return value switch
+        {
+            10 => 10,
+            50 => 50,
+            100 => 100,
+            _ => 25
+        };
+    }
+
+    private static string NormalizeStatusFilter(string? value)
+    {
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "all" => "all",
+            "inactive" => "inactive",
+            _ => "active"
+        };
+    }
+
+    private static string NormalizeSortBy(string? value)
+    {
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "code" => "code",
+            "branch" => "branch",
+            "department" => "department",
+            "hiredate" => "hiredate",
+            "status" => "status",
+            _ => "name"
+        };
     }
 
     private sealed class PositionLookupRow

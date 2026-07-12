@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using SmartAttendance.Application.Branches.Services;
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
@@ -144,6 +144,41 @@ public class BranchService : IBranchService
             return false;
         }
 
+        if (model.IsActive && !company.IsActive)
+        {
+            return false;
+        }
+
+        if (branch.CompanyId != model.CompanyId)
+        {
+            var employees = await _unitOfWork.Employees.GetAllAsync();
+            var devices = await _unitOfWork.Devices.GetAllAsync();
+            var departments = await _unitOfWork.Departments.GetAllAsync();
+
+            var hasLinkedData =
+                employees.Any(x => x.BranchId == branch.Id) ||
+                devices.Any(x => x.BranchId == branch.Id) ||
+                departments.Any(x => x.BranchId == branch.Id);
+
+            if (hasLinkedData)
+            {
+                return false;
+            }
+        }
+
+        if (branch.IsActive && !model.IsActive)
+        {
+            var employees = await _unitOfWork.Employees.GetAllAsync();
+            var hasActiveEmployees = employees.Any(x =>
+                x.IsActive &&
+                x.BranchId == branch.Id);
+
+            if (hasActiveEmployees)
+            {
+                return false;
+            }
+        }
+
         var branches = await _unitOfWork.Branches.GetAllAsync();
         var code = string.IsNullOrWhiteSpace(model.Code)
             ? branch.Code
@@ -231,18 +266,37 @@ public class BranchService : IBranchService
         string prefix,
         IEnumerable<string> existingCodes)
     {
+        var codePrefix = $"{prefix}-";
         var existing = existingCodes
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var seed = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
-        var code = $"{prefix}-{seed}";
-        var counter = 1;
+        var maxNumber = existing
+            .Select(code =>
+            {
+                if (!code.StartsWith(
+                        codePrefix,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return 0;
+                }
+
+                return int.TryParse(
+                    code[codePrefix.Length..],
+                    out var number)
+                    ? number
+                    : 0;
+            })
+            .DefaultIfEmpty(0)
+            .Max();
+
+        var nextNumber = maxNumber + 1;
+        var code = $"{codePrefix}{nextNumber:000}";
 
         while (existing.Contains(code))
         {
-            code = $"{prefix}-{seed}-{counter}";
-            counter++;
+            nextNumber++;
+            code = $"{codePrefix}{nextNumber:000}";
         }
 
         return code;

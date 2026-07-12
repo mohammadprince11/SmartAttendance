@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.Employees.IndexModel
 
 @{
@@ -6,25 +6,62 @@
 
     var employees = Model.Employees;
     var hasFilters = !string.IsNullOrWhiteSpace(Model.SearchTerm)
-        || !string.IsNullOrWhiteSpace(Model.BranchFilter)
-        || !string.IsNullOrWhiteSpace(Model.DepartmentFilter)
-        || !string.IsNullOrWhiteSpace(Model.StatusFilter)
-        || !string.IsNullOrWhiteSpace(Model.SortBy);
+        || Model.BranchId.HasValue
+        || Model.DepartmentId.HasValue
+        || !string.Equals(Model.StatusFilter, "active", StringComparison.OrdinalIgnoreCase)
+        || !string.Equals(Model.SortBy, "name", StringComparison.OrdinalIgnoreCase);
+
+    string BuildEmployeePageUrl(int pageNumber)
+    {
+        return Url.Page(
+            "./Index",
+            new
+            {
+                Model.CompanyId,
+                Model.SearchTerm,
+                Model.BranchId,
+                Model.DepartmentId,
+                Model.StatusFilter,
+                Model.SortBy,
+                Model.PageSize,
+                PageNumber = pageNumber
+            }) ?? "#";
+    }
 }
 
-<link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-employees-index-pro.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-employees-master-filter.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-employees-table-modern-rebuild.css" asp-append-version="true" />
+@section Styles {
+    <link rel="stylesheet" href="~/css/nexora-employees-index-pro.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-employees-master-filter.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-employees-table-modern-rebuild.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-employees-filter-toolbar-fix-v1.css" asp-append-version="true" />
 
-<link rel="stylesheet" href="~/css/nexora-employees-filter-toolbar-fix-v1.css" asp-append-version="true" /><script src="~/js/nexora-employee-row-click.js" asp-append-version="true" defer></script>
+    <style>
+        body.nxr-employees-master-filter-active .nxr-emp-page-nav,
+        body.nxr-employees-master-filter-active .nxr-emp-page-number {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-decoration: none !important;
+        }
+    </style>
+}
+
+<script>
+    document.body.classList.add(
+        "nxr-employees-master-filter-active",
+        "nxr-employees-table-modern",
+        "nxr-employees-ui-ready"
+    );
+</script>
+
+<script src="~/js/nexora-employee-row-click.js" asp-append-version="true" defer></script>
 
 <div class="nxr-page nxr-emp-page">
     <section class="nxr-topline nxr-emp-hero">
         <div class="nxr-title">
             <div class="nxr-brand-mini">NEXORA HR PLATFORM</div>
             <h1>قائمة الموظفين</h1>
-          @*   <p>بحث وفلترة الموظفين حسب موقع العمل والقسم والحالة مع إبقاء الإجراء الأساسي داخل القائمة: ملف الموظف.</p> *@
+            <p>الشركة الحالية: @Model.SelectedCompanyName</p>
         </div>
 
         <div class="nxr-actions nxr-emp-actions">
@@ -71,67 +108,148 @@
     </section>
 
     <section class="nxr-card nxr-emp-filter-card">
-        <form method="get" class="nxr-emp-filter nxr-live-filter" data-nxr-live-filter autocomplete="off">
-            <div class="nxr-emp-field search">
-                <label>بحث سريع</label>
-                <input class="nxr-input"
-                       type="text"
-                       name="SearchTerm"
-                       value="@Model.SearchTerm"
-                       placeholder="الكود، الاسم، الهاتف، المنصب، موقع العمل أو القسم..."
-                       data-nxr-live-search />
+        <form method="get"
+              class="nxr-emp-filter nxr-live-filter"
+              data-nxr-server-filter
+              autocomplete="off">
+            <input type="hidden" name="PageNumber" value="1" data-nxr-page-number-field />
+
+            <div class="nxr-emp-master-grid">
+                <div class="nxr-emp-field">
+                    <label>الشركة</label>
+                    <select data-nexora-select="true"
+                            name="CompanyId"
+                            class="nxr-input"
+                            data-nxr-server-select>
+                        @foreach (var company in Model.CompanyOptions)
+                        {
+                            <option value="@company.Id"
+                                    selected="@(Model.CompanyId == company.Id ? "selected" : null)">
+                                @company.Name
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="nxr-emp-field search">
+                    <label>بحث سريع</label>
+                    <input class="nxr-input"
+                           type="search"
+                           name="SearchTerm"
+                           value="@Model.SearchTerm"
+                           placeholder="الكود، الاسم، الهاتف، المنصب، موقع العمل أو القسم..."
+                           data-nxr-server-search />
+                </div>
+
+                <div class="nxr-emp-field">
+                    <label>موقع العمل</label>
+                    <select data-nexora-select="true"
+                            name="BranchId"
+                            class="nxr-input"
+                            data-nxr-server-select>
+                        <option value="">كل مواقع العمل</option>
+                        @foreach (var branch in Model.BranchOptions)
+                        {
+                            <option value="@branch.Id"
+                                    selected="@(Model.BranchId == branch.Id ? "selected" : null)">
+                                @branch.Name
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="nxr-emp-field">
+                    <label>القسم</label>
+                    <select data-nexora-select="true"
+                            name="DepartmentId"
+                            class="nxr-input"
+                            data-nxr-server-select>
+                        <option value="">كل الأقسام</option>
+                        @foreach (var department in Model.DepartmentOptions)
+                        {
+                            <option value="@department.Id"
+                                    selected="@(Model.DepartmentId == department.Id ? "selected" : null)">
+                                @department.Name
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="nxr-emp-field">
+                    <label>الحالة</label>
+                    <select data-nexora-select="true"
+                            name="StatusFilter"
+                            class="nxr-input"
+                            data-nxr-server-select>
+                        <option value="all"
+                                selected="@(Model.StatusFilter == "all" ? "selected" : null)">كل الحالات</option>
+                        <option value="active"
+                                selected="@(Model.StatusFilter == "active" ? "selected" : null)">فعال</option>
+                        <option value="inactive"
+                                selected="@(Model.StatusFilter == "inactive" ? "selected" : null)">غير فعال</option>
+                    </select>
+                </div>
+
+                <div class="nxr-emp-field">
+                    <label>ترتيب</label>
+                    <select data-nexora-select="true"
+                            name="SortBy"
+                            class="nxr-input"
+                            data-nxr-server-select>
+                        <option value="name"
+                                selected="@(Model.SortBy == "name" ? "selected" : null)">حسب الاسم</option>
+                        <option value="code"
+                                selected="@(Model.SortBy == "code" ? "selected" : null)">حسب الكود</option>
+                        <option value="branch"
+                                selected="@(Model.SortBy == "branch" ? "selected" : null)">حسب موقع العمل</option>
+                        <option value="department"
+                                selected="@(Model.SortBy == "department" ? "selected" : null)">حسب القسم</option>
+                        <option value="hireDate"
+                                selected="@(Model.SortBy == "hiredate" ? "selected" : null)">الأحدث تعييناً</option>
+                        <option value="status"
+                                selected="@(Model.SortBy == "status" ? "selected" : null)">حسب الحالة</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="nxr-emp-field">
-                <label>موقع العمل</label>
-                <select data-nexora-select="true" name="BranchFilter" class="nxr-input" data-nxr-live-select>
-                    <option value="" selected="@(string.IsNullOrWhiteSpace(Model.BranchFilter) ? "selected" : null)">كل مواقع العمل</option>
-                    @foreach (var branch in Model.BranchOptions)
-                    {
-                        <option value="@branch" selected="@(string.Equals(Model.BranchFilter, branch, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
-                            @branch
-                        </option>
-                    }
-                </select>
-            </div>
+            <div class="nxr-emp-master-toolbar">
+                <div class="nxr-emp-master-summary">
+                    <span class="nxr-emp-master-counter">
+                        @if (Model.FilteredEmployees > 0)
+                        {
+                            <text>عرض @Model.FirstItemNumber - @Model.LastItemNumber من @Model.FilteredEmployees</text>
+                        }
+                        else
+                        {
+                            <text>عرض 0 من 0</text>
+                        }
+                    </span>
 
-            <div class="nxr-emp-field">
-                <label>القسم</label>
-                <select data-nexora-select="true" name="DepartmentFilter" class="nxr-input" data-nxr-live-select>
-                    <option value="" selected="@(string.IsNullOrWhiteSpace(Model.DepartmentFilter) ? "selected" : null)">كل الأقسام</option>
-                    @foreach (var department in Model.DepartmentOptions)
-                    {
-                        <option value="@department" selected="@(string.Equals(Model.DepartmentFilter, department, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
-                            @department
-                        </option>
-                    }
-                </select>
-            </div>
+                    <span class="nxr-emp-master-total">
+                        الإجمالي @Model.FilteredEmployees
+                    </span>
+                </div>
 
-            <div class="nxr-emp-field">
-                <label>الحالة</label>
-                <select data-nexora-select="true" name="StatusFilter" class="nxr-input" data-nxr-live-select>
-                    <option value="all" selected="@(string.Equals(Model.StatusFilter, "all", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">&#x0643;&#x0644; &#x0627;&#x0644;&#x062d;&#x0627;&#x0644;&#x0627;&#x062a;</option>
-                    <option value="active" selected="@((string.IsNullOrWhiteSpace(Model.StatusFilter) || string.Equals(Model.StatusFilter, "active", StringComparison.OrdinalIgnoreCase)) ? "selected" : null)">&#x0641;&#x0639;&#x0627;&#x0644;</option>
-                    <option value="inactive" selected="@(string.Equals(Model.StatusFilter, "inactive", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">&#x063a;&#x064a;&#x0631; &#x0641;&#x0639;&#x0627;&#x0644;</option>
-                </select>
-            </div>
+                <div class="nxr-emp-master-actions">
+                    <div class="nxr-emp-master-page-size">
+                        <span>عدد الأسطر</span>
+                        <select name="PageSize"
+                                data-nxr-server-select
+                                data-nexora-select="true"
+                                data-nexora-select-variant="employee-page-size"
+                                data-nexora-select-panel-min-width="84"
+                                aria-label="عدد الأسطر">
+                            <option value="10" selected="@(Model.PageSize == 10 ? "selected" : null)">10</option>
+                            <option value="25" selected="@(Model.PageSize == 25 ? "selected" : null)">25</option>
+                            <option value="50" selected="@(Model.PageSize == 50 ? "selected" : null)">50</option>
+                            <option value="100" selected="@(Model.PageSize == 100 ? "selected" : null)">100</option>
+                        </select>
+                    </div>
 
-            <div class="nxr-emp-field">
-                <label>ترتيب</label>
-                <select data-nexora-select="true" name="SortBy" class="nxr-input" data-nxr-live-select>
-                    <option value="name" selected="@((Model.SortBy ?? "name").Equals("name", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الاسم</option>
-                    <option value="code" selected="@(string.Equals(Model.SortBy, "code", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الكود</option>
-                    <option value="branch" selected="@(string.Equals(Model.SortBy, "branch", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب موقع العمل</option>
-                    <option value="department" selected="@(string.Equals(Model.SortBy, "department", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب القسم</option>
-                    <option value="hireDate" selected="@(string.Equals(Model.SortBy, "hireDate", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">الأحدث تعييناً</option>
-                    <option value="status" selected="@(string.Equals(Model.SortBy, "status", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">حسب الحالة</option>
-                </select>
-            </div>
-
-            <div class="nxr-emp-filter-actions">
-                <button type="submit" class="nxr-btn primary">تطبيق</button>
-                <a asp-page="./Index" class="nxr-btn">مسح الفلاتر</a>
+                    <a asp-page="./Index"
+                       asp-route-companyId="@Model.CompanyId"
+                       class="nxr-emp-master-reset">مسح الفلاتر</a>
+                </div>
             </div>
         </form>
     </section>
@@ -141,21 +259,40 @@
             <div>
                 <h2>سجل الموظفين</h2>
                 <p>
-                    @if (hasFilters)
+                    @if (Model.FilteredEmployees == 0)
                     {
-                        <span>تم عرض @Model.FilteredEmployees من أصل @Model.TotalEmployees موظف.</span>
+                        <span>لا توجد نتائج حسب البحث والفلترة الحالية.</span>
+                    }
+                    else if (hasFilters)
+                    {
+                        <span>
+                            عرض الموظفين من @Model.FirstItemNumber إلى @Model.LastItemNumber
+                            من أصل @Model.FilteredEmployees حسب الفلترة الحالية.
+                        </span>
                     }
                     else
                     {
-                        <span>عرض كل الموظفين المسجلين في النظام.</span>
+                        <span>
+                            عرض الموظفين من @Model.FirstItemNumber إلى @Model.LastItemNumber
+                            من أصل @Model.FilteredEmployees.
+                        </span>
                     }
                 </p>
             </div>
 
-            <span class="nxr-emp-count">@Model.FilteredEmployees نتيجة</span>
+            <span class="nxr-emp-count">
+                @if (Model.FilteredEmployees > 0)
+                {
+                    <text>عرض @Model.FirstItemNumber - @Model.LastItemNumber من @Model.FilteredEmployees</text>
+                }
+                else
+                {
+                    <text>عرض 0 من 0</text>
+                }
+            </span>
         </div>
 
-        <div class="nxr-table-wrap nxr-emp-table-wrap">
+        <div class="nxr-table-wrap nxr-emp-table-wrap nxr-modern-emp-table-wrap">
             <table class="nxr-table nxr-emp-table">
                 <colgroup>
                     <col class="nxr-col-employee" />
@@ -165,7 +302,6 @@
                     <col class="nxr-col-position" />
                     <col class="nxr-col-hire" />
                     <col class="nxr-col-status" />
-                   @*  <col class="nxr-col-action" /> *@
                 </colgroup>
 
                 <thead>
@@ -177,7 +313,7 @@
                         <th>المنصب</th>
                         <th>تاريخ التعيين</th>
                         <th>الحالة</th>
-</tr>
+                    </tr>
                 </thead>
 
                 <tbody>
@@ -241,12 +377,69 @@
                 </tbody>
             </table>
         </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="nxr-emp-master-pagination"
+                 aria-label="صفحات قائمة الموظفين">
+                @if (Model.PageNumber > 1)
+                {
+                    <a class="nxr-emp-page-nav"
+                       href="@BuildEmployeePageUrl(Model.PageNumber - 1)">السابق</a>
+                }
+                else
+                {
+                    <button type="button"
+                            class="nxr-emp-page-nav"
+                            disabled>السابق</button>
+                }
+
+                <div class="nxr-emp-page-numbers">
+                    @foreach (var paginationPage in Model.PaginationPages)
+                    {
+                        if (paginationPage.HasValue)
+                        {
+                            if (paginationPage.Value == Model.PageNumber)
+                            {
+                                <button type="button"
+                                        class="nxr-emp-page-number is-current"
+                                        aria-current="page"
+                                        disabled>@(paginationPage.Value)</button>
+                            }
+                            else
+                            {
+                                <a class="nxr-emp-page-number"
+                                   href="@BuildEmployeePageUrl(paginationPage.Value)">@(paginationPage.Value)</a>
+                            }
+                        }
+                        else
+                        {
+                            <span class="nxr-emp-page-ellipsis"
+                                  aria-hidden="true">…</span>
+                        }
+                    }
+                </div>
+
+                @if (Model.PageNumber < Model.TotalPages)
+                {
+                    <a class="nxr-emp-page-nav"
+                       href="@BuildEmployeePageUrl(Model.PageNumber + 1)">التالي</a>
+                }
+                else
+                {
+                    <button type="button"
+                            class="nxr-emp-page-nav"
+                            disabled>التالي</button>
+                }
+
+                <span class="nxr-emp-page-summary">
+                    صفحة @Model.PageNumber من @Model.TotalPages
+                </span>
+            </nav>
+        }
     </section>
 </div>
 
 @section Scripts {
     <script src="~/js/nexora-employees-master-filter.js" asp-append-version="true"></script>
-    <script src="~/js/nexora-employees-table-modern-rebuild.js" asp-append-version="true"></script>
 }
-
-

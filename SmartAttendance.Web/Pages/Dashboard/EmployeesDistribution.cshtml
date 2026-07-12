@@ -15,9 +15,11 @@
     <div class="page-header distribution-header">
         <div>
             <h1>@Model.PageTitle</h1>
-            <p>صفحة تفصيلية للبحث والفرز بدل عرض كل البيانات داخل لوحة التحكم.</p>
+            <p>الشركة الحالية: @Model.SelectedCompanyName</p>
         </div>
-        <a class="distribution-back-link" asp-page="/Index">رجوع للوحة التحكم</a>
+        <a class="distribution-back-link"
+           asp-page="/Index"
+           asp-route-companyId="@Model.CompanyId">رجوع للوحة التحكم</a>
     </div>
 
     <section class="distribution-tabs" aria-label="Distribution Tabs">
@@ -25,7 +27,8 @@
         {
             <a class="distribution-tab @(Model.Type == tab.Key ? "active" : "")"
                asp-page="/Dashboard/EmployeesDistribution"
-               asp-route-type="@tab.Key">
+               asp-route-type="@tab.Key"
+               asp-route-companyId="@Model.CompanyId">
                 @tab.Label
             </a>
         }
@@ -57,9 +60,12 @@
     <section class="dashboard-panel distribution-filter-panel">
         <form method="get" class="distribution-filter-form">
             <input type="hidden" name="type" value="@Model.Type" />
+            <input type="hidden" name="companyId" value="@Model.CompanyId" />
             <input type="search" name="search" value="@Model.Search" placeholder="بحث داخل النتائج..." />
             <button type="submit">بحث</button>
-            <a asp-page="/Dashboard/EmployeesDistribution" asp-route-type="@Model.Type">مسح</a>
+            <a asp-page="/Dashboard/EmployeesDistribution"
+               asp-route-type="@Model.Type"
+               asp-route-companyId="@Model.CompanyId">مسح</a>
         </form>
     </section>
 

@@ -1,24 +1,41 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using SmartAttendance.Application.Branches.ViewModels;
+using SmartAttendance.Application.Companies.Services;
+using SmartAttendance.Application.Companies.ViewModels;
+using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Application.Employees.Services;
 using SmartAttendance.Application.Employees.ViewModels;
+using SmartAttendance.Web.Infrastructure.CompanyContext;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
 public class IndexModel : PageModel
 {
     private readonly IEmployeeService _employeeService;
+    private readonly ICompanyService _companyService;
 
-    public IndexModel(IEmployeeService employeeService)
+    public IndexModel(
+        IEmployeeService employeeService,
+        ICompanyService companyService)
     {
         _employeeService = employeeService;
+        _companyService = companyService;
     }
 
     public List<EmployeeListViewModel> Employees { get; set; } = new();
 
-    public List<string> BranchOptions { get; set; } = new();
+    public List<CompanyListViewModel> CompanyOptions { get; set; } = new();
 
-    public List<string> DepartmentOptions { get; set; } = new();
+    public List<BranchListViewModel> BranchOptions { get; set; } = new();
+
+    public List<DepartmentListViewModel> DepartmentOptions { get; set; } = new();
+
+    public string SelectedCompanyName =>
+        CompanyId.HasValue
+            ? CompanyOptions.FirstOrDefault(x =>
+                  x.Id == CompanyId.Value)?.Name ?? "-"
+            : "-";
 
     public int TotalEmployees { get; set; }
 
@@ -30,120 +47,204 @@ public class IndexModel : PageModel
 
     public int NewThisYear { get; set; }
 
+    public int TotalPages { get; set; }
+
+    public int FirstItemNumber =>
+        FilteredEmployees == 0
+            ? 0
+            : ((PageNumber - 1) * PageSize) + 1;
+
+    public int LastItemNumber =>
+        FilteredEmployees == 0
+            ? 0
+            : Math.Min(PageNumber * PageSize, FilteredEmployees);
+
+    public IReadOnlyList<int?> PaginationPages =>
+        BuildPaginationPages(PageNumber, TotalPages);
+
+    [BindProperty(SupportsGet = true)]
+    public int? CompanyId { get; set; }
+
     [BindProperty(SupportsGet = true)]
     public string? SearchTerm { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public string? BranchFilter { get; set; }
+    public int? BranchId { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public string? DepartmentFilter { get; set; }
+    public int? DepartmentId { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public string? StatusFilter { get; set; }
+    public string StatusFilter { get; set; } = "active";
 
     [BindProperty(SupportsGet = true)]
-    public string? SortBy { get; set; }
+    public string SortBy { get; set; } = "name";
+
+    [BindProperty(SupportsGet = true)]
+    public int PageNumber { get; set; } = 1;
+
+    [BindProperty(SupportsGet = true)]
+    public int PageSize { get; set; } = 25;
 
     public async Task OnGetAsync()
     {
-        var allEmployees = (await _employeeService.GetAllAsync(null)).ToList();
+        CompanyOptions = (await _companyService.GetAllAsync())
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Name)
+            .ThenBy(x => x.Code)
+            .ToList();
 
-        TotalEmployees = allEmployees.Count;
-        ActiveEmployees = allEmployees.Count(x => x.IsActive);
-        InactiveEmployees = allEmployees.Count(x => !x.IsActive);
-        NewThisYear = allEmployees.Count(x => x.HireDate.Year == DateTime.Today.Year);
+        CompanyId = CompanySelectionContext.Resolve(
+            HttpContext,
+            CompanyId,
+            CompanyOptions.Select(x => x.Id).ToArray());
 
+        SearchTerm = string.IsNullOrWhiteSpace(SearchTerm)
+            ? null
+            : SearchTerm.Trim();
         StatusFilter = NormalizeStatusFilter(StatusFilter);
+        SortBy = NormalizeSortBy(SortBy);
+        PageNumber = Math.Max(PageNumber, 1);
+        PageSize = NormalizePageSize(PageSize);
 
-        BranchOptions = allEmployees
-            .Select(x => x.BranchName)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Select(x => x!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(x => x)
+        if (!CompanyId.HasValue)
+        {
+            Employees = new List<EmployeeListViewModel>();
+            BranchOptions = new List<BranchListViewModel>();
+            DepartmentOptions = new List<DepartmentListViewModel>();
+            return;
+        }
+
+        BranchOptions = (await _employeeService
+                .GetBranchesForDropdownAsync(CompanyId.Value))
+            .OrderBy(x => x.Name)
             .ToList();
 
-        DepartmentOptions = allEmployees
-            .Select(x => x.DepartmentName)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Select(x => x!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(x => x)
+        DepartmentOptions = (await _employeeService
+                .GetDepartmentsForDropdownAsync(CompanyId.Value))
+            .OrderBy(x => x.Name)
             .ToList();
 
-        // NEXORA_STATUS_UI_DEFAULT_ACTIVE_START
-        // Status filtering is handled client-side so inactive rows remain available
-        // when the user selects the inactive filter.
-        if (string.IsNullOrWhiteSpace(StatusFilter))
-        {
-            StatusFilter = "active";
-        }
-        // NEXORA_STATUS_UI_DEFAULT_ACTIVE_END
+        BranchId = BranchId.HasValue &&
+                   BranchOptions.Any(x => x.Id == BranchId.Value)
+            ? BranchId
+            : null;
 
-        var query = allEmployees.AsEnumerable();
+        DepartmentId = DepartmentId.HasValue &&
+                       DepartmentOptions.Any(x =>
+                           x.Id == DepartmentId.Value)
+            ? DepartmentId
+            : null;
 
-        if (!string.IsNullOrWhiteSpace(SearchTerm))
-        {
-            var term = SearchTerm.Trim();
+        var result = await _employeeService.GetPagedAsync(
+            new EmployeeListQueryViewModel
+            {
+                CompanyId = CompanyId,
+                SearchTerm = SearchTerm,
+                BranchId = BranchId,
+                DepartmentId = DepartmentId,
+                StatusFilter = StatusFilter,
+                SortBy = SortBy,
+                PageNumber = PageNumber,
+                PageSize = PageSize
+            });
 
-            query = query.Where(x =>
-                Contains(x.EmployeeNo, term) ||
-                Contains(x.FullName, term) ||
-                Contains(x.NationalId, term) ||
-                Contains(x.Phone, term) ||
-                Contains(x.Email, term) ||
-                Contains(x.Position, term) ||
-                Contains(x.DepartmentCode, term) ||
-                Contains(x.DepartmentName, term) ||
-                Contains(x.BranchName, term));
-        }
-
-        if (!string.IsNullOrWhiteSpace(BranchFilter))
-        {
-            query = query.Where(x => string.Equals(x.BranchName, BranchFilter, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (!string.IsNullOrWhiteSpace(DepartmentFilter))
-        {
-            query = query.Where(x => string.Equals(x.DepartmentName, DepartmentFilter, StringComparison.OrdinalIgnoreCase));
-        }
-query = (SortBy ?? "name").ToLowerInvariant() switch
-        {
-            "code" => query.OrderBy(x => x.EmployeeNo),
-            "branch" => query.OrderBy(x => x.BranchName).ThenBy(x => x.FullName),
-            "department" => query.OrderBy(x => x.DepartmentName).ThenBy(x => x.FullName),
-            "hiredate" => query.OrderByDescending(x => x.HireDate),
-            "status" => query.OrderByDescending(x => x.IsActive).ThenBy(x => x.FullName),
-            _ => query.OrderBy(x => x.FullName)
-        };
-
-        Employees = query.ToList();
-        FilteredEmployees = Employees.Count;
+        Employees = result.Items;
+        TotalEmployees = result.TotalEmployees;
+        FilteredEmployees = result.FilteredEmployees;
+        ActiveEmployees = result.ActiveEmployees;
+        InactiveEmployees = result.InactiveEmployees;
+        NewThisYear = result.NewThisYear;
+        PageNumber = result.PageNumber;
+        PageSize = result.PageSize;
+        TotalPages = result.TotalPages;
     }
 
+    private static int NormalizePageSize(int value)
+    {
+        return value switch
+        {
+            10 => 10,
+            50 => 50,
+            100 => 100,
+            _ => 25
+        };
+    }
 
     private static string NormalizeStatusFilter(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return "active";
-        }
-
-        var normalized = value.Trim().ToLowerInvariant();
-
-        return normalized switch
+        return value?.Trim().ToLowerInvariant() switch
         {
             "all" => "all",
             "inactive" => "inactive",
-            "active" => "active",
             _ => "active"
         };
     }
-    private static bool Contains(string? value, string term)
+
+    private static string NormalizeSortBy(string? value)
     {
-        return !string.IsNullOrWhiteSpace(value) &&
-               value.Contains(term, StringComparison.OrdinalIgnoreCase);
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "code" => "code",
+            "branch" => "branch",
+            "department" => "department",
+            "hiredate" => "hiredate",
+            "status" => "status",
+            _ => "name"
+        };
+    }
+
+    private static IReadOnlyList<int?> BuildPaginationPages(
+        int currentPage,
+        int totalPages)
+    {
+        if (totalPages <= 0)
+        {
+            return Array.Empty<int?>();
+        }
+
+        if (totalPages <= 7)
+        {
+            return Enumerable
+                .Range(1, totalPages)
+                .Select(x => (int?)x)
+                .ToList();
+        }
+
+        var pages = new List<int?> { 1 };
+
+        if (currentPage > 4)
+        {
+            pages.Add(null);
+        }
+
+        var start = Math.Max(2, currentPage - 1);
+        var end = Math.Min(totalPages - 1, currentPage + 1);
+
+        if (currentPage <= 4)
+        {
+            start = 2;
+            end = 5;
+        }
+        else if (currentPage >= totalPages - 3)
+        {
+            start = totalPages - 4;
+            end = totalPages - 1;
+        }
+
+        for (var pageNumber = start;
+             pageNumber <= end;
+             pageNumber++)
+        {
+            pages.Add(pageNumber);
+        }
+
+        if (currentPage < totalPages - 3)
+        {
+            pages.Add(null);
+        }
+
+        pages.Add(totalPages);
+        return pages;
     }
 }
-

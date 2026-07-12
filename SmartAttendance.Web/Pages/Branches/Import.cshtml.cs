@@ -28,6 +28,9 @@ public class ImportModel : PageModel
     [BindProperty]
     public string? PastedData { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public int? CompanyId { get; set; }
+
     public string ImportType { get; private set; } = FixedImportType;
 
     public string PageTitle { get; private set; } = "Branch Data Import";

@@ -19,7 +19,7 @@
 
         <div class="nexora-import-hero-actions"> @* NEXORA_FIX22A_TEMPLATE_LINK *@
             <a href="?handler=Template" class="nx-setup-btn nx-setup-btn-primary">Excel Template</a>
-            <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0644;&#x0639;&#x0648;&#x062F;&#x0629; &#x0625;&#x0644;&#x0649; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;</a>
+            <a asp-page="/Setup/Index" asp-route-companyId="@Model.CompanyId" asp-fragment="departments" class="nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0644;&#x0639;&#x0648;&#x062F;&#x0629; &#x0625;&#x0644;&#x0649; &#x0625;&#x0639;&#x062F;&#x0627;&#x062F; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</a>
         </div>
     </section>
 
@@ -81,6 +81,7 @@
         </div>
 
         <form method="post" enctype="multipart/form-data" asp-page-handler="Preview">
+            <input asp-for="CompanyId" type="hidden" />
             <div class="nexora-import-two">
                 <div class="nexora-import-box">
                     <div class="nexora-import-box-title">
@@ -133,7 +134,7 @@
                 <button type="submit" class="nx-setup-btn nx-setup-btn-primary">معاينة البيانات</button>
                 <div class="nexora-import-hero-actions"> @* NEXORA_FIX22A_TEMPLATE_LINK *@
             <a href="?handler=Template" class="nx-setup-btn nx-setup-btn-primary">Excel Template</a>
-            <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0644;&#x0639;&#x0648;&#x062F;&#x0629; &#x0625;&#x0644;&#x0649; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;</a>
+            <a asp-page="/Setup/Index" asp-route-companyId="@Model.CompanyId" asp-fragment="departments" class="nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0644;&#x0639;&#x0648;&#x062F;&#x0629; &#x0625;&#x0644;&#x0649; &#x0625;&#x0639;&#x062F;&#x0627;&#x062F; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</a>
         </div>
             </div>
         </form>
@@ -180,6 +181,7 @@
             @if (Model.Preview.ReadyCount > 0)
             {
                 <form method="post" asp-page-handler="Import" class="nexora-import-confirm">
+                    <input asp-for="CompanyId" type="hidden" />
                     <input type="hidden" name="token" value="@Model.Preview.Token" />
                     <button type="submit" class="nx-setup-btn nx-setup-btn-primary">استيراد الصفوف الصالحة</button>
                 </form>

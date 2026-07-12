@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.Setup.IndexModel
 @using SmartAttendance.Domain.Enums
 
@@ -15,6 +15,7 @@
     var workLocationCount = Model.Branches.Count;
     var departmentCount = Model.Departments.Count;
     var hasAvailableCutoffTypes = setup != null && Model.HasAvailableCutoffTypes();
+    var companyDeactivationLocked = Model.IsCompanyDeactivationLocked;
 }
 
 @* NEXORA_ACTIVE_CUTOFF_TYPE_MARKUP_START *@<div class="nexora-setup-page nx-company-setup-page">
@@ -135,11 +136,6 @@
 
                 <div class="nx-setup-form-grid nx-company-profile-fields">
                     <label class="nx-setup-field">
-                        <span>&#x0631;&#x0645;&#x0632; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
-                        <input value="@Model.Profile.CompanyCode" readonly class="nx-company-readonly" />
-                    </label>
-
-                    <label class="nx-setup-field">
                         <span>&#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
                         <input asp-for="Profile.Name" />
                         <span asp-validation-for="Profile.Name" class="text-danger"></span>
@@ -187,10 +183,37 @@
                         <span asp-validation-for="Profile.Address" class="text-danger"></span>
                     </label>
 
-                    <label class="nx-setup-check">
-                        <input asp-for="Profile.IsActive" />
+                    <label class="nx-setup-check @(companyDeactivationLocked ? "is-locked" : "")">
+                        @if (companyDeactivationLocked)
+                        {
+                            <input type="hidden"
+                                   name="Profile.IsActive"
+                                   value="true" />
+                            <input type="checkbox"
+                                   checked
+                                   disabled
+                                   aria-describedby="company-active-lock-reason" />
+                        }
+                        else
+                        {
+                            <input asp-for="Profile.IsActive" />
+                        }
                         <span>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629; &#x0641;&#x0639;&#x0627;&#x0644;&#x0629;</span>
                     </label>
+
+                    @if (companyDeactivationLocked)
+                    {
+                        <div id="company-active-lock-reason"
+                             class="nx-setup-lock-reason nx-setup-field-wide"
+                             role="note">
+                            <strong>&#x0644;&#x0627; &#x064A;&#x0645;&#x0643;&#x0646; &#x062A;&#x0639;&#x0637;&#x064A;&#x0644; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629; &#x062D;&#x0627;&#x0644;&#x064A;&#x0627;</strong>
+                            <span>
+                                @Model.ActiveEmployeeCount &#x0645;&#x0648;&#x0638;&#x0641; &#x0641;&#x0639;&#x0627;&#x0644;&#x060C;
+                                @Model.ActiveBranchCount &#x0645;&#x0648;&#x0642;&#x0639; &#x0639;&#x0645;&#x0644; &#x0641;&#x0639;&#x0627;&#x0644;&#x060C;
+                                @Model.ActiveDepartmentCount &#x0642;&#x0633;&#x0645; &#x0641;&#x0639;&#x0627;&#x0644;.
+                            </span>
+                        </div>
+                    }
 
                     <div class="nx-setup-modal__actions nx-company-form-actions">
                         <button type="submit" class="nx-setup-btn nx-setup-btn-primary">&#x062D;&#x0641;&#x0638; &#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</button>
@@ -209,7 +232,7 @@
                 </div>
 
                 <div class="nexora-setup-actions">
-                    <a asp-page="/Branches/Import" class="nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; Excel</a>
+                    <a asp-page="/Branches/Import" asp-route-companyId="@setup.CompanyId" class="nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; Excel</a>
                     <button type="button"
                             class="nx-setup-btn nx-setup-btn-primary"
                             data-nx-setup-open="setup-branch-modal"
@@ -247,10 +270,12 @@
                         {
                             @foreach (var branch in Model.Branches)
                             {
+                                var branchActiveEmployeeCount =
+                                    Model.GetActiveEmployeeCountForBranch(branch.Id);
+
                                 <tr>
                                     <td>
                                         <strong class="nx-setup-title">@branch.Name</strong>
-                                        <small class="nx-policy-note">@branch.Code</small>
                                     </td>
                                     <td>@(string.IsNullOrWhiteSpace(branch.Address) ? "-" : branch.Address)</td>
                                     <td>
@@ -260,8 +285,27 @@
                                     </td>
                                     <td>
                                         <div class="nx-setup-row-actions">
-                                            <a asp-page="/Branches/Edit" asp-route-id="@branch.Id" class="btn-table btn-edit">&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;</a>
-                                            <a asp-page="/Branches/Delete" asp-route-id="@branch.Id" class="btn-table btn-delete">&#x062D;&#x0630;&#x0641;</a>
+                                            <button type="button"
+                                                    class="btn-table btn-edit"
+                                                    data-nx-setup-open="setup-branch-edit-modal"
+                                                    data-branch-edit-open
+                                                    data-branch-id="@branch.Id"
+                                                    data-branch-company-id="@branch.CompanyId"
+                                                    data-branch-name="@branch.Name"
+                                                    data-branch-address="@(branch.Address ?? string.Empty)"
+                                                    data-branch-active="@(branch.IsActive ? "true" : "false")"
+                                                    data-branch-active-employee-count="@branchActiveEmployeeCount">
+                                                &#x062A;&#x0639;&#x062F;&#x064A;&#x0644;
+                                            </button>
+                                            <button type="button"
+                                                    class="btn-table btn-delete"
+                                                    data-nx-setup-open="setup-branch-delete-modal"
+                                                    data-branch-delete-open
+                                                    data-branch-id="@branch.Id"
+                                                    data-branch-company-id="@branch.CompanyId"
+                                                    data-branch-name="@branch.Name">
+                                                &#x062D;&#x0630;&#x0641;
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -281,7 +325,7 @@
                 </div>
 
                 <div class="nexora-setup-actions">
-                    <a asp-page="/Departments/Import" class="nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; Excel</a>
+                    <a asp-page="/Departments/Import" asp-route-companyId="@setup.CompanyId" class="nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; Excel</a>
                     <button type="button"
                             class="nx-setup-btn nx-setup-btn-primary"
                             data-nx-setup-open="setup-department-modal">
@@ -310,10 +354,12 @@
                         {
                             @foreach (var department in Model.Departments)
                             {
+                                var departmentActiveEmployeeCount =
+                                    Model.GetActiveEmployeeCountForDepartment(department.Id);
+
                                 <tr>
                                     <td>
                                         <strong class="nx-setup-title">@department.Name</strong>
-                                        <small class="nx-policy-note">@department.Code</small>
                                     </td>
                                     <td>
                                         <span class="nx-setup-status @(department.IsActive ? "is-active" : "is-inactive")">
@@ -322,8 +368,26 @@
                                     </td>
                                     <td>
                                         <div class="nx-setup-row-actions">
-                                            <a asp-page="/Departments/Edit" asp-route-id="@department.Id" class="btn-table btn-edit">&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;</a>
-                                            <a asp-page="/Departments/Delete" asp-route-id="@department.Id" class="btn-table btn-delete">&#x062D;&#x0630;&#x0641;</a>
+                                            <button type="button"
+                                                    class="btn-table btn-edit"
+                                                    data-nx-setup-open="setup-department-edit-modal"
+                                                    data-department-edit-open
+                                                    data-department-id="@department.Id"
+                                                    data-department-company-id="@department.CompanyId"
+                                                    data-department-name="@department.Name"
+                                                    data-department-active="@(department.IsActive ? "true" : "false")"
+                                                    data-department-active-employee-count="@departmentActiveEmployeeCount">
+                                                &#x062A;&#x0639;&#x062F;&#x064A;&#x0644;
+                                            </button>
+                                            <button type="button"
+                                                    class="btn-table btn-delete"
+                                                    data-nx-setup-open="setup-department-delete-modal"
+                                                    data-department-delete-open
+                                                    data-department-id="@department.Id"
+                                                    data-department-company-id="@department.CompanyId"
+                                                    data-department-name="@department.Name">
+                                                &#x062D;&#x0630;&#x0641;
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -491,6 +555,283 @@
             </div>
         </div>
 
+        @* NEXORA_SETUP_ENTITY_MODALS_START *@
+        <div id="setup-branch-edit-modal"
+             class="nx-setup-modal nx-setup-entity-modal"
+             aria-hidden="true"
+             inert>
+            <div class="nx-setup-modal__panel nx-setup-entity-edit-panel"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="setup-branch-edit-title">
+                <button type="button"
+                        class="nx-setup-modal__close"
+                        data-nx-setup-close
+                        aria-label="Close">&times;</button>
+
+                <div class="nx-setup-modal__head">
+                    <span>WORK LOCATION</span>
+                    <h2 id="setup-branch-edit-title">&#x062A;&#x0639;&#x062F;&#x064A;&#x0644; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</h2>
+                    <p>&#x062D;&#x062F;&#x062B; &#x0627;&#x0633;&#x0645; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;&#x060C; &#x0627;&#x0644;&#x0639;&#x0646;&#x0648;&#x0627;&#x0646;&#x060C; &#x0623;&#x0648; &#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629; &#x0645;&#x0646; &#x062F;&#x0648;&#x0646; &#x0645;&#x063A;&#x0627;&#x062F;&#x0631;&#x0629; &#x0635;&#x0641;&#x062D;&#x0629; &#x0627;&#x0644;&#x0625;&#x0639;&#x062F;&#x0627;&#x062F;.</p>
+                </div>
+
+                <form method="post"
+                      asp-page-handler="UpdateBranch"
+                      class="nx-setup-modal-form"
+                      data-entity-submit>
+                    <input type="hidden" name="EditBranch.Id" data-branch-edit-id />
+                    <input type="hidden" name="EditBranch.CompanyId" data-branch-edit-company-id />
+
+                    <div class="nx-setup-form-grid">
+                        <label class="nx-setup-field">
+                            <span>&#x0627;&#x0633;&#x0645; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span>
+                            <input name="EditBranch.Name"
+                                   data-branch-edit-name
+                                   autocomplete="off"
+                                   required />
+                        </label>
+
+                        <label class="nx-setup-field">
+                            <span>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
+                            <input value="@setup.Profile.Name"
+                                   readonly
+                                   class="nx-company-readonly" />
+                        </label>
+
+                        <label class="nx-setup-field nx-setup-field-wide">
+                            <span>&#x0627;&#x0644;&#x0639;&#x0646;&#x0648;&#x0627;&#x0646;</span>
+                            <textarea name="EditBranch.Address"
+                                      data-branch-edit-address
+                                      rows="3"></textarea>
+                        </label>
+
+                        <label class="nx-setup-check"
+                               data-branch-active-control>
+                            <input type="checkbox"
+                                   name="EditBranch.IsActive"
+                                   value="true"
+                                   data-branch-edit-active />
+                            <input type="hidden"
+                                   name="EditBranch.IsActive"
+                                   value="false"
+                                   data-branch-edit-active-fallback />
+                            <span>&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644; &#x0641;&#x0639;&#x0627;&#x0644;</span>
+                        </label>
+
+                        <div class="nx-setup-lock-reason nx-setup-field-wide"
+                             data-branch-active-lock
+                             hidden>
+                            <strong>&#x0644;&#x0627; &#x064A;&#x0645;&#x0643;&#x0646; &#x062A;&#x0639;&#x0637;&#x064A;&#x0644; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</strong>
+                            <span data-branch-active-lock-text></span>
+                        </div>
+                    </div>
+
+                    <div class="nx-setup-modal__actions">
+                        <button type="button"
+                                class="nx-setup-btn nx-setup-btn-secondary"
+                                data-nx-setup-close>
+                            &#x0625;&#x0644;&#x063A;&#x0627;&#x0621;
+                        </button>
+                        <button type="submit"
+                                class="nx-setup-btn nx-setup-btn-primary"
+                                data-entity-submit-button>
+                            <span data-entity-submit-label>&#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;&#x0627;&#x062A;</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="setup-branch-delete-modal"
+             class="nx-setup-modal nx-setup-entity-modal"
+             aria-hidden="true"
+             inert>
+            <div class="nx-setup-modal__panel nx-setup-entity-delete-panel"
+                 role="alertdialog"
+                 aria-modal="true"
+                 aria-labelledby="setup-branch-delete-title"
+                 aria-describedby="setup-branch-delete-description">
+                <button type="button"
+                        class="nx-setup-modal__close"
+                        data-nx-setup-close
+                        aria-label="Close">&times;</button>
+
+                <div class="nx-setup-modal__head">
+                    <span>WORK LOCATION</span>
+                    <h2 id="setup-branch-delete-title">&#x062A;&#x0623;&#x0643;&#x064A;&#x062F; &#x062D;&#x0630;&#x0641; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</h2>
+                    <p id="setup-branch-delete-description">&#x0631;&#x0627;&#x062C;&#x0639; &#x0627;&#x0633;&#x0645; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644; &#x0642;&#x0628;&#x0644; &#x062A;&#x0646;&#x0641;&#x064A;&#x0630; &#x0627;&#x0644;&#x062D;&#x0630;&#x0641;.</p>
+                </div>
+
+                <form method="post"
+                      asp-page-handler="DeleteBranch"
+                      class="nx-setup-modal-form"
+                      data-entity-submit>
+                    <input type="hidden"
+                           name="companyId"
+                           data-branch-delete-company-id />
+                    <input type="hidden"
+                           name="branchId"
+                           data-branch-delete-id />
+
+                    <div class="nx-cutoff-confirm-summary">
+                        <span>&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644; &#x0627;&#x0644;&#x0645;&#x062D;&#x062F;&#x062F;</span>
+                        <strong data-branch-delete-name></strong>
+                        <p>&#x0644;&#x0646; &#x064A;&#x062A;&#x0645; &#x0627;&#x0644;&#x062D;&#x0630;&#x0641; &#x0625;&#x0630;&#x0627; &#x0643;&#x0627;&#x0646; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644; &#x0645;&#x0631;&#x062A;&#x0628;&#x0637;&#x0627; &#x0628;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;&#x060C; &#x0623;&#x062C;&#x0647;&#x0632;&#x0629;&#x060C; &#x0623;&#x0648; &#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0623;&#x062E;&#x0631;&#x0649;.</p>
+                    </div>
+
+                    <div class="nx-setup-modal__actions nx-cutoff-confirm-actions">
+                        <button type="button"
+                                class="nx-setup-btn nx-setup-btn-secondary"
+                                data-nx-setup-close>
+                            &#x0625;&#x0644;&#x063A;&#x0627;&#x0621;
+                        </button>
+                        <button type="submit"
+                                class="nx-setup-btn nx-cutoff-confirm-delete"
+                                data-entity-submit-button>
+                            <span data-entity-submit-label>&#x062D;&#x0630;&#x0641; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="setup-department-edit-modal"
+             class="nx-setup-modal nx-setup-entity-modal"
+             aria-hidden="true"
+             inert>
+            <div class="nx-setup-modal__panel nx-setup-entity-edit-panel"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="setup-department-edit-title">
+                <button type="button"
+                        class="nx-setup-modal__close"
+                        data-nx-setup-close
+                        aria-label="Close">&times;</button>
+
+                <div class="nx-setup-modal__head">
+                    <span>DEPARTMENT</span>
+                    <h2 id="setup-department-edit-title">&#x062A;&#x0639;&#x062F;&#x064A;&#x0644; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</h2>
+                    <p>&#x062D;&#x062F;&#x062B; &#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0623;&#x0648; &#x062D;&#x0627;&#x0644;&#x062A;&#x0647; &#x0645;&#x0646; &#x062F;&#x0648;&#x0646; &#x0645;&#x063A;&#x0627;&#x062F;&#x0631;&#x0629; &#x0635;&#x0641;&#x062D;&#x0629; &#x0627;&#x0644;&#x0625;&#x0639;&#x062F;&#x0627;&#x062F;.</p>
+                </div>
+
+                <form method="post"
+                      asp-page-handler="UpdateDepartment"
+                      class="nx-setup-modal-form"
+                      data-entity-submit>
+                    <input type="hidden"
+                           name="EditDepartment.Id"
+                           data-department-edit-id />
+                    <input type="hidden"
+                           name="EditDepartment.CompanyId"
+                           data-department-edit-company-id />
+
+                    <div class="nx-setup-form-grid">
+                        <label class="nx-setup-field">
+                            <span>&#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</span>
+                            <input name="EditDepartment.Name"
+                                   data-department-edit-name
+                                   autocomplete="off"
+                                   required />
+                        </label>
+
+                        <label class="nx-setup-field">
+                            <span>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
+                            <input value="@setup.Profile.Name"
+                                   readonly
+                                   class="nx-company-readonly" />
+                        </label>
+
+                        <label class="nx-setup-check"
+                               data-department-active-control>
+                            <input type="checkbox"
+                                   name="EditDepartment.IsActive"
+                                   value="true"
+                                   data-department-edit-active />
+                            <input type="hidden"
+                                   name="EditDepartment.IsActive"
+                                   value="false"
+                                   data-department-edit-active-fallback />
+                            <span>&#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0641;&#x0639;&#x0627;&#x0644;</span>
+                        </label>
+
+                        <div class="nx-setup-lock-reason nx-setup-field-wide"
+                             data-department-active-lock
+                             hidden>
+                            <strong>&#x0644;&#x0627; &#x064A;&#x0645;&#x0643;&#x0646; &#x062A;&#x0639;&#x0637;&#x064A;&#x0644; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</strong>
+                            <span data-department-active-lock-text></span>
+                        </div>
+                    </div>
+
+                    <div class="nx-setup-modal__actions">
+                        <button type="button"
+                                class="nx-setup-btn nx-setup-btn-secondary"
+                                data-nx-setup-close>
+                            &#x0625;&#x0644;&#x063A;&#x0627;&#x0621;
+                        </button>
+                        <button type="submit"
+                                class="nx-setup-btn nx-setup-btn-primary"
+                                data-entity-submit-button>
+                            <span data-entity-submit-label>&#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;&#x0627;&#x062A;</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="setup-department-delete-modal"
+             class="nx-setup-modal nx-setup-entity-modal"
+             aria-hidden="true"
+             inert>
+            <div class="nx-setup-modal__panel nx-setup-entity-delete-panel"
+                 role="alertdialog"
+                 aria-modal="true"
+                 aria-labelledby="setup-department-delete-title"
+                 aria-describedby="setup-department-delete-description">
+                <button type="button"
+                        class="nx-setup-modal__close"
+                        data-nx-setup-close
+                        aria-label="Close">&times;</button>
+
+                <div class="nx-setup-modal__head">
+                    <span>DEPARTMENT</span>
+                    <h2 id="setup-department-delete-title">&#x062A;&#x0623;&#x0643;&#x064A;&#x062F; &#x062D;&#x0630;&#x0641; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</h2>
+                    <p id="setup-department-delete-description">&#x0631;&#x0627;&#x062C;&#x0639; &#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0642;&#x0628;&#x0644; &#x062A;&#x0646;&#x0641;&#x064A;&#x0630; &#x0627;&#x0644;&#x062D;&#x0630;&#x0641;.</p>
+                </div>
+
+                <form method="post"
+                      asp-page-handler="DeleteDepartment"
+                      class="nx-setup-modal-form"
+                      data-entity-submit>
+                    <input type="hidden"
+                           name="companyId"
+                           data-department-delete-company-id />
+                    <input type="hidden"
+                           name="departmentId"
+                           data-department-delete-id />
+
+                    <div class="nx-cutoff-confirm-summary">
+                        <span>&#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0627;&#x0644;&#x0645;&#x062D;&#x062F;&#x062F;</span>
+                        <strong data-department-delete-name></strong>
+                        <p>&#x0644;&#x0646; &#x064A;&#x062A;&#x0645; &#x0627;&#x0644;&#x062D;&#x0630;&#x0641; &#x0625;&#x0630;&#x0627; &#x0643;&#x0627;&#x0646; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0645;&#x0631;&#x062A;&#x0628;&#x0637;&#x0627; &#x0628;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646; &#x0623;&#x0648; &#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0623;&#x062E;&#x0631;&#x0649;.</p>
+                    </div>
+
+                    <div class="nx-setup-modal__actions nx-cutoff-confirm-actions">
+                        <button type="button"
+                                class="nx-setup-btn nx-setup-btn-secondary"
+                                data-nx-setup-close>
+                            &#x0625;&#x0644;&#x063A;&#x0627;&#x0621;
+                        </button>
+                        <button type="submit"
+                                class="nx-setup-btn nx-cutoff-confirm-delete"
+                                data-entity-submit-button>
+                            <span data-entity-submit-label>&#x062D;&#x0630;&#x0641; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        @* NEXORA_SETUP_ENTITY_MODALS_END *@
+
         <div id="cutoff-policy-modal" class="nx-setup-modal @(Model.OpenPolicyModal ? "is-open" : "")" aria-hidden="@(Model.OpenPolicyModal ? "false" : "true")" data-auto-open="@(Model.OpenPolicyModal ? "true" : "false")">
             <div class="nx-setup-modal__panel" role="dialog" aria-modal="true" aria-labelledby="cutoff-policy-title">
                 <button type="button" class="nx-setup-modal__close" data-nx-setup-close aria-label="Close">&times;</button>
@@ -501,13 +842,14 @@
                     <p>&#x062D;&#x062F;&#x062F; &#x0627;&#x0644;&#x0641;&#x062A;&#x0631;&#x0629; &#x0627;&#x0644;&#x0634;&#x0647;&#x0631;&#x064A;&#x0629; &#x0648;&#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x062A;&#x064A; &#x062A;&#x062F;&#x062E;&#x0644; &#x0636;&#x0645;&#x0646;&#x0647;&#x0627;.</p>
                 </div>
 
-                <form method="post" asp-page-handler="SaveCutoff" class="nx-setup-modal-form" data-cutoff-form>
+                <form id="cutoff-policy-form" method="post" asp-page-handler="SaveCutoff" class="nx-setup-modal-form" data-cutoff-form>
                     <input type="hidden" asp-for="CutoffPolicy.Id" />
                     <input type="hidden" asp-for="CutoffPolicy.CompanyId" />
 
-                    <div asp-validation-summary="ModelOnly" class="nx-setup-alert-danger"></div>
+                    <div class="nx-cutoff-scroll-content">
+                        <div asp-validation-summary="ModelOnly" class="nx-setup-alert-danger"></div>
 
-                    <div class="nx-setup-form-grid">
+                        <div class="nx-setup-form-grid">
                         <label class="nx-setup-field nx-setup-field-wide">
                             <span>&#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x0633;&#x064A;&#x0627;&#x0633;&#x0629;</span>
                             <input asp-for="CutoffPolicy.Name" />
@@ -588,17 +930,27 @@
                             <span asp-validation-for="CutoffPolicy.Notes" class="text-danger"></span>
                         </label>
 
-                        <label class="nx-setup-check">
-                            <input asp-for="CutoffPolicy.IsActive" />
-                            <span>&#x0633;&#x064A;&#x0627;&#x0633;&#x0629; &#x0627;&#x0644;&#x063A;&#x0644;&#x0642; &#x0641;&#x0639;&#x0627;&#x0644;&#x0629;</span>
-                        </label>
+                            <label class="nx-setup-check">
+                                <input asp-for="CutoffPolicy.IsActive" />
+                                <span>&#x0633;&#x064A;&#x0627;&#x0633;&#x0629; &#x0627;&#x0644;&#x063A;&#x0644;&#x0642; &#x0641;&#x0639;&#x0627;&#x0644;&#x0629;</span>
+                            </label>
+                        </div>
                     </div>
 
-                    <div class="nx-setup-modal__actions">
-                        <button type="button" class="nx-setup-btn nx-setup-btn-secondary" data-nx-setup-close>&#x0625;&#x0644;&#x063A;&#x0627;&#x0621;</button>
-                        <button type="submit" class="nx-setup-btn nx-setup-btn-primary">&#x062D;&#x0641;&#x0638; &#x0633;&#x064A;&#x0627;&#x0633;&#x0629; &#x0627;&#x0644;&#x063A;&#x0644;&#x0642;</button>
-                    </div>
                 </form>
+
+                <div class="nx-setup-modal__actions nx-cutoff-fixed-actions">
+                    <button type="button"
+                            class="nx-setup-btn nx-setup-btn-secondary"
+                            data-nx-setup-close>
+                        &#x0625;&#x0644;&#x063A;&#x0627;&#x0621;
+                    </button>
+                    <button type="submit"
+                            form="cutoff-policy-form"
+                            class="nx-setup-btn nx-setup-btn-primary">
+                        &#x062D;&#x0641;&#x0638; &#x0633;&#x064A;&#x0627;&#x0633;&#x0629; &#x0627;&#x0644;&#x063A;&#x0644;&#x0642;
+                    </button>
+                </div>
             </div>
 
         </div>

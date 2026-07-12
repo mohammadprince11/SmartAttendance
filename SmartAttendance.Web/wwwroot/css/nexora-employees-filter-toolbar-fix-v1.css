@@ -75,7 +75,7 @@ body.nxr-employees-master-filter-active .nxr-emp-master-reset {
     }
 }
 
-/* NEXORA_EMPLOYEES_PAGE_SIZE_CUSTOM_NXOS_START */
+/* NEXORA_EMPLOYEES_PAGE_SIZE_CUSTOM_NXCS_START */
 
 body.nxr-employees-master-filter-active .nxr-emp-master-page-size {
     width: auto !important;
@@ -104,21 +104,91 @@ body.nxr-employees-master-filter-active .nxr-emp-master-page-size > span {
     white-space: nowrap !important;
 }
 
-body.nxr-employees-master-filter-active .nxr-emp-master-page-size > .nxos.nxos--page-size {
+body.nxr-employees-master-filter-active
+.nxr-emp-master-page-size
+> select[data-nxr-master-page-size].nxcs-native
++ .nxcs-select--employee-page-size {
+    width: 70px !important;
+    min-width: 70px !important;
+    max-width: 70px !important;
+    flex: 0 0 70px !important;
     display: inline-block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
+    direction: rtl !important;
 }
 
-body.nxr-employees-master-filter-active .nxr-emp-master-page-size > select.nxos-native {
-    position: absolute !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    width: 1px !important;
-    height: 1px !important;
-    min-height: 1px !important;
-    max-height: 1px !important;
+body.nxr-employees-master-filter-active
+.nxr-emp-master-page-size
+.nxcs-select--employee-page-size
+.nxcs-trigger {
+    width: 70px !important;
+    min-width: 70px !important;
+    max-width: 70px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 3px !important;
+    padding: 0 4px 0 6px !important;
+    border-radius: 999px !important;
+    direction: rtl !important;
+    text-align: center !important;
+}
+
+body.nxr-employees-master-filter-active
+.nxr-emp-master-page-size
+.nxcs-select--employee-page-size
+.nxcs-value {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    text-align: center !important;
+    direction: ltr !important;
+    line-height: 1 !important;
+    font-size: 13px !important;
+    font-weight: 1000 !important;
+    font-variant-numeric: tabular-nums !important;
+    font-feature-settings: "tnum" 1 !important;
+    letter-spacing: .02em !important;
+}
+
+body.nxr-employees-master-filter-active
+.nxr-emp-master-page-size
+.nxcs-select--employee-page-size
+.nxcs-caret {
+    width: 22px !important;
+    height: 22px !important;
+    flex: 0 0 22px !important;
+    font-size: 9px !important;
+}
+
+.nxcs-panel--employee-page-size {
+    min-width: 84px !important;
+    max-width: 84px !important;
+    gap: 4px !important;
+    padding: 6px !important;
+    border-radius: 14px !important;
+    direction: ltr !important;
+}
+
+.nxcs-panel--employee-page-size .nxcs-option {
+    min-height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 6px 8px !important;
+    text-align: center !important;
+    direction: ltr !important;
+    line-height: 1 !important;
+    font-size: 13px !important;
+    font-weight: 950 !important;
+    font-variant-numeric: tabular-nums !important;
+    font-feature-settings: "tnum" 1 !important;
 }
 
 body.nxr-employees-master-filter-active .nxr-emp-master-reset {
@@ -131,4 +201,4 @@ body.nxr-employees-master-filter-active .nxr-emp-master-reset {
     line-height: 1 !important;
 }
 
-/* NEXORA_EMPLOYEES_PAGE_SIZE_CUSTOM_NXOS_END */
+/* NEXORA_EMPLOYEES_PAGE_SIZE_CUSTOM_NXCS_END */

@@ -1,4 +1,4 @@
-using System.Net.Mail;
+﻿using System.Net.Mail;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.Setup.Services;
@@ -167,6 +167,41 @@ public class SetupService : ISetupService
 
         if (company == null)
             return Failure("Company was not found.");
+
+        if (company.IsActive && !model.IsActive)
+        {
+            var activeEmployeeCount = await _dbContext.Employees
+                .AsNoTracking()
+                .CountAsync(x =>
+                    !x.IsDeleted &&
+                    x.IsActive &&
+                    x.Branch.CompanyId == model.CompanyId);
+
+            var activeBranchCount = await _dbContext.Branches
+                .AsNoTracking()
+                .CountAsync(x =>
+                    !x.IsDeleted &&
+                    x.IsActive &&
+                    x.CompanyId == model.CompanyId);
+
+            var activeDepartmentCount = await _dbContext.Departments
+                .AsNoTracking()
+                .CountAsync(x =>
+                    !x.IsDeleted &&
+                    x.IsActive &&
+                    x.CompanyId == model.CompanyId);
+
+            if (activeEmployeeCount > 0 ||
+                activeBranchCount > 0 ||
+                activeDepartmentCount > 0)
+            {
+                return Failure(
+                    $"لا يمكن تعطيل الشركة حالياً. عالج الارتباطات الفعالة أولاً: " +
+                    $"{activeEmployeeCount} موظف، " +
+                    $"{activeBranchCount} موقع عمل، " +
+                    $"{activeDepartmentCount} قسم.");
+            }
+        }
 
         company.Name = model.Name.Trim();
         company.Email = NormalizeNullable(model.Email);

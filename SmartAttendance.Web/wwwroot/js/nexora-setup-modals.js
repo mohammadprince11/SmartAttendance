@@ -83,12 +83,37 @@
         });
     }
 
+    function closeModalForNavigation(modal) {
+        if (!modal) return;
+
+        const activeElement = document.activeElement;
+
+        if (
+            activeElement &&
+            modal.contains(activeElement) &&
+            typeof activeElement.blur === "function"
+        ) {
+            activeElement.blur();
+        }
+
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+        setModalInert(modal, true);
+        delete modal._nexoraOpener;
+        syncPageLock();
+    }
+
     function initializeModals() {
         document.querySelectorAll(".nx-setup-modal").forEach(modal => {
-            const isOpen = modal.classList.contains("is-open");
+            const shouldAutoOpen =
+                modal.getAttribute("data-auto-open") === "true";
 
-            modal.setAttribute("aria-hidden", isOpen ? "false" : "true");
-            setModalInert(modal, !isOpen);
+            modal.classList.toggle("is-open", shouldAutoOpen);
+            modal.setAttribute(
+                "aria-hidden",
+                shouldAutoOpen ? "false" : "true"
+            );
+            setModalInert(modal, !shouldAutoOpen);
         });
 
         syncPageLock();
@@ -118,6 +143,22 @@
         }
     });
 
+    document.addEventListener("submit", event => {
+        const form = event.target;
+
+        if (!(form instanceof HTMLFormElement)) {
+            return;
+        }
+
+        const modal = form.closest(".nx-setup-modal");
+
+        if (!modal) {
+            return;
+        }
+
+        closeModalForNavigation(modal);
+    });
+
     document.addEventListener("keydown", event => {
         if (event.key !== "Escape") return;
 
@@ -134,4 +175,6 @@
     } else {
         initializeModals();
     }
+
+    window.addEventListener("pageshow", initializeModals);
 })();
