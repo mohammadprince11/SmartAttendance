@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    NEXORA Violations Refine Modal V14.1
    ========================================================================== */
 
@@ -1024,14 +1024,13 @@ body.nxv-modal-open {
     margin: 0 !important;
 }
 
-/* Keep dropdowns and calendar popups above the modal panel */
-.nxv-modal-panel .nxos.is-open,
-.nxv-modal-panel .nxcal.is-open {
+/* Keep dropdown menus above the modal panel.
+   Calendar layering is owned by nexora-calendar-v18.css. */
+.nxv-modal-panel .nxos.is-open {
     z-index: 100000 !important;
 }
 
-.nxv-modal-panel .nxos__menu,
-.nxv-modal-panel .nxcal__panel {
+.nxv-modal-panel .nxos__menu {
     z-index: 100001 !important;
 }
 

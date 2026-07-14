@@ -1,7 +1,7 @@
-﻿/* NEXORA Calendar V18.5
-   Dark NEXORA date picker.
+/* NEXORA Calendar V18.8
+   Canonical shared NEXORA date picker.
    Display format: yyyy-MM-dd.
-   Month navigation uses arrows only.
+   Interactive month/year selection and unified scrollbar.
 */
 
 input[type="date"].nxcal-native {
@@ -18,6 +18,10 @@ input[type="date"].nxcal-native {
 }
 
 .nxcal {
+    --nxcal-scrollbar-size: 7px;
+    --nxcal-scrollbar-track: rgba(255, 255, 255, .035);
+    --nxcal-scrollbar-thumb: rgba(25, 211, 224, .62);
+    --nxcal-scrollbar-thumb-hover: rgba(124, 244, 255, .82);
     position: relative !important;
     width: 100% !important;
     min-width: 0 !important;
@@ -27,7 +31,7 @@ input[type="date"].nxcal-native {
 }
 
 .nxcal.is-open {
-    z-index: 999999 !important;
+    z-index: 2147482500 !important;
 }
 
 .nxcal__button {
@@ -114,12 +118,56 @@ input[type="date"].nxcal-native {
     box-shadow:
         0 28px 70px rgba(0,0,0,.52),
         inset 0 0 0 1px rgba(255,255,255,.025) !important;
-    z-index: 999999 !important;
+    z-index: 2147482600 !important;
     direction: rtl !important;
+    overscroll-behavior: contain !important;
+    scrollbar-width: thin !important;
+    scrollbar-color:
+        var(--nxcal-scrollbar-thumb)
+        var(--nxcal-scrollbar-track) !important;
+    scrollbar-gutter: stable !important;
 }
 
 .nxcal.is-open .nxcal__panel {
     display: block !important;
+}
+
+.nxcal__panel::-webkit-scrollbar {
+    width: var(--nxcal-scrollbar-size) !important;
+    height: var(--nxcal-scrollbar-size) !important;
+}
+
+.nxcal__panel::-webkit-scrollbar-track {
+    border-radius: 999px !important;
+    background: var(--nxcal-scrollbar-track) !important;
+}
+
+.nxcal__panel::-webkit-scrollbar-thumb {
+    min-height: 42px !important;
+    border: 2px solid transparent !important;
+    border-radius: 999px !important;
+    background:
+        linear-gradient(
+            180deg,
+            var(--nxcal-scrollbar-thumb-hover),
+            var(--nxcal-scrollbar-thumb)
+        ) padding-box !important;
+    box-shadow:
+        0 0 0 1px rgba(25, 211, 224, .12),
+        0 0 12px rgba(25, 211, 224, .14) !important;
+}
+
+.nxcal__panel::-webkit-scrollbar-thumb:hover {
+    background:
+        linear-gradient(
+            180deg,
+            #A6FAFF,
+            var(--nxcal-scrollbar-thumb-hover)
+        ) padding-box !important;
+}
+
+.nxcal__panel::-webkit-scrollbar-corner {
+    background: transparent !important;
 }
 
 .nxcal__head {
@@ -151,21 +199,6 @@ input[type="date"].nxcal-native {
     border-color: rgba(25, 211, 224, .55) !important;
 }
 
-.nxcal__month {
-    min-height: 38px !important;
-    border: 1px solid rgba(25, 211, 224, .16) !important;
-    border-radius: 14px !important;
-    background: rgba(255,255,255,.028) !important;
-    color: #FFFFFF !important;
-    font-weight: 1000 !important;
-    font-size: 14px !important;
-    letter-spacing: .2px !important;
-    text-align: center !important;
-    font-family: inherit !important;
-    display: grid !important;
-    place-items: center !important;
-    padding: 0 10px !important;
-}
 
 .nxcal__week,
 .nxcal__grid {
@@ -271,3 +304,217 @@ input[type="date"].nxcal-native {
         height: 34px !important;
     }
 }
+
+/* NEXORA_CALENDAR_COMPACT_VIEWPORT_V18_8_START */
+@media (max-height: 720px) {
+    .nxcal__panel {
+        padding: 12px !important;
+    }
+
+    .nxcal__head {
+        margin-bottom: 8px !important;
+    }
+
+    .nxcal__week,
+    .nxcal__grid {
+        gap: 5px !important;
+    }
+
+    .nxcal__week {
+        margin-bottom: 5px !important;
+    }
+
+    .nxcal__weekday {
+        min-height: 22px !important;
+    }
+
+    .nxcal__day {
+        height: 34px !important;
+        border-radius: 12px !important;
+    }
+
+    .nxcal__foot {
+        padding-top: 8px !important;
+        margin-top: 8px !important;
+    }
+}
+/* NEXORA_CALENDAR_COMPACT_VIEWPORT_V18_8_END */
+
+/* NEXORA_CALENDAR_PERIOD_SELECTOR_V18_8_START */
+.nxcal__period {
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 78px !important;
+    gap: 6px !important;
+    align-items: center !important;
+}
+
+.nxcal__period-button {
+    min-width: 0 !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border: 1px solid rgba(25, 211, 224, .18) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, .028) !important;
+    color: #FFFFFF !important;
+    display: grid !important;
+    place-items: center !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+    cursor: pointer !important;
+    font-family: inherit !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+    line-height: 1 !important;
+    transform: none !important;
+}
+
+.nxcal__year-button {
+    color: #F6D98D !important;
+    font-size: 13px !important;
+}
+
+.nxcal__period-button:hover,
+.nxcal__period-button:focus-visible,
+.nxcal__period-button[aria-expanded="true"] {
+    border-color: rgba(25, 211, 224, .68) !important;
+    background: rgba(25, 211, 224, .12) !important;
+    color: #EFFFFF !important;
+    box-shadow: 0 0 0 3px rgba(25, 211, 224, .10) !important;
+    outline: none !important;
+    transform: none !important;
+}
+
+.nxcal__chooser {
+    min-height: 196px !important;
+    display: grid !important;
+    gap: 10px !important;
+    padding-top: 2px !important;
+}
+
+.nxcal__chooser-title {
+    min-height: 34px !important;
+    display: grid !important;
+    place-items: center !important;
+    border: 1px solid rgba(215, 178, 109, .24) !important;
+    border-radius: 12px !important;
+    background: rgba(215, 178, 109, .08) !important;
+    color: #F6D98D !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+}
+
+.nxcal__month-grid,
+.nxcal__year-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+}
+
+.nxcal__choice {
+    min-width: 0 !important;
+    min-height: 40px !important;
+    padding: 7px 8px !important;
+    border: 1px solid rgba(255, 255, 255, .07) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, .035) !important;
+    color: #EAF8FB !important;
+    display: grid !important;
+    place-items: center !important;
+    cursor: pointer !important;
+    font-family: inherit !important;
+    font-size: 11px !important;
+    font-weight: 950 !important;
+    line-height: 1.35 !important;
+    transform: none !important;
+}
+
+.nxcal__choice:hover,
+.nxcal__choice:focus-visible {
+    border-color: rgba(25, 211, 224, .48) !important;
+    background: rgba(25, 211, 224, .12) !important;
+    color: #FFFFFF !important;
+    outline: none !important;
+    transform: none !important;
+}
+
+.nxcal__choice.is-selected {
+    border-color: rgba(25, 211, 224, .90) !important;
+    background: linear-gradient(135deg, #19D3E0, #7CF4FF) !important;
+    color: #00151E !important;
+    box-shadow: 0 0 0 3px rgba(25, 211, 224, .11) !important;
+}
+
+.nxcal__year-range-head {
+    display: grid !important;
+    grid-template-columns: 38px minmax(0, 1fr) 38px !important;
+    gap: 8px !important;
+    align-items: center !important;
+}
+
+.nxcal__range-nav {
+    width: 38px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    border: 1px solid rgba(25, 211, 224, .25) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, .045) !important;
+    color: #CFFBFF !important;
+    display: grid !important;
+    place-items: center !important;
+    cursor: pointer !important;
+    font-family: inherit !important;
+    font-size: 18px !important;
+    font-weight: 1000 !important;
+    line-height: 1 !important;
+    transform: none !important;
+}
+
+.nxcal__range-nav:hover,
+.nxcal__range-nav:focus-visible {
+    border-color: rgba(25, 211, 224, .58) !important;
+    background: rgba(25, 211, 224, .12) !important;
+    outline: none !important;
+    transform: none !important;
+}
+
+.nxcal__year-range-label {
+    min-height: 36px !important;
+    display: grid !important;
+    place-items: center !important;
+    border: 1px solid rgba(215, 178, 109, .24) !important;
+    border-radius: 12px !important;
+    background: rgba(215, 178, 109, .08) !important;
+    color: #F6D98D !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+}
+
+@media (max-width: 760px) {
+    .nxcal__period {
+        grid-template-columns: minmax(0, 1fr) 72px !important;
+    }
+
+    .nxcal__month-grid,
+    .nxcal__year-grid {
+        gap: 6px !important;
+    }
+
+    .nxcal__choice {
+        min-height: 38px !important;
+        padding-inline: 6px !important;
+    }
+}
+/* NEXORA_CALENDAR_PERIOD_SELECTOR_V18_8_END */
+
+/* NEXORA_CALENDAR_CANONICAL_CONTEXTS_V18_8_START */
+.nxcal.is-open.is-above,
+.nxv-modal-panel .nxcal.is-open {
+    z-index: 2147482500 !important;
+}
+
+.nxv-modal-panel .nxcal__panel {
+    z-index: 2147482600 !important;
+}
+/* NEXORA_CALENDAR_CANONICAL_CONTEXTS_V18_8_END */

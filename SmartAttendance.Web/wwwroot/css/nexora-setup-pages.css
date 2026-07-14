@@ -1,4 +1,4 @@
-﻿.nexora-setup-page {
+.nexora-setup-page {
     direction: rtl;
     display: flex;
     flex-direction: column;
@@ -1658,10 +1658,6 @@ html.nx-setup-modal-open body .nxcs-panel {
     font-size: 12px;
     font-weight: 900;
     line-height: 1.45;
-}
-
-.nxcal.is-open.is-above {
-    z-index: 1000000 !important;
 }
 
 @media (max-width: 720px) {

@@ -1,65 +1,355 @@
 ﻿@page
 @model SmartAttendance.Web.Pages.EmployeeProfiles.IndexModel
 @{
-    ViewData["Title"] = "الإعلانات";
+    ViewData["Title"] = "عمليات الموارد البشرية";
     var tab = Model.Tab;
-    var templateOrder = new[] { "marriage", "condolence", "newborn", "holiday", "promotion", "welcome", "farewell" };
+    var templateOrder = new[] { "holiday", "circular", "workhours", "welcome", "promotion", "appreciation", "marriage", "condolence" };
     var templates = templateOrder
         .Select(k => Model.AnnouncementTemplates.FirstOrDefault(t => t.Key.Equals(k, System.StringComparison.OrdinalIgnoreCase)))
         .Where(t => t != null)
         .ToList();
+    var templateGroupMap = new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase)
+    {
+        ["holiday"] = "official",
+        ["circular"] = "official",
+        ["workhours"] = "official",
+        ["welcome"] = "employees",
+        ["promotion"] = "employees",
+        ["appreciation"] = "recognition",
+        ["marriage"] = "occasions",
+        ["condolence"] = "occasions"
+    };
+    var templateGroupLabels = new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase)
+    {
+        ["all"] = "الكل",
+        ["official"] = "رسمي",
+        ["employees"] = "موظفون",
+        ["recognition"] = "تكريم",
+        ["occasions"] = "مناسبات"
+    };
 }
 
-<link rel="stylesheet" href="~/css/nexora-announcement-studio-dynamic.css" asp-append-version="true" />
+@section Styles {
+    <link rel="stylesheet" href="~/css/nexora-announcement-studio-dynamic.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-hr-operations-page.css" asp-append-version="true" />
+}
 
-<section class="nx-approved-page" dir="rtl">
+@section Scripts {
+    <script src="~/js/nexora-announcement-studio-dynamic.js" asp-append-version="true"></script>
+    <script>
+        (() => {
+            const root = document.getElementById("nxApprovedAnnouncementStudio");
+            const picker = root?.querySelector("[data-ann-date-picker]");
+            const hidden = root?.querySelector('[data-ann-field="date"]');
+
+            if (!root || !picker || !hidden) {
+                return;
+            }
+
+            const displayToIso = (value) => {
+                const text = (value || "").trim();
+
+                let match = text.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);
+
+                if (match) {
+                    return `${match[3]}-${match[2]}-${match[1]}`;
+                }
+
+                match = text.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+
+                return match ? text : "";
+            };
+
+            const isoToDisplay = (value) => {
+                const match = (value || "").match(
+                    /^(\\d{4})-(\\d{2})-(\\d{2})$/
+                );
+
+                return match
+                    ? `${match[3]}/${match[2]}/${match[1]}`
+                    : "";
+            };
+
+            const syncPickerFromHidden = () => {
+                const nextValue = displayToIso(hidden.value);
+
+                if (picker.value !== nextValue) {
+                    picker.value = nextValue;
+                    picker.dispatchEvent(
+                        new Event("change", { bubbles: false })
+                    );
+                }
+            };
+
+            const syncHiddenFromPicker = () => {
+                hidden.value = isoToDisplay(picker.value);
+                hidden.dataset.auto = "false";
+                hidden.dispatchEvent(
+                    new Event("input", { bubbles: true })
+                );
+            };
+
+            picker.addEventListener("input", syncHiddenFromPicker);
+            picker.addEventListener("change", syncHiddenFromPicker);
+
+            const scheduleSync = () => {
+                window.requestAnimationFrame(syncPickerFromHidden);
+            };
+
+            root.addEventListener("click", scheduleSync);
+            root.addEventListener("change", scheduleSync);
+            root.addEventListener("input", (event) => {
+                if (event.target !== picker) {
+                    scheduleSync();
+                }
+            });
+
+            syncPickerFromHidden();
+        })();
+    </script>
+}
+
+<section class="nx-approved-page nx-approved-page--@tab" dir="rtl">
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
         <div class="nx-approved-alert">@Model.StatusMessage</div>
     }
 
     <header class="nx-approved-header">
-        <div class="nx-approved-title-icon">📣</div>
+        <div class="nx-approved-title-icon" aria-hidden="true">HR</div>
         <div class="nx-approved-title">
-            <h1>الإعلانات</h1>
-            <p>أنشئ وأرسل الإعلانات للموظفين باستخدام قوالب جاهزة احترافية أو تصميم مخصص.</p>
+            <span class="nx-approved-eyebrow">NEXORA PEOPLE OPERATIONS</span>
+            <h1>عمليات الموارد البشرية</h1>
+            <p>مركز موحّد للتواصل وصوت الموظف والحالات والمجتمع والتقدير والحملات.</p>
         </div>
-        <nav class="nx-approved-tabs">
-            <a class="@(tab == "announcements" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements">الإعلانات</a>
-            <a class="@(tab == "polls" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="polls">الاستبيانات</a>
-            <a class="@(tab == "feedback" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="feedback">الشكاوي</a>
-            <a class="@(tab == "wall" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="wall">الحائط</a>
+        <nav class="nx-approved-tabs" aria-label="أقسام عمليات الموارد البشرية">
+            <a class="@(tab == "overview" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="overview">نظرة عامة</a>
+            <a class="@(tab == "announcements" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements">التواصل</a>
+            <a class="@(tab == "polls" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="polls">صوت الموظف</a>
+            <a class="@(tab == "feedback" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="feedback">الحالات</a>
+            <a class="@(tab == "wall" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="wall">المجتمع</a>
+            <a class="@(tab == "recognition" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="recognition">التقدير</a>
+            <a class="@(tab == "campaigns" ? "active" : "")" asp-page="./Index" asp-route-section="engagement" asp-route-tab="campaigns">الحملات</a>
         </nav>
     </header>
 
-    @if (tab == "announcements")
+    @if (tab == "overview")
+    {
+        <section class="nx-ops-overview" aria-label="لوحة عمليات الموارد البشرية">
+            <section class="nx-ops-kpi-grid">
+                <article class="nx-ops-kpi cyan">
+                    <span>المحتوى النشط</span>
+                    <strong>@Model.ActivePeopleOperationsItems</strong>
+                    <small>@Model.PublishedAnnouncements إعلان · @Model.PublishedPolls استطلاع</small>
+                </article>
+                <article class="nx-ops-kpi gold">
+                    <span>الإعلانات</span>
+                    <strong>@Model.TotalAnnouncements</strong>
+                    <small>@Model.PublishedAnnouncements منشور · @Model.DraftAnnouncements مسودة</small>
+                </article>
+                <article class="nx-ops-kpi violet">
+                    <span>صوت الموظف</span>
+                    <strong>@Model.TotalPollVotes</strong>
+                    <small>@Model.TotalPolls استطلاع · إجمالي الأصوات المسجلة</small>
+                </article>
+                <article class="nx-ops-kpi rose">
+                    <span>الحالات المفتوحة</span>
+                    <strong>@Model.OpenPeopleCases</strong>
+                    <small>@Model.TotalFeedback إجمالي الشكاوى والمقترحات</small>
+                </article>
+            </section>
+
+            <section class="nx-ops-command-grid">
+                <article class="nx-ops-command-card">
+                    <header>
+                        <div>
+                            <span class="nx-ops-label">إجراءات سريعة</span>
+                            <h2>ابدأ عملية جديدة</h2>
+                        </div>
+                        <span class="nx-ops-status-dot live">مباشر</span>
+                    </header>
+                    <div class="nx-ops-quick-actions">
+                        <a asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements">إنشاء إعلان</a>
+                        <a asp-page="./Index" asp-route-section="engagement" asp-route-tab="polls">إنشاء استطلاع</a>
+                        <a asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements" asp-route-preset="appreciation">تكريم موظف</a>
+                        <a asp-page="./Index" asp-route-section="engagement" asp-route-tab="campaigns">إطلاق حملة</a>
+                    </div>
+                </article>
+
+                <article class="nx-ops-command-card nx-ops-health">
+                    <header>
+                        <div>
+                            <span class="nx-ops-label">حالة المركز</span>
+                            <h2>ملخص التشغيل الحالي</h2>
+                        </div>
+                        <span class="nx-ops-health-score">@Model.ActivePeopleOperationsItems</span>
+                    </header>
+                    <div class="nx-ops-health-list">
+                        <div><span>إعلانات منشورة</span><strong>@Model.PublishedAnnouncements</strong></div>
+                        <div><span>استبيانات منشورة</span><strong>@Model.PublishedPolls</strong></div>
+                        <div><span>حالات بانتظار المعالجة</span><strong>@Model.OpenPeopleCases</strong></div>
+                        <div><span>إجمالي التفاعلات المسجلة</span><strong>@Model.TotalPollVotes</strong></div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="nx-ops-module-grid">
+                <a class="nx-ops-module-card communication" asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements">
+                    <span>01</span><strong>التواصل والإعلانات</strong><small>قوالب جاهزة، نشر مباشر، واستهداف الموظفين.</small>
+                </a>
+                <a class="nx-ops-module-card voice" asp-page="./Index" asp-route-section="engagement" asp-route-tab="polls">
+                    <span>02</span><strong>صوت الموظف</strong><small>استبيانات وانتخابات ومتابعة المشاركة الفعلية.</small>
+                </a>
+                <a class="nx-ops-module-card cases" asp-page="./Index" asp-route-section="engagement" asp-route-tab="feedback">
+                    <span>03</span><strong>الحالات</strong><small>الشكاوى والمقترحات والردود وحالة المعالجة.</small>
+                </a>
+                <a class="nx-ops-module-card community" asp-page="./Index" asp-route-section="engagement" asp-route-tab="wall">
+                    <span>04</span><strong>المجتمع</strong><small>المحتوى المنشور الذي يظهر في حائط الموظفين.</small>
+                </a>
+                <a class="nx-ops-module-card recognition" asp-page="./Index" asp-route-section="engagement" asp-route-tab="recognition">
+                    <span>05</span><strong>التقدير والإنجازات</strong><small>ترقيات وشكر وتقدير وترحيب بالموظفين.</small>
+                </a>
+                <a class="nx-ops-module-card campaigns" asp-page="./Index" asp-route-section="engagement" asp-route-tab="campaigns">
+                    <span>06</span><strong>الحملات والمناسبات</strong><small>عطل وتعاميم وتغيير دوام وحملات داخلية.</small>
+                </a>
+            </section>
+
+            <section class="nx-ops-activity-grid">
+                <article class="nx-ops-activity-card">
+                    <header><h2>أحدث الإعلانات</h2><a asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements">عرض الكل</a></header>
+                    @if (Model.Announcements.Count == 0)
+                    {
+                        <div class="nx-ops-empty">لا توجد إعلانات بعد.</div>
+                    }
+                    @foreach (var item in Model.Announcements.Take(4))
+                    {
+                        <div class="nx-ops-activity-row">
+                            <span class="@(item.IsPublished ? "live" : "draft")">@Model.PublishText(item.IsPublished)</span>
+                            <div><strong>@item.Title</strong><small>@item.Category · @Model.DisplayDate(item.PublishDate)</small></div>
+                        </div>
+                    }
+                </article>
+
+                <article class="nx-ops-activity-card">
+                    <header><h2>أحدث الاستبيانات</h2><a asp-page="./Index" asp-route-section="engagement" asp-route-tab="polls">عرض الكل</a></header>
+                    @if (Model.Polls.Count == 0)
+                    {
+                        <div class="nx-ops-empty">لا توجد استطلاعات بعد.</div>
+                    }
+                    @foreach (var item in Model.Polls.Take(4))
+                    {
+                        <div class="nx-ops-activity-row">
+                            <span class="@(item.IsPublished ? "live" : "draft")">@Model.PublishText(item.IsPublished)</span>
+                            <div><strong>@item.Title</strong><small>@item.VotesCount تصويت · @Model.TargetText(item)</small></div>
+                        </div>
+                    }
+                </article>
+
+                <article class="nx-ops-activity-card">
+                    <header><h2>أحدث الحالات</h2><a asp-page="./Index" asp-route-section="engagement" asp-route-tab="feedback">عرض الكل</a></header>
+                    @if (Model.FeedbackItems.Count == 0)
+                    {
+                        <div class="nx-ops-empty">لا توجد حالات بعد.</div>
+                    }
+                    @foreach (var item in Model.FeedbackItems.Take(4))
+                    {
+                        <div class="nx-ops-activity-row">
+                            <span class="@Model.StatusClass(item.Status)">@Model.StatusText(item.Status)</span>
+                            <div><strong>@item.Title</strong><small>@item.Type · @item.EmployeeName</small></div>
+                        </div>
+                    }
+                </article>
+            </section>
+        </section>
+    }
+    else if (tab == "announcements")
     {
         <section class="nx-ann-studio" id="nxApprovedAnnouncementStudio">
-            <section class="nx-template-strip">
-                <div class="nx-section-heading">
+            <section class="nx-template-strip" aria-labelledby="nxAnnouncementTemplateTitle">
+                <div class="nx-section-heading nx-template-heading">
                     <div>
-                        <span>النماذج الثابتة</span>
-                        <h2>قوالب الإعلانات الجاهزة</h2>
+                        <span>مكتبة التواصل</span>
+                        <h2 id="nxAnnouncementTemplateTitle">قوالب الإعلانات الجاهزة</h2>
                     </div>
-                    <small>اختر قالب جاهز أو استخدم تصميم مخصص. النص داخل المعاينة ديناميكي ويتغير حسب الحقول.</small>
+                    <div class="nx-template-heading__aside">
+                        <span class="nx-template-count"><b>@templates.Count</b> قوالب احترافية</span>
+                        <small>مكتبة فاخرة ومنظمة: اختر الفئة ثم القالب، وستتحدث المعاينة والحقول تلقائياً مع بقاء النص قابلاً للتعديل.</small>
+                    </div>
                 </div>
 
-                <div class="nx-template-grid">
-                    @foreach (var template in templates)
-                    {
-                        var checkedTemplate = template!.Key.Equals("holiday", System.StringComparison.OrdinalIgnoreCase);
-                        <label class="nx-template-card @(checkedTemplate ? "active" : "") @template.CssClass" data-ann-template-card="@template.Key">
-                            @if (checkedTemplate)
-                            {
-                                <input form="nxAnnCreateForm" type="radio" name="Announcement.TemplateKey" value="@template.Key" checked />
-                            }
-                            else
-                            {
-                                <input form="nxAnnCreateForm" type="radio" name="Announcement.TemplateKey" value="@template.Key" />
-                            }
-                            <img src="@Url.Content("~/brand/announcement-studio/cards/" + template.Key + ".png")" alt="@template.Name" />
-                        </label>
-                    }
+                <div class="nx-template-toolbar">
+                    <div class="nx-template-filter-group" role="toolbar" aria-label="تصفية قوالب الإعلانات">
+                        <button type="button" class="nx-template-filter active" data-ann-filter="all">الكل</button>
+                        <button type="button" class="nx-template-filter" data-ann-filter="official">رسمي</button>
+                        <button type="button" class="nx-template-filter" data-ann-filter="employees">موظفون</button>
+                        <button type="button" class="nx-template-filter" data-ann-filter="recognition">تكريم</button>
+                        <button type="button" class="nx-template-filter" data-ann-filter="occasions">مناسبات</button>
+                    </div>
+                    <div class="nx-template-toolbar__aside">
+                        <span class="nx-template-toolbar__hint">اسحب المكتبة أو استخدم الأسهم للتنقل بين القوالب.</span>
+                        <div class="nx-template-scroll-actions" aria-label="التنقل بين القوالب">
+                            <button type="button" class="nx-template-scroll-action" data-ann-template-scroll="prev" aria-label="القوالب السابقة">&#x203A;</button>
+                            <button type="button" class="nx-template-scroll-action" data-ann-template-scroll="next" aria-label="القوالب التالية">&#x2039;</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nx-template-grid-shell">
+                    <div class="nx-template-grid" role="radiogroup" aria-label="اختيار قالب الإعلان" data-ann-template-grid>
+                        @foreach (var template in templates)
+                        {
+                            var checkedTemplate = template!.Key.Equals("holiday", System.StringComparison.OrdinalIgnoreCase);
+                            var templateGroup = templateGroupMap.TryGetValue(template.Key, out var groupKey)
+                                ? groupKey
+                                : "official";
+                            var templateGroupLabel = templateGroupLabels.TryGetValue(templateGroup, out var groupLabel)
+                                ? groupLabel
+                                : template.Category;
+                            <label class="nx-template-card @(checkedTemplate ? "active" : "") @template.CssClass nx-template-card--@template.Key"
+                                   data-ann-template-card="@template.Key"
+                                   data-ann-template-group="@templateGroup"
+                                   role="radio"
+                                   aria-checked="@(checkedTemplate ? "true" : "false")"
+                                   title="@template.Name">
+                                @if (checkedTemplate)
+                                {
+                                    <input form="nxAnnCreateForm" type="radio" name="Announcement.TemplateKey" value="@template.Key" aria-label="@template.Name" checked />
+                                }
+                                else
+                                {
+                                    <input form="nxAnnCreateForm" type="radio" name="Announcement.TemplateKey" value="@template.Key" aria-label="@template.Name" />
+                                }
+
+                                <span class="nx-template-card__glow" aria-hidden="true"></span>
+
+                                <span class="nx-template-card__visual" aria-hidden="true">
+                                    <img src="@Url.Content("~/brand/announcement-studio/cards/" + template.AssetKey + ".png")" alt="" />
+                                    <span class="nx-template-card__shade"></span>
+                                    <span class="nx-template-card__topline">
+                                        <span class="nx-template-card__group">@templateGroupLabel</span>
+                                        <span class="nx-template-card__icon">@template.Icon</span>
+                                    </span>
+                                    <span class="nx-template-card__hero-copy">
+                                        <small>@template.Category</small>
+                                        <strong>@template.Name</strong>
+                                    </span>
+                                </span>
+
+                                <span class="nx-template-card__content">
+                                    <span class="nx-template-card__meta">
+                                        <span>@template.Category</span>
+                                        <span>جاهز للتعديل</span>
+                                    </span>
+                                    <small>@template.Description</small>
+                                </span>
+
+                                <span class="nx-template-card__check" aria-hidden="true">
+                                    <i>✓</i>
+                                    <em>محدد</em>
+                                </span>
+                            </label>
+                        }
+                    </div>
                 </div>
             </section>
 
@@ -74,7 +364,7 @@
                     </header>
 
                     <div class="nx-preview-stage">
-                        <button type="button" class="nx-arrow nx-arrow-right" data-ann-step="prev">‹</button>
+                        <button type="button" class="nx-arrow nx-arrow-right" data-ann-step="prev" data-nexora-hover="off" aria-label="القالب السابق">‹</button>
 
                         <article class="nx-live-card holiday" id="nxLiveAnnouncementCard">
                             <div class="nx-live-art">
@@ -91,14 +381,14 @@
                             </div>
                         </article>
 
-                        <button type="button" class="nx-arrow nx-arrow-left" data-ann-step="next">›</button>
+                        <button type="button" class="nx-arrow nx-arrow-left" data-ann-step="next" data-nexora-hover="off" aria-label="القالب التالي">›</button>
                     </div>
 
                     <div class="nx-thumb-row">
                         @foreach (var template in templates)
                         {
                             <button type="button" class="nx-thumb @(template!.Key == "holiday" ? "active" : "")" data-ann-template-button="@template.Key" title="@template.Name">
-                                <img src="@Url.Content("~/brand/announcement-studio/thumbs/" + template.Key + ".png")" alt="@template.Name" />
+                                <img src="@Url.Content("~/brand/announcement-studio/thumbs/" + template.AssetKey + ".png")" alt="@template.Name" />
                             </button>
                         }
                     </div>
@@ -164,12 +454,14 @@
                                 <label>الفئة *</label>
                                 <select name="Announcement.Category" data-ann-field="category">
                                     <option value="عام">عام</option>
+                                    <option value="تعميم إداري">تعميم إداري</option>
+                                    <option value="تعليمات">تعليمات</option>
+                                    <option value="شكر وتقدير">شكر وتقدير</option>
                                     <option value="تهنئة">تهنئة</option>
                                     <option value="تعزية">تعزية</option>
                                     <option value="عطلة رسمية" selected>عطلة رسمية</option>
                                     <option value="ترحيب">ترحيب</option>
                                     <option value="وداع">وداع</option>
-                                    <option value="تعليمات">تعليمات</option>
                                 </select>
                             </div>
                             <div class="nx-field">
@@ -206,7 +498,15 @@
                             </div>
                             <div class="nx-field">
                                 <label>التاريخ / المناسبة</label>
-                                <input name="Announcement.EffectiveDateText" data-ann-field="date" value="15/05/2026" placeholder="مثال: 01/06/2026" />
+                                <input type="date"
+                                       id="nxAnnouncementDatePicker"
+                                       data-ann-date-picker
+                                       value="2026-05-15"
+                                       aria-label="التاريخ أو المناسبة" />
+                                <input type="hidden"
+                                       name="Announcement.EffectiveDateText"
+                                       data-ann-field="date"
+                                       value="15/05/2026" />
                             </div>
                         </div>
 
@@ -438,29 +738,29 @@
                 <section class="nx-pulse-score-panel">
                     <header class="nx-pulse-card-head">
                         <div>
-                            <h2>مؤشر نبض الموظفين</h2>
-                            <p>قراءة سريعة لمستوى الرضا العام.</p>
+                            <h2>مؤشر صوت الموظف</h2>
+                            <p>المؤشرات أدناه مرتبطة بالاستطلاعات والتصويتات المسجلة فعلياً.</p>
                         </div>
-                        <span class="nx-pulse-pill">⚡ Pulse</span>
+                        <span class="nx-pulse-pill">⚡ LIVE DATA</span>
                     </header>
 
                     <div class="nx-score-body">
                         <div class="nx-score-ring">
-                            <strong>78%</strong>
-                            <span>نبض عام جيد</span>
+                            <strong>@Model.TotalPollVotes</strong>
+                            <span>صوت مسجل</span>
                         </div>
                         <div class="nx-score-legend">
-                            <div><i class="good"></i><b>80% - 100%</b><span>جيد</span></div>
-                            <div><i class="warn"></i><b>50% - 79%</b><span>يحتاج متابعة</span></div>
-                            <div><i class="bad"></i><b>0% - 49%</b><span>خطر</span></div>
+                            <div><i class="good"></i><b>@Model.PublishedPolls</b><span>استطلاع منشور</span></div>
+                            <div><i class="warn"></i><b>@Model.DraftPolls</b><span>مسودة</span></div>
+                            <div><i class="bad"></i><b>@Model.TotalPolls</b><span>إجمالي الاستطلاعات</span></div>
                         </div>
                     </div>
 
                     <div class="nx-pulse-mini-kpis">
-                        <article><strong>1,248</strong><span>إجمالي المشاركين</span></article>
-                        <article><strong>82%</strong><span>نسبة المشاركة</span></article>
-                        <article><strong>+12%</strong><span>تحسن عن السابق</span></article>
-                        <article><strong>324</strong><span>تعليقات الموظفين</span></article>
+                        <article><strong>@Model.TotalPolls</strong><span>إجمالي الاستطلاعات</span></article>
+                        <article><strong>@Model.PublishedPolls</strong><span>منشور حالياً</span></article>
+                        <article><strong>@Model.DraftPolls</strong><span>محفوظ كمسودة</span></article>
+                        <article><strong>@Model.TotalPollVotes</strong><span>إجمالي الأصوات</span></article>
                     </div>
                 </section>
 
@@ -586,32 +886,27 @@
             </section>
 
             <section class="nx-pulse-dashboard-grid">
-                <article class="nx-pulse-analytics-card">
-                    <header><h3>توزيع الرضا حسب الفروع</h3><a>عرض الكل</a></header>
-                    <div class="nx-branch-bars">
-                        <div><span>85%</span><i style="height:85%"></i><b>Rixos</b></div>
-                        <div><span>78%</span><i style="height:78%"></i><b>Mövenpick</b></div>
-                        <div><span>72%</span><i style="height:72%"></i><b>Al Azza</b></div>
-                        <div><span>60%</span><i class="warn" style="height:60%"></i><b>IPI</b></div>
-                        <div><span>48%</span><i class="bad" style="height:48%"></i><b>The Factory</b></div>
+                <article class="nx-pulse-analytics-card nx-ops-data-note">
+                    <header><h3>تحليل الفروع والأقسام</h3></header>
+                    <div>
+                        <strong>بيانات فعلية فقط</strong>
+                        <p>تظهر المقارنات بعد تسجيل أصوات كافية وربط كل نتيجة بجمهورها المستهدف.</p>
                     </div>
                 </article>
 
-                <article class="nx-pulse-analytics-card">
-                    <header><h3>أعلى 3 مواضيع تحتاج متابعة</h3><a>عرض الكل</a></header>
-                    <div class="nx-risk-list">
-                        <div><strong>جدول الدوام</strong><span>62% غير راضين</span><em>⚠</em></div>
-                        <div><strong>فرص الترقي</strong><span>55% غير راضين</span><em>⚠</em></div>
-                        <div><strong>التواصل الداخلي</strong><span>41% غير راضين</span><em>⚠</em></div>
+                <article class="nx-pulse-analytics-card nx-ops-data-note">
+                    <header><h3>المواضيع التي تحتاج متابعة</h3></header>
+                    <div>
+                        <strong>@Model.TotalPollVotes صوت مسجل</strong>
+                        <p>لن يعرض النظام نسباً تقديرية أو مواضيع وهمية. التحليل سيُبنى من نتائج الاستبيانات الفعلية.</p>
                     </div>
                 </article>
 
-                <article class="nx-pulse-analytics-card">
-                    <header><h3>التوزيع حسب الجنس</h3></header>
-                    <div class="nx-donut-wrap">
-                        <div class="nx-donut"></div>
-                        <div><strong>62%</strong><span>ذكور</span></div>
-                        <div><strong>38%</strong><span>إناث</span></div>
+                <article class="nx-pulse-analytics-card nx-ops-data-note">
+                    <header><h3>الخصوصية والثقة</h3></header>
+                    <div>
+                        <strong>نتائج موثوقة</strong>
+                        <p>الاستطلاعات السرية تبقى دون أسماء، والاستطلاعات الظاهرة تستخدم فقط عند اختيارها صراحة.</p>
                     </div>
                 </article>
 
@@ -657,7 +952,7 @@
             <div class="nx-feedback-list">
                 @if (Model.FeedbackItems.Count == 0)
                 {
-                    <div class="nx-empty">لا توجد شكاوي أو مقترحات.</div>
+                    <div class="nx-empty">لا توجد شكاوى أو مقترحات.</div>
                 }
                 @foreach (var item in Model.FeedbackItems)
                 {
@@ -689,12 +984,17 @@
     else if (tab == "wall")
     {
         <section class="nx-wall-grid">
+            @if (!Model.Announcements.Any(x => x.IsPublished))
+            {
+                <div class="nx-ops-empty nx-ops-empty--wide">
+                    لا توجد منشورات على الحائط حالياً. انشر إعلاناً من تبويب التواصل ليظهر هنا.
+                </div>
+            }
             @foreach (var item in Model.Announcements.Where(x => x.IsPublished))
             {
                 var wallTemplate = Model.AnnouncementTemplates.FirstOrDefault(x => x.Key.Equals(item.TemplateKey ?? "custom", System.StringComparison.OrdinalIgnoreCase));
-                var assetKey = wallTemplate?.Key ?? "custom";
                 <article class="nx-wall-card">
-                    <img src="@Url.Content("~/brand/announcement-studio/cards/" + assetKey + ".png")" alt="@item.Category" />
+                    <img src="@Url.Content("~/brand/announcement-studio/cards/" + (wallTemplate?.AssetKey ?? "custom") + ".png")" alt="@item.Category" />
                     <div>
                         <span class="nx-badge neutral">@item.Category</span>
                         <h3>@item.Title</h3>
@@ -705,7 +1005,84 @@
             }
         </section>
     }
+    else if (tab == "recognition")
+    {
+        <section class="nx-ops-special-page">
+            <header class="nx-ops-special-head">
+                <div>
+                    <span class="nx-ops-label">RECOGNITION</span>
+                    <h2>التقدير والإنجازات</h2>
+                    <p>حوّل إنجازات الموظفين والترقيات ورسائل الشكر إلى محتوى مهني يظهر في تجربة الموظف.</p>
+                </div>
+                <a class="nx-ops-primary-action" asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements" asp-route-preset="appreciation">إنشاء تكريم</a>
+            </header>
+
+            <section class="nx-ops-template-launcher">
+                <a asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements" asp-route-preset="appreciation">
+                    <span>🏆</span><strong>شكر وتقدير</strong><small>تكريم موظف أو فريق بسبب إنجاز واضح.</small>
+                </a>
+                <a asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements" asp-route-preset="promotion">
+                    <span>📈</span><strong>ترقية موظف</strong><small>إعلان الترقية والمنصب الجديد وتاريخ السريان.</small>
+                </a>
+                <a asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements" asp-route-preset="welcome">
+                    <span>🤝</span><strong>موظف جديد</strong><small>ترحيب بالموظف وربطه بالقسم وموقع العمل.</small>
+                </a>
+            </section>
+
+            <section class="nx-ops-records-card">
+                <header><h2>سجل التقدير</h2><span>@Model.RecognitionAnnouncements.Count عنصر</span></header>
+                @if (Model.RecognitionAnnouncements.Count == 0)
+                {
+                    <div class="nx-ops-empty">لا توجد سجلات تقدير حالياً.</div>
+                }
+                @foreach (var item in Model.RecognitionAnnouncements)
+                {
+                    <article class="nx-ops-record-row">
+                        <span class="@(item.IsPublished ? "live" : "draft")">@Model.PublishText(item.IsPublished)</span>
+                        <div><strong>@item.Title</strong><small>@item.Category · @Model.TargetText(item) · @Model.DisplayDate(item.PublishDate)</small></div>
+                    </article>
+                }
+            </section>
+        </section>
+    }
+    else if (tab == "campaigns")
+    {
+        <section class="nx-ops-special-page">
+            <header class="nx-ops-special-head">
+                <div>
+                    <span class="nx-ops-label">CAMPAIGNS</span>
+                    <h2>الحملات والمناسبات</h2>
+                    <p>ابدأ بحملة أو تعميم جاهز، ثم حدّد الجمهور وانشره مباشرة من استوديو التواصل.</p>
+                </div>
+                <a class="nx-ops-primary-action" asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements" asp-route-preset="circular">إنشاء حملة</a>
+            </header>
+
+            <section class="nx-ops-template-launcher">
+                <a asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements" asp-route-preset="holiday">
+                    <span>📅</span><strong>عطلة رسمية</strong><small>إشعار العطلة وتاريخ العودة والتعليمات.</small>
+                </a>
+                <a asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements" asp-route-preset="circular">
+                    <span>📄</span><strong>تعميم إداري</strong><small>توجيه رسمي مع تاريخ بدء التطبيق.</small>
+                </a>
+                <a asp-page="./Index" asp-route-section="engagement" asp-route-tab="announcements" asp-route-preset="workhours">
+                    <span>🕘</span><strong>تغيير الدوام</strong><small>تحديث وقت العمل والمواقع المشمولة.</small>
+                </a>
+            </section>
+
+            <section class="nx-ops-records-card">
+                <header><h2>سجل الحملات والتعاميم</h2><span>@Model.CampaignAnnouncements.Count عنصر</span></header>
+                @if (Model.CampaignAnnouncements.Count == 0)
+                {
+                    <div class="nx-ops-empty">لا توجد حملات أو تعاميم حالياً.</div>
+                }
+                @foreach (var item in Model.CampaignAnnouncements)
+                {
+                    <article class="nx-ops-record-row">
+                        <span class="@(item.IsPublished ? "live" : "draft")">@Model.PublishText(item.IsPublished)</span>
+                        <div><strong>@item.Title</strong><small>@item.Category · @Model.TargetText(item) · @Model.DisplayDate(item.PublishDate)</small></div>
+                    </article>
+                }
+            </section>
+        </section>
+    }
 </section>
-
-<script src="~/js/nexora-announcement-studio-dynamic.js" asp-append-version="true"></script>
-

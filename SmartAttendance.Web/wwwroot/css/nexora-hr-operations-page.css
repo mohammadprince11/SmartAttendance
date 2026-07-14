@@ -1,0 +1,839 @@
+/* NEXORA_HR_OPERATIONS_LAYOUT_V1_START */
+.nx-approved-page,
+.nx-approved-page * {
+    box-sizing: border-box !important;
+}
+
+.nx-approved-page {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    padding: 4px 0 28px !important;
+}
+
+.nx-approved-header {
+    grid-template-columns: 52px minmax(0, 1fr) auto !important;
+    min-height: 88px !important;
+    gap: 14px !important;
+    padding: 14px 16px !important;
+    border-radius: 20px !important;
+}
+
+.nx-approved-title-icon {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 15px !important;
+    font-size: 14px !important;
+    font-weight: 1000 !important;
+    letter-spacing: .08em !important;
+}
+
+.nx-approved-eyebrow {
+    display: block !important;
+    margin-bottom: 3px !important;
+    color: #f4d18d !important;
+    font-size: 9px !important;
+    font-weight: 1000 !important;
+    letter-spacing: .16em !important;
+}
+
+.nx-approved-title h1 {
+    font-size: 26px !important;
+    line-height: 1.2 !important;
+}
+
+.nx-approved-title p {
+    margin-top: 5px !important;
+    max-width: 620px !important;
+    line-height: 1.55 !important;
+}
+
+.nx-approved-tabs {
+    justify-content: flex-start !important;
+    gap: 6px !important;
+}
+
+.nx-approved-tabs a {
+    min-height: 36px !important;
+    padding: 6px 11px !important;
+    border-radius: 11px !important;
+}
+
+.nx-ann-studio {
+    margin-top: 12px !important;
+    gap: 12px !important;
+}
+
+.nx-preview-panel,
+.nx-create-panel,
+.nx-recent-panel {
+    border-radius: 20px !important;
+    padding: 13px !important;
+}
+
+.nx-section-heading {
+    align-items: flex-start !important;
+    padding-bottom: 10px !important;
+}
+
+.nx-section-heading h2,
+.nx-card-head h2 {
+    font-size: 17px !important;
+}
+
+.nx-section-heading small,
+.nx-card-head p {
+    max-width: 470px !important;
+    line-height: 1.55 !important;
+}
+
+/* Announcement template library dimensions are owned by
+   nexora-announcement-studio-dynamic.css. */
+
+.nx-card-head {
+    min-height: 54px !important;
+    margin-bottom: 11px !important;
+    padding-bottom: 10px !important;
+}
+
+.nx-preview-stage {
+    padding: 6px 38px !important;
+}
+
+.nx-live-card {
+    width: 100% !important;
+    max-width: 621px !important;
+}
+
+.nx-thumb-row {
+    gap: 7px !important;
+    margin-top: 10px !important;
+}
+
+.nx-thumb {
+    height: 50px !important;
+    border-radius: 9px !important;
+}
+
+.nx-dots {
+    margin-top: 7px !important;
+}
+
+.nx-form {
+    gap: 9px !important;
+}
+
+.nx-form-row {
+    gap: 8px !important;
+}
+
+.nx-field {
+    gap: 5px !important;
+}
+
+.nx-field input,
+.nx-field select {
+    height: 40px !important;
+}
+
+.nx-field textarea {
+    min-height: 76px !important;
+}
+
+.nx-mode-tabs {
+    gap: 6px !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+}
+
+.nx-mode-tabs label {
+    min-height: 37px !important;
+}
+
+.nx-employee-picker summary {
+    min-height: 40px !important;
+    padding-block: 9px !important;
+}
+
+.nx-form-footer {
+    gap: 8px !important;
+    padding-top: 8px !important;
+}
+
+.nx-actions {
+    gap: 7px !important;
+}
+
+.nx-btn {
+    min-height: 39px !important;
+}
+
+.nx-table-wrap {
+    max-width: 100% !important;
+    overflow: auto !important;
+    border-radius: 14px !important;
+}
+
+.nx-table {
+    min-width: 900px !important;
+}
+
+@media (min-width: 1240px) {
+    .nx-approved-page--announcements .nx-main-grid {
+        direction: ltr !important;
+        display: grid !important;
+        grid-template-columns: minmax(0, 1.15fr) minmax(390px, .85fr) !important;
+        grid-template-areas: "preview form" !important;
+        gap: 12px !important;
+        align-items: start !important;
+    }
+
+    .nx-approved-page--announcements .nx-preview-panel {
+        grid-area: preview !important;
+        direction: rtl !important;
+        position: sticky !important;
+        top: 10px !important;
+    }
+
+    .nx-approved-page--announcements .nx-create-panel {
+        grid-area: form !important;
+        direction: rtl !important;
+    }
+
+    .nx-approved-page--announcements .nx-form-row {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 1239px) {
+    .nx-approved-header {
+        grid-template-columns: 52px minmax(0, 1fr) !important;
+    }
+
+    .nx-approved-tabs {
+        grid-column: 1 / -1 !important;
+        width: 100% !important;
+    }
+
+    .nx-approved-page--announcements .nx-main-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        grid-template-areas: "form" "preview" !important;
+        gap: 12px !important;
+    }
+
+    .nx-approved-page--announcements .nx-create-panel {
+        grid-area: form !important;
+    }
+
+    .nx-approved-page--announcements .nx-preview-panel {
+        grid-area: preview !important;
+        position: static !important;
+    }
+}
+
+@media (max-width: 900px) {
+    /* The template library keeps horizontal scrolling on compact screens. */
+}
+
+@media (max-width: 680px) {
+    .nx-approved-page {
+        padding-bottom: 18px !important;
+    }
+
+    .nx-approved-header {
+        grid-template-columns: 44px minmax(0, 1fr) !important;
+        padding: 12px !important;
+        border-radius: 17px !important;
+    }
+
+    .nx-approved-title-icon {
+        width: 42px !important;
+        height: 42px !important;
+    }
+
+    .nx-approved-title h1 {
+        font-size: 21px !important;
+    }
+
+    .nx-approved-title p {
+        font-size: 11px !important;
+    }
+
+    .nx-approved-tabs {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .nx-approved-tabs a {
+        width: 100% !important;
+    }
+
+    .nx-section-heading,
+    .nx-card-head {
+        align-items: flex-start !important;
+        flex-direction: column !important;
+    }
+
+    .nx-template-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .nx-template-card {
+        height: 108px !important;
+    }
+
+    .nx-form-row {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nx-preview-stage {
+        padding-inline: 30px !important;
+    }
+
+    .nx-thumb-row {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+
+    .nx-form-footer,
+    .nx-actions {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        width: 100% !important;
+    }
+
+    .nx-btn {
+        width: 100% !important;
+    }
+}
+/* NEXORA_HR_OPERATIONS_LAYOUT_V1_END */
+
+/* NEXORA_HR_OPERATIONS_CONTROLS_V2_START */
+.nx-approved-page .nx-preview-stage .nx-arrow,
+.nx-approved-page .nx-preview-stage .nx-arrow:hover,
+.nx-approved-page .nx-preview-stage .nx-arrow:focus,
+.nx-approved-page .nx-preview-stage .nx-arrow:focus-visible,
+.nx-approved-page .nx-preview-stage .nx-arrow:active {
+    transform: translateY(-50%) !important;
+    transform-origin: center center !important;
+    filter: none !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    line-height: 1 !important;
+}
+
+.nx-approved-page .nx-preview-stage .nx-arrow:hover,
+.nx-approved-page .nx-preview-stage .nx-arrow:focus-visible {
+    border-color: rgba(25, 211, 224, .72) !important;
+    box-shadow:
+        0 0 0 4px rgba(25, 211, 224, .10),
+        0 12px 28px rgba(0, 0, 0, .24) !important;
+}
+
+/* NEXORA_HR_OPERATIONS_CONTROLS_V2_END */
+
+/* NEXORA_PEOPLE_OPERATIONS_CENTER_V1_START */
+.nx-approved-tabs {
+    flex-wrap: wrap !important;
+}
+
+.nx-approved-tabs a {
+    white-space: nowrap !important;
+}
+
+.nx-ops-overview,
+.nx-ops-special-page {
+    display: grid !important;
+    gap: 12px !important;
+    margin-top: 12px !important;
+}
+
+.nx-ops-kpi-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.nx-ops-kpi {
+    position: relative !important;
+    overflow: hidden !important;
+    min-height: 124px !important;
+    padding: 16px !important;
+    border: 1px solid rgba(111, 151, 188, .22) !important;
+    border-radius: 20px !important;
+    background:
+        radial-gradient(circle at 100% 0%, rgba(25, 211, 224, .10), transparent 45%),
+        linear-gradient(145deg, rgba(8, 28, 47, .98), rgba(3, 15, 29, .98)) !important;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, .20) !important;
+}
+
+.nx-ops-kpi::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: auto 16px 0 16px !important;
+    height: 2px !important;
+    border-radius: 999px !important;
+    opacity: .9 !important;
+}
+
+.nx-ops-kpi.cyan::after {
+    background: linear-gradient(90deg, transparent, #19d3e0, transparent) !important;
+}
+
+.nx-ops-kpi.gold::after {
+    background: linear-gradient(90deg, transparent, #d7b26d, transparent) !important;
+}
+
+.nx-ops-kpi.violet::after {
+    background: linear-gradient(90deg, transparent, #9f8cff, transparent) !important;
+}
+
+.nx-ops-kpi.rose::after {
+    background: linear-gradient(90deg, transparent, #fb7185, transparent) !important;
+}
+
+.nx-ops-kpi span,
+.nx-ops-kpi small {
+    display: block !important;
+}
+
+.nx-ops-kpi span {
+    color: #a9bfd2 !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+}
+
+.nx-ops-kpi strong {
+    display: block !important;
+    margin: 8px 0 5px !important;
+    color: #fff !important;
+    font-size: 32px !important;
+    line-height: 1 !important;
+}
+
+.nx-ops-kpi small {
+    color: #8fa9bf !important;
+    font-size: 10px !important;
+    line-height: 1.6 !important;
+}
+
+.nx-ops-command-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.15fr) minmax(340px, .85fr) !important;
+    gap: 12px !important;
+}
+
+.nx-ops-command-card,
+.nx-ops-activity-card,
+.nx-ops-records-card,
+.nx-ops-special-head {
+    border: 1px solid rgba(111, 151, 188, .22) !important;
+    border-radius: 20px !important;
+    background:
+        radial-gradient(circle at 100% 0%, rgba(25, 211, 224, .08), transparent 46%),
+        linear-gradient(145deg, rgba(8, 28, 47, .98), rgba(3, 15, 29, .98)) !important;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, .18) !important;
+}
+
+.nx-ops-command-card {
+    padding: 15px !important;
+}
+
+.nx-ops-command-card > header,
+.nx-ops-activity-card > header,
+.nx-ops-records-card > header,
+.nx-ops-special-head {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 14px !important;
+}
+
+.nx-ops-label {
+    color: #d7b26d !important;
+    font-size: 9px !important;
+    font-weight: 1000 !important;
+    letter-spacing: .16em !important;
+}
+
+.nx-ops-command-card h2,
+.nx-ops-activity-card h2,
+.nx-ops-records-card h2,
+.nx-ops-special-head h2 {
+    margin: 4px 0 0 !important;
+    color: #fff !important;
+    font-size: 17px !important;
+}
+
+.nx-ops-status-dot,
+.nx-ops-health-score {
+    min-width: 54px !important;
+    min-height: 30px !important;
+    padding: 6px 10px !important;
+    border: 1px solid rgba(25, 211, 224, .34) !important;
+    border-radius: 999px !important;
+    background: rgba(25, 211, 224, .10) !important;
+    color: #82f3f7 !important;
+    font-size: 10px !important;
+    font-weight: 1000 !important;
+    text-align: center !important;
+}
+
+.nx-ops-quick-actions {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    margin-top: 14px !important;
+}
+
+.nx-ops-quick-actions a,
+.nx-ops-primary-action {
+    display: grid !important;
+    place-items: center !important;
+    min-height: 42px !important;
+    padding: 8px 12px !important;
+    border: 1px solid rgba(25, 211, 224, .28) !important;
+    border-radius: 13px !important;
+    background: rgba(7, 31, 50, .86) !important;
+    color: #eafcff !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    text-decoration: none !important;
+}
+
+.nx-ops-quick-actions a:hover,
+.nx-ops-primary-action:hover {
+    border-color: rgba(25, 211, 224, .72) !important;
+    background: rgba(25, 211, 224, .13) !important;
+}
+
+.nx-ops-health-list {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    margin-top: 14px !important;
+}
+
+.nx-ops-health-list div {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    min-height: 42px !important;
+    padding: 9px 11px !important;
+    border: 1px solid rgba(111, 151, 188, .16) !important;
+    border-radius: 12px !important;
+    background: rgba(2, 14, 27, .46) !important;
+}
+
+.nx-ops-health-list span {
+    color: #9eb4c7 !important;
+    font-size: 10px !important;
+}
+
+.nx-ops-health-list strong {
+    color: #fff !important;
+    font-size: 15px !important;
+}
+
+.nx-ops-module-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.nx-ops-module-card {
+    position: relative !important;
+    display: grid !important;
+    min-height: 132px !important;
+    padding: 15px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(111, 151, 188, .20) !important;
+    border-radius: 18px !important;
+    background:
+        linear-gradient(145deg, rgba(8, 28, 47, .96), rgba(3, 15, 29, .98)) !important;
+    color: inherit !important;
+    text-decoration: none !important;
+}
+
+.nx-ops-module-card::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: auto -22px -30px auto !important;
+    width: 100px !important;
+    height: 100px !important;
+    border-radius: 50% !important;
+    background: rgba(25, 211, 224, .08) !important;
+    filter: blur(2px) !important;
+}
+
+.nx-ops-module-card > span {
+    color: #d7b26d !important;
+    font-size: 10px !important;
+    font-weight: 1000 !important;
+    letter-spacing: .12em !important;
+}
+
+.nx-ops-module-card strong {
+    align-self: end !important;
+    margin-top: 15px !important;
+    color: #fff !important;
+    font-size: 15px !important;
+}
+
+.nx-ops-module-card small {
+    margin-top: 5px !important;
+    color: #8fa9bf !important;
+    font-size: 10px !important;
+    line-height: 1.55 !important;
+}
+
+.nx-ops-module-card:hover {
+    transform: translateY(-2px) !important;
+    border-color: rgba(25, 211, 224, .55) !important;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .26) !important;
+}
+
+.nx-ops-activity-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.nx-ops-activity-card,
+.nx-ops-records-card {
+    padding: 14px !important;
+}
+
+.nx-ops-activity-card > header,
+.nx-ops-records-card > header {
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid rgba(111, 151, 188, .14) !important;
+}
+
+.nx-ops-activity-card > header a,
+.nx-ops-records-card > header span {
+    color: #7fe9ef !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    text-decoration: none !important;
+}
+
+.nx-ops-activity-row,
+.nx-ops-record-row {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-height: 58px !important;
+    padding: 9px 0 !important;
+    border-bottom: 1px solid rgba(111, 151, 188, .10) !important;
+}
+
+.nx-ops-activity-row:last-child,
+.nx-ops-record-row:last-child {
+    border-bottom: 0 !important;
+}
+
+.nx-ops-activity-row > span,
+.nx-ops-record-row > span {
+    min-width: 58px !important;
+    padding: 5px 8px !important;
+    border-radius: 999px !important;
+    background: rgba(111, 151, 188, .12) !important;
+    color: #a9bfd2 !important;
+    font-size: 9px !important;
+    font-weight: 900 !important;
+    text-align: center !important;
+}
+
+.nx-ops-activity-row > span.live,
+.nx-ops-record-row > span.live,
+.nx-ops-activity-row > span.answered {
+    background: rgba(45, 212, 191, .12) !important;
+    color: #7ef2d7 !important;
+}
+
+.nx-ops-activity-row > span.draft,
+.nx-ops-record-row > span.draft,
+.nx-ops-activity-row > span.pending,
+.nx-ops-activity-row > span.open {
+    background: rgba(215, 178, 109, .12) !important;
+    color: #f0cf8b !important;
+}
+
+.nx-ops-activity-row strong,
+.nx-ops-record-row strong {
+    display: block !important;
+    overflow: hidden !important;
+    color: #eef7ff !important;
+    font-size: 11px !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.nx-ops-activity-row small,
+.nx-ops-record-row small {
+    display: block !important;
+    margin-top: 4px !important;
+    overflow: hidden !important;
+    color: #8099ae !important;
+    font-size: 9px !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.nx-ops-empty {
+    display: grid !important;
+    place-items: center !important;
+    min-height: 96px !important;
+    padding: 18px !important;
+    color: #829bad !important;
+    font-size: 11px !important;
+    text-align: center !important;
+}
+
+.nx-ops-empty--wide {
+    grid-column: 1 / -1 !important;
+    min-height: 180px !important;
+    border: 1px dashed rgba(111, 151, 188, .26) !important;
+    border-radius: 18px !important;
+    background: rgba(3, 16, 29, .46) !important;
+}
+
+.nx-ops-special-head {
+    padding: 16px !important;
+}
+
+.nx-ops-special-head p {
+    margin: 5px 0 0 !important;
+    max-width: 700px !important;
+    color: #91a9bc !important;
+    font-size: 11px !important;
+    line-height: 1.6 !important;
+}
+
+.nx-ops-primary-action {
+    min-width: 132px !important;
+    background:
+        linear-gradient(135deg, rgba(25, 211, 224, .22), rgba(25, 211, 224, .08)) !important;
+}
+
+.nx-ops-template-launcher {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.nx-ops-template-launcher a {
+    display: grid !important;
+    grid-template-columns: 42px minmax(0, 1fr) !important;
+    gap: 2px 12px !important;
+    min-height: 108px !important;
+    padding: 14px !important;
+    border: 1px solid rgba(111, 151, 188, .20) !important;
+    border-radius: 18px !important;
+    background:
+        radial-gradient(circle at 0% 100%, rgba(215, 178, 109, .08), transparent 42%),
+        linear-gradient(145deg, rgba(8, 28, 47, .96), rgba(3, 15, 29, .98)) !important;
+    color: inherit !important;
+    text-decoration: none !important;
+}
+
+.nx-ops-template-launcher a > span {
+    grid-row: 1 / 3 !important;
+    display: grid !important;
+    place-items: center !important;
+    width: 42px !important;
+    height: 42px !important;
+    border: 1px solid rgba(25, 211, 224, .24) !important;
+    border-radius: 13px !important;
+    background: rgba(25, 211, 224, .08) !important;
+    font-size: 19px !important;
+}
+
+.nx-ops-template-launcher strong {
+    align-self: end !important;
+    color: #fff !important;
+    font-size: 13px !important;
+}
+
+.nx-ops-template-launcher small {
+    color: #8fa9bf !important;
+    font-size: 10px !important;
+    line-height: 1.55 !important;
+}
+
+.nx-ops-template-launcher a:hover {
+    border-color: rgba(25, 211, 224, .58) !important;
+    transform: translateY(-2px) !important;
+}
+
+.nx-ops-records-card > header {
+    margin-bottom: 2px !important;
+}
+
+.nx-ops-data-note {
+    min-height: 190px !important;
+}
+
+.nx-ops-data-note > div {
+    display: grid !important;
+    place-items: center !important;
+    min-height: 128px !important;
+    padding: 16px !important;
+    text-align: center !important;
+}
+
+.nx-ops-data-note strong {
+    color: #eafcff !important;
+    font-size: 14px !important;
+}
+
+.nx-ops-data-note p {
+    max-width: 320px !important;
+    margin: 7px auto 0 !important;
+    color: #8fa9bf !important;
+    font-size: 10px !important;
+    line-height: 1.65 !important;
+}
+
+@media (max-width: 1100px) {
+    .nx-ops-kpi-grid,
+    .nx-ops-module-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .nx-ops-command-grid,
+    .nx-ops-activity-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nx-ops-quick-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 760px) {
+    .nx-ops-kpi-grid,
+    .nx-ops-module-grid,
+    .nx-ops-template-launcher,
+    .nx-ops-health-list {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nx-ops-special-head {
+        align-items: stretch !important;
+        flex-direction: column !important;
+    }
+
+    .nx-ops-primary-action {
+        width: 100% !important;
+    }
+}
+/* NEXORA_PEOPLE_OPERATIONS_CENTER_V1_END */

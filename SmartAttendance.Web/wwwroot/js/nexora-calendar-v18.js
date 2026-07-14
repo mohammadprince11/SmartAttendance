@@ -1,5 +1,6 @@
-// NEXORA Calendar V18.5
-// Arrows-only month navigation. Display format: yyyy-MM-dd.
+// NEXORA Calendar V18.8
+// Canonical shared calendar with interactive month/year selection.
+// NEXORA_CALENDAR_PERIOD_SELECTOR_V18_8_START
 
 (() => {
     const SELECTOR = 'input[type="date"]:not([data-nexora-native-date="true"]):not([data-nexora-calendar-built="1"])';
@@ -66,12 +67,17 @@
             view: monthStart(initialDate)
         };
 
+        let chooserMode = null;
+        let yearPageStart = state.view.getFullYear() - 5;
+
         const picker = document.createElement("div");
         picker.className = "nxcal";
+        picker.dataset.nexoraCalendarVersion = "18.8";
 
         const button = document.createElement("button");
         button.type = "button";
         button.className = "nxcal__button";
+        button.dataset.nexoraHover = "off";
         button.setAttribute("aria-haspopup", "dialog");
         button.setAttribute("aria-expanded", "false");
 
@@ -131,7 +137,12 @@
             picker.classList.toggle("is-above", preferAbove);
         }
 function changeMonth(delta) {
-            state.view = new Date(state.view.getFullYear(), state.view.getMonth() + delta, 1);
+            chooserMode = null;
+            state.view = new Date(
+                state.view.getFullYear(),
+                state.view.getMonth() + delta,
+                1
+            );
             render();
         }
 
@@ -150,9 +161,33 @@ function changeMonth(delta) {
             prevBtn.textContent = "‹";
             prevBtn.title = "الشهر السابق";
 
-            const month = document.createElement("div");
-            month.className = "nxcal__month";
-            month.textContent = `${MONTHS_AR[state.view.getMonth()]} ${state.view.getFullYear()}`;
+            const period = document.createElement("div");
+            period.className = "nxcal__period";
+
+            const monthBtn = document.createElement("button");
+            monthBtn.type = "button";
+            monthBtn.className = "nxcal__period-button nxcal__month-button";
+            monthBtn.textContent = MONTHS_AR[state.view.getMonth()];
+            monthBtn.title = "اختيار الشهر";
+            monthBtn.setAttribute(
+                "aria-expanded",
+                chooserMode === "month" ? "true" : "false"
+            );
+            monthBtn.dataset.nexoraHover = "off";
+
+            const yearBtn = document.createElement("button");
+            yearBtn.type = "button";
+            yearBtn.className = "nxcal__period-button nxcal__year-button";
+            yearBtn.textContent = String(state.view.getFullYear());
+            yearBtn.title = "اختيار السنة";
+            yearBtn.setAttribute(
+                "aria-expanded",
+                chooserMode === "year" ? "true" : "false"
+            );
+            yearBtn.dataset.nexoraHover = "off";
+
+            period.appendChild(monthBtn);
+            period.appendChild(yearBtn);
 
             const nextBtn = document.createElement("button");
             nextBtn.type = "button";
@@ -172,9 +207,156 @@ function changeMonth(delta) {
                 changeMonth(1);
             });
 
+            monthBtn.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                chooserMode = chooserMode === "month" ? null : "month";
+                render();
+            });
+
+            yearBtn.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (chooserMode !== "year") {
+                    yearPageStart = state.view.getFullYear() - 5;
+                }
+
+                chooserMode = chooserMode === "year" ? null : "year";
+                render();
+            });
+
             head.appendChild(prevBtn);
-            head.appendChild(month);
+            head.appendChild(period);
             head.appendChild(nextBtn);
+            panel.appendChild(head);
+
+            if (chooserMode === "month") {
+                const chooser = document.createElement("div");
+                chooser.className = "nxcal__chooser nxcal__month-chooser";
+
+                const chooserTitle = document.createElement("div");
+                chooserTitle.className = "nxcal__chooser-title";
+                chooserTitle.textContent = `اختر الشهر - ${state.view.getFullYear()}`;
+
+                const monthGrid = document.createElement("div");
+                monthGrid.className = "nxcal__month-grid";
+
+                MONTHS_AR.forEach((monthName, monthIndex) => {
+                    const option = document.createElement("button");
+                    option.type = "button";
+                    option.className = "nxcal__choice";
+                    option.textContent = monthName;
+                    option.dataset.nexoraHover = "off";
+
+                    if (monthIndex === state.view.getMonth()) {
+                        option.classList.add("is-selected");
+                    }
+
+                    option.addEventListener("click", (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        state.view = new Date(
+                            state.view.getFullYear(),
+                            monthIndex,
+                            1
+                        );
+                        chooserMode = null;
+                        render();
+                    });
+
+                    monthGrid.appendChild(option);
+                });
+
+                chooser.appendChild(chooserTitle);
+                chooser.appendChild(monthGrid);
+                panel.appendChild(chooser);
+                return;
+            }
+
+            if (chooserMode === "year") {
+                const chooser = document.createElement("div");
+                chooser.className = "nxcal__chooser nxcal__year-chooser";
+
+                const rangeHead = document.createElement("div");
+                rangeHead.className = "nxcal__year-range-head";
+
+                const previousRange = document.createElement("button");
+                previousRange.type = "button";
+                previousRange.className = "nxcal__range-nav";
+                previousRange.textContent = "‹";
+                previousRange.title = "السنوات السابقة";
+                previousRange.dataset.nexoraHover = "off";
+
+                const rangeLabel = document.createElement("div");
+                rangeLabel.className = "nxcal__year-range-label";
+                rangeLabel.textContent = `${yearPageStart} - ${yearPageStart + 11}`;
+
+                const nextRange = document.createElement("button");
+                nextRange.type = "button";
+                nextRange.className = "nxcal__range-nav";
+                nextRange.textContent = "›";
+                nextRange.title = "السنوات التالية";
+                nextRange.dataset.nexoraHover = "off";
+
+                previousRange.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    yearPageStart -= 12;
+                    render();
+                });
+
+                nextRange.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    yearPageStart += 12;
+                    render();
+                });
+
+                rangeHead.appendChild(previousRange);
+                rangeHead.appendChild(rangeLabel);
+                rangeHead.appendChild(nextRange);
+
+                const yearGrid = document.createElement("div");
+                yearGrid.className = "nxcal__year-grid";
+
+                for (let yearOffset = 0; yearOffset < 12; yearOffset++) {
+                    const year = yearPageStart + yearOffset;
+                    const option = document.createElement("button");
+                    option.type = "button";
+                    option.className = "nxcal__choice nxcal__year-choice";
+                    option.textContent = String(year);
+                    option.dataset.nexoraHover = "off";
+
+                    if (year === state.view.getFullYear()) {
+                        option.classList.add("is-selected");
+                    }
+
+                    option.addEventListener("click", (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        state.view = new Date(
+                            year,
+                            state.view.getMonth(),
+                            1
+                        );
+                        chooserMode = null;
+                        render();
+                    });
+
+                    yearGrid.appendChild(option);
+                }
+
+                chooser.appendChild(rangeHead);
+                chooser.appendChild(yearGrid);
+                panel.appendChild(chooser);
+                return;
+            }
 
             const week = document.createElement("div");
             week.className = "nxcal__week";
@@ -258,10 +440,12 @@ function changeMonth(delta) {
             foot.appendChild(clear);
             foot.appendChild(todayBtn);
 
-            panel.appendChild(head);
             panel.appendChild(week);
             panel.appendChild(grid);
             panel.appendChild(foot);
+            panel.querySelectorAll("button").forEach((control) => {
+                control.dataset.nexoraHover = "off";
+            });
         }
 
         button.addEventListener("click", (event) => {
@@ -278,6 +462,8 @@ function changeMonth(delta) {
                 const selected = parseIso(input.value);
                 if (selected) state.view = monthStart(selected);
 
+                chooserMode = null;
+                yearPageStart = state.view.getFullYear() - 5;
                 render();
                 picker.classList.add("is-open");
                 button.setAttribute("aria-expanded", "true");
@@ -330,7 +516,20 @@ function changeMonth(delta) {
     });
 
     window.addEventListener("resize", closeAll, { passive: true });
-    window.addEventListener("scroll", closeAll, true);
+    // NEXORA_CALENDAR_INTERNAL_SCROLL_V18_6_START
+    window.addEventListener("scroll", (event) => {
+        const target = event.target;
+
+        if (
+            target instanceof Element &&
+            target.closest(".nxcal__panel")
+        ) {
+            return;
+        }
+
+        closeAll();
+    }, true);
+    // NEXORA_CALENDAR_INTERNAL_SCROLL_V18_6_END
 
     document.addEventListener("DOMContentLoaded", () => {
         buildAll();
@@ -344,4 +543,5 @@ function changeMonth(delta) {
         childList: true,
         subtree: true
     });
+// NEXORA_CALENDAR_PERIOD_SELECTOR_V18_8_END
 })();

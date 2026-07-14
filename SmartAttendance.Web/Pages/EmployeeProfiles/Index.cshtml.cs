@@ -1,4 +1,4 @@
-using System.Data.Common;
+﻿using System.Data.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
@@ -19,7 +19,7 @@ public class IndexModel : PageModel
     public string Section { get; set; } = "engagement";
 
     [BindProperty(SupportsGet = true)]
-    public string Tab { get; set; } = "announcements";
+    public string Tab { get; set; } = "overview";
 
     [BindProperty(SupportsGet = true)]
     public string? Search { get; set; }
@@ -58,6 +58,23 @@ public class IndexModel : PageModel
     public int OpenFeedback => FeedbackItems.Count(x => x.Status.Equals("Open", StringComparison.OrdinalIgnoreCase));
     public int PendingFeedback => FeedbackItems.Count(x => x.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase));
     public int AnsweredFeedback => FeedbackItems.Count(x => x.Status.Equals("Answered", StringComparison.OrdinalIgnoreCase) || x.Status.Equals("Closed", StringComparison.OrdinalIgnoreCase));
+
+    public int ActivePeopleOperationsItems => PublishedAnnouncements + PublishedPolls;
+    public int OpenPeopleCases => OpenFeedback + PendingFeedback;
+
+    public IReadOnlyList<AnnouncementRow> RecognitionAnnouncements =>
+        Announcements
+            .Where(x => x.TemplateKey.Equals("appreciation", StringComparison.OrdinalIgnoreCase)
+                     || x.TemplateKey.Equals("promotion", StringComparison.OrdinalIgnoreCase)
+                     || x.TemplateKey.Equals("welcome", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    public IReadOnlyList<AnnouncementRow> CampaignAnnouncements =>
+        Announcements
+            .Where(x => x.TemplateKey.Equals("circular", StringComparison.OrdinalIgnoreCase)
+                     || x.TemplateKey.Equals("workhours", StringComparison.OrdinalIgnoreCase)
+                     || x.TemplateKey.Equals("holiday", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
     public async Task OnGetAsync()
     {
@@ -421,10 +438,31 @@ WHERE Id = @Id;
 
     private void NormalizeRoute()
     {
-        if (string.IsNullOrWhiteSpace(Section)) Section = "engagement";
-        if (string.IsNullOrWhiteSpace(Tab)) Tab = "announcements";
+        if (string.IsNullOrWhiteSpace(Section))
+        {
+            Section = "engagement";
+        }
+
         Section = Section.Trim().ToLowerInvariant();
-        Tab = Tab.Trim().ToLowerInvariant();
+
+        var normalizedTab = string.IsNullOrWhiteSpace(Tab)
+            ? "overview"
+            : Tab.Trim().ToLowerInvariant();
+
+        var allowedTabs = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "overview",
+            "announcements",
+            "polls",
+            "feedback",
+            "wall",
+            "recognition",
+            "campaigns"
+        };
+
+        Tab = allowedTabs.Contains(normalizedTab)
+            ? normalizedTab
+            : "overview";
     }
 
     private async Task<List<AnnouncementRow>> LoadAnnouncementsAsync()
@@ -645,12 +683,15 @@ ORDER BY FullName;
         var name = string.IsNullOrWhiteSpace(personName) ? "أحد موظفينا" : personName.Trim();
         return templateKey switch
         {
-            "marriage" => $"تهنئة بمناسبة الزواج - {name}",
-            "condolence" => $"تعزية - {name}",
-            "newborn" => $"مولود جديد - {name}",
-            "holiday" => "عطلة رسمية",
-            "promotion" => $"تهنئة بالترقية - {name}",
+            "holiday" => "إعلان عطلة رسمية",
+            "circular" => "تعميم إداري",
+            "workhours" => "تغيير أوقات الدوام",
             "welcome" => $"ترحيب بموظف جديد - {name}",
+            "promotion" => $"تهنئة بالترقية - {name}",
+            "appreciation" => $"شكر وتقدير - {name}",
+            "marriage" => $"تهنئة بمناسبة الزواج - {name}",
+            "condolence" => $"تعزية ومواساة - {name}",
+            "newborn" => $"مولود جديد - {name}",
             "farewell" => $"وداع وشكر - {name}",
             _ => Announcement.Title?.Trim() ?? string.Empty
         };
@@ -665,12 +706,15 @@ ORDER BY FullName;
 
         return templateKey switch
         {
+            "holiday" => $"تعلن إدارة الموارد البشرية عن عطلة رسمية{(string.IsNullOrWhiteSpace(date) ? "" : $" بتاريخ {date}")}. يرجى من جميع الموظفين الالتزام بالتعليمات الخاصة بالدوام والعودة حسب التوجيه المعتمد.",
+            "circular" => $"يرجى من جميع الموظفين الاطلاع على هذا التعميم الإداري والعمل بمضمونه اعتباراً{(string.IsNullOrWhiteSpace(date) ? " من تاريخ النشر" : $" من تاريخ {date}")}. لأي استفسار يرجى التواصل مع الجهة المعنية.",
+            "workhours" => $"نود إعلامكم بأنه تم تحديث أوقات الدوام{(string.IsNullOrWhiteSpace(extra) ? "" : $" إلى {extra}")}{(string.IsNullOrWhiteSpace(date) ? "" : $" اعتباراً من {date}")}. يرجى الالتزام بالتوقيت الجديد والتنسيق مع المسؤول المباشر.",
+            "welcome" => $"نرحب بانضمام {name} إلى فريق العمل{(string.IsNullOrWhiteSpace(extra) ? "" : $" بمنصب {extra}")}. نتمنى له بداية موفقة ومسيرة ناجحة ضمن عائلة الشركة.",
+            "promotion" => $"نبارك إلى {name} ترقيته{(string.IsNullOrWhiteSpace(extra) ? "" : $" إلى منصب {extra}")}. نتمنى له دوام النجاح والتوفيق في مهامه الجديدة، مع الشكر والتقدير لجهوده المميزة.",
+            "appreciation" => $"تتقدم الشركة بالشكر والتقدير إلى {name}{(string.IsNullOrWhiteSpace(extra) ? "" : $" تقديراً لـ {extra}")}. نثمّن هذا العطاء ونتمنى له المزيد من النجاح والتميز.",
             "marriage" => $"تتقدم الشركة بخالص التهاني والتبريكات إلى {name} بمناسبة الزواج. نتمنى له حياة سعيدة مليئة بالمودة والنجاح، ودوام الفرح والتوفيق.",
             "condolence" => $"تتقدم الشركة بخالص العزاء والمواساة إلى {name}. سائلين الله أن يتغمد الفقيد بواسع رحمته، وأن يلهم أهله وذويه الصبر والسلوان.",
             "newborn" => $"تتقدم الشركة بأصدق التهاني إلى {name} بمناسبة المولود الجديد{(string.IsNullOrWhiteSpace(extra) ? "" : $" ({extra})")}. نسأل الله أن يجعله من مواليد السعادة والبركة.",
-            "holiday" => $"تعلن إدارة الشركة عن عطلة رسمية{(string.IsNullOrWhiteSpace(date) ? "" : $" بتاريخ {date}")}. يرجى من جميع الموظفين الالتزام بالتعليمات الخاصة بالدوام حسب توجيهات الإدارة.",
-            "promotion" => $"نبارك إلى {name} ترقيته{(string.IsNullOrWhiteSpace(extra) ? "" : $" إلى منصب {extra}")}. نتمنى له دوام النجاح والتوفيق في مهامه الجديدة، مع الشكر والتقدير لجهوده المميزة.",
-            "welcome" => $"نرحب بانضمام {name} إلى فريق العمل{(string.IsNullOrWhiteSpace(extra) ? "" : $" بمنصب {extra}")}. نتمنى له بداية موفقة ومسيرة ناجحة ضمن عائلة الشركة.",
             "farewell" => $"تتقدم الشركة بالشكر والتقدير إلى {name} على ما قدمه من جهود خلال فترة عمله. نتمنى له دوام التوفيق والنجاح في مسيرته القادمة.",
             _ => Announcement.Body?.Trim() ?? string.Empty
         } + $"\n\n{department}";
@@ -784,17 +828,21 @@ ORDER BY FullName;
         public string Category { get; init; } = "عام";
         public string Icon { get; init; } = "📣";
         public string CssClass { get; init; } = "custom";
+        public string AssetKey { get; init; } = "custom";
 
         public static IReadOnlyList<AnnouncementTemplateDefinition> All { get; } = new List<AnnouncementTemplateDefinition>
         {
-            new() { Key = "custom", Name = "مخصص", Description = "إعلان حر", Category = "عام", Icon = "📣", CssClass = "custom" },
-            new() { Key = "marriage", Name = "زواج", Description = "تهنئة رسمية", Category = "تهنئة", Icon = "💍", CssClass = "marriage" },
-            new() { Key = "condolence", Name = "وفاة", Description = "تعزية ومواساة", Category = "تعزية", Icon = "🕊️", CssClass = "condolence" },
-            new() { Key = "newborn", Name = "مولود جديد", Description = "تهنئة مولود", Category = "تهنئة", Icon = "👶", CssClass = "newborn" },
-            new() { Key = "holiday", Name = "عطلة رسمية", Description = "إشعار عطلة", Category = "عطلة رسمية", Icon = "📅", CssClass = "holiday" },
-            new() { Key = "promotion", Name = "ترقية", Description = "تهنئة وظيفية", Category = "تهنئة", Icon = "📈", CssClass = "promotion" },
-            new() { Key = "welcome", Name = "ترحيب بموظف جديد", Description = "انضمام جديد", Category = "ترحيب", Icon = "🤝", CssClass = "welcome" },
-            new() { Key = "farewell", Name = "وداع موظف", Description = "شكر وتقدير", Category = "وداع", Icon = "🧳", CssClass = "farewell" }
+            new() { Key = "custom", Name = "مخصص", Description = "إعلان حر", Category = "عام", Icon = "📣", CssClass = "custom", AssetKey = "custom" },
+            new() { Key = "holiday", Name = "عطلة رسمية", Description = "إشعار عطلة", Category = "عطلة رسمية", Icon = "📅", CssClass = "holiday", AssetKey = "holiday" },
+            new() { Key = "circular", Name = "تعميم إداري", Description = "توجيه رسمي", Category = "تعميم إداري", Icon = "📄", CssClass = "circular", AssetKey = "circular" },
+            new() { Key = "workhours", Name = "تغيير الدوام", Description = "تحديث أوقات العمل", Category = "تعليمات", Icon = "🕘", CssClass = "holiday", AssetKey = "holiday" },
+            new() { Key = "welcome", Name = "موظف جديد", Description = "ترحيب وانضمام", Category = "ترحيب", Icon = "🤝", CssClass = "welcome", AssetKey = "welcome" },
+            new() { Key = "promotion", Name = "ترقية", Description = "تهنئة وظيفية", Category = "تهنئة", Icon = "📈", CssClass = "promotion", AssetKey = "promotion" },
+            new() { Key = "appreciation", Name = "شكر وتقدير", Description = "تكريم إنجاز", Category = "شكر وتقدير", Icon = "🏆", CssClass = "promotion", AssetKey = "promotion" },
+            new() { Key = "marriage", Name = "زواج", Description = "تهنئة رسمية", Category = "تهنئة", Icon = "💍", CssClass = "marriage", AssetKey = "marriage" },
+            new() { Key = "condolence", Name = "تعزية", Description = "تعزية ومواساة", Category = "تعزية", Icon = "🕊️", CssClass = "condolence", AssetKey = "condolence" },
+            new() { Key = "newborn", Name = "مولود جديد", Description = "تهنئة مولود", Category = "تهنئة", Icon = "👶", CssClass = "newborn", AssetKey = "newborn" },
+            new() { Key = "farewell", Name = "وداع موظف", Description = "شكر وتقدير", Category = "وداع", Icon = "🧳", CssClass = "farewell", AssetKey = "farewell" }
         };
     }
 
@@ -817,4 +865,3 @@ ORDER BY FullName;
         public string Name { get; set; } = string.Empty;
     }
 }
-

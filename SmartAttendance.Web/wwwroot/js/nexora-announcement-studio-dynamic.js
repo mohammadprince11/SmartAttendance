@@ -1,21 +1,30 @@
-﻿
-(function () {
+﻿(function () {
     const root = document.getElementById('nxApprovedAnnouncementStudio');
     if (!root) return;
 
     const templates = [
-        { key: 'marriage', category: 'تهنئة', pre: 'تهنئة رسمية', title: 'تهنئة بمناسبة الزواج', body: 'تتقدم الشركة بأصدق التهاني إلى {person} بمناسبة الزواج. نتمنى له حياة سعيدة وموفقة ومليئة بالمودة والرحمة.', date: '', department: 'قسم الموارد البشرية' },
-        { key: 'condolence', category: 'تعزية', pre: 'تعزية ومواساة', title: 'إِنَّا لِلّهِ وَإِنَّا إِلَيْهِ رَاجِعونَ', body: 'تتقدم الشركة بخالص العزاء والمواساة إلى {person}. سائلين الله أن يتغمد الفقيد بواسع رحمته وأن يلهم أهله وذويه الصبر والسلوان.', date: '', department: 'قسم الموارد البشرية' },
-        { key: 'newborn', category: 'تهنئة', pre: 'تهنئة مولود', title: 'مبارك المولود الجديد', body: 'تتقدم الشركة بأصدق التهاني إلى {person} بمناسبة المولود الجديد {secondary}. نسأل الله أن يجعله من مواليد السعادة والبركة.', date: '', department: 'قسم الموارد البشرية' },
-        { key: 'holiday', category: 'عطلة رسمية', pre: 'بمناسبة المناسبة الوطنية', title: 'عطلة رسمية', body: 'تعلن إدارة الموارد البشرية أن الدوام سيكون متوقفاً يوم الخميس الموافق 15 أيار 2026', date: '15/05/2026', department: 'قسم الموارد البشرية' },
-        { key: 'promotion', category: 'تهنئة', pre: 'تهنئة وظيفية', title: 'تهنئة بالترقية', body: 'نبارك إلى {person} ترقيته إلى {secondary}. نتمنى له دوام النجاح والتوفيق في مهامه الجديدة، مع الشكر والتقدير لجهوده المميزة.', date: '', department: 'قسم الموارد البشرية' },
-        { key: 'welcome', category: 'ترحيب', pre: 'انضمام جديد', title: 'ترحيب بموظف جديد', body: 'نرحب بانضمام {person} إلى فريق العمل بمنصب {secondary}. نتمنى له بداية موفقة ومسيرة ناجحة ضمن عائلة الشركة.', date: '', department: 'قسم الموارد البشرية' },
-        { key: 'farewell', category: 'وداع', pre: 'شكر وتقدير', title: 'وداع وشكر', body: 'تتقدم الشركة بالشكر والتقدير إلى {person} على ما قدمه من جهود خلال فترة عمله. نتمنى له دوام التوفيق والنجاح في مسيرته القادمة.', date: '', department: 'قسم الموارد البشرية' },
-        { key: 'custom', category: 'عام', pre: 'إعلان داخلي', title: 'عنوان الإعلان المخصص', body: 'اكتب تفاصيل الإعلان هنا، وسيظهر النص في المعاينة مباشرة بدون استخدام قالب ثابت.', date: '', department: 'قسم الموارد البشرية' }
+        { key: 'holiday', artKey: 'holiday', category: 'عطلة رسمية', pre: 'إشعار عطلة رسمية', title: 'إعلان عطلة رسمية', body: 'تعلن إدارة الموارد البشرية عن عطلة رسمية بتاريخ {date}. يرجى من جميع الموظفين الالتزام بالتعليمات الخاصة بالدوام والعودة حسب التوجيه المعتمد.', date: '15/05/2026', department: 'إدارة الموارد البشرية' },
+        { key: 'circular', artKey: 'circular', category: 'تعميم إداري', pre: 'توجيه رسمي', title: 'تعميم إداري', body: 'يرجى من جميع الموظفين الاطلاع على هذا التعميم والعمل بمضمونه اعتباراً من {date}. لأي استفسار يرجى التواصل مع الجهة المعنية.', date: '', department: 'إدارة الموارد البشرية' },
+        { key: 'workhours', artKey: 'holiday', category: 'تعليمات', pre: 'تحديث أوقات العمل', title: 'تغيير أوقات الدوام', body: 'نود إعلامكم بأنه تم تحديث أوقات الدوام إلى {secondary} اعتباراً من {date}. يرجى الالتزام بالتوقيت الجديد والتنسيق مع المسؤول المباشر.', date: '', department: 'إدارة الموارد البشرية' },
+        { key: 'welcome', artKey: 'welcome', category: 'ترحيب', pre: 'انضمام جديد', title: 'ترحيب بموظف جديد', body: 'نرحب بانضمام {person} إلى فريق العمل بمنصب {secondary}. نتمنى له بداية موفقة ومسيرة ناجحة ضمن عائلة الشركة.', date: '', department: 'إدارة الموارد البشرية' },
+        { key: 'promotion', artKey: 'promotion', category: 'تهنئة', pre: 'تهنئة وظيفية', title: 'تهنئة بالترقية', body: 'نبارك إلى {person} ترقيته إلى {secondary}. نتمنى له دوام النجاح والتوفيق في مهامه الجديدة، مع الشكر والتقدير لجهوده المميزة.', date: '', department: 'إدارة الموارد البشرية' },
+        { key: 'appreciation', artKey: 'promotion', category: 'شكر وتقدير', pre: 'تكريم إنجاز', title: 'شكر وتقدير', body: 'تتقدم الشركة بالشكر والتقدير إلى {person} تقديراً لـ {secondary}. نثمّن هذا العطاء ونتمنى له المزيد من النجاح والتميز.', date: '', department: 'إدارة الموارد البشرية' },
+        { key: 'marriage', artKey: 'marriage', category: 'تهنئة', pre: 'تهنئة رسمية', title: 'تهنئة بمناسبة الزواج', body: 'تتقدم الشركة بأصدق التهاني إلى {person} بمناسبة الزواج. نتمنى له حياة سعيدة وموفقة ومليئة بالمودة والرحمة.', date: '', department: 'إدارة الموارد البشرية' },
+        { key: 'condolence', artKey: 'condolence', category: 'تعزية', pre: 'تعزية ومواساة', title: 'إِنَّا لِلّهِ وَإِنَّا إِلَيْهِ رَاجِعونَ', body: 'تتقدم الشركة بخالص العزاء والمواساة إلى {person}. سائلين الله أن يتغمد الفقيد بواسع رحمته وأن يلهم أهله وذويه الصبر والسلوان.', date: '', department: 'إدارة الموارد البشرية' },
+        { key: 'newborn', artKey: 'newborn', category: 'تهنئة', pre: 'تهنئة مولود', title: 'مبارك المولود الجديد', body: 'تتقدم الشركة بأصدق التهاني إلى {person} بمناسبة المولود الجديد {secondary}. نسأل الله أن يجعله من مواليد السعادة والبركة.', date: '', department: 'إدارة الموارد البشرية' },
+        { key: 'farewell', artKey: 'farewell', category: 'وداع', pre: 'شكر وتقدير', title: 'وداع وشكر', body: 'تتقدم الشركة بالشكر والتقدير إلى {person} على ما قدمه من جهود خلال فترة عمله. نتمنى له دوام التوفيق والنجاح في مسيرته القادمة.', date: '', department: 'إدارة الموارد البشرية' },
+        { key: 'custom', artKey: 'custom', category: 'عام', pre: 'إعلان داخلي', title: 'عنوان الإعلان المخصص', body: 'اكتب تفاصيل الإعلان هنا، وسيظهر النص في المعاينة مباشرة بدون استخدام قالب ثابت.', date: '', department: 'إدارة الموارد البشرية' }
     ];
+
+    const templateCards = Array.from(root.querySelectorAll('[data-ann-template-card]'));
+    const filterButtons = Array.from(root.querySelectorAll('[data-ann-filter]'));
+    const templateGrid = root.querySelector('[data-ann-template-grid]');
+    const prevScrollButton = root.querySelector('[data-ann-template-scroll="prev"]');
+    const nextScrollButton = root.querySelector('[data-ann-template-scroll="next"]');
 
     let index = templates.findIndex(t => t.key === 'holiday');
     if (index < 0) index = 0;
+    let activeFilter = 'all';
 
     const form = document.getElementById('nxAnnCreateForm');
     const liveCard = document.getElementById('nxLiveAnnouncementCard');
@@ -51,6 +60,10 @@
         return templates.find(t => t.key === key) || templates[templates.length - 1];
     }
 
+    function visibleCards() {
+        return templateCards.filter(card => !card.classList.contains('is-hidden'));
+    }
+
     function selectedKey() {
         const checkedMode = root.querySelector('input[name="Announcement.UseTemplateMode"]:checked');
         if (checkedMode && checkedMode.value === 'Custom') return 'custom';
@@ -68,31 +81,53 @@
             if (select) select.value = 'custom';
             root.querySelectorAll('input[name="Announcement.TemplateKey"]').forEach(r => r.checked = false);
             if (customHelp) customHelp.classList.add('is-visible');
-            root.querySelectorAll('[data-ann-template-card]').forEach(card => {
+            templateCards.forEach(card => {
                 card.classList.remove('active');
                 card.classList.add('is-muted');
             });
         } else {
             if (templateRadio) templateRadio.checked = true;
             if (customHelp) customHelp.classList.remove('is-visible');
-            root.querySelectorAll('[data-ann-template-card]').forEach(card => card.classList.remove('is-muted'));
+            templateCards.forEach(card => card.classList.remove('is-muted'));
         }
     }
 
     function text(templateText) {
         const person = value('person') || 'زميلنا العزيز';
-        const secondary = value('secondary') || 'المهمة الجديدة';
+        const secondary = value('secondary') || 'المعلومة الإضافية';
+        const date = value('date') || 'التاريخ المحدد';
+        const department = value('department') || 'إدارة الموارد البشرية';
+
         return templateText
             .replaceAll('{person}', person)
-            .replaceAll('{secondary}', secondary);
+            .replaceAll('{secondary}', secondary)
+            .replaceAll('{date}', date)
+            .replaceAll('{department}', department);
+    }
+
+    function scrollCardIntoView(key) {
+        const target = templateCards.find(card => card.dataset.annTemplateCard === key && !card.classList.contains('is-hidden'));
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+    }
+
+    function updateScrollActions() {
+        if (!templateGrid || !prevScrollButton || !nextScrollButton) return;
+        const maxScroll = Math.max(0, templateGrid.scrollWidth - templateGrid.clientWidth - 2);
+        const current = Math.max(0, templateGrid.scrollLeft);
+        prevScrollButton.disabled = current <= 2;
+        nextScrollButton.disabled = current >= maxScroll;
     }
 
     function setActive(key) {
         const isCustom = key === 'custom';
 
-        root.querySelectorAll('[data-ann-template-card]').forEach(card => {
-            card.classList.toggle('active', !isCustom && card.dataset.annTemplateCard === key);
+        templateCards.forEach(card => {
+            const isSelected = !isCustom && card.dataset.annTemplateCard === key;
+            card.classList.toggle('active', isSelected);
             card.classList.toggle('is-muted', isCustom);
+            card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
         });
 
         root.querySelectorAll('[data-ann-template-button]').forEach(btn => {
@@ -102,6 +137,13 @@
         root.querySelectorAll('.nx-dots i').forEach((dot, i) => {
             dot.classList.toggle('active', !isCustom && i === index);
         });
+
+        if (!isCustom) {
+            window.requestAnimationFrame(() => {
+                scrollCardIntoView(key);
+                updateScrollActions();
+            });
+        }
     }
 
     function syncInputs(key, force) {
@@ -140,7 +182,7 @@
         syncInputs(template.key, force);
 
         liveCard.className = `nx-live-card ${template.key}`;
-        artImage.src = `/brand/announcement-studio/art/${template.key}.png`;
+        artImage.src = `/brand/announcement-studio/art/${template.artKey || 'custom'}.png`;
         artImage.alt = template.key;
 
         liveCategory.textContent = value('category') || template.category;
@@ -155,6 +197,39 @@
         setActive(template.key);
     }
 
+    function applyFilter(group, preserveSelection) {
+        activeFilter = group || 'all';
+
+        filterButtons.forEach(button => {
+            button.classList.toggle('active', button.dataset.annFilter === activeFilter);
+        });
+
+        templateCards.forEach(card => {
+            const matches = activeFilter === 'all' || card.dataset.annTemplateGroup === activeFilter;
+            card.classList.toggle('is-hidden', !matches);
+        });
+
+        if (!preserveSelection) {
+            const currentCard = templateCards.find(card => card.dataset.annTemplateCard === selectedKey());
+            if (!currentCard || currentCard.classList.contains('is-hidden')) {
+                const fallbackCard = visibleCards()[0];
+                if (fallbackCard) {
+                    render(fallbackCard.dataset.annTemplateCard, true);
+                }
+            }
+        }
+
+        window.requestAnimationFrame(updateScrollActions);
+    }
+
+    templateCards.forEach(card => {
+        card.addEventListener('click', event => {
+            if (event.target.closest('input')) return;
+            setMode('Template');
+            render(card.dataset.annTemplateCard, true);
+        });
+    });
+
     root.querySelectorAll('input[name="Announcement.TemplateKey"]').forEach(radio => {
         radio.addEventListener('change', () => {
             setMode('Template');
@@ -168,6 +243,26 @@
             render(btn.dataset.annTemplateButton, true);
         });
     });
+
+    filterButtons.forEach(button => {
+        button.addEventListener('click', () => applyFilter(button.dataset.annFilter, false));
+    });
+
+    if (templateGrid) {
+        templateGrid.addEventListener('scroll', updateScrollActions, { passive: true });
+    }
+
+    if (prevScrollButton && templateGrid) {
+        prevScrollButton.addEventListener('click', () => {
+            templateGrid.scrollBy({ left: -280, behavior: 'smooth' });
+        });
+    }
+
+    if (nextScrollButton && templateGrid) {
+        nextScrollButton.addEventListener('click', () => {
+            templateGrid.scrollBy({ left: 280, behavior: 'smooth' });
+        });
+    }
 
     root.querySelectorAll('input[name="Announcement.UseTemplateMode"]').forEach(mode => {
         mode.addEventListener('change', () => {
@@ -186,6 +281,7 @@
                 render('custom', false);
             } else {
                 setMode('Template');
+                applyFilter(activeFilter, true);
                 render(select.value, true);
             }
         });
@@ -216,7 +312,15 @@
         previewButton.addEventListener('click', () => render(selectedKey(), false));
     }
 
-    render('holiday', true);
+    const requestedPreset = new URLSearchParams(window.location.search).get('preset');
+    const initialTemplate = templates.some(t => t.key === requestedPreset && t.key !== 'custom')
+        ? requestedPreset
+        : 'holiday';
+
+    applyFilter('all', true);
+    render(initialTemplate, true);
+    window.requestAnimationFrame(updateScrollActions);
+    window.addEventListener('resize', updateScrollActions);
 })();
 
 
@@ -385,4 +489,3 @@
 
     applyTemplate('satisfaction');
 })();
-

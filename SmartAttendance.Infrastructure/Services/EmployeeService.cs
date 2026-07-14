@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Branches.ViewModels;
@@ -59,12 +59,22 @@ public class EmployeeService : IEmployeeService
         var startOfYear = new DateOnly(DateTime.Today.Year, 1, 1);
         var startOfNextYear = startOfYear.AddYears(1);
 
-        var totalEmployees = await employeesQuery.CountAsync();
-        var activeEmployees = await employeesQuery.CountAsync(x => x.IsActive);
+        var employeeSummary = await employeesQuery
+            .GroupBy(_ => 1)
+            .Select(group => new
+            {
+                TotalEmployees = group.Count(),
+                ActiveEmployees = group.Count(x => x.IsActive),
+                NewThisYear = group.Count(x =>
+                    x.HireDate >= startOfYear &&
+                    x.HireDate < startOfNextYear)
+            })
+            .FirstOrDefaultAsync();
+
+        var totalEmployees = employeeSummary?.TotalEmployees ?? 0;
+        var activeEmployees = employeeSummary?.ActiveEmployees ?? 0;
         var inactiveEmployees = totalEmployees - activeEmployees;
-        var newThisYear = await employeesQuery.CountAsync(x =>
-            x.HireDate >= startOfYear &&
-            x.HireDate < startOfNextYear);
+        var newThisYear = employeeSummary?.NewThisYear ?? 0;
 
         var filteredQuery = employeesQuery;
 
@@ -446,21 +456,22 @@ public class EmployeeService : IEmployeeService
         GetDepartmentsForDropdownAsync(
             int? companyId = null)
     {
-        var departments = await _unitOfWork.Departments.GetAllAsync();
-        var companies = await _unitOfWork.Companies.GetAllAsync();
-
-        var companyLookup = companies
+        var departmentsQuery = _dbContext.Departments
+            .AsNoTracking()
             .Where(x =>
+                !x.IsDeleted &&
                 x.IsActive &&
-                (!companyId.HasValue || x.Id == companyId.Value))
-            .ToDictionary(x => x.Id, x => x.Name);
+                !x.Company.IsDeleted &&
+                x.Company.IsActive);
 
-        return departments
-            .Where(x =>
-                x.IsActive &&
-                companyLookup.ContainsKey(x.CompanyId) &&
-                (!companyId.HasValue || x.CompanyId == companyId.Value))
-            .OrderBy(x => companyLookup[x.CompanyId])
+        if (companyId.HasValue && companyId.Value > 0)
+        {
+            departmentsQuery = departmentsQuery.Where(x =>
+                x.CompanyId == companyId.Value);
+        }
+
+        return await departmentsQuery
+            .OrderBy(x => x.Company.Name)
             .ThenBy(x => x.Name)
             .Select(x => new DepartmentListViewModel
             {
@@ -469,23 +480,34 @@ public class EmployeeService : IEmployeeService
                 Name = x.Name,
                 IsActive = x.IsActive,
                 CompanyId = x.CompanyId,
-                CompanyName = companyLookup[x.CompanyId],
-                BranchId = 0,
-                BranchName = string.Empty
+                CompanyName = x.Company.Name,
+                BranchId = x.BranchId ?? 0,
+                BranchName = x.Branch == null || x.Branch.IsDeleted
+                    ? string.Empty
+                    : x.Branch.Name
             })
-            .ToList();
+            .ToListAsync();
     }
 
     public async Task<IEnumerable<BranchListViewModel>>
         GetBranchesForDropdownAsync(
             int? companyId = null)
     {
-        var branches = await _unitOfWork.Branches.GetAllAsync();
-
-        return branches
+        var branchesQuery = _dbContext.Branches
+            .AsNoTracking()
             .Where(x =>
+                !x.IsDeleted &&
                 x.IsActive &&
-                (!companyId.HasValue || x.CompanyId == companyId.Value))
+                !x.Company.IsDeleted &&
+                x.Company.IsActive);
+
+        if (companyId.HasValue && companyId.Value > 0)
+        {
+            branchesQuery = branchesQuery.Where(x =>
+                x.CompanyId == companyId.Value);
+        }
+
+        return await branchesQuery
             .OrderBy(x => x.Name)
             .Select(x => new BranchListViewModel
             {
@@ -496,7 +518,7 @@ public class EmployeeService : IEmployeeService
                 IsActive = x.IsActive,
                 CompanyId = x.CompanyId
             })
-            .ToList();
+            .ToListAsync();
     }
 
     public async Task<IEnumerable<PositionOptionViewModel>>

@@ -1,10 +1,10 @@
 
 /* ==========================================================================
    NEXORA Employees Master Filter - Clean Rebuild
-   هدف الملف:
-   - إلغاء تأثير كل تصاميم الفلتر القديمة.
-   - بناء شريط فلاتر ثابت، متناظر، بدون حركة.
-   - فلترة + عدد أسطر من سكربت واحد فقط.
+   Canonical server-side filter layout:
+   - One stylesheet for filter fields, toolbar, page-size control, and pagination.
+   - Keep Work Location and Department as independent company-level filters.
+   - Preserve the NEXORA custom select system without duplicate wrappers.
    ========================================================================== */
 
 body.nxr-employees-master-filter-active .nxr-emp-filter,
@@ -58,7 +58,7 @@ body.nxr-employees-master-filter-active .nxr-emp-master-grid {
 }
 
 /* Fields */
-body.nxr-employees-master-filter-active .nxr-emp-filter .nxr-field {
+body.nxr-employees-master-filter-active .nxr-emp-filter .nxr-emp-field {
     display: grid !important;
     grid-template-rows: 18px 42px !important;
     gap: 4px !important;
@@ -67,7 +67,7 @@ body.nxr-employees-master-filter-active .nxr-emp-filter .nxr-field {
     margin: 0 !important;
 }
 
-body.nxr-employees-master-filter-active .nxr-emp-filter .nxr-field label {
+body.nxr-employees-master-filter-active .nxr-emp-filter .nxr-emp-field label {
     height: 18px !important;
     line-height: 18px !important;
     margin: 0 !important;
@@ -166,53 +166,142 @@ body.nxr-employees-master-filter-active .nxr-emp-master-actions {
 }
 
 body.nxr-employees-master-filter-active .nxr-emp-master-page-size {
-    height: 36px !important;
+    width: auto !important;
+    min-width: 154px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
     display: inline-flex !important;
     align-items: center !important;
-    gap: 8px !important;
-    padding: 0 10px !important;
+    justify-content: center !important;
+    gap: 9px !important;
+    padding: 0 12px !important;
     border-radius: 999px !important;
     border: 1px solid rgba(25, 211, 224, .28) !important;
     background: rgba(25, 211, 224, .075) !important;
     color: #9EEBF1 !important;
     box-sizing: border-box !important;
-}
-
-body.nxr-employees-master-filter-active .nxr-emp-master-page-size span {
-    font-size: 12px !important;
-    font-weight: 1000 !important;
+    overflow: visible !important;
     white-space: nowrap !important;
 }
 
-body.nxr-employees-master-filter-active .nxr-emp-master-page-size select {
-    width: 72px !important;
-    min-width: 72px !important;
-    height: 28px !important;
-    min-height: 28px !important;
-    max-height: 28px !important;
-    padding: 0 8px !important;
-    border-radius: 999px !important;
-    border: 1px solid rgba(25, 211, 224, .35) !important;
-    background: rgba(3, 13, 25, .92) !important;
-    color: #EEF6FB !important;
-    font-size: 12px !important;
-    font-weight: 1000 !important;
-    text-align: center !important;
-}
-
-body.nxr-employees-master-filter-active .nxr-emp-master-reset {
-    height: 36px !important;
-    min-width: 104px !important;
+body.nxr-employees-master-filter-active .nxr-emp-master-page-size > span {
+    height: 30px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 0 13px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #9EEBF1 !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+}
+
+body.nxr-employees-master-filter-active
+.nxr-emp-master-page-size
+> select[data-nxr-server-select].nxcs-native
++ .nxcs-select--employee-page-size {
+    width: 70px !important;
+    min-width: 70px !important;
+    max-width: 70px !important;
+    flex: 0 0 70px !important;
+    display: inline-flex !important;
+    direction: rtl !important;
+}
+
+body.nxr-employees-master-filter-active
+.nxr-emp-master-page-size
+.nxcs-select--employee-page-size
+.nxcs-trigger {
+    width: 70px !important;
+    min-width: 70px !important;
+    max-width: 70px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 3px !important;
+    padding: 0 4px 0 6px !important;
+    border-radius: 999px !important;
+    direction: rtl !important;
+    text-align: center !important;
+}
+
+body.nxr-employees-master-filter-active
+.nxr-emp-master-page-size
+.nxcs-select--employee-page-size
+.nxcs-value {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    text-align: center !important;
+    direction: ltr !important;
+    line-height: 1 !important;
+    font-size: 13px !important;
+    font-weight: 1000 !important;
+    font-variant-numeric: tabular-nums !important;
+    font-feature-settings: "tnum" 1 !important;
+    letter-spacing: .02em !important;
+}
+
+body.nxr-employees-master-filter-active
+.nxr-emp-master-page-size
+.nxcs-select--employee-page-size
+.nxcs-caret {
+    width: 22px !important;
+    height: 22px !important;
+    flex: 0 0 22px !important;
+    font-size: 9px !important;
+}
+
+.nxcs-panel--employee-page-size {
+    min-width: 84px !important;
+    max-width: 84px !important;
+    gap: 4px !important;
+    padding: 6px !important;
+    border-radius: 14px !important;
+    direction: ltr !important;
+}
+
+.nxcs-panel--employee-page-size .nxcs-option {
+    min-height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 6px 8px !important;
+    text-align: center !important;
+    direction: ltr !important;
+    line-height: 1 !important;
+    font-size: 13px !important;
+    font-weight: 950 !important;
+    font-variant-numeric: tabular-nums !important;
+    font-feature-settings: "tnum" 1 !important;
+}
+
+body.nxr-employees-master-filter-active .nxr-emp-master-reset {
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    min-width: 112px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 16px !important;
     border-radius: 999px !important;
     border: 1px solid rgba(73, 111, 151, .30) !important;
     background: rgba(255, 255, 255, .04) !important;
     color: #EEF6FB !important;
     font-size: 12px !important;
     font-weight: 1000 !important;
+    line-height: 1 !important;
     text-decoration: none !important;
     cursor: pointer !important;
     box-sizing: border-box !important;
@@ -272,6 +361,10 @@ body.nxr-employees-master-filter-active .nxr-emp-page-nav,
 body.nxr-employees-master-filter-active .nxr-emp-page-number {
     min-width: 38px !important;
     height: 36px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-decoration: none !important;
     padding: 0 11px !important;
     border: 1px solid rgba(73, 111, 151, .36) !important;
     border-radius: 12px !important;
@@ -334,7 +427,7 @@ body.nxr-employees-master-filter-active .nxr-emp-page-summary {
         grid-template-columns: 1fr 1fr !important;
     }
 
-    body.nxr-employees-master-filter-active .nxr-emp-master-grid .nxr-field:first-child {
+    body.nxr-employees-master-filter-active .nxr-emp-master-grid .nxr-emp-field:first-child {
         grid-column: 1 / -1 !important;
     }
 
@@ -368,3 +461,5 @@ body.nxr-employees-master-filter-active .nxr-emp-page-summary {
         flex-direction: column !important;
     }
 }
+
+/* NEXORA_EMPLOYEES_CSS_CONSOLIDATION_V1 */
