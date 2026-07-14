@@ -1,6 +1,7 @@
-using Microsoft.AspNetCore.Authentication.Cookies;
+﻿using Microsoft.AspNetCore.Authentication.Cookies;
 using SmartAttendance.Web.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Application.Announcements.Services;
 using SmartAttendance.Application.AttendanceImports.Services;
 using SmartAttendance.Application.AttendanceProcessing.Services;
 using SmartAttendance.Application.AttendanceRecords.Mappings;
@@ -101,6 +102,7 @@ builder.Services.AddScoped<IEmployeePermissionService, EmployeePermissionService
 builder.Services.AddScoped<IAttendanceImportService, AttendanceImportService>();
 builder.Services.AddScoped<IMasterDataImportService, MasterDataImportService>();
 builder.Services.AddScoped<ISetupService, SetupService>();
+builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 
 var app = builder.Build();
 

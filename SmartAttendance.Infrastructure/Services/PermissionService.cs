@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.Permissions.Services;
 using SmartAttendance.Application.Permissions.ViewModels;
@@ -243,7 +243,16 @@ public class PermissionService : IPermissionService
             P("Permissions", "Permissions.Create", "Create Permission"),
             P("Permissions", "Permissions.Edit", "Edit Permission"),
             P("Permissions", "Permissions.Delete", "Delete Permission"),
-            P("Permissions", "Permissions.Assign", "Assign User Permissions")
+            P("Permissions", "Permissions.Assign", "Assign User Permissions"),
+
+            P("Announcements", "Announcements.Create", "Create Announcements"),
+            P("Announcements", "Announcements.Publish", "Publish Announcements"),
+            P("Announcements", "Announcements.Archive", "Archive Announcements"),
+            P("Announcements", "Announcements.Delete", "Delete Announcements"),
+            P("Announcements", "Announcements.ManageTemplates", "Manage Announcement Templates"),
+            P("Announcements", "Announcements.ManageSignatures", "Manage Announcement Signatures"),
+            P("Announcements", "Announcements.ModerateComments", "Moderate Announcement Comments"),
+            P("Announcements", "Announcements.ViewReadReports", "View Announcement Read Reports")
         };
     }
 }

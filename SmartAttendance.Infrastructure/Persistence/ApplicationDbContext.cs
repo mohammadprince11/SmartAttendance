@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Domain.Entities;
 
 namespace SmartAttendance.Infrastructure.Persistence;
@@ -43,6 +43,36 @@ public class ApplicationDbContext : DbContext
     public DbSet<PayrollCutoffPolicy> PayrollCutoffPolicies => Set<PayrollCutoffPolicy>();
 
     public DbSet<PayrollCutoffPolicyType> PayrollCutoffPolicyTypes => Set<PayrollCutoffPolicyType>();
+
+    public DbSet<AnnouncementGroup> AnnouncementGroups => Set<AnnouncementGroup>();
+
+    public DbSet<AnnouncementContent> AnnouncementContents => Set<AnnouncementContent>();
+
+    public DbSet<AnnouncementTemplate> AnnouncementTemplates => Set<AnnouncementTemplate>();
+
+    public DbSet<AnnouncementSignature> AnnouncementSignatures => Set<AnnouncementSignature>();
+
+    public DbSet<AnnouncementAudienceRule> AnnouncementAudienceRules => Set<AnnouncementAudienceRule>();
+
+    public DbSet<HrJobPosition> HrJobPositions => Set<HrJobPosition>();
+
+    public DbSet<AnnouncementRecipient> AnnouncementRecipients => Set<AnnouncementRecipient>();
+
+    public DbSet<AnnouncementChannel> AnnouncementChannels => Set<AnnouncementChannel>();
+
+    public DbSet<AnnouncementAttachment> AnnouncementAttachments => Set<AnnouncementAttachment>();
+
+    public DbSet<AnnouncementReadReceipt> AnnouncementReadReceipts => Set<AnnouncementReadReceipt>();
+
+    public DbSet<AnnouncementComment> AnnouncementComments => Set<AnnouncementComment>();
+
+    public DbSet<AnnouncementReaction> AnnouncementReactions => Set<AnnouncementReaction>();
+
+    public DbSet<AnnouncementAuditLog> AnnouncementAuditLogs => Set<AnnouncementAuditLog>();
+
+    public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
+
+    public DbSet<UserNotificationRecipient> UserNotificationRecipients => Set<UserNotificationRecipient>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

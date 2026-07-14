@@ -612,18 +612,32 @@
                                         </div>
                                     </td>
                                     <td><span class="nx-badge neutral">@item.Category</span></td>
-                                    <td>@Model.TargetText(item)</td>
+                                    <td>
+                                        <div>@Model.TargetText(item)</div>
+                                        <small>@item.RecipientCount مستلم</small>
+                                    </td>
                                     <td>@Model.DisplayDate(item.PublishDate)</td>
                                     <td>@item.CreatedBy</td>
-                                    <td><span class="nx-badge @(item.IsPublished ? "published" : "draft")">@Model.PublishText(item.IsPublished)</span></td>
+                                    <td><span class="nx-badge @Model.AnnouncementStatusClass(item.Status)">@Model.AnnouncementStatusText(item.Status)</span></td>
                                     <td>
                                         <div class="nx-row-actions">
-                                            <form method="post" asp-page-handler="ToggleAnnouncement" asp-route-id="@item.Id" asp-route-publish="@(!item.IsPublished)">
-                                                <button type="submit">@(item.IsPublished ? "مسودة" : "نشر")</button>
-                                            </form>
-                                            <form method="post" asp-page-handler="DeleteAnnouncement" asp-route-id="@item.Id" onsubmit="return confirm('هل تريد حذف الإعلان؟');">
-                                                <button type="submit" class="danger">حذف</button>
-                                            </form>
+                                            @if (item.Status.Equals("Pending", System.StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                <form method="post" asp-page-handler="ToggleAnnouncement" asp-route-id="@item.Id" asp-route-publish="true">
+                                                    <button type="submit">نشر</button>
+                                                </form>
+                                            }
+                                            @if (item.Status.Equals("Published", System.StringComparison.OrdinalIgnoreCase) ||
+                                                 item.Status.Equals("Expired", System.StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                <form method="post" asp-page-handler="ArchiveAnnouncement" asp-route-id="@item.Id" onsubmit="return confirm('هل تريد أرشفة الإعلان وإيقاف ظهوره على الحائط؟');">
+                                                    <button type="submit" class="danger">أرشفة</button>
+                                                </form>
+                                            }
+                                            @if (item.Status.Equals("Archived", System.StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                <span class="nx-badge neutral">لا توجد إجراءات</span>
+                                            }
                                         </div>
                                     </td>
                                 </tr>

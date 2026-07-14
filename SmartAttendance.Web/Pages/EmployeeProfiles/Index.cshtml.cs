@@ -1,5 +1,7 @@
 ﻿using System.Data.Common;
 using Microsoft.AspNetCore.Mvc;
+using SmartAttendance.Application.Announcements.Models;
+using SmartAttendance.Application.Announcements.Services;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -9,10 +11,14 @@ namespace SmartAttendance.Web.Pages.EmployeeProfiles;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IAnnouncementService _announcementService;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        IAnnouncementService announcementService)
     {
         _dbContext = dbContext;
+        _announcementService = announcementService;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -45,9 +51,9 @@ public class IndexModel : PageModel
     public IReadOnlyList<AnnouncementTemplateDefinition> AnnouncementTemplates { get; } = AnnouncementTemplateDefinition.All;
 
     public int TotalAnnouncements => Announcements.Count;
-    public int PublishedAnnouncements => Announcements.Count(x => x.IsPublished);
-    public int DraftAnnouncements => Announcements.Count(x => !x.IsPublished);
-    public int WallPosts => Announcements.Count(x => x.IsPublished);
+    public int PublishedAnnouncements => Announcements.Count(x => x.Status.Equals("Published", StringComparison.OrdinalIgnoreCase));
+    public int DraftAnnouncements => Announcements.Count(x => x.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase));
+    public int WallPosts => Announcements.Count(x => x.Status.Equals("Published", StringComparison.OrdinalIgnoreCase));
 
     public int TotalPolls => Polls.Count;
     public int PublishedPolls => Polls.Count(x => x.IsPublished);
@@ -84,8 +90,6 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostCreateAnnouncementAsync()
     {
-        await EmployeeEngagementSchema.EnsureAsync(_dbContext);
-
         var title = Announcement.Title?.Trim() ?? string.Empty;
         var body = Announcement.Body?.Trim() ?? string.Empty;
         var templateKey = NormalizeTemplateKey(Announcement.TemplateKey);
@@ -93,19 +97,28 @@ public class IndexModel : PageModel
 
         if (!templateKey.Equals("custom", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrWhiteSpace(Announcement.Category) || Announcement.Category.Equals("عام", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(Announcement.Category) ||
+                Announcement.Category.Equals("عام", StringComparison.OrdinalIgnoreCase))
             {
                 Announcement.Category = template.Category;
             }
 
             if (string.IsNullOrWhiteSpace(title))
             {
-                title = BuildTemplateTitle(templateKey, Announcement.PersonName, Announcement.SecondaryName);
+                title = BuildTemplateTitle(
+                    templateKey,
+                    Announcement.PersonName,
+                    Announcement.SecondaryName);
             }
 
             if (string.IsNullOrWhiteSpace(body))
             {
-                body = BuildTemplateBody(templateKey, Announcement.PersonName, Announcement.SecondaryName, Announcement.DepartmentName, Announcement.EffectiveDateText);
+                body = BuildTemplateBody(
+                    templateKey,
+                    Announcement.PersonName,
+                    Announcement.SecondaryName,
+                    Announcement.DepartmentName,
+                    Announcement.EffectiveDateText);
             }
         }
 
@@ -115,105 +128,80 @@ public class IndexModel : PageModel
             return RedirectToPage(new { section = "engagement", tab = "announcements" });
         }
 
-        var targetType = string.IsNullOrWhiteSpace(Announcement.TargetType) ? "All" : Announcement.TargetType.Trim();
-        var targetError = ValidateTarget(targetType, Announcement.EmployeeIds, Announcement.DepartmentId, Announcement.BranchId);
+        var targetType = string.IsNullOrWhiteSpace(Announcement.TargetType)
+            ? "All"
+            : Announcement.TargetType.Trim();
+
+        var targetError = ValidateTarget(
+            targetType,
+            Announcement.EmployeeIds,
+            Announcement.DepartmentId,
+            Announcement.BranchId);
+
         if (!string.IsNullOrWhiteSpace(targetError))
         {
             StatusMessage = targetError;
             return RedirectToPage(new { section = "engagement", tab = "announcements" });
         }
 
-        var targetValue = BuildTargetValue(targetType, Announcement.EmployeeIds, Announcement.DepartmentId, Announcement.BranchId);
-        var category = string.IsNullOrWhiteSpace(Announcement.Category) ? "عام" : Announcement.Category.Trim();
-        var isPublished = Announcement.PublishNow;
-        var user = Request.Cookies["SA.UserName"] ?? "HR";
+        var request = new AnnouncementCreateRequest
+        {
+            LanguageCode = "ar",
+            Title = title,
+            Body = body,
+            Category = string.IsNullOrWhiteSpace(Announcement.Category)
+                ? "عام"
+                : Announcement.Category.Trim(),
+            PublishNow = Announcement.PublishNow,
+            CommentsEnabled = false,
+            ReactionsEnabled = true,
+            AllEmployees = targetType.Equals("All", StringComparison.OrdinalIgnoreCase),
+            BranchIds = targetType.Equals("Branch", StringComparison.OrdinalIgnoreCase) &&
+                        Announcement.BranchId.HasValue
+                ? new[] { Announcement.BranchId.Value }
+                : Array.Empty<int>(),
+            DepartmentIds = targetType.Equals("Department", StringComparison.OrdinalIgnoreCase) &&
+                            Announcement.DepartmentId.HasValue
+                ? new[] { Announcement.DepartmentId.Value }
+                : Array.Empty<int>(),
+            EmployeeIds = targetType.Equals("Employee", StringComparison.OrdinalIgnoreCase)
+                ? (Announcement.EmployeeIds ?? Array.Empty<int>())
+                : Array.Empty<int>()
+        };
 
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            """
-INSERT INTO EmployeePortalAnnouncements
-(Title, Body, Category, TargetType, TargetValue, TemplateKey, IsPublished, PublishDate, CreatedBy, CreatedAt)
-VALUES
-(@Title, @Body, @Category, @TargetType, @TargetValue, @TemplateKey, @IsPublished, SYSUTCDATETIME(), @CreatedBy, SYSUTCDATETIME());
+        var result = await _announcementService.CreateAsync(
+            request,
+            BuildAnnouncementActor(),
+            HttpContext.RequestAborted);
 
-INSERT INTO AuditLogs (EntityName, EntityId, Action, NewValues, UserName, IpAddress)
-VALUES ('EmployeePortalAnnouncement', NULL, 'Create Announcement', @NewValues, @UserName, @IpAddress);
-""",
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@Title", title);
-                HrmsDatabase.AddParameter(command, "@Body", body);
-                HrmsDatabase.AddParameter(command, "@Category", category);
-                HrmsDatabase.AddParameter(command, "@TargetType", targetType);
-                HrmsDatabase.AddParameter(command, "@TargetValue", targetValue);
-                HrmsDatabase.AddParameter(command, "@TemplateKey", templateKey);
-                HrmsDatabase.AddParameter(command, "@IsPublished", isPublished);
-                HrmsDatabase.AddParameter(command, "@CreatedBy", user);
-                HrmsDatabase.AddParameter(command, "@NewValues", HrmsDatabase.JsonLine(
-                    ("Title", title),
-                    ("Category", category),
-                    ("TargetType", targetType),
-                    ("TargetValue", targetValue),
-                    ("TemplateKey", templateKey),
-                    ("Published", isPublished)));
-                HrmsDatabase.AddParameter(command, "@UserName", user);
-                HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
-            });
-
-        StatusMessage = isPublished ? "تم نشر الإعلان وسيظهر في حائط الموظف حسب الجهة المستهدفة." : "تم حفظ الإعلان كمسودة.";
+        StatusMessage = result.Message;
         return RedirectToPage(new { section = "engagement", tab = "announcements" });
     }
 
-    public async Task<IActionResult> OnPostDeleteAnnouncementAsync(int id)
+    public async Task<IActionResult> OnPostArchiveAnnouncementAsync(int id)
     {
-        await EmployeeEngagementSchema.EnsureAsync(_dbContext);
-        var user = Request.Cookies["SA.UserName"] ?? "HR";
+        var result = await _announcementService.ArchiveAsync(
+            id,
+            BuildAnnouncementActor(),
+            HttpContext.RequestAborted);
 
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            """
-DELETE FROM EmployeePortalAnnouncements WHERE Id = @Id;
-
-INSERT INTO AuditLogs (EntityName, EntityId, Action, NewValues, UserName, IpAddress)
-VALUES ('EmployeePortalAnnouncement', CAST(@Id AS nvarchar(80)), 'Delete Announcement', 'Deleted from HR operations page', @UserName, @IpAddress);
-""",
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@Id", id);
-                HrmsDatabase.AddParameter(command, "@UserName", user);
-                HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
-            });
-
-        StatusMessage = "تم حذف الإعلان من قاعدة البيانات.";
+        StatusMessage = result.Message;
         return RedirectToPage(new { section = "engagement", tab = "announcements" });
     }
 
     public async Task<IActionResult> OnPostToggleAnnouncementAsync(int id, bool publish)
     {
-        await EmployeeEngagementSchema.EnsureAsync(_dbContext);
-        var user = Request.Cookies["SA.UserName"] ?? "HR";
+        var result = publish
+            ? await _announcementService.PublishAsync(
+                id,
+                BuildAnnouncementActor(),
+                HttpContext.RequestAborted)
+            : await _announcementService.ArchiveAsync(
+                id,
+                BuildAnnouncementActor(),
+                HttpContext.RequestAborted);
 
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            """
-UPDATE EmployeePortalAnnouncements
-SET IsPublished = @Publish,
-    PublishDate = CASE WHEN @Publish = 1 THEN SYSUTCDATETIME() ELSE PublishDate END
-WHERE Id = @Id;
-
-INSERT INTO AuditLogs (EntityName, EntityId, Action, NewValues, UserName, IpAddress)
-VALUES ('EmployeePortalAnnouncement', CAST(@Id AS nvarchar(80)), 'Toggle Announcement Publish', @NewValues, @UserName, @IpAddress);
-""",
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@Id", id);
-                HrmsDatabase.AddParameter(command, "@Publish", publish);
-                HrmsDatabase.AddParameter(command, "@NewValues", publish ? "Published" : "Draft");
-                HrmsDatabase.AddParameter(command, "@UserName", user);
-                HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
-            });
-
-        StatusMessage = publish ? "تم نشر الإعلان." : "تم تحويل الإعلان إلى مسودة.";
+        StatusMessage = result.Message;
         return RedirectToPage(new { section = "engagement", tab = "announcements" });
     }
 
@@ -467,45 +455,30 @@ WHERE Id = @Id;
 
     private async Task<List<AnnouncementRow>> LoadAnnouncementsAsync()
     {
-        var where = string.IsNullOrWhiteSpace(Search) ? string.Empty : "WHERE Title LIKE @Search OR Body LIKE @Search OR Category LIKE @Search";
-        return await HrmsDatabase.QueryAsync(
-            _dbContext,
-            $"""
-SELECT TOP 100
-    Id,
-    Title,
-    ISNULL(Body, '') AS Body,
-    ISNULL(Category, N'عام') AS Category,
-    ISNULL(TargetType, N'All') AS TargetType,
-    ISNULL(TargetValue, '') AS TargetValue,
-    ISNULL(TemplateKey, 'custom') AS TemplateKey,
-    IsPublished,
-    PublishDate,
-    ISNULL(CreatedBy, '') AS CreatedBy
-FROM EmployeePortalAnnouncements
-{where}
-ORDER BY PublishDate DESC, Id DESC;
-""",
-            command =>
+        var items = await _announcementService.GetManagementListAsync(
+            Search,
+            HttpContext.RequestAborted);
+
+        return items
+            .Select(item => new AnnouncementRow
             {
-                if (!string.IsNullOrWhiteSpace(Search))
-                {
-                    HrmsDatabase.AddParameter(command, "@Search", $"%{Search.Trim()}%");
-                }
-            },
-            reader => new AnnouncementRow
-            {
-                Id = HrmsDatabase.GetInt(reader, "Id"),
-                Title = HrmsDatabase.GetString(reader, "Title"),
-                Body = HrmsDatabase.GetString(reader, "Body"),
-                Category = HrmsDatabase.GetString(reader, "Category"),
-                TargetType = HrmsDatabase.GetString(reader, "TargetType"),
-                TargetValue = HrmsDatabase.GetString(reader, "TargetValue"),
-                TemplateKey = HrmsDatabase.GetString(reader, "TemplateKey"),
-                IsPublished = HrmsDatabase.GetBool(reader, "IsPublished"),
-                PublishDate = HrmsDatabase.GetDateTime(reader, "PublishDate"),
-                CreatedBy = HrmsDatabase.GetString(reader, "CreatedBy")
-            });
+                Id = item.Id,
+                Title = item.Title,
+                Body = item.Body,
+                Category = item.Category,
+                TargetType = item.AudienceSummary,
+                TargetValue = item.AudienceSummary,
+                TemplateKey = ResolveAnnouncementTemplateKey(item.Category, item.Title),
+                Status = item.Status.ToString(),
+                IsPublished = item.Status == SmartAttendance.Domain.Enums.AnnouncementStatus.Published,
+                PublishDate = item.PublishDate.HasValue
+                    ? item.PublishDate.Value.ToDateTime(TimeOnly.MinValue)
+                    : null,
+                CreatedBy = item.CreatedBy,
+                RecipientCount = item.RecipientCount,
+                IsLegacy = item.IsLegacy
+            })
+            .ToList();
     }
 
     private async Task<List<PollRow>> LoadPollsAsync()
@@ -720,11 +693,62 @@ ORDER BY FullName;
         } + $"\n\n{department}";
     }
 
+    private AnnouncementActorContext BuildAnnouncementActor() =>
+        new()
+        {
+            UserName = Request.Cookies["SA.UserName"] ?? User.Identity?.Name ?? "System",
+            Role = Request.Cookies["SA.Role"] ?? string.Empty,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        };
+
+    private static string ResolveAnnouncementTemplateKey(string? category, string? title)
+    {
+        var categoryText = category?.Trim() ?? string.Empty;
+        var titleText = title?.Trim() ?? string.Empty;
+
+        if (categoryText.Contains("عطلة", StringComparison.OrdinalIgnoreCase)) return "holiday";
+        if (categoryText.Contains("تعميم", StringComparison.OrdinalIgnoreCase)) return "circular";
+        if (categoryText.Contains("تعليمات", StringComparison.OrdinalIgnoreCase) ||
+            titleText.Contains("الدوام", StringComparison.OrdinalIgnoreCase)) return "workhours";
+        if (categoryText.Contains("ترحيب", StringComparison.OrdinalIgnoreCase)) return "welcome";
+        if (categoryText.Contains("شكر", StringComparison.OrdinalIgnoreCase)) return "appreciation";
+        if (categoryText.Contains("تعزية", StringComparison.OrdinalIgnoreCase)) return "condolence";
+        if (categoryText.Contains("وداع", StringComparison.OrdinalIgnoreCase)) return "farewell";
+
+        if (categoryText.Contains("تهنئة", StringComparison.OrdinalIgnoreCase))
+        {
+            if (titleText.Contains("ترقية", StringComparison.OrdinalIgnoreCase)) return "promotion";
+            if (titleText.Contains("مولود", StringComparison.OrdinalIgnoreCase)) return "newborn";
+            if (titleText.Contains("زواج", StringComparison.OrdinalIgnoreCase)) return "marriage";
+        }
+
+        return "custom";
+    }
+
     public string DisplayDate(DateTime? date) => date.HasValue ? date.Value.ToString("dd/MM/yyyy") : "-";
     public string StatusText(string status) => status.Equals("Open", StringComparison.OrdinalIgnoreCase) ? "مفتوحة" : status.Equals("Pending", StringComparison.OrdinalIgnoreCase) ? "قيد المعالجة" : status.Equals("Answered", StringComparison.OrdinalIgnoreCase) ? "تم الرد" : status.Equals("Closed", StringComparison.OrdinalIgnoreCase) ? "مغلقة" : status;
     public string StatusClass(string status) => status.Equals("Open", StringComparison.OrdinalIgnoreCase) ? "open" : status.Equals("Pending", StringComparison.OrdinalIgnoreCase) ? "pending" : status.Equals("Answered", StringComparison.OrdinalIgnoreCase) ? "answered" : status.Equals("Closed", StringComparison.OrdinalIgnoreCase) ? "closed" : string.Empty;
     public string PublishText(bool isPublished) => isPublished ? "منشور" : "مسودة";
-    public string TargetText(AnnouncementRow a) => TargetText(a.TargetType);
+    public string AnnouncementStatusText(string status) => status switch
+    {
+        "Published" => "منشور",
+        "Pending" => "مسودة",
+        "Scheduled" => "مجدول",
+        "Expired" => "منتهي",
+        "Archived" => "مؤرشف",
+        _ => status
+    };
+    public string AnnouncementStatusClass(string status) => status switch
+    {
+        "Published" => "published",
+        "Pending" => "draft",
+        "Scheduled" => "pending",
+        "Expired" => "neutral",
+        "Archived" => "neutral",
+        _ => "neutral"
+    };
+    public string TargetText(AnnouncementRow a) =>
+        string.IsNullOrWhiteSpace(a.TargetValue) ? "جمهور محدد" : a.TargetValue;
     public string TargetText(PollRow p) => TargetText(p.TargetType);
     private string TargetText(string targetType)
     {
@@ -782,9 +806,12 @@ ORDER BY FullName;
         public string TargetType { get; set; } = string.Empty;
         public string TargetValue { get; set; } = string.Empty;
         public string TemplateKey { get; set; } = "custom";
+        public string Status { get; set; } = "Pending";
         public bool IsPublished { get; set; }
         public DateTime? PublishDate { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
+        public int RecipientCount { get; set; }
+        public bool IsLegacy { get; set; }
     }
 
     public class PollRow

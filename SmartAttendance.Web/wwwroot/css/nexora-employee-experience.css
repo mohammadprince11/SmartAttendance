@@ -1,4 +1,4 @@
-/* NEXORA Employee Experience Portal */
+﻿/* NEXORA Employee Experience Portal */
 :root{
     --nx-bg:#050d18;
     --nx-panel:#071526;
@@ -336,3 +336,8 @@ a{text-decoration:none;color:inherit}
         grid-template-columns:1fr;
     }
 }
+
+.nxex-ann-read{display:flex;justify-content:flex-start;margin:0}
+.nxex-ann-read button{min-height:38px;border:1px solid rgba(25,211,224,.34);border-radius:12px;background:rgba(25,211,224,.10);color:#dfffff;font-family:inherit;font-weight:1000;cursor:pointer;padding:0 15px}
+.nxex-ann-read-state{display:flex;justify-content:flex-start!important;gap:8px!important;align-items:center!important;color:#8ff2d8;font-size:12px;font-weight:1000}
+.nxex-ann-read-state small{color:#8ff2d8}

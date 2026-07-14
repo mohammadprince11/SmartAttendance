@@ -1,5 +1,6 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using SmartAttendance.Application.Announcements.Services;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -9,10 +10,14 @@ namespace SmartAttendance.Web.Pages.EmployeePortal;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IAnnouncementService _announcementService;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        IAnnouncementService announcementService)
     {
         _dbContext = dbContext;
+        _announcementService = announcementService;
     }
 
     public string Tab { get; private set; } = "home";
@@ -55,6 +60,27 @@ public class IndexModel : PageModel
         Tab = NormalizeTab(tab);
         await LoadAsync();
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostReadAnnouncementAsync(
+        int id,
+        string? returnTab)
+    {
+        var employeeId = await ResolveEmployeeIdAsync();
+
+        if (employeeId <= 0)
+        {
+            StatusMessage = "لا يمكن تسجيل القراءة لأن المستخدم غير مرتبط بموظف.";
+            return RedirectToPage(new { tab = returnTab ?? "home" });
+        }
+
+        var result = await _announcementService.MarkReadAsync(
+            id,
+            employeeId,
+            HttpContext.RequestAborted);
+
+        StatusMessage = result.Message;
+        return RedirectToPage(new { tab = returnTab ?? "home" });
     }
 
     public async Task<IActionResult> OnPostFeedbackAsync(string? returnTab)
@@ -347,47 +373,26 @@ ORDER BY UpdatedAt DESC, Id DESC;
 
     private async Task<List<EmployeePortalAnnouncement>> LoadAnnouncementsAsync(EmployeePortalEmployee employee)
     {
-        return await HrmsDatabase.QueryAsync(
-            _dbContext,
-            """
-SELECT TOP 20
-    Id,
-    Title,
-    ISNULL(Body, '') AS Body,
-    ISNULL(Category, N'عام') AS Category,
-    ISNULL(TargetType, N'All') AS TargetType,
-    ISNULL(TargetValue, '') AS TargetValue,
-    PublishDate
-FROM EmployeePortalAnnouncements
-WHERE IsPublished = 1
-  AND
-  (
-      TargetType IS NULL
-      OR TargetType = 'All'
-      OR (TargetType = 'Employee' AND (TargetValue = @EmployeeIdText OR TargetValue = @EmployeeNo OR TargetValue LIKE @EmployeeIdLike))
-      OR (TargetType = 'Department' AND TargetValue = @DepartmentName)
-      OR (TargetType = 'Branch' AND TargetValue = @BranchName)
-  )
-ORDER BY PublishDate DESC, Id DESC;
-""",
-            command =>
+        var items = await _announcementService.GetEmployeeFeedAsync(
+            employee.Id,
+            HttpContext.RequestAborted);
+
+        return items
+            .Select(item => new EmployeePortalAnnouncement
             {
-                HrmsDatabase.AddParameter(command, "@EmployeeIdText", employee.Id.ToString());
-                HrmsDatabase.AddParameter(command, "@EmployeeNo", employee.EmployeeNo);
-                HrmsDatabase.AddParameter(command, "@EmployeeIdLike", $"%{employee.Id}%");
-                HrmsDatabase.AddParameter(command, "@DepartmentName", employee.DepartmentName);
-                HrmsDatabase.AddParameter(command, "@BranchName", employee.BranchName);
-            },
-            reader => new EmployeePortalAnnouncement
-            {
-                Id = HrmsDatabase.GetInt(reader, "Id"),
-                Title = HrmsDatabase.GetString(reader, "Title"),
-                Body = HrmsDatabase.GetString(reader, "Body"),
-                Category = HrmsDatabase.GetString(reader, "Category"),
-                TargetType = HrmsDatabase.GetString(reader, "TargetType"),
-                TargetValue = HrmsDatabase.GetString(reader, "TargetValue"),
-                PublishDate = HrmsDatabase.GetDateTime(reader, "PublishDate")
-            });
+                Id = item.Id,
+                Title = item.Title,
+                Body = item.Body,
+                Category = item.Category,
+                TargetType = "RecipientSnapshot",
+                TargetValue = employee.Id.ToString(),
+                PublishDate = item.PublishDate.HasValue
+                    ? item.PublishDate.Value.ToDateTime(TimeOnly.MinValue)
+                    : null,
+                IsRead = item.IsRead,
+                FirstReadAtUtc = item.FirstReadAtUtc
+            })
+            .ToList();
     }
 
     private async Task<List<EmployeePortalPoll>> LoadPollsAsync(EmployeePortalEmployee employee)
@@ -725,6 +730,8 @@ ORDER BY CreatedAt DESC, Id DESC;
         public string TargetType { get; set; } = string.Empty;
         public string TargetValue { get; set; } = string.Empty;
         public DateTime? PublishDate { get; set; }
+        public bool IsRead { get; set; }
+        public DateTime? FirstReadAtUtc { get; set; }
     }
 
     public class EmployeePortalPoll

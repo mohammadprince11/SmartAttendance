@@ -105,6 +105,20 @@
                                     </div>
                                     <h3>@item.Title</h3>
                                     <p>@item.Body</p>
+                                    @if (item.IsRead)
+                                    {
+                                        <div class="nxex-ann-read-state">
+                                            <span>تم الاطلاع</span>
+                                            <small>@Model.DisplayDate(item.FirstReadAtUtc)</small>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <form method="post" asp-page-handler="ReadAnnouncement" asp-route-id="@item.Id" class="nxex-ann-read">
+                                            <input type="hidden" name="returnTab" value="home" />
+                                            <button type="submit">عرض وتأكيد القراءة</button>
+                                        </form>
+                                    }
                                 </article>
                             }
                         </div>
