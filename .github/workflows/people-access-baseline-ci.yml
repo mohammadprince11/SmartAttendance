@@ -1,0 +1,40 @@
+name: People Access Baseline CI
+
+on:
+  push:
+    branches:
+      - test/people-access-foundation-20260715
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  baseline-build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.301
+
+      - name: Show SDK information
+        shell: pwsh
+        run: dotnet --info
+
+      - name: Restore solution
+        shell: pwsh
+        run: dotnet restore .\SmartAttendance.slnx
+
+      - name: Build solution
+        shell: pwsh
+        run: dotnet build .\SmartAttendance.slnx --configuration Release --no-restore
+
+      - name: Test solution
+        shell: pwsh
+        run: dotnet test .\SmartAttendance.slnx --configuration Release --no-build --verbosity normal
