@@ -1,52 +1,75 @@
-(function () {
-    function setValue(id, value) {
-        const el = document.getElementById(id);
-        if (!el) return;
+(() => {
+    "use strict";
 
-        if (el.type === "checkbox") {
-            el.checked = value === "true";
-        } else {
-            el.value = value || "";
-        }
+    const root = document.querySelector(
+        "[data-identity-management]");
+
+    if (!root) {
+        return;
     }
 
-    function initEdit() {
-        document.querySelectorAll("[data-edit-user]").forEach(button => {
-            button.addEventListener("click", () => {
-                setValue("userId", button.dataset.id);
-                setValue("userEmployeeId", button.dataset.employeeId);
-                setValue("userUsername", button.dataset.username);
-                setValue("userPassword", "");
-                setValue("userRole", button.dataset.role);
-                setValue("userIsActive", button.dataset.active);
+    const roleSelect = root.querySelector(
+        "[data-role-select]");
+    const templateLabel = root.querySelector(
+        "[data-system-template]");
 
-                document.querySelector(".hrms-form-card")?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start"
-                });
+    const syncRoleTemplate = () => {
+        if (!roleSelect || !templateLabel) {
+            return;
+        }
+
+        const selected =
+            roleSelect.options[roleSelect.selectedIndex];
+
+        templateLabel.textContent =
+            selected?.dataset.template || "Viewer";
+    };
+
+    roleSelect?.addEventListener(
+        "change",
+        syncRoleTemplate);
+
+    syncRoleTemplate();
+
+    const passwordInput = root.querySelector(
+        "[data-password-input]");
+    const passwordConfirm = root.querySelector(
+        "[data-password-confirm]");
+    const togglePassword = root.querySelector(
+        "[data-toggle-password]");
+
+    togglePassword?.addEventListener("click", () => {
+        if (!passwordInput) {
+            return;
+        }
+
+        const show = passwordInput.type === "password";
+
+        passwordInput.type = show
+            ? "text"
+            : "password";
+
+        if (passwordConfirm) {
+            passwordConfirm.type = show
+                ? "text"
+                : "password";
+        }
+
+        togglePassword.textContent = show
+            ? "إخفاء"
+            : "عرض";
+    });
+
+    root.querySelectorAll("[data-toggle-identity]")
+        .forEach((form) => {
+            form.addEventListener("submit", (event) => {
+                const message =
+                    form.dataset.message ||
+                    "هل تريد متابعة العملية؟";
+
+                if (!window.confirm(message)) {
+                    event.preventDefault();
+                }
             });
         });
-    }
-
-    function initClear() {
-        document.querySelector("[data-clear-user]")?.addEventListener("click", () => {
-            setValue("userId", "0");
-            setValue("userEmployeeId", "");
-            setValue("userUsername", "");
-            setValue("userPassword", "");
-            setValue("userRole", "Employee");
-            setValue("userIsActive", "true");
-        });
-    }
-
-    function init() {
-        initEdit();
-        initClear();
-    }
-
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", init);
-    } else {
-        init();
-    }
 })();
