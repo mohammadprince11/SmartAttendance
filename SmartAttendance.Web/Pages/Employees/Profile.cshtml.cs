@@ -93,6 +93,8 @@ public partial class ProfileModel : PageModel
 
     public bool CanViewLifecycle { get; set; }
 
+    public bool CanViewHistory { get; set; }
+
     public bool CanOpenEmployeeDocuments { get; set; }
 
     public bool CanViewDirectory { get; set; }
@@ -130,7 +132,7 @@ public partial class ProfileModel : PageModel
 
         await LoadActionPermissionsAsync(Employee.Id);
 
-        if (CanChangeAssignment)
+        if (CanRehire)
         {
             await LoadProfileReassignLookupsAsync();
         }
@@ -140,7 +142,11 @@ public partial class ProfileModel : PageModel
         await LoadDocumentsAsync(Employee.Id);
         await LoadProfileFilesAsync(Employee.Id);
         await LoadShiftsAsync(Employee.Id);
-        await LoadAuditAsync(Employee.Id);
+
+        if (CanViewHistory)
+        {
+            await LoadAuditAsync(Employee.Id);
+        }
 
         return Page();
     }
@@ -160,6 +166,13 @@ public partial class ProfileModel : PageModel
         {
             TempData["ErrorMessage"] = "\u0644\u0645 \u064a\u062a\u0645 \u062a\u062d\u062f\u064a\u062f \u0627\u0644\u0645\u0648\u0638\u0641.";
             return RedirectToPage("./Index");
+        }
+
+        if (!await HasEmployeeActionPermissionAsync(
+                PeoplePermissionCodes.Rehire,
+                id))
+        {
+            return Forbid();
         }
 
         var employee = await LoadProfileReassignEmployeeAsync(id);
@@ -500,6 +513,11 @@ WHERE e.Id = @EmployeeId;",
             role,
             PeoplePermissionCodes.ViewLifecycle,
             employeeId);
+        CanViewHistory = await CanAccessAsync(
+            systemUserId,
+            role,
+            PeoplePermissionCodes.ViewHistory,
+            employeeId);
 
         // The legacy document centre is still an administrator-only aggregate
         // screen. Scoped document access remains available through profile cards.
@@ -520,6 +538,21 @@ WHERE e.Id = @EmployeeId;",
             employeeId,
             PeopleCompatibilityAccess.IsAllowed(role, permissionCode),
             HttpContext.RequestAborted);
+    }
+
+    private Task<bool> HasEmployeeActionPermissionAsync(
+        string permissionCode,
+        int employeeId)
+    {
+        var systemUserId =
+            PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        var role = PeopleAccessContext.GetRole(HttpContext);
+
+        return CanAccessAsync(
+            systemUserId,
+            role,
+            permissionCode,
+            employeeId);
     }
 
     private async Task<EmployeeProfileCard?> LoadEmployeeAsync()

@@ -97,6 +97,13 @@ ORDER BY CompanyId, Name;",
             return RedirectToPage("./Index");
         }
 
+        if (!await HasEmployeeActionPermissionAsync(
+                SmartAttendance.Application.Common.Security.PeoplePermissionCodes.Rehire,
+                id))
+        {
+            return Forbid();
+        }
+
         var employee = await LoadProfileReassignEmployeeV2Async(id);
 
         if (employee == null)
