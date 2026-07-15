@@ -11,6 +11,7 @@ using SmartAttendance.Application.Branches.Mappings;
 using SmartAttendance.Application.Branches.Services;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.Companies.Mappings;
+using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Application.Companies.Services;
 using SmartAttendance.Application.Departments.Mappings;
 using SmartAttendance.Application.Departments.Services;
@@ -99,6 +100,8 @@ builder.Services.AddScoped<ISystemUserService, SystemUserService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IUserPermissionService, UserPermissionService>();
 builder.Services.AddScoped<IEmployeePermissionService, EmployeePermissionService>();
+builder.Services.AddScoped<ILoginIdentityService, LoginIdentityService>();
+builder.Services.AddScoped<IPermissionAuthorizationService, PermissionAuthorizationService>();
 builder.Services.AddScoped<IAttendanceImportService, AttendanceImportService>();
 builder.Services.AddScoped<IMasterDataImportService, MasterDataImportService>();
 builder.Services.AddScoped<ISetupService, SetupService>();
@@ -107,6 +110,7 @@ builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 var app = builder.Build();
 
 await DefaultShiftSeeder.SeedAsync(app.Services);
+await PeoplePermissionSeeder.SeedAsync(app.Services);
 
 if (!app.Environment.IsDevelopment())
 {

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Security;
 
@@ -11,10 +12,14 @@ namespace SmartAttendance.Web.Pages.Account;
 public class LoginModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ILoginIdentityService _loginIdentityService;
 
-    public LoginModel(ApplicationDbContext dbContext)
+    public LoginModel(
+        ApplicationDbContext dbContext,
+        ILoginIdentityService loginIdentityService)
     {
         _dbContext = dbContext;
+        _loginIdentityService = loginIdentityService;
     }
 
     [BindProperty]
@@ -89,6 +94,26 @@ public class LoginModel : PageModel
             ? user.EmployeeName
             : user.Username;
 
+        int? systemUserId = null;
+
+        try
+        {
+            systemUserId = await _loginIdentityService.EnsureSystemUserAsync(
+                new LoginIdentityRequest
+                {
+                    EmployeeId = user.EmployeeId,
+                    UserName = user.Username,
+                    DisplayName = displayName,
+                    CompatibilityRole = user.Role,
+                    IsActive = user.IsActive
+                },
+                HttpContext.RequestAborted);
+        }
+        catch
+        {
+            // Login remains available through compatibility roles if identity synchronization fails.
+        }
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -97,6 +122,11 @@ public class LoginModel : PageModel
             new("DisplayName", displayName),
             new("EmployeeId", user.EmployeeId?.ToString() ?? string.Empty)
         };
+
+        if (systemUserId.HasValue)
+        {
+            claims.Add(new Claim("SystemUserId", systemUserId.Value.ToString()));
+        }
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
