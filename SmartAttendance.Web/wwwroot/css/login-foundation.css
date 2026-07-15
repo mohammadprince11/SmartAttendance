@@ -1,5 +1,33 @@
 /* Login foundation */
 
+/* NEXORA_LOGIN_ISOLATED_SHELL_START
+   This stylesheet is loaded only by /Account/Login.
+   Keep the login page independent from the authenticated application shell.
+*/
+.nexora-shell {
+    display: block !important;
+    min-height: 100dvh !important;
+}
+
+.nexora-sidebar,
+.nexora-topbar {
+    display: none !important;
+}
+
+.nexora-main {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+}
+
+.nexora-content {
+    width: 100% !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+}
+/* NEXORA_LOGIN_ISOLATED_SHELL_END */
+
 /* NEXORA_LOGIN_VIEWPORT_FIT_START
    Keep the login experience inside the available NEXORA content viewport.
    The content pane remains the scroll owner only on genuinely short screens.
