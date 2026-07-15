@@ -255,7 +255,7 @@ SELECT TOP 1
     ISNULL(c.Name, '') AS CompanyName
 FROM Employees e
 LEFT JOIN Departments d ON e.DepartmentId = d.Id
-LEFT JOIN Branches b ON d.BranchId = b.Id
+LEFT JOIN Branches b ON e.BranchId = b.Id
 LEFT JOIN Companies c ON b.CompanyId = c.Id
 WHERE e.Id = @Id;",
             command => HrmsDatabase.AddParameter(command, "@Id", Id),

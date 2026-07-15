@@ -352,7 +352,7 @@ SELECT TOP 1
     ISNULL(m.FullName, '') AS DirectManager
 FROM Employees e
 LEFT JOIN Departments d ON e.DepartmentId = d.Id
-LEFT JOIN Branches b ON d.BranchId = b.Id
+LEFT JOIN Branches b ON e.BranchId = b.Id
 LEFT JOIN Employees m ON e.DirectManagerId = m.Id
 WHERE (@Id IS NOT NULL AND e.Id = @Id)
    OR (@EmployeeNo IS NOT NULL AND @EmployeeNo <> '' AND e.EmployeeNo = @EmployeeNo);

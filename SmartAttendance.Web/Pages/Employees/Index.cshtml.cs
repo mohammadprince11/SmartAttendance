@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Application.Branches.ViewModels;
+using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Application.Companies.Services;
 using SmartAttendance.Application.Companies.ViewModels;
 using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Application.Employees.Services;
 using SmartAttendance.Application.Employees.ViewModels;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
@@ -14,13 +16,16 @@ public class IndexModel : PageModel
 {
     private readonly IEmployeeService _employeeService;
     private readonly ICompanyService _companyService;
+    private readonly IPermissionAuthorizationService _permissionAuthorizationService;
 
     public IndexModel(
         IEmployeeService employeeService,
-        ICompanyService companyService)
+        ICompanyService companyService,
+        IPermissionAuthorizationService permissionAuthorizationService)
     {
         _employeeService = employeeService;
         _companyService = companyService;
+        _permissionAuthorizationService = permissionAuthorizationService;
     }
 
     public List<EmployeeListViewModel> Employees { get; set; } = new();
@@ -30,6 +35,10 @@ public class IndexModel : PageModel
     public List<BranchListViewModel> BranchOptions { get; set; } = new();
 
     public List<DepartmentListViewModel> DepartmentOptions { get; set; } = new();
+
+    public bool CanCreateEmployee { get; set; }
+
+    public bool CanImportEmployees { get; set; }
 
     public string SelectedCompanyName =>
         CompanyId.HasValue
@@ -88,11 +97,56 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        CompanyOptions = (await _companyService.GetAllAsync())
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        var role = PeopleAccessContext.GetRole(HttpContext);
+
+        var directoryScope = await _permissionAuthorizationService
+            .GetPeopleDataScopeAsync(
+                systemUserId,
+                PeoplePermissionCodes.ViewDirectory,
+                PeopleCompatibilityAccess.IsAllowed(
+                    role,
+                    PeoplePermissionCodes.ViewDirectory),
+                HttpContext.RequestAborted);
+
+        var accessibleCompanyIds = directoryScope.IsDeniedAll
+            ? Array.Empty<int>()
+            : (await _employeeService.GetAccessibleCompanyIdsAsync(directoryScope))
+                .Concat(directoryScope.AllowedCompanyIds)
+                .Except(directoryScope.DeniedCompanyIds)
+                .Distinct()
+                .ToArray();
+
+        var allCompanies = (await _companyService.GetAllAsync())
             .Where(x => x.IsActive)
             .OrderBy(x => x.Name)
             .ThenBy(x => x.Code)
             .ToList();
+
+        CompanyOptions = directoryScope.IsUnrestricted &&
+                         !directoryScope.HasAnyDenial
+            ? allCompanies
+            : allCompanies
+                .Where(x => accessibleCompanyIds.Contains(x.Id))
+                .ToList();
+
+        CanCreateEmployee = await _permissionAuthorizationService
+            .HasGlobalPermissionAsync(
+                systemUserId,
+                PeoplePermissionCodes.Create,
+                PeopleCompatibilityAccess.IsAllowed(
+                    role,
+                    PeoplePermissionCodes.Create),
+                HttpContext.RequestAborted);
+
+        CanImportEmployees = await _permissionAuthorizationService
+            .HasGlobalPermissionAsync(
+                systemUserId,
+                PeoplePermissionCodes.Import,
+                PeopleCompatibilityAccess.IsAllowed(
+                    role,
+                    PeoplePermissionCodes.Import),
+                HttpContext.RequestAborted);
 
         CompanyId = CompanySelectionContext.Resolve(
             HttpContext,
@@ -116,12 +170,16 @@ public class IndexModel : PageModel
         }
 
         BranchOptions = (await _employeeService
-                .GetBranchesForDropdownAsync(CompanyId.Value))
+                .GetBranchesForDropdownAsync(
+                    CompanyId.Value,
+                    directoryScope))
             .OrderBy(x => x.Name)
             .ToList();
 
         DepartmentOptions = (await _employeeService
-                .GetDepartmentsForDropdownAsync(CompanyId.Value))
+                .GetDepartmentsForDropdownAsync(
+                    CompanyId.Value,
+                    directoryScope))
             .OrderBy(x => x.Name)
             .ToList();
 
@@ -139,6 +197,7 @@ public class IndexModel : PageModel
         var result = await _employeeService.GetPagedAsync(
             new EmployeeListQueryViewModel
             {
+                DataScope = directoryScope,
                 CompanyId = CompanyId,
                 SearchTerm = SearchTerm,
                 BranchId = BranchId,
@@ -148,6 +207,24 @@ public class IndexModel : PageModel
                 PageNumber = PageNumber,
                 PageSize = PageSize
             });
+
+        var profileScope = await _permissionAuthorizationService
+            .GetPeopleDataScopeAsync(
+                systemUserId,
+                PeoplePermissionCodes.ViewProfile,
+                PeopleCompatibilityAccess.IsAllowed(
+                    role,
+                    PeoplePermissionCodes.ViewProfile),
+                HttpContext.RequestAborted);
+
+        foreach (var employee in result.Items)
+        {
+            employee.CanViewProfile = profileScope.AllowsEmployee(
+                employee.Id,
+                employee.CompanyId,
+                employee.BranchId,
+                employee.DepartmentId);
+        }
 
         Employees = result.Items;
         TotalEmployees = result.TotalEmployees;

@@ -65,7 +65,12 @@ public class EmployeePermissionService : IEmployeePermissionService
         var grantedPermissionIds = systemUser == null
             ? new HashSet<int>()
             : userPermissions
-                .Where(x => x.SystemUserId == systemUser.Id)
+                .Where(x =>
+                    x.SystemUserId == systemUser.Id &&
+                    x.Effect == PermissionEffect.Allow &&
+                    x.ScopeType == PeopleDataScopeType.All &&
+                    !x.ValidFromUtc.HasValue &&
+                    !x.ValidToUtc.HasValue)
                 .Select(x => x.PermissionId)
                 .ToHashSet();
 
@@ -154,7 +159,12 @@ public class EmployeePermissionService : IEmployeePermissionService
         }
 
         var currentAssignments = (await _unitOfWork.SystemUserPermissions.GetAllAsync())
-            .Where(x => x.SystemUserId == systemUser.Id)
+            .Where(x =>
+                x.SystemUserId == systemUser.Id &&
+                x.Effect == PermissionEffect.Allow &&
+                x.ScopeType == PeopleDataScopeType.All &&
+                !x.ValidFromUtc.HasValue &&
+                !x.ValidToUtc.HasValue)
             .ToList();
 
         var selectedSet = selectedPermissionIds.ToHashSet();
@@ -170,7 +180,9 @@ public class EmployeePermissionService : IEmployeePermissionService
             await _unitOfWork.SystemUserPermissions.AddAsync(new SystemUserPermission
             {
                 SystemUserId = systemUser.Id,
-                PermissionId = permissionId
+                PermissionId = permissionId,
+                Effect = PermissionEffect.Allow,
+                ScopeType = PeopleDataScopeType.All
             });
         }
 

@@ -61,20 +61,19 @@ ORDER BY CompanyId, Name;",
         ReassignDepartments = await HrmsDatabase.QueryAsync(
             _dbContext,
             @"
-SELECT Id, Name, ISNULL(BranchId, 0) AS BranchId
+SELECT Id, Name, CompanyId
 FROM Departments
 WHERE IsActive = 1 OR Id = @CurrentDepartmentId
-ORDER BY Name;",
+ORDER BY CompanyId, Name;",
             command =>
             {
-                HrmsDatabase.AddParameter(command, "@CurrentBranchId", CurrentReassignBranchId);
                 HrmsDatabase.AddParameter(command, "@CurrentDepartmentId", CurrentReassignDepartmentId);
             },
             reader => new ProfileReassignDepartmentOption
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
                 Name = HrmsDatabase.GetString(reader, "Name"),
-                BranchId = HrmsDatabase.GetInt(reader, "BranchId")
+                CompanyId = HrmsDatabase.GetInt(reader, "CompanyId")
             });
     }
 
@@ -270,11 +269,11 @@ END;",
             @"
 SELECT TOP 1
     e.DepartmentId,
-    ISNULL(d.BranchId, 0) AS BranchId,
+    e.BranchId AS BranchId,
     ISNULL(b.CompanyId, 0) AS CompanyId
 FROM Employees e
 LEFT JOIN Departments d ON e.DepartmentId = d.Id
-LEFT JOIN Branches b ON d.BranchId = b.Id
+LEFT JOIN Branches b ON e.BranchId = b.Id
 WHERE e.Id = @EmployeeId;",
             command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
             reader => new ProfileReassignCurrentOrgRow
@@ -299,7 +298,7 @@ SELECT TOP 1
     e.HireDate,
     e.IsActive,
     e.DepartmentId,
-    ISNULL(d.BranchId, 0) AS BranchId,
+    e.BranchId AS BranchId,
     ISNULL(b.CompanyId, 0) AS CompanyId,
     ISNULL(e.Position, '') AS Position,
     ISNULL(e.EmploymentStatus, '') AS EmploymentStatus,
@@ -310,7 +309,7 @@ SELECT TOP 1
     ISNULL(c.Name, '') AS CompanyName
 FROM Employees e
 LEFT JOIN Departments d ON e.DepartmentId = d.Id
-LEFT JOIN Branches b ON d.BranchId = b.Id
+LEFT JOIN Branches b ON e.BranchId = b.Id
 LEFT JOIN Companies c ON b.CompanyId = c.Id
 WHERE e.Id = @EmployeeId;",
             command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
@@ -349,8 +348,10 @@ SELECT TOP 1
     c.Id AS CompanyId,
     c.Name AS CompanyName
 FROM Departments d
-INNER JOIN Branches b ON d.BranchId = b.Id
-INNER JOIN Companies c ON b.CompanyId = c.Id
+INNER JOIN Branches b
+    ON b.Id = @BranchId
+   AND b.CompanyId = d.CompanyId
+INNER JOIN Companies c ON c.Id = d.CompanyId
 WHERE d.Id = @DepartmentId
   AND b.Id = @BranchId
   AND c.Id = @CompanyId;",
@@ -425,7 +426,7 @@ WHERE d.Id = @DepartmentId
     {
         public int Id { get; set; }
 
-        public int BranchId { get; set; }
+        public int CompanyId { get; set; }
 
         public string Name { get; set; } = string.Empty;
     }

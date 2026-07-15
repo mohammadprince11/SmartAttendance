@@ -1,5 +1,6 @@
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Departments.ViewModels;
+using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Application.Employees.ViewModels;
 
 namespace SmartAttendance.Application.Employees.Services;
@@ -25,10 +26,15 @@ public interface IEmployeeService
     Task<bool> EmployeeNoExistsAsync(string employeeNo);
 
     Task<IEnumerable<DepartmentListViewModel>> GetDepartmentsForDropdownAsync(
-        int? companyId = null);
+        int? companyId = null,
+        PeopleDataScope? dataScope = null);
 
     Task<IEnumerable<BranchListViewModel>> GetBranchesForDropdownAsync(
-        int? companyId = null);
+        int? companyId = null,
+        PeopleDataScope? dataScope = null);
+
+    Task<IReadOnlyList<int>> GetAccessibleCompanyIdsAsync(
+        PeopleDataScope dataScope);
 
     Task<IEnumerable<PositionOptionViewModel>> GetPositionsForDropdownAsync();
 }

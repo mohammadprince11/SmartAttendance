@@ -32,6 +32,10 @@ public class EmployeeListViewModel
 
     public bool IsActive { get; set; }
 
+    public bool CanViewProfile { get; set; }
+
+    public int CompanyId { get; set; }
+
     public int BranchId { get; set; }
 
     public int DepartmentId { get; set; }

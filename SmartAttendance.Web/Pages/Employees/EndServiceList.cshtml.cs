@@ -1,16 +1,27 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Infrastructure.Security;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
 public class EndServiceListModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IPermissionAuthorizationService _permissionAuthorizationService;
+    private string _accessibleEmployeeIdsJson = "[]";
+    private PeopleDataScope _profileScope = PeopleDataScope.Empty();
 
-    public EndServiceListModel(ApplicationDbContext dbContext)
+    public EndServiceListModel(
+        ApplicationDbContext dbContext,
+        IPermissionAuthorizationService permissionAuthorizationService)
     {
         _dbContext = dbContext;
+        _permissionAuthorizationService = permissionAuthorizationService;
     }
 
     public string? SearchTerm { get; set; }
@@ -21,8 +32,12 @@ public class EndServiceListModel : PageModel
     public int CompletedClearance { get; set; }
     public int PendingClearance { get; set; }
     public int CurrentMonthRecords { get; set; }
+    public bool CanViewDirectory { get; set; }
 
-    public async Task OnGetAsync(string? searchTerm, string? endServiceType, string? clearanceStatus)
+    public async Task OnGetAsync(
+        string? searchTerm,
+        string? endServiceType,
+        string? clearanceStatus)
     {
         SearchTerm = searchTerm?.Trim();
         EndServiceType = endServiceType?.Trim();
@@ -30,16 +45,81 @@ public class EndServiceListModel : PageModel
 
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         await EmployeeLifecycleSchema.EnsureAsync(_dbContext);
+        await LoadAccessibleEmployeeIdsAsync();
         await LoadKpisAsync();
         await LoadRecordsAsync();
     }
 
+    private async Task LoadAccessibleEmployeeIdsAsync()
+    {
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        var role = PeopleAccessContext.GetRole(HttpContext);
+
+        var scope = await _permissionAuthorizationService.GetPeopleDataScopeAsync(
+            systemUserId,
+            PeoplePermissionCodes.ViewLifecycle,
+            PeopleCompatibilityAccess.IsAllowed(
+                role,
+                PeoplePermissionCodes.ViewLifecycle),
+            HttpContext.RequestAborted);
+
+        _profileScope = await _permissionAuthorizationService.GetPeopleDataScopeAsync(
+            systemUserId,
+            PeoplePermissionCodes.ViewProfile,
+            PeopleCompatibilityAccess.IsAllowed(
+                role,
+                PeoplePermissionCodes.ViewProfile),
+            HttpContext.RequestAborted);
+
+        CanViewDirectory = await _permissionAuthorizationService.HasPermissionAsync(
+            systemUserId,
+            PeoplePermissionCodes.ViewDirectory,
+            PeopleCompatibilityAccess.IsAllowed(
+                role,
+                PeoplePermissionCodes.ViewDirectory),
+            HttpContext.RequestAborted);
+
+        var employeeIds = await _dbContext.Employees
+            .AsNoTracking()
+            .Where(employee => !employee.IsDeleted)
+            .ApplyPeopleDataScope(scope)
+            .Select(employee => employee.Id)
+            .ToListAsync(HttpContext.RequestAborted);
+
+        _accessibleEmployeeIdsJson = JsonSerializer.Serialize(employeeIds);
+    }
+
     private async Task LoadKpisAsync()
     {
-        TotalRecords = await HrmsDatabase.ScalarAsync<int>(_dbContext, @"SELECT COUNT(*) FROM EmployeeEndServices;");
-        CompletedClearance = await HrmsDatabase.ScalarAsync<int>(_dbContext, @"SELECT COUNT(*) FROM EmployeeEndServices WHERE ClearanceStatus = 'Completed';");
-        PendingClearance = await HrmsDatabase.ScalarAsync<int>(_dbContext, @"SELECT COUNT(*) FROM EmployeeEndServices WHERE ISNULL(ClearanceStatus,'') <> 'Completed';");
-        CurrentMonthRecords = await HrmsDatabase.ScalarAsync<int>(_dbContext, @"SELECT COUNT(*) FROM EmployeeEndServices WHERE CreatedAt >= DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);");
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            @"
+SELECT
+    COUNT(*) AS TotalRecords,
+    SUM(CASE WHEN es.ClearanceStatus = 'Completed' THEN 1 ELSE 0 END) AS CompletedClearance,
+    SUM(CASE WHEN ISNULL(es.ClearanceStatus,'') <> 'Completed' THEN 1 ELSE 0 END) AS PendingClearance,
+    SUM(CASE WHEN es.CreatedAt >= DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1) THEN 1 ELSE 0 END) AS CurrentMonthRecords
+FROM EmployeeEndServices es
+INNER JOIN OPENJSON(@AccessibleEmployeeIdsJson)
+    WITH (EmployeeId int '$') allowed
+    ON allowed.EmployeeId = es.EmployeeId;",
+            command => HrmsDatabase.AddParameter(
+                command,
+                "@AccessibleEmployeeIdsJson",
+                _accessibleEmployeeIdsJson),
+            reader => new
+            {
+                TotalRecords = HrmsDatabase.GetInt(reader, "TotalRecords"),
+                CompletedClearance = HrmsDatabase.GetInt(reader, "CompletedClearance"),
+                PendingClearance = HrmsDatabase.GetInt(reader, "PendingClearance"),
+                CurrentMonthRecords = HrmsDatabase.GetInt(reader, "CurrentMonthRecords")
+            });
+
+        var summary = rows.FirstOrDefault();
+        TotalRecords = summary?.TotalRecords ?? 0;
+        CompletedClearance = summary?.CompletedClearance ?? 0;
+        PendingClearance = summary?.PendingClearance ?? 0;
+        CurrentMonthRecords = summary?.CurrentMonthRecords ?? 0;
     }
 
     private async Task LoadRecordsAsync()
@@ -60,12 +140,18 @@ SELECT TOP 300
     ISNULL(es.CreatedBy,'') AS CreatedBy,
     es.CreatedAt,
     ISNULL(e.Position,'') AS Position,
+    ISNULL(e.BranchId, 0) AS BranchId,
+    ISNULL(e.DepartmentId, 0) AS DepartmentId,
+    ISNULL(b.CompanyId, 0) AS CompanyId,
     ISNULL(d.Name,'') AS DepartmentName,
     ISNULL(b.Name,'') AS BranchName
 FROM EmployeeEndServices es
+INNER JOIN OPENJSON(@AccessibleEmployeeIdsJson)
+    WITH (EmployeeId int '$') allowed
+    ON allowed.EmployeeId = es.EmployeeId
 LEFT JOIN Employees e ON es.EmployeeId = e.Id
 LEFT JOIN Departments d ON e.DepartmentId = d.Id
-LEFT JOIN Branches b ON d.BranchId = b.Id
+LEFT JOIN Branches b ON e.BranchId = b.Id
 WHERE
     (@SearchTerm = ''
         OR es.EmployeeNo LIKE '%' + @SearchTerm + '%'
@@ -79,9 +165,22 @@ WHERE
 ORDER BY es.CreatedAt DESC;",
             command =>
             {
-                HrmsDatabase.AddParameter(command, "@SearchTerm", SearchTerm ?? string.Empty);
-                HrmsDatabase.AddParameter(command, "@EndServiceType", EndServiceType ?? string.Empty);
-                HrmsDatabase.AddParameter(command, "@ClearanceStatus", ClearanceStatus ?? string.Empty);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@AccessibleEmployeeIdsJson",
+                    _accessibleEmployeeIdsJson);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@SearchTerm",
+                    SearchTerm ?? string.Empty);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@EndServiceType",
+                    EndServiceType ?? string.Empty);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@ClearanceStatus",
+                    ClearanceStatus ?? string.Empty);
             },
             reader => new EndServiceRow
             {
@@ -97,18 +196,39 @@ ORDER BY es.CreatedAt DESC;",
                 CreatedBy = HrmsDatabase.GetString(reader, "CreatedBy"),
                 CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt"),
                 Position = HrmsDatabase.GetString(reader, "Position"),
+                BranchId = HrmsDatabase.GetInt(reader, "BranchId"),
+                DepartmentId = HrmsDatabase.GetInt(reader, "DepartmentId"),
+                CompanyId = HrmsDatabase.GetInt(reader, "CompanyId"),
                 DepartmentName = HrmsDatabase.GetString(reader, "DepartmentName"),
                 BranchName = HrmsDatabase.GetString(reader, "BranchName")
             });
+
+        foreach (var record in Records)
+        {
+            record.CanViewProfile = _profileScope.AllowsEmployee(
+                record.EmployeeId,
+                record.CompanyId,
+                record.BranchId,
+                record.DepartmentId);
+        }
     }
 
-    public string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
-    public string DisplayDate(DateOnly? value) => value.HasValue ? value.Value.ToString("yyyy-MM-dd") : "-";
-    public string DisplayDateTime(DateTime? value) => value.HasValue ? value.Value.ToString("yyyy-MM-dd HH:mm") : "-";
+    public string Display(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "-" : value;
+
+    public string DisplayDate(DateOnly? value) =>
+        value.HasValue ? value.Value.ToString("yyyy-MM-dd") : "-";
+
+    public string DisplayDateTime(DateTime? value) =>
+        value.HasValue ? value.Value.ToString("yyyy-MM-dd HH:mm") : "-";
 
     public string TypeText(string? value, string? fallback)
     {
-        if (!string.IsNullOrWhiteSpace(fallback)) return fallback;
+        if (!string.IsNullOrWhiteSpace(fallback))
+        {
+            return fallback;
+        }
+
         return value switch
         {
             "Resignation" => "استقالة",
@@ -122,8 +242,11 @@ ORDER BY es.CreatedAt DESC;",
         };
     }
 
-    public string ClearanceText(string? value) => value == "Completed" ? "مكتملة" : "معلقة";
-    public string ClearanceClass(string? value) => value == "Completed" ? "ok" : "warn";
+    public string ClearanceText(string? value) =>
+        value == "Completed" ? "مكتملة" : "معلقة";
+
+    public string ClearanceClass(string? value) =>
+        value == "Completed" ? "ok" : "warn";
 
     public class EndServiceRow
     {
@@ -139,8 +262,11 @@ ORDER BY es.CreatedAt DESC;",
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime? CreatedAt { get; set; }
         public string Position { get; set; } = string.Empty;
+        public int CompanyId { get; set; }
+        public int BranchId { get; set; }
+        public int DepartmentId { get; set; }
+        public bool CanViewProfile { get; set; }
         public string DepartmentName { get; set; } = string.Empty;
         public string BranchName { get; set; } = string.Empty;
     }
 }
-

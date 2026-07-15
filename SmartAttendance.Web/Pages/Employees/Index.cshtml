@@ -53,10 +53,20 @@
             <p>الشركة الحالية: @Model.SelectedCompanyName</p>
         </div>
 
-        <div class="nxr-actions nxr-emp-actions">
-            <a asp-page="./Create" class="nxr-btn primary">إضافة موظف</a>
-            <a asp-page="./Import" class="nxr-btn">&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;</a>
-        </div>
+        @if (Model.CanCreateEmployee || Model.CanImportEmployees)
+        {
+            <div class="nxr-actions nxr-emp-actions">
+                @if (Model.CanCreateEmployee)
+                {
+                    <a asp-page="./Create" class="nxr-btn primary">إضافة موظف</a>
+                }
+
+                @if (Model.CanImportEmployees)
+                {
+                    <a asp-page="./Import" class="nxr-btn">&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;</a>
+                }
+            </div>
+        }
     </section>
 
     @if (TempData["SuccessMessage"] != null)
@@ -310,12 +320,12 @@
                     {
                         foreach (var employee in employees)
                         {
-                            <tr class="nxr-clickable-employee-row"
-                                data-employee-row
-                                data-profile-url="@(Url.Page("./Profile", new { id = employee.Id }))"
-                                tabindex="0"
-                                role="link"
-                                aria-label="Open employee profile">
+                            <tr class="@(employee.CanViewProfile ? "nxr-clickable-employee-row" : "nxr-employee-row-readonly")"
+                                data-employee-row="@(employee.CanViewProfile ? "true" : null)"
+                                data-profile-url="@(employee.CanViewProfile ? Url.Page("./Profile", new { id = employee.Id }) : null)"
+                                tabindex="@(employee.CanViewProfile ? "0" : null)"
+                                role="@(employee.CanViewProfile ? "link" : null)"
+                                aria-label="@(employee.CanViewProfile ? "Open employee profile" : null)">
                                 <td class="nxr-emp-person-cell">
                                     <div class="nxr-emp-person">
                                         <div>

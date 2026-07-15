@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
+using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
@@ -19,11 +21,16 @@ public partial class ProfileModel : PageModel
 
     private readonly ApplicationDbContext _dbContext;
     private readonly IWebHostEnvironment _environment;
+    private readonly IPermissionAuthorizationService _permissionAuthorizationService;
 
-    public ProfileModel(ApplicationDbContext dbContext, IWebHostEnvironment environment)
+    public ProfileModel(
+        ApplicationDbContext dbContext,
+        IWebHostEnvironment environment,
+        IPermissionAuthorizationService permissionAuthorizationService)
     {
         _dbContext = dbContext;
         _environment = environment;
+        _permissionAuthorizationService = permissionAuthorizationService;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -72,6 +79,24 @@ public partial class ProfileModel : PageModel
 
     public string? ErrorMessage { get; set; }
 
+    public bool CanEditEmployee { get; set; }
+
+    public bool CanUploadDocument { get; set; }
+
+    public bool CanDeleteDocument { get; set; }
+
+    public bool CanChangeAssignment { get; set; }
+
+    public bool CanEndService { get; set; }
+
+    public bool CanRehire { get; set; }
+
+    public bool CanViewLifecycle { get; set; }
+
+    public bool CanOpenEmployeeDocuments { get; set; }
+
+    public bool CanViewDirectory { get; set; }
+
     [BindProperty]
     public IFormFile? EmployeePhoto { get; set; }
 
@@ -103,7 +128,13 @@ public partial class ProfileModel : PageModel
             return Page();
         }
 
-        await LoadProfileReassignLookupsAsync();
+        await LoadActionPermissionsAsync(Employee.Id);
+
+        if (CanChangeAssignment)
+        {
+            await LoadProfileReassignLookupsAsync();
+        }
+
         await LoadAttendanceAsync(Employee.Id);
         await LoadRequestsAsync(Employee.Id);
         await LoadDocumentsAsync(Employee.Id);
@@ -421,6 +452,76 @@ WHERE e.Id = @EmployeeId;",
         return relativePath;
     }
 
+    private async Task LoadActionPermissionsAsync(int employeeId)
+    {
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        var role = PeopleAccessContext.GetRole(HttpContext);
+
+        CanViewDirectory = await _permissionAuthorizationService.HasPermissionAsync(
+            systemUserId,
+            PeoplePermissionCodes.ViewDirectory,
+            PeopleCompatibilityAccess.IsAllowed(
+                role,
+                PeoplePermissionCodes.ViewDirectory),
+            HttpContext.RequestAborted);
+
+        CanEditEmployee = await CanAccessAsync(
+            systemUserId,
+            role,
+            PeoplePermissionCodes.Edit,
+            employeeId);
+        CanUploadDocument = await CanAccessAsync(
+            systemUserId,
+            role,
+            PeoplePermissionCodes.UploadDocument,
+            employeeId);
+        CanDeleteDocument = await CanAccessAsync(
+            systemUserId,
+            role,
+            PeoplePermissionCodes.DeleteDocument,
+            employeeId);
+        CanChangeAssignment = await CanAccessAsync(
+            systemUserId,
+            role,
+            PeoplePermissionCodes.ChangeAssignment,
+            employeeId);
+        CanEndService = await CanAccessAsync(
+            systemUserId,
+            role,
+            PeoplePermissionCodes.EndService,
+            employeeId);
+        CanRehire = await CanAccessAsync(
+            systemUserId,
+            role,
+            PeoplePermissionCodes.Rehire,
+            employeeId);
+        CanViewLifecycle = await CanAccessAsync(
+            systemUserId,
+            role,
+            PeoplePermissionCodes.ViewLifecycle,
+            employeeId);
+
+        // The legacy document centre is still an administrator-only aggregate
+        // screen. Scoped document access remains available through profile cards.
+        CanOpenEmployeeDocuments = role.Equals(
+            "Admin",
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private Task<bool> CanAccessAsync(
+        int systemUserId,
+        string role,
+        string permissionCode,
+        int employeeId)
+    {
+        return _permissionAuthorizationService.CanAccessEmployeeAsync(
+            systemUserId,
+            permissionCode,
+            employeeId,
+            PeopleCompatibilityAccess.IsAllowed(role, permissionCode),
+            HttpContext.RequestAborted);
+    }
+
     private async Task<EmployeeProfileCard?> LoadEmployeeAsync()
     {
         var rows = await HrmsDatabase.QueryAsync(
@@ -451,7 +552,7 @@ SELECT TOP 1
     ISNULL(m.FullName, '') AS DirectManager
 FROM Employees e
 LEFT JOIN Departments d ON e.DepartmentId = d.Id
-LEFT JOIN Branches b ON d.BranchId = b.Id
+LEFT JOIN Branches b ON e.BranchId = b.Id
 LEFT JOIN Companies c ON b.CompanyId = c.Id
 LEFT JOIN Employees m ON e.DirectManagerId = m.Id
 WHERE
@@ -795,8 +896,8 @@ ORDER BY CreatedAt DESC;",
 
     public string AttendanceRiskClass => AttendanceRiskItems == 0 ? "ok" : "warn";
 
-    
-    
+
+
     public int AttendanceExceptionsCount => AttendanceRows.Count(x =>
         x.Status == 2 ||
         x.Status == 3 ||
@@ -893,7 +994,7 @@ public class EmployeeProfileCard
 
         public DateOnly? BirthDate { get; set; }
 
-        
+
         public string MaritalStatus { get; set; } = string.Empty;
 public bool IsActive { get; set; }
 

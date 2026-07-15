@@ -2,6 +2,7 @@ using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.UserPermissions.Services;
 using SmartAttendance.Application.UserPermissions.ViewModels;
 using SmartAttendance.Domain.Entities;
+using SmartAttendance.Domain.Enums;
 
 namespace SmartAttendance.Infrastructure.Services;
 
@@ -42,7 +43,12 @@ public class UserPermissionService : IUserPermissionService
         var userPermissions = await _unitOfWork.SystemUserPermissions.GetAllAsync();
 
         var grantedPermissionIds = userPermissions
-            .Where(x => x.SystemUserId == systemUserId)
+            .Where(x =>
+                x.SystemUserId == systemUserId &&
+                x.Effect == PermissionEffect.Allow &&
+                x.ScopeType == PeopleDataScopeType.All &&
+                !x.ValidFromUtc.HasValue &&
+                !x.ValidToUtc.HasValue)
             .Select(x => x.PermissionId)
             .ToHashSet();
 
@@ -95,7 +101,12 @@ public class UserPermissionService : IUserPermissionService
             .ToList();
 
         var currentAssignments = (await _unitOfWork.SystemUserPermissions.GetAllAsync())
-            .Where(x => x.SystemUserId == systemUserId)
+            .Where(x =>
+                x.SystemUserId == systemUserId &&
+                x.Effect == PermissionEffect.Allow &&
+                x.ScopeType == PeopleDataScopeType.All &&
+                !x.ValidFromUtc.HasValue &&
+                !x.ValidToUtc.HasValue)
             .ToList();
 
         var selectedSet = selectedPermissionIds.ToHashSet();
@@ -119,7 +130,9 @@ public class UserPermissionService : IUserPermissionService
             await _unitOfWork.SystemUserPermissions.AddAsync(new SystemUserPermission
             {
                 SystemUserId = systemUserId,
-                PermissionId = permissionId
+                PermissionId = permissionId,
+                Effect = PermissionEffect.Allow,
+                ScopeType = PeopleDataScopeType.All
             });
         }
 

@@ -1,3 +1,7 @@
+@using SmartAttendance.Application.Common.Security
+@using SmartAttendance.Web.Infrastructure.Security
+@inject IPermissionAuthorizationService PermissionAuthorizationService
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" data-theme="dark" data-sidebar="expanded">
 <head>
@@ -63,6 +67,56 @@
         var loginRole = Context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
         var loginEmployeeId = Context.User.FindFirst("EmployeeId")?.Value ?? "";
         var isLoggedIn = !string.IsNullOrWhiteSpace(loginUser);
+        var systemUserId = PeopleAccessContext.GetSystemUserId(Context) ?? 0;
+
+        var canViewPeopleDirectory = isLoggedIn &&
+            await PermissionAuthorizationService.HasPermissionAsync(
+                systemUserId,
+                PeoplePermissionCodes.ViewDirectory,
+                PeopleCompatibilityAccess.IsAllowed(
+                    loginRole,
+                    PeoplePermissionCodes.ViewDirectory),
+                Context.RequestAborted);
+
+        var canImportPeople = isLoggedIn &&
+            await PermissionAuthorizationService.HasGlobalPermissionAsync(
+                systemUserId,
+                PeoplePermissionCodes.Import,
+                PeopleCompatibilityAccess.IsAllowed(
+                    loginRole,
+                    PeoplePermissionCodes.Import),
+                Context.RequestAborted);
+
+        var canManagePeoplePermissions = isLoggedIn &&
+            await PermissionAuthorizationService.HasGlobalPermissionAsync(
+                systemUserId,
+                PeoplePermissionCodes.ManagePermissions,
+                PeopleCompatibilityAccess.IsAllowed(
+                    loginRole,
+                    PeoplePermissionCodes.ManagePermissions),
+                Context.RequestAborted);
+
+        var isAdminRole = loginRole.Equals(
+            "Admin",
+            StringComparison.OrdinalIgnoreCase);
+
+        var canViewOrganization = isAdminRole ||
+            loginRole.Equals("HR Manager", StringComparison.OrdinalIgnoreCase) ||
+            loginRole.Equals("HR Officer", StringComparison.OrdinalIgnoreCase) ||
+            loginRole.Equals("Branch Manager", StringComparison.OrdinalIgnoreCase) ||
+            loginRole.Equals("Finance Viewer", StringComparison.OrdinalIgnoreCase);
+
+        // These People pages still use the legacy server-side Admin compatibility rule.
+        // Keep their navigation visibility aligned with the middleware until each route
+        // receives a dedicated dynamic permission code.
+        var canUseLegacyPeopleAdministration = isAdminRole;
+
+        var hasVisiblePeopleNavigation =
+            canViewPeopleDirectory ||
+            canImportPeople ||
+            canManagePeoplePermissions ||
+            canViewOrganization ||
+            canUseLegacyPeopleAdministration;
 
         var pageTitle = ViewData["Title"]?.ToString() ?? "NEXORA";
 
@@ -145,8 +199,10 @@
                 </button>
             </div>
 
-                        <nav class="nexora-nav nexora-stable-nav" aria-label="القائمة الرئيسية">
-                <!-- NEXORA_SAFE_MAIN_MENU_START -->
+            @if (isLoggedIn)
+            {
+                <nav class="nexora-nav nexora-stable-nav" aria-label="القائمة الرئيسية">
+                    <!-- NEXORA_SAFE_MAIN_MENU_START -->
                 <a asp-page="/Index" class="nexora-nav-link nexora-root-link @ActiveClass("/Index")" data-nav-area="dashboard" data-sidebar-label="&#x0644;&#x0648;&#x062D;&#x0629; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A;">
                     <span class="nexora-nav-dot"></span>
                     <span>لوحة البيانات</span>
@@ -159,60 +215,83 @@
                         <span>&#x0625;&#x0639;&#x062F;&#x0627;&#x062F; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
                     </a>
                 }
-                <details name="nexora-main-menu" class="nexora-nav-group" @(employeesOpen ? "open" : "")>
-                    <summary data-sidebar-label="&#x0623;&#x0634;&#x062E;&#x0627;&#x0635;">
-                        <span class="nexora-nav-dot gold"></span>
-                        <span class="nexora-nav-text">أشخاص</span>
-                        <span class="nexora-chevron"></span>
-                    </summary>
-                    <div class="nexora-nav-group-links">
-                        <a asp-page="/Employees/Index" class="nexora-nav-link @ActiveClass("/Employees/Index")">
-                            <span>قائمة الموظفين</span>
-                        </a>
-                        <a asp-page="/Employees/Import" class="nexora-nav-link @(IsUnder("/Employees/Import") ? "active nexora-active" : "")">
-                            <span>&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;</span>
-                        </a>
-                        <a asp-page="/Violations/Index" class="nexora-nav-link @(IsUnder("/Violations") ? "active nexora-active" : "")">
-                            <span>حالات المخالفات</span>
-                        </a><a asp-page="/EmployeeUpdates/Index" class="nexora-nav-link @(IsUnder("/EmployeeUpdates") ? "active nexora-active" : "")">
-                            <span>تحديثات الموظف</span>
-                        </a>
-                        <a asp-page="/DisciplinaryRules/Index" class="nexora-nav-link @(IsUnder("/DisciplinaryRules") ? "active nexora-active" : "")">
-                            <span>إعدادات الموارد البشرية</span>
-                        </a>
-                        @* NEXORA_EMPLOYEE_PROFILE_SETTINGS_NAV_LINK *@
-                        <a asp-page="/EmployeeProfileSettings/Index" class="nexora-nav-link @(IsUnder("/EmployeeProfileSettings") ? "active nexora-active" : "")">
-                            <span>&#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</span>
-                        </a>
-                        <a asp-page="/HrSettings/ProbationPeriod" class="nexora-nav-link @(IsUnder("/HrSettings/ProbationPeriod") ? "active nexora-active" : "")">
-                            <span>فترة التجربة</span>
-                        </a>
-                        <a asp-page="/HrSettings/NoticePeriod" class="nexora-nav-link @(IsUnder("/HrSettings/NoticePeriod") ? "active nexora-active" : "")">
-                            <span>فترة الإنذار</span>
-                        </a>
-                        <a asp-page="/HrSettings/SelfServiceSettings" class="nexora-nav-link @(IsUnder("/HrSettings/SelfServiceSettings") ? "active nexora-active" : "")">
-                            <span>إعدادات الخدمة الذاتية</span>
-                        </a>
-                        <a asp-page="/HrSettings/TerminationReasons" class="nexora-nav-link @(IsUnder("/HrSettings/TerminationReasons") ? "active nexora-active" : "")">
-                            <span>أسباب الإيقاف</span>
-                        </a>
-                        <a asp-page="/HrSettings/NotificationCenter" class="nexora-nav-link @(IsUnder("/HrSettings/NotificationCenter") ? "active nexora-active" : "")">
-                            <span>مركز الإشعارات</span>
-                        </a>
-                        <a asp-page="/EmployeeProfiles/Index" class="nexora-nav-link @(IsUnder("/EmployeeProfiles") ? "active nexora-active" : "")">
-                            <span>عمليات الموارد البشرية</span>
-                        </a>
-                        <a asp-page="/Organization/Index" class="nexora-nav-link @(IsUnder("/Organization") ? "active nexora-active" : "")">
-                            <span>الهياكل التنظيمية</span>
-                        </a>
-                        <a asp-page="/EmployeeDocuments/Index" class="nexora-nav-link @(IsUnder("/EmployeeDocuments") ? "active nexora-active" : "")">
-                            <span>مركز الوثائق</span>
-                        </a>
-                        <a asp-page="/EmployeePermissions/Index" class="nexora-nav-link @(IsUnder("/EmployeePermissions") ? "active nexora-active" : "")">
-                            <span>بطاقات الموظفين</span>
-                        </a>
-                    </div>
-                </details>
+                @if (hasVisiblePeopleNavigation)
+                {
+                    <details name="nexora-main-menu" class="nexora-nav-group" @(employeesOpen ? "open" : "")>
+                        <summary data-sidebar-label="&#x0623;&#x0634;&#x062E;&#x0627;&#x0635;">
+                            <span class="nexora-nav-dot gold"></span>
+                            <span class="nexora-nav-text">أشخاص</span>
+                            <span class="nexora-chevron"></span>
+                        </summary>
+                        <div class="nexora-nav-group-links">
+                            @if (canViewPeopleDirectory)
+                            {
+                                <a asp-page="/Employees/Index" class="nexora-nav-link @ActiveClass("/Employees/Index")">
+                                    <span>قائمة الموظفين</span>
+                                </a>
+                            }
+
+                            @if (canImportPeople)
+                            {
+                                <a asp-page="/Employees/Import" class="nexora-nav-link @(IsUnder("/Employees/Import") ? "active nexora-active" : "")">
+                                    <span>&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;</span>
+                                </a>
+                            }
+
+                            @if (canUseLegacyPeopleAdministration)
+                            {
+                                <a asp-page="/Violations/Index" class="nexora-nav-link @(IsUnder("/Violations") ? "active nexora-active" : "")">
+                                    <span>حالات المخالفات</span>
+                                </a>
+                                <a asp-page="/EmployeeUpdates/Index" class="nexora-nav-link @(IsUnder("/EmployeeUpdates") ? "active nexora-active" : "")">
+                                    <span>تحديثات الموظف</span>
+                                </a>
+                                <a asp-page="/DisciplinaryRules/Index" class="nexora-nav-link @(IsUnder("/DisciplinaryRules") ? "active nexora-active" : "")">
+                                    <span>إعدادات الموارد البشرية</span>
+                                </a>
+                                @* NEXORA_EMPLOYEE_PROFILE_SETTINGS_NAV_LINK *@
+                                <a asp-page="/EmployeeProfileSettings/Index" class="nexora-nav-link @(IsUnder("/EmployeeProfileSettings") ? "active nexora-active" : "")">
+                                    <span>&#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</span>
+                                </a>
+                                <a asp-page="/HrSettings/ProbationPeriod" class="nexora-nav-link @(IsUnder("/HrSettings/ProbationPeriod") ? "active nexora-active" : "")">
+                                    <span>فترة التجربة</span>
+                                </a>
+                                <a asp-page="/HrSettings/NoticePeriod" class="nexora-nav-link @(IsUnder("/HrSettings/NoticePeriod") ? "active nexora-active" : "")">
+                                    <span>فترة الإنذار</span>
+                                </a>
+                                <a asp-page="/HrSettings/SelfServiceSettings" class="nexora-nav-link @(IsUnder("/HrSettings/SelfServiceSettings") ? "active nexora-active" : "")">
+                                    <span>إعدادات الخدمة الذاتية</span>
+                                </a>
+                                <a asp-page="/HrSettings/TerminationReasons" class="nexora-nav-link @(IsUnder("/HrSettings/TerminationReasons") ? "active nexora-active" : "")">
+                                    <span>أسباب الإيقاف</span>
+                                </a>
+                                <a asp-page="/HrSettings/NotificationCenter" class="nexora-nav-link @(IsUnder("/HrSettings/NotificationCenter") ? "active nexora-active" : "")">
+                                    <span>مركز الإشعارات</span>
+                                </a>
+                                <a asp-page="/EmployeeProfiles/Index" class="nexora-nav-link @(IsUnder("/EmployeeProfiles") ? "active nexora-active" : "")">
+                                    <span>عمليات الموارد البشرية</span>
+                                </a>
+                                <a asp-page="/EmployeeDocuments/Index" class="nexora-nav-link @(IsUnder("/EmployeeDocuments") ? "active nexora-active" : "")">
+                                    <span>مركز الوثائق</span>
+                                </a>
+                            }
+
+                            @if (canViewOrganization)
+                            {
+                                <a asp-page="/Organization/Index" class="nexora-nav-link @(IsUnder("/Organization") ? "active nexora-active" : "")">
+                                    <span>الهياكل التنظيمية</span>
+                                </a>
+                            }
+
+                            @if (canManagePeoplePermissions)
+                            {
+                                <a asp-page="/EmployeePermissions/Index" class="nexora-nav-link @(IsUnder("/EmployeePermissions") ? "active nexora-active" : "")">
+                                    <span>بطاقات الموظفين</span>
+                                </a>
+                            }
+                        </div>
+                    </details>
+                }
 
                 <details name="nexora-main-menu" class="nexora-nav-group" @(attendanceOpen ? "open" : "")>
                     <summary data-sidebar-label="&#x0627;&#x0644;&#x062D;&#x0636;&#x0648;&#x0631; &#x0648;&#x0627;&#x0644;&#x0627;&#x0646;&#x0635;&#x0631;&#x0627;&#x0641;">
@@ -263,8 +342,9 @@
                         </a>
                     </div>
                 </details>
-                <!-- NEXORA_SAFE_MAIN_MENU_END -->
-            </nav>
+                    <!-- NEXORA_SAFE_MAIN_MENU_END -->
+                </nav>
+            }
         </aside>
 
         <div class="nexora-main">

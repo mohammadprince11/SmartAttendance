@@ -3,11 +3,13 @@ using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
+using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Application.Employees.Services;
 using SmartAttendance.Application.Employees.ViewModels;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Infrastructure.Security;
 
 namespace SmartAttendance.Infrastructure.Services;
 
@@ -43,6 +45,9 @@ public class EmployeeService : IEmployeeService
         var employeesQuery = _dbContext.Employees
             .AsNoTracking()
             .Where(x => !x.IsDeleted);
+
+        employeesQuery = employeesQuery.ApplyPeopleDataScope(
+            query.DataScope ?? PeopleDataScope.Unrestricted());
 
         if (query.CompanyId.HasValue &&
             query.CompanyId.Value > 0)
@@ -163,6 +168,7 @@ public class EmployeeService : IEmployeeService
                 Gender = x.Gender,
                 MaritalStatus = x.MaritalStatus,
                 IsActive = x.IsActive,
+                CompanyId = x.Branch.CompanyId,
                 BranchId = x.BranchId,
                 DepartmentId = x.DepartmentId,
                 DepartmentCode = x.Department.IsDeleted
@@ -454,7 +460,8 @@ public class EmployeeService : IEmployeeService
 
     public async Task<IEnumerable<DepartmentListViewModel>>
         GetDepartmentsForDropdownAsync(
-            int? companyId = null)
+            int? companyId = null,
+            PeopleDataScope? dataScope = null)
     {
         var departmentsQuery = _dbContext.Departments
             .AsNoTracking()
@@ -468,6 +475,21 @@ public class EmployeeService : IEmployeeService
         {
             departmentsQuery = departmentsQuery.Where(x =>
                 x.CompanyId == companyId.Value);
+        }
+
+        if (dataScope != null &&
+            (!dataScope.IsUnrestricted || dataScope.HasAnyDenial))
+        {
+            var accessibleDepartmentIds = await _dbContext.Employees
+                .AsNoTracking()
+                .Where(x => !x.IsDeleted)
+                .ApplyPeopleDataScope(dataScope)
+                .Select(x => x.DepartmentId)
+                .Distinct()
+                .ToListAsync();
+
+            departmentsQuery = departmentsQuery.Where(x =>
+                accessibleDepartmentIds.Contains(x.Id));
         }
 
         return await departmentsQuery
@@ -491,7 +513,8 @@ public class EmployeeService : IEmployeeService
 
     public async Task<IEnumerable<BranchListViewModel>>
         GetBranchesForDropdownAsync(
-            int? companyId = null)
+            int? companyId = null,
+            PeopleDataScope? dataScope = null)
     {
         var branchesQuery = _dbContext.Branches
             .AsNoTracking()
@@ -507,6 +530,21 @@ public class EmployeeService : IEmployeeService
                 x.CompanyId == companyId.Value);
         }
 
+        if (dataScope != null &&
+            (!dataScope.IsUnrestricted || dataScope.HasAnyDenial))
+        {
+            var accessibleBranchIds = await _dbContext.Employees
+                .AsNoTracking()
+                .Where(x => !x.IsDeleted)
+                .ApplyPeopleDataScope(dataScope)
+                .Select(x => x.BranchId)
+                .Distinct()
+                .ToListAsync();
+
+            branchesQuery = branchesQuery.Where(x =>
+                accessibleBranchIds.Contains(x.Id));
+        }
+
         return await branchesQuery
             .OrderBy(x => x.Name)
             .Select(x => new BranchListViewModel
@@ -518,6 +556,21 @@ public class EmployeeService : IEmployeeService
                 IsActive = x.IsActive,
                 CompanyId = x.CompanyId
             })
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<int>> GetAccessibleCompanyIdsAsync(
+        PeopleDataScope dataScope)
+    {
+        ArgumentNullException.ThrowIfNull(dataScope);
+
+        return await _dbContext.Employees
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted)
+            .ApplyPeopleDataScope(dataScope)
+            .Select(x => x.Branch.CompanyId)
+            .Distinct()
+            .OrderBy(x => x)
             .ToListAsync();
     }
 
