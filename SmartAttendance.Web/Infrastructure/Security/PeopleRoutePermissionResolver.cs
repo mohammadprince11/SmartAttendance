@@ -74,7 +74,7 @@ public static class PeopleRoutePermissionResolver
                 if (handler.Equals("ReassignFromModal", StringComparison.OrdinalIgnoreCase) ||
                     handler.Equals("ReassignFromModalV2", StringComparison.OrdinalIgnoreCase))
                 {
-                    return Employee(PeoplePermissionCodes.ChangeAssignment);
+                    return Employee(PeoplePermissionCodes.Rehire);
                 }
 
                 if (handler.Equals("UploadProfileAreaFile", StringComparison.OrdinalIgnoreCase))
