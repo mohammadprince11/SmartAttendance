@@ -14,7 +14,10 @@
             <h1>سجل إنهاء الخدمات</h1>
             <p>متابعة إجراءات إنهاء الخدمة وحالة التصفية مع إمكانية الرجوع إلى ملف الموظف.</p>
         </div>
-        <a asp-page="./Index" class="esl-btn ghost">قائمة الموظفين</a>
+        @if (Model.CanViewDirectory)
+        {
+            <a asp-page="./Index" class="esl-btn ghost">قائمة الموظفين</a>
+        }
     </div>
 
     <section class="esl-kpis">
@@ -91,7 +94,16 @@
                             <td><span class="esl-badge @Model.ClearanceClass(row.ClearanceStatus)">@Model.ClearanceText(row.ClearanceStatus)</span></td>
                             <td>@Model.Display(row.CreatedBy)</td>
                             <td>@Model.DisplayDateTime(row.CreatedAt)</td>
-                            <td><a asp-page="./Profile" asp-route-id="@row.EmployeeId" class="esl-mini-btn">فتح الملف</a></td>
+                            <td>
+                                @if (row.CanViewProfile)
+                                {
+                                    <a asp-page="./Profile" asp-route-id="@row.EmployeeId" class="esl-mini-btn">فتح الملف</a>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </td>
                         </tr>
                     }
 

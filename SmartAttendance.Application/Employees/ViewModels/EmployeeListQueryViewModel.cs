@@ -1,7 +1,10 @@
+using SmartAttendance.Application.Common.Security;
+
 namespace SmartAttendance.Application.Employees.ViewModels;
 
 public class EmployeeListQueryViewModel
 {
+    public PeopleDataScope? DataScope { get; set; }
     public int? CompanyId { get; set; }
 
     public string? SearchTerm { get; set; }

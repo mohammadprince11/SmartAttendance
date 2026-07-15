@@ -804,14 +804,33 @@ public sealed class AnnouncementService : IAnnouncementService
             return false;
         }
 
-        return await _dbContext.SystemUserPermissions
+        var utcNow = DateTime.UtcNow;
+
+        var activeRules = _dbContext.SystemUserPermissions
             .AsNoTracking()
-            .AnyAsync(
-                assignment =>
-                    assignment.SystemUserId == actorUser.Id &&
-                    assignment.Permission.IsActive &&
-                    assignment.Permission.Code == permissionCode,
-                cancellationToken);
+            .Where(assignment =>
+                assignment.SystemUserId == actorUser.Id &&
+                assignment.Permission.IsActive &&
+                assignment.Permission.Code == permissionCode &&
+                (!assignment.ValidFromUtc.HasValue || assignment.ValidFromUtc.Value <= utcNow) &&
+                (!assignment.ValidToUtc.HasValue || assignment.ValidToUtc.Value > utcNow));
+
+        var denied = await activeRules.AnyAsync(
+            assignment =>
+                assignment.Effect == PermissionEffect.Deny &&
+                assignment.ScopeType == PeopleDataScopeType.All,
+            cancellationToken);
+
+        if (denied)
+        {
+            return false;
+        }
+
+        return await activeRules.AnyAsync(
+            assignment =>
+                assignment.Effect == PermissionEffect.Allow &&
+                assignment.ScopeType == PeopleDataScopeType.All,
+            cancellationToken);
     }
 
     private void AddAudit(

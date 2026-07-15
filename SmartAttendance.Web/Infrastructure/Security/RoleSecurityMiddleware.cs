@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -7,7 +8,7 @@ namespace SmartAttendance.Web.Infrastructure.Security;
 public class RoleSecurityMiddleware
 {
     private readonly RequestDelegate _next;
-    private static readonly System.Threading.SemaphoreSlim LoginDatabaseEnsureLock = new(1, 1);
+    private static readonly SemaphoreSlim LoginDatabaseEnsureLock = new(1, 1);
     private static volatile bool LoginDatabaseIsReady;
 
     public RoleSecurityMiddleware(RequestDelegate next)
@@ -15,7 +16,11 @@ public class RoleSecurityMiddleware
         _next = next;
     }
 
-    public async Task InvokeAsync(HttpContext context, ApplicationDbContext dbContext)
+    public async Task InvokeAsync(
+        HttpContext context,
+        ApplicationDbContext dbContext,
+        ILoginIdentityService loginIdentityService,
+        IPermissionAuthorizationService permissionAuthorizationService)
     {
         await EnsureLoginDatabaseCreatedAsync(dbContext);
 
@@ -34,17 +39,38 @@ public class RoleSecurityMiddleware
         }
 
         var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var username = context.User.Identity?.Name ?? context.User.FindFirstValue(ClaimTypes.Name);
+        var username = context.User.Identity?.Name ??
+                       context.User.FindFirstValue(ClaimTypes.Name);
         var role = context.User.FindFirstValue(ClaimTypes.Role);
         var employeeId = context.User.FindFirstValue("EmployeeId");
+        var displayName = context.User.FindFirstValue("DisplayName") ?? username;
 
-        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(role))
+        if (string.IsNullOrWhiteSpace(userId) ||
+            string.IsNullOrWhiteSpace(username) ||
+            string.IsNullOrWhiteSpace(role))
         {
             RedirectToLogin(context);
             return;
         }
 
-        var isAllowed = await IsAllowedAsync(context, dbContext, path, role, employeeId);
+        var systemUserId = await ResolveSystemUserIdAsync(
+            context,
+            loginIdentityService,
+            username,
+            displayName ?? username,
+            role,
+            employeeId);
+
+        PeopleAccessContext.SetSystemUserId(context, systemUserId);
+
+        var isAllowed = await IsAllowedAsync(
+            context,
+            dbContext,
+            permissionAuthorizationService,
+            path,
+            role,
+            employeeId,
+            systemUserId);
 
         if (!isAllowed)
         {
@@ -55,7 +81,8 @@ public class RoleSecurityMiddleware
         await _next(context);
     }
 
-    private static async Task EnsureLoginDatabaseCreatedAsync(ApplicationDbContext dbContext)
+    private static async Task EnsureLoginDatabaseCreatedAsync(
+        ApplicationDbContext dbContext)
     {
         if (LoginDatabaseIsReady)
         {
@@ -82,7 +109,9 @@ public class RoleSecurityMiddleware
 
     private static bool IsPublicPath(string path)
     {
-        if (path == "/account/login" || path == "/account/logout" || path == "/accessdenied")
+        if (path == "/account/login" ||
+            path == "/account/logout" ||
+            path == "/accessdenied")
         {
             return true;
         }
@@ -102,14 +131,105 @@ public class RoleSecurityMiddleware
 
     private static void RedirectToLogin(HttpContext context)
     {
-        var returnUrl = Uri.EscapeDataString(context.Request.Path + context.Request.QueryString);
+        var returnUrl = Uri.EscapeDataString(
+            context.Request.Path + context.Request.QueryString);
         context.Response.Redirect($"/Account/Login?ReturnUrl={returnUrl}");
     }
 
-    private static async Task<bool> IsAllowedAsync(HttpContext context, ApplicationDbContext dbContext, string path, string role, string? employeeId)
+    private static async Task<bool> IsAllowedAsync(
+        HttpContext context,
+        ApplicationDbContext dbContext,
+        IPermissionAuthorizationService permissionAuthorizationService,
+        string path,
+        string role,
+        string? employeeId,
+        int? systemUserId)
     {
         role = role.Trim();
 
+        var compatibilityAllowed = await IsCompatibilityAllowedAsync(
+            context,
+            dbContext,
+            path,
+            role,
+            employeeId);
+
+        var requirement = PeopleRoutePermissionResolver.Resolve(context, path);
+
+        if (requirement == null)
+        {
+            return compatibilityAllowed;
+        }
+
+        // If identity synchronization fails, retain the pre-existing role rules so
+        // an infrastructure issue cannot lock out the current administrator.
+        if (!systemUserId.HasValue || systemUserId.Value <= 0)
+        {
+            return compatibilityAllowed;
+        }
+
+        return requirement.ScopeMode switch
+        {
+            PeoplePermissionScopeMode.DataSet =>
+                await permissionAuthorizationService.HasPermissionAsync(
+                    systemUserId.Value,
+                    requirement.PermissionCode,
+                    compatibilityAllowed,
+                    context.RequestAborted),
+
+            PeoplePermissionScopeMode.Global =>
+                await permissionAuthorizationService.HasGlobalPermissionAsync(
+                    systemUserId.Value,
+                    requirement.PermissionCode,
+                    compatibilityAllowed,
+                    context.RequestAborted),
+
+            PeoplePermissionScopeMode.Employee =>
+                await IsEmployeePermissionAllowedAsync(
+                    context,
+                    dbContext,
+                    permissionAuthorizationService,
+                    systemUserId.Value,
+                    requirement.PermissionCode,
+                    compatibilityAllowed),
+
+            _ => false
+        };
+    }
+
+    private static async Task<bool> IsEmployeePermissionAllowedAsync(
+        HttpContext context,
+        ApplicationDbContext dbContext,
+        IPermissionAuthorizationService permissionAuthorizationService,
+        int systemUserId,
+        string permissionCode,
+        bool compatibilityAllowed)
+    {
+        var targetEmployeeId = await PeopleTargetEmployeeResolver.ResolveAsync(
+            context,
+            dbContext,
+            context.RequestAborted);
+
+        if (!targetEmployeeId.HasValue)
+        {
+            return false;
+        }
+
+        return await permissionAuthorizationService.CanAccessEmployeeAsync(
+            systemUserId,
+            permissionCode,
+            targetEmployeeId.Value,
+            compatibilityAllowed,
+            context.RequestAborted);
+    }
+
+    private static async Task<bool> IsCompatibilityAllowedAsync(
+        HttpContext context,
+        ApplicationDbContext dbContext,
+        string path,
+        string role,
+        string? employeeId)
+    {
         if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
         {
             return true;
@@ -214,7 +334,10 @@ public class RoleSecurityMiddleware
 
             if (path.StartsWith("/employeefile"))
             {
-                return await IsOwnEmployeeFileAsync(context, dbContext, employeeId);
+                return await IsOwnEmployeeFileAsync(
+                    context,
+                    dbContext,
+                    employeeId);
             }
 
             return false;
@@ -223,10 +346,54 @@ public class RoleSecurityMiddleware
         return false;
     }
 
-    private static bool HasEmployeeId(string? employeeIdCookie)
+    private static async Task<int?> ResolveSystemUserIdAsync(
+        HttpContext context,
+        ILoginIdentityService loginIdentityService,
+        string username,
+        string displayName,
+        string role,
+        string? employeeIdClaim)
     {
-        return !string.IsNullOrWhiteSpace(employeeIdCookie) &&
-               int.TryParse(employeeIdCookie, out var id) &&
+        var systemUserIdClaim = context.User.FindFirstValue("SystemUserId");
+
+        if (int.TryParse(systemUserIdClaim, out var existingSystemUserId) &&
+            existingSystemUserId > 0)
+        {
+            return existingSystemUserId;
+        }
+
+        int? employeeId = null;
+
+        if (int.TryParse(employeeIdClaim, out var parsedEmployeeId) &&
+            parsedEmployeeId > 0)
+        {
+            employeeId = parsedEmployeeId;
+        }
+
+        try
+        {
+            return await loginIdentityService.EnsureSystemUserAsync(
+                new LoginIdentityRequest
+                {
+                    EmployeeId = employeeId,
+                    UserName = username,
+                    DisplayName = displayName,
+                    CompatibilityRole = role,
+                    IsActive = true
+                },
+                context.RequestAborted);
+        }
+        catch
+        {
+            // Compatibility access remains available if identity synchronization fails.
+            return null;
+        }
+    }
+
+    private static bool HasEmployeeId(string? employeeIdClaim)
+    {
+        return !string.IsNullOrWhiteSpace(employeeIdClaim) &&
+               int.TryParse(employeeIdClaim, out var id) &&
                id > 0;
     }
 
@@ -243,9 +410,13 @@ public class RoleSecurityMiddleware
         return false;
     }
 
-    private static async Task<bool> IsOwnRequestAsync(HttpContext context, string? employeeIdCookie)
+    private static async Task<bool> IsOwnRequestAsync(
+        HttpContext context,
+        string? employeeIdClaim)
     {
-        if (string.IsNullOrWhiteSpace(employeeIdCookie) || !int.TryParse(employeeIdCookie, out var ownEmployeeId) || ownEmployeeId <= 0)
+        if (string.IsNullOrWhiteSpace(employeeIdClaim) ||
+            !int.TryParse(employeeIdClaim, out var ownEmployeeId) ||
+            ownEmployeeId <= 0)
         {
             return false;
         }
@@ -290,9 +461,14 @@ public class RoleSecurityMiddleware
         return true;
     }
 
-    private static async Task<bool> IsOwnEmployeeFileAsync(HttpContext context, ApplicationDbContext dbContext, string? employeeIdCookie)
+    private static async Task<bool> IsOwnEmployeeFileAsync(
+        HttpContext context,
+        ApplicationDbContext dbContext,
+        string? employeeIdClaim)
     {
-        if (string.IsNullOrWhiteSpace(employeeIdCookie) || !int.TryParse(employeeIdCookie, out var employeeId) || employeeId <= 0)
+        if (string.IsNullOrWhiteSpace(employeeIdClaim) ||
+            !int.TryParse(employeeIdClaim, out var employeeId) ||
+            employeeId <= 0)
         {
             return false;
         }
@@ -300,7 +476,8 @@ public class RoleSecurityMiddleware
         var requestedEmployeeNo = context.Request.Query["EmployeeNo"].ToString();
         var requestedId = context.Request.Query["Id"].ToString();
 
-        if (!string.IsNullOrWhiteSpace(requestedId) && int.TryParse(requestedId, out var idFromQuery))
+        if (!string.IsNullOrWhiteSpace(requestedId) &&
+            int.TryParse(requestedId, out var idFromQuery))
         {
             return idFromQuery == employeeId;
         }

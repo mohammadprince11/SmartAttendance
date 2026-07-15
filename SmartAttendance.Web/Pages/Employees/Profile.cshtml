@@ -236,8 +236,11 @@
         </div>
 
         <div class="nxr-actions nxr-profile-pro-actions nxr-kayan-top-actions">
-            <a asp-page="./Index" class="nxr-btn">رجوع للقائمة</a>
-            @if (employee != null)
+            @if (Model.CanViewDirectory)
+            {
+                <a asp-page="./Index" class="nxr-btn">رجوع للقائمة</a>
+            }
+            @if (employee != null && (Model.CanEditEmployee || Model.CanOpenEmployeeDocuments || Model.CanViewLifecycle || Model.CanEndService || Model.CanChangeAssignment))
             {
                 <div class="nxr-action-menu" data-nxr-action-menu>
                     <button type="button" class="nxr-btn primary nxr-action-menu-button" data-nxr-action-toggle>
@@ -250,20 +253,29 @@
                             <span>أوامر شؤون الموظفين</span>
                         </div>
 
-                        <a asp-page="./Edit" asp-route-id="@employee.Id" class="nxr-action-item">
-                            <span>تعديل البيانات</span>
-                            <small>تحديث المعلومات الشخصية والوظيفية</small>
-                        </a>
+                        @if (Model.CanEditEmployee)
+                        {
+                            <a asp-page="./Edit" asp-route-id="@employee.Id" class="nxr-action-item">
+                                <span>تعديل البيانات</span>
+                                <small>تحديث المعلومات الشخصية والوظيفية</small>
+                            </a>
+                        }
 
-                        <a asp-page="/EmployeeDocuments/Index" asp-route-employeeId="@employee.Id" class="nxr-action-item">
-                            <span>رفع مستند</span>
-                            <small>إضافة مستمسك أو ملف جديد</small>
-                        </a>
+                        @if (Model.CanOpenEmployeeDocuments)
+                        {
+                            <a asp-page="/EmployeeDocuments/Index" asp-route-employeeId="@employee.Id" class="nxr-action-item">
+                                <span>رفع مستند</span>
+                                <small>إضافة مستمسك أو ملف جديد</small>
+                            </a>
+                        }
 
-                        <a asp-page="./Lifecycle" asp-route-id="@employee.Id" class="nxr-action-item">
-                            <span>السجل الوظيفي</span>
-                            <small>الحركات والتغييرات الوظيفية</small>
-                        </a>
+                        @if (Model.CanViewLifecycle)
+                        {
+                            <a asp-page="./Lifecycle" asp-route-id="@employee.Id" class="nxr-action-item">
+                                <span>السجل الوظيفي</span>
+                                <small>الحركات والتغييرات الوظيفية</small>
+                            </a>
+                        }
 
                         <button type="button" class="nxr-action-item is-disabled">
                             <span>إضافة عقد / تجديد عقد</span>
@@ -284,14 +296,14 @@
                             <span>مخالفة / كتاب HR</span>
                             <small>إنذار، عقوبة، شكر، أو كتاب إداري</small>
                         </button>
-                        @if (employee.IsActive)
+                        @if (employee.IsActive && Model.CanEndService)
                         {
                             <a asp-page="./EndService" asp-route-id="@employee.Id" class="nxr-action-item danger">
                                 <span>&#x0625;&#x0646;&#x0647;&#x0627;&#x0621; &#x062E;&#x062F;&#x0645;&#x0629;</span>
                                 <small>&#x0625;&#x062C;&#x0631;&#x0627;&#x0621; &#x0631;&#x0633;&#x0645;&#x064A; &#x0644;&#x0625;&#x0646;&#x0647;&#x0627;&#x0621; &#x062E;&#x062F;&#x0645;&#x0629; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</small>
                             </a>
                         }
-                        else
+                        else if (!employee.IsActive && Model.CanChangeAssignment)
                         {
                             <button type="button" class="nxr-action-item" data-nxr-reassign-open>
                                 <span>&#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x062A;&#x0639;&#x064A;&#x064A;&#x0646;</span>
@@ -355,7 +367,7 @@
                                                     <select name="ReassignDepartmentId" data-nxr-reassign-department>
                                                         @foreach (var department in Model.ReassignDepartments)
                                                         {
-                                                            <option value="@department.Id" data-branch-id="@department.BranchId" selected="@(department.Id == Model.CurrentReassignDepartmentId ? "selected" : null)">@Model.Display(department.Name)</option>
+                                                            <option value="@department.Id" data-company-id="@department.CompanyId" selected="@(department.Id == Model.CurrentReassignDepartmentId ? "selected" : null)">@Model.Display(department.Name)</option>
                                                         }
                                                     </select>
                                                 </label>
@@ -419,18 +431,33 @@
     {
         <section class="nxr-kayan-profile-card nxr-card">
             <div class="nxr-kayan-identity">
-                <form method="post" asp-page-handler="UploadProfilePhoto" asp-route-id="@employee.Id" enctype="multipart/form-data" class="nxr-profile-photo-form" data-employee-photo-form data-auto-submit-photo>
-                    <label class="nxr-kayan-avatar nxr-profile-photo-drop @(string.IsNullOrWhiteSpace(employee.PhotoPath) ? "has-image has-brand-placeholder" : "has-image")" data-employee-photo-drop title="اضغط لتحديث صورة الموظف">
-                        <input asp-for="EmployeePhoto" type="file" accept="image/png,image/jpeg,image/webp" />
-                        <img class="nxr-profile-photo-preview"
-                             src="@(string.IsNullOrWhiteSpace(employee.PhotoPath) ? employeePhotoFallback : employee.PhotoPath)"
-                             alt="Employee photo"
-                             data-employee-photo-preview
-                             data-placeholder-src="@employeePhotoFallback"
-                             onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
-                        <span class="nxr-profile-photo-change">اضغط لتحديث الصورة</span>
-                    </label>
-                </form>
+                @if (Model.CanEditEmployee)
+                {
+                    <form method="post" asp-page-handler="UploadProfilePhoto" asp-route-id="@employee.Id" enctype="multipart/form-data" class="nxr-profile-photo-form" data-employee-photo-form data-auto-submit-photo>
+                        <label class="nxr-kayan-avatar nxr-profile-photo-drop @(string.IsNullOrWhiteSpace(employee.PhotoPath) ? "has-image has-brand-placeholder" : "has-image")" data-employee-photo-drop title="اضغط لتحديث صورة الموظف">
+                            <input asp-for="EmployeePhoto" type="file" accept="image/png,image/jpeg,image/webp" />
+                            <img class="nxr-profile-photo-preview"
+                                 src="@(string.IsNullOrWhiteSpace(employee.PhotoPath) ? employeePhotoFallback : employee.PhotoPath)"
+                                 alt="Employee photo"
+                                 data-employee-photo-preview
+                                 data-placeholder-src="@employeePhotoFallback"
+                                 onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
+                            <span class="nxr-profile-photo-change">اضغط لتحديث الصورة</span>
+                        </label>
+                    </form>
+                }
+                else
+                {
+                    <div class="nxr-profile-photo-form">
+                        <div class="nxr-kayan-avatar nxr-profile-photo-drop @(string.IsNullOrWhiteSpace(employee.PhotoPath) ? "has-image has-brand-placeholder" : "has-image")">
+                            <img class="nxr-profile-photo-preview"
+                                 src="@(string.IsNullOrWhiteSpace(employee.PhotoPath) ? employeePhotoFallback : employee.PhotoPath)"
+                                 alt="Employee photo"
+                                 data-placeholder-src="@employeePhotoFallback"
+                                 onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
+                        </div>
+                    </div>
+                }
 
                 <div class="nxr-kayan-main">
                     <div class="nxr-kayan-code">@Model.Display(employee.EmployeeNo)</div>
@@ -456,7 +483,7 @@
                             <span>المدير المباشر</span>
                             <strong>@Model.Display(employee.DirectManager)</strong>
                         </div>
-                    
+
                         @* NEXORA_DYNAMIC_PROFILE_BASIC_CONTACT_GRID_MARKER *@
                         @{
                             var nxrBasicContactDynamicSection = Model.ProfileDynamicSections.FirstOrDefault(item => item.Key == "basic");
@@ -479,7 +506,10 @@
             <div class="nxr-kayan-section">
                 <div class="nxr-kayan-section-head">
                     <h3>المعلومات الشخصية</h3>
-                    <a asp-page="./Edit" asp-route-id="@employee.Id" class="nxr-kayan-edit" title="تعديل">✎</a>
+                    @if (Model.CanEditEmployee)
+                    {
+                        <a asp-page="./Edit" asp-route-id="@employee.Id" class="nxr-kayan-edit" title="تعديل">✎</a>
+                    }
                 </div>
 
                 <div class="nxr-kayan-info-grid">
@@ -516,7 +546,10 @@
             <div class="nxr-kayan-section">
                 <div class="nxr-kayan-section-head">
                     <h3>المعلومات الوظيفية</h3>
-                    <a asp-page="./Lifecycle" asp-route-id="@employee.Id" class="nxr-kayan-edit" title="السجل الوظيفي">↗</a>
+                    @if (Model.CanViewLifecycle)
+                    {
+                        <a asp-page="./Lifecycle" asp-route-id="@employee.Id" class="nxr-kayan-edit" title="السجل الوظيفي">↗</a>
+                    }
                 </div>
 
                 <div class="nxr-kayan-info-grid">
@@ -829,8 +862,14 @@
                 </div>
 
                 <div class="nxr-profile-kayan-tools">
-                    <a asp-page="/EmployeeDocuments/Index" asp-route-employeeId="@employee.Id" class="primary">الملفات الإلكترونية</a>
-                    <a asp-page="./Lifecycle" asp-route-id="@employee.Id">سجل الموظف</a>
+                    @if (Model.CanOpenEmployeeDocuments)
+                    {
+                        <a asp-page="/EmployeeDocuments/Index" asp-route-employeeId="@employee.Id" class="primary">الملفات الإلكترونية</a>
+                    }
+                    @if (Model.CanViewLifecycle)
+                    {
+                        <a asp-page="./Lifecycle" asp-route-id="@employee.Id">سجل الموظف</a>
+                    }
                     <button type="button" data-nxr-profile-tab="activity">عرض النشاط</button>
                 </div>
             </div>
@@ -859,27 +898,41 @@
                             <article class="nxr-profile-kayan-card nxr-profile-upload-card">
                                 <div class="nxr-profile-kayan-card-head">
                                     <h3>@fileCard.Title</h3>
-                                    <label for="@uploadInputId" class="nxr-profile-upload-menu" title="Upload file">+</label>
+                                    @if (Model.CanUploadDocument)
+                                    {
+                                        <label for="@uploadInputId" class="nxr-profile-upload-menu" title="Upload file">+</label>
+                                    }
                                 </div>
 
-                                <form method="post"
-                                      enctype="multipart/form-data"
-                                      asp-page-handler="UploadProfileAreaFile"
-                                      asp-route-id="@employee.Id"
-                                      class="nxr-profile-upload-hidden-form">
-                                    <input type="hidden" name="ProfileAreaCategory" value="@fileCard.Category" />
-                                    <input id="@uploadInputId"
-                                           type="file"
-                                           name="ProfileAreaFile"
-                                           accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx"
-                                           onchange="this.form.submit()" />
-                                </form>
+                                @if (Model.CanUploadDocument)
+                                {
+                                    <form method="post"
+                                          enctype="multipart/form-data"
+                                          asp-page-handler="UploadProfileAreaFile"
+                                          asp-route-id="@employee.Id"
+                                          class="nxr-profile-upload-hidden-form">
+                                        <input type="hidden" name="ProfileAreaCategory" value="@fileCard.Category" />
+                                        <input id="@uploadInputId"
+                                               type="file"
+                                               name="ProfileAreaFile"
+                                               accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx"
+                                               onchange="this.form.submit()" />
+                                    </form>
 
-                                <label for="@uploadInputId" class="nxr-profile-upload-drop">
-                                    <span class="icon">@fileCard.Icon</span>
-                                    <strong>@(cardFiles.Any() ? "\u0625\u0636\u0627\u0641\u0629 \u0645\u0644\u0641 \u0622\u062e\u0631" : "\u0627\u0631\u0641\u0639 \u0645\u0644\u0641")</strong>
-                                    <small>@fileCard.Description</small>
-                                </label>
+                                    <label for="@uploadInputId" class="nxr-profile-upload-drop">
+                                        <span class="icon">@fileCard.Icon</span>
+                                        <strong>@(cardFiles.Any() ? "\u0625\u0636\u0627\u0641\u0629 \u0645\u0644\u0641 \u0622\u062e\u0631" : "\u0627\u0631\u0641\u0639 \u0645\u0644\u0641")</strong>
+                                        <small>@fileCard.Description</small>
+                                    </label>
+                                }
+                                else if (!cardFiles.Any())
+                                {
+                                    <div class="nxr-profile-upload-drop">
+                                        <span class="icon">@fileCard.Icon</span>
+                                        <strong>لا توجد ملفات</strong>
+                                        <small>@fileCard.Description</small>
+                                    </div>
+                                }
 
                                 @if (cardFiles.Any())
                                 {
@@ -894,13 +947,16 @@
 
                                                 <div class="nxr-profile-file-actions">
                                                     <a href="@file.StoredPath" target="_blank">&#x0641;&#x062A;&#x062D;</a>
-                                                    <form method="post"
-                                                          asp-page-handler="DeleteProfileAreaFile"
-                                                          asp-route-id="@employee.Id"
-                                                          asp-route-fileId="@file.Id"
-                                                          onsubmit="return confirm('Delete this file?');">
-                                                        <button type="submit">&#x062D;&#x0630;&#x0641;</button>
-                                                    </form>
+                                                    @if (Model.CanDeleteDocument)
+                                                    {
+                                                        <form method="post"
+                                                              asp-page-handler="DeleteProfileAreaFile"
+                                                              asp-route-id="@employee.Id"
+                                                              asp-route-fileId="@file.Id"
+                                                              onsubmit="return confirm('Delete this file?');">
+                                                            <button type="submit">&#x062D;&#x0630;&#x0641;</button>
+                                                        </form>
+                                                    }
                                                 </div>
                                             </div>
                                         }

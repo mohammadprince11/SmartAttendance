@@ -70,14 +70,14 @@
         return changed;
     }
 
-    function filterDepartments(branchSelect, departmentSelect) {
-        if (!branchSelect || !departmentSelect) return false;
+    function filterDepartments(companySelect, departmentSelect) {
+        if (!companySelect || !departmentSelect) return false;
 
         var changed = false;
-        var branchId = branchSelect.value;
+        var companyId = companySelect.value;
 
         Array.from(departmentSelect.options).forEach(function (option) {
-            var shouldHide = option.dataset.branchId !== branchId;
+            var shouldHide = option.dataset.companyId !== companyId;
 
             if (option.hidden !== shouldHide) {
                 option.hidden = shouldHide;
@@ -106,7 +106,7 @@
         }
 
         filterBranches(companySelect, branchSelect);
-        filterDepartments(branchSelect, departmentSelect);
+        filterDepartments(companySelect, departmentSelect);
 
         refreshSelect(companySelect);
         refreshSelect(branchSelect);
