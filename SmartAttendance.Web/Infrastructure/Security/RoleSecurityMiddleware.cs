@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -120,6 +120,7 @@ public class RoleSecurityMiddleware
             path.StartsWith("/js/") ||
             path.StartsWith("/lib/") ||
             path.StartsWith("/images/") ||
+            path.StartsWith("/brand/") ||
             path.StartsWith("/uploads/") ||
             path.StartsWith("/favicon"))
         {
@@ -161,11 +162,12 @@ public class RoleSecurityMiddleware
             return compatibilityAllowed;
         }
 
-        // If identity synchronization fails, retain the pre-existing role rules so
-        // an infrastructure issue cannot lock out the current administrator.
+        // Dynamic People permissions fail closed when the synchronized
+        // system identity is unavailable. Compatibility access remains in
+        // effect only for routes that do not declare a dynamic requirement.
         if (!systemUserId.HasValue || systemUserId.Value <= 0)
         {
-            return compatibilityAllowed;
+            return false;
         }
 
         return requirement.ScopeMode switch
