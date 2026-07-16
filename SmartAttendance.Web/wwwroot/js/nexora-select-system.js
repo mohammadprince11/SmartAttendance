@@ -5,6 +5,7 @@
     var openState = null;
     var refreshToken = 0;
     var uid = 0;
+    var fileDialogPending = false;
 
     function closest(element, selector) {
         return element && element.closest ? element.closest(selector) : null;
@@ -58,18 +59,41 @@
 
     function setImportantStyle(element, name, value) {
         try {
+            if (
+                element.style.getPropertyValue(name) === value &&
+                element.style.getPropertyPriority(name) === "important"
+            ) {
+                return;
+            }
+
             element.style.setProperty(name, value, "important");
         } catch (_) {
-            element.style[name] = value;
+            if (element.style[name] !== value) {
+                element.style[name] = value;
+            }
         }
     }
 
     function hideNative(select) {
-        select.classList.remove("nxos-native");
-        select.classList.add("nxcs-native");
-        select.dataset.nxcsEnhanced = "true";
-        select.setAttribute("aria-hidden", "true");
-        select.tabIndex = -1;
+        if (select.classList.contains("nxos-native")) {
+            select.classList.remove("nxos-native");
+        }
+
+        if (!select.classList.contains("nxcs-native")) {
+            select.classList.add("nxcs-native");
+        }
+
+        if (select.dataset.nxcsEnhanced !== "true") {
+            select.dataset.nxcsEnhanced = "true";
+        }
+
+        if (select.getAttribute("aria-hidden") !== "true") {
+            select.setAttribute("aria-hidden", "true");
+        }
+
+        if (select.tabIndex !== -1) {
+            select.tabIndex = -1;
+        }
 
         setImportantStyle(select, "position", "absolute");
         setImportantStyle(select, "inset-inline-start", "-10000px");
@@ -172,20 +196,44 @@
         var value = wrapper.querySelector(".nxcs-value");
         var option = selectedOption(select);
 
+        var currentText = optionText(option);
+        var disabledValue = select.disabled ? "true" : "false";
+        var selectedValue = select.value || "";
+        var optionCount = String(select.options.length);
+
         if (value) {
-            value.textContent = optionText(option);
-            value.title = optionText(option);
+            if (value.textContent !== currentText) {
+                value.textContent = currentText;
+            }
+
+            if (value.title !== currentText) {
+                value.title = currentText;
+            }
         }
 
         if (trigger) {
-            trigger.disabled = !!select.disabled;
-            trigger.setAttribute("aria-disabled", select.disabled ? "true" : "false");
+            if (trigger.disabled !== !!select.disabled) {
+                trigger.disabled = !!select.disabled;
+            }
+
+            if (trigger.getAttribute("aria-disabled") !== disabledValue) {
+                trigger.setAttribute("aria-disabled", disabledValue);
+            }
         }
 
         wrapper.classList.toggle("is-disabled", !!select.disabled);
-        wrapper.dataset.nxcsValue = select.value || "";
-        wrapper.dataset.nxcsCount = String(select.options.length);
-        wrapper.dataset.nxcsDisabled = select.disabled ? "true" : "false";
+
+        if (wrapper.dataset.nxcsValue !== selectedValue) {
+            wrapper.dataset.nxcsValue = selectedValue;
+        }
+
+        if (wrapper.dataset.nxcsCount !== optionCount) {
+            wrapper.dataset.nxcsCount = optionCount;
+        }
+
+        if (wrapper.dataset.nxcsDisabled !== disabledValue) {
+            wrapper.dataset.nxcsDisabled = disabledValue;
+        }
 
         hideNative(select);
     }
@@ -459,6 +507,7 @@
         var fileInput = closest(event.target, "input[type='file']");
 
         if (fileInput) {
+            fileDialogPending = true;
             closeTransientPanels();
         }
     }, true);
@@ -468,12 +517,18 @@
 
         if (!fileInput) return;
 
+        fileDialogPending = false;
+
         window.requestAnimationFrame(function () {
             closeTransientPanels();
         });
     }, true);
 
     window.addEventListener("focus", function () {
+        if (!fileDialogPending) return;
+
+        fileDialogPending = false;
+
         window.setTimeout(function () {
             closeTransientPanels();
         }, 0);
@@ -512,28 +567,59 @@
         closeOpen();
     }, true);
 
+    function nodeContainsSelect(node) {
+        if (!node || node.nodeType !== 1) return false;
+        if (node.tagName === "SELECT") return true;
+        return !!(node.querySelector && node.querySelector("select"));
+    }
+
+    function mutationAffectsSelect(mutation) {
+        if (!mutation) return false;
+
+        if (mutation.type === "attributes") {
+            return (
+                mutation.target &&
+                mutation.target.tagName === "SELECT" &&
+                mutation.attributeName === "disabled"
+            );
+        }
+
+        if (mutation.type !== "childList") return false;
+
+        if (
+            mutation.target &&
+            (
+                mutation.target.tagName === "SELECT" ||
+                mutation.target.tagName === "OPTGROUP"
+            )
+        ) {
+            return true;
+        }
+
+        return (
+            Array.prototype.some.call(
+                mutation.addedNodes || [],
+                nodeContainsSelect
+            ) ||
+            Array.prototype.some.call(
+                mutation.removedNodes || [],
+                nodeContainsSelect
+            )
+        );
+    }
+
     if (window.MutationObserver) {
         var observer = new MutationObserver(function (mutations) {
-            var needsRefresh = false;
-
-            mutations.forEach(function (mutation) {
-                if (mutation.type === "childList") {
-                    needsRefresh = true;
-                }
-
-                if (mutation.type === "attributes" && mutation.target && mutation.target.tagName === "SELECT") {
-                    needsRefresh = true;
-                }
-            });
-
-            if (needsRefresh) scheduleRefresh();
+            if (mutations.some(mutationAffectsSelect)) {
+                scheduleRefresh();
+            }
         });
 
         observer.observe(document.documentElement, {
             childList: true,
             subtree: true,
             attributes: true,
-            attributeFilter: ["disabled", "class", "style"]
+            attributeFilter: ["disabled"]
         });
     }
 
