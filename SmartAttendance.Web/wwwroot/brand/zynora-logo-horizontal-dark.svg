@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 420" width="1600" height="420" role="img" aria-label="ZYNORA HR horizontal logo">
+  <title>ZYNORA HR — Horizontal Logo</title>
+  <svg x="20" y="20" width="360" height="360" viewBox="0 0 1024 1024" aria-hidden="true">
+  
+  <g fill="none" fill-rule="evenodd">
+    <!-- Top precision bar -->
+    <path fill="#081426" d="M170 218h520l-112 126H58z"/>
+    <!-- Main forward-motion diagonal -->
+    <path fill="#18C7BD" d="M584 294h176L360 746H184z"/>
+    <!-- Refined aqua facet -->
+    <path fill="#42DED3" opacity=".78" d="M584 294h88L272 746h-88z"/>
+    <!-- Bottom stability bar -->
+    <path fill="#081426" d="M334 680h520L742 806H222z"/>
+    <!-- Human-value anchor -->
+    <rect x="150" y="720" width="74" height="74" rx="8" fill="#D4B36A"/>
+    <!-- Structured data pixels -->
+    <rect x="650" y="184" width="62" height="62" rx="6" fill="#18C7BD"/>
+    <rect x="726" y="184" width="62" height="62" rx="6" fill="#18C7BD"/>
+    <rect x="802" y="184" width="62" height="62" rx="6" fill="#18C7BD"/>
+    <rect x="726" y="108" width="62" height="62" rx="6" fill="#18C7BD"/>
+    <rect x="802" y="108" width="62" height="62" rx="6" fill="#18C7BD"/>
+    <rect x="878" y="108" width="62" height="62" rx="6" fill="#18C7BD"/>
+    <rect x="802" y="32" width="62" height="62" rx="6" fill="#18C7BD"/>
+    <rect x="878" y="32" width="62" height="62" rx="6" fill="#18C7BD"/>
+  </g>
+</svg>
+  <rect x="420" y="84" width="2" height="252" fill="#9AA8B5" opacity=".65"/>
+  <text x="480" y="268"
+        font-family="Inter Display, Inter, Arial, sans-serif"
+        font-size="188"
+        font-weight="500"
+        letter-spacing="18"
+        fill="#081426">ZYNORA</text>
+  <text x="1370" y="268"
+        font-family="Inter, Arial, sans-serif"
+        font-size="84"
+        font-weight="600"
+        letter-spacing="4"
+        fill="#18C7BD">HR</text>
+</svg>

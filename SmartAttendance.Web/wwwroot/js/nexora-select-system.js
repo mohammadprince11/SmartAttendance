@@ -112,6 +112,38 @@
         });
     }
 
+    function removeDetachedPanels() {
+        document.querySelectorAll("body > .nxcs-panel").forEach(function (panel) {
+            if (!openState || openState.panel !== panel) {
+                panel.remove();
+            }
+        });
+
+        if (!openState) return;
+
+        var isConnected =
+            openState.select &&
+            openState.select.isConnected &&
+            openState.wrapper &&
+            openState.wrapper.isConnected &&
+            openState.trigger &&
+            openState.trigger.isConnected &&
+            openState.panel &&
+            openState.panel.isConnected;
+
+        if (!isConnected) {
+            closeOpen();
+        }
+    }
+
+    function closeTransientPanels() {
+        closeOpen();
+
+        document.querySelectorAll("body > .nxcs-panel").forEach(function (panel) {
+            panel.remove();
+        });
+    }
+
     function cleanupNear(select) {
         if (!select) return;
 
@@ -403,6 +435,7 @@
     function refreshAll() {
         removeLegacyShells();
         removeOrphanCustomShells();
+        removeDetachedPanels();
 
         document.querySelectorAll("select").forEach(function (select) {
             enhance(select);
@@ -421,6 +454,30 @@
             refreshAll();
         });
     }
+
+    document.addEventListener("click", function (event) {
+        var fileInput = closest(event.target, "input[type='file']");
+
+        if (fileInput) {
+            closeTransientPanels();
+        }
+    }, true);
+
+    document.addEventListener("change", function (event) {
+        var fileInput = closest(event.target, "input[type='file']");
+
+        if (!fileInput) return;
+
+        window.requestAnimationFrame(function () {
+            closeTransientPanels();
+        });
+    }, true);
+
+    window.addEventListener("focus", function () {
+        window.setTimeout(function () {
+            closeTransientPanels();
+        }, 0);
+    }, true);
 
     document.addEventListener("click", function (event) {
         if (!openState) return;

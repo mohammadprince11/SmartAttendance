@@ -272,6 +272,11 @@
                             {
                                 var branchActiveEmployeeCount =
                                     Model.GetActiveEmployeeCountForBranch(branch.Id);
+                                var branchDeleteLocked =
+                                    Model.IsBranchDeletionLocked(branch.Id);
+                                var branchDeleteLockReason = branchDeleteLocked
+                                    ? Model.GetBranchDeletionLockReason(branch.Id)
+                                    : null;
 
                                 <tr>
                                     <td>
@@ -297,15 +302,21 @@
                                                     data-branch-active-employee-count="@branchActiveEmployeeCount">
                                                 &#x062A;&#x0639;&#x062F;&#x064A;&#x0644;
                                             </button>
-                                            <button type="button"
-                                                    class="btn-table btn-delete"
-                                                    data-nx-setup-open="setup-branch-delete-modal"
-                                                    data-branch-delete-open
-                                                    data-branch-id="@branch.Id"
-                                                    data-branch-company-id="@branch.CompanyId"
-                                                    data-branch-name="@branch.Name">
-                                                &#x062D;&#x0630;&#x0641;
-                                            </button>
+                                            <span class="nx-setup-delete-guard @(branchDeleteLocked ? "is-locked" : "")"
+                                                  title="@branchDeleteLockReason">
+                                                <button type="button"
+                                                        class="btn-table btn-delete"
+                                                        data-nx-setup-open="setup-branch-delete-modal"
+                                                        data-branch-delete-open
+                                                        data-branch-id="@branch.Id"
+                                                        data-branch-company-id="@branch.CompanyId"
+                                                        data-branch-name="@branch.Name"
+                                                        disabled="@branchDeleteLocked"
+                                                        aria-disabled="@(branchDeleteLocked ? "true" : "false")"
+                                                        aria-label="@(branchDeleteLocked ? branchDeleteLockReason : "حذف موقع العمل")">
+                                                    &#x062D;&#x0630;&#x0641;
+                                                </button>
+                                            </span>
                                         </div>
                                     </td>
                                 </tr>
@@ -356,6 +367,11 @@
                             {
                                 var departmentActiveEmployeeCount =
                                     Model.GetActiveEmployeeCountForDepartment(department.Id);
+                                var departmentDeleteLocked =
+                                    Model.IsDepartmentDeletionLocked(department.Id);
+                                var departmentDeleteLockReason = departmentDeleteLocked
+                                    ? Model.GetDepartmentDeletionLockReason(department.Id)
+                                    : null;
 
                                 <tr>
                                     <td>
@@ -379,15 +395,21 @@
                                                     data-department-active-employee-count="@departmentActiveEmployeeCount">
                                                 &#x062A;&#x0639;&#x062F;&#x064A;&#x0644;
                                             </button>
-                                            <button type="button"
-                                                    class="btn-table btn-delete"
-                                                    data-nx-setup-open="setup-department-delete-modal"
-                                                    data-department-delete-open
-                                                    data-department-id="@department.Id"
-                                                    data-department-company-id="@department.CompanyId"
-                                                    data-department-name="@department.Name">
-                                                &#x062D;&#x0630;&#x0641;
-                                            </button>
+                                            <span class="nx-setup-delete-guard @(departmentDeleteLocked ? "is-locked" : "")"
+                                                  title="@departmentDeleteLockReason">
+                                                <button type="button"
+                                                        class="btn-table btn-delete"
+                                                        data-nx-setup-open="setup-department-delete-modal"
+                                                        data-department-delete-open
+                                                        data-department-id="@department.Id"
+                                                        data-department-company-id="@department.CompanyId"
+                                                        data-department-name="@department.Name"
+                                                        disabled="@departmentDeleteLocked"
+                                                        aria-disabled="@(departmentDeleteLocked ? "true" : "false")"
+                                                        aria-label="@(departmentDeleteLocked ? departmentDeleteLockReason : "حذف القسم")">
+                                                    &#x062D;&#x0630;&#x0641;
+                                                </button>
+                                            </span>
                                         </div>
                                     </td>
                                 </tr>

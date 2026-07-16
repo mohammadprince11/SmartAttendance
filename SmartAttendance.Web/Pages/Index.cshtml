@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.IndexModel
 
 @{
@@ -31,136 +31,182 @@
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/dashboard-unified.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/dashboard-nexora.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-dashboard-distribution.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-dashboard-phase1b.css" asp-append-version="true" />
 
-<div class="dashboard-page">
-    <div class="page-header">
-        <div>
-            <h1>لوحة التحكم</h1>
-            <p>ملخص الشركة الحالية: @Model.SelectedCompanyName</p>
+<div class="dashboard-page zynora-dashboard">
+    <header class="zy-dashboard-hero">
+        <div class="zy-dashboard-hero-copy">
+            <span class="zy-dashboard-eyebrow">
+                <span aria-hidden="true"></span>
+                INTELLIGENT PEOPLE OPERATIONS
+            </span>
+            <h1>لوحة التحكم التنفيذية</h1>
+            <p>
+                نظرة موحدة على الأشخاص والحضور والطلبات والهيكل التنظيمي
+                ضمن الشركة الحالية.
+            </p>
+
+            <div class="zy-dashboard-context">
+                <span>الشركة الحالية</span>
+                <strong>@Model.SelectedCompanyName</strong>
+            </div>
         </div>
 
         @if (Model.CompanyOptions.Count > 0)
         {
             <form method="get"
-                  class="distribution-filter-form dashboard-company-context"
+                  class="dashboard-company-context"
                   aria-label="اختيار الشركة">
-                <label for="dashboardCompanyId">الشركة</label>
-                <select id="dashboardCompanyId"
-                        name="CompanyId"
-                        data-nexora-select="true">
-                    @foreach (var company in Model.CompanyOptions)
-                    {
-                        <option value="@company.Id"
-                                selected="@(Model.CompanyId == company.Id ? "selected" : null)">
-                            @company.Name
-                        </option>
-                    }
-                </select>
-                <button type="submit">عرض</button>
+                <label for="dashboardCompanyId">تغيير الشركة</label>
+                <div class="dashboard-company-control">
+                    <select id="dashboardCompanyId"
+                            name="CompanyId"
+                            data-nexora-select="true">
+                        @foreach (var company in Model.CompanyOptions)
+                        {
+                            <option value="@company.Id"
+                                    selected="@(Model.CompanyId == company.Id ? "selected" : null)">
+                                @company.Name
+                            </option>
+                        }
+                    </select>
+                    <button type="submit">تطبيق</button>
+                </div>
             </form>
         }
+
+        <div class="zy-dashboard-pattern" aria-hidden="true"></div>
+    </header>
+
+    <div class="dashboard-section-heading">
+        <div>
+            <span>ORGANIZATION</span>
+            <h2>ملخص القوى العاملة</h2>
+        </div>
+        <p>المؤشرات الأساسية للشركة المحددة</p>
     </div>
 
-    <section class="dashboard-kpi-grid">
-        <div class="dashboard-kpi">
+    <section class="dashboard-kpi-grid dashboard-kpi-grid--primary">
+        <div class="dashboard-kpi" data-icon="people">
             <span>إجمالي الموظفين</span>
             <strong>@Model.Employees</strong>
             <small>فعال: @Model.ActiveEmployees | غير فعال: @Model.InactiveEmployees</small>
         </div>
 
-        <div class="dashboard-kpi">
+        <div class="dashboard-kpi" data-icon="branches">
             <span>الفروع</span>
             <strong>@Model.Branches</strong>
             <small>الشركة: @Model.SelectedCompanyName</small>
         </div>
 
-        <div class="dashboard-kpi">
+        <div class="dashboard-kpi" data-icon="departments">
             <span>الأقسام</span>
             <strong>@Model.Departments</strong>
             <small>حسب الهيكل التنظيمي</small>
         </div>
 
-        <div class="dashboard-kpi">
+        <div class="dashboard-kpi" data-icon="devices">
             <span>الأجهزة</span>
             <strong>@Model.Devices</strong>
             <small>الشفتات العامة: @Model.Shifts</small>
         </div>
 
-        <div class="dashboard-kpi">
+        <div class="dashboard-kpi" data-icon="records">
             <span>سجلات الحضور</span>
             <strong>@Model.AttendanceRecords</strong>
             <small>إجمالي السجلات</small>
         </div>
 
-        <div class="dashboard-kpi warning">
+        <div class="dashboard-kpi warning" data-icon="requests">
             <span>طلبات معلقة</span>
             <strong>@Model.PendingRequests</strong>
             <small>بانتظار موافقة</small>
         </div>
     </section>
 
-    <section class="dashboard-kpi-grid">
-        <div class="dashboard-kpi success">
+    <div class="dashboard-section-heading">
+        <div>
+            <span>ATTENDANCE</span>
+            <h2>حالة اليوم</h2>
+        </div>
+        <p>الحضور والاستثناءات لليوم الحالي</p>
+    </div>
+
+    <section class="dashboard-kpi-grid dashboard-kpi-grid--today">
+        <div class="dashboard-kpi success" data-icon="present">
             <span>حضور اليوم</span>
             <strong>@Model.TodayPresent</strong>
             <small>حاضر</small>
         </div>
 
-        <div class="dashboard-kpi warning">
+        <div class="dashboard-kpi warning" data-icon="late">
             <span>تأخير اليوم</span>
             <strong>@Model.TodayLate</strong>
             <small>متأخر</small>
         </div>
 
-        <div class="dashboard-kpi danger">
+        <div class="dashboard-kpi danger" data-icon="absent">
             <span>غياب اليوم</span>
             <strong>@Model.TodayAbsent</strong>
             <small>غائب</small>
         </div>
 
-        <div class="dashboard-kpi danger">
+        <div class="dashboard-kpi danger" data-icon="missing">
             <span>بصمات ناقصة اليوم</span>
             <strong>@Model.TodayMissingOut</strong>
             <small>خروج مفقود</small>
         </div>
 
-        <div class="dashboard-kpi warning">
+        <div class="dashboard-kpi warning" data-icon="contracts">
             <span>عقود تنتهي خلال 30 يوم</span>
             <strong>@Model.Contracts30</strong>
             <small>تحتاج متابعة</small>
         </div>
 
-        <div class="dashboard-kpi danger">
+        <div class="dashboard-kpi danger" data-icon="missing">
             <span>بصمات ناقصة خلال 30 يوم</span>
             <strong>@Model.MissingPunches30</strong>
             <small>آخر 30 يوم</small>
         </div>
     </section>
 
-    <section class="dashboard-kpi-grid compact">
-        <div class="dashboard-kpi warning">
+    <div class="dashboard-section-heading">
+        <div>
+            <span>LAST 30 DAYS</span>
+            <h2>اتجاهات آخر 30 يوماً</h2>
+        </div>
+        <p>مؤشرات المتابعة والتنبيهات الحديثة</p>
+    </div>
+
+    <section class="dashboard-kpi-grid dashboard-kpi-grid--trend">
+        <div class="dashboard-kpi warning" data-icon="late">
             <span>تأخير آخر 30 يوم</span>
             <strong>@Model.Late30</strong>
         </div>
 
-        <div class="dashboard-kpi danger">
+        <div class="dashboard-kpi danger" data-icon="absent">
             <span>غياب آخر 30 يوم</span>
             <strong>@Model.Absent30</strong>
         </div>
 
-        <div class="dashboard-kpi success">
+        <div class="dashboard-kpi success" data-icon="approved">
             <span>طلبات مقبولة خلال 30 يوم</span>
             <strong>@Model.ApprovedRequests30</strong>
         </div>
 
-        <div class="dashboard-kpi danger">
+        <div class="dashboard-kpi danger" data-icon="rejected">
             <span>طلبات مرفوضة خلال 30 يوم</span>
             <strong>@Model.RejectedRequests30</strong>
         </div>
     </section>
+
+    <div class="dashboard-section-heading">
+        <div>
+            <span>PEOPLE DISTRIBUTION</span>
+            <h2>توزيع الموظفين</h2>
+        </div>
+        <p>أعلى النتائج مع إمكانية فتح التفاصيل الكاملة</p>
+    </div>
 
     <section class="dashboard-grid distribution-summary-grid">
         <div class="dashboard-panel distribution-card">
@@ -353,9 +399,12 @@
         </div>
     </section>
 
-    <section class="dashboard-panel">
+    <section class="dashboard-panel dashboard-requests-panel">
         <div class="dashboard-panel-head">
-            <h2>آخر طلبات الخدمات الذاتية</h2>
+            <div>
+                <span class="dashboard-panel-kicker">SELF SERVICE</span>
+                <h2>آخر طلبات الخدمات الذاتية</h2>
+            </div>
         </div>
 
         <div class="dashboard-table-wrap">

@@ -99,6 +99,33 @@ public class IndexModel : PageModel
     public IReadOnlyDictionary<int, int> ActiveEmployeeCountByDepartment { get; private set; } =
         new Dictionary<int, int>();
 
+    public IReadOnlyDictionary<int, int> LinkedEmployeeCountByBranch { get; private set; } =
+        new Dictionary<int, int>();
+
+    public IReadOnlyDictionary<int, int> LinkedDeviceCountByBranch { get; private set; } =
+        new Dictionary<int, int>();
+
+    public IReadOnlyDictionary<int, int> LinkedDepartmentCountByBranch { get; private set; } =
+        new Dictionary<int, int>();
+
+    public IReadOnlyDictionary<int, int> LinkedAnnouncementCountByBranch { get; private set; } =
+        new Dictionary<int, int>();
+
+    public IReadOnlyDictionary<int, int> LinkedPermissionCountByBranch { get; private set; } =
+        new Dictionary<int, int>();
+
+    public IReadOnlyDictionary<int, int> LinkedEmployeeCountByDepartment { get; private set; } =
+        new Dictionary<int, int>();
+
+    public IReadOnlyDictionary<int, int> LinkedPositionCountByDepartment { get; private set; } =
+        new Dictionary<int, int>();
+
+    public IReadOnlyDictionary<int, int> LinkedAnnouncementCountByDepartment { get; private set; } =
+        new Dictionary<int, int>();
+
+    public IReadOnlyDictionary<int, int> LinkedPermissionCountByDepartment { get; private set; } =
+        new Dictionary<int, int>();
+
     public bool IsCompanyDeactivationLocked =>
         (Setup?.Profile.IsActive ?? Profile.IsActive) &&
         (ActiveEmployeeCount > 0 ||
@@ -306,6 +333,16 @@ public class IndexModel : PageModel
                 "work-locations");
         }
 
+        if (await HasBranchDeletionDependenciesAsync(branchId))
+        {
+            TempData["ErrorMessage"] =
+                "لا يمكن حذف موقع العمل لوجود بيانات مرتبطة به.";
+
+            return RedirectToSetupSection(
+                companyId,
+                "work-locations");
+        }
+
         var deleted = await _branchService.DeleteAsync(branchId);
 
         TempData[deleted ? "SuccessMessage" : "ErrorMessage"] = deleted
@@ -374,6 +411,16 @@ public class IndexModel : PageModel
         {
             TempData["ErrorMessage"] =
                 "\u062a\u0639\u0630\u0631 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0645\u062d\u062f\u062f.";
+
+            return RedirectToSetupSection(
+                companyId,
+                "departments");
+        }
+
+        if (await HasDepartmentDeletionDependenciesAsync(departmentId))
+        {
+            TempData["ErrorMessage"] =
+                "لا يمكن حذف القسم لوجود بيانات مرتبطة به.";
 
             return RedirectToSetupSection(
                 companyId,
@@ -579,6 +626,68 @@ public class IndexModel : PageModel
             : 0;
     }
 
+    public bool IsBranchDeletionLocked(int branchId)
+    {
+        return GetDictionaryCount(LinkedEmployeeCountByBranch, branchId) > 0 ||
+               GetDictionaryCount(LinkedDeviceCountByBranch, branchId) > 0 ||
+               GetDictionaryCount(LinkedDepartmentCountByBranch, branchId) > 0 ||
+               GetDictionaryCount(LinkedAnnouncementCountByBranch, branchId) > 0 ||
+               GetDictionaryCount(LinkedPermissionCountByBranch, branchId) > 0;
+    }
+
+    public string GetBranchDeletionLockReason(int branchId)
+    {
+        var employeeCount = GetDictionaryCount(
+            LinkedEmployeeCountByBranch,
+            branchId);
+        var deviceCount = GetDictionaryCount(
+            LinkedDeviceCountByBranch,
+            branchId);
+        var departmentCount = GetDictionaryCount(
+            LinkedDepartmentCountByBranch,
+            branchId);
+        var announcementCount = GetDictionaryCount(
+            LinkedAnnouncementCountByBranch,
+            branchId);
+        var permissionCount = GetDictionaryCount(
+            LinkedPermissionCountByBranch,
+            branchId);
+
+        return
+            "لا يمكن حذف موقع العمل لوجود بيانات مرتبطة " +
+            $"(موظفون: {employeeCount}، أجهزة: {deviceCount}، أقسام: {departmentCount}، " +
+            $"جمهور إعلانات: {announcementCount}، نطاقات صلاحيات: {permissionCount}).";
+    }
+
+    public bool IsDepartmentDeletionLocked(int departmentId)
+    {
+        return GetDictionaryCount(LinkedEmployeeCountByDepartment, departmentId) > 0 ||
+               GetDictionaryCount(LinkedPositionCountByDepartment, departmentId) > 0 ||
+               GetDictionaryCount(LinkedAnnouncementCountByDepartment, departmentId) > 0 ||
+               GetDictionaryCount(LinkedPermissionCountByDepartment, departmentId) > 0;
+    }
+
+    public string GetDepartmentDeletionLockReason(int departmentId)
+    {
+        var employeeCount = GetDictionaryCount(
+            LinkedEmployeeCountByDepartment,
+            departmentId);
+        var positionCount = GetDictionaryCount(
+            LinkedPositionCountByDepartment,
+            departmentId);
+        var announcementCount = GetDictionaryCount(
+            LinkedAnnouncementCountByDepartment,
+            departmentId);
+        var permissionCount = GetDictionaryCount(
+            LinkedPermissionCountByDepartment,
+            departmentId);
+
+        return
+            "لا يمكن حذف القسم لوجود بيانات مرتبطة " +
+            $"(موظفون: {employeeCount}، مسميات وظيفية: {positionCount}، " +
+            $"جمهور إعلانات: {announcementCount}، نطاقات صلاحيات: {permissionCount}).";
+    }
+
     public bool HasAvailableCutoffTypes(int currentPolicyId = 0)
     {
         if (Setup == null)
@@ -626,19 +735,23 @@ public class IndexModel : PageModel
             .ThenBy(x => x.Name)
             .ToList();
 
-        var activeAssignments = await _dbContext.Employees
+        var employeeAssignments = await _dbContext.Employees
             .AsNoTracking()
             .Where(x =>
                 !x.IsDeleted &&
-                x.IsActive &&
                 !x.Branch.IsDeleted &&
                 x.Branch.CompanyId == companyId)
             .Select(x => new
             {
                 x.BranchId,
-                x.DepartmentId
+                x.DepartmentId,
+                x.IsActive
             })
             .ToListAsync();
+
+        var activeAssignments = employeeAssignments
+            .Where(x => x.IsActive)
+            .ToList();
 
         ActiveEmployeeCount = activeAssignments.Count;
         ActiveBranchCount = Branches.Count(x => x.IsActive);
@@ -650,11 +763,184 @@ public class IndexModel : PageModel
             .GroupBy(x => x.DepartmentId)
             .ToDictionary(x => x.Key, x => x.Count());
 
+        var branchIds = Branches
+            .Select(x => x.Id)
+            .ToArray();
+        var departmentIds = Departments
+            .Select(x => x.Id)
+            .ToArray();
+
+        LinkedEmployeeCountByBranch = employeeAssignments
+            .Where(x => branchIds.Contains(x.BranchId))
+            .GroupBy(x => x.BranchId)
+            .ToDictionary(x => x.Key, x => x.Count());
+
+        LinkedDeviceCountByBranch = await _dbContext.Devices
+            .AsNoTracking()
+            .Where(x =>
+                !x.IsDeleted &&
+                branchIds.Contains(x.BranchId))
+            .GroupBy(x => x.BranchId)
+            .Select(group => new
+            {
+                Id = group.Key,
+                Count = group.Count()
+            })
+            .ToDictionaryAsync(x => x.Id, x => x.Count);
+
+        LinkedDepartmentCountByBranch = await _dbContext.Departments
+            .AsNoTracking()
+            .Where(x =>
+                !x.IsDeleted &&
+                x.BranchId.HasValue &&
+                branchIds.Contains(x.BranchId.Value))
+            .GroupBy(x => x.BranchId!.Value)
+            .Select(group => new
+            {
+                Id = group.Key,
+                Count = group.Count()
+            })
+            .ToDictionaryAsync(x => x.Id, x => x.Count);
+
+        LinkedAnnouncementCountByBranch = await _dbContext.AnnouncementAudienceRules
+            .AsNoTracking()
+            .Where(x =>
+                !x.IsDeleted &&
+                x.BranchId.HasValue &&
+                branchIds.Contains(x.BranchId.Value))
+            .GroupBy(x => x.BranchId!.Value)
+            .Select(group => new
+            {
+                Id = group.Key,
+                Count = group.Count()
+            })
+            .ToDictionaryAsync(x => x.Id, x => x.Count);
+
+        LinkedPermissionCountByBranch = await _dbContext.SystemUserPermissions
+            .AsNoTracking()
+            .Where(x =>
+                x.ScopeBranchId.HasValue &&
+                branchIds.Contains(x.ScopeBranchId.Value))
+            .GroupBy(x => x.ScopeBranchId!.Value)
+            .Select(group => new
+            {
+                Id = group.Key,
+                Count = group.Count()
+            })
+            .ToDictionaryAsync(x => x.Id, x => x.Count);
+
+        LinkedEmployeeCountByDepartment = employeeAssignments
+            .Where(x => departmentIds.Contains(x.DepartmentId))
+            .GroupBy(x => x.DepartmentId)
+            .ToDictionary(x => x.Key, x => x.Count());
+
+        LinkedPositionCountByDepartment = await _dbContext.HrJobPositions
+            .AsNoTracking()
+            .Where(x =>
+                x.DepartmentId.HasValue &&
+                departmentIds.Contains(x.DepartmentId.Value))
+            .GroupBy(x => x.DepartmentId!.Value)
+            .Select(group => new
+            {
+                Id = group.Key,
+                Count = group.Count()
+            })
+            .ToDictionaryAsync(x => x.Id, x => x.Count);
+
+        LinkedAnnouncementCountByDepartment = await _dbContext.AnnouncementAudienceRules
+            .AsNoTracking()
+            .Where(x =>
+                !x.IsDeleted &&
+                x.DepartmentId.HasValue &&
+                departmentIds.Contains(x.DepartmentId.Value))
+            .GroupBy(x => x.DepartmentId!.Value)
+            .Select(group => new
+            {
+                Id = group.Key,
+                Count = group.Count()
+            })
+            .ToDictionaryAsync(x => x.Id, x => x.Count);
+
+        LinkedPermissionCountByDepartment = await _dbContext.SystemUserPermissions
+            .AsNoTracking()
+            .Where(x =>
+                x.ScopeDepartmentId.HasValue &&
+                departmentIds.Contains(x.ScopeDepartmentId.Value))
+            .GroupBy(x => x.ScopeDepartmentId!.Value)
+            .Select(group => new
+            {
+                Id = group.Key,
+                Count = group.Count()
+            })
+            .ToDictionaryAsync(x => x.Id, x => x.Count);
+
         NewBranch.CompanyId = companyId;
         NewDepartment.CompanyId = companyId;
         NewDepartment.BranchId = 0;
 
         return true;
+    }
+
+    private static int GetDictionaryCount(
+        IReadOnlyDictionary<int, int> source,
+        int id)
+    {
+        return source.TryGetValue(id, out var count)
+            ? count
+            : 0;
+    }
+
+    private async Task<bool> HasBranchDeletionDependenciesAsync(int branchId)
+    {
+        return
+            await _dbContext.Employees
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    !x.IsDeleted &&
+                    x.BranchId == branchId) ||
+            await _dbContext.Devices
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    !x.IsDeleted &&
+                    x.BranchId == branchId) ||
+            await _dbContext.Departments
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    !x.IsDeleted &&
+                    x.BranchId == branchId) ||
+            await _dbContext.AnnouncementAudienceRules
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    !x.IsDeleted &&
+                    x.BranchId == branchId) ||
+            await _dbContext.SystemUserPermissions
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.ScopeBranchId == branchId);
+    }
+
+    private async Task<bool> HasDepartmentDeletionDependenciesAsync(
+        int departmentId)
+    {
+        return
+            await _dbContext.Employees
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    !x.IsDeleted &&
+                    x.DepartmentId == departmentId) ||
+            await _dbContext.HrJobPositions
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.DepartmentId == departmentId) ||
+            await _dbContext.AnnouncementAudienceRules
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    !x.IsDeleted &&
+                    x.DepartmentId == departmentId) ||
+            await _dbContext.SystemUserPermissions
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.ScopeDepartmentId == departmentId);
     }
 
     private async Task<IReadOnlyList<CompanyListViewModel>> LoadCompaniesAsync()

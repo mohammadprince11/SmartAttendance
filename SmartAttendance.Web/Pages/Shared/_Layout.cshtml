@@ -3,57 +3,65 @@
 @inject IPermissionAuthorizationService PermissionAuthorizationService
 
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" data-theme="dark" data-sidebar="expanded">
+<html lang="ar" dir="rtl" data-theme="light" data-sidebar="expanded">
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>@(ViewData["Title"] ?? "NEXORA") - NEXORA</title>
+    <title>@(ViewData["Title"] ?? "ZYNORA HR") - ZYNORA HR</title>
 
     <script>
         (function () {
-            var sidebarState = "expanded";
+            var theme = "light";
 
             try {
-                localStorage.setItem("SmartAttendance.Language", "ar");
-                localStorage.setItem("SmartAttendance.Theme", "dark");
+                [
+                    "SmartAttendance.Sidebar",
+                    "NEXORA.Sidebar.State",
+                    "NEXORA.Sidebar.Final.Working",
+                    "NEXORA.SidebarMode.Final",
+                    "NEXORA.V2.Sidebar",
+                    "NEXORA.Sidebar",
+                    "SidebarCollapsed",
+                    "sidebar"
+                ].forEach(function (key) {
+                    localStorage.removeItem(key);
+                });
 
-                var savedSidebarState =
-                    localStorage.getItem("NEXORA.Sidebar.State");
+                var savedTheme =
+                    localStorage.getItem("ZYNORA.Theme");
 
-                if (savedSidebarState === "collapsed") {
-                    sidebarState = "collapsed";
+                if (
+                    savedTheme === "light" ||
+                    savedTheme === "dark"
+                ) {
+                    theme = savedTheme;
                 }
-
-                localStorage.removeItem("SmartAttendance.Sidebar");
-                localStorage.removeItem("NEXORA.Sidebar.Final.Working");
-                localStorage.removeItem("NEXORA.SidebarMode.Final");
-                localStorage.removeItem("NEXORA.V2.Sidebar");
-                localStorage.removeItem("NEXORA.Sidebar");
-                localStorage.removeItem("SidebarCollapsed");
-                localStorage.removeItem("sidebar");
             } catch (e) { }
 
-            document.documentElement.setAttribute("lang", "ar");
-            document.documentElement.setAttribute("dir", "rtl");
-            document.documentElement.setAttribute("data-theme", "dark");
             document.documentElement.setAttribute(
                 "data-sidebar",
-                sidebarState
+                "expanded"
+            );
+
+            document.documentElement.setAttribute(
+                "data-theme",
+                theme
             );
         })();
     </script>
 
-    <link rel="icon" type="image/svg+xml" href="~/brand/nexora-symbol.svg" />
+    <link rel="icon" type="image/svg+xml" href="~/brand/zynora-symbol.svg" />
+    <link rel="apple-touch-icon" href="~/brand/zynora-symbol-1024.png" />
     <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-brand.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-ui-stabilization-phase1.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-force-right-sidebar.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-calendar-v18.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-global-scroll-system.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-select-system.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-design-tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-brand.css" asp-append-version="true" />
 
     @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/nexora-button-interactions.css" asp-append-version="true" />
@@ -118,7 +126,7 @@
             canViewOrganization ||
             canUseLegacyPeopleAdministration;
 
-        var pageTitle = ViewData["Title"]?.ToString() ?? "NEXORA";
+        var pageTitle = ViewData["Title"]?.ToString() ?? "ZYNORA HR";
 
         var rawPath = (Context.Request.Path.Value ?? "/").TrimEnd('/');
         if (string.IsNullOrWhiteSpace(rawPath))
@@ -180,23 +188,16 @@
     <div class="nexora-shell">
         <aside class="nexora-sidebar" aria-label="القائمة الجانبية">
             <div class="nexora-brand-card">
-                <a asp-page="/Index" class="nexora-brand-link" aria-label="NEXORA Home">
-                    <img class="nexora-brand-symbol" src="~/brand/nexora-symbol.svg" alt="NEXORA" />
-                    <div class="nexora-brand-copy">
-                        <div class="nexora-wordmark">NEXORA</div>
-                        <div class="nexora-arabic">نيكسورا</div>
-                        <div class="nexora-tagline">HR Operations Platform</div>
-                    </div>
+                <a asp-page="/Index"
+                   class="nexora-brand-link"
+                   aria-label="ZYNORA HR Home">
+                    <img class="nexora-brand-logo"
+                         src="~/brand/zynora-logo-horizontal-light.svg"
+                         alt="ZYNORA HR" />
+                    <span class="nexora-brand-tagline">
+                        Smarter People. Stronger Business.
+                    </span>
                 </a>
-
-                <button type="button"
-                        class="nexora-sidebar-toggle"
-                        data-sidebar-toggle
-                        aria-expanded="true"
-                        aria-label="&#x062A;&#x0642;&#x0644;&#x064A;&#x0635; &#x0627;&#x0644;&#x0642;&#x0627;&#x0626;&#x0645;&#x0629; &#x0627;&#x0644;&#x062C;&#x0627;&#x0646;&#x0628;&#x064A;&#x0629;"
-                        title="&#x062A;&#x0642;&#x0644;&#x064A;&#x0635; &#x0627;&#x0644;&#x0642;&#x0627;&#x0626;&#x0645;&#x0629;">
-                    <span aria-hidden="true"></span>
-                </button>
             </div>
 
             @if (isLoggedIn)
@@ -222,7 +223,7 @@
                 @if (hasVisiblePeopleNavigation)
                 {
                     <details name="nexora-main-menu" class="nexora-nav-group" @(employeesOpen ? "open" : "")>
-                        <summary data-sidebar-label="&#x0623;&#x0634;&#x062E;&#x0627;&#x0635;">
+                        <summary data-nav-area="people" data-sidebar-label="&#x0623;&#x0634;&#x062E;&#x0627;&#x0635;">
                             <span class="nexora-nav-dot gold"></span>
                             <span class="nexora-nav-text">أشخاص</span>
                             <span class="nexora-chevron"></span>
@@ -298,7 +299,7 @@
                 }
 
                 <details name="nexora-main-menu" class="nexora-nav-group" @(attendanceOpen ? "open" : "")>
-                    <summary data-sidebar-label="&#x0627;&#x0644;&#x062D;&#x0636;&#x0648;&#x0631; &#x0648;&#x0627;&#x0644;&#x0627;&#x0646;&#x0635;&#x0631;&#x0627;&#x0641;">
+                    <summary data-nav-area="attendance" data-sidebar-label="&#x0627;&#x0644;&#x062D;&#x0636;&#x0648;&#x0631; &#x0648;&#x0627;&#x0644;&#x0627;&#x0646;&#x0635;&#x0631;&#x0627;&#x0641;">
                         <span class="nexora-nav-dot gold"></span>
                         <span class="nexora-nav-text">الحضور والانصراف</span>
                         <span class="nexora-chevron"></span>
@@ -329,7 +330,7 @@
                 </details>
 
                 <details name="nexora-main-menu" class="nexora-nav-group" @(payrollOpen ? "open" : "")>
-                    <summary data-sidebar-label="&#x0627;&#x0644;&#x0631;&#x0648;&#x0627;&#x062A;&#x0628;">
+                    <summary data-nav-area="payroll" data-sidebar-label="&#x0627;&#x0644;&#x0631;&#x0648;&#x0627;&#x062A;&#x0628;">
                         <span class="nexora-nav-dot gold"></span>
                         <span class="nexora-nav-text">&#x0627;&#x0644;&#x0631;&#x0648;&#x0627;&#x062A;&#x0628;</span>
                         <span class="nexora-chevron"></span>
@@ -356,22 +357,43 @@
                 <div class="nexora-topbar-left">
                     <div>
                         <div class="nexora-page-title">@pageTitle</div>
-                        <div class="nexora-page-subtitle">نيكسورا · منصة تشغيل الموارد البشرية</div>
+                        <div class="nexora-page-subtitle">زينورا · عمليات موارد بشرية ذكية</div>
                     </div>
                 </div>
 
                 <div class="nexora-controls">
-                    <span class="nexora-mode-chip">عربي · داكن</span>
+                    <button type="button"
+                            class="nexora-theme-toggle"
+                            data-zynora-theme-toggle
+                            aria-label="تفعيل الوضع الداكن"
+                            title="تغيير المظهر">
+                        <svg class="nexora-theme-icon nexora-theme-icon--sun"
+                             viewBox="0 0 24 24"
+                             aria-hidden="true">
+                            <circle cx="12" cy="12" r="4"></circle>
+                            <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"></path>
+                        </svg>
+                        <svg class="nexora-theme-icon nexora-theme-icon--moon"
+                             viewBox="0 0 24 24"
+                             aria-hidden="true">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"></path>
+                        </svg>
+                    </button>
 
                     @if (isLoggedIn)
                     {
                         <div class="nexora-user-chip">
-                            <span class="nexora-user-avatar">@(string.IsNullOrWhiteSpace(loginDisplayName) ? "N" : loginDisplayName.Trim()[0])</span>
-                            <span class="nexora-user-name">@loginDisplayName</span>
-                            <span class="nexora-user-role">@loginRole</span>
+                            <span class="nexora-user-avatar">@(string.IsNullOrWhiteSpace(loginDisplayName) ? "Z" : loginDisplayName.Trim()[0])</span>
+                            <span class="nexora-user-copy">
+                                <span class="nexora-user-name">@loginDisplayName</span>
+                                <span class="nexora-user-role">@loginRole</span>
+                            </span>
                         </div>
 
-                        <a asp-page="/Account/Logout" class="nexora-pill-button">خروج</a>
+                        <a asp-page="/Account/Logout"
+                           class="nexora-pill-button nexora-logout-button">
+                            خروج
+                        </a>
                     }
                     else
                     {
@@ -394,6 +416,7 @@
     </script>
 
     <script src="~/js/table-pagination.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-theme.js" asp-append-version="true"></script>
     <script src="~/js/nexora-ui-stabilization-phase1.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 <script src="~/js/nexora-calendar-v18.js" asp-append-version="true" defer></script>

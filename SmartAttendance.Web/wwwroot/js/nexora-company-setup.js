@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
     function cleanupSetupTransientLayers() {
         document.querySelectorAll("body > .nxcs-panel").forEach(panel => {
             panel.remove();
@@ -391,9 +391,89 @@
 
     const logoInput = document.querySelector("[data-logo-file]");
     const logoPreview = document.querySelector("[data-logo-preview]");
+    const logoContentScroller =
+        document.querySelector(".nexora-content");
+
+    let logoScrollSnapshot = null;
+    let logoRestoreSequence = 0;
+
+    function normalizeDocumentScroll() {
+        document.documentElement.scrollTop = 0;
+        document.documentElement.scrollLeft = 0;
+        document.body.scrollTop = 0;
+        document.body.scrollLeft = 0;
+
+        window.scrollTo({
+            left: 0,
+            top: 0,
+            behavior: "auto"
+        });
+    }
+
+    function rememberLogoScrollPosition() {
+        logoScrollSnapshot = {
+            contentScrollTop:
+                logoContentScroller?.scrollTop || 0,
+            contentScrollLeft:
+                logoContentScroller?.scrollLeft || 0
+        };
+
+        normalizeDocumentScroll();
+    }
+
+    function restoreLogoScrollPosition() {
+        const snapshot = logoScrollSnapshot;
+        const sequence = ++logoRestoreSequence;
+
+        logoInput?.blur();
+
+        function restore() {
+            if (sequence !== logoRestoreSequence) {
+                return;
+            }
+
+            normalizeDocumentScroll();
+
+            if (snapshot && logoContentScroller) {
+                logoContentScroller.scrollTo({
+                    left: snapshot.contentScrollLeft,
+                    top: snapshot.contentScrollTop,
+                    behavior: "auto"
+                });
+            }
+        }
+
+        restore();
+        window.requestAnimationFrame(restore);
+        window.setTimeout(restore, 40);
+        window.setTimeout(() => {
+            restore();
+
+            if (sequence === logoRestoreSequence) {
+                logoScrollSnapshot = null;
+            }
+        }, 180);
+    }
+
+    logoInput?.addEventListener(
+        "pointerdown",
+        rememberLogoScrollPosition
+    );
+
+    logoInput?.addEventListener(
+        "click",
+        rememberLogoScrollPosition
+    );
+
+    logoInput?.addEventListener(
+        "cancel",
+        restoreLogoScrollPosition
+    );
 
     logoInput?.addEventListener("change", () => {
         const file = logoInput.files?.[0];
+
+        restoreLogoScrollPosition();
 
         if (!file || !logoPreview || !file.type.startsWith("image/")) {
             return;
@@ -403,13 +483,27 @@
 
         reader.addEventListener("load", () => {
             logoPreview.innerHTML = "";
+
             const image = document.createElement("img");
             image.src = String(reader.result || "");
             image.alt = "Company logo preview";
+
             logoPreview.appendChild(image);
+            restoreLogoScrollPosition();
         });
 
         reader.readAsDataURL(file);
+    });
+
+    window.addEventListener("focus", () => {
+        if (!logoScrollSnapshot) {
+            return;
+        }
+
+        window.setTimeout(
+            restoreLogoScrollPosition,
+            0
+        );
     });
 })();
 
@@ -835,9 +929,17 @@
         );
     }
 
+    function stickyTopbarOffset() {
+        const topbar = document.querySelector(".nexora-topbar");
+        const topbarHeight =
+            topbar?.getBoundingClientRect().height || 0;
+
+        return Math.ceil(topbarHeight) + 18;
+    }
+
     function targetScrollTop(target) {
         const targetRect = target.getBoundingClientRect();
-        const offset = 18;
+        const offset = stickyTopbarOffset();
 
         if (isDocumentScroller(contentScroller)) {
             return Math.max(

@@ -1254,16 +1254,60 @@ html.nx-setup-modal-open body .nxos__menu.is-open {
 }
 
 .nx-company-file-button {
+    position: relative;
     width: 100%;
+    overflow: hidden;
+    cursor: pointer;
+    isolation: isolate;
+}
+
+.nx-company-file-button > span {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.nx-company-file-button input[type="file"] {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 2 !important;
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 100% !important;
+    min-height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: inherit !important;
+    background: transparent !important;
+    color: transparent !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    clip: auto !important;
+    clip-path: none !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+}
+
+.nx-company-file-button input[type="file"]::file-selector-button {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
     cursor: pointer;
 }
 
-.nx-company-file-button input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
+.nx-company-file-button:focus-within {
+    border-color: rgba(24, 199, 189, .72) !important;
+    box-shadow: 0 0 0 4px rgba(24, 199, 189, .12) !important;
 }
 
 .nx-company-remove-logo {
@@ -2790,3 +2834,26 @@ body.nx-setup-modal-open .nxcs-panel {
 }
 
 /* NEXORA_CUTOFF_DETACHED_ACTION_FOOTER_V3_END */
+
+/* ZYNORA_SETUP_DELETE_GUARD_START */
+.nx-setup-delete-guard {
+    display: inline-flex;
+    align-items: center;
+}
+
+.nx-setup-delete-guard.is-locked {
+    cursor: not-allowed;
+}
+
+.nx-setup-delete-guard.is-locked .btn-delete,
+.nx-setup-delete-guard .btn-delete:disabled {
+    color: #7f8c9b !important;
+    background: rgba(71, 85, 105, .12) !important;
+    border-color: rgba(148, 163, 184, .16) !important;
+    box-shadow: none !important;
+    filter: grayscale(1);
+    opacity: .58;
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+/* ZYNORA_SETUP_DELETE_GUARD_END */

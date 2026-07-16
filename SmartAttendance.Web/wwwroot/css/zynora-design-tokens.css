@@ -1,0 +1,164 @@
+/*
+ * ZYNORA HR — Official Design Tokens
+ * Phase 1B: light-first enterprise shell with complete dark-mode parity.
+ */
+
+:root {
+    color-scheme: light;
+
+    --zy-midnight-navy: #081426;
+    --zy-deep-space: #101C30;
+    --zy-electric-teal: #18C7BD;
+    --zy-refined-aqua: #42DED3;
+    --zy-champagne-gold: #D4B36A;
+    --zy-soft-silver: #D9E1E8;
+    --zy-cloud-white: #F7F9FB;
+
+    --zy-danger: #D94F5C;
+    --zy-success: #238C63;
+    --zy-warning: #B77A14;
+    --zy-info: #2F76C9;
+
+    --zy-font-display: "Sora", "Inter", "Segoe UI", Arial, sans-serif;
+    --zy-font-ui: "Inter", "Segoe UI", Arial, sans-serif;
+    --zy-font-ar: "Tajawal", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+
+    --zy-space-1: 4px;
+    --zy-space-2: 8px;
+    --zy-space-3: 16px;
+    --zy-space-4: 24px;
+    --zy-space-5: 32px;
+    --zy-space-6: 40px;
+    --zy-space-7: 48px;
+    --zy-space-8: 64px;
+
+    --zy-radius-xs: 4px;
+    --zy-radius-sm: 6px;
+    --zy-radius-md: 8px;
+    --zy-radius-lg: 12px;
+    --zy-radius-xl: 16px;
+
+    --zy-shadow-sm: 0 1px 2px rgba(8, 20, 38, .04);
+    --zy-shadow-md: 0 6px 18px rgba(8, 20, 38, .07);
+    --zy-shadow-lg: 0 16px 40px rgba(8, 20, 38, .10);
+
+    --zy-duration-fast: 140ms;
+    --zy-duration-normal: 220ms;
+    --zy-ease: cubic-bezier(.2, .8, .2, 1);
+
+    --zy-sidebar-width: 288px;
+    --zy-topbar-height: 72px;
+    --zy-content-max: 1760px;
+
+    --zy-bg: #EEF3F6;
+    --zy-bg-elevated: var(--zy-cloud-white);
+    --zy-surface: #FFFFFF;
+    --zy-surface-raised: #F3F6F8;
+    --zy-surface-soft: rgba(8, 20, 38, .035);
+    --zy-input: #FFFFFF;
+    --zy-text: var(--zy-midnight-navy);
+    --zy-text-muted: #627386;
+    --zy-border: rgba(8, 20, 38, .11);
+    --zy-border-strong: rgba(24, 199, 189, .40);
+    --zy-focus-ring: 0 0 0 3px rgba(24, 199, 189, .20);
+    --zy-table-row-alt: rgba(8, 20, 38, .018);
+    --zy-primary-soft: rgba(24, 199, 189, .11);
+    --zy-danger-soft: rgba(217, 79, 92, .10);
+    --zy-warning-soft: rgba(183, 122, 20, .11);
+    --zy-success-soft: rgba(35, 140, 99, .10);
+
+    /* Legacy compatibility aliases. */
+    --nx-bg: var(--zy-bg);
+    --nx-bg-2: var(--zy-bg-elevated);
+    --nx-surface: var(--zy-surface);
+    --nx-surface-2: var(--zy-surface-raised);
+    --nx-surface-3: var(--zy-surface-soft);
+    --nx-border: var(--zy-border);
+    --nx-border-soft: var(--zy-border);
+    --nx-text: var(--zy-text);
+    --nx-muted: var(--zy-text-muted);
+    --nx-muted-2: #8395A8;
+    --nx-teal: var(--zy-electric-teal);
+    --nx-teal-2: var(--zy-refined-aqua);
+    --nx-gold: var(--zy-champagne-gold);
+    --nx-danger: var(--zy-danger);
+    --nx-warning: var(--zy-warning);
+    --nx-success: var(--zy-success);
+    --nx-radius-lg: var(--zy-radius-xl);
+    --nx-radius-md: var(--zy-radius-lg);
+    --nx-radius-sm: var(--zy-radius-md);
+    --nx-shadow: var(--zy-shadow-lg);
+    --nx-sidebar-width: var(--zy-sidebar-width);
+    --nx-font: var(--zy-font-ar);
+    --nx-font-en: var(--zy-font-display);
+    --nx-font-ar: var(--zy-font-ar);
+
+    --nxr-bg: var(--zy-bg);
+    --nxr-bg2: var(--zy-bg-elevated);
+    --nxr-panel: var(--zy-surface);
+    --nxr-panel2: var(--zy-surface-raised);
+    --nxr-card: var(--zy-surface);
+    --nxr-line: var(--zy-border);
+    --nxr-line2: var(--zy-border-strong);
+    --nxr-text: var(--zy-text);
+    --nxr-muted: var(--zy-text-muted);
+    --nxr-faint: #8294A7;
+    --nxr-teal: var(--zy-electric-teal);
+    --nxr-teal2: var(--zy-refined-aqua);
+    --nxr-gold: var(--zy-champagne-gold);
+    --nxr-green: var(--zy-success);
+    --nxr-red: var(--zy-danger);
+    --nxr-radius: var(--zy-radius-lg);
+    --nxr-radius2: var(--zy-radius-xl);
+    --nxr-shadow: var(--zy-shadow-lg);
+    --nxr-glow: var(--zy-focus-ring);
+    --nxr-sidebar: var(--zy-sidebar-width);
+    --nxr-font: var(--zy-font-ar);
+
+    --sa-bg: var(--zy-bg);
+    --sa-bg-2: var(--zy-bg-elevated);
+    --sa-surface: var(--zy-surface);
+    --sa-surface-2: var(--zy-surface-raised);
+    --sa-surface-3: var(--zy-surface-soft);
+    --sa-input: var(--zy-input);
+    --sa-text: var(--zy-text);
+    --sa-muted: var(--zy-text-muted);
+    --sa-border: var(--zy-border);
+    --sa-border-strong: var(--zy-border-strong);
+    --sa-primary: var(--zy-electric-teal);
+    --sa-primary-2: var(--zy-refined-aqua);
+    --sa-primary-hover: #0F9F98;
+    --sa-primary-soft: var(--zy-primary-soft);
+    --sa-success: var(--zy-success);
+    --sa-warning: var(--zy-warning);
+    --sa-danger: var(--zy-danger);
+    --sa-danger-soft: var(--zy-danger-soft);
+    --sa-info: var(--zy-info);
+    --sa-radius: var(--zy-radius-lg);
+    --sa-shadow: var(--zy-shadow-md);
+    --sa-table-row-alt: var(--zy-table-row-alt);
+}
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+
+    --zy-bg: var(--zy-midnight-navy);
+    --zy-bg-elevated: var(--zy-deep-space);
+    --zy-surface: #12223A;
+    --zy-surface-raised: #162941;
+    --zy-surface-soft: rgba(247, 249, 251, .035);
+    --zy-input: #0B1A2D;
+    --zy-text: var(--zy-cloud-white);
+    --zy-text-muted: #A7B6C7;
+    --zy-border: rgba(217, 225, 232, .14);
+    --zy-border-strong: rgba(24, 199, 189, .34);
+    --zy-table-row-alt: rgba(247, 249, 251, .018);
+    --zy-primary-soft: rgba(24, 199, 189, .12);
+    --zy-danger-soft: rgba(228, 92, 102, .12);
+    --zy-warning-soft: rgba(214, 162, 60, .12);
+    --zy-success-soft: rgba(47, 183, 128, .12);
+    --zy-shadow-sm: 0 1px 2px rgba(0, 0, 0, .16);
+    --zy-shadow-md: 0 8px 24px rgba(0, 0, 0, .20);
+    --zy-shadow-lg: 0 18px 48px rgba(0, 0, 0, .28);
+    --sa-primary-hover: var(--zy-refined-aqua);
+}
