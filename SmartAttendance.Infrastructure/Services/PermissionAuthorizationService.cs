@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Domain.Enums;
 using SmartAttendance.Infrastructure.Persistence;
@@ -8,6 +8,9 @@ namespace SmartAttendance.Infrastructure.Services;
 public sealed class PermissionAuthorizationService : IPermissionAuthorizationService
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly object _activeRulesCacheLock = new();
+    private readonly Dictionary<int, Task<List<ActivePermissionRule>>>
+        _activeRulesByUser = new();
 
     public PermissionAuthorizationService(ApplicationDbContext dbContext)
     {
@@ -199,6 +202,45 @@ public sealed class PermissionAuthorizationService : IPermissionAuthorizationSer
         }
 
         var normalizedCode = permissionCode.Trim();
+        var allRules = await LoadActiveRulesForUserAsync(
+            systemUserId,
+            cancellationToken);
+
+        return allRules
+            .Where(rule => string.Equals(
+                rule.PermissionCode,
+                normalizedCode,
+                StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private Task<List<ActivePermissionRule>> LoadActiveRulesForUserAsync(
+        int systemUserId,
+        CancellationToken cancellationToken)
+    {
+        lock (_activeRulesCacheLock)
+        {
+            if (_activeRulesByUser.TryGetValue(
+                    systemUserId,
+                    out var cachedTask))
+            {
+                return cachedTask;
+            }
+
+            var loadTask = QueryActiveRulesForUserAsync(
+                systemUserId,
+                cancellationToken);
+
+            _activeRulesByUser[systemUserId] = loadTask;
+            return loadTask;
+        }
+    }
+
+    private async Task<List<ActivePermissionRule>>
+        QueryActiveRulesForUserAsync(
+            int systemUserId,
+            CancellationToken cancellationToken)
+    {
         var utcNow = DateTime.UtcNow;
 
         return await _dbContext.SystemUserPermissions
@@ -210,13 +252,13 @@ public sealed class PermissionAuthorizationService : IPermissionAuthorizationSer
                 !assignment.SystemUser.IsDeleted &&
                 assignment.Permission.IsActive &&
                 !assignment.Permission.IsDeleted &&
-                assignment.Permission.Code == normalizedCode &&
                 (!assignment.ValidFromUtc.HasValue ||
                  assignment.ValidFromUtc.Value <= utcNow) &&
                 (!assignment.ValidToUtc.HasValue ||
                  assignment.ValidToUtc.Value > utcNow))
             .Select(assignment => new ActivePermissionRule
             {
+                PermissionCode = assignment.Permission.Code,
                 Effect = assignment.Effect,
                 ScopeType = assignment.ScopeType,
                 ScopeCompanyId = assignment.ScopeCompanyId,
@@ -263,6 +305,8 @@ public sealed class PermissionAuthorizationService : IPermissionAuthorizationSer
 
     private sealed class ActivePermissionRule
     {
+        public string PermissionCode { get; init; } = string.Empty;
+
         public PermissionEffect Effect { get; init; }
 
         public PeopleDataScopeType ScopeType { get; init; }

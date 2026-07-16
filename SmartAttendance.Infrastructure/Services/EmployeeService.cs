@@ -140,7 +140,21 @@ public class EmployeeService : IEmployeeService
                 .ThenBy(x => x.EmployeeNo)
         };
 
-        var filteredEmployees = await filteredQuery.CountAsync();
+        var hasResultFilters = !string.IsNullOrWhiteSpace(searchTerm) ||
+                               (query.BranchId.HasValue &&
+                                query.BranchId.Value > 0) ||
+                               (query.DepartmentId.HasValue &&
+                                query.DepartmentId.Value > 0);
+
+        var filteredEmployees = hasResultFilters
+            ? await filteredQuery.CountAsync()
+            : statusFilter switch
+            {
+                "all" => totalEmployees,
+                "inactive" => inactiveEmployees,
+                _ => activeEmployees
+            };
+
         var totalPages = filteredEmployees == 0
             ? 0
             : (int)Math.Ceiling(filteredEmployees / (double)pageSize);
@@ -148,40 +162,43 @@ public class EmployeeService : IEmployeeService
             ? 1
             : Math.Min(requestedPage, totalPages);
 
-        var items = await filteredQuery
+        var pageEmployeeIds = await filteredQuery
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(x => new EmployeeListViewModel
-            {
-                Id = x.Id,
-                EmployeeNo = x.EmployeeNo,
-                FullName = x.FullName,
-                NationalId = x.NationalId,
-                Phone = x.Phone,
-                Email = x.Email,
-                Position = x.Position,
-                PositionId = x.PositionId,
-                HireDate = x.HireDate,
-                BirthDate = x.BirthDate,
-                Country = x.Country,
-                Nationality = x.Nationality,
-                Gender = x.Gender,
-                MaritalStatus = x.MaritalStatus,
-                IsActive = x.IsActive,
-                CompanyId = x.Branch.CompanyId,
-                BranchId = x.BranchId,
-                DepartmentId = x.DepartmentId,
-                DepartmentCode = x.Department.IsDeleted
-                    ? string.Empty
-                    : x.Department.Code,
-                DepartmentName = x.Department.IsDeleted
-                    ? string.Empty
-                    : x.Department.Name,
-                BranchName = x.Branch.IsDeleted
-                    ? string.Empty
-                    : x.Branch.Name
-            })
+            .Select(x => x.Id)
             .ToListAsync();
+
+        var pageEmployees = pageEmployeeIds.Count == 0
+            ? new List<EmployeeListViewModel>()
+            : await employeesQuery
+                .Where(x => pageEmployeeIds.Contains(x.Id))
+                .Select(x => new EmployeeListViewModel
+                {
+                    Id = x.Id,
+                    EmployeeNo = x.EmployeeNo,
+                    FullName = x.FullName,
+                    Phone = x.Phone,
+                    Email = x.Email,
+                    Position = x.Position,
+                    HireDate = x.HireDate,
+                    IsActive = x.IsActive,
+                    CompanyId = x.Branch.CompanyId,
+                    BranchId = x.BranchId,
+                    DepartmentId = x.DepartmentId,
+                    DepartmentName = x.Department.IsDeleted
+                        ? string.Empty
+                        : x.Department.Name,
+                    BranchName = x.Branch.IsDeleted
+                        ? string.Empty
+                        : x.Branch.Name
+                })
+                .ToListAsync();
+
+        var pageEmployeesById = pageEmployees.ToDictionary(x => x.Id);
+        var items = pageEmployeeIds
+            .Where(pageEmployeesById.ContainsKey)
+            .Select(id => pageEmployeesById[id])
+            .ToList();
 
         return new EmployeePagedResultViewModel
         {
