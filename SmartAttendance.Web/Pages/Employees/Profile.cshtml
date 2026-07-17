@@ -331,7 +331,8 @@
                             تعديل البيانات
                         </a>
                     }
-@if (Model.CanOpenEmployeeDocuments)
+
+                    @if (Model.CanOpenEmployeeDocuments)
                     {
                         <a asp-page="/EmployeeDocuments/Index"
                            asp-route-employeeId="@employee.Id"
@@ -772,15 +773,15 @@
             }
 
             <section class="z360-details">
-                <nav class="z360-detail-nav" aria-label="أقسام ملف الموظف">
-                    <a href="#attendance">الحضور</a>
-                    <a href="#requests">الطلبات</a>
-                    <a href="#documents">المستندات</a>
-                    <a href="#profile-files">ملفات الموظف</a>
-                    <a href="#shifts">الشفتات</a>
+                <nav class="z360-detail-nav" aria-label="أقسام ملف الموظف" data-z360-tabs>
+                    <a href="#attendance" data-z360-tab="attendance" class="is-active">الحضور</a>
+                    <a href="#requests" data-z360-tab="requests">الطلبات</a>
+                    <a href="#documents" data-z360-tab="documents">المستندات</a>
+                    <a href="#profile-files" data-z360-tab="profile-files">ملفات الموظف</a>
+                    <a href="#shifts" data-z360-tab="shifts">الشفتات</a>
                     @if (Model.CanViewHistory)
                     {
-                        <a href="#audit">سجل التعديلات</a>
+                        <a href="#audit" data-z360-tab="audit">سجل التعديلات</a>
                     }
                 </nav>
 
@@ -1099,5 +1100,48 @@
 @section Scripts {
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
     <script src="~/js/nexora-profile-reassign-modal.js" asp-append-version="true"></script>
-    <script src="~/js/nexora-profile-anchor-navigation.js" asp-append-version="true"></script>
+
+    <script>
+        // تبويبات أقسام الملف: يظهر قسم واحد فقط حسب التبويب المختار
+        (function () {
+            var nav = document.querySelector("[data-z360-tabs]");
+            if (!nav) return;
+
+            var tabs = Array.prototype.slice.call(nav.querySelectorAll("[data-z360-tab]"));
+            var sectionIds = tabs.map(function (tab) { return tab.getAttribute("data-z360-tab"); });
+
+            function activate(targetId) {
+                if (sectionIds.indexOf(targetId) === -1) return;
+
+                sectionIds.forEach(function (id) {
+                    var section = document.getElementById(id);
+                    if (section) section.hidden = (id !== targetId);
+                });
+
+                tabs.forEach(function (tab) {
+                    tab.classList.toggle("is-active", tab.getAttribute("data-z360-tab") === targetId);
+                });
+            }
+
+            tabs.forEach(function (tab) {
+                tab.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    activate(tab.getAttribute("data-z360-tab"));
+                });
+            });
+
+            // روابط داخلية تشير لقسم (مثل زر "إضافة مستند" → #profile-files)
+            document.querySelectorAll('a[href^="#"]').forEach(function (link) {
+                var targetId = link.getAttribute("href").slice(1);
+                if (sectionIds.indexOf(targetId) === -1 || link.hasAttribute("data-z360-tab")) return;
+
+                link.addEventListener("click", function () {
+                    activate(targetId);
+                });
+            });
+
+            // القسم الأول فعال والباقي مخفي عند التحميل
+            activate(sectionIds[0]);
+        })();
+    </script>
 }

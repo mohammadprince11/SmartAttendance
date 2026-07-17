@@ -636,10 +636,21 @@ html[data-theme="dark"] .z360-hero {
     color: var(--z360-teal);
 }
 
+.z360-detail-nav a.is-active {
+    border-color: transparent;
+    background: var(--z360-cyan);
+    color: #04141f;
+}
+
 .z360-module-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
+}
+
+/* في وضع التبويبات يظهر قسم واحد فقط، فيأخذ العرض الكامل */
+.z360-details .z360-module-grid {
+    grid-template-columns: 1fr;
 }
 
 .z360-module {
@@ -982,9 +993,11 @@ html[data-theme="dark"] .z360-hero {
 }
 
 .z360-modal-dialog {
+    display: flex;
+    flex-direction: column;
     width: min(880px, 100%);
     max-height: calc(100vh - 36px);
-    overflow: auto;
+    overflow: hidden;
     border: 1px solid var(--z360-border-strong);
     border-radius: 16px;
     background: var(--z360-surface);
@@ -992,9 +1005,18 @@ html[data-theme="dark"] .z360-hero {
     box-shadow: 0 28px 80px rgba(0, 0, 0, .38);
 }
 
+/* الفورم يلف الجسم والأزرار: الهيدر والأزرار ثابتان والجسم وحده يتمرر */
+.z360-modal-dialog form {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
 .z360-modal-head,
 .z360-modal-actions {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
@@ -1030,8 +1052,19 @@ html[data-theme="dark"] .z360-hero {
 
 .z360-modal-body {
     display: grid;
+    flex: 1 1 auto;
     gap: 14px;
+    min-height: 0;
     padding: 16px 17px;
+    /* !important يتغلب على قاعدة عامة في nexora-calendar-v18.css
+       تفرض overflow:visible على أي عنصر يحوي "section" في اسم صنفه */
+    overflow-y: auto !important;
+    align-content: start;
+}
+
+/* منع نفس القاعدة العامة من كسر تمرير المودال الداخلي */
+.z360-modal .z360-modal-section {
+    overflow: visible;
 }
 
 .z360-modal-section {
@@ -1046,11 +1079,16 @@ html[data-theme="dark"] .z360-hero {
     font-size: 14px;
 }
 
-.z360-old-grid,
+.z360-old-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 9px;
+}
+
 .z360-edit-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 9px;
+    gap: 11px;
 }
 
 .z360-old-grid > div,
@@ -1082,8 +1120,16 @@ html[data-theme="dark"] .z360-hero {
 }
 
 .z360-edit-grid textarea {
-    min-height: 84px;
+    min-height: 62px;
     resize: vertical;
+}
+
+.z360-modal input:focus,
+.z360-modal select:focus,
+.z360-modal textarea:focus {
+    outline: none;
+    border-color: var(--z360-cyan);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--z360-cyan) 22%, transparent);
 }
 
 .z360-confirm {
@@ -1103,6 +1149,25 @@ html[data-theme="dark"] .z360-hero {
 html.nxr-modal-open,
 body.nxr-modal-open {
     overflow: hidden;
+}
+
+/* المودال ينتقل إلى body خارج حاوية z360، لذا يحتاج media queries خاصة به */
+@media (max-width: 760px) {
+    .z360-modal {
+        padding: 10px;
+    }
+
+    .z360-old-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .z360-edit-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .z360-edit-grid .z360-wide {
+        grid-column: auto;
+    }
 }
 
 /* Container-based responsiveness: reacts to actual content width after sidebar */
