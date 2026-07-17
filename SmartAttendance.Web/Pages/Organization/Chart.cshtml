@@ -1,0 +1,140 @@
+@page
+@model SmartAttendance.Web.Pages.Organization.ChartModel
+@{
+    ViewData["Title"] = "الهيكل الإداري";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/organization-chart.css" asp-append-version="true" />
+}
+
+<div class="orgchart-page" dir="rtl">
+    <div class="page-header">
+        <div>
+            <h1>الهيكل الإداري (خريطة المسؤوليات)</h1>
+            <p>تسلسل المدراء المباشرين للموظفين الفعالين في الشركة المحددة، مبني من "المدير المباشر" في ملف كل موظف.</p>
+        </div>
+        <div class="orgchart-header-actions">
+            <a asp-page="/Organization/Index" class="orgchart-btn-secondary">الهيكل التنظيمي (الفروع والأقسام)</a>
+            <form method="get" class="orgchart-company-form">
+                <label for="companySelect">الشركة</label>
+                <select id="companySelect" name="CompanyId" onchange="this.form.submit()">
+                    @foreach (var company in Model.CompanyOptions)
+                    {
+                        <option value="@company.Id" selected="@(Model.CompanyId == company.Id)">@company.Name</option>
+                    }
+                </select>
+            </form>
+        </div>
+    </div>
+
+    @if (!Model.CompanyId.HasValue)
+    {
+        <div class="orgchart-empty">لا توجد شركات فعّالة لعرض هيكلها.</div>
+    }
+    else
+    {
+        <section class="orgchart-stats">
+            <article class="orgchart-stat">
+                <span>موظفون فعّالون</span>
+                <strong>@Model.TotalEmployees</strong>
+                <small>@Model.SelectedCompanyName</small>
+            </article>
+            <article class="orgchart-stat">
+                <span>مدراء</span>
+                <strong>@Model.ManagerCount</strong>
+                <small>لديهم فريق تابع مباشر</small>
+            </article>
+            <article class="orgchart-stat">
+                <span>مربوطون بمدير</span>
+                <strong>@Model.WithManagerCount</strong>
+                <small>محدد لهم مدير مباشر</small>
+            </article>
+            <article class="orgchart-stat @(Model.WithoutManagerCount > 0 ? "warn" : "")">
+                <span>بلا مدير مباشر</span>
+                <strong>@Model.WithoutManagerCount</strong>
+                <small>يحتاجون ربطاً بالتسلسل</small>
+            </article>
+            <article class="orgchart-stat">
+                <span>عمق التسلسل</span>
+                <strong>@Model.MaxDepth</strong>
+                <small>أطول سلسلة إدارية</small>
+            </article>
+        </section>
+
+        @if (Model.TotalEmployees == 0)
+        {
+            <div class="orgchart-empty">لا يوجد موظفون فعّالون في هذه الشركة.</div>
+        }
+        else
+        {
+            <div class="orgchart-toolbar">
+                <div class="orgchart-search">
+                    <span>🔎</span>
+                    <input type="text" id="orgSearch" placeholder="ابحث باسم الموظف أو رقمه الوظيفي..." autocomplete="off" />
+                </div>
+                <div class="orgchart-toolbar-actions">
+                    <button type="button" class="orgchart-btn-secondary" data-org-expand>فتح الكل</button>
+                    <button type="button" class="orgchart-btn-secondary" data-org-collapse>طيّ الكل</button>
+                </div>
+            </div>
+
+            @if (Model.ManagerRoots.Count > 0)
+            {
+                <section class="orgchart-canvas" id="orgCanvas">
+                    <ul class="org-tree org-tree-root">
+                        @foreach (var root in Model.ManagerRoots)
+                        {
+                            <partial name="_OrgNode" model="root" />
+                        }
+                    </ul>
+                </section>
+            }
+            else
+            {
+                <div class="orgchart-hint">
+                    لم يتم تحديد أي "مدير مباشر" بعد، لذا لا توجد سلسلة إدارية لعرضها.
+                    افتح ملف أي موظف وحدّد مديره المباشر ليبدأ الهيكل بالظهور هنا.
+                </div>
+            }
+
+            @if (Model.UnassignedRoots.Count > 0)
+            {
+                <section class="orgchart-unassigned">
+                    <details @(Model.ManagerRoots.Count == 0 ? "open" : "")>
+                        <summary>
+                            <strong>موظفون بلا مدير مباشر</strong>
+                            <span class="orgchart-badge">@Model.UnassignedRoots.Count</span>
+                        </summary>
+                        <div class="orgchart-unassigned-grid">
+                            @foreach (var node in Model.UnassignedRoots)
+                            {
+                                <div class="orgchart-ic-card" data-name="@node.FullName.ToLowerInvariant()" data-no="@node.EmployeeNo">
+                                    <div class="org-node-avatar sm">
+                                        @if (!string.IsNullOrWhiteSpace(node.PhotoPath))
+                                        {
+                                            <img src="@node.PhotoPath" alt="@node.FullName" loading="lazy" />
+                                        }
+                                        else
+                                        {
+                                            <span>@node.Initials</span>
+                                        }
+                                    </div>
+                                    <div>
+                                        <strong>@node.FullName</strong>
+                                        <small>@(string.IsNullOrWhiteSpace(node.Position) ? node.DepartmentName : node.Position) · @node.EmployeeNo</small>
+                                    </div>
+                                    <a asp-page="/Employees/Edit" asp-route-id="@node.Id" class="org-node-link" title="تحديد المدير المباشر">↗</a>
+                                </div>
+                            }
+                        </div>
+                    </details>
+                </section>
+            }
+        }
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/organization-chart.js" asp-append-version="true"></script>
+}

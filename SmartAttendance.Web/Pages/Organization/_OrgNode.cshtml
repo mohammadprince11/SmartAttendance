@@ -1,0 +1,41 @@
+@model SmartAttendance.Web.Pages.Organization.ChartModel.OrgNode
+
+<li class="org-tree-item" data-name="@Model.FullName.ToLowerInvariant()" data-no="@Model.EmployeeNo">
+    <div class="org-node" tabindex="0">
+        <div class="org-node-avatar">
+            @if (!string.IsNullOrWhiteSpace(Model.PhotoPath))
+            {
+                <img src="@Model.PhotoPath" alt="@Model.FullName" loading="lazy" />
+            }
+            else
+            {
+                <span>@Model.Initials</span>
+            }
+        </div>
+        <div class="org-node-body">
+            <strong>@Model.FullName</strong>
+            <span class="org-node-role">@(string.IsNullOrWhiteSpace(Model.Position) ? "—" : Model.Position)</span>
+            <small class="org-node-dept">@Model.DepartmentName · @Model.EmployeeNo</small>
+        </div>
+        <div class="org-node-actions">
+            <a asp-page="/Employees/Edit" asp-route-id="@Model.Id" class="org-node-link" title="فتح ملف الموظف">↗</a>
+            @if (Model.Children.Count > 0)
+            {
+                <button type="button" class="org-node-toggle" aria-label="طيّ / فتح" title="طيّ / فتح الفريق">
+                    <span class="org-node-count">@Model.Children.Count</span>
+                    <span class="org-node-chevron">▾</span>
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (Model.Children.Count > 0)
+    {
+        <ul class="org-tree-children">
+            @foreach (var child in Model.Children)
+            {
+                <partial name="_OrgNode" model="child" />
+            }
+        </ul>
+    }
+</li>

@@ -286,8 +286,11 @@
 
                             @if (canViewOrganization)
                             {
-                                <a asp-page="/Organization/Index" class="nexora-nav-link @(IsUnder("/Organization") ? "active nexora-active" : "")">
+                                <a asp-page="/Organization/Index" class="nexora-nav-link @(IsUnder("/Organization/Index") || (IsUnder("/Organization") && !IsUnder("/Organization/Chart")) ? "active nexora-active" : "")">
                                     <span>الهياكل التنظيمية</span>
+                                </a>
+                                <a asp-page="/Organization/Chart" class="nexora-nav-link @(IsUnder("/Organization/Chart") ? "active nexora-active" : "")">
+                                    <span>الهيكل الإداري</span>
                                 </a>
                             }
 
