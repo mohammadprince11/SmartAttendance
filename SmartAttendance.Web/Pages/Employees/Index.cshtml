@@ -1,444 +1,144 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.Employees.IndexModel
-
-@{
-    ViewData["Title"] = "قائمة الموظفين";
-
-    var employees = Model.Employees;
-    var hasFilters = !string.IsNullOrWhiteSpace(Model.SearchTerm)
-        || Model.BranchId.HasValue
-        || Model.DepartmentId.HasValue
-        || !string.Equals(Model.StatusFilter, "active", StringComparison.OrdinalIgnoreCase)
-        || !string.Equals(Model.SortBy, "name", StringComparison.OrdinalIgnoreCase);
-
-    string BuildEmployeePageUrl(int pageNumber)
-    {
-        return Url.Page(
-            "./Index",
-            new
-            {
-                Model.CompanyId,
-                Model.SearchTerm,
-                Model.BranchId,
-                Model.DepartmentId,
-                Model.StatusFilter,
-                Model.SortBy,
-                Model.PageSize,
-                PageNumber = pageNumber
-            }) ?? "#";
-    }
+@{ 
+    ViewData["Title"] = "قائمة الموظفين"; 
+    var employees = Model.Employees; 
+    string BuildEmployeePageUrl(int pageNumber) 
+    { 
+        return Url.Page("./Index", new { Model.CompanyId, Model.SearchTerm, Model.BranchId, Model.DepartmentId, Model.StatusFilter, Model.SortBy, Model.PageSize, PageNumber = pageNumber }) ?? "#"; 
+    } 
 }
-
-@section Styles {
-    <link rel="stylesheet" href="~/css/nexora-employees-index-pro.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-employees-master-filter.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-employees-table-modern-rebuild.css" asp-append-version="true" />
-}
-
-<script>
-    document.body.classList.add(
-        "nxr-employees-master-filter-active",
-        "nxr-employees-table-modern",
-        "nxr-employees-ui-ready"
-    );
-</script>
-
+@section Styles { <link rel="stylesheet" href="~/css/zynora-people.css" asp-append-version="true" /> }
 <script src="~/js/nexora-employee-row-click.js" asp-append-version="true" defer></script>
 
-<div class="nxr-page nxr-emp-page">
-    <section class="nxr-topline nxr-emp-hero">
-        <div class="nxr-title">
-            <div class="nxr-brand-mini">NEXORA HR PLATFORM</div>
-            <h1>قائمة الموظفين</h1>
-            <p>الشركة الحالية: @Model.SelectedCompanyName</p>
+<div class="zhr-container">
+    <div class="zhr-header">
+        <div class="zhr-company-badge">
+            <span style="color:var(--zhr-text-secondary); margin-left:8px;">الشركة الحالية:</span>
+            <strong style="color:var(--cloud-white);">@Model.SelectedCompanyName</strong>
         </div>
-
-        @if (Model.CanCreateEmployee || Model.CanImportEmployees)
-        {
-            <div class="nxr-actions nxr-emp-actions">
-                @if (Model.CanCreateEmployee)
-                {
-                    <a asp-page="./Create" class="nxr-btn primary">إضافة موظف</a>
-                }
-
-                @if (Model.CanImportEmployees)
-                {
-                    <a asp-page="./Import" class="nxr-btn">&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;</a>
-                }
-            </div>
+        @if (Model.CanCreateEmployee || Model.CanImportEmployees) 
+        { 
+            <div style="display:flex; gap:12px;"> 
+                @if (Model.CanImportEmployees) { <a asp-page="./Import" class="zhr-btn zhr-btn-secondary">استيراد الموظفين</a> } 
+                @if (Model.CanCreateEmployee) { <a asp-page="./Create" class="zhr-btn zhr-btn-primary">إضافة موظف</a> } 
+            </div> 
         }
-    </section>
+    </div>
 
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="nxr-success">@TempData["SuccessMessage"]</div>
+    @if (TempData["SuccessMessage"] != null) 
+    { 
+        <div style="background:rgba(40, 167, 69, 0.1); color:var(--success); border: 1px solid var(--success); padding:12px; border-radius:8px; margin-bottom:20px; font-weight:bold;">
+            @TempData["SuccessMessage"]
+        </div> 
     }
 
-    <section class="nxr-emp-kpis">
-        <div class="nxr-emp-kpi">
-            <span>إجمالي الموظفين</span>
-            <strong>@Model.TotalEmployees</strong>
-            <small>كل السجلات</small>
-        </div>
-
-        <div class="nxr-emp-kpi ok">
-            <span>فعال</span>
-            <strong>@Model.ActiveEmployees</strong>
-            <small>موظفون نشطون</small>
-        </div>
-
-        <div class="nxr-emp-kpi warn">
-            <span>غير فعال</span>
-            <strong>@Model.InactiveEmployees</strong>
-            <small>قيد المراجعة</small>
-        </div>
-
-        <div class="nxr-emp-kpi info">
-            <span>تعيينات السنة</span>
-            <strong>@Model.NewThisYear</strong>
-            <small>@DateTime.Today.Year</small>
-        </div>
-
-        <div class="nxr-emp-kpi filter">
-            <span>النتائج الحالية</span>
-            <strong>@Model.FilteredEmployees</strong>
-            <small>حسب البحث والفلترة</small>
-        </div>
+    <section class="zhr-kpi-grid">
+        <div class="zhr-kpi-card"><span class="zhr-kpi-title">إجمالي الموظفين</span><span class="zhr-kpi-value">@Model.TotalEmployees</span></div>
+        <div class="zhr-kpi-card active"><span class="zhr-kpi-title">فعال</span><span class="zhr-kpi-value">@Model.ActiveEmployees</span></div>
+        <div class="zhr-kpi-card inactive"><span class="zhr-kpi-title">غير فعال</span><span class="zhr-kpi-value">@Model.InactiveEmployees</span></div>
+        <div class="zhr-kpi-card new"><span class="zhr-kpi-title">تعيينات السنة</span><span class="zhr-kpi-value">@Model.NewThisYear</span></div>
+        <div class="zhr-kpi-card total"><span class="zhr-kpi-title">النتائج الحالية</span><span class="zhr-kpi-value">@Model.FilteredEmployees</span></div>
     </section>
 
-    <section class="nxr-card nxr-emp-filter-card">
-        <form method="get"
-              class="nxr-emp-filter nxr-live-filter"
-              data-nxr-server-filter
-              autocomplete="off">
-            <input type="hidden" name="PageNumber" value="1" data-nxr-page-number-field />
-
-            <div class="nxr-emp-master-grid">
-                <div class="nxr-emp-field">
-                    <label>الشركة</label>
-                    <select data-nexora-select="true"
-                            name="CompanyId"
-                            class="nxr-input"
-                            data-nxr-server-select>
-                        @foreach (var company in Model.CompanyOptions)
-                        {
-                            <option value="@company.Id"
-                                    selected="@(Model.CompanyId == company.Id ? "selected" : null)">
-                                @company.Name
-                            </option>
-                        }
+    <section class="zhr-filter-card">
+        <form method="get" id="zhr-filter-form" autocomplete="off" style="margin: 0;">
+            <input type="hidden" name="PageNumber" value="1" />
+            <div class="zhr-filter-grid">
+                <div class="zhr-form-group">
+                    <label class="zhr-label">الشركة</label>
+                    <select name="CompanyId" class="zhr-select" onchange="document.getElementById('zhr-filter-form').submit()">
+                        @foreach(var c in Model.CompanyOptions){<option value="@c.Id" selected="@(Model.CompanyId==c.Id ? "selected" : null)">@c.Name</option>}
                     </select>
                 </div>
-
-                <div class="nxr-emp-field search">
-                    <label>بحث سريع</label>
-                    <input class="nxr-input"
-                           type="search"
-                           name="SearchTerm"
-                           value="@Model.SearchTerm"
-                           placeholder="الكود، الاسم، الهاتف، المنصب، موقع العمل أو القسم..."
-                           data-nxr-server-search />
+                <div class="zhr-form-group">
+                    <label class="zhr-label">بحث سريع</label>
+                    <input type="search" name="SearchTerm" class="zhr-input" value="@Model.SearchTerm" placeholder="الكود، الاسم، القسم..." onblur="document.getElementById('zhr-filter-form').submit()" />
                 </div>
-
-                <div class="nxr-emp-field">
-                    <label>موقع العمل</label>
-                    <select data-nexora-select="true"
-                            name="BranchId"
-                            class="nxr-input"
-                            data-nxr-server-select>
-                        <option value="">كل مواقع العمل</option>
-                        @foreach (var branch in Model.BranchOptions)
-                        {
-                            <option value="@branch.Id"
-                                    selected="@(Model.BranchId == branch.Id ? "selected" : null)">
-                                @branch.Name
-                            </option>
-                        }
+                <div class="zhr-form-group">
+                    <label class="zhr-label">موقع العمل</label>
+                    <select name="BranchId" class="zhr-select" onchange="document.getElementById('zhr-filter-form').submit()">
+                        <option value="">الكل</option>
+                        @foreach(var b in Model.BranchOptions){<option value="@b.Id" selected="@(Model.BranchId==b.Id ? "selected" : null)">@b.Name</option>}
                     </select>
                 </div>
-
-                <div class="nxr-emp-field">
-                    <label>القسم</label>
-                    <select data-nexora-select="true"
-                            name="DepartmentId"
-                            class="nxr-input"
-                            data-nxr-server-select>
-                        <option value="">كل الأقسام</option>
-                        @foreach (var department in Model.DepartmentOptions)
-                        {
-                            <option value="@department.Id"
-                                    selected="@(Model.DepartmentId == department.Id ? "selected" : null)">
-                                @department.Name
-                            </option>
-                        }
+                <div class="zhr-form-group">
+                    <label class="zhr-label">القسم</label>
+                    <select name="DepartmentId" class="zhr-select" onchange="document.getElementById('zhr-filter-form').submit()">
+                        <option value="">الكل</option>
+                        @foreach(var d in Model.DepartmentOptions){<option value="@d.Id" selected="@(Model.DepartmentId==d.Id ? "selected" : null)">@d.Name</option>}
                     </select>
                 </div>
-
-                <div class="nxr-emp-field">
-                    <label>الحالة</label>
-                    <select data-nexora-select="true"
-                            name="StatusFilter"
-                            class="nxr-input"
-                            data-nxr-server-select>
-                        <option value="all"
-                                selected="@(Model.StatusFilter == "all" ? "selected" : null)">كل الحالات</option>
-                        <option value="active"
-                                selected="@(Model.StatusFilter == "active" ? "selected" : null)">فعال</option>
-                        <option value="inactive"
-                                selected="@(Model.StatusFilter == "inactive" ? "selected" : null)">غير فعال</option>
+                <div class="zhr-form-group">
+                    <label class="zhr-label">الحالة</label>
+                    <select name="StatusFilter" class="zhr-select" onchange="document.getElementById('zhr-filter-form').submit()">
+                        <option value="all" selected="@(Model.StatusFilter=="all" ? "selected" : null)">الكل</option>
+                        <option value="active" selected="@(Model.StatusFilter=="active" ? "selected" : null)">فعال</option>
+                        <option value="inactive" selected="@(Model.StatusFilter=="inactive" ? "selected" : null)">غير فعال</option>
                     </select>
                 </div>
-
-                <div class="nxr-emp-field">
-                    <label>ترتيب</label>
-                    <select data-nexora-select="true"
-                            name="SortBy"
-                            class="nxr-input"
-                            data-nxr-server-select>
-                        <option value="name"
-                                selected="@(Model.SortBy == "name" ? "selected" : null)">حسب الاسم</option>
-                        <option value="code"
-                                selected="@(Model.SortBy == "code" ? "selected" : null)">حسب الكود</option>
-                        <option value="branch"
-                                selected="@(Model.SortBy == "branch" ? "selected" : null)">حسب موقع العمل</option>
-                        <option value="department"
-                                selected="@(Model.SortBy == "department" ? "selected" : null)">حسب القسم</option>
-                        <option value="hireDate"
-                                selected="@(Model.SortBy == "hiredate" ? "selected" : null)">الأحدث تعييناً</option>
-                        <option value="status"
-                                selected="@(Model.SortBy == "status" ? "selected" : null)">حسب الحالة</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="nxr-emp-master-toolbar">
-                <div class="nxr-emp-master-summary">
-                    <span class="nxr-emp-master-counter">
-                        @if (Model.FilteredEmployees > 0)
-                        {
-                            <text>عرض @Model.FirstItemNumber - @Model.LastItemNumber من @Model.FilteredEmployees</text>
-                        }
-                        else
-                        {
-                            <text>عرض 0 من 0</text>
-                        }
-                    </span>
-
-                    <span class="nxr-emp-master-total">
-                        الإجمالي @Model.FilteredEmployees
-                    </span>
-                </div>
-
-                <div class="nxr-emp-master-actions">
-                    <div class="nxr-emp-master-page-size">
-                        <span>عدد الأسطر</span>
-                        <select name="PageSize"
-                                data-nxr-server-select
-                                data-nexora-select="true"
-                                data-nexora-select-variant="employee-page-size"
-                                data-nexora-select-panel-min-width="84"
-                                aria-label="عدد الأسطر">
-                            <option value="10" selected="@(Model.PageSize == 10 ? "selected" : null)">10</option>
-                            <option value="25" selected="@(Model.PageSize == 25 ? "selected" : null)">25</option>
-                            <option value="50" selected="@(Model.PageSize == 50 ? "selected" : null)">50</option>
-                            <option value="100" selected="@(Model.PageSize == 100 ? "selected" : null)">100</option>
-                        </select>
-                    </div>
-
-                    <a asp-page="./Index"
-                       asp-route-companyId="@Model.CompanyId"
-                       class="nxr-emp-master-reset">مسح الفلاتر</a>
+                <div class="zhr-form-group">
+                    <a asp-page="./Index" asp-route-companyId="@Model.CompanyId" class="zhr-btn zhr-btn-secondary" title="مسح الفلاتر">مسح</a>
                 </div>
             </div>
         </form>
     </section>
 
-    <section class="nxr-card nxr-emp-list-card">
-        <div class="nxr-emp-list-head">
-            <div>
-                <h2>سجل الموظفين</h2>
-                <p>
-                    @if (Model.FilteredEmployees == 0)
-                    {
-                        <span>لا توجد نتائج حسب البحث والفلترة الحالية.</span>
-                    }
-                    else if (hasFilters)
-                    {
-                        <span>
-                            عرض الموظفين من @Model.FirstItemNumber إلى @Model.LastItemNumber
-                            من أصل @Model.FilteredEmployees حسب الفلترة الحالية.
-                        </span>
-                    }
-                    else
-                    {
-                        <span>
-                            عرض الموظفين من @Model.FirstItemNumber إلى @Model.LastItemNumber
-                            من أصل @Model.FilteredEmployees.
-                        </span>
-                    }
-                </p>
-            </div>
-
-            <span class="nxr-emp-count">
-                @if (Model.FilteredEmployees > 0)
-                {
-                    <text>عرض @Model.FirstItemNumber - @Model.LastItemNumber من @Model.FilteredEmployees</text>
-                }
-                else
-                {
-                    <text>عرض 0 من 0</text>
-                }
+    <section class="zhr-table-card">
+        <div class="zhr-toolbar">
+            <span class="zhr-toolbar-info">
+                @if(Model.FilteredEmployees > 0){<text>عرض @Model.FirstItemNumber إلى @Model.LastItemNumber من أصل @Model.FilteredEmployees</text>}else{<text>لا توجد نتائج</text>}
             </span>
+            <div class="zhr-pagesize-wrapper">
+                <label class="zhr-label" style="margin:0;">الأسطر:</label>
+                <select name="PageSize" form="zhr-filter-form" class="zhr-select" style="padding: 4px 8px; width: auto; height: 32px;" onchange="document.getElementById('zhr-filter-form').submit()">
+                    <option value="10" selected="@(Model.PageSize==10 ? "selected" : null)">10</option>
+                    <option value="25" selected="@(Model.PageSize==25 ? "selected" : null)">25</option>
+                    <option value="50" selected="@(Model.PageSize==50 ? "selected" : null)">50</option>
+                    <option value="100" selected="@(Model.PageSize==100 ? "selected" : null)">100</option>
+                </select>
+            </div>
         </div>
-
-        <div class="nxr-table-wrap nxr-emp-table-wrap nxr-modern-emp-table-wrap">
-            <table class="nxr-table nxr-emp-table">
-                <colgroup>
-                    <col class="nxr-col-employee" />
-                    <col class="nxr-col-code" />
-                    <col class="nxr-col-branch" />
-                    <col class="nxr-col-department" />
-                    <col class="nxr-col-position" />
-                    <col class="nxr-col-hire" />
-                    <col class="nxr-col-status" />
-                </colgroup>
-
-                <thead>
-                    <tr>
-                        <th>الموظف</th>
-                        <th>الكود</th>
-                        <th>موقع العمل</th>
-                        <th>القسم</th>
-                        <th>المنصب</th>
-                        <th>تاريخ التعيين</th>
-                        <th>الحالة</th>
-                    </tr>
-                </thead>
-
+        <div class="zhr-table-responsive">
+            <table class="zhr-table">
+                <thead><tr><th>الموظف</th><th>الكود</th><th>موقع العمل</th><th>القسم</th><th>المنصب</th><th>تاريخ التعيين</th><th>الحالة</th></tr></thead>
                 <tbody>
-                    @if (employees.Any())
+                    @if(employees.Any())
                     {
-                        foreach (var employee in employees)
+                        foreach(var emp in employees)
                         {
-                            <tr class="@(employee.CanViewProfile ? "nxr-clickable-employee-row" : "nxr-employee-row-readonly")"
-                                data-employee-row="@(employee.CanViewProfile ? "true" : null)"
-                                data-profile-url="@(employee.CanViewProfile ? Url.Page("./Profile", new { id = employee.Id }) : null)"
-                                tabindex="@(employee.CanViewProfile ? "0" : null)"
-                                role="@(employee.CanViewProfile ? "link" : null)"
-                                aria-label="@(employee.CanViewProfile ? "Open employee profile" : null)">
-                                <td class="nxr-emp-person-cell">
-                                    <div class="nxr-emp-person">
-                                        <div>
-                                            <strong>@employee.FullName</strong>
-                                            <small>
-                                                @if (!string.IsNullOrWhiteSpace(employee.Phone))
-                                                {
-                                                    <span>@employee.Phone</span>
-                                                }
-                                                else if (!string.IsNullOrWhiteSpace(employee.Email))
-                                                {
-                                                    <span>@employee.Email</span>
-                                                }
-                                                else
-                                                {
-                                                    <span>لا توجد بيانات تواصل</span>
-                                                }
-                                            </small>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <td>
-                                    <span class="nxr-code">@employee.EmployeeNo</span>
-                                </td>
-
-                                <td>@(!string.IsNullOrWhiteSpace(employee.BranchName) ? employee.BranchName : "غير محدد")</td>
-                                <td>@(!string.IsNullOrWhiteSpace(employee.DepartmentName) ? employee.DepartmentName : "غير محدد")</td>
-                                <td>@(!string.IsNullOrWhiteSpace(employee.Position) ? employee.Position : "-")</td>
-                                <td>@employee.HireDate.ToString("yyyy-MM-dd")</td>
-
-                                <td>
-                                    <span class="nxr-status @(employee.IsActive ? "active" : "inactive")">
-                                        @(employee.IsActive ? "فعال" : "غير فعال")
-                                    </span>
-                                </td>
+                            <tr class="@(emp.CanViewProfile ? "zhr-clickable" : "")" data-employee-row="@(emp.CanViewProfile ? "true" : null)" data-profile-url="@(emp.CanViewProfile ? Url.Page("./Profile", new { id = emp.Id }) : null)">
+                                <td class="zhr-emp-meta"><strong>@emp.FullName</strong><small>@(string.IsNullOrWhiteSpace(emp.Phone) ? emp.Email : emp.Phone)</small></td>
+                                <td><strong>@emp.EmployeeNo</strong></td>
+                                <td>@(string.IsNullOrWhiteSpace(emp.BranchName) ? "-" : emp.BranchName)</td>
+                                <td>@(string.IsNullOrWhiteSpace(emp.DepartmentName) ? "-" : emp.DepartmentName)</td>
+                                <td>@(string.IsNullOrWhiteSpace(emp.Position) ? "-" : emp.Position)</td>
+                                <td>@emp.HireDate.ToString("yyyy-MM-dd")</td>
+                                <td><span class="zhr-status-badge @(emp.IsActive ? "zhr-status-active" : "zhr-status-inactive")">@(emp.IsActive ? "فعال" : "غير فعال")</span></td>
                             </tr>
                         }
                     }
                     else
                     {
-                        <tr>
-                            <td colspan="7" class="nxr-empty nxr-emp-empty">
-                                لا توجد نتائج مطابقة للبحث أو الفلترة الحالية.
-                            </td>
-                        </tr>
+                        <tr><td colspan="7" style="text-align:center; padding:32px; color:var(--zhr-text-secondary);">لا توجد بيانات مطابقة</td></tr>
                     }
                 </tbody>
             </table>
         </div>
-
-        @if (Model.TotalPages > 1)
+        @if(Model.TotalPages > 1)
         {
-            <nav class="nxr-emp-master-pagination"
-                 aria-label="صفحات قائمة الموظفين">
-                @if (Model.PageNumber > 1)
+            <div class="zhr-pagination">
+                @if(Model.PageNumber > 1){<a href="@BuildEmployeePageUrl(Model.PageNumber - 1)" class="zhr-page-link">السابق</a>}else{<button class="zhr-page-link" disabled>السابق</button>} 
+                @foreach(var p in Model.PaginationPages)
                 {
-                    <a class="nxr-emp-page-nav"
-                       href="@BuildEmployeePageUrl(Model.PageNumber - 1)">السابق</a>
-                }
-                else
-                {
-                    <button type="button"
-                            class="nxr-emp-page-nav"
-                            disabled>السابق</button>
-                }
-
-                <div class="nxr-emp-page-numbers">
-                    @foreach (var paginationPage in Model.PaginationPages)
+                    if(p.HasValue)
                     {
-                        if (paginationPage.HasValue)
-                        {
-                            if (paginationPage.Value == Model.PageNumber)
-                            {
-                                <button type="button"
-                                        class="nxr-emp-page-number is-current"
-                                        aria-current="page"
-                                        disabled>@(paginationPage.Value)</button>
-                            }
-                            else
-                            {
-                                <a class="nxr-emp-page-number"
-                                   href="@BuildEmployeePageUrl(paginationPage.Value)">@(paginationPage.Value)</a>
-                            }
-                        }
-                        else
-                        {
-                            <span class="nxr-emp-page-ellipsis"
-                                  aria-hidden="true">…</span>
-                        }
+                        if(p.Value == Model.PageNumber){<button class="zhr-page-link active" disabled>@p.Value</button>}else{<a href="@BuildEmployeePageUrl(p.Value)" class="zhr-page-link">@p.Value</a>}
                     }
-                </div>
-
-                @if (Model.PageNumber < Model.TotalPages)
-                {
-                    <a class="nxr-emp-page-nav"
-                       href="@BuildEmployeePageUrl(Model.PageNumber + 1)">التالي</a>
-                }
-                else
-                {
-                    <button type="button"
-                            class="nxr-emp-page-nav"
-                            disabled>التالي</button>
-                }
-
-                <span class="nxr-emp-page-summary">
-                    صفحة @Model.PageNumber من @Model.TotalPages
-                </span>
-            </nav>
+                    else{<span style="color:var(--zhr-text-secondary);">...</span>}
+                } 
+                @if(Model.PageNumber < Model.TotalPages){<a href="@BuildEmployeePageUrl(Model.PageNumber + 1)" class="zhr-page-link">التالي</a>}else{<button class="zhr-page-link" disabled>التالي</button>}
+            </div>
         }
     </section>
 </div>
-
-@section Scripts {
-    <script src="~/js/nexora-employees-master-filter.js" asp-append-version="true"></script>
-}

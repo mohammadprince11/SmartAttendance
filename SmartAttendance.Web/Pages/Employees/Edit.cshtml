@@ -1,13 +1,12 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.Employees.EditModel
 @{
-    ViewData["Title"] = "\u062A\u0639\u062F\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641";
+    ViewData["Title"] = "تعديل بيانات الموظف";
 
     var employeePhotoFallback = Url.Content("~/brand/employee-photo-placeholder.svg");
     var employeePhotoSrc = string.IsNullOrWhiteSpace(Model.CurrentPhotoPath)
         ? employeePhotoFallback
         : Model.CurrentPhotoPath;
-
 }
 
 <link rel="stylesheet" href="~/css/nexora-edit-custom-datepicker.css" asp-append-version="true" />
@@ -15,17 +14,32 @@
 <link rel="stylesheet" href="~/css/nexora-employee-edit-clean-layout.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-profile-dynamic-fields.css" asp-append-version="true" />
 
+<style>
+    /* توحيد الستايل مع النظام */
+    input[data-nexora-date-field="true"] { background-color: #0f172a !important; color: #e2e8f0 !important; border: 1px solid #334155 !important; border-radius: 8px !important; padding: 10px 16px !important; }
+    input[data-nexora-date-field="true"]:focus { border-color: #0ea5e9 !important; box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2) !important; }
+
+    /* ستايل قائمة البحث الذكية */
+    .nxr-searchable-wrapper { position: relative; width: 100%; }
+    .nxr-search-input { width: 100%; background-color: #0f172a !important; color: #e2e8f0 !important; border: 1px solid #334155 !important; border-radius: 8px !important; padding: 10px 16px !important; transition: border-color 0.2s; cursor: pointer; }
+    .nxr-search-input:focus { outline: none; border-color: #0ea5e9 !important; box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2) !important; }
+    .nxr-search-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; margin-top: 4px; max-height: 250px; overflow-y: auto; z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .nxr-option { padding: 10px 16px; cursor: pointer; color: #cbd5e1; border-bottom: 1px solid #334155; font-size: 0.95rem; }
+    .nxr-option:last-child { border-bottom: none; }
+    .nxr-option:hover { background-color: #334155; color: #fff; }
+    .nxr-option-code { font-size: 0.8rem; background: #0f172a; padding: 2px 6px; border-radius: 4px; margin-left: 8px; color: #0ea5e9; }
+</style>
+
 <div class="nxr-edit-final-page" dir="rtl">
     <section class="nxr-edit-final-hero">
         <div>
             <span>Employee Data</span>
-            <h1>&#x062A;&#x0639;&#x062F;&#x064A;&#x0644; &#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h1>
-            <p>&#x062A;&#x0631;&#x062A;&#x064A;&#x0628; &#x0627;&#x0644;&#x062D;&#x0642;&#x0648;&#x0644; &#x062D;&#x0633;&#x0628; &#x0627;&#x0644;&#x0623;&#x0647;&#x0645;&#x064A;&#x0629; &#x0628;&#x0628;&#x0644;&#x0648;&#x0643; &#x0648;&#x0627;&#x062D;&#x062F;.</p>
+            <h1>تعديل بيانات الموظف</h1>
+            <p>ترتيب الحقول حسب الأهمية ببلوك واحد.</p>
         </div>
-
         <div class="nxr-edit-final-hero-actions">
-            <a asp-page="./Profile" asp-route-id="@Model.Employee.Id" class="nxr-edit-btn secondary">&#x0627;&#x0644;&#x0639;&#x0648;&#x062F;&#x0629; &#x0644;&#x0644;&#x0645;&#x0644;&#x0641;</a>
-            <a asp-page="./Index" class="nxr-edit-btn ghost">&#x0642;&#x0627;&#x0626;&#x0645;&#x0629; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;&#x064A;&#x0646;</a>
+            <a asp-page="./Profile" asp-route-id="@Model.Employee.Id" class="nxr-edit-btn secondary">العودة للملف</a>
+            <a asp-page="./Index" class="nxr-edit-btn ghost">قائمة الموظفين</a>
         </div>
     </section>
 
@@ -39,9 +53,9 @@
         <div>
             <h2>@Model.Employee.FullName</h2>
             <p>
-                <span>&#x0627;&#x0644;&#x0643;&#x0648;&#x062F;: <strong>@Model.Employee.EmployeeNo</strong></span>
-                <span>&#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;: <strong>@(string.IsNullOrWhiteSpace(Model.Employee.Position) ? "-" : Model.Employee.Position)</strong></span>
-                <span>&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629;: <strong>@(Model.Employee.IsActive ? "\u0641\u0639\u0627\u0644" : "\u063A\u064A\u0631 \u0641\u0639\u0627\u0644")</strong></span>
+                <span>الكود: <strong>@Model.Employee.EmployeeNo</strong></span>
+                <span>المنصب: <strong>@(string.IsNullOrWhiteSpace(Model.Employee.Position) ? "-" : Model.Employee.Position)</strong></span>
+                <span>الحالة: <strong>@(Model.Employee.IsActive ? "فعال" : "غير فعال")</strong></span>
             </p>
         </div>
     </section>
@@ -53,8 +67,8 @@
             <div class="nxr-edit-final-card-head">
                 <div>
                     <span>Employee Data</span>
-                    <h2>&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h2>
-                    <p>&#x0643;&#x0644; &#x0627;&#x0644;&#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0631;&#x062A;&#x0628;&#x0629; &#x062D;&#x0633;&#x0628; &#x0627;&#x0644;&#x0623;&#x0647;&#x0645;&#x064A;&#x0629;.</p>
+                    <h2>بيانات الموظف</h2>
+                    <p>كل الحقول مرتبة حسب الأهمية.</p>
                 </div>
             </div>
 
@@ -63,202 +77,130 @@
                     <input asp-for="EmployeePhoto" type="file" accept="image/png,image/jpeg,image/webp" />
                     <img data-employee-photo-preview data-placeholder-src="@employeePhotoFallback" src="@employeePhotoSrc" alt="Employee photo" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
                 </label>
-
                 <div class="nxr-edit-photo-info">
-                    <strong>&#x0635;&#x0648;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</strong>
-                    <span>&#x0627;&#x062E;&#x062A;&#x0631; &#x0635;&#x0648;&#x0631;&#x0629; PNG &#x0623;&#x0648; JPG &#x0623;&#x0648; WEBP.</span>
+                    <strong>صورة الموظف</strong>
+                    <span>اختر صورة PNG أو JPG أو WEBP.</span>
                     <small>Max 5MB</small>
                 </div>
-
                 <div class="nxr-edit-status-near-photo">
-                    <label>&#x062D;&#x0627;&#x0644;&#x0629; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</label>
+                    <label>حالة الموظف</label>
                     <label class="nxr-edit-status-switch">
                         <input asp-for="Employee.IsActive" />
-                        <span>&#x0641;&#x0639;&#x0627;&#x0644; &#x062F;&#x0627;&#x062E;&#x0644; &#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</span>
+                        <span>فعال داخل النظام</span>
                     </label>
                 </div>
             </div>
 
             <div class="nxr-edit-final-grid">
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.EmployeeNo">&#x0643;&#x0648;&#x062F; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</label>
+                    <label asp-for="Employee.EmployeeNo">كود الموظف</label>
                     <input asp-for="Employee.EmployeeNo" />
                     <span asp-validation-for="Employee.EmployeeNo"></span>
                 </div>
-
                 <div class="nxr-edit-field nxr-span-2">
-                    <label asp-for="Employee.FullName">&#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</label>
+                    <label asp-for="Employee.FullName">اسم الموظف</label>
                     <input asp-for="Employee.FullName" />
                     <span asp-validation-for="Employee.FullName"></span>
                 </div>
-
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.NationalId">&#x0627;&#x0644;&#x0631;&#x0642;&#x0645; &#x0627;&#x0644;&#x0648;&#x0637;&#x0646;&#x064A; / &#x0627;&#x0644;&#x0628;&#x0637;&#x0627;&#x0642;&#x0629;</label>
+                    <label asp-for="Employee.NationalId">الرقم الوطني / البطاقة</label>
                     <input asp-for="Employee.NationalId" />
                     <span asp-validation-for="Employee.NationalId"></span>
                 </div>
-
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.Phone">&#x0627;&#x0644;&#x0647;&#x0627;&#x062A;&#x0641;</label>
+                    <label asp-for="Employee.Phone">الهاتف</label>
                     <input asp-for="Employee.Phone" />
                     <span asp-validation-for="Employee.Phone"></span>
                 </div>
-
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.Email">&#x0627;&#x0644;&#x0625;&#x064A;&#x0645;&#x064A;&#x0644;</label>
+                    <label asp-for="Employee.Email">الإيميل</label>
                     <input asp-for="Employee.Email" />
                     <span asp-validation-for="Employee.Email"></span>
                 </div>
-
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.BranchId">&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</label>
+                    <label asp-for="Employee.BranchId">موقع العمل</label>
                     <select asp-for="Employee.BranchId" class="nxr-native-select" id="Employee_BranchId">
-                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</option>
-                        @foreach (var branch in Model.Branches.OrderBy(x => x.Name))
-                        {
-                            <option value="@branch.Id"
-                                    data-company-id="@branch.CompanyId"
-                                    selected="@(branch.Id == Model.Employee.BranchId ? "selected" : null)">
-                                @branch.Name
-                            </option>
-                        }
+                        <option value="">اختر موقع العمل</option>
+                        @foreach (var branch in Model.Branches.OrderBy(x => x.Name)) { <option value="@branch.Id" data-company-id="@branch.CompanyId" selected="@(branch.Id == Model.Employee.BranchId ? "selected" : null)">@branch.Name</option> }
                     </select>
                     <span asp-validation-for="Employee.BranchId"></span>
                 </div>
-
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.DepartmentId">&#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</label>
+                    <label asp-for="Employee.DepartmentId">القسم</label>
                     <select asp-for="Employee.DepartmentId" class="nxr-native-select" id="Employee_DepartmentId">
-                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</option>
-                        @foreach (var department in Model.Departments.OrderBy(x => x.CompanyName).ThenBy(x => x.Name))
-                        {
-                            <option value="@department.Id"
-                                    data-company-id="@department.CompanyId"
-                                    selected="@(department.Id == Model.Employee.DepartmentId ? "selected" : null)">
-                                @department.Name
-                            </option>
-                        }
+                        <option value="">اختر القسم</option>
+                        @foreach (var department in Model.Departments.OrderBy(x => x.CompanyName).ThenBy(x => x.Name)) { <option value="@department.Id" data-company-id="@department.CompanyId" selected="@(department.Id == Model.Employee.DepartmentId ? "selected" : null)">@department.Name</option> }
                     </select>
                     <span asp-validation-for="Employee.DepartmentId"></span>
                 </div>
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.PositionId">&#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</label>
+                    <label asp-for="Employee.PositionId">المنصب</label>
                     <select asp-for="Employee.PositionId" class="nxr-native-select" id="Employee_PositionId">
-                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</option>
-                        @foreach (var position in Model.PositionOptions.OrderBy(x => x.Name))
-                        {
-                            <option value="@position.Id"
-                                    data-company-id="@position.CompanyId"
-                                    selected="@(position.Id == Model.Employee.PositionId ? "selected" : null)">
-                                @position.Name
-                            </option>
-                        }
+                        <option value="">اختر المنصب</option>
+                        @foreach (var position in Model.PositionOptions.OrderBy(x => x.Name)) { <option value="@position.Id" data-company-id="@position.CompanyId" selected="@(position.Id == Model.Employee.PositionId ? "selected" : null)">@position.Name</option> }
                     </select>
                     <span asp-validation-for="Employee.PositionId"></span>
                 </div>
 
+                <!-- --- القائمة الذكية للمدير (بالبحث) --- -->
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.HireDate">&#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0627;&#x0644;&#x062A;&#x0639;&#x064A;&#x064A;&#x0646;</label>
+                    <label asp-for="DirectManagerId">المدير المباشر</label>
+                    <div class="nxr-searchable-wrapper" id="managerSearchWrapper">
+                        <input type="hidden" asp-for="DirectManagerId" id="managerHiddenId" />
+                        <input type="text" class="nxr-search-input" id="managerSearchInput" placeholder="بحث بالاسم أو الكود..." autocomplete="off" />
+                        <div class="nxr-search-dropdown" id="managerDropdown">
+                            <div class="nxr-option" data-value="" data-text="-- بدون مدير --">-- بدون مدير --</div>
+                            @foreach (var manager in Model.Managers)
+                            {
+                                <div class="nxr-option" data-value="@manager.Id" data-text="@manager.FullName @manager.EmployeeNo">
+                                    <span class="nxr-option-code">@manager.EmployeeNo</span> @manager.FullName
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <span asp-validation-for="DirectManagerId"></span>
+                </div>
+                <!-- --------------------------------------- -->
+
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.HireDate">تاريخ التعيين</label>
                     <input name="Employee.HireDate" id="Employee_HireDate" value="@Model.Employee.HireDate.ToString("yyyy-MM-dd")" type="text" data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" />
                     <span asp-validation-for="Employee.HireDate"></span>
                 </div>
-
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.BirthDate">&#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0627;&#x0644;&#x0645;&#x064A;&#x0644;&#x0627;&#x062F;</label>
+                    <label asp-for="Employee.BirthDate">تاريخ الميلاد</label>
                     <input name="Employee.BirthDate" id="Employee_BirthDate" value="@(Model.Employee.BirthDate?.ToString("yyyy-MM-dd"))" type="text" data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" />
                     <span asp-validation-for="Employee.BirthDate"></span>
                 </div>
-
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.Gender">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;</label>
+                    <label asp-for="Employee.Gender">الجنس</label>
                     <select asp-for="Employee.Gender" class="nxr-native-select">
-                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631;...</option>
-                        <option value="Male">&#x0630;&#x0643;&#x0631;</option>
-                        <option value="Female">&#x0623;&#x0646;&#x062B;&#x0649;</option>
+                        <option value="">اختر...</option><option value="Male">ذكر</option><option value="Female">أنثى</option>
                     </select>
-                    <span asp-validation-for="Employee.Gender"></span>
                 </div>
-
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.MaritalStatus">&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629; &#x0627;&#x0644;&#x0627;&#x062C;&#x062A;&#x0645;&#x0627;&#x0639;&#x064A;&#x0629;</label>
+                    <label asp-for="Employee.MaritalStatus">الحالة الاجتماعية</label>
                     <select asp-for="Employee.MaritalStatus" class="nxr-native-select">
-                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631;...</option>
-                        <option value="Single">&#x0623;&#x0639;&#x0632;&#x0628;</option>
-                        <option value="Married">&#x0645;&#x062A;&#x0632;&#x0648;&#x062C;</option>
-                        <option value="Divorced">&#x0645;&#x0637;&#x0644;&#x0642;</option>
-                        <option value="Widowed">&#x0623;&#x0631;&#x0645;&#x0644;</option>
-                        <option value="Separated">&#x0645;&#x0646;&#x0641;&#x0635;&#x0644;</option>
+                        <option value="">اختر...</option><option value="Single">أعزب</option><option value="Married">متزوج</option><option value="Divorced">مطلق</option><option value="Widowed">أرمل</option><option value="Separated">منفصل</option>
                     </select>
-                    <span asp-validation-for="Employee.MaritalStatus"></span>
                 </div>
-
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.Country">&#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</label>
+                    <label asp-for="Employee.Country">البلد</label>
                     <select asp-for="Employee.Country" class="nxr-native-select">
-                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</option>
-                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Country) &&
-                            !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownCountry(Model.Employee.Country))
-                        {
-                            <option value="@Model.Employee.Country">@Model.Employee.Country</option>
-                        }
-                        <option value="Iraq">&#x0627;&#x0644;&#x0639;&#x0631;&#x0627;&#x0642;</option>
-                        <option value="Syria">&#x0633;&#x0648;&#x0631;&#x064A;&#x0627;</option>
-                        <option value="Jordan">&#x0627;&#x0644;&#x0623;&#x0631;&#x062F;&#x0646;</option>
-                        <option value="Lebanon">&#x0644;&#x0628;&#x0646;&#x0627;&#x0646;</option>
-                        <option value="Saudi Arabia">&#x0627;&#x0644;&#x0633;&#x0639;&#x0648;&#x062F;&#x064A;&#x0629;</option>
-                        <option value="United Arab Emirates">&#x0627;&#x0644;&#x0625;&#x0645;&#x0627;&#x0631;&#x0627;&#x062A;</option>
-                        <option value="Qatar">&#x0642;&#x0637;&#x0631;</option>
-                        <option value="Kuwait">&#x0627;&#x0644;&#x0643;&#x0648;&#x064A;&#x062A;</option>
-                        <option value="Bahrain">&#x0627;&#x0644;&#x0628;&#x062D;&#x0631;&#x064A;&#x0646;</option>
-                        <option value="Oman">&#x0639;&#x0645;&#x0627;&#x0646;</option>
-                        <option value="Egypt">&#x0645;&#x0635;&#x0631;</option>
-                        <option value="Turkey">&#x062A;&#x0631;&#x0643;&#x064A;&#x0627;</option>
-                        <option value="Iran">&#x0625;&#x064A;&#x0631;&#x0627;&#x0646;</option>
-                        <option value="India">&#x0627;&#x0644;&#x0647;&#x0646;&#x062F;</option>
-                        <option value="Pakistan">&#x0628;&#x0627;&#x0643;&#x0633;&#x062A;&#x0627;&#x0646;</option>
-                        <option value="Bangladesh">&#x0628;&#x0646;&#x063A;&#x0644;&#x0627;&#x062F;&#x0634;</option>
-                        <option value="Philippines">&#x0627;&#x0644;&#x0641;&#x0644;&#x0628;&#x064A;&#x0646;</option>
-                        <option value="Nepal">&#x0646;&#x064A;&#x0628;&#x0627;&#x0644;</option>
-                        <option value="Other">&#x0623;&#x062E;&#x0631;&#x0649;</option>
+                        <option value="">اختر البلد</option>
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Country) && !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownCountry(Model.Employee.Country)) { <option value="@Model.Employee.Country">@Model.Employee.Country</option> }
+                        <option value="Iraq">العراق</option><option value="Syria">سوريا</option><option value="Jordan">الأردن</option><option value="Lebanon">لبنان</option><option value="Saudi Arabia">السعودية</option><option value="United Arab Emirates">الإمارات</option><option value="Qatar">قطر</option><option value="Kuwait">الكويت</option><option value="Bahrain">البحرين</option><option value="Oman">عمان</option><option value="Egypt">مصر</option><option value="Turkey">تركيا</option><option value="Iran">إيران</option><option value="India">الهند</option><option value="Pakistan">باكستان</option><option value="Bangladesh">بنغلادش</option><option value="Philippines">الفلبين</option><option value="Nepal">نيبال</option><option value="Other">أخرى</option>
                     </select>
-                    <span asp-validation-for="Employee.Country"></span>
                 </div>
-
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.Nationality">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</label>
+                    <label asp-for="Employee.Nationality">الجنسية</label>
                     <select asp-for="Employee.Nationality" class="nxr-native-select">
-                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</option>
-                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Nationality) &&
-                            !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownNationality(Model.Employee.Nationality))
-                        {
-                            <option value="@Model.Employee.Nationality">@Model.Employee.Nationality</option>
-                        }
-                        <option value="Iraqi">&#x0639;&#x0631;&#x0627;&#x0642;&#x064A;</option>
-                        <option value="Syrian">&#x0633;&#x0648;&#x0631;&#x064A;</option>
-                        <option value="Jordanian">&#x0623;&#x0631;&#x062F;&#x0646;&#x064A;</option>
-                        <option value="Lebanese">&#x0644;&#x0628;&#x0646;&#x0627;&#x0646;&#x064A;</option>
-                        <option value="Saudi">&#x0633;&#x0639;&#x0648;&#x062F;&#x064A;</option>
-                        <option value="Emirati">&#x0625;&#x0645;&#x0627;&#x0631;&#x0627;&#x062A;&#x064A;</option>
-                        <option value="Qatari">&#x0642;&#x0637;&#x0631;&#x064A;</option>
-                        <option value="Kuwaiti">&#x0643;&#x0648;&#x064A;&#x062A;&#x064A;</option>
-                        <option value="Bahraini">&#x0628;&#x062D;&#x0631;&#x064A;&#x0646;&#x064A;</option>
-                        <option value="Omani">&#x0639;&#x0645;&#x0627;&#x0646;&#x064A;</option>
-                        <option value="Egyptian">&#x0645;&#x0635;&#x0631;&#x064A;</option>
-                        <option value="Turkish">&#x062A;&#x0631;&#x0643;&#x064A;</option>
-                        <option value="Iranian">&#x0625;&#x064A;&#x0631;&#x0627;&#x0646;&#x064A;</option>
-                        <option value="Indian">&#x0647;&#x0646;&#x062F;&#x064A;</option>
-                        <option value="Pakistani">&#x0628;&#x0627;&#x0643;&#x0633;&#x062A;&#x0627;&#x0646;&#x064A;</option>
-                        <option value="Bangladeshi">&#x0628;&#x0646;&#x063A;&#x0644;&#x0627;&#x062F;&#x0634;&#x064A;</option>
-                        <option value="Filipino">&#x0641;&#x0644;&#x0628;&#x064A;&#x0646;&#x064A;</option>
-                        <option value="Nepali">&#x0646;&#x064A;&#x0628;&#x0627;&#x0644;&#x064A;</option>
-                        <option value="Other">&#x0623;&#x062E;&#x0631;&#x0649;</option>
+                        <option value="">اختر الجنسية</option>
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Nationality) && !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownNationality(Model.Employee.Nationality)) { <option value="@Model.Employee.Nationality">@Model.Employee.Nationality</option> }
+                        <option value="Iraqi">عراقي</option><option value="Syrian">سوري</option><option value="Jordanian">أردني</option><option value="Lebanese">لبناني</option><option value="Saudi">سعودي</option><option value="Emirati">إماراتي</option><option value="Qatari">قطري</option><option value="Kuwaiti">كويتي</option><option value="Bahraini">بحريني</option><option value="Omani">عماني</option><option value="Egyptian">مصري</option><option value="Turkish">تركي</option><option value="Iranian">إيراني</option><option value="Indian">هندي</option><option value="Pakistani">باكستاني</option><option value="Bangladeshi">بنغلادشي</option><option value="Filipino">فلبيني</option><option value="Nepali">نيبالي</option><option value="Other">أخرى</option>
                     </select>
-                    <span asp-validation-for="Employee.Nationality"></span>
                 </div>
             </div>
-
-
-        @* NEXORA_DYNAMIC_PROFILE_EDIT_MARKER *@
 
         @if (Model.ProfileDynamicSections.Any(profileSection => profileSection.Fields.Count > 0))
         {
@@ -266,50 +208,26 @@
                 <div class="nxr-edit-final-card-head">
                     <div>
                         <span>Dynamic Profile Fields</span>
-                        <h2>&#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h2>
-                        <p>&#x0627;&#x0644;&#x062D;&#x0642;&#x0648;&#x0644; &#x0627;&#x0644;&#x0645;&#x0636;&#x0627;&#x0641;&#x0629; &#x0645;&#x0646; &#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;.</p>
+                        <h2>حقول ملف الموظف</h2>
                     </div>
                 </div>
-
                 <div class="nxr-profile-dynamic-sections">
                     @foreach (var profileSection in Model.ProfileDynamicSections.Where(item => item.Fields.Count > 0))
                     {
                         <article class="nxr-profile-dynamic-edit-section">
                             <div class="nxr-profile-dynamic-section-head">
                                 <h3>@profileSection.Label</h3>
-                                <span>@profileSection.Fields.Count &#x062D;&#x0642;&#x0644;</span>
+                                <span>@profileSection.Fields.Count حقل</span>
                             </div>
-
                             <div class="nxr-edit-final-grid">
                                 @foreach (var field in profileSection.Fields)
                                 {
                                     var inputId = $"ProfileCustomValues_{field.FieldKey}";
                                     var requiredValue = field.IsRequired ? "required" : null;
-
                                     <div class="nxr-edit-field @(field.IsTextArea ? "nxr-span-2" : "")">
-                                        <label for="@inputId">
-                                            @field.FieldLabel
-                                            @if (field.IsRequired)
-                                            {
-                                                <span>*</span>
-                                            }
-                                        </label>
-
-                                        @if (field.IsTextArea)
-                                        {
-                                            <textarea id="@inputId"
-                                                      name="ProfileCustomValues[@field.FieldKey]"
-                                                      required="@requiredValue"
-                                                      rows="3">@field.FieldValue</textarea>
-                                        }
-                                        else
-                                        {
-                                            <input id="@inputId"
-                                                   name="ProfileCustomValues[@field.FieldKey]"
-                                                   type="@field.InputType"
-                                                   value="@field.FieldValue"
-                                                   required="@requiredValue" />
-                                        }
+                                        <label for="@inputId">@field.FieldLabel @if (field.IsRequired){<span>*</span>}</label>
+                                        @if (field.IsTextArea) { <textarea id="@inputId" name="ProfileCustomValues[@field.FieldKey]" required="@requiredValue" rows="3">@field.FieldValue</textarea> }
+                                        else { <input id="@inputId" name="ProfileCustomValues[@field.FieldKey]" type="@field.InputType" value="@field.FieldValue" required="@requiredValue" /> }
                                     </div>
                                 }
                             </div>
@@ -319,8 +237,8 @@
             </section>
         }
         <div class="nxr-edit-final-actions">
-                <button type="submit" class="nxr-edit-btn primary">&#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;</button>
-                <a asp-page="./Profile" asp-route-id="@Model.Employee.Id" class="nxr-edit-btn secondary">&#x0625;&#x0644;&#x063A;&#x0627;&#x0621; &#x0648;&#x0627;&#x0644;&#x0639;&#x0648;&#x062F;&#x0629; &#x0644;&#x0644;&#x0645;&#x0644;&#x0641;</a>
+                <button type="submit" class="nxr-edit-btn primary">حفظ التعديل</button>
+                <a asp-page="./Profile" asp-route-id="@Model.Employee.Id" class="nxr-edit-btn secondary">إلغاء والعودة للملف</a>
             </div>
         </section>
     </form>
@@ -330,154 +248,124 @@
     <script src="~/js/nexora-edit-custom-datepicker.js" asp-append-version="true" defer></script>
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
 
+    <!-- سكربت القائمة الذكية للمدير المباشر -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const wrapper = document.getElementById('managerSearchWrapper');
+            const input = document.getElementById('managerSearchInput');
+            const hidden = document.getElementById('managerHiddenId');
+            const dropdown = document.getElementById('managerDropdown');
+            const options = dropdown.querySelectorAll('.nxr-option');
 
-    <!-- NEXORA_EDIT_ORGANIZATION_FILTER_START -->
+            if(!wrapper || !input || !hidden || !dropdown) return;
+
+            // جلب النص الحالي بناءً على القيمة المخفية
+            let selectedText = "";
+            if(hidden.value) {
+                const selectedOpt = dropdown.querySelector('.nxr-option[data-value="' + hidden.value + '"]');
+                if(selectedOpt) {
+                    selectedText = selectedOpt.textContent.trim();
+                    input.value = selectedText;
+                }
+            } else {
+                input.value = "-- بدون مدير --";
+            }
+
+            input.addEventListener('focus', function() {
+                input.value = '';
+                filterOptions('');
+                dropdown.style.display = 'block';
+            });
+
+            input.addEventListener('input', function(e) {
+                filterOptions(e.target.value.toLowerCase());
+            });
+
+            function filterOptions(term) {
+                options.forEach(opt => {
+                    const textToSearch = opt.getAttribute('data-text').toLowerCase();
+                    if(textToSearch.includes(term)) {
+                        opt.style.display = 'block';
+                    } else {
+                        opt.style.display = 'none';
+                    }
+                });
+            }
+
+            options.forEach(opt => {
+                opt.addEventListener('click', function() {
+                    hidden.value = this.getAttribute('data-value');
+                    selectedText = this.textContent.trim();
+                    input.value = selectedText;
+                    dropdown.style.display = 'none';
+                });
+            });
+
+            document.addEventListener('click', function(e) {
+                if(!wrapper.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                    if(input.value !== selectedText) {
+                        input.value = selectedText; // إعادة النص في حال لم يتم اختيار شيء
+                    }
+                }
+            });
+        });
+    </script>
+    <!-- نهاية سكربت القائمة الذكية -->
+
     <script>
         (() => {
             const workLocation = document.getElementById("Employee_BranchId");
             const department = document.getElementById("Employee_DepartmentId");
             const position = document.getElementById("Employee_PositionId");
-
-            if (!workLocation || !department || !position) {
-                return;
-            }
-
-            function refreshSelect(select) {
-                if (window.NexoraSelect && typeof window.NexoraSelect.refresh === "function") {
-                    window.NexoraSelect.refresh(select);
-                }
-
-                select.dispatchEvent(new Event("change", { bubbles: true }));
-            }
-
+            if (!workLocation || !department || !position) return;
+            function refreshSelect(select) { if (window.NexoraSelect && typeof window.NexoraSelect.refresh === "function") { window.NexoraSelect.refresh(select); } select.dispatchEvent(new Event("change", { bubbles: true })); }
             function filterByCompany(select, companyId) {
                 let currentIsValid = false;
-
                 Array.from(select.options).forEach(option => {
-                    if (!option.value) {
-                        option.hidden = false;
-                        option.disabled = false;
-                        return;
-                    }
-
-                    const belongsToCompany =
-                        companyId &&
-                        option.dataset.companyId === companyId;
-
-                    option.hidden = !belongsToCompany;
-                    option.disabled = !belongsToCompany;
-
-                    if (belongsToCompany && option.value === select.value) {
-                        currentIsValid = true;
-                    }
+                    if (!option.value) { option.hidden = false; option.disabled = false; return; }
+                    const belongsToCompany = companyId && option.dataset.companyId === companyId;
+                    option.hidden = !belongsToCompany; option.disabled = !belongsToCompany;
+                    if (belongsToCompany && option.value === select.value) { currentIsValid = true; }
                 });
-
-                if (!currentIsValid) {
-                    select.value = "";
-                }
-
+                if (!currentIsValid) { select.value = ""; }
                 refreshSelect(select);
             }
-
             function filterOrganization() {
                 const selectedOption = workLocation.options[workLocation.selectedIndex];
                 const companyId = selectedOption?.dataset.companyId || "";
-
                 filterByCompany(department, companyId);
                 filterByCompany(position, companyId);
             }
-
             workLocation.addEventListener("change", filterOrganization);
             filterOrganization();
-
             window.NexoraEditFilterOrganization = filterOrganization;
         })();
     </script>
-    <!-- NEXORA_EDIT_ORGANIZATION_FILTER_END -->
 
-    <!-- NEXORA_MARITAL_BY_GENDER_START -->
     <script>
         (() => {
-            const labels = {
-                Male: {
-                    Single: "\u0623\u0639\u0632\u0628",
-                    Married: "\u0645\u062A\u0632\u0648\u062C",
-                    Divorced: "\u0645\u0637\u0644\u0642",
-                    Widowed: "\u0623\u0631\u0645\u0644",
-                    Separated: "\u0645\u0646\u0641\u0635\u0644"
-                },
-                Female: {
-                    Single: "\u0639\u0632\u0628\u0627\u0621",
-                    Married: "\u0645\u062A\u0632\u0648\u062C\u0629",
-                    Divorced: "\u0645\u0637\u0644\u0642\u0629",
-                    Widowed: "\u0623\u0631\u0645\u0644\u0629",
-                    Separated: "\u0645\u0646\u0641\u0635\u0644\u0629"
-                }
-            };
-
-            const placeholder = "\u0627\u062E\u062A\u0631...";
-
-            function getGenderGroup(genderValue) {
-                const value = (genderValue || "").trim();
-
-                if (value === "Female" || value === "\u0623\u0646\u062B\u0649" || value === "\u0627\u0646\u062B\u0649") {
-                    return labels.Female;
-                }
-
-                return labels.Male;
-            }
-
+            const labels = { Male: { Single: "أعزب", Married: "متزوج", Divorced: "مطلق", Widowed: "أرمل", Separated: "منفصل" }, Female: { Single: "عزباء", Married: "متزوجة", Divorced: "مطلقة", Widowed: "أرملة", Separated: "منفصلة" } };
+            const placeholder = "اختر...";
+            function getGenderGroup(genderValue) { const value = (genderValue || "").trim(); if (value === "Female" || value === "أنثى" || value === "انثى") { return labels.Female; } return labels.Male; }
             function applyMaritalLabels() {
-                const gender = document.getElementById("Employee_Gender");
-                const marital = document.getElementById("Employee_MaritalStatus");
-
-                if (!gender || !marital) {
-                    return;
-                }
-
+                const gender = document.getElementById("Employee_Gender"); const marital = document.getElementById("Employee_MaritalStatus");
+                if (!gender || !marital) return;
                 const group = getGenderGroup(gender.value);
-
                 Array.from(marital.options).forEach(option => {
-                    if (!option.value) {
-                        option.textContent = placeholder;
-                        return;
-                    }
-
-                    if (group[option.value]) {
-                        option.textContent = group[option.value];
-                    }
+                    if (!option.value) { option.textContent = placeholder; return; }
+                    if (group[option.value]) { option.textContent = group[option.value]; }
                 });
-
-                if (window.NexoraSelect && typeof window.NexoraSelect.refresh === "function") {
-                    window.NexoraSelect.refresh(marital);
-                } else {
-                    marital.dispatchEvent(new Event("change", { bubbles: true }));
-                }
+                if (window.NexoraSelect && typeof window.NexoraSelect.refresh === "function") { window.NexoraSelect.refresh(marital); } else { marital.dispatchEvent(new Event("change", { bubbles: true })); }
             }
-
             function bind() {
                 const gender = document.getElementById("Employee_Gender");
-
-                if (gender && !gender.dataset.maritalGenderBound) {
-                    gender.dataset.maritalGenderBound = "1";
-                    gender.addEventListener("change", applyMaritalLabels);
-                    gender.addEventListener("input", applyMaritalLabels);
-                }
-
+                if (gender && !gender.dataset.maritalGenderBound) { gender.dataset.maritalGenderBound = "1"; gender.addEventListener("change", applyMaritalLabels); gender.addEventListener("input", applyMaritalLabels); }
                 applyMaritalLabels();
             }
-
-            if (document.readyState === "loading") {
-                document.addEventListener("DOMContentLoaded", bind);
-            } else {
-                bind();
-            }
-
-            setTimeout(bind, 100);
-            setTimeout(bind, 400);
-            setTimeout(bind, 900);
+            if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", bind); } else { bind(); }
+            setTimeout(bind, 100); setTimeout(bind, 400); setTimeout(bind, 900);
         })();
     </script>
-    <!-- NEXORA_MARITAL_BY_GENDER_END -->
     <partial name="_ValidationScriptsPartial" />
 }

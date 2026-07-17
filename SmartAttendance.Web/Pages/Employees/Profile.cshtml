@@ -1,41 +1,8 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.Employees.ProfileModel
-<link rel="stylesheet" href="~/css/nexora-profile-file-cards.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-employee-profile-dynamic-fields.css" asp-append-version="true" />
 
-<link rel="stylesheet" href="~/css/nexora-profile-reassign-modal.css" asp-append-version="true" />@* NEXORA_PROFILE_MARITAL_BY_GENDER_START *@
 @functions {
-    private static string NxrDisplayMaritalStatusByGender(string? value, string? gender)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return "-";
-        }
-
-        var normalized = value.Trim();
-        var genderValue = (gender ?? string.Empty).Trim();
-
-        var isFemale =
-            string.Equals(genderValue, "Female", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(genderValue, "\u0623\u0646\u062B\u0649", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(genderValue, "\u0627\u0646\u062B\u0649", StringComparison.OrdinalIgnoreCase);
-
-        return normalized switch
-        {
-            "Single" => isFemale ? "\u0639\u0632\u0628\u0627\u0621" : "\u0623\u0639\u0632\u0628",
-            "Married" => isFemale ? "\u0645\u062A\u0632\u0648\u062C\u0629" : "\u0645\u062A\u0632\u0648\u062C",
-            "Divorced" => isFemale ? "\u0645\u0637\u0644\u0642\u0629" : "\u0645\u0637\u0644\u0642",
-            "Widowed" => isFemale ? "\u0623\u0631\u0645\u0644\u0629" : "\u0623\u0631\u0645\u0644",
-            "Separated" => isFemale ? "\u0645\u0646\u0641\u0635\u0644\u0629" : "\u0645\u0646\u0641\u0635\u0644",
-            _ => normalized
-        };
-    }
-}
-@* NEXORA_PROFILE_MARITAL_BY_GENDER_END *@
-
-@* NEXORA_PROFILE_STATIC_FUNCTIONS_START *@
-@functions {
-    private static string NxrDisplayAge(DateOnly? birthDate)
+    private static string Z360Age(DateOnly? birthDate)
     {
         if (!birthDate.HasValue)
         {
@@ -53,7 +20,7 @@
         return age < 0 ? "-" : age.ToString();
     }
 
-    private static string NxrDisplayWorkDuration(DateOnly? hireDate)
+    private static string Z360WorkDuration(DateOnly? hireDate)
     {
         if (!hireDate.HasValue)
         {
@@ -84,23 +51,38 @@
 
         if (years <= 0 && months <= 0)
         {
-            return "\u0623\u0642\u0644 \u0645\u0646 \u0634\u0647\u0631";
+            return "أقل من شهر";
         }
 
         if (years <= 0)
         {
-            return months.ToString() + " \u0634\u0647\u0631";
+            return $"{months} شهر";
         }
 
         if (months <= 0)
         {
-            return years.ToString() + " \u0633\u0646\u0629";
+            return $"{years} سنة";
         }
 
-        return years.ToString() + " \u0633\u0646\u0629 \u0648 " + months.ToString() + " \u0634\u0647\u0631";
+        return $"{years} سنة و {months} شهر";
     }
 
-    private static string NxrDisplayMaritalStatus(string? value)
+    private static string Z360Gender(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "-";
+        }
+
+        return value.Trim() switch
+        {
+            "Male" => "ذكر",
+            "Female" => "أنثى",
+            _ => value.Trim()
+        };
+    }
+
+    private static string Z360MaritalStatus(string? value, string? gender)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -108,1341 +90,1023 @@
         }
 
         var normalized = value.Trim();
+        var genderValue = (gender ?? string.Empty).Trim();
+        var isFemale =
+            string.Equals(genderValue, "Female", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(genderValue, "أنثى", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(genderValue, "انثى", StringComparison.OrdinalIgnoreCase);
 
         return normalized switch
         {
-            "Single" => "\u0623\u0639\u0632\u0628",
-            "Married" => "\u0645\u062A\u0632\u0648\u062C",
-            "Divorced" => "\u0645\u0637\u0644\u0642",
-            "Widowed" => "\u0623\u0631\u0645\u0644",
-            "Separated" => "\u0645\u0646\u0641\u0635\u0644",
+            "Single" => isFemale ? "عزباء" : "أعزب",
+            "Married" => isFemale ? "متزوجة" : "متزوج",
+            "Divorced" => isFemale ? "مطلقة" : "مطلق",
+            "Widowed" => isFemale ? "أرملة" : "أرمل",
+            "Separated" => isFemale ? "منفصلة" : "منفصل",
             _ => normalized
         };
     }
 
-    private static string NxrDisplayGender(string? value)
+    private static string Z360AttendanceClass(int status)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        return status switch
         {
-            return "-";
-        }
+            1 => "z360-badge-ok",
+            2 => "z360-badge-warn",
+            3 => "z360-badge-danger",
+            _ => string.Empty
+        };
+    }
 
-        var normalized = value.Trim();
-
-        return normalized switch
+    private static string Z360RequestClass(string? status)
+    {
+        return status switch
         {
-            "Male" => "\u0630\u0643\u0631",
-            "Female" => "\u0623\u0646\u062B\u0649",
-            _ => normalized
+            "Approved" => "z360-badge-ok",
+            "Rejected" => "z360-badge-danger",
+            "Pending" => "z360-badge-warn",
+            _ => string.Empty
         };
     }
 }
-@* NEXORA_PROFILE_STATIC_FUNCTIONS_END *@
-
-
-
-
 
 @{
     ViewData["Title"] = "ملف الموظف";
 
     var employee = Model.Employee;
     var today = DateOnly.FromDateTime(DateTime.Today);
-    var initial = employee == null || string.IsNullOrWhiteSpace(employee.FullName) ? "N" : employee.FullName.Trim()[0].ToString();
+    var photoFallback = Url.Content("~/brand/zynora-symbol.svg");
+    var readinessClass = Model.PayrollRiskItems == 0 ? "z360-kpi-ok" : "z360-kpi-warn";
+    var healthClass = Model.Employee360HealthScore >= 85
+        ? "z360-kpi-ok"
+        : Model.Employee360HealthScore >= 65
+            ? "z360-kpi-warn"
+            : "z360-kpi-danger";
+    var readinessText = Model.PayrollRiskItems == 0 ? "جاهز" : "مراجعة";
 
-    var employeePhotoFallback = Url.Content("~/brand/employee-photo-placeholder.svg");
-    string StatusClass(int status)
+    var basicDynamicSection = Model.ProfileDynamicSections.FirstOrDefault(item => item.Key == "basic");
+    var personalDynamicSection = Model.ProfileDynamicSections.FirstOrDefault(item => item.Key == "personal");
+    var jobDynamicSection = Model.ProfileDynamicSections.FirstOrDefault(item => item.Key == "job");
+    var additionalDynamicSections = Model.ProfileDynamicSections
+        .Where(item => item.Key == "additional")
+        .ToList();
+
+    var documentHasId = Model.DocumentRows.Any(d =>
+        string.Equals(d.DocumentType, "ID", StringComparison.OrdinalIgnoreCase) ||
+        (d.DocumentType ?? string.Empty).Contains("هوية", StringComparison.OrdinalIgnoreCase) ||
+        (d.DocumentType ?? string.Empty).Contains("بطاقة", StringComparison.OrdinalIgnoreCase));
+
+    var documentHasContract = Model.DocumentRows.Any(d =>
+        string.Equals(d.DocumentType, "Contract", StringComparison.OrdinalIgnoreCase) ||
+        (d.DocumentType ?? string.Empty).Contains("Contract", StringComparison.OrdinalIgnoreCase) ||
+        (d.DocumentType ?? string.Empty).Contains("عقد", StringComparison.OrdinalIgnoreCase));
+
+    var documentHasPassport = Model.DocumentRows.Any(d =>
+        string.Equals(d.DocumentType, "Passport", StringComparison.OrdinalIgnoreCase) ||
+        (d.DocumentType ?? string.Empty).Contains("Passport", StringComparison.OrdinalIgnoreCase) ||
+        (d.DocumentType ?? string.Empty).Contains("جواز", StringComparison.OrdinalIgnoreCase));
+
+    var documentHasVisa = Model.DocumentRows.Any(d =>
+        string.Equals(d.DocumentType, "Visa", StringComparison.OrdinalIgnoreCase) ||
+        (d.DocumentType ?? string.Empty).Contains("Visa", StringComparison.OrdinalIgnoreCase) ||
+        (d.DocumentType ?? string.Empty).Contains("إقامة", StringComparison.OrdinalIgnoreCase) ||
+        (d.DocumentType ?? string.Empty).Contains("اقامة", StringComparison.OrdinalIgnoreCase));
+
+    var employeeGeo = employee == null
+        ? string.Empty
+        : $"{employee.Nationality} {employee.Country}".ToLowerInvariant();
+
+    var isExpat =
+        !string.IsNullOrWhiteSpace(employeeGeo) &&
+        !(employeeGeo.Contains("iraq") ||
+          employeeGeo.Contains("iraqi") ||
+          employeeGeo.Contains("العراق") ||
+          employeeGeo.Contains("عراقي") ||
+          employeeGeo.Contains("عراقية"));
+
+    var contractNeedsReview =
+        employee != null &&
+        employee.ContractEndDate.HasValue &&
+        employee.ContractEndDate.Value <= today.AddDays(30);
+
+    var hasRequirements =
+        Model.PayrollRiskItems > 0 ||
+        Model.AttendanceExceptionsCount > 0 ||
+        Model.PendingRequests > 0 ||
+        Model.ExpiredDocumentsCount > 0 ||
+        Model.ExpiringDocumentsCount > 0 ||
+        !documentHasId ||
+        !documentHasContract ||
+        (isExpat && (!documentHasPassport || !documentHasVisa)) ||
+        contractNeedsReview;
+
+    var profileFileCards = new[]
     {
-        return status switch
-        {
-            1 => "ok",
-            2 => "warn",
-            3 => "danger",
-            4 => "info",
-            5 => "muted",
-            _ => "muted"
-        };
-    }
-
-    string RequestClass(string? status)
-    {
-        return status switch
-        {
-            "Approved" => "ok",
-            "Rejected" => "danger",
-            "Pending" => "warn",
-            _ => "muted"
-        };
-    }
-
-    string DocumentClass(DateOnly? expiryDate)
-    {
-        if (!expiryDate.HasValue)
-        {
-            return "muted";
-        }
-
-        if (expiryDate.Value < today)
-        {
-            return "danger";
-        }
-
-        if (expiryDate.Value <= today.AddDays(30))
-        {
-            return "warn";
-        }
-
-        return "ok";
-    }
-
-    string DocumentText(DateOnly? expiryDate)
-    {
-        if (!expiryDate.HasValue)
-        {
-            return "بدون تاريخ انتهاء";
-        }
-
-        if (expiryDate.Value < today)
-        {
-            return $"منتهي: {expiryDate.Value:yyyy-MM-dd}";
-        }
-
-        if (expiryDate.Value <= today.AddDays(30))
-        {
-            return $"قريب الانتهاء: {expiryDate.Value:yyyy-MM-dd}";
-        }
-
-        return $"صالح إلى: {expiryDate.Value:yyyy-MM-dd}";
-    }
-
-    var readinessClass = Model.PayrollRiskItems == 0 ? "ok" : "warn";
-    var readinessText = Model.PayrollRiskItems == 0 ? "جاهز مبدئياً" : "يحتاج مراجعة";
-    var employeeStatusText = employee?.IsActive == true ? "فعال" : "غير فعال";
+        new { Category = "Experience", Title = "الخبرات" },
+        new { Category = "Certificates", Title = "الشهادات" },
+        new { Category = "Medical", Title = "الملفات الطبية" },
+        new { Category = "Training", Title = "الدورات التدريبية" },
+        new { Category = "Education", Title = "التعليم" }
+    };
 }
 
-<link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-employee-profile-pro.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-employee-profile-kayan-style.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-profile-kayan-pages.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-employee-photo-upload.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-employee-profile-polish-requirements.css" asp-append-version="true" />
+@section Styles {
+    <link rel="stylesheet" href="~/css/z360-profile.css" asp-append-version="true" />
+}
 
-<div class="nxr-page nxr-profile-pro-page">
-    <section class="nxr-profile-pro-topline">
-        <div>
-            <div class="nxr-brand-mini">NEXORA Employee Profile</div>
-            <h1>ملف الموظف</h1>
-            <p>مركز مختصر لبيانات الموظف، الحضور، الطلبات، المستندات، والشفتات.</p>
-        </div>
-
-        <div class="nxr-actions nxr-profile-pro-actions nxr-kayan-top-actions">
-            @if (Model.CanViewDirectory)
-            {
-                <a asp-page="./Index" class="nxr-btn">رجوع للقائمة</a>
-            }
-            @if (employee != null && (Model.CanEditEmployee || Model.CanOpenEmployeeDocuments || Model.CanViewLifecycle || Model.CanEndService || Model.CanRehire || Model.CanChangeAssignment))
-            {
-                <div class="nxr-action-menu" data-nxr-action-menu>
-                    <button type="button" class="nxr-btn primary nxr-action-menu-button" data-nxr-action-toggle>
-                        إجراءات الموظف
-                    </button>
-
-                    <div class="nxr-action-menu-panel" data-nxr-action-panel>
-                        <div class="nxr-action-menu-head">
-                            <strong>مركز إجراءات الموظف</strong>
-                            <span>أوامر شؤون الموظفين</span>
-                        </div>
-
-                        @if (Model.CanEditEmployee)
-                        {
-                            <a asp-page="./Edit" asp-route-id="@employee.Id" class="nxr-action-item">
-                                <span>تعديل البيانات</span>
-                                <small>تحديث المعلومات الشخصية والوظيفية</small>
-                            </a>
-                        }
-
-                        @if (Model.CanOpenEmployeeDocuments)
-                        {
-                            <a asp-page="/EmployeeDocuments/Index" asp-route-employeeId="@employee.Id" class="nxr-action-item">
-                                <span>رفع مستند</span>
-                                <small>إضافة مستمسك أو ملف جديد</small>
-                            </a>
-                        }
-
-                        @if (Model.CanViewLifecycle)
-                        {
-                            <a asp-page="./Lifecycle" asp-route-id="@employee.Id" class="nxr-action-item">
-                                <span>السجل الوظيفي</span>
-                                <small>الحركات والتغييرات الوظيفية</small>
-                            </a>
-                        }
-
-                        <button type="button" class="nxr-action-item is-disabled">
-                            <span>إضافة عقد / تجديد عقد</span>
-                            <small>قريباً ضمن مركز العقود</small>
-                        </button>
-
-                        <button type="button" class="nxr-action-item is-disabled">
-                            <span>حركة وظيفية</span>
-                            <small>نقل فرع، قسم، منصب أو مدير مباشر</small>
-                        </button>
-
-                        <button type="button" class="nxr-action-item is-disabled">
-                            <span>إضافة عهدة</span>
-                            <small>ربط جهاز، بطاقة، زي أو عهدة بالموظف</small>
-                        </button>
-
-                        <button type="button" class="nxr-action-item is-disabled">
-                            <span>مخالفة / كتاب HR</span>
-                            <small>إنذار، عقوبة، شكر، أو كتاب إداري</small>
-                        </button>
-                        @if (employee.IsActive && Model.CanEndService)
-                        {
-                            <a asp-page="./EndService" asp-route-id="@employee.Id" class="nxr-action-item danger">
-                                <span>&#x0625;&#x0646;&#x0647;&#x0627;&#x0621; &#x062E;&#x062F;&#x0645;&#x0629;</span>
-                                <small>&#x0625;&#x062C;&#x0631;&#x0627;&#x0621; &#x0631;&#x0633;&#x0645;&#x064A; &#x0644;&#x0625;&#x0646;&#x0647;&#x0627;&#x0621; &#x062E;&#x062F;&#x0645;&#x0629; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</small>
-                            </a>
-                        }
-                        else if (!employee.IsActive && Model.CanRehire)
-                        {
-                            <button type="button" class="nxr-action-item" data-nxr-reassign-open>
-                                <span>&#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x062A;&#x0639;&#x064A;&#x064A;&#x0646;</span>
-                                <small>&#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x062A;&#x0641;&#x0639;&#x064A;&#x0644; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641; &#x0645;&#x0639; &#x0645;&#x0631;&#x0627;&#x062C;&#x0639;&#x0629; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0633;&#x0627;&#x0628;&#x0642;&#x0629;</small>
-                            </button>
-
-                            <div class="nxr-reassign-backdrop" data-nxr-reassign-modal hidden>
-                                <div class="nxr-reassign-dialog" role="dialog" aria-modal="true">
-                                    <div class="nxr-reassign-head">
-                                        <div>
-                                            <strong>&#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x062A;&#x0639;&#x064A;&#x064A;&#x0646; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</strong>
-                                            <span>&#x064A;&#x0639;&#x0631;&#x0636; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0633;&#x0627;&#x0628;&#x0642;&#x0629; &#x0642;&#x0628;&#x0644; &#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x0627;&#x0644;&#x062A;&#x0641;&#x0639;&#x064A;&#x0644;. &#x0639;&#x062F;&#x0651;&#x0644; &#x0645;&#x0627; &#x064A;&#x0644;&#x0632;&#x0645; &#x062B;&#x0645; &#x0627;&#x062D;&#x0641;&#x0638; &#x062D;&#x062A;&#x0649; &#x064A;&#x0633;&#x062C;&#x0644; &#x0641;&#x064A; &#x0627;&#x0644;&#x0633;&#x062C;&#x0644; &#x0627;&#x0644;&#x0648;&#x0638;&#x064A;&#x0641;&#x064A;.</span>
-                                        </div>
-                                        <button type="button" data-nxr-reassign-close aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                                    </div>
-
-                                    <form method="post"
-                                          asp-page-handler="ReassignFromModalV2"
-                                          asp-route-id="@employee.Id"
-                                          class="nxr-reassign-form">
-                                        <section class="nxr-reassign-section">
-                                            <h4>&#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0633;&#x0627;&#x0628;&#x0642;&#x0629;</h4>
-                                            <div class="nxr-reassign-old-grid">
-                                                <div><span>&#x0627;&#x0644;&#x0643;&#x0648;&#x062F;</span><strong>@Model.Display(employee.EmployeeNo)</strong></div>
-                                                <div><span>&#x0627;&#x0644;&#x0627;&#x0633;&#x0645;</span><strong>@Model.Display(employee.FullName)</strong></div>
-                                                <div><span>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span><strong>@Model.Display(employee.CompanyName)</strong></div>
-                                                <div><span>&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span><strong>@Model.Display(employee.BranchName)</strong></div>
-                                                <div><span>&#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</span><strong>@Model.Display(employee.DepartmentName)</strong></div>
-                                                <div><span>&#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628; &#x0627;&#x0644;&#x0633;&#x0627;&#x0628;&#x0642;/&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x064A;</span><strong>@Model.Display(employee.Position)</strong></div>
-                                                <div><span>&#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0627;&#x0644;&#x062A;&#x0639;&#x064A;&#x064A;&#x0646; &#x0627;&#x0644;&#x0633;&#x0627;&#x0628;&#x0642;</span><strong>@Model.DisplayDate(employee.HireDate)</strong></div>
-                                                <div><span>&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629; &#x0627;&#x0644;&#x0633;&#x0627;&#x0628;&#x0642;&#x0629;</span><strong>@Model.Display(employee.EmploymentStatus)</strong></div>
-                                            </div>
-                                        </section>
-
-                                        <section class="nxr-reassign-section">
-                                            <h4>&#x0627;&#x0644;&#x062A;&#x0639;&#x062F;&#x064A;&#x0644; &#x0642;&#x0628;&#x0644; &#x0627;&#x0644;&#x062D;&#x0641;&#x0638;</h4>
-                                            <div class="nxr-reassign-edit-grid">
-                                                @* NEXORA_REASSIGN_EDITABLE_ORG_START *@
-                                                <label>
-                                                    <span>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
-                                                    <select name="ReassignCompanyId" data-nxr-reassign-company>
-                                                        @foreach (var company in Model.ReassignCompanies)
-                                                        {
-                                                            <option value="@company.Id" selected="@(company.Id == Model.CurrentReassignCompanyId ? "selected" : null)">@Model.Display(company.Name)</option>
-                                                        }
-                                                    </select>
-                                                </label>
-
-                                                <label>
-                                                    <span>&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span>
-                                                    <select name="ReassignBranchId" data-nxr-reassign-branch>
-                                                        @foreach (var branch in Model.ReassignBranches)
-                                                        {
-                                                            <option value="@branch.Id" data-company-id="@branch.CompanyId" selected="@(branch.Id == Model.CurrentReassignBranchId ? "selected" : null)">@Model.Display(branch.Name)</option>
-                                                        }
-                                                    </select>
-                                                </label>
-
-                                                <label>
-                                                    <span>&#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</span>
-                                                    <select name="ReassignDepartmentId" data-nxr-reassign-department>
-                                                        @foreach (var department in Model.ReassignDepartments)
-                                                        {
-                                                            <option value="@department.Id" data-company-id="@department.CompanyId" selected="@(department.Id == Model.CurrentReassignDepartmentId ? "selected" : null)">@Model.Display(department.Name)</option>
-                                                        }
-                                                    </select>
-                                                </label>
-                                                @* NEXORA_REASSIGN_EDITABLE_ORG_END *@
-                                                <label>
-                                                    <span>&#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0627;&#x0644;&#x0645;&#x0628;&#x0627;&#x0634;&#x0631;&#x0629; &#x0627;&#x0644;&#x062C;&#x062F;&#x064A;&#x062F;</span>
-                                                    <input type="date" name="ReassignDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
-                                                </label>
-
-                                                <label>
-                                                    <span>&#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628; &#x0628;&#x0639;&#x062F; &#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x0627;&#x0644;&#x062A;&#x0639;&#x064A;&#x064A;&#x0646;</span>
-                                                    <input type="text" name="ReassignPosition" value="@employee.Position" />
-                                                </label>
-
-                                                <label class="wide">
-                                                    <span>&#x0633;&#x0628;&#x0628; &#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x0627;&#x0644;&#x062A;&#x0639;&#x064A;&#x064A;&#x0646;</span>
-                                                    <textarea name="ReassignReason" rows="3" required placeholder="&#x0645;&#x062B;&#x0627;&#x0644;: &#x0631;&#x062C;&#x0648;&#x0639; &#x0644;&#x0644;&#x0639;&#x0645;&#x0644;&#x060C; &#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x0645;&#x0628;&#x0627;&#x0634;&#x0631;&#x0629;&#x060C; &#x062A;&#x0635;&#x062D;&#x064A;&#x062D; &#x062D;&#x0627;&#x0644;&#x0629;..."></textarea>
-                                                </label>
-
-                                                <label class="wide">
-                                                    <span>&#x0645;&#x0644;&#x0627;&#x062D;&#x0638;&#x0627;&#x062A; HR / &#x0627;&#x0644;&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0637;&#x0644;&#x0648;&#x0628;&#x0629;</span>
-                                                    <textarea name="ReassignNotes" rows="3" placeholder="&#x0627;&#x0643;&#x062A;&#x0628; &#x0623;&#x064A; &#x062A;&#x0639;&#x062F;&#x064A;&#x0644; &#x0645;&#x0637;&#x0644;&#x0648;&#x0628; &#x0623;&#x0648; &#x0645;&#x0644;&#x0627;&#x062D;&#x0638;&#x0629; &#x062A;&#x062D;&#x0641;&#x0638; &#x0645;&#x0639; &#x0627;&#x0644;&#x0633;&#x062C;&#x0644;"></textarea>
-                                                </label>
-                                            </div>
-
-                                            <label class="nxr-reassign-confirm">
-                                                <input type="checkbox" name="ConfirmReassign" value="true" />
-                                                <span>&#x0623;&#x0624;&#x0643;&#x062F; &#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x062A;&#x0639;&#x064A;&#x064A;&#x0646; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641; &#x0648;&#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x062D;&#x0631;&#x0643;&#x0629; &#x0641;&#x064A; &#x0627;&#x0644;&#x0633;&#x062C;&#x0644; &#x0627;&#x0644;&#x0648;&#x0638;&#x064A;&#x0641;&#x064A;.</span>
-                                            </label>
-                                        </section>
-
-                                        <div class="nxr-reassign-actions">
-                                            <button type="button" class="ghost" data-nxr-reassign-close>&#x0625;&#x0644;&#x063A;&#x0627;&#x0621;</button>
-                                            <button type="submit" class="primary">&#x062D;&#x0641;&#x0638; &#x0625;&#x0639;&#x0627;&#x062F;&#x0629; &#x0627;&#x0644;&#x062A;&#x0639;&#x064A;&#x064A;&#x0646;</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-        </div>
-    </section>
-
+<div class="z360-page" dir="rtl">
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="nxr-success">@TempData["SuccessMessage"]</div>
+        <div class="z360-alert z360-alert-success">@TempData["SuccessMessage"]</div>
     }
 
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="nxr-error">@TempData["ErrorMessage"]</div>
+        <div class="z360-alert z360-alert-danger">@TempData["ErrorMessage"]</div>
     }
 
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
-        <div class="nxr-error">@Model.ErrorMessage</div>
+        <div class="z360-alert z360-alert-danger">@Model.ErrorMessage</div>
     }
-    else if (employee != null)
+
+    @if (employee != null)
     {
-        <section class="nxr-kayan-profile-card nxr-card">
-            <div class="nxr-kayan-identity">
-                @if (Model.CanEditEmployee)
-                {
-                    <form method="post" asp-page-handler="UploadProfilePhoto" asp-route-id="@employee.Id" enctype="multipart/form-data" class="nxr-profile-photo-form" data-employee-photo-form data-auto-submit-photo>
-                        <label class="nxr-kayan-avatar nxr-profile-photo-drop @(string.IsNullOrWhiteSpace(employee.PhotoPath) ? "has-image has-brand-placeholder" : "has-image")" data-employee-photo-drop title="اضغط لتحديث صورة الموظف">
-                            <input asp-for="EmployeePhoto" type="file" accept="image/png,image/jpeg,image/webp" />
-                            <img class="nxr-profile-photo-preview"
-                                 src="@(string.IsNullOrWhiteSpace(employee.PhotoPath) ? employeePhotoFallback : employee.PhotoPath)"
-                                 alt="Employee photo"
-                                 data-employee-photo-preview
-                                 data-placeholder-src="@employeePhotoFallback"
-                                 onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
-                            <span class="nxr-profile-photo-change">اضغط لتحديث الصورة</span>
-                        </label>
-                    </form>
-                }
-                else
-                {
-                    <div class="nxr-profile-photo-form">
-                        <div class="nxr-kayan-avatar nxr-profile-photo-drop @(string.IsNullOrWhiteSpace(employee.PhotoPath) ? "has-image has-brand-placeholder" : "has-image")">
-                            <img class="nxr-profile-photo-preview"
-                                 src="@(string.IsNullOrWhiteSpace(employee.PhotoPath) ? employeePhotoFallback : employee.PhotoPath)"
-                                 alt="Employee photo"
-                                 data-placeholder-src="@employeePhotoFallback"
-                                 onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
-                        </div>
-                    </div>
-                }
-
-                <div class="nxr-kayan-main">
-                    <div class="nxr-kayan-code">@Model.Display(employee.EmployeeNo)</div>
-                    <h2>@employee.FullName</h2>
-                    <p>@Model.Display(employee.Position)</p>
-
-                    <div class="nxr-kayan-status-row">
-                        <span class="nxr-profile-pro-badge @(employee.IsActive ? "ok" : "danger")">@employeeStatusText</span>
-                        <span class="nxr-profile-pro-badge muted">@Model.Display(employee.BranchName)</span>
-                        <span class="nxr-profile-pro-badge muted">@Model.Display(employee.DepartmentName)</span>
-                    </div>
-
-                    <div class="nxr-kayan-contact">
-                        <div>
-                            <span>البريد الإلكتروني</span>
-                            <strong>@Model.Display(employee.Email)</strong>
-                        </div>
-                        <div>
-                            <span>الهاتف</span>
-                            <strong>@Model.Display(employee.Phone)</strong>
-                        </div>
-                        <div>
-                            <span>المدير المباشر</span>
-                            <strong>@Model.Display(employee.DirectManager)</strong>
-                        </div>
-
-                        @* NEXORA_DYNAMIC_PROFILE_BASIC_CONTACT_GRID_MARKER *@
-                        @{
-                            var nxrBasicContactDynamicSection = Model.ProfileDynamicSections.FirstOrDefault(item => item.Key == "basic");
-                        }
-                        @if (nxrBasicContactDynamicSection != null && nxrBasicContactDynamicSection.Fields.Count > 0)
-                        {
-                            foreach (var field in nxrBasicContactDynamicSection.Fields.Where(item => !string.IsNullOrWhiteSpace(item.FieldValue)))
-                            {
-                                var nxrBasicContactDynamicDisplayValue = string.IsNullOrWhiteSpace(field.FieldValue) ? "-" : field.FieldValue;
-
-                                <div>
-                                    <span>@field.FieldLabel</span>
-                                    <strong class="@(nxrBasicContactDynamicDisplayValue == "-" ? "nxr-profile-dynamic-empty-value" : "")">@nxrBasicContactDynamicDisplayValue</strong>
-                                </div>
-                            }
-                        }</div>
-                </div>
-            </div>
-
-            <div class="nxr-kayan-section">
-                <div class="nxr-kayan-section-head">
-                    <h3>المعلومات الشخصية</h3>
+        <div class="z360-stack">
+            <section class="z360-hero" aria-label="هوية الموظف">
+                <div class="z360-identity">
                     @if (Model.CanEditEmployee)
                     {
-                        <a asp-page="./Edit" asp-route-id="@employee.Id" class="nxr-kayan-edit" title="تعديل">✎</a>
-                    }
-                </div>
-
-                <div class="nxr-kayan-info-grid">
-                    <div><span>رقم الهوية</span><strong>@Model.Display(employee.NationalId)</strong></div>
-                    <div><span>تاريخ الميلاد</span><strong>@Model.DisplayDate(employee.BirthDate)</strong></div>
-@* NEXORA_PROFILE_PERSONAL_STATIC_EXTRA_START *@
-<div><span>&#x0627;&#x0644;&#x0639;&#x0645;&#x0631;</span><strong>@NxrDisplayAge(employee.BirthDate)</strong></div>
-<div><span>&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629; &#x0627;&#x0644;&#x0627;&#x062C;&#x062A;&#x0645;&#x0627;&#x0639;&#x064A;&#x0629;</span><strong>@NxrDisplayMaritalStatusByGender(employee.MaritalStatus, employee.Gender)</strong></div>
-@* NEXORA_PROFILE_PERSONAL_STATIC_EXTRA_END *@
-@* NEXORA_DYNAMIC_PROFILE_PERSONAL_SUMMARY_MARKER *@
-@{
-    var nxrPersonalDynamicSection = Model.ProfileDynamicSections.FirstOrDefault(item => item.Key == "personal");
-}
-@if (nxrPersonalDynamicSection != null && nxrPersonalDynamicSection.Fields.Count > 0)
-{
-    foreach (var field in nxrPersonalDynamicSection.Fields.Where(item => !string.IsNullOrWhiteSpace(item.FieldValue)))
-    {
-        var nxrPersonalDynamicDisplayValue = string.IsNullOrWhiteSpace(field.FieldValue) ? "-" : field.FieldValue;
-
-        <div class="nxr-profile-dynamic-summary-item">
-            <span>@field.FieldLabel</span>
-            <strong class="@(nxrPersonalDynamicDisplayValue == "-" ? "nxr-profile-dynamic-empty-value" : "")">@nxrPersonalDynamicDisplayValue</strong>
-        </div>
-    }
-}
-
-
-                    <div><span>الجنس</span><strong>@NxrDisplayGender(employee.Gender)</strong></div>
-                    <div><span>الجنسية</span><strong>@Model.Display(employee.Nationality)</strong></div>
-                    <div><span>البلد</span><strong>@Model.Display(employee.Country)</strong></div>
-                </div>
-            </div>
-
-            <div class="nxr-kayan-section">
-                <div class="nxr-kayan-section-head">
-                    <h3>المعلومات الوظيفية</h3>
-                    @if (Model.CanViewLifecycle)
-                    {
-                        <a asp-page="./Lifecycle" asp-route-id="@employee.Id" class="nxr-kayan-edit" title="السجل الوظيفي">↗</a>
-                    }
-                </div>
-
-                <div class="nxr-kayan-info-grid">
-                    <div><span>الشركة</span><strong>@Model.Display(employee.CompanyName)</strong></div>
-                    <div><span>موقع العمل</span><strong>@Model.Display(employee.BranchName)</strong></div>
-                    <div><span>القسم</span><strong>@Model.Display(employee.DepartmentName)</strong></div>
-                    <div><span>المنصب</span><strong>@Model.Display(employee.Position)</strong></div>
-                    <div><span>&#x0645;&#x062F;&#x0629; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span><strong>@NxrDisplayWorkDuration(employee.HireDate)</strong></div>
-                    <div><span>نوع العقد</span><strong>@Model.Display(employee.ContractType)</strong></div>
-                    <div><span>نهاية العقد</span><strong>@Model.DisplayDate(employee.ContractEndDate)</strong></div>
-
-@* NEXORA_DYNAMIC_PROFILE_JOB_SUMMARY_MARKER *@
-@{
-    var nxrJobDynamicSection = Model.ProfileDynamicSections.FirstOrDefault(item => item.Key == "job");
-}
-@if (nxrJobDynamicSection != null && nxrJobDynamicSection.Fields.Count > 0)
-{
-    foreach (var field in nxrJobDynamicSection.Fields.Where(item => !string.IsNullOrWhiteSpace(item.FieldValue)))
-    {
-        var nxrJobDynamicDisplayValue = string.IsNullOrWhiteSpace(field.FieldValue) ? "-" : field.FieldValue;
-
-        <div class="nxr-profile-dynamic-summary-item">
-            <span>@field.FieldLabel</span>
-            <strong class="@(nxrJobDynamicDisplayValue == "-" ? "nxr-profile-dynamic-empty-value" : "")">@nxrJobDynamicDisplayValue</strong>
-        </div>
-    }
-}                </div>
-            </div>
-
-            <div class="nxr-kayan-section nxr-kayan-financial">
-                <div class="nxr-kayan-section-head">
-                    <h3>المعلومات المالية</h3>
-                    <button type="button" class="nxr-kayan-edit" title="مخفي حسب الصلاحية">◎</button>
-                </div>
-
-                <div class="nxr-kayan-info-grid">
-                    <div><span>الراتب الأساسي</span><strong>مخفي حسب الصلاحية</strong></div>
-                    <div><span>الراتب الكلي</span><strong>مخفي حسب الصلاحية</strong></div>
-                    <div><span>العملة</span><strong>IQD / USD لاحقاً</strong></div>
-                    <div><span>طريقة الدفع</span><strong>قريباً</strong></div>
-                    <div><span>القروض والسلف</span><strong>قريباً</strong></div>
-                    <div><span>جاهزية الراتب</span><strong>@readinessText</strong></div>
-
-@* NEXORA_DYNAMIC_PROFILE_FINANCIAL_SUMMARY_MARKER *@
-@{
-    var nxrFinancialDynamicSection = Model.ProfileDynamicSections.FirstOrDefault(item => item.Key == "financial");
-}
-@if (nxrFinancialDynamicSection != null && nxrFinancialDynamicSection.Fields.Count > 0)
-{
-    foreach (var field in nxrFinancialDynamicSection.Fields.Where(item => !string.IsNullOrWhiteSpace(item.FieldValue)))
-    {
-        var nxrFinancialDynamicDisplayValue = string.IsNullOrWhiteSpace(field.FieldValue) ? "-" : field.FieldValue;
-
-        <div class="nxr-profile-dynamic-summary-item">
-            <span>@field.FieldLabel</span>
-            <strong class="@(nxrFinancialDynamicDisplayValue == "-" ? "nxr-profile-dynamic-empty-value" : "")">@nxrFinancialDynamicDisplayValue</strong>
-        </div>
-    }
-}                </div>
-            </div>
-
-@* NEXORA_DYNAMIC_PROFILE_OTHER_SUMMARY_MARKER *@
-@{
-    var nxrOtherDynamicSections = Model.ProfileDynamicSections
-        .Where(item => item.Key == "additional")
-        .ToList();
-}
-@if (nxrOtherDynamicSections.Count > 0)
-{
-    foreach (var profileSection in nxrOtherDynamicSections)
-    {
-        <div class="nxr-kayan-section nxr-profile-dynamic-summary-extra">
-            <div class="nxr-kayan-section-head">
-                <h3>@profileSection.Label</h3>
-            </div>
-
-            <div class="nxr-kayan-info-grid">
-                @foreach (var field in profileSection.Fields.Where(item => !string.IsNullOrWhiteSpace(item.FieldValue)))
-                {
-                    var nxrOtherDynamicDisplayValue = string.IsNullOrWhiteSpace(field.FieldValue) ? "-" : field.FieldValue;
-
-                    <div class="nxr-profile-dynamic-summary-item">
-                        <span>@field.FieldLabel</span>
-                        <strong class="@(nxrOtherDynamicDisplayValue == "-" ? "nxr-profile-dynamic-empty-value" : "")">@nxrOtherDynamicDisplayValue</strong>
-                    </div>
-                }
-            </div>
-        </div>
-    }
-}
-        </section>
-        var documentHasId = Model.DocumentRows.Any(d =>
-            string.Equals(d.DocumentType, "ID", StringComparison.OrdinalIgnoreCase) ||
-            (d.DocumentType ?? "").Contains("هوية", StringComparison.OrdinalIgnoreCase) ||
-            (d.DocumentType ?? "").Contains("بطاقة", StringComparison.OrdinalIgnoreCase));
-
-        var documentHasContract = Model.DocumentRows.Any(d =>
-            string.Equals(d.DocumentType, "Contract", StringComparison.OrdinalIgnoreCase) ||
-            (d.DocumentType ?? "").Contains("Contract", StringComparison.OrdinalIgnoreCase) ||
-            (d.DocumentType ?? "").Contains("عقد", StringComparison.OrdinalIgnoreCase));
-
-        var documentHasPassport = Model.DocumentRows.Any(d =>
-            string.Equals(d.DocumentType, "Passport", StringComparison.OrdinalIgnoreCase) ||
-            (d.DocumentType ?? "").Contains("Passport", StringComparison.OrdinalIgnoreCase) ||
-            (d.DocumentType ?? "").Contains("جواز", StringComparison.OrdinalIgnoreCase));
-
-        var documentHasVisa = Model.DocumentRows.Any(d =>
-            string.Equals(d.DocumentType, "Visa", StringComparison.OrdinalIgnoreCase) ||
-            (d.DocumentType ?? "").Contains("Visa", StringComparison.OrdinalIgnoreCase) ||
-            (d.DocumentType ?? "").Contains("إقامة", StringComparison.OrdinalIgnoreCase) ||
-            (d.DocumentType ?? "").Contains("اقامة", StringComparison.OrdinalIgnoreCase));
-
-        var documentHasHealthCard = Model.DocumentRows.Any(d =>
-            string.Equals(d.DocumentType, "Health Card", StringComparison.OrdinalIgnoreCase) ||
-            (d.DocumentType ?? "").Contains("Health", StringComparison.OrdinalIgnoreCase) ||
-            (d.DocumentType ?? "").Contains("صحية", StringComparison.OrdinalIgnoreCase));
-
-        var documentEmployeeGeo = $"{employee.Nationality} {employee.Country}".ToLowerInvariant();
-        var documentIsExpat =
-            !string.IsNullOrWhiteSpace(documentEmployeeGeo) &&
-            !(documentEmployeeGeo.Contains("iraq") || documentEmployeeGeo.Contains("iraqi") || documentEmployeeGeo.Contains("العراق") || documentEmployeeGeo.Contains("عراقي") || documentEmployeeGeo.Contains("عراقية"));
-
-        var documentWorkContext = $"{employee.CompanyName} {employee.BranchName} {employee.DepartmentName} {employee.Position}".ToLowerInvariant();
-        var documentNeedsHealthCard =
-            documentWorkContext.Contains("food") ||
-            documentWorkContext.Contains("restaurant") ||
-            documentWorkContext.Contains("cafe") ||
-            documentWorkContext.Contains("coffee") ||
-            documentWorkContext.Contains("kitchen") ||
-            documentWorkContext.Contains("hotel") ||
-            documentWorkContext.Contains("patchi") ||
-            documentWorkContext.Contains("rixos") ||
-            documentWorkContext.Contains("movenpick") ||
-            documentWorkContext.Contains("مطعم") ||
-            documentWorkContext.Contains("كافيه") ||
-            documentWorkContext.Contains("مطبخ") ||
-            documentWorkContext.Contains("فندق") ||
-            documentWorkContext.Contains("اغذية") ||
-            documentWorkContext.Contains("أغذية");
-
-        var documentMissingRequiredCount = 0;
-        if (!documentHasId) { documentMissingRequiredCount++; }
-        if (!documentHasContract) { documentMissingRequiredCount++; }
-        if (documentIsExpat && !documentHasPassport) { documentMissingRequiredCount++; }
-        if (documentIsExpat && !documentHasVisa) { documentMissingRequiredCount++; }
-        if (documentNeedsHealthCard && !documentHasHealthCard) { documentMissingRequiredCount++; }
-
-        var contractNeedsReview = employee.ContractEndDate.HasValue && employee.ContractEndDate.Value <= today.AddDays(30);
-        var hasEmployeeRequirements =
-            Model.PayrollRiskItems > 0 ||
-            Model.AttendanceExceptionsCount > 0 ||
-            Model.PendingRequests > 0 ||
-            Model.ExpiredDocumentsCount > 0 ||
-            Model.ExpiringDocumentsCount > 0 ||
-            documentMissingRequiredCount > 0 ||
-            contractNeedsReview;
-
-        <section class="nxr-employee-requirements @(hasEmployeeRequirements ? "" : "is-clear")">
-            <div class="nxr-requirements-head">
-                <div class="nxr-requirements-title">
-                    <h3>متطلبات الموظف</h3>
-                    <p>الملاحظات التي تحتاج متابعة من شؤون الموظفين قبل اعتماد الملف أو جاهزية الراتب.</p>
-                </div>
-
-                <span class="nxr-requirements-badge">
-                    @(hasEmployeeRequirements ? "توجد متطلبات تحتاج متابعة" : "لا توجد متطلبات حالياً")
-                </span>
-            </div>
-
-            <div class="nxr-requirements-grid">
-                @if (!documentHasId)
-                {
-                    <div class="nxr-requirement-item danger">
-                        <strong>مستند ناقص: هوية / بطاقة وطنية</strong>
-                        <span>هذا المستند مطلوب لكل موظف.</span>
-                        <small>Document Rules</small>
-                    </div>
-                }
-
-                @if (!documentHasContract)
-                {
-                    <div class="nxr-requirement-item danger">
-                        <strong>مستند ناقص: عقد عمل</strong>
-                        <span>العقد مطلوب لاكتمال ملف الموظف.</span>
-                        <small>Document Rules</small>
-                    </div>
-                }
-
-                @if (documentIsExpat && !documentHasPassport)
-                {
-                    <div class="nxr-requirement-item danger">
-                        <strong>مستند ناقص: جواز سفر</strong>
-                        <span>مطلوب للموظفين الوافدين.</span>
-                        <small>Expats Documents</small>
-                    </div>
-                }
-
-                @if (documentIsExpat && !documentHasVisa)
-                {
-                    <div class="nxr-requirement-item danger">
-                        <strong>مستند ناقص: إقامة / فيزا</strong>
-                        <span>مطلوب للموظفين الوافدين.</span>
-                        <small>Expats Documents</small>
-                    </div>
-                }
-
-                @if (documentNeedsHealthCard && !documentHasHealthCard)
-                {
-                    <div class="nxr-requirement-item warn">
-                        <strong>مستند ناقص: بطاقة صحية</strong>
-                        <span>مطلوبة للمطاعم، الكافيهات، الفنادق، والمواقع الغذائية.</span>
-                        <small>Health Compliance</small>
-                    </div>
-                }
-
-                @if (Model.PayrollRiskItems > 0)
-                {
-                    <div class="nxr-requirement-item warn">
-                        <strong>جاهزية الراتب</strong>
-                        <span>يوجد @Model.PayrollRiskItems ملاحظة تحتاج مراجعة قبل إغلاق الراتب.</span>
-                        <small>Payroll Readiness</small>
-                    </div>
-                }
-
-                @if (Model.AttendanceExceptionsCount > 0)
-                {
-                    <div class="nxr-requirement-item warn">
-                        <strong>استثناءات الحضور</strong>
-                        <span>يوجد @Model.AttendanceExceptionsCount حالة حضور تحتاج تدقيق أو معالجة.</span>
-                        <small>Attendance Exceptions</small>
-                    </div>
-                }
-
-                @if (Model.PendingRequests > 0)
-                {
-                    <div class="nxr-requirement-item warn">
-                        <strong>طلبات معلقة</strong>
-                        <span>يوجد @Model.PendingRequests طلب بانتظار الموافقة أو الإغلاق.</span>
-                        <small>Pending Requests</small>
-                    </div>
-                }
-
-                @if (Model.ExpiredDocumentsCount > 0)
-                {
-                    <div class="nxr-requirement-item danger">
-                        <strong>مستندات منتهية</strong>
-                        <span>يوجد @Model.ExpiredDocumentsCount مستند منتهي يحتاج تحديث.</span>
-                        <small>Documents Risk</small>
-                    </div>
-                }
-
-                @if (Model.ExpiringDocumentsCount > 0)
-                {
-                    <div class="nxr-requirement-item warn">
-                        <strong>مستندات قرب الانتهاء</strong>
-                        <span>يوجد @Model.ExpiringDocumentsCount مستند قريب الانتهاء.</span>
-                        <small>Documents Follow-up</small>
-                    </div>
-                }
-
-                @if (contractNeedsReview)
-                {
-                    <div class="nxr-requirement-item warn">
-                        <strong>العقد يحتاج متابعة</strong>
-                        <span>نهاية العقد: @Model.DisplayDate(employee.ContractEndDate)</span>
-                        <small>Contract Follow-up</small>
-                    </div>
-                }
-
-                @if (!hasEmployeeRequirements)
-                {
-                    <div class="nxr-requirement-item ok">
-                        <strong>الملف مكتمل حالياً</strong>
-                        <span>لا توجد متطلبات ظاهرة حسب البيانات الحالية.</span>
-                        <small>HR Status</small>
-                    </div>
-                }
-            </div>
-        </section>
-<section id="overview" class="nxr-profile-pro-status-grid nxr-kayan-risk-grid">
-            <div class="nxr-card nxr-profile-pro-status @readinessClass">
-                <span>جاهزية الراتب</span>
-                <strong>@readinessText</strong>
-                <small>@Model.PayrollRiskItems ملاحظة تحتاج مراجعة</small>
-            </div>
-            <div class="nxr-card nxr-profile-pro-status @Model.AttendanceExceptionClass">
-                <span>استثناءات الحضور</span>
-                <strong>@Model.AttendanceExceptionsCount</strong>
-                <small>تأخير، غياب، بصمة ناقصة أو ملاحظة</small>
-            </div>
-            <div class="nxr-card nxr-profile-pro-status @(Model.ExpiredDocumentsCount > 0 ? "danger" : Model.ExpiringDocumentsCount > 0 ? "warn" : "ok")">
-                <span>حالة المستندات</span>
-                <strong>@Model.DocumentRows.Count</strong>
-                <small>@Model.ExpiredDocumentsCount منتهي، @Model.ExpiringDocumentsCount قريب الانتهاء</small>
-            </div>
-            <div class="nxr-card nxr-profile-pro-status @(Model.PendingRequests > 0 ? "warn" : "ok")">
-                <span>طلبات معلقة</span>
-                <strong>@Model.PendingRequests</strong>
-                <small>@Model.ApprovedRequests مقبول، @Model.RejectedRequests مرفوض</small>
-            </div>
-        </section>
-
-                <!-- NEXORA_PROFILE_KAYAN_PAGES_START -->
-        <section class="nxr-profile-kayan-pages nxr-card" data-nxr-profile-kayan-pages>
-            <div class="nxr-profile-kayan-topbar">
-                <div class="nxr-profile-kayan-tabs" role="tablist" aria-label="صفحات ملف الموظف">
-                    <button type="button" class="active" data-nxr-profile-tab="personal">الملف الشخصي</button>
-                    <button type="button" data-nxr-profile-tab="finance">الملف المالي</button>
-                    @if (Model.CanViewHistory)
-                    {
-                        <button type="button" data-nxr-profile-tab="activity">الأنشطة الأخيرة</button>
-                    }
-                </div>
-
-                <div class="nxr-profile-kayan-tools">
-                    @if (Model.CanOpenEmployeeDocuments)
-                    {
-                        <a asp-page="/EmployeeDocuments/Index" asp-route-employeeId="@employee.Id" class="primary">الملفات الإلكترونية</a>
-                    }
-                    @if (Model.CanViewLifecycle)
-                    {
-                        <a asp-page="./Lifecycle" asp-route-id="@employee.Id">سجل الموظف</a>
-                    }
-                    @if (Model.CanViewHistory)
-                    {
-                        <button type="button" data-nxr-profile-tab="activity">عرض النشاط</button>
-                    }
-                </div>
-            </div>
-
-            <div class="nxr-profile-kayan-body">
-                <div class="nxr-profile-kayan-pane active" data-nxr-profile-pane="personal">
-                    <div class="nxr-profile-kayan-grid">
-                                                @* NEXORA_DYNAMIC_PROFILE_VIEW_MOVED_TO_SUMMARY_MARKER *@
-@* NEXORA_PROFILE_FILE_CARDS_START *@
-                        @{
-                            var nxrProfileFileCards = new[]
-                            {
-                                new { Category = "Experience", Title = "\u0627\u0644\u062e\u0628\u0631\u0627\u062a", Description = "\u0627\u0631\u0641\u0639 \u0645\u0644\u0641\u0627\u062a \u0627\u0644\u062e\u0628\u0631\u0627\u062a \u0627\u0644\u0633\u0627\u0628\u0642\u0629 \u0648\u0627\u0644\u062d\u0627\u0644\u064a\u0629.", Icon = "\u25a3" },
-                                new { Category = "Certificates", Title = "\u0627\u0644\u0634\u0647\u0627\u062f\u0627\u062a", Description = "\u0627\u0631\u0641\u0639 \u0627\u0644\u0634\u0647\u0627\u062f\u0627\u062a \u0627\u0644\u0623\u0643\u0627\u062f\u064a\u0645\u064a\u0629 \u0648\u0627\u0644\u0645\u0647\u0646\u064a\u0629.", Icon = "\u25a4" },
-                                new { Category = "Medical", Title = "\u0627\u0644\u0645\u0644\u0641\u0627\u062a \u0627\u0644\u0637\u0628\u064a\u0629", Description = "\u0627\u0631\u0641\u0639 \u0627\u0644\u0641\u062d\u0648\u0635\u0627\u062a \u0648\u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0635\u062d\u064a\u0629 \u0648\u0627\u0644\u0645\u0644\u0627\u062d\u0638\u0627\u062a.", Icon = "\u271a" },
-                                new { Category = "Training", Title = "\u062f\u0648\u0631\u0627\u062a \u062a\u062f\u0631\u064a\u0628\u064a\u0629", Description = "\u0627\u0631\u0641\u0639 \u0645\u0644\u0641\u0627\u062a \u0627\u0644\u062f\u0648\u0631\u0627\u062a \u0648\u0627\u0644\u062a\u062f\u0631\u064a\u0628\u0627\u062a.", Icon = "\u25a5" },
-                                new { Category = "Education", Title = "\u0627\u0644\u062a\u0639\u0644\u064a\u0645", Description = "\u0627\u0631\u0641\u0639 \u0645\u0644\u0641\u0627\u062a \u0627\u0644\u0645\u0624\u0647\u0644 \u0627\u0644\u062f\u0631\u0627\u0633\u064a \u0648\u0627\u0644\u062a\u062e\u0635\u0635.", Icon = "\u25b1" }
-                            };
-                        }
-
-                        @foreach (var fileCard in nxrProfileFileCards)
-                        {
-                            var cardFiles = Model.ProfileFilesByCategory(fileCard.Category);
-                            var uploadInputId = $"nxrProfileUpload_{fileCard.Category}_{employee.Id}";
-
-                            <article class="nxr-profile-kayan-card nxr-profile-upload-card">
-                                <div class="nxr-profile-kayan-card-head">
-                                    <h3>@fileCard.Title</h3>
-                                    @if (Model.CanUploadDocument)
-                                    {
-                                        <label for="@uploadInputId" class="nxr-profile-upload-menu" title="Upload file">+</label>
-                                    }
-                                </div>
-
-                                @if (Model.CanUploadDocument)
-                                {
-                                    <form method="post"
-                                          enctype="multipart/form-data"
-                                          asp-page-handler="UploadProfileAreaFile"
-                                          asp-route-id="@employee.Id"
-                                          class="nxr-profile-upload-hidden-form">
-                                        <input type="hidden" name="ProfileAreaCategory" value="@fileCard.Category" />
-                                        <input id="@uploadInputId"
-                                               type="file"
-                                               name="ProfileAreaFile"
-                                               accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx"
-                                               onchange="this.form.submit()" />
-                                    </form>
-
-                                    <label for="@uploadInputId" class="nxr-profile-upload-drop">
-                                        <span class="icon">@fileCard.Icon</span>
-                                        <strong>@(cardFiles.Any() ? "\u0625\u0636\u0627\u0641\u0629 \u0645\u0644\u0641 \u0622\u062e\u0631" : "\u0627\u0631\u0641\u0639 \u0645\u0644\u0641")</strong>
-                                        <small>@fileCard.Description</small>
-                                    </label>
-                                }
-                                else if (!cardFiles.Any())
-                                {
-                                    <div class="nxr-profile-upload-drop">
-                                        <span class="icon">@fileCard.Icon</span>
-                                        <strong>لا توجد ملفات</strong>
-                                        <small>@fileCard.Description</small>
-                                    </div>
-                                }
-
-                                @if (cardFiles.Any())
-                                {
-                                    <div class="nxr-profile-file-list">
-                                        @foreach (var file in cardFiles.Take(5))
-                                        {
-                                            <div class="nxr-profile-file-row">
-                                                <div>
-                                                    <strong>@Model.Display(file.FileName)</strong>
-                                                    <span>@(file.UploadedAt.HasValue ? file.UploadedAt.Value.ToString("yyyy-MM-dd HH:mm") : "-")</span>
-                                                </div>
-
-                                                <div class="nxr-profile-file-actions">
-                                                    <a href="@file.StoredPath" target="_blank">&#x0641;&#x062A;&#x062D;</a>
-                                                    @if (Model.CanDeleteDocument)
-                                                    {
-                                                        <form method="post"
-                                                              asp-page-handler="DeleteProfileAreaFile"
-                                                              asp-route-id="@employee.Id"
-                                                              asp-route-fileId="@file.Id"
-                                                              onsubmit="return confirm('Delete this file?');">
-                                                            <button type="submit">&#x062D;&#x0630;&#x0641;</button>
-                                                        </form>
-                                                    }
-                                                </div>
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                            </article>
-                        }
-                        @* NEXORA_PROFILE_FILE_CARDS_END *@
-<article class="nxr-profile-kayan-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>العنوان</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-list">
-                                <div class="nxr-profile-kayan-row">
-                                    <div><strong>البلد</strong><span>@Model.Display(employee.Country)</span></div>
-                                    <span class="nxr-profile-kayan-chip">بيانات حالية</span>
-                                </div>
-                                <div class="nxr-profile-kayan-row">
-                                    <div><strong>رقم الهاتف</strong><span>@Model.Display(employee.Phone)</span></div>
-                                    <span class="nxr-profile-kayan-chip">اتصال</span>
-                                </div>
-                            </div>
-                        </article>
-
-                        <article class="nxr-profile-kayan-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>العهد</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▰</span><strong>لا يوجد بيانات</strong><small>اللابتوبات، الأجهزة، العهد التشغيلية.</small></div></div>
-                        </article>
-
-                        <article class="nxr-profile-kayan-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>الوثائق</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            @if (Model.DocumentRows.Any())
-                            {
-                                <div class="nxr-profile-kayan-list">
-                                    @foreach (var doc in Model.DocumentRows.Take(4))
-                                    {
-                                        <div class="nxr-profile-kayan-row">
-                                            <div>
-                                                <strong>@Model.Display(doc.DocumentType)</strong>
-                                                <span>@Model.Display(doc.FileName)</span>
-                                            </div>
-                                            @if (!string.IsNullOrWhiteSpace(doc.StoredPath))
-                                            {
-                                                <a href="@doc.StoredPath" target="_blank" class="nxr-profile-kayan-chip">فتح</a>
-                                            }
-                                            else
-                                            {
-                                                <span class="nxr-profile-kayan-chip warn">بدون ملف</span>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="nxr-profile-kayan-empty"><div><span class="icon">▤</span><strong>لا يوجد بيانات</strong><small>الهوية، العقد، الجواز، الإقامة، البطاقة الصحية.</small></div></div>
-                            }
-                        </article>
-                    </div>
-                </div>
-
-                <div class="nxr-profile-kayan-pane" data-nxr-profile-pane="finance">
-                    <div class="nxr-profile-kayan-grid">
-                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>العلاوات</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">＋</span><strong>لا يوجد بيانات</strong><small>العلاوات الدائمة أو المؤقتة.</small></div></div>
-                        </article>
-
-                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>الدخل القائم على الحصص</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">＋</span><strong>لا يوجد بيانات</strong><small>العمولات والحوافز المتغيرة.</small></div></div>
-                        </article>
-
-                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>امتيازات خارج الراتب</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">＋</span><strong>لا يوجد بيانات</strong><small>السكن، النقل، التغذية، امتيازات أخرى.</small></div></div>
-                        </article>
-
-                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>الإجازات</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-list">
-                                <div class="nxr-profile-kayan-row">
-                                    <div><strong>طلبات معلقة</strong><span>ضمن ملف الموظف</span></div>
-                                    <span class="nxr-profile-kayan-chip warn">@Model.PendingRequests</span>
-                                </div>
-                                <div class="nxr-profile-kayan-row">
-                                    <div><strong>طلبات مقبولة</strong><span>إجازات وخدمات ذاتية</span></div>
-                                    <span class="nxr-profile-kayan-chip">@Model.ApprovedRequests</span>
-                                </div>
-                            </div>
-                        </article>
-
-                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>التأمين الصحي</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">✚</span><strong>لا يوجد بيانات</strong><small>معلومات التأمين الصحي والاشتراكات.</small></div></div>
-                        </article>
-
-                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>الاقتطاعات الدائمة</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">－</span><strong>لا يوجد بيانات</strong><small>السلف، القروض، أو الاستقطاعات الشهرية.</small></div></div>
-                        </article>
-
-                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>البنوك الأخرى</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▦</span><strong>لا يوجد بيانات</strong><small>حسابات مصرفية إضافية.</small></div></div>
-                        </article>
-
-                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>إعفاءات إضافية</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">%</span><strong>لا يوجد بيانات</strong><small>إعفاءات أو معالجات مالية خاصة.</small></div></div>
-                        </article>
-
-                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>مراكز الكلفة</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-list">
-                                <div class="nxr-profile-kayan-row">
-                                    <div><strong>موقع العمل</strong><span>@Model.Display(employee.BranchName)</span></div>
-                                    <span class="nxr-profile-kayan-chip">Cost</span>
-                                </div>
-                                <div class="nxr-profile-kayan-row">
-                                    <div><strong>القسم</strong><span>@Model.Display(employee.DepartmentName)</span></div>
-                                    <span class="nxr-profile-kayan-chip">Dept</span>
-                                </div>
-                            </div>
-                        </article>
-
-                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>امتيازات خارجية</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▧</span><strong>لا يوجد بيانات</strong><small>امتيازات غير مرتبطة بالراتب المباشر.</small></div></div>
-                        </article>
-
-                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>تسديدات</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">↺</span><strong>لا يوجد بيانات</strong><small>تسديدات مالية أو استردادات.</small></div></div>
-                        </article>
-
-                        <article class="nxr-profile-kayan-card nxr-profile-kayan-finance-card">
-                            <div class="nxr-profile-kayan-card-head"><h3>مخصصات متغيرة</h3><span class="nxr-profile-kayan-menu">☰</span></div>
-                            <div class="nxr-profile-kayan-empty"><div><span class="icon">▨</span><strong>لا يوجد بيانات</strong><small>مخصصات تتغير حسب الشهر أو الموقع.</small></div></div>
-                        </article>
-                    </div>
-                </div>
-
-                <div class="nxr-profile-kayan-pane" data-nxr-profile-pane="activity">
-                    <div class="nxr-profile-kayan-activity-head">
-                        <div>
-                            <h3>الأنشطة الأخيرة</h3>
-                            <p>آخر الحركات المسجلة على ملف الموظف، ويمكن لاحقاً ربطها بكل أوامر شؤون الموظفين.</p>
-                        </div>
-                        <span class="nxr-profile-kayan-chip">@Model.AuditRows.Count حركة</span>
-                    </div>
-
-                    <div class="nxr-profile-kayan-activity-table-wrap">
-                        <table class="nxr-profile-kayan-activity-table">
-                            <thead>
-                                <tr>
-                                    <th>اسم المستخدم</th>
-                                    <th>الإجراء</th>
-                                    <th>تاريخ الحركة</th>
-                                    <th>تفاصيل</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            @if (Model.AuditRows.Any())
-                            {
-                                foreach (var row in Model.AuditRows.Take(40))
-                                {
-                                    var userInitial = string.IsNullOrWhiteSpace(row.UserName) ? "N" : row.UserName.Trim()[0].ToString();
-
-                                    <tr>
-                                        <td>
-                                            <span class="nxr-profile-kayan-user">
-                                                <span class="nxr-profile-kayan-user-avatar">@userInitial</span>
-                                                @Model.Display(row.UserName)
-                                            </span>
-                                        </td>
-                                        <td>@Model.Display(row.Action)</td>
-                                        <td>@Model.DisplayDateTime(row.CreatedAt)</td>
-                                        <td><span class="nxr-profile-kayan-chip">عرض</span></td>
-                                    </tr>
-                                }
-                            }
-                            else
-                            {
-                                <tr>
-                                    <td colspan="4">
-                                        <div class="nxr-profile-kayan-empty">
-                                            <div>
-                                                <span class="icon">◷</span>
-                                                <strong>لا توجد أنشطة مسجلة</strong>
-                                                <small>ستظهر هنا الحركات مثل تعديل البيانات، رفع مستند، تغيير قسم، أو إنهاء خدمة.</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
-        <!-- NEXORA_PROFILE_KAYAN_PAGES_END -->
-<section class="nxr-profile-pro-filter nxr-card">
-            <form method="get">
-                <input type="hidden" name="Id" value="@employee.Id" />
-                <div>
-                    <label>من تاريخ</label>
-                    <input type="date" name="FromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" />
-                </div>
-                <div>
-                    <label>إلى تاريخ</label>
-                    <input type="date" name="ToDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" />
-                </div>
-                <button type="submit" class="nxr-btn primary">تحديث الفترة</button>
-                <a asp-page="./Profile" asp-route-id="@employee.Id" class="nxr-btn">آخر 30 يوم</a>
-            </form>
-        </section>
-
-        <section class="nxr-profile-pro-kpis">
-            <div class="nxr-kpi"><span>سجلات الحضور</span><strong>@Model.AttendanceCount</strong><small>ضمن الفترة</small></div>
-            <div class="nxr-kpi ok"><span>حضور</span><strong>@Model.PresentCount</strong><small>سجل</small></div>
-            <div class="nxr-kpi warn"><span>تأخير</span><strong>@Model.LateCount</strong><small>مرة</small></div>
-            <div class="nxr-kpi danger"><span>غياب</span><strong>@Model.AbsentCount</strong><small>يوم</small></div>
-            <div class="nxr-kpi warn"><span>بصمات ناقصة</span><strong>@Model.MissingCheckoutCount</strong><small>مرة</small></div>
-            <div class="nxr-kpi"><span>ساعات العمل</span><strong>@Model.TotalWorkingHours</strong><small>ساعة</small></div>
-        </section>
-
-        <section id="data" class="nxr-profile-pro-two-col nxr-kayan-details-section">
-            <div class="nxr-card nxr-profile-pro-panel">
-                <div class="nxr-profile-pro-panel-title">
-                    <h3>البيانات الشخصية</h3>
-                </div>
-                <div class="nxr-profile-pro-info">
-                    <div><span>الاسم الكامل</span><strong>@employee.FullName</strong></div>
-                    <div><span>رقم الموظف</span><strong>@Model.Display(employee.EmployeeNo)</strong></div>
-                    <div><span>تاريخ الميلاد</span><strong>@Model.DisplayDate(employee.BirthDate)</strong></div>
-@* NEXORA_PROFILE_PERSONAL_STATIC_EXTRA_START *@
-<div><span>&#x0627;&#x0644;&#x0639;&#x0645;&#x0631;</span><strong>@NxrDisplayAge(employee.BirthDate)</strong></div>
-<div><span>&#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629; &#x0627;&#x0644;&#x0627;&#x062C;&#x062A;&#x0645;&#x0627;&#x0639;&#x064A;&#x0629;</span><strong>@NxrDisplayMaritalStatusByGender(employee.MaritalStatus, employee.Gender)</strong></div>
-@* NEXORA_PROFILE_PERSONAL_STATIC_EXTRA_END *@
-                    <div><span>الجنس</span><strong>@NxrDisplayGender(employee.Gender)</strong></div>
-                    <div><span>الجنسية</span><strong>@Model.Display(employee.Nationality)</strong></div>
-                    <div><span>البلد</span><strong>@Model.Display(employee.Country)</strong></div>
-                    <div><span>رقم الهوية</span><strong>@Model.Display(employee.NationalId)</strong></div>
-                    <div><span>الهاتف</span><strong>@Model.Display(employee.Phone)</strong></div>
-                    <div><span>الإيميل</span><strong>@Model.Display(employee.Email)</strong></div>
-                </div>
-            </div>
-
-            <div class="nxr-card nxr-profile-pro-panel">
-                <div class="nxr-profile-pro-panel-title">
-                    <h3>البيانات الوظيفية</h3>
-                </div>
-                <div class="nxr-profile-pro-info">
-                    <div><span>الشركة</span><strong>@Model.Display(employee.CompanyName)</strong></div>
-                    <div><span>موقع العمل</span><strong>@Model.Display(employee.BranchName)</strong></div>
-                    <div><span>القسم</span><strong>@Model.Display(employee.DepartmentName)</strong></div>
-                    <div><span>المنصب</span><strong>@Model.Display(employee.Position)</strong></div>
-                    <div><span>الحالة الوظيفية</span><strong>@Model.Display(employee.EmploymentStatus)</strong></div>
-                    <div><span>نوع التوظيف</span><strong>@Model.Display(employee.ContractType)</strong></div>
-                    <div><span>&#x0645;&#x062F;&#x0629; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span><strong>@NxrDisplayWorkDuration(employee.HireDate)</strong></div>
-                    <div><span>نهاية العقد</span><strong>@Model.DisplayDate(employee.ContractEndDate)</strong></div>
-                    <div><span>المدير المباشر</span><strong>@Model.Display(employee.DirectManager)</strong></div>
-                </div>
-            </div>
-        </section>
-
-        <section id="attendance" class="nxr-card nxr-profile-pro-panel">
-            <div class="nxr-profile-pro-panel-title with-action">
-                <div>
-                    <h3>الحضور والانصراف</h3>
-                    <p>آخر السجلات ضمن الفترة المحددة.</p>
-                </div></div>
-
-            <div class="nxr-profile-pro-table-wrap">
-                <table class="nxr-profile-pro-table">
-                    <thead>
-                        <tr>
-                            <th>التاريخ</th>
-                            <th>الدخول</th>
-                            <th>الخروج</th>
-                            <th>الجهاز</th>
-                            <th>الحالة</th>
-                            <th>الملاحظات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    @if (Model.AttendanceRows.Any())
-                    {
-                        foreach (var row in Model.AttendanceRows.Take(10))
-                        {
-                            <tr>
-                                <td>@Model.DisplayDate(row.AttendanceDate)</td>
-                                <td>@Model.DisplayTime(row.CheckIn)</td>
-                                <td>@Model.DisplayTime(row.CheckOut)</td>
-                                <td>@Model.Display(row.DeviceName)</td>
-                                <td><span class="nxr-profile-pro-badge @StatusClass(row.Status)">@Model.StatusText(row.Status)</span></td>
-                                <td>@Model.Display(row.Notes)</td>
-                            </tr>
-                        }
+                        <form method="post"
+                              asp-page-handler="UploadProfilePhoto"
+                              asp-route-id="@employee.Id"
+                              enctype="multipart/form-data"
+                              class="z360-photo-form"
+                              data-employee-photo-form
+                              data-auto-submit-photo>
+                            <label class="z360-avatar" data-employee-photo-drop>
+                                <input type="file"
+                                       name="EmployeePhoto"
+                                       accept=".png,.jpg,.jpeg,.webp"
+                                       aria-label="تغيير صورة الموظف" />
+                                <img src="@(string.IsNullOrWhiteSpace(employee.PhotoPath) ? photoFallback : employee.PhotoPath)"
+                                     alt="صورة @employee.FullName"
+                                     data-employee-photo-preview
+                                     onerror="this.onerror=null;this.src='@photoFallback';" />
+                                <span class="z360-avatar-overlay">تغيير الصورة</span>
+                            </label>
+                        </form>
                     }
                     else
                     {
-                        <tr><td colspan="6" class="nxr-profile-pro-empty">لا توجد سجلات حضور ضمن هذه الفترة.</td></tr>
-                    }
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section class="nxr-profile-pro-two-col">
-            <div id="requests" class="nxr-card nxr-profile-pro-panel">
-                <div class="nxr-profile-pro-panel-title with-action">
-                    <div>
-                        <h3>الطلبات</h3>
-                        <p>آخر طلبات الخدمة الذاتية والإجازات.</p>
-                    </div></div>
-
-                <div class="nxr-profile-pro-list">
-                @if (Model.RequestRows.Any())
-                {
-                    foreach (var row in Model.RequestRows.Take(8))
-                    {
-                        <div class="nxr-profile-pro-list-item">
-                            <div>
-                                <strong>@Model.Display(row.RequestType)</strong>
-                                <span>@Model.DisplayDate(row.RequestDate) · @Model.Display(row.CurrentStep)</span>
-                            </div>
-                            <span class="nxr-profile-pro-badge @RequestClass(row.Status)">@Model.RequestStatusText(row.Status)</span>
+                        <div class="z360-avatar">
+                            <img src="@(string.IsNullOrWhiteSpace(employee.PhotoPath) ? photoFallback : employee.PhotoPath)"
+                                 alt="صورة @employee.FullName"
+                                 onerror="this.onerror=null;this.src='@photoFallback';" />
                         </div>
                     }
-                }
-                else
-                {
-                    <div class="nxr-profile-pro-empty">لا توجد طلبات محفوظة.</div>
-                }
-                </div>
-            </div>
 
-            <div id="documents" class="nxr-card nxr-profile-pro-panel">
-                <div class="nxr-profile-pro-panel-title with-action">
-                    <div>
-                        <h3>المستندات</h3>
-                        <p>آخر المستندات المرتبطة بالموظف.</p>
-                    </div></div>
-
-                <div class="nxr-profile-pro-docs">
-                @if (Model.DocumentRows.Any())
-                {
-                    foreach (var row in Model.DocumentRows.Take(8))
-                    {
-                        <div class="nxr-profile-pro-doc">
-                            <div>
-                                <strong>@Model.Display(row.DocumentType)</strong>
-                                <span>@Model.Display(row.FileName)</span>
-                                <small class="@DocumentClass(row.ExpiryDate)">@DocumentText(row.ExpiryDate)</small>
-                            </div>
-                            @if (!string.IsNullOrWhiteSpace(row.StoredPath))
+                    <div class="z360-identity-copy">
+                        <span class="z360-employee-code">@Model.Display(employee.EmployeeNo)</span>
+                        <h1>@employee.FullName</h1>
+                        <p class="z360-position">
+                            @Model.Display(employee.Position)
+                            @if (!string.IsNullOrWhiteSpace(employee.DepartmentName))
                             {
-                                <a href="@row.StoredPath" target="_blank" class="nxr-btn">فتح</a>
+                                <span> | @employee.DepartmentName</span>
+                            }
+                        </p>
+                        <div class="z360-tags">
+                            <span class="z360-tag @(employee.IsActive ? "z360-tag-success" : "z360-tag-danger")">
+                                @(employee.IsActive ? "فعال" : "غير فعال")
+                            </span>
+                            <span class="z360-tag">@Model.Display(employee.BranchName)</span>
+                            <span class="z360-tag">@Model.Display(employee.CompanyName)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="z360-contact">
+                    <div class="z360-contact-row">
+                        <span>البريد الإلكتروني</span>
+                        <strong>@Model.Display(employee.Email)</strong>
+                    </div>
+                    <div class="z360-contact-row">
+                        <span>الهاتف</span>
+                        <strong>@Model.Display(employee.Phone)</strong>
+                    </div>
+                    <div class="z360-contact-row">
+                        <span>المدير المباشر</span>
+                        <strong>@Model.Display(employee.DirectManager)</strong>
+                    </div>
+
+                    @if (basicDynamicSection != null)
+                    {
+                        foreach (var field in basicDynamicSection.Fields
+                            .Where(item => !string.IsNullOrWhiteSpace(item.FieldValue))
+                            .Take(3))
+                        {
+                            <div class="z360-contact-row">
+                                <span>@field.FieldLabel</span>
+                                <strong>@field.FieldValue</strong>
+                            </div>
+                        }
+                    }
+                </div>
+
+            </section>
+
+            <section class="z360-command" aria-label="مركز التحكم والعمليات">
+                <div class="z360-command-title">
+                    <h2>مركز التحكم والعمليات (360)</h2>
+                    <p>إجراءات ملف الموظف حسب الصلاحيات الممنوحة</p>
+                </div>
+
+                <div class="z360-actions">
+                    @if (Model.CanEditEmployee)
+                    {
+                        <a asp-page="./Edit"
+                           asp-route-id="@employee.Id"
+                           class="z360-action z360-action-primary">
+                            تعديل البيانات
+                        </a>
+                    }
+
+                    @if (Model.CanChangeAssignment)
+                    {
+                        <a asp-page="./Edit"
+                           asp-route-id="@employee.Id"
+                           class="z360-action">
+                            تغيير التعيين
+                        </a>
+                    }
+
+                    @if (Model.CanOpenEmployeeDocuments)
+                    {
+                        <a asp-page="/EmployeeDocuments/Index"
+                           asp-route-employeeId="@employee.Id"
+                           class="z360-action">
+                            إضافة مستند
+                        </a>
+                    }
+                    else if (Model.CanUploadDocument)
+                    {
+                        <a href="#profile-files" class="z360-action">إضافة مستند</a>
+                    }
+
+                    @if (employee.IsActive && Model.CanEndService)
+                    {
+                        <a asp-page="./EndService"
+                           asp-route-id="@employee.Id"
+                           class="z360-action z360-action-danger">
+                            إنهاء الخدمة
+                        </a>
+                    }
+                    else if (!employee.IsActive && Model.CanRehire)
+                    {
+                        <button type="button"
+                                class="z360-action z360-action-success"
+                                data-nxr-reassign-open>
+                            إعادة تعيين
+                        </button>
+                    }
+
+                    @if (Model.CanViewDirectory)
+                    {
+                        <a asp-page="./Index" class="z360-action">رجوع للقائمة</a>
+                    }
+                </div>
+            </section>
+
+            @if (!employee.IsActive && Model.CanRehire)
+            {
+                <div class="z360-modal"
+                     data-nxr-reassign-modal
+                     hidden>
+                    <div class="z360-modal-dialog"
+                         role="dialog"
+                         aria-modal="true"
+                         aria-labelledby="z360-reassign-title">
+                        <div class="z360-modal-head">
+                            <div>
+                                <strong id="z360-reassign-title">إعادة تعيين الموظف</strong>
+                                <span>راجع البيانات السابقة وحدد موقع العمل الجديد قبل الحفظ.</span>
+                            </div>
+                            <button type="button"
+                                    class="z360-modal-close"
+                                    data-nxr-reassign-close
+                                    aria-label="إغلاق">&times;</button>
+                        </div>
+
+                        <form method="post"
+                              asp-page-handler="ReassignFromModalV2"
+                              asp-route-id="@employee.Id">
+                            <div class="z360-modal-body">
+                                <section class="z360-modal-section">
+                                    <h4>البيانات السابقة</h4>
+                                    <div class="z360-old-grid">
+                                        <div><span>الكود</span><strong>@Model.Display(employee.EmployeeNo)</strong></div>
+                                        <div><span>الاسم</span><strong>@Model.Display(employee.FullName)</strong></div>
+                                        <div><span>الشركة</span><strong>@Model.Display(employee.CompanyName)</strong></div>
+                                        <div><span>موقع العمل</span><strong>@Model.Display(employee.BranchName)</strong></div>
+                                        <div><span>القسم</span><strong>@Model.Display(employee.DepartmentName)</strong></div>
+                                        <div><span>المنصب</span><strong>@Model.Display(employee.Position)</strong></div>
+                                        <div><span>تاريخ التعيين</span><strong>@Model.DisplayDate(employee.HireDate)</strong></div>
+                                        <div><span>الحالة السابقة</span><strong>@Model.Display(employee.EmploymentStatus)</strong></div>
+                                    </div>
+                                </section>
+
+                                <section class="z360-modal-section">
+                                    <h4>التعديل قبل الحفظ</h4>
+                                    <div class="z360-edit-grid">
+                                        <label>
+                                            <span>الشركة</span>
+                                            <select name="ReassignCompanyId" data-nxr-reassign-company>
+                                                @foreach (var company in Model.ReassignCompanies)
+                                                {
+                                                    <option value="@company.Id"
+                                                            selected="@(company.Id == Model.CurrentReassignCompanyId ? "selected" : null)">
+                                                        @Model.Display(company.Name)
+                                                    </option>
+                                                }
+                                            </select>
+                                        </label>
+
+                                        <label>
+                                            <span>موقع العمل</span>
+                                            <select name="ReassignBranchId" data-nxr-reassign-branch>
+                                                @foreach (var branch in Model.ReassignBranches)
+                                                {
+                                                    <option value="@branch.Id"
+                                                            data-company-id="@branch.CompanyId"
+                                                            selected="@(branch.Id == Model.CurrentReassignBranchId ? "selected" : null)">
+                                                        @Model.Display(branch.Name)
+                                                    </option>
+                                                }
+                                            </select>
+                                        </label>
+
+                                        <label>
+                                            <span>القسم</span>
+                                            <select name="ReassignDepartmentId" data-nxr-reassign-department>
+                                                @foreach (var department in Model.ReassignDepartments)
+                                                {
+                                                    <option value="@department.Id"
+                                                            data-company-id="@department.CompanyId"
+                                                            selected="@(department.Id == Model.CurrentReassignDepartmentId ? "selected" : null)">
+                                                        @Model.Display(department.Name)
+                                                    </option>
+                                                }
+                                            </select>
+                                        </label>
+
+                                        <label>
+                                            <span>تاريخ المباشرة الجديد</span>
+                                            <input type="date"
+                                                   name="ReassignDate"
+                                                   value="@DateTime.Today.ToString("yyyy-MM-dd")"
+                                                   required />
+                                        </label>
+
+                                        <label>
+                                            <span>المنصب بعد إعادة التعيين</span>
+                                            <input type="text"
+                                                   name="ReassignPosition"
+                                                   value="@employee.Position" />
+                                        </label>
+
+                                        <label class="z360-wide">
+                                            <span>سبب إعادة التعيين</span>
+                                            <textarea name="ReassignReason"
+                                                      rows="3"
+                                                      required></textarea>
+                                        </label>
+
+                                        <label class="z360-wide">
+                                            <span>ملاحظات الموارد البشرية</span>
+                                            <textarea name="ReassignNotes"
+                                                      rows="3"></textarea>
+                                        </label>
+                                    </div>
+                                </section>
+
+                                <label class="z360-confirm">
+                                    <input type="checkbox"
+                                           name="ConfirmReassign"
+                                           value="true"
+                                           required />
+                                    <span>أؤكد إعادة تفعيل الموظف وحفظ الحركة في السجل الوظيفي.</span>
+                                </label>
+                            </div>
+
+                            <div class="z360-modal-actions">
+                                <button type="button"
+                                        class="z360-action"
+                                        data-nxr-reassign-close>
+                                    إلغاء
+                                </button>
+                                <button type="submit"
+                                        class="z360-action z360-action-success">
+                                    حفظ وإعادة التعيين
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            }
+
+            <section class="z360-kpis" aria-label="مؤشرات الموظف">
+                <div class="z360-kpi @healthClass">
+                    <span class="z360-kpi-label">مؤشر الصحة الوظيفية</span>
+                    <strong class="z360-kpi-value">@Model.Employee360HealthScore%</strong>
+                    <small class="z360-kpi-note">@Model.Employee360HealthText</small>
+                </div>
+                <div class="z360-kpi @readinessClass">
+                    <span class="z360-kpi-label">جاهزية الراتب</span>
+                    <strong class="z360-kpi-value">@readinessText</strong>
+                    <small class="z360-kpi-note">@Model.PayrollRiskItems ملاحظة</small>
+                </div>
+                <div class="z360-kpi">
+                    <span class="z360-kpi-label">رصيد الإجازات</span>
+                    <strong class="z360-kpi-value">—</strong>
+                    <small class="z360-kpi-note">غير مربوط حالياً</small>
+                </div>
+                <div class="z360-kpi">
+                    <span class="z360-kpi-label">العهد المسجلة</span>
+                    <strong class="z360-kpi-value">—</strong>
+                    <small class="z360-kpi-note">وحدة العهد غير مفعلة</small>
+                </div>
+            </section>
+
+            <section class="z360-summary-grid" aria-label="ملخص بيانات الموظف">
+                <article class="z360-card">
+                    <div class="z360-card-head">
+                        <h3>المعلومات الشخصية</h3>
+                        @if (Model.CanEditEmployee)
+                        {
+                            <a asp-page="./Edit"
+                               asp-route-id="@employee.Id"
+                               class="z360-card-tool"
+                               title="تعديل">✎</a>
+                        }
+                    </div>
+                    <div class="z360-fields">
+                        <div class="z360-field"><span>الرقم الوطني</span><strong>@Model.Display(employee.NationalId)</strong></div>
+                        <div class="z360-field"><span>تاريخ الميلاد</span><strong>@Model.DisplayDate(employee.BirthDate)</strong></div>
+                        <div class="z360-field"><span>العمر</span><strong>@Z360Age(employee.BirthDate)</strong></div>
+                        <div class="z360-field"><span>الحالة الاجتماعية</span><strong>@Z360MaritalStatus(employee.MaritalStatus, employee.Gender)</strong></div>
+                        <div class="z360-field"><span>الجنس</span><strong>@Z360Gender(employee.Gender)</strong></div>
+                        <div class="z360-field"><span>الجنسية</span><strong>@Model.Display(employee.Nationality)</strong></div>
+                        <div class="z360-field"><span>البلد</span><strong>@Model.Display(employee.Country)</strong></div>
+
+                        @if (personalDynamicSection != null)
+                        {
+                            foreach (var field in personalDynamicSection.Fields
+                                .Where(item => !string.IsNullOrWhiteSpace(item.FieldValue)))
+                            {
+                                <div class="z360-field">
+                                    <span>@field.FieldLabel</span>
+                                    <strong>@field.FieldValue</strong>
+                                </div>
+                            }
+                        }
+                    </div>
+                </article>
+
+                <article class="z360-card">
+                    <div class="z360-card-head">
+                        <h3>المعلومات الوظيفية</h3>
+                        @if (Model.CanViewLifecycle)
+                        {
+                            <a asp-page="./Lifecycle"
+                               asp-route-id="@employee.Id"
+                               class="z360-card-tool"
+                               title="السجل الوظيفي">↗</a>
+                        }
+                    </div>
+                    <div class="z360-fields">
+                        <div class="z360-field"><span>الشركة</span><strong>@Model.Display(employee.CompanyName)</strong></div>
+                        <div class="z360-field"><span>موقع العمل</span><strong>@Model.Display(employee.BranchName)</strong></div>
+                        <div class="z360-field"><span>القسم</span><strong>@Model.Display(employee.DepartmentName)</strong></div>
+                        <div class="z360-field"><span>المنصب</span><strong>@Model.Display(employee.Position)</strong></div>
+                        <div class="z360-field"><span>مدة العمل</span><strong>@Z360WorkDuration(employee.HireDate)</strong></div>
+                        <div class="z360-field"><span>نوع العقد</span><strong>@Model.Display(employee.ContractType)</strong></div>
+                        <div class="z360-field"><span>نهاية العقد</span><strong>@Model.DisplayDate(employee.ContractEndDate)</strong></div>
+
+                        @if (jobDynamicSection != null)
+                        {
+                            foreach (var field in jobDynamicSection.Fields
+                                .Where(item => !string.IsNullOrWhiteSpace(item.FieldValue)))
+                            {
+                                <div class="z360-field">
+                                    <span>@field.FieldLabel</span>
+                                    <strong>@field.FieldValue</strong>
+                                </div>
+                            }
+                        }
+                    </div>
+                </article>
+
+                <article class="z360-card">
+                    <div class="z360-card-head">
+                        <h3>تنبيهات ومخالفات</h3>
+                        <span class="z360-card-tool" aria-hidden="true">!</span>
+                    </div>
+                    <div class="z360-fields">
+                        <div class="z360-field">
+                            <span>الغيابات والتأخير</span>
+                            <strong class="@(Model.AttendanceExceptionsCount > 0 ? "z360-value-danger" : "")">
+                                @Model.AttendanceExceptionsCount
+                            </strong>
+                        </div>
+                        <div class="z360-field">
+                            <span>بصمات ناقصة</span>
+                            <strong class="@(Model.MissingCheckoutCount > 0 ? "z360-value-warning" : "")">
+                                @Model.MissingCheckoutCount
+                            </strong>
+                        </div>
+                        <div class="z360-field">
+                            <span>طلبات معلقة</span>
+                            <strong class="@(Model.PendingRequests > 0 ? "z360-value-warning" : "")">
+                                @Model.PendingRequests
+                            </strong>
+                        </div>
+                        <div class="z360-field">
+                            <span>مستندات منتهية</span>
+                            <strong class="@(Model.ExpiredDocumentsCount > 0 ? "z360-value-danger" : "")">
+                                @Model.ExpiredDocumentsCount
+                            </strong>
+                        </div>
+                        <div class="z360-field">
+                            <span>مستندات قرب الانتهاء</span>
+                            <strong class="@(Model.ExpiringDocumentsCount > 0 ? "z360-value-warning" : "")">
+                                @Model.ExpiringDocumentsCount
+                            </strong>
+                        </div>
+                        <div class="z360-field">
+                            <span>حالة الملف</span>
+                            <strong class="@(hasRequirements ? "z360-value-warning" : "z360-value-success")">
+                                @(hasRequirements ? "يحتاج متابعة" : "مكتمل حالياً")
+                            </strong>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="z360-card">
+                    <div class="z360-card-head">
+                        <h3>المعلومات المالية</h3>
+                        <span class="z360-card-tool" title="بيانات حساسة">◎</span>
+                    </div>
+                    <div class="z360-fields">
+                        <div class="z360-field"><span>الراتب الأساسي</span><strong class="z360-financial-mask">مخفي حسب الصلاحية</strong></div>
+                        <div class="z360-field"><span>الراتب الكلي</span><strong class="z360-financial-mask">مخفي حسب الصلاحية</strong></div>
+                        <div class="z360-field"><span>العملة</span><strong>غير مربوطة حالياً</strong></div>
+                        <div class="z360-field"><span>طريقة الدفع</span><strong>غير مربوطة حالياً</strong></div>
+                        <div class="z360-field"><span>القروض والسلف</span><strong>غير مربوطة حالياً</strong></div>
+                        <div class="z360-field"><span>جاهزية الراتب</span><strong>@readinessText</strong></div>
+                    </div>
+                </article>
+            </section>
+
+            @if (additionalDynamicSections.Count > 0)
+            {
+                <section class="z360-module-grid" aria-label="معلومات إضافية">
+                    @foreach (var profileSection in additionalDynamicSections)
+                    {
+                        <article class="z360-module">
+                            <div class="z360-module-head">
+                                <div>
+                                    <h3>@profileSection.Label</h3>
+                                    <p>بيانات إضافية مرتبطة بملف الموظف.</p>
+                                </div>
+                            </div>
+                            <div class="z360-fields">
+                                @foreach (var field in profileSection.Fields
+                                    .Where(item => !string.IsNullOrWhiteSpace(item.FieldValue)))
+                                {
+                                    <div class="z360-field">
+                                        <span>@field.FieldLabel</span>
+                                        <strong>@field.FieldValue</strong>
+                                    </div>
+                                }
+                            </div>
+                        </article>
+                    }
+                </section>
+            }
+
+            @if (hasRequirements)
+            {
+                <section class="z360-requirements">
+                    <div class="z360-section-head">
+                        <div>
+                            <h3>متطلبات الموظف</h3>
+                            <p>الملاحظات التي تحتاج متابعة قبل اعتماد الملف أو إغلاق الراتب.</p>
+                        </div>
+                        <span class="z360-status-pill">توجد متطلبات تحتاج متابعة</span>
+                    </div>
+
+                    <div class="z360-requirement-grid">
+                        @if (!documentHasId)
+                        {
+                            <div class="z360-requirement z360-requirement-danger">
+                                <strong>هوية / بطاقة وطنية مفقودة</strong>
+                                <span>هذا المستند مطلوب لكل موظف.</span>
+                            </div>
+                        }
+                        @if (!documentHasContract)
+                        {
+                            <div class="z360-requirement z360-requirement-danger">
+                                <strong>عقد العمل مفقود</strong>
+                                <span>العقد مطلوب لاكتمال ملف الموظف.</span>
+                            </div>
+                        }
+                        @if (isExpat && !documentHasPassport)
+                        {
+                            <div class="z360-requirement z360-requirement-danger">
+                                <strong>جواز السفر مفقود</strong>
+                                <span>مطلوب للموظفين الوافدين.</span>
+                            </div>
+                        }
+                        @if (isExpat && !documentHasVisa)
+                        {
+                            <div class="z360-requirement z360-requirement-danger">
+                                <strong>الإقامة / الفيزا مفقودة</strong>
+                                <span>مطلوبة للموظفين الوافدين.</span>
+                            </div>
+                        }
+                        @if (Model.PayrollRiskItems > 0)
+                        {
+                            <div class="z360-requirement">
+                                <strong>جاهزية الراتب</strong>
+                                <span>يوجد @Model.PayrollRiskItems ملاحظة تحتاج مراجعة.</span>
+                            </div>
+                        }
+                        @if (Model.AttendanceExceptionsCount > 0)
+                        {
+                            <div class="z360-requirement">
+                                <strong>استثناءات الحضور</strong>
+                                <span>يوجد @Model.AttendanceExceptionsCount حالة تحتاج تدقيق.</span>
+                            </div>
+                        }
+                        @if (Model.PendingRequests > 0)
+                        {
+                            <div class="z360-requirement">
+                                <strong>طلبات معلقة</strong>
+                                <span>يوجد @Model.PendingRequests طلب بانتظار الإجراء.</span>
+                            </div>
+                        }
+                        @if (Model.ExpiredDocumentsCount > 0)
+                        {
+                            <div class="z360-requirement z360-requirement-danger">
+                                <strong>مستندات منتهية</strong>
+                                <span>يوجد @Model.ExpiredDocumentsCount مستند منتهي.</span>
+                            </div>
+                        }
+                        @if (Model.ExpiringDocumentsCount > 0)
+                        {
+                            <div class="z360-requirement">
+                                <strong>مستندات قرب الانتهاء</strong>
+                                <span>يوجد @Model.ExpiringDocumentsCount مستند يحتاج متابعة.</span>
+                            </div>
+                        }
+                        @if (contractNeedsReview)
+                        {
+                            <div class="z360-requirement">
+                                <strong>العقد يحتاج متابعة</strong>
+                                <span>نهاية العقد: @Model.DisplayDate(employee.ContractEndDate)</span>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+
+            <section class="z360-details">
+                <nav class="z360-detail-nav" aria-label="أقسام ملف الموظف">
+                    <a href="#attendance">الحضور</a>
+                    <a href="#requests">الطلبات</a>
+                    <a href="#documents">المستندات</a>
+                    <a href="#profile-files">ملفات الموظف</a>
+                    <a href="#shifts">الشفتات</a>
+                    @if (Model.CanViewHistory)
+                    {
+                        <a href="#audit">سجل التعديلات</a>
+                    }
+                </nav>
+
+                <div class="z360-module-grid">
+                    <article id="attendance" class="z360-module z360-module-wide">
+                        <div class="z360-module-head">
+                            <div>
+                                <h3>الحضور والانصراف</h3>
+                                <p>السجلات والاستثناءات ضمن الفترة المحددة.</p>
+                            </div>
+                        </div>
+
+                        <form method="get" class="z360-filter">
+                            <input type="hidden" name="Id" value="@employee.Id" />
+                            <label>
+                                <span>من تاريخ</span>
+                                <input type="date"
+                                       name="FromDate"
+                                       value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" />
+                            </label>
+                            <label>
+                                <span>إلى تاريخ</span>
+                                <input type="date"
+                                       name="ToDate"
+                                       value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" />
+                            </label>
+                            <button type="submit" class="z360-action z360-action-primary">تحديث الفترة</button>
+                            <a asp-page="./Profile"
+                               asp-route-id="@employee.Id"
+                               class="z360-action">آخر 30 يوم</a>
+                        </form>
+
+                        <div class="z360-mini-kpis">
+                            <div class="z360-mini-kpi"><span>السجلات</span><strong>@Model.AttendanceCount</strong></div>
+                            <div class="z360-mini-kpi"><span>الحضور</span><strong>@Model.PresentCount</strong></div>
+                            <div class="z360-mini-kpi"><span>التأخير</span><strong>@Model.LateCount</strong></div>
+                            <div class="z360-mini-kpi"><span>الغياب</span><strong>@Model.AbsentCount</strong></div>
+                            <div class="z360-mini-kpi"><span>بصمات ناقصة</span><strong>@Model.MissingCheckoutCount</strong></div>
+                            <div class="z360-mini-kpi"><span>ساعات العمل</span><strong>@Model.TotalWorkingHours</strong></div>
+                        </div>
+
+                        <div class="z360-table-wrap">
+                            <table class="z360-table">
+                                <thead>
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>الدخول</th>
+                                        <th>الخروج</th>
+                                        <th>الجهاز</th>
+                                        <th>الحالة</th>
+                                        <th>الملاحظات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (Model.AttendanceRows.Any())
+                                    {
+                                        foreach (var row in Model.AttendanceRows.Take(15))
+                                        {
+                                            <tr>
+                                                <td>@Model.DisplayDate(row.AttendanceDate)</td>
+                                                <td>@Model.DisplayTime(row.CheckIn)</td>
+                                                <td>@Model.DisplayTime(row.CheckOut)</td>
+                                                <td>@Model.Display(row.DeviceName)</td>
+                                                <td>
+                                                    <span class="z360-badge @Z360AttendanceClass(row.Status)">
+                                                        @Model.StatusText(row.Status)
+                                                    </span>
+                                                </td>
+                                                <td>@Model.Display(row.Notes)</td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="6">
+                                                <div class="z360-empty">لا توجد سجلات حضور ضمن هذه الفترة.</div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+
+                    <article id="requests" class="z360-module">
+                        <div class="z360-module-head">
+                            <div>
+                                <h3>الطلبات</h3>
+                                <p>آخر طلبات الموظف والخدمة الذاتية.</p>
+                            </div>
+                            <span class="z360-badge z360-badge-warn">@Model.PendingRequests معلق</span>
+                        </div>
+
+                        @if (Model.RequestRows.Any())
+                        {
+                            <div class="z360-list">
+                                @foreach (var row in Model.RequestRows.Take(8))
+                                {
+                                    <div class="z360-list-row">
+                                        <div class="z360-list-main">
+                                            <strong>@Model.Display(row.RequestType)</strong>
+                                            <span>@Model.DisplayDate(row.RequestDate) · @Model.Display(row.CurrentStep)</span>
+                                        </div>
+                                        <span class="z360-badge @Z360RequestClass(row.Status)">
+                                            @Model.RequestStatusText(row.Status)
+                                        </span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="z360-empty">لا توجد طلبات محفوظة.</div>
+                        }
+                    </article>
+
+                    <article id="documents" class="z360-module">
+                        <div class="z360-module-head">
+                            <div>
+                                <h3>المستندات</h3>
+                                <p>آخر المستندات الرسمية المرتبطة بالموظف.</p>
+                            </div>
+                            @if (Model.CanOpenEmployeeDocuments)
+                            {
+                                <a asp-page="/EmployeeDocuments/Index"
+                                   asp-route-employeeId="@employee.Id"
+                                   class="z360-action">فتح المركز</a>
                             }
                         </div>
-                    }
-                }
-                else
-                {
-                    <div class="nxr-profile-pro-empty">لا توجد مستندات محفوظة لهذا الموظف.</div>
-                }
-                </div>
-            </div>
-        </section>
 
-        <section class="nxr-profile-pro-three-col nxr-kayan-future-modules">
-            <div id="assets" class="nxr-card nxr-profile-pro-panel">
-                <div class="nxr-profile-pro-panel-title with-action">
-                    <div>
-                        <h3>العهد</h3>
-                        <p>الأجهزة والبطاقات والمعدات المسلّمة للموظف.</p>
-                    </div>
-                    <button type="button" class="nxr-mini-link disabled">قريباً</button>
-                </div>
-                <div class="nxr-kayan-coming-soon">
-                    <strong>مركز العهد</strong>
-                    <span>لابتوب، موبايل، سيم كارد، زي عمل، بطاقة دخول، أو أي عهدة أخرى.</span>
-                </div>
-            </div>
+                        @if (Model.DocumentRows.Any())
+                        {
+                            <div class="z360-list">
+                                @foreach (var row in Model.DocumentRows.Take(8))
+                                {
+                                    var documentClass =
+                                        !row.ExpiryDate.HasValue ? string.Empty :
+                                        row.ExpiryDate.Value < today ? "z360-badge-danger" :
+                                        row.ExpiryDate.Value <= today.AddDays(30) ? "z360-badge-warn" :
+                                        "z360-badge-ok";
 
-            <div id="discipline" class="nxr-card nxr-profile-pro-panel">
-                <div class="nxr-profile-pro-panel-title with-action">
-                    <div>
-                        <h3>المخالفات</h3>
-                        <p>المخالفات والإجراءات التأديبية حسب سياسة الشركة.</p>
-                    </div>
-                    <button type="button" class="nxr-mini-link disabled">قريباً</button>
-                </div>
-                <div class="nxr-kayan-coming-soon">
-                    <strong>المخالفات والعقوبات</strong>
-                    <span>لفت نظر، إنذار، إنذار بالفصل، عقوبة، أو إيقاف تكليف.</span>
-                </div>
-            </div>
-
-            <div id="letters" class="nxr-card nxr-profile-pro-panel">
-                <div class="nxr-profile-pro-panel-title with-action">
-                    <div>
-                        <h3>كتب HR</h3>
-                        <p>قوالب الكتب الرسمية المرتبطة بملف الموظف.</p>
-                    </div>
-                    <button type="button" class="nxr-mini-link disabled">قريباً</button>
-                </div>
-                <div class="nxr-kayan-coming-soon">
-                    <strong>رسائل وقوالب HR</strong>
-                    <span>مباشرة، شكر، إنذار، عدم تجديد عقد، إنهاء خدمة، أو طلب صرف.</span>
-                </div>
-            </div>
-        </section>
-
-        <section class="nxr-profile-pro-two-col">
-            <div id="shifts" class="nxr-card nxr-profile-pro-panel">
-                <div class="nxr-profile-pro-panel-title">
-                    <h3>الشفتات</h3>
-                    <p>الشفتات الحالية والسابقة للموظف.</p>
-                </div>
-
-                <div class="nxr-profile-pro-list">
-                @if (Model.ShiftRows.Any())
-                {
-                    foreach (var row in Model.ShiftRows.Take(8))
-                    {
-                        <div class="nxr-profile-pro-list-item">
-                            <div>
-                                <strong>@Model.Display(row.Name)</strong>
-                                <span>@row.StartTime - @row.EndTime · @Model.Display(row.WorkingHours)</span>
-                                <small>@Model.DisplayDate(row.EffectiveFrom) إلى @Model.DisplayDate(row.EffectiveTo)</small>
+                                    <div class="z360-list-row">
+                                        <div class="z360-list-main">
+                                            <strong>@Model.Display(row.DocumentType)</strong>
+                                            <span>@Model.Display(row.FileName)</span>
+                                            <small>@(row.ExpiryDate.HasValue ? $"ينتهي: {row.ExpiryDate:yyyy-MM-dd}" : "بدون تاريخ انتهاء")</small>
+                                        </div>
+                                        <div class="z360-file-actions">
+                                            <span class="z360-badge @documentClass">
+                                                @(row.ExpiryDate.HasValue ? Model.DisplayDate(row.ExpiryDate) : "مفتوح")
+                                            </span>
+                                            @if (!string.IsNullOrWhiteSpace(row.StoredPath))
+                                            {
+                                                <a href="@row.StoredPath" target="_blank">فتح</a>
+                                            }
+                                        </div>
+                                    </div>
+                                }
                             </div>
-                            <span class="nxr-profile-pro-badge @(row.IsCurrent ? "ok" : "muted")">@(row.IsCurrent ? "حالي" : "سابق")</span>
-                        </div>
-                    }
-                }
-                else
-                {
-                    <div class="nxr-profile-pro-empty">لا توجد شفتات مرتبطة.</div>
-                }
-                </div>
-            </div>
+                        }
+                        else
+                        {
+                            <div class="z360-empty">لا توجد مستندات محفوظة لهذا الموظف.</div>
+                        }
+                    </article>
 
-            <div id="audit" class="nxr-card nxr-profile-pro-panel">
-                <div class="nxr-profile-pro-panel-title">
-                    <h3>سجل التعديلات</h3>
-                    <p>آخر الحركات المسجلة على ملف الموظف.</p>
-                </div>
-
-                <div class="nxr-profile-pro-list">
-                @if (Model.AuditRows.Any())
-                {
-                    foreach (var row in Model.AuditRows.Take(8))
-                    {
-                        <div class="nxr-profile-pro-list-item">
+                    <article id="profile-files" class="z360-module z360-module-wide">
+                        <div class="z360-module-head">
                             <div>
-                                <strong>@Model.Display(row.Action)</strong>
-                                <span>@Model.Display(row.UserName) · @Model.Display(row.IpAddress)</span>
+                                <h3>ملفات الموظف</h3>
+                                <p>الخبرات والشهادات والملفات الطبية والتدريب والتعليم.</p>
                             </div>
-                            <small>@Model.DisplayDateTime(row.CreatedAt)</small>
                         </div>
+
+                        <div class="z360-files-grid">
+                            @foreach (var fileCard in profileFileCards)
+                            {
+                                var cardFiles = Model.ProfileFilesByCategory(fileCard.Category);
+                                var inputId = $"z360Upload_{fileCard.Category}_{employee.Id}";
+
+                                <section class="z360-file-card">
+                                    <div class="z360-file-card-head">
+                                        <h4>@fileCard.Title</h4>
+                                        @if (Model.CanUploadDocument)
+                                        {
+                                            <label for="@inputId"
+                                                   class="z360-upload-label"
+                                                   title="رفع ملف">+</label>
+                                        }
+                                    </div>
+
+                                    @if (Model.CanUploadDocument)
+                                    {
+                                        <form method="post"
+                                              enctype="multipart/form-data"
+                                              asp-page-handler="UploadProfileAreaFile"
+                                              asp-route-id="@employee.Id">
+                                            <input type="hidden"
+                                                   name="ProfileAreaCategory"
+                                                   value="@fileCard.Category" />
+                                            <input id="@inputId"
+                                                   class="z360-hidden-input"
+                                                   type="file"
+                                                   name="ProfileAreaFile"
+                                                   accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx"
+                                                   onchange="this.form.submit()" />
+                                        </form>
+                                    }
+
+                                    @if (cardFiles.Any())
+                                    {
+                                        <div class="z360-file-items">
+                                            @foreach (var file in cardFiles.Take(5))
+                                            {
+                                                <div class="z360-file-item">
+                                                    <div class="z360-file-item-main">
+                                                        <strong>@Model.Display(file.FileName)</strong>
+                                                        <span>@(file.UploadedAt.HasValue ? file.UploadedAt.Value.ToString("yyyy-MM-dd HH:mm") : "-")</span>
+                                                    </div>
+                                                    <div class="z360-file-actions">
+                                                        <a href="@file.StoredPath" target="_blank">فتح</a>
+                                                        @if (Model.CanDeleteDocument)
+                                                        {
+                                                            <form method="post"
+                                                                  asp-page-handler="DeleteProfileAreaFile"
+                                                                  asp-route-id="@employee.Id"
+                                                                  asp-route-fileId="@file.Id"
+                                                                  onsubmit="return confirm('هل تريد حذف الملف؟');">
+                                                                <button type="submit">حذف</button>
+                                                            </form>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="z360-empty">لا توجد ملفات.</div>
+                                    }
+                                </section>
+                            }
+                        </div>
+                    </article>
+
+                    <article id="shifts" class="z360-module">
+                        <div class="z360-module-head">
+                            <div>
+                                <h3>الشفتات</h3>
+                                <p>الشفتات الحالية والسابقة.</p>
+                            </div>
+                        </div>
+
+                        @if (Model.ShiftRows.Any())
+                        {
+                            <div class="z360-list">
+                                @foreach (var row in Model.ShiftRows.Take(8))
+                                {
+                                    <div class="z360-list-row">
+                                        <div class="z360-list-main">
+                                            <strong>@Model.Display(row.Name)</strong>
+                                            <span>@row.StartTime - @row.EndTime · @Model.Display(row.WorkingHours)</span>
+                                            <small>@Model.DisplayDate(row.EffectiveFrom) إلى @Model.DisplayDate(row.EffectiveTo)</small>
+                                        </div>
+                                        <span class="z360-badge @(row.IsCurrent ? "z360-badge-ok" : "")">
+                                            @(row.IsCurrent ? "حالي" : "سابق")
+                                        </span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="z360-empty">لا توجد شفتات مرتبطة.</div>
+                        }
+                    </article>
+
+                    @if (Model.CanViewHistory)
+                    {
+                        <article id="audit" class="z360-module">
+                            <div class="z360-module-head">
+                                <div>
+                                    <h3>سجل التعديلات</h3>
+                                    <p>آخر الحركات المسجلة على ملف الموظف.</p>
+                                </div>
+                            </div>
+
+                            @if (Model.AuditRows.Any())
+                            {
+                                <div class="z360-list">
+                                    @foreach (var row in Model.AuditRows.Take(8))
+                                    {
+                                        <div class="z360-list-row">
+                                            <div class="z360-list-main">
+                                                <strong>@Model.Display(row.Action)</strong>
+                                                <span>@Model.Display(row.UserName) · @Model.Display(row.IpAddress)</span>
+                                            </div>
+                                            <small>@Model.DisplayDateTime(row.CreatedAt)</small>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="z360-empty">لا توجد تعديلات مسجلة.</div>
+                            }
+                        </article>
                     }
-                }
-                else
-                {
-                    <div class="nxr-profile-pro-empty">لا توجد تعديلات مسجلة.</div>
-                }
                 </div>
-            </div>
-        </section>
+            </section>
+        </div>
     }
 </div>
 
 @section Scripts {
-    <script src="~/js/nexora-profile-kayan-pages.js" asp-append-version="true"></script>
-    <script src="~/js/nexora-employee-profile-kayan-style.js" asp-append-version="true"></script>
-    <script src="~/js/nexora-profile-remove-extra-links-tabs.js" asp-append-version="true"></script>
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
-
-    <script src="~/js/nexora-profile-reassign-modal.js" asp-append-version="true"></script>}
-
-<link rel="stylesheet" href="~/css/nexora-profile-remove-extra-links-tabs.css" asp-append-version="true" />
+    <script src="~/js/nexora-profile-reassign-modal.js" asp-append-version="true"></script>
+}
