@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -684,111 +685,69 @@ ORDER BY Id;
 
     private async Task ApplyEmployeeFieldAsync(int employeeId, string fieldKey, string value)
     {
+        var employee = await _dbContext.Employees
+            .FirstOrDefaultAsync(x => x.Id == employeeId);
+
+        if (employee == null)
+        {
+            return;
+        }
+
         switch (fieldKey)
         {
             case "FullName":
-                await UpdateEmployeeStringAsync(employeeId, "FullName", value);
+                employee.FullName = value ?? string.Empty;
                 break;
             case "EmployeeNo":
-                await UpdateEmployeeStringAsync(employeeId, "EmployeeNo", value);
+                employee.EmployeeNo = value ?? string.Empty;
                 break;
             case "NationalId":
-                await UpdateEmployeeStringAsync(employeeId, "NationalId", value);
+                employee.NationalId = value ?? string.Empty;
                 break;
             case "Phone":
-                await UpdateEmployeeStringAsync(employeeId, "Phone", value);
+                employee.Phone = value ?? string.Empty;
                 break;
             case "Email":
-                await UpdateEmployeeStringAsync(employeeId, "Email", value);
+                employee.Email = value ?? string.Empty;
                 break;
             case "Position":
-                await UpdateEmployeeStringAsync(employeeId, "Position", value);
+                employee.Position = value ?? string.Empty;
                 break;
             case "Nationality": // NEXORA_FIX14G_APPLY_NATIONALITY
-                await UpdateEmployeeStringAsync(employeeId, "Nationality", value);
+                employee.Nationality = value ?? string.Empty;
                 break;
             case "DirectManagerId":
-                await HrmsDatabase.ExecuteAsync(
-                    _dbContext,
-                    "UPDATE Employees SET DirectManagerId = NULLIF(@Value, 0) WHERE Id = @EmployeeId;",
-                    command =>
-                    {
-                        HrmsDatabase.AddParameter(command, "@Value", int.TryParse(value, out var managerId) ? managerId : 0);
-                        HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-                    });
+                employee.DirectManagerId =
+                    int.TryParse(value, out var managerId) && managerId > 0
+                        ? managerId
+                        : null;
                 break;
             case "DepartmentId":
-                await HrmsDatabase.ExecuteAsync(
-                    _dbContext,
-                    "UPDATE Employees SET DepartmentId = @Value WHERE Id = @EmployeeId;",
-                    command =>
-                    {
-                        HrmsDatabase.AddParameter(command, "@Value", int.TryParse(value, out var id) ? id : 0);
-                        HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-                    });
+                if (int.TryParse(value, out var departmentId) && departmentId > 0)
+                {
+                    employee.DepartmentId = departmentId;
+                }
                 break;
             case "HireDate":
-                await UpdateEmployeeDateAsync(employeeId, "HireDate", value);
+                if (DateTime.TryParse(value, out var hireDate))
+                {
+                    employee.HireDate = DateOnly.FromDateTime(hireDate);
+                }
                 break;
             case "BirthDate":
-                await UpdateEmployeeDateAsync(employeeId, "BirthDate", value);
+                employee.BirthDate = DateTime.TryParse(value, out var birthDate)
+                    ? DateOnly.FromDateTime(birthDate)
+                    : null;
                 break;
             case "IsActive":
-                await HrmsDatabase.ExecuteAsync(
-                    _dbContext,
-                    "UPDATE Employees SET IsActive = @Value WHERE Id = @EmployeeId;",
-                    command =>
-                    {
-                        HrmsDatabase.AddParameter(command, "@Value", value.Equals("true", StringComparison.OrdinalIgnoreCase));
-                        HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-                    });
+                employee.IsActive = value?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
                 break;
+            default:
+                return;
         }
-    }
 
-    private async Task UpdateEmployeeStringAsync(int employeeId, string column, string value)
-    {
-        var sql = column switch
-        {
-            "FullName" => "UPDATE Employees SET FullName = @Value WHERE Id = @EmployeeId;",
-            "EmployeeNo" => "UPDATE Employees SET EmployeeNo = @Value WHERE Id = @EmployeeId;",
-            "NationalId" => "UPDATE Employees SET NationalId = @Value WHERE Id = @EmployeeId;",
-            "Phone" => "UPDATE Employees SET Phone = @Value WHERE Id = @EmployeeId;",
-            "Email" => "UPDATE Employees SET Email = @Value WHERE Id = @EmployeeId;",
-            "Position" => "UPDATE Employees SET Position = @Value WHERE Id = @EmployeeId;",
-            "Nationality" => "UPDATE Employees SET Nationality = @Value WHERE Id = @EmployeeId;",
-            _ => throw new InvalidOperationException("Unsupported employee field.")
-        };
-
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            sql,
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@Value", value ?? string.Empty);
-                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-            });
-    }
-
-    private async Task UpdateEmployeeDateAsync(int employeeId, string column, string value)
-    {
-        var sql = column switch
-        {
-            "HireDate" => "UPDATE Employees SET HireDate = @Value WHERE Id = @EmployeeId;",
-            "BirthDate" => "UPDATE Employees SET BirthDate = @Value WHERE Id = @EmployeeId;",
-            _ => throw new InvalidOperationException("Unsupported employee date field.")
-        };
-
-        DateTime? parsed = DateTime.TryParse(value, out var date) ? date : null;
-
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            sql,
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@Value", parsed);
-                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-            });
+        employee.UpdatedAt = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync();
     }
 
     private async Task ApplyCompensationFieldAsync(int employeeId, string fieldKey, string value)

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -109,83 +110,88 @@ SELECT @PositionCount;
             }
         }
 
-        var duplicate = await HrmsDatabase.ScalarAsync<int>(
-            _dbContext,
-            "SELECT COUNT(*) FROM Employees WHERE EmployeeNo = @EmployeeNo AND Id <> @Id",
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@EmployeeNo", Input.EmployeeNo.Trim());
-                HrmsDatabase.AddParameter(command, "@Id", Input.Id);
-            });
+        var duplicate = await _dbContext.Employees
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.EmployeeNo == Input.EmployeeNo.Trim() &&
+                x.Id != Input.Id);
 
-        if (duplicate > 0)
+        if (duplicate)
         {
             ErrorMessage = "رقم الموظف مستخدم لموظف آخر.";
             return RedirectToPage(new { EmployeeNo = Input.OldEmployeeNo });
         }
 
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            """
-UPDATE Employees
-SET
-    EmployeeNo = @EmployeeNo,
-    FullName = @FullName,
-    NationalId = @NationalId,
-    Phone = @Phone,
-    Email = @Email,
-    HireDate = @HireDate,
-    BirthDate = @BirthDate,
-    IsActive = @IsActive,
-    DepartmentId = @DepartmentId,
-    Position = @Position,
-    Gender = @Gender,
-    Nationality = @Nationality,
-    Country = @Country,
-    ContractType = @ContractType,
-    ContractEndDate = @ContractEndDate,
-    EmploymentStatus = @EmploymentStatus,
-    DirectManagerId = @DirectManagerId
-WHERE Id = @Id;
+        var employee = await _dbContext.Employees
+            .FirstOrDefaultAsync(x => x.Id == Input.Id);
 
+        if (employee == null)
+        {
+            ErrorMessage = "لم يتم العثور على الموظف.";
+            return RedirectToPage("/Employees/Index");
+        }
+
+        // المدير المباشر لا يكون الموظف نفسه.
+        if (Input.DirectManagerId.HasValue && Input.DirectManagerId.Value == Input.Id)
+        {
+            ErrorMessage = "لا يمكن تعيين الموظف مديراً مباشراً لنفسه.";
+            return RedirectToPage(new { EmployeeNo = Input.OldEmployeeNo });
+        }
+
+        employee.EmployeeNo = Input.EmployeeNo.Trim();
+        employee.FullName = Input.FullName.Trim();
+        employee.NationalId = Input.NationalId;
+        employee.Phone = Input.Phone;
+        employee.Email = Input.Email;
+        if (Input.HireDate.HasValue)
+        {
+            employee.HireDate = Input.HireDate.Value;
+        }
+        employee.BirthDate = Input.BirthDate;
+        employee.IsActive = Input.IsActive;
+        employee.DepartmentId = Input.DepartmentId;
+        employee.Position = string.IsNullOrWhiteSpace(Input.Position) ? null : Input.Position.Trim();
+        employee.Gender = Input.Gender;
+        employee.Nationality = Input.Nationality;
+        employee.Country = Input.Country;
+        employee.ContractType = Input.ContractType;
+        employee.ContractEndDate = Input.ContractEndDate;
+        employee.EmploymentStatus = Input.EmploymentStatus;
+        employee.DirectManagerId = Input.DirectManagerId;
+        employee.UpdatedAt = DateTime.UtcNow;
+
+        await using (var transaction = await _dbContext.Database.BeginTransactionAsync())
+        {
+            await _dbContext.SaveChangesAsync();
+
+            await HrmsDatabase.ExecuteAsync(
+                _dbContext,
+                """
 INSERT INTO AuditLogs (EntityName, EntityId, Action, OldValues, NewValues, UserName, IpAddress)
-VALUES ('Employee', CAST(@Id AS nvarchar(80)), 'Update Full Employee File', @OldValues, @NewValues, 'HR', @IpAddress);
+VALUES ('Employee', CAST(@Id AS nvarchar(80)), 'Update Full Employee File', @OldValues, @NewValues, @UserName, @IpAddress);
 """,
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@Id", Input.Id);
-                HrmsDatabase.AddParameter(command, "@EmployeeNo", Input.EmployeeNo.Trim());
-                HrmsDatabase.AddParameter(command, "@FullName", Input.FullName.Trim());
-                HrmsDatabase.AddParameter(command, "@NationalId", Input.NationalId);
-                HrmsDatabase.AddParameter(command, "@Phone", Input.Phone);
-                HrmsDatabase.AddParameter(command, "@Email", Input.Email);
-                HrmsDatabase.AddParameter(command, "@HireDate", Input.HireDate);
-                HrmsDatabase.AddParameter(command, "@BirthDate", Input.BirthDate);
-                HrmsDatabase.AddParameter(command, "@IsActive", Input.IsActive);
-                HrmsDatabase.AddParameter(command, "@DepartmentId", Input.DepartmentId);
-                HrmsDatabase.AddParameter(command, "@Position", string.IsNullOrWhiteSpace(Input.Position) ? null : Input.Position.Trim());
-                HrmsDatabase.AddParameter(command, "@Gender", Input.Gender);
-                HrmsDatabase.AddParameter(command, "@Nationality", Input.Nationality);
-                HrmsDatabase.AddParameter(command, "@Country", Input.Country);
-                HrmsDatabase.AddParameter(command, "@ContractType", Input.ContractType);
-                HrmsDatabase.AddParameter(command, "@ContractEndDate", Input.ContractEndDate);
-                HrmsDatabase.AddParameter(command, "@EmploymentStatus", Input.EmploymentStatus);
-                HrmsDatabase.AddParameter(command, "@DirectManagerId", Input.DirectManagerId);
-                HrmsDatabase.AddParameter(command, "@OldValues", HrmsDatabase.JsonLine(("EmployeeNo", Input.OldEmployeeNo)));
-                HrmsDatabase.AddParameter(command, "@NewValues", HrmsDatabase.JsonLine(
-                    ("EmployeeNo", Input.EmployeeNo),
-                    ("FullName", Input.FullName),
-                    ("DepartmentId", Input.DepartmentId),
-                    ("Position", Input.Position),
-                    ("Gender", Input.Gender),
-                    ("Nationality", Input.Nationality),
-                    ("Country", Input.Country),
-                    ("ContractType", Input.ContractType),
-                    ("ContractEndDate", Input.ContractEndDate),
-                    ("EmploymentStatus", Input.EmploymentStatus),
-                    ("DirectManagerId", Input.DirectManagerId)));
-                HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
-            });
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@Id", Input.Id);
+                    HrmsDatabase.AddParameter(command, "@OldValues", HrmsDatabase.JsonLine(("EmployeeNo", Input.OldEmployeeNo)));
+                    HrmsDatabase.AddParameter(command, "@NewValues", HrmsDatabase.JsonLine(
+                        ("EmployeeNo", Input.EmployeeNo),
+                        ("FullName", Input.FullName),
+                        ("DepartmentId", Input.DepartmentId),
+                        ("Position", Input.Position),
+                        ("Gender", Input.Gender),
+                        ("Nationality", Input.Nationality),
+                        ("Country", Input.Country),
+                        ("ContractType", Input.ContractType),
+                        ("ContractEndDate", Input.ContractEndDate),
+                        ("EmploymentStatus", Input.EmploymentStatus),
+                        ("DirectManagerId", Input.DirectManagerId)));
+                    HrmsDatabase.AddParameter(command, "@UserName", User.Identity?.Name ?? "System");
+                    HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
+                });
+
+            await transaction.CommitAsync();
+        }
 
         SuccessMessage = "تم حفظ بيانات الموظف الأساسية والمتقدمة.";
         return RedirectToPage(new { EmployeeNo = Input.EmployeeNo.Trim() });
