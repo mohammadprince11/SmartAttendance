@@ -1,0 +1,140 @@
+@page
+@model SmartAttendance.Web.Pages.Engagement.IndexModel
+@{
+    ViewData["Title"] = "عمليات الموارد البشرية";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/nexora-hr-operations-page.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-announcement-studio-dynamic.css" asp-append-version="true" />
+}
+
+<section class="nx-approved-page nx-approved-page--overview" dir="rtl">
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="nx-approved-alert">@Model.StatusMessage</div>
+    }
+
+    <partial name="_EngagementNav" model="@("overview")" />
+
+    <section class="nx-ops-overview" aria-label="لوحة عمليات الموارد البشرية">
+        <section class="nx-ops-kpi-grid">
+            <article class="nx-ops-kpi cyan">
+                <span>المحتوى النشط</span>
+                <strong>@Model.ActiveEngagementItems</strong>
+                <small>@Model.PublishedAnnouncements إعلان · @Model.PublishedPolls استطلاع</small>
+            </article>
+            <article class="nx-ops-kpi gold">
+                <span>الإعلانات</span>
+                <strong>@Model.TotalAnnouncements</strong>
+                <small>@Model.PublishedAnnouncements منشور · @Model.DraftAnnouncements مسودة</small>
+            </article>
+            <article class="nx-ops-kpi violet">
+                <span>صوت الموظف</span>
+                <strong>@Model.TotalPollVotes</strong>
+                <small>@Model.TotalPolls استطلاع · إجمالي الأصوات المسجلة</small>
+            </article>
+            <article class="nx-ops-kpi rose">
+                <span>الحالات المفتوحة</span>
+                <strong>@Model.OpenEngagementCases</strong>
+                <small>@Model.TotalFeedback إجمالي الشكاوى والمقترحات</small>
+            </article>
+        </section>
+
+        <section class="nx-ops-command-grid">
+            <article class="nx-ops-command-card">
+                <header>
+                    <div>
+                        <span class="nx-ops-label">إجراءات سريعة</span>
+                        <h2>ابدأ عملية جديدة</h2>
+                    </div>
+                    <span class="nx-ops-status-dot live">مباشر</span>
+                </header>
+                <div class="nx-ops-quick-actions">
+                    <a asp-page="/Engagement/Announcements">إنشاء إعلان</a>
+                    <a asp-page="/Engagement/Polls">إنشاء استطلاع</a>
+                    <a asp-page="/Engagement/Announcements" asp-route-preset="appreciation">تكريم موظف</a>
+                    <a asp-page="/Engagement/Recognition">إطلاق حملة</a>
+                </div>
+            </article>
+
+            <article class="nx-ops-command-card nx-ops-health">
+                <header>
+                    <div>
+                        <span class="nx-ops-label">حالة المركز</span>
+                        <h2>ملخص التشغيل الحالي</h2>
+                    </div>
+                    <span class="nx-ops-health-score">@Model.ActiveEngagementItems</span>
+                </header>
+                <div class="nx-ops-health-list">
+                    <div><span>إعلانات منشورة</span><strong>@Model.PublishedAnnouncements</strong></div>
+                    <div><span>استبيانات منشورة</span><strong>@Model.PublishedPolls</strong></div>
+                    <div><span>حالات بانتظار المعالجة</span><strong>@Model.OpenEngagementCases</strong></div>
+                    <div><span>إجمالي التفاعلات المسجلة</span><strong>@Model.TotalPollVotes</strong></div>
+                </div>
+            </article>
+        </section>
+
+        <section class="nx-ops-module-grid">
+            <a class="nx-ops-module-card communication" asp-page="/Engagement/Announcements">
+                <span>01</span><strong>التواصل والإعلانات</strong><small>قوالب جاهزة، نشر مباشر، واستهداف الموظفين.</small>
+            </a>
+            <a class="nx-ops-module-card voice" asp-page="/Engagement/Polls">
+                <span>02</span><strong>صوت الموظف</strong><small>استبيانات وانتخابات ومتابعة المشاركة الفعلية.</small>
+            </a>
+            <a class="nx-ops-module-card cases" asp-page="/Engagement/Feedback">
+                <span>03</span><strong>الحالات</strong><small>الشكاوى والمقترحات والردود وحالة المعالجة.</small>
+            </a>
+            <a class="nx-ops-module-card recognition" asp-page="/Engagement/Recognition">
+                <span>04</span><strong>التقدير والحملات</strong><small>ترقيات وشكر وترحيب، وعطل وتعاميم وحملات داخلية.</small>
+            </a>
+        </section>
+
+        <section class="nx-ops-activity-grid">
+            <article class="nx-ops-activity-card">
+                <header><h2>أحدث الإعلانات</h2><a asp-page="/Engagement/Announcements">عرض الكل</a></header>
+                @if (Model.Announcements.Count == 0)
+                {
+                    <div class="nx-ops-empty">لا توجد إعلانات بعد.</div>
+                }
+                @foreach (var item in Model.Announcements.Take(4))
+                {
+                    <div class="nx-ops-activity-row">
+                        <span class="@(item.IsPublished ? "live" : "draft")">@Model.PublishText(item.IsPublished)</span>
+                        <div><strong>@item.Title</strong><small>@item.Category · @Model.DisplayDate(item.PublishDate)</small></div>
+                    </div>
+                }
+            </article>
+
+            <article class="nx-ops-activity-card">
+                <header><h2>أحدث الاستبيانات</h2><a asp-page="/Engagement/Polls">عرض الكل</a></header>
+                @if (Model.Polls.Count == 0)
+                {
+                    <div class="nx-ops-empty">لا توجد استطلاعات بعد.</div>
+                }
+                @foreach (var item in Model.Polls.Take(4))
+                {
+                    <div class="nx-ops-activity-row">
+                        <span class="@(item.IsPublished ? "live" : "draft")">@Model.PublishText(item.IsPublished)</span>
+                        <div><strong>@item.Title</strong><small>@item.VotesCount تصويت · @Model.TargetText(item)</small></div>
+                    </div>
+                }
+            </article>
+
+            <article class="nx-ops-activity-card">
+                <header><h2>أحدث الحالات</h2><a asp-page="/Engagement/Feedback">عرض الكل</a></header>
+                @if (Model.FeedbackItems.Count == 0)
+                {
+                    <div class="nx-ops-empty">لا توجد حالات بعد.</div>
+                }
+                @foreach (var item in Model.FeedbackItems.Take(4))
+                {
+                    <div class="nx-ops-activity-row">
+                        <span class="@Model.StatusClass(item.Status)">@Model.StatusText(item.Status)</span>
+                        <div><strong>@item.Title</strong><small>@item.Type · @item.EmployeeName</small></div>
+                    </div>
+                }
+            </article>
+        </section>
+    </section>
+</section>

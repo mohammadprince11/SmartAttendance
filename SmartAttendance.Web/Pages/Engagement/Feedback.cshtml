@@ -1,0 +1,59 @@
+@page
+@model SmartAttendance.Web.Pages.Engagement.FeedbackModel
+@{
+    ViewData["Title"] = "الحالات والملاحظات";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/nexora-announcement-studio-dynamic.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-hr-operations-page.css" asp-append-version="true" />
+}
+
+<section class="nx-approved-page nx-approved-page--feedback" dir="rtl">
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="nx-approved-alert">@Model.StatusMessage</div>
+    }
+
+    <partial name="_EngagementNav" model="@("feedback")" />
+
+    <section class="nx-feedback-page">
+        <section class="nx-kpis">
+            <article><span>إجمالي الوارد</span><strong>@Model.TotalFeedback</strong></article>
+            <article><span>مفتوحة</span><strong>@Model.OpenFeedback</strong></article>
+            <article><span>قيد المعالجة</span><strong>@Model.PendingFeedback</strong></article>
+            <article><span>تم الرد / مغلقة</span><strong>@Model.AnsweredFeedback</strong></article>
+        </section>
+
+        <div class="nx-feedback-list">
+            @if (Model.FeedbackItems.Count == 0)
+            {
+                <div class="nx-empty">لا توجد شكاوى أو مقترحات.</div>
+            }
+            @foreach (var item in Model.FeedbackItems)
+            {
+                <article class="nx-feedback-card">
+                    <div>
+                        <div class="nx-tags"><span class="nx-badge neutral">@item.Type</span><span class="nx-badge @Model.StatusClass(item.Status)">@Model.StatusText(item.Status)</span><span class="nx-badge draft">@item.Priority</span></div>
+                        <h3>@item.Title</h3>
+                        <p>@item.Message</p>
+                        <small>الموظف: @item.EmployeeName | الرقم: @item.EmployeeNo | التاريخ: @Model.DisplayDate(item.CreatedAt)</small>
+                        @if (!string.IsNullOrWhiteSpace(item.AdminReply))
+                        {
+                            <div class="nx-admin-reply"><strong>رد الإدارة - @item.RepliedBy</strong><span>@item.AdminReply</span></div>
+                        }
+                    </div>
+                    <div class="nx-feedback-actions">
+                        <form method="post" asp-page-handler="Reply">
+                            <input type="hidden" name="FeedbackReply.Id" value="@item.Id" />
+                            <select name="FeedbackReply.Status"><option value="Answered">تم الرد</option><option value="Pending">قيد المعالجة</option><option value="Closed">مغلقة</option></select>
+                            <textarea name="FeedbackReply.Reply" placeholder="اكتب رد الإدارة"></textarea>
+                            <button type="submit">حفظ الرد</button>
+                        </form>
+                        <form method="post" asp-page-handler="Close" asp-route-id="@item.Id"><button type="submit" class="danger">إغلاق الطلب</button></form>
+                    </div>
+                </article>
+            }
+        </div>
+    </section>
+</section>

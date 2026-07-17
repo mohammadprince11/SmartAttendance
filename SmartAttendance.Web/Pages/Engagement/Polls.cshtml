@@ -1,0 +1,319 @@
+@page
+@model SmartAttendance.Web.Pages.Engagement.PollsModel
+@{
+    ViewData["Title"] = "صوت الموظف";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/nexora-announcement-studio-dynamic.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-hr-operations-page.css" asp-append-version="true" />
+}
+
+<section class="nx-approved-page nx-approved-page--polls" dir="rtl">
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="nx-approved-alert">@Model.StatusMessage</div>
+    }
+
+    <partial name="_EngagementNav" model="@("polls")" />
+
+    <section class="nx-pulse-studio" id="nxEmployeePulseStudio">
+        <header class="nx-pulse-hero">
+            <div class="nx-pulse-title">
+                <span>EMPLOYEE PULSE STUDIO</span>
+                <h1>نبض الموظفين</h1>
+                <p>أنشئ استبيانات وقياس نبض الموظفين، انتخابات داخلية، وتحليل فوري لمستوى الرضا.</p>
+            </div>
+            <div class="nx-pulse-score">
+                <span>الأصوات المسجلة</span>
+                <strong>@Model.TotalPollVotes</strong>
+                <small>@Model.PublishedPolls استطلاع منشور حالياً</small>
+            </div>
+        </header>
+
+        <section class="nx-pulse-template-panel">
+            <div class="nx-pulse-section-title">
+                <div>
+                    <span>قوالب جاهزة</span>
+                    <h2>اختر نوع الاستبيان</h2>
+                </div>
+                <small>القالب يغيّر طريقة العرض والأسئلة المقترحة فقط. يمكنك تعديل النص والخيارات.</small>
+            </div>
+
+            <div class="nx-pulse-template-grid">
+                <label class="nx-pulse-template active" data-pulse-template="satisfaction">
+                    <input type="radio" name="PulseTemplate" value="satisfaction" checked />
+                    <img src="@Url.Content("~/brand/pulse-studio/templates/satisfaction.png")" alt="رضا الموظفين" />
+                </label>
+                <label class="nx-pulse-template" data-pulse-template="workplace">
+                    <input type="radio" name="PulseTemplate" value="workplace" />
+                    <img src="@Url.Content("~/brand/pulse-studio/templates/workplace.png")" alt="بيئة العمل" />
+                </label>
+                <label class="nx-pulse-template" data-pulse-template="supervisor">
+                    <input type="radio" name="PulseTemplate" value="supervisor" />
+                    <img src="@Url.Content("~/brand/pulse-studio/templates/supervisor.png")" alt="تقييم المشرف" />
+                </label>
+                <label class="nx-pulse-template" data-pulse-template="transport">
+                    <input type="radio" name="PulseTemplate" value="transport" />
+                    <img src="@Url.Content("~/brand/pulse-studio/templates/transport.png")" alt="النقل والسكن" />
+                </label>
+                <label class="nx-pulse-template" data-pulse-template="meals">
+                    <input type="radio" name="PulseTemplate" value="meals" />
+                    <img src="@Url.Content("~/brand/pulse-studio/templates/meals.png")" alt="الوجبات" />
+                </label>
+                <label class="nx-pulse-template" data-pulse-template="employee_month">
+                    <input type="radio" name="PulseTemplate" value="employee_month" />
+                    <img src="@Url.Content("~/brand/pulse-studio/templates/employee_month.png")" alt="موظف الشهر" />
+                </label>
+                <label class="nx-pulse-template" data-pulse-template="ideas">
+                    <input type="radio" name="PulseTemplate" value="ideas" />
+                    <img src="@Url.Content("~/brand/pulse-studio/templates/ideas.png")" alt="اقتراحات تحسين" />
+                </label>
+                <label class="nx-pulse-template" data-pulse-template="custom">
+                    <input type="radio" name="PulseTemplate" value="custom" />
+                    <img src="@Url.Content("~/brand/pulse-studio/templates/custom.png")" alt="تصميم مخصص" />
+                </label>
+            </div>
+        </section>
+
+        <section class="nx-pulse-main-grid">
+            <section class="nx-pulse-phone-panel">
+                <header class="nx-pulse-card-head">
+                    <div>
+                        <h2>معاينة الاستطلاع كما يراه الموظف</h2>
+                        <p>المعاينة تتغير مباشرة حسب العنوان والسؤال والخيارات.</p>
+                    </div>
+                    <span class="nx-pulse-pill">👁 مباشر</span>
+                </header>
+
+                <div class="nx-phone-stage">
+                    <button type="button" class="nx-pulse-arrow nx-pulse-arrow-right">‹</button>
+
+                    <article class="nx-phone-preview">
+                        <div class="nx-phone-top"></div>
+                        <div class="nx-phone-content">
+                            <span id="nxPulseStep">سؤال 1/1</span>
+                            <h3 id="nxPulseQuestion">ما مدى رضاك عن بيئة العمل في شركتنا؟</h3>
+                            <p id="nxPulseDescription">اختر التقييم الذي يعبر عن رأيك</p>
+
+                            <div class="nx-pulse-faces" id="nxPulseFaces">
+                                <button type="button"><strong>😡</strong><small>غير راض إطلاقاً</small></button>
+                                <button type="button"><strong>☹️</strong><small>غير راض</small></button>
+                                <button type="button"><strong>😐</strong><small>محايد</small></button>
+                                <button type="button"><strong>🙂</strong><small>راض</small></button>
+                                <button type="button"><strong>😀</strong><small>راض جداً</small></button>
+                            </div>
+
+                            <textarea readonly placeholder="اكتب تعليقك اختياري"></textarea>
+                            <button type="button" class="nx-phone-submit">إرسال الإجابة</button>
+                            <div class="nx-phone-lock">🔒 هذا الاستطلاع سري<br />لن تظهر أسماء في النتائج</div>
+                        </div>
+                    </article>
+
+                    <button type="button" class="nx-pulse-arrow nx-pulse-arrow-left">›</button>
+                </div>
+            </section>
+
+            <section class="nx-pulse-score-panel">
+                <header class="nx-pulse-card-head">
+                    <div>
+                        <h2>مؤشر صوت الموظف</h2>
+                        <p>المؤشرات أدناه مرتبطة بالاستطلاعات والتصويتات المسجلة فعلياً.</p>
+                    </div>
+                    <span class="nx-pulse-pill">⚡ LIVE DATA</span>
+                </header>
+
+                <div class="nx-score-body">
+                    <div class="nx-score-ring">
+                        <strong>@Model.TotalPollVotes</strong>
+                        <span>صوت مسجل</span>
+                    </div>
+                    <div class="nx-score-legend">
+                        <div><i class="good"></i><b>@Model.PublishedPolls</b><span>استطلاع منشور</span></div>
+                        <div><i class="warn"></i><b>@Model.DraftPolls</b><span>مسودة</span></div>
+                        <div><i class="bad"></i><b>@Model.TotalPolls</b><span>إجمالي الاستطلاعات</span></div>
+                    </div>
+                </div>
+
+                <div class="nx-pulse-mini-kpis">
+                    <article><strong>@Model.TotalPolls</strong><span>إجمالي الاستطلاعات</span></article>
+                    <article><strong>@Model.PublishedPolls</strong><span>منشور حالياً</span></article>
+                    <article><strong>@Model.DraftPolls</strong><span>محفوظ كمسودة</span></article>
+                    <article><strong>@Model.TotalPollVotes</strong><span>إجمالي الأصوات</span></article>
+                </div>
+            </section>
+
+            <section class="nx-pulse-create-panel">
+                <header class="nx-pulse-card-head">
+                    <div>
+                        <h2>إنشاء استطلاع / انتخاب</h2>
+                        <p>استخدم قالب جاهز أو نص مخصص.</p>
+                    </div>
+                    <span class="nx-pulse-plus">+</span>
+                </header>
+
+                <form id="nxPulseForm" method="post" asp-page-handler="Create" class="nx-pulse-form">
+                    <div class="nx-pulse-mode">
+                        <label>
+                            <input type="radio" name="PulseMode" value="template" checked />
+                            <span>باستخدام قالب جاهز</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="PulseMode" value="custom" />
+                            <span>تصميم مخصص / نص حر</span>
+                        </label>
+                    </div>
+
+                    <div class="nx-pulse-field">
+                        <label>عنوان الاستطلاع *</label>
+                        <input name="Poll.Title" data-pulse-field="title" value="استطلاع رضا الموظفين - مايو 2026" placeholder="اكتب عنوان الاستطلاع" />
+                    </div>
+
+                    <div class="nx-pulse-field">
+                        <label>السؤال *</label>
+                        <textarea name="Poll.Question" data-pulse-field="question">ما مدى رضاك عن بيئة العمل في شركتنا؟</textarea>
+                    </div>
+
+                    <div class="nx-pulse-field">
+                        <label>الخيارات *</label>
+                        <textarea name="Poll.OptionsText" data-pulse-field="options">غير راض إطلاقاً&#10;غير راض&#10;محايد&#10;راض&#10;راض جداً</textarea>
+                        <small>كل خيار بسطر مستقل. يمكن استخدامها كتقييم، اختيار، أو انتخاب.</small>
+                    </div>
+
+                    <div class="nx-pulse-form-row">
+                        <div class="nx-pulse-field">
+                            <label>نوع الاستطلاع *</label>
+                            <select name="Poll.Category" data-pulse-field="category">
+                                <option value="استطلاع" selected>استطلاع</option>
+                                <option value="انتخاب">انتخاب</option>
+                                <option value="تصويت داخلي">تصويت داخلي</option>
+                                <option value="نبض الموظفين">نبض الموظفين</option>
+                            </select>
+                        </div>
+                        <div class="nx-pulse-field">
+                            <label>نوع الخصوصية</label>
+                            <select name="PulsePrivacy" data-pulse-field="privacy">
+                                <option value="anonymous" selected>سري بدون أسماء</option>
+                                <option value="visible">ظاهر للإدارة بالأسماء</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="nx-pulse-form-row">
+                        <div class="nx-pulse-field">
+                            <label>توجيه الاستطلاع إلى *</label>
+                            <select name="Poll.TargetType">
+                                <option value="All" selected>جميع الموظفين</option>
+                                <option value="Employee">موظفون محددون</option>
+                                <option value="Department">قسم محدد</option>
+                                <option value="Branch">فرع محدد</option>
+                            </select>
+                        </div>
+                        <div class="nx-pulse-field">
+                            <label>الفئة</label>
+                            <input name="PulseAudienceLabel" value="رضا الموظفين" data-pulse-field="label" />
+                        </div>
+                    </div>
+
+                    <details class="nx-pulse-employee-picker">
+                        <summary>الموظفون المحددون <span>يفعل عند اختيار موظفون محددون</span></summary>
+                        <div class="nx-pulse-employee-grid">
+                            @foreach (var employee in Model.Employees)
+                            {
+                                <label>
+                                    <input type="checkbox" name="Poll.EmployeeIds" value="@employee.Id" />
+                                    <strong>@employee.FullName</strong>
+                                    <small>@employee.EmployeeNo</small>
+                                </label>
+                            }
+                        </div>
+                    </details>
+
+                    <div class="nx-pulse-form-row">
+                        <div class="nx-pulse-field">
+                            <label>القسم</label>
+                            <select name="Poll.DepartmentId">
+                                <option value="">اختر قسم</option>
+                                @foreach (var department in Model.Departments)
+                                {
+                                    <option value="@department.Id">@department.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="nx-pulse-field">
+                            <label>الفرع</label>
+                            <select name="Poll.BranchId">
+                                <option value="">اختر فرع</option>
+                                @foreach (var branch in Model.Branches)
+                                {
+                                    <option value="@branch.Id">@branch.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="nx-pulse-form-footer">
+                        <label class="nx-pulse-check">
+                            <input name="Poll.PublishNow" type="checkbox" value="true" checked />
+                            <input name="Poll.PublishNow" type="hidden" value="false" />
+                            <span>نشر الاستطلاع الآن</span>
+                        </label>
+                        <button type="submit">حفظ / نشر الاستطلاع</button>
+                    </div>
+                </form>
+            </section>
+        </section>
+
+        <section class="nx-pulse-dashboard-grid">
+            <article class="nx-pulse-analytics-card nx-ops-data-note">
+                <header><h3>تحليل الفروع والأقسام</h3></header>
+                <div>
+                    <strong>بيانات فعلية فقط</strong>
+                    <p>تظهر المقارنات بعد تسجيل أصوات كافية وربط كل نتيجة بجمهورها المستهدف.</p>
+                </div>
+            </article>
+
+            <article class="nx-pulse-analytics-card nx-ops-data-note">
+                <header><h3>المواضيع التي تحتاج متابعة</h3></header>
+                <div>
+                    <strong>@Model.TotalPollVotes صوت مسجل</strong>
+                    <p>لن يعرض النظام نسباً تقديرية أو مواضيع وهمية. التحليل سيُبنى من نتائج الاستبيانات الفعلية.</p>
+                </div>
+            </article>
+
+            <article class="nx-pulse-analytics-card nx-ops-data-note">
+                <header><h3>الخصوصية والثقة</h3></header>
+                <div>
+                    <strong>نتائج موثوقة</strong>
+                    <p>الاستطلاعات السرية تبقى دون أسماء، والاستطلاعات الظاهرة تستخدم فقط عند اختيارها صراحة.</p>
+                </div>
+            </article>
+
+            <article class="nx-pulse-analytics-card nx-pulse-recent">
+                <header><h3>آخر الاستطلاعات</h3></header>
+                @if (Model.Polls.Count == 0)
+                {
+                    <div class="nx-pulse-empty">لا توجد استطلاعات حالياً.</div>
+                }
+                @foreach (var item in Model.Polls.Take(5))
+                {
+                    <div class="nx-pulse-recent-row">
+                        <span class="@(item.IsPublished ? "active" : "closed")">@Model.PublishText(item.IsPublished)</span>
+                        <div>
+                            <strong>@item.Title</strong>
+                            <small>@item.Category · @Model.TargetText(item) · @item.VotesCount تصويت</small>
+                        </div>
+                        <div class="nx-pulse-row-actions">
+                            <form method="post" asp-page-handler="Toggle" asp-route-id="@item.Id" asp-route-publish="@(!item.IsPublished)">
+                                <button type="submit">@(item.IsPublished ? "مسودة" : "نشر")</button>
+                            </form>
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" onsubmit="return confirm('هل تريد حذف الاستطلاع؟');">
+                                <button type="submit" class="danger">حذف</button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </article>
+        </section>
+    </section>
+</section>

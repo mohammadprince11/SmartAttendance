@@ -1,0 +1,17 @@
+@model string
+
+<header class="nx-approved-header">
+    <div class="nx-approved-title-icon" aria-hidden="true">HR</div>
+    <div class="nx-approved-title">
+        <span class="nx-approved-eyebrow">NEXORA PEOPLE OPERATIONS</span>
+        <h1>عمليات الموارد البشرية</h1>
+        <p>مركز موحّد للتواصل وصوت الموظف والحالات والتقدير والحملات.</p>
+    </div>
+    <nav class="nx-approved-tabs" aria-label="أقسام عمليات الموارد البشرية">
+        <a class="@(Model == "overview" ? "active" : "")" asp-page="/Engagement/Index">نظرة عامة</a>
+        <a class="@(Model == "announcements" ? "active" : "")" asp-page="/Engagement/Announcements">التواصل</a>
+        <a class="@(Model == "polls" ? "active" : "")" asp-page="/Engagement/Polls">صوت الموظف</a>
+        <a class="@(Model == "feedback" ? "active" : "")" asp-page="/Engagement/Feedback">الحالات</a>
+        <a class="@(Model == "recognition" ? "active" : "")" asp-page="/Engagement/Recognition">التقدير والحملات</a>
+    </nav>
+</header>

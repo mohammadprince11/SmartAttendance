@@ -1,0 +1,95 @@
+@page
+@model SmartAttendance.Web.Pages.Engagement.RecognitionModel
+@{
+    ViewData["Title"] = "التقدير والحملات";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/nexora-announcement-studio-dynamic.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nexora-hr-operations-page.css" asp-append-version="true" />
+}
+
+<section class="nx-approved-page nx-approved-page--recognition" dir="rtl">
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="nx-approved-alert">@Model.StatusMessage</div>
+    }
+
+    <partial name="_EngagementNav" model="@("recognition")" />
+
+    <section class="nx-ops-special-page">
+        <header class="nx-ops-special-head">
+            <div>
+                <span class="nx-ops-label">RECOGNITION</span>
+                <h2>التقدير والإنجازات</h2>
+                <p>حوّل إنجازات الموظفين والترقيات ورسائل الشكر إلى محتوى مهني يظهر في تجربة الموظف.</p>
+            </div>
+            <a class="nx-ops-primary-action" asp-page="/Engagement/Announcements" asp-route-preset="appreciation">إنشاء تكريم</a>
+        </header>
+
+        <section class="nx-ops-template-launcher">
+            <a asp-page="/Engagement/Announcements" asp-route-preset="appreciation">
+                <span>🏆</span><strong>شكر وتقدير</strong><small>تكريم موظف أو فريق بسبب إنجاز واضح.</small>
+            </a>
+            <a asp-page="/Engagement/Announcements" asp-route-preset="promotion">
+                <span>📈</span><strong>ترقية موظف</strong><small>إعلان الترقية والمنصب الجديد وتاريخ السريان.</small>
+            </a>
+            <a asp-page="/Engagement/Announcements" asp-route-preset="welcome">
+                <span>🤝</span><strong>موظف جديد</strong><small>ترحيب بالموظف وربطه بالقسم وموقع العمل.</small>
+            </a>
+        </section>
+
+        <section class="nx-ops-records-card">
+            <header><h2>سجل التقدير</h2><span>@Model.RecognitionAnnouncements.Count عنصر</span></header>
+            @if (Model.RecognitionAnnouncements.Count == 0)
+            {
+                <div class="nx-ops-empty">لا توجد سجلات تقدير حالياً.</div>
+            }
+            @foreach (var item in Model.RecognitionAnnouncements)
+            {
+                <article class="nx-ops-record-row">
+                    <span class="@(item.IsPublished ? "live" : "draft")">@Model.PublishText(item.IsPublished)</span>
+                    <div><strong>@item.Title</strong><small>@item.Category · @Model.TargetText(item) · @Model.DisplayDate(item.PublishDate)</small></div>
+                </article>
+            }
+        </section>
+    </section>
+
+    <section class="nx-ops-special-page">
+        <header class="nx-ops-special-head">
+            <div>
+                <span class="nx-ops-label">CAMPAIGNS</span>
+                <h2>الحملات والمناسبات</h2>
+                <p>ابدأ بحملة أو تعميم جاهز، ثم حدّد الجمهور وانشره مباشرة من استوديو التواصل.</p>
+            </div>
+            <a class="nx-ops-primary-action" asp-page="/Engagement/Announcements" asp-route-preset="circular">إنشاء حملة</a>
+        </header>
+
+        <section class="nx-ops-template-launcher">
+            <a asp-page="/Engagement/Announcements" asp-route-preset="holiday">
+                <span>📅</span><strong>عطلة رسمية</strong><small>إشعار العطلة وتاريخ العودة والتعليمات.</small>
+            </a>
+            <a asp-page="/Engagement/Announcements" asp-route-preset="circular">
+                <span>📄</span><strong>تعميم إداري</strong><small>توجيه رسمي مع تاريخ بدء التطبيق.</small>
+            </a>
+            <a asp-page="/Engagement/Announcements" asp-route-preset="workhours">
+                <span>🕘</span><strong>تغيير الدوام</strong><small>تحديث وقت العمل والمواقع المشمولة.</small>
+            </a>
+        </section>
+
+        <section class="nx-ops-records-card">
+            <header><h2>سجل الحملات والتعاميم</h2><span>@Model.CampaignAnnouncements.Count عنصر</span></header>
+            @if (Model.CampaignAnnouncements.Count == 0)
+            {
+                <div class="nx-ops-empty">لا توجد حملات أو تعاميم حالياً.</div>
+            }
+            @foreach (var item in Model.CampaignAnnouncements)
+            {
+                <article class="nx-ops-record-row">
+                    <span class="@(item.IsPublished ? "live" : "draft")">@Model.PublishText(item.IsPublished)</span>
+                    <div><strong>@item.Title</strong><small>@item.Category · @Model.TargetText(item) · @Model.DisplayDate(item.PublishDate)</small></div>
+                </article>
+            }
+        </section>
+    </section>
+</section>

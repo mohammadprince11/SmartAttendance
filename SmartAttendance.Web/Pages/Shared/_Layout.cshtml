@@ -177,7 +177,7 @@
 
         Func<string, string> ActiveClass = path => IsCurrent(path) ? "active nexora-active" : "";
 
-        var employeesOpen = IsUnder("/Employees") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/EmployeeProfiles") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization") || IsUnder("/Alerts");
+        var employeesOpen = IsUnder("/Employees") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/EmployeeProfiles") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization") || IsUnder("/Alerts") || IsUnder("/Engagement");
         var attendanceOpen = IsUnder("/AttendanceOperations") || IsUnder("/AttendanceRecords") || IsUnder("/AttendanceImports") || IsUnder("/AttendanceProcessing") || IsUnder("/AttendanceCorrections") || IsUnder("/Shifts") || IsUnder("/Devices");
         var requestsOpen = IsUnder("/LeaveRequests") || IsUnder("/Approvals") || IsUnder("/SelfServices");
         var systemOpen = IsUnder("/Branches") || IsUnder("/Departments") || IsUnder("/SystemUsers") || IsUnder("/Permissions");
@@ -273,7 +273,7 @@
                                 <a asp-page="/HrSettings/NotificationCenter" class="nexora-nav-link @(IsUnder("/HrSettings/NotificationCenter") ? "active nexora-active" : "")">
                                     <span>مركز الإشعارات</span>
                                 </a>
-                                <a asp-page="/EmployeeProfiles/Index" class="nexora-nav-link @(IsUnder("/EmployeeProfiles") ? "active nexora-active" : "")">
+                                <a asp-page="/Engagement/Index" class="nexora-nav-link @(IsUnder("/Engagement") || IsUnder("/EmployeeProfiles") ? "active nexora-active" : "")">
                                     <span>عمليات الموارد البشرية</span>
                                 </a>
                                 <a asp-page="/EmployeeDocuments/Index" class="nexora-nav-link @(IsUnder("/EmployeeDocuments") ? "active nexora-active" : "")">
