@@ -1,0 +1,149 @@
+@page
+@model SmartAttendance.Web.Pages.Alerts.IndexModel
+
+@{
+    ViewData["Title"] = "لوحة التنبيهات والانتهاءات";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page">
+    <div class="page-header">
+        <div>
+            <h1>لوحة التنبيهات والانتهاءات</h1>
+            <p>متابعة عقود الموظفين والمستندات المنتهية أو القريبة من الانتهاء.</p>
+        </div>
+        <form method="get" class="hrms-inline-form">
+            <label for="days-filter">نطاق التنبيه</label>
+            <select id="days-filter" name="Days" onchange="this.form.submit()">
+                @foreach (var option in new[] { 7, 15, 30, 60, 90 })
+                {
+                    <option value="@option" selected="@(Model.Days == option)">خلال @option يوم</option>
+                }
+            </select>
+        </form>
+    </div>
+
+    <div class="hrms-stats-card">
+        <div class="hrms-stats">
+            <div class="hrms-stat">
+                <span>عقود منتهية</span>
+                <strong>@Model.ExpiredContractsCount</strong>
+            </div>
+            <div class="hrms-stat">
+                <span>عقود تنتهي خلال @Model.Days يوم</span>
+                <strong>@Model.ExpiringContractsCount</strong>
+            </div>
+            <div class="hrms-stat">
+                <span>مستندات منتهية</span>
+                <strong>@Model.ExpiredDocumentsCount</strong>
+            </div>
+            <div class="hrms-stat">
+                <span>مستندات تنتهي خلال @Model.Days يوم</span>
+                <strong>@Model.ExpiringDocumentsCount</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="hrms-table-card">
+        <div class="page-header">
+            <div>
+                <h2>انتهاءات العقود</h2>
+                <p>الموظفون الفعالون الذين تنتهي عقودهم خلال @Model.Days يوم أو انتهت فعلاً.</p>
+            </div>
+        </div>
+
+        @if (Model.ContractAlerts.Count == 0)
+        {
+            <div class="hrms-empty">لا توجد عقود منتهية أو قريبة من الانتهاء ضمن النطاق المحدد.</div>
+        }
+        else
+        {
+            <div class="hrms-table-wrap">
+                <table class="hrms-table">
+                    <thead>
+                        <tr>
+                            <th>الحالة</th>
+                            <th>الرقم الوظيفي</th>
+                            <th class="text-start">الموظف</th>
+                            <th class="text-start">القسم</th>
+                            <th class="text-start">الفرع</th>
+                            <th>نوع العقد</th>
+                            <th>تاريخ الانتهاء</th>
+                            <th>الملف</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.ContractAlerts)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="hrms-badge @Model.StatusClass(item.DaysLeft)">@Model.StatusText(item.DaysLeft)</span>
+                                </td>
+                                <td>@item.EmployeeNo</td>
+                                <td class="text-start">@item.FullName</td>
+                                <td class="text-start">@item.DepartmentName</td>
+                                <td class="text-start">@item.BranchName</td>
+                                <td>@(string.IsNullOrWhiteSpace(item.ContractType) ? "-" : item.ContractType)</td>
+                                <td>@item.ContractEndDate.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    <a asp-page="/Employees/Edit" asp-route-id="@item.EmployeeId" class="hrms-btn-secondary">فتح</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="hrms-table-card">
+        <div class="page-header">
+            <div>
+                <h2>انتهاءات المستندات</h2>
+                <p>أحدث نسخة من كل مستند لكل موظف فعال، إذا كانت منتهية أو تنتهي خلال @Model.Days يوم.</p>
+            </div>
+        </div>
+
+        @if (Model.DocumentAlerts.Count == 0)
+        {
+            <div class="hrms-empty">لا توجد مستندات منتهية أو قريبة من الانتهاء ضمن النطاق المحدد.</div>
+        }
+        else
+        {
+            <div class="hrms-table-wrap">
+                <table class="hrms-table">
+                    <thead>
+                        <tr>
+                            <th>الحالة</th>
+                            <th>الرقم الوظيفي</th>
+                            <th class="text-start">الموظف</th>
+                            <th>نوع المستند</th>
+                            <th class="text-start">الملف</th>
+                            <th>تاريخ الانتهاء</th>
+                            <th>المستندات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.DocumentAlerts)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="hrms-badge @Model.StatusClass(item.DaysLeft)">@Model.StatusText(item.DaysLeft)</span>
+                                </td>
+                                <td>@item.EmployeeNo</td>
+                                <td class="text-start">@item.FullName</td>
+                                <td>@Model.DocumentTypeText(item.DocumentType)</td>
+                                <td class="text-start">@item.FileName</td>
+                                <td>@item.ExpiryDate.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    <a asp-page="/EmployeeDocuments/Index" asp-route-EmployeeId="@item.EmployeeId" class="hrms-btn-secondary">فتح</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

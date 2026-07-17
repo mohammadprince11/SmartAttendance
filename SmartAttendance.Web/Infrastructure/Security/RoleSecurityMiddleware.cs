@@ -255,6 +255,7 @@ public class RoleSecurityMiddleware
             return IsAny(path,
                 "/organization",
                 "/organizationsettings",
+                "/alerts",
                 "/employees",
                 "/employeefile",
                 "/myprofile",
@@ -281,6 +282,7 @@ public class RoleSecurityMiddleware
         {
             return IsAny(path,
                 "/organization",
+                "/alerts",
                 "/employees",
                 "/employeefile",
                 "/myprofile",
