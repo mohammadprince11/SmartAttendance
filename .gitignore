@@ -59,3 +59,7 @@ _nexora_diagnostics/
 SmartAttendance.Web/wwwroot/uploads/company-logos/
 SmartAttendance.Web/App_Data/PageImports/
 SmartAttendance.Web/App_Data/PositionImports/
+
+# Claude Code: keep shared launch.json, ignore local session data
+.claude/*
+!.claude/launch.json

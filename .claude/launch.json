@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Web",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "SmartAttendance.Web", "--urls", "http://localhost:5080"],
+      "port": 5080
+    },
+    {
+      "name": "API",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "SmartAttendance.API", "--urls", "http://localhost:5226"],
+      "port": 5226
+    }
+  ]
+}
