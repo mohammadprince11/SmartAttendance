@@ -1,0 +1,132 @@
+@page
+@using SmartAttendance.Domain.Enums
+@model SmartAttendance.Web.Pages.LeaveBalances.IndexModel
+
+@{
+    ViewData["Title"] = "أرصدة الإجازات";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page">
+    <div class="page-header">
+        <div>
+            <h1>أرصدة الإجازات</h1>
+            <p>المستحق والمستخدم والمتبقي لكل موظف حسب القانون العراقي (سنوية 21 يوم، مرضية 30 يوم).</p>
+        </div>
+        <form method="get" class="hrms-inline-form">
+            @if (Model.CompanyOptions.Count > 1)
+            {
+                <label for="company-filter">الشركة</label>
+                <select id="company-filter" name="CompanyId" onchange="this.form.submit()">
+                    @foreach (var option in Model.CompanyOptions)
+                    {
+                        <option value="@option.Id" selected="@(Model.CompanyId == option.Id)">@option.Name</option>
+                    }
+                </select>
+            }
+            <label for="year-filter">السنة</label>
+            <select id="year-filter" name="Year" onchange="this.form.submit()">
+                @foreach (var year in Model.YearOptions)
+                {
+                    <option value="@year" selected="@(Model.Year == year)">@year</option>
+                }
+            </select>
+            <label for="search-filter">بحث</label>
+            <input id="search-filter" type="search" name="Search" value="@Model.Search" placeholder="اسم أو رقم وظيفي" />
+            <button type="submit" class="hrms-btn-secondary">تطبيق</button>
+        </form>
+    </div>
+
+    <div class="hrms-stats-card">
+        <div class="hrms-stats">
+            <div class="hrms-stat">
+                <span>عدد الموظفين</span>
+                <strong>@Model.EmployeeCount</strong>
+            </div>
+            <div class="hrms-stat">
+                <span>تجاوزوا الرصيد</span>
+                <strong>@Model.OverLimitCount</strong>
+            </div>
+            <div class="hrms-stat">
+                <span>إجمالي السنوية المستخدمة</span>
+                <strong>@Model.TotalAnnualUsed.ToString("0.#")</strong>
+            </div>
+            <div class="hrms-stat">
+                <span>إجمالي السنوية المتبقية</span>
+                <strong>@Model.TotalAnnualRemaining.ToString("0.#")</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="hrms-table-card">
+        <div class="page-header">
+            <div>
+                <h2>الأرصدة لسنة @Model.Year @(string.IsNullOrEmpty(Model.SelectedCompanyName) ? "" : "— " + Model.SelectedCompanyName)</h2>
+                <p>المستحق يُحسب من السياسة الافتراضية ما لم يُضبط يدوياً لكل موظف. المستخدم من الطلبات المعتمدة.</p>
+            </div>
+        </div>
+
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="hrms-empty">لا يوجد موظفون فعالون مطابقون ضمن الشركة والبحث المحددين.</div>
+        }
+        else
+        {
+            <div class="hrms-table-wrap">
+                <table class="hrms-table">
+                    <thead>
+                        <tr>
+                            <th>الرقم الوظيفي</th>
+                            <th class="text-start">الموظف</th>
+                            <th class="text-start">القسم</th>
+                            @foreach (var type in Model.TrackedTypes)
+                            {
+                                <th>@Model.LeaveTypeText(type) — مستحق</th>
+                                <th>مستخدم</th>
+                                <th>متبقي</th>
+                            }
+                            <th>ضبط</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            <tr>
+                                <td>@row.EmployeeNo</td>
+                                <td class="text-start">@row.FullName</td>
+                                <td class="text-start">@row.DepartmentName</td>
+                                @foreach (var type in Model.TrackedTypes)
+                                {
+                                    var cell = row.Cells[type];
+                                    <td>
+                                        @cell.Entitled.ToString("0.#")
+                                        @if (cell.CarriedOver > 0)
+                                        {
+                                            <span style="opacity:.7">(+@cell.CarriedOver.ToString("0.#") مُرحّل)</span>
+                                        }
+                                        @if (cell.HasOverride)
+                                        {
+                                            <span class="hrms-badge approved">مضبوط</span>
+                                        }
+                                    </td>
+                                    <td>@cell.Used.ToString("0.#")</td>
+                                    <td>
+                                        <span class="hrms-badge @Model.RemainingClass(cell.Remaining)">@cell.Remaining.ToString("0.#")</span>
+                                    </td>
+                                }
+                                <td>
+                                    <a asp-page="/LeaveBalances/Adjust"
+                                       asp-route-employeeId="@row.EmployeeId"
+                                       asp-route-year="@Model.Year"
+                                       asp-route-companyId="@Model.CompanyId"
+                                       class="hrms-btn-secondary">ضبط</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,70 @@
+@page
+@model SmartAttendance.Web.Pages.LeaveBalances.AdjustModel
+
+@{
+    ViewData["Title"] = "ضبط رصيد الإجازات";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page">
+    <div class="page-header">
+        <div>
+            <h1>ضبط رصيد الإجازات</h1>
+            <p>@Model.FullName (@Model.EmployeeNo) — سنة @Model.Year</p>
+        </div>
+        <a asp-page="/LeaveBalances/Index" asp-route-CompanyId="@Model.CompanyId" asp-route-Year="@Model.Year" class="hrms-btn-secondary">رجوع</a>
+    </div>
+
+    <div class="hrms-table-card">
+        <form method="post">
+            <input type="hidden" asp-for="EmployeeId" />
+            <input type="hidden" asp-for="Year" />
+            <input type="hidden" asp-for="CompanyId" />
+
+            <div class="hrms-table-wrap">
+                <table class="hrms-table">
+                    <thead>
+                        <tr>
+                            <th class="text-start">نوع الإجازة</th>
+                            <th>المستحق (أيام)</th>
+                            <th>المُرحّل من السنة السابقة</th>
+                            <th class="text-start">ملاحظة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.Inputs.Count; i++)
+                        {
+                            <tr>
+                                <td class="text-start">
+                                    @Model.LeaveTypeText(Model.Inputs[i].LeaveType)
+                                    <input type="hidden" asp-for="Inputs[i].LeaveType" />
+                                </td>
+                                <td>
+                                    <div class="hrms-field" style="max-width:120px;margin:0 auto">
+                                        <input type="number" step="0.5" min="0" max="366" asp-for="Inputs[i].EntitledDays" />
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="hrms-field" style="max-width:120px;margin:0 auto">
+                                        <input type="number" step="0.5" min="0" max="366" asp-for="Inputs[i].CarriedOverDays" />
+                                    </div>
+                                </td>
+                                <td class="text-start">
+                                    <div class="hrms-field">
+                                        <input type="text" maxlength="500" asp-for="Inputs[i].Note" placeholder="اختياري" />
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="page-header" style="margin-top:16px">
+                <div></div>
+                <button type="submit" class="hrms-btn-primary">حفظ</button>
+            </div>
+        </form>
+    </div>
+</div>
