@@ -29,6 +29,36 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.Property(x => x.Email)
             .HasMaxLength(200);
 
+        builder.Property(x => x.PhotoPath)
+            .HasMaxLength(500);
+
+        builder.Property(x => x.ContractType)
+            .HasMaxLength(100);
+
+        builder.Property(x => x.EmploymentStatus)
+            .HasMaxLength(100);
+
+        builder.Property(x => x.ServiceEndType)
+            .HasMaxLength(80);
+
+        builder.Property(x => x.ServiceEndReason)
+            .HasMaxLength(1000);
+
+        builder.Property(x => x.ServiceEndNotes)
+            .HasMaxLength(2000);
+
+        builder.Property(x => x.ClearanceStatus)
+            .HasMaxLength(80);
+
+        builder.Property(x => x.RehireReason)
+            .HasMaxLength(1000);
+
+        builder.Property(x => x.RehireNotes)
+            .HasMaxLength(2000);
+
+        builder.Property(x => x.RehireCount)
+            .HasDefaultValue(0);
+
         builder.HasIndex(x => x.EmployeeNo)
             .IsUnique();
 

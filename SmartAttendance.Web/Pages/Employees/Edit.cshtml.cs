@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Departments.ViewModels;
+using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Application.Employees.Services;
 using SmartAttendance.Application.Employees.ViewModels;
 using SmartAttendance.Infrastructure.Persistence;
@@ -15,6 +16,7 @@ public class EditModel : PageModel
     private readonly IEmployeeService _employeeService;
     private readonly ApplicationDbContext _dbContext;
     private readonly IWebHostEnvironment _environment;
+    private readonly IPermissionAuthorizationService _permissionAuthorizationService;
 
     private static readonly HashSet<string> AllowedEmployeePhotoExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -24,11 +26,13 @@ public class EditModel : PageModel
     public EditModel(
         IEmployeeService employeeService,
         ApplicationDbContext dbContext,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        IPermissionAuthorizationService permissionAuthorizationService)
     {
         _employeeService = employeeService;
         _dbContext = dbContext;
         _environment = environment;
+        _permissionAuthorizationService = permissionAuthorizationService;
     }
 
     [BindProperty]
@@ -56,6 +60,13 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
+        // Defense-in-depth: نفس فحص صلاحية التعديل الموجود بصفحة Profile،
+        // حتى لا يكون الرابط المباشر للصفحة كافياً لتجاوز الصلاحيات.
+        if (!await CanEditEmployeeAsync(id))
+        {
+            return Forbid();
+        }
+
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Branches = await _employeeService.GetBranchesForDropdownAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
@@ -81,6 +92,11 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        if (!await CanEditEmployeeAsync(Employee.Id))
+        {
+            return Forbid();
+        }
+
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Branches = await _employeeService.GetBranchesForDropdownAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
@@ -127,6 +143,19 @@ public class EditModel : PageModel
             : $"تم تحديث بيانات الموظف بنجاح. {photoResult}";
 
         return RedirectToPage("./Profile", new { id = Employee.Id });
+    }
+
+    private Task<bool> CanEditEmployeeAsync(int employeeId)
+    {
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        var role = PeopleAccessContext.GetRole(HttpContext);
+
+        return _permissionAuthorizationService.CanAccessEmployeeAsync(
+            systemUserId,
+            PeoplePermissionCodes.Edit,
+            employeeId,
+            PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.Edit),
+            HttpContext.RequestAborted);
     }
 
     private async Task<IEnumerable<ManagerOption>> LoadManagersAsync(int employeeId)

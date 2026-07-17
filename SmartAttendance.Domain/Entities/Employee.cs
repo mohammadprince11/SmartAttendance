@@ -30,6 +30,34 @@ public class Employee : AuditableEntity
 
     public string? MaritalStatus { get; set; }
 
+    public string? PhotoPath { get; set; }
+
+    public string? ContractType { get; set; }
+
+    public DateOnly? ContractEndDate { get; set; }
+
+    public string? EmploymentStatus { get; set; }
+
+    public int? DirectManagerId { get; set; }
+
+    public DateOnly? ServiceEndDate { get; set; }
+
+    public string? ServiceEndType { get; set; }
+
+    public string? ServiceEndReason { get; set; }
+
+    public string? ServiceEndNotes { get; set; }
+
+    public string? ClearanceStatus { get; set; }
+
+    public DateOnly? LastRehireDate { get; set; }
+
+    public string? RehireReason { get; set; }
+
+    public string? RehireNotes { get; set; }
+
+    public int RehireCount { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     public int BranchId { get; set; }
