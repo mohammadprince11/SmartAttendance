@@ -271,7 +271,7 @@ END;",
                         ("Status", StatusText(statusValue)),
                         ("Source", "\u064A\u062F\u0648\u064A"),
                         ("Notes", noteText)));
-                    HrmsDatabase.AddParameter(command, "@UserName", Request.Cookies["SA.UserName"] ?? "HR");
+                    HrmsDatabase.AddParameter(command, "@UserName", User.Identity?.Name ?? "HR");
                     HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
                 });
 
@@ -310,7 +310,7 @@ END;",
                         ("Status", StatusText(statusValue)),
                         ("Source", "\u064A\u062F\u0648\u064A"),
                         ("Notes", noteText)));
-                    HrmsDatabase.AddParameter(command, "@UserName", Request.Cookies["SA.UserName"] ?? "HR");
+                    HrmsDatabase.AddParameter(command, "@UserName", User.Identity?.Name ?? "HR");
                     HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
                 });
 
@@ -406,7 +406,7 @@ END;",
                         ("CheckOut", Correction.CheckOut),
                         ("Status", StatusText(statusValue)),
                         ("Notes", Correction.Notes)));
-                    HrmsDatabase.AddParameter(command, "@UserName", Request.Cookies["SA.UserName"] ?? "HR");
+                    HrmsDatabase.AddParameter(command, "@UserName", User.Identity?.Name ?? "HR");
                     HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
                 });
 
@@ -471,7 +471,7 @@ END;",
                         ("Status", StatusText(statusValue)),
                         ("Source", "ÙŠØ¯ÙˆÙŠ"),
                         ("Notes", Correction.Notes)));
-                    HrmsDatabase.AddParameter(command, "@UserName", Request.Cookies["SA.UserName"] ?? "HR");
+                    HrmsDatabase.AddParameter(command, "@UserName", User.Identity?.Name ?? "HR");
                     HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
                 });
 

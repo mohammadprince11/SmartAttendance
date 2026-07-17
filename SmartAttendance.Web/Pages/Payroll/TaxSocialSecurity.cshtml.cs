@@ -666,7 +666,7 @@ END;
 
     private string CurrentUserName()
     {
-        return Request.Cookies["SA.UserName"] ?? User?.Identity?.Name ?? "system";
+        return User?.Identity?.Name ?? "system";
     }
 
     private static string NormalizeMonth(string? value)

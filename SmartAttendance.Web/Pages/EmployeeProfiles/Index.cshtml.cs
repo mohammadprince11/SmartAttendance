@@ -236,7 +236,7 @@ public class IndexModel : PageModel
         var targetValue = BuildTargetValue(targetType, Poll.EmployeeIds, Poll.DepartmentId, Poll.BranchId);
         var category = string.IsNullOrWhiteSpace(Poll.Category) ? "استطلاع" : Poll.Category.Trim();
         var isPublished = Poll.PublishNow;
-        var user = Request.Cookies["SA.UserName"] ?? "HR";
+        var user = User.Identity?.Name ?? "HR";
 
         var pollId = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
@@ -295,7 +295,7 @@ VALUES ('EmployeePoll', CAST(@PollId AS nvarchar(80)), 'Create Poll', @NewValues
     public async Task<IActionResult> OnPostTogglePollAsync(int id, bool publish)
     {
         await EmployeeEngagementSchema.EnsureAsync(_dbContext);
-        var user = Request.Cookies["SA.UserName"] ?? "HR";
+        var user = User.Identity?.Name ?? "HR";
 
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
@@ -324,7 +324,7 @@ VALUES ('EmployeePoll', CAST(@Id AS nvarchar(80)), 'Toggle Poll Publish', @NewVa
     public async Task<IActionResult> OnPostDeletePollAsync(int id)
     {
         await EmployeeEngagementSchema.EnsureAsync(_dbContext);
-        var user = Request.Cookies["SA.UserName"] ?? "HR";
+        var user = User.Identity?.Name ?? "HR";
 
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
@@ -357,7 +357,7 @@ VALUES ('EmployeePoll', CAST(@Id AS nvarchar(80)), 'Delete Poll', 'Deleted from 
             return RedirectToPage(new { section = "engagement", tab = "feedback" });
         }
 
-        var user = Request.Cookies["SA.UserName"] ?? "HR";
+        var user = User.Identity?.Name ?? "HR";
         var status = string.IsNullOrWhiteSpace(FeedbackReply.Status) ? "Answered" : FeedbackReply.Status.Trim();
 
         await HrmsDatabase.ExecuteAsync(
@@ -391,7 +391,7 @@ VALUES ('EmployeeFeedbackItems', CAST(@Id AS nvarchar(80)), 'Reply Employee Feed
     public async Task<IActionResult> OnPostCloseFeedbackAsync(int id)
     {
         await EmployeeEngagementSchema.EnsureAsync(_dbContext);
-        var user = Request.Cookies["SA.UserName"] ?? "HR";
+        var user = User.Identity?.Name ?? "HR";
 
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
@@ -696,7 +696,7 @@ ORDER BY FullName;
     private AnnouncementActorContext BuildAnnouncementActor() =>
         new()
         {
-            UserName = Request.Cookies["SA.UserName"] ?? User.Identity?.Name ?? "System",
+            UserName = User.Identity?.Name ?? "System",
             Role = Request.Cookies["SA.Role"] ?? string.Empty,
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         };

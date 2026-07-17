@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -87,7 +87,7 @@ public class IndexModel : PageModel
             return RedirectToPage(new { employeeId, tab = "stage", section = "employee-master" });
         }
 
-        var requestedBy = Request.Cookies["SA.UserName"] ?? User.Identity?.Name ?? "System";
+        var requestedBy = User.Identity?.Name ?? "System";
         var resolvedEffectiveDate = (effectiveDate ?? DateTime.Today).Date;
         var sectionName = "\u062A\u062D\u062F\u064A\u062B \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641";
 
@@ -169,7 +169,7 @@ VALUES
             }
         }
 
-        var lockedBy = Request.Cookies["SA.UserName"] ?? User.Identity?.Name ?? "System";
+        var lockedBy = User.Identity?.Name ?? "System";
 
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
