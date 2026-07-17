@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -94,7 +94,7 @@ public class EndServiceModel : PageModel
             return Page();
         }
 
-        var userName = Request.Cookies["SA.UserName"] ?? "System";
+        var userName = User.Identity?.Name ?? "System";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
         var status = MapEmploymentStatus(EndServiceType);
         var endTypeText = EndServiceTypeText(EndServiceType);

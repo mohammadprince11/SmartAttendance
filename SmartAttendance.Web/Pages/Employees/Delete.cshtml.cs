@@ -74,7 +74,7 @@ END;",
                 HrmsDatabase.AddParameter(command, "@Id", id);
                 HrmsDatabase.AddParameter(command, "@OldValues", "IsActive: True");
                 HrmsDatabase.AddParameter(command, "@NewValues", "IsActive: False");
-                HrmsDatabase.AddParameter(command, "@UserName", Request.Cookies["SA.UserName"] ?? "System");
+                HrmsDatabase.AddParameter(command, "@UserName", User.Identity?.Name ?? "System");
                 HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
             });
 

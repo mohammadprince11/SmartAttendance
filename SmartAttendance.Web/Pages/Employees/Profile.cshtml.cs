@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
@@ -151,253 +151,6 @@ public partial class ProfileModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostReassignFromModalAsync(
-        int id,
-        string? reassignDate,
-        string? reassignPosition,
-        string? reassignReason,
-        string? reassignNotes,
-        string? confirmReassign)
-    {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        await EmployeeLifecycleSchema.EnsureAsync(_dbContext);
-
-        if (id <= 0)
-        {
-            TempData["ErrorMessage"] = "\u0644\u0645 \u064a\u062a\u0645 \u062a\u062d\u062f\u064a\u062f \u0627\u0644\u0645\u0648\u0638\u0641.";
-            return RedirectToPage("./Index");
-        }
-
-        if (!await HasEmployeeActionPermissionAsync(
-                PeoplePermissionCodes.Rehire,
-                id))
-        {
-            return Forbid();
-        }
-
-        var employee = await LoadProfileReassignEmployeeAsync(id);
-
-        if (employee == null)
-        {
-            TempData["ErrorMessage"] = "\u0644\u0645 \u064a\u062a\u0645 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0648\u0638\u0641.";
-            return RedirectToPage("./Index");
-        }
-
-        if (employee.IsActive)
-        {
-            TempData["ErrorMessage"] = "\u0627\u0644\u0645\u0648\u0638\u0641 \u0641\u0639\u0627\u0644 \u062d\u0627\u0644\u064a\u0627\u064b \u0648\u0644\u0627 \u064a\u062d\u062a\u0627\u062c \u0625\u0644\u0649 \u0625\u0639\u0627\u062f\u0629 \u062a\u0639\u064a\u064a\u0646.";
-            return RedirectToPage(new { id });
-        }
-
-        if (!DateOnly.TryParse(reassignDate, out var reassignDateValue))
-        {
-            TempData["ErrorMessage"] = "\u062d\u062f\u062f \u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u0629 \u0627\u0644\u062c\u062f\u064a\u062f.";
-            return RedirectToPage(new { id });
-        }
-
-        if (string.IsNullOrWhiteSpace(reassignReason))
-        {
-            TempData["ErrorMessage"] = "\u0627\u0643\u062a\u0628 \u0633\u0628\u0628 \u0625\u0639\u0627\u062f\u0629 \u0627\u0644\u062a\u0639\u064a\u064a\u0646.";
-            return RedirectToPage(new { id });
-        }
-
-        var isConfirmed =
-            string.Equals(confirmReassign, "true", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(confirmReassign, "on", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(confirmReassign, "1", StringComparison.OrdinalIgnoreCase);
-
-        if (!isConfirmed)
-        {
-            TempData["ErrorMessage"] = "\u064a\u062c\u0628 \u062a\u0623\u0643\u064a\u062f \u0625\u0639\u0627\u062f\u0629 \u0627\u0644\u062a\u0639\u064a\u064a\u0646 \u0642\u0628\u0644 \u0627\u0644\u062d\u0641\u0638.";
-            return RedirectToPage(new { id });
-        }
-
-        var newPosition = string.IsNullOrWhiteSpace(reassignPosition)
-            ? employee.Position
-            : reassignPosition.Trim();
-
-        var reason = reassignReason.Trim();
-        var notes = BuildProfileReassignNotes(employee.Position, newPosition, reassignNotes);
-        var userName = Request.Cookies["SA.UserName"] ?? "System";
-        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
-
-        object? previousHireDateSql = employee.HireDate.HasValue
-            ? employee.HireDate.Value.ToDateTime(TimeOnly.MinValue)
-            : null;
-
-        var reassignDateSql = reassignDateValue.ToDateTime(TimeOnly.MinValue);
-
-        var oldValues =
-            $"IsActive: {employee.IsActive}; HireDate: {DisplayDate(employee.HireDate)}; Position: {employee.Position}; EmploymentStatus: {employee.EmploymentStatus}; ServiceEndDate: {DisplayDate(employee.ServiceEndDate)}";
-
-        var newValues =
-            $"IsActive: True; HireDate/ReassignDate: {reassignDateValue:yyyy-MM-dd}; Position: {newPosition}; EmploymentStatus: Active";
-
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            @"
-INSERT INTO EmployeeRehires
-(
-    EmployeeId,
-    EmployeeNo,
-    EmployeeName,
-    PreviousHireDate,
-    RehireDate,
-    PreviousEmploymentStatus,
-    Reason,
-    HrNotes,
-    CreatedBy,
-    IpAddress,
-    CreatedAt
-)
-VALUES
-(
-    @EmployeeId,
-    @EmployeeNo,
-    @EmployeeName,
-    @PreviousHireDate,
-    @RehireDate,
-    @PreviousEmploymentStatus,
-    @Reason,
-    @HrNotes,
-    @CreatedBy,
-    @IpAddress,
-    GETDATE()
-);
-
-UPDATE Employees
-SET
-    IsActive = 1,
-    HireDate = @RehireDate,
-    Position = @Position,
-    EmploymentStatus = N'Active',
-    ServiceEndDate = NULL,
-    ServiceEndType = NULL,
-    ServiceEndReason = NULL,
-    ServiceEndNotes = NULL,
-    ClearanceStatus = NULL,
-    LastRehireDate = @RehireDate,
-    RehireReason = @Reason,
-    RehireNotes = @HrNotes,
-    RehireCount = ISNULL(RehireCount, 0) + 1
-WHERE Id = @EmployeeId;
-
-IF OBJECT_ID('AuditLogs', 'U') IS NOT NULL
-BEGIN
-    INSERT INTO AuditLogs
-    (
-        EntityName,
-        EntityId,
-        Action,
-        OldValues,
-        NewValues,
-        UserName,
-        IpAddress
-    )
-    VALUES
-    (
-        'Employee',
-        CAST(@EmployeeId AS nvarchar(80)),
-        'Employee Reassigned From Profile Modal',
-        @OldValues,
-        @NewValues,
-        @CreatedBy,
-        @IpAddress
-    );
-END;",
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@EmployeeId", id);
-                HrmsDatabase.AddParameter(command, "@EmployeeNo", employee.EmployeeNo);
-                HrmsDatabase.AddParameter(command, "@EmployeeName", employee.FullName);
-                HrmsDatabase.AddParameter(command, "@PreviousHireDate", previousHireDateSql);
-                HrmsDatabase.AddParameter(command, "@RehireDate", reassignDateSql);
-                HrmsDatabase.AddParameter(command, "@PreviousEmploymentStatus", employee.EmploymentStatus);
-                HrmsDatabase.AddParameter(command, "@Position", newPosition);
-                HrmsDatabase.AddParameter(command, "@Reason", reason);
-                HrmsDatabase.AddParameter(command, "@HrNotes", string.IsNullOrWhiteSpace(notes) ? null : notes);
-                HrmsDatabase.AddParameter(command, "@CreatedBy", userName);
-                HrmsDatabase.AddParameter(command, "@IpAddress", ipAddress);
-                HrmsDatabase.AddParameter(command, "@OldValues", oldValues);
-                HrmsDatabase.AddParameter(command, "@NewValues", newValues);
-            });
-
-        TempData["SuccessMessage"] = "\u062a\u0645\u062a \u0625\u0639\u0627\u062f\u0629 \u062a\u0639\u064a\u064a\u0646 \u0627\u0644\u0645\u0648\u0638\u0641 \u0648\u062d\u0641\u0638 \u0627\u0644\u062d\u0631\u0643\u0629 \u0641\u064a \u0627\u0644\u0633\u062c\u0644 \u0627\u0644\u0648\u0638\u064a\u0641\u064a.";
-        return RedirectToPage(new { id });
-    }
-
-    private async Task<ProfileReassignEmployeeRow?> LoadProfileReassignEmployeeAsync(int employeeId)
-    {
-        var rows = await HrmsDatabase.QueryAsync(
-            _dbContext,
-            @"
-SELECT TOP 1
-    e.Id,
-    e.EmployeeNo,
-    e.FullName,
-    e.HireDate,
-    e.IsActive,
-    ISNULL(e.Position, '') AS Position,
-    ISNULL(e.EmploymentStatus, '') AS EmploymentStatus,
-    e.ServiceEndDate,
-    ISNULL(e.ServiceEndReason, '') AS ServiceEndReason
-FROM Employees e
-WHERE e.Id = @EmployeeId;",
-            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
-            reader => new ProfileReassignEmployeeRow
-            {
-                Id = HrmsDatabase.GetInt(reader, "Id"),
-                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
-                FullName = HrmsDatabase.GetString(reader, "FullName"),
-                HireDate = HrmsDatabase.GetDateOnly(reader, "HireDate"),
-                IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
-                Position = HrmsDatabase.GetString(reader, "Position"),
-                EmploymentStatus = HrmsDatabase.GetString(reader, "EmploymentStatus"),
-                ServiceEndDate = HrmsDatabase.GetDateOnly(reader, "ServiceEndDate"),
-                ServiceEndReason = HrmsDatabase.GetString(reader, "ServiceEndReason")
-            });
-
-        return rows.FirstOrDefault();
-    }
-
-    private static string BuildProfileReassignNotes(string previousPosition, string newPosition, string? hrNotes)
-    {
-        var items = new List<string>();
-
-        if (!string.Equals(previousPosition?.Trim(), newPosition?.Trim(), StringComparison.OrdinalIgnoreCase))
-        {
-            items.Add($"Position changed from '{previousPosition}' to '{newPosition}'.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(hrNotes))
-        {
-            items.Add(hrNotes.Trim());
-        }
-
-        return string.Join(" | ", items);
-    }
-
-    private class ProfileReassignEmployeeRow
-    {
-        public int Id { get; set; }
-
-        public string EmployeeNo { get; set; } = string.Empty;
-
-        public string FullName { get; set; } = string.Empty;
-
-        public DateOnly? HireDate { get; set; }
-
-        public bool IsActive { get; set; }
-
-        public string Position { get; set; } = string.Empty;
-
-        public string EmploymentStatus { get; set; } = string.Empty;
-
-        public DateOnly? ServiceEndDate { get; set; }
-
-        public string ServiceEndReason { get; set; } = string.Empty;
-    }
-
     public async Task<IActionResult> OnPostUploadProfilePhotoAsync(int id)
     {
         await EmployeeLifecycleSchema.EnsureAsync(_dbContext);
@@ -436,6 +189,11 @@ WHERE e.Id = @EmployeeId;",
         }
 
         if (file.Length > 5 * 1024 * 1024)
+        {
+            return string.Empty;
+        }
+
+        if (!await UploadSignatureValidator.IsValidImageAsync(file))
         {
             return string.Empty;
         }
@@ -886,17 +644,6 @@ ORDER BY CreatedAt DESC;",
         };
     }
 
-    public string SourceText(int source)
-    {
-        return source switch
-        {
-            1 => "جهاز",
-            2 => "استيراد",
-            3 => "تعديل يدوي",
-            _ => "-"
-        };
-    }
-
     public string RequestStatusText(string? status)
     {
         return status switch
@@ -912,24 +659,12 @@ ORDER BY CreatedAt DESC;",
 
     public int PayrollRiskItems => AbsentCount + MissingCheckoutCount + PendingRequests + ExpiredDocumentsCount + ExpiringDocumentsCount;
 
-    public int AttendanceRiskItems => AbsentCount + LateCount + MissingCheckoutCount;
-
     public int ExpiredDocumentsCount => DocumentRows.Count(x => x.ExpiryDate.HasValue && x.ExpiryDate.Value < DateOnly.FromDateTime(DateTime.Today));
 
     public int ExpiringDocumentsCount => DocumentRows.Count(x =>
         x.ExpiryDate.HasValue &&
         x.ExpiryDate.Value >= DateOnly.FromDateTime(DateTime.Today) &&
         x.ExpiryDate.Value <= DateOnly.FromDateTime(DateTime.Today.AddDays(30)));
-
-    public string PayrollReadinessClass => PayrollRiskItems == 0 ? "ok" : "warn";
-
-    public string PayrollReadinessText => PayrollRiskItems == 0
-        ? "جاهز مبدئياً لإغلاق الراتب"
-        : "يحتاج مراجعة قبل إغلاق الراتب";
-
-    public string AttendanceRiskClass => AttendanceRiskItems == 0 ? "ok" : "warn";
-
-
 
     public int AttendanceExceptionsCount => AttendanceRows.Count(x =>
         x.Status == 2 ||
@@ -938,18 +673,7 @@ ORDER BY CreatedAt DESC;",
         !x.CheckOut.HasValue ||
         !string.IsNullOrWhiteSpace(x.Notes));
 
-    public List<AttendanceRow> AttendanceExceptionRows => AttendanceRows
-        .Where(x =>
-            x.Status == 2 ||
-            x.Status == 3 ||
-            !x.CheckIn.HasValue ||
-            !x.CheckOut.HasValue ||
-            !string.IsNullOrWhiteSpace(x.Notes))
-        .Take(20)
-        .ToList();
-
-    public string AttendanceExceptionClass => AttendanceExceptionsCount == 0 ? "ok" : "warn";
-public int Employee360HealthScore
+    public int Employee360HealthScore
     {
         get
         {
@@ -970,46 +694,13 @@ public int Employee360HealthScore
         }
     }
 
-    public string Employee360HealthClass => Employee360HealthScore >= 85
-        ? "ok"
-        : Employee360HealthScore >= 60
-            ? "warn"
-            : "danger";
-
     public string Employee360HealthText => Employee360HealthScore >= 85
         ? "مستقر"
         : Employee360HealthScore >= 60
             ? "يحتاج متابعة"
             : "خطر تشغيلي";
 
-    public bool HasPayrollBlockingIssues => AbsentCount > 0 || MissingCheckoutCount > 0 || PendingRequests > 0 || ExpiredDocumentsCount > 0;
-    public string AttendanceStatusName(int status)
-    {
-        return status switch
-        {
-            1 => "حاضر",
-            2 => "متأخر",
-            3 => "غياب",
-            4 => "بصمة ناقصة",
-            5 => "عطلة",
-            _ => "غير محدد"
-        };
-    }
-    public string AttendanceSourceName(int source)
-    {
-        return source switch
-        {
-            1 => "جهاز بصمة",
-            2 => "إدخال يدوي",
-            3 => "استيراد",
-            4 => "طلب",
-            5 => "نظام",
-            _ => "غير محدد"
-        };
-    }
-
-
-public class EmployeeProfileCard
+    public class EmployeeProfileCard
     {
         public int Id { get; set; }
 
@@ -1029,7 +720,7 @@ public class EmployeeProfileCard
 
 
         public string MaritalStatus { get; set; } = string.Empty;
-public bool IsActive { get; set; }
+        public bool IsActive { get; set; }
 
         public string Position { get; set; } = string.Empty;
 
@@ -1159,10 +850,3 @@ public bool IsActive { get; set; }
         public DateTime? CreatedAt { get; set; }
     }
 }
-
-
-
-
-
-
-

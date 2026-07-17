@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.Common.Security;
@@ -83,20 +84,17 @@ public class EmployeeService : IEmployeeService
 
         var filteredQuery = employeesQuery;
 
+        // 🚀 هذا هو التعديل السحري الذي سيجعل البحث طلقة!
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
+            // نستخدم StartsWith للكود والهوية لتمكين الـ Index في قاعدة البيانات
+            // ركزنا البحث على أهم الحقول لتقليل الضغط على الـ SQL Server
             filteredQuery = filteredQuery.Where(x =>
-                x.EmployeeNo.Contains(searchTerm) ||
+                x.EmployeeNo.StartsWith(searchTerm) ||
                 x.FullName.Contains(searchTerm) ||
-                (x.NationalId != null && x.NationalId.Contains(searchTerm)) ||
                 (x.Phone != null && x.Phone.Contains(searchTerm)) ||
-                (x.Email != null && x.Email.Contains(searchTerm)) ||
-                (x.Position != null && x.Position.Contains(searchTerm)) ||
-                (!x.Department.IsDeleted &&
-                 (x.Department.Code.Contains(searchTerm) ||
-                  x.Department.Name.Contains(searchTerm))) ||
-                (!x.Branch.IsDeleted &&
-                 x.Branch.Name.Contains(searchTerm)));
+                (x.NationalId != null && x.NationalId.StartsWith(searchTerm))
+            );
         }
 
         if (query.BranchId.HasValue && query.BranchId.Value > 0)
@@ -273,24 +271,7 @@ public class EmployeeService : IEmployeeService
                 (x.Phone != null &&
                  x.Phone.Contains(
                      searchTerm,
-                     StringComparison.OrdinalIgnoreCase)) ||
-                (x.Email != null &&
-                 x.Email.Contains(
-                     searchTerm,
-                     StringComparison.OrdinalIgnoreCase)) ||
-                (x.Position != null &&
-                 x.Position.Contains(
-                     searchTerm,
-                     StringComparison.OrdinalIgnoreCase)) ||
-                x.DepartmentCode.Contains(
-                    searchTerm,
-                    StringComparison.OrdinalIgnoreCase) ||
-                x.DepartmentName.Contains(
-                    searchTerm,
-                    StringComparison.OrdinalIgnoreCase) ||
-                x.BranchName.Contains(
-                    searchTerm,
-                    StringComparison.OrdinalIgnoreCase));
+                     StringComparison.OrdinalIgnoreCase)));
         }
 
         return result
@@ -414,13 +395,24 @@ public class EmployeeService : IEmployeeService
             return false;
         }
 
-        var employees = await _unitOfWork.Employees.GetAllAsync();
+        // النقل إلى قسم أو موقع عمل جديد يتطلب أن يكون الهدف فعالاً؛
+        // البقاء في نفس الجهة مسموح حتى لو تم إيقافها لاحقاً.
+        if (model.BranchId != employee.BranchId && !branch.IsActive)
+        {
+            return false;
+        }
 
-        var duplicateEmployeeNo = employees.Any(x =>
-            x.Id != model.Id &&
-            x.EmployeeNo.Equals(
-                model.EmployeeNo,
-                StringComparison.OrdinalIgnoreCase));
+        if (model.DepartmentId != employee.DepartmentId && !department.IsActive)
+        {
+            return false;
+        }
+
+        var duplicateEmployeeNo = await _dbContext.Employees
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.Id != model.Id &&
+                !x.IsDeleted &&
+                x.EmployeeNo == model.EmployeeNo);
 
         if (duplicateEmployeeNo)
         {
@@ -467,12 +459,11 @@ public class EmployeeService : IEmployeeService
 
     public async Task<bool> EmployeeNoExistsAsync(string employeeNo)
     {
-        var employees = await _unitOfWork.Employees.GetAllAsync();
-
-        return employees.Any(x =>
-            x.EmployeeNo.Equals(
-                employeeNo,
-                StringComparison.OrdinalIgnoreCase));
+        return await _dbContext.Employees
+            .AsNoTracking()
+            .AnyAsync(x =>
+                !x.IsDeleted &&
+                x.EmployeeNo == employeeNo);
     }
 
     public async Task<IEnumerable<DepartmentListViewModel>>
@@ -629,6 +620,8 @@ public class EmployeeService : IEmployeeService
             }
 
             await using var command = connection.CreateCommand();
+            command.Transaction = _dbContext.Database
+                .CurrentTransaction?.GetDbTransaction();
             command.CommandText = includeInactive
                 ? """
                   SELECT Id, CompanyId, ArabicName, IsActive

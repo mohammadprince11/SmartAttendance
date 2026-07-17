@@ -159,7 +159,7 @@ ORDER BY CompanyId, Name;",
 
         var reason = reassignReason.Trim();
         var notes = BuildProfileReassignNotesV2(employee, target, newPosition, reassignNotes);
-        var userName = Request.Cookies["SA.UserName"] ?? "System";
+        var userName = User.Identity?.Name ?? "System";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
 
         object? previousHireDateSql = employee.HireDate.HasValue

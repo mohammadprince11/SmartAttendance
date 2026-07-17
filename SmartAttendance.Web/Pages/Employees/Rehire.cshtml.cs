@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -71,7 +71,7 @@ public class RehireModel : PageModel
             return Page();
         }
 
-        var userName = Request.Cookies["SA.UserName"] ?? "System";
+        var userName = User.Identity?.Name ?? "System";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
         var rehireDateValue = RehireDate!.Value;
         var rehireDateSql = rehireDateValue.ToDateTime(TimeOnly.MinValue);

@@ -154,6 +154,11 @@ END;
             return string.Empty;
         }
 
+        if (!await Infrastructure.Security.UploadSignatureValidator.IsValidForExtensionAsync(file, extension))
+        {
+            return string.Empty;
+        }
+
         var webRoot = _environment.WebRootPath;
 
         if (string.IsNullOrWhiteSpace(webRoot))

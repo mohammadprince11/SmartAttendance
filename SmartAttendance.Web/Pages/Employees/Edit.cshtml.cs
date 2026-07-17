@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Departments.ViewModels;
@@ -6,6 +6,7 @@ using SmartAttendance.Application.Employees.Services;
 using SmartAttendance.Application.Employees.ViewModels;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
@@ -36,17 +37,22 @@ public class EditModel : PageModel
     [BindProperty]
     public IFormFile? EmployeePhoto { get; set; }
 
+    [BindProperty]
+    public int? DirectManagerId { get; set; }
+
+    public class ManagerOption { 
+        public int Id { get; set; } 
+        public string EmployeeNo { get; set; } = string.Empty; 
+        public string FullName { get; set; } = string.Empty; 
+    }
+    public IEnumerable<ManagerOption> Managers { get; set; } = new List<ManagerOption>();
+
     public string CurrentPhotoPath { get; set; } = string.Empty;
-
     public IEnumerable<BranchListViewModel> Branches { get; set; } = new List<BranchListViewModel>();
-
     public IEnumerable<DepartmentListViewModel> Departments { get; set; } = new List<DepartmentListViewModel>();
-
-
     public IEnumerable<PositionOptionViewModel> PositionOptions { get; set; } = new List<PositionOptionViewModel>();
-
     public List<EmployeeProfileDynamicSection> ProfileDynamicSections { get; set; } = new();
-public string? ErrorMessage { get; set; }
+    public string? ErrorMessage { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
@@ -56,14 +62,19 @@ public string? ErrorMessage { get; set; }
 
         var employee = await _employeeService.GetEditByIdAsync(id);
 
-        if (employee == null)
-            return NotFound();
+        if (employee == null) return NotFound();
 
         Employee = employee;
 
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
-CurrentPhotoPath = await GetEmployeePhotoPathAsync(Employee.Id);
+        CurrentPhotoPath = await GetEmployeePhotoPathAsync(Employee.Id);
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, Employee.Id);
+        Managers = await LoadManagersAsync(Employee.Id);
+
+        // --- الإصلاح الجذري لمشكلة الـ Cast Exception ---
+        var managerObj = await HrmsDatabase.ScalarAsync<object>(_dbContext, "SELECT DirectManagerId FROM Employees WHERE Id = @Id", cmd => HrmsDatabase.AddParameter(cmd, "@Id", id));
+        DirectManagerId = (managerObj == null || managerObj == DBNull.Value) ? null : Convert.ToInt32(managerObj);
+        // ------------------------------------------------
 
         return Page();
     }
@@ -73,74 +84,97 @@ CurrentPhotoPath = await GetEmployeePhotoPathAsync(Employee.Id);
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Branches = await _employeeService.GetBranchesForDropdownAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
+        PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
         CurrentPhotoPath = Employee.Id > 0 ? await GetEmployeePhotoPathAsync(Employee.Id) : string.Empty;
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, Employee.Id > 0 ? Employee.Id : 0);
 
-        if (!ModelState.IsValid)
-            return Page();
+        Managers = await LoadManagersAsync(Employee.Id);
 
-        var updated = await _employeeService.UpdateAsync(Employee);
+        if (!ModelState.IsValid) return Page();
 
-        if (!updated)
+        if (DirectManagerId.HasValue && DirectManagerId.Value == Employee.Id)
         {
-            ErrorMessage = "\u062a\u0639\u0630\u0631 \u062d\u0641\u0638 \u0627\u0644\u062a\u0639\u062f\u064a\u0644. \u062a\u0623\u0643\u062f \u0645\u0646 \u0643\u0648\u062f \u0627\u0644\u0645\u0648\u0638\u0641 \u0648\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0645\u0644 \u0648\u0627\u0644\u0642\u0633\u0645 \u0648\u0623\u0646\u0647\u0627 \u062a\u062a\u0628\u0639 \u0625\u0644\u0649 \u0646\u0641\u0633 \u0627\u0644\u0634\u0631\u0643\u0629.";
+            ErrorMessage = "لا يمكن تعيين الموظف مديراً مباشراً لنفسه.";
             return Page();
         }
 
+        // بيانات الموظف والمدير المباشر والحقول الديناميكية تُحفظ ضمن معاملة واحدة؛
+        // حفظ الصورة (عملية ملفات) يبقى خارجها حتى لا يؤثر فشله على البيانات.
+        await using (var transaction = await _dbContext.Database.BeginTransactionAsync())
+        {
+            var updated = await _employeeService.UpdateAsync(Employee);
+
+            if (!updated)
+            {
+                ErrorMessage = "تعذر حفظ التعديل. تأكد من كود الموظف وموقع العمل والقسم.";
+                return Page();
+            }
+
+            await HrmsDatabase.ExecuteAsync(_dbContext, "UPDATE Employees SET DirectManagerId = @ManagerId WHERE Id = @Id", cmd => {
+                HrmsDatabase.AddParameter(cmd, "@ManagerId", DirectManagerId.HasValue ? (object)DirectManagerId.Value : DBNull.Value);
+                HrmsDatabase.AddParameter(cmd, "@Id", Employee.Id);
+            });
+
+            await EmployeeProfileDynamicFields.SaveAsync(_dbContext, Employee.Id, Request.Form);
+
+            await transaction.CommitAsync();
+        }
+
         var photoResult = await SaveEmployeePhotoAsync(Employee.Id);
-        await EmployeeProfileDynamicFields.SaveAsync(_dbContext, Employee.Id, Request.Form);
 
         TempData["SuccessMessage"] = string.IsNullOrWhiteSpace(photoResult)
-            ? "\u062a\u0645 \u062a\u062d\u062f\u064a\u062b \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0645\u0648\u0638\u0641 \u0628\u0646\u062c\u0627\u062d."
-            : $"\u062a\u0645 \u062a\u062d\u062f\u064a\u062b \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0645\u0648\u0638\u0641 \u0628\u0646\u062c\u0627\u062d. {photoResult}";
+            ? "تم تحديث بيانات الموظف بنجاح."
+            : $"تم تحديث بيانات الموظف بنجاح. {photoResult}";
 
         return RedirectToPage("./Profile", new { id = Employee.Id });
     }
 
+    private async Task<IEnumerable<ManagerOption>> LoadManagersAsync(int employeeId)
+    {
+        // القائمة محصورة بموظفي نفس شركة الموظف الحالي، مع استثنائه من الخيارات.
+        return await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+            SELECT e.Id, ISNULL(e.EmployeeNo, '') AS EmployeeNo, e.FullName
+            FROM Employees e
+            INNER JOIN Branches b ON e.BranchId = b.Id
+            WHERE e.IsActive = 1
+              AND e.IsDeleted = 0
+              AND e.Id <> @SelfId
+              AND b.CompanyId = (
+                  SELECT b2.CompanyId
+                  FROM Employees e2
+                  INNER JOIN Branches b2 ON e2.BranchId = b2.Id
+                  WHERE e2.Id = @SelfId
+              )
+            ORDER BY e.FullName;
+            """,
+            cmd => HrmsDatabase.AddParameter(cmd, "@SelfId", employeeId),
+            reader => new ManagerOption { Id = Convert.ToInt32(reader["Id"]), EmployeeNo = reader["EmployeeNo"].ToString() ?? "", FullName = reader["FullName"].ToString() ?? "" });
+    }
 
     private async Task<string> GetEmployeePhotoPathAsync(int employeeId)
     {
-        return await HrmsDatabase.ScalarAsync<string>(
-            _dbContext,
-            "SELECT ISNULL(PhotoPath, '') FROM Employees WHERE Id = @EmployeeId",
-            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId)) ?? string.Empty;
+        return await HrmsDatabase.ScalarAsync<string>(_dbContext, "SELECT ISNULL(PhotoPath, '') FROM Employees WHERE Id = @EmployeeId", command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId)) ?? string.Empty;
     }
 
     private async Task<string> SaveEmployeePhotoAsync(int employeeId)
     {
-        if (EmployeePhoto == null || EmployeePhoto.Length == 0)
-            return string.Empty;
-
+        if (EmployeePhoto == null || EmployeePhoto.Length == 0) return string.Empty;
         var extension = Path.GetExtension(EmployeePhoto.FileName);
-
-        if (string.IsNullOrWhiteSpace(extension) || !AllowedEmployeePhotoExtensions.Contains(extension))
-            return "\u0644\u0645 \u064a\u062a\u0645 \u062d\u0641\u0638 \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u0648\u0638\u0641 \u0644\u0623\u0646 \u0627\u0644\u0635\u064a\u063a\u0629 \u063a\u064a\u0631 \u0645\u062f\u0639\u0648\u0645\u0629.";
-
-        if (EmployeePhoto.Length > 5 * 1024 * 1024)
-            return "\u0644\u0645 \u064a\u062a\u0645 \u062d\u0641\u0638 \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u0648\u0638\u0641 \u0644\u0623\u0646 \u062d\u062c\u0645\u0647\u0627 \u0623\u0643\u0628\u0631 \u0645\u0646 5MB.";
+        if (string.IsNullOrWhiteSpace(extension) || !AllowedEmployeePhotoExtensions.Contains(extension)) return "صيغة الصورة غير مدعومة.";
+        if (EmployeePhoto.Length > 5 * 1024 * 1024) return "حجم الصورة أكبر من 5MB.";
+        if (!await UploadSignatureValidator.IsValidImageAsync(EmployeePhoto)) return "محتوى الملف ليس صورة صالحة.";
 
         var uploadRoot = Path.Combine(_environment.WebRootPath, "uploads", "employee-photos");
         Directory.CreateDirectory(uploadRoot);
-
         var storedName = $"employee_{employeeId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}{extension}";
         var physicalPath = Path.Combine(uploadRoot, storedName);
         var relativePath = $"/uploads/employee-photos/{storedName}";
 
-        await using (var stream = System.IO.File.Create(physicalPath))
-        {
-            await EmployeePhoto.CopyToAsync(stream);
-        }
-
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            "UPDATE Employees SET PhotoPath = @PhotoPath WHERE Id = @EmployeeId;",
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@PhotoPath", relativePath);
-                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-            });
-
+        await using (var stream = System.IO.File.Create(physicalPath)) { await EmployeePhoto.CopyToAsync(stream); }
+        await HrmsDatabase.ExecuteAsync(_dbContext, "UPDATE Employees SET PhotoPath = @PhotoPath WHERE Id = @EmployeeId;", command => { HrmsDatabase.AddParameter(command, "@PhotoPath", relativePath); HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId); });
         CurrentPhotoPath = relativePath;
-        return "\u062a\u0645 \u062d\u0641\u0638 \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u0648\u0638\u0641.";
+        return "تم حفظ الصورة.";
     }
 }
