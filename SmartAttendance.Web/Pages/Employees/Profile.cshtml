@@ -331,17 +331,7 @@
                             تعديل البيانات
                         </a>
                     }
-
-                    @if (Model.CanChangeAssignment)
-                    {
-                        <a asp-page="./Edit"
-                           asp-route-id="@employee.Id"
-                           class="z360-action">
-                            تغيير التعيين
-                        </a>
-                    }
-
-                    @if (Model.CanOpenEmployeeDocuments)
+@if (Model.CanOpenEmployeeDocuments)
                     {
                         <a asp-page="/EmployeeDocuments/Index"
                            asp-route-employeeId="@employee.Id"
@@ -1109,4 +1099,5 @@
 @section Scripts {
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
     <script src="~/js/nexora-profile-reassign-modal.js" asp-append-version="true"></script>
+    <script src="~/js/nexora-profile-anchor-navigation.js" asp-append-version="true"></script>
 }
