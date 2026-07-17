@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Application.Common.Security;
@@ -81,11 +82,7 @@ public class EditModel : PageModel
         CurrentPhotoPath = await GetEmployeePhotoPathAsync(Employee.Id);
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, Employee.Id);
         Managers = await LoadManagersAsync(Employee.Id);
-
-        // --- الإصلاح الجذري لمشكلة الـ Cast Exception ---
-        var managerObj = await HrmsDatabase.ScalarAsync<object>(_dbContext, "SELECT DirectManagerId FROM Employees WHERE Id = @Id", cmd => HrmsDatabase.AddParameter(cmd, "@Id", id));
-        DirectManagerId = (managerObj == null || managerObj == DBNull.Value) ? null : Convert.ToInt32(managerObj);
-        // ------------------------------------------------
+        DirectManagerId = Employee.DirectManagerId;
 
         return Page();
     }
@@ -114,6 +111,8 @@ public class EditModel : PageModel
             return Page();
         }
 
+        Employee.DirectManagerId = DirectManagerId;
+
         // بيانات الموظف والمدير المباشر والحقول الديناميكية تُحفظ ضمن معاملة واحدة؛
         // حفظ الصورة (عملية ملفات) يبقى خارجها حتى لا يؤثر فشله على البيانات.
         await using (var transaction = await _dbContext.Database.BeginTransactionAsync())
@@ -122,14 +121,9 @@ public class EditModel : PageModel
 
             if (!updated)
             {
-                ErrorMessage = "تعذر حفظ التعديل. تأكد من كود الموظف وموقع العمل والقسم.";
+                ErrorMessage = "تعذر حفظ التعديل. تأكد من كود الموظف وموقع العمل والقسم والمدير المباشر.";
                 return Page();
             }
-
-            await HrmsDatabase.ExecuteAsync(_dbContext, "UPDATE Employees SET DirectManagerId = @ManagerId WHERE Id = @Id", cmd => {
-                HrmsDatabase.AddParameter(cmd, "@ManagerId", DirectManagerId.HasValue ? (object)DirectManagerId.Value : DBNull.Value);
-                HrmsDatabase.AddParameter(cmd, "@Id", Employee.Id);
-            });
 
             await EmployeeProfileDynamicFields.SaveAsync(_dbContext, Employee.Id, Request.Form);
 
@@ -184,7 +178,11 @@ public class EditModel : PageModel
 
     private async Task<string> GetEmployeePhotoPathAsync(int employeeId)
     {
-        return await HrmsDatabase.ScalarAsync<string>(_dbContext, "SELECT ISNULL(PhotoPath, '') FROM Employees WHERE Id = @EmployeeId", command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId)) ?? string.Empty;
+        return await _dbContext.Employees
+            .AsNoTracking()
+            .Where(x => x.Id == employeeId)
+            .Select(x => x.PhotoPath ?? string.Empty)
+            .FirstOrDefaultAsync() ?? string.Empty;
     }
 
     private async Task<string> SaveEmployeePhotoAsync(int employeeId)
@@ -202,7 +200,9 @@ public class EditModel : PageModel
         var relativePath = $"/uploads/employee-photos/{storedName}";
 
         await using (var stream = System.IO.File.Create(physicalPath)) { await EmployeePhoto.CopyToAsync(stream); }
-        await HrmsDatabase.ExecuteAsync(_dbContext, "UPDATE Employees SET PhotoPath = @PhotoPath WHERE Id = @EmployeeId;", command => { HrmsDatabase.AddParameter(command, "@PhotoPath", relativePath); HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId); });
+        await _dbContext.Employees
+            .Where(x => x.Id == employeeId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.PhotoPath, relativePath));
         CurrentPhotoPath = relativePath;
         return "تم حفظ الصورة.";
     }

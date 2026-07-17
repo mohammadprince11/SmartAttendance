@@ -41,6 +41,8 @@ public class EmployeeEditViewModel
 
     public string? MaritalStatus { get; set; }
 
+    public int? DirectManagerId { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     [Range(1, int.MaxValue, ErrorMessage = "اختر موقع العمل.")]

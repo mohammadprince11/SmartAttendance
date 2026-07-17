@@ -419,6 +419,28 @@ public class EmployeeService : IEmployeeService
             return false;
         }
 
+        // المدير المباشر: لا يكون الموظف نفسه، ويجب أن يكون فعالاً ومن نفس شركة موقع العمل الهدف.
+        if (model.DirectManagerId.HasValue)
+        {
+            if (model.DirectManagerId.Value == model.Id)
+            {
+                return false;
+            }
+
+            var managerValid = await _dbContext.Employees
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.Id == model.DirectManagerId.Value &&
+                    !x.IsDeleted &&
+                    x.IsActive &&
+                    x.Branch.CompanyId == branch.CompanyId);
+
+            if (!managerValid)
+            {
+                return false;
+            }
+        }
+
         employee.EmployeeNo = model.EmployeeNo;
         employee.FullName = model.FullName;
         employee.NationalId = model.NationalId;
@@ -433,6 +455,7 @@ public class EmployeeService : IEmployeeService
         employee.Nationality = model.Nationality;
         employee.Country = model.Country;
         employee.IsActive = model.IsActive;
+        employee.DirectManagerId = model.DirectManagerId;
         employee.BranchId = model.BranchId;
         employee.DepartmentId = model.DepartmentId;
 
