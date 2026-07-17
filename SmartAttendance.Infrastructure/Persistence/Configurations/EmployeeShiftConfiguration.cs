@@ -21,9 +21,12 @@ public class EmployeeShiftConfiguration : IEntityTypeConfiguration<EmployeeShift
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Shift)
-            .WithMany()
+            .WithMany(x => x.EmployeeShifts)
             .HasForeignKey(x => x.ShiftId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // فلتر مطابق لفلتر Shift حتى لا تظهر إسنادات تشير إلى شفت محذوف ناعماً.
+        builder.HasQueryFilter(x => !x.IsDeleted && !x.Shift.IsDeleted);
 
         builder.HasIndex(x => new
         {
