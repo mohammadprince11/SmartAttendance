@@ -225,25 +225,30 @@
         }
         else
         {
-            <div class="hrms-grid">
-                @foreach (var position in Model.Positions)
-                {
-                    <article class="hrms-tile">
-                        <div class="hrms-tile-head">
-                            <div style="display:flex;align-items:center;gap:10px">
-                                <div class="hrms-tile-icon">🧑‍💼</div>
-                                <div>
-                                    <h3>@position.Name</h3>
-                                    @if (!string.IsNullOrWhiteSpace(position.EnglishName))
-                                    {
-                                        <span class="hrms-tile-sub">@position.EnglishName</span>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                        <div><div class="hrms-tile-metric">@position.EmployeeCount</div><span class="hrms-tile-sub">موظف</span></div>
-                    </article>
-                }
+            <div class="table-card">
+                <form method="get" class="search-form" onsubmit="return false;">
+                    <input type="search" placeholder="بحث باسم المنصب..." aria-label="بحث المناصب" />
+                </form>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>المنصب</th>
+                            <th class="text-start">الاسم بالإنجليزية</th>
+                            <th>عدد الموظفين</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var position in Model.Positions)
+                        {
+                            <tr>
+                                <td>@position.Name</td>
+                                <td class="text-start">@(string.IsNullOrWhiteSpace(position.EnglishName) ? "—" : position.EnglishName)</td>
+                                <td>@position.EmployeeCount</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         }
     </div>

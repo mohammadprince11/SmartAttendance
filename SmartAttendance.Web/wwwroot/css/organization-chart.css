@@ -167,49 +167,84 @@
     overflow-x: auto;
 }
 
+/* Top-down org chart (Kayan-style): parent centered above a horizontal row of
+   children, joined with connector lines drawn via ::before/::after pseudo-elements. */
 .org-tree,
 .org-tree-children {
     list-style: none;
     margin: 0;
     padding: 0;
+    display: flex;
+    justify-content: center;
+    gap: 4px;
 }
 
-.org-tree-root > .org-tree-item {
-    margin-bottom: 10px;
-}
-
-/* Nested items get an indent + connector line on the right (RTL). */
-.org-tree-children {
-    margin-right: 22px;
-    padding-right: 18px;
-    border-right: 2px solid var(--sa-border);
+.org-tree-root {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 24px;
 }
 
 .org-tree-item {
     position: relative;
-    padding-top: 8px;
+    padding: 26px 10px 0;
+    text-align: center;
 }
 
-.org-tree-children > .org-tree-item::before {
+/* Horizontal connectors between siblings (two halves meeting under the parent). */
+.org-tree-children > .org-tree-item::before,
+.org-tree-children > .org-tree-item::after {
     content: "";
     position: absolute;
-    top: 30px;
-    right: -18px;
-    width: 16px;
-    height: 2px;
-    background: var(--sa-border);
+    top: 0;
+    width: 50%;
+    height: 26px;
+    border-top: 2px solid var(--sa-border);
+}
+
+.org-tree-children > .org-tree-item::before { right: 50%; }
+.org-tree-children > .org-tree-item::after { left: 50%; }
+
+/* First/last children only need the inner half of the horizontal bar. */
+.org-tree-children > .org-tree-item:first-child::before,
+.org-tree-children > .org-tree-item:last-child::after { border-top: 0; }
+
+/* Vertical drop from each child up to the horizontal bar. */
+.org-tree-children > .org-tree-item::before { border-inline-start: 2px solid var(--sa-border); }
+
+/* Only child: single straight vertical line, no horizontal bar. */
+.org-tree-children > .org-tree-item:only-child::before,
+.org-tree-children > .org-tree-item:only-child::after { border-top: 0; }
+
+/* Vertical drop from a parent down to its children row. */
+.org-tree-item > .org-tree-children::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    inset-inline-start: 50%;
+    width: 0;
+    height: 26px;
+    border-inline-start: 2px solid var(--sa-border);
+}
+
+.org-tree-item > .org-tree-children {
+    position: relative;
+    padding-top: 26px;
+    align-items: flex-start;
 }
 
 /* --- Node card --- */
 .org-node {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 12px;
     background: var(--sa-surface-2);
     border: 1px solid var(--sa-border);
     border-radius: 14px;
     padding: 10px 14px;
-    max-width: 460px;
+    width: 240px;
+    text-align: start;
+    vertical-align: top;
     transition: border-color .15s ease, box-shadow .15s ease;
 }
 
