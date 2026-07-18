@@ -24,6 +24,12 @@ public class IndexModel : PageModel
 
     public List<EmployeeDependent> Dependents { get; set; } = new();
 
+    public List<EmployeeEducation> Educations { get; set; } = new();
+
+    public List<EmployeeExperience> Experiences { get; set; } = new();
+
+    public List<EmployeeCertificate> Certificates { get; set; } = new();
+
     public int DependentCount => Dependents.Count;
 
     public int SupportedCount => Dependents.Count(d => d.IsDependent);
@@ -32,6 +38,15 @@ public class IndexModel : PageModel
 
     [BindProperty]
     public DependentInput Input { get; set; } = new();
+
+    [BindProperty]
+    public EducationInputModel EducationInput { get; set; } = new();
+
+    [BindProperty]
+    public ExperienceInputModel ExperienceInput { get; set; } = new();
+
+    [BindProperty]
+    public CertificateInputModel CertificateInput { get; set; } = new();
 
     [TempData]
     public string? SuccessMessage { get; set; }
@@ -42,6 +57,7 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnGetAsync()
     {
         await EmployeeDependentSchema.EnsureAsync(_dbContext);
+        await EmployeeRecordsSchema.EnsureAsync(_dbContext);
 
         if (!await LoadHeaderAsync())
         {
@@ -49,7 +65,144 @@ public class IndexModel : PageModel
         }
 
         await LoadDependentsAsync();
+        await LoadRecordsAsync();
         return Page();
+    }
+
+    private async Task LoadRecordsAsync()
+    {
+        Educations = await _dbContext.EmployeeEducations.AsNoTracking()
+            .Where(x => x.EmployeeId == EmployeeId)
+            .OrderByDescending(x => x.IsLatest).ThenByDescending(x => x.ToDate)
+            .ToListAsync();
+
+        Experiences = await _dbContext.EmployeeExperiences.AsNoTracking()
+            .Where(x => x.EmployeeId == EmployeeId)
+            .OrderByDescending(x => x.ToDate)
+            .ToListAsync();
+
+        Certificates = await _dbContext.EmployeeCertificates.AsNoTracking()
+            .Where(x => x.EmployeeId == EmployeeId)
+            .OrderByDescending(x => x.IssueDate)
+            .ToListAsync();
+    }
+
+    private async Task<bool> EmployeeExistsAsync() =>
+        await _dbContext.Employees.AnyAsync(e => e.Id == EmployeeId && !e.IsDeleted);
+
+    private (string user, DateTime now) Stamp() => (User.Identity?.Name ?? "System", DateTime.UtcNow);
+
+    // ---- Education ----
+    public async Task<IActionResult> OnPostSaveEducationAsync()
+    {
+        await EmployeeRecordsSchema.EnsureAsync(_dbContext);
+        if (!await EmployeeExistsAsync()) return NotFound();
+        if (string.IsNullOrWhiteSpace(EducationInput.University))
+        {
+            ErrorMessage = "اسم الجامعة مطلوب."; return RedirectToPage(new { EmployeeId });
+        }
+        var (user, now) = Stamp();
+        var e = EducationInput.Id > 0
+            ? await _dbContext.EmployeeEducations.FirstOrDefaultAsync(x => x.Id == EducationInput.Id && x.EmployeeId == EmployeeId)
+            : null;
+        if (e == null)
+        {
+            e = new EmployeeEducation { EmployeeId = EmployeeId, CreatedAt = now, CreatedBy = user };
+            _dbContext.EmployeeEducations.Add(e);
+        }
+        else { e.UpdatedAt = now; e.UpdatedBy = user; }
+        e.Country = Clean(EducationInput.Country);
+        e.University = EducationInput.University.Trim();
+        e.Degree = Clean(EducationInput.Degree);
+        e.Major = Clean(EducationInput.Major);
+        e.FromDate = EducationInput.FromDate;
+        e.ToDate = EducationInput.ToDate;
+        e.IsLatest = EducationInput.IsLatest;
+        e.Note = Clean(EducationInput.Note);
+        await _dbContext.SaveChangesAsync();
+        SuccessMessage = "تم حفظ المؤهل التعليمي.";
+        return RedirectToPage(new { EmployeeId });
+    }
+
+    public async Task<IActionResult> OnPostDeleteEducationAsync(int recordId)
+    {
+        var e = await _dbContext.EmployeeEducations.FirstOrDefaultAsync(x => x.Id == recordId && x.EmployeeId == EmployeeId);
+        if (e != null) { e.IsDeleted = true; await _dbContext.SaveChangesAsync(); SuccessMessage = "تم الحذف."; }
+        return RedirectToPage(new { EmployeeId });
+    }
+
+    // ---- Experience ----
+    public async Task<IActionResult> OnPostSaveExperienceAsync()
+    {
+        await EmployeeRecordsSchema.EnsureAsync(_dbContext);
+        if (!await EmployeeExistsAsync()) return NotFound();
+        if (string.IsNullOrWhiteSpace(ExperienceInput.CompanyName))
+        {
+            ErrorMessage = "اسم الشركة مطلوب."; return RedirectToPage(new { EmployeeId });
+        }
+        var (user, now) = Stamp();
+        var e = ExperienceInput.Id > 0
+            ? await _dbContext.EmployeeExperiences.FirstOrDefaultAsync(x => x.Id == ExperienceInput.Id && x.EmployeeId == EmployeeId)
+            : null;
+        if (e == null)
+        {
+            e = new EmployeeExperience { EmployeeId = EmployeeId, CreatedAt = now, CreatedBy = user };
+            _dbContext.EmployeeExperiences.Add(e);
+        }
+        else { e.UpdatedAt = now; e.UpdatedBy = user; }
+        e.CompanyName = ExperienceInput.CompanyName.Trim();
+        e.Country = Clean(ExperienceInput.Country);
+        e.JobTitle = Clean(ExperienceInput.JobTitle);
+        e.FromDate = ExperienceInput.FromDate;
+        e.ToDate = ExperienceInput.ToDate;
+        e.Note = Clean(ExperienceInput.Note);
+        await _dbContext.SaveChangesAsync();
+        SuccessMessage = "تم حفظ الخبرة.";
+        return RedirectToPage(new { EmployeeId });
+    }
+
+    public async Task<IActionResult> OnPostDeleteExperienceAsync(int recordId)
+    {
+        var e = await _dbContext.EmployeeExperiences.FirstOrDefaultAsync(x => x.Id == recordId && x.EmployeeId == EmployeeId);
+        if (e != null) { e.IsDeleted = true; await _dbContext.SaveChangesAsync(); SuccessMessage = "تم الحذف."; }
+        return RedirectToPage(new { EmployeeId });
+    }
+
+    // ---- Certificate ----
+    public async Task<IActionResult> OnPostSaveCertificateAsync()
+    {
+        await EmployeeRecordsSchema.EnsureAsync(_dbContext);
+        if (!await EmployeeExistsAsync()) return NotFound();
+        if (string.IsNullOrWhiteSpace(CertificateInput.Name))
+        {
+            ErrorMessage = "اسم الشهادة مطلوب."; return RedirectToPage(new { EmployeeId });
+        }
+        var (user, now) = Stamp();
+        var e = CertificateInput.Id > 0
+            ? await _dbContext.EmployeeCertificates.FirstOrDefaultAsync(x => x.Id == CertificateInput.Id && x.EmployeeId == EmployeeId)
+            : null;
+        if (e == null)
+        {
+            e = new EmployeeCertificate { EmployeeId = EmployeeId, CreatedAt = now, CreatedBy = user };
+            _dbContext.EmployeeCertificates.Add(e);
+        }
+        else { e.UpdatedAt = now; e.UpdatedBy = user; }
+        e.Name = CertificateInput.Name.Trim();
+        e.ReferenceNo = Clean(CertificateInput.ReferenceNo);
+        e.IssueDate = CertificateInput.IssueDate;
+        e.FromDate = CertificateInput.FromDate;
+        e.ToDate = CertificateInput.ToDate;
+        e.Note = Clean(CertificateInput.Note);
+        await _dbContext.SaveChangesAsync();
+        SuccessMessage = "تم حفظ الشهادة.";
+        return RedirectToPage(new { EmployeeId });
+    }
+
+    public async Task<IActionResult> OnPostDeleteCertificateAsync(int recordId)
+    {
+        var e = await _dbContext.EmployeeCertificates.FirstOrDefaultAsync(x => x.Id == recordId && x.EmployeeId == EmployeeId);
+        if (e != null) { e.IsDeleted = true; await _dbContext.SaveChangesAsync(); SuccessMessage = "تم الحذف."; }
+        return RedirectToPage(new { EmployeeId });
     }
 
     public async Task<IActionResult> OnPostSaveDependentAsync()
@@ -243,6 +396,41 @@ public class IndexModel : PageModel
         public bool IsDependent { get; set; }
         public string? MobilePhone { get; set; }
         public string? CompanyName { get; set; }
+        public string? Note { get; set; }
+    }
+
+    public class EducationInputModel
+    {
+        public int Id { get; set; }
+        public string? Country { get; set; }
+        public string University { get; set; } = string.Empty;
+        public string? Degree { get; set; }
+        public string? Major { get; set; }
+        public DateOnly? FromDate { get; set; }
+        public DateOnly? ToDate { get; set; }
+        public bool IsLatest { get; set; }
+        public string? Note { get; set; }
+    }
+
+    public class ExperienceInputModel
+    {
+        public int Id { get; set; }
+        public string CompanyName { get; set; } = string.Empty;
+        public string? Country { get; set; }
+        public string? JobTitle { get; set; }
+        public DateOnly? FromDate { get; set; }
+        public DateOnly? ToDate { get; set; }
+        public string? Note { get; set; }
+    }
+
+    public class CertificateInputModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? ReferenceNo { get; set; }
+        public DateOnly? IssueDate { get; set; }
+        public DateOnly? FromDate { get; set; }
+        public DateOnly? ToDate { get; set; }
         public string? Note { get; set; }
     }
 }
