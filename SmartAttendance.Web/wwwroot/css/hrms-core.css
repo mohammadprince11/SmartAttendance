@@ -291,3 +291,194 @@ html[dir="rtl"] .hrms-table {
         flex-direction: column;
     }
 }
+
+/* ============================================================
+   Shared HRMS UI primitives (Kayan-style): responsive card grid,
+   tabs, and slide-over panel. Reusable across pages.
+   ============================================================ */
+
+/* Responsive card distribution: 1 col (mobile) / 2 (tablet) / 3 (wide),
+   mirroring Kayan's col-md-12 / col-lg-6 / col-xl-4. */
+.hrms-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+@media (max-width: 1200px) {
+    .hrms-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+    .hrms-grid { grid-template-columns: 1fr; }
+}
+
+/* A single tile/panel inside the grid. */
+.hrms-tile {
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 16px;
+    box-shadow: var(--sa-shadow);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.hrms-tile-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.hrms-tile-head h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 1000;
+    color: var(--sa-text);
+}
+
+.hrms-tile-icon {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+    background: var(--sa-primary-soft);
+    color: var(--sa-primary);
+    font-size: 18px;
+    flex: none;
+}
+
+.hrms-tile-metric {
+    font-size: 26px;
+    font-weight: 1000;
+    color: var(--sa-text);
+    line-height: 1.1;
+}
+
+.hrms-tile-sub {
+    color: var(--sa-muted);
+    font-weight: 800;
+    font-size: 12px;
+}
+
+.hrms-tile.cursor,
+.hrms-clickable { cursor: pointer; transition: transform .12s var(--zy-ease, ease), box-shadow .12s ease, border-color .12s ease; }
+.hrms-tile.cursor:hover,
+.hrms-clickable:hover { transform: translateY(-2px); border-color: var(--sa-border-strong); box-shadow: var(--zy-shadow-lg); }
+
+/* ---------- Tabs ---------- */
+.hrms-tabs {
+    display: flex;
+    gap: 6px;
+    border-bottom: 1px solid var(--sa-border);
+    margin-bottom: 14px;
+    overflow-x: auto;
+}
+
+.hrms-tab {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    padding: 11px 16px;
+    font: inherit;
+    font-weight: 900;
+    color: var(--sa-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    border-radius: 10px 10px 0 0;
+}
+
+.hrms-tab:hover { color: var(--sa-text); background: var(--sa-surface-3); }
+
+.hrms-tab.active {
+    color: var(--sa-primary);
+    border-bottom-color: var(--sa-primary);
+}
+
+.hrms-tabpanel { display: none; }
+.hrms-tabpanel.active { display: block; animation: hrms-fade .2s ease; }
+
+@keyframes hrms-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- Slide-over (offcanvas) ---------- */
+.hrms-slideover-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 20, 38, .42);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .35s ease, visibility .35s ease;
+    z-index: 1200;
+}
+
+.hrms-slideover {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: min(480px, 94vw);
+    background: var(--sa-surface);
+    border-inline-start: 1px solid var(--sa-border);
+    box-shadow: var(--zy-shadow-lg);
+    transform: translateX(100%);
+    transition: transform .35s ease-out;
+    z-index: 1201;
+    display: flex;
+    flex-direction: column;
+    overscroll-behavior: contain;
+}
+
+/* RTL: panel sits on the left edge, so it slides out to the left. */
+html[dir="rtl"] .hrms-slideover { transform: translateX(-100%); }
+
+.hrms-slideover.wide { width: min(720px, 96vw); }
+
+.hrms-slideover.open,
+html[dir="rtl"] .hrms-slideover.open { transform: translateX(0); }
+.hrms-slideover-backdrop.open { opacity: 1; visibility: visible; }
+
+.hrms-slideover-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--sa-border);
+    position: sticky;
+    top: 0;
+    background: var(--sa-surface);
+}
+
+.hrms-slideover-head h2 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 1000;
+    color: var(--sa-text);
+}
+
+.hrms-slideover-close {
+    appearance: none;
+    border: 1px solid var(--sa-border);
+    background: var(--sa-surface-3);
+    color: var(--sa-text);
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    flex: none;
+}
+
+.hrms-slideover-close:hover { border-color: var(--sa-danger); color: var(--sa-danger); }
+
+.hrms-slideover-body {
+    padding: 18px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.hrms-muted { color: var(--sa-muted); font-weight: 800; }

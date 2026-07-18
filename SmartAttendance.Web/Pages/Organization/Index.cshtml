@@ -2,180 +2,382 @@
 @model SmartAttendance.Web.Pages.Organization.IndexModel
 
 @{
-    ViewData["Title"] = "Organization";
+    ViewData["Title"] = "الهياكل التنظيمية";
 }
 
-<link rel="stylesheet" href="~/css/organization-view-only.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/organization-chart.css" asp-append-version="true" />
 
-<div class="org-view-page">
+<div class="hrms-page" data-hrms-tabs-group>
     <div class="page-header">
         <div>
-            <h1>الهيكل التنظيمي</h1>
-            <p>عرض هيكل الشركة والفروع والأقسام وعدد الموظفين.</p>
+            <h1>الهياكل التنظيمية</h1>
+            <p>هيكلية الشركة، الهيكل الهرمي (المدراء)، والهيكل الوظيفي — في مكان واحد.</p>
         </div>
-
-        <div class="org-header-actions">
-    <a asp-page="/Companies/Index" class="org-btn-secondary">&#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0627;&#x062A;</a>
-    <a asp-page="/Branches/Index" class="org-btn-secondary">&#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x0627;&#x0644;&#x0641;&#x0631;&#x0648;&#x0639;</a>
-    <a asp-page="/Departments/Index" class="org-btn-secondary">&#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;</a>
-</div>
+        <div class="hrms-inline-form">
+            <a asp-page="/Companies/Index" class="hrms-btn-secondary">إعدادات الشركات</a>
+            <a asp-page="/Branches/Index" class="hrms-btn-secondary">إعدادات الفروع</a>
+            <a asp-page="/Departments/Index" class="hrms-btn-secondary">إعدادات الأقسام</a>
+        </div>
     </div>
 
-    <section class="org-summary-grid">
-        <div class="org-summary-card">
-            <div>
-                <span>الشركات</span>
-                <strong>@Model.TotalCompanies</strong>
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="hrms-badge approved" style="padding:10px 14px">@Model.SuccessMessage</div>
+    }
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="hrms-badge rejected" style="padding:10px 14px">@Model.ErrorMessage</div>
+    }
+
+    <div class="hrms-stats-card">
+        <div class="hrms-stats">
+            <div class="hrms-stat"><span>الشركات</span><strong>@Model.TotalCompanies</strong></div>
+            <div class="hrms-stat"><span>الفروع</span><strong>@Model.TotalBranches</strong></div>
+            <div class="hrms-stat"><span>الأقسام</span><strong>@Model.TotalDepartments</strong></div>
+            <div class="hrms-stat"><span>الموظفون</span><strong>@Model.TotalEmployees</strong></div>
+        </div>
+    </div>
+
+    <div class="hrms-tabs" role="tablist">
+        <button type="button" class="hrms-tab active" data-hrms-tab="company" data-hrms-tab-remember>هيكلية الشركة</button>
+        <button type="button" class="hrms-tab" data-hrms-tab="chart" data-hrms-tab-remember>الهيكل الهرمي</button>
+        <button type="button" class="hrms-tab" data-hrms-tab="functional" data-hrms-tab-remember>الهيكل الوظيفي</button>
+    </div>
+
+    @* ===================== Tab 1: Company structure ===================== *@
+    <div class="hrms-tabpanel active" data-hrms-tabpanel="company">
+        <div class="hrms-tile-head" style="margin-bottom:14px">
+            <form method="get" class="hrms-inline-form">
+                <label for="org-search">بحث</label>
+                <input id="org-search" type="search" name="Search" value="@Model.Search" placeholder="شركة / فرع / قسم" />
+                <button type="submit" class="hrms-btn-secondary">تطبيق</button>
+                @if (!string.IsNullOrWhiteSpace(Model.Search))
+                {
+                    <a asp-page="./Index" class="hrms-btn-secondary">مسح</a>
+                }
+            </form>
+            <div class="hrms-inline-form">
+                <label><input type="checkbox" id="org-active-only" /> النشطة فقط</label>
+                <button type="button" class="hrms-btn-primary" data-hrms-open="add-company">+ شركة</button>
+                <button type="button" class="hrms-btn-secondary" data-hrms-open="add-branch">+ فرع</button>
+                <button type="button" class="hrms-btn-secondary" data-hrms-open="add-department">+ قسم</button>
             </div>
-            <div class="org-summary-icon">🏢</div>
         </div>
-
-        <div class="org-summary-card">
-            <div>
-                <span>الفروع</span>
-                <strong>@Model.TotalBranches</strong>
-            </div>
-            <div class="org-summary-icon">📍</div>
-        </div>
-
-        <div class="org-summary-card">
-            <div>
-                <span>الأقسام</span>
-                <strong>@Model.TotalDepartments</strong>
-            </div>
-            <div class="org-summary-icon">🧩</div>
-        </div>
-
-        <div class="org-summary-card">
-            <div>
-                <span>الموظفون</span>
-                <strong>@Model.TotalEmployees</strong>
-                <small>فعال @Model.ActiveEmployees / غير فعال @Model.InactiveEmployees</small>
-            </div>
-            <div class="org-summary-icon">👥</div>
-        </div>
-    </section>
-
-    <form method="get" class="org-search-panel">
-        <div class="org-search-input">
-            <span>🔎</span>
-            <input asp-for="Search" placeholder="ابحث عن شركة أو فرع أو قسم..." />
-        </div>
-
-        <button type="submit" class="org-btn-primary">بحث</button>
-        <a asp-page="./Index" class="org-btn-secondary">مسح</a>
-        <button type="button" class="org-btn-secondary" data-expand-all>فتح الأقسام</button>
-        <button type="button" class="org-btn-secondary" data-collapse-all>إغلاق الأقسام</button>
-    </form>
-
-    <section class="org-companies">
-        @foreach (var company in Model.Companies)
-        {
-            <article class="org-company">
-                <div class="org-company-header">
-                    <div class="org-company-info">
-                        <div class="org-company-icon">🏢</div>
-                        <div>
-                            <h2>@company.Name</h2>
-                            <p>@company.BranchCount فروع · @company.DepartmentCount أقسام · @company.EmployeeCount موظفين</p>
-                        </div>
-                    </div>
-
-                    <span class="org-status @(company.IsActive ? "active" : "inactive")">
-                        @(company.IsActive ? "فعال" : "غير فعال")
-                    </span>
-                </div>
-
-                <div class="org-table">
-                    <div class="org-table-head">
-                        <div>موقع العمل</div>
-                        <div>الأقسام</div>
-                        <div>الموظفون</div>
-                        <div>الحالة</div>
-                        <div>عرض</div>
-                    </div>
-
-                    @foreach (var branch in company.Branches)
-                    {
-                        <div class="org-branch">
-                            <div class="org-branch-name">
-                                <span class="org-branch-icon">📍</span>
-                                <div>
-                                    <strong>@branch.Name</strong>
-                                    <small>@branch.Code</small>
-                                </div>
-                            </div>
-
-                            <div class="org-count">
-                                <strong>@branch.DepartmentCount</strong>
-                                <small>أقسام</small>
-                            </div>
-
-                            <div class="org-count">
-                                <strong>@branch.EmployeeCount</strong>
-                                <small>موظفين</small>
-                            </div>
-
-                            <div>
-                                <span class="org-status @(branch.IsActive ? "active" : "inactive")">
-                                    @(branch.IsActive ? "فعال" : "غير فعال")
-                                </span>
-                            </div>
-
-                            <div>
-                                <button type="button" class="org-toggle" data-toggle-departments>⌄</button>
-                            </div>
-                        </div>
-
-                        <div class="org-departments" hidden>
-                            @if (branch.Departments.Any())
-                            {
-                                @foreach (var department in branch.Departments)
-                                {
-                                    <div class="org-department">
-                                        <div class="org-department-name">
-                                            <span>🧩</span>
-                                            <div>
-                                                <strong>@department.Name</strong>
-                                                <small>@department.Code</small>
-                                            </div>
-                                        </div>
-
-                                        <div class="org-count">
-                                            <strong>@department.EmployeeCount</strong>
-                                            <small>موظف</small>
-                                        </div>
-
-                                        <div>
-                                            <span class="org-status @(department.IsActive ? "active" : "inactive")">
-                                                @(department.IsActive ? "فعال" : "غير فعال")
-                                            </span>
-                                        </div>
-                                    </div>
-                                }
-                            }
-                            else
-                            {
-                                <div class="org-empty-line">لا توجد أقسام داخل هذا موقع العمل.</div>
-                            }
-                        </div>
-                    }
-
-                    @if (!company.Branches.Any())
-                    {
-                        <div class="org-empty-line">لا توجد فروع داخل هذه الشركة.</div>
-                    }
-                </div>
-            </article>
-        }
 
         @if (!Model.Companies.Any())
         {
-            <div class="org-empty">لا توجد نتائج حسب البحث الحالي.</div>
+            <div class="hrms-empty">لا توجد نتائج حسب البحث الحالي.</div>
         }
-    </section>
+        else
+        {
+            <div class="hrms-grid" id="org-company-grid">
+                @foreach (var company in Model.Companies)
+                {
+                    <article class="hrms-tile cursor org-unit" data-active="@(company.IsActive ? "1" : "0")"
+                             data-hrms-open="company-@company.Id">
+                        <div class="hrms-tile-head">
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <div class="hrms-tile-icon">🏢</div>
+                                <div>
+                                    <h3>@company.Name</h3>
+                                    <span class="hrms-tile-sub">@company.Code · شركة</span>
+                                </div>
+                            </div>
+                            <span class="hrms-badge @(company.IsActive ? "approved" : "rejected")">
+                                @(company.IsActive ? "فعال" : "متوقف")
+                            </span>
+                        </div>
+                        <div style="display:flex;gap:18px">
+                            <div><div class="hrms-tile-metric">@company.EmployeeCount</div><span class="hrms-tile-sub">موظف</span></div>
+                            <div><div class="hrms-tile-metric">@company.BranchCount</div><span class="hrms-tile-sub">فرع</span></div>
+                            <div><div class="hrms-tile-metric">@company.DepartmentCount</div><span class="hrms-tile-sub">قسم</span></div>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </div>
+
+    @* ===================== Tab 2: Hierarchical (chart) ===================== *@
+    <div class="hrms-tabpanel" data-hrms-tabpanel="chart">
+        <div class="hrms-tile-head" style="margin-bottom:14px">
+            <div>
+                <h3>الهيكل الهرمي (خريطة المسؤوليات)</h3>
+                <span class="hrms-tile-sub">تسلسل المدراء المباشرين للموظفين الفعالين — مبني من "المدير المباشر".</span>
+            </div>
+            <form method="get" class="hrms-inline-form">
+                <input type="hidden" name="Search" value="@Model.Search" />
+                <label for="chartCompany">الشركة</label>
+                <select id="chartCompany" name="ChartCompanyId" onchange="this.form.submit()">
+                    @foreach (var company in Model.ChartCompanies)
+                    {
+                        <option value="@company.Id" selected="@(Model.ChartCompanyId == company.Id)">@company.Name</option>
+                    }
+                </select>
+                <noscript><button type="submit" class="hrms-btn-secondary">عرض</button></noscript>
+            </form>
+        </div>
+
+        @if (!Model.ChartCompanyId.HasValue)
+        {
+            <div class="hrms-empty">لا توجد شركات فعّالة لعرض هيكلها.</div>
+        }
+        else
+        {
+            <div class="hrms-stats-card" style="margin-bottom:14px">
+                <div class="hrms-stats">
+                    <div class="hrms-stat"><span>موظفون فعّالون</span><strong>@Model.Chart.TotalEmployees</strong></div>
+                    <div class="hrms-stat"><span>مدراء</span><strong>@Model.Chart.ManagerCount</strong></div>
+                    <div class="hrms-stat"><span>مربوطون بمدير</span><strong>@Model.Chart.WithManagerCount</strong></div>
+                    <div class="hrms-stat"><span>بلا مدير مباشر</span><strong>@Model.Chart.WithoutManagerCount</strong></div>
+                    <div class="hrms-stat"><span>عمق التسلسل</span><strong>@Model.Chart.MaxDepth</strong></div>
+                </div>
+            </div>
+
+            @if (Model.Chart.TotalEmployees == 0)
+            {
+                <div class="hrms-empty">لا يوجد موظفون فعّالون في هذه الشركة.</div>
+            }
+            else
+            {
+                <div class="orgchart-page" dir="rtl">
+                    <div class="orgchart-toolbar">
+                        <div class="orgchart-search">
+                            <span>🔎</span>
+                            <input type="text" id="orgSearch" placeholder="ابحث باسم الموظف أو رقمه الوظيفي..." autocomplete="off" />
+                        </div>
+                        <div class="orgchart-toolbar-actions">
+                            <button type="button" class="orgchart-btn-secondary" data-org-expand>فتح الكل</button>
+                            <button type="button" class="orgchart-btn-secondary" data-org-collapse>طيّ الكل</button>
+                        </div>
+                    </div>
+
+                    @if (Model.Chart.ManagerRoots.Count > 0)
+                    {
+                        <section class="orgchart-canvas" id="orgCanvas">
+                            <ul class="org-tree org-tree-root">
+                                @foreach (var root in Model.Chart.ManagerRoots)
+                                {
+                                    <partial name="_OrgNode" model="root" />
+                                }
+                            </ul>
+                        </section>
+                    }
+                    else
+                    {
+                        <div class="orgchart-hint">
+                            لم يتم تحديد أي "مدير مباشر" بعد، لذا لا توجد سلسلة إدارية لعرضها.
+                        </div>
+                    }
+
+                    @if (Model.Chart.UnassignedRoots.Count > 0)
+                    {
+                        <section class="orgchart-unassigned">
+                            <details @(Model.Chart.ManagerRoots.Count == 0 ? "open" : "")>
+                                <summary>
+                                    <strong>موظفون بلا مدير مباشر</strong>
+                                    <span class="orgchart-badge">@Model.Chart.UnassignedRoots.Count</span>
+                                </summary>
+                                <div class="orgchart-unassigned-grid">
+                                    @foreach (var node in Model.Chart.UnassignedRoots)
+                                    {
+                                        <div class="orgchart-ic-card" data-name="@node.FullName.ToLowerInvariant()" data-no="@node.EmployeeNo">
+                                            <div class="org-node-avatar sm">
+                                                @if (!string.IsNullOrWhiteSpace(node.PhotoPath))
+                                                {
+                                                    <img src="@node.PhotoPath" alt="@node.FullName" loading="lazy" />
+                                                }
+                                                else
+                                                {
+                                                    <span>@node.Initials</span>
+                                                }
+                                            </div>
+                                            <div>
+                                                <strong>@node.FullName</strong>
+                                                <small>@(string.IsNullOrWhiteSpace(node.Position) ? node.DepartmentName : node.Position) · @node.EmployeeNo</small>
+                                            </div>
+                                            <a asp-page="/Employees/Edit" asp-route-id="@node.Id" class="org-node-link" title="تحديد المدير المباشر">↗</a>
+                                        </div>
+                                    }
+                                </div>
+                            </details>
+                        </section>
+                    }
+                </div>
+            }
+        }
+    </div>
+
+    @* ===================== Tab 3: Functional (positions) ===================== *@
+    <div class="hrms-tabpanel" data-hrms-tabpanel="functional">
+        <div class="hrms-tile-head" style="margin-bottom:14px">
+            <div>
+                <h3>الهيكل الوظيفي (المناصب)</h3>
+                <span class="hrms-tile-sub">المناصب الوظيفية الفعّالة وعدد الموظفين في كل منصب.</span>
+            </div>
+            <a asp-page="/Positions/Index" class="hrms-btn-secondary">إدارة المناصب</a>
+        </div>
+
+        @if (!Model.Positions.Any())
+        {
+            <div class="hrms-empty">لا توجد مناصب وظيفية فعّالة بعد.</div>
+        }
+        else
+        {
+            <div class="hrms-grid">
+                @foreach (var position in Model.Positions)
+                {
+                    <article class="hrms-tile">
+                        <div class="hrms-tile-head">
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <div class="hrms-tile-icon">🧑‍💼</div>
+                                <div>
+                                    <h3>@position.Name</h3>
+                                    @if (!string.IsNullOrWhiteSpace(position.EnglishName))
+                                    {
+                                        <span class="hrms-tile-sub">@position.EnglishName</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div><div class="hrms-tile-metric">@position.EmployeeCount</div><span class="hrms-tile-sub">موظف</span></div>
+                    </article>
+                }
+            </div>
+        }
+    </div>
 </div>
 
+@* ===================== Slide-overs ===================== *@
+@foreach (var company in Model.Companies)
+{
+    <aside class="hrms-slideover" id="company-@company.Id" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2>@company.Name</h2>
+            <button type="button" class="hrms-slideover-close" data-hrms-close aria-label="إغلاق">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <p class="hrms-muted">@company.BranchCount فرع · @company.DepartmentCount قسم · @company.EmployeeCount موظف</p>
+            @if (!company.Branches.Any())
+            {
+                <div class="hrms-empty">لا توجد فروع داخل هذه الشركة.</div>
+            }
+            else
+            {
+                foreach (var branch in company.Branches)
+                {
+                    <div class="hrms-tile" style="margin-bottom:12px">
+                        <div class="hrms-tile-head">
+                            <div>
+                                <h3>📍 @branch.Name</h3>
+                                <span class="hrms-tile-sub">@branch.Code · @branch.EmployeeCount موظف · @branch.DepartmentCount قسم</span>
+                            </div>
+                            <span class="hrms-badge @(branch.IsActive ? "approved" : "rejected")">@(branch.IsActive ? "فعال" : "متوقف")</span>
+                        </div>
+                        @if (branch.Departments.Any())
+                        {
+                            <div style="display:flex;flex-wrap:wrap;gap:8px">
+                                @foreach (var department in branch.Departments)
+                                {
+                                    <span class="hrms-badge" title="@department.EmployeeCount موظف">
+                                        🧩 @department.Name (@department.EmployeeCount)
+                                    </span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="hrms-muted">لا توجد أقسام في هذا الفرع.</span>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    </aside>
+}
+
+<aside class="hrms-slideover" id="add-company" aria-hidden="true">
+    <div class="hrms-slideover-head">
+        <h2>إضافة شركة</h2>
+        <button type="button" class="hrms-slideover-close" data-hrms-close aria-label="إغلاق">×</button>
+    </div>
+    <div class="hrms-slideover-body">
+        <form method="post" asp-page-handler="CreateCompany" class="hrms-page">
+            <div class="hrms-field"><label>اسم الشركة</label><input name="CompanyInput.Name" required /></div>
+            <div class="hrms-field"><label>الكود (اختياري)</label><input name="CompanyInput.Code" /></div>
+            <label><input type="checkbox" name="CompanyInput.IsActive" value="true" checked /> فعّالة</label>
+            <button type="submit" class="hrms-btn-primary">حفظ</button>
+        </form>
+    </div>
+</aside>
+
+<aside class="hrms-slideover" id="add-branch" aria-hidden="true">
+    <div class="hrms-slideover-head">
+        <h2>إضافة فرع</h2>
+        <button type="button" class="hrms-slideover-close" data-hrms-close aria-label="إغلاق">×</button>
+    </div>
+    <div class="hrms-slideover-body">
+        <form method="post" asp-page-handler="CreateBranch" class="hrms-page">
+            <div class="hrms-field">
+                <label>الشركة</label>
+                <select name="BranchInput.CompanyId" required>
+                    <option value="">اختر الشركة</option>
+                    @foreach (var company in Model.Companies)
+                    {
+                        <option value="@company.Id">@company.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="hrms-field"><label>اسم الفرع</label><input name="BranchInput.Name" required /></div>
+            <div class="hrms-field"><label>الكود (اختياري)</label><input name="BranchInput.Code" /></div>
+            <div class="hrms-field"><label>العنوان (اختياري)</label><input name="BranchInput.Address" /></div>
+            <label><input type="checkbox" name="BranchInput.IsActive" value="true" checked /> فعّال</label>
+            <button type="submit" class="hrms-btn-primary">حفظ</button>
+        </form>
+    </div>
+</aside>
+
+<aside class="hrms-slideover" id="add-department" aria-hidden="true">
+    <div class="hrms-slideover-head">
+        <h2>إضافة قسم</h2>
+        <button type="button" class="hrms-slideover-close" data-hrms-close aria-label="إغلاق">×</button>
+    </div>
+    <div class="hrms-slideover-body">
+        <form method="post" asp-page-handler="CreateDepartment" class="hrms-page">
+            <div class="hrms-field">
+                <label>الفرع</label>
+                <select name="DepartmentInput.BranchId" required>
+                    <option value="">اختر الفرع</option>
+                    @foreach (var company in Model.Companies)
+                    {
+                        foreach (var branch in company.Branches)
+                        {
+                            <option value="@branch.Id">@company.Name — @branch.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="hrms-field"><label>اسم القسم</label><input name="DepartmentInput.Name" required /></div>
+            <div class="hrms-field"><label>الكود (اختياري)</label><input name="DepartmentInput.Code" /></div>
+            <label><input type="checkbox" name="DepartmentInput.IsActive" value="true" checked /> فعّال</label>
+            <button type="submit" class="hrms-btn-primary">حفظ</button>
+        </form>
+    </div>
+</aside>
+
 @section Scripts {
-    <script src="~/js/organization-view-only.js" asp-append-version="true"></script>
+    <script src="~/js/organization-chart.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var toggle = document.getElementById('org-active-only');
+            if (toggle) {
+                toggle.addEventListener('change', function () {
+                    document.querySelectorAll('#org-company-grid .org-unit').forEach(function (el) {
+                        el.style.display = (toggle.checked && el.getAttribute('data-active') !== '1') ? 'none' : '';
+                    });
+                });
+            }
+        })();
+    </script>
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.CompanyContext;
 
 namespace SmartAttendance.Web.Pages.Organization;
 
@@ -17,6 +18,19 @@ public class IndexModel : PageModel
 
     [BindProperty(SupportsGet = true)]
     public string? Search { get; set; }
+
+    // ---- Hierarchical (chart) tab ----
+    [BindProperty(SupportsGet = true)]
+    public int? ChartCompanyId { get; set; }
+
+    public List<ChartCompanyOption> ChartCompanies { get; set; } = new();
+
+    public string ChartCompanyName { get; set; } = string.Empty;
+
+    public OrgChartData Chart { get; set; } = new();
+
+    // ---- Functional (positions) tab ----
+    public List<PositionRow> Positions { get; set; } = new();
 
     public List<CompanyViewModel> Companies { get; set; } = new();
 
@@ -50,6 +64,66 @@ public class IndexModel : PageModel
     public async Task OnGetAsync()
     {
         await LoadAsync();
+        await LoadChartAsync();
+        await LoadPositionsAsync();
+    }
+
+    private async Task LoadChartAsync()
+    {
+        ChartCompanies = await _dbContext.Companies
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted && x.IsActive)
+            .OrderBy(x => x.Name)
+            .ThenBy(x => x.Code)
+            .Select(x => new ChartCompanyOption { Id = x.Id, Name = x.Name })
+            .ToListAsync();
+
+        ChartCompanyId = CompanySelectionContext.Resolve(
+            HttpContext,
+            ChartCompanyId,
+            ChartCompanies.Select(x => x.Id).ToArray());
+
+        if (!ChartCompanyId.HasValue)
+        {
+            return;
+        }
+
+        ChartCompanyName = ChartCompanies
+            .FirstOrDefault(x => x.Id == ChartCompanyId.Value)?.Name ?? string.Empty;
+
+        Chart = await OrgChartBuilder.BuildAsync(_dbContext, ChartCompanyId.Value);
+    }
+
+    private async Task LoadPositionsAsync()
+    {
+        var counts = await _dbContext.Employees
+            .AsNoTracking()
+            .Where(e => e.IsActive && !e.IsDeleted && e.PositionId != null)
+            .GroupBy(e => e.PositionId!.Value)
+            .Select(g => new { PositionId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.PositionId, x => x.Count);
+
+        Positions = await _dbContext.HrJobPositions
+            .AsNoTracking()
+            .Where(p => p.IsActive)
+            .OrderBy(p => p.ArabicName)
+            .Select(p => new PositionRow
+            {
+                Id = p.Id,
+                Name = p.ArabicName,
+                EnglishName = p.EnglishName
+            })
+            .ToListAsync();
+
+        foreach (var position in Positions)
+        {
+            position.EmployeeCount = counts.TryGetValue(position.Id, out var c) ? c : 0;
+        }
+
+        Positions = Positions
+            .OrderByDescending(p => p.EmployeeCount)
+            .ThenBy(p => p.Name)
+            .ToList();
     }
 
     public async Task<IActionResult> OnPostCreateCompanyAsync()
@@ -399,6 +473,24 @@ public class IndexModel : PageModel
         public string Code { get; set; } = string.Empty;
 
         public bool IsActive { get; set; }
+
+        public int EmployeeCount { get; set; }
+    }
+
+    public class ChartCompanyOption
+    {
+        public int Id { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+    }
+
+    public class PositionRow
+    {
+        public int Id { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+
+        public string? EnglishName { get; set; }
 
         public int EmployeeCount { get; set; }
     }

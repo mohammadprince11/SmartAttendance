@@ -292,7 +292,7 @@
                                 <a asp-page="/Organization/Index" class="nexora-nav-link @(IsUnder("/Organization/Index") || (IsUnder("/Organization") && !IsUnder("/Organization/Chart")) ? "active nexora-active" : "")">
                                     <span>الهياكل التنظيمية</span>
                                 </a>
-                                <a asp-page="/Organization/Chart" class="nexora-nav-link @(IsUnder("/Organization/Chart") ? "active nexora-active" : "")">
+                                <a href="/Organization/Index#tab=chart" class="nexora-nav-link @(IsUnder("/Organization/Chart") ? "active nexora-active" : "")">
                                     <span>الهيكل الإداري</span>
                                 </a>
                             }
@@ -425,6 +425,7 @@
     </script>
 
     <script src="~/js/table-pagination.js" asp-append-version="true"></script>
+    <script src="~/js/hrms-ui.js" asp-append-version="true"></script>
     <script src="~/js/zynora-theme.js" asp-append-version="true"></script>
     <script src="~/js/nexora-ui-stabilization-phase1.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
