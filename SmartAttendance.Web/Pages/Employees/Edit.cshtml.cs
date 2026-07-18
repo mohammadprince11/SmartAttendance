@@ -59,6 +59,19 @@ public class EditModel : PageModel
     public List<EmployeeProfileDynamicSection> ProfileDynamicSections { get; set; } = new();
     public string? ErrorMessage { get; set; }
 
+    public List<string> ReligionOptions { get; set; } = new();
+    public List<string> WorkTypeOptions { get; set; } = new();
+    public List<string> GradeOptions { get; set; } = new();
+    public List<string> SponsorOptions { get; set; } = new();
+
+    private async Task LoadLookupsAsync()
+    {
+        ReligionOptions = await HrLookups.ValuesAsync(_dbContext, "religions");
+        WorkTypeOptions = await HrLookups.ValuesAsync(_dbContext, "worktypes");
+        GradeOptions = await HrLookups.ValuesAsync(_dbContext, "grades");
+        SponsorOptions = await HrLookups.ValuesAsync(_dbContext, "sponsors");
+    }
+
     public async Task<IActionResult> OnGetAsync(int id)
     {
         // Defense-in-depth: نفس فحص صلاحية التعديل الموجود بصفحة Profile،
@@ -83,6 +96,7 @@ public class EditModel : PageModel
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, Employee.Id);
         Managers = await LoadManagersAsync(Employee.Id);
         DirectManagerId = Employee.DirectManagerId;
+        await LoadLookupsAsync();
 
         return Page();
     }
@@ -102,6 +116,7 @@ public class EditModel : PageModel
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, Employee.Id > 0 ? Employee.Id : 0);
 
         Managers = await LoadManagersAsync(Employee.Id);
+        await LoadLookupsAsync();
 
         if (!ModelState.IsValid) return Page();
 

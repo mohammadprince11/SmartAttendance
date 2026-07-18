@@ -39,6 +39,63 @@ IF COL_LENGTH('Employees', 'EmploymentStatus') IS NULL
 IF COL_LENGTH('Employees', 'DirectManagerId') IS NULL
     ALTER TABLE Employees ADD DirectManagerId int NULL;
 
+IF COL_LENGTH('Employees', 'FirstName') IS NULL
+    ALTER TABLE Employees ADD FirstName nvarchar(100) NULL;
+
+IF COL_LENGTH('Employees', 'SecondName') IS NULL
+    ALTER TABLE Employees ADD SecondName nvarchar(100) NULL;
+
+IF COL_LENGTH('Employees', 'ThirdName') IS NULL
+    ALTER TABLE Employees ADD ThirdName nvarchar(100) NULL;
+
+IF COL_LENGTH('Employees', 'LastName') IS NULL
+    ALTER TABLE Employees ADD LastName nvarchar(100) NULL;
+
+IF COL_LENGTH('Employees', 'FirstNameEn') IS NULL
+    ALTER TABLE Employees ADD FirstNameEn nvarchar(100) NULL;
+
+IF COL_LENGTH('Employees', 'SecondNameEn') IS NULL
+    ALTER TABLE Employees ADD SecondNameEn nvarchar(100) NULL;
+
+IF COL_LENGTH('Employees', 'ThirdNameEn') IS NULL
+    ALTER TABLE Employees ADD ThirdNameEn nvarchar(100) NULL;
+
+IF COL_LENGTH('Employees', 'LastNameEn') IS NULL
+    ALTER TABLE Employees ADD LastNameEn nvarchar(100) NULL;
+
+IF COL_LENGTH('Employees', 'IsCitizen') IS NULL
+    ALTER TABLE Employees ADD IsCitizen bit NOT NULL CONSTRAINT DF_Employees_IsCitizen DEFAULT(1);
+
+IF COL_LENGTH('Employees', 'PassportNo') IS NULL
+    ALTER TABLE Employees ADD PassportNo nvarchar(50) NULL;
+
+IF COL_LENGTH('Employees', 'SponsorName') IS NULL
+    ALTER TABLE Employees ADD SponsorName nvarchar(150) NULL;
+
+IF COL_LENGTH('Employees', 'Religion') IS NULL
+    ALTER TABLE Employees ADD Religion nvarchar(50) NULL;
+
+IF COL_LENGTH('Employees', 'PersonalEmail') IS NULL
+    ALTER TABLE Employees ADD PersonalEmail nvarchar(200) NULL;
+
+IF COL_LENGTH('Employees', 'MotherCountry') IS NULL
+    ALTER TABLE Employees ADD MotherCountry nvarchar(100) NULL;
+
+IF COL_LENGTH('Employees', 'MotherCity') IS NULL
+    ALTER TABLE Employees ADD MotherCity nvarchar(100) NULL;
+
+IF COL_LENGTH('Employees', 'PhoneExtension') IS NULL
+    ALTER TABLE Employees ADD PhoneExtension nvarchar(20) NULL;
+
+IF COL_LENGTH('Employees', 'JoiningDate') IS NULL
+    ALTER TABLE Employees ADD JoiningDate date NULL;
+
+IF COL_LENGTH('Employees', 'WorkType') IS NULL
+    ALTER TABLE Employees ADD WorkType nvarchar(50) NULL;
+
+IF COL_LENGTH('Employees', 'JobGrade') IS NULL
+    ALTER TABLE Employees ADD JobGrade nvarchar(100) NULL;
+
 IF OBJECT_ID('SelfServiceRequests', 'U') IS NULL
 BEGIN
     CREATE TABLE SelfServiceRequests

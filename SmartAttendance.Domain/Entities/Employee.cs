@@ -10,6 +10,51 @@ public class Employee : AuditableEntity
 
     public string? NationalId { get; set; }
 
+    // --- Quad name (Kayan-style): Arabic + English parts. FullName stays the
+    // display name and is composed from the Arabic parts when they are present. ---
+    public string? FirstName { get; set; }
+
+    public string? SecondName { get; set; }
+
+    public string? ThirdName { get; set; }
+
+    public string? LastName { get; set; }
+
+    public string? FirstNameEn { get; set; }
+
+    public string? SecondNameEn { get; set; }
+
+    public string? ThirdNameEn { get; set; }
+
+    public string? LastNameEn { get; set; }
+
+    /// <summary>Citizen vs expat — drives residency/sponsor logic.</summary>
+    public bool IsCitizen { get; set; } = true;
+
+    public string? PassportNo { get; set; }
+
+    /// <summary>Sponsor (كفيل) for expats.</summary>
+    public string? SponsorName { get; set; }
+
+    public string? Religion { get; set; }
+
+    public string? PersonalEmail { get; set; }
+
+    public string? MotherCountry { get; set; }
+
+    public string? MotherCity { get; set; }
+
+    public string? PhoneExtension { get; set; }
+
+    /// <summary>Actual joining date (may differ from contract HireDate).</summary>
+    public DateOnly? JoiningDate { get; set; }
+
+    /// <summary>Full-time / part-time / shift / remote.</summary>
+    public string? WorkType { get; set; }
+
+    /// <summary>Job grade / class (طبقة العمل).</summary>
+    public string? JobGrade { get; set; }
+
     public string? Phone { get; set; }
 
     public string? Email { get; set; }

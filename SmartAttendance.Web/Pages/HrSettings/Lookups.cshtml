@@ -1,0 +1,97 @@
+@page
+@model SmartAttendance.Web.Pages.HrSettings.LookupsModel
+
+@{
+    ViewData["Title"] = "القوائم المرجعية";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page" data-hrms-tabs-group>
+    <div class="page-header">
+        <div>
+            <h1>القوائم المرجعية</h1>
+            <p>إدارة قوائم النظام (الديانات، أنواع الدوام، الدرجات، الكفلاء...) — تظهر مباشرة بحقول ملف الموظف.</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.Message))
+    {
+        <div class="hrms-badge approved" style="padding:10px 14px">@Model.Message</div>
+    }
+
+    <div class="hrms-tabs" role="tablist">
+        @for (var i = 0; i < Model.Categories.Count; i++)
+        {
+            var category = Model.Categories[i];
+            <button type="button" class="hrms-tab @(i == 0 ? "active" : "")" data-hrms-tab="@category.Key" data-hrms-tab-remember>@category.Label</button>
+        }
+    </div>
+
+    @for (var i = 0; i < Model.Categories.Count; i++)
+    {
+        var category = Model.Categories[i];
+        var items = Model.Items.Where(x => x.Category == category.Key).ToList();
+
+        <div class="hrms-tabpanel @(i == 0 ? "active" : "")" data-hrms-tabpanel="@category.Key">
+            <div class="hrms-table-card">
+                <form method="post" asp-page-handler="Add" class="hrms-inline-form" style="margin-bottom:12px;flex-wrap:wrap">
+                    <input type="hidden" name="category" value="@category.Key" />
+                    <label>الاسم بالعربية</label>
+                    <input name="arabicName" required placeholder="القيمة الجديدة..." />
+                    <label>بالإنجليزية</label>
+                    <input name="englishName" placeholder="اختياري" />
+                    <label>الترتيب</label>
+                    <input name="sortOrder" type="number" min="0" value="0" style="max-width:90px" />
+                    <button type="submit" class="hrms-btn-primary">+ إضافة</button>
+                </form>
+
+                @if (!items.Any())
+                {
+                    <div class="hrms-empty">لا توجد قيم بهذه القائمة بعد.</div>
+                }
+                else
+                {
+                    <div class="hrms-table-wrap">
+                        <table class="hrms-table">
+                            <thead>
+                                <tr>
+                                    <th class="text-start">القيمة</th>
+                                    <th class="text-start">بالإنجليزية</th>
+                                    <th>الترتيب</th>
+                                    <th>الحالة</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in items)
+                                {
+                                    <tr>
+                                        <td class="text-start">@item.ArabicName</td>
+                                        <td class="text-start">@(string.IsNullOrWhiteSpace(item.EnglishName) ? "—" : item.EnglishName)</td>
+                                        <td>@item.SortOrder</td>
+                                        <td><span class="hrms-badge @(item.IsActive ? "approved" : "rejected")">@(item.IsActive ? "فعال" : "معطل")</span></td>
+                                        <td>
+                                            <div class="hrms-inline-form" style="justify-content:center">
+                                                <form method="post" asp-page-handler="Toggle">
+                                                    <input type="hidden" name="id" value="@item.Id" />
+                                                    <input type="hidden" name="category" value="@category.Key" />
+                                                    <button type="submit" class="hrms-btn-secondary">@(item.IsActive ? "تعطيل" : "تفعيل")</button>
+                                                </form>
+                                                <form method="post" asp-page-handler="Delete" onsubmit="return confirm('حذف القيمة؟');">
+                                                    <input type="hidden" name="id" value="@item.Id" />
+                                                    <input type="hidden" name="category" value="@category.Key" />
+                                                    <button type="submit" class="hrms-btn-secondary">حذف</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

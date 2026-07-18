@@ -442,7 +442,6 @@ public class EmployeeService : IEmployeeService
         }
 
         employee.EmployeeNo = model.EmployeeNo;
-        employee.FullName = model.FullName;
         employee.NationalId = model.NationalId;
         employee.Phone = model.Phone;
         employee.Email = model.Email;
@@ -458,6 +457,30 @@ public class EmployeeService : IEmployeeService
         employee.DirectManagerId = model.DirectManagerId;
         employee.BranchId = model.BranchId;
         employee.DepartmentId = model.DepartmentId;
+
+        employee.FirstName = Trimmed(model.FirstName);
+        employee.SecondName = Trimmed(model.SecondName);
+        employee.ThirdName = Trimmed(model.ThirdName);
+        employee.LastName = Trimmed(model.LastName);
+        employee.FirstNameEn = Trimmed(model.FirstNameEn);
+        employee.SecondNameEn = Trimmed(model.SecondNameEn);
+        employee.ThirdNameEn = Trimmed(model.ThirdNameEn);
+        employee.LastNameEn = Trimmed(model.LastNameEn);
+        employee.IsCitizen = model.IsCitizen;
+        employee.PassportNo = Trimmed(model.PassportNo);
+        employee.SponsorName = Trimmed(model.SponsorName);
+        employee.Religion = Trimmed(model.Religion);
+        employee.PersonalEmail = Trimmed(model.PersonalEmail);
+        employee.MotherCountry = Trimmed(model.MotherCountry);
+        employee.MotherCity = Trimmed(model.MotherCity);
+        employee.PhoneExtension = Trimmed(model.PhoneExtension);
+        employee.JoiningDate = model.JoiningDate;
+        employee.WorkType = Trimmed(model.WorkType);
+        employee.JobGrade = Trimmed(model.JobGrade);
+
+        // FullName stays the display name: composed from the Arabic quad name
+        // when its required parts are present, otherwise taken as typed.
+        employee.FullName = ComposeFullName(employee) ?? model.FullName;
 
         _unitOfWork.Employees.Update(employee);
         await _unitOfWork.SaveChangesAsync();
@@ -478,6 +501,24 @@ public class EmployeeService : IEmployeeService
         await _unitOfWork.SaveChangesAsync();
 
         return true;
+    }
+
+    private static string? Trimmed(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    /// <summary>First + second + third + last Arabic names, when first and last exist.</summary>
+    private static string? ComposeFullName(Employee employee)
+    {
+        if (string.IsNullOrWhiteSpace(employee.FirstName) || string.IsNullOrWhiteSpace(employee.LastName))
+        {
+            return null;
+        }
+
+        var parts = new[] { employee.FirstName, employee.SecondName, employee.ThirdName, employee.LastName }
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Select(p => p!.Trim());
+
+        return string.Join(' ', parts);
     }
 
     public async Task<bool> EmployeeNoExistsAsync(string employeeNo)

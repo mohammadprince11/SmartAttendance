@@ -200,6 +200,108 @@
                         <option value="Iraqi">عراقي</option><option value="Syrian">سوري</option><option value="Jordanian">أردني</option><option value="Lebanese">لبناني</option><option value="Saudi">سعودي</option><option value="Emirati">إماراتي</option><option value="Qatari">قطري</option><option value="Kuwaiti">كويتي</option><option value="Bahraini">بحريني</option><option value="Omani">عماني</option><option value="Egyptian">مصري</option><option value="Turkish">تركي</option><option value="Iranian">إيراني</option><option value="Indian">هندي</option><option value="Pakistani">باكستاني</option><option value="Bangladeshi">بنغلادشي</option><option value="Filipino">فلبيني</option><option value="Nepali">نيبالي</option><option value="Other">أخرى</option>
                     </select>
                 </div>
+
+                @* ---------- الاسم الرباعي (نمط كيان): يبني اسم الموظف تلقائياً ---------- *@
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.FirstName">الاسم الأول (عربي)</label>
+                    <input asp-for="Employee.FirstName" data-quad-name />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.SecondName">الاسم الثاني (عربي)</label>
+                    <input asp-for="Employee.SecondName" data-quad-name />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.ThirdName">الاسم الثالث (عربي)</label>
+                    <input asp-for="Employee.ThirdName" data-quad-name />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.LastName">اللقب (عربي)</label>
+                    <input asp-for="Employee.LastName" data-quad-name />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.FirstNameEn">First Name</label>
+                    <input asp-for="Employee.FirstNameEn" dir="ltr" />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.SecondNameEn">Second Name</label>
+                    <input asp-for="Employee.SecondNameEn" dir="ltr" />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.ThirdNameEn">Third Name</label>
+                    <input asp-for="Employee.ThirdNameEn" dir="ltr" />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.LastNameEn">Last Name</label>
+                    <input asp-for="Employee.LastNameEn" dir="ltr" />
+                </div>
+
+                @* ---------- الجنسية والإقامة ---------- *@
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.IsCitizen">مواطن</label>
+                    <select asp-for="Employee.IsCitizen" class="nxr-native-select">
+                        <option value="true">مواطن</option>
+                        <option value="false">غير مواطن (وافد)</option>
+                    </select>
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.PassportNo">رقم جواز السفر</label>
+                    <input asp-for="Employee.PassportNo" />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.SponsorName">الكفيل</label>
+                    <select asp-for="Employee.SponsorName" class="nxr-native-select">
+                        <option value="">بدون كفيل</option>
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.SponsorName) && !Model.SponsorOptions.Contains(Model.Employee.SponsorName)) { <option value="@Model.Employee.SponsorName">@Model.Employee.SponsorName</option> }
+                        @foreach (var sponsor in Model.SponsorOptions) { <option value="@sponsor">@sponsor</option> }
+                    </select>
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.Religion">الديانة</label>
+                    <select asp-for="Employee.Religion" class="nxr-native-select">
+                        <option value="">اختر...</option>
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Religion) && !Model.ReligionOptions.Contains(Model.Employee.Religion)) { <option value="@Model.Employee.Religion">@Model.Employee.Religion</option> }
+                        @foreach (var religion in Model.ReligionOptions) { <option value="@religion">@religion</option> }
+                    </select>
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.MotherCountry">البلد الأم</label>
+                    <input asp-for="Employee.MotherCountry" />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.MotherCity">المدينة الأم</label>
+                    <input asp-for="Employee.MotherCity" />
+                </div>
+
+                @* ---------- الاتصال والتوظيف ---------- *@
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.PersonalEmail">البريد الشخصي</label>
+                    <input asp-for="Employee.PersonalEmail" dir="ltr" />
+                    <span asp-validation-for="Employee.PersonalEmail"></span>
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.PhoneExtension">امتداد الهاتف</label>
+                    <input asp-for="Employee.PhoneExtension" />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.JoiningDate">تاريخ الانضمام (المباشرة)</label>
+                    <input name="Employee.JoiningDate" id="Employee_JoiningDate" value="@(Model.Employee.JoiningDate?.ToString("yyyy-MM-dd"))" type="text" data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.WorkType">نوع الدوام</label>
+                    <select asp-for="Employee.WorkType" class="nxr-native-select">
+                        <option value="">اختر...</option>
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.WorkType) && !Model.WorkTypeOptions.Contains(Model.Employee.WorkType)) { <option value="@Model.Employee.WorkType">@Model.Employee.WorkType</option> }
+                        @foreach (var workType in Model.WorkTypeOptions) { <option value="@workType">@workType</option> }
+                    </select>
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.JobGrade">الدرجة الوظيفية</label>
+                    <select asp-for="Employee.JobGrade" class="nxr-native-select">
+                        <option value="">اختر...</option>
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.JobGrade) && !Model.GradeOptions.Contains(Model.Employee.JobGrade)) { <option value="@Model.Employee.JobGrade">@Model.Employee.JobGrade</option> }
+                        @foreach (var grade in Model.GradeOptions) { <option value="@grade">@grade</option> }
+                    </select>
+                </div>
             </div>
 
         @if (Model.ProfileDynamicSections.Any(profileSection => profileSection.Fields.Count > 0))
@@ -379,6 +481,22 @@
             }
             if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", bind); } else { bind(); }
             setTimeout(bind, 100); setTimeout(bind, 400); setTimeout(bind, 900);
+        })();
+    </script>
+    <script>
+        // الاسم الرباعي → يبني "اسم الموظف" تلقائياً أثناء الكتابة (يبقى قابلاً للتعديل اليدوي).
+        (function () {
+            var full = document.getElementById("Employee_FullName");
+            var parts = Array.prototype.slice.call(document.querySelectorAll("[data-quad-name]"));
+            if (!full || !parts.length) return;
+            function compose() {
+                var first = document.getElementById("Employee_FirstName");
+                var last = document.getElementById("Employee_LastName");
+                if (!first || !last || !first.value.trim() || !last.value.trim()) return;
+                var values = parts.map(function (p) { return p.value.trim(); }).filter(Boolean);
+                full.value = values.join(" ");
+            }
+            parts.forEach(function (p) { p.addEventListener("input", compose); });
         })();
     </script>
     <partial name="_ValidationScriptsPartial" />

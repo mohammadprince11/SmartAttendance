@@ -32,6 +32,25 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.Property(x => x.PhotoPath)
             .HasMaxLength(500);
 
+        builder.Property(x => x.FirstName).HasMaxLength(100);
+        builder.Property(x => x.SecondName).HasMaxLength(100);
+        builder.Property(x => x.ThirdName).HasMaxLength(100);
+        builder.Property(x => x.LastName).HasMaxLength(100);
+        builder.Property(x => x.FirstNameEn).HasMaxLength(100);
+        builder.Property(x => x.SecondNameEn).HasMaxLength(100);
+        builder.Property(x => x.ThirdNameEn).HasMaxLength(100);
+        builder.Property(x => x.LastNameEn).HasMaxLength(100);
+        builder.Property(x => x.IsCitizen).HasDefaultValue(true);
+        builder.Property(x => x.PassportNo).HasMaxLength(50);
+        builder.Property(x => x.SponsorName).HasMaxLength(150);
+        builder.Property(x => x.Religion).HasMaxLength(50);
+        builder.Property(x => x.PersonalEmail).HasMaxLength(200);
+        builder.Property(x => x.MotherCountry).HasMaxLength(100);
+        builder.Property(x => x.MotherCity).HasMaxLength(100);
+        builder.Property(x => x.PhoneExtension).HasMaxLength(20);
+        builder.Property(x => x.WorkType).HasMaxLength(50);
+        builder.Property(x => x.JobGrade).HasMaxLength(100);
+
         builder.Property(x => x.ContractType)
             .HasMaxLength(100);
 
