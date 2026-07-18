@@ -34,12 +34,6 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<EmployeeDependent> EmployeeDependents => Set<EmployeeDependent>();
 
-    public DbSet<EmployeeEducation> EmployeeEducations => Set<EmployeeEducation>();
-
-    public DbSet<EmployeeExperience> EmployeeExperiences => Set<EmployeeExperience>();
-
-    public DbSet<EmployeeCertificate> EmployeeCertificates => Set<EmployeeCertificate>();
-
     public DbSet<EmployeeFileRecord> EmployeeFileRecords => Set<EmployeeFileRecord>();
 
     public DbSet<SystemUser> SystemUsers => Set<SystemUser>();
