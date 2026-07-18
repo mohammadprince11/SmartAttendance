@@ -227,6 +227,20 @@
                                     <div class="nxr-edit-field @(field.IsTextArea ? "nxr-span-2" : "")">
                                         <label for="@inputId">@field.FieldLabel @if (field.IsRequired){<span>*</span>}</label>
                                         @if (field.IsTextArea) { <textarea id="@inputId" name="ProfileCustomValues[@field.FieldKey]" required="@requiredValue" rows="3">@field.FieldValue</textarea> }
+                                        else if (field.IsSelect)
+                                        {
+                                            <select id="@inputId" name="ProfileCustomValues[@field.FieldKey]" required="@requiredValue">
+                                                <option value="">اختر</option>
+                                                @foreach (var option in field.Options)
+                                                {
+                                                    <option value="@option" selected="@(option == field.FieldValue ? "selected" : null)">@option</option>
+                                                }
+                                            </select>
+                                        }
+                                        else if (field.IsCheckbox)
+                                        {
+                                            <input id="@inputId" name="ProfileCustomValues[@field.FieldKey]" type="checkbox" value="true" checked="@(field.IsCheckedValue ? "checked" : null)" />
+                                        }
                                         else { <input id="@inputId" name="ProfileCustomValues[@field.FieldKey]" type="@field.InputType" value="@field.FieldValue" required="@requiredValue" /> }
                                     </div>
                                 }

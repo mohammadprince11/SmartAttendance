@@ -6,18 +6,11 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 
 public static class EmployeeProfileDynamicFields
 {
-    private static readonly EmployeeProfileDynamicSectionDefinition[] FixedSections =
-    {
-        new("basic", "\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629", 10),
-        new("personal", "\u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0634\u062E\u0635\u064A\u0629", 20),
-        new("job", "\u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0648\u0638\u064A\u0641\u064A\u0629", 30),
-        new("financial", "\u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629", 40),
-        new("additional", "\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629", 50)
-    };
-
     public static async Task<List<EmployeeProfileDynamicSection>> LoadSectionsAsync(ApplicationDbContext dbContext, int employeeId)
     {
         await EnsureSchemaAsync(dbContext);
+
+        var sections = await EmployeeProfileSections.LoadAsync(dbContext, activeOnly: true);
 
         var fields = await HrmsDatabase.QueryAsync(
             dbContext,
@@ -28,6 +21,7 @@ SELECT
     d.FieldKey,
     d.FieldLabel,
     d.FieldType,
+    d.FieldOptions,
     d.IsRequired,
     d.SortOrder,
     ISNULL(v.FieldValue, '') AS FieldValue
@@ -36,17 +30,7 @@ LEFT JOIN EmployeeCustomFields v
     ON v.EmployeeId = @EmployeeId
    AND v.FieldKey = d.FieldKey
 WHERE d.IsActive = 1
-ORDER BY
-    CASE d.SectionKey
-        WHEN 'basic' THEN 10
-        WHEN 'personal' THEN 20
-        WHEN 'job' THEN 30
-        WHEN 'financial' THEN 40
-        WHEN 'additional' THEN 50
-        ELSE 99
-    END,
-    d.SortOrder,
-    d.Id;
+ORDER BY d.SortOrder, d.Id;
 """,
             command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
             reader => new EmployeeProfileDynamicField
@@ -56,6 +40,7 @@ ORDER BY
                 FieldKey = GetString(reader, "FieldKey"),
                 FieldLabel = GetString(reader, "FieldLabel"),
                 FieldType = NormalizeFieldType(GetString(reader, "FieldType")),
+                FieldOptions = GetString(reader, "FieldOptions"),
                 IsRequired = GetBool(reader, "IsRequired"),
                 SortOrder = GetInt(reader, "SortOrder"),
                 FieldValue = GetString(reader, "FieldValue")
@@ -65,7 +50,7 @@ ORDER BY
             .GroupBy(field => field.SectionKey, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
-        return FixedSections
+        return sections
             .Select(section => new EmployeeProfileDynamicSection
             {
                 Key = section.Key,
@@ -90,7 +75,7 @@ ORDER BY
         var definitions = await HrmsDatabase.QueryAsync(
             dbContext,
             """
-SELECT FieldKey, FieldLabel
+SELECT FieldKey, FieldLabel, FieldType
 FROM EmployeeProfileFieldDefinitions
 WHERE IsActive = 1
 ORDER BY SortOrder, Id;
@@ -99,19 +84,29 @@ ORDER BY SortOrder, Id;
             reader => new EmployeeProfileFieldSaveDefinition
             {
                 FieldKey = GetString(reader, "FieldKey"),
-                FieldLabel = GetString(reader, "FieldLabel")
+                FieldLabel = GetString(reader, "FieldLabel"),
+                FieldType = NormalizeFieldType(GetString(reader, "FieldType"))
             });
 
         foreach (var definition in definitions)
         {
             var formKey = $"ProfileCustomValues[{definition.FieldKey}]";
+            var isCheckbox = definition.FieldType == "checkbox";
 
             if (!form.TryGetValue(formKey, out var rawValue))
             {
-                continue;
+                // An unchecked checkbox posts nothing — persist it as cleared.
+                if (!isCheckbox)
+                {
+                    continue;
+                }
+
+                rawValue = string.Empty;
             }
 
-            var value = rawValue.ToString();
+            var value = isCheckbox
+                ? (rawValue.ToString().Contains("true", StringComparison.OrdinalIgnoreCase) ? "true" : "")
+                : rawValue.ToString();
 
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
@@ -231,10 +226,15 @@ BEGIN
     CREATE UNIQUE INDEX UX_EmployeeCustomFields_Employee_Field
     ON [dbo].[EmployeeCustomFields] ([EmployeeId], [FieldKey]);
 END;
+
+IF COL_LENGTH('EmployeeProfileFieldDefinitions', 'FieldOptions') IS NULL
+    ALTER TABLE EmployeeProfileFieldDefinitions ADD FieldOptions nvarchar(max) NULL;
 """);
+
+        await EmployeeProfileSections.EnsureSchemaAsync(dbContext);
     }
 
-    private static string NormalizeFieldType(string value)
+    public static string NormalizeFieldType(string? value)
     {
         var normalized = (value ?? string.Empty).Trim().ToLowerInvariant();
 
@@ -243,6 +243,8 @@ END;
             "number" => "number",
             "date" => "date",
             "textarea" => "textarea",
+            "select" => "select",
+            "checkbox" => "checkbox",
             _ => "text"
         };
     }
@@ -265,12 +267,11 @@ END;
         return value == DBNull.Value ? string.Empty : Convert.ToString(value) ?? string.Empty;
     }
 
-    private sealed record EmployeeProfileDynamicSectionDefinition(string Key, string Label, int SortOrder);
-
     private sealed class EmployeeProfileFieldSaveDefinition
     {
         public string FieldKey { get; set; } = string.Empty;
         public string FieldLabel { get; set; } = string.Empty;
+        public string FieldType { get; set; } = "text";
     }
 }
 
@@ -289,11 +290,24 @@ public sealed class EmployeeProfileDynamicField
     public string FieldKey { get; set; } = string.Empty;
     public string FieldLabel { get; set; } = string.Empty;
     public string FieldType { get; set; } = "text";
+    public string FieldOptions { get; set; } = string.Empty;
     public string FieldValue { get; set; } = string.Empty;
     public bool IsRequired { get; set; }
     public int SortOrder { get; set; }
 
     public bool IsTextArea => FieldType.Equals("textarea", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsSelect => FieldType.Equals("select", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsCheckbox => FieldType.Equals("checkbox", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsCheckedValue => FieldValue.Equals("true", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Dropdown options — one per line in FieldOptions.</summary>
+    public List<string> Options => FieldOptions
+        .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Distinct()
+        .ToList();
 
     public string InputType => FieldType switch
     {

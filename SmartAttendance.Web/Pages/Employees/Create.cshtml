@@ -307,6 +307,24 @@
                                                       rows="3"
                                                       placeholder="@field.FieldLabel">@field.FieldValue</textarea>
                                         }
+                                        else if (field.IsSelect)
+                                        {
+                                            <select id="@inputId" name="ProfileCustomValues[@field.FieldKey]" required="@requiredAttribute">
+                                                <option value="">اختر</option>
+                                                @foreach (var option in field.Options)
+                                                {
+                                                    <option value="@option" selected="@(option == field.FieldValue ? "selected" : null)">@option</option>
+                                                }
+                                            </select>
+                                        }
+                                        else if (field.IsCheckbox)
+                                        {
+                                            <input id="@inputId"
+                                                   name="ProfileCustomValues[@field.FieldKey]"
+                                                   type="checkbox"
+                                                   value="true"
+                                                   checked="@(field.IsCheckedValue ? "checked" : null)" />
+                                        }
                                         else
                                         {
                                             <input id="@inputId"

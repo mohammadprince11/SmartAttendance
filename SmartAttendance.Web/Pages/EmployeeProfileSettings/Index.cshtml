@@ -13,6 +13,20 @@
 
 @section Scripts {
     <script src="~/js/nexora-employee-profile-settings-modals.js" asp-append-version="true"></script>
+    <script>
+        // Show the dropdown-options textarea only when the field type is "select".
+        (function () {
+            function sync(select) {
+                var scope = select.closest('form') || document;
+                var optionsField = scope.querySelector('[data-nxr-options-field]');
+                if (optionsField) optionsField.hidden = select.value !== 'select';
+            }
+            document.querySelectorAll('[data-nxr-fieldtype]').forEach(function (select) {
+                select.addEventListener('change', function () { sync(select); });
+                sync(select);
+            });
+        })();
+    </script>
 }
 
 <div class="nxr-profile-settings-page nxr-profile-settings-page-v2" dir="rtl">
@@ -83,12 +97,19 @@
 
             <div class="nxr-profile-settings-field">
                 <label asp-for="Field.FieldType">&#x0646;&#x0648;&#x0639; &#x0627;&#x0644;&#x062D;&#x0642;&#x0644;</label>
-                <select asp-for="Field.FieldType">
-                    <option value="text">&#x0646;&#x0635;</option>
-                    <option value="number">&#x0631;&#x0642;&#x0645;</option>
-                    <option value="date">&#x062A;&#x0627;&#x0631;&#x064A;&#x062E;</option>
-                    <option value="textarea">&#x0646;&#x0635; &#x0637;&#x0648;&#x064A;&#x0644;</option>
+                <select asp-for="Field.FieldType" data-nxr-fieldtype>
+                    <option value="text">نص</option>
+                    <option value="number">رقم</option>
+                    <option value="date">تاريخ</option>
+                    <option value="textarea">نص طويل</option>
+                    <option value="select">قائمة منسدلة</option>
+                    <option value="checkbox">خانة اختيار</option>
                 </select>
+            </div>
+
+            <div class="nxr-profile-settings-field span-2" data-nxr-options-field hidden>
+                <label asp-for="Field.FieldOptions">خيارات القائمة (خيار بكل سطر)</label>
+                <textarea asp-for="Field.FieldOptions" rows="3" placeholder="مثال:&#10;أعزب&#10;متزوج"></textarea>
             </div>
 
             <div class="nxr-profile-settings-field">
@@ -107,6 +128,29 @@
         </form>
     </section>
 
+    <section class="nxr-profile-settings-card">
+        <div class="nxr-profile-settings-card-head">
+            <div>
+                <span>بناء الأقسام</span>
+                <h2>إضافة قسم جديد</h2>
+                <p>أنشئ قسماً (مجموعة حقول) جديداً يظهر داخل ملف الموظف — ثم أضف له حقولاً من الأعلى.</p>
+            </div>
+        </div>
+        <form method="post" asp-page-handler="AddSection" class="nxr-profile-settings-form">
+            <div class="nxr-profile-settings-field span-2">
+                <label>اسم القسم</label>
+                <input name="Section.Label" placeholder="مثال: معلومات السكن" required />
+            </div>
+            <div class="nxr-profile-settings-field">
+                <label>الترتيب</label>
+                <input name="Section.SortOrder" type="number" min="0" value="0" />
+            </div>
+            <div class="nxr-profile-settings-actions">
+                <button type="submit">إضافة القسم</button>
+            </div>
+        </form>
+    </section>
+
     <section class="nxr-profile-settings-list-head">
         <div>
             <span>&#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645; &#x0627;&#x0644;&#x0645;&#x0639;&#x062A;&#x0645;&#x062F;&#x0629;</span>
@@ -117,13 +161,40 @@
     <section class="nxr-profile-settings-sections">
         @foreach (var profileSection in Model.Sections)
         {
-            <article class="nxr-profile-settings-section">
+            <article class="nxr-profile-settings-section @(profileSection.IsActive ? "" : "is-disabled")">
                 <header>
                     <div>
-                        <span>@profileSection.Description</span>
+                        <span>@(profileSection.IsSystem ? "قسم نظام" : "قسم مخصص")@(profileSection.IsActive ? "" : " · معطل")</span>
                         <h3>@profileSection.Label</h3>
                     </div>
-                    <strong>@profileSection.Fields.Count</strong>
+                    <div class="nxr-profile-settings-row-actions" style="display:flex;align-items:center;gap:8px">
+                        <div class="nxr-profile-settings-edit-shell" data-nxr-edit-shell>
+                            <button type="button" class="nxr-profile-settings-edit-trigger">تعديل القسم</button>
+                            <form method="post" asp-page-handler="UpdateSection" asp-route-id="@profileSection.Id" class="nxr-profile-settings-edit-form">
+                                <div class="nxr-profile-settings-field">
+                                    <label>اسم القسم</label>
+                                    <input name="Section.Label" value="@profileSection.Label" />
+                                </div>
+                                <div class="nxr-profile-settings-field">
+                                    <label>الترتيب</label>
+                                    <input name="Section.SortOrder" type="number" min="0" value="@profileSection.SortOrder" />
+                                </div>
+                                <div class="nxr-profile-settings-actions">
+                                    <button type="submit">حفظ</button>
+                                </div>
+                            </form>
+                        </div>
+                        @if (!profileSection.IsSystem)
+                        {
+                            <form method="post" asp-page-handler="ToggleSection" asp-route-id="@profileSection.Id">
+                                <button type="submit">@(profileSection.IsActive ? "تعطيل" : "تفعيل")</button>
+                            </form>
+                            <form method="post" asp-page-handler="DeleteSection" asp-route-id="@profileSection.Id" onsubmit="return confirm('حذف القسم؟');">
+                                <button type="submit" class="danger">حذف</button>
+                            </form>
+                        }
+                        <strong>@profileSection.Fields.Count</strong>
+                    </div>
                 </header>
 
                 @if (profileSection.Fields.Count == 0)
@@ -191,12 +262,19 @@
 
                                             <div class="nxr-profile-settings-field">
                                                 <label>&#x0646;&#x0648;&#x0639; &#x0627;&#x0644;&#x062D;&#x0642;&#x0644;</label>
-                                                <select name="EditField.FieldType">
+                                                <select name="EditField.FieldType" data-nxr-fieldtype>
                                                     <option value="text" selected="@(field.FieldType == "text" ? "selected" : null)">&#x0646;&#x0635;</option>
                                                     <option value="number" selected="@(field.FieldType == "number" ? "selected" : null)">&#x0631;&#x0642;&#x0645;</option>
                                                     <option value="date" selected="@(field.FieldType == "date" ? "selected" : null)">&#x062A;&#x0627;&#x0631;&#x064A;&#x062E;</option>
                                                     <option value="textarea" selected="@(field.FieldType == "textarea" ? "selected" : null)">&#x0646;&#x0635; &#x0637;&#x0648;&#x064A;&#x0644;</option>
+                                                    <option value="select" selected="@(field.FieldType == "select" ? "selected" : null)">قائمة منسدلة</option>
+                                                    <option value="checkbox" selected="@(field.FieldType == "checkbox" ? "selected" : null)">خانة اختيار</option>
                                                 </select>
+                                            </div>
+
+                                            <div class="nxr-profile-settings-field" data-nxr-options-field hidden="@(field.FieldType == "select" ? null : "hidden")">
+                                                <label>خيارات القائمة (خيار بكل سطر)</label>
+                                                <textarea name="EditField.FieldOptions" rows="3">@field.FieldOptions</textarea>
                                             </div>
 
                                             <div class="nxr-profile-settings-field">

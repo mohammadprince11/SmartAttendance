@@ -148,8 +148,9 @@
     var basicDynamicSection = Model.ProfileDynamicSections.FirstOrDefault(item => item.Key == "basic");
     var personalDynamicSection = Model.ProfileDynamicSections.FirstOrDefault(item => item.Key == "personal");
     var jobDynamicSection = Model.ProfileDynamicSections.FirstOrDefault(item => item.Key == "job");
+    // "additional" plus any admin-created custom sections (keys outside the four fixed ones).
     var additionalDynamicSections = Model.ProfileDynamicSections
-        .Where(item => item.Key == "additional")
+        .Where(item => item.Key != "basic" && item.Key != "personal" && item.Key != "job" && item.Key != "financial")
         .ToList();
 
     var documentHasId = Model.DocumentRows.Any(d =>
@@ -310,7 +311,7 @@
                         {
                             <div class="z360-contact-row">
                                 <span>@field.FieldLabel</span>
-                                <strong>@field.FieldValue</strong>
+                                <strong>@(field.IsCheckbox ? (field.IsCheckedValue ? "نعم" : "لا") : field.FieldValue)</strong>
                             </div>
                         }
                     }
@@ -559,7 +560,7 @@
                             {
                                 <div class="z360-field">
                                     <span>@field.FieldLabel</span>
-                                    <strong>@field.FieldValue</strong>
+                                    <strong>@(field.IsCheckbox ? (field.IsCheckedValue ? "نعم" : "لا") : field.FieldValue)</strong>
                                 </div>
                             }
                         }
@@ -593,7 +594,7 @@
                             {
                                 <div class="z360-field">
                                     <span>@field.FieldLabel</span>
-                                    <strong>@field.FieldValue</strong>
+                                    <strong>@(field.IsCheckbox ? (field.IsCheckedValue ? "نعم" : "لا") : field.FieldValue)</strong>
                                 </div>
                             }
                         }
@@ -679,7 +680,7 @@
                                 {
                                     <div class="z360-field">
                                         <span>@field.FieldLabel</span>
-                                        <strong>@field.FieldValue</strong>
+                                        <strong>@(field.IsCheckbox ? (field.IsCheckedValue ? "نعم" : "لا") : field.FieldValue)</strong>
                                     </div>
                                 }
                             </div>
