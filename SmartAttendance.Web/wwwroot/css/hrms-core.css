@@ -482,3 +482,55 @@ html[dir="rtl"] .hrms-slideover.open { transform: translateX(0); }
 }
 
 .hrms-muted { color: var(--sa-muted); font-weight: 800; }
+
+/* Toggle pill (checkbox styled to match the toolbar buttons). */
+.hrms-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 1px solid var(--sa-border);
+    background: var(--sa-surface-3);
+    color: var(--sa-text);
+    font-weight: 900;
+    cursor: pointer;
+    user-select: none;
+}
+
+.hrms-toggle input { accent-color: var(--sa-primary); width: 16px; height: 16px; cursor: pointer; }
+.hrms-toggle:hover { border-color: var(--sa-border-strong); }
+
+/* Client-side table pager (matches hrms tables). */
+.hrms-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 12px;
+    margin-top: 4px;
+    border-top: 1px solid var(--sa-border);
+}
+
+.hrms-pager-info { color: var(--sa-muted); font-weight: 800; font-size: 13px; }
+
+.hrms-pager-controls { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+
+.hrms-pager-btn {
+    appearance: none;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 10px;
+    border: 1px solid var(--sa-border);
+    background: var(--sa-surface);
+    color: var(--sa-text);
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.hrms-pager-btn:hover:not(:disabled) { border-color: var(--sa-primary); color: var(--sa-primary); }
+.hrms-pager-btn.active { background: var(--sa-primary); border-color: var(--sa-primary); color: #fff; }
+.hrms-pager-btn:disabled { opacity: .45; cursor: default; }

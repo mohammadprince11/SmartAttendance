@@ -93,13 +93,74 @@
         if (e.key === "Escape") closeAll();
     });
 
-    // Restore active tab from hash on load (#tab=key).
+    // Client-side table paginator: any <table data-hrms-paginate="N"> paired with
+    // <div class="hrms-pager" data-hrms-pager-for="tableId" data-hrms-search="inputId">.
+    function setupPaginatedTable(table) {
+        var size = parseInt(table.getAttribute("data-hrms-paginate"), 10) || 10;
+        var pager = document.querySelector('[data-hrms-pager-for="' + table.id + '"]');
+        var searchInput = pager && pager.getAttribute("data-hrms-search")
+            ? document.getElementById(pager.getAttribute("data-hrms-search")) : null;
+        if (!table.tBodies.length) return;
+        var rows = Array.prototype.slice.call(table.tBodies[0].rows);
+        var page = 1;
+
+        function filtered() {
+            var q = (searchInput && searchInput.value || "").trim().toLowerCase();
+            if (!q) return rows;
+            return rows.filter(function (r) {
+                return (r.getAttribute("data-search") || r.textContent).toLowerCase().indexOf(q) !== -1;
+            });
+        }
+
+        function render() {
+            var fr = filtered();
+            var pages = Math.max(1, Math.ceil(fr.length / size));
+            if (page > pages) page = pages;
+            if (page < 1) page = 1;
+            rows.forEach(function (r) { r.style.display = "none"; });
+            fr.slice((page - 1) * size, page * size).forEach(function (r) { r.style.display = ""; });
+            if (!pager) return;
+            var start = fr.length ? (page - 1) * size + 1 : 0;
+            var end = Math.min(page * size, fr.length);
+            var html = '<span class="hrms-pager-info">عرض ' + start + "–" + end + " من " + fr.length + "</span>";
+            html += '<span class="hrms-pager-controls">';
+            html += '<button type="button" class="hrms-pager-btn" data-go="prev"' + (page <= 1 ? " disabled" : "") + ">‹</button>";
+            for (var p = 1; p <= pages; p++) {
+                if (p === 1 || p === pages || Math.abs(p - page) <= 1) {
+                    html += '<button type="button" class="hrms-pager-btn' + (p === page ? " active" : "") + '" data-go="' + p + '">' + p + "</button>";
+                } else if (Math.abs(p - page) === 2) {
+                    html += '<span class="hrms-pager-info">…</span>';
+                }
+            }
+            html += '<button type="button" class="hrms-pager-btn" data-go="next"' + (page >= pages ? " disabled" : "") + ">›</button></span>";
+            pager.innerHTML = html;
+        }
+
+        if (pager) {
+            pager.addEventListener("click", function (e) {
+                var b = e.target.closest("[data-go]");
+                if (!b || b.disabled) return;
+                var g = b.getAttribute("data-go");
+                if (g === "prev") page--;
+                else if (g === "next") page++;
+                else page = parseInt(g, 10);
+                render();
+            });
+        }
+        if (searchInput) {
+            searchInput.addEventListener("input", function () { page = 1; render(); });
+        }
+        render();
+    }
+
+    // Restore active tab from hash on load (#tab=key) + wire paginated tables.
     document.addEventListener("DOMContentLoaded", function () {
         var m = /[#&]tab=([^&]+)/.exec(location.hash);
         if (m) {
             var tab = document.querySelector('.hrms-tab[data-hrms-tab="' + CSS.escape(m[1]) + '"]');
             if (tab) activateTab(tab);
         }
+        document.querySelectorAll("table[data-hrms-paginate]").forEach(setupPaginatedTable);
     });
 
     window.HrmsUI = { open: open, close: closeAll, activateTab: activateTab };

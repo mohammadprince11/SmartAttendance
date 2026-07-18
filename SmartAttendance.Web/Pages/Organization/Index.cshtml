@@ -58,7 +58,7 @@
                 }
             </form>
             <div class="hrms-inline-form">
-                <label><input type="checkbox" id="org-active-only" /> النشطة فقط</label>
+                <label class="hrms-toggle"><input type="checkbox" id="org-active-only" /> النشطة فقط</label>
                 <button type="button" class="hrms-btn-primary" data-hrms-open="add-company">+ شركة</button>
                 <button type="button" class="hrms-btn-secondary" data-hrms-open="add-branch">+ فرع</button>
                 <button type="button" class="hrms-btn-secondary" data-hrms-open="add-department">+ قسم</button>
@@ -225,30 +225,35 @@
         }
         else
         {
-            <div class="table-card">
-                <form method="get" class="search-form" onsubmit="return false;">
-                    <input type="search" placeholder="بحث باسم المنصب..." aria-label="بحث المناصب" />
-                </form>
+            <div class="hrms-table-card">
+                <div class="hrms-inline-form" style="margin-bottom:12px">
+                    <label for="pos-search">بحث</label>
+                    <input id="pos-search" type="search" placeholder="بحث باسم المنصب..." autocomplete="off" />
+                </div>
 
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>المنصب</th>
-                            <th class="text-start">الاسم بالإنجليزية</th>
-                            <th>عدد الموظفين</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var position in Model.Positions)
-                        {
+                <div class="hrms-table-wrap">
+                    <table class="hrms-table" id="pos-table" data-hrms-paginate="10">
+                        <thead>
                             <tr>
-                                <td>@position.Name</td>
-                                <td class="text-start">@(string.IsNullOrWhiteSpace(position.EnglishName) ? "—" : position.EnglishName)</td>
-                                <td>@position.EmployeeCount</td>
+                                <th class="text-start">المنصب</th>
+                                <th class="text-start">الاسم بالإنجليزية</th>
+                                <th>عدد الموظفين</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var position in Model.Positions)
+                            {
+                                <tr data-search="@position.Name @position.EnglishName">
+                                    <td class="text-start">@position.Name</td>
+                                    <td class="text-start">@(string.IsNullOrWhiteSpace(position.EnglishName) ? "—" : position.EnglishName)</td>
+                                    <td>@position.EmployeeCount</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="hrms-pager" id="pos-pager" data-hrms-pager-for="pos-table" data-hrms-search="pos-search"></div>
             </div>
         }
     </div>
