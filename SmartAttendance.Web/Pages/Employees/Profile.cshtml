@@ -212,6 +212,7 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/z360-profile.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 }
 
 <div class="z360-page" dir="rtl">
@@ -361,10 +362,6 @@
                             إعادة تعيين
                         </button>
                     }
-
-                    <a asp-page="/EmployeeProfile/Index" asp-route-employeeId="@employee.Id" class="z360-action">
-                        العائلة والمعالون
-                    </a>
 
                     @if (Model.CanViewDirectory)
                     {
@@ -776,6 +773,15 @@
                 </section>
             }
 
+            @if (!string.IsNullOrEmpty(Model.PanelSuccess))
+            {
+                <div class="hrms-badge approved" style="padding:10px 14px;margin-bottom:10px">@Model.PanelSuccess</div>
+            }
+            @if (!string.IsNullOrEmpty(Model.PanelError))
+            {
+                <div class="hrms-badge rejected" style="padding:10px 14px;margin-bottom:10px">@Model.PanelError</div>
+            }
+
             <section class="z360-details">
                 <nav class="z360-detail-nav" aria-label="أقسام ملف الموظف" data-z360-tabs>
                     <a href="#attendance" data-z360-tab="attendance" class="is-active">الحضور</a>
@@ -783,6 +789,10 @@
                     <a href="#documents" data-z360-tab="documents">المستندات</a>
                     <a href="#profile-files" data-z360-tab="profile-files">ملفات الموظف</a>
                     <a href="#shifts" data-z360-tab="shifts">الشفتات</a>
+                    <a href="#family" data-z360-tab="family">العائلة والمعالون</a>
+                    <a href="#education" data-z360-tab="education">التعليم</a>
+                    <a href="#experience" data-z360-tab="experience">الخبرات</a>
+                    <a href="#certificates" data-z360-tab="certificates">الشهادات</a>
                     @if (Model.CanViewHistory)
                     {
                         <a href="#audit" data-z360-tab="audit">سجل التعديلات</a>
@@ -1064,6 +1074,160 @@
                         }
                     </article>
 
+                    @* ---------- Family / dependents ---------- *@
+                    <article id="family" class="z360-module z360-module-wide" hidden>
+                        <div class="z360-module-head">
+                            <div><h3>العائلة والمعالون</h3><p>الأزواج والأبناء والأقرباء وجهات الطوارئ.</p></div>
+                            <button type="button" class="z360-action z360-action-primary" data-hrms-open="dep-form" onclick="hrmsResetForm('dep')">+ إضافة معال</button>
+                        </div>
+                        @if (!Model.Dependents.Any())
+                        {
+                            <div class="z360-empty">لا يوجد معالون مسجّلون.</div>
+                        }
+                        else
+                        {
+                            <div class="hrms-grid">
+                                @foreach (var d in Model.Dependents)
+                                {
+                                    <article class="hrms-tile">
+                                        <div class="hrms-tile-head">
+                                            <div><h3>@d.Name</h3><span class="hrms-tile-sub">@Model.RelationText(d.Relation)@(string.IsNullOrWhiteSpace(d.MobilePhone) ? "" : " · " + d.MobilePhone)</span></div>
+                                        </div>
+                                        <div class="hrms-inline-form">
+                                            @if (d.IsDependent) { <span class="hrms-badge approved">معال</span> }
+                                            @if (d.IsEmergencyContact) { <span class="hrms-badge pending">طوارئ</span> }
+                                            @if (d.IsSpecialNeeds) { <span class="hrms-badge">احتياجات خاصة</span> }
+                                        </div>
+                                        <div class="hrms-inline-form" style="margin-top:auto">
+                                            <button type="button" class="hrms-btn-secondary rec-edit" data-form="dep"
+                                                    data-id="@d.Id" data-relation="@d.Relation" data-name="@d.Name" data-nameother="@d.NameOther"
+                                                    data-birthdate="@(d.BirthDate?.ToString("yyyy-MM-dd"))" data-marriagedate="@(d.MarriageDate?.ToString("yyyy-MM-dd"))"
+                                                    data-religion="@d.Religion" data-nationality="@d.Nationality" data-nationalid="@d.NationalId" data-passportno="@d.PassportNo"
+                                                    data-iscitizen="@d.IsCitizen.ToString().ToLowerInvariant()" data-maritalstatus="@d.MaritalStatus"
+                                                    data-isemergencycontact="@d.IsEmergencyContact.ToString().ToLowerInvariant()" data-isspecialneeds="@d.IsSpecialNeeds.ToString().ToLowerInvariant()"
+                                                    data-isworking="@d.IsWorking.ToString().ToLowerInvariant()" data-isdependent="@d.IsDependent.ToString().ToLowerInvariant()"
+                                                    data-mobilephone="@d.MobilePhone" data-companyname="@d.CompanyName" data-note="@d.Note"
+                                                    data-hrms-open="dep-form">تعديل</button>
+                                            <form method="post" asp-page-handler="DeleteDependent" asp-route-id="@Model.Id" onsubmit="return confirm('حذف؟');">
+                                                <input type="hidden" name="recordId" value="@d.Id" />
+                                                <button type="submit" class="hrms-btn-secondary">حذف</button>
+                                            </form>
+                                        </div>
+                                    </article>
+                                }
+                            </div>
+                        }
+                    </article>
+
+                    @* ---------- Education ---------- *@
+                    <article id="education" class="z360-module z360-module-wide" hidden>
+                        <div class="z360-module-head">
+                            <div><h3>التعليم</h3><p>المؤهلات الأكاديمية.</p></div>
+                            <button type="button" class="z360-action z360-action-primary" data-hrms-open="ed-form" onclick="hrmsResetForm('ed')">+ إضافة مؤهل</button>
+                        </div>
+                        @if (!Model.Educations.Any())
+                        {
+                            <div class="z360-empty">لا توجد مؤهلات مسجّلة.</div>
+                        }
+                        else
+                        {
+                            <div class="hrms-grid">
+                                @foreach (var ed in Model.Educations)
+                                {
+                                    <article class="hrms-tile">
+                                        <div class="hrms-tile-head">
+                                            <div><h3>@ed.University</h3><span class="hrms-tile-sub">@(string.IsNullOrWhiteSpace(ed.Degree) ? "" : ed.Degree + " · ")@ed.Major</span></div>
+                                            @if (ed.IsLatest) { <span class="hrms-badge approved">الأحدث</span> }
+                                        </div>
+                                        <div class="hrms-tile-sub">@(string.IsNullOrWhiteSpace(ed.Country) ? "" : "🌍 " + ed.Country)@(ed.ToDate.HasValue ? " · " + ed.ToDate.Value.ToString("yyyy") : "")</div>
+                                        <div class="hrms-inline-form" style="margin-top:auto">
+                                            <button type="button" class="hrms-btn-secondary rec-edit" data-form="ed"
+                                                    data-id="@ed.Id" data-country="@ed.Country" data-university="@ed.University" data-degree="@ed.Degree" data-major="@ed.Major"
+                                                    data-fromdate="@(ed.FromDate?.ToString("yyyy-MM-dd"))" data-todate="@(ed.ToDate?.ToString("yyyy-MM-dd"))"
+                                                    data-islatest="@ed.IsLatest.ToString().ToLowerInvariant()" data-note="@ed.Note" data-hrms-open="ed-form">تعديل</button>
+                                            <form method="post" asp-page-handler="DeleteEducation" asp-route-id="@Model.Id" onsubmit="return confirm('حذف؟');">
+                                                <input type="hidden" name="recordId" value="@ed.Id" />
+                                                <button type="submit" class="hrms-btn-secondary">حذف</button>
+                                            </form>
+                                        </div>
+                                    </article>
+                                }
+                            </div>
+                        }
+                    </article>
+
+                    @* ---------- Experience ---------- *@
+                    <article id="experience" class="z360-module z360-module-wide" hidden>
+                        <div class="z360-module-head">
+                            <div><h3>الخبرات</h3><p>الخبرات المهنية السابقة.</p></div>
+                            <button type="button" class="z360-action z360-action-primary" data-hrms-open="ex-form" onclick="hrmsResetForm('ex')">+ إضافة خبرة</button>
+                        </div>
+                        @if (!Model.Experiences.Any())
+                        {
+                            <div class="z360-empty">لا توجد خبرات مسجّلة.</div>
+                        }
+                        else
+                        {
+                            <div class="hrms-grid">
+                                @foreach (var ex in Model.Experiences)
+                                {
+                                    <article class="hrms-tile">
+                                        <div class="hrms-tile-head">
+                                            <div><h3>@ex.CompanyName</h3><span class="hrms-tile-sub">@ex.JobTitle</span></div>
+                                        </div>
+                                        <div class="hrms-tile-sub">@(string.IsNullOrWhiteSpace(ex.Country) ? "" : "🌍 " + ex.Country)@(ex.FromDate.HasValue ? " · " + ex.FromDate.Value.ToString("yyyy") : "")@(ex.ToDate.HasValue ? " – " + ex.ToDate.Value.ToString("yyyy") : "")</div>
+                                        <div class="hrms-inline-form" style="margin-top:auto">
+                                            <button type="button" class="hrms-btn-secondary rec-edit" data-form="ex"
+                                                    data-id="@ex.Id" data-companyname="@ex.CompanyName" data-country="@ex.Country" data-jobtitle="@ex.JobTitle"
+                                                    data-fromdate="@(ex.FromDate?.ToString("yyyy-MM-dd"))" data-todate="@(ex.ToDate?.ToString("yyyy-MM-dd"))"
+                                                    data-note="@ex.Note" data-hrms-open="ex-form">تعديل</button>
+                                            <form method="post" asp-page-handler="DeleteExperience" asp-route-id="@Model.Id" onsubmit="return confirm('حذف؟');">
+                                                <input type="hidden" name="recordId" value="@ex.Id" />
+                                                <button type="submit" class="hrms-btn-secondary">حذف</button>
+                                            </form>
+                                        </div>
+                                    </article>
+                                }
+                            </div>
+                        }
+                    </article>
+
+                    @* ---------- Certificates ---------- *@
+                    <article id="certificates" class="z360-module z360-module-wide" hidden>
+                        <div class="z360-module-head">
+                            <div><h3>الشهادات</h3><p>الشهادات والرخص المهنية.</p></div>
+                            <button type="button" class="z360-action z360-action-primary" data-hrms-open="ce-form" onclick="hrmsResetForm('ce')">+ إضافة شهادة</button>
+                        </div>
+                        @if (!Model.Certificates.Any())
+                        {
+                            <div class="z360-empty">لا توجد شهادات مسجّلة.</div>
+                        }
+                        else
+                        {
+                            <div class="hrms-grid">
+                                @foreach (var ce in Model.Certificates)
+                                {
+                                    <article class="hrms-tile">
+                                        <div class="hrms-tile-head">
+                                            <div><h3>@ce.Name</h3><span class="hrms-tile-sub">@(string.IsNullOrWhiteSpace(ce.ReferenceNo) ? "" : "مرجع: " + ce.ReferenceNo)</span></div>
+                                        </div>
+                                        <div class="hrms-tile-sub">@(ce.IssueDate.HasValue ? "إصدار: " + ce.IssueDate.Value.ToString("yyyy-MM-dd") : "")</div>
+                                        <div class="hrms-inline-form" style="margin-top:auto">
+                                            <button type="button" class="hrms-btn-secondary rec-edit" data-form="ce"
+                                                    data-id="@ce.Id" data-name="@ce.Name" data-referenceno="@ce.ReferenceNo"
+                                                    data-issuedate="@(ce.IssueDate?.ToString("yyyy-MM-dd"))" data-fromdate="@(ce.FromDate?.ToString("yyyy-MM-dd"))"
+                                                    data-todate="@(ce.ToDate?.ToString("yyyy-MM-dd"))" data-note="@ce.Note" data-hrms-open="ce-form">تعديل</button>
+                                            <form method="post" asp-page-handler="DeleteCertificate" asp-route-id="@Model.Id" onsubmit="return confirm('حذف؟');">
+                                                <input type="hidden" name="recordId" value="@ce.Id" />
+                                                <button type="submit" class="hrms-btn-secondary">حذف</button>
+                                            </form>
+                                        </div>
+                                    </article>
+                                }
+                            </div>
+                        }
+                    </article>
+
                     @if (Model.CanViewHistory)
                     {
                         <article id="audit" class="z360-module">
@@ -1101,9 +1265,135 @@
     }
 </div>
 
+@* ---------- Slide-over: dependent ---------- *@
+<aside class="hrms-slideover wide" id="dep-form" aria-hidden="true">
+    <div class="hrms-slideover-head"><h2 id="dep-form-title">إضافة معال</h2><button type="button" class="hrms-slideover-close" data-hrms-close>×</button></div>
+    <div class="hrms-slideover-body">
+        <form method="post" asp-page-handler="SaveDependent" asp-route-id="@Model.Id" class="hrms-page">
+            <input type="hidden" name="Dependent.Id" id="dep-Id" value="0" />
+            <div class="hrms-grid-2">
+                <div class="hrms-field"><label>صلة القرابة</label>
+                    <select name="Dependent.Relation" id="dep-Relation">
+                        <option value="Spouse">شريك</option>
+                        <option value="Son">إبن</option>
+                        <option value="Daughter">بنت</option>
+                        <option value="Relative">قريب</option>
+                    </select>
+                </div>
+                <div class="hrms-field"><label>الاسم</label><input name="Dependent.Name" id="dep-Name" required /></div>
+                <div class="hrms-field"><label>الاسم (لغة أخرى)</label><input name="Dependent.NameOther" id="dep-NameOther" /></div>
+                <div class="hrms-field"><label>تاريخ الميلاد</label><input type="date" name="Dependent.BirthDate" id="dep-BirthDate" /></div>
+                <div class="hrms-field"><label>تاريخ الزواج</label><input type="date" name="Dependent.MarriageDate" id="dep-MarriageDate" /></div>
+                <div class="hrms-field"><label>الديانة</label><input name="Dependent.Religion" id="dep-Religion" /></div>
+                <div class="hrms-field"><label>الجنسية</label><input name="Dependent.Nationality" id="dep-Nationality" /></div>
+                <div class="hrms-field"><label>رقم الهوية</label><input name="Dependent.NationalId" id="dep-NationalId" /></div>
+                <div class="hrms-field"><label>رقم الجواز</label><input name="Dependent.PassportNo" id="dep-PassportNo" /></div>
+                <div class="hrms-field"><label>الحالة الاجتماعية</label><input name="Dependent.MaritalStatus" id="dep-MaritalStatus" /></div>
+                <div class="hrms-field"><label>هاتف محمول</label><input name="Dependent.MobilePhone" id="dep-MobilePhone" /></div>
+                <div class="hrms-field"><label>اسم الشركة</label><input name="Dependent.CompanyName" id="dep-CompanyName" /></div>
+            </div>
+            <div class="hrms-inline-form" style="flex-wrap:wrap;gap:14px;margin:8px 0">
+                <label><input type="checkbox" name="Dependent.IsDependent" id="dep-IsDependent" value="true" /> معال</label>
+                <label><input type="checkbox" name="Dependent.IsEmergencyContact" id="dep-IsEmergencyContact" value="true" /> جهة طوارئ</label>
+                <label><input type="checkbox" name="Dependent.IsSpecialNeeds" id="dep-IsSpecialNeeds" value="true" /> احتياجات خاصة</label>
+                <label><input type="checkbox" name="Dependent.IsWorking" id="dep-IsWorking" value="true" /> عامل</label>
+                <label><input type="checkbox" name="Dependent.IsCitizen" id="dep-IsCitizen" value="true" /> مواطن</label>
+            </div>
+            <div class="hrms-field"><label>ملاحظة</label><input name="Dependent.Note" id="dep-Note" /></div>
+            <button type="submit" class="hrms-btn-primary">حفظ</button>
+        </form>
+    </div>
+</aside>
+
+@* ---------- Slide-over: education ---------- *@
+<aside class="hrms-slideover wide" id="ed-form" aria-hidden="true">
+    <div class="hrms-slideover-head"><h2 id="ed-form-title">إضافة مؤهل</h2><button type="button" class="hrms-slideover-close" data-hrms-close>×</button></div>
+    <div class="hrms-slideover-body">
+        <form method="post" asp-page-handler="SaveEducation" asp-route-id="@Model.Id" class="hrms-page">
+            <input type="hidden" name="Education.Id" id="ed-Id" value="0" />
+            <div class="hrms-grid-2">
+                <div class="hrms-field"><label>الجامعة / المؤسسة</label><input name="Education.University" id="ed-University" required /></div>
+                <div class="hrms-field"><label>الدرجة</label><input name="Education.Degree" id="ed-Degree" /></div>
+                <div class="hrms-field"><label>التخصص</label><input name="Education.Major" id="ed-Major" /></div>
+                <div class="hrms-field"><label>البلد</label><input name="Education.Country" id="ed-Country" /></div>
+                <div class="hrms-field"><label>من تاريخ</label><input type="date" name="Education.FromDate" id="ed-FromDate" /></div>
+                <div class="hrms-field"><label>إلى تاريخ</label><input type="date" name="Education.ToDate" id="ed-ToDate" /></div>
+            </div>
+            <label><input type="checkbox" name="Education.IsLatest" id="ed-IsLatest" value="true" /> أحدث مؤهل</label>
+            <div class="hrms-field"><label>ملاحظة</label><input name="Education.Note" id="ed-Note" /></div>
+            <button type="submit" class="hrms-btn-primary">حفظ</button>
+        </form>
+    </div>
+</aside>
+
+@* ---------- Slide-over: experience ---------- *@
+<aside class="hrms-slideover wide" id="ex-form" aria-hidden="true">
+    <div class="hrms-slideover-head"><h2 id="ex-form-title">إضافة خبرة</h2><button type="button" class="hrms-slideover-close" data-hrms-close>×</button></div>
+    <div class="hrms-slideover-body">
+        <form method="post" asp-page-handler="SaveExperience" asp-route-id="@Model.Id" class="hrms-page">
+            <input type="hidden" name="Experience.Id" id="ex-Id" value="0" />
+            <div class="hrms-grid-2">
+                <div class="hrms-field"><label>اسم الشركة</label><input name="Experience.CompanyName" id="ex-CompanyName" required /></div>
+                <div class="hrms-field"><label>المسمى الوظيفي</label><input name="Experience.JobTitle" id="ex-JobTitle" /></div>
+                <div class="hrms-field"><label>البلد</label><input name="Experience.Country" id="ex-Country" /></div>
+                <div class="hrms-field"><label>من تاريخ</label><input type="date" name="Experience.FromDate" id="ex-FromDate" /></div>
+                <div class="hrms-field"><label>إلى تاريخ</label><input type="date" name="Experience.ToDate" id="ex-ToDate" /></div>
+            </div>
+            <div class="hrms-field"><label>ملاحظة</label><input name="Experience.Note" id="ex-Note" /></div>
+            <button type="submit" class="hrms-btn-primary">حفظ</button>
+        </form>
+    </div>
+</aside>
+
+@* ---------- Slide-over: certificate ---------- *@
+<aside class="hrms-slideover wide" id="ce-form" aria-hidden="true">
+    <div class="hrms-slideover-head"><h2 id="ce-form-title">إضافة شهادة</h2><button type="button" class="hrms-slideover-close" data-hrms-close>×</button></div>
+    <div class="hrms-slideover-body">
+        <form method="post" asp-page-handler="SaveCertificate" asp-route-id="@Model.Id" class="hrms-page">
+            <input type="hidden" name="Certificate.Id" id="ce-Id" value="0" />
+            <div class="hrms-grid-2">
+                <div class="hrms-field"><label>اسم الشهادة</label><input name="Certificate.Name" id="ce-Name" required /></div>
+                <div class="hrms-field"><label>رقم المرجع</label><input name="Certificate.ReferenceNo" id="ce-ReferenceNo" /></div>
+                <div class="hrms-field"><label>تاريخ الإصدار</label><input type="date" name="Certificate.IssueDate" id="ce-IssueDate" /></div>
+                <div class="hrms-field"><label>من تاريخ</label><input type="date" name="Certificate.FromDate" id="ce-FromDate" /></div>
+                <div class="hrms-field"><label>إلى تاريخ</label><input type="date" name="Certificate.ToDate" id="ce-ToDate" /></div>
+            </div>
+            <div class="hrms-field"><label>ملاحظة</label><input name="Certificate.Note" id="ce-Note" /></div>
+            <button type="submit" class="hrms-btn-primary">حفظ</button>
+        </form>
+    </div>
+</aside>
+
 @section Scripts {
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
     <script src="~/js/nexora-profile-reassign-modal.js" asp-append-version="true"></script>
+
+    <script>
+        var HRMS_FORM_TITLE = { dep: 'معال', ed: 'مؤهل', ex: 'خبرة', ce: 'شهادة' };
+        function hrmsResetForm(kind) {
+            var slide = document.getElementById(kind + '-form');
+            var f = slide.querySelector('form'); f.reset();
+            slide.querySelector('input[type=hidden]').value = '0';
+            document.getElementById(kind + '-form-title').textContent = 'إضافة ' + HRMS_FORM_TITLE[kind];
+        }
+        (function () {
+            document.querySelectorAll('.rec-edit').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var kind = btn.dataset.form, p = kind;
+                    var form = document.getElementById(kind + '-form');
+                    document.getElementById(kind + '-form-title').textContent = 'تعديل ' + HRMS_FORM_TITLE[kind];
+                    var byId = {}; form.querySelectorAll('[id]').forEach(function (e) { byId[e.id.toLowerCase()] = e; });
+                    Object.keys(btn.dataset).forEach(function (key) {
+                        if (key === 'form' || key === 'hrmsOpen') return;
+                        var el = byId[(p + '-' + key).toLowerCase()];
+                        if (!el) return;
+                        if (el.type === 'checkbox') el.checked = btn.dataset[key] === 'true';
+                        else el.value = btn.dataset[key] || '';
+                    });
+                });
+            });
+        })();
+    </script>
 
     <script>
         // تبويبات أقسام الملف: يظهر قسم واحد فقط حسب التبويب المختار
@@ -1144,8 +1434,9 @@
                 });
             });
 
-            // القسم الأول فعال والباقي مخفي عند التحميل
-            activate(sectionIds[0]);
+            // القسم الأول فعال والباقي مخفي عند التحميل — أو القسم المحدد في الرابط (#section)
+            var fromHash = (location.hash || "").slice(1);
+            activate(sectionIds.indexOf(fromHash) !== -1 ? fromHash : sectionIds[0]);
         })();
     </script>
 }

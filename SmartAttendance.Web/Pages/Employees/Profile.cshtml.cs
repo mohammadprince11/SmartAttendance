@@ -148,6 +148,9 @@ public partial class ProfileModel : PageModel
             await LoadAuditAsync(Employee.Id);
         }
 
+        Id = Employee.Id;
+        await LoadPanelsAsync();
+
         return Page();
     }
 
