@@ -1,0 +1,388 @@
+@page
+@using System.Text.Json
+@model SmartAttendance.Web.Pages.PeopleReports.IndexModel
+
+@{
+    ViewData["Title"] = "التقارير";
+    var datasetsJson = JsonSerializer.Serialize(
+        Model.Datasets.Select(d => new
+        {
+            key = d.Key,
+            label = d.Label,
+            columns = d.Columns.Select(c => new { key = c.Key, label = c.Label })
+        }));
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    /* Kayan-style report cards */
+    .rep-card { display:flex; align-items:center; gap:12px; background:var(--sa-surface); border:1px solid var(--sa-border); border-radius:14px; padding:14px 16px; cursor:pointer; transition:border-color .15s ease, transform .12s ease; }
+    .rep-card:hover { border-color:var(--sa-primary); transform:translateY(-1px); }
+    .rep-card-icon { width:38px; height:38px; flex:none; display:grid; place-items:center; border-radius:10px; background:var(--sa-primary-soft); color:var(--sa-primary); font-size:17px; }
+    .rep-card-text { flex:1; font-weight:900; color:var(--sa-text); }
+    .rep-pin { appearance:none; border:0; background:transparent; color:var(--sa-muted); font-size:16px; cursor:pointer; padding:4px; border-radius:8px; }
+    .rep-pin:hover { color:var(--sa-primary); background:var(--sa-surface-3); }
+    .rep-pin.pinned { color:var(--sa-primary); }
+    .rep-empty { text-align:center; padding:48px 16px; color:var(--sa-muted); font-weight:800; }
+    .rep-empty .icon { font-size:44px; margin-bottom:10px; }
+    /* Dual listbox (builder) */
+    .rep-dual { display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:stretch; }
+    .rep-dual select { width:100%; min-height:180px; border-radius:12px; border:1px solid var(--sa-border); background:var(--sa-input); color:var(--sa-text); padding:6px; font-weight:800; }
+    .rep-dual-actions { display:flex; flex-direction:column; justify-content:center; gap:6px; }
+    .rep-dual-actions button, .rep-order button { appearance:none; width:34px; height:34px; border-radius:10px; border:1px solid var(--sa-border); background:var(--sa-surface); color:var(--sa-text); font-weight:900; cursor:pointer; }
+    .rep-dual-actions button:hover, .rep-order button:hover { border-color:var(--sa-primary); color:var(--sa-primary); }
+    .rep-order { display:flex; gap:6px; margin-top:6px; }
+    @@media (max-width:760px){ .rep-dual{ grid-template-columns:1fr; } .rep-dual-actions{ flex-direction:row; } }
+    @@media print {
+        .nexora-sidebar, .nexora-topbar, .page-header .hrms-inline-form, .hrms-pager, form { display:none !important; }
+    }
+</style>
+
+<div class="hrms-page" data-hrms-tabs-group>
+
+    @if (Model.Current == null)
+    {
+        <div class="page-header">
+            <div>
+                <h1>التقارير</h1>
+                <p>تقارير جاهزة لكل بيانات مودل الأشخاص + باني تقارير مخصص.</p>
+            </div>
+            <button type="button" class="hrms-btn-primary" data-hrms-open="report-builder">+ تقرير جديد</button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Message))
+        {
+            <div class="hrms-badge approved" style="padding:10px 14px">@Model.Message</div>
+        }
+
+        <div class="hrms-tabs" role="tablist">
+            <button type="button" class="hrms-tab active" data-hrms-tab="system" data-hrms-tab-remember>تقارير النظام</button>
+            <button type="button" class="hrms-tab" data-hrms-tab="mine" data-hrms-tab-remember>تقاريري</button>
+            <button type="button" class="hrms-tab" data-hrms-tab="shared" data-hrms-tab-remember>تمت مشاركتها معي</button>
+        </div>
+
+        @* ---------------- Tab 1: System reports (Kayan card grid + pin) ---------------- *@
+        <div class="hrms-tabpanel active" data-hrms-tabpanel="system">
+            <div class="hrms-inline-form" style="margin-bottom:14px">
+                <label for="rep-search">بحث</label>
+                <input id="rep-search" type="search" placeholder="بحث باسم التقرير..." autocomplete="off" />
+            </div>
+            <div class="hrms-grid" id="rep-grid">
+                @foreach (var report in Model.SystemReports)
+                {
+                    <div class="rep-card" data-rep-id="@report.Id" data-search="@report.Name"
+                         onclick="if(!event.target.closest('.rep-pin')) location.href='?ReportId=@report.Id'">
+                        <div class="rep-card-icon">📊</div>
+                        <div class="rep-card-text">@report.Name</div>
+                        <button type="button" class="rep-pin" data-pin="@report.Id" title="تثبيت">📌</button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* ---------------- Tab 2: My reports ---------------- *@
+        <div class="hrms-tabpanel" data-hrms-tabpanel="mine">
+            @if (!Model.MyReports.Any())
+            {
+                <div class="hrms-card rep-empty">
+                    <div class="icon">🗂️</div>
+                    <div>لم تقم بإنشاء أي تقرير حتى الآن</div>
+                    <p class="hrms-muted" style="margin:6px 0 14px">أنشئ تقريرك الخاص باختيار مصدر البيانات والأعمدة التي تحتاجها.</p>
+                    <button type="button" class="hrms-btn-primary" data-hrms-open="report-builder">تقرير جديد</button>
+                </div>
+            }
+            else
+            {
+                <div class="hrms-grid">
+                    @foreach (var report in Model.MyReports)
+                    {
+                        <div class="rep-card" onclick="if(!event.target.closest('form,button')) location.href='?ReportId=@report.Id'">
+                            <div class="rep-card-icon">📄</div>
+                            <div class="rep-card-text">
+                                @report.Name
+                                <div class="hrms-tile-sub" style="font-weight:800">
+                                    @(Model.Datasets.FirstOrDefault(d => d.Key == report.DatasetKey)?.Label ?? report.DatasetKey) · @report.Columns.Count أعمدة
+                                    @if (report.IsShared) { <span class="hrms-badge approved">مشارك</span> }
+                                </div>
+                            </div>
+                            <form method="post" asp-page-handler="ToggleShare" style="display:inline">
+                                <input type="hidden" name="id" value="@report.Id" />
+                                <button type="submit" class="rep-pin" title="@(report.IsShared ? "إلغاء المشاركة" : "مشاركة")">@(report.IsShared ? "🔓" : "🔒")</button>
+                            </form>
+                            <form method="post" asp-page-handler="DeleteReport" style="display:inline" onsubmit="return confirm('حذف التقرير؟');">
+                                <input type="hidden" name="id" value="@report.Id" />
+                                <button type="submit" class="rep-pin" title="حذف">🗑️</button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        @* ---------------- Tab 3: Shared with me ---------------- *@
+        <div class="hrms-tabpanel" data-hrms-tabpanel="shared">
+            @if (!Model.SharedReports.Any())
+            {
+                <div class="hrms-card rep-empty">
+                    <div class="icon">🤝</div>
+                    <div>لا توجد تقارير مشاركة معك حالياً</div>
+                </div>
+            }
+            else
+            {
+                <div class="hrms-grid">
+                    @foreach (var report in Model.SharedReports)
+                    {
+                        <div class="rep-card" onclick="location.href='?ReportId=@report.Id'">
+                            <div class="rep-card-icon">📄</div>
+                            <div class="rep-card-text">
+                                @report.Name
+                                <div class="hrms-tile-sub" style="font-weight:800">بواسطة @report.OwnerUser</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        @* ---------------- Run view (Kayan-style header actions) ---------------- *@
+        <div class="page-header">
+            <div>
+                <h1>@Model.Current.Name</h1>
+                <p>@(string.IsNullOrWhiteSpace(Model.Current.Description) ? $"{Model.RunRows.Count} سجل" : Model.Current.Description + $" · {Model.RunRows.Count} سجل")</p>
+            </div>
+            <div class="hrms-inline-form">
+                <button type="button" class="hrms-btn-secondary" data-hrms-open="run-filter">🔎 بحث</button>
+                <a asp-page="./Index" asp-route-ReportId="@Model.ReportId" asp-page-handler="Export"
+                   asp-route-CompanyId="@Model.CompanyId" asp-route-Search="@Model.Search" asp-route-ActiveOnly="@Model.ActiveOnly"
+                   class="hrms-btn-secondary">⬇ تصدير إكسل</a>
+                <button type="button" class="hrms-btn-secondary" onclick="window.print()">🖨 طباعة</button>
+                <a asp-page="./Index" class="hrms-btn-secondary">→ رجوع</a>
+            </div>
+        </div>
+
+        <div class="hrms-table-card">
+            @if (!Model.RunRows.Any())
+            {
+                <div class="hrms-empty">لا توجد بيانات مطابقة.</div>
+            }
+            else
+            {
+                <div class="hrms-table-wrap">
+                    <table class="hrms-table" id="run-table" data-hrms-paginate="15">
+                        <thead>
+                            <tr>
+                                @foreach (var column in Model.RunColumns)
+                                {
+                                    <th class="text-start">@column.Label</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in Model.RunRows)
+                            {
+                                <tr>
+                                    @foreach (var column in Model.RunColumns)
+                                    {
+                                        <td class="text-start">@(string.IsNullOrEmpty(row.GetValueOrDefault(column.Key, "")) ? "—" : row[column.Key])</td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="hrms-pager" data-hrms-pager-for="run-table"></div>
+            }
+        </div>
+
+        @* Filter drawer (Kayan aside filter) *@
+        <aside class="hrms-slideover" id="run-filter" aria-hidden="true">
+            <div class="hrms-slideover-head">
+                <h2>بحث وتصفية</h2>
+                <button type="button" class="hrms-slideover-close" data-hrms-close>×</button>
+            </div>
+            <div class="hrms-slideover-body">
+                <form method="get" class="hrms-page">
+                    <input type="hidden" name="ReportId" value="@Model.ReportId" />
+                    @if (Model.Companies.Count > 1)
+                    {
+                        <div class="hrms-field">
+                            <label>الشركة</label>
+                            <select name="CompanyId">
+                                <option value="">الكل</option>
+                                @foreach (var company in Model.Companies)
+                                {
+                                    <option value="@company.Id" selected="@(Model.CompanyId == company.Id ? "selected" : null)">@company.Name</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                    <div class="hrms-field">
+                        <label>الاسم أو الرقم الوظيفي</label>
+                        <input type="search" name="Search" value="@Model.Search" placeholder="بحث..." />
+                    </div>
+                    <label class="hrms-toggle"><input type="checkbox" name="ActiveOnly" value="true" checked="@(Model.ActiveOnly ? "checked" : null)" /> الفعالون فقط</label>
+                    <button type="submit" class="hrms-btn-primary">تطبيق</button>
+                </form>
+            </div>
+        </aside>
+    }
+</div>
+
+@* ---------------- Slide-over: report builder (Kayan-style) ---------------- *@
+<aside class="hrms-slideover wide" id="report-builder" aria-hidden="true">
+    <div class="hrms-slideover-head">
+        <h2>تقرير جديد</h2>
+        <button type="button" class="hrms-slideover-close" data-hrms-close>×</button>
+    </div>
+    <div class="hrms-slideover-body">
+        <form method="post" asp-page-handler="CreateReport" class="hrms-page" onsubmit="return repCollectColumns();">
+            <div class="hrms-field">
+                <label>اسم التقرير</label>
+                <input name="name" required placeholder="مثال: هواتف موظفي الفروع" />
+            </div>
+            <div class="hrms-field">
+                <label>الوصف (اختياري)</label>
+                <input name="description" placeholder="وصف مختصر للتقرير" />
+            </div>
+            <div class="hrms-field">
+                <label>من يمكنه مشاهدة هذا التقرير</label>
+                <select name="visibility">
+                    <option value="me">أنا فقط</option>
+                    <option value="everyone">الجميع</option>
+                </select>
+            </div>
+            <div class="hrms-field">
+                <label>فئة الحقول (مصدر البيانات)</label>
+                <select name="datasetKey" id="builder-dataset">
+                    @foreach (var dataset in Model.Datasets)
+                    {
+                        <option value="@dataset.Key">@dataset.Label</option>
+                    }
+                </select>
+            </div>
+
+            <div class="hrms-field">
+                <label>اختر أعمدة التقرير — انقل الحقول من «المتاحة» إلى «المحددة» ورتّبها</label>
+                <div class="rep-dual">
+                    <div>
+                        <span class="hrms-tile-sub">الحقول المتاحة</span>
+                        <select id="rep-available" multiple size="9"></select>
+                    </div>
+                    <div class="rep-dual-actions">
+                        <button type="button" onclick="repMove('rep-available','rep-selected')" title="إضافة">‹</button>
+                        <button type="button" onclick="repMove('rep-selected','rep-available')" title="إزالة">›</button>
+                        <button type="button" onclick="repMoveAll('rep-available','rep-selected')" title="إضافة الكل">«</button>
+                        <button type="button" onclick="repMoveAll('rep-selected','rep-available')" title="إزالة الكل">»</button>
+                    </div>
+                    <div>
+                        <span class="hrms-tile-sub">الحقول المحددة (بالترتيب)</span>
+                        <select id="rep-selected" multiple size="9"></select>
+                        <div class="rep-order">
+                            <button type="button" onclick="repShift(-1)" title="أعلى">↑</button>
+                            <button type="button" onclick="repShift(1)" title="أسفل">↓</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <input type="hidden" name="columnsCsv" id="rep-columns-csv" />
+            <button type="submit" class="hrms-btn-primary">حفظ التقرير</button>
+        </form>
+    </div>
+</aside>
+
+@section Scripts {
+    <script>
+        var REP_DATASETS = @Html.Raw(datasetsJson);
+
+        // ---- Builder dual listbox ----
+        function repFill() {
+            var key = document.getElementById('builder-dataset').value;
+            var ds = REP_DATASETS.find(function (d) { return d.key === key; });
+            var avail = document.getElementById('rep-available');
+            var sel = document.getElementById('rep-selected');
+            avail.innerHTML = ''; sel.innerHTML = '';
+            if (!ds) return;
+            ds.columns.forEach(function (c) {
+                var o = document.createElement('option');
+                o.value = c.key; o.textContent = c.label;
+                avail.appendChild(o);
+            });
+        }
+        function repMove(fromId, toId) {
+            var from = document.getElementById(fromId), to = document.getElementById(toId);
+            [...from.selectedOptions].forEach(function (o) { to.appendChild(o); });
+        }
+        function repMoveAll(fromId, toId) {
+            var from = document.getElementById(fromId), to = document.getElementById(toId);
+            [...from.options].forEach(function (o) { to.appendChild(o); });
+        }
+        function repShift(dir) {
+            var sel = document.getElementById('rep-selected');
+            var opts = [...sel.selectedOptions];
+            if (dir > 0) opts.reverse();
+            opts.forEach(function (o) {
+                var sib = dir < 0 ? o.previousElementSibling : o.nextElementSibling;
+                if (sib) sel.insertBefore(dir < 0 ? o : sib, dir < 0 ? sib : o);
+            });
+        }
+        function repCollectColumns() {
+            var sel = document.getElementById('rep-selected');
+            var keys = [...sel.options].map(function (o) { return o.value; });
+            if (!keys.length) { alert('اختر عموداً واحداً على الأقل.'); return false; }
+            document.getElementById('rep-columns-csv').value = keys.join(',');
+            return true;
+        }
+        (function () {
+            var ds = document.getElementById('builder-dataset');
+            if (ds) { ds.addEventListener('change', repFill); repFill(); }
+        })();
+
+        // ---- System reports: search + pin (localStorage, pinned first) ----
+        (function () {
+            var grid = document.getElementById('rep-grid');
+            if (!grid) return;
+            var KEY = 'zy-pinned-reports';
+            function pins() { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } }
+            function apply() {
+                var pinned = pins();
+                var cards = [...grid.querySelectorAll('.rep-card')];
+                cards.sort(function (a, b) {
+                    var pa = pinned.indexOf(a.dataset.repId) !== -1 ? 0 : 1;
+                    var pb = pinned.indexOf(b.dataset.repId) !== -1 ? 0 : 1;
+                    return pa - pb;
+                });
+                cards.forEach(function (c) {
+                    grid.appendChild(c);
+                    var btn = c.querySelector('.rep-pin');
+                    if (btn) btn.classList.toggle('pinned', pinned.indexOf(c.dataset.repId) !== -1);
+                });
+            }
+            grid.addEventListener('click', function (e) {
+                var btn = e.target.closest('.rep-pin');
+                if (!btn) return;
+                e.stopPropagation();
+                var id = btn.getAttribute('data-pin');
+                var p = pins();
+                var i = p.indexOf(id);
+                if (i === -1) p.unshift(id); else p.splice(i, 1);
+                localStorage.setItem(KEY, JSON.stringify(p));
+                apply();
+            });
+            var search = document.getElementById('rep-search');
+            if (search) {
+                search.addEventListener('input', function () {
+                    var q = search.value.trim();
+                    grid.querySelectorAll('.rep-card').forEach(function (c) {
+                        c.style.display = !q || (c.dataset.search || '').indexOf(q) !== -1 ? '' : 'none';
+                    });
+                });
+            }
+            apply();
+        })();
+    </script>
+}
