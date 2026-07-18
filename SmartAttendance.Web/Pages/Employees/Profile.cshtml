@@ -362,6 +362,10 @@
                         </button>
                     }
 
+                    <a asp-page="/EmployeeProfile/Index" asp-route-employeeId="@employee.Id" class="z360-action">
+                        العائلة والمعالون
+                    </a>
+
                     @if (Model.CanViewDirectory)
                     {
                         <a asp-page="./Index" class="z360-action">رجوع للقائمة</a>

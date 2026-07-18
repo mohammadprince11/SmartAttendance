@@ -1,0 +1,257 @@
+@page
+@using SmartAttendance.Domain.Enums
+@model SmartAttendance.Web.Pages.EmployeeProfile.IndexModel
+
+@{
+    ViewData["Title"] = $"ملف {Model.Header.FullName}";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page" data-hrms-tabs-group>
+    <div class="page-header">
+        <div>
+            <h1>الملف 360° — @Model.Header.FullName</h1>
+            <p>ملف الموظف الشامل. اللوحة الأولى: العائلة والمعالون (نمط كيان).</p>
+        </div>
+        <div class="hrms-inline-form">
+            <a asp-page="/Employees/Edit" asp-route-id="@Model.Header.Id" class="hrms-btn-secondary">تعديل البيانات الأساسية</a>
+            <a asp-page="/Employees/Index" class="hrms-btn-secondary">رجوع للقائمة</a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="hrms-badge approved" style="padding:10px 14px">@Model.SuccessMessage</div>
+    }
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="hrms-badge rejected" style="padding:10px 14px">@Model.ErrorMessage</div>
+    }
+
+    @* ---------- Header card ---------- *@
+    <div class="hrms-card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div class="hrms-tile-icon" style="width:64px;height:64px;font-size:24px;border-radius:16px">
+            @if (!string.IsNullOrWhiteSpace(Model.Header.PhotoPath))
+            {
+                <img src="@Model.Header.PhotoPath" alt="@Model.Header.FullName" style="width:100%;height:100%;object-fit:cover;border-radius:16px" />
+            }
+            else
+            {
+                <span>@Model.Header.InitialsText</span>
+            }
+        </div>
+        <div style="flex:1;min-width:200px">
+            <h2 style="margin:0;font-size:20px;font-weight:1000">@Model.Header.FullName</h2>
+            <p class="hrms-muted" style="margin:4px 0 0">
+                @Model.Header.EmployeeNo · @(string.IsNullOrWhiteSpace(Model.Header.Position) ? Model.Header.DepartmentName : Model.Header.Position) · @Model.Header.BranchName
+            </p>
+        </div>
+        <span class="hrms-badge @(Model.Header.IsActive ? "approved" : "rejected")">@(Model.Header.IsActive ? "فعّال" : "متوقف")</span>
+    </div>
+
+    <div class="hrms-tabs" role="tablist">
+        <button type="button" class="hrms-tab active" data-hrms-tab="overview" data-hrms-tab-remember>نظرة عامة</button>
+        <button type="button" class="hrms-tab" data-hrms-tab="family" data-hrms-tab-remember>العائلة والمعالون</button>
+    </div>
+
+    @* ---------- Overview ---------- *@
+    <div class="hrms-tabpanel active" data-hrms-tabpanel="overview">
+        <div class="hrms-grid">
+            <div class="hrms-tile">
+                <div class="hrms-tile-head"><h3>معلومات الاتصال</h3><div class="hrms-tile-icon">📞</div></div>
+                <div><span class="hrms-tile-sub">الهاتف</span><div>@(string.IsNullOrWhiteSpace(Model.Header.Phone) ? "—" : Model.Header.Phone)</div></div>
+                <div><span class="hrms-tile-sub">البريد</span><div>@(string.IsNullOrWhiteSpace(Model.Header.Email) ? "—" : Model.Header.Email)</div></div>
+            </div>
+            <div class="hrms-tile">
+                <div class="hrms-tile-head"><h3>معلومات وظيفية</h3><div class="hrms-tile-icon">🗂️</div></div>
+                <div><span class="hrms-tile-sub">القسم</span><div>@Model.Header.DepartmentName</div></div>
+                <div><span class="hrms-tile-sub">تاريخ التعيين</span><div>@(Model.Header.HireDate?.ToString("yyyy-MM-dd") ?? "—")</div></div>
+            </div>
+            <div class="hrms-tile">
+                <div class="hrms-tile-head"><h3>معلومات شخصية</h3><div class="hrms-tile-icon">🪪</div></div>
+                <div><span class="hrms-tile-sub">الجنسية</span><div>@(string.IsNullOrWhiteSpace(Model.Header.Nationality) ? "—" : Model.Header.Nationality)</div></div>
+                <div><span class="hrms-tile-sub">تاريخ الميلاد</span><div>@(Model.Header.BirthDate?.ToString("yyyy-MM-dd") ?? "—")</div></div>
+            </div>
+        </div>
+    </div>
+
+    @* ---------- Family & dependents ---------- *@
+    <div class="hrms-tabpanel" data-hrms-tabpanel="family">
+        <div class="hrms-stats-card" style="margin-bottom:14px">
+            <div class="hrms-stats">
+                <div class="hrms-stat"><span>عدد المعالين</span><strong>@Model.DependentCount</strong></div>
+                <div class="hrms-stat"><span>معالون (مالياً)</span><strong>@Model.SupportedCount</strong></div>
+                <div class="hrms-stat"><span>جهات اتصال طوارئ</span><strong>@Model.EmergencyContactCount</strong></div>
+            </div>
+        </div>
+
+        <div class="hrms-tile-head" style="margin-bottom:14px">
+            <div><h3>العائلة والمعالون</h3><span class="hrms-tile-sub">أفراد عائلة الموظف والمعالين، مع أعلام المعال وجهة الطوارئ.</span></div>
+            <button type="button" class="hrms-btn-primary" data-hrms-open="dependent-form" onclick="hrmsResetDependentForm()">+ إضافة معال</button>
+        </div>
+
+        @if (!Model.Dependents.Any())
+        {
+            <div class="hrms-empty">لا يوجد معالون مسجّلون. اضغط "إضافة معال" لإضافة أول فرد.</div>
+        }
+        else
+        {
+            <div class="hrms-grid">
+                @foreach (var dep in Model.Dependents)
+                {
+                    <article class="hrms-tile">
+                        <div class="hrms-tile-head">
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <div class="hrms-tile-icon">@Model.Initials(dep.Name)</div>
+                                <div>
+                                    <h3>@dep.Name</h3>
+                                    <span class="hrms-tile-sub">@Model.RelationText(dep.Relation)@(dep.BirthDate.HasValue ? " · " + dep.BirthDate.Value.ToString("yyyy-MM-dd") : "")</span>
+                                </div>
+                            </div>
+                            <span class="hrms-badge">@Model.RelationText(dep.Relation)</span>
+                        </div>
+
+                        <div style="display:flex;flex-wrap:wrap;gap:6px">
+                            @if (dep.IsDependent)
+                            {
+                                <span class="hrms-badge approved">معال</span>
+                            }
+                            @if (dep.IsEmergencyContact)
+                            {
+                                <span class="hrms-badge pending">طوارئ</span>
+                            }
+                            @if (dep.IsSpecialNeeds)
+                            {
+                                <span class="hrms-badge">احتياجات خاصة</span>
+                            }
+                            @if (dep.IsWorking)
+                            {
+                                <span class="hrms-badge">عامل</span>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(dep.MobilePhone))
+                        {
+                            <div class="hrms-tile-sub">📱 @dep.MobilePhone</div>
+                        }
+
+                        <div class="hrms-inline-form" style="margin-top:auto">
+                            <button type="button" class="hrms-btn-secondary dep-edit"
+                                    data-hrms-open="dependent-form"
+                                    data-id="@dep.Id"
+                                    data-relation="@((int)dep.Relation)"
+                                    data-name="@dep.Name"
+                                    data-nameother="@dep.NameOther"
+                                    data-birthdate="@(dep.BirthDate?.ToString("yyyy-MM-dd"))"
+                                    data-marriagedate="@(dep.MarriageDate?.ToString("yyyy-MM-dd"))"
+                                    data-religion="@dep.Religion"
+                                    data-nationality="@dep.Nationality"
+                                    data-nationalid="@dep.NationalId"
+                                    data-passportno="@dep.PassportNo"
+                                    data-iscitizen="@dep.IsCitizen.ToString().ToLowerInvariant()"
+                                    data-maritalstatus="@dep.MaritalStatus"
+                                    data-isemergencycontact="@dep.IsEmergencyContact.ToString().ToLowerInvariant()"
+                                    data-isspecialneeds="@dep.IsSpecialNeeds.ToString().ToLowerInvariant()"
+                                    data-isworking="@dep.IsWorking.ToString().ToLowerInvariant()"
+                                    data-isdependent="@dep.IsDependent.ToString().ToLowerInvariant()"
+                                    data-mobilephone="@dep.MobilePhone"
+                                    data-companyname="@dep.CompanyName"
+                                    data-note="@dep.Note">تعديل</button>
+                            <form method="post" asp-page-handler="DeleteDependent" asp-route-employeeId="@Model.EmployeeId"
+                                  onsubmit="return confirm('حذف هذا المعال؟');">
+                                <input type="hidden" name="dependentId" value="@dep.Id" />
+                                <button type="submit" class="hrms-btn-secondary">حذف</button>
+                            </form>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@* ---------- Slide-over: add / edit dependent ---------- *@
+<aside class="hrms-slideover wide" id="dependent-form" aria-hidden="true">
+    <div class="hrms-slideover-head">
+        <h2 id="dependent-form-title">إضافة معال</h2>
+        <button type="button" class="hrms-slideover-close" data-hrms-close aria-label="إغلاق">×</button>
+    </div>
+    <div class="hrms-slideover-body">
+        <form method="post" asp-page-handler="SaveDependent" asp-route-employeeId="@Model.EmployeeId" class="hrms-page">
+            <input type="hidden" name="Input.Id" id="dep-Id" value="0" />
+            <div class="hrms-grid-2">
+                <div class="hrms-field">
+                    <label>صلة القرابة</label>
+                    <select name="Input.Relation" id="dep-Relation">
+                        <option value="1">شريك</option>
+                        <option value="2">إبن</option>
+                        <option value="3">بنت</option>
+                        <option value="4">قريب</option>
+                    </select>
+                </div>
+                <div class="hrms-field"><label>الاسم (عربي)</label><input name="Input.Name" id="dep-Name" required /></div>
+                <div class="hrms-field"><label>الاسم (لغة أخرى)</label><input name="Input.NameOther" id="dep-NameOther" /></div>
+                <div class="hrms-field"><label>تاريخ الميلاد</label><input type="date" name="Input.BirthDate" id="dep-BirthDate" /></div>
+                <div class="hrms-field"><label>تاريخ الزواج</label><input type="date" name="Input.MarriageDate" id="dep-MarriageDate" /></div>
+                <div class="hrms-field"><label>الديانة</label><input name="Input.Religion" id="dep-Religion" /></div>
+                <div class="hrms-field"><label>الجنسية</label><input name="Input.Nationality" id="dep-Nationality" /></div>
+                <div class="hrms-field"><label>الحالة الاجتماعية</label><input name="Input.MaritalStatus" id="dep-MaritalStatus" /></div>
+                <div class="hrms-field"><label>رقم الهوية</label><input name="Input.NationalId" id="dep-NationalId" /></div>
+                <div class="hrms-field"><label>رقم الجواز</label><input name="Input.PassportNo" id="dep-PassportNo" /></div>
+                <div class="hrms-field"><label>هاتف محمول</label><input name="Input.MobilePhone" id="dep-MobilePhone" /></div>
+                <div class="hrms-field"><label>اسم الشركة</label><input name="Input.CompanyName" id="dep-CompanyName" /></div>
+            </div>
+
+            <div class="hrms-inline-form" style="flex-wrap:wrap;gap:14px;margin-top:6px">
+                <label><input type="checkbox" name="Input.IsDependent" id="dep-IsDependent" value="true" /> معال (مالياً)</label>
+                <label><input type="checkbox" name="Input.IsEmergencyContact" id="dep-IsEmergencyContact" value="true" /> جهة اتصال طوارئ</label>
+                <label><input type="checkbox" name="Input.IsSpecialNeeds" id="dep-IsSpecialNeeds" value="true" /> ذوي احتياجات خاصة</label>
+                <label><input type="checkbox" name="Input.IsWorking" id="dep-IsWorking" value="true" /> عامل</label>
+                <label><input type="checkbox" name="Input.IsCitizen" id="dep-IsCitizen" value="true" /> مواطن</label>
+            </div>
+
+            <div class="hrms-field"><label>ملاحظة</label><input name="Input.Note" id="dep-Note" /></div>
+
+            <button type="submit" class="hrms-btn-primary">حفظ</button>
+        </form>
+    </div>
+</aside>
+
+@section Scripts {
+    <script>
+        function hrmsResetDependentForm() {
+            document.getElementById('dependent-form-title').textContent = 'إضافة معال';
+            var f = document.querySelector('#dependent-form form');
+            f.reset();
+            document.getElementById('dep-Id').value = '0';
+        }
+        (function () {
+            document.querySelectorAll('.dep-edit').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var d = btn.dataset;
+                    document.getElementById('dependent-form-title').textContent = 'تعديل معال';
+                    document.getElementById('dep-Id').value = d.id || '0';
+                    document.getElementById('dep-Relation').value = d.relation || '1';
+                    document.getElementById('dep-Name').value = d.name || '';
+                    document.getElementById('dep-NameOther').value = d.nameother || '';
+                    document.getElementById('dep-BirthDate').value = d.birthdate || '';
+                    document.getElementById('dep-MarriageDate').value = d.marriagedate || '';
+                    document.getElementById('dep-Religion').value = d.religion || '';
+                    document.getElementById('dep-Nationality').value = d.nationality || '';
+                    document.getElementById('dep-MaritalStatus').value = d.maritalstatus || '';
+                    document.getElementById('dep-NationalId').value = d.nationalid || '';
+                    document.getElementById('dep-PassportNo').value = d.passportno || '';
+                    document.getElementById('dep-MobilePhone').value = d.mobilephone || '';
+                    document.getElementById('dep-CompanyName').value = d.companyname || '';
+                    document.getElementById('dep-Note').value = d.note || '';
+                    document.getElementById('dep-IsDependent').checked = d.isdependent === 'true';
+                    document.getElementById('dep-IsEmergencyContact').checked = d.isemergencycontact === 'true';
+                    document.getElementById('dep-IsSpecialNeeds').checked = d.isspecialneeds === 'true';
+                    document.getElementById('dep-IsWorking').checked = d.isworking === 'true';
+                    document.getElementById('dep-IsCitizen').checked = d.iscitizen === 'true';
+                });
+            });
+        })();
+    </script>
+}

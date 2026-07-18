@@ -32,6 +32,8 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<LeaveBalance> LeaveBalances => Set<LeaveBalance>();
 
+    public DbSet<EmployeeDependent> EmployeeDependents => Set<EmployeeDependent>();
+
     public DbSet<SystemUser> SystemUsers => Set<SystemUser>();
 
     public DbSet<Permission> Permissions => Set<Permission>();
