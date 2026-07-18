@@ -124,6 +124,8 @@ public partial class ProfileModel
         r.RefNo = CleanText(RecordInput.RefNo);
         r.FromDate = RecordInput.FromDate;
         r.ToDate = RecordInput.ToDate;
+        r.Amount = RecordInput.Amount;
+        r.IsCurrent = RecordInput.IsCurrent;
         r.Note = CleanText(RecordInput.Note);
 
         var (name, path) = await SaveRecordFileAsync(RecordAttachment);
@@ -180,6 +182,8 @@ public partial class ProfileModel
         public string? RefNo { get; set; }
         public DateOnly? FromDate { get; set; }
         public DateOnly? ToDate { get; set; }
+        public decimal? Amount { get; set; }
+        public bool IsCurrent { get; set; }
         public string? Note { get; set; }
     }
 

@@ -15,6 +15,7 @@ public class EmployeeFileRecordConfiguration : IEntityTypeConfiguration<Employee
         builder.Property(x => x.Subtitle).HasMaxLength(200);
         builder.Property(x => x.Country).HasMaxLength(100);
         builder.Property(x => x.RefNo).HasMaxLength(100);
+        builder.Property(x => x.Amount).HasColumnType("decimal(18,2)");
         builder.Property(x => x.Note).HasMaxLength(500);
         builder.Property(x => x.AttachmentName).HasMaxLength(260);
         builder.Property(x => x.AttachmentPath).HasMaxLength(500);

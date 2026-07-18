@@ -32,6 +32,12 @@ public class EmployeeFileRecord : AuditableEntity
 
     public DateOnly? ToDate { get; set; }
 
+    /// <summary>Monetary value — asset value / training cost. Optional per type.</summary>
+    public decimal? Amount { get; set; }
+
+    /// <summary>Generic "current" flag — current address / asset in the employee's hands. Optional per type.</summary>
+    public bool IsCurrent { get; set; }
+
     public string? Note { get; set; }
 
     /// <summary>Optional uploaded file (original name + served path).</summary>

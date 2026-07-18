@@ -26,6 +26,8 @@ BEGIN
         RefNo nvarchar(100) NULL,
         FromDate date NULL,
         ToDate date NULL,
+        Amount decimal(18,2) NULL,
+        IsCurrent bit NOT NULL DEFAULT(0),
         Note nvarchar(500) NULL,
         AttachmentName nvarchar(260) NULL,
         AttachmentPath nvarchar(500) NULL,
@@ -37,6 +39,12 @@ BEGIN
     );
     CREATE INDEX IX_EmployeeFileRecords_Employee_Type ON EmployeeFileRecords (EmployeeId, RecordType);
 END;
+
+IF COL_LENGTH('EmployeeFileRecords', 'Amount') IS NULL
+    ALTER TABLE EmployeeFileRecords ADD Amount decimal(18,2) NULL;
+
+IF COL_LENGTH('EmployeeFileRecords', 'IsCurrent') IS NULL
+    ALTER TABLE EmployeeFileRecords ADD IsCurrent bit NOT NULL CONSTRAINT DF_EmployeeFileRecords_IsCurrent DEFAULT(0);
 """);
     }
 }

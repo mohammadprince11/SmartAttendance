@@ -972,11 +972,15 @@
                             @{
                                 var recordCards = new[]
                                 {
-                                    new { Type = EmployeeRecordType.Experience, Title = "الخبرات", TitleLabel = "اسم الشركة", SubLabel = "المسمى الوظيفي" },
-                                    new { Type = EmployeeRecordType.Certificate, Title = "الشهادات", TitleLabel = "اسم الشهادة", SubLabel = "جهة الإصدار" },
-                                    new { Type = EmployeeRecordType.Medical, Title = "الملفات الطبية", TitleLabel = "الحالة الطبية", SubLabel = "تفاصيل" },
-                                    new { Type = EmployeeRecordType.Training, Title = "الدورات التدريبية", TitleLabel = "اسم الدورة", SubLabel = "الجهة" },
-                                    new { Type = EmployeeRecordType.Education, Title = "التعليم", TitleLabel = "الجامعة / المؤسسة", SubLabel = "الدرجة والتخصص" }
+                                    new { Type = EmployeeRecordType.Experience, Title = "الخبرات", TitleLabel = "اسم الشركة", SubLabel = "المسمى الوظيفي", RefLabel = "رقم مرجعي", ShowAmount = false, ShowCurrent = false, CurrentLabel = "" },
+                                    new { Type = EmployeeRecordType.Certificate, Title = "الشهادات", TitleLabel = "اسم الشهادة", SubLabel = "جهة الإصدار", RefLabel = "رقم المرجع", ShowAmount = false, ShowCurrent = false, CurrentLabel = "" },
+                                    new { Type = EmployeeRecordType.Medical, Title = "الملفات الطبية", TitleLabel = "الحالة الطبية", SubLabel = "تفاصيل", RefLabel = "رقم مرجعي", ShowAmount = false, ShowCurrent = false, CurrentLabel = "" },
+                                    new { Type = EmployeeRecordType.Training, Title = "الدورات التدريبية", TitleLabel = "اسم الدورة", SubLabel = "الجهة", RefLabel = "رقم مرجعي", ShowAmount = true, ShowCurrent = false, CurrentLabel = "" },
+                                    new { Type = EmployeeRecordType.Education, Title = "التعليم", TitleLabel = "الجامعة / المؤسسة", SubLabel = "الدرجة والتخصص", RefLabel = "رقم مرجعي", ShowAmount = false, ShowCurrent = false, CurrentLabel = "" },
+                                    new { Type = EmployeeRecordType.Asset, Title = "العهد", TitleLabel = "اسم العهدة", SubLabel = "النوع", RefLabel = "رقم مرجعي", ShowAmount = true, ShowCurrent = true, CurrentLabel = "بحوزة الموظف" },
+                                    new { Type = EmployeeRecordType.Address, Title = "العنوان", TitleLabel = "العنوان", SubLabel = "المنطقة", RefLabel = "رقم مرجعي", ShowAmount = false, ShowCurrent = true, CurrentLabel = "العنوان الحالي" },
+                                    new { Type = EmployeeRecordType.EmergencyContact, Title = "جهات الطوارئ", TitleLabel = "الاسم", SubLabel = "صلة القرابة", RefLabel = "رقم الهاتف", ShowAmount = false, ShowCurrent = false, CurrentLabel = "" },
+                                    new { Type = EmployeeRecordType.Residency, Title = "الإقامة", TitleLabel = "نوع الإقامة", SubLabel = "الحالة", RefLabel = "رقم الإقامة", ShowAmount = false, ShowCurrent = false, CurrentLabel = "" }
                                 };
                             }
                             @foreach (var card in recordCards)
@@ -987,7 +991,7 @@
                                         <h4>@card.Title</h4>
                                         <button type="button" class="z360-upload-label" title="إضافة"
                                                 data-hrms-open="rec-form"
-                                                onclick="hrmsOpenRecord('@card.Type', '@card.Title', '@card.TitleLabel', '@card.SubLabel')">+</button>
+                                                onclick="hrmsOpenRecord('@card.Type', '@card.Title', '@card.TitleLabel', '@card.SubLabel', '@card.RefLabel', @card.ShowAmount.ToString().ToLowerInvariant(), @card.ShowCurrent.ToString().ToLowerInvariant(), '@card.CurrentLabel')">+</button>
                                     </div>
 
                                     @if (records.Any())
@@ -997,8 +1001,8 @@
                                             {
                                                 <div class="z360-file-item">
                                                     <div class="z360-file-item-main">
-                                                        <strong>@r.Title</strong>
-                                                        <span>@r.Subtitle@(r.ToDate.HasValue ? " · " + r.ToDate.Value.ToString("yyyy") : "")@(string.IsNullOrWhiteSpace(r.Country) ? "" : " · " + r.Country)</span>
+                                                        <strong>@r.Title@(r.IsCurrent ? " ✓" : "")</strong>
+                                                        <span>@r.Subtitle@(r.Amount.HasValue ? " · " + r.Amount.Value.ToString("0.##") : "")@(r.ToDate.HasValue ? " · " + r.ToDate.Value.ToString("yyyy") : "")@(string.IsNullOrWhiteSpace(r.Country) ? "" : " · " + r.Country)</span>
                                                     </div>
                                                     <div class="z360-file-actions">
                                                         @if (!string.IsNullOrWhiteSpace(r.AttachmentPath))
@@ -1007,8 +1011,9 @@
                                                         }
                                                         <button type="button" class="rec-open"
                                                                 data-type="@r.RecordType" data-card-title="@card.Title" data-title-label="@card.TitleLabel" data-sub-label="@card.SubLabel"
+                                                                data-ref-label="@card.RefLabel" data-show-amount="@card.ShowAmount.ToString().ToLowerInvariant()" data-show-current="@card.ShowCurrent.ToString().ToLowerInvariant()" data-current-label="@card.CurrentLabel"
                                                                 data-id="@r.Id" data-title="@r.Title" data-subtitle="@r.Subtitle" data-country="@r.Country" data-refno="@r.RefNo"
-                                                                data-fromdate="@(r.FromDate?.ToString("yyyy-MM-dd"))" data-todate="@(r.ToDate?.ToString("yyyy-MM-dd"))" data-note="@r.Note"
+                                                                data-fromdate="@(r.FromDate?.ToString("yyyy-MM-dd"))" data-todate="@(r.ToDate?.ToString("yyyy-MM-dd"))" data-amount="@(r.Amount?.ToString("0.##"))" data-iscurrent="@r.IsCurrent.ToString().ToLowerInvariant()" data-note="@r.Note"
                                                                 data-hrms-open="rec-form">تعديل</button>
                                                         <form method="post" asp-page-handler="DeleteRecord" asp-route-id="@Model.Id" onsubmit="return confirm('هل تريد الحذف؟');">
                                                             <input type="hidden" name="recordId" value="@r.Id" />
@@ -1188,10 +1193,12 @@
                 <div class="hrms-field"><label id="rec-Title-label">العنوان</label><input name="RecordInput.Title" id="rec-Title" required /></div>
                 <div class="hrms-field"><label id="rec-Subtitle-label">تفاصيل</label><input name="RecordInput.Subtitle" id="rec-Subtitle" /></div>
                 <div class="hrms-field"><label>البلد</label><input name="RecordInput.Country" id="rec-Country" /></div>
-                <div class="hrms-field"><label>رقم مرجعي</label><input name="RecordInput.RefNo" id="rec-RefNo" /></div>
+                <div class="hrms-field"><label id="rec-RefNo-label">رقم مرجعي</label><input name="RecordInput.RefNo" id="rec-RefNo" /></div>
                 <div class="hrms-field"><label>من تاريخ</label><input type="date" name="RecordInput.FromDate" id="rec-FromDate" /></div>
                 <div class="hrms-field"><label>إلى تاريخ</label><input type="date" name="RecordInput.ToDate" id="rec-ToDate" /></div>
+                <div class="hrms-field" id="rec-Amount-field" hidden><label>المبلغ</label><input type="number" step="0.01" min="0" name="RecordInput.Amount" id="rec-Amount" /></div>
             </div>
+            <label id="rec-Current-field" class="hrms-toggle" hidden style="margin-bottom:6px"><input type="checkbox" name="RecordInput.IsCurrent" id="rec-IsCurrent" value="true" /> <span id="rec-Current-label">الحالي</span></label>
             <div class="hrms-field"><label>ملاحظة</label><input name="RecordInput.Note" id="rec-Note" /></div>
             <div class="hrms-field"><label>ملف مرفق (اختياري)</label><input type="file" name="RecordAttachment" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" /></div>
             <button type="submit" class="hrms-btn-primary">حفظ</button>
@@ -1230,28 +1237,36 @@
         })();
 
         // Structured file records: shared slide-over for all categories.
-        function hrmsSetRecordLabels(type, cardTitle, titleLabel, subLabel) {
+        function hrmsSetRecordLabels(type, cardTitle, titleLabel, subLabel, refLabel, showAmount, showCurrent, currentLabel) {
             document.getElementById('rec-RecordType').value = type;
             document.getElementById('rec-form-title').textContent = cardTitle;
             document.getElementById('rec-Title-label').textContent = titleLabel;
             document.getElementById('rec-Subtitle-label').textContent = subLabel;
+            document.getElementById('rec-RefNo-label').textContent = refLabel || 'رقم مرجعي';
+            document.getElementById('rec-Amount-field').hidden = !showAmount;
+            var cur = document.getElementById('rec-Current-field');
+            cur.hidden = !showCurrent;
+            document.getElementById('rec-Current-label').textContent = currentLabel || 'الحالي';
         }
-        function hrmsOpenRecord(type, cardTitle, titleLabel, subLabel) {
+        function hrmsOpenRecord(type, cardTitle, titleLabel, subLabel, refLabel, showAmount, showCurrent, currentLabel) {
             var f = document.querySelector('#rec-form form'); f.reset();
             document.getElementById('rec-Id').value = '0';
-            hrmsSetRecordLabels(type, cardTitle, titleLabel, subLabel);
+            hrmsSetRecordLabels(type, cardTitle, titleLabel, subLabel, refLabel, showAmount, showCurrent, currentLabel);
         }
         (function () {
             document.querySelectorAll('.rec-open').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var d = btn.dataset;
-                    hrmsSetRecordLabels(d.type, d.cardTitle, d.titleLabel, d.subLabel);
+                    hrmsSetRecordLabels(d.type, d.cardTitle, d.titleLabel, d.subLabel, d.refLabel,
+                        d.showAmount === 'true', d.showCurrent === 'true', d.currentLabel);
                     var byId = {};
                     document.querySelectorAll('#rec-form [id]').forEach(function (e) { byId[e.id.toLowerCase()] = e; });
-                    ['id', 'title', 'subtitle', 'country', 'refno', 'fromdate', 'todate', 'note'].forEach(function (k) {
+                    ['id', 'title', 'subtitle', 'country', 'refno', 'fromdate', 'todate', 'amount', 'note'].forEach(function (k) {
                         var el = byId['rec-' + k];
                         if (el) el.value = d[k] || '';
                     });
+                    var curCb = document.getElementById('rec-IsCurrent');
+                    if (curCb) curCb.checked = d.iscurrent === 'true';
                 });
             });
         })();
