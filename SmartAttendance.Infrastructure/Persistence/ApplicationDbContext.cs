@@ -40,6 +40,8 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<EmployeeCertificate> EmployeeCertificates => Set<EmployeeCertificate>();
 
+    public DbSet<EmployeeFileRecord> EmployeeFileRecords => Set<EmployeeFileRecord>();
+
     public DbSet<SystemUser> SystemUsers => Set<SystemUser>();
 
     public DbSet<Permission> Permissions => Set<Permission>();

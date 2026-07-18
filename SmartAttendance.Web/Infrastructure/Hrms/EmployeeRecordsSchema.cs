@@ -78,6 +78,31 @@ BEGIN
     );
     CREATE INDEX IX_EmployeeCertificates_EmployeeId ON EmployeeCertificates (EmployeeId);
 END;
+
+IF OBJECT_ID('EmployeeFileRecords', 'U') IS NULL
+BEGIN
+    CREATE TABLE EmployeeFileRecords
+    (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        EmployeeId int NOT NULL,
+        RecordType int NOT NULL,
+        Title nvarchar(200) NOT NULL,
+        Subtitle nvarchar(200) NULL,
+        Country nvarchar(100) NULL,
+        RefNo nvarchar(100) NULL,
+        FromDate date NULL,
+        ToDate date NULL,
+        Note nvarchar(500) NULL,
+        AttachmentName nvarchar(260) NULL,
+        AttachmentPath nvarchar(500) NULL,
+        CreatedAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        CreatedBy nvarchar(150) NULL,
+        UpdatedAt datetime2 NULL,
+        UpdatedBy nvarchar(150) NULL,
+        IsDeleted bit NOT NULL DEFAULT(0)
+    );
+    CREATE INDEX IX_EmployeeFileRecords_Employee_Type ON EmployeeFileRecords (EmployeeId, RecordType);
+END;
 """);
     }
 }

@@ -1,5 +1,6 @@
 ﻿@page
 @model SmartAttendance.Web.Pages.Employees.ProfileModel
+@using SmartAttendance.Domain.Enums
 
 @functions {
     private static string Z360Age(DateOnly? birthDate)
@@ -968,62 +969,51 @@
                         </div>
 
                         <div class="z360-files-grid">
-                            @foreach (var fileCard in profileFileCards)
+                            @{
+                                var recordCards = new[]
+                                {
+                                    new { Type = EmployeeRecordType.Experience, Title = "الخبرات", TitleLabel = "اسم الشركة", SubLabel = "المسمى الوظيفي" },
+                                    new { Type = EmployeeRecordType.Certificate, Title = "الشهادات", TitleLabel = "اسم الشهادة", SubLabel = "جهة الإصدار" },
+                                    new { Type = EmployeeRecordType.Medical, Title = "الملفات الطبية", TitleLabel = "الحالة الطبية", SubLabel = "تفاصيل" },
+                                    new { Type = EmployeeRecordType.Training, Title = "الدورات التدريبية", TitleLabel = "اسم الدورة", SubLabel = "الجهة" },
+                                    new { Type = EmployeeRecordType.Education, Title = "التعليم", TitleLabel = "الجامعة / المؤسسة", SubLabel = "الدرجة والتخصص" }
+                                };
+                            }
+                            @foreach (var card in recordCards)
                             {
-                                var cardFiles = Model.ProfileFilesByCategory(fileCard.Category);
-                                var inputId = $"z360Upload_{fileCard.Category}_{employee.Id}";
-
+                                var records = Model.RecordsOf(card.Type).ToList();
                                 <section class="z360-file-card">
                                     <div class="z360-file-card-head">
-                                        <h4>@fileCard.Title</h4>
-                                        @if (Model.CanUploadDocument)
-                                        {
-                                            <label for="@inputId"
-                                                   class="z360-upload-label"
-                                                   title="رفع ملف">+</label>
-                                        }
+                                        <h4>@card.Title</h4>
+                                        <button type="button" class="z360-upload-label" title="إضافة"
+                                                data-hrms-open="rec-form"
+                                                onclick="hrmsOpenRecord('@card.Type', '@card.Title', '@card.TitleLabel', '@card.SubLabel')">+</button>
                                     </div>
 
-                                    @if (Model.CanUploadDocument)
-                                    {
-                                        <form method="post"
-                                              enctype="multipart/form-data"
-                                              asp-page-handler="UploadProfileAreaFile"
-                                              asp-route-id="@employee.Id">
-                                            <input type="hidden"
-                                                   name="ProfileAreaCategory"
-                                                   value="@fileCard.Category" />
-                                            <input id="@inputId"
-                                                   class="z360-hidden-input"
-                                                   type="file"
-                                                   name="ProfileAreaFile"
-                                                   accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx"
-                                                   onchange="this.form.submit()" />
-                                        </form>
-                                    }
-
-                                    @if (cardFiles.Any())
+                                    @if (records.Any())
                                     {
                                         <div class="z360-file-items">
-                                            @foreach (var file in cardFiles.Take(5))
+                                            @foreach (var r in records)
                                             {
                                                 <div class="z360-file-item">
                                                     <div class="z360-file-item-main">
-                                                        <strong>@Model.Display(file.FileName)</strong>
-                                                        <span>@(file.UploadedAt.HasValue ? file.UploadedAt.Value.ToString("yyyy-MM-dd HH:mm") : "-")</span>
+                                                        <strong>@r.Title</strong>
+                                                        <span>@r.Subtitle@(r.ToDate.HasValue ? " · " + r.ToDate.Value.ToString("yyyy") : "")@(string.IsNullOrWhiteSpace(r.Country) ? "" : " · " + r.Country)</span>
                                                     </div>
                                                     <div class="z360-file-actions">
-                                                        <a href="@file.StoredPath" target="_blank">فتح</a>
-                                                        @if (Model.CanDeleteDocument)
+                                                        @if (!string.IsNullOrWhiteSpace(r.AttachmentPath))
                                                         {
-                                                            <form method="post"
-                                                                  asp-page-handler="DeleteProfileAreaFile"
-                                                                  asp-route-id="@employee.Id"
-                                                                  asp-route-fileId="@file.Id"
-                                                                  onsubmit="return confirm('هل تريد حذف الملف؟');">
-                                                                <button type="submit">حذف</button>
-                                                            </form>
+                                                            <a href="@r.AttachmentPath" target="_blank">الملف</a>
                                                         }
+                                                        <button type="button" class="rec-open"
+                                                                data-type="@r.RecordType" data-card-title="@card.Title" data-title-label="@card.TitleLabel" data-sub-label="@card.SubLabel"
+                                                                data-id="@r.Id" data-title="@r.Title" data-subtitle="@r.Subtitle" data-country="@r.Country" data-refno="@r.RefNo"
+                                                                data-fromdate="@(r.FromDate?.ToString("yyyy-MM-dd"))" data-todate="@(r.ToDate?.ToString("yyyy-MM-dd"))" data-note="@r.Note"
+                                                                data-hrms-open="rec-form">تعديل</button>
+                                                        <form method="post" asp-page-handler="DeleteRecord" asp-route-id="@Model.Id" onsubmit="return confirm('هل تريد الحذف؟');">
+                                                            <input type="hidden" name="recordId" value="@r.Id" />
+                                                            <button type="submit">حذف</button>
+                                                        </form>
                                                     </div>
                                                 </div>
                                             }
@@ -1031,7 +1021,7 @@
                                     }
                                     else
                                     {
-                                        <div class="z360-empty">لا توجد ملفات.</div>
+                                        <div class="z360-empty">لا توجد سجلات.</div>
                                     }
                                 </section>
                             }
@@ -1187,6 +1177,28 @@
     </div>
 </aside>
 
+@* ---------- Slide-over: structured file record (education/experience/…) ---------- *@
+<aside class="hrms-slideover wide" id="rec-form" aria-hidden="true">
+    <div class="hrms-slideover-head"><h2 id="rec-form-title">إضافة سجل</h2><button type="button" class="hrms-slideover-close" data-hrms-close>×</button></div>
+    <div class="hrms-slideover-body">
+        <form method="post" asp-page-handler="SaveRecord" asp-route-id="@Model.Id" enctype="multipart/form-data" class="hrms-page">
+            <input type="hidden" name="RecordInput.Id" id="rec-Id" value="0" />
+            <input type="hidden" name="RecordInput.RecordType" id="rec-RecordType" value="Education" />
+            <div class="hrms-grid-2">
+                <div class="hrms-field"><label id="rec-Title-label">العنوان</label><input name="RecordInput.Title" id="rec-Title" required /></div>
+                <div class="hrms-field"><label id="rec-Subtitle-label">تفاصيل</label><input name="RecordInput.Subtitle" id="rec-Subtitle" /></div>
+                <div class="hrms-field"><label>البلد</label><input name="RecordInput.Country" id="rec-Country" /></div>
+                <div class="hrms-field"><label>رقم مرجعي</label><input name="RecordInput.RefNo" id="rec-RefNo" /></div>
+                <div class="hrms-field"><label>من تاريخ</label><input type="date" name="RecordInput.FromDate" id="rec-FromDate" /></div>
+                <div class="hrms-field"><label>إلى تاريخ</label><input type="date" name="RecordInput.ToDate" id="rec-ToDate" /></div>
+            </div>
+            <div class="hrms-field"><label>ملاحظة</label><input name="RecordInput.Note" id="rec-Note" /></div>
+            <div class="hrms-field"><label>ملف مرفق (اختياري)</label><input type="file" name="RecordAttachment" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" /></div>
+            <button type="submit" class="hrms-btn-primary">حفظ</button>
+        </form>
+    </div>
+</aside>
+
 @section Scripts {
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
     <script src="~/js/nexora-profile-reassign-modal.js" asp-append-version="true"></script>
@@ -1212,6 +1224,33 @@
                         if (!el) return;
                         if (el.type === 'checkbox') el.checked = btn.dataset[key] === 'true';
                         else el.value = btn.dataset[key] || '';
+                    });
+                });
+            });
+        })();
+
+        // Structured file records: shared slide-over for all categories.
+        function hrmsSetRecordLabels(type, cardTitle, titleLabel, subLabel) {
+            document.getElementById('rec-RecordType').value = type;
+            document.getElementById('rec-form-title').textContent = cardTitle;
+            document.getElementById('rec-Title-label').textContent = titleLabel;
+            document.getElementById('rec-Subtitle-label').textContent = subLabel;
+        }
+        function hrmsOpenRecord(type, cardTitle, titleLabel, subLabel) {
+            var f = document.querySelector('#rec-form form'); f.reset();
+            document.getElementById('rec-Id').value = '0';
+            hrmsSetRecordLabels(type, cardTitle, titleLabel, subLabel);
+        }
+        (function () {
+            document.querySelectorAll('.rec-open').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var d = btn.dataset;
+                    hrmsSetRecordLabels(d.type, d.cardTitle, d.titleLabel, d.subLabel);
+                    var byId = {};
+                    document.querySelectorAll('#rec-form [id]').forEach(function (e) { byId[e.id.toLowerCase()] = e; });
+                    ['id', 'title', 'subtitle', 'country', 'refno', 'fromdate', 'todate', 'note'].forEach(function (k) {
+                        var el = byId['rec-' + k];
+                        if (el) el.value = d[k] || '';
                     });
                 });
             });
