@@ -1271,7 +1271,17 @@ body.nxr-modal-open {
 
 @container z360 (max-width: 560px) {
     .z360-page {
-        padding: 10px 8px 36px;
+        padding: 10px 6px 36px;
+    }
+
+    /* Tighten card padding on phones so content uses more of the width. */
+    .z360-module,
+    .z360-hero {
+        padding: 14px 10px;
+    }
+
+    .z360-file-card {
+        padding: 12px 10px;
     }
 
     .z360-identity {

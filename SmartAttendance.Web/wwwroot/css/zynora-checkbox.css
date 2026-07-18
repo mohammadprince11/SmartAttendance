@@ -1,0 +1,70 @@
+/*
+ * ZYNORA HR — unified checkbox.
+ * One system-consistent checkbox everywhere: a rounded box that fills with the
+ * brand teal and shows a white tick when checked. Uses design tokens so it adapts
+ * to light/dark automatically. Loaded last + !important so it overrides the older
+ * per-page accent-color styles precisely. Native switches are opted out via
+ * [role="switch"] / .no-zy-check.
+ */
+
+input[type="checkbox"]:not([role="switch"]):not(.no-zy-check) {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    width: 18px !important;
+    height: 18px !important;
+    inline-size: 18px !important;
+    block-size: 18px !important;
+    min-width: 18px !important;
+    max-width: 18px !important;
+    min-height: 18px !important;
+    max-height: 18px !important;
+    min-block-size: 18px !important;
+    max-block-size: 18px !important;
+    padding: 0 !important;
+    border: 1.5px solid var(--sa-border-strong, rgba(24, 199, 189, .45)) !important;
+    border-radius: 6px !important;
+    background: var(--sa-input, #fff) !important;
+    background-image: none !important;
+    cursor: pointer !important;
+    position: relative !important;
+    vertical-align: -4px !important;
+    flex: none !important;
+    transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease !important;
+    accent-color: auto !important;
+}
+
+input[type="checkbox"]:not([role="switch"]):not(.no-zy-check):hover:not(:disabled) {
+    border-color: var(--sa-primary, #18C7BD) !important;
+}
+
+input[type="checkbox"]:not([role="switch"]):not(.no-zy-check):focus-visible {
+    outline: none !important;
+    border-color: var(--sa-primary, #18C7BD) !important;
+    box-shadow: var(--zy-focus-ring, 0 0 0 3px rgba(24, 199, 189, .22)) !important;
+}
+
+input[type="checkbox"]:not([role="switch"]):not(.no-zy-check):checked {
+    background: var(--sa-primary, #18C7BD) !important;
+    border-color: var(--sa-primary, #18C7BD) !important;
+}
+
+/* White tick (rotated border), centred in the box. */
+input[type="checkbox"]:not([role="switch"]):not(.no-zy-check):checked::after {
+    content: "" !important;
+    position: absolute !important;
+    inset-block-start: 2px !important;
+    inset-inline-start: 5.5px !important;
+    inline-size: 4px !important;
+    block-size: 8px !important;
+    border: solid #fff !important;
+    border-width: 0 2px 2px 0 !important;
+    border-radius: 1px !important;
+    transform: rotate(45deg) !important;
+}
+
+input[type="checkbox"]:not([role="switch"]):not(.no-zy-check):disabled {
+    opacity: .5 !important;
+    cursor: default !important;
+}
