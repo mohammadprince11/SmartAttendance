@@ -1,0 +1,69 @@
+/*
+ * ZYNORA HR — unified file input.
+ * One system-consistent look for every <input type="file">: a token-styled field
+ * with a teal "choose file" button (::file-selector-button). Loaded last +
+ * !important so it overrides older per-page styles and the global input rules.
+ * Does NOT touch `display`, so hidden trigger inputs (.z360-hidden-input / [hidden])
+ * stay hidden. Opt-out with .no-zy-file.
+ */
+
+input[type="file"]:not(.no-zy-file):not(.z360-hidden-input) {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    box-sizing: border-box !important;
+    max-width: 100% !important;
+    font: inherit !important;
+    color: var(--sa-muted, #627386) !important;
+    background: var(--sa-input, #fff) !important;
+    border: 1px solid var(--sa-border, rgba(8, 20, 38, .12)) !important;
+    border-radius: 12px !important;
+    padding: 6px 8px !important;
+    min-height: 42px !important;
+    cursor: pointer !important;
+    line-height: 1.6 !important;
+    transition: border-color .15s ease, box-shadow .15s ease !important;
+}
+
+input[type="file"]:not(.no-zy-file):not(.z360-hidden-input):hover {
+    border-color: var(--sa-border-strong, rgba(24, 199, 189, .45)) !important;
+}
+
+input[type="file"]:not(.no-zy-file):not(.z360-hidden-input):focus-visible {
+    outline: none !important;
+    border-color: var(--sa-primary, #18C7BD) !important;
+    box-shadow: var(--zy-focus-ring, 0 0 0 3px rgba(24, 199, 189, .22)) !important;
+}
+
+/* The "choose file" button. */
+input[type="file"]:not(.no-zy-file):not(.z360-hidden-input)::file-selector-button {
+    font: inherit !important;
+    font-weight: 900 !important;
+    margin: 0 !important;
+    margin-inline-end: 10px !important;
+    padding: 7px 16px !important;
+    min-height: 30px !important;
+    border: 1px solid var(--sa-primary, #18C7BD) !important;
+    border-radius: 10px !important;
+    background: var(--sa-primary-soft, rgba(24, 199, 189, .12)) !important;
+    color: var(--sa-primary, #18C7BD) !important;
+    cursor: pointer !important;
+    transition: background-color .15s ease, color .15s ease !important;
+}
+
+input[type="file"]:not(.no-zy-file):not(.z360-hidden-input)::file-selector-button:hover {
+    background: var(--sa-primary, #18C7BD) !important;
+    color: #fff !important;
+}
+
+/* WebKit legacy pseudo (older Chrome/Safari). */
+input[type="file"]:not(.no-zy-file):not(.z360-hidden-input)::-webkit-file-upload-button {
+    font: inherit !important;
+    font-weight: 900 !important;
+    margin-inline-end: 10px !important;
+    padding: 7px 16px !important;
+    border: 1px solid var(--sa-primary, #18C7BD) !important;
+    border-radius: 10px !important;
+    background: var(--sa-primary-soft, rgba(24, 199, 189, .12)) !important;
+    color: var(--sa-primary, #18C7BD) !important;
+    cursor: pointer !important;
+}
