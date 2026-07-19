@@ -179,7 +179,7 @@
 
         Func<string, string> ActiveClass = path => IsCurrent(path) ? "active nexora-active" : "";
 
-        var employeesOpen = IsUnder("/Employees") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/EmployeeProfiles") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization") || IsUnder("/Alerts") || IsUnder("/LeaveBalances") || IsUnder("/PeopleReports") || IsUnder("/Engagement");
+        var employeesOpen = IsUnder("/Employees") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/EmployeeProfiles") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization") || IsUnder("/Alerts") || IsUnder("/LeaveBalances") || IsUnder("/PeopleReports") || IsUnder("/EmployeeTasks") || IsUnder("/Engagement");
         var attendanceOpen = IsUnder("/AttendanceOperations") || IsUnder("/AttendanceRecords") || IsUnder("/AttendanceImports") || IsUnder("/AttendanceProcessing") || IsUnder("/AttendanceCorrections") || IsUnder("/Shifts") || IsUnder("/Devices");
         var requestsOpen = IsUnder("/LeaveRequests") || IsUnder("/Approvals") || IsUnder("/SelfServices");
         var systemOpen = IsUnder("/Branches") || IsUnder("/Departments") || IsUnder("/SystemUsers") || IsUnder("/Permissions");
@@ -292,6 +292,9 @@
                                 </a>
                                 <a asp-page="/PeopleReports/Index" class="nexora-nav-link @(IsUnder("/PeopleReports") ? "active nexora-active" : "")">
                                     <span>التقارير</span>
+                                </a>
+                                <a asp-page="/EmployeeTasks/Index" class="nexora-nav-link @(IsUnder("/EmployeeTasks") ? "active nexora-active" : "")">
+                                    <span>مهام التعيين والإنهاء</span>
                                 </a>
                             }
 

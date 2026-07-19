@@ -63,3 +63,4 @@ SmartAttendance.Web/App_Data/PositionImports/
 # Claude Code: keep shared launch.json, ignore local session data
 .claude/*
 !.claude/launch.json
+SmartAttendance.Web/App_Data/DataProtection-Keys/

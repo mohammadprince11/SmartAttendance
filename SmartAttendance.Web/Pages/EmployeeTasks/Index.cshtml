@@ -1,0 +1,230 @@
+@page
+@using SmartAttendance.Domain.Enums
+@model SmartAttendance.Web.Pages.EmployeeTasks.IndexModel
+
+@{
+    ViewData["Title"] = "مهام التعيين والإنهاء";
+    var today = DateOnly.FromDateTime(DateTime.Today);
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page" data-hrms-tabs-group>
+    <div class="page-header">
+        <div>
+            <h1>مهام التعيين والإنهاء</h1>
+            <p>قوائم مهام مؤتمتة لدورة حياة الموظف (Onboarding / Offboarding) بنمط كيان.</p>
+        </div>
+        <button type="button" class="hrms-btn-primary" data-hrms-open="launch-form">+ بدء عملية</button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.Message))
+    {
+        <div class="hrms-badge approved" style="padding:10px 14px">@Model.Message</div>
+    }
+
+    <div class="hrms-stats-card">
+        <div class="hrms-stats">
+            <div class="hrms-stat"><span>مهام تعيين مفتوحة</span><strong>@Model.OpenOnboarding</strong></div>
+            <div class="hrms-stat"><span>مهام إنهاء مفتوحة</span><strong>@Model.OpenOffboarding</strong></div>
+            <div class="hrms-stat"><span>متأخرة</span><strong>@Model.OverdueCount</strong></div>
+            <div class="hrms-stat"><span>أُنجزت هذا الشهر</span><strong>@Model.DoneThisMonth</strong></div>
+        </div>
+    </div>
+
+    <div class="hrms-tabs" role="tablist">
+        <button type="button" class="hrms-tab active" data-hrms-tab="screening" data-hrms-tab-remember>متابعة المهام</button>
+        <button type="button" class="hrms-tab" data-hrms-tab="templates" data-hrms-tab-remember>قوالب المهام</button>
+    </div>
+
+    @* ---------------- Tab 1: Screening ---------------- *@
+    <div class="hrms-tabpanel active" data-hrms-tabpanel="screening">
+        <div class="hrms-table-card">
+            <form method="get" class="hrms-inline-form" style="margin-bottom:12px;flex-wrap:wrap">
+                <label>العملية</label>
+                <select name="ProcessFilter" onchange="this.form.submit()">
+                    <option value="0" selected="@(Model.ProcessFilter == 0 ? "selected" : null)">الكل</option>
+                    <option value="1" selected="@(Model.ProcessFilter == 1 ? "selected" : null)">تعيين</option>
+                    <option value="2" selected="@(Model.ProcessFilter == 2 ? "selected" : null)">إنهاء</option>
+                </select>
+                <label>الحالة</label>
+                <select name="StatusFilter" onchange="this.form.submit()">
+                    <option value="open" selected="@(Model.StatusFilter == "open" ? "selected" : null)">مفتوحة</option>
+                    <option value="done" selected="@(Model.StatusFilter == "done" ? "selected" : null)">منجزة</option>
+                    <option value="all" selected="@(Model.StatusFilter == "all" ? "selected" : null)">الكل</option>
+                </select>
+                <label>بحث</label>
+                <input type="search" name="Search" value="@Model.Search" placeholder="موظف أو مهمة..." />
+                <button type="submit" class="hrms-btn-secondary">تطبيق</button>
+            </form>
+
+            @if (!Model.Tasks.Any())
+            {
+                <div class="hrms-empty">لا توجد مهام مطابقة — ابدأ عملية تعيين أو إنهاء من الزر أعلاه.</div>
+            }
+            else
+            {
+                <div class="hrms-table-wrap">
+                    <table class="hrms-table" id="tasks-table" data-hrms-paginate="15">
+                        <thead>
+                            <tr>
+                                <th>الحالة</th>
+                                <th class="text-start">الموظف</th>
+                                <th>العملية</th>
+                                <th class="text-start">المهمة</th>
+                                <th>الجهة المسؤولة</th>
+                                <th>الاستحقاق</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var task in Model.Tasks)
+                            {
+                                var overdue = !task.IsDone && task.DueDate.HasValue && task.DueDate.Value < today;
+                                <tr>
+                                    <td>
+                                        <span class="hrms-badge @(task.IsDone ? "approved" : overdue ? "rejected" : "pending")">
+                                            @(task.IsDone ? "منجزة" : overdue ? "متأخرة" : "مفتوحة")
+                                        </span>
+                                    </td>
+                                    <td class="text-start">@task.EmployeeName <span class="hrms-muted">@task.EmployeeNo</span></td>
+                                    <td>@Model.ProcessText(task.ProcessType)</td>
+                                    <td class="text-start">@task.Title</td>
+                                    <td>@(string.IsNullOrWhiteSpace(task.AssigneeRole) ? "—" : task.AssigneeRole)</td>
+                                    <td>@(task.DueDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                                    <td>
+                                        <div class="hrms-inline-form" style="justify-content:center">
+                                            @if (!task.IsDone)
+                                            {
+                                                <form method="post" asp-page-handler="Complete" asp-route-StatusFilter="@Model.StatusFilter" asp-route-ProcessFilter="@Model.ProcessFilter" asp-route-Search="@Model.Search">
+                                                    <input type="hidden" name="id" value="@task.Id" />
+                                                    <button type="submit" class="hrms-btn-primary">إنجاز</button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <form method="post" asp-page-handler="Reopen" asp-route-StatusFilter="@Model.StatusFilter" asp-route-ProcessFilter="@Model.ProcessFilter" asp-route-Search="@Model.Search">
+                                                    <input type="hidden" name="id" value="@task.Id" />
+                                                    <button type="submit" class="hrms-btn-secondary">إعادة فتح</button>
+                                                </form>
+                                            }
+                                            <form method="post" asp-page-handler="DeleteTask" asp-route-StatusFilter="@Model.StatusFilter" asp-route-ProcessFilter="@Model.ProcessFilter" asp-route-Search="@Model.Search" onsubmit="return confirm('حذف المهمة؟');">
+                                                <input type="hidden" name="id" value="@task.Id" />
+                                                <button type="submit" class="hrms-btn-secondary">حذف</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="hrms-pager" data-hrms-pager-for="tasks-table"></div>
+            }
+        </div>
+    </div>
+
+    @* ---------------- Tab 2: Templates ---------------- *@
+    <div class="hrms-tabpanel" data-hrms-tabpanel="templates">
+        <div class="hrms-grid" style="grid-template-columns:repeat(2, minmax(0,1fr))">
+            @foreach (var process in new[] { HrProcessType.Onboarding, HrProcessType.Offboarding })
+            {
+                var items = Model.Templates.Where(t => t.ProcessType == process).ToList();
+                <div class="hrms-table-card">
+                    <div class="hrms-tile-head" style="margin-bottom:10px">
+                        <h3>قالب @(process == HrProcessType.Onboarding ? "التعيين (Onboarding)" : "الإنهاء (Offboarding)")</h3>
+                        <span class="hrms-badge">@items.Count مهمة</span>
+                    </div>
+
+                    <form method="post" asp-page-handler="AddTemplate" class="hrms-inline-form" style="margin-bottom:10px;flex-wrap:wrap">
+                        <input type="hidden" name="processType" value="@((int)process)" />
+                        <input name="title" required placeholder="مهمة جديدة..." style="flex:1;min-width:140px" />
+                        <input name="assigneeRole" placeholder="الجهة (HR/IT...)" style="max-width:120px" />
+                        <input name="dueDays" type="number" min="0" value="0" title="أيام الاستحقاق" style="max-width:70px" />
+                        <input name="sortOrder" type="number" min="0" value="0" title="الترتيب" style="max-width:70px" />
+                        <button type="submit" class="hrms-btn-primary">+</button>
+                    </form>
+
+                    @if (!items.Any())
+                    {
+                        <div class="hrms-empty">لا توجد مهام بهذا القالب.</div>
+                    }
+                    else
+                    {
+                        <div class="hrms-table-wrap">
+                            <table class="hrms-table">
+                                <thead>
+                                    <tr>
+                                        <th class="text-start">المهمة</th>
+                                        <th>الجهة</th>
+                                        <th>استحقاق (يوم)</th>
+                                        <th>الحالة</th>
+                                        <th>إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var template in items)
+                                    {
+                                        <tr>
+                                            <td class="text-start">@template.Title</td>
+                                            <td>@(string.IsNullOrWhiteSpace(template.AssigneeRole) ? "—" : template.AssigneeRole)</td>
+                                            <td>+@template.DueDays</td>
+                                            <td><span class="hrms-badge @(template.IsActive ? "approved" : "rejected")">@(template.IsActive ? "فعال" : "معطل")</span></td>
+                                            <td>
+                                                <div class="hrms-inline-form" style="justify-content:center">
+                                                    <form method="post" asp-page-handler="ToggleTemplate">
+                                                        <input type="hidden" name="id" value="@template.Id" />
+                                                        <button type="submit" class="hrms-btn-secondary">@(template.IsActive ? "تعطيل" : "تفعيل")</button>
+                                                    </form>
+                                                    <form method="post" asp-page-handler="DeleteTemplate" onsubmit="return confirm('حذف القالب؟');">
+                                                        <input type="hidden" name="id" value="@template.Id" />
+                                                        <button type="submit" class="hrms-btn-secondary">حذف</button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@* ---------------- Slide-over: launch a process ---------------- *@
+<aside class="hrms-slideover" id="launch-form" aria-hidden="true">
+    <div class="hrms-slideover-head">
+        <h2>بدء عملية تعيين / إنهاء</h2>
+        <button type="button" class="hrms-slideover-close" data-hrms-close>×</button>
+    </div>
+    <div class="hrms-slideover-body">
+        <form method="post" asp-page-handler="Launch" class="hrms-page">
+            <div class="hrms-field">
+                <label>نوع العملية</label>
+                <select name="processType">
+                    <option value="1">تعيين (Onboarding)</option>
+                    <option value="2">إنهاء (Offboarding)</option>
+                </select>
+            </div>
+            <div class="hrms-field">
+                <label>الموظف</label>
+                <input name="employeeRef" list="employee-list" required placeholder="اكتب الرقم أو الاسم..." autocomplete="off" />
+                <datalist id="employee-list">
+                    @foreach (var employee in Model.EmployeeOptions)
+                    {
+                        <option value="@employee.EmployeeNo — @employee.FullName"></option>
+                    }
+                </datalist>
+            </div>
+            <div class="hrms-field">
+                <label>تاريخ البدء</label>
+                <input type="date" name="startDate" value="@today.ToString("yyyy-MM-dd")" />
+            </div>
+            <p class="hrms-muted">سيتم توليد مهام العملية من القالب الفعّال مع مواعيد استحقاق محسوبة من تاريخ البدء.</p>
+            <button type="submit" class="hrms-btn-primary">بدء العملية</button>
+        </form>
+    </div>
+</aside>
