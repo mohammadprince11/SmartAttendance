@@ -6,6 +6,10 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages.EmployeeUpdates;
 
+/// <summary>
+/// دفتر حركات الموظف (نمط كيان): تعديلات البيانات كسجلات Transaction بمرجع
+/// وتاريخ تنفيذ وحالة، بدل التعديل المباشر — الأساس لقفل الرواتب لاحقاً.
+/// </summary>
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;

@@ -10,6 +10,10 @@ using SmartAttendance.Domain.Enums;
 
 namespace SmartAttendance.Infrastructure.Services;
 
+/// <summary>
+/// استيراد سجلات الحضور من ملفات أجهزة البصمة (Excel/CSV): التطبيع، كشف
+/// التكرار، والإدراج الدفعي — يخدم صفحة /AttendanceImports.
+/// </summary>
 public class AttendanceImportService : IAttendanceImportService
 {
     private readonly IUnitOfWork _unitOfWork;

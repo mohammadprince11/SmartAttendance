@@ -8,6 +8,10 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages.DisciplinaryRules;
 
+/// <summary>
+/// إعدادات المخالفات: فئات المخالفات وأنواعها وقواعد العقوبات المتدرجة
+/// (تكرار → إجراء) التي يستهلكها سجل المخالفات /Violations.
+/// </summary>
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;

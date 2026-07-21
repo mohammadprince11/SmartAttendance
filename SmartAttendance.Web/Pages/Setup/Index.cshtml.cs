@@ -19,6 +19,10 @@ using SmartAttendance.Web.Infrastructure.CompanyContext;
 
 namespace SmartAttendance.Web.Pages.Setup;
 
+/// <summary>
+/// مركز إعداد الشركة (/Setup): بوابة البيانات المرجعية — شركات، فروع، أقسام،
+/// مناصب، ورديات، أجهزة، عطل — مع عدادات وحالة كل قسم.
+/// </summary>
 public class IndexModel : PageModel
 {
     private const long MaximumLogoSize = 5 * 1024 * 1024;

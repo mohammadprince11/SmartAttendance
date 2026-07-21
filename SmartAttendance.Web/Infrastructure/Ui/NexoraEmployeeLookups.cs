@@ -4,6 +4,10 @@ using System.Linq;
 
 namespace SmartAttendance.Web.Infrastructure.Ui;
 
+/// <summary>
+/// قوائم مساعدة مشتركة لشاشات الموظف (جنسيات، بلدان، ديانات...) — تُستهلك
+/// من صفحات الإنشاء والتعديل والفلاتر.
+/// </summary>
 public static class NexoraEmployeeLookups
 {
     public static IReadOnlyList<string> Countries { get; } = new[]

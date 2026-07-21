@@ -9,6 +9,10 @@ using SmartAttendance.Domain.Entities;
 using SmartAttendance.Domain.Enums;
 namespace SmartAttendance.Infrastructure.Services;
 
+/// <summary>
+/// استيراد البيانات المرجعية (شركات/فروع/أقسام/عطل/ورديات...) من Excel —
+/// المحرك المشترك لكل صفحات Import في مودل الإعداد.
+/// </summary>
 public class MasterDataImportService : IMasterDataImportService
 {
     private readonly IUnitOfWork _unitOfWork;

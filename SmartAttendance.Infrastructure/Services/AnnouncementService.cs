@@ -9,6 +9,10 @@ using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Infrastructure.Services;
 
+/// <summary>
+/// خدمة الإعلانات والتعاميم: النشر حسب الجمهور (شركة/فرع/قسم)، تتبع القراءة،
+/// والقوالب — تغذي حائط بوابة الموظف وستوديو الإعلانات.
+/// </summary>
 public sealed class AnnouncementService : IAnnouncementService
 {
     private readonly ApplicationDbContext _dbContext;

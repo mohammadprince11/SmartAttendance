@@ -1,9 +1,0 @@
-.edit-help-note {
-    margin-top: 12px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    border: 1px solid rgba(34, 197, 94, .35);
-    background: rgba(34, 197, 94, .10);
-    color: var(--sa-success);
-    font-weight: 900;
-}

@@ -13,6 +13,11 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Infrastructure.Imports;
 
+/// <summary>
+/// محرك الاستيراد الشامل للموظفين: يقرأ ملفات Excel/CSV ويؤسس الموظفين مع
+/// فروعهم وأقسامهم ومناصبهم دفعة واحدة (إنشاء المراجع الناقصة تلقائياً).
+/// يُستخدم من صفحة /Employees/Import — أثقل ملف بالمشروع، عدّل بحذر.
+/// </summary>
 public sealed class EmployeeBootstrapImportEngine
 {
     public const long MaxFileBytes = 10L * 1024L * 1024L;

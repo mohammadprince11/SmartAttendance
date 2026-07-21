@@ -1,9 +1,0 @@
-/* NEXORA_FIX15C_OPTIONAL_SELECT_DISABLED */
-.nxos,
-.nxos__menu,
-select.nxos-native {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-}

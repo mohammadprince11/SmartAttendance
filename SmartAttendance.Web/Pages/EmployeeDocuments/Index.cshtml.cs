@@ -5,6 +5,10 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages.EmployeeDocuments;
 
+/// <summary>
+/// مركز وثائق الموظفين: رفع/عرض/انتهاء صلاحية الوثائق مع تنبيهات الانتهاء —
+/// يعمل فوق جدول EmployeeDocuments.
+/// </summary>
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;

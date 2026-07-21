@@ -8,6 +8,10 @@ using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Pages.Positions;
 
+/// <summary>
+/// المناصب (الهيكل الوظيفي): جدول المناصب بفئاتها ومستوياتها مع بحث وترقيم —
+/// يغذي قوائم المنصب بشاشات الموظف والهيكل التنظيمي.
+/// </summary>
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _db;

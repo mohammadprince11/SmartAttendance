@@ -6,6 +6,10 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages.EmployeeProfileSettings;
 
+/// <summary>
+/// باني حقول ملف الموظف (الداينمك مرحلة 1): أقسام ديناميكية + حقول مخصصة
+/// (6 أنواع) لكيان الموظف نفسه. الكيانات الفرعية لها باني منفصل /HrSettings/EntityFields.
+/// </summary>
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;

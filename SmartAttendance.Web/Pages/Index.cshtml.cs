@@ -11,6 +11,10 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages;
 
+/// <summary>
+/// لوحة التحكم التنفيذية (الصفحة الرئيسية): KPIs القوى العاملة، حالة اليوم،
+/// التوزيعات (فروع/أقسام/جنس/جنسية)، والتنبيهات — تتغذى من عدة خدمات إحصائية.
+/// </summary>
 public class IndexModel : PageModel
 {
     private const int DistributionTopLimit = 5;

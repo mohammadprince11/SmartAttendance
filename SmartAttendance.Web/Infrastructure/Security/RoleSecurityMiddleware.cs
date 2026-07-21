@@ -5,6 +5,11 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Infrastructure.Security;
 
+/// <summary>
+/// حارس المسارات المركزي: يفحص كل طلب ضد دور المستخدم — نظام صلاحيات ديناميكي
+/// (PeopleRoutePermissionResolver) مع قوائم توافقية ثابتة لكل دور كخط رجوع.
+/// ملاحظة: القوائم الثابتة أدناه هي مصدر الحقيقة لما يراه كل دور من صفحات.
+/// </summary>
 public class RoleSecurityMiddleware
 {
     private readonly RequestDelegate _next;

@@ -3,6 +3,10 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Infrastructure.Security;
 
+/// <summary>
+/// طبقة الوصول لجدول AppLoginUsers (حسابات الدخول): إنشاء الجدول ذاتياً،
+/// التحقق من كلمات المرور (PBKDF2)، وربط الحسابات بالموظفين والأدوار.
+/// </summary>
 public static class LoginDatabase
 {
     public const string DefaultAdminUsername = "admin";

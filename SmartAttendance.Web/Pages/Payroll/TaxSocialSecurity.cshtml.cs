@@ -6,6 +6,10 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages.Payroll;
 
+/// <summary>
+/// إعدادات الضرائب والضمان الاجتماعي العراقية: شرائح الضريبة، نسب الضمان،
+/// والإعفاءات — البذرة الأولى لمودل الرواتب المؤجل.
+/// </summary>
 public class TaxSocialSecurityModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;

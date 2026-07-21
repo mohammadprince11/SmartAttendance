@@ -629,11 +629,6 @@
     "ast_hash": "7e5bb68d5de5c5c41baa26f40ba29406",
     "semantic_hash": ""
   },
-  "SmartAttendance.Application/UserPermissions/Services/IUserPermissionService.cs": {
-    "mtime": 1783145070.0749505,
-    "ast_hash": "0c6dc0e7e0abd71dd30fba24ef9f4af0",
-    "semantic_hash": ""
-  },
   "SmartAttendance.Application/UserPermissions/ViewModels/PermissionCheckViewModel.cs": {
     "mtime": 1783145070.075951,
     "ast_hash": "5104fc62bb384abba0995f4ecf7243aa",
@@ -642,16 +637,6 @@
   "SmartAttendance.Application/UserPermissions/ViewModels/PermissionGroupViewModel.cs": {
     "mtime": 1783145070.0772977,
     "ast_hash": "971bf37bcb58eb1ca66910242b6527a4",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Application/UserPermissions/ViewModels/UserPermissionAssignmentViewModel.cs": {
-    "mtime": 1783145070.0772977,
-    "ast_hash": "b88355b98e909c7db8735870856a491a",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Application/UserPermissions/ViewModels/UserPermissionUserViewModel.cs": {
-    "mtime": 1783145070.0783012,
-    "ast_hash": "1f586aa70da7f7729cab46a15cba27d8",
     "semantic_hash": ""
   },
   "SmartAttendance.Domain/Common/AuditableEntity.cs": {
@@ -1414,11 +1399,6 @@
     "ast_hash": "b17f545545c24117579dda68718a30d7",
     "semantic_hash": ""
   },
-  "SmartAttendance.Infrastructure/Services/UserPermissionService.cs": {
-    "mtime": 1784139084.3059313,
-    "ast_hash": "3e9c752b8a3950d8536e00b5c2353f32",
-    "semantic_hash": ""
-  },
   "SmartAttendance.Infrastructure/SmartAttendance.Infrastructure.csproj": {
     "mtime": 1783495658.4656851,
     "ast_hash": "b5c6429c8e2006867b9fd0cc3952f475",
@@ -1505,8 +1485,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/PeopleRoutePermissionResolver.cs": {
-    "mtime": 1784204659.8526776,
-    "ast_hash": "3b2227b7765b74a036103ff5a63dc46e",
+    "mtime": 1784672360.1973383,
+    "ast_hash": "63d202e7e8fc40d109195485331683a4",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/PeopleTargetEmployeeResolver.cs": {
@@ -1515,8 +1495,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/RoleSecurityMiddleware.cs": {
-    "mtime": 1784642015.3754704,
-    "ast_hash": "f81f3c96d6620c67d4241c23ff577aac",
+    "mtime": 1784672360.1953144,
+    "ast_hash": "6a3bd695587b5b0b84bdd3ec940fe816",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/SimplePasswordHasher.cs": {
@@ -1662,36 +1642,6 @@
   "SmartAttendance.Web/Pages/AttendanceRecords/Index.cshtml.cs": {
     "mtime": 1783145071.0082872,
     "ast_hash": "a2ca757763760da98e6bc07134c158e8",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/AttendanceReports/Daily.cshtml": {
-    "mtime": 1783145071.0109394,
-    "ast_hash": "6091971f43cfe81558b62c3e57583141",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/AttendanceReports/Daily.cshtml.cs": {
-    "mtime": 1783145071.0127363,
-    "ast_hash": "fb01182ecbae277ff4a3b39d2b0c9ab6",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/AttendanceReports/Index.cshtml": {
-    "mtime": 1783145071.013806,
-    "ast_hash": "8a653dc3717fde6a6f8edbfe5147edcf",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/AttendanceReports/Index.cshtml.cs": {
-    "mtime": 1783145071.014917,
-    "ast_hash": "4b247eaa22f0d6023f2d4249eb6fc829",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/AttendanceReports/Monthly.cshtml": {
-    "mtime": 1783145071.014917,
-    "ast_hash": "e914ce99a0a560eabdb4b16d90dcbb69",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/AttendanceReports/Monthly.cshtml.cs": {
-    "mtime": 1783145071.015971,
-    "ast_hash": "b352ca4977b9a9e3de3661a000f36bda",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AuditLogs/Index.cshtml": {
@@ -1934,16 +1884,6 @@
     "ast_hash": "6b3688906080767945ce2b62d140c1f8",
     "semantic_hash": ""
   },
-  "SmartAttendance.Web/Pages/EmployeeFile/Index.cshtml": {
-    "mtime": 1783414214.3907533,
-    "ast_hash": "3f14a31aabde8173972b467624eea11c",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/EmployeeFile/Index.cshtml.cs": {
-    "mtime": 1784309397.0632265,
-    "ast_hash": "afc90eac4c49d98c18fe6d044bdbeb18",
-    "semantic_hash": ""
-  },
   "SmartAttendance.Web/Pages/EmployeePermissions/Index.cshtml": {
     "mtime": 1783145071.0588324,
     "ast_hash": "766c2387339995b274b01e82b30dd9d7",
@@ -1972,16 +1912,6 @@
   "SmartAttendance.Web/Pages/EmployeeProfileSettings/Index.cshtml.cs": {
     "mtime": 1784387913.5243504,
     "ast_hash": "3eee3d929ef6a07af8965d68075f1b51",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/EmployeeProfiles/Index.cshtml": {
-    "mtime": 1784321868.6889565,
-    "ast_hash": "ee6c1e589fabbfdeab8f267600168d4f",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/EmployeeProfiles/Index.cshtml.cs": {
-    "mtime": 1784321868.6889565,
-    "ast_hash": "84b80b598ab70d0e012f4914ee6910e8",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeeShifts/Create.cshtml": {
@@ -2424,16 +2354,6 @@
     "ast_hash": "c676baae7d8e46db2d2bcc4b57320c35",
     "semantic_hash": ""
   },
-  "SmartAttendance.Web/Pages/Notifications/Index.cshtml": {
-    "mtime": 1783145071.1167789,
-    "ast_hash": "a6de872f929ec130e1f23d72787294e6",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/Notifications/Index.cshtml.cs": {
-    "mtime": 1783145071.1183014,
-    "ast_hash": "72ab31f68155983861777593e4ff479e",
-    "semantic_hash": ""
-  },
   "SmartAttendance.Web/Pages/Organization/Chart.cshtml": {
     "mtime": 1784323103.280789,
     "ast_hash": "d8860a17431e643a6c3df2ddd628b78d",
@@ -2549,36 +2469,6 @@
     "ast_hash": "4f65be48a3551f4a8c9369a0d3b2d37b",
     "semantic_hash": ""
   },
-  "SmartAttendance.Web/Pages/Reports/Create.cshtml": {
-    "mtime": 1783145071.1317477,
-    "ast_hash": "9139c1c644479561c0e3c973b07cedf1",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/Reports/Create.cshtml.cs": {
-    "mtime": 1783145071.1317477,
-    "ast_hash": "760b1a38d3bc683b48fb255cf836725e",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/Reports/Index.cshtml": {
-    "mtime": 1783145071.1317477,
-    "ast_hash": "2b99a465f2cbb74e6f2412427c2cbb1a",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/Reports/Index.cshtml.cs": {
-    "mtime": 1783145071.1317477,
-    "ast_hash": "862946ace3a641177cd40d717446b465",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/Reports/View.cshtml": {
-    "mtime": 1783145071.133893,
-    "ast_hash": "c2f2a6b807347fcae228e6bb416b6ce8",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/Reports/View.cshtml.cs": {
-    "mtime": 1783145071.1348886,
-    "ast_hash": "1c7fceef31d59d63851310ddd35cd709",
-    "semantic_hash": ""
-  },
   "SmartAttendance.Web/Pages/SelfServices/Index.cshtml": {
     "mtime": 1783145071.1348886,
     "ast_hash": "b3919a6870f678fac77c51fc5748e38a",
@@ -2605,8 +2495,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784669939.7476623,
-    "ast_hash": "9a9fdc657082a41fe8ef848aa28b3d92",
+    "mtime": 1784672377.2366335,
+    "ast_hash": "0b9c06a3d05d55a149aefa9980d739a8",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -2714,16 +2604,6 @@
     "ast_hash": "f94512658ded15f34606a54f7a52305c",
     "semantic_hash": ""
   },
-  "SmartAttendance.Web/Pages/UserPermissions/Index.cshtml": {
-    "mtime": 1783145071.1552331,
-    "ast_hash": "af3324f392d42496a231aedc6473db33",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/UserPermissions/Index.cshtml.cs": {
-    "mtime": 1783145071.1566129,
-    "ast_hash": "6b01e39e6215df00829518fa01318c25",
-    "semantic_hash": ""
-  },
   "SmartAttendance.Web/Pages/Violations/Index.cshtml": {
     "mtime": 1784657421.9912057,
     "ast_hash": "7c736cb466dad7ec96a198df97af53a3",
@@ -2755,8 +2635,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Program.cs": {
-    "mtime": 1784435978.090091,
-    "ast_hash": "9023973cdb8622c95994f88c75809133",
+    "mtime": 1784672413.8317409,
+    "ast_hash": "8935e08e157ef760bc8bb006dff08a6f",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Properties/launchSettings.json": {
@@ -2797,11 +2677,6 @@
   "SmartAttendance.Web/wwwroot/js/employee-file-button.js": {
     "mtime": 1783499838.9010968,
     "ast_hash": "53b6b17f21ad3f52250dcbb904a7b854",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/js/employee-file-tabs.js": {
-    "mtime": 1783145071.1984482,
-    "ast_hash": "239d7b0a52a82826db50c77606906a5e",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/employee-language-cleanup.js": {
@@ -3227,16 +3102,6 @@
   "SmartAttendance.Web/wwwroot/js/report-builder-pro.js": {
     "mtime": 1783499843.6845126,
     "ast_hash": "c2779b428fd22dfbe28c7ba5bb23d847",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/js/reports-create.js": {
-    "mtime": 1783145071.2064583,
-    "ast_hash": "2c206afe18b1928f219f4b70f26ef872",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/js/reports-index.js": {
-    "mtime": 1783145071.2107275,
-    "ast_hash": "3e67fd8d07a2d37d51bb9fccc9ec0b8b",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/self-service-own-employee.js": {
@@ -3792,16 +3657,6 @@
   "SmartAttendance.Web/Infrastructure/Reports/PeopleReportsStore.cs": {
     "mtime": 1784457359.3641653,
     "ast_hash": "261b77e0c0bed1c3718a1688f7314950",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/EmployeeProfile/Index.cshtml": {
-    "mtime": 1784371922.1189873,
-    "ast_hash": "5e98ce8b559a7ad0182f8d453de9a347",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/EmployeeProfile/Index.cshtml.cs": {
-    "mtime": 1784371907.4729538,
-    "ast_hash": "732b329e9ffebe50c831bc2c6e79fd39",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeeTasks/Index.cshtml": {

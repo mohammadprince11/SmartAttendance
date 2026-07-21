@@ -9,6 +9,10 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages.AttendanceOperations;
 
+/// <summary>
+/// عمليات الحضور اليومية: لوحة تجميعية لسجلات الدخول/الخروج مع تصحيح سريع
+/// وفلاتر — الواجهة التشغيلية الأولى لمودل الحضور (سيُعاد بناؤه بدراسة كيان).
+/// </summary>
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;

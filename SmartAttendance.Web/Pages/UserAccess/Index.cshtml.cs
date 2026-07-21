@@ -9,6 +9,10 @@ using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.UserAccess;
 
+/// <summary>
+/// إدارة مستخدمي النظام (/UserAccess): إنشاء حسابات دخول، ربطها بالموظفين،
+/// الأدوار التوافقية، وحالة التفعيل. تعمل فوق جدول AppLoginUsers عبر LoginDatabase.
+/// </summary>
 public class IndexModel : PageModel
 {
     private const string AdminRole = "Admin";

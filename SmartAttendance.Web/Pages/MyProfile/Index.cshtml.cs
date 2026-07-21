@@ -6,6 +6,10 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages.MyProfile;
 
+/// <summary>
+/// ملفي الشخصي (خدمة ذاتية): بيانات الموظف الحالي، حضوره، طلباته — مع إدراج
+/// طلبات جديدة يمر عبر محرك الموافقات ApprovalWorkflowEngine.
+/// </summary>
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;

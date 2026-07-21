@@ -9,6 +9,10 @@ using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Infrastructure.Services;
 
+/// <summary>
+/// خدمة مركز الإعداد: عدادات واكتمال البيانات المرجعية (شركات/فروع/أقسام...)
+/// المعروضة بلوحة /Setup.
+/// </summary>
 public class SetupService : ISetupService
 {
     private readonly IUnitOfWork _unitOfWork;

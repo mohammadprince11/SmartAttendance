@@ -10,6 +10,10 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Imports;
 namespace SmartAttendance.Web.Pages.Employees;
 
+/// <summary>
+/// واجهة استيراد الموظفين: رفع الملف، المعاينة، ثم التنفيذ عبر
+/// EmployeeBootstrapImportEngine مع تقرير أخطاء صف-بصف.
+/// </summary>
 public class ImportModel : PageModel
 {
     private const string FixedImportType = "Employees";

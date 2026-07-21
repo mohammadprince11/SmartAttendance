@@ -7,6 +7,10 @@ using SmartAttendance.Web.Infrastructure.CompanyContext;
 
 namespace SmartAttendance.Web.Pages.Organization;
 
+/// <summary>
+/// الهياكل التنظيمية بثلاثة تبويبات (نمط كيان): هيكلية الشركة (فروع/أقسام) +
+/// الهيكل الهرمي (شجرة المدراء عبر OrgChartBuilder) + الهيكل الوظيفي (المناصب).
+/// </summary>
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
