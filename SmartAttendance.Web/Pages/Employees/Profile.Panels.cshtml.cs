@@ -7,6 +7,16 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
+/// <summary>موديل partial رندر الحقول المخصصة داخل سلايدات الملف 360°.</summary>
+public sealed class EntityCustomFieldsPartialModel
+{
+    public string EntityKey { get; set; } = string.Empty;
+    public List<EntityCustomFields.FieldDefinition> Fields { get; set; } = new();
+    /// <summary>required بالمتصفح — يُعطَّل بسلايد السجلات المشترك (JS يديره حسب النوع الظاهر).</summary>
+    public bool ApplyRequired { get; set; } = true;
+    public bool StartHidden { get; set; }
+}
+
 /// <summary>
 /// Structured 360° data that lives inside the employee profile page but isn't a
 /// file upload: the family / dependents list shown as a card inside the
@@ -40,6 +50,13 @@ public partial class ProfileModel
 
     public int LeaveLedgerYear { get; set; } = DateTime.Today.Year;
     public List<LeaveLedgerRow> LeaveLedger { get; set; } = new();
+
+    // ---- الحقول المخصصة لكل كيان (الداينمك مرحلة 2) ----
+    public Dictionary<string, List<EntityCustomFields.FieldDefinition>> CustomFieldDefs { get; set; } = new();
+    public Dictionary<string, Dictionary<int, Dictionary<string, string>>> CustomFieldValues { get; set; } = new();
+
+    public List<EntityCustomFields.FieldDefinition> CustomFieldsOf(string entityKey) =>
+        CustomFieldDefs.TryGetValue(entityKey, out var defs) ? defs : new();
 
     public int DependentCount => Dependents.Count;
     public int SupportedCount => Dependents.Count(d => d.IsDependent);
@@ -94,6 +111,20 @@ public partial class ProfileModel
             .OrderByDescending(c => c.IsCurrent).ThenByDescending(c => c.FromDate).ToListAsync();
 
         await LoadLeaveLedgerAsync();
+
+        // الحقول المخصصة: التعريفات + قيم كل سجلات هذا الموظف دفعة واحدة.
+        CustomFieldDefs = await EntityCustomFields.DefinitionsByEntityAsync(_dbContext);
+        var recordIds = new Dictionary<string, IReadOnlyList<int>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Dependent"] = Dependents.Select(d => d.Id).ToList(),
+            ["Contract"] = Contracts.Select(c => c.Id).ToList(),
+            ["Allowance"] = Allowances.Select(a => a.Id).ToList(),
+        };
+        foreach (var group in FileRecords.GroupBy(r => r.RecordType))
+        {
+            recordIds[group.Key.ToString()] = group.Select(r => r.Id).ToList();
+        }
+        CustomFieldValues = await EntityCustomFields.ValuesByEntityAsync(_dbContext, recordIds);
     }
 
     // نفس منطق صفحة /LeaveBalances: المنح من LeaveBalance (أو افتراضي السياسة)،
@@ -183,6 +214,7 @@ public partial class ProfileModel
         e.Note = CleanText(Dependent.Note);
 
         await _dbContext.SaveChangesAsync();
+        await EntityCustomFields.SaveValuesFromFormAsync(_dbContext, "Dependent", e.Id, Request.Form);
         PanelSuccess = "تم حفظ المعال.";
         return BackToFiles();
     }
@@ -196,6 +228,7 @@ public partial class ProfileModel
             e.UpdatedAt = DateTime.UtcNow;
             e.UpdatedBy = User.Identity?.Name ?? "System";
             await _dbContext.SaveChangesAsync();
+            await EntityCustomFields.DeleteValuesAsync(_dbContext, "Dependent", recordId);
             PanelSuccess = "تم الحذف.";
         }
         return BackToFiles();
@@ -238,6 +271,7 @@ public partial class ProfileModel
         if (path != null) { r.AttachmentName = name; r.AttachmentPath = path; }
 
         await _dbContext.SaveChangesAsync();
+        await EntityCustomFields.SaveValuesFromFormAsync(_dbContext, r.RecordType.ToString(), r.Id, Request.Form);
         PanelSuccess = "تم حفظ السجل.";
         return BackToFiles();
     }
@@ -245,7 +279,13 @@ public partial class ProfileModel
     public async Task<IActionResult> OnPostDeleteRecordAsync(int recordId)
     {
         var r = await _dbContext.EmployeeFileRecords.FirstOrDefaultAsync(x => x.Id == recordId && x.EmployeeId == Id);
-        if (r != null) { r.IsDeleted = true; r.UpdatedAt = DateTime.UtcNow; r.UpdatedBy = User.Identity?.Name ?? "System"; await _dbContext.SaveChangesAsync(); PanelSuccess = "تم الحذف."; }
+        if (r != null)
+        {
+            r.IsDeleted = true; r.UpdatedAt = DateTime.UtcNow; r.UpdatedBy = User.Identity?.Name ?? "System";
+            await _dbContext.SaveChangesAsync();
+            await EntityCustomFields.DeleteValuesAsync(_dbContext, r.RecordType.ToString(), recordId);
+            PanelSuccess = "تم الحذف.";
+        }
         return BackToFiles();
     }
 
@@ -298,6 +338,7 @@ public partial class ProfileModel
         if (path != null) { a.AttachmentName = name; a.AttachmentPath = path; }
 
         await _dbContext.SaveChangesAsync();
+        await EntityCustomFields.SaveValuesFromFormAsync(_dbContext, "Allowance", a.Id, Request.Form);
         PanelSuccess = "تم حفظ العلاوة.";
         return BackToFiles();
     }
@@ -376,6 +417,7 @@ public partial class ProfileModel
                     .SetProperty(e => e.ContractEndDate, c.ToDate));
         }
 
+        await EntityCustomFields.SaveValuesFromFormAsync(_dbContext, "Contract", c.Id, Request.Form);
         PanelSuccess = "تم حفظ العقد.";
         return BackToFiles();
     }

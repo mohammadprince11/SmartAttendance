@@ -1,0 +1,50 @@
+@using SmartAttendance.Web.Infrastructure.Hrms
+@model SmartAttendance.Web.Pages.Employees.EntityCustomFieldsPartialModel
+
+@* الحقول المخصصة المعرّفة من /HrSettings/EntityFields — تُرندر داخل سلايد الكيان.
+   القيم تُملأ بالتعديل عبر JS من hrmsCfValues (data-cf-input يسهّل الالتقاط). *@
+@if (Model.Fields.Any())
+{
+    <div class="hrms-grid" data-cf-group="@Model.EntityKey" hidden="@Model.StartHidden">
+        @foreach (var field in Model.Fields)
+        {
+            <div class="hrms-field">
+                @if (field.IsCheckbox)
+                {
+                    <label class="hrms-toggle">
+                        <input type="checkbox" name="@field.InputName" value="true"
+                               data-cf-input="@field.FieldKey" data-cf-entity="@Model.EntityKey" />
+                        <span>@field.FieldLabel</span>
+                    </label>
+                }
+                else
+                {
+                    <label>@field.FieldLabel @(field.IsRequired ? "*" : "")</label>
+                    @if (field.IsSelect)
+                    {
+                        <select name="@field.InputName" data-cf-input="@field.FieldKey" data-cf-entity="@Model.EntityKey"
+                                required="@(Model.ApplyRequired && field.IsRequired)">
+                            <option value="">—</option>
+                            @foreach (var option in field.Options)
+                            {
+                                <option value="@option">@option</option>
+                            }
+                        </select>
+                    }
+                    else if (field.IsTextArea)
+                    {
+                        <textarea name="@field.InputName" rows="2" data-cf-input="@field.FieldKey" data-cf-entity="@Model.EntityKey"
+                                  required="@(Model.ApplyRequired && field.IsRequired)"></textarea>
+                    }
+                    else
+                    {
+                        <input type="@field.InputType" name="@field.InputName"
+                               step="@(field.InputType == "number" ? "any" : null)"
+                               data-cf-input="@field.FieldKey" data-cf-entity="@Model.EntityKey"
+                               required="@(Model.ApplyRequired && field.IsRequired)" />
+                    }
+                }
+            </div>
+        }
+    </div>
+}

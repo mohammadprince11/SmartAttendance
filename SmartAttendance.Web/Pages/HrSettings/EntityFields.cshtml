@@ -1,0 +1,151 @@
+@page "/HrSettings/EntityFields"
+@model SmartAttendance.Web.Pages.HrSettings.EntityFieldsModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+@Html.AntiForgeryToken()
+
+@{
+    ViewData["Title"] = "حقول الكيانات";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+
+<style>
+    .efb-layout { display: grid; grid-template-columns: 250px 1fr; gap: 14px; align-items: start; }
+    @@media (max-width: 900px) { .efb-layout { grid-template-columns: 1fr; } }
+    .efb-catalog a { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; color: var(--nxhs-text, #DCEAF4); text-decoration: none; font-size: 13px; font-weight: 800; }
+    .efb-catalog a:hover { background: rgba(25,211,224,.06); }
+    .efb-catalog a.active { background: rgba(25,211,224,.12); color: #19D3E0; }
+    .efb-count { font-size: 11px; opacity: .75; background: rgba(143,168,188,.16); border-radius: 999px; padding: 1px 8px; }
+    .efb-row { display: grid; grid-template-columns: 26px 1fr 130px 1fr 74px 74px 120px; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid rgba(73,111,151,.18); border-radius: 12px; margin-bottom: 6px; background: rgba(255,255,255,.02); }
+    .efb-row.efb-dragging { opacity: .4; }
+    .efb-row input[type="text"], .efb-row select, .efb-row textarea, .efb-add input[type="text"], .efb-add select, .efb-add textarea { min-height: 32px; border-radius: 8px; border: 1px solid rgba(143,168,188,.3); background: rgba(0,0,0,.2); color: inherit; padding: 4px 10px; font-size: 12px; width: 100%; }
+    .efb-row textarea, .efb-add textarea { min-height: 32px; resize: vertical; }
+    .efb-grip { cursor: grab; opacity: .6; text-align: center; user-select: none; }
+    .efb-toggle { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 800; }
+    .efb-head { display: grid; grid-template-columns: 26px 1fr 130px 1fr 74px 74px 120px; gap: 8px; padding: 4px 10px; font-size: 11px; opacity: .65; font-weight: 900; }
+    .efb-add { display: grid; grid-template-columns: 1fr 130px 1fr 74px auto; gap: 8px; align-items: center; padding: 12px; border: 1px dashed rgba(25,211,224,.35); border-radius: 14px; margin-bottom: 14px; }
+    .efb-actions button { background: none; border: 0; cursor: pointer; font-weight: 800; font-size: 12px; }
+</style>
+
+<section class="nxhs-page nxhs-simple" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">إعدادات الموارد البشرية</a>
+        <h1>حقول الكيانات</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <div class="efb-layout">
+        <aside class="nxhs-panel efb-catalog">
+            @foreach (var entity in EntityCustomFields.Entities)
+            {
+                var count = Model.AllDefinitions.TryGetValue(entity.Key, out var defs) ? defs.Count : 0;
+                <a href="?Entity=@entity.Key" class="@(entity.Key == Model.Entity ? "active" : "")">
+                    <span>@entity.Label</span>
+                    <span class="efb-count">@count</span>
+                </a>
+            }
+        </aside>
+
+        <section class="nxhs-panel">
+            <header class="nxhs-search-head">
+                <h2>حقول «@Model.SelectedEntity?.Label» المخصصة</h2>
+            </header>
+            <p class="nxhs-helper">
+                الحقول هنا تظهر تلقائياً بنموذج «@Model.SelectedEntity?.Label» بملف الموظف 360° وتُحفظ قيمها لكل سجل.
+                اسحب ⠿ لإعادة الترتيب. نوع «قائمة» يحتاج الخيارات سطراً لكل خيار.
+            </p>
+
+            <form method="post" asp-page-handler="Save" asp-route-Entity="@Model.Entity" class="efb-add">
+                <input type="hidden" name="id" value="0" />
+                <input type="hidden" name="isActive" value="true" />
+                <input type="text" name="fieldLabel" placeholder="تسمية الحقل الجديد" required />
+                <select name="fieldType">
+                    <option value="text">نص</option>
+                    <option value="number">رقم</option>
+                    <option value="date">تاريخ</option>
+                    <option value="textarea">نص طويل</option>
+                    <option value="select">قائمة</option>
+                    <option value="checkbox">مربع اختيار</option>
+                </select>
+                <textarea name="fieldOptions" rows="1" placeholder="خيارات القائمة (سطر لكل خيار)"></textarea>
+                <label class="efb-toggle"><input type="checkbox" name="isRequired" value="true" /> إلزامي</label>
+                <button type="submit" class="nxhs-modal-cancel">+ إضافة</button>
+            </form>
+
+            @if (Model.Fields.Any())
+            {
+                <div class="efb-head"><span></span><span>التسمية</span><span>النوع</span><span>الخيارات</span><span>إلزامي</span><span>فعال</span><span></span></div>
+            }
+            else
+            {
+                <p class="nxhs-helper">لا حقول مخصصة لهذا الكيان بعد.</p>
+            }
+
+            <div id="efbRows">
+                @foreach (var field in Model.Fields)
+                {
+                    <form method="post" asp-page-handler="Save" asp-route-Entity="@Model.Entity" class="efb-row" draggable="true" data-id="@field.Id">
+                        <span class="efb-grip">⠿</span>
+                        <input type="hidden" name="id" value="@field.Id" />
+                        <input type="text" name="fieldLabel" value="@field.FieldLabel" required />
+                        <select name="fieldType">
+                            <option value="text" selected="@(field.FieldType == "text")">نص</option>
+                            <option value="number" selected="@(field.FieldType == "number")">رقم</option>
+                            <option value="date" selected="@(field.FieldType == "date")">تاريخ</option>
+                            <option value="textarea" selected="@(field.FieldType == "textarea")">نص طويل</option>
+                            <option value="select" selected="@(field.FieldType == "select")">قائمة</option>
+                            <option value="checkbox" selected="@(field.FieldType == "checkbox")">مربع اختيار</option>
+                        </select>
+                        <textarea name="fieldOptions" rows="1">@field.FieldOptions</textarea>
+                        <label class="efb-toggle"><input type="checkbox" name="isRequired" value="true" checked="@field.IsRequired" /></label>
+                        <label class="efb-toggle"><input type="checkbox" name="isActive" value="true" checked="@field.IsActive" /></label>
+                        <span class="efb-actions">
+                            <button type="submit" style="color:#19D3E0">حفظ</button>
+                            <button type="submit" formaction="?Entity=@Model.Entity&handler=Delete" style="color:#F87171"
+                                    onclick="return confirm('حذف الحقل «@field.FieldLabel» وكل قيمه المخزّنة؟')">حذف</button>
+                        </span>
+                    </form>
+                }
+            </div>
+        </section>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        // سحب وإفلات لترتيب الحقول + حفظ فوري.
+        (function () {
+            var wrap = document.getElementById("efbRows");
+            if (!wrap) return;
+            var dragging = null;
+            wrap.addEventListener("dragstart", function (e) {
+                var row = e.target.closest(".efb-row");
+                if (!row) return;
+                dragging = row;
+                row.classList.add("efb-dragging");
+            });
+            wrap.addEventListener("dragover", function (e) {
+                e.preventDefault();
+                var over = e.target.closest(".efb-row");
+                if (!over || !dragging || over === dragging) return;
+                var rect = over.getBoundingClientRect();
+                wrap.insertBefore(dragging, e.clientY < rect.top + rect.height / 2 ? over : over.nextSibling);
+            });
+            wrap.addEventListener("drop", function (e) { e.preventDefault(); });
+            wrap.addEventListener("dragend", function () {
+                if (!dragging) return;
+                dragging.classList.remove("efb-dragging");
+                dragging = null;
+                var order = Array.prototype.map.call(wrap.querySelectorAll(".efb-row"), function (r) { return r.dataset.id; }).join(",");
+                var data = new FormData();
+                data.append("order", order);
+                data.append("__RequestVerificationToken", document.querySelector('input[name="__RequestVerificationToken"]').value);
+                fetch("?Entity=@Model.Entity&handler=Reorder", { method: "POST", body: data, credentials: "same-origin" });
+            });
+        })();
+    </script>
+}

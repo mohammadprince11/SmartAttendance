@@ -1363,6 +1363,7 @@
                 <label><input type="checkbox" name="Dependent.IsCitizen" id="dep-IsCitizen" value="true" /> مواطن</label>
             </div>
             <div class="hrms-field"><label>ملاحظة</label><input name="Dependent.Note" id="dep-Note" /></div>
+            <partial name="_EntityCustomFields" model='new EntityCustomFieldsPartialModel { EntityKey = "Dependent", Fields = Model.CustomFieldsOf("Dependent") }' />
             <button type="submit" class="hrms-btn-primary">حفظ</button>
         </form>
     </div>
@@ -1389,6 +1390,7 @@
             <label class="hrms-toggle"><input type="checkbox" name="Allowance.EndAfterDate" id="alw-EndAfterDate" value="true" /> إنهاء تلقائي بعد التاريخ</label>
             <div class="hrms-field"><label>ملاحظة</label><input name="Allowance.Note" id="alw-Note" /></div>
             <div class="hrms-field"><label>ملف مرفق (اختياري)</label><input type="file" name="AllowanceAttachment" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" /></div>
+            <partial name="_EntityCustomFields" model='new EntityCustomFieldsPartialModel { EntityKey = "Allowance", Fields = Model.CustomFieldsOf("Allowance") }' />
             <button type="submit" class="hrms-btn-primary">حفظ العلاوة</button>
         </form>
     </div>
@@ -1409,6 +1411,7 @@
         document.getElementById('alw-ToDate').value = toDate || '';
         document.getElementById('alw-EndAfterDate').checked = endAfter === true || endAfter === 'true';
         document.getElementById('alw-Note').value = note || '';
+        if (window.hrmsCfFill) hrmsCfFill('Allowance', 'allowance-form', id || 0);
     }
 </script>
 
@@ -1433,6 +1436,7 @@
             <label class="hrms-toggle"><input type="checkbox" name="Contract.IsCurrent" id="ctr-IsCurrent" value="true" /> العقد الحالي (يحدّث نوع العقد وانتهاءه ببيانات الموظف)</label>
             <div class="hrms-field"><label>ملاحظات العقد</label><input name="Contract.Note" id="ctr-Note" /></div>
             <div class="hrms-field"><label>العقد الموقّع (اختياري)</label><input type="file" name="ContractAttachment" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx" /></div>
+            <partial name="_EntityCustomFields" model='new EntityCustomFieldsPartialModel { EntityKey = "Contract", Fields = Model.CustomFieldsOf("Contract") }' />
             <button type="submit" class="hrms-btn-primary">حفظ العقد</button>
         </form>
     </div>
@@ -1453,6 +1457,7 @@
         document.getElementById('ctr-ToDate').value = toDate || '';
         document.getElementById('ctr-IsCurrent').checked = isCurrent === true || isCurrent === 'true';
         document.getElementById('ctr-Note').value = note || '';
+        if (window.hrmsCfFill) hrmsCfFill('Contract', 'contract-form', id || 0);
     }
 </script>
 
@@ -1487,6 +1492,11 @@
             </div>
             <div class="hrms-field"><label>ملاحظة</label><input name="RecordInput.Note" id="rec-Note" /></div>
             <div class="hrms-field"><label>ملف مرفق (اختياري)</label><input type="file" name="RecordAttachment" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" /></div>
+            @* الحقول المخصصة لكل نوع سجل — السلايد مشترك فتظهر مجموعة النوع الفعال فقط (JS) *@
+            @foreach (var recordTypeKey in new[] { "Education", "Experience", "Certificate", "Training", "Medical", "Asset", "Address", "EmergencyContact", "Residency" })
+            {
+                <partial name="_EntityCustomFields" model='new EntityCustomFieldsPartialModel { EntityKey = recordTypeKey, Fields = Model.CustomFieldsOf(recordTypeKey), ApplyRequired = false, StartHidden = true }' />
+            }
             <button type="submit" class="hrms-btn-primary">حفظ</button>
         </form>
     </div>
@@ -1495,6 +1505,23 @@
 @section Scripts {
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
     <script src="~/js/nexora-profile-reassign-modal.js" asp-append-version="true"></script>
+
+    <script>
+        // الحقول المخصصة (الداينمك مرحلة 2): قيم كل السجلات + تعبئة/تفريغ بالسلايدات.
+        var HRMS_CF = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CustomFieldValues));
+        function hrmsCfFill(entity, slideId, recordId) {
+            var values = (HRMS_CF[entity] || {})[recordId] || {};
+            document.querySelectorAll('#' + slideId + ' [data-cf-entity="' + entity + '"]').forEach(function (el) {
+                var v = values[el.dataset.cfInput] || '';
+                if (el.type === 'checkbox') el.checked = v === 'true'; else el.value = v;
+            });
+        }
+        function hrmsCfToggleRecordGroups(type) {
+            document.querySelectorAll('#rec-form [data-cf-group]').forEach(function (group) {
+                group.hidden = group.dataset.cfGroup !== type;
+            });
+        }
+    </script>
 
     <script>
         var HRMS_FORM_TITLE = { dep: 'معال', ed: 'مؤهل', ex: 'خبرة', ce: 'شهادة' };
@@ -1518,6 +1545,8 @@
                         if (el.type === 'checkbox') el.checked = btn.dataset[key] === 'true';
                         else el.value = btn.dataset[key] || '';
                     });
+                    // الحقول المخصصة للمعال
+                    if (kind === 'dep') hrmsCfFill('Dependent', 'dep-form', btn.dataset.id);
                 });
             });
         })();
@@ -1538,6 +1567,7 @@
             document.getElementById('rec-ReturnDate-field').hidden = type !== 'Asset';
             document.getElementById('rec-Returned-field').hidden = type !== 'Asset';
             document.getElementById('rec-Reference-block').hidden = type !== 'Experience';
+            hrmsCfToggleRecordGroups(type);
         }
         function hrmsOpenRecord(type, cardTitle, titleLabel, subLabel, refLabel, showAmount, showCurrent, currentLabel) {
             var f = document.querySelector('#rec-form form'); f.reset();
@@ -1561,6 +1591,7 @@
                     if (curCb) curCb.checked = d.iscurrent === 'true';
                     var retCb = document.getElementById('rec-IsReturned');
                     if (retCb) retCb.checked = d.isreturned === 'true';
+                    hrmsCfFill(d.type, 'rec-form', d.id);
                 });
             });
         })();
