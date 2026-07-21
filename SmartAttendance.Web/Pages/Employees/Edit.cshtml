@@ -494,5 +494,25 @@
             parts.forEach(function (p) { p.addEventListener("input", compose); });
         })();
     </script>
+    <script>
+        // التحكم بالحقول: علامة * و required على الحقول الإلزامية المعرّفة مركزياً.
+        (function () {
+            var keys = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RequiredFieldKeys));
+            keys.forEach(function (key) {
+                var input = document.querySelector('[name="Employee.' + key + '"]');
+                if (!input || input.type === "hidden") return;
+                input.setAttribute("required", "required");
+                var label = (input.id && document.querySelector('label[for="' + input.id + '"]')) ||
+                    (input.closest(".nxr-field") || input.parentElement).querySelector("label");
+                if (label && !label.querySelector(".nx-req-star")) {
+                    var star = document.createElement("span");
+                    star.className = "nx-req-star";
+                    star.textContent = " *";
+                    star.style.cssText = "color:#f87171;font-weight:900";
+                    label.appendChild(star);
+                }
+            });
+        })();
+    </script>
     <partial name="_ValidationScriptsPartial" />
 }

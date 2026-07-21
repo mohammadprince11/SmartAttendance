@@ -64,6 +64,9 @@ public class EditModel : PageModel
     public List<string> GradeOptions { get; set; } = new();
     public List<string> SponsorOptions { get; set; } = new();
 
+    /// <summary>الحقول الإلزامية من «التحكم بالحقول» — تعلَّم بنجمة وتُفرض بالسيرفر.</summary>
+    public HashSet<string> RequiredFieldKeys { get; set; } = new();
+
     private async Task LoadLookupsAsync()
     {
         ReligionOptions = await HrLookups.ValuesAsync(_dbContext, "religions");
@@ -98,6 +101,7 @@ public class EditModel : PageModel
         Managers = await LoadManagersAsync(Employee.Id);
         DirectManagerId = Employee.DirectManagerId;
         await LoadLookupsAsync();
+        RequiredFieldKeys = await EmployeeFieldControl.GetRequiredKeysAsync(_dbContext);
 
         return Page();
     }
@@ -118,6 +122,10 @@ public class EditModel : PageModel
 
         Managers = await LoadManagersAsync(Employee.Id);
         await LoadLookupsAsync();
+        RequiredFieldKeys = await EmployeeFieldControl.GetRequiredKeysAsync(_dbContext);
+
+        // التحكم بالحقول: فرض الإلزامية المركزية بالسيرفر.
+        EmployeeFieldControl.ValidateRequired(Employee, RequiredFieldKeys, ModelState, "Employee");
 
         if (!ModelState.IsValid) return Page();
 

@@ -2045,13 +2045,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Create.cshtml": {
-    "mtime": 1784641932.0557494,
-    "ast_hash": "487d9abbfd79fdbd373b5629949df9e8",
+    "mtime": 1784655262.8471017,
+    "ast_hash": "9dd82904fd468b50de83cc816c50b6ef",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Create.cshtml.cs": {
-    "mtime": 1784641899.7581666,
-    "ast_hash": "b61e0adf42fce532030d1c09c58047bf",
+    "mtime": 1784655212.440625,
+    "ast_hash": "edf53869cf53de82e2d42bb059b3d81e",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Delete.cshtml": {
@@ -2065,13 +2065,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Edit.cshtml": {
-    "mtime": 1784441357.5387073,
-    "ast_hash": "d7d4a87fb258f9ad048309c4861d2a52",
+    "mtime": 1784655266.6386836,
+    "ast_hash": "6697cfb2325e6be76cb38fc8a8f21ff3",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Edit.cshtml.cs": {
-    "mtime": 1784441308.6559443,
-    "ast_hash": "43c52d1cabf2c6adbe2bb5f991cd2993",
+    "mtime": 1784655229.520424,
+    "ast_hash": "161079b29195b6a97f3cf8ff3621990c",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/EndService.cshtml": {
@@ -2605,8 +2605,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784653068.289155,
-    "ast_hash": "f25e2ff9d95804a0fe298c7d131d5d79",
+    "mtime": 1784655279.189161,
+    "ast_hash": "870aaed515540ce83a0db7b36f86ffa3",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3952,6 +3952,21 @@
   "SmartAttendance.Web/wwwroot/js/zynora-kayan-nav.js": {
     "mtime": 1784654739.150941,
     "ast_hash": "3655323bc97c9bdf632f67381f5bbb58",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/EmployeeFieldControl.cs": {
+    "mtime": 1784655176.5179784,
+    "ast_hash": "27e3194c426a00827c62caaf595c1539",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/HrSettings/FieldControl.cshtml": {
+    "mtime": 1784655196.7396362,
+    "ast_hash": "d0ce33bd720c3f7d68d0c05817aa6437",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/HrSettings/FieldControl.cshtml.cs": {
+    "mtime": 1784655187.566714,
+    "ast_hash": "ac2ec837c1d2fcbee69204e2ef123324",
     "semantic_hash": ""
   }
 }

@@ -1,0 +1,51 @@
+@page "/HrSettings/FieldControl"
+@model SmartAttendance.Web.Pages.HrSettings.FieldControlModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@{
+    ViewData["Title"] = "التحكم بالحقول";
+    var groups = EmployeeFieldControl.Catalog.GroupBy(f => f.Group);
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+
+<section class="nxhs-page nxhs-simple" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">إعدادات الموارد البشرية</a>
+        <h1>التحكم بالحقول</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <form method="post" class="nxhs-panel">
+        <p class="nxhs-helper">
+            حدّد الحقول الإلزامية بشاشتي إنشاء وتعديل الموظف — الإلزامية تُعلَّم بنجمة وتُفرض عند الحفظ.
+            الحقول الجوهرية (الاسم، التعيين، الفرع، القسم) مقفلة إلزامية دائماً.
+        </p>
+
+        @foreach (var group in groups)
+        {
+            <section class="nxhs-setting-section">
+                <h2>@group.Key</h2>
+                <div class="nxhs-permission-grid">
+                    @foreach (var field in group)
+                    {
+                        <label title="@(field.Locked ? "إلزامي دائماً" : "")">
+                            <input type="checkbox" name="required" value="@field.Key"
+                                   checked="@(field.Locked || Model.RequiredKeys.Contains(field.Key))"
+                                   disabled="@field.Locked" />
+                            <span>@field.Label @(field.Locked ? "🔒" : "")</span>
+                        </label>
+                    }
+                </div>
+            </section>
+        }
+
+        <footer class="nxhs-actions">
+            <button type="submit">حفظ الإعدادات</button>
+        </footer>
+    </form>
+</section>

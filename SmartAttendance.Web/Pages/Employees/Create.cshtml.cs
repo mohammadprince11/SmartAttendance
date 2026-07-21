@@ -71,6 +71,9 @@ public class CreateModel : PageModel
     public List<string> GradeOptions { get; set; } = new();
     public List<string> SponsorOptions { get; set; } = new();
 
+    /// <summary>الحقول الإلزامية من «التحكم بالحقول» — تعلَّم بنجمة وتُفرض بالسيرفر.</summary>
+    public HashSet<string> RequiredFieldKeys { get; set; } = new();
+
     private async Task LoadLookupsAsync()
     {
         ReligionOptions = await HrLookups.ValuesAsync(_dbContext, "religions");
@@ -87,6 +90,7 @@ public class CreateModel : PageModel
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
         await LoadLookupsAsync();
+        RequiredFieldKeys = await EmployeeFieldControl.GetRequiredKeysAsync(_dbContext);
 
         var codeSchema = await EmployeeCodeSchema.GetAsync(_dbContext);
         CodeSchemaActive = codeSchema?.IsActive == true;
@@ -104,6 +108,7 @@ public class CreateModel : PageModel
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
         await LoadLookupsAsync();
+        RequiredFieldKeys = await EmployeeFieldControl.GetRequiredKeysAsync(_dbContext);
 
         // رمز الموظف: إن تُرك فارغاً والمخطط مفعّل → توليد ذرّي (زيادة التسلسل بنفس العبارة).
         var postSchema = await EmployeeCodeSchema.GetAsync(_dbContext);
@@ -132,6 +137,9 @@ public class CreateModel : PageModel
                 ModelState.Remove("Employee.FullName");
             }
         }
+
+        // التحكم بالحقول: فرض الإلزامية المركزية بالسيرفر.
+        EmployeeFieldControl.ValidateRequired(Employee, RequiredFieldKeys, ModelState, "Employee");
 
         if (!ModelState.IsValid)
             return Page();
