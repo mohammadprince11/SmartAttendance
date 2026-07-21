@@ -1,11 +1,24 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.HrSettings.NotificationCenterModel
+
+@*
+    مركز الإشعارات — التبديل صار AJAX (2026-07): سابقاً كل نقرة مفتاح كانت
+    POST بإعادة تحميل كاملة فتومض الشاشة وتقفز («ترجف»). الآن fetch يقلب
+    الحالة ويُظهر/يخفي لوحة التفاصيل محلياً؛ الإرسال العادي يبقى fallback.
+    لوحة التفاصيل تُرندر لكل قاعدة (مخفية للمعطلة) حتى يشتغل الإظهار بلا تحميل.
+*@
 
 @{
     ViewData["Title"] = "مركز الإشعارات";
 }
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+
+<style>
+    /* إظهار ناعم للوحة التفاصيل عند التفعيل — بدل قفزة إعادة التحميل */
+    .nxhs-notification-details.reveal { animation: nxhsReveal .25s ease both; }
+    @@keyframes nxhsReveal { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+</style>
 
 <section class="nxhs-page nxhs-simple" dir="rtl">
     <header class="nxhs-titlebar">
@@ -21,7 +34,7 @@
     <section class="nxhs-panel nxhs-notification-panel">
         @foreach (var rule in Model.Rules)
         {
-            <article class="nxhs-notification-item @(rule.IsEnabled ? "is-open" : "")">
+            <article class="nxhs-notification-item @(rule.IsEnabled ? "is-open" : "")" data-rule="@rule.Id">
                 <header>
                     <h3>@rule.Name</h3>
 
@@ -33,49 +46,47 @@
                     </form>
                 </header>
 
-                @if (rule.IsEnabled)
-                {
-                    <form method="post" asp-page-handler="UpdateRule" class="nxhs-notification-details">
-                        <input type="hidden" name="id" value="@rule.Id" />
+                @* التفاصيل تُرندر دائماً وتُخفى للمعطلة — حتى يُظهرها التبديل بلا إعادة تحميل *@
+                <form method="post" asp-page-handler="UpdateRule" class="nxhs-notification-details" hidden="@(!rule.IsEnabled)">
+                    <input type="hidden" name="id" value="@rule.Id" />
 
-                        <div class="nxhs-notif-grid">
-                            <label>
-                                <span>تذكير</span>
-                                <select data-nexora-select="true" name="audience">
-                                    <option selected="@(rule.Audience == "المشرفين")">المشرفين</option>
-                                    <option selected="@(rule.Audience == "المدير المباشر والمشرفون")">المدير المباشر والمشرفون</option>
-                                    <option selected="@(rule.Audience == "الموظف")">الموظف</option>
-                                </select>
-                            </label>
+                    <div class="nxhs-notif-grid">
+                        <label>
+                            <span>تذكير</span>
+                            <select data-nexora-select="true" name="audience">
+                                <option selected="@(rule.Audience == "المشرفين")">المشرفين</option>
+                                <option selected="@(rule.Audience == "المدير المباشر والمشرفون")">المدير المباشر والمشرفون</option>
+                                <option selected="@(rule.Audience == "الموظف")">الموظف</option>
+                            </select>
+                        </label>
 
-                            <label>
-                                <span>عدد الأيام</span>
-                                <input name="daysBefore" type="number" min="0" value="@rule.DaysBefore" />
-                            </label>
+                        <label>
+                            <span>عدد الأيام</span>
+                            <input name="daysBefore" type="number" min="0" value="@rule.DaysBefore" />
+                        </label>
 
-                            <label class="wide">
-                                <span>الوصف</span>
-                                <b>@rule.TriggerDescription</b>
-                            </label>
+                        <label class="wide">
+                            <span>الوصف</span>
+                            <b>@rule.TriggerDescription</b>
+                        </label>
 
-                            <label>
-                                <span>العناصر</span>
-                                <select data-nexora-select="true" name="selectedItems">
-                                    <option selected="@(rule.SelectedItems == "كل العناصر المختارة")">كل العناصر المختارة</option>
-                                    <option selected="@(rule.SelectedItems == "كل الموظفين")">كل الموظفين</option>
-                                    <option selected="@(rule.SelectedItems == "كل الوثائق")">كل الوثائق</option>
-                                </select>
-                            </label>
+                        <label>
+                            <span>العناصر</span>
+                            <select data-nexora-select="true" name="selectedItems">
+                                <option selected="@(rule.SelectedItems == "كل العناصر المختارة")">كل العناصر المختارة</option>
+                                <option selected="@(rule.SelectedItems == "كل الموظفين")">كل الموظفين</option>
+                                <option selected="@(rule.SelectedItems == "كل الوثائق")">كل الوثائق</option>
+                            </select>
+                        </label>
 
-                            <label>
-                                <span>اختر المستخدم المشرف</span>
-                                <input name="supervisorName" value="@rule.SupervisorName" placeholder="اسم المشرف" />
-                            </label>
+                        <label>
+                            <span>اختر المستخدم المشرف</span>
+                            <input name="supervisorName" value="@rule.SupervisorName" placeholder="اسم المشرف" />
+                        </label>
 
-                            <button type="submit">حفظ</button>
-                        </div>
-                    </form>
-                }
+                        <button type="submit">حفظ</button>
+                    </div>
+                </form>
             </article>
         }
     </section>
@@ -84,8 +95,46 @@
 <script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>
 
 @section Scripts {
+    <script>
+        // تبديل الإشعار بلا إعادة تحميل: fetch POST ثم قلب الحالة محلياً.
+        // عند فشل الشبكة نرجع للإرسال العادي حتى لا يعلق المفتاح.
+        document.querySelectorAll(".nxhs-switch-form").forEach(function (form) {
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+                var button = form.querySelector(".nxhs-switch-button");
+                var article = form.closest(".nxhs-notification-item");
+                var details = article.querySelector(".nxhs-notification-details");
+                button.disabled = true;
 
+                fetch(form.action, { method: "POST", body: new FormData(form), credentials: "same-origin" })
+                    .then(function (response) {
+                        if (!response.ok) throw new Error(response.status);
+                        var nowOn = !button.classList.contains("on");
+                        button.classList.toggle("on", nowOn);
+                        article.classList.toggle("is-open", nowOn);
+                        if (details) {
+                            details.hidden = !nowOn;
+                            details.classList.toggle("reveal", nowOn);
+                        }
+                    })
+                    .catch(function () { form.submit(); })
+                    .finally(function () { button.disabled = false; });
+            });
+        });
+
+        // حفظ التفاصيل يعيد التحميل (redirect) — نحفظ موضع التمرير ونرجعه حتى لا تقفز الصفحة.
+        var scroller = document.querySelector(".nexora-content") || document.scrollingElement;
+        document.querySelectorAll(".nxhs-notification-details").forEach(function (form) {
+            form.addEventListener("submit", function () {
+                try { sessionStorage.setItem("nxhs-notif-scroll", scroller.scrollTop); } catch (e) { }
+            });
+        });
+        try {
+            var savedScroll = sessionStorage.getItem("nxhs-notif-scroll");
+            if (savedScroll !== null) {
+                scroller.scrollTop = parseInt(savedScroll, 10) || 0;
+                sessionStorage.removeItem("nxhs-notif-scroll");
+            }
+        } catch (e) { }
+    </script>
 }
-
-
-
