@@ -1,451 +1,225 @@
 @page
 @model SmartAttendance.Web.Pages.IndexModel
 
+@*
+    لوحة التحكم التنفيذية — أعيد تصميمها (2026-07) بنمط مدمج:
+    هيدر بصف واحد ← شريط KPI ← نبض اليوم + آخر 30 يوماً + الطلبات ←
+    توزيعات القوى العاملة بأشرطة CSS ← العقود قريبة الانتهاء + آخر الطلبات.
+    كل البيانات من IndexModel (استعلام SQL واحد مجمّع) — الواجهة عرض فقط.
+*@
+
 @{
     ViewData["Title"] = "لوحة التحكم";
 
-    static string SafeName(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) || value == "Not Set"
-            ? "غير محدد"
-            : value;
-    }
+    static string SafeName(string? value) =>
+        string.IsNullOrWhiteSpace(value) || value == "Not Set" ? "غير محدد" : value;
 
-    static string StatusText(string? status)
+    static string StatusText(string? status) => status switch
     {
-        return status switch
-        {
-            "Pending" => "معلق",
-            "Approved" => "مقبول",
-            "Rejected" => "مرفوض",
-            _ => string.IsNullOrWhiteSpace(status) ? "-" : status
-        };
-    }
+        "Pending" => "معلق",
+        "Approved" => "مقبول",
+        "Rejected" => "مرفوض",
+        _ => string.IsNullOrWhiteSpace(status) ? "-" : status
+    };
 
-    static string StatusClass(string? status)
+    static string StatusClass(string? status) => status switch
     {
-        return string.IsNullOrWhiteSpace(status)
-            ? "unknown"
-            : status.ToLowerInvariant();
-    }
+        "Pending" => "pending",
+        "Approved" => "approved",
+        "Rejected" => "rejected",
+        _ => ""
+    };
+
+    // عرض شريط النسبة: نسبة القيمة من الأكبر بالمجموعة (لأشرطة التوزيع)
+    static int BarWidth(int value, int max) => max <= 0 ? 0 : Math.Max(3, (int)Math.Round(value * 100.0 / max));
+
+    var activeTotal = Math.Max(1, Model.ActiveEmployees);
+    var today = DateTime.Today;
+
+    // مجموعات التوزيع تُرسم بنفس القالب — (العنوان، الصفوف)
+    var distributions = new (string Title, List<SmartAttendance.Web.Pages.IndexModel.NameCountRow> Rows)[]
+    {
+        ("حسب الفرع", Model.ByBranch),
+        ("حسب القسم", Model.ByDepartment),
+        ("حسب الجنس", Model.ByGender),
+        ("حسب البلد", Model.ByCountry),
+        ("حسب الجنسية", Model.ByNationality),
+        ("حسب نوع العقد", Model.ByContractType),
+    };
 }
 
-<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/zynora-dashboard-phase1b.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-exec-dashboard.css" asp-append-version="true" />
 
-<div class="dashboard-page zynora-dashboard">
-    <header class="zy-dashboard-hero">
-        <div class="zy-dashboard-hero-copy">
-            <span class="zy-dashboard-eyebrow">
-                <span aria-hidden="true"></span>
-                INTELLIGENT PEOPLE OPERATIONS
-            </span>
+<section class="zxd-page" dir="rtl">
+
+    @* ---------- الهيدر: عنوان + تاريخ + محدد الشركة ---------- *@
+    <header class="zxd-head">
+        <div>
             <h1>لوحة التحكم التنفيذية</h1>
-            <p>
-                نظرة موحدة على الأشخاص والحضور والطلبات والهيكل التنظيمي
-                ضمن الشركة الحالية.
-            </p>
-
-            <div class="zy-dashboard-context">
-                <span>الشركة الحالية</span>
-                <strong>@Model.SelectedCompanyName</strong>
-            </div>
+            <div class="zxd-date">@today.ToString("dddd، dd MMMM yyyy", new System.Globalization.CultureInfo("ar-IQ")) · الشركة الحالية: @Model.SelectedCompanyName</div>
         </div>
-
-        @if (Model.CompanyOptions.Count > 0)
-        {
-            <form method="get"
-                  class="dashboard-company-context"
-                  aria-label="اختيار الشركة">
-                <label for="dashboardCompanyId">تغيير الشركة</label>
-                <div class="dashboard-company-control">
-                    <select id="dashboardCompanyId"
-                            name="CompanyId"
-                            data-nexora-select="true">
-                        @foreach (var company in Model.CompanyOptions)
-                        {
-                            <option value="@company.Id"
-                                    selected="@(Model.CompanyId == company.Id ? "selected" : null)">
-                                @company.Name
-                            </option>
-                        }
-                    </select>
-                    <button type="submit">تطبيق</button>
-                </div>
-            </form>
-        }
-
-        <div class="zy-dashboard-pattern" aria-hidden="true"></div>
+        <form method="get" class="zxd-company">
+            <select name="CompanyId" onchange="this.form.submit()">
+                @foreach (var company in Model.CompanyOptions)
+                {
+                    <option value="@company.Id" selected="@(company.Id == Model.CompanyId)">@company.Name (@company.EmployeeCount)</option>
+                }
+            </select>
+        </form>
     </header>
 
-    <div class="dashboard-section-heading">
-        <div>
-            <span>ORGANIZATION</span>
-            <h2>ملخص القوى العاملة</h2>
-        </div>
-        <p>المؤشرات الأساسية للشركة المحددة</p>
+    @* ---------- شريط KPI ---------- *@
+    <div class="zxd-kpis">
+        <a class="zxd-kpi" href="/Employees">
+            <span class="ic">👥</span>
+            <div><b>@Model.Employees.ToString("N0")</b><span>إجمالي الموظفين</span><small>فعال @Model.ActiveEmployees · غير فعال @Model.InactiveEmployees</small></div>
+        </a>
+        <a class="zxd-kpi green" href="/AttendanceRecords">
+            <span class="ic">✅</span>
+            <div><b>@Model.TodayPresent.ToString("N0")</b><span>حضور اليوم</span></div>
+        </a>
+        <a class="zxd-kpi amber" href="/AttendanceRecords">
+            <span class="ic">⏰</span>
+            <div><b>@Model.TodayLate.ToString("N0")</b><span>متأخرون اليوم</span></div>
+        </a>
+        <a class="zxd-kpi red" href="/AttendanceRecords">
+            <span class="ic">🚫</span>
+            <div><b>@Model.TodayAbsent.ToString("N0")</b><span>غياب اليوم</span></div>
+        </a>
+        <a class="zxd-kpi amber" href="/AttendanceCorrections">
+            <span class="ic">↩️</span>
+            <div><b>@Model.TodayMissingOut.ToString("N0")</b><span>بلا بصمة خروج</span></div>
+        </a>
+        <a class="zxd-kpi" href="/Approvals">
+            <span class="ic">📨</span>
+            <div><b>@Model.PendingRequests.ToString("N0")</b><span>طلبات معلقة</span></div>
+        </a>
     </div>
 
-    <section class="dashboard-kpi-grid dashboard-kpi-grid--primary">
-        <div class="dashboard-kpi" data-icon="people">
-            <span>إجمالي الموظفين</span>
-            <strong>@Model.Employees</strong>
-            <small>فعال: @Model.ActiveEmployees | غير فعال: @Model.InactiveEmployees</small>
+    @* ---------- نبض اليوم + آخر 30 يوماً + الطلبات ---------- *@
+    <div class="zxd-row-3">
+        <div class="zxd-card">
+            <h2>نبض اليوم <small>من واقع سجلات الحضور</small></h2>
+            <div class="zxd-pulse">
+                <div class="zxd-pulse-row green"><b>حاضر</b><span class="bar"><i style="width:@BarWidth(Model.TodayPresent, activeTotal)%"></i></span><span>@Model.TodayPresent</span></div>
+                <div class="zxd-pulse-row amber"><b>متأخر</b><span class="bar"><i style="width:@BarWidth(Model.TodayLate, activeTotal)%"></i></span><span>@Model.TodayLate</span></div>
+                <div class="zxd-pulse-row red"><b>غائب</b><span class="bar"><i style="width:@BarWidth(Model.TodayAbsent, activeTotal)%"></i></span><span>@Model.TodayAbsent</span></div>
+                <div class="zxd-pulse-row teal"><b>بلا خروج</b><span class="bar"><i style="width:@BarWidth(Model.TodayMissingOut, activeTotal)%"></i></span><span>@Model.TodayMissingOut</span></div>
+            </div>
         </div>
 
-        <div class="dashboard-kpi" data-icon="branches">
-            <span>الفروع</span>
-            <strong>@Model.Branches</strong>
-            <small>الشركة: @Model.SelectedCompanyName</small>
+        <div class="zxd-card">
+            <h2>آخر 30 يوماً <small>مؤشرات تراكمية</small></h2>
+            <div class="zxd-minis">
+                <div class="zxd-mini"><b>@Model.Late30.ToString("N0")</b><span>حالات تأخر</span></div>
+                <div class="zxd-mini"><b>@Model.Absent30.ToString("N0")</b><span>حالات غياب</span></div>
+                <div class="zxd-mini"><b>@Model.MissingPunches30.ToString("N0")</b><span>بصمات مفقودة</span></div>
+                <div class="zxd-mini"><b>@Model.Contracts30.ToString("N0")</b><span>عقود جديدة</span></div>
+            </div>
         </div>
 
-        <div class="dashboard-kpi" data-icon="departments">
-            <span>الأقسام</span>
-            <strong>@Model.Departments</strong>
-            <small>حسب الهيكل التنظيمي</small>
+        <div class="zxd-card">
+            <h2>الطلبات <small>آخر 30 يوماً</small></h2>
+            <div class="zxd-pulse">
+                @{
+                    var reqMax = Math.Max(1, Math.Max(Model.PendingRequests, Math.Max(Model.ApprovedRequests30, Model.RejectedRequests30)));
+                }
+                <div class="zxd-pulse-row amber"><b>معلقة</b><span class="bar"><i style="width:@BarWidth(Model.PendingRequests, reqMax)%"></i></span><span>@Model.PendingRequests</span></div>
+                <div class="zxd-pulse-row green"><b>مقبولة</b><span class="bar"><i style="width:@BarWidth(Model.ApprovedRequests30, reqMax)%"></i></span><span>@Model.ApprovedRequests30</span></div>
+                <div class="zxd-pulse-row red"><b>مرفوضة</b><span class="bar"><i style="width:@BarWidth(Model.RejectedRequests30, reqMax)%"></i></span><span>@Model.RejectedRequests30</span></div>
+            </div>
+            <div style="margin-top:12px">
+                <a class="zxd-chip" href="/Approvals">فتح شاشة الموافقات ←</a>
+            </div>
         </div>
-
-        <div class="dashboard-kpi" data-icon="devices">
-            <span>الأجهزة</span>
-            <strong>@Model.Devices</strong>
-            <small>الشفتات العامة: @Model.Shifts</small>
-        </div>
-
-        <div class="dashboard-kpi" data-icon="records">
-            <span>سجلات الحضور</span>
-            <strong>@Model.AttendanceRecords</strong>
-            <small>إجمالي السجلات</small>
-        </div>
-
-        <div class="dashboard-kpi warning" data-icon="requests">
-            <span>طلبات معلقة</span>
-            <strong>@Model.PendingRequests</strong>
-            <small>بانتظار موافقة</small>
-        </div>
-    </section>
-
-    <div class="dashboard-section-heading">
-        <div>
-            <span>ATTENDANCE</span>
-            <h2>حالة اليوم</h2>
-        </div>
-        <p>الحضور والاستثناءات لليوم الحالي</p>
     </div>
 
-    <section class="dashboard-kpi-grid dashboard-kpi-grid--today">
-        <div class="dashboard-kpi success" data-icon="present">
-            <span>حضور اليوم</span>
-            <strong>@Model.TodayPresent</strong>
-            <small>حاضر</small>
+    @* ---------- توزيعات القوى العاملة (6 بطاقات بقالب واحد) ---------- *@
+    <div class="zxd-card">
+        <h2>توزيع القوى العاملة <small>@Model.Employees.ToString("N0") موظفاً · فروع @Model.Branches · أقسام @Model.Departments</small></h2>
+        <div class="zxd-row-3">
+            @foreach (var (title, rows) in distributions)
+            {
+                <div>
+                    <h2 style="font-size:12px;color:var(--zxd-muted)">@title</h2>
+                    <div class="zxd-dist">
+                        @if (rows.Count == 0)
+                        {
+                            <div class="zxd-empty">لا بيانات</div>
+                        }
+                        else
+                        {
+                            var max = rows.Max(r => r.Total);
+                            var total = Math.Max(1, rows.Sum(r => r.Total));
+                            foreach (var row in rows.Take(6))
+                            {
+                                <div class="zxd-dist-row">
+                                    <span class="n" title="@SafeName(row.Name)">@SafeName(row.Name)</span>
+                                    <span class="bar"><i style="width:@BarWidth(row.Total, max)%"></i></span>
+                                    <span class="v">@row.Total (@((row.Total * 100 / total))%)</span>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            }
         </div>
-
-        <div class="dashboard-kpi warning" data-icon="late">
-            <span>تأخير اليوم</span>
-            <strong>@Model.TodayLate</strong>
-            <small>متأخر</small>
-        </div>
-
-        <div class="dashboard-kpi danger" data-icon="absent">
-            <span>غياب اليوم</span>
-            <strong>@Model.TodayAbsent</strong>
-            <small>غائب</small>
-        </div>
-
-        <div class="dashboard-kpi danger" data-icon="missing">
-            <span>بصمات ناقصة اليوم</span>
-            <strong>@Model.TodayMissingOut</strong>
-            <small>خروج مفقود</small>
-        </div>
-
-        <div class="dashboard-kpi warning" data-icon="contracts">
-            <span>عقود تنتهي خلال 30 يوم</span>
-            <strong>@Model.Contracts30</strong>
-            <small>تحتاج متابعة</small>
-        </div>
-
-        <div class="dashboard-kpi danger" data-icon="missing">
-            <span>بصمات ناقصة خلال 30 يوم</span>
-            <strong>@Model.MissingPunches30</strong>
-            <small>آخر 30 يوم</small>
-        </div>
-    </section>
-
-    <div class="dashboard-section-heading">
-        <div>
-            <span>LAST 30 DAYS</span>
-            <h2>اتجاهات آخر 30 يوماً</h2>
-        </div>
-        <p>مؤشرات المتابعة والتنبيهات الحديثة</p>
     </div>
 
-    <section class="dashboard-kpi-grid dashboard-kpi-grid--trend">
-        <div class="dashboard-kpi warning" data-icon="late">
-            <span>تأخير آخر 30 يوم</span>
-            <strong>@Model.Late30</strong>
+    @* ---------- العقود قريبة الانتهاء + آخر الطلبات ---------- *@
+    <div class="zxd-row-2">
+        <div class="zxd-card">
+            <h2>عقود تنتهي خلال 60 يوماً <small>@Model.ExpiringContracts.Count عقداً</small></h2>
+            @if (Model.ExpiringContracts.Count == 0)
+            {
+                <div class="zxd-empty">لا عقود قريبة الانتهاء 🎉</div>
+            }
+            else
+            {
+                <table class="zxd-table">
+                    <thead><tr><th>الموظف</th><th>المنصب</th><th>تاريخ الانتهاء</th><th>المتبقي</th></tr></thead>
+                    <tbody>
+                        @foreach (var contract in Model.ExpiringContracts.Take(8))
+                        {
+                            var daysLeft = contract.ContractEndDate.HasValue
+                                ? contract.ContractEndDate.Value.DayNumber - DateOnly.FromDateTime(today).DayNumber
+                                : 0;
+                            <tr>
+                                <td>@contract.EmployeeName <small style="color:var(--zxd-muted)">@contract.EmployeeNo</small></td>
+                                <td>@SafeName(contract.Position)</td>
+                                <td>@(contract.ContractEndDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                                <td><span class="zxd-chip @(daysLeft <= 14 ? "danger" : "pending")">@daysLeft يوم</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
         </div>
 
-        <div class="dashboard-kpi danger" data-icon="absent">
-            <span>غياب آخر 30 يوم</span>
-            <strong>@Model.Absent30</strong>
+        <div class="zxd-card">
+            <h2>آخر طلبات الخدمة الذاتية <small><a class="zxd-chip" href="/SelfServices">الكل</a></small></h2>
+            @if (Model.LatestRequests.Count == 0)
+            {
+                <div class="zxd-empty">لا طلبات حديثة</div>
+            }
+            else
+            {
+                <table class="zxd-table">
+                    <thead><tr><th>الموظف</th><th>النوع</th><th>الحالة</th><th>المرحلة</th><th>التاريخ</th></tr></thead>
+                    <tbody>
+                        @foreach (var request in Model.LatestRequests.Take(8))
+                        {
+                            <tr>
+                                <td>@request.EmployeeName</td>
+                                <td>@request.RequestType</td>
+                                <td><span class="zxd-chip @StatusClass(request.Status)">@StatusText(request.Status)</span></td>
+                                <td>@request.CurrentStep</td>
+                                <td>@(request.CreatedAt?.ToString("MM-dd HH:mm") ?? "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
         </div>
-
-        <div class="dashboard-kpi success" data-icon="approved">
-            <span>طلبات مقبولة خلال 30 يوم</span>
-            <strong>@Model.ApprovedRequests30</strong>
-        </div>
-
-        <div class="dashboard-kpi danger" data-icon="rejected">
-            <span>طلبات مرفوضة خلال 30 يوم</span>
-            <strong>@Model.RejectedRequests30</strong>
-        </div>
-    </section>
-
-    <div class="dashboard-section-heading">
-        <div>
-            <span>PEOPLE DISTRIBUTION</span>
-            <h2>توزيع الموظفين</h2>
-        </div>
-        <p>أعلى النتائج مع إمكانية فتح التفاصيل الكاملة</p>
     </div>
-
-    <section class="dashboard-grid distribution-summary-grid">
-        <div class="dashboard-panel distribution-card">
-            <div class="dashboard-panel-head distribution-panel-head">
-                <div>
-                    <h2>الموظفون حسب الفرع</h2>
-                    <p>أعلى 5 فروع + أخرى</p>
-                </div>
-                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="branches" asp-route-companyId="@Model.CompanyId">عرض التفاصيل</a>
-            </div>
-            <div class="dashboard-list">
-                @foreach (var row in Model.ByBranch)
-                {
-                    var isOther = SafeName(row.Name) == "أخرى";
-                    <div class="dashboard-list-row @(isOther ? "other-row" : "")">
-                        <span>@SafeName(row.Name)</span>
-                        <strong>@row.Total</strong>
-                    </div>
-                }
-
-                @if (!Model.ByBranch.Any())
-                {
-                    <div class="dashboard-empty">لا توجد بيانات فروع حالياً.</div>
-                }
-            </div>
-        </div>
-
-        <div class="dashboard-panel distribution-card">
-            <div class="dashboard-panel-head distribution-panel-head">
-                <div>
-                    <h2>الموظفون حسب القسم</h2>
-                    <p>أعلى 5 أقسام + أخرى</p>
-                </div>
-                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="departments" asp-route-companyId="@Model.CompanyId">عرض التفاصيل</a>
-            </div>
-            <div class="dashboard-list">
-                @foreach (var row in Model.ByDepartment)
-                {
-                    var isOther = SafeName(row.Name) == "أخرى";
-                    <div class="dashboard-list-row @(isOther ? "other-row" : "")">
-                        <span>@SafeName(row.Name)</span>
-                        <strong>@row.Total</strong>
-                    </div>
-                }
-
-                @if (!Model.ByDepartment.Any())
-                {
-                    <div class="dashboard-empty">لا توجد بيانات أقسام حالياً.</div>
-                }
-            </div>
-        </div>
-
-        <div class="dashboard-panel distribution-card">
-            <div class="dashboard-panel-head distribution-panel-head">
-                <div>
-                    <h2>الموظفون حسب الجنس</h2>
-                    <p>أعلى 5 + أخرى</p>
-                </div>
-                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="gender" asp-route-companyId="@Model.CompanyId">عرض التفاصيل</a>
-            </div>
-            <div class="dashboard-list">
-                @foreach (var row in Model.ByGender)
-                {
-                    var isOther = SafeName(row.Name) == "أخرى";
-                    <div class="dashboard-list-row @(isOther ? "other-row" : "")">
-                        <span>@SafeName(row.Name)</span>
-                        <strong>@row.Total</strong>
-                    </div>
-                }
-
-                @if (!Model.ByGender.Any())
-                {
-                    <div class="dashboard-empty">لا توجد بيانات حالياً.</div>
-                }
-            </div>
-        </div>
-
-        <div class="dashboard-panel distribution-card">
-            <div class="dashboard-panel-head distribution-panel-head">
-                <div>
-                    <h2>الموظفون حسب البلد</h2>
-                    <p>أعلى 5 بلدان + أخرى</p>
-                </div>
-                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="country" asp-route-companyId="@Model.CompanyId">عرض التفاصيل</a>
-            </div>
-            <div class="dashboard-list">
-                @foreach (var row in Model.ByCountry)
-                {
-                    var isOther = SafeName(row.Name) == "أخرى";
-                    <div class="dashboard-list-row @(isOther ? "other-row" : "")">
-                        <span>@SafeName(row.Name)</span>
-                        <strong>@row.Total</strong>
-                    </div>
-                }
-
-                @if (!Model.ByCountry.Any())
-                {
-                    <div class="dashboard-empty">لا توجد بيانات حالياً.</div>
-                }
-            </div>
-        </div>
-
-        <div class="dashboard-panel distribution-card">
-            <div class="dashboard-panel-head distribution-panel-head">
-                <div>
-                    <h2>الموظفون حسب الجنسية</h2>
-                    <p>أعلى 5 جنسيات + أخرى</p>
-                </div>
-                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="nationality" asp-route-companyId="@Model.CompanyId">عرض التفاصيل</a>
-            </div>
-            <div class="dashboard-list">
-                @foreach (var row in Model.ByNationality)
-                {
-                    var isOther = SafeName(row.Name) == "أخرى";
-                    <div class="dashboard-list-row @(isOther ? "other-row" : "")">
-                        <span>@SafeName(row.Name)</span>
-                        <strong>@row.Total</strong>
-                    </div>
-                }
-
-                @if (!Model.ByNationality.Any())
-                {
-                    <div class="dashboard-empty">لا توجد بيانات حالياً.</div>
-                }
-            </div>
-        </div>
-
-        <div class="dashboard-panel distribution-card">
-            <div class="dashboard-panel-head distribution-panel-head">
-                <div>
-                    <h2>الموظفون حسب نوع العقد</h2>
-                    <p>أعلى 5 أنواع + أخرى</p>
-                </div>
-                <a class="distribution-details-link" asp-page="/Dashboard/EmployeesDistribution" asp-route-type="contractType" asp-route-companyId="@Model.CompanyId">عرض التفاصيل</a>
-            </div>
-            <div class="dashboard-list">
-                @foreach (var row in Model.ByContractType)
-                {
-                    var isOther = SafeName(row.Name) == "أخرى";
-                    <div class="dashboard-list-row @(isOther ? "other-row" : "")">
-                        <span>@SafeName(row.Name)</span>
-                        <strong>@row.Total</strong>
-                    </div>
-                }
-
-                @if (!Model.ByContractType.Any())
-                {
-                    <div class="dashboard-empty">لا توجد بيانات عقود حالياً.</div>
-                }
-            </div>
-        </div>
-
-        <div class="dashboard-panel">
-            <h2>حالة طلبات الخدمات الذاتية</h2>
-            <div class="dashboard-list">
-                @foreach (var row in Model.RequestsByStatus)
-                {
-                    <div class="dashboard-list-row">
-                        <span>@StatusText(row.Name)</span>
-                        <strong>@row.Total</strong>
-                    </div>
-                }
-
-                @if (!Model.RequestsByStatus.Any())
-                {
-                    <div class="dashboard-empty">لا توجد طلبات حالياً.</div>
-                }
-            </div>
-        </div>
-
-        <div class="dashboard-panel">
-            <h2>عقود قريبة الانتهاء خلال 60 يوم</h2>
-            <div class="dashboard-list">
-                @foreach (var row in Model.ExpiringContracts)
-                {
-                    <div class="dashboard-list-row warning-row">
-                        <span>
-                            @row.EmployeeNo - @row.EmployeeName
-                            <small>@row.Position</small>
-                        </span>
-                        <strong>@row.ContractEndDate?.ToString("yyyy-MM-dd")</strong>
-                    </div>
-                }
-
-                @if (!Model.ExpiringContracts.Any())
-                {
-                    <div class="dashboard-empty">لا توجد عقود قريبة الانتهاء.</div>
-                }
-            </div>
-        </div>
-    </section>
-
-    <section class="dashboard-panel dashboard-requests-panel">
-        <div class="dashboard-panel-head">
-            <div>
-                <span class="dashboard-panel-kicker">SELF SERVICE</span>
-                <h2>آخر طلبات الخدمات الذاتية</h2>
-            </div>
-        </div>
-
-        <div class="dashboard-table-wrap">
-            <table class="dashboard-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>رقم الموظف</th>
-                        <th class="text-start">الاسم</th>
-                        <th>نوع الطلب</th>
-                        <th>الحالة</th>
-                        <th>المرحلة</th>
-                        <th>التاريخ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var request in Model.LatestRequests)
-                    {
-                        var statusText = StatusText(request.Status);
-                        var statusClass = StatusClass(request.Status);
-
-                        <tr>
-                            <td>@request.Id</td>
-                            <td>@request.EmployeeNo</td>
-                            <td class="text-start">@request.EmployeeName</td>
-                            <td>@request.RequestType</td>
-                            <td><span class="hrms-badge @statusClass">@statusText</span></td>
-                            <td>@request.CurrentStep</td>
-                            <td>@request.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</td>
-                        </tr>
-                    }
-
-                    @if (!Model.LatestRequests.Any())
-                    {
-                        <tr>
-                            <td colspan="7" class="dashboard-empty-cell">لا توجد طلبات حديثة.</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </section>
-</div>
-
+</section>

@@ -79,17 +79,21 @@ public class IndexModel : PageModel
     {
         var stopwatch = Stopwatch.StartNew();
 
+        // ترتيب الشركات بعدد موظفيها تنازلياً: الافتراضي (First بـ Resolve) يصير
+        // الشركة الفعلية ذات البيانات بدل شركة فارغة تُظهر اللوحة أصفاراً.
         CompanyOptions = await _dbContext.Companies
             .AsNoTracking()
             .Where(x => !x.IsDeleted && x.IsActive)
-            .OrderBy(x => x.Name)
-            .ThenBy(x => x.Code)
             .Select(x => new CompanyOption
             {
                 Id = x.Id,
                 Name = x.Name,
-                IsActive = x.IsActive
+                IsActive = x.IsActive,
+                EmployeeCount = _dbContext.Employees.Count(e =>
+                    !e.IsDeleted && e.Branch != null && e.Branch.CompanyId == x.Id)
             })
+            .OrderByDescending(x => x.EmployeeCount)
+            .ThenBy(x => x.Name)
             .ToListAsync();
 
         CompanyId = CompanySelectionContext.Resolve(
@@ -637,6 +641,9 @@ ORDER BY r.CreatedAt DESC;
         public string Name { get; set; } = string.Empty;
 
         public bool IsActive { get; set; }
+
+        /// <summary>لترتيب الشركات: الشركة ذات الموظفين تتصدر وتصير الافتراضية.</summary>
+        public int EmployeeCount { get; set; }
     }
 
     public class NameCountRow
