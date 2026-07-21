@@ -1480,8 +1480,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/ViolationCaseSchema.cs": {
-    "mtime": 1783749096.4874797,
-    "ast_hash": "fa18f0b3afd902a92153bbbc7bdf0dc3",
+    "mtime": 1784657313.8087964,
+    "ast_hash": "679ffccb34d2632111774cd023febe7f",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Imports/EmployeeBootstrapImportEngine.cs": {
@@ -1955,13 +1955,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeePortal/Index.cshtml": {
-    "mtime": 1784062080.9280145,
-    "ast_hash": "8a7937e49899ddae2e58c044e2b1e90c",
+    "mtime": 1784658099.43525,
+    "ast_hash": "307f28f9c0141b4f9ca2a0eddea27e96",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeePortal/Index.cshtml.cs": {
-    "mtime": 1784656674.716816,
-    "ast_hash": "24803bb5a44362eaedb1b7523daecb8e",
+    "mtime": 1784658085.8095467,
+    "ast_hash": "831cf29cd2d27510442771059976cf32",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeeProfileSettings/Index.cshtml": {
@@ -2725,13 +2725,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Violations/Index.cshtml": {
-    "mtime": 1783749096.6098366,
-    "ast_hash": "0446073e8f433741d2d6211720cdaf52",
+    "mtime": 1784657421.9912057,
+    "ast_hash": "7c736cb466dad7ec96a198df97af53a3",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Violations/Index.cshtml.cs": {
-    "mtime": 1783749096.6113641,
-    "ast_hash": "60383e04dacc03e99c7ca97f3c64824a",
+    "mtime": 1784657387.534964,
+    "ast_hash": "e7ed832a48ea88d095fd6da328fe40a3",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Violations/PrintForm.cshtml": {
@@ -3715,8 +3715,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Domain/Entities/EmployeeFileRecord.cs": {
-    "mtime": 1784633566.121707,
-    "ast_hash": "aafbdcca4c6cd0e4178ae8afd3306d94",
+    "mtime": 1784658026.6235385,
+    "ast_hash": "8de09011b1cec02ff119969e1cfb8d04",
     "semantic_hash": ""
   },
   "SmartAttendance.Domain/Entities/EmployeeTask.cs": {
@@ -3770,8 +3770,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/EmployeeRecordsSchema.cs": {
-    "mtime": 1784633602.1389039,
-    "ast_hash": "79c9676a4d935982d9df2e3556131161",
+    "mtime": 1784658035.325206,
+    "ast_hash": "1b8eae28d8e78d1c746e2dc161fb9b00",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/EmployeeTasksSchema.cs": {
@@ -3920,13 +3920,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AssetsManagement/Index.cshtml": {
-    "mtime": 1784642077.4080572,
-    "ast_hash": "e36f3d38ae59b3c429f9c27859cf76e0",
+    "mtime": 1784658065.325965,
+    "ast_hash": "b4f43cac09c245caaea6469fe7c63bd3",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AssetsManagement/Index.cshtml.cs": {
-    "mtime": 1784642041.2844667,
-    "ast_hash": "a93c06e1d037513a44a2826e5c73c408",
+    "mtime": 1784658046.506527,
+    "ast_hash": "eb7fc669ba2b15e9192c80e99defa9aa",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/HrSettings/EmployeeCodeSchemaPage.cshtml": {

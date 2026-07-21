@@ -3,16 +3,40 @@
 @using SmartAttendance.Web.Infrastructure.Hrms
 
 @{
-    ViewData["Title"] = "التحكم بالحقول";
-    var groups = EmployeeFieldControl.Catalog.GroupBy(f => f.Group);
+    ViewData["Title"] = "استوديو الحقول";
+    // الحقول مرتبة حسب الترتيب المخصص المخزّن، ومجمّعة بمجموعاتها
+    var ordered = EmployeeFieldControl.Catalog
+        .Select(def => new
+        {
+            Def = def,
+            Setting = Model.Settings.TryGetValue(def.Key, out var s)
+                ? s
+                : new EmployeeFieldControl.FieldSetting { Key = def.Key, IsVisible = true, DisplayOrder = 999 }
+        })
+        .OrderBy(x => x.Setting.DisplayOrder)
+        .ToList();
+    var groups = ordered.GroupBy(x => x.Def.Group);
 }
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 
+<style>
+    .fcs-row { display: grid; grid-template-columns: 26px 1fr 170px 90px 90px; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid rgba(157,184,204,.14); border-radius: 12px; margin-bottom: 6px; background: rgba(255,255,255,.02); }
+    .fcs-row.fcs-dragging { opacity: .4; }
+    .fcs-row.fcs-hidden-row { opacity: .55; }
+    .fcs-grip { cursor: grab; opacity: .6; user-select: none; text-align: center; }
+    .fcs-name b { display: block; font-size: 13px; }
+    .fcs-name small { opacity: .6; font-size: 11px; }
+    .fcs-row input[type="text"] { min-height: 32px; border-radius: 8px; border: 1px solid rgba(157,184,204,.25); background: rgba(0,0,0,.2); color: inherit; padding: 4px 10px; font-size: 12px; width: 100%; }
+    .fcs-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; justify-content: center; }
+    .fcs-head { display: grid; grid-template-columns: 26px 1fr 170px 90px 90px; gap: 10px; padding: 4px 10px; font-size: 11px; opacity: .65; font-weight: 900; }
+    .fcs-lock { color: #facc15; }
+</style>
+
 <section class="nxhs-page nxhs-simple" dir="rtl">
     <header class="nxhs-titlebar">
         <a asp-page="./Index">إعدادات الموارد البشرية</a>
-        <h1>التحكم بالحقول</h1>
+        <h1>استوديو الحقول</h1>
     </header>
 
     @if (TempData["SuccessMessage"] != null)
@@ -22,23 +46,39 @@
 
     <form method="post" class="nxhs-panel">
         <p class="nxhs-helper">
-            حدّد الحقول الإلزامية بشاشتي إنشاء وتعديل الموظف — الإلزامية تُعلَّم بنجمة وتُفرض عند الحفظ.
-            الحقول الجوهرية (الاسم، التعيين، الفرع، القسم) مقفلة إلزامية دائماً.
+            تحكّم كامل بحقول شاشتي إنشاء وتعديل الموظف: اسحب ⠿ لإعادة الترتيب داخل المجموعة، أخفِ أي حقل، غيّر تسميته، وحدّد الإلزامي.
+            الحقول الجوهرية 🔒 تبقى ظاهرة وإلزامية. لإضافة حقول جديدة كلياً استخدم
+            <a href="/EmployeeProfileSettings" style="color:#12D9E3">باني حقول ملف الموظف</a>.
         </p>
 
         @foreach (var group in groups)
         {
             <section class="nxhs-setting-section">
                 <h2>@group.Key</h2>
-                <div class="nxhs-permission-grid">
-                    @foreach (var field in group)
+                <div class="fcs-head"><span></span><span>الحقل</span><span>تسمية مخصصة</span><span>ظاهر</span><span>إلزامي</span></div>
+                <div data-fcs-group>
+                    @foreach (var item in group)
                     {
-                        <label title="@(field.Locked ? "إلزامي دائماً" : "")">
-                            <input type="checkbox" name="required" value="@field.Key"
-                                   checked="@(field.Locked || Model.RequiredKeys.Contains(field.Key))"
-                                   disabled="@field.Locked" />
-                            <span>@field.Label @(field.Locked ? "🔒" : "")</span>
-                        </label>
+                        var def = item.Def;
+                        var setting = item.Setting;
+                        <div class="fcs-row @(setting.IsVisible ? "" : "fcs-hidden-row")" draggable="true">
+                            <span class="fcs-grip" title="اسحب لإعادة الترتيب">⠿</span>
+                            <input type="hidden" name="FieldKey" value="@def.Key" />
+                            <span class="fcs-name">
+                                <b>@(setting.CustomLabel ?? def.Label) @(def.Locked ? Html.Raw("<span class='fcs-lock'>🔒</span>") : Html.Raw(""))</b>
+                                <small>@def.Label · @def.Key</small>
+                            </span>
+                            <input type="text" name="label_@def.Key" value="@setting.CustomLabel" placeholder="@def.Label" title="اتركه فارغاً للتسمية الافتراضية" />
+                            <label class="fcs-toggle" title="@(def.Locked ? "جوهري — لا يُخفى" : "إظهار/إخفاء الحقل")">
+                                <input type="checkbox" name="vis_@def.Key" value="true"
+                                       checked="@(def.Locked || setting.IsVisible)" disabled="@def.Locked"
+                                       onchange="this.closest('.fcs-row').classList.toggle('fcs-hidden-row', !this.checked)" />
+                            </label>
+                            <label class="fcs-toggle" title="@(def.Locked ? "جوهري — إلزامي دائماً" : "إلزامي")">
+                                <input type="checkbox" name="req_@def.Key" value="true"
+                                       checked="@(def.Locked || setting.IsRequired)" disabled="@def.Locked" />
+                            </label>
+                        </div>
                     }
                 </div>
             </section>
@@ -49,3 +89,30 @@
         </footer>
     </form>
 </section>
+
+@section Scripts {
+    <script>
+        // سحب وإفلات لإعادة ترتيب الحقول داخل مجموعتها (الترتيب يُشتق من تسلسل FieldKey عند الحفظ).
+        document.querySelectorAll("[data-fcs-group]").forEach(function (group) {
+            var dragging = null;
+            group.addEventListener("dragstart", function (e) {
+                var row = e.target.closest(".fcs-row");
+                if (!row) return;
+                dragging = row;
+                row.classList.add("fcs-dragging");
+            });
+            group.addEventListener("dragover", function (e) {
+                e.preventDefault();
+                var over = e.target.closest(".fcs-row");
+                if (!over || !dragging || over === dragging || over.parentElement !== group) return;
+                var rect = over.getBoundingClientRect();
+                group.insertBefore(dragging, e.clientY < rect.top + rect.height / 2 ? over : over.nextSibling);
+            });
+            group.addEventListener("drop", function (e) { e.preventDefault(); });
+            group.addEventListener("dragend", function () {
+                if (dragging) dragging.classList.remove("fcs-dragging");
+                dragging = null;
+            });
+        });
+    </script>
+}

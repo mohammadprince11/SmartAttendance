@@ -71,8 +71,11 @@ public class CreateModel : PageModel
     public List<string> GradeOptions { get; set; } = new();
     public List<string> SponsorOptions { get; set; } = new();
 
-    /// <summary>الحقول الإلزامية من «التحكم بالحقول» — تعلَّم بنجمة وتُفرض بالسيرفر.</summary>
+    /// <summary>الحقول الإلزامية من «استوديو الحقول» — تعلَّم بنجمة وتُفرض بالسيرفر.</summary>
     public HashSet<string> RequiredFieldKeys { get; set; } = new();
+
+    /// <summary>إعدادات الحقول الكاملة (إخفاء/تسمية/ترتيب) — تطبّقها الواجهة.</summary>
+    public Dictionary<string, EmployeeFieldControl.FieldSetting> FieldSettings { get; set; } = new();
 
     private async Task LoadLookupsAsync()
     {
@@ -90,7 +93,8 @@ public class CreateModel : PageModel
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
         await LoadLookupsAsync();
-        RequiredFieldKeys = await EmployeeFieldControl.GetRequiredKeysAsync(_dbContext);
+        FieldSettings = await EmployeeFieldControl.GetSettingsAsync(_dbContext);
+        RequiredFieldKeys = EmployeeFieldControl.RequiredKeys(FieldSettings);
 
         var codeSchema = await EmployeeCodeSchema.GetAsync(_dbContext);
         CodeSchemaActive = codeSchema?.IsActive == true;
@@ -108,7 +112,8 @@ public class CreateModel : PageModel
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
         await LoadLookupsAsync();
-        RequiredFieldKeys = await EmployeeFieldControl.GetRequiredKeysAsync(_dbContext);
+        FieldSettings = await EmployeeFieldControl.GetSettingsAsync(_dbContext);
+        RequiredFieldKeys = EmployeeFieldControl.RequiredKeys(FieldSettings);
 
         // رمز الموظف: إن تُرك فارغاً والمخطط مفعّل → توليد ذرّي (زيادة التسلسل بنفس العبارة).
         var postSchema = await EmployeeCodeSchema.GetAsync(_dbContext);

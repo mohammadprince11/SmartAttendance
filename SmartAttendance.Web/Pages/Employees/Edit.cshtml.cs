@@ -64,8 +64,11 @@ public class EditModel : PageModel
     public List<string> GradeOptions { get; set; } = new();
     public List<string> SponsorOptions { get; set; } = new();
 
-    /// <summary>الحقول الإلزامية من «التحكم بالحقول» — تعلَّم بنجمة وتُفرض بالسيرفر.</summary>
+    /// <summary>الحقول الإلزامية من «استوديو الحقول» — تعلَّم بنجمة وتُفرض بالسيرفر.</summary>
     public HashSet<string> RequiredFieldKeys { get; set; } = new();
+
+    /// <summary>إعدادات الحقول الكاملة (إخفاء/تسمية/ترتيب) — تطبّقها الواجهة.</summary>
+    public Dictionary<string, EmployeeFieldControl.FieldSetting> FieldSettings { get; set; } = new();
 
     private async Task LoadLookupsAsync()
     {
@@ -101,7 +104,8 @@ public class EditModel : PageModel
         Managers = await LoadManagersAsync(Employee.Id);
         DirectManagerId = Employee.DirectManagerId;
         await LoadLookupsAsync();
-        RequiredFieldKeys = await EmployeeFieldControl.GetRequiredKeysAsync(_dbContext);
+        FieldSettings = await EmployeeFieldControl.GetSettingsAsync(_dbContext);
+        RequiredFieldKeys = EmployeeFieldControl.RequiredKeys(FieldSettings);
 
         return Page();
     }
@@ -122,7 +126,8 @@ public class EditModel : PageModel
 
         Managers = await LoadManagersAsync(Employee.Id);
         await LoadLookupsAsync();
-        RequiredFieldKeys = await EmployeeFieldControl.GetRequiredKeysAsync(_dbContext);
+        FieldSettings = await EmployeeFieldControl.GetSettingsAsync(_dbContext);
+        RequiredFieldKeys = EmployeeFieldControl.RequiredKeys(FieldSettings);
 
         // التحكم بالحقول: فرض الإلزامية المركزية بالسيرفر.
         EmployeeFieldControl.ValidateRequired(Employee, RequiredFieldKeys, ModelState, "Employee");

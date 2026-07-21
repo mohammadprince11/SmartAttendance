@@ -719,3 +719,77 @@
 body.nxhs-modal-open {
     overflow: hidden;
 }
+
+/* --------------------------------------------------------------------------
+   صفحة المدخل /HrSettings — الهيرو وبطاقات الشاشات (كانت بلا تنسيق إطلاقاً)
+   -------------------------------------------------------------------------- */
+.nxhs-hero {
+    padding: 28px;
+    border: 1px solid var(--nxhs-line);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 88% 14%, rgba(25, 211, 224, .15), transparent 34%),
+        linear-gradient(135deg, rgba(9, 31, 52, .96), rgba(5, 16, 29, .96));
+    box-shadow: 0 22px 52px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255, 255, 255, .04);
+    margin-bottom: 18px;
+}
+
+.nxhs-hero span {
+    font-size: 11px;
+    font-weight: 1000;
+    letter-spacing: .14em;
+    color: var(--nxhs-cyan);
+}
+
+.nxhs-hero h1 {
+    margin: 6px 0 8px;
+    font-size: 30px;
+    font-weight: 1000;
+    color: #F3F8FC;
+}
+
+.nxhs-hero p {
+    margin: 0;
+    color: var(--nxhs-muted);
+    font-size: 13px;
+    max-width: 720px;
+}
+
+.nxhs-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 14px;
+}
+
+.nxhs-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px;
+    border: 1px solid var(--nxhs-line);
+    border-radius: 20px;
+    background:
+        radial-gradient(circle at top right, rgba(25, 211, 224, .08), transparent 40%),
+        linear-gradient(180deg, rgba(8, 25, 43, .90), rgba(5, 16, 29, .96));
+    color: var(--nxhs-text);
+    text-decoration: none;
+    transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+
+.nxhs-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(25, 211, 224, .45);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, .28);
+}
+
+.nxhs-card strong {
+    font-size: 15px;
+    font-weight: 1000;
+    color: #F3F8FC;
+}
+
+.nxhs-card small {
+    color: var(--nxhs-muted);
+    font-size: 12px;
+    line-height: 1.6;
+}

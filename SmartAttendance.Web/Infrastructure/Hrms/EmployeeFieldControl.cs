@@ -58,19 +58,34 @@ public static class EmployeeFieldControl
         new("PersonalEmail",  "البريد الشخصي",               "التواصل"),
     };
 
+    /// <summary>إعدادات حقل واحد كما يديرها الأدمن من استوديو الحقول.</summary>
+    public sealed class FieldSetting
+    {
+        public string Key { get; set; } = string.Empty;
+        public bool IsRequired { get; set; }
+        public bool IsVisible { get; set; } = true;
+        public string? CustomLabel { get; set; }
+        public int DisplayOrder { get; set; }
+    }
+
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
     {
         // زرع المفاتيح الناقصة فقط (idempotent) — إضافة حقل جديد للكتالوج لاحقاً تُزرع تلقائياً.
         var seedValues = new StringBuilder();
+        var order = 0;
         foreach (var def in Catalog)
         {
+            order++;
             if (seedValues.Length > 0) seedValues.Append(", ");
-            seedValues.Append("(N'").Append(def.Key).Append("', ").Append(def.DefaultRequired ? 1 : 0).Append(')');
+            seedValues.Append("(N'").Append(def.Key).Append("', ").Append(def.DefaultRequired ? 1 : 0)
+                      .Append(", ").Append(order).Append(')');
         }
 
+        // دفعة 1: الجدول والأعمدة — منفصلة عن دفعة الزرع لأن SQL يصرّف الدفعة كاملة
+        // قبل تنفيذ ALTER فتفشل مراجع الأعمدة الجديدة بنفس الدفعة.
         await HrmsDatabase.ExecuteAsync(
             dbContext,
-            $"""
+            """
 IF OBJECT_ID('HrFieldControls', 'U') IS NULL
 BEGIN
     CREATE TABLE HrFieldControls
@@ -80,53 +95,107 @@ BEGIN
     );
 END;
 
+IF COL_LENGTH('HrFieldControls', 'IsVisible') IS NULL
+    ALTER TABLE HrFieldControls ADD IsVisible bit NOT NULL CONSTRAINT DF_HrFieldControls_IsVisible DEFAULT(1);
+
+IF COL_LENGTH('HrFieldControls', 'CustomLabel') IS NULL
+    ALTER TABLE HrFieldControls ADD CustomLabel nvarchar(150) NULL;
+
+IF COL_LENGTH('HrFieldControls', 'DisplayOrder') IS NULL
+    ALTER TABLE HrFieldControls ADD DisplayOrder int NOT NULL CONSTRAINT DF_HrFieldControls_DisplayOrder DEFAULT(0);
+""");
+
+        // دفعة 2: زرع المفاتيح الناقصة وترميم الترتيب الصفري.
+        await HrmsDatabase.ExecuteAsync(
+            dbContext,
+            $"""
 MERGE HrFieldControls AS target
-USING (VALUES {seedValues}) AS source(FieldKey, IsRequired)
+USING (VALUES {seedValues}) AS source(FieldKey, IsRequired, DisplayOrder)
 ON target.FieldKey = source.FieldKey
-WHEN NOT MATCHED THEN INSERT (FieldKey, IsRequired) VALUES (source.FieldKey, source.IsRequired);
+WHEN NOT MATCHED THEN INSERT (FieldKey, IsRequired, DisplayOrder) VALUES (source.FieldKey, source.IsRequired, source.DisplayOrder);
+
+-- ترميم ترتيب صفري (جداول أنشئت قبل عمود الترتيب)
+UPDATE target
+SET target.DisplayOrder = source.DisplayOrder
+FROM HrFieldControls AS target
+JOIN (VALUES {seedValues}) AS source(FieldKey, IsRequired, DisplayOrder)
+    ON target.FieldKey = source.FieldKey
+WHERE target.DisplayOrder = 0;
 """);
     }
 
-    /// <summary>مفاتيح الحقول الإلزامية حالياً (المقفلة دائماً ضمنها).</summary>
-    public static async Task<HashSet<string>> GetRequiredKeysAsync(ApplicationDbContext dbContext)
+    /// <summary>كل إعدادات الحقول بترتيب العرض المخصص (المقفلة إلزامية دائماً).</summary>
+    public static async Task<Dictionary<string, FieldSetting>> GetSettingsAsync(ApplicationDbContext dbContext)
     {
         await EnsureAsync(dbContext);
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT FieldKey FROM HrFieldControls WHERE IsRequired = 1;",
+            "SELECT FieldKey, IsRequired, IsVisible, CustomLabel, DisplayOrder FROM HrFieldControls;",
             command => { },
-            reader => HrmsDatabase.GetString(reader, "FieldKey") ?? string.Empty);
+            reader => new FieldSetting
+            {
+                Key = HrmsDatabase.GetString(reader, "FieldKey"),
+                IsRequired = HrmsDatabase.GetBool(reader, "IsRequired"),
+                IsVisible = HrmsDatabase.GetBool(reader, "IsVisible"),
+                CustomLabel = HrmsDatabase.GetString(reader, "CustomLabel") is { Length: > 0 } label ? label : null,
+                DisplayOrder = HrmsDatabase.GetInt(reader, "DisplayOrder")
+            });
 
-        var keys = new HashSet<string>(rows.Where(k => k.Length > 0), StringComparer.Ordinal);
+        var map = rows.ToDictionary(r => r.Key, r => r, StringComparer.Ordinal);
+        foreach (var def in Catalog.Where(d => d.Locked))
+        {
+            if (map.TryGetValue(def.Key, out var setting))
+            {
+                setting.IsRequired = true;
+                setting.IsVisible = true; // الجوهرية لا تُخفى
+            }
+        }
+        return map;
+    }
+
+    public static async Task SaveSettingsAsync(ApplicationDbContext dbContext, IReadOnlyList<FieldSetting> settings)
+    {
+        await EnsureAsync(dbContext);
+        foreach (var setting in settings)
+        {
+            var def = Catalog.FirstOrDefault(d => d.Key == setting.Key);
+            if (def == null) continue; // لا نثق بمفاتيح خارج الكتالوج
+
+            var required = def.Locked || setting.IsRequired;
+            var visible = def.Locked || setting.IsVisible;
+            await HrmsDatabase.ExecuteAsync(
+                dbContext,
+                """
+UPDATE HrFieldControls
+SET IsRequired = @Required, IsVisible = @Visible, CustomLabel = @Label, DisplayOrder = @Order
+WHERE FieldKey = @Key;
+""",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@Key", setting.Key);
+                    HrmsDatabase.AddParameter(command, "@Required", required ? 1 : 0);
+                    HrmsDatabase.AddParameter(command, "@Visible", visible ? 1 : 0);
+                    HrmsDatabase.AddParameter(command, "@Label", string.IsNullOrWhiteSpace(setting.CustomLabel) ? DBNull.Value : setting.CustomLabel.Trim());
+                    HrmsDatabase.AddParameter(command, "@Order", Math.Max(1, setting.DisplayOrder));
+                });
+        }
+    }
+
+    /// <summary>مفاتيح الحقول الإلزامية حالياً — المخفي لا يُفرض حتى لو معلَّم إلزامياً.</summary>
+    public static async Task<HashSet<string>> GetRequiredKeysAsync(ApplicationDbContext dbContext)
+        => RequiredKeys(await GetSettingsAsync(dbContext));
+
+    /// <summary>اشتقاق مفاتيح الإلزامي من إعدادات محمّلة مسبقاً (يوفّر استعلاماً ثانياً).</summary>
+    public static HashSet<string> RequiredKeys(Dictionary<string, FieldSetting> settings)
+    {
+        var keys = new HashSet<string>(
+            settings.Values.Where(s => s.IsRequired && s.IsVisible).Select(s => s.Key),
+            StringComparer.Ordinal);
         foreach (var def in Catalog.Where(d => d.Locked))
         {
             keys.Add(def.Key);
         }
         return keys;
-    }
-
-    public static async Task SaveAsync(ApplicationDbContext dbContext, IReadOnlyCollection<string> requiredKeys)
-    {
-        await EnsureAsync(dbContext);
-
-        // نبني قائمة القيم من الكتالوج حصراً (لا نثق بمفاتيح النموذج المرسل).
-        var setValues = new StringBuilder();
-        foreach (var def in Catalog)
-        {
-            var required = def.Locked || requiredKeys.Contains(def.Key);
-            if (setValues.Length > 0) setValues.Append(", ");
-            setValues.Append("(N'").Append(def.Key).Append("', ").Append(required ? 1 : 0).Append(')');
-        }
-
-        await HrmsDatabase.ExecuteAsync(
-            dbContext,
-            $"""
-UPDATE target
-SET target.IsRequired = source.IsRequired
-FROM HrFieldControls AS target
-JOIN (VALUES {setValues}) AS source(FieldKey, IsRequired)
-    ON target.FieldKey = source.FieldKey;
-""");
     }
 
     /// <summary>

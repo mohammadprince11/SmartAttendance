@@ -558,6 +558,7 @@
   "556": "refreshFirstAndLastRowStyles",
   "557": "getHeaderRowCount",
   "558": "updateGridThemeClass",
+  "559": "DateTime",
   "560": "setupAutoHeight",
   "561": "addStopEditingWhenGridLosesFocus",
   "562": "resetIcons",
@@ -568,9 +569,13 @@
   "567": "13) شاشة تشغيل التقرير المخصّص (جولة 5 — فحص حي بإنشاء تقرير فعلي، 2026-07-19)",
   "568": "1) كيان الموظف الأساسي (Employee)",
   "569": "getCSSVariablePixelValue",
+  "570": "processDataTypeDefinitions",
   "571": "EmployeeCodeSchemaPage.cshtml",
   "572": "FinancialInfo.cshtml",
   "573": "removeConditionsAndOperators",
+  "574": "isDomDataMissingInHierarchy",
   "575": "Index.cshtml",
+  "576": "updateGridThemeClass",
+  "577": "getRowByPosition",
   "578": "getAlignedGridApis"
 }

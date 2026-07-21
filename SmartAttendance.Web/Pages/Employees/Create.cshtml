@@ -681,23 +681,51 @@
         })();
     </script>
     <script>
-        // التحكم بالحقول: علامة * و required على الحقول الإلزامية المعرّفة مركزياً.
+        // استوديو الحقول: إخفاء/تسمية مخصصة/ترتيب + علامة * و required — كلها معرّفة مركزياً.
         (function () {
-            var keys = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                Model.RequiredFieldKeys.Where(k => !(Model.CodeSchemaActive && k == "EmployeeNo"))));
-            keys.forEach(function (key) {
-                var input = document.querySelector('[name="Employee.' + key + '"]');
+            var fields = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                Model.FieldSettings.Values.Select(s => new { k = s.Key, v = s.IsVisible, r = Model.RequiredFieldKeys.Contains(s.Key), l = s.CustomLabel, o = s.DisplayOrder })));
+            var skipEmployeeNoRequired = @(Model.CodeSchemaActive ? "true" : "false");
+            var items = [];
+
+            fields.forEach(function (f) {
+                var input = document.querySelector('[name="Employee.' + f.k + '"]');
                 if (!input || input.type === "hidden") return;
-                input.setAttribute("required", "required");
-                var label = (input.id && document.querySelector('label[for="' + input.id + '"]')) ||
-                    (input.closest(".nxr-field") || input.parentElement).querySelector("label");
-                if (label && !label.querySelector(".nx-req-star")) {
-                    var star = document.createElement("span");
-                    star.className = "nx-req-star";
-                    star.textContent = " *";
-                    star.style.cssText = "color:#f87171;font-weight:900";
-                    label.appendChild(star);
+                var box = input.closest(".nxr-field") || input.parentElement;
+                var label = (input.id && document.querySelector('label[for="' + input.id + '"]')) || box.querySelector("label");
+
+                if (!f.v) { box.style.setProperty("display", "none", "important"); input.removeAttribute("required"); return; }
+                if (f.l && label) label.textContent = f.l;
+                if (f.r && !(f.k === "EmployeeNo" && skipEmployeeNoRequired)) {
+                    input.setAttribute("required", "required");
+                    if (label && !label.querySelector(".nx-req-star")) {
+                        var star = document.createElement("span");
+                        star.className = "nx-req-star";
+                        star.textContent = " *";
+                        star.style.cssText = "color:#f87171;font-weight:900";
+                        label.appendChild(star);
+                    }
                 }
+                items.push({ box: box, order: f.o });
+            });
+
+            // إعادة الترتيب: داخل كل حاوية، تُرتّب الحقول المُدارة حسب ترتيب الاستوديو.
+            var byParent = new Map();
+            items.forEach(function (it) {
+                var parent = it.box.parentElement;
+                if (!byParent.has(parent)) byParent.set(parent, []);
+                byParent.get(parent).push(it);
+            });
+            byParent.forEach(function (list, parent) {
+                if (list.length < 2) return;
+                var domFirst = list.map(function (x) { return x.box; }).sort(function (a, b) {
+                    return (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
+                })[0];
+                var anchor = document.createComment("fc-anchor");
+                parent.insertBefore(anchor, domFirst);
+                list.sort(function (a, b) { return a.order - b.order; })
+                    .forEach(function (it) { parent.insertBefore(it.box, anchor); });
+                parent.removeChild(anchor);
             });
         })();
     </script>

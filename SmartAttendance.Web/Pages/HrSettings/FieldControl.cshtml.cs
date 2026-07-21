@@ -6,7 +6,8 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 namespace SmartAttendance.Web.Pages.HrSettings;
 
 /// <summary>
-/// التحكم بالحقول (نمط كيان): مفتاح إلزامي مركزي لكل حقل بشاشة الموظف.
+/// استوديو الحقول (نمط كيان + طلب المستخدم «الأدمن مبرمج»): لكل حقل بشاشة الموظف —
+/// إظهار/إخفاء، إلزامي، تسمية مخصصة، وترتيب بالسحب. الحقول الجوهرية مقفلة ظاهرة إلزامية.
 /// </summary>
 public class FieldControlModel : PageModel
 {
@@ -17,17 +18,35 @@ public class FieldControlModel : PageModel
         _dbContext = dbContext;
     }
 
-    public HashSet<string> RequiredKeys { get; set; } = new();
+    public Dictionary<string, EmployeeFieldControl.FieldSetting> Settings { get; set; } = new();
 
     public async Task OnGetAsync()
     {
-        RequiredKeys = await EmployeeFieldControl.GetRequiredKeysAsync(_dbContext);
+        Settings = await EmployeeFieldControl.GetSettingsAsync(_dbContext);
     }
 
-    public async Task<IActionResult> OnPostAsync(List<string>? required)
+    public async Task<IActionResult> OnPostAsync()
     {
-        await EmployeeFieldControl.SaveAsync(_dbContext, required ?? new List<string>());
-        TempData["SuccessMessage"] = "تم حفظ إعدادات التحكم بالحقول.";
+        var form = Request.Form;
+        var keys = form["FieldKey"];
+        var settings = new List<EmployeeFieldControl.FieldSetting>();
+
+        for (var i = 0; i < keys.Count; i++)
+        {
+            var key = keys[i] ?? string.Empty;
+            settings.Add(new EmployeeFieldControl.FieldSetting
+            {
+                Key = key,
+                // كل صف يرسل قيمه بأسماء مفتاحية حتى لا تختل المصفوفات مع الترتيب بالسحب
+                IsVisible = form[$"vis_{key}"] == "true",
+                IsRequired = form[$"req_{key}"] == "true",
+                CustomLabel = form[$"label_{key}"],
+                DisplayOrder = i + 1
+            });
+        }
+
+        await EmployeeFieldControl.SaveSettingsAsync(_dbContext, settings);
+        TempData["SuccessMessage"] = "تم حفظ إعدادات الحقول — الإخفاء والتسميات والترتيب تنطبق على شاشتي إنشاء وتعديل الموظف.";
         return RedirectToPage();
     }
 }
