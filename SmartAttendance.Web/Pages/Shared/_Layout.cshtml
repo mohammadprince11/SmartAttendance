@@ -180,11 +180,10 @@
 
         Func<string, string> ActiveClass = path => IsCurrent(path) ? "active nexora-active" : "";
 
-        var employeesOpen = IsUnder("/Employees") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/EmployeeProfiles") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization") || IsUnder("/Alerts") || IsUnder("/LeaveBalances") || IsUnder("/PeopleReports") || IsUnder("/EmployeeTasks") || IsUnder("/Engagement");
+        var employeesOpen = IsUnder("/Employees") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization") || IsUnder("/Alerts") || IsUnder("/LeaveBalances") || IsUnder("/PeopleReports") || IsUnder("/EmployeeTasks") || IsUnder("/Engagement");
         var attendanceOpen = IsUnder("/AttendanceOperations") || IsUnder("/AttendanceRecords") || IsUnder("/AttendanceImports") || IsUnder("/AttendanceProcessing") || IsUnder("/AttendanceCorrections") || IsUnder("/Shifts") || IsUnder("/Devices");
         var requestsOpen = IsUnder("/LeaveRequests") || IsUnder("/Approvals") || IsUnder("/SelfServices");
         var systemOpen = IsUnder("/Branches") || IsUnder("/Departments") || IsUnder("/SystemUsers") || IsUnder("/Permissions");
-        var reportsOpen = IsUnder("/AttendanceReports") || IsUnder("/Reports");
         var payrollOpen = IsUnder("/Payroll");
     }
 
@@ -252,10 +251,10 @@
 
                             @if (canUseLegacyPeopleAdministration)
                             {
-                                <details class="ky-acc" @(IsUnder("/Engagement") || IsUnder("/EmployeeProfiles") || IsUnder("/EmployeeUpdates") || IsUnder("/Violations") || IsUnder("/AssetsManagement") || IsUnder("/EmployeeTasks") || IsUnder("/LeaveBalances") || IsUnder("/Alerts") ? "open" : "")>
+                                <details class="ky-acc" @(IsUnder("/Engagement") || IsUnder("/EmployeeUpdates") || IsUnder("/Violations") || IsUnder("/AssetsManagement") || IsUnder("/EmployeeTasks") || IsUnder("/LeaveBalances") || IsUnder("/Alerts") ? "open" : "")>
                                     <summary><span>عمليات الموارد البشرية</span><span class="ky-acc-chev"></span></summary>
                                     <div class="ky-acc-body">
-                                        <a asp-page="/Engagement/Index" class="nexora-nav-link @(IsUnder("/Engagement") || IsUnder("/EmployeeProfiles") ? "active nexora-active" : "")">
+                                        <a asp-page="/Engagement/Index" class="nexora-nav-link @(IsUnder("/Engagement") ? "active nexora-active" : "")">
                                             <span>تفاعل الموظفين</span>
                                         </a>
                                         <a asp-page="/EmployeeUpdates/Index" class="nexora-nav-link @(IsUnder("/EmployeeUpdates") ? "active nexora-active" : "")">

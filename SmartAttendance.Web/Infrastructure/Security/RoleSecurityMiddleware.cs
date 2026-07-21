@@ -261,8 +261,6 @@ public class RoleSecurityMiddleware
                 "/peoplereports",
                 "/employeetasks",
                 "/employees",
-                "/employeefile",
-                "/employeeprofile",
                 "/myprofile",
                 "/useraccess",
                 "/devices",
@@ -277,10 +275,8 @@ public class RoleSecurityMiddleware
                 "/selfservices",
                 "/approvals",
                 "/auditlogs",
-                "/notifications",
                 "/systemmaintenance",
-                "/employeepermissions",
-                "/reports");
+                "/employeepermissions");
         }
 
         if (role.Equals("HR Officer", StringComparison.OrdinalIgnoreCase))
@@ -293,8 +289,6 @@ public class RoleSecurityMiddleware
                 "/peoplereports",
                 "/employeetasks",
                 "/employees",
-                "/employeefile",
-                "/employeeprofile",
                 "/myprofile",
                 "/attendancerecords",
                 "/attendanceprocessing",
@@ -303,8 +297,7 @@ public class RoleSecurityMiddleware
                 "/holidays",
                 "/leaverequests",
                 "/selfservices",
-                "/approvals",
-                "/reports");
+                "/approvals");
         }
 
         if (role.Equals("Branch Manager", StringComparison.OrdinalIgnoreCase))
@@ -312,21 +305,18 @@ public class RoleSecurityMiddleware
             return IsAny(path,
                 "/organization",
                 "/employees",
-                "/employeefile",
                 "/myprofile",
                 "/attendancerecords",
                 "/attendanceprocessing",
                 "/attendancecorrections",
                 "/leaverequests",
-                "/selfservices",
-                "/reports");
+                "/selfservices");
         }
 
         if (role.Equals("Finance Viewer", StringComparison.OrdinalIgnoreCase))
         {
             return IsAny(path,
-                "/organization",
-                "/reports");
+                "/organization");
         }
 
         if (role.Equals("Employee", StringComparison.OrdinalIgnoreCase))
@@ -344,14 +334,6 @@ public class RoleSecurityMiddleware
             if (IsAny(path, "/selfservices", "/leaverequests"))
             {
                 return await IsOwnRequestAsync(context, employeeId);
-            }
-
-            if (path.StartsWith("/employeefile"))
-            {
-                return await IsOwnEmployeeFileAsync(
-                    context,
-                    dbContext,
-                    employeeId);
             }
 
             return false;
@@ -475,41 +457,4 @@ public class RoleSecurityMiddleware
         return true;
     }
 
-    private static async Task<bool> IsOwnEmployeeFileAsync(
-        HttpContext context,
-        ApplicationDbContext dbContext,
-        string? employeeIdClaim)
-    {
-        if (string.IsNullOrWhiteSpace(employeeIdClaim) ||
-            !int.TryParse(employeeIdClaim, out var employeeId) ||
-            employeeId <= 0)
-        {
-            return false;
-        }
-
-        var requestedEmployeeNo = context.Request.Query["EmployeeNo"].ToString();
-        var requestedId = context.Request.Query["Id"].ToString();
-
-        if (!string.IsNullOrWhiteSpace(requestedId) &&
-            int.TryParse(requestedId, out var idFromQuery))
-        {
-            return idFromQuery == employeeId;
-        }
-
-        if (string.IsNullOrWhiteSpace(requestedEmployeeNo))
-        {
-            return false;
-        }
-
-        var count = await HrmsDatabase.ScalarAsync<int>(
-            dbContext,
-            "SELECT COUNT(*) FROM Employees WHERE Id = @EmployeeId AND EmployeeNo = @EmployeeNo",
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-                HrmsDatabase.AddParameter(command, "@EmployeeNo", requestedEmployeeNo);
-            });
-
-        return count > 0;
-    }
 }

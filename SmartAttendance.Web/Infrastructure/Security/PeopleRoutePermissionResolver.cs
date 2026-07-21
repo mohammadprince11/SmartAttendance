@@ -93,25 +93,7 @@ public static class PeopleRoutePermissionResolver
             return Employee(PeoplePermissionCodes.ViewProfile);
         }
 
-        if (normalizedPath.StartsWith("/employeefile", StringComparison.Ordinal))
-        {
-            if (HttpMethods.IsPost(context.Request.Method))
-            {
-                var handler = context.Request.Query["handler"].ToString();
-
-                if (handler.Equals("UploadDocument", StringComparison.OrdinalIgnoreCase))
-                {
-                    return Employee(PeoplePermissionCodes.UploadDocument);
-                }
-
-                return Employee(PeoplePermissionCodes.Edit);
-            }
-
-            return Employee(PeoplePermissionCodes.ViewProfile);
-        }
-
-        if (normalizedPath.StartsWith("/employeepermissions", StringComparison.Ordinal) ||
-            normalizedPath.StartsWith("/userpermissions", StringComparison.Ordinal))
+        if (normalizedPath.StartsWith("/employeepermissions", StringComparison.Ordinal))
         {
             return Global(PeoplePermissionCodes.ManagePermissions);
         }

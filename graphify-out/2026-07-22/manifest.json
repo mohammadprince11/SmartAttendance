@@ -2125,8 +2125,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Profile.cshtml": {
-    "mtime": 1784646063.9663973,
-    "ast_hash": "8d25757b2341296403243d2f5eda2701",
+    "mtime": 1784669921.5806415,
+    "ast_hash": "eed46a301ae8daee3d65a989f6544df8",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Profile.cshtml.cs": {
@@ -2275,8 +2275,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/HrSettings/Index.cshtml": {
-    "mtime": 1783420774.5950553,
-    "ast_hash": "25e2c336e76f1e0d6a878da6e29c9e7a",
+    "mtime": 1784669944.5820024,
+    "ast_hash": "4bba121788c31cf8e2989d604310e94b",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/HrSettings/Index.cshtml.cs": {
@@ -2605,8 +2605,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784658782.6584594,
-    "ast_hash": "7120b8d5ed4ae700da09a22488b08978",
+    "mtime": 1784669939.7476623,
+    "ast_hash": "9a9fdc657082a41fe8ef848aa28b3d92",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3815,8 +3815,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Profile.Panels.cshtml.cs": {
-    "mtime": 1784641778.8854496,
-    "ast_hash": "2fb8db2c1842ded9fe66060840185ce2",
+    "mtime": 1784669935.9103327,
+    "ast_hash": "34919e59ef7f0df31d4b7fe6f67fdc47",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/HrSettings/Lookups.cshtml": {
@@ -3987,6 +3987,26 @@
   "SmartAttendance.Web/Infrastructure/Hrms/ApprovalWorkflowEngine.cs": {
     "mtime": 1784656622.5983317,
     "ast_hash": "08b9f0876ccd7f81117ccacda2e62496",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/EntityCustomFields.cs": {
+    "mtime": 1784669715.5251446,
+    "ast_hash": "e544db6422ad5bccd07fe83efb15960e",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/Employees/_EntityCustomFields.cshtml": {
+    "mtime": 1784669846.495968,
+    "ast_hash": "e226fd368906d4479ed51c517b522d12",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/HrSettings/EntityFields.cshtml": {
+    "mtime": 1784669770.4602277,
+    "ast_hash": "c34673e0330f8d52609c3357c9d910ea",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/HrSettings/EntityFields.cshtml.cs": {
+    "mtime": 1784669734.6462753,
+    "ast_hash": "fd047f7a116743426ca7729ddaa52add",
     "semantic_hash": ""
   }
 }

@@ -577,5 +577,17 @@
   "575": "Index.cshtml",
   "576": "updateGridThemeClass",
   "577": "getRowByPosition",
-  "578": "getAlignedGridApis"
+  "578": "getAlignedGridApis",
+  "579": "getContextMenuAnchorElement",
+  "580": "getInitialValues",
+  "581": "NoticePeriodModel",
+  "582": "ProbationPeriodModel",
+  "583": "refreshToolTip",
+  "584": "redrawFullWidthEmbeddedRows",
+  "585": "updateNodesFromRowData",
+  "586": "calculateOffset",
+  "587": "workOutVisibility",
+  "588": "EntityFields.cshtml",
+  "589": "_EntityCustomFields.cshtml",
+  "590": "isSuppressMenuHide"
 }
