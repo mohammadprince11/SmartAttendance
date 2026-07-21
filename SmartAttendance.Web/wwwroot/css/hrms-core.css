@@ -481,6 +481,23 @@ html[dir="rtl"] .hrms-slideover.open { transform: translateX(0); }
     flex: 1;
 }
 
+/* سكربت الكاليندر يعلّم حاويات حقول التاريخ بـ nxcal-ready ويفرض overflow:visible !important
+   (nexora-calendar-v18.css) — هذا يلغي تمرير جسم السلايد فيضيع زر الحفظ بالنماذج الطويلة.
+   قاعدة أخصّ بنفس القوة تعيد التمرير؛ منبثقة التقويم تبقى ظاهرة داخل مساحة التمرير. */
+.hrms-slideover-body.nxcal-ready,
+.hrms-slideover .hrms-slideover-body {
+    overflow: hidden auto !important;
+    min-height: 0;
+}
+
+/* خاصية hidden تنهزم أمام أي قاعدة display من ملفات التنسيق (مثل display:grid على
+   .hrms-field) — فكانت الحقول النوعية المخفية (معدل التعليم/إرجاع العهدة/مرجع الخبرة)
+   تظهر بكل أنواع سلايد السجلات. نعيد لها سلطتها ضمن نطاق hrms. */
+.hrms-slideover [hidden],
+.hrms-page [hidden] {
+    display: none !important;
+}
+
 .hrms-muted { color: var(--sa-muted); font-weight: 800; }
 
 /* Toggle pill (checkbox styled to match the toolbar buttons). */
