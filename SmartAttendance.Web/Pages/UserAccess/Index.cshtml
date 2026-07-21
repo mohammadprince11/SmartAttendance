@@ -1,385 +1,229 @@
 @page
 @model SmartAttendance.Web.Pages.UserAccess.IndexModel
 
+@*
+    إدارة مستخدمي النظام — أعيد تصميمها بنمط كيان (2026-07):
+    شريط عنوان بعدادات ← فلاتر ← جدول هويات نظيف ← سلايد إنشاء/تعديل.
+    كل المعالجات بالـ PageModel كما هي (Save/Toggle + تعبئة التعديل عبر
+    EditLoginId/EditSystemUserId بالسيرفر) — هذه الواجهة عرض وتفاعل فقط.
+*@
+
 @{
     ViewData["Title"] = "إدارة مستخدمي النظام";
-    var editorTitle = Model.Input.IsEditing
-        ? "تحديث وربط الحساب"
-        : "إنشاء حساب موحد";
 }
 
-@section Styles {
-    <link rel="stylesheet"
-          href="~/css/user-access.css"
-          asp-append-version="true" />
-}
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-user-access.css" asp-append-version="true" />
 
-<div class="nx-identity-page"
-     data-identity-management>
-    <section class="nx-identity-hero">
+<section class="zua-page" dir="rtl">
+
+    @* ---------- العنوان + العدادات ---------- *@
+    <header class="zua-head">
         <div>
-            <span class="nx-identity-kicker">
-                NEXORA IDENTITY MANAGEMENT
-            </span>
             <h1>إدارة مستخدمي النظام</h1>
-            <p>
-                مركز موحد لحسابات الدخول، هويات الصلاحيات،
-                وربط المستخدمين بالموظفين.
-            </p>
+            <p>حسابات الدخول وهويات الصلاحيات وربطها بالموظفين — بمكان واحد.</p>
         </div>
-
-        <div class="nx-identity-stats">
-            <article>
-                <strong>@Model.TotalCount</strong>
-                <span>إجمالي الهويات</span>
-            </article>
-            <article>
-                <strong>@Model.LinkedCount</strong>
-                <span>ربط صحيح</span>
-            </article>
-            <article>
-                <strong>@Model.NeedsReviewCount</strong>
-                <span>تحتاج مراجعة</span>
-            </article>
+        <div class="zua-stats">
+            <div class="zua-stat"><b>@Model.TotalCount</b><span>إجمالي الهويات</span></div>
+            <div class="zua-stat ok"><b>@Model.LinkedCount</b><span>مرتبط صحيح</span></div>
+            <div class="zua-stat warn"><b>@Model.NeedsReviewCount</b><span>يحتاج مراجعة</span></div>
+            <div class="zua-stat"><b>@Model.Identities.Count(x => x.IsActive)</b><span>فعال</span></div>
         </div>
-    </section>
+    </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
     {
-        <div class="nx-identity-alert success">
-            @Model.SuccessMessage
-        </div>
+        <div class="zua-alert">@Model.SuccessMessage</div>
     }
-
-    @if (TempData["ErrorMessage"] is string tempError)
-    {
-        <div class="nx-identity-alert danger">
-            @tempError
-        </div>
-    }
-
     @if (!string.IsNullOrWhiteSpace(Model.PageError))
     {
-        <div class="nx-identity-alert danger">
-            @Model.PageError
-        </div>
+        <div class="zua-alert error">@Model.PageError</div>
     }
 
-    <div class="nx-identity-layout">
-        <aside class="nx-identity-editor">
-            <div class="nx-identity-panel-head">
-                <div>
-                    <span class="nx-identity-section-label">
-                        @(Model.Input.IsEditing ? "EDIT IDENTITY" : "NEW IDENTITY")
-                    </span>
-                    <h2>@editorTitle</h2>
-                </div>
+    @* ---------- الفلاتر + زر الإنشاء ---------- *@
+    <form method="get" class="zua-filters">
+        <input type="search" name="Search" value="@Model.Search" placeholder="بحث بالاسم، اسم المستخدم، الموظف..." />
+        <select name="Status" onchange="this.form.submit()">
+            <option value="">جميع الحالات</option>
+            <option value="linked" selected="@(Model.Status == "linked")">مرتبط بشكل صحيح</option>
+            <option value="review" selected="@(Model.Status == "review")">يحتاج مراجعة</option>
+            <option value="active" selected="@(Model.Status == "active")">فعال</option>
+            <option value="inactive" selected="@(Model.Status == "inactive")">معطل</option>
+        </select>
+        <button type="submit" class="zua-btn ghost">بحث</button>
+        <button type="button" class="zua-btn" onclick="zuaOpenCreate()">+ مستخدم جديد</button>
+    </form>
 
-                @if (Model.Input.IsEditing)
-                {
-                    <a asp-page="./Index"
-                       asp-route-Search="@Model.Search"
-                       asp-route-Status="@Model.Status"
-                       class="nx-identity-btn secondary">
-                        إلغاء
-                    </a>
-                }
-            </div>
+    @* ---------- الجدول ---------- *@
+    <div class="zua-table-card">
+        @if (Model.Identities.Count == 0)
+        {
+            <div class="zua-empty">لا هويات مطابقة للفلاتر الحالية.</div>
+        }
+        else
+        {
+            <table class="zua-table">
+                <thead>
+                    <tr>
+                        <th>المستخدم</th>
+                        <th>الموظف المرتبط</th>
+                        <th>الدور</th>
+                        <th>حالة الربط</th>
+                        <th>الحالة</th>
+                        <th>آخر دخول</th>
+                        <th style="text-align:end">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Identities)
+                    {
+                        <tr>
+                            <td>
+                                <div class="zua-user">
+                                    <span class="zua-avatar">@(string.IsNullOrWhiteSpace(row.DisplayName) ? "؟" : row.DisplayName.Trim()[..1])</span>
+                                    <div>
+                                        <b>@row.DisplayName</b>
+                                        <small>@row.UserName</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                @if (row.EmployeeId.HasValue && !string.IsNullOrWhiteSpace(row.EmployeeName))
+                                {
+                                    <a href="/Employees/Profile?id=@row.EmployeeId" style="color:var(--zua-teal);text-decoration:none;font-weight:800">@row.EmployeeName</a>
+                                    <small style="color:var(--zua-muted)"> @row.EmployeeNo</small>
+                                }
+                                else
+                                {
+                                    <span style="color:var(--zua-muted)">بلا ربط</span>
+                                }
+                            </td>
+                            <td><span class="zua-chip role">@row.CompatibilityRole</span></td>
+                            <td><span class="zua-chip @row.StatusCss">@row.StatusLabel</span></td>
+                            <td><span class="zua-chip @(row.IsActive ? "on" : "off")">@(row.IsActive ? "فعال" : "معطل")</span></td>
+                            <td style="direction:ltr;text-align:end;font-size:12px;color:var(--zua-muted)">
+                                @(row.LastLoginAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—")
+                            </td>
+                            <td>
+                                <div class="zua-actions">
+                                    @if (row.CanEdit)
+                                    {
+                                        <a class="zua-btn ghost" style="display:inline-flex;align-items:center;text-decoration:none"
+                                           href="?EditLoginId=@row.LoginId&EditSystemUserId=@row.SystemUserId&Search=@Model.Search&Status=@Model.Status">تعديل</a>
+                                    }
+                                    @if (row.CanToggle)
+                                    {
+                                        <form method="post" asp-page-handler="Toggle" style="display:inline">
+                                            <input type="hidden" name="loginId" value="@row.LoginId" />
+                                            <input type="hidden" name="search" value="@Model.Search" />
+                                            <input type="hidden" name="status" value="@Model.Status" />
+                                            <button type="submit" class="zua-btn ghost">@(row.IsActive ? "تعطيل" : "تفعيل")</button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
 
-            <form method="post"
-                  asp-page-handler="Save"
-                  class="nx-identity-form">
-                <input asp-for="Input.LoginId"
-                       type="hidden" />
-                <input asp-for="Input.SystemUserId"
-                       type="hidden" />
+    @* ---------- سلايد الإنشاء/التعديل (نفس نمط سلايدات الملف 360°) ---------- *@
+    <div class="hrms-slideover-backdrop" id="zua-backdrop" onclick="zuaClose()"></div>
+    <aside class="hrms-slideover" id="zua-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="zua-slide-title">@(Model.Input.IsEditing ? "تعديل الحساب" : "حساب جديد")</h2>
+            <button type="button" class="hrms-slideover-close" onclick="zuaClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Save" class="zua-form">
+                <input type="hidden" asp-for="Input.LoginId" />
+                <input type="hidden" asp-for="Input.SystemUserId" />
+                <input type="hidden" name="Search" value="@Model.Search" />
+                <input type="hidden" name="Status" value="@Model.Status" />
 
-                <label class="nx-identity-field wide">
-                    <span>الموظف المرتبط</span>
-                    <select asp-for="Input.EmployeeId"
-                            data-employee-select>
-                        <option value="">
-                            بدون ربط بموظف
-                        </option>
+                <label>الموظف المرتبط (اختياري)
+                    <select asp-for="Input.EmployeeId">
+                        <option value="">بدون ربط بموظف</option>
                         @foreach (var employee in Model.Employees)
                         {
-                            var unavailable =
-                                employee.IsLinked &&
-                                employee.Id != Model.Input.EmployeeId;
-
-                            <option value="@employee.Id"
-                                    disabled="@unavailable">
-                                @employee.DisplayText
-                            </option>
+                            <option value="@employee.Id">@employee.FullName — @employee.EmployeeNo@(employee.IsLinked ? " · مرتبط" : "")</option>
                         }
                     </select>
-                    <small>
-                        يمنع النظام ربط الموظف بأكثر من حساب.
-                    </small>
+                    <span class="hint">عند اختيار موظف يُعتمد اسمه تلقائياً إن تُرك الاسم فارغاً.</span>
                 </label>
 
-                <label class="nx-identity-field">
-                    <span>الاسم الكامل</span>
-                    <input asp-for="Input.FullName"
-                           maxlength="150"
-                           autocomplete="name" />
-                    <small>
-                        عند اختيار موظف يعتمد النظام اسم الموظف المسجل.
-                    </small>
-                </label>
-
-                <label class="nx-identity-field">
-                    <span>اسم المستخدم</span>
-                    <input asp-for="Input.UserName"
-                           maxlength="100"
-                           required
-                           autocomplete="username" />
-                </label>
-
-                <label class="nx-identity-field">
-                    <span>البريد الإلكتروني</span>
-                    <input asp-for="Input.Email"
-                           type="email"
-                           maxlength="150"
-                           autocomplete="email" />
-                </label>
-
-                <label class="nx-identity-field">
-                    <span>دور التوافق</span>
-                    <select asp-for="Input.CompatibilityRole"
-                            data-role-select>
-                        @foreach (var role in Model.Roles)
-                        {
-                            <option value="@role.Value"
-                                    data-template="@role.SystemTemplate">
-                                @role.Label · @role.Value
-                            </option>
-                        }
-                    </select>
-                    <small>
-                        الدور قالب أولي؛ الصلاحيات المباشرة تبقى المرجع النهائي.
-                    </small>
-                </label>
-
-                <label class="nx-identity-field">
-                    <span>
-                        @(Model.Input.LoginId > 0
-                            ? "كلمة مرور جديدة"
-                            : "كلمة المرور")
-                    </span>
-                    <div class="nx-identity-password">
-                        <input asp-for="Input.Password"
-                               type="password"
-                               minlength="8"
-                               autocomplete="new-password"
-                               data-password-input />
-                        <button type="button"
-                                data-toggle-password
-                                aria-label="إظهار أو إخفاء كلمة المرور">
-                            عرض
-                        </button>
-                    </div>
-                    @if (Model.Input.LoginId > 0)
-                    {
-                        <small>
-                            اتركها فارغة للإبقاء على كلمة المرور الحالية.
-                        </small>
-                    }
-                </label>
-
-                <label class="nx-identity-field">
-                    <span>تأكيد كلمة المرور</span>
-                    <input asp-for="Input.ConfirmPassword"
-                           type="password"
-                           minlength="8"
-                           autocomplete="new-password"
-                           data-password-confirm />
-                </label>
-
-                <label class="nx-identity-field wide">
-                    <span>ملاحظات إدارية</span>
-                    <textarea asp-for="Input.Notes"
-                              maxlength="500"
-                              rows="3"></textarea>
-                </label>
-
-                <label class="nx-identity-active wide">
-                    <input asp-for="Input.IsActive" />
-                    <span>الحساب فعال ويسمح له بتسجيل الدخول</span>
-                </label>
-
-                <div class="nx-identity-form-summary wide">
-                    <span>قالب SystemUser:</span>
-                    <strong data-system-template>Viewer</strong>
+                <div class="row2">
+                    <label>الاسم الكامل
+                        <input asp-for="Input.FullName" placeholder="اسم العرض" />
+                    </label>
+                    <label>اسم المستخدم *
+                        <input asp-for="Input.UserName" required dir="ltr" placeholder="username" />
+                    </label>
                 </div>
 
-                <button type="submit"
-                        class="nx-identity-btn primary wide">
-                    @(Model.Input.IsEditing
-                        ? "حفظ التحديث والربط"
-                        : "إنشاء الحساب الموحد")
-                </button>
-            </form>
-        </aside>
-
-        <main class="nx-identity-list-area">
-            <section class="nx-identity-filter-panel">
-                <form method="get"
-                      class="nx-identity-filters">
-                    <label>
-                        <span>بحث</span>
-                        <input asp-for="Search"
-                               placeholder="الاسم، المستخدم، الموظف، الدور..." />
+                <div class="row2">
+                    <label>البريد الإلكتروني
+                        <input asp-for="Input.Email" type="email" dir="ltr" placeholder="user@company.com" />
                     </label>
-
-                    <label>
-                        <span>حالة الربط</span>
-                        <select asp-for="Status">
-                            <option value="">جميع الحالات</option>
-                            <option value="Linked">مرتبط بشكل صحيح</option>
-                            <option value="NeedsSync">يحتاج مزامنة</option>
-                            <option value="LoginOnly">حساب دخول فقط</option>
-                            <option value="SystemOnly">هوية صلاحيات فقط</option>
-                            <option value="Conflict">تعارض في الربط</option>
+                    <label>الدور
+                        <select asp-for="Input.CompatibilityRole">
+                            @foreach (var role in Model.Roles)
+                            {
+                                <option value="@role.Value">@role.Label</option>
+                            }
                         </select>
                     </label>
+                </div>
 
-                    <div class="nx-identity-filter-actions">
-                        <button type="submit"
-                                class="nx-identity-btn primary">
-                            تطبيق
-                        </button>
-                        <a asp-page="./Index"
-                           class="nx-identity-btn secondary">
-                            مسح
-                        </a>
-                    </div>
-                </form>
-            </section>
+                <div class="row2">
+                    <label>كلمة المرور @(Model.Input.IsEditing ? "(فارغة = بلا تغيير)" : "*")
+                        <input asp-for="Input.Password" type="password" dir="ltr" autocomplete="new-password" />
+                    </label>
+                    <label>تأكيد كلمة المرور
+                        <input asp-for="Input.ConfirmPassword" type="password" dir="ltr" autocomplete="new-password" />
+                    </label>
+                </div>
 
-            <section class="nx-identity-list">
-                @foreach (var identity in Model.Identities)
-                {
-                    <article class="nx-identity-card">
-                        <header>
-                            <div class="nx-identity-person">
-                                <span class="nx-identity-avatar">
-                                    @(string.IsNullOrWhiteSpace(identity.DisplayName)
-                                        ? "N"
-                                        : identity.DisplayName.Trim()[0])
-                                </span>
+                <label>ملاحظات
+                    <textarea asp-for="Input.Notes" rows="2"></textarea>
+                </label>
 
-                                <div>
-                                    <h3>
-                                        @(string.IsNullOrWhiteSpace(identity.DisplayName)
-                                            ? identity.UserName
-                                            : identity.DisplayName)
-                                    </h3>
-                                    <code>@identity.UserName</code>
-                                </div>
-                            </div>
+                <label style="flex-direction:row;align-items:center;gap:8px">
+                    <input asp-for="Input.IsActive" type="checkbox" style="min-height:auto" /> الحساب فعال
+                </label>
 
-                            <span class="nx-identity-link-status @identity.StatusCss">
-                                @identity.StatusLabel
-                            </span>
-                        </header>
-
-                        <div class="nx-identity-details">
-                            <span>
-                                <strong>الموظف:</strong>
-                                @(string.IsNullOrWhiteSpace(identity.EmployeeName)
-                                    ? "غير مرتبط"
-                                    : $"{identity.EmployeeNo} - {identity.EmployeeName}")
-                            </span>
-                            <span>
-                                <strong>دور الدخول:</strong>
-                                @identity.CompatibilityRole
-                            </span>
-                            <span>
-                                <strong>قالب الصلاحيات:</strong>
-                                @identity.SystemRoleLabel
-                            </span>
-                            <span>
-                                <strong>الصلاحيات المباشرة:</strong>
-                                @identity.PermissionCount
-                            </span>
-                            <span>
-                                <strong>الحالة:</strong>
-                                @(identity.IsActive ? "فعال" : "متوقف")
-                            </span>
-                            <span>
-                                <strong>آخر دخول:</strong>
-                                @(identity.LastLoginAt?.ToString("yyyy/MM/dd HH:mm")
-                                    ?? "لم يسجل الدخول")
-                            </span>
-                        </div>
-
-                        @if (identity.LinkStatus ==
-                            IndexModel.IdentityLinkStatus.Conflict)
-                        {
-                            <div class="nx-identity-conflict-note">
-                                يوجد أكثر من سجل يطابق الموظف أو اسم المستخدم.
-                                أوقف التعديل حتى تتم مراجعة التعارض يدوياً.
-                            </div>
-                        }
-
-                        <footer>
-                            <div class="nx-identity-ids">
-                                <span>Login #@identity.LoginId</span>
-                                <span>System #@identity.SystemUserId</span>
-                            </div>
-
-                            <div class="nx-identity-actions">
-                                @if (identity.CanEdit)
-                                {
-                                    <a asp-page="./Index"
-                                       asp-route-EditLoginId="@identity.LoginId"
-                                       asp-route-EditSystemUserId="@identity.SystemUserId"
-                                       asp-route-Search="@Model.Search"
-                                       asp-route-Status="@Model.Status"
-                                       class="nx-identity-btn secondary">
-                                        @(identity.LoginId == 0 ||
-                                          identity.SystemUserId == 0
-                                            ? "إكمال الربط"
-                                            : "تعديل")
-                                    </a>
-                                }
-
-                                @if (identity.CanToggle)
-                                {
-                                    <form method="post"
-                                          asp-page-handler="Toggle"
-                                          asp-route-loginId="@identity.LoginId"
-                                          asp-route-search="@Model.Search"
-                                          asp-route-status="@Model.Status"
-                                          data-toggle-identity
-                                          data-message="@(identity.IsActive
-                                              ? "سيتم تعطيل تسجيل الدخول لهذا الحساب."
-                                              : "سيتم تفعيل تسجيل الدخول لهذا الحساب.")">
-                                        <button type="submit"
-                                                class="nx-identity-btn @(identity.IsActive ? "danger" : "success")">
-                                            @(identity.IsActive ? "تعطيل" : "تفعيل")
-                                        </button>
-                                    </form>
-                                }
-                            </div>
-                        </footer>
-                    </article>
-                }
-
-                @if (!Model.Identities.Any())
-                {
-                    <div class="nx-identity-empty">
-                        <h3>لا توجد نتائج</h3>
-                        <p>غيّر البحث أو حالة الربط لعرض حسابات أخرى.</p>
-                    </div>
-                }
-            </section>
-        </main>
-    </div>
-</div>
+                <button type="submit" class="zua-btn">@(Model.Input.IsEditing ? "حفظ التعديلات" : "إنشاء الحساب")</button>
+            </form>
+        </div>
+    </aside>
+</section>
 
 @section Scripts {
-    <script src="~/js/user-access.js"
-            asp-append-version="true"></script>
+    <script>
+        // فتح/إغلاق سلايد الحساب — التعديل يفتح تلقائياً عندما يعبّئه السيرفر (EditLoginId).
+        function zuaOpen() {
+            document.getElementById('zua-slide').classList.add('open');
+            document.getElementById('zua-backdrop').classList.add('open');
+        }
+        function zuaClose() {
+            document.getElementById('zua-slide').classList.remove('open');
+            document.getElementById('zua-backdrop').classList.remove('open');
+        }
+        function zuaOpenCreate() {
+            var form = document.querySelector('#zua-slide form');
+            form.reset();
+            document.getElementById('Input_LoginId').value = '0';
+            document.getElementById('Input_SystemUserId').value = '0';
+            document.getElementById('zua-slide-title').textContent = 'حساب جديد';
+            zuaOpen();
+        }
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') zuaClose(); });
+
+        @if (Model.Input.IsEditing)
+        {
+            @:zuaOpen();
+        }
+    </script>
 }
