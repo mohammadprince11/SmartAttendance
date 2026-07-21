@@ -224,13 +224,14 @@ VALUES (@PollId, @OptionId, @EmployeeId, SYSUTCDATETIME());
             reason = "تم الإرسال من بوابة الموظف";
         }
 
-        await HrmsDatabase.ExecuteAsync(
+        var requestId = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
             """
 INSERT INTO SelfServiceRequests
 (EmployeeId, RequestType, CreatedAt, FromDate, ToDate, Reason, Status)
 VALUES
 (@EmployeeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @Reason, 'Pending');
+SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
             {
@@ -240,6 +241,12 @@ VALUES
                 HrmsDatabase.AddParameter(command, "@ToDate", toDate);
                 HrmsDatabase.AddParameter(command, "@Reason", reason);
             });
+
+        // سريان الموافقات: حلّ القالب وتجميد خطوات اللجنة على الطلب.
+        if (requestId > 0)
+        {
+            await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, type, employeeId);
+        }
 
         StatusMessage = $"تم إرسال طلب {type} بنجاح وهو الآن قيد المراجعة.";
         return RedirectToPage(new { tab = returnTab ?? "requests" });

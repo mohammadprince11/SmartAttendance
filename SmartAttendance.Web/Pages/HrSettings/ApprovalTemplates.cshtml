@@ -1,0 +1,385 @@
+@page "/HrSettings/ApprovalTemplates"
+@model SmartAttendance.Web.Pages.HrSettings.ApprovalTemplatesModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+@using System.Text.Json
+@Html.AntiForgeryToken()
+
+@{
+    ViewData["Title"] = "قوالب الموافقات";
+    var modules = ApprovalTemplateStore.RequestTypes.GroupBy(t => t.Module);
+    var templatesJson = JsonSerializer.Serialize(Model.Templates.Select(t => new
+    {
+        t.Id, t.Name, t.NameEn, t.IsActive, t.HasConditions,
+        t.CondBranchId, t.CondDepartmentId, t.CondWorkType,
+        t.AutoRejectUnknownCommittee, t.CancelLimitDays,
+        t.CommentRequiredOnReject, t.AttachmentRequiredOnRequest,
+        t.EscalationDays, t.EscalationTo, t.NotifyJson,
+        Steps = t.Steps.Select(s => new { s.ApproverType, s.RoleName, s.UserName, s.DisplayName }),
+        Watchers = t.Watchers.Select(w => w.UserName)
+    }));
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+
+<style>
+    .apt-layout { display: grid; grid-template-columns: 250px 1fr; gap: 14px; align-items: start; }
+    @@media (max-width: 900px) { .apt-layout { grid-template-columns: 1fr; } }
+    .apt-catalog h3 { font-size: 12px; color: var(--nxr-muted, #9FB0BE); margin: 12px 4px 6px; }
+    .apt-catalog a { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; color: var(--nxr-text, #E6EAEE); text-decoration: none; font-size: 13px; font-weight: 800; }
+    .apt-catalog a:hover { background: rgba(18,217,227,.06); }
+    .apt-catalog a.active { background: rgba(18,217,227,.12); color: #12D9E3; }
+    .apt-count { font-size: 11px; opacity: .75; background: rgba(157,184,204,.14); border-radius: 999px; padding: 1px 8px; }
+    .apt-row { cursor: grab; }
+    .apt-row.apt-dragging { opacity: .4; }
+    .apt-chain { display: flex; flex-wrap: wrap; gap: 4px; }
+    .apt-chip { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: rgba(18,217,227,.09); border: 1px solid rgba(18,217,227,.2); }
+    .apt-slide { position: fixed; inset: 0 auto 0 0; width: min(560px, 96vw); transform: translateX(-100%); transition: transform .35s ease; background: linear-gradient(180deg, rgba(7,18,31,.99), rgba(5,13,23,.99)); border-inline-end: 1px solid rgba(18,217,227,.16); z-index: 1080; overflow-y: auto; padding: 18px; }
+    .apt-slide.open { transform: translateX(0); }
+    .apt-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1079; display: none; }
+    .apt-backdrop.open { display: block; }
+    .apt-slide h2 { margin: 0 0 12px; font-size: 17px; }
+    .apt-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .apt-form-grid .full { grid-column: 1 / -1; }
+    .apt-steps { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .apt-step { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid rgba(157,184,204,.18); border-radius: 10px; font-size: 13px; font-weight: 800; }
+    .apt-step .num { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: rgba(18,217,227,.12); color: #12D9E3; font-size: 12px; flex: none; }
+    .apt-step button { margin-inline-start: auto; background: none; border: 0; color: #f87171; cursor: pointer; font-weight: 900; }
+    .apt-matrix { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .apt-matrix th, .apt-matrix td { border: 1px solid rgba(157,184,204,.16); padding: 6px 8px; text-align: center; }
+    .apt-sim { margin-top: 14px; }
+    .apt-sim-result { margin-top: 8px; font-size: 13px; font-weight: 800; }
+</style>
+
+<section class="nxhs-page nxhs-simple" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">إعدادات الموارد البشرية</a>
+        <h1>قوالب الموافقات</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <div class="apt-layout">
+        <aside class="nxhs-panel apt-catalog">
+            @foreach (var module in modules)
+            {
+                <h3>@module.Key</h3>
+                foreach (var type in module)
+                {
+                    var count = Model.Counts.TryGetValue(type.Key, out var c) ? c : 0;
+                    <a href="?Type=@type.Key" class="@(type.Key == Model.Type ? "active" : "")">
+                        <span>@type.Label</span>
+                        <span class="apt-count">@count</span>
+                    </a>
+                }
+            }
+        </aside>
+
+        <section class="nxhs-panel">
+            <header class="nxhs-search-head">
+                <h2>قوالب «@Model.SelectedType?.Label»</h2>
+                <button type="button" class="nxhs-modal-delete" style="background:#0e7490" onclick="aptOpen(0)">+ قالب جديد</button>
+            </header>
+            <p class="nxhs-helper">اسحب الصفوف لترتيب أولوية التنفيذ — المحرك يختار أول قالب نشط تنطبق شروطه.</p>
+
+            <div class="nxhs-table-wrap">
+                <table class="nxhs-table">
+                    <thead>
+                        <tr><th style="width:34px"></th><th>اسم القالب</th><th>لجنة الموافقة</th><th>لديه شروط</th><th>الحالة</th><th>الإجراء</th></tr>
+                    </thead>
+                    <tbody id="aptRows">
+                        @foreach (var template in Model.Templates)
+                        {
+                            <tr class="apt-row" draggable="true" data-id="@template.Id">
+                                <td style="cursor:grab">⠿</td>
+                                <td><b>@template.Name</b></td>
+                                <td>
+                                    <span class="apt-chain">
+                                        @foreach (var step in template.Steps)
+                                        {
+                                            <span class="apt-chip">@step.DisplayName</span>
+                                        }
+                                    </span>
+                                </td>
+                                <td>@(template.HasConditions ? "نعم" : "—")</td>
+                                <td>@(template.IsActive ? "نشط" : "متوقف")</td>
+                                <td style="white-space:nowrap">
+                                    <button type="button" class="nxhs-modal-cancel" onclick="aptOpen(@template.Id)">تعديل</button>
+                                    <form method="post" asp-page-handler="Delete" asp-route-Type="@Model.Type" style="display:inline"
+                                          onsubmit="return confirm('حذف القالب «@template.Name»؟')">
+                                        <input type="hidden" name="id" value="@template.Id" />
+                                        <button type="submit" class="nxhs-delete-trigger">حذف</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        @if (!Model.Templates.Any())
+                        {
+                            <tr><td colspan="6" style="text-align:center;opacity:.7">لا قوالب لهذا النوع — الطلبات تتبع المسار الافتراضي (المدير المباشر ثم HR).</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="apt-sim">
+                <h3 style="font-size:13px;margin:0 0 6px">محاكاة: أي قالب ينطبق؟</h3>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input id="aptSimEmp" type="number" min="1" placeholder="رقم الموظف (Id)" style="max-width:180px" />
+                    <button type="button" class="nxhs-modal-cancel" onclick="aptSimulate()">فحص</button>
+                </div>
+                <div id="aptSimResult" class="apt-sim-result"></div>
+            </div>
+        </section>
+    </div>
+
+    <div class="apt-backdrop" id="aptBackdrop" onclick="aptClose()"></div>
+    <aside class="apt-slide" id="aptSlide">
+        <h2 id="aptSlideTitle">قالب جديد</h2>
+        <form method="post" asp-page-handler="Save" asp-route-Type="@Model.Type" id="aptForm">
+            <input type="hidden" name="Id" id="f_Id" value="0" />
+            <div class="apt-form-grid">
+                <label class="full">اسم القالب (عربي)
+                    <input name="Name" id="f_Name" required />
+                </label>
+                <label class="full">Template Name (EN)
+                    <input name="NameEn" id="f_NameEn" dir="ltr" />
+                </label>
+                <label class="nxhs-check-line"><input type="checkbox" name="IsActive" id="f_IsActive" value="true" checked /> <b>نشط</b></label>
+                <label class="nxhs-check-line"><input type="checkbox" name="HasConditions" id="f_HasConditions" value="true" onchange="aptToggleConds()" /> <b>تطبيق اعتماداً على شروط</b></label>
+            </div>
+
+            <div id="aptConds" class="apt-form-grid" style="display:none;margin-top:8px">
+                <label>الفرع
+                    <select name="CondBranchId" id="f_CondBranchId">
+                        <option value="">أي فرع</option>
+                        @foreach (var branch in Model.Branches) { <option value="@branch.Id">@branch.Name</option> }
+                    </select>
+                </label>
+                <label>القسم
+                    <select name="CondDepartmentId" id="f_CondDepartmentId">
+                        <option value="">أي قسم</option>
+                        @foreach (var department in Model.Departments) { <option value="@department.Id">@department.Name</option> }
+                    </select>
+                </label>
+                <label>نوع الدوام
+                    <select name="CondWorkType" id="f_CondWorkType">
+                        <option value="">أي نوع</option>
+                        @foreach (var workType in Model.WorkTypes) { <option value="@workType">@workType</option> }
+                    </select>
+                </label>
+            </div>
+
+            <h3 style="font-size:13px;margin:14px 0 4px">لجنة الموافقة (بالترتيب)</h3>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                <select id="aptStepType" onchange="aptStepTypeChanged()">
+                    <option value="DirectManager">المدير المباشر</option>
+                    <option value="Role">دور</option>
+                    <option value="User">مستخدم محدد</option>
+                </select>
+                <select id="aptStepRole" style="display:none">
+                    <option value="HR Manager">HR Manager</option>
+                    <option value="HR Officer">HR Officer</option>
+                    <option value="Branch Manager">Branch Manager</option>
+                    <option value="Admin">Admin</option>
+                </select>
+                <select id="aptStepUser" style="display:none">
+                    @foreach (var user in Model.Users) { <option value="@user">@user</option> }
+                </select>
+                <button type="button" class="nxhs-modal-cancel" onclick="aptAddStep()">+ إضافة خطوة</button>
+            </div>
+            <div class="apt-steps" id="aptSteps"></div>
+
+            <h3 style="font-size:13px;margin:14px 0 4px">مشاهدون (بلا صلاحية قرار)</h3>
+            <select name="Watchers" id="f_Watchers" multiple size="4" style="width:100%">
+                @foreach (var user in Model.Users) { <option value="@user">@user</option> }
+            </select>
+
+            <h3 style="font-size:13px;margin:14px 0 4px">مصفوفة الإشعارات</h3>
+            <table class="apt-matrix">
+                <thead><tr><th></th><th>عند الطلب</th><th>الموافقة</th><th>الرفض</th><th>الإلغاء</th></tr></thead>
+                <tbody>
+                    <tr>
+                        <th>الموظف نفسه</th>
+                        @foreach (var evt in new[] { "Submit", "Approve", "Reject", "Cancel" })
+                        { <td><input type="checkbox" name="notify_Employee_@evt" value="true" class="apt-nt" data-a="Employee" data-e="@evt" /></td> }
+                    </tr>
+                    <tr>
+                        <th>اللجان السابقة</th>
+                        @foreach (var evt in new[] { "Submit", "Approve", "Reject", "Cancel" })
+                        { <td><input type="checkbox" name="notify_Committee_@evt" value="true" class="apt-nt" data-a="Committee" data-e="@evt" /></td> }
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="font-size:13px;margin:14px 0 4px">التصعيد وقواعد الطلب</h3>
+            <div class="apt-form-grid">
+                <label>تصعيد بعد (أيام بلا قرار)
+                    <input type="number" name="EscalationDays" id="f_EscalationDays" min="1" />
+                </label>
+                <label>التصعيد إلى
+                    <select name="EscalationTo" id="f_EscalationTo">
+                        <option value="">—</option>
+                        <option value="HR Manager">HR Manager</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                </label>
+                <label>منع إلغاء الطلب بعد (أيام)
+                    <input type="number" name="CancelLimitDays" id="f_CancelLimitDays" min="1" />
+                </label>
+                <label class="nxhs-check-line"><input type="checkbox" name="AutoReject" id="f_AutoReject" value="true" /> <b>رفض تلقائي إن لم يُتعرَّف على أعضاء اللجنة</b></label>
+                <label class="nxhs-check-line"><input type="checkbox" name="CommentReq" id="f_CommentReq" value="true" /> <b>التعليق مطلوب عند الرفض</b></label>
+                <label class="nxhs-check-line"><input type="checkbox" name="AttachReq" id="f_AttachReq" value="true" /> <b>المرفق مطلوب عند تقديم الطلب</b></label>
+            </div>
+
+            <footer class="nxhs-actions" style="margin-top:16px">
+                <button type="submit">حفظ القالب</button>
+                <button type="button" class="nxhs-modal-cancel" onclick="aptClose()">إلغاء</button>
+            </footer>
+        </form>
+    </aside>
+</section>
+
+<script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+    <script>
+        var aptTemplates = @Html.Raw(templatesJson);
+        var aptType = "@Model.Type";
+
+        function aptToggleConds() {
+            document.getElementById("aptConds").style.display =
+                document.getElementById("f_HasConditions").checked ? "grid" : "none";
+        }
+
+        function aptStepTypeChanged() {
+            var t = document.getElementById("aptStepType").value;
+            document.getElementById("aptStepRole").style.display = t === "Role" ? "" : "none";
+            document.getElementById("aptStepUser").style.display = t === "User" ? "" : "none";
+        }
+
+        function aptAddStep(type, role, user, display) {
+            type = type || document.getElementById("aptStepType").value;
+            role = role !== undefined ? role : document.getElementById("aptStepRole").value;
+            user = user !== undefined ? user : document.getElementById("aptStepUser").value;
+            display = display || (type === "Role" ? role : type === "User" ? user : "المدير المباشر");
+
+            var wrap = document.getElementById("aptSteps");
+            var row = document.createElement("div");
+            row.className = "apt-step";
+            row.innerHTML =
+                '<span class="num"></span><span>' + display + "</span>" +
+                '<input type="hidden" name="StepType" value="' + type + '" />' +
+                '<input type="hidden" name="StepRole" value="' + (type === "Role" ? role : "") + '" />' +
+                '<input type="hidden" name="StepUser" value="' + (type === "User" ? user : "") + '" />' +
+                '<button type="button" onclick="this.parentElement.remove(); aptNumber();">×</button>';
+            wrap.appendChild(row);
+            aptNumber();
+        }
+
+        function aptNumber() {
+            var rows = document.querySelectorAll("#aptSteps .apt-step .num");
+            rows.forEach(function (n, i) { n.textContent = i + 1; });
+        }
+
+        function aptOpen(id) {
+            var form = document.getElementById("aptForm");
+            form.reset();
+            document.getElementById("aptSteps").innerHTML = "";
+            document.getElementById("f_Id").value = id || 0;
+            document.getElementById("aptSlideTitle").textContent = id ? "تعديل القالب" : "قالب جديد";
+
+            if (id) {
+                var t = aptTemplates.find(function (x) { return x.Id === id; });
+                if (t) {
+                    document.getElementById("f_Name").value = t.Name || "";
+                    document.getElementById("f_NameEn").value = t.NameEn || "";
+                    document.getElementById("f_IsActive").checked = !!t.IsActive;
+                    document.getElementById("f_HasConditions").checked = !!t.HasConditions;
+                    document.getElementById("f_CondBranchId").value = t.CondBranchId || "";
+                    document.getElementById("f_CondDepartmentId").value = t.CondDepartmentId || "";
+                    document.getElementById("f_CondWorkType").value = t.CondWorkType || "";
+                    document.getElementById("f_AutoReject").checked = !!t.AutoRejectUnknownCommittee;
+                    document.getElementById("f_CommentReq").checked = !!t.CommentRequiredOnReject;
+                    document.getElementById("f_AttachReq").checked = !!t.AttachmentRequiredOnRequest;
+                    document.getElementById("f_EscalationDays").value = t.EscalationDays || "";
+                    document.getElementById("f_EscalationTo").value = t.EscalationTo || "";
+                    document.getElementById("f_CancelLimitDays").value = t.CancelLimitDays || "";
+                    (t.Steps || []).forEach(function (s) {
+                        aptAddStep(s.ApproverType, s.RoleName || "", s.UserName || "", s.DisplayName);
+                    });
+                    var watchers = t.Watchers || [];
+                    Array.prototype.forEach.call(document.getElementById("f_Watchers").options, function (o) {
+                        o.selected = watchers.indexOf(o.value) > -1;
+                    });
+                    if (t.NotifyJson) {
+                        try {
+                            var m = JSON.parse(t.NotifyJson);
+                            document.querySelectorAll(".apt-nt").forEach(function (cb) {
+                                cb.checked = !!(m[cb.dataset.a] && m[cb.dataset.a].indexOf(cb.dataset.e) > -1);
+                            });
+                        } catch (e) { }
+                    }
+                }
+            }
+            aptToggleConds();
+            aptStepTypeChanged();
+            document.getElementById("aptSlide").classList.add("open");
+            document.getElementById("aptBackdrop").classList.add("open");
+        }
+
+        function aptClose() {
+            document.getElementById("aptSlide").classList.remove("open");
+            document.getElementById("aptBackdrop").classList.remove("open");
+        }
+        document.addEventListener("keydown", function (e) { if (e.key === "Escape") aptClose(); });
+
+        // سحب وإفلات لترتيب الأولوية (نفس نمط باني التقارير) + حفظ فوري.
+        (function () {
+            var body = document.getElementById("aptRows");
+            if (!body) return;
+            var dragging = null;
+            body.addEventListener("dragstart", function (e) {
+                var row = e.target.closest(".apt-row");
+                if (!row) return;
+                dragging = row;
+                row.classList.add("apt-dragging");
+            });
+            body.addEventListener("dragover", function (e) {
+                e.preventDefault();
+                var over = e.target.closest(".apt-row");
+                if (!over || !dragging || over === dragging) return;
+                var rect = over.getBoundingClientRect();
+                var before = e.clientY < rect.top + rect.height / 2;
+                body.insertBefore(dragging, before ? over : over.nextSibling);
+            });
+            body.addEventListener("drop", function (e) { e.preventDefault(); });
+            body.addEventListener("dragend", function () {
+                if (!dragging) return;
+                dragging.classList.remove("apt-dragging");
+                dragging = null;
+                var order = Array.prototype.map.call(body.querySelectorAll(".apt-row"), function (r) { return r.dataset.id; }).join(",");
+                var data = new FormData();
+                data.append("order", order);
+                data.append("__RequestVerificationToken", document.querySelector('input[name="__RequestVerificationToken"]').value);
+                fetch("?Type=" + aptType + "&handler=Reorder", { method: "POST", body: data, credentials: "same-origin" });
+            });
+        })();
+
+        function aptSimulate() {
+            var empId = document.getElementById("aptSimEmp").value;
+            var target = document.getElementById("aptSimResult");
+            if (!empId) { target.textContent = "أدخل رقم الموظف."; return; }
+            fetch("?handler=Resolve&type=" + aptType + "&employeeId=" + empId, { credentials: "same-origin" })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (!d.found) { target.textContent = (d.employee ? d.employee + ": " : "") + d.message; return; }
+                    target.innerHTML = "<b>" + d.employee + "</b> ← قالب «" + d.template + "»" +
+                        (d.conditional ? " (شرطي)" : "") + " — السلسلة: " +
+                        d.chain.map(function (c) { return '<span class="apt-chip">' + c + "</span>"; }).join(" ← ");
+                })
+                .catch(function () { target.textContent = "تعذر الفحص."; });
+        }
+    </script>
+}

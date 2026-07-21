@@ -2,42 +2,42 @@
 @model SmartAttendance.Web.Pages.Approvals.IndexModel
 
 @{
-    ViewData["Title"] = "Approvals";
+    ViewData["Title"] = "الموافقات";
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .apv-chain { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .apv-step { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(157,184,204,.25); opacity: .65; }
+    .apv-step.done { border-color: rgba(34,197,94,.5); color: #4ade80; opacity: 1; }
+    .apv-step.current { border-color: rgba(18,217,227,.6); color: #12D9E3; opacity: 1; box-shadow: 0 0 0 1px rgba(18,217,227,.25); }
+    .apv-step.rejected { border-color: rgba(248,113,113,.6); color: #f87171; opacity: 1; }
+    .apv-template { font-size: 11px; opacity: .7; display: block; margin-top: 2px; }
+</style>
 
 <div class="hrms-page">
     <div class="page-header">
         <div>
             <h1>الموافقات</h1>
-            <p>مسار موافقات على مرحلتين: المدير المباشر ثم HR.</p>
+            <p>لجان الموافقة تُبنى من «قوالب الموافقات» — الموافقة تقدّم الخطوة التالية حتى الاعتماد النهائي.</p>
         </div>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(Model.Message))
     {
-        <div class="hrms-alert success">@Model.Message</div>
+        <div class="hrms-alert @(Model.MessageIsError ? "danger" : "success")">@Model.Message</div>
     }
 
     <form method="get" class="hrms-filter-card">
         <div class="hrms-grid-3">
             <div class="hrms-field">
-                <label>مرحلة الموافقة</label>
-                <select asp-for="Step">
-                    <option value="Manager">المدير المباشر</option>
-                    <option value="HR">HR</option>
-                    <option value="All">الكل</option>
-                </select>
-            </div>
-
-            <div class="hrms-field">
                 <label>الحالة</label>
                 <select asp-for="Status">
-                    <option value="Pending">Pending</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Rejected">Rejected</option>
-                    <option value="All">All</option>
+                    <option value="Pending">قيد الموافقة</option>
+                    <option value="Approved">معتمدة</option>
+                    <option value="Rejected">مرفوضة</option>
+                    <option value="All">الكل</option>
                 </select>
             </div>
 
@@ -55,41 +55,56 @@
                         <th>#</th>
                         <th>رقم الموظف</th>
                         <th class="text-start">الاسم</th>
-                        <th>المدير المباشر</th>
                         <th>نوع الطلب</th>
                         <th>الفترة</th>
                         <th>الحالة</th>
-                        <th>المرحلة</th>
-                        <th>موافقة المدير</th>
-                        <th>موافقة HR</th>
+                        <th class="text-start">لجنة الموافقة</th>
                         <th>السبب</th>
-                        <th>قرار</th>
+                        <th>قرار الخطوة الحالية</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var request in Model.Requests)
                     {
-                        var decisionStep = request.CurrentStep == "HR" ? "HR" : "Manager";
-
+                        Model.Flows.TryGetValue(request.Id, out var flow);
                         <tr>
                             <td>@request.Id</td>
                             <td>@request.EmployeeNo</td>
                             <td class="text-start">@request.EmployeeName</td>
-                            <td>@(string.IsNullOrWhiteSpace(request.DirectManager) ? "-" : request.DirectManager)</td>
                             <td>@request.RequestType</td>
                             <td>@request.FromDate?.ToString("yyyy-MM-dd") - @request.ToDate?.ToString("yyyy-MM-dd")</td>
                             <td><span class="hrms-badge @request.Status.ToLower()">@request.Status</span></td>
-                            <td>@request.CurrentStep</td>
-                            <td>@(string.IsNullOrWhiteSpace(request.ManagerStatus) ? "-" : request.ManagerStatus)</td>
-                            <td>@(string.IsNullOrWhiteSpace(request.HrStatus) ? "-" : request.HrStatus)</td>
+                            <td class="text-start">
+                                @if (flow != null)
+                                {
+                                    <span class="apv-chain">
+                                        @foreach (var step in flow.Steps)
+                                        {
+                                            var css = step.Status switch
+                                            {
+                                                "Approved" => "done",
+                                                "Current" => "current",
+                                                "Rejected" => "rejected",
+                                                _ => ""
+                                            };
+                                            <span class="apv-step @css">@step.DisplayName</span>
+                                        }
+                                    </span>
+                                    <span class="apv-template">قالب: @flow.TemplateName</span>
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
+                            </td>
                             <td class="text-start">@request.Reason</td>
                             <td>
-                                @if (request.Status == "Pending")
+                                @if (request.Status == "Pending" && flow?.Current != null)
                                 {
                                     <form method="post" class="hrms-actions" style="justify-content:center;">
-                                        <input asp-for="Note" placeholder="ملاحظة" style="min-height:34px;border-radius:10px;border:1px solid var(--sa-border);background:var(--sa-input);color:var(--sa-text);" />
-                                        <button asp-page-handler="Approve" asp-route-id="@request.Id" asp-route-step="@decisionStep" class="hrms-btn-success">موافقة</button>
-                                        <button asp-page-handler="Reject" asp-route-id="@request.Id" asp-route-step="@decisionStep" class="hrms-btn-danger">رفض</button>
+                                        <input asp-for="Note" placeholder="ملاحظة@(flow.CommentRequiredOnReject ? " (إلزامية عند الرفض)" : "")" style="min-height:34px;border-radius:10px;border:1px solid var(--sa-border);background:var(--sa-input);color:var(--sa-text);" />
+                                        <button asp-page-handler="Approve" asp-route-id="@request.Id" class="hrms-btn-success">موافقة</button>
+                                        <button asp-page-handler="Reject" asp-route-id="@request.Id" class="hrms-btn-danger">رفض</button>
                                     </form>
                                 }
                                 else
@@ -103,7 +118,7 @@
                     @if (!Model.Requests.Any())
                     {
                         <tr>
-                            <td colspan="12" class="hrms-empty">لا توجد طلبات حسب الفلاتر.</td>
+                            <td colspan="9" class="hrms-empty">لا توجد طلبات حسب الفلاتر.</td>
                         </tr>
                     }
                 </tbody>

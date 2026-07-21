@@ -324,7 +324,7 @@ ORDER BY AttendanceDate DESC, CheckIn DESC;",
             return false;
         }
 
-        await HrmsDatabase.ExecuteAsync(
+        var requestId = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
             @"
 DECLARE @columns nvarchar(max) = N'EmployeeId';
@@ -378,7 +378,7 @@ BEGIN SET @columns += N', Stage'; SET @values += N', ''Manager'''; END
 IF COL_LENGTH('SelfServiceRequests','CreatedAt') IS NOT NULL
 BEGIN SET @columns += N', CreatedAt'; SET @values += N', SYSUTCDATETIME()'; END
 
-DECLARE @sql nvarchar(max) = N'INSERT INTO SelfServiceRequests (' + @columns + N') VALUES (' + @values + N');';
+DECLARE @sql nvarchar(max) = N'INSERT INTO SelfServiceRequests (' + @columns + N') VALUES (' + @values + N'); SELECT CAST(SCOPE_IDENTITY() AS int);';
 
 EXEC sp_executesql @sql,
     N'@EmployeeId int, @RequestType nvarchar(100), @StartDate date, @EndDate date, @FromTime nvarchar(20), @ToTime nvarchar(20), @Reason nvarchar(500)',
@@ -399,6 +399,12 @@ EXEC sp_executesql @sql,
                 HrmsDatabase.AddParameter(command, "@ToTime", RequestInput.ToTime);
                 HrmsDatabase.AddParameter(command, "@Reason", RequestInput.Reason);
             });
+
+        // سريان الموافقات: حلّ القالب وتجميد خطوات اللجنة على الطلب.
+        if (requestId > 0)
+        {
+            await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, RequestInput.RequestType ?? string.Empty, employeeId);
+        }
 
         return true;
     }

@@ -323,6 +323,12 @@ END;
         return reader.IsDBNull(ordinal) ? 0 : Convert.ToInt32(reader.GetValue(ordinal));
     }
 
+    public static int? GetNullableInt(DbDataReader reader, string name)
+    {
+        var ordinal = reader.GetOrdinal(name);
+        return reader.IsDBNull(ordinal) ? null : Convert.ToInt32(reader.GetValue(ordinal));
+    }
+
     public static string GetString(DbDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
