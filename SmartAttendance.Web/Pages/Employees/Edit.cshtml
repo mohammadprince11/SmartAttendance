@@ -97,10 +97,39 @@
                     <input asp-for="Employee.EmployeeNo" />
                     <span asp-validation-for="Employee.EmployeeNo"></span>
                 </div>
-                <div class="nxr-edit-field nxr-span-2">
-                    <label asp-for="Employee.FullName">اسم الموظف</label>
-                    <input asp-for="Employee.FullName" />
-                    <span asp-validation-for="Employee.FullName"></span>
+                @* اسم الموظف الكامل يتولّد تلقائياً من الاسم الرباعي — لا يُدخل مرتين *@
+                <input type="hidden" asp-for="Employee.FullName" />
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.FirstName">الاسم الأول (عربي)</label>
+                    <input asp-for="Employee.FirstName" data-quad-name />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.SecondName">الاسم الثاني (عربي)</label>
+                    <input asp-for="Employee.SecondName" data-quad-name />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.ThirdName">الاسم الثالث (عربي)</label>
+                    <input asp-for="Employee.ThirdName" data-quad-name />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.LastName">اللقب (عربي)</label>
+                    <input asp-for="Employee.LastName" data-quad-name />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.FirstNameEn">First Name</label>
+                    <input asp-for="Employee.FirstNameEn" dir="ltr" />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.SecondNameEn">Second Name</label>
+                    <input asp-for="Employee.SecondNameEn" dir="ltr" />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.ThirdNameEn">Third Name</label>
+                    <input asp-for="Employee.ThirdNameEn" dir="ltr" />
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.LastNameEn">Last Name</label>
+                    <input asp-for="Employee.LastNameEn" dir="ltr" />
                 </div>
                 <div class="nxr-edit-field">
                     <label asp-for="Employee.NationalId">الرقم الوطني / البطاقة</label>
@@ -113,7 +142,7 @@
                     <span asp-validation-for="Employee.Phone"></span>
                 </div>
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.Email">الإيميل</label>
+                    <label asp-for="Employee.Email">البريد الإلكتروني (العمل)</label>
                     <input asp-for="Employee.Email" />
                     <span asp-validation-for="Employee.Email"></span>
                 </div>
@@ -163,9 +192,13 @@
                 <!-- --------------------------------------- -->
 
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.HireDate">تاريخ التعيين</label>
+                    <label asp-for="Employee.HireDate">تاريخ التعيين (العقد)</label>
                     <input name="Employee.HireDate" id="Employee_HireDate" value="@Model.Employee.HireDate.ToString("yyyy-MM-dd")" type="text" data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" />
                     <span asp-validation-for="Employee.HireDate"></span>
+                </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.JoiningDate">تاريخ المباشرة الفعلية (إن اختلفت)</label>
+                    <input name="Employee.JoiningDate" id="Employee_JoiningDate" value="@(Model.Employee.JoiningDate?.ToString("yyyy-MM-dd"))" type="text" data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" />
                 </div>
                 <div class="nxr-edit-field">
                     <label asp-for="Employee.BirthDate">تاريخ الميلاد</label>
@@ -199,40 +232,6 @@
                         @if (!string.IsNullOrWhiteSpace(Model.Employee.Nationality) && !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownNationality(Model.Employee.Nationality)) { <option value="@Model.Employee.Nationality">@Model.Employee.Nationality</option> }
                         <option value="Iraqi">عراقي</option><option value="Syrian">سوري</option><option value="Jordanian">أردني</option><option value="Lebanese">لبناني</option><option value="Saudi">سعودي</option><option value="Emirati">إماراتي</option><option value="Qatari">قطري</option><option value="Kuwaiti">كويتي</option><option value="Bahraini">بحريني</option><option value="Omani">عماني</option><option value="Egyptian">مصري</option><option value="Turkish">تركي</option><option value="Iranian">إيراني</option><option value="Indian">هندي</option><option value="Pakistani">باكستاني</option><option value="Bangladeshi">بنغلادشي</option><option value="Filipino">فلبيني</option><option value="Nepali">نيبالي</option><option value="Other">أخرى</option>
                     </select>
-                </div>
-
-                @* ---------- الاسم الرباعي (نمط كيان): يبني اسم الموظف تلقائياً ---------- *@
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.FirstName">الاسم الأول (عربي)</label>
-                    <input asp-for="Employee.FirstName" data-quad-name />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.SecondName">الاسم الثاني (عربي)</label>
-                    <input asp-for="Employee.SecondName" data-quad-name />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.ThirdName">الاسم الثالث (عربي)</label>
-                    <input asp-for="Employee.ThirdName" data-quad-name />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.LastName">اللقب (عربي)</label>
-                    <input asp-for="Employee.LastName" data-quad-name />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.FirstNameEn">First Name</label>
-                    <input asp-for="Employee.FirstNameEn" dir="ltr" />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.SecondNameEn">Second Name</label>
-                    <input asp-for="Employee.SecondNameEn" dir="ltr" />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.ThirdNameEn">Third Name</label>
-                    <input asp-for="Employee.ThirdNameEn" dir="ltr" />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.LastNameEn">Last Name</label>
-                    <input asp-for="Employee.LastNameEn" dir="ltr" />
                 </div>
 
                 @* ---------- الجنسية والإقامة ---------- *@
@@ -281,10 +280,6 @@
                 <div class="nxr-edit-field">
                     <label asp-for="Employee.PhoneExtension">امتداد الهاتف</label>
                     <input asp-for="Employee.PhoneExtension" />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.JoiningDate">تاريخ الانضمام (المباشرة)</label>
-                    <input name="Employee.JoiningDate" id="Employee_JoiningDate" value="@(Model.Employee.JoiningDate?.ToString("yyyy-MM-dd"))" type="text" data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" />
                 </div>
                 <div class="nxr-edit-field">
                     <label asp-for="Employee.WorkType">نوع الدوام</label>

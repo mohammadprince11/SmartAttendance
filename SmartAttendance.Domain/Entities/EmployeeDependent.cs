@@ -38,6 +38,15 @@ public class EmployeeDependent : AuditableEntity
 
     public bool IsCitizen { get; set; }
 
+    /// <summary>Residency permit number — relevant for non-citizen family members.</summary>
+    public string? ResidencyNo { get; set; }
+
+    /// <summary>Male / female — Kayan asks it for children and relatives.</summary>
+    public string? Gender { get; set; }
+
+    /// <summary>Currently studying — drives education allowances.</summary>
+    public bool IsStudent { get; set; }
+
     public string? MaritalStatus { get; set; }
 
     /// <summary>Listed as an emergency contact.</summary>

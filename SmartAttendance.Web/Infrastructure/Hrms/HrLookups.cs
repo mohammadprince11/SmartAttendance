@@ -19,7 +19,9 @@ public static class HrLookups
         new LookupCategory("grades", "الدرجات الوظيفية"),
         new LookupCategory("sponsors", "الكفلاء"),
         new LookupCategory("assettypes", "أنواع العهد"),
-        new LookupCategory("nationalities", "الجنسيات")
+        new LookupCategory("nationalities", "الجنسيات"),
+        new LookupCategory("salaryitems", "عناصر الراتب (العلاوات)"),
+        new LookupCategory("contracttypes", "أنواع العقود")
     };
 
     public sealed class LookupItem
@@ -86,6 +88,32 @@ BEGIN
         (N'nationalities', N'فلبيني',     N'Filipino',    90),
         (N'nationalities', N'نيبالي',     N'Nepali',      100),
         (N'nationalities', N'أخرى',       N'Other',       110);
+END;
+
+-- عناصر الراتب (العلاوات) — فئة أضيفت لاحقاً فتُزرع مستقلة (الزرع أعلاه يعمل فقط والجدول فارغ)
+IF NOT EXISTS (SELECT 1 FROM HrLookups WHERE Category = N'salaryitems')
+BEGIN
+    INSERT INTO HrLookups (Category, ArabicName, EnglishName, SortOrder)
+    VALUES
+        (N'salaryitems', N'بدل سكن',      N'Housing Allowance',   10),
+        (N'salaryitems', N'بدل مواصلات',  N'Transport Allowance', 20),
+        (N'salaryitems', N'بدل طعام',     N'Food Allowance',      30),
+        (N'salaryitems', N'بدل هاتف',     N'Phone Allowance',     40),
+        (N'salaryitems', N'بدل خطورة',    N'Hazard Allowance',    50),
+        (N'salaryitems', N'بدل شهادة',    N'Certificate Allowance', 60),
+        (N'salaryitems', N'بدل منصب',     N'Position Allowance',  70),
+        (N'salaryitems', N'أخرى',         N'Other',               80);
+END;
+
+-- أنواع العقود — فئة أضيفت لاحقاً فتُزرع مستقلة
+IF NOT EXISTS (SELECT 1 FROM HrLookups WHERE Category = N'contracttypes')
+BEGIN
+    INSERT INTO HrLookups (Category, ArabicName, EnglishName, SortOrder)
+    VALUES
+        (N'contracttypes', N'محدود 6 أشهر',  N'Limited 6 Months', 10),
+        (N'contracttypes', N'محدود سنة',     N'Limited 1 Year',   20),
+        (N'contracttypes', N'محدود سنتين',   N'Limited 2 Years',  30),
+        (N'contracttypes', N'غير محدود',     N'Unlimited',        40);
 END;
 """);
     }

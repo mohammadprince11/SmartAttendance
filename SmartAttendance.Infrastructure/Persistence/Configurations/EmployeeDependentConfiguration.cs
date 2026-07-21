@@ -19,6 +19,8 @@ public class EmployeeDependentConfiguration : IEntityTypeConfiguration<EmployeeD
         builder.Property(x => x.Nationality).HasMaxLength(100);
         builder.Property(x => x.NationalId).HasMaxLength(50);
         builder.Property(x => x.PassportNo).HasMaxLength(50);
+        builder.Property(x => x.ResidencyNo).HasMaxLength(50);
+        builder.Property(x => x.Gender).HasMaxLength(20);
         builder.Property(x => x.MaritalStatus).HasMaxLength(50);
         builder.Property(x => x.MobilePhone).HasMaxLength(50);
         builder.Property(x => x.CompanyName).HasMaxLength(200);

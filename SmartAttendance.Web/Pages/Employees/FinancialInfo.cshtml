@@ -1,0 +1,171 @@
+@page "{id:int}"
+@model SmartAttendance.Web.Pages.Employees.FinancialInfoModel
+@{
+    ViewData["Title"] = "المعلومات المالية";
+    string d(DateOnly? v) => v?.ToString("yyyy-MM-dd") ?? "";
+}
+
+<style>
+    .fin-page { direction: rtl; display: grid; gap: 16px; max-width: 1200px; margin: 0 auto; }
+    .fin-hero { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+        padding: 18px 22px; border-radius: 20px; border: 1px solid rgba(34,211,238,.22);
+        background: linear-gradient(135deg, rgba(8,31,50,.9), rgba(4,16,28,.98)); }
+    .fin-hero h1 { margin: 0 0 4px; color: #f5f9ff; font-size: 26px; font-weight: 1000; }
+    .fin-hero p { margin: 0; color: #9fb8c9; font-weight: 800; }
+    .fin-card { padding: 18px 20px; border-radius: 18px; border: 1px solid rgba(148,163,184,.2);
+        background: rgba(2,13,24,.5); display: grid; gap: 14px; }
+    .fin-card > h2 { margin: 0; color: #f5c96b; font-size: 16px; font-weight: 1000;
+        padding-bottom: 10px; border-bottom: 1px solid rgba(148,163,184,.16); }
+    .fin-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+    .fin-field { display: grid; gap: 6px; min-width: 0; }
+    .fin-field label { color: rgba(226,232,240,.82); font-size: 12.5px; font-weight: 900; }
+    .fin-field input, .fin-field select { min-height: 42px; border-radius: 12px; padding: 8px 12px;
+        border: 1px solid rgba(148,163,184,.22); background: rgba(3,16,28,.5); color: #f5f9ff; font-weight: 800; }
+    .fin-check { display: flex; align-items: center; gap: 8px; color: #e2e8f0; font-weight: 800; min-height: 42px; }
+    .fin-actions { display: flex; gap: 10px; justify-content: flex-start; }
+    .fin-btn { min-height: 44px; padding: 10px 20px; border-radius: 12px; font-weight: 1000; cursor: pointer;
+        border: 1px solid rgba(148,163,184,.25); background: rgba(15,23,42,.6); color: #e2e8f0; text-decoration: none;
+        display: inline-flex; align-items: center; }
+    .fin-btn.primary { background: linear-gradient(135deg,#22d3ee,#67e8f9); color: #06111f; border-color: rgba(34,211,238,.44); }
+    html[data-theme="light"] .fin-hero, html[data-theme="light"] .fin-card { background: #fff; border-color: #d8e5ef; }
+    html[data-theme="light"] .fin-hero h1 { color: #102033; }
+    html[data-theme="light"] .fin-field input, html[data-theme="light"] .fin-field select { background: #fff; color: #102033; border-color: #d8e5ef; }
+    @@media (max-width: 900px) { .fin-grid { grid-template-columns: 1fr 1fr; } }
+    @@media (max-width: 560px) { .fin-grid { grid-template-columns: 1fr; } }
+</style>
+
+<form method="post" enctype="multipart/form-data" class="fin-page">
+    <section class="fin-hero">
+        <div>
+            <h1>المعلومات المالية</h1>
+            <p>@Model.EmployeeName · الكود @Model.EmployeeNo</p>
+        </div>
+        <div class="fin-actions">
+            <button type="submit" class="fin-btn primary">حفظ</button>
+            <a asp-page="./Profile" asp-route-id="@Model.EmployeeId" class="fin-btn">رجوع للملف</a>
+        </div>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="fin-card" style="border-color:#fca5a5;color:#fca5a5">@Model.ErrorMessage</div>
+    }
+
+    <section class="fin-card">
+        <h2>الراتب والعملة</h2>
+        <div class="fin-grid">
+            <div class="fin-field">
+                <label>العملة</label>
+                <select asp-for="Input.Currency">
+                    <option value="">اختر</option>
+                    @foreach (var c in SmartAttendance.Web.Pages.Employees.FinancialInfoModel.Currencies)
+                    { <option value="@c" selected="@(Model.Input.Currency == c ? "selected" : null)">@c</option> }
+                </select>
+            </div>
+            <div class="fin-field"><label>سلم الرواتب</label><input asp-for="Input.SalaryScale" /></div>
+            <div class="fin-field"><label>الراتب الأساسي</label><input asp-for="Input.BasicSalary" type="number" step="0.0001" id="fin-basic-salary" /></div>
+            <div class="fin-field"><label>الراتب اليومي</label><input asp-for="Input.DailySalary" type="number" step="0.0001" /></div>
+            <div class="fin-field"><label>سعر ساعة العمل</label><input asp-for="Input.HourlyRate" type="number" step="0.0001" /></div>
+            <div class="fin-field">
+                <label>الراتب الكلي</label>
+                <input type="text" id="fin-total-salary" readonly tabindex="-1"
+                       style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.35);font-weight:1000" />
+            </div>
+        </div>
+    </section>
+
+    <section class="fin-card">
+        <h2>الضمان الاجتماعي</h2>
+        <div class="fin-grid">
+            <div class="fin-field"><label>نوع الضمان</label><input asp-for="Input.SocialSecurityType" /></div>
+            <div class="fin-field"><label>راتب الضمان</label><input asp-for="Input.SocialSecuritySalary" type="number" step="0.0001" /></div>
+            <div class="fin-field"><label>رقم الضمان</label><input asp-for="Input.SocialSecurityNo" /></div>
+            <div class="fin-field"><label>تاريخ الانضمام</label><input name="Input.SocialSecurityJoinDate" value="@d(Model.Input.SocialSecurityJoinDate)" type="date" /></div>
+            <div class="fin-field"><label>اشتراكات سابقة (أشهر)</label><input asp-for="Input.SocialSecurityPreviousMonths" type="number" /></div>
+            <div class="fin-field"><label>سن التقاعد</label><input asp-for="Input.RetirementAge" type="number" /></div>
+        </div>
+    </section>
+
+    <section class="fin-card">
+        <h2>الضريبة</h2>
+        <div class="fin-grid">
+            <div class="fin-field"><label>ملف الضريبة</label><input asp-for="Input.TaxFile" /></div>
+            <div class="fin-field"><label>الرقم الضريبي</label><input asp-for="Input.TaxNo" /></div>
+            <div class="fin-field"><label>السنة</label><input asp-for="Input.TaxYear" type="number" /></div>
+            <div class="fin-field"><label>راتب الضريبة السابق</label><input asp-for="Input.PreviousTaxSalary" type="number" step="0.0001" /></div>
+            <div class="fin-field"><label>إعفاء الضريبة السابق</label><input asp-for="Input.PreviousTaxExemption" type="number" step="0.0001" /></div>
+            <div class="fin-field"><label>مبلغ الضريبة السابق</label><input asp-for="Input.PreviousTaxAmount" type="number" step="0.0001" /></div>
+            <div class="fin-field"><label>راتب الحد الأدنى السابق</label><input asp-for="Input.PreviousMinSalary" type="number" step="0.0001" /></div>
+            <div class="fin-field"><label>ضريبة الحد الأدنى السابق</label><input asp-for="Input.PreviousMinTaxAmount" type="number" step="0.0001" /></div>
+            <div class="fin-field"><label>أشهر الضرائب السابقة</label><input asp-for="Input.PreviousTaxMonths" type="number" /></div>
+        </div>
+    </section>
+
+    <section class="fin-card">
+        <h2>مكافأة نهاية الخدمة والاحتساب</h2>
+        <div class="fin-grid">
+            <div class="fin-field"><label>إعداد المكافأة</label><input asp-for="Input.EndOfServiceSetup" /></div>
+            <div class="fin-field"><label>تاريخ بدء المكافأة</label><input name="Input.EndOfServiceStartDate" value="@d(Model.Input.EndOfServiceStartDate)" type="date" /></div>
+            <div class="fin-field"><label>تاريخ الاستحقاق</label><input name="Input.EndOfServiceDueDate" value="@d(Model.Input.EndOfServiceDueDate)" type="date" /></div>
+            <div class="fin-field"><label>تاريخ بدء الراتب الإضافي</label><input name="Input.AdditionalSalaryStartDate" value="@d(Model.Input.AdditionalSalaryStartDate)" type="date" /></div>
+            <label class="fin-check"><input asp-for="Input.EndOfServiceCompute" type="checkbox" /> احتساب مكافأة نهاية الخدمة</label>
+            <label class="fin-check"><input asp-for="Input.CalcPreviousSalaries" type="checkbox" /> احتساب الرواتب السابقة</label>
+            <label class="fin-check"><input asp-for="Input.StopSalaryCalc" type="checkbox" /> إيقاف احتساب الراتب</label>
+        </div>
+    </section>
+
+    <section class="fin-card">
+        <h2>الدفع والبنك</h2>
+        <div class="fin-grid">
+            <div class="fin-field">
+                <label>طريقة الدفع</label>
+                <select asp-for="Input.PaymentMethod" id="fin-payment-method">
+                    <option value="">اختر</option>
+                    @foreach (var p in SmartAttendance.Web.Pages.Employees.FinancialInfoModel.PaymentMethods)
+                    { <option value="@p" selected="@(Model.Input.PaymentMethod == p ? "selected" : null)">@p</option> }
+                </select>
+            </div>
+            <div class="fin-field fin-bank-field"><label>البنك</label><input asp-for="Input.BankName" /></div>
+            <div class="fin-field fin-bank-field"><label>فرع البنك</label><input asp-for="Input.BankBranch" /></div>
+            <div class="fin-field fin-bank-field"><label>رقم الوحدة</label><input asp-for="Input.UnitNo" /></div>
+            <div class="fin-field fin-bank-field"><label>IBAN</label><input asp-for="Input.Iban" dir="ltr" /></div>
+            <div class="fin-field fin-bank-field"><label>رقم البطاقة</label><input asp-for="Input.CardNo" dir="ltr" /></div>
+            <div class="fin-field fin-bank-field"><label>حساب Mxp</label><input asp-for="Input.MxpAccount" dir="ltr" /></div>
+            <label class="fin-check fin-bank-field"><input asp-for="Input.BankCommitment" type="checkbox" /> التزام بنكي</label>
+            <div class="fin-field fin-bank-field"><label>ملف الالتزام البنكي</label><input name="CommitmentFile" type="file" /></div>
+            <div class="fin-field"><label>مرفقات</label><input name="Attachment" type="file" /></div>
+        </div>
+    </section>
+
+    <script>
+        // حقول البنك تظهر فقط عند «تحويل بنكي» + الراتب الكلي يتحدّث حياً مع الأساسي.
+        (function () {
+            var ALLOWANCES_TOTAL = @Model.ActiveAllowancesTotal.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var pay = document.getElementById('fin-payment-method');
+            var basic = document.getElementById('fin-basic-salary');
+            var total = document.getElementById('fin-total-salary');
+
+            function syncBankFields() {
+                var showBank = pay.value === 'تحويل بنكي';
+                document.querySelectorAll('.fin-bank-field').forEach(function (f) {
+                    f.style.display = showBank ? '' : 'none';
+                });
+            }
+
+            function syncTotal() {
+                var basicValue = parseFloat(basic.value) || 0;
+                total.value = (basicValue + ALLOWANCES_TOTAL).toLocaleString('en-US', { maximumFractionDigits: 4 });
+            }
+
+            pay.addEventListener('change', syncBankFields);
+            basic.addEventListener('input', syncTotal);
+            syncBankFields();
+            syncTotal();
+        })();
+    </script>
+
+    <section class="fin-actions">
+        <button type="submit" class="fin-btn primary">حفظ المعلومات المالية</button>
+        <a asp-page="./Profile" asp-route-id="@Model.EmployeeId" class="fin-btn">إلغاء</a>
+    </section>
+</form>

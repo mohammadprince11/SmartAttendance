@@ -35,8 +35,26 @@ public class EmployeeFileRecord : AuditableEntity
     /// <summary>Monetary value — asset value / training cost. Optional per type.</summary>
     public decimal? Amount { get; set; }
 
-    /// <summary>Generic "current" flag — current address / asset in the employee's hands. Optional per type.</summary>
+    /// <summary>Generic "current" flag — current address / asset in the employee's hands / latest education. Optional per type.</summary>
     public bool IsCurrent { get; set; }
+
+    /// <summary>Asset handed back by the employee (العهد).</summary>
+    public bool IsReturned { get; set; }
+
+    /// <summary>Date the asset was returned.</summary>
+    public DateOnly? ReturnDate { get; set; }
+
+    /// <summary>Grade point average — education records.</summary>
+    public string? Gpa { get; set; }
+
+    // --- Reference block: the previous-employer contact on an Experience record. ---
+    public string? RefContactName { get; set; }
+
+    public string? RefContactPosition { get; set; }
+
+    public string? RefContactPhone { get; set; }
+
+    public string? RefContactNote { get; set; }
 
     public string? Note { get; set; }
 

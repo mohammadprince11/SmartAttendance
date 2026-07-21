@@ -36,6 +36,12 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<EmployeeFileRecord> EmployeeFileRecords => Set<EmployeeFileRecord>();
 
+    public DbSet<EmployeeFinancialInfo> EmployeeFinancialInfos => Set<EmployeeFinancialInfo>();
+
+    public DbSet<EmployeeAllowance> EmployeeAllowances => Set<EmployeeAllowance>();
+
+    public DbSet<EmployeeContract> EmployeeContracts => Set<EmployeeContract>();
+
     public DbSet<HrTaskTemplate> HrTaskTemplates => Set<HrTaskTemplate>();
 
     public DbSet<EmployeeTask> EmployeeTasks => Set<EmployeeTask>();

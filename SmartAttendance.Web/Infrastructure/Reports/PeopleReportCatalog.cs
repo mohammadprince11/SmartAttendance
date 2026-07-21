@@ -13,7 +13,10 @@ namespace SmartAttendance.Web.Infrastructure.Reports;
 /// </summary>
 public static class PeopleReportCatalog
 {
-    public sealed record ReportColumn(string Key, string Label);
+    /// <summary>نوع مدخل المرشح بدرج «بحث وتصفية» (نمط كيان: type-aware).</summary>
+    public enum FilterKind { Text, Select, DateRange }
+
+    public sealed record ReportColumn(string Key, string Label, FilterKind Filter = FilterKind.Text);
 
     public sealed record ReportDataset(string Key, string Label, IReadOnlyList<ReportColumn> Columns);
 
@@ -30,73 +33,73 @@ public static class PeopleReportCatalog
         {
             new ReportColumn("no", "الرقم الوظيفي"),
             new ReportColumn("name", "اسم الموظف"),
-            new ReportColumn("gender", "الجنس"),
-            new ReportColumn("birthdate", "تاريخ الولادة"),
-            new ReportColumn("nationality", "الجنسية"),
-            new ReportColumn("country", "البلد"),
-            new ReportColumn("maritalstatus", "الحالة الاجتماعية"),
+            new ReportColumn("gender", "الجنس", FilterKind.Select),
+            new ReportColumn("birthdate", "تاريخ الولادة", FilterKind.DateRange),
+            new ReportColumn("nationality", "الجنسية", FilterKind.Select),
+            new ReportColumn("country", "البلد", FilterKind.Select),
+            new ReportColumn("maritalstatus", "الحالة الاجتماعية", FilterKind.Select),
             new ReportColumn("nationalid", "رقم الهوية"),
             new ReportColumn("phone", "الهاتف"),
             new ReportColumn("email", "البريد الإلكتروني"),
-            new ReportColumn("branch", "الفرع"),
-            new ReportColumn("department", "القسم"),
-            new ReportColumn("position", "المنصب"),
-            new ReportColumn("hiredate", "تاريخ التعيين"),
-            new ReportColumn("contracttype", "نوع العقد"),
-            new ReportColumn("contractend", "انتهاء العقد"),
-            new ReportColumn("status", "حالة التوظيف"),
-            new ReportColumn("manager", "المدير المباشر"),
-            new ReportColumn("active", "فعال"),
-            new ReportColumn("serviceend", "تاريخ انتهاء الخدمة"),
-            new ReportColumn("serviceendtype", "نوع انتهاء الخدمة")
+            new ReportColumn("branch", "الفرع", FilterKind.Select),
+            new ReportColumn("department", "القسم", FilterKind.Select),
+            new ReportColumn("position", "المنصب", FilterKind.Select),
+            new ReportColumn("hiredate", "تاريخ التعيين", FilterKind.DateRange),
+            new ReportColumn("contracttype", "نوع العقد", FilterKind.Select),
+            new ReportColumn("contractend", "انتهاء العقد", FilterKind.DateRange),
+            new ReportColumn("status", "حالة التوظيف", FilterKind.Select),
+            new ReportColumn("manager", "المدير المباشر", FilterKind.Select),
+            new ReportColumn("active", "فعال", FilterKind.Select),
+            new ReportColumn("serviceend", "تاريخ انتهاء الخدمة", FilterKind.DateRange),
+            new ReportColumn("serviceendtype", "نوع انتهاء الخدمة", FilterKind.Select)
         }),
         new ReportDataset("dependents", "العائلة والمعالون", new[]
         {
             new ReportColumn("no", "الرقم الوظيفي"),
             new ReportColumn("employee", "اسم الموظف"),
             new ReportColumn("name", "الاسم"),
-            new ReportColumn("relation", "صلة القرابة"),
-            new ReportColumn("birthdate", "تاريخ الولادة"),
-            new ReportColumn("nationality", "الجنسية"),
+            new ReportColumn("relation", "صلة القرابة", FilterKind.Select),
+            new ReportColumn("birthdate", "تاريخ الولادة", FilterKind.DateRange),
+            new ReportColumn("nationality", "الجنسية", FilterKind.Select),
             new ReportColumn("nationalid", "رقم الهوية"),
-            new ReportColumn("isdependent", "معال"),
-            new ReportColumn("isemergency", "جهة طوارئ"),
+            new ReportColumn("isdependent", "معال", FilterKind.Select),
+            new ReportColumn("isemergency", "جهة طوارئ", FilterKind.Select),
             new ReportColumn("phone", "هاتف محمول"),
-            new ReportColumn("maritalstatus", "الحالة الاجتماعية")
+            new ReportColumn("maritalstatus", "الحالة الاجتماعية", FilterKind.Select)
         }),
         new ReportDataset("records", "سجلات ملف الموظف", new[]
         {
             new ReportColumn("no", "الرقم الوظيفي"),
             new ReportColumn("employee", "اسم الموظف"),
-            new ReportColumn("type", "نوع السجل"),
+            new ReportColumn("type", "نوع السجل", FilterKind.Select),
             new ReportColumn("title", "العنوان"),
             new ReportColumn("subtitle", "التفاصيل"),
-            new ReportColumn("country", "البلد"),
+            new ReportColumn("country", "البلد", FilterKind.Select),
             new ReportColumn("refno", "رقم مرجعي"),
-            new ReportColumn("fromdate", "من تاريخ"),
-            new ReportColumn("todate", "إلى تاريخ"),
+            new ReportColumn("fromdate", "من تاريخ", FilterKind.DateRange),
+            new ReportColumn("todate", "إلى تاريخ", FilterKind.DateRange),
             new ReportColumn("amount", "المبلغ"),
-            new ReportColumn("iscurrent", "حالي"),
+            new ReportColumn("iscurrent", "حالي", FilterKind.Select),
             new ReportColumn("attachment", "مرفق")
         }),
         new ReportDataset("documents", "وثائق الموظفين", new[]
         {
             new ReportColumn("no", "الرقم الوظيفي"),
             new ReportColumn("employee", "اسم الموظف"),
-            new ReportColumn("doctype", "نوع الوثيقة"),
+            new ReportColumn("doctype", "نوع الوثيقة", FilterKind.Select),
             new ReportColumn("filename", "الملف"),
-            new ReportColumn("expirydate", "تاريخ الانتهاء"),
-            new ReportColumn("uploadedat", "تاريخ الرفع"),
-            new ReportColumn("uploadedby", "رفع بواسطة")
+            new ReportColumn("expirydate", "تاريخ الانتهاء", FilterKind.DateRange),
+            new ReportColumn("uploadedat", "تاريخ الرفع", FilterKind.DateRange),
+            new ReportColumn("uploadedby", "رفع بواسطة", FilterKind.Select)
         }),
         new ReportDataset("leaves", "طلبات الإجازة", new[]
         {
             new ReportColumn("no", "الرقم الوظيفي"),
             new ReportColumn("employee", "اسم الموظف"),
-            new ReportColumn("type", "نوع الإجازة"),
-            new ReportColumn("status", "الحالة"),
-            new ReportColumn("fromdate", "من تاريخ"),
-            new ReportColumn("todate", "إلى تاريخ"),
+            new ReportColumn("type", "نوع الإجازة", FilterKind.Select),
+            new ReportColumn("status", "الحالة", FilterKind.Select),
+            new ReportColumn("fromdate", "من تاريخ", FilterKind.DateRange),
+            new ReportColumn("todate", "إلى تاريخ", FilterKind.DateRange),
             new ReportColumn("days", "الأيام"),
             new ReportColumn("reason", "السبب")
         }),
@@ -105,10 +108,10 @@ public static class PeopleReportCatalog
             new ReportColumn("refno", "رقم المرجع"),
             new ReportColumn("no", "الرقم الوظيفي"),
             new ReportColumn("employee", "اسم الموظف"),
-            new ReportColumn("category", "الفئة"),
+            new ReportColumn("category", "الفئة", FilterKind.Select),
             new ReportColumn("title", "المخالفة"),
-            new ReportColumn("eventdate", "تاريخ الحدث"),
-            new ReportColumn("status", "الحالة"),
+            new ReportColumn("eventdate", "تاريخ الحدث", FilterKind.DateRange),
+            new ReportColumn("status", "الحالة", FilterKind.Select),
             new ReportColumn("action", "الإجراء")
         })
     };

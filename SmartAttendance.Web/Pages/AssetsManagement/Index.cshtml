@@ -1,0 +1,102 @@
+@page
+@model SmartAttendance.Web.Pages.AssetsManagement.IndexModel
+@{
+    ViewData["Title"] = "إدارة العهد";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page" dir="rtl">
+    <div class="page-header">
+        <div>
+            <h1>إدارة العهد</h1>
+            <p>سجل مركزي لعهد كل الموظفين مع تتبع الإرجاع — التحرير التفصيلي من ملف الموظف.</p>
+        </div>
+        <form method="get" class="hrms-inline-form">
+            <input type="search" name="Search" value="@Model.Search" placeholder="بحث بالموظف أو العهدة..." />
+            <select name="Status" onchange="this.form.submit()">
+                <option value="held" selected="@(Model.Status == "held" ? "selected" : null)">بحوزة الموظفين</option>
+                <option value="returned" selected="@(Model.Status == "returned" ? "selected" : null)">المُرجَعة</option>
+                <option value="all" selected="@(Model.Status == "all" ? "selected" : null)">الكل</option>
+            </select>
+            <button type="submit" class="hrms-btn-primary">بحث</button>
+        </form>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.Message))
+    {
+        <div class="hrms-badge approved" style="padding:10px 14px">@Model.Message</div>
+    }
+
+    <div class="hrms-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px">
+        <div class="hrms-card" style="padding:14px"><div class="hrms-tile-sub">بحوزة الموظفين</div><strong style="font-size:24px">@Model.HeldCount</strong></div>
+        <div class="hrms-card" style="padding:14px"><div class="hrms-tile-sub">مُرجَعة</div><strong style="font-size:24px">@Model.ReturnedCount</strong></div>
+        <div class="hrms-card" style="padding:14px"><div class="hrms-tile-sub">قيمة العهد بالحوزة</div><strong style="font-size:24px">@Model.HeldValueTotal.ToString("#,0.##")</strong></div>
+    </div>
+
+    <div class="hrms-table-card">
+        @if (!Model.Rows.Any())
+        {
+            <div class="hrms-empty">لا توجد عهد ضمن هذا الفلتر.</div>
+        }
+        else
+        {
+            <div class="hrms-table-wrap">
+                <table class="hrms-table" data-hrms-paginate="20" id="assets-table">
+                    <thead>
+                        <tr>
+                            <th>الرمز</th>
+                            <th>الموظف</th>
+                            <th>القسم</th>
+                            <th>العهدة</th>
+                            <th>النوع</th>
+                            <th>من – إلى</th>
+                            <th>القيمة</th>
+                            <th>الحالة</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            <tr>
+                                <td>@row.EmployeeNo</td>
+                                <td><a href="/Employees/Profile?id=@row.EmployeeId#profile-files">@row.EmployeeName</a></td>
+                                <td>@row.DepartmentName</td>
+                                <td>@row.Title</td>
+                                <td>@(string.IsNullOrWhiteSpace(row.Subtitle) ? "—" : row.Subtitle)</td>
+                                <td>@(row.FromDate?.ToString("yyyy-MM-dd") ?? "—") @(row.ToDate.HasValue ? "– " + row.ToDate.Value.ToString("yyyy-MM-dd") : "")</td>
+                                <td>@(row.Amount?.ToString("#,0.##") ?? "—")</td>
+                                <td>
+                                    @if (row.IsReturned)
+                                    {
+                                        <span class="hrms-badge approved">مُرجَعة @(row.ReturnDate?.ToString("yyyy-MM-dd"))</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="hrms-badge pending">بحوزة الموظف</span>
+                                    }
+                                </td>
+                                <td style="white-space:nowrap">
+                                    @if (!string.IsNullOrWhiteSpace(row.AttachmentPath))
+                                    {
+                                        <a href="@row.AttachmentPath" target="_blank" title="مرفق">📄</a>
+                                    }
+                                    @if (!row.IsReturned)
+                                    {
+                                        <form method="post" asp-page-handler="MarkReturned" asp-route-Search="@Model.Search" asp-route-Status="@Model.Status"
+                                              style="display:inline" onsubmit="return confirm('تعليم العهدة كمُرجَعة بتاريخ اليوم؟');">
+                                            <input type="hidden" name="recordId" value="@row.Id" />
+                                            <button type="submit" class="hrms-btn-secondary" style="padding:4px 10px">تم الإرجاع</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="hrms-pager" data-hrms-pager-for="assets-table"></div>
+        }
+    </div>
+</div>

@@ -90,6 +90,7 @@ public class EditModel : PageModel
         if (employee == null) return NotFound();
 
         Employee = employee;
+        PrefillQuadNameFromFullName();
 
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
         CurrentPhotoPath = await GetEmployeePhotoPathAsync(Employee.Id);
@@ -152,6 +153,28 @@ public class EditModel : PageModel
             : $"تم تحديث بيانات الموظف بنجاح. {photoResult}";
 
         return RedirectToPage("./Profile", new { id = Employee.Id });
+    }
+
+    // الموظفون القدامى عندهم FullName فقط؛ نوزّعه على خانات الرباعي حتى يبقى
+    // مصدر إدخال الاسم واحداً بالنموذج، وإعادة تركيبه عند الحفظ تعطي نفس النص.
+    private void PrefillQuadNameFromFullName()
+    {
+        var hasQuad = !string.IsNullOrWhiteSpace(Employee.FirstName) ||
+                      !string.IsNullOrWhiteSpace(Employee.SecondName) ||
+                      !string.IsNullOrWhiteSpace(Employee.ThirdName) ||
+                      !string.IsNullOrWhiteSpace(Employee.LastName);
+
+        if (hasQuad || string.IsNullOrWhiteSpace(Employee.FullName))
+        {
+            return;
+        }
+
+        var parts = Employee.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        Employee.FirstName = parts.Length > 0 ? parts[0] : null;
+        Employee.LastName = parts.Length > 1 ? parts[^1] : null;
+        Employee.SecondName = parts.Length > 2 ? parts[1] : null;
+        Employee.ThirdName = parts.Length > 3 ? string.Join(' ', parts[2..^1]) : null;
     }
 
     private Task<bool> CanEditEmployeeAsync(int employeeId)

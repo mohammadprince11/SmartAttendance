@@ -340,6 +340,15 @@ SELECT TOP 1
     ISNULL(e.ContractType, '') AS ContractType,
     e.ContractEndDate,
     ISNULL(e.EmploymentStatus, '') AS EmploymentStatus,
+    e.IsCitizen,
+    ISNULL(e.PassportNo, '') AS PassportNo,
+    ISNULL(e.SponsorName, '') AS SponsorName,
+    ISNULL(e.Religion, '') AS Religion,
+    ISNULL(e.PersonalEmail, '') AS PersonalEmail,
+    ISNULL(e.PhoneExtension, '') AS PhoneExtension,
+    e.JoiningDate,
+    ISNULL(e.WorkType, '') AS WorkType,
+    ISNULL(e.JobGrade, '') AS JobGrade,
     ISNULL(d.Name, '') AS DepartmentName,
     ISNULL(b.Name, '') AS BranchName,
     ISNULL(c.Name, '') AS CompanyName,
@@ -378,6 +387,15 @@ WHERE
                 ContractType = HrmsDatabase.GetString(reader, "ContractType"),
                 ContractEndDate = HrmsDatabase.GetDateOnly(reader, "ContractEndDate"),
                 EmploymentStatus = HrmsDatabase.GetString(reader, "EmploymentStatus"),
+                IsCitizen = HrmsDatabase.GetBool(reader, "IsCitizen"),
+                PassportNo = HrmsDatabase.GetString(reader, "PassportNo"),
+                SponsorName = HrmsDatabase.GetString(reader, "SponsorName"),
+                Religion = HrmsDatabase.GetString(reader, "Religion"),
+                PersonalEmail = HrmsDatabase.GetString(reader, "PersonalEmail"),
+                PhoneExtension = HrmsDatabase.GetString(reader, "PhoneExtension"),
+                JoiningDate = HrmsDatabase.GetDateOnly(reader, "JoiningDate"),
+                WorkType = HrmsDatabase.GetString(reader, "WorkType"),
+                JobGrade = HrmsDatabase.GetString(reader, "JobGrade"),
                 DepartmentName = HrmsDatabase.GetString(reader, "DepartmentName"),
                 BranchName = HrmsDatabase.GetString(reader, "BranchName"),
                 CompanyName = HrmsDatabase.GetString(reader, "CompanyName"),
@@ -619,6 +637,27 @@ ORDER BY CreatedAt DESC;",
         return string.IsNullOrWhiteSpace(value) ? "-" : value;
     }
 
+    /// <summary>
+    /// ملاحظة الحضور: ملاحظات الاستيراد التقنية
+    /// ("Imported from X.xlsx | Punches: N | Machines: M") تُختزل لعدد البصمات فقط —
+    /// اسم الملف ضجيج والجهاز له عمود مستقل. الملاحظات البشرية تُعرض كما هي.
+    /// </summary>
+    public string DisplayAttendanceNote(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "-";
+        }
+
+        if (!value.StartsWith("Imported from", StringComparison.OrdinalIgnoreCase))
+        {
+            return value;
+        }
+
+        var punches = System.Text.RegularExpressions.Regex.Match(value, @"Punches:\s*(\d+)");
+        return punches.Success ? $"بصمات: {punches.Groups[1].Value}" : "-";
+    }
+
     public string DisplayDate(DateOnly? value)
     {
         return value.HasValue ? value.Value.ToString("yyyy-MM-dd") : "-";
@@ -738,6 +777,16 @@ ORDER BY CreatedAt DESC;",
         public string ContractType { get; set; } = string.Empty;
 
         public DateOnly? ContractEndDate { get; set; }
+
+        public bool IsCitizen { get; set; }
+        public string PassportNo { get; set; } = string.Empty;
+        public string SponsorName { get; set; } = string.Empty;
+        public string Religion { get; set; } = string.Empty;
+        public string PersonalEmail { get; set; } = string.Empty;
+        public string PhoneExtension { get; set; } = string.Empty;
+        public DateOnly? JoiningDate { get; set; }
+        public string WorkType { get; set; } = string.Empty;
+        public string JobGrade { get; set; } = string.Empty;
 
         public string EmploymentStatus { get; set; } = string.Empty;
 

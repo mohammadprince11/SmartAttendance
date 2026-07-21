@@ -73,14 +73,55 @@
             <div class="nxr-form-grid nxr-create-grid nxr-basic-grid">
                 <div class="nxr-field">
                     <label asp-for="Employee.EmployeeNo">كود الموظف</label>
-                    <input asp-for="Employee.EmployeeNo" placeholder="مثال: EMP-250601" />
+                    @if (Model.CodeSchemaActive)
+                    {
+                        @* بلا asp-for حتى لا يفرض تحقق «مطلوب» بجهة العميل — التوليد يصير بالسيرفر *@
+                        <input name="Employee.EmployeeNo" id="Employee_EmployeeNo" value="@Model.Employee.EmployeeNo"
+                               placeholder="اتركه فارغاً للتوليد التلقائي (@Model.CodeSchemaPreview)" />
+                        <span style="color:#67e8f9;font-size:12px;font-weight:800">توليد تلقائي مفعّل — الفارغ يأخذ الرقم التالي</span>
+                    }
+                    else
+                    {
+                        <input asp-for="Employee.EmployeeNo" placeholder="مثال: EMP-250601" />
+                    }
                     <span asp-validation-for="Employee.EmployeeNo" class="text-danger"></span>
                 </div>
 
+                @* الاسم الكامل يتولّد تلقائياً من الاسم الرباعي — نفس نمط صفحة التعديل *@
+                <input type="hidden" asp-for="Employee.FullName" />
                 <div class="nxr-field">
-                    <label asp-for="Employee.FullName">الاسم الكامل</label>
-                    <input asp-for="Employee.FullName" placeholder="أدخل الاسم الكامل" />
-                    <span asp-validation-for="Employee.FullName" class="text-danger"></span>
+                    <label asp-for="Employee.FirstName">الاسم الأول (عربي)</label>
+                    <input asp-for="Employee.FirstName" data-quad-name required />
+                    <span asp-validation-for="Employee.FirstName" class="text-danger"></span>
+                </div>
+                <div class="nxr-field">
+                    <label asp-for="Employee.SecondName">الاسم الثاني (عربي)</label>
+                    <input asp-for="Employee.SecondName" data-quad-name />
+                </div>
+                <div class="nxr-field">
+                    <label asp-for="Employee.ThirdName">الاسم الثالث (عربي)</label>
+                    <input asp-for="Employee.ThirdName" data-quad-name />
+                </div>
+                <div class="nxr-field">
+                    <label asp-for="Employee.LastName">اللقب (عربي)</label>
+                    <input asp-for="Employee.LastName" data-quad-name required />
+                    <span asp-validation-for="Employee.LastName" class="text-danger"></span>
+                </div>
+                <div class="nxr-field">
+                    <label asp-for="Employee.FirstNameEn">First Name</label>
+                    <input asp-for="Employee.FirstNameEn" dir="ltr" />
+                </div>
+                <div class="nxr-field">
+                    <label asp-for="Employee.SecondNameEn">Second Name</label>
+                    <input asp-for="Employee.SecondNameEn" dir="ltr" />
+                </div>
+                <div class="nxr-field">
+                    <label asp-for="Employee.ThirdNameEn">Third Name</label>
+                    <input asp-for="Employee.ThirdNameEn" dir="ltr" />
+                </div>
+                <div class="nxr-field">
+                    <label asp-for="Employee.LastNameEn">Last Name</label>
+                    <input asp-for="Employee.LastNameEn" dir="ltr" />
                 </div>
 
                 <div class="nxr-field">
@@ -173,6 +214,41 @@
                 </div>
 @* NEXORA_DEMOGRAPHIC_FIELDS_END *@
 @* NEXORA_MARITAL_STATUS_FIELD_END *@
+
+                @* ---------- الجنسية والإقامة (نمط كيان — مطابق لصفحة التعديل) ---------- *@
+                <div class="nxr-field">
+                    <label asp-for="Employee.IsCitizen">مواطن</label>
+                    <select asp-for="Employee.IsCitizen" class="nxr-native-select">
+                        <option value="true">مواطن</option>
+                        <option value="false">غير مواطن (وافد)</option>
+                    </select>
+                </div>
+                <div class="nxr-field">
+                    <label asp-for="Employee.PassportNo">رقم جواز السفر</label>
+                    <input asp-for="Employee.PassportNo" />
+                </div>
+                <div class="nxr-field">
+                    <label asp-for="Employee.SponsorName">الكفيل</label>
+                    <select asp-for="Employee.SponsorName" class="nxr-native-select">
+                        <option value="">بدون كفيل</option>
+                        @foreach (var sponsor in Model.SponsorOptions) { <option value="@sponsor">@sponsor</option> }
+                    </select>
+                </div>
+                <div class="nxr-field">
+                    <label asp-for="Employee.Religion">الديانة</label>
+                    <select asp-for="Employee.Religion" class="nxr-native-select">
+                        <option value="">اختر...</option>
+                        @foreach (var religion in Model.ReligionOptions) { <option value="@religion">@religion</option> }
+                    </select>
+                </div>
+                <div class="nxr-field">
+                    <label asp-for="Employee.MotherCountry">البلد الأم</label>
+                    <input asp-for="Employee.MotherCountry" />
+                </div>
+                <div class="nxr-field">
+                    <label asp-for="Employee.MotherCity">المدينة الأم</label>
+                    <input asp-for="Employee.MotherCity" />
+                </div>
             </div>
         </section>
 
@@ -235,9 +311,30 @@
                 </div>
 
                 <div class="nxr-field">
-                    <label asp-for="Employee.HireDate">تاريخ التعيين</label>
+                    <label asp-for="Employee.HireDate">تاريخ التعيين (العقد)</label>
                     <input data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" asp-for="Employee.HireDate" type="text" />
                     <span asp-validation-for="Employee.HireDate" class="text-danger"></span>
+                </div>
+
+                <div class="nxr-field">
+                    <label asp-for="Employee.JoiningDate">تاريخ المباشرة الفعلية (إن اختلفت)</label>
+                    <input data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" asp-for="Employee.JoiningDate" type="text" />
+                </div>
+
+                <div class="nxr-field">
+                    <label asp-for="Employee.WorkType">نوع الدوام</label>
+                    <select asp-for="Employee.WorkType" class="nxr-native-select">
+                        <option value="">اختر...</option>
+                        @foreach (var workType in Model.WorkTypeOptions) { <option value="@workType">@workType</option> }
+                    </select>
+                </div>
+
+                <div class="nxr-field">
+                    <label asp-for="Employee.JobGrade">الدرجة الوظيفية</label>
+                    <select asp-for="Employee.JobGrade" class="nxr-native-select">
+                        <option value="">اختر...</option>
+                        @foreach (var grade in Model.GradeOptions) { <option value="@grade">@grade</option> }
+                    </select>
                 </div>
             </div>
         </section>
@@ -259,9 +356,20 @@
                 </div>
 
                 <div class="nxr-field">
-                    <label asp-for="Employee.Email">البريد الإلكتروني</label>
+                    <label asp-for="Employee.Email">البريد الإلكتروني (العمل)</label>
                     <input asp-for="Employee.Email" placeholder="name@example.com" />
                     <span asp-validation-for="Employee.Email" class="text-danger"></span>
+                </div>
+
+                <div class="nxr-field">
+                    <label asp-for="Employee.PersonalEmail">البريد الشخصي</label>
+                    <input asp-for="Employee.PersonalEmail" dir="ltr" placeholder="personal@example.com" />
+                    <span asp-validation-for="Employee.PersonalEmail" class="text-danger"></span>
+                </div>
+
+                <div class="nxr-field">
+                    <label asp-for="Employee.PhoneExtension">امتداد الهاتف</label>
+                    <input asp-for="Employee.PhoneExtension" />
                 </div>
             </div>
         </section>
@@ -559,6 +667,19 @@
         })();
     </script>
     <!-- NEXORA_MARITAL_BY_GENDER_END -->
+    <script>
+        // الاسم الرباعي → يبني "الاسم الكامل" المخفي تلقائياً أثناء الكتابة.
+        (function () {
+            var full = document.getElementById("Employee_FullName");
+            var parts = Array.prototype.slice.call(document.querySelectorAll("[data-quad-name]"));
+            if (!full || !parts.length) return;
+            function compose() {
+                var values = parts.map(function (p) { return p.value.trim(); }).filter(Boolean);
+                full.value = values.join(" ");
+            }
+            parts.forEach(function (p) { p.addEventListener("input", compose); });
+        })();
+    </script>
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/nexora-employee-create-documents-final.js" asp-append-version="true"></script>
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>

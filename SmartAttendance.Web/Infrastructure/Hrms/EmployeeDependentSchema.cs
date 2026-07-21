@@ -47,6 +47,15 @@ BEGIN
 
     CREATE INDEX IX_EmployeeDependents_EmployeeId ON EmployeeDependents (EmployeeId);
 END;
+
+IF COL_LENGTH('EmployeeDependents', 'ResidencyNo') IS NULL
+    ALTER TABLE EmployeeDependents ADD ResidencyNo nvarchar(50) NULL;
+
+IF COL_LENGTH('EmployeeDependents', 'Gender') IS NULL
+    ALTER TABLE EmployeeDependents ADD Gender nvarchar(20) NULL;
+
+IF COL_LENGTH('EmployeeDependents', 'IsStudent') IS NULL
+    ALTER TABLE EmployeeDependents ADD IsStudent bit NOT NULL CONSTRAINT DF_EmployeeDependents_IsStudent DEFAULT(0);
 """);
     }
 }

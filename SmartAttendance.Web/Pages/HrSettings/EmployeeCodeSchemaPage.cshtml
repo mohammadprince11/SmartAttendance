@@ -1,0 +1,47 @@
+@page "/HrSettings/EmployeeCodeSchema"
+@model SmartAttendance.Web.Pages.HrSettings.EmployeeCodeSchemaPageModel
+@{
+    ViewData["Title"] = "مخطط رمز الموظف";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page" dir="rtl">
+    <div class="page-header">
+        <div>
+            <h1>مخطط رمز الموظف التلقائي</h1>
+            <p>مقاطع نمط كيان: [بادئة ثابتة] + [رقم متسلسل بعدد أرقام]. عند التفعيل، ترك حقل الكود فارغاً بصفحة إضافة الموظف يولّد الرقم التالي تلقائياً.</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.Message))
+    {
+        <div class="hrms-badge approved" style="padding:10px 14px">@Model.Message</div>
+    }
+
+    <div class="hrms-card" style="max-width:640px;padding:20px;display:grid;gap:14px">
+        <form method="post" class="hrms-page" style="display:grid;gap:14px">
+            <div class="hrms-field">
+                <label>البادئة الثابتة (المقطع الأول)</label>
+                <input name="prefix" value="@Model.Schema.Prefix" placeholder="مثال: EMP-" dir="ltr" />
+            </div>
+            <div class="hrms-field">
+                <label>عدد أرقام التسلسل (المقطع الثاني)</label>
+                <input name="digits" type="number" min="1" max="12" value="@Model.Schema.Digits" />
+            </div>
+            <div class="hrms-field">
+                <label>آخر رقم تسلسلي (الرقم الجاي = هذا + 1)</label>
+                <input name="lastNumber" type="number" min="0" value="@Model.Schema.LastNumber" />
+            </div>
+            <label class="hrms-toggle">
+                <input type="checkbox" name="isActive" value="true" checked="@(Model.Schema.IsActive ? "checked" : null)" />
+                تفعيل التوليد التلقائي
+            </label>
+            <div class="hrms-field">
+                <label>معاينة الرمز التالي</label>
+                <input value="@Model.Preview" readonly dir="ltr" style="font-weight:1000" />
+            </div>
+            <button type="submit" class="hrms-btn-primary">حفظ المخطط</button>
+        </form>
+    </div>
+</div>

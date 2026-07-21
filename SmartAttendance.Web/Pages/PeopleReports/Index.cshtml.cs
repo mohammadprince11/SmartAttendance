@@ -38,10 +38,19 @@ public class IndexModel : PageModel
 
     public List<CompanyOption> Companies { get; set; } = new();
 
+    // مستخدمو النظام لخيار «مشاركة مع أشخاص محددين» بالباني.
+    public List<string> ShareUserOptions { get; set; } = new();
+
     // ---- Run result ----
     public PeopleReportsStore.SavedReport? Current { get; set; }
     public List<PeopleReportCatalog.ReportColumn> RunColumns { get; set; } = new();
     public List<Dictionary<string, string>> RunRows { get; set; } = new();
+
+    // مرشحات التقرير (المختارة بالباني) + قيمها الحالية من الـ query string.
+    // المفاتيح بـ RunFilterValues: <key> للنص/القائمة، و<key>_from / <key>_to لنطاق التاريخ.
+    public List<PeopleReportCatalog.ReportColumn> RunFilterColumns { get; set; } = new();
+    public Dictionary<string, string> RunFilterValues { get; set; } = new();
+    public Dictionary<string, List<string>> RunFilterOptions { get; set; } = new();
 
     [TempData]
     public string? Message { get; set; }
@@ -91,7 +100,8 @@ public class IndexModel : PageModel
     }
 
     public async Task<IActionResult> OnPostCreateReportAsync(
-        string name, string? description, string datasetKey, string columnsCsv, string visibility)
+        string name, string? description, string datasetKey, string columnsCsv, string visibility,
+        int id = 0, string? filterColumnsCsv = null, List<string>? sharedWith = null)
     {
         await PeopleReportsStore.EnsureSchemaAsync(_dbContext);
 
@@ -104,12 +114,8 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        // Ordered columns come from the dual-listbox as CSV; keep only valid keys.
-        var validColumns = (columnsCsv ?? "")
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(c => dataset.Columns.Any(dc => dc.Key.Equals(c, StringComparison.OrdinalIgnoreCase)))
-            .Distinct()
-            .ToList();
+        // Ordered columns come from the picker as CSV; keep only valid keys.
+        var validColumns = ValidKeys(columnsCsv, dataset);
 
         if (validColumns.Count == 0)
         {
@@ -117,14 +123,38 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
+        var validFilters = ValidKeys(filterColumnsCsv, dataset);
+
         var isShared = string.Equals(visibility, "everyone", StringComparison.OrdinalIgnoreCase);
+        var isSpecific = string.Equals(visibility, "specific", StringComparison.OrdinalIgnoreCase);
+        var sharedWithCsv = isSpecific && sharedWith is { Count: > 0 }
+            ? string.Join(",", sharedWith.Where(u => !string.IsNullOrWhiteSpace(u)).Select(u => u.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
+            : null;
 
-        await PeopleReportsStore.CreateAsync(
-            _dbContext, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared);
+        if (id > 0)
+        {
+            await PeopleReportsStore.UpdateOwnAsync(
+                _dbContext, id, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared,
+                sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null);
+            Message = "تم تحديث التقرير.";
+        }
+        else
+        {
+            await PeopleReportsStore.CreateAsync(
+                _dbContext, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared,
+                sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null);
+            Message = "تم حفظ التقرير.";
+        }
 
-        Message = "تم حفظ التقرير.";
         return RedirectToPage(null, null, null, "mine");
     }
+
+    private static List<string> ValidKeys(string? csv, PeopleReportCatalog.ReportDataset dataset) =>
+        (csv ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(c => dataset.Columns.Any(dc => dc.Key.Equals(c, StringComparison.OrdinalIgnoreCase)))
+            .Distinct()
+            .ToList();
 
     public async Task<IActionResult> OnPostDeleteReportAsync(int id)
     {
@@ -146,13 +176,25 @@ public class IndexModel : PageModel
 
         SystemReports = all.Where(r => r.IsSystem).ToList();
         MyReports = all.Where(r => !r.IsSystem && string.Equals(r.OwnerUser, CurrentUser, StringComparison.OrdinalIgnoreCase)).ToList();
-        SharedReports = all.Where(r => !r.IsSystem && r.IsShared && !string.Equals(r.OwnerUser, CurrentUser, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        // مشاركة مع الجميع (IsShared) أو معي تحديداً (SharedWith).
+        SharedReports = all.Where(r =>
+            !r.IsSystem &&
+            !string.Equals(r.OwnerUser, CurrentUser, StringComparison.OrdinalIgnoreCase) &&
+            (r.IsShared || r.SharedWith.Contains(CurrentUser, StringComparer.OrdinalIgnoreCase))).ToList();
 
         Companies = await _dbContext.Companies
             .AsNoTracking()
             .Where(c => !c.IsDeleted && c.IsActive)
             .OrderBy(c => c.Name)
             .Select(c => new CompanyOption { Id = c.Id, Name = c.Name })
+            .ToListAsync();
+
+        ShareUserOptions = await _dbContext.SystemUsers
+            .AsNoTracking()
+            .Where(u => !u.IsDeleted && u.IsActive && u.UserName != CurrentUser)
+            .OrderBy(u => u.UserName)
+            .Select(u => u.UserName)
             .ToListAsync();
     }
 
@@ -185,6 +227,75 @@ public class IndexModel : PageModel
                 Search = Search,
                 ActiveOnly = ActiveOnly
             });
+
+        // «البحث المتقدم» نمط كيان: يعرض حصراً مرشحات التقرير المعرّفة —
+        // المختارة بالباني للتقارير المخصصة، والمزروعة افتراضياً لتقارير النظام.
+        // نص = يحتوي، قائمة = مطابقة تامة (خياراتها القيم الفعلية بالبيانات)، تاريخ = نطاق من/إلى.
+        RunFilterColumns = report.FilterColumns
+            .Select(key => dataset.Columns.FirstOrDefault(c => c.Key.Equals(key, StringComparison.OrdinalIgnoreCase)))
+            .Where(c => c != null)
+            .Select(c => c!)
+            .ToList();
+
+        foreach (var filterColumn in RunFilterColumns.Where(c => c.Filter == PeopleReportCatalog.FilterKind.Select))
+        {
+            RunFilterOptions[filterColumn.Key] = RunRows
+                .Select(row => row.GetValueOrDefault(filterColumn.Key, ""))
+                .Where(v => !string.IsNullOrEmpty(v))
+                .Distinct()
+                .OrderBy(v => v)
+                .Take(300)
+                .ToList();
+        }
+
+        foreach (var filterColumn in RunFilterColumns)
+        {
+            string Q(string suffix) => (Request.Query["cf_" + filterColumn.Key + suffix].ToString() ?? "").Trim();
+
+            switch (filterColumn.Filter)
+            {
+                case PeopleReportCatalog.FilterKind.DateRange:
+                    var from = Q("_from");
+                    var to = Q("_to");
+                    if (!string.IsNullOrEmpty(from))
+                    {
+                        RunFilterValues[filterColumn.Key + "_from"] = from;
+                        // التواريخ بصيغة yyyy-MM-dd فالمقارنة النصية الترتيبية صحيحة.
+                        RunRows = RunRows.Where(row =>
+                            string.Compare(row.GetValueOrDefault(filterColumn.Key, ""), from, StringComparison.Ordinal) >= 0).ToList();
+                    }
+                    if (!string.IsNullOrEmpty(to))
+                    {
+                        RunFilterValues[filterColumn.Key + "_to"] = to;
+                        RunRows = RunRows.Where(row =>
+                        {
+                            var v = row.GetValueOrDefault(filterColumn.Key, "");
+                            return !string.IsNullOrEmpty(v) && string.Compare(v, to, StringComparison.Ordinal) <= 0;
+                        }).ToList();
+                    }
+                    break;
+
+                case PeopleReportCatalog.FilterKind.Select:
+                    var selected = Q("");
+                    if (!string.IsNullOrEmpty(selected))
+                    {
+                        RunFilterValues[filterColumn.Key] = selected;
+                        RunRows = RunRows.Where(row =>
+                            string.Equals(row.GetValueOrDefault(filterColumn.Key, ""), selected, StringComparison.OrdinalIgnoreCase)).ToList();
+                    }
+                    break;
+
+                default:
+                    var value = Q("");
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        RunFilterValues[filterColumn.Key] = value;
+                        RunRows = RunRows.Where(row =>
+                            row.GetValueOrDefault(filterColumn.Key, "").Contains(value, StringComparison.OrdinalIgnoreCase)).ToList();
+                    }
+                    break;
+            }
+        }
     }
 
     private static string Csv(string value)

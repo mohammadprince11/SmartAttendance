@@ -11,6 +11,20 @@
             label = d.Label,
             columns = d.Columns.Select(c => new { key = c.Key, label = c.Label })
         }));
+
+    // تقاريري للتعديل بالباني (prefill client-side).
+    var myReportsJson = JsonSerializer.Serialize(
+        Model.MyReports.Select(r => new
+        {
+            id = r.Id,
+            name = r.Name,
+            description = r.Description ?? "",
+            datasetKey = r.DatasetKey,
+            columns = r.Columns,
+            filterColumns = r.FilterColumns,
+            isShared = r.IsShared,
+            sharedWith = r.SharedWith
+        }));
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
@@ -26,16 +40,48 @@
     .rep-pin.pinned { color:var(--sa-primary); }
     .rep-empty { text-align:center; padding:48px 16px; color:var(--sa-muted); font-weight:800; }
     .rep-empty .icon { font-size:44px; margin-bottom:10px; }
-    /* Dual listbox (builder) */
-    .rep-dual { display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:stretch; }
-    .rep-dual select { width:100%; min-height:180px; border-radius:12px; border:1px solid var(--sa-border); background:var(--sa-input); color:var(--sa-text); padding:6px; font-weight:800; }
-    .rep-dual-actions { display:flex; flex-direction:column; justify-content:center; gap:6px; }
-    .rep-dual-actions button, .rep-order button { appearance:none; width:34px; height:34px; border-radius:10px; border:1px solid var(--sa-border); background:var(--sa-surface); color:var(--sa-text); font-weight:900; cursor:pointer; }
-    .rep-dual-actions button:hover, .rep-order button:hover { border-color:var(--sa-primary); color:var(--sa-primary); }
-    .rep-order { display:flex; gap:6px; margin-top:6px; }
-    @@media (max-width:760px){ .rep-dual{ grid-template-columns:1fr; } .rep-dual-actions{ flex-direction:row; } }
+    /* Kayan-style field picker (builder): model select + search + row list, drag & drop */
+    .rep-dnd { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:stretch; }
+    .rep-dnd-panel { display:flex; flex-direction:column; gap:0; min-width:0; border:1px solid var(--sa-border); border-radius:12px; background:var(--sa-surface); overflow:hidden; }
+    .rep-dnd-panel > .rep-panel-title { padding:10px 12px; font-weight:900; font-size:12.5px; color:var(--sa-muted); border-bottom:1px solid var(--sa-border); background:var(--sa-surface-3); }
+    .rep-model-select { margin:10px 12px 0; padding:9px 12px; border-radius:10px; border:1px solid var(--sa-border); background:var(--sa-input); color:var(--sa-text); font-weight:800; }
+    .rep-field-search { display:flex; align-items:center; gap:8px; margin:8px 12px 10px; padding:0 12px; border-radius:10px; border:1px solid var(--sa-border); background:var(--sa-input); }
+    .rep-field-search span { color:var(--sa-muted); font-size:14px; }
+    .rep-field-search input { flex:1; border:0; background:transparent; color:var(--sa-text); font-weight:800; padding:9px 0; outline:none; min-width:0; }
+    .rep-pool, .rep-drop { flex:1; min-height:220px; max-height:300px; overflow-y:auto; border-top:1px solid var(--sa-border); }
+    .rep-row { display:flex; align-items:center; gap:8px; width:100%; padding:10px 14px; border-bottom:1px solid var(--sa-border); color:var(--sa-text); font-weight:800; font-size:13px; cursor:grab; user-select:none; background:transparent; transition:background .12s ease, opacity .12s ease; }
+    .rep-row:hover { background:var(--sa-primary-soft); }
+    .rep-row.rep-dragging { opacity:.35; }
+    .rep-row .rep-row-grip { color:var(--sa-muted); font-size:12px; letter-spacing:-1px; }
+    .rep-row .rep-row-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .rep-row .rep-row-num { color:var(--sa-primary); font-size:11.5px; min-width:18px; text-align:center; }
+    .rep-row .rep-row-x { display:none; border:0; background:transparent; color:var(--sa-muted); font-weight:900; cursor:pointer; padding:0 2px; font-size:14px; line-height:1; }
+    .rep-row .rep-row-x:hover { color:#e11d48; }
+    .rep-drop .rep-row .rep-row-x { display:inline; }
+    .rep-drop.rep-over, .rep-pool.rep-over { background:var(--sa-primary-soft); }
+    .rep-dnd-hint { color:var(--sa-muted); font-size:12px; font-weight:800; margin:0 0 8px; }
+    .rep-drop-empty { display:block; text-align:center; color:var(--sa-muted); font-weight:800; font-size:12.5px; padding:34px 10px; pointer-events:none; }
+    .rep-no-match { display:block; text-align:center; color:var(--sa-muted); font-weight:800; font-size:12.5px; padding:20px 10px; }
+    @@media (max-width:760px){ .rep-dnd{ grid-template-columns:1fr; } }
+    /* ag-Grid run table (Kayan-style) */
+    .rep-run-toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 14px; }
+    .rep-run-toolbar input { flex:0 1 320px; min-width:180px; border-radius:10px; border:1px solid var(--sa-border); background:var(--sa-input); color:var(--sa-text); padding:9px 12px; font-weight:800; }
+    #run-grid { height:calc(100vh - 350px); min-height:440px; width:100%; }
+    #run-grid.ag-theme-quartz, #run-grid.ag-theme-quartz-dark { --ag-font-family:inherit; border-radius:12px; overflow:hidden; }
     @@media print {
-        .nexora-sidebar, .nexora-topbar, .page-header .hrms-inline-form, .hrms-pager, form { display:none !important; }
+        .rep-run-toolbar { display:none !important; }
+        #run-grid { height:auto !important; min-height:0 !important; }
+    }
+
+    /* Print header + settings */
+    .rep-print-head { display:none; }
+    @@media print {
+        .nexora-sidebar, .nexora-topbar, .page-header .hrms-inline-form, .hrms-pager, form, .hrms-slideover { display:none !important; }
+        .rep-print-head.on { display:flex !important; align-items:center; justify-content:space-between; gap:16px; margin-bottom:14px; padding-bottom:10px; border-bottom:2px solid #0f172a; }
+        .rep-print-head img { height:36px; }
+        .rep-print-head-text { display:flex; flex-direction:column; align-items:flex-start; gap:2px; }
+        .rep-print-head-text strong { font-size:16px; color:#0f172a; }
+        .rep-print-head-text span { font-size:12px; color:#475569; }
     }
 </style>
 
@@ -48,7 +94,6 @@
                 <h1>التقارير</h1>
                 <p>تقارير جاهزة لكل بيانات مودل الأشخاص + باني تقارير مخصص.</p>
             </div>
-            <button type="button" class="hrms-btn-primary" data-hrms-open="report-builder">+ تقرير جديد</button>
         </div>
 
         @if (!string.IsNullOrEmpty(Model.Message))
@@ -94,6 +139,9 @@
             }
             else
             {
+                <div style="display:flex; justify-content:flex-end; margin-bottom:12px">
+                    <button type="button" class="hrms-btn-primary" data-hrms-open="report-builder">+ تقرير جديد</button>
+                </div>
                 <div class="hrms-grid">
                     @foreach (var report in Model.MyReports)
                     {
@@ -106,6 +154,7 @@
                                     @if (report.IsShared) { <span class="hrms-badge approved">مشارك</span> }
                                 </div>
                             </div>
+                            <button type="button" class="rep-pin" title="تعديل" onclick="repEdit(@report.Id)">✏️</button>
                             <form method="post" asp-page-handler="ToggleShare" style="display:inline">
                                 <input type="hidden" name="id" value="@report.Id" />
                                 <button type="submit" class="rep-pin" title="@(report.IsShared ? "إلغاء المشاركة" : "مشاركة")">@(report.IsShared ? "🔓" : "🔒")</button>
@@ -154,13 +203,40 @@
                 <h1>@Model.Current.Name</h1>
                 <p>@(string.IsNullOrWhiteSpace(Model.Current.Description) ? $"{Model.RunRows.Count} سجل" : Model.Current.Description + $" · {Model.RunRows.Count} سجل")</p>
             </div>
+            @{
+                var exportRoute = new Dictionary<string, string>
+                {
+                    ["ReportId"] = Model.ReportId.ToString(),
+                    ["CompanyId"] = Model.CompanyId?.ToString() ?? "",
+                    ["Search"] = Model.Search ?? "",
+                    ["ActiveOnly"] = Model.ActiveOnly.ToString()
+                };
+                foreach (var filterValue in Model.RunFilterValues)
+                {
+                    exportRoute["cf_" + filterValue.Key] = filterValue.Value;
+                }
+            }
             <div class="hrms-inline-form">
-                <button type="button" class="hrms-btn-secondary" data-hrms-open="run-filter">🔎 بحث</button>
-                <a asp-page="./Index" asp-route-ReportId="@Model.ReportId" asp-page-handler="Export"
-                   asp-route-CompanyId="@Model.CompanyId" asp-route-Search="@Model.Search" asp-route-ActiveOnly="@Model.ActiveOnly"
+                @if (Model.RunFilterColumns.Any())
+                {
+                    <button type="button" class="hrms-btn-secondary" data-hrms-open="run-filter">🔎 بحث متقدم</button>
+                }
+                <a asp-page="./Index" asp-page-handler="Export" asp-all-route-data="exportRoute"
                    class="hrms-btn-secondary">⬇ تصدير إكسل</a>
-                <button type="button" class="hrms-btn-secondary" onclick="window.print()">🖨 طباعة</button>
+                <button type="button" class="hrms-btn-secondary" data-hrms-open="print-settings">🖨 طباعة</button>
                 <a asp-page="./Index" class="hrms-btn-secondary">→ رجوع</a>
+            </div>
+        </div>
+
+        @* ترويسة الطباعة — تظهر فقط عند الطباعة وحسب اختيار المستخدم *@
+        <div class="rep-print-head" id="rep-print-head">
+            <img src="~/brand/zynora-logo-horizontal-light.svg" alt="ZYNORA HR" />
+            <div class="rep-print-head-text">
+                <strong>@Model.Current.Name</strong>
+                <span>
+                    @(Model.CompanyId.HasValue ? (Model.Companies.FirstOrDefault(c => c.Id == Model.CompanyId)?.Name ?? "") : "كل الشركات")
+                    · @Model.RunRows.Count سجل · @DateTime.Now.ToString("yyyy-MM-dd")
+                </span>
             </div>
         </div>
 
@@ -171,30 +247,13 @@
             }
             else
             {
-                <div class="hrms-table-wrap">
-                    <table class="hrms-table" id="run-table" data-hrms-paginate="15">
-                        <thead>
-                            <tr>
-                                @foreach (var column in Model.RunColumns)
-                                {
-                                    <th class="text-start">@column.Label</th>
-                                }
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var row in Model.RunRows)
-                            {
-                                <tr>
-                                    @foreach (var column in Model.RunColumns)
-                                    {
-                                        <td class="text-start">@(string.IsNullOrEmpty(row.GetValueOrDefault(column.Key, "")) ? "—" : row[column.Key])</td>
-                                    }
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                @* جدول ag-Grid — نفس محرك جداول كيان: فرز بالنقر + فلتر لكل عمود + بحث سريع *@
+                <link rel="stylesheet" href="~/lib/ag-grid/ag-grid.css" />
+                <link rel="stylesheet" href="~/lib/ag-grid/ag-theme-quartz.css" />
+                <div class="rep-run-toolbar">
+                    <input type="search" id="run-quick-search" placeholder="بحث سريع بكل الأعمدة..." autocomplete="off" />
                 </div>
-                <div class="hrms-pager" data-hrms-pager-for="run-table"></div>
+                <div id="run-grid" class="ag-theme-quartz" dir="rtl"></div>
             }
         </div>
 
@@ -224,9 +283,64 @@
                         <label>الاسم أو الرقم الوظيفي</label>
                         <input type="search" name="Search" value="@Model.Search" placeholder="بحث..." />
                     </div>
+                    @if (Model.RunFilterColumns.Any())
+                    {
+                        <div class="hrms-tile-sub" style="margin-top:4px">بحث متقدم</div>
+                        foreach (var filterColumn in Model.RunFilterColumns)
+                        {
+                            <div class="hrms-field">
+                                <label>@filterColumn.Label</label>
+                                @if (filterColumn.Filter == SmartAttendance.Web.Infrastructure.Reports.PeopleReportCatalog.FilterKind.Select)
+                                {
+                                    var currentValue = Model.RunFilterValues.GetValueOrDefault(filterColumn.Key, "");
+                                    <select name="cf_@filterColumn.Key">
+                                        <option value="">الكل</option>
+                                        @foreach (var option in Model.RunFilterOptions.GetValueOrDefault(filterColumn.Key, new List<string>()))
+                                        {
+                                            <option value="@option" selected="@(option == currentValue ? "selected" : null)">@option</option>
+                                        }
+                                    </select>
+                                }
+                                else if (filterColumn.Filter == SmartAttendance.Web.Infrastructure.Reports.PeopleReportCatalog.FilterKind.DateRange)
+                                {
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+                                        <input type="date" name="cf_@(filterColumn.Key)_from" value="@Model.RunFilterValues.GetValueOrDefault(filterColumn.Key + "_from", "")" title="من" />
+                                        <input type="date" name="cf_@(filterColumn.Key)_to" value="@Model.RunFilterValues.GetValueOrDefault(filterColumn.Key + "_to", "")" title="إلى" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <input type="search" name="cf_@filterColumn.Key" value="@Model.RunFilterValues.GetValueOrDefault(filterColumn.Key, "")" placeholder="يحتوي..." />
+                                }
+                            </div>
+                        }
+                        <a href="?ReportId=@Model.ReportId" class="hrms-btn-secondary" style="text-align:center">إزالة الفلتر</a>
+                    }
                     <label class="hrms-toggle"><input type="checkbox" name="ActiveOnly" value="true" checked="@(Model.ActiveOnly ? "checked" : null)" /> الفعالون فقط</label>
                     <button type="submit" class="hrms-btn-primary">تطبيق</button>
                 </form>
+            </div>
+        </aside>
+
+        @* درج إعدادات الطباعة (نمط كيان) *@
+        <aside class="hrms-slideover" id="print-settings" aria-hidden="true">
+            <div class="hrms-slideover-head">
+                <h2>إعدادات الطباعة</h2>
+                <button type="button" class="hrms-slideover-close" data-hrms-close>×</button>
+            </div>
+            <div class="hrms-slideover-body">
+                <div class="hrms-page">
+                    <div class="hrms-field">
+                        <label>اتجاه الصفحة</label>
+                        <select id="print-orientation">
+                            <option value="portrait">عمودي</option>
+                            <option value="landscape">أفقي</option>
+                        </select>
+                    </div>
+                    <label class="hrms-toggle"><input type="checkbox" id="print-show-header" checked /> إظهار الترويسة (الشعار واسم التقرير)</label>
+                    <label class="hrms-toggle"><input type="checkbox" id="print-all-rows" checked /> طباعة كل السجلات (تجاهل ترقيم الصفحات)</label>
+                    <button type="button" class="hrms-btn-primary" onclick="repPrint()">🖨 طباعة</button>
+                </div>
             </div>
         </aside>
     }
@@ -235,61 +349,81 @@
 @* ---------------- Slide-over: report builder (Kayan-style) ---------------- *@
 <aside class="hrms-slideover wide" id="report-builder" aria-hidden="true">
     <div class="hrms-slideover-head">
-        <h2>تقرير جديد</h2>
+        <h2 id="builder-title">تقرير جديد</h2>
         <button type="button" class="hrms-slideover-close" data-hrms-close>×</button>
     </div>
     <div class="hrms-slideover-body">
         <form method="post" asp-page-handler="CreateReport" class="hrms-page" onsubmit="return repCollectColumns();">
+            <input type="hidden" name="id" id="rep-edit-id" value="0" />
             <div class="hrms-field">
                 <label>اسم التقرير</label>
-                <input name="name" required placeholder="مثال: هواتف موظفي الفروع" />
+                <input name="name" id="rep-name" required placeholder="مثال: هواتف موظفي الفروع" />
             </div>
             <div class="hrms-field">
                 <label>الوصف (اختياري)</label>
-                <input name="description" placeholder="وصف مختصر للتقرير" />
+                <input name="description" id="rep-description" placeholder="وصف مختصر للتقرير" />
             </div>
             <div class="hrms-field">
                 <label>من يمكنه مشاهدة هذا التقرير</label>
-                <select name="visibility">
+                <select name="visibility" id="rep-visibility">
                     <option value="me">أنا فقط</option>
                     <option value="everyone">الجميع</option>
+                    <option value="specific">أشخاص محددون</option>
                 </select>
             </div>
-            <div class="hrms-field">
-                <label>فئة الحقول (مصدر البيانات)</label>
-                <select name="datasetKey" id="builder-dataset">
-                    @foreach (var dataset in Model.Datasets)
+            <div class="hrms-field" id="rep-shared-with-field" style="display:none">
+                <label>اختر الأشخاص (Ctrl لتحديد أكثر من شخص)</label>
+                <select name="sharedWith" id="rep-shared-with" multiple size="5">
+                    @foreach (var shareUser in Model.ShareUserOptions)
                     {
-                        <option value="@dataset.Key">@dataset.Label</option>
+                        <option value="@shareUser">@shareUser</option>
                     }
                 </select>
             </div>
+            <div class="hrms-field">
+                <label>أعمدة التقرير</label>
+                <p class="rep-dnd-hint">اختر المودل أولاً، ثم اسحب الحقل وأفلته بـ«أعمدة التقرير» (أو انقره). التبديل بين المودلات يحتفظ باختياراتك لكل مودل.</p>
+                <div class="rep-dnd">
+                    <div class="rep-dnd-panel">
+                        <select name="datasetKey" id="builder-dataset" class="rep-model-select">
+                            @foreach (var dataset in Model.Datasets)
+                            {
+                                <option value="@dataset.Key">@dataset.Label</option>
+                            }
+                        </select>
+                        <div class="rep-field-search">
+                            <span>&#128269;</span>
+                            <input type="search" id="rep-field-search" placeholder="بحث" autocomplete="off" />
+                        </div>
+                        <div id="rep-available" class="rep-pool"></div>
+                    </div>
+                    <div class="rep-dnd-panel">
+                        <span class="rep-panel-title">أعمدة التقرير (بالترتيب)</span>
+                        <div id="rep-selected" class="rep-drop"></div>
+                    </div>
+                </div>
+            </div>
 
             <div class="hrms-field">
-                <label>اختر أعمدة التقرير — انقل الحقول من «المتاحة» إلى «المحددة» ورتّبها</label>
-                <div class="rep-dual">
-                    <div>
-                        <span class="hrms-tile-sub">الحقول المتاحة</span>
-                        <select id="rep-available" multiple size="9"></select>
-                    </div>
-                    <div class="rep-dual-actions">
-                        <button type="button" onclick="repMove('rep-available','rep-selected')" title="إضافة">‹</button>
-                        <button type="button" onclick="repMove('rep-selected','rep-available')" title="إزالة">›</button>
-                        <button type="button" onclick="repMoveAll('rep-available','rep-selected')" title="إضافة الكل">«</button>
-                        <button type="button" onclick="repMoveAll('rep-selected','rep-available')" title="إزالة الكل">»</button>
-                    </div>
-                    <div>
-                        <span class="hrms-tile-sub">الحقول المحددة (بالترتيب)</span>
-                        <select id="rep-selected" multiple size="9"></select>
-                        <div class="rep-order">
-                            <button type="button" onclick="repShift(-1)" title="أعلى">↑</button>
-                            <button type="button" onclick="repShift(1)" title="أسفل">↓</button>
+                <label>إختر مرشح التقرير (اختياري)</label>
+                <p class="rep-dnd-hint">اسحب الحقول التي تريدها كأداة بحث متقدم عند تشغيل التقرير — تظهر بدرج «بحث وتصفية».</p>
+                <div class="rep-dnd">
+                    <div class="rep-dnd-panel">
+                        <div class="rep-field-search">
+                            <span>&#128269;</span>
+                            <input type="search" id="rep-filter-search" placeholder="بحث" autocomplete="off" />
                         </div>
+                        <div id="rep-filter-available" class="rep-pool"></div>
+                    </div>
+                    <div class="rep-dnd-panel">
+                        <span class="rep-panel-title">مرشحات التقرير</span>
+                        <div id="rep-filter-selected" class="rep-drop"></div>
                     </div>
                 </div>
             </div>
 
             <input type="hidden" name="columnsCsv" id="rep-columns-csv" />
+            <input type="hidden" name="filterColumnsCsv" id="rep-filters-csv" />
             <button type="submit" class="hrms-btn-primary">حفظ التقرير</button>
         </form>
     </div>
@@ -299,47 +433,234 @@
     <script>
         var REP_DATASETS = @Html.Raw(datasetsJson);
 
-        // ---- Builder dual listbox ----
+        // ---- الطباعة بإعدادات (اتجاه/ترويسة/كل السجلات) — تدعم جدول ag-Grid ----
+        function repPrint() {
+            var orientation = document.getElementById('print-orientation').value;
+            var showHeader = document.getElementById('print-show-header').checked;
+            var allRows = document.getElementById('print-all-rows').checked;
+
+            var head = document.getElementById('rep-print-head');
+            if (head) head.classList.toggle('on', showHeader);
+
+            var style = document.getElementById('rep-print-orient');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'rep-print-orient';
+                document.head.appendChild(style);
+            }
+            style.textContent = '@@page { size: A4 ' + orientation + '; }';
+
+            document.querySelectorAll('.hrms-slideover.open [data-hrms-close]').forEach(function (b) { b.click(); });
+
+            // «كل السجلات»: تخطيط الطباعة بـ ag-Grid يعرض كل الصفوف المفلترة بلا سكرول.
+            if (allRows && window.repRunGridApi) window.repRunGridApi.setGridOption('domLayout', 'print');
+            setTimeout(function () {
+                window.print();
+                setTimeout(function () {
+                    if (allRows && window.repRunGridApi) window.repRunGridApi.setGridOption('domLayout', 'normal');
+                }, 300);
+            }, 200);
+        }
+        window.repPrint = repPrint;
+
+        // ---- Builder: Kayan-style pickers (أعمدة + مرشحات) + تعديل + مشاركة محددة ----
+        var MY_REPORTS = @Html.Raw(myReportsJson);
+        var repDatasetSelect = document.getElementById('builder-dataset');
+
+        // لاقط قابل لإعادة الاستخدام: قائمة صفوف + بحث + سحب وإفلات + ذاكرة لكل مودل.
+        function repMakePicker(poolId, dropId, searchId, emptyText) {
+            var pool = document.getElementById(poolId);
+            var drop = document.getElementById(dropId);
+            var search = document.getElementById(searchId);
+            var dragged = null, currentKey = null, memory = {};
+
+            function makeRow(col) {
+                var row = document.createElement('div');
+                row.className = 'rep-row';
+                row.draggable = true;
+                row.dataset.key = col.key;
+                row.dataset.label = col.label;
+                var grip = document.createElement('span'); grip.className = 'rep-row-grip'; grip.textContent = '⋮⋮';
+                var num = document.createElement('span'); num.className = 'rep-row-num';
+                var lbl = document.createElement('span'); lbl.className = 'rep-row-label'; lbl.textContent = col.label;
+                var x = document.createElement('button');
+                x.type = 'button'; x.className = 'rep-row-x'; x.textContent = '×'; x.title = 'إزالة';
+                x.addEventListener('click', function (e) { e.stopPropagation(); pool.appendChild(row); refresh(); });
+                row.appendChild(grip); row.appendChild(num); row.appendChild(lbl); row.appendChild(x);
+                row.addEventListener('click', function () {
+                    (row.parentElement === pool ? drop : pool).appendChild(row);
+                    refresh();
+                });
+                row.addEventListener('dragstart', function (e) {
+                    dragged = row;
+                    row.classList.add('rep-dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    try { e.dataTransfer.setData('text/plain', col.key); } catch (err) { }
+                });
+                row.addEventListener('dragend', function () {
+                    row.classList.remove('rep-dragging');
+                    dragged = null;
+                    refresh();
+                });
+                return row;
+            }
+
+            function refresh() {
+                var rows = drop.querySelectorAll('.rep-row');
+                rows.forEach(function (r, i) { r.querySelector('.rep-row-num').textContent = (i + 1); });
+                pool.querySelectorAll('.rep-row-num').forEach(function (n) { n.textContent = ''; });
+
+                var empty = drop.querySelector('.rep-drop-empty');
+                if (!rows.length && !empty) {
+                    var ph = document.createElement('span');
+                    ph.className = 'rep-drop-empty';
+                    ph.textContent = emptyText;
+                    drop.appendChild(ph);
+                } else if (rows.length && empty) { empty.remove(); }
+
+                applySearch();
+                if (currentKey) {
+                    memory[currentKey] = [...rows].map(function (r) { return r.dataset.key; });
+                }
+            }
+
+            function applySearch() {
+                var q = (search.value || '').trim();
+                var any = false;
+                pool.querySelectorAll('.rep-row').forEach(function (r) {
+                    var show = !q || (r.dataset.label || '').indexOf(q) !== -1;
+                    r.style.display = show ? '' : 'none';
+                    if (show) any = true;
+                });
+                var no = pool.querySelector('.rep-no-match');
+                if (!any && !no) {
+                    var n = document.createElement('span');
+                    n.className = 'rep-no-match';
+                    n.textContent = 'لا توجد حقول مطابقة';
+                    pool.appendChild(n);
+                } else if (any && no) { no.remove(); }
+            }
+
+            function insertTarget(zone, y) {
+                var rows = [...zone.querySelectorAll('.rep-row')].filter(function (r) { return r !== dragged && r.style.display !== 'none'; });
+                for (var i = 0; i < rows.length; i++) {
+                    var rect = rows[i].getBoundingClientRect();
+                    if (y < rect.top + rect.height / 2) return rows[i];
+                }
+                return null;
+            }
+
+            [pool, drop].forEach(function (zone) {
+                zone.addEventListener('dragover', function (e) {
+                    if (!dragged) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    zone.classList.add('rep-over');
+                    var before = insertTarget(zone, e.clientY);
+                    if (before) zone.insertBefore(dragged, before); else zone.appendChild(dragged);
+                });
+                zone.addEventListener('dragleave', function (e) {
+                    if (!zone.contains(e.relatedTarget)) zone.classList.remove('rep-over');
+                });
+                zone.addEventListener('drop', function (e) {
+                    e.preventDefault();
+                    zone.classList.remove('rep-over');
+                    refresh();
+                });
+            });
+
+            search.addEventListener('input', applySearch);
+
+            return {
+                fill: function (key, ds) {
+                    currentKey = null; // لا نكتب فوق ذاكرة المودل الجديد أثناء البناء
+                    pool.innerHTML = ''; drop.innerHTML = '';
+                    if (ds) {
+                        var saved = memory[key] || [];
+                        var byKey = {};
+                        ds.columns.forEach(function (c) { byKey[c.key] = c; });
+                        saved.forEach(function (k) { if (byKey[k]) drop.appendChild(makeRow(byKey[k])); });
+                        ds.columns.forEach(function (c) {
+                            if (saved.indexOf(c.key) === -1) pool.appendChild(makeRow(c));
+                        });
+                    }
+                    currentKey = key;
+                    refresh();
+                },
+                keys: function () { return [...drop.querySelectorAll('.rep-row')].map(function (r) { return r.dataset.key; }); },
+                setMemory: function (key, keys) { memory[key] = keys.slice(); },
+                clearMemory: function () { memory = {}; }
+            };
+        }
+
+        var repColumnsPicker = repMakePicker('rep-available', 'rep-selected', 'rep-field-search', 'أفلت الحقول هنا لتصبح أعمدة التقرير');
+        var repFiltersPicker = repMakePicker('rep-filter-available', 'rep-filter-selected', 'rep-filter-search', 'أفلت الحقول هنا لتصبح مرشحات بحث بشاشة التقرير');
+
         function repFill() {
-            var key = document.getElementById('builder-dataset').value;
+            var key = repDatasetSelect.value;
             var ds = REP_DATASETS.find(function (d) { return d.key === key; });
-            var avail = document.getElementById('rep-available');
-            var sel = document.getElementById('rep-selected');
-            avail.innerHTML = ''; sel.innerHTML = '';
-            if (!ds) return;
-            ds.columns.forEach(function (c) {
-                var o = document.createElement('option');
-                o.value = c.key; o.textContent = c.label;
-                avail.appendChild(o);
-            });
+            repColumnsPicker.fill(key, ds);
+            repFiltersPicker.fill(key, ds);
         }
-        function repMove(fromId, toId) {
-            var from = document.getElementById(fromId), to = document.getElementById(toId);
-            [...from.selectedOptions].forEach(function (o) { to.appendChild(o); });
-        }
-        function repMoveAll(fromId, toId) {
-            var from = document.getElementById(fromId), to = document.getElementById(toId);
-            [...from.options].forEach(function (o) { to.appendChild(o); });
-        }
-        function repShift(dir) {
-            var sel = document.getElementById('rep-selected');
-            var opts = [...sel.selectedOptions];
-            if (dir > 0) opts.reverse();
-            opts.forEach(function (o) {
-                var sib = dir < 0 ? o.previousElementSibling : o.nextElementSibling;
-                if (sib) sel.insertBefore(dir < 0 ? o : sib, dir < 0 ? sib : o);
-            });
-        }
+
         function repCollectColumns() {
-            var sel = document.getElementById('rep-selected');
-            var keys = [...sel.options].map(function (o) { return o.value; });
+            var keys = repColumnsPicker.keys();
             if (!keys.length) { alert('اختر عموداً واحداً على الأقل.'); return false; }
             document.getElementById('rep-columns-csv').value = keys.join(',');
+            document.getElementById('rep-filters-csv').value = repFiltersPicker.keys().join(',');
             return true;
         }
+
+        // إظهار قائمة الأشخاص فقط عند اختيار «أشخاص محددون».
+        var repVisibility = document.getElementById('rep-visibility');
+        var repSharedWith = document.getElementById('rep-shared-with');
+        function repSyncVisibility() {
+            document.getElementById('rep-shared-with-field').style.display =
+                repVisibility.value === 'specific' ? '' : 'none';
+        }
+
+        function repResetBuilder() {
+            document.getElementById('rep-edit-id').value = '0';
+            document.getElementById('builder-title').textContent = 'تقرير جديد';
+            document.getElementById('rep-name').value = '';
+            document.getElementById('rep-description').value = '';
+            repVisibility.value = 'me';
+            [...repSharedWith.options].forEach(function (o) { o.selected = false; });
+            repColumnsPicker.clearMemory();
+            repFiltersPicker.clearMemory();
+            repFill();
+            repSyncVisibility();
+        }
+
+        // فتح الباني لتعديل تقرير موجود (prefill من MY_REPORTS).
+        function repEdit(id) {
+            var r = MY_REPORTS.find(function (x) { return x.id === id; });
+            if (!r) return;
+            var opener = document.querySelector('[data-hrms-open="report-builder"]');
+            if (opener) opener.click(); // يفتح السلايد ويصفّر النموذج أولاً
+            document.getElementById('rep-edit-id').value = r.id;
+            document.getElementById('builder-title').textContent = 'تعديل التقرير';
+            document.getElementById('rep-name').value = r.name;
+            document.getElementById('rep-description').value = r.description;
+            repVisibility.value = r.sharedWith.length ? 'specific' : (r.isShared ? 'everyone' : 'me');
+            [...repSharedWith.options].forEach(function (o) { o.selected = r.sharedWith.indexOf(o.value) !== -1; });
+            repDatasetSelect.value = r.datasetKey;
+            repColumnsPicker.setMemory(r.datasetKey, r.columns);
+            repFiltersPicker.setMemory(r.datasetKey, r.filterColumns);
+            repFill();
+            repSyncVisibility();
+        }
+        window.repEdit = repEdit;
+
         (function () {
-            var ds = document.getElementById('builder-dataset');
-            if (ds) { ds.addEventListener('change', repFill); repFill(); }
+            if (!repDatasetSelect) return;
+            repDatasetSelect.addEventListener('change', repFill);
+            repVisibility.addEventListener('change', repSyncVisibility);
+            document.querySelectorAll('[data-hrms-open="report-builder"]').forEach(function (b) {
+                b.addEventListener('click', repResetBuilder);
+            });
+            repFill();
+            repSyncVisibility();
         })();
 
         // ---- System reports: search + pin (localStorage, pinned first) ----
@@ -385,4 +706,81 @@
             apply();
         })();
     </script>
+
+    @if (Model.Current != null && Model.RunRows.Any())
+    {
+        var runColumnsJson = JsonSerializer.Serialize(
+            Model.RunColumns.Select(c => new { key = c.Key, label = c.Label, kind = c.Filter.ToString() }));
+        var runRowsJson = JsonSerializer.Serialize(Model.RunRows);
+
+        <script src="~/lib/ag-grid/ag-grid-community.min.js"></script>
+        <script>
+            // ---- جدول التشغيل = ag-Grid (نفس محرك كيان): فرز/فلاتر أعمدة/بحث سريع/ترقيم ----
+            (function () {
+                var el = document.getElementById('run-grid');
+                if (!el || !window.agGrid) return;
+
+                var RUN_COLUMNS = @Html.Raw(runColumnsJson);
+                var RUN_ROWS = @Html.Raw(runRowsJson);
+
+                if ((document.documentElement.getAttribute('data-theme') || 'dark') !== 'light') {
+                    el.className = 'ag-theme-quartz-dark';
+                }
+
+                var columnDefs = RUN_COLUMNS.map(function (c) {
+                    var def = {
+                        field: c.key,
+                        headerName: c.label,
+                        flex: 1,
+                        minWidth: 130,
+                        filter: 'agTextColumnFilter',
+                        floatingFilter: true,
+                        valueFormatter: function (p) { return p.value === '' || p.value == null ? '—' : p.value; }
+                    };
+                    if (c.kind === 'DateRange') {
+                        def.filter = 'agDateColumnFilter';
+                        def.filterParams = {
+                            comparator: function (filterDate, cellValue) {
+                                if (!cellValue) return -1;
+                                var d = new Date(cellValue + 'T00:00:00');
+                                return d < filterDate ? -1 : (d > filterDate ? 1 : 0);
+                            }
+                        };
+                    }
+                    return def;
+                });
+
+                window.repRunGridApi = agGrid.createGrid(el, {
+                    rowData: RUN_ROWS,
+                    columnDefs: columnDefs,
+                    enableRtl: true,
+                    defaultColDef: { sortable: true, resizable: true },
+                    pagination: true,
+                    paginationPageSize: 100,
+                    paginationPageSizeSelector: [15, 50, 100, 500],
+                    suppressCellFocus: true,
+                    localeText: {
+                        page: 'صفحة', of: 'من', to: 'إلى', pageSizeSelectorLabel: 'حجم الصفحة:',
+                        noRowsToShow: 'لا توجد بيانات', loadingOoo: 'جارٍ التحميل...',
+                        contains: 'يحتوي', notContains: 'لا يحتوي', equals: 'يساوي', notEqual: 'لا يساوي',
+                        startsWith: 'يبدأ بـ', endsWith: 'ينتهي بـ', blank: 'فارغ', notBlank: 'غير فارغ',
+                        filterOoo: 'تصفية...', searchOoo: 'بحث...', selectAll: 'اختيار الكل',
+                        andCondition: 'و', orCondition: 'أو',
+                        applyFilter: 'تطبيق', resetFilter: 'إعادة تعيين', clearFilter: 'مسح', cancelFilter: 'إلغاء',
+                        greaterThan: 'أكبر من', lessThan: 'أصغر من', inRange: 'بين',
+                        before: 'قبل', after: 'بعد', dateFilter: 'فلتر تاريخ', textFilter: 'فلتر نصي',
+                        firstPage: 'الأولى', lastPage: 'الأخيرة', nextPage: 'التالية', previousPage: 'السابقة',
+                        ariaSortableColumn: 'قابل للفرز', noMatches: 'لا نتائج مطابقة'
+                    }
+                });
+
+                var quick = document.getElementById('run-quick-search');
+                if (quick) {
+                    quick.addEventListener('input', function () {
+                        window.repRunGridApi.setGridOption('quickFilterText', quick.value);
+                    });
+                }
+            })();
+        </script>
+    }
 }

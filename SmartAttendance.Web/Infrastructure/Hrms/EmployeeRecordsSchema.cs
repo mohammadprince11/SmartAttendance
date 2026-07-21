@@ -45,6 +45,27 @@ IF COL_LENGTH('EmployeeFileRecords', 'Amount') IS NULL
 
 IF COL_LENGTH('EmployeeFileRecords', 'IsCurrent') IS NULL
     ALTER TABLE EmployeeFileRecords ADD IsCurrent bit NOT NULL CONSTRAINT DF_EmployeeFileRecords_IsCurrent DEFAULT(0);
+
+IF COL_LENGTH('EmployeeFileRecords', 'IsReturned') IS NULL
+    ALTER TABLE EmployeeFileRecords ADD IsReturned bit NOT NULL CONSTRAINT DF_EmployeeFileRecords_IsReturned DEFAULT(0);
+
+IF COL_LENGTH('EmployeeFileRecords', 'ReturnDate') IS NULL
+    ALTER TABLE EmployeeFileRecords ADD ReturnDate date NULL;
+
+IF COL_LENGTH('EmployeeFileRecords', 'Gpa') IS NULL
+    ALTER TABLE EmployeeFileRecords ADD Gpa nvarchar(20) NULL;
+
+IF COL_LENGTH('EmployeeFileRecords', 'RefContactName') IS NULL
+    ALTER TABLE EmployeeFileRecords ADD RefContactName nvarchar(200) NULL;
+
+IF COL_LENGTH('EmployeeFileRecords', 'RefContactPosition') IS NULL
+    ALTER TABLE EmployeeFileRecords ADD RefContactPosition nvarchar(200) NULL;
+
+IF COL_LENGTH('EmployeeFileRecords', 'RefContactPhone') IS NULL
+    ALTER TABLE EmployeeFileRecords ADD RefContactPhone nvarchar(50) NULL;
+
+IF COL_LENGTH('EmployeeFileRecords', 'RefContactNote') IS NULL
+    ALTER TABLE EmployeeFileRecords ADD RefContactNote nvarchar(500) NULL;
 """);
     }
 }

@@ -17,6 +17,29 @@ public partial class ProfileModel
 {
     public List<EmployeeDependent> Dependents { get; set; } = new();
     public List<EmployeeFileRecord> FileRecords { get; set; } = new();
+    public EmployeeFinancialInfo? FinancialInfo { get; set; }
+
+    // ---- العلاوات (نمط كيان: عنصر راتب + مبلغ + نطاق + حالة مشتقة) ----
+    public List<EmployeeAllowance> Allowances { get; set; } = new();
+    public List<string> SalaryItemOptions { get; set; } = new();
+    public decimal ActiveAllowancesTotal { get; set; }
+
+    // ---- العقود (نمط كيان: متعددة، التجديد صف جديد) ----
+    public List<EmployeeContract> Contracts { get; set; } = new();
+    public List<string> ContractTypeOptions { get; set; } = new();
+
+    // ---- دفتر استحقاقات الإجازة (نمط كيان: سابق/استحقاق/مستخدم/حالي) ----
+    public sealed class LeaveLedgerRow
+    {
+        public SmartAttendance.Domain.Enums.LeaveType Type { get; set; }
+        public decimal CarriedOver { get; set; }
+        public decimal Entitled { get; set; }
+        public decimal Used { get; set; }
+        public decimal Current => CarriedOver + Entitled - Used; // السالب مسموح مثل كيان
+    }
+
+    public int LeaveLedgerYear { get; set; } = DateTime.Today.Year;
+    public List<LeaveLedgerRow> LeaveLedger { get; set; } = new();
 
     public int DependentCount => Dependents.Count;
     public int SupportedCount => Dependents.Count(d => d.IsDependent);
@@ -31,11 +54,16 @@ public partial class ProfileModel
     [BindProperty] public DependentInput Dependent { get; set; } = new();
     [BindProperty] public FileRecordInput RecordInput { get; set; } = new();
     [BindProperty] public IFormFile? RecordAttachment { get; set; }
+    [BindProperty] public AllowanceInput Allowance { get; set; } = new();
+    [BindProperty] public IFormFile? AllowanceAttachment { get; set; }
+    [BindProperty] public ContractInput Contract { get; set; } = new();
+    [BindProperty] public IFormFile? ContractAttachment { get; set; }
 
     public async Task LoadPanelsAsync()
     {
         await EmployeeDependentSchema.EnsureAsync(_dbContext);
         await EmployeeRecordsSchema.EnsureAsync(_dbContext);
+        await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);
 
         Dependents = await _dbContext.EmployeeDependents.AsNoTracking()
             .Where(d => d.EmployeeId == Id)
@@ -44,6 +72,74 @@ public partial class ProfileModel
         FileRecords = await _dbContext.EmployeeFileRecords.AsNoTracking()
             .Where(r => r.EmployeeId == Id)
             .OrderByDescending(r => r.ToDate).ThenByDescending(r => r.Id).ToListAsync();
+
+        FinancialInfo = await _dbContext.EmployeeFinancialInfos.AsNoTracking()
+            .FirstOrDefaultAsync(f => f.EmployeeId == Id);
+
+        await EmployeeAllowanceSchema.EnsureAsync(_dbContext);
+        Allowances = await _dbContext.EmployeeAllowances.AsNoTracking()
+            .Where(a => a.EmployeeId == Id)
+            .OrderByDescending(a => a.FromDate).ToListAsync();
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        ActiveAllowancesTotal = Allowances.Where(a => a.IsActiveOn(today)).Sum(a => a.Amount);
+
+        await HrLookups.EnsureSchemaAsync(_dbContext);
+        SalaryItemOptions = await HrLookups.ValuesAsync(_dbContext, "salaryitems");
+        ContractTypeOptions = await HrLookups.ValuesAsync(_dbContext, "contracttypes");
+
+        await EmployeeContractSchema.EnsureAsync(_dbContext);
+        Contracts = await _dbContext.EmployeeContracts.AsNoTracking()
+            .Where(c => c.EmployeeId == Id)
+            .OrderByDescending(c => c.IsCurrent).ThenByDescending(c => c.FromDate).ToListAsync();
+
+        await LoadLeaveLedgerAsync();
+    }
+
+    // نفس منطق صفحة /LeaveBalances: المنح من LeaveBalance (أو افتراضي السياسة)،
+    // والاستخدام يُشتق من طلبات الإجازة المعتمدة المتداخلة مع السنة.
+    private async Task LoadLeaveLedgerAsync()
+    {
+        await LeaveBalanceSchema.EnsureAsync(_dbContext);
+
+        var year = LeaveLedgerYear;
+        var yearStart = new DateOnly(year, 1, 1);
+        var yearEnd = new DateOnly(year, 12, 31);
+        var trackedTypes = SmartAttendance.Domain.Leave.IraqiLeavePolicy.TrackedTypes.ToList();
+
+        var overrides = await _dbContext.LeaveBalances.AsNoTracking()
+            .Where(b => b.EmployeeId == Id && b.Year == year)
+            .ToListAsync();
+
+        var requests = await _dbContext.LeaveRequests.AsNoTracking()
+            .Where(r => r.EmployeeId == Id
+                     && r.Status == SmartAttendance.Domain.Enums.LeaveStatus.Approved
+                     && trackedTypes.Contains(r.LeaveType)
+                     && r.FromDate <= yearEnd
+                     && r.ToDate >= yearStart)
+            .Select(r => new { r.LeaveType, r.FromDate, r.ToDate })
+            .ToListAsync();
+
+        LeaveLedger = trackedTypes.Select(type =>
+        {
+            var stored = overrides.FirstOrDefault(b => b.LeaveType == type);
+            var used = requests.Where(r => r.LeaveType == type).Sum(r =>
+            {
+                var start = r.FromDate > yearStart ? r.FromDate : yearStart;
+                var end = r.ToDate < yearEnd ? r.ToDate : yearEnd;
+                var days = end.DayNumber - start.DayNumber + 1;
+                return days > 0 ? days : 0;
+            });
+
+            return new LeaveLedgerRow
+            {
+                Type = type,
+                CarriedOver = stored?.CarriedOverDays ?? 0,
+                Entitled = stored?.EntitledDays
+                    ?? SmartAttendance.Domain.Leave.IraqiLeavePolicy.GetDefaultEntitlement(type) ?? 0,
+                Used = used
+            };
+        }).ToList();
     }
 
     private IActionResult BackToFiles() => RedirectToPage("./Profile", null, new { Id }, "profile-files");
@@ -74,6 +170,9 @@ public partial class ProfileModel
         e.NationalId = CleanText(Dependent.NationalId);
         e.PassportNo = CleanText(Dependent.PassportNo);
         e.IsCitizen = Dependent.IsCitizen;
+        e.ResidencyNo = CleanText(Dependent.ResidencyNo);
+        e.Gender = CleanText(Dependent.Gender);
+        e.IsStudent = Dependent.IsStudent;
         e.MaritalStatus = CleanText(Dependent.MaritalStatus);
         e.IsEmergencyContact = Dependent.IsEmergencyContact;
         e.IsSpecialNeeds = Dependent.IsSpecialNeeds;
@@ -126,6 +225,13 @@ public partial class ProfileModel
         r.ToDate = RecordInput.ToDate;
         r.Amount = RecordInput.Amount;
         r.IsCurrent = RecordInput.IsCurrent;
+        r.IsReturned = RecordInput.IsReturned;
+        r.ReturnDate = RecordInput.ReturnDate;
+        r.Gpa = CleanText(RecordInput.Gpa);
+        r.RefContactName = CleanText(RecordInput.RefContactName);
+        r.RefContactPosition = CleanText(RecordInput.RefContactPosition);
+        r.RefContactPhone = CleanText(RecordInput.RefContactPhone);
+        r.RefContactNote = CleanText(RecordInput.RefContactNote);
         r.Note = CleanText(RecordInput.Note);
 
         var (name, path) = await SaveRecordFileAsync(RecordAttachment);
@@ -163,6 +269,149 @@ public partial class ProfileModel
         return (Path.GetFileName(file.FileName), $"/uploads/employee-records/{fileName}");
     }
 
+    // ---- العلاوات: حفظ (إضافة/تعديل) وحذف — نفس نمط المعالين ----
+    public async Task<IActionResult> OnPostSaveAllowanceAsync()
+    {
+        await EmployeeAllowanceSchema.EnsureAsync(_dbContext);
+        if (!await _dbContext.Employees.AnyAsync(e => e.Id == Id && !e.IsDeleted)) return NotFound();
+        if (string.IsNullOrWhiteSpace(Allowance.ItemName)) { PanelError = "عنصر الراتب مطلوب."; return BackToFiles(); }
+        if (Allowance.FromDate == default) { PanelError = "تاريخ بداية العلاوة مطلوب."; return BackToFiles(); }
+        if (Allowance.ToDate.HasValue && Allowance.ToDate.Value < Allowance.FromDate)
+        { PanelError = "تاريخ نهاية العلاوة قبل بدايتها."; return BackToFiles(); }
+
+        var user = User.Identity?.Name ?? "System";
+        var now = DateTime.UtcNow;
+        var a = Allowance.Id > 0
+            ? await _dbContext.EmployeeAllowances.FirstOrDefaultAsync(x => x.Id == Allowance.Id && x.EmployeeId == Id)
+            : null;
+        if (a == null) { a = new EmployeeAllowance { EmployeeId = Id, CreatedAt = now, CreatedBy = user }; _dbContext.EmployeeAllowances.Add(a); }
+        else { a.UpdatedAt = now; a.UpdatedBy = user; }
+
+        a.ItemName = Allowance.ItemName.Trim();
+        a.Amount = Allowance.Amount;
+        a.FromDate = Allowance.FromDate;
+        a.ToDate = Allowance.ToDate;
+        a.EndAfterDate = Allowance.EndAfterDate;
+        a.Note = CleanText(Allowance.Note);
+
+        var (name, path) = await SaveRecordFileAsync(AllowanceAttachment);
+        if (path != null) { a.AttachmentName = name; a.AttachmentPath = path; }
+
+        await _dbContext.SaveChangesAsync();
+        PanelSuccess = "تم حفظ العلاوة.";
+        return BackToFiles();
+    }
+
+    public async Task<IActionResult> OnPostDeleteAllowanceAsync(int recordId)
+    {
+        var a = await _dbContext.EmployeeAllowances.FirstOrDefaultAsync(x => x.Id == recordId && x.EmployeeId == Id);
+        if (a != null)
+        {
+            a.IsDeleted = true;
+            a.UpdatedAt = DateTime.UtcNow;
+            a.UpdatedBy = User.Identity?.Name ?? "System";
+            await _dbContext.SaveChangesAsync();
+            PanelSuccess = "تم حذف العلاوة.";
+        }
+        return BackToFiles();
+    }
+
+    public class AllowanceInput
+    {
+        public int Id { get; set; }
+        public string ItemName { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public DateOnly FromDate { get; set; }
+        public DateOnly? ToDate { get; set; }
+        public bool EndAfterDate { get; set; }
+        public string? Note { get; set; }
+    }
+
+    // ---- العقود: حفظ (إضافة/تعديل) وحذف — التجديد يُدخل كصف جديد ----
+    public async Task<IActionResult> OnPostSaveContractAsync()
+    {
+        await EmployeeContractSchema.EnsureAsync(_dbContext);
+        if (!await _dbContext.Employees.AnyAsync(e => e.Id == Id && !e.IsDeleted)) return NotFound();
+        if (string.IsNullOrWhiteSpace(Contract.ContractType)) { PanelError = "نوع العقد مطلوب."; return BackToFiles(); }
+        if (Contract.FromDate == default) { PanelError = "تاريخ بداية العقد مطلوب."; return BackToFiles(); }
+        if (Contract.ToDate.HasValue && Contract.ToDate.Value < Contract.FromDate)
+        { PanelError = "تاريخ نهاية العقد قبل بدايته."; return BackToFiles(); }
+
+        var user = User.Identity?.Name ?? "System";
+        var now = DateTime.UtcNow;
+        var c = Contract.Id > 0
+            ? await _dbContext.EmployeeContracts.FirstOrDefaultAsync(x => x.Id == Contract.Id && x.EmployeeId == Id)
+            : null;
+        if (c == null) { c = new EmployeeContract { EmployeeId = Id, CreatedAt = now, CreatedBy = user }; _dbContext.EmployeeContracts.Add(c); }
+        else { c.UpdatedAt = now; c.UpdatedBy = user; }
+
+        c.ContractNo = CleanText(Contract.ContractNo);
+        c.ContractType = Contract.ContractType.Trim();
+        c.FromDate = Contract.FromDate;
+        c.ToDate = Contract.ToDate;
+        c.IsCurrent = Contract.IsCurrent;
+        c.Note = CleanText(Contract.Note);
+
+        // عقد حالي واحد فقط لكل موظف.
+        if (c.IsCurrent)
+        {
+            var others = await _dbContext.EmployeeContracts
+                .Where(x => x.EmployeeId == Id && x.IsCurrent && x.Id != c.Id)
+                .ToListAsync();
+            foreach (var other in others) { other.IsCurrent = false; other.UpdatedAt = now; other.UpdatedBy = user; }
+        }
+
+        var (name, path) = await SaveRecordFileAsync(ContractAttachment);
+        if (path != null) { c.AttachmentName = name; c.AttachmentPath = path; }
+
+        await _dbContext.SaveChangesAsync();
+
+        // مزامنة حقول العقد المختصرة بكيان الموظف (نوع العقد الحالي وانتهاؤه) — تغذّي التنبيهات والتقارير.
+        if (c.IsCurrent)
+        {
+            await _dbContext.Employees
+                .Where(e => e.Id == Id)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(e => e.ContractType, c.ContractType)
+                    .SetProperty(e => e.ContractEndDate, c.ToDate));
+        }
+
+        PanelSuccess = "تم حفظ العقد.";
+        return BackToFiles();
+    }
+
+    public async Task<IActionResult> OnPostDeleteContractAsync(int recordId)
+    {
+        var c = await _dbContext.EmployeeContracts.FirstOrDefaultAsync(x => x.Id == recordId && x.EmployeeId == Id);
+        if (c != null)
+        {
+            c.IsDeleted = true;
+            c.UpdatedAt = DateTime.UtcNow;
+            c.UpdatedBy = User.Identity?.Name ?? "System";
+            await _dbContext.SaveChangesAsync();
+            PanelSuccess = "تم حذف العقد.";
+        }
+        return BackToFiles();
+    }
+
+    public class ContractInput
+    {
+        public int Id { get; set; }
+        public string? ContractNo { get; set; }
+        public string ContractType { get; set; } = string.Empty;
+        public DateOnly FromDate { get; set; }
+        public DateOnly? ToDate { get; set; }
+        public bool IsCurrent { get; set; }
+        public string? Note { get; set; }
+    }
+
+    public string LeaveTypeText(SmartAttendance.Domain.Enums.LeaveType type) => type switch
+    {
+        SmartAttendance.Domain.Enums.LeaveType.Annual => "إجازة سنوية",
+        SmartAttendance.Domain.Enums.LeaveType.Sick => "إجازة مرضية",
+        _ => type.ToString()
+    };
+
     public string RelationText(DependentRelation relation) => relation switch
     {
         DependentRelation.Spouse => "شريك",
@@ -184,6 +433,13 @@ public partial class ProfileModel
         public DateOnly? ToDate { get; set; }
         public decimal? Amount { get; set; }
         public bool IsCurrent { get; set; }
+        public bool IsReturned { get; set; }
+        public DateOnly? ReturnDate { get; set; }
+        public string? Gpa { get; set; }
+        public string? RefContactName { get; set; }
+        public string? RefContactPosition { get; set; }
+        public string? RefContactPhone { get; set; }
+        public string? RefContactNote { get; set; }
         public string? Note { get; set; }
     }
 
@@ -200,6 +456,9 @@ public partial class ProfileModel
         public string? NationalId { get; set; }
         public string? PassportNo { get; set; }
         public bool IsCitizen { get; set; }
+        public string? ResidencyNo { get; set; }
+        public string? Gender { get; set; }
+        public bool IsStudent { get; set; }
         public string? MaritalStatus { get; set; }
         public bool IsEmergencyContact { get; set; }
         public bool IsSpecialNeeds { get; set; }

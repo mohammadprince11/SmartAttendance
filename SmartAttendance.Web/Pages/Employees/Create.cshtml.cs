@@ -62,6 +62,23 @@ public class CreateModel : PageModel
 
     public string? ErrorMessage { get; set; }
 
+    /// <summary>مخطط رمز الموظف مفعّل — الحقل يُترك فارغاً ليتولّد تلقائياً.</summary>
+    public bool CodeSchemaActive { get; set; }
+    public string? CodeSchemaPreview { get; set; }
+
+    public List<string> ReligionOptions { get; set; } = new();
+    public List<string> WorkTypeOptions { get; set; } = new();
+    public List<string> GradeOptions { get; set; } = new();
+    public List<string> SponsorOptions { get; set; } = new();
+
+    private async Task LoadLookupsAsync()
+    {
+        ReligionOptions = await HrLookups.ValuesAsync(_dbContext, "religions");
+        WorkTypeOptions = await HrLookups.ValuesAsync(_dbContext, "worktypes");
+        GradeOptions = await HrLookups.ValuesAsync(_dbContext, "grades");
+        SponsorOptions = await HrLookups.ValuesAsync(_dbContext, "sponsors");
+    }
+
     public async Task OnGetAsync()
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
@@ -69,6 +86,14 @@ public class CreateModel : PageModel
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
+        await LoadLookupsAsync();
+
+        var codeSchema = await EmployeeCodeSchema.GetAsync(_dbContext);
+        CodeSchemaActive = codeSchema?.IsActive == true;
+        if (codeSchema is { IsActive: true })
+        {
+            CodeSchemaPreview = codeSchema.Prefix + (codeSchema.LastNumber + 1).ToString(new string('0', Math.Clamp(codeSchema.Digits, 1, 12)));
+        }
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -78,6 +103,35 @@ public class CreateModel : PageModel
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
+        await LoadLookupsAsync();
+
+        // رمز الموظف: إن تُرك فارغاً والمخطط مفعّل → توليد ذرّي (زيادة التسلسل بنفس العبارة).
+        var postSchema = await EmployeeCodeSchema.GetAsync(_dbContext);
+        CodeSchemaActive = postSchema?.IsActive == true;
+        if (string.IsNullOrWhiteSpace(Employee.EmployeeNo) && CodeSchemaActive)
+        {
+            var generated = await EmployeeCodeSchema.GenerateNextAsync(_dbContext);
+            if (!string.IsNullOrWhiteSpace(generated))
+            {
+                Employee.EmployeeNo = generated;
+                ModelState.Remove("Employee.EmployeeNo");
+            }
+        }
+
+        // الاسم الكامل يتولّد من الرباعي؛ إن وصل فارغاً (JS معطّل مثلاً) نركّبه هنا.
+        if (string.IsNullOrWhiteSpace(Employee.FullName))
+        {
+            var composed = string.Join(' ',
+                new[] { Employee.FirstName, Employee.SecondName, Employee.ThirdName, Employee.LastName }
+                    .Where(part => !string.IsNullOrWhiteSpace(part))
+                    .Select(part => part!.Trim()));
+
+            if (!string.IsNullOrWhiteSpace(composed))
+            {
+                Employee.FullName = composed;
+                ModelState.Remove("Employee.FullName");
+            }
+        }
 
         if (!ModelState.IsValid)
             return Page();

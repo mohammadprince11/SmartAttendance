@@ -361,6 +361,25 @@ public class EmployeeService : IEmployeeService
         employee.PositionId = model.PositionId;
         employee.Position = position?.Name;
 
+        employee.FirstName = Trimmed(model.FirstName);
+        employee.SecondName = Trimmed(model.SecondName);
+        employee.ThirdName = Trimmed(model.ThirdName);
+        employee.LastName = Trimmed(model.LastName);
+        employee.FirstNameEn = Trimmed(model.FirstNameEn);
+        employee.SecondNameEn = Trimmed(model.SecondNameEn);
+        employee.ThirdNameEn = Trimmed(model.ThirdNameEn);
+        employee.LastNameEn = Trimmed(model.LastNameEn);
+        employee.PassportNo = Trimmed(model.PassportNo);
+        employee.SponsorName = Trimmed(model.SponsorName);
+        employee.Religion = Trimmed(model.Religion);
+        employee.PersonalEmail = Trimmed(model.PersonalEmail);
+        employee.MotherCountry = Trimmed(model.MotherCountry);
+        employee.MotherCity = Trimmed(model.MotherCity);
+        employee.PhoneExtension = Trimmed(model.PhoneExtension);
+        employee.WorkType = Trimmed(model.WorkType);
+        employee.JobGrade = Trimmed(model.JobGrade);
+        employee.FullName = ComposeFullName(employee) ?? model.FullName;
+
         await _unitOfWork.Employees.AddAsync(employee);
         await _unitOfWork.SaveChangesAsync();
 

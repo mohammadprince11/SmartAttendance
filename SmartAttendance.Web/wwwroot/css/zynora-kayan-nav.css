@@ -1,0 +1,131 @@
+/* =========================================================
+   ZYNORA — سلوك تنقّل كيان (قسم 20 بالدراسة) بهويتنا البصرية:
+   - النقر على المجموعة يفتح «درج فروع» كامل الارتفاع ينزلق بجانب
+     القائمة (transition 0.1s ease-in-out مثل كيان حرفياً).
+   - أول صف بالدرج = عنوان المجموعة كرابط (ky-drawer-title).
+   - الفروع الداخلية أكورديون حصري بانميشن ارتفاع (~0.35s ease
+     مثل Bootstrap collapse الذي يستخدمه كيان).
+   - الظهور بكلاس ky-open (يديره zynora-kayan-nav.js) وليس خاصية
+     open — لتفادي تعارض سكربتات الأكورديون القديمة.
+   - الموبايل (<981px): يبقى أكورديون داخلياً كما هو.
+   ========================================================= */
+
+@media (min-width: 981px) {
+    .nexora-nav-group { position: static !important; }
+
+    .nexora-nav-group:not(.ky-open) > .nexora-nav-group-links { display: none !important; }
+
+    .nexora-nav-group.ky-open > summary {
+        background: rgba(18, 217, 227, .10) !important;
+        color: #e6eaee !important;
+    }
+
+    /* الدرج: لوحة ثابتة كاملة الارتفاع بجانب القائمة — انزلاق 0.1s ease-in-out (توقيت كيان) */
+    .nexora-nav-group.ky-open > .nexora-nav-group-links {
+        position: fixed !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        /* الإزاحة تُضبط ديناميكياً بالـ JS على عرض القائمة الفعلي (متغير --ky-offset) */
+        right: var(--ky-offset, var(--nxr-sidebar, 286px)) !important;
+        left: auto !important;
+        width: 272px !important;
+        margin: 0 !important;
+        padding: 10px 10px 16px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 2px !important;
+        overflow-y: auto !important;
+        z-index: 1071; /* نفس طبقة درج كيان */
+        background:
+            radial-gradient(circle at 85% 0%, rgba(18, 217, 227, .10), transparent 32%),
+            linear-gradient(180deg, rgba(7, 18, 31, .99), rgba(5, 13, 23, .99)) !important;
+        border-inline-start: 1px solid rgba(18, 217, 227, .16) !important;
+        box-shadow: -18px 0 44px rgba(0, 0, 0, .34) !important;
+        animation: kySlideIn .1s ease-in-out both;
+    }
+
+    @keyframes kySlideIn {
+        from { transform: translateX(-14px); opacity: 0; }
+        to { transform: none; opacity: 1; }
+    }
+
+    /* أول صف = عنوان المجموعة (مثل كيان: العنوان رابط للصفحة الرئيسية) */
+    .ky-drawer-title {
+        min-height: 46px !important;
+        margin: -10px -10px 8px !important;
+        padding: 14px 16px !important;
+        border-radius: 0 !important;
+        border-bottom: 1px solid rgba(157, 184, 204, .16) !important;
+        background: rgba(18, 217, 227, .07) !important;
+        color: #e6eaee !important;
+        font-size: 15px !important;
+        font-weight: 1000 !important;
+    }
+}
+
+/* علامة هادئة على مجموعة الصفحة الحالية دون فتح الدرج تلقائياً */
+.nexora-nav-group > summary.ky-current {
+    background: rgba(18, 217, 227, .07) !important;
+}
+
+/* ---------- الأكورديون الداخلي (حصري + انميشن ارتفاع مثل Bootstrap collapse) ---------- */
+.ky-acc {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.ky-acc > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 36px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    color: var(--nxr-muted, #9FB0BE);
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    transition: background .12s ease, color .12s ease;
+}
+
+.ky-acc > summary::-webkit-details-marker { display: none; }
+
+.ky-acc > summary:hover { background: rgba(18, 217, 227, .06); color: var(--nxr-text, #E6EAEE); }
+
+.ky-acc[open] > summary { color: var(--nxr-teal, #12D9E3); }
+
+.ky-acc-chev {
+    width: 7px; height: 7px;
+    border-left: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform .2s ease;
+    flex: none;
+}
+
+.ky-acc[open] > .ky-acc-chev,
+.ky-acc[open] > summary .ky-acc-chev { transform: rotate(135deg); }
+
+/* جسم الأكورديون: انميشن ارتفاع بنمط Bootstrap collapse (~0.35s ease) */
+.ky-acc > .ky-acc-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .35s ease;
+    padding: 0 4px 0 0;
+}
+
+.ky-acc[open] > .ky-acc-body { max-height: 460px; }
+
+.ky-acc .ky-acc-body .nexora-nav-link {
+    margin-inline-start: 10px;
+    border-inline-start: 2px solid rgba(157, 184, 204, .18);
+    border-radius: 0 10px 10px 0;
+}

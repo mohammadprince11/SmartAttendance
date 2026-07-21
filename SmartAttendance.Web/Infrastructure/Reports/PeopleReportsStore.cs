@@ -21,9 +21,19 @@ public static class PeopleReportsStore
         public string? OwnerUser { get; set; }
         public bool IsSystem { get; set; }
         public bool IsShared { get; set; }
+        public string? SharedWithCsv { get; set; }
+        public string? FilterColumnsCsv { get; set; }
         public int SortOrder { get; set; }
 
         public List<string> Columns => ColumnsCsv
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+
+        public List<string> SharedWith => (SharedWithCsv ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+
+        public List<string> FilterColumns => (FilterColumnsCsv ?? string.Empty)
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToList();
     }
@@ -53,6 +63,20 @@ END;
 
 IF COL_LENGTH('PeopleReports', 'Description') IS NULL
     ALTER TABLE PeopleReports ADD Description nvarchar(500) NULL;
+
+IF COL_LENGTH('PeopleReports', 'SharedWithCsv') IS NULL
+    ALTER TABLE PeopleReports ADD SharedWithCsv nvarchar(max) NULL;
+
+IF COL_LENGTH('PeopleReports', 'FilterColumnsCsv') IS NULL
+    ALTER TABLE PeopleReports ADD FilterColumnsCsv nvarchar(max) NULL;
+
+-- مرشحات افتراضية لتقارير النظام (نمط كيان: البحث المتقدم يعتمد مرشحات التقرير المعرّفة)
+UPDATE PeopleReports SET FilterColumnsCsv = N'branch,department,position,hiredate,status,active' WHERE IsSystem = 1 AND DatasetKey = N'employees'  AND FilterColumnsCsv IS NULL;
+UPDATE PeopleReports SET FilterColumnsCsv = N'relation,nationality,isdependent,isemergency'      WHERE IsSystem = 1 AND DatasetKey = N'dependents' AND FilterColumnsCsv IS NULL;
+UPDATE PeopleReports SET FilterColumnsCsv = N'type,country,fromdate,todate,iscurrent'            WHERE IsSystem = 1 AND DatasetKey = N'records'    AND FilterColumnsCsv IS NULL;
+UPDATE PeopleReports SET FilterColumnsCsv = N'doctype,expirydate,uploadedat'                     WHERE IsSystem = 1 AND DatasetKey = N'documents'  AND FilterColumnsCsv IS NULL;
+UPDATE PeopleReports SET FilterColumnsCsv = N'type,status,fromdate,todate'                       WHERE IsSystem = 1 AND DatasetKey = N'leaves'     AND FilterColumnsCsv IS NULL;
+UPDATE PeopleReports SET FilterColumnsCsv = N'category,status,eventdate'                         WHERE IsSystem = 1 AND DatasetKey = N'violations' AND FilterColumnsCsv IS NULL;
 
 IF NOT EXISTS (SELECT 1 FROM PeopleReports WHERE IsSystem = 1)
 BEGIN
@@ -92,7 +116,7 @@ END;
         return await HrmsDatabase.QueryAsync(
             db,
             """
-SELECT Id, Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, SortOrder
+SELECT Id, Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, SharedWithCsv, FilterColumnsCsv, SortOrder
 FROM PeopleReports
 WHERE IsDeleted = 0
 ORDER BY SortOrder, Id;
@@ -108,7 +132,7 @@ ORDER BY SortOrder, Id;
         var rows = await HrmsDatabase.QueryAsync(
             db,
             """
-SELECT Id, Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, SortOrder
+SELECT Id, Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, SharedWithCsv, FilterColumnsCsv, SortOrder
 FROM PeopleReports
 WHERE Id = @Id AND IsDeleted = 0;
 """,
@@ -119,13 +143,14 @@ WHERE Id = @Id AND IsDeleted = 0;
     }
 
     public static async Task CreateAsync(
-        ApplicationDbContext db, string name, string? description, string datasetKey, string columnsCsv, string ownerUser, bool isShared)
+        ApplicationDbContext db, string name, string? description, string datasetKey, string columnsCsv, string ownerUser, bool isShared,
+        string? sharedWithCsv = null, string? filterColumnsCsv = null)
     {
         await HrmsDatabase.ExecuteAsync(
             db,
             """
-INSERT INTO PeopleReports (Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, SortOrder)
-VALUES (@Name, @Description, @DatasetKey, NULL, @ColumnsCsv, @OwnerUser, 0, @IsShared, 1000);
+INSERT INTO PeopleReports (Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, SharedWithCsv, FilterColumnsCsv, SortOrder)
+VALUES (@Name, @Description, @DatasetKey, NULL, @ColumnsCsv, @OwnerUser, 0, @IsShared, @SharedWith, @FilterColumns, 1000);
 """,
             command =>
             {
@@ -135,6 +160,40 @@ VALUES (@Name, @Description, @DatasetKey, NULL, @ColumnsCsv, @OwnerUser, 0, @IsS
                 HrmsDatabase.AddParameter(command, "@ColumnsCsv", columnsCsv);
                 HrmsDatabase.AddParameter(command, "@OwnerUser", ownerUser);
                 HrmsDatabase.AddParameter(command, "@IsShared", isShared ? 1 : 0);
+                HrmsDatabase.AddParameter(command, "@SharedWith", string.IsNullOrWhiteSpace(sharedWithCsv) ? DBNull.Value : sharedWithCsv);
+                HrmsDatabase.AddParameter(command, "@FilterColumns", string.IsNullOrWhiteSpace(filterColumnsCsv) ? DBNull.Value : filterColumnsCsv);
+            });
+    }
+
+    /// <summary>Owner-only update of a custom report (name/columns/sharing/filters).</summary>
+    public static async Task UpdateOwnAsync(
+        ApplicationDbContext db, int id, string name, string? description, string datasetKey, string columnsCsv, string ownerUser, bool isShared,
+        string? sharedWithCsv, string? filterColumnsCsv)
+    {
+        await HrmsDatabase.ExecuteAsync(
+            db,
+            """
+UPDATE PeopleReports
+SET Name = @Name,
+    Description = @Description,
+    DatasetKey = @DatasetKey,
+    ColumnsCsv = @ColumnsCsv,
+    IsShared = @IsShared,
+    SharedWithCsv = @SharedWith,
+    FilterColumnsCsv = @FilterColumns
+WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner AND IsDeleted = 0;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", id);
+                HrmsDatabase.AddParameter(command, "@Owner", ownerUser);
+                HrmsDatabase.AddParameter(command, "@Name", name);
+                HrmsDatabase.AddParameter(command, "@Description", string.IsNullOrWhiteSpace(description) ? DBNull.Value : description.Trim());
+                HrmsDatabase.AddParameter(command, "@DatasetKey", datasetKey);
+                HrmsDatabase.AddParameter(command, "@ColumnsCsv", columnsCsv);
+                HrmsDatabase.AddParameter(command, "@IsShared", isShared ? 1 : 0);
+                HrmsDatabase.AddParameter(command, "@SharedWith", string.IsNullOrWhiteSpace(sharedWithCsv) ? DBNull.Value : sharedWithCsv);
+                HrmsDatabase.AddParameter(command, "@FilterColumns", string.IsNullOrWhiteSpace(filterColumnsCsv) ? DBNull.Value : filterColumnsCsv);
             });
     }
 
@@ -177,6 +236,8 @@ WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner;
         OwnerUser = HrmsDatabase.GetString(reader, "OwnerUser"),
         IsSystem = HrmsDatabase.GetBool(reader, "IsSystem"),
         IsShared = HrmsDatabase.GetBool(reader, "IsShared"),
+        SharedWithCsv = HrmsDatabase.GetString(reader, "SharedWithCsv"),
+        FilterColumnsCsv = HrmsDatabase.GetString(reader, "FilterColumnsCsv"),
         SortOrder = HrmsDatabase.GetInt(reader, "SortOrder")
     };
 }
