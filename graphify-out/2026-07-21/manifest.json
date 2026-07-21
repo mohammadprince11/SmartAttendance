@@ -1100,8 +1100,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Infrastructure/Persistence/ApplicationDbContext.cs": {
-    "mtime": 1784637126.9939938,
-    "ast_hash": "f3777797bc08079abe0eebe0333a6a6c",
+    "mtime": 1784641678.2160215,
+    "ast_hash": "57543e91b7d6fb8b7b2f07e38436aeca",
     "semantic_hash": ""
   },
   "SmartAttendance.Infrastructure/Persistence/Configurations/AnnouncementAttachmentConfiguration.cs": {
@@ -1515,8 +1515,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/RoleSecurityMiddleware.cs": {
-    "mtime": 1784435791.2232738,
-    "ast_hash": "0ef6e0187cf1fe126bb90d6b839ac487",
+    "mtime": 1784642015.3754704,
+    "ast_hash": "f81f3c96d6620c67d4241c23ff577aac",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/SimplePasswordHasher.cs": {
@@ -2045,13 +2045,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Create.cshtml": {
-    "mtime": 1784441438.7892988,
-    "ast_hash": "96a11e2256cf8faf1c574a7362623755",
+    "mtime": 1784641932.0557494,
+    "ast_hash": "487d9abbfd79fdbd373b5629949df9e8",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Create.cshtml.cs": {
-    "mtime": 1784441379.380944,
-    "ast_hash": "7ecefe87e3bd623ed3f8ed14bc9ec46b",
+    "mtime": 1784641899.7581666,
+    "ast_hash": "b61e0adf42fce532030d1c09c58047bf",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Delete.cshtml": {
@@ -2125,13 +2125,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Profile.cshtml": {
-    "mtime": 1784637320.0037577,
-    "ast_hash": "de86f20c16fac82da16a17c75f052182",
+    "mtime": 1784646063.9663973,
+    "ast_hash": "8d25757b2341296403243d2f5eda2701",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Profile.cshtml.cs": {
-    "mtime": 1784635514.407166,
-    "ast_hash": "db0dd71cb1033c9e0d67be1b798649cd",
+    "mtime": 1784646025.6535304,
+    "ast_hash": "e4bf98df01770b89f4c92d7ac7ea4005",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/ProfileFiles.cs": {
@@ -2605,8 +2605,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784473240.468397,
-    "ast_hash": "86f4e9aaff714a0b92e334cdd80a6e07",
+    "mtime": 1784653068.289155,
+    "ast_hash": "f25e2ff9d95804a0fe298c7d131d5d79",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3780,8 +3780,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/HrLookups.cs": {
-    "mtime": 1784637179.210695,
-    "ast_hash": "53a5322f02378b71c26378be0b114296",
+    "mtime": 1784641719.3630338,
+    "ast_hash": "fd4cac80396bf71907ccac0520a160c9",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Reports/PeopleReportCatalog.cs": {
@@ -3815,8 +3815,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Profile.Panels.cshtml.cs": {
-    "mtime": 1784637247.4266713,
-    "ast_hash": "689872d1ae13f8dd01543f5a9640fb63",
+    "mtime": 1784641778.8854496,
+    "ast_hash": "2fb8db2c1842ded9fe66060840185ce2",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/HrSettings/Lookups.cshtml": {
@@ -3850,8 +3850,8 @@
     "semantic_hash": ""
   },
   "docs/kayan-people-module-study.md": {
-    "mtime": 1784637003.2164507,
-    "ast_hash": "02fbe81f58e616401febf57771bf5259",
+    "mtime": 1784652862.4507737,
+    "ast_hash": "684a6ef148bb7bdd66d62e8bdc2040b9",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/lib/ag-grid/ag-grid-community.min.js": {
@@ -3875,13 +3875,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/FinancialInfo.cshtml": {
-    "mtime": 1784476365.0981915,
-    "ast_hash": "37d4fe88214a8ab0ed57bcb65d3e7dd1",
+    "mtime": 1784638245.5122151,
+    "ast_hash": "b23af01ff2282f151748f2314332fcc5",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/FinancialInfo.cshtml.cs": {
-    "mtime": 1784476314.7964187,
-    "ast_hash": "ed8ed38111b673f5f40d1a77e3940318",
+    "mtime": 1784637883.312581,
+    "ast_hash": "3e52cc0a63f647e7d1a160e94df0e2c4",
     "semantic_hash": ""
   },
   "SmartAttendance.Domain/Entities/EmployeeAllowance.cs": {
@@ -3897,6 +3897,61 @@
   "SmartAttendance.Web/Infrastructure/Hrms/EmployeeAllowanceSchema.cs": {
     "mtime": 1784637140.5002859,
     "ast_hash": "6ac889c2c342133d0295dd6b5cf96043",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Domain/Entities/EmployeeContract.cs": {
+    "mtime": 1784641658.1272662,
+    "ast_hash": "400343f908c9ba8c08dd2d1bf88b81b4",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Infrastructure/Persistence/Configurations/EmployeeContractConfiguration.cs": {
+    "mtime": 1784641668.9572213,
+    "ast_hash": "33757a281ff5d98874fd09142e4af98c",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/EmployeeCodeSchema.cs": {
+    "mtime": 1784641846.098175,
+    "ast_hash": "1b7b8080ec17b886363bcd9692d04172",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/EmployeeContractSchema.cs": {
+    "mtime": 1784641692.5396543,
+    "ast_hash": "043dd0dcd66cad29c2695208d923d4d2",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/AssetsManagement/Index.cshtml": {
+    "mtime": 1784642077.4080572,
+    "ast_hash": "e36f3d38ae59b3c429f9c27859cf76e0",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/AssetsManagement/Index.cshtml.cs": {
+    "mtime": 1784642041.2844667,
+    "ast_hash": "a93c06e1d037513a44a2826e5c73c408",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/HrSettings/EmployeeCodeSchemaPage.cshtml": {
+    "mtime": 1784641972.8029752,
+    "ast_hash": "a60c529c647dc981cb2027fbe14763a1",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/HrSettings/EmployeeCodeSchemaPage.cshtml.cs": {
+    "mtime": 1784641955.2411318,
+    "ast_hash": "14aca42a2efa8acc886995769b0a059d",
+    "semantic_hash": ""
+  },
+  "docs/kayan-attendance-module-study.md": {
+    "mtime": 1784640496.160311,
+    "ast_hash": "3c10967af48183723ee99e6de7ada2fd",
+    "semantic_hash": ""
+  },
+  "docs/kayan-payroll-module-study.md": {
+    "mtime": 1784640763.3240557,
+    "ast_hash": "8a3b3c650efbba07cd5d0df4f234002f",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/wwwroot/js/zynora-kayan-nav.js": {
+    "mtime": 1784653646.6647222,
+    "ast_hash": "c213c4663096a1fc9b2c73183fdcd09d",
     "semantic_hash": ""
   }
 }

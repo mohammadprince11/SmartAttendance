@@ -2605,8 +2605,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784642103.1496122,
-    "ast_hash": "bd004ad9023461d75ea713addd6ab058",
+    "mtime": 1784653068.289155,
+    "ast_hash": "f25e2ff9d95804a0fe298c7d131d5d79",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3850,8 +3850,8 @@
     "semantic_hash": ""
   },
   "docs/kayan-people-module-study.md": {
-    "mtime": 1784641365.0435786,
-    "ast_hash": "611be9808d8abe022f09466900e98446",
+    "mtime": 1784652862.4507737,
+    "ast_hash": "684a6ef148bb7bdd66d62e8bdc2040b9",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/lib/ag-grid/ag-grid-community.min.js": {
@@ -3947,6 +3947,11 @@
   "docs/kayan-payroll-module-study.md": {
     "mtime": 1784640763.3240557,
     "ast_hash": "8a3b3c650efbba07cd5d0df4f234002f",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/wwwroot/js/zynora-kayan-nav.js": {
+    "mtime": 1784654739.150941,
+    "ast_hash": "3655323bc97c9bdf632f67381f5bbb58",
     "semantic_hash": ""
   }
 }

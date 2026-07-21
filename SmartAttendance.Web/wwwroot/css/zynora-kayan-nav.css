@@ -10,51 +10,110 @@
    - الموبايل (<981px): يبقى أكورديون داخلياً كما هو.
    ========================================================= */
 
+/* زر الرجوع يظهر فقط بوضع الدرج (سطح المكتب) */
+.ky-back { display: none; }
+
 @media (min-width: 981px) {
     .nexora-nav-group { position: static !important; }
 
-    .nexora-nav-group:not(.ky-open) > .nexora-nav-group-links { display: none !important; }
+    .nexora-nav-group:not(.ky-open):not(.ky-closing) > .nexora-nav-group-links { display: none !important; }
+
+    /* كروم 131+ يخفي محتوى details المغلق عبر ::details-content بـ content-visibility:hidden،
+       ولأننا نفتح بكلاس ky-open دون خاصية open يجب كشف المحتوى صراحةً وإلا لا يُرسم الدرج إطلاقاً */
+    .nexora-nav-group.ky-open::details-content,
+    .nexora-nav-group.ky-closing::details-content {
+        content-visibility: visible !important;
+        display: contents !important;
+    }
 
     .nexora-nav-group.ky-open > summary {
         background: rgba(18, 217, 227, .10) !important;
         color: #e6eaee !important;
     }
 
-    /* الدرج: لوحة ثابتة كاملة الارتفاع بجانب القائمة — انزلاق 0.1s ease-in-out (توقيت كيان) */
-    .nexora-nav-group.ky-open > .nexora-nav-group-links {
+    /* الدرج: لوحة كاملة الارتفاع تغطي القائمة نفسها (لا تطغى على المحتوى)
+       — موضعها وعرضها يُطابقان القائمة ديناميكياً بالـ JS (--ky-right / --ky-w) */
+    .nexora-nav-group.ky-open > .nexora-nav-group-links,
+    .nexora-nav-group.ky-closing > .nexora-nav-group-links {
         position: fixed !important;
         top: 0 !important;
         bottom: 0 !important;
         height: 100vh !important;
         max-height: 100vh !important;
-        /* الإزاحة تُضبط ديناميكياً بالـ JS على عرض القائمة الفعلي (متغير --ky-offset) */
-        right: var(--ky-offset, var(--nxr-sidebar, 286px)) !important;
+        right: var(--ky-right, 0) !important;
         left: auto !important;
-        width: 272px !important;
+        width: var(--ky-w, var(--nxr-sidebar, 286px)) !important;
         margin: 0 !important;
         padding: 10px 10px 16px !important;
         display: flex !important;
         flex-direction: column !important;
         gap: 2px !important;
         overflow-y: auto !important;
+        overflow-x: hidden !important;
         z-index: 1071; /* نفس طبقة درج كيان */
         background:
             radial-gradient(circle at 85% 0%, rgba(18, 217, 227, .10), transparent 32%),
             linear-gradient(180deg, rgba(7, 18, 31, .99), rgba(5, 13, 23, .99)) !important;
         border-inline-start: 1px solid rgba(18, 217, 227, .16) !important;
         box-shadow: -18px 0 44px rgba(0, 0, 0, .34) !important;
-        animation: kySlideIn .1s ease-in-out both;
     }
 
-    @keyframes kySlideIn {
-        from { transform: translateX(-14px); opacity: 0; }
+    .nexora-nav-group.ky-open > .nexora-nav-group-links {
+        animation: kySlideOver .32s cubic-bezier(.22, .61, .36, 1) both;
+    }
+
+    .nexora-nav-group.ky-closing > .nexora-nav-group-links {
+        animation: kySlideOut .22s cubic-bezier(.55, .06, .68, .19) both;
+        pointer-events: none;
+    }
+
+    /* الدرج ينزلق من حافة القائمة اليمنى فوقها (RTL) */
+    @keyframes kySlideOver {
+        from { transform: translateX(28px); opacity: 0; }
         to { transform: none; opacity: 1; }
     }
 
-    /* أول صف = عنوان المجموعة (مثل كيان: العنوان رابط للصفحة الرئيسية) */
+    @keyframes kySlideOut {
+        from { transform: none; opacity: 1; }
+        to { transform: translateX(28px); opacity: 0; }
+    }
+
+    /* صف الرجوع أعلى الدرج (يحقنه JS) */
+    .ky-back {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 44px;
+        margin: -10px -10px 0;
+        padding: 12px 16px;
+        border: 0;
+        border-bottom: 1px solid rgba(157, 184, 204, .16);
+        background: rgba(18, 217, 227, .05);
+        color: #9FB0BE;
+        font-size: 13px;
+        font-weight: 900;
+        font-family: inherit;
+        text-align: start;
+        cursor: pointer;
+        flex: none;
+        transition: background .15s ease, color .15s ease;
+    }
+
+    .ky-back:hover { background: rgba(18, 217, 227, .12); color: #E6EAEE; }
+
+    .ky-back-chev {
+        width: 8px;
+        height: 8px;
+        border-top: 2px solid currentColor;
+        border-right: 2px solid currentColor;
+        transform: rotate(45deg);
+        flex: none;
+    }
+
+    /* عنوان المجموعة يلي صف الرجوع (مثل كيان: العنوان رابط للصفحة الرئيسية) */
     .ky-drawer-title {
         min-height: 46px !important;
-        margin: -10px -10px 8px !important;
+        margin: 0 -10px 8px !important;
         padding: 14px 16px !important;
         border-radius: 0 !important;
         border-bottom: 1px solid rgba(157, 184, 204, .16) !important;

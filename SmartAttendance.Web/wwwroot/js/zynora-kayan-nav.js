@@ -1,7 +1,9 @@
 // سلوك تنقّل كيان (قسم 20 بالدراسة) على قائمتنا:
-// - النقر على المجموعة (أشخاص/الحضور/الرواتب) يفتح درج فروع منزلقاً بجانب القائمة
-//   (كلاس ky-open — مو خاصية open، حتى لا تتعارض سكربتات الأكورديون القديمة).
+// - النقر على المجموعة (أشخاص/الحضور/الرواتب) يفتح درج فروع يغطي القائمة نفسها
+//   بانزلاق ناعم، مع صف «رجوع» أعلاه يعيد للقائمة الرئيسية.
+//   (كلاس ky-open — مو خاصية open، حتى لا تتعارض سكربتات الأكورديون القديمة.)
 // - درج واحد مفتوح؛ النقر خارج القائمة أو Escape يغلق (مثل كيان: اختيار مباشر يغلق).
+// - الإغلاق بأنميشن خروج (كلاس ky-closing يبقي الدرج مرسوماً حتى انتهاء الحركة).
 // - الأكورديون الداخلي (ky-acc) حصري + انميشن إغلاق (details يخفي فوراً، فنؤخر إزالة open).
 // - الموبايل (<981px): سلوك <details> الطبيعي.
 (function () {
@@ -10,9 +12,17 @@
 
     var desktop = window.matchMedia("(min-width: 981px)");
 
+    function closeGroup(group) {
+        if (!group.classList.contains("ky-open")) return;
+        group.classList.remove("ky-open");
+        // نبقي الدرج مرسوماً أثناء أنميشن الخروج (0.22s) ثم نخفيه
+        group.classList.add("ky-closing");
+        setTimeout(function () { group.classList.remove("ky-closing"); }, 240);
+    }
+
     function closeAll(except) {
         groups.forEach(function (group) {
-            if (group !== except) group.classList.remove("ky-open");
+            if (group !== except) closeGroup(group);
         });
     }
 
@@ -24,28 +34,32 @@
         // مجموعة الصفحة الحالية (رندرها السيرفر open): علامة هادئة بلا انبثاق درج.
         if (group.hasAttribute("open")) summary.classList.add("ky-current");
 
+        // صف الرجوع أعلى الدرج (الدرج يغطي القائمة، فيحتاج مخرجاً واضحاً).
+        var back = document.createElement("button");
+        back.type = "button";
+        back.className = "ky-back";
+        back.innerHTML = '<span class="ky-back-chev" aria-hidden="true"></span><span>رجوع</span>';
+        back.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeGroup(group);
+        });
+        links.insertBefore(back, links.firstChild);
+
         summary.addEventListener("click", function (e) {
             if (!desktop.matches) return; // الموبايل: أكورديون طبيعي
             e.preventDefault();
-            var willOpen = !group.classList.contains("ky-open");
+            if (group.classList.contains("ky-open")) { closeGroup(group); return; }
             closeAll(group);
-            group.classList.toggle("ky-open", willOpen);
-            if (willOpen) {
-                // التصاق تام بالقائمة: نضبط إزاحة تقريبية ثم نقيس الفجوة الفعلية ونعوّضها
-                // (القياس المباشر يتأثر بتحجيم المتصفح/شريط التمرير).
-                var sidebar = document.querySelector(".nexora-sidebar");
-                if (sidebar) {
-                    links.style.setProperty("--ky-offset", (window.innerWidth - sidebar.getBoundingClientRect().left) + "px");
-                    requestAnimationFrame(function () {
-                        var drawerRect = links.getBoundingClientRect();
-                        var gap = sidebar.getBoundingClientRect().left - (drawerRect.left + drawerRect.width);
-                        if (Math.abs(gap) > 1) {
-                            var current = parseFloat(links.style.getPropertyValue("--ky-offset")) || 0;
-                            links.style.setProperty("--ky-offset", (current - gap) + "px");
-                        }
-                    });
-                }
+            group.classList.remove("ky-closing");
+            // الدرج يغطي القائمة تماماً: نطابق موضعه وعرضه على القائمة الفعلية.
+            var sidebar = document.querySelector(".nexora-sidebar");
+            if (sidebar) {
+                var rect = sidebar.getBoundingClientRect();
+                links.style.setProperty("--ky-right", (window.innerWidth - rect.right) + "px");
+                links.style.setProperty("--ky-w", rect.width + "px");
             }
+            group.classList.add("ky-open");
         });
     });
 
