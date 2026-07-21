@@ -58,6 +58,13 @@
         box-shadow: -18px 0 44px rgba(0, 0, 0, .34) !important;
     }
 
+    /* الدرج عمود flex: بلا هذي القاعدة تنضغط عناصره لتطابق الارتفاع بدل أن تفيض،
+       فلا يكبر scrollHeight ولا يشتغل التمرير وتُقص العناصر السفلية بالشاشات القصيرة */
+    .nexora-nav-group.ky-open > .nexora-nav-group-links > *,
+    .nexora-nav-group.ky-closing > .nexora-nav-group-links > * {
+        flex-shrink: 0;
+    }
+
     .nexora-nav-group.ky-open > .nexora-nav-group-links {
         animation: kySlideOver .32s cubic-bezier(.22, .61, .36, 1) both;
     }
