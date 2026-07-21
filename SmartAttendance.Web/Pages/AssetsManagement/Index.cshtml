@@ -53,6 +53,7 @@
                             <th>من – إلى</th>
                             <th>القيمة</th>
                             <th>الحالة</th>
+                            <th>موافقة الموظف</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -75,6 +76,16 @@
                                     else
                                     {
                                         <span class="hrms-badge pending">بحوزة الموظف</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (row.EmployeeAcknowledged)
+                                    {
+                                        <span class="hrms-badge approved" title="@row.AcknowledgedAt?.ToString("yyyy-MM-dd HH:mm")">✓ أقرّ بالاستلام</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="hrms-badge pending">بانتظار الإقرار</span>
                                     }
                                 </td>
                                 <td style="white-space:nowrap">

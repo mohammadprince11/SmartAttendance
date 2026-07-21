@@ -278,6 +278,158 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         Attendance = await LoadAttendanceAsync(employeeId);
         Team = await LoadTeamAsync(Employee);
         FeedbackItems = await LoadFeedbackAsync(employeeId);
+        PendingViolationReplies = await LoadPendingViolationRepliesAsync(employeeId);
+        PendingAssetAcknowledgments = await LoadPendingAssetAcknowledgmentsAsync(employeeId);
+    }
+
+    public sealed class PendingAssetAcknowledgment
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string? Subtitle { get; set; }
+        public DateOnly? FromDate { get; set; }
+        public decimal? Amount { get; set; }
+    }
+
+    public List<PendingAssetAcknowledgment> PendingAssetAcknowledgments { get; set; } = new();
+
+    private async Task<List<PendingAssetAcknowledgment>> LoadPendingAssetAcknowledgmentsAsync(int employeeId)
+    {
+        await EmployeeRecordsSchema.EnsureAsync(_dbContext);
+        return await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT Id, Title, Subtitle, FromDate, Amount
+FROM EmployeeFileRecords
+WHERE EmployeeId = @EmployeeId
+  AND RecordType = @AssetType
+  AND ISNULL(IsReturned, 0) = 0
+  AND ISNULL(EmployeeAcknowledged, 0) = 0
+ORDER BY Id DESC;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                HrmsDatabase.AddParameter(command, "@AssetType", (int)SmartAttendance.Domain.Enums.EmployeeRecordType.Asset);
+            },
+            reader => new PendingAssetAcknowledgment
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                Title = HrmsDatabase.GetString(reader, "Title"),
+                Subtitle = HrmsDatabase.GetString(reader, "Subtitle"),
+                FromDate = HrmsDatabase.GetDateOnly(reader, "FromDate"),
+                Amount = reader["Amount"] as decimal?
+            });
+    }
+
+    /// <summary>إقرار الموظف باستلام العهدة (نمط كيان «موافقة الموظف») — يظهر بإدارة العهد.</summary>
+    public async Task<IActionResult> OnPostAcknowledgeAssetAsync(int id, string? returnTab)
+    {
+        var employeeId = await ResolveEmployeeIdAsync();
+        if (employeeId <= 0)
+        {
+            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
+        }
+
+        await EmployeeRecordsSchema.EnsureAsync(_dbContext);
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+UPDATE EmployeeFileRecords
+SET EmployeeAcknowledged = 1, AcknowledgedAt = SYSUTCDATETIME(), UpdatedAt = SYSUTCDATETIME()
+WHERE Id = @Id AND EmployeeId = @EmployeeId
+  AND RecordType = @AssetType AND ISNULL(EmployeeAcknowledged, 0) = 0;
+
+INSERT INTO SystemNotifications (Title, Message, TargetRole, Url)
+SELECT N'إقرار استلام عهدة',
+       N'أقرّ الموظف باستلام العهدة: ' + r.Title,
+       'HR', '/AssetsManagement'
+FROM EmployeeFileRecords r WHERE r.Id = @Id AND r.EmployeeId = @EmployeeId;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", id);
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                HrmsDatabase.AddParameter(command, "@AssetType", (int)SmartAttendance.Domain.Enums.EmployeeRecordType.Asset);
+            });
+
+        StatusMessage = "تم تسجيل إقرارك باستلام العهدة.";
+        return RedirectToPage(new { tab = returnTab ?? "requests" });
+    }
+
+    public sealed class PendingViolationReply
+    {
+        public int Id { get; set; }
+        public string ReferenceNo { get; set; } = string.Empty;
+        public string ViolationTitle { get; set; } = string.Empty;
+        public DateOnly? EventDate { get; set; }
+    }
+
+    public List<PendingViolationReply> PendingViolationReplies { get; set; } = new();
+
+    private async Task<List<PendingViolationReply>> LoadPendingViolationRepliesAsync(int employeeId)
+    {
+        await ViolationCaseSchema.EnsureAsync(_dbContext);
+        return await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT Id, ReferenceNo, ISNULL(ViolationTitle, N'') AS ViolationTitle, EventDate
+FROM EmployeeViolationCases
+WHERE EmployeeId = @EmployeeId AND ISNULL(IsDeleted, 0) = 0
+  AND ISNULL(EmployeeReplyStatus, N'NotRequested') = N'Pending'
+ORDER BY EventDate DESC;
+""",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => new PendingViolationReply
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                ReferenceNo = HrmsDatabase.GetString(reader, "ReferenceNo"),
+                ViolationTitle = HrmsDatabase.GetString(reader, "ViolationTitle"),
+                EventDate = HrmsDatabase.GetDateOnly(reader, "EventDate")
+            });
+    }
+
+    /// <summary>ردّ الموظف على مخالفة (حق الدفاع) — يُحفظ نصاً ويُشعر HR.</summary>
+    public async Task<IActionResult> OnPostViolationReplyAsync(int id, string reply, string? returnTab)
+    {
+        var employeeId = await ResolveEmployeeIdAsync();
+        if (employeeId <= 0)
+        {
+            // نفس fallback الوضع التجريبي المستخدم بعرض البوابة (مستخدم غير مربوط بموظف).
+            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
+        }
+
+        if (employeeId <= 0 || string.IsNullOrWhiteSpace(reply))
+        {
+            StatusMessage = "يرجى كتابة نص الرد.";
+            return RedirectToPage(new { tab = returnTab ?? "requests" });
+        }
+
+        await ViolationCaseSchema.EnsureAsync(_dbContext);
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+UPDATE EmployeeViolationCases
+SET EmployeeReply = @Reply, EmployeeReplyStatus = N'Replied',
+    EmployeeRepliedAt = SYSUTCDATETIME(), UpdatedAt = SYSUTCDATETIME()
+WHERE Id = @Id AND EmployeeId = @EmployeeId
+  AND ISNULL(EmployeeReplyStatus, N'NotRequested') = N'Pending';
+
+INSERT INTO SystemNotifications (Title, Message, TargetRole, Url)
+SELECT N'رد موظف على مخالفة',
+       N'ردّ الموظف على المخالفة ' + v.ReferenceNo + N' — راجع الرد بسجل المخالفات.',
+       'HR', '/Violations?Reply=replied'
+FROM EmployeeViolationCases v WHERE v.Id = @Id AND v.EmployeeId = @EmployeeId;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", id);
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                HrmsDatabase.AddParameter(command, "@Reply", reply.Trim());
+            });
+
+        StatusMessage = "تم إرسال ردّك على المخالفة للموارد البشرية.";
+        return RedirectToPage(new { tab = returnTab ?? "requests" });
     }
 
     private async Task<int> ResolveEmployeeIdAsync()

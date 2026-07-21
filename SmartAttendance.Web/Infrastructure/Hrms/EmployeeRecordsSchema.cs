@@ -49,6 +49,13 @@ IF COL_LENGTH('EmployeeFileRecords', 'IsCurrent') IS NULL
 IF COL_LENGTH('EmployeeFileRecords', 'IsReturned') IS NULL
     ALTER TABLE EmployeeFileRecords ADD IsReturned bit NOT NULL CONSTRAINT DF_EmployeeFileRecords_IsReturned DEFAULT(0);
 
+-- إقرار الموظف بالاستلام عبر الخدمة الذاتية (نمط كيان «موافقة الموظف»)
+IF COL_LENGTH('EmployeeFileRecords', 'EmployeeAcknowledged') IS NULL
+    ALTER TABLE EmployeeFileRecords ADD EmployeeAcknowledged bit NOT NULL CONSTRAINT DF_EmployeeFileRecords_EmployeeAcknowledged DEFAULT(0);
+
+IF COL_LENGTH('EmployeeFileRecords', 'AcknowledgedAt') IS NULL
+    ALTER TABLE EmployeeFileRecords ADD AcknowledgedAt datetime2 NULL;
+
 IF COL_LENGTH('EmployeeFileRecords', 'ReturnDate') IS NULL
     ALTER TABLE EmployeeFileRecords ADD ReturnDate date NULL;
 

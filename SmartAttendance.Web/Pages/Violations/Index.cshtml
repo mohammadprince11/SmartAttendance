@@ -106,6 +106,13 @@
         </select>
 
         <button type="button" class="nxv-btn ghost" data-nxv-reset>إعادة تعيين</button>
+
+        @* فلتر رد الموظف (حق الدفاع — نمط كيان) *@
+        <select data-nexora-select="true" onchange="location.href='?Reply='+this.value">
+            <option value="all" selected="@(Model.Reply == "all")">رد الموظف: الكل</option>
+            <option value="pending" selected="@(Model.Reply == "pending")">بانتظار رد الموظف</option>
+            <option value="replied" selected="@(Model.Reply == "replied")">تم الرد</option>
+        </select>
     </section>
 
     <section class="nxv-card nxv-table-card">
@@ -194,12 +201,27 @@
 
                             <td>
                                 <span class="nxv-status @item.StatusCss">@item.Status</span>
+                                @if (item.EmployeeReplyStatus == "Pending")
+                                {
+                                    <small style="display:block;color:#facc15;font-weight:800;margin-top:2px">⏳ بانتظار رد الموظف</small>
+                                }
+                                else if (item.EmployeeReplyStatus == "Replied")
+                                {
+                                    <small style="display:block;color:#4ade80;font-weight:800;margin-top:2px" title="@item.EmployeeReply">✓ ردّ الموظف: @(item.EmployeeReply.Length > 40 ? item.EmployeeReply[..40] + "…" : item.EmployeeReply)</small>
+                                }
                             </td>
 
                             <td>
                                 <div class="nxv-options">
                                     <a asp-page="/Employees/Profile" asp-route-id="@item.EmployeeId" title="فتح ملف الموظف">موظف</a>
                                     <a asp-page="/Violations/PrintForm" asp-route-id="@item.Id" title="عرض فورمة A4 المربوطة">فورمة</a>
+                                    @if (item.EmployeeReplyStatus == "NotRequested")
+                                    {
+                                        <form method="post" asp-page-handler="RequestReply" style="display:inline">
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" title="طلب رد الموظف على المخالفة (حق الدفاع)" style="background:none;border:0;color:#67e8f9;cursor:pointer;font-weight:800;font-size:inherit;padding:0">طلب رد</button>
+                                        </form>
+                                    }
                                 </div>
                             </td>
                         </tr>

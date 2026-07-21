@@ -44,6 +44,12 @@ public class EmployeeFileRecord : AuditableEntity
     /// <summary>Date the asset was returned.</summary>
     public DateOnly? ReturnDate { get; set; }
 
+    /// <summary>إقرار الموظف باستلام العهدة عبر الخدمة الذاتية (نمط كيان «موافقة الموظف»).</summary>
+    public bool EmployeeAcknowledged { get; set; }
+
+    /// <summary>Timestamp of the employee acknowledgment.</summary>
+    public DateTime? AcknowledgedAt { get; set; }
+
     /// <summary>Grade point average — education records.</summary>
     public string? Gpa { get; set; }
 

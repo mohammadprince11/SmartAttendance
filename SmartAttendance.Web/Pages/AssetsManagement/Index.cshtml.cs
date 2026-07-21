@@ -37,6 +37,8 @@ public class IndexModel : PageModel
         public bool IsReturned { get; set; }
         public DateOnly? ReturnDate { get; set; }
         public string? AttachmentPath { get; set; }
+        public bool EmployeeAcknowledged { get; set; }
+        public DateTime? AcknowledgedAt { get; set; }
     }
 
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
@@ -82,7 +84,9 @@ public class IndexModel : PageModel
                 IsCurrent = r.IsCurrent,
                 IsReturned = r.IsReturned,
                 ReturnDate = r.ReturnDate,
-                AttachmentPath = r.AttachmentPath
+                AttachmentPath = r.AttachmentPath,
+                EmployeeAcknowledged = r.EmployeeAcknowledged,
+                AcknowledgedAt = r.AcknowledgedAt
             })
             .ToListAsync();
 

@@ -64,6 +64,20 @@ IF COL_LENGTH('EmployeeViolationCases', 'IsDeleted') IS NULL
 
 IF COL_LENGTH('EmployeeViolationCases', 'UpdatedAt') IS NULL
     ALTER TABLE EmployeeViolationCases ADD UpdatedAt datetime2 NULL;
+
+-- رد الموظف (حق الدفاع — نمط كيان «رد الموظف قيد الانتظار»):
+-- NotRequested → Pending (طلب HR الرد) → Replied (ردّ الموظف من بوابته)
+IF COL_LENGTH('EmployeeViolationCases', 'EmployeeReplyStatus') IS NULL
+    ALTER TABLE EmployeeViolationCases ADD EmployeeReplyStatus nvarchar(30) NOT NULL CONSTRAINT DF_EmployeeViolationCases_EmployeeReplyStatus DEFAULT(N'NotRequested');
+
+IF COL_LENGTH('EmployeeViolationCases', 'EmployeeReply') IS NULL
+    ALTER TABLE EmployeeViolationCases ADD EmployeeReply nvarchar(1000) NULL;
+
+IF COL_LENGTH('EmployeeViolationCases', 'ReplyRequestedAt') IS NULL
+    ALTER TABLE EmployeeViolationCases ADD ReplyRequestedAt datetime2 NULL;
+
+IF COL_LENGTH('EmployeeViolationCases', 'EmployeeRepliedAt') IS NULL
+    ALTER TABLE EmployeeViolationCases ADD EmployeeRepliedAt datetime2 NULL;
 """);
     }
 }

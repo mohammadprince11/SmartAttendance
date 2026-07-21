@@ -32,10 +32,38 @@ public class IndexModel : PageModel
     [BindProperty]
     public CreateViolationInput Input { get; set; } = new();
 
+    /// <summary>فلتر رد الموظف: all | pending (بانتظار الرد) | replied (تم الرد).</summary>
+    [BindProperty(SupportsGet = true)]
+    public string Reply { get; set; } = "all";
+
+    public int PendingReplyCount => Items.Count(i => i.EmployeeReplyStatus == "Pending");
+
     public async Task OnGetAsync()
     {
         Input.EventDate = DateTime.Today;
         await LoadPageDataAsync();
+    }
+
+    /// <summary>طلب رد الموظف على المخالفة (حق الدفاع) — يظهر له ببوابته وإشعار.</summary>
+    public async Task<IActionResult> OnPostRequestReplyAsync(int id)
+    {
+        await ViolationCaseSchema.EnsureAsync(_db);
+        await ExecuteAsync(
+            """
+UPDATE EmployeeViolationCases
+SET EmployeeReplyStatus = N'Pending', ReplyRequestedAt = SYSUTCDATETIME(), UpdatedAt = SYSUTCDATETIME()
+WHERE Id = @Id AND ISNULL(IsDeleted, 0) = 0;
+
+INSERT INTO SystemNotifications (Title, Message, TargetRole, Url)
+SELECT N'مطلوب ردك على مخالفة',
+       N'سُجّلت بحقك مخالفة بالرقم المرجعي ' + v.ReferenceNo + N' — يرجى الرد عليها من بوابة الموظف.',
+       'Employee', '/EmployeePortal?tab=requests'
+FROM EmployeeViolationCases v WHERE v.Id = @Id;
+""",
+            command => Add(command, "@Id", id));
+
+        TempData["SuccessMessage"] = "تم طلب رد الموظف — ستظهر المخالفة ببوابته للرد عليها.";
+        return RedirectToPage(new { Reply });
     }
 
     public async Task<IActionResult> OnPostCreateAsync()
@@ -273,12 +301,18 @@ SELECT
     ISNULL(v.FinancialImpactType, N'None') AS FinancialImpactType,
     ISNULL(v.FinancialImpactValue, 0) AS FinancialImpactValue,
     ISNULL(v.DeductionAmount, 0) AS DeductionAmount,
-    ISNULL(v.Notes, N'') AS Notes
+    ISNULL(v.Notes, N'') AS Notes,
+    ISNULL(v.EmployeeReplyStatus, N'NotRequested') AS EmployeeReplyStatus,
+    ISNULL(v.EmployeeReply, N'') AS EmployeeReply,
+    v.EmployeeRepliedAt
 FROM EmployeeViolationCases v
 LEFT JOIN Employees e ON e.Id = v.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
 LEFT JOIN Branches b ON b.Id = d.BranchId
 WHERE ISNULL(v.IsDeleted, 0) = 0
+  AND (@Reply = 'all'
+       OR (@Reply = 'pending' AND ISNULL(v.EmployeeReplyStatus, N'NotRequested') = N'Pending')
+       OR (@Reply = 'replied' AND ISNULL(v.EmployeeReplyStatus, N'NotRequested') = N'Replied'))
 ORDER BY v.EventDate DESC, v.Id DESC;
 """,
             reader => new ViolationCaseRow
@@ -301,8 +335,12 @@ ORDER BY v.EventDate DESC, v.Id DESC;
                 FinancialImpactType = ToStringValue(reader["FinancialImpactType"], "None"),
                 FinancialImpactValue = ToDecimal(reader["FinancialImpactValue"]),
                 DeductionAmount = ToDecimal(reader["DeductionAmount"]),
-                Notes = ToStringValue(reader["Notes"])
-            });
+                Notes = ToStringValue(reader["Notes"]),
+                EmployeeReplyStatus = ToStringValue(reader["EmployeeReplyStatus"], "NotRequested"),
+                EmployeeReply = ToStringValue(reader["EmployeeReply"]),
+                EmployeeRepliedAt = reader["EmployeeRepliedAt"] as DateTime?
+            },
+            command => Add(command, "@Reply", string.IsNullOrWhiteSpace(Reply) ? "all" : Reply));
     }
 
     private async Task<ViolationTypePickerItem?> GetViolationRuleAsync(int violationTypeId)
@@ -538,6 +576,16 @@ public sealed class ViolationCaseRow
     public decimal FinancialImpactValue { get; set; }
     public decimal DeductionAmount { get; set; }
     public string Notes { get; set; } = string.Empty;
+    public string EmployeeReplyStatus { get; set; } = "NotRequested";
+    public string EmployeeReply { get; set; } = string.Empty;
+    public DateTime? EmployeeRepliedAt { get; set; }
+
+    public string ReplyStatusText => EmployeeReplyStatus switch
+    {
+        "Pending" => "بانتظار رد الموظف",
+        "Replied" => "تم الرد",
+        _ => "—"
+    };
 
     public string Avatar => string.IsNullOrWhiteSpace(EmployeeName) ? "؟" : EmployeeName.Trim()[0].ToString();
 

@@ -300,6 +300,61 @@
                     </form>
                 </section>
 
+                @if (Model.PendingViolationReplies.Any())
+                {
+                    <section class="nxex-card" style="border:1px solid rgba(250,204,21,.35)">
+                        <header class="nxex-card-head">
+                            <div>
+                                <h2>مخالفات بانتظار ردّك</h2>
+                                <p>حق الدفاع: اكتب ردّك على المخالفة ليصل للموارد البشرية قبل اتخاذ الإجراء.</p>
+                            </div>
+                            <span class="nxex-chip pending">@Model.PendingViolationReplies.Count</span>
+                        </header>
+
+                        @foreach (var violation in Model.PendingViolationReplies)
+                        {
+                            <form method="post" asp-page-handler="ViolationReply" class="nxex-form" style="margin-bottom:12px">
+                                <input type="hidden" name="id" value="@violation.Id" />
+                                <input type="hidden" name="returnTab" value="requests" />
+                                <div class="nxex-request-preview">
+                                    <span>@violation.ReferenceNo · @violation.EventDate?.ToString("yyyy-MM-dd")</span>
+                                    <strong>@violation.ViolationTitle</strong>
+                                </div>
+                                <textarea name="reply" required placeholder="اكتب ردّك على هذه المخالفة..."></textarea>
+                                <button type="submit">إرسال الرد</button>
+                            </form>
+                        }
+                    </section>
+                }
+
+                @if (Model.PendingAssetAcknowledgments.Any())
+                {
+                    <section class="nxex-card" style="border:1px solid rgba(18,217,227,.35)">
+                        <header class="nxex-card-head">
+                            <div>
+                                <h2>عهد بانتظار إقرارك</h2>
+                                <p>أقرّ باستلام العهد المسلّمة إليك — يظهر إقرارك لإدارة الموارد البشرية.</p>
+                            </div>
+                            <span class="nxex-chip pending">@Model.PendingAssetAcknowledgments.Count</span>
+                        </header>
+
+                        @foreach (var asset in Model.PendingAssetAcknowledgments)
+                        {
+                            <form method="post" asp-page-handler="AcknowledgeAsset" class="nxex-form" style="margin-bottom:10px;display:flex;align-items:center;gap:10px;justify-content:space-between">
+                                <input type="hidden" name="id" value="@asset.Id" />
+                                <input type="hidden" name="returnTab" value="requests" />
+                                <div>
+                                    <strong>@asset.Title</strong>
+                                    <small style="display:block;opacity:.75">
+                                        @(string.IsNullOrWhiteSpace(asset.Subtitle) ? "" : asset.Subtitle + " · ")منذ @(asset.FromDate?.ToString("yyyy-MM-dd") ?? "—")@(asset.Amount.HasValue ? " · بقيمة " + asset.Amount.Value.ToString("#,0.##") : "")
+                                    </small>
+                                </div>
+                                <button type="submit" style="flex:none">أقرّ بالاستلام</button>
+                            </form>
+                        }
+                    </section>
+                }
+
                 <section class="nxex-card nxex-request-list-card">
                     <header class="nxex-card-head">
                         <div>

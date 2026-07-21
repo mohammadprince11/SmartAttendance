@@ -1575,13 +1575,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Approvals/Index.cshtml": {
-    "mtime": 1783145070.9400134,
-    "ast_hash": "5a9761727507bc2280bed0b8b8264154",
+    "mtime": 1784656776.5150876,
+    "ast_hash": "bab7a73009aa984a0ebf828fd64b161c",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Approvals/Index.cshtml.cs": {
-    "mtime": 1783145070.9400134,
-    "ast_hash": "bcb3fc74a565b4e913acd31705b5e1d7",
+    "mtime": 1784656752.4731266,
+    "ast_hash": "fd5d8c3041d4ccb9a0332cc721509400",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AttendanceCorrections/Index.cshtml": {
@@ -1960,8 +1960,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeePortal/Index.cshtml.cs": {
-    "mtime": 1784062080.9220974,
-    "ast_hash": "a0b8da34c2032262c5fabf8c260bf61f",
+    "mtime": 1784656674.716816,
+    "ast_hash": "24803bb5a44362eaedb1b7523daecb8e",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeeProfileSettings/Index.cshtml": {
@@ -2420,8 +2420,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/MyProfile/Index.cshtml.cs": {
-    "mtime": 1783749096.5844529,
-    "ast_hash": "65eb54fc5e1b60d1d42d6ae11e8f03c7",
+    "mtime": 1784656706.4550586,
+    "ast_hash": "c676baae7d8e46db2d2bcc4b57320c35",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Notifications/Index.cshtml": {
@@ -2585,8 +2585,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/SelfServices/Index.cshtml.cs": {
-    "mtime": 1783145071.1363792,
-    "ast_hash": "0b86019645b0fe81e3fadc578abf605a",
+    "mtime": 1784656655.2382152,
+    "ast_hash": "49dbb1f64b899841ca73dd3963e5f70e",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Setup/Index.cshtml": {
@@ -3970,8 +3970,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/ApprovalTemplateStore.cs": {
-    "mtime": 1784655870.0945802,
-    "ast_hash": "9dd5121b56f4df6e22dabcfed0e40a4d",
+    "mtime": 1784656550.1589835,
+    "ast_hash": "832b55dd2411c0377f02474d7932f0a7",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/HrSettings/ApprovalTemplates.cshtml": {
@@ -3982,6 +3982,11 @@
   "SmartAttendance.Web/Pages/HrSettings/ApprovalTemplates.cshtml.cs": {
     "mtime": 1784655938.0272276,
     "ast_hash": "d8dcbf33ee30ae6f8405eea484b08591",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/ApprovalWorkflowEngine.cs": {
+    "mtime": 1784656622.5983317,
+    "ast_hash": "08b9f0876ccd7f81117ccacda2e62496",
     "semantic_hash": ""
   }
 }
