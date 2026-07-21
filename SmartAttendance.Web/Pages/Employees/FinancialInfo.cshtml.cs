@@ -45,8 +45,20 @@ public class FinancialInfoModel : PageModel
     public static readonly string[] Currencies = { "IQD", "USD", "EUR", "SAR", "AED", "JOD", "EGP", "KWD", "BHD", "QAR", "OMR" };
     public static readonly string[] PaymentMethods = { "نقداً", "شيك", "تحويل بنكي" };
 
+    /// <summary>الحقول الحساسة: الصفحة كاملة راتب — تُحجب عن الأدوار غير المخوّلة.</summary>
+    private async Task<bool> CanViewSalaryAsync()
+    {
+        var allowedRoles = await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetAsync(
+            _dbContext, "Sensitive.SalaryRoles", "Admin,HR Manager");
+        var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? string.Empty;
+        return allowedRoles
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Contains(role, StringComparer.OrdinalIgnoreCase);
+    }
+
     public async Task<IActionResult> OnGetAsync(int id)
     {
+        if (!await CanViewSalaryAsync()) return Forbid();
         if (!await CanEditAsync(id)) return Forbid();
         await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);
 
@@ -74,6 +86,7 @@ public class FinancialInfoModel : PageModel
 
     public async Task<IActionResult> OnPostAsync(int id)
     {
+        if (!await CanViewSalaryAsync()) return Forbid();
         if (!await CanEditAsync(id)) return Forbid();
         await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);
 

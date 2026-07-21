@@ -295,6 +295,9 @@
 
                             @if (canUseLegacyPeopleAdministration)
                             {
+                                <a href="/Employees/PeopleDashboard" class="nexora-nav-link @(IsUnder("/Employees/PeopleDashboard") ? "active nexora-active" : "")">
+                                    <span>داشبورد الأشخاص</span>
+                                </a>
                                 <a asp-page="/PeopleReports/Index" class="nexora-nav-link @(IsUnder("/PeopleReports") ? "active nexora-active" : "")">
                                     <span>التقارير</span>
                                 </a>
@@ -338,6 +341,9 @@
                                         </a>
                                         <a href="/HrSettings/EntityFields" class="nexora-nav-link @(IsUnder("/HrSettings/EntityFields") ? "active nexora-active" : "")">
                                             <span>حقول الكيانات</span>
+                                        </a>
+                                        <a href="/HrSettings/EmployeeGroups" class="nexora-nav-link @(IsUnder("/HrSettings/EmployeeGroups") ? "active nexora-active" : "")">
+                                            <span>مجموعات الموظفين</span>
                                         </a>
                                     </div>
                                 </details>

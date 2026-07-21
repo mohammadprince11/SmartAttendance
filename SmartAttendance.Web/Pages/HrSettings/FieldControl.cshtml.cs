@@ -20,9 +20,20 @@ public class FieldControlModel : PageModel
 
     public Dictionary<string, EmployeeFieldControl.FieldSetting> Settings { get; set; } = new();
 
+    /// <summary>الأدوار المخوّلة برؤية الحقول الحساسة (الرواتب) — نمط أدوار كيان.</summary>
+    public HashSet<string> SensitiveSalaryRoles { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public static readonly string[] AllRoles =
+        { "Admin", "HR Manager", "HR Officer", "Branch Manager", "Finance Viewer" };
+
     public async Task OnGetAsync()
     {
         Settings = await EmployeeFieldControl.GetSettingsAsync(_dbContext);
+        var csv = await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetAsync(
+            _dbContext, "Sensitive.SalaryRoles", "Admin,HR Manager");
+        SensitiveSalaryRoles = csv
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -46,6 +57,13 @@ public class FieldControlModel : PageModel
         }
 
         await EmployeeFieldControl.SaveSettingsAsync(_dbContext, settings);
+
+        // الأدوار الحساسة: Admin دائماً ضمنها حتى لا يقفل أحد نفسه بالخطأ.
+        var sensitiveRoles = form["sensitiveRoles"].Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
+        if (!sensitiveRoles.Contains("Admin")) sensitiveRoles.Insert(0, "Admin");
+        await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.SetAsync(
+            _dbContext, "Sensitive.SalaryRoles", string.Join(",", sensitiveRoles));
+
         TempData["SuccessMessage"] = "تم حفظ إعدادات الحقول — الإخفاء والتسميات والترتيب تنطبق على شاشتي إنشاء وتعديل الموظف.";
         return RedirectToPage();
     }

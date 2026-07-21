@@ -68,6 +68,22 @@ public partial class ProfileModel
     [TempData] public string? PanelSuccess { get; set; }
     [TempData] public string? PanelError { get; set; }
 
+    /// <summary>
+    /// الحقول الحساسة (نمط أدوار كيان): رؤية الراتب والعلاوات محصورة بالأدوار
+    /// المعرّفة بإعداد Sensitive.SalaryRoles (الافتراضي Admin وHR Manager).
+    /// </summary>
+    public bool CanViewSalary { get; set; }
+
+    private async Task LoadSalaryVisibilityAsync()
+    {
+        var allowedRoles = await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetAsync(
+            _dbContext, "Sensitive.SalaryRoles", "Admin,HR Manager");
+        var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? string.Empty;
+        CanViewSalary = allowedRoles
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Contains(role, StringComparer.OrdinalIgnoreCase);
+    }
+
     [BindProperty] public DependentInput Dependent { get; set; } = new();
     [BindProperty] public FileRecordInput RecordInput { get; set; } = new();
     [BindProperty] public IFormFile? RecordAttachment { get; set; }
@@ -78,6 +94,7 @@ public partial class ProfileModel
 
     public async Task LoadPanelsAsync()
     {
+        await LoadSalaryVisibilityAsync();
         await EmployeeDependentSchema.EnsureAsync(_dbContext);
         await EmployeeRecordsSchema.EnsureAsync(_dbContext);
         await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);

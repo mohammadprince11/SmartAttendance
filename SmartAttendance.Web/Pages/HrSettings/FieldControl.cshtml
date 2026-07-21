@@ -84,6 +84,23 @@
             </section>
         }
 
+        @* الحقول الحساسة (نمط أدوار كيان): من يرى الراتب والعلاوات والصفحة المالية *@
+        <section class="nxhs-setting-section">
+            <h2>الحقول الحساسة — رؤية الرواتب 🔐</h2>
+            <p class="nxhs-helper">الأدوار المحددة فقط ترى بطاقة المعلومات المالية والعلاوات وصفحة الملف المالي. Admin دائماً مخوّل.</p>
+            <div class="nxhs-permission-grid">
+                @foreach (var role in SmartAttendance.Web.Pages.HrSettings.FieldControlModel.AllRoles)
+                {
+                    <label>
+                        <input type="checkbox" name="sensitiveRoles" value="@role"
+                               checked="@(role == "Admin" || Model.SensitiveSalaryRoles.Contains(role))"
+                               disabled="@(role == "Admin")" />
+                        <span>@role @(role == "Admin" ? "🔒" : "")</span>
+                    </label>
+                }
+            </div>
+        </section>
+
         <footer class="nxhs-actions">
             <button type="submit">حفظ الإعدادات</button>
         </footer>

@@ -691,7 +691,8 @@
                         _ => finText(fin?.PaymentMethod)
                     };
                 }
-                <article class="z360-card">
+                @* الحقول الحساسة: بطاقة الرواتب تظهر فقط للأدوار المخوّلة (Sensitive.SalaryRoles) *@
+                <article class="z360-card" hidden="@(!Model.CanViewSalary)">
                     <div class="z360-card-head">
                         <h3>المعلومات المالية</h3>
                         <a class="z360-card-tool" asp-page="./FinancialInfo" asp-route-id="@Model.Id" title="تعديل المعلومات المالية">✎</a>
@@ -847,6 +848,7 @@
                     <a href="#documents" data-z360-tab="documents">المستندات</a>
                     <a href="#profile-files" data-z360-tab="profile-files">ملفات الموظف</a>
                     <a href="#shifts" data-z360-tab="shifts">الشفتات</a>
+                    <a href="#timeline" data-z360-tab="timeline">الخط الزمني</a>
                     @if (Model.CanViewHistory)
                     {
                         <a href="#audit" data-z360-tab="audit">سجل التعديلات</a>
@@ -1060,6 +1062,23 @@
                                                     <div class="z360-file-item-main">
                                                         <strong>@r.Title@(r.IsCurrent ? " ✓" : "")</strong>
                                                         <span>@r.Subtitle@(r.Amount.HasValue ? " · " + r.Amount.Value.ToString("0.##") : "")@(r.ToDate.HasValue ? " · " + r.ToDate.Value.ToString("yyyy") : "")@(string.IsNullOrWhiteSpace(r.Country) ? "" : " · " + r.Country)</span>
+                                                        @* القيم المخصصة (حقول الكيانات) تظهر على البطاقة نفسها لا بالسلايد فقط *@
+                                                        @{
+                                                            var typeKey = r.RecordType.ToString();
+                                                            var cfDefs = Model.CustomFieldsOf(typeKey);
+                                                            var cfVals = Model.CustomFieldValues.TryGetValue(typeKey, out var byRec) && byRec.TryGetValue(r.Id, out var vals) ? vals : null;
+                                                        }
+                                                        @if (cfVals != null && cfDefs.Count > 0)
+                                                        {
+                                                            var cfParts = cfDefs
+                                                                .Where(f => cfVals.TryGetValue(f.FieldKey, out var v) && !string.IsNullOrWhiteSpace(v))
+                                                                .Select(f => f.FieldLabel + ": " + (f.IsCheckbox ? "نعم" : cfVals[f.FieldKey]))
+                                                                .ToList();
+                                                            @if (cfParts.Count > 0)
+                                                            {
+                                                                <span style="color:#67e8f9;font-size:11px;font-weight:800">@string.Join(" · ", cfParts)</span>
+                                                            }
+                                                        }
                                                     </div>
                                                     <div class="z360-file-actions">
                                                         @if (!string.IsNullOrWhiteSpace(r.AttachmentPath))
@@ -1104,6 +1123,21 @@
                                                 <div class="z360-file-item-main">
                                                     <strong>@d.Name</strong>
                                                     <span>@Model.RelationText(d.Relation)@(d.IsDependent ? " · معال" : "")@(d.IsEmergencyContact ? " · طوارئ" : "")</span>
+                                                    @{
+                                                        var depDefs = Model.CustomFieldsOf("Dependent");
+                                                        var depVals = Model.CustomFieldValues.TryGetValue("Dependent", out var depByRec) && depByRec.TryGetValue(d.Id, out var dv) ? dv : null;
+                                                    }
+                                                    @if (depVals != null && depDefs.Count > 0)
+                                                    {
+                                                        var depParts = depDefs
+                                                            .Where(f => depVals.TryGetValue(f.FieldKey, out var v) && !string.IsNullOrWhiteSpace(v))
+                                                            .Select(f => f.FieldLabel + ": " + (f.IsCheckbox ? "نعم" : depVals[f.FieldKey]))
+                                                            .ToList();
+                                                        @if (depParts.Count > 0)
+                                                        {
+                                                            <span style="color:#67e8f9;font-size:11px;font-weight:800">@string.Join(" · ", depParts)</span>
+                                                        }
+                                                    }
                                                 </div>
                                                 <div class="z360-file-actions">
                                                     <button type="button" class="rec-edit" data-form="dep"
@@ -1131,8 +1165,8 @@
                                 }
                             </section>
 
-                            @* ---------- العلاوات (نمط كيان: عنصر راتب + مبلغ + نطاق + حالة) ---------- *@
-                            <section class="z360-file-card">
+                            @* ---------- العلاوات (نمط كيان) — حساسة: للأدوار المخوّلة فقط ---------- *@
+                            <section class="z360-file-card" hidden="@(!Model.CanViewSalary)">
                                 <div class="z360-file-card-head">
                                     <h4>العلاوات</h4>
                                     <button type="button" class="z360-upload-label" title="إضافة علاوة"
@@ -1279,6 +1313,39 @@
                         else
                         {
                             <div class="z360-empty">لا توجد شفتات مرتبطة.</div>
+                        }
+                    </article>
+
+                    @* الخط الزمني الموحّد: كل أحداث الموظف من كل المصادر بترتيب زمني *@
+                    <article id="timeline" class="z360-module" hidden>
+                        <div class="z360-module-head">
+                            <div>
+                                <h3>الخط الزمني</h3>
+                                <p>رحلة الموظف كاملة: تعيين، عقود، حركات، مخالفات، طلبات، وملفات.</p>
+                            </div>
+                        </div>
+                        @if (Model.TimelineEvents.Count == 0)
+                        {
+                            <p style="color:var(--sa-muted,#8FA8BC);font-weight:800;padding:12px">لا أحداث مسجلة بعد.</p>
+                        }
+                        else
+                        {
+                            <div style="display:flex;flex-direction:column;gap:0;position:relative;padding-inline-start:6px">
+                                @foreach (var ev in Model.TimelineEvents)
+                                {
+                                    <div style="display:grid;grid-template-columns:34px 110px 1fr;gap:10px;align-items:start;padding:9px 0;border-bottom:1px solid rgba(143,168,188,.08)">
+                                        <span style="font-size:16px;text-align:center">@ev.Icon</span>
+                                        <span style="font-size:11px;color:var(--sa-muted,#8FA8BC);font-weight:800;direction:ltr;text-align:end">@ev.EventDate.ToString("yyyy-MM-dd")</span>
+                                        <span style="font-size:13px">
+                                            <b style="font-weight:900">@ev.Title</b>
+                                            @if (!string.IsNullOrWhiteSpace(ev.Detail))
+                                            {
+                                                <small style="display:block;color:var(--sa-muted,#8FA8BC);font-weight:700">@ev.Detail</small>
+                                            }
+                                        </span>
+                                    </div>
+                                }
+                            </div>
                         }
                     </article>
 

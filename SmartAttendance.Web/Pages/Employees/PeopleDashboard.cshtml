@@ -1,0 +1,83 @@
+@page "/Employees/PeopleDashboard"
+@model SmartAttendance.Web.Pages.Employees.PeopleDashboardModel
+
+@*
+    داشبورد الأشخاص (نمط كيان 18.7) — يعيد استخدام ستايل اللوحة التنفيذية
+    (zynora-exec-dashboard.css) بمؤشرات مودل الأشخاص المتخصصة.
+*@
+
+@{
+    ViewData["Title"] = "داشبورد الأشخاص";
+    static int Pct(int part, int total) => total <= 0 ? 0 : (int)Math.Round(part * 100.0 / total);
+    var genderTotal = Math.Max(1, Model.MaleCount + Model.FemaleCount);
+}
+
+<link rel="stylesheet" href="~/css/zynora-exec-dashboard.css" asp-append-version="true" />
+
+<section class="zxd-page" dir="rtl">
+    <header class="zxd-head">
+        <div>
+            <h1>داشبورد الأشخاص</h1>
+            <div class="zxd-date">مؤشرات القوى العاملة ومعدل الدوران — نطاق سنة للخروج</div>
+        </div>
+        <a class="zxd-chip" href="/Employees">قائمة الموظفين ←</a>
+    </header>
+
+    <div class="zxd-kpis">
+        <a class="zxd-kpi" href="/Employees"><span class="ic">👥</span><div><b>@Model.TotalEmployees.ToString("N0")</b><span>الموظفون</span><small>فعال @Model.ActiveEmployees</small></div></a>
+        <a class="zxd-kpi green" href="/Employees"><span class="ic">🆕</span><div><b>@Model.NewThisMonth</b><span>جديد هذا الشهر</span></div></a>
+        <a class="zxd-kpi amber" href="/HrSettings/ProbationPeriod"><span class="ic">⏳</span><div><b>@Model.InProbation</b><span>في فترة التجربة</span><small>90 يوماً من المباشرة</small></div></a>
+        <a class="zxd-kpi red" href="/Employees?Status=inactive"><span class="ic">⏸️</span><div><b>@Model.Suspended</b><span>موقوف عن العمل</span></div></a>
+        <a class="zxd-kpi red" href="/Employees/EndServiceList"><span class="ic">🚪</span><div><b>@Model.EndedThisMonth</b><span>أُنهي هذا الشهر</span></div></a>
+    </div>
+
+    <div class="zxd-row-3">
+        <div class="zxd-card">
+            <h2>معدل الدوران <small>آخر 12 شهراً</small></h2>
+            <div class="zxd-minis">
+                <div class="zxd-mini"><b>@Model.TurnoverRate%</b><span>الإجمالي</span></div>
+                <div class="zxd-mini"><b>@Model.VoluntaryRate%</b><span>الطوعي (استقالات)</span></div>
+                <div class="zxd-mini"><b>@Model.VoluntaryExits</b><span>مغادرة طوعية</span></div>
+                <div class="zxd-mini"><b>@Model.InvoluntaryExits</b><span>مغادرة غير طوعية</span></div>
+            </div>
+        </div>
+
+        <div class="zxd-card">
+            <h2>تكافؤ الجنسين <small>الفعالون</small></h2>
+            <div class="zxd-pulse">
+                <div class="zxd-pulse-row teal"><b>ذكور</b><span class="bar"><i style="width:@Pct(Model.MaleCount, genderTotal)%"></i></span><span>@Model.MaleCount (@Pct(Model.MaleCount, genderTotal)%)</span></div>
+                <div class="zxd-pulse-row green"><b>إناث</b><span class="bar"><i style="width:@Pct(Model.FemaleCount, genderTotal)%"></i></span><span>@Model.FemaleCount (@Pct(Model.FemaleCount, genderTotal)%)</span></div>
+            </div>
+        </div>
+
+        <div class="zxd-card">
+            <h2>شرائح الأعمار</h2>
+            <div class="zxd-dist">
+                @{ var ageMax = Math.Max(1, Model.AgeBuckets.Count == 0 ? 1 : Model.AgeBuckets.Max(b => b.Count)); }
+                @foreach (var bucket in Model.AgeBuckets)
+                {
+                    <div class="zxd-dist-row">
+                        <span class="n">@bucket.Label</span>
+                        <span class="bar"><i style="width:@Math.Max(3, bucket.Count * 100 / ageMax)%"></i></span>
+                        <span class="v">@bucket.Count</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="zxd-card">
+        <h2>مدة الخدمة</h2>
+        <div class="zxd-dist">
+            @{ var tenureMax = Math.Max(1, Model.TenureBuckets.Count == 0 ? 1 : Model.TenureBuckets.Max(b => b.Count)); }
+            @foreach (var bucket in Model.TenureBuckets)
+            {
+                <div class="zxd-dist-row">
+                    <span class="n">@bucket.Label</span>
+                    <span class="bar"><i style="width:@Math.Max(3, bucket.Count * 100 / tenureMax)%"></i></span>
+                    <span class="v">@bucket.Count</span>
+                </div>
+            }
+        </div>
+    </div>
+</section>

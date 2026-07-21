@@ -150,6 +150,7 @@ public partial class ProfileModel : PageModel
 
         Id = Employee.Id;
         await LoadPanelsAsync();
+        await LoadTimelineAsync();
 
         return Page();
     }

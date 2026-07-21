@@ -1,0 +1,81 @@
+@page "/HrSettings/EmployeeGroups"
+@model SmartAttendance.Web.Pages.HrSettings.EmployeeGroupsModel
+
+@{
+    ViewData["Title"] = "مجموعات الموظفين";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+
+<section class="nxhs-page nxhs-simple" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">إعدادات الموارد البشرية</a>
+        <h1>مجموعات الموظفين</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <section class="nxhs-panel">
+        <p class="nxhs-helper">
+            مجموعات ديناميكية بالشروط (نمط كيان): العضوية تُحسب تلقائياً من الشروط —
+            تُستهدف بها الإعلانات والتقارير مستقبلاً.
+        </p>
+
+        <form method="post" asp-page-handler="Add" class="nxhs-inline-add" style="flex-wrap:wrap">
+            <input name="name" placeholder="اسم المجموعة" required style="min-width:180px" />
+            <select data-nexora-select="true" name="branchId">
+                <option value="">كل الفروع</option>
+                @foreach (var (id, name) in Model.Branches) { <option value="@id">@name</option> }
+            </select>
+            <select data-nexora-select="true" name="departmentId">
+                <option value="">كل الأقسام</option>
+                @foreach (var (id, name) in Model.Departments) { <option value="@id">@name</option> }
+            </select>
+            <select data-nexora-select="true" name="workType">
+                <option value="">كل أنواع الدوام</option>
+                @foreach (var workType in Model.WorkTypes) { <option value="@workType">@workType</option> }
+            </select>
+            <label class="nxhs-check-line" style="margin:0"><input type="checkbox" name="activeOnly" value="true" checked /> <b>الفعالون فقط</b></label>
+            <input name="note" placeholder="ملاحظة (اختياري)" />
+            <button type="submit">إضافة</button>
+        </form>
+
+        <div class="nxhs-table-wrap">
+            <table class="nxhs-table">
+                <thead>
+                    <tr><th>المجموعة</th><th>الشروط</th><th>الأعضاء الآن</th><th>ملاحظة</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @if (Model.Groups.Count == 0)
+                    {
+                        <tr><td colspan="5" style="text-align:center;opacity:.7;padding:18px">لا مجموعات معرفة بعد.</td></tr>
+                    }
+                    @foreach (var group in Model.Groups)
+                    {
+                        var conditions = new List<string>();
+                        if (!string.IsNullOrWhiteSpace(group.BranchName)) conditions.Add("فرع " + group.BranchName);
+                        if (!string.IsNullOrWhiteSpace(group.DepartmentName)) conditions.Add("قسم " + group.DepartmentName);
+                        if (!string.IsNullOrWhiteSpace(group.WorkType)) conditions.Add(group.WorkType);
+                        if (group.ActiveOnly) conditions.Add("فعال");
+                        <tr>
+                            <td><b>@group.Name</b></td>
+                            <td>@(conditions.Count == 0 ? "كل الموظفين" : string.Join(" · ", conditions))</td>
+                            <td><b style="color:#12D9E3">@group.MemberCount</b></td>
+                            <td>@group.Note</td>
+                            <td>
+                                <form method="post" asp-page-handler="Delete" style="display:inline"
+                                      onsubmit="return confirm('حذف المجموعة «@group.Name»؟')">
+                                    <input type="hidden" name="id" value="@group.Id" />
+                                    <button type="submit" class="nxhs-delete-trigger">حذف</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</section>
