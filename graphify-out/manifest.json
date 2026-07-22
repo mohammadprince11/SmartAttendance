@@ -2220,8 +2220,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Index.cshtml": {
-    "mtime": 1784718615.1273177,
-    "ast_hash": "2cf5ad35b6196f3e2816d47641e05a52",
+    "mtime": 1784720221.6064372,
+    "ast_hash": "45aec5491520b9abef6c8b942e755b1c",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Index.cshtml.cs": {
@@ -2450,8 +2450,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784706742.6024914,
-    "ast_hash": "3d68881def3af28e681a700c44e80d90",
+    "mtime": 1784736737.198017,
+    "ast_hash": "ee0c08bdd082e53910e73bdef1ebacb7",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -2590,8 +2590,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Program.cs": {
-    "mtime": 1784696634.6589391,
-    "ast_hash": "80bd1a7c9b98a350542bdbf777ab3091",
+    "mtime": 1784736713.7542875,
+    "ast_hash": "6179588e9dbe39a7a80352aadb5b4556",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Properties/launchSettings.json": {
@@ -2780,8 +2780,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/zynora-theme.js": {
-    "mtime": 1784204660.7122836,
-    "ast_hash": "dd81885a379bb120b25ae7c417db8934",
+    "mtime": 1784734516.0497923,
+    "ast_hash": "a8030f633057eecb6daf078c95175718",
     "semantic_hash": ""
   },
   "SmartAttendance.slnx": {
@@ -3530,8 +3530,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/ShiftTypes/Index.cshtml": {
-    "mtime": 1784706742.6175516,
-    "ast_hash": "f77108c35fc6cdde451520c8c4a95209",
+    "mtime": 1784720249.0264757,
+    "ast_hash": "cc39830b70368fca5114532fa4ee2cf8",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/ShiftTypes/Index.cshtml.cs": {
@@ -3550,8 +3550,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AttendanceSettings/Index.cshtml": {
-    "mtime": 1784706742.5872872,
-    "ast_hash": "7ef15e721609f04e901aa726cf70b944",
+    "mtime": 1784720255.5698538,
+    "ast_hash": "517add416e34c7a99b632738d96f1181",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AttendanceSettings/Index.cshtml.cs": {
@@ -3565,8 +3565,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/DayAttendance/Index.cshtml": {
-    "mtime": 1784706742.5943532,
-    "ast_hash": "6c512caa1b0c1f5f583296eba5b8a1e9",
+    "mtime": 1784720267.9873266,
+    "ast_hash": "1ba438a6ef2c8a67ea84b61ce0fdb648",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/DayAttendance/Index.cshtml.cs": {
@@ -3585,8 +3585,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AttendanceRecommendations/Index.cshtml": {
-    "mtime": 1784706742.5839496,
-    "ast_hash": "5901a5ef7ea06f14157102abd0014f7b",
+    "mtime": 1784720271.6318843,
+    "ast_hash": "72d4cb50d982507922cbbc7379a1add7",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AttendanceRecommendations/Index.cshtml.cs": {
@@ -3595,8 +3595,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/ShiftRules/Index.cshtml": {
-    "mtime": 1784706742.6126873,
-    "ast_hash": "727f771bb5a755e271aee54163a0ae28",
+    "mtime": 1784720258.091187,
+    "ast_hash": "7113cc0429de8d4a69ab09587b328901",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/ShiftRules/Index.cshtml.cs": {
@@ -3620,8 +3620,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/ShiftAssignments/Index.cshtml": {
-    "mtime": 1784706742.6065185,
-    "ast_hash": "d113e616b0cb3168d4c47e4c9500e589",
+    "mtime": 1784720291.275392,
+    "ast_hash": "40318b2ee882fe99a38ac454178d0673",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/ShiftAssignments/Index.cshtml.cs": {
@@ -3635,8 +3635,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/MonthAttendance/Index.cshtml": {
-    "mtime": 1784706742.6004767,
-    "ast_hash": "469a92f4ded89431ab6701a2d2b4f74f",
+    "mtime": 1784720287.1089294,
+    "ast_hash": "f1bf6e746c7042185c98608553c12b43",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/MonthAttendance/Index.cshtml.cs": {
@@ -3647,6 +3647,26 @@
   "SmartAttendance.Web/Infrastructure/Hrms/DashboardWidgetStore.cs": {
     "mtime": 1784718541.8779159,
     "ast_hash": "93dccc97fc4b486299e3e32730b187b5",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/wwwroot/js/zynora-confirm.js": {
+    "mtime": 1784720174.2226527,
+    "ast_hash": "3abd0baba4929cfe582f123b5acaa4b2",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Theming/IThemeContextService.cs": {
+    "mtime": 1784736690.1644938,
+    "ast_hash": "5b1b5ea687dcfae46d3f35c3dcedaa30",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Theming/ThemeContext.cs": {
+    "mtime": 1784736683.7604773,
+    "ast_hash": "a7b78e517ec510f8384f716eb4c9246d",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Theming/ThemeContextService.cs": {
+    "mtime": 1784737043.406011,
+    "ast_hash": "10234ce4a100e0dff7dba6a383a83422",
     "semantic_hash": ""
   }
 }
