@@ -2450,8 +2450,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784735863.4693975,
-    "ast_hash": "3514b3174983f081e34c133536c9c3fa",
+    "mtime": 1784736737.198017,
+    "ast_hash": "ee0c08bdd082e53910e73bdef1ebacb7",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -2590,8 +2590,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Program.cs": {
-    "mtime": 1784696634.6589391,
-    "ast_hash": "80bd1a7c9b98a350542bdbf777ab3091",
+    "mtime": 1784736713.7542875,
+    "ast_hash": "6179588e9dbe39a7a80352aadb5b4556",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Properties/launchSettings.json": {
@@ -3652,6 +3652,21 @@
   "SmartAttendance.Web/wwwroot/js/zynora-confirm.js": {
     "mtime": 1784720174.2226527,
     "ast_hash": "3abd0baba4929cfe582f123b5acaa4b2",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Theming/IThemeContextService.cs": {
+    "mtime": 1784736690.1644938,
+    "ast_hash": "5b1b5ea687dcfae46d3f35c3dcedaa30",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Theming/ThemeContext.cs": {
+    "mtime": 1784736683.7604773,
+    "ast_hash": "a7b78e517ec510f8384f716eb4c9246d",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Theming/ThemeContextService.cs": {
+    "mtime": 1784737043.406011,
+    "ast_hash": "10234ce4a100e0dff7dba6a383a83422",
     "semantic_hash": ""
   }
 }
