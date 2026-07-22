@@ -291,4 +291,29 @@
 .ar-tree-page { color: var(--zy-text); font-size: .82rem; }
 .ar-tree-act { text-align: center; font-size: .72rem; color: var(--zy-text-muted); }
 
+/* ---- Data scope selectors --------------------------------------------- */
+
+.ar-scope {
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-md);
+    padding: 6px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.ar-scope-row {
+    display: grid;
+    grid-template-columns: 1fr 180px;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: var(--zy-radius-sm);
+}
+
+.ar-scope-row:hover { background: var(--zy-surface-raised); }
+
+.ar-scope-entity { color: var(--zy-text); font-size: .85rem; }
+
+.ar-scope-select { padding: 7px 10px; height: auto; }
+
 .ar-modal-actions { display: flex; gap: var(--zy-space-2); justify-content: flex-end; margin-top: var(--zy-space-3); }

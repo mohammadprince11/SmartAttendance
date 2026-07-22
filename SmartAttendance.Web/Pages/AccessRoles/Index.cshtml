@@ -13,7 +13,8 @@
      data-role-type="@Model.Type"
      data-users='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Users))'
      data-assigned='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AssignedByRole))'
-     data-grants='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.GrantsByRole))'>
+     data-grants='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.GrantsByRole))'
+     data-datascopes='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DataScopesByRole))'>
 
     @if (TempData["AccessRoleMessage"] is string msg)
     {
@@ -69,6 +70,7 @@
                             <td>
                                 <form method="post" asp-page-handler="Toggle" class="ar-inline">
                                     <input type="hidden" name="id" value="@role.Id" />
+                                    <input type="hidden" name="Type" value="@Model.Type" />
                                     <button type="submit" class="ar-status @(role.IsActive ? "is-on" : "is-off")">
                                         @(role.IsActive ? "نشط" : "غير نشط")
                                     </button>
@@ -81,6 +83,7 @@
                                 </button>
                                 <form method="post" asp-page-handler="Delete" class="ar-inline">
                                     <input type="hidden" name="id" value="@role.Id" />
+                                    <input type="hidden" name="Type" value="@Model.Type" />
                                     <button type="submit" class="ar-btn ar-btn-mini ar-btn-danger" data-zyconfirm="تأكيد الحذف؟">حذف</button>
                                 </form>
                             </td>
@@ -100,6 +103,7 @@
             </div>
             <form method="post" asp-page-handler="Save">
                 <input type="hidden" name="Id" id="ar-id" value="0" />
+                <input type="hidden" name="Type" value="@Model.Type" />
 
                 <div class="ar-field">
                     <label>اسم الدور (عربي)</label>
@@ -157,6 +161,27 @@
                                         }
                                     </div>
                                 </details>
+                            }
+                        </div>
+                    </div>
+                }
+                else if (Model.Type == SmartAttendance.Web.Infrastructure.Security.AccessRoleStore.TypeData)
+                {
+                    <div class="ar-field">
+                        <label>نطاق البيانات</label>
+                        <p class="ar-hint">حدّد نطاق السجلات التي يراها هذا الدور لكل كيان.</p>
+                        <div class="ar-scope">
+                            @foreach (var entity in Model.DataEntities)
+                            {
+                                <div class="ar-scope-row">
+                                    <span class="ar-scope-entity">@entity.Label</span>
+                                    <select name="scope_@(entity.Code)" class="ar-input ar-scope-select" data-entity="@(entity.Code)">
+                                        @foreach (var level in Model.ScopeLevels)
+                                        {
+                                            <option value="@level.Key">@level.Label</option>
+                                        }
+                                    </select>
+                                </div>
                             }
                         </div>
                     </div>

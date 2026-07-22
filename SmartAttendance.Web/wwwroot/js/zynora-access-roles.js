@@ -12,9 +12,19 @@
     try { users = JSON.parse(wrap.getAttribute("data-users") || "[]"); } catch (e) { users = []; }
     try { assigned = JSON.parse(wrap.getAttribute("data-assigned") || "{}"); } catch (e) { assigned = {}; }
     try { grants = JSON.parse(wrap.getAttribute("data-grants") || "{}"); } catch (e) { grants = {}; }
+    var dataScopes = {};
+    try { dataScopes = JSON.parse(wrap.getAttribute("data-datascopes") || "{}"); } catch (e) { dataScopes = {}; }
 
     var modal = document.getElementById("ar-modal");
     var usersBox = document.getElementById("ar-users");
+
+    // Pre-select the data-scope dropdowns from a role's stored grants.
+    function applyScopes(roleScopes) {
+        var map = roleScopes || {};
+        document.querySelectorAll(".ar-scope-select[data-entity]").forEach(function (sel) {
+            sel.value = map[sel.getAttribute("data-entity")] || "None";
+        });
+    }
 
     // Pre-check the page-permission tree from a role's stored grants.
     function applyGrants(roleGrants) {
@@ -58,6 +68,7 @@
         document.getElementById("ar-active").checked = true;
         renderUsers([]);
         applyGrants({});
+        applyScopes({});
         modal.hidden = false;
     };
 
@@ -70,6 +81,7 @@
         document.getElementById("ar-active").checked = !!isActive;
         renderUsers(assigned[id] || []);
         applyGrants(grants[id] || {});
+        applyScopes(dataScopes[id] || {});
         modal.hidden = false;
     };
 

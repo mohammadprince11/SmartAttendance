@@ -50,6 +50,12 @@ public class IndexModel : PageModel
     /// <summary>Per role: page code → granted actions (for pre-checking the tree on edit).</summary>
     public Dictionary<int, Dictionary<string, List<string>>> GrantsByRole { get; set; } = new();
 
+    public IReadOnlyList<DataScopeCatalog.DataEntity> DataEntities => DataScopeCatalog.Entities;
+    public IReadOnlyList<DataScopeCatalog.ScopeLevel> ScopeLevels => DataScopeCatalog.ScopeLevels;
+
+    /// <summary>Per role: entity code → scope key (for pre-selecting on edit).</summary>
+    public Dictionary<int, Dictionary<string, string>> DataScopesByRole { get; set; } = new();
+
     private bool IsAdmin =>
         (User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty)
         .Equals("Admin", StringComparison.OrdinalIgnoreCase);
@@ -106,6 +112,10 @@ public class IndexModel : PageModel
         {
             await AccessRoleStore.ReplaceGrantsAsync(_dbContext, savedId, BuildPageGrants(form));
         }
+        else if (Type == AccessRoleStore.TypeData)
+        {
+            await AccessRoleStore.ReplaceGrantsAsync(_dbContext, savedId, BuildDataGrants(form));
+        }
 
         TempData["AccessRoleMessage"] = role.Id > 0 ? "تم تحديث الدور." : "تم إنشاء الدور.";
         return RedirectToPage(new { Type });
@@ -157,6 +167,14 @@ public class IndexModel : PageModel
                     g => DeserializeActions(g.Payload),
                     StringComparer.OrdinalIgnoreCase);
             }
+            else if (Type == AccessRoleStore.TypeData)
+            {
+                var grants = await AccessRoleStore.GetGrantsAsync(_dbContext, role.Id);
+                DataScopesByRole[role.Id] = grants.ToDictionary(
+                    g => g.GrantKey,
+                    g => DeserializeScope(g.Payload),
+                    StringComparer.OrdinalIgnoreCase);
+            }
         }
     }
 
@@ -185,6 +203,51 @@ public class IndexModel : PageModel
         }
 
         return grants;
+    }
+
+    /// <summary>Reads scope_&lt;EntityCode&gt; selects into grants (skips "None").</summary>
+    private static List<AccessRoleStore.AccessRoleGrant> BuildDataGrants(IFormCollection form)
+    {
+        var grants = new List<AccessRoleStore.AccessRoleGrant>();
+
+        foreach (var entity in DataScopeCatalog.Entities)
+        {
+            var scope = form[$"scope_{entity.Code}"].ToString();
+            if (string.IsNullOrWhiteSpace(scope) ||
+                scope.Equals("None", StringComparison.OrdinalIgnoreCase) ||
+                !DataScopeCatalog.IsValidScope(scope))
+            {
+                continue;
+            }
+
+            grants.Add(new AccessRoleStore.AccessRoleGrant
+            {
+                GrantKey = entity.Code,
+                Payload = System.Text.Json.JsonSerializer.Serialize(new { scope }),
+            });
+        }
+
+        return grants;
+    }
+
+    private static string DeserializeScope(string? payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return "None";
+        }
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(payload);
+            return doc.RootElement.TryGetProperty("scope", out var scope)
+                ? scope.GetString() ?? "None"
+                : "None";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return "None";
+        }
     }
 
     private static List<string> DeserializeActions(string? payload)
