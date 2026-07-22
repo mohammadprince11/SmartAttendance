@@ -1,0 +1,263 @@
+@page "/ShiftTypes"
+@model SmartAttendance.Web.Pages.ShiftTypes.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+@using System.Text.Json
+
+@*
+    أنواع المناوبات — المرحلة 1 من مودل الحضور الجديد (نمط كيان):
+    قائمة + سلايد بناء بمصفوفة الأيام السبعة. التعديل يتعبأ من JSON مضمّن.
+*@
+
+@{
+    ViewData["Title"] = "أنواع المناوبات";
+    var shiftsJson = JsonSerializer.Serialize(Model.Shifts.Select(s => new
+    {
+        s.Id, s.Name, s.NameEn, s.ColorHex, s.IsFlexible, s.FlexDailyHours, s.IsActive,
+        Days = s.Days.Select(d => new { d.DayIndex, d.DayKind, d.StartTime, d.EndTime })
+    }));
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .sht-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
+    .sht-head {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
+                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
+    }
+    html[data-theme="light"] .sht-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
+    .sht-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .sht-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .sht-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
+    .sht-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
+
+    .sht-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: hidden; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .sht-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .sht-table th { text-align: start; padding: 12px 14px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); }
+    html[data-theme="light"] .sht-table th { background: #f2f7fb; }
+    .sht-table td { padding: 11px 14px; border-bottom: 1px solid rgba(143,168,188,.08); vertical-align: middle; }
+    .sht-table tr:hover td { background: rgba(18,217,227,.04); }
+    .sht-color { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-inline-end: 8px; }
+    .sht-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; background: rgba(18,217,227,.1); color: #12D9E3; }
+    .sht-chip.flex { background: rgba(167,139,250,.14); color: #a78bfa; }
+    .sht-chip.off { background: rgba(248,113,113,.12); color: #f87171; }
+    .sht-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+
+    /* مصفوفة الأيام بالسلايد */
+    .sht-daygrid { display: flex; flex-direction: column; gap: 6px; }
+    .sht-dayrow { display: grid; grid-template-columns: 72px 120px 1fr 1fr 70px; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid rgba(73,111,151,.16); border-radius: 10px; font-size: 12px; }
+    .sht-dayrow b { font-weight: 900; }
+    .sht-dayrow select, .sht-dayrow input { min-height: 32px; border-radius: 8px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: inherit; padding: 4px 8px; font-size: 12px; width: 100%; }
+    html[data-theme="light"] .sht-dayrow select, html[data-theme="light"] .sht-dayrow input { background: #fff; }
+    .sht-dayrow .hours { text-align: center; font-weight: 900; color: #12D9E3; direction: ltr; }
+    .sht-dayrow.is-off { opacity: .55; }
+    .sht-form { display: flex; flex-direction: column; gap: 10px; }
+    .sht-form label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 4px; }
+    .sht-form input[type=text], .sht-form input[type=number] { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px; }
+    html[data-theme="light"] .sht-form input[type=text], html[data-theme="light"] .sht-form input[type=number] { background: #fff; }
+    .sht-colors { display: flex; gap: 8px; flex-wrap: wrap; }
+    .sht-colors label { flex-direction: row; cursor: pointer; }
+    .sht-colors input { display: none; }
+    .sht-colors span { width: 26px; height: 26px; border-radius: 8px; display: inline-block; border: 2px solid transparent; }
+    .sht-colors input:checked + span { border-color: #fff; box-shadow: 0 0 0 2px #12D9E3; }
+    .sht-mode { display: flex; gap: 14px; font-size: 13px; font-weight: 900; }
+    .sht-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
+</style>
+
+<section class="sht-page" dir="rtl">
+    <header class="sht-head">
+        <div>
+            <h1>أنواع المناوبات</h1>
+            <p>تعريف المناوبات يوماً-بيوم (ثابتة بأوقات أو مرنة بساعات) — أساس محرك الحضور الجديد.</p>
+        </div>
+        <button type="button" class="sht-btn" onclick="shtOpen(0)">+ مناوبة جديدة</button>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="sht-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <div class="sht-table-card">
+        @if (Model.Shifts.Count == 0)
+        {
+            <div class="sht-empty">لا مناوبات معرفة بعد — ابدأ بـ«مناوبة جديدة».</div>
+        }
+        else
+        {
+            <table class="sht-table">
+                <thead>
+                    <tr><th>المناوبة</th><th>النوع</th><th>أيام العطل/الراحة</th><th>ساعات الأسبوع</th><th>الحالة</th><th style="text-align:end">إجراءات</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var shift in Model.Shifts)
+                    {
+                        <tr>
+                            <td><span class="sht-color" style="background:@shift.ColorHex"></span><b>@shift.Name</b>@(string.IsNullOrWhiteSpace(shift.NameEn) ? "" : $" · {shift.NameEn}")</td>
+                            <td><span class="sht-chip @(shift.IsFlexible ? "flex" : "")">@(shift.IsFlexible ? $"مرنة · {shift.FlexDailyHours:0.##} س/يوم" : "ثابتة")</span></td>
+                            <td>@shift.OffDaysText</td>
+                            <td style="direction:ltr">@shift.Days.Sum(d => d.WorkHours).ToString("0.##") س</td>
+                            <td><span class="sht-chip @(shift.IsActive ? "" : "off")">@(shift.IsActive ? "نشطة" : "متوقفة")</span></td>
+                            <td style="text-align:end;white-space:nowrap">
+                                <button type="button" class="sht-btn ghost" onclick="shtOpen(@shift.Id)">تعديل</button>
+                                <form method="post" asp-page-handler="Delete" style="display:inline" onsubmit="return confirm('حذف المناوبة «@shift.Name»؟')">
+                                    <input type="hidden" name="id" value="@shift.Id" />
+                                    <button type="submit" class="sht-btn ghost" style="color:#f87171">حذف</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @* ---------- سلايد بناء المناوبة ---------- *@
+    <div class="hrms-slideover-backdrop" id="sht-backdrop" onclick="shtClose()"></div>
+    <aside class="hrms-slideover wide" id="sht-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="sht-title">مناوبة جديدة</h2>
+            <button type="button" class="hrms-slideover-close" onclick="shtClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Save" class="sht-form" id="sht-form">
+                <input type="hidden" name="Id" id="sht-Id" value="0" />
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <label>اسم المناوبة (عربي) *
+                        <input type="text" name="Name" id="sht-Name" required />
+                    </label>
+                    <label>Shift Name (EN)
+                        <input type="text" name="NameEn" id="sht-NameEn" dir="ltr" />
+                    </label>
+                </div>
+
+                <label>لون المناوبة (للمستعرض)</label>
+                <div class="sht-colors">
+                    @foreach (var color in ShiftTypeStore.Colors)
+                    {
+                        <label><input type="radio" name="ColorHex" value="@color" @(color == ShiftTypeStore.Colors[0] ? "checked" : "") /><span style="background:@color"></span></label>
+                    }
+                </div>
+
+                <div class="sht-mode">
+                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="ShiftMode" value="fixed" checked onchange="shtModeChanged()" /> ثابتة (أوقات لكل يوم)</label>
+                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="ShiftMode" value="flex" onchange="shtModeChanged()" /> مرنة (ساعات مطلوبة)</label>
+                </div>
+
+                <label id="sht-flex-wrap" hidden>الساعات المطلوبة يومياً
+                    <input type="number" name="FlexDailyHours" id="sht-FlexHours" step="0.25" min="0" max="24" value="8" style="max-width:140px" />
+                </label>
+
+                <label>مصفوفة الأسبوع</label>
+                <div class="sht-daygrid">
+                    <div class="sht-dayrow" style="opacity:.7;border:0;padding:2px 8px">
+                        <b>اليوم</b><b>النوع</b><b>الدخول</b><b>الخروج</b><b style="text-align:center">ساعات</b>
+                    </div>
+                    @for (var dayIndex = 0; dayIndex < 7; dayIndex++)
+                    {
+                        <div class="sht-dayrow" data-day="@dayIndex">
+                            <b>@ShiftTypeStore.DayNames[dayIndex]</b>
+                            <select name="day_kind_@dayIndex" onchange="shtDayChanged(@dayIndex)">
+                                <option value="Work">يوم عمل</option>
+                                <option value="Weekend">يوم عطلة</option>
+                                <option value="Rest">يوم راحة</option>
+                            </select>
+                            <input type="time" name="day_start_@dayIndex" value="09:00" onchange="shtDayChanged(@dayIndex)" />
+                            <input type="time" name="day_end_@dayIndex" value="17:00" onchange="shtDayChanged(@dayIndex)" />
+                            <span class="hours" data-hours="@dayIndex">8</span>
+                        </div>
+                    }
+                </div>
+
+                <label style="flex-direction:row;align-items:center;gap:8px">
+                    <input type="checkbox" name="IsActive" value="true" id="sht-Active" checked /> المناوبة نشطة
+                </label>
+
+                <button type="submit" class="sht-btn">حفظ المناوبة</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script>
+        var SHT_DATA = @Html.Raw(shiftsJson);
+
+        function shtEls(d) {
+            return {
+                kind: document.querySelector('[name="day_kind_' + d + '"]'),
+                start: document.querySelector('[name="day_start_' + d + '"]'),
+                end: document.querySelector('[name="day_end_' + d + '"]'),
+                hours: document.querySelector('[data-hours="' + d + '"]'),
+                row: document.querySelector('.sht-dayrow[data-day="' + d + '"]')
+            };
+        }
+
+        // حساب ساعات اليوم محلياً (يدعم عبور منتصف الليل — مثل السيرفر)
+        function shtComputeHours(start, end) {
+            if (!start || !end) return 0;
+            var s = start.split(':'), e = end.split(':');
+            var mins = (parseInt(e[0]) * 60 + parseInt(e[1])) - (parseInt(s[0]) * 60 + parseInt(s[1]));
+            if (mins < 0) mins += 1440;
+            return Math.round(mins / 60 * 100) / 100;
+        }
+
+        function shtIsFlex() { return document.querySelector('[name="ShiftMode"]:checked').value === 'flex'; }
+
+        function shtDayChanged(d) {
+            var el = shtEls(d);
+            var isWork = el.kind.value === 'Work';
+            var flex = shtIsFlex();
+            el.start.disabled = !isWork || flex;
+            el.end.disabled = !isWork || flex;
+            el.row.classList.toggle('is-off', !isWork);
+            el.hours.textContent = !isWork ? '0'
+                : flex ? (document.getElementById('sht-FlexHours').value || 0)
+                : shtComputeHours(el.start.value, el.end.value);
+        }
+
+        function shtModeChanged() {
+            document.getElementById('sht-flex-wrap').hidden = !shtIsFlex();
+            for (var d = 0; d < 7; d++) shtDayChanged(d);
+        }
+        document.getElementById('sht-FlexHours').addEventListener('input', shtModeChanged);
+
+        function shtOpen(id) {
+            var form = document.getElementById('sht-form');
+            form.reset();
+            document.getElementById('sht-Id').value = id || 0;
+            document.getElementById('sht-title').textContent = id ? 'تعديل المناوبة' : 'مناوبة جديدة';
+
+            if (id) {
+                var s = SHT_DATA.find(function (x) { return x.Id === id; });
+                if (s) {
+                    document.getElementById('sht-Name').value = s.Name || '';
+                    document.getElementById('sht-NameEn').value = s.NameEn || '';
+                    document.getElementById('sht-Active').checked = !!s.IsActive;
+                    var colorInput = document.querySelector('[name="ColorHex"][value="' + s.ColorHex + '"]');
+                    if (colorInput) colorInput.checked = true;
+                    document.querySelector('[name="ShiftMode"][value="' + (s.IsFlexible ? 'flex' : 'fixed') + '"]').checked = true;
+                    document.getElementById('sht-FlexHours').value = s.FlexDailyHours || 8;
+                    (s.Days || []).forEach(function (day) {
+                        var el = shtEls(day.DayIndex);
+                        el.kind.value = day.DayKind || 'Work';
+                        if (day.StartTime) el.start.value = day.StartTime;
+                        if (day.EndTime) el.end.value = day.EndTime;
+                    });
+                }
+            }
+            shtModeChanged();
+            document.getElementById('sht-slide').classList.add('open');
+            document.getElementById('sht-backdrop').classList.add('open');
+        }
+
+        function shtClose() {
+            document.getElementById('sht-slide').classList.remove('open');
+            document.getElementById('sht-backdrop').classList.remove('open');
+        }
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') shtClose(); });
+    </script>
+}

@@ -1,0 +1,142 @@
+@page "/AttendanceViewer"
+@model SmartAttendance.Web.Pages.AttendanceViewer.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@*
+    مستعرض الحضور — المرحلة 5 (نمط كيان): مصفوفة موظف × أيام الشهر بمفتاح ملون
+    + عمود المجموع (حاضر/أيام عمل).
+*@
+
+@{
+    ViewData["Title"] = "مستعرض الحضور";
+    var statusKeys = new (string Key, string Label, string Color)[]
+    {
+        ("Present", "حاضر", "#4ade80"),
+        ("Late", "متأخر", "#facc15"),
+        ("Incomplete", "بصمة ناقصة", "#f97316"),
+        ("Absent", "غائب", "#f87171"),
+        ("Weekend", "عطلة أسبوعية", "#60a5fa"),
+        ("Rest", "يوم راحة", "#8FA8BC")
+    };
+    var colorMap = statusKeys.ToDictionary(s => s.Key, s => s.Color);
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .avw-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
+    .avw-head {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
+                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
+    }
+    html[data-theme="light"] .avw-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
+    .avw-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .avw-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .avw-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
+    .avw-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
+
+    .avw-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .avw-bar input { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; font-size: 13px; }
+    html[data-theme="light"] .avw-bar input { background: #fff; color: inherit; }
+    .avw-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-inline-start: auto; font-size: 11px; font-weight: 900; }
+    .avw-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .avw-legend i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+
+    .avw-matrix-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .avw-matrix { border-collapse: collapse; font-size: 11px; }
+    .avw-matrix th { padding: 8px 6px; font-size: 10px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); text-align: center; position: sticky; top: 0; }
+    html[data-theme="light"] .avw-matrix th { background: #f2f7fb; }
+    .avw-matrix th.emp, .avw-matrix td.emp { text-align: start; min-width: 190px; position: sticky; inset-inline-start: 0; background: var(--sa-surface, #08192b); z-index: 1; }
+    html[data-theme="light"] .avw-matrix th.emp, html[data-theme="light"] .avw-matrix td.emp { background: #fff; }
+    .avw-matrix td { padding: 3px; border-bottom: 1px solid rgba(143,168,188,.06); text-align: center; }
+    .avw-cell { width: 22px; height: 22px; border-radius: 6px; display: inline-block; opacity: .92; }
+    .avw-cell.empty { background: rgba(143,168,188,.1); }
+    .avw-total { font-weight: 1000; color: #12D9E3; direction: ltr; white-space: nowrap; }
+    .avw-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .avw-pager { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; font-weight: 900; }
+</style>
+
+<section class="avw-page" dir="rtl">
+    <header class="avw-head">
+        <div>
+            <h1>مستعرض الحضور</h1>
+            <p>مصفوفة موظف × أيام الشهر من اليوميات المحللة — شغّل «تحديث الحضور» أولاً ليكتمل الشهر.</p>
+        </div>
+    </header>
+
+    <form method="get" class="avw-bar">
+        <input type="month" name="Month" value="@Model.Month" />
+        <input type="text" name="Search" value="@Model.Search" placeholder="بحث رمز/اسم..." />
+        <button type="submit" class="avw-btn ghost">عرض</button>
+        <div class="avw-legend">
+            @foreach (var (_, label, color) in statusKeys)
+            {
+                <span><i style="background:@color"></i>@label</span>
+            }
+        </div>
+    </form>
+
+    <div class="avw-matrix-card">
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="avw-empty">لا يوميات لهذا الشهر — شغّل «تحديث الحضور» من شاشة الحضور اليومي.</div>
+        }
+        else
+        {
+            <table class="avw-matrix">
+                <thead>
+                    <tr>
+                        <th class="emp">الموظف</th>
+                        @for (var day = 1; day <= Model.DaysInMonth; day++)
+                        {
+                            <th>@day</th>
+                        }
+                        <th>المجموع</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            <td class="emp"><b>@row.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @row.EmployeeNo</span></td>
+                            @for (var day = 1; day <= Model.DaysInMonth; day++)
+                            {
+                                @if (row.Days.TryGetValue(day, out var cell))
+                                {
+                                    var color = colorMap.TryGetValue(cell.Status, out var c) ? c : "#8FA8BC";
+                                    var tip = $"{cell.WorkDate:yyyy-MM-dd} — {DayAttendanceStore.StatusLabel(cell.Status)}"
+                                        + (cell.CheckIn != null ? $" · دخول {cell.CheckIn:HH:mm}" : "")
+                                        + (cell.CheckOut != null ? $" · خروج {cell.CheckOut:HH:mm}" : "")
+                                        + (cell.LateHours > 0 ? $" · تأخير {cell.LateHours:0.##}س" : "");
+                                    <td><span class="avw-cell" style="background:@color" title="@tip"></span></td>
+                                }
+                                else
+                                {
+                                    <td><span class="avw-cell empty" title="لم يُحلل"></span></td>
+                                }
+                            }
+                            <td class="avw-total">@row.PresentDays/@row.WorkDays</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <div class="avw-pager">
+            @if (Model.PageNumber > 1)
+            {
+                <a class="avw-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&PageNumber=@(Model.PageNumber - 1)">السابق</a>
+            }
+            <span>صفحة @Model.PageNumber من @Model.TotalPages (@Model.TotalRows موظف)</span>
+            @if (Model.PageNumber < Model.TotalPages)
+            {
+                <a class="avw-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&PageNumber=@(Model.PageNumber + 1)">التالي</a>
+            }
+        </div>
+    }
+</section>

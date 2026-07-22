@@ -1,0 +1,300 @@
+@page "/AttendanceSettings"
+@model SmartAttendance.Web.Pages.AttendanceSettings.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+@using System.Text.Json
+
+@*
+    إعدادات الحضور — المرحلة 2 من مودل الحضور الجديد (نمط كيان):
+    دلالات البصمات + مصادر بيانات الحضور. التعديل يتعبأ من JSON مضمّن.
+*@
+
+@{
+    ViewData["Title"] = "إعدادات الحضور";
+    var semanticsJson = JsonSerializer.Serialize(Model.Semantics.Select(s => new
+    {
+        s.Id, s.Name, s.NameEn, s.IsSystem, s.IsActive, s.SortOrder
+    }));
+    var sourcesJson = JsonSerializer.Serialize(Model.Sources.Select(s => new
+    {
+        s.Id, s.Name, s.ReadType, s.ConfigValue, s.UsesSemantics, s.IsSystem, s.IsActive
+    }));
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .ats-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
+    .ats-head {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
+                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
+    }
+    html[data-theme="light"] .ats-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
+    .ats-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .ats-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .ats-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
+    .ats-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
+
+    .ats-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: hidden; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .ats-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid rgba(73,111,151,.22); }
+    .ats-card-head h2 { margin: 0; font-size: 15px; font-weight: 1000; }
+    .ats-card-head p { margin: 2px 0 0; font-size: 11px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .ats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .ats-table th { text-align: start; padding: 11px 14px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); }
+    html[data-theme="light"] .ats-table th { background: #f2f7fb; }
+    .ats-table td { padding: 10px 14px; border-bottom: 1px solid rgba(143,168,188,.08); vertical-align: middle; }
+    .ats-table tr:hover td { background: rgba(18,217,227,.04); }
+    .ats-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; background: rgba(18,217,227,.1); color: #12D9E3; }
+    .ats-chip.sys { background: rgba(167,139,250,.14); color: #a78bfa; }
+    .ats-chip.off { background: rgba(248,113,113,.12); color: #f87171; }
+    .ats-chip.yes { background: rgba(74,222,128,.12); color: #4ade80; }
+    .ats-empty { padding: 24px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+
+    .ats-form { display: flex; flex-direction: column; gap: 10px; }
+    .ats-form label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 4px; }
+    .ats-form input[type=text], .ats-form input[type=number], .ats-form select {
+        min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25);
+        background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px;
+    }
+    html[data-theme="light"] .ats-form input[type=text], html[data-theme="light"] .ats-form input[type=number], html[data-theme="light"] .ats-form select { background: #fff; }
+    .ats-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
+    .ats-hint { font-size: 11px; color: var(--sa-muted, #8FA8BC); font-weight: 700; }
+</style>
+
+<section class="ats-page" dir="rtl">
+    <header class="ats-head">
+        <div>
+            <h1>إعدادات الحضور</h1>
+            <p>دلالات البصمات (تصنيف البصمة) ومصادر بيانات الحضور (من أين تأتي البصمات) — المرحلة 2 من محرك الحضور.</p>
+        </div>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="ats-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    @* ---------- دلالات البصمات ---------- *@
+    <div class="ats-card">
+        <div class="ats-card-head">
+            <div>
+                <h2>دلالات البصمات</h2>
+                <p>تصنيف البصمات: حضور/انصراف نظاميتان + دلالات مخصصة (صلاة، استراحة، مهمة عمل...).</p>
+            </div>
+            <button type="button" class="ats-btn" onclick="atsOpenSemantic(0)">+ دلالة جديدة</button>
+        </div>
+        @if (Model.Semantics.Count == 0)
+        {
+            <div class="ats-empty">لا دلالات بعد.</div>
+        }
+        else
+        {
+            <table class="ats-table">
+                <thead>
+                    <tr><th>الدلالة</th><th>English</th><th>النوع</th><th>الحالة</th><th style="text-align:end">إجراءات</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var semantic in Model.Semantics)
+                    {
+                        <tr>
+                            <td><b>@semantic.Name</b></td>
+                            <td dir="ltr" style="text-align:start">@(semantic.NameEn ?? "—")</td>
+                            <td><span class="ats-chip @(semantic.IsSystem ? "sys" : "")">@(semantic.IsSystem ? "نظامية" : "مخصصة")</span></td>
+                            <td><span class="ats-chip @(semantic.IsActive ? "" : "off")">@(semantic.IsActive ? "نشطة" : "متوقفة")</span></td>
+                            <td style="text-align:end;white-space:nowrap">
+                                <button type="button" class="ats-btn ghost" onclick="atsOpenSemantic(@semantic.Id)">تعديل</button>
+                                @if (!semantic.IsSystem)
+                                {
+                                    <form method="post" asp-page-handler="DeleteSemantic" style="display:inline" onsubmit="return confirm('حذف الدلالة «@semantic.Name»؟')">
+                                        <input type="hidden" name="id" value="@semantic.Id" />
+                                        <button type="submit" class="ats-btn ghost" style="color:#f87171">حذف</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @* ---------- مصادر بيانات الحضور ---------- *@
+    <div class="ats-card">
+        <div class="ats-card-head">
+            <div>
+                <h2>مصادر بيانات الحضور</h2>
+                <p>من أين تُقرأ البصمات الخام: ملف إكسل، عرض/جدول بقاعدة بيانات جهاز البصمة، أو API خارجي.</p>
+            </div>
+            <button type="button" class="ats-btn" onclick="atsOpenSource(0)">+ مصدر جديد</button>
+        </div>
+        @if (Model.Sources.Count == 0)
+        {
+            <div class="ats-empty">لا مصادر بعد.</div>
+        }
+        else
+        {
+            <table class="ats-table">
+                <thead>
+                    <tr><th>المصدر</th><th>القراءة من</th><th>الإعداد</th><th>الدلالات</th><th>الحالة</th><th style="text-align:end">إجراءات</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var source in Model.Sources)
+                    {
+                        <tr>
+                            <td><b>@source.Name</b>@(source.IsSystem ? " " : "")@if (source.IsSystem) {<span class="ats-chip sys">نظامي</span>}</td>
+                            <td><span class="ats-chip">@AttendanceSourceStore.ReadTypeLabel(source.ReadType)</span></td>
+                            <td dir="ltr" style="text-align:start;font-size:12px">@(source.ConfigValue ?? "—")</td>
+                            <td><span class="ats-chip @(source.UsesSemantics ? "yes" : "off")">@(source.UsesSemantics ? "نعم" : "لا")</span></td>
+                            <td><span class="ats-chip @(source.IsActive ? "" : "off")">@(source.IsActive ? "نشط" : "متوقف")</span></td>
+                            <td style="text-align:end;white-space:nowrap">
+                                <button type="button" class="ats-btn ghost" onclick="atsOpenSource(@source.Id)">تعديل</button>
+                                @if (!source.IsSystem)
+                                {
+                                    <form method="post" asp-page-handler="DeleteSource" style="display:inline" onsubmit="return confirm('حذف المصدر «@source.Name»؟')">
+                                        <input type="hidden" name="id" value="@source.Id" />
+                                        <button type="submit" class="ats-btn ghost" style="color:#f87171">حذف</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @* ---------- سلايد الدلالة ---------- *@
+    <div class="hrms-slideover-backdrop" id="ats-backdrop" onclick="atsClose()"></div>
+    <aside class="hrms-slideover" id="ats-sem-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="ats-sem-title">دلالة جديدة</h2>
+            <button type="button" class="hrms-slideover-close" onclick="atsClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="SaveSemantic" class="ats-form">
+                <input type="hidden" name="Id" id="ats-sem-Id" value="0" />
+                <label>اسم الدلالة (عربي) *
+                    <input type="text" name="Name" id="ats-sem-Name" required />
+                </label>
+                <label>Semantic Name (EN)
+                    <input type="text" name="NameEn" id="ats-sem-NameEn" dir="ltr" />
+                </label>
+                <label>ترتيب العرض
+                    <input type="number" name="SortOrder" id="ats-sem-Sort" value="10" min="0" max="999" style="max-width:140px" />
+                </label>
+                <label style="flex-direction:row;align-items:center;gap:8px">
+                    <input type="checkbox" name="IsActive" value="true" id="ats-sem-Active" checked /> الدلالة نشطة
+                </label>
+                <span class="ats-hint">الدلالات تغذّي لاحقاً أزرار البصم بالخدمة الذاتية ومنشئ قواعد المناوبات.</span>
+                <button type="submit" class="ats-btn">حفظ الدلالة</button>
+            </form>
+        </div>
+    </aside>
+
+    @* ---------- سلايد المصدر ---------- *@
+    <aside class="hrms-slideover" id="ats-src-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="ats-src-title">مصدر جديد</h2>
+            <button type="button" class="hrms-slideover-close" onclick="atsClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="SaveSource" class="ats-form">
+                <input type="hidden" name="Id" id="ats-src-Id" value="0" />
+                <label>اسم المصدر *
+                    <input type="text" name="Name" id="ats-src-Name" required />
+                </label>
+                <label>القراءة من
+                    <select name="ReadType" id="ats-src-ReadType" onchange="atsReadTypeChanged()">
+                        @foreach (var (key, label) in AttendanceSourceStore.ReadTypes)
+                        {
+                            <option value="@key">@label</option>
+                        }
+                    </select>
+                </label>
+                <label id="ats-src-config-wrap">الإعداد
+                    <input type="text" name="ConfigValue" id="ats-src-Config" dir="ltr" />
+                    <span class="ats-hint" id="ats-src-config-hint"></span>
+                </label>
+                <label style="flex-direction:row;align-items:center;gap:8px">
+                    <input type="checkbox" name="UsesSemantics" value="true" id="ats-src-Semantics" /> المصدر يصنّف بصماته بالدلالات
+                </label>
+                <label style="flex-direction:row;align-items:center;gap:8px">
+                    <input type="checkbox" name="IsActive" value="true" id="ats-src-Active" checked /> المصدر نشط
+                </label>
+                <button type="submit" class="ats-btn">حفظ المصدر</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script>
+        var ATS_SEMANTICS = @Html.Raw(semanticsJson);
+        var ATS_SOURCES = @Html.Raw(sourcesJson);
+        var ATS_CONFIG_HINTS = {
+            Excel: 'مسار/صفحة الاستيراد — اختياري لملفات الإكسل.',
+            DbView: 'اسم العرض أو الجدول بقاعدة بيانات جهاز البصمة، مثال: dbo.vw_DevicePunches',
+            Api: 'عنوان نقطة النهاية، مثال: https://device.example.com/api/punches'
+        };
+
+        function atsReadTypeChanged() {
+            var type = document.getElementById('ats-src-ReadType').value;
+            document.getElementById('ats-src-config-hint').textContent = ATS_CONFIG_HINTS[type] || '';
+        }
+
+        function atsOpenSemantic(id) {
+            document.getElementById('ats-sem-Id').value = id || 0;
+            document.getElementById('ats-sem-title').textContent = id ? 'تعديل الدلالة' : 'دلالة جديدة';
+            document.getElementById('ats-sem-Name').value = '';
+            document.getElementById('ats-sem-NameEn').value = '';
+            document.getElementById('ats-sem-Sort').value = 10;
+            document.getElementById('ats-sem-Active').checked = true;
+            if (id) {
+                var s = ATS_SEMANTICS.find(function (x) { return x.Id === id; });
+                if (s) {
+                    document.getElementById('ats-sem-Name').value = s.Name || '';
+                    document.getElementById('ats-sem-NameEn').value = s.NameEn || '';
+                    document.getElementById('ats-sem-Sort').value = s.SortOrder || 0;
+                    document.getElementById('ats-sem-Active').checked = !!s.IsActive;
+                }
+            }
+            atsShow('ats-sem-slide');
+        }
+
+        function atsOpenSource(id) {
+            document.getElementById('ats-src-Id').value = id || 0;
+            document.getElementById('ats-src-title').textContent = id ? 'تعديل المصدر' : 'مصدر جديد';
+            document.getElementById('ats-src-Name').value = '';
+            document.getElementById('ats-src-ReadType').value = 'Excel';
+            document.getElementById('ats-src-Config').value = '';
+            document.getElementById('ats-src-Semantics').checked = false;
+            document.getElementById('ats-src-Active').checked = true;
+            if (id) {
+                var s = ATS_SOURCES.find(function (x) { return x.Id === id; });
+                if (s) {
+                    document.getElementById('ats-src-Name').value = s.Name || '';
+                    document.getElementById('ats-src-ReadType').value = s.ReadType || 'Excel';
+                    document.getElementById('ats-src-Config').value = s.ConfigValue || '';
+                    document.getElementById('ats-src-Semantics').checked = !!s.UsesSemantics;
+                    document.getElementById('ats-src-Active').checked = !!s.IsActive;
+                }
+            }
+            atsReadTypeChanged();
+            atsShow('ats-src-slide');
+        }
+
+        function atsShow(slideId) {
+            atsClose();
+            document.getElementById(slideId).classList.add('open');
+            document.getElementById('ats-backdrop').classList.add('open');
+        }
+
+        function atsClose() {
+            document.getElementById('ats-sem-slide').classList.remove('open');
+            document.getElementById('ats-src-slide').classList.remove('open');
+            document.getElementById('ats-backdrop').classList.remove('open');
+        }
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') atsClose(); });
+    </script>
+}
