@@ -9,4 +9,7 @@ namespace SmartAttendance.Web.Infrastructure.Theming;
 public interface IThemeContextService
 {
     Task<ThemeContext> GetCurrentAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Drops a company's cached theme after publish or rollback.</summary>
+    void Invalidate(int companyId);
 }

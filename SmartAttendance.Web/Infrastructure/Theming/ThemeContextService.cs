@@ -1,16 +1,17 @@
 using System.Globalization;
 using Microsoft.Extensions.Caching.Memory;
+using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
 
 namespace SmartAttendance.Web.Infrastructure.Theming;
 
 /// <summary>
-/// Runtime theme resolver (Phase P4). Resolves the current company from the
-/// selection cookie and returns its cached <see cref="ThemeContext"/>. Until
-/// persistence lands (P5) no company has a published theme, so this always
-/// yields the ZYNORA Default while exercising the full cache path
-/// (<c>CompanyTheme:{companyId}:{version}</c>). Any failure falls back to the
-/// default so a broken theme can never take down the shell.
+/// Runtime theme resolver. Resolves the current company from the selection
+/// cookie and returns its published <see cref="ThemeContext"/> from an in-memory
+/// cache keyed by company; a miss loads the active published version from
+/// <see cref="ThemeStore"/>. Companies without a published theme (and any
+/// failure) resolve to <see cref="ThemeContext.Default"/> so a broken or absent
+/// theme can never take down the shell.
 /// </summary>
 public sealed class ThemeContextService : IThemeContextService
 {
@@ -18,60 +19,74 @@ public sealed class ThemeContextService : IThemeContextService
 
     private readonly IMemoryCache _cache;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<ThemeContextService> _logger;
 
     public ThemeContextService(
         IMemoryCache cache,
         IHttpContextAccessor httpContextAccessor,
+        ApplicationDbContext dbContext,
         ILogger<ThemeContextService> logger)
     {
         _cache = cache;
         _httpContextAccessor = httpContextAccessor;
+        _dbContext = dbContext;
         _logger = logger;
     }
 
-    public Task<ThemeContext> GetCurrentAsync(CancellationToken cancellationToken = default)
+    public async Task<ThemeContext> GetCurrentAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             var companyId = ResolveCompanyId();
             if (companyId is null)
             {
-                return Task.FromResult(ThemeContext.Default);
+                return ThemeContext.Default;
             }
 
-            // P5 will read the company's active published version here; for now the
-            // default version is the only one that exists.
-            var version = ThemeContext.DefaultVersion;
-            var cacheKey = BuildCacheKey(companyId.Value, version);
+            var cacheKey = CompanyCacheKey(companyId.Value);
 
-            var context = _cache.GetOrCreate(cacheKey, entry =>
+            var context = await _cache.GetOrCreateAsync(cacheKey, async entry =>
             {
                 entry.AbsoluteExpirationRelativeToNow = CacheLifetime;
 
-                // P5: load CompiledCss from the persisted published ThemeVersion.
-                // Empty CompiledCss keeps the ZYNORA Default rendering.
+                var published = await ThemeStore.GetActivePublishedAsync(_dbContext, companyId.Value);
+                if (published is null)
+                {
+                    // Company has no published theme yet: ZYNORA Default.
+                    return new ThemeContext { CompanyId = companyId };
+                }
+
                 return new ThemeContext
                 {
                     CompanyId = companyId,
-                    Version = version,
+                    Version = published.VersionId.ToString(CultureInfo.InvariantCulture),
+                    CompiledCss = published.CompiledCss,
                 };
-            })!;
+            });
 
-            return Task.FromResult(context);
+            return context ?? ThemeContext.Default;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(
                 ex,
                 "Theme resolution failed; falling back to the ZYNORA Default.");
-            return Task.FromResult(ThemeContext.Default);
+            return ThemeContext.Default;
         }
     }
 
-    /// <summary>Cache key shared with the compiler/invalidation path in later phases.</summary>
-    public static string BuildCacheKey(int companyId, string version) =>
-        $"CompanyTheme:{companyId}:{version}";
+    /// <summary>
+    /// Drops a company's cached theme so the next request recompiles from the
+    /// store. Call after publish or rollback. IMemoryCache is a singleton, so
+    /// this reaches every scoped resolver.
+    /// </summary>
+    public void Invalidate(int companyId) =>
+        _cache.Remove(CompanyCacheKey(companyId));
+
+    /// <summary>Runtime cache key for a company's resolved theme.</summary>
+    public static string CompanyCacheKey(int companyId) =>
+        $"CompanyTheme:{companyId}";
 
     private int? ResolveCompanyId()
     {
