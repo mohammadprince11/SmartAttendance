@@ -3773,5 +3773,15 @@
     "mtime": 1784748927.3529677,
     "ast_hash": "cc1884f60bf3e14195e9224d87470792",
     "semantic_hash": ""
+  },
+  "SmartAttendance.Tests/EmployeeScopeEvaluatorTests.cs": {
+    "mtime": 1784751716.6509855,
+    "ast_hash": "8749c8c7580205f5dd9f4c697a78dd5b",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Security/EmployeeScopeEvaluator.cs": {
+    "mtime": 1784751702.3198452,
+    "ast_hash": "686562197bb1d5f0e64f5366663532b3",
+    "semantic_hash": ""
   }
 }
