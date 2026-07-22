@@ -1450,8 +1450,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/RoleSecurityMiddleware.cs": {
-    "mtime": 1784701746.6774857,
-    "ast_hash": "49e6a0f046800f025de5375162dd4c3d",
+    "mtime": 1784702482.0650618,
+    "ast_hash": "2cf264b6a3f49c4efd5457a930d346a1",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/SimplePasswordHasher.cs": {
@@ -2450,8 +2450,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784701744.9944444,
-    "ast_hash": "8c792074a66c033aed50e3abf770faa3",
+    "mtime": 1784702480.866905,
+    "ast_hash": "1e9c0dc26fbb7cf14ba9a5cf75f20279",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3557,6 +3557,21 @@
   "SmartAttendance.Web/Pages/AttendanceSettings/Index.cshtml.cs": {
     "mtime": 1784701662.1371653,
     "ast_hash": "0df0133327d48c5a71b2226ce55c9d63",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/DayAttendanceStore.cs": {
+    "mtime": 1784703304.802098,
+    "ast_hash": "e8259d273a3f87498fac396f41e4ced9",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/DayAttendance/Index.cshtml": {
+    "mtime": 1784702472.6975694,
+    "ast_hash": "db4768aee551f4e7f719951fc4d629ee",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/DayAttendance/Index.cshtml.cs": {
+    "mtime": 1784702431.401153,
+    "ast_hash": "c238cdcc334887562dc906a8980fa99b",
     "semantic_hash": ""
   }
 }

@@ -1450,8 +1450,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/RoleSecurityMiddleware.cs": {
-    "mtime": 1784702482.0650618,
-    "ast_hash": "2cf264b6a3f49c4efd5457a930d346a1",
+    "mtime": 1784703937.6409085,
+    "ast_hash": "6d9a4b9dded70e6828c53940c6e23026",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/SimplePasswordHasher.cs": {
@@ -2450,8 +2450,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784702480.866905,
-    "ast_hash": "1e9c0dc26fbb7cf14ba9a5cf75f20279",
+    "mtime": 1784703936.1656327,
+    "ast_hash": "7ec139d1549061396f3a0ff2aa2dbd09",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3572,6 +3572,36 @@
   "SmartAttendance.Web/Pages/DayAttendance/Index.cshtml.cs": {
     "mtime": 1784702431.401153,
     "ast_hash": "c238cdcc334887562dc906a8980fa99b",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/RecommendationStore.cs": {
+    "mtime": 1784704261.1067088,
+    "ast_hash": "728a091e83de874b2c8ff9df1d391dc4",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/ShiftRuleStore.cs": {
+    "mtime": 1784704009.3996072,
+    "ast_hash": "08a63a41bea48da51927235313c2c70e",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/AttendanceRecommendations/Index.cshtml": {
+    "mtime": 1784704281.2708805,
+    "ast_hash": "40acd16448442aded16256bfd8f7dc81",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/AttendanceRecommendations/Index.cshtml.cs": {
+    "mtime": 1784704272.8056338,
+    "ast_hash": "3bd1b9d1a8eb48a302f766d7a78bfe20",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/ShiftRules/Index.cshtml": {
+    "mtime": 1784703870.5576644,
+    "ast_hash": "48fe33fa5da24c5e83624500e6d170d8",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/ShiftRules/Index.cshtml.cs": {
+    "mtime": 1784703807.1116998,
+    "ast_hash": "ea2567eb9fc9df68391fff0c780cfeb1",
     "semantic_hash": ""
   }
 }
