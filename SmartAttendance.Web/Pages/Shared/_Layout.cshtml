@@ -3,6 +3,7 @@
 @using SmartAttendance.Web.Infrastructure.Theming
 @inject IPermissionAuthorizationService PermissionAuthorizationService
 @inject IThemeContextService ThemeContextService
+@inject IAccessRoleService AccessRoleService
 @{
     var companyTheme = await ThemeContextService.GetCurrentAsync(Context.RequestAborted);
     var brandName = string.IsNullOrWhiteSpace(companyTheme.DisplayName) ? "ZYNORA HR" : companyTheme.DisplayName;
@@ -123,6 +124,13 @@
             "Admin",
             StringComparison.OrdinalIgnoreCase);
 
+        // Access Roles page enforcement (nav visibility). Admin bypasses; a user
+        // with no Pages role is unrestricted, so existing users are unaffected.
+        var accessProfile = (isLoggedIn && !isAdminRole)
+            ? await AccessRoleService.ResolveAsync(systemUserId, Context.RequestAborted)
+            : null;
+        Func<string, bool> CanPage = code => accessProfile == null || accessProfile.CanViewPage(code);
+
         var canViewOrganization = isAdminRole ||
             loginRole.Equals("HR Manager", StringComparison.OrdinalIgnoreCase) ||
             loginRole.Equals("HR Officer", StringComparison.OrdinalIgnoreCase) ||
@@ -242,7 +250,7 @@
                         <span>أدوار الوصول</span>
                     </a>
                 }
-                @if (hasVisiblePeopleNavigation)
+                @if (hasVisiblePeopleNavigation && CanPage("People.Directory"))
                 {
                     <details name="nexora-main-menu" class="nexora-nav-group" @(employeesOpen ? "open" : "")>
                         <summary data-nav-area="people" data-sidebar-label="&#x0623;&#x0634;&#x062E;&#x0627;&#x0635;">
@@ -379,6 +387,8 @@
                     </details>
                 }
 
+                @if (CanPage("Attendance.Operations"))
+                {
                 <details name="nexora-main-menu" class="nexora-nav-group" @(attendanceOpen ? "open" : "")>
                     <summary data-nav-area="attendance" data-sidebar-label="&#x0627;&#x0644;&#x062D;&#x0636;&#x0648;&#x0631; &#x0648;&#x0627;&#x0644;&#x0627;&#x0646;&#x0635;&#x0631;&#x0627;&#x0641;">
                         <span class="nexora-nav-dot gold"></span>
@@ -433,7 +443,10 @@
                         </a>
                     </div>
                 </details>
+                }
 
+                @if (CanPage("Payroll.TaxSocial"))
+                {
                 <details name="nexora-main-menu" class="nexora-nav-group" @(payrollOpen ? "open" : "")>
                     <summary data-nav-area="payroll" data-sidebar-label="&#x0627;&#x0644;&#x0631;&#x0648;&#x0627;&#x062A;&#x0628;">
                         <span class="nexora-nav-dot gold"></span>
@@ -452,6 +465,7 @@
                         </a>
                     </div>
                 </details>
+                }
                     <!-- NEXORA_SAFE_MAIN_MENU_END -->
                 </nav>
             }
