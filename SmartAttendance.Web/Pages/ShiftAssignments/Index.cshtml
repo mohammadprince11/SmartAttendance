@@ -1,0 +1,172 @@
+@page "/ShiftAssignments"
+@model SmartAttendance.Web.Pages.ShiftAssignments.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@*
+    مناوبات الموظفين الثابتة — المرحلة 5 (نمط كيان «تحديد مناوبات الموظفين»):
+    تحديد متعدد + تعيين/إلغاء جماعي. المحلل يستخدم هذا التعيين.
+*@
+
+@{
+    ViewData["Title"] = "مناوبات الموظفين";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .sha-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
+    .sha-head {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
+                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
+    }
+    html[data-theme="light"] .sha-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
+    .sha-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .sha-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .sha-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
+    .sha-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
+    .sha-btn.no { background: transparent; border: 1px solid rgba(248,113,113,.4); color: #f87171; }
+
+    .sha-bar { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .sha-bar label { font-size: 11px; font-weight: 900; color: var(--sa-muted, #8FA8BC); display: flex; flex-direction: column; gap: 4px; }
+    .sha-bar input, .sha-bar select { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; font-size: 13px; }
+    html[data-theme="light"] .sha-bar input, html[data-theme="light"] .sha-bar select { background: #fff; color: inherit; }
+    .sha-stat { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 900; border: 1px solid rgba(73,111,151,.22); }
+    .sha-stat b { direction: ltr; display: inline-block; }
+
+    .sha-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .sha-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 760px; }
+    .sha-table th { text-align: start; padding: 10px 12px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); }
+    html[data-theme="light"] .sha-table th { background: #f2f7fb; }
+    .sha-table td { padding: 9px 12px; border-bottom: 1px solid rgba(143,168,188,.08); }
+    .sha-table tr:hover td { background: rgba(18,217,227,.04); }
+    .sha-shift { display: inline-flex; align-items: center; gap: 6px; font-weight: 900; }
+    .sha-shift i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+    .sha-none { color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .sha-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .sha-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
+    .sha-pager { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; font-weight: 900; }
+</style>
+
+<section class="sha-page" dir="rtl">
+    <header class="sha-head">
+        <div>
+            <h1>مناوبات الموظفين</h1>
+            <p>تعيين المناوبة الثابتة لكل موظف — «تحديث الحضور» يحلل كل موظف بمناوبته، وغير المعيّن بالافتراضية.</p>
+        </div>
+        <div style="display:flex;gap:8px">
+            <span class="sha-stat" style="color:#4ade80">معيّن <b>@Model.AssignedCount</b></span>
+            <span class="sha-stat" style="color:#facc15">بلا تعيين <b>@Model.UnassignedCount</b></span>
+        </div>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="sha-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <form method="get" class="sha-bar">
+        <label>بحث (رمز/اسم/قسم/فرع)
+            <input type="text" name="Search" value="@Model.Search" placeholder="بحث..." />
+        </label>
+        <label>عرض
+            <select name="Filter">
+                <option value="All" selected="@(Model.Filter == "All")">الكل</option>
+                <option value="Assigned" selected="@(Model.Filter == "Assigned")">المعيّنون</option>
+                <option value="Unassigned" selected="@(Model.Filter == "Unassigned")">بلا تعيين</option>
+            </select>
+        </label>
+        <button type="submit" class="sha-btn ghost">عرض</button>
+    </form>
+
+    <form method="post" id="sha-form">
+        <div class="sha-bar" style="align-items:center">
+            <label style="flex-direction:row;align-items:center;gap:6px;font-size:12px;color:inherit">
+                <input type="checkbox" id="sha-all" onchange="shaToggleAll(this)" /> تحديد الصفحة
+            </label>
+            <span id="sha-count" style="font-size:12px;font-weight:900;color:#12D9E3">0 محدد</span>
+            <label>المناوبة
+                <select name="ShiftTypeId">
+                    <option value="">— اختر —</option>
+                    @foreach (var shift in Model.Shifts)
+                    {
+                        <option value="@shift.Id">@shift.Name</option>
+                    }
+                </select>
+            </label>
+            <button type="submit" asp-page-handler="Assign" class="sha-btn"
+                    onclick="return confirm('تعيين المناوبة المختارة لكل الموظفين المحددين؟')">تعيين للمحدد</button>
+            <button type="submit" asp-page-handler="Unassign" class="sha-btn no"
+                    onclick="return confirm('إلغاء تعيين الموظفين المحددين (يرجعون للافتراضية)؟')">إلغاء التعيين</button>
+            <input type="hidden" name="Search" value="@Model.Search" />
+            <input type="hidden" name="Filter" value="@Model.Filter" />
+            <input type="hidden" name="PageNumber" value="@Model.PageNumber" />
+        </div>
+
+        <div class="sha-table-card" style="margin-top:14px">
+            @if (Model.Rows.Count == 0)
+            {
+                <div class="sha-empty">لا موظفون مطابقون.</div>
+            }
+            else
+            {
+                <table class="sha-table">
+                    <thead>
+                        <tr><th style="width:34px"></th><th>الرمز</th><th>الموظف</th><th>الفرع</th><th>القسم</th><th>المناوبة المعيّنة</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            <tr>
+                                <td><input type="checkbox" name="SelectedIds" value="@row.EmployeeId" onchange="shaCount()" /></td>
+                                <td style="direction:ltr;text-align:start;font-weight:900">@row.EmployeeNo</td>
+                                <td><b>@row.EmployeeName</b></td>
+                                <td>@row.Branch</td>
+                                <td>@row.Department</td>
+                                <td>
+                                    @if (row.ShiftName != null)
+                                    {
+                                        <span class="sha-shift"><i style="background:@(row.ShiftColor ?? "#12D9E3")"></i>@row.ShiftName</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="sha-none">— الافتراضية</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </form>
+
+    @if (Model.TotalPages > 1)
+    {
+        <div class="sha-pager">
+            @if (Model.PageNumber > 1)
+            {
+                <a class="sha-btn ghost" href="?Search=@Model.Search&Filter=@Model.Filter&PageNumber=@(Model.PageNumber - 1)">السابق</a>
+            }
+            <span>صفحة @Model.PageNumber من @Model.TotalPages (@Model.TotalRows موظف)</span>
+            @if (Model.PageNumber < Model.TotalPages)
+            {
+                <a class="sha-btn ghost" href="?Search=@Model.Search&Filter=@Model.Filter&PageNumber=@(Model.PageNumber + 1)">التالي</a>
+            }
+        </div>
+    }
+</section>
+
+@section Scripts {
+    <script>
+        function shaToggleAll(source) {
+            document.querySelectorAll('[name="SelectedIds"]').forEach(function (cb) { cb.checked = source.checked; });
+            shaCount();
+        }
+        function shaCount() {
+            var count = document.querySelectorAll('[name="SelectedIds"]:checked').length;
+            document.getElementById('sha-count').textContent = count + ' محدد';
+        }
+    </script>
+}

@@ -79,18 +79,21 @@ END;
     }
 
     /// <summary>
-    /// «تحديث الحضور»: يعيد بناء يوميات الشهر لكل الموظفين النشطين بمناوبة محددة.
-    /// يحذف يوميات الشهر ثم يولّدها من البصمات الخام — آمن للإعادة (إعادة تحليل).
+    /// «تحديث الحضور»: يعيد بناء يوميات الشهر لكل الموظفين النشطين. كل موظف يُحلل
+    /// بمناوبته المعيّنة (EmployeeShiftTypes — مرحلة 5)، ومن بلا تعيين يسقط
+    /// للمناوبة الافتراضية الممررة (مفهوم كيان). يحذف يوميات الشهر ثم يولّدها من
+    /// البصمات الخام — آمن للإعادة (إعادة تحليل).
     /// </summary>
     /// <returns>عدد الصفوف المولّدة.</returns>
     public static async Task<int> AnalyzeMonthAsync(
-        ApplicationDbContext dbContext, int year, int month, int shiftTypeId)
+        ApplicationDbContext dbContext, int year, int month, int defaultShiftTypeId)
     {
         await EnsureAsync(dbContext);
 
-        var shift = (await ShiftTypeStore.ListAsync(dbContext)).FirstOrDefault(s => s.Id == shiftTypeId);
-        if (shift == null) return 0;
-        var shiftDays = shift.Days.ToDictionary(d => d.DayIndex);
+        var shifts = (await ShiftTypeStore.ListAsync(dbContext))
+            .ToDictionary(s => s.Id, s => (Shift: s, Days: s.Days.ToDictionary(d => d.DayIndex)));
+        if (!shifts.ContainsKey(defaultShiftTypeId)) return 0;
+        var assignments = await EmployeeShiftTypeStore.MapAsync(dbContext);
 
         var monthStart = new DateOnly(year, month, 1);
         var today = DateOnly.FromDateTime(DateTime.Today);
@@ -145,13 +148,18 @@ END;
         var analyzedAt = DateTime.UtcNow;
         foreach (var employeeId in employees)
         {
+            // مناوبة الموظف المعيّنة أو الافتراضية (تعيين لمناوبة محذوفة ← الافتراضية)
+            var shiftId = assignments.TryGetValue(employeeId, out var assigned) && shifts.ContainsKey(assigned)
+                ? assigned : defaultShiftTypeId;
+            var (shift, shiftDays) = shifts[shiftId];
+
             for (var date = monthStart; date <= monthEnd; date = date.AddDays(1))
             {
                 var day = shiftDays.TryGetValue(ToDayIndex(date), out var d) ? d : null;
                 var dayKind = day?.DayKind ?? "Work";
                 byDay.TryGetValue((employeeId, date), out var punch);
                 var row = Derive(shift, day, dayKind, punch.In == default ? null : punch.In, punch.Out);
-                table.Rows.Add(employeeId, date.ToDateTime(TimeOnly.MinValue), shiftTypeId, dayKind,
+                table.Rows.Add(employeeId, date.ToDateTime(TimeOnly.MinValue), shiftId, dayKind,
                     (object?)row.CheckIn ?? DBNull.Value, (object?)row.CheckOut ?? DBNull.Value,
                     row.LateHours, row.EarlyLeaveHours, row.WorkedHours, row.Status, true, analyzedAt);
             }
