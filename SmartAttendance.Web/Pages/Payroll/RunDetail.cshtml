@@ -1,0 +1,130 @@
+@page "/Payroll/RunDetail"
+@model SmartAttendance.Web.Pages.Payroll.RunDetailModel
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "تفاصيل المسير";
+    var payslipJson = JsonSerializer.Serialize(Model.Lines.Select(l => new
+    {
+        l.EmployeeId, l.EmployeeNo, l.EmployeeName, l.GrossSalary, l.NetSalary,
+        l.WorkDays, l.AbsentDays,
+        Components = l.Components.Select(c => new { c.ItemName, c.Amount, c.IsAddition, c.Kind })
+    }));
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .pd-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text,#DCEAF4); }
+    .pd-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background: linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95)); }
+    html[data-theme="light"] .pd-head { background: linear-gradient(135deg,#fff,#f2f7fb); }
+    .pd-head h1 { margin:0; font-size:19px; font-weight:1000; }
+    .pd-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .pd-btn { min-height:32px; padding:6px 14px; border-radius:11px; border:0; font-size:12px; font-weight:900; cursor:pointer; background:linear-gradient(135deg,#12D9E3,#0ea5b5); color:#04141d; }
+    .pd-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .pd-totals { display:flex; gap:10px; flex-wrap:wrap; }
+    .pd-stat { flex:1; min-width:150px; padding:12px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .pd-stat b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .pd-stat span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .pd-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .pd-table { width:100%; border-collapse:collapse; font-size:13px; min-width:900px; }
+    .pd-table th { text-align:start; padding:11px 13px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.12); }
+    html[data-theme="light"] .pd-table th { background:#f2f7fb; }
+    .pd-table td { padding:10px 13px; border-bottom:1px solid rgba(143,168,188,.08); }
+    .pd-table tr:hover td { background:rgba(18,217,227,.04); }
+    .pd-n { direction:ltr; text-align:start; font-weight:900; }
+    .pd-slip-line { display:flex; justify-content:space-between; padding:7px 2px; border-bottom:1px dashed rgba(143,168,188,.18); font-size:13px; }
+    .pd-slip-line.add b { color:#4ade80; }
+    .pd-slip-line.ded b { color:#f87171; }
+    .pd-slip-net { display:flex; justify-content:space-between; padding:12px 2px; font-size:16px; font-weight:1000; margin-top:6px; border-top:2px solid rgba(18,217,227,.4); }
+    .pd-slip-line b, .pd-slip-net b { direction:ltr; }
+</style>
+
+<section class="pd-page" dir="rtl">
+    <header class="pd-head">
+        <div>
+            <h1>مسير @Model.Run!.BatchNo — @Model.Run.PeriodText</h1>
+            <p>الحالة: @Model.Run.StatusLabelText · @Model.Run.EmployeeCount موظفاً · محتسب بواسطة @(Model.Run.CalculatedBy ?? "—")</p>
+        </div>
+        <a class="pd-btn ghost" href="/Payroll/Runs">← عودة للمسيرات</a>
+    </header>
+
+    <div class="pd-totals">
+        <div class="pd-stat"><b>@Model.Run.TotalGross.ToString("0.##")</b><span>إجمالي الرواتب</span></div>
+        <div class="pd-stat"><b style="color:#4ade80">@Model.Run.TotalNet.ToString("0.##")</b><span>صافي المدفوع</span></div>
+        <div class="pd-stat"><b>@Model.Run.TotalTax.ToString("0.##")</b><span>إجمالي الضريبة</span></div>
+        <div class="pd-stat"><b>@Model.Run.TotalGosiCompany.ToString("0.##")</b><span>حصة الشركة (ضمان)</span></div>
+    </div>
+
+    <div class="pd-card">
+        <table class="pd-table">
+            <thead>
+                <tr>
+                    <th>الرمز</th><th>الموظف</th><th>الأساسي</th><th>العلاوات</th><th>الإجمالي</th>
+                    <th>الضريبة</th><th>الضمان</th><th>خصومات</th><th>الصافي</th><th>أيام العمل/الغياب</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var l in Model.Lines)
+                {
+                    <tr>
+                        <td class="pd-n">@l.EmployeeNo</td>
+                        <td>@l.EmployeeName</td>
+                        <td class="pd-n">@l.BasicSalary.ToString("0.##")</td>
+                        <td class="pd-n">@l.TotalAllowances.ToString("0.##")</td>
+                        <td class="pd-n">@l.GrossSalary.ToString("0.##")</td>
+                        <td class="pd-n">@l.TaxAmount.ToString("0.##")</td>
+                        <td class="pd-n">@l.GosiEmployee.ToString("0.##")</td>
+                        <td class="pd-n">@l.OtherDeductions.ToString("0.##")</td>
+                        <td class="pd-n" style="color:#4ade80">@l.NetSalary.ToString("0.##")</td>
+                        <td class="pd-n">@l.WorkDays / @l.AbsentDays</td>
+                        <td><button type="button" class="pd-btn ghost" onclick="pdSlip(@l.EmployeeId)">قسيمة</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* قسيمة الموظف *@
+    <div class="hrms-slideover-backdrop" id="pd-backdrop" onclick="pdClose()"></div>
+    <aside class="hrms-slideover" id="pd-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="pd-title">قسيمة الراتب</h2>
+            <button type="button" class="hrms-slideover-close" onclick="pdClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body" id="pd-slip"></div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script>
+        var PD_DATA = @Html.Raw(payslipJson);
+        var PD_PERIOD = "@Model.Run.PeriodText";
+
+        function pdSlip(empId) {
+            var l = PD_DATA.find(function (x) { return x.EmployeeId === empId; });
+            if (!l) return;
+            document.getElementById('pd-title').textContent = 'قسيمة ' + l.EmployeeName + ' — ' + PD_PERIOD;
+            var html = '<p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800">الرمز ' + l.EmployeeNo +
+                ' · أيام العمل ' + l.WorkDays + ' · الغياب ' + l.AbsentDays + '</p>';
+            (l.Components || []).forEach(function (c) {
+                var cls = c.IsAddition ? 'add' : 'ded';
+                var sign = c.IsAddition ? '+' : '−';
+                html += '<div class="pd-slip-line ' + cls + '"><span>' + c.ItemName + '</span><b>' + sign + ' ' +
+                    Number(c.Amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</b></div>';
+            });
+            html += '<div class="pd-slip-net"><span>صافي الراتب</span><b>' +
+                Number(l.NetSalary).toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</b></div>';
+            document.getElementById('pd-slip').innerHTML = html;
+            document.getElementById('pd-slide').classList.add('open');
+            document.getElementById('pd-backdrop').classList.add('open');
+        }
+        function pdClose() {
+            document.getElementById('pd-slide').classList.remove('open');
+            document.getElementById('pd-backdrop').classList.remove('open');
+        }
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') pdClose(); });
+    </script>
+}

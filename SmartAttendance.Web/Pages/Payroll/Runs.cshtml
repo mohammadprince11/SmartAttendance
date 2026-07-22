@@ -1,0 +1,173 @@
+@page "/Payroll/Runs"
+@model SmartAttendance.Web.Pages.Payroll.RunsModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@{
+    ViewData["Title"] = "المسير";
+    var months = new[] { "يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر" };
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .pr-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
+    .pr-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%), linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95)); }
+    html[data-theme="light"] .pr-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
+    .pr-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .pr-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .pr-btn { min-height: 36px; padding: 7px 16px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
+    .pr-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
+    .pr-btn.sm { min-height: 30px; padding: 4px 11px; font-size: 12px; }
+    .pr-flow { display: flex; gap: 8px; flex-wrap: wrap; font-size: 11px; font-weight: 900; color: var(--sa-muted,#8FA8BC); }
+    .pr-flow span { padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(73,111,151,.25); }
+    .pr-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow-x: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .pr-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+    .pr-table th { text-align: start; padding: 12px 14px; font-size: 11px; font-weight: 1000; color: var(--sa-muted,#8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); }
+    html[data-theme="light"] .pr-table th { background: #f2f7fb; }
+    .pr-table td { padding: 11px 14px; border-bottom: 1px solid rgba(143,168,188,.08); vertical-align: middle; }
+    .pr-table tr:hover td { background: rgba(18,217,227,.04); }
+    .pr-num { direction: ltr; font-weight: 900; text-align: start; }
+    .pr-chip { display: inline-block; padding: 3px 11px; border-radius: 999px; font-size: 11px; font-weight: 900; }
+    .pr-chip.Draft { background: rgba(143,168,188,.16); color: #8FA8BC; }
+    .pr-chip.Calculated { background: rgba(18,217,227,.14); color: #12D9E3; }
+    .pr-chip.Locked { background: rgba(250,204,21,.14); color: #facc15; }
+    .pr-chip.Issued { background: rgba(74,222,128,.14); color: #4ade80; }
+    .pr-chip.PayslipSent { background: rgba(167,139,250,.16); color: #a78bfa; }
+    .pr-empty { padding: 28px; text-align: center; color: var(--sa-muted,#8FA8BC); font-weight: 800; }
+    .pr-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
+    .pr-alert.err { border-color: rgba(248,113,113,.4); background: rgba(248,113,113,.08); color: #f87171; }
+    .pr-form label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 4px; }
+    .pr-form select, .pr-form input { min-height: 38px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px; }
+    html[data-theme="light"] .pr-form select, html[data-theme="light"] .pr-form input { background: #fff; }
+    .pr-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .pr-actions form { display: inline; }
+</style>
+
+<section class="pr-page" dir="rtl">
+    <header class="pr-head">
+        <div>
+            <h1>المسير — دفعات الرواتب</h1>
+            <p>دورة الدفعة: احتساب ← قفل ← اعتماد للصرف ← إرسال القسائم. الاحتساب يقرأ الأساسي والعلاوات والحضور المعتمد وخصومات المخالفات.</p>
+            <div class="pr-flow" style="margin-top:8px">
+                <span>مسودة</span> ← <span>محتسب</span> ← <span>مقفل</span> ← <span>معتمد للصرف</span> ← <span>أُرسلت القسائم</span>
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a class="pr-btn ghost" href="/Payroll/SalaryItems">عناصر الراتب</a>
+            <a class="pr-btn ghost" href="/Payroll/Settings">الضريبة والضمان</a>
+            <button type="button" class="pr-btn" onclick="prOpen()">+ دفعة مسير جديدة</button>
+        </div>
+    </header>
+
+    @if (TempData["PayrollMessage"] != null)
+    {
+        <div class="pr-alert @((TempData["PayrollOk"] as bool?) == false ? "err" : "")">@TempData["PayrollMessage"]</div>
+    }
+
+    <div class="pr-card">
+        @if (Model.Runs.Count == 0)
+        {
+            <div class="pr-empty">لا دفعات مسير بعد — ابدأ بـ«دفعة مسير جديدة» ثم شغّل الاحتساب.</div>
+        }
+        else
+        {
+            <table class="pr-table">
+                <thead>
+                    <tr>
+                        <th>رقم الدفعة</th><th>الفترة</th><th>الحالة</th><th>الموظفون</th>
+                        <th>الإجمالي</th><th>الصافي</th><th>الضريبة</th><th>محتسب بواسطة</th>
+                        <th style="text-align:end">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var run in Model.Runs)
+                    {
+                        <tr>
+                            <td class="pr-num">@run.BatchNo</td>
+                            <td class="pr-num">@run.PeriodText</td>
+                            <td><span class="pr-chip @run.Status">@run.StatusLabelText</span></td>
+                            <td class="pr-num">@run.EmployeeCount</td>
+                            <td class="pr-num">@run.TotalGross.ToString("0.##")</td>
+                            <td class="pr-num" style="color:#4ade80">@run.TotalNet.ToString("0.##")</td>
+                            <td class="pr-num">@run.TotalTax.ToString("0.##")</td>
+                            <td style="font-size:12px">@(run.CalculatedBy ?? "—")<br /><span style="color:var(--sa-muted,#8FA8BC)">@(run.CalculatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</span></td>
+                            <td>
+                                <div class="pr-actions">
+                                    @if (run.EmployeeCount > 0)
+                                    {
+                                        <a class="pr-btn ghost sm" href="/Payroll/RunDetail?id=@run.Id">تفاصيل</a>
+                                    }
+                                    @if (run.Status is "Draft" or "Calculated")
+                                    {
+                                        <form method="post" asp-page-handler="Calculate"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit">@(run.Status == "Draft" ? "احتساب" : "إعادة احتساب")</button></form>
+                                    }
+                                    @if (run.Status == "Calculated")
+                                    {
+                                        <form method="post" asp-page-handler="Lock"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit" data-zyconfirm="قفل الدفعة؟">قفل</button></form>
+                                        <form method="post" asp-page-handler="Reopen"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn ghost sm" type="submit">↩ مسودة</button></form>
+                                    }
+                                    @if (run.Status == "Locked")
+                                    {
+                                        <form method="post" asp-page-handler="Issue"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit" data-zyconfirm="اعتماد للصرف؟">اعتماد للصرف</button></form>
+                                    }
+                                    @if (run.Status == "Issued")
+                                    {
+                                        <form method="post" asp-page-handler="Send"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit" data-zyconfirm="إرسال القسائم؟">إرسال القسائم</button></form>
+                                    }
+                                    @if (run.Status is "Draft" or "Calculated")
+                                    {
+                                        <form method="post" asp-page-handler="Delete"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn ghost sm" type="submit" style="color:#f87171" data-zyconfirm="حذف الدفعة؟">حذف</button></form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @* سلايد إنشاء دفعة *@
+    <div class="hrms-slideover-backdrop" id="pr-backdrop" onclick="prClose()"></div>
+    <aside class="hrms-slideover" id="pr-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2>دفعة مسير جديدة</h2>
+            <button type="button" class="hrms-slideover-close" onclick="prClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Create" class="pr-form" style="display:flex;flex-direction:column;gap:12px">
+                <label>السنة
+                    <input type="number" name="year" min="2000" max="2100" value="@Model.NewYear" />
+                </label>
+                <label>الشهر
+                    <select name="month">
+                        @for (var m = 1; m <= 12; m++)
+                        {
+                            <option value="@m" selected="@(m == Model.NewMonth)">@months[m-1] (@m)</option>
+                        }
+                    </select>
+                </label>
+                <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800">
+                    تُنشأ الدفعة كمسودة. بعدها اضغط «احتساب» لبناء رواتب الموظفين من الأساسي والعلاوات والحضور المعتمد.
+                </p>
+                <button type="submit" class="pr-btn">إنشاء الدفعة</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script>
+        function prOpen() {
+            document.getElementById('pr-slide').classList.add('open');
+            document.getElementById('pr-backdrop').classList.add('open');
+        }
+        function prClose() {
+            document.getElementById('pr-slide').classList.remove('open');
+            document.getElementById('pr-backdrop').classList.remove('open');
+        }
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') prClose(); });
+    </script>
+}

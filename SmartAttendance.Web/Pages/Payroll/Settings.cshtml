@@ -1,0 +1,197 @@
+@page "/Payroll/Settings"
+@model SmartAttendance.Web.Pages.Payroll.SettingsModel
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "تهيئة الضريبة والضمان";
+    var taxJson = JsonSerializer.Serialize(Model.TaxProfiles.Select(p => new
+    {
+        p.Id, p.Name, p.ExemptionAmount, p.IsActive,
+        Brackets = p.Brackets.Select(b => new { b.FromAmount, b.ToAmount, b.Rate })
+    }));
+    var gosiJson = JsonSerializer.Serialize(Model.GosiProfiles.Select(g => new { g.Id, g.Name, g.EmployeeRate, g.CompanyRate, g.Ceiling, g.IsActive }));
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .ps-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
+    .ps-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px; background:linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .ps-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .ps-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .ps-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .ps-warn { padding:10px 14px; border-radius:12px; font-size:12px; font-weight:900; border:1px solid rgba(250,204,21,.4); background:rgba(250,204,21,.08); color:#facc15; }
+    .ps-btn { min-height:34px; padding:6px 15px; border-radius:11px; border:0; font-size:12px; font-weight:900; cursor:pointer; background:linear-gradient(135deg,#12D9E3,#0ea5b5); color:#04141d; }
+    .ps-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .ps-btn.sm { min-height:28px; padding:3px 10px; font-size:11px; }
+    .ps-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @@media (max-width:900px){ .ps-grid { grid-template-columns:1fr; } }
+    .ps-sec { border:1px solid rgba(73,111,151,.22); border-radius:18px; background:var(--sa-surface,rgba(8,25,43,.9)); padding:16px; display:flex; flex-direction:column; gap:10px; }
+    .ps-sec h2 { margin:0; font-size:15px; font-weight:1000; display:flex; justify-content:space-between; align-items:center; }
+    .ps-item { border:1px solid rgba(73,111,151,.18); border-radius:12px; padding:10px 12px; font-size:13px; }
+    .ps-item.active { border-color:rgba(74,222,128,.4); }
+    .ps-item b { direction:ltr; }
+    .ps-tag { font-size:10px; font-weight:900; padding:2px 8px; border-radius:999px; background:rgba(74,222,128,.14); color:#4ade80; }
+    .ps-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
+    .ps-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .ps-form input { min-height:36px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; }
+    html[data-theme="light"] .ps-form input { background:#fff; }
+    .ps-brk { display:grid; grid-template-columns:1fr 1fr 80px 34px; gap:6px; align-items:center; }
+    .ps-brk input { min-height:32px; font-size:12px; }
+</style>
+
+<section class="ps-page" dir="rtl">
+    <header class="ps-head">
+        <div>
+            <h1>تهيئة الضريبة والضمان</h1>
+            <p>الملف النشط من كل نوع يُستخدم بالمسير. الضريبة تصاعدية بشرائح؛ الضمان بنسبة موظف/شركة وسقف.</p>
+        </div>
+        <a class="ps-btn ghost" href="/Payroll/Runs">← المسير</a>
+    </header>
+
+    <div class="ps-warn">⚠️ القيم المبذورة عراقية <b>مبدئية</b> (ضمان 5%/12% + شرائح 3–15%) — راجعها مع محاسب قبل اعتماد أي مسير حقيقي.</div>
+
+    @if (TempData["PayrollMessage"] != null)
+    {
+        <div class="ps-alert">@TempData["PayrollMessage"]</div>
+    }
+
+    <div class="ps-grid">
+        @* ----- الضريبة ----- *@
+        <div class="ps-sec">
+            <h2>ملفات الضريبة <button type="button" class="ps-btn sm" onclick="taxOpen(0)">+ ملف</button></h2>
+            @foreach (var p in Model.TaxProfiles)
+            {
+                <div class="ps-item @(p.IsActive ? "active" : "")">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <div><b>@p.Name</b> @(p.IsActive ? Html.Raw("<span class=\"ps-tag\">نشط</span>") : Html.Raw(""))</div>
+                        <div style="white-space:nowrap">
+                            <button type="button" class="ps-btn ghost sm" onclick="taxOpen(@p.Id)">تعديل</button>
+                            <form method="post" asp-page-handler="DeleteTax" style="display:inline"><input type="hidden" name="id" value="@p.Id" /><button class="ps-btn ghost sm" style="color:#f87171" data-zyconfirm="حذف؟">حذف</button></form>
+                        </div>
+                    </div>
+                    <div style="font-size:12px;color:var(--sa-muted,#8FA8BC);margin-top:4px">
+                        إعفاء <b>@p.ExemptionAmount.ToString("0.##")</b> · شرائح:
+                        @string.Join(" · ", p.Brackets.OrderBy(b => b.FromAmount).Select(b => $"{b.FromAmount:0}–{(b.ToAmount?.ToString("0") ?? "∞")}: {b.Rate:0.##}%"))
+                    </div>
+                </div>
+            }
+        </div>
+
+        @* ----- الضمان ----- *@
+        <div class="ps-sec">
+            <h2>ملفات الضمان الاجتماعي <button type="button" class="ps-btn sm" onclick="gosiOpen(0)">+ ملف</button></h2>
+            @foreach (var g in Model.GosiProfiles)
+            {
+                <div class="ps-item @(g.IsActive ? "active" : "")">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <div><b>@g.Name</b> @(g.IsActive ? Html.Raw("<span class=\"ps-tag\">نشط</span>") : Html.Raw(""))</div>
+                        <div style="white-space:nowrap">
+                            <button type="button" class="ps-btn ghost sm" onclick="gosiOpen(@g.Id)">تعديل</button>
+                            <form method="post" asp-page-handler="DeleteGosi" style="display:inline"><input type="hidden" name="id" value="@g.Id" /><button class="ps-btn ghost sm" style="color:#f87171" data-zyconfirm="حذف؟">حذف</button></form>
+                        </div>
+                    </div>
+                    <div style="font-size:12px;color:var(--sa-muted,#8FA8BC);margin-top:4px">
+                        موظف <b>@g.EmployeeRate.ToString("0.##")%</b> · شركة <b>@g.CompanyRate.ToString("0.##")%</b> · سقف <b>@(g.Ceiling > 0 ? g.Ceiling.ToString("0.##") : "بلا")</b>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* سلايد الضريبة *@
+    <div class="hrms-slideover-backdrop" id="tax-backdrop" onclick="taxClose()"></div>
+    <aside class="hrms-slideover wide" id="tax-slide" aria-hidden="true">
+        <div class="hrms-slideover-head"><h2 id="tax-title">ملف ضريبة</h2><button type="button" class="hrms-slideover-close" onclick="taxClose()">×</button></div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="SaveTax" class="ps-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="Id" id="tax-Id" value="0" />
+                <label>اسم الملف *<input type="text" name="Name" id="tax-Name" required /></label>
+                <label>الإعفاء الشهري (يُطرح قبل الشرائح)<input type="number" name="ExemptionAmount" id="tax-Exemption" step="0.01" value="0" /></label>
+                <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IsActive" value="true" id="tax-Active" checked /> الملف النشط</label>
+                <div><b style="font-size:13px">الشرائح التصاعدية</b> <button type="button" class="ps-btn ghost sm" onclick="brkAdd()">+ شريحة</button></div>
+                <div class="ps-brk" style="color:var(--sa-muted,#8FA8BC);font-size:11px;font-weight:900"><span>من</span><span>إلى (فارغ=∞)</span><span>نسبة%</span><span></span></div>
+                <div id="brk-rows" style="display:flex;flex-direction:column;gap:6px"></div>
+                <button type="submit" class="ps-btn">حفظ الملف</button>
+            </form>
+        </div>
+    </aside>
+
+    @* سلايد الضمان *@
+    <div class="hrms-slideover-backdrop" id="gosi-backdrop" onclick="gosiClose()"></div>
+    <aside class="hrms-slideover" id="gosi-slide" aria-hidden="true">
+        <div class="hrms-slideover-head"><h2 id="gosi-title">ملف ضمان</h2><button type="button" class="hrms-slideover-close" onclick="gosiClose()">×</button></div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="SaveGosi" class="ps-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="Id" id="gosi-Id" value="0" />
+                <label>اسم الملف *<input type="text" name="Name" id="gosi-Name" required /></label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <label>نسبة الموظف %<input type="number" name="EmployeeRate" id="gosi-Emp" step="0.01" value="5" /></label>
+                    <label>نسبة الشركة %<input type="number" name="CompanyRate" id="gosi-Co" step="0.01" value="12" /></label>
+                </div>
+                <label>السقف (0 = بلا سقف)<input type="number" name="Ceiling" id="gosi-Ceiling" step="0.01" value="0" /></label>
+                <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IsActive" value="true" id="gosi-Active" checked /> الملف النشط</label>
+                <button type="submit" class="ps-btn">حفظ الملف</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script>
+        var TAX_DATA = @Html.Raw(taxJson);
+        var GOSI_DATA = @Html.Raw(gosiJson);
+
+        function brkRow(from, to, rate) {
+            var div = document.createElement('div');
+            div.className = 'ps-brk';
+            div.innerHTML = '<input type="number" name="bracket_from" step="0.01" value="' + (from || 0) + '" />' +
+                '<input type="number" name="bracket_to" step="0.01" value="' + (to != null ? to : '') + '" placeholder="∞" />' +
+                '<input type="number" name="bracket_rate" step="0.01" value="' + (rate || 0) + '" />' +
+                '<button type="button" class="ps-btn ghost sm" onclick="this.parentNode.remove()">×</button>';
+            document.getElementById('brk-rows').appendChild(div);
+        }
+        function brkAdd() { brkRow(0, '', 0); }
+
+        function taxOpen(id) {
+            var f = document.querySelector('#tax-slide form'); f.reset();
+            document.getElementById('brk-rows').innerHTML = '';
+            document.getElementById('tax-Id').value = id || 0;
+            document.getElementById('tax-title').textContent = id ? 'تعديل ملف الضريبة' : 'ملف ضريبة جديد';
+            if (id) {
+                var p = TAX_DATA.find(function (x) { return x.Id === id; });
+                if (p) {
+                    document.getElementById('tax-Name').value = p.Name || '';
+                    document.getElementById('tax-Exemption').value = p.ExemptionAmount;
+                    document.getElementById('tax-Active').checked = !!p.IsActive;
+                    (p.Brackets || []).forEach(function (b) { brkRow(b.FromAmount, b.ToAmount, b.Rate); });
+                }
+            }
+            if (document.getElementById('brk-rows').children.length === 0) brkAdd();
+            document.getElementById('tax-slide').classList.add('open');
+            document.getElementById('tax-backdrop').classList.add('open');
+        }
+        function taxClose() { document.getElementById('tax-slide').classList.remove('open'); document.getElementById('tax-backdrop').classList.remove('open'); }
+
+        function gosiOpen(id) {
+            var f = document.querySelector('#gosi-slide form'); f.reset();
+            document.getElementById('gosi-Id').value = id || 0;
+            document.getElementById('gosi-title').textContent = id ? 'تعديل ملف الضمان' : 'ملف ضمان جديد';
+            if (id) {
+                var g = GOSI_DATA.find(function (x) { return x.Id === id; });
+                if (g) {
+                    document.getElementById('gosi-Name').value = g.Name || '';
+                    document.getElementById('gosi-Emp').value = g.EmployeeRate;
+                    document.getElementById('gosi-Co').value = g.CompanyRate;
+                    document.getElementById('gosi-Ceiling').value = g.Ceiling;
+                    document.getElementById('gosi-Active').checked = !!g.IsActive;
+                }
+            }
+            document.getElementById('gosi-slide').classList.add('open');
+            document.getElementById('gosi-backdrop').classList.add('open');
+        }
+        function gosiClose() { document.getElementById('gosi-slide').classList.remove('open'); document.getElementById('gosi-backdrop').classList.remove('open'); }
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { taxClose(); gosiClose(); } });
+    </script>
+}

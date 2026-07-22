@@ -1,0 +1,167 @@
+@page "/Payroll/SalaryItems"
+@model SmartAttendance.Web.Pages.Payroll.SalaryItemsModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "عناصر الراتب";
+    var itemsJson = JsonSerializer.Serialize(Model.Items.Select(i => new
+    {
+        i.Id, i.Name, i.NameEn, i.ItemType, i.ValueKind, i.DefaultValue,
+        i.Taxable, i.InGross, i.Prorated, i.IsActive, i.SortOrder, i.IsSystem
+    }));
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .si-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
+    .si-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px; background:linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .si-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .si-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .si-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .si-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:linear-gradient(135deg,#12D9E3,#0ea5b5); color:#04141d; }
+    .si-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .si-btn.sm { min-height:30px; padding:4px 11px; font-size:12px; }
+    .si-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .si-table { width:100%; border-collapse:collapse; font-size:13px; min-width:760px; }
+    .si-table th { text-align:start; padding:11px 13px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.12); }
+    html[data-theme="light"] .si-table th { background:#f2f7fb; }
+    .si-table td { padding:10px 13px; border-bottom:1px solid rgba(143,168,188,.08); }
+    .si-chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:900; background:rgba(18,217,227,.1); color:#12D9E3; }
+    .si-chip.ded { background:rgba(248,113,113,.12); color:#f87171; }
+    .si-chip.sys { background:rgba(167,139,250,.14); color:#a78bfa; }
+    .si-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
+    .si-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .si-form input, .si-form select { min-height:36px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; }
+    html[data-theme="light"] .si-form input, html[data-theme="light"] .si-form select { background:#fff; }
+    .si-checks { display:flex; gap:16px; flex-wrap:wrap; }
+    .si-checks label { flex-direction:row; align-items:center; gap:6px; }
+</style>
+
+<section class="si-page" dir="rtl">
+    <header class="si-head">
+        <div>
+            <h1>عناصر الراتب</h1>
+            <p>كتالوج بنود المسير (دخل/بدل/اقتطاع/أوفرتايم) — يحدد النوع والقيمة وخضوعه للضريبة ودخوله بالإجمالي وتنسيبه بالحضور.</p>
+        </div>
+        <div style="display:flex;gap:8px">
+            <a class="si-btn ghost" href="/Payroll/Runs">← المسير</a>
+            <button type="button" class="si-btn" onclick="siOpen(0)">+ عنصر جديد</button>
+        </div>
+    </header>
+
+    @if (TempData["PayrollMessage"] != null)
+    {
+        <div class="si-alert">@TempData["PayrollMessage"]</div>
+    }
+
+    <div class="si-card">
+        <table class="si-table">
+            <thead>
+                <tr><th>العنصر</th><th>النوع</th><th>القيمة</th><th>خصائص</th><th>الحالة</th><th style="text-align:end">إجراءات</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var i in Model.Items)
+                {
+                    <tr>
+                        <td><b>@i.Name</b>@(string.IsNullOrWhiteSpace(i.NameEn) ? "" : $" · {i.NameEn}") @(i.IsSystem ? Html.Raw("<span class=\"si-chip sys\">نظام</span>") : Html.Raw(""))</td>
+                        <td><span class="si-chip @(i.IsAddition ? "" : "ded")">@i.ItemTypeLabel</span></td>
+                        <td style="font-size:12px">@i.ValueKindLabel@(i.DefaultValue != 0 ? $" · {i.DefaultValue:0.##}" : "")</td>
+                        <td style="font-size:11px;color:var(--sa-muted,#8FA8BC)">
+                            @(i.Taxable ? "خاضع·" : "")@(i.InGross ? "إجمالي·" : "")@(i.Prorated ? "نسبي" : "")
+                        </td>
+                        <td><span class="si-chip @(i.IsActive ? "" : "ded")">@(i.IsActive ? "نشط" : "متوقف")</span></td>
+                        <td style="text-align:end;white-space:nowrap">
+                            <button type="button" class="si-btn ghost sm" onclick="siOpen(@i.Id)">تعديل</button>
+                            @if (!i.IsSystem)
+                            {
+                                <form method="post" asp-page-handler="Delete" style="display:inline"><input type="hidden" name="id" value="@i.Id" /><button class="si-btn ghost sm" type="submit" style="color:#f87171" data-zyconfirm="حذف العنصر؟">حذف</button></form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="hrms-slideover-backdrop" id="si-backdrop" onclick="siClose()"></div>
+    <aside class="hrms-slideover" id="si-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="si-title">عنصر جديد</h2>
+            <button type="button" class="hrms-slideover-close" onclick="siClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Save" class="si-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="Id" id="si-Id" value="0" />
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <label>الاسم (عربي) *<input type="text" name="Name" id="si-Name" required /></label>
+                    <label>Name (EN)<input type="text" name="NameEn" id="si-NameEn" dir="ltr" /></label>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <label>النوع
+                        <select name="ItemType" id="si-ItemType">
+                            @foreach (var t in SalaryItemStore.ItemTypes)
+                            {
+                                <option value="@t.Key">@t.Label</option>
+                            }
+                        </select>
+                    </label>
+                    <label>طريقة القيمة
+                        <select name="ValueKind" id="si-ValueKind">
+                            @foreach (var v in SalaryItemStore.ValueKinds)
+                            {
+                                <option value="@v.Key">@v.Label</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <label>القيمة الافتراضية / النسبة<input type="number" name="DefaultValue" id="si-DefaultValue" step="0.01" value="0" /></label>
+                    <label>ترتيب العرض<input type="number" name="SortOrder" id="si-SortOrder" value="10" /></label>
+                </div>
+                <div class="si-checks">
+                    <label><input type="checkbox" name="Taxable" value="true" id="si-Taxable" checked /> خاضع للضريبة</label>
+                    <label><input type="checkbox" name="InGross" value="true" id="si-InGross" checked /> ضمن الإجمالي</label>
+                    <label><input type="checkbox" name="Prorated" value="true" id="si-Prorated" /> نسبي بالحضور</label>
+                    <label><input type="checkbox" name="IsActive" value="true" id="si-IsActive" checked /> نشط</label>
+                </div>
+                <button type="submit" class="si-btn">حفظ العنصر</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script>
+        var SI_DATA = @Html.Raw(itemsJson);
+        function siOpen(id) {
+            var f = document.querySelector('#si-slide form'); f.reset();
+            document.getElementById('si-Id').value = id || 0;
+            document.getElementById('si-title').textContent = id ? 'تعديل العنصر' : 'عنصر جديد';
+            if (id) {
+                var i = SI_DATA.find(function (x) { return x.Id === id; });
+                if (i) {
+                    document.getElementById('si-Name').value = i.Name || '';
+                    document.getElementById('si-NameEn').value = i.NameEn || '';
+                    document.getElementById('si-ItemType').value = i.ItemType;
+                    document.getElementById('si-ValueKind').value = i.ValueKind;
+                    document.getElementById('si-DefaultValue').value = i.DefaultValue;
+                    document.getElementById('si-SortOrder').value = i.SortOrder;
+                    document.getElementById('si-Taxable').checked = !!i.Taxable;
+                    document.getElementById('si-InGross').checked = !!i.InGross;
+                    document.getElementById('si-Prorated').checked = !!i.Prorated;
+                    document.getElementById('si-IsActive').checked = !!i.IsActive;
+                }
+            }
+            document.getElementById('si-slide').classList.add('open');
+            document.getElementById('si-backdrop').classList.add('open');
+        }
+        function siClose() {
+            document.getElementById('si-slide').classList.remove('open');
+            document.getElementById('si-backdrop').classList.remove('open');
+        }
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') siClose(); });
+    </script>
+}

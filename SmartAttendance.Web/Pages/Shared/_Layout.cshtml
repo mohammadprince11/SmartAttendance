@@ -454,7 +454,16 @@
                         <span class="nexora-chevron"></span>
                     </summary>
                     <div class="nexora-nav-group-links">
-                        <a asp-page="/Payroll/TaxSocialSecurity" class="nexora-nav-link @(IsUnder("/Payroll") ? "active nexora-active" : "")">
+                        <a asp-page="/Payroll/Runs" class="nexora-nav-link @(IsUnder("/Payroll/Runs") || IsUnder("/Payroll/RunDetail") ? "active nexora-active" : "")">
+                            <span>المسير</span>
+                        </a>
+                        <a asp-page="/Payroll/SalaryItems" class="nexora-nav-link @(IsUnder("/Payroll/SalaryItems") ? "active nexora-active" : "")">
+                            <span>عناصر الراتب</span>
+                        </a>
+                        <a asp-page="/Payroll/Settings" class="nexora-nav-link @(IsUnder("/Payroll/Settings") ? "active nexora-active" : "")">
+                            <span>تهيئة الضريبة والضمان</span>
+                        </a>
+                        <a asp-page="/Payroll/TaxSocialSecurity" class="nexora-nav-link @(IsUnder("/Payroll/TaxSocialSecurity") ? "active nexora-active" : "")">
                             <span>&#x0627;&#x0644;&#x0636;&#x0631;&#x0627;&#x0626;&#x0628; &#x0648;&#x0627;&#x0644;&#x0636;&#x0645;&#x0627;&#x0646;</span>
                         </a>
                         <a asp-page="/EmployeeUpdates/Index" asp-route-section="financial" class="nexora-nav-link">
