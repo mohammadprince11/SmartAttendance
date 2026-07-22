@@ -2,12 +2,11 @@
 @model SmartAttendance.Web.Pages.IndexModel
 
 @*
-    لوحة التحكم التنفيذية — إعادة تصميم (2026-07) بأفكار من فحص حي لكيان وZenHR:
-    - من كيان: قوائم اليوم بالأسماء (تبويبات) + جملة استبصار طبيعية + KPI قابلة للنقر.
-    - من ZenHR: شارة الفترة الزمنية على كل بطاقة + بطاقات أقل وأنظف.
-    - حذف التكرار: «نبض اليوم» كان يكرر أرقام KPI — الأشرطة اندمجت ببطاقات KPI نفسها.
-    - التوزيعات الفارغة (أغلبها «غير محدد») تُخفى تلقائياً حتى تمتلئ بياناتها.
-    كل البيانات من IndexModel (دفعة SQL واحدة) — الواجهة عرض فقط.
+    لوحة التحكم التنفيذية — تصميم هادئ (2026-07):
+    فلسفة: لغة بصرية واحدة — بلاطات أرقام مسطحة، جداول، وأشرطة توزيع. لا إيموجي،
+    لا تدرجات، لا تكرار؛ اللون للدلالة فقط (أخضر/عنبري/أحمر) والباقي محايد.
+    البنية: هيدر ← إحصاءات اليوم (شريط واحد) ← متابعة اليوم + مؤشرات 30 يوماً ←
+    توزيعات ذات بيانات فقط ← عقود قريبة الانتهاء + آخر الطلبات.
 *@
 
 @{
@@ -34,11 +33,8 @@
 
     static int BarWidth(int value, int max) => max <= 0 ? 0 : Math.Max(3, (int)Math.Round(value * 100.0 / max));
 
-    var activeTotal = Math.Max(1, Model.ActiveEmployees);
     var today = DateTime.Today;
-    var presentPct = (Model.TodayPresent + Model.TodayLate) * 100 / activeTotal;
 
-    // توزيعة «ذات معنى» = فيها أكثر من صف وأغلبها ليس «غير محدد» (وإلا تُخفى — تقليل الحشو)
     static bool IsMeaningful(List<SmartAttendance.Web.Pages.IndexModel.NameCountRow> rows)
     {
         if (rows.Count <= 1) return false;
@@ -62,11 +58,11 @@
 
 <section class="zxd-page" dir="rtl">
 
-    @* ---------- الهيدر: عنوان + تاريخ + محدد الشركة ---------- *@
+    @* ---------- الهيدر المسطح ---------- *@
     <header class="zxd-head">
         <div>
             <h1>لوحة التحكم التنفيذية</h1>
-            <div class="zxd-date">@today.ToString("dddd، dd MMMM yyyy", new System.Globalization.CultureInfo("ar-IQ")) · @Model.SelectedCompanyName</div>
+            <div class="zxd-date">@today.ToString("dddd، dd MMMM yyyy", new System.Globalization.CultureInfo("ar-IQ"))</div>
         </div>
         <form method="get" class="zxd-company">
             <select name="CompanyId" onchange="this.form.submit()">
@@ -78,63 +74,41 @@
         </form>
     </header>
 
-    @* ---------- شريط KPI: الأشرطة مدمجة بالبطاقات (بدل بطاقة «نبض اليوم» المكررة) ---------- *@
-    <div class="zxd-kpis">
-        <a class="zxd-kpi" href="/Employees">
-            <span class="ic">👥</span>
-            <div class="zxd-kpi-body">
-                <b>@Model.Employees.ToString("N0")</b><span>إجمالي الموظفين</span>
-                <small>فعال @Model.ActiveEmployees.ToString("N0") · غير فعال @Model.InactiveEmployees.ToString("N0")</small>
-            </div>
-        </a>
-        <a class="zxd-kpi green" href="/DayAttendance">
-            <span class="ic">✅</span>
-            <div class="zxd-kpi-body">
-                <b>@Model.TodayPresent.ToString("N0")</b><span>حضور اليوم</span>
-                <span class="kbar green"><i style="width:@BarWidth(Model.TodayPresent, activeTotal)%"></i></span>
-            </div>
-        </a>
-        <a class="zxd-kpi amber" href="/DayAttendance">
-            <span class="ic">⏰</span>
-            <div class="zxd-kpi-body">
-                <b>@Model.TodayLate.ToString("N0")</b><span>متأخرون اليوم</span>
-                <span class="kbar amber"><i style="width:@BarWidth(Model.TodayLate, activeTotal)%"></i></span>
-            </div>
-        </a>
-        <a class="zxd-kpi red" href="/DayAttendance">
-            <span class="ic">🚫</span>
-            <div class="zxd-kpi-body">
-                <b>@Model.TodayAbsent.ToString("N0")</b><span>غياب اليوم</span>
-                <span class="kbar red"><i style="width:@BarWidth(Model.TodayAbsent, activeTotal)%"></i></span>
-            </div>
-        </a>
-        <a class="zxd-kpi amber" href="/AttendanceCorrections">
-            <span class="ic">↩️</span>
-            <div class="zxd-kpi-body">
-                <b>@Model.TodayMissingOut.ToString("N0")</b><span>بلا بصمة خروج</span>
-                <span class="kbar teal"><i style="width:@BarWidth(Model.TodayMissingOut, activeTotal)%"></i></span>
-            </div>
-        </a>
-        <a class="zxd-kpi" href="/Approvals">
-            <span class="ic">📨</span>
-            <div class="zxd-kpi-body">
-                <b>@Model.PendingRequests.ToString("N0")</b><span>طلبات معلقة</span>
-                <small>بانتظار موافقتك</small>
-            </div>
-        </a>
+    @* ---------- إحصاءات اليوم: شريط بلاطات واحد مقسوم بفواصل ---------- *@
+    <div class="zxd-card">
+        <h2>
+            اليوم
+            <span class="zxd-badge">@(Model.PulseFromEngine ? "محرك الحضور" : "السجلات الخام")</span>
+        </h2>
+        <div class="zxd-stats">
+            <a class="zxd-stat" href="/Employees">
+                <b>@Model.ActiveEmployees.ToString("N0")</b>
+                <span>موظف نشط</span>
+            </a>
+            <a class="zxd-stat green" href="/DayAttendance">
+                <b>@Model.TodayPresent.ToString("N0")</b>
+                <span>حاضر</span>
+            </a>
+            <a class="zxd-stat amber" href="/DayAttendance">
+                <b>@Model.TodayLate.ToString("N0")</b>
+                <span>متأخر</span>
+            </a>
+            <a class="zxd-stat red" href="/DayAttendance">
+                <b>@Model.TodayAbsent.ToString("N0")</b>
+                <span>غائب</span>
+            </a>
+            <a class="zxd-stat amber" href="/AttendanceCorrections">
+                <b>@Model.TodayMissingOut.ToString("N0")</b>
+                <span>بلا بصمة خروج</span>
+            </a>
+            <a class="zxd-stat" href="/Approvals">
+                <b>@Model.PendingRequests.ToString("N0")</b>
+                <span>طلب معلق</span>
+            </a>
+        </div>
     </div>
 
-    @* ---------- جملة الاستبصار (نمط كيان) ---------- *@
-    <div class="zxd-insight">
-        <span class="zxd-chip @(Model.PulseFromEngine ? "approved" : "pending")">@(Model.PulseFromEngine ? "محرك الحضور" : "السجلات الخام")</span>
-        من أصل <b>@Model.ActiveEmployees.ToString("N0")</b> موظفاً نشطاً حضر اليوم
-        <b>@((Model.TodayPresent + Model.TodayLate).ToString("N0"))</b> (@presentPct%) —
-        منهم <b>@Model.TodayLate.ToString("N0")</b> متأخرون،
-        و<b>@Model.TodayAbsent.ToString("N0")</b> غائبون،
-        و<b>@Model.TodayMissingOut.ToString("N0")</b> بلا بصمة خروج.
-    </div>
-
-    @* ---------- متابعة اليوم بالأسماء (نمط كيان) + آخر 30 يوماً والطلبات ---------- *@
+    @* ---------- متابعة اليوم بالأسماء + مؤشرات آخر 30 يوماً ---------- *@
     <div class="zxd-row-2">
         <div class="zxd-card">
             <h2>
@@ -147,7 +121,7 @@
             <div data-panel="late">
                 @if (Model.TodayLateList.Count == 0)
                 {
-                    <div class="zxd-empty">لا متأخرين اليوم 🎉</div>
+                    <div class="zxd-empty">لا متأخرين اليوم</div>
                 }
                 else
                 {
@@ -157,8 +131,8 @@
                             @foreach (var row in Model.TodayLateList)
                             {
                                 <tr>
-                                    <td>@row.EmployeeName <small style="color:var(--zxd-muted)">@row.EmployeeNo</small></td>
-                                    <td style="direction:ltr;text-align:start">@(row.CheckIn?.ToString("HH:mm") ?? "-")</td>
+                                    <td>@row.EmployeeName <small class="zxd-sub">@row.EmployeeNo</small></td>
+                                    <td class="zxd-ltr">@(row.CheckIn?.ToString("HH:mm") ?? "-")</td>
                                     <td>@(row.LateHours > 0 ? $"{row.LateHours:0.##} س" : "-")</td>
                                 </tr>
                             }
@@ -169,7 +143,7 @@
             <div data-panel="noout" hidden>
                 @if (Model.TodayMissingOutList.Count == 0)
                 {
-                    <div class="zxd-empty">لا بصمات خروج مفقودة اليوم 🎉</div>
+                    <div class="zxd-empty">لا بصمات خروج مفقودة اليوم</div>
                 }
                 else
                 {
@@ -179,8 +153,8 @@
                             @foreach (var row in Model.TodayMissingOutList)
                             {
                                 <tr>
-                                    <td>@row.EmployeeName <small style="color:var(--zxd-muted)">@row.EmployeeNo</small></td>
-                                    <td style="direction:ltr;text-align:start">@(row.CheckIn?.ToString("HH:mm") ?? "-")</td>
+                                    <td>@row.EmployeeName <small class="zxd-sub">@row.EmployeeNo</small></td>
+                                    <td class="zxd-ltr">@(row.CheckIn?.ToString("HH:mm") ?? "-")</td>
                                 </tr>
                             }
                         </tbody>
@@ -190,20 +164,14 @@
         </div>
 
         <div class="zxd-card">
-            <h2>المؤشرات والطلبات <small class="zxd-period">آخر 30 يوماً</small></h2>
-            <div class="zxd-minis">
-                <div class="zxd-mini"><b>@Model.Late30.ToString("N0")</b><span>حالات تأخر</span></div>
-                <div class="zxd-mini"><b>@Model.Absent30.ToString("N0")</b><span>حالات غياب</span></div>
-                <div class="zxd-mini"><b>@Model.MissingPunches30.ToString("N0")</b><span>بصمات مفقودة</span></div>
-                <div class="zxd-mini"><b>@Model.Contracts30.ToString("N0")</b><span>عقود جديدة</span></div>
-            </div>
-            @{
-                var reqMax = Math.Max(1, Math.Max(Model.PendingRequests, Math.Max(Model.ApprovedRequests30, Model.RejectedRequests30)));
-            }
-            <div class="zxd-pulse" style="margin-top:14px">
-                <div class="zxd-pulse-row amber"><b>طلبات معلقة</b><span class="bar"><i style="width:@BarWidth(Model.PendingRequests, reqMax)%"></i></span><span>@Model.PendingRequests</span></div>
-                <div class="zxd-pulse-row green"><b>مقبولة</b><span class="bar"><i style="width:@BarWidth(Model.ApprovedRequests30, reqMax)%"></i></span><span>@Model.ApprovedRequests30</span></div>
-                <div class="zxd-pulse-row red"><b>مرفوضة</b><span class="bar"><i style="width:@BarWidth(Model.RejectedRequests30, reqMax)%"></i></span><span>@Model.RejectedRequests30</span></div>
+            <h2>المؤشرات <span class="zxd-badge">آخر 30 يوماً</span></h2>
+            <div class="zxd-stats wrap">
+                <div class="zxd-stat amber"><b>@Model.Late30.ToString("N0")</b><span>حالة تأخر</span></div>
+                <div class="zxd-stat red"><b>@Model.Absent30.ToString("N0")</b><span>حالة غياب</span></div>
+                <div class="zxd-stat amber"><b>@Model.MissingPunches30.ToString("N0")</b><span>بصمة مفقودة</span></div>
+                <div class="zxd-stat green"><b>@Model.ApprovedRequests30.ToString("N0")</b><span>طلب مقبول</span></div>
+                <div class="zxd-stat red"><b>@Model.RejectedRequests30.ToString("N0")</b><span>طلب مرفوض</span></div>
+                <div class="zxd-stat"><b>@Model.Contracts30.ToString("N0")</b><span>عقد جديد</span></div>
             </div>
             <div class="zxd-more-wrap">
                 <a class="zxd-more" href="/Approvals">شاشة الموافقات</a>
@@ -211,11 +179,11 @@
         </div>
     </div>
 
-    @* ---------- توزيعات القوى العاملة: ذات البيانات فقط (الفارغة تُخفى تلقائياً) ---------- *@
+    @* ---------- توزيعات القوى العاملة: ذات البيانات فقط ---------- *@
     @if (distributions.Length > 0)
     {
         <div class="zxd-card">
-            <h2>توزيع القوى العاملة <small>@Model.Employees.ToString("N0") موظفاً · فروع @Model.Branches · أقسام @Model.Departments</small></h2>
+            <h2>القوى العاملة <span class="zxd-badge">@Model.Employees.ToString("N0") موظفاً · @Model.Branches فروع · @Model.Departments قسماً</span></h2>
             <div class="zxd-dists" style="--cols:@Math.Min(distributions.Length, 3)">
                 @foreach (var (title, rows) in distributions)
                 {
@@ -241,18 +209,18 @@
         </div>
     }
 
-    @* ---------- العقود قريبة الانتهاء + آخر الطلبات ---------- *@
+    @* ---------- عقود قريبة الانتهاء + آخر الطلبات ---------- *@
     <div class="zxd-row-2">
         <div class="zxd-card">
-            <h2>عقود قريبة الانتهاء <small class="zxd-period">خلال 60 يوماً · @Model.ExpiringContracts.Count عقداً</small></h2>
+            <h2>عقود قريبة الانتهاء <span class="zxd-badge">خلال 60 يوماً</span></h2>
             @if (Model.ExpiringContracts.Count == 0)
             {
-                <div class="zxd-empty">لا عقود قريبة الانتهاء 🎉</div>
+                <div class="zxd-empty">لا عقود قريبة الانتهاء</div>
             }
             else
             {
                 <table class="zxd-table">
-                    <thead><tr><th>الموظف</th><th>المنصب</th><th>تاريخ الانتهاء</th><th>المتبقي</th></tr></thead>
+                    <thead><tr><th>الموظف</th><th>المنصب</th><th>الانتهاء</th><th>المتبقي</th></tr></thead>
                     <tbody>
                         @foreach (var contract in Model.ExpiringContracts.Take(8))
                         {
@@ -260,9 +228,9 @@
                                 ? contract.ContractEndDate.Value.DayNumber - DateOnly.FromDateTime(today).DayNumber
                                 : 0;
                             <tr>
-                                <td>@contract.EmployeeName <small style="color:var(--zxd-muted)">@contract.EmployeeNo</small></td>
+                                <td>@contract.EmployeeName <small class="zxd-sub">@contract.EmployeeNo</small></td>
                                 <td>@SafeName(contract.Position)</td>
-                                <td style="direction:ltr;text-align:start">@(contract.ContractEndDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                                <td class="zxd-ltr">@(contract.ContractEndDate?.ToString("yyyy-MM-dd") ?? "-")</td>
                                 <td><span class="zxd-chip @(daysLeft <= 14 ? "danger" : "pending")">@daysLeft يوم</span></td>
                             </tr>
                         }
@@ -272,7 +240,7 @@
         </div>
 
         <div class="zxd-card">
-            <h2>آخر طلبات الخدمة الذاتية <a class="zxd-more" href="/SelfServices">عرض كل الطلبات</a></h2>
+            <h2>آخر طلبات الخدمة الذاتية <a class="zxd-more" href="/SelfServices">عرض الكل</a></h2>
             @if (Model.LatestRequests.Count == 0)
             {
                 <div class="zxd-empty">لا طلبات حديثة</div>
@@ -288,7 +256,7 @@
                                 <td>@request.EmployeeName</td>
                                 <td>@request.RequestType</td>
                                 <td><span class="zxd-chip @StatusClass(request.Status)">@StatusText(request.Status)</span></td>
-                                <td style="direction:ltr;text-align:start">@(request.CreatedAt?.ToString("MM-dd HH:mm") ?? "-")</td>
+                                <td class="zxd-ltr">@(request.CreatedAt?.ToString("MM-dd HH:mm") ?? "-")</td>
                             </tr>
                         }
                     </tbody>
