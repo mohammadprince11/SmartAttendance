@@ -3675,8 +3675,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/ThemeStore.cs": {
-    "mtime": 1784739753.8618407,
-    "ast_hash": "2b803f5ee47e6691d2fff9d35207333d",
+    "mtime": 1784740502.7613084,
+    "ast_hash": "309d1c90b56ec08e9cc25f568afca14b",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/BrandingAssets.cs": {
@@ -3685,13 +3685,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Branding/Index.cshtml": {
-    "mtime": 1784739805.1694243,
-    "ast_hash": "5c6ade824683381b7c8dcbc850edfb38",
+    "mtime": 1784740574.3698068,
+    "ast_hash": "d62075793998354dd931af4bf83220e7",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Branding/Index.cshtml.cs": {
-    "mtime": 1784739764.4033735,
-    "ast_hash": "1b943947ce6491a7cb636eb8bba8b223",
+    "mtime": 1784740553.0595646,
+    "ast_hash": "38db4ae98d7ab0f755ac07dffe91e1fb",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/zynora-branding-studio.js": {
