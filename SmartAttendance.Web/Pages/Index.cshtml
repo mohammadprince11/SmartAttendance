@@ -205,8 +205,8 @@
                 <div class="zxd-pulse-row green"><b>مقبولة</b><span class="bar"><i style="width:@BarWidth(Model.ApprovedRequests30, reqMax)%"></i></span><span>@Model.ApprovedRequests30</span></div>
                 <div class="zxd-pulse-row red"><b>مرفوضة</b><span class="bar"><i style="width:@BarWidth(Model.RejectedRequests30, reqMax)%"></i></span><span>@Model.RejectedRequests30</span></div>
             </div>
-            <div style="margin-top:12px">
-                <a class="zxd-chip" href="/Approvals">فتح شاشة الموافقات ←</a>
+            <div class="zxd-more-wrap">
+                <a class="zxd-more" href="/Approvals">شاشة الموافقات</a>
             </div>
         </div>
     </div>
@@ -272,7 +272,7 @@
         </div>
 
         <div class="zxd-card">
-            <h2>آخر طلبات الخدمة الذاتية <small><a class="zxd-chip" href="/SelfServices">الكل</a></small></h2>
+            <h2>آخر طلبات الخدمة الذاتية <a class="zxd-more" href="/SelfServices">عرض كل الطلبات</a></h2>
             @if (Model.LatestRequests.Count == 0)
             {
                 <div class="zxd-empty">لا طلبات حديثة</div>

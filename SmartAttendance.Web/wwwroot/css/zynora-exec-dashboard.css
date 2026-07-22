@@ -209,3 +209,16 @@ html[data-theme="light"] .zxd-mini { background: #f6fafd; }
 .zxd-chip.danger { background: rgba(248, 113, 113, .12); color: var(--zxd-red); }
 
 .zxd-empty { padding: 18px; text-align: center; color: var(--zxd-muted); font-size: 12px; font-weight: 800; }
+
+/* ---------- زر «عرض الكل» الموحد أسفل/أعلى البطاقات ---------- */
+.zxd-more {
+    display: inline-flex; align-items: center; gap: 6px;
+    min-height: 32px; padding: 5px 14px; border-radius: 10px;
+    border: 1px solid rgba(18, 217, 227, .35);
+    background: rgba(18, 217, 227, .08);
+    color: var(--zxd-teal); font-size: 12px; font-weight: 900;
+    text-decoration: none; transition: background .15s ease;
+}
+.zxd-more:hover { background: rgba(18, 217, 227, .18); }
+.zxd-more::after { content: "‹"; font-size: 15px; line-height: 1; } /* سهم «للأمام» بالعربي */
+.zxd-more-wrap { margin-top: 12px; text-align: end; }
