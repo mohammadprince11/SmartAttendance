@@ -1,280 +1,252 @@
 @page
 @model SmartAttendance.Web.Pages.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
 
 @*
-    لوحة التحكم التنفيذية — تصميم هادئ (2026-07):
-    فلسفة: لغة بصرية واحدة — بلاطات أرقام مسطحة، جداول، وأشرطة توزيع. لا إيموجي،
-    لا تدرجات، لا تكرار؛ اللون للدلالة فقط (أخضر/عنبري/أحمر) والباقي محايد.
-    البنية: هيدر ← إحصاءات اليوم (شريط واحد) ← متابعة اليوم + مؤشرات 30 يوماً ←
-    توزيعات ذات بيانات فقط ← عقود قريبة الانتهاء + آخر الطلبات.
+    لوحة التحكم القابلة للبناء — نمط لوحة أشخاص كيان (فحص حي 2026-07-22):
+    صف عدادات ثم شبكة بطاقات رسوم 3 أعمدة (col-xl-4 عند كيان). كل عنصر ويدجت
+    معرف بجدول DashboardWidgets: المستخدم يختار «شنو يظهر» (مقياس) و«شلون يظهر»
+    (رقم/أشرطة/أعمدة/دونات/جدول) من درج «تخصيص اللوحة»، ويرتب ويخفي ويحذف.
+    الرسوم CSS خالصة (أشرطة/أعمدة/دونات conic-gradient) بلا مكتبات.
 *@
 
 @{
     ViewData["Title"] = "لوحة التحكم";
-
-    static string SafeName(string? value) =>
-        string.IsNullOrWhiteSpace(value) || value == "Not Set" ? "غير محدد" : value;
-
-    static string StatusText(string? status) => status switch
-    {
-        "Pending" => "معلق",
-        "Approved" => "مقبول",
-        "Rejected" => "مرفوض",
-        _ => string.IsNullOrWhiteSpace(status) ? "-" : status
-    };
-
-    static string StatusClass(string? status) => status switch
-    {
-        "Pending" => "pending",
-        "Approved" => "approved",
-        "Rejected" => "rejected",
-        _ => ""
-    };
-
-    static int BarWidth(int value, int max) => max <= 0 ? 0 : Math.Max(3, (int)Math.Round(value * 100.0 / max));
-
     var today = DateTime.Today;
 
-    static bool IsMeaningful(List<SmartAttendance.Web.Pages.IndexModel.NameCountRow> rows)
-    {
-        if (rows.Count <= 1) return false;
-        var total = rows.Sum(r => r.Total);
-        var notSet = rows.FirstOrDefault(r => r.Name == "غير محدد")?.Total ?? 0;
-        return total > 0 && notSet * 100.0 / total < 90;
-    }
+    // ألوان أجزاء الدونات والأعمدة (تدوير ثابت)
+    var paletteColors = new[] { "#12D9E3", "#4ade80", "#facc15", "#f87171", "#a78bfa", "#60a5fa", "#f472b6", "#fb923c" };
 
-    var distributions = new (string Title, List<SmartAttendance.Web.Pages.IndexModel.NameCountRow> Rows)[]
-    {
-        ("حسب الفرع", Model.ByBranch),
-        ("حسب القسم", Model.ByDepartment),
-        ("حسب الجنس", Model.ByGender),
-        ("حسب البلد", Model.ByCountry),
-        ("حسب الجنسية", Model.ByNationality),
-        ("حسب نوع العقد", Model.ByContractType),
-    }.Where(d => IsMeaningful(d.Rows)).ToArray();
+    var counters = Model.VisibleWidgets.Where(w => w.Widget.ChartKind == "Number").ToList();
+    var charts = Model.VisibleWidgets.Where(w => w.Widget.ChartKind != "Number").ToList();
 }
 
 <link rel="stylesheet" href="~/css/zynora-exec-dashboard.css" asp-append-version="true" />
 
 <section class="zxd-page" dir="rtl">
 
-    @* ---------- الهيدر المسطح ---------- *@
+    @* ---------- الهيدر ---------- *@
     <header class="zxd-head">
         <div>
-            <h1>لوحة التحكم التنفيذية</h1>
-            <div class="zxd-date">@today.ToString("dddd، dd MMMM yyyy", new System.Globalization.CultureInfo("ar-IQ"))</div>
+            <h1>لوحة التحكم</h1>
+            <div class="zxd-date">@today.ToString("dddd، dd MMMM yyyy", new System.Globalization.CultureInfo("ar-IQ")) · @Model.SelectedCompanyName</div>
         </div>
-        <form method="get" class="zxd-company">
-            <select name="CompanyId" onchange="this.form.submit()">
-                @foreach (var company in Model.CompanyOptions)
-                {
-                    <option value="@company.Id" selected="@(company.Id == Model.CompanyId)">@company.Name (@company.EmployeeCount)</option>
-                }
-            </select>
-        </form>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <form method="get" class="zxd-company">
+                <select name="CompanyId" onchange="this.form.submit()">
+                    @foreach (var company in Model.CompanyOptions)
+                    {
+                        <option value="@company.Id" selected="@(company.Id == Model.CompanyId)">@company.Name (@company.EmployeeCount)</option>
+                    }
+                </select>
+            </form>
+            <button type="button" class="zxd-more" style="border-style:dashed" onclick="zxdOpenBuilder()">تخصيص اللوحة</button>
+        </div>
     </header>
 
-    @* ---------- إحصاءات اليوم: شريط بلاطات واحد مقسوم بفواصل ---------- *@
-    <div class="zxd-card">
-        <h2>
-            اليوم
-            <span class="zxd-badge">@(Model.PulseFromEngine ? "محرك الحضور" : "السجلات الخام")</span>
-        </h2>
-        <div class="zxd-stats">
-            <a class="zxd-stat" href="/Employees">
-                <b>@Model.ActiveEmployees.ToString("N0")</b>
-                <span>موظف نشط</span>
-            </a>
-            <a class="zxd-stat green" href="/DayAttendance">
-                <b>@Model.TodayPresent.ToString("N0")</b>
-                <span>حاضر</span>
-            </a>
-            <a class="zxd-stat amber" href="/DayAttendance">
-                <b>@Model.TodayLate.ToString("N0")</b>
-                <span>متأخر</span>
-            </a>
-            <a class="zxd-stat red" href="/DayAttendance">
-                <b>@Model.TodayAbsent.ToString("N0")</b>
-                <span>غائب</span>
-            </a>
-            <a class="zxd-stat amber" href="/AttendanceCorrections">
-                <b>@Model.TodayMissingOut.ToString("N0")</b>
-                <span>بلا بصمة خروج</span>
-            </a>
-            <a class="zxd-stat" href="/Approvals">
-                <b>@Model.PendingRequests.ToString("N0")</b>
-                <span>طلب معلق</span>
-            </a>
-        </div>
-    </div>
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="zxd-alert">@TempData["SuccessMessage"]</div>
+    }
 
-    @* ---------- متابعة اليوم بالأسماء + مؤشرات آخر 30 يوماً ---------- *@
-    <div class="zxd-row-2">
-        <div class="zxd-card">
-            <h2>
-                متابعة اليوم
-                <span class="zxd-tabs" id="zxd-today-tabs">
-                    <button type="button" class="active" data-tab="late" onclick="zxdTab('late')">متأخرون (@Model.TodayLateList.Count)</button>
-                    <button type="button" data-tab="noout" onclick="zxdTab('noout')">بلا خروج (@Model.TodayMissingOutList.Count)</button>
-                </span>
-            </h2>
-            <div data-panel="late">
-                @if (Model.TodayLateList.Count == 0)
-                {
-                    <div class="zxd-empty">لا متأخرين اليوم</div>
-                }
-                else
-                {
-                    <table class="zxd-table">
-                        <thead><tr><th>الموظف</th><th>ختم الدخول</th><th>التأخير</th></tr></thead>
-                        <tbody>
-                            @foreach (var row in Model.TodayLateList)
-                            {
-                                <tr>
-                                    <td>@row.EmployeeName <small class="zxd-sub">@row.EmployeeNo</small></td>
-                                    <td class="zxd-ltr">@(row.CheckIn?.ToString("HH:mm") ?? "-")</td>
-                                    <td>@(row.LateHours > 0 ? $"{row.LateHours:0.##} س" : "-")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
-            </div>
-            <div data-panel="noout" hidden>
-                @if (Model.TodayMissingOutList.Count == 0)
-                {
-                    <div class="zxd-empty">لا بصمات خروج مفقودة اليوم</div>
-                }
-                else
-                {
-                    <table class="zxd-table">
-                        <thead><tr><th>الموظف</th><th>ختم الدخول</th></tr></thead>
-                        <tbody>
-                            @foreach (var row in Model.TodayMissingOutList)
-                            {
-                                <tr>
-                                    <td>@row.EmployeeName <small class="zxd-sub">@row.EmployeeNo</small></td>
-                                    <td class="zxd-ltr">@(row.CheckIn?.ToString("HH:mm") ?? "-")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
-            </div>
-        </div>
-
-        <div class="zxd-card">
-            <h2>المؤشرات <span class="zxd-badge">آخر 30 يوماً</span></h2>
-            <div class="zxd-stats wrap">
-                <div class="zxd-stat amber"><b>@Model.Late30.ToString("N0")</b><span>حالة تأخر</span></div>
-                <div class="zxd-stat red"><b>@Model.Absent30.ToString("N0")</b><span>حالة غياب</span></div>
-                <div class="zxd-stat amber"><b>@Model.MissingPunches30.ToString("N0")</b><span>بصمة مفقودة</span></div>
-                <div class="zxd-stat green"><b>@Model.ApprovedRequests30.ToString("N0")</b><span>طلب مقبول</span></div>
-                <div class="zxd-stat red"><b>@Model.RejectedRequests30.ToString("N0")</b><span>طلب مرفوض</span></div>
-                <div class="zxd-stat"><b>@Model.Contracts30.ToString("N0")</b><span>عقد جديد</span></div>
-            </div>
-            <div class="zxd-more-wrap">
-                <a class="zxd-more" href="/Approvals">شاشة الموافقات</a>
-            </div>
-        </div>
-    </div>
-
-    @* ---------- توزيعات القوى العاملة: ذات البيانات فقط ---------- *@
-    @if (distributions.Length > 0)
+    @* ---------- صف العدادات (ويدجتات «رقم») ---------- *@
+    @if (counters.Count > 0)
     {
         <div class="zxd-card">
-            <h2>القوى العاملة <span class="zxd-badge">@Model.Employees.ToString("N0") موظفاً · @Model.Branches فروع · @Model.Departments قسماً</span></h2>
-            <div class="zxd-dists" style="--cols:@Math.Min(distributions.Length, 3)">
-                @foreach (var (title, rows) in distributions)
+            <div class="zxd-stats">
+                @foreach (var (widget, data) in counters)
                 {
-                    <div>
-                        <h3 class="zxd-dist-title">@title</h3>
-                        <div class="zxd-dist">
-                            @{
-                                var max = rows.Max(r => r.Total);
-                                var total = Math.Max(1, rows.Sum(r => r.Total));
-                            }
-                            @foreach (var row in rows.Take(6))
-                            {
-                                <div class="zxd-dist-row">
-                                    <span class="n" title="@SafeName(row.Name)">@SafeName(row.Name)</span>
-                                    <span class="bar"><i style="width:@BarWidth(row.Total, max)%"></i></span>
-                                    <span class="v">@row.Total (@((row.Total * 100 / total))%)</span>
-                                </div>
-                            }
-                        </div>
+                    <div class="zxd-stat">
+                        <b>@data.Single.ToString("N0")</b>
+                        <span>@widget.DisplayTitle</span>
                     </div>
                 }
             </div>
         </div>
     }
 
-    @* ---------- عقود قريبة الانتهاء + آخر الطلبات ---------- *@
-    <div class="zxd-row-2">
-        <div class="zxd-card">
-            <h2>عقود قريبة الانتهاء <span class="zxd-badge">خلال 60 يوماً</span></h2>
-            @if (Model.ExpiringContracts.Count == 0)
-            {
-                <div class="zxd-empty">لا عقود قريبة الانتهاء</div>
-            }
-            else
-            {
-                <table class="zxd-table">
-                    <thead><tr><th>الموظف</th><th>المنصب</th><th>الانتهاء</th><th>المتبقي</th></tr></thead>
-                    <tbody>
-                        @foreach (var contract in Model.ExpiringContracts.Take(8))
-                        {
-                            var daysLeft = contract.ContractEndDate.HasValue
-                                ? contract.ContractEndDate.Value.DayNumber - DateOnly.FromDateTime(today).DayNumber
-                                : 0;
-                            <tr>
-                                <td>@contract.EmployeeName <small class="zxd-sub">@contract.EmployeeNo</small></td>
-                                <td>@SafeName(contract.Position)</td>
-                                <td class="zxd-ltr">@(contract.ContractEndDate?.ToString("yyyy-MM-dd") ?? "-")</td>
-                                <td><span class="zxd-chip @(daysLeft <= 14 ? "danger" : "pending")">@daysLeft يوم</span></td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
-        </div>
+    @* ---------- شبكة بطاقات الرسوم (نمط كيان: 3 أعمدة) ---------- *@
+    <div class="zxd-grid">
+        @foreach (var (widget, data) in charts)
+        {
+            var rows = data.Rows;
+            var total = Math.Max(1, rows.Sum(r => r.Total));
+            var max = Math.Max(1, rows.Count == 0 ? 1 : rows.Max(r => r.Total));
 
-        <div class="zxd-card">
-            <h2>آخر طلبات الخدمة الذاتية <a class="zxd-more" href="/SelfServices">عرض الكل</a></h2>
-            @if (Model.LatestRequests.Count == 0)
-            {
-                <div class="zxd-empty">لا طلبات حديثة</div>
-            }
-            else
-            {
-                <table class="zxd-table">
-                    <thead><tr><th>الموظف</th><th>النوع</th><th>الحالة</th><th>التاريخ</th></tr></thead>
-                    <tbody>
-                        @foreach (var request in Model.LatestRequests.Take(8))
+            <div class="zxd-card">
+                <h2>@widget.DisplayTitle <span class="zxd-badge">@total.ToString("N0")</span></h2>
+
+                @if (rows.Count == 0 || rows.All(r => r.Total == 0))
+                {
+                    <div class="zxd-empty">لا يوجد بيانات</div>
+                }
+                else if (widget.ChartKind == "HBars")
+                {
+                    <div class="zxd-dist">
+                        @foreach (var row in rows.Take(7))
                         {
-                            <tr>
-                                <td>@request.EmployeeName</td>
-                                <td>@request.RequestType</td>
-                                <td><span class="zxd-chip @StatusClass(request.Status)">@StatusText(request.Status)</span></td>
-                                <td class="zxd-ltr">@(request.CreatedAt?.ToString("MM-dd HH:mm") ?? "-")</td>
-                            </tr>
+                            <div class="zxd-dist-row">
+                                <span class="n" title="@row.Name">@row.Name</span>
+                                <span class="bar"><i style="width:@(Math.Max(3, row.Total * 100 / max))%"></i></span>
+                                <span class="v">@row.Total (@(row.Total * 100 / total)%)</span>
+                            </div>
                         }
-                    </tbody>
-                </table>
-            }
-        </div>
+                    </div>
+                }
+                else if (widget.ChartKind == "Columns")
+                {
+                    <div class="zxd-cols">
+                        @foreach (var row in rows.Take(11))
+                        {
+                            <div class="zxd-col" title="@row.Name: @row.Total">
+                                <i style="height:@(Math.Max(4, row.Total * 100 / max))%"></i>
+                                <span class="v">@row.Total</span>
+                                <span class="n">@row.Name</span>
+                            </div>
+                        }
+                    </div>
+                }
+                else if (widget.ChartKind == "Donut")
+                {
+                    var slices = rows.Take(6).ToList();
+                    var otherTotal = rows.Skip(6).Sum(r => r.Total);
+                    if (otherTotal > 0) { slices.Add(("أخرى", otherTotal)); }
+                    var acc = 0.0;
+                    var stops = new List<string>();
+                    for (var i = 0; i < slices.Count; i++)
+                    {
+                        var start = acc;
+                        acc += slices[i].Total * 360.0 / total;
+                        stops.Add($"{paletteColors[i % paletteColors.Length]} {start:0.#}deg {acc:0.#}deg");
+                    }
+                    <div class="zxd-donut-wrap">
+                        <div class="zxd-donut" style="background:conic-gradient(@string.Join(", ", stops))"><i></i></div>
+                        <div class="zxd-legend">
+                            @for (var i = 0; i < slices.Count; i++)
+                            {
+                                <span><i style="background:@paletteColors[i % paletteColors.Length]"></i>@slices[i].Name <b>@slices[i].Total</b></span>
+                            }
+                        </div>
+                    </div>
+                }
+                else @* Table *@
+                {
+                    <table class="zxd-table">
+                        <thead><tr><th>الاسم</th><th>العدد</th><th>النسبة</th></tr></thead>
+                        <tbody>
+                            @foreach (var row in rows.Take(10))
+                            {
+                                <tr>
+                                    <td>@row.Name</td>
+                                    <td class="zxd-ltr">@row.Total</td>
+                                    <td class="zxd-ltr">@(row.Total * 100 / total)%</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        }
     </div>
+
+    @* ---------- درج «تخصيص اللوحة» ---------- *@
+    <div class="zxd-builder-backdrop" id="zxd-backdrop" onclick="zxdCloseBuilder()"></div>
+    <aside class="zxd-builder" id="zxd-builder" aria-hidden="true">
+        <div class="zxd-builder-head">
+            <h2>تخصيص اللوحة</h2>
+            <button type="button" class="zxd-x" onclick="zxdCloseBuilder()">×</button>
+        </div>
+        <div class="zxd-builder-body">
+
+            <h3>الويدجتات الحالية <small>رتّب بالأسهم، أظهر/أخفِ بالمربع</small></h3>
+            <form method="post" asp-page-handler="SaveLayout" id="zxd-layout-form">
+                <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+                <input type="hidden" name="OrderedIds" id="zxd-ordered" />
+                <ul class="zxd-wlist" id="zxd-wlist">
+                    @foreach (var widget in Model.AllWidgets)
+                    {
+                        <li data-id="@widget.Id">
+                            <label><input type="checkbox" name="VisibleIds" value="@widget.Id" checked="@widget.IsVisible" /></label>
+                            <span class="t">@widget.DisplayTitle</span>
+                            <span class="k">@DashboardWidgetStore.ChartKinds.FirstOrDefault(c => c.Key == widget.ChartKind).Label</span>
+                            <span class="mv">
+                                <button type="button" onclick="zxdMove(this, -1)">▲</button>
+                                <button type="button" onclick="zxdMove(this, 1)">▼</button>
+                            </span>
+                            <button type="button" class="zxd-x small" title="حذف"
+                                    onclick="zxdDelete(@widget.Id, '@widget.DisplayTitle')">×</button>
+                        </li>
+                    }
+                </ul>
+                <button type="submit" class="zxd-more" style="margin-top:10px" onclick="zxdCollectOrder()">حفظ التخطيط</button>
+            </form>
+
+            <form method="post" asp-page-handler="DeleteWidget" id="zxd-delete-form" hidden>
+                <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+                <input type="hidden" name="id" id="zxd-delete-id" />
+            </form>
+
+            <h3 style="margin-top:18px">إضافة ويدجت</h3>
+            <form method="post" asp-page-handler="AddWidget" class="zxd-addform">
+                <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+                <label>المقياس (شنو يظهر)
+                    <select name="Metric" id="zxd-metric" onchange="zxdMetricChanged()">
+                        @foreach (var (key, label, isCounter) in DashboardWidgetStore.Metrics)
+                        {
+                            <option value="@key" data-counter="@(isCounter ? "1" : "0")">@label</option>
+                        }
+                    </select>
+                </label>
+                <label id="zxd-kind-wrap">شكل العرض (شلون يظهر)
+                    <select name="ChartKind" id="zxd-kind">
+                        @foreach (var (key, label) in DashboardWidgetStore.ChartKinds.Where(c => c.Key != "Number"))
+                        {
+                            <option value="@key">@label</option>
+                        }
+                    </select>
+                </label>
+                <label>عنوان مخصص (اختياري)
+                    <input type="text" name="Title" placeholder="فارغ = تسمية المقياس" />
+                </label>
+                <button type="submit" class="zxd-more">إضافة</button>
+            </form>
+        </div>
+    </aside>
 </section>
 
 @section Scripts {
     <script>
-        function zxdTab(name) {
-            document.querySelectorAll('#zxd-today-tabs button').forEach(function (btn) {
-                btn.classList.toggle('active', btn.dataset.tab === name);
-            });
-            document.querySelectorAll('[data-panel]').forEach(function (panel) {
-                panel.hidden = panel.dataset.panel !== name;
-            });
+        function zxdOpenBuilder() {
+            document.getElementById('zxd-builder').classList.add('open');
+            document.getElementById('zxd-backdrop').classList.add('open');
         }
+        function zxdCloseBuilder() {
+            document.getElementById('zxd-builder').classList.remove('open');
+            document.getElementById('zxd-backdrop').classList.remove('open');
+        }
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') zxdCloseBuilder(); });
+
+        // ترتيب: تحريك عنصر القائمة أعلى/أسفل
+        function zxdMove(btn, dir) {
+            var li = btn.closest('li');
+            if (dir < 0 && li.previousElementSibling) li.parentNode.insertBefore(li, li.previousElementSibling);
+            if (dir > 0 && li.nextElementSibling) li.parentNode.insertBefore(li.nextElementSibling, li);
+        }
+        function zxdCollectOrder() {
+            var ids = Array.from(document.querySelectorAll('#zxd-wlist li')).map(function (li) { return li.dataset.id; });
+            document.getElementById('zxd-ordered').value = ids.join(',');
+        }
+        function zxdDelete(id, title) {
+            if (!confirm('حذف ويدجت «' + title + '»؟')) return;
+            document.getElementById('zxd-delete-id').value = id;
+            document.getElementById('zxd-delete-form').submit();
+        }
+
+        // العدادات شكلها «رقم» حصراً — نخفي منتقي الشكل لها
+        function zxdMetricChanged() {
+            var option = document.getElementById('zxd-metric').selectedOptions[0];
+            document.getElementById('zxd-kind-wrap').hidden = option.dataset.counter === '1';
+        }
+        zxdMetricChanged();
     </script>
 }
