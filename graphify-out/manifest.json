@@ -3685,8 +3685,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Branding/Index.cshtml": {
-    "mtime": 1784740574.3698068,
-    "ast_hash": "d62075793998354dd931af4bf83220e7",
+    "mtime": 1784741799.3657973,
+    "ast_hash": "ba9dd0ca91cd51e42e3e73e2c07dc958",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Branding/Index.cshtml.cs": {
@@ -3695,8 +3695,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/zynora-branding-studio.js": {
-    "mtime": 1784738616.052219,
-    "ast_hash": "3b45a8d8b87fbc74717c07c12c97513f",
+    "mtime": 1784741811.6107886,
+    "ast_hash": "61381e5655ccd7d9598b134f575c90b3",
     "semantic_hash": ""
   }
 }
