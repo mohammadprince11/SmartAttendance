@@ -559,3 +559,150 @@ html[dir="rtl"] .hrms-slideover.open { transform: translateX(0); }
     color: #f87171 !important;
     font-weight: 900 !important;
 }
+
+/* ==========================================================================
+   الجلد الفاتح الموحد لكل شاشات المودل (2026-07)
+   المشكلة: كل صفحة تحمل ستايلاً داخلياً دارك-أولاً بتغطية لايت جزئية مختلفة،
+   فيطلع الثيم الفاتح «كل صفحة بشكل». هذا القسم يفرض قيماً واحدة على كل
+   البادئات (sht/ats/dat/shr/rec/sha/avw/mat/zxd) بخصوصية أعلى
+   (html[data-theme=light] body ...) لتتغلب على ستايلات الصفحات الداخلية.
+   ========================================================================== */
+
+/* لون النص العام وخلفيات الهيدرات: أبيض مسطح بلا تدرجات */
+html[data-theme="light"] body .sht-page, html[data-theme="light"] body .ats-page,
+html[data-theme="light"] body .dat-page, html[data-theme="light"] body .shr-page,
+html[data-theme="light"] body .rec-page, html[data-theme="light"] body .sha-page,
+html[data-theme="light"] body .avw-page, html[data-theme="light"] body .mat-page,
+html[data-theme="light"] body .zxd-page {
+    color: #0b2239;
+}
+
+html[data-theme="light"] body .sht-head, html[data-theme="light"] body .ats-head,
+html[data-theme="light"] body .dat-head, html[data-theme="light"] body .shr-head,
+html[data-theme="light"] body .rec-head, html[data-theme="light"] body .sha-head,
+html[data-theme="light"] body .avw-head, html[data-theme="light"] body .mat-head,
+html[data-theme="light"] body .zxd-head {
+    background: #ffffff;
+    border-color: rgba(15, 60, 100, .14);
+}
+
+/* البطاقات وحاويات الجداول والأشرطة */
+html[data-theme="light"] body .sht-table-card, html[data-theme="light"] body .ats-card,
+html[data-theme="light"] body .dat-table-card, html[data-theme="light"] body .shr-table-card,
+html[data-theme="light"] body .rec-table-card, html[data-theme="light"] body .sha-table-card,
+html[data-theme="light"] body .avw-matrix-card, html[data-theme="light"] body .mat-table-card,
+html[data-theme="light"] body .dat-bar, html[data-theme="light"] body .rec-bar,
+html[data-theme="light"] body .sha-bar, html[data-theme="light"] body .mat-bar,
+html[data-theme="light"] body .avw-bar, html[data-theme="light"] body .zxd-card {
+    background: #ffffff;
+    border-color: rgba(15, 60, 100, .14);
+}
+
+/* رؤوس الجداول وخلايا العمود المثبت */
+html[data-theme="light"] body .sht-table th, html[data-theme="light"] body .ats-table th,
+html[data-theme="light"] body .dat-table th, html[data-theme="light"] body .shr-table th,
+html[data-theme="light"] body .rec-table th, html[data-theme="light"] body .sha-table th,
+html[data-theme="light"] body .avw-matrix th, html[data-theme="light"] body .mat-table th,
+html[data-theme="light"] body .zxd-table th {
+    background: #f3f7fa;
+    color: #45607a;
+    border-color: rgba(15, 60, 100, .14);
+}
+html[data-theme="light"] body .avw-matrix td.emp,
+html[data-theme="light"] body .avw-matrix th.emp { background: #ffffff; }
+
+/* حقول الإدخال والقوائم داخل كل الشاشات (اللي ما يلتقطها nxcs) */
+html[data-theme="light"] body .sht-page input, html[data-theme="light"] body .sht-page select,
+html[data-theme="light"] body .ats-page input, html[data-theme="light"] body .ats-page select,
+html[data-theme="light"] body .dat-page input, html[data-theme="light"] body .dat-page select,
+html[data-theme="light"] body .shr-page input, html[data-theme="light"] body .shr-page select,
+html[data-theme="light"] body .rec-page input, html[data-theme="light"] body .rec-page select,
+html[data-theme="light"] body .sha-page input, html[data-theme="light"] body .sha-page select,
+html[data-theme="light"] body .avw-page input, html[data-theme="light"] body .avw-page select,
+html[data-theme="light"] body .mat-page input, html[data-theme="light"] body .mat-page select,
+html[data-theme="light"] body .zxd-page input, html[data-theme="light"] body .zxd-page select {
+    background: #ffffff;
+    color: #0b2239;
+    border-color: rgba(15, 60, 100, .2);
+}
+
+/* الأزرار الشبح (حدود شفافة) — نص غامق مقروء */
+html[data-theme="light"] body .sht-btn.ghost, html[data-theme="light"] body .ats-btn.ghost,
+html[data-theme="light"] body .dat-btn.ghost, html[data-theme="light"] body .shr-btn.ghost,
+html[data-theme="light"] body .rec-btn.ghost, html[data-theme="light"] body .sha-btn.ghost,
+html[data-theme="light"] body .avw-btn.ghost, html[data-theme="light"] body .mat-btn.ghost {
+    color: #0b2239;
+    border-color: rgba(15, 60, 100, .25);
+}
+
+/* الشارات الملونة: درجات أغمق مقروءة على الأبيض بدل ألوان الدارك الفاقعة */
+html[data-theme="light"] body [class*="-chip"] { filter: none; }
+html[data-theme="light"] body .sht-chip, html[data-theme="light"] body .ats-chip,
+html[data-theme="light"] body .rec-chip.Auto, html[data-theme="light"] body .mat-chip.Locked,
+html[data-theme="light"] body .zxd-chip { color: #0e7490; background: rgba(14, 116, 144, .1); }
+
+html[data-theme="light"] body .dat-chip.Present, html[data-theme="light"] body .rec-chip.Approved,
+html[data-theme="light"] body .zxd-chip.approved, html[data-theme="light"] body .mat-chip.Approved,
+html[data-theme="light"] body .sht-chip.on { color: #15803d; background: rgba(21, 128, 61, .12); }
+
+html[data-theme="light"] body .dat-chip.Late, html[data-theme="light"] body .rec-chip.Pending,
+html[data-theme="light"] body .zxd-chip.pending, html[data-theme="light"] body .mat-chip.UnderReview {
+    color: #a16207; background: rgba(161, 98, 7, .12);
+}
+
+html[data-theme="light"] body .dat-chip.Absent, html[data-theme="light"] body .rec-chip.rejected,
+html[data-theme="light"] body .zxd-chip.rejected, html[data-theme="light"] body .zxd-chip.danger,
+html[data-theme="light"] body .sht-chip.off, html[data-theme="light"] body .ats-chip.off {
+    color: #b91c1c; background: rgba(185, 28, 28, .12);
+}
+
+html[data-theme="light"] body .dat-chip.Incomplete { color: #c2410c; background: rgba(194, 65, 12, .12); }
+html[data-theme="light"] body .dat-chip.Weekend, html[data-theme="light"] body .dat-chip.Rest,
+html[data-theme="light"] body .rec-chip.Ignored { color: #64748b; background: rgba(100, 116, 139, .12); }
+
+/* أرقام وعناوين ملونة فاقعة بالدارك — درجات أغمق باللايت */
+html[data-theme="light"] body .zxd-stat.amber b, html[data-theme="light"] body .dat-num.warn,
+html[data-theme="light"] body .mat-num.warn { color: #a16207; }
+html[data-theme="light"] body .zxd-stat.red b, html[data-theme="light"] body .dat-num.bad,
+html[data-theme="light"] body .mat-num.bad { color: #b91c1c; }
+html[data-theme="light"] body .zxd-stat.green b { color: #15803d; }
+
+/* عناصر النص الخافت */
+html[data-theme="light"] body .sht-empty, html[data-theme="light"] body .ats-empty,
+html[data-theme="light"] body .dat-empty, html[data-theme="light"] body .shr-empty,
+html[data-theme="light"] body .rec-empty, html[data-theme="light"] body .sha-empty,
+html[data-theme="light"] body .avw-empty, html[data-theme="light"] body .mat-empty,
+html[data-theme="light"] body .zxd-empty { color: #64748b; }
+
+/* الشارات الأساسية الناقصة من الجلد الموحد (تركوازي فاقع ← أغمق مقروء) */
+html[data-theme="light"] body .shr-chip, html[data-theme="light"] body .dat-chip,
+html[data-theme="light"] body .rec-chip, html[data-theme="light"] body .mat-chip,
+html[data-theme="light"] body .sha-shift, html[data-theme="light"] body .dat-shift,
+html[data-theme="light"] body .avw-total, html[data-theme="light"] body .dat-check {
+    color: #0e7490;
+}
+html[data-theme="light"] body .shr-chip { background: rgba(14, 116, 144, .1); }
+html[data-theme="light"] body .shr-chip.auto { color: #15803d; background: rgba(21, 128, 61, .1); }
+html[data-theme="light"] body .shr-chip.note { color: #6d28d9; background: rgba(109, 40, 217, .1); }
+html[data-theme="light"] body .shr-chip.off { color: #b91c1c; background: rgba(185, 28, 28, .1); }
+html[data-theme="light"] body .shr-sentence, html[data-theme="light"] body .zxd-sub { color: #64748b; }
+
+/* العدادات والبلاطات الملونة + الأزرار الحمراء الشفافة — درجات أغمق باللايت */
+html[data-theme="light"] body .mat-stat[style*="facc15"], html[data-theme="light"] body .dat-stat.late,
+html[data-theme="light"] body .sha-stat[style*="facc15"] { color: #a16207 !important; }
+html[data-theme="light"] body .mat-stat[style*="4ade80"], html[data-theme="light"] body .dat-stat.present,
+html[data-theme="light"] body .sha-stat[style*="4ade80"] { color: #15803d !important; }
+html[data-theme="light"] body .mat-stat[style*="f87171"], html[data-theme="light"] body .dat-stat.absent { color: #b91c1c !important; }
+html[data-theme="light"] body .mat-stat[style*="12D9E3"], html[data-theme="light"] body .dat-stat.incomplete { color: #0e7490 !important; }
+
+html[data-theme="light"] body .mat-btn.no, html[data-theme="light"] body .rec-btn.no,
+html[data-theme="light"] body .sha-btn.no {
+    color: #b91c1c;
+    border-color: rgba(185, 28, 28, .35);
+}
+
+/* تبويبات وشرائح التركوازي الفاقع */
+html[data-theme="light"] body .rec-tab.active, html[data-theme="light"] body .zxd-tabs button.active {
+    color: #0e7490; background: rgba(14, 116, 144, .1); border-color: rgba(14, 116, 144, .35);
+}
+html[data-theme="light"] body .dat-num, html[data-theme="light"] body .mat-num { color: inherit; }

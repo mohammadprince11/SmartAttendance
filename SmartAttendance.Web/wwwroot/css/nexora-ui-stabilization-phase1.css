@@ -316,3 +316,145 @@ input[type="url"] {
         flex: 1 1 auto !important;
     }
 }
+
+/* ==========================================================================
+   NEXORA_LIGHT_THEME_COMPAT — نسخة الثيم الفاتح (2026-07)
+   كل قواعد هذا الملف كانت خلفيات دارك ثابتة بـ!important فتكسر
+   data-theme="light" بكل الشاشات. هذا البلوك يقلبها للفاتح بنفس القوة.
+   ========================================================================== */
+
+html[data-theme="light"] .nxr-topline,
+html[data-theme="light"] .nxr-profile-pro-topline,
+html[data-theme="light"] .nxr-emp-hero {
+    background: #ffffff !important;
+    box-shadow: 0 10px 26px rgba(15, 40, 70, .08) !important;
+}
+
+html[data-theme="light"] .nxr-btn,
+html[data-theme="light"] .btn,
+html[data-theme="light"] button.nxr-btn,
+html[data-theme="light"] a.nxr-btn {
+    background: #ffffff !important;
+    color: #0b2239 !important;
+    border-color: rgba(15, 60, 100, .22) !important;
+}
+
+html[data-theme="light"] .nxr-btn:hover,
+html[data-theme="light"] .btn:hover {
+    background: rgba(13, 148, 158, .08) !important;
+    color: #0b2239 !important;
+}
+
+/* الأزرار الرئيسية (تيل متدرج) تبقى كما هي — مقروءة على الثيمين */
+html[data-theme="light"] .nxr-btn.primary,
+html[data-theme="light"] .btn-primary,
+html[data-theme="light"] button[type="submit"].nxr-btn,
+html[data-theme="light"] .nxr-btn.gold {
+    color: #04141F !important;
+    background: linear-gradient(135deg, var(--nx-teal), var(--nx-teal-2)) !important;
+}
+
+html[data-theme="light"] .nxr-btn.danger,
+html[data-theme="light"] .btn-danger {
+    background: rgba(185, 28, 28, .08) !important;
+    border-color: rgba(185, 28, 28, .3) !important;
+    color: #b91c1c !important;
+}
+
+html[data-theme="light"] .nxr-card,
+html[data-theme="light"] .nxr-panel,
+html[data-theme="light"] .nxr-kpi,
+html[data-theme="light"] .nxr-score-card,
+html[data-theme="light"] .nxr-table-wrap,
+html[data-theme="light"] .nxr-emp-kpi,
+html[data-theme="light"] .nxr-emp-filter-card,
+html[data-theme="light"] .nxr-profile-hero,
+html[data-theme="light"] .nxr-profile-pro-hero,
+html[data-theme="light"] .card,
+html[data-theme="light"] .table-card {
+    background: #ffffff !important;
+    color: #0b2239 !important;
+    box-shadow: 0 10px 26px rgba(15, 40, 70, .08) !important;
+}
+
+/* الشارات: درجات أغمق مقروءة على الأبيض */
+html[data-theme="light"] .nxr-chip,
+html[data-theme="light"] .badge,
+html[data-theme="light"] .nxr-status {
+    background: rgba(14, 116, 144, .1) !important;
+    border-color: rgba(14, 116, 144, .25) !important;
+    color: #0e7490 !important;
+}
+html[data-theme="light"] .nxr-chip.gold,
+html[data-theme="light"] .badge.gold {
+    background: rgba(161, 98, 7, .1) !important;
+    border-color: rgba(161, 98, 7, .25) !important;
+    color: #a16207 !important;
+}
+html[data-theme="light"] .nxr-status.ok,
+html[data-theme="light"] .badge.ok {
+    background: rgba(21, 128, 61, .1) !important;
+    border-color: rgba(21, 128, 61, .25) !important;
+    color: #15803d !important;
+}
+html[data-theme="light"] .nxr-status.warn,
+html[data-theme="light"] .badge.warn {
+    background: rgba(161, 98, 7, .1) !important;
+    border-color: rgba(161, 98, 7, .25) !important;
+    color: #a16207 !important;
+}
+html[data-theme="light"] .nxr-status.danger,
+html[data-theme="light"] .badge.danger {
+    background: rgba(185, 28, 28, .1) !important;
+    border-color: rgba(185, 28, 28, .25) !important;
+    color: #b91c1c !important;
+}
+
+/* الحقول: بيضاء بنص غامق — القاعدة الأهم (كانت تضرب كل التطبيق) */
+html[data-theme="light"] .nxr-input,
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea {
+    background: #ffffff !important;
+    color: #0b2239 !important;
+    border-color: rgba(15, 60, 100, .22) !important;
+}
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder {
+    color: rgba(70, 95, 120, .6) !important;
+}
+html[data-theme="light"] input:focus,
+html[data-theme="light"] select:focus,
+html[data-theme="light"] textarea:focus,
+html[data-theme="light"] .nxr-input:focus {
+    border-color: rgba(13, 148, 158, .6) !important;
+    box-shadow: 0 0 0 4px rgba(13, 148, 158, .1) !important;
+}
+
+/* رؤوس وخلايا الجداول العامة بالفاتح (كانت rgba(4,14,25,.72) ثابتة) */
+html[data-theme="light"] thead th,
+html[data-theme="light"] .table thead th,
+html[data-theme="light"] .nxr-table thead th {
+    background: #f3f7fa !important;
+    color: #45607a !important;
+    border-bottom-color: rgba(15, 60, 100, .14) !important;
+}
+html[data-theme="light"] tbody td,
+html[data-theme="light"] .table tbody td,
+html[data-theme="light"] .nxr-table tbody td {
+    border-bottom-color: rgba(15, 60, 100, .1) !important;
+}
+html[data-theme="light"] .text-danger,
+html[data-theme="light"] .field-validation-error { color: #b91c1c !important; }
+html[data-theme="light"] .nxr-success,
+html[data-theme="light"] .alert-success {
+    border-color: rgba(21, 128, 61, .3) !important;
+    background: rgba(21, 128, 61, .08) !important;
+    color: #15803d !important;
+}
+html[data-theme="light"] .nxr-error,
+html[data-theme="light"] .alert-danger {
+    border-color: rgba(185, 28, 28, .3) !important;
+    background: rgba(185, 28, 28, .08) !important;
+    color: #b91c1c !important;
+}
