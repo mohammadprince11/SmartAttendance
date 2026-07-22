@@ -23,7 +23,7 @@ body {
     margin: 0;
     min-height: 100vh;
     background:
-        radial-gradient(circle at 8% 0%, rgba(24, 199, 189, .08), transparent 28%),
+        radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--brand-primary) 8%, transparent), transparent 28%),
         var(--zy-bg) !important;
     color: var(--zy-text) !important;
     font-family: var(--zy-font-ar) !important;
@@ -75,7 +75,7 @@ html[dir="ltr"] .nexora-shell {
     overflow-x: hidden !important;
     padding: var(--zy-space-3) var(--zy-space-2) !important;
     background:
-        radial-gradient(circle at 82% 0%, rgba(24, 199, 189, .10), transparent 30%),
+        radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--brand-primary) 10%, transparent), transparent 30%),
         linear-gradient(180deg, var(--zy-midnight-navy), #06101F 100%) !important;
     border: 0 !important;
     color: var(--zy-cloud-white) !important;
@@ -183,8 +183,8 @@ html[dir="ltr"] .nexora-main {
 }
 
 .nexora-nav-group[open] {
-    border-color: rgba(24, 199, 189, .18) !important;
-    background: rgba(24, 199, 189, .035) !important;
+    border-color: color-mix(in srgb, var(--brand-primary) 18%, transparent) !important;
+    background: color-mix(in srgb, var(--brand-primary) 3.5%, transparent) !important;
 }
 
 .nexora-nav-link,
@@ -232,7 +232,7 @@ html[dir="ltr"] .nexora-main {
     color: var(--zy-midnight-navy) !important;
     background: var(--zy-electric-teal) !important;
     border-color: rgba(66, 222, 211, .68) !important;
-    box-shadow: 0 8px 20px rgba(24, 199, 189, .14) !important;
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--brand-primary) 14%, transparent) !important;
 }
 
 .nexora-nav-link.active span,
@@ -475,7 +475,7 @@ html[lang="en"] .nexora-page-title {
 
 .nexora-main {
     background:
-        radial-gradient(circle at 8% -8%, rgba(24, 199, 189, .07), transparent 28%),
+        radial-gradient(circle at 8% -8%, color-mix(in srgb, var(--brand-primary) 7%, transparent), transparent 28%),
         var(--zy-bg) !important;
 }
 
@@ -636,7 +636,7 @@ html[data-theme="dark"] .nexora-theme-icon--moon {
 }
 
 .nexora-content {
-    scrollbar-color: rgba(24, 199, 189, .35) transparent;
+    scrollbar-color: color-mix(in srgb, var(--brand-primary) 35%, transparent) transparent;
 }
 
 @media (max-width: 760px) {
@@ -680,8 +680,8 @@ html[data-theme="light"] .nexora-nav-group > summary { color: rgba(11, 34, 57, .
 html[data-theme="light"] .nexora-nav-link:hover,
 html[data-theme="light"] .nexora-nav-group > summary:hover {
     color: #0b2239 !important;
-    background: rgba(24, 199, 189, .08) !important;
-    border-color: rgba(24, 199, 189, .18) !important;
+    background: color-mix(in srgb, var(--brand-primary) 8%, transparent) !important;
+    border-color: color-mix(in srgb, var(--brand-primary) 18%, transparent) !important;
 }
 
 html[data-theme="light"] .nexora-nav-group {
@@ -689,8 +689,8 @@ html[data-theme="light"] .nexora-nav-group {
     background: rgba(15, 60, 100, .02) !important;
 }
 html[data-theme="light"] .nexora-nav-group[open] {
-    border-color: rgba(24, 199, 189, .28) !important;
-    background: rgba(24, 199, 189, .05) !important;
+    border-color: color-mix(in srgb, var(--brand-primary) 28%, transparent) !important;
+    background: color-mix(in srgb, var(--brand-primary) 5%, transparent) !important;
 }
 
 /* الرابط النشط: تركوازي بنص غامق — نفس هوية الدارك، مقروء بالفاتح */

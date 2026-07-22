@@ -1,8 +1,10 @@
 ﻿:root {
     --midnight-navy: #081426;
     --deep-space: #101C30;
-    --electric-teal: #18C7BD;
-    --refined-aqua: #42DED3;
+    /* Bridge the legacy people palette to the Theme Contract so .zhr-* components
+       follow the Branding & Theme Engine (P7 migration). */
+    --electric-teal: var(--brand-primary, #18C7BD);
+    --refined-aqua: var(--brand-primary-aqua, #42DED3);
     --soft-silver: #D9E1E8;
     --cloud-white: #F7F9FB;
     --danger: #FF4D4F;
@@ -39,8 +41,8 @@ body {
 }
 
 .zhr-company-badge {
-    background: rgba(24, 199, 189, 0.1);
-    border: 1px solid rgba(24, 199, 189, 0.2);
+    background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brand-primary) 20%, transparent);
     padding: 8px 16px;
     border-radius: 8px;
     font-size: 14px;
@@ -69,7 +71,7 @@ body {
 
 .zhr-btn-primary:hover {
     background-color: var(--refined-aqua);
-    box-shadow: 0 4px 12px rgba(24, 199, 189, 0.2);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--brand-primary) 20%, transparent);
     transform: translateY(-1px);
 }
 
@@ -172,7 +174,7 @@ body {
 
 .zhr-input:focus, .zhr-select:focus {
     border-color: var(--electric-teal);
-    box-shadow: 0 0 0 3px rgba(24, 199, 189, 0.15);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 15%, transparent);
 }
 
 .zhr-select option {
@@ -219,7 +221,7 @@ body {
 }
 
 .zhr-table th {
-    background-color: rgba(24, 199, 189, 0.03);
+    background-color: color-mix(in srgb, var(--brand-primary) 3%, transparent);
     color: var(--soft-silver);
     font-weight: 600;
     padding: 16px;
@@ -254,9 +256,9 @@ body {
 }
 
 .zhr-status-active {
-    background-color: rgba(24, 199, 189, 0.1);
+    background-color: color-mix(in srgb, var(--brand-primary) 10%, transparent);
     color: var(--electric-teal);
-    border: 1px solid rgba(24, 199, 189, 0.2);
+    border: 1px solid color-mix(in srgb, var(--brand-primary) 20%, transparent);
 }
 
 .zhr-status-inactive {
@@ -301,7 +303,7 @@ body {
 }
 
 .zhr-page-link:hover:not(:disabled) {
-    background: rgba(24, 199, 189, 0.1);
+    background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
     border-color: var(--electric-teal);
     color: var(--electric-teal);
 }

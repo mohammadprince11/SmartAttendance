@@ -23,7 +23,7 @@ input[type="checkbox"]:not([role="switch"]):not(.no-zy-check) {
     min-block-size: 18px !important;
     max-block-size: 18px !important;
     padding: 0 !important;
-    border: 1.5px solid var(--sa-border-strong, rgba(24, 199, 189, .45)) !important;
+    border: 1.5px solid var(--sa-border-strong, color-mix(in srgb, var(--brand-primary) 45%, transparent)) !important;
     border-radius: 6px !important;
     background: var(--sa-input, #fff) !important;
     background-image: none !important;
@@ -42,7 +42,7 @@ input[type="checkbox"]:not([role="switch"]):not(.no-zy-check):hover:not(:disable
 input[type="checkbox"]:not([role="switch"]):not(.no-zy-check):focus-visible {
     outline: none !important;
     border-color: var(--sa-primary, #18C7BD) !important;
-    box-shadow: var(--zy-focus-ring, 0 0 0 3px rgba(24, 199, 189, .22)) !important;
+    box-shadow: var(--zy-focus-ring, 0 0 0 3px color-mix(in srgb, var(--brand-primary) 22%, transparent)) !important;
 }
 
 input[type="checkbox"]:not([role="switch"]):not(.no-zy-check):checked {

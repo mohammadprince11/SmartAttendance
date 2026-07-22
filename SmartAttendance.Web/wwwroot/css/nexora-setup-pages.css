@@ -1306,8 +1306,8 @@ html.nx-setup-modal-open body .nxos__menu.is-open {
 }
 
 .nx-company-file-button:focus-within {
-    border-color: rgba(24, 199, 189, .72) !important;
-    box-shadow: 0 0 0 4px rgba(24, 199, 189, .12) !important;
+    border-color: color-mix(in srgb, var(--brand-primary) 72%, transparent) !important;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-primary) 12%, transparent) !important;
 }
 
 .nx-company-remove-logo {

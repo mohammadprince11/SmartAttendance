@@ -25,13 +25,13 @@ input[type="file"]:not(.no-zy-file):not(.z360-hidden-input) {
 }
 
 input[type="file"]:not(.no-zy-file):not(.z360-hidden-input):hover {
-    border-color: var(--sa-border-strong, rgba(24, 199, 189, .45)) !important;
+    border-color: var(--sa-border-strong, color-mix(in srgb, var(--brand-primary) 45%, transparent)) !important;
 }
 
 input[type="file"]:not(.no-zy-file):not(.z360-hidden-input):focus-visible {
     outline: none !important;
     border-color: var(--sa-primary, #18C7BD) !important;
-    box-shadow: var(--zy-focus-ring, 0 0 0 3px rgba(24, 199, 189, .22)) !important;
+    box-shadow: var(--zy-focus-ring, 0 0 0 3px color-mix(in srgb, var(--brand-primary) 22%, transparent)) !important;
 }
 
 /* The "choose file" button. */
@@ -44,7 +44,7 @@ input[type="file"]:not(.no-zy-file):not(.z360-hidden-input)::file-selector-butto
     min-height: 30px !important;
     border: 1px solid var(--sa-primary, #18C7BD) !important;
     border-radius: 10px !important;
-    background: var(--sa-primary-soft, rgba(24, 199, 189, .12)) !important;
+    background: var(--sa-primary-soft, color-mix(in srgb, var(--brand-primary) 12%, transparent)) !important;
     color: var(--sa-primary, #18C7BD) !important;
     cursor: pointer !important;
     transition: background-color .15s ease, color .15s ease !important;
@@ -63,7 +63,7 @@ input[type="file"]:not(.no-zy-file):not(.z360-hidden-input)::-webkit-file-upload
     padding: 7px 16px !important;
     border: 1px solid var(--sa-primary, #18C7BD) !important;
     border-radius: 10px !important;
-    background: var(--sa-primary-soft, rgba(24, 199, 189, .12)) !important;
+    background: var(--sa-primary-soft, color-mix(in srgb, var(--brand-primary) 12%, transparent)) !important;
     color: var(--sa-primary, #18C7BD) !important;
     cursor: pointer !important;
 }

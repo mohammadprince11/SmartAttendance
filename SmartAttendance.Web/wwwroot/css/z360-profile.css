@@ -13,10 +13,10 @@
     --z360-muted: #6c7d8f;
     --z360-navy: #081426;
     --z360-navy-2: #0d2137;
-    --z360-teal: #18c7bd;
-    --z360-aqua: #42ded3;
+    --z360-teal: var(--brand-primary, #18c7bd);
+    --z360-aqua: var(--brand-primary-aqua, #42ded3);
     --z360-cyan: #18aee8;
-    --z360-gold: #d4b36a;
+    --z360-gold: var(--brand-accent, #d4b36a);
     --z360-success: #13b981;
     --z360-warning: #e7a51d;
     --z360-danger: #ec5965;
@@ -44,10 +44,10 @@
     --z360-border-strong: #bdd0df;
     --z360-text: #102238;
     --z360-muted: #6c7d8f;
-    --z360-teal: #18c7bd;
+    --z360-teal: var(--brand-primary, #18c7bd);
     --z360-cyan: #18aee8;
-    --z360-aqua: #42ded3;
-    --z360-gold: #d4b36a;
+    --z360-aqua: var(--brand-primary-aqua, #42ded3);
+    --z360-gold: var(--brand-accent, #d4b36a);
     --z360-success: #13b981;
     --z360-warning: #e7a51d;
     --z360-danger: #ec5965;
@@ -140,14 +140,14 @@ html[data-theme="dark"] .z360-page {
     border: 1px solid var(--z360-border);
     border-radius: 16px;
     background:
-        radial-gradient(circle at 88% 8%, rgba(24, 199, 189, .10), transparent 34%),
+        radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--brand-primary) 10%, transparent), transparent 34%),
         var(--z360-surface);
     box-shadow: var(--z360-shadow);
 }
 
 html[data-theme="dark"] .z360-hero {
     background:
-        radial-gradient(circle at 88% 8%, rgba(24, 199, 189, .13), transparent 36%),
+        radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--brand-primary) 13%, transparent), transparent 36%),
         linear-gradient(135deg, #0b2035, #0a192b);
 }
 
@@ -226,9 +226,9 @@ html[data-theme="dark"] .z360-hero {
     min-height: 24px;
     margin-bottom: 6px;
     padding: 3px 9px;
-    border: 1px solid rgba(24, 199, 189, .35);
+    border: 1px solid color-mix(in srgb, var(--brand-primary) 35%, transparent);
     border-radius: 999px;
-    background: rgba(24, 199, 189, .09);
+    background: color-mix(in srgb, var(--brand-primary) 9%, transparent);
     color: var(--z360-teal);
     font-size: 12px;
     font-weight: 800;
@@ -631,8 +631,8 @@ html[data-theme="dark"] .z360-hero {
 }
 
 .z360-detail-nav a:hover {
-    border-color: rgba(24, 199, 189, .34);
-    background: rgba(24, 199, 189, .08);
+    border-color: color-mix(in srgb, var(--brand-primary) 34%, transparent);
+    background: color-mix(in srgb, var(--brand-primary) 8%, transparent);
     color: var(--z360-teal);
 }
 
