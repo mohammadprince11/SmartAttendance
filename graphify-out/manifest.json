@@ -2450,8 +2450,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784738747.4839697,
-    "ast_hash": "e7581b92664203737268c078289c0117",
+    "mtime": 1784745254.270112,
+    "ast_hash": "a6c815197bc24884b8294683bf2b5049",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3717,6 +3717,31 @@
   "SmartAttendance.Tests/ThemeStoreIntegrationTests.cs": {
     "mtime": 1784743611.756844,
     "ast_hash": "f95719b417e841589ba1ac284d50897e",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Security/AccessRoleStore.cs": {
+    "mtime": 1784745084.1328907,
+    "ast_hash": "168cb716db0cc2ec438d0a9c8ef05fbc",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/AccessRoles/Index.cshtml": {
+    "mtime": 1784745180.7354295,
+    "ast_hash": "2d4b2d7be33a255587166f9b988eb88b",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/AccessRoles/Index.cshtml.cs": {
+    "mtime": 1784745140.6839583,
+    "ast_hash": "1f0c80ac12bd2ca7732ac5256e75d368",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/wwwroot/js/zynora-access-roles.js": {
+    "mtime": 1784745203.8102615,
+    "ast_hash": "6d10e7718805ba25a749a1ef29058798",
+    "semantic_hash": ""
+  },
+  "docs/kayan-access-roles-study.md": {
+    "mtime": 1784744905.291455,
+    "ast_hash": "3d839e75fc7c357c2667332ce70dd02c",
     "semantic_hash": ""
   }
 }
