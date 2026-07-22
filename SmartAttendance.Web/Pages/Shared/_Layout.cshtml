@@ -5,6 +5,7 @@
 @inject IThemeContextService ThemeContextService
 @{
     var companyTheme = await ThemeContextService.GetCurrentAsync(Context.RequestAborted);
+    var brandName = string.IsNullOrWhiteSpace(companyTheme.DisplayName) ? "ZYNORA HR" : companyTheme.DisplayName;
 }
 
 <!DOCTYPE html>
@@ -14,7 +15,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>@(ViewData["Title"] ?? "ZYNORA HR") - ZYNORA HR</title>
+    <title>@(ViewData["Title"] ?? brandName) - @brandName</title>
 
     <script>
         (function () {
@@ -47,8 +48,15 @@
         })();
     </script>
 
-    <link rel="icon" type="image/svg+xml" href="~/brand/zynora-symbol.svg" />
-    <link rel="apple-touch-icon" href="~/brand/zynora-symbol-1024.png" />
+    @if (!string.IsNullOrWhiteSpace(companyTheme.FaviconPath))
+    {
+        <link rel="icon" href="@companyTheme.FaviconPath" />
+    }
+    else
+    {
+        <link rel="icon" type="image/svg+xml" href="~/brand/zynora-symbol.svg" />
+        <link rel="apple-touch-icon" href="~/brand/zynora-symbol-1024.png" />
+    }
     <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-ui-stabilization-phase1.css" asp-append-version="true" />
@@ -196,10 +204,10 @@
             <div class="nexora-brand-card">
                 <a asp-page="/Index"
                    class="nexora-brand-link"
-                   aria-label="ZYNORA HR Home">
+                   aria-label="@brandName Home">
                     <img class="nexora-brand-logo"
-                         src="~/brand/zynora-logo-horizontal-light.svg"
-                         alt="ZYNORA HR" />
+                         src="@(string.IsNullOrWhiteSpace(companyTheme.LogoPath) ? Url.Content("~/brand/zynora-logo-horizontal-light.svg") : companyTheme.LogoPath)"
+                         alt="@brandName" />
                     <span class="nexora-brand-tagline">
                         Smarter People. Stronger Business.
                     </span>
@@ -224,6 +232,10 @@
                     <a asp-page="/UserAccess/Index" class="nexora-nav-link nexora-root-link @(IsUnder("/UserAccess") ? "active nexora-active" : "")" data-nav-area="identity" data-sidebar-label="&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0633;&#x062A;&#x062E;&#x062F;&#x0645;&#x064A;&#x0646;">
                         <span class="nexora-nav-dot"></span>
                         <span>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0633;&#x062A;&#x062E;&#x062F;&#x0645;&#x064A;&#x0646;</span>
+                    </a>
+                    <a asp-page="/Branding/Index" class="nexora-nav-link nexora-root-link @(IsUnder("/Branding") ? "active nexora-active" : "")" data-nav-area="branding" data-sidebar-label="&#x0627;&#x0644;&#x0647;&#x0648;&#x064A;&#x0629; &#x0648;&#x0627;&#x0644;&#x062B;&#x064A;&#x0645;">
+                        <span class="nexora-nav-dot gold"></span>
+                        <span>الهوية والثيم</span>
                     </a>
                 }
                 @if (hasVisiblePeopleNavigation)

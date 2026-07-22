@@ -27,6 +27,15 @@ public sealed class ThemeContext
     /// <summary>True when a company override should be injected into the head.</summary>
     public bool HasCompanyOverride => !string.IsNullOrWhiteSpace(CompiledCss);
 
+    /// <summary>Company display name from the published branding snapshot, or null.</summary>
+    public string? DisplayName { get; init; }
+
+    /// <summary>Company logo path from the published branding snapshot, or null.</summary>
+    public string? LogoPath { get; init; }
+
+    /// <summary>Company favicon path from the published branding snapshot, or null.</summary>
+    public string? FaviconPath { get; init; }
+
     public const string DefaultVersion = "default";
 
     /// <summary>The safe fallback: no company, no override, ZYNORA Default skin.</summary>

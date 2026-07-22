@@ -62,6 +62,9 @@ public sealed class ThemeContextService : IThemeContextService
                     CompanyId = companyId,
                     Version = published.VersionId.ToString(CultureInfo.InvariantCulture),
                     CompiledCss = published.CompiledCss,
+                    DisplayName = published.DisplayName,
+                    LogoPath = published.LogoPath,
+                    FaviconPath = published.FaviconPath,
                 };
             });
 

@@ -1,0 +1,182 @@
+@page
+@model SmartAttendance.Web.Pages.Branding.IndexModel
+@{
+    ViewData["Title"] = "الهوية والثيم";
+    var p = Model.Profile;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/zynora-branding-studio.css" asp-append-version="true" />
+}
+
+<div class="brand-studio" data-preview-url="@Url.Page("Index", "Preview")">
+    @if (TempData["BrandingMessage"] is string message)
+    {
+        <div class="brand-toast">@message</div>
+    }
+
+    <div class="brand-head">
+        <div>
+            <h1 class="brand-title">الهوية والثيم</h1>
+            <p class="brand-sub">صمّم هوية <strong>@Model.CompanyName</strong> — الألوان والشعار — والنظام يولّد الثيم كاملاً تلقائياً.</p>
+        </div>
+        <span class="brand-status @(Model.PublishedVersionId.HasValue ? "is-live" : "is-default")">
+            @(Model.PublishedVersionId.HasValue ? $"منشور · إصدار #{Model.PublishedVersionId}" : "هوية ZYNORA الافتراضية")
+        </span>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="brand-grid">
+        <section class="brand-panel">
+            <h2 class="brand-panel-title">ألوان الهوية</h2>
+
+            <div class="brand-field">
+                <label>الاسم المعروض</label>
+                <input type="text" name="DisplayName" value="@p.DisplayName" placeholder="@Model.CompanyName" class="brand-input" />
+            </div>
+
+            <div class="brand-colors">
+                @{
+                    var swatches = new[]
+                    {
+                        ("PrimaryHex", "اللون الرئيسي", string.IsNullOrWhiteSpace(p.PrimaryHex) ? SmartAttendance.Web.Pages.Branding.IndexModel.DefaultPrimary : p.PrimaryHex),
+                        ("SecondaryHex", "اللون الثانوي", string.IsNullOrWhiteSpace(p.SecondaryHex) ? SmartAttendance.Web.Pages.Branding.IndexModel.DefaultSecondary : p.SecondaryHex),
+                        ("AccentHex", "لون التمييز", string.IsNullOrWhiteSpace(p.AccentHex) ? SmartAttendance.Web.Pages.Branding.IndexModel.DefaultAccent : p.AccentHex),
+                    };
+                }
+                @foreach (var (name, label, value) in swatches)
+                {
+                    <div class="brand-color" data-color-field="@name">
+                        <label>@label</label>
+                        <div class="brand-color-row">
+                            <input type="color" value="@value" class="brand-color-dot" data-role="picker" />
+                            <input type="text" name="@name" value="@value" class="brand-input brand-hex" data-role="hex" maxlength="7" />
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="brand-ladder-wrap">
+                <span class="brand-ladder-label">سلّم درجات اللون الرئيسي</span>
+                <div class="brand-ladder" id="brand-ladder"></div>
+            </div>
+
+            <h2 class="brand-panel-title">أصول الهوية</h2>
+            <p class="brand-hint">صور نقطية فقط (PNG / JPG، والأيقونة تقبل ICO) — الحد 3MB.</p>
+
+            <div class="brand-uploads">
+                <div class="brand-field">
+                    <label>الشعار</label>
+                    @if (!string.IsNullOrWhiteSpace(p.LogoPath))
+                    {
+                        <img src="@p.LogoPath" class="brand-asset-preview" alt="logo" />
+                    }
+                    <input type="file" name="LogoFile" accept="image/png,image/jpeg" class="brand-file" />
+                </div>
+                <div class="brand-field">
+                    <label>أيقونة المتصفح (favicon)</label>
+                    @if (!string.IsNullOrWhiteSpace(p.FaviconPath))
+                    {
+                        <img src="@p.FaviconPath" class="brand-asset-preview brand-asset-small" alt="favicon" />
+                    }
+                    <input type="file" name="FaviconFile" accept="image/png,image/x-icon,.ico" class="brand-file" />
+                </div>
+                <div class="brand-field">
+                    <label>خلفية شاشة الدخول</label>
+                    @if (!string.IsNullOrWhiteSpace(p.LoginBackgroundPath))
+                    {
+                        <img src="@p.LoginBackgroundPath" class="brand-asset-preview" alt="login background" />
+                    }
+                    <input type="file" name="LoginBackgroundFile" accept="image/png,image/jpeg" class="brand-file" />
+                </div>
+            </div>
+
+            <div class="brand-actions">
+                <button type="submit" asp-page-handler="SaveDraft" class="brand-btn brand-btn-ghost">حفظ كمسودّة</button>
+                <button type="submit" asp-page-handler="Publish" class="brand-btn brand-btn-primary">نشر الهوية</button>
+                @if (Model.PublishedVersionId.HasValue)
+                {
+                    <button type="submit" asp-page-handler="Reset" class="brand-btn brand-btn-ghost">العودة للافتراضي</button>
+                }
+            </div>
+        </section>
+
+        <section class="brand-panel">
+            <h2 class="brand-panel-title">معاينة حيّة</h2>
+            <div class="brand-validation" id="brand-validation"></div>
+
+            <div class="brand-preview" id="brand-preview">
+                <div class="bp-shell">
+                    <div class="bp-nav">
+                        <span class="bp-nav-item is-active">لوحة البيانات</span>
+                        <span class="bp-nav-item">الموظفون</span>
+                        <span class="bp-nav-item">الحضور</span>
+                    </div>
+                    <div class="bp-body">
+                        <div class="bp-card">
+                            <div class="bp-card-title">بطاقة عيّنة</div>
+                            <p class="bp-card-text">هكذا تظهر المكوّنات بهويتك الجديدة.</p>
+                            <div class="bp-row">
+                                <span class="bp-btn-primary" role="button">إجراء رئيسي</span>
+                                <span class="bp-btn-soft" role="button">ثانوي</span>
+                                <span class="bp-badge">شارة</span>
+                            </div>
+                            <div class="bp-chips">
+                                <span class="bp-chip bp-chip-success">نجاح</span>
+                                <span class="bp-chip bp-chip-warning">تحذير</span>
+                                <span class="bp-chip bp-chip-danger">خطر</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </form>
+
+    @if (Model.Versions.Count > 0)
+    {
+        <section class="brand-panel brand-history">
+            <h2 class="brand-panel-title">سجلّ الإصدارات</h2>
+            <table class="brand-table">
+                <thead>
+                    <tr><th>#</th><th>الحالة</th><th>الفحص</th><th>أُنشئ</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var v in Model.Versions)
+                    {
+                        <tr class="@(v.Status == SmartAttendance.Web.Infrastructure.Theming.ThemeStore.StatusPublished ? "is-published" : "")">
+                            <td>@v.Id</td>
+                            <td><span class="brand-vstatus v-@v.Status.ToLowerInvariant()">@VersionLabel(v.Status)</span></td>
+                            <td>@v.ValidationLevel</td>
+                            <td>@v.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>
+                                @if (v.Status != SmartAttendance.Web.Infrastructure.Theming.ThemeStore.StatusPublished
+                                    && v.Status != SmartAttendance.Web.Infrastructure.Theming.ThemeStore.StatusRejected)
+                                {
+                                    <form method="post" asp-page-handler="Rollback" class="brand-inline-form">
+                                        <input type="hidden" name="versionId" value="@v.Id" />
+                                        <button type="submit" class="brand-btn brand-btn-mini">استرجاع</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </section>
+    }
+</div>
+
+@functions {
+    private static string VersionLabel(string status) => status switch
+    {
+        "Published" => "منشور",
+        "Validated" => "جاهز",
+        "Archived" => "مؤرشف",
+        "Rejected" => "مرفوض",
+        _ => "مسودّة",
+    };
+}
+
+@section Scripts {
+    <script src="~/js/zynora-branding-studio.js" asp-append-version="true"></script>
+}

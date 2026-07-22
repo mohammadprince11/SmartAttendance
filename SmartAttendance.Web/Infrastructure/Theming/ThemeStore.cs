@@ -49,7 +49,12 @@ public static class ThemeStore
         public DateTime? PublishedAt { get; set; }
     }
 
-    public sealed record PublishedTheme(int VersionId, string CompiledCss);
+    public sealed record PublishedTheme(
+        int VersionId,
+        string CompiledCss,
+        string? DisplayName,
+        string? LogoPath,
+        string? FaviconPath);
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
     {
@@ -260,14 +265,21 @@ UPDATE ThemeVersions SET Status = 'Published', PublishedAt = SYSUTCDATETIME()
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,
             """
-SELECT TOP 1 Id, CompiledCss FROM ThemeVersions
+SELECT TOP 1 Id, CompiledCss, BrandingSnapshotJson FROM ThemeVersions
     WHERE CompanyId = @CompanyId AND Status = 'Published'
     ORDER BY PublishedAt DESC, Id DESC;
 """,
             command => HrmsDatabase.AddParameter(command, "@CompanyId", companyId),
-            reader => new PublishedTheme(
-                HrmsDatabase.GetInt(reader, "Id"),
-                HrmsDatabase.GetString(reader, "CompiledCss")));
+            reader =>
+            {
+                var snapshot = DeserializeSnapshot(HrmsDatabase.GetString(reader, "BrandingSnapshotJson"));
+                return new PublishedTheme(
+                    HrmsDatabase.GetInt(reader, "Id"),
+                    HrmsDatabase.GetString(reader, "CompiledCss"),
+                    snapshot?.DisplayName,
+                    snapshot?.LogoPath,
+                    snapshot?.FaviconPath);
+            });
         return rows.FirstOrDefault();
     }
 
@@ -300,4 +312,21 @@ SELECT TOP 1 Id, CompiledCss FROM ThemeVersions
 
     private static string? NullIfEmpty(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value;
+
+    private static BrandingProfile? DeserializeSnapshot(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<BrandingProfile>(json);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
 }
