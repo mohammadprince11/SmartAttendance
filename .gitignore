@@ -57,6 +57,7 @@ _nexora_backups/
 # NEXORA local-only artifacts
 _nexora_diagnostics/
 SmartAttendance.Web/wwwroot/uploads/company-logos/
+SmartAttendance.Web/wwwroot/tenant-assets/
 SmartAttendance.Web/App_Data/PageImports/
 SmartAttendance.Web/App_Data/PositionImports/
 
