@@ -121,6 +121,7 @@ builder.Services.AddScoped<IAttendanceImportService, AttendanceImportService>();
 builder.Services.AddScoped<IMasterDataImportService, MasterDataImportService>();
 builder.Services.AddScoped<ISetupService, SetupService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
+builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Security.IAccessRoleService, SmartAttendance.Web.Infrastructure.Security.AccessRoleService>();
 
 var app = builder.Build();
 

@@ -267,6 +267,50 @@ DELETE FROM AccessRoles WHERE Id = @Id;
         }
     }
 
+    /// <summary>Number of a user's active roles of a type (0 = user is unrestricted for that type).</summary>
+    public static async Task<int> CountUserRolesAsync(
+        ApplicationDbContext dbContext, int systemUserId, string roleType)
+    {
+        await EnsureAsync(dbContext);
+        return await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            """
+SELECT COUNT(*) FROM UserAccessRoles u
+JOIN AccessRoles r ON r.Id = u.RoleId
+WHERE u.SystemUserId = @UserId AND r.RoleType = @RoleType AND r.IsActive = 1;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@UserId", systemUserId);
+                HrmsDatabase.AddParameter(command, "@RoleType", roleType);
+            });
+    }
+
+    /// <summary>All grants across a user's active roles of a type (unioned by the caller).</summary>
+    public static async Task<List<AccessRoleGrant>> GetUserGrantsAsync(
+        ApplicationDbContext dbContext, int systemUserId, string roleType)
+    {
+        await EnsureAsync(dbContext);
+        return await HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+SELECT g.GrantKey, g.Payload FROM AccessRoleGrants g
+JOIN AccessRoles r ON r.Id = g.RoleId
+JOIN UserAccessRoles u ON u.RoleId = r.Id
+WHERE u.SystemUserId = @UserId AND r.RoleType = @RoleType AND r.IsActive = 1;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@UserId", systemUserId);
+                HrmsDatabase.AddParameter(command, "@RoleType", roleType);
+            },
+            reader => new AccessRoleGrant
+            {
+                GrantKey = HrmsDatabase.GetString(reader, "GrantKey"),
+                Payload = NullIfEmpty(HrmsDatabase.GetString(reader, "Payload")),
+            });
+    }
+
     // ---- Helpers -----------------------------------------------------------
 
     private static AccessRole ReadRole(DbDataReader reader) => new()
