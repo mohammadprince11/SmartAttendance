@@ -2590,8 +2590,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Program.cs": {
-    "mtime": 1784737974.7334187,
-    "ast_hash": "6179588e9dbe39a7a80352aadb5b4556",
+    "mtime": 1784748960.1849587,
+    "ast_hash": "b9c375f84c23888ee87944e362e0ddd4",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Properties/launchSettings.json": {
@@ -3720,8 +3720,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/AccessRoleStore.cs": {
-    "mtime": 1784745084.1328907,
-    "ast_hash": "168cb716db0cc2ec438d0a9c8ef05fbc",
+    "mtime": 1784748888.1683948,
+    "ast_hash": "9a81b0f36342ea7fbd81bebc15ddb28c",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AccessRoles/Index.cshtml": {
@@ -3752,6 +3752,26 @@
   "SmartAttendance.Web/Infrastructure/Security/DataScopeCatalog.cs": {
     "mtime": 1784746744.4841163,
     "ast_hash": "289b16db92b7e900f5ebc5cb1f0f69d1",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Tests/AccessProfileTests.cs": {
+    "mtime": 1784748981.7660637,
+    "ast_hash": "0cb3dcbed401a15e80315d55f986e39b",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Tests/AccessRoleServiceIntegrationTests.cs": {
+    "mtime": 1784749012.1051404,
+    "ast_hash": "3224c70d44f5c4f8fcc2989acf5d634d",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Security/AccessProfile.cs": {
+    "mtime": 1784748911.9203057,
+    "ast_hash": "41a3293fb28e4f39479f8ef4209a5c22",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Security/AccessRoleService.cs": {
+    "mtime": 1784748927.3529677,
+    "ast_hash": "cc1884f60bf3e14195e9224d87470792",
     "semantic_hash": ""
   }
 }
