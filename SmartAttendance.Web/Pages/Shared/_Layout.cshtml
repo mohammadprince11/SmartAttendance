@@ -237,6 +237,10 @@
                         <span class="nexora-nav-dot gold"></span>
                         <span>الهوية والثيم</span>
                     </a>
+                    <a asp-page="/AccessRoles/Index" class="nexora-nav-link nexora-root-link @(IsUnder("/AccessRoles") ? "active nexora-active" : "")" data-nav-area="access-roles" data-sidebar-label="&#x0623;&#x062F;&#x0648;&#x0627;&#x0631; &#x0627;&#x0644;&#x0648;&#x0635;&#x0648;&#x0644;">
+                        <span class="nexora-nav-dot"></span>
+                        <span>أدوار الوصول</span>
+                    </a>
                 }
                 @if (hasVisiblePeopleNavigation)
                 {

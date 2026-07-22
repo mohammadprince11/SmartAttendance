@@ -1,0 +1,246 @@
+/* ZYNORA HR — Access Roles hub. Themed via the token contract. */
+
+.ar-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--zy-space-4);
+}
+
+.ar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--zy-space-3);
+    flex-wrap: wrap;
+}
+
+.ar-title { font-size: 1.5rem; color: var(--zy-text); margin: 0; }
+.ar-sub { color: var(--zy-text-muted); margin: 4px 0 0; }
+
+.ar-toast {
+    padding: 12px 16px;
+    border-radius: var(--zy-radius-md);
+    background: var(--zy-primary-soft);
+    border: 1px solid var(--zy-border-strong);
+    color: var(--zy-text);
+}
+
+.ar-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--zy-border);
+    padding-bottom: 2px;
+}
+
+.ar-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: var(--zy-radius-md) var(--zy-radius-md) 0 0;
+    color: var(--zy-text-muted);
+    text-decoration: none;
+    font-size: .9rem;
+    border-bottom: 2px solid transparent;
+}
+
+.ar-tab:hover { color: var(--zy-text); }
+
+.ar-tab.is-active {
+    color: var(--zy-electric-teal);
+    border-bottom-color: var(--zy-electric-teal);
+    background: var(--zy-primary-soft);
+}
+
+.ar-tab-count {
+    min-width: 20px;
+    text-align: center;
+    padding: 1px 7px;
+    border-radius: var(--zy-radius-xl);
+    background: var(--zy-surface-raised);
+    color: var(--zy-text-muted);
+    font-size: .72rem;
+}
+
+.ar-panel {
+    background: var(--zy-surface);
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-lg);
+    padding: var(--zy-space-4);
+    box-shadow: var(--zy-shadow-sm);
+}
+
+.ar-panel-title { font-size: 1.05rem; color: var(--zy-text); margin: 0 0 var(--zy-space-3); }
+
+.ar-empty {
+    color: var(--zy-text-muted);
+    text-align: center;
+    padding: var(--zy-space-6) var(--zy-space-3);
+}
+
+.ar-table { width: 100%; border-collapse: collapse; }
+
+.ar-table th, .ar-table td {
+    text-align: right;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--zy-border);
+    color: var(--zy-text);
+    font-size: .88rem;
+}
+
+.ar-table th { color: var(--zy-text-muted); font-weight: 500; }
+
+.ar-name { font-weight: 600; }
+.ar-note { color: var(--zy-text-muted); }
+
+.ar-users-badge {
+    display: inline-block;
+    min-width: 26px;
+    text-align: center;
+    padding: 2px 10px;
+    border-radius: var(--zy-radius-xl);
+    background: var(--zy-primary-soft);
+    color: var(--zy-electric-teal);
+    font-weight: 600;
+    font-size: .8rem;
+}
+
+.ar-status {
+    padding: 4px 14px;
+    border-radius: var(--zy-radius-xl);
+    border: 1px solid var(--zy-border);
+    background: transparent;
+    font-size: .78rem;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.ar-status.is-on { color: var(--zy-success); border-color: var(--zy-success-soft); background: var(--zy-success-soft); }
+.ar-status.is-off { color: var(--zy-text-muted); }
+
+.ar-inline { display: inline; }
+
+.ar-row-actions { display: flex; gap: 6px; flex-wrap: nowrap; }
+
+.ar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 40px;
+    padding: 0 18px;
+    border-radius: var(--zy-radius-md);
+    border: 1px solid var(--zy-border);
+    background: transparent;
+    color: var(--zy-text);
+    font-family: inherit;
+    font-size: .9rem;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: filter var(--zy-duration-fast) var(--zy-ease);
+}
+
+.ar-btn:hover { filter: brightness(1.08); }
+
+.ar-btn-primary {
+    background: var(--zy-electric-teal);
+    color: var(--zy-midnight-navy);
+    border-color: transparent;
+    font-weight: 600;
+}
+
+.ar-btn-ghost { background: transparent; color: var(--zy-text); }
+
+.ar-btn-mini { height: 32px; padding: 0 14px; font-size: .8rem; color: var(--zy-electric-teal); }
+.ar-btn-danger { color: var(--zy-danger); }
+.ar-btn-danger.zy-armed { background: var(--zy-danger-soft); color: var(--zy-danger); border-color: var(--zy-danger); }
+
+/* ---- Modal ------------------------------------------------------------- */
+
+.ar-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: var(--zy-space-4);
+}
+
+.ar-modal[hidden] { display: none; }
+
+.ar-modal-card {
+    width: 100%;
+    max-width: 520px;
+    max-height: 88vh;
+    overflow-y: auto;
+    background: var(--zy-surface);
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-lg);
+    box-shadow: var(--zy-shadow-lg);
+    padding: var(--zy-space-4);
+}
+
+.ar-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--zy-space-3);
+    color: var(--zy-text);
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.ar-modal-close {
+    background: transparent;
+    border: none;
+    color: var(--zy-text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.ar-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--zy-space-3); }
+.ar-field label { color: var(--zy-text-muted); font-size: .85rem; }
+
+.ar-input {
+    background: var(--zy-input);
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-md);
+    color: var(--zy-text);
+    padding: 10px 12px;
+    font-family: inherit;
+}
+
+.ar-input:focus { outline: none; border-color: var(--zy-border-strong); box-shadow: var(--zy-focus-ring); }
+
+.ar-check { display: flex; align-items: center; gap: 8px; color: var(--zy-text); margin-bottom: var(--zy-space-3); cursor: pointer; }
+
+.ar-users {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-md);
+    padding: 6px;
+}
+
+.ar-user-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--zy-radius-sm);
+    color: var(--zy-text);
+    font-size: .85rem;
+    cursor: pointer;
+}
+
+.ar-user-row:hover { background: var(--zy-surface-raised); }
+
+.ar-hint { color: var(--zy-text-muted); font-size: .8rem; margin: var(--zy-space-2) 0; }
+
+.ar-modal-actions { display: flex; gap: var(--zy-space-2); justify-content: flex-end; margin-top: var(--zy-space-3); }

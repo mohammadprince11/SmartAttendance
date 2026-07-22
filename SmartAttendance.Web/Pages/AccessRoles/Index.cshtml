@@ -1,0 +1,138 @@
+@page
+@model SmartAttendance.Web.Pages.AccessRoles.IndexModel
+@using SmartAttendance.Web.Infrastructure.Security
+@{
+    ViewData["Title"] = "أدوار الوصول";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/zynora-access-roles.css" asp-append-version="true" />
+}
+
+<div class="ar-wrap"
+     data-users='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Users))'
+     data-assigned='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AssignedByRole))'>
+
+    @if (TempData["AccessRoleMessage"] is string msg)
+    {
+        <div class="ar-toast">@msg</div>
+    }
+
+    <div class="ar-head">
+        <div>
+            <h1 class="ar-title">أدوار الوصول</h1>
+            <p class="ar-sub">أدوار قابلة لإعادة الاستخدام تُسنَد لعدة مستخدمين — تُركَّب على المستخدم عبر خمسة أبعاد.</p>
+        </div>
+        <button type="button" class="ar-btn ar-btn-primary" onclick="arOpenModal()">+ دور جديد</button>
+    </div>
+
+    <div class="ar-tabs">
+        @foreach (var tab in SmartAttendance.Web.Pages.AccessRoles.IndexModel.Tabs)
+        {
+            var count = Model.Counts.TryGetValue(tab.Key, out var c) ? c : 0;
+            <a asp-page="Index" asp-route-Type="@tab.Key"
+               class="ar-tab @(Model.Type == tab.Key ? "is-active" : "")">
+                @tab.Label
+                <span class="ar-tab-count">@count</span>
+            </a>
+        }
+    </div>
+
+    <div class="ar-panel">
+        <div class="ar-panel-title">أدوار الوصول — @Model.TypeLabel</div>
+
+        @if (Model.Roles.Count == 0)
+        {
+            <div class="ar-empty">لا توجد أدوار من هذا النوع بعد. أنشئ أول دور بزر «دور جديد».</div>
+        }
+        else
+        {
+            <table class="ar-table">
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>ملاحظة</th>
+                        <th>المستخدمون المتأثرون</th>
+                        <th>الحالة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var role in Model.Roles)
+                    {
+                        <tr>
+                            <td class="ar-name">@role.NameAr</td>
+                            <td class="ar-note">@(string.IsNullOrWhiteSpace(role.Note) ? "—" : role.Note)</td>
+                            <td><span class="ar-users-badge">@role.AffectedUsers</span></td>
+                            <td>
+                                <form method="post" asp-page-handler="Toggle" class="ar-inline">
+                                    <input type="hidden" name="id" value="@role.Id" />
+                                    <button type="submit" class="ar-status @(role.IsActive ? "is-on" : "is-off")">
+                                        @(role.IsActive ? "نشط" : "غير نشط")
+                                    </button>
+                                </form>
+                            </td>
+                            <td class="ar-row-actions">
+                                <button type="button" class="ar-btn ar-btn-mini"
+                                        onclick="arEditRole(@role.Id, '@Html.Raw(role.NameAr.Replace("'", "\\'"))', '@Html.Raw((role.NameEn ?? "").Replace("'", "\\'"))', '@Html.Raw((role.Note ?? "").Replace("'", "\\'"))', @(role.IsActive ? "true" : "false"))">
+                                    تعديل
+                                </button>
+                                <form method="post" asp-page-handler="Delete" class="ar-inline">
+                                    <input type="hidden" name="id" value="@role.Id" />
+                                    <button type="submit" class="ar-btn ar-btn-mini ar-btn-danger" data-zyconfirm="تأكيد الحذف؟">حذف</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <!-- Create / edit modal -->
+    <div class="ar-modal" id="ar-modal" hidden>
+        <div class="ar-modal-card">
+            <div class="ar-modal-head">
+                <span id="ar-modal-title">دور جديد — @Model.TypeLabel</span>
+                <button type="button" class="ar-modal-close" onclick="arCloseModal()">✕</button>
+            </div>
+            <form method="post" asp-page-handler="Save">
+                <input type="hidden" name="Id" id="ar-id" value="0" />
+
+                <div class="ar-field">
+                    <label>اسم الدور (عربي)</label>
+                    <input type="text" name="NameAr" id="ar-nameAr" class="ar-input" required />
+                </div>
+                <div class="ar-field">
+                    <label>اسم الدور (لغة أخرى)</label>
+                    <input type="text" name="NameEn" id="ar-nameEn" class="ar-input" />
+                </div>
+                <div class="ar-field">
+                    <label>ملاحظة</label>
+                    <input type="text" name="Note" id="ar-note" class="ar-input" />
+                </div>
+                <label class="ar-check">
+                    <input type="checkbox" name="IsActive" id="ar-active" value="true" checked />
+                    <span>نشط</span>
+                </label>
+
+                <div class="ar-field">
+                    <label>المستخدمون المُسنَدون</label>
+                    <input type="text" class="ar-input" id="ar-user-search" placeholder="بحث عن مستخدم…" onkeyup="arFilterUsers()" />
+                    <div class="ar-users" id="ar-users"></div>
+                </div>
+
+                <p class="ar-hint">تهيئة الصلاحيات التفصيلية (شجرة الصفحات / نطاق البيانات) تُضاف في الخطوة التالية من المشروع.</p>
+
+                <div class="ar-modal-actions">
+                    <button type="button" class="ar-btn ar-btn-ghost" onclick="arCloseModal()">إلغاء</button>
+                    <button type="submit" class="ar-btn ar-btn-primary">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/zynora-access-roles.js" asp-append-version="true"></script>
+}
