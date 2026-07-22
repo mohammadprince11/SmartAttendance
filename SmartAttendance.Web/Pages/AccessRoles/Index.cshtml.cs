@@ -45,6 +45,11 @@ public class IndexModel : PageModel
     public List<UserOption> Users { get; set; } = new();
     public Dictionary<int, List<int>> AssignedByRole { get; set; } = new();
 
+    public IReadOnlyList<PageCatalog.CatalogModule> Catalog => PageCatalog.Modules;
+
+    /// <summary>Per role: page code → granted actions (for pre-checking the tree on edit).</summary>
+    public Dictionary<int, Dictionary<string, List<string>>> GrantsByRole { get; set; } = new();
+
     private bool IsAdmin =>
         (User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty)
         .Equals("Admin", StringComparison.OrdinalIgnoreCase);
@@ -97,6 +102,11 @@ public class IndexModel : PageModel
             .ToList();
         await AccessRoleStore.ReplaceAssignedUsersAsync(_dbContext, savedId, userIds);
 
+        if (Type == AccessRoleStore.TypePages)
+        {
+            await AccessRoleStore.ReplaceGrantsAsync(_dbContext, savedId, BuildPageGrants(form));
+        }
+
         TempData["AccessRoleMessage"] = role.Id > 0 ? "تم تحديث الدور." : "تم إنشاء الدور.";
         return RedirectToPage(new { Type });
     }
@@ -138,6 +148,59 @@ public class IndexModel : PageModel
         foreach (var role in Roles)
         {
             AssignedByRole[role.Id] = await AccessRoleStore.GetAssignedUserIdsAsync(_dbContext, role.Id);
+
+            if (Type == AccessRoleStore.TypePages)
+            {
+                var grants = await AccessRoleStore.GetGrantsAsync(_dbContext, role.Id);
+                GrantsByRole[role.Id] = grants.ToDictionary(
+                    g => g.GrantKey,
+                    g => DeserializeActions(g.Payload),
+                    StringComparer.OrdinalIgnoreCase);
+            }
+        }
+    }
+
+    /// <summary>Reads grant_&lt;PageCode&gt;_&lt;Action&gt; checkboxes into typed grants.</summary>
+    private static List<AccessRoleStore.AccessRoleGrant> BuildPageGrants(IFormCollection form)
+    {
+        var grants = new List<AccessRoleStore.AccessRoleGrant>();
+
+        foreach (var module in PageCatalog.Modules)
+        {
+            foreach (var page in module.Pages)
+            {
+                var actions = PageCatalog.Actions
+                    .Where(action => form[$"grant_{page.Code}_{action}"] == "on")
+                    .ToList();
+
+                if (actions.Count > 0)
+                {
+                    grants.Add(new AccessRoleStore.AccessRoleGrant
+                    {
+                        GrantKey = page.Code,
+                        Payload = System.Text.Json.JsonSerializer.Serialize(actions),
+                    });
+                }
+            }
+        }
+
+        return grants;
+    }
+
+    private static List<string> DeserializeActions(string? payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return new List<string>();
+        }
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<List<string>>(payload) ?? new List<string>();
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return new List<string>();
         }
     }
 

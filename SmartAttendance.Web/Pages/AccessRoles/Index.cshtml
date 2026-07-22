@@ -10,8 +10,10 @@
 }
 
 <div class="ar-wrap"
+     data-role-type="@Model.Type"
      data-users='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Users))'
-     data-assigned='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AssignedByRole))'>
+     data-assigned='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AssignedByRole))'
+     data-grants='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.GrantsByRole))'>
 
     @if (TempData["AccessRoleMessage"] is string msg)
     {
@@ -122,7 +124,47 @@
                     <div class="ar-users" id="ar-users"></div>
                 </div>
 
-                <p class="ar-hint">تهيئة الصلاحيات التفصيلية (شجرة الصفحات / نطاق البيانات) تُضاف في الخطوة التالية من المشروع.</p>
+                @if (Model.Type == SmartAttendance.Web.Infrastructure.Security.AccessRoleStore.TypePages)
+                {
+                    <div class="ar-field">
+                        <label>صلاحيات الصفحات</label>
+                        <p class="ar-hint">اختر الصفحات والإجراءات المسموحة لهذا الدور.</p>
+                        <div class="ar-tree">
+                            @foreach (var module in Model.Catalog)
+                            {
+                                <details class="ar-tree-module">
+                                    <summary>@module.Label</summary>
+                                    <div class="ar-tree-body">
+                                        <div class="ar-tree-row ar-tree-head">
+                                            <span class="ar-tree-page">الصفحة</span>
+                                            @foreach (var action in SmartAttendance.Web.Infrastructure.Security.PageCatalog.Actions)
+                                            {
+                                                <span class="ar-tree-act">@SmartAttendance.Web.Infrastructure.Security.PageCatalog.ActionLabels[action]</span>
+                                            }
+                                        </div>
+                                        @foreach (var page in module.Pages)
+                                        {
+                                            <div class="ar-tree-row">
+                                                <span class="ar-tree-page">@(page.Label)</span>
+                                                @foreach (var action in SmartAttendance.Web.Infrastructure.Security.PageCatalog.Actions)
+                                                {
+                                                    <span class="ar-tree-act">
+                                                        <input type="checkbox" name="grant_@(page.Code)_@(action)"
+                                                               data-page="@(page.Code)" data-action="@action" />
+                                                    </span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </details>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <p class="ar-hint">تهيئة الصلاحيات التفصيلية لهذا النوع تُضاف في دفعة لاحقة.</p>
+                }
 
                 <div class="ar-modal-actions">
                     <button type="button" class="ar-btn ar-btn-ghost" onclick="arCloseModal()">إلغاء</button>

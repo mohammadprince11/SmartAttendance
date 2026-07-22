@@ -8,11 +8,26 @@
 
     var users = [];
     var assigned = {};
+    var grants = {};
     try { users = JSON.parse(wrap.getAttribute("data-users") || "[]"); } catch (e) { users = []; }
     try { assigned = JSON.parse(wrap.getAttribute("data-assigned") || "{}"); } catch (e) { assigned = {}; }
+    try { grants = JSON.parse(wrap.getAttribute("data-grants") || "{}"); } catch (e) { grants = {}; }
 
     var modal = document.getElementById("ar-modal");
     var usersBox = document.getElementById("ar-users");
+
+    // Pre-check the page-permission tree from a role's stored grants.
+    function applyGrants(roleGrants) {
+        var tree = document.querySelector(".ar-tree");
+        if (!tree) { return; }
+        var map = roleGrants || {};
+        tree.querySelectorAll("input[type=checkbox][data-page]").forEach(function (cb) {
+            var page = cb.getAttribute("data-page");
+            var action = cb.getAttribute("data-action");
+            var actions = map[page] || [];
+            cb.checked = actions.indexOf(action) > -1;
+        });
+    }
 
     function renderUsers(checkedIds) {
         var checked = {};
@@ -42,6 +57,7 @@
         document.getElementById("ar-note").value = "";
         document.getElementById("ar-active").checked = true;
         renderUsers([]);
+        applyGrants({});
         modal.hidden = false;
     };
 
@@ -53,6 +69,7 @@
         document.getElementById("ar-note").value = note || "";
         document.getElementById("ar-active").checked = !!isActive;
         renderUsers(assigned[id] || []);
+        applyGrants(grants[id] || {});
         modal.hidden = false;
     };
 
