@@ -3,7 +3,7 @@
 @inject IPermissionAuthorizationService PermissionAuthorizationService
 
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" data-theme="light" data-sidebar="expanded">
+<html lang="ar" dir="rtl" data-theme="dark" data-sidebar="expanded">
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -13,8 +13,7 @@
 
     <script>
         (function () {
-            var theme = "light";
-
+            // الثيم الداكن حصراً — أُلغي الوضع الفاتح نهائياً (قرار 2026-07)
             try {
                 [
                     "SmartAttendance.Sidebar",
@@ -24,20 +23,11 @@
                     "NEXORA.V2.Sidebar",
                     "NEXORA.Sidebar",
                     "SidebarCollapsed",
-                    "sidebar"
+                    "sidebar",
+                    "ZYNORA.Theme"
                 ].forEach(function (key) {
                     localStorage.removeItem(key);
                 });
-
-                var savedTheme =
-                    localStorage.getItem("ZYNORA.Theme");
-
-                if (
-                    savedTheme === "light" ||
-                    savedTheme === "dark"
-                ) {
-                    theme = savedTheme;
-                }
             } catch (e) { }
 
             document.documentElement.setAttribute(
@@ -47,7 +37,7 @@
 
             document.documentElement.setAttribute(
                 "data-theme",
-                theme
+                "dark"
             );
         })();
     </script>
@@ -447,24 +437,6 @@
                 </div>
 
                 <div class="nexora-controls">
-                    <button type="button"
-                            class="nexora-theme-toggle"
-                            data-zynora-theme-toggle
-                            aria-label="تفعيل الوضع الداكن"
-                            title="تغيير المظهر">
-                        <svg class="nexora-theme-icon nexora-theme-icon--sun"
-                             viewBox="0 0 24 24"
-                             aria-hidden="true">
-                            <circle cx="12" cy="12" r="4"></circle>
-                            <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"></path>
-                        </svg>
-                        <svg class="nexora-theme-icon nexora-theme-icon--moon"
-                             viewBox="0 0 24 24"
-                             aria-hidden="true">
-                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"></path>
-                        </svg>
-                    </button>
-
                     @if (isLoggedIn)
                     {
                         <div class="nexora-user-chip">
