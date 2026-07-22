@@ -82,6 +82,47 @@ html[data-theme="light"] .zxd-company select { background: #fff; }
 .zxd-kpi b { display: block; font-size: 22px; font-weight: 1000; line-height: 1.1; }
 .zxd-kpi span { display: block; font-size: 11px; color: var(--zxd-muted); font-weight: 800; }
 .zxd-kpi small { display: block; font-size: 10px; color: var(--zxd-muted); opacity: .85; }
+.zxd-kpi-body { flex: 1; min-width: 0; }
+
+/* شريط نسبة مصغر داخل بطاقة KPI — بديل بطاقة «نبض اليوم» المكررة */
+.zxd-kpi .kbar {
+    display: block; height: 5px; border-radius: 999px; margin-top: 6px;
+    background: rgba(143, 168, 188, .14); overflow: hidden;
+}
+.zxd-kpi .kbar i { display: block; height: 100%; border-radius: 999px; background: var(--zxd-teal); }
+.zxd-kpi .kbar.green i { background: var(--zxd-green); }
+.zxd-kpi .kbar.amber i { background: var(--zxd-amber); }
+.zxd-kpi .kbar.red i { background: var(--zxd-red); }
+.zxd-kpi .kbar.teal i { background: var(--zxd-teal); }
+
+/* ---------- جملة الاستبصار (نمط كيان): سطر ملخص طبيعي ---------- */
+.zxd-insight {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 11px 16px;
+    border: 1px solid var(--zxd-line); border-radius: 14px;
+    background: var(--sa-surface, rgba(8, 25, 43, .9));
+    font-size: 13px; font-weight: 700; line-height: 1.7;
+}
+.zxd-insight b { font-weight: 1000; color: var(--zxd-teal); }
+
+/* ---------- تبويبات «متابعة اليوم» ---------- */
+.zxd-tabs { display: inline-flex; gap: 6px; }
+.zxd-tabs button {
+    padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 900;
+    border: 1px solid var(--zxd-line); background: transparent; color: inherit; cursor: pointer;
+}
+.zxd-tabs button.active {
+    background: rgba(18, 217, 227, .14); color: var(--zxd-teal);
+    border-color: rgba(18, 217, 227, .4);
+}
+
+/* شارة الفترة الزمنية على عناوين البطاقات (نمط ZenHR) */
+.zxd-period {
+    padding: 2px 10px; border-radius: 999px;
+    background: rgba(143, 168, 188, .12); color: var(--zxd-muted);
+}
+
+.zxd-dist-title { margin: 0 0 8px; font-size: 12px; font-weight: 1000; color: var(--zxd-muted); }
 
 /* ---------- وصول سريع: دورة مودل الحضور ---------- */
 .zxd-quick {

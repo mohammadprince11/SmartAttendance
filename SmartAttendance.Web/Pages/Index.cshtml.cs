@@ -68,6 +68,9 @@ public class IndexModel : PageModel
     public int Late30 { get; set; }
     public int Absent30 { get; set; }
 
+    public List<TodayEmployeeRow> TodayLateList { get; set; } = new();
+    public List<TodayEmployeeRow> TodayMissingOutList { get; set; } = new();
+
     public List<NameCountRow> ByBranch { get; set; } = new();
     public List<NameCountRow> ByDepartment { get; set; } = new();
     public List<NameCountRow> ByGender { get; set; } = new();
@@ -461,6 +464,40 @@ WHERE e.IsDeleted = 0
   AND b.IsDeleted = 0
   AND b.CompanyId = @CompanyId
 ORDER BY r.CreatedAt DESC;
+
+-- قوائم اليوم بالأسماء (نمط كيان): نسختان محرك/خام، والاختيار بالكود حسب PulseFromEngine
+SELECT TOP 8 e.EmployeeNo, e.FullName, d.CheckIn, d.LateHours
+FROM DayAttendances d
+INNER JOIN Employees e ON d.EmployeeId = e.Id
+INNER JOIN Branches b ON e.BranchId = b.Id
+WHERE b.CompanyId = @CompanyId AND d.WorkDate = @Today
+  AND d.IsAnalyzed = 1 AND d.Status = N'Late'
+ORDER BY d.LateHours DESC;
+
+SELECT TOP 8 e.EmployeeNo, e.FullName, a.CheckIn, CAST(0 AS decimal(5,2)) AS LateHours
+FROM AttendanceRecords a
+INNER JOIN Employees e ON a.EmployeeId = e.Id
+INNER JOIN Branches b ON e.BranchId = b.Id
+WHERE a.IsDeleted = 0 AND e.IsDeleted = 0 AND b.IsDeleted = 0
+  AND b.CompanyId = @CompanyId AND a.AttendanceDate = @Today AND a.Status = 2
+ORDER BY a.CheckIn DESC;
+
+SELECT TOP 8 e.EmployeeNo, e.FullName, d.CheckIn, CAST(0 AS decimal(5,2)) AS LateHours
+FROM DayAttendances d
+INNER JOIN Employees e ON d.EmployeeId = e.Id
+INNER JOIN Branches b ON e.BranchId = b.Id
+WHERE b.CompanyId = @CompanyId AND d.WorkDate = @Today
+  AND d.IsAnalyzed = 1 AND d.Status = N'Incomplete'
+ORDER BY d.CheckIn;
+
+SELECT TOP 8 e.EmployeeNo, e.FullName, a.CheckIn, CAST(0 AS decimal(5,2)) AS LateHours
+FROM AttendanceRecords a
+INNER JOIN Employees e ON a.EmployeeId = e.Id
+INNER JOIN Branches b ON e.BranchId = b.Id
+WHERE a.IsDeleted = 0 AND e.IsDeleted = 0 AND b.IsDeleted = 0
+  AND b.CompanyId = @CompanyId AND a.AttendanceDate = @Today
+  AND a.Status IN (1, 2) AND a.CheckIn IS NOT NULL AND a.CheckOut IS NULL
+ORDER BY a.CheckIn;
 """;
 
         var connection = _dbContext.Database.GetDbConnection();
@@ -561,6 +598,19 @@ ORDER BY r.CreatedAt DESC;
 
             await reader.NextResultAsync();
             LatestRequests = await ReadRequestRowsAsync(reader);
+
+            // قوائم اليوم بالأسماء: المصدر الأدق أولاً (محرك الحضور) وإلا الخام
+            await reader.NextResultAsync();
+            var engineLate = await ReadTodayEmployeeRowsAsync(reader);
+            await reader.NextResultAsync();
+            var rawLate = await ReadTodayEmployeeRowsAsync(reader);
+            await reader.NextResultAsync();
+            var engineMissing = await ReadTodayEmployeeRowsAsync(reader);
+            await reader.NextResultAsync();
+            var rawMissing = await ReadTodayEmployeeRowsAsync(reader);
+
+            TodayLateList = PulseFromEngine ? engineLate : rawLate;
+            TodayMissingOutList = PulseFromEngine ? engineMissing : rawMissing;
         }
         finally
         {
@@ -583,6 +633,25 @@ ORDER BY r.CreatedAt DESC;
             {
                 Name = HrmsDatabase.GetString(reader, "Name"),
                 Total = HrmsDatabase.GetInt(reader, "Total")
+            });
+        }
+
+        return rows;
+    }
+
+    private static async Task<List<TodayEmployeeRow>>
+        ReadTodayEmployeeRowsAsync(DbDataReader reader)
+    {
+        var rows = new List<TodayEmployeeRow>();
+
+        while (await reader.ReadAsync())
+        {
+            rows.Add(new TodayEmployeeRow
+            {
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+                CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn"),
+                LateHours = reader["LateHours"] is decimal late ? late : 0
             });
         }
 
@@ -704,6 +773,14 @@ ORDER BY r.CreatedAt DESC;
     {
         public string Name { get; set; } = string.Empty;
         public int Total { get; set; }
+    }
+
+    public class TodayEmployeeRow
+    {
+        public string EmployeeNo { get; set; } = string.Empty;
+        public string EmployeeName { get; set; } = string.Empty;
+        public DateTime? CheckIn { get; set; }
+        public decimal LateHours { get; set; }
     }
 
     public class ContractRow
