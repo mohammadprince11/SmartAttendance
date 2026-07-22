@@ -119,15 +119,18 @@
 
             <div class="brand-preview" id="brand-preview">
                 <div class="bp-shell">
-                    <div class="bp-nav">
-                        <span class="bp-nav-item is-active">لوحة البيانات</span>
-                        <span class="bp-nav-item">الموظفون</span>
-                        <span class="bp-nav-item">الحضور</span>
+                    <div class="bp-nav" id="bp-nav">
+                        <span class="bp-nav-item is-active" role="button" tabindex="0"
+                              data-bp-title="لوحة البيانات" data-bp-text="نظرة عامة على المؤشرات بهويتك الجديدة.">لوحة البيانات</span>
+                        <span class="bp-nav-item" role="button" tabindex="0"
+                              data-bp-title="الموظفون" data-bp-text="قائمة الموظفين والإجراءات بهويتك الجديدة.">الموظفون</span>
+                        <span class="bp-nav-item" role="button" tabindex="0"
+                              data-bp-title="الحضور" data-bp-text="سجلّ الحضور والانصراف بهويتك الجديدة.">الحضور</span>
                     </div>
                     <div class="bp-body">
                         <div class="bp-card">
-                            <div class="bp-card-title">بطاقة عيّنة</div>
-                            <p class="bp-card-text">هكذا تظهر المكوّنات بهويتك الجديدة.</p>
+                            <div class="bp-card-title" id="bp-card-title">لوحة البيانات</div>
+                            <p class="bp-card-text" id="bp-card-text">نظرة عامة على المؤشرات بهويتك الجديدة.</p>
                             <div class="bp-row">
                                 <span class="bp-btn-primary" role="button">إجراء رئيسي</span>
                                 <span class="bp-btn-soft" role="button">ثانوي</span>

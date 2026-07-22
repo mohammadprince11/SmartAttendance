@@ -189,6 +189,43 @@
         return p;
     }
 
+    // Make the preview nav interactive: clicking a tab activates it (showing the
+    // brand's active state on any section) and updates the sample card text.
+    var nav = document.getElementById("bp-nav");
+    if (nav) {
+        var cardTitle = document.getElementById("bp-card-title");
+        var cardText = document.getElementById("bp-card-text");
+
+        function activateTab(tab) {
+            nav.querySelectorAll(".bp-nav-item").forEach(function (t) {
+                t.classList.toggle("is-active", t === tab);
+            });
+            if (cardTitle) {
+                cardTitle.textContent = tab.getAttribute("data-bp-title") || cardTitle.textContent;
+            }
+            if (cardText) {
+                cardText.textContent = tab.getAttribute("data-bp-text") || cardText.textContent;
+            }
+        }
+
+        nav.addEventListener("click", function (e) {
+            var tab = e.target.closest(".bp-nav-item");
+            if (tab) {
+                activateTab(tab);
+            }
+        });
+
+        nav.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") {
+                var tab = e.target.closest(".bp-nav-item");
+                if (tab) {
+                    e.preventDefault();
+                    activateTab(tab);
+                }
+            }
+        });
+    }
+
     // Initial paint.
     renderLadder();
     runPreview();

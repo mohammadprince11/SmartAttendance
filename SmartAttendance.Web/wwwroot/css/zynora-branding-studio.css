@@ -391,6 +391,15 @@
     border-radius: var(--zy-radius-md);
     color: var(--text-muted, #A7B6C7);
     font-size: .85rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--zy-duration-fast) var(--zy-ease),
+                color var(--zy-duration-fast) var(--zy-ease);
+}
+
+.bp-nav-item:not(.is-active):hover {
+    background: var(--interactive-primary-soft, rgba(24,199,189,.12));
+    color: var(--brand-primary, #18C7BD);
 }
 
 .bp-nav-item.is-active {
