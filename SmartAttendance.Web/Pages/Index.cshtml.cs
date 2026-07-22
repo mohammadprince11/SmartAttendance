@@ -56,6 +56,9 @@ public class IndexModel : PageModel
     public int TodayAbsent { get; set; }
     public int TodayMissingOut { get; set; }
 
+    /// <summary>أرقام اليوم من يوميات محرك الحضور الجديد (لا من السجلات الخام).</summary>
+    public bool PulseFromEngine { get; set; }
+
     public int PendingRequests { get; set; }
     public int ApprovedRequests30 { get; set; }
     public int RejectedRequests30 { get; set; }
@@ -110,6 +113,7 @@ public class IndexModel : PageModel
             return;
         }
 
+        await DayAttendanceStore.EnsureAsync(_dbContext); // جدول اليوميات قد لا يكون أُنشئ بعد
         await LoadDashboardDataAsync();
 
         stopwatch.Stop();
@@ -236,6 +240,45 @@ SELECT
           AND a.Status IN (1, 2)
           AND a.CheckIn IS NOT NULL
           AND a.CheckOut IS NULL
+    ),
+    EnginePresent = (
+        SELECT COUNT(*)
+        FROM DayAttendances d
+        INNER JOIN Employees e ON d.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE b.CompanyId = @CompanyId AND d.WorkDate = @Today
+          AND d.IsAnalyzed = 1 AND d.Status = N'Present'
+    ),
+    EngineLate = (
+        SELECT COUNT(*)
+        FROM DayAttendances d
+        INNER JOIN Employees e ON d.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE b.CompanyId = @CompanyId AND d.WorkDate = @Today
+          AND d.IsAnalyzed = 1 AND d.Status = N'Late'
+    ),
+    EngineAbsent = (
+        SELECT COUNT(*)
+        FROM DayAttendances d
+        INNER JOIN Employees e ON d.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE b.CompanyId = @CompanyId AND d.WorkDate = @Today
+          AND d.IsAnalyzed = 1 AND d.Status = N'Absent'
+    ),
+    EngineIncomplete = (
+        SELECT COUNT(*)
+        FROM DayAttendances d
+        INNER JOIN Employees e ON d.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE b.CompanyId = @CompanyId AND d.WorkDate = @Today
+          AND d.IsAnalyzed = 1 AND d.Status = N'Incomplete'
+    ),
+    EngineAnalyzedToday = (
+        SELECT COUNT(*)
+        FROM DayAttendances d
+        INNER JOIN Employees e ON d.EmployeeId = e.Id
+        INNER JOIN Branches b ON e.BranchId = b.Id
+        WHERE b.CompanyId = @CompanyId AND d.WorkDate = @Today AND d.IsAnalyzed = 1
     ),
     PendingRequests = (
         SELECT COUNT(*)
@@ -458,6 +501,17 @@ ORDER BY r.CreatedAt DESC;
                 TodayLate = HrmsDatabase.GetInt(reader, "TodayLate");
                 TodayAbsent = HrmsDatabase.GetInt(reader, "TodayAbsent");
                 TodayMissingOut = HrmsDatabase.GetInt(reader, "TodayMissingOut");
+
+                // إن كان يوم اليوم محللاً بمحرك الحضور الجديد (DayAttendances) فأرقامه
+                // المشتقة أدق من سجلات AttendanceRecords الخام — نعرضها بدلاً منها.
+                PulseFromEngine = HrmsDatabase.GetInt(reader, "EngineAnalyzedToday") > 0;
+                if (PulseFromEngine)
+                {
+                    TodayPresent = HrmsDatabase.GetInt(reader, "EnginePresent");
+                    TodayLate = HrmsDatabase.GetInt(reader, "EngineLate");
+                    TodayAbsent = HrmsDatabase.GetInt(reader, "EngineAbsent");
+                    TodayMissingOut = HrmsDatabase.GetInt(reader, "EngineIncomplete");
+                }
                 PendingRequests = HrmsDatabase.GetInt(reader, "PendingRequests");
                 ApprovedRequests30 = HrmsDatabase.GetInt(reader, "ApprovedRequests30");
                 RejectedRequests30 = HrmsDatabase.GetInt(reader, "RejectedRequests30");

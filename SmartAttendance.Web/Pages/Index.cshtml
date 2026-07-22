@@ -36,7 +36,18 @@
     var activeTotal = Math.Max(1, Model.ActiveEmployees);
     var today = DateTime.Today;
 
-    // مجموعات التوزيع تُرسم بنفس القالب — (العنوان، الصفوف)
+    // مجموعات التوزيع تُرسم بنفس القالب — (العنوان، الصفوف).
+    // المجموعة التي يهيمن عليها «غير محدد» (80%+) ضجيج بلا معلومة — تُخفى تلقائياً
+    // وتظهر من تلقاء نفسها متى ما اكتملت بيانات الموظفين.
+    static bool IsMeaningful(List<SmartAttendance.Web.Pages.IndexModel.NameCountRow> rows)
+    {
+        if (rows.Count == 0) return false;
+        var total = Math.Max(1, rows.Sum(r => r.Total));
+        var unset = rows.Where(r => string.IsNullOrWhiteSpace(r.Name) || r.Name == "Not Set" || r.Name == "غير محدد")
+                        .Sum(r => r.Total);
+        return unset * 100 / total < 80;
+    }
+
     var distributions = new (string Title, List<SmartAttendance.Web.Pages.IndexModel.NameCountRow> Rows)[]
     {
         ("حسب الفرع", Model.ByBranch),
@@ -45,6 +56,18 @@
         ("حسب البلد", Model.ByCountry),
         ("حسب الجنسية", Model.ByNationality),
         ("حسب نوع العقد", Model.ByContractType),
+    }.Where(d => IsMeaningful(d.Rows)).ToArray();
+
+    // شاشات مودل الحضور الجديد — وصول سريع بترتيب الدورة
+    var quickLinks = new (string Url, string Label)[]
+    {
+        ("/ShiftTypes", "أنواع المناوبات"),
+        ("/ShiftAssignments", "مناوبات الموظفين"),
+        ("/ShiftRules", "قواعد المناوبات"),
+        ("/DayAttendance", "الحضور اليومي"),
+        ("/AttendanceViewer", "مستعرض الحضور"),
+        ("/AttendanceRecommendations", "الإجراءات المقترحة"),
+        ("/MonthAttendance", "الحضور الشهري"),
     };
 }
 
@@ -96,16 +119,29 @@
         </a>
     </div>
 
+    @* ---------- وصول سريع: دورة مودل الحضور بترتيبها ---------- *@
+    <div class="zxd-quick">
+        <span class="t">دورة الحضور:</span>
+        @foreach (var (url, label) in quickLinks)
+        {
+            <a href="@url">@label</a>
+        }
+    </div>
+
     @* ---------- نبض اليوم + آخر 30 يوماً + الطلبات ---------- *@
     <div class="zxd-row-3">
         <div class="zxd-card">
-            <h2>نبض اليوم <small>من واقع سجلات الحضور</small></h2>
+            <h2>نبض اليوم <small>@(Model.PulseFromEngine ? "من اليوميات المحللة (محرك الحضور)" : "من سجلات الحضور الخام")</small></h2>
             <div class="zxd-pulse">
                 <div class="zxd-pulse-row green"><b>حاضر</b><span class="bar"><i style="width:@BarWidth(Model.TodayPresent, activeTotal)%"></i></span><span>@Model.TodayPresent</span></div>
                 <div class="zxd-pulse-row amber"><b>متأخر</b><span class="bar"><i style="width:@BarWidth(Model.TodayLate, activeTotal)%"></i></span><span>@Model.TodayLate</span></div>
                 <div class="zxd-pulse-row red"><b>غائب</b><span class="bar"><i style="width:@BarWidth(Model.TodayAbsent, activeTotal)%"></i></span><span>@Model.TodayAbsent</span></div>
-                <div class="zxd-pulse-row teal"><b>بلا خروج</b><span class="bar"><i style="width:@BarWidth(Model.TodayMissingOut, activeTotal)%"></i></span><span>@Model.TodayMissingOut</span></div>
+                <div class="zxd-pulse-row teal"><b>@(Model.PulseFromEngine ? "بصمة ناقصة" : "بلا خروج")</b><span class="bar"><i style="width:@BarWidth(Model.TodayMissingOut, activeTotal)%"></i></span><span>@Model.TodayMissingOut</span></div>
             </div>
+            @if (!Model.PulseFromEngine)
+            {
+                <div style="margin-top:10px"><a class="zxd-chip" href="/DayAttendance">شغّل «تحديث الحضور» لأرقام مشتقة أدق ←</a></div>
+            }
         </div>
 
         <div class="zxd-card">
@@ -136,8 +172,8 @@
 
     @* ---------- توزيعات القوى العاملة (6 بطاقات بقالب واحد) ---------- *@
     <div class="zxd-card">
-        <h2>توزيع القوى العاملة <small>@Model.Employees.ToString("N0") موظفاً · فروع @Model.Branches · أقسام @Model.Departments</small></h2>
-        <div class="zxd-row-3">
+        <h2>توزيع القوى العاملة <small>@Model.Employees.ToString("N0") موظفاً · فروع @Model.Branches · أقسام @Model.Departments — التوزيعات ناقصة البيانات تُخفى تلقائياً</small></h2>
+        <div class="zxd-dists" style="--cols:@Math.Min(3, Math.Max(1, distributions.Length))">
             @foreach (var (title, rows) in distributions)
             {
                 <div>

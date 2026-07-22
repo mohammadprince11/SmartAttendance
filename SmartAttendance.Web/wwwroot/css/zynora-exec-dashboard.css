@@ -83,6 +83,26 @@ html[data-theme="light"] .zxd-company select { background: #fff; }
 .zxd-kpi span { display: block; font-size: 11px; color: var(--zxd-muted); font-weight: 800; }
 .zxd-kpi small { display: block; font-size: 10px; color: var(--zxd-muted); opacity: .85; }
 
+/* ---------- وصول سريع: دورة مودل الحضور ---------- */
+.zxd-quick {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 10px 16px;
+    border: 1px solid var(--zxd-line); border-radius: 14px;
+    background: var(--sa-surface, rgba(8, 25, 43, .9));
+}
+.zxd-quick .t { font-size: 11px; font-weight: 1000; color: var(--zxd-muted); }
+.zxd-quick a {
+    padding: 5px 13px; border-radius: 999px; font-size: 12px; font-weight: 900;
+    text-decoration: none; color: var(--zxd-teal);
+    background: rgba(18, 217, 227, .08); border: 1px solid rgba(18, 217, 227, .2);
+    transition: background .15s ease;
+}
+.zxd-quick a:hover { background: rgba(18, 217, 227, .18); }
+
+/* شبكة التوزيعات: عدد أعمدة ديناميكي حسب المجموعات ذات المعنى */
+.zxd-dists { display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: 14px; }
+@media (max-width: 1100px) { .zxd-dists { grid-template-columns: 1fr; } }
+
 /* ---------- بطاقات عامة ---------- */
 .zxd-card {
     border: 1px solid var(--zxd-line);
