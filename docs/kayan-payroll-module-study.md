@@ -80,3 +80,192 @@
 
 ## 6) متبقٍّ لجولة قادمة
 التهيئة · تصنيفات الضمان/الضريبة (القيم والشرائح) · سلم الرواتب ثلاثي الأبعاد (بنيته) · القروض (نموذجها) · نظام المحاكاة · شاشة تفاصيل مسير مفتوح (أعمدة القسيمة) · الاحتياطي · توزيع التكلفة.
+
+
+---
+---
+
+# الجزء الثاني: الفحص الحي المحدَّث + الحالة الفعلية بالكود + تصميم المحرك — 2026-07-23
+
+> الأقسام 1–6 = جولة سابقة. هذا الجزء: **فحص حي محدَّث لـKayanHR + ZenHR (2026-07-23)** بمتصفح
+> داخلي مسجَّل دخول، **+ الحالة الفعلية بكود SmartAttendance** (قُرئ ملفاً-بملف)، **+ تصميم
+> محرك المسير المقترح** بتوطين العراق. المرجع للحالة الفعلية = هذا الجزء (لا الميموري القديمة).
+
+## 7) خريطة مودل رواتب كيان الكاملة (فحص حي 2026-07-23 — القائمة الفعلية) ⭐
+
+**البادئة الصحيحة `/Payroll/…` (الروابط القديمة بلا بادئة تُعطي خطأ).** المجموعات:
+
+### 7.أ الاحتساب والتنفيذ (المسير)
+| الشاشة | الرابط |
+|---|---|
+| حساب الرواتب (المسير الشهري) | `/Payroll/MonthlySalaryCalculation/Index?Type=1` |
+| الرواتب الإضافية | `?Type=2` |
+| حساب الاحتياطي (Provisions) | `/Payroll/ProvisionCalculation/Index` |
+| احتساب خارج الرواتب | `/Payroll/OutofPayrollCalculation/Index` |
+| إنهاء الموظف (من الرواتب) | `/Employees/EmployeeTermination/EmployeeTermination_IndexFromPayroll` |
+| تصدير ملف البنك | `/Payroll/ExportBankReport/Index` |
+| ربط النظام المالي (ERP) | `/Payroll/MonthlyErpIntegration/Index` |
+| حساب توزيع التكلفة | `/Payroll/CostDistribution/Index` |
+| إعادة حساب راتب الضمان | `/Payroll/CalculateSocialSecuritySalary/Index` |
+
+**قائمة المسيرات (فحص حي)** — الأعمدة الفعلية: `رقم الدفعة` (نمط `2026-8-1` = سنة-شهر-تسلسل) · `نوع الراتب` · `الفترة` · **`حوسب بواسطة` + طابع زمني** · `عدد الموظفين` · `مجموع الرواتب المدفوعة` (بالعملة) · **`مقفل`** (نعم/لا) · **`تم إصدارها`** (نعم/لا) · **`تم إرسال القسيمة`** (نعم/لا). مثال حي: دفعة `2026-8-1` بـ**874 موظفاً** ومجموع **13,515,126.126 JOD**.
+→ **دورة حياة المسير المؤكَّدة**: `حُوسِب` ← `مُقفل` ← `أُصدر` ← `أُرسلت القسيمة` (4 مراحل، 3 بوابات بعد الاحتساب).
+
+### 7.ب الحركات (Transactions)
+دخل `/Payroll/IncomeAndDeduction/Index?Type=1` · اقتطاع `?Type=2` · عمل إضافي `/Payroll/Overtime/Index` · تعديل أيام الراتب `/Payroll/SalaryDaysDeduction/Index` · زيادة الراتب `/Payroll/Raises/Index` · تحديثات نهاية الخدمة `/Payroll/STBUpdates/Index` · إجازات `/Payroll/Leaves/Index` · مغادرات `/Payroll/Permissions/Index` · تدوير المغادرات `/Payroll/RoundingManagement/Index` · بدل إجازات `/Payroll/LeaveEncashment/Index` · تعديل إجازات `/Payroll/LeaveAdjustment/Index` · أرصدة الإجازات `/Payroll/BalanceManagement/Index` · عناصر خارجية `/Payroll/ExternalItemsManagement/Index` · ساعات دوام جزئي `/Payroll/PartTimersWorkingHoursManagement/Index` · **مستورد الحركات** `/Payroll/TransactionsImporter/Index` · حد العمل الإضافي `/Payroll/MaximumOvertimeManagement/Index`.
+
+### 7.ج الإعدادات (فحص حي — البنية المؤكدة)
+- **التهيئة** `/Payroll/Configuration/Index` · **السنة المالية** `/Payroll/FinancialYear/Index`.
+- **عناصر الراتب** `/Payroll/SalaryItems/Index?PageType=N` — الأنواع المؤكدة: الدخل(1) · الاقتطاعات(2) · العمل الإضافي(3) · القائم على الحصص(4) · عناصر خارجية(5) · إدخال البيانات(6) · امتيازات خارجية(8) · تعديل أيام الراتب(9) · قيم ثابتة(10) · امتيازات سنوية(11).
+- **تصنيفات الرواتب** `/Payroll/SalaryClassifications/Index?PageType=N`: فئات تأمين صحي(1) · تأمين صحي(2) · **ضمان اجتماعي(3)** · ضمان إضافي(5) · **مكافأة نهاية الخدمة(4)**.
+- **تصنيفات الضريبة** `/Payroll/TaxClassifications/Index?PageType=N`: إعفاءات(1) · إعفاءات إضافية(5) · ملفات ضريبة(2) · ملفات إضافية(3) · **إجمالي الراتب(4)** · **ضريبة الحد الأدنى(6)**.
+- **أسباب الإيقاف (STB)** `/Payroll/STBClassifications/Index`.
+- **المخصصات المتغيرة** `/Payroll/OtherProvisionsClassifications/Index?PageType=1,2` (إعدادات + تسديدات).
+- **الإجازات والمغادرات (للرواتب)** `/Payroll/Leaves_Permissions/Index?PageType=…`: مدفوعة(5) · مدفوعة بلا رصيد(2) · غير مدفوعة(3) · مغادرات(4) · أسباب التعديل(6).
+- **السقوف** `/Payroll/MaximumOverTime/…`: الحد الأعلى للاقتطاع الشهري(1) · للعمل الإضافي(2).
+- **البنوك** `/Payroll/Banks/Index?PageType=N`: البنوك(1) · الفروع(2) · بنوك الشركة(5) · **ملفات البنوك(3)** · **منشئ ملخص البنك(6)** · **عناصر محسوبة(4)**.
+- **ربط ERP** `/Payroll/ErpIntegration/…`: قوالب · خدمات ويب · ملف · عناصر محسوبة · موردون · أبعاد مايكروسوفت.
+- **تجميع الصيغ (محرك المعادلات)** `/Payroll/ComputedFormula/FormulaPoolIndex?PageType=1,2`: عناصر محسوبة + صيغ التجميع.
+- **قوالب القسائم** `/Payroll/SalarySlipTemplate/TemplatesIndex`.
+
+### 7.د البنية المؤكدة للتصنيفات المالية (فحص حي داخل الشاشات) ⭐⭐
+- **الضمان الاجتماعي** (جدول فعلي): أعمدة `الاسم` · **`الموظف %`** · **`شركة %`** · **`نسبي`** (prorated نعم/لا) · **`معفى`** (نعم/لا) · الحالة. أمثلة حية: افتراضي 7.5/14.25 · «الموظف السعودي» 9.75/11.25 · «غير سعودي» 0/2. ⟵ **GOSI = ملفات مسمّاة بنسبة موظف + نسبة شركة + علم نسبي + علم إعفاء**.
+- **الضريبة/إجمالي الراتب**: جدول بأعمدة `الاسم` · **`تراكمي`** (نعم/لا) · الحالة — الشرائح (from/to/rate) داخل السجل. ⟵ **الضريبة = ملفات شرائح تراكمية** + إعفاءات + إعفاءات إضافية + ملفات ضريبة + ضريبة حد أدنى.
+- **مكافأة نهاية الخدمة**: جدول بأعمدة `الاسم` · **`تراكمي`** · الحالة — الشرائح بحسب سنوات الخدمة داخل السجل (مثل: ½ شهر/سنة لأول 5 سنوات، شهر بعدها).
+> **الديمو أردني (JOD)** — البنية (كيفية النمذجة) هي المطلوبة للنسخ، لا الأرقام الأردنية؛ أرقام العراق تُهيّأ لاحقاً.
+
+## 8) مودل رواتب ZenHR (فحص حي 2026-07-23 — `app.zenhr.com`)
+
+قائمة الرواتب الفعلية (حساب Al-Taawon، صلاحية HR):
+- **إدارة المالية**: My Salaries `/en/employees/{id}/salaries` · **Manage Financial Transactions** `/en/financial_transactions` · **Manage Overtimes** `/en/overtimes` · Air Ticket `/en/airticket_transactions` · Part Time `/en/part_time_transactions` · **Manage Salaries (المسير)** `/en/salaries` · **Vacation In-Advance Salary** `/en/in_advanced_salary_batches` · **Manage Loans** `/en/loans` · Business Trips `/en/business_trips` · **Manage Expenses** `/en/expenses` · **Manage Monthly Provisions** `/en/provision_histories`.
+- **مراكز التكلفة والمشاريع**: Cost Center Allocations `/en/employee_allocations` · Calculated Costs & Reports.
+- **Timesheets**: Timesheet Comparison Report · Project Summary Report.
+- **شاشة المسير** (`/en/salaries`): تبويبان **Salaries** + **Salary Batches**، زر **Calculate**، أعمدة الصف: `Employment Number` · `Employee Name` · `Year` · `Month` · `From Date` · `To Date` · **`Basic Salary`** · **`Net Income`** · `Termination` · Actions. ⟵ **المسير = دفعات (Batches) تُحسب بزر واحد، ينتج صف لكل موظف من Basic → Net**.
+
+**حضور ZenHR (مصادر رسمية محدّثة)**: أنواع مناوبات **regular / roster / split / overnight / flexible** + **grace periods** + **rounding rules** + **auto-overtime بمعدلات حسب نوع اليوم/المناوبة/المدة**. البصم: **Mobile GPS + geofencing**، **Biometric (ZKTeco: بصمة/وجه/قزحية)**، **QR**. **«Recommendations Page»** تقترح أوفرتايم/إجازات آلياً (= نظير `AttendanceRecommendations` عندنا!). **«Recommended Disciplinary Actions»** ترصد المخالفات وتقترح إنذار/خصم. **Missing Punch Management** ← الموافقة تتدفق للرواتب. **Approved timesheets → Payroll** (ساعات، أوفرتايم، بدلات). مكوّنات الراتب: Basic + Housing/Transportation allowances + Overtime + Bonuses + Commissions + Deductions + Loans/Advances + Final settlements + EOS. تقارير: Payroll summaries · Cost center · Variance · Earnings · Payroll journals. توطين: GOSI/WPS/Mudad/Muqeem (KSA) + قواعد متعددة الدول (منها **العراق**).
+
+## 9) الحالة الفعلية بالكود (As-Built) — ما هو مبنيّ من الرواتب
+
+مودل الرواتب عندنا = **أساسات + بذرة حاسبة ضريبة/ضمان standalone**، بلا محرك مسير فعلي.
+
+### 9.أ الأساسات (كيانات EF + Configurations + Migrations رسمية)
+| الكيان | الملف | المحتوى |
+|---|---|---|
+| **CompanyPayrollSetting** | `Domain/Entities/CompanyPayrollSetting.cs` | CompanyId، `PayrollFrequency` (Monthly/SemiMonthly/BiWeekly/Weekly)، PeriodStartDay، PeriodEndDay، PaymentDay?، IsActive |
+| **PayrollCutoffPolicy** + **PayrollCutoffPolicyType** | نفس المجلد | Name، FromDay/ToDay، `PolicyType` (Attendance/WorkingDays/Overtime/Deductions/Additions/Hiring/SalaryChanges/Leaves/Penalties/Terminations)، `CutoffBasis` (DayOfMonth/DaysBefore-After-Period…)، DayOfMonth?، OffsetDays?، CutoffTime?، EffectiveFrom/To، Priority. ⟵ **سياسات قطع لكل نوع حركة** |
+| **EmployeeFinancialInfo** (1:1) | `Domain/Entities/EmployeeFinancialInfo.cs` (+`EmployeeFinancialInfoSchema.cs` self-healing) | **المعلومات المالية الكاملة نمط كيان**: Currency/SalaryScale/**BasicSalary**/DailySalary/HourlyRate · ضمان (Type/Salary/No/JoinDate/PreviousMonths/RetirementAge) · ضريبة (File/No/Year + 6 حقول رصيد افتتاحي) · نهاية خدمة (Setup/Compute/StartDate/DueDate) · تحكّم احتساب (CalcPreviousSalaries/**StopSalaryCalc**/AdditionalSalaryStartDate) · دفع وبنك (Method/Bank/IBAN/Card/…/BankCommitment) |
+| **EmployeeAllowance** (N) | `EmployeeAllowance.cs` | ItemName (من lookup «salaryitems»)، **Amount**، FromDate/ToDate، EndAfterDate، `IsActiveOn(today)`. ⟵ **العلاوات المتكررة** — نظير «العلاوة» بعنصر راتب كيان |
+| **EmployeeContract** (N) | `EmployeeContract.cs` | ContractNo، ContractType، From/ToDate، IsCurrent، مرفق، `RemainingDays()` |
+
+### 9.ب البذرة الفعلية: حاسبة الضريبة والضمان (`/Payroll/TaxSocialSecurity`)
+شاشة واحدة مبنيّة (`Pages/Payroll/TaxSocialSecurity.cshtml.cs`) بجدولين خاصين (self-healing، منفصلين عن كيانات EF):
+- **`PayrollTaxSocialSecuritySettings`** (لكل شهر `yyyy-MM`): `TaxRate` (نسبة **مسطّحة واحدة**)، `TaxExemptionAmount`، `EmployeeSocialSecurityRate`، `CompanySocialSecurityRate`، `SocialSecurityCeiling`، `RoundAmounts`.
+- **`PayrollTaxSocialSecurityRecords`** (لكل موظف×شهر): `GrossSalary` (**يُدخل يدوياً**)، `TaxableSalary`، `TaxAmount`، `SocialSecurityEmployeeAmount`، `SocialSecurityCompanyAmount`، `NetSalary`.
+- **المعادلات المطبَّقة** (SQL بشاشة «تطبيق الإعدادات»):
+  - `TaxableSalary = max(0, Gross − Exemption)`
+  - `TaxAmount = TaxableSalary × TaxRate/100` ← **نسبة مسطّحة، لا شرائح**
+  - `SocialEmployee = min(Gross, Ceiling) × EmployeeRate/100`
+  - `SocialCompany = min(Gross, Ceiling) × CompanyRate/100`
+  - `Net = Gross − TaxAmount − SocialEmployee`
+  - تدوير اختياري لـ0 أو 2 خانة.
+
+### 9.ب-2 تفاصيل الكود المؤكدة (قراءة شاملة 2026-07-23)
+- **`SetupService`** (CRUD الأساسات): `SavePayrollCutoffPolicyAsync` يفرض **قاعدة عمل**: كل `PayrollCutoffType` (حضور/أوفرتايم/...) لا يُسنَد إلا لسياسة قطع **واحدة نشطة** لكل شركة (كشف تعارض `conflictingAssignments`). عند `PolicyType != Attendance` يُطبَّع `CutoffBasis=DayOfMonth` ويُفرَّغ `CutoffTime`.
+- **EF Configurations**: `CompanyPayrollSetting` (1:1 بالشركة، فهرس فريد مفلتر `IsDeleted=0`، Check يوم الفترة 1–31، enum→string)؛ `PayrollCutoffPolicy` (Cascade من الشركة، Checks FromDay/ToDay/DayOfMonth 1–31 وOffset≥0 وEffectiveTo≥From، enum→string)؛ `EmployeeFinancialInfo` (1:1 فريد، كل المبالغ `decimal(18,4)`, Restrict عند حذف الموظف). كلها `HasQueryFilter(!IsDeleted)`.
+- **حاسبة الضريبة/الضمان** لها **جدولان منفصلان تماماً** عن كيانات EF (`PayrollTaxSocialSecurityRecords`/`Settings`، مفتاح شهر `yyyy-MM`) — أي البذرة لا تقرأ `EmployeeFinancialInfo.BasicSalary` ولا العلاوات؛ الـGross يُدخل يدوياً لكل موظف. ⟹ نقطة الدمج الأولى بالمحرك: اشتقاق Gross من `BasicSalary + Σ EmployeeAllowance` بدل الإدخال اليدوي.
+
+### 9.ج جسر الحضور←الرواتب المبنيّ جزئياً
+جدول `EmployeeViolationCases` الفعلي فيه **`FinancialImpactType` + `FinancialImpactValue` + `DeductionAmount`**، ولائحة `DisciplinaryPenaltyRules` فيها `FinancialImpactType`/`FinancialValue`/`CalculationMode`. ⟵ **قناة الخصم من الحضور للرواتب موجودة بالسكيمة**، تنتظر محرك مسير يقرأها. وبوابة **قفل الحضور الشهري** (`EmployeeMonthAttendance.Status = Locked`) جاهزة كمصدر أيام/ساعات معتمدة.
+
+## 10) فجوات الرواتب الفعلية (بعد قراءة الكود + الفحص الحي)
+
+| المكوّن | كيان/ZenHR | عندنا | الفجوة |
+|---|---|---|---|
+| **دورة حياة المسير** (حوسب→مقفل→أُصدر→أُرسلت) | ✅ | ❌ | لا كيان `PayrollRun`/`PayrollBatch` ولا حالات |
+| قسيمة راتب (Payslip) بتفصيل بنود | ✅ قوالب قسائم | ❌ | لا قسيمة ولا سطور بنود |
+| كتالوج عناصر الراتب (10 أنواع بنوع/قيمة/ضريبة/نسبي/ESS) | ✅ | ⚠️ | عندنا lookup علاوات فقط — لا نوع/معادلة/قاعدة ضريبية/توقيت |
+| محرك معادلات (Formula Pool) | ✅ | ❌ | لا صيغ محسوبة |
+| ضريبة تصاعدية بشرائح | ✅ تراكمية | ❌ **مسطّحة** | البذرة نسبة واحدة — العراق تصاعدي |
+| ملفات ضمان (موظف%/شركة%/سقف/نسبي/إعفاء) | ✅ | ⚠️ جزئي | البذرة نسبة واحدة بلا ملفات مسمّاة/إعفاء/نسبي |
+| مكافأة نهاية الخدمة (شرائح سنوات) | ✅ | ❌ | حقول EOS بالمعلومات المالية فقط، بلا محرك |
+| القروض والأقساط | ✅ | ❌ | لا مودل قروض |
+| الأوفرتايم/الدخل/الاقتطاع كحركات | ✅ | ⚠️ | العلاوات فقط؛ لا حركات دخل/اقتطاع/أوفرتايم |
+| ربط الحضور المقفل بالمسير (أيام/غياب/تأخير) | ✅ | ❌ | البوابة جاهزة، لا قارئ بالمسير |
+| ملف بنك (صيَغ تصدير) | ✅ منشئ | ❌ | حقول IBAN/بنك موجودة، لا تصدير |
+| مراكز تكلفة/ERP | ✅ | ❌ | خارج نطاق المرحلة الأولى |
+| Gross يُشتق آلياً (أساسي+علاوات−خصومات) | ✅ | ❌ **يُدخل يدوياً** | لا اشتقاق |
+
+## 11) تصميم محرك المسير المقترح لـSmartAttendance ⭐
+
+> يُبنى بنمط الـHRMS Raw-SQL Stores نفسه (self-healing، `HrmsDatabase`، `SqlBulkCopy`) ليتوافق مع
+> بنية الحضور القائمة، ويقرأ من قفل الحضور الشهري وجداول المخالفات المالية مباشرة.
+
+### 11.أ الكيانات المقترحة
+```
+SalaryItem (عنصر راتب): Id، Name(ثنائي)، ItemType (Income/Deduction/Overtime/…)،
+   ValueKind (Fixed/Formula)، DefaultValue/FormulaId، Taxable(bool)، InGross(bool)،
+   Prorated(bool)، Timing (EventMonth/Prev/Next)، RequestableFromEss(bool)، Active
+   ← يرقّي lookup «salaryitems» الحالي لكيان كامل نمط كيان (قسم 3 أعلاه)
+
+PayrollRun (المسير): Id، BatchNo («yyyy-M-seq»)، SalaryType (Monthly/Additional)،
+   Year، Month، PeriodFrom/To، Status (Draft→Calculated→Locked→Issued→PayslipSent)،
+   CalculatedBy/At، EmployeeCount، TotalPaid، Currency
+
+PayrollRunLine (سطر موظف بالمسير): RunId، EmployeeId، BasicSalary،
+   GrossSalary، TotalAllowances، TotalDeductions، TaxAmount،
+   SocialEmployee، SocialCompany، NetSalary، WorkedDays، AbsentDays، LateHours
+   ← يُشتق من EmployeeFinancialInfo + EmployeeAllowance + EmployeeMonthAttendance(Locked) + الحركات
+
+PayrollLineComponent (بند بالقسيمة): LineId، SalaryItemId، Label، Amount،
+   IsAddition(bool)، Taxable(bool) ← سطور القسيمة التفصيلية
+
+PayrollTransaction (حركة): EmployeeId، Year/Month، SalaryItemId، Amount، Type
+   (Income/Deduction/Overtime/…)، Source (Manual/AttendanceEngine/Disciplinary/Loan)، RefId
+   ← يجمع حركات الدخل/الاقتطاع + خصومات الحضور + أقساط القروض
+
+TaxProfile: Name، IsCumulative، Brackets[]{FromAmount، ToAmount، Rate}، ExemptionAmount،
+   AdditionalExemptions، MinTaxAmount ← نمط كيان (شرائح تراكمية + إعفاءات)
+GosiProfile: Name، EmployeeRate، CompanyRate، Ceiling، Prorated(bool)، Exempt(bool)
+EndOfServiceRule: Name، Tiers[]{FromYears، ToYears، MonthsPerYear}
+EmployeeLoan + LoanInstallment: مبلغ، عدد أقساط، قسط شهري ← حركة اقتطاع شهرية بالمسير
+```
+
+### 11.ب دورة حياة المسير (نمط كيان + ZenHR)
+```
+Draft (إنشاء دفعة لفترة + اختيار الموظفين)
+  │ Calculate: لكل موظف →
+  │   Gross = BasicSalary + Σ(EmployeeAllowance النشطة) + Σ(حركات دخل/أوفرتايم)
+  │   − proration حسب أيام العمل من EmployeeMonthAttendance(Locked) (StopSalaryCalc → استبعاد)
+  │   − Σ(حركات اقتطاع) − Σ(خصومات المخالفات: DeductionAmount) − أقساط القروض
+  │   Tax = TaxProfile(Gross الخاضع − إعفاء) بالشرائح التراكمية
+  │   GosiEmp/Co = GosiProfile(min(Gross, Ceiling))
+  │   Net = Gross − Tax − GosiEmp − اقتطاعات
+  ▼
+Calculated (مراجعة + محاكاة/مدقق قبل الاعتماد)
+  │ Lock  ▼
+Locked (تُجمّد الأرقام)
+  │ Issue ▼
+Issued (اعتماد الصرف)
+  │ SendPayslips ▼
+PayslipSent (نشر القسائم للخدمة الذاتية)
+```
+**البوابات = 3 انتقالات بعد الاحتساب، كل انتقال يسجّل بواسطة+وقت** (نمط الحضور الشهري نفسه).
+
+### 11.ج توطين العراق (يُهيّأ config، لا يُبرمج صلباً)
+- **الضريبة**: تصاعدية بشرائح (3%–15%) — تُدخل كجدول `TaxProfile.Brackets` بواجهة إعدادات، مع إعفاء شخصي/عائلي (أعزب/متزوج/أطفال/سن). **⚠️ الأرقام الدقيقة تُؤكَّد مع محاسب عراقي قبل الإطلاق** — التصميم يدعم أي شرائح.
+- **الضمان الاجتماعي (GOSI العراق)**: موظف **5%** · صاحب العمل **12%** (**25%** للمنشآت المصنّفة «prime») — كملف `GosiProfile`.
+- **مكافأة نهاية الخدمة**: قاعدة شرائح بسنوات الخدمة حسب قانون العمل العراقي — كـ`EndOfServiceRule`.
+- **البذرة الحالية** (`PayrollTaxSocialSecurity`) تُرقّى: النسبة المسطّحة ← شرائح `TaxProfile`، والإدخال اليدوي للـGross ← اشتقاق آلي من الأساسي+العلاوات.
+
+## 12) خارطة التنفيذ المرحلية (عند فك التأجيل)
+
+1. **كتالوج عناصر الراتب** `SalaryItem` (يرقّي lookup العلاوات) — نوع/قيمة/ضريبة/نسبي/توقيت + ربط لوحة العلاوات القائمة.
+2. **ملفات الضريبة/الضمان/EOS** `TaxProfile`/`GosiProfile`/`EndOfServiceRule` بواجهات إعدادات (استبدال البذرة المسطّحة) + بذر أرقام العراق.
+3. **حركات المسير** `PayrollTransaction` (دخل/اقتطاع/أوفرتايم) + **قارئ خصومات الحضور** (من `EmployeeViolationCases.DeductionAmount` + قفل الشهر).
+4. **محرك المسير** `PayrollRun`/`PayrollRunLine`/`PayrollLineComponent` بدورة الحياة الخماسية + اشتقاق Gross→Net + proration من الحضور المقفل.
+5. **القسيمة** (`PayrollLineComponent` → قالب قسيمة + نشر ESS).
+6. **القروض** `EmployeeLoan` + أقساط شهرية آلية.
+7. **ملف البنك** (تصدير من IBAN/بنك القائمة) + (لاحقاً) نهاية الخدمة الآلية والمخصصات ومراكز التكلفة/ERP.
+
+> **الترتيب مقصود**: 1–3 تبني «مدخلات» المسير من القطع الموجودة (علاوات/مخالفات/حضور مقفل)،
+> و4 يجمعها، و5 يُخرج القسيمة. كل مرحلة قابلة للإطلاق مستقلة وتُختبر ككيان الحضور.
