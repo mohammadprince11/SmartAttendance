@@ -60,12 +60,11 @@
             <h1>الحضور الشهري</h1>
             <p>دورة شهر الموظف: تحت المراجعة ← معتمد ← <b>مقفل للرواتب</b> — القفل نهائي وأرقامه لا تتغير بإعادة البناء.</p>
         </div>
-        <form method="post" asp-page-handler="Build"
-              onsubmit="return confirm('بناء/تجديد أرقام الشهر من اليوميات المحللة؟ (المعتمد والمقفل لا يُمسان)')">
+        <form method="post" asp-page-handler="Build">
             <input type="hidden" name="Month" value="@Model.Month" />
             <input type="hidden" name="Search" value="@Model.Search" />
             <input type="hidden" name="Filter" value="@Model.Filter" />
-            <button type="submit" class="mat-btn">بناء الشهر من اليوميات</button>
+            <button type="submit" class="mat-btn" data-zyconfirm="بناء الشهر — تأكيد؟">بناء الشهر من اليوميات</button>
         </form>
     </header>
 
@@ -109,11 +108,11 @@
             </label>
             <span id="mat-count" style="font-size:12px;font-weight:900;color:#12D9E3">0 محدد</span>
             <button type="submit" asp-page-handler="Approve" class="mat-btn ok"
-                    onclick="return confirm('اعتماد الأشهر المحددة (تحت المراجعة فقط)؟')">اعتماد المحدد</button>
+                    data-zyconfirm="اعتماد المحدد — تأكيد؟">اعتماد المحدد</button>
             <button type="submit" asp-page-handler="Lock" class="mat-btn lock"
-                    onclick="return confirm('قفل الأشهر المحددة للرواتب؟ القفل نهائي (المعتمدة فقط).')">قفل للرواتب</button>
+                    data-zyconfirm="القفل نهائي — تأكيد؟">قفل للرواتب</button>
             <button type="submit" asp-page-handler="Reopen" class="mat-btn no"
-                    onclick="return confirm('إرجاع الأشهر المحددة للمراجعة (المعتمدة فقط — المقفل لا يُرجع)؟')">إرجاع للمراجعة</button>
+                    data-zyconfirm="إرجاع للمراجعة — تأكيد؟">إرجاع للمراجعة</button>
         </div>
 
         <div class="mat-table-card" style="margin-top:14px">

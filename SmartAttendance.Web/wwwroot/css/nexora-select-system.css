@@ -170,3 +170,56 @@ select[data-nxcs-enhanced="true"] {
     border-radius: 999px !important;
 }
 /* NEXORA_FIX15D_DROPDOWN_POSITION_END */
+/* NEXORA_FIX15E_LIGHT_THEME_START
+   نسخة الثيم الفاتح: المكون كان دارك ثابتاً فينكسر على data-theme="light" —
+   نقلب الخلفيات لأبيض والنصوص لغامق بنفس قوة !important ليتغلب. */
+html[data-theme="light"] .nxcs-trigger {
+    background: #ffffff !important;
+    border-color: rgba(13, 148, 158, .35) !important;
+    color: #0b2239 !important;
+    box-shadow: inset 0 1px 0 rgba(0, 0, 0, .02) !important;
+}
+
+html[data-theme="light"] .nxcs-trigger:hover,
+html[data-theme="light"] .nxcs-select.is-open .nxcs-trigger,
+html[data-theme="light"] .nxcs-trigger:focus {
+    border-color: rgba(13, 148, 158, .7) !important;
+    box-shadow: 0 0 0 4px rgba(13, 148, 158, .10) !important;
+}
+
+html[data-theme="light"] .nxcs-caret {
+    border-color: rgba(13, 148, 158, .4) !important;
+    background: rgba(13, 148, 158, .08) !important;
+    color: #0d949e !important;
+}
+
+html[data-theme="light"] .nxcs-panel {
+    background: #ffffff !important;
+    border-color: rgba(13, 148, 158, .3) !important;
+    box-shadow: 0 22px 55px rgba(15, 40, 70, .22) !important;
+    scrollbar-color: rgba(13, 148, 158, .45) #eef3f6 !important;
+}
+
+html[data-theme="light"] .nxcs-option {
+    color: #0b2239 !important;
+}
+
+html[data-theme="light"] .nxcs-option:hover,
+html[data-theme="light"] .nxcs-option:focus {
+    background: rgba(13, 148, 158, .10) !important;
+    color: #0b2239 !important;
+}
+
+html[data-theme="light"] .nxcs-option.is-selected {
+    background: linear-gradient(135deg, #0fb5c0, #22D3EE) !important;
+    color: #06222e !important;
+}
+
+html[data-theme="light"] .nxcs-panel::-webkit-scrollbar-track {
+    background: #eef3f6 !important;
+}
+
+html[data-theme="light"] .nxcs-panel::-webkit-scrollbar-thumb {
+    background: rgba(13, 148, 158, .45) !important;
+}
+/* NEXORA_FIX15E_LIGHT_THEME_END */

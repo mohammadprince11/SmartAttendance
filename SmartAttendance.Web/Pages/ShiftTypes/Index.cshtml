@@ -102,9 +102,9 @@
                             <td><span class="sht-chip @(shift.IsActive ? "" : "off")">@(shift.IsActive ? "نشطة" : "متوقفة")</span></td>
                             <td style="text-align:end;white-space:nowrap">
                                 <button type="button" class="sht-btn ghost" onclick="shtOpen(@shift.Id)">تعديل</button>
-                                <form method="post" asp-page-handler="Delete" style="display:inline" onsubmit="return confirm('حذف المناوبة «@shift.Name»؟')">
+                                <form method="post" asp-page-handler="Delete" style="display:inline">
                                     <input type="hidden" name="id" value="@shift.Id" />
-                                    <button type="submit" class="sht-btn ghost" style="color:#f87171">حذف</button>
+                                    <button type="submit" class="sht-btn ghost" style="color:#f87171" data-zyconfirm="تأكيد الحذف؟">حذف</button>
                                 </form>
                             </td>
                         </tr>

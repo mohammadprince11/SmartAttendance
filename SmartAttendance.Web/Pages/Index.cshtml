@@ -183,8 +183,8 @@
                                 <button type="button" onclick="zxdMove(this, -1)">▲</button>
                                 <button type="button" onclick="zxdMove(this, 1)">▼</button>
                             </span>
-                            <button type="button" class="zxd-del" title="حذف"
-                                    onclick="zxdDelete(this, @widget.Id)">×</button>
+                            <button type="button" class="zxd-del" title="حذف" data-zyconfirm="تأكيد الحذف؟"
+                                    onclick="zxdDelete(@widget.Id)">×</button>
                         </li>
                     }
                 </ul>
@@ -253,22 +253,11 @@
             var ids = Array.from(document.querySelectorAll('#zxd-wlist li')).map(function (li) { return li.dataset.id; });
             document.getElementById('zxd-ordered').value = ids.join(',');
         }
-        // حذف بنقرتين بلا نافذة تأكيد قديمة: النقرة الأولى تسلّح الزر («تأكيد؟»)
-        // والثانية خلال 3 ثوانٍ تنفذ — وإلا يرجع لحاله.
-        function zxdDelete(btn, id) {
-            if (btn.dataset.armed) {
-                document.getElementById('zxd-delete-id').value = id;
-                document.getElementById('zxd-delete-form').submit();
-                return;
-            }
-            btn.dataset.armed = '1';
-            btn.classList.add('armed');
-            btn.textContent = 'تأكيد الحذف؟';
-            setTimeout(function () {
-                delete btn.dataset.armed;
-                btn.classList.remove('armed');
-                btn.textContent = '×';
-            }, 3000);
+        // الحذف: التسليح بنقرتين يتولاه zynora-confirm.js عبر data-zyconfirm —
+        // هذه تُستدعى فقط بالنقرة الثانية المؤكدة.
+        function zxdDelete(id) {
+            document.getElementById('zxd-delete-id').value = id;
+            document.getElementById('zxd-delete-form').submit();
         }
 
         // العدادات شكلها «رقم» حصراً — نخفي منتقي الشكل لها

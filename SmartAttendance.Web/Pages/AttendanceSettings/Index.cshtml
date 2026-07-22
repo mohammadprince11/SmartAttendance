@@ -106,9 +106,9 @@
                                 <button type="button" class="ats-btn ghost" onclick="atsOpenSemantic(@semantic.Id)">تعديل</button>
                                 @if (!semantic.IsSystem)
                                 {
-                                    <form method="post" asp-page-handler="DeleteSemantic" style="display:inline" onsubmit="return confirm('حذف الدلالة «@semantic.Name»؟')">
+                                    <form method="post" asp-page-handler="DeleteSemantic" style="display:inline">
                                         <input type="hidden" name="id" value="@semantic.Id" />
-                                        <button type="submit" class="ats-btn ghost" style="color:#f87171">حذف</button>
+                                        <button type="submit" class="ats-btn ghost" style="color:#f87171" data-zyconfirm="تأكيد الحذف؟">حذف</button>
                                     </form>
                                 }
                             </td>
@@ -151,9 +151,9 @@
                                 <button type="button" class="ats-btn ghost" onclick="atsOpenSource(@source.Id)">تعديل</button>
                                 @if (!source.IsSystem)
                                 {
-                                    <form method="post" asp-page-handler="DeleteSource" style="display:inline" onsubmit="return confirm('حذف المصدر «@source.Name»؟')">
+                                    <form method="post" asp-page-handler="DeleteSource" style="display:inline">
                                         <input type="hidden" name="id" value="@source.Id" />
-                                        <button type="submit" class="ats-btn ghost" style="color:#f87171">حذف</button>
+                                        <button type="submit" class="ats-btn ghost" style="color:#f87171" data-zyconfirm="تأكيد الحذف؟">حذف</button>
                                     </form>
                                 }
                             </td>

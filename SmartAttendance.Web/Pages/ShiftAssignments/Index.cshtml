@@ -96,9 +96,9 @@
                 </select>
             </label>
             <button type="submit" asp-page-handler="Assign" class="sha-btn"
-                    onclick="return confirm('تعيين المناوبة المختارة لكل الموظفين المحددين؟')">تعيين للمحدد</button>
+                    data-zyconfirm="تعيين للمحدد — تأكيد؟">تعيين للمحدد</button>
             <button type="submit" asp-page-handler="Unassign" class="sha-btn no"
-                    onclick="return confirm('إلغاء تعيين الموظفين المحددين (يرجعون للافتراضية)؟')">إلغاء التعيين</button>
+                    data-zyconfirm="إلغاء التعيين — تأكيد؟">إلغاء التعيين</button>
             <input type="hidden" name="Search" value="@Model.Search" />
             <input type="hidden" name="Filter" value="@Model.Filter" />
             <input type="hidden" name="PageNumber" value="@Model.PageNumber" />

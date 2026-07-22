@@ -551,3 +551,11 @@ html[dir="rtl"] .hrms-slideover.open { transform: translateX(0); }
 .hrms-pager-btn:hover:not(:disabled) { border-color: var(--sa-primary); color: var(--sa-primary); }
 .hrms-pager-btn.active { background: var(--sa-primary); border-color: var(--sa-primary); color: #fff; }
 .hrms-pager-btn:disabled { opacity: .45; cursor: default; }
+
+/* ---------- التأكيد بنقرتين الموحد (zynora-confirm.js) ---------- */
+.zy-armed {
+    background: rgba(248, 113, 113, .16) !important;
+    border: 1px solid rgba(248, 113, 113, .55) !important;
+    color: #f87171 !important;
+    font-weight: 900 !important;
+}

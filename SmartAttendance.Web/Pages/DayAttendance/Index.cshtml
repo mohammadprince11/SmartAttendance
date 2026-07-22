@@ -66,8 +66,7 @@
             <h1>الحضور اليومي</h1>
             <p>يوميات موظف×يوم بالحقول المشتقة: تأخير، خروج مبكر، ساعات عمل، حالة — المرحلة 3 من محرك الحضور.</p>
         </div>
-        <form method="post" asp-page-handler="Analyze" style="display:flex;align-items:end;gap:8px"
-              onsubmit="return confirm('تحديث الحضور يعيد بناء يوميات الشهر المختار من البصمات الخام. متابعة؟')">
+        <form method="post" asp-page-handler="Analyze" style="display:flex;align-items:end;gap:8px">
             <input type="hidden" name="Month" value="@Model.Month" />
             <input type="hidden" name="Search" value="@Model.Search" />
             <label style="font-size:11px;font-weight:900;display:flex;flex-direction:column;gap:4px">
@@ -80,7 +79,7 @@
                     }
                 </select>
             </label>
-            <button type="submit" class="dat-btn">تحديث الحضور</button>
+            <button type="submit" class="dat-btn" data-zyconfirm="يعيد بناء الشهر — تأكيد؟">تحديث الحضور</button>
         </form>
     </header>
 

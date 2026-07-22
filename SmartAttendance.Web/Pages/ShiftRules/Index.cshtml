@@ -103,9 +103,9 @@
                             <td><span class="shr-chip @(rule.IsActive ? "" : "off")">@(rule.IsActive ? "نشطة" : "متوقفة")</span></td>
                             <td style="text-align:end;white-space:nowrap">
                                 <button type="button" class="shr-btn ghost" onclick="shrOpen(@rule.Id)">تعديل</button>
-                                <form method="post" asp-page-handler="Delete" style="display:inline" onsubmit="return confirm('حذف القاعدة «@rule.Name»؟')">
+                                <form method="post" asp-page-handler="Delete" style="display:inline">
                                     <input type="hidden" name="id" value="@rule.Id" />
-                                    <button type="submit" class="shr-btn ghost" style="color:#f87171">حذف</button>
+                                    <button type="submit" class="shr-btn ghost" style="color:#f87171" data-zyconfirm="تأكيد الحذف؟">حذف</button>
                                 </form>
                             </td>
                         </tr>

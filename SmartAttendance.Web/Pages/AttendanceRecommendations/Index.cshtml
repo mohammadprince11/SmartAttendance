@@ -68,11 +68,10 @@
             <h1>الإجراءات المقترحة</h1>
             <p>مخرجات محرك القواعد بانتظار الفرز: اعتماد (ينشئ مخالفة مرتبطة) أو تجاهل — والتلقائية نُفذت فوراً.</p>
         </div>
-        <form method="post" asp-page-handler="Analyze"
-              onsubmit="return confirm('تحليل يوميات الشهر المختار مقابل القواعد النشطة وتوليد الاقتراحات الجديدة. متابعة؟')">
+        <form method="post" asp-page-handler="Analyze">
             <input type="hidden" name="Month" value="@Model.Month" />
             <input type="hidden" name="Tab" value="@Model.Tab" />
-            <button type="submit" class="rec-btn">تحليل واسترجاع الاقتراحات</button>
+            <button type="submit" class="rec-btn" data-zyconfirm="تحليل الشهر — تأكيد؟">تحليل واسترجاع الاقتراحات</button>
         </form>
     </header>
 
