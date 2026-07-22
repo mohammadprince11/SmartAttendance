@@ -196,6 +196,9 @@
         var cardTitle = document.getElementById("bp-card-title");
         var cardText = document.getElementById("bp-card-text");
 
+        var views = Array.prototype.slice.call(
+            document.querySelectorAll("#brand-preview .bp-view"));
+
         function activateTab(tab) {
             nav.querySelectorAll(".bp-nav-item").forEach(function (t) {
                 t.classList.toggle("is-active", t === tab);
@@ -206,6 +209,10 @@
             if (cardText) {
                 cardText.textContent = tab.getAttribute("data-bp-text") || cardText.textContent;
             }
+            var view = tab.getAttribute("data-bp-view");
+            views.forEach(function (v) {
+                v.hidden = v.getAttribute("data-bp-view") !== view;
+            });
         }
 
         nav.addEventListener("click", function (e) {

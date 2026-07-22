@@ -121,25 +121,93 @@
                 <div class="bp-shell">
                     <div class="bp-nav" id="bp-nav">
                         <span class="bp-nav-item is-active" role="button" tabindex="0"
+                              data-bp-view="dashboard"
                               data-bp-title="لوحة البيانات" data-bp-text="نظرة عامة على المؤشرات بهويتك الجديدة.">لوحة البيانات</span>
                         <span class="bp-nav-item" role="button" tabindex="0"
+                              data-bp-view="employees"
                               data-bp-title="الموظفون" data-bp-text="قائمة الموظفين والإجراءات بهويتك الجديدة.">الموظفون</span>
                         <span class="bp-nav-item" role="button" tabindex="0"
+                              data-bp-view="attendance"
                               data-bp-title="الحضور" data-bp-text="سجلّ الحضور والانصراف بهويتك الجديدة.">الحضور</span>
                     </div>
                     <div class="bp-body">
                         <div class="bp-card">
                             <div class="bp-card-title" id="bp-card-title">لوحة البيانات</div>
                             <p class="bp-card-text" id="bp-card-text">نظرة عامة على المؤشرات بهويتك الجديدة.</p>
+
+                            @* Dashboard: KPI tiles *@
+                            <div class="bp-view" data-bp-view="dashboard">
+                                <div class="bp-kpis">
+                                    <div class="bp-kpi">
+                                        <span class="bp-kpi-num">1,357</span>
+                                        <span class="bp-kpi-label">إجمالي الموظفين</span>
+                                    </div>
+                                    <div class="bp-kpi">
+                                        <span class="bp-kpi-num">92%</span>
+                                        <span class="bp-kpi-label">نسبة الحضور</span>
+                                    </div>
+                                    <div class="bp-kpi">
+                                        <span class="bp-kpi-num">34</span>
+                                        <span class="bp-kpi-label">طلبات معلّقة</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @* Employees: list rows *@
+                            <div class="bp-view" data-bp-view="employees" hidden>
+                                <div class="bp-list">
+                                    <div class="bp-emp">
+                                        <span class="bp-avatar">أ</span>
+                                        <span class="bp-emp-info">
+                                            <span class="bp-emp-name">أحمد الرشيد</span>
+                                            <span class="bp-emp-role">محاسب أول</span>
+                                        </span>
+                                        <span class="bp-chip bp-chip-success">نشط</span>
+                                    </div>
+                                    <div class="bp-emp">
+                                        <span class="bp-avatar">س</span>
+                                        <span class="bp-emp-info">
+                                            <span class="bp-emp-name">سارة الحربي</span>
+                                            <span class="bp-emp-role">أخصائية موارد</span>
+                                        </span>
+                                        <span class="bp-chip bp-chip-warning">إجازة</span>
+                                    </div>
+                                    <div class="bp-emp">
+                                        <span class="bp-avatar">م</span>
+                                        <span class="bp-emp-info">
+                                            <span class="bp-emp-name">محمد العتيبي</span>
+                                            <span class="bp-emp-role">فني صيانة</span>
+                                        </span>
+                                        <span class="bp-chip bp-chip-danger">منتهٍ</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @* Attendance: check-in rows *@
+                            <div class="bp-view" data-bp-view="attendance" hidden>
+                                <div class="bp-list">
+                                    <div class="bp-att">
+                                        <span class="bp-emp-name">أحمد الرشيد</span>
+                                        <span class="bp-att-times">08:02 — 16:10</span>
+                                        <span class="bp-chip bp-chip-success">حاضر</span>
+                                    </div>
+                                    <div class="bp-att">
+                                        <span class="bp-emp-name">سارة الحربي</span>
+                                        <span class="bp-att-times">09:18 — 16:05</span>
+                                        <span class="bp-chip bp-chip-warning">تأخّر</span>
+                                    </div>
+                                    <div class="bp-att">
+                                        <span class="bp-emp-name">محمد العتيبي</span>
+                                        <span class="bp-att-times">— : —</span>
+                                        <span class="bp-chip bp-chip-danger">غائب</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="bp-row">
                                 <span class="bp-btn-primary" role="button">إجراء رئيسي</span>
                                 <span class="bp-btn-soft" role="button">ثانوي</span>
                                 <span class="bp-badge">شارة</span>
-                            </div>
-                            <div class="bp-chips">
-                                <span class="bp-chip bp-chip-success">نجاح</span>
-                                <span class="bp-chip bp-chip-warning">تحذير</span>
-                                <span class="bp-chip bp-chip-danger">خطر</span>
                             </div>
                         </div>
                     </div>
