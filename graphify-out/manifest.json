@@ -3698,5 +3698,25 @@
     "mtime": 1784741811.6107886,
     "ast_hash": "61381e5655ccd7d9598b134f575c90b3",
     "semantic_hash": ""
+  },
+  "SmartAttendance.Tests/SmartAttendance.Tests.csproj": {
+    "mtime": 1784743603.4479215,
+    "ast_hash": "67cb94365448c43a1198fcf360f3a698",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Tests/ThemeCompilerTests.cs": {
+    "mtime": 1784743338.9714677,
+    "ast_hash": "3bd3c3475c591c724ad9d3ac6b7b1342",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Tests/ThemeContextTests.cs": {
+    "mtime": 1784743352.614484,
+    "ast_hash": "3454ff480b52665c2cc8075769c77213",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Tests/ThemeStoreIntegrationTests.cs": {
+    "mtime": 1784743611.756844,
+    "ast_hash": "f95719b417e841589ba1ac284d50897e",
+    "semantic_hash": ""
   }
 }
