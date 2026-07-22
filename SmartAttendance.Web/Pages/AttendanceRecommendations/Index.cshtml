@@ -1,0 +1,170 @@
+@page "/AttendanceRecommendations"
+@model SmartAttendance.Web.Pages.AttendanceRecommendations.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@*
+    متابعة الإجراءات المقترحة — المرحلة 4 (نمط كيان): تبويبات حالة + اعتماد/تجاهل
+    + «تحليل واسترجاع الاقتراحات».
+*@
+
+@{
+    ViewData["Title"] = "الإجراءات المقترحة";
+    var tabs = new (string Key, string Label, int Count)[]
+    {
+        ("Pending", "معلقة", Model.PendingCount),
+        ("Auto", "تلقائية", Model.AutoCount),
+        ("Approved", "معتمدة", Model.ApprovedCount),
+        ("Ignored", "متجاهلة", Model.IgnoredCount),
+        ("All", "الكل", Model.PendingCount + Model.AutoCount + Model.ApprovedCount + Model.IgnoredCount)
+    };
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .rec-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
+    .rec-head {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
+                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
+    }
+    html[data-theme="light"] .rec-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
+    .rec-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .rec-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .rec-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
+    .rec-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
+    .rec-btn.ok { background: linear-gradient(135deg, #4ade80, #22c55e); }
+    .rec-btn.no { background: transparent; border: 1px solid rgba(248,113,113,.4); color: #f87171; }
+
+    .rec-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .rec-bar input[type=month] { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; }
+    html[data-theme="light"] .rec-bar input[type=month] { background: #fff; color: inherit; }
+    .rec-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-inline-start: auto; }
+    .rec-tab { padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 900; border: 1px solid rgba(73,111,151,.25); color: inherit; text-decoration: none; }
+    .rec-tab.active { background: rgba(18,217,227,.14); color: #12D9E3; border-color: rgba(18,217,227,.4); }
+    .rec-tab b { direction: ltr; display: inline-block; }
+
+    .rec-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .rec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 860px; }
+    .rec-table th { text-align: start; padding: 10px 12px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); }
+    html[data-theme="light"] .rec-table th { background: #f2f7fb; }
+    .rec-table td { padding: 10px 12px; border-bottom: 1px solid rgba(143,168,188,.08); vertical-align: middle; }
+    .rec-table tr:hover td { background: rgba(18,217,227,.04); }
+    .rec-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; }
+    .rec-chip.Pending { background: rgba(250,204,21,.12); color: #facc15; }
+    .rec-chip.Approved { background: rgba(74,222,128,.12); color: #4ade80; }
+    .rec-chip.Auto { background: rgba(18,217,227,.12); color: #12D9E3; }
+    .rec-chip.Ignored { background: rgba(143,168,188,.14); color: var(--sa-muted, #8FA8BC); }
+    .rec-chip.note { background: rgba(167,139,250,.14); color: #a78bfa; }
+    .rec-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .rec-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
+    .rec-ref { font-size: 11px; color: #12D9E3; font-weight: 900; direction: ltr; display: inline-block; }
+</style>
+
+<section class="rec-page" dir="rtl">
+    <header class="rec-head">
+        <div>
+            <h1>الإجراءات المقترحة</h1>
+            <p>مخرجات محرك القواعد بانتظار الفرز: اعتماد (ينشئ مخالفة مرتبطة) أو تجاهل — والتلقائية نُفذت فوراً.</p>
+        </div>
+        <form method="post" asp-page-handler="Analyze"
+              onsubmit="return confirm('تحليل يوميات الشهر المختار مقابل القواعد النشطة وتوليد الاقتراحات الجديدة. متابعة؟')">
+            <input type="hidden" name="Month" value="@Model.Month" />
+            <input type="hidden" name="Tab" value="@Model.Tab" />
+            <button type="submit" class="rec-btn">تحليل واسترجاع الاقتراحات</button>
+        </form>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="rec-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <div class="rec-bar">
+        <form method="get" style="display:flex;align-items:center;gap:8px">
+            <input type="hidden" name="Tab" value="@Model.Tab" />
+            <input type="month" name="Month" value="@Model.Month" />
+            <button type="submit" class="rec-btn ghost">عرض</button>
+        </form>
+        <nav class="rec-tabs">
+            @foreach (var (key, label, count) in tabs)
+            {
+                <a class="rec-tab @(Model.Tab == key ? "active" : "")" href="?Month=@Model.Month&Tab=@key">@label <b>@count</b></a>
+            }
+        </nav>
+    </div>
+
+    <div class="rec-table-card">
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="rec-empty">لا اقتراحات بهذا التبويب — شغّل «تحليل واسترجاع الاقتراحات» بعد تحديث الحضور اليومي.</div>
+        }
+        else
+        {
+            <table class="rec-table">
+                <thead>
+                    <tr>
+                        <th>الموظف</th><th>التاريخ</th><th>القاعدة</th><th>ما تحقق</th>
+                        <th>الإجراء المقترح</th><th>الحالة</th><th style="text-align:end">فرز</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            <td><b>@row.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @row.EmployeeNo</span></td>
+                            <td style="direction:ltr;text-align:start">@row.WorkDate.ToString("yyyy-MM-dd")</td>
+                            <td style="font-size:12px">@row.RuleName</td>
+                            <td style="font-size:12px;color:var(--sa-muted,#8FA8BC)">@row.Summary</td>
+                            <td>
+                                <span class="rec-chip @(row.ActionType == "Note" ? "note" : "Pending")" style="background:rgba(18,217,227,.08);color:inherit">@row.ActionText</span>
+                                @if (row.ViolationCaseId != null)
+                                {
+                                    <a class="rec-ref" href="/Violations">#@row.ViolationCaseId</a>
+                                }
+                            </td>
+                            <td><span class="rec-chip @row.Status">@RecommendationStore.StatusLabel(row.Status)</span></td>
+                            <td style="text-align:end;white-space:nowrap">
+                                @if (row.Status == "Pending")
+                                {
+                                    <form method="post" asp-page-handler="Approve" style="display:inline">
+                                        <input type="hidden" name="id" value="@row.Id" />
+                                        <input type="hidden" name="Month" value="@Model.Month" />
+                                        <input type="hidden" name="Tab" value="@Model.Tab" />
+                                        <button type="submit" class="rec-btn ok" style="min-height:32px;padding:5px 14px">اعتماد</button>
+                                    </form>
+                                    <form method="post" asp-page-handler="Ignore" style="display:inline">
+                                        <input type="hidden" name="id" value="@row.Id" />
+                                        <input type="hidden" name="Month" value="@Model.Month" />
+                                        <input type="hidden" name="Tab" value="@Model.Tab" />
+                                        <button type="submit" class="rec-btn no" style="min-height:32px;padding:5px 14px">تجاهل</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <text>—</text>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;font-size:12px;font-weight:900">
+            @if (Model.PageNumber > 1)
+            {
+                <a class="rec-btn ghost" href="?Month=@Model.Month&Tab=@Model.Tab&PageNumber=@(Model.PageNumber - 1)">السابق</a>
+            }
+            <span>صفحة @Model.PageNumber من @Model.TotalPages (@Model.TotalRows اقتراح)</span>
+            @if (Model.PageNumber < Model.TotalPages)
+            {
+                <a class="rec-btn ghost" href="?Month=@Model.Month&Tab=@Model.Tab&PageNumber=@(Model.PageNumber + 1)">التالي</a>
+            }
+        </div>
+    }
+</section>

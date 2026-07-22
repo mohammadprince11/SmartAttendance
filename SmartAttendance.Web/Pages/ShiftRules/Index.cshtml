@@ -1,0 +1,312 @@
+@page "/ShiftRules"
+@model SmartAttendance.Web.Pages.ShiftRules.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+@using System.Text.Json
+
+@*
+    منشئ قواعد المناوبات — المرحلة 4 من مودل الحضور الجديد (نمط كيان):
+    القاعدة = نطاق (مناوبات/سياق يوم/أيام) + شرط (حقل/مقارنة/قيمة) + أثر.
+*@
+
+@{
+    ViewData["Title"] = "قواعد المناوبات";
+    var rulesJson = JsonSerializer.Serialize(Model.Rules.Select(r => new
+    {
+        r.Id, r.Name, r.ShiftTypeIds, r.ApplyOn, r.WeekDays, r.ConditionField, r.Comparison,
+        r.ValueKind, r.ValueTime, r.OffsetMinutes, r.ValueHours, r.ActionType, r.ActionText,
+        r.IsAutomatic, r.IsActive
+    }));
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .shr-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
+    .shr-head {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
+                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
+    }
+    html[data-theme="light"] .shr-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
+    .shr-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .shr-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .shr-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
+    .shr-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
+
+    .shr-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: hidden; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .shr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .shr-table th { text-align: start; padding: 12px 14px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); }
+    html[data-theme="light"] .shr-table th { background: #f2f7fb; }
+    .shr-table td { padding: 11px 14px; border-bottom: 1px solid rgba(143,168,188,.08); vertical-align: middle; }
+    .shr-table tr:hover td { background: rgba(18,217,227,.04); }
+    .shr-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; background: rgba(18,217,227,.1); color: #12D9E3; }
+    .shr-chip.auto { background: rgba(74,222,128,.12); color: #4ade80; }
+    .shr-chip.off { background: rgba(248,113,113,.12); color: #f87171; }
+    .shr-chip.note { background: rgba(167,139,250,.14); color: #a78bfa; }
+    .shr-sentence { font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .shr-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .shr-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
+
+    .shr-form { display: flex; flex-direction: column; gap: 12px; }
+    .shr-form label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 4px; }
+    .shr-form input[type=text], .shr-form input[type=number], .shr-form input[type=time], .shr-form select {
+        min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25);
+        background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px;
+    }
+    html[data-theme="light"] .shr-form input, html[data-theme="light"] .shr-form select { background: #fff; }
+    .shr-section { border: 1px solid rgba(73,111,151,.18); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .shr-section > b { font-size: 12px; color: #12D9E3; }
+    .shr-checks { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; font-weight: 800; }
+    .shr-checks label { flex-direction: row; align-items: center; gap: 5px; }
+    .shr-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .shr-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+</style>
+
+<section class="shr-page" dir="rtl">
+    <header class="shr-head">
+        <div>
+            <h1>قواعد المناوبات</h1>
+            <p>محرك «حضور ← إجراء»: في حالة [شرط على اليومية] ← [مخالفة/ملاحظة]، يدوي بالفرز أو تلقائي.</p>
+        </div>
+        <button type="button" class="shr-btn" onclick="shrOpen(0)">+ قاعدة جديدة</button>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="shr-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <div class="shr-table-card">
+        @if (Model.Rules.Count == 0)
+        {
+            <div class="shr-empty">لا قواعد بعد — ابدأ بـ«قاعدة جديدة» (مثال: ختم الدخول بعد وقت بدء المناوبة ← مخالفة تأخير).</div>
+        }
+        else
+        {
+            <table class="shr-table">
+                <thead>
+                    <tr><th>القاعدة</th><th>الجملة</th><th>النطاق</th><th>الأثر</th><th>التنفيذ</th><th>الحالة</th><th style="text-align:end">إجراءات</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var rule in Model.Rules)
+                    {
+                        var scopeText = rule.ShiftTypeIdList.Count == 0
+                            ? "كل المناوبات"
+                            : string.Join("، ", Model.Shifts.Where(s => rule.ShiftTypeIdList.Contains(s.Id)).Select(s => s.Name));
+                        <tr>
+                            <td><b>@rule.Name</b></td>
+                            <td class="shr-sentence">@rule.Sentence</td>
+                            <td style="font-size:12px">@scopeText · @ShiftRuleStore.LabelOf(ShiftRuleStore.ApplyOnOptions, rule.ApplyOn)</td>
+                            <td><span class="shr-chip @(rule.ActionType == "Note" ? "note" : "")">@(rule.ActionType == "Note" ? "ملاحظة" : "مخالفة")</span></td>
+                            <td><span class="shr-chip @(rule.IsAutomatic ? "auto" : "")">@(rule.IsAutomatic ? "تلقائي" : "بالفرز")</span></td>
+                            <td><span class="shr-chip @(rule.IsActive ? "" : "off")">@(rule.IsActive ? "نشطة" : "متوقفة")</span></td>
+                            <td style="text-align:end;white-space:nowrap">
+                                <button type="button" class="shr-btn ghost" onclick="shrOpen(@rule.Id)">تعديل</button>
+                                <form method="post" asp-page-handler="Delete" style="display:inline" onsubmit="return confirm('حذف القاعدة «@rule.Name»؟')">
+                                    <input type="hidden" name="id" value="@rule.Id" />
+                                    <button type="submit" class="shr-btn ghost" style="color:#f87171">حذف</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @* ---------- سلايد بناء القاعدة ---------- *@
+    <div class="hrms-slideover-backdrop" id="shr-backdrop" onclick="shrClose()"></div>
+    <aside class="hrms-slideover wide" id="shr-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="shr-title">قاعدة جديدة</h2>
+            <button type="button" class="hrms-slideover-close" onclick="shrClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Save" class="shr-form" id="shr-form">
+                <input type="hidden" name="Id" id="shr-Id" value="0" />
+
+                <label>اسم القاعدة *
+                    <input type="text" name="Name" id="shr-Name" required placeholder="مثال: تأخير عن بدء المناوبة" />
+                </label>
+
+                <div class="shr-section">
+                    <b>النطاق</b>
+                    <label>المناوبات (فارغ = الكل)</label>
+                    <div class="shr-checks">
+                        @foreach (var shift in Model.Shifts)
+                        {
+                            <label><input type="checkbox" name="ShiftTypeIds" value="@shift.Id" /> @shift.Name</label>
+                        }
+                    </div>
+                    <div class="shr-grid2">
+                        <label>طبق على
+                            <select name="ApplyOn" id="shr-ApplyOn">
+                                @foreach (var (key, label) in ShiftRuleStore.ApplyOnOptions)
+                                {
+                                    <option value="@key">@label</option>
+                                }
+                            </select>
+                        </label>
+                    </div>
+                    <label>أيام الأسبوع (فارغ = الكل)</label>
+                    <div class="shr-checks">
+                        @for (var dayIndex = 0; dayIndex < 7; dayIndex++)
+                        {
+                            <label><input type="checkbox" name="WeekDays" value="@dayIndex" /> @ShiftTypeStore.DayNames[dayIndex]</label>
+                        }
+                    </div>
+                </div>
+
+                <div class="shr-section">
+                    <b>الشرط «في حالة»</b>
+                    <div class="shr-grid2">
+                        <label>الحقل
+                            <select name="ConditionField" id="shr-Field" onchange="shrFieldChanged()">
+                                @foreach (var (key, label) in ShiftRuleStore.ConditionFields)
+                                {
+                                    <option value="@key">@label</option>
+                                }
+                            </select>
+                        </label>
+                        <label id="shr-cmp-wrap">الشرط
+                            <select name="Comparison" id="shr-Cmp"></select>
+                        </label>
+                    </div>
+                    <div class="shr-grid3" id="shr-value-wrap">
+                        <label>القيمة
+                            <select name="ValueKind" id="shr-Kind" onchange="shrFieldChanged()">
+                                @foreach (var (key, label) in ShiftRuleStore.ValueKinds)
+                                {
+                                    <option value="@key">@label</option>
+                                }
+                            </select>
+                        </label>
+                        <label id="shr-time-wrap">الوقت
+                            <input type="time" name="ValueTime" id="shr-Time" value="09:00" />
+                        </label>
+                        <label id="shr-offset-wrap">إزاحة (دقائق ±)
+                            <input type="number" name="OffsetMinutes" id="shr-Offset" value="0" step="5" min="-720" max="720" />
+                        </label>
+                        <label id="shr-hours-wrap">الساعات
+                            <input type="number" name="ValueHours" id="shr-Hours" value="1" step="0.25" min="0" max="24" />
+                        </label>
+                    </div>
+                </div>
+
+                <div class="shr-section">
+                    <b>الأثر «الإجراء»</b>
+                    <div class="shr-grid2">
+                        <label>نوع الإجراء
+                            <select name="ActionType" id="shr-ActionType">
+                                <option value="Violation">مخالفة (تنشئ قضية بمودل المخالفات)</option>
+                                <option value="Note">ملاحظة (رصد فقط)</option>
+                            </select>
+                        </label>
+                        <label>نص الإجراء *
+                            <input type="text" name="ActionText" id="shr-ActionText" required placeholder="مثال: تأخير عن الدوام - إنذار شفوي" />
+                        </label>
+                    </div>
+                    <div class="shr-checks">
+                        <label><input type="checkbox" name="IsAutomatic" value="true" id="shr-Auto" /> اتخذ الإجراء تلقائياً (بلا فرز)</label>
+                        <label><input type="checkbox" name="IsActive" value="true" id="shr-Active" checked /> القاعدة نشطة</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="shr-btn">حفظ القاعدة</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script>
+        var SHR_DATA = @Html.Raw(rulesJson);
+        var SHR_TIME_CMPS = [['Before','قبل'],['BeforeOrAt','قبل/في'],['After','بعد'],['AfterOrAt','بعد/في']];
+        var SHR_HOUR_CMPS = [['MoreThan','أكثر من'],['LessThan','أقل من']];
+
+        function shrFillCmp(options, selected) {
+            var sel = document.getElementById('shr-Cmp');
+            sel.innerHTML = '';
+            options.forEach(function (o) {
+                var opt = document.createElement('option');
+                opt.value = o[0]; opt.textContent = o[1];
+                if (o[0] === selected) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+
+        // إظهار/إخفاء عناصر القيمة حسب حقل الشرط ونوع القيمة
+        function shrFieldChanged() {
+            var field = document.getElementById('shr-Field').value;
+            var kindSel = document.getElementById('shr-Kind');
+            var isExistence = field === 'Absent' || field === 'MissingCheckOut';
+            var isHoursField = field === 'Duration' || field === 'LateHours' || field === 'EarlyLeaveHours';
+
+            document.getElementById('shr-cmp-wrap').hidden = isExistence;
+            document.getElementById('shr-value-wrap').style.display = isExistence ? 'none' : '';
+
+            if (isExistence) return;
+
+            if (isHoursField) {
+                kindSel.value = 'Hours';
+                kindSel.disabled = true;
+                shrFillCmp(SHR_HOUR_CMPS, document.getElementById('shr-Cmp').value);
+            } else {
+                if (kindSel.value === 'Hours') kindSel.value = 'Time';
+                kindSel.disabled = false;
+                shrFillCmp(SHR_TIME_CMPS, document.getElementById('shr-Cmp').value);
+            }
+
+            var kind = kindSel.value;
+            document.getElementById('shr-time-wrap').hidden = kind !== 'Time';
+            document.getElementById('shr-offset-wrap').hidden = kind !== 'ShiftStart' && kind !== 'ShiftEnd';
+            document.getElementById('shr-hours-wrap').hidden = kind !== 'Hours';
+        }
+
+        function shrOpen(id) {
+            var form = document.getElementById('shr-form');
+            form.reset();
+            document.getElementById('shr-Id').value = id || 0;
+            document.getElementById('shr-title').textContent = id ? 'تعديل القاعدة' : 'قاعدة جديدة';
+
+            if (id) {
+                var r = SHR_DATA.find(function (x) { return x.Id === id; });
+                if (r) {
+                    document.getElementById('shr-Name').value = r.Name || '';
+                    document.getElementById('shr-ApplyOn').value = r.ApplyOn || 'Work';
+                    document.getElementById('shr-Field').value = r.ConditionField || 'CheckIn';
+                    document.getElementById('shr-Kind').value = r.ValueKind || 'Time';
+                    document.getElementById('shr-Time').value = r.ValueTime || '09:00';
+                    document.getElementById('shr-Offset').value = r.OffsetMinutes || 0;
+                    document.getElementById('shr-Hours').value = r.ValueHours || 1;
+                    document.getElementById('shr-ActionType').value = r.ActionType || 'Violation';
+                    document.getElementById('shr-ActionText').value = r.ActionText || '';
+                    document.getElementById('shr-Auto').checked = !!r.IsAutomatic;
+                    document.getElementById('shr-Active').checked = !!r.IsActive;
+                    (r.ShiftTypeIds || '').split(',').forEach(function (v) {
+                        var cb = document.querySelector('[name="ShiftTypeIds"][value="' + v + '"]');
+                        if (cb) cb.checked = true;
+                    });
+                    (r.WeekDays || '').split(',').forEach(function (v) {
+                        var cb = document.querySelector('[name="WeekDays"][value="' + v + '"]');
+                        if (cb) cb.checked = true;
+                    });
+                    shrFieldChanged();
+                    document.getElementById('shr-Cmp').value = r.Comparison || 'After';
+                }
+            } else {
+                shrFieldChanged();
+            }
+            document.getElementById('shr-slide').classList.add('open');
+            document.getElementById('shr-backdrop').classList.add('open');
+        }
+
+        function shrClose() {
+            document.getElementById('shr-slide').classList.remove('open');
+            document.getElementById('shr-backdrop').classList.remove('open');
+        }
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') shrClose(); });
+        shrFieldChanged();
+    </script>
+}
