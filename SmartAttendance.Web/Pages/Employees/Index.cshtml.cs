@@ -17,15 +17,18 @@ public class IndexModel : PageModel
     private readonly IEmployeeService _employeeService;
     private readonly ICompanyService _companyService;
     private readonly IPermissionAuthorizationService _permissionAuthorizationService;
+    private readonly SmartAttendance.Web.Infrastructure.Security.IEffectiveScopeService _effectiveScopeService;
 
     public IndexModel(
         IEmployeeService employeeService,
         ICompanyService companyService,
-        IPermissionAuthorizationService permissionAuthorizationService)
+        IPermissionAuthorizationService permissionAuthorizationService,
+        SmartAttendance.Web.Infrastructure.Security.IEffectiveScopeService effectiveScopeService)
     {
         _employeeService = employeeService;
         _companyService = companyService;
         _permissionAuthorizationService = permissionAuthorizationService;
+        _effectiveScopeService = effectiveScopeService;
     }
 
     public List<EmployeeListViewModel> Employees { get; set; } = new();
@@ -217,13 +220,26 @@ public class IndexModel : PageModel
                     PeoplePermissionCodes.ViewProfile),
                 HttpContext.RequestAborted);
 
+        // Unify the Access Roles Employees data scope with the rules-based scope:
+        // a row is viewable only if BOTH allow it. Admin, no Data role, or an
+        // "All" scope resolve to Unrestricted, so this can only tighten.
+        var accessRoleScope = await _effectiveScopeService.GetEmployeesAccessScopeAsync(
+            systemUserId,
+            role.Equals("Admin", StringComparison.OrdinalIgnoreCase),
+            HttpContext.RequestAborted);
+
         foreach (var employee in result.Items)
         {
             employee.CanViewProfile = profileScope.AllowsEmployee(
-                employee.Id,
-                employee.CompanyId,
-                employee.BranchId,
-                employee.DepartmentId);
+                    employee.Id,
+                    employee.CompanyId,
+                    employee.BranchId,
+                    employee.DepartmentId)
+                && accessRoleScope.AllowsEmployee(
+                    employee.Id,
+                    employee.CompanyId,
+                    employee.BranchId,
+                    employee.DepartmentId);
         }
 
         Employees = result.Items;
