@@ -8,16 +8,18 @@
 
     --zy-midnight-navy: #081426;
     --zy-deep-space: #101C30;
-    --zy-electric-teal: #18C7BD;
-    --zy-refined-aqua: #42DED3;
-    --zy-champagne-gold: #D4B36A;
+    /* Brand colours bridge to the Theme Contract (zynora-theme-contract.css);
+       the engine overrides the brand and status tokens and these follow. */
+    --zy-electric-teal: var(--brand-primary);
+    --zy-refined-aqua: var(--brand-primary-aqua);
+    --zy-champagne-gold: var(--brand-accent);
     --zy-soft-silver: #D9E1E8;
     --zy-cloud-white: #F7F9FB;
 
-    --zy-danger: #D94F5C;
-    --zy-success: #238C63;
-    --zy-warning: #B77A14;
-    --zy-info: #2F76C9;
+    --zy-danger: var(--status-danger);
+    --zy-success: var(--status-success);
+    --zy-warning: var(--status-warning);
+    --zy-info: var(--status-info);
 
     --zy-font-display: "Sora", "Inter", "Segoe UI", Arial, sans-serif;
     --zy-font-ui: "Inter", "Segoe UI", Arial, sans-serif;
@@ -142,23 +144,26 @@
 html[data-theme="dark"] {
     color-scheme: dark;
 
-    --zy-bg: var(--zy-midnight-navy);
-    --zy-bg-elevated: var(--zy-deep-space);
-    --zy-surface: #12223A;
-    --zy-surface-raised: #162941;
-    --zy-surface-soft: rgba(247, 249, 251, .035);
-    --zy-input: #0B1A2D;
-    --zy-text: var(--zy-cloud-white);
-    --zy-text-muted: #A7B6C7;
-    --zy-border: rgba(217, 225, 232, .14);
-    --zy-border-strong: rgba(24, 199, 189, .34);
-    --zy-table-row-alt: rgba(247, 249, 251, .018);
-    --zy-primary-soft: rgba(24, 199, 189, .12);
-    --zy-danger-soft: rgba(228, 92, 102, .12);
-    --zy-warning-soft: rgba(214, 162, 60, .12);
-    --zy-success-soft: rgba(47, 183, 128, .12);
-    --zy-shadow-sm: 0 1px 2px rgba(0, 0, 0, .16);
-    --zy-shadow-md: 0 8px 24px rgba(0, 0, 0, .20);
-    --zy-shadow-lg: 0 18px 48px rgba(0, 0, 0, .28);
-    --sa-primary-hover: var(--zy-refined-aqua);
+    /* Active theme bridges to the Theme Contract (zynora-theme-contract.css).
+       Computed values are identical to the pre-engine dark skin; the engine
+       recolours the app by overriding the contract tokens these consume. */
+    --zy-bg: var(--surface-app);
+    --zy-bg-elevated: var(--surface-base);
+    --zy-surface: var(--surface-panel);
+    --zy-surface-raised: var(--surface-raised);
+    --zy-surface-soft: var(--surface-soft);
+    --zy-input: var(--surface-input);
+    --zy-text: var(--text-default);
+    --zy-text-muted: var(--text-muted);
+    --zy-border: var(--border-default);
+    --zy-border-strong: var(--border-strong);
+    --zy-table-row-alt: var(--interactive-row-alt);
+    --zy-primary-soft: var(--interactive-primary-soft);
+    --zy-danger-soft: var(--status-danger-soft);
+    --zy-warning-soft: var(--status-warning-soft);
+    --zy-success-soft: var(--status-success-soft);
+    --zy-shadow-sm: var(--elevation-sm);
+    --zy-shadow-md: var(--elevation-md);
+    --zy-shadow-lg: var(--elevation-lg);
+    --sa-primary-hover: var(--brand-primary-hover);
 }

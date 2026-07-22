@@ -1,0 +1,80 @@
+/*
+   ZYNORA HR - Theme Token Contract (Branding and Theme Engine, Phase P3)
+
+   This file is the single semantic surface the Branding and Theme Engine writes
+   to. At runtime the compiler emits a style element with id "company-theme" that
+   overrides these same tokens per company; everything downstream (--zy-*, and
+   through it --nx-*, --nxr-*, --sa-*) resolves through this contract, so
+   overriding one token here recolours the whole application.
+
+   The values below are the ZYNORA Default: the current dark theme captured
+   byte-for-byte. When no company theme is resolved this is the fallback skin,
+   and it must render identically to the pre-engine application.
+
+   Groups: brand, surface, text, border, interactive, status, chart, elevation,
+   layout. Semantic status colours are engine-owned and stay independent of the
+   company brand colour by design.
+
+   Dark-first: these are the dark values. Light is generated later (P7) behind a
+   feature flag and is intentionally absent today.
+*/
+
+:root {
+    /* Brand */
+    --brand-primary: #18C7BD;
+    --brand-primary-aqua: #42DED3;
+    --brand-primary-hover: #42DED3;
+    --brand-secondary: #101C30;
+    --brand-accent: #D4B36A;
+
+    /* Surface (dark ladder) */
+    --surface-app: #081426;
+    --surface-base: #101C30;
+    --surface-panel: #12223A;
+    --surface-raised: #162941;
+    --surface-input: #0B1A2D;
+    --surface-soft: rgba(247, 249, 251, .035);
+
+    /* Text */
+    --text-default: #F7F9FB;
+    --text-muted: #A7B6C7;
+    --text-on-primary: #081426;
+
+    /* Border */
+    --border-default: rgba(217, 225, 232, .14);
+    --border-strong: rgba(24, 199, 189, .34);
+
+    /* Interactive */
+    --interactive-primary-soft: rgba(24, 199, 189, .12);
+    --interactive-row-alt: rgba(247, 249, 251, .018);
+    --interactive-focus-ring: 0 0 0 3px rgba(24, 199, 189, .20);
+
+    /* Status (engine-owned, brand-independent) */
+    --status-success: #238C63;
+    --status-success-soft: rgba(47, 183, 128, .12);
+    --status-warning: #B77A14;
+    --status-warning-soft: rgba(214, 162, 60, .12);
+    --status-danger: #D94F5C;
+    --status-danger-soft: rgba(228, 92, 102, .12);
+    --status-info: #2F76C9;
+
+    /* Chart palette (additive default; no consumer yet) */
+    --chart-1: #18C7BD;
+    --chart-2: #D4B36A;
+    --chart-3: #2F76C9;
+    --chart-4: #238C63;
+    --chart-5: #D94F5C;
+    --chart-6: #42DED3;
+    --chart-7: #8B7DD8;
+    --chart-8: #B77A14;
+
+    /* Elevation (dark shadows) */
+    --elevation-sm: 0 1px 2px rgba(0, 0, 0, .16);
+    --elevation-md: 0 8px 24px rgba(0, 0, 0, .20);
+    --elevation-lg: 0 18px 48px rgba(0, 0, 0, .28);
+
+    /* Layout */
+    --layout-sidebar-width: 288px;
+    --layout-topbar-height: 72px;
+    --layout-content-max: 1760px;
+}
