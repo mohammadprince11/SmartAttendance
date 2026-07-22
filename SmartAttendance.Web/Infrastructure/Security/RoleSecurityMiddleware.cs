@@ -270,6 +270,7 @@ public class RoleSecurityMiddleware
                 "/useraccess",
                 "/devices",
                 "/shifts",
+                "/shifttypes",
                 "/employeeshifts",
                 "/attendancerecords",
                 "/attendanceprocessing",
