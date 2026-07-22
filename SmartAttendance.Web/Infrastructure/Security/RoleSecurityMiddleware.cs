@@ -277,6 +277,7 @@ public class RoleSecurityMiddleware
                 "/attendancerecommendations",
                 "/shiftassignments",
                 "/attendanceviewer",
+                "/monthattendance",
                 "/employeeshifts",
                 "/attendancerecords",
                 "/attendanceprocessing",
