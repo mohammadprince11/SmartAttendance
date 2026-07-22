@@ -39,10 +39,17 @@ using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Infrastructure.Repositories;
 using SmartAttendance.Infrastructure.Seeding;
 using SmartAttendance.Infrastructure.Services;
+using SmartAttendance.Web.Infrastructure.Theming;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
+
+// Branding & Theme Engine runtime (P4): in-memory theme cache + request-scoped
+// resolver. No company theme is persisted yet, so this serves the ZYNORA Default.
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IThemeContextService, ThemeContextService>();
 
 // Persist data-protection keys so auth cookies survive app restarts
 // (otherwise every restart regenerates the keys and logs everyone out).
