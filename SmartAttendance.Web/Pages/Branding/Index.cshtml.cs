@@ -163,6 +163,51 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 
+    public async Task<IActionResult> OnPostDeleteVersionAsync(int versionId)
+    {
+        if (!IsAdmin)
+        {
+            return Forbid();
+        }
+
+        var companyId = await ResolveCompanyIdAsync();
+        if (companyId is null)
+        {
+            return RedirectToPage("/Setup/Index");
+        }
+
+        var wasPublished = await ThemeStore.DeleteVersionAsync(_dbContext, companyId.Value, versionId);
+        if (wasPublished)
+        {
+            _themeContextService.Invalidate(companyId.Value);
+        }
+
+        TempData["BrandingMessage"] = wasPublished
+            ? "تم حذف الإصدار المنشور — عادت الهوية الافتراضية."
+            : "تم حذف الإصدار.";
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostEditVersionAsync(int versionId)
+    {
+        if (!IsAdmin)
+        {
+            return Forbid();
+        }
+
+        var companyId = await ResolveCompanyIdAsync();
+        if (companyId is null)
+        {
+            return RedirectToPage("/Setup/Index");
+        }
+
+        var ok = await ThemeStore.LoadVersionIntoProfileAsync(_dbContext, companyId.Value, versionId);
+        TempData["BrandingMessage"] = ok
+            ? "تم تحميل الإصدار للتعديل — عدّل وانشر."
+            : "تعذّر تحميل الإصدار.";
+        return RedirectToPage();
+    }
+
     public async Task<IActionResult> OnPostResetAsync()
     {
         if (!IsAdmin)

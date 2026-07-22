@@ -230,6 +230,59 @@ UPDATE ThemeVersions SET Status = 'Published', PublishedAt = SYSUTCDATETIME()
         return true;
     }
 
+    /// <summary>
+    /// Deletes a version. Returns true when the deleted version was the active
+    /// published one, signalling the caller to invalidate the cache so the
+    /// company falls back to the ZYNORA Default.
+    /// </summary>
+    public static async Task<bool> DeleteVersionAsync(
+        ApplicationDbContext dbContext, int companyId, int versionId)
+    {
+        await EnsureAsync(dbContext);
+
+        var version = await GetVersionAsync(dbContext, versionId);
+        if (version is null || version.CompanyId != companyId)
+        {
+            return false;
+        }
+
+        await HrmsDatabase.ExecuteAsync(
+            dbContext,
+            "DELETE FROM ThemeVersions WHERE Id = @Id AND CompanyId = @CompanyId;",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", versionId);
+                HrmsDatabase.AddParameter(command, "@CompanyId", companyId);
+            });
+
+        return version.Status == StatusPublished;
+    }
+
+    /// <summary>
+    /// Loads a version's captured branding back into the editable profile so the
+    /// admin can tweak and republish it. Returns false when the version or its
+    /// snapshot is missing.
+    /// </summary>
+    public static async Task<bool> LoadVersionIntoProfileAsync(
+        ApplicationDbContext dbContext, int companyId, int versionId)
+    {
+        var version = await GetVersionAsync(dbContext, versionId);
+        if (version is null || version.CompanyId != companyId)
+        {
+            return false;
+        }
+
+        var snapshot = DeserializeSnapshot(version.BrandingSnapshotJson);
+        if (snapshot is null)
+        {
+            return false;
+        }
+
+        snapshot.CompanyId = companyId;
+        await SaveBrandingProfileAsync(dbContext, snapshot);
+        return true;
+    }
+
     public static async Task<ThemeVersion?> GetVersionAsync(
         ApplicationDbContext dbContext, int versionId)
     {

@@ -148,7 +148,7 @@
                             <td><span class="brand-vstatus v-@v.Status.ToLowerInvariant()">@VersionLabel(v.Status)</span></td>
                             <td>@v.ValidationLevel</td>
                             <td>@v.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
-                            <td>
+                            <td class="brand-row-actions">
                                 @if (v.Status != SmartAttendance.Web.Infrastructure.Theming.ThemeStore.StatusPublished
                                     && v.Status != SmartAttendance.Web.Infrastructure.Theming.ThemeStore.StatusRejected)
                                 {
@@ -157,6 +157,14 @@
                                         <button type="submit" class="brand-btn brand-btn-mini">استرجاع</button>
                                     </form>
                                 }
+                                <form method="post" asp-page-handler="EditVersion" class="brand-inline-form">
+                                    <input type="hidden" name="versionId" value="@v.Id" />
+                                    <button type="submit" class="brand-btn brand-btn-mini">تعديل</button>
+                                </form>
+                                <form method="post" asp-page-handler="DeleteVersion" class="brand-inline-form">
+                                    <input type="hidden" name="versionId" value="@v.Id" />
+                                    <button type="submit" class="brand-btn brand-btn-mini brand-btn-danger" data-zyconfirm="تأكيد الحذف؟">حذف</button>
+                                </form>
                             </td>
                         </tr>
                     }
