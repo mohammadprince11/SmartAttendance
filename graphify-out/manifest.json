@@ -2450,8 +2450,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784745254.270112,
-    "ast_hash": "a6c815197bc24884b8294683bf2b5049",
+    "mtime": 1784751047.3292444,
+    "ast_hash": "1ae79ed2a07fe18e23175500ee092add",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -2590,7 +2590,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Program.cs": {
-    "mtime": 1784748960.1849587,
+    "mtime": 1784751316.602088,
     "ast_hash": "b9c375f84c23888ee87944e362e0ddd4",
     "semantic_hash": ""
   },
