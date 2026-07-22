@@ -1,16 +1,16 @@
 # Graph Report - SmartAttendance  (2026-07-22)
 
 ## Corpus Check
-- 651 files · ~556,025 words
+- 652 files · ~554,845 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 7828 nodes · 20385 edges · 507 communities (370 shown, 137 thin omitted)
+- 7836 nodes · 20411 edges · 512 communities (357 shown, 155 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 304 edges (avg confidence: 0.77)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a0bff513`
+- Built from commit: `364fb8d5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -428,59 +428,65 @@
 - AddIndependentDepartmentsAndEmployeeWorkLocations_20260711
 - 20260703142930_AddEmployeePosition.Designer.cs
 - 20260706211359_AddEmployeeViolationCasesDbFix.Designer.cs
+- 20260703113220_AddWeeklyOffDaysToEmployeeShifts.Designer.cs
 - 20260711064619_AddCompanySetupFoundationAndReconcileModel_20260711.Designer.cs
+- 20260706211359_AddEmployeeViolationCasesDbFix.Designer.cs
 - MigrateLegacyAnnouncementsToAnnouncementStudio_20260714
 - 20260715130000_AddPeoplePermissionRulesAndScopes_20260715.Designer.cs
 - 20260717165105_ReconcileEmployeeLegacyColumns_20260717.Designer.cs
 - LogoutModel
 - .TryParseDateTime
+- 20260708064932_SomeeDeploySync_20260708.Designer.cs
+- 20260711064619_AddCompanySetupFoundationAndReconcileModel_20260711.Designer.cs
 - serialize
 - getParent
 - checkViewportAndScrolls
 - getCSSVariablePixelValue
 - getNextCellToFocusWithoutCtrlPressed
 - moveColumns
+- 20260711155333_AddIndependentDepartmentsAndEmployeeWorkLocations_20260711.Designer.cs
 - getHeaderCtrls
 - calculatePages
 - getIconName
 - Index.cshtml
 - Index.cshtml
 - setDataValue
+- 20260711165702_AddCompanyScopedPositionsAndEmployeePositionLink_20260711.Designer.cs
+- 20260714194223_AddAnnouncementStudioFinalFoundation_20260714.Designer.cs
+- 20260717165105_ReconcileEmployeeLegacyColumns_20260717.Designer.cs
+- 20260717171600_FixEmployeeShiftShiftRelationship_20260717.Designer.cs
 - isReadOnly
+- CompanyConfiguration
+- resetIcons
+- filterNodes
+- wrap
+- isDomDataMissingInHierarchy
 - setRowTop
+- togglePickerHasFocus
 - setValue
 - focus
 - 20260715130000_AddPeoplePermissionRulesAndScopes_20260715.Designer.cs
-- clearHighlighted
-- resetIcons
 - updateScrollGap
-- DateTime
-- m
-- CreateModel
 - getRowNode
 - B
 - refreshNodesAndContainerHeight
 - _install
 - Vi
 - Index.cshtml.cs
-- dispatchLocalEvent
 - getCallback
 - getLeft
 - isLegacyMenuEnabled
 - export
 - isEditing
-- ProbationPeriodModel
 - updateLabels
 - updateColDefAndGetColumnType
 - undoRedo
 - successCommon
-- SmartAttendance.Application.AttendanceReports.ViewModels
 - IndexModel
 - SystemUserService
 - CreateModel
 - individualConditionPasses
 - Index.cshtml
-- RawReadResult
 - extend
 - FieldControl.cshtml
 - Index.cshtml.cs
@@ -491,7 +497,6 @@
 - 9) آلية الواجهة (السلايد / الفتح-الإغلاق / التوزيع) — لعكسها على نظامنا
 - HrJobPosition
 - onFullWidthContainerWheel
-- addVerticalScrollListeners
 - getHeaderRowCount
 - onFloatingFilterChanged
 - applyCellClassRules
@@ -507,128 +512,128 @@
 - _EntityCustomFields.cshtml
 
 ## God Nodes (most connected - your core abstractions)
-1. `ApplicationDbContext` - 262 edges
+1. `ApplicationDbContext` - 268 edges
 2. `postConstruct()` - 207 edges
 3. `forEach()` - 205 edges
-4. `SmartAttendance.Infrastructure.Persistence` - 145 edges
+4. `SmartAttendance.Infrastructure.Persistence` - 146 edges
 5. `push()` - 139 edges
 6. `SmartAttendance.Domain.Entities` - 125 edges
 7. `setComp()` - 120 edges
 8. `getGui()` - 99 edges
 9. `p()` - 93 edges
-10. `SmartAttendance.Web.Infrastructure.Hrms` - 91 edges
+10. `SmartAttendance.Web.Infrastructure.Hrms` - 92 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `LeaveLedgerRow` --references--> `LeaveType`  [EXTRACTED]
-  SmartAttendance.Web/Pages/Employees/Profile.Panels.cshtml.cs → SmartAttendance.Domain/Enums/LeaveType.cs
-- `TypeInput` --references--> `LeaveType`  [EXTRACTED]
-  SmartAttendance.Web/Pages/LeaveBalances/Adjust.cshtml.cs → SmartAttendance.Domain/Enums/LeaveType.cs
-- `AnnouncementService` --implements--> `IAnnouncementService`  [EXTRACTED]
-  SmartAttendance.Infrastructure/Services/AnnouncementService.cs → SmartAttendance.Application/Announcements/Services/IAnnouncementService.cs
 - `IndexModel` --references--> `IAnnouncementService`  [EXTRACTED]
   SmartAttendance.Web/Pages/EmployeePortal/Index.cshtml.cs → SmartAttendance.Application/Announcements/Services/IAnnouncementService.cs
-- `EngagementPageModel` --references--> `IAnnouncementService`  [EXTRACTED]
-  SmartAttendance.Web/Pages/Engagement/EngagementPageModel.cs → SmartAttendance.Application/Announcements/Services/IAnnouncementService.cs
+- `AttendanceImportService` --implements--> `IAttendanceImportService`  [EXTRACTED]
+  SmartAttendance.Infrastructure/Services/AttendanceImportService.cs → SmartAttendance.Application/AttendanceImports/Services/IAttendanceImportService.cs
+- `IndexModel` --references--> `IAttendanceImportService`  [EXTRACTED]
+  SmartAttendance.Web/Pages/AttendanceOperations/Index.cshtml.cs → SmartAttendance.Application/AttendanceImports/Services/IAttendanceImportService.cs
+- `IndexModel` --references--> `AttendanceImportPreviewViewModel`  [EXTRACTED]
+  SmartAttendance.Web/Pages/AttendanceImports/Index.cshtml.cs → SmartAttendance.Application/AttendanceImports/ViewModels/AttendanceImportPreviewViewModel.cs
+- `IndexModel` --references--> `AttendanceImportPreviewViewModel`  [EXTRACTED]
+  SmartAttendance.Web/Pages/AttendanceOperations/Index.cshtml.cs → SmartAttendance.Application/AttendanceImports/ViewModels/AttendanceImportPreviewViewModel.cs
 
 ## Import Cycles
 - None detected.
 
-## Communities (507 total, 137 thin omitted)
+## Communities (512 total, 155 thin omitted)
 
 ### Community 0 - "EmployeeBootstrapImportEngine"
-Cohesion: 0.09
-Nodes (22): Auto, Created, Key, Label, ShiftRule, List, Task, DayAttendanceStore (+14 more)
+Cohesion: 0.07
+Nodes (30): Auto, Created, Key, Label, Recommendation, ShiftRule, List, Task (+22 more)
 
 ### Community 1 - ".ExecuteAsync"
 Cohesion: 0.07
 Nodes (22): SmartAttendance.Web.Pages.DisciplinaryRules, Task, Action, DbCommand, Task, DateTime, DbCommand, Dictionary (+14 more)
 
 ### Community 2 - "SmartAttendance.Infrastructure.Persistence.Configurations"
-Cohesion: 0.06
-Nodes (56): DbContext, IDisposable, DateOnly, DateTime, TimeOnly, AttendanceProcessingResultViewModel, IUnitOfWork, AuditableEntity (+48 more)
+Cohesion: 0.07
+Nodes (47): IDisposable, DateOnly, DateTime, TimeOnly, AttendanceProcessingResultViewModel, IUnitOfWork, AuditableEntity, DateOnly (+39 more)
 
 ### Community 3 - "MasterDataImportService"
 Cohesion: 0.12
 Nodes (17): FileReadResult, FileRow, Dictionary, MasterDataImportPreviewRowViewModel, DateOnly, Dictionary, IEnumerable, IReadOnlyList (+9 more)
 
 ### Community 4 - "SmartAttendance.Infrastructure.Persistence"
-Cohesion: 0.03
-Nodes (54): SmartAttendance.Web.Pages.MonthAttendance, SmartAttendance.Application.Announcements.Services, SmartAttendance.Web.Infrastructure.HrSettings, SmartAttendance.Web.Pages.HrSettings, SmartAttendance.Web.Pages.Engagement, SmartAttendance.Web.Infrastructure.Hrms, SmartAttendance.Web.Pages.DayAttendance, SmartAttendance.Web.Pages.AttendanceRecommendations (+46 more)
+Cohesion: 0.02
+Nodes (89): SmartAttendance.Web.Pages.MonthAttendance, SmartAttendance.Application.Announcements.Services, SmartAttendance.Web.Infrastructure.HrSettings, SmartAttendance.Web.Pages.HrSettings, SmartAttendance.Web.Infrastructure.CompanyContext, SmartAttendance.Web.Pages.Engagement, SmartAttendance.Web.Infrastructure.Hrms, SmartAttendance.Web.Pages.PeopleReports (+81 more)
 
 ### Community 5 - ".QueryAsync"
-Cohesion: 0.06
-Nodes (39): EmployeePortalAnnouncement, EmployeePortalAttendance, EmployeePortalCompensation, EmployeePortalEmployee, EmployeePortalFeedback, EmployeePortalPoll, EmployeePortalRequest, EmployeePortalTeamMember (+31 more)
+Cohesion: 0.04
+Nodes (58): EmployeePortalAnnouncement, EmployeePortalAttendance, EmployeePortalCompensation, EmployeePortalEmployee, EmployeePortalFeedback, EmployeePortalPoll, EmployeePortalRequest, EmployeePortalTeamMember (+50 more)
 
 ### Community 6 - "ReportBuilderService"
-Cohesion: 0.13
-Nodes (13): SmartAttendance.Web.Pages.EmployeeTasks, HrProcessType, Task, EmployeeTasksSchema, DateOnly, EmployeeOption, IActionResult, List (+5 more)
+Cohesion: 0.16
+Nodes (11): HrProcessType, Task, EmployeeTasksSchema, DateOnly, EmployeeOption, IActionResult, List, Task (+3 more)
 
 ### Community 7 - "SmartAttendance.Domain.Entities"
-Cohesion: 0.14
-Nodes (10): DynamicFieldDefinition, EmployeeBootstrapPlan, Action, DbCommand, DbDataReader, Func, IEnumerable, List (+2 more)
+Cohesion: 0.18
+Nodes (5): DynamicFieldDefinition, DbDataReader, Func, IEnumerable, PositionRow
 
 ### Community 8 - "ISystemUserService"
 Cohesion: 0.06
 Nodes (31): SmartAttendance.Application.SystemUsers.Services, SmartAttendance.Application.SystemUsers.ViewModels, SmartAttendance.Web.Pages.SystemUsers, IEnumerable, Task, ISystemUserService, SystemUserCreateViewModel, SystemUserDetailsViewModel (+23 more)
 
 ### Community 9 - "ImportModel"
-Cohesion: 0.08
-Nodes (19): SmartAttendance.Web.Pages.Positions, OriginalName, Action, DbCommand, Dictionary, HashSet, IActionResult, IFormFile (+11 more)
+Cohesion: 0.09
+Nodes (18): OriginalName, Action, DbCommand, Dictionary, HashSet, IActionResult, IFormFile, IReadOnlyList (+10 more)
 
 ### Community 10 - "RoleSecurityMiddleware"
 Cohesion: 0.14
 Nodes (12): bool, RequestDelegate, SemaphoreSlim, CancellationToken, Task, ILoginIdentityService, CancellationToken, Task (+4 more)
 
 ### Community 11 - "IHolidayService"
-Cohesion: 0.07
-Nodes (26): SmartAttendance.Application.Holidays.Services, SmartAttendance.Application.Holidays.ViewModels, SmartAttendance.Web.Pages.Holidays, IEnumerable, Task, IHolidayService, DateOnly, HolidayCreateViewModel (+18 more)
+Cohesion: 0.06
+Nodes (29): SmartAttendance.Application.Holidays.ViewModels, SmartAttendance.Web.Pages.Holidays, IEnumerable, Task, IHolidayService, DateOnly, HolidayCreateViewModel, DateOnly (+21 more)
 
 ### Community 12 - "IndexModel"
-Cohesion: 0.20
-Nodes (7): IEnumerable, DateOnly, LeaveRequestListViewModel, LeaveStatus, IEnumerable, Task, IndexModel
+Cohesion: 0.21
+Nodes (8): SmartAttendance.Application.LeaveRequests.Services, SmartAttendance.Application.LeaveRequests.ViewModels, SmartAttendance.Web.Pages.LeaveRequests, DateOnly, LeaveRequestListViewModel, IEnumerable, Task, IndexModel
 
 ### Community 13 - "IndexModel"
-Cohesion: 0.21
-Nodes (10): IReadOnlyCollection, AnnouncementCreateRequest, CancellationToken, DateOnly, DateTime, IEnumerable, IReadOnlyList, List (+2 more)
+Cohesion: 0.05
+Nodes (40): AnnouncementInput, AnnouncementRow, AnnouncementTemplateDefinition, BranchOption, DateTimeOffset, FeedbackRow, PollRow, DateOnly (+32 more)
 
 ### Community 14 - "AnnouncementGroup"
-Cohesion: 0.13
-Nodes (14): EmployeeProfileCard, ShiftRow, AttendanceRow, AuditRow, DbCommand, DocumentRow, HashSet, IActionResult (+6 more)
+Cohesion: 0.11
+Nodes (25): ensureCellVisible(), ensureColumnVisible(), ensureIndexVisible(), ensureNodeVisible(), getBodyViewportElement(), getGridBodyCtrl(), getHScrollPosition(), getNormalisedPosition() (+17 more)
 
 ### Community 15 - "IUnitOfWork"
-Cohesion: 0.04
-Nodes (51): SmartAttendance.Application.Shifts.Mappings, SmartAttendance.Application.EmployeeShifts.Mappings, SmartAttendance.Application.LeaveRequests.Mappings, SmartAttendance.Application.Departments.Services, SmartAttendance.Application.Devices.Mappings, SmartAttendance.Application.Holidays.Mappings, SmartAttendance.Application.Departments.Mappings, SmartAttendance.Web.Infrastructure.Security (+43 more)
+Cohesion: 0.06
+Nodes (31): SmartAttendance.Application.Companies.Services, SmartAttendance.Application.Departments.Services, SmartAttendance.Web.Pages.Companies, SmartAttendance.Web.Infrastructure.Security, SmartAttendance.Application.Companies.ViewModels, SmartAttendance.Web.Pages.Employees, SmartAttendance.Web.Pages.Branches, SmartAttendance.Application.Employees.ViewModels (+23 more)
 
 ### Community 16 - "ProfileModel"
-Cohesion: 0.19
-Nodes (7): SmartAttendance.Application.AttendanceRecords.ViewModels, SmartAttendance.Web.Pages.Devices, SmartAttendance.Application.Devices.Services, SmartAttendance.Web.Pages.AttendanceRecords, SmartAttendance.Application.Devices.ViewModels, SmartAttendance.Application.AttendanceRecords.Services, AttendanceRecordRow
+Cohesion: 0.05
+Nodes (34): SmartAttendance.Application.Shifts.Mappings, SmartAttendance.Application.EmployeeShifts.Mappings, SmartAttendance.Application.LeaveRequests.Mappings, SmartAttendance.Application.AttendanceRecords.ViewModels, SmartAttendance.Application.Devices.Mappings, SmartAttendance.Application.Holidays.Mappings, SmartAttendance.Application.Departments.Mappings, SmartAttendance.Web.Pages.Devices (+26 more)
 
 ### Community 17 - ".AddParameter"
-Cohesion: 0.12
-Nodes (14): EmployeeRecord, IdentityInputModel, IdentityLinkStatus, IdentityRow, LoginRecord, RoleOption, DbCommand, EmployeeOption (+6 more)
+Cohesion: 0.10
+Nodes (17): EmployeeRecord, IdentityInputModel, IdentityLinkStatus, IdentityRow, LoginRecord, RoleOption, SavedReport, Task (+9 more)
 
 ### Community 18 - "MonthlyAttendanceReportViewModel"
-Cohesion: 0.12
-Nodes (24): A(), addPivotColumns(), addRowGroupColumns(), addValueColumns(), createGroupSafeValueFormatter(), extractCols(), extractColsCommon(), extractPivotCols() (+16 more)
+Cohesion: 0.08
+Nodes (43): A(), addPivotColumns(), addRowGroupColumns(), addValueColumns(), applyColumnState(), calculateColInitialWidth(), clearSortBarTheseColumns(), createColumnEvent() (+35 more)
 
 ### Community 19 - "IndexModel"
-Cohesion: 0.23
-Nodes (12): ContractRow, NameCountRow, CompanyOption, DbDataReader, IEnumerable, ILogger, int, List (+4 more)
+Cohesion: 0.12
+Nodes (17): Data, Func, IReadOnlyList, IReadOnlySet, List, Name, Task, DashboardWidgetStore (+9 more)
 
 ### Community 20 - "SetupService"
-Cohesion: 0.09
-Nodes (18): SmartAttendance.Application.Setup.ViewModels, IReadOnlyCollection, IReadOnlyList, Task, ISetupService, DateOnly, BulkAssignShiftViewModel, CompanySetupProfileViewModel (+10 more)
+Cohesion: 0.08
+Nodes (23): SmartAttendance.Application.Setup.ViewModels, IReadOnlyCollection, IReadOnlyList, Task, ISetupService, DateOnly, BulkAssignShiftViewModel, CompanySetupProfileViewModel (+15 more)
 
 ### Community 21 - "ICompanyService"
-Cohesion: 0.07
-Nodes (22): SmartAttendance.Application.Companies.Services, SmartAttendance.Web.Pages.Companies, Task, ICompanyService, CompanyCreateViewModel, CompanyDetailsViewModel, CompanyEditViewModel, IEnumerable (+14 more)
+Cohesion: 0.09
+Nodes (18): Task, ICompanyService, CompanyCreateViewModel, CompanyDetailsViewModel, CompanyEditViewModel, IEnumerable, IMapper, Task (+10 more)
 
 ### Community 22 - "ImportModel"
-Cohesion: 0.10
+Cohesion: 0.09
 Nodes (12): NexoraEmployeeDynamicImportDefinition, NexoraEmployeeDynamicImportResult, Dictionary, IActionResult, IFormFile, IReadOnlyList, IWebHostEnvironment, List (+4 more)
 
 ### Community 23 - "IndexModel"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (10): HashSet, IActionResult, IFormFile, IReadOnlyDictionary, IReadOnlyList, IWebHostEnvironment, long, SelectListItem (+2 more)
 
 ### Community 24 - "nexora-company-setup.js"
@@ -637,15 +642,15 @@ Nodes (30): build(), buildAll(), closeAll(), markParents(), monthStart(), pad(),
 
 ### Community 25 - "Company"
 Cohesion: 0.01
-Nodes (29): addTabGuards(), areModelsEqual(), areSimpleModelsEqual(), checkForDoubleTap(), clearFocusedCell(), getFirstVirtualRenderedRow(), getFocusCellToUseAfterRefresh(), getFocusEventParams() (+21 more)
+Nodes (20): areModelsEqual(), areSimpleModelsEqual(), checkForDoubleTap(), getFirstVirtualRenderedRow(), getKeepDetailRowsCount(), getLastVirtualRenderedRow(), getOptionalSelectors(), getPaginationSelector() (+12 more)
 
 ### Community 26 - "Program.cs"
-Cohesion: 0.13
-Nodes (9): AnnouncementRow, AnnouncementTemplateDefinition, BranchOption, FeedbackRow, PollRow, DepartmentOption, EmployeeOption, List (+1 more)
+Cohesion: 0.12
+Nodes (12): SmartAttendance.Application.AttendanceImports.Services, SmartAttendance.Web.Pages.AttendanceProcessing, SmartAttendance.Web.Pages.AttendanceImports, SmartAttendance.Application.AttendanceReports.Services, SmartAttendance.Application.AttendanceReports.ViewModels, SmartAttendance.Application.AttendanceProcessing.Services, SmartAttendance.Application.AttendanceProcessing.ViewModels, SmartAttendance.Application.AttendanceImports.ViewModels (+4 more)
 
 ### Community 27 - "CompanyListViewModel"
-Cohesion: 0.09
-Nodes (19): IEnumerable, CompanyListViewModel, IEnumerable, Task, IDepartmentService, DepartmentCreateViewModel, DepartmentEditViewModel, Task (+11 more)
+Cohesion: 0.10
+Nodes (19): IEnumerable, Task, IDepartmentService, DepartmentCreateViewModel, DepartmentDetailsViewModel, IActionResult, IEnumerable, Task (+11 more)
 
 ### Community 28 - "SmartAttendance.Application.Companies.ViewModels"
 Cohesion: 0.13
@@ -660,64 +665,64 @@ Cohesion: 0.09
 Nodes (22): SmartAttendance.Web.Pages.EmployeeProfileSettings, EditFieldInput, NewFieldInput, ProfileFieldView, ProfileSectionView, SectionInput, DbDataReader, List (+14 more)
 
 ### Community 31 - "IndexModel"
-Cohesion: 0.17
-Nodes (13): Action, DbCommand, DbDataReader, IActionResult, List, Task, CompanyOption, IndexModel (+5 more)
+Cohesion: 0.16
+Nodes (14): SmartAttendance.Web.Pages.Positions, Action, DbCommand, DbDataReader, IActionResult, List, Task, CompanyOption (+6 more)
 
 ### Community 32 - ".EnsureCreatedAsync"
-Cohesion: 0.15
-Nodes (16): cancelDrag(), containsWidget(), findFullWidthRowGui(), getFocusedCell(), isOverFormFieldElement(), isRightClickInExistingRange(), onKeyboardNavigate(), onMouseDown() (+8 more)
+Cohesion: 0.10
+Nodes (21): cancelDrag(), getActiveTouch(), getFirstActiveTouch(), isEventNearStartEvent(), isOverFormFieldElement(), newTooltipComponentCallback(), onCommonMove(), onEscapeKeyDown() (+13 more)
 
 ### Community 33 - "IndexModel"
 Cohesion: 0.08
-Nodes (29): SmartAttendance.Web.Pages.Violations, Task, Action, DateTime, Func, IActionResult, IDataRecord, IDbCommand (+21 more)
+Nodes (28): SmartAttendance.Web.Pages.Violations, Action, DateTime, Func, IActionResult, IDataRecord, IDbCommand, List (+20 more)
 
 ### Community 34 - "IBranchService"
-Cohesion: 0.10
-Nodes (19): IEnumerable, Task, IBranchService, BranchCreateViewModel, BranchDetailsViewModel, IActionResult, IEnumerable, Task (+11 more)
+Cohesion: 0.08
+Nodes (24): IEnumerable, Task, IBranchService, BranchCreateViewModel, BranchDetailsViewModel, IEnumerable, CompanyListViewModel, IActionResult (+16 more)
 
 ### Community 35 - "IndexModel"
-Cohesion: 0.15
-Nodes (10): CorrectionRow, CorrectionInput, Dictionary, HashSet, IActionResult, IFormFile, IWebHostEnvironment, List (+2 more)
+Cohesion: 0.12
+Nodes (12): CorrectionRow, CorrectionInput, DateOnly, DateTime, Dictionary, HashSet, IActionResult, IFormFile (+4 more)
 
 ### Community 36 - "ViewModel"
-Cohesion: 0.22
-Nodes (12): SmartAttendance.Application.Announcements.Models, DateOnly, DateTime, AnnouncementActorContext, AnnouncementManagementItem, AnnouncementOperationResult, EmployeeAnnouncementItem, CancellationToken (+4 more)
+Cohesion: 0.14
+Nodes (15): DateOnly, Task, IAttendanceAdvancedReportService, DateOnly, DateTime, List, DailyAttendanceReportRowViewModel, DailyAttendanceReportViewModel (+7 more)
 
 ### Community 37 - "ApplicationDbContext"
-Cohesion: 0.24
-Nodes (7): Action, Func, IDataRecord, IDbCommand, List, Task, HrSettingsStore
+Cohesion: 0.06
+Nodes (40): Bucket, DbContext, DbSet, ModelBuilder, ApplicationDbContext, DbCommand, Dictionary, IReadOnlyDictionary (+32 more)
 
 ### Community 38 - "PrintFormModel"
-Cohesion: 0.30
-Nodes (5): IEnumerable, IMapper, IQueryable, Task, AttendanceRecordService
+Cohesion: 0.24
+Nodes (7): CancellationToken, Task, IEnumerable, IMapper, IQueryable, Task, AttendanceRecordService
 
 ### Community 39 - "nexora-announcement-studio-dynamic.js"
 Cohesion: 0.06
 Nodes (63): applyFilter(), applyTemplate(), currentOptions(), field(), getTemplate(), iconFor(), render(), renderPreview() (+55 more)
 
 ### Community 40 - "AnnouncementService"
-Cohesion: 0.06
-Nodes (64): addRowDropZone(), attemptToPinColumns(), checkCenterForScrolling(), clearColumnsList(), clearRowHighlight(), createDropTargetEvent(), disableUserSelect(), dispatchGridEvent() (+56 more)
+Cohesion: 0.20
+Nodes (20): addRowDropZone(), clearColumnsList(), clearDragAndDropProperties(), clearRowHighlight(), dispatchGridEvent(), doManagedDrag(), draggingToRowDragEvent(), ensureIntervalCleared() (+12 more)
 
 ### Community 41 - "IndexModel"
 Cohesion: 0.17
 Nodes (9): EmployeeCard, ProfileInputModel, RequestInputModel, AttendanceRow, IActionResult, List, RequestRow, Task (+1 more)
 
 ### Community 42 - "nexora-employee-profile-settings-modals.js"
-Cohesion: 0.06
-Nodes (57): cachedFilter(), callOnFilterChangedOutsideRenderCycle(), checkDestroyFilter(), createFilterInstance(), createFilterParams(), createFilterWrapper(), createGetValue(), createValueGetter() (+49 more)
+Cohesion: 0.16
+Nodes (26): afterInit(), all(), getAdvancedFilterModel(), getColumnFilterInstance(), getDefaultFloatingFilter(), getFilterInstance(), getFilterInstanceImpl(), getFilterModel() (+18 more)
 
 ### Community 43 - "AttendanceImportService"
-Cohesion: 0.17
-Nodes (9): RawReadResult, Dictionary, IReadOnlyList, List, TimeOnly, XElement, XNamespace, ZipArchive (+1 more)
+Cohesion: 0.12
+Nodes (13): AttendanceImportBuildResult, RawReadResult, DateOnly, DateTime, Dictionary, IReadOnlyList, Task, TimeOnly (+5 more)
 
 ### Community 44 - "IndexModel"
-Cohesion: 0.10
-Nodes (18): SmartAttendance.Web.Pages.EmployeeDocuments, DocumentInput, DocumentRequirementRow, SelectedEmployeeInfo, DateOnly, DateTime, DocumentRow, EmployeeOption (+10 more)
+Cohesion: 0.17
+Nodes (11): DocumentInput, DocumentRequirementRow, SelectedEmployeeInfo, DocumentRow, EmployeeOption, HashSet, IActionResult, IWebHostEnvironment (+3 more)
 
 ### Community 45 - "PageModel"
 Cohesion: 0.08
-Nodes (17): IEnumerable, Task, IShiftService, TimeOnly, ShiftCreateViewModel, TimeOnly, ShiftDetailsViewModel, IActionResult (+9 more)
+Nodes (21): IEnumerable, Task, IShiftService, TimeOnly, ShiftCreateViewModel, TimeOnly, ShiftDetailsViewModel, TimeOnly (+13 more)
 
 ### Community 46 - "SmartAttendance.Infrastructure"
 Cohesion: 0.09
@@ -728,20 +733,20 @@ Cohesion: 0.21
 Nodes (9): DbDataReader, EmployeeOption, IActionResult, List, Task, TaxSocialSecurityModel, TaxSocialSecurityInput, TaxSocialSecurityRow (+1 more)
 
 ### Community 48 - "EngagementPageModel"
-Cohesion: 0.09
-Nodes (18): FeedbackReplyInput, PollInput, Task, HrmsDatabase, IActionResult, Task, IActionResult, Task (+10 more)
+Cohesion: 0.16
+Nodes (10): FeedbackReplyInput, PollInput, Task, IActionResult, Task, FeedbackModel, IActionResult, Task (+2 more)
 
 ### Community 49 - "IndexModel"
-Cohesion: 0.11
-Nodes (19): BranchInputModel, ChartCompanyOption, CompanyInputModel, CompanyViewModel, DepartmentInputModel, CompanyOption, List, Task (+11 more)
+Cohesion: 0.07
+Nodes (30): BranchInputModel, BranchViewModel, ChartCompanyOption, CompanyInputModel, CompanyViewModel, DepartmentInputModel, DepartmentViewModel, CompanyOption (+22 more)
 
 ### Community 50 - "EmployeeService"
-Cohesion: 0.10
-Nodes (14): PositionLookupRow, IReadOnlyList, PeopleDataScope, DepartmentListViewModel, EmployeeListQueryViewModel, PositionOptionViewModel, IQueryable, PeopleDataScopeQueryExtensions (+6 more)
+Cohesion: 0.08
+Nodes (18): PositionLookupRow, IReadOnlyList, PeopleDataScope, DepartmentListViewModel, DateOnly, EmployeeEditViewModel, EmployeeListQueryViewModel, List (+10 more)
 
 ### Community 51 - "BranchListViewModel"
-Cohesion: 0.08
-Nodes (25): BranchListViewModel, IEnumerable, Task, IDeviceService, DeviceCreateViewModel, DeviceDetailsViewModel, DeviceEditViewModel, IEnumerable (+17 more)
+Cohesion: 0.09
+Nodes (21): BranchListViewModel, IEnumerable, Task, IDeviceService, DeviceCreateViewModel, DeviceDetailsViewModel, DeviceEditViewModel, IActionResult (+13 more)
 
 ### Community 52 - "ImportModel"
 Cohesion: 0.15
@@ -764,44 +769,44 @@ Cohesion: 0.25
 Nodes (9): SmartAttendance.Web.Pages.PositionLevels, Action, DbCommand, IActionResult, List, Task, IndexModel, LookupForm (+1 more)
 
 ### Community 57 - "EmployeeBootstrapImportEngine.cs"
-Cohesion: 0.24
-Nodes (11): addGroupExpandIcon(), calculateDisplayedColumns(), getClientSideLastPixelOfGroup(), getColumnGroupShow(), getLastPixelOfGroup(), getServerSideLastPixelOfGroup(), isExpandable(), isExpanded() (+3 more)
+Cohesion: 0.40
+Nodes (6): addGroupExpandIcon(), getClientSideLastPixelOfGroup(), getLastPixelOfGroup(), getServerSideLastPixelOfGroup(), isExpandable(), updateIconVisibility()
 
 ### Community 58 - "IPermissionService"
-Cohesion: 0.04
-Nodes (43): SmartAttendance.Application.AttendanceImports.Services, SmartAttendance.Web.Pages.AttendanceProcessing, SmartAttendance.Web.Pages.AttendanceImports, SmartAttendance.Application.AttendanceReports.Services, SmartAttendance.Application.AttendanceReports.ViewModels, SmartAttendance.Application.AttendanceProcessing.Services, SmartAttendance.Application.AttendanceProcessing.ViewModels, SmartAttendance.Application.AttendanceImports.ViewModels (+35 more)
+Cohesion: 0.10
+Nodes (16): DateOnly, IEnumerable, Task, IAttendanceProcessingService, DateOnly, IEnumerable, Task, IAttendanceReportService (+8 more)
 
 ### Community 59 - "AnnouncementContent"
 Cohesion: 0.03
-Nodes (55): SmartAttendance.Infrastructure.Persistence.Configurations, IEntityTypeConfiguration, AnnouncementAttachment, DateTime, Guid, AnnouncementAuditLog, ICollection, AnnouncementContent (+47 more)
+Nodes (53): SmartAttendance.Infrastructure.Persistence.Configurations, IEntityTypeConfiguration, AnnouncementAttachment, ICollection, AnnouncementContent, ICollection, AnnouncementSignature, ICollection (+45 more)
 
 ### Community 60 - "nexora-select-system.js"
 Cohesion: 0.19
 Nodes (23): buildPanel(), cleanupNear(), closeOpen(), closest(), closeTransientPanels(), enhance(), hideNative(), isNativeOnly() (+15 more)
 
 ### Community 61 - "SmartAttendance.Application.Shifts.ViewModels"
-Cohesion: 0.11
-Nodes (19): CheckIn, CheckOut, EarlyLeaveHours, LateHours, ShiftDay, ShiftType, DbCommand, DbDataReader (+11 more)
+Cohesion: 0.08
+Nodes (25): CheckIn, CheckOut, EarlyLeaveHours, LateHours, DateOnly, DateTime, List, ShiftDay (+17 more)
 
 ### Community 62 - "IShiftService"
-Cohesion: 0.16
-Nodes (12): ReportColumn, ReportDataset, SavedReport, Task, PeopleReportsStore, CompanyOption, Dictionary, IActionResult (+4 more)
+Cohesion: 0.14
+Nodes (17): ReportColumn, ReportDataset, ReportFilters, DateOnly, DateTime, Dictionary, IReadOnlyList, List (+9 more)
 
 ### Community 63 - "Index.cshtml.cs"
-Cohesion: 0.06
-Nodes (47): addRowDraggerToRow(), announceDescription(), ce(), clearMouseOver(), createEvent(), createMethod(), createMethodProxy(), createRowEvent() (+39 more)
+Cohesion: 0.20
+Nodes (15): createEvent(), dispatchCellContextMenuEvent(), dispatchEvent(), dispatchEventOnce(), isDoubleClickOnIPad(), mouseStayingInsideCell(), onCellClicked(), onCellDoubleClicked() (+7 more)
 
 ### Community 64 - "IndexModel"
-Cohesion: 0.08
-Nodes (37): calculateDirtyNodes(), calculateHeaderRows(), canColumnDisplayMixedSort(), checkRowCount(), checkViewportColumns(), clearSortBarTheseColumns(), doFullSort(), executeFromRootNode() (+29 more)
+Cohesion: 0.31
+Nodes (10): canColumnDisplayMixedSort(), getColumnsWithSortingOrdered(), getDisplaySortForColumn(), getIndexedSortMap(), getSort(), getSortModel(), getSortOptions(), isSortActive() (+2 more)
 
 ### Community 65 - "nexora-edit-custom-datepicker.js"
 Cohesion: 0.26
 Nodes (21): bind(), bindAll(), clampYear(), closePicker(), createPicker(), formatDate(), getYearPageStart(), normalizeManualValue() (+13 more)
 
 ### Community 66 - "LeaveType"
-Cohesion: 0.06
-Nodes (14): SmartAttendance.Application.Common.Interfaces.Repositories, SmartAttendance.Infrastructure.Services, SmartAttendance.Infrastructure.Repositories, SmartAttendance.Infrastructure.Repositories.Common, SmartAttendance.Domain.Common, SmartAttendance.Application.Setup.Services, SmartAttendance.Domain.Entities, SmartAttendance.Domain.Enums (+6 more)
+Cohesion: 0.05
+Nodes (23): SmartAttendance.Application.Common.Interfaces.Repositories, SmartAttendance.Infrastructure.Services, SmartAttendance.Infrastructure.Repositories, SmartAttendance.Domain.Leave, SmartAttendance.Infrastructure.Repositories.Common, SmartAttendance.Domain.Common, SmartAttendance.Application.Setup.Services, SmartAttendance.Domain.Entities (+15 more)
 
 ### Community 67 - "NotificationCenterModel"
 Cohesion: 0.11
@@ -812,60 +817,60 @@ Cohesion: 0.10
 Nodes (20): 1. دراسة السوق: بمن نقارن أنفسنا, 2. تقييم SmartAttendance الحالي مقابل السوق, 3. خطة الذكاء الاصطناعي (المرحلة القادمة), 4. خطة تطبيق الموبايل المحدود, 5. إعادة تصميم صفحة EmployeeProfiles («عمليات الموارد البشرية»), 6. خارطة الطريق المقترحة (بالترتيب), الأنظمة الإقليمية (الشرق الأوسط — الأهم للمقارنة المباشرة), الأنظمة العالمية الكبيرة (Enterprise) (+12 more)
 
 ### Community 69 - "string"
-Cohesion: 0.12
-Nodes (16): IEnumerable, List, Task, IEmployeePermissionService, List, EmployeePermissionAssignmentViewModel, EmployeePermissionEmployeeViewModel, IEnumerable (+8 more)
+Cohesion: 0.18
+Nodes (10): IEnumerable, List, Task, IEmployeePermissionService, EmployeePermissionEmployeeViewModel, IActionResult, IEnumerable, List (+2 more)
 
 ### Community 70 - "IEmployeeShiftService"
-Cohesion: 0.17
-Nodes (11): IEnumerable, Task, IEmployeeShiftService, DateOnly, EmployeeShiftEditViewModel, TimeOnly, ShiftListViewModel, IActionResult (+3 more)
+Cohesion: 0.12
+Nodes (17): IEnumerable, Task, IEmployeeShiftService, DateOnly, EmployeeShiftCreateViewModel, DateOnly, EmployeeShiftEditViewModel, TimeOnly (+9 more)
 
 ### Community 71 - "ImportModel"
 Cohesion: 0.22
 Nodes (6): IActionResult, IFormFile, IWebHostEnvironment, List, Task, ImportModel
 
 ### Community 72 - "PermissionAuthorizationService"
-Cohesion: 0.13
-Nodes (20): Fr(), getScrollbarWidth(), ir(), Mr(), Na(), nr(), onPinnedLeftWidthChanged(), onPinnedRightWidthChanged() (+12 more)
+Cohesion: 0.14
+Nodes (18): dispatchSortChangedEvents(), getCurrentPage(), ir(), Na(), nr(), onFilterChangedIcon(), onPageSizeRelatedOptionsChange(), onPaginationChanged() (+10 more)
 
 ### Community 73 - "SmartAttendance.Application.AttendanceImports.ViewModels"
-Cohesion: 0.11
-Nodes (29): applySizeToSiblings(), calculateMouseMovement(), center(), constrainSizeToAvailableHeight(), findBoundaryElement(), getAvailableHeight(), getContainerWidth(), getHeight() (+21 more)
+Cohesion: 0.08
+Nodes (40): applySizeToSiblings(), calculateMouseMovement(), center(), findBoundaryElement(), getAvailableHeight(), getColDefValue(), getColumnsToResize(), getContainerWidth() (+32 more)
 
 ### Community 74 - "Index.cshtml.cs"
-Cohesion: 0.29
-Nodes (7): AssignmentRow, IActionResult, int, List, ShiftType, Task, IndexModel
+Cohesion: 0.18
+Nodes (12): AssignmentRow, Dictionary, IReadOnlyCollection, List, Task, EmployeeShiftTypeStore, IActionResult, int (+4 more)
 
 ### Community 75 - "IAttendanceRecordService"
-Cohesion: 0.19
-Nodes (9): IEnumerable, Task, IAttendanceRecordService, DeviceListViewModel, IActionResult, IEnumerable, SelectListItem, Task (+1 more)
+Cohesion: 0.06
+Nodes (33): IEnumerable, Task, IAttendanceRecordService, DateOnly, DateTime, AttendanceRecordCreateViewModel, DateOnly, DateTime (+25 more)
 
 ### Community 76 - "IGenericRepository"
 Cohesion: 0.22
 Nodes (11): ManagerOption, Dictionary, FieldSetting, HashSet, IActionResult, IEnumerable, IFormFile, IWebHostEnvironment (+3 more)
 
 ### Community 77 - "IndexModel"
-Cohesion: 0.11
-Nodes (17): IEnumerable, IReadOnlyList, Task, IEmployeeService, DateOnly, EmployeeCreateViewModel, DateOnly, EmployeeEditViewModel (+9 more)
+Cohesion: 0.12
+Nodes (15): IEnumerable, IReadOnlyList, Task, IEmployeeService, DateOnly, EmployeeCreateViewModel, Dictionary, HashSet (+7 more)
 
 ### Community 78 - "IEmployeeService"
-Cohesion: 0.24
-Nodes (8): ISet, ModelStateDictionary, Dictionary, HashSet, IReadOnlyList, Task, EmployeeFieldControl, FieldSetting
+Cohesion: 0.15
+Nodes (14): ISet, ModelStateDictionary, Dictionary, HashSet, IReadOnlyList, Task, EmployeeFieldControl, FieldSetting (+6 more)
 
 ### Community 79 - "IndexModel"
-Cohesion: 0.14
-Nodes (14): GroupRow, Id, DbCommand, DbDataReader, Dictionary, IReadOnlyList, Task, ApprovalTemplateStore (+6 more)
+Cohesion: 0.27
+Nodes (7): DbCommand, DbDataReader, Dictionary, IReadOnlyList, Task, ApprovalTemplateStore, TemplateRow
 
 ### Community 80 - "SmartAttendance.Infrastructure.Migrations"
-Cohesion: 0.35
-Nodes (8): ReportFilters, DateOnly, DateTime, Dictionary, IReadOnlyList, List, Task, PeopleReportCatalog
+Cohesion: 0.12
+Nodes (19): addSlideAnimation(), callColumnCellValueChangedHandler(), checkForRequiredDependencies(), checkProperties(), frameworkComponent(), getCompKeys(), getDocLink(), getFrameworkOverrides() (+11 more)
 
 ### Community 81 - ".SaveChangesAsync"
-Cohesion: 0.12
-Nodes (12): LoginUser, int, Task, TimeSpan, LoginDatabase, int, SimplePasswordHasher, IActionResult (+4 more)
+Cohesion: 0.14
+Nodes (11): LoginUser, int, Task, TimeSpan, LoginDatabase, int, SimplePasswordHasher, IActionResult (+3 more)
 
 ### Community 82 - "ILeaveRequestService"
 Cohesion: 0.22
-Nodes (9): Task, ILeaveRequestService, DateOnly, LeaveRequestEditViewModel, IActionResult, IEnumerable, SelectListItem, Task (+1 more)
+Nodes (8): IEnumerable, Task, ILeaveRequestService, IActionResult, IEnumerable, SelectListItem, Task, EditModel
 
 ### Community 83 - "reports-create.js"
 Cohesion: 0.18
@@ -873,11 +878,11 @@ Nodes (6): EndServiceRow, DateOnly, DateTime, List, EndServiceListModel, EndServ
 
 ### Community 84 - ".LoadSectionsAsync"
 Cohesion: 0.08
-Nodes (32): attemptHeaderCompRefresh(), canWeEditAfterModelFromParentFilter(), createFloatingFilterInputService(), doesFilterHaveSingleInput(), getDefaultFilterOptions(), getFilterModelFormatter(), getModel(), isEventFromDataChange() (+24 more)
+Nodes (31): attemptHeaderCompRefresh(), canWeEditAfterModelFromParentFilter(), conditionToString(), createFloatingFilterInputService(), doesFilterHaveSingleInput(), getDefaultFilterOptions(), getFilterModelFormatter(), getModelAsString() (+23 more)
 
 ### Community 85 - "LoginDatabase"
 Cohesion: 0.22
-Nodes (10): addAutoCols(), addControlsCols(), isReady(), positionLockedCols(), refreshAll(), refreshCols(), saveColOrder(), selectCols() (+2 more)
+Nodes (10): addAutoCols(), addControlsCols(), createColsFromColDefs(), positionLockedCols(), recreateColumnDefs(), refreshCols(), saveColOrder(), selectCols() (+2 more)
 
 ### Community 86 - ".GetProcessedRecordsAsync"
 Cohesion: 0.21
@@ -892,20 +897,20 @@ Cohesion: 0.13
 Nodes (15): ASPNETCORE_ENVIRONMENT, applicationUrl, commandName, dotnetRunMessages, environmentVariables, launchBrowser, applicationUrl, commandName (+7 more)
 
 ### Community 89 - "AttendanceRecordEditViewModel"
-Cohesion: 0.06
-Nodes (30): BranchViewModel, SmartAttendance.Domain.Leave, SmartAttendance.Web.Infrastructure.CompanyContext, SmartAttendance.Web.Pages.Dashboard, SmartAttendance.Web.Pages.Organization, SmartAttendance.Web.Pages.LeaveBalances, DepartmentViewModel, CompanyOption (+22 more)
+Cohesion: 0.13
+Nodes (17): ce(), dispatchAsync(), dispatchToListeners(), get(), getDisplaySortIndexForColumn(), getHeaderRowContainerCtrl(), getListeners(), me() (+9 more)
 
 ### Community 90 - "CreateModel"
 Cohesion: 0.18
 Nodes (8): Task, IAttendanceImportService, AttendanceImportResultViewModel, IActionResult, IFormFile, IWebHostEnvironment, Task, IndexModel
 
 ### Community 91 - "ImportModel"
-Cohesion: 0.16
-Nodes (8): List, MasterDataImportPreviewViewModel, IActionResult, IFormFile, IWebHostEnvironment, List, Task, ImportModel
-
-### Community 92 - "ImportModel"
 Cohesion: 0.22
 Nodes (6): IActionResult, IFormFile, IWebHostEnvironment, List, Task, ImportModel
+
+### Community 92 - "ImportModel"
+Cohesion: 0.18
+Nodes (7): MasterDataImportResultViewModel, IActionResult, IFormFile, IWebHostEnvironment, List, Task, ImportModel
 
 ### Community 93 - "ImportModel"
 Cohesion: 0.22
@@ -928,32 +933,32 @@ Cohesion: 0.17
 Nodes (9): ContractAlertRow, SmartAttendance.Web.Pages.Alerts, DocumentAlertRow, DateOnly, List, Task, ContractAlertRow, DocumentAlertRow (+1 more)
 
 ### Community 98 - "EndServiceModel"
-Cohesion: 0.16
-Nodes (16): addChild(), buildTrees(), createColGroup(), createGroups(), getColGroupAtLevel(), getGroupAtDirection(), getHighlighted(), getInstanceIdForKey() (+8 more)
+Cohesion: 0.20
+Nodes (10): getAriaColIndex(), getHighlighted(), getLeafColumns(), getParentRowCtrl(), isMoving(), onLeafColumnHighlightChanged(), refreshAriaColIndex(), refreshExpanded() (+2 more)
 
 ### Community 99 - "EditModel"
-Cohesion: 0.17
-Nodes (16): calculateSelectedFromChildren(), dispatchChange(), getBestCostNodeSelection(), getSelectAllState(), getSelectedCounts(), isSelected(), ke(), onCheckboxClick() (+8 more)
+Cohesion: 0.18
+Nodes (16): ae(), cachedFilter(), forEachColumnFilter(), getColumnFilterModel(), getCurrentFloatingFilterParentModel(), getFilterWrapper(), getModelFromFilterWrapper(), getModelFromInitialState() (+8 more)
 
 ### Community 100 - "ProfileModel"
-Cohesion: 0.20
-Nodes (10): ProfileReassignBranchOption, ProfileReassignCompanyOption, ProfileReassignCurrentOrgRow, ProfileReassignDepartmentOption, ProfileReassignEmployeeV2Row, ProfileReassignTargetOrgV2Row, IActionResult, List (+2 more)
+Cohesion: 0.23
+Nodes (14): doesExternalFilterPass(), doesRowPassAggregateFilters(), doesRowPassFilter(), doesRowPassOtherFilters(), isAdvancedFilterPresent(), isAggregateFilterPresent(), isAggregateQuickFilterPresent(), isAnyFilterPresent() (+6 more)
 
 ### Community 101 - "BranchService"
 Cohesion: 0.19
-Nodes (9): DateOnly, EmployeeListViewModel, List, EmployeePagedResultViewModel, IActionResult, IEnumerable, SelectListItem, Task (+1 more)
+Nodes (9): SmartAttendance.Web.Pages.EmployeeDocuments, DateOnly, DateTime, IFormFile, DocumentInput, DocumentRequirementRow, DocumentRow, EmployeeOption (+1 more)
 
 ### Community 102 - "DepartmentService"
-Cohesion: 0.40
-Nodes (3): IEnumerable, Task, DepartmentService
+Cohesion: 0.36
+Nodes (4): DepartmentEditViewModel, IEnumerable, Task, DepartmentService
 
 ### Community 103 - "PermissionService"
 Cohesion: 0.12
 Nodes (18): SmartAttendance.Web.Pages.EmployeePortal, EmployeePortalPollOption, DateOnly, DateTime, EmployeePortalAnnouncement, EmployeePortalAttendance, EmployeePortalCompensation, EmployeePortalEmployee (+10 more)
 
 ### Community 104 - "PayrollCutoffPolicy"
-Cohesion: 0.16
-Nodes (12): DateTime, IReadOnlyList, AnnouncementInput, AnnouncementRow, AnnouncementTemplateDefinition, BranchOption, DepartmentOption, EmployeeOption (+4 more)
+Cohesion: 0.23
+Nodes (7): SmartAttendance.Application.Permissions.Services, SmartAttendance.Application.Permissions.ViewModels, SmartAttendance.Web.Pages.Permissions, PermissionListViewModel, EditModel, IEnumerable, IndexModel
 
 ### Community 105 - "nexora-employee-updates-date-system.js"
 Cohesion: 0.32
@@ -968,20 +973,24 @@ Cohesion: 0.06
 Nodes (30): 10) منشئ قواعد المناوبات ⭐⭐ — المخطط الكامل (فحص نموذج «قاعدة جديدة»), 11) تهيئة المناوبات — تعريف المناوبة (نموذج «مناوبة عمل جديدة»), 12) التهيئة العامة (PageType=5) — كل المفاتيح الملتقطة, 13) بقية الشاشات (لقطات سريعة), 14) الخلاصة المعمارية النهائية — نموذج البيانات المستنتج, 15) خريطة البناء المقترحة لنظامنا (عند فك تأجيل الحضور), 1) شجرة مودل «تسجيل الحضور» /TimeAttendance, 2) منشئ قواعد المناوبات ⭐ — محرك «حضور ← مخالفة» (فحص حي) (+22 more)
 
 ### Community 108 - "EmployeeShiftService"
-Cohesion: 0.20
-Nodes (14): destroyActiveOverlay(), doHideOverlay(), doShowLoadingOverlay(), doShowNoRowsOverlay(), focusInto(), hideOverlay(), isExclusive(), isGridFocused() (+6 more)
+Cohesion: 0.13
+Nodes (19): destroyActiveOverlay(), doHideOverlay(), doShowLoadingOverlay(), doShowNoRowsOverlay(), findFocusableElementBeforeTabGuard(), findFocusableElements(), focusInto(), hideOverlay() (+11 more)
 
 ### Community 109 - "EngagementPageModel.cs"
-Cohesion: 0.11
-Nodes (17): ParsedImportRow, BootstrapStructureCounts, BranchReference, CompanyReference, DepartmentReference, DynamicFieldDefinition, EmployeeBootstrapPlan, EmployeeTemplateColumn (+9 more)
+Cohesion: 0.12
+Nodes (16): ParsedImportRow, BootstrapStructureCounts, BranchReference, CompanyReference, DepartmentReference, DynamicFieldDefinition, EmployeeTemplateColumn, EmployeeTemplateColumnKind (+8 more)
 
 ### Community 110 - "nexora-sidebar-scroll-accordion.js"
-Cohesion: 0.28
-Nodes (9): allowFocusForNextCoreContainer(), findNextElementOutsideAndFocus(), focusContainer(), focusInnerElement(), focusNextInnerContainer(), getFocusableContainers(), getNextFocusableIndex(), onFocus() (+1 more)
+Cohesion: 0.24
+Nodes (10): allowFocusForNextCoreContainer(), findNextElementOutsideAndFocus(), focusContainer(), focusInnerElement(), focusNextInnerContainer(), getFocusableContainers(), getNextFocusableIndex(), onFocus() (+2 more)
 
 ### Community 111 - "SmartAttendance.Application.Permissions.ViewModels"
-Cohesion: 0.15
-Nodes (21): afterGuiAttached(), alignPickerToComponent(), beforeHidePicker(), createListComponent(), createPickerComponent(), er(), focus(), focusIn() (+13 more)
+Cohesion: 0.16
+Nodes (14): alignPickerToComponent(), beforeHidePicker(), createListComponent(), createPickerComponent(), hidePicker(), isDisabled(), onLabelOrWrapperMouseDown(), onWrapperFocusOut() (+6 more)
+
+### Community 112 - "IndexModel"
+Cohesion: 0.41
+Nodes (4): IEnumerable, IMapper, Task, DeviceService
 
 ### Community 113 - "LifecycleModel"
 Cohesion: 0.34
@@ -1000,32 +1009,32 @@ Cohesion: 0.26
 Nodes (9): appendViolationPlaceholder(), applyFilters(), createViolationOption(), displayImpact(), fillPenaltyFromViolation(), filterViolationTypes(), normalize(), resetPenalty() (+1 more)
 
 ### Community 117 - "organization-modals.js"
-Cohesion: 0.18
-Nodes (11): getFilterState(), getPaginationState(), getRowGroupExpansionState(), getRowSelectionState(), refreshStaleState(), setCachedStateValue(), setFilterState(), setPaginationState() (+3 more)
+Cohesion: 0.15
+Nodes (13): cc(), getFilterState(), getInitialState(), getPaginationState(), getRowGroupExpansionState(), getRowSelectionState(), refreshStaleState(), setCachedStateValue() (+5 more)
 
 ### Community 118 - "PeoplePermissionSeeder.cs"
 Cohesion: 0.33
 Nodes (5): DateOnly, LeaveRequestDetailsViewModel, IActionResult, Task, DeleteModel
 
 ### Community 119 - "SmartAttendance.Application.MasterDataImports.ViewModels"
-Cohesion: 0.08
-Nodes (35): addBlock(), checkBlockToLoad(), createBlock(), createLoadParams(), destroyAllBlocksPastVirtualRowCount(), destroyBlock(), destroyCache(), dispatchModelUpdatedEvent() (+27 more)
+Cohesion: 0.13
+Nodes (22): addBlock(), checkBlockToLoad(), checkRowCount(), createBlock(), destroyAllBlocksPastVirtualRowCount(), destroyBlock(), forEachNode(), forEachNodeDeep() (+14 more)
 
 ### Community 120 - "CreateModel"
-Cohesion: 0.12
-Nodes (13): BalanceCell, decimal, EmployeeBalanceRow, LeaveType, IReadOnlyList, IraqiLeavePolicy, CompanyOption, Dictionary (+5 more)
+Cohesion: 0.10
+Nodes (17): BalanceCell, decimal, LeaveType, IReadOnlyList, IraqiLeavePolicy, Task, LeaveBalanceSchema, LeaveLedgerRow (+9 more)
 
 ### Community 121 - "DeviceService"
 Cohesion: 0.14
 Nodes (14): 16.10 الحقول الإضافية `/Setup/ExtraFields` — آلية الحقول المخصّصة ⭐ (قلب «الداينمك»), 16.11 التصنيفات الشخصية `/Setup/Personal` — نمط الـ lookups الموحّد, 16.12 التحكم بالحقول `/Setup/MandatoryFields` — إلزامية مركزية, 16.13 خريطة التأثير — أي إعداد يؤثر على أي جزء, 16.1 الاكتشاف المعماري: طبقتا إعدادات, 16.2 شجرة «إعدادات الموارد البشرية» (داخل الأشخاص), 16.3 شجرة مودل «إعدادات» العام المغذّي للأشخاص (جرد), 16.4 التهيئة `/Employees/Configuration` — مفاتيح سلوك المودل (فحص حي) (+6 more)
 
 ### Community 122 - "AdjustModel"
-Cohesion: 0.06
-Nodes (39): addGlobalListener(), ae(), checkVisibility(), createTemplate(), disableFeature(), enableFeature(), getContainerElement(), getMaxConcurrentDatasourceRequests() (+31 more)
+Cohesion: 0.05
+Nodes (47): addGlobalListener(), checkVisibility(), createTemplate(), destroyStickyCtrls(), disableFeature(), enableFeature(), fireGridStylesChangedEvent(), getContainerElement() (+39 more)
 
 ### Community 123 - "Profile.cshtml.cs"
-Cohesion: 0.27
-Nodes (8): DateOnly, DateTime, AttendanceRow, AuditRow, DocumentRow, EmployeeProfileCard, RequestRow, ShiftRow
+Cohesion: 0.24
+Nodes (12): createLoadParams(), getBlockStateJson(), getEndRow(), getLastAccessed(), getStartRow(), getState(), getVersion(), isBlockCurrentlyDisplayed() (+4 more)
 
 ### Community 124 - "nexora-active-menu-precision-fix.js"
 Cohesion: 0.25
@@ -1044,48 +1053,48 @@ Cohesion: 0.42
 Nodes (4): HttpContext, PeoplePermissionScopeMode, PeopleRoutePermissionRequirement, PeopleRoutePermissionResolver
 
 ### Community 128 - ".OnPostCreateAsync"
-Cohesion: 0.07
-Nodes (23): EmployeeEndServiceCard, EmployeeLifecycleCard, EmployeeRehireCard, EmployeeTimelineRow, RequestInput, Task, IActionResult, Task (+15 more)
+Cohesion: 0.04
+Nodes (35): EmployeeEndServiceCard, EmployeeLifecycleCard, EmployeeRehireCard, EmployeeTimelineRow, RequestInput, Task, AttendanceRow, CorrectionInput (+27 more)
 
 ### Community 129 - "IndexModel"
-Cohesion: 0.14
-Nodes (19): addSelectionHandle(), getCols(), getDisplayedLeafColumns(), getFirstColumn(), getHasChartRange(), getNormalisedColumnLeft(), highlightHoveredColumn(), isColAtEdge() (+11 more)
+Cohesion: 0.24
+Nodes (10): getCellRendererDetails(), getHasChartRange(), getLoadingCellRendererDetails(), getValueToDisplay(), isSingleCell(), onCellSelectionChanged(), refreshHandle(), showValue() (+2 more)
 
 ### Community 130 - "Index.cshtml.cs"
-Cohesion: 0.17
-Nodes (12): LookupCategory, LookupItem, DbDataReader, IReadOnlyList, List, Task, HrLookups, IActionResult (+4 more)
+Cohesion: 0.11
+Nodes (18): GroupRow, Id, LookupCategory, LookupItem, IReadOnlyList, List, Task, HrLookups (+10 more)
 
 ### Community 131 - "SmartAttendance.Application.EmployeePermissions.ViewModels"
-Cohesion: 0.15
-Nodes (17): cc(), dispatchStateUpdateEvent(), getColumnGroupState(), getFocusedCellState(), getInitialState(), getRangeSelectionState(), getSideBarState(), setColumnPivotState() (+9 more)
+Cohesion: 0.20
+Nodes (12): dispatchStateUpdateEvent(), getFocusedCellState(), getRangeSelectionState(), getSideBarState(), setColumnPivotState(), setFocusedCellState(), setupStateOnFirstDataRendered(), setupStateOnGridReady() (+4 more)
 
 ### Community 132 - "Index.cshtml.cs"
-Cohesion: 0.15
-Nodes (11): DateOnly, DateTime, AttendanceRecordCreateViewModel, DateOnly, DateTime, AttendanceRecordEditViewModel, DateOnly, DateTime (+3 more)
+Cohesion: 0.24
+Nodes (12): extractExistingTreeData(), getColumnGroupState(), getGroupId(), getProvidedColGroup(), isExpanded(), processGroupOpenedEvent(), resetColumnGroupState(), setColumnGroupOpened() (+4 more)
 
 ### Community 133 - "Migration"
-Cohesion: 0.09
-Nodes (13): EmployeeTemplateColumn, ParsedImportFile, ReferenceColumn, Dictionary, int, IReadOnlyDictionary, IReadOnlyList, long (+5 more)
+Cohesion: 0.07
+Nodes (15): EmployeeBootstrapPlan, EmployeeTemplateColumn, ParsedImportFile, ReferenceColumn, DateOnly, ICollection, int, IReadOnlyDictionary (+7 more)
 
 ### Community 134 - "AnnouncementOperationResult"
-Cohesion: 0.06
-Nodes (41): AllowanceInput, AssetRow, ContractInput, DependentInput, EntityDef, FileRecordInput, LeaveLedgerRow, Task (+33 more)
+Cohesion: 0.08
+Nodes (28): AllowanceInput, AssetRow, ContractInput, DependentInput, FileRecordInput, LeaveLedgerRow, Task, EmployeeAllowanceSchema (+20 more)
 
 ### Community 135 - "EmployeeListViewModel"
-Cohesion: 0.07
-Nodes (31): addFullWidthRowDragging(), createFullWidthCompDetails(), getCellEditorDetails(), getCompDetails(), getCompKeys(), getDateCompDetails(), getDragAndDropImageCompDetails(), getEditorRendererDetails() (+23 more)
+Cohesion: 0.10
+Nodes (23): addFullWidthRowDragging(), createFullWidthCompDetails(), getCellEditorDetails(), getCompDetails(), getDateCompDetails(), getDragAndDropImageCompDetails(), getEditorRendererDetails(), getFilterDetails() (+15 more)
 
 ### Community 136 - "ShiftEditViewModel"
-Cohesion: 0.16
-Nodes (15): addDragSource(), addGuiEventListener(), clearComponent(), getActiveTouch(), getFirstActiveTouch(), getRowDragText(), isEventNearStartEvent(), onCommonMove() (+7 more)
+Cohesion: 0.27
+Nodes (7): EntityDef, Dictionary, FieldDefinition, IActionResult, List, Task, EntityFieldsModel
 
 ### Community 137 - "AnnouncementAudienceRule"
 Cohesion: 0.23
 Nodes (10): MonthRow, Func, IActionResult, int, IReadOnlyCollection, List, Month, Task (+2 more)
 
 ### Community 138 - "ShiftService"
-Cohesion: 0.29
-Nodes (13): focusAdvancedFilter(), focusGridView(), focusGridViewFailed(), focusHeaderPosition(), focusHeaderPositionFromUserFunc(), focusLastHeader(), focusNextFromAdvancedFilter(), focusOverlay() (+5 more)
+Cohesion: 0.11
+Nodes (30): areCellsRendered(), findHeaderCellCtrl(), focusAdvancedFilter(), focusFirstHeader(), focusGridView(), focusGridViewFailed(), focusHeader(), focusHeaderPosition() (+22 more)
 
 ### Community 139 - ".IsValidImageAsync"
 Cohesion: 0.47
@@ -1105,51 +1114,51 @@ Nodes (35): activateTabGuards(), addHoverFunctionality(), announceAriaDescriptio
 
 ### Community 143 - "CreateModel"
 Cohesion: 0.24
-Nodes (8): Recommendation, IActionResult, int, List, Month, Task, Year, IndexModel
+Nodes (11): callOnFilterChangedOutsideRenderCycle(), checkDestroyFilter(), createFilterInstance(), createFilterParams(), createFilterWrapper(), createGetValue(), createValueGetter(), filterChangedCallbackFactory() (+3 more)
 
 ### Community 144 - "nexora-employee-portal.js"
-Cohesion: 0.18
-Nodes (11): getDomLayout(), getNextValue(), onScrollGapChanged(), setLabelAlignment(), setLabelEllipsis(), setReadOnly(), setRowAnimationCssOnBodyViewport(), setWrapperTypeClass() (+3 more)
+Cohesion: 0.17
+Nodes (13): addActiveListenerToggles(), Fr(), getScrollbarWidth(), hideAndShowInvisibleScrollAsNeeded(), initialiseInvisibleScrollbar(), Mr(), onPinnedRowDataChanged(), onScrollGapChanged() (+5 more)
 
 ### Community 145 - "nexora-employee-updates-accounting-format.js"
-Cohesion: 0.13
-Nodes (10): SmartAttendance.Web.Pages.Shifts, SmartAttendance.Application.MasterDataImports.ViewModels, SmartAttendance.Application.Shifts.Services, SmartAttendance.Web.Infrastructure.Imports, SmartAttendance.Application.MasterDataImports.Services, EmployeeImportTemplateDynamicField, NexoraEmployeeDynamicImportDefinition, NexoraEmployeeDynamicImportResult (+2 more)
+Cohesion: 0.18
+Nodes (6): SmartAttendance.Application.MasterDataImports.ViewModels, SmartAttendance.Web.Infrastructure.Imports, SmartAttendance.Application.MasterDataImports.Services, EmployeeImportTemplateDynamicField, NexoraEmployeeDynamicImportDefinition, NexoraEmployeeDynamicImportResult
 
 ### Community 146 - "nexora-ui-stabilization-phase1.js"
 Cohesion: 0.42
 Nodes (9): activateCurrentNavigation(), bindAccordion(), bindSearchShortcut(), closeOtherGroups(), hrefPath(), init(), isSame(), lockExpandedSidebar() (+1 more)
 
 ### Community 147 - "table-pagination.js"
-Cohesion: 0.08
-Nodes (36): createButton(), findClearElement(), getColumnCount(), getStoredPageSize(), getTotalPages(), isClientSideSearchForm(), isEmptyMessageRow(), normalizeText() (+28 more)
+Cohesion: 0.06
+Nodes (44): before(), calculateBounds(), calculatePixelOffset(), checkGenerateQuickFilterAggregateText(), checkPageSize(), createBaseColDefParams(), createProvidedBeans(), doesRowPassQuickFilter() (+36 more)
 
 ### Community 148 - "Index.cshtml.cs"
-Cohesion: 0.06
-Nodes (20): Task, ICompanyRepository, IEnumerable, Task, IGenericRepository, CompanyPayrollSettingsViewModel, ICollection, Company (+12 more)
+Cohesion: 0.14
+Nodes (8): Task, ICompanyRepository, DbSet, IEnumerable, Task, GenericRepository, Task, CompanyRepository
 
 ### Community 149 - "PeopleDataScope"
-Cohesion: 0.13
-Nodes (19): activateTabIndex(), createDateComponent(), da(), getAriaLabel(), init(), onClicked(), Ot(), setAriaLabel() (+11 more)
+Cohesion: 0.25
+Nodes (8): extractHeaderValue(), getColGroupDef(), getDisplayNameForColumnGroup(), getDisplayNameForProvidedColumnGroup(), getHeaderGroupCompDetails(), getHeaderName(), onNewHeaderRowColumn(), setupLabel()
 
 ### Community 150 - "DeleteModel"
-Cohesion: 0.33
-Nodes (4): AnnouncementInput, IActionResult, Task, AnnouncementsModel
+Cohesion: 0.20
+Nodes (11): canInferCellDataType(), doColDefPropsPreventInference(), doesColDefPropPreventInference(), dt(), getInitialData(), inferCellDataType(), initWaitForRowData(), mergeDataTypeDefinitions() (+3 more)
 
 ### Community 151 - "DeleteModel"
-Cohesion: 0.22
-Nodes (11): be(), checkRowSelectable(), createDaemonNode(), createDataChangedEvent(), onDragStart(), resetQuickFilterAggregateText(), setData(), setDataAndId() (+3 more)
+Cohesion: 0.09
+Nodes (24): checkRowSelectable(), createDaemonNode(), createDataChangedEvent(), createDragAndDropImageComponent(), expire(), getCallback(), isFullWidthCell(), isModuleRegistered() (+16 more)
 
 ### Community 152 - "DeleteModel"
-Cohesion: 0.31
-Nodes (9): checkRightRowModelType(), checkSelectionType(), isCheckboxSelection(), isIncludeControl(), refreshCells(), refreshOrDestroyCell(), refreshShouldDestroy(), setupControlComps() (+1 more)
+Cohesion: 0.22
+Nodes (13): checkRightRowModelType(), checkSelectionType(), isCheckboxSelection(), isCurrentPageOnly(), isFilteredOnly(), isIncludeControl(), onCbSelectAll(), onModelChanged() (+5 more)
 
 ### Community 153 - "IndexModel"
-Cohesion: 0.21
-Nodes (14): addEventListeners(), addInIcon(), addInputListeners(), addManagedEventListeners(), addManagedPropertyListener(), addManagedPropertyListeners(), destroyDatasource(), setDatasource() (+6 more)
+Cohesion: 0.15
+Nodes (16): addColumnHoverListener(), addInIcon(), addInputListeners(), addManagedEventListeners(), isHovered(), onColumnHover(), setMenu(), setupHeaderHeight() (+8 more)
 
 ### Community 154 - "employee-file-button.js"
-Cohesion: 0.10
-Nodes (22): addListenersForCellComps(), animateCell(), createCellPosition(), createId(), createIdFromValues(), flashCell(), flashCells(), isCellFocused() (+14 more)
+Cohesion: 0.08
+Nodes (40): addListenersForCellComps(), animateCell(), createId(), createIdFromValues(), createRowEvent(), flashCell(), flashCells(), getAllCellCtrls() (+32 more)
 
 ### Community 155 - "nexora-announcement-studio-pixel.js"
 Cohesion: 0.33
@@ -1160,40 +1169,40 @@ Cohesion: 0.58
 Nodes (8): bind(), findSelectBySuffix(), hasOption(), linkFromCountry(), linkFromNationality(), normalize(), refreshSelect(), setSelectValue()
 
 ### Community 157 - "nexora-employees-filter-sidebar-forcefix.js"
-Cohesion: 0.24
-Nodes (7): Task, IActionResult, IReadOnlyList, List, Task, AdjustModel, TypeInput
+Cohesion: 0.20
+Nodes (11): clearFocusedCell(), containsWidget(), findFullWidthRowGui(), getFocusedCell(), getFocusEventParams(), isRightClickInExistingRange(), onColumnEverythingChanged(), onKeyboardNavigate() (+3 more)
 
 ### Community 158 - "SmartAttendance.Application.LeaveRequests.ViewModels"
-Cohesion: 0.06
-Nodes (43): addDestroyTask(), addTaskToList(), attemptSettingScrollPosition(), checkScrollLeft(), createTask(), debounce(), doHorizontalScroll(), executeFrame() (+35 more)
+Cohesion: 0.14
+Nodes (19): checkScrollLeft(), doHorizontalScroll(), fireScrollEvent(), getScrollPosition(), getViewportElement(), getViewportForSource(), horizontallyScrollHeaderCenterAndFloatingCenter(), isControllingScroll() (+11 more)
 
 ### Community 159 - "DeleteModel"
-Cohesion: 0.12
-Nodes (29): afterCompCreated(), afterHeaderCompCreated(), createCellEditorInstance(), createDragAndDropImageComponent(), destroyBean(), destroyEditor(), destroyEditorAndRenderer(), destroyFloatingFilterComp() (+21 more)
+Cohesion: 0.15
+Nodes (20): afterCompCreated(), afterHeaderCompCreated(), createCellEditorInstance(), destroyBean(), destroyEditor(), destroyEditorAndRenderer(), destroyFloatingFilterComp(), destroyHeaderComp() (+12 more)
 
 ### Community 160 - "LeaveRequestDetailsViewModel"
-Cohesion: 0.14
-Nodes (17): areCellsRendered(), createTooltipFeatureIfNeeded(), findHeaderCellCtrl(), focusHeader(), getColumnGroupChild(), getHeaderCellCtrls(), getHeaderCtrls(), getInstance() (+9 more)
+Cohesion: 0.12
+Nodes (16): createBean(), createDndSource(), createRowDragComp(), createSelectionCheckbox(), createTooltipFeatureIfNeeded(), destroyCache(), getGridId(), initBeans() (+8 more)
 
 ### Community 161 - "SystemSetupViewModel"
-Cohesion: 0.12
-Nodes (18): addDestroyFunc(), addDomData(), addPreventScrollWhileDragging(), addRowDragListener(), createDateCompWrapper(), observeResize(), refreshTabIndex(), registerViewportResizeListener() (+10 more)
+Cohesion: 0.24
+Nodes (6): EmployeeBalanceRow, CompanyOption, IReadOnlyList, List, Task, IndexModel
 
 ### Community 162 - "EmployeePermissionService"
-Cohesion: 0.08
-Nodes (35): addColumnHoverListener(), addDropTarget(), applyRowSpan(), applyStaticCssClasses(), createManagedBean(), createParams(), getGridId(), isContainerVisible() (+27 more)
+Cohesion: 0.10
+Nodes (30): addDestroyFunc(), addDomData(), addDropTarget(), addPreventScrollWhileDragging(), addRowDragListener(), applyRowSpan(), applyStaticCssClasses(), createManagedBean() (+22 more)
 
 ### Community 163 - ".OnPostSaveEmployeeAsync"
 Cohesion: 0.15
 Nodes (13): 14.10 العائلة (كيان موحّد `Dependent` بتنويع حسب القرابة), 14.11 العقود (قائمة بالملف — الإدارة بشاشة `/ContractsManagement`), 14.12 المعلومات المالية — `viewEmployeeFinancialInformation` (نموذج 37 حقل — الجسر لمودل الرواتب) ⭐, 14.1 الكفاءات — `viewCompetencies` / `addNewCompetency`, 14.2 الخبرات (سجل وظيفي) — `viewJobHistory` / `addNewJobHistory`, 14.3 الشهادات — `viewCertificates` / `addNewCertificate`, 14.4 التعليم — `viewEducation` / `addNewEducation`, 14.5 الدورات التدريبية — `viewTrainingCourses` / `addNewTrainingCourse` (+5 more)
 
 ### Community 164 - "CreateModel"
-Cohesion: 0.11
-Nodes (25): addExistingKeys(), balanceColumnTree(), balanceTreeForAutoCols(), createColumn(), createColumnGroup(), createColumnTree(), createMergedColGroupDef(), findDepth() (+17 more)
+Cohesion: 0.17
+Nodes (17): addExistingKeys(), balanceColumnTree(), balanceTreeForAutoCols(), createColumn(), createColumnGroup(), createColumnTree(), createMergedColGroupDef(), findDepth() (+9 more)
 
 ### Community 165 - "Lifecycle.cshtml.cs"
-Cohesion: 0.12
-Nodes (28): addEventListenersToPopup(), addPopup(), addPopupToPopupList(), bringPopupToFront(), calculatePointerAlign(), callPostProcessPopup(), check(), createPopupWrapper() (+20 more)
+Cohesion: 0.23
+Nodes (15): calculatePointerAlign(), callPostProcessPopup(), getParentRect(), getPopupIndex(), getPopupParent(), keepPopupPositionedRelativeTo(), keepXYWithinBounds(), positionPopup() (+7 more)
 
 ### Community 166 - "ProfileReassignEditable.cs"
 Cohesion: 0.25
@@ -1208,8 +1217,8 @@ Cohesion: 0.30
 Nodes (6): SchemaRow, Task, EmployeeCodeSchema, IActionResult, Task, EmployeeCodeSchemaPageModel
 
 ### Community 169 - "nexora-announcement-studio-total.js"
-Cohesion: 0.08
-Nodes (42): calculateOffset(), clearOffset(), ensureCellVisible(), ensureColumnVisible(), ensureIndexVisible(), ensureNodeVisible(), getApproximateVScollPosition(), getGridBodyCtrl() (+34 more)
+Cohesion: 0.09
+Nodes (32): calculateOffset(), clearOffset(), getApproximateVScollPosition(), getNextFocusIndexForAutoHeight(), getScrollPositionForPixel(), getUiBodyHeight(), getViewportHeight(), getVScrollPosition() (+24 more)
 
 ### Community 170 - "nexora-document-rules-actions-phase2.js"
 Cohesion: 0.43
@@ -1232,36 +1241,40 @@ Cohesion: 0.33
 Nodes (10): init(), lang(), translate(), applyLanguage(), applyTheme(), bind(), getLanguage(), getTheme() (+2 more)
 
 ### Community 175 - "TaxSocialSecurity.cshtml.cs"
-Cohesion: 0.12
-Nodes (22): addBodyViewportListener(), addFocusListeners(), addFullWidthContainerWheelListener(), addHorizontalScrollListeners(), addKeyboardListeners(), addKeyDownListeners(), addManagedElementListeners(), addMouseListeners() (+14 more)
+Cohesion: 0.10
+Nodes (25): addBodyViewportListener(), addFocusListeners(), addFullWidthContainerWheelListener(), addHorizontalScrollListeners(), addKeyboardListeners(), addKeyDownListeners(), addManagedElementListeners(), addMouseListeners() (+17 more)
 
 ### Community 176 - "AttendanceProcessingResultViewModel"
-Cohesion: 0.06
-Nodes (32): afterImmutableDataChange(), batchUpdateRowData(), buildRefreshModelParams(), commonUpdateRowData(), createChangePath(), dispatchSortChangedEvents(), dispatchUpdateEventsAndRefresh(), doAggregate() (+24 more)
+Cohesion: 0.10
+Nodes (20): afterImmutableDataChange(), batchUpdateRowData(), buildRefreshModelParams(), commonUpdateRowData(), createChangePath(), doAggregate(), doFilter(), doFilterAggregates() (+12 more)
 
 ### Community 177 - "IndexModel"
 Cohesion: 0.17
-Nodes (13): afterInit(), dispatchVisibleChangedEvent(), getAnchorElementForMenu(), getHeaderCellCtrl(), getHeaderCtrlForColumn(), getHtmlElementForColumnHeader(), hasFilter(), showColumnMenu() (+5 more)
+Nodes (13): dispatchVisibleChangedEvent(), getAnchorElementForMenu(), getHeaderCellCtrl(), getHeaderCtrlForColumn(), getHtmlElementForColumnHeader(), hasFilter(), setMenuVisible(), showColumnMenu() (+5 more)
 
 ### Community 178 - "AnnouncementComment"
-Cohesion: 0.14
-Nodes (18): addColumnListeners(), addEventListener(), addKeyboardModeEvents(), addListenersToChildrenColumns(), addRenderedRowListener(), addTemporaryEvents(), createBodyTemplate(), dispatchAsync() (+10 more)
+Cohesion: 0.10
+Nodes (25): addColumnListeners(), addDragSource(), addEventListener(), addEventListenersToPopup(), addGuiEventListener(), addKeyboardModeEvents(), addListenersToChildrenColumns(), addRenderedRowListener() (+17 more)
 
 ### Community 179 - "IndexModel"
-Cohesion: 0.29
-Nodes (6): DateOnly, DateTime, AttendanceRecordDetailsViewModel, IActionResult, Task, DeleteModel
+Cohesion: 0.42
+Nodes (9): createButton(), findClearElement(), getColumnCount(), getStoredPageSize(), getTotalPages(), isClientSideSearchForm(), isEmptyMessageRow(), normalizeText() (+1 more)
 
 ### Community 180 - "SelfServiceSettingsModel"
-Cohesion: 0.24
-Nodes (8): DistributionDefinition, DistributionRow, CompanyOption, ILogger, IReadOnlyList, List, Task, EmployeesDistributionModel
+Cohesion: 0.13
+Nodes (12): DistributionDefinition, DistributionRow, HttpRequest, ILogger, HttpContext, IReadOnlyCollection, CompanySelectionContext, CompanyOption (+4 more)
 
 ### Community 181 - "nexora-announcement-studio-approved.js"
 Cohesion: 0.25
 Nodes (7): List, RequestTypeDef, StepRow, TemplateRow, WatcherRow, StepRow, WatcherRow
 
 ### Community 182 - "nexora-employees-page-size.js"
-Cohesion: 0.12
-Nodes (14): DateOnly, DateTime, EmployeeFileRecord, DependentRelation, EmployeeRecordType, EntityTypeBuilder, EmployeeFileRecordConfiguration, DateOnly (+6 more)
+Cohesion: 0.13
+Nodes (13): DateOnly, DateTime, EmployeeFileRecord, DependentRelation, EmployeeRecordType, EntityTypeBuilder, EmployeeFileRecordConfiguration, DateOnly (+5 more)
+
+### Community 183 - "nexora-sidebar-brand-active-fix.js"
+Cohesion: 0.22
+Nodes (10): addClasses(), ai(), createParams(), lookupUserCompDetails(), setRefreshFunction(), setupClassesFromColDef(), setupSortableClass(), setupTooltip() (+2 more)
 
 ### Community 184 - "nexora-sidebar-button-force-working-fix.js"
 Cohesion: 0.36
@@ -1280,28 +1293,28 @@ Cohesion: 0.29
 Nodes (6): SmartAttendance.Web.Pages.Payroll, DateTime, EmployeeOption, TaxSocialSecurityInput, TaxSocialSecurityRow, TaxSocialSecuritySettingsInput
 
 ### Community 188 - "PermissionAuthorizationService.cs"
-Cohesion: 0.38
-Nodes (4): IEnumerable, IMapper, Task, HolidayService
+Cohesion: 0.22
+Nodes (10): getNextSortDirection(), getWrapperHasFocus(), handleKeyDown(), navigate(), navigateToPage(), onEnterKeyDown(), onMenuKeyboardShortcut(), progressSort() (+2 more)
 
 ### Community 189 - "NoticePeriodModel"
 Cohesion: 0.17
 Nodes (11): 1) شجرة مودل الرواتب /Payroll, 2) حساب الرواتب (المسير) — فحص حي, 3) نموذج عنصر الراتب (الدخل) — فحص حي ⭐, 4) خريطة تأثير مودل الرواتب (أولية), 5) فجوات SmartAttendance الكبرى (أولية), 6) متبقٍّ لجولة قادمة, أ. الاحتساب والتنفيذ (المسير), الحالة (تُحدَّث أثناء الفحص) (+3 more)
 
 ### Community 190 - "ProbationPeriodModel"
-Cohesion: 0.16
-Nodes (14): checkObjectValueHandlers(), getDate(), getDefaultDataTypes(), Ko(), lr(), O(), processDataTypeDefinitions(), qo() (+6 more)
+Cohesion: 0.09
+Nodes (27): Bo(), checkObjectValueHandlers(), forEachInput(), G(), getBlockState(), getDate(), getDefaultDataTypes(), getLastType() (+19 more)
 
 ### Community 191 - "attendance-operations-final.js"
 Cohesion: 0.73
 Nodes (5): closeModal(), init(), initEditModal(), initImportModal(), openModal()
 
 ### Community 192 - "nexora-announcement-studio.js"
-Cohesion: 0.29
-Nodes (7): configureFilter(), setupFilterButton(), setupFilterChangedListener(), setupFilterIcon(), setupUi(), updateCompDetails(), updateFilterButton()
+Cohesion: 0.13
+Nodes (15): addFeatures(), areFilterCompsDifferent(), configureFilter(), enableTooltipFeature(), isCellRenderer(), onColDefChanged(), setupActive(), setupFilterButton() (+7 more)
 
 ### Community 193 - "nexora-dashboard-cleanup-stats-fix.js"
-Cohesion: 0.18
-Nodes (8): AttendanceImportBuildResult, List, AttendanceImportPreviewViewModel, DateOnly, DateTime, AttendanceImportRowViewModel, Task, AttendanceImportBuildResult
+Cohesion: 0.17
+Nodes (10): RawPunch, RawPunchError, List, AttendanceImportPreviewViewModel, DateOnly, DateTime, AttendanceImportRowViewModel, List (+2 more)
 
 ### Community 194 - "nexora-disciplinary-remove-header-footer.js"
 Cohesion: 0.60
@@ -1309,103 +1322,103 @@ Nodes (5): findCard(), isHeaderFooterText(), ownTextOf(), removeBlocks(), textOf
 
 ### Community 195 - "sidebar-modules.js"
 Cohesion: 0.17
-Nodes (17): ensureAllRowsInRangeHaveHeightsCalculated(), getCellToRestoreFocusToAfterRefresh(), getLockOnRefresh(), getRowBuffer(), getRowBufferInPixels(), onBodyScroll(), onPageLoaded(), onPinnedRowDataChanged() (+9 more)
+Nodes (22): createOrUpdateRowCtrl(), createRowCon(), dispatchDisplayedRowsChanged(), ensureAllRowsInRangeHaveHeightsCalculated(), getCellToRestoreFocusToAfterRefresh(), getLockOnRefresh(), getRowBuffer(), getRowBufferInPixels() (+14 more)
 
 ### Community 196 - "zynora-theme.js"
 Cohesion: 0.67
 Nodes (5): applyTheme(), currentTheme(), init(), normalizeTheme(), updateToggle()
 
 ### Community 197 - "PeoplePermissionCodes"
-Cohesion: 0.25
-Nodes (9): expire(), isCurrentPageOnly(), isFilteredOnly(), onCbSelectAll(), onDataChanged(), onModelChanged(), onSelectionChanged(), refreshSelectAllLabel() (+1 more)
+Cohesion: 0.31
+Nodes (3): IEnumerable, Task, IGenericRepository
 
 ### Community 198 - "UpdateShiftGraceColumns"
-Cohesion: 0.40
-Nodes (5): Dictionary, IReadOnlyCollection, List, Task, EmployeeShiftTypeStore
+Cohesion: 0.33
+Nodes (4): PermissionDetailsViewModel, IActionResult, Task, DeleteModel
 
 ### Community 199 - "AddHolidaysAndLeaveRequestsModule"
-Cohesion: 0.33
-Nodes (6): clearOptions(), getSelectionCount(), isSortModelDifferent(), onColumnEverything(), reset(), resetNodes()
+Cohesion: 0.11
+Nodes (24): clear(), clearLocalValues(), clearOptions(), constrainSizeToAvailableHeight(), createCellCtrls(), destroy(), destroyBeans(), destroyDatasource() (+16 more)
 
 ### Community 200 - "AddSystemUsersModule"
-Cohesion: 0.23
-Nodes (12): getDateComponentParams(), getDefaultDebounceMs(), getDomDataKey(), k(), mo(), setRowAutoHeight(), setTextInputParams(), setupOnBtApplyDebounce() (+4 more)
+Cohesion: 0.17
+Nodes (16): createDateComponent(), getAriaLabel(), getDateComponentParams(), getDefaultDebounceMs(), getDomDataKey(), getModel(), k(), mo() (+8 more)
 
 ### Community 201 - "AddFlexiblePermissionsModule"
-Cohesion: 0.07
-Nodes (49): addActiveListenerToggles(), addListeners(), addOrRemoveCssClass(), C(), calculateRowLevel(), executeSlideAndFadeAnimations(), forContainers(), forEachGui() (+41 more)
+Cohesion: 0.13
+Nodes (26): addOrRemoveCssClass(), executeSlideAndFadeAnimations(), forEachGui(), getFirstRow(), getInitialRowClasses(), getLastRow(), getPinnedForContainer(), initialiseRowComp() (+18 more)
 
 ### Community 202 - "AddDirectEmployeePermissionsModule"
-Cohesion: 0.27
-Nodes (15): clearOtherNodes(), deselectAllRowNodes(), dispatchSelectionChanged(), forEachNodeOnPage(), getNodesToSelect(), hasNodesToSelect(), isMultiSelect(), N() (+7 more)
+Cohesion: 0.08
+Nodes (42): applyThemeClasses(), be(), calculateSelectedFromChildren(), clearOtherNodes(), depthFirstSearchChangedPath(), depthFirstSearchEverything(), deselectAllRowNodes(), dispatchSelectionChanged() (+34 more)
 
 ### Community 203 - "AddWeeklyOffDaysToEmployeeShifts"
-Cohesion: 0.27
-Nodes (6): NotificationRuleRow, TerminationReasonRow, IActionResult, List, Task, NotificationCenterModel
+Cohesion: 0.22
+Nodes (9): addResizers(), clearResizeListeners(), createResizeMap(), getResizerElement(), onResizeEnd(), refreshFilterResizer(), removeResizers(), restoreLastSize() (+1 more)
 
 ### Community 204 - "AddEmployeePosition"
-Cohesion: 0.03
-Nodes (38): SmartAttendance.Infrastructure.Migrations, ModelSnapshot, ModelBuilder, InitialCreate, ModelBuilder, AddHolidaysAndLeaveRequestsModule, ModelBuilder, AddSystemUsersModule (+30 more)
+Cohesion: 0.11
+Nodes (10): SmartAttendance.Infrastructure.Migrations, ModelSnapshot, ModelBuilder, UpdateShiftGraceColumns, ModelBuilder, AddSystemUsersModule, ModelBuilder, RemoveEmployeePositionSyncTrigger_20260711 (+2 more)
 
 ### Community 205 - "AddEmployeeViolationCasesDbFix"
-Cohesion: 0.11
-Nodes (33): applyAutosizeStrategy(), applyColumnState(), calculateColInitialWidth(), checkMinAndMaxWidthsForSet(), createColumnEvent(), D(), dispatchStateUpdatedEvent(), f() (+25 more)
+Cohesion: 0.15
+Nodes (24): applyAutosizeStrategy(), autoSizeAllColumns(), autoSizeCols(), autoSizeColumn(), checkMinAndMaxWidthsForSet(), fireColumnWidthChangedEvent(), getActualWidth(), getColumnBounds() (+16 more)
 
 ### Community 206 - "AddCompanySetupFoundationAndReconcileModel_20260711"
-Cohesion: 0.13
-Nodes (24): addClasses(), findChildrenRemovingPadding(), findColAtEdgeForHeaderRow(), findGroupWidthId(), findHeader(), focusFirstHeader(), getAllCtrls(), getColumnGroupPaddingInfo() (+16 more)
+Cohesion: 0.12
+Nodes (29): autoSizeColumnGroupsByColumns(), calculateDisplayedColumns(), findChildrenRemovingPadding(), findColAtEdgeForHeaderRow(), findGroupWidthId(), findHeader(), getAllCtrls(), getColGroupAtLevel() (+21 more)
 
 ### Community 207 - "RedesignPayrollCutoffPolicies_20260711_122556"
-Cohesion: 0.33
-Nodes (10): createOrUpdateRowCtrl(), createRowCon(), destroyRowCtrls(), dispatchDisplayedRowsChanged(), isCacheable(), recycleRows(), redrawRow(), redrawRows() (+2 more)
+Cohesion: 0.29
+Nodes (4): PermissionCreateViewModel, IActionResult, Task, CreateModel
 
 ### Community 208 - "AddIndependentDepartmentsAndEmployeeWorkLocations_20260711"
-Cohesion: 0.18
-Nodes (17): addKeyDownListener(), doGridOperations(), getControlsForEventTarget(), isEditing(), onCtrlAndC(), onCtrlAndD(), onCtrlAndV(), onCtrlAndX() (+9 more)
+Cohesion: 0.39
+Nodes (4): IEnumerable, List, Task, EmployeePermissionService
 
 ### Community 209 - "AddCompanyScopedPositionsAndEmployeePositionLink_20260711"
-Cohesion: 0.12
-Nodes (21): findFocusableElementBeforeTabGuard(), findFocusableElements(), findNextCellToFocusOn(), findNextFocusableElement(), focusNextGridCoreContainer(), focusPosition(), getCellByPosition(), getLastCellOfColSpan() (+13 more)
+Cohesion: 0.29
+Nodes (8): destroyFilter(), disableColumnFilters(), disposeColumnListener(), disposeFilterWrapper(), isPrimary(), onColumnsChanged(), setFilterActive(), updateDependentFilters()
 
 ### Community 210 - "RemoveEmployeePositionSyncTrigger_20260711"
-Cohesion: 0.24
-Nodes (8): CancellationToken, Task, PermissionEditViewModel, IEnumerable, IMapper, List, Task, PermissionService
+Cohesion: 0.29
+Nodes (6): PermissionEditViewModel, IEnumerable, IMapper, List, Task, PermissionService
 
 ### Community 211 - "AddAnnouncementStudioFinalFoundation_20260714"
 Cohesion: 0.32
 Nodes (4): LoginIdentityRequest, CancellationToken, Task, LoginIdentityService
 
 ### Community 212 - "MigrateLegacyAnnouncementsToAnnouncementStudio_20260714"
-Cohesion: 0.04
-Nodes (23): Migration, MigrationBuilder, UpdateShiftGraceColumns, MigrationBuilder, AddHolidaysAndLeaveRequestsModule, MigrationBuilder, AddSystemUsersModule, MigrationBuilder (+15 more)
+Cohesion: 0.22
+Nodes (5): Migration, MigrationBuilder, AddEmployeePosition, MigrationBuilder, SomeeDeploySync_20260708
 
 ### Community 213 - "AddPeoplePermissionRulesAndScopes_20260715"
-Cohesion: 0.09
-Nodes (27): addCustomContent(), appendContent(), appendEmptyCells(), beginNewLine(), doAddHeaderHeader(), exportColumnGroups(), exportHeaders(), extractHeaderValue() (+19 more)
+Cohesion: 0.13
+Nodes (19): addCustomContent(), appendContent(), appendEmptyCells(), beginNewLine(), exportHeaders(), getColumnsToExport(), onNewBodyRow(), onNewBodyRowColumn() (+11 more)
 
 ### Community 214 - "ReconcileEmployeeLegacyColumns_20260717"
 Cohesion: 0.22
 Nodes (8): SmartAttendance.Web.Pages.EmployeeUpdates, DepartmentOption, DynamicUpdateFieldDefinition, EmployeeLookupOption, UpdateChange, UpdateEmployee, UpdateField, UpdateSection
 
 ### Community 215 - "FixEmployeeShiftShiftRelationship_20260717"
-Cohesion: 0.13
-Nodes (22): getAutoHeaderHeight(), getColsToShow(), getColumnGroupHeaderRowHeight(), getColumnHeaderRowHeight(), getFloatingFiltersHeight(), getGroupHeaderHeight(), getGroupRowCount(), getGroupRowCtrlAtIndex() (+14 more)
+Cohesion: 0.15
+Nodes (20): getAutoHeaderHeight(), getColumnGroupHeaderRowHeight(), getColumnHeaderRowHeight(), getFloatingFiltersHeight(), getGroupHeaderHeight(), getGroupRowCount(), getGroupRowCtrlAtIndex(), getGroupRowsHeight() (+12 more)
 
 ### Community 216 - "LogoutModel"
-Cohesion: 0.09
-Nodes (38): addCssClass(), addElementsToContainerAndGetWidth(), addInCellEditor(), addPopupCellEditor(), afterCellEditorCreated(), afterCellRendererCreated(), appendChild(), Br() (+30 more)
+Cohesion: 0.11
+Nodes (22): addElementsToContainerAndGetWidth(), addOption(), addPopupCellEditor(), appendChild(), ba(), Br(), cloneItemIntoDummy(), cr() (+14 more)
 
 ### Community 217 - "my-profile-phase1.js"
 Cohesion: 0.70
 Nodes (4): init(), initEdit(), initRequestHints(), initRequestModal()
 
 ### Community 218 - "nexora-announcement-templates.js"
-Cohesion: 0.29
-Nodes (5): DateOnly, EmployeeShiftListViewModel, IEnumerable, Task, IndexModel
+Cohesion: 0.15
+Nodes (11): SmartAttendance.Web.Pages.Shifts, SmartAttendance.Application.Shifts.Services, SmartAttendance.Web.Pages.EmployeeShifts, SmartAttendance.Application.Shifts.ViewModels, SmartAttendance.Application.EmployeeShifts.Services, SmartAttendance.Application.EmployeeShifts.ViewModels, DateOnly, EmployeeShiftListViewModel (+3 more)
 
 ### Community 219 - "nexora-employees-live-filter.js"
-Cohesion: 0.11
-Nodes (26): Bo(), createCondition(), forEachInput(), forEachPositionInput(), forEachPositionTypeInput(), getConditionType(), getConditionTypes(), getFilterType() (+18 more)
+Cohesion: 0.15
+Nodes (18): addChangedListeners(), attachElementOnChange(), createCellPosition(), createCondition(), forEachPositionInput(), forEachPositionTypeInput(), getConditionType(), getInputs() (+10 more)
 
 ### Community 220 - "nexora-remove-sidebar-collapse-icons.js"
 Cohesion: 0.36
@@ -1416,8 +1429,8 @@ Cohesion: 0.33
 Nodes (7): processAction(), processCell(), processRange(), redo(), setLastFocusedCell(), undo(), undoRedo()
 
 ### Community 222 - "self-service-own-employee.js"
-Cohesion: 0.25
-Nodes (9): allContainersIntersect(), findCurrentDropTarget(), findExternalZone(), getAllContainersFromDropTarget(), getContainer(), getSecondaryContainers(), isInterestedIn(), isMouseOnDropTarget() (+1 more)
+Cohesion: 0.15
+Nodes (19): allContainersIntersect(), createDropTargetEvent(), enterDragTargetIfExists(), findCurrentDropTarget(), findExternalZone(), getAllContainersFromDropTarget(), getContainer(), getHorizontalDirection() (+11 more)
 
 ### Community 223 - "NEXORA_Brand_UI_Implementation.md"
 Cohesion: 0.50
@@ -1428,8 +1441,8 @@ Cohesion: 0.50
 Nodes (3): SmartAttendance.Application.Common.Security, SmartAttendance.Web.Infrastructure.Security, IPermissionAuthorizationService
 
 ### Community 225 - "IMasterDataImportService"
-Cohesion: 0.10
-Nodes (33): createCellCtrls(), createCellEditorParams(), focusCell(), getCellEditor(), getCellEditorInstances(), getCellPosition(), getCellPositionForEvent(), getColumn() (+25 more)
+Cohesion: 0.05
+Nodes (62): addKeyDownListener(), createCellEditorParams(), doGridOperations(), Eo(), findNextCellToFocusOn(), focusCell(), focusPosition(), getCellByPosition() (+54 more)
 
 ### Community 226 - "MasterDataImportResultViewModel"
 Cohesion: 0.25
@@ -1440,20 +1453,20 @@ Cohesion: 0.40
 Nodes (4): route:/ShiftRules, SmartAttendance.Web.Infrastructure.Hrms, System.Text.Json, SmartAttendance.Web.Pages.ShiftRules.IndexModel
 
 ### Community 228 - "20260630180127_InitialCreate.Designer.cs"
-Cohesion: 0.26
+Cohesion: 0.29
 Nodes (6): RouteValueDictionary, CancellationToken, Func, HttpContext, Task, PeopleTargetEmployeeResolver
 
 ### Community 229 - "20260702231709_AddHolidaysAndLeaveRequestsModule.Designer.cs"
 Cohesion: 0.10
-Nodes (27): adjustPrecision(), executeFilterValueGetter(), executeValueGetter(), getActiveInputElement(), getKeyForNode(), getLastType(), getOpenedGroup(), getValue() (+19 more)
+Nodes (26): adjustPrecision(), dispatchChange(), dispatchLocalEvent(), fireChangeEvent(), fireItemSelected(), getActiveInputElement(), getDomLayout(), getNextValue() (+18 more)
 
 ### Community 230 - "E"
 Cohesion: 0.29
 Nodes (7): getCellGui(), getContextMenuAnchorElement(), getContextMenuPosition(), getFullWidthElement(), getGridBodyElement(), getRowYPosition(), showContextMenu()
 
 ### Community 231 - "getScrollFeature"
-Cohesion: 0.39
-Nodes (4): DepartmentDetailsViewModel, IActionResult, Task, DeleteModel
+Cohesion: 0.33
+Nodes (5): DateTime, Guid, AnnouncementAuditLog, EntityTypeBuilder, AnnouncementAuditLogConfiguration
 
 ### Community 232 - "20260703113220_AddWeeklyOffDaysToEmployeeShifts.Designer.cs"
 Cohesion: 0.20
@@ -1464,44 +1477,44 @@ Cohesion: 0.47
 Nodes (3): closeAll(), ensureBackdrop(), open()
 
 ### Community 234 - "20260706211359_AddEmployeeViolationCasesDbFix.Designer.cs"
-Cohesion: 0.13
-Nodes (22): Aa(), addOption(), ba(), ca(), ea(), fa(), ha(), ia() (+14 more)
+Cohesion: 0.11
+Nodes (24): Aa(), ca(), ea(), enableOrDisableButtons(), ha(), ia(), isZeroPagesToDisplay(), ja() (+16 more)
 
 ### Community 235 - "20260708064932_SomeeDeploySync_20260708.Designer.cs"
-Cohesion: 0.05
-Nodes (57): addFolders(), autoSizeAllColumns(), autoSizeCols(), autoSizeColumn(), autoSizeColumnGroupsByColumns(), buildColumnDefs(), canSkip(), createColsFromColDefs() (+49 more)
+Cohesion: 0.06
+Nodes (46): addFolders(), addTaskToList(), buildColumnDefs(), C(), canSkip(), createCellRendererInstance(), createHeader(), createTask() (+38 more)
 
 ### Community 236 - "20260711064619_AddCompanySetupFoundationAndReconcileModel_20260711.Designer.cs"
-Cohesion: 0.12
-Nodes (19): addParentNode(), applyPaginationOffset(), areAllContainersReady(), createPathItems(), doChangeDetection(), executeProcessRowPostCreateFunc(), getInitialRowTop(), getInitialRowTopShared() (+11 more)
+Cohesion: 0.18
+Nodes (13): applyPaginationOffset(), areAllContainersReady(), executeProcessRowPostCreateFunc(), getInitialRowTop(), getInitialRowTopShared(), getInitialTransform(), getPixelOffset(), getRealPixelPosition() (+5 more)
 
 ### Community 237 - "20260711092610_RedesignPayrollCutoffPolicies_20260711_122556.Designer.cs"
 Cohesion: 0.18
 Nodes (10): SmartAttendance.Web.Pages.UserAccess, DateTime, EmployeeOption, EmployeeRecord, IdentityInputModel, IdentityLinkStatus, IdentityRow, LoginRecord (+2 more)
 
 ### Community 238 - "20260711155333_AddIndependentDepartmentsAndEmployeeWorkLocations_20260711.Designer.cs"
-Cohesion: 0.17
-Nodes (9): SmartAttendance.Web.Pages.PeopleReports, SmartAttendance.Web.Infrastructure.Reports, FilterKind, ReportColumn, ReportDataset, ReportFilters, List, SavedReport (+1 more)
+Cohesion: 0.33
+Nodes (7): addParentNode(), createPathItems(), doChangeDetection(), isRowPinned(), linkPathItems(), onCellValueChanged(), populateColumnsMap()
 
 ### Community 239 - "20260711165702_AddCompanyScopedPositionsAndEmployeePositionLink_20260711.Designer.cs"
-Cohesion: 0.22
-Nodes (10): addPropertyListeners(), expandRows(), getById(), getIds(), has(), onGroupExpandedOrCollapsed(), removeAllById(), setOrder() (+2 more)
+Cohesion: 0.14
+Nodes (19): addColumnDefaultAndTypes(), applyGlobalGridOptions(), assignColumnTypes(), clearRowTopAndRowIndex(), createDefFromGroup(), ct(), expandRows(), getById() (+11 more)
 
 ### Community 240 - "20260714194223_AddAnnouncementStudioFinalFoundation_20260714.Designer.cs"
-Cohesion: 0.06
-Nodes (47): addFunction(), addSlideAnimation(), __assertRegistered(), callColumnCellValueChangedHandler(), cd(), checkForRequiredDependencies(), checkProperties(), create() (+39 more)
+Cohesion: 0.12
+Nodes (24): addFunction(), __assertRegistered(), cd(), create(), createBeansList(), extractModuleEntity(), getBean(), __isRegistered() (+16 more)
 
 ### Community 241 - "addManagedElementListeners"
-Cohesion: 0.39
-Nodes (5): List, SetupDropdownItemViewModel, SetupStepViewModel, SystemSetupViewModel, List
+Cohesion: 0.38
+Nodes (7): announceDescription(), createRowEventWithSource(), fe(), getLocaleTextFunc(), isRowSelectionBlocked(), onRowClick(), ve()
 
 ### Community 243 - "20260717171600_FixEmployeeShiftShiftRelationship_20260717.Designer.cs"
-Cohesion: 0.40
-Nodes (6): isAnyParentAutoHeaderHeight(), isAutoHeaderHeight(), isAutoHeight(), isColumnInHeaderViewport(), isColumnInRowViewport(), setAutoHeightActive()
+Cohesion: 0.29
+Nodes (7): attemptSettingScrollPosition(), check(), ensureCleared(), ensureIntervalStarted(), ensureTickingStarted(), S(), setInterval()
 
 ### Community 244 - "attendance-records-filters.js"
-Cohesion: 0.16
-Nodes (14): getColDefValue(), getColumnsToResize(), getInitialSizeOfColumns(), getInitialValues(), getSizeRatiosOfColumns(), isResizable(), isSortable(), normaliseDragChange() (+6 more)
+Cohesion: 0.29
+Nodes (7): calculateDisplayName(), checkDisplayName(), clearMouseOver(), getDisplayNameForColumn(), setMouseOver(), updateState(), workOutDraggable()
 
 ### Community 245 - "nexora-a4-custom-file-picker-v13-1.js"
 Cohesion: 0.83
@@ -1516,56 +1529,48 @@ Cohesion: 0.40
 Nodes (4): route:/ShiftTypes, SmartAttendance.Web.Infrastructure.Hrms, System.Text.Json, SmartAttendance.Web.Pages.ShiftTypes.IndexModel
 
 ### Community 249 - "filterNodes"
-Cohesion: 0.29
-Nodes (6): Dictionary, FieldSetting, HashSet, IActionResult, Task, FieldControlModel
+Cohesion: 0.38
+Nodes (7): isAllowPivot(), isAllowRowGroup(), isAllowValue(), isAnyFunctionAllowed(), isDropColumnInPivotMode(), onDragEnter(), setDragging()
 
 ### Community 254 - "ApprovalRow"
-Cohesion: 0.43
-Nodes (4): IActionResult, List, Task, TerminationReasonsModel
+Cohesion: 0.33
+Nodes (6): getIconName(), getRowDragFeature(), hasExternalDropZones(), onSuppressRowDrag(), shouldPreventRowMove(), workOutVisibility()
 
 ### Community 255 - "apiNotFound"
-Cohesion: 0.10
-Nodes (25): canInferCellDataType(), checkCompatibility(), checkWarnings(), doColDefPropsPreventInference(), doesColDefPropPreventInference(), dt(), getDefaultJoinOperator(), getInitialData() (+17 more)
+Cohesion: 0.11
+Nodes (23): apiNotFound(), assertModuleRegistered(), checkCompatibility(), checkWarnings(), er(), getDefaultJoinOperator(), getTextMatcher(), kr() (+15 more)
 
 ### Community 257 - "AddCompanyScopedPositionsAndEmployeePositionLink_20260711"
-Cohesion: 0.32
-Nodes (8): createBoilerplateListOption(), createCustomListOption(), createFilterListOptions(), getFilterTitle(), getPlaceholderText(), resetPlaceholder(), setInputPlaceholder(), translate()
+Cohesion: 0.19
+Nodes (14): createBoilerplateListOption(), createCustomListOption(), createFilterListOptions(), getFilterTitle(), getPlaceholderText(), isDefaultOperator(), resetJoinOperator(), resetJoinOperatorAnd() (+6 more)
 
 ### Community 258 - "IndexModel"
-Cohesion: 0.25
-Nodes (8): getCompId(), getLabel(), getLabelId(), getTemplate(), refreshAriaLabelledBy(), refreshLabel(), setLabel(), setLabelSeparator()
+Cohesion: 0.14
+Nodes (19): addPopup(), addPopupToPopupList(), bringPopupToFront(), createPopupWrapper(), da(), fa(), ga(), getAriaElement() (+11 more)
 
 ### Community 263 - "columnPinned"
-Cohesion: 0.43
-Nodes (4): HttpRequest, HttpContext, IReadOnlyCollection, CompanySelectionContext
+Cohesion: 0.40
+Nodes (3): DateOnly, LeaveRequestEditViewModel, LeaveStatus
 
 ### Community 264 - "evaluateExpression"
 Cohesion: 0.50
 Nodes (4): createExpressionFunction(), createFunctionBody(), evaluate(), evaluateExpression()
 
 ### Community 266 - "getModel"
-Cohesion: 0.08
-Nodes (32): addResizers(), addRowNodes(), clear(), clearDragAndDropProperties(), clearLocalValues(), clearResizeListeners(), createHeaderComp(), createResizeMap() (+24 more)
+Cohesion: 0.16
+Nodes (15): addRowNodes(), createHeaderComp(), destroyAllCells(), destroyCells(), detach(), ensureDomOrder(), getCellCtrlsForContainer(), getCtrl() (+7 more)
 
 ### Community 268 - "PeopleDashboardModel"
 Cohesion: 0.14
-Nodes (16): addFeatures(), areFilterCompsDifferent(), createCellRendererParams(), disableTooltipFeature(), dispatchFirstDataRenderedEvent(), enableTooltipFeature(), getCellRendererDetails(), getLoadingCellRendererDetails() (+8 more)
+Nodes (15): addDestroyTask(), debounce(), dispatchFirstDataRenderedEvent(), executeFrame(), finish(), flush(), flushAllFrames(), isOn() (+7 more)
 
 ### Community 271 - "IndexModel"
-Cohesion: 0.29
-Nodes (7): createTabGuard(), initialiseTabGuard(), insertGridIntoDom(), Lc(), oc(), u(), updateGridOptions()
-
-### Community 273 - "wrap"
-Cohesion: 0.43
-Nodes (7): forEachNode(), getRowNodesInRange(), onGridStylesChanges(), resetRowHeights(), resetRowHeightsForAllRowNodes(), setRowHeight(), updateRowHeights()
-
-### Community 274 - "isSuppressMenuHide"
-Cohesion: 0.52
-Nodes (3): IActionResult, Task, SelfServiceSettingsModel
+Cohesion: 0.17
+Nodes (13): addTabGuards(), createTabGuard(), getAvailableLoadingCount(), initialiseTabGuard(), insertGridIntoDom(), Lc(), oc(), performCheckBlocksToLoad() (+5 more)
 
 ### Community 275 - "refreshToolTip"
-Cohesion: 0.15
-Nodes (19): addDisplayedLeafColumns(), addLeafColumns(), checkLeft(), getAllTrees(), getAriaColIndex(), getColumnGroup(), getPartId(), Kt() (+11 more)
+Cohesion: 0.11
+Nodes (25): addChild(), addDisplayedLeafColumns(), addLeafColumns(), buildTrees(), calculateHeaderRows(), checkViewportColumns(), createColGroup(), createGroups() (+17 more)
 
 ### Community 276 - "Index.cshtml.cs"
 Cohesion: 0.33
@@ -1573,59 +1578,43 @@ Nodes (5): DateTime, List, ActionResult, FlowState, StepState
 
 ### Community 290 - "Daily.cshtml"
 Cohesion: 0.24
-Nodes (10): at(), createControlsCols(), ge(), getIsVisible(), isCellCheckboxSelection(), isControlsColEnabled(), le(), onSelectableChanged() (+2 more)
+Nodes (10): at(), createControlsCols(), ge(), getIsVisible(), isCellCheckboxSelection(), isControlsColEnabled(), isReady(), le() (+2 more)
 
 ### Community 291 - "DeleteModel"
-Cohesion: 0.08
-Nodes (21): SmartAttendance.Application.Permissions.ViewModels, SmartAttendance.Web.Pages.Permissions, IEnumerable, Task, IPermissionService, PermissionCreateViewModel, PermissionDetailsViewModel, PermissionListViewModel (+13 more)
+Cohesion: 0.18
+Nodes (7): IEnumerable, Task, IPermissionService, IActionResult, Task, IActionResult, Task
 
 ### Community 292 - "SystemSetupViewModel"
 Cohesion: 0.50
 Nodes (3): route:/AttendanceRecommendations, SmartAttendance.Web.Infrastructure.Hrms, SmartAttendance.Web.Pages.AttendanceRecommendations.IndexModel
 
-### Community 314 - "TerminationReasonsModel"
-Cohesion: 0.53
-Nodes (3): IActionResult, Task, NoticePeriodModel
-
-### Community 317 - "SmartAttendance.Application.AttendanceImports.ViewModels"
-Cohesion: 0.47
-Nodes (6): addColumnDefaultAndTypes(), applyGlobalGridOptions(), assignColumnTypes(), ct(), it(), mergeParamsWithApplicationProvidedParams()
-
 ### Community 359 - "CreateModel"
-Cohesion: 0.17
-Nodes (12): BootstrapSnapshot, BootstrapStructureCounts, BranchReference, CompanyReference, DepartmentReference, EmployeeBootstrapRowPlan, PositionReference, DateOnly (+4 more)
+Cohesion: 0.16
+Nodes (18): BootstrapSnapshot, BootstrapStructureCounts, BranchReference, CompanyReference, DepartmentReference, EmployeeBootstrapRowPlan, PositionReference, ICollection (+10 more)
 
 ### Community 372 - "AnnouncementRecipient"
 Cohesion: 0.22
-Nodes (7): SmartAttendance.Application.Permissions.Services, SmartAttendance.Application.EmployeePermissions.ViewModels, SmartAttendance.Web.Pages.EmployeePermissions, SmartAttendance.Application.EmployeePermissions.Services, EmployeePermissionCheckViewModel, List, EmployeePermissionGroupViewModel
+Nodes (7): SmartAttendance.Application.EmployeePermissions.ViewModels, SmartAttendance.Web.Pages.EmployeePermissions, List, EmployeePermissionAssignmentViewModel, EmployeePermissionCheckViewModel, List, EmployeePermissionGroupViewModel
 
 ### Community 373 - "Index.cshtml"
-Cohesion: 0.50
-Nodes (4): IReadOnlySet, IReadOnlyList, PeoplePermissionCodes, PermissionDefinition
+Cohesion: 0.22
+Nodes (7): IReadOnlyCollection, AnnouncementPermissionCodes, IReadOnlyList, IReadOnlySet, PeoplePermissionCodes, PermissionDefinition, string
 
 ### Community 374 - "SystemUser"
-Cohesion: 0.29
-Nodes (8): buildCompressedFileStream(), buildFileStream(), clearStream(), G(), getUncompressedZipFile(), getZipFile(), packageFiles(), updateHasChildren()
+Cohesion: 0.40
+Nodes (6): buildCompressedFileStream(), buildFileStream(), clearStream(), getUncompressedZipFile(), getZipFile(), packageFiles()
 
 ### Community 386 - "SelfServiceSettingsModel"
 Cohesion: 0.33
 Nodes (5): DateTime, List, ProfileModel, TimelineEvent, TimelineEvent
 
-### Community 389 - "Index.cshtml.cs"
-Cohesion: 0.29
-Nodes (6): DateOnly, EmployeeShiftCreateViewModel, IActionResult, IEnumerable, Task, CreateModel
-
-### Community 393 - "ProbationPeriodModel"
-Cohesion: 0.50
-Nodes (3): IActionResult, Task, LogoutModel
+### Community 391 - "NoticePeriodModel"
+Cohesion: 0.25
+Nodes (5): List, Task, IMasterDataImportService, List, MasterDataImportPreviewViewModel
 
 ### Community 394 - "getDisplayNameForColumn"
-Cohesion: 0.40
-Nodes (5): doesMovePassRules(), getProposedColumnOrder(), moveColumnByIndex(), moveColumns(), Wi()
-
-### Community 396 - "removeConditionsAndOperators"
-Cohesion: 0.60
-Nodes (5): getActualDepth(), getColumnsInViewport(), getColumnsInViewportNormalLayout(), getColumnsInViewportPrintLayout(), getHeadersToRender()
+Cohesion: 0.25
+Nodes (8): doesMovePassRules(), getMoveColumnParams(), getProposedColumnOrder(), handleColumnDragWhileAllowingMovement(), moveColumnByIndex(), moveColumns(), normaliseDirection(), Wi()
 
 ### Community 397 - "Index.cshtml.cs"
 Cohesion: 0.22
@@ -1635,37 +1624,25 @@ Nodes (13): addActiveHeaderMouseListeners(), addHeaderMouseListeners(), addHighl
 Cohesion: 0.40
 Nodes (4): route:/AttendanceSettings, SmartAttendance.Web.Infrastructure.Hrms, System.Text.Json, SmartAttendance.Web.Pages.AttendanceSettings.IndexModel
 
-### Community 399 - "Index.cshtml.cs"
-Cohesion: 0.40
-Nodes (4): SmartAttendance.Web.Pages.AttendanceViewer, DayRow, Dictionary, EmployeeRow
-
-### Community 400 - "Index.cshtml.cs"
-Cohesion: 0.40
-Nodes (4): SmartAttendance.Web.Pages.AssetsManagement, DateOnly, DateTime, AssetRow
-
-### Community 401 - "getAlignedGridApis"
-Cohesion: 0.49
-Nodes (3): IReadOnlyCollection, Task, MonthAttendanceStore
-
 ### Community 403 - "filterNodes"
 Cohesion: 0.50
-Nodes (3): SmartAttendance.Web.Pages.AuditLogs, DateTime, AuditRow
+Nodes (5): findNextColumnWithFloatingFilter(), getColAfter(), getColBefore(), getRangeBorders(), sameRow()
 
-### Community 415 - "RawPunch"
-Cohesion: 0.67
-Nodes (3): depthFirstSearchChangedPath(), depthFirstSearchEverything(), forEachChangedNodeDepthFirst()
+### Community 404 - "showValue"
+Cohesion: 0.50
+Nodes (5): fireColumnEvent(), fireEvent(), getAlignedGridApis(), isDestroyed(), isGridApi()
 
-### Community 418 - "ApprovalRow"
-Cohesion: 0.40
-Nodes (4): SmartAttendance.Web.Pages.Approvals, DateOnly, DateTime, ApprovalRow
+### Community 405 - "setParams"
+Cohesion: 0.60
+Nodes (5): removeComponents(), removeDateComps(), removeElements(), removeItems(), removeValueElements()
 
 ### Community 424 - "20260702231709_AddHolidaysAndLeaveRequestsModule.Designer.cs"
 Cohesion: 0.16
 Nodes (13): ActionResult, ApprovalRow, FlowState, Dictionary, IEnumerable, Task, ApprovalWorkflowEngine, Dictionary (+5 more)
 
 ### Community 426 - "20260702234437_AddDirectEmployeePermissionsModule.Designer.cs"
-Cohesion: 0.15
-Nodes (16): applyElementsToComponent(), copyAttributesFromNode(), createBean(), createChildComponentsFromTags(), createComponentFromElement(), createDndSource(), createRowDragComp(), createSelectionCheckbox() (+8 more)
+Cohesion: 0.10
+Nodes (26): activateTabIndex(), addCssClass(), applyElementsToComponent(), containsCssClass(), copyAttributesFromNode(), createChildComponentsFromTags(), createComponentFromElement(), createDateCompWrapper() (+18 more)
 
 ### Community 428 - "20260703142930_AddEmployeePosition.Designer.cs"
 Cohesion: 0.67
@@ -1675,61 +1652,53 @@ Nodes (3): getGridThemeClass(), handleThemeChange(), updateGridThemeClass()
 Cohesion: 0.67
 Nodes (3): isHeaderMenuButtonAlwaysShowEnabled(), isHeaderMenuButtonEnabled(), isSuppressMenuHide()
 
-### Community 431 - "20260711064619_AddCompanySetupFoundationAndReconcileModel_20260711.Designer.cs"
-Cohesion: 0.40
-Nodes (6): focusNextHeaderRow(), getHeaderRowCount(), isAdvancedFilterHeaderActive(), navigateHorizontally(), navigateVertically(), setCurrentHeaderRowWithoutSpan()
-
 ### Community 434 - "20260715130000_AddPeoplePermissionRulesAndScopes_20260715.Designer.cs"
-Cohesion: 0.19
-Nodes (14): createNode(), dispatchRowDataUpdateStartedEvent(), executeAdd(), executeRemove(), executeUpdate(), lookupRowNode(), sanitizeAddIndex(), setMaster() (+6 more)
+Cohesion: 0.10
+Nodes (24): createNode(), createTransactionForRowData(), dispatchRowDataUpdateStartedEvent(), dispatchUpdateEventsAndRefresh(), ensureAnimationCssClassPresent(), executeAdd(), executeRemove(), executeUpdate() (+16 more)
 
 ### Community 435 - "20260717165105_ReconcileEmployeeLegacyColumns_20260717.Designer.cs"
 Cohesion: 0.50
 Nodes (3): route:/DayAttendance, SmartAttendance.Web.Infrastructure.Hrms, SmartAttendance.Web.Pages.DayAttendance.IndexModel
 
 ### Community 436 - "LogoutModel"
-Cohesion: 0.12
-Nodes (12): Bucket, SmartAttendance.Web.Pages, PageModel, AccessDeniedModel, AuditRow, List, IndexModel, List (+4 more)
+Cohesion: 0.09
+Nodes (16): SmartAttendance.Web.Pages, PageModel, AccessDeniedModel, IActionResult, Task, LogoutModel, ErrorModel, IActionResult (+8 more)
 
 ### Community 437 - ".TryParseDateTime"
-Cohesion: 0.21
-Nodes (12): checkAutoHeights(), createAllCellCtrls(), extractViewportColumns(), getAllAutoHeightCols(), getColsForRow(), getColsWithinViewport(), getLeftColsForRow(), getRightColsForRow() (+4 more)
+Cohesion: 0.24
+Nodes (11): checkAutoHeights(), createAllCellCtrls(), extractViewportColumns(), getAllAutoHeightCols(), getColsForRow(), getColsWithinViewport(), getLeftColsForRow(), getRightColsForRow() (+3 more)
 
 ### Community 440 - "serialize"
 Cohesion: 0.26
 Nodes (8): DbDataReader, IFormCollection, List, Task, EmployeeProfileDynamicField, EmployeeProfileDynamicFields, EmployeeProfileDynamicSection, EmployeeProfileFieldSaveDefinition
 
 ### Community 441 - "getParent"
-Cohesion: 0.04
-Nodes (44): DateTime, BaseEntity, IEntity, DateTime, AnnouncementChannel, DateTime, AnnouncementComment, DateOnly (+36 more)
+Cohesion: 0.03
+Nodes (50): DateTime, BaseEntity, IEntity, AnnouncementAudienceRule, DateTime, AnnouncementChannel, DateTime, AnnouncementComment (+42 more)
 
 ### Community 442 - "checkViewportAndScrolls"
-Cohesion: 0.12
-Nodes (17): checkBodyHeight(), checkViewportAndScrolls(), getPinnedColumnsOverflowingViewport(), hasHorizontalScrollGap(), hasVerticalScrollGap(), isHorizontalScrollShowing(), keepPinnedColumnsNarrowerThanViewport(), listenForResize() (+9 more)
-
-### Community 443 - "getCSSVariablePixelValue"
-Cohesion: 0.50
-Nodes (4): getCSSVariablePixelValue(), getDefaultHeaderHeight(), getDefaultListItemHeight(), measureSizeEl()
+Cohesion: 0.20
+Nodes (11): checkBodyHeight(), checkCenterForScrolling(), checkViewportAndScrolls(), getCenterViewportScrollLeft(), getCenterWidth(), getPinnedColumnsOverflowingViewport(), keepPinnedColumnsNarrowerThanViewport(), listenForResize() (+3 more)
 
 ### Community 444 - "getNextCellToFocusWithoutCtrlPressed"
-Cohesion: 0.10
-Nodes (22): createColumnFunctionCallbackParams(), getCellAbove(), getCellBelow(), getCellToLeft(), getCellToRight(), getLastBodyCell(), getLastFloatingTopRow(), getNextCellToFocus() (+14 more)
+Cohesion: 0.09
+Nodes (24): createColumnFunctionCallbackParams(), ee(), getCellAbove(), getCellBelow(), getCellToLeft(), getCellToRight(), getLastBodyCell(), getLastFloatingTopRow() (+16 more)
 
 ### Community 445 - "moveColumns"
 Cohesion: 0.31
 Nodes (9): addOptions(), createPageSizeSelectOptions(), createPageSizeSelectorComp(), getPageSizeSelectorValues(), handlePaginationChanged(), onPageSizeSelectorValuesChange(), reloadPageSizesSelector(), shouldShowPageSizeSelector() (+1 more)
 
 ### Community 447 - "getHeaderCtrls"
-Cohesion: 0.29
-Nodes (6): TimeOnly, ShiftEditViewModel, IEnumerable, IMapper, Task, ShiftService
+Cohesion: 0.40
+Nodes (4): IEnumerable, IMapper, Task, ShiftService
 
 ### Community 448 - "calculatePages"
-Cohesion: 0.14
-Nodes (20): adjustCurrentPageIfInvalid(), calculatedPagesNotActive(), calculatePages(), calculatePagesAllRows(), calculatePagesMasterRowsOnly(), dispatchPaginationChangedEvent(), getPageForIndex(), goToFirstPage() (+12 more)
+Cohesion: 0.15
+Nodes (19): adjustCurrentPageIfInvalid(), calculatedPagesNotActive(), calculatePages(), calculatePagesAllRows(), calculatePagesMasterRowsOnly(), dispatchPaginationChangedEvent(), getPageForIndex(), goToFirstPage() (+11 more)
 
 ### Community 449 - "getIconName"
-Cohesion: 0.18
-Nodes (12): doingTreeDataFiltering(), filter(), filterNodes(), forEachNodeAfterFilter(), forEachNodeAfterFilterAndSort(), forEachPivotNode(), getFirstPixelOfGroup(), getNodesInRangeForSelection() (+4 more)
+Cohesion: 0.14
+Nodes (17): calculateDirtyNodes(), doFullSort(), forEachNodeAfterFilter(), forEachNodeAfterFilterAndSort(), forEachPivotNode(), getColumnDefs(), getColumnState(), getFirstChildOfFirstChild() (+9 more)
 
 ### Community 450 - "Index.cshtml"
 Cohesion: 0.50
@@ -1740,16 +1709,36 @@ Cohesion: 0.50
 Nodes (3): route:/ShiftAssignments, SmartAttendance.Web.Infrastructure.Hrms, SmartAttendance.Web.Pages.ShiftAssignments.IndexModel
 
 ### Community 452 - "setDataValue"
-Cohesion: 0.06
-Nodes (41): ai(), callValueFormatter(), checkPageSize(), conditionToString(), createBaseColDefParams(), createProvidedBeans(), dispatchCellChangedEvent(), equals() (+33 more)
+Cohesion: 0.13
+Nodes (21): callValueFormatter(), createCellRendererParams(), dispatchCellChangedEvent(), equals(), formatValue(), getAutoCol(), getCol(), getColDefCol() (+13 more)
 
 ### Community 457 - "isReadOnly"
-Cohesion: 0.26
-Nodes (8): Task, IActionResult, IFormFile, IWebHostEnvironment, name, path, Task, FinancialInfoModel
+Cohesion: 0.23
+Nodes (9): Task, EmployeeFinancialInfoSchema, IActionResult, IFormFile, IWebHostEnvironment, name, path, Task (+1 more)
+
+### Community 459 - "resetIcons"
+Cohesion: 0.67
+Nodes (4): disableUserSelect(), resetIcons(), setResizeCursor(), setResizeIcons()
+
+### Community 460 - "filterNodes"
+Cohesion: 0.50
+Nodes (4): doingTreeDataFiltering(), executeFromRootNode(), filter(), filterNodes()
+
+### Community 461 - "wrap"
+Cohesion: 0.67
+Nodes (3): createMethod(), createMethodProxy(), wrap()
+
+### Community 462 - "isDomDataMissingInHierarchy"
+Cohesion: 0.67
+Nodes (3): getFocusCellToUseAfterRefresh(), getFocusHeaderToUseAfterRefresh(), isDomDataMissingInHierarchy()
 
 ### Community 463 - "setRowTop"
-Cohesion: 0.29
-Nodes (11): clearRowTopAndRowIndex(), createRowNodes(), ensureRowHeightsValid(), onPaginationPixelOffsetChanged(), onTopChanged(), processServerResult(), setRowIndex(), setRowTop() (+3 more)
+Cohesion: 0.21
+Nodes (15): createRowNodes(), dispatchModelUpdatedEvent(), ensureRowHeightsValid(), onGridStylesChanges(), onPaginationPixelOffsetChanged(), onTopChanged(), resetRowHeights(), resetRowHeightsForAllRowNodes() (+7 more)
+
+### Community 464 - "togglePickerHasFocus"
+Cohesion: 0.67
+Nodes (3): onPickerFocusIn(), onPickerFocusOut(), togglePickerHasFocus()
 
 ### Community 466 - "setValue"
 Cohesion: 0.22
@@ -1759,81 +1748,57 @@ Nodes (9): 17.1 تحديثات الموظف `/Employees/ChangeTransactions/Index
 Cohesion: 0.43
 Nodes (7): refreshAria(), refreshAriaFilterButton(), refreshAriaFiltered(), refreshAriaMenu(), refreshAriaSort(), setAriaDescriptionProperty(), setupFilterClass()
 
-### Community 474 - "clearHighlighted"
-Cohesion: 0.67
-Nodes (3): DateOnly, DateTime, RawPunch
-
-### Community 475 - "resetIcons"
-Cohesion: 0.17
-Nodes (16): all(), applyModel(), checkApplyDebounce(), close(), handleCancelEnd(), isModelValid(), onBtApply(), onBtCancel() (+8 more)
-
 ### Community 476 - "updateScrollGap"
 Cohesion: 0.22
 Nodes (9): getCellWidth(), getColSpanningList(), onDisplayColumnsChanged(), onFirstRightPinnedChanged(), onLastLeftPinnedChanged(), onWidthChanged(), refreshListenersToColumnsForCellComps(), removeGridColumnListeners() (+1 more)
 
-### Community 478 - "m"
-Cohesion: 0.38
-Nodes (4): DateOnly, EmployeeAllowance, EntityTypeBuilder, EmployeeAllowanceConfiguration
-
-### Community 481 - "CreateModel"
-Cohesion: 0.67
-Nodes (3): apiNotFound(), assertModuleRegistered(), makeApi()
-
 ### Community 482 - "getRowNode"
-Cohesion: 0.14
-Nodes (21): addRow(), calculateIndexesToDraw(), datasourceChanged(), destroyFirstPass(), destroySecondPass(), doNotUnVirtualiseRow(), forEachPinnedRow(), getPinnedRowById() (+13 more)
+Cohesion: 0.12
+Nodes (24): addRow(), calculateIndexesToDraw(), datasourceChanged(), destroyFirstPass(), destroyRowCtrls(), destroySecondPass(), doNotUnVirtualiseRow(), f() (+16 more)
 
 ### Community 483 - "B"
-Cohesion: 0.24
-Nodes (11): B(), checkContainerWidths(), ee(), getDomOrder(), getKeepDetailRowsCount(), getNextStickyPosition(), initialise(), initialiseCache() (+3 more)
+Cohesion: 0.13
+Nodes (24): addEventListeners(), addListeners(), addManagedPropertyListener(), addManagedPropertyListeners(), addPropertyListeners(), addRowDraggerToRow(), B(), checkContainerWidths() (+16 more)
 
 ### Community 484 - "refreshNodesAndContainerHeight"
-Cohesion: 0.21
-Nodes (12): areFooterRowsStickySuppressed(), canRowsBeSticky(), checkStickyRows(), destroyStickyCtrls(), getStickyAncestors(), refreshNodesAndContainerHeight(), refreshStickyNode(), resetOffsets() (+4 more)
+Cohesion: 0.27
+Nodes (10): areFooterRowsStickySuppressed(), canRowsBeSticky(), checkStickyRows(), getStickyAncestors(), refreshNodesAndContainerHeight(), refreshStickyNode(), resetOffsets(), setOffsetBottom() (+2 more)
 
 ### Community 486 - "_install"
-Cohesion: 0.14
-Nodes (17): applyThemeClasses(), compareRowNodes(), fireGridStylesChangedEvent(), getComparator(), getCSS(), _getCSSChunks(), getCssClass(), _getFlatUnits() (+9 more)
+Cohesion: 0.09
+Nodes (33): compareRowNodes(), createDragItem(), createValueForGroupNode(), executeFilterValueGetter(), executeValueGetter(), extractRowCellValue(), generateColumnStateForRowGroupAndPivotIndexes(), getColDef() (+25 more)
 
 ### Community 488 - "Vi"
-Cohesion: 0.17
-Nodes (16): findNextColumnWithFloatingFilter(), getAllCols(), getCenterCols(), getColAfter(), getColBefore(), getColumnForFullWidth(), getDragItemForGroup(), getLeafColumns() (+8 more)
+Cohesion: 0.09
+Nodes (32): attemptToPinColumns(), clearHighlighted(), findFirstAndLastMovingColumns(), finishColumnMoving(), getAllCols(), getAllMovingColumns(), getCenterCols(), getCols() (+24 more)
 
 ### Community 490 - "Index.cshtml.cs"
 Cohesion: 0.67
 Nodes (3): getRowByPosition(), getStickyBottomRowCtrls(), getStickyTopRowCtrls()
 
-### Community 492 - "dispatchLocalEvent"
-Cohesion: 0.28
-Nodes (9): dispatchLocalEvent(), fireChangeEvent(), fireItemSelected(), onQuickFilterColumnConfigChanged(), parseQuickFilter(), resetQuickFilterCache(), setQuickFilter(), setQuickFilterParserAndMatcher() (+1 more)
-
 ### Community 493 - "getCallback"
-Cohesion: 0.15
-Nodes (13): createAutoCols(), getCallback(), ie(), isFullWidthCell(), isModuleRegistered(), isNodeFullWidthCell(), isSuppressAutoCol(), mergeGridCommonParams() (+5 more)
+Cohesion: 0.25
+Nodes (9): createAutoCols(), getColsToShow(), ie(), isNodeFullWidthCell(), isPivotMode(), isShowingPivotResult(), isSuppressAutoCol(), setRowType() (+1 more)
 
 ### Community 494 - "getLeft"
-Cohesion: 0.14
-Nodes (18): animateInLeft(), executeNextVMTurn(), getBodyContainerWidth(), getCellLeft(), getColsLeftWidth(), getColumnBounds(), getColumnOrGroup(), getLeft() (+10 more)
+Cohesion: 0.12
+Nodes (24): addSelectionHandle(), animateInLeft(), checkLeft(), executeNextVMTurn(), getBodyContainerWidth(), getCellLeft(), getColsLeftWidth(), getColumnOrGroup() (+16 more)
 
 ### Community 495 - "isLegacyMenuEnabled"
-Cohesion: 0.09
-Nodes (30): areAdditionalColumnMenuItemsEnabled(), calculateDisplayName(), checkDisplayName(), createValueForGroupNode(), extractRowCellValue(), getColDef(), getColumnMenuType(), getColumnStateFromColDef() (+22 more)
+Cohesion: 0.20
+Nodes (12): areAdditionalColumnMenuItemsEnabled(), getColumnMenuType(), isColumnMenuAnchoringEnabled(), isColumnMenuInHeaderEnabled(), isFilterMenuInHeaderEnabled(), isFilterMenuItemEnabled(), isFloatingFilterButtonDisplayed(), isFloatingFilterButtonEnabled() (+4 more)
 
 ### Community 497 - "export"
-Cohesion: 0.18
-Nodes (13): createSerializingSession(), download(), Eo(), export(), exportDataAsCsv(), getData(), getDataAsCsv(), getDefaultFileExtension() (+5 more)
+Cohesion: 0.20
+Nodes (12): createSerializingSession(), download(), export(), exportDataAsCsv(), getData(), getDataAsCsv(), getDefaultFileExtension(), getDefaultFileName() (+4 more)
 
 ### Community 498 - "isEditing"
 Cohesion: 0.22
 Nodes (9): checkType(), formatDate(), getBaseDataType(), getDataTypeDefinition(), getDateFormatterFunction(), getDateParserFunction(), getDateStringTypeDefinition(), getStartValue() (+1 more)
 
-### Community 500 - "ProbationPeriodModel"
-Cohesion: 0.53
-Nodes (3): IActionResult, Task, ProbationPeriodModel
-
 ### Community 501 - "updateLabels"
-Cohesion: 0.31
-Nodes (9): announceAriaStatus(), enableOrDisableButtons(), formatNumber(), getCurrentPage(), isZeroPagesToDisplay(), onPageSizeRelatedOptionsChange(), onPaginationChanged(), setTotalLabelsToZero() (+1 more)
+Cohesion: 0.47
+Nodes (6): announceAriaStatus(), formatNumber(), jo(), setTotalLabelsToZero(), Uo(), updateLabels()
 
 ### Community 502 - "updateColDefAndGetColumnType"
 Cohesion: 0.33
@@ -1844,24 +1809,20 @@ Cohesion: 0.22
 Nodes (9): 3) عمليات الموارد البشرية — كيانات مؤكّدة بالفحص, إدارة العهد `EmployeeAsset` (`/AssetsManagement`), إنهاء الموظف `EmployeeTermination` (`/EmployeeTermination`) — workflow 3 مراحل, الطلبات المخصّصة `CustomRequest` (`/CustomRequestsScreening`), العقود `EmployeeContract` (`/ContractsManagement`) — **كيان مستقل متعدّد لكل موظف**, تخصيص رئيس وحدة مؤقت (`/TemporaryHeadofUnitAllocation`), حالات المخالفات (`/ViolationCases`) + الإجراءات التأديبية (`/ViolationActions`), مهام الموظفين `EmployeeProcess`/`Task` (`/CompanyProcesses/EmployeesTasks`) — محرّك عمليات (+1 more)
 
 ### Community 505 - "successCommon"
-Cohesion: 0.40
-Nodes (6): dispatchLoadCompleted(), isRequestMostRecentAndLive(), pageLoadFailed(), processServerFail(), success(), successCommon()
-
-### Community 506 - "SmartAttendance.Application.AttendanceReports.ViewModels"
-Cohesion: 0.21
-Nodes (15): getAllCellCtrls(), getAllCellsForColumn(), getAllRowCtrls(), getCellCtrl(), getCellCtrls(), getCellElement(), getCellRenderer(), getCellRendererInstances() (+7 more)
+Cohesion: 0.33
+Nodes (7): dispatchLoadCompleted(), isRequestMostRecentAndLive(), pageLoadFailed(), processServerFail(), processServerResult(), success(), successCommon()
 
 ### Community 507 - "IndexModel"
 Cohesion: 0.33
 Nodes (6): 20.1 المعمارية: شريطان جانبيان بسمات ARIA, 20.2 كود معالج الفتح الحرفي (من jQuery events), 20.3 الأكورديون داخل الدرج, 20.4 شجرة المجموعات (أول صف = عنوان المجموعة نفسها كرابط), 20.5 وصفة المطابقة لنظامنا, 20) الناف بار — البنية والحركة والمحتوى بدقة تقنية (جولة 11، فحص DOM+CSS+JS حي)
 
 ### Community 508 - "SystemUserService"
-Cohesion: 0.20
-Nodes (10): comparator(), doAggregateFiltersPass(), doColumnFiltersPass(), doesFilterPass(), evaluateCustomFilter(), evaluateNonNullValue(), evaluateNullValue(), getCellValue() (+2 more)
+Cohesion: 0.18
+Nodes (11): comparator(), doAggregateFiltersPass(), doColumnFiltersPass(), doesFilterPass(), evaluateCustomFilter(), evaluateNonNullValue(), evaluateNullValue(), getCellValue() (+3 more)
 
 ### Community 510 - "CreateModel"
-Cohesion: 0.14
-Nodes (33): addChangedListeners(), afterGuiDetached(), attachElementOnChange(), createJoinOperatorPanel(), createMissingConditionsAndOperators(), createOption(), getNumConditions(), isConditionUiComplete() (+25 more)
+Cohesion: 0.12
+Nodes (41): afterGuiDetached(), applyModel(), checkApplyDebounce(), close(), createJoinOperatorPanel(), createMissingConditionsAndOperators(), createOption(), getFilterType() (+33 more)
 
 ### Community 511 - "individualConditionPasses"
 Cohesion: 0.33
@@ -1870,10 +1831,6 @@ Nodes (7): getByIndex(), getPinnedBottomTotalHeight(), getPinnedTopTotalHeight()
 ### Community 515 - "Index.cshtml"
 Cohesion: 0.50
 Nodes (3): route:/MonthAttendance, SmartAttendance.Web.Infrastructure.Hrms, SmartAttendance.Web.Pages.MonthAttendance.IndexModel
-
-### Community 516 - "RawReadResult"
-Cohesion: 0.67
-Nodes (3): RawPunch, RawPunchError, RawReadResult
 
 ### Community 521 - "extend"
 Cohesion: 0.28
@@ -1888,8 +1845,8 @@ Cohesion: 0.29
 Nodes (7): SmartAttendance.Web.Pages.SelfServices, DateOnly, DateTime, TimeOnly, EmployeeOption, RequestInput, RequestRow
 
 ### Community 533 - "dispatchRowEvent"
-Cohesion: 0.47
-Nodes (6): dispatchRowEvent(), setAllChildrenCount(), setChildIndex(), setFirstChild(), setLastChild(), updateChildIndexes()
+Cohesion: 0.36
+Nodes (8): dispatchRowEvent(), setAllChildrenCount(), setChildIndex(), setFirstChild(), setGroup(), setLastChild(), updateChildIndexes(), updateHasChildren()
 
 ### Community 537 - "v"
 Cohesion: 0.38
@@ -1900,8 +1857,8 @@ Cohesion: 0.40
 Nodes (4): route:/HrSettings/ApprovalTemplates, SmartAttendance.Web.Infrastructure.Hrms, System.Text.Json, SmartAttendance.Web.Pages.HrSettings.ApprovalTemplatesModel
 
 ### Community 547 - "moveColumns"
-Cohesion: 0.28
-Nodes (9): addRowNodeToRowsToDisplay(), createDetailNode(), createFooter(), destroyFooter(), execute(), getFlattenDetails(), isPrimary(), recursivelyAddToRowsToDisplay() (+1 more)
+Cohesion: 0.24
+Nodes (10): addRowNodeToRowsToDisplay(), createDetailNode(), createFooter(), destroyFooter(), execute(), getFirstPixelOfGroup(), getFlattenDetails(), hasChildren() (+2 more)
 
 ### Community 548 - "9) آلية الواجهة (السلايد / الفتح-الإغلاق / التوزيع) — لعكسها على نظامنا"
 Cohesion: 0.33
@@ -1911,13 +1868,9 @@ Nodes (6): 9) آلية الواجهة (السلايد / الفتح-الإغلا�
 Cohesion: 0.50
 Nodes (4): onFullWidthContainerWheel(), onStickyWheel(), scrollGridBodyToMatchEvent(), scrollVertically()
 
-### Community 555 - "addVerticalScrollListeners"
-Cohesion: 0.50
-Nodes (4): setSelectedInitialValue(), syncInNewRowNode(), syncInOldRowNode(), syncInRowNode()
-
 ### Community 557 - "getHeaderRowCount"
-Cohesion: 0.21
-Nodes (14): clearHighlightedRow(), ensureRowsAtPixel(), getHighlightPosition(), getPinnedBottomRowCount(), getRow(), getRowCount(), getRowIndexAtPixel(), getTopLevelRowCount() (+6 more)
+Cohesion: 0.14
+Nodes (20): clearHighlightedRow(), ensureRowsAtPixel(), focusNextHeaderRow(), getHeaderRowCount(), getHighlightPosition(), getPinnedBottomRowCount(), getRow(), getRowCount() (+12 more)
 
 ### Community 565 - "applyCellClassRules"
 Cohesion: 0.15
@@ -1936,36 +1889,36 @@ Cohesion: 0.50
 Nodes (4): 1) كيان الموظف الأساسي (Employee), أ. المعلومات الأساسية (هوية شخصية), ب. تفاصيل اخرى — التوظيف والتخصيص, ج. تفاصيل اخرى — المالية
 
 ### Community 569 - "getCSSVariablePixelValue"
-Cohesion: 0.11
-Nodes (19): addControls(), ar(), constructor(), createCellRendererInstance(), dispatchQueuedStateUpdateEvents(), getCallbackForEvent(), getCellAriaRole(), insertValueWithoutCellRenderer() (+11 more)
+Cohesion: 0.05
+Nodes (55): addControls(), addInCellEditor(), afterCellEditorCreated(), afterCellRendererCreated(), afterGuiAttached(), ar(), calculateRowLevel(), clearParentOfValue() (+47 more)
 
 ### Community 580 - "getInitialValues"
-Cohesion: 0.12
-Nodes (31): columnPinned(), columnVisible(), compareColumnStatesAndDispatchEvents(), createDefFromColumn(), createDragItem(), createStateItemFromColumn(), extractDataFromEvent(), generateColumnStateForRowGroupAndPivotIndexes() (+23 more)
+Cohesion: 0.22
+Nodes (18): columnPinned(), columnVisible(), compareColumnStatesAndDispatchEvents(), createDefFromColumn(), createGroupSafeValueFormatter(), createStateItemFromColumn(), getAggFunc(), getCommonValue() (+10 more)
 
 ### Community 588 - "EntityFields.cshtml"
 Cohesion: 0.50
 Nodes (3): route:/HrSettings/EntityFields, SmartAttendance.Web.Infrastructure.Hrms, SmartAttendance.Web.Pages.HrSettings.EntityFieldsModel
 
 ## Knowledge Gaps
-- **481 isolated node(s):** `$schema`, `commandName`, `dotnetRunMessages`, `launchBrowser`, `applicationUrl` (+476 more)
+- **482 isolated node(s):** `$schema`, `commandName`, `dotnetRunMessages`, `launchBrowser`, `applicationUrl` (+477 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **137 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **155 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `ApplicationDbContext` connect `SmartAttendance.Infrastructure.Persistence.Configurations` to `EmployeeBootstrapImportEngine`, `.ExecuteAsync`, `SmartAttendance.Infrastructure.Persistence`, `.QueryAsync`, `ReportBuilderService`, `ImportModel`, `RoleSecurityMiddleware`, `IndexModel`, `AnnouncementGroup`, `.AddParameter`, `IndexModel`, `SetupService`, `ICompanyService`, `ImportModel`, `IndexModel`, `v`, `Program.cs`, `SmartAttendance.Application.Companies.ViewModels`, `IndexModel`, `IndexModel`, `IndexModel`, `IndexModel`, `ApplicationDbContext`, `PrintFormModel`, `IndexModel`, `IndexModel`, `TaxSocialSecurityModel`, `EngagementPageModel`, `IndexModel`, `EmployeeService`, `SmartAttendance.Application.Employees.ViewModels`, `IndexModel`, `IndexModel`, `AnnouncementContent`, `SmartAttendance.Application.Shifts.ViewModels`, `IShiftService`, `Index.cshtml.cs`, `IGenericRepository`, `IndexModel`, `IEmployeeService`, `IndexModel`, `SmartAttendance.Infrastructure.Migrations`, `.SaveChangesAsync`, `reports-create.js`, `.GetProcessedRecordsAsync`, `nexora-sidebar-accordion-v2.js`, `IndexModel`, `DepartmentService`, `CreateModel`, `.OnPostCreateAsync`, `Index.cshtml.cs`, `Migration`, `AnnouncementOperationResult`, `AnnouncementAudienceRule`, `CreateModel`, `Index.cshtml.cs`, `nexora-announcement-studio-pixel.js`, `nexora-employees-filter-sidebar-forcefix.js`, `nexora-addemployee-selected-documents-preview.js`, `nexora-employee-portal-shell-nav.js`, `nexora-proper-sidebar-collapse-fix.js`, `SelfServiceSettingsModel`, `nexora-employees-page-size.js`, `nexora-uiux-v2.js`, `UpdateShiftGraceColumns`, `AddWeeklyOffDaysToEmployeeShifts`, `AddAnnouncementStudioFinalFoundation_20260714`, `MasterDataImportResultViewModel`, `20260630180127_InitialCreate.Designer.cs`, `nexora-addemployee-document-file-selector-fix.js`, `filterNodes`, `ApprovalRow`, `isSuppressMenuHide`, `TerminationReasonsModel`, `ProbationPeriodModel`, `getAlignedGridApis`, `20260702231709_AddHolidaysAndLeaveRequestsModule.Designer.cs`, `LogoutModel`, `serialize`, `getParent`, `isReadOnly`, `m`, `ProbationPeriodModel`?**
-  _High betweenness centrality (0.120) - this node is a cross-community bridge._
-- **Why does `SmartAttendance.Infrastructure.Persistence` connect `SmartAttendance.Infrastructure.Persistence` to `.ExecuteAsync`, `ReportBuilderService`, `AnnouncementOperationResult`, `ImportModel`, `organization-settings.js`, `IUnitOfWork`, `Index.cshtml.cs`, `ProfileModel`, `Index.cshtml.cs`, `filterNodes`, `Index.cshtml.cs`, `setParams`, `ICompanyService`, `nexora-employee-updates-accounting-format.js`, `Index.cshtml.cs`, `IndexModel`, `RawReadResult`, `IndexModel`, `IndexModel`, `ApprovalRow`, `IndexModel`, `MigrateLegacyAnnouncementsToAnnouncementStudio_20260714`, `IndexModel`, `nexora-announcement-studio-approved.js`, `IndexModel`, `serialize`, `nexora-sidebar-button-force-working-fix.js`, `IPermissionService`, `DeviceListViewModel`, `IndexModel`, `LeaveType`, `AddWeeklyOffDaysToEmployeeShifts`, `AddEmployeePosition`, `ReconcileEmployeeLegacyColumns_20260717`, `20260715130000_AddPeoplePermissionRulesAndScopes_20260715.Designer.cs`, `AttendanceRecordEditViewModel`, `nexora-remove-sidebar-collapse-icons.js`, `DateTime`, `IndexModel`, `20260630180127_InitialCreate.Designer.cs`, `PermissionService`, `PayrollCutoffPolicy`, `EngagementPageModel.cs`, `20260711155333_AddIndependentDepartmentsAndEmployeeWorkLocations_20260711.Designer.cs`, `20260711092610_RedesignPayrollCutoffPolicies_20260711_122556.Designer.cs`, `Profile.cshtml.cs`?**
-  _High betweenness centrality (0.065) - this node is a cross-community bridge._
-- **Why does `SmartAttendance.Infrastructure.Migrations` connect `AddEmployeePosition` to `AddDirectEmployeePermissionsModule`, `Permission`, `AddEmployeePosition`, `B`, `RedesignPayrollCutoffPolicies_20260711_122556`, `AddIndependentDepartmentsAndEmployeeWorkLocations_20260711`, `.EnsureAsync`, `getFocusEventParams`, `MigrateLegacyAnnouncementsToAnnouncementStudio_20260714`, `MigrateLegacyAnnouncementsToAnnouncementStudio_20260714`, `setParams`, `20260715130000_AddPeoplePermissionRulesAndScopes_20260715.Designer.cs`?**
+- **Why does `ApplicationDbContext` connect `ApplicationDbContext` to `.OnPostCreateAsync`, `.ExecuteAsync`, `SmartAttendance.Infrastructure.Persistence.Configurations`, `Index.cshtml.cs`, `SmartAttendance.Infrastructure.Persistence`, `.QueryAsync`, `AnnouncementOperationResult`, `ReportBuilderService`, `EmployeeBootstrapImportEngine`, `Migration`, `RoleSecurityMiddleware`, `ShiftEditViewModel`, `AnnouncementAudienceRule`, `IndexModel`, `ImportModel`, `.AddParameter`, `IndexModel`, `Index.cshtml.cs`, `ICompanyService`, `SetupService`, `ImportModel`, `IndexModel`, `v`, `nexora-announcement-studio-pixel.js`, `SmartAttendance.Application.Companies.ViewModels`, `IndexModel`, `IndexModel`, `SystemSetupViewModel`, `IndexModel`, `IndexModel`, `PrintFormModel`, `20260702231709_AddHolidaysAndLeaveRequestsModule.Designer.cs`, `nexora-addemployee-selected-documents-preview.js`, `IndexModel`, `nexora-employee-portal-shell-nav.js`, `nexora-proper-sidebar-collapse-fix.js`, `IndexModel`, `TaxSocialSecurityModel`, `EngagementPageModel`, `IndexModel`, `EmployeeService`, `LogoutModel`, `SelfServiceSettingsModel`, `nexora-employees-page-size.js`, `SmartAttendance.Application.Employees.ViewModels`, `serialize`, `nexora-uiux-v2.js`, `getParent`, `AnnouncementContent`, `IndexModel`, `SmartAttendance.Application.Shifts.ViewModels`, `IShiftService`, `IndexModel`, `LeaveType`, `isReadOnly`, `Index.cshtml.cs`, `IGenericRepository`, `IndexModel`, `IEmployeeService`, `IndexModel`, `.SaveChangesAsync`, `AddAnnouncementStudioFinalFoundation_20260714`, `reports-create.js`, `.GetProcessedRecordsAsync`, `nexora-sidebar-accordion-v2.js`, `IndexModel`, `MasterDataImportResultViewModel`, `20260630180127_InitialCreate.Designer.cs`, `DepartmentService`, `getScrollFeature`, `CreateModel`, `nexora-addemployee-document-file-selector-fix.js`, `CreateModel`?**
+  _High betweenness centrality (0.131) - this node is a cross-community bridge._
+- **Why does `SmartAttendance.Infrastructure.Persistence` connect `SmartAttendance.Infrastructure.Persistence` to `.OnPostCreateAsync`, `.ExecuteAsync`, `ImportModel`, `organization-settings.js`, `IUnitOfWork`, `ProfileModel`, `nexora-employee-updates-accounting-format.js`, `Index.cshtml.cs`, `Index.cshtml.cs`, `Program.cs`, `RawReadResult`, `RawPunch`, `IndexModel`, `IndexModel`, `ApprovalRow`, `IndexModel`, `ApplicationDbContext`, `AddEmployeePosition`, `20260703113220_AddWeeklyOffDaysToEmployeeShifts.Designer.cs`, `20260711064619_AddCompanySetupFoundationAndReconcileModel_20260711.Designer.cs`, `20260706211359_AddEmployeeViolationCasesDbFix.Designer.cs`, `MigrateLegacyAnnouncementsToAnnouncementStudio_20260714`, `IndexModel`, `nexora-announcement-studio-approved.js`, `20260708064932_SomeeDeploySync_20260708.Designer.cs`, `20260711064619_AddCompanySetupFoundationAndReconcileModel_20260711.Designer.cs`, `serialize`, `nexora-sidebar-button-force-working-fix.js`, `IndexModel`, `getCSSVariablePixelValue`, `DeviceListViewModel`, `IndexModel`, `20260711155333_AddIndependentDepartmentsAndEmployeeWorkLocations_20260711.Designer.cs`, `LeaveType`, `20260711165702_AddCompanyScopedPositionsAndEmployeePositionLink_20260711.Designer.cs`, `20260714194223_AddAnnouncementStudioFinalFoundation_20260714.Designer.cs`, `20260717165105_ReconcileEmployeeLegacyColumns_20260717.Designer.cs`, `20260717171600_FixEmployeeShiftShiftRelationship_20260717.Designer.cs`, `AddEmployeePosition`, `ReconcileEmployeeLegacyColumns_20260717`, `20260715130000_AddPeoplePermissionRulesAndScopes_20260715.Designer.cs`, `nexora-remove-sidebar-collapse-icons.js`, `IndexModel`, `BranchService`, `PermissionService`, `EngagementPageModel.cs`, `20260711092610_RedesignPayrollCutoffPolicies_20260711_122556.Designer.cs`?**
+  _High betweenness centrality (0.062) - this node is a cross-community bridge._
+- **Why does `SmartAttendance.Infrastructure.Migrations` connect `AddEmployeePosition` to `Index.cshtml.cs`, `Permission`, `ProbationPeriodModel`, `removeConditionsAndOperators`, `.EnsureAsync`, `Index.cshtml.cs`, `Index.cshtml.cs`, `wrap`, `isSuppressMenuHide`, `getFocusEventParams`, `getAlignedGridApis`, `RawReadResult`, `RawPunch`, `AddDirectEmployeePermissionsModule`, `ApprovalRow`, `AddEmployeePosition`, `B`, `RedesignPayrollCutoffPolicies_20260711_122556`, `AddIndependentDepartmentsAndEmployeeWorkLocations_20260711`, `20260703113220_AddWeeklyOffDaysToEmployeeShifts.Designer.cs`, `20260711064619_AddCompanySetupFoundationAndReconcileModel_20260711.Designer.cs`, `20260706211359_AddEmployeeViolationCasesDbFix.Designer.cs`, `MigrateLegacyAnnouncementsToAnnouncementStudio_20260714`, `20260708064932_SomeeDeploySync_20260708.Designer.cs`, `20260711064619_AddCompanySetupFoundationAndReconcileModel_20260711.Designer.cs`, `TerminationReasonsModel`, `getCSSVariablePixelValue`, `SmartAttendance.Application.AttendanceImports.ViewModels`, `20260711155333_AddIndependentDepartmentsAndEmployeeWorkLocations_20260711.Designer.cs`, `20260711165702_AddCompanyScopedPositionsAndEmployeePositionLink_20260711.Designer.cs`, `20260714194223_AddAnnouncementStudioFinalFoundation_20260714.Designer.cs`, `20260717165105_ReconcileEmployeeLegacyColumns_20260717.Designer.cs`, `20260717171600_FixEmployeeShiftShiftRelationship_20260717.Designer.cs`, `MigrateLegacyAnnouncementsToAnnouncementStudio_20260714`, `20260715130000_AddPeoplePermissionRulesAndScopes_20260715.Designer.cs`?**
   _High betweenness centrality (0.027) - this node is a cross-community bridge._
 - **What connects `$schema`, `commandName`, `dotnetRunMessages` to the rest of the system?**
-  _481 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _482 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `EmployeeBootstrapImportEngine` be split into smaller, more focused modules?**
-  _Cohesion score 0.0851063829787234 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06801346801346801 - nodes in this community are weakly interconnected._
 - **Should `.ExecuteAsync` be split into smaller, more focused modules?**
   _Cohesion score 0.07253086419753087 - nodes in this community are weakly interconnected._
 - **Should `SmartAttendance.Infrastructure.Persistence.Configurations` be split into smaller, more focused modules?**
-  _Cohesion score 0.06414414414414414 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07192460317460317 - nodes in this community are weakly interconnected._

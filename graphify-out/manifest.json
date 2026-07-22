@@ -2220,13 +2220,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Index.cshtml": {
-    "mtime": 1784713247.1010294,
-    "ast_hash": "703b25a3ba72521f85e345d18e63a87a",
+    "mtime": 1784718615.1273177,
+    "ast_hash": "2cf5ad35b6196f3e2816d47641e05a52",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Index.cshtml.cs": {
-    "mtime": 1784713120.0514684,
-    "ast_hash": "5e4b8f612e50f2ba9fb479ff30bbe695",
+    "mtime": 1784718565.4761543,
+    "ast_hash": "06035584fb2682e4b2e8b7b53d76ee1b",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/LeaveBalances/Adjust.cshtml": {
@@ -3642,6 +3642,11 @@
   "SmartAttendance.Web/Pages/MonthAttendance/Index.cshtml.cs": {
     "mtime": 1784706742.6004767,
     "ast_hash": "9ab3a5189cf320bd8d2728ad3cfc10a7",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/DashboardWidgetStore.cs": {
+    "mtime": 1784718541.8779159,
+    "ast_hash": "93dccc97fc4b486299e3e32730b187b5",
     "semantic_hash": ""
   }
 }
