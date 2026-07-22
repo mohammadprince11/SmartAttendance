@@ -2590,7 +2590,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Program.cs": {
-    "mtime": 1784736713.7542875,
+    "mtime": 1784737974.7334187,
     "ast_hash": "6179588e9dbe39a7a80352aadb5b4556",
     "semantic_hash": ""
   },
@@ -3655,8 +3655,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/IThemeContextService.cs": {
-    "mtime": 1784736690.1644938,
-    "ast_hash": "5b1b5ea687dcfae46d3f35c3dcedaa30",
+    "mtime": 1784737618.0804367,
+    "ast_hash": "7a2f52163b56d3abc71c815d296df674",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/ThemeContext.cs": {
@@ -3665,8 +3665,18 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/ThemeContextService.cs": {
-    "mtime": 1784737043.406011,
-    "ast_hash": "10234ce4a100e0dff7dba6a383a83422",
+    "mtime": 1784737607.7882092,
+    "ast_hash": "a1738402258618d8e71d1e2d267cfa90",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Theming/ThemeCompiler.cs": {
+    "mtime": 1784737661.2653916,
+    "ast_hash": "290bdf0422d2b8cd8557e860ec39814e",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Theming/ThemeStore.cs": {
+    "mtime": 1784737584.1023533,
+    "ast_hash": "2c86c612c2c3a6ca2aa2f7fe87d8684a",
     "semantic_hash": ""
   }
 }

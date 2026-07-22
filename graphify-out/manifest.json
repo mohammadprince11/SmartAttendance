@@ -2450,8 +2450,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784736737.198017,
-    "ast_hash": "ee0c08bdd082e53910e73bdef1ebacb7",
+    "mtime": 1784738747.4839697,
+    "ast_hash": "e7581b92664203737268c078289c0117",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3660,13 +3660,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/ThemeContext.cs": {
-    "mtime": 1784736683.7604773,
-    "ast_hash": "a7b78e517ec510f8384f716eb4c9246d",
+    "mtime": 1784738360.4098897,
+    "ast_hash": "1d9599af907bd1445844282ca2c69e76",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/ThemeContextService.cs": {
-    "mtime": 1784737607.7882092,
-    "ast_hash": "a1738402258618d8e71d1e2d267cfa90",
+    "mtime": 1784738393.1508954,
+    "ast_hash": "be285920f81d7591093154a24353baa5",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/ThemeCompiler.cs": {
@@ -3675,8 +3675,28 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/ThemeStore.cs": {
-    "mtime": 1784737584.1023533,
-    "ast_hash": "2c86c612c2c3a6ca2aa2f7fe87d8684a",
+    "mtime": 1784738386.066238,
+    "ast_hash": "e517bd63055abd3be38e1dc8fb28a172",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Theming/BrandingAssets.cs": {
+    "mtime": 1784738422.7562194,
+    "ast_hash": "cdc9cff888566a1d3e3ef44e95dd2c92",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/Branding/Index.cshtml": {
+    "mtime": 1784739031.044239,
+    "ast_hash": "7cd609dd422370fd7ed8f02bb9f9f4ed",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/Branding/Index.cshtml.cs": {
+    "mtime": 1784738478.0948625,
+    "ast_hash": "d909f253b8d7cd75949e7736eeb57079",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/wwwroot/js/zynora-branding-studio.js": {
+    "mtime": 1784738616.052219,
+    "ast_hash": "3b45a8d8b87fbc74717c07c12c97513f",
     "semantic_hash": ""
   }
 }
