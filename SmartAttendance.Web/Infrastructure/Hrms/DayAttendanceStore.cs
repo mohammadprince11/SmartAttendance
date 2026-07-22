@@ -2,6 +2,7 @@ using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using SmartAttendance.Domain.Enums;
 using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
@@ -47,6 +48,8 @@ public static class DayAttendanceStore
         "Absent" => "غائب",
         "Weekend" => "عطلة أسبوعية",
         "Rest" => "يوم راحة",
+        "Holiday" => "عطلة رسمية",
+        "Leave" => "إجازة",
         _ => status
     };
 
@@ -118,6 +121,25 @@ END;
                 g => g.Key,
                 g => (In: g.Min(p => p.CheckIn), Out: g.Max(p => p.CheckOut)));
 
+        // العطل الرسمية والإجازات المعتمدة — لمنع احتساب يوم عطلة/إجازة كـ«غياب»
+        // (سدّ فجوة المحرك الجديد مقابل القديم؛ حرج لصحة خصومات الرواتب لاحقاً).
+        var holidayRows = await dbContext.Holidays.AsNoTracking()
+            .Select(h => new { h.HolidayDate, h.IsRecurring }).ToListAsync();
+        var holidayDates = new HashSet<DateOnly>();
+        foreach (var h in holidayRows)
+        {
+            var concrete = h.IsRecurring ? new DateOnly(year, h.HolidayDate.Month, h.HolidayDate.Day) : h.HolidayDate;
+            if (concrete >= monthStart && concrete <= monthEnd) holidayDates.Add(concrete);
+        }
+
+        var leaveRows = await dbContext.LeaveRequests.AsNoTracking()
+            .Where(l => l.Status == LeaveStatus.Approved && l.FromDate <= monthEnd && l.ToDate >= monthStart)
+            .Select(l => new { l.EmployeeId, l.FromDate, l.ToDate })
+            .ToListAsync();
+        var leavesByEmployee = leaveRows
+            .GroupBy(l => l.EmployeeId)
+            .ToDictionary(g => g.Key, g => g.Select(l => (l.FromDate, l.ToDate)).ToList());
+
         // ترانزاكشن واحدة للحذف وكل دفعات الإدخال — فلَش لوغ واحد بدل واحد لكل أمر
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
@@ -159,9 +181,22 @@ END;
                 var dayKind = day?.DayKind ?? "Work";
                 byDay.TryGetValue((employeeId, date), out var punch);
                 var row = Derive(shift, day, dayKind, punch.In == default ? null : punch.In, punch.Out);
+
+                // يوم بلا حضور فعلي (غياب) يُعاد تصنيفه إن كان عطلة رسمية أو ضمن إجازة
+                // معتمدة — فلا يُخصم بالرواتب. الأيام المشتغَل بها تبقى كما هي.
+                var status = row.Status;
+                if (status == "Absent")
+                {
+                    if (holidayDates.Contains(date))
+                        status = "Holiday";
+                    else if (leavesByEmployee.TryGetValue(employeeId, out var intervals)
+                             && intervals.Any(iv => date >= iv.FromDate && date <= iv.ToDate))
+                        status = "Leave";
+                }
+
                 table.Rows.Add(employeeId, date.ToDateTime(TimeOnly.MinValue), shiftId, dayKind,
                     (object?)row.CheckIn ?? DBNull.Value, (object?)row.CheckOut ?? DBNull.Value,
-                    row.LateHours, row.EarlyLeaveHours, row.WorkedHours, row.Status, true, analyzedAt);
+                    row.LateHours, row.EarlyLeaveHours, row.WorkedHours, status, true, analyzedAt);
             }
         }
 
