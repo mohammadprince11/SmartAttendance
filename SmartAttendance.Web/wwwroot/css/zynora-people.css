@@ -317,3 +317,37 @@ body {
     opacity: 0.3;
     cursor: not-allowed;
 }
+
+/* ==========================================================================
+   ZHR_LIGHT_THEME — نسخة الثيم الفاتح لصفحة الموظفين (2026-07)
+   التوكنز كانت دارك-فقط؛ نقلبها بالفاتح فتنقلب الصفحة كلها.
+   ========================================================================== */
+html[data-theme="light"] {
+    --zhr-card-bg: #ffffff;
+    --zhr-border-color: rgba(15, 60, 100, .14);
+    --zhr-text-primary: #0b2239;
+    --zhr-text-secondary: #64748b;
+    --zhr-input-bg: #ffffff;
+}
+
+html[data-theme="light"] body { background-color: #eef3f6; color: var(--zhr-text-primary); }
+
+/* النصوص التي كانت بلون --cloud-white الثابت */
+html[data-theme="light"] .zhr-kpi-value,
+html[data-theme="light"] .zhr-input,
+html[data-theme="light"] .zhr-select,
+html[data-theme="light"] .zhr-btn-secondary { color: #0b2239; }
+
+html[data-theme="light"] .zhr-btn-secondary { background-color: rgba(15, 60, 100, .08); }
+html[data-theme="light"] .zhr-select option { background-color: #ffffff; color: #0b2239; }
+html[data-theme="light"] .zhr-toolbar { background: rgba(15, 60, 100, .03); }
+
+html[data-theme="light"] .zhr-page-link {
+    background: #ffffff;
+    color: #0b2239;
+    border-color: rgba(15, 60, 100, .18);
+}
+html[data-theme="light"] .zhr-page-link.active {
+    background: var(--electric-teal);
+    color: #04141F;
+}

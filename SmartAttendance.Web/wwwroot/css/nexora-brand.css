@@ -657,3 +657,52 @@ html[data-theme="dark"] .nexora-theme-icon--moon {
 }
 
 /* ZYNORA_PHASE1B_SHELL_POLISH_END */
+
+/* ==========================================================================
+   NEXORA_SIDEBAR_LIGHT — نسخة الثيم الفاتح للقائمة الجانبية (2026-07)
+   السايدبار كان دارك ثابتاً على الثيمين. بالفاتح: أبيض بحدود ونصوص غامقة،
+   والرابط النشط يبقى تركوازياً.
+   ========================================================================== */
+html[data-theme="light"] .nexora-sidebar {
+    background: #ffffff !important;
+    color: #0b2239 !important;
+    box-shadow: -6px 0 22px rgba(15, 40, 70, .07) !important;
+}
+html[data-theme="light"][dir="rtl"] .nexora-sidebar { border-left: 1px solid rgba(15, 60, 100, .12) !important; }
+html[data-theme="light"][dir="ltr"] .nexora-sidebar { border-right: 1px solid rgba(15, 60, 100, .12) !important; }
+
+html[data-theme="light"] .nexora-nav-link,
+html[data-theme="light"] .nexora-nav-group > summary {
+    color: rgba(11, 34, 57, .72) !important;
+}
+html[data-theme="light"] .nexora-nav-group > summary { color: rgba(11, 34, 57, .9) !important; }
+
+html[data-theme="light"] .nexora-nav-link:hover,
+html[data-theme="light"] .nexora-nav-group > summary:hover {
+    color: #0b2239 !important;
+    background: rgba(24, 199, 189, .08) !important;
+    border-color: rgba(24, 199, 189, .18) !important;
+}
+
+html[data-theme="light"] .nexora-nav-group {
+    border-color: rgba(15, 60, 100, .1) !important;
+    background: rgba(15, 60, 100, .02) !important;
+}
+html[data-theme="light"] .nexora-nav-group[open] {
+    border-color: rgba(24, 199, 189, .28) !important;
+    background: rgba(24, 199, 189, .05) !important;
+}
+
+/* الرابط النشط: تركوازي بنص غامق — نفس هوية الدارك، مقروء بالفاتح */
+html[data-theme="light"] .nexora-nav-link.active,
+html[data-theme="light"] .nexora-nav-link.nexora-active,
+html[data-theme="light"] .nexora-nav-link[aria-current="page"] {
+    color: #04141F !important;
+    background: var(--zy-electric-teal) !important;
+}
+
+/* الشعار: نسخة النص الغامق على الثيم الفاتح (الافتراضية نصها أبيض للسايدبار الغامق) */
+html[data-theme="light"] .nexora-brand-logo {
+    content: url("/brand/zynora-logo-horizontal-dark.svg");
+}
+html[data-theme="light"] .nexora-brand-tagline { color: #64748b !important; }
