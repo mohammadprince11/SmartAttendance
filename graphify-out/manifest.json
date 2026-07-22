@@ -1995,8 +1995,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Index.cshtml.cs": {
-    "mtime": 1784139084.329868,
-    "ast_hash": "37b0e881de0d37f64ad01301e5e55598",
+    "mtime": 1784752561.2257147,
+    "ast_hash": "75a6b38aa12bfd93a5dea160f8c053c3",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Lifecycle.cshtml": {
@@ -2450,7 +2450,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784751047.3292444,
+    "mtime": 1784752169.0718,
     "ast_hash": "1ae79ed2a07fe18e23175500ee092add",
     "semantic_hash": ""
   },
@@ -2590,8 +2590,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Program.cs": {
-    "mtime": 1784751316.602088,
-    "ast_hash": "b9c375f84c23888ee87944e362e0ddd4",
+    "mtime": 1784752514.651819,
+    "ast_hash": "ae4f8caab97fa79bde825ce5f0749838",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Properties/launchSettings.json": {
@@ -3655,133 +3655,148 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/IThemeContextService.cs": {
-    "mtime": 1784737618.0804367,
-    "ast_hash": "7a2f52163b56d3abc71c815d296df674",
+    "mtime": 1784752169.0581422,
+    "ast_hash": "c4c6495fa3cafb0d4df476ca74c32206",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/ThemeContext.cs": {
-    "mtime": 1784738360.4098897,
-    "ast_hash": "1d9599af907bd1445844282ca2c69e76",
+    "mtime": 1784752169.0596037,
+    "ast_hash": "c9d12aee88fb53b445608628b08b5dd9",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/ThemeContextService.cs": {
-    "mtime": 1784738393.1508954,
-    "ast_hash": "be285920f81d7591093154a24353baa5",
+    "mtime": 1784752169.0596037,
+    "ast_hash": "b8b48f1723333cacc9969eb0cf97a54e",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/ThemeCompiler.cs": {
-    "mtime": 1784737661.2653916,
-    "ast_hash": "290bdf0422d2b8cd8557e860ec39814e",
+    "mtime": 1784752169.0596037,
+    "ast_hash": "08a2e5bfd8638412e5b83082a0999f80",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/ThemeStore.cs": {
-    "mtime": 1784740502.7613084,
-    "ast_hash": "309d1c90b56ec08e9cc25f568afca14b",
+    "mtime": 1784752169.0596037,
+    "ast_hash": "5a20c1b4bfeb051d3c4132d3eb986f5c",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/BrandingAssets.cs": {
-    "mtime": 1784738422.7562194,
-    "ast_hash": "cdc9cff888566a1d3e3ef44e95dd2c92",
+    "mtime": 1784752169.0561311,
+    "ast_hash": "cc8dfbd05ae58397c9705471377c1d2c",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Branding/Index.cshtml": {
-    "mtime": 1784741799.3657973,
-    "ast_hash": "ba9dd0ca91cd51e42e3e73e2c07dc958",
+    "mtime": 1784752169.0677776,
+    "ast_hash": "4a6d8df683c11e4937e734c166977f0d",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Branding/Index.cshtml.cs": {
-    "mtime": 1784740553.0595646,
-    "ast_hash": "38db4ae98d7ab0f755ac07dffe91e1fb",
+    "mtime": 1784752169.0697908,
+    "ast_hash": "a7222dc7bf0f12065d5d29d206a35d61",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/zynora-branding-studio.js": {
-    "mtime": 1784741811.6107886,
-    "ast_hash": "61381e5655ccd7d9598b134f575c90b3",
+    "mtime": 1784752169.0864072,
+    "ast_hash": "73dda0b52e912924ebc77c206fbf4836",
     "semantic_hash": ""
   },
   "SmartAttendance.Tests/SmartAttendance.Tests.csproj": {
-    "mtime": 1784743603.4479215,
+    "mtime": 1784752169.0430088,
     "ast_hash": "67cb94365448c43a1198fcf360f3a698",
     "semantic_hash": ""
   },
   "SmartAttendance.Tests/ThemeCompilerTests.cs": {
-    "mtime": 1784743338.9714677,
-    "ast_hash": "3bd3c3475c591c724ad9d3ac6b7b1342",
+    "mtime": 1784752169.0450194,
+    "ast_hash": "0fd4a24c26f1468dfb1f1c5563c74c7f",
     "semantic_hash": ""
   },
   "SmartAttendance.Tests/ThemeContextTests.cs": {
-    "mtime": 1784743352.614484,
-    "ast_hash": "3454ff480b52665c2cc8075769c77213",
+    "mtime": 1784752169.0450194,
+    "ast_hash": "5e84430bc1f469852d48320844df1389",
     "semantic_hash": ""
   },
   "SmartAttendance.Tests/ThemeStoreIntegrationTests.cs": {
-    "mtime": 1784743611.756844,
-    "ast_hash": "f95719b417e841589ba1ac284d50897e",
+    "mtime": 1784752169.0450194,
+    "ast_hash": "201485bc2c90397bb9e48b6050ee3cd5",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/AccessRoleStore.cs": {
-    "mtime": 1784748888.1683948,
-    "ast_hash": "9a81b0f36342ea7fbd81bebc15ddb28c",
+    "mtime": 1784752169.0521007,
+    "ast_hash": "de180bd9582a8126d4259e44d1d784b2",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AccessRoles/Index.cshtml": {
-    "mtime": 1784747129.0343575,
-    "ast_hash": "91b312567c7d7e3b419f9fa76d2f4b96",
+    "mtime": 1784752169.0642757,
+    "ast_hash": "45551f9becb0ede6da360de82a63bda4",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AccessRoles/Index.cshtml.cs": {
-    "mtime": 1784746791.4595816,
-    "ast_hash": "2097890a491adf49806d73caccfc5dbb",
+    "mtime": 1784752169.065726,
+    "ast_hash": "c1709097644d38d441e9f6cc09554d1b",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/zynora-access-roles.js": {
-    "mtime": 1784746843.4265392,
-    "ast_hash": "c8cabe675096897a5f463ba116562aae",
+    "mtime": 1784752169.0864072,
+    "ast_hash": "7a75f10b2a4fecb36d3cc34a4592b9f6",
     "semantic_hash": ""
   },
   "docs/kayan-access-roles-study.md": {
-    "mtime": 1784744905.291455,
-    "ast_hash": "3d839e75fc7c357c2667332ce70dd02c",
+    "mtime": 1784752169.0864072,
+    "ast_hash": "3f8fe6ed693392dd7cdcbdd627f23f53",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/PageCatalog.cs": {
-    "mtime": 1784745836.045614,
-    "ast_hash": "b2e2516506dd84903c23145ee834e7f7",
+    "mtime": 1784752169.0561311,
+    "ast_hash": "b50e86e17803b3b717605afaffdd1a06",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/DataScopeCatalog.cs": {
-    "mtime": 1784746744.4841163,
-    "ast_hash": "289b16db92b7e900f5ebc5cb1f0f69d1",
+    "mtime": 1784752169.054116,
+    "ast_hash": "7fe1af3a12307d6efc520b733aeacbe2",
     "semantic_hash": ""
   },
   "SmartAttendance.Tests/AccessProfileTests.cs": {
-    "mtime": 1784748981.7660637,
-    "ast_hash": "0cb3dcbed401a15e80315d55f986e39b",
+    "mtime": 1784752169.0409977,
+    "ast_hash": "655f0c90b2c279c76b9f9c33d52b034b",
     "semantic_hash": ""
   },
   "SmartAttendance.Tests/AccessRoleServiceIntegrationTests.cs": {
-    "mtime": 1784749012.1051404,
-    "ast_hash": "3224c70d44f5c4f8fcc2989acf5d634d",
+    "mtime": 1784752169.0430088,
+    "ast_hash": "e232049387cdf92fee76bd353f0b8d44",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/AccessProfile.cs": {
-    "mtime": 1784748911.9203057,
-    "ast_hash": "41a3293fb28e4f39479f8ef4209a5c22",
+    "mtime": 1784752169.04703,
+    "ast_hash": "9e88aa25a4f226b31dc3cebe34e0ef56",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/AccessRoleService.cs": {
-    "mtime": 1784748927.3529677,
-    "ast_hash": "cc1884f60bf3e14195e9224d87470792",
+    "mtime": 1784752169.0515916,
+    "ast_hash": "950154843440fb75525c01a54f0dde39",
     "semantic_hash": ""
   },
   "SmartAttendance.Tests/EmployeeScopeEvaluatorTests.cs": {
-    "mtime": 1784751716.6509855,
-    "ast_hash": "8749c8c7580205f5dd9f4c697a78dd5b",
+    "mtime": 1784752169.0430088,
+    "ast_hash": "d11d20a8f3cc1685f6bbefcbb9ffd67e",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/EmployeeScopeEvaluator.cs": {
-    "mtime": 1784751702.3198452,
-    "ast_hash": "686562197bb1d5f0e64f5366663532b3",
+    "mtime": 1784752169.054116,
+    "ast_hash": "33f5edefa601455a22078653a19836d6",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Tests/AccessRoleScopeTranslatorTests.cs": {
+    "mtime": 1784752581.0788858,
+    "ast_hash": "607b004417b1ae845c620ddef8ce4e6e",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Security/AccessRoleScopeTranslator.cs": {
+    "mtime": 1784752478.9291434,
+    "ast_hash": "5ee81a052255f3cc1e0cb07d9db841db",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Security/EffectiveScopeService.cs": {
+    "mtime": 1784752504.2621784,
+    "ast_hash": "46ef07e41f385cb07555be5a4235092b",
     "semantic_hash": ""
   }
 }
