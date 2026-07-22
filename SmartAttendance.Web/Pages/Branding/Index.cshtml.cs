@@ -43,6 +43,9 @@ public class IndexModel : PageModel
     public List<ThemeStore.ThemeVersion> Versions { get; set; } = new();
     public int? PublishedVersionId { get; set; }
 
+    /// <summary>Version currently loaded for in-place editing (from ?edit=id).</summary>
+    public int? EditingVersionId { get; set; }
+
     private bool IsAdmin =>
         (User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty)
         .Equals("Admin", StringComparison.OrdinalIgnoreCase);
@@ -61,6 +64,13 @@ public class IndexModel : PageModel
         }
 
         await LoadAsync(companyId.Value);
+
+        if (int.TryParse(Request.Query["edit"], out var editId) &&
+            Versions.Any(v => v.Id == editId))
+        {
+            EditingVersionId = editId;
+        }
+
         return Page();
     }
 
@@ -125,7 +135,11 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        var version = await ThemeStore.CompileDraftAsync(_dbContext, companyId.Value);
+        // When editing, recompile the same version in place instead of adding one.
+        int? editingVersionId =
+            int.TryParse(Request.Form["EditingVersionId"], out var eid) && eid > 0 ? eid : null;
+
+        var version = await ThemeStore.CompileDraftAsync(_dbContext, companyId.Value, editingVersionId);
         if (version is null)
         {
             TempData["BrandingMessage"] = "لا توجد هوية للنشر.";
@@ -202,10 +216,14 @@ public class IndexModel : PageModel
         }
 
         var ok = await ThemeStore.LoadVersionIntoProfileAsync(_dbContext, companyId.Value, versionId);
-        TempData["BrandingMessage"] = ok
-            ? "تم تحميل الإصدار للتعديل — عدّل وانشر."
-            : "تعذّر تحميل الإصدار.";
-        return RedirectToPage();
+        if (!ok)
+        {
+            TempData["BrandingMessage"] = "تعذّر تحميل الإصدار.";
+            return RedirectToPage();
+        }
+
+        TempData["BrandingMessage"] = "تم تحميل الإصدار للتعديل — عدّل ثم احفظ.";
+        return RedirectToPage(new { edit = versionId });
     }
 
     public async Task<IActionResult> OnPostResetAsync()

@@ -234,11 +234,20 @@
 }
 
 .brand-btn {
-    padding: 10px 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 40px;
+    padding: 0 18px;
     border-radius: var(--zy-radius-md);
     border: 1px solid var(--zy-border);
+    background: transparent;
+    color: var(--zy-text);
     font-family: inherit;
     font-size: .9rem;
+    line-height: 1;
+    white-space: nowrap;
     cursor: pointer;
     transition: filter var(--zy-duration-fast) var(--zy-ease);
 }
@@ -259,16 +268,16 @@
     color: var(--zy-text);
 }
 
+/* Row action buttons: identical shape, differ only by text colour. */
 .brand-btn-mini {
-    padding: 6px 12px;
+    height: 32px;
+    padding: 0 14px;
     font-size: .8rem;
-    background: transparent;
     color: var(--zy-electric-teal);
 }
 
 .brand-btn-danger {
     color: var(--zy-danger);
-    border-color: var(--zy-danger-soft);
 }
 
 .brand-btn-danger.zy-armed {
@@ -280,8 +289,29 @@
 .brand-row-actions {
     display: flex;
     gap: 6px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-start;
+}
+
+.brand-editing-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--zy-space-3);
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    margin-bottom: var(--zy-space-3);
+    border-radius: var(--zy-radius-md);
+    background: var(--zy-warning-soft);
+    border: 1px solid var(--zy-warning);
+    color: var(--zy-text);
+    font-size: .85rem;
+}
+
+.brand-editing-cancel {
+    color: var(--zy-warning);
+    text-decoration: none;
+    white-space: nowrap;
 }
 
 .brand-validation {

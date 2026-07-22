@@ -160,7 +160,7 @@ ELSE
     /// publish. Returns null when no branding profile exists.
     /// </summary>
     public static async Task<ThemeVersion?> CompileDraftAsync(
-        ApplicationDbContext dbContext, int companyId)
+        ApplicationDbContext dbContext, int companyId, int? existingVersionId = null)
     {
         var profile = await GetBrandingProfileAsync(dbContext, companyId);
         if (profile is null)
@@ -176,6 +176,37 @@ ELSE
             : StatusValidated;
         var validationJson = System.Text.Json.JsonSerializer.Serialize(result.Messages);
         var snapshotJson = System.Text.Json.JsonSerializer.Serialize(profile);
+
+        // When editing an existing version, recompile in place instead of
+        // spawning a new row so the history does not grow on every edit.
+        if (existingVersionId is int editId)
+        {
+            var target = await GetVersionAsync(dbContext, editId);
+            if (target is not null && target.CompanyId == companyId)
+            {
+                await HrmsDatabase.ExecuteAsync(
+                    dbContext,
+                    """
+UPDATE ThemeVersions SET
+    Status = @Status, CompiledCss = @CompiledCss, ValidationLevel = @ValidationLevel,
+    ValidationJson = @ValidationJson, BrandingSnapshotJson = @BrandingSnapshotJson,
+    PublishedAt = NULL
+WHERE Id = @Id AND CompanyId = @CompanyId;
+""",
+                    command =>
+                    {
+                        HrmsDatabase.AddParameter(command, "@Status", status);
+                        HrmsDatabase.AddParameter(command, "@CompiledCss", result.CompiledCss);
+                        HrmsDatabase.AddParameter(command, "@ValidationLevel", result.Level.ToString());
+                        HrmsDatabase.AddParameter(command, "@ValidationJson", validationJson);
+                        HrmsDatabase.AddParameter(command, "@BrandingSnapshotJson", snapshotJson);
+                        HrmsDatabase.AddParameter(command, "@Id", editId);
+                        HrmsDatabase.AddParameter(command, "@CompanyId", companyId);
+                    });
+
+                return await GetVersionAsync(dbContext, editId);
+            }
+        }
 
         var id = await HrmsDatabase.ScalarAsync<int>(
             dbContext,

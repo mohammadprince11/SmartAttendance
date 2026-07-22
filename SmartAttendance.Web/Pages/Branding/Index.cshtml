@@ -26,7 +26,18 @@
     </div>
 
     <form method="post" enctype="multipart/form-data" class="brand-grid">
+        @if (Model.EditingVersionId.HasValue)
+        {
+            <input type="hidden" name="EditingVersionId" value="@Model.EditingVersionId" />
+        }
         <section class="brand-panel">
+            @if (Model.EditingVersionId.HasValue)
+            {
+                <div class="brand-editing-banner">
+                    <span>تعدّل الإصدار #@Model.EditingVersionId — الحفظ يحدّثه في مكانه.</span>
+                    <a asp-page="Index" class="brand-editing-cancel">إلغاء التعديل</a>
+                </div>
+            }
             <h2 class="brand-panel-title">ألوان الهوية</h2>
 
             <div class="brand-field">
@@ -92,7 +103,9 @@
 
             <div class="brand-actions">
                 <button type="submit" asp-page-handler="SaveDraft" class="brand-btn brand-btn-ghost">حفظ كمسودّة</button>
-                <button type="submit" asp-page-handler="Publish" class="brand-btn brand-btn-primary">نشر الهوية</button>
+                <button type="submit" asp-page-handler="Publish" class="brand-btn brand-btn-primary">
+                    @(Model.EditingVersionId.HasValue ? "حفظ ونشر التعديل" : "نشر الهوية")
+                </button>
                 @if (Model.PublishedVersionId.HasValue)
                 {
                     <button type="submit" asp-page-handler="Reset" class="brand-btn brand-btn-ghost">العودة للافتراضي</button>
