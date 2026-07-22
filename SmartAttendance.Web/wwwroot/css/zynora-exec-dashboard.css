@@ -211,8 +211,13 @@ html[data-theme="light"] .zxd-donut i { background: #fff; }
 .zxd-builder-body h3 small { font-size: 10px; color: var(--zxd-muted); font-weight: 800; }
 
 .zxd-del {
-    width: 24px; height: 24px; border-radius: 7px; border: 1px solid var(--zxd-line);
+    min-width: 24px; height: 24px; border-radius: 7px; border: 1px solid var(--zxd-line);
     background: transparent; color: var(--zxd-red); font-size: 13px; cursor: pointer; line-height: 1;
+    flex: none; transition: all .15s ease;
+}
+.zxd-del.armed {
+    padding: 0 10px; font-size: 11px; font-weight: 900;
+    background: rgba(248, 113, 113, .15); border-color: rgba(248, 113, 113, .5);
 }
 
 .zxd-wlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
