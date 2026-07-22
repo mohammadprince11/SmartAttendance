@@ -272,6 +272,7 @@ public class RoleSecurityMiddleware
                 "/shifts",
                 "/shifttypes",
                 "/attendancesettings",
+                "/dayattendance",
                 "/employeeshifts",
                 "/attendancerecords",
                 "/attendanceprocessing",

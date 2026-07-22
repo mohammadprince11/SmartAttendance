@@ -1,0 +1,163 @@
+@page "/DayAttendance"
+@model SmartAttendance.Web.Pages.DayAttendance.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@*
+    الحضور اليومي — المرحلة 3 من مودل الحضور الجديد (نمط كيان):
+    يوميات بالحقول المشتقة + «تحديث الحضور» (إعادة بناء الشهر من البصمات).
+*@
+
+@{
+    ViewData["Title"] = "الحضور اليومي";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .dat-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
+    .dat-head {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
+                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
+    }
+    html[data-theme="light"] .dat-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
+    .dat-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .dat-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .dat-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
+    .dat-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
+
+    .dat-bar { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .dat-bar label { font-size: 11px; font-weight: 900; color: var(--sa-muted, #8FA8BC); display: flex; flex-direction: column; gap: 4px; }
+    .dat-bar input, .dat-bar select { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; font-size: 13px; }
+    html[data-theme="light"] .dat-bar input, html[data-theme="light"] .dat-bar select { background: #fff; color: inherit; }
+
+    .dat-stats { display: flex; gap: 8px; flex-wrap: wrap; }
+    .dat-stat { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 900; border: 1px solid rgba(73,111,151,.22); }
+    .dat-stat b { direction: ltr; display: inline-block; }
+    .dat-stat.present { color: #4ade80; } .dat-stat.late { color: #facc15; }
+    .dat-stat.absent { color: #f87171; } .dat-stat.incomplete { color: #f97316; }
+
+    .dat-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .dat-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 900px; }
+    .dat-table th { text-align: start; padding: 10px 12px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); position: sticky; top: 0; }
+    html[data-theme="light"] .dat-table th { background: #f2f7fb; }
+    .dat-table td { padding: 9px 12px; border-bottom: 1px solid rgba(143,168,188,.08); white-space: nowrap; }
+    .dat-table tr:hover td { background: rgba(18,217,227,.04); }
+    .dat-num { direction: ltr; text-align: start; font-weight: 900; }
+    .dat-num.warn { color: #facc15; } .dat-num.bad { color: #f97316; }
+    .dat-shift { display: inline-flex; align-items: center; gap: 6px; }
+    .dat-shift i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+    .dat-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; }
+    .dat-chip.Present { background: rgba(74,222,128,.12); color: #4ade80; }
+    .dat-chip.Late { background: rgba(250,204,21,.12); color: #facc15; }
+    .dat-chip.Absent { background: rgba(248,113,113,.12); color: #f87171; }
+    .dat-chip.Incomplete { background: rgba(249,115,22,.14); color: #f97316; }
+    .dat-chip.Weekend, .dat-chip.Rest { background: rgba(143,168,188,.14); color: var(--sa-muted, #8FA8BC); }
+    .dat-check { color: #12D9E3; font-weight: 900; }
+    .dat-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .dat-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
+    .dat-pager { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; font-weight: 900; }
+</style>
+
+<section class="dat-page" dir="rtl">
+    <header class="dat-head">
+        <div>
+            <h1>الحضور اليومي</h1>
+            <p>يوميات موظف×يوم بالحقول المشتقة: تأخير، خروج مبكر، ساعات عمل، حالة — المرحلة 3 من محرك الحضور.</p>
+        </div>
+        <form method="post" asp-page-handler="Analyze" style="display:flex;align-items:end;gap:8px"
+              onsubmit="return confirm('تحديث الحضور يعيد بناء يوميات الشهر المختار من البصمات الخام. متابعة؟')">
+            <input type="hidden" name="Month" value="@Model.Month" />
+            <input type="hidden" name="Search" value="@Model.Search" />
+            <label style="font-size:11px;font-weight:900;display:flex;flex-direction:column;gap:4px">
+                مناوبة التحليل
+                <select name="ShiftTypeId" required style="min-height:36px;border-radius:10px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:6px 10px">
+                    <option value="">— اختر —</option>
+                    @foreach (var shift in Model.Shifts)
+                    {
+                        <option value="@shift.Id">@shift.Name</option>
+                    }
+                </select>
+            </label>
+            <button type="submit" class="dat-btn">تحديث الحضور</button>
+        </form>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="dat-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <form method="get" class="dat-bar">
+        <label>الشهر
+            <input type="month" name="Month" value="@Model.Month" />
+        </label>
+        <label>بحث (رمز/اسم موظف)
+            <input type="text" name="Search" value="@Model.Search" placeholder="بحث..." />
+        </label>
+        <button type="submit" class="dat-btn ghost">عرض</button>
+        <div class="dat-stats" style="margin-inline-start:auto">
+            <span class="dat-stat present">حاضر <b>@Model.PresentCount</b></span>
+            <span class="dat-stat late">متأخر <b>@Model.LateCount</b></span>
+            <span class="dat-stat incomplete">بصمة ناقصة <b>@Model.IncompleteCount</b></span>
+            <span class="dat-stat absent">غائب <b>@Model.AbsentCount</b></span>
+        </div>
+    </form>
+
+    <div class="dat-table-card">
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="dat-empty">لا يوميات لهذا الشهر — استخدم «تحديث الحضور» لبنائها من البصمات الخام.</div>
+        }
+        else
+        {
+            <table class="dat-table">
+                <thead>
+                    <tr>
+                        <th>الموظف</th><th>التاريخ</th><th>المناوبة</th><th>ختم الدخول</th><th>ختم الخروج</th>
+                        <th>ساعات العمل</th><th>ساعات التأخير</th><th>الخروج المبكر</th><th>الحالة</th><th>تم التحليل</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            <td><b>@row.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @row.EmployeeNo</span></td>
+                            <td class="dat-num">@row.WorkDate.ToString("yyyy-MM-dd") <span style="color:var(--sa-muted,#8FA8BC)">@ShiftTypeStore.DayNames[DayAttendanceStore.ToDayIndex(row.WorkDate)]</span></td>
+                            <td>
+                                @if (row.ShiftName != null)
+                                {
+                                    <span class="dat-shift"><i style="background:@(row.ShiftColor ?? "#12D9E3")"></i>@row.ShiftName</span>
+                                }
+                                else { <text>—</text> }
+                            </td>
+                            <td class="dat-num">@(row.CheckIn?.ToString("HH:mm") ?? "—")</td>
+                            <td class="dat-num">@(row.CheckOut?.ToString("HH:mm") ?? "—")</td>
+                            <td class="dat-num">@row.WorkedHours.ToString("0.##")</td>
+                            <td class="dat-num @(row.LateHours > 0 ? "warn" : "")">@row.LateHours.ToString("0.##")</td>
+                            <td class="dat-num @(row.EarlyLeaveHours > 0 ? "bad" : "")">@row.EarlyLeaveHours.ToString("0.##")</td>
+                            <td><span class="dat-chip @row.Status">@DayAttendanceStore.StatusLabel(row.Status)</span></td>
+                            <td>@if (row.IsAnalyzed) { <span class="dat-check">✓</span> } else { <text>—</text> }</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <div class="dat-pager">
+            @if (Model.PageNumber > 1)
+            {
+                <a class="dat-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&PageNumber=@(Model.PageNumber - 1)">السابق</a>
+            }
+            <span>صفحة @Model.PageNumber من @Model.TotalPages (@Model.TotalRows يومية)</span>
+            @if (Model.PageNumber < Model.TotalPages)
+            {
+                <a class="dat-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&PageNumber=@(Model.PageNumber + 1)">التالي</a>
+            }
+        </div>
+    }
+</section>
