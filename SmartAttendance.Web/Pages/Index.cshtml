@@ -21,6 +21,7 @@
     var charts = Model.VisibleWidgets.Where(w => w.Widget.ChartKind != "Number").ToList();
 }
 
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-exec-dashboard.css" asp-append-version="true" />
 
 <section class="zxd-page" dir="rtl">
@@ -75,7 +76,7 @@
 
             <div class="zxd-card">
                 <h2>@widget.DisplayTitle <span class="zxd-badge">@total.ToString("N0")</span></h2>
-
+                <div class="zxd-card-body">
                 @if (rows.Count == 0 || rows.All(r => r.Total == 0))
                 {
                     <div class="zxd-empty">لا يوجد بيانات</div>
@@ -83,15 +84,19 @@
                 else if (widget.ChartKind == "HBars")
                 {
                     <div class="zxd-dist">
-                        @foreach (var row in rows.Take(7))
+                        @foreach (var (row, index) in rows.Take(30).Select((r, i) => (r, i)))
                         {
-                            <div class="zxd-dist-row">
+                            <div class="zxd-dist-row" hidden="@(index >= 5)" data-more="@(index >= 5 ? "1" : null)">
                                 <span class="n" title="@row.Name">@row.Name</span>
                                 <span class="bar"><i style="width:@(Math.Max(3, row.Total * 100 / max))%"></i></span>
                                 <span class="v">@row.Total (@(row.Total * 100 / total)%)</span>
                             </div>
                         }
                     </div>
+                    @if (rows.Count > 5)
+                    {
+                        <button type="button" class="zxd-showmore" onclick="zxdShowMore(this)">عرض المزيد (@(Math.Min(rows.Count, 30) - 5))</button>
+                    }
                 }
                 else if (widget.ChartKind == "Columns")
                 {
@@ -108,8 +113,8 @@
                 }
                 else if (widget.ChartKind == "Donut")
                 {
-                    var slices = rows.Take(6).ToList();
-                    var otherTotal = rows.Skip(6).Sum(r => r.Total);
+                    var slices = rows.Take(5).ToList();
+                    var otherTotal = rows.Skip(5).Sum(r => r.Total);
                     if (otherTotal > 0) { slices.Add(("أخرى", otherTotal)); }
                     var acc = 0.0;
                     var stops = new List<string>();
@@ -134,9 +139,9 @@
                     <table class="zxd-table">
                         <thead><tr><th>الاسم</th><th>العدد</th><th>النسبة</th></tr></thead>
                         <tbody>
-                            @foreach (var row in rows.Take(10))
+                            @foreach (var (row, index) in rows.Take(30).Select((r, i) => (r, i)))
                             {
-                                <tr>
+                                <tr hidden="@(index >= 5)" data-more="@(index >= 5 ? "1" : null)">
                                     <td>@row.Name</td>
                                     <td class="zxd-ltr">@row.Total</td>
                                     <td class="zxd-ltr">@(row.Total * 100 / total)%</td>
@@ -144,19 +149,24 @@
                             }
                         </tbody>
                     </table>
+                    @if (rows.Count > 5)
+                    {
+                        <button type="button" class="zxd-showmore" onclick="zxdShowMore(this)">عرض المزيد (@(Math.Min(rows.Count, 30) - 5))</button>
+                    }
                 }
+                </div>
             </div>
         }
     </div>
 
-    @* ---------- درج «تخصيص اللوحة» ---------- *@
-    <div class="zxd-builder-backdrop" id="zxd-backdrop" onclick="zxdCloseBuilder()"></div>
-    <aside class="zxd-builder" id="zxd-builder" aria-hidden="true">
-        <div class="zxd-builder-head">
+    @* ---------- درج «تخصيص اللوحة» (نمط hrms-slideover المجرب بكل الشاشات) ---------- *@
+    <div class="hrms-slideover-backdrop" id="zxd-backdrop" onclick="zxdCloseBuilder()"></div>
+    <aside class="hrms-slideover" id="zxd-builder" aria-hidden="true">
+        <div class="hrms-slideover-head">
             <h2>تخصيص اللوحة</h2>
-            <button type="button" class="zxd-x" onclick="zxdCloseBuilder()">×</button>
+            <button type="button" class="hrms-slideover-close" onclick="zxdCloseBuilder()">×</button>
         </div>
-        <div class="zxd-builder-body">
+        <div class="hrms-slideover-body zxd-builder-body">
 
             <h3>الويدجتات الحالية <small>رتّب بالأسهم، أظهر/أخفِ بالمربع</small></h3>
             <form method="post" asp-page-handler="SaveLayout" id="zxd-layout-form">
@@ -173,7 +183,7 @@
                                 <button type="button" onclick="zxdMove(this, -1)">▲</button>
                                 <button type="button" onclick="zxdMove(this, 1)">▼</button>
                             </span>
-                            <button type="button" class="zxd-x small" title="حذف"
+                            <button type="button" class="zxd-del" title="حذف"
                                     onclick="zxdDelete(@widget.Id, '@widget.DisplayTitle')">×</button>
                         </li>
                     }
@@ -225,6 +235,13 @@
             document.getElementById('zxd-backdrop').classList.remove('open');
         }
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') zxdCloseBuilder(); });
+
+        // «عرض المزيد»: يظهر بقية الصفوف المخفية بنفس البطاقة
+        function zxdShowMore(btn) {
+            var body = btn.closest('.zxd-card-body');
+            body.querySelectorAll('[data-more]').forEach(function (el) { el.hidden = false; });
+            btn.remove();
+        }
 
         // ترتيب: تحريك عنصر القائمة أعلى/أسفل
         function zxdMove(btn, dir) {
