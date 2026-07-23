@@ -15,6 +15,9 @@ public static class PayrollTransactionStore
     public const string Deduction = "Deduction";
     public const string Overtime = "Overtime";
 
+    /// <summary>معامل بدل العمل الإضافي الافتراضي (1.5× الأجر الساعي) عند عدم تحديده.</summary>
+    public const decimal DefaultRateFactor = 1.5m;
+
     public static string TypeLabel(string t) => t switch
     {
         "Income" => "دخل",
@@ -46,6 +49,11 @@ public static class PayrollTransactionStore
         public decimal Amount { get; set; }
         public string TxType { get; set; } = "Income";
         public bool Taxable { get; set; } = true;
+
+        // عمل إضافي (Overtime): ساعات × معامل بدل. المبلغ يُحتسب بالمسير من الأجر
+        // الساعي للموظف × الساعات × المعامل. إن كانت الساعات فارغة يُستخدم Amount كقيمة يدوية.
+        public decimal? Hours { get; set; }
+        public decimal? RateFactor { get; set; }
 
         // نوع الدفعة
         public string PaymentType { get; set; } = "InSalary";   // InSalary | OutSalary
@@ -149,6 +157,8 @@ IF COL_LENGTH('PayrollTransactions','Source') IS NULL ALTER TABLE PayrollTransac
 IF COL_LENGTH('PayrollTransactions','Status') IS NULL ALTER TABLE PayrollTransactions ADD Status nvarchar(30) NOT NULL CONSTRAINT DF_PT_Status DEFAULT(N'Approved');
 IF COL_LENGTH('PayrollTransactions','IsLocked') IS NULL ALTER TABLE PayrollTransactions ADD IsLocked bit NOT NULL CONSTRAINT DF_PT_IsLocked DEFAULT(0);
 IF COL_LENGTH('PayrollTransactions','LockedRunId') IS NULL ALTER TABLE PayrollTransactions ADD LockedRunId int NULL;
+IF COL_LENGTH('PayrollTransactions','Hours') IS NULL ALTER TABLE PayrollTransactions ADD Hours decimal(9,2) NULL;
+IF COL_LENGTH('PayrollTransactions','RateFactor') IS NULL ALTER TABLE PayrollTransactions ADD RateFactor decimal(6,3) NULL;
 """);
     }
 
@@ -254,7 +264,9 @@ WHERE [Year] = @Y AND [Month] = @M AND TxType = @Type
                 ItemName = HrmsDatabase.GetString(reader, "ItemName"),
                 Amount = reader["Amount"] is decimal a ? a : 0,
                 TxType = HrmsDatabase.GetString(reader, "TxType"),
-                Taxable = HrmsDatabase.GetBool(reader, "Taxable")
+                Taxable = HrmsDatabase.GetBool(reader, "Taxable"),
+                Hours = reader["Hours"] is decimal h ? h : null,
+                RateFactor = reader["RateFactor"] is decimal rf ? rf : null
             });
     }
 
@@ -354,13 +366,13 @@ INSERT INTO PayrollTransactions
   TransactionDate, EffectiveDate, IsUnlimited, ValidFrom, ValidTo,
   IsRetroactive, RetroactiveDate, UpdateSocialSecurity, SocialSecurityToDate, SalaryFromDate, SalaryToDate,
   IsScheduled, InstallmentMode, InstallmentCount, InstallmentAmount, InstallmentMonths, FirstInstallmentDate,
-  ChangeCostCenter, CostCenter, AttachmentName, AttachmentPath, Note, Source, Status, ReferenceNo, CreatedBy)
+  ChangeCostCenter, CostCenter, AttachmentName, AttachmentPath, Note, Source, Status, Hours, RateFactor, ReferenceNo, CreatedBy)
 VALUES
  (@Emp, @Y, @M, @Item, @Name, @Amount, @Type, @Taxable, @PaymentType,
   @TxDate, @EffDate, @Unlimited, @ValidFrom, @ValidTo,
   @Retro, @RetroDate, @UpdSS, @SSToDate, @SalFrom, @SalTo,
   @Sched, @InstMode, @InstCount, @InstAmount, @InstMonths, @FirstInst,
-  @ChgCC, @CostCenter, @AttName, @AttPath, @Note, @Source, @Status, @Ref, @By);
+  @ChgCC, @CostCenter, @AttName, @AttPath, @Note, @Source, @Status, @Hours, @RateFactor, @Ref, @By);
 """;
 
     private const string UpdateSql = """
@@ -369,7 +381,7 @@ UPDATE PayrollTransactions SET
   PaymentType=@PaymentType, TransactionDate=@TxDate, EffectiveDate=@EffDate, IsUnlimited=@Unlimited, ValidFrom=@ValidFrom, ValidTo=@ValidTo,
   IsRetroactive=@Retro, RetroactiveDate=@RetroDate, UpdateSocialSecurity=@UpdSS, SocialSecurityToDate=@SSToDate, SalaryFromDate=@SalFrom, SalaryToDate=@SalTo,
   IsScheduled=@Sched, InstallmentMode=@InstMode, InstallmentCount=@InstCount, InstallmentAmount=@InstAmount, InstallmentMonths=@InstMonths, FirstInstallmentDate=@FirstInst,
-  ChangeCostCenter=@ChgCC, CostCenter=@CostCenter, AttachmentName=@AttName, AttachmentPath=@AttPath, Note=@Note, Source=@Source, Status=@Status
+  ChangeCostCenter=@ChgCC, CostCenter=@CostCenter, AttachmentName=@AttName, AttachmentPath=@AttPath, Note=@Note, Source=@Source, Status=@Status, Hours=@Hours, RateFactor=@RateFactor
 WHERE Id=@Id;
 """;
 
@@ -415,6 +427,8 @@ WHERE Id=@Id;
         Status = HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } st ? st : "Approved",
         IsLocked = HrmsDatabase.GetBool(reader, "IsLocked"),
         LockedRunId = HrmsDatabase.GetNullableInt(reader, "LockedRunId"),
+        Hours = reader["Hours"] is decimal h ? h : null,
+        RateFactor = reader["RateFactor"] is decimal rf ? rf : null,
         CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default
     };
 
@@ -454,5 +468,7 @@ WHERE Id=@Id;
         HrmsDatabase.AddParameter(command, "@Note", (object?)tx.Note ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@Source", string.IsNullOrWhiteSpace(tx.Source) ? "مباشر" : tx.Source);
         HrmsDatabase.AddParameter(command, "@Status", string.IsNullOrWhiteSpace(tx.Status) ? "Approved" : tx.Status);
+        HrmsDatabase.AddParameter(command, "@Hours", (object?)tx.Hours ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@RateFactor", (object?)tx.RateFactor ?? DBNull.Value);
     }
 }

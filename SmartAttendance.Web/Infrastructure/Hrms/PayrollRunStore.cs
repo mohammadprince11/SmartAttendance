@@ -263,6 +263,8 @@ END;
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
         var deductionTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.Deduction))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
+        var overtimeTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.Overtime))
+            .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
         // --- بناء السطور ---
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
@@ -280,8 +282,8 @@ END;
             financial.TryGetValue(emp.Id, out var fin);
             if (fin?.Stop == true) continue;                 // مستبعَد من الاحتساب
             var basic = fin?.Basic ?? 0;
-            if (basic <= 0 && !allowances.ContainsKey(emp.Id) && !income.ContainsKey(emp.Id))
-                continue; // لا راتب ولا علاوات ولا حركات دخل
+            if (basic <= 0 && !allowances.ContainsKey(emp.Id) && !income.ContainsKey(emp.Id) && !overtimeTx.ContainsKey(emp.Id))
+                continue; // لا راتب ولا علاوات ولا حركات دخل/عمل إضافي
 
             // تنسيب الأساسي حسب أيام الحضور من الاعتماد الشهري
             months.TryGetValue(emp.Id, out var month);
@@ -323,8 +325,28 @@ END;
                 }
             }
 
-            var gross = Math.Round(proratedBasic + allowancesTotal + incomeTotal, 2);
-            var taxableBase = Math.Round(proratedBasic + allowancesTotal + taxableIncome, 2);
+            // العمل الإضافي (شاشة «العمل الإضافي») — ساعات × الأجر الساعي × معامل البدل.
+            // إن لم تُحدَّد ساعات (إدخال مبلغ يدوي) يُستخدم المبلغ المخزّن كما هو.
+            decimal overtimeTotal = 0, taxableOvertime = 0;
+            if (overtimeTx.TryGetValue(emp.Id, out var empOt))
+            {
+                foreach (var t in empOt)
+                {
+                    var amt = t.Hours is > 0
+                        ? Math.Round(t.Hours.Value * hourlyRate * (t.RateFactor ?? PayrollTransactionStore.DefaultRateFactor), 2)
+                        : t.Amount;
+                    if (amt == 0) continue;
+                    overtimeTotal += amt;
+                    if (t.Taxable) taxableOvertime += amt;
+                    var label = t.Hours is > 0
+                        ? $"{t.ItemName} ({t.Hours:0.##}س × {t.RateFactor ?? PayrollTransactionStore.DefaultRateFactor:0.##})"
+                        : t.ItemName;
+                    comps.Add(new Component { ItemName = label, Amount = amt, IsAddition = true, Kind = "Overtime" });
+                }
+            }
+
+            var gross = Math.Round(proratedBasic + allowancesTotal + incomeTotal + overtimeTotal, 2);
+            var taxableBase = Math.Round(proratedBasic + allowancesTotal + taxableIncome + taxableOvertime, 2);
             var tax = PayrollConfigStore.ComputeTax(taxableBase, taxProfile);
             var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(gross, gosiProfile);
 

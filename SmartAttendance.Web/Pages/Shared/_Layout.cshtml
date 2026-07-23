@@ -463,6 +463,9 @@
                         <a href="/Payroll/Transactions?type=Deduction" class="nexora-nav-link">
                             <span>حركات الاقتطاع</span>
                         </a>
+                        <a asp-page="/Payroll/Overtime" class="nexora-nav-link @(IsUnder("/Payroll/Overtime") ? "active nexora-active" : "")">
+                            <span>العمل الإضافي</span>
+                        </a>
                         <a asp-page="/Payroll/SalaryItems" class="nexora-nav-link @(IsUnder("/Payroll/SalaryItems") ? "active nexora-active" : "")">
                             <span>عناصر الراتب</span>
                         </a>

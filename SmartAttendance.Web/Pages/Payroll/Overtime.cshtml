@@ -1,0 +1,457 @@
+@page "/Payroll/Overtime"
+@model SmartAttendance.Web.Pages.Payroll.OvertimeModel
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "العمل الإضافي";
+    var months = new[] { "يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر" };
+    var acc = "#f59e0b";
+    var catalogJson = JsonSerializer.Serialize(Model.Catalog.Select(i => new { i.Id, i.Name, i.Taxable, i.DefaultValue }));
+    var empJson = JsonSerializer.Serialize(Model.Employees.Select(e => new { e.Id, e.No, e.Name }));
+    string J(object o) => JsonSerializer.Serialize(o);
+    string Dt(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .ot-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
+    .ot-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .ot-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .ot-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .ot-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .ot-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
+    .ot-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .ot-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+    .ot-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
+    .ot-btn.danger:hover { background:rgba(248,113,113,.26); }
+    .ot-btn.warn { background:rgba(250,204,21,.14); border:1px solid rgba(250,204,21,.45); color:#facc15; }
+    .ot-btn.warn:hover { background:rgba(250,204,21,.24); }
+    .ot-bulkbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 14px; border:1px solid rgba(73,111,151,.22); border-radius:14px; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .ot-bulkbar b { font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); margin-inline-end:auto; }
+    .ot-tabs { display:flex; gap:2px; border-bottom:1px solid rgba(73,111,151,.22); }
+    .ot-tabs a { padding:11px 22px; font-size:13px; font-weight:900; color:var(--sa-muted,#8FA8BC); text-decoration:none; border-bottom:3px solid transparent; }
+    .ot-tabs a.on { color:var(--acc); border-bottom-color:var(--acc); }
+    .ot-lockbanner { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; font-size:13px; font-weight:900; border:1px solid rgba(250,204,21,.4); background:rgba(250,204,21,.08); color:#facc15; }
+
+    .ot-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+    .ot-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
+    .ot-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
+    .ot-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .ot-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+
+    .ot-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    .ot-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); flex-wrap:wrap; }
+    .ot-filter select, .ot-filter input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; }
+    html[data-theme="light"] .ot-filter select, html[data-theme="light"] .ot-filter input { background:#fff; }
+
+    .ot-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .ot-table { width:100%; border-collapse:collapse; font-size:13px; min-width:900px; }
+    .ot-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .ot-table th { background:#f2f7fb; }
+    .ot-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
+    .ot-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
+    .ot-table tfoot td { padding:12px 14px; font-weight:1000; border-top:2px solid color-mix(in srgb,var(--acc) 40%,transparent); background:rgba(0,0,0,.1); }
+    .ot-ref { direction:ltr; font-weight:900; font-size:12px; }
+    .ot-emp b { font-weight:900; } .ot-emp span { display:block; font-size:11px; color:var(--sa-muted,#8FA8BC); }
+    .ot-num { direction:ltr; font-weight:900; color:var(--acc); text-align:start; }
+    .ot-chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:900; }
+    .ot-chip.ap { background:rgba(74,222,128,.14); color:#4ade80; }
+    .ot-chip.dr { background:rgba(143,168,188,.16); color:#8FA8BC; }
+    .ot-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .ot-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
+    .ot-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
+    .ot-actions { display:flex; gap:6px; justify-content:flex-end; } .ot-actions form { display:inline; }
+
+    .ot-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .ot-form select, .ot-form input, .ot-form textarea { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; font-family:inherit; }
+    html[data-theme="light"] .ot-form select, html[data-theme="light"] .ot-form input, html[data-theme="light"] .ot-form textarea { background:#fff; }
+    .ot-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .ot-hint { font-size:12px; font-weight:800; color:var(--sa-muted,#8FA8BC); padding:2px 2px 6px; }
+    .ot-preview { padding:10px 12px; border:1px dashed color-mix(in srgb,var(--acc) 45%,transparent); border-radius:10px; font-size:13px; font-weight:900; background:color-mix(in srgb,var(--acc) 8%,transparent); }
+    .ot-preview b { color:var(--acc); direction:ltr; }
+</style>
+
+<section class="ot-page" dir="rtl">
+    <header class="ot-head">
+        <div>
+            <h1>⏱ العمل الإضافي</h1>
+            <p>ساعات × معامل بدل — القيمة الفعلية تُحتسب بالمسير من الأجر الساعي للموظف (الأساسي ÷ 30 ÷ 8).</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <a class="ot-btn ghost" href="/Payroll/Transactions">الحركات</a>
+            <a class="ot-btn ghost" href="/Payroll/Runs">← المسير</a>
+            @if (!Model.IsReadOnly)
+            {
+                <button type="button" class="ot-btn ghost" onclick="massOpen()">👥 إدخال جماعي</button>
+                <button type="button" class="ot-btn" onclick="otOpen(0)">+ عمل إضافي</button>
+            }
+        </div>
+    </header>
+
+    <div class="ot-tabs">
+        <a href="/Payroll/Overtime?Year=@Model.Year&Month=@Model.Month&Lock=Open" class="@(Model.IsReadOnly ? "" : "on")">حركات غير مقفلة</a>
+        <a href="/Payroll/Overtime?Year=@Model.Year&Month=@Model.Month&Lock=Locked" class="@(Model.IsReadOnly ? "on" : "")">🔒 حركات مقفلة</a>
+    </div>
+
+    @if (Model.IsReadOnly && Model.Items.Count > 0)
+    {
+        <div class="ot-lockbanner">🔒 هذه الحركات دخلت مسيراً مقفلاً/معتمداً — للعرض فقط، لا تُعدّل ولا تُحذف.</div>
+    }
+
+    <div class="ot-kpis">
+        <div class="ot-kpi"><b>@Model.TotalCount</b><span>عدد الحركات</span></div>
+        <div class="ot-kpi"><b>@Model.TotalHours.ToString("#,0.##")</b><span>إجمالي الساعات</span></div>
+        <div class="ot-kpi"><b>@Model.EmployeesCovered</b><span>الموظفون المشمولون</span></div>
+        <div class="ot-kpi"><b>@($"{Model.Month:00}/{Model.Year}")</b><span>الفترة الحالية</span></div>
+    </div>
+
+    <form method="get" class="ot-bar">
+        <input type="hidden" name="Lock" value="@Model.Lock" />
+        <div class="ot-filter">
+            <span>الفترة:</span>
+            <select name="Month" onchange="this.form.submit()">
+                @for (var m = 1; m <= 12; m++)
+                { <option value="@m" selected="@(m == Model.Month)">@months[m-1]</option> }
+            </select>
+            <select name="Year" onchange="this.form.submit()">
+                @for (var y = DateTime.Today.Year - 3; y <= DateTime.Today.Year + 1; y++)
+                { <option value="@y" selected="@(y == Model.Year)">@y</option> }
+            </select>
+        </div>
+        <div class="ot-filter">
+            <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/بند/رقم مرجعي" style="min-width:200px" />
+            <button type="submit" class="ot-btn ghost sm">بحث</button>
+        </div>
+    </form>
+
+    @if (TempData["PayrollMessage"] != null)
+    {
+        <div class="ot-alert @((TempData["PayrollOk"] as bool?) == false ? "err" : "")">@TempData["PayrollMessage"]</div>
+    }
+
+    <form method="post">
+    <input type="hidden" name="Year" value="@Model.Year" />
+    <input type="hidden" name="Month" value="@Model.Month" />
+    <input type="hidden" name="Lock" value="@Model.Lock" />
+    <div class="ot-card">
+        @if (Model.Items.Count == 0)
+        {
+            <div class="ot-empty">
+                @if (Model.IsReadOnly)
+                { <text>لا حركات مقفلة لفترة @($"{Model.Month:00}/{Model.Year}").</text> }
+                else
+                { <text>لا حركات عمل إضافي لفترة @($"{Model.Month:00}/{Model.Year}") — أضف بـ«+ عمل إضافي».</text> }
+            </div>
+        }
+        else
+        {
+            <table class="ot-table">
+                <thead>
+                    <tr>
+                        <th style="width:34px"><input type="checkbox" onclick="otAll(this)" /></th>
+                        <th>الرقم المرجعي</th><th>الموظف</th><th>البند</th>
+                        <th>الساعات</th><th>المعامل</th><th>تاريخ الحركة</th><th>الحالة</th>
+                        @if (!Model.IsReadOnly)
+                        { <th style="text-align:end">إجراءات</th> }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in Model.Items)
+                    {
+                        <tr>
+                            <td><input type="checkbox" name="SelectedIds" value="@t.Id" /></td>
+                            <td class="ot-ref">@t.ReferenceNo</td>
+                            <td class="ot-emp"><b>@t.EmployeeName</b><span>@t.EmployeeNo</span></td>
+                            <td><b>@t.ItemName</b></td>
+                            <td class="ot-num">@((t.Hours ?? 0).ToString("#,0.##"))</td>
+                            <td class="ot-num">×@((t.RateFactor ?? SmartAttendance.Web.Infrastructure.Hrms.PayrollTransactionStore.DefaultRateFactor).ToString("0.##"))</td>
+                            <td class="ot-ref">@(t.TransactionDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                            <td><span class="ot-chip @(t.Status == "Approved" ? "ap" : "dr")">@t.StatusText</span></td>
+                            @if (!Model.IsReadOnly)
+                            {
+                            <td>
+                                <div class="ot-actions">
+                                    <button type="button" class="ot-btn ghost sm" onclick="otEdit(this)" data-tx="@J(new {
+                                        Id = t.Id, t.EmployeeId, t.SalaryItemId, t.ItemName, t.Hours, t.RateFactor, t.Amount, t.Taxable,
+                                        TransactionDate=Dt(t.TransactionDate), t.Note, t.Status, t.Year, t.Month })">تعديل</button>
+                                    <button type="submit" asp-page-handler="Delete" name="id" value="@t.Id" class="ot-btn danger sm" onclick="return confirm('حذف الحركة؟')">حذف</button>
+                                </div>
+                            </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr><td colspan="4">الإجمالي (@Model.Items.Count حركة)</td><td class="ot-num">@Model.TotalHours.ToString("#,0.##")</td><td colspan="@(Model.IsReadOnly ? 3 : 4)"></td></tr>
+                </tfoot>
+            </table>
+        }
+    </div>
+    @if (Model.Items.Count > 0)
+    {
+        <div class="ot-bulkbar">
+            <b>إجراءات على المحدد</b>
+            @if (Model.IsReadOnly)
+            {
+                <button type="submit" asp-page-handler="UnlockSelected" class="ot-btn warn" onclick="return confirm('إلغاء قفل الحركات المحددة؟')">🔓 إلغاء قفل المحدد</button>
+            }
+            else
+            {
+                <button type="submit" asp-page-handler="LockSelected" class="ot-btn warn" onclick="return confirm('إقفال الحركات المحددة؟')">🔒 إقفال المحدد</button>
+                <button type="submit" asp-page-handler="DeleteMany" class="ot-btn danger" onclick="return confirm('حذف الحركات المحددة؟')">🗑 حذف المحدد</button>
+            }
+        </div>
+    }
+    </form>
+
+    @* ===== نموذج عمل إضافي ===== *@
+    <div class="hrms-slideover-backdrop" id="ot-backdrop" onclick="otClose()"></div>
+    <aside class="hrms-slideover" id="ot-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="ot-title">عمل إضافي جديد</h2>
+            <button type="button" class="hrms-slideover-close" onclick="otClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Save" class="ot-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="Id" id="ot-Id" value="0" />
+                <input type="hidden" name="ItemName" id="ot-ItemName" />
+                <input type="hidden" name="SalaryItemId" id="ot-SalaryItemId" value="0" />
+                <input type="hidden" name="Amount" id="ot-Amount" value="0" />
+
+                <label>اسم الموظف *
+                    <div class="empk-field">
+                        <input type="text" id="ot-emp-name" class="empk-name" placeholder="اسم الموظف" readonly />
+                        <input type="text" id="ot-emp-code" class="empk-code" placeholder="رمز" autocomplete="off" />
+                    </div>
+                    <input type="hidden" name="EmployeeId" id="ot-EmployeeId" />
+                </label>
+
+                <label>بند العمل الإضافي *
+                    <select id="ot-ItemSelect" onchange="otItemChanged()">
+                        <option value="">— اختر من الكتالوج —</option>
+                        @foreach (var i in Model.Catalog)
+                        { <option value="@i.Id">@i.Name</option> }
+                        <option value="__custom">أخرى (نص حر)…</option>
+                    </select>
+                </label>
+                <label id="ot-CustomWrap" hidden>اسم البند (نص حر)
+                    <input type="text" id="ot-CustomName" oninput="document.getElementById('ot-ItemName').value=this.value" />
+                </label>
+
+                <div class="ot-grid2">
+                    <label>عدد الساعات *<input type="number" id="ot-Hours" name="Hours" step="0.25" min="0" required oninput="otPreview()" /></label>
+                    <label>معامل البدل *<input type="number" id="ot-RateFactor" name="RateFactor" step="0.05" min="0" value="1.5" oninput="otPreview()" /></label>
+                </div>
+
+                <div class="ot-preview" id="ot-preview">القيمة الفعلية = <b>الساعات × المعامل × الأجر الساعي</b> — تُحتسب بالمسير.</div>
+
+                <div class="ot-grid2">
+                    <label>الشهر
+                        <select name="FMonth" id="ot-FMonth">
+                            @for (var m = 1; m <= 12; m++)
+                            { <option value="@m" selected="@(m == Model.Month)">@months[m-1]</option> }
+                        </select>
+                    </label>
+                    <label>السنة<input type="number" name="FYear" id="ot-FYear" min="2000" max="2100" value="@Model.Year" /></label>
+                </div>
+
+                <div class="ot-grid2">
+                    <label>تاريخ الحركة<input type="date" name="TransactionDate" id="ot-TransactionDate" /></label>
+                    <label style="flex-direction:row;align-items:center;gap:6px;min-height:38px"><input type="checkbox" name="Taxable" value="true" id="ot-Taxable" checked /> خاضع للضريبة</label>
+                </div>
+
+                <label>الحالة
+                    <select name="Status" id="ot-Status">
+                        <option value="Approved">معتمد</option>
+                        <option value="Draft">مسودة</option>
+                    </select>
+                </label>
+
+                <label>ملاحظة<textarea name="Note" id="ot-Note" rows="2"></textarea></label>
+
+                <button type="submit" class="ot-btn">حفظ العمل الإضافي</button>
+            </form>
+        </div>
+    </aside>
+
+    @* ===== إدخال جماعي ===== *@
+    <div class="hrms-slideover-backdrop" id="mass-backdrop" onclick="massClose()"></div>
+    <aside class="hrms-slideover wide" id="mass-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2>👥 إدخال جماعي — عمل إضافي</h2>
+            <button type="button" class="hrms-slideover-close" onclick="massClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="MassEntry" class="ot-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="MassItemName" id="mass-ItemName" />
+                <input type="hidden" name="MassSalaryItemId" id="mass-SalaryItemId" value="0" />
+
+                <p class="ot-hint">ساعات ومعامل موحّد لكل الموظفين المحددين — تُنشأ حركة مستقلة لكل موظف.</p>
+
+                <label>بند العمل الإضافي *
+                    <select id="mass-ItemSelect" onchange="massItemChanged()">
+                        <option value="">— اختر من الكتالوج —</option>
+                        @foreach (var i in Model.Catalog)
+                        { <option value="@i.Id">@i.Name</option> }
+                        <option value="__custom">أخرى (نص حر)…</option>
+                    </select>
+                </label>
+                <label id="mass-CustomWrap" hidden>اسم البند (نص حر)
+                    <input type="text" id="mass-CustomName" oninput="document.getElementById('mass-ItemName').value=this.value" />
+                </label>
+
+                <div class="ot-grid2">
+                    <label>عدد الساعات *<input type="number" name="MassHours" step="0.25" min="0" required /></label>
+                    <label>معامل البدل *<input type="number" name="MassRateFactor" step="0.05" min="0" value="1.5" /></label>
+                </div>
+                <div class="ot-grid2">
+                    <label style="flex-direction:row;align-items:center;gap:6px;min-height:38px"><input type="checkbox" name="MassTaxable" value="true" id="mass-Taxable" checked /> خاضع للضريبة</label>
+                    <label>الفترة
+                        <span style="display:flex;gap:6px">
+                            <select name="MassMonth">
+                                @for (var m = 1; m <= 12; m++)
+                                { <option value="@m" selected="@(m == Model.Month)">@months[m-1]</option> }
+                            </select>
+                            <input type="number" name="MassYear" value="@Model.Year" min="2000" max="2100" style="width:88px" />
+                        </span>
+                    </label>
+                </div>
+                <label>ملاحظة<textarea name="MassNote" rows="2"></textarea></label>
+
+                <label>الموظفون * <span id="mass-count" style="color:var(--acc)">(0 محدد)</span></label>
+                <div style="display:flex;gap:6px">
+                    <input type="text" id="mass-empsearch" placeholder="بحث بالاسم أو الرمز" oninput="massRenderEmps()"
+                           style="flex:1;min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-weight:800" />
+                    <button type="button" class="ot-btn ghost sm" onclick="massSelectAll(true)">تحديد الظاهر</button>
+                    <button type="button" class="ot-btn ghost sm" onclick="massSelectAll(false)">مسح الكل</button>
+                </div>
+                <div id="mass-emplist" style="max-height:280px;overflow-y:auto;border:1px solid rgba(73,111,151,.2);border-radius:10px;padding:4px"></div>
+
+                <button type="submit" class="ot-btn">حفظ الإدخال الجماعي</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script src="~/js/emp-picker.js" asp-append-version="true"></script>
+    <script>
+        var OT_ITEMS = @Html.Raw(catalogJson);
+        var OT_EMP = @Html.Raw(empJson);
+        var otEmpPicker = EmpPicker.init({
+            code: document.getElementById('ot-emp-code'),
+            name: document.getElementById('ot-emp-name'),
+            hidden: document.getElementById('ot-EmployeeId'),
+            employees: OT_EMP
+        });
+
+        function otAll(cb){ document.querySelectorAll('[name=SelectedIds]').forEach(function(x){x.checked=cb.checked;}); }
+        function setVal(id, v){ var el=document.getElementById(id); if(el) el.value = (v==null?'':v); }
+        function setChk(id, v){ var el=document.getElementById(id); if(el) el.checked = !!v; }
+
+        function otPreview(){
+            var h = parseFloat(document.getElementById('ot-Hours').value) || 0;
+            var f = parseFloat(document.getElementById('ot-RateFactor').value) || 0;
+            var el = document.getElementById('ot-preview');
+            if (h > 0 && f > 0)
+                el.innerHTML = 'القيمة = <b>' + (h*f).toFixed(2) + '</b> × الأجر الساعي (' + h.toFixed(2) + 'س × ' + f.toFixed(2) + ') — تُحتسب بالمسير.';
+            else
+                el.innerHTML = 'القيمة الفعلية = <b>الساعات × المعامل × الأجر الساعي</b> — تُحتسب بالمسير.';
+        }
+
+        function otItemChanged(){
+            var sel = document.getElementById('ot-ItemSelect'), val = sel.value;
+            var cw = document.getElementById('ot-CustomWrap');
+            if (val === '__custom'){ cw.hidden=false; document.getElementById('ot-SalaryItemId').value=0; document.getElementById('ot-ItemName').value=document.getElementById('ot-CustomName').value||''; return; }
+            cw.hidden=true;
+            if (!val){ document.getElementById('ot-ItemName').value=''; document.getElementById('ot-SalaryItemId').value=0; return; }
+            var it = OT_ITEMS.find(function(x){ return String(x.Id)===val; });
+            if (it){
+                document.getElementById('ot-ItemName').value = it.Name;
+                document.getElementById('ot-SalaryItemId').value = it.Id;
+                document.getElementById('ot-Taxable').checked = !!it.Taxable;
+                if (it.DefaultValue && !(parseFloat(document.getElementById('ot-RateFactor').value)>0)) document.getElementById('ot-RateFactor').value = it.DefaultValue;
+                otPreview();
+            }
+        }
+
+        function otEdit(btn){
+            try { var d = JSON.parse(btn.getAttribute('data-tx')); otOpen(d.Id, d); }
+            catch (e) { alert('تعذّر فتح التعديل: ' + e.message); }
+        }
+
+        function otOpen(id, d){
+            var f = document.querySelector('#ot-slide form'); f.reset();
+            document.getElementById('ot-Id').value = id || 0;
+            document.getElementById('ot-title').textContent = id ? 'تعديل عمل إضافي' : 'عمل إضافي جديد';
+            document.getElementById('ot-CustomWrap').hidden = true;
+            document.getElementById('ot-ItemSelect').value=''; document.getElementById('ot-ItemName').value=''; document.getElementById('ot-SalaryItemId').value=0;
+            document.getElementById('ot-RateFactor').value = '1.5';
+            otEmpPicker.set(null);
+
+            if (id && d){
+                otEmpPicker.set(OT_EMP.find(function(x){ return x.Id === d.EmployeeId; }) || null);
+                setVal('ot-FMonth', d.Month); setVal('ot-FYear', d.Year);
+                setVal('ot-Hours', d.Hours); setVal('ot-RateFactor', d.RateFactor != null ? d.RateFactor : 1.5);
+                setVal('ot-Amount', d.Amount); setChk('ot-Taxable', d.Taxable);
+                setVal('ot-TransactionDate', d.TransactionDate); setVal('ot-Note', d.Note); setVal('ot-Status', d.Status || 'Approved');
+                document.getElementById('ot-ItemName').value = d.ItemName || '';
+                if (d.SalaryItemId && OT_ITEMS.find(function(x){return x.Id===d.SalaryItemId;})){
+                    document.getElementById('ot-ItemSelect').value = String(d.SalaryItemId);
+                    document.getElementById('ot-SalaryItemId').value = d.SalaryItemId;
+                } else if (d.ItemName){
+                    document.getElementById('ot-ItemSelect').value='__custom';
+                    document.getElementById('ot-CustomWrap').hidden=false;
+                    document.getElementById('ot-CustomName').value=d.ItemName;
+                }
+            } else {
+                setVal('ot-TransactionDate', new Date().toISOString().slice(0,10));
+            }
+            otPreview();
+            document.getElementById('ot-slide').classList.add('open');
+            document.getElementById('ot-backdrop').classList.add('open');
+        }
+        function otClose(){ document.getElementById('ot-slide').classList.remove('open'); document.getElementById('ot-backdrop').classList.remove('open'); }
+
+        // ===== إدخال جماعي =====
+        function massItemChanged(){
+            var sel=document.getElementById('mass-ItemSelect'), val=sel.value, cw=document.getElementById('mass-CustomWrap');
+            if(val==='__custom'){ cw.hidden=false; document.getElementById('mass-SalaryItemId').value=0; document.getElementById('mass-ItemName').value=document.getElementById('mass-CustomName').value||''; return; }
+            cw.hidden=true;
+            if(!val){ document.getElementById('mass-ItemName').value=''; document.getElementById('mass-SalaryItemId').value=0; return; }
+            var it=OT_ITEMS.find(function(x){ return String(x.Id)===val; });
+            if(it){ document.getElementById('mass-ItemName').value=it.Name; document.getElementById('mass-SalaryItemId').value=it.Id; document.getElementById('mass-Taxable').checked=!!it.Taxable; }
+        }
+        function massCount(){ document.getElementById('mass-count').textContent='('+document.querySelectorAll('#mass-emplist input:checked').length+' محدد)'; }
+        function massBuildEmps(){
+            document.getElementById('mass-emplist').innerHTML = OT_EMP.map(function(e){
+                var key=((e.No||'')+' '+(e.Name||'')).toLowerCase();
+                return '<label class="mass-emp" data-s="'+key+'" style="display:flex;align-items:center;gap:8px;padding:6px 8px;font-weight:800;cursor:pointer;border-radius:8px">'
+                    +'<input type="checkbox" name="MassEmployeeIds" value="'+e.Id+'" onchange="massCount()" />'
+                    +'<span style="flex:1">'+(e.Name||'')+'</span>'
+                    +'<span style="direction:ltr;color:var(--sa-muted,#8FA8BC);font-size:12px">'+(e.No||'')+'</span></label>';
+            }).join('');
+        }
+        function massRenderEmps(){
+            var q=(document.getElementById('mass-empsearch').value||'').trim().toLowerCase();
+            document.querySelectorAll('#mass-emplist .mass-emp').forEach(function(l){ l.style.display = (!q || l.getAttribute('data-s').indexOf(q)>=0) ? 'flex' : 'none'; });
+        }
+        function massSelectAll(on){
+            document.querySelectorAll('#mass-emplist .mass-emp').forEach(function(l){ if(l.style.display!=='none'){ l.querySelector('input').checked=on; } });
+            massCount();
+        }
+        function massOpen(){
+            document.querySelector('#mass-slide form').reset();
+            document.getElementById('mass-ItemName').value=''; document.getElementById('mass-SalaryItemId').value=0;
+            document.getElementById('mass-CustomWrap').hidden=true;
+            massBuildEmps(); massRenderEmps(); massCount();
+            document.getElementById('mass-slide').classList.add('open'); document.getElementById('mass-backdrop').classList.add('open');
+        }
+        function massClose(){ document.getElementById('mass-slide').classList.remove('open'); document.getElementById('mass-backdrop').classList.remove('open'); }
+
+        document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ otClose(); massClose(); } });
+    </script>
+}
