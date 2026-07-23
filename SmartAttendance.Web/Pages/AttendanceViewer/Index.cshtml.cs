@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -35,15 +36,38 @@ public class IndexModel : PageModel
         public int EmployeeId { get; set; }
         public string EmployeeNo { get; set; } = string.Empty;
         public string EmployeeName { get; set; } = string.Empty;
+        public string? Position { get; set; }
         public Dictionary<int, DayAttendanceStore.DayRow> Days { get; set; } = new(); // اليوم ← اليومية
         public int PresentDays { get; set; }
         public int WorkDays { get; set; }
+
+        /// <summary>أول حرفين من الاسم — لشارة الموظف الملوّنة (نمط كيان).</summary>
+        public string Initials
+        {
+            get
+            {
+                var parts = EmployeeName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 0) return "؟";
+                return parts.Length == 1 ? parts[0][..1] : $"{parts[0][..1]}{parts[1][..1]}";
+            }
+        }
+
+        /// <summary>لون شارة الموظف مشتق من المعرّف (ثابت لكل موظف).</summary>
+        public string BadgeColor
+        {
+            get
+            {
+                var palette = ShiftTypeStore.Colors;
+                return palette[EmployeeId % palette.Length];
+            }
+        }
     }
 
     public List<EmployeeRow> Rows { get; set; } = new();
     public int DaysInMonth { get; set; }
     public int TotalRows { get; set; }
     public int TotalPages { get; set; }
+    public (int Year, int Month) MonthPair => Period;
 
     public (int Year, int Month) Period
     {
@@ -82,5 +106,16 @@ public class IndexModel : PageModel
         if (PageNumber < 1) PageNumber = 1;
         if (PageNumber > TotalPages) PageNumber = TotalPages;
         Rows = employees.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
+
+        // المناصب للصفوف المعروضة فقط (بطاقة الموظف نمط كيان)
+        var ids = Rows.Select(r => r.EmployeeId).ToList();
+        var positions = await _dbContext.Employees.AsNoTracking()
+            .Where(e => ids.Contains(e.Id))
+            .Select(e => new { e.Id, Pos = e.PositionId != null
+                ? _dbContext.HrJobPositions.Where(p => p.Id == e.PositionId).Select(p => p.ArabicName).FirstOrDefault()
+                : e.Position })
+            .ToDictionaryAsync(x => x.Id, x => x.Pos);
+        foreach (var row in Rows)
+            if (positions.TryGetValue(row.EmployeeId, out var pos)) row.Position = pos;
     }
 }
