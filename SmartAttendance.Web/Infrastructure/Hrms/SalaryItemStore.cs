@@ -23,8 +23,20 @@ public static class SalaryItemStore
     public static readonly (string Key, string Label)[] ValueKinds =
     {
         ("Fixed", "قيمة ثابتة"),
-        ("Formula", "معادلة / نسبة"),
+        ("Formula", "معادلة"),
         ("PerEmployee", "لكل موظف (من ملفه المالي)")
+    };
+
+    /// <summary>متغيّرات المعادلة المتاحة ببوابة المعادلة (مفتاح ← تسمية) — تُعرض كرقاقات قابلة للإدراج.</summary>
+    public static readonly (string Key, string Label)[] FormulaVars =
+    {
+        ("Basic", "الراتب الأساسي"),
+        ("Allowances", "إجمالي العلاوات"),
+        ("Gross", "الراتب الإجمالي"),
+        ("Hours", "عدد الساعات"),
+        ("Days", "عدد الأيام"),
+        ("DailyRate", "الأجر اليومي"),
+        ("HourlyRate", "الأجر الساعي"),
     };
 
     public static string LabelOf((string Key, string Label)[] list, string key) =>
@@ -37,7 +49,8 @@ public static class SalaryItemStore
         public string? NameEn { get; set; }
         public string ItemType { get; set; } = "Income";        // Income | Deduction | Overtime | Statutory
         public string ValueKind { get; set; } = "Fixed";        // Fixed | Formula | PerEmployee
-        public decimal DefaultValue { get; set; }               // مبلغ ثابت أو نسبة% حسب ValueKind
+        public decimal DefaultValue { get; set; }               // مبلغ ثابت حسب ValueKind
+        public string? Formula { get; set; }                    // تعبير المعادلة (عند ValueKind=Formula) مثل: Basic / 30 / 8 * Hours
         public bool Taxable { get; set; } = true;               // يدخل بوعاء الضريبة؟
         public bool InGross { get; set; } = true;               // يدخل بالراتب الإجمالي؟
         public bool Prorated { get; set; }                      // يُنسّب حسب أيام الحضور؟
@@ -84,6 +97,9 @@ BEGIN
       (N'ضريبة الدخل',    N'Income Tax',   N'Statutory', N'Formula',     0, 0, 0, 0, 1, 90),
       (N'الضمان الاجتماعي (حصة الموظف)', N'Social Security (Employee)', N'Statutory', N'Formula', 0, 0, 0, 0, 1, 91);
 END;
+
+-- بوابة المعادلة (idempotent)
+IF COL_LENGTH('SalaryItems','Formula') IS NULL ALTER TABLE SalaryItems ADD Formula nvarchar(500) NULL;
 """);
     }
 
@@ -115,7 +131,7 @@ END;
                 """
 UPDATE SalaryItems
 SET Name = @Name, NameEn = @NameEn, ItemType = @ItemType, ValueKind = @ValueKind,
-    DefaultValue = @DefaultValue, Taxable = @Taxable, InGross = @InGross,
+    DefaultValue = @DefaultValue, Formula = @Formula, Taxable = @Taxable, InGross = @InGross,
     Prorated = @Prorated, IsActive = @IsActive, SortOrder = @SortOrder
 WHERE Id = @Id;
 """,
@@ -130,8 +146,8 @@ WHERE Id = @Id;
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
                 """
-INSERT INTO SalaryItems (Name, NameEn, ItemType, ValueKind, DefaultValue, Taxable, InGross, Prorated, IsSystem, IsActive, SortOrder)
-VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Taxable, @InGross, @Prorated, 0, @IsActive, @SortOrder);
+INSERT INTO SalaryItems (Name, NameEn, ItemType, ValueKind, DefaultValue, Formula, Taxable, InGross, Prorated, IsSystem, IsActive, SortOrder)
+VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable, @InGross, @Prorated, 0, @IsActive, @SortOrder);
 """,
                 command => AddParameters(command, item));
         }
@@ -155,6 +171,7 @@ VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Taxable, @InGross
         ItemType = HrmsDatabase.GetString(reader, "ItemType") is { Length: > 0 } t ? t : "Income",
         ValueKind = HrmsDatabase.GetString(reader, "ValueKind") is { Length: > 0 } v ? v : "Fixed",
         DefaultValue = reader["DefaultValue"] is decimal d ? d : 0,
+        Formula = HrmsDatabase.GetString(reader, "Formula") is { Length: > 0 } fx ? fx : null,
         Taxable = HrmsDatabase.GetBool(reader, "Taxable"),
         InGross = HrmsDatabase.GetBool(reader, "InGross"),
         Prorated = HrmsDatabase.GetBool(reader, "Prorated"),
@@ -170,6 +187,7 @@ VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Taxable, @InGross
         HrmsDatabase.AddParameter(command, "@ItemType", item.ItemType);
         HrmsDatabase.AddParameter(command, "@ValueKind", item.ValueKind);
         HrmsDatabase.AddParameter(command, "@DefaultValue", item.DefaultValue);
+        HrmsDatabase.AddParameter(command, "@Formula", (object?)item.Formula ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@Taxable", item.Taxable ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@InGross", item.InGross ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@Prorated", item.Prorated ? 1 : 0);

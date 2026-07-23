@@ -33,6 +33,7 @@ public class SalaryItemsModel : PageModel
             ItemType = form["ItemType"].ToString() is { Length: > 0 } t ? t : "Income",
             ValueKind = form["ValueKind"].ToString() is { Length: > 0 } v ? v : "Fixed",
             DefaultValue = decimal.TryParse(form["DefaultValue"], out var dv) ? dv : 0,
+            Formula = form["ValueKind"].ToString() == "Formula" && !string.IsNullOrWhiteSpace(form["Formula"]) ? form["Formula"].ToString().Trim() : null,
             Taxable = form["Taxable"] == "true",
             InGross = form["InGross"] == "true",
             Prorated = form["Prorated"] == "true",

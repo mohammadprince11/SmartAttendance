@@ -7,7 +7,7 @@
     ViewData["Title"] = "عناصر الراتب";
     var itemsJson = JsonSerializer.Serialize(Model.Items.Select(i => new
     {
-        i.Id, i.Name, i.NameEn, i.ItemType, i.ValueKind, i.DefaultValue,
+        i.Id, i.Name, i.NameEn, i.ItemType, i.ValueKind, i.DefaultValue, i.Formula,
         i.Taxable, i.InGross, i.Prorated, i.IsActive, i.SortOrder, i.IsSystem
     }));
 }
@@ -38,6 +38,28 @@
     html[data-theme="light"] .si-form input, html[data-theme="light"] .si-form select { background:#fff; }
     .si-checks { display:flex; gap:16px; flex-wrap:wrap; }
     .si-checks label { flex-direction:row; align-items:center; gap:6px; }
+    /* ===== بوابة المعادلة ===== */
+    .si-fx { display:flex; flex-direction:column; gap:10px; border:1px solid rgba(73,111,151,.25); border-radius:12px; padding:12px; background:rgba(0,0,0,.1); }
+    .si-fx-expr { min-height:50px; border:1px solid rgba(73,111,151,.35); border-radius:10px; background:rgba(0,0,0,.22); color:inherit; padding:8px 10px; direction:ltr; text-align:left; font-family:ui-monospace,monospace; font-size:14px; font-weight:800; resize:vertical; width:100%; }
+    html[data-theme="light"] .si-fx-expr { background:#fff; }
+    .si-fx-body { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .si-fx-vars { display:flex; flex-direction:column; gap:4px; max-height:210px; overflow:auto; }
+    .si-fx-var { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:7px 9px; border:1px solid rgba(73,111,151,.2); border-radius:8px; cursor:pointer; font-size:12px; font-weight:800; background:transparent; color:inherit; text-align:start; }
+    .si-fx-var:hover { background:color-mix(in srgb,#12D9E3 9%,transparent); border-color:rgba(18,217,227,.4); }
+    .si-fx-var .plus { color:#12D9E3; font-weight:1000; font-size:15px; }
+    .si-fx-pad { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; align-content:start; }
+    .si-fx-key { min-height:34px; border:1px solid rgba(73,111,151,.25); border-radius:8px; background:rgba(0,0,0,.15); color:inherit; font-weight:900; font-size:13px; cursor:pointer; }
+    html[data-theme="light"] .si-fx-key { background:#f2f7fb; }
+    .si-fx-key:hover { background:color-mix(in srgb,#12D9E3 12%,transparent); }
+    .si-fx-key.fn { font-size:10px; color:#a78bfa; }
+    .si-fx-key.op { color:#12D9E3; }
+    .si-fx-key.clr { color:#f87171; }
+    .si-fx-test { display:flex; flex-wrap:wrap; gap:8px; align-items:end; border-top:1px dashed rgba(73,111,151,.3); padding-top:10px; }
+    .si-fx-test label { font-size:10px; gap:2px; }
+    .si-fx-test input { width:82px; min-height:30px; }
+    .si-fx-result { font-weight:1000; color:#4ade80; direction:ltr; font-size:15px; }
+    .si-fx-result.err { color:#f87171; font-size:12px; }
+    .si-fx-hint { font-size:11px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
 </style>
 
 <section class="si-page" dir="rtl">
@@ -67,7 +89,13 @@
                     <tr>
                         <td><b>@i.Name</b>@(string.IsNullOrWhiteSpace(i.NameEn) ? "" : $" · {i.NameEn}") @(i.IsSystem ? Html.Raw("<span class=\"si-chip sys\">نظام</span>") : Html.Raw(""))</td>
                         <td><span class="si-chip @(i.IsAddition ? "" : "ded")">@i.ItemTypeLabel</span></td>
-                        <td style="font-size:12px">@i.ValueKindLabel@(i.DefaultValue != 0 ? $" · {i.DefaultValue:0.##}" : "")</td>
+                        <td style="font-size:12px">
+                            @i.ValueKindLabel
+                            @if (i.ValueKind == "Formula" && !string.IsNullOrWhiteSpace(i.Formula))
+                            { <text> · </text><code style="direction:ltr;color:#a78bfa;font-size:11px">@i.Formula</code> }
+                            else if (i.DefaultValue != 0)
+                            { <text> · @i.DefaultValue.ToString("0.##")</text> }
+                        </td>
                         <td style="font-size:11px;color:var(--sa-muted,#8FA8BC)">
                             @(i.Taxable ? "خاضع·" : "")@(i.InGross ? "إجمالي·" : "")@(i.Prorated ? "نسبي" : "")
                         </td>
@@ -108,7 +136,7 @@
                         </select>
                     </label>
                     <label>طريقة القيمة
-                        <select name="ValueKind" id="si-ValueKind">
+                        <select name="ValueKind" id="si-ValueKind" onchange="siKind(this.value)">
                             @foreach (var v in SalaryItemStore.ValueKinds)
                             {
                                 <option value="@v.Key">@v.Label</option>
@@ -117,8 +145,59 @@
                     </label>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                    <label>القيمة الافتراضية / النسبة<input type="number" name="DefaultValue" id="si-DefaultValue" step="0.01" value="0" /></label>
+                    <label id="si-fixedWrap">القيمة الثابتة<input type="number" name="DefaultValue" id="si-DefaultValue" step="0.01" value="0" /></label>
                     <label>ترتيب العرض<input type="number" name="SortOrder" id="si-SortOrder" value="10" /></label>
+                </div>
+
+                @* ===== بوابة المعادلة (تظهر عند اختيار «معادلة») ===== *@
+                <input type="hidden" name="Formula" id="si-Formula" />
+                <div id="si-formulaWrap" style="display:none;flex-direction:column;gap:6px">
+                    <label style="margin:0">المعادلة <span class="si-fx-hint">— أدرج المتغيّرات والعوامل من الأسفل أو اكتب مباشرةً</span></label>
+                    <div class="si-fx">
+                        <textarea class="si-fx-expr" id="si-fxExpr" rows="2" placeholder="مثال: Basic / 30 / 8 * Hours" oninput="fxSync()"></textarea>
+                        <div class="si-fx-body">
+                            <div class="si-fx-vars">
+                                @foreach (var v in SalaryItemStore.FormulaVars)
+                                {
+                                    <button type="button" class="si-fx-var" onclick="fxIns('@v.Key ')"><span>@v.Label</span><span class="plus">+</span></button>
+                                }
+                            </div>
+                            <div class="si-fx-pad">
+                                <button type="button" class="si-fx-key fn" onclick="fxIns('ROUND(')">ROUND</button>
+                                <button type="button" class="si-fx-key fn" onclick="fxIns('MIN(')">MIN</button>
+                                <button type="button" class="si-fx-key fn" onclick="fxIns('MAX(')">MAX</button>
+                                <button type="button" class="si-fx-key fn" onclick="fxIns('ABS(')">ABS</button>
+                                <button type="button" class="si-fx-key" onclick="fxIns('7')">7</button>
+                                <button type="button" class="si-fx-key" onclick="fxIns('8')">8</button>
+                                <button type="button" class="si-fx-key" onclick="fxIns('9')">9</button>
+                                <button type="button" class="si-fx-key op" onclick="fxIns(' / ')">÷</button>
+                                <button type="button" class="si-fx-key" onclick="fxIns('4')">4</button>
+                                <button type="button" class="si-fx-key" onclick="fxIns('5')">5</button>
+                                <button type="button" class="si-fx-key" onclick="fxIns('6')">6</button>
+                                <button type="button" class="si-fx-key op" onclick="fxIns(' * ')">×</button>
+                                <button type="button" class="si-fx-key" onclick="fxIns('1')">1</button>
+                                <button type="button" class="si-fx-key" onclick="fxIns('2')">2</button>
+                                <button type="button" class="si-fx-key" onclick="fxIns('3')">3</button>
+                                <button type="button" class="si-fx-key op" onclick="fxIns(' - ')">−</button>
+                                <button type="button" class="si-fx-key" onclick="fxIns('0')">0</button>
+                                <button type="button" class="si-fx-key" onclick="fxIns('.')">.</button>
+                                <button type="button" class="si-fx-key op" onclick="fxIns('(')">(</button>
+                                <button type="button" class="si-fx-key op" onclick="fxIns(')')">)</button>
+                                <button type="button" class="si-fx-key op" onclick="fxIns(' + ')">+</button>
+                                <button type="button" class="si-fx-key" onclick="fxIns(', ')">,</button>
+                                <button type="button" class="si-fx-key" onclick="fxBack()">⌫</button>
+                                <button type="button" class="si-fx-key clr" onclick="fxClear()">C</button>
+                            </div>
+                        </div>
+                        <div class="si-fx-test">
+                            <span class="si-fx-hint">اختبار حيّ:</span>
+                            <label>أساسي<input type="number" id="fx-t-Basic" value="400000" oninput="fxTest()" /></label>
+                            <label>علاوات<input type="number" id="fx-t-Allowances" value="0" oninput="fxTest()" /></label>
+                            <label>ساعات<input type="number" id="fx-t-Hours" value="10" oninput="fxTest()" /></label>
+                            <label>أيام<input type="number" id="fx-t-Days" value="0" oninput="fxTest()" /></label>
+                            <span>= <span class="si-fx-result" id="fx-result">—</span></span>
+                        </div>
+                    </div>
                 </div>
                 <div class="si-checks">
                     <label><input type="checkbox" name="Taxable" value="true" id="si-Taxable" checked /> خاضع للضريبة</label>
@@ -139,6 +218,9 @@
             var f = document.querySelector('#si-slide form'); f.reset();
             document.getElementById('si-Id').value = id || 0;
             document.getElementById('si-title').textContent = id ? 'تعديل العنصر' : 'عنصر جديد';
+            document.getElementById('si-fxExpr').value = '';
+            document.getElementById('si-Formula').value = '';
+            var kind = 'Fixed';
             if (id) {
                 var i = SI_DATA.find(function (x) { return x.Id === id; });
                 if (i) {
@@ -152,14 +234,58 @@
                     document.getElementById('si-InGross').checked = !!i.InGross;
                     document.getElementById('si-Prorated').checked = !!i.Prorated;
                     document.getElementById('si-IsActive').checked = !!i.IsActive;
+                    document.getElementById('si-fxExpr').value = i.Formula || '';
+                    document.getElementById('si-Formula').value = i.Formula || '';
+                    kind = i.ValueKind || 'Fixed';
                 }
             }
+            siKind(kind);
             document.getElementById('si-slide').classList.add('open');
             document.getElementById('si-backdrop').classList.add('open');
         }
         function siClose() {
             document.getElementById('si-slide').classList.remove('open');
             document.getElementById('si-backdrop').classList.remove('open');
+        }
+        function siKind(kind){
+            document.getElementById('si-fixedWrap').style.display = (kind==='Fixed') ? '' : 'none';
+            document.getElementById('si-formulaWrap').style.display = (kind==='Formula') ? 'flex' : 'none';
+            if(kind==='Formula') fxTest();
+        }
+
+        // ===== بوابة المعادلة =====
+        function fxSync(){ document.getElementById('si-Formula').value = document.getElementById('si-fxExpr').value; fxTest(); }
+        function fxIns(t){
+            var ta=document.getElementById('si-fxExpr');
+            var a=ta.selectionStart, b=ta.selectionEnd; if(a==null){a=b=ta.value.length;}
+            ta.value = ta.value.slice(0,a) + t + ta.value.slice(b);
+            var np=a+t.length; ta.focus(); try{ta.setSelectionRange(np,np);}catch(e){}
+            fxSync();
+        }
+        function fxBack(){ var ta=document.getElementById('si-fxExpr'); ta.value=ta.value.replace(/\s*\S\s*$/,'').replace(/\s+$/,''); fxSync(); }
+        function fxClear(){ document.getElementById('si-fxExpr').value=''; fxSync(); }
+        function fxNum(id){ return parseFloat(document.getElementById(id).value)||0; }
+        function fxEval(expr, vars){
+            var s=' '+expr+' ';
+            Object.keys(vars).sort(function(a,b){return b.length-a.length;}).forEach(function(k){
+                s = s.replace(new RegExp('\\b'+k+'\\b','g'), '('+(vars[k]||0)+')');
+            });
+            s = s.replace(/ROUND\s*\(/gi,'Math.round(').replace(/MIN\s*\(/gi,'Math.min(').replace(/MAX\s*\(/gi,'Math.max(').replace(/ABS\s*\(/gi,'Math.abs(');
+            var check = s.replace(/Math\.(round|min|max|abs)\(/g,'(');
+            if(/[A-Za-z]/.test(check)) return {error:'متغيّر/دالة غير معروفة'};
+            if(!/^[\s0-9+\-*/(). ,]*$/.test(check)) return {error:'رموز غير مسموحة'};
+            try { var r = Function('"use strict"; return ('+s+');')(); if(typeof r!=='number' || !isFinite(r)) return {error:'ناتج غير صالح'}; return {value:r}; }
+            catch(e){ return {error:'صيغة غير مكتملة'}; }
+        }
+        function fxTest(){
+            var expr=document.getElementById('si-fxExpr').value||'';
+            var res=document.getElementById('fx-result');
+            if(!expr.trim()){ res.textContent='—'; res.className='si-fx-result'; return; }
+            var basic=fxNum('fx-t-Basic'), allw=fxNum('fx-t-Allowances'), hrs=fxNum('fx-t-Hours'), days=fxNum('fx-t-Days');
+            var vars={ Basic:basic, Allowances:allw, Gross:basic+allw, Hours:hrs, Days:days, DailyRate:basic/30, HourlyRate:basic/30/8 };
+            var out=fxEval(expr, vars);
+            if(out.error){ res.textContent=out.error; res.className='si-fx-result err'; }
+            else { res.textContent=(Math.round(out.value*100)/100).toLocaleString('en-US'); res.className='si-fx-result'; }
         }
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') siClose(); });
     </script>
