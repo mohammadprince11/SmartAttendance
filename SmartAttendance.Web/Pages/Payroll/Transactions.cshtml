@@ -123,11 +123,18 @@
                 <a href="/Payroll/Transactions?type=Income" class="@(Model.IsDeduction ? "" : "on")">دخل</a>
                 <a href="/Payroll/Transactions?type=Deduction" class="@(Model.IsDeduction ? "on" : "")">اقتطاع</a>
             </span>
-            <a class="tx-btn ghost" href="/Payroll/Runs">← المسير</a>
+            <a class="tx-btn ghost" href="/Payroll/Runs" title="مسير الرواتب — كشف احتساب رواتب الشهر" style="display:inline-flex;align-items:center;gap:6px">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <span>مسير الرواتب</span>
+            </a>
             @if (!Model.IsReadOnly)
             {
-                <button type="button" class="tx-btn ghost icon" title="دخل جماعي" aria-label="دخل جماعي" onclick="massOpen()">👥</button>
-                <button type="button" class="tx-btn ghost icon" title="استيراد الحركات (إكسل/CSV)" aria-label="استيراد الحركات" onclick="impOpen()">📥</button>
+                <button type="button" class="tx-btn ghost icon" title="دخل جماعي — إدخال بند واحد لعدة موظفين" aria-label="دخل جماعي" onclick="massOpen()">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </button>
+                <button type="button" class="tx-btn ghost icon" title="استيراد الحركات (إكسل/CSV)" aria-label="استيراد الحركات" onclick="impOpen()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
                 <button type="button" class="tx-btn" onclick="txOpen(0)">+ حركة جديدة</button>
             }
         </div>
