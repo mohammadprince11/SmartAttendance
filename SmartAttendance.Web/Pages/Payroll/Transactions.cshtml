@@ -110,6 +110,12 @@
     .tx-adv-toggle { align-self:flex-start; background:transparent; border:1px dashed rgba(73,111,151,.4); color:var(--sa-muted,#8FA8BC); border-radius:10px; padding:8px 14px; font-size:12px; font-weight:900; cursor:pointer; }
     .tx-adv-toggle.open { color:var(--acc); border-color:var(--acc); }
     .tx-hint { font-size:12px; font-weight:800; color:var(--sa-muted,#8FA8BC); padding:2px 2px 6px; }
+    .mass-tabs { display:flex; gap:4px; border:1px solid rgba(73,111,151,.25); border-radius:12px; padding:4px; background:rgba(0,0,0,.12); flex-wrap:wrap; }
+    .mass-tab { flex:1 1 auto; min-width:96px; padding:8px 10px; border:0; border-radius:9px; background:transparent; color:var(--sa-muted,#8FA8BC); font-size:12px; font-weight:900; cursor:pointer; }
+    .mass-tab.on { background:var(--acc); color:#04141d; }
+    .mass-pane { display:flex; flex-direction:column; gap:10px; }
+    .mass-pane[hidden] { display:none; }
+    .mass-file-hint { font-size:12px; font-weight:800; color:var(--sa-muted,#8FA8BC); border:1px dashed rgba(73,111,151,.35); border-radius:10px; padding:10px 12px; line-height:1.9; }
 </style>
 
 <section class="tx-page" dir="rtl">
@@ -508,14 +514,15 @@
             <button type="button" class="hrms-slideover-close" onclick="massClose()">×</button>
         </div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="MassEntry" class="tx-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="MassEntry" enctype="multipart/form-data" class="tx-form" style="display:flex;flex-direction:column;gap:12px">
                 <input type="hidden" name="Type" value="@Model.Type" />
                 <input type="hidden" name="MassItemName" id="mass-ItemName" />
                 <input type="hidden" name="MassSalaryItemId" id="mass-SalaryItemId" value="0" />
                 <input type="hidden" name="MassPaymentType" id="mass-PaymentType" value="InSalary" />
+                <input type="hidden" name="ScopeMode" id="mass-ScopeMode" value="Manual" />
 
-                <p class="tx-hint">بند ومبلغ موحّد لكل الموظفين المحددين — تُنشأ حركة مستقلة لكل موظف.</p>
-
+                @* ===== معلومات الحركة ===== *@
+                <div class="tx-adv-sec">معلومات الحركة</div>
                 <label>@Model.ItemLabel *
                     <select id="mass-ItemSelect" onchange="massItemChanged()">
                         <option value="">— اختر من الكتالوج —</option>
@@ -551,14 +558,68 @@
                 </div>
                 <label>ملاحظة<textarea name="MassNote" rows="2"></textarea></label>
 
-                <label>الموظفون * <span id="mass-count" style="color:var(--acc)">(0 محدد)</span></label>
-                <div style="display:flex;gap:6px">
-                    <input type="text" id="mass-empsearch" placeholder="بحث بالاسم أو الرمز" oninput="massRenderEmps()"
-                           style="flex:1;min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-weight:800" />
-                    <button type="button" class="tx-btn ghost sm" onclick="massSelectAll(true)">تحديد الظاهر</button>
-                    <button type="button" class="tx-btn ghost sm" onclick="massSelectAll(false)">مسح الكل</button>
+                @* ===== النطاق (لمن يُطبَّق) — 4 طرق ===== *@
+                <div class="tx-adv-sec">النطاق — لمن يُطبَّق</div>
+                <div class="mass-tabs">
+                    <button type="button" class="mass-tab on" data-m="Manual" onclick="massTab('Manual')">اختيار يدوي</button>
+                    <button type="button" class="mass-tab" data-m="Paste" onclick="massTab('Paste')">لصق أكواد</button>
+                    <button type="button" class="mass-tab" data-m="File" onclick="massTab('File')">ملف إكسل</button>
+                    <button type="button" class="mass-tab" data-m="Criteria" onclick="massTab('Criteria')">حسب معايير</button>
                 </div>
-                <div id="mass-emplist" style="max-height:280px;overflow-y:auto;border:1px solid rgba(73,111,151,.2);border-radius:10px;padding:4px"></div>
+
+                @* طريقة 1: اختيار يدوي *@
+                <div class="mass-pane" id="mass-pane-Manual">
+                    <label>الموظفون <span id="mass-count" style="color:var(--acc)">(0 محدد)</span></label>
+                    <div style="display:flex;gap:6px">
+                        <input type="text" id="mass-empsearch" placeholder="بحث بالاسم أو الرمز" oninput="massRenderEmps()"
+                               style="flex:1;min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-weight:800" />
+                        <button type="button" class="tx-btn ghost sm" onclick="massSelectAll(true)">تحديد الظاهر</button>
+                        <button type="button" class="tx-btn ghost sm" onclick="massSelectAll(false)">مسح الكل</button>
+                    </div>
+                    <div id="mass-emplist" style="max-height:260px;overflow-y:auto;border:1px solid rgba(73,111,151,.2);border-radius:10px;padding:4px"></div>
+                </div>
+
+                @* طريقة 2: لصق أكواد *@
+                <div class="mass-pane" id="mass-pane-Paste" hidden>
+                    <label>ألصق أكواد الموظفين
+                        <textarea name="MassCodes" rows="5" placeholder="مفصولة بفاصلة أو سطر، مثال:&#10;11230, 11321&#10;11045"></textarea>
+                    </label>
+                    <p class="tx-hint">تُحلّ الأكواد إلى موظفين تلقائياً — الأكواد غير المطابقة تُتخطّى مع إظهار عددها.</p>
+                </div>
+
+                @* طريقة 3: رفع ملف إكسل/CSV *@
+                <div class="mass-pane" id="mass-pane-File" hidden>
+                    <div class="mass-file-hint"><b style="color:var(--acc)">تنسيق الملف:</b> عمود واحد يحوي <b>رمز الموظف</b> (صف الترويسة يُتخطّى تلقائياً إن لم يكن كوداً).</div>
+                    <label>الملف (.xlsx أو .csv)<input type="file" name="massFile" accept=".xlsx,.csv" style="min-height:auto;padding:8px" /></label>
+                </div>
+
+                @* طريقة 4: حسب معايير *@
+                <div class="mass-pane" id="mass-pane-Criteria" hidden>
+                    <p class="tx-hint">يُطبَّق على <b>كل الموظفين النشطين</b> المطابقين للمعايير المختارة.</p>
+                    <div class="tx-grid2">
+                        <label>القسم
+                            <select name="MassDept">
+                                <option value="">كل الأقسام</option>
+                                @foreach (var s in Model.AllDepartments)
+                                { <option value="@s">@s</option> }
+                            </select>
+                        </label>
+                        <label>الفرع
+                            <select name="MassBranch">
+                                <option value="">كل الفروع</option>
+                                @foreach (var s in Model.AllBranches)
+                                { <option value="@s">@s</option> }
+                            </select>
+                        </label>
+                    </div>
+                    <label>المسمى الوظيفي
+                        <select name="MassJobTitle">
+                            <option value="">كل المسميات</option>
+                            @foreach (var s in Model.AllJobTitles)
+                            { <option value="@s">@s</option> }
+                        </select>
+                    </label>
+                </div>
 
                 <button type="submit" class="tx-btn">حفظ الدخل الجماعي</button>
             </form>
@@ -734,11 +795,20 @@
             document.querySelectorAll('#mass-emplist .mass-emp').forEach(function(l){ if(l.style.display!=='none'){ l.querySelector('input').checked=on; } });
             massCount();
         }
+        // تبديل طريقة النطاق (Manual | Paste | File | Criteria)
+        function massTab(mode){
+            document.getElementById('mass-ScopeMode').value = mode;
+            document.querySelectorAll('#mass-slide .mass-tab').forEach(function(t){ t.classList.toggle('on', t.getAttribute('data-m')===mode); });
+            ['Manual','Paste','File','Criteria'].forEach(function(k){
+                var p = document.getElementById('mass-pane-'+k); if(p) p.hidden = (k!==mode);
+            });
+        }
         function massOpen(){
             document.querySelector('#mass-slide form').reset();
             document.getElementById('mass-ItemName').value=''; document.getElementById('mass-SalaryItemId').value=0;
             document.getElementById('mass-CustomWrap').hidden=true; document.getElementById('mass-PaymentType').value='InSalary';
             massBuildEmps(); massRenderEmps(); massCount();
+            massTab('Manual');
             document.getElementById('mass-slide').classList.add('open'); document.getElementById('mass-backdrop').classList.add('open');
         }
         function massClose(){ document.getElementById('mass-slide').classList.remove('open'); document.getElementById('mass-backdrop').classList.remove('open'); }

@@ -78,6 +78,11 @@ public class TransactionsModel : PageModel
     public List<string> Branches { get; set; } = new();
     public List<string> JobTitles { get; set; } = new();
 
+    // القوائم الكاملة للمؤسسة (لمعايير النطاق بالدخل الجماعي — كل الموظفين لا الحركات فقط)
+    public List<string> AllDepartments { get; set; } = new();
+    public List<string> AllBranches { get; set; } = new();
+    public List<string> AllJobTitles { get; set; } = new();
+
     public bool HasAdvanced => Emp is > 0 || !string.IsNullOrWhiteSpace(PayType) || !string.IsNullOrWhiteSpace(Src)
         || MinAmount.HasValue || MaxAmount.HasValue || !string.IsNullOrWhiteSpace(Dept) || !string.IsNullOrWhiteSpace(Branch)
         || !string.IsNullOrWhiteSpace(JobTitle) || DateFrom.HasValue || DateTo.HasValue || !string.IsNullOrWhiteSpace(RefNo);
@@ -149,6 +154,15 @@ public class TransactionsModel : PageModel
                 No = HrmsDatabase.GetString(reader, "EmployeeNo"),
                 Name = HrmsDatabase.GetString(reader, "FullName")
             });
+
+        // القوائم الكاملة للمؤسسة لمعايير النطاق (كل الموظفين النشطين)
+        var attrs = await HrmsDatabase.QueryAsync(_db,
+            "SELECT ISNULL(d.Name, N'') AS Dept, ISNULL(b.Name, N'') AS Branch, ISNULL(e.Position, N'') AS Position FROM Employees e LEFT JOIN Departments d ON d.Id = e.DepartmentId LEFT JOIN Branches b ON b.Id = e.BranchId WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1;",
+            command => { },
+            reader => new { Dept = HrmsDatabase.GetString(reader, "Dept"), Branch = HrmsDatabase.GetString(reader, "Branch"), Position = HrmsDatabase.GetString(reader, "Position") });
+        AllDepartments = attrs.Select(x => x.Dept).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
+        AllBranches = attrs.Select(x => x.Branch).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
+        AllJobTitles = attrs.Select(x => x.Position).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
 
         TotalCount = Items.Count;
         TotalAmount = Items.Sum(x => x.Amount);
@@ -240,8 +254,12 @@ public class TransactionsModel : PageModel
         return RedirectToPage(new { Type, Year, Month });
     }
 
-    /// <summary>دخل جماعي: بند + مبلغ موحّد لعدة موظفين محددين.</summary>
-    public async Task<IActionResult> OnPostMassEntryAsync()
+    /// <summary>
+    /// دخل جماعي (نمط كيان «النطاق»): بند+مبلغ موحّد يُطبَّق على مجموعة موظفين تُحدَّد
+    /// بأربع طرق — Manual (اختيار يدوي) | Paste (لصق أكواد) | File (رفع إكسل/CSV) |
+    /// Criteria (حسب معايير: قسم/فرع/مسمى وظيفي).
+    /// </summary>
+    public async Task<IActionResult> OnPostMassEntryAsync(IFormFile? massFile)
     {
         var f = Request.Form;
         var type = f["Type"].ToString() == PayrollTransactionStore.Deduction ? PayrollTransactionStore.Deduction : PayrollTransactionStore.Income;
@@ -249,13 +267,78 @@ public class TransactionsModel : PageModel
         var m = int.TryParse(f["MassMonth"], out var mm) ? mm : Month;
         var back = new { Type = type, Year = y, Month = m };
 
-        var empIds = f["MassEmployeeIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).Distinct().ToList();
         var itemName = f["MassItemName"].ToString().Trim();
         var amount = decimal.TryParse(f["MassAmount"], out var a) ? a : 0;
-
-        if (empIds.Count == 0) { TempData["PayrollMessage"] = "اختر موظفاً واحداً على الأقل."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
         if (string.IsNullOrWhiteSpace(itemName)) { TempData["PayrollMessage"] = "اختر البند."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
         if (amount <= 0) { TempData["PayrollMessage"] = "المبلغ يجب أن يكون أكبر من صفر."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
+
+        // كل الموظفين النشطين بخصائصهم — لحلّ الأكواد والمعايير
+        var emps = await HrmsDatabase.QueryAsync(_db,
+            "SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(d.Name, N'') AS Dept, ISNULL(b.Name, N'') AS Branch, ISNULL(e.Position, N'') AS Position FROM Employees e LEFT JOIN Departments d ON d.Id = e.DepartmentId LEFT JOIN Branches b ON b.Id = e.BranchId WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1;",
+            command => { },
+            reader => new
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                No = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                Dept = HrmsDatabase.GetString(reader, "Dept"),
+                Branch = HrmsDatabase.GetString(reader, "Branch"),
+                Position = HrmsDatabase.GetString(reader, "Position")
+            });
+        var byCode = new Dictionary<string, int>();
+        foreach (var e in emps) { var k = e.No.Trim().ToLowerInvariant(); if (k.Length > 0) byCode[k] = e.Id; }
+
+        var mode = f["ScopeMode"].ToString();
+        if (string.IsNullOrWhiteSpace(mode)) mode = "Manual";
+        var empIds = new List<int>();
+        int skipped = 0;
+        string scopeLabel;
+
+        if (mode == "Paste" || mode == "File")
+        {
+            IEnumerable<string> codes;
+            if (mode == "File")
+            {
+                if (massFile == null || massFile.Length == 0)
+                { TempData["PayrollMessage"] = "اختر ملف إكسل أو CSV."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
+                List<string[]> rows;
+                try { await using var s = massFile.OpenReadStream(); rows = SpreadsheetReader.Read(s, massFile.FileName); }
+                catch (Exception ex) { TempData["PayrollMessage"] = "تعذّر قراءة الملف: " + ex.Message; TempData["PayrollOk"] = false; return RedirectToPage(back); }
+                codes = rows.Where(r => r.Length > 0).Select(r => r[0]);
+                scopeLabel = "ملف إكسل";
+            }
+            else
+            {
+                codes = f["MassCodes"].ToString().Split(new[] { '\n', '\r', ',', ';', '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                scopeLabel = "لصق أكواد";
+            }
+            foreach (var raw in codes)
+            {
+                var k = raw.Trim().ToLowerInvariant();
+                if (k.Length == 0) continue;
+                if (byCode.TryGetValue(k, out var id)) empIds.Add(id); else skipped++;
+            }
+        }
+        else if (mode == "Criteria")
+        {
+            var dept = f["MassDept"].ToString().Trim();
+            var branch = f["MassBranch"].ToString().Trim();
+            var job = f["MassJobTitle"].ToString().Trim();
+            if (dept.Length == 0 && branch.Length == 0 && job.Length == 0)
+            { TempData["PayrollMessage"] = "حدد معياراً واحداً على الأقل (قسم/فرع/مسمى وظيفي)."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
+            empIds = emps.Where(e =>
+                (dept.Length == 0 || e.Dept == dept) &&
+                (branch.Length == 0 || e.Branch == branch) &&
+                (job.Length == 0 || e.Position == job)).Select(e => e.Id).ToList();
+            scopeLabel = "حسب معايير";
+        }
+        else
+        {
+            empIds = f["MassEmployeeIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+            scopeLabel = "اختيار يدوي";
+        }
+
+        empIds = empIds.Distinct().ToList();
+        if (empIds.Count == 0) { TempData["PayrollMessage"] = "لم يُحدَّد أي موظف مطابق."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
 
         var template = new PayrollTransactionStore.Transaction
         {
@@ -274,7 +357,9 @@ public class TransactionsModel : PageModel
         };
 
         var n = await PayrollTransactionStore.SaveManyAsync(_db, empIds, template, User?.Identity?.Name ?? "system");
-        TempData["PayrollMessage"] = $"تمت إضافة {n} حركة عبر الدخل الجماعي.";
+        TempData["PayrollMessage"] = $"تمت إضافة {n} حركة عبر الدخل الجماعي (النطاق: {scopeLabel})"
+            + (skipped > 0 ? $"، وتُخطّي {skipped} كوداً غير مطابق." : ".");
+        TempData["PayrollOk"] = true;
         return RedirectToPage(back);
     }
 
