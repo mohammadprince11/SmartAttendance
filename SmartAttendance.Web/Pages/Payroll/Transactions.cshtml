@@ -116,6 +116,20 @@
     .mass-pane { display:flex; flex-direction:column; gap:10px; }
     .mass-pane[hidden] { display:none; }
     .mass-file-hint { font-size:12px; font-weight:800; color:var(--sa-muted,#8FA8BC); border:1px dashed rgba(73,111,151,.35); border-radius:10px; padding:10px 12px; line-height:1.9; }
+    /* قائمة الموظفين للاختيار اليدوي — صف نظيف (نتغلّب على الأنماط العامة بـ!important) */
+    .mass-list { max-height:300px; overflow-y:auto; border:1px solid rgba(73,111,151,.22); border-radius:12px; padding:6px; display:flex; flex-direction:column; gap:2px; background:rgba(0,0,0,.1); }
+    .mass-emp { display:flex !important; flex-direction:row !important; align-items:center; gap:10px; padding:7px 10px; border-radius:9px; cursor:pointer; margin:0; }
+    .mass-emp:hover { background:color-mix(in srgb,var(--acc) 8%,transparent); }
+    .mass-emp.sel { background:color-mix(in srgb,var(--acc) 15%,transparent); }
+    .mass-emp.hidden { display:none !important; }
+    .mass-emp input[type=checkbox] { width:17px !important; height:17px; min-height:auto !important; flex:0 0 auto; margin:0; accent-color:var(--acc); }
+    .mass-emp .av { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:1000; font-size:13px; color:#04141d; background:linear-gradient(135deg,var(--acc),#12D9E3); flex:0 0 auto; }
+    .mass-emp .nm { flex:1; font-weight:900; font-size:13px; text-align:start; color:var(--sa-text,#DCEAF4); }
+    html[data-theme="light"] .mass-emp .nm { color:#0b1d31; }
+    .mass-emp .cd { direction:ltr; color:var(--sa-muted,#8FA8BC); font-size:12px; font-weight:900; }
+    .mass-paste-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .mass-paste-head b { font-size:13px; font-weight:900; } .mass-paste-head b span { color:var(--acc); }
+    #mass-codes { font-family:inherit; direction:ltr; text-align:start; line-height:1.9; }
 </style>
 
 <section class="tx-page" dir="rtl">
@@ -576,15 +590,18 @@
                         <button type="button" class="tx-btn ghost sm" onclick="massSelectAll(true)">تحديد الظاهر</button>
                         <button type="button" class="tx-btn ghost sm" onclick="massSelectAll(false)">مسح الكل</button>
                     </div>
-                    <div id="mass-emplist" style="max-height:260px;overflow-y:auto;border:1px solid rgba(73,111,151,.2);border-radius:10px;padding:4px"></div>
+                    <div id="mass-emplist" class="mass-list"></div>
                 </div>
 
-                @* طريقة 2: لصق أكواد *@
+                @* طريقة 2: لصق أكواد (لصق تلقائي بفواصل — نمط كيان) *@
                 <div class="mass-pane" id="mass-pane-Paste" hidden>
-                    <label>ألصق أكواد الموظفين
-                        <textarea name="MassCodes" rows="5" placeholder="مفصولة بفاصلة أو سطر، مثال:&#10;11230, 11321&#10;11045"></textarea>
-                    </label>
-                    <p class="tx-hint">تُحلّ الأكواد إلى موظفين تلقائياً — الأكواد غير المطابقة تُتخطّى مع إظهار عددها.</p>
+                    <div class="mass-paste-head">
+                        <b>أكواد الموظفين <span id="mass-codecount">(0 كود)</span></b>
+                        <button type="button" class="tx-btn ghost sm" onclick="massPasteClip()">📋 لصق من الحافظة</button>
+                    </div>
+                    <textarea name="MassCodes" id="mass-codes" rows="6" placeholder="انقر «لصق من الحافظة» أو ألصق مباشرة (Ctrl+V) — أكواد إكسل (سطر لكل كود) تتحوّل لفواصل تلقائياً"
+                              oninput="massCodeCount()" onpaste="massOnPaste(event)"></textarea>
+                    <p class="tx-hint">تُحلّ الأكواد إلى موظفين تلقائياً — غير المطابق يُتخطّى مع إظهار عدده.</p>
                 </div>
 
                 @* طريقة 3: رفع ملف إكسل/CSV *@
@@ -778,21 +795,45 @@
             if(it){ document.getElementById('mass-ItemName').value=it.Name; document.getElementById('mass-SalaryItemId').value=it.Id; document.getElementById('mass-Taxable').checked=!!it.Taxable; if(it.DefaultValue && !document.getElementById('mass-Amount').value) document.getElementById('mass-Amount').value=it.DefaultValue; }
         }
         function massCount(){ document.getElementById('mass-count').textContent='('+document.querySelectorAll('#mass-emplist input:checked').length+' محدد)'; }
+        function massEmpToggle(cb){ var l=cb.closest('.mass-emp'); if(l) l.classList.toggle('sel', cb.checked); massCount(); }
         function massBuildEmps(){
             document.getElementById('mass-emplist').innerHTML = TX_EMP.map(function(e){
                 var key=((e.No||'')+' '+(e.Name||'')).toLowerCase();
-                return '<label class="mass-emp" data-s="'+key+'" style="display:flex;align-items:center;gap:8px;padding:6px 8px;font-weight:800;cursor:pointer;border-radius:8px">'
-                    +'<input type="checkbox" name="MassEmployeeIds" value="'+e.Id+'" onchange="massCount()" />'
-                    +'<span style="flex:1">'+(e.Name||'')+'</span>'
-                    +'<span style="direction:ltr;color:var(--sa-muted,#8FA8BC);font-size:12px">'+(e.No||'')+'</span></label>';
+                var initial=((e.Name||'؟').trim().charAt(0))||'؟';
+                return '<label class="mass-emp" data-s="'+key+'">'
+                    +'<input type="checkbox" name="MassEmployeeIds" value="'+e.Id+'" onchange="massEmpToggle(this)" />'
+                    +'<span class="av">'+initial+'</span>'
+                    +'<span class="nm">'+(e.Name||'')+'</span>'
+                    +'<span class="cd">'+(e.No||'')+'</span></label>';
             }).join('');
+        }
+
+        // ===== لصق الأكواد (تحويل تلقائي لفواصل — نمط كيان) =====
+        function massTokens(s){ return (s||'').split(/[\s,;]+/).map(function(x){return x.trim();}).filter(Boolean); }
+        function massCodeCount(){ var el=document.getElementById('mass-codecount'); if(el) el.textContent='('+massTokens(document.getElementById('mass-codes').value).length+' كود)'; }
+        function massOnPaste(e){
+            e.preventDefault();
+            var text=((e.clipboardData||window.clipboardData).getData('text')||'');
+            var toks=massTokens(text);
+            var ta=document.getElementById('mass-codes');
+            var cur=(ta.value||'').trim();
+            ta.value=(cur? cur+', ':'')+toks.join(', ');
+            massCodeCount();
+        }
+        function massPasteClip(){
+            if(navigator.clipboard && navigator.clipboard.readText){
+                navigator.clipboard.readText().then(function(t){
+                    document.getElementById('mass-codes').value=massTokens(t).join(', ');
+                    massCodeCount();
+                }).catch(function(){ alert('تعذّر الوصول للحافظة — ألصق يدوياً (Ctrl+V) داخل الحقل.'); });
+            } else { alert('المتصفح لا يدعم القراءة من الحافظة — ألصق يدوياً (Ctrl+V).'); }
         }
         function massRenderEmps(){
             var q=(document.getElementById('mass-empsearch').value||'').trim().toLowerCase();
-            document.querySelectorAll('#mass-emplist .mass-emp').forEach(function(l){ l.style.display = (!q || l.getAttribute('data-s').indexOf(q)>=0) ? 'flex' : 'none'; });
+            document.querySelectorAll('#mass-emplist .mass-emp').forEach(function(l){ l.classList.toggle('hidden', !(!q || l.getAttribute('data-s').indexOf(q)>=0)); });
         }
         function massSelectAll(on){
-            document.querySelectorAll('#mass-emplist .mass-emp').forEach(function(l){ if(l.style.display!=='none'){ l.querySelector('input').checked=on; } });
+            document.querySelectorAll('#mass-emplist .mass-emp').forEach(function(l){ if(!l.classList.contains('hidden')){ var cb=l.querySelector('input'); cb.checked=on; l.classList.toggle('sel', on); } });
             massCount();
         }
         // تبديل طريقة النطاق (Manual | Paste | File | Criteria)
@@ -802,6 +843,7 @@
             ['Manual','Paste','File','Criteria'].forEach(function(k){
                 var p = document.getElementById('mass-pane-'+k); if(p) p.hidden = (k!==mode);
             });
+            if(mode==='Paste') massCodeCount();
         }
         function massOpen(){
             document.querySelector('#mass-slide form').reset();
