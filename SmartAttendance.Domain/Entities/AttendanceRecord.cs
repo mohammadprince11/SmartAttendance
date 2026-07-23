@@ -24,4 +24,11 @@ public class AttendanceRecord : AuditableEntity
     public Device? Device { get; set; }
 
     public string? Notes { get; set; }
+
+    /// <summary>
+    /// دلالة زوج البصمة (حضور/استراحة/صلاة…). null = حضور. العمود يُضاف بمسار
+    /// الترقية الذاتي في HrmsDatabase لا بهجرة EF. الأزواج غير-الحضورية تُستثنى
+    /// من اشتقاق اليومية — راجع DayAttendanceStore وقسم 32 بدراسة الحضور.
+    /// </summary>
+    public int? PunchSemanticId { get; set; }
 }

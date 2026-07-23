@@ -299,49 +299,33 @@
                 <button type="button" data-close-edit>×</button>
             </div>
 
-            <form method="post" asp-page-handler="Upsert" data-preserve-filter="true">
+            <form method="post" asp-page-handler="SavePunches" data-preserve-filter="true">
                 <input type="hidden" name="Tab" value="process" />
                 <input type="hidden" name="ProcessFromDate" value="@Model.ProcessFromDate?.ToString("yyyy-MM-dd")" />
                 <input type="hidden" name="ProcessToDate" value="@Model.ProcessToDate?.ToString("yyyy-MM-dd")" />
                 <input type="hidden" name="ProcessSearchTerm" value="@Model.ProcessSearchTerm" />
                 <input type="hidden" name="MaxRows" value="@Model.MaxRows" />
 
-                <input asp-for="Correction.Id" type="hidden" value="0" />
                 <input asp-for="Correction.EmployeeNo" type="hidden" id="editEmployeeNo" />
                 <input asp-for="Correction.Date" type="hidden" id="editDate" />
 
-                <div class="modal-grid">
-                    <div class="hrms-field">
-                        <label>الدخول</label>
-                        <input asp-for="Correction.CheckIn" id="editCheckIn" type="time" />
-                    </div>
+                @* أزواج بصمات اليوم — يُبنى بالـJS من خريطة AttendancePairsJson *@
+                <div class="punch-pairs" id="editPairs"></div>
 
-                    <div class="hrms-field">
-                        <label>الخروج</label>
-                        <input asp-for="Correction.CheckOut" id="editCheckOut" type="time" />
-                    </div>
+                <button type="button" class="hrms-btn-secondary punch-add" data-add-pair>+ إضافة زوج بصمة</button>
 
-                    <div class="hrms-field">
-                        <label>الحالة</label>
-                        <select asp-for="Correction.Status" id="editStatus">
-                            <option value="1">حاضر</option>
-                            <option value="2">متأخر</option>
-                            <option value="3">غائب</option>
-                            <option value="4">إجازة</option>
-                            <option value="5">عطلة</option>
-                        </select>
-                    </div>
-
-                    <div class="hrms-field">
-                        <label>ملاحظة</label>
-                        <input asp-for="Correction.Notes" id="editNotes" placeholder="اكتب سبب التعديل حتى يظهر في سجل العمليات" />
-                    </div>
+                <div class="hrms-field" style="margin-top:12px">
+                    <label>ملاحظة</label>
+                    <input asp-for="Correction.Notes" id="editNotes" placeholder="اكتب سبب التعديل حتى يظهر في سجل العمليات" />
                 </div>
 
-                <div class="edit-help-note">سيتم حفظ التعديل كمصدر يدوي مع الملاحظة في سجل العمليات.</div>
+                <div class="edit-help-note">
+                    اليوم قد يحمل أزواج بصمات متعددة. <strong>الحالة والتأخير وساعات العمل تُشتق تلقائياً</strong>
+                    من أول دخول وآخر خروج — لا تُفرض يدوياً. أفرغ وقتَي الزوج لحذفه.
+                </div>
 
                 <div class="modal-actions">
-                    <button type="submit" class="hrms-btn-primary">حفظ التعديل</button>
+                    <button type="submit" class="hrms-btn-primary">حفظ البصمات</button>
                     <button type="button" class="hrms-btn-secondary" data-close-edit>إلغاء</button>
                 </div>
             </form>
@@ -401,5 +385,9 @@
 </div>
 
 @section Scripts {
+    <script>
+        // خريطة «كود الموظف|التاريخ» ← أزواج بصمات اليوم (يبنيها الخادم)
+        window.ATTENDANCE_PAIRS = @Html.Raw(Model.AttendancePairsJson);
+    </script>
     <script src="~/js/attendance-operations-final.js" asp-append-version="true"></script>
 }

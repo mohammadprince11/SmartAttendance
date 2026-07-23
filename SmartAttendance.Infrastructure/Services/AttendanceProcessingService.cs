@@ -38,12 +38,37 @@ public class AttendanceProcessingService : IAttendanceProcessingService
             .OrderBy(x => x.FullName)
             .ToList();
 
+        // أول دخول وآخر خروج لليوم (نمط كيان) — كان يأخذ أول زوج فقط ويتجاهل
+        // بقية أزواج اليوم، فيخالف اليومية المشتقّة بـDayAttendanceStore.
+        // والأزواج غير-الحضورية (استراحة/صلاة) مستثناة كما بالمحرك الجديد:
+        // اصطلاح موحّد — زوج الحضور دلالته NULL، وما عداه بصمة أخرى.
         var recordsLookup = records
             .Where(x => x.AttendanceDate >= startDate && x.AttendanceDate <= endDate)
+            .Where(x => x.PunchSemanticId == null)
             .GroupBy(x => new { x.EmployeeId, x.AttendanceDate })
             .ToDictionary(
                 x => x.Key,
-                x => x.OrderBy(r => r.CheckIn).First());
+                x =>
+                {
+                    var ordered = x.OrderBy(r => r.CheckIn).ToList();
+                    var first = ordered.First();
+
+                    // نسخة خفيفة تحمل أول دخول وآخر خروج بدل الزوج الأول وحده
+                    return new AttendanceRecord
+                    {
+                        Id = first.Id,
+                        EmployeeId = first.EmployeeId,
+                        AttendanceDate = first.AttendanceDate,
+                        CheckIn = ordered.Min(r => r.CheckIn),
+                        CheckOut = ordered.Any(r => r.CheckOut.HasValue)
+                            ? ordered.Where(r => r.CheckOut.HasValue).Max(r => r.CheckOut)
+                            : null,
+                        Source = first.Source,
+                        Status = first.Status,
+                        DeviceId = first.DeviceId,
+                        Notes = first.Notes
+                    };
+                });
 
         var shiftLookup = shifts.ToDictionary(x => x.Id);
 

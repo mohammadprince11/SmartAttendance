@@ -24,3 +24,32 @@
 .other-punch-table { min-width: 720px; table-layout: auto; }
 .other-punch-table th,
 .other-punch-table td { width: auto !important; }
+
+/* أزواج البصمات بمودال التحرير: صف لكل زوج (دخول · خروج · إفراغ) */
+.punch-pairs { display: flex; flex-direction: column; gap: 10px; }
+.punch-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr 40px;
+    gap: 10px;
+    align-items: end;
+    padding: 10px;
+    border: 1px solid var(--sa-border);
+    border-radius: 14px;
+    background: var(--sa-surface-2);
+}
+.punch-pair.is-cleared { opacity: .5; border-color: rgba(248,113,113,.5); }
+.punch-remove {
+    height: 38px;
+    border: 1px solid rgba(248,113,113,.4);
+    border-radius: 12px;
+    background: transparent;
+    color: #f87171;
+    font-weight: 1000;
+    cursor: pointer;
+}
+.punch-remove:hover { background: rgba(248,113,113,.12); }
+.punch-add { margin-top: 10px; }
+
+@media (max-width: 900px) {
+    .punch-pair { grid-template-columns: 1fr 1fr 40px; }
+}
