@@ -29,8 +29,14 @@
     .ot-btn.danger:hover { background:rgba(248,113,113,.26); }
     .ot-btn.warn { background:rgba(250,204,21,.14); border:1px solid rgba(250,204,21,.45); color:#facc15; }
     .ot-btn.warn:hover { background:rgba(250,204,21,.24); }
-    .ot-bulkbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 14px; border:1px solid rgba(73,111,151,.22); border-radius:14px; background:var(--sa-surface,rgba(8,25,43,.9)); }
-    .ot-bulkbar b { font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); margin-inline-end:auto; }
+    .ot-bulkbar { position:fixed; bottom:18px; inset-inline:0; margin-inline:auto; width:max-content; max-width:calc(100% - 32px);
+        z-index:60; display:none; gap:10px; align-items:center; flex-wrap:wrap; padding:12px 18px;
+        border:1px solid color-mix(in srgb,var(--acc) 45%,transparent); border-radius:16px;
+        background:var(--sa-surface,rgba(8,25,43,.98)); box-shadow:0 14px 44px rgba(0,0,0,.55); }
+    html[data-theme="light"] .ot-bulkbar { background:#fff; }
+    .ot-bulkbar.show { display:flex; }
+    .ot-bulkbar b { font-size:13px; font-weight:900; color:inherit; margin-inline-end:6px; }
+    .ot-bulkbar b span { color:var(--acc); }
     .ot-tabs { display:flex; gap:2px; border-bottom:1px solid rgba(73,111,151,.22); }
     .ot-tabs a { padding:11px 22px; font-size:13px; font-weight:900; color:var(--sa-muted,#8FA8BC); text-decoration:none; border-bottom:3px solid transparent; }
     .ot-tabs a.on { color:var(--acc); border-bottom-color:var(--acc); }
@@ -162,7 +168,7 @@
                     @foreach (var t in Model.Items)
                     {
                         <tr>
-                            <td><input type="checkbox" name="SelectedIds" value="@t.Id" /></td>
+                            <td><input type="checkbox" name="SelectedIds" value="@t.Id" onchange="otSel()" /></td>
                             <td class="ot-ref">@t.ReferenceNo</td>
                             <td class="ot-emp"><b>@t.EmployeeName</b><span>@t.EmployeeNo</span></td>
                             <td><b>@t.ItemName</b></td>
@@ -192,8 +198,8 @@
     </div>
     @if (Model.Items.Count > 0)
     {
-        <div class="ot-bulkbar">
-            <b>إجراءات على المحدد</b>
+        <div class="ot-bulkbar" id="ot-bulkbar">
+            <b>المحدد: <span id="ot-selcount">0</span></b>
             @if (Model.IsReadOnly)
             {
                 <button type="submit" asp-page-handler="UnlockSelected" class="ot-btn warn" data-zyconfirm="إلغاء قفل الحركات المحددة؟">🔓 إلغاء قفل المحدد</button>
@@ -348,7 +354,13 @@
             employees: OT_EMP
         });
 
-        function otAll(cb){ document.querySelectorAll('[name=SelectedIds]').forEach(function(x){x.checked=cb.checked;}); }
+        function otAll(cb){ document.querySelectorAll('[name=SelectedIds]').forEach(function(x){x.checked=cb.checked;}); otSel(); }
+        function otSel(){
+            var bar = document.getElementById('ot-bulkbar'); if(!bar) return;
+            var n = document.querySelectorAll('[name=SelectedIds]:checked').length;
+            var c = document.getElementById('ot-selcount'); if(c) c.textContent = n;
+            bar.classList.toggle('show', n > 0);
+        }
         function setVal(id, v){ var el=document.getElementById(id); if(el) el.value = (v==null?'':v); }
         function setChk(id, v){ var el=document.getElementById(id); if(el) el.checked = !!v; }
 

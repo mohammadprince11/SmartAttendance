@@ -29,8 +29,14 @@
     .tx-btn.danger:hover { background:rgba(248,113,113,.26); }
     .tx-btn.warn { background:rgba(250,204,21,.14); border:1px solid rgba(250,204,21,.45); color:#facc15; }
     .tx-btn.warn:hover { background:rgba(250,204,21,.24); }
-    .tx-bulkbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 14px; border:1px solid rgba(73,111,151,.22); border-radius:14px; background:var(--sa-surface,rgba(8,25,43,.9)); }
-    .tx-bulkbar b { font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); margin-inline-end:auto; }
+    .tx-bulkbar { position:fixed; bottom:18px; inset-inline:0; margin-inline:auto; width:max-content; max-width:calc(100% - 32px);
+        z-index:60; display:none; gap:10px; align-items:center; flex-wrap:wrap; padding:12px 18px;
+        border:1px solid color-mix(in srgb,var(--acc) 45%,transparent); border-radius:16px;
+        background:var(--sa-surface,rgba(8,25,43,.98)); box-shadow:0 14px 44px rgba(0,0,0,.55); }
+    html[data-theme="light"] .tx-bulkbar { background:#fff; }
+    .tx-bulkbar.show { display:flex; }
+    .tx-bulkbar b { font-size:13px; font-weight:900; color:inherit; margin-inline-end:6px; }
+    .tx-bulkbar b span { color:var(--acc); }
     .tx-seg { display:inline-flex; border:1px solid rgba(73,111,151,.3); border-radius:12px; overflow:hidden; }
     .tx-seg a { padding:7px 16px; font-size:13px; font-weight:900; color:inherit; text-decoration:none; }
     .tx-seg a.on { background:var(--acc); color:#04141d; }
@@ -218,7 +224,7 @@
                     @foreach (var t in Model.Items)
                     {
                         <tr>
-                            <td><input type="checkbox" name="SelectedIds" value="@t.Id" /></td>
+                            <td><input type="checkbox" name="SelectedIds" value="@t.Id" onchange="txSel()" /></td>
                             <td class="tx-ref">@t.ReferenceNo</td>
                             <td class="tx-emp"><b>@t.EmployeeName</b><span>@t.EmployeeNo</span></td>
                             <td><b>@t.ItemName</b></td>
@@ -254,8 +260,8 @@
     </div>
     @if (Model.Items.Count > 0)
     {
-        <div class="tx-bulkbar">
-            <b>إجراءات على المحدد</b>
+        <div class="tx-bulkbar" id="tx-bulkbar">
+            <b>المحدد: <span id="tx-selcount">0</span></b>
             @if (Model.IsReadOnly)
             {
                 <button type="submit" asp-page-handler="UnlockSelected" class="tx-btn warn" data-zyconfirm="إلغاء قفل الحركات المحددة؟">🔓 إلغاء قفل المحدد</button>
@@ -508,7 +514,13 @@
         });
         function advToggle(){ var p=document.getElementById('adv-panel'); p.style.display = (p.style.display==='none') ? 'flex' : 'none'; }
 
-        function txAll(cb){ document.querySelectorAll('[name=SelectedIds]').forEach(function(x){x.checked=cb.checked;}); }
+        function txAll(cb){ document.querySelectorAll('[name=SelectedIds]').forEach(function(x){x.checked=cb.checked;}); txSel(); }
+        function txSel(){
+            var bar = document.getElementById('tx-bulkbar'); if(!bar) return;
+            var n = document.querySelectorAll('[name=SelectedIds]:checked').length;
+            var c = document.getElementById('tx-selcount'); if(c) c.textContent = n;
+            bar.classList.toggle('show', n > 0);
+        }
 
         function txSetPt(v){
             document.getElementById('tx-PaymentType').value = v;
