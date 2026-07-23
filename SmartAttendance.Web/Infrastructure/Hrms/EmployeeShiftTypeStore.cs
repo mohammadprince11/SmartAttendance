@@ -17,11 +17,37 @@ public static class EmployeeShiftTypeStore
         public int EmployeeId { get; set; }
         public string EmployeeNo { get; set; } = string.Empty;
         public string EmployeeName { get; set; } = string.Empty;
-        public string Department { get; set; } = string.Empty;
-        public string Branch { get; set; } = string.Empty;
-        public int? ShiftTypeId { get; set; }
+        public string Position { get; set; } = string.Empty;
+        public string Department { get; set; } = string.Empty;   // الهيكلية
+        public string Branch { get; set; } = string.Empty;       // الموقع
+        public int? ShiftTypeId { get; set; }                    // التعيين اليدوي الصريح
         public string? ShiftName { get; set; }
         public string? ShiftColor { get; set; }
+
+        // سمات الموظف — لتقييم معايير الاستحقاق (المناوبة الفعّالة عند غياب التعيين)
+        public int DepartmentId { get; set; }
+        public int BranchId { get; set; }
+        public int? PositionId { get; set; }
+        public string? ContractType { get; set; }
+        public string? Nationality { get; set; }
+        public string? MaritalStatus { get; set; }
+
+        // المناوبة الفعّالة (تُحسب بالصفحة): يدوي ← استحقاق ← افتراضية
+        public string EffectiveSource { get; set; } = "Default"; // Manual | Eligibility | Default
+        public string? EffectiveShiftName { get; set; }
+        public string? EffectiveShiftColor { get; set; }
+
+        /// <summary>قاموس سمات الموظف بمفاتيح معايير الاستحقاق.</summary>
+        public IReadOnlyDictionary<string, string?> EligibilityAttrs => new Dictionary<string, string?>
+        {
+            ["Department"] = DepartmentId.ToString(),
+            ["Branch"] = BranchId.ToString(),
+            ["Position"] = PositionId?.ToString(),
+            ["ContractType"] = ContractType,
+            ["Nationality"] = Nationality,
+            ["MaritalStatus"] = MaritalStatus,
+            ["Employee"] = EmployeeId.ToString()
+        };
     }
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
@@ -67,11 +93,14 @@ END;
             dbContext,
             """
 SELECT e.Id AS EmployeeId, e.EmployeeNo, e.FullName,
+       ISNULL(hp.ArabicName, ISNULL(e.Position, N'')) AS PositionName,
        ISNULL(d.Name, N'') AS DepartmentName, ISNULL(b.Name, N'') AS BranchName,
+       e.DepartmentId, e.BranchId, e.PositionId, e.ContractType, e.Nationality, e.MaritalStatus,
        est.ShiftTypeId, s.Name AS ShiftName, s.ColorHex AS ShiftColor
 FROM Employees e
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
-LEFT JOIN Branches b ON b.Id = d.BranchId
+LEFT JOIN Branches b ON b.Id = e.BranchId
+LEFT JOIN HrJobPositions hp ON hp.Id = e.PositionId
 LEFT JOIN EmployeeShiftTypes est ON est.EmployeeId = e.Id
 LEFT JOIN ShiftTypes s ON s.Id = est.ShiftTypeId
 WHERE e.IsActive = 1
@@ -83,8 +112,15 @@ ORDER BY e.EmployeeNo;
                 EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
                 EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
                 EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+                Position = HrmsDatabase.GetString(reader, "PositionName"),
                 Department = HrmsDatabase.GetString(reader, "DepartmentName"),
                 Branch = HrmsDatabase.GetString(reader, "BranchName"),
+                DepartmentId = HrmsDatabase.GetInt(reader, "DepartmentId"),
+                BranchId = HrmsDatabase.GetInt(reader, "BranchId"),
+                PositionId = HrmsDatabase.GetNullableInt(reader, "PositionId"),
+                ContractType = HrmsDatabase.GetString(reader, "ContractType") is { Length: > 0 } ct ? ct : null,
+                Nationality = HrmsDatabase.GetString(reader, "Nationality") is { Length: > 0 } nat ? nat : null,
+                MaritalStatus = HrmsDatabase.GetString(reader, "MaritalStatus") is { Length: > 0 } ms ? ms : null,
                 ShiftTypeId = HrmsDatabase.GetNullableInt(reader, "ShiftTypeId"),
                 ShiftName = HrmsDatabase.GetString(reader, "ShiftName") is { Length: > 0 } n ? n : null,
                 ShiftColor = HrmsDatabase.GetString(reader, "ShiftColor") is { Length: > 0 } c ? c : null

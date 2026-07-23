@@ -55,6 +55,7 @@ public class IndexModel : PageModel
             filtered = filtered.Where(r =>
                 r.EmployeeNo.Contains(value, StringComparison.OrdinalIgnoreCase) ||
                 r.EmployeeName.Contains(value, StringComparison.OrdinalIgnoreCase) ||
+                r.Position.Contains(value, StringComparison.OrdinalIgnoreCase) ||
                 r.Department.Contains(value, StringComparison.OrdinalIgnoreCase) ||
                 r.Branch.Contains(value, StringComparison.OrdinalIgnoreCase)).ToList();
         }
@@ -64,6 +65,28 @@ public class IndexModel : PageModel
         if (PageNumber < 1) PageNumber = 1;
         if (PageNumber > TotalPages) PageNumber = TotalPages;
         Rows = filtered.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
+
+        // المناوبة الفعّالة لكل صف: تعيين يدوي ← مطابقة معايير استحقاق ← الافتراضية
+        // (نفس ترتيب DayAttendanceStore، لإظهار ما سيستخدمه المحلل فعلاً).
+        var eligibilityShifts = Shifts.Where(s => s.Eligibility.Count > 0).OrderBy(s => s.Id).ToList();
+        foreach (var row in Rows)
+        {
+            if (row.ShiftTypeId != null)
+            {
+                row.EffectiveSource = "Manual";
+                row.EffectiveShiftName = row.ShiftName;
+                row.EffectiveShiftColor = row.ShiftColor;
+                continue;
+            }
+            var match = eligibilityShifts.FirstOrDefault(s =>
+                ShiftTypeStore.EmployeeMatchesEligibility(s, row.EligibilityAttrs));
+            if (match != null)
+            {
+                row.EffectiveSource = "Eligibility";
+                row.EffectiveShiftName = match.Name;
+                row.EffectiveShiftColor = match.ColorHex;
+            }
+        }
     }
 
     public async Task<IActionResult> OnPostAssignAsync()

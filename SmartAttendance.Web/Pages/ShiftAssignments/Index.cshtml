@@ -44,6 +44,11 @@
     .sha-shift { display: inline-flex; align-items: center; gap: 6px; font-weight: 900; }
     .sha-shift i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
     .sha-none { color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .sha-pos { font-size: 11px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .sha-src { font-size: 10px; font-weight: 900; padding: 1px 7px; border-radius: 999px; margin-inline-start: 6px; vertical-align: 1px; }
+    .sha-src.Manual { background: rgba(18,217,227,.14); color: #12D9E3; }
+    .sha-src.Eligibility { background: rgba(96,165,250,.16); color: #60a5fa; }
+    .sha-src.Default { background: rgba(143,168,188,.14); color: var(--sa-muted, #8FA8BC); }
     .sha-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
     .sha-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
     .sha-pager { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; font-weight: 900; }
@@ -53,7 +58,7 @@
     <header class="sha-head">
         <div>
             <h1>مناوبات الموظفين</h1>
-            <p>تعيين المناوبة الثابتة لكل موظف — «تحديث الحضور» يحلل كل موظف بمناوبته، وغير المعيّن بالافتراضية.</p>
+            <p>تعيين المناوبة الثابتة لكل موظف — المحلل يستخدم: تعيين يدوي ← مطابقة معايير الاستحقاق ← المناوبة الافتراضية.</p>
         </div>
         <div style="display:flex;gap:8px">
             <span class="sha-stat" style="color:#4ade80">معيّن <b>@Model.AssignedCount</b></span>
@@ -67,7 +72,7 @@
     }
 
     <form method="get" class="sha-bar">
-        <label>بحث (رمز/اسم/قسم/فرع)
+        <label>بحث (رمز/اسم/منصب/هيكلية/موقع)
             <input type="text" name="Search" value="@Model.Search" placeholder="بحث..." />
         </label>
         <label>عرض
@@ -113,7 +118,7 @@
             {
                 <table class="sha-table">
                     <thead>
-                        <tr><th style="width:34px"></th><th>الرمز</th><th>الموظف</th><th>الفرع</th><th>القسم</th><th>المناوبة المعيّنة</th></tr>
+                        <tr><th style="width:34px"></th><th>الرمز</th><th>اسم الموظف</th><th>الهيكلية</th><th>الموقع</th><th>تهيئة المناوبات</th></tr>
                     </thead>
                     <tbody>
                         @foreach (var row in Model.Rows)
@@ -121,13 +126,18 @@
                             <tr>
                                 <td><input type="checkbox" name="SelectedIds" value="@row.EmployeeId" onchange="shaCount()" /></td>
                                 <td style="direction:ltr;text-align:start;font-weight:900">@row.EmployeeNo</td>
-                                <td><b>@row.EmployeeName</b></td>
-                                <td>@row.Branch</td>
-                                <td>@row.Department</td>
                                 <td>
-                                    @if (row.ShiftName != null)
+                                    <b>@row.EmployeeName</b>
+                                    @if (!string.IsNullOrWhiteSpace(row.Position))
+                                    { <div class="sha-pos">@row.Position</div> }
+                                </td>
+                                <td>@row.Department</td>
+                                <td>@row.Branch</td>
+                                <td>
+                                    @if (row.EffectiveShiftName != null)
                                     {
-                                        <span class="sha-shift"><i style="background:@(row.ShiftColor ?? "#12D9E3")"></i>@row.ShiftName</span>
+                                        <span class="sha-shift"><i style="background:@(row.EffectiveShiftColor ?? "#12D9E3")"></i>@row.EffectiveShiftName</span>
+                                        <span class="sha-src @row.EffectiveSource">@(row.EffectiveSource switch { "Manual" => "يدوي", "Eligibility" => "بالاستحقاق", _ => "" })</span>
                                     }
                                     else
                                     {
