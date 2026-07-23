@@ -258,6 +258,10 @@ END;
             }))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
+        // حركات الدخل للفترة (شاشة «حركات الدخل») — تُضاف كبنود إضافية بالقسيمة
+        var income = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.Income))
+            .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
+
         // --- بناء السطور ---
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
@@ -274,7 +278,8 @@ END;
             financial.TryGetValue(emp.Id, out var fin);
             if (fin?.Stop == true) continue;                 // مستبعَد من الاحتساب
             var basic = fin?.Basic ?? 0;
-            if (basic <= 0 && !allowances.ContainsKey(emp.Id)) continue; // لا راتب ولا علاوات
+            if (basic <= 0 && !allowances.ContainsKey(emp.Id) && !income.ContainsKey(emp.Id))
+                continue; // لا راتب ولا علاوات ولا حركات دخل
 
             // تنسيب الأساسي حسب أيام الحضور من الاعتماد الشهري
             months.TryGetValue(emp.Id, out var month);
@@ -303,8 +308,22 @@ END;
                 }
             }
 
-            var gross = Math.Round(proratedBasic + allowancesTotal, 2);
-            var tax = PayrollConfigStore.ComputeTax(gross, taxProfile);
+            // حركات الدخل (مكافآت/حوافز/بدلات لمرة) — بنود إضافية، بعضها غير خاضع للضريبة
+            decimal incomeTotal = 0, taxableIncome = 0;
+            if (income.TryGetValue(emp.Id, out var empIncome))
+            {
+                foreach (var t in empIncome)
+                {
+                    if (t.Amount == 0) continue;
+                    incomeTotal += t.Amount;
+                    if (t.Taxable) taxableIncome += t.Amount;
+                    comps.Add(new Component { ItemName = t.ItemName, Amount = t.Amount, IsAddition = true, Kind = "Income" });
+                }
+            }
+
+            var gross = Math.Round(proratedBasic + allowancesTotal + incomeTotal, 2);
+            var taxableBase = Math.Round(proratedBasic + allowancesTotal + taxableIncome, 2);
+            var tax = PayrollConfigStore.ComputeTax(taxableBase, taxProfile);
             var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(gross, gosiProfile);
 
             // خصومات المخالفات: مباشر بالدينار + أيام×يومي + ساعات×ساعي

@@ -84,6 +84,7 @@ public static class PageCatalog
         new("Payroll", "الرواتب", new[]
         {
             new CatalogPage("Payroll.Runs", "المسير"),
+            new CatalogPage("Payroll.Income", "حركات الدخل"),
             new CatalogPage("Payroll.SalaryItems", "عناصر الراتب"),
             new CatalogPage("Payroll.Settings", "تهيئة الضريبة والضمان"),
             new CatalogPage("Payroll.TaxSocial", "الضرائب والضمان"),
