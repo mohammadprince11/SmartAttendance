@@ -2450,8 +2450,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784812427.8006637,
-    "ast_hash": "eb11c1e6ddc0fcb4608ba66fc2f08286",
+    "mtime": 1784828988.0044389,
+    "ast_hash": "673b768b8ea43d3c5def262fb024bc0f",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3430,8 +3430,8 @@
     "semantic_hash": ""
   },
   "docs/kayan-attendance-module-study.md": {
-    "mtime": 1784827632.2663999,
-    "ast_hash": "a5a5592bd25d4fa6ca6410769bbcf77e",
+    "mtime": 1784829291.3510592,
+    "ast_hash": "75cc71040affb7fd4402bb59b321a908",
     "semantic_hash": ""
   },
   "docs/kayan-payroll-module-study.md": {
@@ -3560,8 +3560,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/DayAttendanceStore.cs": {
-    "mtime": 1784826276.2612946,
-    "ast_hash": "50a249df76e83377532359243cd2e0c8",
+    "mtime": 1784828957.4891834,
+    "ast_hash": "d4be139ee4e1741ff84849937d87e524",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/DayAttendance/Index.cshtml": {
@@ -3620,13 +3620,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/ShiftAssignments/Index.cshtml": {
-    "mtime": 1784827387.7264998,
-    "ast_hash": "03653a08f912194b817a3ebdb246317d",
+    "mtime": 1784828176.875584,
+    "ast_hash": "e7532108463fbbef099cdfba015f4777",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/ShiftAssignments/Index.cshtml.cs": {
-    "mtime": 1784827380.2867634,
-    "ast_hash": "2a5cad6cad71b4c38a2ae273abe228af",
+    "mtime": 1784828107.7795582,
+    "ast_hash": "b3ccbb1e46f7d9a79ca0b57c6b4bc384",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/MonthAttendanceStore.cs": {
@@ -3942,6 +3942,21 @@
   "SmartAttendance.Web/Infrastructure/Hrms/AttendanceTransactionStore.cs": {
     "mtime": 1784822860.273101,
     "ast_hash": "c7aea7b776d4f11106341e53e42b54ea",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/ShiftOverrideStore.cs": {
+    "mtime": 1784828767.1161127,
+    "ast_hash": "34121b7cf2f0f6b12a38b341bb5671af",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/ShiftOverrides/Index.cshtml": {
+    "mtime": 1784828900.4362905,
+    "ast_hash": "32c8abbe9e4797dea0c39b2d6ffaebb2",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/ShiftOverrides/Index.cshtml.cs": {
+    "mtime": 1784828830.6749995,
+    "ast_hash": "b93df1a691609a05e7bbdd78c53ef21d",
     "semantic_hash": ""
   }
 }
