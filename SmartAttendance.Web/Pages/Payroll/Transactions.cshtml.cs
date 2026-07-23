@@ -20,6 +20,14 @@ public class TransactionsModel : PageModel
         _db = db;
     }
 
+    /// <summary>
+    /// إظهار الفلاتر غير المنفَّذة (وحدة عمل · الهيكلية · كفيل · نوع العقد ·
+    /// مجموعة الموظفين · تاريخ التعيين · حالة الموظف · رقم الدفعة · حالة الطلب).
+    /// مطفأة بنسخة الإطلاق: خانة معطّلة بشارة «قريباً» تُقرأ كمنتج غير مكتمل.
+    /// تُرفع لـtrue عند تنفيذ الفلاتر فعلياً — الماركب محفوظ كما هو.
+    /// </summary>
+    public bool ShowUpcomingFilters => false;
+
     [BindProperty(SupportsGet = true)]
     public string Type { get; set; } = PayrollTransactionStore.Income;   // Income | Deduction
 

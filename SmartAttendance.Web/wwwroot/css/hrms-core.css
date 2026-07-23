@@ -115,7 +115,10 @@
 .hrms-btn-primary {
     background: var(--sa-primary);
     border-color: var(--sa-primary);
-    color: #fff !important;
+    /* لون النص فوق الأساسي يحسبه محرك الهوية بالتباين (ThemeCompiler.OnPrimaryHex)
+       فيبقى مقروءاً مهما كانت ألوان علامة العميل. كان #fff مفروضاً فأعطى نسبة
+       2.11 على الفيروزي الافتراضي (المطلوب 4.5). */
+    color: var(--text-on-primary, #04141d) !important;
 }
 
 .hrms-btn-secondary {
@@ -706,3 +709,26 @@ html[data-theme="light"] body .rec-tab.active, html[data-theme="light"] body .zx
     color: #0e7490; background: rgba(14, 116, 144, .1); border-color: rgba(14, 116, 144, .35);
 }
 html[data-theme="light"] body .dat-num, html[data-theme="light"] body .mat-num { color: inherit; }
+
+/* ==========================================================================
+   حراس تجربة المستخدم (zynora-ux-guards.js): حالة الإرسال وأخطاء الحقول
+   ========================================================================== */
+.zy-busy {
+    opacity: .72;
+    cursor: progress !important;
+    pointer-events: none;
+}
+
+.zy-invalid {
+    border-color: var(--sa-danger, #f87171) !important;
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, .16);
+}
+
+.zy-field-error {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.5;
+    color: var(--sa-danger, #f87171);
+}

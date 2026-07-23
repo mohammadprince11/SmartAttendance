@@ -219,27 +219,32 @@
                         { <option value="@s" selected="@(Model.Branch == s)">@s</option> }
                     </select>
                 </label>
-                <label class="tx-fld soon"><span>وحدة عمل <span class="tx-soon">قريباً</span></span>
-                    <select disabled><option>الكل</option></select>
-                </label>
-                <label class="tx-fld soon"><span>الهيكلية <span class="tx-soon">قريباً</span></span>
-                    <select disabled><option>الكل</option></select>
-                </label>
-                <label class="tx-fld soon"><span>كفيل <span class="tx-soon">قريباً</span></span>
-                    <select disabled><option>الكل</option></select>
-                </label>
-                <label class="tx-fld soon"><span>نوع العقد <span class="tx-soon">قريباً</span></span>
-                    <select disabled><option>الكل</option></select>
-                </label>
-                <label class="tx-fld soon"><span>مجموعة الموظفين <span class="tx-soon">قريباً</span></span>
-                    <select disabled><option>الكل</option></select>
-                </label>
-                <label class="tx-fld soon"><span>تاريخ التعيين <span class="tx-soon">قريباً</span></span>
-                    <input type="date" disabled />
-                </label>
-                <label class="tx-fld soon"><span>حالة الموظف <span class="tx-soon">قريباً</span></span>
-                    <select disabled><option>نشط</option></select>
-                </label>
+                @* فلاتر غير منفَّذة بعد — مخفية خلف ShowUpcomingFilters حتى تُبنى،
+                   فلا يرى العميل خانات معطّلة بشارة «قريباً» في نسخة الإطلاق. *@
+                @if (Model.ShowUpcomingFilters)
+                {
+                    <label class="tx-fld soon"><span>وحدة عمل <span class="tx-soon">قريباً</span></span>
+                        <select disabled><option>الكل</option></select>
+                    </label>
+                    <label class="tx-fld soon"><span>الهيكلية <span class="tx-soon">قريباً</span></span>
+                        <select disabled><option>الكل</option></select>
+                    </label>
+                    <label class="tx-fld soon"><span>كفيل <span class="tx-soon">قريباً</span></span>
+                        <select disabled><option>الكل</option></select>
+                    </label>
+                    <label class="tx-fld soon"><span>نوع العقد <span class="tx-soon">قريباً</span></span>
+                        <select disabled><option>الكل</option></select>
+                    </label>
+                    <label class="tx-fld soon"><span>مجموعة الموظفين <span class="tx-soon">قريباً</span></span>
+                        <select disabled><option>الكل</option></select>
+                    </label>
+                    <label class="tx-fld soon"><span>تاريخ التعيين <span class="tx-soon">قريباً</span></span>
+                        <input type="date" disabled />
+                    </label>
+                    <label class="tx-fld soon"><span>حالة الموظف <span class="tx-soon">قريباً</span></span>
+                        <select disabled><option>نشط</option></select>
+                    </label>
+                }
             </div>
 
             @* ===== تصفية الحركة ===== *@
@@ -274,12 +279,17 @@
                         <input type="number" name="MaxAmount" placeholder="إلى" value="@(Model.MaxAmount)" step="0.01" />
                     </span>
                 </label>
-                <label class="tx-fld soon"><span>رقم الدفعة (المسير) <span class="tx-soon">قريباً</span></span>
-                    <select disabled><option>الكل</option></select>
-                </label>
-                <label class="tx-fld soon"><span>حالة الطلب (الموافقات) <span class="tx-soon">قريباً</span></span>
-                    <select disabled><option>الكل</option></select>
-                </label>
+                @* فلاتر غير منفَّذة بعد — مخفية خلف ShowUpcomingFilters حتى تُبنى،
+                   فلا يرى العميل خانات معطّلة بشارة «قريباً» في نسخة الإطلاق. *@
+                @if (Model.ShowUpcomingFilters)
+                {
+                    <label class="tx-fld soon"><span>رقم الدفعة (المسير) <span class="tx-soon">قريباً</span></span>
+                        <select disabled><option>الكل</option></select>
+                    </label>
+                    <label class="tx-fld soon"><span>حالة الطلب (الموافقات) <span class="tx-soon">قريباً</span></span>
+                        <select disabled><option>الكل</option></select>
+                    </label>
+                }
             </div>
 
             <div class="tx-adv-actions">

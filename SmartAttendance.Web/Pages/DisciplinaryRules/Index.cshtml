@@ -15,7 +15,6 @@
 <link rel="stylesheet" href="~/css/nexora-disciplinary-designer-preview-safe-v1.css" asp-append-version="true" /><section class="nxpen-page nxpen-wide" dir="rtl">
     <header class="nxpen-hero">
         <div class="nxpen-hero-copy">
-            <span>HR SETTINGS / DISCIPLINARY CONFIGURATION</span>
             <h1>إعدادات المخالفات</h1>
             <p>نبني هنا دستور المخالفات للشركة: هل تحتاج لجنة موافقات؟ هل يحق للموظف الاعتراض؟ ما هي الفئات والمخالفات؟ وما هو شكل فورمة العقوبة التي ستصدر باسم الشركة؟</p>
         </div>
@@ -83,7 +82,7 @@
                         </article>
 
                         <article class="nxpen-form-shell">
-                            <header><div><strong>هيدر الفورمة</strong><p>إذا تركته فارغاً سيظهر هيدر تلقائي يحتوي شعار NEXORA وبيانات النظام.</p></div><small>Header</small></header>
+                            <header><div><strong>هيدر الفورمة</strong><p>إذا تركته فارغاً سيظهر هيدر تلقائي يحتوي شعار شركتك وبيانات النظام.</p></div><small>Header</small></header>
                             <textarea name="formHeader" rows="7" placeholder="شركة الرغد الدولية\nقسم الموارد البشرية\nإشعار مخالفة وجزاء">@Model.Settings.FormHeader</textarea>
                         </article>
 
@@ -539,7 +538,7 @@ else if (Model.Settings.A4FormFileType == "Pdf")
                                     }
                                     else
                                     {
-                                        <div class="nxpen-auto-footer"><strong>@Model.Settings.ApprovingAuthorityName</strong><small>تم إنشاء هذا الإشعار من نظام NEXORA HR</small></div>
+                                        <div class="nxpen-auto-footer"><strong>@Model.Settings.ApprovingAuthorityName</strong><small>تم إنشاء هذا الإشعار آلياً من نظام الموارد البشرية</small></div>
                                     }
 
                                     @foreach (var block in Model.TextBlocks.Where(x => x.Area == "Footer" && x.IsActive))
@@ -610,7 +609,7 @@ else
                             <footer class="nxpen-paper-footer">
                                 @if (string.IsNullOrWhiteSpace(Model.Settings.FormFooter))
                                 {
-                                    <span>@Model.Settings.ApprovingAuthorityName</span><small>تم إنشاء هذا الإشعار من نظام NEXORA HR</small>
+                                    <span>@Model.Settings.ApprovingAuthorityName</span><small>تم إنشاء هذا الإشعار آلياً من نظام الموارد البشرية</small>
                                 }
                                 else
                                 {
