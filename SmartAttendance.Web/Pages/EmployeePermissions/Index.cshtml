@@ -24,15 +24,15 @@
     .employee-card {
         display: block;
         padding: 12px;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--sa-border, #e2e8f0);
         border-radius: 12px;
-        background: #ffffff;
-        color: #0f172a;
+        background: var(--sa-surface, #ffffff);
+        color: var(--sa-text, #0f172a);
         text-decoration: none;
     }
 
     .employee-card.active {
-        border-color: #2563eb;
+        border-color: var(--sa-primary, #2563eb);
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
     }
 
@@ -42,7 +42,7 @@
     }
 
     .employee-card .meta {
-        color: #64748b;
+        color: var(--sa-muted, #64748b);
         font-size: 12px;
     }
 
@@ -52,16 +52,16 @@
         padding: 3px 8px;
         font-size: 11px;
         border-radius: 999px;
-        background: #e0f2fe;
-        color: #075985;
+        background: var(--sa-primary-soft, #e0f2fe);
+        color: var(--sa-info, #075985);
     }
 
     .permission-group {
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--sa-border, #e2e8f0);
         border-radius: 14px;
         padding: 14px;
         margin-bottom: 14px;
-        background: #ffffff;
+        background: var(--sa-surface, #ffffff);
     }
 
     .permission-group h3 {
@@ -74,7 +74,7 @@
         grid-template-columns: 24px 1fr;
         gap: 10px;
         padding: 9px 0;
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid var(--sa-border, #f1f5f9);
     }
 
     .permission-check:first-of-type {
@@ -83,11 +83,11 @@
 
     .permission-code {
         font-weight: 700;
-        color: #0f172a;
+        color: var(--sa-text, #0f172a);
     }
 
     .permission-desc {
-        color: #64748b;
+        color: var(--sa-muted, #64748b);
         font-size: 12px;
         margin-top: 3px;
     }
