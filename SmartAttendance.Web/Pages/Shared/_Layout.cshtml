@@ -457,8 +457,11 @@
                         <a asp-page="/Payroll/Runs" class="nexora-nav-link @(IsUnder("/Payroll/Runs") || IsUnder("/Payroll/RunDetail") ? "active nexora-active" : "")">
                             <span>المسير</span>
                         </a>
-                        <a asp-page="/Payroll/Income" class="nexora-nav-link @(IsUnder("/Payroll/Income") ? "active nexora-active" : "")">
+                        <a href="/Payroll/Transactions?type=Income" class="nexora-nav-link">
                             <span>حركات الدخل</span>
+                        </a>
+                        <a href="/Payroll/Transactions?type=Deduction" class="nexora-nav-link">
+                            <span>حركات الاقتطاع</span>
                         </a>
                         <a asp-page="/Payroll/SalaryItems" class="nexora-nav-link @(IsUnder("/Payroll/SalaryItems") ? "active nexora-active" : "")">
                             <span>عناصر الراتب</span>

@@ -1,0 +1,394 @@
+@page "/Payroll/Transactions"
+@model SmartAttendance.Web.Pages.Payroll.TransactionsModel
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = Model.TypeTitle;
+    var months = new[] { "يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر" };
+    var acc = Model.IsDeduction ? "#f87171" : "#4ade80";
+    var catalogJson = JsonSerializer.Serialize(Model.Catalog.Select(i => new { i.Id, i.Name, i.Taxable, i.DefaultValue }));
+    string J(object o) => JsonSerializer.Serialize(o);
+    string Dt(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .tx-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
+    .tx-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .tx-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .tx-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .tx-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .tx-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
+    .tx-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .tx-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+    .tx-seg { display:inline-flex; border:1px solid rgba(73,111,151,.3); border-radius:12px; overflow:hidden; }
+    .tx-seg a { padding:7px 16px; font-size:13px; font-weight:900; color:inherit; text-decoration:none; }
+    .tx-seg a.on { background:var(--acc); color:#04141d; }
+
+    .tx-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+    .tx-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
+    .tx-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
+    .tx-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .tx-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+
+    .tx-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    .tx-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); flex-wrap:wrap; }
+    .tx-filter select, .tx-filter input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; }
+    html[data-theme="light"] .tx-filter select, html[data-theme="light"] .tx-filter input { background:#fff; }
+
+    .tx-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .tx-table { width:100%; border-collapse:collapse; font-size:13px; min-width:960px; }
+    .tx-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .tx-table th { background:#f2f7fb; }
+    .tx-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
+    .tx-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
+    .tx-table tfoot td { padding:12px 14px; font-weight:1000; border-top:2px solid color-mix(in srgb,var(--acc) 40%,transparent); background:rgba(0,0,0,.1); }
+    .tx-ref { direction:ltr; font-weight:900; font-size:12px; }
+    .tx-emp b { font-weight:900; } .tx-emp span { display:block; font-size:11px; color:var(--sa-muted,#8FA8BC); }
+    .tx-amt { direction:ltr; font-weight:900; color:var(--acc); text-align:start; }
+    .tx-chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:900; }
+    .tx-chip.in { background:rgba(18,217,227,.1); color:#12D9E3; }
+    .tx-chip.out { background:rgba(250,204,21,.14); color:#facc15; }
+    .tx-chip.ap { background:rgba(74,222,128,.14); color:#4ade80; }
+    .tx-chip.dr { background:rgba(143,168,188,.16); color:#8FA8BC; }
+    .tx-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .tx-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
+    .tx-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
+    .tx-actions { display:flex; gap:6px; justify-content:flex-end; } .tx-actions form { display:inline; }
+
+    /* النموذج */
+    .tx-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .tx-form select, .tx-form input, .tx-form textarea { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; font-family:inherit; }
+    html[data-theme="light"] .tx-form select, html[data-theme="light"] .tx-form input, html[data-theme="light"] .tx-form textarea { background:#fff; }
+    .tx-toggle { display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border:1px solid rgba(73,111,151,.2); border-radius:10px; font-size:13px; font-weight:900; }
+    .tx-toggle input { width:auto; min-height:auto; }
+    .tx-seg2 { display:inline-flex; border:1px solid rgba(73,111,151,.3); border-radius:10px; overflow:hidden; }
+    .tx-seg2 label { flex-direction:row; padding:8px 14px; cursor:pointer; margin:0; }
+    .tx-seg2 label.on { background:var(--acc); color:#04141d; }
+    .tx-seg2 input { display:none; }
+    .tx-sub { display:none; flex-direction:column; gap:10px; padding:10px 12px; border:1px dashed rgba(73,111,151,.3); border-radius:10px; background:rgba(0,0,0,.08); }
+    .tx-sub.show { display:flex; }
+    .tx-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+</style>
+
+<section class="tx-page" dir="rtl">
+    <header class="tx-head">
+        <div>
+            <h1>@Model.TypeTitle</h1>
+            <p>حركات مالية فردية لكل موظف×فترة تُغذّي المسير — نوع الدفعة، أثر رجعي، جدولة أقساط، مركز تكلفة.</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span class="tx-seg">
+                <a href="/Payroll/Transactions?type=Income" class="@(Model.IsDeduction ? "" : "on")">دخل</a>
+                <a href="/Payroll/Transactions?type=Deduction" class="@(Model.IsDeduction ? "on" : "")">اقتطاع</a>
+            </span>
+            <a class="tx-btn ghost" href="/Payroll/Runs">← المسير</a>
+            <button type="button" class="tx-btn" onclick="txOpen(0)">+ حركة جديدة</button>
+        </div>
+    </header>
+
+    <div class="tx-kpis">
+        <div class="tx-kpi"><b>@Model.TotalCount</b><span>عدد الحركات</span></div>
+        <div class="tx-kpi"><b>@Model.TotalAmount.ToString("#,0.##")</b><span>الإجمالي للفترة</span></div>
+        <div class="tx-kpi"><b>@Model.EmployeesCovered</b><span>الموظفون المشمولون</span></div>
+        <div class="tx-kpi"><b>@($"{Model.Month:00}/{Model.Year}")</b><span>الفترة الحالية</span></div>
+    </div>
+
+    <form method="get" class="tx-bar">
+        <input type="hidden" name="Type" value="@Model.Type" />
+        <div class="tx-filter">
+            <span>الفترة:</span>
+            <select name="Month" onchange="this.form.submit()">
+                @for (var m = 1; m <= 12; m++)
+                { <option value="@m" selected="@(m == Model.Month)">@months[m-1]</option> }
+            </select>
+            <select name="Year" onchange="this.form.submit()">
+                @for (var y = DateTime.Today.Year - 3; y <= DateTime.Today.Year + 1; y++)
+                { <option value="@y" selected="@(y == Model.Year)">@y</option> }
+            </select>
+            <select name="Item" onchange="this.form.submit()">
+                <option value="">كل البنود</option>
+                @foreach (var i in Model.Catalog)
+                { <option value="@i.Id" selected="@(Model.Item == i.Id)">@i.Name</option> }
+            </select>
+            <select name="Status" onchange="this.form.submit()">
+                <option value="">كل الحالات</option>
+                <option value="Approved" selected="@(Model.Status == "Approved")">معتمد</option>
+                <option value="Draft" selected="@(Model.Status == "Draft")">مسودة</option>
+            </select>
+        </div>
+        <div class="tx-filter">
+            <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/بند/رقم مرجعي" style="min-width:220px" />
+            <button type="submit" class="tx-btn ghost sm">بحث</button>
+        </div>
+    </form>
+
+    @if (TempData["PayrollMessage"] != null)
+    {
+        <div class="tx-alert @((TempData["PayrollOk"] as bool?) == false ? "err" : "")">@TempData["PayrollMessage"]</div>
+    }
+
+    <form method="post" asp-page-handler="DeleteMany">
+    <input type="hidden" name="Type" value="@Model.Type" />
+    <div class="tx-card">
+        @if (Model.Items.Count == 0)
+        {
+            <div class="tx-empty">لا حركات @(Model.IsDeduction ? "اقتطاع" : "دخل") لفترة @($"{Model.Month:00}/{Model.Year}") — أضف بـ«+ حركة جديدة».</div>
+        }
+        else
+        {
+            <table class="tx-table">
+                <thead>
+                    <tr>
+                        <th style="width:34px"><input type="checkbox" onclick="txAll(this)" /></th>
+                        <th>الرقم المرجعي</th><th>الموظف</th><th>@Model.ItemLabel</th><th>المصدر</th>
+                        <th>نوع الدفعة</th><th>تاريخ الحركة</th><th>المبلغ</th><th>الحالة</th><th style="text-align:end">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in Model.Items)
+                    {
+                        <tr>
+                            <td><input type="checkbox" name="SelectedIds" value="@t.Id" /></td>
+                            <td class="tx-ref">@t.ReferenceNo</td>
+                            <td class="tx-emp"><b>@t.EmployeeName</b><span>@t.EmployeeNo</span></td>
+                            <td><b>@t.ItemName</b></td>
+                            <td style="font-size:12px">@t.Source</td>
+                            <td><span class="tx-chip @(t.PaymentType == "OutSalary" ? "out" : "in")">@t.PaymentTypeLabel</span></td>
+                            <td class="tx-ref">@(t.TransactionDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                            <td class="tx-amt">@t.Amount.ToString("#,0.##")</td>
+                            <td><span class="tx-chip @(t.Status == "Approved" ? "ap" : "dr")">@t.StatusText</span></td>
+                            <td>
+                                <div class="tx-actions">
+                                    <button type="button" class="tx-btn ghost sm" onclick='txOpen(@t.Id, @Html.Raw(J(new {
+                                        t.EmployeeId, t.SalaryItemId, t.ItemName, t.Amount, t.Taxable, t.PaymentType,
+                                        TransactionDate=Dt(t.TransactionDate), EffectiveDate=Dt(t.EffectiveDate),
+                                        t.IsUnlimited, ValidFrom=Dt(t.ValidFrom), ValidTo=Dt(t.ValidTo),
+                                        t.IsRetroactive, RetroactiveDate=Dt(t.RetroactiveDate), t.UpdateSocialSecurity,
+                                        SocialSecurityToDate=Dt(t.SocialSecurityToDate), SalaryFromDate=Dt(t.SalaryFromDate), SalaryToDate=Dt(t.SalaryToDate),
+                                        t.IsScheduled, t.InstallmentMode, t.InstallmentCount, t.InstallmentAmount, t.InstallmentMonths, FirstInstallmentDate=Dt(t.FirstInstallmentDate),
+                                        t.ChangeCostCenter, t.CostCenter, t.Note, t.Status, t.Year, t.Month }))')>تعديل</button>
+                                    <button type="button" class="tx-btn ghost sm" style="color:#f87171"
+                                            onclick="if(confirm('حذف الحركة؟')){this.closest('tr').querySelector('[name=SelectedIds]').checked=true;this.closest('form').querySelector('[name=SelectedIds]');document.getElementById('tx-del-'+@t.Id).submit();}">حذف</button>
+                                </div>
+                                <form id="tx-del-@t.Id" method="post" asp-page-handler="Delete" style="display:none"><input type="hidden" name="Type" value="@Model.Type" /><input type="hidden" name="id" value="@t.Id" /></form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr><td colspan="7">الإجمالي (@Model.Items.Count حركة)</td><td class="tx-amt">@Model.TotalAmount.ToString("#,0.##")</td><td colspan="2"></td></tr>
+                </tfoot>
+            </table>
+        }
+    </div>
+    @if (Model.Items.Count > 0)
+    {
+        <div style="display:flex;justify-content:flex-start">
+            <button type="submit" class="tx-btn ghost sm" style="color:#f87171" onclick="return confirm('حذف الحركات المحددة؟')">حذف العناصر المختارة</button>
+        </div>
+    }
+    </form>
+
+    @* ===== نموذج حركة جديدة (مطابق كيان) ===== *@
+    <div class="hrms-slideover-backdrop" id="tx-backdrop" onclick="txClose()"></div>
+    <aside class="hrms-slideover wide" id="tx-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="tx-title">حركة جديدة</h2>
+            <button type="button" class="hrms-slideover-close" onclick="txClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Save" class="tx-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="Type" value="@Model.Type" />
+                <input type="hidden" name="Id" id="tx-Id" value="0" />
+                <input type="hidden" name="ItemName" id="tx-ItemName" />
+                <input type="hidden" name="SalaryItemId" id="tx-SalaryItemId" value="0" />
+                <input type="hidden" name="PaymentType" id="tx-PaymentType" value="InSalary" />
+
+                <label>اسم الموظف *
+                    <select name="EmployeeId" id="tx-EmployeeId" required>
+                        <option value="">— اختر الموظف —</option>
+                        @foreach (var e in Model.Employees)
+                        { <option value="@e.Id">@e.SearchText</option> }
+                    </select>
+                </label>
+
+                <label>نوع الدفعة
+                    <span class="tx-seg2" id="tx-pt">
+                        <label class="on" data-pt="InSalary" onclick="txSetPt('InSalary')"><input type="radio" name="_pt" checked /> داخل الراتب</label>
+                        <label data-pt="OutSalary" onclick="txSetPt('OutSalary')"><input type="radio" name="_pt" /> خارج الراتب</label>
+                    </span>
+                </label>
+
+                <label>@Model.ItemLabel *
+                    <select id="tx-ItemSelect" onchange="txItemChanged()">
+                        <option value="">— اختر من الكتالوج —</option>
+                        @foreach (var i in Model.Catalog)
+                        { <option value="@i.Id">@i.Name</option> }
+                        <option value="__custom">أخرى (نص حر)…</option>
+                    </select>
+                </label>
+                <label id="tx-CustomWrap" hidden>اسم البند (نص حر)
+                    <input type="text" id="tx-CustomName" oninput="document.getElementById('tx-ItemName').value=this.value" />
+                </label>
+
+                <div class="tx-grid2">
+                    <label>المبلغ / القيمة *<input type="number" name="Amount" id="tx-Amount" step="0.01" min="0" required /></label>
+                    <label style="flex-direction:row;align-items:center;gap:6px;min-height:38px"><input type="checkbox" name="Taxable" value="true" id="tx-Taxable" checked /> خاضع للضريبة</label>
+                </div>
+
+                <div class="tx-grid2">
+                    <label>الشهر
+                        <select name="FMonth" id="tx-FMonth">
+                            @for (var m = 1; m <= 12; m++)
+                            { <option value="@m" selected="@(m == Model.Month)">@months[m-1]</option> }
+                        </select>
+                    </label>
+                    <label>السنة<input type="number" name="FYear" id="tx-FYear" min="2000" max="2100" value="@Model.Year" /></label>
+                </div>
+
+                <div class="tx-grid2">
+                    <label>تاريخ الحركة<input type="date" name="TransactionDate" id="tx-TransactionDate" /></label>
+                    <label>تاريخ التنفيذ<input type="date" name="EffectiveDate" id="tx-EffectiveDate" /></label>
+                </div>
+
+                @* غير محدود *@
+                <div class="tx-toggle"><span>غير محدود (متكرر بلا نهاية)</span><input type="checkbox" name="IsUnlimited" value="true" id="tx-IsUnlimited" onchange="txToggle('unlimited', !this.checked)" /></div>
+                <div class="tx-sub" id="tx-sub-unlimited">
+                    <div class="tx-grid2">
+                        <label>صالح من<input type="date" name="ValidFrom" id="tx-ValidFrom" /></label>
+                        <label>صالح إلى<input type="date" name="ValidTo" id="tx-ValidTo" /></label>
+                    </div>
+                </div>
+
+                @* بأثر رجعي *@
+                <div class="tx-toggle"><span>بأثر رجعي</span><input type="checkbox" name="IsRetroactive" value="true" id="tx-IsRetroactive" onchange="txToggle('retro', this.checked)" /></div>
+                <div class="tx-sub" id="tx-sub-retro">
+                    <label>تاريخ الأثر الرجعي<input type="date" name="RetroactiveDate" id="tx-RetroactiveDate" /></label>
+                    <div class="tx-toggle"><span>تحديث راتب الضمان الاجتماعي</span><input type="checkbox" name="UpdateSocialSecurity" value="true" id="tx-UpdateSocialSecurity" onchange="txToggle('ss', this.checked)" /></div>
+                    <div class="tx-sub" id="tx-sub-ss"><label>الحساب حتى التاريخ<input type="date" name="SocialSecurityToDate" id="tx-SocialSecurityToDate" /></label></div>
+                    <div class="tx-grid2">
+                        <label>راتب رجعي من<input type="date" name="SalaryFromDate" id="tx-SalaryFromDate" /></label>
+                        <label>راتب رجعي إلى<input type="date" name="SalaryToDate" id="tx-SalaryToDate" /></label>
+                    </div>
+                </div>
+
+                @* جدولة / أقساط *@
+                <div class="tx-toggle"><span>جدولة (أقساط)</span><input type="checkbox" name="IsScheduled" value="true" id="tx-IsScheduled" onchange="txToggle('sched', this.checked)" /></div>
+                <div class="tx-sub" id="tx-sub-sched">
+                    <label>طريقة الجدولة
+                        <select name="InstallmentMode" id="tx-InstallmentMode">
+                            <option value="ByValue">حسب القيمة</option>
+                            <option value="ByMonth">حسب الشهر</option>
+                        </select>
+                    </label>
+                    <div class="tx-grid2">
+                        <label>عدد الأقساط<input type="number" name="InstallmentCount" id="tx-InstallmentCount" min="1" /></label>
+                        <label>قيمة القسط<input type="number" name="InstallmentAmount" id="tx-InstallmentAmount" step="0.01" /></label>
+                    </div>
+                    <div class="tx-grid2">
+                        <label>عدد الأشهر<input type="number" name="InstallmentMonths" id="tx-InstallmentMonths" min="1" /></label>
+                        <label>تاريخ أول قسط<input type="date" name="FirstInstallmentDate" id="tx-FirstInstallmentDate" /></label>
+                    </div>
+                </div>
+
+                @* مركز التكلفة *@
+                <div class="tx-toggle"><span>تغيير مركز التكلفة</span><input type="checkbox" name="ChangeCostCenter" value="true" id="tx-ChangeCostCenter" onchange="txToggle('cc', this.checked)" /></div>
+                <div class="tx-sub" id="tx-sub-cc"><label>مركز التكلفة<input type="text" name="CostCenter" id="tx-CostCenter" /></label></div>
+
+                <label>الحالة
+                    <select name="Status" id="tx-Status">
+                        <option value="Approved">معتمد</option>
+                        <option value="Draft">مسودة</option>
+                    </select>
+                </label>
+
+                <label>ملاحظة<textarea name="Note" id="tx-Note" rows="2"></textarea></label>
+
+                <button type="submit" class="tx-btn">حفظ الحركة</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script>
+        var TX_ITEMS = @Html.Raw(catalogJson);
+
+        function txAll(cb){ document.querySelectorAll('[name=SelectedIds]').forEach(function(x){x.checked=cb.checked;}); }
+
+        function txSetPt(v){
+            document.getElementById('tx-PaymentType').value = v;
+            document.querySelectorAll('#tx-pt label').forEach(function(l){ l.classList.toggle('on', l.getAttribute('data-pt')===v); });
+        }
+        function txToggle(key, show){ document.getElementById('tx-sub-'+key).classList.toggle('show', !!show); }
+
+        function txItemChanged(){
+            var sel = document.getElementById('tx-ItemSelect'), val = sel.value;
+            var cw = document.getElementById('tx-CustomWrap');
+            if (val === '__custom'){ cw.hidden=false; document.getElementById('tx-SalaryItemId').value=0; document.getElementById('tx-ItemName').value=document.getElementById('tx-CustomName').value||''; return; }
+            cw.hidden=true;
+            if (!val){ document.getElementById('tx-ItemName').value=''; document.getElementById('tx-SalaryItemId').value=0; return; }
+            var it = TX_ITEMS.find(function(x){ return String(x.Id)===val; });
+            if (it){
+                document.getElementById('tx-ItemName').value = it.Name;
+                document.getElementById('tx-SalaryItemId').value = it.Id;
+                document.getElementById('tx-Taxable').checked = !!it.Taxable;
+                if (it.DefaultValue && !document.getElementById('tx-Amount').value) document.getElementById('tx-Amount').value = it.DefaultValue;
+            }
+        }
+
+        function setVal(id, v){ var el=document.getElementById(id); if(el) el.value = (v==null?'':v); }
+        function setChk(id, v){ var el=document.getElementById(id); if(el) el.checked = !!v; }
+
+        function txOpen(id, d){
+            var f = document.querySelector('#tx-slide form'); f.reset();
+            document.getElementById('tx-Id').value = id || 0;
+            document.getElementById('tx-title').textContent = id ? 'تعديل حركة' : 'حركة جديدة';
+            ['unlimited','retro','ss','sched','cc'].forEach(function(k){ document.getElementById('tx-sub-'+k).classList.remove('show'); });
+            document.getElementById('tx-CustomWrap').hidden = true;
+            document.getElementById('tx-ItemSelect').value=''; document.getElementById('tx-ItemName').value=''; document.getElementById('tx-SalaryItemId').value=0;
+            txSetPt('InSalary');
+
+            if (id && d){
+                setVal('tx-EmployeeId', d.EmployeeId);
+                setVal('tx-FMonth', d.Month); setVal('tx-FYear', d.Year);
+                setVal('tx-Amount', d.Amount); setChk('tx-Taxable', d.Taxable);
+                txSetPt(d.PaymentType || 'InSalary');
+                setVal('tx-TransactionDate', d.TransactionDate); setVal('tx-EffectiveDate', d.EffectiveDate);
+                setChk('tx-IsUnlimited', d.IsUnlimited); txToggle('unlimited', !d.IsUnlimited);
+                setVal('tx-ValidFrom', d.ValidFrom); setVal('tx-ValidTo', d.ValidTo);
+                setChk('tx-IsRetroactive', d.IsRetroactive); txToggle('retro', d.IsRetroactive);
+                setVal('tx-RetroactiveDate', d.RetroactiveDate);
+                setChk('tx-UpdateSocialSecurity', d.UpdateSocialSecurity); txToggle('ss', d.UpdateSocialSecurity);
+                setVal('tx-SocialSecurityToDate', d.SocialSecurityToDate);
+                setVal('tx-SalaryFromDate', d.SalaryFromDate); setVal('tx-SalaryToDate', d.SalaryToDate);
+                setChk('tx-IsScheduled', d.IsScheduled); txToggle('sched', d.IsScheduled);
+                setVal('tx-InstallmentMode', d.InstallmentMode || 'ByValue');
+                setVal('tx-InstallmentCount', d.InstallmentCount); setVal('tx-InstallmentAmount', d.InstallmentAmount);
+                setVal('tx-InstallmentMonths', d.InstallmentMonths); setVal('tx-FirstInstallmentDate', d.FirstInstallmentDate);
+                setChk('tx-ChangeCostCenter', d.ChangeCostCenter); txToggle('cc', d.ChangeCostCenter);
+                setVal('tx-CostCenter', d.CostCenter); setVal('tx-Note', d.Note); setVal('tx-Status', d.Status || 'Approved');
+                document.getElementById('tx-ItemName').value = d.ItemName || '';
+                if (d.SalaryItemId && TX_ITEMS.find(function(x){return x.Id===d.SalaryItemId;})){
+                    document.getElementById('tx-ItemSelect').value = String(d.SalaryItemId);
+                    document.getElementById('tx-SalaryItemId').value = d.SalaryItemId;
+                } else if (d.ItemName){
+                    document.getElementById('tx-ItemSelect').value='__custom';
+                    document.getElementById('tx-CustomWrap').hidden=false;
+                    document.getElementById('tx-CustomName').value=d.ItemName;
+                }
+            } else {
+                var today = new Date().toISOString().slice(0,10);
+                setVal('tx-TransactionDate', today);
+            }
+            document.getElementById('tx-slide').classList.add('open');
+            document.getElementById('tx-backdrop').classList.add('open');
+        }
+        function txClose(){ document.getElementById('tx-slide').classList.remove('open'); document.getElementById('tx-backdrop').classList.remove('open'); }
+        document.addEventListener('keydown', function(e){ if(e.key==='Escape') txClose(); });
+    </script>
+}

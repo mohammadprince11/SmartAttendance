@@ -258,8 +258,10 @@ END;
             }))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
-        // حركات الدخل للفترة (شاشة «حركات الدخل») — تُضاف كبنود إضافية بالقسيمة
+        // حركات الدخل/الاقتطاع للفترة (شاشة «الحركات») — بنود إضافية/خصم بالقسيمة
         var income = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.Income))
+            .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
+        var deductionTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.Deduction))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
         // --- بناء السطور ---
@@ -345,7 +347,19 @@ END;
             if (tax > 0) comps.Add(new Component { ItemName = "ضريبة الدخل", Amount = tax, IsAddition = false, Kind = "Tax" });
             if (gosiEmp > 0) comps.Add(new Component { ItemName = "الضمان الاجتماعي (حصة الموظف)", Amount = gosiEmp, IsAddition = false, Kind = "Gosi" });
 
-            var otherDeductions = penaltyTotal;
+            // حركات الاقتطاع (خصومات مُدخلة يدوياً بشاشة الحركات)
+            decimal deductionTxTotal = 0;
+            if (deductionTx.TryGetValue(emp.Id, out var empDed))
+            {
+                foreach (var t in empDed)
+                {
+                    if (t.Amount == 0) continue;
+                    deductionTxTotal += t.Amount;
+                    comps.Add(new Component { ItemName = t.ItemName, Amount = t.Amount, IsAddition = false, Kind = "Deduction" });
+                }
+            }
+
+            var otherDeductions = penaltyTotal + deductionTxTotal;
             var net = Math.Round(gross - tax - gosiEmp - otherDeductions, 2);
 
             var lineId = await HrmsDatabase.ScalarAsync<int>(

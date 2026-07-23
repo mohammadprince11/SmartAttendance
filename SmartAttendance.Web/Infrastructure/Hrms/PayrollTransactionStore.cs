@@ -3,9 +3,11 @@ using SmartAttendance.Infrastructure.Persistence;
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
 /// <summary>
-/// حركات المسير (نمط كيان «حركات الدخل/الإقتطاع/العمل الإضافي»): إدخالات مالية لكل
-/// موظف×فترة (سنة/شهر) — دخل (مكافأة/حافز/بدل لمرة)، اقتطاع، أوفرتايم — تُغذّي احتساب
-/// المسير كبنود إضافية على الأساسي والعلاوات. المخزن عام (TxType) وأول شاشة مبنية «الدخل».
+/// حركات المسير (مطابقة كيان «حركات الدخل/الإقتطاع/العمل الإضافي»): إدخالات مالية لكل
+/// موظف تُغذّي المسير. تحمل كل خصائص كيان: نوع الدفعة (داخل/خارج الراتب)، الأثر الرجعي
+/// (+تحديث الضمان)، الجدولة/الأقساط، مركز التكلفة، المرفق، الرقم المرجعي، المصدر، والحالة.
+/// نمط self-healing (CREATE + ALTER ADD idempotent). التوسعة الخلفية (توليد الأقساط،
+/// إعادة حساب الضمان، سير الموافقات) تُبنى تدريجياً؛ الحقول كلها ملتقطة ومخزّنة.
 /// </summary>
 public static class PayrollTransactionStore
 {
@@ -21,9 +23,18 @@ public static class PayrollTransactionStore
         _ => t
     };
 
+    public static string StatusLabel(string s) => s switch
+    {
+        "Draft" => "مسودة",
+        "Approved" => "معتمد",
+        "Rejected" => "مرفوض",
+        _ => s
+    };
+
     public sealed class Transaction
     {
         public int Id { get; set; }
+        public string ReferenceNo { get; set; } = string.Empty;
         public int EmployeeId { get; set; }
         public string EmployeeNo { get; set; } = string.Empty;
         public string EmployeeName { get; set; } = string.Empty;
@@ -35,11 +46,51 @@ public static class PayrollTransactionStore
         public decimal Amount { get; set; }
         public string TxType { get; set; } = "Income";
         public bool Taxable { get; set; } = true;
+
+        // نوع الدفعة
+        public string PaymentType { get; set; } = "InSalary";   // InSalary | OutSalary
+
+        // تواريخ
+        public DateOnly? TransactionDate { get; set; }
+        public DateOnly? EffectiveDate { get; set; }
+
+        // غير محدود / فترة صلاحية
+        public bool IsUnlimited { get; set; }
+        public DateOnly? ValidFrom { get; set; }
+        public DateOnly? ValidTo { get; set; }
+
+        // بأثر رجعي
+        public bool IsRetroactive { get; set; }
+        public DateOnly? RetroactiveDate { get; set; }
+        public bool UpdateSocialSecurity { get; set; }
+        public DateOnly? SocialSecurityToDate { get; set; }
+        public DateOnly? SalaryFromDate { get; set; }
+        public DateOnly? SalaryToDate { get; set; }
+
+        // جدولة / أقساط
+        public bool IsScheduled { get; set; }
+        public string? InstallmentMode { get; set; }            // ByValue | ByMonth
+        public int? InstallmentCount { get; set; }
+        public decimal? InstallmentAmount { get; set; }
+        public int? InstallmentMonths { get; set; }
+        public DateOnly? FirstInstallmentDate { get; set; }
+
+        // مركز التكلفة
+        public bool ChangeCostCenter { get; set; }
+        public string? CostCenter { get; set; }
+
+        // مرفق / ملاحظة / مصدر / حالة
+        public string? AttachmentName { get; set; }
+        public string? AttachmentPath { get; set; }
         public string? Note { get; set; }
+        public string Source { get; set; } = "مباشر";
+        public string Status { get; set; } = "Approved";
         public DateTime CreatedAt { get; set; }
 
         public string PeriodText => $"{Month:00}/{Year}";
         public bool IsAddition => TxType is "Income" or "Overtime";
+        public string PaymentTypeLabel => PaymentType == "OutSalary" ? "خارج الراتب" : "داخل الراتب";
+        public string StatusText => StatusLabel(Status);
     }
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
@@ -67,11 +118,39 @@ BEGIN
     CREATE INDEX IX_PayrollTransactions_Period ON PayrollTransactions ([Year], [Month], TxType);
     CREATE INDEX IX_PayrollTransactions_Employee ON PayrollTransactions (EmployeeId);
 END;
+
+-- توسعة مطابقة كيان (idempotent)
+IF COL_LENGTH('PayrollTransactions','ReferenceNo') IS NULL ALTER TABLE PayrollTransactions ADD ReferenceNo nvarchar(40) NULL;
+IF COL_LENGTH('PayrollTransactions','PaymentType') IS NULL ALTER TABLE PayrollTransactions ADD PaymentType nvarchar(20) NOT NULL CONSTRAINT DF_PT_PaymentType DEFAULT(N'InSalary');
+IF COL_LENGTH('PayrollTransactions','TransactionDate') IS NULL ALTER TABLE PayrollTransactions ADD TransactionDate date NULL;
+IF COL_LENGTH('PayrollTransactions','EffectiveDate') IS NULL ALTER TABLE PayrollTransactions ADD EffectiveDate date NULL;
+IF COL_LENGTH('PayrollTransactions','IsUnlimited') IS NULL ALTER TABLE PayrollTransactions ADD IsUnlimited bit NOT NULL CONSTRAINT DF_PT_Unlimited DEFAULT(0);
+IF COL_LENGTH('PayrollTransactions','ValidFrom') IS NULL ALTER TABLE PayrollTransactions ADD ValidFrom date NULL;
+IF COL_LENGTH('PayrollTransactions','ValidTo') IS NULL ALTER TABLE PayrollTransactions ADD ValidTo date NULL;
+IF COL_LENGTH('PayrollTransactions','IsRetroactive') IS NULL ALTER TABLE PayrollTransactions ADD IsRetroactive bit NOT NULL CONSTRAINT DF_PT_Retro DEFAULT(0);
+IF COL_LENGTH('PayrollTransactions','RetroactiveDate') IS NULL ALTER TABLE PayrollTransactions ADD RetroactiveDate date NULL;
+IF COL_LENGTH('PayrollTransactions','UpdateSocialSecurity') IS NULL ALTER TABLE PayrollTransactions ADD UpdateSocialSecurity bit NOT NULL CONSTRAINT DF_PT_UpdSS DEFAULT(0);
+IF COL_LENGTH('PayrollTransactions','SocialSecurityToDate') IS NULL ALTER TABLE PayrollTransactions ADD SocialSecurityToDate date NULL;
+IF COL_LENGTH('PayrollTransactions','SalaryFromDate') IS NULL ALTER TABLE PayrollTransactions ADD SalaryFromDate date NULL;
+IF COL_LENGTH('PayrollTransactions','SalaryToDate') IS NULL ALTER TABLE PayrollTransactions ADD SalaryToDate date NULL;
+IF COL_LENGTH('PayrollTransactions','IsScheduled') IS NULL ALTER TABLE PayrollTransactions ADD IsScheduled bit NOT NULL CONSTRAINT DF_PT_Sched DEFAULT(0);
+IF COL_LENGTH('PayrollTransactions','InstallmentMode') IS NULL ALTER TABLE PayrollTransactions ADD InstallmentMode nvarchar(20) NULL;
+IF COL_LENGTH('PayrollTransactions','InstallmentCount') IS NULL ALTER TABLE PayrollTransactions ADD InstallmentCount int NULL;
+IF COL_LENGTH('PayrollTransactions','InstallmentAmount') IS NULL ALTER TABLE PayrollTransactions ADD InstallmentAmount decimal(18,2) NULL;
+IF COL_LENGTH('PayrollTransactions','InstallmentMonths') IS NULL ALTER TABLE PayrollTransactions ADD InstallmentMonths int NULL;
+IF COL_LENGTH('PayrollTransactions','FirstInstallmentDate') IS NULL ALTER TABLE PayrollTransactions ADD FirstInstallmentDate date NULL;
+IF COL_LENGTH('PayrollTransactions','ChangeCostCenter') IS NULL ALTER TABLE PayrollTransactions ADD ChangeCostCenter bit NOT NULL CONSTRAINT DF_PT_CCC DEFAULT(0);
+IF COL_LENGTH('PayrollTransactions','CostCenter') IS NULL ALTER TABLE PayrollTransactions ADD CostCenter nvarchar(150) NULL;
+IF COL_LENGTH('PayrollTransactions','AttachmentName') IS NULL ALTER TABLE PayrollTransactions ADD AttachmentName nvarchar(260) NULL;
+IF COL_LENGTH('PayrollTransactions','AttachmentPath') IS NULL ALTER TABLE PayrollTransactions ADD AttachmentPath nvarchar(500) NULL;
+IF COL_LENGTH('PayrollTransactions','Source') IS NULL ALTER TABLE PayrollTransactions ADD Source nvarchar(50) NOT NULL CONSTRAINT DF_PT_Source DEFAULT(N'مباشر');
+IF COL_LENGTH('PayrollTransactions','Status') IS NULL ALTER TABLE PayrollTransactions ADD Status nvarchar(30) NOT NULL CONSTRAINT DF_PT_Status DEFAULT(N'Approved');
 """);
     }
 
     public static async Task<List<Transaction>> ListAsync(
-        ApplicationDbContext dbContext, int year, int month, string txType, string? search)
+        ApplicationDbContext dbContext, int year, int month, string txType, string? search,
+        int? salaryItemId = null, string? status = null, string? source = null)
     {
         await EnsureAsync(dbContext);
         var rows = await HrmsDatabase.QueryAsync(
@@ -93,25 +172,34 @@ ORDER BY t.CreatedAt DESC;
             },
             Read);
 
+        if (salaryItemId is > 0) rows = rows.Where(r => r.SalaryItemId == salaryItemId).ToList();
+        if (!string.IsNullOrWhiteSpace(status)) rows = rows.Where(r => r.Status == status).ToList();
+        if (!string.IsNullOrWhiteSpace(source)) rows = rows.Where(r => r.Source == source).ToList();
         if (!string.IsNullOrWhiteSpace(search))
         {
             var v = search.Trim();
             rows = rows.Where(r =>
                 r.EmployeeNo.Contains(v, StringComparison.OrdinalIgnoreCase) ||
                 r.EmployeeName.Contains(v, StringComparison.OrdinalIgnoreCase) ||
-                r.ItemName.Contains(v, StringComparison.OrdinalIgnoreCase)).ToList();
+                r.ItemName.Contains(v, StringComparison.OrdinalIgnoreCase) ||
+                r.ReferenceNo.Contains(v, StringComparison.OrdinalIgnoreCase)).ToList();
         }
         return rows;
     }
 
-    /// <summary>حركات فترة معينة لنوع معيّن — للاحتساب بالمسير (بلا join).</summary>
+    /// <summary>حركات فترة/نوع للاحتساب بالمسير — المعتمدة داخل الراتب فقط.</summary>
     public static async Task<List<Transaction>> ForPeriodAsync(
         ApplicationDbContext dbContext, int year, int month, string txType)
     {
         await EnsureAsync(dbContext);
         return await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT * FROM PayrollTransactions WHERE [Year] = @Y AND [Month] = @M AND TxType = @Type;",
+            """
+SELECT * FROM PayrollTransactions
+WHERE [Year] = @Y AND [Month] = @M AND TxType = @Type
+  AND ISNULL(PaymentType, N'InSalary') = N'InSalary'
+  AND ISNULL(Status, N'Approved') = N'Approved';
+""",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Y", year);
@@ -128,53 +216,89 @@ ORDER BY t.CreatedAt DESC;
             });
     }
 
-    public static async Task SaveAsync(ApplicationDbContext dbContext, Transaction tx, string userName)
+    public static async Task<int> SaveAsync(ApplicationDbContext dbContext, Transaction tx, string userName)
     {
         await EnsureAsync(dbContext);
         if (tx.Id > 0)
         {
-            await HrmsDatabase.ExecuteAsync(
-                dbContext,
-                """
-UPDATE PayrollTransactions
-SET EmployeeId = @Emp, [Year] = @Y, [Month] = @M, SalaryItemId = @Item,
-    ItemName = @Name, Amount = @Amount, TxType = @Type, Taxable = @Taxable, Note = @Note
-WHERE Id = @Id;
-""",
-                command =>
-                {
-                    HrmsDatabase.AddParameter(command, "@Id", tx.Id);
-                    Add(command, tx);
-                });
+            await HrmsDatabase.ExecuteAsync(dbContext, UpdateSql, command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", tx.Id);
+                Add(command, tx);
+            });
+            return tx.Id;
         }
-        else
+
+        if (string.IsNullOrWhiteSpace(tx.ReferenceNo))
+            tx.ReferenceNo = await GenerateReferenceNoAsync(dbContext, tx.TxType);
+
+        return await HrmsDatabase.ScalarAsync<int>(dbContext, InsertSql + " SELECT CAST(SCOPE_IDENTITY() AS int);", command =>
         {
-            await HrmsDatabase.ExecuteAsync(
-                dbContext,
-                """
-INSERT INTO PayrollTransactions (EmployeeId, [Year], [Month], SalaryItemId, ItemName, Amount, TxType, Taxable, Note, CreatedBy)
-VALUES (@Emp, @Y, @M, @Item, @Name, @Amount, @Type, @Taxable, @Note, @By);
-""",
-                command =>
-                {
-                    Add(command, tx);
-                    HrmsDatabase.AddParameter(command, "@By", userName);
-                });
-        }
+            Add(command, tx);
+            HrmsDatabase.AddParameter(command, "@Ref", tx.ReferenceNo);
+            HrmsDatabase.AddParameter(command, "@By", userName);
+        });
     }
 
     public static async Task DeleteAsync(ApplicationDbContext dbContext, int id)
     {
         await EnsureAsync(dbContext);
-        await HrmsDatabase.ExecuteAsync(
-            dbContext,
+        await HrmsDatabase.ExecuteAsync(dbContext,
             "DELETE FROM PayrollTransactions WHERE Id = @Id;",
             command => HrmsDatabase.AddParameter(command, "@Id", id));
     }
 
+    public static async Task DeleteManyAsync(ApplicationDbContext dbContext, IReadOnlyCollection<int> ids)
+    {
+        await EnsureAsync(dbContext);
+        foreach (var chunk in ids.Chunk(200))
+        {
+            var inList = string.Join(",", chunk.Select((_, i) => $"@P{i}"));
+            await HrmsDatabase.ExecuteAsync(dbContext,
+                $"DELETE FROM PayrollTransactions WHERE Id IN ({inList});",
+                command => { for (var i = 0; i < chunk.Length; i++) HrmsDatabase.AddParameter(command, $"@P{i}", chunk[i]); });
+        }
+    }
+
+    private static async Task<string> GenerateReferenceNoAsync(ApplicationDbContext dbContext, string txType)
+    {
+        var prefix = txType switch { "Deduction" => "DD", "Overtime" => "OT", _ => "IN" };
+        prefix += $"{DateTime.Today:yy}-";
+        var count = await HrmsDatabase.ScalarAsync<int>(dbContext,
+            "SELECT COUNT(1) FROM PayrollTransactions WHERE ReferenceNo LIKE @P;",
+            command => HrmsDatabase.AddParameter(command, "@P", prefix + "%"));
+        return $"{prefix}{count + 1:0000}";
+    }
+
+    private const string InsertSql = """
+INSERT INTO PayrollTransactions
+ (EmployeeId, [Year], [Month], SalaryItemId, ItemName, Amount, TxType, Taxable, PaymentType,
+  TransactionDate, EffectiveDate, IsUnlimited, ValidFrom, ValidTo,
+  IsRetroactive, RetroactiveDate, UpdateSocialSecurity, SocialSecurityToDate, SalaryFromDate, SalaryToDate,
+  IsScheduled, InstallmentMode, InstallmentCount, InstallmentAmount, InstallmentMonths, FirstInstallmentDate,
+  ChangeCostCenter, CostCenter, AttachmentName, AttachmentPath, Note, Source, Status, ReferenceNo, CreatedBy)
+VALUES
+ (@Emp, @Y, @M, @Item, @Name, @Amount, @Type, @Taxable, @PaymentType,
+  @TxDate, @EffDate, @Unlimited, @ValidFrom, @ValidTo,
+  @Retro, @RetroDate, @UpdSS, @SSToDate, @SalFrom, @SalTo,
+  @Sched, @InstMode, @InstCount, @InstAmount, @InstMonths, @FirstInst,
+  @ChgCC, @CostCenter, @AttName, @AttPath, @Note, @Source, @Status, @Ref, @By);
+""";
+
+    private const string UpdateSql = """
+UPDATE PayrollTransactions SET
+  EmployeeId=@Emp, [Year]=@Y, [Month]=@M, SalaryItemId=@Item, ItemName=@Name, Amount=@Amount, TxType=@Type, Taxable=@Taxable,
+  PaymentType=@PaymentType, TransactionDate=@TxDate, EffectiveDate=@EffDate, IsUnlimited=@Unlimited, ValidFrom=@ValidFrom, ValidTo=@ValidTo,
+  IsRetroactive=@Retro, RetroactiveDate=@RetroDate, UpdateSocialSecurity=@UpdSS, SocialSecurityToDate=@SSToDate, SalaryFromDate=@SalFrom, SalaryToDate=@SalTo,
+  IsScheduled=@Sched, InstallmentMode=@InstMode, InstallmentCount=@InstCount, InstallmentAmount=@InstAmount, InstallmentMonths=@InstMonths, FirstInstallmentDate=@FirstInst,
+  ChangeCostCenter=@ChgCC, CostCenter=@CostCenter, AttachmentName=@AttName, AttachmentPath=@AttPath, Note=@Note, Source=@Source, Status=@Status
+WHERE Id=@Id;
+""";
+
     private static Transaction Read(System.Data.Common.DbDataReader reader) => new()
     {
         Id = HrmsDatabase.GetInt(reader, "Id"),
+        ReferenceNo = HrmsDatabase.GetString(reader, "ReferenceNo"),
         EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
         EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
         EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
@@ -186,12 +310,37 @@ VALUES (@Emp, @Y, @M, @Item, @Name, @Amount, @Type, @Taxable, @Note, @By);
         Amount = reader["Amount"] is decimal a ? a : 0,
         TxType = HrmsDatabase.GetString(reader, "TxType") is { Length: > 0 } t ? t : "Income",
         Taxable = HrmsDatabase.GetBool(reader, "Taxable"),
+        PaymentType = HrmsDatabase.GetString(reader, "PaymentType") is { Length: > 0 } p ? p : "InSalary",
+        TransactionDate = HrmsDatabase.GetDateOnly(reader, "TransactionDate"),
+        EffectiveDate = HrmsDatabase.GetDateOnly(reader, "EffectiveDate"),
+        IsUnlimited = HrmsDatabase.GetBool(reader, "IsUnlimited"),
+        ValidFrom = HrmsDatabase.GetDateOnly(reader, "ValidFrom"),
+        ValidTo = HrmsDatabase.GetDateOnly(reader, "ValidTo"),
+        IsRetroactive = HrmsDatabase.GetBool(reader, "IsRetroactive"),
+        RetroactiveDate = HrmsDatabase.GetDateOnly(reader, "RetroactiveDate"),
+        UpdateSocialSecurity = HrmsDatabase.GetBool(reader, "UpdateSocialSecurity"),
+        SocialSecurityToDate = HrmsDatabase.GetDateOnly(reader, "SocialSecurityToDate"),
+        SalaryFromDate = HrmsDatabase.GetDateOnly(reader, "SalaryFromDate"),
+        SalaryToDate = HrmsDatabase.GetDateOnly(reader, "SalaryToDate"),
+        IsScheduled = HrmsDatabase.GetBool(reader, "IsScheduled"),
+        InstallmentMode = HrmsDatabase.GetString(reader, "InstallmentMode") is { Length: > 0 } im ? im : null,
+        InstallmentCount = HrmsDatabase.GetNullableInt(reader, "InstallmentCount"),
+        InstallmentAmount = reader["InstallmentAmount"] is decimal ia ? ia : null,
+        InstallmentMonths = HrmsDatabase.GetNullableInt(reader, "InstallmentMonths"),
+        FirstInstallmentDate = HrmsDatabase.GetDateOnly(reader, "FirstInstallmentDate"),
+        ChangeCostCenter = HrmsDatabase.GetBool(reader, "ChangeCostCenter"),
+        CostCenter = HrmsDatabase.GetString(reader, "CostCenter") is { Length: > 0 } cc ? cc : null,
+        AttachmentName = HrmsDatabase.GetString(reader, "AttachmentName") is { Length: > 0 } an ? an : null,
+        AttachmentPath = HrmsDatabase.GetString(reader, "AttachmentPath") is { Length: > 0 } ap ? ap : null,
         Note = HrmsDatabase.GetString(reader, "Note") is { Length: > 0 } n ? n : null,
+        Source = HrmsDatabase.GetString(reader, "Source") is { Length: > 0 } s ? s : "مباشر",
+        Status = HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } st ? st : "Approved",
         CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default
     };
 
     private static void Add(System.Data.Common.DbCommand command, Transaction tx)
     {
+        object? D(DateOnly? d) => d.HasValue ? d.Value.ToDateTime(TimeOnly.MinValue) : DBNull.Value;
         HrmsDatabase.AddParameter(command, "@Emp", tx.EmployeeId);
         HrmsDatabase.AddParameter(command, "@Y", tx.Year);
         HrmsDatabase.AddParameter(command, "@M", tx.Month);
@@ -200,6 +349,30 @@ VALUES (@Emp, @Y, @M, @Item, @Name, @Amount, @Type, @Taxable, @Note, @By);
         HrmsDatabase.AddParameter(command, "@Amount", tx.Amount);
         HrmsDatabase.AddParameter(command, "@Type", tx.TxType);
         HrmsDatabase.AddParameter(command, "@Taxable", tx.Taxable ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@PaymentType", tx.PaymentType);
+        HrmsDatabase.AddParameter(command, "@TxDate", D(tx.TransactionDate));
+        HrmsDatabase.AddParameter(command, "@EffDate", D(tx.EffectiveDate));
+        HrmsDatabase.AddParameter(command, "@Unlimited", tx.IsUnlimited ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@ValidFrom", D(tx.ValidFrom));
+        HrmsDatabase.AddParameter(command, "@ValidTo", D(tx.ValidTo));
+        HrmsDatabase.AddParameter(command, "@Retro", tx.IsRetroactive ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@RetroDate", D(tx.RetroactiveDate));
+        HrmsDatabase.AddParameter(command, "@UpdSS", tx.UpdateSocialSecurity ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@SSToDate", D(tx.SocialSecurityToDate));
+        HrmsDatabase.AddParameter(command, "@SalFrom", D(tx.SalaryFromDate));
+        HrmsDatabase.AddParameter(command, "@SalTo", D(tx.SalaryToDate));
+        HrmsDatabase.AddParameter(command, "@Sched", tx.IsScheduled ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@InstMode", (object?)tx.InstallmentMode ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@InstCount", (object?)tx.InstallmentCount ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@InstAmount", (object?)tx.InstallmentAmount ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@InstMonths", (object?)tx.InstallmentMonths ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@FirstInst", D(tx.FirstInstallmentDate));
+        HrmsDatabase.AddParameter(command, "@ChgCC", tx.ChangeCostCenter ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@CostCenter", (object?)tx.CostCenter ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@AttName", (object?)tx.AttachmentName ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@AttPath", (object?)tx.AttachmentPath ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@Note", (object?)tx.Note ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@Source", string.IsNullOrWhiteSpace(tx.Source) ? "مباشر" : tx.Source);
+        HrmsDatabase.AddParameter(command, "@Status", string.IsNullOrWhiteSpace(tx.Status) ? "Approved" : tx.Status);
     }
 }
