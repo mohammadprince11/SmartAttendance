@@ -2,18 +2,18 @@
 @model SmartAttendance.Web.Pages.Holidays.IndexModel
 
 @{
-    ViewData["Title"] = "Holidays";
+    ViewData["Title"] = "العطل الرسمية";
 }
 
 <div class="page-header">
     <div>
-        <h1>Holidays</h1>
-        <p>Manage official holidays</p>
+        <h1>العطل الرسمية</h1>
+        <p>إدارة العطل الرسمية</p>
     </div>
 
     <div class="form-actions">
-        <a asp-page="./Import" class="btn-secondary">Import Excel</a>
-        <a asp-page="./Create" class="btn-primary">+ Add Holiday</a>
+        <a asp-page="./Import" class="btn-secondary">استيراد إكسل</a>
+        <a asp-page="./Create" class="btn-primary">+ إضافة عطلة</a>
     </div>
 </div>
 
@@ -29,20 +29,20 @@
         <input type="text"
                name="SearchTerm"
                value="@Model.SearchTerm"
-               placeholder="Search by holiday name or description..." />
+               placeholder="بحث باسم العطلة أو وصفها..." />
 
-        <button type="submit" class="btn-primary">Search</button>
-        <a asp-page="./Index" class="btn-secondary">Clear</a>
+        <button type="submit" class="btn-primary">بحث</button>
+        <a asp-page="./Index" class="btn-secondary">مسح</a>
     </form>
 
     <table class="data-table">
         <thead>
             <tr>
-                <th>Holiday Name</th>
-                <th>Date</th>
-                <th>Recurring</th>
-                <th>Description</th>
-                <th style="width: 160px;">Actions</th>
+                <th>اسم العطلة</th>
+                <th>التاريخ</th>
+                <th>متكررة</th>
+                <th>الوصف</th>
+                <th style="width: 160px;">إجراءات</th>
             </tr>
         </thead>
 
@@ -54,11 +54,11 @@
                     <tr>
                         <td>@holiday.Name</td>
                         <td>@holiday.HolidayDate</td>
-                        <td>@(holiday.IsRecurring ? "Yes" : "No")</td>
+                        <td>@(holiday.IsRecurring ? "نعم" : "لا")</td>
                         <td>@holiday.Description</td>
                         <td>
-                            <a asp-page="./Edit" asp-route-id="@holiday.Id" class="btn-table btn-edit">Edit</a>
-                            <a asp-page="./Delete" asp-route-id="@holiday.Id" class="btn-table btn-delete">Delete</a>
+                            <a asp-page="./Edit" asp-route-id="@holiday.Id" class="btn-table btn-edit">تعديل</a>
+                            <a asp-page="./Delete" asp-route-id="@holiday.Id" class="btn-table btn-delete">حذف</a>
                         </td>
                     </tr>
                 }
@@ -66,7 +66,7 @@
             else
             {
                 <tr>
-                    <td colspan="5" style="text-align:center;">No holidays found.</td>
+                    <td colspan="5" style="text-align:center;">لا توجد عطل.</td>
                 </tr>
             }
         </tbody>

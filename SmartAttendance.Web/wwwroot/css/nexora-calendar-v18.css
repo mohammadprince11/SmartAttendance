@@ -4,7 +4,9 @@
    Interactive month/year selection and unified scrollbar.
 */
 
-input[type="date"].nxcal-native {
+/* حقل الشهر يرقّيه nexora-month-picker-v1.js لنفس الغلاف — يُخفى الأصلي مثل حقل التاريخ */
+input[type="date"].nxcal-native,
+input[type="month"].nxcal-native {
     position: absolute !important;
     opacity: 0 !important;
     pointer-events: none !important;

@@ -29,7 +29,7 @@ public class ImportModel : PageModel
 
     public string ImportType { get; private set; } = FixedImportType;
 
-    public string PageTitle { get; private set; } = "Holiday Data Import";
+    public string PageTitle { get; private set; } = "استيراد بيانات العطل";
 
     public List<string> RequiredColumns { get; set; } = new();
 

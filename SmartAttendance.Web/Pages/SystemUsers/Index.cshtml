@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.SystemUsers.IndexModel
 
 @{
-    ViewData["Title"] = "System Users";
+    ViewData["Title"] = "مستخدمو النظام";
 }
 
 <div class="page-header">
     <div>
-        <h1>System Users</h1>
-        <p>Manage application users and roles</p>
+        <h1>مستخدمو النظام</h1>
+        <p>إدارة مستخدمي النظام وأدوارهم</p>
     </div>
 
-    <a asp-page="./Create" class="btn-primary">+ Add User</a>
+    <a asp-page="./Create" class="btn-primary">+ إضافة مستخدم</a>
 </div>
 
 @if (TempData["SuccessMessage"] != null)
@@ -26,22 +26,22 @@
         <input type="text"
                name="SearchTerm"
                value="@Model.SearchTerm"
-               placeholder="Search by name, username, email, or role..." />
+               placeholder="بحث بالاسم أو اسم المستخدم أو البريد أو الدور..." />
 
-        <button type="submit" class="btn-primary">Search</button>
-        <a asp-page="./Index" class="btn-secondary">Clear</a>
+        <button type="submit" class="btn-primary">بحث</button>
+        <a asp-page="./Index" class="btn-secondary">مسح</a>
     </form>
 
     <table class="data-table">
         <thead>
             <tr>
-                <th>Full Name</th>
-                <th>User Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Active</th>
-                <th>Notes</th>
-                <th style="width: 160px;">Actions</th>
+                <th>الاسم الكامل</th>
+                <th>اسم المستخدم</th>
+                <th>البريد الإلكتروني</th>
+                <th>الدور</th>
+                <th>نشط</th>
+                <th>ملاحظات</th>
+                <th style="width: 160px;">إجراءات</th>
             </tr>
         </thead>
 
@@ -55,11 +55,11 @@
                         <td>@user.UserName</td>
                         <td>@user.Email</td>
                         <td>@user.Role</td>
-                        <td>@(user.IsActive ? "Yes" : "No")</td>
+                        <td>@(user.IsActive ? "نعم" : "لا")</td>
                         <td>@user.Notes</td>
                         <td>
-                            <a asp-page="./Edit" asp-route-id="@user.Id" class="btn-table btn-edit">Edit</a>
-                            <a asp-page="./Delete" asp-route-id="@user.Id" class="btn-table btn-delete">Delete</a>
+                            <a asp-page="./Edit" asp-route-id="@user.Id" class="btn-table btn-edit">تعديل</a>
+                            <a asp-page="./Delete" asp-route-id="@user.Id" class="btn-table btn-delete">حذف</a>
                         </td>
                     </tr>
                 }

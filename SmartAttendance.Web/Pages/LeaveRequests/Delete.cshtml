@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.LeaveRequests.DeleteModel
 
 @{
-    ViewData["Title"] = "Delete Leave Request";
+    ViewData["Title"] = "حذف طلب إجازة";
 }
 
 <div class="page-header">
     <div>
-        <h1>Delete Leave Request</h1>
-        <p>Confirm leave request deletion</p>
+        <h1>حذف طلب إجازة</h1>
+        <p>تأكيد حذف طلب الإجازة</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">رجوع للقائمة</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -28,42 +28,42 @@
 
     <div class="details-grid">
         <div class="form-group">
-            <label>Employee No</label>
+            <label>رقم الموظف</label>
             <div class="form-control">@Model.LeaveRequest.EmployeeNo</div>
         </div>
 
         <div class="form-group">
-            <label>Employee Name</label>
+            <label>اسم الموظف</label>
             <div class="form-control">@Model.LeaveRequest.EmployeeName</div>
         </div>
 
         <div class="form-group">
-            <label>Leave Type</label>
+            <label>نوع الإجازة</label>
             <div class="form-control">@Model.LeaveRequest.LeaveType</div>
         </div>
 
         <div class="form-group">
-            <label>Status</label>
+            <label>الحالة</label>
             <div class="form-control">@Model.LeaveRequest.Status</div>
         </div>
 
         <div class="form-group">
-            <label>From Date</label>
+            <label>من تاريخ</label>
             <div class="form-control">@Model.LeaveRequest.FromDate</div>
         </div>
 
         <div class="form-group">
-            <label>To Date</label>
+            <label>إلى تاريخ</label>
             <div class="form-control">@Model.LeaveRequest.ToDate</div>
         </div>
 
         <div class="form-group">
-            <label>Total Days</label>
+            <label>إجمالي الأيام</label>
             <div class="form-control">@Model.LeaveRequest.TotalDays</div>
         </div>
 
         <div class="form-group">
-            <label>Reason</label>
+            <label>السبب</label>
             <div class="form-control">@Model.LeaveRequest.Reason</div>
         </div>
     </div>
@@ -72,8 +72,8 @@
         <input type="hidden" name="id" value="@Model.LeaveRequest.Id" />
 
         <div class="form-actions">
-            <button type="submit" class="btn-table btn-delete">Delete</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-table btn-delete">حذف</button>
+            <a asp-page="./Index" class="btn-secondary">إلغاء</a>
         </div>
     </form>
 </div>

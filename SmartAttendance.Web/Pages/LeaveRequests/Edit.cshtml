@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.LeaveRequests.EditModel
 
 @{
-    ViewData["Title"] = "Edit Leave Request";
+    ViewData["Title"] = "تعديل طلب إجازة";
 }
 
 <div class="page-header">
     <div>
-        <h1>Edit Leave Request</h1>
-        <p>Update leave request information</p>
+        <h1>تعديل طلب إجازة</h1>
+        <p>تحديث بيانات طلب الإجازة</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">رجوع للقائمة</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -26,7 +26,7 @@
         <input type="hidden" asp-for="LeaveRequest.Id" />
 
         <div class="form-group">
-            <label asp-for="LeaveRequest.EmployeeId">Employee</label>
+            <label asp-for="LeaveRequest.EmployeeId">الموظف</label>
             <select asp-for="LeaveRequest.EmployeeId" class="form-control">
                 <option value="">-- Select Employee --</option>
 
@@ -39,38 +39,38 @@
         </div>
 
         <div class="form-group">
-            <label asp-for="LeaveRequest.LeaveType">Leave Type</label>
+            <label asp-for="LeaveRequest.LeaveType">نوع الإجازة</label>
             <select asp-for="LeaveRequest.LeaveType" asp-items="Model.LeaveTypes" class="form-control"></select>
             <span asp-validation-for="LeaveRequest.LeaveType" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="LeaveRequest.Status">Status</label>
+            <label asp-for="LeaveRequest.Status">الحالة</label>
             <select asp-for="LeaveRequest.Status" asp-items="Model.Statuses" class="form-control"></select>
             <span asp-validation-for="LeaveRequest.Status" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="LeaveRequest.FromDate">From Date</label>
+            <label asp-for="LeaveRequest.FromDate">من تاريخ</label>
             <input asp-for="LeaveRequest.FromDate" type="date" class="form-control" />
             <span asp-validation-for="LeaveRequest.FromDate" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="LeaveRequest.ToDate">To Date</label>
+            <label asp-for="LeaveRequest.ToDate">إلى تاريخ</label>
             <input asp-for="LeaveRequest.ToDate" type="date" class="form-control" />
             <span asp-validation-for="LeaveRequest.ToDate" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="LeaveRequest.Reason">Reason</label>
+            <label asp-for="LeaveRequest.Reason">السبب</label>
             <input asp-for="LeaveRequest.Reason" class="form-control" />
             <span asp-validation-for="LeaveRequest.Reason" class="text-danger"></span>
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn-primary">Update</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary">تحديث</button>
+            <a asp-page="./Index" class="btn-secondary">إلغاء</a>
         </div>
     </form>
 </div>

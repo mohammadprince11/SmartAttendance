@@ -2,21 +2,21 @@
 @model SmartAttendance.Web.Pages.Permissions.IndexModel
 
 @{
-    ViewData["Title"] = "Permissions";
+    ViewData["Title"] = "الصلاحيات";
 }
 
 <div class="page-header">
     <div>
-        <h1>Permissions</h1>
-        <p>Manage flexible permission codes used by the system</p>
+        <h1>الصلاحيات</h1>
+        <p>إدارة رموز الصلاحيات المرنة المستخدمة في النظام</p>
     </div>
 
     <div class="form-actions">
         <form method="post" asp-page-handler="Seed">
-            <button type="submit" class="btn-secondary">Seed Default Permissions</button>
+            <button type="submit" class="btn-secondary">زرع الصلاحيات الافتراضية</button>
         </form>
 
-        <a asp-page="./Create" class="btn-primary">+ Add Permission</a>
+        <a asp-page="./Create" class="btn-primary">+ إضافة صلاحية</a>
     </div>
 </div>
 
@@ -32,22 +32,22 @@
         <input type="text"
                name="SearchTerm"
                value="@Model.SearchTerm"
-               placeholder="Search by module, code, or name..." />
+               placeholder="بحث بالوحدة أو الرمز أو الاسم..." />
 
-        <button type="submit" class="btn-primary">Search</button>
-        <a asp-page="./Index" class="btn-secondary">Clear</a>
+        <button type="submit" class="btn-primary">بحث</button>
+        <a asp-page="./Index" class="btn-secondary">مسح</a>
     </form>
 
     <table class="data-table">
         <thead>
             <tr>
-                <th>Module</th>
-                <th>Code</th>
-                <th>Name</th>
-                <th>Active</th>
-                <th>Order</th>
-                <th>Description</th>
-                <th style="width: 160px;">Actions</th>
+                <th>الوحدة</th>
+                <th>الرمز</th>
+                <th>الاسم</th>
+                <th>نشط</th>
+                <th>الترتيب</th>
+                <th>الوصف</th>
+                <th style="width: 160px;">إجراءات</th>
             </tr>
         </thead>
 
@@ -60,12 +60,12 @@
                         <td>@permission.Module</td>
                         <td>@permission.Code</td>
                         <td>@permission.Name</td>
-                        <td>@(permission.IsActive ? "Yes" : "No")</td>
+                        <td>@(permission.IsActive ? "نعم" : "لا")</td>
                         <td>@permission.DisplayOrder</td>
                         <td>@permission.Description</td>
                         <td>
-                            <a asp-page="./Edit" asp-route-id="@permission.Id" class="btn-table btn-edit">Edit</a>
-                            <a asp-page="./Delete" asp-route-id="@permission.Id" class="btn-table btn-delete">Delete</a>
+                            <a asp-page="./Edit" asp-route-id="@permission.Id" class="btn-table btn-edit">تعديل</a>
+                            <a asp-page="./Delete" asp-route-id="@permission.Id" class="btn-table btn-delete">حذف</a>
                         </td>
                     </tr>
                 }

@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.AttendanceRecords.DeleteModel
 
 @{
-    ViewData["Title"] = "Delete Attendance Record";
+    ViewData["Title"] = "حذف سجل حضور";
 }
 
 <div class="page-header">
     <div>
-        <h1>Delete Attendance Record</h1>
-        <p>Confirm attendance record deletion</p>
+        <h1>حذف سجل حضور</h1>
+        <p>تأكيد حذف سجل الحضور</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">رجوع للقائمة</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -28,47 +28,47 @@
 
     <div class="details-grid">
         <div class="form-group">
-            <label>Employee No</label>
+            <label>رقم الموظف</label>
             <div class="form-control">@Model.AttendanceRecord.EmployeeNo</div>
         </div>
 
         <div class="form-group">
-            <label>Employee Name</label>
+            <label>اسم الموظف</label>
             <div class="form-control">@Model.AttendanceRecord.EmployeeName</div>
         </div>
 
         <div class="form-group">
-            <label>Attendance Date</label>
+            <label>تاريخ الحضور</label>
             <div class="form-control">@Model.AttendanceRecord.AttendanceDate</div>
         </div>
 
         <div class="form-group">
-            <label>Check In</label>
+            <label>ختم الدخول</label>
             <div class="form-control">@Model.AttendanceRecord.CheckIn.ToString("yyyy-MM-dd HH:mm")</div>
         </div>
 
         <div class="form-group">
-            <label>Check Out</label>
+            <label>ختم الخروج</label>
             <div class="form-control">@(Model.AttendanceRecord.CheckOut?.ToString("yyyy-MM-dd HH:mm") ?? "-")</div>
         </div>
 
         <div class="form-group">
-            <label>Status</label>
+            <label>الحالة</label>
             <div class="form-control">@Model.AttendanceRecord.Status</div>
         </div>
 
         <div class="form-group">
-            <label>Source</label>
+            <label>المصدر</label>
             <div class="form-control">@Model.AttendanceRecord.Source</div>
         </div>
 
         <div class="form-group">
-            <label>Device</label>
+            <label>الجهاز</label>
             <div class="form-control">@(string.IsNullOrWhiteSpace(Model.AttendanceRecord.DeviceName) ? "-" : Model.AttendanceRecord.DeviceName)</div>
         </div>
 
         <div class="form-group">
-            <label>Notes</label>
+            <label>ملاحظات</label>
             <div class="form-control">@Model.AttendanceRecord.Notes</div>
         </div>
     </div>
@@ -77,8 +77,8 @@
         <input type="hidden" name="id" value="@Model.AttendanceRecord.Id" />
 
         <div class="form-actions">
-            <button type="submit" class="btn-table btn-delete">Delete</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-table btn-delete">حذف</button>
+            <a asp-page="./Index" class="btn-secondary">إلغاء</a>
         </div>
     </form>
 </div>

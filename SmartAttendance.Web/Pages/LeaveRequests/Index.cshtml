@@ -2,18 +2,18 @@
 @model SmartAttendance.Web.Pages.LeaveRequests.IndexModel
 
 @{
-    ViewData["Title"] = "Leave Requests";
+    ViewData["Title"] = "طلبات الإجازات";
 }
 
 <div class="page-header">
     <div>
-        <h1>Leave Requests</h1>
-        <p>Manage approved employee leaves</p>
+        <h1>طلبات الإجازات</h1>
+        <p>إدارة إجازات الموظفين المعتمدة</p>
     </div>
 
     <div class="form-actions">
-        <a asp-page="./Import" class="btn-secondary">Import Excel</a>
-        <a asp-page="./Create" class="btn-primary">+ Add Leave</a>
+        <a asp-page="./Import" class="btn-secondary">استيراد إكسل</a>
+        <a asp-page="./Create" class="btn-primary">+ إضافة إجازة</a>
     </div>
 </div>
 
@@ -29,23 +29,23 @@
         <input type="text"
                name="SearchTerm"
                value="@Model.SearchTerm"
-               placeholder="Search by employee, leave type, status, or reason..." />
+               placeholder="بحث بالموظف أو نوع الإجازة أو الحالة أو السبب..." />
 
-        <button type="submit" class="btn-primary">Search</button>
-        <a asp-page="./Index" class="btn-secondary">Clear</a>
+        <button type="submit" class="btn-primary">بحث</button>
+        <a asp-page="./Index" class="btn-secondary">مسح</a>
     </form>
 
     <table class="data-table">
         <thead>
             <tr>
-                <th>Employee No</th>
-                <th>Employee Name</th>
-                <th>Leave Type</th>
-                <th>Status</th>
-                <th>From</th>
-                <th>To</th>
-                <th>Total Days</th>
-                <th style="width: 160px;">Actions</th>
+                <th>رقم الموظف</th>
+                <th>اسم الموظف</th>
+                <th>نوع الإجازة</th>
+                <th>الحالة</th>
+                <th>من</th>
+                <th>إلى</th>
+                <th>إجمالي الأيام</th>
+                <th style="width: 160px;">إجراءات</th>
             </tr>
         </thead>
 
@@ -63,8 +63,8 @@
                         <td>@leave.ToDate</td>
                         <td>@leave.TotalDays</td>
                         <td>
-                            <a asp-page="./Edit" asp-route-id="@leave.Id" class="btn-table btn-edit">Edit</a>
-                            <a asp-page="./Delete" asp-route-id="@leave.Id" class="btn-table btn-delete">Delete</a>
+                            <a asp-page="./Edit" asp-route-id="@leave.Id" class="btn-table btn-edit">تعديل</a>
+                            <a asp-page="./Delete" asp-route-id="@leave.Id" class="btn-table btn-delete">حذف</a>
                         </td>
                     </tr>
                 }
@@ -72,7 +72,7 @@
             else
             {
                 <tr>
-                    <td colspan="8" style="text-align:center;">No leave requests found.</td>
+                    <td colspan="8" style="text-align:center;">لا توجد طلبات إجازات.</td>
                 </tr>
             }
         </tbody>

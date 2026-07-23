@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.EmployeeShifts.EditModel
 
 @{
-    ViewData["Title"] = "Edit Employee Shift";
+    ViewData["Title"] = "تعديل مناوبة موظف";
 }
 
 <div class="page-header">
     <div>
-        <h1>Edit Employee Shift</h1>
-        <p>Update employee shift assignment and weekly off day</p>
+        <h1>تعديل مناوبة موظف</h1>
+        <p>تحديث إسناد مناوبة الموظف ويوم الراحة الأسبوعية</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">رجوع للقائمة</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -26,7 +26,7 @@
         <input type="hidden" asp-for="EmployeeShift.Id" />
 
         <div class="form-group">
-            <label asp-for="EmployeeShift.EmployeeId">Employee</label>
+            <label asp-for="EmployeeShift.EmployeeId">الموظف</label>
             <select asp-for="EmployeeShift.EmployeeId" class="form-control">
                 <option value="">-- Select Employee --</option>
 
@@ -39,7 +39,7 @@
         </div>
 
         <div class="form-group">
-            <label asp-for="EmployeeShift.ShiftId">Shift</label>
+            <label asp-for="EmployeeShift.ShiftId">المناوبة</label>
             <select asp-for="EmployeeShift.ShiftId" class="form-control">
                 <option value="">-- Select Shift --</option>
 
@@ -52,22 +52,22 @@
         </div>
 
         <div class="form-group">
-            <label asp-for="EmployeeShift.EffectiveFrom">Effective From</label>
+            <label asp-for="EmployeeShift.EffectiveFrom">ساري من</label>
             <input asp-for="EmployeeShift.EffectiveFrom" type="date" class="form-control" />
             <span asp-validation-for="EmployeeShift.EffectiveFrom" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="EmployeeShift.EffectiveTo">Effective To</label>
+            <label asp-for="EmployeeShift.EffectiveTo">ساري إلى</label>
             <input asp-for="EmployeeShift.EffectiveTo" type="date" class="form-control" />
             <span asp-validation-for="EmployeeShift.EffectiveTo" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="EmployeeShift.WeeklyOffDays">Weekly Off Days</label>
+            <label asp-for="EmployeeShift.WeeklyOffDays">أيام الراحة الأسبوعية</label>
             <input asp-for="EmployeeShift.WeeklyOffDays"
                    class="form-control"
-                   placeholder="Example: Friday or Friday,Saturday" />
+                   placeholder="مثال: الجمعة أو الجمعة,السبت" />
             <small style="color:#64748b;font-weight:700;">
                 Supported: Friday, Saturday, Sunday... You can also write Arabic day names مثل: الجمعة
             </small>
@@ -82,8 +82,8 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn-primary">Update</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary">تحديث</button>
+            <a asp-page="./Index" class="btn-secondary">إلغاء</a>
         </div>
     </form>
 </div>

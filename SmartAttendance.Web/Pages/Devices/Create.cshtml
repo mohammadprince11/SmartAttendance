@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.Devices.CreateModel
 
 @{
-    ViewData["Title"] = "Add Device";
+    ViewData["Title"] = "إضافة جهاز";
 }
 
 <div class="page-header">
     <div>
-        <h1>Add Device</h1>
-        <p>Create a new attendance device under a branch</p>
+        <h1>إضافة جهاز</h1>
+        <p>إضافة جهاز حضور جديد ضمن فرع</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">رجوع للقائمة</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -24,7 +24,7 @@
 <div class="form-card">
     <form method="post">
         <div class="form-group">
-            <label asp-for="Device.BranchId">Branch</label>
+            <label asp-for="Device.BranchId">الفرع</label>
             <select asp-for="Device.BranchId" class="form-control">
                 <option value="">-- Select Branch --</option>
 
@@ -37,44 +37,44 @@
         </div>
 
         <div class="form-group">
-            <label asp-for="Device.Name">Device Name</label>
+            <label asp-for="Device.Name">اسم الجهاز</label>
             <input asp-for="Device.Name" class="form-control" />
             <span asp-validation-for="Device.Name" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="Device.IpAddress">IP Address</label>
+            <label asp-for="Device.IpAddress">عنوان IP</label>
             <input asp-for="Device.IpAddress" class="form-control" />
             <span asp-validation-for="Device.IpAddress" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="Device.Port">Port</label>
+            <label asp-for="Device.Port">المنفذ</label>
             <input asp-for="Device.Port" class="form-control" />
             <span asp-validation-for="Device.Port" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="Device.SerialNumber">Serial Number</label>
+            <label asp-for="Device.SerialNumber">الرقم التسلسلي</label>
             <input asp-for="Device.SerialNumber" class="form-control" />
             <span asp-validation-for="Device.SerialNumber" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="Device.Model">Model</label>
+            <label asp-for="Device.Model">الطراز</label>
             <input asp-for="Device.Model" class="form-control" />
             <span asp-validation-for="Device.Model" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="Device.FirmwareVersion">Firmware Version</label>
+            <label asp-for="Device.FirmwareVersion">إصدار البرنامج الثابت</label>
             <input asp-for="Device.FirmwareVersion" class="form-control" />
             <span asp-validation-for="Device.FirmwareVersion" class="text-danger"></span>
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn-primary">Save</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary">حفظ</button>
+            <a asp-page="./Index" class="btn-secondary">إلغاء</a>
         </div>
     </form>
 </div>

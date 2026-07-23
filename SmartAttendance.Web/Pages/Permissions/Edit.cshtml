@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.Permissions.EditModel
 
 @{
-    ViewData["Title"] = "Edit Permission";
+    ViewData["Title"] = "تعديل صلاحية";
 }
 
 <div class="page-header">
     <div>
-        <h1>Edit Permission</h1>
-        <p>Update permission details</p>
+        <h1>تعديل صلاحية</h1>
+        <p>تحديث تفاصيل الصلاحية</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">رجوع للقائمة</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -26,25 +26,25 @@
         <input type="hidden" asp-for="Permission.Id" />
 
         <div class="form-group">
-            <label asp-for="Permission.Module">Module</label>
+            <label asp-for="Permission.Module">الوحدة</label>
             <input asp-for="Permission.Module" class="form-control" />
             <span asp-validation-for="Permission.Module" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="Permission.Code">Code</label>
+            <label asp-for="Permission.Code">الرمز</label>
             <input asp-for="Permission.Code" class="form-control" />
             <span asp-validation-for="Permission.Code" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="Permission.Name">Name</label>
+            <label asp-for="Permission.Name">الاسم</label>
             <input asp-for="Permission.Name" class="form-control" />
             <span asp-validation-for="Permission.Name" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="Permission.DisplayOrder">Display Order</label>
+            <label asp-for="Permission.DisplayOrder">ترتيب العرض</label>
             <input asp-for="Permission.DisplayOrder" type="number" class="form-control" />
             <span asp-validation-for="Permission.DisplayOrder" class="text-danger"></span>
         </div>
@@ -52,19 +52,19 @@
         <div class="form-group checkbox-group">
             <label>
                 <input asp-for="Permission.IsActive" />
-                Active
+                نشط
             </label>
         </div>
 
         <div class="form-group">
-            <label asp-for="Permission.Description">Description</label>
+            <label asp-for="Permission.Description">الوصف</label>
             <input asp-for="Permission.Description" class="form-control" />
             <span asp-validation-for="Permission.Description" class="text-danger"></span>
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn-primary">Update</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary">تحديث</button>
+            <a asp-page="./Index" class="btn-secondary">إلغاء</a>
         </div>
     </form>
 </div>

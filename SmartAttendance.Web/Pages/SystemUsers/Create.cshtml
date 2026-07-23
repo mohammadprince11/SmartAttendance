@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.SystemUsers.CreateModel
 
 @{
-    ViewData["Title"] = "Add System User";
+    ViewData["Title"] = "إضافة مستخدم";
 }
 
 <div class="page-header">
     <div>
-        <h1>Add System User</h1>
-        <p>Create a new system user role record</p>
+        <h1>إضافة مستخدم</h1>
+        <p>إنشاء سجل دور لمستخدم نظام</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">رجوع للقائمة</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -24,25 +24,25 @@
 <div class="form-card">
     <form method="post">
         <div class="form-group">
-            <label asp-for="SystemUser.FullName">Full Name</label>
+            <label asp-for="SystemUser.FullName">الاسم الكامل</label>
             <input asp-for="SystemUser.FullName" class="form-control" />
             <span asp-validation-for="SystemUser.FullName" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="SystemUser.UserName">User Name</label>
+            <label asp-for="SystemUser.UserName">اسم المستخدم</label>
             <input asp-for="SystemUser.UserName" class="form-control" />
             <span asp-validation-for="SystemUser.UserName" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="SystemUser.Email">Email</label>
+            <label asp-for="SystemUser.Email">البريد الإلكتروني</label>
             <input asp-for="SystemUser.Email" class="form-control" />
             <span asp-validation-for="SystemUser.Email" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="SystemUser.Role">Role</label>
+            <label asp-for="SystemUser.Role">الدور</label>
             <select asp-for="SystemUser.Role" asp-items="Model.Roles" class="form-control"></select>
             <span asp-validation-for="SystemUser.Role" class="text-danger"></span>
         </div>
@@ -50,23 +50,23 @@
         <div class="form-group checkbox-group">
             <label>
                 <input asp-for="SystemUser.IsActive" />
-                Active
+                نشط
             </label>
         </div>
 
         <div class="form-group">
-            <label asp-for="SystemUser.Notes">Notes</label>
+            <label asp-for="SystemUser.Notes">ملاحظات</label>
             <input asp-for="SystemUser.Notes" class="form-control" />
             <span asp-validation-for="SystemUser.Notes" class="text-danger"></span>
         </div>
 
         <div class="alert-success">
-            This page manages roles only. Login and passwords will be added later in the authentication phase.
+            هذه الصفحة تدير الأدوار فقط. سيُضاف الدخول وكلمات المرور لاحقاً في مرحلة المصادقة.
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn-primary">Save</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary">حفظ</button>
+            <a asp-page="./Index" class="btn-secondary">إلغاء</a>
         </div>
     </form>
 </div>

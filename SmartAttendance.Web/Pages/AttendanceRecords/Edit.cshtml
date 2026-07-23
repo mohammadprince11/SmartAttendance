@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.AttendanceRecords.EditModel
 
 @{
-    ViewData["Title"] = "Edit Attendance Record";
+    ViewData["Title"] = "تعديل سجل حضور";
 }
 
 <div class="page-header">
     <div>
-        <h1>Edit Attendance Record</h1>
-        <p>Update attendance record information</p>
+        <h1>تعديل سجل حضور</h1>
+        <p>تحديث بيانات سجل الحضور</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">رجوع للقائمة</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -26,7 +26,7 @@
         <input type="hidden" asp-for="AttendanceRecord.Id" />
 
         <div class="form-group">
-            <label asp-for="AttendanceRecord.EmployeeId">Employee</label>
+            <label asp-for="AttendanceRecord.EmployeeId">الموظف</label>
             <select asp-for="AttendanceRecord.EmployeeId" class="form-control">
                 <option value="">-- Select Employee --</option>
 
@@ -39,37 +39,37 @@
         </div>
 
         <div class="form-group">
-            <label asp-for="AttendanceRecord.AttendanceDate">Attendance Date</label>
+            <label asp-for="AttendanceRecord.AttendanceDate">تاريخ الحضور</label>
             <input asp-for="AttendanceRecord.AttendanceDate" type="date" class="form-control" />
             <span asp-validation-for="AttendanceRecord.AttendanceDate" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="AttendanceRecord.CheckIn">Check In</label>
+            <label asp-for="AttendanceRecord.CheckIn">ختم الدخول</label>
             <input asp-for="AttendanceRecord.CheckIn" type="datetime-local" class="form-control" />
             <span asp-validation-for="AttendanceRecord.CheckIn" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="AttendanceRecord.CheckOut">Check Out</label>
+            <label asp-for="AttendanceRecord.CheckOut">ختم الخروج</label>
             <input asp-for="AttendanceRecord.CheckOut" type="datetime-local" class="form-control" />
             <span asp-validation-for="AttendanceRecord.CheckOut" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="AttendanceRecord.Source">Source</label>
+            <label asp-for="AttendanceRecord.Source">المصدر</label>
             <select asp-for="AttendanceRecord.Source" asp-items="Model.Sources" class="form-control"></select>
             <span asp-validation-for="AttendanceRecord.Source" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="AttendanceRecord.Status">Status</label>
+            <label asp-for="AttendanceRecord.Status">الحالة</label>
             <select asp-for="AttendanceRecord.Status" asp-items="Model.Statuses" class="form-control"></select>
             <span asp-validation-for="AttendanceRecord.Status" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="AttendanceRecord.DeviceId">Device</label>
+            <label asp-for="AttendanceRecord.DeviceId">الجهاز</label>
             <select asp-for="AttendanceRecord.DeviceId" class="form-control">
                 <option value="">-- No Device / Manual --</option>
 
@@ -82,14 +82,14 @@
         </div>
 
         <div class="form-group">
-            <label asp-for="AttendanceRecord.Notes">Notes</label>
+            <label asp-for="AttendanceRecord.Notes">ملاحظات</label>
             <input asp-for="AttendanceRecord.Notes" class="form-control" />
             <span asp-validation-for="AttendanceRecord.Notes" class="text-danger"></span>
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn-primary">Update</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary">تحديث</button>
+            <a asp-page="./Index" class="btn-secondary">إلغاء</a>
         </div>
     </form>
 </div>

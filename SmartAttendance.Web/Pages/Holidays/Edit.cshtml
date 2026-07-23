@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.Holidays.EditModel
 
 @{
-    ViewData["Title"] = "Edit Holiday";
+    ViewData["Title"] = "تعديل عطلة";
 }
 
 <div class="page-header">
     <div>
-        <h1>Edit Holiday</h1>
-        <p>Update holiday information</p>
+        <h1>تعديل عطلة</h1>
+        <p>تحديث بيانات العطلة</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">رجوع للقائمة</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -26,13 +26,13 @@
         <input type="hidden" asp-for="Holiday.Id" />
 
         <div class="form-group">
-            <label asp-for="Holiday.Name">Holiday Name</label>
+            <label asp-for="Holiday.Name">اسم العطلة</label>
             <input asp-for="Holiday.Name" class="form-control" />
             <span asp-validation-for="Holiday.Name" class="text-danger"></span>
         </div>
 
         <div class="form-group">
-            <label asp-for="Holiday.HolidayDate">Holiday Date</label>
+            <label asp-for="Holiday.HolidayDate">تاريخ العطلة</label>
             <input asp-for="Holiday.HolidayDate" type="date" class="form-control" />
             <span asp-validation-for="Holiday.HolidayDate" class="text-danger"></span>
         </div>
@@ -40,19 +40,19 @@
         <div class="form-group checkbox-group">
             <label>
                 <input asp-for="Holiday.IsRecurring" />
-                Recurring every year
+                متكررة كل سنة
             </label>
         </div>
 
         <div class="form-group">
-            <label asp-for="Holiday.Description">Description</label>
+            <label asp-for="Holiday.Description">الوصف</label>
             <input asp-for="Holiday.Description" class="form-control" />
             <span asp-validation-for="Holiday.Description" class="text-danger"></span>
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn-primary">Update</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary">تحديث</button>
+            <a asp-page="./Index" class="btn-secondary">إلغاء</a>
         </div>
     </form>
 </div>

@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.Permissions.DeleteModel
 
 @{
-    ViewData["Title"] = "Delete Permission";
+    ViewData["Title"] = "حذف صلاحية";
 }
 
 <div class="page-header">
     <div>
-        <h1>Delete Permission</h1>
-        <p>Confirm permission deletion</p>
+        <h1>حذف صلاحية</h1>
+        <p>تأكيد حذف الصلاحية</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">رجوع للقائمة</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -28,23 +28,23 @@
 
     <div class="details-grid">
         <div class="form-group">
-            <label>Module</label>
+            <label>الوحدة</label>
             <div class="form-control">@Model.Permission.Module</div>
         </div>
 
         <div class="form-group">
-            <label>Code</label>
+            <label>الرمز</label>
             <div class="form-control">@Model.Permission.Code</div>
         </div>
 
         <div class="form-group">
-            <label>Name</label>
+            <label>الاسم</label>
             <div class="form-control">@Model.Permission.Name</div>
         </div>
 
         <div class="form-group">
-            <label>Active</label>
-            <div class="form-control">@(Model.Permission.IsActive ? "Yes" : "No")</div>
+            <label>نشط</label>
+            <div class="form-control">@(Model.Permission.IsActive ? "نعم" : "لا")</div>
         </div>
     </div>
 
@@ -52,8 +52,8 @@
         <input type="hidden" name="id" value="@Model.Permission.Id" />
 
         <div class="form-actions">
-            <button type="submit" class="btn-table btn-delete">Delete</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-table btn-delete">حذف</button>
+            <a asp-page="./Index" class="btn-secondary">إلغاء</a>
         </div>
     </form>
 </div>

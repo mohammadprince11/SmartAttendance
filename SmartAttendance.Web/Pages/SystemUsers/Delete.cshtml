@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.SystemUsers.DeleteModel
 
 @{
-    ViewData["Title"] = "Delete System User";
+    ViewData["Title"] = "حذف مستخدم";
 }
 
 <div class="page-header">
     <div>
-        <h1>Delete System User</h1>
-        <p>Confirm system user deletion</p>
+        <h1>حذف مستخدم</h1>
+        <p>تأكيد حذف مستخدم النظام</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">رجوع للقائمة</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -28,32 +28,32 @@
 
     <div class="details-grid">
         <div class="form-group">
-            <label>Full Name</label>
+            <label>الاسم الكامل</label>
             <div class="form-control">@Model.SystemUser.FullName</div>
         </div>
 
         <div class="form-group">
-            <label>User Name</label>
+            <label>اسم المستخدم</label>
             <div class="form-control">@Model.SystemUser.UserName</div>
         </div>
 
         <div class="form-group">
-            <label>Email</label>
+            <label>البريد الإلكتروني</label>
             <div class="form-control">@Model.SystemUser.Email</div>
         </div>
 
         <div class="form-group">
-            <label>Role</label>
+            <label>الدور</label>
             <div class="form-control">@Model.SystemUser.Role</div>
         </div>
 
         <div class="form-group">
-            <label>Active</label>
-            <div class="form-control">@(Model.SystemUser.IsActive ? "Yes" : "No")</div>
+            <label>نشط</label>
+            <div class="form-control">@(Model.SystemUser.IsActive ? "نعم" : "لا")</div>
         </div>
 
         <div class="form-group">
-            <label>Notes</label>
+            <label>ملاحظات</label>
             <div class="form-control">@Model.SystemUser.Notes</div>
         </div>
     </div>
@@ -62,8 +62,8 @@
         <input type="hidden" name="id" value="@Model.SystemUser.Id" />
 
         <div class="form-actions">
-            <button type="submit" class="btn-table btn-delete">Delete</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-table btn-delete">حذف</button>
+            <a asp-page="./Index" class="btn-secondary">إلغاء</a>
         </div>
     </form>
 </div>

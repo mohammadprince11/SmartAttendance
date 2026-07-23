@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.Holidays.DeleteModel
 
 @{
-    ViewData["Title"] = "Delete Holiday";
+    ViewData["Title"] = "حذف عطلة";
 }
 
 <div class="page-header">
     <div>
-        <h1>Delete Holiday</h1>
-        <p>Confirm holiday deletion</p>
+        <h1>حذف عطلة</h1>
+        <p>تأكيد حذف العطلة</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">رجوع للقائمة</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -28,22 +28,22 @@
 
     <div class="details-grid">
         <div class="form-group">
-            <label>Holiday Name</label>
+            <label>اسم العطلة</label>
             <div class="form-control">@Model.Holiday.Name</div>
         </div>
 
         <div class="form-group">
-            <label>Date</label>
+            <label>التاريخ</label>
             <div class="form-control">@Model.Holiday.HolidayDate</div>
         </div>
 
         <div class="form-group">
-            <label>Recurring</label>
-            <div class="form-control">@(Model.Holiday.IsRecurring ? "Yes" : "No")</div>
+            <label>متكررة</label>
+            <div class="form-control">@(Model.Holiday.IsRecurring ? "نعم" : "لا")</div>
         </div>
 
         <div class="form-group">
-            <label>Description</label>
+            <label>الوصف</label>
             <div class="form-control">@Model.Holiday.Description</div>
         </div>
     </div>
@@ -52,8 +52,8 @@
         <input type="hidden" name="id" value="@Model.Holiday.Id" />
 
         <div class="form-actions">
-            <button type="submit" class="btn-table btn-delete">Delete</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-table btn-delete">حذف</button>
+            <a asp-page="./Index" class="btn-secondary">إلغاء</a>
         </div>
     </form>
 </div>

@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.Devices.DeleteModel
 
 @{
-    ViewData["Title"] = "Delete Device";
+    ViewData["Title"] = "حذف جهاز";
 }
 
 <div class="page-header">
     <div>
-        <h1>Delete Device</h1>
-        <p>Confirm device deletion</p>
+        <h1>حذف جهاز</h1>
+        <p>تأكيد حذف الجهاز</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">رجوع للقائمة</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -28,49 +28,49 @@
 
     <div class="details-grid">
         <div class="form-group">
-            <label>Branch</label>
+            <label>الفرع</label>
             <div class="form-control">@Model.Device.BranchName</div>
         </div>
 
         <div class="form-group">
-            <label>Device Name</label>
+            <label>اسم الجهاز</label>
             <div class="form-control">@Model.Device.Name</div>
         </div>
 
         <div class="form-group">
-            <label>IP Address</label>
+            <label>عنوان IP</label>
             <div class="form-control">@Model.Device.IpAddress</div>
         </div>
 
         <div class="form-group">
-            <label>Port</label>
+            <label>المنفذ</label>
             <div class="form-control">@Model.Device.Port</div>
         </div>
 
         <div class="form-group">
-            <label>Serial Number</label>
+            <label>الرقم التسلسلي</label>
             <div class="form-control">@Model.Device.SerialNumber</div>
         </div>
 
         <div class="form-group">
-            <label>Model</label>
+            <label>الطراز</label>
             <div class="form-control">@Model.Device.Model</div>
         </div>
 
         <div class="form-group">
-            <label>Firmware Version</label>
+            <label>إصدار البرنامج الثابت</label>
             <div class="form-control">@Model.Device.FirmwareVersion</div>
         </div>
 
         <div class="form-group">
-            <label>Status</label>
+            <label>الحالة</label>
             <div class="form-control">
                 @(Model.Device.IsActive ? "Active" : "Inactive")
             </div>
         </div>
 
         <div class="form-group">
-            <label>Enabled</label>
+            <label>مفعّل</label>
             <div class="form-control">
                 @(Model.Device.IsEnabled ? "Enabled" : "Disabled")
             </div>
@@ -81,8 +81,8 @@
         <input type="hidden" name="id" value="@Model.Device.Id" />
 
         <div class="form-actions">
-            <button type="submit" class="btn-table btn-delete">Delete</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-table btn-delete">حذف</button>
+            <a asp-page="./Index" class="btn-secondary">إلغاء</a>
         </div>
     </form>
 </div>

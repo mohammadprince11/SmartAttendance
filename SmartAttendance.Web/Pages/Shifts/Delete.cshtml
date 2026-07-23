@@ -2,16 +2,16 @@
 @model SmartAttendance.Web.Pages.Shifts.DeleteModel
 
 @{
-    ViewData["Title"] = "Delete Shift";
+    ViewData["Title"] = "حذف شفت";
 }
 
 <div class="page-header">
     <div>
-        <h1>Delete Shift</h1>
-        <p>Confirm shift deletion</p>
+        <h1>حذف شفت</h1>
+        <p>تأكيد حذف المناوبة</p>
     </div>
 
-    <a asp-page="./Index" class="btn-secondary">Back to List</a>
+    <a asp-page="./Index" class="btn-secondary">رجوع للقائمة</a>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -28,47 +28,47 @@
 
     <div class="details-grid">
         <div class="form-group">
-            <label>Shift Code</label>
+            <label>رمز المناوبة</label>
             <div class="form-control">@Model.Shift.Code</div>
         </div>
 
         <div class="form-group">
-            <label>Shift Name</label>
+            <label>اسم المناوبة</label>
             <div class="form-control">@Model.Shift.Name</div>
         </div>
 
         <div class="form-group">
-            <label>Start Time</label>
+            <label>وقت البداية</label>
             <div class="form-control">@Model.Shift.StartTime.ToString("HH:mm")</div>
         </div>
 
         <div class="form-group">
-            <label>End Time</label>
+            <label>وقت النهاية</label>
             <div class="form-control">@Model.Shift.EndTime.ToString("HH:mm")</div>
         </div>
 
         <div class="form-group">
-            <label>Working Hours</label>
+            <label>ساعات العمل</label>
             <div class="form-control">@Model.Shift.WorkingHours</div>
         </div>
 
         <div class="form-group">
-            <label>Grace In</label>
+            <label>سماح الدخول</label>
             <div class="form-control">@Model.Shift.GraceInMinutes min</div>
         </div>
 
         <div class="form-group">
-            <label>Grace Out</label>
+            <label>سماح الخروج</label>
             <div class="form-control">@Model.Shift.GraceOutMinutes min</div>
         </div>
 
         <div class="form-group">
-            <label>Night Shift</label>
-            <div class="form-control">@(Model.Shift.IsNightShift ? "Yes" : "No")</div>
+            <label>مناوبة ليلية</label>
+            <div class="form-control">@(Model.Shift.IsNightShift ? "نعم" : "لا")</div>
         </div>
 
         <div class="form-group">
-            <label>Status</label>
+            <label>الحالة</label>
             <div class="form-control">@(Model.Shift.IsActive ? "Active" : "Inactive")</div>
         </div>
     </div>
@@ -77,8 +77,8 @@
         <input type="hidden" name="id" value="@Model.Shift.Id" />
 
         <div class="form-actions">
-            <button type="submit" class="btn-table btn-delete">Delete</button>
-            <a asp-page="./Index" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-table btn-delete">حذف</button>
+            <a asp-page="./Index" class="btn-secondary">إلغاء</a>
         </div>
     </form>
 </div>

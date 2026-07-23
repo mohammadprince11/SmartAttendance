@@ -2,18 +2,18 @@
 @model SmartAttendance.Web.Pages.Devices.IndexModel
 
 @{
-    ViewData["Title"] = "Devices";
+    ViewData["Title"] = "الأجهزة";
 }
 
 <div class="page-header">
     <div>
-        <h1>Devices</h1>
-        <p>Manage attendance devices</p>
+        <h1>الأجهزة</h1>
+        <p>إدارة أجهزة الحضور</p>
     </div>
 
     <div class="form-actions">
-        <a asp-page="./Import" class="btn-secondary">Import Excel</a>
-        <a asp-page="./Create" class="btn-primary">+ Add Device</a>
+        <a asp-page="./Import" class="btn-secondary">استيراد إكسل</a>
+        <a asp-page="./Create" class="btn-primary">+ إضافة جهاز</a>
     </div>
 </div>
 
@@ -29,22 +29,22 @@
         <input type="text"
                name="SearchTerm"
                value="@Model.SearchTerm"
-               placeholder="Search by device name, IP, or serial..." />
+               placeholder="بحث باسم الجهاز أو العنوان أو الرقم التسلسلي..." />
 
-        <button type="submit" class="btn-primary">Search</button>
-        <a asp-page="./Index" class="btn-secondary">Clear</a>
+        <button type="submit" class="btn-primary">بحث</button>
+        <a asp-page="./Index" class="btn-secondary">مسح</a>
     </form>
 
     <table class="data-table">
         <thead>
             <tr>
-                <th>Name</th>
-                <th>IP Address</th>
-                <th>Port</th>
-                <th>Serial Number</th>
-                <th>Active</th>
-                <th>Enabled</th>
-                <th style="width: 160px;">Actions</th>
+                <th>الاسم</th>
+                <th>عنوان IP</th>
+                <th>المنفذ</th>
+                <th>الرقم التسلسلي</th>
+                <th>نشط</th>
+                <th>مفعّل</th>
+                <th style="width: 160px;">إجراءات</th>
             </tr>
         </thead>
 
@@ -58,11 +58,11 @@
                         <td>@device.IpAddress</td>
                         <td>@device.Port</td>
                         <td>@device.SerialNumber</td>
-                        <td>@(device.IsActive ? "Yes" : "No")</td>
-                        <td>@(device.IsEnabled ? "Yes" : "No")</td>
+                        <td>@(device.IsActive ? "نعم" : "لا")</td>
+                        <td>@(device.IsEnabled ? "نعم" : "لا")</td>
                         <td>
-                            <a asp-page="./Edit" asp-route-id="@device.Id" class="btn-table btn-edit">Edit</a>
-                            <a asp-page="./Delete" asp-route-id="@device.Id" class="btn-table btn-delete">Delete</a>
+                            <a asp-page="./Edit" asp-route-id="@device.Id" class="btn-table btn-edit">تعديل</a>
+                            <a asp-page="./Delete" asp-route-id="@device.Id" class="btn-table btn-delete">حذف</a>
                         </td>
                     </tr>
                 }
@@ -70,7 +70,7 @@
             else
             {
                 <tr>
-                    <td colspan="7" style="text-align:center;">No devices found.</td>
+                    <td colspan="7" style="text-align:center;">لا توجد أجهزة.</td>
                 </tr>
             }
         </tbody>

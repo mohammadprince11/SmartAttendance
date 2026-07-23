@@ -40,7 +40,7 @@ public class ImportModel : PageModel
 
     public string ImportType { get; private set; } = FixedImportType;
 
-    public string PageTitle { get; private set; } = "Smart Employee Bootstrap Import";
+    public string PageTitle { get; private set; } = "الاستيراد الذكي لبيانات الموظفين";
 
     public List<string> RequiredColumns { get; set; } = new();
 
