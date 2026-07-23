@@ -6,93 +6,146 @@
     ViewData["Title"] = "تفاصيل المسير";
     var payslipJson = JsonSerializer.Serialize(Model.Lines.Select(l => new
     {
-        l.EmployeeId, l.EmployeeNo, l.EmployeeName, l.GrossSalary, l.NetSalary,
-        l.WorkDays, l.AbsentDays,
-        Components = l.Components.Select(c => new { c.ItemName, c.Amount, c.IsAddition, c.Kind })
+        l.EmployeeId, l.EmployeeNo, l.EmployeeName, l.Department, l.Position,
+        l.BasicSalary, l.TotalAllowances, l.GrossSalary,
+        l.TaxAmount, l.GosiEmployee, l.GosiCompany, l.OtherDeductions,
+        l.TotalDeductions, l.NetSalary, l.EmployerCost, l.WorkDays, l.AbsentDays,
+        Earnings = l.Earnings.Select(c => new { c.ItemName, c.Amount }),
+        Deductions = l.Deductions.Select(c => new { c.ItemName, c.Amount })
     }));
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
 <style>
-    .pd-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text,#DCEAF4); }
+    .pd-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
     .pd-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
         padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
-        background: linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95)); }
-    html[data-theme="light"] .pd-head { background: linear-gradient(135deg,#fff,#f2f7fb); }
+        background:radial-gradient(circle at 90% 10%,rgba(18,217,227,.1),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .pd-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
     .pd-head h1 { margin:0; font-size:19px; font-weight:1000; }
-    .pd-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .pd-btn { min-height:32px; padding:6px 14px; border-radius:11px; border:0; font-size:12px; font-weight:900; cursor:pointer; background:linear-gradient(135deg,#12D9E3,#0ea5b5); color:#04141d; }
+    .pd-head p { margin:3px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .pd-btn { min-height:34px; padding:7px 15px; border-radius:11px; border:0; font-size:12px; font-weight:900; cursor:pointer; background:linear-gradient(135deg,#12D9E3,#0ea5b5); color:#04141d; }
     .pd-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
-    .pd-totals { display:flex; gap:10px; flex-wrap:wrap; }
-    .pd-stat { flex:1; min-width:150px; padding:12px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); }
-    .pd-stat b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .pd-totals { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+    .pd-stat { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
+    .pd-stat::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc,#12D9E3); }
+    .pd-stat b { display:block; font-size:19px; font-weight:1000; direction:ltr; }
     .pd-stat span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
     .pd-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
-    .pd-table { width:100%; border-collapse:collapse; font-size:13px; min-width:900px; }
-    .pd-table th { text-align:start; padding:11px 13px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.12); }
+    .pd-table { width:100%; border-collapse:collapse; font-size:13px; min-width:980px; }
+    .pd-table th { text-align:start; padding:11px 13px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
     html[data-theme="light"] .pd-table th { background:#f2f7fb; }
     .pd-table td { padding:10px 13px; border-bottom:1px solid rgba(143,168,188,.08); }
-    .pd-table tr:hover td { background:rgba(18,217,227,.04); }
+    .pd-table tbody tr:hover td { background:rgba(18,217,227,.05); cursor:pointer; }
+    .pd-table tfoot td { padding:12px 13px; font-weight:1000; border-top:2px solid rgba(18,217,227,.35); background:rgba(0,0,0,.1); }
     .pd-n { direction:ltr; text-align:start; font-weight:900; }
-    .pd-slip-line { display:flex; justify-content:space-between; padding:7px 2px; border-bottom:1px dashed rgba(143,168,188,.18); font-size:13px; }
-    .pd-slip-line.add b { color:#4ade80; }
-    .pd-slip-line.ded b { color:#f87171; }
-    .pd-slip-net { display:flex; justify-content:space-between; padding:12px 2px; font-size:16px; font-weight:1000; margin-top:6px; border-top:2px solid rgba(18,217,227,.4); }
-    .pd-slip-line b, .pd-slip-net b { direction:ltr; }
+    .pd-emp b { font-weight:900; } .pd-emp span { display:block; font-size:11px; color:var(--sa-muted,#8FA8BC); }
+    .pd-net { color:#4ade80; }
+
+    /* ---------- القسيمة الاحترافية ---------- */
+    .pd-slip-doc { background:#fff; color:#0b1d31; border-radius:14px; padding:22px; font-size:13px; box-shadow:0 10px 40px rgba(0,0,0,.4); }
+    .pd-slip-top { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #0ea5b5; padding-bottom:12px; margin-bottom:14px; }
+    .pd-slip-top .co { font-size:17px; font-weight:1000; color:#04141d; }
+    .pd-slip-top .co small { display:block; font-size:11px; font-weight:800; color:#5b7085; margin-top:2px; }
+    .pd-slip-top .lbl { text-align:end; }
+    .pd-slip-top .lbl b { font-size:15px; font-weight:1000; color:#0ea5b5; }
+    .pd-slip-top .lbl span { display:block; font-size:11px; color:#5b7085; font-weight:800; }
+    .pd-slip-emp { display:grid; grid-template-columns:1fr 1fr; gap:6px 18px; background:#f2f7fb; border-radius:10px; padding:12px 14px; margin-bottom:14px; font-size:12px; }
+    .pd-slip-emp div span { color:#5b7085; font-weight:800; } .pd-slip-emp div b { font-weight:1000; }
+    .pd-slip-cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .pd-slip-box { border:1px solid #d8e2ec; border-radius:10px; overflow:hidden; }
+    .pd-slip-box h4 { margin:0; padding:8px 12px; font-size:12px; font-weight:1000; color:#fff; }
+    .pd-slip-box.earn h4 { background:#16a34a; } .pd-slip-box.ded h4 { background:#dc2626; }
+    .pd-slip-box .row { display:flex; justify-content:space-between; padding:7px 12px; border-bottom:1px dashed #e3ebf3; font-size:12px; }
+    .pd-slip-box .row b { direction:ltr; font-weight:900; }
+    .pd-slip-box .sum { display:flex; justify-content:space-between; padding:9px 12px; font-weight:1000; background:#f2f7fb; }
+    .pd-slip-box .sum b { direction:ltr; }
+    .pd-slip-net { display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding:14px 18px; border-radius:12px; background:linear-gradient(135deg,#04141d,#0b2e40); color:#fff; }
+    .pd-slip-net span { font-size:13px; font-weight:900; } .pd-slip-net b { font-size:22px; font-weight:1000; direction:ltr; color:#12D9E3; }
+    .pd-slip-emp2 { display:flex; gap:18px; margin-top:12px; font-size:12px; color:#5b7085; font-weight:800; }
+    .pd-slip-emp2 b { color:#0b1d31; direction:ltr; }
+    .pd-slip-sign { display:flex; justify-content:space-between; margin-top:26px; font-size:12px; color:#5b7085; }
+    .pd-slip-sign div { text-align:center; } .pd-slip-sign .line { border-top:1.5px solid #0b1d31; width:150px; margin-bottom:4px; }
+
+    @@media print {
+        body * { visibility:hidden !important; }
+        #pd-slide, #pd-slide * { visibility:visible !important; }
+        #pd-slide { position:fixed !important; inset:0 !important; width:100% !important; max-width:100% !important; transform:none !important; box-shadow:none !important; background:#fff !important; overflow:visible !important; }
+        .hrms-slideover-head, .pd-print-btn { display:none !important; }
+        .pd-slip-doc { box-shadow:none; border-radius:0; }
+    }
 </style>
 
 <section class="pd-page" dir="rtl">
     <header class="pd-head">
         <div>
             <h1>مسير @Model.Run!.BatchNo — @Model.Run.PeriodText</h1>
-            <p>الحالة: @Model.Run.StatusLabelText · @Model.Run.EmployeeCount موظفاً · محتسب بواسطة @(Model.Run.CalculatedBy ?? "—")</p>
+            <p>@Model.CompanyName · الحالة: @Model.Run.StatusLabelText · @Model.Run.EmployeeCount موظفاً · محتسب بواسطة @(Model.Run.CalculatedBy ?? "—") @(Model.Run.CalculatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</p>
         </div>
         <a class="pd-btn ghost" href="/Payroll/Runs">← عودة للمسيرات</a>
     </header>
 
     <div class="pd-totals">
-        <div class="pd-stat"><b>@Model.Run.TotalGross.ToString("0.##")</b><span>إجمالي الرواتب</span></div>
-        <div class="pd-stat"><b style="color:#4ade80">@Model.Run.TotalNet.ToString("0.##")</b><span>صافي المدفوع</span></div>
-        <div class="pd-stat"><b>@Model.Run.TotalTax.ToString("0.##")</b><span>إجمالي الضريبة</span></div>
-        <div class="pd-stat"><b>@Model.Run.TotalGosiCompany.ToString("0.##")</b><span>حصة الشركة (ضمان)</span></div>
+        <div class="pd-stat" style="--acc:#12D9E3"><b>@Model.Run.TotalGross.ToString("#,0.##")</b><span>إجمالي الرواتب</span></div>
+        <div class="pd-stat" style="--acc:#f87171"><b>@Model.TotalDeductions.ToString("#,0.##")</b><span>إجمالي الاستقطاعات</span></div>
+        <div class="pd-stat" style="--acc:#4ade80"><b class="pd-net">@Model.Run.TotalNet.ToString("#,0.##")</b><span>صافي المدفوع</span></div>
+        <div class="pd-stat" style="--acc:#facc15"><b>@Model.Run.TotalTax.ToString("#,0.##")</b><span>ضريبة الدخل</span></div>
+        <div class="pd-stat" style="--acc:#a78bfa"><b>@Model.TotalGosiEmployee.ToString("#,0.##")</b><span>ضمان (موظفون)</span></div>
+        <div class="pd-stat" style="--acc:#60a5fa"><b>@Model.TotalEmployerCost.ToString("#,0.##")</b><span>تكلفة صاحب العمل</span></div>
     </div>
 
     <div class="pd-card">
         <table class="pd-table">
             <thead>
                 <tr>
-                    <th>الرمز</th><th>الموظف</th><th>الأساسي</th><th>العلاوات</th><th>الإجمالي</th>
-                    <th>الضريبة</th><th>الضمان</th><th>خصومات</th><th>الصافي</th><th>أيام العمل/الغياب</th><th></th>
+                    <th>الموظف</th><th>القسم</th><th>الأساسي</th><th>العلاوات</th><th>الإجمالي</th>
+                    <th>الضريبة</th><th>الضمان</th><th>خصومات أخرى</th><th>الصافي</th><th>حضور/غياب</th><th></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var l in Model.Lines)
                 {
-                    <tr>
-                        <td class="pd-n">@l.EmployeeNo</td>
-                        <td>@l.EmployeeName</td>
-                        <td class="pd-n">@l.BasicSalary.ToString("0.##")</td>
-                        <td class="pd-n">@l.TotalAllowances.ToString("0.##")</td>
-                        <td class="pd-n">@l.GrossSalary.ToString("0.##")</td>
-                        <td class="pd-n">@l.TaxAmount.ToString("0.##")</td>
-                        <td class="pd-n">@l.GosiEmployee.ToString("0.##")</td>
-                        <td class="pd-n">@l.OtherDeductions.ToString("0.##")</td>
-                        <td class="pd-n" style="color:#4ade80">@l.NetSalary.ToString("0.##")</td>
-                        <td class="pd-n">@l.WorkDays / @l.AbsentDays</td>
-                        <td><button type="button" class="pd-btn ghost" onclick="pdSlip(@l.EmployeeId)">قسيمة</button></td>
+                    <tr onclick="pdSlip(@l.EmployeeId)">
+                        <td class="pd-emp"><b>@l.EmployeeName</b><span>@l.EmployeeNo@(string.IsNullOrWhiteSpace(l.Position) ? "" : $" · {l.Position}")</span></td>
+                        <td style="font-size:12px">@(string.IsNullOrWhiteSpace(l.Department) ? "—" : l.Department)</td>
+                        <td class="pd-n">@l.BasicSalary.ToString("#,0.##")</td>
+                        <td class="pd-n">@l.TotalAllowances.ToString("#,0.##")</td>
+                        <td class="pd-n">@l.GrossSalary.ToString("#,0.##")</td>
+                        <td class="pd-n">@l.TaxAmount.ToString("#,0.##")</td>
+                        <td class="pd-n">@l.GosiEmployee.ToString("#,0.##")</td>
+                        <td class="pd-n">@l.OtherDeductions.ToString("#,0.##")</td>
+                        <td class="pd-n pd-net">@l.NetSalary.ToString("#,0.##")</td>
+                        <td class="pd-n">@(l.WorkDays - l.AbsentDays)/@l.WorkDays</td>
+                        <td><button type="button" class="pd-btn ghost" onclick="event.stopPropagation();pdSlip(@l.EmployeeId)">قسيمة</button></td>
                     </tr>
                 }
             </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2">الإجمالي (@Model.Lines.Count موظفاً)</td>
+                    <td class="pd-n">@Model.Lines.Sum(l => l.BasicSalary).ToString("#,0.##")</td>
+                    <td class="pd-n">@Model.Lines.Sum(l => l.TotalAllowances).ToString("#,0.##")</td>
+                    <td class="pd-n">@Model.Run.TotalGross.ToString("#,0.##")</td>
+                    <td class="pd-n">@Model.Run.TotalTax.ToString("#,0.##")</td>
+                    <td class="pd-n">@Model.TotalGosiEmployee.ToString("#,0.##")</td>
+                    <td class="pd-n">@Model.TotalOther.ToString("#,0.##")</td>
+                    <td class="pd-n pd-net">@Model.Run.TotalNet.ToString("#,0.##")</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
         </table>
     </div>
 
-    @* قسيمة الموظف *@
+    @* قسيمة راتب احترافية *@
     <div class="hrms-slideover-backdrop" id="pd-backdrop" onclick="pdClose()"></div>
-    <aside class="hrms-slideover" id="pd-slide" aria-hidden="true">
+    <aside class="hrms-slideover wide" id="pd-slide" aria-hidden="true">
         <div class="hrms-slideover-head">
-            <h2 id="pd-title">قسيمة الراتب</h2>
-            <button type="button" class="hrms-slideover-close" onclick="pdClose()">×</button>
+            <h2>قسيمة راتب</h2>
+            <div style="display:flex;gap:8px">
+                <button type="button" class="pd-btn pd-print-btn" onclick="window.print()">🖨 طباعة</button>
+                <button type="button" class="hrms-slideover-close" onclick="pdClose()">×</button>
+            </div>
         </div>
         <div class="hrms-slideover-body" id="pd-slip"></div>
     </aside>
@@ -102,21 +155,53 @@
     <script>
         var PD_DATA = @Html.Raw(payslipJson);
         var PD_PERIOD = "@Model.Run.PeriodText";
+        var PD_BATCH = "@Model.Run.BatchNo";
+        var PD_CO = @Html.Raw(JsonSerializer.Serialize(Model.CompanyName));
+
+        function fmt(n) { return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
         function pdSlip(empId) {
             var l = PD_DATA.find(function (x) { return x.EmployeeId === empId; });
             if (!l) return;
-            document.getElementById('pd-title').textContent = 'قسيمة ' + l.EmployeeName + ' — ' + PD_PERIOD;
-            var html = '<p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800">الرمز ' + l.EmployeeNo +
-                ' · أيام العمل ' + l.WorkDays + ' · الغياب ' + l.AbsentDays + '</p>';
-            (l.Components || []).forEach(function (c) {
-                var cls = c.IsAddition ? 'add' : 'ded';
-                var sign = c.IsAddition ? '+' : '−';
-                html += '<div class="pd-slip-line ' + cls + '"><span>' + c.ItemName + '</span><b>' + sign + ' ' +
-                    Number(c.Amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</b></div>';
-            });
-            html += '<div class="pd-slip-net"><span>صافي الراتب</span><b>' +
-                Number(l.NetSalary).toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</b></div>';
+            var earnRows = (l.Earnings || []).map(function (c) {
+                return '<div class="row"><span>' + c.ItemName + '</span><b>' + fmt(c.Amount) + '</b></div>';
+            }).join('');
+            var dedRows = (l.Deductions || []).map(function (c) {
+                return '<div class="row"><span>' + c.ItemName + '</span><b>' + fmt(c.Amount) + '</b></div>';
+            }).join('');
+            if (!dedRows) dedRows = '<div class="row"><span>لا استقطاعات</span><b>0.00</b></div>';
+
+            var html =
+              '<div class="pd-slip-doc">' +
+                '<div class="pd-slip-top">' +
+                  '<div class="co">' + PD_CO + '<small>قسيمة راتب رسمية</small></div>' +
+                  '<div class="lbl"><b>' + PD_PERIOD + '</b><span>دفعة ' + PD_BATCH + '</span></div>' +
+                '</div>' +
+                '<div class="pd-slip-emp">' +
+                  '<div><span>الموظف</span> <b>' + l.EmployeeName + '</b></div>' +
+                  '<div><span>الرقم الوظيفي</span> <b>' + l.EmployeeNo + '</b></div>' +
+                  '<div><span>القسم</span> <b>' + (l.Department || '—') + '</b></div>' +
+                  '<div><span>المنصب</span> <b>' + (l.Position || '—') + '</b></div>' +
+                  '<div><span>أيام العمل</span> <b>' + (l.WorkDays - l.AbsentDays) + ' / ' + l.WorkDays + '</b></div>' +
+                  '<div><span>أيام الغياب</span> <b>' + l.AbsentDays + '</b></div>' +
+                '</div>' +
+                '<div class="pd-slip-cols">' +
+                  '<div class="pd-slip-box earn"><h4>الاستحقاقات</h4>' + earnRows +
+                    '<div class="sum"><span>إجمالي الاستحقاقات</span><b>' + fmt(l.GrossSalary) + '</b></div></div>' +
+                  '<div class="pd-slip-box ded"><h4>الاستقطاعات</h4>' + dedRows +
+                    '<div class="sum"><span>إجمالي الاستقطاعات</span><b>' + fmt(l.TotalDeductions) + '</b></div></div>' +
+                '</div>' +
+                '<div class="pd-slip-net"><span>صافي الراتب المستحق</span><b>' + fmt(l.NetSalary) + ' د.ع</b></div>' +
+                '<div class="pd-slip-emp2">' +
+                  '<div>مساهمة الشركة (ضمان): <b>' + fmt(l.GosiCompany) + '</b></div>' +
+                  '<div>التكلفة الكلية على صاحب العمل: <b>' + fmt(l.EmployerCost) + '</b></div>' +
+                '</div>' +
+                '<div class="pd-slip-sign">' +
+                  '<div><div class="line"></div>توقيع الموظف</div>' +
+                  '<div><div class="line"></div>الموارد البشرية / المالية</div>' +
+                '</div>' +
+              '</div>';
+
             document.getElementById('pd-slip').innerHTML = html;
             document.getElementById('pd-slide').classList.add('open');
             document.getElementById('pd-backdrop').classList.add('open');

@@ -51,6 +51,8 @@ public static class PayrollRunStore
         public int EmployeeId { get; set; }
         public string EmployeeNo { get; set; } = string.Empty;
         public string EmployeeName { get; set; } = string.Empty;
+        public string Department { get; set; } = string.Empty;
+        public string Position { get; set; } = string.Empty;
         public decimal BasicSalary { get; set; }
         public decimal TotalAllowances { get; set; }
         public decimal GrossSalary { get; set; }
@@ -62,6 +64,11 @@ public static class PayrollRunStore
         public int WorkDays { get; set; }
         public int AbsentDays { get; set; }
         public List<Component> Components { get; set; } = new();
+
+        public decimal TotalDeductions => TaxAmount + GosiEmployee + OtherDeductions;
+        public decimal EmployerCost => GrossSalary + GosiCompany;
+        public IEnumerable<Component> Earnings => Components.Where(c => c.IsAddition);
+        public IEnumerable<Component> Deductions => Components.Where(c => !c.IsAddition);
     }
 
     public sealed class Component
@@ -398,9 +405,11 @@ WHERE Id = @Id;
         var lines = await HrmsDatabase.QueryAsync(
             dbContext,
             """
-SELECT l.*, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName
+SELECT l.*, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
+       ISNULL(e.Position, N'') AS Position, ISNULL(d.Name, N'') AS DepartmentName
 FROM PayrollRunLines l
 INNER JOIN Employees e ON e.Id = l.EmployeeId
+LEFT JOIN Departments d ON d.Id = e.DepartmentId
 WHERE l.RunId = @RunId
 ORDER BY e.EmployeeNo;
 """,
@@ -412,6 +421,8 @@ ORDER BY e.EmployeeNo;
                 EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
                 EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
                 EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+                Department = HrmsDatabase.GetString(reader, "DepartmentName"),
+                Position = HrmsDatabase.GetString(reader, "Position"),
                 BasicSalary = reader["BasicSalary"] is decimal b ? b : 0,
                 TotalAllowances = reader["TotalAllowances"] is decimal a ? a : 0,
                 GrossSalary = reader["GrossSalary"] is decimal g ? g : 0,

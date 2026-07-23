@@ -5,54 +5,72 @@
 @{
     ViewData["Title"] = "المسير";
     var months = new[] { "يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر" };
+    string[] stages = { "Draft","Calculated","Locked","Issued","PayslipSent" };
+    string[] stageLabels = { "مسودة","محتسب","مقفل","معتمد","قسائم" };
+    int StageIndex(string s) => Array.IndexOf(stages, s);
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
 <style>
-    .pr-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
-    .pr-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
-        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
-        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%), linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95)); }
-    html[data-theme="light"] .pr-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
-    .pr-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
-    .pr-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .pr-btn { min-height: 36px; padding: 7px 16px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
-    .pr-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
-    .pr-btn.sm { min-height: 30px; padding: 4px 11px; font-size: 12px; }
-    .pr-flow { display: flex; gap: 8px; flex-wrap: wrap; font-size: 11px; font-weight: 900; color: var(--sa-muted,#8FA8BC); }
-    .pr-flow span { padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(73,111,151,.25); }
-    .pr-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow-x: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .pr-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
-    .pr-table th { text-align: start; padding: 12px 14px; font-size: 11px; font-weight: 1000; color: var(--sa-muted,#8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); }
-    html[data-theme="light"] .pr-table th { background: #f2f7fb; }
-    .pr-table td { padding: 11px 14px; border-bottom: 1px solid rgba(143,168,188,.08); vertical-align: middle; }
-    .pr-table tr:hover td { background: rgba(18,217,227,.04); }
-    .pr-num { direction: ltr; font-weight: 900; text-align: start; }
-    .pr-chip { display: inline-block; padding: 3px 11px; border-radius: 999px; font-size: 11px; font-weight: 900; }
-    .pr-chip.Draft { background: rgba(143,168,188,.16); color: #8FA8BC; }
-    .pr-chip.Calculated { background: rgba(18,217,227,.14); color: #12D9E3; }
-    .pr-chip.Locked { background: rgba(250,204,21,.14); color: #facc15; }
-    .pr-chip.Issued { background: rgba(74,222,128,.14); color: #4ade80; }
-    .pr-chip.PayslipSent { background: rgba(167,139,250,.16); color: #a78bfa; }
-    .pr-empty { padding: 28px; text-align: center; color: var(--sa-muted,#8FA8BC); font-weight: 800; }
-    .pr-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
-    .pr-alert.err { border-color: rgba(248,113,113,.4); background: rgba(248,113,113,.08); color: #f87171; }
-    .pr-form label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 4px; }
-    .pr-form select, .pr-form input { min-height: 38px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px; }
-    html[data-theme="light"] .pr-form select, html[data-theme="light"] .pr-form input { background: #fff; }
-    .pr-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-    .pr-actions form { display: inline; }
+    .pr-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
+    .pr-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,rgba(18,217,227,.12),transparent 38%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .pr-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .pr-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .pr-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .pr-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:linear-gradient(135deg,#12D9E3,#0ea5b5); color:#04141d; }
+    .pr-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .pr-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+
+    .pr-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+    .pr-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
+    .pr-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc,#12D9E3); }
+    .pr-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .pr-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .pr-kpi small { font-size:11px; font-weight:900; color:#12D9E3; }
+
+    .pr-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    .pr-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .pr-filter select { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; }
+    html[data-theme="light"] .pr-filter select { background:#fff; }
+
+    .pr-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .pr-table { width:100%; border-collapse:collapse; font-size:13px; min-width:1040px; }
+    .pr-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .pr-table th { background:#f2f7fb; }
+    .pr-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
+    .pr-table tbody tr:hover td { background:rgba(18,217,227,.04); }
+    .pr-num { direction:ltr; font-weight:900; text-align:start; }
+    .pr-net { color:#4ade80; }
+
+    .pr-steps { display:flex; align-items:center; gap:3px; }
+    .pr-steps i { width:16px; height:5px; border-radius:3px; background:rgba(143,168,188,.25); }
+    .pr-steps i.on { background:#12D9E3; }
+    .pr-steps i.on.done { background:#4ade80; }
+    .pr-steps b { font-size:10px; font-weight:900; margin-inline-start:6px; padding:2px 8px; border-radius:999px; }
+    .st-Draft { background:rgba(143,168,188,.16); color:#8FA8BC; }
+    .st-Calculated { background:rgba(18,217,227,.14); color:#12D9E3; }
+    .st-Locked { background:rgba(250,204,21,.14); color:#facc15; }
+    .st-Issued { background:rgba(74,222,128,.14); color:#4ade80; }
+    .st-PayslipSent { background:rgba(167,139,250,.16); color:#a78bfa; }
+
+    .pr-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .pr-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
+    .pr-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
+    .pr-actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+    .pr-actions form { display:inline; }
+    .pr-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .pr-form select, .pr-form input { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; }
+    html[data-theme="light"] .pr-form select, html[data-theme="light"] .pr-form input { background:#fff; }
 </style>
 
 <section class="pr-page" dir="rtl">
     <header class="pr-head">
         <div>
             <h1>المسير — دفعات الرواتب</h1>
-            <p>دورة الدفعة: احتساب ← قفل ← اعتماد للصرف ← إرسال القسائم. الاحتساب يقرأ الأساسي والعلاوات والحضور المعتمد وخصومات المخالفات.</p>
-            <div class="pr-flow" style="margin-top:8px">
-                <span>مسودة</span> ← <span>محتسب</span> ← <span>مقفل</span> ← <span>معتمد للصرف</span> ← <span>أُرسلت القسائم</span>
-            </div>
+            <p>احتساب الرواتب من الأساسي والعلاوات والحضور المعتمد وخصومات المخالفات، بدورة اعتماد وقسائم.</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
             <a class="pr-btn ghost" href="/Payroll/SalaryItems">عناصر الراتب</a>
@@ -60,6 +78,38 @@
             <button type="button" class="pr-btn" onclick="prOpen()">+ دفعة مسير جديدة</button>
         </div>
     </header>
+
+    <div class="pr-kpis">
+        <div class="pr-kpi" style="--acc:#12D9E3"><b>@Model.TotalRuns</b><span>إجمالي الدفعات</span></div>
+        <div class="pr-kpi" style="--acc:#a78bfa"><b>@Model.PaidRuns</b><span>دفعات معتمدة/مصروفة</span></div>
+        <div class="pr-kpi" style="--acc:#facc15"><b>@(Model.LatestRun?.BatchNo ?? "—")</b><span>آخر دفعة · @(Model.LatestRun?.StatusLabelText ?? "")</span></div>
+        <div class="pr-kpi" style="--acc:#60a5fa"><b>@Model.LatestEmployees</b><span>موظفو آخر مسير</span></div>
+        <div class="pr-kpi" style="--acc:#12D9E3"><b>@Model.YearGross.ToString("#,0")</b><span>إجمالي رواتب السنة</span></div>
+        <div class="pr-kpi" style="--acc:#4ade80"><b class="pr-net">@Model.YearNet.ToString("#,0")</b><span>صافي مدفوع السنة</span></div>
+    </div>
+
+    <div class="pr-bar">
+        <form method="get" class="pr-filter">
+            <span>السنة:</span>
+            <select name="Year" onchange="this.form.submit()">
+                <option value="">الكل</option>
+                @foreach (var y in Model.AvailableYears)
+                {
+                    <option value="@y" selected="@(Model.Year == y)">@y</option>
+                }
+            </select>
+        </form>
+        <div class="pr-filter">
+            <span>المسار:</span>
+            <span class="pr-steps">
+                @for (var i = 0; i < stages.Length; i++)
+                {
+                    <i class="on"></i>
+                }
+                <span style="color:var(--sa-muted,#8FA8BC);font-weight:900">مسودة ← محتسب ← مقفل ← معتمد ← قسائم</span>
+            </span>
+        </div>
+    </div>
 
     @if (TempData["PayrollMessage"] != null)
     {
@@ -69,29 +119,40 @@
     <div class="pr-card">
         @if (Model.Runs.Count == 0)
         {
-            <div class="pr-empty">لا دفعات مسير بعد — ابدأ بـ«دفعة مسير جديدة» ثم شغّل الاحتساب.</div>
+            <div class="pr-empty">لا دفعات مسير @(Model.Year.HasValue ? $"لسنة {Model.Year}" : "") — ابدأ بـ«دفعة مسير جديدة» ثم شغّل الاحتساب.</div>
         }
         else
         {
             <table class="pr-table">
                 <thead>
                     <tr>
-                        <th>رقم الدفعة</th><th>الفترة</th><th>الحالة</th><th>الموظفون</th>
-                        <th>الإجمالي</th><th>الصافي</th><th>الضريبة</th><th>محتسب بواسطة</th>
+                        <th>رقم الدفعة</th><th>الفترة</th><th>الحالة والتقدّم</th><th>الموظفون</th>
+                        <th>الإجمالي</th><th>الاستقطاعات</th><th>الصافي</th><th>حصة الشركة</th><th>محتسب بواسطة</th>
                         <th style="text-align:end">إجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var run in Model.Runs)
                     {
+                        var idx = StageIndex(run.Status);
+                        var deductions = run.TotalGross - run.TotalNet;
                         <tr>
                             <td class="pr-num">@run.BatchNo</td>
                             <td class="pr-num">@run.PeriodText</td>
-                            <td><span class="pr-chip @run.Status">@run.StatusLabelText</span></td>
+                            <td>
+                                <div class="pr-steps">
+                                    @for (var i = 0; i < stages.Length; i++)
+                                    {
+                                        <i class="@(i <= idx ? "on" : "")@(run.Status is "Issued" or "PayslipSent" ? " done" : "")"></i>
+                                    }
+                                    <b class="st-@run.Status">@run.StatusLabelText</b>
+                                </div>
+                            </td>
                             <td class="pr-num">@run.EmployeeCount</td>
-                            <td class="pr-num">@run.TotalGross.ToString("0.##")</td>
-                            <td class="pr-num" style="color:#4ade80">@run.TotalNet.ToString("0.##")</td>
-                            <td class="pr-num">@run.TotalTax.ToString("0.##")</td>
+                            <td class="pr-num">@run.TotalGross.ToString("#,0.##")</td>
+                            <td class="pr-num">@deductions.ToString("#,0.##")</td>
+                            <td class="pr-num pr-net">@run.TotalNet.ToString("#,0.##")</td>
+                            <td class="pr-num">@run.TotalGosiCompany.ToString("#,0.##")</td>
                             <td style="font-size:12px">@(run.CalculatedBy ?? "—")<br /><span style="color:var(--sa-muted,#8FA8BC)">@(run.CalculatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</span></td>
                             <td>
                                 <div class="pr-actions">
@@ -101,20 +162,20 @@
                                     }
                                     @if (run.Status is "Draft" or "Calculated")
                                     {
-                                        <form method="post" asp-page-handler="Calculate"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit">@(run.Status == "Draft" ? "احتساب" : "إعادة احتساب")</button></form>
+                                        <form method="post" asp-page-handler="Calculate"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit">@(run.Status == "Draft" ? "احتساب" : "إعادة")</button></form>
                                     }
                                     @if (run.Status == "Calculated")
                                     {
                                         <form method="post" asp-page-handler="Lock"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit" data-zyconfirm="قفل الدفعة؟">قفل</button></form>
-                                        <form method="post" asp-page-handler="Reopen"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn ghost sm" type="submit">↩ مسودة</button></form>
+                                        <form method="post" asp-page-handler="Reopen"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn ghost sm" type="submit">↩</button></form>
                                     }
                                     @if (run.Status == "Locked")
                                     {
-                                        <form method="post" asp-page-handler="Issue"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit" data-zyconfirm="اعتماد للصرف؟">اعتماد للصرف</button></form>
+                                        <form method="post" asp-page-handler="Issue"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit" data-zyconfirm="اعتماد للصرف؟">اعتماد</button></form>
                                     }
                                     @if (run.Status == "Issued")
                                     {
-                                        <form method="post" asp-page-handler="Send"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit" data-zyconfirm="إرسال القسائم؟">إرسال القسائم</button></form>
+                                        <form method="post" asp-page-handler="Send"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit" data-zyconfirm="إرسال القسائم؟">قسائم</button></form>
                                     }
                                     @if (run.Status is "Draft" or "Calculated")
                                     {
@@ -129,7 +190,6 @@
         }
     </div>
 
-    @* سلايد إنشاء دفعة *@
     <div class="hrms-slideover-backdrop" id="pr-backdrop" onclick="prClose()"></div>
     <aside class="hrms-slideover" id="pr-slide" aria-hidden="true">
         <div class="hrms-slideover-head">
@@ -138,9 +198,7 @@
         </div>
         <div class="hrms-slideover-body">
             <form method="post" asp-page-handler="Create" class="pr-form" style="display:flex;flex-direction:column;gap:12px">
-                <label>السنة
-                    <input type="number" name="year" min="2000" max="2100" value="@Model.NewYear" />
-                </label>
+                <label>السنة<input type="number" name="year" min="2000" max="2100" value="@Model.NewYear" /></label>
                 <label>الشهر
                     <select name="month">
                         @for (var m = 1; m <= 12; m++)
@@ -150,7 +208,7 @@
                     </select>
                 </label>
                 <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800">
-                    تُنشأ الدفعة كمسودة. بعدها اضغط «احتساب» لبناء رواتب الموظفين من الأساسي والعلاوات والحضور المعتمد.
+                    تُنشأ الدفعة كمسودة. بعدها «احتساب» يبني رواتب الموظفين من الأساسي والعلاوات والحضور المعتمد وخصومات المخالفات.
                 </p>
                 <button type="submit" class="pr-btn">إنشاء الدفعة</button>
             </form>
@@ -160,14 +218,8 @@
 
 @section Scripts {
     <script>
-        function prOpen() {
-            document.getElementById('pr-slide').classList.add('open');
-            document.getElementById('pr-backdrop').classList.add('open');
-        }
-        function prClose() {
-            document.getElementById('pr-slide').classList.remove('open');
-            document.getElementById('pr-backdrop').classList.remove('open');
-        }
+        function prOpen() { document.getElementById('pr-slide').classList.add('open'); document.getElementById('pr-backdrop').classList.add('open'); }
+        function prClose() { document.getElementById('pr-slide').classList.remove('open'); document.getElementById('pr-backdrop').classList.remove('open'); }
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') prClose(); });
     </script>
 }

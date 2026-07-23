@@ -23,12 +23,21 @@ public class RunDetailModel : PageModel
 
     public PayrollRunStore.PayrollRun? Run { get; set; }
     public List<PayrollRunStore.PayrollLine> Lines { get; set; } = new();
+    public string CompanyName { get; set; } = "الشركة";
+
+    public decimal TotalDeductions => Lines.Sum(l => l.TotalDeductions);
+    public decimal TotalGosiEmployee => Lines.Sum(l => l.GosiEmployee);
+    public decimal TotalOther => Lines.Sum(l => l.OtherDeductions);
+    public decimal TotalEmployerCost => Lines.Sum(l => l.EmployerCost);
 
     public async Task<IActionResult> OnGetAsync()
     {
         Run = await PayrollRunStore.GetRunAsync(_db, Id);
         if (Run == null) return RedirectToPage("Runs");
         Lines = await PayrollRunStore.ListLinesAsync(_db, Id);
+        CompanyName = await HrmsDatabase.ScalarAsync<string>(_db,
+            "SELECT TOP 1 ISNULL(Name, N'الشركة') FROM Companies WHERE ISNULL(IsDeleted,0)=0 ORDER BY Id;")
+            ?? "الشركة";
         return Page();
     }
 }

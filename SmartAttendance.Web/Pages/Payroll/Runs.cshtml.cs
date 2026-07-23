@@ -19,13 +19,38 @@ public class RunsModel : PageModel
     }
 
     public List<PayrollRunStore.PayrollRun> Runs { get; set; } = new();
+    public List<int> AvailableYears { get; set; } = new();
+
+    [BindProperty(SupportsGet = true)]
+    public int? Year { get; set; }
 
     public int NewYear { get; set; } = DateTime.Today.Year;
     public int NewMonth { get; set; } = DateTime.Today.Month;
 
+    // مؤشرات
+    public int TotalRuns { get; set; }
+    public int PaidRuns { get; set; }
+    public PayrollRunStore.PayrollRun? LatestRun { get; set; }
+    public decimal YearNet { get; set; }
+    public decimal YearGross { get; set; }
+    public int LatestEmployees { get; set; }
+
     public async Task OnGetAsync()
     {
-        Runs = await PayrollRunStore.ListRunsAsync(_db);
+        var all = await PayrollRunStore.ListRunsAsync(_db);
+        AvailableYears = all.Select(r => r.Year).Distinct().OrderByDescending(y => y).ToList();
+        if (AvailableYears.Count == 0) AvailableYears.Add(DateTime.Today.Year);
+
+        TotalRuns = all.Count;
+        PaidRuns = all.Count(r => r.Status is "Issued" or "PayslipSent");
+        LatestRun = all.OrderByDescending(r => r.Year).ThenByDescending(r => r.Month).ThenByDescending(r => r.Id).FirstOrDefault();
+        LatestEmployees = LatestRun?.EmployeeCount ?? 0;
+
+        var filterYear = Year ?? AvailableYears.First();
+        YearNet = all.Where(r => r.Year == filterYear).Sum(r => r.TotalNet);
+        YearGross = all.Where(r => r.Year == filterYear).Sum(r => r.TotalGross);
+
+        Runs = (Year.HasValue ? all.Where(r => r.Year == Year.Value) : all).ToList();
     }
 
     public async Task<IActionResult> OnPostCreateAsync(int year, int month)
