@@ -13,6 +13,7 @@
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/mass-scope.css" asp-append-version="true" />
 
 <style>
     .sd-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
@@ -305,13 +306,13 @@
             <button type="button" class="hrms-slideover-close" onclick="massClose()">×</button>
         </div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="MassEntry" class="sd-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="MassEntry" enctype="multipart/form-data" class="sd-form" style="display:flex;flex-direction:column;gap:12px">
                 <input type="hidden" name="MassItemName" id="mass-ItemName" />
                 <input type="hidden" name="MassSalaryItemId" id="mass-SalaryItemId" value="0" />
                 <input type="hidden" name="MassDirection" id="mass-Direction" value="Deduct" />
+                <input type="hidden" name="ScopeMode" id="mass-ScopeMode" value="Manual" />
 
-                <p class="sd-hint">اتجاه وعدد أيام موحّد لكل الموظفين المحددين — تُنشأ حركة مستقلة لكل موظف.</p>
-
+                <div class="mass-sec">معلومات الحركة</div>
                 <label>البند *
                     <select id="mass-ItemSelect" onchange="massItemChanged()">
                         <option value="">— اختر من الكتالوج —</option>
@@ -344,14 +345,49 @@
                 </label>
                 <label>ملاحظة<textarea name="MassNote" rows="2"></textarea></label>
 
-                <label>الموظفون * <span id="mass-count" style="color:var(--acc)">(0 محدد)</span></label>
-                <div style="display:flex;gap:6px">
-                    <input type="text" id="mass-empsearch" placeholder="بحث بالاسم أو الرمز" oninput="massRenderEmps()"
-                           style="flex:1;min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-weight:800" />
-                    <button type="button" class="sd-btn ghost sm" onclick="massSelectAll(true)">تحديد الظاهر</button>
-                    <button type="button" class="sd-btn ghost sm" onclick="massSelectAll(false)">مسح الكل</button>
+                @* ===== النطاق (لمن يُطبَّق) — 4 طرق ===== *@
+                <div class="mass-sec">النطاق — لمن يُطبَّق</div>
+                <div class="mass-tabs">
+                    <button type="button" class="mass-tab on" data-m="Manual" onclick="massTab('Manual')">اختيار يدوي</button>
+                    <button type="button" class="mass-tab" data-m="Paste" onclick="massTab('Paste')">لصق أكواد</button>
+                    <button type="button" class="mass-tab" data-m="File" onclick="massTab('File')">ملف إكسل</button>
+                    <button type="button" class="mass-tab" data-m="Criteria" onclick="massTab('Criteria')">حسب معايير</button>
                 </div>
-                <div id="mass-emplist" style="max-height:280px;overflow-y:auto;border:1px solid rgba(73,111,151,.2);border-radius:10px;padding:4px"></div>
+
+                <div class="mass-pane" id="mass-pane-Manual">
+                    <label>الموظفون <span id="mass-count" style="color:var(--acc)">(0 محدد)</span></label>
+                    <div style="display:flex;gap:6px">
+                        <input type="text" id="mass-empsearch" placeholder="بحث بالاسم أو الرمز" oninput="massRenderEmps()"
+                               style="flex:1;min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-weight:800" />
+                        <button type="button" class="sd-btn ghost sm" onclick="massSelectAll(true)">تحديد الظاهر</button>
+                        <button type="button" class="sd-btn ghost sm" onclick="massSelectAll(false)">مسح الكل</button>
+                    </div>
+                    <div id="mass-emplist" class="mass-list"></div>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-Paste" hidden>
+                    <div class="mass-paste-head">
+                        <b>أكواد الموظفين <span id="mass-codecount">(0 كود)</span></b>
+                        <button type="button" class="sd-btn ghost sm" onclick="massPasteClip()">📋 لصق من الحافظة</button>
+                    </div>
+                    <textarea name="MassCodes" id="mass-codes" rows="6" placeholder="انقر «لصق من الحافظة» أو ألصق مباشرة (Ctrl+V) — أكواد إكسل (سطر لكل كود) تتحوّل لفواصل تلقائياً"
+                              oninput="massCodeCount()" onpaste="massOnPaste(event)"></textarea>
+                    <p class="sd-hint">تُحلّ الأكواد إلى موظفين تلقائياً — غير المطابق يُتخطّى مع إظهار عدده.</p>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-File" hidden>
+                    <div class="mass-file-hint"><b style="color:var(--acc)">تنسيق الملف:</b> عمود واحد يحوي <b>رمز الموظف</b>.</div>
+                    <label>الملف (.xlsx أو .csv)<input type="file" name="massFile" accept=".xlsx,.csv" style="min-height:auto;padding:8px" /></label>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-Criteria" hidden>
+                    <p class="sd-hint">يُطبَّق على <b>كل الموظفين النشطين</b> المطابقين للمعايير.</p>
+                    <div class="sd-grid2">
+                        <label>القسم<select name="MassDept"><option value="">كل الأقسام</option>@foreach (var s in Model.AllDepartments){<option value="@s">@s</option>}</select></label>
+                        <label>الفرع<select name="MassBranch"><option value="">كل الفروع</option>@foreach (var s in Model.AllBranches){<option value="@s">@s</option>}</select></label>
+                    </div>
+                    <label>المسمى الوظيفي<select name="MassJobTitle"><option value="">كل المسميات</option>@foreach (var s in Model.AllJobTitles){<option value="@s">@s</option>}</select></label>
+                </div>
 
                 <button type="submit" class="sd-btn">حفظ الإدخال الجماعي</button>
             </form>
@@ -361,9 +397,11 @@
 
 @section Scripts {
     <script src="~/js/emp-picker.js" asp-append-version="true"></script>
+    <script src="~/js/mass-scope.js" asp-append-version="true"></script>
     <script>
         var SD_ITEMS = @Html.Raw(catalogJson);
         var SD_EMP = @Html.Raw(empJson);
+        window.MASS_EMP = SD_EMP;
         var sdEmpPicker = EmpPicker.init({
             code: document.getElementById('sd-emp-code'),
             name: document.getElementById('sd-emp-name'),
@@ -469,29 +507,11 @@
             var it=SD_ITEMS.find(function(x){ return String(x.Id)===val; });
             if(it){ document.getElementById('mass-ItemName').value=it.Name; document.getElementById('mass-SalaryItemId').value=it.Id; }
         }
-        function massCount(){ document.getElementById('mass-count').textContent='('+document.querySelectorAll('#mass-emplist input:checked').length+' محدد)'; }
-        function massBuildEmps(){
-            document.getElementById('mass-emplist').innerHTML = SD_EMP.map(function(e){
-                var key=((e.No||'')+' '+(e.Name||'')).toLowerCase();
-                return '<label class="mass-emp" data-s="'+key+'" style="display:flex;align-items:center;gap:8px;padding:6px 8px;font-weight:800;cursor:pointer;border-radius:8px">'
-                    +'<input type="checkbox" name="MassEmployeeIds" value="'+e.Id+'" onchange="massCount()" />'
-                    +'<span style="flex:1">'+(e.Name||'')+'</span>'
-                    +'<span style="direction:ltr;color:var(--sa-muted,#8FA8BC);font-size:12px">'+(e.No||'')+'</span></label>';
-            }).join('');
-        }
-        function massRenderEmps(){
-            var q=(document.getElementById('mass-empsearch').value||'').trim().toLowerCase();
-            document.querySelectorAll('#mass-emplist .mass-emp').forEach(function(l){ l.style.display = (!q || l.getAttribute('data-s').indexOf(q)>=0) ? 'flex' : 'none'; });
-        }
-        function massSelectAll(on){
-            document.querySelectorAll('#mass-emplist .mass-emp').forEach(function(l){ if(l.style.display!=='none'){ l.querySelector('input').checked=on; } });
-            massCount();
-        }
         function massOpen(){
             document.querySelector('#mass-slide form').reset();
             document.getElementById('mass-ItemName').value=''; document.getElementById('mass-SalaryItemId').value=0;
             document.getElementById('mass-CustomWrap').hidden=true; massSetDir('Deduct');
-            massBuildEmps(); massRenderEmps(); massCount();
+            massBuildEmps(); massRenderEmps(); massCount(); massTab('Manual');
             document.getElementById('mass-slide').classList.add('open'); document.getElementById('mass-backdrop').classList.add('open');
         }
         function massClose(){ document.getElementById('mass-slide').classList.remove('open'); document.getElementById('mass-backdrop').classList.remove('open'); }

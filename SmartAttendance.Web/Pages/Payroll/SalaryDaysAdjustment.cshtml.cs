@@ -44,6 +44,10 @@ public class SalaryDaysAdjustmentModel : PageModel
     public decimal DeductedDays { get; set; }
     public int EmployeesCovered { get; set; }
 
+    public List<string> AllDepartments { get; set; } = new();
+    public List<string> AllBranches { get; set; } = new();
+    public List<string> AllJobTitles { get; set; } = new();
+
     public sealed class EmployeeOption
     {
         public int Id { get; set; }
@@ -71,6 +75,8 @@ public class SalaryDaysAdjustmentModel : PageModel
                 No = HrmsDatabase.GetString(reader, "EmployeeNo"),
                 Name = HrmsDatabase.GetString(reader, "FullName")
             });
+
+        (AllDepartments, AllBranches, AllJobTitles) = await MassScopeResolver.OrgListsAsync(_db);
 
         TotalCount = Items.Count;
         AddedDays = Items.Where(x => (x.Days ?? 0) > 0).Sum(x => x.Days ?? 0);
@@ -148,22 +154,24 @@ public class SalaryDaysAdjustmentModel : PageModel
         return RedirectToPage(new { Year, Month });
     }
 
-    /// <summary>إدخال جماعي: نفس عدد الأيام والاتجاه لعدة موظفين دفعة واحدة.</summary>
-    public async Task<IActionResult> OnPostMassEntryAsync()
+    /// <summary>إدخال جماعي (نمط كيان «النطاق»): نفس الأيام والاتجاه لمجموعة موظفين تُحدَّد بأربع طرق.</summary>
+    public async Task<IActionResult> OnPostMassEntryAsync(IFormFile? massFile)
     {
         var f = Request.Form;
         var y = int.TryParse(f["MassYear"], out var yy) ? yy : Year;
         var m = int.TryParse(f["MassMonth"], out var mm) ? mm : Month;
         var back = new { Year = y, Month = m };
 
-        var empIds = f["MassEmployeeIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).Distinct().ToList();
         var itemName = f["MassItemName"].ToString().Trim();
         var days = decimal.TryParse(f["MassDays"], out var dd) ? Math.Abs(dd) : 0;
         if (f["MassDirection"].ToString() != "Add") days = -days;
 
-        if (empIds.Count == 0) { TempData["PayrollMessage"] = "اختر موظفاً واحداً على الأقل."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
         if (string.IsNullOrWhiteSpace(itemName)) { TempData["PayrollMessage"] = "اختر البند."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
         if (days == 0) { TempData["PayrollMessage"] = "عدد الأيام يجب أن يكون أكبر من صفر."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
+
+        var (empIds, skipped, scopeLabel, err) = await MassScopeResolver.ResolveAsync(_db, f, massFile);
+        if (err != null) { TempData["PayrollMessage"] = err; TempData["PayrollOk"] = false; return RedirectToPage(back); }
+        if (empIds.Count == 0) { TempData["PayrollMessage"] = "لم يُحدَّد أي موظف مطابق."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
 
         var template = new PayrollTransactionStore.Transaction
         {
@@ -183,7 +191,9 @@ public class SalaryDaysAdjustmentModel : PageModel
         };
 
         var n = await PayrollTransactionStore.SaveManyAsync(_db, empIds, template, User?.Identity?.Name ?? "system");
-        TempData["PayrollMessage"] = $"تمت إضافة {n} حركة تعديل أيام عبر الإدخال الجماعي.";
+        TempData["PayrollMessage"] = $"تمت إضافة {n} حركة تعديل أيام (النطاق: {scopeLabel})"
+            + (skipped > 0 ? $"، وتُخطّي {skipped} كوداً غير مطابق." : ".");
+        TempData["PayrollOk"] = true;
         return RedirectToPage(back);
     }
 

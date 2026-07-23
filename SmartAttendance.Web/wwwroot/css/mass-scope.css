@@ -1,0 +1,30 @@
+/* ==========================================================================
+   محدّد نطاق الإدخال الجماعي (نمط كيان «النطاق») — أنماط مشتركة بين شاشات الحركات.
+   يعتمد على متغيّرات الصفحة: --acc / --sa-text / --sa-muted / --sa-surface.
+   ========================================================================== */
+.mass-sec { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:1000; color:var(--acc); margin:2px 0 -2px; }
+.mass-sec::after { content:""; flex:1; height:1px; background:color-mix(in srgb, var(--acc) 30%, transparent); }
+.mass-hint { font-size:12px; font-weight:800; color:var(--sa-muted,#8FA8BC); padding:2px 2px 6px; }
+
+.mass-tabs { display:flex; gap:4px; border:1px solid rgba(73,111,151,.25); border-radius:12px; padding:4px; background:rgba(0,0,0,.12); flex-wrap:wrap; }
+.mass-tab { flex:1 1 auto; min-width:96px; padding:8px 10px; border:0; border-radius:9px; background:transparent; color:var(--sa-muted,#8FA8BC); font-size:12px; font-weight:900; cursor:pointer; }
+.mass-tab.on { background:var(--acc); color:#04141d; }
+
+.mass-pane { display:flex; flex-direction:column; gap:10px; }
+.mass-pane[hidden] { display:none; }
+.mass-file-hint { font-size:12px; font-weight:800; color:var(--sa-muted,#8FA8BC); border:1px dashed rgba(73,111,151,.35); border-radius:10px; padding:10px 12px; line-height:1.9; }
+
+.mass-list { max-height:300px; overflow-y:auto; border:1px solid rgba(73,111,151,.22); border-radius:12px; padding:6px; display:flex; flex-direction:column; gap:2px; background:rgba(0,0,0,.1); }
+.mass-emp { display:flex !important; flex-direction:row !important; align-items:center; gap:10px; padding:7px 10px; border-radius:9px; cursor:pointer; margin:0; }
+.mass-emp:hover { background:color-mix(in srgb, var(--acc) 8%, transparent); }
+.mass-emp.sel { background:color-mix(in srgb, var(--acc) 15%, transparent); }
+.mass-emp.hidden { display:none !important; }
+.mass-emp input[type=checkbox] { width:17px !important; height:17px; min-height:auto !important; flex:0 0 auto; margin:0; accent-color:var(--acc); }
+.mass-emp .av { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:1000; font-size:13px; color:#04141d; background:linear-gradient(135deg, var(--acc), #12D9E3); flex:0 0 auto; }
+.mass-emp .nm { flex:1; font-weight:900; font-size:13px; text-align:start; color:var(--sa-text,#DCEAF4); }
+html[data-theme="light"] .mass-emp .nm { color:#0b1d31; }
+.mass-emp .cd { direction:ltr; color:var(--sa-muted,#8FA8BC); font-size:12px; font-weight:900; }
+
+.mass-paste-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.mass-paste-head b { font-size:13px; font-weight:900; } .mass-paste-head b span { color:var(--acc); }
+#mass-codes { font-family:inherit; direction:ltr; text-align:start; line-height:1.9; }
