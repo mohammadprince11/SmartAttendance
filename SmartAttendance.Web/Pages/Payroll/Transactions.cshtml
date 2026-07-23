@@ -7,6 +7,7 @@
     var months = new[] { "يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر" };
     var acc = Model.IsDeduction ? "#f87171" : "#4ade80";
     var catalogJson = JsonSerializer.Serialize(Model.Catalog.Select(i => new { i.Id, i.Name, i.Taxable, i.DefaultValue }));
+    var empJson = JsonSerializer.Serialize(Model.Employees.Select(e => new { e.Id, e.No, e.Name }));
     string J(object o) => JsonSerializer.Serialize(o);
     string Dt(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
 }
@@ -214,11 +215,11 @@
                 <p class="tx-hint">الحقول الأساسية تكفي لأغلب الحالات — الخيارات المتقدمة اختيارية.</p>
 
                 <label>اسم الموظف *
-                    <select name="EmployeeId" id="tx-EmployeeId" required>
-                        <option value="">— اختر الموظف —</option>
-                        @foreach (var e in Model.Employees)
-                        { <option value="@e.Id">@e.SearchText</option> }
-                    </select>
+                    <div class="empk-field">
+                        <input type="text" id="tx-emp-name" class="empk-name" placeholder="اسم الموظف" readonly />
+                        <input type="text" id="tx-emp-code" class="empk-code" placeholder="رمز" autocomplete="off" />
+                    </div>
+                    <input type="hidden" name="EmployeeId" id="tx-EmployeeId" />
                 </label>
 
                 <label>نوع الدفعة
@@ -323,8 +324,16 @@
 </section>
 
 @section Scripts {
+    <script src="~/js/emp-picker.js" asp-append-version="true"></script>
     <script>
         var TX_ITEMS = @Html.Raw(catalogJson);
+        var TX_EMP = @Html.Raw(empJson);
+        var txEmpPicker = EmpPicker.init({
+            code: document.getElementById('tx-emp-code'),
+            name: document.getElementById('tx-emp-name'),
+            hidden: document.getElementById('tx-EmployeeId'),
+            employees: TX_EMP
+        });
 
         function txAll(cb){ document.querySelectorAll('[name=SelectedIds]').forEach(function(x){x.checked=cb.checked;}); }
 
@@ -367,10 +376,11 @@
             txAdv(false);
             document.getElementById('tx-CustomWrap').hidden = true;
             document.getElementById('tx-ItemSelect').value=''; document.getElementById('tx-ItemName').value=''; document.getElementById('tx-SalaryItemId').value=0;
+            txEmpPicker.set(null);
             txSetPt('InSalary');
 
             if (id && d){
-                setVal('tx-EmployeeId', d.EmployeeId);
+                txEmpPicker.set(TX_EMP.find(function(x){ return x.Id === d.EmployeeId; }) || null);
                 setVal('tx-FMonth', d.Month); setVal('tx-FYear', d.Year);
                 setVal('tx-Amount', d.Amount); setChk('tx-Taxable', d.Taxable);
                 txSetPt(d.PaymentType || 'InSalary');
