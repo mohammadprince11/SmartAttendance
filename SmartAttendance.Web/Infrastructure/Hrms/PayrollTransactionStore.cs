@@ -14,6 +14,7 @@ public static class PayrollTransactionStore
     public const string Income = "Income";
     public const string Deduction = "Deduction";
     public const string Overtime = "Overtime";
+    public const string SalaryDays = "SalaryDays";
 
     /// <summary>معامل بدل العمل الإضافي الافتراضي (1.5× الأجر الساعي) عند عدم تحديده.</summary>
     public const decimal DefaultRateFactor = 1.5m;
@@ -23,6 +24,7 @@ public static class PayrollTransactionStore
         "Income" => "دخل",
         "Deduction" => "اقتطاع",
         "Overtime" => "عمل إضافي",
+        "SalaryDays" => "تعديل أيام الراتب",
         _ => t
     };
 
@@ -54,6 +56,10 @@ public static class PayrollTransactionStore
         // الساعي للموظف × الساعات × المعامل. إن كانت الساعات فارغة يُستخدم Amount كقيمة يدوية.
         public decimal? Hours { get; set; }
         public decimal? RateFactor { get; set; }
+
+        // تعديل أيام الراتب (SalaryDays): عدد أيام موقّع — موجب يضيف أياماً، سالب يخصمها.
+        // المبلغ يُحتسب بالمسير = الأيام × الأجر اليومي (الأساسي ÷ 30). Amount يدوي بديل.
+        public decimal? Days { get; set; }
 
         // نوع الدفعة
         public string PaymentType { get; set; } = "InSalary";   // InSalary | OutSalary
@@ -159,6 +165,7 @@ IF COL_LENGTH('PayrollTransactions','IsLocked') IS NULL ALTER TABLE PayrollTrans
 IF COL_LENGTH('PayrollTransactions','LockedRunId') IS NULL ALTER TABLE PayrollTransactions ADD LockedRunId int NULL;
 IF COL_LENGTH('PayrollTransactions','Hours') IS NULL ALTER TABLE PayrollTransactions ADD Hours decimal(9,2) NULL;
 IF COL_LENGTH('PayrollTransactions','RateFactor') IS NULL ALTER TABLE PayrollTransactions ADD RateFactor decimal(6,3) NULL;
+IF COL_LENGTH('PayrollTransactions','Days') IS NULL ALTER TABLE PayrollTransactions ADD Days decimal(9,2) NULL;
 """);
     }
 
@@ -266,7 +273,8 @@ WHERE [Year] = @Y AND [Month] = @M AND TxType = @Type
                 TxType = HrmsDatabase.GetString(reader, "TxType"),
                 Taxable = HrmsDatabase.GetBool(reader, "Taxable"),
                 Hours = reader["Hours"] is decimal h ? h : null,
-                RateFactor = reader["RateFactor"] is decimal rf ? rf : null
+                RateFactor = reader["RateFactor"] is decimal rf ? rf : null,
+                Days = reader["Days"] is decimal dy ? dy : null
             });
     }
 
@@ -352,7 +360,7 @@ WHERE [Year] = @Y AND [Month] = @M AND TxType = @Type
 
     private static async Task<string> GenerateReferenceNoAsync(ApplicationDbContext dbContext, string txType)
     {
-        var prefix = txType switch { "Deduction" => "DD", "Overtime" => "OT", _ => "IN" };
+        var prefix = txType switch { "Deduction" => "DD", "Overtime" => "OT", "SalaryDays" => "SD", _ => "IN" };
         prefix += $"{DateTime.Today:yy}-";
         var count = await HrmsDatabase.ScalarAsync<int>(dbContext,
             "SELECT COUNT(1) FROM PayrollTransactions WHERE ReferenceNo LIKE @P;",
@@ -366,13 +374,13 @@ INSERT INTO PayrollTransactions
   TransactionDate, EffectiveDate, IsUnlimited, ValidFrom, ValidTo,
   IsRetroactive, RetroactiveDate, UpdateSocialSecurity, SocialSecurityToDate, SalaryFromDate, SalaryToDate,
   IsScheduled, InstallmentMode, InstallmentCount, InstallmentAmount, InstallmentMonths, FirstInstallmentDate,
-  ChangeCostCenter, CostCenter, AttachmentName, AttachmentPath, Note, Source, Status, Hours, RateFactor, ReferenceNo, CreatedBy)
+  ChangeCostCenter, CostCenter, AttachmentName, AttachmentPath, Note, Source, Status, Hours, RateFactor, Days, ReferenceNo, CreatedBy)
 VALUES
  (@Emp, @Y, @M, @Item, @Name, @Amount, @Type, @Taxable, @PaymentType,
   @TxDate, @EffDate, @Unlimited, @ValidFrom, @ValidTo,
   @Retro, @RetroDate, @UpdSS, @SSToDate, @SalFrom, @SalTo,
   @Sched, @InstMode, @InstCount, @InstAmount, @InstMonths, @FirstInst,
-  @ChgCC, @CostCenter, @AttName, @AttPath, @Note, @Source, @Status, @Hours, @RateFactor, @Ref, @By);
+  @ChgCC, @CostCenter, @AttName, @AttPath, @Note, @Source, @Status, @Hours, @RateFactor, @Days, @Ref, @By);
 """;
 
     private const string UpdateSql = """
@@ -381,7 +389,7 @@ UPDATE PayrollTransactions SET
   PaymentType=@PaymentType, TransactionDate=@TxDate, EffectiveDate=@EffDate, IsUnlimited=@Unlimited, ValidFrom=@ValidFrom, ValidTo=@ValidTo,
   IsRetroactive=@Retro, RetroactiveDate=@RetroDate, UpdateSocialSecurity=@UpdSS, SocialSecurityToDate=@SSToDate, SalaryFromDate=@SalFrom, SalaryToDate=@SalTo,
   IsScheduled=@Sched, InstallmentMode=@InstMode, InstallmentCount=@InstCount, InstallmentAmount=@InstAmount, InstallmentMonths=@InstMonths, FirstInstallmentDate=@FirstInst,
-  ChangeCostCenter=@ChgCC, CostCenter=@CostCenter, AttachmentName=@AttName, AttachmentPath=@AttPath, Note=@Note, Source=@Source, Status=@Status, Hours=@Hours, RateFactor=@RateFactor
+  ChangeCostCenter=@ChgCC, CostCenter=@CostCenter, AttachmentName=@AttName, AttachmentPath=@AttPath, Note=@Note, Source=@Source, Status=@Status, Hours=@Hours, RateFactor=@RateFactor, Days=@Days
 WHERE Id=@Id;
 """;
 
@@ -429,6 +437,7 @@ WHERE Id=@Id;
         LockedRunId = HrmsDatabase.GetNullableInt(reader, "LockedRunId"),
         Hours = reader["Hours"] is decimal h ? h : null,
         RateFactor = reader["RateFactor"] is decimal rf ? rf : null,
+        Days = reader["Days"] is decimal dy ? dy : null,
         CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default
     };
 
@@ -470,5 +479,6 @@ WHERE Id=@Id;
         HrmsDatabase.AddParameter(command, "@Status", string.IsNullOrWhiteSpace(tx.Status) ? "Approved" : tx.Status);
         HrmsDatabase.AddParameter(command, "@Hours", (object?)tx.Hours ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@RateFactor", (object?)tx.RateFactor ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@Days", (object?)tx.Days ?? DBNull.Value);
     }
 }

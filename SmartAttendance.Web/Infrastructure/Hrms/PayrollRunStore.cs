@@ -76,7 +76,7 @@ public static class PayrollRunStore
         public string ItemName { get; set; } = string.Empty;
         public decimal Amount { get; set; }
         public bool IsAddition { get; set; }
-        public string Kind { get; set; } = string.Empty;   // Basic|Allowance|Overtime|Tax|Gosi|Penalty
+        public string Kind { get; set; } = string.Empty;   // Basic|Allowance|Income|Overtime|SalaryDays|Deduction|Tax|Gosi|Penalty
     }
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
@@ -265,6 +265,8 @@ END;
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
         var overtimeTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.Overtime))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
+        var salaryDaysTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.SalaryDays))
+            .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
         // --- بناء السطور ---
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
@@ -282,8 +284,9 @@ END;
             financial.TryGetValue(emp.Id, out var fin);
             if (fin?.Stop == true) continue;                 // مستبعَد من الاحتساب
             var basic = fin?.Basic ?? 0;
-            if (basic <= 0 && !allowances.ContainsKey(emp.Id) && !income.ContainsKey(emp.Id) && !overtimeTx.ContainsKey(emp.Id))
-                continue; // لا راتب ولا علاوات ولا حركات دخل/عمل إضافي
+            if (basic <= 0 && !allowances.ContainsKey(emp.Id) && !income.ContainsKey(emp.Id)
+                && !overtimeTx.ContainsKey(emp.Id) && !salaryDaysTx.ContainsKey(emp.Id))
+                continue; // لا راتب ولا علاوات ولا حركات دخل/عمل إضافي/أيام
 
             // تنسيب الأساسي حسب أيام الحضور من الاعتماد الشهري
             months.TryGetValue(emp.Id, out var month);
@@ -345,8 +348,30 @@ END;
                 }
             }
 
-            var gross = Math.Round(proratedBasic + allowancesTotal + incomeTotal + overtimeTotal, 2);
-            var taxableBase = Math.Round(proratedBasic + allowancesTotal + taxableIncome + taxableOvertime, 2);
+            // تعديل أيام الراتب (شاشة «تعديل أيام الراتب») — أيام موقّعة × الأجر اليومي.
+            // موجب = إضافة أيام (استحقاق يدخل الإجمالي والوعاء الخاضع)، سالب = خصم أيام
+            // (استقطاع بعد الإجمالي كنمط حركات الاقتطاع). إن لم تُحدَّد أيام يُستخدم المبلغ
+            // المخزّن موقّعاً. الأجر اليومي = الأساسي ÷ 30.
+            decimal salaryDaysAdd = 0, salaryDaysDeduct = 0;
+            if (salaryDaysTx.TryGetValue(emp.Id, out var empDays))
+            {
+                foreach (var t in empDays)
+                {
+                    var signed = t.Days.HasValue && t.Days.Value != 0
+                        ? Math.Round(t.Days.Value * dailyRate, 2)
+                        : t.Amount;
+                    if (signed == 0) continue;
+                    var abs = Math.Abs(signed);
+                    var label = t.Days.HasValue && t.Days.Value != 0
+                        ? $"{t.ItemName} ({t.Days:+0.##;-0.##} يوم)"
+                        : t.ItemName;
+                    if (signed > 0) salaryDaysAdd += abs; else salaryDaysDeduct += abs;
+                    comps.Add(new Component { ItemName = label, Amount = abs, IsAddition = signed > 0, Kind = "SalaryDays" });
+                }
+            }
+
+            var gross = Math.Round(proratedBasic + allowancesTotal + incomeTotal + overtimeTotal + salaryDaysAdd, 2);
+            var taxableBase = Math.Round(proratedBasic + allowancesTotal + taxableIncome + taxableOvertime + salaryDaysAdd, 2);
             var tax = PayrollConfigStore.ComputeTax(taxableBase, taxProfile);
             var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(gross, gosiProfile);
 
@@ -381,7 +406,7 @@ END;
                 }
             }
 
-            var otherDeductions = penaltyTotal + deductionTxTotal;
+            var otherDeductions = penaltyTotal + deductionTxTotal + salaryDaysDeduct;
             var net = Math.Round(gross - tax - gosiEmp - otherDeductions, 2);
 
             var lineId = await HrmsDatabase.ScalarAsync<int>(
