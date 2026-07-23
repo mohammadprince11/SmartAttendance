@@ -23,18 +23,18 @@
         margin: 0 0 8px 0;
         font-size: 30px;
         font-weight: 900;
-        color: #0f172a;
+        color: var(--sa-text, #0f172a);
     }
 
     .import-v3-head p {
         margin: 0;
-        color: #64748b;
+        color: var(--sa-muted, #64748b);
         font-size: 15px;
     }
 
     .import-v3-card {
-        background: #ffffff;
-        border: 1px solid #dbe4f0;
+        background: var(--sa-surface, #ffffff);
+        border: 1px solid var(--sa-border, #dbe4f0);
         border-radius: 22px;
         padding: 24px;
         box-shadow: 0 22px 55px rgba(15, 23, 42, 0.08);
@@ -54,8 +54,8 @@
     }
 
     .import-v3-box {
-        background: #f8fafc;
-        border: 1px solid #dbe4f0;
+        background: var(--sa-surface-2, #f8fafc);
+        border: 1px solid var(--sa-border, #dbe4f0);
         border-radius: 18px;
         padding: 18px;
         min-height: 330px;
@@ -67,7 +67,7 @@
         gap: 10px;
         font-size: 17px;
         font-weight: 900;
-        color: #0f172a;
+        color: var(--sa-text, #0f172a);
         margin-bottom: 8px;
     }
 
@@ -75,8 +75,8 @@
         width: 32px;
         height: 32px;
         border-radius: 12px;
-        background: #2563eb;
-        color: #ffffff;
+        background: var(--sa-primary, #2563eb);
+        color: var(--sa-surface, #ffffff);
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -84,7 +84,7 @@
     }
 
     .import-v3-help {
-        color: #64748b;
+        color: var(--sa-muted, #64748b);
         font-size: 13px;
         line-height: 1.6;
         margin-bottom: 14px;
@@ -92,8 +92,8 @@
 
     .import-v3-file {
         width: 100%;
-        background: #ffffff;
-        border: 2px dashed #93c5fd;
+        background: var(--sa-surface, #ffffff);
+        border: 2px dashed var(--sa-primary-soft, #93c5fd);
         border-radius: 16px;
         padding: 18px;
         min-height: 64px;
@@ -103,8 +103,8 @@
         width: 100%;
         min-height: 210px;
         resize: vertical;
-        background: #ffffff;
-        border: 2px solid #cbd5e1;
+        background: var(--sa-surface, #ffffff);
+        border: 2px solid var(--sa-border-strong, #cbd5e1);
         border-radius: 16px;
         padding: 14px;
         font-family: Consolas, "Courier New", monospace;
@@ -116,7 +116,7 @@
 
     .import-v3-paste:focus,
     .import-v3-file:focus {
-        border-color: #2563eb;
+        border-color: var(--sa-primary, #2563eb);
         box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
     }
 
@@ -124,12 +124,12 @@
         margin: 18px 0;
         padding: 16px;
         border-radius: 18px;
-        border: 1px solid #86efac;
-        background: linear-gradient(135deg, #ecfdf5, #eff6ff);
+        border: 1px solid var(--sa-success, #86efac);
+        background: linear-gradient(135deg, var(--sa-surface-3, #ecfdf5), var(--sa-surface-3, #eff6ff));
     }
 
     .import-v3-required-title {
-        color: #065f46;
+        color: var(--sa-success, #065f46);
         font-weight: 900;
         margin-bottom: 10px;
     }
@@ -141,9 +141,9 @@
     }
 
     .import-v3-badge {
-        background: #ffffff;
-        color: #075985;
-        border: 1px solid #bae6fd;
+        background: var(--sa-surface, #ffffff);
+        color: var(--sa-info, #075985);
+        border: 1px solid var(--sa-info, #bae6fd);
         border-radius: 999px;
         padding: 7px 12px;
         font-size: 12px;
@@ -151,9 +151,9 @@
     }
 
     .import-v3-note {
-        background: #fff7ed;
-        border: 1px solid #fed7aa;
-        color: #9a3412;
+        background: var(--sa-surface-3, #fff7ed);
+        border: 1px solid var(--sa-warning, #fed7aa);
+        color: var(--sa-warning, #9a3412);
         border-radius: 16px;
         padding: 12px 14px;
         font-size: 13px;
@@ -176,32 +176,32 @@
     }
 
     .import-v3-summary-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
+        background: var(--sa-surface, #ffffff);
+        border: 1px solid var(--sa-border, #e2e8f0);
         border-radius: 16px;
         padding: 16px;
     }
 
     .import-v3-summary-card .label {
         font-size: 12px;
-        color: #64748b;
+        color: var(--sa-muted, #64748b);
         font-weight: 800;
         margin-bottom: 6px;
     }
 
     .import-v3-summary-card .value {
         font-size: 28px;
-        color: #0f172a;
+        color: var(--sa-text, #0f172a);
         font-weight: 900;
     }
 
     .status-ready {
-        color: #166534;
+        color: var(--sa-success, #166534);
         font-weight: 900;
     }
 
     .status-error {
-        color: #991b1b;
+        color: var(--sa-danger, #991b1b);
         font-weight: 900;
     }
 
@@ -209,9 +209,9 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        background: #dbeafe;
-        color: #1e40af;
-        border: 1px solid #93c5fd;
+        background: var(--sa-primary-soft, #dbeafe);
+        color: var(--sa-primary, #1e40af);
+        border: 1px solid var(--sa-primary-soft, #93c5fd);
         border-radius: 999px;
         padding: 7px 12px;
         font-size: 12px;

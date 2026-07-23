@@ -55,13 +55,20 @@ public class IndexModel : PageModel
     [TempData]
     public string? ErrorMessage { get; set; }
 
+    /// <summary>
+    /// الحساب الحالي غير مرتبط بسجل موظف (مثل حساب admin النظامي) — ليست مشكلة
+    /// صلاحية، فلا تُحوَّل لصفحة «لا صلاحية» المضلِّلة بل تُشرح الحالة بالصفحة.
+    /// </summary>
+    public bool AccountNotLinkedToEmployee { get; set; }
+
     public async Task<IActionResult> OnGetAsync()
     {
         var employeeId = GetCurrentEmployeeId();
 
         if (employeeId <= 0)
         {
-            return RedirectToPage("/AccessDenied");
+            AccountNotLinkedToEmployee = true;
+            return Page();
         }
 
         await LoadAsync(employeeId);

@@ -6,6 +6,7 @@
     var employee = Model.Employee;
 }
 
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/my-profile.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/my-profile-phase1.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/my-profile-attendance-header-fix.css" asp-append-version="true" />
@@ -361,6 +362,29 @@
                     </div>
                 </form>
             </div>
+        </div>
+    </div>
+}
+else if (Model.AccountNotLinkedToEmployee)
+{
+    @* حساب نظامي بلا سجل موظف (admin مثلاً): ليست مشكلة صلاحية — تُشرح الحالة *@
+    <div class="hrms-page">
+        <div class="page-header">
+            <div>
+                <h1>ملفي الشخصي</h1>
+                <p>صفحة الخدمة الذاتية للموظف: بياناته وحضوره وطلباته.</p>
+            </div>
+        </div>
+
+        <div class="hrms-card" style="text-align:center;padding:48px 24px">
+            <h2 style="margin:0 0 10px;font-size:18px;font-weight:1000">حسابك غير مرتبط بسجل موظف</h2>
+            <p style="margin:0 0 6px;color:var(--sa-muted,#8FA8BC);font-weight:800">
+                هذه الصفحة تعرض بيانات موظف بعينه، وحسابك حساب نظامي لا يقابله سجل في قائمة الموظفين.
+            </p>
+            <p style="margin:0 0 18px;color:var(--sa-muted,#8FA8BC);font-weight:800">
+                لربط الحساب بموظف، افتح «إدارة مستخدمي النظام» واختر الموظف المقابل للحساب.
+            </p>
+            <a href="/UserAccess" class="hrms-btn-primary">إدارة مستخدمي النظام</a>
         </div>
     </div>
 }

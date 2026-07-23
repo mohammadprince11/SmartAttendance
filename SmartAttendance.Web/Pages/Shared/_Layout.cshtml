@@ -405,12 +405,10 @@
                         <a asp-page="/AttendanceImports/Index" class="nexora-nav-link @(IsUnder("/AttendanceImports") ? "active nexora-active" : "")">
                             <span>استيراد البصمات</span>
                         </a>
-                        <a asp-page="/AttendanceProcessing/Index" class="nexora-nav-link @(IsUnder("/AttendanceProcessing") ? "active nexora-active" : "")">
-                            <span>معالجة الحضور</span>
-                        </a>
-                        <a asp-page="/AttendanceCorrections/Index" class="nexora-nav-link @(IsUnder("/AttendanceCorrections") ? "active nexora-active" : "")">
-                            <span>تصحيحات الحضور</span>
-                        </a>
+                        @* «معالجة الحضور» و«تصحيحات الحضور» أُزيلا من القائمة: كلاهما مجرد
+                           إعادة توجيه لـ/AttendanceOperations — الأول بنفس التبويب الافتراضي
+                           (نسخة مطابقة)، والثاني بتبويب لا عرض له إطلاقاً. المساران يبقيان
+                           عاملين للروابط المحفوظة. *@
                         <a href="/ShiftTypes" class="nexora-nav-link @(IsUnder("/ShiftTypes") ? "active nexora-active" : "")">
                             <span>أنواع المناوبات</span>
                         </a>
