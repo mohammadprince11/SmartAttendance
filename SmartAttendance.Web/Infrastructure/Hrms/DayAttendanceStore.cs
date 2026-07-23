@@ -352,8 +352,22 @@ WHERE EmployeeId=@Emp AND WorkDate=@Date;
         return true;
     }
 
-    /// <summary>اشتقاق حقول اليوم: التأخير/الخروج المبكر/الساعات/الحالة.</summary>
-    private static (DateTime? CheckIn, DateTime? CheckOut, decimal LateHours,
+    /// <summary>
+    /// تطبيق فترة السماح على فارق زمني (تأخير أو خروج مبكر) وإرجاعه بالساعات.
+    /// داخل السماحية (أو عندها بالضبط) ⇒ صفر. بعدها ⇒ حسب سياسة المناوبة:
+    /// Subtract = الفارق ناقص السماحية · Full = الفارق كاملاً.
+    /// </summary>
+    public static decimal ApplyGrace(TimeSpan span, int graceMinutes, string? policy)
+    {
+        if (span <= TimeSpan.Zero) return 0;
+        var grace = TimeSpan.FromMinutes(Math.Max(0, graceMinutes));
+        if (span <= grace) return 0;
+        var effective = policy == "Full" ? span : span - grace;
+        return Math.Round((decimal)effective.TotalHours, 2);
+    }
+
+    /// <summary>اشتقاق حقول اليوم: التأخير/الخروج المبكر/الساعات/الحالة. (عامة لتغطية الاختبارات)</summary>
+    public static (DateTime? CheckIn, DateTime? CheckOut, decimal LateHours,
         decimal EarlyLeaveHours, decimal WorkedHours, string Status) Derive(
         ShiftTypeStore.ShiftType shift, ShiftTypeStore.ShiftDay? day,
         string dayKind, DateTime? checkIn, DateTime? checkOut)
@@ -387,29 +401,34 @@ WHERE EmployeeId=@Emp AND WorkDate=@Date;
         decimal late = 0, early = 0;
         if (TimeSpan.TryParse(day?.StartTime, out var shiftStart))
         {
-            var lateSpan = checkIn.Value.TimeOfDay - shiftStart;
-            if (lateSpan > TimeSpan.Zero) late = Math.Round((decimal)lateSpan.TotalHours, 2);
+            late = ApplyGrace(checkIn.Value.TimeOfDay - shiftStart,
+                shift.LatenessGraceMinutes, shift.GraceExceededPolicy);
         }
         if (checkOut.HasValue && checkOut.Value.Date == checkIn.Value.Date
             && TimeSpan.TryParse(day?.StartTime, out var dayStart)
             && TimeSpan.TryParse(day?.EndTime, out var shiftEnd)
             && shiftEnd > dayStart) // العابرة لمنتصف الليل (نهاية < بداية) خروجها باليوم التالي — لا اشتقاق مبكر هنا
         {
-            var earlySpan = shiftEnd - checkOut.Value.TimeOfDay;
-            if (earlySpan > TimeSpan.Zero) early = Math.Round((decimal)earlySpan.TotalHours, 2);
+            early = ApplyGrace(shiftEnd - checkOut.Value.TimeOfDay,
+                shift.EarlyLeaveGraceMinutes, shift.GraceExceededPolicy);
         }
 
         var status = !checkOut.HasValue ? "Incomplete" : late > 0 ? "Late" : "Present";
         return (checkIn, checkOut, late, early, worked, status);
     }
 
-    public static async Task<List<DayRow>> ListAsync(
+    public static Task<List<DayRow>> ListAsync(
         ApplicationDbContext dbContext, int year, int month, string? search)
     {
-        await EnsureAsync(dbContext);
-
         var from = new DateOnly(year, month, 1);
-        var to = from.AddMonths(1).AddDays(-1);
+        return ListRangeAsync(dbContext, from, from.AddMonths(1).AddDays(-1), search);
+    }
+
+    /// <summary>يوميات مدى تواريخ حر — تغذّي شاشة «إدارة الحضور» من المحرك الرسمي.</summary>
+    public static async Task<List<DayRow>> ListRangeAsync(
+        ApplicationDbContext dbContext, DateOnly from, DateOnly to, string? search)
+    {
+        await EnsureAsync(dbContext);
 
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,

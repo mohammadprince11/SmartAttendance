@@ -61,6 +61,15 @@ public class IndexModel : PageModel
 
     public int ProcessTotalResults { get; set; }
 
+    /// <summary>
+    /// بالفترة صفوف غير محلّلة تُقرأ من المحرك القديم (عرض فقط) — تنبيه الشاشة
+    /// يطلب تشغيل «تحديث الحضور» ليصير العرض كله من المحرك الرسمي.
+    /// </summary>
+    public bool IsLegacyEngineFallback { get; set; }
+
+    /// <summary>عدد صفوف الفترة التي لا يقابلها يومية محلّلة.</summary>
+    public int UnanalyzedRows { get; set; }
+
     public bool ProcessIsLimited { get; set; }
 
     public AttendanceImportPreviewViewModel? Preview { get; set; }
@@ -872,12 +881,52 @@ WHERE ar.AttendanceDate >= @FromDate
 
         MaxRows = NormalizeMaxRows(MaxRows);
 
-        var processedRecords = await _attendanceProcessingService.GetProcessedRecordsAsync(
+        // المحرك الرسمي (DayAttendances) هو المصدر لكل يوم محلَّل — نفس ما يغذّي
+        // المخالفات والرواتب، فتُطبَّق فترة السماح وسياستها ولا تتناقض الشاشة مع
+        // ما سُجِّل (قسم 35). الأيام غير المحلّلة تبقى بقراءة المحرك القديم حتى لا
+        // يختفي موظف من الكشف، ومع تنبيه صريح بأنها قراءة أولية.
+        var dayRows = await DayAttendanceStore.ListRangeAsync(
+            _dbContext, ProcessFromDate.Value, ProcessToDate.Value, null);
+
+        var official = dayRows.ToDictionary(
+            r => BuildAttendanceNoteKey(r.EmployeeNo, r.WorkDate),
+            MapDayRow,
+            StringComparer.OrdinalIgnoreCase);
+
+        var legacy = await _attendanceProcessingService.GetProcessedRecordsAsync(
             ProcessFromDate,
             ProcessToDate,
             null);
 
-        var materialized = CleanProcessFilter(processedRecords.ToList());
+        var processedRecords = new List<AttendanceProcessingResultViewModel>();
+        var legacyKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var legacyCount = 0;
+
+        foreach (var row in legacy)
+        {
+            var key = BuildAttendanceNoteKey(row.EmployeeNo ?? string.Empty, row.AttendanceDate);
+            legacyKeys.Add(key);
+
+            if (official.TryGetValue(key, out var derived))
+            {
+                processedRecords.Add(derived);
+            }
+            else
+            {
+                legacyCount++;
+                processedRecords.Add(row);
+            }
+        }
+
+        // يوميات محلّلة لا يقابلها صف بالمحرك القديم (موظف خارج نطاقه مثلاً)
+        processedRecords.AddRange(official
+            .Where(pair => !legacyKeys.Contains(pair.Key))
+            .Select(pair => pair.Value));
+
+        UnanalyzedRows = legacyCount;
+        IsLegacyEngineFallback = legacyCount > 0;
+
+        var materialized = CleanProcessFilter(processedRecords);
 
         ProcessTotalResults = materialized.Count;
         ProcessIsLimited = ProcessTotalResults > MaxRows;
@@ -889,6 +938,37 @@ WHERE ar.AttendanceDate >= @FromDate
         await LoadAttendanceNotesForProcessedAsync();
     }
 
+
+    /// <summary>
+    /// يومية المحرك الرسمي ← صف الجدول. الحالات تُترجم لمفردات الشاشة القائمة:
+    /// عطلة/راحة ← «راحة أسبوعية» (وبعمل فيها ← «عمل في الراحة الأسبوعية»)،
+    /// و«بصمة ناقصة» تُترك للشاشة تشتقها من غياب أحد الوقتين.
+    /// </summary>
+    private static AttendanceProcessingResultViewModel MapDayRow(DayAttendanceStore.DayRow row)
+    {
+        var isOff = row.DayKind is "Weekend" or "Rest";
+        var status = isOff
+            ? (row.WorkedHours > 0 ? "Work On Weekly Off" : "Weekly Off")
+            : row.Status == "Incomplete" ? "Present" : row.Status;
+
+        return new AttendanceProcessingResultViewModel
+        {
+            EmployeeId = row.EmployeeId,
+            EmployeeNo = row.EmployeeNo,
+            EmployeeName = row.EmployeeName,
+            AttendanceDate = row.WorkDate,
+            ShiftCode = string.Empty,   // المناوبة تُعرَّف بالاسم في المحرك الرسمي
+            ShiftName = row.ShiftName ?? string.Empty,
+            IsWeeklyOff = isOff,
+            CheckIn = row.CheckIn,
+            CheckOut = row.CheckOut,
+            WorkingHours = row.WorkedHours,
+            LateMinutes = (int)Math.Round(row.LateHours * 60, MidpointRounding.AwayFromZero),
+            EarlyLeaveMinutes = (int)Math.Round(row.EarlyLeaveHours * 60, MidpointRounding.AwayFromZero),
+            MissingCheckOut = row.CheckIn.HasValue && !row.CheckOut.HasValue,
+            CalculatedStatus = status
+        };
+    }
 
     private void NormalizeDefaults()
     {

@@ -70,6 +70,7 @@ public class IndexModel : PageModel
             RequestableFromEss = form["RequestableFromEss"] == "true",
             LatenessGraceMinutes = int.TryParse(form["LatenessGraceMinutes"], out var lgm) ? Math.Max(0, lgm) : 0,
             EarlyLeaveGraceMinutes = int.TryParse(form["EarlyLeaveGraceMinutes"], out var elg) ? Math.Max(0, elg) : 0,
+            GraceExceededPolicy = form["GraceExceededPolicy"] == "Full" ? "Full" : "Subtract",
             TimeLimitFrom = string.IsNullOrWhiteSpace(form["TimeLimitFrom"]) ? null : form["TimeLimitFrom"].ToString(),
             TimeLimitFromDayBefore = form["TimeLimitFromAnchor"] == "before",
             TimeLimitTo = string.IsNullOrWhiteSpace(form["TimeLimitTo"]) ? null : form["TimeLimitTo"].ToString(),

@@ -84,6 +84,14 @@
                         <span>النتائج محدودة للأداء، استخدم البحث أو فترة أصغر.</span>
                     }
                 </p>
+                @if (Model.IsLegacyEngineFallback && Model.ProcessedRecords.Any())
+                {
+                    <p class="hrms-alert warning" style="margin-top:8px">
+                        ⚠️ @Model.UnanalyzedRows صفاً من الفترة بلا يومية محلّلة، فهي قراءة أولية لا يُبنى عليها احتساب.
+                        شغّل <strong>«تحديث الحضور»</strong> من <a asp-page="/DayAttendance/Index">مستعرض الحضور</a>
+                        ليصير العرض كله من المحرك الرسمي بفترة السماح وسياستها.
+                    </p>
+                }
             </div>
         </div>
 
@@ -110,7 +118,9 @@
                     {
                         var statusText = SmartAttendance.Web.Pages.AttendanceOperations.IndexModel.ProcessingAutoStatusText(item.CheckIn, item.CheckOut, item.CalculatedStatus);
                         var statusValue = SmartAttendance.Web.Pages.AttendanceOperations.IndexModel.ProcessingStatusValueForEdit(item.CheckIn, item.CheckOut, item.CalculatedStatus);
-                        var shiftText = string.IsNullOrWhiteSpace(item.ShiftName) ? "-" : $"{item.ShiftCode} - {item.ShiftName}";
+                        var shiftText = string.IsNullOrWhiteSpace(item.ShiftName)
+                            ? "-"
+                            : string.IsNullOrWhiteSpace(item.ShiftCode) ? item.ShiftName : $"{item.ShiftCode} - {item.ShiftName}";
 
                         <tr class="@(Model.IsAttendanceEdited(item.EmployeeNo, item.AttendanceDate) ? "manual-edit-row" : "")">
                             <td>@item.AttendanceDate.ToString("yyyy-MM-dd")</td>

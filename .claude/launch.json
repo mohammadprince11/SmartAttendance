@@ -13,5 +13,6 @@
       "runtimeArgs": ["run", "--project", "SmartAttendance.API", "--urls", "http://localhost:5226"],
       "port": 5226
     }
-  ]
+  ],
+  "autoVerify": true
 }

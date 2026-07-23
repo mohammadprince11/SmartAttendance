@@ -94,6 +94,9 @@ public static class ShiftTypeStore
         // ===== السماحيات والحدود (فترة السماح + نافذة البصم + منتصف المناوبة) =====
         public int LatenessGraceMinutes { get; set; }         // فترة السماح للتأخير (دقائق)
         public int EarlyLeaveGraceMinutes { get; set; }       // فترة السماح للخروج المبكر (دقائق)
+        // سياسة تجاوز السماحية (تُخصَّص لكل شركة/مناوبة):
+        // Subtract = يُطرح المسموح من الفارق · Full = يُحتسب الفارق كاملاً من بدء/انتهاء المناوبة
+        public string GraceExceededPolicy { get; set; } = "Subtract";
         public string? TimeLimitFrom { get; set; }            // حد وقت بدء المناوبة HH:mm (أبكر بصمة صالحة)
         public bool TimeLimitFromDayBefore { get; set; }      // مرساة الحد: من اليوم السابق
         public string? TimeLimitTo { get; set; }              // حد وقت انتهاء المناوبة HH:mm (أحدث بصمة صالحة)
@@ -182,6 +185,7 @@ IF COL_LENGTH('ShiftTypes','AvailableInRoster') IS NULL ALTER TABLE ShiftTypes A
 IF COL_LENGTH('ShiftTypes','RequestableFromEss') IS NULL ALTER TABLE ShiftTypes ADD RequestableFromEss bit NOT NULL CONSTRAINT DF_ST_RFE DEFAULT(0);
 IF COL_LENGTH('ShiftTypes','LatenessGraceMinutes') IS NULL ALTER TABLE ShiftTypes ADD LatenessGraceMinutes int NOT NULL CONSTRAINT DF_ST_LGM DEFAULT(0);
 IF COL_LENGTH('ShiftTypes','EarlyLeaveGraceMinutes') IS NULL ALTER TABLE ShiftTypes ADD EarlyLeaveGraceMinutes int NOT NULL CONSTRAINT DF_ST_ELG DEFAULT(0);
+IF COL_LENGTH('ShiftTypes','GraceExceededPolicy') IS NULL ALTER TABLE ShiftTypes ADD GraceExceededPolicy nvarchar(20) NOT NULL CONSTRAINT DF_ST_GXP DEFAULT(N'Subtract');
 IF COL_LENGTH('ShiftTypes','TimeLimitFrom') IS NULL ALTER TABLE ShiftTypes ADD TimeLimitFrom nvarchar(5) NULL;
 IF COL_LENGTH('ShiftTypes','TimeLimitFromDayBefore') IS NULL ALTER TABLE ShiftTypes ADD TimeLimitFromDayBefore bit NOT NULL CONSTRAINT DF_ST_TLFB DEFAULT(0);
 IF COL_LENGTH('ShiftTypes','TimeLimitTo') IS NULL ALTER TABLE ShiftTypes ADD TimeLimitTo nvarchar(5) NULL;
@@ -311,7 +315,7 @@ SET Name = @Name, NameEn = @NameEn, ColorHex = @Color,
     FillMissingCheckIn = @FMI, FillMissingCheckOut = @FMO, StripSemantics = @STS,
     ConsiderPermissionsOutsideShift = @CPO, ExcludePermsOutsideStartFromLate = @EPL,
     TotalDurationMode = @TDM, AvailableInRoster = @AIR, RequestableFromEss = @RFE,
-    LatenessGraceMinutes = @LGM, EarlyLeaveGraceMinutes = @ELG,
+    LatenessGraceMinutes = @LGM, EarlyLeaveGraceMinutes = @ELG, GraceExceededPolicy = @GXP,
     TimeLimitFrom = @TLF, TimeLimitFromDayBefore = @TLFB, TimeLimitTo = @TLT, TimeLimitToDayAfter = @TLTA, MidShiftTime = @MST,
     ConflictLateReturnEnabled = @CLRE, ConflictLateReturnAction = @CLRA, ConflictLateReturnValue = @CLRV,
     ConflictEarlyLeaveEnabled = @CELE, ConflictEarlyLeaveAction = @CELA, ConflictEarlyLeaveValue = @CELV,
@@ -335,12 +339,12 @@ DELETE FROM ShiftEligibilityRules WHERE ShiftTypeId = @Id;
 INSERT INTO ShiftTypes (Name, NameEn, ColorHex, IsFlexible, FlexDailyHours, MultiPeriod,
     FillMissingCheckIn, FillMissingCheckOut, StripSemantics, ConsiderPermissionsOutsideShift,
     ExcludePermsOutsideStartFromLate, TotalDurationMode, AvailableInRoster, RequestableFromEss,
-    LatenessGraceMinutes, EarlyLeaveGraceMinutes, TimeLimitFrom, TimeLimitFromDayBefore, TimeLimitTo, TimeLimitToDayAfter, MidShiftTime,
+    LatenessGraceMinutes, EarlyLeaveGraceMinutes, GraceExceededPolicy, TimeLimitFrom, TimeLimitFromDayBefore, TimeLimitTo, TimeLimitToDayAfter, MidShiftTime,
     ConflictLateReturnEnabled, ConflictLateReturnAction, ConflictLateReturnValue,
     ConflictEarlyLeaveEnabled, ConflictEarlyLeaveAction, ConflictEarlyLeaveValue, IsActive)
 VALUES (@Name, @NameEn, @Color, @Flex, @FlexHours, @Multi,
     @FMI, @FMO, @STS, @CPO, @EPL, @TDM, @AIR, @RFE,
-    @LGM, @ELG, @TLF, @TLFB, @TLT, @TLTA, @MST,
+    @LGM, @ELG, @GXP, @TLF, @TLFB, @TLT, @TLTA, @MST,
     @CLRE, @CLRA, @CLRV, @CELE, @CELA, @CELV, @Active);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
@@ -448,6 +452,7 @@ DELETE FROM ShiftTypes WHERE Id = @Id;
         RequestableFromEss = HrmsDatabase.GetBool(reader, "RequestableFromEss"),
         LatenessGraceMinutes = HrmsDatabase.GetInt(reader, "LatenessGraceMinutes"),
         EarlyLeaveGraceMinutes = HrmsDatabase.GetInt(reader, "EarlyLeaveGraceMinutes"),
+        GraceExceededPolicy = HrmsDatabase.GetString(reader, "GraceExceededPolicy") is { Length: > 0 } gxp ? gxp : "Subtract",
         TimeLimitFrom = HrmsDatabase.GetString(reader, "TimeLimitFrom") is { Length: > 0 } tlf ? tlf : null,
         TimeLimitFromDayBefore = HrmsDatabase.GetBool(reader, "TimeLimitFromDayBefore"),
         TimeLimitTo = HrmsDatabase.GetString(reader, "TimeLimitTo") is { Length: > 0 } tlt ? tlt : null,
@@ -489,6 +494,7 @@ DELETE FROM ShiftTypes WHERE Id = @Id;
         HrmsDatabase.AddParameter(command, "@RFE", shift.RequestableFromEss ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@LGM", shift.LatenessGraceMinutes);
         HrmsDatabase.AddParameter(command, "@ELG", shift.EarlyLeaveGraceMinutes);
+        HrmsDatabase.AddParameter(command, "@GXP", shift.GraceExceededPolicy == "Full" ? "Full" : "Subtract");
         HrmsDatabase.AddParameter(command, "@TLF", (object?)shift.TimeLimitFrom ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@TLFB", shift.TimeLimitFromDayBefore ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@TLT", (object?)shift.TimeLimitTo ?? DBNull.Value);

@@ -15,7 +15,8 @@
         s.Id, s.Name, s.NameEn, s.ColorHex, s.IsFlexible, s.FlexDailyHours, s.MultiPeriod, s.IsActive,
         s.FillMissingCheckIn, s.FillMissingCheckOut, s.StripSemantics, s.ConsiderPermissionsOutsideShift,
         s.ExcludePermsOutsideStartFromLate, s.TotalDurationMode, s.AvailableInRoster, s.RequestableFromEss,
-        s.LatenessGraceMinutes, s.EarlyLeaveGraceMinutes, s.TimeLimitFrom, s.TimeLimitFromDayBefore,
+        s.LatenessGraceMinutes, s.EarlyLeaveGraceMinutes, s.GraceExceededPolicy,
+        s.TimeLimitFrom, s.TimeLimitFromDayBefore,
         s.TimeLimitTo, s.TimeLimitToDayAfter, s.MidShiftTime,
         s.ConflictLateReturnEnabled, s.ConflictLateReturnAction, s.ConflictLateReturnValue,
         s.ConflictEarlyLeaveEnabled, s.ConflictEarlyLeaveAction, s.ConflictEarlyLeaveValue,
@@ -260,6 +261,12 @@
                             <label>فترة السماح للتأخير (دقائق)<input type="number" name="LatenessGraceMinutes" id="sht-LGM" min="0" max="600" value="0" /></label>
                             <label>فترة السماح للخروج المبكر (دقائق)<input type="number" name="EarlyLeaveGraceMinutes" id="sht-ELG" min="0" max="600" value="0" /></label>
                         </div>
+                        <label style="max-width:420px">عند تجاوز فترة السماح <span class="sht-hint">— سياسة الشركة في احتساب الفارق</span>
+                            <select name="GraceExceededPolicy" id="sht-GXP" class="sht-select">
+                                <option value="Subtract">يُطرح المسموح (تأخير 20د وسماحية 15 ⇐ يُسجَّل 5د)</option>
+                                <option value="Full">يُحتسب كاملاً (تأخير 20د وسماحية 15 ⇐ يُسجَّل 20د)</option>
+                            </select>
+                        </label>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
                             <label>حد وقت بدء المناوبة (أبكر بصمة صالحة)
                                 <span style="display:flex;gap:6px;align-items:center">
@@ -578,6 +585,7 @@
                     document.getElementById('sht-TDM').value = s.TotalDurationMode || 'WorkOnly';
                     document.getElementById('sht-LGM').value = s.LatenessGraceMinutes || 0;
                     document.getElementById('sht-ELG').value = s.EarlyLeaveGraceMinutes || 0;
+                    document.getElementById('sht-GXP').value = s.GraceExceededPolicy || 'Subtract';
                     document.getElementById('sht-TLF').value = s.TimeLimitFrom || '';
                     document.getElementById('sht-TLFA').value = s.TimeLimitFromDayBefore ? 'before' : 'same';
                     document.getElementById('sht-TLT').value = s.TimeLimitTo || '';
