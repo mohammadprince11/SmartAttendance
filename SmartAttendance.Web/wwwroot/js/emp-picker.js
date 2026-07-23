@@ -106,10 +106,13 @@
         var byCode = {};
         opts.employees.forEach(function (e) { byCode[String(e.No || '').trim().toLowerCase()] = e; });
 
+        function fire(e) { if (opts.onChange) opts.onChange(e || null); }
+
         function set(e) {
             opts.hidden.value = e ? e.Id : '';
             opts.code.value = e ? (e.No || '') : '';
             opts.name.value = e ? (e.Name || '') : '';
+            fire(e);
         }
 
         // كتابة الكود ← يظهّر الاسم فوراً
@@ -117,6 +120,7 @@
             var e = byCode[this.value.trim().toLowerCase()];
             if (e) { opts.hidden.value = e.Id; opts.name.value = e.Name || ''; }
             else { opts.hidden.value = ''; opts.name.value = ''; }
+            fire(e);
         });
 
         function openPopup() { open({ employees: opts.employees, onSelect: set }); }

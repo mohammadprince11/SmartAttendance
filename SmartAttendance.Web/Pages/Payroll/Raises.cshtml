@@ -1,0 +1,317 @@
+@page "/Payroll/Raises"
+@model SmartAttendance.Web.Pages.Payroll.RaisesModel
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "زيادات الراتب";
+    var acc = "#34d399";
+    var empJson = JsonSerializer.Serialize(Model.Employees.Select(e => new { e.Id, e.No, e.Name, e.Basic }));
+    string J(object o) => JsonSerializer.Serialize(o);
+    string Dt(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .rz-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
+    .rz-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .rz-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .rz-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .rz-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .rz-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
+    .rz-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .rz-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+    .rz-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
+    .rz-btn.danger:hover { background:rgba(248,113,113,.26); }
+    .rz-btn.apply { background:rgba(52,211,153,.16); border:1px solid rgba(52,211,153,.5); color:#34d399; }
+    .rz-btn.apply:hover { background:rgba(52,211,153,.28); }
+    .rz-tabs { display:flex; gap:2px; border-bottom:1px solid rgba(73,111,151,.22); }
+    .rz-tabs a { padding:11px 22px; font-size:13px; font-weight:900; color:var(--sa-muted,#8FA8BC); text-decoration:none; border-bottom:3px solid transparent; }
+    .rz-tabs a.on { color:var(--acc); border-bottom-color:var(--acc); }
+
+    .rz-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+    .rz-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
+    .rz-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
+    .rz-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .rz-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+
+    .rz-bar { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:10px; }
+    .rz-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); flex-wrap:wrap; }
+    .rz-filter input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; }
+    html[data-theme="light"] .rz-filter input { background:#fff; }
+
+    .rz-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .rz-table { width:100%; border-collapse:collapse; font-size:13px; min-width:960px; }
+    .rz-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .rz-table th { background:#f2f7fb; }
+    .rz-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
+    .rz-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
+    .rz-ref { direction:ltr; font-weight:900; font-size:12px; }
+    .rz-emp b { font-weight:900; } .rz-emp span { display:block; font-size:11px; color:var(--sa-muted,#8FA8BC); }
+    .rz-num { direction:ltr; font-weight:900; text-align:start; }
+    .rz-flow { direction:ltr; font-weight:900; } .rz-flow .old { color:var(--sa-muted,#8FA8BC); text-decoration:line-through; } .rz-flow .arrow { color:var(--acc); margin:0 5px; } .rz-flow .new { color:var(--acc); }
+    .rz-inc { direction:ltr; font-weight:900; color:#34d399; }
+    .rz-chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:900; }
+    .rz-chip.amt { background:rgba(18,217,227,.1); color:#12D9E3; }
+    .rz-chip.pct { background:rgba(167,139,250,.16); color:#a78bfa; }
+    .rz-chip.ap { background:rgba(52,211,153,.16); color:#34d399; }
+    .rz-chip.pend { background:rgba(250,204,21,.14); color:#facc15; }
+    .rz-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .rz-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(52,211,153,.35); background:rgba(52,211,153,.08); }
+    .rz-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
+    .rz-actions { display:flex; gap:6px; justify-content:flex-end; } .rz-actions form { display:inline; }
+
+    .rz-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .rz-form select, .rz-form input, .rz-form textarea { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; font-family:inherit; }
+    html[data-theme="light"] .rz-form select, html[data-theme="light"] .rz-form input, html[data-theme="light"] .rz-form textarea { background:#fff; }
+    .rz-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .rz-seg { display:inline-flex; border:1px solid rgba(73,111,151,.3); border-radius:10px; overflow:hidden; }
+    .rz-seg label { flex-direction:row !important; padding:9px 16px; cursor:pointer; margin:0; font-weight:900; }
+    .rz-seg label.on { background:var(--acc); color:#04141d; }
+    .rz-seg input { display:none; }
+    .rz-preview { padding:12px 14px; border:1px dashed color-mix(in srgb,var(--acc) 45%,transparent); border-radius:12px; font-size:14px; font-weight:900; background:color-mix(in srgb,var(--acc) 8%,transparent); text-align:center; }
+    .rz-preview .flow { direction:ltr; } .rz-preview .old { color:var(--sa-muted,#8FA8BC); text-decoration:line-through; } .rz-preview .arrow { color:var(--acc); margin:0 8px; } .rz-preview .new { color:var(--acc); font-size:16px; }
+    .rz-preview small { display:block; font-size:11px; font-weight:800; color:var(--sa-muted,#8FA8BC); margin-top:4px; }
+</style>
+
+<section class="rz-page" dir="rtl">
+    <header class="rz-head">
+        <div>
+            <h1>📈 زيادات الراتب</h1>
+            <p>تغيير دائم للراتب الأساسي (بمبلغ أو نسبة). عند «التطبيق» يُحدَّث راتب الموظف الأساسي فوراً.</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <a class="rz-btn ghost" href="/Payroll/Transactions">الحركات</a>
+            <a class="rz-btn ghost" href="/Payroll/Runs">← المسير</a>
+            <button type="button" class="rz-btn" onclick="rzOpen(0)">+ زيادة راتب</button>
+        </div>
+    </header>
+
+    <div class="rz-tabs">
+        <a href="/Payroll/Raises?Tab=Pending" class="@(Model.IsApplied ? "" : "on")">قيد الانتظار (@Model.PendingCount)</a>
+        <a href="/Payroll/Raises?Tab=Applied" class="@(Model.IsApplied ? "on" : "")">✔ مُطبَّقة (@Model.AppliedCount)</a>
+    </div>
+
+    <div class="rz-kpis">
+        <div class="rz-kpi"><b>@Model.PendingCount</b><span>زيادات قيد الانتظار</span></div>
+        <div class="rz-kpi"><b>@Model.AppliedCount</b><span>زيادات مُطبَّقة</span></div>
+        <div class="rz-kpi"><b style="color:#34d399">+@Model.TotalIncrease.ToString("#,0.##")</b><span>إجمالي الزيادة الشهرية المُطبَّقة</span></div>
+        <div class="rz-kpi"><b>@Model.Employees.Count</b><span>الموظفون النشطون</span></div>
+    </div>
+
+    <form method="get" class="rz-bar">
+        <input type="hidden" name="Tab" value="@Model.Tab" />
+        <div class="rz-filter">
+            <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/سبب/رقم مرجعي" style="min-width:220px" />
+            <button type="submit" class="rz-btn ghost sm">بحث</button>
+        </div>
+    </form>
+
+    @if (TempData["PayrollMessage"] != null)
+    {
+        <div class="rz-alert @((TempData["PayrollOk"] as bool?) == false ? "err" : "")">@TempData["PayrollMessage"]</div>
+    }
+
+    <div class="rz-card">
+        @if (Model.Items.Count == 0)
+        {
+            <div class="rz-empty">
+                @if (Model.IsApplied)
+                { <text>لا زيادات مُطبَّقة بعد.</text> }
+                else
+                { <text>لا زيادات قيد الانتظار — أضف بـ«+ زيادة راتب».</text> }
+            </div>
+        }
+        else
+        {
+            <table class="rz-table">
+                <thead>
+                    <tr>
+                        <th>الرقم المرجعي</th><th>الموظف</th><th>النوع</th><th>الأساسي (قبل ← بعد)</th>
+                        <th>الزيادة</th><th>تاريخ السريان</th><th>السبب</th><th>@(Model.IsApplied ? "طُبّقت في" : "الحالة")</th>
+                        <th style="text-align:end">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Items)
+                    {
+                        <tr>
+                            <td class="rz-ref">@r.ReferenceNo</td>
+                            <td class="rz-emp"><b>@r.EmployeeName</b><span>@r.EmployeeNo</span></td>
+                            <td>
+                                <span class="rz-chip @(r.RaiseType == "Percentage" ? "pct" : "amt")">
+                                    @(r.RaiseType == "Percentage" ? $"{r.RaiseValue:#,0.##}%" : r.RaiseValue.ToString("#,0.##"))
+                                </span>
+                            </td>
+                            <td class="rz-flow"><span class="old">@r.OldBasic.ToString("#,0.##")</span><span class="arrow">←</span><span class="new">@r.NewBasic.ToString("#,0.##")</span></td>
+                            <td class="rz-inc">+@r.Increase.ToString("#,0.##")</td>
+                            <td class="rz-ref">@(r.EffectiveDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                            <td style="font-size:12px">@(r.Reason ?? "—")</td>
+                            <td>
+                                @if (r.IsApplied)
+                                { <span class="rz-ref" style="font-size:12px">@(r.AppliedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</span> }
+                                else
+                                { <span class="rz-chip pend">قيد الانتظار</span> }
+                            </td>
+                            <td>
+                                <div class="rz-actions">
+                                    @if (!r.IsApplied)
+                                    {
+                                        <form method="post" asp-page-handler="Apply" data-zyconfirm="تطبيق الزيادة على الراتب الأساسي؟">
+                                            <input type="hidden" name="id" value="@r.Id" />
+                                            <button type="submit" class="rz-btn apply sm">✔ تطبيق</button>
+                                        </form>
+                                        <button type="button" class="rz-btn ghost sm" onclick="rzEdit(this)" data-rz="@J(new {
+                                            r.Id, r.EmployeeId, r.RaiseType, r.RaiseValue, EffectiveDate=Dt(r.EffectiveDate), r.Reason, r.Note, r.Status })">تعديل</button>
+                                        <form method="post" asp-page-handler="Delete" data-zyconfirm="حذف الزيادة؟">
+                                            <input type="hidden" name="id" value="@r.Id" />
+                                            <button type="submit" class="rz-btn danger sm">حذف</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="rz-chip ap">✔ مُطبَّقة</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @* ===== نموذج زيادة راتب ===== *@
+    <div class="hrms-slideover-backdrop" id="rz-backdrop" onclick="rzClose()"></div>
+    <aside class="hrms-slideover" id="rz-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="rz-title">زيادة راتب جديدة</h2>
+            <button type="button" class="hrms-slideover-close" onclick="rzClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Save" class="rz-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="Id" id="rz-Id" value="0" />
+                <input type="hidden" name="RaiseType" id="rz-RaiseType" value="Amount" />
+
+                <label>اسم الموظف *
+                    <div class="empk-field">
+                        <input type="text" id="rz-emp-name" class="empk-name" placeholder="اسم الموظف" readonly />
+                        <input type="text" id="rz-emp-code" class="empk-code" placeholder="رمز" autocomplete="off" />
+                    </div>
+                    <input type="hidden" name="EmployeeId" id="rz-EmployeeId" />
+                </label>
+
+                <div class="rz-grid2">
+                    <label>نوع الزيادة *
+                        <span class="rz-seg" id="rz-seg">
+                            <label class="on" data-type="Amount" onclick="rzSetType('Amount')"><input type="radio" name="_t" checked /> مبلغ</label>
+                            <label data-type="Percentage" onclick="rzSetType('Percentage')"><input type="radio" name="_t" /> نسبة %</label>
+                        </span>
+                    </label>
+                    <label><span id="rz-valLabel">قيمة الزيادة (مبلغ) *</span><input type="number" id="rz-RaiseValue" name="RaiseValue" step="0.01" min="0" required oninput="rzPreview()" /></label>
+                </div>
+
+                <div class="rz-preview" id="rz-preview">اختر موظفاً وأدخل قيمة الزيادة لعرض الأساسي الجديد.</div>
+
+                <div class="rz-grid2">
+                    <label>تاريخ السريان<input type="date" name="EffectiveDate" id="rz-EffectiveDate" /></label>
+                    <label>السبب
+                        <select name="Reason" id="rz-Reason">
+                            <option value="">— اختر —</option>
+                            <option value="علاوة سنوية">علاوة سنوية</option>
+                            <option value="ترقية">ترقية</option>
+                            <option value="تعديل هيكل الرواتب">تعديل هيكل الرواتب</option>
+                            <option value="استحقاق أداء">استحقاق أداء</option>
+                            <option value="أخرى">أخرى</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label>الحالة
+                    <select name="Status" id="rz-Status">
+                        <option value="Approved">معتمد</option>
+                        <option value="Draft">مسودة</option>
+                    </select>
+                </label>
+
+                <label>ملاحظة<textarea name="Note" id="rz-Note" rows="2"></textarea></label>
+
+                <p style="font-size:12px;font-weight:800;color:var(--sa-muted,#8FA8BC);margin:0">تُحفظ الزيادة قيد الانتظار — لا يتغيّر الراتب الأساسي إلا بعد الضغط على «تطبيق».</p>
+                <button type="submit" class="rz-btn">حفظ الزيادة</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script src="~/js/emp-picker.js" asp-append-version="true"></script>
+    <script>
+        var RZ_EMP = @Html.Raw(empJson);
+        var rzCurrentBasic = 0;
+
+        function fmt(n){ return (Math.round(n*100)/100).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2}); }
+
+        var rzPicker = EmpPicker.init({
+            code: document.getElementById('rz-emp-code'),
+            name: document.getElementById('rz-emp-name'),
+            hidden: document.getElementById('rz-EmployeeId'),
+            employees: RZ_EMP,
+            onChange: function(e){ rzCurrentBasic = e ? (e.Basic || 0) : 0; rzPreview(); }
+        });
+
+        function rzSetType(t){
+            document.getElementById('rz-RaiseType').value = t;
+            document.querySelectorAll('#rz-seg label').forEach(function(l){ l.classList.toggle('on', l.getAttribute('data-type')===t); });
+            document.getElementById('rz-valLabel').textContent = t==='Percentage' ? 'نسبة الزيادة (%) *' : 'قيمة الزيادة (مبلغ) *';
+            rzPreview();
+        }
+
+        function rzPreview(){
+            var el = document.getElementById('rz-preview');
+            var v = parseFloat(document.getElementById('rz-RaiseValue').value) || 0;
+            var type = document.getElementById('rz-RaiseType').value;
+            if (!document.getElementById('rz-EmployeeId').value){ el.innerHTML = 'اختر موظفاً وأدخل قيمة الزيادة لعرض الأساسي الجديد.'; return; }
+            var oldB = rzCurrentBasic;
+            var newB = type==='Percentage' ? oldB*(1+v/100) : oldB+v;
+            var inc = newB - oldB;
+            el.innerHTML = '<span class="flow"><span class="old">' + fmt(oldB) + '</span><span class="arrow">←</span><span class="new">' + fmt(newB) + '</span></span>'
+                + '<small>الزيادة: +' + fmt(inc) + (type==='Percentage' ? (' (' + fmt(v) + '%)') : '') + '</small>';
+        }
+
+        function setVal(id, v){ var el=document.getElementById(id); if(el) el.value = (v==null?'':v); }
+
+        function rzEdit(btn){
+            try { var d = JSON.parse(btn.getAttribute('data-rz')); rzOpen(d.Id, d); }
+            catch (e) { alert('تعذّر فتح التعديل: ' + e.message); }
+        }
+
+        function rzOpen(id, d){
+            var f = document.querySelector('#rz-slide form'); f.reset();
+            document.getElementById('rz-Id').value = id || 0;
+            document.getElementById('rz-title').textContent = id ? 'تعديل زيادة' : 'زيادة راتب جديدة';
+            rzCurrentBasic = 0;
+            rzPicker.set(null);
+            rzSetType('Amount');
+
+            if (id && d){
+                var emp = RZ_EMP.find(function(x){ return x.Id === d.EmployeeId; });
+                rzPicker.set(emp || null);   // يضبط rzCurrentBasic عبر onChange
+                rzSetType(d.RaiseType || 'Amount');
+                setVal('rz-RaiseValue', d.RaiseValue);
+                setVal('rz-EffectiveDate', d.EffectiveDate);
+                setVal('rz-Reason', d.Reason || '');
+                setVal('rz-Note', d.Note); setVal('rz-Status', d.Status || 'Approved');
+            } else {
+                setVal('rz-EffectiveDate', new Date().toISOString().slice(0,10));
+            }
+            rzPreview();
+            document.getElementById('rz-slide').classList.add('open');
+            document.getElementById('rz-backdrop').classList.add('open');
+        }
+        function rzClose(){ document.getElementById('rz-slide').classList.remove('open'); document.getElementById('rz-backdrop').classList.remove('open'); }
+
+        document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ rzClose(); } });
+    </script>
+}
