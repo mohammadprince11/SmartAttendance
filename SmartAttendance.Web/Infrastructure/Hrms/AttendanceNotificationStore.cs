@@ -18,10 +18,20 @@ public static class AttendanceNotificationStore
         ("WeeklyShortage", "نقص الساعات الأسبوعي")
     };
 
+    /// <summary>قناة الإشعار — بريد إلكتروني أو إشعار داخل النظام/تطبيق الموبايل (لا SMS).</summary>
     public static readonly (string Key, string Label)[] Channels =
     {
         ("Email", "البريد الإلكتروني"),
-        ("Sms", "رسالة نصية")
+        ("System", "إشعار النظام (تطبيق الموبايل/رابط الحساب)")
+    };
+
+    /// <summary>وضع «نسخة إلى» (CC): بلا / موظفون محددون / المدير المباشر / كلاهما.</summary>
+    public static readonly (string Key, string Label)[] CcModes =
+    {
+        ("None", "بلا"),
+        ("Specific", "موظفون محددون"),
+        ("Manager", "المدير المباشر"),
+        ("Both", "كلاهما")
     };
 
     public static string LabelOf(string key) => Types.FirstOrDefault(t => t.Key == key).Label ?? key;
@@ -63,6 +73,7 @@ IF COL_LENGTH('AttendanceNotifications','FromDate') IS NULL ALTER TABLE Attendan
 IF COL_LENGTH('AttendanceNotifications','ToDate') IS NULL ALTER TABLE AttendanceNotifications ADD ToDate date NOT NULL CONSTRAINT DF_AN_To DEFAULT('2000-01-01');
 IF COL_LENGTH('AttendanceNotifications','Channel') IS NULL ALTER TABLE AttendanceNotifications ADD Channel nvarchar(10) NOT NULL CONSTRAINT DF_AN_Ch DEFAULT(N'Email');
 IF COL_LENGTH('AttendanceNotifications','MessageTemplate') IS NULL ALTER TABLE AttendanceNotifications ADD MessageTemplate nvarchar(1000) NOT NULL CONSTRAINT DF_AN_Msg DEFAULT(N'');
+IF COL_LENGTH('AttendanceNotifications','CcMode') IS NULL ALTER TABLE AttendanceNotifications ADD CcMode nvarchar(20) NOT NULL CONSTRAINT DF_AN_Cc DEFAULT(N'None');
 IF COL_LENGTH('AttendanceNotifications','Year') IS NOT NULL ALTER TABLE AttendanceNotifications DROP COLUMN [Year];
 IF COL_LENGTH('AttendanceNotifications','Month') IS NOT NULL ALTER TABLE AttendanceNotifications DROP COLUMN [Month];
 
@@ -86,9 +97,10 @@ END;
     /// يؤلّف ويخزّن إشعاراً: يحسب رموز حضور كل موظف بالفترة، يولّد رسالته، ويكتبها
     /// بصندوق الصادر. يعيد (معرّف الإشعار، عدد المستلمين).
     /// </summary>
-    public static async Task<(int NotificationId, int Recipients)> SendAsync(
+    public static async Task<(int NotificationId, int Recipients, int CcCount)> SendAsync(
         ApplicationDbContext dbContext, string type, DateOnly from, DateOnly to,
-        string channel, string template, IReadOnlyCollection<int> employeeIds)
+        string channel, string template, IReadOnlyCollection<int> employeeIds,
+        string ccMode, IReadOnlyCollection<int> ccEmployeeIds)
     {
         await EnsureAsync(dbContext);
         if (to < from) (from, to) = (to, from);
@@ -126,8 +138,8 @@ GROUP BY EmployeeId;
         var notificationId = await HrmsDatabase.ScalarAsync<int>(
             dbContext,
             """
-INSERT INTO AttendanceNotifications (NotifType, FromDate, ToDate, Channel, MessageTemplate, Recipients)
-VALUES (@Type, @From, @To, @Channel, @Template, @Recipients);
+INSERT INTO AttendanceNotifications (NotifType, FromDate, ToDate, Channel, MessageTemplate, CcMode, Recipients)
+VALUES (@Type, @From, @To, @Channel, @Template, @CcMode, @Recipients);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
@@ -137,9 +149,23 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                 HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
                 HrmsDatabase.AddParameter(command, "@Channel", channel);
                 HrmsDatabase.AddParameter(command, "@Template", template);
+                HrmsDatabase.AddParameter(command, "@CcMode", string.IsNullOrWhiteSpace(ccMode) ? "None" : ccMode);
                 HrmsDatabase.AddParameter(command, "@Recipients", employeeIds.Count);
             });
 
+        // خرائط المدير المباشر (لـ CC «المدير المباشر») — للأهداف فقط
+        var managerOf = new Dictionary<int, int>();
+        if (ccMode is "Manager" or "Both")
+        {
+            managerOf = (await HrmsDatabase.QueryAsync(
+                dbContext,
+                "SELECT Id, DirectManagerId FROM Employees WHERE DirectManagerId IS NOT NULL;",
+                command => { },
+                reader => new { Id = HrmsDatabase.GetInt(reader, "Id"), Mgr = HrmsDatabase.GetNullableInt(reader, "DirectManagerId") }))
+                .Where(x => x.Mgr is int).ToDictionary(x => x.Id, x => x.Mgr!.Value);
+        }
+
+        int cc = 0;
         foreach (var empId in employeeIds)
         {
             stats.TryGetValue(empId, out var s);
@@ -149,19 +175,40 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                 .Replace("{2}", (s?.EarlyHours ?? 0).ToString("0.##"))
                 .Replace("{3}", period)
                 .Replace("{4}", (s?.Missing ?? 0).ToString());
-            var id = empId;
-            await HrmsDatabase.ExecuteAsync(
-                dbContext,
-                "INSERT INTO AttendanceNotificationOutbox (NotificationId, EmployeeId, Channel, RenderedMessage) VALUES (@N, @E, @C, @M);",
-                command =>
-                {
-                    HrmsDatabase.AddParameter(command, "@N", notificationId);
-                    HrmsDatabase.AddParameter(command, "@E", id);
-                    HrmsDatabase.AddParameter(command, "@C", channel);
-                    HrmsDatabase.AddParameter(command, "@M", message.Length > 1200 ? message[..1200] : message);
-                });
+            await AddOutboxAsync(dbContext, notificationId, empId, channel, message);
+
+            // نسخة للمدير المباشر (نسخة من رسالة كل موظف)
+            if ((ccMode is "Manager" or "Both") && managerOf.TryGetValue(empId, out var mgr))
+            {
+                await AddOutboxAsync(dbContext, notificationId, mgr, channel, "نسخة (المدير المباشر): " + message);
+                cc++;
+            }
         }
 
-        return (notificationId, employeeIds.Count);
+        // نسخة لموظفين محددين (رسالة ملخص واحدة لكل منهم)
+        if ((ccMode is "Specific" or "Both") && ccEmployeeIds.Count > 0)
+        {
+            var summary = $"نسخة: تم إشعار {employeeIds.Count} موظفاً بـ«{LabelOf(type)}» للفترة ({period}).";
+            foreach (var ccId in ccEmployeeIds)
+            {
+                await AddOutboxAsync(dbContext, notificationId, ccId, channel, summary);
+                cc++;
+            }
+        }
+
+        return (notificationId, employeeIds.Count, cc);
     }
+
+    private static Task AddOutboxAsync(ApplicationDbContext dbContext, int notificationId,
+        int employeeId, string channel, string message) =>
+        HrmsDatabase.ExecuteAsync(
+            dbContext,
+            "INSERT INTO AttendanceNotificationOutbox (NotificationId, EmployeeId, Channel, RenderedMessage) VALUES (@N, @E, @C, @M);",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@N", notificationId);
+                HrmsDatabase.AddParameter(command, "@E", employeeId);
+                HrmsDatabase.AddParameter(command, "@C", channel);
+                HrmsDatabase.AddParameter(command, "@M", message.Length > 1200 ? message[..1200] : message);
+            });
 }

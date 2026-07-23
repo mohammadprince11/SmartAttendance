@@ -45,6 +45,8 @@ public class IndexModel : PageModel
     public List<Lookup> Positions { get; set; } = new();
     public List<string> ContractTypes { get; set; } = new();
     public List<string> Nationalities { get; set; } = new();
+    public record EmpLite(int Id, string No, string Name);
+    public List<EmpLite> AllEmployees { get; set; } = new();
     public bool HasFilter => FDept != null || FBranch != null || FPosition != null
         || !string.IsNullOrWhiteSpace(FContract) || !string.IsNullOrWhiteSpace(FNationality);
 
@@ -165,6 +167,8 @@ public class IndexModel : PageModel
         Nationalities = await _dbContext.Employees.AsNoTracking()
             .Where(e => e.Nationality != null && e.Nationality != "")
             .Select(e => e.Nationality!).Distinct().OrderBy(x => x).ToListAsync();
+        AllEmployees = await _dbContext.Employees.AsNoTracking().Where(e => e.IsActive)
+            .OrderBy(e => e.EmployeeNo).Select(e => new EmpLite(e.Id, e.EmployeeNo, e.FullName)).ToListAsync();
     }
 
     /// <summary>تعديل بصمتي يوم من الخلية (تحديث الدخول/الخروج وإعادة الاشتقاق).</summary>
@@ -206,36 +210,47 @@ public class IndexModel : PageModel
         if (from == default) from = new DateOnly(year, month, 1);
         if (to == default) to = from.AddMonths(1).AddDays(-1);
 
-        var employeeIds = await MatchingEmployeeIdsAsync();
-        if (employeeIds.Count == 0)
-        {
-            TempData["SuccessMessage"] = "لا موظفون مطابقون للفلتر — عدّل النطاق.";
-            return RedirectToPage(RouteValues());
-        }
+        // النطاق: حقول المؤلّف المستقلة (تسبق فلتر المستعرض إن حُدّدت)
+        var scope = form;
+        int? sDept = int.TryParse(scope["NDept"], out var sd) ? sd : null;
+        int? sBranch = int.TryParse(scope["NBranch"], out var sb) ? sb : null;
+        int? sPos = int.TryParse(scope["NPosition"], out var sp) ? sp : null;
+        var sContract = scope["NContract"].ToString();
+        var sNat = scope["NNationality"].ToString();
 
-        var (_, recipients) = await AttendanceNotificationStore.SendAsync(
-            _dbContext, type, from, to, channel, template, employeeIds);
-        TempData["SuccessMessage"] =
-            $"تم تأليف إشعار «{AttendanceNotificationStore.LabelOf(type)}» عبر {(channel == "Sms" ? "رسالة نصية" : "البريد")} لـ{recipients} موظفاً "
-            + $"({from:yyyy-MM-dd} → {to:yyyy-MM-dd}) — وُلّدت الرسائل بصندوق الصادر.";
-        return RedirectToPage(RouteValues());
-    }
-
-    /// <summary>معرّفات الموظفين المطابقين للفلتر الحالي (السمات + البحث) — نطاق الإشعار.</summary>
-    private async Task<List<int>> MatchingEmployeeIdsAsync()
-    {
         var q = _dbContext.Employees.AsNoTracking().Where(e => e.IsActive);
-        if (FDept != null) q = q.Where(e => e.DepartmentId == FDept);
-        if (FBranch != null) q = q.Where(e => e.BranchId == FBranch);
-        if (FPosition != null) q = q.Where(e => e.PositionId == FPosition);
-        if (!string.IsNullOrWhiteSpace(FContract)) q = q.Where(e => e.ContractType == FContract);
-        if (!string.IsNullOrWhiteSpace(FNationality)) q = q.Where(e => e.Nationality == FNationality);
+        if (sDept != null) q = q.Where(e => e.DepartmentId == sDept);
+        if (sBranch != null) q = q.Where(e => e.BranchId == sBranch);
+        if (sPos != null) q = q.Where(e => e.PositionId == sPos);
+        if (!string.IsNullOrWhiteSpace(sContract)) q = q.Where(e => e.ContractType == sContract);
+        if (!string.IsNullOrWhiteSpace(sNat)) q = q.Where(e => e.Nationality == sNat);
         if (!string.IsNullOrWhiteSpace(Search))
         {
             var v = Search.Trim();
             q = q.Where(e => e.EmployeeNo.Contains(v) || e.FullName.Contains(v));
         }
-        return await q.Select(e => e.Id).ToListAsync();
+        var employeeIds = await q.Select(e => e.Id).ToListAsync();
+        if (employeeIds.Count == 0)
+        {
+            TempData["SuccessMessage"] = "لا موظفون مطابقون للنطاق — عدّله.";
+            return RedirectToPage(RouteValues());
+        }
+
+        var ccMode = form["CcMode"].ToString() is { Length: > 0 } cm ? cm : "None";
+        var ccIds = form["CcEmployeeIds"]
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => int.TryParse(x, out var id) ? id : 0)
+            .Where(id => id > 0).Distinct().ToList();
+
+        var (_, recipients, ccCount) = await AttendanceNotificationStore.SendAsync(
+            _dbContext, type, from, to, channel, template, employeeIds, ccMode, ccIds);
+
+        var channelLabel = AttendanceNotificationStore.Channels.FirstOrDefault(c => c.Key == channel).Label ?? channel;
+        TempData["SuccessMessage"] =
+            $"تم تأليف إشعار «{AttendanceNotificationStore.LabelOf(type)}» عبر {channelLabel} لـ{recipients} موظفاً"
+            + (ccCount > 0 ? $" (+{ccCount} نسخة)" : "")
+            + $" ({from:yyyy-MM-dd} → {to:yyyy-MM-dd}) — وُلّدت الرسائل بصندوق الصادر.";
+        return RedirectToPage(RouteValues());
     }
 
     private object RouteValues() => new

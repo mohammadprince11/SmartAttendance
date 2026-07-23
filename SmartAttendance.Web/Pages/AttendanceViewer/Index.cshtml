@@ -317,9 +317,9 @@
             </div>
             <div>
                 <label style="font-size:12px;font-weight:900">قناة الإشعار</label>
-                <div style="display:flex;gap:14px;margin-top:6px;font-size:13px;font-weight:900">
+                <div style="display:flex;gap:14px;margin-top:6px;font-size:13px;font-weight:900;flex-wrap:wrap">
                     <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="Channel" value="Email" checked /> البريد الإلكتروني</label>
-                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="Channel" value="Sms" /> رسالة نصية</label>
+                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="Channel" value="System" /> إشعار النظام (تطبيق الموبايل/رابط الحساب)</label>
                 </div>
             </div>
             <label style="font-size:12px;font-weight:900;display:flex;flex-direction:column;gap:4px">نص الرسالة
@@ -329,7 +329,67 @@
             <div style="font-size:11px;color:var(--sa-muted,#8FA8BC);font-weight:800;line-height:1.7">
                 الرموز: <b>{0}</b> أيام الغياب · <b>{1}</b> ساعات التأخير · <b>{2}</b> ساعات الخروج المبكر · <b>{3}</b> الفترة · <b>{4}</b> البصمات المفقودة — تُملأ من حضور كل موظف.
             </div>
-            <div style="font-size:11px;color:var(--sa-muted,#8FA8BC);font-weight:800">النطاق: الموظفون المطابقون للفلتر/البحث الحالي بالمستعرض.</div>
+            @* نسخة إلى (CC) *@
+            <div style="border:1px solid rgba(73,111,151,.2);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px">
+                <label style="flex-direction:row;align-items:center;gap:8px;font-size:13px;font-weight:900">
+                    <input type="checkbox" id="avw-cc-on" onchange="avwCcToggle()" /> نسخة إلى
+                </label>
+                <div id="avw-cc-body" style="display:none;flex-direction:column;gap:8px">
+                    <input type="hidden" name="CcMode" id="avw-cc-mode" value="Specific" />
+                    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;font-weight:900">
+                        <label style="flex-direction:row;align-items:center;gap:5px"><input type="radio" name="cc-r" value="Specific" checked onchange="avwCcMode('Specific')" /> موظفون محددون</label>
+                        <label style="flex-direction:row;align-items:center;gap:5px"><input type="radio" name="cc-r" value="Manager" onchange="avwCcMode('Manager')" /> المدير المباشر</label>
+                        <label style="flex-direction:row;align-items:center;gap:5px"><input type="radio" name="cc-r" value="Both" onchange="avwCcMode('Both')" /> كلاهما</label>
+                    </div>
+                    <div id="avw-cc-pick" style="display:flex;flex-direction:column;gap:6px">
+                        <div style="display:flex;gap:6px">
+                            <input type="text" id="avw-cc-search" placeholder="بحث بالاسم أو الرمز" oninput="avwCcRender()"
+                                   style="flex:1;min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-size:12px" />
+                            <span style="font-size:11px;font-weight:900;color:#12D9E3;align-self:center">المحدد: <b id="avw-cc-count">0</b></span>
+                        </div>
+                        <div id="avw-cc-list" style="max-height:150px;overflow:auto;display:flex;flex-direction:column;gap:2px"></div>
+                    </div>
+                </div>
+            </div>
+
+            @* النطاق (audience) *@
+            <div style="border:1px solid rgba(73,111,151,.2);border-radius:12px;padding:12px">
+                <label style="font-size:12px;font-weight:900">النطاق — الموظفون المستهدَفون</label>
+                <div class="avw-grid3" style="margin-top:8px">
+                    <label>الهيكلية (القسم)
+                        <select name="NDept"><option value="">الكل</option>
+                            @foreach (var d in Model.Departments)
+                            { <option value="@d.Value" selected="@(Model.FDept?.ToString() == d.Value)">@d.Label</option> }
+                        </select>
+                    </label>
+                    <label>الموقع (الفرع)
+                        <select name="NBranch"><option value="">الكل</option>
+                            @foreach (var b in Model.Branches)
+                            { <option value="@b.Value" selected="@(Model.FBranch?.ToString() == b.Value)">@b.Label</option> }
+                        </select>
+                    </label>
+                    <label>المسمى الوظيفي
+                        <select name="NPosition"><option value="">الكل</option>
+                            @foreach (var p in Model.Positions)
+                            { <option value="@p.Value" selected="@(Model.FPosition?.ToString() == p.Value)">@p.Label</option> }
+                        </select>
+                    </label>
+                    <label>نوع العقد
+                        <select name="NContract"><option value="">الكل</option>
+                            @foreach (var c in Model.ContractTypes)
+                            { <option value="@c" selected="@(Model.FContract == c)">@c</option> }
+                        </select>
+                    </label>
+                    <label>الجنسية
+                        <select name="NNationality"><option value="">الكل</option>
+                            @foreach (var n in Model.Nationalities)
+                            { <option value="@n" selected="@(Model.FNationality == n)">@n</option> }
+                        </select>
+                    </label>
+                </div>
+                <div style="font-size:11px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin-top:6px">اترك «الكل» لإشعار جميع الموظفين النشطين المطابقين للبحث.</div>
+            </div>
+
             <div style="display:flex;gap:8px">
                 <button type="button" class="avw-btn ghost" onclick="avwNotifStep(1)">رجوع</button>
                 <button type="submit" class="avw-btn">إشعار الموظف</button>
@@ -399,6 +459,30 @@
             el.classList.add('on');
             document.getElementById('avw-n-type').value = el.getAttribute('data-type');
         }
+        var AVW_EMPS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllEmployees));
+        function avwCcToggle() {
+            var on = document.getElementById('avw-cc-on').checked;
+            document.getElementById('avw-cc-body').style.display = on ? 'flex' : 'none';
+            document.getElementById('avw-cc-mode').value = on ? (document.querySelector('[name=cc-r]:checked') ? document.querySelector('[name=cc-r]:checked').value : 'Specific') : 'None';
+            if (on) avwCcRender();
+        }
+        function avwCcMode(m) {
+            document.getElementById('avw-cc-mode').value = m;
+            document.getElementById('avw-cc-pick').style.display = (m === 'Specific' || m === 'Both') ? 'flex' : 'none';
+        }
+        function avwCcRender() {
+            var q = (document.getElementById('avw-cc-search').value || '').trim().toLowerCase();
+            var checked = new Set([].map.call(document.querySelectorAll('[name=CcEmployeeIds]:checked'), function (c) { return c.value; }));
+            var shown = AVW_EMPS.filter(function (e) { return !q || e.No.toLowerCase().indexOf(q) >= 0 || (e.Name || '').toLowerCase().indexOf(q) >= 0; }).slice(0, 100);
+            document.getElementById('avw-cc-list').innerHTML = shown.map(function (e) {
+                return '<label style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer">'
+                    + '<input type="checkbox" name="CcEmployeeIds" value="' + e.Id + '"' + (checked.has(String(e.Id)) ? ' checked' : '') + ' onchange="avwCcCount()" />'
+                    + '<span style="direction:ltr">' + e.No + '</span> · ' + (e.Name || '') + '</label>';
+            }).join('');
+            avwCcCount();
+        }
+        function avwCcCount() { document.getElementById('avw-cc-count').textContent = document.querySelectorAll('[name=CcEmployeeIds]:checked').length; }
+
         function avwNotifStep(step) {
             document.getElementById('avw-n-step1').style.display = step === 1 ? 'flex' : 'none';
             document.getElementById('avw-n-step2').style.display = step === 2 ? 'flex' : 'none';
