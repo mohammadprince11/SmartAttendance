@@ -61,6 +61,15 @@ public static class ShiftTypeStore
         public bool AvailableInRoster { get; set; } = true;   // متاحة بجدول الحضور (الروستر)
         public bool RequestableFromEss { get; set; }          // قابلة للطلب من الخدمة الذاتية
 
+        // ===== السماحيات والحدود (فترة السماح + نافذة البصم + منتصف المناوبة) =====
+        public int LatenessGraceMinutes { get; set; }         // فترة السماح للتأخير (دقائق)
+        public int EarlyLeaveGraceMinutes { get; set; }       // فترة السماح للخروج المبكر (دقائق)
+        public string? TimeLimitFrom { get; set; }            // حد وقت بدء المناوبة HH:mm (أبكر بصمة صالحة)
+        public bool TimeLimitFromDayBefore { get; set; }      // مرساة الحد: من اليوم السابق
+        public string? TimeLimitTo { get; set; }              // حد وقت انتهاء المناوبة HH:mm (أحدث بصمة صالحة)
+        public bool TimeLimitToDayAfter { get; set; }         // مرساة الحد: إلى اليوم التالي
+        public string? MidShiftTime { get; set; }             // وقت منتصف المناوبة HH:mm (تقسيم بصمات المناوبة العابرة لمنتصف الليل)
+
         public bool IsActive { get; set; } = true;
         public List<ShiftDay> Days { get; set; } = new();
         public List<ShiftPeriod> Periods { get; set; } = new();
@@ -129,6 +138,13 @@ IF COL_LENGTH('ShiftTypes','ExcludePermsOutsideStartFromLate') IS NULL ALTER TAB
 IF COL_LENGTH('ShiftTypes','TotalDurationMode') IS NULL ALTER TABLE ShiftTypes ADD TotalDurationMode nvarchar(20) NOT NULL CONSTRAINT DF_ST_TDM DEFAULT(N'WorkOnly');
 IF COL_LENGTH('ShiftTypes','AvailableInRoster') IS NULL ALTER TABLE ShiftTypes ADD AvailableInRoster bit NOT NULL CONSTRAINT DF_ST_AIR DEFAULT(1);
 IF COL_LENGTH('ShiftTypes','RequestableFromEss') IS NULL ALTER TABLE ShiftTypes ADD RequestableFromEss bit NOT NULL CONSTRAINT DF_ST_RFE DEFAULT(0);
+IF COL_LENGTH('ShiftTypes','LatenessGraceMinutes') IS NULL ALTER TABLE ShiftTypes ADD LatenessGraceMinutes int NOT NULL CONSTRAINT DF_ST_LGM DEFAULT(0);
+IF COL_LENGTH('ShiftTypes','EarlyLeaveGraceMinutes') IS NULL ALTER TABLE ShiftTypes ADD EarlyLeaveGraceMinutes int NOT NULL CONSTRAINT DF_ST_ELG DEFAULT(0);
+IF COL_LENGTH('ShiftTypes','TimeLimitFrom') IS NULL ALTER TABLE ShiftTypes ADD TimeLimitFrom nvarchar(5) NULL;
+IF COL_LENGTH('ShiftTypes','TimeLimitFromDayBefore') IS NULL ALTER TABLE ShiftTypes ADD TimeLimitFromDayBefore bit NOT NULL CONSTRAINT DF_ST_TLFB DEFAULT(0);
+IF COL_LENGTH('ShiftTypes','TimeLimitTo') IS NULL ALTER TABLE ShiftTypes ADD TimeLimitTo nvarchar(5) NULL;
+IF COL_LENGTH('ShiftTypes','TimeLimitToDayAfter') IS NULL ALTER TABLE ShiftTypes ADD TimeLimitToDayAfter bit NOT NULL CONSTRAINT DF_ST_TLTA DEFAULT(0);
+IF COL_LENGTH('ShiftTypes','MidShiftTime') IS NULL ALTER TABLE ShiftTypes ADD MidShiftTime nvarchar(5) NULL;
 """);
     }
 
@@ -213,6 +229,8 @@ SET Name = @Name, NameEn = @NameEn, ColorHex = @Color,
     FillMissingCheckIn = @FMI, FillMissingCheckOut = @FMO, StripSemantics = @STS,
     ConsiderPermissionsOutsideShift = @CPO, ExcludePermsOutsideStartFromLate = @EPL,
     TotalDurationMode = @TDM, AvailableInRoster = @AIR, RequestableFromEss = @RFE,
+    LatenessGraceMinutes = @LGM, EarlyLeaveGraceMinutes = @ELG,
+    TimeLimitFrom = @TLF, TimeLimitFromDayBefore = @TLFB, TimeLimitTo = @TLT, TimeLimitToDayAfter = @TLTA, MidShiftTime = @MST,
     IsActive = @Active
 WHERE Id = @Id;
 DELETE FROM ShiftTypeDays WHERE ShiftTypeId = @Id;
@@ -231,9 +249,11 @@ DELETE FROM ShiftTypePeriods WHERE ShiftTypeId = @Id;
                 """
 INSERT INTO ShiftTypes (Name, NameEn, ColorHex, IsFlexible, FlexDailyHours, MultiPeriod,
     FillMissingCheckIn, FillMissingCheckOut, StripSemantics, ConsiderPermissionsOutsideShift,
-    ExcludePermsOutsideStartFromLate, TotalDurationMode, AvailableInRoster, RequestableFromEss, IsActive)
+    ExcludePermsOutsideStartFromLate, TotalDurationMode, AvailableInRoster, RequestableFromEss,
+    LatenessGraceMinutes, EarlyLeaveGraceMinutes, TimeLimitFrom, TimeLimitFromDayBefore, TimeLimitTo, TimeLimitToDayAfter, MidShiftTime, IsActive)
 VALUES (@Name, @NameEn, @Color, @Flex, @FlexHours, @Multi,
-    @FMI, @FMO, @STS, @CPO, @EPL, @TDM, @AIR, @RFE, @Active);
+    @FMI, @FMO, @STS, @CPO, @EPL, @TDM, @AIR, @RFE,
+    @LGM, @ELG, @TLF, @TLFB, @TLT, @TLTA, @MST, @Active);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
                 command => AddShiftParameters(command, shift));
@@ -321,6 +341,13 @@ DELETE FROM ShiftTypes WHERE Id = @Id;
         TotalDurationMode = HrmsDatabase.GetString(reader, "TotalDurationMode") is { Length: > 0 } td ? td : "WorkOnly",
         AvailableInRoster = HrmsDatabase.GetBool(reader, "AvailableInRoster"),
         RequestableFromEss = HrmsDatabase.GetBool(reader, "RequestableFromEss"),
+        LatenessGraceMinutes = HrmsDatabase.GetInt(reader, "LatenessGraceMinutes"),
+        EarlyLeaveGraceMinutes = HrmsDatabase.GetInt(reader, "EarlyLeaveGraceMinutes"),
+        TimeLimitFrom = HrmsDatabase.GetString(reader, "TimeLimitFrom") is { Length: > 0 } tlf ? tlf : null,
+        TimeLimitFromDayBefore = HrmsDatabase.GetBool(reader, "TimeLimitFromDayBefore"),
+        TimeLimitTo = HrmsDatabase.GetString(reader, "TimeLimitTo") is { Length: > 0 } tlt ? tlt : null,
+        TimeLimitToDayAfter = HrmsDatabase.GetBool(reader, "TimeLimitToDayAfter"),
+        MidShiftTime = HrmsDatabase.GetString(reader, "MidShiftTime") is { Length: > 0 } mst ? mst : null,
         IsActive = HrmsDatabase.GetBool(reader, "IsActive")
     };
 
@@ -349,6 +376,13 @@ DELETE FROM ShiftTypes WHERE Id = @Id;
         HrmsDatabase.AddParameter(command, "@TDM", string.IsNullOrWhiteSpace(shift.TotalDurationMode) ? "WorkOnly" : shift.TotalDurationMode);
         HrmsDatabase.AddParameter(command, "@AIR", shift.AvailableInRoster ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@RFE", shift.RequestableFromEss ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@LGM", shift.LatenessGraceMinutes);
+        HrmsDatabase.AddParameter(command, "@ELG", shift.EarlyLeaveGraceMinutes);
+        HrmsDatabase.AddParameter(command, "@TLF", (object?)shift.TimeLimitFrom ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@TLFB", shift.TimeLimitFromDayBefore ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@TLT", (object?)shift.TimeLimitTo ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@TLTA", shift.TimeLimitToDayAfter ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@MST", (object?)shift.MidShiftTime ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@Active", shift.IsActive ? 1 : 0);
     }
 }

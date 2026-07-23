@@ -15,6 +15,8 @@
         s.Id, s.Name, s.NameEn, s.ColorHex, s.IsFlexible, s.FlexDailyHours, s.MultiPeriod, s.IsActive,
         s.FillMissingCheckIn, s.FillMissingCheckOut, s.StripSemantics, s.ConsiderPermissionsOutsideShift,
         s.ExcludePermsOutsideStartFromLate, s.TotalDurationMode, s.AvailableInRoster, s.RequestableFromEss,
+        s.LatenessGraceMinutes, s.EarlyLeaveGraceMinutes, s.TimeLimitFrom, s.TimeLimitFromDayBefore,
+        s.TimeLimitTo, s.TimeLimitToDayAfter, s.MidShiftTime,
         Days = s.Days.Select(d => new { d.DayIndex, d.DayKind, d.StartTime, d.EndTime }),
         Periods = s.Periods.Select(p => new { p.StartTime, p.EndTime })
     }));
@@ -204,6 +206,38 @@
                     }
                 </div>
 
+                @* ===== السماحيات والحدود (فترة السماح + نافذة البصم + منتصف المناوبة) ===== *@
+                <label style="margin-top:6px">السماحيات والحدود <span class="sht-hint">— فترة السماح، نافذة البصم الصالحة، منتصف المناوبة</span></label>
+                <div style="display:flex;flex-direction:column;gap:10px;border:1px solid rgba(73,111,151,.18);border-radius:12px;padding:12px">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <label>فترة السماح للتأخير (دقائق)<input type="number" name="LatenessGraceMinutes" id="sht-LGM" min="0" max="600" value="0" /></label>
+                        <label>فترة السماح للخروج المبكر (دقائق)<input type="number" name="EarlyLeaveGraceMinutes" id="sht-ELG" min="0" max="600" value="0" /></label>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <label>حد وقت بدء المناوبة (أبكر بصمة صالحة)
+                            <span style="display:flex;gap:6px;align-items:center">
+                                <input type="time" name="TimeLimitFrom" id="sht-TLF" style="flex:1" />
+                                <select name="TimeLimitFromAnchor" id="sht-TLFA" style="min-height:36px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 6px">
+                                    <option value="same">نفس اليوم</option>
+                                    <option value="before">اليوم السابق</option>
+                                </select>
+                            </span>
+                        </label>
+                        <label>حد وقت انتهاء المناوبة (أحدث بصمة صالحة)
+                            <span style="display:flex;gap:6px;align-items:center">
+                                <input type="time" name="TimeLimitTo" id="sht-TLT" style="flex:1" />
+                                <select name="TimeLimitToAnchor" id="sht-TLTA" style="min-height:36px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 6px">
+                                    <option value="same">نفس اليوم</option>
+                                    <option value="after">اليوم التالي</option>
+                                </select>
+                            </span>
+                        </label>
+                    </div>
+                    <label style="max-width:280px">وقت منتصف المناوبة <span class="sht-hint">(لتقسيم بصمات المناوبة العابرة لمنتصف الليل)</span>
+                        <input type="time" name="MidShiftTime" id="sht-MST" style="max-width:160px" />
+                    </label>
+                </div>
+
                 @* ===== قواعد سلوك المناوبة (أسفل اختيار الأيام — نمط كيان) ===== *@
                 <label style="margin-top:6px">قواعد المناوبة <span class="sht-hint">— كيف يعامل محرك الحضور بصمات هذه المناوبة</span></label>
                 <div style="display:flex;flex-direction:column;gap:8px;border:1px solid rgba(73,111,151,.18);border-radius:12px;padding:12px">
@@ -354,6 +388,13 @@
                     document.getElementById('sht-AIR').checked = !!s.AvailableInRoster;
                     document.getElementById('sht-RFE').checked = !!s.RequestableFromEss;
                     document.getElementById('sht-TDM').value = s.TotalDurationMode || 'WorkOnly';
+                    document.getElementById('sht-LGM').value = s.LatenessGraceMinutes || 0;
+                    document.getElementById('sht-ELG').value = s.EarlyLeaveGraceMinutes || 0;
+                    document.getElementById('sht-TLF').value = s.TimeLimitFrom || '';
+                    document.getElementById('sht-TLFA').value = s.TimeLimitFromDayBefore ? 'before' : 'same';
+                    document.getElementById('sht-TLT').value = s.TimeLimitTo || '';
+                    document.getElementById('sht-TLTA').value = s.TimeLimitToDayAfter ? 'after' : 'same';
+                    document.getElementById('sht-MST').value = s.MidShiftTime || '';
                     (s.Days || []).forEach(function (day) {
                         var el = shtEls(day.DayIndex);
                         el.kind.value = day.DayKind || 'Work';

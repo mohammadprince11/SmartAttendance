@@ -47,6 +47,13 @@ public class IndexModel : PageModel
             TotalDurationMode = form["TotalDurationMode"].ToString() is { Length: > 0 } tdm ? tdm : "WorkOnly",
             AvailableInRoster = form["AvailableInRoster"] == "true",
             RequestableFromEss = form["RequestableFromEss"] == "true",
+            LatenessGraceMinutes = int.TryParse(form["LatenessGraceMinutes"], out var lgm) ? Math.Max(0, lgm) : 0,
+            EarlyLeaveGraceMinutes = int.TryParse(form["EarlyLeaveGraceMinutes"], out var elg) ? Math.Max(0, elg) : 0,
+            TimeLimitFrom = string.IsNullOrWhiteSpace(form["TimeLimitFrom"]) ? null : form["TimeLimitFrom"].ToString(),
+            TimeLimitFromDayBefore = form["TimeLimitFromAnchor"] == "before",
+            TimeLimitTo = string.IsNullOrWhiteSpace(form["TimeLimitTo"]) ? null : form["TimeLimitTo"].ToString(),
+            TimeLimitToDayAfter = form["TimeLimitToAnchor"] == "after",
+            MidShiftTime = string.IsNullOrWhiteSpace(form["MidShiftTime"]) ? null : form["MidShiftTime"].ToString(),
             IsActive = form["IsActive"] == "true"
         };
 
