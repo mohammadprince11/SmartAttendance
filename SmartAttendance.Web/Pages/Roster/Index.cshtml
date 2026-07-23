@@ -1,0 +1,195 @@
+@page "/Roster"
+@model SmartAttendance.Web.Pages.Roster.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@*
+    جدولة مناوبات العمل (الروستر) — الصفحة الثالثة بقسم «حضور الموظفين» (نمط كيان):
+    شبكة موظف×يوم، خلية = مناوبة/عطلة/راحة، غير المجدول ← الافتراضية. حفظ + نشر.
+*@
+
+@{
+    ViewData["Title"] = "جدولة مناوبات العمل";
+    var (year, month) = Model.Period;
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .ros-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
+    .ros-head {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
+                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
+    }
+    html[data-theme="light"] .ros-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
+    .ros-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .ros-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .ros-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
+    .ros-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
+    .ros-btn.pub { background: linear-gradient(135deg, #4ade80, #22c55e); }
+
+    .ros-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .ros-bar input { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; font-size: 13px; }
+    html[data-theme="light"] .ros-bar input { background: #fff; color: inherit; }
+    .ros-note { font-size: 12px; font-weight: 800; padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(250,204,21,.3); background: rgba(250,204,21,.08); color: #facc15; }
+    .ros-pub { font-size: 12px; font-weight: 900; padding: 5px 12px; border-radius: 999px; background: rgba(74,222,128,.14); color: #4ade80; }
+    .ros-pub.no { background: rgba(143,168,188,.14); color: var(--sa-muted, #8FA8BC); }
+    .ros-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
+
+    .ros-grid-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); max-height: 66vh; }
+    .ros-grid { border-collapse: separate; border-spacing: 0; font-size: 11.5px; }
+    .ros-grid th, .ros-grid td { border-bottom: 1px solid rgba(143,168,188,.1); border-inline-start: 1px solid rgba(143,168,188,.06); white-space: nowrap; }
+    .ros-grid thead th { position: sticky; top: 0; z-index: 3; background: #0a1f33; color: var(--sa-muted, #8FA8BC); font-weight: 1000; padding: 6px 8px; text-align: center; }
+    html[data-theme="light"] .ros-grid thead th { background: #eef4f9; }
+    .ros-grid th.emp, .ros-grid td.emp { position: sticky; inset-inline-start: 0; z-index: 2; background: var(--sa-surface, #0b2135); text-align: start; padding: 6px 12px; min-width: 190px; }
+    .ros-grid thead th.emp { z-index: 4; }
+    html[data-theme="light"] .ros-grid th.emp, html[data-theme="light"] .ros-grid td.emp { background: #fff; }
+    .ros-grid td.emp b { font-weight: 900; }
+    .ros-grid td.emp .dep { font-size: 10px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .ros-dcol { min-width: 62px; }
+    .ros-dcol .dn { font-size: 10px; opacity: .8; }
+    .ros-dcol.fri { color: #f87171; }
+    .ros-cell { padding: 3px; }
+    .ros-cell select { width: 60px; min-height: 30px; border-radius: 7px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: inherit; padding: 2px; font-size: 11px; font-weight: 800; }
+    html[data-theme="light"] .ros-cell select { background: #fff; }
+    .ros-cell select.has { border-color: rgba(18,217,227,.5); }
+    .ros-cell select.off { border-color: rgba(248,113,113,.4); color: #f87171; }
+    .ros-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .ros-actions { display: flex; gap: 8px; align-items: center; }
+    .ros-legend { font-size: 11px; color: var(--sa-muted, #8FA8BC); font-weight: 800; display: flex; gap: 12px; flex-wrap: wrap; }
+</style>
+
+<section class="ros-page" dir="rtl">
+    <header class="ros-head">
+        <div>
+            <h1>جدولة مناوبات العمل</h1>
+            <p>شبكة موظف × يوم — عيّن مناوبة أو عطلة/راحة لكل يوم. الأيام غير المجدولة تُحلَّل بالمناوبة الافتراضية.</p>
+        </div>
+        <form method="get" class="ros-actions">
+            <input type="month" name="Month" value="@Model.Month" onchange="this.form.submit()"
+                   style="min-height:38px;border-radius:10px;border:1px solid rgba(73,111,151,.3);background:rgba(0,0,0,.16);color:inherit;padding:6px 10px" />
+            <input type="hidden" name="Search" value="@Model.Search" />
+            @if (Model.PublishedAt != null)
+            {
+                <span class="ros-pub">منشور · @Model.PublishedAt.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+            }
+            else
+            {
+                <span class="ros-pub no">غير منشور</span>
+            }
+        </form>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="ros-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <div class="ros-note">في حال لم تُعيّن مناوبة أو يوم عطلة لموظف في يوم معين، يُجدول تلقائياً وفق مناوبته الافتراضية (تعيينه الدائم/الاستحقاق).</div>
+
+    <form method="get" class="ros-bar">
+        <input type="hidden" name="Month" value="@Model.Month" />
+        <input type="text" name="Search" value="@Model.Search" placeholder="بحث بالموظف (رمز/اسم)..." />
+        <button type="submit" class="ros-btn ghost">عرض</button>
+        <span class="ros-legend" style="margin-inline-start:auto">
+            <span>الموظفون: <b style="direction:ltr;display:inline-block">@Model.TotalRows</b></span>
+            <span>— = افتراضي</span><span style="color:#f87171">ع = عطلة · ر = راحة</span>
+        </span>
+    </form>
+
+    <form method="post" id="ros-form">
+        <input type="hidden" name="Month" value="@Model.Month" />
+        <input type="hidden" name="Search" value="@Model.Search" />
+        <input type="hidden" name="PageNumber" value="@Model.PageNumber" />
+
+        <div class="ros-grid-card">
+            @if (Model.Employees.Count == 0)
+            {
+                <div class="ros-empty">لا موظفون مطابقون.</div>
+            }
+            else
+            {
+                <table class="ros-grid">
+                    <thead>
+                        <tr>
+                            <th class="emp">الموظف</th>
+                            @foreach (var day in Model.Days)
+                            {
+                                var isFri = day.DayOfWeek == DayOfWeek.Friday;
+                                <th class="ros-dcol @(isFri ? "fri" : "")">
+                                    @day.Day<div class="dn">@Model.DayName(day)</div>
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var emp in Model.Employees)
+                        {
+                            <tr>
+                                <td class="emp">
+                                    <b>@emp.Name</b>
+                                    <div class="dep" style="direction:ltr">@emp.No · @emp.Department</div>
+                                </td>
+                                @foreach (var day in Model.Days)
+                                {
+                                    var cell = Model.Cells.TryGetValue((emp.Id, day), out var c) ? c : null;
+                                    var val = cell == null ? "" : cell.CellType switch
+                                    {
+                                        RosterStore.CellWeekend => "Weekend",
+                                        RosterStore.CellRest => "Rest",
+                                        _ => "S" + cell.ShiftTypeId
+                                    };
+                                    var isOff = val is "Weekend" or "Rest";
+                                    <td class="ros-cell">
+                                        <select name="cell_@(emp.Id)_@(day.ToString("yyyy-MM-dd"))"
+                                                class="@(val.Length > 0 ? (isOff ? "off" : "has") : "")" onchange="rosMark(this)">
+                                            <option value="">—</option>
+                                            @foreach (var shift in Model.Shifts)
+                                            {
+                                                <option value="S@(shift.Id)" selected="@(val == "S" + shift.Id)">@shift.Name</option>
+                                            }
+                                            <option value="Weekend" selected="@(val == "Weekend")">عطلة</option>
+                                            <option value="Rest" selected="@(val == "Rest")">راحة</option>
+                                        </select>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+
+        <div class="ros-bar" style="justify-content:space-between">
+            <div class="ros-actions">
+                <button type="submit" asp-page-handler="Save" class="ros-btn" data-zyconfirm="حفظ الجدول للصفحة الحالية؟">حفظ الجدول</button>
+                <button type="submit" asp-page-handler="Publish" class="ros-btn pub" data-zyconfirm="حفظ ونشر جدول الشهر؟">نشر الجدول</button>
+            </div>
+            @if (Model.TotalPages > 1)
+            {
+                <div class="ros-actions" style="font-size:12px;font-weight:900">
+                    @if (Model.PageNumber > 1)
+                    {
+                        <a class="ros-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&PageNumber=@(Model.PageNumber - 1)">السابق</a>
+                    }
+                    <span>صفحة @Model.PageNumber / @Model.TotalPages</span>
+                    @if (Model.PageNumber < Model.TotalPages)
+                    {
+                        <a class="ros-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&PageNumber=@(Model.PageNumber + 1)">التالي</a>
+                    }
+                </div>
+            }
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <script>
+        function rosMark(sel) {
+            sel.classList.remove('has', 'off');
+            if (!sel.value) return;
+            sel.classList.add(sel.value === 'Weekend' || sel.value === 'Rest' ? 'off' : 'has');
+        }
+    </script>
+}

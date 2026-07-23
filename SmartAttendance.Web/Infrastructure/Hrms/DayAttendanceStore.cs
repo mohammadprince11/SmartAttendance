@@ -124,6 +124,9 @@ END;
         // التعديلات المؤقتة المتقاطعة مع الشهر — أعلى أولوية بالإسناد (موظف×يوم ← مناوبة)
         var overrideMap = await ShiftOverrideStore.MapAsync(dbContext, monthStart, monthEnd);
 
+        // الروستر الشهري — أولوية تحت التجاوز وفوق التعيين الدائم (مناوبة أو عطلة/راحة)
+        var rosterMap = await RosterStore.MapAsync(dbContext, year, month);
+
         var punches = await dbContext.AttendanceRecords.AsNoTracking()
             .Where(r => r.AttendanceDate >= monthStart && r.AttendanceDate <= monthEnd)
             .Select(r => new { r.EmployeeId, r.AttendanceDate, r.CheckIn, r.CheckOut })
@@ -213,13 +216,23 @@ END;
 
             for (var date = monthStart; date <= monthEnd; date = date.AddDays(1))
             {
-                // التجاوز المؤقت (لو غطّى هذا اليوم) يسبق المناوبة الأساس.
-                var shiftId = overrideMap.TryGetValue((employeeId, date), out var ov) && shifts.ContainsKey(ov)
-                    ? ov : baseShiftId;
+                // أولوية الإسناد اليومي: تجاوز مؤقت ← روستر ← الأساس. الروستر قد يفرض
+                // نوع اليوم (عطلة/راحة) بدل تعيين مناوبة.
+                var shiftId = baseShiftId;
+                string? forcedDayKind = null;
+                if (overrideMap.TryGetValue((employeeId, date), out var ov) && shifts.ContainsKey(ov))
+                {
+                    shiftId = ov;
+                }
+                else if (rosterMap.TryGetValue((employeeId, date), out var rc))
+                {
+                    if (rc.ForcedDayKind != null) forcedDayKind = rc.ForcedDayKind;
+                    else if (rc.ShiftId is int rs && shifts.ContainsKey(rs)) shiftId = rs;
+                }
                 var (shift, shiftDays) = shifts[shiftId];
 
                 var day = shiftDays.TryGetValue(ToDayIndex(date), out var d) ? d : null;
-                var dayKind = day?.DayKind ?? "Work";
+                var dayKind = forcedDayKind ?? (day?.DayKind ?? "Work");
                 byDay.TryGetValue((employeeId, date), out var punch);
                 var row = Derive(shift, day, dayKind, punch.In == default ? null : punch.In, punch.Out);
 
