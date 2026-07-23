@@ -191,6 +191,56 @@ public class OvertimeModel : PageModel
         return RedirectToPage(back);
     }
 
+    /// <summary>استيراد عمل إضافي من إكسل/CSV (الأعمدة: رمز الموظف | عدد الساعات | البند؟ | المعامل؟) — قيمة لكل موظف.</summary>
+    public async Task<IActionResult> OnPostImportAsync(IFormFile? importFile)
+    {
+        var f = Request.Form;
+        var y = int.TryParse(f["ImportYear"], out var yy) ? yy : Year;
+        var m = int.TryParse(f["ImportMonth"], out var mm) ? mm : Month;
+        var back = new { Year = y, Month = m };
+
+        if (importFile == null || importFile.Length == 0)
+        { TempData["PayrollMessage"] = "اختر ملف إكسل أو CSV."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
+
+        List<string[]> rows;
+        try { await using var s = importFile.OpenReadStream(); rows = SpreadsheetReader.Read(s, importFile.FileName); }
+        catch (Exception ex) { TempData["PayrollMessage"] = "تعذّر قراءة الملف: " + ex.Message; TempData["PayrollOk"] = false; return RedirectToPage(back); }
+
+        var emps = await HrmsDatabase.QueryAsync(_db,
+            "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1;",
+            command => { },
+            reader => new { Id = HrmsDatabase.GetInt(reader, "Id"), No = HrmsDatabase.GetString(reader, "EmployeeNo") });
+        var byCode = new Dictionary<string, int>();
+        foreach (var e in emps) { var k = e.No.Trim().ToLowerInvariant(); if (k.Length > 0) byCode[k] = e.Id; }
+
+        int imported = 0, skipped = 0;
+        var user = User?.Identity?.Name ?? "system";
+        for (var i = 1; i < rows.Count; i++) // الصف 0 ترويسة
+        {
+            var row = rows[i];
+            if (row.Length < 2) { skipped++; continue; }
+            var code = row[0].Trim().ToLowerInvariant();
+            if (code.Length == 0 || !byCode.TryGetValue(code, out var empId)) { skipped++; continue; }
+            if (!decimal.TryParse(row[1], out var hrs) || hrs <= 0) { skipped++; continue; }
+
+            var itemName = row.Length > 2 && !string.IsNullOrWhiteSpace(row[2]) ? row[2].Trim() : "عمل إضافي";
+            var factor = row.Length > 3 && decimal.TryParse(row[3], out var rf) && rf > 0 ? rf : PayrollTransactionStore.DefaultRateFactor;
+
+            await PayrollTransactionStore.SaveAsync(_db, new PayrollTransactionStore.Transaction
+            {
+                EmployeeId = empId, Year = y, Month = m, TxType = PayrollTransactionStore.Overtime,
+                ItemName = itemName, Hours = hrs, RateFactor = factor, Amount = 0, Taxable = true,
+                PaymentType = "InSalary", TransactionDate = DateOnly.FromDateTime(DateTime.Today),
+                Status = "Approved", Source = "استيراد إكسل"
+            }, user);
+            imported++;
+        }
+
+        TempData["PayrollMessage"] = $"استُوردت {imported} حركة عمل إضافي" + (skipped > 0 ? $"، وتُخطّي {skipped} صفاً (بيانات غير صالحة)." : ".");
+        TempData["PayrollOk"] = imported > 0;
+        return RedirectToPage(back);
+    }
+
     public async Task<IActionResult> OnPostLockSelectedAsync()
     {
         var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();

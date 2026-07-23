@@ -90,11 +90,13 @@
             <p>ساعات × معامل بدل — القيمة الفعلية تُحتسب بالمسير من الأجر الساعي للموظف (الأساسي ÷ 30 ÷ 8).</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <a class="ot-btn ghost" href="/Payroll/Transactions">الحركات</a>
             @if (!Model.IsReadOnly)
             {
                 <button type="button" class="ot-btn ghost icon" title="إدخال جماعي — بند واحد لعدة موظفين" aria-label="إدخال جماعي" onclick="massOpen()">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </button>
+                <button type="button" class="ot-btn ghost icon" title="استيراد من إكسل (رمز الموظف + الساعات)" aria-label="استيراد إكسل" onclick="impOpen()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 </button>
                 <button type="button" class="ot-btn" onclick="otOpen(0)">+ عمل إضافي</button>
             }
@@ -379,6 +381,34 @@
             </form>
         </div>
     </aside>
+
+    @* ===== استيراد إكسل ===== *@
+    <div class="hrms-slideover-backdrop" id="imp-backdrop" onclick="impClose()"></div>
+    <aside class="hrms-slideover" id="imp-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2>⬆ استيراد العمل الإضافي (إكسل / CSV)</h2>
+            <button type="button" class="hrms-slideover-close" onclick="impClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Import" enctype="multipart/form-data" class="ot-form" style="display:flex;flex-direction:column;gap:12px">
+                <div class="mass-file-hint">
+                    <b style="color:var(--acc)">أعمدة الملف (الصف الأول ترويسة تُتجاهل):</b><br />
+                    A: رمز الموظف · B: عدد الساعات · C: البند (اختياري) · D: المعامل (اختياري، افتراضي 1.5)
+                </div>
+                <div class="ot-grid2">
+                    <label>الشهر
+                        <select name="ImportMonth">
+                            @for (var m = 1; m <= 12; m++)
+                            { <option value="@m" selected="@(m == Model.Month)">@months[m-1]</option> }
+                        </select>
+                    </label>
+                    <label>السنة<input type="number" name="ImportYear" value="@Model.Year" min="2000" max="2100" /></label>
+                </div>
+                <label>الملف (.xlsx أو .csv) *<input type="file" name="importFile" accept=".xlsx,.csv" required style="min-height:auto;padding:8px" /></label>
+                <button type="submit" class="ot-btn">استيراد</button>
+            </form>
+        </div>
+    </aside>
 </section>
 
 @section Scripts {
@@ -486,7 +516,9 @@
             document.getElementById('mass-slide').classList.add('open'); document.getElementById('mass-backdrop').classList.add('open');
         }
         function massClose(){ document.getElementById('mass-slide').classList.remove('open'); document.getElementById('mass-backdrop').classList.remove('open'); }
+        function impOpen(){ document.getElementById('imp-slide').classList.add('open'); document.getElementById('imp-backdrop').classList.add('open'); }
+        function impClose(){ document.getElementById('imp-slide').classList.remove('open'); document.getElementById('imp-backdrop').classList.remove('open'); }
 
-        document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ otClose(); massClose(); } });
+        document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ otClose(); massClose(); impClose(); } });
     </script>
 }
