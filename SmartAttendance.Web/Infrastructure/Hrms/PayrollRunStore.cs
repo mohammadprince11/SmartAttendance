@@ -502,8 +502,15 @@ ORDER BY c.IsAddition DESC, c.Id;
         (await ListLinesAsync(dbContext, runId)).FirstOrDefault(x => x.EmployeeId == employeeId);
 
     // ---------------- دورة الحياة ----------------
-    public static Task<(bool, string)> LockAsync(ApplicationDbContext dbContext, int runId) =>
-        TransitionAsync(dbContext, runId, from: "Calculated", to: "Locked", "LockedAt", "قُفلت الدفعة.");
+    public static async Task<(bool, string)> LockAsync(ApplicationDbContext dbContext, int runId)
+    {
+        var run = await GetRunAsync(dbContext, runId);
+        var res = await TransitionAsync(dbContext, runId, from: "Calculated", to: "Locked", "LockedAt", "قُفلت الدفعة.");
+        // قفل حركات الدفعة (لكل حركة) — الحركات الجديدة بعدها تبقى غير مقفلة
+        if (res.Item1 && run != null)
+            await PayrollTransactionStore.LockForRunAsync(dbContext, runId, run.Year, run.Month);
+        return res;
+    }
 
     public static Task<(bool, string)> IssueAsync(ApplicationDbContext dbContext, int runId) =>
         TransitionAsync(dbContext, runId, from: "Locked", to: "Issued", "IssuedAt", "اعتُمدت للصرف.");

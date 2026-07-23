@@ -85,6 +85,8 @@ public static class PayrollTransactionStore
         public string? Note { get; set; }
         public string Source { get; set; } = "مباشر";
         public string Status { get; set; } = "Approved";
+        public bool IsLocked { get; set; }
+        public int? LockedRunId { get; set; }
         public DateTime CreatedAt { get; set; }
 
         public string PeriodText => $"{Month:00}/{Year}";
@@ -145,12 +147,14 @@ IF COL_LENGTH('PayrollTransactions','AttachmentName') IS NULL ALTER TABLE Payrol
 IF COL_LENGTH('PayrollTransactions','AttachmentPath') IS NULL ALTER TABLE PayrollTransactions ADD AttachmentPath nvarchar(500) NULL;
 IF COL_LENGTH('PayrollTransactions','Source') IS NULL ALTER TABLE PayrollTransactions ADD Source nvarchar(50) NOT NULL CONSTRAINT DF_PT_Source DEFAULT(N'مباشر');
 IF COL_LENGTH('PayrollTransactions','Status') IS NULL ALTER TABLE PayrollTransactions ADD Status nvarchar(30) NOT NULL CONSTRAINT DF_PT_Status DEFAULT(N'Approved');
+IF COL_LENGTH('PayrollTransactions','IsLocked') IS NULL ALTER TABLE PayrollTransactions ADD IsLocked bit NOT NULL CONSTRAINT DF_PT_IsLocked DEFAULT(0);
+IF COL_LENGTH('PayrollTransactions','LockedRunId') IS NULL ALTER TABLE PayrollTransactions ADD LockedRunId int NULL;
 """);
     }
 
     public static async Task<List<Transaction>> ListAsync(
         ApplicationDbContext dbContext, int year, int month, string txType, string? search,
-        int? salaryItemId = null, string? status = null, string? source = null)
+        int? salaryItemId = null, string? status = null, string? source = null, bool? locked = null)
     {
         await EnsureAsync(dbContext);
         var rows = await HrmsDatabase.QueryAsync(
@@ -172,6 +176,7 @@ ORDER BY t.CreatedAt DESC;
             },
             Read);
 
+        if (locked.HasValue) rows = rows.Where(r => r.IsLocked == locked.Value).ToList();
         if (salaryItemId is > 0) rows = rows.Where(r => r.SalaryItemId == salaryItemId).ToList();
         if (!string.IsNullOrWhiteSpace(status)) rows = rows.Where(r => r.Status == status).ToList();
         if (!string.IsNullOrWhiteSpace(source)) rows = rows.Where(r => r.Source == source).ToList();
@@ -188,16 +193,40 @@ ORDER BY t.CreatedAt DESC;
     }
 
     /// <summary>
-    /// هل فترة (سنة/شهر) مقفلة؟ = يوجد مسير لها بحالة مقفل/معتمد/قسائم استهلك حركاتها.
-    /// الحركات في فترة مقفلة تصير للقراءة فقط (نمط كيان: تبويب «حركات مقفلة»).
+    /// قفل الحركات (نمط كيان — لكل حركة لا للفترة): عند قفل مسير، تُقفل الحركات
+    /// المعتمدة داخل الراتب لفترته غير المقفلة سابقاً. الحركات الجديدة بعده تبقى
+    /// «غير مقفلة» (تدخل مسيراً لاحقاً) — فيبقى بإمكانك إضافة حركات دائماً.
     /// </summary>
-    public static async Task<bool> IsPeriodLockedAsync(ApplicationDbContext dbContext, int year, int month)
+    public static async Task LockForRunAsync(ApplicationDbContext dbContext, int runId, int year, int month)
     {
-        var count = await HrmsDatabase.ScalarAsync<int>(
+        await EnsureAsync(dbContext);
+        await HrmsDatabase.ExecuteAsync(
             dbContext,
-            "IF OBJECT_ID('PayrollRuns','U') IS NULL SELECT 0 ELSE SELECT COUNT(1) FROM PayrollRuns WHERE [Year]=@Y AND [Month]=@M AND Status IN (N'Locked', N'Issued', N'PayslipSent');",
-            command => { HrmsDatabase.AddParameter(command, "@Y", year); HrmsDatabase.AddParameter(command, "@M", month); });
-        return count > 0;
+            """
+UPDATE PayrollTransactions
+SET IsLocked = 1, LockedRunId = @Run
+WHERE [Year] = @Y AND [Month] = @M
+  AND ISNULL(PaymentType, N'InSalary') = N'InSalary'
+  AND ISNULL(Status, N'Approved') = N'Approved'
+  AND ISNULL(IsLocked, 0) = 0;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Run", runId);
+                HrmsDatabase.AddParameter(command, "@Y", year);
+                HrmsDatabase.AddParameter(command, "@M", month);
+            });
+    }
+
+    /// <summary>هل حركة بعينها مقفلة؟ (دخلت مسيراً مقفلاً) — لحماية التعديل/الحذف.</summary>
+    public static async Task<bool> IsLockedAsync(ApplicationDbContext dbContext, int id)
+    {
+        await EnsureAsync(dbContext);
+        var v = await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            "SELECT CAST(ISNULL(IsLocked,0) AS int) FROM PayrollTransactions WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", id));
+        return v == 1;
     }
 
     /// <summary>حركات فترة/نوع للاحتساب بالمسير — المعتمدة داخل الراتب فقط.</summary>
@@ -348,6 +377,8 @@ WHERE Id=@Id;
         Note = HrmsDatabase.GetString(reader, "Note") is { Length: > 0 } n ? n : null,
         Source = HrmsDatabase.GetString(reader, "Source") is { Length: > 0 } s ? s : "مباشر",
         Status = HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } st ? st : "Approved",
+        IsLocked = HrmsDatabase.GetBool(reader, "IsLocked"),
+        LockedRunId = HrmsDatabase.GetNullableInt(reader, "LockedRunId"),
         CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default
     };
 

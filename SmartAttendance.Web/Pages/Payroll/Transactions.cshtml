@@ -94,7 +94,7 @@
                 <a href="/Payroll/Transactions?type=Deduction" class="@(Model.IsDeduction ? "on" : "")">اقتطاع</a>
             </span>
             <a class="tx-btn ghost" href="/Payroll/Runs">← المسير</a>
-            @if (!Model.IsReadOnly && !Model.PeriodLocked)
+            @if (!Model.IsReadOnly)
             {
                 <button type="button" class="tx-btn" onclick="txOpen(0)">+ حركة جديدة</button>
             }
@@ -159,9 +159,7 @@
         @if (Model.Items.Count == 0)
         {
             <div class="tx-empty">
-                @if (Model.PeriodLocked && !Model.IsReadOnly)
-                { <text>حركات فترة @($"{Model.Month:00}/{Model.Year}") مقفلة — راجع تبويب «🔒 حركات مقفلة».</text> }
-                else if (Model.IsReadOnly)
+                @if (Model.IsReadOnly)
                 { <text>لا حركات مقفلة لفترة @($"{Model.Month:00}/{Model.Year}").</text> }
                 else
                 { <text>لا حركات @(Model.IsDeduction ? "اقتطاع" : "دخل") لفترة @($"{Model.Month:00}/{Model.Year}") — أضف بـ«+ حركة جديدة».</text> }
