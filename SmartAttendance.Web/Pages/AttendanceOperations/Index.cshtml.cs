@@ -47,15 +47,6 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int MaxRows { get; set; } = 25;
 
-    [BindProperty(SupportsGet = true)]
-    public string? CorrectionEmployeeNo { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public DateOnly? CorrectionFromDate { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public DateOnly? CorrectionToDate { get; set; }
-
     [BindProperty]
     public IFormFile? AttendanceFile { get; set; }
 
@@ -71,8 +62,6 @@ public class IndexModel : PageModel
     public int ProcessTotalResults { get; set; }
 
     public bool ProcessIsLimited { get; set; }
-
-    public List<CorrectionRow> CorrectionRecords { get; set; } = new();
 
     public AttendanceImportPreviewViewModel? Preview { get; set; }
 
@@ -100,7 +89,6 @@ public class IndexModel : PageModel
         {
             ErrorMessage = "ÙŠØ±Ø¬Ù‰ Ø§Ø®ØªÙŠØ§Ø± Ù…Ù„Ù Excel Ø£Ùˆ CSV.";
             NormalizeDefaults();
-            await LoadCorrectionsAsync();
             await LoadProcessingAsync();
             return Page();
         }
@@ -111,7 +99,6 @@ public class IndexModel : PageModel
         {
             ErrorMessage = "Ù†ÙˆØ¹ Ø§Ù„Ù…Ù„Ù ØºÙŠØ± Ù…Ø¯Ø¹ÙˆÙ…. Ø§Ø³ØªØ®Ø¯Ù… xlsx Ø£Ùˆ csv ÙÙ‚Ø·.";
             NormalizeDefaults();
-            await LoadCorrectionsAsync();
             await LoadProcessingAsync();
             return Page();
         }
@@ -142,7 +129,6 @@ public class IndexModel : PageModel
         }
 
         NormalizeDefaults();
-        await LoadCorrectionsAsync();
         await LoadProcessingAsync();
         return Page();
     }
@@ -186,7 +172,6 @@ public class IndexModel : PageModel
         }
 
         NormalizeDefaults();
-        await LoadCorrectionsAsync();
         await LoadProcessingAsync();
         return Page();
     }
@@ -333,175 +318,9 @@ END;",
         });
     }
 
-    public async Task<IActionResult> OnPostCorrectAsync()
-    {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        Tab = "corrections";
-
-        if (Correction.Id > 0)
-        {
-            var oldRows = await HrmsDatabase.QueryAsync(
-                _dbContext,
-                @"
-SELECT TOP 1
-    Id,
-    AttendanceDate,
-    CheckIn,
-    CheckOut,
-    Status,
-    ISNULL(Notes, '') AS Notes
-FROM AttendanceRecords
-WHERE Id = @Id;",
-                command => HrmsDatabase.AddParameter(command, "@Id", Correction.Id),
-                reader => new CorrectionRow
-                {
-                    Id = HrmsDatabase.GetInt(reader, "Id"),
-                    Date = HrmsDatabase.GetDateOnly(reader, "AttendanceDate")?.ToString("yyyy-MM-dd") ?? "",
-                    CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn")?.ToString("HH:mm") ?? "",
-                    CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut")?.ToString("HH:mm") ?? "",
-                    StatusValue = HrmsDatabase.GetInt(reader, "Status"),
-                    Notes = HrmsDatabase.GetString(reader, "Notes")
-                });
-
-            var old = oldRows.FirstOrDefault();
-
-            if (old == null || string.IsNullOrWhiteSpace(old.Date))
-            {
-                ErrorMessage = "Ø§Ù„Ø³Ø¬Ù„ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯.";
-                NormalizeDefaults();
-                await LoadCorrectionsAsync();
-                return Page();
-            }
-
-            var date = DateOnly.Parse(old.Date);
-            var checkIn = BuildDateTime(date, Correction.CheckIn);
-            DateTime? checkOut = string.IsNullOrWhiteSpace(Correction.CheckOut) ? null : BuildDateTime(date, Correction.CheckOut);
-            var statusValue = NormalizeStatus(Correction.Status);
-
-            await HrmsDatabase.ExecuteAsync(
-                _dbContext,
-                @"
-UPDATE AttendanceRecords
-SET CheckIn = @CheckIn,
-    CheckOut = @CheckOut,
-    Status = @Status,
-    Notes = @Notes
-WHERE Id = @Id;
-
-IF OBJECT_ID('AuditLogs', 'U') IS NOT NULL
-BEGIN
-    INSERT INTO AuditLogs (EntityName, EntityId, Action, OldValues, NewValues, UserName, IpAddress)
-    VALUES ('AttendanceRecord', CAST(@Id AS nvarchar(80)), 'Attendance Correction', @OldValues, @NewValues, @UserName, @IpAddress);
-END;",
-                command =>
-                {
-                    HrmsDatabase.AddParameter(command, "@Id", Correction.Id);
-                    HrmsDatabase.AddParameter(command, "@CheckIn", checkIn);
-                    HrmsDatabase.AddParameter(command, "@CheckOut", checkOut);
-                    HrmsDatabase.AddParameter(command, "@Status", statusValue);
-                    HrmsDatabase.AddParameter(command, "@Notes", Correction.Notes);
-                    HrmsDatabase.AddParameter(command, "@OldValues", HrmsDatabase.JsonLine(
-                        ("CheckIn", old.CheckIn),
-                        ("CheckOut", old.CheckOut),
-                        ("Status", StatusText(old.StatusValue)),
-                        ("Notes", old.Notes)));
-                    HrmsDatabase.AddParameter(command, "@NewValues", HrmsDatabase.JsonLine(
-                        ("CheckIn", Correction.CheckIn),
-                        ("CheckOut", Correction.CheckOut),
-                        ("Status", StatusText(statusValue)),
-                        ("Notes", Correction.Notes)));
-                    HrmsDatabase.AddParameter(command, "@UserName", User.Identity?.Name ?? "HR");
-                    HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
-                });
-
-            SuccessMessage = "ØªÙ… ØªØµØ­ÙŠØ­ Ø³Ø¬Ù„ Ø§Ù„Ø­Ø¶ÙˆØ± ÙˆØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¹Ù…Ù„ÙŠØ© ÙÙŠ Ø³Ø¬Ù„ Ø§Ù„Ø¹Ù…Ù„ÙŠØ§Øª.";
-        }
-        else
-        {
-            if (string.IsNullOrWhiteSpace(Correction.EmployeeNo) || string.IsNullOrWhiteSpace(Correction.Date))
-            {
-                ErrorMessage = "Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø¥Ø¶Ø§ÙØ© Ø¨ØµÙ…Ø© Ø¨Ø¯ÙˆÙ† Ø±Ù‚Ù… Ù…ÙˆØ¸Ù ÙˆØªØ§Ø±ÙŠØ®.";
-                NormalizeDefaults();
-                await LoadCorrectionsAsync();
-                return Page();
-            }
-
-            var employeeId = await HrmsDatabase.ScalarAsync<int>(
-                _dbContext,
-                "SELECT TOP 1 Id FROM Employees WHERE EmployeeNo = @EmployeeNo",
-                command => HrmsDatabase.AddParameter(command, "@EmployeeNo", Correction.EmployeeNo));
-
-            if (employeeId <= 0)
-            {
-                ErrorMessage = "Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ Ø§Ù„Ù…ÙˆØ¸Ù.";
-                NormalizeDefaults();
-                await LoadCorrectionsAsync();
-                return Page();
-            }
-
-            var date = DateOnly.Parse(Correction.Date);
-            var checkIn = BuildDateTime(date, Correction.CheckIn);
-            DateTime? checkOut = string.IsNullOrWhiteSpace(Correction.CheckOut) ? null : BuildDateTime(date, Correction.CheckOut);
-            var statusValue = NormalizeStatus(Correction.Status);
-
-            await HrmsDatabase.ExecuteAsync(
-                _dbContext,
-                @"
-INSERT INTO AttendanceRecords
-(EmployeeId, AttendanceDate, CheckIn, CheckOut, Source, Status, DeviceId, Notes, CreatedAt)
-VALUES
-(@EmployeeId, @AttendanceDate, @CheckIn, @CheckOut, 3, @Status, NULL, @Notes, SYSUTCDATETIME());
-
-DECLARE @NewId int = SCOPE_IDENTITY();
-
-IF OBJECT_ID('AuditLogs', 'U') IS NOT NULL
-BEGIN
-    INSERT INTO AuditLogs (EntityName, EntityId, Action, NewValues, UserName, IpAddress)
-    VALUES ('AttendanceRecord', CAST(@NewId AS nvarchar(80)), 'Manual Attendance Add', @NewValues, @UserName, @IpAddress);
-END;",
-                command =>
-                {
-                    HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-                    HrmsDatabase.AddParameter(command, "@AttendanceDate", date);
-                    HrmsDatabase.AddParameter(command, "@CheckIn", checkIn);
-                    HrmsDatabase.AddParameter(command, "@CheckOut", checkOut);
-                    HrmsDatabase.AddParameter(command, "@Status", statusValue);
-                    HrmsDatabase.AddParameter(command, "@Notes", Correction.Notes);
-                    HrmsDatabase.AddParameter(command, "@NewValues", HrmsDatabase.JsonLine(
-                        ("EmployeeNo", Correction.EmployeeNo),
-                        ("Date", Correction.Date),
-                        ("CheckIn", Correction.CheckIn),
-                        ("CheckOut", Correction.CheckOut),
-                        ("Status", StatusText(statusValue)),
-                        ("Source", "ÙŠØ¯ÙˆÙŠ"),
-                        ("Notes", Correction.Notes)));
-                    HrmsDatabase.AddParameter(command, "@UserName", User.Identity?.Name ?? "HR");
-                    HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
-                });
-
-            SuccessMessage = "ØªÙ…Øª Ø¥Ø¶Ø§ÙØ© Ø³Ø¬Ù„ Ø­Ø¶ÙˆØ± ÙŠØ¯ÙˆÙŠ Ù„Ù„ÙŠÙˆÙ… Ø§Ù„Ù…Ø­Ø¯Ø¯.";
-        }
-
-        NormalizeDefaults();
-        await LoadCorrectionsAsync();
-
-        return Page();
-    }
     private async Task LoadCurrentTabAsync()
     {
-        if (Tab.Equals("import", StringComparison.OrdinalIgnoreCase))
-        {
-            await LoadProcessingAsync();
-            await LoadCorrectionsAsync();
-            return;
-        }
-
-        if (Tab.Equals("corrections", StringComparison.OrdinalIgnoreCase))
-        {
-            await LoadCorrectionsAsync();
-            return;
-        }
-
+        // بعد إزالة شاشة التصحيحات لم يبقَ إلا جدول المعالجة أياً كان التبويب
         await LoadProcessingAsync();
     }
 
@@ -668,116 +487,6 @@ WHERE ar.AttendanceDate >= @FromDate
     }
 
 
-    private async Task LoadCorrectionsAsync()
-    {
-        CorrectionFromDate ??= DateOnly.FromDateTime(DateTime.Today.AddDays(-30));
-        CorrectionToDate ??= DateOnly.FromDateTime(DateTime.Today);
-
-        if (CorrectionToDate < CorrectionFromDate)
-        {
-            CorrectionToDate = CorrectionFromDate;
-        }
-
-        var hasEmployeeFilter = !string.IsNullOrWhiteSpace(CorrectionEmployeeNo);
-
-        if (hasEmployeeFilter)
-        {
-            var sql = @"
-DECLARE @Days int = DATEDIFF(DAY, @FromDate, @ToDate) + 1;
-
-WITH Dates AS
-(
-    SELECT TOP (@Days)
-        DATEADD(DAY, ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 1, @FromDate) AS AttendanceDate
-    FROM sys.all_objects
-),
-FilteredEmployees AS
-(
-    SELECT Id, EmployeeNo, FullName
-    FROM Employees
-    WHERE EmployeeNo LIKE '%' + @EmployeeNo + '%'
-)
-SELECT TOP 500
-    ISNULL(ar.Id, 0) AS Id,
-    e.EmployeeNo,
-    e.FullName,
-    d.AttendanceDate,
-    ar.CheckIn,
-    ar.CheckOut,
-    ISNULL(ar.Status, 0) AS Status,
-    ISNULL(ar.Source, 0) AS Source,
-    ISNULL(ar.Notes, '') AS Notes
-FROM FilteredEmployees e
-CROSS JOIN Dates d
-LEFT JOIN AttendanceRecords ar
-    ON ar.EmployeeId = e.Id
-   AND ar.AttendanceDate = CAST(d.AttendanceDate AS date)
-ORDER BY d.AttendanceDate DESC, e.EmployeeNo;";
-
-            CorrectionRecords = await HrmsDatabase.QueryAsync(
-                _dbContext,
-                sql,
-                command =>
-                {
-                    HrmsDatabase.AddParameter(command, "@EmployeeNo", CorrectionEmployeeNo);
-                    HrmsDatabase.AddParameter(command, "@FromDate", CorrectionFromDate);
-                    HrmsDatabase.AddParameter(command, "@ToDate", CorrectionToDate);
-                },
-                reader => new CorrectionRow
-                {
-                    Id = HrmsDatabase.GetInt(reader, "Id"),
-                    EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
-                    EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
-                    Date = HrmsDatabase.GetDateOnly(reader, "AttendanceDate")?.ToString("yyyy-MM-dd") ?? "",
-                    CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn")?.ToString("HH:mm") ?? "",
-                    CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut")?.ToString("HH:mm") ?? "",
-                    StatusValue = HrmsDatabase.GetInt(reader, "Status"),
-                    SourceValue = HrmsDatabase.GetInt(reader, "Source"),
-                    Notes = HrmsDatabase.GetString(reader, "Notes")
-                });
-
-            return;
-        }
-
-        var existingSql = @"
-SELECT TOP 200
-    ar.Id,
-    e.EmployeeNo,
-    e.FullName,
-    ar.AttendanceDate,
-    ar.CheckIn,
-    ar.CheckOut,
-    ar.Status,
-    ar.Source,
-    ISNULL(ar.Notes, '') AS Notes
-FROM AttendanceRecords ar
-INNER JOIN Employees e ON ar.EmployeeId = e.Id
-WHERE
-    (@FromDate IS NULL OR ar.AttendanceDate >= @FromDate)
-    AND (@ToDate IS NULL OR ar.AttendanceDate <= @ToDate)
-ORDER BY ar.AttendanceDate DESC, ar.CheckIn DESC;";
-
-        CorrectionRecords = await HrmsDatabase.QueryAsync(
-            _dbContext,
-            existingSql,
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@FromDate", CorrectionFromDate);
-                HrmsDatabase.AddParameter(command, "@ToDate", CorrectionToDate);
-            },
-            reader => new CorrectionRow
-            {
-                Id = HrmsDatabase.GetInt(reader, "Id"),
-                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
-                EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
-                Date = HrmsDatabase.GetDateOnly(reader, "AttendanceDate")?.ToString("yyyy-MM-dd") ?? "",
-                CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn")?.ToString("HH:mm") ?? "",
-                CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut")?.ToString("HH:mm") ?? "",
-                StatusValue = HrmsDatabase.GetInt(reader, "Status"),
-                SourceValue = HrmsDatabase.GetInt(reader, "Source"),
-                Notes = HrmsDatabase.GetString(reader, "Notes")
-            });
-    }
     private void NormalizeDefaults()
     {
         if (string.IsNullOrWhiteSpace(Tab))
@@ -789,9 +498,6 @@ ORDER BY ar.AttendanceDate DESC, ar.CheckIn DESC;";
 
         ProcessFromDate ??= DateOnly.FromDateTime(DateTime.Today);
         ProcessToDate ??= ProcessFromDate;
-
-        CorrectionFromDate ??= DateOnly.FromDateTime(DateTime.Today.AddDays(-30));
-        CorrectionToDate ??= DateOnly.FromDateTime(DateTime.Today);
 
         MaxRows = NormalizeMaxRows(MaxRows);
     }
@@ -994,28 +700,6 @@ ORDER BY ar.AttendanceDate DESC, ar.CheckIn DESC;";
         public string? Notes { get; set; }
     }
 
-    public class CorrectionRow
-    {
-        public int Id { get; set; }
-
-        public string? EmployeeNo { get; set; }
-
-        public string? Date { get; set; }
-
-
-        public string EmployeeName { get; set; } = string.Empty;
-
-
-        public string CheckIn { get; set; } = string.Empty;
-
-        public string CheckOut { get; set; } = string.Empty;
-
-        public int StatusValue { get; set; }
-
-        public int SourceValue { get; set; }
-
-        public string Notes { get; set; } = string.Empty;
-    }
 }
 
 
