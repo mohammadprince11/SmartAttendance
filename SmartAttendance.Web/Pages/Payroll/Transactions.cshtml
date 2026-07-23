@@ -25,6 +25,8 @@
     .tx-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
     .tx-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
     .tx-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+    .tx-btn.icon { width:38px; padding:0; font-size:17px; display:inline-flex; align-items:center; justify-content:center; }
+    .tx-btn.icon:hover { background:color-mix(in srgb,var(--acc) 18%,transparent); border-color:color-mix(in srgb,var(--acc) 45%,transparent); }
     .tx-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
     .tx-btn.danger:hover { background:rgba(248,113,113,.26); }
     .tx-btn.warn { background:rgba(250,204,21,.14); border:1px solid rgba(250,204,21,.45); color:#facc15; }
@@ -111,8 +113,8 @@
             <a class="tx-btn ghost" href="/Payroll/Runs">← المسير</a>
             @if (!Model.IsReadOnly)
             {
-                <button type="button" class="tx-btn ghost" onclick="massOpen()">👥 دخل جماعي</button>
-                <button type="button" class="tx-btn ghost" onclick="impOpen()">⬆ استيراد إكسل</button>
+                <button type="button" class="tx-btn ghost icon" title="دخل جماعي" aria-label="دخل جماعي" onclick="massOpen()">👥</button>
+                <button type="button" class="tx-btn ghost icon" title="استيراد الحركات (إكسل/CSV)" aria-label="استيراد الحركات" onclick="impOpen()">📥</button>
                 <button type="button" class="tx-btn" onclick="txOpen(0)">+ حركة جديدة</button>
             }
         </div>
@@ -162,7 +164,9 @@
         <div class="tx-filter">
             <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/بند/رقم مرجعي" style="min-width:200px" />
             <button type="submit" class="tx-btn ghost sm">بحث</button>
-            <button type="button" class="tx-btn ghost sm" onclick="advToggle()">🔎 بحث متقدم</button>
+            <button type="button" class="tx-btn ghost icon" title="بحث متقدم (فلاتر)" aria-label="بحث متقدم" onclick="advToggle()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+            </button>
         </div>
         <div id="adv-panel" class="tx-adv-panel" style="@(Model.HasAdvanced ? "" : "display:none")">
             <span style="font-weight:900;color:var(--sa-muted,#8FA8BC)">الموظف:</span>
@@ -181,6 +185,24 @@
                 @foreach (var s in Model.Sources)
                 { <option value="@s" selected="@(Model.Src == s)">@s</option> }
             </select>
+            <select name="Dept">
+                <option value="">كل الأقسام</option>
+                @foreach (var s in Model.Departments)
+                { <option value="@s" selected="@(Model.Dept == s)">@s</option> }
+            </select>
+            <select name="Branch">
+                <option value="">كل الفروع</option>
+                @foreach (var s in Model.Branches)
+                { <option value="@s" selected="@(Model.Branch == s)">@s</option> }
+            </select>
+            <select name="JobTitle">
+                <option value="">كل المسميات الوظيفية</option>
+                @foreach (var s in Model.JobTitles)
+                { <option value="@s" selected="@(Model.JobTitle == s)">@s</option> }
+            </select>
+            <span style="font-weight:900;color:var(--sa-muted,#8FA8BC)">تاريخ الحركة:</span>
+            <input type="date" name="DateFrom" value="@(Model.DateFrom?.ToString("yyyy-MM-dd"))" title="من تاريخ" />
+            <input type="date" name="DateTo" value="@(Model.DateTo?.ToString("yyyy-MM-dd"))" title="إلى تاريخ" />
             <input type="number" name="MinAmount" placeholder="مبلغ من" value="@(Model.MinAmount)" step="0.01" style="width:104px" />
             <input type="number" name="MaxAmount" placeholder="مبلغ إلى" value="@(Model.MaxAmount)" step="0.01" style="width:104px" />
             <button type="submit" class="tx-btn sm">تطبيق</button>

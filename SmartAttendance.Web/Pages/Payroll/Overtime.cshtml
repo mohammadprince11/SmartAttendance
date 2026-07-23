@@ -25,6 +25,7 @@
     .ot-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
     .ot-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
     .ot-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+    .ot-btn.icon { width:38px; padding:0; font-size:17px; display:inline-flex; align-items:center; justify-content:center; }
     .ot-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
     .ot-btn.danger:hover { background:rgba(248,113,113,.26); }
     .ot-btn.warn { background:rgba(250,204,21,.14); border:1px solid rgba(250,204,21,.45); color:#facc15; }
@@ -91,7 +92,7 @@
             <a class="ot-btn ghost" href="/Payroll/Runs">← المسير</a>
             @if (!Model.IsReadOnly)
             {
-                <button type="button" class="ot-btn ghost" onclick="massOpen()">👥 إدخال جماعي</button>
+                <button type="button" class="ot-btn ghost icon" title="إدخال جماعي" aria-label="إدخال جماعي" onclick="massOpen()">👥</button>
                 <button type="button" class="ot-btn" onclick="otOpen(0)">+ عمل إضافي</button>
             }
         </div>

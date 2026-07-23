@@ -44,6 +44,8 @@ public static class PayrollTransactionStore
         public string EmployeeNo { get; set; } = string.Empty;
         public string EmployeeName { get; set; } = string.Empty;
         public string Department { get; set; } = string.Empty;
+        public string Branch { get; set; } = string.Empty;
+        public string Position { get; set; } = string.Empty;
         public int Year { get; set; }
         public int Month { get; set; }
         public int? SalaryItemId { get; set; }
@@ -178,10 +180,11 @@ IF COL_LENGTH('PayrollTransactions','Days') IS NULL ALTER TABLE PayrollTransacti
             dbContext,
             """
 SELECT t.*, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
-       ISNULL(d.Name, N'') AS DepartmentName
+       ISNULL(d.Name, N'') AS DepartmentName, ISNULL(b.Name, N'') AS BranchName, ISNULL(e.Position, N'') AS Position
 FROM PayrollTransactions t
 INNER JOIN Employees e ON e.Id = t.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
+LEFT JOIN Branches b ON b.Id = e.BranchId
 WHERE t.[Year] = @Y AND t.[Month] = @M AND t.TxType = @Type
 ORDER BY t.CreatedAt DESC;
 """,
@@ -401,6 +404,8 @@ WHERE Id=@Id;
         EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
         EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
         Department = HrmsDatabase.GetString(reader, "DepartmentName"),
+        Branch = HrmsDatabase.GetString(reader, "BranchName"),
+        Position = HrmsDatabase.GetString(reader, "Position"),
         Year = HrmsDatabase.GetInt(reader, "Year"),
         Month = HrmsDatabase.GetInt(reader, "Month"),
         SalaryItemId = HrmsDatabase.GetNullableInt(reader, "SalaryItemId"),

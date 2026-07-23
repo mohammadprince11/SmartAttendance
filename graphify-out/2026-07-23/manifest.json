@@ -2450,8 +2450,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784803902.1154273,
-    "ast_hash": "0168e35e01c1910be1c10123182ef9df",
+    "mtime": 1784804753.8616247,
+    "ast_hash": "eb11c1e6ddc0fcb4608ba66fc2f08286",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3745,8 +3745,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/PageCatalog.cs": {
-    "mtime": 1784803892.2699935,
-    "ast_hash": "78ab7d8bf93642830e72e3c42ac7dd30",
+    "mtime": 1784804745.069599,
+    "ast_hash": "f00e643e61e5fd9d36a643b9b915a518",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/DataScopeCatalog.cs": {
@@ -3912,6 +3912,21 @@
   "SmartAttendance.Web/Pages/Payroll/Raises.cshtml.cs": {
     "mtime": 1784803760.3708408,
     "ast_hash": "b599558b230e57e0fd49587ab87f676b",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/EndOfServiceStore.cs": {
+    "mtime": 1784804613.4377594,
+    "ast_hash": "b6498ce23406197f86659faede9004c9",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/Payroll/EndOfService.cshtml": {
+    "mtime": 1784804737.11008,
+    "ast_hash": "f44f63dc8e649f67ec47668932f95b7e",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/Payroll/EndOfService.cshtml.cs": {
+    "mtime": 1784804644.1475317,
+    "ast_hash": "24f15751ee26b496f9be136de895600b",
     "semantic_hash": ""
   }
 }

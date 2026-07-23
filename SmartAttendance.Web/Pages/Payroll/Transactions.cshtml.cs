@@ -54,8 +54,30 @@ public class TransactionsModel : PageModel
     [BindProperty(SupportsGet = true)]
     public decimal? MaxAmount { get; set; }
 
+    // فلاتر إضافية بنمط كيان
+    [BindProperty(SupportsGet = true)]
+    public string? Dept { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? Branch { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? JobTitle { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public DateOnly? DateFrom { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public DateOnly? DateTo { get; set; }
+
     public List<string> Sources { get; set; } = new();
-    public bool HasAdvanced => Emp is > 0 || !string.IsNullOrWhiteSpace(PayType) || !string.IsNullOrWhiteSpace(Src) || MinAmount.HasValue || MaxAmount.HasValue;
+    public List<string> Departments { get; set; } = new();
+    public List<string> Branches { get; set; } = new();
+    public List<string> JobTitles { get; set; } = new();
+
+    public bool HasAdvanced => Emp is > 0 || !string.IsNullOrWhiteSpace(PayType) || !string.IsNullOrWhiteSpace(Src)
+        || MinAmount.HasValue || MaxAmount.HasValue || !string.IsNullOrWhiteSpace(Dept) || !string.IsNullOrWhiteSpace(Branch)
+        || !string.IsNullOrWhiteSpace(JobTitle) || DateFrom.HasValue || DateTo.HasValue;
 
     /// <summary>التبويب: Open (غير مقفلة، قابلة للتعديل) | Locked (مقفلة، قراءة فقط).</summary>
     [BindProperty(SupportsGet = true)]
@@ -92,10 +114,20 @@ public class TransactionsModel : PageModel
         // القفل لكل حركة: التبويب يفلتر بحالة قفل الحركة نفسها
         Items = await PayrollTransactionStore.ListAsync(_db, Year, Month, Type, Search, Item, Status, locked: Lock == "Locked");
 
+        // قوائم الفلاتر (من حركات الفترة قبل تطبيق الفلاتر المتقدمة)
         Sources = Items.Select(x => x.Source).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
+        Departments = Items.Select(x => x.Department).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
+        Branches = Items.Select(x => x.Branch).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
+        JobTitles = Items.Select(x => x.Position).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
+
         if (Emp is > 0) Items = Items.Where(x => x.EmployeeId == Emp).ToList();
         if (!string.IsNullOrWhiteSpace(PayType)) Items = Items.Where(x => x.PaymentType == PayType).ToList();
         if (!string.IsNullOrWhiteSpace(Src)) Items = Items.Where(x => x.Source == Src).ToList();
+        if (!string.IsNullOrWhiteSpace(Dept)) Items = Items.Where(x => x.Department == Dept).ToList();
+        if (!string.IsNullOrWhiteSpace(Branch)) Items = Items.Where(x => x.Branch == Branch).ToList();
+        if (!string.IsNullOrWhiteSpace(JobTitle)) Items = Items.Where(x => x.Position == JobTitle).ToList();
+        if (DateFrom.HasValue) Items = Items.Where(x => x.TransactionDate.HasValue && x.TransactionDate.Value >= DateFrom.Value).ToList();
+        if (DateTo.HasValue) Items = Items.Where(x => x.TransactionDate.HasValue && x.TransactionDate.Value <= DateTo.Value).ToList();
         if (MinAmount.HasValue) Items = Items.Where(x => x.Amount >= MinAmount.Value).ToList();
         if (MaxAmount.HasValue) Items = Items.Where(x => x.Amount <= MaxAmount.Value).ToList();
 
