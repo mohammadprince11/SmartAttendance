@@ -189,7 +189,7 @@
                             <form method="post" asp-page-handler="ToggleSection" asp-route-id="@profileSection.Id">
                                 <button type="submit">@(profileSection.IsActive ? "تعطيل" : "تفعيل")</button>
                             </form>
-                            <form method="post" asp-page-handler="DeleteSection" asp-route-id="@profileSection.Id" onsubmit="return confirm('حذف القسم؟');">
+                            <form method="post" asp-page-handler="DeleteSection" asp-route-id="@profileSection.Id" data-zyconfirm="حذف القسم؟">
                                 <button type="submit" class="danger">حذف</button>
                             </form>
                         }

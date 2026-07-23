@@ -480,7 +480,7 @@
                                         @if (item.Status.Equals("Published", System.StringComparison.OrdinalIgnoreCase) ||
                                              item.Status.Equals("Expired", System.StringComparison.OrdinalIgnoreCase))
                                         {
-                                            <form method="post" asp-page-handler="Archive" asp-route-id="@item.Id" onsubmit="return confirm('هل تريد أرشفة الإعلان وإيقاف ظهوره على الحائط؟');">
+                                            <form method="post" asp-page-handler="Archive" asp-route-id="@item.Id" data-zyconfirm="هل تريد أرشفة الإعلان وإيقاف ظهوره على الحائط؟">
                                                 <button type="submit" class="danger">أرشفة</button>
                                             </form>
                                         }

@@ -108,7 +108,7 @@
                                 <td style="white-space:nowrap">
                                     <button type="button" class="nxhs-modal-cancel" onclick="aptOpen(@template.Id)">تعديل</button>
                                     <form method="post" asp-page-handler="Delete" asp-route-Type="@Model.Type" style="display:inline"
-                                          onsubmit="return confirm('حذف القالب «@template.Name»؟')">
+                                          data-zyconfirm="حذف القالب «@template.Name»؟">
                                         <input type="hidden" name="id" value="@template.Id" />
                                         <button type="submit" class="nxhs-delete-trigger">حذف</button>
                                     </form>

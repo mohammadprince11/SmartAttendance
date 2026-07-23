@@ -67,7 +67,7 @@
                             <td>@group.Note</td>
                             <td>
                                 <form method="post" asp-page-handler="Delete" style="display:inline"
-                                      onsubmit="return confirm('حذف المجموعة «@group.Name»؟')">
+                                      data-zyconfirm="حذف المجموعة «@group.Name»؟">
                                     <input type="hidden" name="id" value="@group.Id" />
                                     <button type="submit" class="nxhs-delete-trigger">حذف</button>
                                 </form>

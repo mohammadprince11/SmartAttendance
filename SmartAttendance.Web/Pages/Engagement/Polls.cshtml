@@ -307,7 +307,7 @@
                             <form method="post" asp-page-handler="Toggle" asp-route-id="@item.Id" asp-route-publish="@(!item.IsPublished)">
                                 <button type="submit">@(item.IsPublished ? "مسودة" : "نشر")</button>
                             </form>
-                            <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" onsubmit="return confirm('هل تريد حذف الاستطلاع؟');">
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" data-zyconfirm="هل تريد حذف الاستطلاع؟">
                                 <button type="submit" class="danger">حذف</button>
                             </form>
                         </div>

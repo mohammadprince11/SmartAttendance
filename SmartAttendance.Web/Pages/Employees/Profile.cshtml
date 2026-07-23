@@ -1093,7 +1093,7 @@
                                                                 data-gpa="@r.Gpa" data-returndate="@(r.ReturnDate?.ToString("yyyy-MM-dd"))" data-isreturned="@r.IsReturned.ToString().ToLowerInvariant()"
                                                                 data-refcontactname="@r.RefContactName" data-refcontactposition="@r.RefContactPosition" data-refcontactphone="@r.RefContactPhone" data-refcontactnote="@r.RefContactNote"
                                                                 data-hrms-open="rec-form">تعديل</button>
-                                                        <form method="post" asp-page-handler="DeleteRecord" asp-route-id="@Model.Id" onsubmit="return confirm('هل تريد الحذف؟');">
+                                                        <form method="post" asp-page-handler="DeleteRecord" asp-route-id="@Model.Id" data-zyconfirm="هل تريد الحذف؟">
                                                             <input type="hidden" name="recordId" value="@r.Id" />
                                                             <button type="submit">حذف</button>
                                                         </form>
@@ -1150,7 +1150,7 @@
                                                             data-isworking="@d.IsWorking.ToString().ToLowerInvariant()" data-isdependent="@d.IsDependent.ToString().ToLowerInvariant()"
                                                             data-mobilephone="@d.MobilePhone" data-companyname="@d.CompanyName" data-note="@d.Note"
                                                             data-hrms-open="dep-form">تعديل</button>
-                                                    <form method="post" asp-page-handler="DeleteDependent" asp-route-id="@Model.Id" onsubmit="return confirm('هل تريد الحذف؟');">
+                                                    <form method="post" asp-page-handler="DeleteDependent" asp-route-id="@Model.Id" data-zyconfirm="هل تريد الحذف؟">
                                                         <input type="hidden" name="recordId" value="@d.Id" />
                                                         <button type="submit">حذف</button>
                                                     </form>
@@ -1193,7 +1193,7 @@
                                                         <td style="white-space:nowrap">
                                                             <button type="button" class="z360-card-tool" title="تعديل" data-hrms-open="allowance-form"
                                                                     onclick="allowanceOpen(@allowance.Id,'@Html.Raw(allowance.ItemName.Replace("'", "\\'"))',@allowance.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture),this,'@allowance.FromDate.ToString("yyyy-MM-dd")','@(allowance.ToDate?.ToString("yyyy-MM-dd") ?? "")',@(allowance.EndAfterDate ? "true" : "false"),'@Html.Raw((allowance.Note ?? "").Replace("'", "\\'"))')">✎</button>
-                                                            <form method="post" asp-page-handler="DeleteAllowance" asp-route-id="@Model.Id" style="display:inline" onsubmit="return confirm('حذف العلاوة؟');">
+                                                            <form method="post" asp-page-handler="DeleteAllowance" asp-route-id="@Model.Id" style="display:inline" data-zyconfirm="حذف العلاوة؟">
                                                                 <input type="hidden" name="recordId" value="@allowance.Id" />
                                                                 <button type="submit" class="z360-card-tool" title="حذف">🗑</button>
                                                             </form>
@@ -1240,7 +1240,7 @@
                                                             }
                                                             <button type="button" class="z360-card-tool" title="تعديل" data-hrms-open="contract-form"
                                                                     onclick="contractOpen(@contract.Id,'@Html.Raw((contract.ContractNo ?? "").Replace("'", "\\'"))','@Html.Raw(contract.ContractType.Replace("'", "\\'"))','@contract.FromDate.ToString("yyyy-MM-dd")','@(contract.ToDate?.ToString("yyyy-MM-dd") ?? "")',@(contract.IsCurrent ? "true" : "false"),'@Html.Raw((contract.Note ?? "").Replace("'", "\\'"))')">✎</button>
-                                                            <form method="post" asp-page-handler="DeleteContract" asp-route-id="@Model.Id" style="display:inline" onsubmit="return confirm('حذف العقد؟');">
+                                                            <form method="post" asp-page-handler="DeleteContract" asp-route-id="@Model.Id" style="display:inline" data-zyconfirm="حذف العقد؟">
                                                                 <input type="hidden" name="recordId" value="@contract.Id" />
                                                                 <button type="submit" class="z360-card-tool" title="حذف">🗑</button>
                                                             </form>

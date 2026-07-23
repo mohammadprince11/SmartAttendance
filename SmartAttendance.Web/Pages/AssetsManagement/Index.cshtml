@@ -96,7 +96,7 @@
                                     @if (!row.IsReturned)
                                     {
                                         <form method="post" asp-page-handler="MarkReturned" asp-route-Search="@Model.Search" asp-route-Status="@Model.Status"
-                                              style="display:inline" onsubmit="return confirm('تعليم العهدة كمُرجَعة بتاريخ اليوم؟');">
+                                              style="display:inline" data-zyconfirm="تعليم العهدة كمُرجَعة بتاريخ اليوم؟">
                                             <input type="hidden" name="recordId" value="@row.Id" />
                                             <button type="submit" class="hrms-btn-secondary" style="padding:4px 10px">تم الإرجاع</button>
                                         </form>

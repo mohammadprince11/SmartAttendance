@@ -78,7 +78,7 @@
                                                     <input type="hidden" name="category" value="@category.Key" />
                                                     <button type="submit" class="hrms-btn-secondary">@(item.IsActive ? "تعطيل" : "تفعيل")</button>
                                                 </form>
-                                                <form method="post" asp-page-handler="Delete" onsubmit="return confirm('حذف القيمة؟');">
+                                                <form method="post" asp-page-handler="Delete" data-zyconfirm="حذف القيمة؟">
                                                     <input type="hidden" name="id" value="@item.Id" />
                                                     <input type="hidden" name="category" value="@category.Key" />
                                                     <button type="submit" class="hrms-btn-secondary">حذف</button>

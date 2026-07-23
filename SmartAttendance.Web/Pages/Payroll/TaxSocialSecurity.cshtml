@@ -136,7 +136,7 @@
         <form method="post"
               asp-page-handler="ApplySettings"
               class="tax-apply-form"
-              onsubmit="return confirm('سيتم تطبيق إعدادات الشهر على السجلات المحفوظة التي تحتوي راتب إجمالي فقط. هل تريد المتابعة؟');">
+              data-zyconfirm="سيتم تطبيق إعدادات الشهر على السجلات المحفوظة التي تحتوي راتب إجمالي فقط. هل تريد المتابعة؟">
             <input type="hidden" name="SettingsInput.PayrollMonth" value="@Model.NormalizedMonth" />
             <input type="hidden" name="SearchTerm" value="@Model.SearchTerm" />
             <input type="hidden" name="MaxRows" value="@Model.MaxRows" />
@@ -354,7 +354,7 @@
                                             <form method="post"
                                                   asp-page-handler="Delete"
                                                   asp-route-id="@row.RecordId"
-                                                  onsubmit="return confirm('هل تريد حذف سجل الضريبة والضمان لهذا الموظف؟');">
+                                                  data-zyconfirm="هل تريد حذف سجل الضريبة والضمان لهذا الموظف؟">
                                                 <input type="hidden" name="PayrollMonth" value="@Model.NormalizedMonth" />
                                                 <input type="hidden" name="SearchTerm" value="@Model.SearchTerm" />
                                                 <input type="hidden" name="MaxRows" value="@Model.MaxRows" />

@@ -159,7 +159,7 @@
                                 <input type="hidden" name="id" value="@report.Id" />
                                 <button type="submit" class="rep-pin" title="@(report.IsShared ? "إلغاء المشاركة" : "مشاركة")">@(report.IsShared ? "🔓" : "🔒")</button>
                             </form>
-                            <form method="post" asp-page-handler="DeleteReport" style="display:inline" onsubmit="return confirm('حذف التقرير؟');">
+                            <form method="post" asp-page-handler="DeleteReport" style="display:inline" data-zyconfirm="حذف التقرير؟">
                                 <input type="hidden" name="id" value="@report.Id" />
                                 <button type="submit" class="rep-pin" title="حذف">🗑️</button>
                             </form>

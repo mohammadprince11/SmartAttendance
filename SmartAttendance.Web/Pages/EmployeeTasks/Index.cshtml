@@ -108,7 +108,7 @@
                                                     <button type="submit" class="hrms-btn-secondary">إعادة فتح</button>
                                                 </form>
                                             }
-                                            <form method="post" asp-page-handler="DeleteTask" asp-route-StatusFilter="@Model.StatusFilter" asp-route-ProcessFilter="@Model.ProcessFilter" asp-route-Search="@Model.Search" onsubmit="return confirm('حذف المهمة؟');">
+                                            <form method="post" asp-page-handler="DeleteTask" asp-route-StatusFilter="@Model.StatusFilter" asp-route-ProcessFilter="@Model.ProcessFilter" asp-route-Search="@Model.Search" data-zyconfirm="حذف المهمة؟">
                                                 <input type="hidden" name="id" value="@task.Id" />
                                                 <button type="submit" class="hrms-btn-secondary">حذف</button>
                                             </form>
@@ -176,7 +176,7 @@
                                                         <input type="hidden" name="id" value="@template.Id" />
                                                         <button type="submit" class="hrms-btn-secondary">@(template.IsActive ? "تعطيل" : "تفعيل")</button>
                                                     </form>
-                                                    <form method="post" asp-page-handler="DeleteTemplate" onsubmit="return confirm('حذف القالب؟');">
+                                                    <form method="post" asp-page-handler="DeleteTemplate" data-zyconfirm="حذف القالب؟">
                                                         <input type="hidden" name="id" value="@template.Id" />
                                                         <button type="submit" class="hrms-btn-secondary">حذف</button>
                                                     </form>

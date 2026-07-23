@@ -106,7 +106,7 @@
                         <span class="efb-actions">
                             <button type="submit" style="color:#19D3E0">حفظ</button>
                             <button type="submit" formaction="?Entity=@Model.Entity&handler=Delete" style="color:#F87171"
-                                    onclick="return confirm('حذف الحقل «@field.FieldLabel» وكل قيمه المخزّنة؟')">حذف</button>
+                                    data-zyconfirm="حذف الحقل «@field.FieldLabel» وكل قيمه المخزّنة؟">حذف</button>
                         </span>
                     </form>
                 }
