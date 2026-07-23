@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
@@ -29,7 +30,23 @@ public class IndexModel : PageModel
     [Microsoft.AspNetCore.Mvc.BindProperty(SupportsGet = true)]
     public int PageNumber { get; set; } = 1;
 
+    // فلتر بحث متقدم (نمط كيان) — سمات الموظف
+    [Microsoft.AspNetCore.Mvc.BindProperty(SupportsGet = true)] public int? FDept { get; set; }
+    [Microsoft.AspNetCore.Mvc.BindProperty(SupportsGet = true)] public int? FBranch { get; set; }
+    [Microsoft.AspNetCore.Mvc.BindProperty(SupportsGet = true)] public int? FPosition { get; set; }
+    [Microsoft.AspNetCore.Mvc.BindProperty(SupportsGet = true)] public string? FContract { get; set; }
+    [Microsoft.AspNetCore.Mvc.BindProperty(SupportsGet = true)] public string? FNationality { get; set; }
+
     public const int PageSize = 20;
+
+    public record Lookup(string Value, string Label);
+    public List<Lookup> Departments { get; set; } = new();
+    public List<Lookup> Branches { get; set; } = new();
+    public List<Lookup> Positions { get; set; } = new();
+    public List<string> ContractTypes { get; set; } = new();
+    public List<string> Nationalities { get; set; } = new();
+    public bool HasFilter => FDept != null || FBranch != null || FPosition != null
+        || !string.IsNullOrWhiteSpace(FContract) || !string.IsNullOrWhiteSpace(FNationality);
 
     public sealed class EmployeeRow
     {
@@ -85,7 +102,22 @@ public class IndexModel : PageModel
         Month ??= $"{year:0000}-{month:00}";
         DaysInMonth = DateTime.DaysInMonth(year, month);
 
+        await LoadLookupsAsync();
+
         var all = await DayAttendanceStore.ListAsync(_dbContext, year, month, Search);
+
+        // فلتر سمات الموظف: نجلب معرّفات الموظفين المطابقين ونقصر المصفوفة عليهم
+        if (HasFilter)
+        {
+            var q = _dbContext.Employees.AsNoTracking().Where(e => e.IsActive);
+            if (FDept != null) q = q.Where(e => e.DepartmentId == FDept);
+            if (FBranch != null) q = q.Where(e => e.BranchId == FBranch);
+            if (FPosition != null) q = q.Where(e => e.PositionId == FPosition);
+            if (!string.IsNullOrWhiteSpace(FContract)) q = q.Where(e => e.ContractType == FContract);
+            if (!string.IsNullOrWhiteSpace(FNationality)) q = q.Where(e => e.Nationality == FNationality);
+            var matchIds = new HashSet<int>(await q.Select(e => e.Id).ToListAsync());
+            all = all.Where(r => matchIds.Contains(r.EmployeeId)).ToList();
+        }
 
         var employees = all
             .GroupBy(r => (r.EmployeeId, r.EmployeeNo, r.EmployeeName))
@@ -118,4 +150,59 @@ public class IndexModel : PageModel
         foreach (var row in Rows)
             if (positions.TryGetValue(row.EmployeeId, out var pos)) row.Position = pos;
     }
+
+    private async Task LoadLookupsAsync()
+    {
+        Departments = await _dbContext.Departments.AsNoTracking()
+            .OrderBy(d => d.Name).Select(d => new Lookup(d.Id.ToString(), d.Name)).ToListAsync();
+        Branches = await _dbContext.Branches.AsNoTracking()
+            .OrderBy(b => b.Name).Select(b => new Lookup(b.Id.ToString(), b.Name)).ToListAsync();
+        Positions = await _dbContext.HrJobPositions.AsNoTracking()
+            .OrderBy(p => p.ArabicName).Select(p => new Lookup(p.Id.ToString(), p.ArabicName)).ToListAsync();
+        ContractTypes = await _dbContext.Employees.AsNoTracking()
+            .Where(e => e.ContractType != null && e.ContractType != "")
+            .Select(e => e.ContractType!).Distinct().OrderBy(x => x).ToListAsync();
+        Nationalities = await _dbContext.Employees.AsNoTracking()
+            .Where(e => e.Nationality != null && e.Nationality != "")
+            .Select(e => e.Nationality!).Distinct().OrderBy(x => x).ToListAsync();
+    }
+
+    /// <summary>تعديل بصمتي يوم من الخلية (تحديث الدخول/الخروج وإعادة الاشتقاق).</summary>
+    public async Task<IActionResult> OnPostEditDayAsync()
+    {
+        var form = Request.Form;
+        var empId = int.TryParse(form["EmployeeId"], out var e) ? e : 0;
+        DateOnly.TryParse(form["Date"], out var date);
+        DateTime? checkIn = TimeOnly.TryParse(form["CheckIn"], out var ci) ? date.ToDateTime(ci) : null;
+        DateTime? checkOut = TimeOnly.TryParse(form["CheckOut"], out var co) ? date.ToDateTime(co) : null;
+
+        if (empId <= 0 || date == default)
+        {
+            TempData["SuccessMessage"] = "بيانات التعديل ناقصة.";
+        }
+        else
+        {
+            var ok = await DayAttendanceStore.UpdateDayAsync(_dbContext, empId, date, checkIn, checkOut);
+            TempData["SuccessMessage"] = ok
+                ? $"تم تعديل حضور {date:yyyy-MM-dd}."
+                : "تعذّر التعديل — لا يومية محللة لهذا اليوم (شغّل «تحديث الحضور» أولاً).";
+        }
+        return RedirectToPage(RouteValues());
+    }
+
+    /// <summary>إشعار الموظفين (ملخص الحضور/الغياب/نقص الساعات) — يسجّل الطلب للشهر.</summary>
+    public async Task<IActionResult> OnPostNotifyAsync()
+    {
+        var (year, month) = Period;
+        var type = Request.Form["NotifType"].ToString() is { Length: > 0 } t ? t : "Summary";
+        var recipients = await _dbContext.Employees.AsNoTracking().CountAsync(e => e.IsActive);
+        await AttendanceNotificationStore.CreateAsync(_dbContext, type, year, month, recipients);
+        TempData["SuccessMessage"] = $"تم إرسال إشعار «{AttendanceNotificationStore.LabelOf(type)}» لـ{recipients} موظفاً.";
+        return RedirectToPage(RouteValues());
+    }
+
+    private object RouteValues() => new
+    {
+        Month, Search, PageNumber, FDept, FBranch, FPosition, FContract, FNationality
+    };
 }

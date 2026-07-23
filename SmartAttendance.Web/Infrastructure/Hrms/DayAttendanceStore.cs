@@ -271,6 +271,63 @@ END;
         return table.Rows.Count;
     }
 
+    /// <summary>
+    /// تعديل يدوي لبصمتي يوم (نمط كيان — تعديل من خلية المستعرض): يحدّث الدخول/الخروج
+    /// ويعيد اشتقاق التأخير/الخروج المبكر/الساعات/الحالة بمناوبة اليوم نفسها. يتطلب
+    /// وجود يومية محللة مسبقاً (لمعرفة المناوبة ونوع اليوم).
+    /// </summary>
+    public static async Task<bool> UpdateDayAsync(
+        ApplicationDbContext dbContext, int employeeId, DateOnly date, DateTime? checkIn, DateTime? checkOut)
+    {
+        await EnsureAsync(dbContext);
+
+        var existing = (await HrmsDatabase.QueryAsync(
+            dbContext,
+            "SELECT TOP 1 ShiftTypeId, DayKind FROM DayAttendances WHERE EmployeeId=@Emp AND WorkDate=@Date;",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Emp", employeeId);
+                HrmsDatabase.AddParameter(command, "@Date", date.ToDateTime(TimeOnly.MinValue));
+            },
+            reader => new
+            {
+                ShiftTypeId = HrmsDatabase.GetNullableInt(reader, "ShiftTypeId"),
+                DayKind = HrmsDatabase.GetString(reader, "DayKind") is { Length: > 0 } k ? k : "Work"
+            })).FirstOrDefault();
+        if (existing == null) return false;
+
+        var shifts = (await ShiftTypeStore.ListAsync(dbContext)).ToDictionary(s => s.Id);
+        ShiftTypeStore.ShiftType? shift = existing.ShiftTypeId is int sid && shifts.TryGetValue(sid, out var s) ? s : null;
+        var shiftDay = shift?.Days.FirstOrDefault(d => d.DayIndex == ToDayIndex(date));
+
+        var row = shift != null
+            ? Derive(shift, shiftDay, existing.DayKind, checkIn, checkOut)
+            : (checkIn, checkOut, 0m, 0m,
+                checkIn.HasValue && checkOut.HasValue ? Math.Max(0, Math.Round((decimal)(checkOut.Value - checkIn.Value).TotalHours, 2)) : 0m,
+                !checkIn.HasValue ? "Absent" : !checkOut.HasValue ? "Incomplete" : "Present");
+
+        await HrmsDatabase.ExecuteAsync(
+            dbContext,
+            """
+UPDATE DayAttendances
+SET CheckIn=@In, CheckOut=@Out, LateHours=@Late, EarlyLeaveHours=@Early,
+    WorkedHours=@Worked, Status=@Status, IsAnalyzed=1, AnalyzedAt=SYSUTCDATETIME()
+WHERE EmployeeId=@Emp AND WorkDate=@Date;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Emp", employeeId);
+                HrmsDatabase.AddParameter(command, "@Date", date.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@In", (object?)row.Item1 ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Out", (object?)row.Item2 ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Late", row.Item3);
+                HrmsDatabase.AddParameter(command, "@Early", row.Item4);
+                HrmsDatabase.AddParameter(command, "@Worked", row.Item5);
+                HrmsDatabase.AddParameter(command, "@Status", row.Item6);
+            });
+        return true;
+    }
+
     /// <summary>اشتقاق حقول اليوم: التأخير/الخروج المبكر/الساعات/الحالة.</summary>
     private static (DateTime? CheckIn, DateTime? CheckOut, decimal LateHours,
         decimal EarlyLeaveHours, decimal WorkedHours, string Status) Derive(

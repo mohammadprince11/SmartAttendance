@@ -3,25 +3,26 @@
 @using SmartAttendance.Web.Infrastructure.Hrms
 
 @*
-    مستعرض الحضور (نمط كيان): مصفوفة موظف × أيام الشهر بـ8 حالات ملونة + شرائح
-    فلترة قابلة للتبديل + رؤوس أيام بأسماء الأسبوع + بطاقة موظف + عمود المجموع.
+    مستعرض الحضور (نمط كيان): مصفوفة موظف × أيام + شرائح فلترة حالات + فلتر متقدم
+    + إعدادات عرض (نقاط/نص) + إشعار الموظفين + تعديل بصمتي اليوم من الخلية.
 *@
 
 @{
     ViewData["Title"] = "مستعرض الحضور";
     var (year, month) = Model.MonthPair;
-    var statusKeys = new (string Key, string Label, string Color)[]
+    var statusKeys = new (string Key, string Label, string Color, string Abbr)[]
     {
-        ("Present", "حاضر", "#4ade80"),
-        ("Late", "متأخر", "#facc15"),
-        ("Incomplete", "بصمة ناقصة", "#f97316"),
-        ("Absent", "غائب", "#f87171"),
-        ("Weekend", "عطلة أسبوعية", "#60a5fa"),
-        ("Rest", "يوم راحة", "#8FA8BC"),
-        ("Holiday", "عطلة رسمية", "#a78bfa"),
-        ("Leave", "إجازة", "#12D9E3")
+        ("Present", "حاضر", "#4ade80", "ح"),
+        ("Late", "متأخر", "#facc15", "ت"),
+        ("Incomplete", "بصمة ناقصة", "#f97316", "ن"),
+        ("Absent", "غائب", "#f87171", "غ"),
+        ("Weekend", "عطلة أسبوعية", "#60a5fa", "ع"),
+        ("Rest", "يوم راحة", "#8FA8BC", "ر"),
+        ("Holiday", "عطلة رسمية", "#a78bfa", "عر"),
+        ("Leave", "إجازة", "#12D9E3", "إ")
     };
     var colorMap = statusKeys.ToDictionary(s => s.Key, s => s.Color);
+    var abbrMap = statusKeys.ToDictionary(s => s.Key, s => s.Abbr);
     var dayShort = new[] { "سبت", "أحد", "إثن", "ثلا", "أرب", "خمي", "جمع" };
 }
 
@@ -29,30 +30,34 @@
 
 <style>
     .avw-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
-    .avw-head {
-        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    .avw-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
         padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
-        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
-                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
-    }
+        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%), linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95)); }
     html[data-theme="light"] .avw-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
     .avw-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
     .avw-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .avw-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
+    .avw-btn { min-height: 38px; padding: 8px 16px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
     .avw-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
+    .avw-icon { min-height: 38px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; border: 1px solid rgba(73,111,151,.3); background: transparent; color: inherit; cursor: pointer; font-size: 16px; position: relative; }
+    .avw-icon.on { background: rgba(18,217,227,.14); border-color: rgba(18,217,227,.5); color: #12D9E3; }
 
     .avw-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .avw-bar input { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; font-size: 13px; }
-    html[data-theme="light"] .avw-bar input { background: #fff; color: inherit; }
+    .avw-bar input, .avw-bar select { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; font-size: 13px; }
+    html[data-theme="light"] .avw-bar input, html[data-theme="light"] .avw-bar select { background: #fff; color: inherit; }
 
-    /* شرائح فلترة الحالات (قابلة للتبديل) */
+    .avw-panel { border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); padding: 14px; }
+    .avw-grid3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+    .avw-grid3 label { font-size: 11px; font-weight: 900; color: var(--sa-muted, #8FA8BC); display: flex; flex-direction: column; gap: 4px; }
+    .avw-grid3 select { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px; font-size: 13px; }
+    html[data-theme="light"] .avw-grid3 select { background: #fff; }
+
     .avw-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-    .avw-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 900; cursor: pointer; border: 1px solid transparent; user-select: none; transition: opacity .15s; }
+    .avw-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 900; cursor: pointer; border: 1px solid transparent; user-select: none; }
     .avw-chip i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
     .avw-chip.off { opacity: .38; filter: grayscale(.6); }
     .avw-chip .cnt { direction: ltr; font-size: 11px; opacity: .85; }
 
-    .avw-matrix-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); max-height: 68vh; }
+    .avw-matrix-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); max-height: 66vh; }
     .avw-matrix { border-collapse: separate; border-spacing: 0; font-size: 11px; }
     .avw-matrix th { padding: 6px 6px; font-size: 10px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: #0a1f33; text-align: center; position: sticky; top: 0; z-index: 3; }
     html[data-theme="light"] .avw-matrix th { background: #eef4f9; }
@@ -66,30 +71,110 @@
     .avw-badge { width: 30px; height: 30px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; font-weight: 1000; font-size: 11px; color: #04141d; flex: none; }
     .avw-emp .nm { font-weight: 900; line-height: 1.15; }
     .avw-emp .sub { font-size: 10px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .avw-cell { width: 20px; height: 20px; border-radius: 50%; display: inline-block; opacity: .95; transition: opacity .15s; }
-    .avw-cell.empty { background: rgba(143,168,188,.12); }
+    .avw-cell { width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; opacity: .95; cursor: pointer; font-size: 9px; font-weight: 1000; color: #04141d; }
+    .avw-cell.empty { background: rgba(143,168,188,.12); cursor: default; }
     .avw-cell.dim { opacity: .08; }
+    .avw-matrix.text-mode .avw-cell { width: auto; min-width: 22px; height: 18px; border-radius: 5px; padding: 0 4px; }
     .avw-total { font-weight: 1000; color: #12D9E3; direction: ltr; white-space: nowrap; }
     .avw-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
     .avw-pager { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; font-weight: 900; }
+
+    /* منبثقات */
+    .avw-modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 80; display: none; }
+    .avw-modal-bg.show { display: block; }
+    .avw-modal { position: fixed; z-index: 81; inset-inline: 0; top: 18%; margin-inline: auto; width: max-content; max-width: calc(100% - 32px);
+        background: var(--sa-surface, #0b2135); border: 1px solid rgba(73,111,151,.4); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6); padding: 18px; display: none; }
+    html[data-theme="light"] .avw-modal { background: #fff; }
+    .avw-modal.show { display: block; }
+    .avw-modal h3 { margin: 0 0 12px; font-size: 15px; font-weight: 1000; }
+    .avw-modal label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 4px; }
+    .avw-modal input[type=time] { min-height: 38px; border-radius: 10px; border: 1px solid rgba(73,111,151,.3); background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px; }
+    html[data-theme="light"] .avw-modal input[type=time] { background: #f2f7fb; }
+    .avw-notif-opts { display: flex; gap: 10px; flex-wrap: wrap; }
+    .avw-notif-opt { border: 1px solid rgba(73,111,151,.3); border-radius: 12px; padding: 14px 18px; font-weight: 900; font-size: 13px; cursor: pointer; text-align: center; min-width: 120px; }
+    .avw-notif-opt.on { background: rgba(18,217,227,.14); border-color: #12D9E3; color: #12D9E3; }
 </style>
 
 <section class="avw-page" dir="rtl">
     <header class="avw-head">
         <div>
             <h1>مستعرض الحضور</h1>
-            <p>مصفوفة موظف × أيام الشهر بـ8 حالات ملونة — انقر الشرائح لتصفية الحالات المعروضة.</p>
+            <p>مصفوفة موظف × أيام الشهر — انقر خلية لتعديل البصمات، والشرائح لتصفية الحالات.</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+            <button type="button" class="avw-icon" id="avw-filter-btn" onclick="avwPanel('filter')" title="بحث متقدم">⛃</button>
+            <button type="button" class="avw-icon" id="avw-settings-btn" onclick="avwPanel('settings')" title="إعدادات العرض">⚙</button>
+            <button type="button" class="avw-icon" onclick="avwModal('notif', true)" title="إشعار الموظفين">🔔</button>
         </div>
     </header>
 
-    <form method="get" class="avw-bar">
+    <form method="get" class="avw-bar" id="avw-getform">
         <input type="month" name="Month" value="@Model.Month" onchange="this.form.submit()" />
         <input type="text" name="Search" value="@Model.Search" placeholder="بحث رمز/اسم..." />
         <button type="submit" class="avw-btn ghost">عرض</button>
+        @* حفظ قيم الفلتر عبر البحث/الشهر *@
+        <input type="hidden" name="FDept" value="@Model.FDept" />
+        <input type="hidden" name="FBranch" value="@Model.FBranch" />
+        <input type="hidden" name="FPosition" value="@Model.FPosition" />
+        <input type="hidden" name="FContract" value="@Model.FContract" />
+        <input type="hidden" name="FNationality" value="@Model.FNationality" />
     </form>
 
+    @* ===== لوحة البحث المتقدم ===== *@
+    <div class="avw-panel" id="avw-filter" style="display:@(Model.HasFilter ? "block" : "none")">
+        <form method="get">
+            <input type="hidden" name="Month" value="@Model.Month" />
+            <input type="hidden" name="Search" value="@Model.Search" />
+            <div class="avw-grid3">
+                <label>الهيكلية (القسم)
+                    <select name="FDept"><option value="">الكل</option>
+                        @foreach (var d in Model.Departments)
+                        { <option value="@d.Value" selected="@(Model.FDept?.ToString() == d.Value)">@d.Label</option> }
+                    </select>
+                </label>
+                <label>الموقع (الفرع)
+                    <select name="FBranch"><option value="">الكل</option>
+                        @foreach (var b in Model.Branches)
+                        { <option value="@b.Value" selected="@(Model.FBranch?.ToString() == b.Value)">@b.Label</option> }
+                    </select>
+                </label>
+                <label>المسمى الوظيفي
+                    <select name="FPosition"><option value="">الكل</option>
+                        @foreach (var p in Model.Positions)
+                        { <option value="@p.Value" selected="@(Model.FPosition?.ToString() == p.Value)">@p.Label</option> }
+                    </select>
+                </label>
+                <label>نوع العقد
+                    <select name="FContract"><option value="">الكل</option>
+                        @foreach (var c in Model.ContractTypes)
+                        { <option value="@c" selected="@(Model.FContract == c)">@c</option> }
+                    </select>
+                </label>
+                <label>الجنسية
+                    <select name="FNationality"><option value="">الكل</option>
+                        @foreach (var n in Model.Nationalities)
+                        { <option value="@n" selected="@(Model.FNationality == n)">@n</option> }
+                    </select>
+                </label>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+                <button type="submit" class="avw-btn">بحث</button>
+                <a class="avw-btn ghost" href="?Month=@Model.Month&Search=@Model.Search">إزالة الفلتر</a>
+            </div>
+        </form>
+    </div>
+
+    @* ===== لوحة الإعدادات ===== *@
+    <div class="avw-panel" id="avw-settings" style="display:none">
+        <label style="font-size:12px;font-weight:900">حالة الحضور (شكل الخلية)</label>
+        <div style="display:flex;gap:14px;margin-top:8px;font-size:13px;font-weight:900">
+            <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="avw-disp" value="dots" checked onchange="avwDisplay('dots')" /> أيقونات (نقاط ملونة)</label>
+            <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="avw-disp" value="text" onchange="avwDisplay('text')" /> نص (رمز الحالة)</label>
+        </div>
+    </div>
+
     <div class="avw-bar avw-chips" id="avw-chips">
-        @foreach (var (key, label, color) in statusKeys)
+        @foreach (var (key, label, color, _) in statusKeys)
         {
             <span class="avw-chip" data-status="@key" style="background:@(color)22;color:@color" onclick="avwToggle(this)">
                 <i style="background:@color"></i>@label <span class="cnt" data-cnt="@key">0</span>
@@ -100,11 +185,11 @@
     <div class="avw-matrix-card">
         @if (Model.Rows.Count == 0)
         {
-            <div class="avw-empty">لا يوميات لهذا الشهر — شغّل «تحديث الحضور» من شاشة الحضور اليومي.</div>
+            <div class="avw-empty">لا يوميات مطابقة — شغّل «تحديث الحضور» أو عدّل الفلتر.</div>
         }
         else
         {
-            <table class="avw-matrix">
+            <table class="avw-matrix" id="avw-matrix">
                 <thead>
                     <tr>
                         <th class="emp">الموظف</th>
@@ -138,11 +223,17 @@
                                 @if (row.Days.TryGetValue(day, out var cell))
                                 {
                                     var color = colorMap.TryGetValue(cell.Status, out var c) ? c : "#8FA8BC";
+                                    var abbr = abbrMap.TryGetValue(cell.Status, out var a) ? a : "?";
                                     var tip = $"{cell.WorkDate:yyyy-MM-dd} — {DayAttendanceStore.StatusLabel(cell.Status)}"
                                         + (cell.CheckIn != null ? $" · دخول {cell.CheckIn:HH:mm}" : "")
-                                        + (cell.CheckOut != null ? $" · خروج {cell.CheckOut:HH:mm}" : "")
-                                        + (cell.LateHours > 0 ? $" · تأخير {cell.LateHours:0.##}س" : "");
-                                    <td class="@(isFri ? "fri" : "")"><span class="avw-cell" data-status="@cell.Status" style="background:@color" title="@tip"></span></td>
+                                        + (cell.CheckOut != null ? $" · خروج {cell.CheckOut:HH:mm}" : "");
+                                    <td class="@(isFri ? "fri" : "")">
+                                        <span class="avw-cell" data-status="@cell.Status" data-abbr="@abbr"
+                                              data-emp="@row.EmployeeId" data-name="@row.EmployeeName" data-date="@date.ToString("yyyy-MM-dd")"
+                                              data-in="@(cell.CheckIn?.ToString("HH:mm"))" data-out="@(cell.CheckOut?.ToString("HH:mm"))"
+                                              data-label="@DayAttendanceStore.StatusLabel(cell.Status)"
+                                              style="background:@color" title="@tip" onclick="avwEditCell(this)"></span>
+                                    </td>
                                 }
                                 else
                                 {
@@ -159,43 +250,114 @@
 
     @if (Model.TotalPages > 1)
     {
+        var qs = $"Month={Model.Month}&Search={Model.Search}&FDept={Model.FDept}&FBranch={Model.FBranch}&FPosition={Model.FPosition}&FContract={Model.FContract}&FNationality={Model.FNationality}";
         <div class="avw-pager">
             @if (Model.PageNumber > 1)
-            {
-                <a class="avw-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&PageNumber=@(Model.PageNumber - 1)">السابق</a>
-            }
+            { <a class="avw-btn ghost" href="?@qs&PageNumber=@(Model.PageNumber - 1)">السابق</a> }
             <span>صفحة @Model.PageNumber من @Model.TotalPages (@Model.TotalRows موظف)</span>
             @if (Model.PageNumber < Model.TotalPages)
-            {
-                <a class="avw-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&PageNumber=@(Model.PageNumber + 1)">التالي</a>
-            }
+            { <a class="avw-btn ghost" href="?@qs&PageNumber=@(Model.PageNumber + 1)">التالي</a> }
         </div>
     }
 </section>
 
+@* ===== منبثق تعديل بصمتي اليوم ===== *@
+<div class="avw-modal-bg" id="avw-editbg" onclick="avwModal('edit', false)"></div>
+<div class="avw-modal" id="avw-edit">
+    <h3 id="avw-edit-title">تعديل الحضور</h3>
+    <form method="post" asp-page-handler="EditDay" style="display:flex;flex-direction:column;gap:10px;min-width:260px">
+        <input type="hidden" name="Month" value="@Model.Month" />
+        <input type="hidden" name="Search" value="@Model.Search" />
+        <input type="hidden" name="EmployeeId" id="avw-e-emp" />
+        <input type="hidden" name="Date" id="avw-e-date" />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <label>وقت الدخول<input type="time" name="CheckIn" id="avw-e-in" /></label>
+            <label>وقت الخروج<input type="time" name="CheckOut" id="avw-e-out" /></label>
+        </div>
+        <p class="avw-empty" style="padding:0;text-align:start;font-size:11px" id="avw-e-hint"></p>
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="avw-btn">حفظ التعديل</button>
+            <button type="button" class="avw-btn ghost" onclick="avwModal('edit', false)">إلغاء</button>
+        </div>
+    </form>
+</div>
+
+@* ===== منبثق إشعار الموظفين ===== *@
+<div class="avw-modal-bg" id="avw-notifbg" onclick="avwModal('notif', false)"></div>
+<div class="avw-modal" id="avw-notif">
+    <h3>إشعار الموظفين — بماذا تود إبلاغهم؟</h3>
+    <form method="post" asp-page-handler="Notify" style="display:flex;flex-direction:column;gap:14px">
+        <input type="hidden" name="Month" value="@Model.Month" />
+        <input type="hidden" name="NotifType" id="avw-n-type" value="Summary" />
+        <div class="avw-notif-opts">
+            @foreach (var (key, label) in AttendanceNotificationStore.Types)
+            {
+                <div class="avw-notif-opt @(key == "Summary" ? "on" : "")" data-type="@key" onclick="avwNotifPick(this)">@label</div>
+            }
+        </div>
+        <button type="submit" class="avw-btn" style="align-self:flex-start">استمر</button>
+    </form>
+</div>
+
 @section Scripts {
     <script>
-        // عدّ كل حالة + تصفية بالنقر على الشريحة (إخفاء/تعتيم خلايا الحالة)
         var avwHidden = new Set();
-
         function avwCounts() {
             var counts = {};
             document.querySelectorAll('.avw-cell[data-status]').forEach(function (el) {
-                var s = el.getAttribute('data-status');
-                counts[s] = (counts[s] || 0) + 1;
+                var s = el.getAttribute('data-status'); counts[s] = (counts[s] || 0) + 1;
             });
-            document.querySelectorAll('[data-cnt]').forEach(function (el) {
-                el.textContent = counts[el.getAttribute('data-cnt')] || 0;
-            });
+            document.querySelectorAll('[data-cnt]').forEach(function (el) { el.textContent = counts[el.getAttribute('data-cnt')] || 0; });
         }
         function avwToggle(chip) {
             var s = chip.getAttribute('data-status');
             if (avwHidden.has(s)) { avwHidden.delete(s); chip.classList.remove('off'); }
             else { avwHidden.add(s); chip.classList.add('off'); }
-            document.querySelectorAll('.avw-cell[data-status="' + s + '"]').forEach(function (el) {
-                el.classList.toggle('dim', avwHidden.has(s));
-            });
+            document.querySelectorAll('.avw-cell[data-status="' + s + '"]').forEach(function (el) { el.classList.toggle('dim', avwHidden.has(s)); });
         }
+
+        function avwPanel(which) {
+            var el = document.getElementById('avw-' + which);
+            var show = el.style.display === 'none';
+            el.style.display = show ? 'block' : 'none';
+            document.getElementById('avw-' + which + '-btn').classList.toggle('on', show);
+        }
+
+        // إعدادات العرض: نقاط/نص (محفوظ محلياً)
+        function avwDisplay(mode) {
+            var m = document.getElementById('avw-matrix'); if (!m) return;
+            if (mode === 'text') {
+                m.classList.add('text-mode');
+                document.querySelectorAll('.avw-cell[data-abbr]').forEach(function (el) { el.textContent = el.getAttribute('data-abbr'); });
+            } else {
+                m.classList.remove('text-mode');
+                document.querySelectorAll('.avw-cell[data-abbr]').forEach(function (el) { el.textContent = ''; });
+            }
+            try { localStorage.setItem('avwDisp', mode); } catch (e) {}
+        }
+
+        // منبثقات (edit / notif)
+        function avwModal(which, show) {
+            document.getElementById('avw-' + which).classList.toggle('show', show);
+            document.getElementById('avw-' + which + 'bg').classList.toggle('show', show);
+        }
+        function avwEditCell(el) {
+            document.getElementById('avw-e-emp').value = el.getAttribute('data-emp');
+            document.getElementById('avw-e-date').value = el.getAttribute('data-date');
+            document.getElementById('avw-e-in').value = el.getAttribute('data-in') || '';
+            document.getElementById('avw-e-out').value = el.getAttribute('data-out') || '';
+            document.getElementById('avw-edit-title').textContent = 'تعديل حضور ' + el.getAttribute('data-name') + ' — ' + el.getAttribute('data-date');
+            document.getElementById('avw-e-hint').textContent = 'الحالة الحالية: ' + el.getAttribute('data-label') + ' · يُعاد اشتقاق التأخير والحالة تلقائياً بعد الحفظ.';
+            avwModal('edit', true);
+        }
+        function avwNotifPick(el) {
+            document.querySelectorAll('.avw-notif-opt').forEach(function (o) { o.classList.remove('on'); });
+            el.classList.add('on');
+            document.getElementById('avw-n-type').value = el.getAttribute('data-type');
+        }
+
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { avwModal('edit', false); avwModal('notif', false); } });
         avwCounts();
+        try { if (localStorage.getItem('avwDisp') === 'text') { document.querySelector('[name=avw-disp][value=text]').checked = true; avwDisplay('text'); } } catch (e) {}
     </script>
 }
