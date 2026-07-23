@@ -51,7 +51,20 @@
     .sha-src.Default { background: rgba(143,168,188,.14); color: var(--sa-muted, #8FA8BC); }
     .sha-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
     .sha-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
-    .sha-pager { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; font-weight: 900; }
+
+    /* بار الإجراءات الجماعية العائم الثابت (المعيار البصري المعتمد) */
+    .sha-bulkbar { position: fixed; bottom: 18px; inset-inline: 0; margin-inline: auto; width: max-content; max-width: calc(100% - 32px);
+        z-index: 60; display: none; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 18px;
+        border: 1px solid rgba(18,217,227,.45); border-radius: 16px;
+        background: var(--sa-surface, rgba(8,25,43,.98)); box-shadow: 0 14px 44px rgba(0,0,0,.55); }
+    html[data-theme="light"] .sha-bulkbar { background: #fff; }
+    .sha-bulkbar.show { display: flex; }
+    .sha-bulkbar b { font-size: 13px; font-weight: 900; }
+    .sha-bulkbar b span { color: #12D9E3; }
+    .sha-bulkbar select { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.3); background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px; font-size: 13px; font-weight: 800; }
+    html[data-theme="light"] .sha-bulkbar select { background: #f2f7fb; }
+    .sha-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .sha-btn.sm { min-height: 32px; padding: 5px 12px; font-size: 12px; }
 </style>
 
 <section class="sha-page" dir="rtl">
@@ -86,30 +99,16 @@
     </form>
 
     <form method="post" id="sha-form">
-        <div class="sha-bar" style="align-items:center">
-            <label style="flex-direction:row;align-items:center;gap:6px;font-size:12px;color:inherit">
-                <input type="checkbox" id="sha-all" onchange="shaToggleAll(this)" /> تحديد الصفحة
-            </label>
-            <span id="sha-count" style="font-size:12px;font-weight:900;color:#12D9E3">0 محدد</span>
-            <label>المناوبة
-                <select name="ShiftTypeId">
-                    <option value="">— اختر —</option>
-                    @foreach (var shift in Model.Shifts)
-                    {
-                        <option value="@shift.Id">@shift.Name</option>
-                    }
-                </select>
-            </label>
-            <button type="submit" asp-page-handler="Assign" class="sha-btn"
-                    data-zyconfirm="تعيين للمحدد — تأكيد؟">تعيين للمحدد</button>
-            <button type="submit" asp-page-handler="Unassign" class="sha-btn no"
-                    data-zyconfirm="إلغاء التعيين — تأكيد؟">إلغاء التعيين</button>
-            <input type="hidden" name="Search" value="@Model.Search" />
-            <input type="hidden" name="Filter" value="@Model.Filter" />
-            <input type="hidden" name="PageNumber" value="@Model.PageNumber" />
+        <input type="hidden" name="Search" value="@Model.Search" />
+        <input type="hidden" name="Filter" value="@Model.Filter" />
+
+        <div class="sha-tools" style="padding:0 4px">
+            <button type="button" class="sha-btn ghost sm" onclick="shaSelectAll(true)">تحديد الكل (@Model.TotalRows)</button>
+            <button type="button" class="sha-btn ghost sm" onclick="shaSelectAll(false)">مسح الكل</button>
+            <span class="sha-none" style="font-size:12px">النتائج: <b style="direction:ltr;display:inline-block">@Model.TotalRows</b> موظف</span>
         </div>
 
-        <div class="sha-table-card" style="margin-top:14px">
+        <div class="sha-table-card" style="margin-top:12px">
             @if (Model.Rows.Count == 0)
             {
                 <div class="sha-empty">لا موظفون مطابقون.</div>
@@ -118,7 +117,7 @@
             {
                 <table class="sha-table">
                     <thead>
-                        <tr><th style="width:34px"></th><th>الرمز</th><th>اسم الموظف</th><th>الهيكلية</th><th>الموقع</th><th>تهيئة المناوبات</th></tr>
+                        <tr><th style="width:34px"><input type="checkbox" id="sha-all" onchange="shaToggleAll(this)" title="تحديد الكل" /></th><th>الرمز</th><th>اسم الموظف</th><th>الهيكلية</th><th>الموقع</th><th>تهيئة المناوبات</th></tr>
                     </thead>
                     <tbody>
                         @foreach (var row in Model.Rows)
@@ -150,33 +149,40 @@
                 </table>
             }
         </div>
-    </form>
 
-    @if (Model.TotalPages > 1)
-    {
-        <div class="sha-pager">
-            @if (Model.PageNumber > 1)
-            {
-                <a class="sha-btn ghost" href="?Search=@Model.Search&Filter=@Model.Filter&PageNumber=@(Model.PageNumber - 1)">السابق</a>
-            }
-            <span>صفحة @Model.PageNumber من @Model.TotalPages (@Model.TotalRows موظف)</span>
-            @if (Model.PageNumber < Model.TotalPages)
-            {
-                <a class="sha-btn ghost" href="?Search=@Model.Search&Filter=@Model.Filter&PageNumber=@(Model.PageNumber + 1)">التالي</a>
-            }
+        @* بار الإجراءات الجماعية العائم — يظهر عند التحديد *@
+        <div class="sha-bulkbar" id="sha-bulkbar">
+            <b>المحدد: <span id="sha-count">0</span></b>
+            <select name="ShiftTypeId">
+                <option value="">— اختر المناوبة —</option>
+                @foreach (var shift in Model.Shifts)
+                {
+                    <option value="@shift.Id">@shift.Name</option>
+                }
+            </select>
+            <button type="submit" asp-page-handler="Assign" class="sha-btn"
+                    data-zyconfirm="تعيين المناوبة للمحدد — تأكيد؟">تعيين للمحدد</button>
+            <button type="submit" asp-page-handler="Unassign" class="sha-btn no"
+                    data-zyconfirm="إلغاء تعيين المحدد — تأكيد؟">إلغاء التعيين</button>
         </div>
-    }
+    </form>
 </section>
 
 @section Scripts {
     <script>
-        function shaToggleAll(source) {
-            document.querySelectorAll('[name="SelectedIds"]').forEach(function (cb) { cb.checked = source.checked; });
+        function shaToggleAll(source) { shaSelectAll(source.checked); }
+        function shaSelectAll(on) {
+            document.querySelectorAll('[name="SelectedIds"]').forEach(function (cb) { cb.checked = on; });
+            var head = document.getElementById('sha-all'); if (head) head.checked = on;
             shaCount();
         }
         function shaCount() {
             var count = document.querySelectorAll('[name="SelectedIds"]:checked').length;
-            document.getElementById('sha-count').textContent = count + ' محدد';
+            document.getElementById('sha-count').textContent = count;
+            document.getElementById('sha-bulkbar').classList.toggle('show', count > 0);
+            var total = document.querySelectorAll('[name="SelectedIds"]').length;
+            var head = document.getElementById('sha-all');
+            if (head) head.checked = count > 0 && count === total;
         }
     </script>
 }

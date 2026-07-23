@@ -25,15 +25,9 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string Filter { get; set; } = "All";   // All | Assigned | Unassigned
 
-    [BindProperty(SupportsGet = true)]
-    public int PageNumber { get; set; } = 1;
-
-    public const int PageSize = 50;
-
     public List<EmployeeShiftTypeStore.AssignmentRow> Rows { get; set; } = new();
     public List<ShiftTypeStore.ShiftType> Shifts { get; set; } = new();
     public int TotalRows { get; set; }
-    public int TotalPages { get; set; }
     public int AssignedCount { get; set; }
     public int UnassignedCount { get; set; }
 
@@ -61,10 +55,7 @@ public class IndexModel : PageModel
         }
 
         TotalRows = filtered.Count;
-        TotalPages = TotalRows == 0 ? 1 : (int)Math.Ceiling(TotalRows / (double)PageSize);
-        if (PageNumber < 1) PageNumber = 1;
-        if (PageNumber > TotalPages) PageNumber = TotalPages;
-        Rows = filtered.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
+        Rows = filtered;
 
         // المناوبة الفعّالة لكل صف: تعيين يدوي ← مطابقة معايير استحقاق ← الافتراضية
         // (نفس ترتيب DayAttendanceStore، لإظهار ما سيستخدمه المحلل فعلاً).
@@ -103,7 +94,7 @@ public class IndexModel : PageModel
             var count = await EmployeeShiftTypeStore.AssignAsync(_dbContext, employeeIds, shiftTypeId);
             TempData["SuccessMessage"] = $"تم تعيين المناوبة لـ{count} موظفاً.";
         }
-        return RedirectToPage(new { Search, Filter, PageNumber });
+        return RedirectToPage(new { Search, Filter });
     }
 
     public async Task<IActionResult> OnPostUnassignAsync()
@@ -118,7 +109,7 @@ public class IndexModel : PageModel
             await EmployeeShiftTypeStore.UnassignAsync(_dbContext, employeeIds);
             TempData["SuccessMessage"] = $"أُلغي تعيين {employeeIds.Count} موظفاً (يرجعون للمناوبة الافتراضية).";
         }
-        return RedirectToPage(new { Search, Filter, PageNumber });
+        return RedirectToPage(new { Search, Filter });
     }
 
     private List<int> ParseSelected() =>
