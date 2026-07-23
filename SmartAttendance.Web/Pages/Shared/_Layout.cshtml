@@ -131,6 +131,11 @@
             : null;
         Func<string, bool> CanPage = code => accessProfile == null || accessProfile.CanViewPage(code);
 
+        // إخفاء ما سيمنعه الحارس: نفس مصدر الحقيقة الذي ينفّذه RoleSecurityMiddleware.
+        // بدونها كان الدور غير الأدمن يرى روابط تنتهي كلها بـ«لا صلاحية».
+        Func<string, bool> CanRoute = path =>
+            SmartAttendance.Web.Infrastructure.Security.RoleRouteCatalog.IsAllowed(loginRole, path);
+
         var canViewOrganization = isAdminRole ||
             loginRole.Equals("HR Manager", StringComparison.OrdinalIgnoreCase) ||
             loginRole.Equals("HR Officer", StringComparison.OrdinalIgnoreCase) ||
@@ -396,58 +401,106 @@
                         <span class="nexora-chevron"></span>
                     </summary>
                     <div class="nexora-nav-group-links">
-                        <a asp-page="/AttendanceOperations/Index" class="nexora-nav-link @(IsUnder("/AttendanceOperations") ? "active nexora-active" : "")">
-                            <span>مراقبة الحضور</span>
-                        </a>
-                        <a asp-page="/AttendanceRecords/Index" class="nexora-nav-link @(IsUnder("/AttendanceRecords") ? "active nexora-active" : "")">
-                            <span>سجلات الحضور</span>
-                        </a>
-                        <a asp-page="/AttendanceImports/Index" class="nexora-nav-link @(IsUnder("/AttendanceImports") ? "active nexora-active" : "")">
-                            <span>استيراد البصمات</span>
-                        </a>
+                        @if (CanRoute("/attendanceoperations"))
+                        {
+                            <a asp-page="/AttendanceOperations/Index" class="nexora-nav-link @(IsUnder("/AttendanceOperations") ? "active nexora-active" : "")">
+                                <span>مراقبة الحضور</span>
+                            </a>
+                        }
+                        @if (CanRoute("/attendancerecords"))
+                        {
+                            <a asp-page="/AttendanceRecords/Index" class="nexora-nav-link @(IsUnder("/AttendanceRecords") ? "active nexora-active" : "")">
+                                <span>سجلات الحضور</span>
+                            </a>
+                        }
+                        @if (CanRoute("/attendanceimports"))
+                        {
+                            <a asp-page="/AttendanceImports/Index" class="nexora-nav-link @(IsUnder("/AttendanceImports") ? "active nexora-active" : "")">
+                                <span>استيراد البصمات</span>
+                            </a>
+                        }
                         @* «معالجة الحضور» و«تصحيحات الحضور» أُزيلا من القائمة: كلاهما مجرد
                            إعادة توجيه لـ/AttendanceOperations — الأول بنفس التبويب الافتراضي
                            (نسخة مطابقة)، والثاني بتبويب لا عرض له إطلاقاً. المساران يبقيان
                            عاملين للروابط المحفوظة. *@
-                        <a href="/ShiftTypes" class="nexora-nav-link @(IsUnder("/ShiftTypes") ? "active nexora-active" : "")">
-                            <span>أنواع المناوبات</span>
-                        </a>
-                        <a href="/AttendanceSettings" class="nexora-nav-link @(IsUnder("/AttendanceSettings") ? "active nexora-active" : "")">
-                            <span>إعدادات الحضور</span>
-                        </a>
-                        <a href="/DayAttendance" class="nexora-nav-link @(IsUnder("/DayAttendance") ? "active nexora-active" : "")">
-                            <span>الحضور اليومي</span>
-                        </a>
-                        <a href="/ShiftRules" class="nexora-nav-link @(IsUnder("/ShiftRules") ? "active nexora-active" : "")">
-                            <span>قواعد المناوبات</span>
-                        </a>
-                        <a href="/AttendanceRecommendations" class="nexora-nav-link @(IsUnder("/AttendanceRecommendations") ? "active nexora-active" : "")">
-                            <span>الإجراءات المقترحة</span>
-                        </a>
-                        <a href="/ShiftAssignments" class="nexora-nav-link @(IsUnder("/ShiftAssignments") ? "active nexora-active" : "")">
-                            <span>مناوبات الموظفين</span>
-                        </a>
-                        <a href="/ShiftOverrides" class="nexora-nav-link @(IsUnder("/ShiftOverrides") ? "active nexora-active" : "")">
-                            <span>تعديل مناوبات مؤقت</span>
-                        </a>
-                        <a href="/Roster" class="nexora-nav-link @(IsUnder("/Roster") ? "active nexora-active" : "")">
-                            <span>جدولة مناوبات العمل</span>
-                        </a>
-                        <a href="/EmployeeGeoLocations" class="nexora-nav-link @(IsUnder("/EmployeeGeoLocations") ? "active nexora-active" : "")">
-                            <span>المواقع الجغرافية للموظفين</span>
-                        </a>
-                        <a href="/AttendanceViewer" class="nexora-nav-link @(IsUnder("/AttendanceViewer") ? "active nexora-active" : "")">
-                            <span>مستعرض الحضور</span>
-                        </a>
-                        <a href="/MonthAttendance" class="nexora-nav-link @(IsUnder("/MonthAttendance") ? "active nexora-active" : "")">
-                            <span>الحضور الشهري</span>
-                        </a>
-                        <a asp-page="/Shifts/Index" class="nexora-nav-link @(IsUnder("/Shifts") ? "active nexora-active" : "")">
-                            <span>الشفتات</span>
-                        </a>
-                        <a asp-page="/Devices/Index" class="nexora-nav-link @(IsUnder("/Devices") ? "active nexora-active" : "")">
-                            <span>الأجهزة</span>
-                        </a>
+                        @if (CanRoute("/shifttypes"))
+                        {
+                            <a href="/ShiftTypes" class="nexora-nav-link @(IsUnder("/ShiftTypes") ? "active nexora-active" : "")">
+                                <span>أنواع المناوبات</span>
+                            </a>
+                        }
+                        @if (CanRoute("/attendancesettings"))
+                        {
+                            <a href="/AttendanceSettings" class="nexora-nav-link @(IsUnder("/AttendanceSettings") ? "active nexora-active" : "")">
+                                <span>إعدادات الحضور</span>
+                            </a>
+                        }
+                        @if (CanRoute("/dayattendance"))
+                        {
+                            <a href="/DayAttendance" class="nexora-nav-link @(IsUnder("/DayAttendance") ? "active nexora-active" : "")">
+                                <span>الحضور اليومي</span>
+                            </a>
+                        }
+                        @if (CanRoute("/shiftrules"))
+                        {
+                            <a href="/ShiftRules" class="nexora-nav-link @(IsUnder("/ShiftRules") ? "active nexora-active" : "")">
+                                <span>قواعد المناوبات</span>
+                            </a>
+                        }
+                        @if (CanRoute("/attendancerecommendations"))
+                        {
+                            <a href="/AttendanceRecommendations" class="nexora-nav-link @(IsUnder("/AttendanceRecommendations") ? "active nexora-active" : "")">
+                                <span>الإجراءات المقترحة</span>
+                            </a>
+                        }
+                        @if (CanRoute("/shiftassignments"))
+                        {
+                            <a href="/ShiftAssignments" class="nexora-nav-link @(IsUnder("/ShiftAssignments") ? "active nexora-active" : "")">
+                                <span>مناوبات الموظفين</span>
+                            </a>
+                        }
+                        @if (CanRoute("/shiftoverrides"))
+                        {
+                            <a href="/ShiftOverrides" class="nexora-nav-link @(IsUnder("/ShiftOverrides") ? "active nexora-active" : "")">
+                                <span>تعديل مناوبات مؤقت</span>
+                            </a>
+                        }
+                        @if (CanRoute("/roster"))
+                        {
+                            <a href="/Roster" class="nexora-nav-link @(IsUnder("/Roster") ? "active nexora-active" : "")">
+                                <span>جدولة مناوبات العمل</span>
+                            </a>
+                        }
+                        @if (CanRoute("/employeegeolocations"))
+                        {
+                            <a href="/EmployeeGeoLocations" class="nexora-nav-link @(IsUnder("/EmployeeGeoLocations") ? "active nexora-active" : "")">
+                                <span>المواقع الجغرافية للموظفين</span>
+                            </a>
+                        }
+                        @if (CanRoute("/attendanceviewer"))
+                        {
+                            <a href="/AttendanceViewer" class="nexora-nav-link @(IsUnder("/AttendanceViewer") ? "active nexora-active" : "")">
+                                <span>مستعرض الحضور</span>
+                            </a>
+                        }
+                        @if (CanRoute("/monthattendance"))
+                        {
+                            <a href="/MonthAttendance" class="nexora-nav-link @(IsUnder("/MonthAttendance") ? "active nexora-active" : "")">
+                                <span>الحضور الشهري</span>
+                            </a>
+                        }
+                        @if (CanRoute("/shifts"))
+                        {
+                            <a asp-page="/Shifts/Index" class="nexora-nav-link @(IsUnder("/Shifts") ? "active nexora-active" : "")">
+                                <span>الشفتات</span>
+                            </a>
+                        }
+                        @if (CanRoute("/devices"))
+                        {
+                            <a asp-page="/Devices/Index" class="nexora-nav-link @(IsUnder("/Devices") ? "active nexora-active" : "")">
+                                <span>الأجهزة</span>
+                            </a>
+                        }
                     </div>
                 </details>
                 }

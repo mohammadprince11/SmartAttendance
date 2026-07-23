@@ -237,111 +237,29 @@ public class RoleSecurityMiddleware
         string role,
         string? employeeId)
     {
-        if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+        if (RoleRouteCatalog.IsAdmin(role))
         {
             return true;
         }
 
-        if (path == "/" ||
-            path == "/index" ||
-            path.StartsWith("/account/") ||
-            path.StartsWith("/settings/"))
+        if (RoleRouteCatalog.Matches(path, RoleRouteCatalog.Common))
         {
             return true;
         }
 
+        // «ملفي الشخصي» يحتاج سياق الطلب (حساب مرتبط بموظف) فيبقى خارج الكتالوج
         if (path.StartsWith("/myprofile"))
         {
             return HasEmployeeId(employeeId);
         }
 
-        if (role.Equals("HR Manager", StringComparison.OrdinalIgnoreCase))
-        {
-            return IsAny(path,
-                "/organization",
-                "/organizationsettings",
-                "/alerts",
-                "/leavebalances",
-                "/assetsmanagement",
-                "/peoplereports",
-                "/employeetasks",
-                "/employees",
-                "/myprofile",
-                "/useraccess",
-                "/devices",
-                "/shifts",
-                "/shifttypes",
-                "/attendancesettings",
-                "/dayattendance",
-                "/shiftrules",
-                "/attendancerecommendations",
-                "/shiftassignments",
-                // الشاشة التشغيلية الأم للمودل: المسارات البديلة
-                // (/attendanceprocessing و/attendancecorrections و/attendanceimports)
-                // كلها تُعيد التوجيه إليها، فبدونها كانت كلها تنتهي بـ«لا صلاحية».
-                "/attendanceoperations",
-                // صفحات أُضيفت للمودل لاحقاً ولم تُحدَّث قوائم الأدوار معها
-                "/shiftoverrides",
-                "/roster",
-                "/employeegeolocations",
-                "/attendanceviewer",
-                "/monthattendance",
-                "/employeeshifts",
-                "/attendancerecords",
-                "/attendanceprocessing",
-                "/attendancecorrections",
-                "/attendanceimports",
-                "/holidays",
-                "/leaverequests",
-                "/selfservices",
-                "/approvals",
-                "/auditlogs",
-                "/systemmaintenance",
-                "/employeepermissions");
-        }
+        // القوائم الثابتة لكل دور صارت في RoleRouteCatalog — مصدر حقيقة واحد
+        // يستهلكه هذا الحارس والقائمة الجانبية معاً، فلا تُعرض روابط تُمنع.
+        var catalogRoutes = RoleRouteCatalog.RoutesFor(role);
 
-        if (role.Equals("HR Officer", StringComparison.OrdinalIgnoreCase))
+        if (catalogRoutes != null)
         {
-            return IsAny(path,
-                "/organization",
-                "/alerts",
-                "/leavebalances",
-                "/assetsmanagement",
-                "/peoplereports",
-                "/employeetasks",
-                "/employees",
-                "/myprofile",
-                "/attendancerecords",
-                // الشاشة التي تُعيد إليها مسارات المعالجة/التصحيحات/الاستيراد التوجيه
-                "/attendanceoperations",
-                "/attendanceprocessing",
-                "/attendancecorrections",
-                "/attendanceimports",
-                "/holidays",
-                "/leaverequests",
-                "/selfservices",
-                "/approvals");
-        }
-
-        if (role.Equals("Branch Manager", StringComparison.OrdinalIgnoreCase))
-        {
-            return IsAny(path,
-                "/organization",
-                "/employees",
-                "/myprofile",
-                "/attendancerecords",
-                // الشاشة التي تُعيد إليها مسارات المعالجة/التصحيحات التوجيه
-                "/attendanceoperations",
-                "/attendanceprocessing",
-                "/attendancecorrections",
-                "/leaverequests",
-                "/selfservices");
-        }
-
-        if (role.Equals("Finance Viewer", StringComparison.OrdinalIgnoreCase))
-        {
-            return IsAny(path,
-                "/organization");
+            return RoleRouteCatalog.Matches(path, catalogRoutes);
         }
 
         if (role.Equals("Employee", StringComparison.OrdinalIgnoreCase))
