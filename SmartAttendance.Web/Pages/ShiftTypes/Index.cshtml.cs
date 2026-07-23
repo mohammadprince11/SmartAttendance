@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -21,9 +22,29 @@ public class IndexModel : PageModel
 
     public List<ShiftTypeStore.ShiftType> Shifts { get; set; } = new();
 
+    // قوائم منتقيات معايير الاستحقاق (تبويب 4)
+    public record Lookup(string Value, string Label);
+    public List<Lookup> Departments { get; set; } = new();
+    public List<Lookup> Branches { get; set; } = new();
+    public List<Lookup> Positions { get; set; } = new();
+    public List<Lookup> Employees { get; set; } = new();
+
     public async Task OnGetAsync()
     {
         Shifts = await ShiftTypeStore.ListAsync(_dbContext);
+        await LoadLookupsAsync();
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        Departments = await _dbContext.Departments.AsNoTracking()
+            .OrderBy(d => d.Name).Select(d => new Lookup(d.Id.ToString(), d.Name)).ToListAsync();
+        Branches = await _dbContext.Branches.AsNoTracking()
+            .OrderBy(b => b.Name).Select(b => new Lookup(b.Id.ToString(), b.Name)).ToListAsync();
+        Positions = await _dbContext.HrJobPositions.AsNoTracking()
+            .OrderBy(p => p.ArabicName).Select(p => new Lookup(p.Id.ToString(), p.ArabicName)).ToListAsync();
+        Employees = await _dbContext.Employees.AsNoTracking().Where(e => e.IsActive)
+            .OrderBy(e => e.FullName).Select(e => new Lookup(e.Id.ToString(), e.FullName)).ToListAsync();
     }
 
     public async Task<IActionResult> OnPostSaveAsync()
@@ -54,13 +75,37 @@ public class IndexModel : PageModel
             TimeLimitTo = string.IsNullOrWhiteSpace(form["TimeLimitTo"]) ? null : form["TimeLimitTo"].ToString(),
             TimeLimitToDayAfter = form["TimeLimitToAnchor"] == "after",
             MidShiftTime = string.IsNullOrWhiteSpace(form["MidShiftTime"]) ? null : form["MidShiftTime"].ToString(),
+            // تبويب 3: قواعد التعارض مع المغادرات
+            ConflictLateReturnEnabled = form["ConflictLateReturnEnabled"] == "true",
+            ConflictLateReturnAction = form["ConflictLateReturnAction"].ToString() is { Length: > 0 } clra ? clra : "Deduction",
+            ConflictLateReturnValue = decimal.TryParse(form["ConflictLateReturnValue"], out var clrv) ? Math.Max(0, clrv) : 0,
+            ConflictEarlyLeaveEnabled = form["ConflictEarlyLeaveEnabled"] == "true",
+            ConflictEarlyLeaveAction = form["ConflictEarlyLeaveAction"].ToString() is { Length: > 0 } cela ? cela : "Deduction",
+            ConflictEarlyLeaveValue = decimal.TryParse(form["ConflictEarlyLeaveValue"], out var celv) ? Math.Max(0, celv) : 0,
             IsActive = form["IsActive"] == "true"
         };
 
         if (string.IsNullOrWhiteSpace(shift.Name))
         {
+            await LoadLookupsAsync();
             TempData["SuccessMessage"] = "اسم المناوبة مطلوب.";
             return RedirectToPage();
+        }
+
+        // تبويب 4: معايير الاستحقاق — مصفوفات متوازية (EligGroup/EligField/EligValue)
+        var eligGroups = form["EligGroup"];
+        var eligFields = form["EligField"];
+        var eligValues = form["EligValue"];
+        for (var i = 0; i < eligValues.Count; i++)
+        {
+            var value = eligValues[i]?.Trim();
+            if (string.IsNullOrWhiteSpace(value)) continue;
+            shift.Eligibility.Add(new ShiftTypeStore.EligibilityRule
+            {
+                GroupNo = i < eligGroups.Count && int.TryParse(eligGroups[i], out var g) ? g : 0,
+                Field = i < eligFields.Count && !string.IsNullOrWhiteSpace(eligFields[i]) ? eligFields[i]! : "Department",
+                Value = value
+            });
         }
 
         // فترات السبليت شفت: period_start_i / period_end_i (i=0..)

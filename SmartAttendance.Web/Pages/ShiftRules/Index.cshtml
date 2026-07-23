@@ -12,9 +12,10 @@
     ViewData["Title"] = "قواعد المناوبات";
     var rulesJson = JsonSerializer.Serialize(Model.Rules.Select(r => new
     {
-        r.Id, r.Name, r.ShiftTypeIds, r.ApplyOn, r.WeekDays, r.ConditionField, r.Comparison,
-        r.ValueKind, r.ValueTime, r.OffsetMinutes, r.ValueHours, r.ActionType, r.ActionText,
-        r.IsAutomatic, r.IsActive
+        r.Id, r.Name, r.ShiftTypeIds, r.ApplyOn, r.WeekDays, r.PunchSemanticId, r.ConditionField, r.Comparison,
+        r.ValueKind, r.ValueTime, r.ValueAnchor, r.ValueTime2, r.ValueAnchor2, r.OffsetMinutes,
+        r.ValueHours, r.ValueHours2, r.ActionType, r.ActionText, r.ActionValue,
+        r.AllowEdit, r.UseEscalation, r.IsAutomatic, r.IsActive
     }));
 }
 
@@ -44,6 +45,7 @@
     .shr-chip.auto { background: rgba(74,222,128,.12); color: #4ade80; }
     .shr-chip.off { background: rgba(248,113,113,.12); color: #f87171; }
     .shr-chip.note { background: rgba(167,139,250,.14); color: #a78bfa; }
+    .shr-chip.fin { background: rgba(96,165,250,.14); color: #60a5fa; }
     .shr-sentence { font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
     .shr-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
     .shr-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
@@ -98,7 +100,11 @@
                             <td><b>@rule.Name</b></td>
                             <td class="shr-sentence">@rule.Sentence</td>
                             <td style="font-size:12px">@scopeText · @ShiftRuleStore.LabelOf(ShiftRuleStore.ApplyOnOptions, rule.ApplyOn)</td>
-                            <td><span class="shr-chip @(rule.ActionType == "Note" ? "note" : "")">@(rule.ActionType == "Note" ? "ملاحظة" : "مخالفة")</span></td>
+                            <td>
+                                <span class="shr-chip @(rule.ActionType == "Violation" ? "" : rule.ActionType == "Note" ? "note" : "fin")">@ShiftRuleStore.LabelOf(ShiftRuleStore.ActionTypes, rule.ActionType)</span>
+                                @if (ShiftRuleStore.ActionNeedsValue(rule.ActionType) && rule.ActionValue > 0)
+                                { <span class="shr-sentence" style="direction:ltr">@rule.ActionValue.ToString("0.##") @ShiftRuleStore.ActionValueUnit(rule.ActionType)</span> }
+                            </td>
                             <td><span class="shr-chip @(rule.IsAutomatic ? "auto" : "")">@(rule.IsAutomatic ? "تلقائي" : "بالفرز")</span></td>
                             <td><span class="shr-chip @(rule.IsActive ? "" : "off")">@(rule.IsActive ? "نشطة" : "متوقفة")</span></td>
                             <td style="text-align:end;white-space:nowrap">
@@ -140,11 +146,20 @@
                         }
                     </div>
                     <div class="shr-grid2">
-                        <label>طبق على
+                        <label>طبق على (معايير الاستحقاق)
                             <select name="ApplyOn" id="shr-ApplyOn">
                                 @foreach (var (key, label) in ShiftRuleStore.ApplyOnOptions)
                                 {
                                     <option value="@key">@label</option>
+                                }
+                            </select>
+                        </label>
+                        <label>نوع البصمة
+                            <select name="PunchSemanticId" id="shr-Semantic">
+                                <option value="">الحضور (كل البصمات)</option>
+                                @foreach (var semantic in Model.Semantics)
+                                {
+                                    <option value="@semantic.Id">@semantic.Name</option>
                                 }
                             </select>
                         </label>
@@ -170,7 +185,7 @@
                             </select>
                         </label>
                         <label id="shr-cmp-wrap">الشرط
-                            <select name="Comparison" id="shr-Cmp"></select>
+                            <select name="Comparison" id="shr-Cmp" onchange="shrValueVisibility()"></select>
                         </label>
                     </div>
                     <div class="shr-grid3" id="shr-value-wrap">
@@ -182,14 +197,39 @@
                                 }
                             </select>
                         </label>
-                        <label id="shr-time-wrap">الوقت
+                        <label id="shr-time-wrap">الوقت (من)
                             <input type="time" name="ValueTime" id="shr-Time" value="09:00" />
+                        </label>
+                        <label id="shr-anchor-wrap">مرساة اليوم (من)
+                            <select name="ValueAnchor" id="shr-Anchor">
+                                @foreach (var (key, label) in ShiftRuleStore.DayAnchors)
+                                {
+                                    <option value="@key">@label</option>
+                                }
+                            </select>
                         </label>
                         <label id="shr-offset-wrap">إزاحة (دقائق ±)
                             <input type="number" name="OffsetMinutes" id="shr-Offset" value="0" step="5" min="-720" max="720" />
                         </label>
-                        <label id="shr-hours-wrap">الساعات
+                        <label id="shr-hours-wrap">الساعات (من)
                             <input type="number" name="ValueHours" id="shr-Hours" value="1" step="0.25" min="0" max="24" />
+                        </label>
+                    </div>
+                    @* الطرف الثاني — لمقارنة «بين» فقط *@
+                    <div class="shr-grid3" id="shr-value2-wrap" hidden>
+                        <label id="shr-time2-wrap">الوقت (إلى)
+                            <input type="time" name="ValueTime2" id="shr-Time2" value="10:00" />
+                        </label>
+                        <label id="shr-anchor2-wrap">مرساة اليوم (إلى)
+                            <select name="ValueAnchor2" id="shr-Anchor2">
+                                @foreach (var (key, label) in ShiftRuleStore.DayAnchors)
+                                {
+                                    <option value="@key">@label</option>
+                                }
+                            </select>
+                        </label>
+                        <label id="shr-hours2-wrap">الساعات (إلى)
+                            <input type="number" name="ValueHours2" id="shr-Hours2" value="2" step="0.25" min="0" max="24" />
                         </label>
                     </div>
                 </div>
@@ -198,17 +238,27 @@
                     <b>الأثر «الإجراء»</b>
                     <div class="shr-grid2">
                         <label>نوع الإجراء
-                            <select name="ActionType" id="shr-ActionType">
-                                <option value="Violation">مخالفة (تنشئ قضية بمودل المخالفات)</option>
-                                <option value="Note">ملاحظة (رصد فقط)</option>
+                            <select name="ActionType" id="shr-ActionType" onchange="shrActionChanged()">
+                                @foreach (var (key, label) in ShiftRuleStore.ActionTypes)
+                                {
+                                    <option value="@key">@label</option>
+                                }
                             </select>
                         </label>
                         <label>نص الإجراء *
                             <input type="text" name="ActionText" id="shr-ActionText" required placeholder="مثال: تأخير عن الدوام - إنذار شفوي" />
                         </label>
                     </div>
+                    <div class="shr-grid2">
+                        <label id="shr-actionvalue-wrap" hidden><span id="shr-actionvalue-label">القيمة</span>
+                            <input type="number" name="ActionValue" id="shr-ActionValue" value="0" step="0.25" min="0" />
+                        </label>
+                    </div>
+                    <p class="shr-sentence" id="shr-action-hint" style="margin:0"></p>
                     <div class="shr-checks">
                         <label><input type="checkbox" name="IsAutomatic" value="true" id="shr-Auto" /> اتخذ الإجراء تلقائياً (بلا فرز)</label>
+                        <label><input type="checkbox" name="AllowEdit" value="true" id="shr-AllowEdit" /> السماح بتعديل الإجراء الموصى به</label>
+                        <label><input type="checkbox" name="UseEscalation" value="true" id="shr-Escalation" /> تسلسل إجراءات تصاعدي</label>
                         <label><input type="checkbox" name="IsActive" value="true" id="shr-Active" checked /> القاعدة نشطة</label>
                     </div>
                 </div>
@@ -222,18 +272,50 @@
 @section Scripts {
     <script>
         var SHR_DATA = @Html.Raw(rulesJson);
-        var SHR_TIME_CMPS = [['Before','قبل'],['BeforeOrAt','قبل/في'],['After','بعد'],['AfterOrAt','بعد/في']];
-        var SHR_HOUR_CMPS = [['MoreThan','أكثر من'],['LessThan','أقل من']];
+        var SHR_TIME_CMPS = [['Before','قبل'],['BeforeOrAt','قبل/في'],['After','بعد'],['AfterOrAt','بعد/في'],['Between','بين']];
+        var SHR_HOUR_CMPS = [['MoreThan','أكثر من'],['LessThan','أقل من'],['Between','بين']];
+        // أنواع الأثر الحاملة قيمة عددية ووحدتها
+        var SHR_ACTION_VALUE = { Overtime: 'ساعة', Permission: 'ساعة', Income: 'مبلغ', Deduction: 'مبلغ' };
+        var SHR_ACTION_HINT = {
+            Violation: 'تنشئ قضية بمودل المخالفات عند الاعتماد.',
+            Note: 'رصد فقط بلا أثر منفَّذ.',
+            Leave: 'تنشئ حركة إجازة (تُغذّي الرواتب).',
+            Permission: 'تنشئ حركة مغادرة بالساعات.',
+            Overtime: 'تنشئ حركة عمل إضافي بالساعات (تُغذّي الرواتب).',
+            Income: 'تنشئ حركة دخل بالمبلغ (تُغذّي الرواتب).',
+            Deduction: 'تنشئ حركة اقتطاع بالمبلغ (تُغذّي الرواتب).'
+        };
 
         function shrFillCmp(options, selected) {
             var sel = document.getElementById('shr-Cmp');
+            var keep = selected || sel.value;
             sel.innerHTML = '';
             options.forEach(function (o) {
                 var opt = document.createElement('option');
                 opt.value = o[0]; opt.textContent = o[1];
-                if (o[0] === selected) opt.selected = true;
+                if (o[0] === keep) opt.selected = true;
                 sel.appendChild(opt);
             });
+        }
+
+        // إظهار/إخفاء أطراف القيمة حسب نوع القيمة والمقارنة (بين ⇒ طرف ثانٍ)
+        function shrValueVisibility() {
+            var kind = document.getElementById('shr-Kind').value;
+            var isBetween = document.getElementById('shr-Cmp').value === 'Between';
+            var isHours = kind === 'Hours';
+            var isTime = kind === 'Time';
+            var isShiftRel = kind === 'ShiftStart' || kind === 'ShiftEnd';
+
+            document.getElementById('shr-time-wrap').hidden = !isTime;
+            document.getElementById('shr-anchor-wrap').hidden = !(isTime || isShiftRel);
+            document.getElementById('shr-offset-wrap').hidden = !isShiftRel;
+            document.getElementById('shr-hours-wrap').hidden = !isHours;
+
+            // الطرف الثاني: للوقت المطلق أو الساعات فقط ضمن «بين»
+            document.getElementById('shr-value2-wrap').hidden = !(isBetween && (isTime || isHours));
+            document.getElementById('shr-time2-wrap').hidden = !isTime;
+            document.getElementById('shr-anchor2-wrap').hidden = !isTime;
+            document.getElementById('shr-hours2-wrap').hidden = !isHours;
         }
 
         // إظهار/إخفاء عناصر القيمة حسب حقل الشرط ونوع القيمة
@@ -245,23 +327,29 @@
 
             document.getElementById('shr-cmp-wrap').hidden = isExistence;
             document.getElementById('shr-value-wrap').style.display = isExistence ? 'none' : '';
+            document.getElementById('shr-value2-wrap').hidden = true;
 
             if (isExistence) return;
 
             if (isHoursField) {
                 kindSel.value = 'Hours';
                 kindSel.disabled = true;
-                shrFillCmp(SHR_HOUR_CMPS, document.getElementById('shr-Cmp').value);
+                shrFillCmp(SHR_HOUR_CMPS);
             } else {
                 if (kindSel.value === 'Hours') kindSel.value = 'Time';
                 kindSel.disabled = false;
-                shrFillCmp(SHR_TIME_CMPS, document.getElementById('shr-Cmp').value);
+                shrFillCmp(SHR_TIME_CMPS);
             }
+            shrValueVisibility();
+        }
 
-            var kind = kindSel.value;
-            document.getElementById('shr-time-wrap').hidden = kind !== 'Time';
-            document.getElementById('shr-offset-wrap').hidden = kind !== 'ShiftStart' && kind !== 'ShiftEnd';
-            document.getElementById('shr-hours-wrap').hidden = kind !== 'Hours';
+        // إظهار قيمة الأثر العددية + التلميح حسب نوع الإجراء
+        function shrActionChanged() {
+            var type = document.getElementById('shr-ActionType').value;
+            var unit = SHR_ACTION_VALUE[type];
+            document.getElementById('shr-actionvalue-wrap').hidden = !unit;
+            document.getElementById('shr-actionvalue-label').textContent = unit === 'ساعة' ? 'عدد الساعات' : 'المبلغ';
+            document.getElementById('shr-action-hint').textContent = SHR_ACTION_HINT[type] || '';
         }
 
         function shrOpen(id) {
@@ -275,14 +363,22 @@
                 if (r) {
                     document.getElementById('shr-Name').value = r.Name || '';
                     document.getElementById('shr-ApplyOn').value = r.ApplyOn || 'Work';
+                    document.getElementById('shr-Semantic').value = r.PunchSemanticId || '';
                     document.getElementById('shr-Field').value = r.ConditionField || 'CheckIn';
                     document.getElementById('shr-Kind').value = r.ValueKind || 'Time';
                     document.getElementById('shr-Time').value = r.ValueTime || '09:00';
+                    document.getElementById('shr-Anchor').value = r.ValueAnchor || 'Same';
+                    document.getElementById('shr-Time2').value = r.ValueTime2 || '10:00';
+                    document.getElementById('shr-Anchor2').value = r.ValueAnchor2 || 'Same';
                     document.getElementById('shr-Offset').value = r.OffsetMinutes || 0;
                     document.getElementById('shr-Hours').value = r.ValueHours || 1;
+                    document.getElementById('shr-Hours2').value = r.ValueHours2 || 2;
                     document.getElementById('shr-ActionType').value = r.ActionType || 'Violation';
                     document.getElementById('shr-ActionText').value = r.ActionText || '';
+                    document.getElementById('shr-ActionValue').value = r.ActionValue || 0;
                     document.getElementById('shr-Auto').checked = !!r.IsAutomatic;
+                    document.getElementById('shr-AllowEdit').checked = !!r.AllowEdit;
+                    document.getElementById('shr-Escalation').checked = !!r.UseEscalation;
                     document.getElementById('shr-Active').checked = !!r.IsActive;
                     (r.ShiftTypeIds || '').split(',').forEach(function (v) {
                         var cb = document.querySelector('[name="ShiftTypeIds"][value="' + v + '"]');
@@ -294,9 +390,12 @@
                     });
                     shrFieldChanged();
                     document.getElementById('shr-Cmp').value = r.Comparison || 'After';
+                    shrValueVisibility();
+                    shrActionChanged();
                 }
             } else {
                 shrFieldChanged();
+                shrActionChanged();
             }
             document.getElementById('shr-slide').classList.add('open');
             document.getElementById('shr-backdrop').classList.add('open');
@@ -308,5 +407,6 @@
         }
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') shrClose(); });
         shrFieldChanged();
+        shrActionChanged();
     </script>
 }

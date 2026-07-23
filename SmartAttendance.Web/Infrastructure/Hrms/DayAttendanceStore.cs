@@ -106,8 +106,20 @@ END;
 
         var employees = await dbContext.Employees.AsNoTracking()
             .Where(e => e.IsActive)
-            .Select(e => e.Id)
+            .Select(e => new
+            {
+                e.Id, e.DepartmentId, e.BranchId, e.PositionId,
+                e.ContractType, e.Nationality, e.MaritalStatus
+            })
             .ToListAsync();
+
+        // معايير الاستحقاق: المناوبات ذات القواعد تُطبَّق تلقائياً على الموظف المطابِق
+        // (ما لم يكن له تعيين يدوي صريح). ترتيب ثابت بالمعرّف لحسم التطابق المتعدد.
+        var eligibilityShifts = shifts.Values
+            .Select(v => v.Shift)
+            .Where(s => s.Eligibility.Count > 0)
+            .OrderBy(s => s.Id)
+            .ToList();
 
         var punches = await dbContext.AttendanceRecords.AsNoTracking()
             .Where(r => r.AttendanceDate >= monthStart && r.AttendanceDate <= monthEnd)
@@ -168,11 +180,34 @@ END;
         table.Columns.Add("AnalyzedAt", typeof(DateTime));
 
         var analyzedAt = DateTime.UtcNow;
-        foreach (var employeeId in employees)
+        foreach (var emp in employees)
         {
-            // مناوبة الموظف المعيّنة أو الافتراضية (تعيين لمناوبة محذوفة ← الافتراضية)
-            var shiftId = assignments.TryGetValue(employeeId, out var assigned) && shifts.ContainsKey(assigned)
-                ? assigned : defaultShiftTypeId;
+            var employeeId = emp.Id;
+
+            // ترتيب الإسناد: (1) تعيين يدوي صريح، (2) مناوبة تطابق معايير استحقاقها
+            // الموظف، (3) المناوبة الافتراضية. التعيين لمناوبة محذوفة ← الافتراضية.
+            int shiftId;
+            if (assignments.TryGetValue(employeeId, out var assigned) && shifts.ContainsKey(assigned))
+            {
+                shiftId = assigned;
+            }
+            else
+            {
+                var attrs = new Dictionary<string, string?>
+                {
+                    ["Department"] = emp.DepartmentId.ToString(),
+                    ["Branch"] = emp.BranchId.ToString(),
+                    ["Position"] = emp.PositionId?.ToString(),
+                    ["ContractType"] = emp.ContractType,
+                    ["Nationality"] = emp.Nationality,
+                    ["MaritalStatus"] = emp.MaritalStatus,
+                    ["Employee"] = employeeId.ToString()
+                };
+                var eligible = eligibilityShifts
+                    .FirstOrDefault(s => ShiftTypeStore.EmployeeMatchesEligibility(s, attrs));
+                shiftId = eligible?.Id ?? defaultShiftTypeId;
+            }
+
             var (shift, shiftDays) = shifts[shiftId];
 
             for (var date = monthStart; date <= monthEnd; date = date.AddDays(1))

@@ -21,11 +21,13 @@ public class IndexModel : PageModel
 
     public List<ShiftRuleStore.ShiftRule> Rules { get; set; } = new();
     public List<ShiftTypeStore.ShiftType> Shifts { get; set; } = new();
+    public List<PunchSemanticStore.PunchSemantic> Semantics { get; set; } = new();
 
     public async Task OnGetAsync()
     {
         Rules = await ShiftRuleStore.ListAsync(_dbContext);
         Shifts = (await ShiftTypeStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
+        Semantics = (await PunchSemanticStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
     }
 
     public async Task<IActionResult> OnPostSaveAsync()
@@ -38,14 +40,22 @@ public class IndexModel : PageModel
             ShiftTypeIds = string.Join(",", form["ShiftTypeIds"].Where(v => !string.IsNullOrWhiteSpace(v))),
             ApplyOn = form["ApplyOn"].ToString() is { Length: > 0 } applyOn ? applyOn : "Work",
             WeekDays = string.Join(",", form["WeekDays"].Where(v => !string.IsNullOrWhiteSpace(v))),
+            PunchSemanticId = int.TryParse(form["PunchSemanticId"], out var semanticId) && semanticId > 0 ? semanticId : null,
             ConditionField = form["ConditionField"].ToString() is { Length: > 0 } field ? field : "CheckIn",
             Comparison = form["Comparison"].ToString() is { Length: > 0 } cmp ? cmp : "After",
             ValueKind = form["ValueKind"].ToString() is { Length: > 0 } kind ? kind : "Time",
             ValueTime = string.IsNullOrWhiteSpace(form["ValueTime"]) ? null : form["ValueTime"].ToString(),
+            ValueAnchor = form["ValueAnchor"].ToString() is { Length: > 0 } anchor ? anchor : "Same",
+            ValueTime2 = string.IsNullOrWhiteSpace(form["ValueTime2"]) ? null : form["ValueTime2"].ToString(),
+            ValueAnchor2 = form["ValueAnchor2"].ToString() is { Length: > 0 } anchor2 ? anchor2 : "Same",
             OffsetMinutes = int.TryParse(form["OffsetMinutes"], out var offset) ? offset : 0,
             ValueHours = decimal.TryParse(form["ValueHours"], out var hours) ? hours : 0,
+            ValueHours2 = decimal.TryParse(form["ValueHours2"], out var hours2) ? hours2 : 0,
             ActionType = form["ActionType"].ToString() is { Length: > 0 } action ? action : "Violation",
             ActionText = form["ActionText"].ToString().Trim(),
+            ActionValue = decimal.TryParse(form["ActionValue"], out var actionValue) ? actionValue : 0,
+            AllowEdit = form["AllowEdit"] == "true",
+            UseEscalation = form["UseEscalation"] == "true",
             IsAutomatic = form["IsAutomatic"] == "true",
             IsActive = form["IsActive"] == "true"
         };

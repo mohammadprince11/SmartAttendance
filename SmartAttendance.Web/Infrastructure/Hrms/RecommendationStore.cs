@@ -26,8 +26,10 @@ public static class RecommendationStore
         public string Summary { get; set; } = string.Empty;
         public string ActionType { get; set; } = "Violation";
         public string ActionText { get; set; } = string.Empty;
-        public string Status { get; set; } = "Pending";   // Pending | Approved | Ignored | Auto
+        public decimal ActionValue { get; set; }
+        public string Status { get; set; } = "Pending";   // Pending | Approved | Ignored | Auto | Conflicted
         public int? ViolationCaseId { get; set; }
+        public int? TransactionId { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 
@@ -37,8 +39,19 @@ public static class RecommendationStore
         "Approved" => "معتمد",
         "Ignored" => "متجاهل",
         "Auto" => "تلقائي",
+        "Conflicted" => "متعارض مع حركة",
         _ => status
     };
+
+    /// <summary>
+    /// تعارض الاقتراح مع حركة قائمة (نمط كيان «حركات متضاربة»): أثر عقابي (مخالفة/
+    /// اقتطاع) على يوم عليه حركة معتمدة (إجازة/عطلة رسمية) لا يُنفَّذ تلقائياً بل
+    /// يُعلَّم «متعارض» لمراجعة يدوية. أما الأثر المقصود لهذه الأيام (أوفرتايم/دخل/…)
+    /// فليس تعارضاً.
+    /// </summary>
+    public static bool IsConflict(ShiftRuleStore.ShiftRule rule, DayAttendanceStore.DayRow day) =>
+        ShiftRuleStore.EffectiveContext(day) is "Leave" or "Holiday"
+        && rule.ActionType is "Violation" or "Deduction";
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
     {
@@ -65,6 +78,12 @@ BEGIN
     CREATE UNIQUE INDEX UX_AttendanceRecommendations_Day_Rule
         ON AttendanceRecommendations (EmployeeId, WorkDate, RuleId);
 END;
+
+-- ترقية تدريجية: قيمة الأثر المالي + حركة منفَّذة مرتبطة
+IF COL_LENGTH('AttendanceRecommendations', 'ActionValue') IS NULL
+    ALTER TABLE AttendanceRecommendations ADD ActionValue decimal(12,2) NOT NULL DEFAULT(0);
+IF COL_LENGTH('AttendanceRecommendations', 'TransactionId') IS NULL
+    ALTER TABLE AttendanceRecommendations ADD TransactionId int NULL;
 """);
     }
 
@@ -99,6 +118,7 @@ END;
         table.Columns.Add("Summary", typeof(string));
         table.Columns.Add("ActionType", typeof(string));
         table.Columns.Add("ActionText", typeof(string));
+        table.Columns.Add("ActionValue", typeof(decimal));
         table.Columns.Add("Status", typeof(string));
 
         int created = 0, auto = 0;
@@ -116,20 +136,20 @@ END;
                 var summary = ShiftRuleStore.Evaluate(rule, day, shiftDay);
                 if (summary == null) continue;
 
-                if (rule.IsAutomatic)
-                {
-                    int? violationId = rule.ActionType == "Violation"
-                        ? await CreateViolationAsync(dbContext, day.EmployeeId, day.WorkDate,
-                            rule.ActionText, $"{rule.Name}: {summary}")
-                        : null;
+                // اقتراح متعارض مع حركة قائمة (إجازة/عطلة) لا يُنفَّذ تلقائياً — للمراجعة اليدوية
+                var conflict = IsConflict(rule, day);
 
-                    await HrmsDatabase.ExecuteAsync(
+                if (rule.IsAutomatic && !conflict)
+                {
+                    // الاقتراح أولاً (لمعرّفه الحقيقي) ثم تنفيذ الأثر ثم ربط معرّفاته
+                    var recId = await HrmsDatabase.ScalarAsync<int>(
                         dbContext,
                         """
 INSERT INTO AttendanceRecommendations
-    (EmployeeId, WorkDate, RuleId, RuleName, Summary, ActionType, ActionText, Status, ViolationCaseId, DecidedAt)
+    (EmployeeId, WorkDate, RuleId, RuleName, Summary, ActionType, ActionText, ActionValue, Status, DecidedAt)
 VALUES
-    (@Employee, @Date, @Rule, @RuleName, @Summary, @ActionType, @ActionText, N'Auto', @Violation, SYSUTCDATETIME());
+    (@Employee, @Date, @Rule, @RuleName, @Summary, @ActionType, @ActionText, @ActionValue, N'Auto', SYSUTCDATETIME());
+SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
                         command =>
                         {
@@ -140,14 +160,30 @@ VALUES
                             HrmsDatabase.AddParameter(command, "@Summary", summary);
                             HrmsDatabase.AddParameter(command, "@ActionType", rule.ActionType);
                             HrmsDatabase.AddParameter(command, "@ActionText", rule.ActionText);
-                            HrmsDatabase.AddParameter(command, "@Violation", (object?)violationId ?? DBNull.Value);
+                            HrmsDatabase.AddParameter(command, "@ActionValue", rule.ActionValue);
                         });
+
+                    var (violationId, transactionId) = await ExecuteEffectAsync(
+                        dbContext, day.EmployeeId, day.WorkDate, recId, rule.Id, rule.Name,
+                        rule.ActionType, rule.ActionText, rule.ActionValue, summary);
+
+                    if (violationId.HasValue || transactionId.HasValue)
+                        await HrmsDatabase.ExecuteAsync(
+                            dbContext,
+                            "UPDATE AttendanceRecommendations SET ViolationCaseId = @Violation, TransactionId = @Transaction WHERE Id = @Id;",
+                            command =>
+                            {
+                                HrmsDatabase.AddParameter(command, "@Id", recId);
+                                HrmsDatabase.AddParameter(command, "@Violation", (object?)violationId ?? DBNull.Value);
+                                HrmsDatabase.AddParameter(command, "@Transaction", (object?)transactionId ?? DBNull.Value);
+                            });
                     auto++;
                 }
                 else
                 {
                     table.Rows.Add(day.EmployeeId, day.WorkDate.ToDateTime(TimeOnly.MinValue), rule.Id,
-                        rule.Name, summary, rule.ActionType, rule.ActionText, "Pending");
+                        rule.Name, summary, rule.ActionType, rule.ActionText, rule.ActionValue,
+                        conflict ? "Conflicted" : "Pending");
                 }
 
                 existing.Add((day.EmployeeId, day.WorkDate, rule.Id));
@@ -213,8 +249,10 @@ ORDER BY r.WorkDate DESC, e.EmployeeNo;
                 Summary = HrmsDatabase.GetString(reader, "Summary"),
                 ActionType = HrmsDatabase.GetString(reader, "ActionType"),
                 ActionText = HrmsDatabase.GetString(reader, "ActionText"),
+                ActionValue = reader["ActionValue"] is decimal av ? av : 0,
                 Status = HrmsDatabase.GetString(reader, "Status"),
                 ViolationCaseId = HrmsDatabase.GetNullableInt(reader, "ViolationCaseId"),
+                TransactionId = HrmsDatabase.GetNullableInt(reader, "TransactionId"),
                 CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default
             });
 
@@ -223,48 +261,78 @@ ORDER BY r.WorkDate DESC, e.EmployeeNo;
             : rows.Where(r => r.Status == status).ToList();
     }
 
-    /// <summary>اعتماد اقتراح معلق: مخالفة ← إنشاء قضية مخالفة مرتبطة.</summary>
+    /// <summary>
+    /// اعتماد اقتراح معلق أو متعارض (تجاوز يدوي): ينفّذ الأثر — مخالفة ← قضية مرتبطة،
+    /// إجازة/مغادرة/أوفرتايم/دخل/اقتطاع ← حركة AttendanceTransaction، ملاحظة ← بلا أثر.
+    /// </summary>
     public static async Task<bool> ApproveAsync(ApplicationDbContext dbContext, int id)
     {
         await EnsureAsync(dbContext);
 
         var rec = (await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT TOP 1 r.*, e.EmployeeNo, e.FullName FROM AttendanceRecommendations r INNER JOIN Employees e ON e.Id = r.EmployeeId WHERE r.Id = @Id AND r.Status = N'Pending';",
+            "SELECT TOP 1 r.*, e.EmployeeNo, e.FullName FROM AttendanceRecommendations r INNER JOIN Employees e ON e.Id = r.EmployeeId WHERE r.Id = @Id AND r.Status IN (N'Pending', N'Conflicted');",
             command => HrmsDatabase.AddParameter(command, "@Id", id),
             reader => new Recommendation
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
                 EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
                 WorkDate = HrmsDatabase.GetDateOnly(reader, "WorkDate") ?? default,
+                RuleId = HrmsDatabase.GetInt(reader, "RuleId"),
                 RuleName = HrmsDatabase.GetString(reader, "RuleName"),
                 Summary = HrmsDatabase.GetString(reader, "Summary"),
                 ActionType = HrmsDatabase.GetString(reader, "ActionType"),
-                ActionText = HrmsDatabase.GetString(reader, "ActionText")
+                ActionText = HrmsDatabase.GetString(reader, "ActionText"),
+                ActionValue = reader["ActionValue"] is decimal av ? av : 0
             })).FirstOrDefault();
 
         if (rec == null) return false;
 
-        int? violationId = null;
-        if (rec.ActionType == "Violation")
-        {
-            violationId = await CreateViolationAsync(dbContext, rec.EmployeeId, rec.WorkDate,
-                rec.ActionText, $"{rec.RuleName}: {rec.Summary}");
-        }
+        var (violationId, transactionId) = await ExecuteEffectAsync(
+            dbContext, rec.EmployeeId, rec.WorkDate, rec.Id, rec.RuleId, rec.RuleName,
+            rec.ActionType, rec.ActionText, rec.ActionValue, rec.Summary);
 
         await HrmsDatabase.ExecuteAsync(
             dbContext,
             """
 UPDATE AttendanceRecommendations
-SET Status = N'Approved', ViolationCaseId = @Violation, DecidedAt = SYSUTCDATETIME()
+SET Status = N'Approved', ViolationCaseId = @Violation, TransactionId = @Transaction, DecidedAt = SYSUTCDATETIME()
 WHERE Id = @Id;
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Id", id);
                 HrmsDatabase.AddParameter(command, "@Violation", (object?)violationId ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Transaction", (object?)transactionId ?? DBNull.Value);
             });
         return true;
+    }
+
+    /// <summary>
+    /// تنفيذ أثر القاعدة حسب نوعه: مخالفة ← قضية EmployeeViolationCase، الأنواع المالية/
+    /// الإجازة/المغادرة ← حركة AttendanceTransaction، ملاحظة ← بلا أثر.
+    /// </summary>
+    private static async Task<(int? ViolationId, int? TransactionId)> ExecuteEffectAsync(
+        ApplicationDbContext dbContext, int employeeId, DateOnly workDate, int recommendationId,
+        int ruleId, string ruleName, string actionType, string actionText, decimal actionValue,
+        string summary)
+    {
+        switch (actionType)
+        {
+            case "Note":
+                return (null, null);
+
+            case "Violation":
+                var violationId = await CreateViolationAsync(dbContext, employeeId, workDate,
+                    actionText, $"{ruleName}: {summary}");
+                return (violationId, null);
+
+            default: // Leave | Permission | Overtime | Income | Deduction
+                var transactionId = await AttendanceTransactionStore.CreateAsync(dbContext,
+                    employeeId, workDate, recommendationId, ruleId, ruleName,
+                    actionType, actionText, actionValue);
+                return (null, transactionId);
+        }
     }
 
     public static async Task IgnoreAsync(ApplicationDbContext dbContext, int id)
@@ -272,7 +340,7 @@ WHERE Id = @Id;
         await EnsureAsync(dbContext);
         await HrmsDatabase.ExecuteAsync(
             dbContext,
-            "UPDATE AttendanceRecommendations SET Status = N'Ignored', DecidedAt = SYSUTCDATETIME() WHERE Id = @Id AND Status = N'Pending';",
+            "UPDATE AttendanceRecommendations SET Status = N'Ignored', DecidedAt = SYSUTCDATETIME() WHERE Id = @Id AND Status IN (N'Pending', N'Conflicted');",
             command => HrmsDatabase.AddParameter(command, "@Id", id));
     }
 

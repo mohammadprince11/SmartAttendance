@@ -12,10 +12,12 @@
     var tabs = new (string Key, string Label, int Count)[]
     {
         ("Pending", "معلقة", Model.PendingCount),
+        ("Conflicted", "متعارضة", Model.ConflictedCount),
         ("Auto", "تلقائية", Model.AutoCount),
         ("Approved", "معتمدة", Model.ApprovedCount),
         ("Ignored", "متجاهلة", Model.IgnoredCount),
-        ("All", "الكل", Model.PendingCount + Model.AutoCount + Model.ApprovedCount + Model.IgnoredCount)
+        ("Transactions", "الحركات", Model.TransactionsCount),
+        ("All", "الكل", Model.PendingCount + Model.ConflictedCount + Model.AutoCount + Model.ApprovedCount + Model.IgnoredCount)
     };
 }
 
@@ -56,7 +58,9 @@
     .rec-chip.Approved { background: rgba(74,222,128,.12); color: #4ade80; }
     .rec-chip.Auto { background: rgba(18,217,227,.12); color: #12D9E3; }
     .rec-chip.Ignored { background: rgba(143,168,188,.14); color: var(--sa-muted, #8FA8BC); }
+    .rec-chip.Conflicted { background: rgba(248,113,113,.14); color: #f87171; }
     .rec-chip.note { background: rgba(167,139,250,.14); color: #a78bfa; }
+    .rec-chip.fin { background: rgba(96,165,250,.14); color: #60a5fa; }
     .rec-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
     .rec-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
     .rec-ref { font-size: 11px; color: #12D9E3; font-weight: 900; direction: ltr; display: inline-block; }
@@ -66,7 +70,7 @@
     <header class="rec-head">
         <div>
             <h1>الإجراءات المقترحة</h1>
-            <p>مخرجات محرك القواعد بانتظار الفرز: اعتماد (ينشئ مخالفة مرتبطة) أو تجاهل — والتلقائية نُفذت فوراً.</p>
+            <p>مخرجات محرك القواعد بانتظار الفرز: اعتماد (ينشئ مخالفة أو حركة مرتبطة) أو تجاهل — والتلقائية نُفذت فوراً، والمتعارضة مع حركة قائمة تنتظر مراجعة يدوية.</p>
         </div>
         <form method="post" asp-page-handler="Analyze">
             <input type="hidden" name="Month" value="@Model.Month" />
@@ -94,63 +98,113 @@
         </nav>
     </div>
 
-    <div class="rec-table-card">
-        @if (Model.Rows.Count == 0)
-        {
-            <div class="rec-empty">لا اقتراحات بهذا التبويب — شغّل «تحليل واسترجاع الاقتراحات» بعد تحديث الحضور اليومي.</div>
-        }
-        else
-        {
-            <table class="rec-table">
-                <thead>
-                    <tr>
-                        <th>الموظف</th><th>التاريخ</th><th>القاعدة</th><th>ما تحقق</th>
-                        <th>الإجراء المقترح</th><th>الحالة</th><th style="text-align:end">فرز</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var row in Model.Rows)
-                    {
+    @if (Model.Tab == "Transactions")
+    {
+        <div class="rec-table-card">
+            @if (Model.Transactions.Count == 0)
+            {
+                <div class="rec-empty">لا حركات منفَّذة هذا الشهر — الحركات تنتج عن اعتماد اقتراح ذي أثر (إجازة/مغادرة/أوفرتايم/دخل/اقتطاع) أو من قاعدة تلقائية.</div>
+            }
+            else
+            {
+                <table class="rec-table">
+                    <thead>
                         <tr>
-                            <td><b>@row.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @row.EmployeeNo</span></td>
-                            <td style="direction:ltr;text-align:start">@row.WorkDate.ToString("yyyy-MM-dd")</td>
-                            <td style="font-size:12px">@row.RuleName</td>
-                            <td style="font-size:12px;color:var(--sa-muted,#8FA8BC)">@row.Summary</td>
-                            <td>
-                                <span class="rec-chip @(row.ActionType == "Note" ? "note" : "Pending")" style="background:rgba(18,217,227,.08);color:inherit">@row.ActionText</span>
-                                @if (row.ViolationCaseId != null)
-                                {
-                                    <a class="rec-ref" href="/Violations">#@row.ViolationCaseId</a>
-                                }
-                            </td>
-                            <td><span class="rec-chip @row.Status">@RecommendationStore.StatusLabel(row.Status)</span></td>
-                            <td style="text-align:end;white-space:nowrap">
-                                @if (row.Status == "Pending")
-                                {
-                                    <form method="post" asp-page-handler="Approve" style="display:inline">
-                                        <input type="hidden" name="id" value="@row.Id" />
-                                        <input type="hidden" name="Month" value="@Model.Month" />
-                                        <input type="hidden" name="Tab" value="@Model.Tab" />
-                                        <button type="submit" class="rec-btn ok" style="min-height:32px;padding:5px 14px">اعتماد</button>
-                                    </form>
-                                    <form method="post" asp-page-handler="Ignore" style="display:inline">
-                                        <input type="hidden" name="id" value="@row.Id" />
-                                        <input type="hidden" name="Month" value="@Model.Month" />
-                                        <input type="hidden" name="Tab" value="@Model.Tab" />
-                                        <button type="submit" class="rec-btn no" style="min-height:32px;padding:5px 14px">تجاهل</button>
-                                    </form>
-                                }
-                                else
-                                {
-                                    <text>—</text>
-                                }
-                            </td>
+                            <th>الموظف</th><th>التاريخ</th><th>القاعدة</th><th>نوع الأثر</th>
+                            <th>البيان</th><th style="text-align:end">القيمة</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
-        }
-    </div>
+                    </thead>
+                    <tbody>
+                        @foreach (var txn in Model.Transactions)
+                        {
+                            <tr>
+                                <td><b>@txn.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @txn.EmployeeNo</span></td>
+                                <td style="direction:ltr;text-align:start">@txn.WorkDate.ToString("yyyy-MM-dd")</td>
+                                <td style="font-size:12px">@txn.RuleName</td>
+                                <td><span class="rec-chip fin">@ShiftRuleStore.LabelOf(ShiftRuleStore.ActionTypes, txn.ActionType)</span></td>
+                                <td style="font-size:12px;color:var(--sa-muted,#8FA8BC)">@txn.ActionText</td>
+                                <td style="text-align:end;direction:ltr;font-weight:900">
+                                    @if (txn.Hours > 0)
+                                    { <text>@txn.Hours.ToString("0.##") ساعة</text> }
+                                    else if (txn.Amount > 0)
+                                    { <text>@txn.Amount.ToString("0.##")</text> }
+                                    else
+                                    { <text>—</text> }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="rec-table-card">
+            @if (Model.Rows.Count == 0)
+            {
+                <div class="rec-empty">لا اقتراحات بهذا التبويب — شغّل «تحليل واسترجاع الاقتراحات» بعد تحديث الحضور اليومي.</div>
+            }
+            else
+            {
+                <table class="rec-table">
+                    <thead>
+                        <tr>
+                            <th>الموظف</th><th>التاريخ</th><th>القاعدة</th><th>ما تحقق</th>
+                            <th>الإجراء المقترح</th><th>الحالة</th><th style="text-align:end">فرز</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            var canDecide = row.Status is "Pending" or "Conflicted";
+                            <tr>
+                                <td><b>@row.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @row.EmployeeNo</span></td>
+                                <td style="direction:ltr;text-align:start">@row.WorkDate.ToString("yyyy-MM-dd")</td>
+                                <td style="font-size:12px">@row.RuleName</td>
+                                <td style="font-size:12px;color:var(--sa-muted,#8FA8BC)">@row.Summary</td>
+                                <td>
+                                    <span class="rec-chip @(row.ActionType == "Note" ? "note" : row.ActionType == "Violation" ? "Pending" : "fin")" style="@(row.ActionType is "Note" or "Violation" ? "background:rgba(18,217,227,.08);color:inherit" : "")">@ShiftRuleStore.LabelOf(ShiftRuleStore.ActionTypes, row.ActionType)@(string.IsNullOrWhiteSpace(row.ActionText) ? "" : $" · {row.ActionText}")</span>
+                                    @if (ShiftRuleStore.ActionNeedsValue(row.ActionType) && row.ActionValue > 0)
+                                    { <span class="rec-ref" style="color:#60a5fa">@row.ActionValue.ToString("0.##") @ShiftRuleStore.ActionValueUnit(row.ActionType)</span> }
+                                    @if (row.ViolationCaseId != null)
+                                    {
+                                        <a class="rec-ref" href="/Violations">مخالفة #@row.ViolationCaseId</a>
+                                    }
+                                    @if (row.TransactionId != null)
+                                    {
+                                        <a class="rec-ref" href="?Month=@Model.Month&Tab=Transactions" style="color:#60a5fa">حركة #@row.TransactionId</a>
+                                    }
+                                </td>
+                                <td><span class="rec-chip @row.Status">@RecommendationStore.StatusLabel(row.Status)</span></td>
+                                <td style="text-align:end;white-space:nowrap">
+                                    @if (canDecide)
+                                    {
+                                        <form method="post" asp-page-handler="Approve" style="display:inline">
+                                            <input type="hidden" name="id" value="@row.Id" />
+                                            <input type="hidden" name="Month" value="@Model.Month" />
+                                            <input type="hidden" name="Tab" value="@Model.Tab" />
+                                            <button type="submit" class="rec-btn ok" style="min-height:32px;padding:5px 14px" data-zyconfirm="@(row.Status == "Conflicted" ? "اعتماد رغم التعارض مع حركة قائمة؟" : null)">اعتماد</button>
+                                        </form>
+                                        <form method="post" asp-page-handler="Ignore" style="display:inline">
+                                            <input type="hidden" name="id" value="@row.Id" />
+                                            <input type="hidden" name="Month" value="@Model.Month" />
+                                            <input type="hidden" name="Tab" value="@Model.Tab" />
+                                            <button type="submit" class="rec-btn no" style="min-height:32px;padding:5px 14px">تجاهل</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <text>—</text>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
 
     @if (Model.TotalPages > 1)
     {

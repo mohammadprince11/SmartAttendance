@@ -4,8 +4,8 @@
 @using System.Text.Json
 
 @*
-    أنواع المناوبات — المرحلة 1 من مودل الحضور الجديد (نمط كيان):
-    قائمة + سلايد بناء بمصفوفة الأيام السبعة. التعديل يتعبأ من JSON مضمّن.
+    أنواع المناوبات — نموذج بأربعة تبويبات متسلسلة (مطابق كيان):
+    1) معلومات المناوبة  2) قواعد المناوبة  3) قواعد التعارض مع الحركة  4) معايير الاستحقاق
 *@
 
 @{
@@ -17,9 +17,19 @@
         s.ExcludePermsOutsideStartFromLate, s.TotalDurationMode, s.AvailableInRoster, s.RequestableFromEss,
         s.LatenessGraceMinutes, s.EarlyLeaveGraceMinutes, s.TimeLimitFrom, s.TimeLimitFromDayBefore,
         s.TimeLimitTo, s.TimeLimitToDayAfter, s.MidShiftTime,
+        s.ConflictLateReturnEnabled, s.ConflictLateReturnAction, s.ConflictLateReturnValue,
+        s.ConflictEarlyLeaveEnabled, s.ConflictEarlyLeaveAction, s.ConflictEarlyLeaveValue,
         Days = s.Days.Select(d => new { d.DayIndex, d.DayKind, d.StartTime, d.EndTime }),
-        Periods = s.Periods.Select(p => new { p.StartTime, p.EndTime })
+        Periods = s.Periods.Select(p => new { p.StartTime, p.EndTime }),
+        Eligibility = s.Eligibility.Select(e => new { e.GroupNo, e.Field, e.Value })
     }));
+    var lookupsJson = JsonSerializer.Serialize(new
+    {
+        Department = Model.Departments,
+        Branch = Model.Branches,
+        Position = Model.Positions,
+        Employee = Model.Employees
+    });
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
@@ -48,7 +58,18 @@
     .sht-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; background: rgba(18,217,227,.1); color: #12D9E3; }
     .sht-chip.flex { background: rgba(167,139,250,.14); color: #a78bfa; }
     .sht-chip.off { background: rgba(248,113,113,.12); color: #f87171; }
+    .sht-chip.multi { background: rgba(96,165,250,.14); color: #60a5fa; }
     .sht-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+
+    /* شريط التبويبات (نمط كيان: مرقّمة متسلسلة) */
+    .sht-tabs { display: flex; gap: 0; border: 1px solid rgba(73,111,151,.2); border-radius: 12px; overflow: hidden; margin-bottom: 6px; }
+    .sht-tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 8px; font-size: 12px; font-weight: 900; cursor: pointer; background: transparent; border: 0; color: var(--sa-muted, #8FA8BC); border-inline-start: 1px solid rgba(73,111,151,.15); }
+    .sht-tab:first-child { border-inline-start: 0; }
+    .sht-tab .n { width: 20px; height: 20px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; background: rgba(143,168,188,.18); color: inherit; }
+    .sht-tab.active { color: #12D9E3; background: rgba(18,217,227,.08); }
+    .sht-tab.active .n { background: #12D9E3; color: #04141d; }
+    .sht-panel { display: none; flex-direction: column; gap: 10px; }
+    .sht-panel.active { display: flex; }
 
     /* مصفوفة الأيام بالسلايد */
     .sht-daygrid { display: flex; flex-direction: column; gap: 6px; }
@@ -69,7 +90,6 @@
     .sht-colors input:checked + span { border-color: #fff; box-shadow: 0 0 0 2px #12D9E3; }
     .sht-mode { display: flex; gap: 14px; font-size: 13px; font-weight: 900; flex-wrap: wrap; }
     .sht-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
-    /* الفترات المتعددة (سبليت شفت) */
     .sht-periods { display: flex; flex-direction: column; gap: 6px; }
     .sht-period-row { display: grid; grid-template-columns: 30px 1fr 1fr 56px 34px; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid rgba(73,111,151,.16); border-radius: 10px; font-size: 12px; }
     .sht-period-row b { font-weight: 900; text-align: center; color: var(--sa-muted,#8FA8BC); }
@@ -78,14 +98,30 @@
     .sht-period-row .hours { text-align: center; font-weight: 900; color: #12D9E3; direction: ltr; }
     .sht-period-row .rm { background: rgba(248,113,113,.14); border: 1px solid rgba(248,113,113,.4); color: #f87171; border-radius: 8px; min-height: 32px; cursor: pointer; font-weight: 900; }
     .sht-hint { font-size: 12px; font-weight: 800; color: var(--sa-muted,#8FA8BC); }
-    .sht-chip.multi { background: rgba(96,165,250,.14); color: #60a5fa; }
+    .sht-box { display: flex; flex-direction: column; gap: 10px; border: 1px solid rgba(73,111,151,.18); border-radius: 12px; padding: 12px; }
+    .sht-select { min-height: 34px; border-radius: 8px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: inherit; padding: 4px 8px; font-size: 12px; }
+    html[data-theme="light"] .sht-select { background: #fff; }
+
+    /* تبويب 3: التعارض */
+    .sht-conflict-row { display: grid; grid-template-columns: 1fr 150px 120px; gap: 10px; align-items: end; border: 1px solid rgba(73,111,151,.16); border-radius: 10px; padding: 10px; }
+    .sht-conflict-row.off { opacity: .5; }
+    /* تبويب 4: الاستحقاق */
+    .sht-elig-group { border: 1px solid rgba(73,111,151,.2); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .sht-elig-group > .gh { display: flex; align-items: center; justify-content: space-between; }
+    .sht-elig-group > .gh b { font-weight: 900; }
+    .sht-elig-rule { display: grid; grid-template-columns: 160px 1fr 34px; gap: 8px; align-items: center; }
+    .sht-elig-rule select, .sht-elig-rule input { min-height: 34px; border-radius: 8px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: inherit; padding: 4px 8px; font-size: 12px; width: 100%; }
+    html[data-theme="light"] .sht-elig-rule select, html[data-theme="light"] .sht-elig-rule input { background: #fff; }
+    .sht-elig-rule .rm { background: rgba(248,113,113,.14); border: 1px solid rgba(248,113,113,.4); color: #f87171; border-radius: 8px; min-height: 34px; cursor: pointer; font-weight: 900; }
+    .sht-or { text-align: center; font-size: 11px; font-weight: 900; color: #60a5fa; }
+    .sht-link { background: transparent; border: 0; color: #12D9E3; font-weight: 900; cursor: pointer; font-size: 12px; padding: 2px; }
 </style>
 
 <section class="sht-page" dir="rtl">
     <header class="sht-head">
         <div>
             <h1>أنواع المناوبات</h1>
-            <p>تعريف المناوبات يوماً-بيوم (ثابتة بأوقات أو مرنة بساعات) — أساس محرك الحضور الجديد.</p>
+            <p>تعريف المناوبات بأربعة تبويبات (نمط كيان): معلومات · قواعد · التعارض مع الحركة · معايير الاستحقاق.</p>
         </div>
         <button type="button" class="sht-btn" onclick="shtOpen(0)">+ مناوبة جديدة</button>
     </header>
@@ -104,7 +140,7 @@
         {
             <table class="sht-table">
                 <thead>
-                    <tr><th>المناوبة</th><th>النوع</th><th>أيام العطل/الراحة</th><th>ساعات الأسبوع</th><th>الحالة</th><th style="text-align:end">إجراءات</th></tr>
+                    <tr><th>المناوبة</th><th>النوع</th><th>أيام العطل/الراحة</th><th>ساعات الأسبوع</th><th>الاستحقاق</th><th>الحالة</th><th style="text-align:end">إجراءات</th></tr>
                 </thead>
                 <tbody>
                     @foreach (var shift in Model.Shifts)
@@ -118,6 +154,7 @@
                             </td>
                             <td>@shift.OffDaysText</td>
                             <td style="direction:ltr">@shift.Days.Sum(d => d.WorkHours).ToString("0.##") س</td>
+                            <td>@(shift.Eligibility.Count == 0 ? "الكل" : $"{shift.Eligibility.Select(e => e.GroupNo).Distinct().Count()} مجموعة")</td>
                             <td><span class="sht-chip @(shift.IsActive ? "" : "off")">@(shift.IsActive ? "نشطة" : "متوقفة")</span></td>
                             <td style="text-align:end;white-space:nowrap">
                                 <button type="button" class="sht-btn ghost" onclick="shtOpen(@shift.Id)">تعديل</button>
@@ -133,7 +170,7 @@
         }
     </div>
 
-    @* ---------- سلايد بناء المناوبة ---------- *@
+    @* ---------- سلايد بناء المناوبة (4 تبويبات) ---------- *@
     <div class="hrms-slideover-backdrop" id="sht-backdrop" onclick="shtClose()"></div>
     <aside class="hrms-slideover wide" id="sht-slide" aria-hidden="true">
         <div class="hrms-slideover-head">
@@ -144,124 +181,184 @@
             <form method="post" asp-page-handler="Save" class="sht-form" id="sht-form">
                 <input type="hidden" name="Id" id="sht-Id" value="0" />
 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                    <label>اسم المناوبة (عربي) *
-                        <input type="text" name="Name" id="sht-Name" required />
-                    </label>
-                    <label>Shift Name (EN)
-                        <input type="text" name="NameEn" id="sht-NameEn" dir="ltr" />
-                    </label>
+                <div class="sht-tabs">
+                    <button type="button" class="sht-tab active" data-tab="1" onclick="shtTab(1)"><span class="n">1</span> معلومات المناوبة</button>
+                    <button type="button" class="sht-tab" data-tab="2" onclick="shtTab(2)"><span class="n">2</span> قواعد المناوبة</button>
+                    <button type="button" class="sht-tab" data-tab="3" onclick="shtTab(3)"><span class="n">3</span> التعارض مع الحركة</button>
+                    <button type="button" class="sht-tab" data-tab="4" onclick="shtTab(4)"><span class="n">4</span> معايير الاستحقاق</button>
                 </div>
 
-                <label>لون المناوبة (للمستعرض)</label>
-                <div class="sht-colors">
-                    @foreach (var color in ShiftTypeStore.Colors)
-                    {
-                        <label><input type="radio" name="ColorHex" value="@color" @(color == ShiftTypeStore.Colors[0] ? "checked" : "") /><span style="background:@color"></span></label>
-                    }
-                </div>
-
-                <div class="sht-mode">
-                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="ShiftMode" value="fixed" checked onchange="shtModeChanged()" /> ثابتة (أوقات لكل يوم)</label>
-                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="ShiftMode" value="flex" onchange="shtModeChanged()" /> مرنة (ساعات مطلوبة)</label>
-                </div>
-
-                <label id="sht-flex-wrap" hidden>الساعات المطلوبة يومياً
-                    <input type="number" name="FlexDailyHours" id="sht-FlexHours" step="0.25" min="0" max="24" value="8" style="max-width:140px" />
-                </label>
-
-                @* نوع الفترات: واحدة / متعددة (سبليت شفت) — للثابتة فقط *@
-                <div class="sht-mode" id="sht-period-mode">
-                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="PeriodMode" value="single" checked onchange="shtPeriodModeChanged()" /> فترة واحدة</label>
-                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="PeriodMode" value="multi" onchange="shtPeriodModeChanged()" /> فترات متعددة (سبليت شفت)</label>
-                </div>
-
-                <div id="sht-periods-wrap" hidden style="display:flex;flex-direction:column;gap:8px">
-                    <label style="margin:0">الفترات <span class="sht-hint">— تنطبق على كل أيام العمل؛ ساعات اليوم = مجموع الفترات</span></label>
-                    <div id="sht-periods" class="sht-periods"></div>
-                    <div style="display:flex;justify-content:space-between;align-items:center">
-                        <button type="button" class="sht-btn ghost" onclick="shtAddPeriod()">+ فترة</button>
-                        <span class="sht-hint">إجمالي ساعات الفترات: <b id="sht-periods-total" style="color:#12D9E3">0</b></span>
+                @* ===================== تبويب 1: معلومات المناوبة ===================== *@
+                <div class="sht-panel active" data-panel="1">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <label>اسم المناوبة (عربي) *
+                            <input type="text" name="Name" id="sht-Name" required />
+                        </label>
+                        <label>Shift Name (EN)
+                            <input type="text" name="NameEn" id="sht-NameEn" dir="ltr" />
+                        </label>
                     </div>
-                </div>
 
-                <label>مصفوفة الأسبوع</label>
-                <div class="sht-daygrid">
-                    <div class="sht-dayrow" style="opacity:.7;border:0;padding:2px 8px">
-                        <b>اليوم</b><b>النوع</b><b>الدخول</b><b>الخروج</b><b style="text-align:center">ساعات</b>
+                    <label>لون المناوبة (للمستعرض)</label>
+                    <div class="sht-colors">
+                        @foreach (var color in ShiftTypeStore.Colors)
+                        {
+                            <label><input type="radio" name="ColorHex" value="@color" @(color == ShiftTypeStore.Colors[0] ? "checked" : "") /><span style="background:@color"></span></label>
+                        }
                     </div>
-                    @for (var dayIndex = 0; dayIndex < 7; dayIndex++)
-                    {
-                        <div class="sht-dayrow" data-day="@dayIndex">
-                            <b>@ShiftTypeStore.DayNames[dayIndex]</b>
-                            <select name="day_kind_@dayIndex" onchange="shtDayChanged(@dayIndex)">
-                                <option value="Work">يوم عمل</option>
-                                <option value="Weekend">يوم عطلة</option>
-                                <option value="Rest">يوم راحة</option>
-                            </select>
-                            <input type="time" name="day_start_@dayIndex" value="09:00" onchange="shtDayChanged(@dayIndex)" />
-                            <input type="time" name="day_end_@dayIndex" value="17:00" onchange="shtDayChanged(@dayIndex)" />
-                            <span class="hours" data-hours="@dayIndex">8</span>
+
+                    <div class="sht-mode">
+                        <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="ShiftMode" value="fixed" checked onchange="shtModeChanged()" /> ثابتة (أوقات لكل يوم)</label>
+                        <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="ShiftMode" value="flex" onchange="shtModeChanged()" /> مرنة (ساعات مطلوبة)</label>
+                    </div>
+
+                    <label id="sht-flex-wrap" hidden>الساعات المطلوبة يومياً
+                        <input type="number" name="FlexDailyHours" id="sht-FlexHours" step="0.25" min="0" max="24" value="8" style="max-width:140px" />
+                    </label>
+
+                    <div class="sht-mode" id="sht-period-mode">
+                        <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="PeriodMode" value="single" checked onchange="shtPeriodModeChanged()" /> فترة واحدة</label>
+                        <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="PeriodMode" value="multi" onchange="shtPeriodModeChanged()" /> فترات متعددة (سبليت شفت)</label>
+                    </div>
+
+                    <div id="sht-periods-wrap" hidden style="display:flex;flex-direction:column;gap:8px">
+                        <label style="margin:0">الفترات <span class="sht-hint">— تنطبق على كل أيام العمل؛ ساعات اليوم = مجموع الفترات</span></label>
+                        <div id="sht-periods" class="sht-periods"></div>
+                        <div style="display:flex;justify-content:space-between;align-items:center">
+                            <button type="button" class="sht-btn ghost" onclick="shtAddPeriod()">+ فترة</button>
+                            <span class="sht-hint">إجمالي ساعات الفترات: <b id="sht-periods-total" style="color:#12D9E3">0</b></span>
                         </div>
-                    }
-                </div>
-
-                @* ===== السماحيات والحدود (فترة السماح + نافذة البصم + منتصف المناوبة) ===== *@
-                <label style="margin-top:6px">السماحيات والحدود <span class="sht-hint">— فترة السماح، نافذة البصم الصالحة، منتصف المناوبة</span></label>
-                <div style="display:flex;flex-direction:column;gap:10px;border:1px solid rgba(73,111,151,.18);border-radius:12px;padding:12px">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                        <label>فترة السماح للتأخير (دقائق)<input type="number" name="LatenessGraceMinutes" id="sht-LGM" min="0" max="600" value="0" /></label>
-                        <label>فترة السماح للخروج المبكر (دقائق)<input type="number" name="EarlyLeaveGraceMinutes" id="sht-ELG" min="0" max="600" value="0" /></label>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                        <label>حد وقت بدء المناوبة (أبكر بصمة صالحة)
-                            <span style="display:flex;gap:6px;align-items:center">
-                                <input type="time" name="TimeLimitFrom" id="sht-TLF" style="flex:1" />
-                                <select name="TimeLimitFromAnchor" id="sht-TLFA" style="min-height:36px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 6px">
-                                    <option value="same">نفس اليوم</option>
-                                    <option value="before">اليوم السابق</option>
+
+                    <label>مصفوفة الأسبوع</label>
+                    <div class="sht-daygrid">
+                        <div class="sht-dayrow" style="opacity:.7;border:0;padding:2px 8px">
+                            <b>اليوم</b><b>النوع</b><b>الدخول</b><b>الخروج</b><b style="text-align:center">ساعات</b>
+                        </div>
+                        @for (var dayIndex = 0; dayIndex < 7; dayIndex++)
+                        {
+                            <div class="sht-dayrow" data-day="@dayIndex">
+                                <b>@ShiftTypeStore.DayNames[dayIndex]</b>
+                                <select name="day_kind_@dayIndex" onchange="shtDayChanged(@dayIndex)">
+                                    <option value="Work">يوم عمل</option>
+                                    <option value="Weekend">يوم عطلة</option>
+                                    <option value="Rest">يوم راحة</option>
                                 </select>
-                            </span>
-                        </label>
-                        <label>حد وقت انتهاء المناوبة (أحدث بصمة صالحة)
-                            <span style="display:flex;gap:6px;align-items:center">
-                                <input type="time" name="TimeLimitTo" id="sht-TLT" style="flex:1" />
-                                <select name="TimeLimitToAnchor" id="sht-TLTA" style="min-height:36px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 6px">
-                                    <option value="same">نفس اليوم</option>
-                                    <option value="after">اليوم التالي</option>
-                                </select>
-                            </span>
+                                <input type="time" name="day_start_@dayIndex" value="09:00" onchange="shtDayChanged(@dayIndex)" />
+                                <input type="time" name="day_end_@dayIndex" value="17:00" onchange="shtDayChanged(@dayIndex)" />
+                                <span class="hours" data-hours="@dayIndex">8</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @* ===================== تبويب 2: قواعد المناوبة ===================== *@
+                <div class="sht-panel" data-panel="2">
+                    <label>السماحيات والحدود <span class="sht-hint">— فترة السماح، نافذة البصم الصالحة، منتصف المناوبة</span></label>
+                    <div class="sht-box">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                            <label>فترة السماح للتأخير (دقائق)<input type="number" name="LatenessGraceMinutes" id="sht-LGM" min="0" max="600" value="0" /></label>
+                            <label>فترة السماح للخروج المبكر (دقائق)<input type="number" name="EarlyLeaveGraceMinutes" id="sht-ELG" min="0" max="600" value="0" /></label>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                            <label>حد وقت بدء المناوبة (أبكر بصمة صالحة)
+                                <span style="display:flex;gap:6px;align-items:center">
+                                    <input type="time" name="TimeLimitFrom" id="sht-TLF" style="flex:1" />
+                                    <select name="TimeLimitFromAnchor" id="sht-TLFA" class="sht-select" style="min-height:36px">
+                                        <option value="same">نفس اليوم</option>
+                                        <option value="before">اليوم السابق</option>
+                                    </select>
+                                </span>
+                            </label>
+                            <label>حد وقت انتهاء المناوبة (أحدث بصمة صالحة)
+                                <span style="display:flex;gap:6px;align-items:center">
+                                    <input type="time" name="TimeLimitTo" id="sht-TLT" style="flex:1" />
+                                    <select name="TimeLimitToAnchor" id="sht-TLTA" class="sht-select" style="min-height:36px">
+                                        <option value="same">نفس اليوم</option>
+                                        <option value="after">اليوم التالي</option>
+                                    </select>
+                                </span>
+                            </label>
+                        </div>
+                        <label style="max-width:280px">وقت منتصف المناوبة <span class="sht-hint">(لتقسيم بصمات المناوبة العابرة لمنتصف الليل)</span>
+                            <input type="time" name="MidShiftTime" id="sht-MST" style="max-width:160px" />
                         </label>
                     </div>
-                    <label style="max-width:280px">وقت منتصف المناوبة <span class="sht-hint">(لتقسيم بصمات المناوبة العابرة لمنتصف الليل)</span>
-                        <input type="time" name="MidShiftTime" id="sht-MST" style="max-width:160px" />
-                    </label>
+
+                    <label style="margin-top:6px">قواعد سلوك المناوبة <span class="sht-hint">— كيف يعامل محرك الحضور بصمات هذه المناوبة</span></label>
+                    <div class="sht-box">
+                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="FillMissingCheckIn" value="true" id="sht-FMI" /> تعبئة وقت بدء المناوبة تلقائياً لأي بصمة دخول مفقودة</label>
+                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="FillMissingCheckOut" value="true" id="sht-FMO" /> تعبئة وقت انتهاء المناوبة تلقائياً لأي بصمة خروج مفقودة</label>
+                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="StripSemantics" value="true" id="sht-STS" /> تجريد فترة الدلالات (استراحة/صلاة…) من مدة الحضور</label>
+                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="ConsiderPermissionsOutsideShift" value="true" id="sht-CPO" /> احتساب ساعات المغادرة الواقعة خارج المناوبة</label>
+                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="ExcludePermsOutsideStartFromLate" value="true" id="sht-EPL" /> استثناء المغادرات خارج بداية المناوبة من التأخير</label>
+                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="AvailableInRoster" value="true" id="sht-AIR" checked /> متاحة في جدول الحضور (الروستر)</label>
+                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="RequestableFromEss" value="true" id="sht-RFE" /> قابلة للطلب من الخدمة الذاتية</label>
+                        <label style="max-width:260px">عند احتساب المدة الإجمالية
+                            <select name="TotalDurationMode" id="sht-TDM" class="sht-select">
+                                <option value="WorkOnly">أيام العمل فقط</option>
+                                <option value="IncludeOff">اشمل أيام العطل</option>
+                                <option value="Both">كلاهما</option>
+                            </select>
+                        </label>
+                    </div>
                 </div>
 
-                @* ===== قواعد سلوك المناوبة (أسفل اختيار الأيام — نمط كيان) ===== *@
-                <label style="margin-top:6px">قواعد المناوبة <span class="sht-hint">— كيف يعامل محرك الحضور بصمات هذه المناوبة</span></label>
-                <div style="display:flex;flex-direction:column;gap:8px;border:1px solid rgba(73,111,151,.18);border-radius:12px;padding:12px">
-                    <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="FillMissingCheckIn" value="true" id="sht-FMI" /> تعبئة وقت بدء المناوبة تلقائياً لأي بصمة دخول مفقودة</label>
-                    <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="FillMissingCheckOut" value="true" id="sht-FMO" /> تعبئة وقت انتهاء المناوبة تلقائياً لأي بصمة خروج مفقودة</label>
-                    <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="StripSemantics" value="true" id="sht-STS" /> تجريد فترة الدلالات (استراحة/صلاة…) من مدة الحضور</label>
-                    <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="ConsiderPermissionsOutsideShift" value="true" id="sht-CPO" /> احتساب ساعات المغادرة الواقعة خارج المناوبة</label>
-                    <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="ExcludePermsOutsideStartFromLate" value="true" id="sht-EPL" /> استثناء المغادرات خارج بداية المناوبة من التأخير</label>
-                    <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="AvailableInRoster" value="true" id="sht-AIR" checked /> متاحة في جدول الحضور (الروستر)</label>
-                    <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="RequestableFromEss" value="true" id="sht-RFE" /> قابلة للطلب من الخدمة الذاتية</label>
-                    <label style="max-width:260px">عند احتساب المدة الإجمالية
-                        <select name="TotalDurationMode" id="sht-TDM" style="min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 8px">
-                            <option value="WorkOnly">أيام العمل فقط</option>
-                            <option value="IncludeOff">اشمل أيام العطل</option>
-                            <option value="Both">كلاهما</option>
-                        </select>
-                    </label>
+                @* ===================== تبويب 3: قواعد التعارض مع الحركة ===================== *@
+                <div class="sht-panel" data-panel="3">
+                    <label>قواعد التعارض مع المغادرات <span class="sht-hint">— الإجراء عندما لا تتطابق المغادرة المعتمدة مع الحضور الفعلي</span></label>
+
+                    <div class="sht-conflict-row off" id="sht-CLR-row">
+                        <label style="flex-direction:row;align-items:center;gap:8px;font-weight:900">
+                            <input type="checkbox" name="ConflictLateReturnEnabled" value="true" id="sht-CLRE" onchange="shtConflictChanged()" />
+                            عندما يتأخر الموظف في العودة من المغادرة
+                        </label>
+                        <label>الإجراء
+                            <select name="ConflictLateReturnAction" id="sht-CLRA" class="sht-select" onchange="shtConflictChanged()">
+                                @foreach (var (key, label) in ShiftTypeStore.ConflictActions)
+                                { <option value="@key">@label</option> }
+                            </select>
+                        </label>
+                        <label><span id="sht-CLRV-label">القيمة</span>
+                            <input type="number" name="ConflictLateReturnValue" id="sht-CLRV" step="0.25" min="0" value="0" />
+                        </label>
+                    </div>
+
+                    <div class="sht-conflict-row off" id="sht-CEL-row">
+                        <label style="flex-direction:row;align-items:center;gap:8px;font-weight:900">
+                            <input type="checkbox" name="ConflictEarlyLeaveEnabled" value="true" id="sht-CELE" onchange="shtConflictChanged()" />
+                            عندما يذهب الموظف في وقت مبكر للمغادرة
+                        </label>
+                        <label>الإجراء
+                            <select name="ConflictEarlyLeaveAction" id="sht-CELA" class="sht-select" onchange="shtConflictChanged()">
+                                @foreach (var (key, label) in ShiftTypeStore.ConflictActions)
+                                { <option value="@key">@label</option> }
+                            </select>
+                        </label>
+                        <label><span id="sht-CELV-label">القيمة</span>
+                            <input type="number" name="ConflictEarlyLeaveValue" id="sht-CELV" step="0.25" min="0" value="0" />
+                        </label>
+                    </div>
+                    <p class="sht-hint" style="margin:0">القيمة = ساعات (للمغادرات) أو مبلغ (للاقتطاع).</p>
                 </div>
 
-                <label style="flex-direction:row;align-items:center;gap:8px">
+                @* ===================== تبويب 4: معايير الاستحقاق ===================== *@
+                <div class="sht-panel" data-panel="4">
+                    <label>معايير الاستحقاق <span class="sht-hint">— اترك فارغاً لتطبيق المناوبة على الجميع، أو حدّد شرائح الموظفين</span></label>
+                    <p class="sht-hint" style="margin:0">المناوبة مؤهلة للموظف إن طابق أيّ مجموعة (OR)، والمجموعة تتطلب مطابقة كل قواعدها (AND).</p>
+                    <div id="sht-elig-groups" style="display:flex;flex-direction:column;gap:10px"></div>
+                    <button type="button" class="sht-btn ghost" onclick="shtAddEligGroup()" style="align-self:flex-start">+ مجموعة قواعد</button>
+                </div>
+
+                <label style="flex-direction:row;align-items:center;gap:8px;margin-top:6px">
                     <input type="checkbox" name="IsActive" value="true" id="sht-Active" checked /> المناوبة نشطة
                 </label>
 
-                <button type="submit" class="sht-btn">حفظ المناوبة</button>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+                    <button type="button" class="sht-btn ghost" id="sht-prev" onclick="shtNav(-1)">السابق</button>
+                    <button type="button" class="sht-btn ghost" id="sht-next" onclick="shtNav(1)">التالي</button>
+                    <button type="submit" class="sht-btn" style="margin-inline-start:auto">حفظ المناوبة</button>
+                </div>
             </form>
         </div>
     </aside>
@@ -270,6 +367,10 @@
 @section Scripts {
     <script>
         var SHT_DATA = @Html.Raw(shiftsJson);
+        var SHT_LOOKUPS = @Html.Raw(lookupsJson);
+        var SHT_FIELDS = @Html.Raw(JsonSerializer.Serialize(ShiftTypeStore.EligibilityFields.Select(f => new { f.Key, f.Label })));
+        var SHT_LOOKUP_FIELDS = ['Department', 'Branch', 'Position', 'Employee']; // منتقيات؛ الباقي نص حر
+        var shtTabCur = 1;
 
         function shtEls(d) {
             return {
@@ -281,7 +382,6 @@
             };
         }
 
-        // حساب ساعات اليوم محلياً (يدعم عبور منتصف الليل — مثل السيرفر)
         function shtComputeHours(start, end) {
             if (!start || !end) return 0;
             var s = start.split(':'), e = end.split(':');
@@ -298,7 +398,7 @@
             var isWork = el.kind.value === 'Work';
             var flex = shtIsFlex();
             var multi = shtIsMulti();
-            var lockTimes = !isWork || flex || multi;   // بالمرنة/المتعددة لا أوقات لكل يوم
+            var lockTimes = !isWork || flex || multi;
             el.start.disabled = lockTimes;
             el.end.disabled = lockTimes;
             el.row.classList.toggle('is-off', !isWork);
@@ -311,13 +411,12 @@
         function shtModeChanged() {
             var flex = shtIsFlex();
             document.getElementById('sht-flex-wrap').hidden = !flex;
-            document.getElementById('sht-period-mode').hidden = flex;   // الفترات للثابتة فقط
+            document.getElementById('sht-period-mode').hidden = flex;
             if (flex) { var single = document.querySelector('[name="PeriodMode"][value="single"]'); if (single) single.checked = true; }
             shtPeriodModeChanged();
         }
         document.getElementById('sht-FlexHours').addEventListener('input', shtModeChanged);
 
-        // ===== الفترات المتعددة (سبليت شفت) =====
         function shtReindexPeriods() {
             document.querySelectorAll('#sht-periods .sht-period-row').forEach(function (row, i) {
                 row.querySelector('.p-start').name = 'period_start_' + i;
@@ -359,13 +458,102 @@
             shtPeriodsRecalc();
         }
 
+        // ===== التبويبات =====
+        function shtTab(n) {
+            shtTabCur = n;
+            document.querySelectorAll('.sht-tab').forEach(function (t) { t.classList.toggle('active', +t.dataset.tab === n); });
+            document.querySelectorAll('.sht-panel').forEach(function (p) { p.classList.toggle('active', +p.dataset.panel === n); });
+            document.getElementById('sht-prev').style.visibility = n === 1 ? 'hidden' : 'visible';
+            document.getElementById('sht-next').style.visibility = n === 4 ? 'hidden' : 'visible';
+        }
+        function shtNav(dir) { var n = Math.min(4, Math.max(1, shtTabCur + dir)); shtTab(n); }
+
+        // ===== تبويب 3: التعارض =====
+        function shtConflictChanged() {
+            [['CLRE', 'CLR', 'CLRA', 'CLRV'], ['CELE', 'CEL', 'CELA', 'CELV']].forEach(function (ids) {
+                var on = document.getElementById('sht-' + ids[0]).checked;
+                document.getElementById('sht-' + ids[1] + '-row').classList.toggle('off', !on);
+                document.getElementById('sht-' + ids[2]).disabled = !on;
+                document.getElementById('sht-' + ids[3]).disabled = !on;
+                var isHours = document.getElementById('sht-' + ids[2]).value === 'Permission';
+                document.getElementById('sht-' + ids[3] + '-label').textContent = isHours ? 'عدد الساعات' : 'المبلغ';
+            });
+        }
+
+        // ===== تبويب 4: معايير الاستحقاق =====
+        function shtValueControl(field, value) {
+            if (SHT_LOOKUP_FIELDS.indexOf(field) >= 0) {
+                var opts = '<option value="">اختر…</option>';
+                (SHT_LOOKUPS[field] || []).forEach(function (o) {
+                    opts += '<option value="' + o.Value + '"' + (String(o.Value) === String(value) ? ' selected' : '') + '>' + o.Label + '</option>';
+                });
+                return '<select name="EligValue">' + opts + '</select>';
+            }
+            return '<input type="text" name="EligValue" value="' + (value != null ? String(value).replace(/"/g, '&quot;') : '') + '" placeholder="القيمة" />';
+        }
+        function shtEligFieldChanged(sel) {
+            var rule = sel.closest('.sht-elig-rule');
+            var holder = rule.querySelector('.val');
+            holder.innerHTML = shtValueControl(sel.value, '');
+        }
+        function shtAddEligRule(groupEl, field, value) {
+            var rules = groupEl.querySelector('.rules');
+            var row = document.createElement('div');
+            row.className = 'sht-elig-rule';
+            var fieldOpts = SHT_FIELDS.map(function (f) {
+                return '<option value="' + f.Key + '"' + (f.Key === (field || 'Department') ? ' selected' : '') + '>' + f.Label + '</option>';
+            }).join('');
+            row.innerHTML = '<input type="hidden" name="EligGroup" class="grp" value="0" />'
+                + '<select name="EligField" onchange="shtEligFieldChanged(this)">' + fieldOpts + '</select>'
+                + '<span class="val">' + shtValueControl(field || 'Department', value) + '</span>'
+                + '<button type="button" class="rm" onclick="shtRemoveEligRule(this)">×</button>';
+            rules.appendChild(row);
+            shtReindexElig();
+        }
+        function shtRemoveEligRule(btn) { btn.closest('.sht-elig-rule').remove(); shtReindexElig(); }
+        function shtAddEligGroup(rulesData) {
+            var wrap = document.getElementById('sht-elig-groups');
+            if (wrap.children.length > 0) {
+                var or = document.createElement('div'); or.className = 'sht-or'; or.textContent = '— أو —'; wrap.appendChild(or);
+            }
+            var group = document.createElement('div');
+            group.className = 'sht-elig-group';
+            group.innerHTML = '<div class="gh"><b class="gt">مجموعة</b>'
+                + '<button type="button" class="sht-link" style="color:#f87171" onclick="shtRemoveEligGroup(this)">حذف المجموعة</button></div>'
+                + '<div class="rules"></div>'
+                + '<button type="button" class="sht-link" onclick="shtAddEligRule(this.closest(\'.sht-elig-group\'))">+ قاعدة</button>';
+            wrap.appendChild(group);
+            if (rulesData && rulesData.length) {
+                rulesData.forEach(function (r) { shtAddEligRule(group, r.Field, r.Value); });
+            } else {
+                shtAddEligRule(group);
+            }
+            shtReindexElig();
+        }
+        function shtRemoveEligGroup(btn) {
+            var group = btn.closest('.sht-elig-group');
+            var prev = group.previousElementSibling;
+            if (prev && prev.classList.contains('sht-or')) prev.remove();
+            else { var next = group.nextElementSibling; if (next && next.classList.contains('sht-or')) next.remove(); }
+            group.remove();
+            shtReindexElig();
+        }
+        function shtReindexElig() {
+            document.querySelectorAll('#sht-elig-groups .sht-elig-group').forEach(function (group, gi) {
+                group.querySelector('.gt').textContent = 'مجموعة ' + (gi + 1);
+                group.querySelectorAll('.grp').forEach(function (h) { h.value = gi; });
+            });
+        }
+
         function shtOpen(id) {
             var form = document.getElementById('sht-form');
             form.reset();
             document.getElementById('sht-Id').value = id || 0;
             document.getElementById('sht-title').textContent = id ? 'تعديل المناوبة' : 'مناوبة جديدة';
             document.getElementById('sht-periods').innerHTML = '';
+            document.getElementById('sht-elig-groups').innerHTML = '';
             document.querySelector('[name="PeriodMode"][value="single"]').checked = true;
+            shtTab(1);
 
             if (id) {
                 var s = SHT_DATA.find(function (x) { return x.Id === id; });
@@ -395,6 +583,18 @@
                     document.getElementById('sht-TLT').value = s.TimeLimitTo || '';
                     document.getElementById('sht-TLTA').value = s.TimeLimitToDayAfter ? 'after' : 'same';
                     document.getElementById('sht-MST').value = s.MidShiftTime || '';
+                    // تبويب 3
+                    document.getElementById('sht-CLRE').checked = !!s.ConflictLateReturnEnabled;
+                    document.getElementById('sht-CLRA').value = s.ConflictLateReturnAction || 'Deduction';
+                    document.getElementById('sht-CLRV').value = s.ConflictLateReturnValue || 0;
+                    document.getElementById('sht-CELE').checked = !!s.ConflictEarlyLeaveEnabled;
+                    document.getElementById('sht-CELA').value = s.ConflictEarlyLeaveAction || 'Deduction';
+                    document.getElementById('sht-CELV').value = s.ConflictEarlyLeaveValue || 0;
+                    // تبويب 4: أعد بناء المجموعات
+                    var byGroup = {};
+                    (s.Eligibility || []).forEach(function (e) { (byGroup[e.GroupNo] = byGroup[e.GroupNo] || []).push(e); });
+                    Object.keys(byGroup).sort(function (a, b) { return a - b; }).forEach(function (g) { shtAddEligGroup(byGroup[g]); });
+                    // مصفوفة الأيام
                     (s.Days || []).forEach(function (day) {
                         var el = shtEls(day.DayIndex);
                         el.kind.value = day.DayKind || 'Work';
@@ -404,6 +604,7 @@
                 }
             }
             shtModeChanged();
+            shtConflictChanged();
             document.getElementById('sht-slide').classList.add('open');
             document.getElementById('sht-backdrop').classList.add('open');
         }

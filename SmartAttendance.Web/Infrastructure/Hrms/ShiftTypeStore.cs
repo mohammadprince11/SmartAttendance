@@ -20,6 +20,28 @@ public static class ShiftTypeStore
     public static readonly string[] Colors =
         { "#12D9E3", "#4ade80", "#facc15", "#f97316", "#f87171", "#a78bfa", "#60a5fa", "#f472b6" };
 
+    /// <summary>نوع إجراء تعارض المغادرات (تبويب 3 نمط كيان): تسجيله مغادرة أو اقتطاع.</summary>
+    public static readonly (string Key, string Label)[] ConflictActions =
+    {
+        ("Permission", "المغادرات"),
+        ("Deduction", "اقتطاع")
+    };
+
+    /// <summary>حقول معايير الاستحقاق (تبويب 4 نمط كيان) — سمات الموظف المتاحة عندنا.</summary>
+    public static readonly (string Key, string Label)[] EligibilityFields =
+    {
+        ("Department", "القسم"),
+        ("Branch", "الفرع"),
+        ("Position", "المنصب"),
+        ("ContractType", "نوع العقد"),
+        ("Nationality", "الجنسية"),
+        ("MaritalStatus", "الحالة الاجتماعية"),
+        ("Employee", "موظف محدد")
+    };
+
+    public static string LabelOf((string Key, string Label)[] list, string key) =>
+        list.FirstOrDefault(x => x.Key == key).Label ?? key;
+
     public sealed class ShiftDay
     {
         public int DayIndex { get; set; }                 // 0=السبت .. 6=الجمعة
@@ -39,6 +61,14 @@ public static class ShiftTypeStore
         public string StartTime { get; set; } = "09:00";
         public string EndTime { get; set; } = "13:00";
         public decimal Hours => ComputeHours(StartTime, EndTime);
+    }
+
+    /// <summary>قاعدة استحقاق واحدة: حقل موظف = قيمة، ضمن مجموعة (GroupNo). المجموعات OR، وداخلها AND.</summary>
+    public sealed class EligibilityRule
+    {
+        public int GroupNo { get; set; }
+        public string Field { get; set; } = "Department";   // انظر EligibilityFields
+        public string Value { get; set; } = string.Empty;   // معرّف (قسم/فرع/منصب/موظف) أو نص (جنسية…)
     }
 
     public sealed class ShiftType
@@ -70,9 +100,21 @@ public static class ShiftTypeStore
         public bool TimeLimitToDayAfter { get; set; }         // مرساة الحد: إلى اليوم التالي
         public string? MidShiftTime { get; set; }             // وقت منتصف المناوبة HH:mm (تقسيم بصمات المناوبة العابرة لمنتصف الليل)
 
+        // ===== تبويب 3: قواعد التعارض مع المغادرات (نمط كيان) =====
+        // سيناريوهان لعدم تطابق المغادرة المعتمدة مع الحضور الفعلي، لكل منهما إجراء.
+        public bool ConflictLateReturnEnabled { get; set; }          // تأخّر العودة من المغادرة
+        public string ConflictLateReturnAction { get; set; } = "Deduction"; // Permission | Deduction
+        public decimal ConflictLateReturnValue { get; set; }
+        public bool ConflictEarlyLeaveEnabled { get; set; }          // الذهاب مبكراً للمغادرة
+        public string ConflictEarlyLeaveAction { get; set; } = "Deduction";
+        public decimal ConflictEarlyLeaveValue { get; set; }
+
         public bool IsActive { get; set; } = true;
         public List<ShiftDay> Days { get; set; } = new();
         public List<ShiftPeriod> Periods { get; set; } = new();
+
+        // ===== تبويب 4: معايير الاستحقاق (شرائح موظفين — مجموعات OR، داخلها AND) =====
+        public List<EligibilityRule> Eligibility { get; set; } = new();
 
         /// <summary>أسماء أيام العطلة/الراحة — لعمود القائمة (مثل عرض كيان).</summary>
         public string OffDaysText => string.Join(" ",
@@ -145,6 +187,28 @@ IF COL_LENGTH('ShiftTypes','TimeLimitFromDayBefore') IS NULL ALTER TABLE ShiftTy
 IF COL_LENGTH('ShiftTypes','TimeLimitTo') IS NULL ALTER TABLE ShiftTypes ADD TimeLimitTo nvarchar(5) NULL;
 IF COL_LENGTH('ShiftTypes','TimeLimitToDayAfter') IS NULL ALTER TABLE ShiftTypes ADD TimeLimitToDayAfter bit NOT NULL CONSTRAINT DF_ST_TLTA DEFAULT(0);
 IF COL_LENGTH('ShiftTypes','MidShiftTime') IS NULL ALTER TABLE ShiftTypes ADD MidShiftTime nvarchar(5) NULL;
+
+-- تبويب 3: قواعد التعارض مع المغادرات (idempotent)
+IF COL_LENGTH('ShiftTypes','ConflictLateReturnEnabled') IS NULL ALTER TABLE ShiftTypes ADD ConflictLateReturnEnabled bit NOT NULL CONSTRAINT DF_ST_CLRE DEFAULT(0);
+IF COL_LENGTH('ShiftTypes','ConflictLateReturnAction') IS NULL ALTER TABLE ShiftTypes ADD ConflictLateReturnAction nvarchar(20) NOT NULL CONSTRAINT DF_ST_CLRA DEFAULT(N'Deduction');
+IF COL_LENGTH('ShiftTypes','ConflictLateReturnValue') IS NULL ALTER TABLE ShiftTypes ADD ConflictLateReturnValue decimal(12,2) NOT NULL CONSTRAINT DF_ST_CLRV DEFAULT(0);
+IF COL_LENGTH('ShiftTypes','ConflictEarlyLeaveEnabled') IS NULL ALTER TABLE ShiftTypes ADD ConflictEarlyLeaveEnabled bit NOT NULL CONSTRAINT DF_ST_CELE DEFAULT(0);
+IF COL_LENGTH('ShiftTypes','ConflictEarlyLeaveAction') IS NULL ALTER TABLE ShiftTypes ADD ConflictEarlyLeaveAction nvarchar(20) NOT NULL CONSTRAINT DF_ST_CELA DEFAULT(N'Deduction');
+IF COL_LENGTH('ShiftTypes','ConflictEarlyLeaveValue') IS NULL ALTER TABLE ShiftTypes ADD ConflictEarlyLeaveValue decimal(12,2) NOT NULL CONSTRAINT DF_ST_CELV DEFAULT(0);
+
+-- تبويب 4: معايير الاستحقاق (شرائح موظفين)
+IF OBJECT_ID('ShiftEligibilityRules', 'U') IS NULL
+BEGIN
+    CREATE TABLE ShiftEligibilityRules
+    (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        ShiftTypeId int NOT NULL,
+        GroupNo int NOT NULL DEFAULT(0),
+        Field nvarchar(30) NOT NULL,
+        Value nvarchar(200) NOT NULL DEFAULT(N'')
+    );
+    CREATE INDEX IX_ShiftEligibilityRules_Shift ON ShiftEligibilityRules (ShiftTypeId, GroupNo);
+END;
 """);
     }
 
@@ -183,15 +247,33 @@ IF COL_LENGTH('ShiftTypes','MidShiftTime') IS NULL ALTER TABLE ShiftTypes ADD Mi
                 }
             });
 
+        var eligibility = await HrmsDatabase.QueryAsync(
+            dbContext,
+            "SELECT * FROM ShiftEligibilityRules ORDER BY ShiftTypeId, GroupNo, Id;",
+            command => { },
+            reader => new
+            {
+                ShiftTypeId = HrmsDatabase.GetInt(reader, "ShiftTypeId"),
+                Rule = new EligibilityRule
+                {
+                    GroupNo = HrmsDatabase.GetInt(reader, "GroupNo"),
+                    Field = HrmsDatabase.GetString(reader, "Field") is { Length: > 0 } f ? f : "Department",
+                    Value = HrmsDatabase.GetString(reader, "Value")
+                }
+            });
+
         var daysByShift = days.GroupBy(d => d.ShiftTypeId)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Day).ToList());
         var periodsByShift = periods.GroupBy(p => p.ShiftTypeId)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Period).ToList());
+        var eligByShift = eligibility.GroupBy(e => e.ShiftTypeId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Rule).ToList());
 
         foreach (var shift in shifts)
         {
             shift.Days = daysByShift.TryGetValue(shift.Id, out var list) ? list : new();
             shift.Periods = periodsByShift.TryGetValue(shift.Id, out var pl) ? pl : new();
+            shift.Eligibility = eligByShift.TryGetValue(shift.Id, out var el) ? el : new();
         }
         return shifts;
     }
@@ -231,10 +313,13 @@ SET Name = @Name, NameEn = @NameEn, ColorHex = @Color,
     TotalDurationMode = @TDM, AvailableInRoster = @AIR, RequestableFromEss = @RFE,
     LatenessGraceMinutes = @LGM, EarlyLeaveGraceMinutes = @ELG,
     TimeLimitFrom = @TLF, TimeLimitFromDayBefore = @TLFB, TimeLimitTo = @TLT, TimeLimitToDayAfter = @TLTA, MidShiftTime = @MST,
+    ConflictLateReturnEnabled = @CLRE, ConflictLateReturnAction = @CLRA, ConflictLateReturnValue = @CLRV,
+    ConflictEarlyLeaveEnabled = @CELE, ConflictEarlyLeaveAction = @CELA, ConflictEarlyLeaveValue = @CELV,
     IsActive = @Active
 WHERE Id = @Id;
 DELETE FROM ShiftTypeDays WHERE ShiftTypeId = @Id;
 DELETE FROM ShiftTypePeriods WHERE ShiftTypeId = @Id;
+DELETE FROM ShiftEligibilityRules WHERE ShiftTypeId = @Id;
 """,
                 command =>
                 {
@@ -250,10 +335,13 @@ DELETE FROM ShiftTypePeriods WHERE ShiftTypeId = @Id;
 INSERT INTO ShiftTypes (Name, NameEn, ColorHex, IsFlexible, FlexDailyHours, MultiPeriod,
     FillMissingCheckIn, FillMissingCheckOut, StripSemantics, ConsiderPermissionsOutsideShift,
     ExcludePermsOutsideStartFromLate, TotalDurationMode, AvailableInRoster, RequestableFromEss,
-    LatenessGraceMinutes, EarlyLeaveGraceMinutes, TimeLimitFrom, TimeLimitFromDayBefore, TimeLimitTo, TimeLimitToDayAfter, MidShiftTime, IsActive)
+    LatenessGraceMinutes, EarlyLeaveGraceMinutes, TimeLimitFrom, TimeLimitFromDayBefore, TimeLimitTo, TimeLimitToDayAfter, MidShiftTime,
+    ConflictLateReturnEnabled, ConflictLateReturnAction, ConflictLateReturnValue,
+    ConflictEarlyLeaveEnabled, ConflictEarlyLeaveAction, ConflictEarlyLeaveValue, IsActive)
 VALUES (@Name, @NameEn, @Color, @Flex, @FlexHours, @Multi,
     @FMI, @FMO, @STS, @CPO, @EPL, @TDM, @AIR, @RFE,
-    @LGM, @ELG, @TLF, @TLFB, @TLT, @TLTA, @MST, @Active);
+    @LGM, @ELG, @TLF, @TLFB, @TLT, @TLTA, @MST,
+    @CLRE, @CLRA, @CLRV, @CELE, @CELA, @CELV, @Active);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
                 command => AddShiftParameters(command, shift));
@@ -299,6 +387,22 @@ VALUES (@ShiftTypeId, @DayIndex, @DayKind, @StartTime, @EndTime, @WorkHours);
                 });
         }
 
+        // معايير الاستحقاق: صفوف بمجموعات (تجاهل القواعد الفارغة القيمة)
+        foreach (var rule in shift.Eligibility.Where(r => !string.IsNullOrWhiteSpace(r.Value)))
+        {
+            var current = rule;
+            await HrmsDatabase.ExecuteAsync(
+                dbContext,
+                "INSERT INTO ShiftEligibilityRules (ShiftTypeId, GroupNo, Field, Value) VALUES (@S, @G, @F, @V);",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@S", id);
+                    HrmsDatabase.AddParameter(command, "@G", current.GroupNo);
+                    HrmsDatabase.AddParameter(command, "@F", current.Field);
+                    HrmsDatabase.AddParameter(command, "@V", current.Value);
+                });
+        }
+
         return id;
     }
 
@@ -310,6 +414,7 @@ VALUES (@ShiftTypeId, @DayIndex, @DayKind, @StartTime, @EndTime, @WorkHours);
             """
 DELETE FROM ShiftTypeDays WHERE ShiftTypeId = @Id;
 DELETE FROM ShiftTypePeriods WHERE ShiftTypeId = @Id;
+DELETE FROM ShiftEligibilityRules WHERE ShiftTypeId = @Id;
 DELETE FROM ShiftTypes WHERE Id = @Id;
 """,
             command => HrmsDatabase.AddParameter(command, "@Id", id));
@@ -348,6 +453,12 @@ DELETE FROM ShiftTypes WHERE Id = @Id;
         TimeLimitTo = HrmsDatabase.GetString(reader, "TimeLimitTo") is { Length: > 0 } tlt ? tlt : null,
         TimeLimitToDayAfter = HrmsDatabase.GetBool(reader, "TimeLimitToDayAfter"),
         MidShiftTime = HrmsDatabase.GetString(reader, "MidShiftTime") is { Length: > 0 } mst ? mst : null,
+        ConflictLateReturnEnabled = HrmsDatabase.GetBool(reader, "ConflictLateReturnEnabled"),
+        ConflictLateReturnAction = HrmsDatabase.GetString(reader, "ConflictLateReturnAction") is { Length: > 0 } clra ? clra : "Deduction",
+        ConflictLateReturnValue = reader["ConflictLateReturnValue"] is decimal clrv ? clrv : 0,
+        ConflictEarlyLeaveEnabled = HrmsDatabase.GetBool(reader, "ConflictEarlyLeaveEnabled"),
+        ConflictEarlyLeaveAction = HrmsDatabase.GetString(reader, "ConflictEarlyLeaveAction") is { Length: > 0 } cela ? cela : "Deduction",
+        ConflictEarlyLeaveValue = reader["ConflictEarlyLeaveValue"] is decimal celv ? celv : 0,
         IsActive = HrmsDatabase.GetBool(reader, "IsActive")
     };
 
@@ -383,6 +494,29 @@ DELETE FROM ShiftTypes WHERE Id = @Id;
         HrmsDatabase.AddParameter(command, "@TLT", (object?)shift.TimeLimitTo ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@TLTA", shift.TimeLimitToDayAfter ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@MST", (object?)shift.MidShiftTime ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@CLRE", shift.ConflictLateReturnEnabled ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@CLRA", string.IsNullOrWhiteSpace(shift.ConflictLateReturnAction) ? "Deduction" : shift.ConflictLateReturnAction);
+        HrmsDatabase.AddParameter(command, "@CLRV", shift.ConflictLateReturnValue);
+        HrmsDatabase.AddParameter(command, "@CELE", shift.ConflictEarlyLeaveEnabled ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@CELA", string.IsNullOrWhiteSpace(shift.ConflictEarlyLeaveAction) ? "Deduction" : shift.ConflictEarlyLeaveAction);
+        HrmsDatabase.AddParameter(command, "@CELV", shift.ConflictEarlyLeaveValue);
         HrmsDatabase.AddParameter(command, "@Active", shift.IsActive ? 1 : 0);
+    }
+
+    /// <summary>
+    /// هل الموظف مؤهّل لهذه المناوبة حسب معايير الاستحقاق؟ لا قواعد ⇒ الكل مؤهل.
+    /// المجموعات OR، وداخل المجموعة AND. attrs = قيم حقول الموظف (Department/Branch/…)
+    /// كنصوص (معرّفات للحقول المرجعية). قاعدة Employee تطابق معرّف الموظف.
+    /// </summary>
+    public static bool EmployeeMatchesEligibility(ShiftType shift, IReadOnlyDictionary<string, string?> attrs)
+    {
+        if (shift.Eligibility.Count == 0) return true;
+
+        return shift.Eligibility
+            .GroupBy(r => r.GroupNo)
+            .Any(group => group.All(rule =>
+                attrs.TryGetValue(rule.Field, out var actual)
+                && !string.IsNullOrWhiteSpace(actual)
+                && string.Equals(actual.Trim(), rule.Value.Trim(), StringComparison.OrdinalIgnoreCase)));
     }
 }
