@@ -39,6 +39,10 @@ public class RaisesModel : PageModel
     public int AppliedCount { get; set; }
     public decimal TotalIncrease { get; set; }
 
+    public List<string> AllDepartments { get; set; } = new();
+    public List<string> AllBranches { get; set; } = new();
+    public List<string> AllJobTitles { get; set; } = new();
+
     public async Task OnGetAsync()
     {
         if (Tab != "Applied") Tab = "Pending";
@@ -52,6 +56,107 @@ public class RaisesModel : PageModel
         TotalCount = Items.Count;
 
         Employees = await SalaryRaiseStore.EmployeeBasicsAsync(_db);
+        (AllDepartments, AllBranches, AllJobTitles) = await MassScopeResolver.OrgListsAsync(_db);
+    }
+
+    /// <summary>تطبيق جماعي (= قفل) للزيادات المحددة قيد الانتظار.</summary>
+    public async Task<IActionResult> OnPostApplyManyAsync()
+    {
+        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        if (ids.Count == 0) { TempData["PayrollMessage"] = "حدد زيادات أولاً."; TempData["PayrollOk"] = false; return RedirectToPage(); }
+        var n = await SalaryRaiseStore.ApplyManyAsync(_db, ids, User?.Identity?.Name ?? "system");
+        TempData["PayrollMessage"] = $"طُبّقت {n} زيادة وحُدّثت رواتبها الأساسية.";
+        TempData["PayrollOk"] = n > 0;
+        return RedirectToPage(new { Tab = "Applied" });
+    }
+
+    public async Task<IActionResult> OnPostDeleteManyAsync()
+    {
+        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        if (ids.Count == 0) { TempData["PayrollMessage"] = "حدد زيادات أولاً."; TempData["PayrollOk"] = false; return RedirectToPage(); }
+        await SalaryRaiseStore.DeleteManyAsync(_db, ids);
+        TempData["PayrollMessage"] = $"تم حذف {ids.Count} زيادة.";
+        return RedirectToPage();
+    }
+
+    /// <summary>إدخال جماعي (نمط كيان «النطاق»): نفس الزيادة (مبلغ/نسبة) لمجموعة موظفين — زيادة قيد الانتظار لكل موظف.</summary>
+    public async Task<IActionResult> OnPostMassEntryAsync(IFormFile? massFile)
+    {
+        var f = Request.Form;
+        DateOnly? D(string key) => DateOnly.TryParse(f[key], out var d) ? d : null;
+        var type = f["RaiseType"].ToString() == SalaryRaiseStore.ByPercentage ? SalaryRaiseStore.ByPercentage : SalaryRaiseStore.ByAmount;
+        var value = decimal.TryParse(f["RaiseValue"], out var v) ? v : 0;
+        if (value <= 0) { TempData["PayrollMessage"] = "قيمة الزيادة يجب أن تكون أكبر من صفر."; TempData["PayrollOk"] = false; return RedirectToPage(); }
+
+        var (empIds, skipped, scopeLabel, err) = await MassScopeResolver.ResolveAsync(_db, f, massFile);
+        if (err != null) { TempData["PayrollMessage"] = err; TempData["PayrollOk"] = false; return RedirectToPage(); }
+        if (empIds.Count == 0) { TempData["PayrollMessage"] = "لم يُحدَّد أي موظف مطابق."; TempData["PayrollOk"] = false; return RedirectToPage(); }
+
+        var basics = (await SalaryRaiseStore.EmployeeBasicsAsync(_db)).ToDictionary(x => x.Id, x => x.Basic);
+        var reason = string.IsNullOrWhiteSpace(f["Reason"]) ? null : f["Reason"].ToString().Trim();
+        var eff = D("EffectiveDate");
+        var user = User?.Identity?.Name ?? "system";
+        int n = 0;
+        foreach (var empId in empIds)
+        {
+            var oldBasic = basics.TryGetValue(empId, out var b) ? b : 0;
+            var newBasic = type == SalaryRaiseStore.ByPercentage
+                ? Math.Round(oldBasic * (1 + value / 100m), 2)
+                : Math.Round(oldBasic + value, 2);
+            await SalaryRaiseStore.SaveAsync(_db, new SalaryRaiseStore.Raise
+            {
+                EmployeeId = empId, OldBasic = oldBasic, RaiseType = type, RaiseValue = value, NewBasic = newBasic,
+                EffectiveDate = eff, Reason = reason, Status = "Approved"
+            }, user);
+            n++;
+        }
+        TempData["PayrollMessage"] = $"أُضيفت {n} زيادة قيد الانتظار (النطاق: {scopeLabel})"
+            + (skipped > 0 ? $"، وتُخطّي {skipped} كوداً غير مطابق." : ".");
+        TempData["PayrollOk"] = true;
+        return RedirectToPage();
+    }
+
+    /// <summary>استيراد زيادات من إكسل/CSV (الأعمدة: رمز الموظف | القيمة | النوع؟(مبلغ/نسبة) | السبب؟).</summary>
+    public async Task<IActionResult> OnPostImportAsync(IFormFile? importFile)
+    {
+        if (importFile == null || importFile.Length == 0)
+        { TempData["PayrollMessage"] = "اختر ملف إكسل أو CSV."; TempData["PayrollOk"] = false; return RedirectToPage(); }
+
+        List<string[]> rows;
+        try { await using var s = importFile.OpenReadStream(); rows = SpreadsheetReader.Read(s, importFile.FileName); }
+        catch (Exception ex) { TempData["PayrollMessage"] = "تعذّر قراءة الملف: " + ex.Message; TempData["PayrollOk"] = false; return RedirectToPage(); }
+
+        var basics = await SalaryRaiseStore.EmployeeBasicsAsync(_db);
+        var byCode = new Dictionary<string, SalaryRaiseStore.EmployeeBasic>();
+        foreach (var e in basics) { var k = e.No.Trim().ToLowerInvariant(); if (k.Length > 0) byCode[k] = e; }
+
+        int imported = 0, skipped = 0;
+        var user = User?.Identity?.Name ?? "system";
+        for (var i = 1; i < rows.Count; i++)
+        {
+            var row = rows[i];
+            if (row.Length < 2) { skipped++; continue; }
+            var code = row[0].Trim().ToLowerInvariant();
+            if (code.Length == 0 || !byCode.TryGetValue(code, out var emp)) { skipped++; continue; }
+            if (!decimal.TryParse(row[1], out var value) || value <= 0) { skipped++; continue; }
+
+            var type = row.Length > 2 && (row[2].Contains("نسب") || row[2].Contains("%") || row[2].Trim().Equals("Percentage", StringComparison.OrdinalIgnoreCase))
+                ? SalaryRaiseStore.ByPercentage : SalaryRaiseStore.ByAmount;
+            var reason = row.Length > 3 && !string.IsNullOrWhiteSpace(row[3]) ? row[3].Trim() : null;
+            var newBasic = type == SalaryRaiseStore.ByPercentage
+                ? Math.Round(emp.Basic * (1 + value / 100m), 2)
+                : Math.Round(emp.Basic + value, 2);
+
+            await SalaryRaiseStore.SaveAsync(_db, new SalaryRaiseStore.Raise
+            {
+                EmployeeId = emp.Id, OldBasic = emp.Basic, RaiseType = type, RaiseValue = value, NewBasic = newBasic,
+                Reason = reason, Status = "Approved"
+            }, user);
+            imported++;
+        }
+        TempData["PayrollMessage"] = $"استُوردت {imported} زيادة قيد الانتظار" + (skipped > 0 ? $"، وتُخطّي {skipped} صفاً (بيانات غير صالحة)." : ".");
+        TempData["PayrollOk"] = imported > 0;
+        return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostSaveAsync()

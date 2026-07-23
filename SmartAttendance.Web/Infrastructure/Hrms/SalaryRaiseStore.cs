@@ -223,6 +223,22 @@ ELSE
         return true;
     }
 
+    /// <summary>تطبيق جماعي (= «قفل») لعدة زيادات قيد الانتظار. يرجع عدد ما طُبّق فعلاً.</summary>
+    public static async Task<int> ApplyManyAsync(ApplicationDbContext dbContext, IEnumerable<int> ids, string userName)
+    {
+        int n = 0;
+        foreach (var id in ids.Distinct())
+            if (await ApplyAsync(dbContext, id, userName)) n++;
+        return n;
+    }
+
+    /// <summary>حذف جماعي للزيادات غير المُطبَّقة المحددة.</summary>
+    public static async Task DeleteManyAsync(ApplicationDbContext dbContext, IEnumerable<int> ids)
+    {
+        foreach (var id in ids.Distinct())
+            await DeleteAsync(dbContext, id);
+    }
+
     private static async Task<string> GenerateReferenceNoAsync(ApplicationDbContext dbContext)
     {
         var prefix = $"RS{DateTime.Today:yy}-";

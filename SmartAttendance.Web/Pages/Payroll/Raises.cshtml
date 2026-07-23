@@ -11,6 +11,7 @@
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/mass-scope.css" asp-append-version="true" />
 
 <style>
     .rz-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
@@ -27,6 +28,15 @@
     .rz-btn.danger:hover { background:rgba(248,113,113,.26); }
     .rz-btn.apply { background:rgba(52,211,153,.16); border:1px solid rgba(52,211,153,.5); color:#34d399; }
     .rz-btn.apply:hover { background:rgba(52,211,153,.28); }
+    .rz-btn.warn { background:rgba(250,204,21,.14); border:1px solid rgba(250,204,21,.45); color:#facc15; }
+    .rz-btn.icon { width:38px; padding:0; font-size:17px; display:inline-flex; align-items:center; justify-content:center; }
+    .rz-bulkbar { position:fixed; bottom:18px; inset-inline:0; margin-inline:auto; width:max-content; max-width:calc(100% - 32px);
+        z-index:60; display:none; gap:10px; align-items:center; flex-wrap:wrap; padding:12px 18px;
+        border:1px solid color-mix(in srgb,var(--acc) 45%,transparent); border-radius:16px;
+        background:var(--sa-surface,rgba(8,25,43,.98)); box-shadow:0 14px 44px rgba(0,0,0,.55); }
+    html[data-theme="light"] .rz-bulkbar { background:#fff; }
+    .rz-bulkbar.show { display:flex; }
+    .rz-bulkbar b { font-size:13px; font-weight:900; } .rz-bulkbar b span { color:var(--acc); }
     .rz-tabs { display:flex; gap:2px; border-bottom:1px solid rgba(73,111,151,.22); }
     .rz-tabs a { padding:11px 22px; font-size:13px; font-weight:900; color:var(--sa-muted,#8FA8BC); text-decoration:none; border-bottom:3px solid transparent; }
     .rz-tabs a.on { color:var(--acc); border-bottom-color:var(--acc); }
@@ -83,6 +93,12 @@
             <p>تغيير دائم للراتب الأساسي (بمبلغ أو نسبة). عند «التطبيق» يُحدَّث راتب الموظف الأساسي فوراً.</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button type="button" class="rz-btn ghost icon" title="زيادة جماعية — نفس الزيادة لعدة موظفين" aria-label="زيادة جماعية" onclick="massOpen()">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </button>
+            <button type="button" class="rz-btn ghost icon" title="استيراد من إكسل (رمز الموظف + القيمة)" aria-label="استيراد إكسل" onclick="impOpen()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
             <button type="button" class="rz-btn" onclick="rzOpen(0)">+ زيادة راتب</button>
         </div>
     </header>
@@ -112,6 +128,7 @@
         <div class="rz-alert @((TempData["PayrollOk"] as bool?) == false ? "err" : "")">@TempData["PayrollMessage"]</div>
     }
 
+    <form method="post">
     <div class="rz-card">
         @if (Model.Items.Count == 0)
         {
@@ -119,7 +136,7 @@
                 @if (Model.IsApplied)
                 { <text>لا زيادات مُطبَّقة بعد.</text> }
                 else
-                { <text>لا زيادات قيد الانتظار — أضف بـ«+ زيادة راتب».</text> }
+                { <text>لا زيادات قيد الانتظار — أضف بـ«+ زيادة راتب» أو زيادة جماعية.</text> }
             </div>
         }
         else
@@ -127,6 +144,8 @@
             <table class="rz-table">
                 <thead>
                     <tr>
+                        @if (!Model.IsApplied)
+                        { <th style="width:34px"><input type="checkbox" onclick="rzAll(this)" /></th> }
                         <th>الرقم المرجعي</th><th>الموظف</th><th>النوع</th><th>الأساسي (قبل ← بعد)</th>
                         <th>الزيادة</th><th>تاريخ السريان</th><th>السبب</th><th>@(Model.IsApplied ? "طُبّقت في" : "الحالة")</th>
                         <th style="text-align:end">إجراءات</th>
@@ -136,6 +155,8 @@
                     @foreach (var r in Model.Items)
                     {
                         <tr>
+                            @if (!Model.IsApplied)
+                            { <td><input type="checkbox" name="SelectedIds" value="@r.Id" onchange="rzSel()" /></td> }
                             <td class="rz-ref">@r.ReferenceNo</td>
                             <td class="rz-emp"><b>@r.EmployeeName</b><span>@r.EmployeeNo</span></td>
                             <td>
@@ -151,26 +172,20 @@
                                 @if (r.IsApplied)
                                 { <span class="rz-ref" style="font-size:12px">@(r.AppliedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</span> }
                                 else
-                                { <span class="rz-chip pend">قيد الانتظار</span> }
+                                { <span class="rz-chip pend">قيد الانتظار (غير مقفلة)</span> }
                             </td>
                             <td>
                                 <div class="rz-actions">
                                     @if (!r.IsApplied)
                                     {
-                                        <form method="post" asp-page-handler="Apply" data-zyconfirm="تطبيق الزيادة على الراتب الأساسي؟">
-                                            <input type="hidden" name="id" value="@r.Id" />
-                                            <button type="submit" class="rz-btn apply sm">✔ تطبيق</button>
-                                        </form>
+                                        <button type="submit" asp-page-handler="Apply" name="id" value="@r.Id" class="rz-btn apply sm" data-zyconfirm="تطبيق (قفل) الزيادة؟">✔ تطبيق</button>
                                         <button type="button" class="rz-btn ghost sm" onclick="rzEdit(this)" data-rz="@J(new {
                                             r.Id, r.EmployeeId, r.RaiseType, r.RaiseValue, EffectiveDate=Dt(r.EffectiveDate), r.Reason, r.Note, r.Status })">تعديل</button>
-                                        <form method="post" asp-page-handler="Delete" data-zyconfirm="حذف الزيادة؟">
-                                            <input type="hidden" name="id" value="@r.Id" />
-                                            <button type="submit" class="rz-btn danger sm">حذف</button>
-                                        </form>
+                                        <button type="submit" asp-page-handler="Delete" name="id" value="@r.Id" class="rz-btn danger sm" data-zyconfirm="حذف الزيادة؟">حذف</button>
                                     }
                                     else
                                     {
-                                        <span class="rz-chip ap">✔ مُطبَّقة</span>
+                                        <span class="rz-chip ap">✔ مُطبَّقة (مقفلة)</span>
                                     }
                                 </div>
                             </td>
@@ -180,6 +195,15 @@
             </table>
         }
     </div>
+    @if (!Model.IsApplied && Model.Items.Count > 0)
+    {
+        <div class="rz-bulkbar" id="rz-bulkbar">
+            <b>المحدد: <span id="rz-selcount">0</span></b>
+            <button type="submit" asp-page-handler="ApplyMany" class="rz-btn apply" data-zyconfirm="تطبيق (قفل) الزيادات المحددة على الرواتب الأساسية؟">✔ تطبيق المحدد</button>
+            <button type="submit" asp-page-handler="DeleteMany" class="rz-btn danger" data-zyconfirm="حذف الزيادات المحددة؟">🗑 حذف المحدد</button>
+        </div>
+    }
+    </form>
 
     @* ===== نموذج زيادة راتب ===== *@
     <div class="hrms-slideover-backdrop" id="rz-backdrop" onclick="rzClose()"></div>
@@ -241,12 +265,119 @@
             </form>
         </div>
     </aside>
+
+    @* ===== زيادة جماعية (نطاق كيان) ===== *@
+    <div class="hrms-slideover-backdrop" id="mass-backdrop" onclick="massClose()"></div>
+    <aside class="hrms-slideover wide" id="mass-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2>👥 زيادة جماعية</h2>
+            <button type="button" class="hrms-slideover-close" onclick="massClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="MassEntry" enctype="multipart/form-data" class="rz-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="RaiseType" id="mass-RaiseType" value="Amount" />
+                <input type="hidden" name="ScopeMode" id="mass-ScopeMode" value="Manual" />
+
+                <div class="mass-sec">معلومات الزيادة</div>
+                <div class="rz-grid2">
+                    <label>نوع الزيادة *
+                        <span class="rz-seg" id="mass-seg">
+                            <label class="on" data-type="Amount" onclick="massSetType('Amount')"><input type="radio" name="_mt" checked /> مبلغ</label>
+                            <label data-type="Percentage" onclick="massSetType('Percentage')"><input type="radio" name="_mt" /> نسبة %</label>
+                        </span>
+                    </label>
+                    <label><span id="mass-valLabel">قيمة الزيادة (مبلغ) *</span><input type="number" name="RaiseValue" step="0.01" min="0" required /></label>
+                </div>
+                <div class="rz-grid2">
+                    <label>تاريخ السريان<input type="date" name="EffectiveDate" /></label>
+                    <label>السبب
+                        <select name="Reason">
+                            <option value="">— اختر —</option>
+                            <option value="علاوة سنوية">علاوة سنوية</option>
+                            <option value="ترقية">ترقية</option>
+                            <option value="تعديل هيكل الرواتب">تعديل هيكل الرواتب</option>
+                            <option value="استحقاق أداء">استحقاق أداء</option>
+                            <option value="أخرى">أخرى</option>
+                        </select>
+                    </label>
+                </div>
+
+                @* ===== النطاق — لمن تُطبَّق ===== *@
+                <div class="mass-sec">النطاق — لمن تُطبَّق</div>
+                <div class="mass-tabs">
+                    <button type="button" class="mass-tab on" data-m="Manual" onclick="massTab('Manual')">اختيار يدوي</button>
+                    <button type="button" class="mass-tab" data-m="Paste" onclick="massTab('Paste')">لصق أكواد</button>
+                    <button type="button" class="mass-tab" data-m="File" onclick="massTab('File')">ملف إكسل</button>
+                    <button type="button" class="mass-tab" data-m="Criteria" onclick="massTab('Criteria')">حسب معايير</button>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-Manual">
+                    <label>الموظفون <span id="mass-count" style="color:var(--acc)">(0 محدد)</span></label>
+                    <div style="display:flex;gap:6px">
+                        <input type="text" id="mass-empsearch" placeholder="بحث بالاسم أو الرمز" oninput="massRenderEmps()"
+                               style="flex:1;min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-weight:800" />
+                        <button type="button" class="rz-btn ghost sm" onclick="massSelectAll(true)">تحديد الظاهر</button>
+                        <button type="button" class="rz-btn ghost sm" onclick="massSelectAll(false)">مسح الكل</button>
+                    </div>
+                    <div id="mass-emplist" class="mass-list"></div>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-Paste" hidden>
+                    <div class="mass-paste-head">
+                        <b>أكواد الموظفين <span id="mass-codecount">(0 كود)</span></b>
+                        <button type="button" class="rz-btn ghost sm" onclick="massPasteClip()">📋 لصق من الحافظة</button>
+                    </div>
+                    <textarea name="MassCodes" id="mass-codes" rows="6" placeholder="انقر «لصق من الحافظة» أو ألصق مباشرة (Ctrl+V) — أكواد إكسل (سطر لكل كود) تتحوّل لفواصل تلقائياً"
+                              oninput="massCodeCount()" onpaste="massOnPaste(event)"></textarea>
+                    <p class="mass-hint">تُحلّ الأكواد إلى موظفين تلقائياً — غير المطابق يُتخطّى مع إظهار عدده.</p>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-File" hidden>
+                    <div class="mass-file-hint"><b style="color:var(--acc)">تنسيق الملف:</b> عمود واحد يحوي <b>رمز الموظف</b>.</div>
+                    <label>الملف (.xlsx أو .csv)<input type="file" name="massFile" accept=".xlsx,.csv" style="min-height:auto;padding:8px" /></label>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-Criteria" hidden>
+                    <p class="mass-hint">تُطبَّق على <b>كل الموظفين النشطين</b> المطابقين للمعايير.</p>
+                    <div class="rz-grid2">
+                        <label>القسم<select name="MassDept"><option value="">كل الأقسام</option>@foreach (var s in Model.AllDepartments){<option value="@s">@s</option>}</select></label>
+                        <label>الفرع<select name="MassBranch"><option value="">كل الفروع</option>@foreach (var s in Model.AllBranches){<option value="@s">@s</option>}</select></label>
+                    </div>
+                    <label>المسمى الوظيفي<select name="MassJobTitle"><option value="">كل المسميات</option>@foreach (var s in Model.AllJobTitles){<option value="@s">@s</option>}</select></label>
+                </div>
+
+                <p class="mass-hint">تُنشأ زيادة <b>قيد الانتظار</b> لكل موظف — طبّقها لاحقاً فردياً أو بالتحديد الجماعي.</p>
+                <button type="submit" class="rz-btn">حفظ الزيادات الجماعية</button>
+            </form>
+        </div>
+    </aside>
+
+    @* ===== استيراد إكسل ===== *@
+    <div class="hrms-slideover-backdrop" id="imp-backdrop" onclick="impClose()"></div>
+    <aside class="hrms-slideover" id="imp-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2>⬆ استيراد الزيادات (إكسل / CSV)</h2>
+            <button type="button" class="hrms-slideover-close" onclick="impClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Import" enctype="multipart/form-data" class="rz-form" style="display:flex;flex-direction:column;gap:12px">
+                <div class="mass-file-hint">
+                    <b style="color:var(--acc)">أعمدة الملف (الصف الأول ترويسة تُتجاهل):</b><br />
+                    A: رمز الموظف · B: القيمة · C: النوع (مبلغ / نسبة — اختياري، افتراضي مبلغ) · D: السبب (اختياري)
+                </div>
+                <label>الملف (.xlsx أو .csv) *<input type="file" name="importFile" accept=".xlsx,.csv" required style="min-height:auto;padding:8px" /></label>
+                <button type="submit" class="rz-btn">استيراد</button>
+            </form>
+        </div>
+    </aside>
 </section>
 
 @section Scripts {
     <script src="~/js/emp-picker.js" asp-append-version="true"></script>
+    <script src="~/js/mass-scope.js" asp-append-version="true"></script>
     <script>
         var RZ_EMP = @Html.Raw(empJson);
+        window.MASS_EMP = RZ_EMP;
         var rzCurrentBasic = 0;
 
         function fmt(n){ return (Math.round(n*100)/100).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2}); }
@@ -310,6 +441,31 @@
         }
         function rzClose(){ document.getElementById('rz-slide').classList.remove('open'); document.getElementById('rz-backdrop').classList.remove('open'); }
 
-        document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ rzClose(); } });
+        // ===== تحديد الصفوف + بار عائم =====
+        function rzAll(cb){ document.querySelectorAll('[name=SelectedIds]').forEach(function(x){x.checked=cb.checked;}); rzSel(); }
+        function rzSel(){
+            var bar = document.getElementById('rz-bulkbar'); if(!bar) return;
+            var n = document.querySelectorAll('[name=SelectedIds]:checked').length;
+            var c = document.getElementById('rz-selcount'); if(c) c.textContent = n;
+            bar.classList.toggle('show', n > 0);
+        }
+
+        // ===== زيادة جماعية =====
+        function massSetType(t){
+            document.getElementById('mass-RaiseType').value = t;
+            document.querySelectorAll('#mass-seg label').forEach(function(l){ l.classList.toggle('on', l.getAttribute('data-type')===t); });
+            document.getElementById('mass-valLabel').textContent = t==='Percentage' ? 'نسبة الزيادة (%) *' : 'قيمة الزيادة (مبلغ) *';
+        }
+        function massOpen(){
+            document.querySelector('#mass-slide form').reset();
+            massSetType('Amount');
+            massBuildEmps(); massRenderEmps(); massCount(); massTab('Manual');
+            document.getElementById('mass-slide').classList.add('open'); document.getElementById('mass-backdrop').classList.add('open');
+        }
+        function massClose(){ document.getElementById('mass-slide').classList.remove('open'); document.getElementById('mass-backdrop').classList.remove('open'); }
+        function impOpen(){ document.getElementById('imp-slide').classList.add('open'); document.getElementById('imp-backdrop').classList.add('open'); }
+        function impClose(){ document.getElementById('imp-slide').classList.remove('open'); document.getElementById('imp-backdrop').classList.remove('open'); }
+
+        document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ rzClose(); massClose(); impClose(); } });
     </script>
 }
