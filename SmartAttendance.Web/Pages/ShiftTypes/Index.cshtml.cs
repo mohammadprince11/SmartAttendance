@@ -39,6 +39,14 @@ public class IndexModel : PageModel
             IsFlexible = form["ShiftMode"] == "flex",
             FlexDailyHours = decimal.TryParse(form["FlexDailyHours"], out var flexHours) ? flexHours : 0,
             MultiPeriod = form["PeriodMode"] == "multi" && form["ShiftMode"] != "flex",
+            FillMissingCheckIn = form["FillMissingCheckIn"] == "true",
+            FillMissingCheckOut = form["FillMissingCheckOut"] == "true",
+            StripSemantics = form["StripSemantics"] == "true",
+            ConsiderPermissionsOutsideShift = form["ConsiderPermissionsOutsideShift"] == "true",
+            ExcludePermsOutsideStartFromLate = form["ExcludePermsOutsideStartFromLate"] == "true",
+            TotalDurationMode = form["TotalDurationMode"].ToString() is { Length: > 0 } tdm ? tdm : "WorkOnly",
+            AvailableInRoster = form["AvailableInRoster"] == "true",
+            RequestableFromEss = form["RequestableFromEss"] == "true",
             IsActive = form["IsActive"] == "true"
         };
 

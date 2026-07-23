@@ -50,6 +50,17 @@ public static class ShiftTypeStore
         public bool IsFlexible { get; set; }
         public decimal FlexDailyHours { get; set; }       // للمرنة: ساعات مطلوبة يومياً
         public bool MultiPeriod { get; set; }             // مناوبة بفترات متعددة (سبليت شفت)
+
+        // ===== قواعد سلوك المناوبة (أسفل اختيار الأيام بكيان) =====
+        public bool FillMissingCheckIn { get; set; }          // تعبئة وقت بدء المناوبة لبصمة دخول مفقودة
+        public bool FillMissingCheckOut { get; set; }         // تعبئة وقت انتهاء المناوبة لبصمة خروج مفقودة
+        public bool StripSemantics { get; set; }              // تجريد فترة الدلالات (استراحة/صلاة…) من الحضور
+        public bool ConsiderPermissionsOutsideShift { get; set; } // احتساب ساعات المغادرة خارج المناوبة
+        public bool ExcludePermsOutsideStartFromLate { get; set; } // استثناء المغادرات خارج بداية المناوبة من التأخير
+        public string TotalDurationMode { get; set; } = "WorkOnly"; // WorkOnly | IncludeOff | Both
+        public bool AvailableInRoster { get; set; } = true;   // متاحة بجدول الحضور (الروستر)
+        public bool RequestableFromEss { get; set; }          // قابلة للطلب من الخدمة الذاتية
+
         public bool IsActive { get; set; } = true;
         public List<ShiftDay> Days { get; set; } = new();
         public List<ShiftPeriod> Periods { get; set; } = new();
@@ -108,6 +119,16 @@ BEGIN
     );
     CREATE INDEX IX_ShiftTypePeriods_Shift ON ShiftTypePeriods (ShiftTypeId, Ordinal);
 END;
+
+-- قواعد سلوك المناوبة (idempotent)
+IF COL_LENGTH('ShiftTypes','FillMissingCheckIn') IS NULL ALTER TABLE ShiftTypes ADD FillMissingCheckIn bit NOT NULL CONSTRAINT DF_ST_FMI DEFAULT(0);
+IF COL_LENGTH('ShiftTypes','FillMissingCheckOut') IS NULL ALTER TABLE ShiftTypes ADD FillMissingCheckOut bit NOT NULL CONSTRAINT DF_ST_FMO DEFAULT(0);
+IF COL_LENGTH('ShiftTypes','StripSemantics') IS NULL ALTER TABLE ShiftTypes ADD StripSemantics bit NOT NULL CONSTRAINT DF_ST_STS DEFAULT(0);
+IF COL_LENGTH('ShiftTypes','ConsiderPermissionsOutsideShift') IS NULL ALTER TABLE ShiftTypes ADD ConsiderPermissionsOutsideShift bit NOT NULL CONSTRAINT DF_ST_CPO DEFAULT(0);
+IF COL_LENGTH('ShiftTypes','ExcludePermsOutsideStartFromLate') IS NULL ALTER TABLE ShiftTypes ADD ExcludePermsOutsideStartFromLate bit NOT NULL CONSTRAINT DF_ST_EPL DEFAULT(0);
+IF COL_LENGTH('ShiftTypes','TotalDurationMode') IS NULL ALTER TABLE ShiftTypes ADD TotalDurationMode nvarchar(20) NOT NULL CONSTRAINT DF_ST_TDM DEFAULT(N'WorkOnly');
+IF COL_LENGTH('ShiftTypes','AvailableInRoster') IS NULL ALTER TABLE ShiftTypes ADD AvailableInRoster bit NOT NULL CONSTRAINT DF_ST_AIR DEFAULT(1);
+IF COL_LENGTH('ShiftTypes','RequestableFromEss') IS NULL ALTER TABLE ShiftTypes ADD RequestableFromEss bit NOT NULL CONSTRAINT DF_ST_RFE DEFAULT(0);
 """);
     }
 
@@ -188,7 +209,11 @@ END;
                 """
 UPDATE ShiftTypes
 SET Name = @Name, NameEn = @NameEn, ColorHex = @Color,
-    IsFlexible = @Flex, FlexDailyHours = @FlexHours, MultiPeriod = @Multi, IsActive = @Active
+    IsFlexible = @Flex, FlexDailyHours = @FlexHours, MultiPeriod = @Multi,
+    FillMissingCheckIn = @FMI, FillMissingCheckOut = @FMO, StripSemantics = @STS,
+    ConsiderPermissionsOutsideShift = @CPO, ExcludePermsOutsideStartFromLate = @EPL,
+    TotalDurationMode = @TDM, AvailableInRoster = @AIR, RequestableFromEss = @RFE,
+    IsActive = @Active
 WHERE Id = @Id;
 DELETE FROM ShiftTypeDays WHERE ShiftTypeId = @Id;
 DELETE FROM ShiftTypePeriods WHERE ShiftTypeId = @Id;
@@ -204,8 +229,11 @@ DELETE FROM ShiftTypePeriods WHERE ShiftTypeId = @Id;
             id = await HrmsDatabase.ScalarAsync<int>(
                 dbContext,
                 """
-INSERT INTO ShiftTypes (Name, NameEn, ColorHex, IsFlexible, FlexDailyHours, MultiPeriod, IsActive)
-VALUES (@Name, @NameEn, @Color, @Flex, @FlexHours, @Multi, @Active);
+INSERT INTO ShiftTypes (Name, NameEn, ColorHex, IsFlexible, FlexDailyHours, MultiPeriod,
+    FillMissingCheckIn, FillMissingCheckOut, StripSemantics, ConsiderPermissionsOutsideShift,
+    ExcludePermsOutsideStartFromLate, TotalDurationMode, AvailableInRoster, RequestableFromEss, IsActive)
+VALUES (@Name, @NameEn, @Color, @Flex, @FlexHours, @Multi,
+    @FMI, @FMO, @STS, @CPO, @EPL, @TDM, @AIR, @RFE, @Active);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
                 command => AddShiftParameters(command, shift));
@@ -285,6 +313,14 @@ DELETE FROM ShiftTypes WHERE Id = @Id;
         IsFlexible = HrmsDatabase.GetBool(reader, "IsFlexible"),
         FlexDailyHours = reader["FlexDailyHours"] is decimal f ? f : 0,
         MultiPeriod = HrmsDatabase.GetBool(reader, "MultiPeriod"),
+        FillMissingCheckIn = HrmsDatabase.GetBool(reader, "FillMissingCheckIn"),
+        FillMissingCheckOut = HrmsDatabase.GetBool(reader, "FillMissingCheckOut"),
+        StripSemantics = HrmsDatabase.GetBool(reader, "StripSemantics"),
+        ConsiderPermissionsOutsideShift = HrmsDatabase.GetBool(reader, "ConsiderPermissionsOutsideShift"),
+        ExcludePermsOutsideStartFromLate = HrmsDatabase.GetBool(reader, "ExcludePermsOutsideStartFromLate"),
+        TotalDurationMode = HrmsDatabase.GetString(reader, "TotalDurationMode") is { Length: > 0 } td ? td : "WorkOnly",
+        AvailableInRoster = HrmsDatabase.GetBool(reader, "AvailableInRoster"),
+        RequestableFromEss = HrmsDatabase.GetBool(reader, "RequestableFromEss"),
         IsActive = HrmsDatabase.GetBool(reader, "IsActive")
     };
 
@@ -305,6 +341,14 @@ DELETE FROM ShiftTypes WHERE Id = @Id;
         HrmsDatabase.AddParameter(command, "@Flex", shift.IsFlexible ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@FlexHours", shift.FlexDailyHours);
         HrmsDatabase.AddParameter(command, "@Multi", shift.MultiPeriod ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@FMI", shift.FillMissingCheckIn ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@FMO", shift.FillMissingCheckOut ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@STS", shift.StripSemantics ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@CPO", shift.ConsiderPermissionsOutsideShift ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@EPL", shift.ExcludePermsOutsideStartFromLate ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@TDM", string.IsNullOrWhiteSpace(shift.TotalDurationMode) ? "WorkOnly" : shift.TotalDurationMode);
+        HrmsDatabase.AddParameter(command, "@AIR", shift.AvailableInRoster ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@RFE", shift.RequestableFromEss ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@Active", shift.IsActive ? 1 : 0);
     }
 }

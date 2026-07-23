@@ -13,6 +13,8 @@
     var shiftsJson = JsonSerializer.Serialize(Model.Shifts.Select(s => new
     {
         s.Id, s.Name, s.NameEn, s.ColorHex, s.IsFlexible, s.FlexDailyHours, s.MultiPeriod, s.IsActive,
+        s.FillMissingCheckIn, s.FillMissingCheckOut, s.StripSemantics, s.ConsiderPermissionsOutsideShift,
+        s.ExcludePermsOutsideStartFromLate, s.TotalDurationMode, s.AvailableInRoster, s.RequestableFromEss,
         Days = s.Days.Select(d => new { d.DayIndex, d.DayKind, d.StartTime, d.EndTime }),
         Periods = s.Periods.Select(p => new { p.StartTime, p.EndTime })
     }));
@@ -202,6 +204,25 @@
                     }
                 </div>
 
+                @* ===== قواعد سلوك المناوبة (أسفل اختيار الأيام — نمط كيان) ===== *@
+                <label style="margin-top:6px">قواعد المناوبة <span class="sht-hint">— كيف يعامل محرك الحضور بصمات هذه المناوبة</span></label>
+                <div style="display:flex;flex-direction:column;gap:8px;border:1px solid rgba(73,111,151,.18);border-radius:12px;padding:12px">
+                    <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="FillMissingCheckIn" value="true" id="sht-FMI" /> تعبئة وقت بدء المناوبة تلقائياً لأي بصمة دخول مفقودة</label>
+                    <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="FillMissingCheckOut" value="true" id="sht-FMO" /> تعبئة وقت انتهاء المناوبة تلقائياً لأي بصمة خروج مفقودة</label>
+                    <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="StripSemantics" value="true" id="sht-STS" /> تجريد فترة الدلالات (استراحة/صلاة…) من مدة الحضور</label>
+                    <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="ConsiderPermissionsOutsideShift" value="true" id="sht-CPO" /> احتساب ساعات المغادرة الواقعة خارج المناوبة</label>
+                    <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="ExcludePermsOutsideStartFromLate" value="true" id="sht-EPL" /> استثناء المغادرات خارج بداية المناوبة من التأخير</label>
+                    <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="AvailableInRoster" value="true" id="sht-AIR" checked /> متاحة في جدول الحضور (الروستر)</label>
+                    <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="RequestableFromEss" value="true" id="sht-RFE" /> قابلة للطلب من الخدمة الذاتية</label>
+                    <label style="max-width:260px">عند احتساب المدة الإجمالية
+                        <select name="TotalDurationMode" id="sht-TDM" style="min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 8px">
+                            <option value="WorkOnly">أيام العمل فقط</option>
+                            <option value="IncludeOff">اشمل أيام العطل</option>
+                            <option value="Both">كلاهما</option>
+                        </select>
+                    </label>
+                </div>
+
                 <label style="flex-direction:row;align-items:center;gap:8px">
                     <input type="checkbox" name="IsActive" value="true" id="sht-Active" checked /> المناوبة نشطة
                 </label>
@@ -325,6 +346,14 @@
                     var multi = !s.IsFlexible && !!s.MultiPeriod;
                     document.querySelector('[name="PeriodMode"][value="' + (multi ? 'multi' : 'single') + '"]').checked = true;
                     if (multi) (s.Periods || []).forEach(function (p) { shtAddPeriod(p.StartTime, p.EndTime); });
+                    document.getElementById('sht-FMI').checked = !!s.FillMissingCheckIn;
+                    document.getElementById('sht-FMO').checked = !!s.FillMissingCheckOut;
+                    document.getElementById('sht-STS').checked = !!s.StripSemantics;
+                    document.getElementById('sht-CPO').checked = !!s.ConsiderPermissionsOutsideShift;
+                    document.getElementById('sht-EPL').checked = !!s.ExcludePermsOutsideStartFromLate;
+                    document.getElementById('sht-AIR').checked = !!s.AvailableInRoster;
+                    document.getElementById('sht-RFE').checked = !!s.RequestableFromEss;
+                    document.getElementById('sht-TDM').value = s.TotalDurationMode || 'WorkOnly';
                     (s.Days || []).forEach(function (day) {
                         var el = shtEls(day.DayIndex);
                         el.kind.value = day.DayKind || 'Work';
