@@ -72,6 +72,9 @@
     .tx-sub { display:none; flex-direction:column; gap:10px; padding:10px 12px; border:1px dashed rgba(73,111,151,.3); border-radius:10px; background:rgba(0,0,0,.08); }
     .tx-sub.show { display:flex; }
     .tx-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .tx-adv-toggle { align-self:flex-start; background:transparent; border:1px dashed rgba(73,111,151,.4); color:var(--sa-muted,#8FA8BC); border-radius:10px; padding:8px 14px; font-size:12px; font-weight:900; cursor:pointer; }
+    .tx-adv-toggle.open { color:var(--acc); border-color:var(--acc); }
+    .tx-hint { font-size:12px; font-weight:800; color:var(--sa-muted,#8FA8BC); padding:2px 2px 6px; }
 </style>
 
 <section class="tx-page" dir="rtl">
@@ -208,6 +211,8 @@
                 <input type="hidden" name="SalaryItemId" id="tx-SalaryItemId" value="0" />
                 <input type="hidden" name="PaymentType" id="tx-PaymentType" value="InSalary" />
 
+                <p class="tx-hint">الحقول الأساسية تكفي لأغلب الحالات — الخيارات المتقدمة اختيارية.</p>
+
                 <label>اسم الموظف *
                     <select name="EmployeeId" id="tx-EmployeeId" required>
                         <option value="">— اختر الموظف —</option>
@@ -250,54 +255,57 @@
                     <label>السنة<input type="number" name="FYear" id="tx-FYear" min="2000" max="2100" value="@Model.Year" /></label>
                 </div>
 
-                <div class="tx-grid2">
-                    <label>تاريخ الحركة<input type="date" name="TransactionDate" id="tx-TransactionDate" /></label>
+                <label>تاريخ الحركة<input type="date" name="TransactionDate" id="tx-TransactionDate" /></label>
+
+                @* ===== خيارات متقدمة (مطويّة — تُظهَر عند الحاجة فقط) ===== *@
+                <button type="button" class="tx-adv-toggle" id="tx-adv-btn" onclick="txAdv()">▾ خيارات متقدمة (اختيارية)</button>
+                <div id="tx-adv" style="display:none;flex-direction:column;gap:12px">
                     <label>تاريخ التنفيذ<input type="date" name="EffectiveDate" id="tx-EffectiveDate" /></label>
-                </div>
 
-                @* غير محدود *@
-                <div class="tx-toggle"><span>غير محدود (متكرر بلا نهاية)</span><input type="checkbox" name="IsUnlimited" value="true" id="tx-IsUnlimited" onchange="txToggle('unlimited', !this.checked)" /></div>
-                <div class="tx-sub" id="tx-sub-unlimited">
-                    <div class="tx-grid2">
-                        <label>صالح من<input type="date" name="ValidFrom" id="tx-ValidFrom" /></label>
-                        <label>صالح إلى<input type="date" name="ValidTo" id="tx-ValidTo" /></label>
+                    @* غير محدود *@
+                    <div class="tx-toggle"><span>غير محدود (متكرر بلا نهاية)</span><input type="checkbox" name="IsUnlimited" value="true" id="tx-IsUnlimited" onchange="txToggle('unlimited', !this.checked)" /></div>
+                    <div class="tx-sub" id="tx-sub-unlimited">
+                        <div class="tx-grid2">
+                            <label>صالح من<input type="date" name="ValidFrom" id="tx-ValidFrom" /></label>
+                            <label>صالح إلى<input type="date" name="ValidTo" id="tx-ValidTo" /></label>
+                        </div>
                     </div>
-                </div>
 
-                @* بأثر رجعي *@
-                <div class="tx-toggle"><span>بأثر رجعي</span><input type="checkbox" name="IsRetroactive" value="true" id="tx-IsRetroactive" onchange="txToggle('retro', this.checked)" /></div>
-                <div class="tx-sub" id="tx-sub-retro">
-                    <label>تاريخ الأثر الرجعي<input type="date" name="RetroactiveDate" id="tx-RetroactiveDate" /></label>
-                    <div class="tx-toggle"><span>تحديث راتب الضمان الاجتماعي</span><input type="checkbox" name="UpdateSocialSecurity" value="true" id="tx-UpdateSocialSecurity" onchange="txToggle('ss', this.checked)" /></div>
-                    <div class="tx-sub" id="tx-sub-ss"><label>الحساب حتى التاريخ<input type="date" name="SocialSecurityToDate" id="tx-SocialSecurityToDate" /></label></div>
-                    <div class="tx-grid2">
-                        <label>راتب رجعي من<input type="date" name="SalaryFromDate" id="tx-SalaryFromDate" /></label>
-                        <label>راتب رجعي إلى<input type="date" name="SalaryToDate" id="tx-SalaryToDate" /></label>
+                    @* بأثر رجعي *@
+                    <div class="tx-toggle"><span>بأثر رجعي</span><input type="checkbox" name="IsRetroactive" value="true" id="tx-IsRetroactive" onchange="txToggle('retro', this.checked)" /></div>
+                    <div class="tx-sub" id="tx-sub-retro">
+                        <label>تاريخ الأثر الرجعي<input type="date" name="RetroactiveDate" id="tx-RetroactiveDate" /></label>
+                        <div class="tx-toggle"><span>تحديث راتب الضمان الاجتماعي</span><input type="checkbox" name="UpdateSocialSecurity" value="true" id="tx-UpdateSocialSecurity" onchange="txToggle('ss', this.checked)" /></div>
+                        <div class="tx-sub" id="tx-sub-ss"><label>الحساب حتى التاريخ<input type="date" name="SocialSecurityToDate" id="tx-SocialSecurityToDate" /></label></div>
+                        <div class="tx-grid2">
+                            <label>راتب رجعي من<input type="date" name="SalaryFromDate" id="tx-SalaryFromDate" /></label>
+                            <label>راتب رجعي إلى<input type="date" name="SalaryToDate" id="tx-SalaryToDate" /></label>
+                        </div>
                     </div>
-                </div>
 
-                @* جدولة / أقساط *@
-                <div class="tx-toggle"><span>جدولة (أقساط)</span><input type="checkbox" name="IsScheduled" value="true" id="tx-IsScheduled" onchange="txToggle('sched', this.checked)" /></div>
-                <div class="tx-sub" id="tx-sub-sched">
-                    <label>طريقة الجدولة
-                        <select name="InstallmentMode" id="tx-InstallmentMode">
-                            <option value="ByValue">حسب القيمة</option>
-                            <option value="ByMonth">حسب الشهر</option>
-                        </select>
-                    </label>
-                    <div class="tx-grid2">
-                        <label>عدد الأقساط<input type="number" name="InstallmentCount" id="tx-InstallmentCount" min="1" /></label>
-                        <label>قيمة القسط<input type="number" name="InstallmentAmount" id="tx-InstallmentAmount" step="0.01" /></label>
+                    @* جدولة / أقساط *@
+                    <div class="tx-toggle"><span>جدولة (أقساط)</span><input type="checkbox" name="IsScheduled" value="true" id="tx-IsScheduled" onchange="txToggle('sched', this.checked)" /></div>
+                    <div class="tx-sub" id="tx-sub-sched">
+                        <label>طريقة الجدولة
+                            <select name="InstallmentMode" id="tx-InstallmentMode">
+                                <option value="ByValue">حسب القيمة</option>
+                                <option value="ByMonth">حسب الشهر</option>
+                            </select>
+                        </label>
+                        <div class="tx-grid2">
+                            <label>عدد الأقساط<input type="number" name="InstallmentCount" id="tx-InstallmentCount" min="1" /></label>
+                            <label>قيمة القسط<input type="number" name="InstallmentAmount" id="tx-InstallmentAmount" step="0.01" /></label>
+                        </div>
+                        <div class="tx-grid2">
+                            <label>عدد الأشهر<input type="number" name="InstallmentMonths" id="tx-InstallmentMonths" min="1" /></label>
+                            <label>تاريخ أول قسط<input type="date" name="FirstInstallmentDate" id="tx-FirstInstallmentDate" /></label>
+                        </div>
                     </div>
-                    <div class="tx-grid2">
-                        <label>عدد الأشهر<input type="number" name="InstallmentMonths" id="tx-InstallmentMonths" min="1" /></label>
-                        <label>تاريخ أول قسط<input type="date" name="FirstInstallmentDate" id="tx-FirstInstallmentDate" /></label>
-                    </div>
-                </div>
 
-                @* مركز التكلفة *@
-                <div class="tx-toggle"><span>تغيير مركز التكلفة</span><input type="checkbox" name="ChangeCostCenter" value="true" id="tx-ChangeCostCenter" onchange="txToggle('cc', this.checked)" /></div>
-                <div class="tx-sub" id="tx-sub-cc"><label>مركز التكلفة<input type="text" name="CostCenter" id="tx-CostCenter" /></label></div>
+                    @* مركز التكلفة *@
+                    <div class="tx-toggle"><span>تغيير مركز التكلفة</span><input type="checkbox" name="ChangeCostCenter" value="true" id="tx-ChangeCostCenter" onchange="txToggle('cc', this.checked)" /></div>
+                    <div class="tx-sub" id="tx-sub-cc"><label>مركز التكلفة<input type="text" name="CostCenter" id="tx-CostCenter" /></label></div>
+                </div>
 
                 <label>الحالة
                     <select name="Status" id="tx-Status">
@@ -325,6 +333,13 @@
             document.querySelectorAll('#tx-pt label').forEach(function(l){ l.classList.toggle('on', l.getAttribute('data-pt')===v); });
         }
         function txToggle(key, show){ document.getElementById('tx-sub-'+key).classList.toggle('show', !!show); }
+        function txAdv(open){
+            var adv = document.getElementById('tx-adv'), btn = document.getElementById('tx-adv-btn');
+            var show = (open === undefined) ? adv.style.display === 'none' : open;
+            adv.style.display = show ? 'flex' : 'none';
+            btn.classList.toggle('open', show);
+            btn.textContent = (show ? '▴' : '▾') + ' خيارات متقدمة (اختيارية)';
+        }
 
         function txItemChanged(){
             var sel = document.getElementById('tx-ItemSelect'), val = sel.value;
@@ -349,6 +364,7 @@
             document.getElementById('tx-Id').value = id || 0;
             document.getElementById('tx-title').textContent = id ? 'تعديل حركة' : 'حركة جديدة';
             ['unlimited','retro','ss','sched','cc'].forEach(function(k){ document.getElementById('tx-sub-'+k).classList.remove('show'); });
+            txAdv(false);
             document.getElementById('tx-CustomWrap').hidden = true;
             document.getElementById('tx-ItemSelect').value=''; document.getElementById('tx-ItemName').value=''; document.getElementById('tx-SalaryItemId').value=0;
             txSetPt('InSalary');
@@ -381,6 +397,7 @@
                     document.getElementById('tx-CustomWrap').hidden=false;
                     document.getElementById('tx-CustomName').value=d.ItemName;
                 }
+                if (d.IsRetroactive || d.IsScheduled || d.ChangeCostCenter || d.IsUnlimited || d.EffectiveDate || d.ValidFrom) txAdv(true);
             } else {
                 var today = new Date().toISOString().slice(0,10);
                 setVal('tx-TransactionDate', today);
