@@ -1860,7 +1860,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeeProfileSettings/Index.cshtml": {
-    "mtime": 1784803105.848954,
+    "mtime": 1784812427.7535133,
     "ast_hash": "3d274b55ac7549d65798e027a10a6e8f",
     "semantic_hash": ""
   },
@@ -2010,7 +2010,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Employees/Profile.cshtml": {
-    "mtime": 1784803129.1740997,
+    "mtime": 1784812427.760499,
     "ast_hash": "e0b5d2132ec19307cb8f514802f8d04e",
     "semantic_hash": ""
   },
@@ -2040,7 +2040,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Engagement/Announcements.cshtml": {
-    "mtime": 1784803097.0412972,
+    "mtime": 1784812427.7630932,
     "ast_hash": "205cb720732f6db358afc9be654a0ee0",
     "semantic_hash": ""
   },
@@ -2075,7 +2075,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Engagement/Polls.cshtml": {
-    "mtime": 1784803091.6104155,
+    "mtime": 1784812427.764089,
     "ast_hash": "6df68647b52442f37cd527e54bf10c85",
     "semantic_hash": ""
   },
@@ -2335,7 +2335,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/TaxSocialSecurity.cshtml": {
-    "mtime": 1784803120.2249002,
+    "mtime": 1784812427.7950823,
     "ast_hash": "42be1e4806b78668539066ec4988c639",
     "semantic_hash": ""
   },
@@ -2450,7 +2450,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784804753.8616247,
+    "mtime": 1784812427.8006637,
     "ast_hash": "eb11c1e6ddc0fcb4608ba66fc2f08286",
     "semantic_hash": ""
   },
@@ -3295,7 +3295,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeeTasks/Index.cshtml": {
-    "mtime": 1784803114.678512,
+    "mtime": 1784812427.7584505,
     "ast_hash": "d98224a260fff66adef43ff4e3ebc886",
     "semantic_hash": ""
   },
@@ -3310,7 +3310,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/HrSettings/Lookups.cshtml": {
-    "mtime": 1784803089.1107621,
+    "mtime": 1784812427.769504,
     "ast_hash": "4839cbc20cb9266031513ba6185f997d",
     "semantic_hash": ""
   },
@@ -3325,7 +3325,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/PeopleReports/Index.cshtml": {
-    "mtime": 1784803104.0532098,
+    "mtime": 1784812427.7996552,
     "ast_hash": "7a7ca54577be64896414a26c13f81934",
     "semantic_hash": ""
   },
@@ -3410,7 +3410,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AssetsManagement/Index.cshtml": {
-    "mtime": 1784803087.1935987,
+    "mtime": 1784812427.7521863,
     "ast_hash": "3ebfbb033a24b74300d1594f42a33328",
     "semantic_hash": ""
   },
@@ -3430,12 +3430,12 @@
     "semantic_hash": ""
   },
   "docs/kayan-attendance-module-study.md": {
-    "mtime": 1784759295.4003613,
-    "ast_hash": "5a162d5df9765ad70b6c0e86c54a82a9",
+    "mtime": 1784826582.9673223,
+    "ast_hash": "5a0780e68c104d2019ecd43f9bcb5fda",
     "semantic_hash": ""
   },
   "docs/kayan-payroll-module-study.md": {
-    "mtime": 1784759346.010876,
+    "mtime": 1784812427.8101363,
     "ast_hash": "59d0f336cd39baf0ab135f4f219c1b6d",
     "semantic_hash": ""
   },
@@ -3465,7 +3465,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/HrSettings/ApprovalTemplates.cshtml": {
-    "mtime": 1784803101.7076383,
+    "mtime": 1784812427.7654054,
     "ast_hash": "0e69e93d2c945b4407f81cff372f8538",
     "semantic_hash": ""
   },
@@ -3490,7 +3490,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/HrSettings/EntityFields.cshtml": {
-    "mtime": 1784803094.5272908,
+    "mtime": 1784812427.7684236,
     "ast_hash": "dae308fa1f45ce64c8a68d99525d3eec",
     "semantic_hash": ""
   },
@@ -3515,7 +3515,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/HrSettings/EmployeeGroups.cshtml": {
-    "mtime": 1784803099.4039972,
+    "mtime": 1784812427.7674217,
     "ast_hash": "9ac8cefe78d280e338a2e61a1495a237",
     "semantic_hash": ""
   },
@@ -3525,18 +3525,18 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/ShiftTypeStore.cs": {
-    "mtime": 1784706742.5785072,
-    "ast_hash": "4f1b0630c28ebc22e052a785c89ef316",
+    "mtime": 1784825191.0145676,
+    "ast_hash": "4232cf04422cda551bf1d99cf7252fad",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/ShiftTypes/Index.cshtml": {
-    "mtime": 1784720249.0264757,
-    "ast_hash": "cc39830b70368fca5114532fa4ee2cf8",
+    "mtime": 1784825738.0885208,
+    "ast_hash": "464855fdd3063615165718895fcf7568",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/ShiftTypes/Index.cshtml.cs": {
-    "mtime": 1784706742.6195664,
-    "ast_hash": "b7d83a2202e763c611b55598a4534ac6",
+    "mtime": 1784825274.5921369,
+    "ast_hash": "ae352ca48a428f1755495b4e79c76799",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/AttendanceSourceStore.cs": {
@@ -3560,8 +3560,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/DayAttendanceStore.cs": {
-    "mtime": 1784760572.5839841,
-    "ast_hash": "a1331a2fdfb011441aecb19450fc83d7",
+    "mtime": 1784826276.2612946,
+    "ast_hash": "50a249df76e83377532359243cd2e0c8",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/DayAttendance/Index.cshtml": {
@@ -3575,33 +3575,33 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/RecommendationStore.cs": {
-    "mtime": 1784706742.5762503,
-    "ast_hash": "3b4f3e23a2c67abab6416a535e9455ec",
+    "mtime": 1784823300.6818461,
+    "ast_hash": "341cd77c6e24835d14221489d009c828",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/ShiftRuleStore.cs": {
-    "mtime": 1784706742.5785072,
-    "ast_hash": "af6fbc97c2a576ac6310fd26c1d2809b",
+    "mtime": 1784822809.781525,
+    "ast_hash": "7d1f04c25e738d9d99eebc3b9f341108",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AttendanceRecommendations/Index.cshtml": {
-    "mtime": 1784720271.6318843,
-    "ast_hash": "72d4cb50d982507922cbbc7379a1add7",
+    "mtime": 1784823291.73436,
+    "ast_hash": "736b4a0916da63a07fb60914c5d1d928",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AttendanceRecommendations/Index.cshtml.cs": {
-    "mtime": 1784706742.5852706,
-    "ast_hash": "e4ab214468613c2a3e593bf8bcaa93cd",
+    "mtime": 1784823220.7988675,
+    "ast_hash": "fd8b30c8ed9d97da67b3befc4637d584",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/ShiftRules/Index.cshtml": {
-    "mtime": 1784720258.091187,
-    "ast_hash": "7113cc0429de8d4a69ab09587b328901",
+    "mtime": 1784823187.8669305,
+    "ast_hash": "7af8b245cd61cea4f8c78bec90a848e5",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/ShiftRules/Index.cshtml.cs": {
-    "mtime": 1784706742.614698,
-    "ast_hash": "d648ca34cbd3da2f89c798d9a3ec17b1",
+    "mtime": 1784823048.265988,
+    "ast_hash": "dd6395dc0eec4a90e045ee4355e4f759",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/EmployeeShiftTypeStore.cs": {
@@ -3650,8 +3650,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/zynora-confirm.js": {
-    "mtime": 1784802996.179374,
-    "ast_hash": "961edefb16266d3ea093a3dfa64ec7ab",
+    "mtime": 1784812427.806892,
+    "ast_hash": "45d797409c72a0b1e578c2688914e2ba",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Theming/IThemeContextService.cs": {
@@ -3745,7 +3745,7 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/PageCatalog.cs": {
-    "mtime": 1784804745.069599,
+    "mtime": 1784812427.7511895,
     "ast_hash": "f00e643e61e5fd9d36a643b9b915a518",
     "semantic_hash": ""
   },
@@ -3800,143 +3800,148 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/PayrollConfigStore.cs": {
-    "mtime": 1784759717.93019,
-    "ast_hash": "bf947fa4286c4af870b239fc7ab38151",
+    "mtime": 1784812427.7443676,
+    "ast_hash": "f4dbffcd3653414f8ac0fbe7947c84fe",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/PayrollRunStore.cs": {
-    "mtime": 1784801114.557556,
-    "ast_hash": "78e6daefdb1b2dda84e667f24d60add6",
+    "mtime": 1784812427.7452714,
+    "ast_hash": "5f866be46ebcf2788e2560d9c857e157",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/SalaryItemStore.cs": {
-    "mtime": 1784759648.9824011,
-    "ast_hash": "bc9a8be1e50f789cca8bbb545b00ad02",
+    "mtime": 1784814586.5411017,
+    "ast_hash": "7f8c1a047cb0ece2bbbf29054559e5eb",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/RunDetail.cshtml": {
-    "mtime": 1784781131.5039136,
-    "ast_hash": "4aa79a2e5d8211d958261256e302013e",
+    "mtime": 1784812427.7785792,
+    "ast_hash": "7bb85d0b7a8a73d2badf7c5e8da34090",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/RunDetail.cshtml.cs": {
-    "mtime": 1784781044.000805,
-    "ast_hash": "d0b996b42edf51dd070f3c2e90010f40",
+    "mtime": 1784812427.781271,
+    "ast_hash": "08217ee77dba3f866703e05fa84b18c0",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Runs.cshtml": {
-    "mtime": 1784781213.915068,
-    "ast_hash": "d0858da695fde549b9b3d34619b4af4b",
+    "mtime": 1784812427.7822886,
+    "ast_hash": "8b452f0705d95e91c19e6fc9b17b0450",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Runs.cshtml.cs": {
-    "mtime": 1784781147.6103444,
-    "ast_hash": "e29fa58b96975db319e23ccfed53f87e",
+    "mtime": 1784812427.7834842,
+    "ast_hash": "f128b497b536ade9b9f074ac42012d99",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/SalaryItems.cshtml": {
-    "mtime": 1784808527.1536987,
-    "ast_hash": "ab110e067599cdb555aad7de572395e7",
+    "mtime": 1784814775.5944345,
+    "ast_hash": "e889000ec5f0bf19e6265128c37e6bc0",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/SalaryItems.cshtml.cs": {
-    "mtime": 1784760213.0733492,
-    "ast_hash": "972df07456103ee759ef6951e8971053",
+    "mtime": 1784814605.6258242,
+    "ast_hash": "afdd5cd8f0aa5220e5c90e2a99f43ffa",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Settings.cshtml": {
-    "mtime": 1784808536.029669,
-    "ast_hash": "fffd5d3b02810125a27f24cb2a1db390",
+    "mtime": 1784812427.7903278,
+    "ast_hash": "8eea45d7dff9a55bcfcdd48280eafe32",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Settings.cshtml.cs": {
-    "mtime": 1784760282.8459916,
-    "ast_hash": "b1cbf91caed2e477a754f756e662dc2b",
+    "mtime": 1784812427.7923388,
+    "ast_hash": "d8ed08262f781c0cc48dd0d63b47f7aa",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/PayrollTransactionStore.cs": {
-    "mtime": 1784805894.4276004,
-    "ast_hash": "4fa879503225ba3bc70f183551bc3349",
+    "mtime": 1784812427.7462854,
+    "ast_hash": "3fd1559ba83c3d85e302741365c1ae49",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/SpreadsheetReader.cs": {
-    "mtime": 1784796770.5643568,
-    "ast_hash": "cad112122777f50d482bf38fa98d55bc",
+    "mtime": 1784812427.749187,
+    "ast_hash": "6f1c9ae93ec461194b5c02be5ff1e1fd",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Transactions.cshtml": {
-    "mtime": 1784810574.0655377,
-    "ast_hash": "2b3184b11aabce5572ebb7692cfef8cf",
+    "mtime": 1784812427.7966313,
+    "ast_hash": "c2f793d63e9bcb006ff4ee7cf913f449",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Transactions.cshtml.cs": {
-    "mtime": 1784810269.9518526,
-    "ast_hash": "239579a5a6c9d74d5750ee192f3b750a",
+    "mtime": 1784812427.7981415,
+    "ast_hash": "3ee4e560a218d2a4364b032dfb805878",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/emp-picker.js": {
-    "mtime": 1784803800.2696848,
-    "ast_hash": "1bfc930c2cb9ba071d835a2eb2e28d01",
+    "mtime": 1784812427.8031547,
+    "ast_hash": "5273b89347c4594988fefaf21e1b2637",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Overtime.cshtml": {
-    "mtime": 1784810690.626068,
-    "ast_hash": "e0b7fe2e6440e48836f423084aa09432",
+    "mtime": 1784812427.7734802,
+    "ast_hash": "95733200141c2ccb8c7a75e161a07090",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Overtime.cshtml.cs": {
-    "mtime": 1784810342.109217,
-    "ast_hash": "00c9dcefa93fd31a1a298549746e6ca4",
+    "mtime": 1784812427.775496,
+    "ast_hash": "4cd21bc365a4b1e9c0b60c600d5b5b68",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/SalaryDaysAdjustment.cshtml": {
-    "mtime": 1784810906.0491898,
-    "ast_hash": "4ff5583c16874af22bee7c9715f175fe",
+    "mtime": 1784812427.784498,
+    "ast_hash": "95d961b9d035f884e37ba6af9a1297cd",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/SalaryDaysAdjustment.cshtml.cs": {
-    "mtime": 1784810783.3673651,
-    "ast_hash": "291ffd6dfa49c798a3621b72e29c3d90",
+    "mtime": 1784812427.7854955,
+    "ast_hash": "5f655af89a86c2daf2fd5ec89f24d40d",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/SalaryRaiseStore.cs": {
-    "mtime": 1784803726.8697462,
-    "ast_hash": "8ca7b9a463ef8b70d8ca246ef0beef36",
+    "mtime": 1784812671.8248737,
+    "ast_hash": "995b1d5853521935ecf5ed2c9b63e07d",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Raises.cshtml": {
-    "mtime": 1784808504.7634647,
-    "ast_hash": "54f83125b7672242501de9dfaa8c750c",
+    "mtime": 1784813379.979345,
+    "ast_hash": "731808d92a484f141a6201688587193f",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Raises.cshtml.cs": {
-    "mtime": 1784803760.3708408,
-    "ast_hash": "b599558b230e57e0fd49587ab87f676b",
+    "mtime": 1784813391.0908675,
+    "ast_hash": "78c91ef7c56c80f444361d08f9fafe59",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/EndOfServiceStore.cs": {
-    "mtime": 1784804613.4377594,
-    "ast_hash": "b6498ce23406197f86659faede9004c9",
+    "mtime": 1784812427.742352,
+    "ast_hash": "cf791a3c81232cb34f48acb4e76b9a8f",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/EndOfService.cshtml": {
-    "mtime": 1784808512.1153042,
-    "ast_hash": "0c47e5eaaba874727b2c0d9a55f557e7",
+    "mtime": 1784812427.7708542,
+    "ast_hash": "b7edf67491219e25e20d4a6043ded9a3",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/EndOfService.cshtml.cs": {
-    "mtime": 1784804644.1475317,
-    "ast_hash": "24f15751ee26b496f9be136de895600b",
+    "mtime": 1784812427.771865,
+    "ast_hash": "31cd2404319772c500d7e64c04bc8d68",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/MassScopeResolver.cs": {
-    "mtime": 1784810228.023536,
-    "ast_hash": "4431a23ffa583aca18661dd2ccbbe2cb",
+    "mtime": 1784812427.742352,
+    "ast_hash": "ad24a9e2e4afa2d8025dfbe86f26e405",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/mass-scope.js": {
-    "mtime": 1784810497.820633,
-    "ast_hash": "d6205b48796a8344f443447347d77878",
+    "mtime": 1784812427.8041546,
+    "ast_hash": "d900bf3e7271fb340133bd0e40ce20b2",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/AttendanceTransactionStore.cs": {
+    "mtime": 1784822860.273101,
+    "ast_hash": "c7aea7b776d4f11106341e53e42b54ea",
     "semantic_hash": ""
   }
 }
