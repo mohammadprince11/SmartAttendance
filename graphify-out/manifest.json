@@ -3835,8 +3835,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/SalaryItems.cshtml": {
-    "mtime": 1784760255.3640263,
-    "ast_hash": "eced845e8b221215885e0e14a650284c",
+    "mtime": 1784808527.1536987,
+    "ast_hash": "ab110e067599cdb555aad7de572395e7",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/SalaryItems.cshtml.cs": {
@@ -3845,8 +3845,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Settings.cshtml": {
-    "mtime": 1784760340.0135403,
-    "ast_hash": "b093e98b5bfa8369eda7b0f7676db34f",
+    "mtime": 1784808536.029669,
+    "ast_hash": "fffd5d3b02810125a27f24cb2a1db390",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Settings.cshtml.cs": {
@@ -3865,13 +3865,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Transactions.cshtml": {
-    "mtime": 1784806804.2905903,
-    "ast_hash": "fe6c1d8312fcacb751d5304f4e1eb267",
+    "mtime": 1784810574.0655377,
+    "ast_hash": "2b3184b11aabce5572ebb7692cfef8cf",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Transactions.cshtml.cs": {
-    "mtime": 1784806827.7085893,
-    "ast_hash": "91edcae3e0bbe6bca3fc825c8cf8fcc7",
+    "mtime": 1784810269.9518526,
+    "ast_hash": "239579a5a6c9d74d5750ee192f3b750a",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/emp-picker.js": {
@@ -3880,23 +3880,23 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Overtime.cshtml": {
-    "mtime": 1784806325.01995,
-    "ast_hash": "36f4d5dd5ab720b8cebc26a31bdac863",
+    "mtime": 1784810690.626068,
+    "ast_hash": "e0b7fe2e6440e48836f423084aa09432",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Overtime.cshtml.cs": {
-    "mtime": 1784799928.5080428,
-    "ast_hash": "bbcae0e52db01f24da0904b79b4eefd8",
+    "mtime": 1784810342.109217,
+    "ast_hash": "00c9dcefa93fd31a1a298549746e6ca4",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/SalaryDaysAdjustment.cshtml": {
-    "mtime": 1784806337.682339,
-    "ast_hash": "5f77723e079d21910d7349bdd1406e73",
+    "mtime": 1784810906.0491898,
+    "ast_hash": "4ff5583c16874af22bee7c9715f175fe",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/SalaryDaysAdjustment.cshtml.cs": {
-    "mtime": 1784801159.3431203,
-    "ast_hash": "cd46e2368089dffa72321bb7e0aabcb7",
+    "mtime": 1784810783.3673651,
+    "ast_hash": "291ffd6dfa49c798a3621b72e29c3d90",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/SalaryRaiseStore.cs": {
@@ -3905,8 +3905,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Raises.cshtml": {
-    "mtime": 1784803884.9422536,
-    "ast_hash": "796b9237e66c23cf619c5c67edb38f01",
+    "mtime": 1784808504.7634647,
+    "ast_hash": "54f83125b7672242501de9dfaa8c750c",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Raises.cshtml.cs": {
@@ -3920,13 +3920,23 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/EndOfService.cshtml": {
-    "mtime": 1784804737.11008,
-    "ast_hash": "f44f63dc8e649f67ec47668932f95b7e",
+    "mtime": 1784808512.1153042,
+    "ast_hash": "0c47e5eaaba874727b2c0d9a55f557e7",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/EndOfService.cshtml.cs": {
     "mtime": 1784804644.1475317,
     "ast_hash": "24f15751ee26b496f9be136de895600b",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/MassScopeResolver.cs": {
+    "mtime": 1784810228.023536,
+    "ast_hash": "4431a23ffa583aca18661dd2ccbbe2cb",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/wwwroot/js/mass-scope.js": {
+    "mtime": 1784810497.820633,
+    "ast_hash": "d6205b48796a8344f443447347d77878",
     "semantic_hash": ""
   }
 }
