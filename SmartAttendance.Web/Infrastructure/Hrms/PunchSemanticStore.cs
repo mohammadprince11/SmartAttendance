@@ -66,6 +66,33 @@ END;
             });
     }
 
+    /// <summary>
+    /// مُعرّف دلالة «حضور» النظامية — الزوج الذي يُحتسب في اشتقاق اليومية.
+    /// كل ما عداه (استراحة/صلاة/مهمة عمل...) بصمات أخرى تُستثنى من أول-دخول
+    /// وآخر-خروج. تُبذر الدلالة النظامية تلقائياً فلا تعود 0 عملياً.
+    /// </summary>
+    public static async Task<int> AttendanceSemanticIdAsync(ApplicationDbContext dbContext)
+    {
+        await EnsureAsync(dbContext);
+
+        return await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            "SELECT TOP 1 Id FROM PunchSemantics WHERE IsSystem = 1 ORDER BY SortOrder, Id;",
+            command => { });
+    }
+
+    /// <summary>
+    /// الدلالات غير-الحضورية النشطة — تغذّي «البصمات الأخرى».
+    /// تُستثنى الدلالتان النظاميتان: صفّنا زوج (دخول/خروج) فدلالة «حضور» تغطّيه،
+    /// و«انصراف» النظامية تخصّ أزرار البصم بالخدمة الذاتية لا تصنيف الأزواج.
+    /// </summary>
+    public static async Task<List<PunchSemantic>> OtherSemanticsAsync(ApplicationDbContext dbContext)
+    {
+        var all = await ListAsync(dbContext);
+
+        return all.Where(s => s.IsActive && !s.IsSystem).ToList();
+    }
+
     public static async Task SaveAsync(ApplicationDbContext dbContext, PunchSemantic semantic)
     {
         await EnsureAsync(dbContext);

@@ -143,6 +143,14 @@ IF COL_LENGTH('SelfServiceRequests', 'HrReviewedAt') IS NULL
 IF COL_LENGTH('SelfServiceRequests', 'HrNote') IS NULL
     ALTER TABLE SelfServiceRequests ADD HrNote nvarchar(max) NULL;
 
+-- دلالة زوج البصمة (نمط كيان — قسم 29.د بدراسة الحضور): كل صف في
+-- AttendanceRecords هو زوج دخول/خروج، وكيان يصنّف الأزواج بنوع بصمة
+-- (حضور · استراحة · صلاة · مهمة عمل...). NULL = حضور، فالبيانات القائمة
+-- تبقى على معناها. الأزواج غير-الحضورية تُستثنى من اشتقاق اليومية حتى لا
+-- تصبح استراحةٌ «آخر خروج».
+IF COL_LENGTH('AttendanceRecords', 'PunchSemanticId') IS NULL
+    ALTER TABLE AttendanceRecords ADD PunchSemanticId int NULL;
+
 IF OBJECT_ID('ApprovalHistories', 'U') IS NULL
 BEGIN
     CREATE TABLE ApprovalHistories

@@ -127,10 +127,34 @@ END;
         // الروستر الشهري — أولوية تحت التجاوز وفوق التعيين الدائم (مناوبة أو عطلة/راحة)
         var rosterMap = await RosterStore.MapAsync(dbContext, year, month);
 
-        var punches = await dbContext.AttendanceRecords.AsNoTracking()
-            .Where(r => r.AttendanceDate >= monthStart && r.AttendanceDate <= monthEnd)
-            .Select(r => new { r.EmployeeId, r.AttendanceDate, r.CheckIn, r.CheckOut })
-            .ToListAsync();
+        // أزواج البصمات الحضورية فقط: الأزواج غير-الحضورية (استراحة/صلاة/مهمة عمل)
+        // مستثناة حتى لا تصبح استراحةٌ «آخر خروج» فتُحتسب خروجاً مبكراً كاذباً.
+        // NULL = حضور، فالبيانات السابقة لتصنيف الأزواج تبقى على معناها.
+        // قراءة خام لا EF: العمود مُضاف بمسار الترقية الذاتي لا بهجرة.
+        var attendanceSemanticId = await PunchSemanticStore.AttendanceSemanticIdAsync(dbContext);
+
+        var punches = await HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+SELECT EmployeeId, AttendanceDate, CheckIn, CheckOut
+FROM AttendanceRecords
+WHERE AttendanceDate >= @From AND AttendanceDate <= @To
+  AND ISNULL(IsDeleted, 0) = 0
+  AND ISNULL(PunchSemanticId, @Attendance) = @Attendance;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@From", monthStart.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@To", monthEnd.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@Attendance", attendanceSemanticId);
+            },
+            reader => new
+            {
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                AttendanceDate = HrmsDatabase.GetDateOnly(reader, "AttendanceDate") ?? default,
+                CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn") ?? default,
+                CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut")
+            });
 
         // أول بصمة دخول وآخر بصمة خروج لكل موظف×يوم (نمط الالتقاط بكيان)
         var byDay = punches
