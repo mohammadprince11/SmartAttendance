@@ -239,7 +239,7 @@
                                         SocialSecurityToDate=Dt(t.SocialSecurityToDate), SalaryFromDate=Dt(t.SalaryFromDate), SalaryToDate=Dt(t.SalaryToDate),
                                         t.IsScheduled, t.InstallmentMode, t.InstallmentCount, t.InstallmentAmount, t.InstallmentMonths, FirstInstallmentDate=Dt(t.FirstInstallmentDate),
                                         t.ChangeCostCenter, t.CostCenter, t.Note, t.Status, t.Year, t.Month })">تعديل</button>
-                                    <button type="submit" asp-page-handler="Delete" name="id" value="@t.Id" class="tx-btn danger sm" onclick="return confirm('حذف الحركة؟')">حذف</button>
+                                    <button type="submit" asp-page-handler="Delete" name="id" value="@t.Id" class="tx-btn danger sm" data-zyconfirm="حذف الحركة؟">حذف</button>
                                 </div>
                             </td>
                             }
@@ -258,12 +258,12 @@
             <b>إجراءات على المحدد</b>
             @if (Model.IsReadOnly)
             {
-                <button type="submit" asp-page-handler="UnlockSelected" class="tx-btn warn" onclick="return confirm('إلغاء قفل الحركات المحددة؟')">🔓 إلغاء قفل المحدد</button>
+                <button type="submit" asp-page-handler="UnlockSelected" class="tx-btn warn" data-zyconfirm="إلغاء قفل الحركات المحددة؟">🔓 إلغاء قفل المحدد</button>
             }
             else
             {
-                <button type="submit" asp-page-handler="LockSelected" class="tx-btn warn" onclick="return confirm('إقفال الحركات المحددة؟')">🔒 إقفال المحدد</button>
-                <button type="submit" asp-page-handler="DeleteMany" class="tx-btn danger" onclick="return confirm('حذف الحركات المحددة؟')">🗑 حذف المحدد</button>
+                <button type="submit" asp-page-handler="LockSelected" class="tx-btn warn" data-zyconfirm="إقفال الحركات المحددة؟">🔒 إقفال المحدد</button>
+                <button type="submit" asp-page-handler="DeleteMany" class="tx-btn danger" data-zyconfirm="حذف الحركات المحددة؟">🗑 حذف المحدد</button>
             }
         </div>
     }

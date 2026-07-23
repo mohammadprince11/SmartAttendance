@@ -186,7 +186,7 @@
                                     <button type="button" class="sd-btn ghost sm" onclick="sdEdit(this)" data-tx="@J(new {
                                         Id = t.Id, t.EmployeeId, t.SalaryItemId, t.ItemName, t.Days,
                                         TransactionDate=Dt(t.TransactionDate), t.Note, t.Status, t.Year, t.Month })">تعديل</button>
-                                    <button type="submit" asp-page-handler="Delete" name="id" value="@t.Id" class="sd-btn danger sm" onclick="return confirm('حذف الحركة؟')">حذف</button>
+                                    <button type="submit" asp-page-handler="Delete" name="id" value="@t.Id" class="sd-btn danger sm" data-zyconfirm="حذف الحركة؟">حذف</button>
                                 </div>
                             </td>
                             }
@@ -205,12 +205,12 @@
             <b>إجراءات على المحدد</b>
             @if (Model.IsReadOnly)
             {
-                <button type="submit" asp-page-handler="UnlockSelected" class="sd-btn warn" onclick="return confirm('إلغاء قفل الحركات المحددة؟')">🔓 إلغاء قفل المحدد</button>
+                <button type="submit" asp-page-handler="UnlockSelected" class="sd-btn warn" data-zyconfirm="إلغاء قفل الحركات المحددة؟">🔓 إلغاء قفل المحدد</button>
             }
             else
             {
-                <button type="submit" asp-page-handler="LockSelected" class="sd-btn warn" onclick="return confirm('إقفال الحركات المحددة؟')">🔒 إقفال المحدد</button>
-                <button type="submit" asp-page-handler="DeleteMany" class="sd-btn danger" onclick="return confirm('حذف الحركات المحددة؟')">🗑 حذف المحدد</button>
+                <button type="submit" asp-page-handler="LockSelected" class="sd-btn warn" data-zyconfirm="إقفال الحركات المحددة؟">🔒 إقفال المحدد</button>
+                <button type="submit" asp-page-handler="DeleteMany" class="sd-btn danger" data-zyconfirm="حذف الحركات المحددة؟">🗑 حذف المحدد</button>
             }
         </div>
     }
