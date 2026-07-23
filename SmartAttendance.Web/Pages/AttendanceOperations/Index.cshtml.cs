@@ -67,6 +67,17 @@ public class IndexModel : PageModel
 
     public AttendanceImportResultViewModel? ImportResult { get; set; }
 
+    /// <summary>
+    /// البصمات الأخرى (نمط كيان — قسم 29.د): أزواج بصمات بدلالة غير-حضورية
+    /// (استراحة/صلاة/مهمة عمل). لا تدخل اشتقاق اليومية، وتُعرض وتُدار مستقلة.
+    /// </summary>
+    public List<OtherPunchRow> OtherPunches { get; set; } = new();
+
+    public List<PunchSemanticStore.PunchSemantic> OtherSemantics { get; set; } = new();
+
+    [BindProperty]
+    public OtherPunchInput OtherPunch { get; set; } = new();
+
     [TempData]
     public string? SuccessMessage { get; set; }
 
@@ -272,9 +283,9 @@ END;",
                 _dbContext,
                 @"
 INSERT INTO AttendanceRecords
-(EmployeeId, AttendanceDate, CheckIn, CheckOut, Source, Status, DeviceId, Notes, CreatedAt)
+(EmployeeId, AttendanceDate, CheckIn, CheckOut, Source, Status, DeviceId, Notes, CreatedAt, IsDeleted)
 VALUES
-(@EmployeeId, @AttendanceDate, @CheckIn, @CheckOut, 3, @Status, NULL, @Notes, SYSUTCDATETIME());
+(@EmployeeId, @AttendanceDate, @CheckIn, @CheckOut, 3, @Status, NULL, @Notes, SYSUTCDATETIME(), 0);
 
 DECLARE @NewId int = SCOPE_IDENTITY();
 
@@ -322,6 +333,144 @@ END;",
     {
         // بعد إزالة شاشة التصحيحات لم يبقَ إلا جدول المعالجة أياً كان التبويب
         await LoadProcessingAsync();
+        await LoadOtherPunchesAsync();
+    }
+
+    /// <summary>
+    /// أزواج البصمات غير-الحضورية للفترة المعروضة + الدلالات المتاحة لإضافتها.
+    /// مستثناة من اشتقاق اليومية (راجع DayAttendanceStore) فتُعرض مستقلة.
+    /// </summary>
+    private async Task LoadOtherPunchesAsync()
+    {
+        OtherSemantics = await PunchSemanticStore.OtherSemanticsAsync(_dbContext);
+
+        var from = ProcessFromDate ?? DateOnly.FromDateTime(DateTime.Today);
+        var to = ProcessToDate ?? from;
+        var attendanceId = await PunchSemanticStore.AttendanceSemanticIdAsync(_dbContext);
+
+        OtherPunches = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT TOP 200
+    ar.Id, e.EmployeeNo, e.FullName, ar.AttendanceDate, ar.CheckIn, ar.CheckOut,
+    ISNULL(ar.PunchSemanticId, 0) AS PunchSemanticId,
+    ISNULL(ps.Name, N'-') AS SemanticName
+FROM AttendanceRecords ar
+INNER JOIN Employees e ON e.Id = ar.EmployeeId
+LEFT JOIN PunchSemantics ps ON ps.Id = ar.PunchSemanticId
+WHERE ISNULL(ar.IsDeleted, 0) = 0
+  AND ar.AttendanceDate >= @From AND ar.AttendanceDate <= @To
+  AND ar.PunchSemanticId IS NOT NULL
+  AND ar.PunchSemanticId <> @Attendance
+ORDER BY ar.AttendanceDate DESC, ar.CheckIn DESC;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@From", from);
+                HrmsDatabase.AddParameter(command, "@To", to);
+                HrmsDatabase.AddParameter(command, "@Attendance", attendanceId);
+            },
+            reader => new OtherPunchRow
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+                Date = HrmsDatabase.GetDateOnly(reader, "AttendanceDate") ?? default,
+                CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn"),
+                CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut"),
+                SemanticName = HrmsDatabase.GetString(reader, "SemanticName")
+            });
+    }
+
+    /// <summary>إضافة زوج بصمة غير-حضوري (نظير «إضافة بصمات أخرى» بكيان).</summary>
+    public async Task<IActionResult> OnPostAddOtherPunchAsync()
+    {
+        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
+
+        var redirect = new
+        {
+            Tab = "process",
+            ProcessFromDate,
+            ProcessToDate,
+            ProcessSearchTerm,
+            MaxRows
+        };
+
+        if (string.IsNullOrWhiteSpace(OtherPunch.EmployeeNo) ||
+            string.IsNullOrWhiteSpace(OtherPunch.Date) ||
+            OtherPunch.PunchSemanticId <= 0)
+        {
+            ErrorMessage = "رقم الموظف والتاريخ ونوع البصمة مطلوبة.";
+            return RedirectToPage("./Index", redirect);
+        }
+
+        if (string.IsNullOrWhiteSpace(OtherPunch.CheckIn))
+        {
+            ErrorMessage = "أدخل وقت البداية على الأقل.";
+            return RedirectToPage("./Index", redirect);
+        }
+
+        var employeeId = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            "SELECT TOP 1 Id FROM Employees WHERE EmployeeNo = @EmployeeNo",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeNo", OtherPunch.EmployeeNo));
+
+        if (employeeId <= 0)
+        {
+            ErrorMessage = "لم يتم العثور على الموظف.";
+            return RedirectToPage("./Index", redirect);
+        }
+
+        var date = DateOnly.Parse(OtherPunch.Date);
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+INSERT INTO AttendanceRecords
+    (EmployeeId, AttendanceDate, CheckIn, CheckOut, Source, Status, DeviceId, Notes, CreatedAt, IsDeleted, PunchSemanticId)
+VALUES
+    (@EmployeeId, @Date, @CheckIn, @CheckOut, 3, 1, NULL, @Notes, SYSUTCDATETIME(), 0, @Semantic);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                HrmsDatabase.AddParameter(command, "@Date", date);
+                HrmsDatabase.AddParameter(command, "@CheckIn", BuildDateTime(date, OtherPunch.CheckIn));
+                HrmsDatabase.AddParameter(command, "@CheckOut",
+                    string.IsNullOrWhiteSpace(OtherPunch.CheckOut)
+                        ? DBNull.Value
+                        : BuildDateTime(date, OtherPunch.CheckOut));
+                HrmsDatabase.AddParameter(command, "@Notes", (object?)OtherPunch.Notes ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Semantic", OtherPunch.PunchSemanticId);
+            });
+
+        SuccessMessage = "أُضيفت البصمة — لا تدخل اشتقاق اليومية.";
+        return RedirectToPage("./Index", redirect);
+    }
+
+    public async Task<IActionResult> OnPostDeleteOtherPunchAsync(int id)
+    {
+        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
+
+        // حذف مقيّد بالبصمات غير-الحضورية حتى لا يمسّ سجلات الحضور
+        var affected = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            """
+DELETE FROM AttendanceRecords WHERE Id = @Id AND PunchSemanticId IS NOT NULL;
+SELECT @@ROWCOUNT;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", id));
+
+        SuccessMessage = affected > 0 ? "حُذفت البصمة." : "لم تُحذف — ليست بصمة غير-حضورية.";
+
+        return RedirectToPage("./Index", new
+        {
+            Tab = "process",
+            ProcessFromDate,
+            ProcessToDate,
+            ProcessSearchTerm,
+            MaxRows
+        });
     }
 
     private List<AttendanceProcessingResultViewModel> ApplyProcessingLocalSearch(List<AttendanceProcessingResultViewModel> rows)
@@ -683,6 +832,33 @@ WHERE ar.AttendanceDate >= @FromDate
 
         return 1;
     }
+    public class OtherPunchRow
+    {
+        public int Id { get; set; }
+        public string EmployeeNo { get; set; } = string.Empty;
+        public string EmployeeName { get; set; } = string.Empty;
+        public DateOnly Date { get; set; }
+        public DateTime? CheckIn { get; set; }
+        public DateTime? CheckOut { get; set; }
+        public string SemanticName { get; set; } = string.Empty;
+
+        /// <summary>مدة الزوج بالساعات — «الفترة» بجدول كيان.</summary>
+        public decimal? DurationHours =>
+            CheckIn.HasValue && CheckOut.HasValue
+                ? Math.Round((decimal)(CheckOut.Value - CheckIn.Value).TotalHours, 2)
+                : null;
+    }
+
+    public class OtherPunchInput
+    {
+        public string? EmployeeNo { get; set; }
+        public string? Date { get; set; }
+        public string? CheckIn { get; set; }
+        public string? CheckOut { get; set; }
+        public int PunchSemanticId { get; set; }
+        public string? Notes { get; set; }
+    }
+
     public class CorrectionInput
     {
         public int Id { get; set; }

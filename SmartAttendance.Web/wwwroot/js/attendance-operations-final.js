@@ -68,9 +68,32 @@
         });
     }
 
+    // مودال «البصمات الأخرى» — نفس نمط مودال الاستيراد (فتح/إغلاق/نقر الخلفية)
+    function initOtherModal() {
+        const modal = document.querySelector("[data-other-modal]");
+        if (!modal) return;
+
+        document.querySelectorAll("[data-open-other]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                openModal(modal);
+            });
+        });
+
+        document.querySelectorAll("[data-close-other]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                closeModal(modal);
+            });
+        });
+
+        modal.addEventListener("click", function (event) {
+            if (event.target === modal) closeModal(modal);
+        });
+    }
+
     function init() {
         initEditModal();
         initImportModal();
+        initOtherModal();
     }
 
     if (document.readyState === "loading") {

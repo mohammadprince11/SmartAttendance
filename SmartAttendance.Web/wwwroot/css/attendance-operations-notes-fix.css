@@ -18,3 +18,9 @@
     font-weight: 900;
     max-width: 240px;
 }
+
+/* البصمات الأخرى: جدول أضيق من جدول المعالجة (8 أعمدة لا 12) فيُلغى
+   عرض الأعمدة الثابت الموروث من .attendance-table وإلا انسحبت لعرض 1180px. */
+.other-punch-table { min-width: 720px; table-layout: auto; }
+.other-punch-table th,
+.other-punch-table td { width: auto !important; }

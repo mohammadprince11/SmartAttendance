@@ -151,6 +151,144 @@
         </div>
     </section>
 
+    @* ===== البصمات الأخرى (نمط كيان): أزواج بدلالة غير-حضورية، خارج اشتقاق اليومية ===== *@
+    <section class="attendance-results-card">
+        <div class="results-head">
+            <div>
+                <h2>البصمات الأخرى</h2>
+                <p>
+                    بصمات بدلالة غير-حضورية (استراحة · صلاة · مهمة عمل…) —
+                    <strong>لا تدخل احتساب أول دخول وآخر خروج</strong> فلا تؤثر على ساعات العمل والخروج المبكر.
+                </p>
+            </div>
+            @if (Model.OtherSemantics.Any())
+            {
+                <button type="button" class="hrms-btn-primary" data-open-other>إضافة بصمات أخرى</button>
+            }
+        </div>
+
+        <div class="attendance-table-wrap">
+            <table class="attendance-table other-punch-table">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>كود الموظف</th>
+                        <th>اسم الموظف</th>
+                        <th>نوع البصمة</th>
+                        <th>البداية</th>
+                        <th>النهاية</th>
+                        <th>الفترة</th>
+                        <th>حذف</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var punch in Model.OtherPunches)
+                    {
+                        <tr>
+                            <td>@punch.Date.ToString("yyyy-MM-dd")</td>
+                            <td>@punch.EmployeeNo</td>
+                            <td>@punch.EmployeeName</td>
+                            <td><span class="attendance-status">@punch.SemanticName</span></td>
+                            <td>@(punch.CheckIn?.ToString("HH:mm") ?? "-")</td>
+                            <td>@(punch.CheckOut?.ToString("HH:mm") ?? "-")</td>
+                            <td>@(punch.DurationHours?.ToString("0.##") is { Length: > 0 } h ? $"{h} س" : "-")</td>
+                            <td>
+                                <form method="post" asp-page-handler="DeleteOtherPunch" style="display:inline">
+                                    <input type="hidden" name="id" value="@punch.Id" />
+                                    <input type="hidden" name="ProcessFromDate" value="@Model.ProcessFromDate?.ToString("yyyy-MM-dd")" />
+                                    <input type="hidden" name="ProcessToDate" value="@Model.ProcessToDate?.ToString("yyyy-MM-dd")" />
+                                    <input type="hidden" name="MaxRows" value="@Model.MaxRows" />
+                                    <button type="submit" class="hrms-btn-secondary" data-zyconfirm="حذف البصمة؟">حذف</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+
+                    @if (!Model.OtherPunches.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="hrms-empty">
+                                @if (Model.OtherSemantics.Any())
+                                {
+                                    <text>لا بصمات أخرى في هذه الفترة.</text>
+                                }
+                                else
+                                {
+                                    <text>لا دلالات بصمات معرّفة — عرّفها من «إعدادات الحضور» ليمكن تسجيل بصمات أخرى.</text>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="attendance-modal-backdrop" data-other-modal>
+        <div class="attendance-modal">
+            <div class="attendance-modal-head">
+                <div>
+                    <h2>إضافة بصمات أخرى</h2>
+                    <p>بصمة بدلالة غير-حضورية — تُسجَّل ولا تُحتسب في اشتقاق اليومية.</p>
+                </div>
+                <button type="button" data-close-other>×</button>
+            </div>
+
+            <form method="post" asp-page-handler="AddOtherPunch">
+                <input type="hidden" name="ProcessFromDate" value="@Model.ProcessFromDate?.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="ProcessToDate" value="@Model.ProcessToDate?.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="ProcessSearchTerm" value="@Model.ProcessSearchTerm" />
+                <input type="hidden" name="MaxRows" value="@Model.MaxRows" />
+
+                <div class="modal-grid">
+                    <div class="hrms-field">
+                        <label>نوع البصمة *</label>
+                        <select asp-for="OtherPunch.PunchSemanticId">
+                            @foreach (var semantic in Model.OtherSemantics)
+                            {
+                                <option value="@semantic.Id">@semantic.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>كود الموظف *</label>
+                        <input asp-for="OtherPunch.EmployeeNo" placeholder="مثال: 11230" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>التاريخ *</label>
+                        <input asp-for="OtherPunch.Date" type="date" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>ملاحظة</label>
+                        <input asp-for="OtherPunch.Notes" placeholder="اختياري" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>البداية *</label>
+                        <input asp-for="OtherPunch.CheckIn" type="time" />
+                    </div>
+
+                    <div class="hrms-field">
+                        <label>النهاية</label>
+                        <input asp-for="OtherPunch.CheckOut" type="time" />
+                    </div>
+                </div>
+
+                <div class="edit-help-note">
+                    هذه البصمة لا تدخل احتساب أول دخول وآخر خروج — فاستراحةٌ بعد الخروج لا تُطيل ساعات العمل.
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="hrms-btn-primary">حفظ البصمة</button>
+                    <button type="button" class="hrms-btn-secondary" data-close-other>إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="attendance-modal-backdrop" data-edit-modal>
         <div class="attendance-modal">
             <div class="attendance-modal-head">
