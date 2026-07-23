@@ -36,17 +36,39 @@ public static class AttendanceNotificationStore
 
     public static string LabelOf(string key) => Types.FirstOrDefault(t => t.Key == key).Label ?? key;
 
-    /// <summary>نص القالب الافتراضي لكل نوع — يحوي الرموز {0}..{4}.</summary>
+    /// <summary>هل النوع أسبوعي (سنة/شهر/أسبوع) أم بمدى تاريخ (ملخص)؟</summary>
+    public static bool IsWeekly(string type) => type is "WeeklyAbsence" or "WeeklyShortage";
+
+    /// <summary>
+    /// نص القالب الافتراضي لكل نوع — برموز مختلفة حسب النوع (مطابقة كيان):
+    /// • ملخص: {0}غياب {1}تأخير {2}خروج مبكر {3}الفترة {4}بصمات مفقودة
+    /// • غياب أسبوعي: {0}عدد الغياب {1}قائمة أيام الغياب {2}رقم الأسبوع {3}فترة الأسبوع {4}الشهر {5}السنة
+    /// • نقص ساعات أسبوعي: {0}مرات النقص {1}الساعات المطلوبة {2}الساعات الفعلية {3}رقم الأسبوع {4}فترة الأسبوع {5}الشهر {6}السنة
+    /// </summary>
     public static string DefaultTemplate(string type) => type switch
     {
         "WeeklyAbsence" =>
-            "عزيزي الموظف/ة، لديك {0} أيام غياب خلال الفترة ({3}). يُرجى مراجعة حضورك قبل اعتماد الحركات.",
+            "عزيزي الموظف/ة، خلال الأسبوع {2} ({3}) من شهر {4}/{5}: لديك {0} أيام غياب"
+            + " ({1}). يُرجى مراجعة حضورك قبل اعتماد الحركات.",
         "WeeklyShortage" =>
-            "عزيزي الموظف/ة، لديك {1} ساعات تأخير و{2} ساعات خروج مبكر خلال الفترة ({3}). يُرجى الالتزام بأوقات المناوبة.",
+            "عزيزي الموظف/ة، خلال الأسبوع {3} ({4}) من شهر {5}/{6}: لديك {0} مرات نقص ساعات؛"
+            + " المطلوب {1} ساعة والفعلي {2} ساعة. يُرجى الالتزام بأوقات المناوبة.",
         _ =>
             "عزيزي الموظف/ة، يُرجى العلم أن لديك خلال الفترة ({3}): {0} أيام غياب، {1} ساعات تأخير، "
             + "{2} ساعات خروج مبكر، و{4} بصمات مفقودة. يُرجى مراجعة دوامك قبل اعتماد الحركات."
     };
+
+    /// <summary>عدد أسابيع الشهر (أسابيع بطول 7 من اليوم 1) وحدود أسبوع محدد.</summary>
+    public static int WeeksInMonth(int year, int month) =>
+        (int)Math.Ceiling(DateTime.DaysInMonth(year, month) / 7.0);
+
+    public static (DateOnly From, DateOnly To) WeekRange(int year, int month, int week)
+    {
+        var days = DateTime.DaysInMonth(year, month);
+        var startDay = Math.Clamp((week - 1) * 7 + 1, 1, days);
+        var endDay = Math.Min(week * 7, days);
+        return (new DateOnly(year, month, startDay), new DateOnly(year, month, endDay));
+    }
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
     {
@@ -97,8 +119,14 @@ END;
     /// يؤلّف ويخزّن إشعاراً: يحسب رموز حضور كل موظف بالفترة، يولّد رسالته، ويكتبها
     /// بصندوق الصادر. يعيد (معرّف الإشعار، عدد المستلمين).
     /// </summary>
+    private static readonly string[] MonthNames =
+    {
+        "", "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+        "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
+    };
+
     public static async Task<(int NotificationId, int Recipients, int CcCount)> SendAsync(
-        ApplicationDbContext dbContext, string type, DateOnly from, DateOnly to,
+        ApplicationDbContext dbContext, string type, DateOnly from, DateOnly to, int week,
         string channel, string template, IReadOnlyCollection<int> employeeIds,
         string ccMode, IReadOnlyCollection<int> ccEmployeeIds)
     {
@@ -106,32 +134,28 @@ END;
         if (to < from) (from, to) = (to, from);
         if (string.IsNullOrWhiteSpace(template)) template = DefaultTemplate(type);
 
-        // مجاميع الحضور لكل موظف بالفترة (غياب/تأخير/خروج مبكر/بصمات مفقودة)
-        var stats = (await HrmsDatabase.QueryAsync(
+        // يوميات الفترة لكل موظف (لحساب رموز كل نوع — منها قائمة أيام الغياب)
+        var rowsByEmp = (await HrmsDatabase.QueryAsync(
             dbContext,
             """
-SELECT EmployeeId,
-       SUM(CASE WHEN Status = N'Absent' THEN 1 ELSE 0 END) AS AbsenceDays,
-       SUM(LateHours) AS LateHours,
-       SUM(EarlyLeaveHours) AS EarlyHours,
-       SUM(CASE WHEN Status = N'Incomplete' THEN 1 ELSE 0 END) AS Missing
+SELECT EmployeeId, WorkDate, Status, LateHours, EarlyLeaveHours, WorkedHours
 FROM DayAttendances
 WHERE WorkDate >= @From AND WorkDate <= @To
-GROUP BY EmployeeId;
+ORDER BY EmployeeId, WorkDate;
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
                 HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
             },
-            reader => new
-            {
-                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
-                AbsenceDays = HrmsDatabase.GetInt(reader, "AbsenceDays"),
-                LateHours = reader["LateHours"] is decimal l ? l : 0,
-                EarlyHours = reader["EarlyHours"] is decimal e ? e : 0,
-                Missing = HrmsDatabase.GetInt(reader, "Missing")
-            })).ToDictionary(x => x.EmployeeId);
+            reader => new DayStat(
+                HrmsDatabase.GetInt(reader, "EmployeeId"),
+                HrmsDatabase.GetDateOnly(reader, "WorkDate") ?? default,
+                HrmsDatabase.GetString(reader, "Status"),
+                reader["LateHours"] is decimal l ? l : 0,
+                reader["EarlyLeaveHours"] is decimal e ? e : 0,
+                reader["WorkedHours"] is decimal w ? w : 0)))
+            .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
         var period = $"{from:yyyy-MM-dd} → {to:yyyy-MM-dd}";
 
@@ -168,13 +192,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         int cc = 0;
         foreach (var empId in employeeIds)
         {
-            stats.TryGetValue(empId, out var s);
-            var message = template
-                .Replace("{0}", (s?.AbsenceDays ?? 0).ToString())
-                .Replace("{1}", (s?.LateHours ?? 0).ToString("0.##"))
-                .Replace("{2}", (s?.EarlyHours ?? 0).ToString("0.##"))
-                .Replace("{3}", period)
-                .Replace("{4}", (s?.Missing ?? 0).ToString());
+            rowsByEmp.TryGetValue(empId, out var rows);
+            var message = Render(type, template, rows ?? new(), from, to, week, period);
             await AddOutboxAsync(dbContext, notificationId, empId, channel, message);
 
             // نسخة للمدير المباشر (نسخة من رسالة كل موظف)
@@ -197,6 +216,58 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         }
 
         return (notificationId, employeeIds.Count, cc);
+    }
+
+    private sealed record DayStat(int EmployeeId, DateOnly Date, string Status,
+        decimal Late, decimal Early, decimal Worked);
+
+    /// <summary>يولّد رسالة موظف حسب النوع، بملء الرموز من يومياته بالفترة.</summary>
+    private static string Render(string type, string template, List<DayStat> rows,
+        DateOnly from, DateOnly to, int week, string period)
+    {
+        var monthName = MonthNames[Math.Clamp(from.Month, 1, 12)];
+        switch (type)
+        {
+            case "WeeklyAbsence":
+            {
+                var absent = rows.Where(r => r.Status == "Absent").Select(r => r.Date).ToList();
+                var list = absent.Count > 0 ? string.Join("، ", absent.Select(d => d.ToString("MM-dd"))) : "لا شيء";
+                return template
+                    .Replace("{0}", absent.Count.ToString())
+                    .Replace("{1}", list)
+                    .Replace("{2}", week.ToString())
+                    .Replace("{3}", period)
+                    .Replace("{4}", monthName)
+                    .Replace("{5}", from.Year.ToString());
+            }
+            case "WeeklyShortage":
+            {
+                var shortDays = rows.Count(r => r.Late > 0 || r.Early > 0);
+                var actual = rows.Sum(r => r.Worked);
+                var required = rows.Sum(r => r.Worked + r.Late + r.Early);   // مطلوب ≈ فعلي + نقص
+                return template
+                    .Replace("{0}", shortDays.ToString())
+                    .Replace("{1}", required.ToString("0.##"))
+                    .Replace("{2}", actual.ToString("0.##"))
+                    .Replace("{3}", week.ToString())
+                    .Replace("{4}", period)
+                    .Replace("{5}", monthName)
+                    .Replace("{6}", from.Year.ToString());
+            }
+            default: // Summary
+            {
+                var absence = rows.Count(r => r.Status == "Absent");
+                var late = rows.Sum(r => r.Late);
+                var early = rows.Sum(r => r.Early);
+                var missing = rows.Count(r => r.Status == "Incomplete");
+                return template
+                    .Replace("{0}", absence.ToString())
+                    .Replace("{1}", late.ToString("0.##"))
+                    .Replace("{2}", early.ToString("0.##"))
+                    .Replace("{3}", period)
+                    .Replace("{4}", missing.ToString());
+            }
+        }
     }
 
     private static Task AddOutboxAsync(ApplicationDbContext dbContext, int notificationId,

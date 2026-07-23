@@ -311,26 +311,36 @@
 
         @* الخطوة 2: المؤلّف *@
         <div id="avw-n-step2" style="display:none;flex-direction:column;gap:12px">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            @* الفترة — ملخص: من/إلى · أسبوعي: سنة/شهر/أسبوع *@
+            <div id="avw-n-range" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
                 <label style="font-size:12px;font-weight:900;display:flex;flex-direction:column;gap:4px">من تاريخ
                     <input type="date" name="FromDate" id="avw-n-from" /></label>
                 <label style="font-size:12px;font-weight:900;display:flex;flex-direction:column;gap:4px">إلى تاريخ
                     <input type="date" name="ToDate" id="avw-n-to" /></label>
             </div>
+            <div id="avw-n-week" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <label style="font-size:12px;font-weight:900;display:flex;flex-direction:column;gap:4px">السنة
+                    <input type="number" name="NYear" id="avw-n-year" min="2000" max="2100" onchange="avwFillWeeks(this.value, document.getElementById('avw-n-month').value)" /></label>
+                <label style="font-size:12px;font-weight:900;display:flex;flex-direction:column;gap:4px">الشهر
+                    <select name="NMonth" id="avw-n-month" onchange="avwFillWeeks(document.getElementById('avw-n-year').value, this.value)">
+                        @for (var mo = 1; mo <= 12; mo++)
+                        { <option value="@mo">@mo</option> }
+                    </select></label>
+                <label style="font-size:12px;font-weight:900;display:flex;flex-direction:column;gap:4px">الأسبوع
+                    <select name="NWeek" id="avw-n-weeknum"></select></label>
+            </div>
             <div>
                 <label style="font-size:12px;font-weight:900">قناة الإشعار</label>
                 <div style="display:flex;gap:14px;margin-top:6px;font-size:13px;font-weight:900;flex-wrap:wrap">
-                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="Channel" value="Email" checked /> البريد الإلكتروني</label>
-                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="Channel" value="System" /> إشعار النظام (تطبيق الموبايل/رابط الحساب)</label>
+                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="Channel" value="System" checked /> إشعار النظام (تطبيق الموبايل/رابط الحساب)</label>
+                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="Channel" value="Email" /> البريد الإلكتروني</label>
                 </div>
             </div>
             <label style="font-size:12px;font-weight:900;display:flex;flex-direction:column;gap:4px">نص الرسالة
                 <textarea name="Message" id="avw-n-msg" rows="4"
                           style="border-radius:10px;border:1px solid rgba(73,111,151,.3);background:rgba(0,0,0,.16);color:inherit;padding:8px 10px;font-size:13px;font-weight:700;resize:vertical"></textarea>
             </label>
-            <div style="font-size:11px;color:var(--sa-muted,#8FA8BC);font-weight:800;line-height:1.7">
-                الرموز: <b>{0}</b> أيام الغياب · <b>{1}</b> ساعات التأخير · <b>{2}</b> ساعات الخروج المبكر · <b>{3}</b> الفترة · <b>{4}</b> البصمات المفقودة — تُملأ من حضور كل موظف.
-            </div>
+            <div id="avw-n-legend" style="font-size:11px;color:var(--sa-muted,#8FA8BC);font-weight:800;line-height:1.7"></div>
             @* نسخة إلى (CC) *@
             <div style="border:1px solid rgba(73,111,151,.2);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px">
                 <label style="flex-direction:row;align-items:center;gap:8px;font-size:13px;font-weight:900">
@@ -453,9 +463,25 @@
         }
         var AVW_TEMPLATES = {
             Summary: 'عزيزي الموظف/ة، يُرجى العلم أن لديك خلال الفترة ({3}): {0} أيام غياب، {1} ساعات تأخير، {2} ساعات خروج مبكر، و{4} بصمات مفقودة. يُرجى مراجعة دوامك قبل اعتماد الحركات.',
-            WeeklyAbsence: 'عزيزي الموظف/ة، لديك {0} أيام غياب خلال الفترة ({3}). يُرجى مراجعة حضورك قبل اعتماد الحركات.',
-            WeeklyShortage: 'عزيزي الموظف/ة، لديك {1} ساعات تأخير و{2} ساعات خروج مبكر خلال الفترة ({3}). يُرجى الالتزام بأوقات المناوبة.'
+            WeeklyAbsence: 'عزيزي الموظف/ة، خلال الأسبوع {2} ({3}) من شهر {4}/{5}: لديك {0} أيام غياب ({1}). يُرجى مراجعة حضورك قبل اعتماد الحركات.',
+            WeeklyShortage: 'عزيزي الموظف/ة، خلال الأسبوع {3} ({4}) من شهر {5}/{6}: لديك {0} مرات نقص ساعات؛ المطلوب {1} ساعة والفعلي {2} ساعة. يُرجى الالتزام بأوقات المناوبة.'
         };
+        var AVW_LEGENDS = {
+            Summary: 'الرموز: <b>{0}</b> أيام الغياب · <b>{1}</b> ساعات التأخير · <b>{2}</b> ساعات الخروج المبكر · <b>{3}</b> الفترة · <b>{4}</b> البصمات المفقودة.',
+            WeeklyAbsence: 'الرموز: <b>{0}</b> عدد أيام الغياب · <b>{1}</b> قائمة أيام الغياب · <b>{2}</b> رقم الأسبوع · <b>{3}</b> فترة الأسبوع · <b>{4}</b> الشهر · <b>{5}</b> السنة.',
+            WeeklyShortage: 'الرموز: <b>{0}</b> مرات نقص الساعات · <b>{1}</b> الساعات المطلوبة · <b>{2}</b> الساعات الفعلية · <b>{3}</b> رقم الأسبوع · <b>{4}</b> فترة الأسبوع · <b>{5}</b> الشهر · <b>{6}</b> السنة.'
+        };
+        var AVW_WEEKLY = { WeeklyAbsence: 1, WeeklyShortage: 1 };
+        function avwFillWeeks(y, mo) {
+            var days = new Date(y, mo, 0).getDate();
+            var weeks = Math.ceil(days / 7);
+            var sel = document.getElementById('avw-n-weeknum');
+            sel.innerHTML = '';
+            for (var w = 1; w <= weeks; w++) {
+                var s = (w - 1) * 7 + 1, e = Math.min(w * 7, days);
+                sel.innerHTML += '<option value="' + w + '">الأسبوع ' + w + ' (' + s + '–' + e + ')</option>';
+            }
+        }
         function avwNotifPick(el) {
             document.querySelectorAll('.avw-notif-opt').forEach(function (o) { o.classList.remove('on'); });
             el.classList.add('on');
@@ -477,9 +503,10 @@
             var checked = new Set([].map.call(document.querySelectorAll('[name=CcEmployeeIds]:checked'), function (c) { return c.value; }));
             var shown = AVW_EMPS.filter(function (e) { return !q || e.No.toLowerCase().indexOf(q) >= 0 || (e.Name || '').toLowerCase().indexOf(q) >= 0; }).slice(0, 100);
             document.getElementById('avw-cc-list').innerHTML = shown.map(function (e) {
-                return '<label style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer">'
-                    + '<input type="checkbox" name="CcEmployeeIds" value="' + e.Id + '"' + (checked.has(String(e.Id)) ? ' checked' : '') + ' onchange="avwCcCount()" />'
-                    + '<span style="direction:ltr">' + e.No + '</span> · ' + (e.Name || '') + '</label>';
+                return '<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;text-align:start">'
+                    + '<input type="checkbox" name="CcEmployeeIds" value="' + e.Id + '"' + (checked.has(String(e.Id)) ? ' checked' : '') + ' onchange="avwCcCount()" style="flex:none" />'
+                    + '<span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
+                    + '<bdi style="color:#12D9E3">' + e.No + '</bdi> — ' + (e.Name || '') + '</span></label>';
             }).join('');
             avwCcCount();
         }
@@ -492,11 +519,20 @@
                 var type = document.getElementById('avw-n-type').value;
                 document.getElementById('avw-n-title').textContent = 'إشعار الموظفين — ' + (document.querySelector('.avw-notif-opt.on') ? document.querySelector('.avw-notif-opt.on').textContent.trim() : '');
                 document.getElementById('avw-n-msg').value = AVW_TEMPLATES[type] || AVW_TEMPLATES.Summary;
-                // تواريخ افتراضية = شهر المستعرض
-                var m = document.querySelector('[name=Month]').value; // yyyy-MM
-                if (m) {
+                document.getElementById('avw-n-legend').innerHTML = (AVW_LEGENDS[type] || AVW_LEGENDS.Summary) + ' — تُملأ من حضور كل موظف.';
+                var m = document.querySelector('input[type=month][name=Month]').value || document.querySelector('[name=Month]').value;
+                var y = m ? +m.split('-')[0] : new Date().getFullYear();
+                var mo = m ? +m.split('-')[1] : (new Date().getMonth() + 1);
+                var weekly = !!AVW_WEEKLY[type];
+                document.getElementById('avw-n-range').style.display = weekly ? 'none' : 'grid';
+                document.getElementById('avw-n-week').style.display = weekly ? 'grid' : 'none';
+                if (weekly) {
+                    document.getElementById('avw-n-year').value = y;
+                    document.getElementById('avw-n-month').value = mo;
+                    avwFillWeeks(y, mo);
+                } else {
+                    var last = new Date(y, mo, 0).getDate();
                     document.getElementById('avw-n-from').value = m + '-01';
-                    var y = +m.split('-')[0], mo = +m.split('-')[1], last = new Date(y, mo, 0).getDate();
                     document.getElementById('avw-n-to').value = m + '-' + String(last).padStart(2, '0');
                 }
             } else {

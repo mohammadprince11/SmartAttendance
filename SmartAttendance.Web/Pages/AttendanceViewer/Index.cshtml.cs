@@ -203,12 +203,25 @@ public class IndexModel : PageModel
         var (year, month) = Period;
         var form = Request.Form;
         var type = form["NotifType"].ToString() is { Length: > 0 } t ? t : "Summary";
-        var channel = form["Channel"].ToString() is { Length: > 0 } ch ? ch : "Email";
+        var channel = form["Channel"].ToString() is { Length: > 0 } ch ? ch : "System";
         var template = form["Message"].ToString();
-        DateOnly.TryParse(form["FromDate"], out var from);
-        DateOnly.TryParse(form["ToDate"], out var to);
-        if (from == default) from = new DateOnly(year, month, 1);
-        if (to == default) to = from.AddMonths(1).AddDays(-1);
+
+        DateOnly from, to;
+        var week = 0;
+        if (AttendanceNotificationStore.IsWeekly(type))
+        {
+            var wy = int.TryParse(form["NYear"], out var y2) ? y2 : year;
+            var wm = int.TryParse(form["NMonth"], out var m2) ? m2 : month;
+            week = int.TryParse(form["NWeek"], out var wk) ? Math.Max(1, wk) : 1;
+            (from, to) = AttendanceNotificationStore.WeekRange(wy, wm, week);
+        }
+        else
+        {
+            DateOnly.TryParse(form["FromDate"], out from);
+            DateOnly.TryParse(form["ToDate"], out to);
+            if (from == default) from = new DateOnly(year, month, 1);
+            if (to == default) to = from.AddMonths(1).AddDays(-1);
+        }
 
         // النطاق: حقول المؤلّف المستقلة (تسبق فلتر المستعرض إن حُدّدت)
         var scope = form;
@@ -243,7 +256,7 @@ public class IndexModel : PageModel
             .Where(id => id > 0).Distinct().ToList();
 
         var (_, recipients, ccCount) = await AttendanceNotificationStore.SendAsync(
-            _dbContext, type, from, to, channel, template, employeeIds, ccMode, ccIds);
+            _dbContext, type, from, to, week, channel, template, employeeIds, ccMode, ccIds);
 
         var channelLabel = AttendanceNotificationStore.Channels.FirstOrDefault(c => c.Key == channel).Label ?? channel;
         TempData["SuccessMessage"] =
