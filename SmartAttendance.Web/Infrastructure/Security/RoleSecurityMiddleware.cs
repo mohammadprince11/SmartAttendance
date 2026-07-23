@@ -276,6 +276,14 @@ public class RoleSecurityMiddleware
                 "/shiftrules",
                 "/attendancerecommendations",
                 "/shiftassignments",
+                // الشاشة التشغيلية الأم للمودل: المسارات البديلة
+                // (/attendanceprocessing و/attendancecorrections و/attendanceimports)
+                // كلها تُعيد التوجيه إليها، فبدونها كانت كلها تنتهي بـ«لا صلاحية».
+                "/attendanceoperations",
+                // صفحات أُضيفت للمودل لاحقاً ولم تُحدَّث قوائم الأدوار معها
+                "/shiftoverrides",
+                "/roster",
+                "/employeegeolocations",
                 "/attendanceviewer",
                 "/monthattendance",
                 "/employeeshifts",
@@ -304,6 +312,8 @@ public class RoleSecurityMiddleware
                 "/employees",
                 "/myprofile",
                 "/attendancerecords",
+                // الشاشة التي تُعيد إليها مسارات المعالجة/التصحيحات/الاستيراد التوجيه
+                "/attendanceoperations",
                 "/attendanceprocessing",
                 "/attendancecorrections",
                 "/attendanceimports",
@@ -320,6 +330,8 @@ public class RoleSecurityMiddleware
                 "/employees",
                 "/myprofile",
                 "/attendancerecords",
+                // الشاشة التي تُعيد إليها مسارات المعالجة/التصحيحات التوجيه
+                "/attendanceoperations",
                 "/attendanceprocessing",
                 "/attendancecorrections",
                 "/leaverequests",
