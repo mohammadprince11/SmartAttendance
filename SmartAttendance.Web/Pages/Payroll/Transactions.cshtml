@@ -97,6 +97,7 @@
             @if (!Model.IsReadOnly)
             {
                 <button type="button" class="tx-btn ghost" onclick="massOpen()">👥 دخل جماعي</button>
+                <button type="button" class="tx-btn ghost" onclick="impOpen()">⬆ استيراد إكسل</button>
                 <button type="button" class="tx-btn" onclick="txOpen(0)">+ حركة جديدة</button>
             }
         </div>
@@ -424,6 +425,35 @@
             </form>
         </div>
     </aside>
+
+    @* ===== استيراد إكسل ===== *@
+    <div class="hrms-slideover-backdrop" id="imp-backdrop" onclick="impClose()"></div>
+    <aside class="hrms-slideover" id="imp-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2>⬆ استيراد الحركات (إكسل / CSV)</h2>
+            <button type="button" class="hrms-slideover-close" onclick="impClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Import" enctype="multipart/form-data" class="tx-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="Type" value="@Model.Type" />
+                <div style="font-size:12px;font-weight:800;color:var(--sa-muted,#8FA8BC);border:1px dashed rgba(73,111,151,.3);border-radius:10px;padding:10px 12px;line-height:2">
+                    <b style="color:var(--acc)">أعمدة الملف (الصف الأول ترويسة تُتجاهل):</b><br />
+                    A: رمز الموظف · B: البند · C: المبلغ · D: نوع الدفعة (داخل/خارج — اختياري) · E: ملاحظة (اختياري)
+                </div>
+                <div class="tx-grid2">
+                    <label>الشهر
+                        <select name="ImportMonth">
+                            @for (var m = 1; m <= 12; m++)
+                            { <option value="@m" selected="@(m == Model.Month)">@months[m-1]</option> }
+                        </select>
+                    </label>
+                    <label>السنة<input type="number" name="ImportYear" value="@Model.Year" min="2000" max="2100" /></label>
+                </div>
+                <label>الملف (.xlsx أو .csv) *<input type="file" name="importFile" accept=".xlsx,.csv" required style="min-height:auto;padding:8px" /></label>
+                <button type="submit" class="tx-btn">استيراد الحركات</button>
+            </form>
+        </div>
+    </aside>
 </section>
 
 @section Scripts {
@@ -561,6 +591,9 @@
         }
         function massClose(){ document.getElementById('mass-slide').classList.remove('open'); document.getElementById('mass-backdrop').classList.remove('open'); }
 
-        document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ txClose(); massClose(); } });
+        function impOpen(){ document.getElementById('imp-slide').classList.add('open'); document.getElementById('imp-backdrop').classList.add('open'); }
+        function impClose(){ document.getElementById('imp-slide').classList.remove('open'); document.getElementById('imp-backdrop').classList.remove('open'); }
+
+        document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ txClose(); massClose(); impClose(); } });
     </script>
 }

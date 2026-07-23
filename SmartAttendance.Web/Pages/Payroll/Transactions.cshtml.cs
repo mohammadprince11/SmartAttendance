@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
@@ -212,6 +213,58 @@ public class TransactionsModel : PageModel
 
         var n = await PayrollTransactionStore.SaveManyAsync(_db, empIds, template, User?.Identity?.Name ?? "system");
         TempData["PayrollMessage"] = $"تمت إضافة {n} حركة عبر الدخل الجماعي.";
+        return RedirectToPage(back);
+    }
+
+    /// <summary>استيراد حركات من إكسل/CSV (الأعمدة: رمز الموظف | البند | المبلغ | نوع الدفعة؟ | ملاحظة؟).</summary>
+    public async Task<IActionResult> OnPostImportAsync(IFormFile? importFile)
+    {
+        var f = Request.Form;
+        var type = f["Type"].ToString() == PayrollTransactionStore.Deduction ? PayrollTransactionStore.Deduction : PayrollTransactionStore.Income;
+        var y = int.TryParse(f["ImportYear"], out var yy) ? yy : Year;
+        var m = int.TryParse(f["ImportMonth"], out var mm) ? mm : Month;
+        var back = new { Type = type, Year = y, Month = m };
+
+        if (importFile == null || importFile.Length == 0)
+        { TempData["PayrollMessage"] = "اختر ملف إكسل أو CSV."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
+
+        List<string[]> rows;
+        try { await using var s = importFile.OpenReadStream(); rows = SpreadsheetReader.Read(s, importFile.FileName); }
+        catch (Exception ex) { TempData["PayrollMessage"] = "تعذّر قراءة الملف: " + ex.Message; TempData["PayrollOk"] = false; return RedirectToPage(back); }
+
+        var emps = await HrmsDatabase.QueryAsync(_db,
+            "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1;",
+            command => { },
+            reader => new { Id = HrmsDatabase.GetInt(reader, "Id"), No = HrmsDatabase.GetString(reader, "EmployeeNo") });
+        var byCode = new Dictionary<string, int>();
+        foreach (var e in emps) { var k = e.No.Trim().ToLowerInvariant(); if (k.Length > 0) byCode[k] = e.Id; }
+
+        int imported = 0, skipped = 0;
+        var user = User?.Identity?.Name ?? "system";
+        for (var i = 1; i < rows.Count; i++) // الصف 0 ترويسة
+        {
+            var row = rows[i];
+            if (row.Length < 3) { skipped++; continue; }
+            var code = row[0].Trim().ToLowerInvariant();
+            var itemName = row[1].Trim();
+            if (code.Length == 0 || itemName.Length == 0 || !byCode.TryGetValue(code, out var empId)) { skipped++; continue; }
+            if (!decimal.TryParse(row[2], out var amount) || amount <= 0) { skipped++; continue; }
+
+            var paymentType = row.Length > 3 && (row[3].Contains("خارج") || row[3].Trim().Equals("OutSalary", StringComparison.OrdinalIgnoreCase)) ? "OutSalary" : "InSalary";
+            var note = row.Length > 4 && !string.IsNullOrWhiteSpace(row[4]) ? row[4].Trim() : null;
+
+            await PayrollTransactionStore.SaveAsync(_db, new PayrollTransactionStore.Transaction
+            {
+                EmployeeId = empId, Year = y, Month = m, TxType = type,
+                ItemName = itemName, Amount = amount, Taxable = true,
+                PaymentType = paymentType, TransactionDate = DateOnly.FromDateTime(DateTime.Today),
+                Note = note, Status = "Approved", Source = "استيراد إكسل"
+            }, user);
+            imported++;
+        }
+
+        TempData["PayrollMessage"] = $"استُوردت {imported} حركة" + (skipped > 0 ? $"، وتُخطّي {skipped} صفاً (بيانات غير صالحة)." : ".");
+        TempData["PayrollOk"] = imported > 0;
         return RedirectToPage(back);
     }
 
