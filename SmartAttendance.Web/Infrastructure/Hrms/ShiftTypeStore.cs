@@ -32,6 +32,15 @@ public static class ShiftTypeStore
         public bool IsWork => DayKind == "Work";
     }
 
+    /// <summary>فترة عمل بمناوبة «بفترات متعددة» (سبليت شفت) — بداية/نهاية مشتركة لكل أيام العمل.</summary>
+    public sealed class ShiftPeriod
+    {
+        public int Ordinal { get; set; }
+        public string StartTime { get; set; } = "09:00";
+        public string EndTime { get; set; } = "13:00";
+        public decimal Hours => ComputeHours(StartTime, EndTime);
+    }
+
     public sealed class ShiftType
     {
         public int Id { get; set; }
@@ -40,8 +49,10 @@ public static class ShiftTypeStore
         public string ColorHex { get; set; } = "#12D9E3";
         public bool IsFlexible { get; set; }
         public decimal FlexDailyHours { get; set; }       // للمرنة: ساعات مطلوبة يومياً
+        public bool MultiPeriod { get; set; }             // مناوبة بفترات متعددة (سبليت شفت)
         public bool IsActive { get; set; } = true;
         public List<ShiftDay> Days { get; set; } = new();
+        public List<ShiftPeriod> Periods { get; set; } = new();
 
         /// <summary>أسماء أيام العطلة/الراحة — لعمود القائمة (مثل عرض كيان).</summary>
         public string OffDaysText => string.Join(" ",
@@ -82,6 +93,21 @@ BEGIN
     );
     CREATE UNIQUE INDEX UX_ShiftTypeDays_Shift_Day ON ShiftTypeDays (ShiftTypeId, DayIndex);
 END;
+
+-- الفترات المتعددة (سبليت شفت) — idempotent
+IF COL_LENGTH('ShiftTypes','MultiPeriod') IS NULL ALTER TABLE ShiftTypes ADD MultiPeriod bit NOT NULL CONSTRAINT DF_ShiftTypes_MultiPeriod DEFAULT(0);
+IF OBJECT_ID('ShiftTypePeriods', 'U') IS NULL
+BEGIN
+    CREATE TABLE ShiftTypePeriods
+    (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        ShiftTypeId int NOT NULL,
+        Ordinal int NOT NULL,
+        StartTime nvarchar(5) NOT NULL,       -- HH:mm
+        EndTime nvarchar(5) NOT NULL
+    );
+    CREATE INDEX IX_ShiftTypePeriods_Shift ON ShiftTypePeriods (ShiftTypeId, Ordinal);
+END;
 """);
     }
 
@@ -105,12 +131,30 @@ END;
                 Day = ReadDay(reader)
             });
 
-        var byShift = days.GroupBy(d => d.ShiftTypeId)
+        var periods = await HrmsDatabase.QueryAsync(
+            dbContext,
+            "SELECT * FROM ShiftTypePeriods ORDER BY ShiftTypeId, Ordinal;",
+            command => { },
+            reader => new
+            {
+                ShiftTypeId = HrmsDatabase.GetInt(reader, "ShiftTypeId"),
+                Period = new ShiftPeriod
+                {
+                    Ordinal = HrmsDatabase.GetInt(reader, "Ordinal"),
+                    StartTime = HrmsDatabase.GetString(reader, "StartTime") is { Length: > 0 } s ? s : "09:00",
+                    EndTime = HrmsDatabase.GetString(reader, "EndTime") is { Length: > 0 } e ? e : "13:00"
+                }
+            });
+
+        var daysByShift = days.GroupBy(d => d.ShiftTypeId)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Day).ToList());
+        var periodsByShift = periods.GroupBy(p => p.ShiftTypeId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Period).ToList());
 
         foreach (var shift in shifts)
         {
-            shift.Days = byShift.TryGetValue(shift.Id, out var list) ? list : new();
+            shift.Days = daysByShift.TryGetValue(shift.Id, out var list) ? list : new();
+            shift.Periods = periodsByShift.TryGetValue(shift.Id, out var pl) ? pl : new();
         }
         return shifts;
     }
@@ -118,6 +162,22 @@ END;
     public static async Task<int> SaveAsync(ApplicationDbContext dbContext, ShiftType shift)
     {
         await EnsureAsync(dbContext);
+
+        // مناوبة بفترات متعددة: ساعات كل يوم عمل = مجموع ساعات الفترات المشتركة،
+        // ووقتا اليوم = بداية أول فترة/نهاية آخر فترة (للعرض ومرساة المحرك).
+        if (shift.MultiPeriod && shift.Periods.Count > 0)
+        {
+            var ordered = shift.Periods.OrderBy(p => p.Ordinal).ToList();
+            var total = ordered.Sum(p => p.Hours);
+            var firstStart = ordered.First().StartTime;
+            var lastEnd = ordered.Last().EndTime;
+            foreach (var day in shift.Days.Where(d => d.IsWork))
+            {
+                day.StartTime = firstStart;
+                day.EndTime = lastEnd;
+                day.WorkHours = total;
+            }
+        }
 
         int id;
         if (shift.Id > 0)
@@ -128,9 +188,10 @@ END;
                 """
 UPDATE ShiftTypes
 SET Name = @Name, NameEn = @NameEn, ColorHex = @Color,
-    IsFlexible = @Flex, FlexDailyHours = @FlexHours, IsActive = @Active
+    IsFlexible = @Flex, FlexDailyHours = @FlexHours, MultiPeriod = @Multi, IsActive = @Active
 WHERE Id = @Id;
 DELETE FROM ShiftTypeDays WHERE ShiftTypeId = @Id;
+DELETE FROM ShiftTypePeriods WHERE ShiftTypeId = @Id;
 """,
                 command =>
                 {
@@ -143,11 +204,31 @@ DELETE FROM ShiftTypeDays WHERE ShiftTypeId = @Id;
             id = await HrmsDatabase.ScalarAsync<int>(
                 dbContext,
                 """
-INSERT INTO ShiftTypes (Name, NameEn, ColorHex, IsFlexible, FlexDailyHours, IsActive)
-VALUES (@Name, @NameEn, @Color, @Flex, @FlexHours, @Active);
+INSERT INTO ShiftTypes (Name, NameEn, ColorHex, IsFlexible, FlexDailyHours, MultiPeriod, IsActive)
+VALUES (@Name, @NameEn, @Color, @Flex, @FlexHours, @Multi, @Active);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
                 command => AddShiftParameters(command, shift));
+        }
+
+        if (shift.MultiPeriod)
+        {
+            var ord = 0;
+            foreach (var period in shift.Periods.OrderBy(p => p.Ordinal))
+            {
+                var current = period;
+                var thisOrd = ord++;
+                await HrmsDatabase.ExecuteAsync(
+                    dbContext,
+                    "INSERT INTO ShiftTypePeriods (ShiftTypeId, Ordinal, StartTime, EndTime) VALUES (@S, @O, @St, @En);",
+                    command =>
+                    {
+                        HrmsDatabase.AddParameter(command, "@S", id);
+                        HrmsDatabase.AddParameter(command, "@O", thisOrd);
+                        HrmsDatabase.AddParameter(command, "@St", current.StartTime);
+                        HrmsDatabase.AddParameter(command, "@En", current.EndTime);
+                    });
+            }
         }
 
         foreach (var day in shift.Days.OrderBy(d => d.DayIndex))
@@ -180,6 +261,7 @@ VALUES (@ShiftTypeId, @DayIndex, @DayKind, @StartTime, @EndTime, @WorkHours);
             dbContext,
             """
 DELETE FROM ShiftTypeDays WHERE ShiftTypeId = @Id;
+DELETE FROM ShiftTypePeriods WHERE ShiftTypeId = @Id;
 DELETE FROM ShiftTypes WHERE Id = @Id;
 """,
             command => HrmsDatabase.AddParameter(command, "@Id", id));
@@ -202,6 +284,7 @@ DELETE FROM ShiftTypes WHERE Id = @Id;
         ColorHex = HrmsDatabase.GetString(reader, "ColorHex") is { Length: > 0 } c ? c : "#12D9E3",
         IsFlexible = HrmsDatabase.GetBool(reader, "IsFlexible"),
         FlexDailyHours = reader["FlexDailyHours"] is decimal f ? f : 0,
+        MultiPeriod = HrmsDatabase.GetBool(reader, "MultiPeriod"),
         IsActive = HrmsDatabase.GetBool(reader, "IsActive")
     };
 
@@ -221,6 +304,7 @@ DELETE FROM ShiftTypes WHERE Id = @Id;
         HrmsDatabase.AddParameter(command, "@Color", shift.ColorHex);
         HrmsDatabase.AddParameter(command, "@Flex", shift.IsFlexible ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@FlexHours", shift.FlexDailyHours);
+        HrmsDatabase.AddParameter(command, "@Multi", shift.MultiPeriod ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@Active", shift.IsActive ? 1 : 0);
     }
 }

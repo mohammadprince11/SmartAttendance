@@ -12,8 +12,9 @@
     ViewData["Title"] = "أنواع المناوبات";
     var shiftsJson = JsonSerializer.Serialize(Model.Shifts.Select(s => new
     {
-        s.Id, s.Name, s.NameEn, s.ColorHex, s.IsFlexible, s.FlexDailyHours, s.IsActive,
-        Days = s.Days.Select(d => new { d.DayIndex, d.DayKind, d.StartTime, d.EndTime })
+        s.Id, s.Name, s.NameEn, s.ColorHex, s.IsFlexible, s.FlexDailyHours, s.MultiPeriod, s.IsActive,
+        Days = s.Days.Select(d => new { d.DayIndex, d.DayKind, d.StartTime, d.EndTime }),
+        Periods = s.Periods.Select(p => new { p.StartTime, p.EndTime })
     }));
 }
 
@@ -62,8 +63,18 @@
     .sht-colors input { display: none; }
     .sht-colors span { width: 26px; height: 26px; border-radius: 8px; display: inline-block; border: 2px solid transparent; }
     .sht-colors input:checked + span { border-color: #fff; box-shadow: 0 0 0 2px #12D9E3; }
-    .sht-mode { display: flex; gap: 14px; font-size: 13px; font-weight: 900; }
+    .sht-mode { display: flex; gap: 14px; font-size: 13px; font-weight: 900; flex-wrap: wrap; }
     .sht-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
+    /* الفترات المتعددة (سبليت شفت) */
+    .sht-periods { display: flex; flex-direction: column; gap: 6px; }
+    .sht-period-row { display: grid; grid-template-columns: 30px 1fr 1fr 56px 34px; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid rgba(73,111,151,.16); border-radius: 10px; font-size: 12px; }
+    .sht-period-row b { font-weight: 900; text-align: center; color: var(--sa-muted,#8FA8BC); }
+    .sht-period-row input { min-height: 32px; border-radius: 8px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: inherit; padding: 4px 8px; width: 100%; }
+    html[data-theme="light"] .sht-period-row input { background: #fff; }
+    .sht-period-row .hours { text-align: center; font-weight: 900; color: #12D9E3; direction: ltr; }
+    .sht-period-row .rm { background: rgba(248,113,113,.14); border: 1px solid rgba(248,113,113,.4); color: #f87171; border-radius: 8px; min-height: 32px; cursor: pointer; font-weight: 900; }
+    .sht-hint { font-size: 12px; font-weight: 800; color: var(--sa-muted,#8FA8BC); }
+    .sht-chip.multi { background: rgba(96,165,250,.14); color: #60a5fa; }
 </style>
 
 <section class="sht-page" dir="rtl">
@@ -96,7 +107,11 @@
                     {
                         <tr>
                             <td><span class="sht-color" style="background:@shift.ColorHex"></span><b>@shift.Name</b>@(string.IsNullOrWhiteSpace(shift.NameEn) ? "" : $" · {shift.NameEn}")</td>
-                            <td><span class="sht-chip @(shift.IsFlexible ? "flex" : "")">@(shift.IsFlexible ? $"مرنة · {shift.FlexDailyHours:0.##} س/يوم" : "ثابتة")</span></td>
+                            <td>
+                                <span class="sht-chip @(shift.IsFlexible ? "flex" : "")">@(shift.IsFlexible ? $"مرنة · {shift.FlexDailyHours:0.##} س/يوم" : "ثابتة")</span>
+                                @if (shift.MultiPeriod)
+                                { <span class="sht-chip multi">@shift.Periods.Count فترات</span> }
+                            </td>
                             <td>@shift.OffDaysText</td>
                             <td style="direction:ltr">@shift.Days.Sum(d => d.WorkHours).ToString("0.##") س</td>
                             <td><span class="sht-chip @(shift.IsActive ? "" : "off")">@(shift.IsActive ? "نشطة" : "متوقفة")</span></td>
@@ -150,6 +165,21 @@
                 <label id="sht-flex-wrap" hidden>الساعات المطلوبة يومياً
                     <input type="number" name="FlexDailyHours" id="sht-FlexHours" step="0.25" min="0" max="24" value="8" style="max-width:140px" />
                 </label>
+
+                @* نوع الفترات: واحدة / متعددة (سبليت شفت) — للثابتة فقط *@
+                <div class="sht-mode" id="sht-period-mode">
+                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="PeriodMode" value="single" checked onchange="shtPeriodModeChanged()" /> فترة واحدة</label>
+                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="PeriodMode" value="multi" onchange="shtPeriodModeChanged()" /> فترات متعددة (سبليت شفت)</label>
+                </div>
+
+                <div id="sht-periods-wrap" hidden style="display:flex;flex-direction:column;gap:8px">
+                    <label style="margin:0">الفترات <span class="sht-hint">— تنطبق على كل أيام العمل؛ ساعات اليوم = مجموع الفترات</span></label>
+                    <div id="sht-periods" class="sht-periods"></div>
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <button type="button" class="sht-btn ghost" onclick="shtAddPeriod()">+ فترة</button>
+                        <span class="sht-hint">إجمالي ساعات الفترات: <b id="sht-periods-total" style="color:#12D9E3">0</b></span>
+                    </div>
+                </div>
 
                 <label>مصفوفة الأسبوع</label>
                 <div class="sht-daygrid">
@@ -206,30 +236,81 @@
         }
 
         function shtIsFlex() { return document.querySelector('[name="ShiftMode"]:checked').value === 'flex'; }
+        function shtIsMulti() { var r = document.querySelector('[name="PeriodMode"]:checked'); return !!r && r.value === 'multi' && !shtIsFlex(); }
 
         function shtDayChanged(d) {
             var el = shtEls(d);
             var isWork = el.kind.value === 'Work';
             var flex = shtIsFlex();
-            el.start.disabled = !isWork || flex;
-            el.end.disabled = !isWork || flex;
+            var multi = shtIsMulti();
+            var lockTimes = !isWork || flex || multi;   // بالمرنة/المتعددة لا أوقات لكل يوم
+            el.start.disabled = lockTimes;
+            el.end.disabled = lockTimes;
             el.row.classList.toggle('is-off', !isWork);
             el.hours.textContent = !isWork ? '0'
                 : flex ? (document.getElementById('sht-FlexHours').value || 0)
+                : multi ? (document.getElementById('sht-periods-total').textContent || 0)
                 : shtComputeHours(el.start.value, el.end.value);
         }
 
         function shtModeChanged() {
-            document.getElementById('sht-flex-wrap').hidden = !shtIsFlex();
-            for (var d = 0; d < 7; d++) shtDayChanged(d);
+            var flex = shtIsFlex();
+            document.getElementById('sht-flex-wrap').hidden = !flex;
+            document.getElementById('sht-period-mode').hidden = flex;   // الفترات للثابتة فقط
+            if (flex) { var single = document.querySelector('[name="PeriodMode"][value="single"]'); if (single) single.checked = true; }
+            shtPeriodModeChanged();
         }
         document.getElementById('sht-FlexHours').addEventListener('input', shtModeChanged);
+
+        // ===== الفترات المتعددة (سبليت شفت) =====
+        function shtReindexPeriods() {
+            document.querySelectorAll('#sht-periods .sht-period-row').forEach(function (row, i) {
+                row.querySelector('.p-start').name = 'period_start_' + i;
+                row.querySelector('.p-end').name = 'period_end_' + i;
+                row.querySelector('b').textContent = (i + 1);
+            });
+        }
+        function shtAddPeriod(start, end) {
+            var wrap = document.getElementById('sht-periods');
+            var row = document.createElement('div');
+            row.className = 'sht-period-row';
+            row.innerHTML = '<b></b>'
+                + '<input type="time" class="p-start" value="' + (start || '09:00') + '" onchange="shtPeriodsRecalc()" />'
+                + '<input type="time" class="p-end" value="' + (end || '13:00') + '" onchange="shtPeriodsRecalc()" />'
+                + '<span class="hours">0</span>'
+                + '<button type="button" class="rm" onclick="shtRemovePeriod(this)">×</button>';
+            wrap.appendChild(row);
+            shtReindexPeriods(); shtPeriodsRecalc();
+        }
+        function shtRemovePeriod(btn) { var row = btn.closest('.sht-period-row'); row.parentNode.removeChild(row); shtReindexPeriods(); shtPeriodsRecalc(); }
+        function shtPeriodsRecalc() {
+            var total = 0;
+            document.querySelectorAll('#sht-periods .sht-period-row').forEach(function (row) {
+                var h = shtComputeHours(row.querySelector('.p-start').value, row.querySelector('.p-end').value);
+                row.querySelector('.hours').textContent = h;
+                total += h;
+            });
+            total = Math.round(total * 100) / 100;
+            document.getElementById('sht-periods-total').textContent = total;
+            if (shtIsMulti()) { for (var d = 0; d < 7; d++) { var el = shtEls(d); if (el.kind.value === 'Work') el.hours.textContent = total; } }
+        }
+        function shtPeriodModeChanged() {
+            var multi = shtIsMulti();
+            document.getElementById('sht-periods-wrap').hidden = !multi;
+            if (multi && document.querySelectorAll('#sht-periods .sht-period-row').length === 0) {
+                shtAddPeriod('09:00', '13:00'); shtAddPeriod('16:00', '20:00');
+            }
+            for (var d = 0; d < 7; d++) shtDayChanged(d);
+            shtPeriodsRecalc();
+        }
 
         function shtOpen(id) {
             var form = document.getElementById('sht-form');
             form.reset();
             document.getElementById('sht-Id').value = id || 0;
             document.getElementById('sht-title').textContent = id ? 'تعديل المناوبة' : 'مناوبة جديدة';
+            document.getElementById('sht-periods').innerHTML = '';
+            document.querySelector('[name="PeriodMode"][value="single"]').checked = true;
 
             if (id) {
                 var s = SHT_DATA.find(function (x) { return x.Id === id; });
@@ -241,6 +322,9 @@
                     if (colorInput) colorInput.checked = true;
                     document.querySelector('[name="ShiftMode"][value="' + (s.IsFlexible ? 'flex' : 'fixed') + '"]').checked = true;
                     document.getElementById('sht-FlexHours').value = s.FlexDailyHours || 8;
+                    var multi = !s.IsFlexible && !!s.MultiPeriod;
+                    document.querySelector('[name="PeriodMode"][value="' + (multi ? 'multi' : 'single') + '"]').checked = true;
+                    if (multi) (s.Periods || []).forEach(function (p) { shtAddPeriod(p.StartTime, p.EndTime); });
                     (s.Days || []).forEach(function (day) {
                         var el = shtEls(day.DayIndex);
                         el.kind.value = day.DayKind || 'Work';

@@ -38,6 +38,7 @@ public class IndexModel : PageModel
             ColorHex = form["ColorHex"].ToString() is { Length: > 0 } color ? color : "#12D9E3",
             IsFlexible = form["ShiftMode"] == "flex",
             FlexDailyHours = decimal.TryParse(form["FlexDailyHours"], out var flexHours) ? flexHours : 0,
+            MultiPeriod = form["PeriodMode"] == "multi" && form["ShiftMode"] != "flex",
             IsActive = form["IsActive"] == "true"
         };
 
@@ -45,6 +46,19 @@ public class IndexModel : PageModel
         {
             TempData["SuccessMessage"] = "اسم المناوبة مطلوب.";
             return RedirectToPage();
+        }
+
+        // فترات السبليت شفت: period_start_i / period_end_i (i=0..)
+        if (shift.MultiPeriod)
+        {
+            for (var i = 0; i < 12; i++)
+            {
+                var ps = form[$"period_start_{i}"].ToString();
+                var pe = form[$"period_end_{i}"].ToString();
+                if (string.IsNullOrWhiteSpace(ps) || string.IsNullOrWhiteSpace(pe)) continue;
+                shift.Periods.Add(new ShiftTypeStore.ShiftPeriod { Ordinal = shift.Periods.Count, StartTime = ps, EndTime = pe });
+            }
+            if (shift.Periods.Count == 0) shift.MultiPeriod = false; // لا فترات ⇒ عد لفترة واحدة
         }
 
         // مصفوفة الأيام السبعة: day_kind_0..6 + day_start/end_0..6
