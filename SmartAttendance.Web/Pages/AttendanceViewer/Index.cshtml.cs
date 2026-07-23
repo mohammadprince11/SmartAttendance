@@ -190,15 +190,52 @@ public class IndexModel : PageModel
         return RedirectToPage(RouteValues());
     }
 
-    /// <summary>إشعار الموظفين (ملخص الحضور/الغياب/نقص الساعات) — يسجّل الطلب للشهر.</summary>
+    /// <summary>
+    /// إشعار الموظفين: مؤلّف رسالة (فترة + قناة + نص برموز) يُرسَل للموظفين المطابقين
+    /// للفلتر الحالي؛ تُملأ رموز كل موظف من حضوره الفعلي وتُخزَّن رسالته بصندوق الصادر.
+    /// </summary>
     public async Task<IActionResult> OnPostNotifyAsync()
     {
         var (year, month) = Period;
-        var type = Request.Form["NotifType"].ToString() is { Length: > 0 } t ? t : "Summary";
-        var recipients = await _dbContext.Employees.AsNoTracking().CountAsync(e => e.IsActive);
-        await AttendanceNotificationStore.CreateAsync(_dbContext, type, year, month, recipients);
-        TempData["SuccessMessage"] = $"تم إرسال إشعار «{AttendanceNotificationStore.LabelOf(type)}» لـ{recipients} موظفاً.";
+        var form = Request.Form;
+        var type = form["NotifType"].ToString() is { Length: > 0 } t ? t : "Summary";
+        var channel = form["Channel"].ToString() is { Length: > 0 } ch ? ch : "Email";
+        var template = form["Message"].ToString();
+        DateOnly.TryParse(form["FromDate"], out var from);
+        DateOnly.TryParse(form["ToDate"], out var to);
+        if (from == default) from = new DateOnly(year, month, 1);
+        if (to == default) to = from.AddMonths(1).AddDays(-1);
+
+        var employeeIds = await MatchingEmployeeIdsAsync();
+        if (employeeIds.Count == 0)
+        {
+            TempData["SuccessMessage"] = "لا موظفون مطابقون للفلتر — عدّل النطاق.";
+            return RedirectToPage(RouteValues());
+        }
+
+        var (_, recipients) = await AttendanceNotificationStore.SendAsync(
+            _dbContext, type, from, to, channel, template, employeeIds);
+        TempData["SuccessMessage"] =
+            $"تم تأليف إشعار «{AttendanceNotificationStore.LabelOf(type)}» عبر {(channel == "Sms" ? "رسالة نصية" : "البريد")} لـ{recipients} موظفاً "
+            + $"({from:yyyy-MM-dd} → {to:yyyy-MM-dd}) — وُلّدت الرسائل بصندوق الصادر.";
         return RedirectToPage(RouteValues());
+    }
+
+    /// <summary>معرّفات الموظفين المطابقين للفلتر الحالي (السمات + البحث) — نطاق الإشعار.</summary>
+    private async Task<List<int>> MatchingEmployeeIdsAsync()
+    {
+        var q = _dbContext.Employees.AsNoTracking().Where(e => e.IsActive);
+        if (FDept != null) q = q.Where(e => e.DepartmentId == FDept);
+        if (FBranch != null) q = q.Where(e => e.BranchId == FBranch);
+        if (FPosition != null) q = q.Where(e => e.PositionId == FPosition);
+        if (!string.IsNullOrWhiteSpace(FContract)) q = q.Where(e => e.ContractType == FContract);
+        if (!string.IsNullOrWhiteSpace(FNationality)) q = q.Where(e => e.Nationality == FNationality);
+        if (!string.IsNullOrWhiteSpace(Search))
+        {
+            var v = Search.Trim();
+            q = q.Where(e => e.EmployeeNo.Contains(v) || e.FullName.Contains(v));
+        }
+        return await q.Select(e => e.Id).ToListAsync();
     }
 
     private object RouteValues() => new

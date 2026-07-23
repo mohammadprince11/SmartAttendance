@@ -104,7 +104,7 @@
         <div style="display:flex;gap:8px;align-items:center">
             <button type="button" class="avw-icon" id="avw-filter-btn" onclick="avwPanel('filter')" title="بحث متقدم">⛃</button>
             <button type="button" class="avw-icon" id="avw-settings-btn" onclick="avwPanel('settings')" title="إعدادات العرض">⚙</button>
-            <button type="button" class="avw-icon" onclick="avwModal('notif', true)" title="إشعار الموظفين">🔔</button>
+            <button type="button" class="avw-icon" onclick="avwModal('notif', true); avwNotifStep(1)" title="إشعار الموظفين">🔔</button>
         </div>
     </header>
 
@@ -282,20 +282,59 @@
     </form>
 </div>
 
-@* ===== منبثق إشعار الموظفين ===== *@
+@* ===== منبثق إشعار الموظفين (مؤلّف رسالة بخطوتين) ===== *@
 <div class="avw-modal-bg" id="avw-notifbg" onclick="avwModal('notif', false)"></div>
-<div class="avw-modal" id="avw-notif">
-    <h3>إشعار الموظفين — بماذا تود إبلاغهم؟</h3>
+<div class="avw-modal" id="avw-notif" style="width:min(560px, calc(100% - 32px))">
+    <h3 id="avw-n-title">إشعار الموظفين — بماذا تود إبلاغهم؟</h3>
     <form method="post" asp-page-handler="Notify" style="display:flex;flex-direction:column;gap:14px">
         <input type="hidden" name="Month" value="@Model.Month" />
+        <input type="hidden" name="Search" value="@Model.Search" />
+        <input type="hidden" name="FDept" value="@Model.FDept" />
+        <input type="hidden" name="FBranch" value="@Model.FBranch" />
+        <input type="hidden" name="FPosition" value="@Model.FPosition" />
+        <input type="hidden" name="FContract" value="@Model.FContract" />
+        <input type="hidden" name="FNationality" value="@Model.FNationality" />
         <input type="hidden" name="NotifType" id="avw-n-type" value="Summary" />
-        <div class="avw-notif-opts">
-            @foreach (var (key, label) in AttendanceNotificationStore.Types)
-            {
-                <div class="avw-notif-opt @(key == "Summary" ? "on" : "")" data-type="@key" onclick="avwNotifPick(this)">@label</div>
-            }
+
+        @* الخطوة 1: نوع الإشعار *@
+        <div id="avw-n-step1" style="display:flex;flex-direction:column;gap:14px">
+            <div class="avw-notif-opts">
+                @foreach (var (key, label) in AttendanceNotificationStore.Types)
+                {
+                    <div class="avw-notif-opt @(key == "Summary" ? "on" : "")" data-type="@key" onclick="avwNotifPick(this)">@label</div>
+                }
+            </div>
+            <button type="button" class="avw-btn" style="align-self:flex-start" onclick="avwNotifStep(2)">استمر</button>
         </div>
-        <button type="submit" class="avw-btn" style="align-self:flex-start">استمر</button>
+
+        @* الخطوة 2: المؤلّف *@
+        <div id="avw-n-step2" style="display:none;flex-direction:column;gap:12px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <label style="font-size:12px;font-weight:900;display:flex;flex-direction:column;gap:4px">من تاريخ
+                    <input type="date" name="FromDate" id="avw-n-from" /></label>
+                <label style="font-size:12px;font-weight:900;display:flex;flex-direction:column;gap:4px">إلى تاريخ
+                    <input type="date" name="ToDate" id="avw-n-to" /></label>
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:900">قناة الإشعار</label>
+                <div style="display:flex;gap:14px;margin-top:6px;font-size:13px;font-weight:900">
+                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="Channel" value="Email" checked /> البريد الإلكتروني</label>
+                    <label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="Channel" value="Sms" /> رسالة نصية</label>
+                </div>
+            </div>
+            <label style="font-size:12px;font-weight:900;display:flex;flex-direction:column;gap:4px">نص الرسالة
+                <textarea name="Message" id="avw-n-msg" rows="4"
+                          style="border-radius:10px;border:1px solid rgba(73,111,151,.3);background:rgba(0,0,0,.16);color:inherit;padding:8px 10px;font-size:13px;font-weight:700;resize:vertical"></textarea>
+            </label>
+            <div style="font-size:11px;color:var(--sa-muted,#8FA8BC);font-weight:800;line-height:1.7">
+                الرموز: <b>{0}</b> أيام الغياب · <b>{1}</b> ساعات التأخير · <b>{2}</b> ساعات الخروج المبكر · <b>{3}</b> الفترة · <b>{4}</b> البصمات المفقودة — تُملأ من حضور كل موظف.
+            </div>
+            <div style="font-size:11px;color:var(--sa-muted,#8FA8BC);font-weight:800">النطاق: الموظفون المطابقون للفلتر/البحث الحالي بالمستعرض.</div>
+            <div style="display:flex;gap:8px">
+                <button type="button" class="avw-btn ghost" onclick="avwNotifStep(1)">رجوع</button>
+                <button type="submit" class="avw-btn">إشعار الموظف</button>
+            </div>
+        </div>
     </form>
 </div>
 
@@ -350,10 +389,33 @@
             document.getElementById('avw-e-hint').textContent = 'الحالة الحالية: ' + el.getAttribute('data-label') + ' · يُعاد اشتقاق التأخير والحالة تلقائياً بعد الحفظ.';
             avwModal('edit', true);
         }
+        var AVW_TEMPLATES = {
+            Summary: 'عزيزي الموظف/ة، يُرجى العلم أن لديك خلال الفترة ({3}): {0} أيام غياب، {1} ساعات تأخير، {2} ساعات خروج مبكر، و{4} بصمات مفقودة. يُرجى مراجعة دوامك قبل اعتماد الحركات.',
+            WeeklyAbsence: 'عزيزي الموظف/ة، لديك {0} أيام غياب خلال الفترة ({3}). يُرجى مراجعة حضورك قبل اعتماد الحركات.',
+            WeeklyShortage: 'عزيزي الموظف/ة، لديك {1} ساعات تأخير و{2} ساعات خروج مبكر خلال الفترة ({3}). يُرجى الالتزام بأوقات المناوبة.'
+        };
         function avwNotifPick(el) {
             document.querySelectorAll('.avw-notif-opt').forEach(function (o) { o.classList.remove('on'); });
             el.classList.add('on');
             document.getElementById('avw-n-type').value = el.getAttribute('data-type');
+        }
+        function avwNotifStep(step) {
+            document.getElementById('avw-n-step1').style.display = step === 1 ? 'flex' : 'none';
+            document.getElementById('avw-n-step2').style.display = step === 2 ? 'flex' : 'none';
+            if (step === 2) {
+                var type = document.getElementById('avw-n-type').value;
+                document.getElementById('avw-n-title').textContent = 'إشعار الموظفين — ' + (document.querySelector('.avw-notif-opt.on') ? document.querySelector('.avw-notif-opt.on').textContent.trim() : '');
+                document.getElementById('avw-n-msg').value = AVW_TEMPLATES[type] || AVW_TEMPLATES.Summary;
+                // تواريخ افتراضية = شهر المستعرض
+                var m = document.querySelector('[name=Month]').value; // yyyy-MM
+                if (m) {
+                    document.getElementById('avw-n-from').value = m + '-01';
+                    var y = +m.split('-')[0], mo = +m.split('-')[1], last = new Date(y, mo, 0).getDate();
+                    document.getElementById('avw-n-to').value = m + '-' + String(last).padStart(2, '0');
+                }
+            } else {
+                document.getElementById('avw-n-title').textContent = 'إشعار الموظفين — بماذا تود إبلاغهم؟';
+            }
         }
 
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { avwModal('edit', false); avwModal('notif', false); } });
