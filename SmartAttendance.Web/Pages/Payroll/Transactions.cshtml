@@ -175,8 +175,9 @@
         <div class="tx-filter">
             <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/بند/رقم مرجعي" style="min-width:200px" />
             <button type="submit" class="tx-btn ghost sm">بحث</button>
-            <button type="button" class="tx-btn ghost icon" title="بحث متقدم (فلاتر)" aria-label="بحث متقدم" onclick="advToggle()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+            <button type="button" class="tx-btn @(Model.HasAdvanced ? "" : "ghost") sm" id="adv-toggle-btn" title="فلاتر البحث المتقدم" onclick="advToggle()" style="display:inline-flex;align-items:center;gap:6px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+                <span>الفلاتر@(Model.HasAdvanced ? " (مفعّلة)" : "")</span>
             </button>
         </div>
         <div id="adv-panel" class="tx-adv-panel" style="@(Model.HasAdvanced ? "" : "display:none")">
