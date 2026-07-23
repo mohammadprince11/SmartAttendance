@@ -196,14 +196,14 @@
                             {
                             <td>
                                 <div class="tx-actions">
-                                    <button type="button" class="tx-btn ghost sm" onclick='txOpen(@t.Id, @Html.Raw(J(new {
-                                        t.EmployeeId, t.SalaryItemId, t.ItemName, t.Amount, t.Taxable, t.PaymentType,
+                                    <button type="button" class="tx-btn ghost sm" onclick="txEdit(this)" data-tx="@J(new {
+                                        Id = t.Id, t.EmployeeId, t.SalaryItemId, t.ItemName, t.Amount, t.Taxable, t.PaymentType,
                                         TransactionDate=Dt(t.TransactionDate), EffectiveDate=Dt(t.EffectiveDate),
                                         t.IsUnlimited, ValidFrom=Dt(t.ValidFrom), ValidTo=Dt(t.ValidTo),
                                         t.IsRetroactive, RetroactiveDate=Dt(t.RetroactiveDate), t.UpdateSocialSecurity,
                                         SocialSecurityToDate=Dt(t.SocialSecurityToDate), SalaryFromDate=Dt(t.SalaryFromDate), SalaryToDate=Dt(t.SalaryToDate),
                                         t.IsScheduled, t.InstallmentMode, t.InstallmentCount, t.InstallmentAmount, t.InstallmentMonths, FirstInstallmentDate=Dt(t.FirstInstallmentDate),
-                                        t.ChangeCostCenter, t.CostCenter, t.Note, t.Status, t.Year, t.Month }))')>تعديل</button>
+                                        t.ChangeCostCenter, t.CostCenter, t.Note, t.Status, t.Year, t.Month })">تعديل</button>
                                     <button type="button" class="tx-btn ghost sm" style="color:#f87171"
                                             onclick="if(confirm('حذف الحركة؟')){this.closest('tr').querySelector('[name=SelectedIds]').checked=true;this.closest('form').querySelector('[name=SelectedIds]');document.getElementById('tx-del-'+@t.Id).submit();}">حذف</button>
                                 </div>
@@ -397,6 +397,11 @@
 
         function setVal(id, v){ var el=document.getElementById(id); if(el) el.value = (v==null?'':v); }
         function setChk(id, v){ var el=document.getElementById(id); if(el) el.checked = !!v; }
+
+        function txEdit(btn){
+            try { var d = JSON.parse(btn.getAttribute('data-tx')); txOpen(d.Id, d); }
+            catch (e) { alert('تعذّر فتح التعديل: ' + e.message); }
+        }
 
         function txOpen(id, d){
             var f = document.querySelector('#tx-slide form'); f.reset();
