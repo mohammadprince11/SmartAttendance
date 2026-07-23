@@ -1,0 +1,348 @@
+@page "/Payroll/EndOfService"
+@model SmartAttendance.Web.Pages.Payroll.EndOfServiceModel
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "نهاية الخدمة";
+    var acc = "#60a5fa";
+    var empJson = JsonSerializer.Serialize(Model.Employees.Select(e => new { e.Id, e.No, e.Name, e.Basic, Hire = e.HireDate?.ToString("yyyy-MM-dd") ?? "" }));
+    string J(object o) => JsonSerializer.Serialize(o);
+    string Dt(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .es-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
+    .es-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .es-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .es-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .es-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .es-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
+    .es-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .es-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+    .es-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
+    .es-btn.danger:hover { background:rgba(248,113,113,.26); }
+    .es-btn.approve { background:rgba(52,211,153,.16); border:1px solid rgba(52,211,153,.5); color:#34d399; }
+    .es-btn.approve:hover { background:rgba(52,211,153,.28); }
+    .es-tabs { display:flex; gap:2px; border-bottom:1px solid rgba(73,111,151,.22); }
+    .es-tabs a { padding:11px 22px; font-size:13px; font-weight:900; color:var(--sa-muted,#8FA8BC); text-decoration:none; border-bottom:3px solid transparent; }
+    .es-tabs a.on { color:var(--acc); border-bottom-color:var(--acc); }
+
+    .es-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+    .es-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
+    .es-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
+    .es-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .es-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+
+    .es-bar { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:10px; }
+    .es-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); flex-wrap:wrap; }
+    .es-filter input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; }
+    html[data-theme="light"] .es-filter input { background:#fff; }
+
+    .es-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .es-table { width:100%; border-collapse:collapse; font-size:13px; min-width:1000px; }
+    .es-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .es-table th { background:#f2f7fb; }
+    .es-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
+    .es-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
+    .es-ref { direction:ltr; font-weight:900; font-size:12px; }
+    .es-emp b { font-weight:900; } .es-emp span { display:block; font-size:11px; color:var(--sa-muted,#8FA8BC); }
+    .es-num { direction:ltr; font-weight:900; text-align:start; }
+    .es-net { direction:ltr; font-weight:1000; color:var(--acc); }
+    .es-chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:900; }
+    .es-chip.ap { background:rgba(52,211,153,.16); color:#34d399; }
+    .es-chip.dr { background:rgba(250,204,21,.14); color:#facc15; }
+    .es-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .es-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(96,165,250,.35); background:rgba(96,165,250,.08); }
+    .es-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
+    .es-actions { display:flex; gap:6px; justify-content:flex-end; } .es-actions form { display:inline; }
+
+    .es-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .es-form select, .es-form input, .es-form textarea { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; font-family:inherit; }
+    html[data-theme="light"] .es-form select, html[data-theme="light"] .es-form input, html[data-theme="light"] .es-form textarea { background:#fff; }
+    .es-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .es-calc { border:1px dashed color-mix(in srgb,var(--acc) 45%,transparent); border-radius:12px; background:color-mix(in srgb,var(--acc) 8%,transparent); padding:12px 14px; display:flex; flex-direction:column; gap:6px; }
+    .es-calc .row { display:flex; justify-content:space-between; font-size:13px; font-weight:900; }
+    .es-calc .row span { color:var(--sa-muted,#8FA8BC); }
+    .es-calc .row b { direction:ltr; }
+    .es-calc .row.total { border-top:1px solid color-mix(in srgb,var(--acc) 35%,transparent); padding-top:6px; margin-top:2px; font-size:15px; }
+    .es-calc .row.total b { color:var(--acc); }
+    .es-calc small { font-size:11px; font-weight:800; color:var(--sa-muted,#8FA8BC); }
+    .es-warn { font-size:11px; font-weight:800; color:#facc15; background:rgba(250,204,21,.08); border:1px solid rgba(250,204,21,.3); border-radius:8px; padding:6px 10px; }
+</style>
+
+<section class="es-page" dir="rtl">
+    <header class="es-head">
+        <div>
+            <h1>🧾 نهاية الخدمة</h1>
+            <p>مكافأة نهاية الخدمة بشرائح سنوات الخدمة + بدل رصيد الإجازات + مستحقات − اقتطاعات = صافي التسوية.</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <a class="es-btn ghost" href="/Payroll/Transactions">الحركات</a>
+            <a class="es-btn ghost" href="/Payroll/Runs">← المسير</a>
+            <button type="button" class="es-btn" onclick="esOpen(0)">+ تسوية نهاية خدمة</button>
+        </div>
+    </header>
+
+    <div class="es-tabs">
+        <a href="/Payroll/EndOfService?Tab=Draft" class="@(Model.IsApproved ? "" : "on")">قيد التسوية (@Model.DraftCount)</a>
+        <a href="/Payroll/EndOfService?Tab=Approved" class="@(Model.IsApproved ? "on" : "")">✔ معتمدة (@Model.ApprovedCount)</a>
+    </div>
+
+    <div class="es-kpis">
+        <div class="es-kpi"><b>@Model.DraftCount</b><span>قيد التسوية</span></div>
+        <div class="es-kpi"><b>@Model.ApprovedCount</b><span>معتمدة</span></div>
+        <div class="es-kpi"><b style="color:#60a5fa">@Model.TotalNet.ToString("#,0.##")</b><span>إجمالي صافي التسويات المعتمدة</span></div>
+        <div class="es-kpi"><b>@Model.Employees.Count</b><span>الموظفون</span></div>
+    </div>
+
+    <form method="get" class="es-bar">
+        <input type="hidden" name="Tab" value="@Model.Tab" />
+        <div class="es-filter">
+            <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/سبب/رقم مرجعي" style="min-width:220px" />
+            <button type="submit" class="es-btn ghost sm">بحث</button>
+        </div>
+    </form>
+
+    @if (TempData["PayrollMessage"] != null)
+    {
+        <div class="es-alert @((TempData["PayrollOk"] as bool?) == false ? "err" : "")">@TempData["PayrollMessage"]</div>
+    }
+
+    <div class="es-card">
+        @if (Model.Items.Count == 0)
+        {
+            <div class="es-empty">
+                @if (Model.IsApproved)
+                { <text>لا تسويات معتمدة بعد.</text> }
+                else
+                { <text>لا تسويات قيد الإعداد — أضف بـ«+ تسوية نهاية خدمة».</text> }
+            </div>
+        }
+        else
+        {
+            <table class="es-table">
+                <thead>
+                    <tr>
+                        <th>الرقم المرجعي</th><th>الموظف</th><th>سنوات الخدمة</th><th>آخر أساسي</th>
+                        <th>المكافأة</th><th>بدل الإجازات</th><th>صافي التسوية</th><th>السبب</th>
+                        <th>@(Model.IsApproved ? "اعتُمدت في" : "الحالة")</th>
+                        <th style="text-align:end">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model.Items)
+                    {
+                        <tr>
+                            <td class="es-ref">@s.ReferenceNo</td>
+                            <td class="es-emp"><b>@s.EmployeeName</b><span>@s.EmployeeNo</span></td>
+                            <td class="es-num">@s.YearsService.ToString("#,0.##")</td>
+                            <td class="es-num">@s.LastBasic.ToString("#,0.##")</td>
+                            <td class="es-num">@s.GratuityAmount.ToString("#,0.##")</td>
+                            <td class="es-num">@s.LeaveEncashment.ToString("#,0.##")</td>
+                            <td class="es-net">@s.NetSettlement.ToString("#,0.##")</td>
+                            <td style="font-size:12px">@(s.Reason ?? "—")</td>
+                            <td>
+                                @if (s.IsApproved)
+                                { <span class="es-ref" style="font-size:12px">@(s.ApprovedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</span> }
+                                else
+                                { <span class="es-chip dr">قيد التسوية</span> }
+                            </td>
+                            <td>
+                                <div class="es-actions">
+                                    @if (!s.IsApproved)
+                                    {
+                                        <form method="post" asp-page-handler="Approve" data-zyconfirm="اعتماد التسوية؟">
+                                            <input type="hidden" name="id" value="@s.Id" />
+                                            <button type="submit" class="es-btn approve sm">✔ اعتماد</button>
+                                        </form>
+                                        <button type="button" class="es-btn ghost sm" onclick="esEdit(this)" data-es="@J(new {
+                                            s.Id, s.EmployeeId, ServiceStartDate=Dt(s.ServiceStartDate), LastWorkingDate=Dt(s.LastWorkingDate),
+                                            s.LastBasic, s.Reason, s.LeaveBalanceDays, s.OtherDues, s.Deductions, s.Note })">تعديل</button>
+                                        <form method="post" asp-page-handler="Delete" data-zyconfirm="حذف التسوية؟">
+                                            <input type="hidden" name="id" value="@s.Id" />
+                                            <button type="submit" class="es-btn danger sm">حذف</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="es-chip ap">✔ معتمدة</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @* ===== نموذج تسوية نهاية خدمة ===== *@
+    <div class="hrms-slideover-backdrop" id="es-backdrop" onclick="esClose()"></div>
+    <aside class="hrms-slideover wide" id="es-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="es-title">تسوية نهاية خدمة</h2>
+            <button type="button" class="hrms-slideover-close" onclick="esClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Save" class="es-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="Id" id="es-Id" value="0" />
+
+                <label>اسم الموظف *
+                    <div class="empk-field">
+                        <input type="text" id="es-emp-name" class="empk-name" placeholder="اسم الموظف" readonly />
+                        <input type="text" id="es-emp-code" class="empk-code" placeholder="رمز" autocomplete="off" />
+                    </div>
+                    <input type="hidden" name="EmployeeId" id="es-EmployeeId" />
+                </label>
+
+                <div class="es-grid2">
+                    <label>تاريخ بدء الخدمة *<input type="date" name="ServiceStartDate" id="es-ServiceStartDate" oninput="esCalc()" /></label>
+                    <label>آخر يوم عمل *<input type="date" name="LastWorkingDate" id="es-LastWorkingDate" oninput="esCalc()" /></label>
+                </div>
+
+                <div class="es-grid2">
+                    <label>آخر راتب أساسي *<input type="number" name="LastBasic" id="es-LastBasic" step="0.01" min="0" required oninput="esCalc()" /></label>
+                    <label>سبب انتهاء الخدمة
+                        <select name="Reason" id="es-Reason">
+                            <option value="">— اختر —</option>
+                            <option value="استقالة">استقالة</option>
+                            <option value="إنهاء عقد">إنهاء عقد</option>
+                            <option value="إنهاء خدمات">إنهاء خدمات</option>
+                            <option value="تقاعد">تقاعد</option>
+                            <option value="وفاة">وفاة</option>
+                            <option value="أخرى">أخرى</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="es-grid2">
+                    <label>رصيد الإجازات (أيام)<input type="number" name="LeaveBalanceDays" id="es-LeaveBalanceDays" step="0.5" min="0" value="0" oninput="esCalc()" /></label>
+                    <label>مستحقات أخرى<input type="number" name="OtherDues" id="es-OtherDues" step="0.01" min="0" value="0" oninput="esCalc()" /></label>
+                </div>
+                <label>اقتطاعات (قروض/سلف/عهد)<input type="number" name="Deductions" id="es-Deductions" step="0.01" min="0" value="0" oninput="esCalc()" /></label>
+
+                @* ===== لوحة الحساب الحيّة ===== *@
+                <div class="es-calc" id="es-calc">
+                    <div class="row"><span>سنوات الخدمة</span><b id="es-c-years">0</b></div>
+                    <div class="row"><span>مكافأة نهاية الخدمة</span><b id="es-c-gratuity">0</b></div>
+                    <div class="row"><small id="es-c-breakdown">—</small></div>
+                    <div class="row"><span>بدل رصيد الإجازات</span><b id="es-c-leave">0</b></div>
+                    <div class="row"><span>مستحقات أخرى</span><b id="es-c-other">0</b></div>
+                    <div class="row"><span>ناقص: اقتطاعات</span><b id="es-c-ded" style="color:#f87171">0</b></div>
+                    <div class="row total"><span>صافي التسوية</span><b id="es-c-net">0</b></div>
+                </div>
+                <div class="es-warn">⚠️ شرائح المكافأة الافتراضية (½ شهر/سنة لأول 5 سنوات، شهر/سنة بعدها) تقريبية — أكّدها مع المحاسب وقانون العمل قبل الاعتماد.</div>
+
+                <label>ملاحظة<textarea name="Note" id="es-Note" rows="2"></textarea></label>
+
+                <button type="submit" class="es-btn">حفظ التسوية</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script src="~/js/emp-picker.js" asp-append-version="true"></script>
+    <script>
+        var ES_EMP = @Html.Raw(empJson);
+        // شرائح المكافأة (مطابقة للسيرفر EndOfServiceStore.DefaultTiers)
+        var ES_TIERS = [ {from:0, to:5, mpy:0.5}, {from:5, to:9999, mpy:1.0} ];
+
+        function fmt(n){ return (Math.round(n*100)/100).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2}); }
+
+        var esPicker = EmpPicker.init({
+            code: document.getElementById('es-emp-code'),
+            name: document.getElementById('es-emp-name'),
+            hidden: document.getElementById('es-EmployeeId'),
+            employees: ES_EMP,
+            onChange: function(e){
+                if (e){
+                    if (e.Hire) document.getElementById('es-ServiceStartDate').value = e.Hire;
+                    document.getElementById('es-LastBasic').value = e.Basic || '';
+                    if (!document.getElementById('es-LastWorkingDate').value)
+                        document.getElementById('es-LastWorkingDate').value = new Date().toISOString().slice(0,10);
+                }
+                esCalc();
+            }
+        });
+
+        function esYears(startStr, endStr){
+            if (!startStr || !endStr) return 0;
+            var s = new Date(startStr), e = new Date(endStr);
+            if (isNaN(s) || isNaN(e) || e <= s) return 0;
+            return Math.round(((e - s) / (1000*60*60*24) / 365.25) * 100) / 100;
+        }
+        function esGratuity(years, monthly){
+            var total = 0, parts = [];
+            ES_TIERS.forEach(function(t){
+                if (years <= t.from) return;
+                var yit = Math.min(years, t.to) - t.from;
+                if (yit <= 0) return;
+                total += yit * t.mpy * monthly;
+                parts.push(fmt(yit) + 'س × ' + fmt(t.mpy) + ' شهر');
+            });
+            return { total: Math.round(total*100)/100, breakdown: parts.length ? parts.join(' + ') : '—' };
+        }
+
+        function esCalc(){
+            var years = esYears(document.getElementById('es-ServiceStartDate').value, document.getElementById('es-LastWorkingDate').value);
+            var basic = parseFloat(document.getElementById('es-LastBasic').value) || 0;
+            var leaveDays = parseFloat(document.getElementById('es-LeaveBalanceDays').value) || 0;
+            var other = parseFloat(document.getElementById('es-OtherDues').value) || 0;
+            var ded = parseFloat(document.getElementById('es-Deductions').value) || 0;
+            var g = esGratuity(years, basic);
+            var daily = basic / 30;
+            var leaveEnc = Math.round(leaveDays * daily * 100) / 100;
+            var net = Math.round((g.total + leaveEnc + other - ded) * 100) / 100;
+
+            document.getElementById('es-c-years').textContent = fmt(years);
+            document.getElementById('es-c-gratuity').textContent = fmt(g.total);
+            document.getElementById('es-c-breakdown').textContent = g.breakdown === '—' ? '—' : ('التفصيل: ' + g.breakdown + ' × آخر أساسي');
+            document.getElementById('es-c-leave').textContent = fmt(leaveEnc);
+            document.getElementById('es-c-other').textContent = fmt(other);
+            document.getElementById('es-c-ded').textContent = '−' + fmt(ded);
+            document.getElementById('es-c-net').textContent = fmt(net);
+        }
+
+        function setVal(id, v){ var el=document.getElementById(id); if(el) el.value = (v==null?'':v); }
+
+        function esEdit(btn){
+            try { var d = JSON.parse(btn.getAttribute('data-es')); esOpen(d.Id, d); }
+            catch (e) { alert('تعذّر فتح التعديل: ' + e.message); }
+        }
+
+        function esOpen(id, d){
+            var f = document.querySelector('#es-slide form'); f.reset();
+            document.getElementById('es-Id').value = id || 0;
+            document.getElementById('es-title').textContent = id ? 'تعديل تسوية' : 'تسوية نهاية خدمة';
+            esPicker.set(null);
+            ['es-LeaveBalanceDays','es-OtherDues','es-Deductions'].forEach(function(x){ document.getElementById(x).value = '0'; });
+
+            if (id && d){
+                var emp = ES_EMP.find(function(x){ return x.Id === d.EmployeeId; });
+                // اضبط الموظف بلا الكتابة فوق قيم التسوية المخزّنة
+                document.getElementById('es-EmployeeId').value = d.EmployeeId;
+                document.getElementById('es-emp-code').value = emp ? (emp.No||'') : '';
+                document.getElementById('es-emp-name').value = emp ? (emp.Name||'') : '';
+                setVal('es-ServiceStartDate', d.ServiceStartDate);
+                setVal('es-LastWorkingDate', d.LastWorkingDate);
+                setVal('es-LastBasic', d.LastBasic);
+                setVal('es-Reason', d.Reason || '');
+                setVal('es-LeaveBalanceDays', d.LeaveBalanceDays);
+                setVal('es-OtherDues', d.OtherDues);
+                setVal('es-Deductions', d.Deductions);
+                setVal('es-Note', d.Note);
+            }
+            esCalc();
+            document.getElementById('es-slide').classList.add('open');
+            document.getElementById('es-backdrop').classList.add('open');
+        }
+        function esClose(){ document.getElementById('es-slide').classList.remove('open'); document.getElementById('es-backdrop').classList.remove('open'); }
+
+        document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ esClose(); } });
+    </script>
+}
