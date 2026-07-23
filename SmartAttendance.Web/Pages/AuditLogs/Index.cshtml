@@ -57,6 +57,14 @@
                             <td>@log.IpAddress</td>
                         </tr>
                     }
+
+                    @if (!Model.Logs.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="hrms-empty">لا سجلات تدقيق مطابقة للفلتر.</td>
+                        </tr>
+                    }
+
                 </tbody>
             </table>
         </div>

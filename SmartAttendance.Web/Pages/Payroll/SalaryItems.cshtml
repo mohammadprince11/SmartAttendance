@@ -109,6 +109,14 @@
                         </td>
                     </tr>
                 }
+
+                    @if (!Model.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="hrms-empty">لا عناصر راتب معرّفة بعد.</td>
+                        </tr>
+                    }
+
             </tbody>
         </table>
     </div>

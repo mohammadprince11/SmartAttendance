@@ -124,6 +124,13 @@
                             <td>@request.CurrentStep</td>
                         </tr>
                     }
+
+                    @if (!Model.Requests.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="hrms-empty">لا توجد طلبات خدمة ذاتية بهذا الفلتر.</td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>

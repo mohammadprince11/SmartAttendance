@@ -74,6 +74,14 @@
                             </td>
                         </tr>
                     }
+
+                    @if (!Model.Groups.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="hrms-empty">لا مجموعات موظفين معرّفة بعد.</td>
+                        </tr>
+                    }
+
                 </tbody>
             </table>
         </div>

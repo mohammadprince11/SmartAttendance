@@ -86,6 +86,14 @@
                             </td>
                         </tr>
                     }
+
+                    @if (!Model.Reasons.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="hrms-empty">لا أسباب إيقاف معرّفة بعد.</td>
+                        </tr>
+                    }
+
                 </tbody>
             </table>
         </div>
