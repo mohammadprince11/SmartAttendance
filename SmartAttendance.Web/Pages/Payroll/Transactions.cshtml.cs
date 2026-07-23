@@ -70,6 +70,9 @@ public class TransactionsModel : PageModel
     [BindProperty(SupportsGet = true)]
     public DateOnly? DateTo { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public string? RefNo { get; set; }
+
     public List<string> Sources { get; set; } = new();
     public List<string> Departments { get; set; } = new();
     public List<string> Branches { get; set; } = new();
@@ -77,7 +80,7 @@ public class TransactionsModel : PageModel
 
     public bool HasAdvanced => Emp is > 0 || !string.IsNullOrWhiteSpace(PayType) || !string.IsNullOrWhiteSpace(Src)
         || MinAmount.HasValue || MaxAmount.HasValue || !string.IsNullOrWhiteSpace(Dept) || !string.IsNullOrWhiteSpace(Branch)
-        || !string.IsNullOrWhiteSpace(JobTitle) || DateFrom.HasValue || DateTo.HasValue;
+        || !string.IsNullOrWhiteSpace(JobTitle) || DateFrom.HasValue || DateTo.HasValue || !string.IsNullOrWhiteSpace(RefNo);
 
     /// <summary>التبويب: Open (غير مقفلة، قابلة للتعديل) | Locked (مقفلة، قراءة فقط).</summary>
     [BindProperty(SupportsGet = true)]
@@ -128,6 +131,7 @@ public class TransactionsModel : PageModel
         if (!string.IsNullOrWhiteSpace(JobTitle)) Items = Items.Where(x => x.Position == JobTitle).ToList();
         if (DateFrom.HasValue) Items = Items.Where(x => x.TransactionDate.HasValue && x.TransactionDate.Value >= DateFrom.Value).ToList();
         if (DateTo.HasValue) Items = Items.Where(x => x.TransactionDate.HasValue && x.TransactionDate.Value <= DateTo.Value).ToList();
+        if (!string.IsNullOrWhiteSpace(RefNo)) Items = Items.Where(x => x.ReferenceNo.Contains(RefNo.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
         if (MinAmount.HasValue) Items = Items.Where(x => x.Amount >= MinAmount.Value).ToList();
         if (MaxAmount.HasValue) Items = Items.Where(x => x.Amount <= MaxAmount.Value).ToList();
 

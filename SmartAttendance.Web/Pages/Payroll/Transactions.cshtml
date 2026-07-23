@@ -57,9 +57,20 @@
     .tx-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); flex-wrap:wrap; }
     .tx-filter select, .tx-filter input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; }
     html[data-theme="light"] .tx-filter select, html[data-theme="light"] .tx-filter input { background:#fff; }
-    .tx-adv-panel { flex-basis:100%; display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:10px 12px; border:1px dashed rgba(73,111,151,.35); border-radius:12px; }
-    .tx-adv-panel select, .tx-adv-panel input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:800; }
+    .tx-adv-panel { flex-basis:100%; display:flex; flex-direction:column; gap:14px; padding:14px 16px; border:1px dashed rgba(73,111,151,.35); border-radius:14px; }
+    .tx-adv-panel select, .tx-adv-panel input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:800; width:100%; }
     html[data-theme="light"] .tx-adv-panel select, html[data-theme="light"] .tx-adv-panel input { background:#fff; }
+    .tx-adv-sec { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:1000; color:var(--acc); margin-bottom:-4px; }
+    .tx-adv-sec::after { content:""; flex:1; height:1px; background:color-mix(in srgb,var(--acc) 30%,transparent); }
+    .tx-adv-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px; }
+    .tx-fld { display:flex; flex-direction:column; gap:4px; font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .tx-fld > span { display:flex; align-items:center; gap:6px; }
+    .tx-fld.soon { opacity:.6; }
+    .tx-fld.soon select, .tx-fld.soon input { cursor:not-allowed; background:rgba(0,0,0,.28); }
+    html[data-theme="light"] .tx-fld.soon select, html[data-theme="light"] .tx-fld.soon input { background:#eef2f6; }
+    .tx-soon { font-size:9px; font-weight:900; padding:1px 6px; border-radius:999px; background:rgba(250,204,21,.16); color:#facc15; }
+    .tx-adv-actions { display:flex; gap:8px; align-items:center; }
+    .tx-fld-range { display:flex; gap:6px; } .tx-fld-range input { width:100%; }
 
     .tx-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
     .tx-table { width:100%; border-collapse:collapse; font-size:13px; min-width:960px; }
@@ -169,44 +180,105 @@
             </button>
         </div>
         <div id="adv-panel" class="tx-adv-panel" style="@(Model.HasAdvanced ? "" : "display:none")">
-            <span style="font-weight:900;color:var(--sa-muted,#8FA8BC)">الموظف:</span>
-            <div class="empk-field" style="max-width:300px">
-                <input type="text" id="adv-emp-name" class="empk-name" placeholder="اسم الموظف" readonly value="@(Model.Emp is > 0 ? Model.Employees.FirstOrDefault(e => e.Id == Model.Emp)?.Name : "")" />
-                <input type="text" id="adv-emp-code" class="empk-code" placeholder="رمز" autocomplete="off" value="@(Model.Emp is > 0 ? Model.Employees.FirstOrDefault(e => e.Id == Model.Emp)?.No : "")" />
+
+            @* ===== تصفية الموظف (هيكل مطابق لكيان) ===== *@
+            <div class="tx-adv-sec">تصفية الموظف</div>
+            <div class="tx-adv-grid">
+                <label class="tx-fld"><span>رمز / اسم الموظف</span>
+                    <div class="empk-field">
+                        <input type="text" id="adv-emp-name" class="empk-name" placeholder="اسم الموظف" readonly value="@(Model.Emp is > 0 ? Model.Employees.FirstOrDefault(e => e.Id == Model.Emp)?.Name : "")" />
+                        <input type="text" id="adv-emp-code" class="empk-code" placeholder="رمز" autocomplete="off" value="@(Model.Emp is > 0 ? Model.Employees.FirstOrDefault(e => e.Id == Model.Emp)?.No : "")" />
+                    </div>
+                    <input type="hidden" name="Emp" id="adv-Emp" value="@(Model.Emp?.ToString() ?? "")" />
+                </label>
+                <label class="tx-fld"><span>المسمى الوظيفي</span>
+                    <select name="JobTitle">
+                        <option value="">الكل</option>
+                        @foreach (var s in Model.JobTitles)
+                        { <option value="@s" selected="@(Model.JobTitle == s)">@s</option> }
+                    </select>
+                </label>
+                <label class="tx-fld"><span>القسم</span>
+                    <select name="Dept">
+                        <option value="">كل الأقسام</option>
+                        @foreach (var s in Model.Departments)
+                        { <option value="@s" selected="@(Model.Dept == s)">@s</option> }
+                    </select>
+                </label>
+                <label class="tx-fld"><span>الفرع / الموقع</span>
+                    <select name="Branch">
+                        <option value="">كل الفروع</option>
+                        @foreach (var s in Model.Branches)
+                        { <option value="@s" selected="@(Model.Branch == s)">@s</option> }
+                    </select>
+                </label>
+                <label class="tx-fld soon"><span>وحدة عمل <span class="tx-soon">قريباً</span></span>
+                    <select disabled><option>الكل</option></select>
+                </label>
+                <label class="tx-fld soon"><span>الهيكلية <span class="tx-soon">قريباً</span></span>
+                    <select disabled><option>الكل</option></select>
+                </label>
+                <label class="tx-fld soon"><span>كفيل <span class="tx-soon">قريباً</span></span>
+                    <select disabled><option>الكل</option></select>
+                </label>
+                <label class="tx-fld soon"><span>نوع العقد <span class="tx-soon">قريباً</span></span>
+                    <select disabled><option>الكل</option></select>
+                </label>
+                <label class="tx-fld soon"><span>مجموعة الموظفين <span class="tx-soon">قريباً</span></span>
+                    <select disabled><option>الكل</option></select>
+                </label>
+                <label class="tx-fld soon"><span>تاريخ التعيين <span class="tx-soon">قريباً</span></span>
+                    <input type="date" disabled />
+                </label>
+                <label class="tx-fld soon"><span>حالة الموظف <span class="tx-soon">قريباً</span></span>
+                    <select disabled><option>نشط</option></select>
+                </label>
             </div>
-            <input type="hidden" name="Emp" id="adv-Emp" value="@(Model.Emp?.ToString() ?? "")" />
-            <select name="PayType">
-                <option value="">كل أنواع الدفعة</option>
-                <option value="InSalary" selected="@(Model.PayType == "InSalary")">داخل الراتب</option>
-                <option value="OutSalary" selected="@(Model.PayType == "OutSalary")">خارج الراتب</option>
-            </select>
-            <select name="Src">
-                <option value="">كل المصادر</option>
-                @foreach (var s in Model.Sources)
-                { <option value="@s" selected="@(Model.Src == s)">@s</option> }
-            </select>
-            <select name="Dept">
-                <option value="">كل الأقسام</option>
-                @foreach (var s in Model.Departments)
-                { <option value="@s" selected="@(Model.Dept == s)">@s</option> }
-            </select>
-            <select name="Branch">
-                <option value="">كل الفروع</option>
-                @foreach (var s in Model.Branches)
-                { <option value="@s" selected="@(Model.Branch == s)">@s</option> }
-            </select>
-            <select name="JobTitle">
-                <option value="">كل المسميات الوظيفية</option>
-                @foreach (var s in Model.JobTitles)
-                { <option value="@s" selected="@(Model.JobTitle == s)">@s</option> }
-            </select>
-            <span style="font-weight:900;color:var(--sa-muted,#8FA8BC)">تاريخ الحركة:</span>
-            <input type="date" name="DateFrom" value="@(Model.DateFrom?.ToString("yyyy-MM-dd"))" title="من تاريخ" />
-            <input type="date" name="DateTo" value="@(Model.DateTo?.ToString("yyyy-MM-dd"))" title="إلى تاريخ" />
-            <input type="number" name="MinAmount" placeholder="مبلغ من" value="@(Model.MinAmount)" step="0.01" style="width:104px" />
-            <input type="number" name="MaxAmount" placeholder="مبلغ إلى" value="@(Model.MaxAmount)" step="0.01" style="width:104px" />
-            <button type="submit" class="tx-btn sm">تطبيق</button>
-            <a class="tx-btn ghost sm" href="/Payroll/Transactions?type=@Model.Type&Year=@Model.Year&Month=@Model.Month&Lock=@Model.Lock">مسح المتقدم</a>
+
+            @* ===== تصفية الحركة ===== *@
+            <div class="tx-adv-sec">تصفية الحركة</div>
+            <div class="tx-adv-grid">
+                <label class="tx-fld"><span>الرقم المرجعي</span>
+                    <input type="text" name="RefNo" value="@Model.RefNo" placeholder="IN26-…" />
+                </label>
+                <label class="tx-fld"><span>نوع الدفعة</span>
+                    <select name="PayType">
+                        <option value="">الكل</option>
+                        <option value="InSalary" selected="@(Model.PayType == "InSalary")">داخل الراتب</option>
+                        <option value="OutSalary" selected="@(Model.PayType == "OutSalary")">خارج الراتب</option>
+                    </select>
+                </label>
+                <label class="tx-fld"><span>المصدر</span>
+                    <select name="Src">
+                        <option value="">كل المصادر</option>
+                        @foreach (var s in Model.Sources)
+                        { <option value="@s" selected="@(Model.Src == s)">@s</option> }
+                    </select>
+                </label>
+                <label class="tx-fld"><span>تاريخ الحركة (من / إلى)</span>
+                    <span class="tx-fld-range">
+                        <input type="date" name="DateFrom" value="@(Model.DateFrom?.ToString("yyyy-MM-dd"))" title="من" />
+                        <input type="date" name="DateTo" value="@(Model.DateTo?.ToString("yyyy-MM-dd"))" title="إلى" />
+                    </span>
+                </label>
+                <label class="tx-fld"><span>المبلغ (من / إلى)</span>
+                    <span class="tx-fld-range">
+                        <input type="number" name="MinAmount" placeholder="من" value="@(Model.MinAmount)" step="0.01" />
+                        <input type="number" name="MaxAmount" placeholder="إلى" value="@(Model.MaxAmount)" step="0.01" />
+                    </span>
+                </label>
+                <label class="tx-fld soon"><span>رقم الدفعة (المسير) <span class="tx-soon">قريباً</span></span>
+                    <select disabled><option>الكل</option></select>
+                </label>
+                <label class="tx-fld soon"><span>حالة الطلب (الموافقات) <span class="tx-soon">قريباً</span></span>
+                    <select disabled><option>الكل</option></select>
+                </label>
+            </div>
+
+            <div class="tx-adv-actions">
+                <button type="submit" class="tx-btn sm">تطبيق الفلاتر</button>
+                <a class="tx-btn ghost sm" href="/Payroll/Transactions?type=@Model.Type&Year=@Model.Year&Month=@Model.Month&Lock=@Model.Lock">مسح المتقدم</a>
+            </div>
         </div>
     </form>
 
