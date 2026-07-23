@@ -25,6 +25,10 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string Tab { get; set; } = "Pending";
 
+    /// <summary>تبويب فرعي داخل «الحركات»: Financial (مالية) أو Violations (مخالفات).</summary>
+    [BindProperty(SupportsGet = true)]
+    public string SubTab { get; set; } = "Financial";
+
     [BindProperty(SupportsGet = true)]
     public int PageNumber { get; set; } = 1;
 
@@ -32,6 +36,8 @@ public class IndexModel : PageModel
 
     public List<RecommendationStore.Recommendation> Rows { get; set; } = new();
     public List<AttendanceTransactionStore.TransactionRow> Transactions { get; set; } = new();
+    public List<AttendanceTransactionStore.ViolationRow> ViolationCases { get; set; } = new();
+    public int ViolationsCount { get; set; }
     public int TotalRows { get; set; }
     public int TotalPages { get; set; }
     public int PendingCount { get; set; }
@@ -66,10 +72,15 @@ public class IndexModel : PageModel
         Transactions = await AttendanceTransactionStore.ListAsync(_dbContext, year, month);
         TransactionsCount = Transactions.Count;
 
+        // الأثر المالي والأثر التأديبي مفصولان بالتخزين، ويُعرضان بتبويبين
+        // فرعيين مطابقةً لكيان (قسم 29.ب): الحركات المالية · حركات المخالفات
+        ViolationCases = await AttendanceTransactionStore.ListViolationsAsync(_dbContext, year, month);
+        ViolationsCount = ViolationCases.Count;
+
         // تبويب «الحركات» يعرض الحركات المنفَّذة لا الاقتراحات
         if (Tab == "Transactions")
         {
-            TotalRows = Transactions.Count;
+            TotalRows = SubTab == "Violations" ? ViolationCases.Count : Transactions.Count;
             TotalPages = 1;
             PageNumber = 1;
             return;
@@ -118,7 +129,7 @@ public class IndexModel : PageModel
         TempData["SuccessMessage"] = done == 0
             ? "لم تُرحَّل أي حركة — المحدد مُرحَّل سابقاً أو نوعه غير قابل للترحيل (مغادرة/إجازة)."
             : $"رُحّلت {done} حركة إلى الرواتب{(skipped > 0 ? $" · تُخطّيت {skipped}" : "")}.";
-        return RedirectToPage(new { Month, Tab = "Transactions" });
+        return RedirectToPage(new { Month, Tab = "Transactions", SubTab = "Financial" });
     }
 
     /// <summary>إلغاء ترحيل الحركات المحددة (نظير «إزالة» بكيان).</summary>
@@ -130,6 +141,6 @@ public class IndexModel : PageModel
         TempData["SuccessMessage"] = done == 0
             ? "لم يُلغَ ترحيل أي حركة — المحدد غير مُرحَّل أو دخل مسيراً مقفلاً."
             : $"أُلغي ترحيل {done} حركة وحُذفت حركة المسير المرتبطة{(skipped > 0 ? $" · تُخطّيت {skipped}" : "")}.";
-        return RedirectToPage(new { Month, Tab = "Transactions" });
+        return RedirectToPage(new { Month, Tab = "Transactions", SubTab = "Financial" });
     }
 }

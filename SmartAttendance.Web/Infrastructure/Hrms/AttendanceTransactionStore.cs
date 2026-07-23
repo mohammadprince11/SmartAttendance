@@ -165,6 +165,67 @@ ORDER BY t.WorkDate DESC, e.EmployeeNo;
             });
     }
 
+    /// <summary>
+    /// صف «حركة مخالفة» — الأثر التأديبي المولّد من محرك الحضور. كيان يفصله عن
+    /// الحركات المالية بتبويب فرعي مستقل بأعمدة مختلفة (قسم 29.ب بدراسة الحضور).
+    /// </summary>
+    public sealed class ViolationRow
+    {
+        public int Id { get; set; }
+        public string ReferenceNo { get; set; } = string.Empty;
+        public string EmployeeNo { get; set; } = string.Empty;
+        public string EmployeeName { get; set; } = string.Empty;
+        public DateOnly EventDate { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string ActionStatus { get; set; } = string.Empty;
+        public decimal DeductionAmount { get; set; }
+    }
+
+    /// <summary>
+    /// قضايا المخالفات المولّدة من محرك الحضور لشهر بعينه — مصدرها «محرك الحضور»
+    /// تمييزاً عن القضايا المُدخلة يدوياً بمودل المخالفات.
+    /// </summary>
+    public static async Task<List<ViolationRow>> ListViolationsAsync(
+        ApplicationDbContext dbContext, int year, int month)
+    {
+        await ViolationCaseSchema.EnsureAsync(dbContext);
+
+        var from = new DateOnly(year, month, 1);
+        var to = from.AddMonths(1).AddDays(-1);
+
+        return await HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+SELECT v.Id, v.ReferenceNo, v.EventDate, v.ViolationTitle, v.Status,
+       v.ActionStatus, v.DeductionAmount,
+       ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName
+FROM EmployeeViolationCases v
+LEFT JOIN Employees e ON e.Id = v.EmployeeId
+WHERE ISNULL(v.IsDeleted, 0) = 0
+  AND v.Source = N'محرك الحضور'
+  AND v.EventDate >= @From AND v.EventDate <= @To
+ORDER BY v.EventDate DESC, v.Id DESC;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
+            },
+            reader => new ViolationRow
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                ReferenceNo = HrmsDatabase.GetString(reader, "ReferenceNo"),
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+                EventDate = HrmsDatabase.GetDateOnly(reader, "EventDate") ?? default,
+                Title = HrmsDatabase.GetString(reader, "ViolationTitle"),
+                Status = HrmsDatabase.GetString(reader, "Status"),
+                ActionStatus = HrmsDatabase.GetString(reader, "ActionStatus"),
+                DeductionAmount = reader["DeductionAmount"] is decimal d ? d : 0
+            });
+    }
+
     private static async Task<List<TransactionRow>> ByIdsAsync(
         ApplicationDbContext dbContext, IReadOnlyCollection<int> ids)
     {

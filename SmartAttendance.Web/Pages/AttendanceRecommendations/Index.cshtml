@@ -16,7 +16,7 @@
         ("Auto", "تلقائية", Model.AutoCount),
         ("Approved", "معتمدة", Model.ApprovedCount),
         ("Ignored", "متجاهلة", Model.IgnoredCount),
-        ("Transactions", "الحركات", Model.TransactionsCount),
+        ("Transactions", "الحركات", Model.TransactionsCount + Model.ViolationsCount),
         ("All", "الكل", Model.PendingCount + Model.ConflictedCount + Model.AutoCount + Model.ApprovedCount + Model.IgnoredCount)
     };
 }
@@ -61,6 +61,13 @@
     .rec-chip.Conflicted { background: rgba(248,113,113,.14); color: #f87171; }
     .rec-chip.note { background: rgba(167,139,250,.14); color: #a78bfa; }
     .rec-chip.fin { background: rgba(96,165,250,.14); color: #60a5fa; }
+    .rec-subtabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .rec-subtab {
+        padding: 8px 16px; border-radius: 12px; font-size: 12.5px; font-weight: 900;
+        border: 1px solid rgba(73,111,151,.25); color: inherit; text-decoration: none;
+    }
+    .rec-subtab.active { background: rgba(96,165,250,.14); color: #60a5fa; border-color: rgba(96,165,250,.42); }
+    .rec-subtab b { direction: ltr; display: inline-block; margin-inline-start: 4px; }
     .rec-chip.moved { background: rgba(74,222,128,.12); color: #4ade80; }
     .rec-chip.notmoved { background: rgba(250,204,21,.12); color: #facc15; }
     .rec-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
@@ -111,6 +118,57 @@
     </div>
 
     @if (Model.Tab == "Transactions")
+    {
+        @* كيان يفصل الأثر المالي عن التأديبي بتبويبين فرعيين بأعمدة مختلفة *@
+        <nav class="rec-subtabs">
+            <a class="rec-subtab @(Model.SubTab != "Violations" ? "active" : "")"
+               href="?Month=@Model.Month&Tab=Transactions&SubTab=Financial">الحركات المالية <b>@Model.TransactionsCount</b></a>
+            <a class="rec-subtab @(Model.SubTab == "Violations" ? "active" : "")"
+               href="?Month=@Model.Month&Tab=Transactions&SubTab=Violations">حركات المخالفات <b>@Model.ViolationsCount</b></a>
+        </nav>
+    }
+
+    @if (Model.Tab == "Transactions" && Model.SubTab == "Violations")
+    {
+        <div class="rec-table-card">
+            @if (Model.ViolationCases.Count == 0)
+            {
+                <div class="rec-empty">لا حركات مخالفات هذا الشهر — تنتج عن اعتماد اقتراح أثره «مخالفة» أو من قاعدة تلقائية.</div>
+            }
+            else
+            {
+                <table class="rec-table">
+                    <thead>
+                        <tr>
+                            <th>الموظف</th><th>التاريخ</th><th>المخالفة</th>
+                            <th>الحالة</th><th style="text-align:end">الاقتطاع</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var v in Model.ViolationCases)
+                        {
+                            <tr>
+                                <td><b>@v.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @v.EmployeeNo</span></td>
+                                <td style="direction:ltr;text-align:start">@v.EventDate.ToString("yyyy-MM-dd")</td>
+                                <td style="font-size:12px">
+                                    @v.Title
+                                    <a class="rec-ref" href="/Violations">@v.ReferenceNo</a>
+                                </td>
+                                <td>
+                                    <span class="rec-chip Pending">@v.Status</span>
+                                    <span class="rec-ref" style="color:var(--sa-muted,#8FA8BC)">@v.ActionStatus</span>
+                                </td>
+                                <td style="text-align:end;direction:ltr;font-weight:900">
+                                    @(v.DeductionAmount > 0 ? v.DeductionAmount.ToString("0.##") : "—")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+    else if (Model.Tab == "Transactions")
     {
         <form method="post">
             <input type="hidden" name="Month" value="@Model.Month" />
