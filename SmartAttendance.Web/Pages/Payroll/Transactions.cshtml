@@ -43,6 +43,9 @@
     .tx-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); flex-wrap:wrap; }
     .tx-filter select, .tx-filter input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; }
     html[data-theme="light"] .tx-filter select, html[data-theme="light"] .tx-filter input { background:#fff; }
+    .tx-adv-panel { flex-basis:100%; display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:10px 12px; border:1px dashed rgba(73,111,151,.35); border-radius:12px; }
+    .tx-adv-panel select, .tx-adv-panel input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:800; }
+    html[data-theme="light"] .tx-adv-panel select, html[data-theme="light"] .tx-adv-panel input { background:#fff; }
 
     .tx-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
     .tx-table { width:100%; border-collapse:collapse; font-size:13px; min-width:960px; }
@@ -145,8 +148,31 @@
             </select>
         </div>
         <div class="tx-filter">
-            <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/بند/رقم مرجعي" style="min-width:220px" />
+            <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/بند/رقم مرجعي" style="min-width:200px" />
             <button type="submit" class="tx-btn ghost sm">بحث</button>
+            <button type="button" class="tx-btn ghost sm" onclick="advToggle()">🔎 بحث متقدم</button>
+        </div>
+        <div id="adv-panel" class="tx-adv-panel" style="@(Model.HasAdvanced ? "" : "display:none")">
+            <span style="font-weight:900;color:var(--sa-muted,#8FA8BC)">الموظف:</span>
+            <div class="empk-field" style="max-width:300px">
+                <input type="text" id="adv-emp-name" class="empk-name" placeholder="اسم الموظف" readonly value="@(Model.Emp is > 0 ? Model.Employees.FirstOrDefault(e => e.Id == Model.Emp)?.Name : "")" />
+                <input type="text" id="adv-emp-code" class="empk-code" placeholder="رمز" autocomplete="off" value="@(Model.Emp is > 0 ? Model.Employees.FirstOrDefault(e => e.Id == Model.Emp)?.No : "")" />
+            </div>
+            <input type="hidden" name="Emp" id="adv-Emp" value="@(Model.Emp?.ToString() ?? "")" />
+            <select name="PayType">
+                <option value="">كل أنواع الدفعة</option>
+                <option value="InSalary" selected="@(Model.PayType == "InSalary")">داخل الراتب</option>
+                <option value="OutSalary" selected="@(Model.PayType == "OutSalary")">خارج الراتب</option>
+            </select>
+            <select name="Src">
+                <option value="">كل المصادر</option>
+                @foreach (var s in Model.Sources)
+                { <option value="@s" selected="@(Model.Src == s)">@s</option> }
+            </select>
+            <input type="number" name="MinAmount" placeholder="مبلغ من" value="@(Model.MinAmount)" step="0.01" style="width:104px" />
+            <input type="number" name="MaxAmount" placeholder="مبلغ إلى" value="@(Model.MaxAmount)" step="0.01" style="width:104px" />
+            <button type="submit" class="tx-btn sm">تطبيق</button>
+            <a class="tx-btn ghost sm" href="/Payroll/Transactions?type=@Model.Type&Year=@Model.Year&Month=@Model.Month&Lock=@Model.Lock">مسح المتقدم</a>
         </div>
     </form>
 
@@ -467,6 +493,13 @@
             hidden: document.getElementById('tx-EmployeeId'),
             employees: TX_EMP
         });
+        EmpPicker.init({
+            code: document.getElementById('adv-emp-code'),
+            name: document.getElementById('adv-emp-name'),
+            hidden: document.getElementById('adv-Emp'),
+            employees: TX_EMP
+        });
+        function advToggle(){ var p=document.getElementById('adv-panel'); p.style.display = (p.style.display==='none') ? 'flex' : 'none'; }
 
         function txAll(cb){ document.querySelectorAll('[name=SelectedIds]').forEach(function(x){x.checked=cb.checked;}); }
 

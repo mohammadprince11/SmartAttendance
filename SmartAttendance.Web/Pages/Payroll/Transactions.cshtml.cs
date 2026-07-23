@@ -38,6 +38,25 @@ public class TransactionsModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string? Status { get; set; }
 
+    // بحث متقدم
+    [BindProperty(SupportsGet = true)]
+    public int? Emp { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? PayType { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? Src { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public decimal? MinAmount { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public decimal? MaxAmount { get; set; }
+
+    public List<string> Sources { get; set; } = new();
+    public bool HasAdvanced => Emp is > 0 || !string.IsNullOrWhiteSpace(PayType) || !string.IsNullOrWhiteSpace(Src) || MinAmount.HasValue || MaxAmount.HasValue;
+
     /// <summary>التبويب: Open (غير مقفلة، قابلة للتعديل) | Locked (مقفلة، قراءة فقط).</summary>
     [BindProperty(SupportsGet = true)]
     public string Lock { get; set; } = "Open";
@@ -72,6 +91,13 @@ public class TransactionsModel : PageModel
         if (Lock != "Locked") Lock = "Open";
         // القفل لكل حركة: التبويب يفلتر بحالة قفل الحركة نفسها
         Items = await PayrollTransactionStore.ListAsync(_db, Year, Month, Type, Search, Item, Status, locked: Lock == "Locked");
+
+        Sources = Items.Select(x => x.Source).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
+        if (Emp is > 0) Items = Items.Where(x => x.EmployeeId == Emp).ToList();
+        if (!string.IsNullOrWhiteSpace(PayType)) Items = Items.Where(x => x.PaymentType == PayType).ToList();
+        if (!string.IsNullOrWhiteSpace(Src)) Items = Items.Where(x => x.Source == Src).ToList();
+        if (MinAmount.HasValue) Items = Items.Where(x => x.Amount >= MinAmount.Value).ToList();
+        if (MaxAmount.HasValue) Items = Items.Where(x => x.Amount <= MaxAmount.Value).ToList();
 
         var all = await SalaryItemStore.ListAsync(_db);
         Catalog = IsDeduction
