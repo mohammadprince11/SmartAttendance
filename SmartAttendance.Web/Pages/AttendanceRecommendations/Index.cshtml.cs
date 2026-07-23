@@ -108,4 +108,28 @@ public class IndexModel : PageModel
         TempData["SuccessMessage"] = "تم تجاهل الاقتراح.";
         return RedirectToPage(new { Month, Tab });
     }
+
+    /// <summary>ترحيل الحركات المحددة لوحدة الرواتب (نمط كيان «انقل إلى وحدة الرواتب»).</summary>
+    public async Task<IActionResult> OnPostTransferAsync(int[] selectedIds)
+    {
+        var (done, skipped) = await AttendanceTransactionStore.TransferToPayrollAsync(
+            _dbContext, selectedIds ?? Array.Empty<int>(), User.Identity?.Name ?? "HR");
+
+        TempData["SuccessMessage"] = done == 0
+            ? "لم تُرحَّل أي حركة — المحدد مُرحَّل سابقاً أو نوعه غير قابل للترحيل (مغادرة/إجازة)."
+            : $"رُحّلت {done} حركة إلى الرواتب{(skipped > 0 ? $" · تُخطّيت {skipped}" : "")}.";
+        return RedirectToPage(new { Month, Tab = "Transactions" });
+    }
+
+    /// <summary>إلغاء ترحيل الحركات المحددة (نظير «إزالة» بكيان).</summary>
+    public async Task<IActionResult> OnPostUndoTransferAsync(int[] selectedIds)
+    {
+        var (done, skipped) = await AttendanceTransactionStore.UndoTransferAsync(
+            _dbContext, selectedIds ?? Array.Empty<int>());
+
+        TempData["SuccessMessage"] = done == 0
+            ? "لم يُلغَ ترحيل أي حركة — المحدد غير مُرحَّل أو دخل مسيراً مقفلاً."
+            : $"أُلغي ترحيل {done} حركة وحُذفت حركة المسير المرتبطة{(skipped > 0 ? $" · تُخطّيت {skipped}" : "")}.";
+        return RedirectToPage(new { Month, Tab = "Transactions" });
+    }
 }

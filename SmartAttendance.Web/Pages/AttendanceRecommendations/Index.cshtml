@@ -61,7 +61,19 @@
     .rec-chip.Conflicted { background: rgba(248,113,113,.14); color: #f87171; }
     .rec-chip.note { background: rgba(167,139,250,.14); color: #a78bfa; }
     .rec-chip.fin { background: rgba(96,165,250,.14); color: #60a5fa; }
+    .rec-chip.moved { background: rgba(74,222,128,.12); color: #4ade80; }
+    .rec-chip.notmoved { background: rgba(250,204,21,.12); color: #facc15; }
     .rec-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .rec-bulkbar {
+        position: fixed; bottom: 18px; inset-inline: 0; margin-inline: auto; width: max-content; max-width: calc(100% - 32px);
+        z-index: 60; display: none; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 18px;
+        border: 1px solid rgba(18,217,227,.45); border-radius: 16px;
+        background: var(--sa-surface, rgba(8,25,43,.98)); box-shadow: 0 14px 44px rgba(0,0,0,.55);
+    }
+    html[data-theme="light"] .rec-bulkbar { background: #fff; }
+    .rec-bulkbar.show { display: flex; }
+    .rec-bulkbar b { font-size: 13px; font-weight: 900; margin-inline-end: 6px; }
+    .rec-bulkbar b span { color: #12D9E3; }
     .rec-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
     .rec-ref { font-size: 11px; color: #12D9E3; font-weight: 900; direction: ltr; display: inline-block; }
 </style>
@@ -100,43 +112,87 @@
 
     @if (Model.Tab == "Transactions")
     {
-        <div class="rec-table-card">
-            @if (Model.Transactions.Count == 0)
-            {
-                <div class="rec-empty">لا حركات منفَّذة هذا الشهر — الحركات تنتج عن اعتماد اقتراح ذي أثر (إجازة/مغادرة/أوفرتايم/دخل/اقتطاع) أو من قاعدة تلقائية.</div>
-            }
-            else
-            {
-                <table class="rec-table">
-                    <thead>
-                        <tr>
-                            <th>الموظف</th><th>التاريخ</th><th>القاعدة</th><th>نوع الأثر</th>
-                            <th>البيان</th><th style="text-align:end">القيمة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var txn in Model.Transactions)
-                        {
+        <form method="post">
+            <input type="hidden" name="Month" value="@Model.Month" />
+            <div class="rec-table-card">
+                @if (Model.Transactions.Count == 0)
+                {
+                    <div class="rec-empty">لا حركات منفَّذة هذا الشهر — الحركات تنتج عن اعتماد اقتراح ذي أثر (إجازة/مغادرة/أوفرتايم/دخل/اقتطاع) أو من قاعدة تلقائية.</div>
+                }
+                else
+                {
+                    <table class="rec-table">
+                        <thead>
                             <tr>
-                                <td><b>@txn.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @txn.EmployeeNo</span></td>
-                                <td style="direction:ltr;text-align:start">@txn.WorkDate.ToString("yyyy-MM-dd")</td>
-                                <td style="font-size:12px">@txn.RuleName</td>
-                                <td><span class="rec-chip fin">@ShiftRuleStore.LabelOf(ShiftRuleStore.ActionTypes, txn.ActionType)</span></td>
-                                <td style="font-size:12px;color:var(--sa-muted,#8FA8BC)">@txn.ActionText</td>
-                                <td style="text-align:end;direction:ltr;font-weight:900">
-                                    @if (txn.Hours > 0)
-                                    { <text>@txn.Hours.ToString("0.##") ساعة</text> }
-                                    else if (txn.Amount > 0)
-                                    { <text>@txn.Amount.ToString("0.##")</text> }
-                                    else
-                                    { <text>—</text> }
-                                </td>
+                                <th style="width:34px"><input type="checkbox" onclick="recAll(this)" /></th>
+                                <th>الموظف</th><th>التاريخ</th><th>القاعدة</th><th>نوع الأثر</th>
+                                <th>البيان</th><th style="text-align:end">القيمة</th><th>حالة الترحيل</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var txn in Model.Transactions)
+                            {
+                                <tr>
+                                    <td><input type="checkbox" name="selectedIds" value="@txn.Id" onclick="recSel()" /></td>
+                                    <td><b>@txn.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @txn.EmployeeNo</span></td>
+                                    <td style="direction:ltr;text-align:start">@txn.WorkDate.ToString("yyyy-MM-dd")</td>
+                                    <td style="font-size:12px">@txn.RuleName</td>
+                                    <td><span class="rec-chip fin">@ShiftRuleStore.LabelOf(ShiftRuleStore.ActionTypes, txn.ActionType)</span></td>
+                                    <td style="font-size:12px;color:var(--sa-muted,#8FA8BC)">@txn.ActionText</td>
+                                    <td style="text-align:end;direction:ltr;font-weight:900">
+                                        @if (txn.Hours > 0)
+                                        { <text>@txn.Hours.ToString("0.##") ساعة</text> }
+                                        else if (txn.Amount > 0)
+                                        { <text>@txn.Amount.ToString("0.##")</text> }
+                                        else
+                                        { <text>—</text> }
+                                    </td>
+                                    <td style="white-space:nowrap">
+                                        @if (!AttendanceTransactionStore.IsTransferable(txn.ActionType))
+                                        {
+                                            <span class="rec-chip Ignored" title="أثر لا يُرحَّل للرواتب — يتبع وحدة المغادرات/الإجازات">لا تُرحَّل</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="rec-chip @(txn.IsTransferred ? "moved" : "notmoved")">@AttendanceTransactionStore.PayrollStatusLabel(txn.PayrollStatus)</span>
+                                            @if (txn.IsTransferred && txn.PayrollTransactionId != null)
+                                            {
+                                                var payrollHref = txn.ActionType == "Overtime"
+                                                    ? $"/Payroll/Overtime?Year={txn.WorkDate.Year}&Month={txn.WorkDate.Month}"
+                                                    : $"/Payroll/Transactions?Type={txn.ActionType}&Year={txn.WorkDate.Year}&Month={txn.WorkDate.Month}";
+                                                <a class="rec-ref" href="@payrollHref" style="color:#60a5fa">مسير #@txn.PayrollTransactionId</a>
+                                            }
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+
+            @if (Model.Transactions.Count > 0)
+            {
+                <div class="rec-bulkbar" id="rec-bulkbar">
+                    <b>المحدد: <span id="rec-selcount">0</span></b>
+                    <button type="submit" asp-page-handler="Transfer" class="rec-btn ok" data-zyconfirm="ترحيل الحركات المحددة إلى وحدة الرواتب؟">انقل إلى وحدة الرواتب</button>
+                    <button type="submit" asp-page-handler="UndoTransfer" class="rec-btn no" data-zyconfirm="إلغاء ترحيل المحدد وحذف حركة المسير المرتبطة؟">إلغاء الترحيل</button>
+                </div>
             }
-        </div>
+        </form>
+
+        <script>
+            function recAll(cb) {
+                document.querySelectorAll('[name=selectedIds]').forEach(function (x) { x.checked = cb.checked; });
+                recSel();
+            }
+            function recSel() {
+                var bar = document.getElementById('rec-bulkbar'); if (!bar) return;
+                var n = document.querySelectorAll('[name=selectedIds]:checked').length;
+                var c = document.getElementById('rec-selcount'); if (c) c.textContent = n;
+                bar.classList.toggle('show', n > 0);
+            }
+        </script>
     }
     else
     {

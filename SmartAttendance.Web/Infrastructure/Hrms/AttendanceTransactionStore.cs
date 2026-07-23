@@ -25,7 +25,32 @@ public static class AttendanceTransactionStore
         public decimal Amount { get; set; }
         public decimal Hours { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        // جسر الرواتب (نمط كيان «انقل إلى وحدة الرواتب» + حالة «لم يتم نقلها بعد»)
+        public string PayrollStatus { get; set; } = NotTransferred;
+        public int? PayrollTransactionId { get; set; }
+        public DateTime? TransferredAt { get; set; }
+        public string TransferredBy { get; set; } = string.Empty;
+
+        public bool IsTransferred => PayrollStatus == Transferred;
+        public bool CanTransfer => !IsTransferred && IsTransferable(ActionType);
     }
+
+    public const string NotTransferred = "NotTransferred";
+    public const string Transferred = "Transferred";
+
+    /// <summary>
+    /// أنواع الأثر التي تُرحَّل للرواتب. المغادرة (Permission) والإجازة (Leave) مستثناتان
+    /// عمداً: عند كيان تذهبان لوحدة المغادرات/الإجازات لا للرواتب، ونمذجتهما عندنا لم تُحسم.
+    /// </summary>
+    public static bool IsTransferable(string actionType) =>
+        actionType is "Overtime" or "Income" or "Deduction";
+
+    public static string PayrollStatusLabel(string status) => status switch
+    {
+        Transferred => "مُرحَّلة",
+        _ => "لم تُرحَّل بعد"
+    };
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
     {
@@ -51,6 +76,17 @@ BEGIN
     CREATE UNIQUE INDEX UX_AttendanceTransactions_Recommendation
         ON AttendanceTransactions (RecommendationId);
 END;
+
+-- جسر الرواتب (idempotent)
+IF COL_LENGTH('AttendanceTransactions','PayrollStatus') IS NULL
+    ALTER TABLE AttendanceTransactions ADD PayrollStatus nvarchar(20) NOT NULL
+        CONSTRAINT DF_AT_PayrollStatus DEFAULT(N'NotTransferred');
+IF COL_LENGTH('AttendanceTransactions','PayrollTransactionId') IS NULL
+    ALTER TABLE AttendanceTransactions ADD PayrollTransactionId int NULL;
+IF COL_LENGTH('AttendanceTransactions','TransferredAt') IS NULL
+    ALTER TABLE AttendanceTransactions ADD TransferredAt datetime2 NULL;
+IF COL_LENGTH('AttendanceTransactions','TransferredBy') IS NULL
+    ALTER TABLE AttendanceTransactions ADD TransferredBy nvarchar(150) NULL;
 """);
     }
 
@@ -121,7 +157,149 @@ ORDER BY t.WorkDate DESC, e.EmployeeNo;
                 ActionText = HrmsDatabase.GetString(reader, "ActionText"),
                 Amount = reader["Amount"] is decimal a ? a : 0,
                 Hours = reader["Hours"] is decimal h ? h : 0,
-                CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default
+                CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default,
+                PayrollStatus = HrmsDatabase.GetString(reader, "PayrollStatus") is { Length: > 0 } ps ? ps : NotTransferred,
+                PayrollTransactionId = HrmsDatabase.GetNullableInt(reader, "PayrollTransactionId"),
+                TransferredAt = HrmsDatabase.GetDateTime(reader, "TransferredAt"),
+                TransferredBy = HrmsDatabase.GetString(reader, "TransferredBy")
             });
+    }
+
+    private static async Task<List<TransactionRow>> ByIdsAsync(
+        ApplicationDbContext dbContext, IReadOnlyCollection<int> ids)
+    {
+        if (ids.Count == 0) return new List<TransactionRow>();
+        var inList = string.Join(",", ids.Select((_, i) => $"@P{i}"));
+        var idArray = ids.ToArray();
+
+        return await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+SELECT t.*, e.EmployeeNo, e.FullName
+FROM AttendanceTransactions t
+INNER JOIN Employees e ON e.Id = t.EmployeeId
+WHERE t.Id IN ({inList});
+""",
+            command => { for (var i = 0; i < idArray.Length; i++) HrmsDatabase.AddParameter(command, $"@P{i}", idArray[i]); },
+            reader => new TransactionRow
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+                WorkDate = HrmsDatabase.GetDateOnly(reader, "WorkDate") ?? default,
+                RecommendationId = HrmsDatabase.GetInt(reader, "RecommendationId"),
+                RuleId = HrmsDatabase.GetInt(reader, "RuleId"),
+                RuleName = HrmsDatabase.GetString(reader, "RuleName"),
+                ActionType = HrmsDatabase.GetString(reader, "ActionType"),
+                ActionText = HrmsDatabase.GetString(reader, "ActionText"),
+                Amount = reader["Amount"] is decimal a ? a : 0,
+                Hours = reader["Hours"] is decimal h ? h : 0,
+                PayrollStatus = HrmsDatabase.GetString(reader, "PayrollStatus") is { Length: > 0 } ps ? ps : NotTransferred,
+                PayrollTransactionId = HrmsDatabase.GetNullableInt(reader, "PayrollTransactionId")
+            });
+    }
+
+    /// <summary>
+    /// ترحيل حركات حضور إلى حركات المسير (نمط كيان «انقل إلى وحدة الرواتب»).
+    /// الخريطة: أوفرتايم ← <c>Overtime</c> بالساعات + معامل البدل الافتراضي (المبلغ يُحتسب
+    /// بالمسير من الأجر الساعي)؛ دخل/اقتطاع ← <c>Income</c>/<c>Deduction</c> بالمبلغ.
+    /// الحركة المُرحَّلة سابقاً أو غير القابلة للترحيل (مغادرة/إجازة) تُتخطّى بلا خطأ.
+    /// لا نمنع الترحيل لشهر فيه مسير مقفل: <c>PayrollTransactionStore</c> يقفل الحركات
+    /// لكل حركة لا للفترة، فالحركة الجديدة تبقى غير مقفلة وتدخل مسيراً لاحقاً.
+    /// </summary>
+    public static async Task<(int Transferred, int Skipped)> TransferToPayrollAsync(
+        ApplicationDbContext dbContext, IReadOnlyCollection<int> ids, string userName)
+    {
+        await EnsureAsync(dbContext);
+        var rows = await ByIdsAsync(dbContext, ids);
+
+        int done = 0, skipped = 0;
+
+        foreach (var row in rows)
+        {
+            if (!row.CanTransfer) { skipped++; continue; }
+
+            var isOvertime = row.ActionType == "Overtime";
+            var payrollId = await PayrollTransactionStore.SaveAsync(dbContext, new PayrollTransactionStore.Transaction
+            {
+                EmployeeId = row.EmployeeId,
+                Year = row.WorkDate.Year,
+                Month = row.WorkDate.Month,
+                ItemName = string.IsNullOrWhiteSpace(row.RuleName) ? "حركة حضور" : row.RuleName,
+                TxType = isOvertime ? PayrollTransactionStore.Overtime : row.ActionType,
+                Amount = isOvertime ? 0 : row.Amount,
+                Hours = isOvertime ? row.Hours : null,
+                RateFactor = isOvertime ? PayrollTransactionStore.DefaultRateFactor : null,
+                Taxable = true,
+                PaymentType = "InSalary",
+                Status = "Approved",
+                TransactionDate = row.WorkDate,
+                Note = row.ActionText,
+                Source = "محرك الحضور"
+            }, userName);
+
+            await HrmsDatabase.ExecuteAsync(
+                dbContext,
+                """
+UPDATE AttendanceTransactions
+SET PayrollStatus = N'Transferred', PayrollTransactionId = @Payroll,
+    TransferredAt = SYSUTCDATETIME(), TransferredBy = @By
+WHERE Id = @Id;
+""",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@Id", row.Id);
+                    HrmsDatabase.AddParameter(command, "@Payroll", payrollId);
+                    HrmsDatabase.AddParameter(command, "@By", userName);
+                });
+
+            done++;
+        }
+
+        return (done, skipped);
+    }
+
+    /// <summary>
+    /// إلغاء الترحيل (نظير «إزالة» بكيان): يحذف حركة المسير المرتبطة ويعيد الحالة.
+    /// الحركة التي دخلت مسيراً مقفلاً لا تُلغى — تُتخطّى وتبقى مُرحَّلة.
+    /// </summary>
+    public static async Task<(int Undone, int Skipped)> UndoTransferAsync(
+        ApplicationDbContext dbContext, IReadOnlyCollection<int> ids)
+    {
+        await EnsureAsync(dbContext);
+        var rows = await ByIdsAsync(dbContext, ids);
+
+        int done = 0, skipped = 0;
+
+        foreach (var row in rows)
+        {
+            if (!row.IsTransferred) { skipped++; continue; }
+
+            if (row.PayrollTransactionId is > 0)
+            {
+                if (await PayrollTransactionStore.IsLockedAsync(dbContext, row.PayrollTransactionId.Value))
+                {
+                    skipped++;
+                    continue;
+                }
+
+                await PayrollTransactionStore.DeleteAsync(dbContext, row.PayrollTransactionId.Value);
+            }
+
+            await HrmsDatabase.ExecuteAsync(
+                dbContext,
+                """
+UPDATE AttendanceTransactions
+SET PayrollStatus = N'NotTransferred', PayrollTransactionId = NULL,
+    TransferredAt = NULL, TransferredBy = NULL
+WHERE Id = @Id;
+""",
+                command => HrmsDatabase.AddParameter(command, "@Id", row.Id));
+
+            done++;
+        }
+
+        return (done, skipped);
     }
 }
