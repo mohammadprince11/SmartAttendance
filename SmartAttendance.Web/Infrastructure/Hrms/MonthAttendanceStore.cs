@@ -171,10 +171,73 @@ ORDER BY e.EmployeeNo;
             });
     }
 
-    /// <summary>اعتماد: تحت المراجعة ← معتمد.</summary>
-    public static Task<int> ApproveAsync(ApplicationDbContext dbContext, IReadOnlyCollection<int> ids) =>
-        Transition(dbContext, ids, from: "UnderReview", to: "Approved",
+    /// <summary>
+    /// اعتماد: تحت المراجعة ← معتمد — <b>ويُمنع الاعتماد بوجود أيام غير محلّلة</b>.
+    /// الشهر المعتمد يُقفل ثم يقرأه المسير (AbsentDays ⟹ اقتطاع)، فاعتماد شهر
+    /// ناقص التحليل يعني راتباً محسوباً على أيام لم يشتقها المحرك.
+    /// </summary>
+    /// <returns>عدد المعتمَد فعلاً، وعدد المحجوب لنقص التحليل.</returns>
+    public static async Task<(int Approved, int Blocked)> ApproveWithGateAsync(
+        ApplicationDbContext dbContext, IReadOnlyCollection<int> ids)
+    {
+        await EnsureAsync(dbContext);
+        if (ids.Count == 0) return (0, 0);
+
+        var eligible = await EligibleForApprovalAsync(dbContext, ids);
+        var approved = await Transition(dbContext, eligible, from: "UnderReview", to: "Approved",
             "ApprovedAt = SYSUTCDATETIME()");
+
+        return (approved, ids.Count - eligible.Count);
+    }
+
+    /// <summary>
+    /// يصفّي المعرّفات إلى ما اكتمل تحليله: عدد اليوميات المحلّلة للموظف بالشهر
+    /// يساوي أيام الشهر المنقضية (الشهر الجاري يُقاس حتى اليوم، لا حتى آخره).
+    /// </summary>
+    private static async Task<List<int>> EligibleForApprovalAsync(
+        ApplicationDbContext dbContext, IReadOnlyCollection<int> ids)
+    {
+        await DayAttendanceStore.EnsureAsync(dbContext);
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var eligible = new List<int>();
+
+        foreach (var chunk in ids.Chunk(500))
+        {
+            var inList = string.Join(",", chunk.Select((_, i) => $"@P{i}"));
+            var rows = await HrmsDatabase.QueryAsync(
+                dbContext,
+                $"""
+SELECT m.Id,
+       DATEDIFF(day, DATEFROMPARTS(m.[Year], m.[Month], 1),
+                CASE WHEN EOMONTH(DATEFROMPARTS(m.[Year], m.[Month], 1)) < @Today
+                     THEN EOMONTH(DATEFROMPARTS(m.[Year], m.[Month], 1)) ELSE @Today END) + 1 AS ExpectedDays,
+       (SELECT COUNT(1) FROM DayAttendances d
+        WHERE d.EmployeeId = m.EmployeeId AND d.IsAnalyzed = 1
+          AND d.WorkDate >= DATEFROMPARTS(m.[Year], m.[Month], 1)
+          AND d.WorkDate <= EOMONTH(DATEFROMPARTS(m.[Year], m.[Month], 1))) AS AnalyzedDays
+FROM EmployeeMonthAttendance m
+WHERE m.Id IN ({inList});
+""",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@Today", today.ToDateTime(TimeOnly.MinValue));
+                    var index = 0;
+                    foreach (var id in chunk) HrmsDatabase.AddParameter(command, $"@P{index++}", id);
+                },
+                reader => new
+                {
+                    Id = HrmsDatabase.GetInt(reader, "Id"),
+                    Expected = HrmsDatabase.GetInt(reader, "ExpectedDays"),
+                    Analyzed = HrmsDatabase.GetInt(reader, "AnalyzedDays")
+                });
+
+            eligible.AddRange(rows
+                .Where(r => r.Expected > 0 && r.Analyzed >= r.Expected)
+                .Select(r => r.Id));
+        }
+
+        return eligible;
+    }
 
     /// <summary>إرجاع للمراجعة: معتمد ← تحت المراجعة (المقفل لا يُرجع).</summary>
     public static Task<int> ReopenAsync(ApplicationDbContext dbContext, IReadOnlyCollection<int> ids) =>

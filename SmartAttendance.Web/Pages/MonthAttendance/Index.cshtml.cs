@@ -86,8 +86,29 @@ public class IndexModel : PageModel
         return RedirectToPage(new { Month, Search, Filter, PageNumber });
     }
 
-    public Task<IActionResult> OnPostApproveAsync() => TransitionAsync(
-        MonthAttendanceStore.ApproveAsync, "اعتُمد {0} شهراً.");
+    /// <summary>الاعتماد ببوابة التحليل: الشهر ناقص اليوميات لا يُعتمد فلا يصل المسير.</summary>
+    public async Task<IActionResult> OnPostApproveAsync()
+    {
+        var ids = SelectedIds();
+
+        if (ids.Count == 0)
+        {
+            TempData["SuccessMessage"] = "حدد صفوفاً أولاً.";
+            return RedirectToPage(new { Month, Search, Filter, PageNumber });
+        }
+
+        var (approved, blocked) = await MonthAttendanceStore.ApproveWithGateAsync(_dbContext, ids);
+
+        TempData["SuccessMessage"] = (approved, blocked) switch
+        {
+            (0, > 0) => $"لم يُعتمد شيء — {blocked} صفاً بأيام غير محلّلة. شغّل «تحديث الحضور» للشهر أولاً.",
+            (> 0, > 0) => $"اعتُمد {approved} شهراً، وحُجب {blocked} لأيام غير محلّلة.",
+            (> 0, 0) => $"اعتُمد {approved} شهراً.",
+            _ => "لا صفوف بحالة تسمح بهذا الانتقال ضمن المحدد."
+        };
+
+        return RedirectToPage(new { Month, Search, Filter, PageNumber });
+    }
 
     public Task<IActionResult> OnPostReopenAsync() => TransitionAsync(
         MonthAttendanceStore.ReopenAsync, "أُرجع {0} شهراً للمراجعة.");
@@ -95,15 +116,18 @@ public class IndexModel : PageModel
     public Task<IActionResult> OnPostLockAsync() => TransitionAsync(
         MonthAttendanceStore.LockAsync, "قُفل {0} شهراً للرواتب.");
 
-    private async Task<IActionResult> TransitionAsync(
-        Func<ApplicationDbContext, IReadOnlyCollection<int>, Task<int>> action, string messageFormat)
-    {
-        var ids = Request.Form["SelectedIds"]
+    private List<int> SelectedIds() =>
+        Request.Form["SelectedIds"]
             .Where(v => !string.IsNullOrWhiteSpace(v))
             .Select(v => int.TryParse(v, out var id) ? id : 0)
             .Where(id => id > 0)
             .Distinct()
             .ToList();
+
+    private async Task<IActionResult> TransitionAsync(
+        Func<ApplicationDbContext, IReadOnlyCollection<int>, Task<int>> action, string messageFormat)
+    {
+        var ids = SelectedIds();
 
         if (ids.Count == 0)
         {
