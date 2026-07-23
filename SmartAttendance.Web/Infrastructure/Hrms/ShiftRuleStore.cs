@@ -22,8 +22,61 @@ public static class ShiftRuleStore
         ("LateHours", "ساعات التأخير"),
         ("EarlyLeaveHours", "ساعات الخروج المبكر"),
         ("Absent", "غائب"),
-        ("MissingCheckOut", "ختم الخروج مفقود")
+        ("MissingCheckOut", "ختم الخروج مفقود"),
+        // يُقيَّم على أزواج نوع البصمة المختار (استراحة/صلاة...) — مثال كيان الحيّ:
+        // «استراحة عدد المرات أكثر من 3 ← سلوك سيء».
+        ("PunchCount", "عدد المرات (لنوع البصمة)")
     };
+
+    /// <summary>هل الحقل عددي (يقارَن بـأكثر/أقل/بين) لا زمني؟</summary>
+    public static bool IsNumericField(string field) =>
+        field is "Duration" or "LateHours" or "EarlyLeaveHours" or "PunchCount";
+
+    /// <summary>هل الحقل يُقيَّم على أزواج نوع بصمة بعينه لا على اليومية؟</summary>
+    public static bool IsSemanticScopedField(string field) =>
+        field is "PunchCount";
+
+    /// <summary>
+    /// يبني عدّاد أزواج البصمات غير-الحضورية لشهر كامل (موظف × يوم × دلالة).
+    /// استعلام واحد للشهر بدل استعلام لكل يومية.
+    /// </summary>
+    public static async Task<SemanticCounts> SemanticCountsAsync(
+        ApplicationDbContext dbContext, int year, int month)
+    {
+        var from = new DateOnly(year, month, 1);
+        var to = from.AddMonths(1).AddDays(-1);
+        var counts = new SemanticCounts();
+
+        var rows = await HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+SELECT EmployeeId, AttendanceDate, PunchSemanticId, COUNT(*) AS PunchCount
+FROM AttendanceRecords
+WHERE ISNULL(IsDeleted, 0) = 0
+  AND AttendanceDate >= @From AND AttendanceDate <= @To
+  AND PunchSemanticId IS NOT NULL
+GROUP BY EmployeeId, AttendanceDate, PunchSemanticId;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@From", from);
+                HrmsDatabase.AddParameter(command, "@To", to);
+            },
+            reader => new
+            {
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                Date = HrmsDatabase.GetDateOnly(reader, "AttendanceDate") ?? default,
+                SemanticId = HrmsDatabase.GetInt(reader, "PunchSemanticId"),
+                Count = HrmsDatabase.GetInt(reader, "PunchCount")
+            });
+
+        foreach (var row in rows)
+        {
+            counts.Add(row.EmployeeId, row.Date, row.SemanticId, row.Count);
+        }
+
+        return counts;
+    }
 
     public static readonly (string Key, string Label)[] Comparisons =
     {
@@ -319,11 +372,40 @@ VALUES
     /// تعريف يوم المناوبة، والمقارنة الزمنية بالدقائق-من-منتصف-الليل مع مرساة يوم
     /// (تدعم عبور منتصف الليل و«بين»). يعيد null إن لم يتحقق، أو نص ملخص التحقق.
     /// </summary>
+    /// <summary>
+    /// عدد أزواج البصمات لكل (موظف × يوم × دلالة) — يغذّي الشروط ذات النطاق
+    /// الدلالي مثل «عدد المرات». يُبنى مرة للشهر بـ<see cref="SemanticCountsAsync"/>.
+    /// </summary>
+    public sealed class SemanticCounts
+    {
+        private readonly Dictionary<(int Employee, DateOnly Date, int Semantic), int> _map = new();
+
+        public void Add(int employeeId, DateOnly date, int semanticId, int count) =>
+            _map[(employeeId, date, semanticId)] = count;
+
+        public int Count(int employeeId, DateOnly date, int semanticId) =>
+            _map.TryGetValue((employeeId, date, semanticId), out var c) ? c : 0;
+    }
+
     public static string? Evaluate(ShiftRule rule, DayAttendanceStore.DayRow day,
-        ShiftTypeStore.ShiftDay? shiftDay)
+        ShiftTypeStore.ShiftDay? shiftDay, SemanticCounts? semanticCounts = null)
     {
         switch (rule.ConditionField)
         {
+            case "PunchCount":
+            {
+                // شرط بنطاق دلالي: يلزمه نوع بصمة محدد على القاعدة
+                if (!rule.PunchSemanticId.HasValue || rule.PunchSemanticId.Value <= 0) return null;
+                if (semanticCounts == null) return null;
+
+                var count = semanticCounts.Count(day.EmployeeId, day.WorkDate, rule.PunchSemanticId.Value);
+                if (count == 0) return null;
+
+                return CompareHours(rule, count)
+                    ? $"عدد المرات {count} ({HoursCriterion(rule)})"
+                    : null;
+            }
+
             case "Absent":
                 return day.Status == "Absent" ? "غياب بلا بصمات" : null;
 

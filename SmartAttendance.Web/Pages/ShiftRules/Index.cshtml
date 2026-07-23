@@ -52,6 +52,7 @@
 
     .shr-form { display: flex; flex-direction: column; gap: 12px; }
     .shr-form label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 4px; }
+    .shr-hint { font-size: 11px; font-weight: 800; line-height: 1.5; color: #facc15; }
     .shr-form input[type=text], .shr-form input[type=number], .shr-form input[type=time], .shr-form select {
         min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25);
         background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px;
@@ -162,6 +163,7 @@
                                     <option value="@semantic.Id">@semantic.Name</option>
                                 }
                             </select>
+                            <small id="shr-semantic-hint" class="shr-hint" hidden></small>
                         </label>
                     </div>
                     <label>أيام الأسبوع (فارغ = الكل)</label>
@@ -323,7 +325,9 @@
             var field = document.getElementById('shr-Field').value;
             var kindSel = document.getElementById('shr-Kind');
             var isExistence = field === 'Absent' || field === 'MissingCheckOut';
-            var isHoursField = field === 'Duration' || field === 'LateHours' || field === 'EarlyLeaveHours';
+            // «عدد المرات» عددي أيضاً لكنه بنطاق دلالي: يلزمه نوع بصمة محدد
+            var isCountField = field === 'PunchCount';
+            var isHoursField = field === 'Duration' || field === 'LateHours' || field === 'EarlyLeaveHours' || isCountField;
 
             document.getElementById('shr-cmp-wrap').hidden = isExistence;
             document.getElementById('shr-value-wrap').style.display = isExistence ? 'none' : '';
@@ -340,7 +344,22 @@
                 kindSel.disabled = false;
                 shrFillCmp(SHR_TIME_CMPS);
             }
+            shrSemanticRequirement(isCountField);
             shrValueVisibility();
+        }
+
+        // «عدد المرات» بلا نوع بصمة لا يُقيَّم إطلاقاً — نُلزم الاختيار ونوضّحه
+        function shrSemanticRequirement(required) {
+            var sel = document.getElementById('shr-Semantic');
+            var hint = document.getElementById('shr-semantic-hint');
+            if (!sel) return;
+            sel.required = !!required;
+            if (hint) {
+                hint.hidden = !required;
+                hint.textContent = required
+                    ? 'مطلوب: «عدد المرات» يُحسب على أزواج نوع البصمة المختار (استراحة/صلاة…) لا على اليومية.'
+                    : '';
+            }
         }
 
         // إظهار قيمة الأثر العددية + التلميح حسب نوع الإجراء

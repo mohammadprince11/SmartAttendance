@@ -121,6 +121,10 @@ IF COL_LENGTH('AttendanceRecommendations', 'TransactionId') IS NULL
         table.Columns.Add("ActionValue", typeof(decimal));
         table.Columns.Add("Status", typeof(string));
 
+        // عدّاد أزواج البصمات غير-الحضورية للشهر — يغذّي الشروط ذات النطاق
+        // الدلالي («عدد المرات» لنوع بصمة). استعلام واحد بدل استعلام لكل يومية.
+        var semanticCounts = await ShiftRuleStore.SemanticCountsAsync(dbContext, year, month);
+
         int created = 0, auto = 0;
         foreach (var day in days)
         {
@@ -133,7 +137,7 @@ IF COL_LENGTH('AttendanceRecommendations', 'TransactionId') IS NULL
                 if (!ShiftRuleStore.AppliesTo(rule, day)) continue;
                 if (existing.Contains((day.EmployeeId, day.WorkDate, rule.Id))) continue;
 
-                var summary = ShiftRuleStore.Evaluate(rule, day, shiftDay);
+                var summary = ShiftRuleStore.Evaluate(rule, day, shiftDay, semanticCounts);
                 if (summary == null) continue;
 
                 // اقتراح متعارض مع حركة قائمة (إجازة/عطلة) لا يُنفَّذ تلقائياً — للمراجعة اليدوية
