@@ -2450,8 +2450,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784830254.0059764,
-    "ast_hash": "30252a86c168e2cc968622d21aab5cfc",
+    "mtime": 1784830950.2096305,
+    "ast_hash": "adb342bd932cffdd7088fde6309ddde2",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3430,8 +3430,8 @@
     "semantic_hash": ""
   },
   "docs/kayan-attendance-module-study.md": {
-    "mtime": 1784830526.0085642,
-    "ast_hash": "c0a7ee24d1ed12696d104004593a92ba",
+    "mtime": 1784831195.3627417,
+    "ast_hash": "b9e995af92623825c5772661af8e895f",
     "semantic_hash": ""
   },
   "docs/kayan-payroll-module-study.md": {
@@ -3972,6 +3972,21 @@
   "SmartAttendance.Web/Pages/Roster/Index.cshtml.cs": {
     "mtime": 1784830180.05109,
     "ast_hash": "a3cd0f378aaa5b3d6aee4d89a1e5caae",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/GeoLocationStore.cs": {
+    "mtime": 1784830820.903301,
+    "ast_hash": "2012fc201f398dd1a90aff715f8e757d",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/EmployeeGeoLocations/Index.cshtml": {
+    "mtime": 1784830939.4009602,
+    "ast_hash": "f263d9144a47a8d513794c60643f0000",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/EmployeeGeoLocations/Index.cshtml.cs": {
+    "mtime": 1784830867.0873554,
+    "ast_hash": "a9bc1776ecbd24b1634117b3012bad84",
     "semantic_hash": ""
   }
 }
