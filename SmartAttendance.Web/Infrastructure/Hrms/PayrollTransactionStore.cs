@@ -187,6 +187,19 @@ ORDER BY t.CreatedAt DESC;
         return rows;
     }
 
+    /// <summary>
+    /// هل فترة (سنة/شهر) مقفلة؟ = يوجد مسير لها بحالة مقفل/معتمد/قسائم استهلك حركاتها.
+    /// الحركات في فترة مقفلة تصير للقراءة فقط (نمط كيان: تبويب «حركات مقفلة»).
+    /// </summary>
+    public static async Task<bool> IsPeriodLockedAsync(ApplicationDbContext dbContext, int year, int month)
+    {
+        var count = await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            "IF OBJECT_ID('PayrollRuns','U') IS NULL SELECT 0 ELSE SELECT COUNT(1) FROM PayrollRuns WHERE [Year]=@Y AND [Month]=@M AND Status IN (N'Locked', N'Issued', N'PayslipSent');",
+            command => { HrmsDatabase.AddParameter(command, "@Y", year); HrmsDatabase.AddParameter(command, "@M", month); });
+        return count > 0;
+    }
+
     /// <summary>حركات فترة/نوع للاحتساب بالمسير — المعتمدة داخل الراتب فقط.</summary>
     public static async Task<List<Transaction>> ForPeriodAsync(
         ApplicationDbContext dbContext, int year, int month, string txType)

@@ -37,6 +37,13 @@ public class TransactionsModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string? Status { get; set; }
 
+    /// <summary>التبويب: Open (غير مقفلة، قابلة للتعديل) | Locked (مقفلة، قراءة فقط).</summary>
+    [BindProperty(SupportsGet = true)]
+    public string Lock { get; set; } = "Open";
+
+    public bool PeriodLocked { get; set; }
+    public bool IsReadOnly => Lock == "Locked";
+
     public List<PayrollTransactionStore.Transaction> Items { get; set; } = new();
     public List<EmployeeOption> Employees { get; set; } = new();
     public List<SalaryItemStore.SalaryItem> Catalog { get; set; } = new();
@@ -62,7 +69,11 @@ public class TransactionsModel : PageModel
         if (Type != PayrollTransactionStore.Deduction) Type = PayrollTransactionStore.Income;
         if (Month is < 1 or > 12) Month = DateTime.Today.Month;
 
+        if (Lock != "Locked") Lock = "Open";
         Items = await PayrollTransactionStore.ListAsync(_db, Year, Month, Type, Search, Item, Status);
+        PeriodLocked = await PayrollTransactionStore.IsPeriodLockedAsync(_db, Year, Month);
+        // كل حركات الفترة تشترك بحالة القفل: تظهر بتبويب يطابق حالة الفترة فقط
+        if ((Lock == "Locked") != PeriodLocked) Items = new();
 
         var all = await SalaryItemStore.ListAsync(_db);
         Catalog = IsDeduction
@@ -132,6 +143,13 @@ public class TransactionsModel : PageModel
         if (string.IsNullOrWhiteSpace(tx.ItemName)) { TempData["PayrollMessage"] = "اختر البند."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
         if (tx.Amount <= 0) { TempData["PayrollMessage"] = "المبلغ يجب أن يكون أكبر من صفر."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
 
+        if (await PayrollTransactionStore.IsPeriodLockedAsync(_db, tx.Year, tx.Month))
+        {
+            TempData["PayrollMessage"] = "الفترة مقفلة (المسير مقفل/معتمد) — لا يمكن إضافة أو تعديل حركاتها.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage(new { Type = type, Year = tx.Year, Month = tx.Month, Lock = "Locked" });
+        }
+
         await PayrollTransactionStore.SaveAsync(_db, tx, User?.Identity?.Name ?? "system");
         TempData["PayrollMessage"] = tx.Id > 0 ? "تم تحديث الحركة." : "تمت إضافة الحركة.";
         return RedirectToPage(back);
@@ -139,6 +157,12 @@ public class TransactionsModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
+        if (await PayrollTransactionStore.IsPeriodLockedAsync(_db, Year, Month))
+        {
+            TempData["PayrollMessage"] = "الفترة مقفلة — لا يمكن حذف حركاتها.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage(new { Type, Year, Month, Lock = "Locked" });
+        }
         await PayrollTransactionStore.DeleteAsync(_db, id);
         TempData["PayrollMessage"] = "تم حذف الحركة.";
         return RedirectToPage(new { Type, Year, Month });
@@ -146,6 +170,12 @@ public class TransactionsModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteManyAsync()
     {
+        if (await PayrollTransactionStore.IsPeriodLockedAsync(_db, Year, Month))
+        {
+            TempData["PayrollMessage"] = "الفترة مقفلة — لا يمكن الحذف.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage(new { Type, Year, Month, Lock = "Locked" });
+        }
         var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
         if (ids.Count > 0)
         {

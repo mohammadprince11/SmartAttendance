@@ -28,6 +28,10 @@
     .tx-seg { display:inline-flex; border:1px solid rgba(73,111,151,.3); border-radius:12px; overflow:hidden; }
     .tx-seg a { padding:7px 16px; font-size:13px; font-weight:900; color:inherit; text-decoration:none; }
     .tx-seg a.on { background:var(--acc); color:#04141d; }
+    .tx-tabs { display:flex; gap:2px; border-bottom:1px solid rgba(73,111,151,.22); }
+    .tx-tabs a { padding:11px 22px; font-size:13px; font-weight:900; color:var(--sa-muted,#8FA8BC); text-decoration:none; border-bottom:3px solid transparent; display:flex; align-items:center; gap:6px; }
+    .tx-tabs a.on { color:var(--acc); border-bottom-color:var(--acc); }
+    .tx-lockbanner { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; font-size:13px; font-weight:900; border:1px solid rgba(250,204,21,.4); background:rgba(250,204,21,.08); color:#facc15; }
 
     .tx-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
     .tx-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
@@ -90,9 +94,22 @@
                 <a href="/Payroll/Transactions?type=Deduction" class="@(Model.IsDeduction ? "on" : "")">اقتطاع</a>
             </span>
             <a class="tx-btn ghost" href="/Payroll/Runs">← المسير</a>
-            <button type="button" class="tx-btn" onclick="txOpen(0)">+ حركة جديدة</button>
+            @if (!Model.IsReadOnly && !Model.PeriodLocked)
+            {
+                <button type="button" class="tx-btn" onclick="txOpen(0)">+ حركة جديدة</button>
+            }
         </div>
     </header>
+
+    <div class="tx-tabs">
+        <a href="/Payroll/Transactions?type=@Model.Type&Year=@Model.Year&Month=@Model.Month&Lock=Open" class="@(Model.IsReadOnly ? "" : "on")">حركات غير مقفلة</a>
+        <a href="/Payroll/Transactions?type=@Model.Type&Year=@Model.Year&Month=@Model.Month&Lock=Locked" class="@(Model.IsReadOnly ? "on" : "")">🔒 حركات مقفلة</a>
+    </div>
+
+    @if (Model.IsReadOnly && Model.Items.Count > 0)
+    {
+        <div class="tx-lockbanner">🔒 هذه الحركات دخلت مسيراً مقفلاً/معتمداً — للعرض فقط، لا تُعدّل ولا تُحذف.</div>
+    }
 
     <div class="tx-kpis">
         <div class="tx-kpi"><b>@Model.TotalCount</b><span>عدد الحركات</span></div>
@@ -103,6 +120,7 @@
 
     <form method="get" class="tx-bar">
         <input type="hidden" name="Type" value="@Model.Type" />
+        <input type="hidden" name="Lock" value="@Model.Lock" />
         <div class="tx-filter">
             <span>الفترة:</span>
             <select name="Month" onchange="this.form.submit()">
@@ -140,23 +158,34 @@
     <div class="tx-card">
         @if (Model.Items.Count == 0)
         {
-            <div class="tx-empty">لا حركات @(Model.IsDeduction ? "اقتطاع" : "دخل") لفترة @($"{Model.Month:00}/{Model.Year}") — أضف بـ«+ حركة جديدة».</div>
+            <div class="tx-empty">
+                @if (Model.PeriodLocked && !Model.IsReadOnly)
+                { <text>حركات فترة @($"{Model.Month:00}/{Model.Year}") مقفلة — راجع تبويب «🔒 حركات مقفلة».</text> }
+                else if (Model.IsReadOnly)
+                { <text>لا حركات مقفلة لفترة @($"{Model.Month:00}/{Model.Year}").</text> }
+                else
+                { <text>لا حركات @(Model.IsDeduction ? "اقتطاع" : "دخل") لفترة @($"{Model.Month:00}/{Model.Year}") — أضف بـ«+ حركة جديدة».</text> }
+            </div>
         }
         else
         {
             <table class="tx-table">
                 <thead>
                     <tr>
-                        <th style="width:34px"><input type="checkbox" onclick="txAll(this)" /></th>
+                        @if (!Model.IsReadOnly)
+                        { <th style="width:34px"><input type="checkbox" onclick="txAll(this)" /></th> }
                         <th>الرقم المرجعي</th><th>الموظف</th><th>@Model.ItemLabel</th><th>المصدر</th>
-                        <th>نوع الدفعة</th><th>تاريخ الحركة</th><th>المبلغ</th><th>الحالة</th><th style="text-align:end">إجراءات</th>
+                        <th>نوع الدفعة</th><th>تاريخ الحركة</th><th>المبلغ</th><th>الحالة</th>
+                        @if (!Model.IsReadOnly)
+                        { <th style="text-align:end">إجراءات</th> }
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var t in Model.Items)
                     {
                         <tr>
-                            <td><input type="checkbox" name="SelectedIds" value="@t.Id" /></td>
+                            @if (!Model.IsReadOnly)
+                            { <td><input type="checkbox" name="SelectedIds" value="@t.Id" /></td> }
                             <td class="tx-ref">@t.ReferenceNo</td>
                             <td class="tx-emp"><b>@t.EmployeeName</b><span>@t.EmployeeNo</span></td>
                             <td><b>@t.ItemName</b></td>
@@ -165,6 +194,8 @@
                             <td class="tx-ref">@(t.TransactionDate?.ToString("yyyy-MM-dd") ?? "—")</td>
                             <td class="tx-amt">@t.Amount.ToString("#,0.##")</td>
                             <td><span class="tx-chip @(t.Status == "Approved" ? "ap" : "dr")">@t.StatusText</span></td>
+                            @if (!Model.IsReadOnly)
+                            {
                             <td>
                                 <div class="tx-actions">
                                     <button type="button" class="tx-btn ghost sm" onclick='txOpen(@t.Id, @Html.Raw(J(new {
@@ -180,16 +211,17 @@
                                 </div>
                                 <form id="tx-del-@t.Id" method="post" asp-page-handler="Delete" style="display:none"><input type="hidden" name="Type" value="@Model.Type" /><input type="hidden" name="id" value="@t.Id" /></form>
                             </td>
+                            }
                         </tr>
                     }
                 </tbody>
                 <tfoot>
-                    <tr><td colspan="7">الإجمالي (@Model.Items.Count حركة)</td><td class="tx-amt">@Model.TotalAmount.ToString("#,0.##")</td><td colspan="2"></td></tr>
+                    <tr><td colspan="@(Model.IsReadOnly ? 6 : 7)">الإجمالي (@Model.Items.Count حركة)</td><td class="tx-amt">@Model.TotalAmount.ToString("#,0.##")</td><td colspan="@(Model.IsReadOnly ? 1 : 2)"></td></tr>
                 </tfoot>
             </table>
         }
     </div>
-    @if (Model.Items.Count > 0)
+    @if (Model.Items.Count > 0 && !Model.IsReadOnly)
     {
         <div style="display:flex;justify-content:flex-start">
             <button type="submit" class="tx-btn ghost sm" style="color:#f87171" onclick="return confirm('حذف الحركات المحددة؟')">حذف العناصر المختارة</button>
