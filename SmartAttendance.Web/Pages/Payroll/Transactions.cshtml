@@ -96,6 +96,7 @@
             <a class="tx-btn ghost" href="/Payroll/Runs">← المسير</a>
             @if (!Model.IsReadOnly)
             {
+                <button type="button" class="tx-btn ghost" onclick="massOpen()">👥 دخل جماعي</button>
                 <button type="button" class="tx-btn" onclick="txOpen(0)">+ حركة جديدة</button>
             }
         </div>
@@ -153,8 +154,11 @@
         <div class="tx-alert @((TempData["PayrollOk"] as bool?) == false ? "err" : "")">@TempData["PayrollMessage"]</div>
     }
 
-    <form method="post" asp-page-handler="DeleteMany">
+    <form method="post">
     <input type="hidden" name="Type" value="@Model.Type" />
+    <input type="hidden" name="Year" value="@Model.Year" />
+    <input type="hidden" name="Month" value="@Model.Month" />
+    <input type="hidden" name="Lock" value="@Model.Lock" />
     <div class="tx-card">
         @if (Model.Items.Count == 0)
         {
@@ -170,8 +174,7 @@
             <table class="tx-table">
                 <thead>
                     <tr>
-                        @if (!Model.IsReadOnly)
-                        { <th style="width:34px"><input type="checkbox" onclick="txAll(this)" /></th> }
+                        <th style="width:34px"><input type="checkbox" onclick="txAll(this)" /></th>
                         <th>الرقم المرجعي</th><th>الموظف</th><th>@Model.ItemLabel</th><th>المصدر</th>
                         <th>نوع الدفعة</th><th>تاريخ الحركة</th><th>المبلغ</th><th>الحالة</th>
                         @if (!Model.IsReadOnly)
@@ -182,8 +185,7 @@
                     @foreach (var t in Model.Items)
                     {
                         <tr>
-                            @if (!Model.IsReadOnly)
-                            { <td><input type="checkbox" name="SelectedIds" value="@t.Id" /></td> }
+                            <td><input type="checkbox" name="SelectedIds" value="@t.Id" /></td>
                             <td class="tx-ref">@t.ReferenceNo</td>
                             <td class="tx-emp"><b>@t.EmployeeName</b><span>@t.EmployeeNo</span></td>
                             <td><b>@t.ItemName</b></td>
@@ -204,25 +206,31 @@
                                         SocialSecurityToDate=Dt(t.SocialSecurityToDate), SalaryFromDate=Dt(t.SalaryFromDate), SalaryToDate=Dt(t.SalaryToDate),
                                         t.IsScheduled, t.InstallmentMode, t.InstallmentCount, t.InstallmentAmount, t.InstallmentMonths, FirstInstallmentDate=Dt(t.FirstInstallmentDate),
                                         t.ChangeCostCenter, t.CostCenter, t.Note, t.Status, t.Year, t.Month })">تعديل</button>
-                                    <button type="button" class="tx-btn ghost sm" style="color:#f87171"
-                                            onclick="if(confirm('حذف الحركة؟')){this.closest('tr').querySelector('[name=SelectedIds]').checked=true;this.closest('form').querySelector('[name=SelectedIds]');document.getElementById('tx-del-'+@t.Id).submit();}">حذف</button>
+                                    <button type="submit" asp-page-handler="Delete" name="id" value="@t.Id" class="tx-btn ghost sm" style="color:#f87171" onclick="return confirm('حذف الحركة؟')">حذف</button>
                                 </div>
-                                <form id="tx-del-@t.Id" method="post" asp-page-handler="Delete" style="display:none"><input type="hidden" name="Type" value="@Model.Type" /><input type="hidden" name="id" value="@t.Id" /></form>
                             </td>
                             }
                         </tr>
                     }
                 </tbody>
                 <tfoot>
-                    <tr><td colspan="@(Model.IsReadOnly ? 6 : 7)">الإجمالي (@Model.Items.Count حركة)</td><td class="tx-amt">@Model.TotalAmount.ToString("#,0.##")</td><td colspan="@(Model.IsReadOnly ? 1 : 2)"></td></tr>
+                    <tr><td colspan="7">الإجمالي (@Model.Items.Count حركة)</td><td class="tx-amt">@Model.TotalAmount.ToString("#,0.##")</td><td colspan="@(Model.IsReadOnly ? 1 : 2)"></td></tr>
                 </tfoot>
             </table>
         }
     </div>
-    @if (Model.Items.Count > 0 && !Model.IsReadOnly)
+    @if (Model.Items.Count > 0)
     {
-        <div style="display:flex;justify-content:flex-start">
-            <button type="submit" class="tx-btn ghost sm" style="color:#f87171" onclick="return confirm('حذف الحركات المحددة؟')">حذف العناصر المختارة</button>
+        <div style="display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap">
+            @if (Model.IsReadOnly)
+            {
+                <button type="submit" asp-page-handler="UnlockSelected" class="tx-btn ghost sm" onclick="return confirm('إلغاء قفل الحركات المحددة؟')">🔓 إلغاء قفل المحدد</button>
+            }
+            else
+            {
+                <button type="submit" asp-page-handler="LockSelected" class="tx-btn ghost sm" onclick="return confirm('إقفال الحركات المحددة؟')">🔒 إقفال المحدد</button>
+                <button type="submit" asp-page-handler="DeleteMany" class="tx-btn ghost sm" style="color:#f87171" onclick="return confirm('حذف الحركات المحددة؟')">🗑 حذف المحدد</button>
+            }
         </div>
     }
     </form>
@@ -351,6 +359,71 @@
             </form>
         </div>
     </aside>
+
+    @* ===== دخل جماعي ===== *@
+    <div class="hrms-slideover-backdrop" id="mass-backdrop" onclick="massClose()"></div>
+    <aside class="hrms-slideover wide" id="mass-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2>👥 دخل جماعي — @Model.TypeTitle</h2>
+            <button type="button" class="hrms-slideover-close" onclick="massClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="MassEntry" class="tx-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="Type" value="@Model.Type" />
+                <input type="hidden" name="MassItemName" id="mass-ItemName" />
+                <input type="hidden" name="MassSalaryItemId" id="mass-SalaryItemId" value="0" />
+                <input type="hidden" name="MassPaymentType" id="mass-PaymentType" value="InSalary" />
+
+                <p class="tx-hint">بند ومبلغ موحّد لكل الموظفين المحددين — تُنشأ حركة مستقلة لكل موظف.</p>
+
+                <label>@Model.ItemLabel *
+                    <select id="mass-ItemSelect" onchange="massItemChanged()">
+                        <option value="">— اختر من الكتالوج —</option>
+                        @foreach (var i in Model.Catalog)
+                        { <option value="@i.Id">@i.Name</option> }
+                        <option value="__custom">أخرى (نص حر)…</option>
+                    </select>
+                </label>
+                <label id="mass-CustomWrap" hidden>اسم البند (نص حر)
+                    <input type="text" id="mass-CustomName" oninput="document.getElementById('mass-ItemName').value=this.value" />
+                </label>
+
+                <div class="tx-grid2">
+                    <label>المبلغ / القيمة *<input type="number" name="MassAmount" id="mass-Amount" step="0.01" min="0" required /></label>
+                    <label style="flex-direction:row;align-items:center;gap:6px;min-height:38px"><input type="checkbox" name="MassTaxable" value="true" id="mass-Taxable" checked /> خاضع للضريبة</label>
+                </div>
+                <div class="tx-grid2">
+                    <label>نوع الدفعة
+                        <select onchange="document.getElementById('mass-PaymentType').value=this.value">
+                            <option value="InSalary">داخل الراتب</option>
+                            <option value="OutSalary">خارج الراتب</option>
+                        </select>
+                    </label>
+                    <label>الفترة
+                        <span style="display:flex;gap:6px">
+                            <select name="MassMonth">
+                                @for (var m = 1; m <= 12; m++)
+                                { <option value="@m" selected="@(m == Model.Month)">@months[m-1]</option> }
+                            </select>
+                            <input type="number" name="MassYear" value="@Model.Year" min="2000" max="2100" style="width:88px" />
+                        </span>
+                    </label>
+                </div>
+                <label>ملاحظة<textarea name="MassNote" rows="2"></textarea></label>
+
+                <label>الموظفون * <span id="mass-count" style="color:var(--acc)">(0 محدد)</span></label>
+                <div style="display:flex;gap:6px">
+                    <input type="text" id="mass-empsearch" placeholder="بحث بالاسم أو الرمز" oninput="massRenderEmps()"
+                           style="flex:1;min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-weight:800" />
+                    <button type="button" class="tx-btn ghost sm" onclick="massSelectAll(true)">تحديد الظاهر</button>
+                    <button type="button" class="tx-btn ghost sm" onclick="massSelectAll(false)">مسح الكل</button>
+                </div>
+                <div id="mass-emplist" style="max-height:280px;overflow-y:auto;border:1px solid rgba(73,111,151,.2);border-radius:10px;padding:4px"></div>
+
+                <button type="submit" class="tx-btn">حفظ الدخل الجماعي</button>
+            </form>
+        </div>
+    </aside>
 </section>
 
 @section Scripts {
@@ -451,6 +524,43 @@
             document.getElementById('tx-backdrop').classList.add('open');
         }
         function txClose(){ document.getElementById('tx-slide').classList.remove('open'); document.getElementById('tx-backdrop').classList.remove('open'); }
-        document.addEventListener('keydown', function(e){ if(e.key==='Escape') txClose(); });
+
+        // ===== دخل جماعي =====
+        function massItemChanged(){
+            var sel=document.getElementById('mass-ItemSelect'), val=sel.value, cw=document.getElementById('mass-CustomWrap');
+            if(val==='__custom'){ cw.hidden=false; document.getElementById('mass-SalaryItemId').value=0; document.getElementById('mass-ItemName').value=document.getElementById('mass-CustomName').value||''; return; }
+            cw.hidden=true;
+            if(!val){ document.getElementById('mass-ItemName').value=''; document.getElementById('mass-SalaryItemId').value=0; return; }
+            var it=TX_ITEMS.find(function(x){ return String(x.Id)===val; });
+            if(it){ document.getElementById('mass-ItemName').value=it.Name; document.getElementById('mass-SalaryItemId').value=it.Id; document.getElementById('mass-Taxable').checked=!!it.Taxable; if(it.DefaultValue && !document.getElementById('mass-Amount').value) document.getElementById('mass-Amount').value=it.DefaultValue; }
+        }
+        function massCount(){ document.getElementById('mass-count').textContent='('+document.querySelectorAll('#mass-emplist input:checked').length+' محدد)'; }
+        function massBuildEmps(){
+            document.getElementById('mass-emplist').innerHTML = TX_EMP.map(function(e){
+                var key=((e.No||'')+' '+(e.Name||'')).toLowerCase();
+                return '<label class="mass-emp" data-s="'+key+'" style="display:flex;align-items:center;gap:8px;padding:6px 8px;font-weight:800;cursor:pointer;border-radius:8px">'
+                    +'<input type="checkbox" name="MassEmployeeIds" value="'+e.Id+'" onchange="massCount()" />'
+                    +'<span style="flex:1">'+(e.Name||'')+'</span>'
+                    +'<span style="direction:ltr;color:var(--sa-muted,#8FA8BC);font-size:12px">'+(e.No||'')+'</span></label>';
+            }).join('');
+        }
+        function massRenderEmps(){
+            var q=(document.getElementById('mass-empsearch').value||'').trim().toLowerCase();
+            document.querySelectorAll('#mass-emplist .mass-emp').forEach(function(l){ l.style.display = (!q || l.getAttribute('data-s').indexOf(q)>=0) ? 'flex' : 'none'; });
+        }
+        function massSelectAll(on){
+            document.querySelectorAll('#mass-emplist .mass-emp').forEach(function(l){ if(l.style.display!=='none'){ l.querySelector('input').checked=on; } });
+            massCount();
+        }
+        function massOpen(){
+            document.querySelector('#mass-slide form').reset();
+            document.getElementById('mass-ItemName').value=''; document.getElementById('mass-SalaryItemId').value=0;
+            document.getElementById('mass-CustomWrap').hidden=true; document.getElementById('mass-PaymentType').value='InSalary';
+            massBuildEmps(); massRenderEmps(); massCount();
+            document.getElementById('mass-slide').classList.add('open'); document.getElementById('mass-backdrop').classList.add('open');
+        }
+        function massClose(){ document.getElementById('mass-slide').classList.remove('open'); document.getElementById('mass-backdrop').classList.remove('open'); }
+
+        document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ txClose(); massClose(); } });
     </script>
 }

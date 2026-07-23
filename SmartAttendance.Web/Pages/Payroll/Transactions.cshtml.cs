@@ -176,4 +176,58 @@ public class TransactionsModel : PageModel
         else TempData["PayrollMessage"] = "حدد حركات أولاً.";
         return RedirectToPage(new { Type, Year, Month });
     }
+
+    /// <summary>دخل جماعي: بند + مبلغ موحّد لعدة موظفين محددين.</summary>
+    public async Task<IActionResult> OnPostMassEntryAsync()
+    {
+        var f = Request.Form;
+        var type = f["Type"].ToString() == PayrollTransactionStore.Deduction ? PayrollTransactionStore.Deduction : PayrollTransactionStore.Income;
+        var y = int.TryParse(f["MassYear"], out var yy) ? yy : Year;
+        var m = int.TryParse(f["MassMonth"], out var mm) ? mm : Month;
+        var back = new { Type = type, Year = y, Month = m };
+
+        var empIds = f["MassEmployeeIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).Distinct().ToList();
+        var itemName = f["MassItemName"].ToString().Trim();
+        var amount = decimal.TryParse(f["MassAmount"], out var a) ? a : 0;
+
+        if (empIds.Count == 0) { TempData["PayrollMessage"] = "اختر موظفاً واحداً على الأقل."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
+        if (string.IsNullOrWhiteSpace(itemName)) { TempData["PayrollMessage"] = "اختر البند."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
+        if (amount <= 0) { TempData["PayrollMessage"] = "المبلغ يجب أن يكون أكبر من صفر."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
+
+        var template = new PayrollTransactionStore.Transaction
+        {
+            Year = y,
+            Month = m,
+            TxType = type,
+            SalaryItemId = int.TryParse(f["MassSalaryItemId"], out var si) && si > 0 ? si : null,
+            ItemName = itemName,
+            Amount = amount,
+            Taxable = f["MassTaxable"] == "true",
+            PaymentType = f["MassPaymentType"].ToString() == "OutSalary" ? "OutSalary" : "InSalary",
+            TransactionDate = DateOnly.FromDateTime(DateTime.Today),
+            Note = string.IsNullOrWhiteSpace(f["MassNote"]) ? null : f["MassNote"].ToString().Trim(),
+            Status = "Approved",
+            Source = "دخل جماعي"
+        };
+
+        var n = await PayrollTransactionStore.SaveManyAsync(_db, empIds, template, User?.Identity?.Name ?? "system");
+        TempData["PayrollMessage"] = $"تمت إضافة {n} حركة عبر الدخل الجماعي.";
+        return RedirectToPage(back);
+    }
+
+    public async Task<IActionResult> OnPostLockSelectedAsync()
+    {
+        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        if (ids.Count > 0) { await PayrollTransactionStore.SetLockedAsync(_db, ids, true); TempData["PayrollMessage"] = $"أُقفلت {ids.Count} حركة."; }
+        else TempData["PayrollMessage"] = "حدد حركات أولاً.";
+        return RedirectToPage(new { Type, Year, Month, Lock = "Locked" });
+    }
+
+    public async Task<IActionResult> OnPostUnlockSelectedAsync()
+    {
+        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        if (ids.Count > 0) { await PayrollTransactionStore.SetLockedAsync(_db, ids, false); TempData["PayrollMessage"] = $"فُتح قفل {ids.Count} حركة."; }
+        else TempData["PayrollMessage"] = "حدد حركات أولاً.";
+        return RedirectToPage(new { Type, Year, Month, Lock = "Open" });
+    }
 }

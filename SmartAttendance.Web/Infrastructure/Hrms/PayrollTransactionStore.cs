@@ -282,12 +282,48 @@ WHERE [Year] = @Y AND [Month] = @M AND TxType = @Type
         });
     }
 
+    /// <summary>دخل جماعي (نمط كيان): إنشاء نفس الحركة لعدة موظفين دفعة واحدة.</summary>
+    public static async Task<int> SaveManyAsync(
+        ApplicationDbContext dbContext, IReadOnlyCollection<int> employeeIds, Transaction template, string userName)
+    {
+        await EnsureAsync(dbContext);
+        int n = 0;
+        foreach (var empId in employeeIds.Distinct())
+        {
+            template.Id = 0;
+            template.EmployeeId = empId;
+            template.ReferenceNo = await GenerateReferenceNoAsync(dbContext, template.TxType);
+            await HrmsDatabase.ExecuteAsync(dbContext, InsertSql, command =>
+            {
+                Add(command, template);
+                HrmsDatabase.AddParameter(command, "@Ref", template.ReferenceNo);
+                HrmsDatabase.AddParameter(command, "@By", userName);
+            });
+            n++;
+        }
+        return n;
+    }
+
     public static async Task DeleteAsync(ApplicationDbContext dbContext, int id)
     {
         await EnsureAsync(dbContext);
         await HrmsDatabase.ExecuteAsync(dbContext,
             "DELETE FROM PayrollTransactions WHERE Id = @Id;",
             command => HrmsDatabase.AddParameter(command, "@Id", id));
+    }
+
+    /// <summary>إقفال/إلغاء قفل يدوي لحركات محددة (نمط كيان «إقفال العناصر المختارة»).</summary>
+    public static async Task SetLockedAsync(ApplicationDbContext dbContext, IReadOnlyCollection<int> ids, bool locked)
+    {
+        await EnsureAsync(dbContext);
+        foreach (var chunk in ids.Chunk(200))
+        {
+            var inList = string.Join(",", chunk.Select((_, i) => $"@P{i}"));
+            var setClause = locked ? "IsLocked = 1" : "IsLocked = 0, LockedRunId = NULL";
+            await HrmsDatabase.ExecuteAsync(dbContext,
+                $"UPDATE PayrollTransactions SET {setClause} WHERE Id IN ({inList});",
+                command => { for (var i = 0; i < chunk.Length; i++) HrmsDatabase.AddParameter(command, $"@P{i}", chunk[i]); });
+        }
     }
 
     public static async Task DeleteManyAsync(ApplicationDbContext dbContext, IReadOnlyCollection<int> ids)
