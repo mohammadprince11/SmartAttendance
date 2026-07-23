@@ -121,6 +121,9 @@ END;
             .OrderBy(s => s.Id)
             .ToList();
 
+        // التعديلات المؤقتة المتقاطعة مع الشهر — أعلى أولوية بالإسناد (موظف×يوم ← مناوبة)
+        var overrideMap = await ShiftOverrideStore.MapAsync(dbContext, monthStart, monthEnd);
+
         var punches = await dbContext.AttendanceRecords.AsNoTracking()
             .Where(r => r.AttendanceDate >= monthStart && r.AttendanceDate <= monthEnd)
             .Select(r => new { r.EmployeeId, r.AttendanceDate, r.CheckIn, r.CheckOut })
@@ -184,12 +187,12 @@ END;
         {
             var employeeId = emp.Id;
 
-            // ترتيب الإسناد: (1) تعيين يدوي صريح، (2) مناوبة تطابق معايير استحقاقها
-            // الموظف، (3) المناوبة الافتراضية. التعيين لمناوبة محذوفة ← الافتراضية.
-            int shiftId;
+            // المناوبة الأساس للموظف: (1) تعيين يدوي صريح، (2) مناوبة تطابق معايير
+            // استحقاقها الموظف، (3) الافتراضية. التعيين لمناوبة محذوفة ← الافتراضية.
+            int baseShiftId;
             if (assignments.TryGetValue(employeeId, out var assigned) && shifts.ContainsKey(assigned))
             {
-                shiftId = assigned;
+                baseShiftId = assigned;
             }
             else
             {
@@ -205,13 +208,16 @@ END;
                 };
                 var eligible = eligibilityShifts
                     .FirstOrDefault(s => ShiftTypeStore.EmployeeMatchesEligibility(s, attrs));
-                shiftId = eligible?.Id ?? defaultShiftTypeId;
+                baseShiftId = eligible?.Id ?? defaultShiftTypeId;
             }
-
-            var (shift, shiftDays) = shifts[shiftId];
 
             for (var date = monthStart; date <= monthEnd; date = date.AddDays(1))
             {
+                // التجاوز المؤقت (لو غطّى هذا اليوم) يسبق المناوبة الأساس.
+                var shiftId = overrideMap.TryGetValue((employeeId, date), out var ov) && shifts.ContainsKey(ov)
+                    ? ov : baseShiftId;
+                var (shift, shiftDays) = shifts[shiftId];
+
                 var day = shiftDays.TryGetValue(ToDayIndex(date), out var d) ? d : null;
                 var dayKind = day?.DayKind ?? "Work";
                 byDay.TryGetValue((employeeId, date), out var punch);

@@ -1,0 +1,258 @@
+@page "/ShiftOverrides"
+@model SmartAttendance.Web.Pages.ShiftOverrides.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+@using System.Text.Json
+
+@*
+    تعديل مناوبات مؤقت — الصفحة الثانية بقسم «حضور الموظفين» (نمط كيان):
+    قائمة سجلات التجاوز + إنشاء لنطاق (الكل/محدد) لفترة (من–إلى).
+*@
+
+@{
+    ViewData["Title"] = "تعديل مناوبات مؤقت";
+    var empsJson = JsonSerializer.Serialize(Model.Employees);
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .sov-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
+    .sov-head {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
+                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
+    }
+    html[data-theme="light"] .sov-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
+    .sov-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .sov-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .sov-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
+    .sov-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
+    .sov-btn.no { background: transparent; border: 1px solid rgba(248,113,113,.4); color: #f87171; }
+    .sov-btn.sm { min-height: 32px; padding: 5px 12px; font-size: 12px; }
+
+    .sov-bar { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .sov-bar label { font-size: 11px; font-weight: 900; color: var(--sa-muted, #8FA8BC); display: flex; flex-direction: column; gap: 4px; }
+    .sov-bar input { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; font-size: 13px; }
+    html[data-theme="light"] .sov-bar input { background: #fff; color: inherit; }
+
+    .sov-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .sov-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 820px; }
+    .sov-table th { text-align: start; padding: 10px 12px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); }
+    html[data-theme="light"] .sov-table th { background: #f2f7fb; }
+    .sov-table td { padding: 9px 12px; border-bottom: 1px solid rgba(143,168,188,.08); }
+    .sov-table tr:hover td { background: rgba(18,217,227,.04); }
+    .sov-shift { display: inline-flex; align-items: center; gap: 6px; font-weight: 900; }
+    .sov-shift i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+    .sov-none { color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .sov-period { direction: ltr; display: inline-block; font-weight: 900; font-size: 12px; }
+    .sov-chip { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 900; background: rgba(96,165,250,.14); color: #60a5fa; }
+    .sov-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .sov-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
+
+    .sov-bulkbar { position: fixed; bottom: 18px; inset-inline: 0; margin-inline: auto; width: max-content; max-width: calc(100% - 32px);
+        z-index: 60; display: none; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 18px;
+        border: 1px solid rgba(18,217,227,.45); border-radius: 16px;
+        background: var(--sa-surface, rgba(8,25,43,.98)); box-shadow: 0 14px 44px rgba(0,0,0,.55); }
+    html[data-theme="light"] .sov-bulkbar { background: #fff; }
+    .sov-bulkbar.show { display: flex; }
+    .sov-bulkbar b { font-size: 13px; font-weight: 900; }
+    .sov-bulkbar b span { color: #12D9E3; }
+
+    /* السلايد */
+    .sov-form { display: flex; flex-direction: column; gap: 12px; }
+    .sov-form label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 4px; }
+    .sov-form input, .sov-form select { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px; }
+    html[data-theme="light"] .sov-form input, html[data-theme="light"] .sov-form select { background: #fff; }
+    .sov-seg { display: flex; gap: 0; border: 1px solid rgba(73,111,151,.3); border-radius: 12px; overflow: hidden; width: max-content; }
+    .sov-seg button { min-height: 36px; padding: 6px 20px; border: 0; background: transparent; color: inherit; font-weight: 900; font-size: 13px; cursor: pointer; }
+    .sov-seg button.on { background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
+    .sov-emps { border: 1px solid rgba(73,111,151,.2); border-radius: 12px; display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+    .sov-emplist { max-height: 260px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
+    .sov-emprow { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; }
+    .sov-emprow:hover { background: rgba(18,217,227,.06); }
+</style>
+
+<section class="sov-page" dir="rtl">
+    <header class="sov-head">
+        <div>
+            <h1>تعديل مناوبات مؤقت</h1>
+            <p>إسناد مناوبة بديلة لموظفين لفترة محددة — المحلل يقدّمها على التعيين الدائم لأيام الفترة.</p>
+        </div>
+        <button type="button" class="sov-btn" onclick="sovOpen()">+ تعديل مناوبات جديد</button>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="sov-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <form method="get" class="sov-bar">
+        <label>بحث (رمز/اسم/مناوبة)
+            <input type="text" name="Search" value="@Model.Search" placeholder="بحث..." />
+        </label>
+        <button type="submit" class="sov-btn ghost">عرض</button>
+        <span class="sov-none" style="font-size:12px;align-self:center">التعديلات: <b style="direction:ltr;display:inline-block">@Model.TotalRows</b></span>
+    </form>
+
+    <form method="post" id="sov-list-form">
+        <input type="hidden" name="Search" value="@Model.Search" />
+        <div class="sov-table-card">
+            @if (Model.Rows.Count == 0)
+            {
+                <div class="sov-empty">لا تعديلات مؤقتة — ابدأ بـ«تعديل مناوبات جديد».</div>
+            }
+            else
+            {
+                <table class="sov-table">
+                    <thead>
+                        <tr>
+                            <th style="width:34px"><input type="checkbox" id="sov-all" onchange="sovToggleAll(this)" /></th>
+                            <th>الرمز</th><th>اسم الموظف</th><th>المناوبة الأصلية</th>
+                            <th>مناوبة عمل جديدة</th><th>المصدر</th><th>فترة التعديل</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            <tr>
+                                <td><input type="checkbox" name="SelectedIds" value="@row.Id" onchange="sovCount()" /></td>
+                                <td style="direction:ltr;text-align:start;font-weight:900">@row.EmployeeNo</td>
+                                <td><b>@row.EmployeeName</b></td>
+                                <td>
+                                    @if (row.OriginalShiftName != null)
+                                    { <span class="sov-shift"><i style="background:@(row.OriginalShiftColor ?? "#12D9E3")"></i>@row.OriginalShiftName</span> }
+                                    else
+                                    { <span class="sov-none">— الافتراضية</span> }
+                                </td>
+                                <td><span class="sov-shift"><i style="background:@(row.NewShiftColor ?? "#12D9E3")"></i>@row.NewShiftName</span></td>
+                                <td><span class="sov-chip">@row.Source</span></td>
+                                <td><span class="sov-period">@row.FromDate.ToString("yyyy-MM-dd") ← @row.ToDate.ToString("yyyy-MM-dd")</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+
+        <div class="sov-bulkbar" id="sov-bulkbar">
+            <b>المحدد: <span id="sov-count">0</span></b>
+            <button type="submit" asp-page-handler="Delete" class="sov-btn no"
+                    data-zyconfirm="حذف التعديلات المحددة؟">🗑 حذف المحدد</button>
+        </div>
+    </form>
+
+    @* ---------- سلايد إنشاء تعديل مؤقت ---------- *@
+    <div class="hrms-slideover-backdrop" id="sov-backdrop" onclick="sovClose()"></div>
+    <aside class="hrms-slideover wide" id="sov-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2>حدد تعديل المناوبات</h2>
+            <button type="button" class="hrms-slideover-close" onclick="sovClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Create" class="sov-form" id="sov-form">
+                <input type="hidden" name="Search" value="@Model.Search" />
+                <input type="hidden" name="Scope" id="sov-Scope" value="Selected" />
+
+                <label>النطاق</label>
+                <div class="sov-seg">
+                    <button type="button" id="sov-seg-all" onclick="sovScope('All')">الكل</button>
+                    <button type="button" class="on" id="sov-seg-sel" onclick="sovScope('Selected')">محدد</button>
+                </div>
+
+                <div id="sov-emps" class="sov-emps">
+                    <div style="display:flex;gap:6px;align-items:center">
+                        <input type="text" id="sov-empsearch" placeholder="بحث بالاسم أو الرمز" oninput="sovRenderEmps()" style="flex:1" />
+                        <button type="button" class="sov-btn ghost sm" onclick="sovSelectShown(true)">تحديد الظاهر</button>
+                        <button type="button" class="sov-btn ghost sm" onclick="sovSelectShown(false)">مسح</button>
+                    </div>
+                    <span class="sov-none" style="font-size:11px">المحدد: <b id="sov-empcount" style="color:#12D9E3">0</b></span>
+                    <div id="sov-emplist" class="sov-emplist"></div>
+                </div>
+
+                <label>مناوبة عمل جديدة *
+                    <select name="ShiftTypeId" required>
+                        <option value="">— اختر —</option>
+                        @foreach (var shift in Model.Shifts)
+                        {
+                            <option value="@shift.Id">@shift.Name</option>
+                        }
+                    </select>
+                </label>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <label>من *<input type="date" name="FromDate" id="sov-From" required /></label>
+                    <label>إلى *<input type="date" name="ToDate" id="sov-To" required /></label>
+                </div>
+
+                <button type="submit" class="sov-btn">حفظ التعديل</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script>
+        var SOV_EMPS = @Html.Raw(empsJson);
+        var sovScopeVal = 'Selected';
+
+        function sovToggleAll(src) {
+            document.querySelectorAll('[name="SelectedIds"]').forEach(function (cb) { cb.checked = src.checked; });
+            sovCount();
+        }
+        function sovCount() {
+            var n = document.querySelectorAll('[name="SelectedIds"]:checked').length;
+            document.getElementById('sov-count').textContent = n;
+            document.getElementById('sov-bulkbar').classList.toggle('show', n > 0);
+        }
+
+        function sovScope(v) {
+            sovScopeVal = v;
+            document.getElementById('sov-Scope').value = v;
+            document.getElementById('sov-seg-all').classList.toggle('on', v === 'All');
+            document.getElementById('sov-seg-sel').classList.toggle('on', v === 'Selected');
+            document.getElementById('sov-emps').style.display = v === 'All' ? 'none' : 'flex';
+        }
+
+        function sovRenderEmps() {
+            var q = (document.getElementById('sov-empsearch').value || '').trim().toLowerCase();
+            var list = document.getElementById('sov-emplist');
+            var checked = new Set(sovCheckedIds());
+            var shown = SOV_EMPS.filter(function (e) {
+                return !q || e.No.toLowerCase().indexOf(q) >= 0 || (e.Name || '').toLowerCase().indexOf(q) >= 0;
+            }).slice(0, 200);
+            list.innerHTML = shown.map(function (e) {
+                return '<label class="sov-emprow"><input type="checkbox" name="EmployeeIds" value="' + e.Id + '"'
+                    + (checked.has(String(e.Id)) ? ' checked' : '') + ' onchange="sovEmpCount()" />'
+                    + '<span style="direction:ltr">' + e.No + '</span> · ' + (e.Name || '') + '</label>';
+            }).join('');
+            sovEmpCount();
+        }
+        function sovCheckedIds() {
+            return [].map.call(document.querySelectorAll('[name="EmployeeIds"]:checked'), function (c) { return c.value; });
+        }
+        function sovEmpCount() {
+            document.getElementById('sov-empcount').textContent = document.querySelectorAll('[name="EmployeeIds"]:checked').length;
+        }
+        function sovSelectShown(on) {
+            document.querySelectorAll('#sov-emplist [name="EmployeeIds"]').forEach(function (c) { c.checked = on; });
+            sovEmpCount();
+        }
+
+        function sovOpen() {
+            document.getElementById('sov-form').reset();
+            sovScope('Selected');
+            var today = new Date().toISOString().slice(0, 10);
+            document.getElementById('sov-From').value = today;
+            document.getElementById('sov-To').value = today;
+            sovRenderEmps();
+            document.getElementById('sov-slide').classList.add('open');
+            document.getElementById('sov-backdrop').classList.add('open');
+        }
+        function sovClose() {
+            document.getElementById('sov-slide').classList.remove('open');
+            document.getElementById('sov-backdrop').classList.remove('open');
+        }
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') sovClose(); });
+    </script>
+}
