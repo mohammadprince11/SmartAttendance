@@ -180,7 +180,7 @@
                                     {
                                         <button type="submit" asp-page-handler="Apply" name="id" value="@r.Id" class="rz-btn apply sm" data-zyconfirm="تطبيق (قفل) الزيادة؟">✔ تطبيق</button>
                                         <button type="button" class="rz-btn ghost sm" onclick="rzEdit(this)" data-rz="@J(new {
-                                            r.Id, r.EmployeeId, r.RaiseType, r.RaiseValue, EffectiveDate=Dt(r.EffectiveDate), r.Reason, r.Note, r.Status })">تعديل</button>
+                                            r.Id, r.EmployeeId, r.RaiseType, r.RaiseValue, EffectiveDate=Dt(r.EffectiveDate), r.Reason, r.Note })">تعديل</button>
                                         <button type="submit" asp-page-handler="Delete" name="id" value="@r.Id" class="rz-btn danger sm" data-zyconfirm="حذف الزيادة؟">حذف</button>
                                     }
                                     else
@@ -250,13 +250,6 @@
                         </select>
                     </label>
                 </div>
-
-                <label>الحالة
-                    <select name="Status" id="rz-Status">
-                        <option value="Approved">معتمد</option>
-                        <option value="Draft">مسودة</option>
-                    </select>
-                </label>
 
                 <label>ملاحظة<textarea name="Note" id="rz-Note" rows="2"></textarea></label>
 
@@ -431,7 +424,7 @@
                 setVal('rz-RaiseValue', d.RaiseValue);
                 setVal('rz-EffectiveDate', d.EffectiveDate);
                 setVal('rz-Reason', d.Reason || '');
-                setVal('rz-Note', d.Note); setVal('rz-Status', d.Status || 'Approved');
+                setVal('rz-Note', d.Note);
             } else {
                 setVal('rz-EffectiveDate', new Date().toISOString().slice(0,10));
             }

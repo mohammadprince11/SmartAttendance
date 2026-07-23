@@ -197,7 +197,7 @@ public class RaisesModel : PageModel
             EffectiveDate = D("EffectiveDate"),
             Reason = string.IsNullOrWhiteSpace(f["Reason"]) ? null : f["Reason"].ToString().Trim(),
             Note = string.IsNullOrWhiteSpace(f["Note"]) ? null : f["Note"].ToString().Trim(),
-            Status = f["Status"].ToString() is { Length: > 0 } st ? st : "Approved"
+            Status = "Approved"
         };
 
         await SalaryRaiseStore.SaveAsync(_db, raise, User?.Identity?.Name ?? "system");
