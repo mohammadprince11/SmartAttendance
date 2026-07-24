@@ -95,6 +95,7 @@ public static class PageCatalog
             new CatalogPage("Payroll.LeaveEncashment", "بدل إجازة"),
             new CatalogPage("Payroll.Raises", "زيادات الراتب"),
             new CatalogPage("Payroll.EndOfService", "نهاية الخدمة"),
+            new CatalogPage("Payroll.Provisions", "حساب الاحتياطي"),
             new CatalogPage("Payroll.SalaryItems", "عناصر الراتب"),
             new CatalogPage("Payroll.Settings", "تهيئة الضريبة والضمان"),
             new CatalogPage("Payroll.TaxSocial", "الضرائب والضمان"),
