@@ -36,4 +36,11 @@ public static class IraqiLeavePolicy
     };
 
     public static bool IsTracked(LeaveType leaveType) => GetDefaultEntitlement(leaveType).HasValue;
+
+    /// <summary>
+    /// هل الإجازة مدفوعة الأجر؟ الإجازة غير المدفوعة (<see cref="LeaveType.Unpaid"/>)
+    /// وحدها تُخصم بالمسير (يوم × الأجر اليومي)؛ ما عداها لا يقلّل الراتب. مصدر
+    /// الحقيقة الوحيد لأثر الإجازة المالي — يستهلكه محرك الحضور والمسير معاً.
+    /// </summary>
+    public static bool IsPaid(LeaveType leaveType) => leaveType != LeaveType.Unpaid;
 }

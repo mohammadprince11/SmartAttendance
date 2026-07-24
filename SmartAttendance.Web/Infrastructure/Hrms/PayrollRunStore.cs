@@ -76,7 +76,7 @@ public static class PayrollRunStore
         public string ItemName { get; set; } = string.Empty;
         public decimal Amount { get; set; }
         public bool IsAddition { get; set; }
-        public string Kind { get; set; } = string.Empty;   // Basic|Allowance|Income|Overtime|SalaryDays|Deduction|Tax|Gosi|Penalty
+        public string Kind { get; set; } = string.Empty;   // Basic|Allowance|Income|Overtime|SalaryDays|Deduction|Leave|Tax|Gosi|Penalty
     }
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
@@ -292,6 +292,7 @@ END;
             months.TryGetValue(emp.Id, out var month);
             var workDays = month?.WorkDays ?? 0;
             var absentDays = month?.AbsentDays ?? 0;
+            var unpaidLeaveDays = month?.UnpaidLeaveDays ?? 0;
             var factor = workDays > 0 ? Math.Max(0m, (workDays - absentDays)) / workDays : 1m;
             var proratedBasic = Math.Round(basic * factor, 2);
 
@@ -406,7 +407,23 @@ END;
                 }
             }
 
-            var otherDeductions = penaltyTotal + deductionTxTotal + salaryDaysDeduct;
+            // الإجازة غير المدفوعة (ربط الإجازات بالمسير): يوم الإجازة غير المدفوعة يُعدّ
+            // يوم عمل بالحضور (فيُدفع ضمن الأساسي) فنخصمه هنا يوماً×الأجر اليومي (أساسي÷30)
+            // كخصم post-gross — نفس نمط تعديل الأيام والمخالفات. الوعاء الخاضع لا يتأثر.
+            decimal unpaidLeaveDeduct = 0;
+            if (unpaidLeaveDays > 0 && dailyRate > 0)
+            {
+                unpaidLeaveDeduct = Math.Round(unpaidLeaveDays * dailyRate, 2);
+                comps.Add(new Component
+                {
+                    ItemName = $"إجازة بدون راتب ({unpaidLeaveDays} يوم)",
+                    Amount = unpaidLeaveDeduct,
+                    IsAddition = false,
+                    Kind = "Leave"
+                });
+            }
+
+            var otherDeductions = penaltyTotal + deductionTxTotal + salaryDaysDeduct + unpaidLeaveDeduct;
             var net = Math.Round(gross - tax - gosiEmp - otherDeductions, 2);
 
             var lineId = await HrmsDatabase.ScalarAsync<int>(

@@ -126,7 +126,7 @@
                     <thead>
                         <tr>
                             <th style="width:34px"></th><th>الموظف</th><th>أيام العمل</th><th>حاضر</th><th>غائب</th>
-                            <th>بصمة ناقصة</th><th>ساعات التأخير</th><th>الخروج المبكر</th><th>ساعات العمل</th><th>الحالة</th>
+                            <th>بصمة ناقصة</th><th>إجازة بدون راتب</th><th>ساعات التأخير</th><th>الخروج المبكر</th><th>ساعات العمل</th><th>الحالة</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -144,6 +144,7 @@
                                 <td class="mat-num" style="color:#4ade80">@row.PresentDays</td>
                                 <td class="mat-num @(row.AbsentDays > 0 ? "bad" : "")">@row.AbsentDays</td>
                                 <td class="mat-num @(row.IncompleteDays > 0 ? "warn" : "")">@row.IncompleteDays</td>
+                                <td class="mat-num @(row.UnpaidLeaveDays > 0 ? "bad" : "")">@row.UnpaidLeaveDays</td>
                                 <td class="mat-num @(row.LateHours > 0 ? "warn" : "")">@row.LateHours.ToString("0.##")</td>
                                 <td class="mat-num @(row.EarlyLeaveHours > 0 ? "warn" : "")">@row.EarlyLeaveHours.ToString("0.##")</td>
                                 <td class="mat-num">@row.WorkedHours.ToString("0.##")</td>

@@ -50,6 +50,7 @@ public static class DayAttendanceStore
         "Rest" => "يوم راحة",
         "Holiday" => "عطلة رسمية",
         "Leave" => "إجازة",
+        "LeaveUnpaid" => "إجازة بدون راتب",
         _ => status
     };
 
@@ -174,13 +175,18 @@ WHERE AttendanceDate >= @From AND AttendanceDate <= @To
             if (concrete >= monthStart && concrete <= monthEnd) holidayDates.Add(concrete);
         }
 
+        // نوع الإجازة يحدّد أثرها المالي: المدفوعة ⟶ «Leave» (لا تُخصم)، وغير المدفوعة
+        // ⟶ «LeaveUnpaid» (يخصمها المسير يوماً×الأجر اليومي). المصدر IraqiLeavePolicy.
         var leaveRows = await dbContext.LeaveRequests.AsNoTracking()
             .Where(l => l.Status == LeaveStatus.Approved && l.FromDate <= monthEnd && l.ToDate >= monthStart)
-            .Select(l => new { l.EmployeeId, l.FromDate, l.ToDate })
+            .Select(l => new { l.EmployeeId, l.FromDate, l.ToDate, l.LeaveType })
             .ToListAsync();
         var leavesByEmployee = leaveRows
             .GroupBy(l => l.EmployeeId)
-            .ToDictionary(g => g.Key, g => g.Select(l => (l.FromDate, l.ToDate)).ToList());
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(l => (l.FromDate, l.ToDate,
+                    Paid: SmartAttendance.Domain.Leave.IraqiLeavePolicy.IsPaid(l.LeaveType))).ToList());
 
         // ترانزاكشن واحدة للحذف وكل دفعات الإدخال — فلَش لوغ واحد بدل واحد لكل أمر
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
@@ -267,9 +273,14 @@ WHERE AttendanceDate >= @From AND AttendanceDate <= @To
                 {
                     if (holidayDates.Contains(date))
                         status = "Holiday";
-                    else if (leavesByEmployee.TryGetValue(employeeId, out var intervals)
-                             && intervals.Any(iv => date >= iv.FromDate && date <= iv.ToDate))
-                        status = "Leave";
+                    else if (leavesByEmployee.TryGetValue(employeeId, out var intervals))
+                    {
+                        var hit = intervals
+                            .Where(iv => date >= iv.FromDate && date <= iv.ToDate)
+                            .Select(iv => (bool?)iv.Paid)
+                            .FirstOrDefault();
+                        if (hit.HasValue) status = hit.Value ? "Leave" : "LeaveUnpaid";
+                    }
                 }
 
                 table.Rows.Add(employeeId, date.ToDateTime(TimeOnly.MinValue), shiftId, dayKind,

@@ -23,6 +23,7 @@ public static class MonthAttendanceStore
         public int PresentDays { get; set; }
         public int AbsentDays { get; set; }
         public int IncompleteDays { get; set; }
+        public int UnpaidLeaveDays { get; set; }
         public decimal LateHours { get; set; }
         public decimal EarlyLeaveHours { get; set; }
         public decimal WorkedHours { get; set; }
@@ -67,6 +68,10 @@ BEGIN
     CREATE UNIQUE INDEX UX_EmployeeMonthAttendance_Employee_Period
         ON EmployeeMonthAttendance (EmployeeId, [Year], [Month]);
 END;
+
+-- أيام الإجازة غير المدفوعة (ربط الإجازات بالمسير): يخصمها المحرك يوماً×الأجر اليومي.
+IF COL_LENGTH('EmployeeMonthAttendance', 'UnpaidLeaveDays') IS NULL
+    ALTER TABLE EmployeeMonthAttendance ADD UnpaidLeaveDays int NOT NULL CONSTRAINT DF_EMA_UnpaidLeaveDays DEFAULT(0);
 """);
     }
 
@@ -93,6 +98,7 @@ WITH Aggregated AS
            SUM(CASE WHEN d.Status IN (N'Present', N'Late') THEN 1 ELSE 0 END) AS PresentDays,
            SUM(CASE WHEN d.Status = N'Absent' THEN 1 ELSE 0 END) AS AbsentDays,
            SUM(CASE WHEN d.Status = N'Incomplete' THEN 1 ELSE 0 END) AS IncompleteDays,
+           SUM(CASE WHEN d.Status = N'LeaveUnpaid' THEN 1 ELSE 0 END) AS UnpaidLeaveDays,
            SUM(d.LateHours) AS LateHours,
            SUM(d.EarlyLeaveHours) AS EarlyLeaveHours,
            SUM(d.WorkedHours) AS WorkedHours
@@ -106,13 +112,14 @@ USING Aggregated AS source
 WHEN MATCHED AND target.Status = N'UnderReview' THEN
     UPDATE SET WorkDays = source.WorkDays, PresentDays = source.PresentDays,
                AbsentDays = source.AbsentDays, IncompleteDays = source.IncompleteDays,
+               UnpaidLeaveDays = source.UnpaidLeaveDays,
                LateHours = source.LateHours, EarlyLeaveHours = source.EarlyLeaveHours,
                WorkedHours = source.WorkedHours, BuiltAt = SYSUTCDATETIME()
 WHEN NOT MATCHED THEN
     INSERT (EmployeeId, [Year], [Month], WorkDays, PresentDays, AbsentDays, IncompleteDays,
-            LateHours, EarlyLeaveHours, WorkedHours, Status)
+            UnpaidLeaveDays, LateHours, EarlyLeaveHours, WorkedHours, Status)
     VALUES (source.EmployeeId, @Year, @Month, source.WorkDays, source.PresentDays,
-            source.AbsentDays, source.IncompleteDays, source.LateHours,
+            source.AbsentDays, source.IncompleteDays, source.UnpaidLeaveDays, source.LateHours,
             source.EarlyLeaveHours, source.WorkedHours, N'UnderReview');
 """,
             command =>
@@ -162,6 +169,7 @@ ORDER BY e.EmployeeNo;
                 PresentDays = HrmsDatabase.GetInt(reader, "PresentDays"),
                 AbsentDays = HrmsDatabase.GetInt(reader, "AbsentDays"),
                 IncompleteDays = HrmsDatabase.GetInt(reader, "IncompleteDays"),
+                UnpaidLeaveDays = HrmsDatabase.GetInt(reader, "UnpaidLeaveDays"),
                 LateHours = reader["LateHours"] is decimal late ? late : 0,
                 EarlyLeaveHours = reader["EarlyLeaveHours"] is decimal early ? early : 0,
                 WorkedHours = reader["WorkedHours"] is decimal worked ? worked : 0,
