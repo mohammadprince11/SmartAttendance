@@ -15,6 +15,7 @@ public static class PayrollTransactionStore
     public const string Deduction = "Deduction";
     public const string Overtime = "Overtime";
     public const string SalaryDays = "SalaryDays";
+    public const string LeaveEncashment = "LeaveEncashment";
 
     /// <summary>معامل بدل العمل الإضافي الافتراضي (1.5× الأجر الساعي) عند عدم تحديده.</summary>
     public const decimal DefaultRateFactor = 1.5m;
@@ -25,6 +26,7 @@ public static class PayrollTransactionStore
         "Deduction" => "اقتطاع",
         "Overtime" => "عمل إضافي",
         "SalaryDays" => "تعديل أيام الراتب",
+        "LeaveEncashment" => "بدل إجازة",
         _ => t
     };
 
@@ -106,7 +108,7 @@ public static class PayrollTransactionStore
         public DateTime CreatedAt { get; set; }
 
         public string PeriodText => $"{Month:00}/{Year}";
-        public bool IsAddition => TxType is "Income" or "Overtime";
+        public bool IsAddition => TxType is "Income" or "Overtime" or "LeaveEncashment";
         public string PaymentTypeLabel => PaymentType == "OutSalary" ? "خارج الراتب" : "داخل الراتب";
         public string StatusText => StatusLabel(Status);
     }
@@ -363,7 +365,7 @@ WHERE [Year] = @Y AND [Month] = @M AND TxType = @Type
 
     private static async Task<string> GenerateReferenceNoAsync(ApplicationDbContext dbContext, string txType)
     {
-        var prefix = txType switch { "Deduction" => "DD", "Overtime" => "OT", "SalaryDays" => "SD", _ => "IN" };
+        var prefix = txType switch { "Deduction" => "DD", "Overtime" => "OT", "SalaryDays" => "SD", "LeaveEncashment" => "LV", _ => "IN" };
         prefix += $"{DateTime.Today:yy}-";
         var count = await HrmsDatabase.ScalarAsync<int>(dbContext,
             "SELECT COUNT(1) FROM PayrollTransactions WHERE ReferenceNo LIKE @P;",

@@ -88,6 +88,7 @@ public static class PageCatalog
             new CatalogPage("Payroll.Transactions", "الحركات (دخل/اقتطاع)"),
             new CatalogPage("Payroll.Overtime", "العمل الإضافي"),
             new CatalogPage("Payroll.SalaryDaysAdjustment", "تعديل أيام الراتب"),
+            new CatalogPage("Payroll.LeaveEncashment", "بدل إجازة"),
             new CatalogPage("Payroll.Raises", "زيادات الراتب"),
             new CatalogPage("Payroll.EndOfService", "نهاية الخدمة"),
             new CatalogPage("Payroll.SalaryItems", "عناصر الراتب"),

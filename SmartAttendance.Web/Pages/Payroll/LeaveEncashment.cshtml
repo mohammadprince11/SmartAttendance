@@ -1,0 +1,529 @@
+@page "/Payroll/LeaveEncashment"
+@model SmartAttendance.Web.Pages.Payroll.LeaveEncashmentModel
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "بدل إجازة";
+    var months = new[] { "يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر" };
+    var acc = "#34d399";
+    var catalogJson = JsonSerializer.Serialize(Model.Catalog.Select(i => new { i.Id, i.Name }));
+    var empJson = JsonSerializer.Serialize(Model.Employees.Select(e => new { e.Id, e.No, e.Name }));
+    string J(object o) => JsonSerializer.Serialize(o);
+    string Dt(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/mass-scope.css" asp-append-version="true" />
+
+<style>
+    .sd-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
+    .sd-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .sd-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .sd-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .sd-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .sd-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
+    .sd-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .sd-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+    .sd-btn.icon { width:38px; padding:0; font-size:17px; display:inline-flex; align-items:center; justify-content:center; }
+    .sd-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
+    .sd-btn.danger:hover { background:rgba(248,113,113,.26); }
+    .sd-btn.warn { background:rgba(250,204,21,.14); border:1px solid rgba(250,204,21,.45); color:#facc15; }
+    .sd-btn.warn:hover { background:rgba(250,204,21,.24); }
+    .sd-bulkbar { position:fixed; bottom:18px; inset-inline:0; margin-inline:auto; width:max-content; max-width:calc(100% - 32px);
+        z-index:60; display:none; gap:10px; align-items:center; flex-wrap:wrap; padding:12px 18px;
+        border:1px solid color-mix(in srgb,var(--acc) 45%,transparent); border-radius:16px;
+        background:var(--sa-surface,rgba(8,25,43,.98)); box-shadow:0 14px 44px rgba(0,0,0,.55); }
+    html[data-theme="light"] .sd-bulkbar { background:#fff; }
+    .sd-bulkbar.show { display:flex; }
+    .sd-bulkbar b { font-size:13px; font-weight:900; color:inherit; margin-inline-end:6px; }
+    .sd-bulkbar b span { color:var(--acc); }
+    .sd-tabs { display:flex; gap:2px; border-bottom:1px solid rgba(73,111,151,.22); }
+    .sd-tabs a { padding:11px 22px; font-size:13px; font-weight:900; color:var(--sa-muted,#8FA8BC); text-decoration:none; border-bottom:3px solid transparent; }
+    .sd-tabs a.on { color:var(--acc); border-bottom-color:var(--acc); }
+    .sd-lockbanner { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; font-size:13px; font-weight:900; border:1px solid rgba(250,204,21,.4); background:rgba(250,204,21,.08); color:#facc15; }
+
+    .sd-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+    .sd-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
+    .sd-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
+    .sd-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .sd-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+
+    .sd-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    .sd-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); flex-wrap:wrap; }
+    .sd-filter select, .sd-filter input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; }
+    html[data-theme="light"] .sd-filter select, html[data-theme="light"] .sd-filter input { background:#fff; }
+    .sd-filter .nxcs-select { width:auto !important; min-width:112px; flex:0 0 auto; }
+
+    .sd-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .sd-table { width:100%; border-collapse:collapse; font-size:13px; min-width:840px; }
+    .sd-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .sd-table th { background:#f2f7fb; }
+    .sd-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
+    .sd-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
+    .sd-table tfoot td { padding:12px 14px; font-weight:1000; border-top:2px solid color-mix(in srgb,var(--acc) 40%,transparent); background:rgba(0,0,0,.1); }
+    .sd-ref { direction:ltr; font-weight:900; font-size:12px; }
+    .sd-emp b { font-weight:900; } .sd-emp span { display:block; font-size:11px; color:var(--sa-muted,#8FA8BC); }
+    .sd-num { direction:ltr; font-weight:900; text-align:start; }
+    .sd-chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:900; }
+    .sd-chip.ap { background:rgba(74,222,128,.14); color:#4ade80; }
+    .sd-chip.dr { background:rgba(143,168,188,.16); color:#8FA8BC; }
+    .sd-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .sd-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
+    .sd-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
+    .sd-actions { display:flex; gap:6px; justify-content:flex-end; } .sd-actions form { display:inline; }
+
+    .sd-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .sd-form select, .sd-form input, .sd-form textarea { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; font-family:inherit; }
+    html[data-theme="light"] .sd-form select, html[data-theme="light"] .sd-form input, html[data-theme="light"] .sd-form textarea { background:#fff; }
+    .sd-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .sd-hint { font-size:12px; font-weight:800; color:var(--sa-muted,#8FA8BC); padding:2px 2px 6px; }
+    .sd-preview { padding:10px 12px; border:1px dashed color-mix(in srgb,var(--acc) 45%,transparent); border-radius:10px; font-size:13px; font-weight:900; background:color-mix(in srgb,var(--acc) 8%,transparent); }
+    .sd-preview b { color:var(--acc); direction:ltr; }
+    .sd-bal { display:flex; gap:8px; flex-wrap:wrap; padding:2px 0 0; }
+    .sd-bal-chip { display:inline-flex; align-items:baseline; gap:5px; padding:6px 12px; border-radius:999px; font-size:12px; font-weight:900;
+        border:1px solid color-mix(in srgb,var(--acc) 35%,transparent); background:color-mix(in srgb,var(--acc) 8%,transparent); }
+    .sd-bal-chip b { color:var(--acc); direction:ltr; font-size:14px; }
+    .sd-bal-empty { font-size:12px; font-weight:800; color:var(--sa-muted,#8FA8BC); }
+</style>
+
+<section class="sd-page" dir="rtl">
+    <header class="sd-head">
+        <div>
+            <h1>🌴 بدل إجازة</h1>
+            <p>صرف أيام رصيد الإجازة نقداً — القيمة تُحتسب بالمسير من الأجر اليومي للموظف (الأساسي ÷ 30) كاستحقاق.</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            @if (!Model.IsReadOnly)
+            {
+                <button type="button" class="sd-btn ghost icon" title="إدخال جماعي — لعدة موظفين" aria-label="إدخال جماعي" onclick="massOpen()">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </button>
+                <button type="button" class="sd-btn ghost icon" title="استيراد من إكسل (رمز الموظف + الأيام)" aria-label="استيراد إكسل" onclick="impOpen()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
+                <button type="button" class="sd-btn" onclick="sdOpen(0)">+ بدل إجازة</button>
+            }
+        </div>
+    </header>
+
+    <div class="sd-tabs">
+        <a href="/Payroll/LeaveEncashment?Year=@Model.Year&Month=@Model.Month&Lock=Open" class="@(Model.IsReadOnly ? "" : "on")">حركات غير مقفلة</a>
+        <a href="/Payroll/LeaveEncashment?Year=@Model.Year&Month=@Model.Month&Lock=Locked" class="@(Model.IsReadOnly ? "on" : "")">🔒 حركات مقفلة</a>
+    </div>
+
+    @if (Model.IsReadOnly && Model.Items.Count > 0)
+    {
+        <div class="sd-lockbanner">🔒 هذه الحركات دخلت مسيراً مقفلاً/معتمداً — للعرض فقط، لا تُعدّل ولا تُحذف.</div>
+    }
+
+    <div class="sd-kpis">
+        <div class="sd-kpi"><b>@Model.TotalCount</b><span>عدد الحركات</span></div>
+        <div class="sd-kpi"><b style="color:@acc">@Model.TotalDays.ToString("#,0.##")</b><span>إجمالي أيام مصروفة</span></div>
+        <div class="sd-kpi"><b>@Model.EmployeesCovered</b><span>موظفون</span></div>
+        <div class="sd-kpi"><b>@($"{Model.Month:00}/{Model.Year}")</b><span>الفترة الحالية</span></div>
+    </div>
+
+    <form method="get" class="sd-bar">
+        <input type="hidden" name="Lock" value="@Model.Lock" />
+        <div class="sd-filter">
+            <span>الفترة:</span>
+            <select name="Month" onchange="this.form.submit()">
+                @for (var m = 1; m <= 12; m++)
+                { <option value="@m" selected="@(m == Model.Month)">@months[m-1]</option> }
+            </select>
+            <select name="Year" onchange="this.form.submit()">
+                @for (var y = DateTime.Today.Year - 3; y <= DateTime.Today.Year + 1; y++)
+                { <option value="@y" selected="@(y == Model.Year)">@y</option> }
+            </select>
+        </div>
+        <div class="sd-filter">
+            <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/بند/رقم مرجعي" style="min-width:200px" />
+            <button type="submit" class="sd-btn ghost sm">بحث</button>
+        </div>
+    </form>
+
+    @if (TempData["PayrollMessage"] != null)
+    {
+        <div class="sd-alert @((TempData["PayrollOk"] as bool?) == false ? "err" : "")">@TempData["PayrollMessage"]</div>
+    }
+
+    <form method="post">
+    <input type="hidden" name="Year" value="@Model.Year" />
+    <input type="hidden" name="Month" value="@Model.Month" />
+    <input type="hidden" name="Lock" value="@Model.Lock" />
+    <div class="sd-card">
+        @if (Model.Items.Count == 0)
+        {
+            <div class="sd-empty">
+                @if (Model.IsReadOnly)
+                { <text>لا حركات مقفلة لفترة @($"{Model.Month:00}/{Model.Year}").</text> }
+                else
+                { <text>لا بدلات إجازة لفترة @($"{Model.Month:00}/{Model.Year}") — أضف بـ«+ بدل إجازة».</text> }
+            </div>
+        }
+        else
+        {
+            <table class="sd-table">
+                <thead>
+                    <tr>
+                        <th style="width:34px"><input type="checkbox" onclick="sdAll(this)" /></th>
+                        <th>الرقم المرجعي</th><th>الموظف</th><th>البند</th>
+                        <th>أيام الصرف</th><th>تاريخ الحركة</th><th>الحالة</th>
+                        @if (!Model.IsReadOnly)
+                        { <th style="text-align:end">إجراءات</th> }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in Model.Items)
+                    {
+                        var d = t.Days ?? 0;
+                        <tr>
+                            <td><input type="checkbox" name="SelectedIds" value="@t.Id" onchange="sdSel()" /></td>
+                            <td class="sd-ref">@t.ReferenceNo</td>
+                            <td class="sd-emp"><b>@t.EmployeeName</b><span>@t.EmployeeNo</span></td>
+                            <td><b>@t.ItemName</b></td>
+                            <td class="sd-num" style="color:@acc">@d.ToString("#,0.##") يوم</td>
+                            <td class="sd-ref">@(t.TransactionDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                            <td><span class="sd-chip @(t.Status == "Approved" ? "ap" : "dr")">@t.StatusText</span></td>
+                            @if (!Model.IsReadOnly)
+                            {
+                            <td>
+                                <div class="sd-actions">
+                                    <button type="button" class="sd-btn ghost sm" onclick="sdEdit(this)" data-tx="@J(new {
+                                        Id = t.Id, t.EmployeeId, t.SalaryItemId, t.ItemName, t.Days,
+                                        TransactionDate=Dt(t.TransactionDate), t.Note, t.Status, t.Year, t.Month })">تعديل</button>
+                                    <button type="submit" asp-page-handler="Delete" name="id" value="@t.Id" class="sd-btn danger sm" data-zyconfirm="حذف الحركة؟">حذف</button>
+                                </div>
+                            </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr><td colspan="4">الإجمالي (@Model.Items.Count حركة)</td><td class="sd-num" style="color:@acc">@Model.TotalDays.ToString("#,0.##") يوم</td><td colspan="@(Model.IsReadOnly ? 2 : 3)"></td></tr>
+                </tfoot>
+            </table>
+        }
+    </div>
+    @if (Model.Items.Count > 0)
+    {
+        <div class="sd-bulkbar" id="sd-bulkbar">
+            <b>المحدد: <span id="sd-selcount">0</span></b>
+            @if (Model.IsReadOnly)
+            {
+                <button type="submit" asp-page-handler="UnlockSelected" class="sd-btn warn" data-zyconfirm="إلغاء قفل الحركات المحددة؟">🔓 إلغاء قفل المحدد</button>
+            }
+            else
+            {
+                <button type="submit" asp-page-handler="LockSelected" class="sd-btn warn" data-zyconfirm="إقفال الحركات المحددة؟">🔒 إقفال المحدد</button>
+                <button type="submit" asp-page-handler="DeleteMany" class="sd-btn danger" data-zyconfirm="حذف الحركات المحددة؟">🗑 حذف المحدد</button>
+            }
+        </div>
+    }
+    </form>
+
+    @* ===== نموذج بدل إجازة ===== *@
+    <div class="hrms-slideover-backdrop" id="sd-backdrop" onclick="sdClose()"></div>
+    <aside class="hrms-slideover" id="sd-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="sd-title">بدل إجازة جديد</h2>
+            <button type="button" class="hrms-slideover-close" onclick="sdClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Save" class="sd-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="Id" id="sd-Id" value="0" />
+                <input type="hidden" name="ItemName" id="sd-ItemName" />
+                <input type="hidden" name="SalaryItemId" id="sd-SalaryItemId" value="0" />
+
+                <label>اسم الموظف *
+                    <div class="empk-field">
+                        <input type="text" id="sd-emp-name" class="empk-name" placeholder="اسم الموظف" readonly />
+                        <input type="text" id="sd-emp-code" class="empk-code" placeholder="رمز" autocomplete="off" />
+                    </div>
+                    <input type="hidden" name="EmployeeId" id="sd-EmployeeId" />
+                </label>
+
+                <div class="sd-bal" id="sd-bal"><span class="sd-bal-empty">اختر الموظف لعرض رصيده المتاح للصرف.</span></div>
+
+                <label>البند
+                    <select id="sd-ItemSelect" onchange="sdItemChanged()">
+                        <option value="">بدل إجازة (افتراضي)</option>
+                        @foreach (var i in Model.Catalog)
+                        { <option value="@i.Id">@i.Name</option> }
+                        <option value="__custom">أخرى (نص حر)…</option>
+                    </select>
+                </label>
+                <label id="sd-CustomWrap" hidden>اسم البند (نص حر)
+                    <input type="text" id="sd-CustomName" oninput="document.getElementById('sd-ItemName').value=this.value" />
+                </label>
+
+                <label>عدد أيام الصرف *<input type="number" id="sd-Days" name="Days" step="0.5" min="0" required oninput="sdPreview()" /></label>
+
+                <div class="sd-preview" id="sd-preview">القيمة = <b>الأيام × الأجر اليومي</b> (الأساسي ÷ 30) — تُحتسب بالمسير.</div>
+
+                <div class="sd-grid2">
+                    <label>الشهر
+                        <select name="FMonth" id="sd-FMonth" onchange="sdReloadBalance()">
+                            @for (var m = 1; m <= 12; m++)
+                            { <option value="@m" selected="@(m == Model.Month)">@months[m-1]</option> }
+                        </select>
+                    </label>
+                    <label>السنة<input type="number" name="FYear" id="sd-FYear" min="2000" max="2100" value="@Model.Year" onchange="sdReloadBalance()" /></label>
+                </div>
+
+                <label>تاريخ الحركة<input type="date" name="TransactionDate" id="sd-TransactionDate" /></label>
+
+                <label>الحالة
+                    <select name="Status" id="sd-Status">
+                        <option value="Approved">معتمد</option>
+                        <option value="Draft">مسودة</option>
+                    </select>
+                </label>
+
+                <label>ملاحظة<textarea name="Note" id="sd-Note" rows="2"></textarea></label>
+
+                <button type="submit" class="sd-btn">حفظ بدل الإجازة</button>
+            </form>
+        </div>
+    </aside>
+
+    @* ===== إدخال جماعي ===== *@
+    <div class="hrms-slideover-backdrop" id="mass-backdrop" onclick="massClose()"></div>
+    <aside class="hrms-slideover wide" id="mass-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2>👥 إدخال جماعي — بدل إجازة</h2>
+            <button type="button" class="hrms-slideover-close" onclick="massClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="MassEntry" enctype="multipart/form-data" class="sd-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="MassItemName" id="mass-ItemName" />
+                <input type="hidden" name="MassSalaryItemId" id="mass-SalaryItemId" value="0" />
+                <input type="hidden" name="ScopeMode" id="mass-ScopeMode" value="Manual" />
+
+                <div class="mass-sec">معلومات الحركة</div>
+                <label>البند
+                    <select id="mass-ItemSelect" onchange="massItemChanged()">
+                        <option value="">بدل إجازة (افتراضي)</option>
+                        @foreach (var i in Model.Catalog)
+                        { <option value="@i.Id">@i.Name</option> }
+                        <option value="__custom">أخرى (نص حر)…</option>
+                    </select>
+                </label>
+                <label id="mass-CustomWrap" hidden>اسم البند (نص حر)
+                    <input type="text" id="mass-CustomName" oninput="document.getElementById('mass-ItemName').value=this.value" />
+                </label>
+
+                <label>عدد أيام الصرف *<input type="number" name="MassDays" step="0.5" min="0" required /></label>
+                <label>الفترة
+                    <span style="display:flex;gap:6px">
+                        <select name="MassMonth">
+                            @for (var m = 1; m <= 12; m++)
+                            { <option value="@m" selected="@(m == Model.Month)">@months[m-1]</option> }
+                        </select>
+                        <input type="number" name="MassYear" value="@Model.Year" min="2000" max="2100" style="width:88px" />
+                    </span>
+                </label>
+                <label>ملاحظة<textarea name="MassNote" rows="2"></textarea></label>
+
+                @* ===== النطاق (لمن يُطبَّق) — 4 طرق ===== *@
+                <div class="mass-sec">النطاق — لمن يُطبَّق</div>
+                <div class="mass-tabs">
+                    <button type="button" class="mass-tab on" data-m="Manual" onclick="massTab('Manual')">اختيار يدوي</button>
+                    <button type="button" class="mass-tab" data-m="Paste" onclick="massTab('Paste')">لصق أكواد</button>
+                    <button type="button" class="mass-tab" data-m="File" onclick="massTab('File')">ملف إكسل</button>
+                    <button type="button" class="mass-tab" data-m="Criteria" onclick="massTab('Criteria')">حسب معايير</button>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-Manual">
+                    <label>الموظفون <span id="mass-count" style="color:var(--acc)">(0 محدد)</span></label>
+                    <div style="display:flex;gap:6px">
+                        <input type="text" id="mass-empsearch" placeholder="بحث بالاسم أو الرمز" oninput="massRenderEmps()"
+                               style="flex:1;min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-weight:800" />
+                        <button type="button" class="sd-btn ghost sm" onclick="massSelectAll(true)">تحديد الظاهر</button>
+                        <button type="button" class="sd-btn ghost sm" onclick="massSelectAll(false)">مسح الكل</button>
+                    </div>
+                    <div id="mass-emplist" class="mass-list"></div>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-Paste" hidden>
+                    <div class="mass-paste-head">
+                        <b>أكواد الموظفين <span id="mass-codecount">(0 كود)</span></b>
+                        <button type="button" class="sd-btn ghost sm" onclick="massPasteClip()">📋 لصق من الحافظة</button>
+                    </div>
+                    <textarea name="MassCodes" id="mass-codes" rows="6" placeholder="انقر «لصق من الحافظة» أو ألصق مباشرة (Ctrl+V) — أكواد إكسل (سطر لكل كود) تتحوّل لفواصل تلقائياً"
+                              oninput="massCodeCount()" onpaste="massOnPaste(event)"></textarea>
+                    <p class="sd-hint">تُحلّ الأكواد إلى موظفين تلقائياً — غير المطابق يُتخطّى مع إظهار عدده.</p>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-File" hidden>
+                    <div class="mass-file-hint"><b style="color:var(--acc)">تنسيق الملف:</b> عمود واحد يحوي <b>رمز الموظف</b>.</div>
+                    <label>الملف (.xlsx أو .csv)<input type="file" name="massFile" accept=".xlsx,.csv" style="min-height:auto;padding:8px" /></label>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-Criteria" hidden>
+                    <p class="sd-hint">يُطبَّق على <b>كل الموظفين النشطين</b> المطابقين للمعايير.</p>
+                    <div class="sd-grid2">
+                        <label>القسم<select name="MassDept"><option value="">كل الأقسام</option>@foreach (var s in Model.AllDepartments){<option value="@s">@s</option>}</select></label>
+                        <label>الفرع<select name="MassBranch"><option value="">كل الفروع</option>@foreach (var s in Model.AllBranches){<option value="@s">@s</option>}</select></label>
+                    </div>
+                    <label>المسمى الوظيفي<select name="MassJobTitle"><option value="">كل المسميات</option>@foreach (var s in Model.AllJobTitles){<option value="@s">@s</option>}</select></label>
+                </div>
+
+                <button type="submit" class="sd-btn">حفظ الإدخال الجماعي</button>
+            </form>
+        </div>
+    </aside>
+
+    @* ===== استيراد إكسل ===== *@
+    <div class="hrms-slideover-backdrop" id="imp-backdrop" onclick="impClose()"></div>
+    <aside class="hrms-slideover" id="imp-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2>⬆ استيراد بدل الإجازة (إكسل / CSV)</h2>
+            <button type="button" class="hrms-slideover-close" onclick="impClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Import" enctype="multipart/form-data" class="sd-form" style="display:flex;flex-direction:column;gap:12px">
+                <div class="mass-file-hint">
+                    <b style="color:var(--acc)">أعمدة الملف (الصف الأول ترويسة تُتجاهل):</b><br />
+                    A: رمز الموظف · B: عدد أيام الصرف · C: البند (اختياري)
+                </div>
+                <div class="sd-grid2">
+                    <label>الشهر
+                        <select name="ImportMonth">
+                            @for (var m = 1; m <= 12; m++)
+                            { <option value="@m" selected="@(m == Model.Month)">@months[m-1]</option> }
+                        </select>
+                    </label>
+                    <label>السنة<input type="number" name="ImportYear" value="@Model.Year" min="2000" max="2100" /></label>
+                </div>
+                <label>الملف (.xlsx أو .csv) *<input type="file" name="importFile" accept=".xlsx,.csv" required style="min-height:auto;padding:8px" /></label>
+                <button type="submit" class="sd-btn">استيراد</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script src="~/js/emp-picker.js" asp-append-version="true"></script>
+    <script src="~/js/mass-scope.js" asp-append-version="true"></script>
+    <script>
+        var SD_ITEMS = @Html.Raw(catalogJson);
+        var SD_EMP = @Html.Raw(empJson);
+        window.MASS_EMP = SD_EMP;
+        var sdEmpPicker = EmpPicker.init({
+            code: document.getElementById('sd-emp-code'),
+            name: document.getElementById('sd-emp-name'),
+            hidden: document.getElementById('sd-EmployeeId'),
+            employees: SD_EMP,
+            onChange: sdReloadBalance
+        });
+
+        function sdAll(cb){ document.querySelectorAll('[name=SelectedIds]').forEach(function(x){x.checked=cb.checked;}); sdSel(); }
+        function sdSel(){
+            var bar = document.getElementById('sd-bulkbar'); if(!bar) return;
+            var n = document.querySelectorAll('[name=SelectedIds]:checked').length;
+            var c = document.getElementById('sd-selcount'); if(c) c.textContent = n;
+            bar.classList.toggle('show', n > 0);
+        }
+        function setVal(id, v){ var el=document.getElementById(id); if(el) el.value = (v==null?'':v); }
+
+        function sdPreview(){
+            var d = parseFloat(document.getElementById('sd-Days').value) || 0;
+            var el = document.getElementById('sd-preview');
+            if (d > 0){
+                el.innerHTML = 'صرف <b>' + d.toFixed(2) + '</b> يوم × الأجر اليومي (الأساسي ÷ 30) — تُحتسب بالمسير كاستحقاق.';
+            } else {
+                el.innerHTML = 'القيمة = <b>الأيام × الأجر اليومي</b> (الأساسي ÷ 30) — تُحتسب بالمسير.';
+            }
+        }
+
+        // عرض رصيد الموظف المتاح (سنوي/مرضي) عند اختياره أو تغيير السنة.
+        function sdReloadBalance(){
+            var empId = parseInt(document.getElementById('sd-EmployeeId').value) || 0;
+            var year = parseInt(document.getElementById('sd-FYear').value) || new Date().getFullYear();
+            var box = document.getElementById('sd-bal');
+            if (!empId){ box.innerHTML = '<span class="sd-bal-empty">اختر الموظف لعرض رصيده المتاح للصرف.</span>'; return; }
+            box.innerHTML = '<span class="sd-bal-empty">جارٍ تحميل الرصيد…</span>';
+            fetch('/Payroll/LeaveEncashment?handler=Balance&employeeId=' + empId + '&year=' + year, { headers: { 'RequestVerificationToken': '' } })
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                    if (!d.ok || !d.types || !d.types.length){ box.innerHTML = '<span class="sd-bal-empty">لا رصيد متتبَّع لهذا الموظف.</span>'; return; }
+                    box.innerHTML = d.types.map(function(t){
+                        return '<span class="sd-bal-chip">' + t.label + ' — المتاح <b>' + (+t.remaining).toFixed(1) + '</b> يوم</span>';
+                    }).join('') + '<span class="sd-bal-empty" style="width:100%">رصيد سنة ' + d.year + ' (إرشادي، لا يمنع الصرف).</span>';
+                })
+                .catch(function(){ box.innerHTML = '<span class="sd-bal-empty">تعذّر تحميل الرصيد.</span>'; });
+        }
+
+        function sdItemChanged(){
+            var sel = document.getElementById('sd-ItemSelect'), val = sel.value;
+            var cw = document.getElementById('sd-CustomWrap');
+            if (val === '__custom'){ cw.hidden=false; document.getElementById('sd-SalaryItemId').value=0; document.getElementById('sd-ItemName').value=document.getElementById('sd-CustomName').value||''; return; }
+            cw.hidden=true;
+            if (!val){ document.getElementById('sd-ItemName').value=''; document.getElementById('sd-SalaryItemId').value=0; return; }
+            var it = SD_ITEMS.find(function(x){ return String(x.Id)===val; });
+            if (it){ document.getElementById('sd-ItemName').value = it.Name; document.getElementById('sd-SalaryItemId').value = it.Id; }
+        }
+
+        function sdEdit(btn){
+            try { var d = JSON.parse(btn.getAttribute('data-tx')); sdOpen(d.Id, d); }
+            catch (e) { alert('تعذّر فتح التعديل: ' + e.message); }
+        }
+
+        function sdOpen(id, d){
+            var f = document.querySelector('#sd-slide form'); f.reset();
+            document.getElementById('sd-Id').value = id || 0;
+            document.getElementById('sd-title').textContent = id ? 'تعديل بدل إجازة' : 'بدل إجازة جديد';
+            document.getElementById('sd-CustomWrap').hidden = true;
+            document.getElementById('sd-ItemSelect').value=''; document.getElementById('sd-ItemName').value=''; document.getElementById('sd-SalaryItemId').value=0;
+            sdEmpPicker.set(null);
+
+            if (id && d){
+                sdEmpPicker.set(SD_EMP.find(function(x){ return x.Id === d.EmployeeId; }) || null);
+                setVal('sd-FMonth', d.Month); setVal('sd-FYear', d.Year);
+                setVal('sd-Days', d.Days == null ? '' : Math.abs(d.Days));
+                setVal('sd-TransactionDate', d.TransactionDate); setVal('sd-Note', d.Note); setVal('sd-Status', d.Status || 'Approved');
+                document.getElementById('sd-ItemName').value = d.ItemName || '';
+                if (d.SalaryItemId && SD_ITEMS.find(function(x){return x.Id===d.SalaryItemId;})){
+                    document.getElementById('sd-ItemSelect').value = String(d.SalaryItemId);
+                    document.getElementById('sd-SalaryItemId').value = d.SalaryItemId;
+                } else if (d.ItemName){
+                    document.getElementById('sd-ItemSelect').value='__custom';
+                    document.getElementById('sd-CustomWrap').hidden=false;
+                    document.getElementById('sd-CustomName').value=d.ItemName;
+                }
+            } else {
+                setVal('sd-TransactionDate', new Date().toISOString().slice(0,10));
+            }
+            sdPreview();
+            sdReloadBalance();
+            document.getElementById('sd-slide').classList.add('open');
+            document.getElementById('sd-backdrop').classList.add('open');
+        }
+        function sdClose(){ document.getElementById('sd-slide').classList.remove('open'); document.getElementById('sd-backdrop').classList.remove('open'); }
+
+        // ===== إدخال جماعي =====
+        function massItemChanged(){
+            var sel=document.getElementById('mass-ItemSelect'), val=sel.value, cw=document.getElementById('mass-CustomWrap');
+            if(val==='__custom'){ cw.hidden=false; document.getElementById('mass-SalaryItemId').value=0; document.getElementById('mass-ItemName').value=document.getElementById('mass-CustomName').value||''; return; }
+            cw.hidden=true;
+            if(!val){ document.getElementById('mass-ItemName').value=''; document.getElementById('mass-SalaryItemId').value=0; return; }
+            var it=SD_ITEMS.find(function(x){ return String(x.Id)===val; });
+            if(it){ document.getElementById('mass-ItemName').value=it.Name; document.getElementById('mass-SalaryItemId').value=it.Id; }
+        }
+        function massOpen(){
+            document.querySelector('#mass-slide form').reset();
+            document.getElementById('mass-ItemName').value=''; document.getElementById('mass-SalaryItemId').value=0;
+            document.getElementById('mass-CustomWrap').hidden=true;
+            massBuildEmps(); massRenderEmps(); massCount(); massTab('Manual');
+            document.getElementById('mass-slide').classList.add('open'); document.getElementById('mass-backdrop').classList.add('open');
+        }
+        function massClose(){ document.getElementById('mass-slide').classList.remove('open'); document.getElementById('mass-backdrop').classList.remove('open'); }
+        function impOpen(){ document.getElementById('imp-slide').classList.add('open'); document.getElementById('imp-backdrop').classList.add('open'); }
+        function impClose(){ document.getElementById('imp-slide').classList.remove('open'); document.getElementById('imp-backdrop').classList.remove('open'); }
+
+        document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ sdClose(); massClose(); impClose(); } });
+    </script>
+}
