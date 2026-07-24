@@ -479,6 +479,12 @@
                                 <span>المواقع الجغرافية للموظفين</span>
                             </a>
                         }
+                        @if (CanRoute("/missingpunchrequests"))
+                        {
+                            <a href="/MissingPunchRequests" class="nexora-nav-link @(IsUnder("/MissingPunchRequests") ? "active nexora-active" : "")">
+                                <span>طلبات البصمة المفقودة</span>
+                            </a>
+                        }
                         @if (CanRoute("/attendanceviewer"))
                         {
                             <a href="/AttendanceViewer" class="nexora-nav-link @(IsUnder("/AttendanceViewer") ? "active nexora-active" : "")">

@@ -1,0 +1,256 @@
+@page "/MissingPunchRequests"
+@model SmartAttendance.Web.Pages.MissingPunchRequests.IndexModel
+@using System.Text.Json
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@{
+    ViewData["Title"] = "طلبات البصمة المفقودة";
+    var acc = "#38bdf8";
+    var empJson = JsonSerializer.Serialize(Model.Employees.Select(e => new { e.Id, e.No, e.Name }));
+    string J(object o) => JsonSerializer.Serialize(o);
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .mp-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
+    .mp-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .mp-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .mp-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .mp-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .mp-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
+    .mp-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .mp-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+    .mp-btn.ok { background:rgba(74,222,128,.16); border:1px solid rgba(74,222,128,.45); color:#4ade80; }
+    .mp-btn.ok:hover { background:rgba(74,222,128,.26); }
+    .mp-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
+    .mp-btn.danger:hover { background:rgba(248,113,113,.26); }
+    .mp-btn.warn { background:rgba(250,204,21,.14); border:1px solid rgba(250,204,21,.45); color:#facc15; }
+
+    .mp-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+    .mp-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
+    .mp-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
+    .mp-kpi.p::before { background:#facc15; } .mp-kpi.a::before { background:#4ade80; } .mp-kpi.r::before { background:#f87171; }
+    .mp-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .mp-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+
+    .mp-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:12px 14px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .mp-bar select, .mp-bar input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:800; font-size:12.5px; }
+    html[data-theme="light"] .mp-bar select, html[data-theme="light"] .mp-bar input { background:#fff; }
+
+    .mp-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .mp-table { width:100%; border-collapse:collapse; font-size:13px; min-width:940px; }
+    .mp-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .mp-table th { background:#f2f7fb; }
+    .mp-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
+    .mp-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
+    .mp-ref { direction:ltr; font-weight:900; font-size:12px; }
+    .mp-emp b { font-weight:900; } .mp-emp span { display:block; font-size:11px; color:var(--sa-muted,#8FA8BC); }
+    .mp-chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:900; }
+    .mp-chip.pending { background:rgba(250,204,21,.14); color:#facc15; }
+    .mp-chip.approved { background:rgba(74,222,128,.14); color:#4ade80; }
+    .mp-chip.rejected { background:rgba(248,113,113,.16); color:#f87171; }
+    .mp-chip.cancelled { background:rgba(143,168,188,.16); color:#8FA8BC; }
+    .mp-chip.in { background:rgba(56,189,248,.16); color:#38bdf8; }
+    .mp-chip.out { background:rgba(167,139,250,.16); color:#a78bfa; }
+    .mp-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .mp-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
+    .mp-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
+    .mp-actions { display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap; } .mp-actions form { display:inline; }
+
+    .mp-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .mp-form select, .mp-form input, .mp-form textarea { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; font-family:inherit; }
+    html[data-theme="light"] .mp-form select, html[data-theme="light"] .mp-form input, html[data-theme="light"] .mp-form textarea { background:#fff; }
+    .mp-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+</style>
+
+<section class="mp-page" dir="rtl">
+    <header class="mp-head">
+        <div>
+            <h1>👆 طلبات البصمة المفقودة</h1>
+            <p>توثيق بصمة غائبة (دخول/خروج) لموظف والبتّ فيها — الموافقة تُنشئ بصمة فعلية تدخل اشتقاق اليومية.</p>
+        </div>
+        @if (Model.CanCreate)
+        {
+            <button type="button" class="mp-btn" onclick="mpOpen(0)">+ طلب جديد</button>
+        }
+    </header>
+
+    <div class="mp-kpis">
+        <div class="mp-kpi p"><b style="color:#facc15">@Model.PendingCount</b><span>قيد الانتظار</span></div>
+        <div class="mp-kpi a"><b style="color:#4ade80">@Model.ApprovedCount</b><span>موافَق عليها</span></div>
+        <div class="mp-kpi r"><b style="color:#f87171">@Model.RejectedCount</b><span>مرفوضة</span></div>
+    </div>
+
+    <form method="get" class="mp-bar">
+        <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/رقم مرجعي" style="min-width:180px" />
+        <select name="Status">
+            <option value="">كل الحالات</option>
+            @foreach (var s in new[] { MissingPunchRequestStore.Pending, MissingPunchRequestStore.Approved, MissingPunchRequestStore.Rejected, MissingPunchRequestStore.Cancelled })
+            { <option value="@s" selected="@(Model.Status == s)">@MissingPunchRequestStore.StatusLabel(s)</option> }
+        </select>
+        <select name="PunchType">
+            <option value="">كل الأنواع</option>
+            <option value="In" selected="@(Model.PunchType == "In")">ختم دخول</option>
+            <option value="Out" selected="@(Model.PunchType == "Out")">ختم خروج</option>
+        </select>
+        <select name="FDept"><option value="">كل الأقسام</option>@foreach (var s in Model.AllDepartments){<option value="@s" selected="@(Model.FDept==s)">@s</option>}</select>
+        <select name="FBranch"><option value="">كل الفروع</option>@foreach (var s in Model.AllBranches){<option value="@s" selected="@(Model.FBranch==s)">@s</option>}</select>
+        <input type="date" name="From" value="@Model.From" title="من تاريخ" />
+        <input type="date" name="To" value="@Model.To" title="إلى تاريخ" />
+        <button type="submit" class="mp-btn ghost sm">تصفية</button>
+        <a href="/MissingPunchRequests" class="mp-btn ghost sm">إزالة</a>
+    </form>
+
+    @if (TempData["MpMessage"] != null)
+    {
+        <div class="mp-alert @((TempData["MpOk"] as bool?) == false ? "err" : "")">@TempData["MpMessage"]</div>
+    }
+
+    <div class="mp-card">
+        @if (Model.Items.Count == 0)
+        {
+            <div class="mp-empty">لا طلبات مطابقة.</div>
+        }
+        else
+        {
+            <table class="mp-table">
+                <thead>
+                    <tr>
+                        <th>الرقم المرجعي</th><th>الموظف</th><th>وقت البصمة</th><th>النوع</th>
+                        <th>الدلالة</th><th>المصدر</th><th>الحالة</th><th style="text-align:end">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Items)
+                    {
+                        <tr>
+                            <td class="mp-ref">@r.RefNo</td>
+                            <td class="mp-emp"><b>@r.EmployeeName</b><span>@r.EmployeeNo</span></td>
+                            <td class="mp-ref">@r.PunchAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td><span class="mp-chip @(r.PunchType == "Out" ? "out" : "in")">@r.PunchTypeText</span></td>
+                            <td>@r.SemanticName</td>
+                            <td style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800">@r.Source</td>
+                            <td><span class="mp-chip @r.Status.ToLowerInvariant()">@r.StatusText</span>
+                                @if (!string.IsNullOrWhiteSpace(r.DecisionNote))
+                                { <span style="display:block;font-size:10px;color:var(--sa-muted,#8FA8BC);margin-top:2px">@r.DecisionNote</span> }
+                            </td>
+                            <td>
+                                <div class="mp-actions">
+                                    @if (r.IsPending)
+                                    {
+                                        if (Model.CanEdit)
+                                        {
+                                            <button type="button" class="mp-btn ghost sm" onclick="mpEdit(this)" data-r="@J(new {
+                                                r.Id, r.EmployeeId, PunchDate = r.PunchAt.ToString("yyyy-MM-dd"), PunchTime = r.PunchAt.ToString("HH:mm"),
+                                                r.PunchType, r.PunchSemanticId, r.Reason })">تعديل</button>
+                                            <form method="post" asp-page-handler="Approve"><input type="hidden" name="id" value="@r.Id" />
+                                                <button type="submit" class="mp-btn ok sm" data-zyconfirm="الموافقة وإنشاء البصمة؟">موافقة</button></form>
+                                            <form method="post" asp-page-handler="Reject"><input type="hidden" name="id" value="@r.Id" />
+                                                <button type="submit" class="mp-btn warn sm" data-zyconfirm="رفض الطلب؟">رفض</button></form>
+                                        }
+                                    }
+                                    else if (r.Status == MissingPunchRequestStore.Approved && Model.CanEdit)
+                                    {
+                                        <form method="post" asp-page-handler="Cancel"><input type="hidden" name="id" value="@r.Id" />
+                                            <button type="submit" class="mp-btn warn sm" data-zyconfirm="إلغاء الموافقة وحذف البصمة؟">إلغاء</button></form>
+                                    }
+                                    @if (Model.CanDelete)
+                                    {
+                                        <form method="post" asp-page-handler="Delete"><input type="hidden" name="id" value="@r.Id" />
+                                            <button type="submit" class="mp-btn danger sm" data-zyconfirm="حذف الطلب؟">حذف</button></form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @* ===== نموذج إنشاء/تعديل طلب ===== *@
+    <div class="hrms-slideover-backdrop" id="mp-backdrop" onclick="mpClose()"></div>
+    <aside class="hrms-slideover" id="mp-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="mp-title">طلب بصمة مفقودة</h2>
+            <button type="button" class="hrms-slideover-close" onclick="mpClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Save" class="mp-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="Id" id="mp-Id" value="0" />
+
+                <label>الموظف *
+                    <div class="empk-field">
+                        <input type="text" id="mp-emp-name" class="empk-name" placeholder="اسم الموظف" readonly />
+                        <input type="text" id="mp-emp-code" class="empk-code" placeholder="رمز" autocomplete="off" />
+                    </div>
+                    <input type="hidden" name="EmployeeId" id="mp-EmployeeId" />
+                </label>
+
+                <div class="mp-grid2">
+                    <label>تاريخ البصمة *<input type="date" name="PunchDate" id="mp-PunchDate" required /></label>
+                    <label>وقت البصمة *<input type="time" name="PunchTime" id="mp-PunchTime" required /></label>
+                </div>
+
+                <div class="mp-grid2">
+                    <label>نوع البصمة *
+                        <select name="PunchType" id="mp-PunchType">
+                            <option value="In">ختم دخول</option>
+                            <option value="Out">ختم خروج</option>
+                        </select>
+                    </label>
+                    <label>الدلالة
+                        <select name="PunchSemanticId" id="mp-PunchSemanticId">
+                            @foreach (var s in Model.Semantics)
+                            { <option value="@s.Id">@s.Name</option> }
+                        </select>
+                    </label>
+                </div>
+
+                <label>السبب<textarea name="Reason" id="mp-Reason" rows="2" placeholder="سبب غياب البصمة (نسيان، عطل جهاز...)"></textarea></label>
+
+                <button type="submit" class="mp-btn">حفظ الطلب</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script src="~/js/emp-picker.js" asp-append-version="true"></script>
+    <script>
+        var MP_EMP = @Html.Raw(empJson);
+        var mpPicker = EmpPicker.init({
+            code: document.getElementById('mp-emp-code'),
+            name: document.getElementById('mp-emp-name'),
+            hidden: document.getElementById('mp-EmployeeId'),
+            employees: MP_EMP
+        });
+        function setVal(id, v){ var el=document.getElementById(id); if(el) el.value = (v==null?'':v); }
+
+        function mpEdit(btn){
+            try { mpOpen(0, JSON.parse(btn.getAttribute('data-r'))); }
+            catch(e){ alert('تعذّر فتح التعديل: ' + e.message); }
+        }
+        function mpOpen(id, d){
+            var f = document.querySelector('#mp-slide form'); f.reset();
+            mpPicker.set(null);
+            document.getElementById('mp-Id').value = (d && d.Id) || 0;
+            document.getElementById('mp-title').textContent = (d && d.Id) ? 'تعديل طلب بصمة' : 'طلب بصمة مفقودة';
+            if (d && d.Id){
+                mpPicker.set(MP_EMP.find(function(x){ return x.Id === d.EmployeeId; }) || null);
+                setVal('mp-PunchDate', d.PunchDate); setVal('mp-PunchTime', d.PunchTime);
+                setVal('mp-PunchType', d.PunchType); setVal('mp-Reason', d.Reason);
+                if (d.PunchSemanticId) setVal('mp-PunchSemanticId', d.PunchSemanticId);
+            } else {
+                setVal('mp-PunchDate', new Date().toISOString().slice(0,10));
+            }
+            document.getElementById('mp-slide').classList.add('open');
+            document.getElementById('mp-backdrop').classList.add('open');
+        }
+        function mpClose(){ document.getElementById('mp-slide').classList.remove('open'); document.getElementById('mp-backdrop').classList.remove('open'); }
+        document.addEventListener('keydown', function(e){ if(e.key==='Escape') mpClose(); });
+    </script>
+}

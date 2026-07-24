@@ -3790,8 +3790,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/PayrollRunStore.cs": {
-    "mtime": 1784893277.4174154,
-    "ast_hash": "8b9f3e40740b6ff7e9790a395e3091fb",
+    "mtime": 1784894841.559252,
+    "ast_hash": "9084d8d8b521c279f309f14e43e44f9e",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/SalaryItemStore.cs": {
@@ -4037,6 +4037,16 @@
   "SmartAttendance.Web/Infrastructure/Hrms/LeaveCarryoverService.cs": {
     "mtime": 1784894070.3230639,
     "ast_hash": "31e1c7123d83ff07c280085108d06ad3",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Tests/SalaryFormulaEvaluatorTests.cs": {
+    "mtime": 1784894977.1330938,
+    "ast_hash": "79e7e454b6f2866a2e78a30a9cd59380",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/SalaryFormulaEvaluator.cs": {
+    "mtime": 1784894760.224109,
+    "ast_hash": "1a9841365c36e31e8c91f422030f581c",
     "semantic_hash": ""
   }
 }
