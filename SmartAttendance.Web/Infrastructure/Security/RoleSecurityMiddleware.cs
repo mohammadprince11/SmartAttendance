@@ -125,7 +125,8 @@ public class RoleSecurityMiddleware
         // ملاحظة: .NET يبصم اسم الملف (manifest.<hash>.webmanifest) فنطابق اللاحقة لا الاسم الحرفي.
         if (path.EndsWith(".webmanifest") ||
             path == "/sw.js" ||
-            path == "/offline.html")
+            path == "/offline.html" ||
+            path == "/app.apk")
         {
             return true;
         }

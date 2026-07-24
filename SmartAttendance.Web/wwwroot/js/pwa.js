@@ -2,10 +2,35 @@
 (function () {
   'use strict';
 
-  // 1) تسجيل الـService Worker.
+  // 1) تسجيل الـService Worker + تحديث تلقائي فوري (يمنع بقاء نسخة قديمة على التلفون).
   if ('serviceWorker' in navigator) {
+    var refreshing = false;
+    // عند تفعيل SW جديد يتحكّم بالصفحة، أعد التحميل مرة واحدة لتطبيق آخر نسخة.
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/sw.js').catch(function (err) {
+      navigator.serviceWorker.register('/sw.js').then(function (reg) {
+        // افحص وجود تحديث فوراً وكل مرة تُفتح فيها الصفحة.
+        reg.update();
+        function promote(worker) {
+          if (!worker) return;
+          worker.addEventListener('statechange', function () {
+            // نسخة جديدة جاهزة وهناك نسخة قديمة تتحكّم ⟶ فعّلها فوراً.
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+              worker.postMessage('SKIP_WAITING');
+            }
+          });
+        }
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          reg.waiting.postMessage('SKIP_WAITING');
+        }
+        promote(reg.installing);
+        reg.addEventListener('updatefound', function () { promote(reg.installing); });
+      }).catch(function (err) {
         console.warn('[PWA] تعذّر تسجيل الـService Worker:', err);
       });
     });

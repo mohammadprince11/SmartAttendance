@@ -27,6 +27,7 @@ public class IndexModel : PageModel
 
     public List<ApprovalRow> Requests { get; set; } = new();
     public Dictionary<int, ApprovalWorkflowEngine.FlowState> Flows { get; set; } = new();
+    public Dictionary<int, List<DataChangeRequestStore.ProposedField>> DataChanges { get; set; } = new();
 
     public string? Message { get; set; }
     public bool MessageIsError { get; set; }
@@ -48,6 +49,18 @@ public class IndexModel : PageModel
         var result = await ApprovalWorkflowEngine.ApproveAsync(_dbContext, id, ActorName(), Note);
         Message = result.Message;
         MessageIsError = !result.Ok;
+
+        // اعتماد نهائي لطلب تعديل بيانات → طبّق التعديلات على ملف الموظف.
+        if (result.FinalApproved)
+        {
+            var applied = await DataChangeRequestStore.ApplyIfDataChangeAsync(
+                _dbContext, id, ActorName(), HttpContext.Connection.RemoteIpAddress?.ToString());
+            if (applied)
+            {
+                Message = "تم اعتماد الطلب وتطبيق التعديلات على بيانات الموظف.";
+            }
+        }
+
         await LoadAsync();
         return Page();
     }
@@ -104,6 +117,12 @@ ORDER BY r.CreatedAt DESC;
                 Reason = HrmsDatabase.GetString(reader, "Reason"),
                 CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt")
             });
+
+        // فروقات طلبات تعديل البيانات (حقل: قديم → جديد) لعرضها للمُعتمِد.
+        var dataChangeIds = Requests
+            .Where(r => r.RequestType == DataChangeRequestStore.RequestTypeLabel)
+            .Select(r => r.Id).ToList();
+        DataChanges = await DataChangeRequestStore.ListFieldsForRequestsAsync(_dbContext, dataChangeIds);
 
         Flows = new Dictionary<int, ApprovalWorkflowEngine.FlowState>();
         foreach (var request in Requests)

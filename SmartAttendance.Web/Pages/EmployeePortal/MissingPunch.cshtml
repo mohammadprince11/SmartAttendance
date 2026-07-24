@@ -1,0 +1,92 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeePortal.MissingPunchModel
+@{
+    Layout = "_EmployeePortalLayout";
+    ViewData["Title"] = "طلب نسيان بصمة";
+}
+
+<section class="nxex-subpage" dir="rtl" data-nxex-page data-active-tab="requests">
+    <header class="nxex-subpage-head">
+        <a class="nxex-back-btn" href="/EmployeePortal?tab=requests" aria-label="رجوع">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </a>
+        <div>
+            <h1>طلب نسيان بصمة</h1>
+            <p>إن نسيت البصمة أو تعطّل الجهاز، وثّق البصمة الغائبة ليعتمدها المسؤول.</p>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="nxex-flash">@Model.StatusMessage</div>
+    }
+
+    <section class="nxex-card" id="nxex-missing-punch-card">
+        <form method="post" class="nxex-form" data-mp-form>
+            <div class="nxex-form-row">
+                <div class="nxex-field">
+                    <label>تاريخ البصمة *</label>
+                    @* كلندر البوابة (نفس صفحة طلب الإجازة) — يوم واحد *@
+                    <button type="button" class="nxex-date-trigger" data-open-datepicker data-dp-single-only>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+                        <span data-date-display class="is-placeholder">اختر التاريخ</span>
+                    </button>
+                    <input type="hidden" name="MpDate" data-dp-from data-mp-date />
+                    <input type="hidden" data-dp-to />
+                </div>
+                <div class="nxex-field">
+                    <label>وقت البصمة المفقودة *</label>
+                    <button type="button" class="nxex-date-trigger" data-open-timepicker>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                        <span data-time-display>--:--</span>
+                    </button>
+                    <input type="hidden" name="MpTime" data-tp-input data-mp-time />
+                </div>
+            </div>
+
+            @* معاينة حيّة: بصمات اليوم مرتّبة زمنياً مع تصنيف دخول/خروج تلقائي (لا اختيار يدوي). *@
+            <div class="nxex-mp-preview" data-mp-preview hidden>
+                <div class="nxex-mp-preview-head">بصمات هذا اليوم بعد الإضافة <small>(الدخول/الخروج يُحدَّد تلقائياً حسب ترتيب الوقت)</small></div>
+                <div class="nxex-mp-timeline" data-mp-timeline></div>
+                <div class="nxex-mp-hours" data-mp-hours hidden></div>
+                <div class="nxex-mp-note" data-mp-note></div>
+            </div>
+
+            <div class="nxex-field">
+                <label>السبب</label>
+                <textarea name="MpReason" placeholder="سبب غياب البصمة (نسيان، عطل جهاز...)"></textarea>
+            </div>
+            <button type="submit" class="nxex-leave-submit">إرسال طلب البصمة</button>
+        </form>
+    </section>
+
+    @if (Model.MyRequests.Any())
+    {
+        <section class="nxex-card">
+            <header class="nxex-card-head">
+                <div>
+                    <h2>طلبات بصمتي</h2>
+                    <p>متابعة طلبات البصمة المفقودة التي قدّمتها وحالتها.</p>
+                </div>
+                <span class="nxex-chip pending">@Model.MyRequests.Count</span>
+            </header>
+            <div class="nxex-request-timeline">
+                @foreach (var mp in Model.MyRequests)
+                {
+                    <article>
+                        <strong>@mp.PunchAt.ToString("yyyy-MM-dd HH:mm")</strong>
+                        <span>@mp.PunchTypeText · @mp.StatusText</span>
+                        @if (!string.IsNullOrWhiteSpace(mp.Reason)) { <small>@mp.Reason</small> }
+                    </article>
+                }
+            </div>
+        </section>
+    }
+
+    <partial name="_NxexPickers" />
+</section>
+
+@section Scripts {
+    <script src="~/js/nxex-missing-punch.js" asp-append-version="true"></script>
+    <script src="~/js/nxex-subpage-nav.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,42 @@
+@* منتقيا التاريخ/الوقت المخصّصان — يُضمَّنان في الصفحات المستقلة (نسيان البصمة/تعديل البيانات).
+   نفس ماركب Index تماماً ليعمل عليهما nxex-datepicker.js / nxex-timepicker.js. *@
+
+<div class="nxex-dp-backdrop" id="nxex-dp-backdrop" hidden></div>
+<div class="nxex-dp-sheet" id="nxex-dp-sheet" role="dialog" aria-label="اختر التاريخ" hidden>
+    <div class="nxex-more-handle"></div>
+    <h3>اختر التاريخ</h3>
+    <div class="nxex-dp-modes">
+        <button type="button" class="active" data-dp-mode="single">يوم واحد</button>
+        <button type="button" data-dp-mode="range">أيام متعددة</button>
+    </div>
+    <div class="nxex-dp-fields">
+        <div class="nxex-dp-field" data-dp-fieldbox="from" hidden><span>من تاريخ</span><strong data-dp-from-label>—</strong></div>
+        <div class="nxex-dp-field" data-dp-fieldbox="to" hidden><span>إلى تاريخ</span><strong data-dp-to-label>—</strong></div>
+        <div class="nxex-dp-field" data-dp-fieldbox="single"><span>تاريخ</span><strong data-dp-single-label>—</strong></div>
+    </div>
+    <div class="nxex-dp-cal">
+        <div class="nxex-dp-calhead">
+            <button type="button" data-dp-prev aria-label="السابق">‹</button>
+            <span data-dp-month></span>
+            <button type="button" data-dp-next aria-label="التالي">›</button>
+        </div>
+        <div class="nxex-dp-week"><span>أحد</span><span>إثنين</span><span>ثلاثاء</span><span>أربعاء</span><span>خميس</span><span>جمعة</span><span>سبت</span></div>
+        <div class="nxex-dp-grid" data-dp-grid></div>
+    </div>
+    <button type="button" class="nxex-dp-apply" data-dp-apply disabled>تطبيق</button>
+    <button type="button" class="nxex-dp-cancel" data-dp-cancel>إلغاء</button>
+</div>
+
+<div class="nxex-tp-backdrop nxex-dp-backdrop" id="nxex-tp-backdrop" hidden></div>
+<div class="nxex-tp-sheet" id="nxex-tp-sheet" role="dialog" aria-label="اختر الوقت" hidden>
+    <div class="nxex-more-handle"></div>
+    <h3>اختر الوقت</h3>
+    <div class="nxex-tp-preview"><strong data-tp-preview>--:--</strong></div>
+    <div class="nxex-tp-cols">
+        <div class="nxex-tp-colwrap"><span>ساعة</span><div class="nxex-tp-col" data-tp-hours></div></div>
+        <div class="nxex-tp-sep">:</div>
+        <div class="nxex-tp-colwrap"><span>دقيقة</span><div class="nxex-tp-col" data-tp-mins></div></div>
+    </div>
+    <button type="button" class="nxex-dp-apply" data-tp-apply disabled>تطبيق</button>
+    <button type="button" class="nxex-dp-cancel" data-tp-cancel>إلغاء</button>
+</div>

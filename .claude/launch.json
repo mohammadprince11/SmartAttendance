@@ -4,8 +4,9 @@
     {
       "name": "Web",
       "runtimeExecutable": "dotnet",
-      "runtimeArgs": ["run", "--project", "SmartAttendance.Web", "--urls", "http://localhost:5080"],
-      "port": 5080
+      "runtimeArgs": ["run", "--project", "SmartAttendance.Web", "--urls", "https://0.0.0.0:5443;http://0.0.0.0:5080"],
+      "port": 5080,
+      "url": "http://localhost:5080"
     },
     {
       "name": "API",

@@ -4,17 +4,15 @@
  *  - نداءات /api/ (بيانات شخصية): شبكة فقط — لا تُخزَّن أبداً.
  *  - الأصول الثابتة (css/js/lib/brand/الأيقونات): stale-while-revalidate.
  */
-const VERSION = 'v1';
+const VERSION = 'v7';
 const STATIC_CACHE = `sa-static-${VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
 const PRECACHE = [
   OFFLINE_URL,
   '/manifest.webmanifest',
-  '/css/nexora-employee-experience.css',
   '/brand/pwa/icon-192.png',
-  '/brand/pwa/icon-512.png',
-  '/brand/zynora-symbol.svg'
+  '/brand/pwa/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -60,17 +58,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // أصول ثابتة: قدّم من الكاش فوراً وحدّث بالخلفية.
+  // أصول ثابتة: الشبكة أولاً (أونلاين = دائماً أحدث نسخة)، والكاش بديلٌ عند انقطاع الشبكة.
   if (isStaticAsset(url)) {
     event.respondWith(
       caches.open(STATIC_CACHE).then((cache) =>
-        cache.match(req).then((cached) => {
-          const network = fetch(req).then((res) => {
-            if (res && res.status === 200) cache.put(req, res.clone());
-            return res;
-          }).catch(() => cached);
-          return cached || network;
-        })
+        fetch(req).then((res) => {
+          if (res && res.status === 200) cache.put(req, res.clone());
+          return res;
+        }).catch(() => cache.match(req))
       )
     );
   }

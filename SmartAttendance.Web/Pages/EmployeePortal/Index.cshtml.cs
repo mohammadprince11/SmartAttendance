@@ -39,6 +39,16 @@ public class IndexModel : PageModel
     /// <summary>آخر بصمات الموظف عبر الإنترنت (تأكيد فوري للبصم الذاتي).</summary>
     public List<OnlinePunchStore.OnlinePunch> MyOnlinePunches { get; private set; } = new();
 
+    /// <summary>الشهر المختار لعرض سجلات الحضور (yyyy-MM) — فارغ = الأحدث.</summary>
+    [BindProperty(SupportsGet = true)]
+    public string? AttMonth { get; set; }
+
+    /// <summary>الأشهر المتاحة بسجلات الحضور (للمنتقي) — (القيمة yyyy-MM، التسمية العربية).</summary>
+    public List<(string Value, string Label)> AttendanceMonths { get; private set; } = new();
+
+    /// <summary>أوقات بصم اليوم (ISO) — لعدّاد ساعات العمل الحيّ من أول بصمة.</summary>
+    public List<string> TodayPunchIso { get; private set; } = new();
+
     [BindProperty]
     public FeedbackInput Feedback { get; set; } = new();
 
@@ -435,16 +445,115 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             return RedirectToPage(new { tab = returnTab ?? "requests" });
         }
 
+        // النوع (دخول/خروج) يُشتَق تلقائياً بالأسبقية الزمنية بين بصمات اليوم الموجودة
+        // والبصمة المُضافة — لا اختيار يدوي (نمط كيان: الترتيب يحدّد الدلالة).
+        var existingTimes = await PunchTypingEngine.DayPunchTimesAsync(
+            _dbContext, employeeId, DateOnly.FromDateTime(punchAt.Value));
+        var derivedType = PunchTypingEngine.DeriveTypeFor(existingTimes, punchAt.Value);
+
         var (ok, message) = await MissingPunchRequestStore.SaveAsync(_dbContext, new MissingPunchRequestStore.Request
         {
             EmployeeId = employeeId,
             PunchAt = punchAt.Value,
-            PunchType = form["MpType"].ToString() == "Out" ? "Out" : "In",
+            PunchType = derivedType,
             Reason = string.IsNullOrWhiteSpace(form["MpReason"]) ? null : form["MpReason"].ToString().Trim(),
             Source = "خدمة ذاتية"
         }, User.Identity?.Name ?? "employee");
 
         StatusMessage = ok ? "تم إرسال طلب البصمة المفقودة وهو الآن قيد مراجعة الموارد البشرية." : message;
+        return RedirectToPage(new { tab = returnTab ?? "requests" });
+    }
+
+    /// <summary>
+    /// بصمات يوم الموظف (AJAX) — للمعاينة الحيّة بنموذج نسيان البصمة: يُرجِع أوقات البصم
+    /// الموجودة مصنَّفةً بالأسبقية (دخول/خروج) ليدمج المتصفح الوقت المُدخَل ويُعيد التصنيف.
+    /// </summary>
+    public async Task<IActionResult> OnGetDayPunchesAsync(string? date)
+    {
+        if (!DateOnly.TryParse(date, out var d))
+            return new JsonResult(new { punches = Array.Empty<object>() });
+
+        var employeeId = await ResolveEmployeeIdAsync();
+        if (employeeId <= 0)
+            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
+        if (employeeId <= 0)
+            return new JsonResult(new { punches = Array.Empty<object>() });
+
+        var times = await PunchTypingEngine.DayPunchTimesAsync(_dbContext, employeeId, d);
+        var typed = PunchTypingEngine.Derive(times);
+        return new JsonResult(new
+        {
+            punches = typed.Select(p => new { at = p.At.ToString("HH:mm"), type = p.Type }).ToArray()
+        });
+    }
+
+    /// <summary>
+    /// طلب «تعديل بياناتي»: يجمع الحقول التي غيّرها الموظف (new_&lt;key&gt;) ويقارنها
+    /// بالقيم الحالية، فيُنشئ طلب خدمة ذاتية يمرّ عبر لجنة الموافقة. لا يُطبَّق على
+    /// الملف إلا بعد الاعتماد النهائي (خلاف التعديل المباشر بشاشة «ملفي»).
+    /// </summary>
+    public async Task<IActionResult> OnPostSubmitDataChangeAsync(string? returnTab)
+    {
+        var employeeId = await ResolveEmployeeIdAsync();
+        if (employeeId <= 0)
+            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
+        if (employeeId <= 0)
+        {
+            StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";
+            return RedirectToPage(new { tab = returnTab ?? "requests" });
+        }
+
+        await DataChangeRequestStore.EnsureAsync(_dbContext);
+        var editable = await DataChangeRequestStore.ListEditableAsync(_dbContext, employeeId);
+
+        var proposed = new List<DataChangeRequestStore.ProposedField>();
+        foreach (var f in editable)
+        {
+            var raw = Request.Form[$"new_{f.Key}"].ToString();
+            if (string.IsNullOrWhiteSpace(raw)) continue;
+            proposed.Add(new DataChangeRequestStore.ProposedField
+            {
+                Key = f.Key,
+                OldValue = f.OldValue,
+                NewValue = raw.Trim()
+            });
+        }
+
+        if (proposed.Count == 0)
+        {
+            StatusMessage = "لم تُدخِل أي قيمة جديدة لتعديلها.";
+            return RedirectToPage(new { tab = returnTab ?? "requests" });
+        }
+
+        var reason = Request.Form["dcReason"].ToString();
+        reason = string.IsNullOrWhiteSpace(reason) ? "طلب تعديل بيانات من بوابة الموظف" : reason.Trim();
+
+        var requestId = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            """
+INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, Reason, Status)
+VALUES (@Emp, @Type, SYSUTCDATETIME(), @Reason, 'Pending');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Emp", employeeId);
+                HrmsDatabase.AddParameter(command, "@Type", DataChangeRequestStore.RequestTypeLabel);
+                HrmsDatabase.AddParameter(command, "@Reason", reason);
+            });
+
+        var saved = requestId > 0 ? await DataChangeRequestStore.SaveFieldsAsync(_dbContext, requestId, proposed) : 0;
+        if (saved == 0)
+        {
+            if (requestId > 0)
+                await HrmsDatabase.ExecuteAsync(_dbContext, "DELETE FROM SelfServiceRequests WHERE Id=@r",
+                    cmd => HrmsDatabase.AddParameter(cmd, "@r", requestId));
+            StatusMessage = "لم تُدخِل أي قيمة مختلفة عن الحالية.";
+            return RedirectToPage(new { tab = returnTab ?? "requests" });
+        }
+
+        await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, DataChangeRequestStore.RequestTypeLabel, employeeId);
+        StatusMessage = $"تم إرسال طلب تعديل البيانات ({saved} حقل) وهو الآن قيد المراجعة.";
         return RedirectToPage(new { tab = returnTab ?? "requests" });
     }
 
@@ -465,9 +574,11 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
 
         var type = punchType == "Out" ? "Out" : "In";
         var now = DateTime.Now;
-        await OnlinePunchStore.RecordAsync(_dbContext, employeeId, type, now, null);
+        var recordId = await OnlinePunchStore.RecordAsync(_dbContext, employeeId, type, now, null);
 
-        StatusMessage = $"سُجّلت بصمة {(type == "Out" ? "الانصراف" : "الحضور")} عبر الإنترنت الساعة {now:HH:mm} — تدخل الحضور عند «تحديث الحضور».";
+        StatusMessage = recordId > 0
+            ? $"سُجّلت بصمة {(type == "Out" ? "الانصراف" : "الحضور")} عبر الإنترنت الساعة {now:HH:mm} — تدخل الحضور عند «تحديث الحضور»."
+            : "تم تجاهل البصمة: سُجّلت بصمة مماثلة خلال أقل من دقيقة.";
         return RedirectToPage(new { tab = returnTab ?? "attendance" });
     }
 
@@ -494,7 +605,34 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         Announcements = await LoadAnnouncementsAsync(Employee);
         Polls = await LoadPollsAsync(Employee);
         Requests = await LoadRequestsAsync(employeeId);
+        // افتراضياً يُعرض الشهر الحالي (null = لم يُختَر بعد؛ "" = «أحدث السجلات» يدوياً).
+        AttMonth ??= DateTime.Today.ToString("yyyy-MM");
         Attendance = await LoadAttendanceAsync(employeeId);
+        AttendanceMonths = await LoadAttendanceMonthsAsync(employeeId);
+        // ملء أيام الغياب: كل يوم بالشهر المختار (حتى اليوم) بلا بصمة = غياب (والجمعة/السبت عطلة).
+        if (TryParseMonth(AttMonth, out var mStart, out var mEnd))
+        {
+            var have = Attendance.Where(a => a.AttendanceDate.HasValue)
+                                 .Select(a => a.AttendanceDate!.Value.Date).ToHashSet();
+            var last = mEnd.AddDays(-1);
+            if (last > DateTime.Today) last = DateTime.Today;
+            var fill = new List<EmployeePortalAttendance>();
+            for (var d = mStart; d <= last; d = d.AddDays(1))
+            {
+                if (have.Contains(d.Date)) continue;
+                var weekend = d.DayOfWeek is DayOfWeek.Friday or DayOfWeek.Saturday;
+                fill.Add(new EmployeePortalAttendance { AttendanceDate = d, Status = weekend ? "weekend" : "absence" });
+            }
+            Attendance = Attendance.Concat(fill).OrderByDescending(a => a.AttendanceDate).ToList();
+        }
+        // أوقات بصم اليوم لعدّاد ساعات العمل الحيّ.
+        try
+        {
+            var todayTimes = await PunchTypingEngine.DayPunchTimesAsync(
+                _dbContext, employeeId, DateOnly.FromDateTime(DateTime.Today));
+            TodayPunchIso = todayTimes.Select(t => t.ToString("yyyy-MM-ddTHH:mm:ss")).ToList();
+        }
+        catch { TodayPunchIso = new(); }
         Team = await LoadTeamAsync(Employee);
         FeedbackItems = await LoadFeedbackAsync(employeeId);
         PendingViolationReplies = await LoadPendingViolationRepliesAsync(employeeId);
@@ -527,11 +665,37 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             ReqCategories = new();
             ReqTypes = new();
         }
+
+        // حقول «تعديل بياناتي» + طلبات التعديل المعلّقة (لعرضها بتبويب الطلبات مع تعديل/حذف).
+        try
+        {
+            await DataChangeRequestStore.EnsureAsync(_dbContext);
+            DataChangeFields = await DataChangeRequestStore.ListEditableAsync(_dbContext, employeeId);
+            PendingDataChanges = await DataChangeRequestStore.ListPendingForEmployeeAsync(_dbContext, employeeId);
+        }
+        catch
+        {
+            DataChangeFields = new();
+            PendingDataChanges = new();
+        }
+    }
+
+    /// <summary>حذف طلب تعديل بيانات معلّق من تبويب الطلبات (لصاحبه فقط، قبل الاعتماد).</summary>
+    public async Task<IActionResult> OnPostDeleteDataChangeAsync(int id)
+    {
+        var employeeId = await ResolveEmployeeIdAsync();
+        if (employeeId <= 0)
+            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
+        var ok = await DataChangeRequestStore.DeletePendingRequestAsync(_dbContext, id, employeeId);
+        StatusMessage = ok ? "تم حذف طلب التعديل المعلّق." : "تعذّر الحذف (الطلب غير موجود أو تمّ البتّ فيه).";
+        return RedirectToPage(new { tab = "requests" });
     }
 
     public List<LeaveBalanceCalculator.TypeBalance> LeaveBalances { get; set; } = new();
     public List<RequestTypeStore.Category> ReqCategories { get; set; } = new();
     public List<RequestTypeStore.ReqType> ReqTypes { get; set; } = new();
+    public List<DataChangeRequestStore.ProposedField> DataChangeFields { get; set; } = new();
+    public List<DataChangeRequestStore.PendingRequest> PendingDataChanges { get; set; } = new();
 
     public static string LeaveTypeArabic(SmartAttendance.Domain.Enums.LeaveType type) => type switch
     {
@@ -732,6 +896,7 @@ SELECT TOP 1
     e.IsActive,
     ISNULL(d.Name, '') AS DepartmentName,
     ISNULL(b.Name, '') AS BranchName,
+    ISNULL(e.PhotoPath, '') AS PhotoPath,
     '' AS ManagerName
 FROM Employees e
 LEFT JOIN Departments d ON e.DepartmentId = d.Id
@@ -753,6 +918,7 @@ WHERE e.Id = @EmployeeId;
                 IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
                 DepartmentName = HrmsDatabase.GetString(reader, "DepartmentName"),
                 BranchName = HrmsDatabase.GetString(reader, "BranchName"),
+                PhotoPath = HrmsDatabase.GetString(reader, "PhotoPath"),
                 ManagerName = HrmsDatabase.GetString(reader, "ManagerName")
             });
 
@@ -921,21 +1087,49 @@ ORDER BY CreatedAt DESC, Id DESC;
 
     private async Task<List<EmployeePortalAttendance>> LoadAttendanceAsync(int employeeId)
     {
+        // شهر محدَّد (yyyy-MM) ⟶ كل سجلات ذلك الشهر؛ وإلا أحدث 30 سجلاً.
+        var hasMonth = TryParseMonth(AttMonth, out var monthStart, out var monthEnd);
+        // تجميع صارم: صف واحد لكل يوم (أول دخول = أدنى وقت، آخر خروج = أعلى وقت) — يمنع
+        // تكرار اليوم حين تتعدّد بصمات نفس التاريخ. آخر نشاط = MAX(CheckOut المُشتَق).
+        var sql = hasMonth
+            ? """
+SELECT AttendanceDate,
+       MIN(CheckIn) AS CheckIn,
+       MAX(CASE WHEN CheckOut IS NOT NULL THEN CheckOut ELSE CheckIn END) AS CheckOut,
+       CAST(COUNT(*) AS nvarchar(50)) AS Status,
+       '' AS Source, '' AS Notes
+FROM AttendanceRecords
+WHERE EmployeeId = @EmployeeId AND ISNULL(IsDeleted,0) = 0
+      AND AttendanceDate >= @From AND AttendanceDate < @To
+GROUP BY AttendanceDate
+ORDER BY AttendanceDate DESC;
+"""
+            : """
+SELECT TOP 30 AttendanceDate, CheckIn, CheckOut, Status, Source, Notes FROM (
+    SELECT AttendanceDate,
+           MIN(CheckIn) AS CheckIn,
+           MAX(CheckOut) AS CheckOut,
+           CAST(COUNT(*) AS nvarchar(50)) AS Status,
+           '' AS Source, '' AS Notes
+    FROM AttendanceRecords
+    WHERE EmployeeId = @EmployeeId AND ISNULL(IsDeleted,0) = 0
+    GROUP BY AttendanceDate
+) d
+ORDER BY AttendanceDate DESC;
+""";
+
         return await HrmsDatabase.QueryAsync(
             _dbContext,
-            """
-SELECT TOP 20
-    AttendanceDate,
-    CheckIn,
-    CheckOut,
-    CAST(ISNULL(Status, '') AS nvarchar(50)) AS Status,
-    CAST(ISNULL(Source, '') AS nvarchar(50)) AS Source,
-    ISNULL(Notes, '') AS Notes
-FROM AttendanceRecords
-WHERE EmployeeId = @EmployeeId
-ORDER BY AttendanceDate DESC, Id DESC;
-""",
-            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            sql,
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                if (hasMonth)
+                {
+                    HrmsDatabase.AddParameter(command, "@From", monthStart);
+                    HrmsDatabase.AddParameter(command, "@To", monthEnd);
+                }
+            },
             reader => new EmployeePortalAttendance
             {
                 AttendanceDate = HrmsDatabase.GetDateTime(reader, "AttendanceDate"),
@@ -945,6 +1139,36 @@ ORDER BY AttendanceDate DESC, Id DESC;
                 Source = HrmsDatabase.GetString(reader, "Source"),
                 Notes = HrmsDatabase.GetString(reader, "Notes")
             });
+    }
+
+    /// <summary>الأشهر المتوفّرة بسجلات الحضور (أحدث 12) للمنتقي.</summary>
+    private async Task<List<(string, string)>> LoadAttendanceMonthsAsync(int employeeId)
+    {
+        var arMonths = new[] { "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+                               "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر" };
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT DISTINCT TOP 12 YEAR(AttendanceDate) AS Y, MONTH(AttendanceDate) AS M
+FROM AttendanceRecords WHERE EmployeeId = @EmployeeId
+ORDER BY Y DESC, M DESC;
+""",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => (Y: HrmsDatabase.GetInt(reader, "Y"), M: HrmsDatabase.GetInt(reader, "M")));
+
+        return rows.Select(r => ($"{r.Y:0000}-{r.M:00}", $"{arMonths[r.M - 1]} {r.Y}")).ToList();
+    }
+
+    private static bool TryParseMonth(string? value, out DateTime start, out DateTime end)
+    {
+        start = default; end = default;
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        var parts = value.Split('-');
+        if (parts.Length != 2 || !int.TryParse(parts[0], out var y) || !int.TryParse(parts[1], out var m)
+            || m < 1 || m > 12) return false;
+        start = new DateTime(y, m, 1);
+        end = start.AddMonths(1);
+        return true;
     }
 
     private async Task<List<EmployeePortalTeamMember>> LoadTeamAsync(EmployeePortalEmployee employee)
@@ -1125,6 +1349,7 @@ ORDER BY CreatedAt DESC, Id DESC;
         public bool IsActive { get; init; }
         public string DepartmentName { get; init; } = string.Empty;
         public string BranchName { get; init; } = string.Empty;
+        public string PhotoPath { get; init; } = string.Empty;
         public string ManagerName { get; init; } = string.Empty;
     }
 

@@ -17,7 +17,14 @@
         </div>
 
         <div class="nxex-identity-card">
-            <div class="nxex-avatar">@Model.Initials</div>
+            @if (!string.IsNullOrWhiteSpace(emp.PhotoPath))
+            {
+                <div class="nxex-avatar has-photo"><img src="@emp.PhotoPath" alt="@emp.FullName" onerror="this.remove()" /></div>
+            }
+            else
+            {
+                <div class="nxex-avatar">@Model.Initials</div>
+            }
             <div>
                 <strong>@emp.FullName</strong>
                 <span>@Model.DisplayValue(emp.Position)</span>
@@ -192,16 +199,6 @@
                 </section>
 
                 <aside class="nxex-smart-rail">
-                    <article class="nxex-card">
-                        <header class="nxex-card-head compact"><h2>المهام المطلوبة</h2><span class="nxex-chip pending">اليوم</span></header>
-                        <div class="nxex-action-list">
-                            <button type="button" data-nxex-jump="pulse">التصويت على الاستبيانات</button>
-                            <button type="button" data-nxex-jump="attendance">مراجعة الحضور</button>
-                            <button type="button" data-nxex-jump="requests">متابعة الطلبات</button>
-                            <button type="button" data-nxex-jump="feedback">إرسال مقترح</button>
-                        </div>
-                    </article>
-
                     <article class="nxex-card nxex-ai-card">
                         <span>HR INSIGHT</span>
                         <strong>@Model.EmployeeInsight</strong>
@@ -215,7 +212,14 @@
             <div class="nxex-profile-grid">
                 <aside class="nxex-profile-card">
                     <div class="nxex-profile-cover"></div>
-                    <div class="nxex-avatar big">@Model.Initials</div>
+                    @if (!string.IsNullOrWhiteSpace(emp.PhotoPath))
+                    {
+                        <div class="nxex-avatar big has-photo"><img src="@emp.PhotoPath" alt="@emp.FullName" onerror="this.remove()" /></div>
+                    }
+                    else
+                    {
+                        <div class="nxex-avatar big">@Model.Initials</div>
+                    }
                     <h2>@emp.FullName</h2>
                     <p>@Model.DisplayValue(emp.Position)</p>
                     <div class="nxex-profile-meta">
@@ -261,74 +265,114 @@
                     </div>
                     <span class="nxex-chip live">🌐</span>
                 </header>
-                <div style="display:flex;gap:10px;flex-wrap:wrap">
-                    <form method="post" asp-page-handler="OnlinePunch" style="flex:1;min-width:160px">
+                <div class="nxex-punch-btns">
+                    <form method="post" asp-page-handler="OnlinePunch">
                         <input type="hidden" name="returnTab" value="attendance" />
                         <input type="hidden" name="punchType" value="In" />
-                        <button type="submit" style="width:100%">🔓 تسجيل حضور الآن</button>
+                        <button type="submit" class="nxex-punch-btn in">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5M15 12H3"/></svg>
+                            تسجيل حضور الآن
+                        </button>
                     </form>
-                    <form method="post" asp-page-handler="OnlinePunch" style="flex:1;min-width:160px">
+                    <form method="post" asp-page-handler="OnlinePunch">
                         <input type="hidden" name="returnTab" value="attendance" />
                         <input type="hidden" name="punchType" value="Out" />
-                        <button type="submit" style="width:100%">🚪 تسجيل انصراف الآن</button>
+                        <button type="submit" class="nxex-punch-btn out">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+                            تسجيل انصراف الآن
+                        </button>
                     </form>
                 </div>
+
+                @* ===== عدّاد ساعات العمل الحيّ (من أول بصمة اليوم) ===== *@
+                <div class="nxex-workclock" data-workclock='@Json.Serialize(Model.TodayPunchIso)' hidden>
+                    <div class="nxex-workclock-label">⏱ ساعات العمل اليوم <small data-wc-since></small></div>
+                    <div class="nxex-workclock-time" data-wc-time>00:00:00</div>
+                    <div class="nxex-workclock-state" data-wc-state></div>
+                </div>
+
                 @if (Model.MyOnlinePunches.Any())
                 {
-                    <div class="nxex-table-wrap" style="margin-top:14px">
-                        <table class="nxex-table">
-                            <thead><tr><th>النوع</th><th>الوقت</th><th>الدلالة</th></tr></thead>
-                            <tbody>
-                                @foreach (var p in Model.MyOnlinePunches.Take(8))
-                                {
-                                    <tr>
-                                        <td><span class="nxex-chip @(p.PunchType == "Out" ? "" : "live")">@p.PunchTypeText</span></td>
-                                        <td>@p.PunchAt.ToString("yyyy-MM-dd HH:mm")</td>
-                                        <td>@p.SemanticName</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                    <div class="nxex-punch-list">
+                        @foreach (var p in Model.MyOnlinePunches.Take(8))
+                        {
+                            <div class="nxex-punch-row @(p.PunchType == "Out" ? "out" : "in")">
+                                <span class="nxex-punch-badge">@(p.PunchType == "Out" ? "خروج" : "دخول")</span>
+                                <span class="nxex-punch-time">@p.PunchAt.ToString("yyyy-MM-dd HH:mm")</span>
+                                <span class="nxex-punch-sem">@p.SemanticName</span>
+                            </div>
+                        }
                     </div>
                 }
             </section>
-            <div class="nxex-grid-2">
-                <section class="nxex-card">
-                    <header class="nxex-card-head">
-                        <div><h2>ملخص الحضور</h2><p>قراءة سريعة من سجلات الحضور.</p></div>
-                        <span class="nxex-chip">@Model.Attendance.Count سجل</span>
-                    </header>
-                    <div class="nxex-attendance-summary">
-                        <article><strong>@Model.CompletedAttendanceCount</strong><span>بصمة مكتملة</span></article>
-                        <article><strong>@Model.MissingCheckoutCount</strong><span>خروج غير مكتمل</span></article>
-                        <article><strong>@Model.LastAttendanceText</strong><span>آخر يوم مسجل</span></article>
-                    </div>
-                </section>
 
-                <section class="nxex-card">
-                    <header class="nxex-card-head"><h2>آخر سجلات الحضور</h2></header>
-                    <div class="nxex-table-wrap">
-                        <table class="nxex-table">
-                            <thead><tr><th>التاريخ</th><th>دخول</th><th>خروج</th><th>الحالة</th></tr></thead>
-                            <tbody>
-                            @if (Model.Attendance.Count == 0)
+            <section class="nxex-card" style="margin-bottom:16px">
+                <header class="nxex-card-head">
+                    <div><h2>ملخص الحضور</h2><p>قراءة سريعة من سجلات الحضور.</p></div>
+                    <span class="nxex-chip">@Model.Attendance.Count سجل</span>
+                </header>
+                <div class="nxex-attendance-summary">
+                    <article><strong>@Model.CompletedAttendanceCount</strong><span>بصمة مكتملة</span></article>
+                    <article><strong>@Model.MissingCheckoutCount</strong><span>خروج غير مكتمل</span></article>
+                    <article><strong>@Model.LastAttendanceText</strong><span>آخر يوم مسجل</span></article>
+                </div>
+            </section>
+
+            <section class="nxex-card">
+                <header class="nxex-card-head">
+                    <div><h2>سجلات الحضور</h2><p>الدخول والخروج لكل يوم.</p></div>
+                    @if (Model.AttendanceMonths.Any())
+                    {
+                        <form method="get" class="nxex-month-filter">
+                            <input type="hidden" name="tab" value="attendance" />
+                            <select name="AttMonth" class="nxex-select" onchange="this.form.submit()">
+                                <option value="">أحدث السجلات</option>
+                                @foreach (var (val, lbl) in Model.AttendanceMonths)
+                                {
+                                    <option value="@val" selected="@(Model.AttMonth == val)">@lbl</option>
+                                }
+                            </select>
+                        </form>
+                    }
+                </header>
+                <div class="nxex-att-list">
+                    @if (Model.Attendance.Count == 0)
+                    {
+                        <div class="nxex-att-empty">لا توجد سجلات حضور لهذه الفترة.</div>
+                    }
+                    @foreach (var row in Model.Attendance)
+                    {
+                        var absent = !row.CheckIn.HasValue;
+                        var weekend = row.Status == "weekend";
+                        var complete = row.CheckIn.HasValue && row.CheckOut.HasValue && row.CheckOut.Value > row.CheckIn.Value;
+                        var dur = complete ? (row.CheckOut!.Value - row.CheckIn!.Value) : TimeSpan.Zero;
+                        <div class="nxex-att-row nxex-att-wide @(absent ? (weekend ? "is-weekend" : "is-absent") : "")">
+                            <div class="nxex-att-toprow">
+                                <div class="nxex-att-date">@Model.DisplayDate(row.AttendanceDate)</div>
+                                @if (absent)
+                                {
+                                    <span class="nxex-att-badge @(weekend ? "wk" : "ab")">@(weekend ? "عطلة" : "غياب")</span>
+                                }
+                                else
+                                {
+                                    <div class="nxex-att-io">
+                                        <span class="nxex-att-in"><em>دخول</em><b>@Model.DisplayTime(row.CheckIn)</b></span>
+                                        <span class="nxex-att-out"><em>خروج</em><b>@(complete ? Model.DisplayTime(row.CheckOut) : "—")</b></span>
+                                    </div>
+                                }
+                            </div>
+                            @if (complete)
                             {
-                                <tr><td colspan="4">لا توجد سجلات حضور.</td></tr>
+                                <div class="nxex-att-status">⏱ ساعات العمل: <span class="h">@((int)dur.TotalHours)س @(dur.Minutes)د</span></div>
                             }
-                            @foreach (var row in Model.Attendance.Take(10))
+                            else if (!absent)
                             {
-                                <tr>
-                                    <td>@Model.DisplayDate(row.AttendanceDate)</td>
-                                    <td>@Model.DisplayTime(row.CheckIn)</td>
-                                    <td>@Model.DisplayTime(row.CheckOut)</td>
-                                    <td><span class="nxex-chip">@Model.DisplayValue(row.Status)</span></td>
-                                </tr>
+                                <div class="nxex-att-status incomplete">⚠ <span class="h">خروج ناقص — نسيان بصمة</span></div>
                             }
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-            </div>
+                        </div>
+                    }
+                </div>
+            </section>
         </section>
 
         <section class="nxex-pane" data-nxex-pane="compensation">
@@ -361,6 +405,42 @@
 
         <section class="nxex-pane" data-nxex-pane="requests">
             <div class="nxex-request-studio">
+                @if (Model.PendingDataChanges.Any())
+                {
+                    <section class="nxex-card">
+                        <header class="nxex-card-head">
+                            <div>
+                                <h2>طلبات تعديل بيانات معلّقة</h2>
+                                <p>قيد مراجعة الموارد البشرية — عدّلها أو احذفها قبل الاعتماد.</p>
+                            </div>
+                            <span class="nxex-chip pending">@Model.PendingDataChanges.Count</span>
+                        </header>
+                        @foreach (var req in Model.PendingDataChanges)
+                        {
+                            <div class="nxex-dc-pending">
+                                <div class="nxex-dc-pending-diffs">
+                                    @foreach (var f in req.Fields)
+                                    {
+                                        <div class="apv-diff-row">
+                                            <b>@f.Label:</b>
+                                            <span class="apv-diff-old">@(string.IsNullOrWhiteSpace(f.OldValue) ? "—" : f.OldValue)</span>
+                                            →
+                                            <span class="apv-diff-new">@(string.IsNullOrWhiteSpace(f.NewValue) ? "—" : f.NewValue)</span>
+                                        </div>
+                                    }
+                                    <small class="nxex-dc-current">@req.CreatedAt.ToString("yyyy-MM-dd HH:mm") · @(string.IsNullOrWhiteSpace(req.CurrentStep) ? "قيد المراجعة" : req.CurrentStep)</small>
+                                </div>
+                                <div class="nxex-dc-pending-actions">
+                                    <a class="nxex-dc-edit" href="/EmployeePortal/DataChange?edit=@req.Id">تعديل</a>
+                                    <form method="post" asp-page-handler="DeleteDataChange" onsubmit="return confirm('حذف طلب التعديل المعلّق؟');">
+                                        <input type="hidden" name="id" value="@req.Id" />
+                                        <button type="submit" class="nxex-dc-del">حذف</button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    </section>
+                }
                 <section class="nxex-card nxex-request-create">
                     <header class="nxex-card-head">
                         <div>
@@ -403,43 +483,6 @@
                         <textarea asp-for="RequestInput.Reason" placeholder="اكتب تفاصيل الطلب هنا..."></textarea>
 
                         <button type="submit">إرسال الطلب للموارد البشرية</button>
-                    </form>
-                </section>
-
-                @* ===== طلب بصمة مفقودة مُهيكل (يصل لصفحة إدارة طلبات البصمة) ===== *@
-                <section class="nxex-card" id="nxex-missing-punch-card">
-                    <header class="nxex-card-head">
-                        <div>
-                            <h2>طلب بصمة مفقودة</h2>
-                            <p>إن نسيت البصمة أو تعطّل الجهاز، وثّق البصمة الغائبة (دخول/خروج) لتعتمدها الموارد البشرية.</p>
-                        </div>
-                        <span class="nxex-chip live">👆</span>
-                    </header>
-                    <form method="post" asp-page-handler="SubmitMissingPunch" class="nxex-form">
-                        <input type="hidden" name="returnTab" value="requests" />
-                        <div class="nxex-form-row">
-                            <div>
-                                <label>تاريخ البصمة *</label>
-                                <input type="date" name="MpDate" required />
-                            </div>
-                            <div>
-                                <label>وقت البصمة *</label>
-                                <input type="time" name="MpTime" required />
-                            </div>
-                        </div>
-                        <div class="nxex-form-row">
-                            <div>
-                                <label>نوع البصمة *</label>
-                                <select name="MpType">
-                                    <option value="In">ختم دخول</option>
-                                    <option value="Out">ختم خروج</option>
-                                </select>
-                            </div>
-                            <div></div>
-                        </div>
-                        <label>السبب</label>
-                        <textarea name="MpReason" placeholder="سبب غياب البصمة (نسيان، عطل جهاز...)"></textarea>
-                        <button type="submit">إرسال طلب البصمة</button>
                     </form>
                 </section>
 
@@ -821,10 +864,14 @@
                     <span>إجازة</span>
                 </button>
             }
-            <button type="button" class="nxex-more-item" data-nxex-tab="requests" data-scroll-target="#nxex-missing-punch-card">
+            <a class="nxex-more-item" href="/EmployeePortal/MissingPunch">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3m0 0 2 2m-2-2-2 2M7 8a5 5 0 0 1 10 0c0 2-1 3-1 5"/><circle cx="12" cy="12" r="9"/></svg>
                 <span>نسيان بصمة</span>
-            </button>
+            </a>
+            <a class="nxex-more-item" href="/EmployeePortal/DataChange">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                <span>تعديل بياناتي</span>
+            </a>
             @foreach (var cat in Model.ReqCategories.Where(c => c.IsPickerEntry))
             {
                 <button type="button" class="nxex-more-item" data-open-cat="cat-@cat.Id">

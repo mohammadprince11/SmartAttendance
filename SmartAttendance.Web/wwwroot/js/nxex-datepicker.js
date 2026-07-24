@@ -106,11 +106,15 @@
   const lock = (on) => { document.documentElement.classList.toggle('nxex-scroll-lock', on); document.body.classList.toggle('nxex-scroll-lock', on); };
   function open(trigger) {
     ctx = (trigger && trigger.closest('form')) || document;
+    // منتقٍ ليوم واحد فقط (نسيان بصمة / تاريخ الميلاد): يخفي مبدّل «أيام متعددة».
+    const singleOnly = !!(trigger && trigger.hasAttribute('data-dp-single-only'));
+    const modesBar = sheet.querySelector('.nxex-dp-modes');
+    if (modesBar) modesBar.style.display = singleOnly ? 'none' : '';
     // ابدأ من القيم الحالية إن وُجدت
     const fEl = ctx.querySelector('[data-dp-from]'), tEl = ctx.querySelector('[data-dp-to]');
     from = parse(fEl && fEl.value); to = parse(tEl && tEl.value);
     if (from) { view = new Date(from.getFullYear(), from.getMonth(), 1); }
-    setMode(from && to && !same(from, to) ? 'range' : 'single');
+    setMode(singleOnly ? 'single' : (from && to && !same(from, to) ? 'range' : 'single'));
     sheet.hidden = false; backdrop.hidden = false; lock(true);
     setTimeout(() => { sheet.classList.add('open'); backdrop.classList.add('open'); }, 10);
   }

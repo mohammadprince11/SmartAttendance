@@ -1,0 +1,164 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeePortal.DataChangeModel
+@{
+    Layout = "_EmployeePortalLayout";
+    ViewData["Title"] = "طلب تعديل بياناتي";
+    var photoFallback = Url.Content("~/brand/employee-photo-placeholder.svg");
+    var photoSrc = string.IsNullOrWhiteSpace(Model.CurrentPhotoPath) ? photoFallback : Model.CurrentPhotoPath;
+
+    string ValLabel(string key, string? val)
+    {
+        if (string.IsNullOrWhiteSpace(val)) return "—";
+        if (Model.Options.TryGetValue(key, out var opts))
+        {
+            var m = opts.FirstOrDefault(o => string.Equals(o.Value, val, StringComparison.OrdinalIgnoreCase));
+            if (m != null) return m.Label;
+        }
+        return val!;
+    }
+    string CurrentLabel(SmartAttendance.Web.Infrastructure.Hrms.DataChangeRequestStore.ProposedField f) => ValLabel(f.Key, f.OldValue);
+    string Pref(string key) => Model.Prefill.TryGetValue(key, out var v) ? (v ?? "") : "";
+    var editing = Model.EditId > 0;
+}
+
+<section class="nxex-subpage" dir="rtl" data-nxex-page data-active-tab="requests">
+    <header class="nxex-subpage-head">
+        <a class="nxex-back-btn" href="/EmployeePortal?tab=requests" aria-label="رجوع">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </a>
+        <div>
+            <h1>طلب تعديل بياناتي</h1>
+            <p>اطلب تعديل بياناتك الشخصية أو صورتك. لن يُطبَّق التغيير على ملفك إلا بعد اعتماد الموارد البشرية.</p>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="nxex-flash">@Model.StatusMessage</div>
+    }
+
+    @* ===== الطلبات المعلّقة (قيد المراجعة) — تعديل أو حذف قبل الاعتماد ===== *@
+    @if (Model.PendingRequests.Any())
+    {
+        <section class="nxex-card">
+            <header class="nxex-card-head">
+                <div>
+                    <h2>طلبات تعديل معلّقة</h2>
+                    <p>قيد مراجعة الموارد البشرية — يمكنك تعديلها أو حذفها قبل الاعتماد.</p>
+                </div>
+                <span class="nxex-chip pending">@Model.PendingRequests.Count</span>
+            </header>
+            @foreach (var req in Model.PendingRequests)
+            {
+                <div class="nxex-dc-pending">
+                    <div class="nxex-dc-pending-diffs">
+                        @foreach (var f in req.Fields)
+                        {
+                            <div class="apv-diff-row">
+                                <b>@f.Label:</b>
+                                <span class="apv-diff-old">@ValLabel(f.Key, f.OldValue)</span>
+                                →
+                                <span class="apv-diff-new">@ValLabel(f.Key, f.NewValue)</span>
+                            </div>
+                        }
+                        <small class="nxex-dc-current">@req.CreatedAt.ToString("yyyy-MM-dd HH:mm") · @(string.IsNullOrWhiteSpace(req.CurrentStep) ? "قيد المراجعة" : req.CurrentStep)</small>
+                    </div>
+                    <div class="nxex-dc-pending-actions">
+                        <a class="nxex-dc-edit" href="/EmployeePortal/DataChange?edit=@req.Id">تعديل</a>
+                        <form method="post" asp-page-handler="Delete" onsubmit="return confirm('حذف طلب التعديل المعلّق؟');">
+                            <input type="hidden" name="id" value="@req.Id" />
+                            <button type="submit" class="nxex-dc-del">حذف</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </section>
+    }
+
+    @if (editing)
+    {
+        <div class="nxex-flash" style="border-color:rgba(25,211,224,.4);background:rgba(25,211,224,.1);color:#bfeef3">
+            تعديل طلب معلّق — الإرسال يستبدل الطلب السابق.
+            <a href="/EmployeePortal/DataChange" style="color:#19d3e0;font-weight:900">إلغاء التعديل</a>
+        </div>
+    }
+
+    <section class="nxex-card">
+        @if (Model.Fields.Any())
+        {
+            <form method="post" class="nxex-form" enctype="multipart/form-data">
+                <input type="hidden" name="editId" value="@Model.EditId" />
+                @* ===== الصورة الشخصية ===== *@
+                <div class="nxex-dc-photo">
+                    <img data-dc-photo-preview src="@photoSrc" alt="الصورة الشخصية"
+                         onerror="this.onerror=null;this.src='@photoFallback';" />
+                    <div class="nxex-dc-photo-actions">
+                        <button type="button" class="nxex-dc-photo-btn" id="dcPhotoBtn">تغيير الصورة</button>
+                        <input type="file" id="dcPhotoInput" name="EmployeePhoto" accept="image/png,image/jpeg,image/webp" hidden data-dc-photo-input />
+                        <small data-dc-photo-name>JPG/PNG/WEBP · حتى 5MB</small>
+                    </div>
+                </div>
+
+                <p class="nxex-dc-hint">اترك الحقل فارغاً إن لم ترغب بتعديله.</p>
+
+                @foreach (var f in Model.Fields.Where(x => x.Kind != "photo"))
+                {
+                    <div class="nxex-field">
+                        <label>@f.Label <small class="nxex-dc-current">(الحالي: @CurrentLabel(f))</small></label>
+
+                        @if (f.Kind == "date")
+                        {
+                            @* كلندر البوابة (نفس صفحة طلب الإجازة) — يوم واحد *@
+                            var dv = Pref(f.Key);
+                            <button type="button" class="nxex-date-trigger" data-open-datepicker data-dp-single-only>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+                                <span data-date-display class="@(string.IsNullOrWhiteSpace(dv) ? "is-placeholder" : "")">@(string.IsNullOrWhiteSpace(dv) ? "اختر التاريخ الجديد" : dv)</span>
+                            </button>
+                            <input type="hidden" name="new_@f.Key" data-dp-from value="@dv" />
+                            <input type="hidden" data-dp-to value="@dv" />
+                        }
+                        else if (f.Kind == "select")
+                        {
+                            @* قائمة النظام (nexora-select-system يُفعّل أي select) *@
+                            var sel = Pref(f.Key);
+                            <select name="new_@f.Key" class="nxr-native-select">
+                                <option value="">— لا تغيير —</option>
+                                @if (Model.Options.TryGetValue(f.Key, out var opts))
+                                {
+                                    @foreach (var o in opts)
+                                    {
+                                        <option value="@o.Value" selected="@(string.Equals(o.Value, sel, StringComparison.OrdinalIgnoreCase))">@o.Label</option>
+                                    }
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            var inputType = f.Kind == "email" ? "email" : f.Kind == "tel" ? "tel" : "text";
+                            <input type="@inputType" name="new_@f.Key" placeholder="القيمة الجديدة" value="@Pref(f.Key)" />
+                        }
+                    </div>
+                }
+
+                <div class="nxex-field">
+                    <label>سبب التعديل (اختياري)</label>
+                    <textarea name="dcReason" placeholder="مثال: تغيّر رقم الهاتف / تحديث العنوان"></textarea>
+                </div>
+                <button type="submit" class="nxex-leave-submit">@(editing ? "حفظ التعديل (استبدال الطلب)" : "إرسال طلب التعديل")</button>
+            </form>
+        }
+        else
+        {
+            <p class="nxex-dc-hint">لا توجد حقول متاحة للتعديل حالياً.</p>
+        }
+    </section>
+
+    <partial name="_NxexPickers" />
+</section>
+
+@section Scripts {
+    <link rel="stylesheet" href="~/css/nexora-select-system.css" asp-append-version="true" />
+    <script src="~/js/nxex-datachange.js" asp-append-version="true"></script>
+    <script src="~/js/nexora-select-system.js" asp-append-version="true"></script>
+    <script src="~/js/nxex-subpage-nav.js" asp-append-version="true"></script>
+}

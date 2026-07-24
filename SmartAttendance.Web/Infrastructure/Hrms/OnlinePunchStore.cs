@@ -29,11 +29,34 @@ public static class OnlinePunchStore
         public string PunchTypeText => PunchType == "Out" ? "ختم خروج" : "ختم دخول";
     }
 
-    /// <summary>تسجيل بصمة عبر الإنترنت (بصم ذاتي). يرجع معرّف السجل.</summary>
+    /// <summary>نافذة منع التكرار (ثوانٍ): بصمتان أونلاين خلالها = ضغطة مكرّرة تُرفَض.</summary>
+    public const int DebounceSeconds = 60;
+
+    /// <summary>
+    /// تسجيل بصمة عبر الإنترنت (بصم ذاتي). يرجع معرّف السجل، أو 0 إن رُفضت لأنها
+    /// مكرّرة خلال <see cref="DebounceSeconds"/> ثانية من بصمة سابقة (قاعدة صارمة تمنع
+    /// إغراق يوم واحد ببصمات متطابقة متلاحقة).
+    /// </summary>
     public static async Task<int> RecordAsync(
         ApplicationDbContext db, int employeeId, string punchType, DateTime punchAt, int? semanticId)
     {
         await HrmsDatabase.EnsureCreatedAsync(db);
+
+        // قاعدة صارمة: ارفض بصمة أونلاين مكرّرة خلال نافذة قصيرة (نقرة مزدوجة/شبكة بطيئة).
+        var recent = await HrmsDatabase.ScalarAsync<int>(
+            db,
+            $"""
+SELECT COUNT(1) FROM AttendanceRecords
+WHERE EmployeeId = @Emp AND Source = @Src AND ISNULL(IsDeleted, 0) = 0
+      AND ABS(DATEDIFF(second, CheckIn, @At)) < {DebounceSeconds};
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Emp", employeeId);
+                HrmsDatabase.AddParameter(command, "@Src", MobileSource);
+                HrmsDatabase.AddParameter(command, "@At", punchAt);
+            });
+        if (recent > 0) return 0;
 
         var attendanceSemanticId = await PunchSemanticStore.AttendanceSemanticIdAsync(db);
         // دلالة الحضور تُخزَّن NULL (يقرأها المحلل)؛ غيرها كبصمة أخرى بمعرّف الدلالة.

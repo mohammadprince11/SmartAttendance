@@ -14,6 +14,11 @@
     .apv-step.current { border-color: rgba(18,217,227,.6); color: #12D9E3; opacity: 1; box-shadow: 0 0 0 1px rgba(18,217,227,.25); }
     .apv-step.rejected { border-color: rgba(248,113,113,.6); color: #f87171; opacity: 1; }
     .apv-template { font-size: 11px; opacity: .7; display: block; margin-top: 2px; }
+    .apv-diff { display: flex; flex-direction: column; gap: 3px; text-align: start; }
+    .apv-diff-row { font-size: 11px; font-weight: 700; }
+    .apv-diff-row b { color: #12D9E3; }
+    .apv-diff-old { color: #f87171; text-decoration: line-through; opacity: .8; }
+    .apv-diff-new { color: #4ade80; }
 </style>
 
 <div class="hrms-page">
@@ -72,7 +77,26 @@
                             <td>@request.EmployeeNo</td>
                             <td class="text-start">@request.EmployeeName</td>
                             <td>@request.RequestType</td>
-                            <td>@request.FromDate?.ToString("yyyy-MM-dd") - @request.ToDate?.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                @if (Model.DataChanges.TryGetValue(request.Id, out var diffs))
+                                {
+                                    <div class="apv-diff">
+                                        @foreach (var d in diffs)
+                                        {
+                                            <div class="apv-diff-row">
+                                                <b>@d.Label:</b>
+                                                <span class="apv-diff-old">@(string.IsNullOrWhiteSpace(d.OldValue) ? "—" : d.OldValue)</span>
+                                                →
+                                                <span class="apv-diff-new">@(string.IsNullOrWhiteSpace(d.NewValue) ? "—" : d.NewValue)</span>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    @(request.FromDate?.ToString("yyyy-MM-dd"))<text> - </text>@(request.ToDate?.ToString("yyyy-MM-dd"))
+                                }
+                            </td>
                             <td><span class="hrms-badge @request.Status.ToLower()">@request.Status</span></td>
                             <td class="text-start">
                                 @if (flow != null)

@@ -84,3 +84,43 @@
     setType(input ? input.value || "إجازة" : "إجازة");
 })();
 
+
+// ===== عدّاد ساعات العمل الحيّ (من أول بصمة اليوم) =====
+(() => {
+    const box = document.querySelector('[data-workclock]');
+    if (!box) return;
+
+    let times = [];
+    try { times = JSON.parse(box.getAttribute('data-workclock') || '[]').map(s => new Date(s)); } catch { times = []; }
+    times = times.filter(d => !isNaN(d)).sort((a, b) => a - b);
+    if (times.length === 0) { box.hidden = true; return; }
+
+    const timeEl = box.querySelector('[data-wc-time]');
+    const stateEl = box.querySelector('[data-wc-state]');
+    const sinceEl = box.querySelector('[data-wc-since]');
+    const pad = n => String(n).padStart(2, '0');
+    const working = times.length % 2 === 1; // فردي = ما زال داخلاً (آخر بصمة دخول)
+
+    if (sinceEl) sinceEl.textContent = `— من أول بصمة ${pad(times[0].getHours())}:${pad(times[0].getMinutes())}`;
+    box.hidden = false;
+    box.classList.toggle('working', working);
+    box.classList.toggle('done', !working);
+
+    function totalMs() {
+        let ms = 0;
+        for (let i = 0; i + 1 < times.length; i += 2) ms += times[i + 1] - times[i];
+        if (working) ms += Date.now() - times[times.length - 1]; // الزوج المفتوح يحسب حتى الآن
+        return Math.max(0, ms);
+    }
+
+    function tick() {
+        const s = Math.floor(totalMs() / 1000);
+        const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+        if (timeEl) timeEl.textContent = `${pad(h)}:${pad(m)}:${pad(sec)}`;
+    }
+
+    if (stateEl) stateEl.textContent = working ? '🟢 يعمل الآن' : '⏹ انتهى الدوام';
+    tick();
+    if (working) setInterval(tick, 1000);
+})();
+

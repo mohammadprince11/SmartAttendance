@@ -176,5 +176,14 @@ app.MapRazorPages()
 
 app.MapControllers();
 
+// تحميل تطبيق أندرويد الملفوف (APK) — نقطة عامة بنوع MIME الصحيح ليثبّته الموظف مباشرة.
+app.MapGet("/app.apk", (IWebHostEnvironment env) =>
+{
+    var apk = Path.Combine(env.WebRootPath, "downloads", "ZynoraPortal.apk");
+    return File.Exists(apk)
+        ? Results.File(apk, "application/vnd.android.package-archive", "ZynoraPortal.apk")
+        : Results.NotFound();
+}).AllowAnonymous();
+
 app.Run();
 

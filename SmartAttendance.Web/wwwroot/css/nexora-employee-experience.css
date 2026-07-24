@@ -641,7 +641,7 @@ html.nxex-scroll-lock,body.nxex-scroll-lock{overflow:hidden !important}
     color:#e6f0fa;font-family:inherit;font-size:14px;font-weight:900;position:relative
 }
 .nxex-dp-grid button.dp-out{color:#4a5b6e;pointer-events:none}
-.nxex-dp-grid button.dp-today{outline:1px solid rgba(215,168,79,.7);outline-offset:-6px;border-radius:50%;color:#f4d18d}
+.nxex-dp-grid button.dp-today{outline:1px solid rgba(25,211,224,.7);outline-offset:-6px;border-radius:50%;color:#19d3e0}
 .nxex-dp-grid button.dp-in-range{background:rgba(25,211,224,.16)}
 .nxex-dp-grid button.dp-start{background:linear-gradient(to left,rgba(25,211,224,.16) 50%,transparent 50%)}
 .nxex-dp-grid button.dp-end{background:linear-gradient(to right,rgba(25,211,224,.16) 50%,transparent 50%)}
@@ -712,3 +712,123 @@ html.nxex-scroll-lock,body.nxex-scroll-lock{overflow:hidden !important}
 
 /* شريط تبويبات الشاشة يُخفى في وضع الفئة المستقلة */
 .nxex-modal-tabs[hidden]{display:none !important}
+
+/* ===== نسيان البصمة: معاينة حيّة بالأسبقية الزمنية ===== */
+.nxex-mp-preview{margin:10px 0;padding:12px;border:1px solid rgba(25,211,224,.25);border-radius:14px;background:rgba(25,211,224,.05)}
+.nxex-mp-preview-head{font-size:12.5px;font-weight:800;color:#cfe9ee;margin-bottom:10px}
+.nxex-mp-preview-head small{display:block;font-weight:700;color:#7f95ab;font-size:11px;margin-top:2px}
+.nxex-mp-timeline{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.nxex-mp-punch{display:inline-flex;flex-direction:column;align-items:center;min-width:62px;padding:6px 10px;border-radius:12px;border:1px solid rgba(157,184,204,.3);background:rgba(13,27,42,.5)}
+.nxex-mp-punch b{font-size:14px;font-weight:900;color:#eaf6f8}
+.nxex-mp-punch small{font-size:10.5px;font-weight:800;margin-top:2px}
+.nxex-mp-punch.in{border-color:rgba(34,197,94,.5)}
+.nxex-mp-punch.in small{color:#4ade80}
+.nxex-mp-punch.out{border-color:rgba(248,113,113,.5)}
+.nxex-mp-punch.out small{color:#f87171}
+.nxex-mp-punch.new{box-shadow:0 0 0 2px rgba(25,211,224,.5);background:rgba(25,211,224,.12)}
+.nxex-mp-arrow{color:#5b7186;font-weight:900}
+.nxex-mp-note{margin-top:10px;font-size:12px;font-weight:800;color:#f4d18d;line-height:1.7}
+.nxex-mp-hours{margin-top:10px;font-size:12.5px;font-weight:800;color:#cfe9ee;line-height:1.7}
+.nxex-mp-hours b{color:#19d3e0;font-size:14px}
+.nxex-mp-warn{color:#f4b73d;font-weight:800}
+
+/* ===== الصفحات المستقلة (نسيان البصمة / تعديل البيانات) ===== */
+.nxex-subpage{max-width:760px;margin:0 auto;padding:14px 14px 120px}
+.nxex-subpage-head{display:flex;align-items:center;gap:12px;margin:6px 0 16px}
+.nxex-subpage-head h1{font-size:19px;font-weight:900;color:#eaf6f8;margin:0}
+.nxex-subpage-head p{font-size:12.5px;font-weight:700;color:#7f95ab;margin:3px 0 0;line-height:1.6}
+.nxex-back-btn{flex:none;width:40px;height:40px;display:grid;place-items:center;border-radius:12px;border:1px solid rgba(157,184,204,.28);background:rgba(13,27,42,.6);color:#cfe9ee}
+.nxex-back-btn svg{width:20px;height:20px}
+.nxex-back-btn:hover{border-color:rgba(25,211,224,.5);color:#19d3e0}
+.nxex-flash{margin:0 0 14px;padding:12px 14px;border-radius:12px;border:1px solid rgba(34,197,94,.4);background:rgba(34,197,94,.1);color:#bff3d2;font-weight:800;font-size:13px}
+/* الصورة الشخصية */
+.nxex-dc-photo{display:flex;align-items:center;gap:16px;padding:6px 0 14px;margin-bottom:6px;border-bottom:1px solid rgba(157,184,204,.15)}
+.nxex-dc-photo img{width:84px;height:84px;border-radius:20px;object-fit:cover;border:2px solid rgba(25,211,224,.35);background:#0d1b2a}
+.nxex-dc-photo-actions{display:flex;flex-direction:column;gap:6px}
+.nxex-dc-photo-btn{display:inline-block;padding:9px 16px;border-radius:12px;border:1px solid rgba(25,211,224,.45);background:rgba(25,211,224,.1);color:#19d3e0;font-weight:800;font-size:13px;cursor:pointer;width:fit-content}
+.nxex-dc-photo-actions small{color:#7f95ab;font-weight:700;font-size:11px}
+.nxex-dc-hint{color:#7f95ab;font-weight:700;font-size:12px;margin:2px 0 8px}
+.nxex-dc-current{color:#7f95ab;font-weight:700}
+/* قائمة منسدلة متّسقة مع النظام */
+.nxex-select{width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(157,184,204,.28);background:rgba(13,27,42,.6);color:#eaf6f8;font-weight:700;font-size:14px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%237f95ab' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 14px center}
+.nxex-select:focus{outline:none;border-color:rgba(25,211,224,.55)}
+/* صفوف مدخل الطلبات المستقلة داخل تبويب الطلبات */
+.nxex-entry-row{display:flex;align-items:center;gap:12px;padding:14px 6px;text-decoration:none;border-bottom:1px solid rgba(157,184,204,.12)}
+.nxex-entry-row:last-child{border-bottom:none}
+.nxex-entry-ic{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:14px;background:rgba(25,211,224,.1);border:1px solid rgba(25,211,224,.3);font-size:20px}
+.nxex-entry-txt{flex:1;display:flex;flex-direction:column;gap:2px}
+.nxex-entry-txt strong{color:#eaf6f8;font-size:14.5px;font-weight:900}
+.nxex-entry-txt small{color:#7f95ab;font-size:12px;font-weight:700}
+.nxex-entry-arrow{color:#5b7186;font-size:22px;font-weight:900}
+
+/* ===== أزرار البصمة عبر الإنترنت (متّسقة مع النظام) ===== */
+.nxex-punch-btns{display:flex;gap:10px;flex-wrap:wrap}
+.nxex-punch-btns form{flex:1;min-width:150px}
+.nxex-punch-btn{width:100%;min-height:52px;display:flex;align-items:center;justify-content:center;gap:9px;border:0;border-radius:14px;font-family:inherit;font-size:15px;font-weight:1000;cursor:pointer;color:#041018}
+.nxex-punch-btn svg{width:20px;height:20px}
+.nxex-punch-btn.in{background:linear-gradient(135deg,#12d3e0,#1f9bd6)}
+.nxex-punch-btn.out{background:linear-gradient(135deg,#f0a848,#e0723a);color:#1a0f04}
+.nxex-punch-btn:active{transform:scale(.99)}
+/* عدّاد ساعات العمل الحيّ */
+.nxex-workclock{margin-top:14px;padding:16px;border-radius:16px;border:1px solid rgba(25,211,224,.3);background:linear-gradient(135deg,rgba(25,211,224,.1),rgba(31,155,214,.05));text-align:center}
+.nxex-workclock-label{font-size:12.5px;font-weight:800;color:#cfe9ee}
+.nxex-workclock-label small{color:#7f95ab;font-weight:700}
+.nxex-workclock-time{font-size:38px;font-weight:1000;color:#19d3e0;letter-spacing:2px;font-variant-numeric:tabular-nums;margin:4px 0 2px}
+.nxex-workclock-state{font-size:12px;font-weight:800}
+.nxex-workclock.working .nxex-workclock-state{color:#4ade80}
+.nxex-workclock.done .nxex-workclock-time{color:#8fa8b8}
+.nxex-workclock.done .nxex-workclock-state{color:#7f95ab}
+/* قائمة بصمات الإنترنت (بلا جدول/سكرول) */
+.nxex-punch-list{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.nxex-punch-row{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;border:1px solid rgba(157,184,204,.16);background:rgba(13,27,42,.5)}
+.nxex-punch-badge{flex:none;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:900}
+.nxex-punch-row.in .nxex-punch-badge{color:#4ade80;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4)}
+.nxex-punch-row.out .nxex-punch-badge{color:#f0a848;background:rgba(240,168,72,.12);border:1px solid rgba(240,168,72,.4)}
+.nxex-punch-time{flex:1;color:#eaf6f8;font-weight:800;font-size:13.5px}
+.nxex-punch-sem{color:#7f95ab;font-weight:700;font-size:12px}
+/* قائمة سجلات الحضور (دخول/خروج واضحة بلا سكرول جانبي) */
+.nxex-month-filter{margin:0}
+.nxex-month-filter .nxex-select{min-width:150px;padding:8px 12px;font-size:13px}
+.nxex-att-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.nxex-att-empty{padding:18px;text-align:center;color:#7f95ab;font-weight:700}
+.nxex-att-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border-radius:12px;border:1px solid rgba(157,184,204,.15);background:rgba(13,27,42,.5)}
+.nxex-att-date{color:#eaf6f8;font-weight:900;font-size:13.5px;white-space:nowrap}
+.nxex-att-io{display:flex;gap:10px}
+.nxex-att-io span{display:flex;flex-direction:column;align-items:center;min-width:64px;padding:6px 10px;border-radius:10px;border:1px solid rgba(157,184,204,.2);background:rgba(6,16,29,.5)}
+.nxex-att-io em{font-style:normal;font-size:10.5px;font-weight:800;color:#7f95ab}
+.nxex-att-io b{font-size:14px;font-weight:900;margin-top:2px}
+.nxex-att-in b{color:#4ade80}
+.nxex-att-out b{color:#f0a848}
+/* حقل تاريخ النظام (يُفعّله nexora-calendar-v18) — نمط احتياطي داكن قبل التفعيل */
+.nxex-sys-date{width:100%;min-height:46px;padding:0 14px;border:1px solid rgba(91,132,176,.28);border-radius:12px;background:rgba(6,16,29,.7);color:#e6f0fa;font-family:inherit;font-size:14px;font-weight:800;color-scheme:dark}
+.nxex-sys-date:focus{outline:none;border-color:rgba(25,211,224,.55)}
+
+/* ===== طلبات تعديل البيانات المعلّقة (تعديل/حذف) ===== */
+.nxex-dc-pending{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid rgba(157,184,204,.12)}
+.nxex-dc-pending:last-child{border-bottom:none}
+.nxex-dc-pending-diffs{flex:1;display:flex;flex-direction:column;gap:4px}
+.apv-diff-row{font-size:12.5px;font-weight:700;color:#cfe0f0}
+.apv-diff-row b{color:#19d3e0}
+.apv-diff-old{color:#f87171;text-decoration:line-through;opacity:.85}
+.apv-diff-new{color:#4ade80}
+.nxex-dc-pending-actions{display:flex;flex-direction:column;gap:6px;flex:none}
+.nxex-dc-pending-actions form{margin:0}
+.nxex-dc-edit,.nxex-dc-del{display:inline-block;text-align:center;min-width:64px;padding:7px 12px;border-radius:10px;font-weight:800;font-size:12.5px;cursor:pointer;border:1px solid;font-family:inherit}
+.nxex-dc-edit{color:#19d3e0;border-color:rgba(25,211,224,.45);background:rgba(25,211,224,.08)}
+.nxex-dc-del{color:#f87171;border-color:rgba(248,113,113,.45);background:rgba(248,113,113,.08);width:100%}
+
+/* صورة شخصية داخل الأفاتار */
+.nxex-avatar.has-photo{padding:0;overflow:hidden}
+.nxex-avatar.has-photo img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+/* حالة اليوم بسجل الحضور */
+.nxex-att-status{margin-top:8px;padding-top:8px;border-top:1px solid rgba(157,184,204,.12);font-size:12px;font-weight:800;display:flex;align-items:center;gap:6px}
+.nxex-att-status .h{color:#19d3e0}
+.nxex-att-status.incomplete .h{color:#f4b73d}
+.nxex-att-wide{flex-direction:column;align-items:stretch;gap:0}
+.nxex-att-wide .nxex-att-toprow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+/* شارة الغياب/العطلة بسجل الحضور */
+.nxex-att-badge{padding:5px 14px;border-radius:999px;font-size:12.5px;font-weight:900;border:1px solid}
+.nxex-att-badge.ab{color:#f87171;border-color:rgba(248,113,113,.45);background:rgba(248,113,113,.1)}
+.nxex-att-badge.wk{color:#8fa8b8;border-color:rgba(143,168,184,.35);background:rgba(143,168,184,.08)}
+.nxex-att-row.is-absent{border-color:rgba(248,113,113,.22)}
+.nxex-att-row.is-weekend{opacity:.72}

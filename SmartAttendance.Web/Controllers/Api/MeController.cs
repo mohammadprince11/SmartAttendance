@@ -128,11 +128,27 @@ WHERE e.Id = @Id;
         if (RequireEmployee() is { } bad) return bad;
         var type = body?.PunchType == "Out" ? "Out" : "In";
         var now = DateTime.Now;
-        await OnlinePunchStore.RecordAsync(_db, EmployeeId, type, now, null);
-        return Ok(new { message = $"سُجّلت بصمة {(type == "Out" ? "الانصراف" : "الحضور")}.", at = now.ToString("yyyy-MM-dd HH:mm"), punchType = type });
+        var recordId = await OnlinePunchStore.RecordAsync(_db, EmployeeId, type, now, null);
+        return recordId > 0
+            ? Ok(new { message = $"سُجّلت بصمة {(type == "Out" ? "الانصراف" : "الحضور")}.", at = now.ToString("yyyy-MM-dd HH:mm"), punchType = type })
+            : BadRequest(new { message = "تم تجاهل البصمة: سُجّلت بصمة مماثلة خلال أقل من دقيقة." });
     }
 
-    public sealed record MissingPunchRequestBody(string Date, string Time, string PunchType, string? Reason);
+    /// <summary>بصمات يوم الموظف مصنَّفةً بالأسبقية (دخول/خروج) — لمعاينة نموذج نسيان البصمة.</summary>
+    [HttpGet("punches")]
+    public async Task<IActionResult> DayPunches([FromQuery] string date)
+    {
+        if (RequireEmployee() is { } bad) return bad;
+        if (!DateOnly.TryParse(date, out var d))
+            return BadRequest(new { message = "تاريخ غير صالح." });
+
+        var times = await PunchTypingEngine.DayPunchTimesAsync(_db, EmployeeId, d);
+        var typed = PunchTypingEngine.Derive(times);
+        return Ok(typed.Select(p => new { at = p.At.ToString("HH:mm"), type = p.Type, typeText = p.TypeLabel }));
+    }
+
+    // PunchType لم يعد يُرسله العميل — يُشتَق تلقائياً بالأسبقية الزمنية.
+    public sealed record MissingPunchRequestBody(string Date, string Time, string? Reason);
 
     /// <summary>تقديم طلب بصمة مفقودة (يصل لصفحة إدارة الطلبات بمصدر «خدمة ذاتية»).</summary>
     [HttpPost("missing-punch")]
@@ -142,16 +158,21 @@ WHERE e.Id = @Id;
         if (body is null || !DateOnly.TryParse(body.Date, out var d) || !TimeOnly.TryParse(body.Time, out var t))
             return BadRequest(new { message = "أدخل تاريخ ووقت البصمة." });
 
+        var punchAt = d.ToDateTime(t);
+        // النوع يُشتَق بالأسبقية الزمنية بين بصمات اليوم والبصمة المُضافة (لا اختيار يدوي).
+        var existingTimes = await PunchTypingEngine.DayPunchTimesAsync(_db, EmployeeId, d);
+        var derivedType = PunchTypingEngine.DeriveTypeFor(existingTimes, punchAt);
+
         var (ok, message) = await MissingPunchRequestStore.SaveAsync(_db, new MissingPunchRequestStore.Request
         {
             EmployeeId = EmployeeId,
-            PunchAt = d.ToDateTime(t),
-            PunchType = body.PunchType == "Out" ? "Out" : "In",
+            PunchAt = punchAt,
+            PunchType = derivedType,
             Reason = string.IsNullOrWhiteSpace(body.Reason) ? null : body.Reason.Trim(),
             Source = "خدمة ذاتية"
         }, User.Identity?.Name ?? "employee");
 
-        return ok ? Ok(new { message }) : BadRequest(new { message });
+        return ok ? Ok(new { message, derivedType }) : BadRequest(new { message });
     }
 
     /// <summary>طلبات الخدمة الذاتية العامة الخاصة بي (إجازة/مغادرة/...).</summary>
@@ -220,5 +241,74 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             await ApprovalWorkflowEngine.StartAsync(_db, requestId, body.RequestType.Trim(), EmployeeId);
 
         return Ok(new { message = $"تم إرسال طلب {body.RequestType.Trim()} وهو قيد المراجعة.", requestId });
+    }
+
+    /// <summary>الحقول القابلة لطلب تعديلها + قيمتها الحالية (لبناء نموذج «تعديل بياناتي»).</summary>
+    [HttpGet("data-change/fields")]
+    public async Task<IActionResult> DataChangeFields()
+    {
+        if (RequireEmployee() is { } bad) return bad;
+        var fields = await DataChangeRequestStore.ListEditableAsync(_db, EmployeeId);
+        return Ok(fields.Select(f => new { key = f.Key, label = f.Label, currentValue = f.OldValue }));
+    }
+
+    public sealed record DataChangeItem(string Key, string? NewValue);
+    public sealed record DataChangeBody(List<DataChangeItem> Fields, string? Reason);
+
+    /// <summary>تقديم طلب تعديل بيانات (لا يُطبَّق إلا بعد اعتماد لجنة الموافقة).</summary>
+    [HttpPost("data-change")]
+    public async Task<IActionResult> SubmitDataChange([FromBody] DataChangeBody body)
+    {
+        if (RequireEmployee() is { } bad) return bad;
+        if (body?.Fields is not { Count: > 0 })
+            return BadRequest(new { message = "اختر حقلاً واحداً على الأقل لتعديله." });
+
+        // القيم الحالية للتحقق من وجود تغيير فعلي.
+        var editable = await DataChangeRequestStore.ListEditableAsync(_db, EmployeeId);
+        var currentByKey = editable.ToDictionary(f => f.Key, f => f, StringComparer.OrdinalIgnoreCase);
+
+        var proposed = new List<DataChangeRequestStore.ProposedField>();
+        foreach (var item in body.Fields)
+        {
+            if (!currentByKey.TryGetValue(item.Key ?? "", out var def)) continue;
+            proposed.Add(new DataChangeRequestStore.ProposedField
+            {
+                Key = def.Key,
+                OldValue = def.OldValue,
+                NewValue = item.NewValue
+            });
+        }
+        if (proposed.Count == 0)
+            return BadRequest(new { message = "لا توجد حقول صالحة للتعديل." });
+
+        var reason = string.IsNullOrWhiteSpace(body.Reason) ? "طلب تعديل بيانات من تطبيق الموبايل" : body.Reason!.Trim();
+
+        var requestId = await HrmsDatabase.ScalarAsync<int>(
+            _db,
+            """
+INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, Reason, Status)
+VALUES (@Emp, @Type, SYSUTCDATETIME(), @Reason, 'Pending');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Emp", EmployeeId);
+                HrmsDatabase.AddParameter(command, "@Type", DataChangeRequestStore.RequestTypeLabel);
+                HrmsDatabase.AddParameter(command, "@Reason", reason);
+            });
+
+        if (requestId <= 0)
+            return BadRequest(new { message = "تعذّر إنشاء الطلب." });
+
+        var savedCount = await DataChangeRequestStore.SaveFieldsAsync(_db, requestId, proposed);
+        if (savedCount == 0)
+        {
+            await HrmsDatabase.ExecuteAsync(_db, "DELETE FROM SelfServiceRequests WHERE Id=@r",
+                cmd => HrmsDatabase.AddParameter(cmd, "@r", requestId));
+            return BadRequest(new { message = "لم تُدخِل أي قيمة مختلفة عن الحالية." });
+        }
+
+        await ApprovalWorkflowEngine.StartAsync(_db, requestId, DataChangeRequestStore.RequestTypeLabel, EmployeeId);
+        return Ok(new { message = $"تم إرسال طلب تعديل البيانات ({savedCount} حقل) وهو قيد المراجعة.", requestId });
     }
 }
