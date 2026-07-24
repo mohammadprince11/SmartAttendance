@@ -2435,8 +2435,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784899425.1225903,
-    "ast_hash": "8104c45f06df1a900beee80cb3d316f9",
+    "mtime": 1784900471.03703,
+    "ast_hash": "372c4bfbfd8f8bdd80195cb206983936",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3730,8 +3730,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/PageCatalog.cs": {
-    "mtime": 1784899369.8499615,
-    "ast_hash": "be4fd9c2cbecfa96561a603f5feeb281",
+    "mtime": 1784900462.2836134,
+    "ast_hash": "5a610647c628e121e46f52de93793664",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/DataScopeCatalog.cs": {
@@ -3800,13 +3800,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/RunDetail.cshtml": {
-    "mtime": 1784851311.2899692,
-    "ast_hash": "cfd72ca4101fdb5b0ea45c7a5f9d8963",
+    "mtime": 1784900321.1186123,
+    "ast_hash": "6451c942a3e93d5b04f49fe866b82f6f",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/RunDetail.cshtml.cs": {
-    "mtime": 1784851288.543463,
-    "ast_hash": "e8f5a7fea70323a9501bdcc20245e68a",
+    "mtime": 1784900308.7766635,
+    "ast_hash": "acd727ef6ee1151f1d2e8c6f7a2f3163",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Payroll/Runs.cshtml": {
@@ -4147,6 +4147,21 @@
   "SmartAttendance.Web/Pages/OrgStructures/_TreeNode.cshtml": {
     "mtime": 1784899323.0689492,
     "ast_hash": "6381883e655d60c43520023cfafdb9f3",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/BankFileTemplateStore.cs": {
+    "mtime": 1784900246.163721,
+    "ast_hash": "9f34fc6295fc8b8a3f2800fb290baa46",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/Payroll/BankTemplates.cshtml": {
+    "mtime": 1784900439.6663213,
+    "ast_hash": "171c6c152a26d5f15cdda6b0e366294b",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/Payroll/BankTemplates.cshtml.cs": {
+    "mtime": 1784900453.3507872,
+    "ast_hash": "6b2c81f6a7bd02a5b11e7d0c726d71a4",
     "semantic_hash": ""
   }
 }

@@ -1450,8 +1450,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/RoleSecurityMiddleware.cs": {
-    "mtime": 1784847260.0785737,
-    "ast_hash": "1fea01d792eb03d191d8fe424d8959dc",
+    "mtime": 1784901674.3426921,
+    "ast_hash": "078d8f0a0462c1726393933e1b9d93c7",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/SimplePasswordHasher.cs": {
@@ -2575,8 +2575,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Program.cs": {
-    "mtime": 1784891246.9083674,
-    "ast_hash": "30f6baf3bbea94eb0b3b08e864ce9678",
+    "mtime": 1784901285.836522,
+    "ast_hash": "aa2bf442b4ba504e6748a1c24921156c",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Properties/launchSettings.json": {
@@ -4162,6 +4162,26 @@
   "SmartAttendance.Web/Pages/Payroll/BankTemplates.cshtml.cs": {
     "mtime": 1784900453.3507872,
     "ast_hash": "6b2c81f6a7bd02a5b11e7d0c726d71a4",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Controllers/Api/AuthController.cs": {
+    "mtime": 1784902005.8859923,
+    "ast_hash": "b6f14ab0c81738ab4b7b188d1f56179f",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Controllers/Api/MeController.cs": {
+    "mtime": 1784901369.1669333,
+    "ast_hash": "79992923d1ba2f9172cb5300ad3bac5e",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Api/ApiTokenAuthHandler.cs": {
+    "mtime": 1784901247.8192427,
+    "ast_hash": "4f4d745533a51a50deacd55661c12941",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Api/ApiTokenStore.cs": {
+    "mtime": 1784901229.5401423,
+    "ast_hash": "c5ff5bbd88e8e008c5a96c7891b42aa3",
     "semantic_hash": ""
   }
 }

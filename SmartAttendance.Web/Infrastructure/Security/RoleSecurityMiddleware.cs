@@ -121,6 +121,13 @@ public class RoleSecurityMiddleware
             return true;
         }
 
+        // واجهة الموبايل (REST) تصادَق بتوكن Bearer داخل الكنترولرات لا بكوكيز هذا
+        // الحارس، فنتركها تمرّ ويتولّى [Authorize(ApiToken)] الحماية.
+        if (path.StartsWith("/api/"))
+        {
+            return true;
+        }
+
         if (path.StartsWith("/css/") ||
             path.StartsWith("/js/") ||
             path.StartsWith("/lib/") ||

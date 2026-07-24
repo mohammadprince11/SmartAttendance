@@ -77,7 +77,14 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             : CookieSecurePolicy.Always;
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
-    });
+    })
+    // مصادقة توكن Bearer لواجهة الموبايل (بجانب الكوكيز) — كنترولرات /api/*
+    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,
+        SmartAttendance.Web.Infrastructure.Api.ApiTokenAuthHandler>(
+        SmartAttendance.Web.Infrastructure.Api.ApiTokenAuthHandler.SchemeName, null);
+
+// كنترولرات واجهة الموبايل (REST/JSON) — بجانب Razor Pages
+builder.Services.AddControllers();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -161,6 +168,8 @@ app.UseAuthorization();
 app.MapStaticAssets();
 app.MapRazorPages()
    .WithStaticAssets();
+
+app.MapControllers();
 
 app.Run();
 
