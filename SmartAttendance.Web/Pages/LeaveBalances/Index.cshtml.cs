@@ -47,6 +47,56 @@ public class IndexModel : PageModel
     public decimal TotalAnnualUsed =>
         Rows.Sum(r => r.Cells.TryGetValue(LeaveType.Annual, out var c) ? c.Used : 0);
 
+    [TempData]
+    public string? CarryMessage { get; set; }
+
+    /// <summary>
+    /// ترحيل الأرصدة: رصيد الموظفين المتبقّي في السنة المعروضة يُرحّل كـ«مُرحّل» للسنة
+    /// التالية (للأنواع المختارة، بسقف اختياري). آمن للإعادة (يضبط لا يُراكم).
+    /// </summary>
+    public async Task<IActionResult> OnPostCarryOverAsync()
+    {
+        var form = Request.Form;
+        if (!CompanyId.HasValue)
+        {
+            var companyIds = await _dbContext.Companies.AsNoTracking()
+                .Where(c => !c.IsDeleted && c.IsActive).Select(c => c.Id).ToArrayAsync();
+            CompanyId = CompanySelectionContext.Resolve(HttpContext, CompanyId, companyIds);
+        }
+        if (!CompanyId.HasValue)
+        {
+            CarryMessage = "اختر الشركة أولاً.";
+            return RedirectToPage(new { CompanyId, Year });
+        }
+
+        var types = form["CarryTypes"]
+            .Where(v => Enum.TryParse<LeaveType>(v, out _))
+            .Select(v => Enum.Parse<LeaveType>(v!))
+            .ToList();
+        if (types.Count == 0)
+        {
+            CarryMessage = "اختر نوع إجازة واحداً على الأقل للترحيل.";
+            return RedirectToPage(new { CompanyId, Year });
+        }
+
+        decimal? cap = decimal.TryParse(form["CarryCap"], out var c) && c > 0 ? c : null;
+
+        var result = await LeaveCarryoverService.CarryOverAsync(
+            _dbContext, CompanyId.Value, Year, types, cap, User.Identity?.Name ?? "System");
+
+        var typeSummary = string.Join("، ",
+            result.ByType.Select(kv => $"{LeaveTypeText(kv.Key)} {kv.Value:0.#}"));
+        CarryMessage = result.EmployeesProcessed == 0
+            ? $"لا رصيد قابل للترحيل من سنة {Year} (كل الأرصدة صفر أو أقل)."
+            : $"رُحّل رصيد {result.EmployeesProcessed} موظفاً من {Year} إلى {Year + 1} — "
+              + $"إجمالي {result.TotalCarriedDays:0.#} يوم"
+              + (string.IsNullOrEmpty(typeSummary) ? "." : $" ({typeSummary}).")
+              + (cap.HasValue ? $" [سقف {cap:0.#} يوم/نوع]" : "");
+
+        // انتقل لعرض سنة الوجهة ليرى المستخدم المُرحّل مباشرة.
+        return RedirectToPage(new { CompanyId, Year = Year + 1 });
+    }
+
     public async Task OnGetAsync()
     {
         await LeaveBalanceSchema.EnsureAsync(_dbContext);

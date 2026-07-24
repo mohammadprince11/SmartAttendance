@@ -2435,8 +2435,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784891458.8979592,
-    "ast_hash": "ddfe7a76b9aecaef7618eda630ceeb31",
+    "mtime": 1784893525.6311362,
+    "ast_hash": "db524bdfab9927ed05b8da13710b3859",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3730,8 +3730,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/PageCatalog.cs": {
-    "mtime": 1784891261.1834824,
-    "ast_hash": "d78f9787b7db05f62704396267b695ee",
+    "mtime": 1784893517.4667134,
+    "ast_hash": "0ab25b438859865d9e0f534605852026",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/DataScopeCatalog.cs": {
@@ -3790,8 +3790,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/PayrollRunStore.cs": {
-    "mtime": 1784892161.845362,
-    "ast_hash": "75c82af19f324ee1f8e65582829f7436",
+    "mtime": 1784893277.4174154,
+    "ast_hash": "8b9f3e40740b6ff7e9790a395e3091fb",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/SalaryItemStore.cs": {
@@ -3840,8 +3840,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/PayrollTransactionStore.cs": {
-    "mtime": 1784812427.7462854,
-    "ast_hash": "3fd1559ba83c3d85e302741365c1ae49",
+    "mtime": 1784893237.3719268,
+    "ast_hash": "45106fa93e599c693c6595bf9ba34cb9",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/SpreadsheetReader.cs": {
@@ -4017,6 +4017,21 @@
   "SmartAttendance.Tests/IraqiLeavePolicyTests.cs": {
     "mtime": 1784892853.732153,
     "ast_hash": "0f6063e34ba4cdecfffe878f1f39953c",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/LeaveBalanceCalculator.cs": {
+    "mtime": 1784893297.148095,
+    "ast_hash": "5f0b6f50a13958455b36e7d7f97960ac",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/Payroll/LeaveEncashment.cshtml": {
+    "mtime": 1784893505.8680346,
+    "ast_hash": "17fca29b1e320b0d39d85e0d03b54fdb",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/Payroll/LeaveEncashment.cshtml.cs": {
+    "mtime": 1784893367.0419836,
+    "ast_hash": "a539418503fb825afa25dcec2ea737b9",
     "semantic_hash": ""
   }
 }
