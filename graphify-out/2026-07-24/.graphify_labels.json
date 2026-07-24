@@ -590,5 +590,9 @@
   "588": "EntityFields.cshtml",
   "589": "_EntityCustomFields.cshtml",
   "590": "filterNodes",
-  "591": "resetIcons"
+  "591": "resetIcons",
+  "592": "RawPunch",
+  "593": "wrap",
+  "594": "getRowByPosition",
+  "595": "isSuppressMenuHide"
 }

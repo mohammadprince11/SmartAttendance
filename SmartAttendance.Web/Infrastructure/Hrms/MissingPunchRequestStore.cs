@@ -95,6 +95,7 @@ END;
 
     public sealed class Filter
     {
+        public int? EmployeeId { get; set; }
         public string? Search { get; set; }
         public string? Status { get; set; }
         public string? PunchType { get; set; }
@@ -125,6 +126,7 @@ ORDER BY r.CreatedAt DESC;
             command => { },
             Read);
 
+        if (filter.EmployeeId is > 0) rows = rows.Where(r => r.EmployeeId == filter.EmployeeId).ToList();
         if (!string.IsNullOrWhiteSpace(filter.Status)) rows = rows.Where(r => r.Status == filter.Status).ToList();
         if (!string.IsNullOrWhiteSpace(filter.PunchType)) rows = rows.Where(r => r.PunchType == filter.PunchType).ToList();
         if (!string.IsNullOrWhiteSpace(filter.Department)) rows = rows.Where(r => r.Department == filter.Department).ToList();

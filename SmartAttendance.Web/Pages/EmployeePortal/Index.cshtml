@@ -1,5 +1,6 @@
 ﻿@page
 @model SmartAttendance.Web.Pages.EmployeePortal.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
 @{
     Layout = "_EmployeePortalLayout";
     ViewData["Title"] = "بوابة الموظف الذكية";
@@ -299,6 +300,71 @@
                         <button type="submit">إرسال الطلب للموارد البشرية</button>
                     </form>
                 </section>
+
+                @* ===== طلب بصمة مفقودة مُهيكل (يصل لصفحة إدارة طلبات البصمة) ===== *@
+                <section class="nxex-card">
+                    <header class="nxex-card-head">
+                        <div>
+                            <h2>طلب بصمة مفقودة</h2>
+                            <p>إن نسيت البصمة أو تعطّل الجهاز، وثّق البصمة الغائبة (دخول/خروج) لتعتمدها الموارد البشرية.</p>
+                        </div>
+                        <span class="nxex-chip live">👆</span>
+                    </header>
+                    <form method="post" asp-page-handler="SubmitMissingPunch" class="nxex-form">
+                        <input type="hidden" name="returnTab" value="requests" />
+                        <div class="nxex-form-row">
+                            <div>
+                                <label>تاريخ البصمة *</label>
+                                <input type="date" name="MpDate" required />
+                            </div>
+                            <div>
+                                <label>وقت البصمة *</label>
+                                <input type="time" name="MpTime" required />
+                            </div>
+                        </div>
+                        <div class="nxex-form-row">
+                            <div>
+                                <label>نوع البصمة *</label>
+                                <select name="MpType">
+                                    <option value="In">ختم دخول</option>
+                                    <option value="Out">ختم خروج</option>
+                                </select>
+                            </div>
+                            <div></div>
+                        </div>
+                        <label>السبب</label>
+                        <textarea name="MpReason" placeholder="سبب غياب البصمة (نسيان، عطل جهاز...)"></textarea>
+                        <button type="submit">إرسال طلب البصمة</button>
+                    </form>
+                </section>
+
+                @if (Model.MyMissingPunches.Any())
+                {
+                    <section class="nxex-card">
+                        <header class="nxex-card-head">
+                            <div>
+                                <h2>طلبات بصمتي</h2>
+                                <p>متابعة طلبات البصمة المفقودة التي قدّمتها وحالتها.</p>
+                            </div>
+                            <span class="nxex-chip pending">@Model.MyMissingPunches.Count</span>
+                        </header>
+                        <div class="nxex-request-timeline">
+                            @foreach (var mp in Model.MyMissingPunches)
+                            {
+                                <article class="@Model.StatusClass(mp.Status)">
+                                    <div class="nxex-request-icon">@(mp.PunchType == "Out" ? "🚪" : "🔓")</div>
+                                    <div style="flex:1">
+                                        <strong>@mp.PunchTypeText · @mp.PunchAt.ToString("yyyy-MM-dd HH:mm")</strong>
+                                        <small style="display:block;opacity:.75">@mp.RefNo@(string.IsNullOrWhiteSpace(mp.Reason) ? "" : " · " + mp.Reason)</small>
+                                        @if (!string.IsNullOrWhiteSpace(mp.DecisionNote))
+                                        { <small style="display:block;opacity:.6">ملاحظة الإدارة: @mp.DecisionNote</small> }
+                                    </div>
+                                    <span class="nxex-chip @(mp.Status == MissingPunchRequestStore.Approved ? "live" : "pending")">@mp.StatusText</span>
+                                </article>
+                            }
+                        </div>
+                    </section>
+                }
 
                 @if (Model.PendingViolationReplies.Any())
                 {

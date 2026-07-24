@@ -30,6 +30,9 @@ public class IndexModel : PageModel
     public List<EmployeePortalTeamMember> Team { get; private set; } = new();
     public List<EmployeePortalFeedback> FeedbackItems { get; private set; } = new();
 
+    /// <summary>طلبات البصمة المفقودة التي قدّمها هذا الموظف (تصل لصفحة الإدارة).</summary>
+    public List<MissingPunchRequestStore.Request> MyMissingPunches { get; private set; } = new();
+
     [BindProperty]
     public FeedbackInput Feedback { get; set; } = new();
 
@@ -252,6 +255,49 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         return RedirectToPage(new { tab = returnTab ?? "requests" });
     }
 
+    /// <summary>
+    /// تقديم طلب بصمة مفقودة مُهيكل من الموظف (نمط كيان — حلقة الخدمة الذاتية):
+    /// يصل لصفحة إدارة طلبات البصمة بمصدر «خدمة ذاتية» بحالة «قيد الانتظار» ليبتّ
+    /// فيه المسؤول. عند الموافقة تُنشأ البصمة الفعلية.
+    /// </summary>
+    public async Task<IActionResult> OnPostSubmitMissingPunchAsync(string? returnTab)
+    {
+        var employeeId = await ResolveEmployeeIdAsync();
+        if (employeeId <= 0)
+        {
+            // نفس fallback العرض: مستخدم غير مربوط بموظف (وضع تجريبي) ← أول موظف.
+            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
+        }
+        if (employeeId <= 0)
+        {
+            StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";
+            return RedirectToPage(new { tab = returnTab ?? "requests" });
+        }
+
+        var form = Request.Form;
+        DateTime? punchAt = null;
+        if (DateOnly.TryParse(form["MpDate"], out var d) && TimeOnly.TryParse(form["MpTime"], out var tm))
+            punchAt = d.ToDateTime(tm);
+
+        if (punchAt == null)
+        {
+            StatusMessage = "يرجى إدخال تاريخ ووقت البصمة المفقودة.";
+            return RedirectToPage(new { tab = returnTab ?? "requests" });
+        }
+
+        var (ok, message) = await MissingPunchRequestStore.SaveAsync(_dbContext, new MissingPunchRequestStore.Request
+        {
+            EmployeeId = employeeId,
+            PunchAt = punchAt.Value,
+            PunchType = form["MpType"].ToString() == "Out" ? "Out" : "In",
+            Reason = string.IsNullOrWhiteSpace(form["MpReason"]) ? null : form["MpReason"].ToString().Trim(),
+            Source = "خدمة ذاتية"
+        }, User.Identity?.Name ?? "employee");
+
+        StatusMessage = ok ? "تم إرسال طلب البصمة المفقودة وهو الآن قيد مراجعة الموارد البشرية." : message;
+        return RedirectToPage(new { tab = returnTab ?? "requests" });
+    }
+
     private async Task LoadAsync()
     {
         await EmployeeEngagementSchema.EnsureAsync(_dbContext);
@@ -280,6 +326,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         FeedbackItems = await LoadFeedbackAsync(employeeId);
         PendingViolationReplies = await LoadPendingViolationRepliesAsync(employeeId);
         PendingAssetAcknowledgments = await LoadPendingAssetAcknowledgmentsAsync(employeeId);
+        MyMissingPunches = await MissingPunchRequestStore.ListAsync(
+            _dbContext, new MissingPunchRequestStore.Filter { EmployeeId = employeeId });
     }
 
     public sealed class PendingAssetAcknowledgment

@@ -2435,8 +2435,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784893525.6311362,
-    "ast_hash": "db524bdfab9927ed05b8da13710b3859",
+    "mtime": 1784895797.9239593,
+    "ast_hash": "82c4e35a650a9ce64e797cd40a043123",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3730,8 +3730,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/PageCatalog.cs": {
-    "mtime": 1784893517.4667134,
-    "ast_hash": "0ab25b438859865d9e0f534605852026",
+    "mtime": 1784895769.5018928,
+    "ast_hash": "7b6053861fbad19cde88cee5f1fda8fe",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/DataScopeCatalog.cs": {
@@ -3990,8 +3990,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/RoleRouteCatalog.cs": {
-    "mtime": 1784891266.658111,
-    "ast_hash": "2ccafda922802532ee96bae4693a3af7",
+    "mtime": 1784895785.156667,
+    "ast_hash": "d971738b705ad862574e02e8716f2eb3",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/nexora-month-picker-v1.js": {
@@ -4047,6 +4047,21 @@
   "SmartAttendance.Web/Infrastructure/Hrms/SalaryFormulaEvaluator.cs": {
     "mtime": 1784894760.224109,
     "ast_hash": "1a9841365c36e31e8c91f422030f581c",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/MissingPunchRequestStore.cs": {
+    "mtime": 1784895635.7110574,
+    "ast_hash": "49ad4f166f7fc144cc4c6f90db3ae0da",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/MissingPunchRequests/Index.cshtml": {
+    "mtime": 1784895763.3255775,
+    "ast_hash": "0c70c0febbe489eb95f3b7bcd9e524ee",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/MissingPunchRequests/Index.cshtml.cs": {
+    "mtime": 1784895693.9430885,
+    "ast_hash": "4f0643d17699ca4e52b9d7acc7c5735d",
     "semantic_hash": ""
   }
 }
