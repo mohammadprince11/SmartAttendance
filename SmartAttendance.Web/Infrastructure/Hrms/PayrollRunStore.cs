@@ -76,7 +76,7 @@ public static class PayrollRunStore
         public string ItemName { get; set; } = string.Empty;
         public decimal Amount { get; set; }
         public bool IsAddition { get; set; }
-        public string Kind { get; set; } = string.Empty;   // Basic|Allowance|Income|Overtime|SalaryDays|LeaveEncashment|Deduction|Leave|Tax|Gosi|Penalty
+        public string Kind { get; set; } = string.Empty;   // Basic|Allowance|Income|Overtime|SalaryDays|LeaveEncashment|Formula|Deduction|Leave|Tax|Gosi|Penalty
     }
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
@@ -270,6 +270,13 @@ END;
         var leaveEncashTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.LeaveEncashment))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
+        // عناصر الراتب ذات الصيغة (غير النظامية النشطة) — تُقيَّم لكل موظف بمحرك الصيغ
+        // وتُضاف بنوداً للقسيمة (استحقاق يدخل الإجمالي/الوعاء الخاضع، أو اقتطاع). عناصر
+        // النظام (الأساسي/الضريبة/الضمان) مستثناة — يعالجها المحرك مباشرةً.
+        var formulaItems = (await SalaryItemStore.ListAsync(dbContext))
+            .Where(x => x.IsActive && !x.IsSystem && x.ValueKind == "Formula" && !string.IsNullOrWhiteSpace(x.Formula))
+            .OrderBy(x => x.SortOrder).ToList();
+
         // --- بناء السطور ---
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
@@ -390,8 +397,43 @@ END;
                 }
             }
 
-            var gross = Math.Round(proratedBasic + allowancesTotal + incomeTotal + overtimeTotal + salaryDaysAdd + leaveEncashTotal, 2);
-            var taxableBase = Math.Round(proratedBasic + allowancesTotal + taxableIncome + taxableOvertime + salaryDaysAdd + taxableLeaveEncash, 2);
+            // محرك الصيغ: كل عنصر معادلة يُقيَّم بمتغيّرات الموظف. الاستحقاق يدخل
+            // الإجمالي (والوعاء الخاضع إن كان خاضعاً)، والاقتطاع بعد الإجمالي. النسبي
+            // يُضرب بمعامل الحضور. الصيغة المعطوبة تُتخطّى بلا إسقاط المسير.
+            decimal formulaAddTotal = 0, formulaTaxableAdd = 0, formulaDeductTotal = 0;
+            if (formulaItems.Count > 0)
+            {
+                var formulaVars = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["Basic"] = basic,
+                    ["Allowances"] = allowancesTotal,
+                    ["Gross"] = basic + allowancesTotal,
+                    ["DailyRate"] = dailyRate,
+                    ["HourlyRate"] = hourlyRate,
+                    ["Hours"] = 0,
+                    ["Days"] = 0
+                };
+                foreach (var item in formulaItems)
+                {
+                    if (!SalaryFormulaEvaluator.TryEvaluate(item.Formula, formulaVars, out var raw, out _)) continue;
+                    var value = Math.Round(item.Prorated ? raw * factor : raw, 2);
+                    if (value == 0) continue;
+                    if (item.IsAddition)
+                    {
+                        formulaAddTotal += value;
+                        if (item.Taxable) formulaTaxableAdd += value;
+                        comps.Add(new Component { ItemName = item.Name, Amount = value, IsAddition = true, Kind = "Formula" });
+                    }
+                    else
+                    {
+                        formulaDeductTotal += value;
+                        comps.Add(new Component { ItemName = item.Name, Amount = value, IsAddition = false, Kind = "Formula" });
+                    }
+                }
+            }
+
+            var gross = Math.Round(proratedBasic + allowancesTotal + incomeTotal + overtimeTotal + salaryDaysAdd + leaveEncashTotal + formulaAddTotal, 2);
+            var taxableBase = Math.Round(proratedBasic + allowancesTotal + taxableIncome + taxableOvertime + salaryDaysAdd + taxableLeaveEncash + formulaTaxableAdd, 2);
             var tax = PayrollConfigStore.ComputeTax(taxableBase, taxProfile);
             var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(gross, gosiProfile);
 
@@ -442,7 +484,7 @@ END;
                 });
             }
 
-            var otherDeductions = penaltyTotal + deductionTxTotal + salaryDaysDeduct + unpaidLeaveDeduct;
+            var otherDeductions = penaltyTotal + deductionTxTotal + salaryDaysDeduct + unpaidLeaveDeduct + formulaDeductTotal;
             var net = Math.Round(gross - tax - gosiEmp - otherDeductions, 2);
 
             var lineId = await HrmsDatabase.ScalarAsync<int>(
