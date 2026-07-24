@@ -449,6 +449,12 @@
                                 <span>قواعد المناوبات</span>
                             </a>
                         }
+                        @if (CanRoute("/periodrules"))
+                        {
+                            <a href="/PeriodRules" class="nexora-nav-link @(IsUnder("/PeriodRules") ? "active nexora-active" : "")">
+                                <span>القواعد الفترية</span>
+                            </a>
+                        }
                         @if (CanRoute("/attendancerecommendations"))
                         {
                             <a href="/AttendanceRecommendations" class="nexora-nav-link @(IsUnder("/AttendanceRecommendations") ? "active nexora-active" : "")">

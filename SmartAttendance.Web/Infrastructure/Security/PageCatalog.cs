@@ -75,6 +75,7 @@ public static class PageCatalog
             new CatalogPage("Attendance.Settings", "إعدادات الحضور"),
             new CatalogPage("Attendance.DayAttendance", "الحضور اليومي"),
             new CatalogPage("Attendance.ShiftRules", "قواعد المناوبات"),
+            new CatalogPage("Attendance.PeriodRules", "القواعد الفترية"),
             new CatalogPage("Attendance.Recommendations", "الإجراءات المقترحة"),
             new CatalogPage("Attendance.MissingPunch", "طلبات البصمة المفقودة"),
             new CatalogPage("Attendance.OnlinePunches", "البصمات عبر الإنترنت"),

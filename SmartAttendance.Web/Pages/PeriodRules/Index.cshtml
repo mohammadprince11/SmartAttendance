@@ -1,0 +1,287 @@
+@page "/PeriodRules"
+@model SmartAttendance.Web.Pages.PeriodRules.IndexModel
+@using System.Text.Json
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@{
+    ViewData["Title"] = "القواعد الفترية";
+    var acc = "#f472b6";
+    var (evalYear, evalPeriod) = Model.EvalResolved;
+    var rulesJson = JsonSerializer.Serialize(Model.Rules.Select(r => new {
+        r.Id, r.Name, r.PeriodType, r.Metric, r.IsActive,
+        Slices = r.Slices.Select(s => new { s.SliceFrom, s.SliceTo, s.ActionType, s.ActionText, s.ActionValue })
+    }));
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .pr-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
+    .pr-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .pr-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .pr-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .pr-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .pr-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
+    .pr-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .pr-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+    .pr-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
+    .pr-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; background:var(--sa-surface,rgba(8,25,43,.9)); overflow:hidden; }
+    .pr-card-head { padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; border-bottom:1px solid rgba(73,111,151,.18); }
+    .pr-card-head h2 { margin:0; font-size:15px; font-weight:1000; }
+    .pr-rule { padding:14px 16px; border-bottom:1px solid rgba(143,168,188,.08); }
+    .pr-rule:last-child { border-bottom:0; }
+    .pr-rule-top { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+    .pr-rule-name { font-weight:1000; font-size:14px; }
+    .pr-rule-meta { font-size:11.5px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .pr-chip { display:inline-block; padding:2px 9px; border-radius:999px; font-size:10.5px; font-weight:900; background:color-mix(in srgb,var(--acc) 14%,transparent); color:var(--acc); }
+    .pr-chip.off { background:rgba(143,168,188,.16); color:#8FA8BC; }
+    .pr-slices { display:flex; flex-direction:column; gap:5px; margin-top:8px; }
+    .pr-slice-row { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:800; padding:5px 10px; border-radius:8px; background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .pr-slice-row { background:#f2f7fb; }
+    .pr-slice-range { direction:ltr; font-weight:900; color:var(--acc); min-width:90px; }
+    .pr-empty { padding:28px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .pr-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
+    .pr-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
+
+    .pr-bar { display:flex; align-items:end; gap:10px; flex-wrap:wrap; padding:12px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .pr-bar label { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); display:flex; flex-direction:column; gap:4px; }
+    .pr-bar input, .pr-bar select { min-height:36px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; font-size:13px; font-weight:800; }
+    html[data-theme="light"] .pr-bar input, html[data-theme="light"] .pr-bar select { background:#fff; }
+
+    .pr-table { width:100%; border-collapse:collapse; font-size:12.5px; min-width:820px; }
+    .pr-table th { text-align:start; padding:10px 12px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.12); }
+    html[data-theme="light"] .pr-table th { background:#f2f7fb; }
+    .pr-table td { padding:9px 12px; border-bottom:1px solid rgba(143,168,188,.08); }
+    .pr-num { direction:ltr; font-weight:900; }
+
+    .pr-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .pr-form select, .pr-form input { min-height:36px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; font-family:inherit; }
+    html[data-theme="light"] .pr-form select, html[data-theme="light"] .pr-form input { background:#fff; }
+    .pr-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .pr-sl-editor { display:flex; flex-direction:column; gap:8px; }
+    .pr-sl-item { display:grid; grid-template-columns:70px 70px 1fr 90px 34px; gap:6px; align-items:center; }
+    .pr-sl-item input, .pr-sl-item select { min-height:34px; font-size:12px; }
+    .pr-sl-x { border:0; background:rgba(248,113,113,.16); color:#f87171; border-radius:8px; min-height:34px; cursor:pointer; font-weight:900; }
+    .pr-sl-head { display:grid; grid-template-columns:70px 70px 1fr 90px 34px; gap:6px; font-size:10.5px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+</style>
+
+<section class="pr-page" dir="rtl">
+    <header class="pr-head">
+        <div>
+            <h1>📊 القواعد الفترية (شهري/أسبوعي)</h1>
+            <p>قواعد على تجميع الفترة بشرائح تصاعدية — كل شريحة مدى للمقياس بإجراء أشدّ (عقوبة متدرّجة).</p>
+        </div>
+        <button type="button" class="pr-btn" onclick="prOpen(0)">+ قاعدة جديدة</button>
+    </header>
+
+    @if (TempData["PrMessage"] != null)
+    {
+        <div class="pr-alert @((TempData["PrOk"] as bool?) == false ? "err" : "")">@TempData["PrMessage"]</div>
+    }
+
+    <div class="pr-card">
+        <div class="pr-card-head"><h2>القواعد المعرّفة</h2><span class="pr-rule-meta">@Model.Rules.Count قاعدة</span></div>
+        @if (Model.Rules.Count == 0)
+        {
+            <div class="pr-empty">لا قواعد فترية — أضف قاعدة بـ«+ قاعدة جديدة».</div>
+        }
+        else
+        {
+            @foreach (var r in Model.Rules)
+            {
+                <div class="pr-rule">
+                    <div class="pr-rule-top">
+                        <div>
+                            <span class="pr-rule-name">@r.Name</span>
+                            <span class="pr-chip @(r.IsActive ? "" : "off")">@(r.IsActive ? "مفعّلة" : "معطّلة")</span>
+                            <div class="pr-rule-meta">@r.PeriodLabel · المقياس: @r.MetricText · @r.Slices.Count شريحة</div>
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <button type="button" class="pr-btn ghost sm" onclick="prEdit(@r.Id)">تعديل</button>
+                            <form method="post" asp-page-handler="DeleteRule" style="display:inline"><input type="hidden" name="id" value="@r.Id" />
+                                <button type="submit" class="pr-btn danger sm" data-zyconfirm="حذف القاعدة؟">حذف</button></form>
+                        </div>
+                    </div>
+                    <div class="pr-slices">
+                        @foreach (var s in r.Slices.OrderBy(x => x.SliceFrom))
+                        {
+                            <div class="pr-slice-row">
+                                <span class="pr-slice-range">@s.RangeText</span>
+                                <span>← @PeriodRuleStore.LabelOf(PeriodRuleStore.ActionTypes, s.ActionType)</span>
+                                @if (!string.IsNullOrWhiteSpace(s.ActionText)) { <span>· @s.ActionText</span> }
+                                @if (s.ActionValue != 0) { <span style="color:var(--acc);direction:ltr">· @s.ActionValue.ToString("0.##")</span> }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    @* ===== لوحة التقييم ===== *@
+    <div class="pr-card">
+        <div class="pr-card-head"><h2>تقييم القواعد على فترة</h2></div>
+        <form method="get" class="pr-bar" style="border:0">
+            <input type="hidden" name="DidEvaluate" value="true" />
+            <label>نوع الفترة
+                <select name="EvalPeriodType" onchange="prPeriodKind(this.value)">
+                    @foreach (var (key, label) in Model.PeriodTypes)
+                    { <option value="@key" selected="@(Model.EvalPeriodType == key)">@label</option> }
+                </select>
+            </label>
+            <label>السنة
+                <select name="EvalYear">
+                    @for (var y = DateTime.Today.Year - 3; y <= DateTime.Today.Year + 1; y++)
+                    { <option value="@y" selected="@(y == evalYear)">@y</option> }
+                </select>
+            </label>
+            <label id="pr-month-wrap" style="@(Model.EvalPeriodType == "Week" ? "display:none" : "")">الشهر
+                <select name="EvalPeriod" id="pr-eval-month" disabled="@(Model.EvalPeriodType == "Week")">
+                    @for (var m = 1; m <= 12; m++)
+                    { <option value="@m" selected="@(Model.EvalPeriodType != "Week" && m == evalPeriod)">@m</option> }
+                </select>
+            </label>
+            <label id="pr-week-wrap" style="@(Model.EvalPeriodType == "Week" ? "" : "display:none")">الأسبوع
+                <select name="EvalPeriod" id="pr-eval-week" disabled="@(Model.EvalPeriodType != "Week")">
+                    @for (var w = 1; w <= Math.Max(Model.WeeksInYear, 52); w++)
+                    { <option value="@w" selected="@(Model.EvalPeriodType == "Week" && w == evalPeriod)">أسبوع @w</option> }
+                </select>
+            </label>
+            <button type="submit" class="pr-btn">تقييم</button>
+            <span class="pr-rule-meta">يقرأ الحضور المُجمَّع — ابنِ الشهر/الأسبوع أولاً.</span>
+        </form>
+
+        @if (Model.DidEvaluate)
+        {
+            <div style="overflow-x:auto">
+                @if (Model.Matches.Count == 0)
+                {
+                    <div class="pr-empty">لا موظفين تنطبق عليهم أي شريحة لهذه الفترة (تأكّد من بناء الحضور وتفعيل القواعد).</div>
+                }
+                else
+                {
+                    <table class="pr-table">
+                        <thead><tr><th>الموظف</th><th>القاعدة</th><th>المقياس</th><th>القيمة</th><th>الشريحة</th><th>الإجراء</th><th>القيمة</th></tr></thead>
+                        <tbody>
+                            @foreach (var m in Model.Matches)
+                            {
+                                <tr>
+                                    <td><b>@m.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @m.EmployeeNo</span></td>
+                                    <td>@m.RuleName</td>
+                                    <td>@m.MetricLabel</td>
+                                    <td class="pr-num">@m.Value.ToString("0.##")@(m.MetricIsHours ? " س" : "")</td>
+                                    <td class="pr-num" style="color:var(--acc)">@m.RangeText</td>
+                                    <td>@m.ActionTypeLabel@(string.IsNullOrWhiteSpace(m.ActionText) ? "" : " · " + m.ActionText)</td>
+                                    <td class="pr-num">@(m.ActionValue != 0 ? m.ActionValue.ToString("0.##") : "—")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        }
+    </div>
+
+    @* ===== باني القاعدة ===== *@
+    <div class="hrms-slideover-backdrop" id="pr-backdrop" onclick="prClose()"></div>
+    <aside class="hrms-slideover wide" id="pr-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="pr-title">قاعدة فترية جديدة</h2>
+            <button type="button" class="hrms-slideover-close" onclick="prClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="SaveRule" class="pr-form" style="display:flex;flex-direction:column;gap:12px" onsubmit="return prValidate()">
+                <input type="hidden" name="Id" id="pr-Id" value="0" />
+                <label>اسم القاعدة *<input name="Name" id="pr-Name" required placeholder="مثال: تأخير شهري متدرّج" /></label>
+                <div class="pr-grid2">
+                    <label>نوع الفترة
+                        <select name="PeriodType" id="pr-PeriodType">
+                            @foreach (var (key, label) in Model.PeriodTypes)
+                            { <option value="@key">@label</option> }
+                        </select>
+                    </label>
+                    <label>المقياس المُجمَّع
+                        <select name="Metric" id="pr-Metric">
+                            @foreach (var (key, label, _) in Model.MetricList)
+                            { <option value="@key">@label</option> }
+                        </select>
+                    </label>
+                </div>
+                <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IsActive" id="pr-IsActive" value="true" checked /> مفعّلة</label>
+
+                <div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                        <label style="margin:0">الشرائح التصاعدية (المدى من–إلى للمقياس، إلى الفارغ = ما فوق)</label>
+                        <button type="button" class="pr-btn ghost sm" onclick="prAddSlice()">+ شريحة</button>
+                    </div>
+                    <div class="pr-sl-head"><span>من</span><span>إلى</span><span>الإجراء / النص</span><span>القيمة</span><span></span></div>
+                    <div class="pr-sl-editor" id="pr-slices"></div>
+                </div>
+
+                <button type="submit" class="pr-btn">حفظ القاعدة</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script>
+        var PR_RULES = @Html.Raw(rulesJson);
+        var PR_ACTIONS = @Html.Raw(JsonSerializer.Serialize(Model.ActionTypeList.Select(a => new { a.Key, a.Label })));
+
+        function prPeriodKind(v){
+            var week = v === 'Week';
+            document.getElementById('pr-month-wrap').style.display = week ? 'none' : '';
+            document.getElementById('pr-week-wrap').style.display = week ? '' : 'none';
+            document.getElementById('pr-eval-month').disabled = week;   // المعطّل لا يُرسَل
+            document.getElementById('pr-eval-week').disabled = !week;
+        }
+
+        function prSliceRow(s){
+            s = s || {};
+            var actions = PR_ACTIONS.map(function(a){
+                var sel = (s.ActionType === a.Key) ? ' selected' : '';
+                return '<option value="'+a.Key+'"'+sel+'>'+a.Label+'</option>';
+            }).join('');
+            var div = document.createElement('div');
+            div.className = 'pr-sl-item';
+            div.innerHTML =
+                '<input type="number" step="0.01" name="SliceFrom" value="'+(s.SliceFrom!=null?s.SliceFrom:'')+'" placeholder="0" />' +
+                '<input type="number" step="0.01" name="SliceTo" value="'+(s.SliceTo!=null?s.SliceTo:'')+'" placeholder="∞" />' +
+                '<span style="display:flex;gap:4px"><select name="SliceActionType" style="flex:0 0 100px">'+actions+'</select>' +
+                '<input name="SliceActionText" value="'+(s.ActionText?String(s.ActionText).replace(/"/g,'&quot;'):'')+'" placeholder="نص الإجراء" style="flex:1" /></span>' +
+                '<input type="number" step="0.01" name="SliceActionValue" value="'+(s.ActionValue!=null?s.ActionValue:'')+'" placeholder="0" />' +
+                '<button type="button" class="pr-sl-x" onclick="this.closest(\'.pr-sl-item\').remove()">×</button>';
+            return div;
+        }
+        function prAddSlice(s){ document.getElementById('pr-slices').appendChild(prSliceRow(s)); }
+
+        function prOpen(id, r){
+            var f = document.querySelector('#pr-slide form'); f.reset();
+            document.getElementById('pr-Id').value = (r && r.Id) || 0;
+            document.getElementById('pr-title').textContent = (r && r.Id) ? 'تعديل قاعدة فترية' : 'قاعدة فترية جديدة';
+            document.getElementById('pr-slices').innerHTML = '';
+            if (r && r.Id){
+                document.getElementById('pr-Name').value = r.Name;
+                document.getElementById('pr-PeriodType').value = r.PeriodType;
+                document.getElementById('pr-Metric').value = r.Metric;
+                document.getElementById('pr-IsActive').checked = !!r.IsActive;
+                (r.Slices||[]).forEach(function(s){ prAddSlice(s); });
+            } else {
+                document.getElementById('pr-IsActive').checked = true;
+                prAddSlice(); prAddSlice();
+            }
+            document.getElementById('pr-slide').classList.add('open');
+            document.getElementById('pr-backdrop').classList.add('open');
+        }
+        function prEdit(id){ var r = PR_RULES.find(function(x){ return x.Id === id; }); if(r) prOpen(id, r); }
+        function prClose(){ document.getElementById('pr-slide').classList.remove('open'); document.getElementById('pr-backdrop').classList.remove('open'); }
+        function prValidate(){
+            if (document.querySelectorAll('#pr-slices .pr-sl-item').length === 0){ alert('أضف شريحة واحدة على الأقل.'); return false; }
+            return true;
+        }
+        document.addEventListener('keydown', function(e){ if(e.key==='Escape') prClose(); });
+    </script>
+}

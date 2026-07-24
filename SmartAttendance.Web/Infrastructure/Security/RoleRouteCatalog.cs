@@ -47,6 +47,7 @@ public static class RoleRouteCatalog
         "/attendancesettings",
         "/dayattendance",
         "/shiftrules",
+        "/periodrules",
         "/attendancerecommendations",
         "/missingpunchrequests",
         "/employeeonlinepunches",
