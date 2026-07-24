@@ -16,6 +16,14 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    @* PWA — تثبيت التطبيق على الأجهزة *@
+    <link rel="manifest" href="~/manifest.webmanifest" />
+    <meta name="theme-color" content="#081426" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ZYNORA" />
+
     <title>@(ViewData["Title"] ?? brandName) - @brandName</title>
 
     <script>
@@ -661,6 +669,7 @@
     <script src="~/js/nexora-employee-updates-accounting-format.js" asp-append-version="true"></script>
     <script src="~/js/zynora-confirm.js" asp-append-version="true"></script>
     <script src="~/js/zynora-ux-guards.js" asp-append-version="true"></script>
+    <script src="~/js/pwa-register.js" asp-append-version="true"></script>
 </body>
 </html>
 

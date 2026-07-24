@@ -1,0 +1,27 @@
+{
+  "id": "/",
+  "name": "ZYNORA HR",
+  "short_name": "ZYNORA",
+  "description": "نظام إدارة الموارد البشرية والحضور",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#081426",
+  "theme_color": "#081426",
+  "icons": [
+    {
+      "src": "/brand/zynora-symbol-1024.png",
+      "sizes": "192x192 512x512 1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/zynora-symbol-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
