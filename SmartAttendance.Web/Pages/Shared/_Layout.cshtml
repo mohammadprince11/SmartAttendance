@@ -503,6 +503,12 @@
                                 <span>الحضور الشهري</span>
                             </a>
                         }
+                        @if (CanRoute("/weekattendance"))
+                        {
+                            <a href="/WeekAttendance" class="nexora-nav-link @(IsUnder("/WeekAttendance") ? "active nexora-active" : "")">
+                                <span>الحضور الأسبوعي</span>
+                            </a>
+                        }
                         @if (CanRoute("/attendancereports"))
                         {
                             <a href="/AttendanceReports" class="nexora-nav-link @(IsUnder("/AttendanceReports") ? "active nexora-active" : "")">

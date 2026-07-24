@@ -60,6 +60,7 @@ public static class RoleRouteCatalog
         "/employeegeolocations",
         "/attendanceviewer",
         "/monthattendance",
+        "/weekattendance",
         "/attendancereports",
         "/employeeshifts",
         "/attendancerecords",
