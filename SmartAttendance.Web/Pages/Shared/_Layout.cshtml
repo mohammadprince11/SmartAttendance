@@ -485,6 +485,12 @@
                                 <span>طلبات البصمة المفقودة</span>
                             </a>
                         }
+                        @if (CanRoute("/employeeonlinepunches"))
+                        {
+                            <a href="/EmployeeOnlinePunches" class="nexora-nav-link @(IsUnder("/EmployeeOnlinePunches") ? "active nexora-active" : "")">
+                                <span>البصمات عبر الإنترنت</span>
+                            </a>
+                        }
                         @if (CanRoute("/attendanceviewer"))
                         {
                             <a href="/AttendanceViewer" class="nexora-nav-link @(IsUnder("/AttendanceViewer") ? "active nexora-active" : "")">

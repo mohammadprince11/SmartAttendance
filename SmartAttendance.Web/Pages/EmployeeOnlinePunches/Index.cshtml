@@ -1,0 +1,143 @@
+@page "/EmployeeOnlinePunches"
+@model SmartAttendance.Web.Pages.EmployeeOnlinePunches.IndexModel
+
+@{
+    ViewData["Title"] = "البصمات عبر الإنترنت";
+    var acc = "#22d3ee";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .op-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
+    .op-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .op-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .op-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .op-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .op-btn { min-height:34px; padding:6px 14px; border-radius:10px; border:1px solid rgba(73,111,151,.3); font-size:12.5px; font-weight:900; cursor:pointer; background:transparent; color:inherit; }
+    .op-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+    .op-btn.danger { background:rgba(248,113,113,.16); border-color:rgba(248,113,113,.45); color:#f87171; }
+    .op-btn.danger:hover { background:rgba(248,113,113,.26); }
+    .op-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+    .op-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
+    .op-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
+    .op-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .op-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .op-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:12px 14px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .op-bar select, .op-bar input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:800; font-size:12.5px; }
+    html[data-theme="light"] .op-bar select, html[data-theme="light"] .op-bar input { background:#fff; }
+    .op-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .op-table { width:100%; border-collapse:collapse; font-size:13px; min-width:760px; }
+    .op-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .op-table th { background:#f2f7fb; }
+    .op-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
+    .op-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
+    .op-emp b { font-weight:900; } .op-emp span { display:block; font-size:11px; color:var(--sa-muted,#8FA8BC); }
+    .op-ref { direction:ltr; font-weight:900; font-size:12px; }
+    .op-chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:900; }
+    .op-chip.in { background:rgba(34,211,238,.16); color:#22d3ee; }
+    .op-chip.out { background:rgba(167,139,250,.16); color:#a78bfa; }
+    .op-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .op-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
+    .op-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
+    .op-bulkbar { position:fixed; bottom:18px; inset-inline:0; margin-inline:auto; width:max-content; max-width:calc(100% - 32px);
+        z-index:60; display:none; gap:10px; align-items:center; padding:12px 18px;
+        border:1px solid color-mix(in srgb,var(--acc) 45%,transparent); border-radius:16px;
+        background:var(--sa-surface,rgba(8,25,43,.98)); box-shadow:0 14px 44px rgba(0,0,0,.55); }
+    html[data-theme="light"] .op-bulkbar { background:#fff; }
+    .op-bulkbar.show { display:flex; }
+    .op-bulkbar b span { color:var(--acc); }
+</style>
+
+<section class="op-page" dir="rtl">
+    <header class="op-head">
+        <div>
+            <h1>🌐 البصمات عبر الإنترنت</h1>
+            <p>بصمات المتصفح/الجوال (بصم ذاتي) — تدخل اشتقاق اليومية عند «تحديث الحضور». يمكن حذف المختار منها.</p>
+        </div>
+    </header>
+
+    <div class="op-kpis">
+        <div class="op-kpi"><b>@Model.Items.Count</b><span>إجمالي البصمات</span></div>
+        <div class="op-kpi"><b style="color:#22d3ee">@Model.InCount</b><span>ختم دخول</span></div>
+        <div class="op-kpi"><b style="color:#a78bfa">@Model.OutCount</b><span>ختم خروج</span></div>
+    </div>
+
+    <form method="get" class="op-bar">
+        <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/رمز" style="min-width:170px" />
+        <select name="PunchType">
+            <option value="">كل الأنواع</option>
+            <option value="In" selected="@(Model.PunchType == "In")">ختم دخول</option>
+            <option value="Out" selected="@(Model.PunchType == "Out")">ختم خروج</option>
+        </select>
+        <select name="FDept"><option value="">كل الأقسام</option>@foreach (var s in Model.AllDepartments){<option value="@s" selected="@(Model.FDept==s)">@s</option>}</select>
+        <select name="FBranch"><option value="">كل الفروع</option>@foreach (var s in Model.AllBranches){<option value="@s" selected="@(Model.FBranch==s)">@s</option>}</select>
+        <input type="date" name="From" value="@Model.From" title="من تاريخ" />
+        <input type="date" name="To" value="@Model.To" title="إلى تاريخ" />
+        <button type="submit" class="op-btn sm">تصفية</button>
+        <a href="/EmployeeOnlinePunches" class="op-btn sm">إزالة</a>
+    </form>
+
+    @if (TempData["OpMessage"] != null)
+    {
+        <div class="op-alert @((TempData["OpOk"] as bool?) == false ? "err" : "")">@TempData["OpMessage"]</div>
+    }
+
+    <form method="post">
+    <div class="op-card">
+        @if (Model.Items.Count == 0)
+        {
+            <div class="op-empty">لا بصمات عبر الإنترنت مطابقة.</div>
+        }
+        else
+        {
+            <table class="op-table">
+                <thead>
+                    <tr>
+                        <th style="width:34px"><input type="checkbox" onclick="opAll(this)" /></th>
+                        <th>الموظف</th><th>وقت البصمة</th><th>النوع</th><th>الدلالة</th>
+                        <th style="text-align:end">إجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.Items)
+                    {
+                        <tr>
+                            <td><input type="checkbox" name="SelectedIds" value="@p.Id" onchange="opSel()" /></td>
+                            <td class="op-emp"><b>@p.EmployeeName</b><span>@p.EmployeeNo</span></td>
+                            <td class="op-ref">@p.PunchAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td><span class="op-chip @(p.PunchType == "Out" ? "out" : "in")">@p.PunchTypeText</span></td>
+                            <td>@p.SemanticName</td>
+                            <td style="text-align:end">
+                                <button type="submit" asp-page-handler="Delete" name="id" value="@p.Id" class="op-btn danger sm" data-zyconfirm="حذف البصمة؟">حذف</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @if (Model.Items.Count > 0)
+    {
+        <div class="op-bulkbar" id="op-bulkbar">
+            <b>المحدد: <span id="op-selcount">0</span></b>
+            <button type="submit" asp-page-handler="DeleteSelected" class="op-btn danger" data-zyconfirm="حذف البصمات المحددة؟">🗑 حذف المحدد</button>
+        </div>
+    }
+    </form>
+</section>
+
+@section Scripts {
+    <script>
+        function opAll(cb){ document.querySelectorAll('[name=SelectedIds]').forEach(function(x){x.checked=cb.checked;}); opSel(); }
+        function opSel(){
+            var bar = document.getElementById('op-bulkbar'); if(!bar) return;
+            var n = document.querySelectorAll('[name=SelectedIds]:checked').length;
+            var c = document.getElementById('op-selcount'); if(c) c.textContent = n;
+            bar.classList.toggle('show', n > 0);
+        }
+    </script>
+}

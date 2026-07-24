@@ -187,6 +187,46 @@
         </section>
 
         <section class="nxex-pane" data-nxex-pane="attendance">
+            @* ===== بصمة الآن (بصم ذاتي عبر الإنترنت) ===== *@
+            <section class="nxex-card" style="margin-bottom:16px">
+                <header class="nxex-card-head">
+                    <div>
+                        <h2>البصمة عبر الإنترنت</h2>
+                        <p>سجّل حضورك أو انصرافك مباشرة من المتصفح — تدخل الحضور عند «تحديث الحضور».</p>
+                    </div>
+                    <span class="nxex-chip live">🌐</span>
+                </header>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <form method="post" asp-page-handler="OnlinePunch" style="flex:1;min-width:160px">
+                        <input type="hidden" name="returnTab" value="attendance" />
+                        <input type="hidden" name="punchType" value="In" />
+                        <button type="submit" style="width:100%">🔓 تسجيل حضور الآن</button>
+                    </form>
+                    <form method="post" asp-page-handler="OnlinePunch" style="flex:1;min-width:160px">
+                        <input type="hidden" name="returnTab" value="attendance" />
+                        <input type="hidden" name="punchType" value="Out" />
+                        <button type="submit" style="width:100%">🚪 تسجيل انصراف الآن</button>
+                    </form>
+                </div>
+                @if (Model.MyOnlinePunches.Any())
+                {
+                    <div class="nxex-table-wrap" style="margin-top:14px">
+                        <table class="nxex-table">
+                            <thead><tr><th>النوع</th><th>الوقت</th><th>الدلالة</th></tr></thead>
+                            <tbody>
+                                @foreach (var p in Model.MyOnlinePunches.Take(8))
+                                {
+                                    <tr>
+                                        <td><span class="nxex-chip @(p.PunchType == "Out" ? "" : "live")">@p.PunchTypeText</span></td>
+                                        <td>@p.PunchAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                        <td>@p.SemanticName</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
             <div class="nxex-grid-2">
                 <section class="nxex-card">
                     <header class="nxex-card-head">

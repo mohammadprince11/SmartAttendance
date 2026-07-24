@@ -33,6 +33,9 @@ public class IndexModel : PageModel
     /// <summary>طلبات البصمة المفقودة التي قدّمها هذا الموظف (تصل لصفحة الإدارة).</summary>
     public List<MissingPunchRequestStore.Request> MyMissingPunches { get; private set; } = new();
 
+    /// <summary>آخر بصمات الموظف عبر الإنترنت (تأكيد فوري للبصم الذاتي).</summary>
+    public List<OnlinePunchStore.OnlinePunch> MyOnlinePunches { get; private set; } = new();
+
     [BindProperty]
     public FeedbackInput Feedback { get; set; } = new();
 
@@ -298,6 +301,29 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         return RedirectToPage(new { tab = returnTab ?? "requests" });
     }
 
+    /// <summary>
+    /// البصمة عبر الإنترنت (بصم ذاتي من البوابة — نمط كيان قسم 36.ج): يسجّل بصمة
+    /// دخول/خروج بوقت الخادم الحالي بمصدر «موبايل»، فتدخل اشتقاق اليومية كأي بصمة.
+    /// </summary>
+    public async Task<IActionResult> OnPostOnlinePunchAsync(string? punchType, string? returnTab)
+    {
+        var employeeId = await ResolveEmployeeIdAsync();
+        if (employeeId <= 0)
+            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
+        if (employeeId <= 0)
+        {
+            StatusMessage = "لا يمكن تسجيل البصمة لأن المستخدم غير مرتبط بموظف.";
+            return RedirectToPage(new { tab = returnTab ?? "attendance" });
+        }
+
+        var type = punchType == "Out" ? "Out" : "In";
+        var now = DateTime.Now;
+        await OnlinePunchStore.RecordAsync(_dbContext, employeeId, type, now, null);
+
+        StatusMessage = $"سُجّلت بصمة {(type == "Out" ? "الانصراف" : "الحضور")} عبر الإنترنت الساعة {now:HH:mm} — تدخل الحضور عند «تحديث الحضور».";
+        return RedirectToPage(new { tab = returnTab ?? "attendance" });
+    }
+
     private async Task LoadAsync()
     {
         await EmployeeEngagementSchema.EnsureAsync(_dbContext);
@@ -328,6 +354,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         PendingAssetAcknowledgments = await LoadPendingAssetAcknowledgmentsAsync(employeeId);
         MyMissingPunches = await MissingPunchRequestStore.ListAsync(
             _dbContext, new MissingPunchRequestStore.Filter { EmployeeId = employeeId });
+        MyOnlinePunches = await OnlinePunchStore.ListAsync(
+            _dbContext, new OnlinePunchStore.Filter { EmployeeId = employeeId, Top = 200 });
     }
 
     public sealed class PendingAssetAcknowledgment

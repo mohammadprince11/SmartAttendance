@@ -49,6 +49,7 @@ public static class RoleRouteCatalog
         "/shiftrules",
         "/attendancerecommendations",
         "/missingpunchrequests",
+        "/employeeonlinepunches",
         "/shiftassignments",
         // الشاشة التشغيلية الأم: المسارات البديلة (المعالجة/التصحيحات/الاستيراد)
         // كلها تُعيد التوجيه إليها، فبدونها تنتهي كلها بـ«لا صلاحية».
@@ -90,6 +91,7 @@ public static class RoleRouteCatalog
         "/attendancecorrections",
         "/attendanceimports",
         "/missingpunchrequests",
+        "/employeeonlinepunches",
         "/holidays",
         "/leaverequests",
         "/selfservices",
