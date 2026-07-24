@@ -143,6 +143,14 @@ IF COL_LENGTH('SelfServiceRequests', 'HrReviewedAt') IS NULL
 IF COL_LENGTH('SelfServiceRequests', 'HrNote') IS NULL
     ALTER TABLE SelfServiceRequests ADD HrNote nvarchar(max) NULL;
 
+-- مرفق صورة للطلب (إجازة/مغادرة/…): مسار نسبي تحت /uploads/requests.
+IF COL_LENGTH('SelfServiceRequests', 'AttachmentPath') IS NULL
+    ALTER TABLE SelfServiceRequests ADD AttachmentPath nvarchar(300) NULL;
+
+-- عدد أيام الإجازة (محسوب من المدى، مخزَّن للعرض/التقارير).
+IF COL_LENGTH('SelfServiceRequests', 'DaysCount') IS NULL
+    ALTER TABLE SelfServiceRequests ADD DaysCount decimal(9,2) NULL;
+
 -- دلالة زوج البصمة (نمط كيان — قسم 29.د بدراسة الحضور): كل صف في
 -- AttendanceRecords هو زوج دخول/خروج، وكيان يصنّف الأزواج بنوع بصمة
 -- (حضور · استراحة · صلاة · مهمة عمل...). NULL = حضور، فالبيانات القائمة

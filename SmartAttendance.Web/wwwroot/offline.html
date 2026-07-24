@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#071424" />
+  <title>غير متصل — بوابة الموظف</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; min-height: 100dvh;
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+      font-family: "Segoe UI", Tahoma, system-ui, sans-serif;
+      background: radial-gradient(1200px 800px at 50% -10%, #0d2036 0%, #071424 60%, #050e1a 100%);
+      color: #e6f0fa; text-align: center;
+    }
+    .card {
+      max-width: 380px; width: 100%;
+      background: rgba(9, 24, 42, .72); border: 1px solid rgba(91, 132, 176, .22);
+      border-radius: 24px; padding: 36px 26px;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, .45);
+    }
+    .icon {
+      width: 92px; height: 92px; margin: 0 auto 20px; display: block;
+      opacity: .95;
+    }
+    h1 { font-size: 22px; margin: 0 0 10px; font-weight: 900; }
+    p { color: #9fb3c7; font-size: 14px; line-height: 1.7; margin: 0 0 22px; }
+    button {
+      min-height: 46px; padding: 0 26px; width: 100%;
+      border-radius: 999px; border: 1px solid rgba(25, 211, 224, .45);
+      background: linear-gradient(135deg, #12d3e0, #1f9bd6);
+      color: #041018; font-size: 15px; font-weight: 900; cursor: pointer;
+    }
+    button:active { transform: scale(.98); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img class="icon" src="/brand/pwa/icon-192.png" alt="" />
+    <h1>لا يوجد اتصال بالإنترنت</h1>
+    <p>تعذّر الوصول إلى الخادم. تأكّد من اتصالك بالشبكة ثم أعد المحاولة — بياناتك محفوظة بأمان على الخادم.</p>
+    <button type="button" onclick="location.reload()">إعادة المحاولة</button>
+  </div>
+</body>
+</html>

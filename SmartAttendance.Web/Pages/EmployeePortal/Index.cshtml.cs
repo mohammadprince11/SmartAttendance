@@ -11,13 +11,16 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IAnnouncementService _announcementService;
+    private readonly IWebHostEnvironment _environment;
 
     public IndexModel(
         ApplicationDbContext dbContext,
-        IAnnouncementService announcementService)
+        IAnnouncementService announcementService,
+        IWebHostEnvironment environment)
     {
         _dbContext = dbContext;
         _announcementService = announcementService;
+        _environment = environment;
     }
 
     public string Tab { get; private set; } = "home";
@@ -259,6 +262,150 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     }
 
     /// <summary>
+    /// طلب إجازة مُهيكل من الشاشة المنبثقة (المرحلة 1: سنوية/مرضية). يتحقّق من
+    /// رصيد السنوية، يحسب عدد الأيام، يحفظ مرفق صورة اختياري، ثم يبدأ سريان الموافقات.
+    /// </summary>
+    public async Task<IActionResult> OnPostCreateLeaveAsync(
+        string? reqType,
+        DateTime? from,
+        DateTime? to,
+        string? fromTime,
+        string? toTime,
+        string? reason,
+        IFormFile? attachment)
+    {
+        var employeeId = await ResolveEmployeeIdAsync();
+        if (employeeId <= 0)
+        {
+            employeeId = await HrmsDatabase.ScalarAsync<int>(
+                _dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
+        }
+        if (employeeId <= 0)
+        {
+            StatusMessage = "تعذّر تحديد الموظف.";
+            return RedirectToPage(new { tab = "requests" });
+        }
+
+        var typeLabel = (reqType ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(typeLabel))
+        {
+            StatusMessage = "يرجى اختيار نوع الطلب.";
+            return RedirectToPage(new { tab = "requests" });
+        }
+        if (!from.HasValue || !to.HasValue)
+        {
+            StatusMessage = "يرجى تحديد تاريخي البداية والنهاية.";
+            return RedirectToPage(new { tab = "requests" });
+        }
+        if (to.Value.Date < from.Value.Date)
+        {
+            StatusMessage = "تاريخ النهاية لا يمكن أن يكون قبل تاريخ البداية.";
+            return RedirectToPage(new { tab = "requests" });
+        }
+
+        // ضوابط النوع من المتجر الداينمك.
+        var typeDef = (await RequestTypeStore.ListTypesAsync(_dbContext, onlyActive: true))
+            .FirstOrDefault(x => x.Name == typeLabel);
+        if (typeDef is { NeedsTime: true } &&
+            (string.IsNullOrWhiteSpace(fromTime) || string.IsNullOrWhiteSpace(toTime)))
+        {
+            StatusMessage = "يرجى تحديد وقت البداية والنهاية.";
+            return RedirectToPage(new { tab = "requests" });
+        }
+        if (typeDef is { AttachmentRequired: true } && attachment is not { Length: > 0 })
+        {
+            StatusMessage = $"المرفق إلزامي لهذا النوع{(string.IsNullOrWhiteSpace(typeDef.AttachmentLabel) ? "" : $" ({typeDef.AttachmentLabel})")}.";
+            return RedirectToPage(new { tab = "requests" });
+        }
+
+        // تقاطع منتصف الليل للأنواع الزمنية (أوفرتايم/مغادرة متأخرة): النهاية في اليوم التالي.
+        if (typeDef is { NeedsTime: true } &&
+            TimeSpan.TryParse(fromTime, out var stTs) && TimeSpan.TryParse(toTime, out var etTs) &&
+            etTs <= stTs)
+        {
+            to = from.Value.AddDays(1);
+        }
+
+        var days = (decimal)((to.Value.Date - from.Value.Date).Days + 1);
+
+        if (typeDef?.AllowedDays is int maxDays && days > maxDays)
+        {
+            StatusMessage = $"عدد الأيام يتجاوز المسموح ({maxDays} يوم) لهذا النوع.";
+            return RedirectToPage(new { tab = "requests" });
+        }
+
+        // بوابة الرصيد للإجازة السنوية.
+        if (typeLabel == "إجازة سنوية")
+        {
+            var balances = await LeaveBalanceCalculator.ForEmployeeAsync(
+                _dbContext, employeeId, from.Value.Year);
+            var annual = balances.FirstOrDefault(
+                b => b.Type == SmartAttendance.Domain.Enums.LeaveType.Annual);
+            var remaining = annual?.Remaining ?? 0m;
+            if (days > remaining)
+            {
+                StatusMessage = $"رصيد الإجازة السنوية غير كافٍ (المتبقّي {remaining:0.#} يوم، والمطلوب {days:0.#}).";
+                return RedirectToPage(new { tab = "requests" });
+            }
+        }
+
+        // حفظ المرفق (صورة اختيارية).
+        string? attachmentPath = null;
+        if (attachment is { Length: > 0 })
+        {
+            var ext = Path.GetExtension(attachment.FileName);
+            var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf" };
+            if (allowed.Contains(ext.ToLowerInvariant()))
+            {
+                var dir = Path.Combine(_environment.WebRootPath, "uploads", "requests");
+                Directory.CreateDirectory(dir);
+                var fileName = $"req_{employeeId}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{ext}";
+                await using (var stream = System.IO.File.Create(Path.Combine(dir, fileName)))
+                {
+                    await attachment.CopyToAsync(stream);
+                }
+                attachmentPath = $"/uploads/requests/{fileName}";
+            }
+        }
+
+        reason = string.IsNullOrWhiteSpace(reason) ? "تم الإرسال من بوابة الموظف" : reason.Trim();
+
+        // وقت اختياري (للمغادرات): "HH:mm".
+        TimeSpan? startTs = TimeSpan.TryParse(fromTime, out var st) ? st : null;
+        TimeSpan? endTs = TimeSpan.TryParse(toTime, out var et) ? et : null;
+
+        var requestId = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            """
+INSERT INTO SelfServiceRequests
+(EmployeeId, RequestType, CreatedAt, FromDate, ToDate, StartTime, EndTime, Reason, Status, DaysCount, AttachmentPath)
+VALUES
+(@EmployeeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @StartTime, @EndTime, @Reason, 'Pending', @DaysCount, @AttachmentPath);
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                HrmsDatabase.AddParameter(command, "@RequestType", typeLabel);
+                HrmsDatabase.AddParameter(command, "@FromDate", from.Value);
+                HrmsDatabase.AddParameter(command, "@ToDate", to.Value);
+                HrmsDatabase.AddParameter(command, "@StartTime", (object?)startTs ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@EndTime", (object?)endTs ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Reason", reason);
+                HrmsDatabase.AddParameter(command, "@DaysCount", days);
+                HrmsDatabase.AddParameter(command, "@AttachmentPath", (object?)attachmentPath ?? DBNull.Value);
+            });
+
+        if (requestId > 0)
+        {
+            await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, typeLabel, employeeId);
+        }
+
+        StatusMessage = $"تم إرسال {typeLabel} ({days:0.#} يوم) وهو الآن قيد المراجعة.";
+        return RedirectToPage(new { tab = "requests" });
+    }
+
+    /// <summary>
     /// تقديم طلب بصمة مفقودة مُهيكل من الموظف (نمط كيان — حلقة الخدمة الذاتية):
     /// يصل لصفحة إدارة طلبات البصمة بمصدر «خدمة ذاتية» بحالة «قيد الانتظار» ليبتّ
     /// فيه المسؤول. عند الموافقة تُنشأ البصمة الفعلية.
@@ -356,7 +503,45 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             _dbContext, new MissingPunchRequestStore.Filter { EmployeeId = employeeId });
         MyOnlinePunches = await OnlinePunchStore.ListAsync(
             _dbContext, new OnlinePunchStore.Filter { EmployeeId = employeeId, Top = 200 });
+
+        // رصيد الإجازات للوحة «إجراءاتي» — لوحة اختيارية لا تُسقط البوابة عند تعذّرها.
+        try
+        {
+            LeaveBalances = await LeaveBalanceCalculator.ForEmployeeAsync(
+                _dbContext, employeeId, DateTime.Now.Year);
+        }
+        catch
+        {
+            LeaveBalances = new();
+        }
+
+        // أنواع الطلبات الداينمك (تبويبات + أنواع بضوابطها) لشاشة الإجازة.
+        try
+        {
+            await RequestTypeStore.EnsureAsync(_dbContext);
+            ReqCategories = await RequestTypeStore.ListCategoriesAsync(_dbContext, onlyActive: true);
+            ReqTypes = await RequestTypeStore.ListTypesAsync(_dbContext, onlyActive: true);
+        }
+        catch
+        {
+            ReqCategories = new();
+            ReqTypes = new();
+        }
     }
+
+    public List<LeaveBalanceCalculator.TypeBalance> LeaveBalances { get; set; } = new();
+    public List<RequestTypeStore.Category> ReqCategories { get; set; } = new();
+    public List<RequestTypeStore.ReqType> ReqTypes { get; set; } = new();
+
+    public static string LeaveTypeArabic(SmartAttendance.Domain.Enums.LeaveType type) => type switch
+    {
+        SmartAttendance.Domain.Enums.LeaveType.Annual => "سنوية",
+        SmartAttendance.Domain.Enums.LeaveType.Sick => "مرضية",
+        SmartAttendance.Domain.Enums.LeaveType.Emergency => "طارئة",
+        SmartAttendance.Domain.Enums.LeaveType.Unpaid => "بدون راتب",
+        SmartAttendance.Domain.Enums.LeaveType.Official => "رسمية",
+        _ => type.ToString()
+    };
 
     public sealed class PendingAssetAcknowledgment
     {

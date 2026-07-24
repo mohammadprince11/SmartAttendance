@@ -146,7 +146,12 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// في التطوير نُبقي HTTP وHTTPS جنباً إلى جنب بلا إجبار تحويل: التلفون يحتاج
+// HTTP لتنزيل شهادة الـCA قبل أن يثق بالـHTTPS (بوت‑ستراب). الإنتاج يفرض HTTPS.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.Use(async (context, next) =>
 {

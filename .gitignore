@@ -65,3 +65,7 @@ SmartAttendance.Web/App_Data/PositionImports/
 .claude/*
 !.claude/launch.json
 SmartAttendance.Web/App_Data/DataProtection-Keys/
+
+# LAN dev TLS private key (never commit)
+SmartAttendance.Web/certs/
+*.pfx

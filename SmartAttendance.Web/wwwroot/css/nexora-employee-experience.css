@@ -341,3 +341,374 @@ a{text-decoration:none;color:inherit}
 .nxex-ann-read button{min-height:38px;border:1px solid rgba(25,211,224,.34);border-radius:12px;background:rgba(25,211,224,.10);color:#dfffff;font-family:inherit;font-weight:1000;cursor:pointer;padding:0 15px}
 .nxex-ann-read-state{display:flex;justify-content:flex-start!important;gap:8px!important;align-items:center!important;color:#8ff2d8;font-size:12px;font-weight:1000}
 .nxex-ann-read-state small{color:#8ff2d8}
+
+/* ===== PWA — زر التثبيت + تلميح iOS + مناطق آمنة ===== */
+.nxex-topbar-actions{display:flex;align-items:center;gap:8px}
+.nxex-install-btn{
+    min-height:34px;padding:0 13px;border-radius:999px;
+    border:1px solid rgba(25,211,224,.45);
+    background:linear-gradient(135deg,rgba(18,211,224,.22),rgba(31,155,214,.20));
+    color:#9ff4fa;font-family:inherit;font-size:12px;font-weight:1000;cursor:pointer;
+    display:flex;align-items:center;gap:4px;white-space:nowrap
+}
+.nxex-install-btn:active{transform:scale(.97)}
+.nxex-ios-hint{
+    margin:0 0 14px;padding:11px 15px;border-radius:16px;
+    border:1px solid rgba(25,211,224,.28);background:rgba(9,24,42,.66);
+    color:#bfe6ef;font-size:12.5px;font-weight:800;line-height:1.7
+}
+
+/* استخدام المناطق الآمنة (الحواف/النوتش) عند العمل كتطبيق مثبَّت */
+@media(display-mode:standalone){
+    .nxex-shell-main{
+        padding-top:max(14px,env(safe-area-inset-top));
+        padding-bottom:max(28px,env(safe-area-inset-bottom))
+    }
+    .nxex-topbar a[href="/Account/Logout"]{display:flex}
+}
+@supports(padding:max(0px)){
+    body.nxex-body{
+        padding-right:env(safe-area-inset-right);
+        padding-left:env(safe-area-inset-left)
+    }
+}
+
+/* ===== لوحة «إجراءاتي» + زر عائم (موبايل فقط) ===== */
+.nxex-mobile-dash{display:none}
+.nxex-fab{display:none}
+
+/* ===== شريط التنقّل السفلي (موبايل) — نمط التطبيقات الأصلية ===== */
+.nxex-bottom-nav{display:none}
+.nxex-more-sheet,.nxex-more-backdrop{display:none}
+
+@media(max-width:720px){
+    /* إزالة التكرار: نُخفي الشريط الجانبي والتبويبات الداخلية ونعتمد الشريط السفلي */
+    .nxex-shell-sidebar{display:none}
+    .nxex-tabs{display:none}
+    .nxex-shell-main{padding-bottom:calc(78px + env(safe-area-inset-bottom))}
+
+    /* الهيرو للصفحة الرئيسية فقط؛ باقي الأقسام تبدأ من الأعلى (سلوك تطبيق) */
+    [data-nxex-page]:not([data-current="home"]) .nxex-hero{display:none}
+    /* الإحصائيات الخمسة تُستبدَل بلوحة «إجراءاتي» على الموبايل */
+    .nxex-command-center{display:none}
+    /* شاشة «طلباتي» = متابعة فقط؛ الإنشاء انتقل لشاشة «+» المنبثقة */
+    .nxex-request-create{display:none}
+
+    /* لوحة «إجراءاتي» */
+    .nxex-mobile-dash{display:block;margin-bottom:16px}
+    .nxex-balance-card{
+        border:1px solid rgba(25,211,224,.22);border-radius:20px;padding:14px 16px;margin-bottom:14px;
+        background:linear-gradient(135deg,rgba(18,211,224,.14),rgba(31,155,214,.10)),rgba(9,24,42,.7)
+    }
+    .nxex-balance-card header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .nxex-balance-card header span{font-size:13px;font-weight:1000;color:#e6f0fa}
+    .nxex-balance-card header small{font-size:11px;font-weight:900;color:#7f95ab}
+    .nxex-balance-row{display:flex;gap:10px}
+    .nxex-balance-item{
+        flex:1;text-align:center;padding:10px 6px;border-radius:14px;
+        background:rgba(255,255,255,.04);border:1px solid rgba(91,132,176,.16)
+    }
+    .nxex-balance-item strong{display:block;font-size:26px;font-weight:1000;color:#19d3e0;line-height:1.1}
+    .nxex-balance-item span{display:block;font-size:12px;font-weight:900;color:#cfe0f0;margin-top:3px}
+    .nxex-balance-item small{display:block;font-size:10px;font-weight:800;color:#7f95ab;margin-top:1px}
+    .nxex-balance-empty{flex:1;text-align:center;color:#7f95ab;font-size:12.5px;font-weight:800;padding:8px}
+
+    .nxex-quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+    .nxex-quick{
+        position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+        padding:13px 4px;border-radius:16px;cursor:pointer;
+        border:1px solid rgba(91,132,176,.18);background:rgba(255,255,255,.03);
+        color:#cfe0f0;font-family:inherit;font-size:10.5px;font-weight:900;text-align:center
+    }
+    .nxex-quick svg{width:24px;height:24px}
+    .nxex-quick:active{transform:scale(.96)}
+    .nxex-quick:nth-child(2) svg{color:#7fd4ff}
+    .nxex-quick:nth-child(3) svg{color:#8ef2c8}
+    .nxex-quick:nth-child(4) svg{color:#ffd27f}
+    .nxex-quick:nth-child(5) svg{color:#c9a3ff}
+    .nxex-quick:nth-child(6) svg{color:#ff9fb2}
+    .nxex-quick:nth-child(7) svg{color:#9ff4fa}
+    .nxex-quick:nth-child(8) svg{color:#ffc47f}
+    .nxex-quick.primary{
+        border-color:rgba(25,211,224,.5);
+        background:linear-gradient(135deg,rgba(18,211,224,.9),rgba(31,155,214,.85));color:#041018
+    }
+    .nxex-quick.primary svg{color:#041018}
+    .nxex-quick-badge{
+        position:absolute;top:6px;left:8px;min-width:18px;height:18px;padding:0 5px;
+        display:flex;align-items:center;justify-content:center;
+        background:#ff4d6d;color:#fff;font-size:10px;font-weight:1000;font-style:normal;border-radius:999px
+    }
+
+    /* زر «طلب جديد» العائم */
+    .nxex-fab{
+        display:flex;align-items:center;justify-content:center;
+        position:fixed;left:18px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:390;
+        width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;
+        background:linear-gradient(135deg,#12d3e0,#1f9bd6);color:#041018;
+        box-shadow:0 10px 24px rgba(18,211,224,.4)
+    }
+    .nxex-fab svg{width:26px;height:26px}
+    .nxex-fab:active{transform:scale(.94)}
+
+    .nxex-bottom-nav{
+        display:flex;position:fixed;bottom:0;left:0;right:0;z-index:400;
+        justify-content:space-around;align-items:stretch;gap:2px;
+        padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+        background:rgba(6,16,29,.94);
+        border-top:1px solid rgba(91,132,176,.20);
+        backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+        box-shadow:0 -8px 24px rgba(0,0,0,.35)
+    }
+    .nxex-bnav-item{
+        flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;
+        justify-content:center;gap:3px;padding:6px 2px;
+        background:none;border:0;cursor:pointer;border-radius:14px;
+        color:#7f95ab;font-family:inherit;font-size:10.5px;font-weight:900;
+        transition:color .15s,background .15s
+    }
+    .nxex-bnav-item svg{width:23px;height:23px;stroke-width:2}
+    .nxex-bnav-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    .nxex-bnav-item.active{color:#19d3e0}
+    .nxex-bnav-item.active svg{filter:drop-shadow(0 0 6px rgba(25,211,224,.55))}
+    .nxex-bnav-item:active{background:rgba(25,211,224,.10)}
+
+    /* درج «المزيد» */
+    /* حاسم: خاصية hidden يجب أن تتغلّب على display:block أدناه، وإلا الخلفية الشفافة
+       تغطّي الشاشة وتعترض كل لمسات الشريط السفلي (الأزرار تبدو معطّلة). */
+    .nxex-more-backdrop[hidden],.nxex-more-sheet[hidden]{display:none}
+    .nxex-more-backdrop{
+        display:block;position:fixed;inset:0;z-index:410;
+        background:rgba(2,8,16,.55);opacity:0;transition:opacity .2s
+    }
+    .nxex-more-backdrop.open{opacity:1}
+    .nxex-more-sheet{
+        display:block;position:fixed;left:0;right:0;bottom:0;z-index:420;
+        background:#0a1a2e;border-top:1px solid rgba(91,132,176,.22);
+        border-radius:22px 22px 0 0;padding:10px 16px calc(20px + env(safe-area-inset-bottom));
+        transform:translateY(100%);transition:transform .22s ease;
+        box-shadow:0 -18px 44px rgba(0,0,0,.5)
+    }
+    .nxex-more-sheet.open{transform:translateY(0)}
+    .nxex-more-handle{width:42px;height:4px;border-radius:999px;background:rgba(159,179,199,.35);margin:2px auto 12px}
+    .nxex-more-sheet h3{margin:0 0 12px;font-size:14px;font-weight:1000;color:#e6f0fa}
+    .nxex-more-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .nxex-more-item{
+        display:flex;align-items:center;gap:10px;padding:13px 14px;
+        background:rgba(255,255,255,.03);border:1px solid rgba(91,132,176,.18);
+        border-radius:16px;cursor:pointer;
+        color:#cfe0f0;font-family:inherit;font-size:12.5px;font-weight:900;text-align:start
+    }
+    .nxex-more-item svg{width:22px;height:22px;flex-shrink:0;color:#19d3e0}
+    .nxex-more-item:active{background:rgba(25,211,224,.10)}
+    .nxex-more-item.active{border-color:rgba(25,211,224,.5);background:rgba(25,211,224,.10)}
+}
+
+/* ===== شاشة طلب الإجازة المنبثقة ===== */
+.nxex-modal-backdrop{position:fixed;inset:0;z-index:500;background:rgba(2,8,16,.62);opacity:0;transition:opacity .22s}
+.nxex-modal-backdrop.open{opacity:1}
+.nxex-modal-backdrop[hidden]{display:none}
+.nxex-modal{
+    position:fixed;left:0;right:0;bottom:0;z-index:510;
+    top:8vh;top:8dvh;            /* dvh يطابق المرئي على الموبايل (يستثني شريط العنوان) */
+    display:flex;flex-direction:column;background:#0a1a2e;
+    border-radius:22px 22px 0 0;transform:translateY(100%);transition:transform .24s ease;
+    box-shadow:0 -20px 50px rgba(0,0,0,.55)
+}
+.nxex-modal.open{transform:translateY(0)}
+.nxex-modal[hidden]{display:none}
+.nxex-modal-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 18px 12px;border-bottom:1px solid rgba(91,132,176,.16)
+}
+.nxex-modal-head h2{margin:0;font-size:17px;font-weight:1000;color:#e6f0fa}
+.nxex-modal-close{
+    width:34px;height:34px;border-radius:50%;border:1px solid rgba(91,132,176,.3);
+    background:rgba(255,255,255,.04);color:#cfe0f0;font-size:15px;cursor:pointer;line-height:1
+}
+.nxex-modal-tabs{display:flex;gap:6px;padding:12px 14px;border-bottom:1px solid rgba(91,132,176,.14)}
+.nxex-modal-tabs button{
+    flex:1;min-height:38px;border-radius:12px;border:1px solid rgba(91,132,176,.2);
+    background:rgba(255,255,255,.03);color:#9fb3c7;font-family:inherit;font-size:12.5px;font-weight:1000;cursor:pointer
+}
+.nxex-modal-tabs button.active{border-color:rgba(25,211,224,.55);background:rgba(25,211,224,.12);color:#9ff4fa}
+.nxex-modal-body{flex:1;min-height:0;overflow-y:auto;padding:16px 18px calc(40px + env(safe-area-inset-bottom))}
+
+.nxex-leave-form{display:flex;flex-direction:column;gap:14px}
+.nxex-leave-types{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.nxex-leave-type{
+    display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 8px;cursor:pointer;
+    border:1px solid rgba(91,132,176,.2);border-radius:14px;background:rgba(255,255,255,.03);text-align:center
+}
+.nxex-leave-type input{position:absolute;opacity:0;pointer-events:none}
+.nxex-leave-type span{font-size:14px;font-weight:1000;color:#e6f0fa}
+.nxex-leave-type small{font-size:10.5px;font-weight:800;color:#7f95ab}
+.nxex-leave-type.active{border-color:rgba(25,211,224,.6);background:rgba(25,211,224,.12)}
+.nxex-leave-type.active span{color:#9ff4fa}
+.nxex-leave-type.disabled{opacity:.45}
+
+.nxex-modal .nxex-field{display:flex;flex-direction:column;gap:6px}
+.nxex-modal .nxex-field label{font-size:12.5px;font-weight:900;color:#cfe0f0}
+.nxex-modal .nxex-field input,.nxex-modal .nxex-field textarea{
+    width:100%;min-height:44px;padding:10px 12px;border-radius:12px;
+    border:1px solid rgba(91,132,176,.25);background:rgba(6,16,29,.7);color:#e6f0fa;
+    font-family:inherit;font-size:14px
+}
+.nxex-modal .nxex-field textarea{min-height:64px;resize:vertical}
+.nxex-daycount{
+    padding:12px 14px;border-radius:12px;text-align:center;font-size:13px;font-weight:900;color:#cfe0f0;
+    background:linear-gradient(135deg,rgba(18,211,224,.14),rgba(31,155,214,.10));border:1px solid rgba(25,211,224,.22)
+}
+.nxex-daycount strong{color:#19d3e0;font-size:18px;margin-inline-start:6px}
+.nxex-leave-submit{
+    min-height:50px;border:0;border-radius:14px;cursor:pointer;margin-top:4px;
+    background:linear-gradient(135deg,#12d3e0,#1f9bd6);color:#041018;font-family:inherit;font-size:15px;font-weight:1000
+}
+.nxex-leave-submit:active{transform:scale(.98)}
+.nxex-modal-soon{text-align:center;padding:40px 20px;color:#9fb3c7}
+.nxex-modal-soon strong{color:#e6f0fa;font-size:15px}
+.nxex-modal-soon p{margin:6px 0}
+.nxex-modal-soon span{display:inline-block;margin-top:12px;padding:6px 14px;border-radius:999px;background:rgba(25,211,224,.1);border:1px solid rgba(25,211,224,.3);color:#9ff4fa;font-size:12px;font-weight:900}
+
+/* ===== تنسيق حقول التاريخ والملف داخل الشاشة المنبثقة (بدل الافتراضي القديم) ===== */
+.nxex-modal input[type="date"]{color-scheme:dark}
+.nxex-modal input[type="date"]::-webkit-calendar-picker-indicator{
+    filter:invert(1) brightness(1.6);opacity:.75;cursor:pointer;padding:2px
+}
+.nxex-modal input[type="file"]{color:#9fb3c7;padding:7px 10px}
+.nxex-modal input[type="file"]::file-selector-button{
+    font:inherit;font-weight:900;margin-inline-end:12px;padding:9px 16px;
+    border:0;border-radius:10px;cursor:pointer;
+    background:linear-gradient(135deg,#12d3e0,#1f9bd6);color:#041018
+}
+.nxex-modal input[type="file"]::-webkit-file-upload-button{
+    font:inherit;font-weight:900;margin-inline-end:12px;padding:9px 16px;
+    border:0;border-radius:10px;cursor:pointer;
+    background:linear-gradient(135deg,#12d3e0,#1f9bd6);color:#041018
+}
+
+/* ===== قفل تمرير الخلفية عند فتح شاشة/درج + منع تسلسل التمرير ===== */
+html.nxex-scroll-lock,body.nxex-scroll-lock{overflow:hidden !important}
+.nxex-modal-body,.nxex-more-sheet{overscroll-behavior:contain}
+.nxex-modal-body{-webkit-overflow-scrolling:touch}
+
+/* التقويم يضيف .nxcal-ready بـoverflow:visible!important للآباء (لإظهار لوحته) —
+   لكن هذا يكسر تمرير جسم الشاشة. نُعيد التمرير للجسم بخصوصية أعلى. */
+.nxex-modal-body.nxcal-ready{overflow-y:auto !important}
+
+/* ===== منتقي التاريخ المخصّص (يوم واحد / أيام متعددة) ===== */
+.nxex-date-trigger{
+    width:100%;min-height:46px;display:flex;align-items:center;gap:10px;padding:0 14px;cursor:pointer;
+    border:1px solid rgba(91,132,176,.28);border-radius:12px;background:rgba(6,16,29,.7);
+    color:#e6f0fa;font-family:inherit;font-size:14px;font-weight:800;text-align:start
+}
+.nxex-date-trigger svg{width:20px;height:20px;color:#19d3e0;flex-shrink:0}
+.nxex-date-trigger span{color:#cfe0f0}
+.nxex-date-trigger .is-placeholder,.nxex-date-trigger span:empty{color:#7f95ab}
+
+.nxex-dp-backdrop{position:fixed;inset:0;z-index:620;background:rgba(2,8,16,.65);opacity:0;transition:opacity .2s}
+.nxex-dp-backdrop.open{opacity:1}
+.nxex-dp-backdrop[hidden]{display:none}
+.nxex-dp-sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:630;max-height:94dvh;
+    display:flex;flex-direction:column;background:#0a1a2e;border-top:1px solid rgba(91,132,176,.22);
+    border-radius:22px 22px 0 0;padding:10px 16px calc(16px + env(safe-area-inset-bottom));
+    transform:translateY(100%);transition:transform .24s ease;box-shadow:0 -18px 44px rgba(0,0,0,.5);
+    overflow-y:auto
+}
+.nxex-dp-sheet.open{transform:translateY(0)}
+.nxex-dp-sheet[hidden]{display:none}
+.nxex-dp-sheet h3{text-align:center;margin:6px 0 14px;font-size:17px;font-weight:1000;color:#e6f0fa}
+
+.nxex-dp-modes{display:flex;gap:0;background:rgba(255,255,255,.04);border:1px solid rgba(91,132,176,.2);border-radius:14px;padding:4px;margin-bottom:16px}
+.nxex-dp-modes button{flex:1;min-height:40px;border:0;border-radius:11px;background:none;color:#9fb3c7;font-family:inherit;font-size:13px;font-weight:1000;cursor:pointer}
+.nxex-dp-modes button.active{background:#12263a;color:#fff}
+
+.nxex-dp-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.nxex-dp-fields:has([data-dp-fieldbox="single"]:not([hidden])){grid-template-columns:1fr}
+.nxex-dp-field{display:grid;gap:5px}
+.nxex-dp-field span{font-size:12.5px;font-weight:900;color:#cfe0f0;text-align:center}
+.nxex-dp-field strong{min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:14px;background:#050e1a;border:1px solid rgba(91,132,176,.2);color:#fff;font-size:14px;font-weight:900}
+
+.nxex-dp-calhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.nxex-dp-calhead span{font-size:15px;font-weight:1000;color:#fff}
+.nxex-dp-calhead button{width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.05);color:#cfe0f0;font-size:20px;cursor:pointer}
+.nxex-dp-week{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px}
+.nxex-dp-week span{text-align:center;font-size:11px;font-weight:900;color:#7f95ab}
+.nxex-dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px 0}
+.nxex-dp-grid button{
+    aspect-ratio:1;border:0;background:none;cursor:pointer;
+    color:#e6f0fa;font-family:inherit;font-size:14px;font-weight:900;position:relative
+}
+.nxex-dp-grid button.dp-out{color:#4a5b6e;pointer-events:none}
+.nxex-dp-grid button.dp-today{outline:1px solid rgba(215,168,79,.7);outline-offset:-6px;border-radius:50%;color:#f4d18d}
+.nxex-dp-grid button.dp-in-range{background:rgba(25,211,224,.16)}
+.nxex-dp-grid button.dp-start{background:linear-gradient(to left,rgba(25,211,224,.16) 50%,transparent 50%)}
+.nxex-dp-grid button.dp-end{background:linear-gradient(to right,rgba(25,211,224,.16) 50%,transparent 50%)}
+.nxex-dp-grid button.dp-start.dp-end{background:none}
+.nxex-dp-grid button.dp-sel::before{
+    content:"";position:absolute;inset:3px;border-radius:50%;background:#19d3e0;z-index:-1
+}
+.nxex-dp-grid button.dp-sel{color:#041018}
+
+.nxex-dp-apply{min-height:52px;border:0;border-radius:16px;margin-top:16px;cursor:pointer;
+    background:linear-gradient(135deg,#12d3e0,#1f9bd6);color:#041018;font-family:inherit;font-size:16px;font-weight:1000}
+.nxex-dp-apply:disabled{opacity:.5}
+.nxex-dp-apply:active{transform:scale(.99)}
+.nxex-dp-cancel{min-height:44px;border:0;background:none;margin-top:6px;cursor:pointer;color:#9fb3c7;font-family:inherit;font-size:14px;font-weight:900}
+
+/* خاصية hidden يجب أن تتغلّب على display:grid لصناديق حقول المنتقي */
+.nxex-dp-field[hidden]{display:none !important}
+
+/* أنواع بثلاثة أعمدة (العرضية/المغادرات) + صف الوقت */
+.nxex-leave-types.nxex-types-3{grid-template-columns:repeat(3,1fr)}
+.nxex-types-3 .nxex-leave-type{padding:12px 4px}
+.nxex-types-3 .nxex-leave-type span{font-size:12.5px}
+.nxex-form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.nxex-modal input[type="time"]{color-scheme:dark}
+.nxex-modal input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1) brightness(1.6);opacity:.75;cursor:pointer}
+
+/* خاصية hidden يجب أن تتغلّب على display:flex لنماذج تبويبات الشاشة */
+.nxex-leave-form[hidden]{display:none !important}
+
+/* ===== منتقي الوقت المخصّص ===== */
+.nxex-tp-sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:630;max-height:88dvh;
+    display:flex;flex-direction:column;background:#0a1a2e;border-top:1px solid rgba(91,132,176,.22);
+    border-radius:22px 22px 0 0;padding:10px 16px calc(16px + env(safe-area-inset-bottom));
+    transform:translateY(100%);transition:transform .24s ease;box-shadow:0 -18px 44px rgba(0,0,0,.5)
+}
+.nxex-tp-sheet.open{transform:translateY(0)}
+.nxex-tp-sheet[hidden]{display:none}
+.nxex-tp-sheet h3{text-align:center;margin:6px 0 10px;font-size:17px;font-weight:1000;color:#e6f0fa}
+.nxex-tp-preview{text-align:center;margin-bottom:14px}
+.nxex-tp-preview strong{font-size:30px;font-weight:1000;color:#19d3e0;letter-spacing:2px}
+.nxex-tp-cols{display:flex;align-items:center;justify-content:center;gap:8px}
+.nxex-tp-colwrap{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;max-width:130px}
+.nxex-tp-colwrap>span{font-size:12px;font-weight:900;color:#7f95ab}
+.nxex-tp-sep{font-size:26px;font-weight:1000;color:#7f95ab;padding-top:20px}
+.nxex-tp-col{width:100%;height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;
+    border:1px solid rgba(91,132,176,.2);border-radius:14px;padding:6px;background:rgba(6,16,29,.6);scroll-behavior:smooth}
+.nxex-tp-col button{min-height:42px;flex:0 0 auto;border:0;border-radius:10px;background:none;cursor:pointer;
+    color:#cfe0f0;font-family:inherit;font-size:17px;font-weight:900}
+.nxex-tp-col button.sel{background:#19d3e0;color:#041018}
+.nxex-tp-col button:active{background:rgba(25,211,224,.12)}
+
+/* صف الوقت يظهر فقط للأنواع التي تحتاج وقت — hidden يجب أن يتغلّب على display:grid */
+.nxex-time-row[hidden]{display:none !important}
+/* شبكة الأنواع تتكيّف مع أي عدد */
+.nxex-leave-types{grid-template-columns:repeat(auto-fit,minmax(90px,1fr)) !important}
+
+/* بانر «الحركة عبر يومين» (الأوفرتايم/المغادرة المتأخرة) */
+.nxex-cross-note{padding:11px 14px;border-radius:14px;border:1px solid rgba(215,168,79,.4);background:rgba(215,168,79,.1);color:#ffe0a0;font-size:12.5px;font-weight:900;line-height:1.7}
+.nxex-cross-note[hidden]{display:none !important}
+.nxex-daycount[hidden]{display:none !important}
+
+/* المدة المطلوبة + ملاحظة المبلغ (الأوفرتايم) */
+.nxex-duration{padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,rgba(18,211,224,.14),rgba(31,155,214,.10));border:1px solid rgba(25,211,224,.22);font-size:13px;font-weight:900;color:#cfe0f0;display:grid;gap:8px}
+.nxex-duration[hidden]{display:none !important}
+.nxex-duration strong{color:#19d3e0;font-size:16px}
+.nxex-amount-note{font-size:11.5px;font-weight:800;color:#f4d18d;line-height:1.7}
+
+/* شريط تبويبات الشاشة يُخفى في وضع الفئة المستقلة */
+.nxex-modal-tabs[hidden]{display:none !important}

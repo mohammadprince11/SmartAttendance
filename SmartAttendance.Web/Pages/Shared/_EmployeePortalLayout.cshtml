@@ -7,8 +7,22 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>@ViewData["Title"] - NEXORA Employee Experience</title>
+
+    @* ===== PWA — تطبيق قابل للتثبيت على كل الأجهزة ===== *@
+    <link rel="manifest" href="~/manifest.webmanifest" />
+    <meta name="theme-color" content="#071424" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="بوابتي" />
+    <meta name="application-name" content="بوابتي" />
+    <link rel="apple-touch-icon" href="~/brand/pwa/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="~/brand/pwa/icon-192.png" />
+
+    <link rel="stylesheet" href="~/css/nexora-calendar-v18.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-employee-experience.css" asp-append-version="true" />
 </head>
 <body class="nxex-body">
@@ -50,12 +64,83 @@
                 <strong>بوابة الموظف الذكية</strong>
                 <span>Employee Experience Portal</span>
             </div>
-            <a href="/Account/Logout">خروج</a>
+            <div class="nxex-topbar-actions">
+                <button type="button" id="pwa-install-btn" class="nxex-install-btn" hidden>
+                    ⬇ تثبيت التطبيق
+                </button>
+                <a href="/Account/Logout">خروج</a>
+            </div>
         </div>
+
+        <div id="pwa-ios-hint" class="nxex-ios-hint" hidden>
+            لتثبيت التطبيق على iPhone: اضغط زر المشاركة
+            <span aria-hidden="true">􀈂</span> ثم «أضف إلى الشاشة الرئيسية».
+        </div>
+
         @RenderBody()
     </main>
 
+    @* ===== شريط التنقّل السفلي (موبايل فقط) — يستبدل الشريط الجانبي والتبويبات المكرّرة ===== *@
+    <nav class="nxex-bottom-nav" aria-label="التنقّل السريع">
+        <button type="button" class="nxex-bnav-item" data-nxex-tab="home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+            <span>الرئيسية</span>
+        </button>
+        <button type="button" class="nxex-bnav-item" data-nxex-tab="attendance">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+            <span>الحضور</span>
+        </button>
+        <button type="button" class="nxex-bnav-item" data-nxex-tab="requests" data-scroll-target=".nxex-request-list-card">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13l2.5-8h11L20 13"/><path d="M4 13v6h16v-6M4 13h4l1 2h6l1-2h4"/></svg>
+            <span>طلباتي</span>
+        </button>
+        <button type="button" class="nxex-bnav-item" data-nxex-tab="compensation">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14h2"/></svg>
+            <span>الراتب</span>
+        </button>
+        <button type="button" class="nxex-bnav-item" id="nxex-more-btn" data-nxex-more-toggle aria-haspopup="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            <span>المزيد</span>
+        </button>
+    </nav>
+
+    @* زر «طلب جديد» عائم (موبايل) — يفتح منتقي أنواع الطلبات *@
+    <button type="button" class="nxex-fab" data-open-reqsheet aria-label="طلب جديد">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+
+    @* درج منتقي «طلب جديد» يُرندَر ديناميكياً في صفحة البوابة (Index) لأنه يعتمد فئات المتجر *@
+
+    <div class="nxex-more-backdrop" id="nxex-more-backdrop" hidden></div>
+    <div class="nxex-more-sheet" id="nxex-more-sheet" role="dialog" aria-label="أقسام إضافية" hidden>
+        <div class="nxex-more-handle"></div>
+        <h3>أقسام أخرى</h3>
+        <div class="nxex-more-grid">
+            <button type="button" class="nxex-more-item" data-nxex-tab="profile">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+                <span>ملفي الشخصي</span>
+            </button>
+            <button type="button" class="nxex-more-item" data-nxex-tab="pulse">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>
+                <span>الاستبيانات</span>
+            </button>
+            <button type="button" class="nxex-more-item" data-nxex-tab="feedback">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>الشكاوي والمقترحات</span>
+            </button>
+            <button type="button" class="nxex-more-item" data-nxex-tab="performance">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><path d="M8 14l-2 7 6-3 6 3-2-7"/></svg>
+                <span>التقييم والانضباط</span>
+            </button>
+        </div>
+    </div>
+
     @await RenderSectionAsync("Scripts", required: false)
+    <script src="~/js/nexora-calendar-v18.js" asp-append-version="true"></script>
+    <script src="~/js/pwa.js" asp-append-version="true"></script>
+    <script src="~/js/nxex-bottom-nav.js" asp-append-version="true"></script>
+    <script src="~/js/nxex-datepicker.js" asp-append-version="true"></script>
+    <script src="~/js/nxex-timepicker.js" asp-append-version="true"></script>
 </body>
 </html>
 

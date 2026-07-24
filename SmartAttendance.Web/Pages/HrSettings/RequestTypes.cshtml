@@ -1,0 +1,131 @@
+@page "/HrSettings/RequestTypes"
+@model SmartAttendance.Web.Pages.HrSettings.RequestTypesModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+@{
+    ViewData["Title"] = "مركز أنواع الطلبات";
+    string Paid(string m) => m switch { "unpaid" => "غير مدفوعة", "half" => "نصف أجر", _ => "مدفوعة" };
+}
+
+<style>
+    .rtc-wrap{max-width:1000px;margin:0 auto;padding:8px 4px 40px}
+    .rtc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    .rtc-head h1{margin:0;font-size:22px;font-weight:1000}
+    .rtc-sub{color:#9fb3c7;font-size:13px;margin-bottom:16px;line-height:1.7}
+    .rtc-status{padding:10px 14px;border-radius:12px;background:rgba(89,217,140,.1);border:1px solid rgba(89,217,140,.3);color:#bfffd8;font-weight:900;margin-bottom:16px}
+    .rtc-cat{border:1px solid rgba(91,132,176,.22);border-radius:18px;padding:14px 16px;margin-bottom:16px;background:rgba(255,255,255,.02)}
+    .rtc-cat-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+    .rtc-cat-title{font-size:17px;font-weight:1000;display:flex;align-items:center;gap:8px}
+    .rtc-badge{font-size:11px;font-weight:900;padding:3px 9px;border-radius:999px;background:rgba(25,211,224,.12);border:1px solid rgba(25,211,224,.3);color:#9ff4fa}
+    .rtc-badge.off{background:rgba(228,93,101,.1);border-color:rgba(228,93,101,.35);color:#ffc7c7}
+    .rtc-type{border:1px solid rgba(91,132,176,.18);border-radius:14px;margin-bottom:8px;background:rgba(6,16,29,.4)}
+    .rtc-type>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .rtc-type>summary::-webkit-details-marker{display:none}
+    .rtc-type-name{font-weight:1000;font-size:14px}
+    .rtc-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+    .rtc-chip{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;border:1px solid rgba(91,132,176,.25);color:#cfe0f0}
+    .rtc-chip.pay{border-color:rgba(89,217,140,.3);color:#bfffd8}
+    .rtc-chip.unpay{border-color:rgba(215,168,79,.35);color:#f4d18d}
+    .rtc-body{padding:4px 14px 14px;border-top:1px solid rgba(91,132,176,.14)}
+    .rtc-form .rtc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}
+    .rtc-form label{display:grid;gap:5px;font-size:12.5px;font-weight:900;color:#cfe0f0}
+    .rtc-form input,.rtc-form select{min-height:40px;padding:8px 10px;border-radius:10px;border:1px solid rgba(91,132,176,.25);background:rgba(6,16,29,.7);color:#e6f0fa;font-family:inherit;font-size:13px;color-scheme:dark}
+    .rtc-toggles{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0}
+    .rtc-toggles label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:#dce7f3}
+    .rtc-actions{display:flex;gap:8px;margin-top:8px}
+    .rtc-btn{min-height:40px;padding:0 18px;border-radius:12px;border:1px solid rgba(91,132,176,.3);background:rgba(255,255,255,.04);color:#e6f0fa;font-family:inherit;font-weight:1000;cursor:pointer}
+    .rtc-btn.primary{border:0;background:linear-gradient(135deg,#12d3e0,#1f9bd6);color:#041018}
+    .rtc-btn.danger{border-color:rgba(228,93,101,.4);color:#ffc7c7}
+    .rtc-addtype>summary{list-style:none;cursor:pointer;padding:10px;text-align:center;color:#9ff4fa;font-weight:1000;font-size:13px;border:1px dashed rgba(25,211,224,.4);border-radius:12px}
+    .rtc-addtype>summary::-webkit-details-marker{display:none}
+    .rtc-inline{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}
+    .rtc-inline input{min-height:34px;padding:4px 8px;border-radius:8px;border:1px solid rgba(91,132,176,.25);background:rgba(6,16,29,.7);color:#e6f0fa;font-size:12px}
+    .rtc-newcat{border:1px dashed rgba(25,211,224,.4);border-radius:16px;padding:14px;margin-bottom:16px}
+    @@media(max-width:640px){.rtc-form .rtc-grid,.rtc-toggles{grid-template-columns:1fr}}
+</style>
+
+<div class="rtc-wrap" dir="rtl">
+    <div class="rtc-head">
+        <h1>مركز أنواع الطلبات</h1>
+        <a href="/HrSettings" class="rtc-btn">→ الإعدادات</a>
+    </div>
+    <p class="rtc-sub">التبويبات والأنواع داينمك — أضِف أي تبويبة أو نوع بضوابطه، ويظهر فوراً في تطبيق الموظف. (قالب الموافقة يُدار من شاشته المنفصلة.)</p>
+
+    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    {
+        <div class="rtc-status">@Model.StatusMessage</div>
+    }
+
+    @* إضافة تبويبة جديدة *@
+    <details class="rtc-newcat">
+        <summary style="cursor:pointer;font-weight:1000;color:#9ff4fa">➕ تبويبة جديدة</summary>
+        <form method="post" asp-page-handler="SaveCategory" class="rtc-inline" style="margin-top:12px">
+            <input type="hidden" name="id" value="0" />
+            <input type="text" name="name" placeholder="اسم التبويب (عربي)" required />
+            <input type="text" name="nameEn" placeholder="English" />
+            <input type="number" name="order" placeholder="الترتيب" value="0" style="width:90px" />
+            <input type="hidden" name="active" value="true" />
+            <button type="submit" class="rtc-btn primary">إضافة</button>
+        </form>
+    </details>
+
+    @foreach (var cat in Model.Categories)
+    {
+        var catTypes = Model.Types.Where(x => x.CategoryId == cat.Id).ToList();
+        <div class="rtc-cat">
+            <div class="rtc-cat-head">
+                <div class="rtc-cat-title">
+                    @cat.Name
+                    <span class="rtc-badge @(cat.IsActive ? "" : "off")">@(cat.IsActive ? "مفعّل" : "معطّل")</span>
+                    <span class="rtc-badge">@catTypes.Count نوع</span>
+                </div>
+                <details>
+                    <summary style="cursor:pointer;color:#9fb3c7;font-size:12px;font-weight:900">تعديل التبويب</summary>
+                    <form method="post" asp-page-handler="SaveCategory" class="rtc-inline" style="margin-top:10px">
+                        <input type="hidden" name="id" value="@cat.Id" />
+                        <input type="text" name="name" value="@cat.Name" required />
+                        <input type="text" name="nameEn" value="@cat.NameEn" placeholder="English" />
+                        <input type="number" name="order" value="@cat.DisplayOrder" style="width:80px" />
+                        <label style="display:inline-flex;gap:5px;align-items:center;color:#dce7f3;font-size:12px"><input type="checkbox" name="active" value="true" checked="@cat.IsActive" /> مفعّل</label>
+                        <button type="submit" class="rtc-btn primary">حفظ</button>
+                        <button type="submit" asp-page-handler="DeleteCategory" name="id" value="@cat.Id" class="rtc-btn danger" data-zyconfirm>حذف التبويب</button>
+                    </form>
+                </details>
+            </div>
+
+            @foreach (var t in catTypes)
+            {
+                <details class="rtc-type">
+                    <summary>
+                        <div>
+                            <div class="rtc-type-name">@t.Name @(t.IsActive ? "" : "· معطّل")</div>
+                            <div class="rtc-chips">
+                                <span class="rtc-chip @(t.PaidMode=="unpaid" ? "unpay" : "pay")">@Paid(t.PaidMode)</span>
+                                @if (t.AllowedDays.HasValue){<span class="rtc-chip">@t.AllowedDays يوم</span>}
+                                @if (t.DeductFromSalary){<span class="rtc-chip unpay">يُستقطع</span>}
+                                @if (t.HasBalance){<span class="rtc-chip">رصيد</span>}
+                                @if (t.NeedsTime){<span class="rtc-chip">وقت</span>}
+                                @if (t.AttachmentRequired){<span class="rtc-chip">مرفق إلزامي</span>}
+                                @if (t.Gender != "all"){<span class="rtc-chip">@(t.Gender=="female" ? "نساء" : "رجال")</span>}
+                            </div>
+                        </div>
+                        <span style="color:#9fb3c7;font-size:12px">تعديل ▾</span>
+                    </summary>
+                    <div class="rtc-body">
+                        <partial name="_RequestTypeForm" model="t" />
+                        <form method="post" asp-page-handler="DeleteType" style="margin-top:8px">
+                            <input type="hidden" name="id" value="@t.Id" />
+                            <button type="submit" class="rtc-btn danger" data-zyconfirm>حذف النوع</button>
+                        </form>
+                    </div>
+                </details>
+            }
+
+            <details class="rtc-addtype">
+                <summary>➕ نوع جديد في «@cat.Name»</summary>
+                <div class="rtc-body">
+                    <partial name="_RequestTypeForm" model="new RequestTypeStore.ReqType { CategoryId = cat.Id }" />
+                </div>
+            </details>
+        </div>
+    }
+</div>

@@ -1,0 +1,57 @@
+@model SmartAttendance.Web.Infrastructure.Hrms.RequestTypeStore.ReqType
+@{
+    var t = Model;
+    var isNew = t.Id == 0;
+}
+<form method="post" asp-page-handler="SaveType" class="rtc-form">
+    <input type="hidden" name="id" value="@t.Id" />
+    <input type="hidden" name="categoryId" value="@t.CategoryId" />
+
+    <div class="rtc-grid">
+        <label>الاسم (عربي)<input type="text" name="name" value="@t.Name" required /></label>
+        <label>الاسم (إنجليزي)<input type="text" name="nameEn" value="@t.NameEn" /></label>
+
+        <label>عدد الأيام المسموح<input type="number" name="allowedDays" value="@(t.AllowedDays?.ToString())" min="0" placeholder="بلا حد" /></label>
+        <label>الحد الأقصى للطلب<input type="number" name="maxPerRequest" value="@(t.MaxPerRequest?.ToString())" min="0" placeholder="بلا حد" /></label>
+
+        <label>التكرار
+            <select name="repeat">
+                <option value="yearly" selected="@(t.Repeat=="yearly")">سنوياً</option>
+                <option value="event" selected="@(t.Repeat=="event")">لكل حالة</option>
+                <option value="once" selected="@(t.Repeat=="once")">مرة/العمر</option>
+            </select>
+        </label>
+        <label>شرط الخدمة (أشهر)<input type="number" name="serviceMonths" value="@t.ServiceMonths" min="0" /></label>
+
+        <label>الجنس المستحقّ
+            <select name="gender">
+                <option value="all" selected="@(t.Gender=="all")">الكل</option>
+                <option value="male" selected="@(t.Gender=="male")">رجال</option>
+                <option value="female" selected="@(t.Gender=="female")">نساء</option>
+            </select>
+        </label>
+        <label>الأجر
+            <select name="paidMode">
+                <option value="full" selected="@(t.PaidMode=="full")">مدفوعة كاملاً</option>
+                <option value="half" selected="@(t.PaidMode=="half")">نصف أجر</option>
+                <option value="unpaid" selected="@(t.PaidMode=="unpaid")">غير مدفوعة</option>
+            </select>
+        </label>
+
+        <label>تسمية المرفق<input type="text" name="attachmentLabel" value="@t.AttachmentLabel" placeholder="مثال: عقد الزواج" /></label>
+        <label>الترتيب<input type="number" name="order" value="@t.DisplayOrder" min="0" /></label>
+    </div>
+
+    <div class="rtc-toggles">
+        <label><input type="checkbox" name="deductFromSalary" value="true" checked="@t.DeductFromSalary" /> تُستقطع من الراتب</label>
+        <label><input type="checkbox" name="countsInService" value="true" checked="@t.CountsInService" /> ضمن مدة الخدمة</label>
+        <label><input type="checkbox" name="hasBalance" value="true" checked="@t.HasBalance" /> رصيد مستقل</label>
+        <label><input type="checkbox" name="attachmentRequired" value="true" checked="@t.AttachmentRequired" /> مرفق إلزامي</label>
+        <label><input type="checkbox" name="needsTime" value="true" checked="@t.NeedsTime" /> يحتاج وقت</label>
+        <label><input type="checkbox" name="active" value="true" checked="@t.IsActive" /> مفعّل</label>
+    </div>
+
+    <div class="rtc-actions">
+        <button type="submit" class="rtc-btn primary">@(isNew ? "إضافة" : "حفظ التعديلات")</button>
+    </div>
+</form>

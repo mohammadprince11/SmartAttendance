@@ -121,6 +121,15 @@ public class RoleSecurityMiddleware
             return true;
         }
 
+        // ملفات الـPWA بالجذر يجب أن تُخدَم بلا مصادقة (المتصفح يجلبها قبل/بعد الدخول).
+        // ملاحظة: .NET يبصم اسم الملف (manifest.<hash>.webmanifest) فنطابق اللاحقة لا الاسم الحرفي.
+        if (path.EndsWith(".webmanifest") ||
+            path == "/sw.js" ||
+            path == "/offline.html")
+        {
+            return true;
+        }
+
         // واجهة الموبايل (REST) تصادَق بتوكن Bearer داخل الكنترولرات لا بكوكيز هذا
         // الحارس، فنتركها تمرّ ويتولّى [Authorize(ApiToken)] الحماية.
         if (path.StartsWith("/api/"))
