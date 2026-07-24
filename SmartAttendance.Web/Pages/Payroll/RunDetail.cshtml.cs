@@ -24,6 +24,7 @@ public class RunDetailModel : PageModel
     public PayrollRunStore.PayrollRun? Run { get; set; }
     public List<PayrollRunStore.PayrollLine> Lines { get; set; } = new();
     public string CompanyName { get; set; } = "الشركة";
+    public List<BankFileTemplateStore.Template> BankTemplates { get; set; } = new();
 
     public decimal TotalDeductions => Lines.Sum(l => l.TotalDeductions);
     public decimal TotalGosiEmployee => Lines.Sum(l => l.GosiEmployee);
@@ -35,6 +36,7 @@ public class RunDetailModel : PageModel
         Run = await PayrollRunStore.GetRunAsync(_db, Id);
         if (Run == null) return RedirectToPage("Runs");
         Lines = await PayrollRunStore.ListLinesAsync(_db, Id);
+        BankTemplates = await BankFileTemplateStore.ActiveAsync(_db);
         CompanyName = await HrmsDatabase.ScalarAsync<string>(_db,
             "SELECT TOP 1 ISNULL(Name, N'الشركة') FROM Companies WHERE ISNULL(IsDeleted,0)=0 ORDER BY Id;")
             ?? "الشركة";
@@ -46,38 +48,25 @@ public class RunDetailModel : PageModel
     /// عمود «قابل للتحويل» يفضح الصفوف بلا آيبان/بطاقة بدل إسقاطها بصمت،
     /// فلا يُرسَل للبنك ملف ناقص دون أن يعلم أحد.
     /// </summary>
-    public async Task<IActionResult> OnGetBankFileAsync()
+    public async Task<IActionResult> OnGetBankFileAsync(int? templateId)
     {
         var run = await PayrollRunStore.GetRunAsync(_db, Id);
         if (run == null) return RedirectToPage("Runs");
 
+        var template = templateId is > 0
+            ? await BankFileTemplateStore.GetAsync(_db, templateId.Value)
+            : await BankFileTemplateStore.DefaultAsync(_db);
+        template ??= await BankFileTemplateStore.DefaultAsync(_db);
+        if (template == null) return RedirectToPage("Runs");
+
         var rows = await PayrollRunStore.BankFileRowsAsync(_db, Id);
-
-        var builder = new System.Text.StringBuilder();
-        builder.AppendLine("رقم الموظف,الاسم,طريقة الدفع,البنك,الفرع,الآيبان,رقم البطاقة,صافي الراتب,قابل للتحويل");
-
-        foreach (var row in rows)
-        {
-            builder.AppendLine(string.Join(',',
-                Csv(row.EmployeeNo), Csv(row.EmployeeName), Csv(row.PaymentMethod),
-                Csv(row.BankName), Csv(row.BankBranch), Csv(row.Iban), Csv(row.CardNo),
-                row.NetSalary.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
-                row.IsPayable ? "نعم" : "لا — بلا آيبان/بطاقة"));
-        }
+        var content = BankFileTemplateStore.BuildContent(template, rows);
 
         var bytes = System.Text.Encoding.UTF8.GetPreamble()
-            .Concat(System.Text.Encoding.UTF8.GetBytes(builder.ToString()))
+            .Concat(System.Text.Encoding.UTF8.GetBytes(content))
             .ToArray();
 
-        return File(bytes, "text/csv", $"BankFile-{run.BatchNo}.csv");
-    }
-
-    /// <summary>تهريب حقل CSV: يُقتبس عند وجود فاصلة/اقتباس/سطر جديد.</summary>
-    private static string Csv(string? value)
-    {
-        var text = value ?? string.Empty;
-        return text.Any(c => c is ',' or '"' or '\n' or '\r')
-            ? $"\"{text.Replace("\"", "\"\"")}\""
-            : text;
+        var safeName = template.Name.Replace(' ', '-');
+        return File(bytes, "text/csv", $"BankFile-{safeName}-{run.BatchNo}.csv");
     }
 }

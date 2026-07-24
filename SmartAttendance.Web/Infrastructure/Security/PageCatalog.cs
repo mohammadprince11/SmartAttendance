@@ -99,6 +99,7 @@ public static class PageCatalog
             new CatalogPage("Payroll.Provisions", "حساب الاحتياطي"),
             new CatalogPage("Payroll.SalaryItems", "عناصر الراتب"),
             new CatalogPage("Payroll.Settings", "تهيئة الضريبة والضمان"),
+            new CatalogPage("Payroll.BankTemplates", "قوالب ملفات البنوك"),
             new CatalogPage("Payroll.TaxSocial", "الضرائب والضمان"),
             new CatalogPage("Payroll.FinancialInfo", "تحديث المعلومات المالية"),
             new CatalogPage("Payroll.Payment", "معلومات الدفع"),

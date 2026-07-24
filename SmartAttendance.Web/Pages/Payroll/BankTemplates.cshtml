@@ -1,0 +1,211 @@
+@page "/Payroll/BankTemplates"
+@model SmartAttendance.Web.Pages.Payroll.BankTemplatesModel
+@using System.Text.Json
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@{
+    ViewData["Title"] = "قوالب ملفات البنوك";
+    var acc = "#2dd4bf";
+    var tplJson = JsonSerializer.Serialize(Model.Templates.Select(t => new {
+        t.Id, t.Name, t.BankName, t.Delimiter, t.IncludeHeader, t.IsDefault, t.IsActive,
+        Columns = t.Columns, Headers = t.Headers
+    }));
+    var fieldsJson = JsonSerializer.Serialize(Model.Fields.Select(f => new { f.Key, f.Label }));
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .bt-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
+    .bt-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .bt-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .bt-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .bt-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .bt-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
+    .bt-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .bt-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+    .bt-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
+    .bt-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; background:var(--sa-surface,rgba(8,25,43,.9)); overflow:hidden; }
+    .bt-row { padding:14px 16px; border-bottom:1px solid rgba(143,168,188,.08); display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+    .bt-row:last-child { border-bottom:0; }
+    .bt-name { font-weight:1000; font-size:14px; }
+    .bt-meta { font-size:11.5px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .bt-chip { display:inline-block; padding:2px 9px; border-radius:999px; font-size:10.5px; font-weight:900; }
+    .bt-chip.def { background:color-mix(in srgb,var(--acc) 18%,transparent); color:var(--acc); }
+    .bt-chip.off { background:rgba(143,168,188,.16); color:#8FA8BC; }
+    .bt-cols { display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; }
+    .bt-col { font-size:11px; font-weight:800; padding:2px 8px; border-radius:6px; background:rgba(0,0,0,.14); direction:ltr; }
+    html[data-theme="light"] .bt-col { background:#f2f7fb; }
+    .bt-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
+    .bt-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
+    .bt-empty { padding:28px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+
+    .bt-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .bt-form select, .bt-form input { min-height:36px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; font-family:inherit; }
+    html[data-theme="light"] .bt-form select, html[data-theme="light"] .bt-form input { background:#fff; }
+    .bt-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .bt-cole { display:flex; flex-direction:column; gap:6px; }
+    .bt-cole-item { display:grid; grid-template-columns:22px 130px 1fr 30px; gap:6px; align-items:center; }
+    .bt-cole-item input[type=checkbox] { min-height:auto; }
+    .bt-cole-item .fname { font-size:12px; font-weight:800; }
+    .bt-cole-item input.hdr { min-height:32px; font-size:12px; }
+    .bt-mv { border:0; background:rgba(45,212,191,.14); color:var(--acc); border-radius:6px; min-height:30px; cursor:pointer; font-weight:900; }
+</style>
+
+<section class="bt-page" dir="rtl">
+    <header class="bt-head">
+        <div>
+            <h1>🏦 قوالب ملفات البنوك</h1>
+            <p>تنسيقات تصدير المسير للبنك: أعمدة وترتيب ورؤوس وفاصل لكل بنك. ⚠️ أكّد التنسيق الفعلي مع البنك.</p>
+        </div>
+        <button type="button" class="bt-btn" onclick="btOpen(0)">+ قالب جديد</button>
+    </header>
+
+    @if (TempData["BtMessage"] != null)
+    {
+        <div class="bt-alert @((TempData["BtOk"] as bool?) == false ? "err" : "")">@TempData["BtMessage"]</div>
+    }
+
+    <div class="bt-card">
+        @if (Model.Templates.Count == 0)
+        {
+            <div class="bt-empty">لا قوالب — أضف قالباً بـ«+ قالب جديد».</div>
+        }
+        else
+        {
+            @foreach (var t in Model.Templates)
+            {
+                <div class="bt-row">
+                    <div style="min-width:0">
+                        <span class="bt-name">@t.Name</span>
+                        @if (t.IsDefault) { <span class="bt-chip def">افتراضي</span> }
+                        @if (!t.IsActive) { <span class="bt-chip off">معطّل</span> }
+                        <div class="bt-meta">@(string.IsNullOrWhiteSpace(t.BankName) ? "بلا بنك محدد" : t.BankName) · فاصل: @BankFileTemplateStore.Delimiters.FirstOrDefault(d => d.Key == t.Delimiter).Label · @(t.IncludeHeader ? "بترويسة" : "بلا ترويسة")</div>
+                        <div class="bt-cols">
+                            @foreach (var c in t.Columns)
+                            { <span class="bt-col">@BankFileTemplateStore.LabelOf(c)</span> }
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px">
+                        <button type="button" class="bt-btn ghost sm" onclick="btEdit(@t.Id)">تعديل</button>
+                        <form method="post" asp-page-handler="Delete" style="display:inline"><input type="hidden" name="id" value="@t.Id" />
+                            <button type="submit" class="bt-btn danger sm" data-zyconfirm="حذف القالب؟">حذف</button></form>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    @* ===== باني القالب ===== *@
+    <div class="hrms-slideover-backdrop" id="bt-backdrop" onclick="btClose()"></div>
+    <aside class="hrms-slideover" id="bt-slide" aria-hidden="true">
+        <div class="hrms-slideover-head">
+            <h2 id="bt-title">قالب بنك جديد</h2>
+            <button type="button" class="hrms-slideover-close" onclick="btClose()">×</button>
+        </div>
+        <div class="hrms-slideover-body">
+            <form method="post" asp-page-handler="Save" class="bt-form" style="display:flex;flex-direction:column;gap:12px" onsubmit="return btCollect()">
+                <input type="hidden" name="Id" id="bt-Id" value="0" />
+                <input type="hidden" name="HeadersJoined" id="bt-HeadersJoined" />
+                <div class="bt-grid2">
+                    <label>اسم القالب *<input name="Name" id="bt-Name" required placeholder="مثال: الرافدين" /></label>
+                    <label>اسم البنك<input name="BankName" id="bt-BankName" placeholder="مصرف..." /></label>
+                </div>
+                <div class="bt-grid2">
+                    <label>الفاصل
+                        <select name="Delimiter" id="bt-Delimiter">
+                            @foreach (var (key, label, _) in Model.Delimiters)
+                            { <option value="@key">@label</option> }
+                        </select>
+                    </label>
+                    <div style="display:flex;flex-direction:column;gap:6px;justify-content:center">
+                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IncludeHeader" id="bt-IncludeHeader" value="true" checked /> إدراج صف الترويسة</label>
+                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IsDefault" id="bt-IsDefault" value="true" /> القالب الافتراضي</label>
+                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IsActive" id="bt-IsActive" value="true" checked /> مفعّل</label>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="margin-bottom:6px">الأعمدة (حدّد وأعد الترتيب؛ الرأس المخصص اختياري)</label>
+                    <div class="bt-cole" id="bt-cols"></div>
+                </div>
+
+                <button type="submit" class="bt-btn">حفظ القالب</button>
+            </form>
+        </div>
+    </aside>
+</section>
+
+@section Scripts {
+    <script>
+        var BT_FIELDS = @Html.Raw(fieldsJson);
+        var BT_TPLS = @Html.Raw(tplJson);
+
+        function btRow(field, checked, header){
+            var div = document.createElement('div');
+            div.className = 'bt-cole-item';
+            div.dataset.key = field.Key;
+            div.innerHTML =
+                '<input type="checkbox" name="Columns" value="'+field.Key+'"'+(checked?' checked':'')+' />' +
+                '<span class="fname">'+field.Label+'</span>' +
+                '<input class="hdr" value="'+(header?String(header).replace(/"/g,'&quot;'):'')+'" placeholder="رأس مخصص (اختياري)" />' +
+                '<button type="button" class="bt-mv" title="أعلى" onclick="btMove(this,-1)">▲</button>';
+            return div;
+        }
+        function btMove(btn, dir){
+            var item = btn.closest('.bt-cole-item');
+            var parent = item.parentElement;
+            if (dir < 0 && item.previousElementSibling) parent.insertBefore(item, item.previousElementSibling);
+            else if (dir > 0 && item.nextElementSibling) parent.insertBefore(item.nextElementSibling, item);
+        }
+        function btBuild(selectedKeys, headersByKey){
+            var box = document.getElementById('bt-cols');
+            box.innerHTML = '';
+            // المختارة أولاً بترتيبها، ثم الباقي
+            (selectedKeys||[]).forEach(function(k){
+                var fld = BT_FIELDS.find(function(f){ return f.Key===k; });
+                if (fld) box.appendChild(btRow(fld, true, headersByKey ? headersByKey[k] : ''));
+            });
+            BT_FIELDS.forEach(function(f){
+                if ((selectedKeys||[]).indexOf(f.Key) === -1) box.appendChild(btRow(f, false, ''));
+            });
+        }
+        function btOpen(id, t){
+            var f = document.querySelector('#bt-slide form'); f.reset();
+            document.getElementById('bt-Id').value = (t && t.Id) || 0;
+            document.getElementById('bt-title').textContent = (t && t.Id) ? 'تعديل قالب بنك' : 'قالب بنك جديد';
+            if (t && t.Id){
+                document.getElementById('bt-Name').value = t.Name;
+                document.getElementById('bt-BankName').value = t.BankName || '';
+                document.getElementById('bt-Delimiter').value = t.Delimiter;
+                document.getElementById('bt-IncludeHeader').checked = !!t.IncludeHeader;
+                document.getElementById('bt-IsDefault').checked = !!t.IsDefault;
+                document.getElementById('bt-IsActive').checked = !!t.IsActive;
+                var hbk = {};
+                (t.Columns||[]).forEach(function(k, i){ hbk[k] = (t.Headers && t.Headers[i]) || ''; });
+                btBuild(t.Columns, hbk);
+            } else {
+                document.getElementById('bt-IncludeHeader').checked = true;
+                document.getElementById('bt-IsActive').checked = true;
+                btBuild(['no','name','iban','net'], {});
+            }
+            document.getElementById('bt-slide').classList.add('open');
+            document.getElementById('bt-backdrop').classList.add('open');
+        }
+        // يجمع رؤوس الأعمدة المختارة بترتيب DOM (يحاذي checkboxes «Columns» المُرسَلة بنفس الترتيب)
+        function btCollect(){
+            var checked = [...document.querySelectorAll('#bt-cols .bt-cole-item')].filter(function(it){
+                return it.querySelector('input[name=Columns]').checked;
+            });
+            if (checked.length === 0){ alert('اختر عموداً واحداً على الأقل.'); return false; }
+            var headers = checked.map(function(it){ return (it.querySelector('input.hdr').value || '').replace(/\|/g,' '); });
+            document.getElementById('bt-HeadersJoined').value = headers.join('|');
+            return true;
+        }
+        function btEdit(id){ var t = BT_TPLS.find(function(x){ return x.Id===id; }); if(t) btOpen(id, t); }
+        function btClose(){ document.getElementById('bt-slide').classList.remove('open'); document.getElementById('bt-backdrop').classList.remove('open'); }
+        document.addEventListener('keydown', function(e){ if(e.key==='Escape') btClose(); });
+    </script>
+}

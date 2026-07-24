@@ -87,7 +87,15 @@
             @* ملف البنك: متاح بعد القفل — قبله الأرقام قابلة لإعادة الاحتساب *@
             @if (Model.Run.Status is "Locked" or "Issued" or "PayslipSent")
             {
-                <a class="pd-btn" href="/Payroll/RunDetail?id=@Model.Id&handler=BankFile">🏦 ملف البنك (CSV)</a>
+                <span style="display:inline-flex;gap:6px;align-items:center">
+                    <select id="bankTemplate" class="pd-btn ghost" style="cursor:pointer">
+                        @foreach (var t in Model.BankTemplates)
+                        { <option value="@t.Id" selected="@t.IsDefault">@t.Name@(string.IsNullOrWhiteSpace(t.BankName) ? "" : $" — {t.BankName}")</option> }
+                    </select>
+                    <a class="pd-btn" id="bankExport" href="/Payroll/RunDetail?id=@Model.Id&handler=BankFile"
+                       onclick="this.href='/Payroll/RunDetail?id=@Model.Id&handler=BankFile&templateId='+document.getElementById('bankTemplate').value">🏦 ملف البنك</a>
+                    <a class="pd-btn ghost" href="/Payroll/BankTemplates" title="إدارة قوالب البنوك">⚙</a>
+                </span>
             }
             else
             {
