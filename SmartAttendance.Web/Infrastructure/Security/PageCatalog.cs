@@ -79,6 +79,7 @@ public static class PageCatalog
             new CatalogPage("Attendance.Assignments", "مناوبات الموظفين"),
             new CatalogPage("Attendance.Viewer", "مستعرض الحضور"),
             new CatalogPage("Attendance.MonthAttendance", "الحضور الشهري"),
+            new CatalogPage("Attendance.Reports", "تقارير الحضور"),
             new CatalogPage("Attendance.Devices", "الأجهزة"),
         }),
         new("Payroll", "الرواتب", new[]

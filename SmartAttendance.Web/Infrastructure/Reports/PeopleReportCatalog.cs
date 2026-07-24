@@ -18,13 +18,21 @@ public static class PeopleReportCatalog
 
     public sealed record ReportColumn(string Key, string Label, FilterKind Filter = FilterKind.Text);
 
-    public sealed record ReportDataset(string Key, string Label, IReadOnlyList<ReportColumn> Columns);
+    /// <summary>
+    /// مصدر بيانات التقرير. <see cref="Module"/> يفصل مصادر الأشخاص عن الحضور
+    /// (نمط كيان: محرك تقارير واحد بمصادر متعددة) فتعرض كل صفحة مصادرها فقط.
+    /// </summary>
+    public sealed record ReportDataset(string Key, string Label, IReadOnlyList<ReportColumn> Columns, string Module = "people");
 
     public sealed class ReportFilters
     {
         public int? CompanyId { get; set; }
         public string? Search { get; set; }
         public bool ActiveOnly { get; set; }
+
+        /// <summary>مدى تاريخ مصادر الحضور (بارامتر تشغيل خادمي نمط كيان). null ⟶ الشهر الحالي.</summary>
+        public DateOnly? From { get; set; }
+        public DateOnly? To { get; set; }
     }
 
     public static readonly IReadOnlyList<ReportDataset> Datasets = new[]
@@ -113,11 +121,47 @@ public static class PeopleReportCatalog
             new ReportColumn("eventdate", "تاريخ الحدث", FilterKind.DateRange),
             new ReportColumn("status", "الحالة", FilterKind.Select),
             new ReportColumn("action", "الإجراء")
-        })
+        }),
+
+        // ===== مصادر الحضور (نمط كيان: التقارير الجدولية فوق يوميات المحرك الرسمي) =====
+        new ReportDataset("att_daily", "حضور الموظفين — التفاصيل اليومية", new[]
+        {
+            new ReportColumn("no", "الرقم الوظيفي"),
+            new ReportColumn("name", "اسم الموظف"),
+            new ReportColumn("date", "تاريخ الحضور", FilterKind.DateRange),
+            new ReportColumn("weekday", "اليوم", FilterKind.Select),
+            new ReportColumn("shift", "المناوبة", FilterKind.Select),
+            new ReportColumn("daykind", "نوع اليوم", FilterKind.Select),
+            new ReportColumn("status", "الحالة", FilterKind.Select),
+            new ReportColumn("checkin", "وقت الدخول"),
+            new ReportColumn("checkout", "وقت الخروج"),
+            new ReportColumn("late", "ساعات التأخير"),
+            new ReportColumn("early", "ساعات الخروج المبكر"),
+            new ReportColumn("worked", "ساعات العمل")
+        }, "attendance"),
+        new ReportDataset("att_summary", "ملخص الحضور الشهري للموظف", new[]
+        {
+            new ReportColumn("no", "الرقم الوظيفي"),
+            new ReportColumn("name", "اسم الموظف"),
+            new ReportColumn("workdays", "أيام العمل"),
+            new ReportColumn("presentdays", "أيام الحضور"),
+            new ReportColumn("latedays", "أيام التأخير"),
+            new ReportColumn("absentdays", "أيام الغياب"),
+            new ReportColumn("incompletedays", "أيام البصمة الناقصة"),
+            new ReportColumn("leavedays", "أيام الإجازة"),
+            new ReportColumn("holidaydays", "أيام العطل الرسمية"),
+            new ReportColumn("latehours", "إجمالي ساعات التأخير"),
+            new ReportColumn("earlyhours", "إجمالي ساعات الخروج المبكر"),
+            new ReportColumn("workedhours", "إجمالي ساعات العمل")
+        }, "attendance")
     };
 
     public static ReportDataset? GetDataset(string key) =>
         Datasets.FirstOrDefault(d => d.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>مصادر البيانات لموديول محدّد (people / attendance) — تعرض كل صفحة مصادرها فقط.</summary>
+    public static IReadOnlyList<ReportDataset> DatasetsFor(string? module) =>
+        Datasets.Where(d => d.Module.Equals(module ?? "people", StringComparison.OrdinalIgnoreCase)).ToList();
 
     public static async Task<List<Dictionary<string, string>>> LoadAsync(
         ApplicationDbContext db,
@@ -133,8 +177,84 @@ public static class PeopleReportCatalog
             "documents" => await LoadDocumentsAsync(db, filters),
             "leaves" => await LoadLeavesAsync(db, filters),
             "violations" => await LoadViolationsAsync(db, filters),
+            "att_daily" => await LoadAttendanceDailyAsync(db, filters),
+            "att_summary" => await LoadAttendanceSummaryAsync(db, filters),
             _ => new List<Dictionary<string, string>>()
         };
+    }
+
+    /// <summary>اليوم بالعربية من التاريخ (لعمود «اليوم» بتقرير الحضور).</summary>
+    private static string WeekdayText(DateOnly date) => date.DayOfWeek switch
+    {
+        DayOfWeek.Saturday => "السبت",
+        DayOfWeek.Sunday => "الأحد",
+        DayOfWeek.Monday => "الإثنين",
+        DayOfWeek.Tuesday => "الثلاثاء",
+        DayOfWeek.Wednesday => "الأربعاء",
+        DayOfWeek.Thursday => "الخميس",
+        DayOfWeek.Friday => "الجمعة",
+        _ => ""
+    };
+
+    private static string H(decimal hours) => hours == 0 ? "0" : hours.ToString("0.##");
+
+    /// <summary>مدى تقرير الحضور: من/إلى المُمرَّرين، وإلا الشهر الحالي كاملاً.</summary>
+    private static (DateOnly From, DateOnly To) AttendanceRange(ReportFilters f)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var from = f.From ?? new DateOnly(today.Year, today.Month, 1);
+        var to = f.To ?? from.AddMonths(1).AddDays(-1);
+        if (to < from) to = from;
+        return (from, to);
+    }
+
+    private static async Task<List<Dictionary<string, string>>> LoadAttendanceDailyAsync(
+        ApplicationDbContext db, ReportFilters f)
+    {
+        var (from, to) = AttendanceRange(f);
+        var rows = await DayAttendanceStore.ListRangeAsync(db, from, to, f.Search);
+
+        return rows.Select(r => new Dictionary<string, string>
+        {
+            ["no"] = r.EmployeeNo,
+            ["name"] = r.EmployeeName,
+            ["date"] = r.WorkDate.ToString("yyyy-MM-dd"),
+            ["weekday"] = WeekdayText(r.WorkDate),
+            ["shift"] = r.ShiftName ?? "",
+            ["daykind"] = r.DayKind switch { "Weekend" => "عطلة أسبوعية", "Rest" => "يوم راحة", _ => "عمل" },
+            ["status"] = DayAttendanceStore.StatusLabel(r.Status),
+            ["checkin"] = r.CheckIn?.ToString("HH:mm") ?? "",
+            ["checkout"] = r.CheckOut?.ToString("HH:mm") ?? "",
+            ["late"] = H(r.LateHours),
+            ["early"] = H(r.EarlyLeaveHours),
+            ["worked"] = H(r.WorkedHours)
+        }).ToList();
+    }
+
+    private static async Task<List<Dictionary<string, string>>> LoadAttendanceSummaryAsync(
+        ApplicationDbContext db, ReportFilters f)
+    {
+        var (from, to) = AttendanceRange(f);
+        var rows = await DayAttendanceStore.ListRangeAsync(db, from, to, f.Search);
+
+        return rows
+            .GroupBy(r => (r.EmployeeId, r.EmployeeNo, r.EmployeeName))
+            .OrderBy(g => g.Key.EmployeeNo)
+            .Select(g => new Dictionary<string, string>
+            {
+                ["no"] = g.Key.EmployeeNo,
+                ["name"] = g.Key.EmployeeName,
+                ["workdays"] = g.Count(r => r.DayKind == "Work").ToString(),
+                ["presentdays"] = g.Count(r => r.Status is "Present" or "Late").ToString(),
+                ["latedays"] = g.Count(r => r.Status == "Late").ToString(),
+                ["absentdays"] = g.Count(r => r.Status == "Absent").ToString(),
+                ["incompletedays"] = g.Count(r => r.Status == "Incomplete").ToString(),
+                ["leavedays"] = g.Count(r => r.Status == "Leave").ToString(),
+                ["holidaydays"] = g.Count(r => r.Status == "Holiday").ToString(),
+                ["latehours"] = H(g.Sum(r => r.LateHours)),
+                ["earlyhours"] = H(g.Sum(r => r.EarlyLeaveHours)),
+                ["workedhours"] = H(g.Sum(r => r.WorkedHours))
+            }).ToList();
     }
 
     private static string D(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";

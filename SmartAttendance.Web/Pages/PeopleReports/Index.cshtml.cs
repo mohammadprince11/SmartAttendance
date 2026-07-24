@@ -29,12 +29,34 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public bool ActiveOnly { get; set; } = true;
 
+    // مدى تاريخ مصادر الحضور (بارامتر تشغيل نمط كيان). فارغ ⟶ الشهر الحالي.
+    [BindProperty(SupportsGet = true)]
+    public string? From { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? To { get; set; }
+
     // ---- Lists ----
     public List<PeopleReportsStore.SavedReport> SystemReports { get; set; } = new();
     public List<PeopleReportsStore.SavedReport> MyReports { get; set; } = new();
     public List<PeopleReportsStore.SavedReport> SharedReports { get; set; } = new();
 
-    public IReadOnlyList<PeopleReportCatalog.ReportDataset> Datasets => PeopleReportCatalog.Datasets;
+    /// <summary>
+    /// الموديول المستنتج من المسار: نفس الصفحة تخدم «/PeopleReports» (أشخاص) و
+    /// «/AttendanceReports» (حضور) عبر AddPageRoute، فتعرض كلٌّ مصادرها وتقاريرها فقط.
+    /// </summary>
+    public string Module =>
+        (HttpContext?.Request?.Path.Value ?? "").Contains("attendancereports", StringComparison.OrdinalIgnoreCase)
+            ? "attendance" : "people";
+
+    public bool IsAttendance => Module == "attendance";
+
+    /// <summary>المسار الأساس للصفحة الحالية — لروابط GET وإجراءات POST وإعادة التوجيه.</summary>
+    public string SelfPath => IsAttendance ? "/AttendanceReports" : "/PeopleReports";
+
+    public string PageTitle => IsAttendance ? "تقارير الحضور" : "التقارير";
+
+    public IReadOnlyList<PeopleReportCatalog.ReportDataset> Datasets => PeopleReportCatalog.DatasetsFor(Module);
 
     public List<CompanyOption> Companies { get; set; } = new();
 
@@ -66,7 +88,7 @@ public class IndexModel : PageModel
             Current = await PeopleReportsStore.GetAsync(_dbContext, ReportId);
             if (Current == null)
             {
-                return RedirectToPage();
+                return Redirect(SelfPath);
             }
 
             await RunAsync(Current);
@@ -75,12 +97,15 @@ public class IndexModel : PageModel
         return Page();
     }
 
+    private static DateOnly? ParseDate(string? value) =>
+        DateOnly.TryParse(value, out var d) ? d : null;
+
     public async Task<IActionResult> OnGetExportAsync()
     {
         var report = await PeopleReportsStore.GetAsync(_dbContext, ReportId);
         if (report == null)
         {
-            return RedirectToPage();
+            return Redirect(SelfPath);
         }
 
         await RunAsync(report);
@@ -111,7 +136,7 @@ public class IndexModel : PageModel
         if (dataset == null || string.IsNullOrWhiteSpace(name))
         {
             Message = "اسم التقرير ومصدر البيانات مطلوبان.";
-            return RedirectToPage();
+            return Redirect(SelfPath);
         }
 
         // Ordered columns come from the picker as CSV; keep only valid keys.
@@ -120,7 +145,7 @@ public class IndexModel : PageModel
         if (validColumns.Count == 0)
         {
             Message = "اختر عموداً واحداً على الأقل.";
-            return RedirectToPage();
+            return Redirect(SelfPath);
         }
 
         var validFilters = ValidKeys(filterColumnsCsv, dataset);
@@ -146,7 +171,7 @@ public class IndexModel : PageModel
             Message = "تم حفظ التقرير.";
         }
 
-        return RedirectToPage(null, null, null, "mine");
+        return Redirect(SelfPath + "#mine");
     }
 
     private static List<string> ValidKeys(string? csv, PeopleReportCatalog.ReportDataset dataset) =>
@@ -160,19 +185,24 @@ public class IndexModel : PageModel
     {
         await PeopleReportsStore.DeleteOwnAsync(_dbContext, id, CurrentUser);
         Message = "تم حذف التقرير.";
-        return RedirectToPage(null, null, null, "mine");
+        return Redirect(SelfPath + "#mine");
     }
 
     public async Task<IActionResult> OnPostToggleShareAsync(int id)
     {
         await PeopleReportsStore.ToggleShareOwnAsync(_dbContext, id, CurrentUser);
         Message = "تم تحديث المشاركة.";
-        return RedirectToPage(null, null, null, "mine");
+        return Redirect(SelfPath + "#mine");
     }
 
     private async Task LoadListsAsync()
     {
         var all = await PeopleReportsStore.LoadAllAsync(_dbContext);
+
+        // اقصر القوائم على مصادر هذا الموديول فقط (أشخاص مقابل حضور).
+        var moduleKeys = new HashSet<string>(
+            Datasets.Select(d => d.Key), StringComparer.OrdinalIgnoreCase);
+        all = all.Where(r => moduleKeys.Contains(r.DatasetKey)).ToList();
 
         SystemReports = all.Where(r => r.IsSystem).ToList();
         MyReports = all.Where(r => !r.IsSystem && string.Equals(r.OwnerUser, CurrentUser, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -225,7 +255,9 @@ public class IndexModel : PageModel
             {
                 CompanyId = CompanyId,
                 Search = Search,
-                ActiveOnly = ActiveOnly
+                ActiveOnly = ActiveOnly,
+                From = ParseDate(From),
+                To = ParseDate(To)
             });
 
         // «البحث المتقدم» نمط كيان: يعرض حصراً مرشحات التقرير المعرّفة —

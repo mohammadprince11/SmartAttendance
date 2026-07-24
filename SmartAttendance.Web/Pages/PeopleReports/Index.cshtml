@@ -3,7 +3,7 @@
 @model SmartAttendance.Web.Pages.PeopleReports.IndexModel
 
 @{
-    ViewData["Title"] = "التقارير";
+    ViewData["Title"] = Model.PageTitle;
     var datasetsJson = JsonSerializer.Serialize(
         Model.Datasets.Select(d => new
         {
@@ -91,8 +91,10 @@
     {
         <div class="page-header">
             <div>
-                <h1>التقارير</h1>
-                <p>تقارير جاهزة لكل بيانات مودل الأشخاص + باني تقارير مخصص.</p>
+                <h1>@Model.PageTitle</h1>
+                <p>@(Model.IsAttendance
+                    ? "تقارير حضور جاهزة (تفصيلية وشهرية) من يوميات المحرك الرسمي + باني تقارير مخصص."
+                    : "تقارير جاهزة لكل بيانات مودل الأشخاص + باني تقارير مخصص.")</p>
             </div>
         </div>
 
@@ -155,11 +157,11 @@
                                 </div>
                             </div>
                             <button type="button" class="rep-pin" title="تعديل" onclick="repEdit(@report.Id)">✏️</button>
-                            <form method="post" asp-page-handler="ToggleShare" style="display:inline">
+                            <form method="post" action="@Model.SelfPath?handler=ToggleShare" style="display:inline">
                                 <input type="hidden" name="id" value="@report.Id" />
                                 <button type="submit" class="rep-pin" title="@(report.IsShared ? "إلغاء المشاركة" : "مشاركة")">@(report.IsShared ? "🔓" : "🔒")</button>
                             </form>
-                            <form method="post" asp-page-handler="DeleteReport" style="display:inline" data-zyconfirm="حذف التقرير؟">
+                            <form method="post" action="@Model.SelfPath?handler=DeleteReport" style="display:inline" data-zyconfirm="حذف التقرير؟">
                                 <input type="hidden" name="id" value="@report.Id" />
                                 <button type="submit" class="rep-pin" title="حذف">🗑️</button>
                             </form>
@@ -204,27 +206,31 @@
                 <p>@(string.IsNullOrWhiteSpace(Model.Current.Description) ? $"{Model.RunRows.Count} سجل" : Model.Current.Description + $" · {Model.RunRows.Count} سجل")</p>
             </div>
             @{
-                var exportRoute = new Dictionary<string, string>
+                var exportRoute = new Dictionary<string, string?>
                 {
                     ["ReportId"] = Model.ReportId.ToString(),
-                    ["CompanyId"] = Model.CompanyId?.ToString() ?? "",
-                    ["Search"] = Model.Search ?? "",
-                    ["ActiveOnly"] = Model.ActiveOnly.ToString()
+                    ["CompanyId"] = Model.CompanyId?.ToString(),
+                    ["Search"] = Model.Search,
+                    ["ActiveOnly"] = Model.ActiveOnly.ToString(),
+                    ["From"] = Model.From,
+                    ["To"] = Model.To
                 };
                 foreach (var filterValue in Model.RunFilterValues)
                 {
                     exportRoute["cf_" + filterValue.Key] = filterValue.Value;
                 }
+                var exportQs = string.Join("&", exportRoute
+                    .Where(kv => !string.IsNullOrEmpty(kv.Value))
+                    .Select(kv => $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value!)}"));
             }
             <div class="hrms-inline-form">
-                @if (Model.RunFilterColumns.Any())
+                @if (Model.RunFilterColumns.Any() || Model.IsAttendance)
                 {
                     <button type="button" class="hrms-btn-secondary" data-hrms-open="run-filter">🔎 بحث متقدم</button>
                 }
-                <a asp-page="./Index" asp-page-handler="Export" asp-all-route-data="exportRoute"
-                   class="hrms-btn-secondary">⬇ تصدير إكسل</a>
+                <a href="@Model.SelfPath?handler=Export&@exportQs" class="hrms-btn-secondary">⬇ تصدير إكسل</a>
                 <button type="button" class="hrms-btn-secondary" data-hrms-open="print-settings">🖨 طباعة</button>
-                <a asp-page="./Index" class="hrms-btn-secondary">→ رجوع</a>
+                <a href="@Model.SelfPath" class="hrms-btn-secondary">→ رجوع</a>
             </div>
         </div>
 
@@ -266,7 +272,18 @@
             <div class="hrms-slideover-body">
                 <form method="get" class="hrms-page">
                     <input type="hidden" name="ReportId" value="@Model.ReportId" />
-                    @if (Model.Companies.Count > 1)
+                    @if (Model.IsAttendance)
+                    {
+                        <div class="hrms-tile-sub" style="margin-top:4px">مدى تاريخ الحضور</div>
+                        <div class="hrms-field">
+                            <label>من / إلى (افتراضياً الشهر الحالي)</label>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+                                <input type="date" name="From" value="@Model.From" title="من" />
+                                <input type="date" name="To" value="@Model.To" title="إلى" />
+                            </div>
+                        </div>
+                    }
+                    @if (!Model.IsAttendance && Model.Companies.Count > 1)
                     {
                         <div class="hrms-field">
                             <label>الشركة</label>
@@ -316,7 +333,10 @@
                         }
                         <a href="?ReportId=@Model.ReportId" class="hrms-btn-secondary" style="text-align:center">إزالة الفلتر</a>
                     }
-                    <label class="hrms-toggle"><input type="checkbox" name="ActiveOnly" value="true" checked="@(Model.ActiveOnly ? "checked" : null)" /> الفعالون فقط</label>
+                    @if (!Model.IsAttendance)
+                    {
+                        <label class="hrms-toggle"><input type="checkbox" name="ActiveOnly" value="true" checked="@(Model.ActiveOnly ? "checked" : null)" /> الفعالون فقط</label>
+                    }
                     <button type="submit" class="hrms-btn-primary">تطبيق</button>
                 </form>
             </div>
@@ -353,7 +373,7 @@
         <button type="button" class="hrms-slideover-close" data-hrms-close>×</button>
     </div>
     <div class="hrms-slideover-body">
-        <form method="post" asp-page-handler="CreateReport" class="hrms-page" onsubmit="return repCollectColumns();">
+        <form method="post" action="@Model.SelfPath?handler=CreateReport" class="hrms-page" onsubmit="return repCollectColumns();">
             <input type="hidden" name="id" id="rep-edit-id" value="0" />
             <div class="hrms-field">
                 <label>اسم التقرير</label>

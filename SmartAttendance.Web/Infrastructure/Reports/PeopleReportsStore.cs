@@ -106,6 +106,18 @@ BEGIN
         (N'طلبات الإجازة',                     N'leaves',     NULL,          N'no,employee,type,status,fromdate,todate,days', 1, 220),
         (N'حالات المخالفات',                   N'violations', NULL,          N'refno,no,employee,category,title,eventdate,status,action', 1, 230);
 END;
+
+-- تقارير نظام الحضور (مصدر att_*): زرع مستقل idempotent كي تظهر على قواعد بيانات
+-- قائمة سبق أن زُرعت بتقارير الأشخاص (كتلة IF NOT EXISTS أعلاه لا تعمل حينها).
+IF NOT EXISTS (SELECT 1 FROM PeopleReports WHERE IsSystem = 1 AND DatasetKey IN (N'att_daily', N'att_summary'))
+BEGIN
+    INSERT INTO PeopleReports (Name, DatasetKey, FilterKey, ColumnsCsv, IsSystem, SortOrder, FilterColumnsCsv)
+    VALUES
+        (N'الحضور والغياب اليومي',            N'att_daily',   NULL, N'no,name,date,weekday,shift,status,checkin,checkout,late,early,worked', 1, 300, N'date,weekday,shift,status'),
+        (N'تفاصيل التأخير والخروج المبكر',    N'att_daily',   NULL, N'no,name,date,shift,status,checkin,checkout,late,early',                1, 310, N'date,status'),
+        (N'ملخص الحضور الشهري للموظف',        N'att_summary', NULL, N'no,name,workdays,presentdays,latedays,absentdays,incompletedays,leavedays,holidaydays,latehours,earlyhours,workedhours', 1, 320, N'no,name'),
+        (N'ملخص الغياب الشهري',               N'att_summary', NULL, N'no,name,workdays,presentdays,absentdays,leavedays,holidaydays',        1, 330, N'no,name');
+END;
 """);
     }
 

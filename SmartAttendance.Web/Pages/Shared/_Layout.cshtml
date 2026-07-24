@@ -331,7 +331,9 @@
                                 <a href="/Employees/PeopleDashboard" class="nexora-nav-link @(IsUnder("/Employees/PeopleDashboard") ? "active nexora-active" : "")">
                                     <span>داشبورد الأشخاص</span>
                                 </a>
-                                <a asp-page="/PeopleReports/Index" class="nexora-nav-link @(IsUnder("/PeopleReports") ? "active nexora-active" : "")">
+                                @* رابط صريح لا asp-page: AddPageRoute لمسار /AttendanceReports يجعل
+                                   توليد الرابط بالاسم يختار المسار المُضاف، فنثبّت مسار الأشخاص يدوياً. *@
+                                <a href="/PeopleReports" class="nexora-nav-link @(IsUnder("/PeopleReports") ? "active nexora-active" : "")">
                                     <span>التقارير</span>
                                 </a>
 
@@ -487,6 +489,12 @@
                         {
                             <a href="/MonthAttendance" class="nexora-nav-link @(IsUnder("/MonthAttendance") ? "active nexora-active" : "")">
                                 <span>الحضور الشهري</span>
+                            </a>
+                        }
+                        @if (CanRoute("/attendancereports"))
+                        {
+                            <a href="/AttendanceReports" class="nexora-nav-link @(IsUnder("/AttendanceReports") ? "active nexora-active" : "")">
+                                <span>تقارير الحضور</span>
                             </a>
                         }
                         @if (CanRoute("/shifts"))
