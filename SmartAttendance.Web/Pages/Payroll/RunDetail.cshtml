@@ -83,7 +83,19 @@
             <h1>مسير @Model.Run!.BatchNo — @Model.Run.PeriodText</h1>
             <p>@Model.CompanyName · الحالة: @Model.Run.StatusLabelText · @Model.Run.EmployeeCount موظفاً · محتسب بواسطة @(Model.Run.CalculatedBy ?? "—") @(Model.Run.CalculatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</p>
         </div>
-        <a class="pd-btn ghost" href="/Payroll/Runs">← عودة للمسيرات</a>
+        <div style="display:flex;gap:8px;align-items:center">
+            @* ملف البنك: متاح بعد القفل — قبله الأرقام قابلة لإعادة الاحتساب *@
+            @if (Model.Run.Status is "Locked" or "Issued" or "PayslipSent")
+            {
+                <a class="pd-btn" href="/Payroll/RunDetail?id=@Model.Id&handler=BankFile">🏦 ملف البنك (CSV)</a>
+            }
+            else
+            {
+                <span class="pd-btn ghost" style="opacity:.55;cursor:not-allowed"
+                      title="اقفل الدفعة أولاً — قبل القفل الأرقام قابلة لإعادة الاحتساب">🏦 ملف البنك</span>
+            }
+            <a class="pd-btn ghost" href="/Payroll/Runs">← عودة للمسيرات</a>
+        </div>
     </header>
 
     <div class="pd-totals">

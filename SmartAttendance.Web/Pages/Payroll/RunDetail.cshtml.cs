@@ -40,4 +40,44 @@ public class RunDetailModel : PageModel
             ?? "الشركة";
         return Page();
     }
+
+    /// <summary>
+    /// ملف البنك للدفعة (CSV بترميز UTF-8 مع BOM ليفتحه إكسل عربياً سليماً).
+    /// عمود «قابل للتحويل» يفضح الصفوف بلا آيبان/بطاقة بدل إسقاطها بصمت،
+    /// فلا يُرسَل للبنك ملف ناقص دون أن يعلم أحد.
+    /// </summary>
+    public async Task<IActionResult> OnGetBankFileAsync()
+    {
+        var run = await PayrollRunStore.GetRunAsync(_db, Id);
+        if (run == null) return RedirectToPage("Runs");
+
+        var rows = await PayrollRunStore.BankFileRowsAsync(_db, Id);
+
+        var builder = new System.Text.StringBuilder();
+        builder.AppendLine("رقم الموظف,الاسم,طريقة الدفع,البنك,الفرع,الآيبان,رقم البطاقة,صافي الراتب,قابل للتحويل");
+
+        foreach (var row in rows)
+        {
+            builder.AppendLine(string.Join(',',
+                Csv(row.EmployeeNo), Csv(row.EmployeeName), Csv(row.PaymentMethod),
+                Csv(row.BankName), Csv(row.BankBranch), Csv(row.Iban), Csv(row.CardNo),
+                row.NetSalary.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
+                row.IsPayable ? "نعم" : "لا — بلا آيبان/بطاقة"));
+        }
+
+        var bytes = System.Text.Encoding.UTF8.GetPreamble()
+            .Concat(System.Text.Encoding.UTF8.GetBytes(builder.ToString()))
+            .ToArray();
+
+        return File(bytes, "text/csv", $"BankFile-{run.BatchNo}.csv");
+    }
+
+    /// <summary>تهريب حقل CSV: يُقتبس عند وجود فاصلة/اقتباس/سطر جديد.</summary>
+    private static string Csv(string? value)
+    {
+        var text = value ?? string.Empty;
+        return text.Any(c => c is ',' or '"' or '\n' or '\r')
+            ? $"\"{text.Replace("\"", "\"\"")}\""
+            : text;
+    }
 }

@@ -545,6 +545,63 @@ ORDER BY c.IsAddition DESC, c.Id;
         return lines;
     }
 
+    /// <summary>صف ملف البنك: بيانات الدفع للموظف + صافي راتبه بالدفعة.</summary>
+    public sealed class BankFileRow
+    {
+        public string EmployeeNo { get; set; } = string.Empty;
+        public string EmployeeName { get; set; } = string.Empty;
+        public string PaymentMethod { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
+        public string BankBranch { get; set; } = string.Empty;
+        public string Iban { get; set; } = string.Empty;
+        public string CardNo { get; set; } = string.Empty;
+        public decimal NetSalary { get; set; }
+
+        /// <summary>لا آيبان ولا رقم بطاقة ⟹ الصف لا يُحوَّل، ويُعلَّم ليصححه المستخدم.</summary>
+        public bool IsPayable => !string.IsNullOrWhiteSpace(Iban) || !string.IsNullOrWhiteSpace(CardNo);
+    }
+
+    /// <summary>
+    /// صفوف ملف البنك لدفعة: سطور المسير + بيانات الدفع من الملف المالي للموظف.
+    /// الصفوف بلا آيبان/بطاقة تُرجَع أيضاً (معلَّمة) بدل أن تختفي بصمت.
+    /// </summary>
+    public static async Task<List<BankFileRow>> BankFileRowsAsync(
+        ApplicationDbContext dbContext, int runId)
+    {
+        await EnsureAsync(dbContext);
+        await EmployeeFinancialInfoSchema.EnsureAsync(dbContext);
+
+        return await HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+SELECT ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
+       ISNULL(f.PaymentMethod, N'') AS PaymentMethod, ISNULL(f.BankName, N'') AS BankName,
+       ISNULL(f.BankBranch, N'') AS BankBranch, ISNULL(f.Iban, N'') AS Iban,
+       ISNULL(f.CardNo, N'') AS CardNo, l.NetSalary
+FROM PayrollRunLines l
+INNER JOIN Employees e ON e.Id = l.EmployeeId
+OUTER APPLY (
+    SELECT TOP 1 * FROM EmployeeFinancialInfos fi
+    WHERE fi.EmployeeId = l.EmployeeId AND ISNULL(fi.IsDeleted, 0) = 0
+    ORDER BY fi.Id DESC
+) f
+WHERE l.RunId = @RunId
+ORDER BY e.EmployeeNo;
+""",
+            command => HrmsDatabase.AddParameter(command, "@RunId", runId),
+            reader => new BankFileRow
+            {
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+                PaymentMethod = HrmsDatabase.GetString(reader, "PaymentMethod"),
+                BankName = HrmsDatabase.GetString(reader, "BankName"),
+                BankBranch = HrmsDatabase.GetString(reader, "BankBranch"),
+                Iban = HrmsDatabase.GetString(reader, "Iban"),
+                CardNo = HrmsDatabase.GetString(reader, "CardNo"),
+                NetSalary = reader["NetSalary"] is decimal n ? n : 0
+            });
+    }
+
     public static async Task<PayrollLine?> GetLineAsync(ApplicationDbContext dbContext, int runId, int employeeId) =>
         (await ListLinesAsync(dbContext, runId)).FirstOrDefault(x => x.EmployeeId == employeeId);
 
