@@ -32,6 +32,7 @@ public static class RoleRouteCatalog
     public static readonly string[] HrManagerRoutes =
     {
         "/organization",
+        "/orgstructures",
         "/organizationsettings",
         "/alerts",
         "/leavebalances",
@@ -80,6 +81,7 @@ public static class RoleRouteCatalog
     public static readonly string[] HrOfficerRoutes =
     {
         "/organization",
+        "/orgstructures",
         "/alerts",
         "/leavebalances",
         "/assetsmanagement",

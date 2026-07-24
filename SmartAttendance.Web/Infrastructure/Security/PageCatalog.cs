@@ -52,6 +52,7 @@ public static class PageCatalog
             new CatalogPage("People.Alerts", "التنبيهات والانتهاءات"),
             new CatalogPage("People.Documents", "مركز الوثائق"),
             new CatalogPage("People.Organization", "الهياكل التنظيمية"),
+            new CatalogPage("People.OrgStructures", "الهياكل الثلاث المتوازية"),
             new CatalogPage("People.Reports", "تقارير الأشخاص"),
             new CatalogPage("People.Cards", "بطاقات الموظفين"),
         }),

@@ -1,0 +1,131 @@
+@page "/OrgStructures"
+@model SmartAttendance.Web.Pages.OrgStructures.IndexModel
+
+@{
+    ViewData["Title"] = "الهياكل التنظيمية";
+    var acc = "#818cf8";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .ost-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
+    .ost-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .ost-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .ost-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .ost-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .ost-head select { min-height:36px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; font-weight:800; }
+    html[data-theme="light"] .ost-head select { background:#fff; }
+
+    .ost-tabs { display:flex; gap:2px; border-bottom:1px solid rgba(73,111,151,.22); flex-wrap:wrap; }
+    .ost-tab { padding:11px 20px; font-size:13px; font-weight:900; color:var(--sa-muted,#8FA8BC); background:transparent; border:0; border-bottom:3px solid transparent; cursor:pointer; }
+    .ost-tab.on { color:var(--acc); border-bottom-color:var(--acc); }
+    .ost-pane { display:none; }
+    .ost-pane.on { display:block; }
+
+    .ost-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; background:var(--sa-surface,rgba(8,25,43,.9)); padding:14px 16px; }
+    .ost-note { font-size:12px; font-weight:800; color:var(--sa-muted,#8FA8BC); margin:0 0 10px; }
+    .ost-stats { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+    .ost-stat { padding:6px 12px; border-radius:999px; font-size:11.5px; font-weight:900; border:1px solid rgba(73,111,151,.22); }
+
+    details.ost-node { border-inline-start:2px solid color-mix(in srgb,var(--acc) 35%,transparent); margin:3px 0 3px 0; padding-inline-start:10px; }
+    details.ost-node > summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:10px; font-weight:900; font-size:13px; }
+    details.ost-node > summary::-webkit-details-marker { display:none; }
+    details.ost-node > summary::before { content:"▸"; color:var(--acc); font-size:11px; transition:transform .15s; }
+    details.ost-node[open] > summary::before { transform:rotate(90deg); }
+    details.ost-node > summary:hover { background:color-mix(in srgb,var(--acc) 8%,transparent); }
+    .ost-children { padding-inline-start:14px; }
+    .ost-leaf { display:flex; align-items:center; gap:8px; padding:6px 10px 6px 24px; font-size:12.5px; font-weight:800; border-radius:8px; }
+    .ost-leaf:hover { background:color-mix(in srgb,var(--acc) 6%,transparent); }
+    .ost-name { flex:0 1 auto; }
+    .ost-sub { font-size:10.5px; font-weight:800; color:var(--sa-muted,#8FA8BC); background:rgba(129,140,248,.12); padding:1px 8px; border-radius:999px; }
+    .ost-count { margin-inline-start:auto; direction:ltr; font-weight:1000; color:var(--acc); font-size:12px; }
+    .ost-empty { padding:28px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+</style>
+
+<section class="ost-page" dir="rtl">
+    <header class="ost-head">
+        <div>
+            <h1>🏛️ الهياكل التنظيمية (ثلاثة أبعاد متوازية)</h1>
+            <p>ثلاثة هياكل مستقلة على نفس الموظفين: وحدات الأعمال · الهرمي (رفع التقارير) · الوظيفي.</p>
+        </div>
+        @if (Model.Companies.Count > 1)
+        {
+            <form method="get">
+                <select name="CompanyId" onchange="this.form.submit()">
+                    @foreach (var c in Model.Companies)
+                    { <option value="@c.Id" selected="@(Model.CompanyId == c.Id)">@c.Name</option> }
+                </select>
+            </form>
+        }
+    </header>
+
+    @if (Model.CompanyId is not > 0)
+    {
+        <div class="ost-card ost-empty">اختر شركة لعرض هياكلها.</div>
+    }
+    else
+    {
+        <div class="ost-tabs">
+            <button type="button" class="ost-tab on" data-tab="bu" onclick="ostTab('bu')">🏢 وحدات الأعمال</button>
+            <button type="button" class="ost-tab" data-tab="hier" onclick="ostTab('hier')">👥 الهيكل الهرمي</button>
+            <button type="button" class="ost-tab" data-tab="func" onclick="ostTab('func')">💼 الهيكل الوظيفي</button>
+        </div>
+
+        @* ===== وحدات الأعمال ===== *@
+        <div class="ost-pane on" data-pane="bu">
+            <div class="ost-card">
+                <p class="ost-note">بُعد وحدات الأعمال: الشركة ← الفرع ← القسم، بعدّاد الموظفين النشطين.</p>
+                @if (Model.BusinessUnits != null)
+                {
+                    <partial name="_TreeNode" model="Model.BusinessUnits" />
+                }
+            </div>
+        </div>
+
+        @* ===== الهيكل الهرمي ===== *@
+        <div class="ost-pane" data-pane="hier">
+            <div class="ost-card">
+                <p class="ost-note">بُعد رفع التقارير: سلسلة المدير المباشر لكل موظف (تُبنى من حقل المدير المباشر).</p>
+                <div class="ost-stats">
+                    <span class="ost-stat" style="color:#4ade80">لديهم مدير <b>@Model.HierWithManager</b></span>
+                    <span class="ost-stat" style="color:#facc15">بلا مدير <b>@Model.HierWithoutManager</b></span>
+                    <span class="ost-stat" style="color:@acc">مدراء <b>@Model.HierManagers</b></span>
+                </div>
+                @if (Model.Hierarchy.Count == 0)
+                {
+                    <div class="ost-empty">لا سلاسل إدارية مبنية — اضبط «المدير المباشر» للموظفين.</div>
+                }
+                else
+                {
+                    @foreach (var root in Model.Hierarchy)
+                    {
+                        <partial name="_TreeNode" model="root" />
+                    }
+                }
+            </div>
+        </div>
+
+        @* ===== الهيكل الوظيفي ===== *@
+        <div class="ost-pane" data-pane="func">
+            <div class="ost-card">
+                <p class="ost-note">بُعد المسميات الوظيفية: المسمى ← القسم، بعدّاد الموظفين النشطين.</p>
+                @if (Model.Functional != null)
+                {
+                    <partial name="_TreeNode" model="Model.Functional" />
+                }
+            </div>
+        </div>
+    }
+</section>
+
+@section Scripts {
+    <script>
+        function ostTab(key){
+            document.querySelectorAll('.ost-tab').forEach(function(t){ t.classList.toggle('on', t.getAttribute('data-tab')===key); });
+            document.querySelectorAll('.ost-pane').forEach(function(p){ p.classList.toggle('on', p.getAttribute('data-pane')===key); });
+        }
+    </script>
+}

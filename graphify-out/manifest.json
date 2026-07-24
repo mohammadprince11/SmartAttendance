@@ -2435,8 +2435,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784898900.5744457,
-    "ast_hash": "2a46d2ee7b1ca02b32579357776d2525",
+    "mtime": 1784899425.1225903,
+    "ast_hash": "8104c45f06df1a900beee80cb3d316f9",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3730,8 +3730,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/PageCatalog.cs": {
-    "mtime": 1784898890.9015014,
-    "ast_hash": "53d5214ae747263050be26810cabc92b",
+    "mtime": 1784899369.8499615,
+    "ast_hash": "be4fd9c2cbecfa96561a603f5feeb281",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/DataScopeCatalog.cs": {
@@ -3990,8 +3990,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/RoleRouteCatalog.cs": {
-    "mtime": 1784898289.6214898,
-    "ast_hash": "a795bd5f98d5d95a10fa7d86300ed79f",
+    "mtime": 1784899401.6659303,
+    "ast_hash": "146db517537c4dcaf31430b2d218ade1",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/nexora-month-picker-v1.js": {
@@ -4127,6 +4127,26 @@
   "SmartAttendance.Web/Pages/PayrollProvisions/Index.cshtml.cs": {
     "mtime": 1784898838.2221515,
     "ast_hash": "7814bc82ab1deddbc79b734746d5e354",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/OrgStructuresBuilder.cs": {
+    "mtime": 1784899280.9851482,
+    "ast_hash": "9a324dba53ef56c5942d5cfc1afa593e",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/OrgStructures/Index.cshtml": {
+    "mtime": 1784899359.5381167,
+    "ast_hash": "c1b750c91a1d7b7f254f0e8c7062b4fa",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/OrgStructures/Index.cshtml.cs": {
+    "mtime": 1784899308.6542015,
+    "ast_hash": "52dc3f88e3ae9bae968058c7ee17112e",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/OrgStructures/_TreeNode.cshtml": {
+    "mtime": 1784899323.0689492,
+    "ast_hash": "6381883e655d60c43520023cfafdb9f3",
     "semantic_hash": ""
   }
 }

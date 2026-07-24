@@ -2435,8 +2435,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784898307.6398704,
-    "ast_hash": "ad349aab453afccb0c1d65edc14730bc",
+    "mtime": 1784898900.5744457,
+    "ast_hash": "2a46d2ee7b1ca02b32579357776d2525",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -3730,8 +3730,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/PageCatalog.cs": {
-    "mtime": 1784898282.3428912,
-    "ast_hash": "6236556f17b97f125e0726f375e62099",
+    "mtime": 1784898890.9015014,
+    "ast_hash": "53d5214ae747263050be26810cabc92b",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/DataScopeCatalog.cs": {
@@ -4112,6 +4112,21 @@
   "SmartAttendance.Web/Pages/PeriodRules/Index.cshtml.cs": {
     "mtime": 1784898165.1846814,
     "ast_hash": "de16e99532455229eb4c51fbe63c25ca",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Hrms/ProvisionCalculator.cs": {
+    "mtime": 1784898815.796314,
+    "ast_hash": "ed7820b8732082ba8e6b4860bfd71cff",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/PayrollProvisions/Index.cshtml": {
+    "mtime": 1784898876.22164,
+    "ast_hash": "d71fc05d08d227efbf5648deec7883a0",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Pages/PayrollProvisions/Index.cshtml.cs": {
+    "mtime": 1784898838.2221515,
+    "ast_hash": "7814bc82ab1deddbc79b734746d5e354",
     "semantic_hash": ""
   }
 }

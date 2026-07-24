@@ -1,0 +1,26 @@
+@model SmartAttendance.Web.Infrastructure.Hrms.OrgStructuresBuilder.Node
+
+@if (Model.Children.Count > 0)
+{
+    <details class="ost-node" open>
+        <summary>
+            <span class="ost-name">@Model.Name</span>
+            @if (!string.IsNullOrWhiteSpace(Model.Subtitle)) { <span class="ost-sub">@Model.Subtitle</span> }
+            <span class="ost-count">@Model.Count</span>
+        </summary>
+        <div class="ost-children">
+            @foreach (var child in Model.Children)
+            {
+                <partial name="_TreeNode" model="child" />
+            }
+        </div>
+    </details>
+}
+else
+{
+    <div class="ost-leaf">
+        <span class="ost-name">@Model.Name</span>
+        @if (!string.IsNullOrWhiteSpace(Model.Subtitle)) { <span class="ost-sub">@Model.Subtitle</span> }
+        <span class="ost-count">@Model.Count</span>
+    </div>
+}
