@@ -154,6 +154,30 @@ public static class PeopleReportCatalog
             new ReportColumn("latehours", "إجمالي ساعات التأخير"),
             new ReportColumn("earlyhours", "إجمالي ساعات الخروج المبكر"),
             new ReportColumn("workedhours", "إجمالي ساعات العمل")
+        }, "attendance"),
+        new ReportDataset("att_online", "البصمات عبر الإنترنت", new[]
+        {
+            new ReportColumn("no", "الرقم الوظيفي"),
+            new ReportColumn("name", "اسم الموظف"),
+            new ReportColumn("branch", "الفرع", FilterKind.Select),
+            new ReportColumn("date", "تاريخ البصمة", FilterKind.DateRange),
+            new ReportColumn("time", "وقت البصمة"),
+            new ReportColumn("weekday", "اليوم", FilterKind.Select),
+            new ReportColumn("punchtype", "نوع البصمة", FilterKind.Select),
+            new ReportColumn("semantic", "الدلالة", FilterKind.Select)
+        }, "attendance"),
+        new ReportDataset("att_missing", "طلبات البصمة المفقودة", new[]
+        {
+            new ReportColumn("refno", "الرقم المرجعي"),
+            new ReportColumn("no", "الرقم الوظيفي"),
+            new ReportColumn("name", "اسم الموظف"),
+            new ReportColumn("date", "تاريخ البصمة", FilterKind.DateRange),
+            new ReportColumn("time", "وقت البصمة"),
+            new ReportColumn("punchtype", "نوع البصمة", FilterKind.Select),
+            new ReportColumn("semantic", "الدلالة", FilterKind.Select),
+            new ReportColumn("status", "الحالة", FilterKind.Select),
+            new ReportColumn("source", "المصدر", FilterKind.Select),
+            new ReportColumn("reason", "السبب")
         }, "attendance")
     };
 
@@ -180,8 +204,54 @@ public static class PeopleReportCatalog
             "violations" => await LoadViolationsAsync(db, filters),
             "att_daily" => await LoadAttendanceDailyAsync(db, filters),
             "att_summary" => await LoadAttendanceSummaryAsync(db, filters),
+            "att_online" => await LoadOnlinePunchesAsync(db, filters),
+            "att_missing" => await LoadMissingPunchesAsync(db, filters),
             _ => new List<Dictionary<string, string>>()
         };
+    }
+
+    private static async Task<List<Dictionary<string, string>>> LoadOnlinePunchesAsync(
+        ApplicationDbContext db, ReportFilters f)
+    {
+        var (from, to) = AttendanceRange(f);
+        var rows = await OnlinePunchStore.ListAsync(db, new OnlinePunchStore.Filter
+        {
+            From = from, To = to, Search = f.Search, Top = 2000
+        });
+        return rows.Select(r => new Dictionary<string, string>
+        {
+            ["no"] = r.EmployeeNo,
+            ["name"] = r.EmployeeName,
+            ["branch"] = r.Branch,
+            ["date"] = r.PunchAt.ToString("yyyy-MM-dd"),
+            ["time"] = r.PunchAt.ToString("HH:mm"),
+            ["weekday"] = WeekdayText(DateOnly.FromDateTime(r.PunchAt)),
+            ["punchtype"] = r.PunchTypeText,
+            ["semantic"] = r.SemanticName
+        }).ToList();
+    }
+
+    private static async Task<List<Dictionary<string, string>>> LoadMissingPunchesAsync(
+        ApplicationDbContext db, ReportFilters f)
+    {
+        var (from, to) = AttendanceRange(f);
+        var rows = await MissingPunchRequestStore.ListAsync(db, new MissingPunchRequestStore.Filter
+        {
+            From = from, To = to, Search = f.Search
+        });
+        return rows.Select(r => new Dictionary<string, string>
+        {
+            ["refno"] = r.RefNo,
+            ["no"] = r.EmployeeNo,
+            ["name"] = r.EmployeeName,
+            ["date"] = r.PunchAt.ToString("yyyy-MM-dd"),
+            ["time"] = r.PunchAt.ToString("HH:mm"),
+            ["punchtype"] = r.PunchTypeText,
+            ["semantic"] = r.SemanticName,
+            ["status"] = r.StatusText,
+            ["source"] = r.Source,
+            ["reason"] = r.Reason ?? ""
+        }).ToList();
     }
 
     /// <summary>اليوم بالعربية من التاريخ (لعمود «اليوم» بتقرير الحضور).</summary>

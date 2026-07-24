@@ -118,6 +118,15 @@ BEGIN
         (N'ملخص الحضور الشهري للموظف',        N'att_summary', NULL, N'no,name,workdays,presentdays,latedays,absentdays,incompletedays,leavedays,holidaydays,latehours,earlyhours,workedhours', 1, 320, N'no,name'),
         (N'ملخص الغياب الشهري',               N'att_summary', NULL, N'no,name,workdays,presentdays,absentdays,leavedays,holidaydays',        1, 330, N'no,name');
 END;
+
+-- مصادر حضور إضافية (البصمات عبر الإنترنت + طلبات البصمة المفقودة) — زرع idempotent مستقل
+IF NOT EXISTS (SELECT 1 FROM PeopleReports WHERE IsSystem = 1 AND DatasetKey IN (N'att_online', N'att_missing'))
+BEGIN
+    INSERT INTO PeopleReports (Name, DatasetKey, FilterKey, ColumnsCsv, IsSystem, SortOrder, FilterColumnsCsv)
+    VALUES
+        (N'البصمات عبر الإنترنت',            N'att_online',  NULL, N'no,name,branch,date,time,weekday,punchtype,semantic',              1, 340, N'date,branch,punchtype'),
+        (N'طلبات البصمة المفقودة',           N'att_missing', NULL, N'refno,no,name,date,time,punchtype,semantic,status,source,reason', 1, 350, N'date,status,punchtype,source');
+END;
 """);
     }
 
