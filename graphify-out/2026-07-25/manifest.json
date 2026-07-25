@@ -1,7 +1,7 @@
 {
   ".claude/launch.json": {
-    "mtime": 1784960475.0042481,
-    "ast_hash": "d013997e7ebcd82d42801c966e28b50e",
+    "mtime": 1784786742.9551432,
+    "ast_hash": "f97c9dc29285b72a2ae78fa5025fdfc2",
     "semantic_hash": ""
   },
   "SmartAttendance.API/Program.cs": {
@@ -1400,8 +1400,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/HrmsDatabase.cs": {
-    "mtime": 1784919514.2402003,
-    "ast_hash": "992eac306fa5e9bf5d3ceaee878b6560",
+    "mtime": 1784847260.0666783,
+    "ast_hash": "0e4c52322f3064889a3d71f5c2984cc5",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/LeaveBalanceSchema.cs": {
@@ -1450,8 +1450,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/RoleSecurityMiddleware.cs": {
-    "mtime": 1784928752.6372228,
-    "ast_hash": "79fe555105c218c40223de7c3f838061",
+    "mtime": 1784901674.3426921,
+    "ast_hash": "078d8f0a0462c1726393933e1b9d93c7",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Security/SimplePasswordHasher.cs": {
@@ -1510,13 +1510,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Approvals/Index.cshtml": {
-    "mtime": 1784967128.7304718,
-    "ast_hash": "c6ffdb2b30890064cdb39d17f48eeeec",
+    "mtime": 1784696634.5581472,
+    "ast_hash": "93b5d2e026e5c036c4c2d92bf53252d1",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Approvals/Index.cshtml.cs": {
-    "mtime": 1784967085.7494395,
-    "ast_hash": "f937232fab2317415a59bbe702ce9c05",
+    "mtime": 1784696634.5581472,
+    "ast_hash": "6ff52e3b91b0ee0c5986e932725dabd7",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AttendanceCorrections/Index.cshtml": {
@@ -1835,13 +1835,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeePortal/Index.cshtml": {
-    "mtime": 1784935407.2767067,
-    "ast_hash": "71127ef74ec89471d847497b0f4a598d",
+    "mtime": 1784897013.1753068,
+    "ast_hash": "915cbb400178219d51caea716bf6e545",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeePortal/Index.cshtml.cs": {
-    "mtime": 1784935378.6212685,
-    "ast_hash": "309ac4c82c3b74b5b828fc01f60e18ad",
+    "mtime": 1784896996.9758153,
+    "ast_hash": "0174630f99477ef8f2fc60e387a9cd92",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeeProfileSettings/Index.cshtml": {
@@ -2145,8 +2145,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/HrSettings/Index.cshtml": {
-    "mtime": 1784919514.250741,
-    "ast_hash": "577e79904e1c32e53d84d7c37cd1303e",
+    "mtime": 1784847529.606977,
+    "ast_hash": "fd4cbcc7173a630e3f8602eb683fa7a8",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/HrSettings/Index.cshtml.cs": {
@@ -2430,13 +2430,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_EmployeePortalLayout.cshtml": {
-    "mtime": 1784930086.6929245,
-    "ast_hash": "400bde68f400952c9784846e2e1a343f",
+    "mtime": 1783749096.6036208,
+    "ast_hash": "5b2811aac733eaf95673bc2f13c7e3a9",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
-    "mtime": 1784967291.3653333,
-    "ast_hash": "e6fbcb786165ff46baa43559281c6fae",
+    "mtime": 1784900471.03703,
+    "ast_hash": "372c4bfbfd8f8bdd80195cb206983936",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_ValidationScriptsPartial.cshtml": {
@@ -2575,8 +2575,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Program.cs": {
-    "mtime": 1784928704.965464,
-    "ast_hash": "3ba14a9bc50d69d2369910a38b44a5b7",
+    "mtime": 1784901285.836522,
+    "ast_hash": "aa2bf442b4ba504e6748a1c24921156c",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Properties/launchSettings.json": {
@@ -2670,8 +2670,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/nexora-employee-experience.js": {
-    "mtime": 1784924060.74459,
-    "ast_hash": "edcf3636cfd52ce46a5190196caffcbe",
+    "mtime": 1783420775.0639405,
+    "ast_hash": "5c2a3a570b2210d31379022034b637c0",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/nexora-employee-photo-upload.js": {
@@ -3460,8 +3460,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/ApprovalWorkflowEngine.cs": {
-    "mtime": 1784967038.7373712,
-    "ast_hash": "d1c7baca3af4eb01e4c12f8e1391e286",
+    "mtime": 1784696634.529693,
+    "ast_hash": "d125be582dc1406207abf477428a47ee",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/EntityCustomFields.cs": {
@@ -4065,8 +4065,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/OnlinePunchStore.cs": {
-    "mtime": 1784931287.875943,
-    "ast_hash": "51c490b0bf5674dcf290251c39848573",
+    "mtime": 1784896961.139837,
+    "ast_hash": "bc0125148318241bf10a8c1af98a256a",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeeOnlinePunches/Index.cshtml": {
@@ -4170,8 +4170,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Controllers/Api/MeController.cs": {
-    "mtime": 1784931314.5720775,
-    "ast_hash": "9ef3272efdc179e251aeae3e7a51c86a",
+    "mtime": 1784901369.1669333,
+    "ast_hash": "79992923d1ba2f9172cb5300ad3bac5e",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Api/ApiTokenAuthHandler.cs": {
@@ -4182,211 +4182,6 @@
   "SmartAttendance.Web/Infrastructure/Api/ApiTokenStore.cs": {
     "mtime": 1784901229.5401423,
     "ast_hash": "c5ff5bbd88e8e008c5a96c7891b42aa3",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.E2E/SmartAttendance.E2E.csproj": {
-    "mtime": 1784930580.4081156,
-    "ast_hash": "4274f3473f3fa718922fa0bdd40c7625",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.E2E/SmokeTests.cs": {
-    "mtime": 1784930624.5066555,
-    "ast_hash": "24587b55820f5cfb4581816a2d832883",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.MobileApp/app/src/com/zynora/portal/MainActivity.java": {
-    "mtime": 1784935943.751887,
-    "ast_hash": "6a5dced6b504235a44fbb5818d01431e",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.MobileApp/build.sh": {
-    "mtime": 1784935943.9110484,
-    "ast_hash": "154e8d27e7021cba9ae56e5046add919",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Infrastructure/Hrms/DataChangeRequestStore.cs": {
-    "mtime": 1784931386.0293205,
-    "ast_hash": "9d5246ec8bdb098985087ef109f9ea1c",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Infrastructure/Hrms/FinancialRequestStore.cs": {
-    "mtime": 1784967022.4914386,
-    "ast_hash": "6a822a0158b99c247fbb745ed49db44d",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Infrastructure/Hrms/LoanStore.cs": {
-    "mtime": 1784937602.015231,
-    "ast_hash": "0c2808f8037908cd26d9182e9aa6f127",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Infrastructure/Hrms/PunchTypingEngine.cs": {
-    "mtime": 1784921162.0343678,
-    "ast_hash": "2e950b7ab65d8876bfa68be2610aa1a0",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Infrastructure/Hrms/RequestTypeStore.cs": {
-    "mtime": 1784919514.2412014,
-    "ast_hash": "247a56b9586db67bcb40e0fb629c266a",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/EmployeePortal/DataChange.cshtml": {
-    "mtime": 1784935300.0748525,
-    "ast_hash": "ce732188bdea4785ce5c99bc7897da44",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/EmployeePortal/DataChange.cshtml.cs": {
-    "mtime": 1784931444.3381276,
-    "ast_hash": "b8cba804b165890e46435f78240e76ed",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/EmployeePortal/MissingPunch.cshtml": {
-    "mtime": 1784935330.3518085,
-    "ast_hash": "64c331d14504bc65aba0bd6a7f94cdf1",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/EmployeePortal/MissingPunch.cshtml.cs": {
-    "mtime": 1784922580.8404925,
-    "ast_hash": "35da9ee4da16bc8f142dbab2f40fb343",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/EmployeePortal/_NxexPickers.cshtml": {
-    "mtime": 1784922632.13542,
-    "ast_hash": "81480ccd5454ee3c6ba4d0ebffd1832b",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/HrSettings/RequestTypes.cshtml": {
-    "mtime": 1784919514.251944,
-    "ast_hash": "1cff22fe5252bcb885a8e35144fcf63b",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/HrSettings/RequestTypes.cshtml.cs": {
-    "mtime": 1784919514.2529564,
-    "ast_hash": "4d1558f1f2251b11f757b00c99a5b35d",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/HrSettings/_RequestTypeForm.cshtml": {
-    "mtime": 1784919514.255223,
-    "ast_hash": "792018a97b4316969d89efc72b42389c",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/Payroll/FinancialRequests.cshtml": {
-    "mtime": 1784967270.946428,
-    "ast_hash": "2cfcc625834a9769e570a8e16e457cc5",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/Payroll/FinancialRequests.cshtml.cs": {
-    "mtime": 1784967184.5535042,
-    "ast_hash": "6536735370e0155f85f25d8bee6c0937",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/Payroll/Loans.cshtml": {
-    "mtime": 1784962525.5161133,
-    "ast_hash": "d6260a5026ab1c6b4e484dbb137e992f",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/Pages/Payroll/Loans.cshtml.cs": {
-    "mtime": 1784937665.9241097,
-    "ast_hash": "446d9a1cdba3ffb0e8600a30b3fe9fe2",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/js/nxex-bottom-nav.js": {
-    "mtime": 1784919514.2757332,
-    "ast_hash": "e31d9a25b22c59a2a2c5cdfcaa787bcf",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/js/nxex-datachange.js": {
-    "mtime": 1784933084.529171,
-    "ast_hash": "cb1791997eef7b21b1134017255d4d61",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/js/nxex-datepicker.js": {
-    "mtime": 1784923865.6783879,
-    "ast_hash": "f28ae6516a359e9c2efbfc876fa89356",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/js/nxex-missing-punch.js": {
-    "mtime": 1784922516.3643184,
-    "ast_hash": "d2d922275b894dcd3563ebd26cc55c39",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/js/nxex-subpage-nav.js": {
-    "mtime": 1784933146.1834965,
-    "ast_hash": "5c58c692adf0c2f5eb2a94fa9562a8eb",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/js/nxex-timepicker.js": {
-    "mtime": 1784919514.2767355,
-    "ast_hash": "114bebc5f50909dccefb2a0869719f3d",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/js/pwa.js": {
-    "mtime": 1784925026.9296987,
-    "ast_hash": "210409aae27e887baa437aa4cd52af05",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/sw.js": {
-    "mtime": 1784929284.2705977,
-    "ast_hash": "621434f85ae7c36ff8fd7cf4d24a1153",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.MobileApp/README.md": {
-    "mtime": 1784935943.9272997,
-    "ast_hash": "6906a849ac87551f9cad2effe313e71e",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/offline.html": {
-    "mtime": 1784919514.2828958,
-    "ast_hash": "e6e90dbf18d65f60ae83a6ddf96546d9",
-    "semantic_hash": ""
-  },
-  "docs/zenhr-full-system-study.md": {
-    "mtime": 1784938680.732332,
-    "ast_hash": "ae80495d4f215d2ceac392e0cd77cb75",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.MobileApp/app/res/mipmap-xhdpi/ic_launcher.png": {
-    "mtime": 1784935943.7827373,
-    "ast_hash": "75e298bd0046e07167f459f0066a24fd",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.MobileApp/app/res/mipmap-xxhdpi/ic_launcher.png": {
-    "mtime": 1784935943.7868092,
-    "ast_hash": "75e298bd0046e07167f459f0066a24fd",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.MobileApp/app/res/mipmap-xxxhdpi/ic_launcher.png": {
-    "mtime": 1784935943.8017216,
-    "ast_hash": "2bb70b76dcb84a3752c94d0097168209",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/brand/pwa/apple-touch-icon.png": {
-    "mtime": 1784926829.822071,
-    "ast_hash": "d82ce25a980925a8f9e106c365fbed96",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/brand/pwa/icon-192.png": {
-    "mtime": 1784926829.805483,
-    "ast_hash": "75e298bd0046e07167f459f0066a24fd",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/brand/pwa/icon-512.png": {
-    "mtime": 1784926829.7915053,
-    "ast_hash": "2bb70b76dcb84a3752c94d0097168209",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/brand/pwa/icon-white.svg": {
-    "mtime": 1784925057.1424963,
-    "ast_hash": "dbab20a113a4f156691de42983fc9242",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/brand/pwa/maskable-192.png": {
-    "mtime": 1784926829.8175478,
-    "ast_hash": "d9c079abc3f746f5e2a6c1aaf0abf159",
-    "semantic_hash": ""
-  },
-  "SmartAttendance.Web/wwwroot/brand/pwa/maskable-512.png": {
-    "mtime": 1784926829.8155375,
-    "ast_hash": "4b40536a95aa187f7ab6753014613b59",
     "semantic_hash": ""
   }
 }

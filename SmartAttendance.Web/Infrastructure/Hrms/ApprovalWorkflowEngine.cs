@@ -23,6 +23,12 @@ public static class ApprovalWorkflowEngine
         ["خروج أثناء الدوام"] = "ExitPermission",
         ["Overtime"] = "Overtime",
         ["عمل إضافي"] = "Overtime",
+        // الطلبات المالية (FinancialRequestStore) — التسمية العربية ← مفتاح قالب اللجنة.
+        ["قرض"] = "Loan",
+        ["سُلفة"] = "Loan",
+        ["بدل مالي"] = "FinancialClaim",
+        ["استرداد نفقات"] = "FinancialClaim",
+        ["زيادة راتب"] = "SalaryIncrease",
     };
 
     public sealed class StepState

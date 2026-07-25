@@ -28,6 +28,7 @@ public class IndexModel : PageModel
     public List<ApprovalRow> Requests { get; set; } = new();
     public Dictionary<int, ApprovalWorkflowEngine.FlowState> Flows { get; set; } = new();
     public Dictionary<int, List<DataChangeRequestStore.ProposedField>> DataChanges { get; set; } = new();
+    public Dictionary<int, FinancialRequestStore.Detail> FinancialRequests { get; set; } = new();
 
     public string? Message { get; set; }
     public bool MessageIsError { get; set; }
@@ -50,14 +51,20 @@ public class IndexModel : PageModel
         Message = result.Message;
         MessageIsError = !result.Ok;
 
-        // اعتماد نهائي لطلب تعديل بيانات → طبّق التعديلات على ملف الموظف.
+        // اعتماد نهائي → فعّل أثر الطلب حسب نوعه (تعديل بيانات أو طلب مالي).
         if (result.FinalApproved)
         {
-            var applied = await DataChangeRequestStore.ApplyIfDataChangeAsync(
-                _dbContext, id, ActorName(), HttpContext.Connection.RemoteIpAddress?.ToString());
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var applied = await DataChangeRequestStore.ApplyIfDataChangeAsync(_dbContext, id, ActorName(), ip);
             if (applied)
             {
                 Message = "تم اعتماد الطلب وتطبيق التعديلات على بيانات الموظف.";
+            }
+
+            var financial = await FinancialRequestStore.ApplyIfFinancialAsync(_dbContext, id, ActorName(), ip);
+            if (financial)
+            {
+                Message = "تم اعتماد الطلب وتفعيل أثره المالي (قرض/بدل/زيادة حسب النوع).";
             }
         }
 
@@ -123,6 +130,9 @@ ORDER BY r.CreatedAt DESC;
             .Where(r => r.RequestType == DataChangeRequestStore.RequestTypeLabel)
             .Select(r => r.Id).ToList();
         DataChanges = await DataChangeRequestStore.ListFieldsForRequestsAsync(_dbContext, dataChangeIds);
+
+        // تفاصيل الطلبات المالية (النوع/المبلغ/الأقساط) لعرضها للمُعتمِد.
+        FinancialRequests = await FinancialRequestStore.ListForRequestsAsync(_dbContext, Requests.Select(r => r.Id));
 
         Flows = new Dictionary<int, ApprovalWorkflowEngine.FlowState>();
         foreach (var request in Requests)

@@ -1,0 +1,334 @@
+@page "/Payroll/FinancialRequests"
+@model SmartAttendance.Web.Pages.Payroll.FinancialRequestsModel
+@using System.Text.Json
+@using SmartAttendance.Web.Infrastructure.Hrms
+@{
+    ViewData["Title"] = "مركز الطلبات المالية";
+    var acc = "#38bdf8";
+    var total = Model.Rows.Count;
+}
+@Html.AntiForgeryToken()
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .fr-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
+    .fr-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .fr-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .fr-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .fr-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .fr-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
+    .fr-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .fr-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+    .fr-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
+    .fr-btn.apply { background:rgba(52,211,153,.16); border:1px solid rgba(52,211,153,.5); color:#34d399; }
+    .fr-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+    .fr-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
+    .fr-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
+    .fr-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .fr-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .fr-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    .fr-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); flex-wrap:nowrap; }
+    .fr-filter input, .fr-filter select { min-height:40px; box-sizing:border-box; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; white-space:nowrap; }
+    html[data-theme="light"] .fr-filter input, html[data-theme="light"] .fr-filter select { background:#fff; }
+    .fr-filter input[name="Search"] { flex:1 1 200px; min-width:140px; }
+    .fr-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .fr-table { width:100%; border-collapse:collapse; font-size:13px; min-width:960px; }
+    .fr-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .fr-table th { background:#f2f7fb; }
+    .fr-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
+    .fr-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
+    .fr-table td.fr-num { direction:ltr; font-weight:900; text-align:right; }
+    .fr-kind { font-size:11px; font-weight:900; padding:2px 10px; border-radius:999px; border:1px solid rgba(73,111,151,.3); white-space:nowrap; }
+    .fr-pill { font-size:11px; font-weight:900; padding:2px 9px; border-radius:999px; border:1px solid rgba(73,111,151,.3); white-space:nowrap; }
+    .fr-pill.Pending { color:#facc15; border-color:rgba(250,204,21,.4); }
+    .fr-pill.Approved { color:#34d399; border-color:rgba(52,211,153,.4); }
+    .fr-pill.Rejected { color:#f87171; border-color:rgba(248,113,113,.4); }
+    .fr-modal-bg { position:fixed; inset:0; background:rgba(2,8,16,.7); z-index:120; display:none; align-items:flex-start; justify-content:center; overflow:auto; padding:40px 16px; }
+    .fr-modal-bg.open { display:flex; }
+    .fr-modal { width:min(640px,100%); border:1px solid rgba(73,111,151,.3); border-radius:18px; background:var(--sa-surface,#0a1c30); padding:20px; }
+    html[data-theme="light"] .fr-modal { background:#fff; }
+    .fr-modal h2 { margin:0 0 14px; font-size:17px; }
+    .fr-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .fr-grid .full { grid-column:1/-1; }
+    .fr-field { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .fr-field input, .fr-field select, .fr-field textarea { min-height:38px; border-radius:11px; border:1px solid rgba(73,111,151,.28); background:rgba(0,0,0,.18); color:var(--sa-text,#DCEAF4); padding:7px 11px; font-weight:800; font-size:13px; }
+    html[data-theme="light"] .fr-field input, html[data-theme="light"] .fr-field select, html[data-theme="light"] .fr-field textarea { background:#fff; }
+    .fr-field.check { flex-direction:row; align-items:center; gap:8px; }
+    .fr-field.check input { min-height:auto; width:18px; height:18px; }
+    .fr-field .empk-code { border-radius:10px 0 0 10px; }
+    .fr-field .empk-name { border-radius:0 10px 10px 0; }
+    .fr-preview { grid-column:1/-1; font-size:13px; font-weight:900; color:var(--acc); }
+    .fr-kindpick { grid-column:1/-1; display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:8px; }
+    .fr-kindpick label { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 6px; border:1px solid rgba(73,111,151,.28); border-radius:12px; cursor:pointer; text-align:center; font-size:11px; font-weight:900; }
+    .fr-kindpick label.on { border-color:var(--acc); background:color-mix(in srgb,var(--acc) 12%,transparent); color:var(--acc); }
+    .fr-kindpick .ic { font-size:20px; }
+    .fr-kindpick input { display:none; }
+    .fr-modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
+</style>
+
+<section class="fr-page" dir="rtl">
+    <header class="fr-head">
+        <div>
+            <h1>مركز الطلبات المالية</h1>
+            <p>قرض · سُلفة · بدل · استرداد · زيادة راتب — طلب واحد يمرّ بلجنة الموافقة ثم يُفعَّل أثره المالي آلياً.</p>
+        </div>
+        <button type="button" class="fr-btn" onclick="frOpen()">+ طلب مالي جديد</button>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="hrms-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <div class="fr-kpis">
+        <div class="fr-kpi"><b>@total</b><span>إجمالي الطلبات</span></div>
+        <div class="fr-kpi"><b>@Model.PendingCount</b><span>قيد الموافقة</span></div>
+        <div class="fr-kpi"><b>@Model.PendingAmount.ToString("N0")</b><span>إجمالي المبالغ المعلّقة</span></div>
+        <div class="fr-kpi"><b>@Model.ApprovedCount</b><span>معتمدة (فُعِّل أثرها)</span></div>
+    </div>
+
+    <div class="fr-bar">
+        <form method="get" class="fr-filter">
+            <input name="Search" value="@Model.Search" placeholder="بحث (اسم/رقم/سبب)" />
+            <select name="Kind" onchange="this.form.submit()">
+                <option value="">كل الأنواع</option>
+                @foreach (var k in FinancialRequestStore.Catalog)
+                {
+                    <option value="@k.Key" selected="@(Model.Kind == k.Key)">@k.Label</option>
+                }
+            </select>
+            <select name="Status" onchange="this.form.submit()">
+                <option value="">كل الحالات</option>
+                <option value="Pending" selected="@(Model.Status == "Pending")">قيد الموافقة</option>
+                <option value="Approved" selected="@(Model.Status == "Approved")">معتمد</option>
+                <option value="Rejected" selected="@(Model.Status == "Rejected")">مرفوض</option>
+            </select>
+            <button type="submit" class="fr-btn ghost sm">تطبيق</button>
+        </form>
+    </div>
+
+    <div class="fr-card">
+        <table class="fr-table">
+            <thead>
+                <tr>
+                    <th>الموظف</th><th>النوع</th><th>المبلغ / التفاصيل</th><th>الخطوة الحالية</th>
+                    <th>الحالة</th><th>التاريخ</th><th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.Rows)
+                {
+                    var d = r.Detail;
+                    <tr>
+                        <td><b>@r.EmployeeName</b><br /><span style="opacity:.6;font-size:11px">@r.EmployeeNo · @r.Department</span></td>
+                        <td><span class="fr-kind">@d.KindLabelText</span></td>
+                        <td class="fr-num">
+                            @d.Amount.ToString("N2")@(d.Kind == "Raise" && d.RaiseType == "Percentage" ? " %" : "")
+                            @if (d.Kind is "Loan" or "Advance")
+                            {
+                                <br /><span style="opacity:.6;font-size:11px">@d.InstallmentCount قسط · يبدأ @d.PeriodText</span>
+                            }
+                            else if (d.Kind is "Allowance" or "Reimbursement")
+                            {
+                                <br /><span style="opacity:.6;font-size:11px">@(d.PaymentType == "OutSalary" ? "خارج الراتب" : "داخل الراتب")@(d.Taxable ? " · خاضع للضريبة" : "")</span>
+                            }
+                        </td>
+                        <td><span style="font-size:12px">@(string.IsNullOrWhiteSpace(r.CurrentStep) ? "—" : r.CurrentStep)</span></td>
+                        <td><span class="fr-pill @r.Status">@r.StatusText</span></td>
+                        <td style="font-size:11px;opacity:.7">@(r.CreatedAt?.ToLocalTime().ToString("yyyy-MM-dd"))</td>
+                        <td style="white-space:nowrap">
+                            @if (r.Status == "Pending")
+                            {
+                                <form method="post" asp-page-handler="Approve" style="display:inline">
+                                    <input type="hidden" name="id" value="@r.RequestId" />
+                                    <button type="submit" class="fr-btn apply sm">اعتماد الخطوة</button>
+                                </form>
+                                <form method="post" asp-page-handler="Reject" style="display:inline" data-zyconfirm="رفض هذا الطلب المالي؟">
+                                    <input type="hidden" name="id" value="@r.RequestId" />
+                                    <button type="submit" class="fr-btn danger sm">رفض</button>
+                                </form>
+                                <form method="post" asp-page-handler="Delete" style="display:inline" data-zyconfirm="حذف الطلب المعلّق؟">
+                                    <input type="hidden" name="id" value="@r.RequestId" />
+                                    <button type="submit" class="fr-btn danger sm">حذف</button>
+                                </form>
+                            }
+                            else if (d.Applied && d.AppliedRefId.HasValue)
+                            {
+                                <span style="font-size:11px;color:#34d399">فُعِّل ✓ (#@d.AppliedRefId)</span>
+                            }
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Rows.Any())
+                {
+                    <tr><td colspan="7" style="text-align:center;opacity:.6;padding:26px">لا طلبات مالية — أنشئ طلباً من الزر أعلاه.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="fr-modal-bg" id="frModalBg">
+    <div class="fr-modal">
+        <h2>طلب مالي جديد</h2>
+        <form method="post" asp-page-handler="Submit" id="frForm">
+            <div class="fr-grid">
+                <div class="fr-kindpick" id="frKindPick">
+                    @foreach (var k in FinancialRequestStore.Catalog)
+                    {
+                        <label data-kind="@k.Key" title="@k.Hint">
+                            <span class="ic">@k.Icon</span>
+                            <span>@k.Label</span>
+                            <input type="radio" name="Kind" value="@k.Key" />
+                        </label>
+                    }
+                </div>
+
+                <label class="fr-field full">الموظف
+                    <div class="empk-field">
+                        <input type="text" id="f_EmpName" class="empk-name" placeholder="اسم الموظف — انقر للبحث" readonly />
+                        <input type="text" id="f_EmpCode" class="empk-code" placeholder="رمز" autocomplete="off" />
+                    </div>
+                    <input type="hidden" name="EmployeeId" id="f_Emp" />
+                </label>
+
+                <label class="fr-field" id="fld_Amount">
+                    <span id="lbl_Amount">المبلغ</span>
+                    <input name="Amount" id="f_Amount" type="number" step="0.01" min="0.01" required oninput="frCalc()" />
+                </label>
+
+                <label class="fr-field" id="fld_RaiseType" style="display:none">نوع الزيادة
+                    <select name="RaiseType" id="f_RaiseType" onchange="frCalc()">
+                        <option value="Amount">مبلغ ثابت</option>
+                        <option value="Percentage">نسبة مئوية %</option>
+                    </select>
+                </label>
+
+                <label class="fr-field" id="fld_Count">عدد الأقساط الشهرية
+                    <input name="InstallmentCount" id="f_Count" type="number" min="1" value="1" oninput="frCalc()" />
+                </label>
+
+                <label class="fr-field" id="fld_PayType" style="display:none">نوع الدفعة
+                    <select name="PaymentType" id="f_PayType">
+                        <option value="InSalary">داخل الراتب</option>
+                        <option value="OutSalary">خارج الراتب</option>
+                    </select>
+                </label>
+
+                <label class="fr-field check" id="fld_Taxable" style="display:none">
+                    <input type="checkbox" name="Taxable" id="f_Taxable" />
+                    <span>خاضع للضريبة</span>
+                </label>
+
+                <label class="fr-field" id="fld_Month"><span id="lbl_Month">يبدأ الخصم — الشهر</span>
+                    <select name="StartMonth" id="f_SMonth">
+                        @for (var m = 1; m <= 12; m++)
+                        {
+                            <option value="@m" selected="@(m == DateTime.Today.Month)">@m.ToString("00")</option>
+                        }
+                    </select>
+                </label>
+                <label class="fr-field" id="fld_Year">السنة
+                    <input name="StartYear" id="f_SYear" type="number" value="@DateTime.Today.Year" />
+                </label>
+
+                <div class="fr-preview" id="f_Preview"></div>
+
+                <label class="fr-field full">السبب
+                    <input name="Reason" id="f_Reason" maxlength="200" />
+                </label>
+                <label class="fr-field full">ملاحظة
+                    <textarea name="Note" id="f_Note" rows="2" maxlength="500"></textarea>
+                </label>
+            </div>
+            <div class="fr-modal-actions">
+                <button type="button" class="fr-btn ghost" onclick="frClose()">إلغاء</button>
+                <button type="submit" class="fr-btn apply">إرسال للموافقة</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/emp-picker.js" asp-append-version="true"></script>
+    <script>
+        var FR_EMP = @Html.Raw(JsonSerializer.Serialize(Model.Employees));
+        var frEmpPicker = EmpPicker.init({
+            code: document.getElementById("f_EmpCode"),
+            name: document.getElementById("f_EmpName"),
+            hidden: document.getElementById("f_Emp"),
+            employees: FR_EMP
+        });
+
+        var frKind = "Loan";
+
+        function frSelectKind(kind) {
+            frKind = kind;
+            document.querySelectorAll("#frKindPick label").forEach(function (l) {
+                var on = l.getAttribute("data-kind") === kind;
+                l.classList.toggle("on", on);
+                var radio = l.querySelector("input");
+                if (radio) radio.checked = on;
+            });
+
+            var isLoan = kind === "Loan" || kind === "Advance";
+            var isRaise = kind === "Raise";
+            var isTx = kind === "Allowance" || kind === "Reimbursement";
+
+            show("fld_Count", isLoan);
+            show("fld_RaiseType", isRaise);
+            show("fld_PayType", isTx);
+            show("fld_Taxable", isTx);
+
+            document.getElementById("lbl_Amount").textContent = isRaise ? "قيمة الزيادة" : "المبلغ";
+            document.getElementById("lbl_Month").textContent = isLoan ? "يبدأ الخصم — الشهر"
+                : (isRaise ? "يسري من — الشهر" : "شهر الاحتساب");
+
+            // البدل داخل الراتب افتراضاً، الاسترداد خارجه.
+            if (isTx) document.getElementById("f_PayType").value = kind === "Reimbursement" ? "OutSalary" : "InSalary";
+            frCalc();
+        }
+
+        function show(id, on) { document.getElementById(id).style.display = on ? "" : "none"; }
+
+        function frCalc() {
+            var amt = parseFloat(document.getElementById("f_Amount").value) || 0;
+            var box = document.getElementById("f_Preview");
+            if (frKind === "Loan" || frKind === "Advance") {
+                var cnt = parseInt(document.getElementById("f_Count").value) || 1;
+                if (cnt < 1) cnt = 1;
+                var monthly = Math.round((amt / cnt) * 100) / 100;
+                box.textContent = amt > 0 ? ("القسط الشهري: " + monthly.toLocaleString() + " × " + cnt + " قسط") : "";
+            } else if (frKind === "Raise") {
+                var emp = FR_EMP.find(function (x) { return x.Id === parseInt(document.getElementById("f_Emp").value); });
+                var basic = emp ? (emp.Basic || 0) : 0;
+                var type = document.getElementById("f_RaiseType").value;
+                var nb = type === "Percentage" ? basic * (1 + amt / 100) : basic + amt;
+                box.textContent = basic > 0
+                    ? ("الأساسي: " + basic.toLocaleString() + " ← " + (Math.round(nb * 100) / 100).toLocaleString())
+                    : "اختر الموظف لمعاينة الأساسي الجديد";
+            } else {
+                box.textContent = "";
+            }
+        }
+
+        function frOpen() {
+            document.getElementById("frForm").reset();
+            frEmpPicker.set(null);
+            frSelectKind("Loan");
+            document.getElementById("frModalBg").classList.add("open");
+        }
+        function frClose() { document.getElementById("frModalBg").classList.remove("open"); }
+
+        document.querySelectorAll("#frKindPick label").forEach(function (l) {
+            l.addEventListener("click", function () { frSelectKind(l.getAttribute("data-kind")); });
+        });
+        // إعادة حساب معاينة الزيادة عند اختيار الموظف.
+        document.getElementById("f_Emp").addEventListener("change", frCalc);
+
+        document.addEventListener("keydown", function (e) { if (e.key === "Escape") frClose(); });
+    </script>
+}
