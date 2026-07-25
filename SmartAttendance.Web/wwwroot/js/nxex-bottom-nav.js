@@ -49,6 +49,46 @@
     setTimeout(() => reqSheet.open(), 80);
   }
 
+  // ===== مودال التضمين: يفتح نموذج أي طلب داخل البوابة (iframe) بمكانه بلا انتقال =====
+  (function () {
+    const modal = document.getElementById('nxex-embed-modal');
+    const backdrop = document.getElementById('nxex-embed-backdrop');
+    const frame = document.getElementById('nxex-embed-frame');
+    const titleEl = document.getElementById('nxex-embed-title');
+    if (!modal || !backdrop || !frame) return;
+    let loadCount = 0;
+    function openEmbed(src, title) {
+      loadCount = 0;
+      if (titleEl) titleEl.textContent = title || 'طلب';
+      frame.src = src;
+      backdrop.hidden = false; modal.hidden = false; lockScroll(true);
+      setTimeout(() => { backdrop.classList.add('open'); modal.classList.add('open'); }, 10);
+    }
+    function closeEmbed() {
+      backdrop.classList.remove('open'); modal.classList.remove('open'); lockScroll(false);
+      setTimeout(() => { backdrop.hidden = true; modal.hidden = true; frame.src = 'about:blank'; }, 260);
+    }
+    document.querySelectorAll('[data-embed-src]').forEach((el) => {
+      el.addEventListener('click', () => {
+        if (reqSheet) reqSheet.close();
+        openEmbed(el.getAttribute('data-embed-src'), el.getAttribute('data-embed-title'));
+      });
+    });
+    backdrop.addEventListener('click', closeEmbed);
+    modal.querySelectorAll('[data-embed-close]').forEach((b) => b.addEventListener('click', closeEmbed));
+    // إغلاق تلقائي عند نجاح الإرسال داخل الإطار (نفس الأصل): بعد أول تحميل، لو ظهرت
+    // رسالة نجاح نغلق ونحدّث البوابة لعكس الطلب الجديد.
+    frame.addEventListener('load', () => {
+      loadCount++;
+      if (loadCount < 2) return;
+      try {
+        const doc = frame.contentDocument;
+        const ok = doc && doc.querySelector('.efr-alert:not(.danger), .hrms-alert.success, [data-request-success]');
+        if (ok) { closeEmbed(); setTimeout(() => window.location.reload(), 300); }
+      } catch (e) { /* تجاهل */ }
+    });
+  })();
+
   // الصفحات الفرعية: لا توجد أقسام [.nxex-pane]، وأزرار تبويب الشريط السفلي مبدّلات
   // داخل صفحة البوابة فقط ⇒ نحوّلها لتنقّل حقيقي. «المزيد» و«+» أعلاه يفتحان بمكانهما.
   const isHub = !!document.querySelector('.nxex-pane');

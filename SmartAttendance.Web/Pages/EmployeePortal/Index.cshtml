@@ -878,18 +878,18 @@
                     <span>إجازة</span>
                 </button>
             }
-            <a class="nxex-more-item" href="/EmployeePortal/MissingPunch">
+            <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/MissingPunch?embed=1" data-embed-title="نسيان بصمة">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3m0 0 2 2m-2-2-2 2M7 8a5 5 0 0 1 10 0c0 2-1 3-1 5"/><circle cx="12" cy="12" r="9"/></svg>
                 <span>نسيان بصمة</span>
-            </a>
-            <a class="nxex-more-item" href="/EmployeePortal/DataChange">
+            </button>
+            <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/DataChange?embed=1" data-embed-title="تعديل بياناتي">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 <span>تعديل بياناتي</span>
-            </a>
-            <a class="nxex-more-item" href="/EmployeePortal/FinancialRequest">
+            </button>
+            <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/FinancialRequest?embed=1" data-embed-title="طلب مالي">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 <span>طلب مالي</span>
-            </a>
+            </button>
             @foreach (var cat in Model.ReqCategories.Where(c => c.IsPickerEntry))
             {
                 <button type="button" class="nxex-more-item" data-open-cat="cat-@cat.Id">

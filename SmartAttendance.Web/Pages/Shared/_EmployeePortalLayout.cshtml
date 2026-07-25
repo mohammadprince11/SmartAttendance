@@ -48,9 +48,22 @@
         @@media (prefers-reduced-motion:reduce){
             #nxsp-splash .nxsp{animation-duration:.01s !important;animation-delay:0s !important}
         }
+        /* ===== وضع التضمين (embed): إخفاء زينة البوابة وعرض النموذج فقط داخل مودال ===== */
+        .nxex-embed .nxex-shell-sidebar,.nxex-embed .nxex-topbar,.nxex-embed .nxex-bottom-nav,.nxex-embed .nxex-fab,.nxex-embed #nxsp-splash,.nxex-embed .nxex-ios-hint{display:none!important}
+        .nxex-embed .nxex-shell-main{margin:0!important;padding:14px 14px 26px!important;max-width:none!important}
+        .nxex-embed-backdrop{position:fixed;inset:0;z-index:900;background:rgba(2,8,16,.62);opacity:0;transition:opacity .22s}
+        .nxex-embed-backdrop.open{opacity:1}.nxex-embed-backdrop[hidden]{display:none}
+        .nxex-embed-modal{position:fixed;left:0;right:0;bottom:0;z-index:901;display:flex;flex-direction:column;height:92vh;max-height:92vh;background:#071626;border-radius:20px 20px 0 0;border:1px solid rgba(91,132,176,.2);transform:translateY(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+        html[data-theme="light"] .nxex-embed-modal{background:#eef6f8}
+        .nxex-embed-modal.open{transform:translateY(0)}.nxex-embed-modal[hidden]{display:none}
+        .nxex-embed-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid rgba(91,132,176,.16)}
+        .nxex-embed-head h2{margin:0;font-size:16px;font-weight:1000;color:var(--sa-text,#e6f0fa);flex:1}
+        .nxex-embed-close{width:34px;height:34px;border-radius:50%;border:1px solid rgba(91,132,176,.3);background:transparent;color:inherit;font-size:15px;cursor:pointer}
+        .nxex-embed-frame{flex:1;width:100%;border:0;background:transparent}
     </style>
 </head>
-<body class="nxex-body">
+@{ var embed = Context.Request.Query["embed"] == "1"; }
+<body class="nxex-body @(embed ? "nxex-embed" : "")">
     <div id="nxsp-splash" aria-hidden="true">
         <svg viewBox="0 0 1024 1024" role="img" aria-label="ZYNORA">
             <path class="nxsp nxsp-top"    fill="#F7F9FB" d="M170 218h520l-112 126H58z"/>
@@ -169,7 +182,7 @@
         var __page = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
         var __isEmployeeHub = __page.Equals("/EmployeePortal/Index", StringComparison.OrdinalIgnoreCase);
     }
-    @if (!__isEmployeeHub)
+    @if (!__isEmployeeHub && !embed)
     {
         <div class="nxex-more-backdrop" id="nxex-req-backdrop" hidden></div>
         <div class="nxex-more-sheet nxex-req-sheet" id="nxex-req-sheet" role="dialog" aria-label="نوع الطلب" hidden>
@@ -180,19 +193,32 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V10l6-4 6 4v11M9 21v-5h6v5"/></svg>
                     <span>إجازة</span>
                 </a>
-                <a class="nxex-more-item" href="/EmployeePortal/MissingPunch">
+                <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/MissingPunch?embed=1" data-embed-title="نسيان بصمة">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3m0 0 2 2m-2-2-2 2M7 8a5 5 0 0 1 10 0c0 2-1 3-1 5"/><circle cx="12" cy="12" r="9"/></svg>
                     <span>نسيان بصمة</span>
-                </a>
-                <a class="nxex-more-item" href="/EmployeePortal/DataChange">
+                </button>
+                <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/DataChange?embed=1" data-embed-title="تعديل بياناتي">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                     <span>تعديل بياناتي</span>
-                </a>
-                <a class="nxex-more-item" href="/EmployeePortal/FinancialRequest">
+                </button>
+                <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/FinancialRequest?embed=1" data-embed-title="طلب مالي">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     <span>طلب مالي</span>
-                </a>
+                </button>
             </div>
+        </div>
+    }
+
+    @* مودال التضمين العام: يعرض نموذج أي طلب داخل البوابة بمكانه (iframe) بلا انتقال *@
+    @if (!embed)
+    {
+        <div class="nxex-embed-backdrop" id="nxex-embed-backdrop" hidden></div>
+        <div class="nxex-embed-modal" id="nxex-embed-modal" role="dialog" aria-modal="true" hidden>
+            <div class="nxex-embed-head">
+                <button type="button" class="nxex-embed-close" data-embed-close aria-label="إغلاق">✕</button>
+                <h2 id="nxex-embed-title">طلب</h2>
+            </div>
+            <iframe class="nxex-embed-frame" id="nxex-embed-frame" title="نموذج الطلب"></iframe>
         </div>
     }
 

@@ -18,6 +18,10 @@
     .efr-kinds input { display:none; }
     .efr-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     .efr-grid .full { grid-column:1/-1; }
+    /* صف واحد: الأقساط (أقصر) + الشهر + السنة */
+    .efr-row3 { grid-column:1/-1; display:flex; gap:10px; align-items:flex-end; }
+    .efr-row3 .efr-field { flex:1; min-width:0; }
+    .efr-row3 #efrFldCount { flex:0 0 78px; }
     .efr-field { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
     .efr-field input, .efr-field select, .efr-field textarea { min-height:42px; box-sizing:border-box; border-radius:12px; border:1px solid rgba(73,111,151,.28); background:rgba(0,0,0,.18); color:var(--sa-text,#DCEAF4); padding:8px 12px; font-weight:800; font-size:14px; }
     html[data-theme="light"] .efr-field input, html[data-theme="light"] .efr-field select, html[data-theme="light"] .efr-field textarea { background:#fff; }
@@ -55,34 +59,51 @@
             <h2>طلب مالي جديد</h2>
             <p class="sub">قرض · سُلفة · بدل · استرداد — يمرّ طلبك بلجنة الموافقة ثم يُفعَّل أثره آلياً.</p>
             <form method="post" id="efrForm">
-                <div class="efr-kinds" id="efrKinds">
-                    @foreach (var k in Model.Kinds)
-                    {
-                        <label data-kind="@k.Key" title="@k.Hint">
-                            <span class="ic">@k.Icon</span>
-                            <span>@k.Label</span>
-                            <input type="radio" name="Kind" value="@k.Key" />
-                        </label>
-                    }
-                </div>
+                @{
+                    var defKind = Model.Kinds.FirstOrDefault(k => k.Key == "Loan") ?? Model.Kinds.FirstOrDefault();
+                }
                 <div class="efr-grid">
+                    <div class="efr-field full">نوع الطلب
+                        <div class="nxex-csel" id="efrKindSel">
+                            <button type="button" class="nxex-csel-trigger" data-csel-trigger aria-haspopup="listbox" aria-expanded="false">
+                                <span data-csel-label>@(defKind?.Icon) @(defKind?.Label)</span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                            <input type="hidden" name="Kind" id="efrKindInput" data-csel-input value="@(defKind?.Key)" />
+                            <ul class="nxex-csel-list" data-csel-list role="listbox" hidden>
+                                @foreach (var k in Model.Kinds)
+                                {
+                                    <li class="nxex-csel-opt" role="option" data-value="@k.Key" data-label="@(k.Icon + " " + k.Label)" aria-selected="@(k.Key == defKind?.Key ? "true" : "false")">@k.Icon @k.Label</li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
                     <label class="efr-field full"><span id="efrLblAmount">المبلغ</span>
                         <input name="Amount" id="efrAmount" type="number" step="0.01" min="0.01" required oninput="efrCalc()" />
                     </label>
-                    <label class="efr-field" id="efrFldCount">عدد الأقساط الشهرية
-                        <input name="InstallmentCount" id="efrCount" type="number" min="1" value="1" oninput="efrCalc()" />
-                    </label>
-                    <label class="efr-field" id="efrFldMonth"><span id="efrLblMonth">يبدأ من — الشهر</span>
-                        <select name="StartMonth" id="efrMonth">
-                            @for (var m = 1; m <= 12; m++)
-                            {
-                                <option value="@m" selected="@(m == DateTime.Today.Month)">@m.ToString("00")</option>
-                            }
-                        </select>
-                    </label>
-                    <label class="efr-field" id="efrFldYear">السنة
-                        <input name="StartYear" type="number" value="@DateTime.Today.Year" />
-                    </label>
+                    <div class="efr-row3">
+                        <label class="efr-field" id="efrFldCount">الأقساط
+                            <input name="InstallmentCount" id="efrCount" type="number" min="1" value="1" oninput="efrCalc()" />
+                        </label>
+                        <div class="efr-field" id="efrFldMonth"><span id="efrLblMonth">الشهر</span>
+                            <div class="nxex-csel">
+                                <button type="button" class="nxex-csel-trigger" data-csel-trigger aria-haspopup="listbox" aria-expanded="false">
+                                    <span data-csel-label>@DateTime.Today.Month.ToString("00")</span>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                                </button>
+                                <input type="hidden" name="StartMonth" data-csel-input value="@DateTime.Today.Month" />
+                                <ul class="nxex-csel-list" data-csel-list role="listbox" hidden>
+                                    @for (var m = 1; m <= 12; m++)
+                                    {
+                                        <li class="nxex-csel-opt" role="option" data-value="@m" data-label="@m.ToString("00")" aria-selected="@(m == DateTime.Today.Month ? "true" : "false")">@m.ToString("00")</li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                        <label class="efr-field" id="efrFldYear">السنة
+                            <input name="StartYear" type="number" value="@DateTime.Today.Year" />
+                        </label>
+                    </div>
                     <div class="efr-preview" id="efrPreview"></div>
                     <label class="efr-field full">السبب
                         <input name="Reason" maxlength="200" placeholder="سبب الطلب (اختياري)" />
@@ -131,17 +152,13 @@
 @section Scripts {
     <script>
         var efrKind = "Loan";
-        function efrShow(id, on){ document.getElementById(id).style.display = on ? "" : "none"; }
+        function efrShow(id, on){ var el=document.getElementById(id); if(el) el.style.display = on ? "" : "none"; }
         function efrSelect(kind){
             efrKind = kind;
-            document.querySelectorAll("#efrKinds label").forEach(function(l){
-                var on = l.getAttribute("data-kind") === kind;
-                l.classList.toggle("on", on);
-                var radio = l.querySelector("input"); if (radio) radio.checked = on;
-            });
             var isLoan = kind === "Loan" || kind === "Advance";
             efrShow("efrFldCount", isLoan);
-            document.getElementById("efrLblMonth").textContent = isLoan ? "يبدأ الخصم — الشهر" : "شهر الاحتساب";
+            var lbl = document.getElementById("efrLblMonth");
+            if (lbl) lbl.textContent = isLoan ? "شهر البدء" : "الشهر";
             efrCalc();
         }
         function efrCalc(){
@@ -153,9 +170,28 @@
                 box.textContent = amt > 0 ? ("القسط الشهري: " + monthly.toLocaleString() + " × " + cnt + " قسط") : "";
             } else { box.textContent = ""; }
         }
-        document.querySelectorAll("#efrKinds label").forEach(function(l){
-            l.addEventListener("click", function(){ efrSelect(l.getAttribute("data-kind")); });
-        });
-        efrSelect("Loan");
+        // تهيئة موحّدة لكل قائمة منسدلة مخصّصة بالصفحة (قائمتها المفتوحة بتصميم التطبيق)
+        function initCsel(sel){
+            var trigger = sel.querySelector('[data-csel-trigger]');
+            var list = sel.querySelector('[data-csel-list]');
+            var labelEl = sel.querySelector('[data-csel-label]');
+            var input = sel.querySelector('[data-csel-input]');
+            if(!trigger || !list || !input) return;
+            var opts = [].slice.call(sel.querySelectorAll('.nxex-csel-opt'));
+            function close(){ list.hidden = true; sel.classList.remove('open'); trigger.setAttribute('aria-expanded','false'); }
+            function open(){ list.hidden = false; sel.classList.add('open'); trigger.setAttribute('aria-expanded','true'); }
+            trigger.addEventListener('click', function(e){ e.stopPropagation(); if(list.hidden) open(); else close(); });
+            opts.forEach(function(li){ li.addEventListener('click', function(){
+                if(li.getAttribute('data-disabled') === 'true') return;
+                opts.forEach(function(o){ o.setAttribute('aria-selected', o===li ? 'true':'false'); });
+                labelEl.textContent = li.getAttribute('data-label') || li.textContent.trim();
+                input.value = li.getAttribute('data-value');
+                close();
+                if(sel.id === 'efrKindSel') efrSelect(li.getAttribute('data-value'));
+            }); });
+            document.addEventListener('click', function(e){ if(!sel.contains(e.target)) close(); });
+        }
+        [].slice.call(document.querySelectorAll('.nxex-csel')).forEach(initCsel);
+        efrSelect((document.getElementById('efrKindInput') || {}).value || "Loan");
     </script>
 }

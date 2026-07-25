@@ -156,7 +156,9 @@ if (!app.Environment.IsDevelopment())
 app.Use(async (context, next) =>
 {
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-    context.Response.Headers["X-Frame-Options"] = "DENY";
+    // SAMEORIGIN لا DENY: تسمح لبوابة الموظف بتضمين صفحات طلباتها بمكانها (iframe)
+    // مع منع أي موقع خارجي من تأطيرنا (حماية من clickjacking).
+    context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
     context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
     context.Response.Headers["Permissions-Policy"] =
         "camera=(), microphone=(), geolocation=()";
