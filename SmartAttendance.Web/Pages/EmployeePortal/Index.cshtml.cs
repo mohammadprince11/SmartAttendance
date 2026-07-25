@@ -74,10 +74,18 @@ public class IndexModel : PageModel
     public string CompensationNote => Compensation.HasData ? "بيانات التعويضات مدخلة في النظام." : "لا توجد بيانات تعويضات مدخلة لهذا الموظف حالياً.";
     public string EmployeeInsight => MissingCheckoutCount > 0 ? "يوجد سجلات حضور تحتاج مراجعة" : OpenPollsCount > 0 ? "يوجد استبيان بانتظار مشاركتك" : "لا توجد إجراءات عاجلة حالياً";
 
-    public async Task<IActionResult> OnGetAsync(string? tab)
+    public async Task<IActionResult> OnGetAsync(string? tab, string? punch, int? pminm, int? prem)
     {
         Tab = NormalizeTab(tab);
         await LoadAsync();
+        StatusMessage = punch switch
+        {
+            "in" => "سُجّلت بصمة الحضور عبر الإنترنت — تدخل الحضور عند «تحديث الحضور».",
+            "out" => "سُجّلت بصمة الانصراف عبر الإنترنت — تدخل الحضور عند «تحديث الحضور».",
+            "toosoon" => $"لا يمكن تسجيل الانصراف قبل مرور {OnlinePunchStore.FormatDuration((pminm ?? 0) / 60d)} من تسجيل الحضور — تبقّى {OnlinePunchStore.FormatDuration((prem ?? 0) / 60d)}.",
+            "dup" => "تم تجاهل البصمة: سُجّلت بصمة مماثلة خلال أقل من دقيقة.",
+            _ => StatusMessage
+        };
         return Page();
     }
 
@@ -657,12 +665,26 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
 
         var type = punchType == "Out" ? "Out" : "In";
         var now = DateTime.Now;
-        var recordId = await OnlinePunchStore.RecordAsync(_dbContext, employeeId, type, now, null);
+        var result = await OnlinePunchStore.RecordAsync(_dbContext, employeeId, type, now, null);
 
-        StatusMessage = recordId > 0
-            ? $"سُجّلت بصمة {(type == "Out" ? "الانصراف" : "الحضور")} عبر الإنترنت الساعة {now:HH:mm} — تدخل الحضور عند «تحديث الحضور»."
-            : "تم تجاهل البصمة: سُجّلت بصمة مماثلة خلال أقل من دقيقة.";
-        return RedirectToPage(new { tab = returnTab ?? "attendance" });
+        // نمرّر نتيجة البصمة عبر معطيات الرابط (أعداد صحيحة آمنة ثقافياً) فتُعاد صياغة الرسالة
+        // في OnGet — بديل موثوق لا يعتمد على بقاء TempData عبر إعادة التوجيه (PRG).
+        var tab = returnTab ?? "attendance";
+        return result.Status switch
+        {
+            OnlinePunchStore.PunchStatus.Recorded =>
+                RedirectToPage(new { tab, punch = type == "Out" ? "out" : "in" }),
+            OnlinePunchStore.PunchStatus.TooSoonForCheckout =>
+                RedirectToPage(new
+                {
+                    tab,
+                    punch = "toosoon",
+                    pminm = (int)Math.Round(result.MinCheckoutHours * 60),
+                    prem = (int)Math.Ceiling(result.HoursRemaining * 60)
+                }),
+            _ =>
+                RedirectToPage(new { tab, punch = "dup" })
+        };
     }
 
     private async Task LoadAsync()

@@ -1,4 +1,6 @@
+using System.Globalization;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.HrSettings;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -33,11 +35,67 @@ public static class OnlinePunchStore
     public const int DebounceSeconds = 60;
 
     /// <summary>
-    /// تسجيل بصمة عبر الإنترنت (بصم ذاتي). يرجع معرّف السجل، أو 0 إن رُفضت لأنها
-    /// مكرّرة خلال <see cref="DebounceSeconds"/> ثانية من بصمة سابقة (قاعدة صارمة تمنع
-    /// إغراق يوم واحد ببصمات متطابقة متلاحقة).
+    /// مفتاح إعداد «أقل عدد ساعات بين الحضور والانصراف» بجدول الإعدادات العام
+    /// (<c>NexoraHrSettings</c>). يعدّله أدمن النظام من صفحة «إعدادات الحضور».
     /// </summary>
-    public static async Task<int> RecordAsync(
+    public const string MinCheckoutHoursKey = "Attendance.OnlinePunch.MinCheckoutHours";
+
+    /// <summary>القيمة الافتراضية إن لم يُضبط الإعداد بعد (٤ ساعات).</summary>
+    public const double DefaultMinCheckoutHours = 4;
+
+    /// <summary>حالة محاولة تسجيل البصمة عبر الإنترنت.</summary>
+    public enum PunchStatus
+    {
+        /// <summary>سُجّلت البصمة.</summary>
+        Recorded,
+        /// <summary>رُفضت لأنها مكرّرة خلال نافذة <see cref="DebounceSeconds"/>.</summary>
+        Duplicate,
+        /// <summary>رُفضت لأن الانصراف قبل مرور المدة الدنيا من آخر حضور مفتوح.</summary>
+        TooSoonForCheckout
+    }
+
+    /// <summary>نتيجة محاولة تسجيل بصمة عبر الإنترنت (تحمل تفاصيل الرفض للرسائل).</summary>
+    public sealed record PunchResult(
+        PunchStatus Status,
+        int RecordId,
+        double MinCheckoutHours = 0,
+        double HoursSinceCheckIn = 0)
+    {
+        /// <summary>الساعات المتبقّية قبل السماح بالانصراف (صفر إن انتهت المدة).</summary>
+        public double HoursRemaining => Math.Max(0, MinCheckoutHours - HoursSinceCheckIn);
+    }
+
+    /// <summary>يقرأ «أقل عدد ساعات» المسموح بينها بين الحضور والانصراف (داينمك من الإعدادات).</summary>
+    public static async Task<double> GetMinCheckoutHoursAsync(ApplicationDbContext db)
+    {
+        var raw = await HrSettingsStore.GetAsync(
+            db, MinCheckoutHoursKey, DefaultMinCheckoutHours.ToString(CultureInfo.InvariantCulture));
+        return double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out var value) && value >= 0
+            ? value
+            : DefaultMinCheckoutHours;
+    }
+
+    /// <summary>يضبط «أقل عدد ساعات» بين الحضور والانصراف (يُثبَّت ضمن [0..24]).</summary>
+    public static Task SetMinCheckoutHoursAsync(ApplicationDbContext db, double hours)
+        => HrSettingsStore.SetAsync(
+            db, MinCheckoutHoursKey, Math.Clamp(hours, 0, 24).ToString(CultureInfo.InvariantCulture));
+
+    /// <summary>يصوغ مدّة بالساعات إلى نص عربي («س ساعة ود دقيقة»).</summary>
+    public static string FormatDuration(double hours)
+    {
+        var totalMinutes = Math.Max(1, (int)Math.Round(hours * 60));
+        var h = totalMinutes / 60;
+        var m = totalMinutes % 60;
+        if (h > 0 && m > 0) return $"{h} ساعة و{m} دقيقة";
+        return h > 0 ? $"{h} ساعة" : $"{m} دقيقة";
+    }
+
+    /// <summary>
+    /// تسجيل بصمة عبر الإنترنت (بصم ذاتي). يرجع <see cref="PunchResult"/> يوضّح الحالة:
+    /// سُجّلت، أو رُفضت لأنها مكرّرة خلال <see cref="DebounceSeconds"/> ثانية، أو رُفضت لأن
+    /// الانصراف قبل مرور المدة الدنيا (قاعدة جازمة تمنع بصم خروج خاطئ عقب الحضور مباشرة).
+    /// </summary>
+    public static async Task<PunchResult> RecordAsync(
         ApplicationDbContext db, int employeeId, string punchType, DateTime punchAt, int? semanticId)
     {
         await HrmsDatabase.EnsureCreatedAsync(db);
@@ -56,14 +114,46 @@ WHERE EmployeeId = @Emp AND Source = @Src AND ISNULL(IsDeleted, 0) = 0
                 HrmsDatabase.AddParameter(command, "@Src", MobileSource);
                 HrmsDatabase.AddParameter(command, "@At", punchAt);
             });
-        if (recent > 0) return 0;
+        if (recent > 0) return new PunchResult(PunchStatus.Duplicate, 0);
+
+        var isOut = punchType == "Out";
+
+        // قاعدة جازمة: لا انصراف إلا بعد مرور المدة الدنيا من آخر حضور مفتوح (CheckOut فارغ).
+        // المدة داينمك من إعدادات الحضور؛ صفر = القاعدة معطّلة.
+        if (isOut)
+        {
+            var minHours = await GetMinCheckoutHoursAsync(db);
+            if (minHours > 0)
+            {
+                // ثوانِ منذ آخر حضور أونلاين مفتوح (CheckOut فارغ)؛ NULL ⟵ لا حضور مفتوح ⟵ يُسمح.
+                var secondsSinceCheckIn = await HrmsDatabase.ScalarAsync<int>(
+                    db,
+                    """
+SELECT TOP 1 DATEDIFF(second, CheckIn, @At) FROM AttendanceRecords
+WHERE EmployeeId = @Emp AND Source = @Src AND ISNULL(IsDeleted, 0) = 0 AND CheckOut IS NULL
+ORDER BY CheckIn DESC;
+""",
+                    command =>
+                    {
+                        HrmsDatabase.AddParameter(command, "@Emp", employeeId);
+                        HrmsDatabase.AddParameter(command, "@Src", MobileSource);
+                        HrmsDatabase.AddParameter(command, "@At", punchAt);
+                    });
+
+                if (secondsSinceCheckIn is { } seconds)
+                {
+                    var elapsedHours = Math.Max(0, seconds) / 3600d;
+                    if (elapsedHours < minHours)
+                        return new PunchResult(PunchStatus.TooSoonForCheckout, 0, minHours, elapsedHours);
+                }
+            }
+        }
 
         var attendanceSemanticId = await PunchSemanticStore.AttendanceSemanticIdAsync(db);
         // دلالة الحضور تُخزَّن NULL (يقرأها المحلل)؛ غيرها كبصمة أخرى بمعرّف الدلالة.
         int? storedSemantic = (semanticId == null || semanticId == attendanceSemanticId) ? null : semanticId;
-        var isOut = punchType == "Out";
 
-        return await HrmsDatabase.ScalarAsync<int>(
+        var newId = await HrmsDatabase.ScalarAsync<int>(
             db,
             """
 INSERT INTO AttendanceRecords
@@ -81,6 +171,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                 HrmsDatabase.AddParameter(command, "@Src", MobileSource);
                 HrmsDatabase.AddParameter(command, "@Semantic", (object?)storedSemantic ?? DBNull.Value);
             });
+
+        return new PunchResult(PunchStatus.Recorded, newId);
     }
 
     public sealed class Filter

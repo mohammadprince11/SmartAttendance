@@ -1400,8 +1400,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/HrmsDatabase.cs": {
-    "mtime": 1784919514.2402003,
-    "ast_hash": "992eac306fa5e9bf5d3ceaee878b6560",
+    "mtime": 1784980262.3053038,
+    "ast_hash": "590709080f23c28e09c59e9adeed9fd9",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/LeaveBalanceSchema.cs": {
@@ -1485,8 +1485,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Account/Login.cshtml.cs": {
-    "mtime": 1784233222.6984828,
-    "ast_hash": "143e01b5b4cee0c2d184d4e2a3106a8f",
+    "mtime": 1784993527.1335542,
+    "ast_hash": "1a2d1cd41b1e305f73003fbdc21502fc",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Account/Logout.cshtml": {
@@ -1510,13 +1510,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Approvals/Index.cshtml": {
-    "mtime": 1784978313.3088233,
-    "ast_hash": "52e2cae482c2887bd2b554767831e08b",
+    "mtime": 1784991093.1413815,
+    "ast_hash": "bb2540c530d814e1fb57f92373bbbd15",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Approvals/Index.cshtml.cs": {
-    "mtime": 1784973862.745478,
-    "ast_hash": "082268f6f5b6ae0cec5146827df5d7e4",
+    "mtime": 1784980271.8381636,
+    "ast_hash": "97b6912630dc9723d170e65a0ba962c7",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AttendanceCorrections/Index.cshtml": {
@@ -1835,13 +1835,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeePortal/Index.cshtml": {
-    "mtime": 1784970834.987186,
-    "ast_hash": "10a303c535e7b0b0b64c0c5e4b967e43",
+    "mtime": 1785002955.146638,
+    "ast_hash": "e7dbed58128f24fcf0aafe3a90199476",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeePortal/Index.cshtml.cs": {
-    "mtime": 1784935378.6212685,
-    "ast_hash": "309ac4c82c3b74b5b828fc01f60e18ad",
+    "mtime": 1785006643.495631,
+    "ast_hash": "14b6689183cc7ec9585555d497d6110f",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeeProfileSettings/Index.cshtml": {
@@ -2430,8 +2430,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_EmployeePortalLayout.cshtml": {
-    "mtime": 1784930086.6929245,
-    "ast_hash": "400bde68f400952c9784846e2e1a343f",
+    "mtime": 1785001209.534823,
+    "ast_hash": "5076df966fa131b3fca520963ac245ed",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/Shared/_Layout.cshtml": {
@@ -2575,8 +2575,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Program.cs": {
-    "mtime": 1784928704.965464,
-    "ast_hash": "3ba14a9bc50d69d2369910a38b44a5b7",
+    "mtime": 1784999185.9415867,
+    "ast_hash": "2c916dc9ec45b8fc44e8d51999532ae9",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Properties/launchSettings.json": {
@@ -3535,13 +3535,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AttendanceSettings/Index.cshtml": {
-    "mtime": 1784720255.5698538,
-    "ast_hash": "517add416e34c7a99b632738d96f1181",
+    "mtime": 1785004928.5688298,
+    "ast_hash": "97986d60f41d9b14fb732ddb9a16d098",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AttendanceSettings/Index.cshtml.cs": {
-    "mtime": 1784706742.5872872,
-    "ast_hash": "2a6ede7ca56e9a3c5e41f4184d625e5d",
+    "mtime": 1785004914.0067098,
+    "ast_hash": "371d317ec15a2d971dd7b402b04b9b71",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/DayAttendanceStore.cs": {
@@ -4065,8 +4065,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/OnlinePunchStore.cs": {
-    "mtime": 1784931287.875943,
-    "ast_hash": "51c490b0bf5674dcf290251c39848573",
+    "mtime": 1785004868.228953,
+    "ast_hash": "bf027a2c8fa8dc2a4219ba553051d9b6",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeeOnlinePunches/Index.cshtml": {
@@ -4170,8 +4170,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Controllers/Api/MeController.cs": {
-    "mtime": 1784931314.5720775,
-    "ast_hash": "9ef3272efdc179e251aeae3e7a51c86a",
+    "mtime": 1785004896.9664383,
+    "ast_hash": "a88fb4c4727f073b660aca3d2219dfc9",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Api/ApiTokenAuthHandler.cs": {
@@ -4290,8 +4290,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/nxex-bottom-nav.js": {
-    "mtime": 1784919514.2757332,
-    "ast_hash": "e31d9a25b22c59a2a2c5cdfcaa787bcf",
+    "mtime": 1785003002.263853,
+    "ast_hash": "5531b2cce8484aa671c989de9edc9fab",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/nxex-datachange.js": {
@@ -4325,8 +4325,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/sw.js": {
-    "mtime": 1784929284.2705977,
-    "ast_hash": "621434f85ae7c36ff8fd7cf4d24a1153",
+    "mtime": 1785000933.001804,
+    "ast_hash": "1134637cd9a5fd9c9160780f9a9ef770",
     "semantic_hash": ""
   },
   "SmartAttendance.MobileApp/README.md": {
@@ -4360,18 +4360,18 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/brand/pwa/apple-touch-icon.png": {
-    "mtime": 1784926829.822071,
-    "ast_hash": "d82ce25a980925a8f9e106c365fbed96",
+    "mtime": 1785000912.253,
+    "ast_hash": "e57e2782fe21500c25c0be95553990d0",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/brand/pwa/icon-192.png": {
-    "mtime": 1784926829.805483,
-    "ast_hash": "75e298bd0046e07167f459f0066a24fd",
+    "mtime": 1785000892.574,
+    "ast_hash": "b2d8e9b2ec63f41517cfa49bfb716382",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/brand/pwa/icon-512.png": {
-    "mtime": 1784926829.7915053,
-    "ast_hash": "2bb70b76dcb84a3752c94d0097168209",
+    "mtime": 1785000892.617,
+    "ast_hash": "0b290fc442cc3064c740593cf8266b7c",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/brand/pwa/icon-white.svg": {
@@ -4380,18 +4380,18 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/brand/pwa/maskable-192.png": {
-    "mtime": 1784926829.8175478,
-    "ast_hash": "d9c079abc3f746f5e2a6c1aaf0abf159",
+    "mtime": 1785000892.625,
+    "ast_hash": "cbd59941410151cc3dff89277f526a46",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/brand/pwa/maskable-512.png": {
-    "mtime": 1784926829.8155375,
-    "ast_hash": "4b40536a95aa187f7ab6753014613b59",
+    "mtime": 1785000892.639,
+    "ast_hash": "05647bf7ab8db6e4b60153cb02ce6657",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeePortal/FinancialRequest.cshtml": {
-    "mtime": 1784970834.983119,
-    "ast_hash": "a9126be530fc2786447bcc3054daa6c7",
+    "mtime": 1785000046.5325818,
+    "ast_hash": "fdd5ae71034f00013d435b3c4e6f2934",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/EmployeePortal/FinancialRequest.cshtml.cs": {

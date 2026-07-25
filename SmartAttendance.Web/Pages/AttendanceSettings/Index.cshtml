@@ -75,6 +75,26 @@
         <div class="ats-alert">@TempData["SuccessMessage"]</div>
     }
 
+    @* ---------- قاعدة البصمة عبر الإنترنت (مهلة الانصراف) ---------- *@
+    <div class="ats-card">
+        <div class="ats-card-head">
+            <div>
+                <h2>قاعدة البصمة عبر الإنترنت (GPS)</h2>
+                <p>قاعدة جازمة: بعد تسجيل الحضور لا يُسمح بتسجيل الانصراف إلا بعد مرور المدة أدناه — لمنع بصم خروج خاطئ عقب الحضور مباشرة.</p>
+            </div>
+        </div>
+        <div style="padding:16px">
+            <form method="post" asp-page-handler="SaveOnlinePunchRule" class="ats-form" style="max-width:420px">
+                <label>أقل عدد ساعات بين الحضور والانصراف
+                    <input type="number" name="MinCheckoutHours" value="@Model.MinCheckoutHours.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                           min="0" max="24" step="0.5" style="max-width:160px" />
+                    <span class="ats-hint">مثال: 4 = لا انصراف قبل مرور 4 ساعات. الصفر يُعطّل القاعدة. يقبل الكسور (مثال 4.5).</span>
+                </label>
+                <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ القاعدة</button>
+            </form>
+        </div>
+    </div>
+
     @* ---------- دلالات البصمات ---------- *@
     <div class="ats-card">
         <div class="ats-card-head">

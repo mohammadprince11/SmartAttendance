@@ -22,10 +22,31 @@ public class IndexModel : PageModel
     public List<PunchSemanticStore.PunchSemantic> Semantics { get; set; } = new();
     public List<AttendanceSourceStore.AttendanceSource> Sources { get; set; } = new();
 
+    /// <summary>أقل عدد ساعات بين الحضور والانصراف بالبصمة عبر الإنترنت (0 = القاعدة معطّلة).</summary>
+    public double MinCheckoutHours { get; set; }
+
     public async Task OnGetAsync()
     {
         Semantics = await PunchSemanticStore.ListAsync(_dbContext);
         Sources = await AttendanceSourceStore.ListAsync(_dbContext);
+        MinCheckoutHours = await OnlinePunchStore.GetMinCheckoutHoursAsync(_dbContext);
+    }
+
+    public async Task<IActionResult> OnPostSaveOnlinePunchRuleAsync()
+    {
+        var raw = Request.Form["MinCheckoutHours"].ToString();
+        if (!double.TryParse(raw, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var hours)
+            && !double.TryParse(raw, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.CurrentCulture, out hours))
+        {
+            TempData["SuccessMessage"] = "أدخل عدد ساعات صحيحاً.";
+            return RedirectToPage();
+        }
+
+        await OnlinePunchStore.SetMinCheckoutHoursAsync(_dbContext, hours);
+        TempData["SuccessMessage"] = hours > 0
+            ? $"تم الحفظ: لا انصراف قبل مرور {OnlinePunchStore.FormatDuration(Math.Clamp(hours, 0, 24))} من الحضور."
+            : "تم الحفظ: قاعدة مهلة الانصراف معطّلة.";
+        return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostSaveSemanticAsync()

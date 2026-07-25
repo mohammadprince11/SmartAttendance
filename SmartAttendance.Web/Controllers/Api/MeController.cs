@@ -128,10 +128,16 @@ WHERE e.Id = @Id;
         if (RequireEmployee() is { } bad) return bad;
         var type = body?.PunchType == "Out" ? "Out" : "In";
         var now = DateTime.Now;
-        var recordId = await OnlinePunchStore.RecordAsync(_db, EmployeeId, type, now, null);
-        return recordId > 0
-            ? Ok(new { message = $"سُجّلت بصمة {(type == "Out" ? "الانصراف" : "الحضور")}.", at = now.ToString("yyyy-MM-dd HH:mm"), punchType = type })
-            : BadRequest(new { message = "تم تجاهل البصمة: سُجّلت بصمة مماثلة خلال أقل من دقيقة." });
+        var result = await OnlinePunchStore.RecordAsync(_db, EmployeeId, type, now, null);
+        return result.Status switch
+        {
+            OnlinePunchStore.PunchStatus.Recorded =>
+                Ok(new { message = $"سُجّلت بصمة {(type == "Out" ? "الانصراف" : "الحضور")}.", at = now.ToString("yyyy-MM-dd HH:mm"), punchType = type }),
+            OnlinePunchStore.PunchStatus.TooSoonForCheckout =>
+                BadRequest(new { message = $"لا يمكن تسجيل الانصراف قبل مرور {OnlinePunchStore.FormatDuration(result.MinCheckoutHours)} من تسجيل الحضور — تبقّى {OnlinePunchStore.FormatDuration(result.HoursRemaining)}." }),
+            _ =>
+                BadRequest(new { message = "تم تجاهل البصمة: سُجّلت بصمة مماثلة خلال أقل من دقيقة." })
+        };
     }
 
     /// <summary>بصمات يوم الموظف مصنَّفةً بالأسبقية (دخول/خروج) — لمعاينة نموذج نسيان البصمة.</summary>
