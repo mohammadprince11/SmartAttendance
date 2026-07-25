@@ -359,6 +359,12 @@ END;
         return reader.IsDBNull(ordinal) ? null : Convert.ToInt32(reader.GetValue(ordinal));
     }
 
+    public static decimal? GetNullableDecimal(DbDataReader reader, string name)
+    {
+        var ordinal = reader.GetOrdinal(name);
+        return reader.IsDBNull(ordinal) ? null : Convert.ToDecimal(reader.GetValue(ordinal));
+    }
+
     public static string GetString(DbDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
@@ -375,6 +381,20 @@ END;
     {
         var value = GetDateTime(reader, name);
         return value.HasValue ? DateOnly.FromDateTime(value.Value) : null;
+    }
+
+    /// <summary>قراءة عمود SQL <c>time</c> (يُرجعه المزوّد كـ <see cref="TimeSpan"/>).</summary>
+    public static TimeSpan? GetTimeSpan(DbDataReader reader, string name)
+    {
+        var ordinal = reader.GetOrdinal(name);
+        if (reader.IsDBNull(ordinal)) return null;
+        var value = reader.GetValue(ordinal);
+        return value switch
+        {
+            TimeSpan ts => ts,
+            DateTime dt => dt.TimeOfDay,
+            _ => TimeSpan.TryParse(value.ToString(), out var parsed) ? parsed : null
+        };
     }
 
     public static bool GetBool(DbDataReader reader, string name)

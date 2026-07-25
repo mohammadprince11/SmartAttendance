@@ -17,7 +17,26 @@
         return ("📄", "gen");
     }
     string D(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
+
+    // تنسيق الوقت "HH:mm" (عمود SQL time = TimeSpan).
+    string T(TimeSpan? t) => t.HasValue ? $"{(int)t.Value.TotalHours:00}:{t.Value.Minutes:00}" : "";
+
+    // المدة بين وقتين مع تجاوز منتصف الليل، كنص عربي "س ساعة و د دقيقة".
+    string Dur(TimeSpan st, TimeSpan et)
+    {
+        var span = et - st;
+        if (span <= TimeSpan.Zero) span += TimeSpan.FromDays(1);
+        var h = (int)span.TotalHours;
+        var m = span.Minutes;
+        if (h > 0 && m > 0) return $"{h} ساعة و{m} دقيقة";
+        if (h > 0) return $"{h} ساعة";
+        return $"{m} دقيقة";
+    }
+
     var panelOpen = Model.HasActiveFilters;
+
+    // أول طلب قابل للفتح (يُفتح افتراضياً في لوحة التفاصيل)
+    var firstSel = Model.Requests.FirstOrDefault();
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
@@ -66,63 +85,85 @@
     .apv-pfoot .go { background:var(--acc); border:0; color:#04141d; }
     .apv-pfoot .clr { background:transparent; border:1px solid rgba(73,111,151,.35); color:inherit; }
 
-    /* جدول نظيف بنمط كيان */
-    .apv-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
-    .apv-table { width:100%; border-collapse:collapse; font-size:13px; min-width:920px; }
-    .apv-table th { text-align:start; padding:13px 16px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); white-space:nowrap; }
-    html[data-theme="light"] .apv-table th { background:#eef6f8; }
-    .apv-table td { padding:14px 16px; border-bottom:1px solid rgba(143,168,188,.1); vertical-align:top; }
-    .apv-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 5%,transparent); }
-    .apv-table tbody tr.sel td { background:color-mix(in srgb,var(--acc) 10%,transparent); }
-    .apv-table tbody tr:last-child td { border-bottom:0; }
-    .apv-chk { width:17px; height:17px; accent-color:var(--acc); cursor:pointer; margin-top:3px; }
+    /* ===== تخطيط master-detail: قائمة يسار + لوحة تفاصيل يمين ===== */
+    .apv-split { display:grid; grid-template-columns:1.5fr 1fr; gap:14px; align-items:start; }
+    @@media (max-width:900px) { .apv-split { grid-template-columns:1fr; } }
 
-    .apv-emp { display:flex; align-items:center; gap:10px; min-width:180px; }
+    .apv-list { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow:hidden; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .apv-lhead { display:flex; align-items:center; gap:8px; padding:11px 16px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC);
+        border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .apv-lhead { background:#eef6f8; }
+    .apv-lhead .all { display:flex; align-items:center; gap:7px; }
+
+    .apv-lrow { display:grid; grid-template-columns:20px 1fr auto; gap:10px; align-items:center; padding:12px 16px; cursor:pointer;
+        border-bottom:1px solid rgba(143,168,188,.1); }
+    .apv-lrow:last-child { border-bottom:0; }
+    .apv-lrow:hover { background:color-mix(in srgb,var(--acc) 5%,transparent); }
+    .apv-lrow.active { background:color-mix(in srgb,var(--acc) 12%,transparent); box-shadow:inset 3px 0 0 var(--acc); }
+    .apv-chk { width:17px; height:17px; accent-color:var(--acc); cursor:pointer; }
+    .apv-lmain { display:flex; align-items:center; gap:10px; min-width:0; }
     .apv-ava { width:36px; height:36px; border-radius:11px; flex:0 0 36px; display:grid; place-items:center; font-size:14px; font-weight:1000; color:#04141d;
         background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 85%,#fff),color-mix(in srgb,var(--acc) 55%,#1b3550)); }
-    .apv-emp .nm { font-weight:900; }
-    .apv-emp .meta { font-size:11px; opacity:.6; font-weight:800; direction:ltr; text-align:start; }
+    .apv-lmain .nm { font-weight:900; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .apv-lmain .sub { font-size:11px; opacity:.65; font-weight:800; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .apv-lmeta { direction:ltr; }
+    .apv-lright { display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex:0 0 auto; }
+    .apv-ldate { font-size:11px; opacity:.6; font-weight:900; direction:ltr; }
 
-    .apv-type { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:900; padding:5px 12px; border-radius:999px; border:1px solid rgba(73,111,151,.3); white-space:nowrap; }
+    .apv-type { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:900; padding:3px 9px; border-radius:999px; border:1px solid rgba(73,111,151,.3); white-space:nowrap; }
     .apv-type.fin { color:#38bdf8; border-color:rgba(56,189,248,.4); background:rgba(56,189,248,.08); }
     .apv-type.data { color:#c084fc; border-color:rgba(192,132,252,.4); background:rgba(192,132,252,.08); }
     .apv-type.leave { color:#34d399; border-color:rgba(52,211,153,.4); background:rgba(52,211,153,.08); }
     .apv-type.att { color:#facc15; border-color:rgba(250,204,21,.4); background:rgba(250,204,21,.08); }
     .apv-type.gen { color:var(--sa-muted,#8FA8BC); }
 
-    .apv-status { display:inline-block; font-size:11px; font-weight:900; padding:4px 12px; border-radius:999px; border:1px solid rgba(73,111,151,.3); white-space:nowrap; }
+    .apv-status { display:inline-block; font-size:10px; font-weight:900; padding:3px 10px; border-radius:999px; border:1px solid rgba(73,111,151,.3); white-space:nowrap; }
     .apv-status.pending { color:#facc15; border-color:rgba(250,204,21,.45); background:rgba(250,204,21,.08); }
     .apv-status.approved { color:#34d399; border-color:rgba(52,211,153,.45); background:rgba(52,211,153,.08); }
     .apv-status.rejected { color:#f87171; border-color:rgba(248,113,113,.45); background:rgba(248,113,113,.08); }
 
-    /* التفاصيل: كل تفصيلة سطر واحد مضغوط (بلا التفاف) */
-    .apv-detail { display:flex; flex-direction:column; min-width:0; gap:2px; }
-    .apv-drow { font-size:11px; font-weight:800; display:flex; align-items:center; gap:5px; padding:2px 0; white-space:nowrap; line-height:1.5; }
-    .apv-drow b { color:var(--acc); font-weight:900; }
+    /* ===== لوحة التفاصيل (يمين) — تلتصق عند التمرير ===== */
+    .apv-side { position:sticky; top:14px; }
+    .apv-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; background:var(--sa-surface,rgba(8,25,43,.9)); padding:18px; display:none; }
+    .apv-card.active { display:block; }
+    .apv-chead { display:flex; align-items:center; gap:11px; padding-bottom:13px; border-bottom:1px solid rgba(73,111,151,.2); }
+    .apv-chead .apv-ava { width:42px; height:42px; flex:0 0 42px; font-size:16px; border-radius:13px; }
+    .apv-chead .nm { font-weight:1000; font-size:15px; }
+    .apv-chead .mt { font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+
+    .apv-sect { font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); margin:15px 0 8px; letter-spacing:.02em; }
+
+    /* كل تفصيلة سطر واحد مستقل */
+    .apv-frow { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid rgba(143,168,188,.1); font-size:12px; font-weight:800; }
+    .apv-frow:last-of-type { border-bottom:0; }
+    .apv-fchk { width:16px; height:16px; accent-color:#34d399; cursor:pointer; flex:0 0 16px; }
+    .apv-fbody { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
+    .apv-fbody .lbl { font-size:11px; color:var(--sa-muted,#8FA8BC); font-weight:900; }
+    .apv-fbody .val { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .apv-old { color:#f87171; text-decoration:line-through; opacity:.75; }
     .apv-arrow { opacity:.5; }
-    .apv-new { color:#4ade80; }
-    .apv-fchk { width:14px; height:14px; accent-color:#34d399; cursor:pointer; flex:0 0 14px; }
-    .apv-drow.excluded { opacity:.5; }
-    .apv-drow.excluded .apv-new { text-decoration:line-through; color:#f87171; }
-    .apv-fhint { font-size:10px; opacity:.5; font-weight:800; padding-top:3px; }
+    .apv-new { color:#4ade80; font-weight:900; }
+    .apv-frow.excluded { opacity:.5; }
+    .apv-frow.excluded .apv-new { text-decoration:line-through; color:#f87171; }
+    .apv-fhint { font-size:10px; opacity:.55; font-weight:800; padding-top:8px; }
     .apv-dates { direction:ltr; font-weight:900; }
-    .apv-mut { opacity:.55; }
+    .apv-reason { font-size:12px; font-weight:700; opacity:.8; line-height:1.6; }
 
-    /* عمود القرار */
-    .apv-decide { display:flex; flex-direction:column; gap:7px; min-width:210px; }
-    .apv-decide .note { min-height:36px; border-radius:10px; border:1px solid rgba(73,111,151,.28); background:rgba(0,0,0,.18); color:var(--sa-text,#DCEAF4); padding:6px 11px; font-weight:700; font-size:12px; width:100%; box-sizing:border-box; }
-    html[data-theme="light"] .apv-decide .note { background:#fff; }
-    .apv-decide .row { display:flex; gap:7px; }
-    .apv-act { flex:1; min-height:36px; border-radius:10px; border:0; font-size:12.5px; font-weight:900; cursor:pointer; }
+    .apv-note { width:100%; box-sizing:border-box; min-height:40px; margin-top:14px; border-radius:11px; border:1px solid rgba(73,111,151,.28); background:rgba(0,0,0,.18); color:var(--sa-text,#DCEAF4); padding:8px 12px; font-weight:700; font-size:13px; }
+    html[data-theme="light"] .apv-note { background:#fff; }
+    .apv-decide { display:flex; gap:9px; margin-top:11px; }
+    .apv-act { flex:1; min-height:42px; border-radius:12px; border:0; font-size:13.5px; font-weight:1000; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
     .apv-act.ok { background:rgba(52,211,153,.16); border:1px solid rgba(52,211,153,.5); color:#34d399; }
     .apv-act.ok:hover { background:rgba(52,211,153,.28); }
     .apv-act.no { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.5); color:#f87171; }
     .apv-act.no:hover { background:rgba(248,113,113,.28); }
-    .apv-done-note { font-size:12px; font-weight:900; }
+    .apv-done { display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:1000; margin-top:14px; padding:11px 14px; border-radius:12px; }
+    .apv-done.approved { color:#34d399; background:rgba(52,211,153,.1); border:1px solid rgba(52,211,153,.3); }
+    .apv-done.rejected { color:#f87171; background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.3); }
 
     .apv-empty { text-align:center; padding:44px 16px; color:var(--sa-muted,#8FA8BC); }
     .apv-empty .big { font-size:34px; display:block; margin-bottom:6px; opacity:.5; }
+    .apv-side-empty { border:1px dashed rgba(73,111,151,.35); border-radius:18px; padding:40px 20px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:900; font-size:13px; }
 
     .apv-bulk { position:fixed; inset-inline:0; bottom:0; z-index:60; display:none; align-items:center; gap:12px; flex-wrap:wrap;
         padding:12px 22px; border-top:1px solid rgba(73,111,151,.3);
@@ -143,7 +184,7 @@
     <header class="apv-head">
         <div>
             <h1>الموافقات</h1>
-            <p>راجع تفاصيل كل طلب وقرّر — يُطبَّق أثر الطلبات المالية وتعديل البيانات آلياً عند الاعتماد النهائي.</p>
+            <p>اختر طلباً من القائمة لتظهر تفاصيله — كل تفصيلة بسطر مستقل، ويُطبَّق أثر الطلبات المالية وتعديل البيانات آلياً عند الاعتماد النهائي.</p>
         </div>
     </header>
 
@@ -249,138 +290,218 @@
         </form>
     </div>
 
-    <div class="apv-card">
-        <table class="apv-table">
-            <thead>
-                <tr>
-                    <th style="width:34px"><input type="checkbox" class="apv-chk" id="apvAll" title="تحديد الكل" /></th>
-                    <th class="text-start">الموظف</th>
-                    <th>نوع الطلب</th>
-                    <th class="text-start">التفاصيل</th>
-                    <th>تاريخ الطلب</th>
-                    <th>الحالة</th>
-                    <th>القرار</th>
-                </tr>
-            </thead>
-            <tbody>
+    @if (!Model.Requests.Any())
+    {
+        <div class="apv-list">
+            <div class="apv-empty">
+                <span class="big">📭</span>
+                لا توجد طلبات حسب الفلاتر الحالية.
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="apv-split">
+            @* ===== القائمة (يسار) ===== *@
+            <div class="apv-list">
+                <div class="apv-lhead">
+                    <label class="all"><input type="checkbox" class="apv-chk" id="apvAll" title="تحديد كل القابلة للإجراء" /> تحديد الكل</label>
+                    <span style="margin-inline-start:auto">@Model.Requests.Count طلب</span>
+                </div>
                 @foreach (var request in Model.Requests)
                 {
                     Model.Flows.TryGetValue(request.Id, out var flow);
                     var badge = TypeBadge(request.RequestType);
                     var initials = string.IsNullOrWhiteSpace(request.EmployeeName) ? "؟" : request.EmployeeName.Trim()[..1];
                     var canAct = request.Status == "Pending" && flow?.Current != null;
-                    var formId = $"decform_{request.Id}";
                     var meta = string.Join(" · ", new[] { request.EmployeeNo, request.Department }.Where(s => !string.IsNullOrWhiteSpace(s)));
-                    <tr id="row_@request.Id">
-                        <td>
+                    <div class="apv-lrow @(firstSel != null && firstSel.Id == request.Id ? "active" : "")" data-target="side_@request.Id" id="row_@request.Id">
+                        <span>
                             @if (canAct)
                             {
-                                <input type="checkbox" class="apv-chk apv-row" name="Ids" value="@request.Id" form="apvBulkForm" data-row="row_@request.Id" />
+                                <input type="checkbox" class="apv-chk apv-row" name="Ids" value="@request.Id" form="apvBulkForm" data-row="row_@request.Id" onclick="event.stopPropagation()" />
                             }
-                        </td>
-                        <td class="text-start">
-                            <div class="apv-emp">
-                                <span class="apv-ava">@initials</span>
-                                <div>
-                                    <div class="nm">@request.EmployeeName</div>
-                                    <div class="meta">@meta</div>
-                                </div>
+                        </span>
+                        <div class="apv-lmain">
+                            <span class="apv-ava">@initials</span>
+                            <div style="min-width:0">
+                                <div class="nm">@request.EmployeeName</div>
+                                <div class="sub"><span class="apv-type @badge.cls">@badge.ic @request.RequestType</span>@if (!string.IsNullOrWhiteSpace(meta)) { <span class="apv-lmeta">@meta</span> }</div>
                             </div>
-                        </td>
-                        <td><span class="apv-type @badge.cls">@badge.ic @request.RequestType</span></td>
-                        <td class="text-start">
-                            <div class="apv-detail">
-                                @if (Model.DataChanges.TryGetValue(request.Id, out var diffs))
+                        </div>
+                        <div class="apv-lright">
+                            <span class="apv-status @request.Status.ToLower()">@request.Status</span>
+                            <span class="apv-ldate">@(request.CreatedAt?.ToLocalTime().ToString("yyyy-MM-dd"))</span>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @* ===== لوحة التفاصيل (يمين) ===== *@
+            <div class="apv-side">
+                @foreach (var request in Model.Requests)
+                {
+                    Model.Flows.TryGetValue(request.Id, out var flow);
+                    var initials = string.IsNullOrWhiteSpace(request.EmployeeName) ? "؟" : request.EmployeeName.Trim()[..1];
+                    var canAct = request.Status == "Pending" && flow?.Current != null;
+                    var formId = $"decform_{request.Id}";
+                    var meta = string.Join(" · ", new[] { request.EmployeeNo, request.Department, request.Position }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                    var hasFields = Model.DataChanges.TryGetValue(request.Id, out var diffs) && diffs.Count > 0;
+                    <div class="apv-card @(firstSel != null && firstSel.Id == request.Id ? "active" : "")" id="side_@request.Id">
+                        <div class="apv-chead">
+                            <span class="apv-ava">@initials</span>
+                            <div style="min-width:0">
+                                <div class="nm">@request.EmployeeName</div>
+                                <div class="mt">@request.RequestType@(string.IsNullOrWhiteSpace(meta) ? "" : " · " + meta)</div>
+                            </div>
+                        </div>
+
+                        <form method="post" id="@formId">
+                            @if (hasFields)
+                            {
+                                <div class="apv-sect">الحقول المطلوب تعديلها</div>
+                                @foreach (var d in diffs!)
                                 {
-                                    @foreach (var d in diffs)
-                                    {
-                                        var excluded = d.Decision == "Rejected";
-                                        <label class="apv-drow @(excluded ? "excluded" : "")">
-                                            @if (canAct)
-                                            {
-                                                <input type="checkbox" class="apv-fchk" name="ApprovedFieldKeys" value="@d.Key" form="@formId" checked="@(!excluded)" />
-                                            }
-                                            <span><b>@d.Label:</b>
+                                    var excluded = d.Decision == "Rejected";
+                                    <label class="apv-frow @(excluded ? "excluded" : "")">
+                                        @if (canAct)
+                                        {
+                                            <input type="checkbox" class="apv-fchk" name="ApprovedFieldKeys" value="@d.Key" form="@formId" checked="@(!excluded)" />
+                                        }
+                                        <span class="apv-fbody">
+                                            <span class="lbl">@d.Label</span>
+                                            <span class="val">
                                                 <span class="apv-old">@(string.IsNullOrWhiteSpace(d.OldValue) ? "—" : d.OldValue)</span>
                                                 <span class="apv-arrow">→</span>
                                                 <span class="apv-new">@(string.IsNullOrWhiteSpace(d.NewValue) ? "—" : d.NewValue)</span>
                                             </span>
-                                        </label>
-                                    }
-                                    @if (canAct && diffs.Count > 1)
-                                    {
-                                        <div class="apv-fhint">أزل تحديد أي حقل لرفضه دون رفض الطلب كاملاً.</div>
-                                    }
+                                        </span>
+                                    </label>
                                 }
-                                else if (Model.FinancialRequests.TryGetValue(request.Id, out var fin))
+                                @if (canAct && diffs.Count > 1)
                                 {
-                                    <div class="apv-drow"><b>@(fin.Kind == "Raise" ? "قيمة الزيادة" : "المبلغ"):</b>
-                                        <span class="apv-new">@fin.Amount.ToString("N2")@(fin.Kind == "Raise" && fin.RaiseType == "Percentage" ? " %" : "")</span>
-                                    </div>
-                                    @if (fin.Kind is "Loan" or "Advance")
-                                    {
-                                        <div class="apv-drow"><b>الأقساط:</b> <span>@fin.InstallmentCount قسط ابتداءً من @fin.PeriodText</span></div>
-                                    }
-                                    else if (fin.Kind is "Allowance" or "Reimbursement")
-                                    {
-                                        <div class="apv-drow"><b>الدفعة:</b> <span>@(fin.PaymentType == "OutSalary" ? "خارج الراتب" : "داخل الراتب")</span></div>
-                                    }
+                                    <div class="apv-fhint">أزل تحديد أي حقل لرفضه دون رفض الطلب كاملاً.</div>
                                 }
-                                else if (request.FromDate.HasValue)
-                                {
-                                    <div class="apv-drow"><b>الفترة:</b> <span class="apv-dates">@request.FromDate?.ToString("yyyy-MM-dd")@(request.ToDate.HasValue ? " → " + request.ToDate?.ToString("yyyy-MM-dd") : "")</span></div>
-                                    @if (!string.IsNullOrWhiteSpace(request.Reason))
-                                    {
-                                        <div class="apv-drow apv-mut">@request.Reason</div>
-                                    }
-                                }
-                                else
-                                {
-                                    <div class="apv-drow apv-mut">@(string.IsNullOrWhiteSpace(request.Reason) ? "—" : request.Reason)</div>
-                                }
-                            </div>
-                        </td>
-                        <td class="apv-dates">@(request.CreatedAt?.ToLocalTime().ToString("yyyy-MM-dd"))</td>
-                        <td><span class="apv-status @request.Status.ToLower()">@request.Status</span></td>
-                        <td>
-                            @if (canAct)
-                            {
-                                <form method="post" class="apv-decide" id="@formId">
-                                    <input asp-for="Note" class="note" placeholder="ملاحظة@(flow!.CommentRequiredOnReject ? " (إلزامية للرفض)" : " (اختياري)")" />
-                                    <div class="row">
-                                        <button asp-page-handler="Approve" asp-route-id="@request.Id" class="apv-act ok">✓ موافقة</button>
-                                        <button asp-page-handler="Reject" asp-route-id="@request.Id" class="apv-act no">✕ رفض</button>
-                                    </div>
-                                </form>
                             }
-                            else if (request.Status == "Approved")
+                            else if (Model.FinancialRequests.TryGetValue(request.Id, out var fin))
                             {
-                                <span class="apv-done-note" style="color:#34d399">✓ معتمد</span>
+                                <div class="apv-sect">تفاصيل الطلب المالي</div>
+                                <div class="apv-frow">
+                                    <span class="apv-fbody">
+                                        <span class="lbl">@(fin.Kind == "Raise" ? "قيمة الزيادة" : "المبلغ")</span>
+                                        <span class="val"><span class="apv-new">@fin.Amount.ToString("N2")@(fin.Kind == "Raise" && fin.RaiseType == "Percentage" ? " %" : "")</span></span>
+                                    </span>
+                                </div>
+                                @if (fin.Kind is "Loan" or "Advance")
+                                {
+                                    <div class="apv-frow">
+                                        <span class="apv-fbody">
+                                            <span class="lbl">الأقساط</span>
+                                            <span class="val">@fin.InstallmentCount قسط ابتداءً من @fin.PeriodText</span>
+                                        </span>
+                                    </div>
+                                }
+                                else if (fin.Kind is "Allowance" or "Reimbursement")
+                                {
+                                    <div class="apv-frow">
+                                        <span class="apv-fbody">
+                                            <span class="lbl">الدفعة</span>
+                                            <span class="val">@(fin.PaymentType == "OutSalary" ? "خارج الراتب" : "داخل الراتب")</span>
+                                        </span>
+                                    </div>
+                                }
                             }
-                            else if (request.Status == "Rejected")
+                            else if (request.StartTime.HasValue)
                             {
-                                <span class="apv-done-note" style="color:#f87171">✕ مرفوض</span>
+                                @* طلب بوقت (مغادرة/أوفرتايم/مغادرة عمل): يُظهر التاريخ والوقت والساعات *@
+                                <div class="apv-sect">تفاصيل الطلب</div>
+                                <div class="apv-frow">
+                                    <span class="apv-fbody">
+                                        <span class="lbl">التاريخ</span>
+                                        <span class="val apv-dates">@request.FromDate?.ToString("yyyy-MM-dd")</span>
+                                    </span>
+                                </div>
+                                <div class="apv-frow">
+                                    <span class="apv-fbody">
+                                        <span class="lbl">الوقت</span>
+                                        <span class="val apv-dates">@T(request.StartTime)@(request.EndTime.HasValue ? " → " + T(request.EndTime) : "")</span>
+                                    </span>
+                                </div>
+                                @if (request.EndTime.HasValue)
+                                {
+                                    <div class="apv-frow">
+                                        <span class="apv-fbody">
+                                            <span class="lbl">المدة</span>
+                                            <span class="val"><span class="apv-new">@Dur(request.StartTime.Value, request.EndTime.Value)</span></span>
+                                        </span>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(request.Reason))
+                                {
+                                    <div class="apv-frow">
+                                        <span class="apv-fbody">
+                                            <span class="lbl">السبب</span>
+                                            <span class="val apv-reason">@request.Reason</span>
+                                        </span>
+                                    </div>
+                                }
+                            }
+                            else if (request.FromDate.HasValue)
+                            {
+                                <div class="apv-sect">تفاصيل الطلب</div>
+                                <div class="apv-frow">
+                                    <span class="apv-fbody">
+                                        <span class="lbl">الفترة</span>
+                                        <span class="val apv-dates">@request.FromDate?.ToString("yyyy-MM-dd")@(request.ToDate.HasValue ? " → " + request.ToDate?.ToString("yyyy-MM-dd") : "")</span>
+                                    </span>
+                                    @if (request.DaysCount.HasValue && request.DaysCount.Value > 0)
+                                    {
+                                        <span class="lbl" style="margin-top:2px">@request.DaysCount.Value.ToString("0.#") يوم</span>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(request.Reason))
+                                {
+                                    <div class="apv-frow">
+                                        <span class="apv-fbody">
+                                            <span class="lbl">السبب</span>
+                                            <span class="val apv-reason">@request.Reason</span>
+                                        </span>
+                                    </div>
+                                }
                             }
                             else
                             {
-                                <span class="apv-mut">—</span>
+                                <div class="apv-sect">تفاصيل الطلب</div>
+                                <div class="apv-frow">
+                                    <span class="apv-fbody">
+                                        <span class="val apv-reason">@(string.IsNullOrWhiteSpace(request.Reason) ? "لا توجد تفاصيل إضافية." : request.Reason)</span>
+                                    </span>
+                                </div>
                             }
-                        </td>
-                    </tr>
-                }
 
-                @if (!Model.Requests.Any())
-                {
-                    <tr>
-                        <td colspan="7" class="apv-empty">
-                            <span class="big">📭</span>
-                            لا توجد طلبات حسب الفلاتر الحالية.
-                        </td>
-                    </tr>
+                            @if (canAct)
+                            {
+                                <input asp-for="Note" class="apv-note" placeholder="ملاحظة@(flow!.CommentRequiredOnReject ? " (إلزامية للرفض)" : " (اختياري)")" />
+                                <div class="apv-decide">
+                                    <button asp-page-handler="Approve" asp-route-id="@request.Id" class="apv-act ok">✓ موافقة</button>
+                                    <button asp-page-handler="Reject" asp-route-id="@request.Id" class="apv-act no">✕ رفض</button>
+                                </div>
+                            }
+                            else if (request.Status == "Approved")
+                            {
+                                <div class="apv-done approved">✓ معتمد</div>
+                            }
+                            else if (request.Status == "Rejected")
+                            {
+                                <div class="apv-done rejected">✕ مرفوض</div>
+                            }
+                        </form>
+                    </div>
                 }
-            </tbody>
-        </table>
-    </div>
+                <div class="apv-side-empty" id="apvSideEmpty" style="display:none">اختر طلباً من القائمة لعرض تفاصيله.</div>
+            </div>
+        </div>
+    }
 </section>
 
 @* شريط الإجراءات الجماعية *@
@@ -396,26 +517,37 @@
     <script>
         window.apvPanel = function () { document.getElementById('apvPanel').classList.toggle('open'); };
         (function () {
+            // ---- اختيار الطلب لعرض تفاصيله (master-detail) ----
+            var rows = Array.prototype.slice.call(document.querySelectorAll('.apv-lrow'));
+            function select(row) {
+                var id = row.getAttribute('data-target');
+                rows.forEach(function (r) { r.classList.toggle('active', r === row); });
+                document.querySelectorAll('.apv-card').forEach(function (c) { c.classList.toggle('active', c.id === id); });
+            }
+            rows.forEach(function (r) { r.addEventListener('click', function () { select(r); }); });
+
+            // ---- التحديد الجماعي ----
             var all = document.getElementById('apvAll');
             var bar = document.getElementById('apvBulkForm');
             var count = document.getElementById('apvCount');
-            function rows() { return Array.prototype.slice.call(document.querySelectorAll('.apv-row')); }
+            function checks() { return Array.prototype.slice.call(document.querySelectorAll('.apv-row')); }
             function refresh() {
-                var checked = rows().filter(function (c) { return c.checked; });
+                var checked = checks().filter(function (c) { return c.checked; });
                 count.textContent = checked.length;
                 bar.classList.toggle('show', checked.length > 0);
-                rows().forEach(function (c) { var it = document.getElementById(c.getAttribute('data-row')); if (it) it.classList.toggle('sel', c.checked); });
                 if (all) {
-                    var total = rows().length;
+                    var total = checks().length;
                     all.checked = total > 0 && checked.length === total;
                     all.indeterminate = checked.length > 0 && checked.length < total;
                 }
             }
-            if (all) all.addEventListener('change', function () { rows().forEach(function (c) { c.checked = all.checked; }); refresh(); });
-            rows().forEach(function (c) { c.addEventListener('change', refresh); });
-            window.apvClear = function () { rows().forEach(function (c) { c.checked = false; }); refresh(); };
+            if (all) all.addEventListener('change', function () { checks().forEach(function (c) { c.checked = all.checked; }); refresh(); });
+            checks().forEach(function (c) { c.addEventListener('change', refresh); });
+            window.apvClear = function () { checks().forEach(function (c) { c.checked = false; }); refresh(); };
+
+            // ---- استبعاد الحقل بصرياً عند إزالة تحديده ----
             document.querySelectorAll('.apv-fchk').forEach(function (c) {
-                c.addEventListener('change', function () { c.closest('.apv-drow').classList.toggle('excluded', !c.checked); });
+                c.addEventListener('change', function () { c.closest('.apv-frow').classList.toggle('excluded', !c.checked); });
             });
             refresh();
         })();

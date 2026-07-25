@@ -159,6 +159,9 @@ SELECT TOP 300
     r.RequestType,
     r.FromDate,
     r.ToDate,
+    r.StartTime,
+    r.EndTime,
+    r.DaysCount,
     r.Status,
     ISNULL(r.CurrentStep, '') AS CurrentStep,
     ISNULL(r.Reason, '') AS Reason,
@@ -208,6 +211,9 @@ ORDER BY r.CreatedAt DESC;
                 RequestType = HrmsDatabase.GetString(reader, "RequestType"),
                 FromDate = HrmsDatabase.GetDateOnly(reader, "FromDate"),
                 ToDate = HrmsDatabase.GetDateOnly(reader, "ToDate"),
+                StartTime = HrmsDatabase.GetTimeSpan(reader, "StartTime"),
+                EndTime = HrmsDatabase.GetTimeSpan(reader, "EndTime"),
+                DaysCount = HrmsDatabase.GetNullableDecimal(reader, "DaysCount"),
                 Status = HrmsDatabase.GetString(reader, "Status"),
                 CurrentStep = HrmsDatabase.GetString(reader, "CurrentStep"),
                 Reason = HrmsDatabase.GetString(reader, "Reason"),
@@ -275,6 +281,9 @@ ORDER BY r.CreatedAt DESC;
         public string RequestType { get; set; } = string.Empty;
         public DateOnly? FromDate { get; set; }
         public DateOnly? ToDate { get; set; }
+        public TimeSpan? StartTime { get; set; }
+        public TimeSpan? EndTime { get; set; }
+        public decimal? DaysCount { get; set; }
         public string Status { get; set; } = string.Empty;
         public string CurrentStep { get; set; } = string.Empty;
         public string Reason { get; set; } = string.Empty;
