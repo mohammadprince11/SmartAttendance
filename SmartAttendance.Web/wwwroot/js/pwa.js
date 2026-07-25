@@ -84,11 +84,43 @@
     }
   }
   window.__saSubscribePush = function () {
-    if ('serviceWorker' in navigator) navigator.serviceWorker.ready.then(subscribePush);
+    if ('serviceWorker' in navigator) return navigator.serviceWorker.ready.then(subscribePush);
+    return Promise.resolve(false);
   };
-  if ('serviceWorker' in navigator && Notification && Notification.permission === 'granted') {
-    navigator.serviceWorker.ready.then(subscribePush);
-  }
+
+  // زر «تفعيل الإشعارات»: يظهر حين القناة مفعّلة والإذن غير ممنوح؛ يطلب الإذن ويشترك.
+  (function wireNotifyButton() {
+    var btn = document.getElementById('pwa-notify-btn');
+    if (!btn || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
+
+    function refresh() {
+      // ممنوح ⟹ مشترِك تلقائياً، أخفِ الزر. مرفوض ⟹ لا فائدة من الزر.
+      btn.hidden = (Notification.permission === 'granted' || Notification.permission === 'denied');
+    }
+
+    fetch('/push/vapid-key', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : { enabled: false }; })
+      .then(function (cfg) {
+        if (!cfg.enabled) { btn.hidden = true; return; }   // القناة معطّلة
+        refresh();
+        if (Notification.permission === 'granted') window.__saSubscribePush();
+      })
+      .catch(function () { btn.hidden = true; });
+
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      btn.textContent = '⏳ جارٍ التفعيل…';
+      window.__saSubscribePush().then(function () {
+        btn.disabled = false;
+        if (Notification.permission === 'granted') {
+          btn.textContent = '✅ الإشعارات مفعّلة';
+          setTimeout(function () { btn.hidden = true; }, 2500);
+        } else {
+          btn.textContent = '🔔 تفعيل الإشعارات';
+        }
+      });
+    });
+  })();
 
   // 2) زر تثبيت مخصّص (أندرويد/كروم/إيدج يدعمون beforeinstallprompt).
   var deferredPrompt = null;
