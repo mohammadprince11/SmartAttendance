@@ -245,6 +245,12 @@ END;
             }))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
+        // بناء الاعتماد الشهري من الحضور اليومي المحلَّل تلقائياً قبل قراءته — نفس منطق
+        // ترحيل أقساط القروض أعلاه: كان البناء خطوة يدوية بشاشة الاعتماد الشهري تُنسى،
+        // فيقرأ المسير جدولاً فارغاً/متقادماً ⟹ معامل الحضور = 1 فلا يُخصم الغياب ولا
+        // الإجازة بلا راتب بصمت (استحقاق زائد). النداء idempotent وآمن للبوابة: MERGE
+        // يحدّث صفوف UnderReview فقط ويُدرج الناقصين، ولا يدوس الأشهر المعتمدة/المقفلة.
+        await MonthAttendanceStore.BuildMonthAsync(dbContext, run.Year, run.Month);
         var months = (await MonthAttendanceStore.ListAsync(dbContext, run.Year, run.Month))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.First());
 
