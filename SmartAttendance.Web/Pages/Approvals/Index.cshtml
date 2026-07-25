@@ -1,166 +1,297 @@
 @page
 @model SmartAttendance.Web.Pages.Approvals.IndexModel
-
 @{
     ViewData["Title"] = "الموافقات";
+    var acc = "#12D9E3";
+
+    // أيقونة + لون خفيف حسب نوع الطلب (تصنيف تقريبي بالكلمات المفتاحية).
+    (string ic, string cls) TypeBadge(string t)
+    {
+        if (t.Contains("قرض") || t.Contains("سُلفة") || t.Contains("سلفة")) return ("🏦", "fin");
+        if (t.Contains("بدل") || t.Contains("استرداد")) return ("🧾", "fin");
+        if (t.Contains("زيادة")) return ("📈", "fin");
+        if (t.Contains("تعديل")) return ("✏️", "data");
+        if (t.Contains("إجازة") || t.Contains("اجازة")) return ("🌴", "leave");
+        if (t.Contains("بصمة")) return ("👆", "att");
+        if (t.Contains("مغادرة") || t.Contains("خروج")) return ("🚪", "att");
+        if (t.Contains("إضافي") || t.Contains("اوفر") || t.Contains("أوفر")) return ("⏱️", "att");
+        return ("📄", "gen");
+    }
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
 <style>
-    .apv-chain { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
-    .apv-step { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(157,184,204,.25); opacity: .65; }
-    .apv-step.done { border-color: rgba(34,197,94,.5); color: #4ade80; opacity: 1; }
-    .apv-step.current { border-color: rgba(18,217,227,.6); color: #12D9E3; opacity: 1; box-shadow: 0 0 0 1px rgba(18,217,227,.25); }
-    .apv-step.rejected { border-color: rgba(248,113,113,.6); color: #f87171; opacity: 1; }
-    .apv-template { font-size: 11px; opacity: .7; display: block; margin-top: 2px; }
-    .apv-diff { display: flex; flex-direction: column; gap: 3px; text-align: start; }
-    .apv-diff-row { font-size: 11px; font-weight: 700; }
-    .apv-diff-row b { color: #12D9E3; }
-    .apv-diff-old { color: #f87171; text-decoration: line-through; opacity: .8; }
-    .apv-diff-new { color: #4ade80; }
+    .apv-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
+    .apv-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 16%,transparent),transparent 42%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .apv-head { background:linear-gradient(135deg,#fff,#eef6f8); }
+    .apv-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .apv-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; max-width:640px; }
+
+    .apv-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+    .apv-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; display:flex; align-items:center; gap:12px; }
+    .apv-kpi .dot { width:38px; height:38px; border-radius:12px; display:grid; place-items:center; font-size:18px; flex:0 0 38px; }
+    .apv-kpi b { display:block; font-size:22px; font-weight:1000; direction:ltr; line-height:1; }
+    .apv-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .apv-kpi.pending .dot { background:rgba(250,204,21,.16); color:#facc15; }
+    .apv-kpi.approved .dot { background:rgba(52,211,153,.16); color:#34d399; }
+    .apv-kpi.rejected .dot { background:rgba(248,113,113,.16); color:#f87171; }
+
+    .apv-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .apv-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .apv-filter select { min-height:40px; box-sizing:border-box; border-radius:11px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 12px; font-weight:900; min-width:170px; }
+    html[data-theme="light"] .apv-filter select { background:#fff; }
+    .apv-btn { min-height:40px; padding:7px 18px; border-radius:11px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
+    .apv-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .apv-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-inline-start:auto; }
+    .apv-tab { min-height:36px; padding:6px 14px; border-radius:999px; border:1px solid rgba(73,111,151,.28); background:transparent; color:var(--sa-muted,#8FA8BC); font-size:12px; font-weight:900; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
+    .apv-tab.on { border-color:var(--acc); background:color-mix(in srgb,var(--acc) 14%,transparent); color:var(--acc); }
+
+    .apv-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .apv-table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; min-width:1080px; }
+    .apv-table th { text-align:start; padding:13px 16px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); position:sticky; top:0; }
+    html[data-theme="light"] .apv-table th { background:#eef6f8; }
+    .apv-table td { padding:14px 16px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
+    .apv-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 5%,transparent); }
+    .apv-table tbody tr:last-child td { border-bottom:0; }
+
+    .apv-emp { display:flex; align-items:center; gap:11px; }
+    .apv-ava { width:36px; height:36px; border-radius:11px; flex:0 0 36px; display:grid; place-items:center; font-size:13px; font-weight:1000; color:#04141d;
+        background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 85%,#fff),color-mix(in srgb,var(--acc) 55%,#1b3550)); }
+    .apv-emp .nm { font-weight:900; }
+    .apv-emp .no { font-size:11px; opacity:.55; direction:ltr; }
+
+    .apv-type { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:900; padding:4px 11px; border-radius:999px; border:1px solid rgba(73,111,151,.3); }
+    .apv-type.fin { color:#38bdf8; border-color:rgba(56,189,248,.4); background:rgba(56,189,248,.08); }
+    .apv-type.data { color:#c084fc; border-color:rgba(192,132,252,.4); background:rgba(192,132,252,.08); }
+    .apv-type.leave { color:#34d399; border-color:rgba(52,211,153,.4); background:rgba(52,211,153,.08); }
+    .apv-type.att { color:#facc15; border-color:rgba(250,204,21,.4); background:rgba(250,204,21,.08); }
+    .apv-type.gen { color:var(--sa-muted,#8FA8BC); }
+
+    .apv-status { font-size:11px; font-weight:900; padding:3px 11px; border-radius:999px; border:1px solid rgba(73,111,151,.3); white-space:nowrap; }
+    .apv-status.pending { color:#facc15; border-color:rgba(250,204,21,.45); background:rgba(250,204,21,.08); }
+    .apv-status.approved { color:#34d399; border-color:rgba(52,211,153,.45); background:rgba(52,211,153,.08); }
+    .apv-status.rejected { color:#f87171; border-color:rgba(248,113,113,.45); background:rgba(248,113,113,.08); }
+
+    /* شريط الفترة / التفاصيل (تعديل بيانات أو مالي) */
+    .apv-diff { display:flex; flex-direction:column; gap:4px; text-align:start; }
+    .apv-diff-row { font-size:11.5px; font-weight:800; }
+    .apv-diff-row b { color:var(--acc); }
+    .apv-diff-old { color:#f87171; text-decoration:line-through; opacity:.75; }
+    .apv-diff-new { color:#4ade80; }
+    .apv-period { direction:ltr; font-weight:900; font-size:12px; }
+
+    /* لجنة الموافقة كـ stepper موصول */
+    .apv-chain { display:flex; align-items:center; flex-wrap:wrap; gap:0; }
+    .apv-node { display:inline-flex; align-items:center; }
+    .apv-step { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:900; padding:4px 10px; border-radius:999px;
+        border:1px solid rgba(157,184,204,.22); color:var(--sa-muted,#8FA8BC); background:rgba(0,0,0,.1); }
+    .apv-step .mk { width:15px; height:15px; border-radius:50%; display:grid; place-items:center; font-size:9px; border:1px solid currentColor; }
+    .apv-step.done { border-color:rgba(52,211,153,.5); color:#34d399; background:rgba(52,211,153,.08); }
+    .apv-step.current { border-color:var(--acc); color:var(--acc); background:color-mix(in srgb,var(--acc) 12%,transparent); box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 14%,transparent); }
+    .apv-step.rejected { border-color:rgba(248,113,113,.5); color:#f87171; background:rgba(248,113,113,.08); }
+    .apv-link { width:14px; height:2px; background:rgba(143,168,188,.25); flex:0 0 14px; }
+    .apv-link.done { background:rgba(52,211,153,.5); }
+    .apv-template { font-size:10.5px; opacity:.6; display:block; margin-top:5px; font-weight:800; }
+
+    /* عمود القرار */
+    .apv-decide { display:flex; flex-direction:column; gap:7px; min-width:230px; }
+    .apv-decide .note { min-height:36px; border-radius:10px; border:1px solid rgba(73,111,151,.28); background:rgba(0,0,0,.18); color:var(--sa-text,#DCEAF4); padding:6px 11px; font-weight:700; font-size:12px; width:100%; box-sizing:border-box; }
+    html[data-theme="light"] .apv-decide .note { background:#fff; }
+    .apv-decide .row { display:flex; gap:7px; }
+    .apv-act { flex:1; min-height:36px; border-radius:10px; border:0; font-size:12.5px; font-weight:900; cursor:pointer; }
+    .apv-act.ok { background:rgba(52,211,153,.16); border:1px solid rgba(52,211,153,.5); color:#34d399; }
+    .apv-act.ok:hover { background:rgba(52,211,153,.28); }
+    .apv-act.no { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.5); color:#f87171; }
+    .apv-act.no:hover { background:rgba(248,113,113,.28); }
+    .apv-done-note { font-size:11px; opacity:.6; font-weight:800; }
+
+    .apv-empty { text-align:center; padding:44px 16px; color:var(--sa-muted,#8FA8BC); }
+    .apv-empty .big { font-size:34px; display:block; margin-bottom:6px; opacity:.5; }
 </style>
 
-<div class="hrms-page">
-    <div class="page-header">
+<section class="apv-page" dir="rtl">
+    <header class="apv-head">
         <div>
             <h1>الموافقات</h1>
-            <p>لجان الموافقة تُبنى من «قوالب الموافقات» — الموافقة تقدّم الخطوة التالية حتى الاعتماد النهائي.</p>
+            <p>لجان الموافقة تُبنى من «قوالب الموافقات» — كل موافقة تقدّم الطلب للخطوة التالية حتى الاعتماد النهائي، وعندها يُفعَّل أثره آلياً.</p>
         </div>
-    </div>
+    </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.Message))
     {
         <div class="hrms-alert @(Model.MessageIsError ? "danger" : "success")">@Model.Message</div>
     }
 
-    <form method="get" class="hrms-filter-card">
-        <div class="hrms-grid-3">
-            <div class="hrms-field">
-                <label>الحالة</label>
-                <select asp-for="Status">
-                    <option value="Pending">قيد الموافقة</option>
-                    <option value="Approved">معتمدة</option>
-                    <option value="Rejected">مرفوضة</option>
-                    <option value="All">الكل</option>
-                </select>
-            </div>
+    <div class="apv-kpis">
+        <div class="apv-kpi pending"><div class="dot">⏳</div><div><b>@Model.PendingCount</b><span>قيد الموافقة</span></div></div>
+        <div class="apv-kpi approved"><div class="dot">✓</div><div><b>@Model.ApprovedCount</b><span>معتمدة</span></div></div>
+        <div class="apv-kpi rejected"><div class="dot">✕</div><div><b>@Model.RejectedCount</b><span>مرفوضة</span></div></div>
+    </div>
 
-            <div class="hrms-actions" style="align-self:end;">
-                <button class="hrms-btn-primary">تطبيق</button>
-            </div>
+    <form method="get" class="apv-bar">
+        <div class="apv-filter">
+            <label>الحالة</label>
+            <select asp-for="Status" onchange="this.form.submit()">
+                <option value="Pending">قيد الموافقة</option>
+                <option value="Approved">معتمدة</option>
+                <option value="Rejected">مرفوضة</option>
+                <option value="All">الكل</option>
+            </select>
+        </div>
+        <button class="apv-btn ghost" type="submit">تطبيق</button>
+        <div class="apv-tabs">
+            @{
+                var tabs = new[] { ("Pending", "قيد الموافقة"), ("Approved", "معتمدة"), ("Rejected", "مرفوضة"), ("All", "الكل") };
+            }
+            @foreach (var (val, label) in tabs)
+            {
+                <a class="apv-tab @(Model.Status == val ? "on" : "")" href="?Status=@val">@label</a>
+            }
         </div>
     </form>
 
-    <div class="hrms-table-card">
-        <div class="hrms-table-wrap">
-            <table class="hrms-table">
-                <thead>
+    <div class="apv-card">
+        <table class="apv-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th class="text-start">الموظف</th>
+                    <th>نوع الطلب</th>
+                    <th>الفترة / التفاصيل</th>
+                    <th>الحالة</th>
+                    <th class="text-start">لجنة الموافقة</th>
+                    <th>السبب</th>
+                    <th>قرار الخطوة الحالية</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var request in Model.Requests)
+                {
+                    Model.Flows.TryGetValue(request.Id, out var flow);
+                    var badge = TypeBadge(request.RequestType);
+                    var initials = string.IsNullOrWhiteSpace(request.EmployeeName) ? "؟" : request.EmployeeName.Trim()[..1];
                     <tr>
-                        <th>#</th>
-                        <th>رقم الموظف</th>
-                        <th class="text-start">الاسم</th>
-                        <th>نوع الطلب</th>
-                        <th>الفترة</th>
-                        <th>الحالة</th>
-                        <th class="text-start">لجنة الموافقة</th>
-                        <th>السبب</th>
-                        <th>قرار الخطوة الحالية</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var request in Model.Requests)
-                    {
-                        Model.Flows.TryGetValue(request.Id, out var flow);
-                        <tr>
-                            <td>@request.Id</td>
-                            <td>@request.EmployeeNo</td>
-                            <td class="text-start">@request.EmployeeName</td>
-                            <td>@request.RequestType</td>
-                            <td>
-                                @if (Model.DataChanges.TryGetValue(request.Id, out var diffs))
-                                {
-                                    <div class="apv-diff">
-                                        @foreach (var d in diffs)
-                                        {
-                                            <div class="apv-diff-row">
-                                                <b>@d.Label:</b>
-                                                <span class="apv-diff-old">@(string.IsNullOrWhiteSpace(d.OldValue) ? "—" : d.OldValue)</span>
-                                                →
-                                                <span class="apv-diff-new">@(string.IsNullOrWhiteSpace(d.NewValue) ? "—" : d.NewValue)</span>
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                                else if (Model.FinancialRequests.TryGetValue(request.Id, out var fin))
-                                {
-                                    <div class="apv-diff">
-                                        <div class="apv-diff-row"><b>النوع:</b> <span class="apv-diff-new">@fin.KindLabelText</span></div>
+                        <td style="opacity:.5;direction:ltr;font-weight:900">@request.Id</td>
+                        <td class="text-start">
+                            <div class="apv-emp">
+                                <span class="apv-ava">@initials</span>
+                                <div>
+                                    <div class="nm">@request.EmployeeName</div>
+                                    <div class="no">@request.EmployeeNo@(string.IsNullOrWhiteSpace(request.DirectManager) ? "" : " · مدير: " + request.DirectManager)</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="apv-type @badge.cls">@badge.ic @request.RequestType</span></td>
+                        <td>
+                            @if (Model.DataChanges.TryGetValue(request.Id, out var diffs))
+                            {
+                                <div class="apv-diff">
+                                    @foreach (var d in diffs)
+                                    {
                                         <div class="apv-diff-row">
-                                            <b>@(fin.Kind == "Raise" ? "قيمة الزيادة" : "المبلغ"):</b>
-                                            <span class="apv-diff-new">@fin.Amount.ToString("N2")@(fin.Kind == "Raise" && fin.RaiseType == "Percentage" ? " %" : "")</span>
+                                            <b>@d.Label:</b>
+                                            <span class="apv-diff-old">@(string.IsNullOrWhiteSpace(d.OldValue) ? "—" : d.OldValue)</span>
+                                            →
+                                            <span class="apv-diff-new">@(string.IsNullOrWhiteSpace(d.NewValue) ? "—" : d.NewValue)</span>
                                         </div>
-                                        @if (fin.Kind is "Loan" or "Advance")
-                                        {
-                                            <div class="apv-diff-row"><b>الأقساط:</b> <span>@fin.InstallmentCount قسط ابتداءً من @fin.PeriodText</span></div>
-                                        }
+                                    }
+                                </div>
+                            }
+                            else if (Model.FinancialRequests.TryGetValue(request.Id, out var fin))
+                            {
+                                <div class="apv-diff">
+                                    <div class="apv-diff-row">
+                                        <b>@(fin.Kind == "Raise" ? "قيمة الزيادة" : "المبلغ"):</b>
+                                        <span class="apv-diff-new">@fin.Amount.ToString("N2")@(fin.Kind == "Raise" && fin.RaiseType == "Percentage" ? " %" : "")</span>
                                     </div>
-                                }
-                                else
-                                {
-                                    @(request.FromDate?.ToString("yyyy-MM-dd"))<text> - </text>@(request.ToDate?.ToString("yyyy-MM-dd"))
-                                }
-                            </td>
-                            <td><span class="hrms-badge @request.Status.ToLower()">@request.Status</span></td>
-                            <td class="text-start">
-                                @if (flow != null)
-                                {
-                                    <span class="apv-chain">
-                                        @foreach (var step in flow.Steps)
+                                    @if (fin.Kind is "Loan" or "Advance")
+                                    {
+                                        <div class="apv-diff-row"><b>الأقساط:</b> <span>@fin.InstallmentCount قسط من @fin.PeriodText</span></div>
+                                    }
+                                    else if (fin.Kind is "Allowance" or "Reimbursement")
+                                    {
+                                        <div class="apv-diff-row"><b>الدفعة:</b> <span>@(fin.PaymentType == "OutSalary" ? "خارج الراتب" : "داخل الراتب")</span></div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="apv-period">@(request.FromDate?.ToString("yyyy-MM-dd"))@(request.ToDate.HasValue ? " → " + request.ToDate?.ToString("yyyy-MM-dd") : "")</span>
+                            }
+                        </td>
+                        <td><span class="apv-status @request.Status.ToLower()">@request.Status</span></td>
+                        <td class="text-start">
+                            @if (flow != null)
+                            {
+                                <div class="apv-chain">
+                                    @for (var i = 0; i < flow.Steps.Count; i++)
+                                    {
+                                        var step = flow.Steps[i];
+                                        var css = step.Status switch
                                         {
-                                            var css = step.Status switch
-                                            {
-                                                "Approved" => "done",
-                                                "Current" => "current",
-                                                "Rejected" => "rejected",
-                                                _ => ""
-                                            };
-                                            <span class="apv-step @css">@step.DisplayName</span>
+                                            "Approved" => "done",
+                                            "Current" => "current",
+                                            "Rejected" => "rejected",
+                                            _ => ""
+                                        };
+                                        var mark = step.Status switch { "Approved" => "✓", "Rejected" => "✕", "Current" => "•", _ => "" };
+                                        if (i > 0)
+                                        {
+                                            <span class="apv-link @(flow.Steps[i - 1].Status == "Approved" ? "done" : "")"></span>
                                         }
-                                    </span>
-                                    <span class="apv-template">قالب: @flow.TemplateName</span>
-                                }
-                                else
-                                {
-                                    <span>—</span>
-                                }
-                            </td>
-                            <td class="text-start">@request.Reason</td>
-                            <td>
-                                @if (request.Status == "Pending" && flow?.Current != null)
-                                {
-                                    <form method="post" class="hrms-actions" style="justify-content:center;">
-                                        <input asp-for="Note" placeholder="ملاحظة@(flow.CommentRequiredOnReject ? " (إلزامية عند الرفض)" : "")" style="min-height:34px;border-radius:10px;border:1px solid var(--sa-border);background:var(--sa-input);color:var(--sa-text);" />
-                                        <button asp-page-handler="Approve" asp-route-id="@request.Id" class="hrms-btn-success">موافقة</button>
-                                        <button asp-page-handler="Reject" asp-route-id="@request.Id" class="hrms-btn-danger">رفض</button>
-                                    </form>
-                                }
-                                else
-                                {
-                                    <span>-</span>
-                                }
-                            </td>
-                        </tr>
-                    }
+                                        <span class="apv-node">
+                                            <span class="apv-step @css"><span class="mk">@mark</span>@step.DisplayName</span>
+                                        </span>
+                                    }
+                                </div>
+                                <span class="apv-template">قالب: @flow.TemplateName</span>
+                            }
+                            else
+                            {
+                                <span style="opacity:.4">—</span>
+                            }
+                        </td>
+                        <td class="text-start" style="max-width:220px">@request.Reason</td>
+                        <td>
+                            @if (request.Status == "Pending" && flow?.Current != null)
+                            {
+                                <form method="post" class="apv-decide">
+                                    <input asp-for="Note" class="note" placeholder="ملاحظة@(flow.CommentRequiredOnReject ? " (إلزامية للرفض)" : " (اختياري)")" />
+                                    <div class="row">
+                                        <button asp-page-handler="Approve" asp-route-id="@request.Id" class="apv-act ok">✓ موافقة</button>
+                                        <button asp-page-handler="Reject" asp-route-id="@request.Id" class="apv-act no">✕ رفض</button>
+                                    </div>
+                                </form>
+                            }
+                            else if (request.Status == "Approved")
+                            {
+                                <span class="apv-done-note" style="color:#34d399">اكتملت اللجنة ✓</span>
+                            }
+                            else if (request.Status == "Rejected")
+                            {
+                                <span class="apv-done-note" style="color:#f87171">مرفوض</span>
+                            }
+                            else
+                            {
+                                <span class="apv-done-note">—</span>
+                            }
+                        </td>
+                    </tr>
+                }
 
-                    @if (!Model.Requests.Any())
-                    {
-                        <tr>
-                            <td colspan="9" class="hrms-empty">لا توجد طلبات حسب الفلاتر.</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                @if (!Model.Requests.Any())
+                {
+                    <tr>
+                        <td colspan="8" class="apv-empty">
+                            <span class="big">📭</span>
+                            لا توجد طلبات حسب الفلتر الحالي.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
-</div>
+</section>

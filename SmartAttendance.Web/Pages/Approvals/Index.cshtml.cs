@@ -33,6 +33,11 @@ public class IndexModel : PageModel
     public string? Message { get; set; }
     public bool MessageIsError { get; set; }
 
+    // ملخّص علوي (مستقل عن الفلتر): أعداد الطلبات بكل حالة.
+    public int PendingCount { get; set; }
+    public int ApprovedCount { get; set; }
+    public int RejectedCount { get; set; }
+
     public async Task OnGetAsync()
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
@@ -86,6 +91,15 @@ public class IndexModel : PageModel
 
     private async Task LoadAsync()
     {
+        var counts = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            "SELECT ISNULL(Status,'Pending') AS S, COUNT(*) AS C FROM SelfServiceRequests GROUP BY ISNULL(Status,'Pending');",
+            null,
+            reader => new { S = HrmsDatabase.GetString(reader, "S"), C = HrmsDatabase.GetInt(reader, "C") });
+        PendingCount = counts.FirstOrDefault(x => x.S == "Pending")?.C ?? 0;
+        ApprovedCount = counts.FirstOrDefault(x => x.S == "Approved")?.C ?? 0;
+        RejectedCount = counts.FirstOrDefault(x => x.S == "Rejected")?.C ?? 0;
+
         Requests = await HrmsDatabase.QueryAsync(
             _dbContext,
             """
