@@ -21,6 +21,11 @@
     .efr-field { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
     .efr-field input, .efr-field select, .efr-field textarea { min-height:42px; box-sizing:border-box; border-radius:12px; border:1px solid rgba(73,111,151,.28); background:rgba(0,0,0,.18); color:var(--sa-text,#DCEAF4); padding:8px 12px; font-weight:800; font-size:14px; }
     html[data-theme="light"] .efr-field input, html[data-theme="light"] .efr-field select, html[data-theme="light"] .efr-field textarea { background:#fff; }
+    .efr-field select { appearance:none; -webkit-appearance:none; padding-inline-start:38px;
+        background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2338bdf8' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:left 12px center; }
+    .efr-field select:focus { outline:none; border-color:rgba(56,189,248,.55); }
+    .efr-field select option { background:#0a1a2e; color:var(--sa-text,#DCEAF4); }
+    html[data-theme="light"] .efr-field select option { background:#fff; color:#0a1a2e; }
     .efr-preview { grid-column:1/-1; font-size:13px; font-weight:900; color:#38bdf8; }
     .efr-submit { min-height:46px; margin-top:14px; width:100%; border:0; border-radius:14px; background:#38bdf8; color:#04141d; font-weight:1000; font-size:15px; cursor:pointer; }
     .efr-alert { padding:12px 14px; border-radius:12px; background:rgba(52,211,153,.14); border:1px solid rgba(52,211,153,.4); color:#34d399; font-weight:900; font-size:13px; }

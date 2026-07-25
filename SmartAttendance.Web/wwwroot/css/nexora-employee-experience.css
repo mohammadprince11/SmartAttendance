@@ -555,6 +555,29 @@ a{text-decoration:none;color:inherit}
     font-family:inherit;font-size:14px
 }
 .nxex-modal .nxex-field textarea{min-height:64px;resize:vertical}
+.nxex-modal .nxex-field select{
+    width:100%;min-height:44px;padding:10px 12px;padding-inline-start:38px;border-radius:12px;
+    border:1px solid rgba(91,132,176,.25);background:rgba(6,16,29,.7);color:#e6f0fa;
+    font-family:inherit;font-size:14px;font-weight:900;appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2319d3e0' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 12px center
+}
+.nxex-modal .nxex-field select:focus{outline:none;border-color:rgba(25,211,224,.55)}
+.nxex-modal .nxex-field select option{background:#0a1a2e;color:#e6f0fa}
+/* قائمة منسدلة مخصّصة — قائمتها المفتوحة بتصميم التطبيق بدل قائمة النظام الأصلية */
+.nxex-csel{position:relative}
+.nxex-csel-trigger{width:100%;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:12px;border:1px solid rgba(91,132,176,.25);background:rgba(6,16,29,.7);color:#e6f0fa;font-family:inherit;font-size:14px;font-weight:900;cursor:pointer;text-align:start}
+.nxex-csel.open .nxex-csel-trigger{border-color:rgba(25,211,224,.55)}
+.nxex-csel-trigger svg{width:18px;height:18px;color:#19d3e0;flex-shrink:0;transition:transform .18s}
+.nxex-csel.open .nxex-csel-trigger svg{transform:rotate(180deg)}
+.nxex-csel-list{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:700;margin:0;padding:6px;list-style:none;border-radius:14px;border:1px solid rgba(25,211,224,.28);background:#0a1a2e;box-shadow:0 14px 34px rgba(0,0,0,.55);max-height:250px;overflow:auto}
+.nxex-csel-opt{padding:12px;border-radius:10px;font-size:14px;font-weight:900;color:#e6f0fa;cursor:pointer}
+.nxex-csel-opt[aria-selected="true"]{background:rgba(25,211,224,.14);color:#9ff4fa}
+.nxex-csel-opt:active{background:rgba(25,211,224,.1)}
+.nxex-csel-opt[data-disabled="true"]{opacity:.4;cursor:not-allowed}
+html[data-theme="light"] .nxex-csel-trigger{background:#fff;color:#0a1a2e}
+html[data-theme="light"] .nxex-csel-list{background:#fff;border-color:rgba(25,150,170,.3)}
+html[data-theme="light"] .nxex-csel-opt{color:#0a1a2e}
+html[data-theme="light"] .nxex-csel-opt[aria-selected="true"]{background:rgba(25,150,170,.14);color:#0a6b78}
 .nxex-daycount{
     padding:12px 14px;border-radius:12px;text-align:center;font-size:13px;font-weight:900;color:#cfe0f0;
     background:linear-gradient(135deg,rgba(18,211,224,.14),rgba(31,155,214,.10));border:1px solid rgba(25,211,224,.22)

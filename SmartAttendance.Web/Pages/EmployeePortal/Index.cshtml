@@ -773,23 +773,37 @@
                       class="nxex-leave-form" data-leave-panel="cat-@cat.Id"
                       data-picker-entry="@cat.IsPickerEntry.ToString().ToLower()" data-cat-name="@cat.Name"
                       hidden="@(isDefault ? null : "hidden")">
-                    <div class="nxex-leave-types">
-                        @{ var picked = false; }
-                        @foreach (var t in catTypes)
-                        {
-                            var disabled = TypeDisabled(t);
-                            var check = !disabled && !picked;
-                            if (check) { picked = true; }
-                            <label class="nxex-leave-type @(disabled ? "disabled" : (check ? "active" : ""))"
-                                   data-needs-time="@t.NeedsTime.ToString().ToLower()"
-                                   data-attach-req="@t.AttachmentRequired.ToString().ToLower()"
-                                   data-attach-label="@(t.AttachmentLabel ?? "")">
-                                <input type="radio" name="reqType" value="@t.Name" checked="@check" disabled="@disabled" />
-                                <span>@t.Name</span>
-                                @{ var bal = BalanceSmall(t); }
-                                @if (!string.IsNullOrEmpty(bal)) { <small>@bal</small> }
-                            </label>
-                        }
+                    @* الأنواع الداخلية للقسم كقائمة منسدلة مخصّصة (قائمة مفتوحة بتصميم التطبيق
+                       بدل قائمة النظام الأصلية؛ dynamic-friendly: تتوسّع دون تكدّس كروت) *@
+                    @{
+                        var defaultType = catTypes.FirstOrDefault(t => !TypeDisabled(t)) ?? catTypes.FirstOrDefault();
+                        var defBal = defaultType != null ? BalanceSmall(defaultType) : "";
+                        var defLabel = defaultType != null ? defaultType.Name + (string.IsNullOrEmpty(defBal) ? "" : " — " + defBal) : "اختر النوع";
+                    }
+                    <div class="nxex-field">
+                        <label>نوع الطلب</label>
+                        <div class="nxex-csel" data-leave-select>
+                            <button type="button" class="nxex-csel-trigger" data-csel-trigger aria-haspopup="listbox" aria-expanded="false">
+                                <span data-csel-label>@defLabel</span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                            <input type="hidden" name="reqType" data-csel-input value="@(defaultType?.Name ?? "")" required />
+                            <ul class="nxex-csel-list" data-csel-list role="listbox" hidden>
+                                @foreach (var t in catTypes)
+                                {
+                                    var disabled = TypeDisabled(t);
+                                    var isSel = defaultType != null && t.Name == defaultType.Name;
+                                    var bal = BalanceSmall(t);
+                                    var optLabel = t.Name + (string.IsNullOrEmpty(bal) ? "" : " — " + bal);
+                                    <li class="nxex-csel-opt" role="option" data-value="@t.Name" data-label="@optLabel"
+                                        data-needs-time="@t.NeedsTime.ToString().ToLower()"
+                                        data-attach-req="@t.AttachmentRequired.ToString().ToLower()"
+                                        data-attach-label="@(t.AttachmentLabel ?? "")"
+                                        aria-selected="@(isSel ? "true" : "false")"
+                                        data-disabled="@(disabled ? "true" : "false")">@optLabel</li>
+                                }
+                            </ul>
+                        </div>
                     </div>
 
                     <div class="nxex-field">

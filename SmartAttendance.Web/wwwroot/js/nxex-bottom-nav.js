@@ -30,22 +30,38 @@
     return { open, close, isOpen: () => !sheetEl.hidden };
   }
 
+  // الدرجان (المزيد + منتقي «طلب جديد») موجودان بالتخطيط على كل الصفحات (نسخة كاملة
+  // بصفحة البوابة، ونسخة روابط بالصفحات الفرعية)، فيفتحان بمكانهما بلا أي انتقال.
   const moreSheet = makeSheet(
     document.getElementById('nxex-more-sheet'),
     document.getElementById('nxex-more-backdrop'));
   const reqSheet = makeSheet(
     document.getElementById('nxex-req-sheet'),
     document.getElementById('nxex-req-backdrop'));
-
-  // ===== درج «المزيد» =====
   if (moreBtn && moreSheet) {
     moreBtn.addEventListener('click', () => moreSheet.isOpen() ? moreSheet.close() : moreSheet.open());
   }
-
-  // ===== منتقي «طلب جديد» =====
   document.querySelectorAll('[data-open-reqsheet]').forEach((el) => {
     el.addEventListener('click', () => reqSheet && reqSheet.open());
   });
+  // توافق مع روابط قديمة (?new=1): يفتح المنتقي تلقائياً.
+  if (reqSheet && new URLSearchParams(location.search).get('new') === '1') {
+    setTimeout(() => reqSheet.open(), 80);
+  }
+
+  // الصفحات الفرعية: لا توجد أقسام [.nxex-pane]، وأزرار تبويب الشريط السفلي مبدّلات
+  // داخل صفحة البوابة فقط ⇒ نحوّلها لتنقّل حقيقي. «المزيد» و«+» أعلاه يفتحان بمكانهما.
+  const isHub = !!document.querySelector('.nxex-pane');
+  if (!isHub) {
+    const tabUrl = (tab) => '/EmployeePortal?tab=' + encodeURIComponent(tab || 'home');
+    document.querySelectorAll('.nxex-bnav-item[data-nxex-tab]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = tabUrl(btn.getAttribute('data-nxex-tab'));
+      }, true);
+    });
+    return; // بقية المنطق (الأقسام/الشاشات) خاص بصفحة البوابة فقط
+  }
 
   // اختيار نوع الطلب: بدّل لتبويب الطلبات، حدّد النوع بالاستوديو، ومرّر للنموذج.
   document.querySelectorAll('#nxex-req-sheet [data-req-type]').forEach((item) => {
@@ -79,7 +95,7 @@
         panels.forEach((p) => { p.hidden = p.getAttribute('data-leave-panel') !== catKey; });
         const panel = panels.find((p) => p.getAttribute('data-leave-panel') === catKey);
         if (modalTitle && panel) modalTitle.textContent = panel.getAttribute('data-cat-name') || 'طلب';
-        if (panel) { const c = panel.querySelector('.nxex-leave-type input[type=radio]:checked'); if (c) applyTypeControls(c); }
+        if (panel) { const s = panel.querySelector('[data-leave-select]'); if (s) applyTypeControls(s); }
       } else {
         if (modalTabs) modalTabs.hidden = false;
         if (modalTitle) modalTitle.textContent = 'طلب إجازة';
@@ -88,7 +104,7 @@
         const firstKey = tabs[0] ? tabs[0].getAttribute('data-leave-tab') : null;
         panels.forEach((p) => { p.hidden = p.getAttribute('data-leave-panel') !== firstKey; });
         const fp = panels.find((p) => p.getAttribute('data-leave-panel') === firstKey);
-        if (fp) { const c = fp.querySelector('.nxex-leave-type input[type=radio]:checked'); if (c) applyTypeControls(c); }
+        if (fp) { const s = fp.querySelector('[data-leave-select]'); if (s) applyTypeControls(s); }
       }
     }
 
@@ -106,6 +122,8 @@
     document.querySelectorAll('[data-open-leave-modal]').forEach((el) => {
       el.addEventListener('click', () => { if (reqSheet) reqSheet.close(); openLeave(null); });
     });
+    // القدوم من رابط «إجازة» بصفحة فرعية (?open=leave): افتح شاشة الإجازة تلقائياً.
+    if (new URLSearchParams(location.search).get('open') === 'leave') setTimeout(() => openLeave(null), 60);
     document.querySelectorAll('[data-open-cat]').forEach((el) => {
       el.addEventListener('click', () => { if (reqSheet) reqSheet.close(); openLeave(el.getAttribute('data-open-cat')); });
     });
@@ -123,24 +141,28 @@
 
     // تمييز نوع الإجازة المختار
     // تطبيق ضوابط النوع المختار: تمييزه + إظهار حقول الوقت + نجمة المرفق حسب المتجر.
-    function applyTypeControls(r) {
-      const form = r.closest('.nxex-leave-form');
-      const label = r.closest('.nxex-leave-type');
-      if (!form || !label) return;
-      form.querySelectorAll('.nxex-leave-type').forEach((l) => l.classList.remove('active'));
-      if (r.checked && !r.disabled) label.classList.add('active');
-      const needsTime = label.getAttribute('data-needs-time') === 'true';
+    // تُستدعى بـ<select> النوع (أو أي عنصر داخل نموذجه). تقرأ ضوابط الخيار المختار
+    // (وقت/مرفق) من data-* على <option> وتظهر/تخفي الحقول تبعاً له.
+    function applyTypeControls(sel) {
+      const select = sel && sel.matches && sel.matches('[data-leave-select]')
+        ? sel
+        : (sel.closest('.nxex-leave-form') || document).querySelector('[data-leave-select]');
+      const form = select ? select.closest('.nxex-leave-form') : (sel.closest ? sel.closest('.nxex-leave-form') : null);
+      if (!form || !select) return;
+      const opt = select.querySelector('.nxex-csel-opt[aria-selected="true"]')
+        || select.querySelector('.nxex-csel-opt:not([data-disabled="true"])');
+      const needsTime = !!opt && opt.getAttribute('data-needs-time') === 'true';
       const timeRow = form.querySelector('.nxex-time-row');
       if (timeRow) timeRow.hidden = !needsTime;
       // الأنواع الزمنية (أوفرتايم/مغادرة): تُقاس بالوقت لا بعدد الأيام.
       const daycount = form.querySelector('[data-daycount]');
       if (daycount) daycount.hidden = needsTime;
       const star = form.querySelector('[data-attach-star]');
-      if (star) star.hidden = label.getAttribute('data-attach-req') !== 'true';
+      if (star) star.hidden = !opt || opt.getAttribute('data-attach-req') !== 'true';
       const hint = form.querySelector('[data-attach-hint]');
       if (hint) {
-        const req = label.getAttribute('data-attach-req') === 'true';
-        const lbl = label.getAttribute('data-attach-label');
+        const req = !!opt && opt.getAttribute('data-attach-req') === 'true';
+        const lbl = opt && opt.getAttribute('data-attach-label');
         hint.textContent = (req && lbl) ? '(' + lbl + ')' : '';
       }
       checkCross(form);
@@ -149,8 +171,9 @@
     // تقاطع منتصف الليل: لو وقت النهاية ≤ وقت البداية والنوع زمني ⟹ الحركة عبر يومين
     // (التاريخ المحدَّد + غد). تُضبط قيمة تاريخ النهاية المخفية تلقائياً.
     function checkCross(form) {
-      const label = form.querySelector('.nxex-leave-type input[type=radio]:checked')?.closest('.nxex-leave-type');
-      const needsTime = label && label.getAttribute('data-needs-time') === 'true';
+      const typeSel = form.querySelector('[data-leave-select]');
+      const typeOpt = typeSel && typeSel.querySelector('.nxex-csel-opt[aria-selected="true"]');
+      const needsTime = !!typeOpt && typeOpt.getAttribute('data-needs-time') === 'true';
       const ft = form.querySelector('input[name=fromTime]')?.value;
       const tt = form.querySelector('input[name=toTime]')?.value;
       const fromD = form.querySelector('[data-dp-from]');
@@ -182,9 +205,30 @@
       }
     }
 
-    leaveModal.querySelectorAll('.nxex-leave-type input[type=radio]').forEach((r) => {
-      r.addEventListener('change', () => applyTypeControls(r));
-    });
+    // ===== القائمة المنسدلة المخصّصة (قائمة مفتوحة بتصميم التطبيق) =====
+    // القائمة position:absolute نسبةً لحاوية .nxex-csel، فتُلصَق تحت المربّع مباشرةً
+    // وتبقى ملتصقة عند تمرير جسم المودال (لا transform/viewport يربكها).
+    function initCustomSelect(widget) {
+      const trigger = widget.querySelector('[data-csel-trigger]');
+      const list = widget.querySelector('[data-csel-list]');
+      const labelEl = widget.querySelector('[data-csel-label]');
+      const input = widget.querySelector('[data-csel-input]');
+      if (!trigger || !list || !input) return;
+      const opts = [...widget.querySelectorAll('.nxex-csel-opt')];
+      const close = () => { list.hidden = true; widget.classList.remove('open'); trigger.setAttribute('aria-expanded', 'false'); };
+      const open = () => { list.hidden = false; widget.classList.add('open'); trigger.setAttribute('aria-expanded', 'true'); list.scrollIntoView({ block: 'nearest' }); };
+      trigger.addEventListener('click', (e) => { e.stopPropagation(); if (list.hidden) open(); else close(); });
+      opts.forEach((li) => li.addEventListener('click', () => {
+        if (li.getAttribute('data-disabled') === 'true') return;
+        opts.forEach((o) => o.setAttribute('aria-selected', o === li ? 'true' : 'false'));
+        labelEl.textContent = li.getAttribute('data-label') || li.textContent.trim();
+        input.value = li.getAttribute('data-value') || '';
+        close();
+        applyTypeControls(widget);
+      }));
+      document.addEventListener('click', (e) => { if (!widget.contains(e.target)) close(); });
+    }
+    leaveModal.querySelectorAll('[data-leave-select]').forEach(initCustomSelect);
     // إعادة فحص التقاطع عند تغيّر وقت أو تاريخ.
     leaveModal.addEventListener('change', (e) => {
       if (e.target.matches('[data-tp-input], [data-dp-from], [data-dp-to]')) {
@@ -193,8 +237,8 @@
       }
     });
     leaveModal.querySelectorAll('.nxex-leave-form').forEach((form) => {
-      const checked = form.querySelector('.nxex-leave-type input[type=radio]:checked');
-      if (checked) applyTypeControls(checked);
+      const select = form.querySelector('[data-leave-select]');
+      if (select) applyTypeControls(select);
     });
 
     // حساب عدد الأيام حياً
