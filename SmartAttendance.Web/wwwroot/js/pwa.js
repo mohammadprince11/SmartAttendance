@@ -47,78 +47,90 @@
     return out;
   }
 
-  async function subscribePush(reg) {
+  // يجلب المفتاح العام إن كانت القناة مفعّلة، وإلا null.
+  async function fetchVapidKey() {
     try {
-      if (!('PushManager' in window)) return;
       var res = await fetch('/push/vapid-key', { credentials: 'same-origin' });
-      if (!res.ok) return;
+      if (!res.ok) return null;
       var cfg = await res.json();
-      if (!cfg.enabled || !cfg.publicKey) return; // القناة معطّلة
-
-      if (Notification.permission === 'denied') return;
-      if (Notification.permission !== 'granted') {
-        var perm = await Notification.requestPermission();
-        if (perm !== 'granted') return;
-      }
-
-      var sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(cfg.publicKey)
-        });
-      }
-      var raw = sub.toJSON();
-      await fetch('/push/subscribe', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          endpoint: sub.endpoint,
-          p256dh: raw.keys && raw.keys.p256dh,
-          auth: raw.keys && raw.keys.auth
-        })
-      });
-    } catch (err) {
-      console.warn('[Push] تعذّر الاشتراك:', err);
-    }
+      return (cfg.enabled && cfg.publicKey) ? cfg.publicKey : null;
+    } catch (e) { return null; }
   }
-  window.__saSubscribePush = function () {
-    if ('serviceWorker' in navigator) return navigator.serviceWorker.ready.then(subscribePush);
-    return Promise.resolve(false);
+
+  // يشترك ويرسل الاشتراك للخادم (يفترض الإذن ممنوحاً). يعيد true عند نجاح الحفظ.
+  async function doSubscribe(publicKey) {
+    var reg = await navigator.serviceWorker.ready;
+    if (!('PushManager' in reg) && !('PushManager' in window)) return false;
+    var sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      });
+    }
+    var raw = sub.toJSON();
+    var r = await fetch('/push/subscribe', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpoint: sub.endpoint,
+        p256dh: raw.keys && raw.keys.p256dh,
+        auth: raw.keys && raw.keys.auth
+      })
+    });
+    return r.ok;
+  }
+
+  // المسار التلقائي: يشترك بصمت إن كان الإذن ممنوحاً سابقاً (لا يطلب إذناً — لا إيماءة).
+  window.__saSubscribePush = async function () {
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+      if (Notification.permission !== 'granted') return false;
+      var pk = await fetchVapidKey();
+      if (!pk) return false;
+      return await doSubscribe(pk);
+    } catch (err) { console.warn('[Push] تعذّر الاشتراك التلقائي:', err); return false; }
   };
 
-  // زر «تفعيل الإشعارات»: يظهر حين القناة مفعّلة والإذن غير ممنوح؛ يطلب الإذن ويشترك.
+  // زر «تفعيل الإشعارات»: يظهر حين القناة مفعّلة والإذن غير محسوم.
   (function wireNotifyButton() {
     var btn = document.getElementById('pwa-notify-btn');
     if (!btn || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
 
-    function refresh() {
-      // ممنوح ⟹ مشترِك تلقائياً، أخفِ الزر. مرفوض ⟹ لا فائدة من الزر.
-      btn.hidden = (Notification.permission === 'granted' || Notification.permission === 'denied');
-    }
+    fetchVapidKey().then(function (pk) {
+      if (!pk) { btn.hidden = true; return; }              // القناة معطّلة
+      if (Notification.permission === 'granted') {           // ممنوح: اشترك واخفِ الزر
+        btn.hidden = true;
+        window.__saSubscribePush();
+      } else if (Notification.permission === 'denied') {
+        btn.hidden = true;                                   // محظور: لا فائدة من الزر
+      } else {
+        btn.hidden = false;                                  // غير محسوم: أظهر الزر
+      }
+    });
 
-    fetch('/push/vapid-key', { credentials: 'same-origin' })
-      .then(function (r) { return r.ok ? r.json() : { enabled: false }; })
-      .then(function (cfg) {
-        if (!cfg.enabled) { btn.hidden = true; return; }   // القناة معطّلة
-        refresh();
-        if (Notification.permission === 'granted') window.__saSubscribePush();
-      })
-      .catch(function () { btn.hidden = true; });
-
-    btn.addEventListener('click', function () {
+    btn.addEventListener('click', async function () {
       btn.disabled = true;
       btn.textContent = '⏳ جارٍ التفعيل…';
-      window.__saSubscribePush().then(function () {
-        btn.disabled = false;
-        if (Notification.permission === 'granted') {
-          btn.textContent = '✅ الإشعارات مفعّلة';
-          setTimeout(function () { btn.hidden = true; }, 2500);
-        } else {
-          btn.textContent = '🔔 تفعيل الإشعارات';
+      try {
+        // اطلب الإذن أولاً مباشرةً داخل إيماءة النقر (قبل أي await) لئلا يرفضه كروم بصمت.
+        var perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+          btn.textContent = perm === 'denied' ? '🔕 الإشعارات محظورة (فعّلها من إعدادات المتصفّح)' : '🔔 تفعيل الإشعارات';
+          btn.disabled = (perm === 'denied');
+          return;
         }
-      });
+        var pk = await fetchVapidKey();
+        var ok = pk ? await doSubscribe(pk) : false;
+        btn.textContent = ok ? '✅ الإشعارات مفعّلة' : '⚠️ تعذّر التفعيل — أعد المحاولة';
+        if (ok) setTimeout(function () { btn.hidden = true; }, 2500);
+        else btn.disabled = false;
+      } catch (err) {
+        console.warn('[Push] فشل التفعيل:', err);
+        btn.textContent = '⚠️ تعذّر التفعيل — أعد المحاولة';
+        btn.disabled = false;
+      }
     });
   })();
 
