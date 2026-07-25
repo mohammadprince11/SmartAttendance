@@ -98,6 +98,7 @@ public static class DataChangeRequestStore
         public string? OptionsKey { get; set; }
         public string? OldValue { get; set; }
         public string? NewValue { get; set; }
+        public string Decision { get; set; } = "Approved"; // Approved | Rejected — قرار المُعتمِد لهذا الحقل
     }
 
     public static async Task EnsureAsync(ApplicationDbContext db)
@@ -117,6 +118,9 @@ BEGIN
     );
     CREATE INDEX IX_DataChangeRequestFields_Request ON DataChangeRequestFields(RequestId);
 END;
+-- قرار لكل حقل: يسمح للمُعتمِد باعتماد بعض الحقول ورفض بعضها ضمن الطلب نفسه.
+IF COL_LENGTH('DataChangeRequestFields','Decision') IS NULL
+    ALTER TABLE DataChangeRequestFields ADD Decision nvarchar(20) NOT NULL CONSTRAINT DF_DCRF_Decision DEFAULT(N'Approved');
 """);
     }
 
@@ -259,6 +263,27 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
         return true;
     }
 
+    /// <summary>
+    /// يسجّل قرار المُعتمِد لكل حقل: المفاتيح في <paramref name="approvedKeys"/> تُعتمد،
+    /// وبقية حقول الطلب تُرفض (لا تُطبَّق عند الاعتماد النهائي). يُستدعى مع كل موافقة خطوة
+    /// (يفوز قرار آخر مُعتمِد). إن كان الطلب ليس طلب تعديل بيانات لا يفعل شيئاً.
+    /// </summary>
+    public static async Task SetFieldDecisionsAsync(ApplicationDbContext db, int requestId, IEnumerable<string> approvedKeys)
+    {
+        await EnsureAsync(db);
+        var keys = approvedKeys?.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct().ToList() ?? new();
+        var inClause = keys.Count > 0 ? string.Join(",", keys.Select((_, i) => $"@k{i}")) : "NULL";
+        await HrmsDatabase.ExecuteAsync(db,
+            $@"UPDATE DataChangeRequestFields
+               SET Decision = CASE WHEN FieldKey IN ({inClause}) THEN N'Approved' ELSE N'Rejected' END
+               WHERE RequestId=@r AND Applied=0",
+            cmd =>
+            {
+                HrmsDatabase.AddParameter(cmd, "@r", requestId);
+                for (var i = 0; i < keys.Count; i++) HrmsDatabase.AddParameter(cmd, $"@k{i}", keys[i]);
+            });
+    }
+
     public static Task<List<ProposedField>> ListFieldsAsync(ApplicationDbContext db, int requestId)
     {
         return HrmsDatabase.QueryAsync(db,
@@ -280,18 +305,21 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
     {
         var ids = requestIds.Distinct().ToList();
         if (ids.Count == 0) return new();
+        await EnsureAsync(db); // يضمن وجود عمود Decision (self-healing) قبل الاستعلام عنه.
         var inClause = string.Join(",", ids.Select((_, i) => $"@r{i}"));
         var rows = await HrmsDatabase.QueryAsync(db,
-            $"SELECT RequestId, FieldLabel, OldValue, NewValue FROM DataChangeRequestFields WHERE RequestId IN ({inClause}) ORDER BY RequestId, Id",
+            $"SELECT RequestId, FieldKey, FieldLabel, OldValue, NewValue, ISNULL(Decision,'Approved') AS Decision FROM DataChangeRequestFields WHERE RequestId IN ({inClause}) ORDER BY RequestId, Id",
             cmd => { for (var i = 0; i < ids.Count; i++) HrmsDatabase.AddParameter(cmd, $"@r{i}", ids[i]); },
             r => new
             {
                 RequestId = HrmsDatabase.GetInt(r, "RequestId"),
                 Field = new ProposedField
                 {
+                    Key = HrmsDatabase.GetString(r, "FieldKey"),
                     Label = HrmsDatabase.GetString(r, "FieldLabel"),
                     OldValue = HrmsDatabase.GetString(r, "OldValue"),
-                    NewValue = HrmsDatabase.GetString(r, "NewValue")
+                    NewValue = HrmsDatabase.GetString(r, "NewValue"),
+                    Decision = HrmsDatabase.GetString(r, "Decision") is { Length: > 0 } dec ? dec : "Approved"
                 }
             });
         return rows.GroupBy(x => x.RequestId)
@@ -317,8 +345,9 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
             cmd => HrmsDatabase.AddParameter(cmd, "@r", requestId));
         if (employeeId <= 0) return false;
 
+        // الحقول المرفوضة (Decision='Rejected') لا تُطبَّق — قرار مُعتمِد على مستوى الحقل.
         var fields = await HrmsDatabase.QueryAsync(db,
-            "SELECT ColumnName, NewValue FROM DataChangeRequestFields WHERE RequestId=@r AND Applied=0",
+            "SELECT ColumnName, NewValue FROM DataChangeRequestFields WHERE RequestId=@r AND Applied=0 AND ISNULL(Decision,'Approved') <> 'Rejected'",
             cmd => HrmsDatabase.AddParameter(cmd, "@r", requestId),
             r => new { Column = HrmsDatabase.GetString(r, "ColumnName"), New = HrmsDatabase.GetString(r, "NewValue") });
         if (fields.Count == 0) return false;
