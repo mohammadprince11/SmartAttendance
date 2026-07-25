@@ -138,6 +138,14 @@ public class RoleSecurityMiddleware
             return true;
         }
 
+        // نقاط Web-Push (كنترولر بمصادقة كوكي [Authorize]) خارج كتالوج الأدوار — لو
+        // حجبها الحارس بالكتالوج لحوّل الموظف إلى /AccessDenied فيفشل جلب مفتاح VAPID
+        // والاشتراك. نمرّرها هنا و[Authorize] يفرض المصادقة والكنترولر يحلّ الموظف بنفسه.
+        if (path.StartsWith("/push/"))
+        {
+            return true;
+        }
+
         if (path.StartsWith("/css/") ||
             path.StartsWith("/js/") ||
             path.StartsWith("/lib/") ||
