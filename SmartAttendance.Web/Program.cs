@@ -141,6 +141,25 @@ builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Security.IAccessRoleService, SmartAttendance.Web.Infrastructure.Security.AccessRoleService>();
 builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Security.IEffectiveScopeService, SmartAttendance.Web.Infrastructure.Security.EffectiveScopeService>();
 
+// قناة الإشعارات الخارجية (SMTP): تُفعَّل عمداً عبر قسم "Smtp" (Enabled=true). حين
+// تكون معطّلة يُحقَن مرسِل No-Op ولا تعمل خدمة التسليم الخلفية (بلا استهلاك).
+builder.Services.Configure<SmartAttendance.Web.Infrastructure.Notifications.SmtpOptions>(
+    builder.Configuration.GetSection(SmartAttendance.Web.Infrastructure.Notifications.SmtpOptions.SectionName));
+var smtpEnabled = builder.Configuration
+    .GetSection(SmartAttendance.Web.Infrastructure.Notifications.SmtpOptions.SectionName)
+    .Get<SmartAttendance.Web.Infrastructure.Notifications.SmtpOptions>()?.IsUsable ?? false;
+if (smtpEnabled)
+{
+    builder.Services.AddSingleton<SmartAttendance.Web.Infrastructure.Notifications.IEmailSender,
+        SmartAttendance.Web.Infrastructure.Notifications.SmtpEmailSender>();
+    builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Notifications.NotificationDispatcherService>();
+}
+else
+{
+    builder.Services.AddSingleton<SmartAttendance.Web.Infrastructure.Notifications.IEmailSender,
+        SmartAttendance.Web.Infrastructure.Notifications.NoOpEmailSender>();
+}
+
 var app = builder.Build();
 
 await DefaultShiftSeeder.SeedAsync(app.Services);

@@ -112,6 +112,16 @@ BEGIN
     );
     CREATE INDEX IX_AttNotifOutbox_Notification ON AttendanceNotificationOutbox (NotificationId);
 END;
+
+-- أعمدة التسليم الفعلي (قناة البريد) — idempotent. الحالة: Pending → Sent | Failed.
+-- صفوف القناة System تبقى Pending ويتجاهلها المرسِل (هي صندوق داخل التطبيق).
+IF COL_LENGTH('AttendanceNotificationOutbox','Subject') IS NULL ALTER TABLE AttendanceNotificationOutbox ADD Subject nvarchar(200) NOT NULL CONSTRAINT DF_ANO_Subject DEFAULT(N'');
+IF COL_LENGTH('AttendanceNotificationOutbox','Status') IS NULL ALTER TABLE AttendanceNotificationOutbox ADD Status nvarchar(10) NOT NULL CONSTRAINT DF_ANO_Status DEFAULT(N'Pending');
+IF COL_LENGTH('AttendanceNotificationOutbox','Attempts') IS NULL ALTER TABLE AttendanceNotificationOutbox ADD Attempts int NOT NULL CONSTRAINT DF_ANO_Attempts DEFAULT(0);
+IF COL_LENGTH('AttendanceNotificationOutbox','SentAt') IS NULL ALTER TABLE AttendanceNotificationOutbox ADD SentAt datetime2 NULL;
+IF COL_LENGTH('AttendanceNotificationOutbox','Error') IS NULL ALTER TABLE AttendanceNotificationOutbox ADD Error nvarchar(400) NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_AttNotifOutbox_Dispatch')
+    CREATE INDEX IX_AttNotifOutbox_Dispatch ON AttendanceNotificationOutbox (Channel, Status);
 """);
     }
 
@@ -189,17 +199,19 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                 .Where(x => x.Mgr is int).ToDictionary(x => x.Id, x => x.Mgr!.Value);
         }
 
+        var subject = $"{LabelOf(type)} — {period}";
+
         int cc = 0;
         foreach (var empId in employeeIds)
         {
             rowsByEmp.TryGetValue(empId, out var rows);
             var message = Render(type, template, rows ?? new(), from, to, week, period);
-            await AddOutboxAsync(dbContext, notificationId, empId, channel, message);
+            await AddOutboxAsync(dbContext, notificationId, empId, channel, subject, message);
 
             // نسخة للمدير المباشر (نسخة من رسالة كل موظف)
             if ((ccMode is "Manager" or "Both") && managerOf.TryGetValue(empId, out var mgr))
             {
-                await AddOutboxAsync(dbContext, notificationId, mgr, channel, "نسخة (المدير المباشر): " + message);
+                await AddOutboxAsync(dbContext, notificationId, mgr, channel, subject, "نسخة (المدير المباشر): " + message);
                 cc++;
             }
         }
@@ -210,7 +222,7 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             var summary = $"نسخة: تم إشعار {employeeIds.Count} موظفاً بـ«{LabelOf(type)}» للفترة ({period}).";
             foreach (var ccId in ccEmployeeIds)
             {
-                await AddOutboxAsync(dbContext, notificationId, ccId, channel, summary);
+                await AddOutboxAsync(dbContext, notificationId, ccId, channel, subject, summary);
                 cc++;
             }
         }
@@ -271,15 +283,16 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     }
 
     private static Task AddOutboxAsync(ApplicationDbContext dbContext, int notificationId,
-        int employeeId, string channel, string message) =>
+        int employeeId, string channel, string subject, string message) =>
         HrmsDatabase.ExecuteAsync(
             dbContext,
-            "INSERT INTO AttendanceNotificationOutbox (NotificationId, EmployeeId, Channel, RenderedMessage) VALUES (@N, @E, @C, @M);",
+            "INSERT INTO AttendanceNotificationOutbox (NotificationId, EmployeeId, Channel, Subject, RenderedMessage, Status) VALUES (@N, @E, @C, @S, @M, N'Pending');",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@N", notificationId);
                 HrmsDatabase.AddParameter(command, "@E", employeeId);
                 HrmsDatabase.AddParameter(command, "@C", channel);
+                HrmsDatabase.AddParameter(command, "@S", subject.Length > 200 ? subject[..200] : subject);
                 HrmsDatabase.AddParameter(command, "@M", message.Length > 1200 ? message[..1200] : message);
             });
 }
