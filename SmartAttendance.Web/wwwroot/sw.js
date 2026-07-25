@@ -4,7 +4,7 @@
  *  - نداءات /api/ (بيانات شخصية): شبكة فقط — لا تُخزَّن أبداً.
  *  - الأصول الثابتة (css/js/lib/brand/الأيقونات): stale-while-revalidate.
  */
-const VERSION = 'v8';
+const VERSION = 'v9';
 const STATIC_CACHE = `sa-static-${VERSION}`;
 const OFFLINE_URL = '/offline.html';
 

@@ -19,26 +19,29 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="بوابتي" />
     <meta name="application-name" content="بوابتي" />
-    <link rel="apple-touch-icon" href="~/brand/pwa/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" href="~/brand/pwa/apple-touch-icon.png?v=2" />
     <link rel="icon" type="image/svg+xml" href="~/brand/pwa/icon-white.svg" />
-    <link rel="icon" type="image/png" sizes="192x192" href="~/brand/pwa/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="~/brand/pwa/icon-192.png?v=2" />
 
     <link rel="stylesheet" href="~/css/nexora-calendar-v18.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-employee-experience.css" asp-append-version="true" />
 
     @* ===== شاشة البداية: أنميشن الشعار عند إطلاق التطبيق (خفيفة، مرة واحدة/جلسة) ===== *@
     <style>
-        #nxsp-splash{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:#071424;
-            animation:nxspOut .55s ease 1.55s forwards}
+        /* شاشة الإقلاع بنفس لون خلفية التطبيق (بلا مربّع)، والشعار أكبر مع سكيل-أنميشن احترافي */
+        #nxsp-splash{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:#050d18;
+            animation:nxspOut .5s ease 1.95s forwards}
         #nxsp-splash.nxsp-skip{display:none}
-        #nxsp-splash svg{width:min(42vw,150px);height:auto;overflow:visible}
+        #nxsp-splash svg{width:min(66vw,250px);height:auto;overflow:visible;transform-origin:center;
+            animation:nxspScale .85s cubic-bezier(.2,.9,.25,1.15) forwards}
+        @@keyframes nxspScale{0%{opacity:0;transform:scale(.5)}60%{opacity:1;transform:scale(1.05)}100%{opacity:1;transform:scale(1)}}
         @@keyframes nxspOut{to{opacity:0;visibility:hidden}}
         #nxsp-splash .nxsp{opacity:0;transform-box:fill-box}
-        #nxsp-splash .nxsp-top{animation:nxspTop .55s cubic-bezier(.2,.85,.25,1) .1s forwards}
-        #nxsp-splash .nxsp-bottom{animation:nxspBottom .55s cubic-bezier(.2,.85,.25,1) .22s forwards}
-        #nxsp-splash .nxsp-diag{transform-origin:left bottom;animation:nxspDiag .6s cubic-bezier(.2,.85,.25,1) .4s forwards}
-        #nxsp-splash .nxsp-facet{animation:nxspFade .5s ease .55s forwards}
-        #nxsp-splash .nxsp-anchor{transform-origin:center;animation:nxspPop .45s cubic-bezier(.3,1.5,.5,1) .62s forwards}
+        #nxsp-splash .nxsp-top{animation:nxspTop .5s cubic-bezier(.2,.85,.25,1) .28s forwards}
+        #nxsp-splash .nxsp-bottom{animation:nxspBottom .5s cubic-bezier(.2,.85,.25,1) .4s forwards}
+        #nxsp-splash .nxsp-diag{transform-origin:left bottom;animation:nxspDiag .55s cubic-bezier(.2,.85,.25,1) .55s forwards}
+        #nxsp-splash .nxsp-facet{animation:nxspFade .5s ease .72s forwards}
+        #nxsp-splash .nxsp-anchor{transform-origin:center;animation:nxspPop .45s cubic-bezier(.3,1.5,.5,1) .8s forwards}
         #nxsp-splash .nxsp-px{transform-origin:center;animation:nxspPop .4s cubic-bezier(.3,1.6,.5,1) forwards}
         @@keyframes nxspTop{from{opacity:0;transform:translateY(-26px)}to{opacity:1;transform:none}}
         @@keyframes nxspBottom{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
@@ -46,6 +49,7 @@
         @@keyframes nxspFade{to{opacity:.8}}
         @@keyframes nxspPop{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}
         @@media (prefers-reduced-motion:reduce){
+            #nxsp-splash svg{animation-duration:.01s !important}
             #nxsp-splash .nxsp{animation-duration:.01s !important;animation-delay:0s !important}
         }
         /* ===== وضع التضمين (embed): إخفاء زينة البوابة وعرض النموذج فقط داخل مودال ===== */
@@ -89,7 +93,7 @@
                 if (sessionStorage.getItem('nxspShown')) { sp.classList.add('nxsp-skip'); return; }
                 sessionStorage.setItem('nxspShown', '1');
             } catch (e) { }
-            setTimeout(function () { sp.parentNode && sp.parentNode.removeChild(sp); }, 2300);
+            setTimeout(function () { sp.parentNode && sp.parentNode.removeChild(sp); }, 2600);
         })();
     </script>
     <aside class="nxex-shell-sidebar">

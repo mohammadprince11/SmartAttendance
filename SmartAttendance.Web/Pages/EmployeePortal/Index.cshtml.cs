@@ -328,6 +328,32 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             return RedirectToPage(new { tab = "requests" });
         }
 
+        // شرط حازم وجازم: يُمنع منعاً باتّاً تقديم أي طلب يحمل وقتاً إذا كان أحد أيامه
+        // يحمل «بصمة ناقصة» (نسيان بصمة) في سجل الحضور — يجب معالجة البصمة أولاً.
+        if (typeDef is { NeedsTime: true })
+        {
+            var incompleteDay = await HrmsDatabase.ScalarAsync<string>(
+                _dbContext,
+                """
+SELECT TOP 1 CONVERT(varchar(10), WorkDate, 23)
+FROM DayAttendances
+WHERE EmployeeId = @Emp AND Status = N'Incomplete'
+  AND WorkDate BETWEEN @From AND @To
+ORDER BY WorkDate;
+""",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@Emp", employeeId);
+                    HrmsDatabase.AddParameter(command, "@From", from.Value.Date);
+                    HrmsDatabase.AddParameter(command, "@To", to.Value.Date);
+                });
+            if (!string.IsNullOrEmpty(incompleteDay))
+            {
+                StatusMessage = $"تعذّر تقديم الطلب: يوم {incompleteDay} يحمل بصمة ناقصة (نسيان بصمة) في سجل الحضور. يجب معالجة البصمة أولاً قبل تقديم أي طلب بوقت لذلك اليوم.";
+                return RedirectToPage(new { tab = "requests" });
+            }
+        }
+
         // تقاطع منتصف الليل للأنواع الزمنية (أوفرتايم/مغادرة متأخرة): النهاية في اليوم التالي.
         if (typeDef is { NeedsTime: true } &&
             TimeSpan.TryParse(fromTime, out var stTs) && TimeSpan.TryParse(toTime, out var etTs) &&
