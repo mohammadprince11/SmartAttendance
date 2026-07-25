@@ -243,6 +243,22 @@ VALUES (@PollId, @OptionId, @EmployeeId, SYSUTCDATETIME());
             reason = "تم الإرسال من بوابة الموظف";
         }
 
+        // نفس الشرط الحازم على المسار المبسّط: لا يُقدَّم طلب بوقت على يوم ناقص البصمة.
+        var reqTypeDef = (await RequestTypeStore.ListTypesAsync(_dbContext, onlyActive: true))
+            .FirstOrDefault(x => x.Name == type);
+        if (reqTypeDef is { NeedsTime: true })
+        {
+            var incompleteDay = await FindIncompletePunchDayAsync(
+                employeeId,
+                DateOnly.FromDateTime(fromDate.Value.Date),
+                DateOnly.FromDateTime((toDate ?? fromDate).Value.Date));
+            if (!string.IsNullOrEmpty(incompleteDay))
+            {
+                StatusMessage = IncompletePunchMessage(incompleteDay);
+                return RedirectToPage(new { tab = returnTab ?? "requests" });
+            }
+        }
+
         var requestId = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
             """
@@ -329,27 +345,17 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         }
 
         // شرط حازم وجازم: يُمنع منعاً باتّاً تقديم أي طلب يحمل وقتاً إذا كان أحد أيامه
-        // يحمل «بصمة ناقصة» (نسيان بصمة) في سجل الحضور — يجب معالجة البصمة أولاً.
+        // يحمل «بصمة ناقصة» (نسيان بصمة) — يُحسب حياً من البصمات الخام (دخول بلا خروج)
+        // لا من جدول اليوميات المشتق، فيمسك حتى يوم اليوم الجاري الذي لم يُحلَّل بعد.
         if (typeDef is { NeedsTime: true })
         {
-            var incompleteDay = await HrmsDatabase.ScalarAsync<string>(
-                _dbContext,
-                """
-SELECT TOP 1 CONVERT(varchar(10), WorkDate, 23)
-FROM DayAttendances
-WHERE EmployeeId = @Emp AND Status = N'Incomplete'
-  AND WorkDate BETWEEN @From AND @To
-ORDER BY WorkDate;
-""",
-                command =>
-                {
-                    HrmsDatabase.AddParameter(command, "@Emp", employeeId);
-                    HrmsDatabase.AddParameter(command, "@From", from.Value.Date);
-                    HrmsDatabase.AddParameter(command, "@To", to.Value.Date);
-                });
+            var incompleteDay = await FindIncompletePunchDayAsync(
+                employeeId,
+                DateOnly.FromDateTime(from.Value.Date),
+                DateOnly.FromDateTime(to.Value.Date));
             if (!string.IsNullOrEmpty(incompleteDay))
             {
-                StatusMessage = $"تعذّر تقديم الطلب: يوم {incompleteDay} يحمل بصمة ناقصة (نسيان بصمة) في سجل الحضور. يجب معالجة البصمة أولاً قبل تقديم أي طلب بوقت لذلك اليوم.";
+                StatusMessage = IncompletePunchMessage(incompleteDay);
                 return RedirectToPage(new { tab = "requests" });
             }
         }
@@ -511,6 +517,57 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         {
             punches = typed.Select(p => new { at = p.At.ToString("HH:mm"), type = p.Type }).ToArray()
         });
+    }
+
+    /// <summary>نصّ المنع الموحّد ليوم يحمل بصمة ناقصة — يستخدمه الإرسال والبوابة الحيّة معاً.</summary>
+    private static string IncompletePunchMessage(string day) =>
+        $"تعذّر تقديم الطلب: يوم {day} يحمل بصمة ناقصة (نسيان بصمة) في سجل الحضور. يجب معالجة البصمة أولاً قبل تقديم أي طلب بوقت لذلك اليوم.";
+
+    /// <summary>
+    /// يبحث عن أول يوم في المدى يحمل «بصمة ناقصة» (دخول بلا خروج) — محسوباً حياً من
+    /// البصمات الخام AttendanceRecords بنفس دلالة المحرّك (MIN(دخول) موجود وMAX(خروج)
+    /// معدوم)، فلا يعتمد على جدول اليوميات المشتق ويمسك يوم اليوم الجاري قبل تحليله.
+    /// يُرجِع اليوم بصيغة yyyy-MM-dd أو null إن كانت كل الأيام مكتملة البصمة.
+    /// </summary>
+    private async Task<string?> FindIncompletePunchDayAsync(int employeeId, DateOnly from, DateOnly to)
+    {
+        if (to < from) (from, to) = (to, from);
+        return await HrmsDatabase.ScalarAsync<string>(
+            _dbContext,
+            """
+SELECT TOP 1 CONVERT(varchar(10), AttendanceDate, 23)
+FROM AttendanceRecords
+WHERE EmployeeId = @Emp
+  AND AttendanceDate BETWEEN @From AND @To
+  AND ISNULL(IsDeleted, 0) = 0
+GROUP BY AttendanceDate
+HAVING MIN(CheckIn) IS NOT NULL AND MAX(CheckOut) IS NULL
+ORDER BY AttendanceDate;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Emp", employeeId);
+                HrmsDatabase.AddParameter(command, "@From", from);
+                HrmsDatabase.AddParameter(command, "@To", to);
+            });
+    }
+
+    /// <summary>
+    /// بوابة حيّة (AJAX) للطلبات الزمنية: بمجرد اختيار الموظف للتاريخ تُخبر الواجهة إن
+    /// كان أحد أيام المدى يحمل نسيان بصمة، فيُمنع الإرسال ويظهر السبب فوراً قبل ملء
+    /// بقية النموذج (بدل أن يُرفض بعد الإرسال).
+    /// </summary>
+    public async Task<IActionResult> OnGetTimeGateAsync(string? from, string? to)
+    {
+        var employeeId = await ResolveEmployeeIdAsync();
+        if (employeeId <= 0 || !DateOnly.TryParse(from, out var f))
+            return new JsonResult(new { blocked = false });
+        if (!DateOnly.TryParse(to, out var t)) t = f;
+
+        var day = await FindIncompletePunchDayAsync(employeeId, f, t);
+        return string.IsNullOrEmpty(day)
+            ? new JsonResult(new { blocked = false })
+            : new JsonResult(new { blocked = true, day, message = IncompletePunchMessage(day) });
     }
 
     /// <summary>

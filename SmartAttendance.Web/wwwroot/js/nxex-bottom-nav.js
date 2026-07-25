@@ -206,6 +206,42 @@
         hint.textContent = (req && lbl) ? '(' + lbl + ')' : '';
       }
       checkCross(form);
+      checkPunchGate(form);
+    }
+
+    // بوابة نسيان البصمة (حيّة): فور اختيار التاريخ لنوع زمني نسأل الخادم إن كان أحد
+    // أيام المدى يحمل بصمة ناقصة، فنُظهر المنع ونُقفل زر الإرسال قبل ملء بقية النموذج.
+    // نُلغي الطلبات القديمة بعلامة تسلسل لكل نموذج حتى لا يكتب ردّ متأخر فوق حالة أحدث.
+    async function checkPunchGate(form) {
+      if (!form) return;
+      const submit = form.querySelector('.nxex-leave-submit');
+      const block = form.querySelector('[data-punch-block]');
+      const clear = () => {
+        if (block) { block.hidden = true; block.textContent = ''; }
+        if (submit) submit.disabled = false;
+      };
+      const typeSel = form.querySelector('[data-leave-select]');
+      const typeOpt = typeSel && typeSel.querySelector('.nxex-csel-opt[aria-selected="true"]');
+      const needsTime = !!typeOpt && typeOpt.getAttribute('data-needs-time') === 'true';
+      const fromD = form.querySelector('[data-dp-from]');
+      const toD = form.querySelector('[data-dp-to]');
+      const from = fromD && fromD.value;
+      const to = (toD && toD.value) || from;
+      if (!needsTime || !from) { clear(); return; }
+      const seq = (form._punchSeq = (form._punchSeq || 0) + 1);
+      try {
+        const res = await fetch(`${location.pathname}?handler=TimeGate&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { headers: { 'X-Requested-With': 'fetch' } });
+        const data = await res.json();
+        if (seq !== form._punchSeq) return; // تغيّرت الحالة أثناء الجلب — تجاهل الرد القديم
+        if (data && data.blocked) {
+          if (block) { block.textContent = data.message || 'تعذّر تقديم الطلب: يوجد نسيان بصمة في التاريخ المحدَّد.'; block.hidden = false; }
+          if (submit) submit.disabled = true;
+        } else {
+          clear();
+        }
+      } catch (e) {
+        if (seq === form._punchSeq) clear(); // فشل الشبكة لا يجب أن يُقفل الإرسال؛ الخادم يبقى الحارس النهائي
+      }
     }
 
     // تقاطع منتصف الليل: لو وقت النهاية ≤ وقت البداية والنوع زمني ⟹ الحركة عبر يومين
@@ -273,7 +309,7 @@
     leaveModal.addEventListener('change', (e) => {
       if (e.target.matches('[data-tp-input], [data-dp-from], [data-dp-to]')) {
         const form = e.target.closest('.nxex-leave-form');
-        if (form) checkCross(form);
+        if (form) { checkCross(form); checkPunchGate(form); }
       }
     });
     leaveModal.querySelectorAll('.nxex-leave-form').forEach((form) => {
