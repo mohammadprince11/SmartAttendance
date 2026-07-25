@@ -37,12 +37,24 @@
     .ln-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); flex-wrap:wrap; }
     .ln-filter input, .ln-filter select { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; }
     html[data-theme="light"] .ln-filter input, html[data-theme="light"] .ln-filter select { background:#fff; }
+    /* شريط «ترحيل المستحق»: كل العناصر بنفس الارتفاع (42px مطابق للمنتقي المخصّص) */
+    .ln-post { align-items:center; gap:8px; }
+    .ln-post input, .ln-post button { min-height:42px; box-sizing:border-box; }
+    /* منتقي الشهر مبنيّ كـ nexora-select (width:100%!important) — نُقيّده لعرض رقمين */
+    .ln-post .nxcs-select { width:74px !important; min-width:74px !important; max-width:74px !important; flex:0 0 74px !important; }
+    /* الفلاتر متجاورة في سطر واحد */
+    .ln-filters { flex-wrap:nowrap; align-items:center; }
+    .ln-filters input, .ln-filters button { min-height:42px; box-sizing:border-box; white-space:nowrap; }
+    .ln-filters input[name="Search"] { flex:1 1 200px; min-width:140px; }
+    .ln-filters .nxcs-select { width:150px !important; min-width:150px !important; max-width:150px !important; flex:0 0 150px !important; }
     .ln-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
     .ln-table { width:100%; border-collapse:collapse; font-size:13px; min-width:1040px; }
     .ln-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
     html[data-theme="light"] .ln-table th { background:#f2f7fb; }
     .ln-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
     .ln-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
+    /* أرقام LTR لكن محاذاة لنفس حافة العنوان (يمين في RTL) حتى تقع تحت عنوانها */
+    .ln-table td.ln-num { direction:ltr; font-weight:900; text-align:right; }
     .ln-num { direction:ltr; font-weight:900; }
     .ln-pill { font-size:11px; font-weight:900; padding:2px 9px; border-radius:999px; border:1px solid rgba(73,111,151,.3); }
     .ln-pill.Pending { color:#facc15; border-color:rgba(250,204,21,.4); }
@@ -59,6 +71,9 @@
     .ln-field { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
     .ln-field input, .ln-field select, .ln-field textarea { min-height:38px; border-radius:11px; border:1px solid rgba(73,111,151,.28); background:rgba(0,0,0,.18); color:var(--sa-text,#DCEAF4); padding:7px 11px; font-weight:800; font-size:13px; }
     html[data-theme="light"] .ln-field input, html[data-theme="light"] .ln-field select, html[data-theme="light"] .ln-field textarea { background:#fff; }
+    /* منتقي الموظف (نمط كيان) داخل حقل النموذج */
+    .ln-field .empk-code { border-radius:10px 0 0 10px; }
+    .ln-field .empk-name { border-radius:0 10px 10px 0; }
     .ln-preview { grid-column:1/-1; font-size:13px; font-weight:900; color:var(--acc); }
     .ln-modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
     .ln-sched { width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
@@ -72,7 +87,7 @@
             <p>قرض/سُلفة بأقساط شهرية ← اعتماد ← خصم آلي كاقتطاع بالمسير عند الاستحقاق.</p>
         </div>
         <div class="ln-actions">
-            <form method="post" asp-page-handler="PostDue" class="ln-filter" style="gap:6px">
+            <form method="post" asp-page-handler="PostDue" class="ln-filter ln-post">
                 <span>ترحيل أقساط:</span>
                 <select name="PostMonth">
                     @for (var m = 1; m <= 12; m++)
@@ -81,7 +96,7 @@
                     }
                 </select>
                 <input name="PostYear" type="number" value="@Model.PostYear" style="width:88px" />
-                <button type="submit" class="ln-btn warn sm">ترحيل المستحق</button>
+                <button type="submit" class="ln-btn warn">ترحيل المستحق</button>
             </form>
             <button type="button" class="ln-btn" onclick="lnOpen(0)">+ قرض / سُلفة</button>
         </div>
@@ -100,7 +115,7 @@
     </div>
 
     <div class="ln-bar">
-        <form method="get" class="ln-filter">
+        <form method="get" class="ln-filter ln-filters">
             <input name="Search" value="@Model.Search" placeholder="بحث (اسم/رقم/مرجع)" />
             <select name="LoanType" onchange="this.form.submit()">
                 <option value="">كل الأنواع</option>
@@ -184,13 +199,11 @@
             <input type="hidden" name="Id" id="f_Id" value="0" />
             <div class="ln-grid">
                 <label class="ln-field full">الموظف
-                    <select name="EmployeeId" id="f_Emp" required>
-                        <option value="">— اختر الموظف —</option>
-                        @foreach (var e in Model.Employees)
-                        {
-                            <option value="@e.Id">@e.Name (@e.No)</option>
-                        }
-                    </select>
+                    <div class="empk-field">
+                        <input type="text" id="f_EmpName" class="empk-name" placeholder="اسم الموظف — انقر للبحث" readonly />
+                        <input type="text" id="f_EmpCode" class="empk-code" placeholder="رمز" autocomplete="off" />
+                    </div>
+                    <input type="hidden" name="EmployeeId" id="f_Emp" />
                 </label>
                 <label class="ln-field">النوع
                     <select name="LoanType" id="f_Type">
@@ -229,7 +242,7 @@
             </div>
             <div class="ln-modal-actions">
                 <button type="button" class="ln-btn ghost" onclick="lnClose()">إلغاء</button>
-                <button type="submit" class="ln-btn">حفظ</button>
+                <button type="submit" class="ln-btn apply">حفظ</button>
             </div>
         </form>
     </div>
@@ -244,10 +257,19 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/emp-picker.js" asp-append-version="true"></script>
     <script>
         var lnLoans = @Html.Raw(JsonSerializer.Serialize(Model.Loans.Select(l => new {
             l.Id, l.EmployeeId, l.LoanType, l.Amount, l.InstallmentCount, l.StartYear, l.StartMonth, l.Reason, l.Note, l.Status
         })));
+
+        var LN_EMP = @Html.Raw(JsonSerializer.Serialize(Model.Employees));
+        var lnEmpPicker = EmpPicker.init({
+            code: document.getElementById("f_EmpCode"),
+            name: document.getElementById("f_EmpName"),
+            hidden: document.getElementById("f_Emp"),
+            employees: LN_EMP
+        });
 
         function lnCalc() {
             var amt = parseFloat(document.getElementById("f_Amount").value) || 0;
@@ -263,10 +285,11 @@
             document.getElementById("f_Id").value = id || 0;
             document.getElementById("f_Status").value = "Pending";
             document.getElementById("lnTitle").textContent = id ? "تعديل القرض" : "قرض / سُلفة جديدة";
+            lnEmpPicker.set(null);
             if (id) {
                 var l = lnLoans.find(function (x) { return x.Id === id; });
                 if (l) {
-                    document.getElementById("f_Emp").value = l.EmployeeId;
+                    lnEmpPicker.set(LN_EMP.find(function (x) { return x.Id === l.EmployeeId; }) || null);
                     document.getElementById("f_Type").value = l.LoanType;
                     document.getElementById("f_Amount").value = l.Amount;
                     document.getElementById("f_Count").value = l.InstallmentCount;
