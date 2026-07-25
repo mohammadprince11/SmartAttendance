@@ -92,6 +92,20 @@
                                         }
                                     </div>
                                 }
+                                else if (Model.FinancialRequests.TryGetValue(request.Id, out var fin))
+                                {
+                                    <div class="apv-diff">
+                                        <div class="apv-diff-row"><b>النوع:</b> <span class="apv-diff-new">@fin.KindLabelText</span></div>
+                                        <div class="apv-diff-row">
+                                            <b>@(fin.Kind == "Raise" ? "قيمة الزيادة" : "المبلغ"):</b>
+                                            <span class="apv-diff-new">@fin.Amount.ToString("N2")@(fin.Kind == "Raise" && fin.RaiseType == "Percentage" ? " %" : "")</span>
+                                        </div>
+                                        @if (fin.Kind is "Loan" or "Advance")
+                                        {
+                                            <div class="apv-diff-row"><b>الأقساط:</b> <span>@fin.InstallmentCount قسط ابتداءً من @fin.PeriodText</span></div>
+                                        }
+                                    </div>
+                                }
                                 else
                                 {
                                     @(request.FromDate?.ToString("yyyy-MM-dd"))<text> - </text>@(request.ToDate?.ToString("yyyy-MM-dd"))
