@@ -55,6 +55,11 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IThemeContextService, ThemeContextService>();
 
+// إجبار HTTPS مفصول عن «البيئة»: النشر خلف Cloudflare Tunnel (ينهي TLS عند الحافة
+// ويمرّر HTTP محلياً) وعلى LAN يحتاج HTTP لبوت‑ستراب شهادة الـCA. لذا نفصل إنفاذ TLS
+// في راية مستقلة (افتراضها false) فيبقى الإنتاج بمعالج أخطاء آمن بلا كسر التنفيل/الدخول.
+var forceHttps = builder.Configuration.GetValue<bool>("ForceHttps");
+
 // Persist data-protection keys so auth cookies survive app restarts
 // (otherwise every restart regenerates the keys and logs everyone out).
 var dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtection-Keys");
@@ -72,9 +77,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.IsEssential = true;
         options.Cookie.Path = "/";
         options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-            ? CookieSecurePolicy.SameAsRequest
-            : CookieSecurePolicy.Always;
+        // SameAsRequest يسمح بالدخول عبر HTTP (التنفيل/LAN)؛ Always فقط عند إجبار HTTPS.
+        options.Cookie.SecurePolicy = forceHttps
+            ? CookieSecurePolicy.Always
+            : CookieSecurePolicy.SameAsRequest;
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
     })
@@ -140,16 +146,18 @@ var app = builder.Build();
 await DefaultShiftSeeder.SeedAsync(app.Services);
 await PeoplePermissionSeeder.SeedAsync(app.Services);
 
+// معالج الأخطاء يعمل في الإنتاج بصرف النظر عن TLS: يمنع تسريب صفحة الاستثناء
+// المطوِّرة (stack trace) للمستخدم النهائي.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    app.UseHsts();
 }
 
-// في التطوير نُبقي HTTP وHTTPS جنباً إلى جنب بلا إجبار تحويل: التلفون يحتاج
-// HTTP لتنزيل شهادة الـCA قبل أن يثق بالـHTTPS (بوت‑ستراب). الإنتاج يفرض HTTPS.
-if (!app.Environment.IsDevelopment())
+// إنفاذ TLS (HSTS + تحويل HTTPS) مفصول عن البيئة: يبقى مطفأً خلف Cloudflare Tunnel
+// وعلى LAN (بوت‑ستراب شهادة الـCA يحتاج HTTP). يُفعَّل فقط عند ForceHttps=true.
+if (forceHttps)
 {
+    app.UseHsts();
     app.UseHttpsRedirection();
 }
 
@@ -160,8 +168,9 @@ app.Use(async (context, next) =>
     // مع منع أي موقع خارجي من تأطيرنا (حماية من clickjacking).
     context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
     context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    // geolocation=(self): يسمح لبصمة الموقع (geofence) من نطاقنا فقط، ويمنع الكاميرا/المايك.
     context.Response.Headers["Permissions-Policy"] =
-        "camera=(), microphone=(), geolocation=()";
+        "camera=(), microphone=(), geolocation=(self)";
 
     await next();
 });
