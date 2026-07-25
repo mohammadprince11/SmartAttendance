@@ -2575,8 +2575,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Program.cs": {
-    "mtime": 1784999185.9415867,
-    "ast_hash": "2c916dc9ec45b8fc44e8d51999532ae9",
+    "mtime": 1785008426.9348211,
+    "ast_hash": "3c89757f9fe1431062fd45c8fae7b64b",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Properties/launchSettings.json": {
@@ -4397,6 +4397,11 @@
   "SmartAttendance.Web/Pages/EmployeePortal/FinancialRequest.cshtml.cs": {
     "mtime": 1784970834.9850917,
     "ast_hash": "500b166a373cbbe77b16d6bc10ee6075",
+    "semantic_hash": ""
+  },
+  "docs/system-readiness-study-2026-07-25.md": {
+    "mtime": 1785007751.3879826,
+    "ast_hash": "ae39f8bbb71a32880ac8f1a15fb78b1b",
     "semantic_hash": ""
   }
 }

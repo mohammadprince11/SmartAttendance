@@ -203,6 +203,13 @@ END;
         await MonthAttendanceStore.EnsureAsync(dbContext);
         await ViolationCaseSchema.EnsureAsync(dbContext);
 
+        // ترحيل أقساط القروض المستحقة لهذه الفترة تلقائياً كحركات اقتطاع قبل الاحتساب —
+        // كانت خطوة يدوية منفصلة بصفحة القروض تُنسى فتضيع خصومات القروض بصمت. النداء
+        // idempotent: يرحّل الأقساط غير المرحّلة فقط ولقروض معتمدة فقط، فإعادة الاحتساب
+        // لا تُكرّر الخصم، وتُلتقط الحركة الناتجة ضمن حركات الاقتطاع أدناه.
+        await LoanStore.EnsureAsync(dbContext);
+        await LoanStore.PostDueInstallmentsAsync(dbContext, run.Year, run.Month, userName);
+
         var taxProfile = await PayrollConfigStore.ActiveTaxProfileAsync(dbContext);
         var gosiProfile = await PayrollConfigStore.ActiveGosiProfileAsync(dbContext);
 
