@@ -36,6 +36,60 @@
     });
   }
 
+  // 1ب) اشتراك Web-Push: بعد جاهزية الـSW، إن كانت القناة مفعّلة والإذن ممنوح
+  // (أو يُطلب عند نقر زر التفعيل) نشترك ونرسل الاشتراك للخادم. آمن حين معطّلة.
+  function urlBase64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    var raw = window.atob(base64);
+    var out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+
+  async function subscribePush(reg) {
+    try {
+      if (!('PushManager' in window)) return;
+      var res = await fetch('/push/vapid-key', { credentials: 'same-origin' });
+      if (!res.ok) return;
+      var cfg = await res.json();
+      if (!cfg.enabled || !cfg.publicKey) return; // القناة معطّلة
+
+      if (Notification.permission === 'denied') return;
+      if (Notification.permission !== 'granted') {
+        var perm = await Notification.requestPermission();
+        if (perm !== 'granted') return;
+      }
+
+      var sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(cfg.publicKey)
+        });
+      }
+      var raw = sub.toJSON();
+      await fetch('/push/subscribe', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endpoint: sub.endpoint,
+          p256dh: raw.keys && raw.keys.p256dh,
+          auth: raw.keys && raw.keys.auth
+        })
+      });
+    } catch (err) {
+      console.warn('[Push] تعذّر الاشتراك:', err);
+    }
+  }
+  window.__saSubscribePush = function () {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.ready.then(subscribePush);
+  };
+  if ('serviceWorker' in navigator && Notification && Notification.permission === 'granted') {
+    navigator.serviceWorker.ready.then(subscribePush);
+  }
+
   // 2) زر تثبيت مخصّص (أندرويد/كروم/إيدج يدعمون beforeinstallprompt).
   var deferredPrompt = null;
   var installBtn = document.getElementById('pwa-install-btn');

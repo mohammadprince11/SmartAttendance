@@ -160,6 +160,20 @@ else
         SmartAttendance.Web.Infrastructure.Notifications.NoOpEmailSender>();
 }
 
+// قناة Web-Push (VAPID): تُفعَّل عمداً عبر قسم "WebPush" (المفاتيح موجودة). معطّلة ⟹
+// مرسِل No-Op فلا دفع، ونقطة vapid-key تعيد enabled=false فيتوقف العميل عن الاشتراك.
+builder.Services.Configure<SmartAttendance.Web.Infrastructure.Notifications.VapidOptions>(
+    builder.Configuration.GetSection(SmartAttendance.Web.Infrastructure.Notifications.VapidOptions.SectionName));
+var pushEnabled = builder.Configuration
+    .GetSection(SmartAttendance.Web.Infrastructure.Notifications.VapidOptions.SectionName)
+    .Get<SmartAttendance.Web.Infrastructure.Notifications.VapidOptions>()?.IsUsable ?? false;
+if (pushEnabled)
+    builder.Services.AddSingleton<SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender,
+        SmartAttendance.Web.Infrastructure.Notifications.WebPushSender>();
+else
+    builder.Services.AddSingleton<SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender,
+        SmartAttendance.Web.Infrastructure.Notifications.NoOpWebPushSender>();
+
 var app = builder.Build();
 
 await DefaultShiftSeeder.SeedAsync(app.Services);

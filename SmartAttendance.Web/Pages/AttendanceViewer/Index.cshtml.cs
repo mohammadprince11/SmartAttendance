@@ -15,10 +15,13 @@ namespace SmartAttendance.Web.Pages.AttendanceViewer;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender _push;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(ApplicationDbContext dbContext,
+        SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender push)
     {
         _dbContext = dbContext;
+        _push = push;
     }
 
     [Microsoft.AspNetCore.Mvc.BindProperty(SupportsGet = true)]
@@ -257,6 +260,17 @@ public class IndexModel : PageModel
 
         var (_, recipients, ccCount) = await AttendanceNotificationStore.SendAsync(
             _dbContext, type, from, to, week, channel, template, employeeIds, ccMode, ccIds);
+
+        // دفع فوري (Web-Push) لكل موظف مستهدف — best-effort موازٍ للصادر: التطبيق
+        // المثبَّت يومض إشعاراً حالاً بلا انتظار البريد. آمن حين القناة معطّلة (No-Op).
+        if (_push.IsEnabled)
+        {
+            var title = AttendanceNotificationStore.LabelOf(type);
+            var body = $"لديك إشعار حضور جديد ({from:MM-dd} → {to:MM-dd}). افتح البوابة للتفاصيل.";
+            foreach (var empId in employeeIds)
+                await _push.SendToEmployeeAsync(_dbContext, empId,
+                    new SmartAttendance.Web.Infrastructure.Notifications.PushPayload(title, body, "/EmployeePortal"));
+        }
 
         var channelLabel = AttendanceNotificationStore.Channels.FirstOrDefault(c => c.Key == channel).Label ?? channel;
         TempData["SuccessMessage"] =

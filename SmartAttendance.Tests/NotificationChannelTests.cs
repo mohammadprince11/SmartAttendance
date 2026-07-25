@@ -104,4 +104,36 @@ public class NotificationChannelTests
         Assert.False(fail.Sent);
         Assert.Equal("boom", fail.Error);
     }
+
+    // --- قناة Web-Push (VAPID) ---
+
+    [Fact]
+    public void Vapid_NotUsable_WhenAnyKeyMissing()
+    {
+        Assert.False(new VapidOptions { Subject = "mailto:hr@x.com", PublicKey = "pub", PrivateKey = "" }.IsUsable);
+        Assert.False(new VapidOptions { Subject = "", PublicKey = "pub", PrivateKey = "priv" }.IsUsable);
+        Assert.False(new VapidOptions { Subject = "mailto:hr@x.com", PublicKey = "", PrivateKey = "priv" }.IsUsable);
+    }
+
+    [Fact]
+    public void Vapid_Usable_WhenAllPresent()
+    {
+        Assert.True(new VapidOptions { Subject = "mailto:hr@x.com", PublicKey = "pub", PrivateKey = "priv" }.IsUsable);
+    }
+
+    [Fact]
+    public async Task NoOpWebPush_IsDisabled_AndDeliversNothing()
+    {
+        var sender = new NoOpWebPushSender();
+        Assert.False(sender.IsEnabled);
+        Assert.Equal(0, await sender.SendToEmployeeAsync(null!, 5, new PushPayload("t", "b")));
+    }
+
+    [Fact]
+    public void PushPayload_Defaults_UrlToNull()
+    {
+        var p = new PushPayload("عنوان", "نص");
+        Assert.Null(p.Url);
+        Assert.Equal("عنوان", p.Title);
+    }
 }

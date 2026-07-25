@@ -2575,8 +2575,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Program.cs": {
-    "mtime": 1785008426.9348211,
-    "ast_hash": "3c89757f9fe1431062fd45c8fae7b64b",
+    "mtime": 1785010758.0606859,
+    "ast_hash": "1b833b351da4f052abef8224e0db7161",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Properties/launchSettings.json": {
@@ -3975,8 +3975,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Hrms/AttendanceNotificationStore.cs": {
-    "mtime": 1784847260.0625498,
-    "ast_hash": "cc3a2ad055d0749cea667025c74acbbb",
+    "mtime": 1785010683.567596,
+    "ast_hash": "18a421c9b08646329e21b98e30b0de98",
     "semantic_hash": ""
   },
   "SmartAttendance.Tests/DayAttendanceDeriveTests.cs": {
@@ -4402,6 +4402,36 @@
   "docs/system-readiness-study-2026-07-25.md": {
     "mtime": 1785007751.3879826,
     "ast_hash": "ae39f8bbb71a32880ac8f1a15fb78b1b",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Tests/NotificationChannelTests.cs": {
+    "mtime": 1785010840.9994009,
+    "ast_hash": "6ba663083077cfff5fd5de696279c6c3",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Notifications/IEmailSender.cs": {
+    "mtime": 1785010613.8894217,
+    "ast_hash": "c8ad2288575f779c6cb7e3a9bc12393f",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Notifications/NotificationDispatcher.cs": {
+    "mtime": 1785010715.20443,
+    "ast_hash": "4986b41e348b60171534739e89e3635e",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Notifications/NotificationDispatcherService.cs": {
+    "mtime": 1785010737.9095678,
+    "ast_hash": "831c2e6af96282fd8576e63de8c0bfba",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Notifications/SmtpEmailSender.cs": {
+    "mtime": 1785010632.2101395,
+    "ast_hash": "60bbb2578bb66a550244d161e832bc52",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Notifications/SmtpOptions.cs": {
+    "mtime": 1785010599.580943,
+    "ast_hash": "05f5629e321639212d52f817fdab1720",
     "semantic_hash": ""
   }
 }

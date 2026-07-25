@@ -2575,8 +2575,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Program.cs": {
-    "mtime": 1785010758.0606859,
-    "ast_hash": "1b833b351da4f052abef8224e0db7161",
+    "mtime": 1785011445.921188,
+    "ast_hash": "379084c762c3200285a109a0510b7e1e",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Properties/launchSettings.json": {
@@ -2585,8 +2585,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/SmartAttendance.Web.csproj": {
-    "mtime": 1783495652.6926768,
-    "ast_hash": "656a86c51b869bfad1a90d857434f99b",
+    "mtime": 1785011309.518294,
+    "ast_hash": "70fb54bce9ad9c168fdd6134cba04ac1",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/attendance-operations-final.js": {
@@ -3600,8 +3600,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/AttendanceViewer/Index.cshtml.cs": {
-    "mtime": 1784847260.094275,
-    "ast_hash": "8765a4101b00d1a4882a77916552d306",
+    "mtime": 1785011665.7572587,
+    "ast_hash": "13327ae3dd1ba2ae307022e3891c3b07",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Pages/ShiftAssignments/Index.cshtml": {
@@ -4320,13 +4320,13 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/js/pwa.js": {
-    "mtime": 1784925026.9296987,
-    "ast_hash": "210409aae27e887baa437aa4cd52af05",
+    "mtime": 1785011502.1331153,
+    "ast_hash": "527492f7b83e7f37584f679dd3baa15f",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/wwwroot/sw.js": {
-    "mtime": 1785000933.001804,
-    "ast_hash": "1134637cd9a5fd9c9160780f9a9ef770",
+    "mtime": 1785011478.2037718,
+    "ast_hash": "4ae55c6c6cba64d5418734d447e7da56",
     "semantic_hash": ""
   },
   "SmartAttendance.MobileApp/README.md": {
@@ -4405,8 +4405,8 @@
     "semantic_hash": ""
   },
   "SmartAttendance.Tests/NotificationChannelTests.cs": {
-    "mtime": 1785010840.9994009,
-    "ast_hash": "6ba663083077cfff5fd5de696279c6c3",
+    "mtime": 1785011682.4044578,
+    "ast_hash": "ee817361524a62e35aae72b47ea9c484",
     "semantic_hash": ""
   },
   "SmartAttendance.Web/Infrastructure/Notifications/IEmailSender.cs": {
@@ -4432,6 +4432,31 @@
   "SmartAttendance.Web/Infrastructure/Notifications/SmtpOptions.cs": {
     "mtime": 1785010599.580943,
     "ast_hash": "05f5629e321639212d52f817fdab1720",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Controllers/PushController.cs": {
+    "mtime": 1785011424.5441778,
+    "ast_hash": "d68e61bd0dc1351b0bc5c9f28ac6e7d1",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Notifications/IWebPushSender.cs": {
+    "mtime": 1785011371.4976816,
+    "ast_hash": "fc5b2c1d1f8ddce7b6ce2c055bfbf46e",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Notifications/PushSubscriptionStore.cs": {
+    "mtime": 1785011354.065842,
+    "ast_hash": "4bb17178e4356782193a1e4f8cb00ccc",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Notifications/VapidOptions.cs": {
+    "mtime": 1785011331.2755334,
+    "ast_hash": "151388b103589a40466c4ddfd2af829e",
+    "semantic_hash": ""
+  },
+  "SmartAttendance.Web/Infrastructure/Notifications/WebPushSender.cs": {
+    "mtime": 1785011389.7078469,
+    "ast_hash": "0a8f6a4a8fa3547d10f7cd7804a9d7ba",
     "semantic_hash": ""
   }
 }
