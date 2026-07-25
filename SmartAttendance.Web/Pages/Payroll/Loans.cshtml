@@ -1,0 +1,309 @@
+@page "/Payroll/Loans"
+@model SmartAttendance.Web.Pages.Payroll.LoansModel
+@using System.Text.Json
+@using SmartAttendance.Web.Infrastructure.Hrms
+@{
+    ViewData["Title"] = "القروض والسُّلف";
+    var acc = "#f59e0b";
+    var total = Model.Loans.Sum(l => l.Amount);
+    var remaining = Model.Loans.Where(l => l.Status != LoanStore.Rejected).Sum(l => l.Remaining);
+    var active = Model.Loans.Count(l => l.Status == LoanStore.Approved);
+}
+@Html.AntiForgeryToken()
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .ln-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
+    .ln-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .ln-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .ln-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .ln-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .ln-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .ln-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
+    .ln-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .ln-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+    .ln-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
+    .ln-btn.apply { background:rgba(52,211,153,.16); border:1px solid rgba(52,211,153,.5); color:#34d399; }
+    .ln-btn.warn { background:rgba(250,204,21,.14); border:1px solid rgba(250,204,21,.45); color:#facc15; }
+    .ln-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+    .ln-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
+    .ln-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
+    .ln-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .ln-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .ln-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    .ln-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); flex-wrap:wrap; }
+    .ln-filter input, .ln-filter select { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; }
+    html[data-theme="light"] .ln-filter input, html[data-theme="light"] .ln-filter select { background:#fff; }
+    .ln-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .ln-table { width:100%; border-collapse:collapse; font-size:13px; min-width:1040px; }
+    .ln-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .ln-table th { background:#f2f7fb; }
+    .ln-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
+    .ln-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
+    .ln-num { direction:ltr; font-weight:900; }
+    .ln-pill { font-size:11px; font-weight:900; padding:2px 9px; border-radius:999px; border:1px solid rgba(73,111,151,.3); }
+    .ln-pill.Pending { color:#facc15; border-color:rgba(250,204,21,.4); }
+    .ln-pill.Approved { color:#34d399; border-color:rgba(52,211,153,.4); }
+    .ln-pill.Closed { color:#8FA8BC; }
+    .ln-pill.Rejected { color:#f87171; border-color:rgba(248,113,113,.4); }
+    .ln-modal-bg { position:fixed; inset:0; background:rgba(2,8,16,.7); z-index:120; display:none; align-items:flex-start; justify-content:center; overflow:auto; padding:40px 16px; }
+    .ln-modal-bg.open { display:flex; }
+    .ln-modal { width:min(640px,100%); border:1px solid rgba(73,111,151,.3); border-radius:18px; background:var(--sa-surface,#0a1c30); padding:20px; }
+    html[data-theme="light"] .ln-modal { background:#fff; }
+    .ln-modal h2 { margin:0 0 14px; font-size:17px; }
+    .ln-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .ln-grid .full { grid-column:1/-1; }
+    .ln-field { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .ln-field input, .ln-field select, .ln-field textarea { min-height:38px; border-radius:11px; border:1px solid rgba(73,111,151,.28); background:rgba(0,0,0,.18); color:var(--sa-text,#DCEAF4); padding:7px 11px; font-weight:800; font-size:13px; }
+    html[data-theme="light"] .ln-field input, html[data-theme="light"] .ln-field select, html[data-theme="light"] .ln-field textarea { background:#fff; }
+    .ln-preview { grid-column:1/-1; font-size:13px; font-weight:900; color:var(--acc); }
+    .ln-modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
+    .ln-sched { width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
+    .ln-sched th, .ln-sched td { padding:6px 10px; border-bottom:1px solid rgba(143,168,188,.12); text-align:start; }
+</style>
+
+<section class="ln-page" dir="rtl">
+    <header class="ln-head">
+        <div>
+            <h1>القروض والسُّلف</h1>
+            <p>قرض/سُلفة بأقساط شهرية ← اعتماد ← خصم آلي كاقتطاع بالمسير عند الاستحقاق.</p>
+        </div>
+        <div class="ln-actions">
+            <form method="post" asp-page-handler="PostDue" class="ln-filter" style="gap:6px">
+                <span>ترحيل أقساط:</span>
+                <select name="PostMonth">
+                    @for (var m = 1; m <= 12; m++)
+                    {
+                        <option value="@m" selected="@(m == Model.PostMonth)">@m.ToString("00")</option>
+                    }
+                </select>
+                <input name="PostYear" type="number" value="@Model.PostYear" style="width:88px" />
+                <button type="submit" class="ln-btn warn sm">ترحيل المستحق</button>
+            </form>
+            <button type="button" class="ln-btn" onclick="lnOpen(0)">+ قرض / سُلفة</button>
+        </div>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="hrms-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <div class="ln-kpis">
+        <div class="ln-kpi"><b>@Model.Loans.Count</b><span>إجمالي السجلات</span></div>
+        <div class="ln-kpi"><b>@total.ToString("N0")</b><span>إجمالي مبالغ القروض</span></div>
+        <div class="ln-kpi"><b>@remaining.ToString("N0")</b><span>الرصيد المتبقّي</span></div>
+        <div class="ln-kpi"><b>@active</b><span>معتمدة نشطة (تُخصم)</span></div>
+    </div>
+
+    <div class="ln-bar">
+        <form method="get" class="ln-filter">
+            <input name="Search" value="@Model.Search" placeholder="بحث (اسم/رقم/مرجع)" />
+            <select name="LoanType" onchange="this.form.submit()">
+                <option value="">كل الأنواع</option>
+                <option value="Loan" selected="@(Model.LoanType == "Loan")">قرض</option>
+                <option value="Advance" selected="@(Model.LoanType == "Advance")">سُلفة</option>
+            </select>
+            <select name="Status" onchange="this.form.submit()">
+                <option value="">كل الحالات</option>
+                <option value="Pending" selected="@(Model.Status == "Pending")">قيد الموافقة</option>
+                <option value="Approved" selected="@(Model.Status == "Approved")">معتمد</option>
+                <option value="Closed" selected="@(Model.Status == "Closed")">مُغلق</option>
+                <option value="Rejected" selected="@(Model.Status == "Rejected")">مرفوض</option>
+            </select>
+            <button type="submit" class="ln-btn ghost sm">تطبيق</button>
+        </form>
+    </div>
+
+    <div class="ln-card">
+        <table class="ln-table">
+            <thead>
+                <tr>
+                    <th>المرجع</th><th>الموظف</th><th>النوع</th><th>المبلغ</th><th>الأقساط</th>
+                    <th>القسط الشهري</th><th>المدفوع</th><th>المتبقّي</th><th>يبدأ</th><th>الحالة</th><th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var l in Model.Loans)
+                {
+                    <tr>
+                        <td class="ln-num">@l.ReferenceNo</td>
+                        <td><b>@l.EmployeeName</b><br /><span style="opacity:.6;font-size:11px">@l.EmployeeNo · @l.Department</span></td>
+                        <td>@l.TypeText</td>
+                        <td class="ln-num">@l.Amount.ToString("N0")</td>
+                        <td class="ln-num">@l.PaidCount / @l.InstallmentCount</td>
+                        <td class="ln-num">@l.MonthlyAmount.ToString("N0")</td>
+                        <td class="ln-num" style="color:#34d399">@l.PaidAmount.ToString("N0")</td>
+                        <td class="ln-num" style="color:@acc">@l.Remaining.ToString("N0")</td>
+                        <td class="ln-num">@l.StartPeriodText</td>
+                        <td><span class="ln-pill @l.Status">@l.StatusText</span></td>
+                        <td style="white-space:nowrap">
+                            <button type="button" class="ln-btn ghost sm" onclick="lnSchedule(@l.Id)">جدول</button>
+                            @if (l.Status == LoanStore.Pending)
+                            {
+                                <button type="button" class="ln-btn ghost sm" onclick="lnOpen(@l.Id)">تعديل</button>
+                                <form method="post" asp-page-handler="SetStatus" style="display:inline">
+                                    <input type="hidden" name="id" value="@l.Id" /><input type="hidden" name="status" value="Approved" />
+                                    <button type="submit" class="ln-btn apply sm">اعتماد</button>
+                                </form>
+                                <form method="post" asp-page-handler="SetStatus" style="display:inline">
+                                    <input type="hidden" name="id" value="@l.Id" /><input type="hidden" name="status" value="Rejected" />
+                                    <button type="submit" class="ln-btn danger sm">رفض</button>
+                                </form>
+                                <form method="post" asp-page-handler="Delete" style="display:inline" data-zyconfirm="حذف القرض @l.ReferenceNo؟">
+                                    <input type="hidden" name="id" value="@l.Id" />
+                                    <button type="submit" class="ln-btn danger sm">حذف</button>
+                                </form>
+                            }
+                            else if (l.Status == LoanStore.Approved)
+                            {
+                                <form method="post" asp-page-handler="SetStatus" style="display:inline" data-zyconfirm="إغلاق القرض يدوياً؟ لن تُخصم أقساطه القادمة.">
+                                    <input type="hidden" name="id" value="@l.Id" /><input type="hidden" name="status" value="Closed" />
+                                    <button type="submit" class="ln-btn warn sm">إغلاق</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Loans.Any())
+                {
+                    <tr><td colspan="11" style="text-align:center;opacity:.6;padding:26px">لا قروض — أنشئ قرضاً أو سُلفة من الزر أعلاه.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="ln-modal-bg" id="lnModalBg">
+    <div class="ln-modal">
+        <h2 id="lnTitle">قرض / سُلفة جديدة</h2>
+        <form method="post" asp-page-handler="Save" enctype="multipart/form-data" id="lnForm">
+            <input type="hidden" name="Id" id="f_Id" value="0" />
+            <div class="ln-grid">
+                <label class="ln-field full">الموظف
+                    <select name="EmployeeId" id="f_Emp" required>
+                        <option value="">— اختر الموظف —</option>
+                        @foreach (var e in Model.Employees)
+                        {
+                            <option value="@e.Id">@e.Name (@e.No)</option>
+                        }
+                    </select>
+                </label>
+                <label class="ln-field">النوع
+                    <select name="LoanType" id="f_Type">
+                        <option value="Loan">قرض</option>
+                        <option value="Advance">سُلفة</option>
+                    </select>
+                </label>
+                <label class="ln-field">المبلغ الإجمالي
+                    <input name="Amount" id="f_Amount" type="number" step="0.01" min="1" required oninput="lnCalc()" />
+                </label>
+                <label class="ln-field">عدد الأقساط الشهرية
+                    <input name="InstallmentCount" id="f_Count" type="number" min="1" value="1" oninput="lnCalc()" />
+                </label>
+                <label class="ln-field">يبدأ الخصم — الشهر
+                    <select name="StartMonth" id="f_SMonth">
+                        @for (var m = 1; m <= 12; m++)
+                        {
+                            <option value="@m" selected="@(m == DateTime.Today.Month)">@m.ToString("00")</option>
+                        }
+                    </select>
+                </label>
+                <label class="ln-field">السنة
+                    <input name="StartYear" id="f_SYear" type="number" value="@DateTime.Today.Year" />
+                </label>
+                <div class="ln-preview" id="f_Preview">القسط الشهري: —</div>
+                <label class="ln-field full">السبب
+                    <input name="Reason" id="f_Reason" maxlength="200" />
+                </label>
+                <label class="ln-field full">ملاحظة
+                    <textarea name="Note" id="f_Note" rows="2" maxlength="500"></textarea>
+                </label>
+                <label class="ln-field full">مرفق (اختياري)
+                    <input name="attachment" type="file" accept="image/*,application/pdf" />
+                </label>
+                <input type="hidden" name="Status" id="f_Status" value="Pending" />
+            </div>
+            <div class="ln-modal-actions">
+                <button type="button" class="ln-btn ghost" onclick="lnClose()">إلغاء</button>
+                <button type="submit" class="ln-btn">حفظ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="ln-modal-bg" id="lnSchedBg">
+    <div class="ln-modal" style="width:min(460px,100%)">
+        <h2>جدول الأقساط</h2>
+        <div id="lnSchedBody" style="font-size:13px">جارٍ التحميل…</div>
+        <div class="ln-modal-actions"><button type="button" class="ln-btn ghost" onclick="document.getElementById('lnSchedBg').classList.remove('open')">إغلاق</button></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var lnLoans = @Html.Raw(JsonSerializer.Serialize(Model.Loans.Select(l => new {
+            l.Id, l.EmployeeId, l.LoanType, l.Amount, l.InstallmentCount, l.StartYear, l.StartMonth, l.Reason, l.Note, l.Status
+        })));
+
+        function lnCalc() {
+            var amt = parseFloat(document.getElementById("f_Amount").value) || 0;
+            var cnt = parseInt(document.getElementById("f_Count").value) || 1;
+            if (cnt < 1) cnt = 1;
+            var monthly = Math.round((amt / cnt) * 100) / 100;
+            document.getElementById("f_Preview").textContent = "القسط الشهري: " + monthly.toLocaleString() + " × " + cnt + " قسط";
+        }
+
+        function lnOpen(id) {
+            var f = document.getElementById("lnForm");
+            f.reset();
+            document.getElementById("f_Id").value = id || 0;
+            document.getElementById("f_Status").value = "Pending";
+            document.getElementById("lnTitle").textContent = id ? "تعديل القرض" : "قرض / سُلفة جديدة";
+            if (id) {
+                var l = lnLoans.find(function (x) { return x.Id === id; });
+                if (l) {
+                    document.getElementById("f_Emp").value = l.EmployeeId;
+                    document.getElementById("f_Type").value = l.LoanType;
+                    document.getElementById("f_Amount").value = l.Amount;
+                    document.getElementById("f_Count").value = l.InstallmentCount;
+                    document.getElementById("f_SMonth").value = l.StartMonth;
+                    document.getElementById("f_SYear").value = l.StartYear;
+                    document.getElementById("f_Reason").value = l.Reason || "";
+                    document.getElementById("f_Note").value = l.Note || "";
+                    document.getElementById("f_Status").value = l.Status;
+                }
+            }
+            lnCalc();
+            document.getElementById("lnModalBg").classList.add("open");
+        }
+        function lnClose() { document.getElementById("lnModalBg").classList.remove("open"); }
+
+        function lnSchedule(id) {
+            var bg = document.getElementById("lnSchedBg");
+            var body = document.getElementById("lnSchedBody");
+            body.textContent = "جارٍ التحميل…";
+            bg.classList.add("open");
+            fetch("?handler=Schedule&id=" + id, { credentials: "same-origin" })
+                .then(function (r) { return r.json(); })
+                .then(function (rows) {
+                    if (!rows.length) { body.textContent = "لا أقساط."; return; }
+                    var html = '<table class="ln-sched"><thead><tr><th>#</th><th>الاستحقاق</th><th>المبلغ</th><th>الحالة</th></tr></thead><tbody>';
+                    rows.forEach(function (r) {
+                        html += "<tr><td>" + r.seqNo + "</td><td>" + r.dueText + "</td><td class='ln-num'>" +
+                            (r.amount).toLocaleString() + "</td><td>" +
+                            (r.isPosted ? "<span style='color:#34d399'>مُخصَم</span>" : "<span style='color:#facc15'>مستحق</span>") + "</td></tr>";
+                    });
+                    body.innerHTML = html + "</tbody></table>";
+                })
+                .catch(function () { body.textContent = "تعذّر التحميل."; });
+        }
+
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") { lnClose(); document.getElementById("lnSchedBg").classList.remove("open"); }
+        });
+    </script>
+}
