@@ -224,15 +224,25 @@ public class LoginModel : PageModel
 
         DeleteLegacyIdentityCookies();
 
+        var isEmployee = user.Role.Equals(
+            "Employee",
+            StringComparison.OrdinalIgnoreCase);
+
+        // نحترم ReturnUrl فقط إن كان محلياً ومناسباً للدور: الموظف قد يصل صفحةَ
+        // الدخول عبر إعادة توجيه من "/" (لوحة الأدمن) فيُخزَّن كـ ReturnUrl —
+        // لو أطعناه أعمى لهبط الموظف على لوحة الأدمن أول دخول. لذا نقصر
+        // ReturnUrl للموظف على مسارات بوابته، وإلا نوجّهه لبوابته الافتراضية.
         if (!string.IsNullOrWhiteSpace(ReturnUrl) &&
-            Url.IsLocalUrl(ReturnUrl))
+            Url.IsLocalUrl(ReturnUrl) &&
+            (!isEmployee ||
+             ReturnUrl.StartsWith(
+                 "/EmployeePortal",
+                 StringComparison.OrdinalIgnoreCase)))
         {
             return LocalRedirect(ReturnUrl);
         }
 
-        if (user.Role.Equals(
-                "Employee",
-                StringComparison.OrdinalIgnoreCase))
+        if (isEmployee)
         {
             return RedirectToPage("/EmployeePortal/Index");
         }
