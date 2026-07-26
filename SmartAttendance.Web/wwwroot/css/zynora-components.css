@@ -101,118 +101,101 @@ html[dir="ltr"] .zy-scope select,
     opacity: .85;
 }
 
-/* ===== 3. الأزرار: توحيد الشكل (أبعاد/حواف/تركيز) عبر كل البادئات ===== */
-/* نجمّع كل بادئات الأزرار المتفرّقة على مواصفة شكل واحدة. */
-.zy-scope .zy-btn,
-.zy-scope .nxr-btn,
-.zy-scope .nxp-btn,
-.zy-scope .esl-btn,
-.zy-scope .rehire-btn,
-.zy-scope .endservice-btn,
-.zy-scope [class*="lifecycle-btn"],
-.zy-scope [class*="hrms-btn"],
-.zy-scope [class*="zhr-btn"],
-.zy-scope [class*="my-btn"],
-.zy-scope [class*="orgchart-btn"],
-.zy-scope [class*="brand-btn"],
-.zy-scope [class*="bp-btn"],
-.zy-scope [class*="ar-btn"],
-.zy-scope [class*="access-btn"] {
+/* ===== 3. الأزرار: توحيد شامل لكل العائلات (شكل/طباعة/تفاعل) ===== */
+/* baseline: أي صنف يحوي "-btn" أو "-button" + nxos__button — عدا الـpills.
+   يوحّد الطباعة/الحواف/المحاذاة/التفاعل لكل الأزرار بلا فرض حجم (فتبقى المضغوطة). */
+.zy-scope [class*="-btn"]:not([class*="pill"]),
+.zy-scope [class*="-button"]:not([class*="pill"]),
+.zy-scope .nxos__button {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 8px;
-    min-height: 40px !important;
-    padding: 0 18px;
-    border-radius: var(--zy-radius-md) !important;
+    box-sizing: border-box;
     font-family: var(--zy-font-ar) !important;
-    font-size: 14px !important;
     font-weight: 700 !important;
-    line-height: 1;
+    line-height: 1.1;
+    text-align: center;
     cursor: pointer;
-    border: 1px solid transparent;
+    border-radius: var(--zy-radius-md) !important;
     transition: transform var(--zy-duration-fast) var(--zy-ease),
                 box-shadow var(--zy-duration-fast) var(--zy-ease),
                 filter var(--zy-duration-fast) var(--zy-ease);
 }
-.zy-scope .zy-btn:hover,
-.zy-scope .nxr-btn:hover,
-.zy-scope .nxp-btn:hover,
-.zy-scope [class*="hrms-btn"]:hover,
-.zy-scope [class*="brand-btn"]:hover,
-.zy-scope [class*="access-btn"]:hover {
+/* الحجم القياسي 40px — أزرار الإجراءات فقط (نستثني المضغوطة: أيقونة/mini/ترقيم/link/switch) */
+.zy-scope [class*="-btn"]:not([class*="pill"]):not([class*="icon"]):not([class*="mini"]):not([class*="pager"]):not([class*="pagination"]):not([class*="link"]):not([class*="switch"]),
+.zy-scope [class*="-button"]:not([class*="pill"]):not([class*="icon"]):not([class*="switch"]):not([class*="pagination"]),
+.zy-scope .nxos__button {
+    min-height: 40px !important;
+    padding: 0 18px;
+    font-size: 14px !important;
+}
+/* hover/active/focus موحّد لكل الأزرار */
+.zy-scope [class*="-btn"]:not([class*="pill"]):hover:not(:disabled),
+.zy-scope [class*="-button"]:not([class*="pill"]):hover:not(:disabled),
+.zy-scope .nxos__button:hover:not(:disabled) {
     filter: brightness(1.05);
 }
-.zy-scope .zy-btn:active,
-.zy-scope .nxr-btn:active,
-.zy-scope .nxp-btn:active,
-.zy-scope [class*="hrms-btn"]:active,
-.zy-scope [class*="brand-btn"]:active,
-.zy-scope [class*="access-btn"]:active {
+.zy-scope [class*="-btn"]:not([class*="pill"]):active:not(:disabled),
+.zy-scope [class*="-button"]:not([class*="pill"]):active:not(:disabled),
+.zy-scope .nxos__button:active:not(:disabled) {
     transform: translateY(1px);
 }
-.zy-scope .zy-btn:focus-visible,
-.zy-scope .nxr-btn:focus-visible,
-.zy-scope .nxp-btn:focus-visible,
-.zy-scope [class*="hrms-btn"]:focus-visible,
-.zy-scope [class*="brand-btn"]:focus-visible {
+.zy-scope [class*="-btn"]:not([class*="pill"]):focus-visible,
+.zy-scope [class*="-button"]:not([class*="pill"]):focus-visible,
+.zy-scope .nxos__button:focus-visible {
     outline: none;
     box-shadow: var(--zy-focus-ring) !important;
 }
 
-/* ===== 4. توحيد ألوان الأزرار حسب الدلالة (primary/secondary/danger/success/ghost/warning) ===== */
-/* أساسي = تيل الهوية */
-.zy-scope .zy-btn--primary,
-.zy-scope .nxp-btn--primary,
-.zy-scope .hrms-btn-primary,
-.zy-scope .zhr-btn-primary,
-.zy-scope .my-btn-primary,
-.zy-scope .bp-btn-primary,
-.zy-scope .ar-btn-primary,
-.zy-scope .access-btn-primary,
-.zy-scope .brand-btn-primary {
+/* ===== 4. توحيد ألوان الأزرار حسب الدلالة (شامل كل العائلات عبر [class*=]) ===== */
+/* أساسي/تطبيق = تيل الهوية */
+.zy-scope [class*="btn-primary"],
+.zy-scope [class*="btn--primary"],
+.zy-scope .tax-apply-btn {
     background: var(--zy-electric-teal) !important;
     color: #fff !important;
     border-color: var(--zy-electric-teal) !important;
 }
 /* ثانوي = محايد بحدّ */
-.zy-scope .hrms-btn-secondary,
-.zy-scope .zhr-btn-secondary,
-.zy-scope .my-btn-secondary,
-.zy-scope .orgchart-btn-secondary,
-.zy-scope .access-btn-secondary {
+.zy-scope [class*="btn-secondary"],
+.zy-scope [class*="btn--secondary"],
+.zy-scope [class*="icon-btn--muted"] {
     background: var(--zy-surface) !important;
     color: var(--zy-text) !important;
-    border-color: var(--zy-border) !important;
+    border: 1px solid var(--zy-border) !important;
 }
-/* خطر = أحمر الحالة */
-.zy-scope .zy-btn--danger,
-.zy-scope .hrms-btn-danger,
-.zy-scope .brand-btn-danger,
-.zy-scope .ar-btn-danger {
+/* خطر/حذف = أحمر الحالة */
+.zy-scope [class*="btn-danger"],
+.zy-scope [class*="btn--danger"],
+.zy-scope .tax-delete-btn {
     background: var(--zy-danger) !important;
     color: #fff !important;
     border-color: var(--zy-danger) !important;
 }
 /* نجاح = أخضر الحالة */
-.zy-scope .zy-btn--success,
-.zy-scope .hrms-btn-success {
+.zy-scope [class*="btn-success"],
+.zy-scope [class*="btn--success"] {
     background: var(--zy-success) !important;
     color: #fff !important;
     border-color: var(--zy-success) !important;
 }
-/* شبح = شفّاف بحدّ */
-.zy-scope .zy-btn--ghost,
-.zy-scope .nxp-btn--ghost,
-.zy-scope .brand-btn-ghost,
-.zy-scope .ar-btn-ghost {
+/* شبح/إلغاء = شفّاف بحدّ */
+.zy-scope [class*="btn--ghost"],
+.zy-scope [class*="btn-ghost"],
+.zy-scope [class*="cancel-button"] {
     background: transparent !important;
     color: var(--zy-text) !important;
-    border-color: var(--zy-border) !important;
+    border: 1px solid var(--zy-border) !important;
 }
-/* تحذير = كهرماني الحالة */
-.zy-scope .lifecycle-btn-warning {
+/* تحذير/لين = كهرماني/تيل ناعم */
+.zy-scope [class*="btn-warning"] {
     background: var(--zy-warning) !important;
     color: #fff !important;
     border-color: var(--zy-warning) !important;
+}
+.zy-scope .bp-btn-soft {
+    background: var(--zy-primary-soft) !important;
+    color: var(--zy-electric-teal) !important;
+    border: 1px solid var(--zy-border-strong) !important;
 }
