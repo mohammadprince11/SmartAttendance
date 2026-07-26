@@ -101,25 +101,33 @@ html[dir="ltr"] .zy-scope select,
     opacity: .85;
 }
 
-/* ===== 3. الأزرار: توحيد الشكل (أبعاد/حواف/تركيز) دون لمس دلالة اللون ===== */
-/* نجمّع البادئات المتفرّقة على مواصفة شكل واحدة. الألوان تبقى من ملفات الميزات. */
+/* ===== 3. الأزرار: توحيد الشكل (أبعاد/حواف/تركيز) عبر كل البادئات ===== */
+/* نجمّع كل بادئات الأزرار المتفرّقة على مواصفة شكل واحدة. */
 .zy-scope .zy-btn,
 .zy-scope .nxr-btn,
 .zy-scope .nxp-btn,
 .zy-scope .esl-btn,
 .zy-scope .rehire-btn,
 .zy-scope .endservice-btn,
-.zy-scope .lifecycle-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+.zy-scope [class*="lifecycle-btn"],
+.zy-scope [class*="hrms-btn"],
+.zy-scope [class*="zhr-btn"],
+.zy-scope [class*="my-btn"],
+.zy-scope [class*="orgchart-btn"],
+.zy-scope [class*="brand-btn"],
+.zy-scope [class*="bp-btn"],
+.zy-scope [class*="ar-btn"],
+.zy-scope [class*="access-btn"] {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     gap: 8px;
-    min-height: 40px;
+    min-height: 40px !important;
     padding: 0 18px;
-    border-radius: var(--zy-radius-md);
-    font-family: var(--zy-font-ar);
-    font-size: 14px;
-    font-weight: 700;
+    border-radius: var(--zy-radius-md) !important;
+    font-family: var(--zy-font-ar) !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
     line-height: 1;
     cursor: pointer;
     border: 1px solid transparent;
@@ -129,39 +137,82 @@ html[dir="ltr"] .zy-scope select,
 }
 .zy-scope .zy-btn:hover,
 .zy-scope .nxr-btn:hover,
-.zy-scope .nxp-btn:hover {
-    filter: brightness(1.04);
+.zy-scope .nxp-btn:hover,
+.zy-scope [class*="hrms-btn"]:hover,
+.zy-scope [class*="brand-btn"]:hover,
+.zy-scope [class*="access-btn"]:hover {
+    filter: brightness(1.05);
 }
 .zy-scope .zy-btn:active,
 .zy-scope .nxr-btn:active,
-.zy-scope .nxp-btn:active {
+.zy-scope .nxp-btn:active,
+.zy-scope [class*="hrms-btn"]:active,
+.zy-scope [class*="brand-btn"]:active,
+.zy-scope [class*="access-btn"]:active {
     transform: translateY(1px);
 }
 .zy-scope .zy-btn:focus-visible,
 .zy-scope .nxr-btn:focus-visible,
-.zy-scope .nxp-btn:focus-visible {
+.zy-scope .nxp-btn:focus-visible,
+.zy-scope [class*="hrms-btn"]:focus-visible,
+.zy-scope [class*="brand-btn"]:focus-visible {
     outline: none;
-    box-shadow: var(--zy-focus-ring);
+    box-shadow: var(--zy-focus-ring) !important;
 }
 
-/* ===== 4. الزر الموحّد القياسي (.zy-btn variants) للاستخدام الجديد ===== */
-.zy-btn--primary {
-    background: var(--zy-electric-teal);
-    color: #fff;
-    border-color: var(--zy-electric-teal);
+/* ===== 4. توحيد ألوان الأزرار حسب الدلالة (primary/secondary/danger/success/ghost/warning) ===== */
+/* أساسي = تيل الهوية */
+.zy-scope .zy-btn--primary,
+.zy-scope .nxp-btn--primary,
+.zy-scope .hrms-btn-primary,
+.zy-scope .zhr-btn-primary,
+.zy-scope .my-btn-primary,
+.zy-scope .bp-btn-primary,
+.zy-scope .ar-btn-primary,
+.zy-scope .access-btn-primary,
+.zy-scope .brand-btn-primary {
+    background: var(--zy-electric-teal) !important;
+    color: #fff !important;
+    border-color: var(--zy-electric-teal) !important;
 }
-.zy-btn--ghost {
-    background: transparent;
-    color: var(--zy-text);
-    border-color: var(--zy-border);
+/* ثانوي = محايد بحدّ */
+.zy-scope .hrms-btn-secondary,
+.zy-scope .zhr-btn-secondary,
+.zy-scope .my-btn-secondary,
+.zy-scope .orgchart-btn-secondary,
+.zy-scope .access-btn-secondary {
+    background: var(--zy-surface) !important;
+    color: var(--zy-text) !important;
+    border-color: var(--zy-border) !important;
 }
-.zy-btn--danger {
-    background: var(--zy-danger);
-    color: #fff;
-    border-color: var(--zy-danger);
+/* خطر = أحمر الحالة */
+.zy-scope .zy-btn--danger,
+.zy-scope .hrms-btn-danger,
+.zy-scope .brand-btn-danger,
+.zy-scope .ar-btn-danger {
+    background: var(--zy-danger) !important;
+    color: #fff !important;
+    border-color: var(--zy-danger) !important;
 }
-.zy-btn--success {
-    background: var(--zy-success);
-    color: #fff;
-    border-color: var(--zy-success);
+/* نجاح = أخضر الحالة */
+.zy-scope .zy-btn--success,
+.zy-scope .hrms-btn-success {
+    background: var(--zy-success) !important;
+    color: #fff !important;
+    border-color: var(--zy-success) !important;
+}
+/* شبح = شفّاف بحدّ */
+.zy-scope .zy-btn--ghost,
+.zy-scope .nxp-btn--ghost,
+.zy-scope .brand-btn-ghost,
+.zy-scope .ar-btn-ghost {
+    background: transparent !important;
+    color: var(--zy-text) !important;
+    border-color: var(--zy-border) !important;
+}
+/* تحذير = كهرماني الحالة */
+.zy-scope .lifecycle-btn-warning {
+    background: var(--zy-warning) !important;
+    color: #fff !important;
+    border-color: var(--zy-warning) !important;
 }
