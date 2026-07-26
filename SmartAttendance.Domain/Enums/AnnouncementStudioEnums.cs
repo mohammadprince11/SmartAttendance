@@ -58,5 +58,11 @@ public enum AnnouncementReactionType
 
 public enum UserNotificationType
 {
-    Announcement = 1
+    Announcement = 1,
+
+    // أنواع مولّد مركز الإشعارات (كرون يومي) — تُخزَّن كنص (HasConversion<string>).
+    Birthday = 2,
+    WorkAnniversary = 3,
+    ContractExpiry = 4,
+    ProbationEnding = 5
 }

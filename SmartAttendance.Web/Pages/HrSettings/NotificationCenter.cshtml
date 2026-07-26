@@ -18,12 +18,29 @@
     /* إظهار ناعم للوحة التفاصيل عند التفعيل — بدل قفزة إعادة التحميل */
     .nxhs-notification-details.reveal { animation: nxhsReveal .25s ease both; }
     @@keyframes nxhsReveal { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+    /* زر «توليد الآن» — تيل صلب موحّد مع بقية أزرار الأفعال */
+    .nxhs-titlebar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .nxhs-generate-now { margin-inline-start: auto; }
+    .nxhs-generate-now button {
+        background: var(--zy-electric-teal, #0d9488);
+        color: #fff; border: 0; border-radius: 10px;
+        padding: 9px 18px; font-weight: 700; font-size: .9rem;
+        cursor: pointer; transition: filter .15s ease, transform .05s ease;
+    }
+    .nxhs-generate-now button:hover { filter: brightness(1.07); }
+    .nxhs-generate-now button:active { transform: translateY(1px); }
 </style>
 
 <section class="nxhs-page nxhs-simple" dir="rtl">
     <header class="nxhs-titlebar">
         <a asp-page="./Index">إعدادات الموارد البشرية</a>
         <h1>مركز الإشعارات</h1>
+        <form method="post" asp-page-handler="GenerateNow" class="nxhs-generate-now">
+            <button type="submit" title="يشغّل المولّد الآن للقواعد الزمنية المفعّلة (عيد ميلاد · ذكرى عمل · قرب انتهاء عقد · قرب انتهاء فترة تجربة)">
+                توليد الآن
+            </button>
+        </form>
     </header>
 
     @if (TempData["SuccessMessage"] != null)

@@ -174,6 +174,10 @@ else
     builder.Services.AddSingleton<SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender,
         SmartAttendance.Web.Infrastructure.Notifications.NoOpWebPushSender>();
 
+// مولّد مركز الإشعارات (كرون يومي): يقرأ قواعد المركز المفعّلة ويُطلق فعلياً عبر
+// صندوق داخل النظام + Web-Push. يعمل دائماً (لا يحتاج SMTP) ويمنع التكرار بجدول أحداث.
+builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleGeneratorService>();
+
 var app = builder.Build();
 
 await DefaultShiftSeeder.SeedAsync(app.Services);
