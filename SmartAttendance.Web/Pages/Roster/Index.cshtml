@@ -10,11 +10,27 @@
 @{
     ViewData["Title"] = "جدولة مناوبات العمل";
     var (year, month) = Model.Period;
-    var palette = new[] { "#12D9E3", "#a78bfa", "#f59e0b", "#34d399", "#60a5fa", "#f472b6", "#facc15", "#fb7185", "#2dd4bf", "#c084fc" };
-    var shiftColor = new Dictionary<int, string>();
-    for (var i = 0; i < Model.Shifts.Count; i++) shiftColor[Model.Shifts[i].Id] = palette[i % palette.Length];
+
+    // لون كل مناوبة = لونها الحقيقي المخزّن (ColorHex) لا لون تلقائي — نفس ألوان مستعرض الحضور.
+    string ShiftColor(ShiftTypeStore.ShiftType s) =>
+        !string.IsNullOrWhiteSpace(s.ColorHex) ? s.ColorHex : "#12D9E3";
+
+    // بطاقة ساعات العمل المختصرة للخلية: مرنة ⇒ «Nس»؛ ثابتة ⇒ «HH–HH» لأول يوم عمل (تُختصر :00).
+    static string Clock(string? t) =>
+        t is { Length: >= 5 } ? (t.EndsWith(":00") ? t[..2] : t[..5]) : (t ?? "");
+    string HoursLabel(ShiftTypeStore.ShiftType s)
+    {
+        if (s.IsFlexible) return s.FlexDailyHours > 0 ? $"{s.FlexDailyHours:0.#}س مرن" : "مرن";
+        var work = s.Days.FirstOrDefault(d => d.IsWork
+            && !string.IsNullOrWhiteSpace(d.StartTime) && !string.IsNullOrWhiteSpace(d.EndTime));
+        if (work != null) return $"{Clock(work.StartTime)}–{Clock(work.EndTime)}";
+        var wh = s.Days.Where(d => d.IsWork).Select(d => d.WorkHours).FirstOrDefault();
+        return wh > 0 ? $"{wh:0.#}س" : "";
+    }
+
     var shiftJson = System.Text.Json.JsonSerializer.Serialize(
-        Model.Shifts.ToDictionary(s => s.Id.ToString(), s => new { n = s.Name, c = shiftColor[s.Id] }));
+        Model.Shifts.ToDictionary(s => s.Id.ToString(),
+            s => new { n = s.Name, c = ShiftColor(s), h = HoursLabel(s) }));
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
@@ -57,7 +73,9 @@
     .ros-dcol .dn { font-size: 10px; opacity: .8; }
     .ros-dcol.off { color: #f87171; }
     .rc-td { padding: 2px; text-align: center; }
-    .rc { width: 54px; min-height: 26px; border-radius: 6px; border: 1px solid rgba(73,111,151,.18); background: rgba(0,0,0,.14); color: var(--sa-muted, #8FA8BC); padding: 2px 4px; font-size: 10.5px; font-weight: 800; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: transform .05s; }
+    .rc { width: 58px; min-height: 30px; border-radius: 6px; border: 1px solid rgba(73,111,151,.18); background: rgba(0,0,0,.14); color: var(--sa-muted, #8FA8BC); padding: 2px 3px; cursor: pointer; overflow: hidden; transition: transform .05s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; line-height: 1.12; }
+    .rc .rc-n { font-size: 10.5px; font-weight: 900; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rc .rc-h { font-size: 8.5px; font-weight: 800; opacity: .82; direction: ltr; }
     .rc:hover { transform: scale(1.06); }
     .rc:active { transform: scale(.94); }
     html[data-theme="light"] .rc { background: #f4f8fb; }
@@ -116,7 +134,8 @@
             @for (var i = 0; i < Model.Shifts.Count; i++)
             {
                 var shift = Model.Shifts[i];
-                <button type="button" class="pchip" onclick="rosBrush('S@(shift.Id)', this)"><span class="dot" style="background:@shiftColor[shift.Id]"></span>@shift.Name</button>
+                var hlbl = HoursLabel(shift);
+                <button type="button" class="pchip" onclick="rosBrush('S@(shift.Id)', this)"><span class="dot" style="background:@ShiftColor(shift)"></span>@shift.Name@(hlbl.Length > 0 ? $" · {hlbl}" : "")</button>
             }
             <button type="button" class="pchip" onclick="rosBrush('Weekend', this)"><span class="dot" style="background:#f87171"></span>عطلة</button>
             <button type="button" class="pchip" onclick="rosBrush('Rest', this)"><span class="dot" style="background:#facc15"></span>راحة</button>
@@ -212,18 +231,31 @@
             el.classList.add('active');
         }
 
+        function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+        // لون نص متباين حسب سطوع لون المناوبة — يبقى مقروءاً مهما كان ColorHex.
+        function fgFor(hex) {
+            const c = (hex || '').replace('#', '');
+            if (c.length < 6) return '#04141d';
+            const r = parseInt(c.slice(0, 2), 16), g = parseInt(c.slice(2, 4), 16), b = parseInt(c.slice(4, 6), 16);
+            return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#04141d' : '#ffffff';
+        }
+
         function disp(v) {
-            if (!v) return { t: '—', bg: '', fg: '' };
-            if (v === 'Weekend') return { t: 'عطلة', bg: 'rgba(248,113,113,.20)', fg: '#f87171' };
-            if (v === 'Rest') return { t: 'راحة', bg: 'rgba(250,204,21,.18)', fg: '#facc15' };
+            if (!v) return { t: '—', h: '', bg: '', fg: '' };
+            if (v === 'Weekend') return { t: 'عطلة', h: '', bg: 'rgba(248,113,113,.20)', fg: '#f87171' };
+            if (v === 'Rest') return { t: 'راحة', h: '', bg: 'rgba(250,204,21,.18)', fg: '#facc15' };
             const s = SHIFTS[v.slice(1)];
-            return { t: s ? s.n : v, bg: s ? s.c : '#12D9E3', fg: '#04141d' };
+            if (!s) return { t: v, h: '', bg: '#12D9E3', fg: '#04141d' };
+            return { t: s.n, h: s.h || '', bg: s.c, fg: fgFor(s.c) };
         }
 
         function styleCell(btn, v) {
             const d = disp(v);
-            btn.textContent = d.t;
-            btn.title = d.t;
+            btn.innerHTML = d.h
+                ? `<span class="rc-n">${esc(d.t)}</span><span class="rc-h">${esc(d.h)}</span>`
+                : `<span class="rc-n">${esc(d.t)}</span>`;
+            btn.title = d.h ? `${d.t} · ${d.h}` : d.t;
             btn.style.background = d.bg;
             btn.style.color = d.fg;
             btn.dataset.v = v;
