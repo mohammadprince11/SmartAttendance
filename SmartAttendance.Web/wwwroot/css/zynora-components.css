@@ -199,3 +199,37 @@ html[dir="ltr"] .zy-scope select,
     color: var(--zy-electric-teal) !important;
     border: 1px solid var(--zy-border-strong) !important;
 }
+
+/* ===== 5. عناصر الأفعال القابلة للنقر بتسميات غير -btn (chip/link كأزرار) ===== */
+/* روابط/أزرار الأفعال المسمّاة chip أو link-btn (لا span الحالة) → شكل زر شبح موحّد.
+   يلتقط zxd-chip / zua-chip / nxr-chip / dat-chip / rec-chip / zhr-page-link ... */
+.zy-scope a[class*="chip"],
+.zy-scope button[class*="chip"],
+.zy-scope a[class*="link-btn"],
+.zy-scope a[class*="page-link"] {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px;
+    min-height: 38px !important;
+    padding: 0 15px !important;
+    border-radius: var(--zy-radius-md) !important;
+    font-family: var(--zy-font-ar) !important;
+    font-weight: 700 !important;
+    font-size: 13.5px !important;
+    line-height: 1;
+    cursor: pointer;
+    text-decoration: none !important;
+    background: var(--zy-surface) !important;
+    color: var(--zy-text) !important;
+    border: 1px solid var(--zy-border) !important;
+    transition: filter var(--zy-duration-fast) var(--zy-ease),
+                border-color var(--zy-duration-fast) var(--zy-ease);
+}
+.zy-scope a[class*="chip"]:hover,
+.zy-scope button[class*="chip"]:hover,
+.zy-scope a[class*="link-btn"]:hover,
+.zy-scope a[class*="page-link"]:hover {
+    filter: brightness(1.06);
+    border-color: var(--zy-border-strong) !important;
+}

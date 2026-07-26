@@ -88,6 +88,40 @@ a.zxd-stat:hover { background: rgba(18, 217, 227, .06); border-radius: 10px; }
 .zxd-stat.amber b { color: var(--zxd-amber); }
 .zxd-stat.red b { color: var(--zxd-red); }
 
+/* ---------- بطاقات المؤشرات (KPI) — كانت الأصناف zxd-kpi/zxd-kpis بلا تعريف
+   فتظهر روابط خام مسطّرة؛ هذي القواعد تصلحها كبطاقات بأيقونة متّسقة مع النظام ---------- */
+.zxd-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 10px;
+    margin: 14px 0;
+}
+.zxd-kpi {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 12px 14px;
+    background: var(--zxd-card, #12223a);
+    border: 1px solid var(--zxd-line, rgba(217, 225, 232, .14));
+    border-radius: 12px;
+    text-decoration: none;
+    color: inherit;
+    transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.zxd-kpi:hover {
+    border-color: rgba(18, 217, 227, .4);
+    background: rgba(18, 217, 227, .05);
+    transform: translateY(-1px);
+}
+.zxd-kpi .ic { font-size: 22px; line-height: 1; flex: 0 0 auto; }
+.zxd-kpi > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.zxd-kpi b { font-size: 22px; font-weight: 1000; line-height: 1.15; }
+.zxd-kpi span { font-size: 11.5px; color: var(--zxd-muted, #8fa8bc); font-weight: 800; }
+.zxd-kpi small { font-size: 10px; color: var(--zxd-muted, #8fa8bc); opacity: .85; }
+.zxd-kpi.green b { color: var(--zxd-green, #34d399); }
+.zxd-kpi.amber b { color: var(--zxd-amber, #fbbf24); }
+.zxd-kpi.red b   { color: var(--zxd-red, #f87171); }
+
 /* ---------- تبويبات «متابعة اليوم» ---------- */
 .zxd-tabs { display: inline-flex; gap: 6px; }
 .zxd-tabs button {
