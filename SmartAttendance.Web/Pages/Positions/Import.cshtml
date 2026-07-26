@@ -1,7 +1,10 @@
 @page
 @model SmartAttendance.Web.Pages.Positions.ImportModel
+@using SmartAttendance.Web.Infrastructure.Theming
+@inject IThemeContextService ThemeContextService
 @{
     ViewData["Title"] = "استيراد المناصب";
+    var brandName = (await ThemeContextService.GetCurrentAsync(default)).DisplayName is string dn && !string.IsNullOrWhiteSpace(dn) ? dn : "ZYNORA";
 }
 
 <link rel="stylesheet" href="~/css/positions.css" asp-append-version="true" />
@@ -19,7 +22,7 @@
 
     <section class="nxp-hero">
         <div class="nxp-hero__content">
-            <p class="nxp-eyebrow">NEXORA HR</p>
+            <p class="nxp-eyebrow">@brandName HR</p>
             <h1>&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; &#x0627;&#x0644;&#x0645;&#x0646;&#x0627;&#x0635;&#x0628;</h1>
             <span>&#x0627;&#x0631;&#x0641;&#x0639; Excel Template &#x0623;&#x0648; &#x0627;&#x0644;&#x0635;&#x0642; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A;. &#x0627;&#x0644;&#x0645;&#x0637;&#x0644;&#x0648;&#x0628; &#x0641;&#x0642;&#x0637;: PositionName &#x0648 CompanyCode.</span>
         </div>

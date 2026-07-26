@@ -1,7 +1,10 @@
 @page
 @model SmartAttendance.Web.Pages.PositionLevels.IndexModel
+@using SmartAttendance.Web.Infrastructure.Theming
+@inject IThemeContextService ThemeContextService
 @{
     ViewData["Title"] = "مستويات المناصب";
+    var brandName = (await ThemeContextService.GetCurrentAsync(default)).DisplayName is string dn && !string.IsNullOrWhiteSpace(dn) ? dn : "ZYNORA";
 }
 
 <link rel="stylesheet" href="~/css/positions.css" asp-append-version="true" />
@@ -19,7 +22,7 @@
 
     <section class="nxp-hero">
         <div class="nxp-hero__content">
-            <p class="nxp-eyebrow">NEXORA HR</p>
+            <p class="nxp-eyebrow">@brandName HR</p>
             <h1>مستويات المناصب</h1>
             <span>إدارة مستويات المناصب المستخدمة داخل صفحة المناصب الوظيفية.</span>
         </div>

@@ -1,5 +1,10 @@
 ﻿@page
 @model SmartAttendance.Web.Pages.Payroll.TaxSocialSecurityModel
+@using SmartAttendance.Web.Infrastructure.Theming
+@inject IThemeContextService ThemeContextService
+@{
+    var brandName = (await ThemeContextService.GetCurrentAsync(default)).DisplayName is string dn && !string.IsNullOrWhiteSpace(dn) ? dn : "ZYNORA";
+}
 
 @{
     ViewData["Title"] = "الضريبة والضمان";
@@ -10,7 +15,7 @@
 <div class="tax-social-page" dir="rtl">
     <section class="tax-hero">
         <div>
-            <span class="tax-eyebrow">NEXORA Payroll Control</span>
+            <span class="tax-eyebrow">@brandName Payroll Control</span>
             <h1>الضريبة والضمان</h1>
             <p>
                 نسخة محسّنة لإدارة إعدادات الضريبة والضمان شهرياً، إدخال السجلات، الاحتساب التلقائي، وتطبيق الإعدادات على السجلات المحفوظة.

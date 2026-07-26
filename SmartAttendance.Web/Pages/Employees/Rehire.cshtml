@@ -1,5 +1,10 @@
 ﻿@page
 @model SmartAttendance.Web.Pages.Employees.RehireModel
+@using SmartAttendance.Web.Infrastructure.Theming
+@inject IThemeContextService ThemeContextService
+@{
+    var brandName = (await ThemeContextService.GetCurrentAsync(default)).DisplayName is string dn && !string.IsNullOrWhiteSpace(dn) ? dn : "ZYNORA";
+}
 
 @{
     ViewData["Title"] = "إعادة تعيين";
@@ -10,7 +15,7 @@
 <div class="rehire-page">
     <div class="rehire-head">
         <div>
-            <div class="rehire-eyebrow">NEXORA Employee Lifecycle</div>
+            <div class="rehire-eyebrow">@brandName Employee Lifecycle</div>
             <h1>إعادة تعيين موظف</h1>
             <p>إعادة تفعيل الموظف بنفس بياناته السابقة مع تسجيل تاريخ مباشرة جديد وحفظ التاريخ السابق بالكامل.</p>
         </div>

@@ -1,5 +1,10 @@
 ﻿@page
 @model SmartAttendance.Web.Pages.EmployeeDocuments.IndexModel
+@using SmartAttendance.Web.Infrastructure.Theming
+@inject IThemeContextService ThemeContextService
+@{
+    var brandName = (await ThemeContextService.GetCurrentAsync(default)).DisplayName is string dn && !string.IsNullOrWhiteSpace(dn) ? dn : "ZYNORA";
+}
 
 @{
     ViewData["Title"] = "مستندات الموظفين";
@@ -21,7 +26,7 @@
 <div class="nxr-page nxr-documents-kayan-page">
     <section class="nxr-topline nxr-documents-topline">
         <div class="nxr-title">
-            <div class="nxr-brand-mini">NEXORA Documents Center</div>
+            <div class="nxr-brand-mini">@brandName Documents Center</div>
             <h1>مستندات الموظفين</h1>
             <p>مركز حفظ ومتابعة مستندات الموظفين حسب النوع، الحالة، تاريخ الانتهاء، والمتطلبات.</p>
         </div>

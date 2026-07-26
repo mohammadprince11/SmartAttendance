@@ -1,7 +1,11 @@
 @page
 @model SmartAttendance.Web.Pages.PositionCategories.IndexModel
+@using SmartAttendance.Web.Infrastructure.Theming
+@inject IThemeContextService ThemeContextService
 @{
     ViewData["Title"] = "فئات المناصب";
+    var brandTheme = await ThemeContextService.GetCurrentAsync(default);
+    var brandEyebrow = string.IsNullOrWhiteSpace(brandTheme.DisplayName) ? "ZYNORA HR" : brandTheme.DisplayName!;
 }
 
 <link rel="stylesheet" href="~/css/positions.css" asp-append-version="true" />
@@ -19,7 +23,7 @@
 
     <section class="nxp-hero">
         <div class="nxp-hero__content">
-            <p class="nxp-eyebrow">NEXORA HR</p>
+            <p class="nxp-eyebrow">@brandEyebrow</p>
             <h1>فئات المناصب</h1>
             <span>إدارة فئات المناصب المستخدمة داخل صفحة المناصب الوظيفية.</span>
         </div>

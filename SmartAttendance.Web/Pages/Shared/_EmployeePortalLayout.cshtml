@@ -1,14 +1,23 @@
+@using SmartAttendance.Web.Infrastructure.Theming
+@inject IThemeContextService ThemeContextService
 @{
     Layout = null;
     var userName = Context.User.Identity?.Name ?? "employee";
     var role = Context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Employee";
+
+    // هوية موحّدة: اسم/شعار البوابة يُقرأ من محرّك الهوية (Branding) لا اسم ثابت.
+    var companyTheme = await ThemeContextService.GetCurrentAsync(Context.RequestAborted);
+    var brandName = string.IsNullOrWhiteSpace(companyTheme.DisplayName) ? "ZYNORA" : companyTheme.DisplayName!;
+    var brandSymbol = new string(brandName.Where(char.IsLetterOrDigit).Take(2).ToArray()).ToUpperInvariant();
+    if (string.IsNullOrEmpty(brandSymbol)) { brandSymbol = "ZY"; }
+    var brandLogo = companyTheme.LogoPath;
 }
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>@ViewData["Title"] - NEXORA Employee Experience</title>
+    <title>@ViewData["Title"] - @brandName</title>
 
     @* ===== PWA — تطبيق قابل للتثبيت على كل الأجهزة ===== *@
     <link rel="manifest" href="~/manifest.webmanifest" />
@@ -98,10 +107,17 @@
     </script>
     <aside class="nxex-shell-sidebar">
         <div class="nxex-brand">
-            <div class="nxex-brand-symbol">NX</div>
+            @if (!string.IsNullOrWhiteSpace(brandLogo))
+            {
+                <div class="nxex-brand-symbol" style="padding:0;overflow:hidden"><img src="@brandLogo" alt="@brandName" style="width:100%;height:100%;object-fit:contain" onerror="this.remove()" /></div>
+            }
+            else
+            {
+                <div class="nxex-brand-symbol">@brandSymbol</div>
+            }
             <div>
-                <strong>NEXORA</strong>
-                <span>Employee Experience</span>
+                <strong>@brandName</strong>
+                <span>بوابة الموظف</span>
             </div>
         </div>
 
@@ -132,7 +148,7 @@
         <div class="nxex-topbar">
             <div>
                 <strong>بوابة الموظف الذكية</strong>
-                <span>Employee Experience Portal · <b style="color:#19d3e0">إصدار v7</b></span>
+                <span>@brandName · <b style="color:#19d3e0">تجربة الموظف</b></span>
             </div>
             <div class="nxex-topbar-actions">
                 <button type="button" id="pwa-install-btn" class="nxex-install-btn" hidden>

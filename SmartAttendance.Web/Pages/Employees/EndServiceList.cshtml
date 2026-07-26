@@ -1,5 +1,10 @@
 ﻿@page
 @model SmartAttendance.Web.Pages.Employees.EndServiceListModel
+@using SmartAttendance.Web.Infrastructure.Theming
+@inject IThemeContextService ThemeContextService
+@{
+    var brandName = (await ThemeContextService.GetCurrentAsync(default)).DisplayName is string dn && !string.IsNullOrWhiteSpace(dn) ? dn : "ZYNORA";
+}
 
 @{
     ViewData["Title"] = "منتهية خدماتهم";
@@ -10,7 +15,7 @@
 <div class="esl-page">
     <div class="esl-head">
         <div>
-            <div class="esl-eyebrow">NEXORA Employee Lifecycle</div>
+            <div class="esl-eyebrow">@brandName Employee Lifecycle</div>
             <h1>سجل إنهاء الخدمات</h1>
             <p>متابعة إجراءات إنهاء الخدمة وحالة التصفية مع إمكانية الرجوع إلى ملف الموظف.</p>
         </div>

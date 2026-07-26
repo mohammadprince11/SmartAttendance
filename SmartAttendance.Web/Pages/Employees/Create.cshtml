@@ -1,5 +1,10 @@
 @page
 @model SmartAttendance.Web.Pages.Employees.CreateModel
+@using SmartAttendance.Web.Infrastructure.Theming
+@inject IThemeContextService ThemeContextService
+@{
+    var brandName = (await ThemeContextService.GetCurrentAsync(default)).DisplayName is string dn && !string.IsNullOrWhiteSpace(dn) ? dn : "ZYNORA";
+}
 
 <link rel="stylesheet" href="~/css/nexora-edit-custom-datepicker.css" asp-append-version="true" />
 @{
@@ -16,7 +21,7 @@
 <div class="nxr-page nxr-create-clean-page" dir="rtl">
     <section class="nxr-topline nxr-create-clean-header">
         <div class="nxr-title">
-            <div class="nxr-brand-mini">NEXORA HR</div>
+            <div class="nxr-brand-mini">@brandName HR</div>
             <h1>إضافة موظف جديد</h1>
             <p>إدخال بيانات الموظف الأساسية والوظيفية مع إمكانية رفع المستمسكات عند الإنشاء.</p>
         </div>
@@ -479,7 +484,7 @@
             <div class="nxr-documents-modal-panel" role="dialog" aria-modal="true" aria-label="المستمسكات الأولية">
                 <div class="nxr-documents-modal-head">
                     <div>
-                        <span class="nxr-force-modal-badge">NEXORA Employee Documents</span>
+                        <span class="nxr-force-modal-badge">@brandName Employee Documents</span>
                         <h2>اختيار المستمسكات الأولية</h2>
                         <p>كل صف يحتوي نوع المستمسك، حالة المطلوب، واختيار الملف الذي سيُحفظ عند إنشاء الموظف.</p>
                     </div>

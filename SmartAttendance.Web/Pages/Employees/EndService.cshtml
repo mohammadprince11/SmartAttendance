@@ -1,5 +1,10 @@
 ﻿@page
 @model SmartAttendance.Web.Pages.Employees.EndServiceModel
+@using SmartAttendance.Web.Infrastructure.Theming
+@inject IThemeContextService ThemeContextService
+@{
+    var brandName = (await ThemeContextService.GetCurrentAsync(default)).DisplayName is string dn && !string.IsNullOrWhiteSpace(dn) ? dn : "ZYNORA";
+}
 
 @{
     ViewData["Title"] = "إنهاء خدمة";
@@ -12,7 +17,7 @@
     <div asp-validation-summary="All" class="endservice-alert danger"></div>
 <div class="endservice-head">
         <div>
-            <div class="endservice-eyebrow">NEXORA Employee Lifecycle</div>
+            <div class="endservice-eyebrow">@brandName Employee Lifecycle</div>
             <h1>إنهاء خدمة موظف</h1>
             <p>إجراء رسمي لإنهاء خدمة الموظف مع الحفاظ على كامل التاريخ الوظيفي والحضور والطلبات والسجلات.</p>
         </div>

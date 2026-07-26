@@ -1,7 +1,13 @@
 @page
 @model SmartAttendance.Web.Pages.DisciplinaryRules.IndexModel
+@using SmartAttendance.Web.Infrastructure.Theming
+@inject IThemeContextService ThemeContextService
 @{
     ViewData["Title"] = "إعدادات المخالفات";
+    var brandTheme = await ThemeContextService.GetCurrentAsync(default);
+    var brandName = string.IsNullOrWhiteSpace(brandTheme.DisplayName) ? "ZYNORA HR" : brandTheme.DisplayName!;
+    var brandSymbol = new string(brandName.Where(char.IsLetterOrDigit).Take(1).ToArray()).ToUpperInvariant();
+    if (string.IsNullOrEmpty(brandSymbol)) { brandSymbol = "Z"; }
     var activeTab = Model.Tab;
     var selectedCategory = Model.SelectedCategoryId;
     var visibleTypes = Model.ViolationTypes.Where(x => selectedCategory <= 0 || x.CategoryId == selectedCategory).ToList();
@@ -508,7 +514,7 @@ else if (Model.Settings.A4FormFileType == "Pdf")
                                     }
                                     else
                                     {
-                                        <div class="nxpen-auto-header"><div class="nxpen-logo-mark">N</div><div><strong>NEXORA HR</strong><small>Disciplinary Notice / إشعار مخالفة وجزاء</small></div></div>
+                                        <div class="nxpen-auto-header"><div class="nxpen-logo-mark">@brandSymbol</div><div><strong>@brandName</strong><small>Disciplinary Notice / إشعار مخالفة وجزاء</small></div></div>
                                     }
 
                                     @foreach (var block in Model.TextBlocks.Where(x => x.Area == "Header" && x.IsActive))
@@ -598,7 +604,7 @@ else
                             <header class="nxpen-paper-header">
                                 @if (string.IsNullOrWhiteSpace(Model.Settings.FormHeader))
                                 {
-                                    <div class="nxpen-auto-header"><div class="nxpen-logo-mark">N</div><div><strong>NEXORA HR</strong><small>Disciplinary Notice / إشعار مخالفة وجزاء</small></div></div>
+                                    <div class="nxpen-auto-header"><div class="nxpen-logo-mark">@brandSymbol</div><div><strong>@brandName</strong><small>Disciplinary Notice / إشعار مخالفة وجزاء</small></div></div>
                                 }
                                 else
                                 {

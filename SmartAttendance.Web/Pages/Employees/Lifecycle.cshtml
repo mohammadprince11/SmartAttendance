@@ -1,5 +1,10 @@
 ﻿@page
 @model SmartAttendance.Web.Pages.Employees.LifecycleModel
+@using SmartAttendance.Web.Infrastructure.Theming
+@inject IThemeContextService ThemeContextService
+@{
+    var brandName = (await ThemeContextService.GetCurrentAsync(default)).DisplayName is string dn && !string.IsNullOrWhiteSpace(dn) ? dn : "ZYNORA";
+}
 
 @{
     ViewData["Title"] = "السجل الوظيفي";
@@ -10,7 +15,7 @@
 <div class="lifecycle-timeline-page">
     <div class="lifecycle-timeline-head">
         <div>
-            <div class="lifecycle-timeline-eyebrow">NEXORA Employee Lifecycle</div>
+            <div class="lifecycle-timeline-eyebrow">@brandName Employee Lifecycle</div>
             <h1>السجل الوظيفي</h1>
             <p>خط زمني يوضح تعيين الموظف، إنهاء الخدمة، وإعادة التعيين بنفس الكود والبيانات السابقة.</p>
         </div>

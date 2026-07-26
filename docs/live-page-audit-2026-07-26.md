@@ -73,6 +73,15 @@
 
 ## سجل الإصلاحات
 
+### ✅ 2026-07-26 — توحيد الهوية NEXORA→ZYNORA (ربط بمحرّك Branding)
+كل السطوح المرئية التي كانت تكتب الاسم القديم "NEXORA" ثابتاً صارت تقرأ الاسم/الشعار من محرّك الهوية (`IThemeContextService`)، بفولباك "ZYNORA":
+- **تخطيط البوابة** `_EmployeePortalLayout.cshtml`: العنوان + الشعار الجانبي (شعار الشركة إن نُشر، وإلا اختصار الاسم) + الترويسة. أُزيل تسريب "إصدار v7" الداخلي.
+- **إشعار المخالفة المطبوع** `DisciplinaryRules`: ترويسة "NEXORA HR"+علامة "N" → اسم/اختصار الهوية (مستند يُسلَّم للموظف).
+- **eyebrows صفحات الإدارة:** `PositionCategories` · `PositionLevels` · `Positions/Import` · `EmployeeDocuments` · `Employees/{Create,Lifecycle,Delete,EndService,EndServiceList,Rehire}` · `Payroll/TaxSocialSecurity`.
+- **متبقٍّ (غير مرئي، مقصود تركه):** مفاتيح `localStorage`/كوكيز `NEXORA.*` + تعليقات كود `NEXORA_FIX*` (تغييرها يخاطر بكسر الجلسات بلا فائدة ظاهرة) + أصول `wwwroot/brand/nexora-*.svg` غير المرجعية.
+- **التحقق:** بناء أخضر (0 تحذير) + فحص حي (منفذ 5090): البوابة بلا أي "NEXORA" مرئي، العنوان/الشعار/الترويسة = ZYNORA. ⚠️ فخّ Razor: `Context.RequestAborted` لا يُترجم داخل بلوك `@{ }` بصفحة `@page` (خلاف التخطيطات) — استُخدم `default` كـCancellationToken.
+- ⚠️ النسخة المنشورة `C:\ZynoraPortal` تحتاج إعادة نشر.
+
 ### ✅ 2026-07-26 — ربط تبويب «التقييم والانضباط» ببيانات حقيقية
 **الملفات:** `EmployeePortal/Index.cshtml.cs` (+`DisciplinaryRecord` + `LoadDisciplinaryHistoryAsync` + استدعاء بـ`LoadAsync`) · `EmployeePortal/Index.cshtml` (تبويب performance + مؤشر النبض).
 - **الانضباط:** صار يقرأ من `EmployeeViolationCases` (رقم مرجعي، تاريخ، فئة، عنوان، الحالة، الإجراء، العقوبة النهائية، الاقتطاع المالي، ردّ الموظف) بحالة فارغة صادقة ("سجلّك نظيف") عند عدم وجود مخالفات.

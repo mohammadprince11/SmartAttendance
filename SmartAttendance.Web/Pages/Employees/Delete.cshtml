@@ -1,5 +1,10 @@
 ﻿@page
 @model SmartAttendance.Web.Pages.Employees.DeleteModel
+@using SmartAttendance.Web.Infrastructure.Theming
+@inject IThemeContextService ThemeContextService
+@{
+    var brandName = (await ThemeContextService.GetCurrentAsync(default)).DisplayName is string dn && !string.IsNullOrWhiteSpace(dn) ? dn : "ZYNORA";
+}
 
 @{
     ViewData["Title"] = "إيقاف موظف";
@@ -10,7 +15,7 @@
 <div class="lifecycle-page">
     <div class="lifecycle-header">
         <div>
-            <div class="lifecycle-eyebrow">NEXORA Employee Lifecycle</div>
+            <div class="lifecycle-eyebrow">@brandName Employee Lifecycle</div>
             <h1>إيقاف موظف</h1>
             <p>لا يتم حذف الموظف نهائياً لأن لديه تاريخ حضور وطلبات وسجلات مرتبطة. هذا الإجراء يحافظ على كل التاريخ ويجعل الموظف غير فعال فقط.</p>
         </div>
