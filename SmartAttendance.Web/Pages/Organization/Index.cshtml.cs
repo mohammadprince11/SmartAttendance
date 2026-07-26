@@ -298,16 +298,18 @@ public class IndexModel : PageModel
             .OrderBy(x => x.Name)
             .ToListAsync();
 
-        var employeeCountsByBranch = await _dbContext.Employees
+        // الموظف مرتبط بالفرع (موقع العمل) مباشرةً عبر BranchId، وبالقسم مستقلاً؛ والأقسام
+        // مشتركة بين الفروع (Departments.BranchId فارغ) فلا يصح اشتقاق فرع الموظف من قسمه.
+        // نحسب الموظفين لكل (فرع، قسم) من فرع الموظف المباشر.
+        var branchDeptCounts = await _dbContext.Employees
             .AsNoTracking()
-            .Where(x => x.Department.BranchId.HasValue)
-            .GroupBy(x => x.Department.BranchId!.Value)
-            .Select(x => new
-            {
-                BranchId = x.Key,
-                Count = x.Count()
-            })
-            .ToDictionaryAsync(x => x.BranchId, x => x.Count);
+            .GroupBy(x => new { x.BranchId, x.DepartmentId })
+            .Select(g => new { g.Key.BranchId, g.Key.DepartmentId, Count = g.Count() })
+            .ToListAsync();
+
+        var employeeCountsByBranch = branchDeptCounts
+            .GroupBy(x => x.BranchId)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.Count));
 
         var employeeCountsByDepartment = await _dbContext.Employees
             .AsNoTracking()
@@ -326,16 +328,33 @@ public class IndexModel : PageModel
                 : 0;
         }
 
+        var departmentsById = departmentRows.ToDictionary(x => x.Id);
+
         foreach (var branch in branchRows)
         {
-            branch.Departments = departmentRows
-                .Where(x => x.BranchId == branch.Id)
+            // أقسام الفرع = الأقسام التي لموظفيه فعلاً، وعدد موظفي كل قسم داخل هذا الفرع.
+            branch.Departments = branchDeptCounts
+                .Where(x => x.BranchId == branch.Id && departmentsById.ContainsKey(x.DepartmentId))
+                .Select(x =>
+                {
+                    var d = departmentsById[x.DepartmentId];
+                    return new DepartmentViewModel
+                    {
+                        Id = d.Id,
+                        BranchId = branch.Id,
+                        Name = d.Name,
+                        Code = d.Code,
+                        IsActive = d.IsActive,
+                        EmployeeCount = x.Count
+                    };
+                })
+                .OrderBy(x => x.Name)
                 .ToList();
 
             branch.DepartmentCount = branch.Departments.Count;
 
-            branch.EmployeeCount = employeeCountsByBranch.TryGetValue(branch.Id, out var employees)
-                ? employees
+            branch.EmployeeCount = employeeCountsByBranch.TryGetValue(branch.Id, out var branchEmployees)
+                ? branchEmployees
                 : 0;
         }
 
