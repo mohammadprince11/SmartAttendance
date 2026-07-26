@@ -526,8 +526,11 @@
                         }
                         @if (CanRoute("/shifts"))
                         {
+                            @* «الشفتات» = الطبقة القديمة (جدول Shifts) لسه يقرأها محرك المعالجة القديم +
+                               ملف الموظف + الإعداد؛ بديلها الحديث «أنواع المناوبات» /ShiftTypes الذي يغذّي الروستر.
+                               وُسِمت «(قديم)» لتمييزها ريثما يُنفَّذ ترحيل Shifts→ShiftTypes. *@
                             <a asp-page="/Shifts/Index" class="nexora-nav-link @(IsUnder("/Shifts") ? "active nexora-active" : "")">
-                                <span>الشفتات</span>
+                                <span>الشفتات (قديم)</span>
                             </a>
                         }
                         @if (CanRoute("/devices"))
