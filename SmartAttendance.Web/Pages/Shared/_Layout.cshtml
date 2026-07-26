@@ -643,11 +643,14 @@
                 </div>
             </header>
 
-            <main class="nexora-content">
+            <main class="nexora-content zy-scope">
                 @RenderBody()
             </main>
         </div>
     </div>
+
+    @* طبقة المكوّنات الموحّدة — تُحمّل بعد RenderBody فتفوز على CSS الصفحات بترتيب المصدر *@
+    <link rel="stylesheet" href="~/css/zynora-components.css" asp-append-version="true" />
 
     <script>
         window.SA_AUTH = {

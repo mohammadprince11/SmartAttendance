@@ -1,0 +1,167 @@
+/*
+ * ZYNORA HR — Unified Components Layer (المرحلة الأولى من توحيد الستايل)
+ * يُحمّل بعد RenderBody فيفوز بترتيب المصدر على CSS الصفحات دون !important.
+ * المبدأ: يستهلك design tokens الموجودة (لا ألوان صلبة) فيتبع محرّك الهوية والثيم.
+ * النطاق: توحيد شكل عناصر النماذج الأصلية (تاريخ/دروب/إدخال/نص) + شكل الأزرار
+ *         (الأبعاد/الحواف/التركيز) دون لمس دلالات الألوان (أساسي/خطر...).
+ *
+ * ملاحظة: الصفحات التي تُنسّق حقولها صراحةً بمحدّد أعلى تبقى كما هي (لا نكسرها)؛
+ *         هذا الملف يوحّد أساساً العناصر الأصلية غير المنسّقة (المصدر الأكبر للتفاوت).
+ */
+
+/* ===== 1. عناصر النماذج الأصلية: إدخال/نص/رقم/بحث ===== */
+.zy-scope input:not([type]),
+.zy-scope input[type="text"],
+.zy-scope input[type="number"],
+.zy-scope input[type="search"],
+.zy-scope input[type="email"],
+.zy-scope input[type="tel"],
+.zy-scope input[type="password"],
+.zy-scope input[type="url"],
+.zy-scope input[type="date"],
+.zy-scope input[type="time"],
+.zy-scope input[type="month"],
+.zy-scope input[type="datetime-local"],
+.zy-scope select,
+.zy-scope textarea {
+    /* !important محصور بخصائص الشكل الجوهرية للعناصر الأصلية فقط — لتوحيد فعلي
+       يتغلّب على ستايل الصفحات عالي الـspecificity (سبب التفاوت المرئي). */
+    font-family: var(--zy-font-ar);
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--zy-text);
+    background-color: var(--zy-input) !important;
+    border: 1px solid var(--zy-border) !important;
+    border-radius: var(--zy-radius-md) !important;
+    padding: 0 12px;
+    min-height: 40px !important;
+    box-sizing: border-box;
+    transition: border-color var(--zy-duration-fast) var(--zy-ease),
+                box-shadow var(--zy-duration-fast) var(--zy-ease);
+    appearance: none !important;
+    -webkit-appearance: none !important;
+}
+
+.zy-scope textarea {
+    padding: 10px 12px;
+    min-height: 88px !important;
+    resize: vertical;
+    line-height: 1.6;
+}
+
+.zy-scope input:focus,
+.zy-scope select:focus,
+.zy-scope textarea:focus {
+    outline: none;
+    border-color: var(--zy-border-strong);
+    box-shadow: var(--zy-focus-ring);
+}
+
+.zy-scope input::placeholder,
+.zy-scope textarea::placeholder {
+    color: var(--zy-text-muted);
+    opacity: .8;
+}
+
+.zy-scope input:disabled,
+.zy-scope select:disabled,
+.zy-scope textarea:disabled {
+    background-color: var(--zy-surface-soft);
+    color: var(--zy-text-muted);
+    cursor: not-allowed;
+}
+
+/* ===== 2. الدروب (select) الأصلي: سهم موحّد واعٍ بالـRTL ===== */
+.zy-scope select {
+    padding-inline-end: 34px !important;
+    /* سهم SVG موحّد بلون النص المكتوم — data URI فلا طلب خارجي */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23627386' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: left 12px center !important;
+    background-size: 12px 8px !important;
+}
+[dir="rtl"] .zy-scope select {
+    background-position: left 12px center;
+}
+html[dir="ltr"] .zy-scope select,
+.zy-scope [dir="ltr"] select {
+    background-position: right 12px center;
+    padding-inline-end: 34px;
+}
+
+/* أيقونة التقويم للتاريخ/الوقت الأصلي (Webkit) بلون موحّد */
+.zy-scope input[type="date"]::-webkit-calendar-picker-indicator,
+.zy-scope input[type="time"]::-webkit-calendar-picker-indicator,
+.zy-scope input[type="month"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: .55;
+    filter: grayscale(1);
+}
+.zy-scope input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: .85;
+}
+
+/* ===== 3. الأزرار: توحيد الشكل (أبعاد/حواف/تركيز) دون لمس دلالة اللون ===== */
+/* نجمّع البادئات المتفرّقة على مواصفة شكل واحدة. الألوان تبقى من ملفات الميزات. */
+.zy-scope .zy-btn,
+.zy-scope .nxr-btn,
+.zy-scope .nxp-btn,
+.zy-scope .esl-btn,
+.zy-scope .rehire-btn,
+.zy-scope .endservice-btn,
+.zy-scope .lifecycle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 18px;
+    border-radius: var(--zy-radius-md);
+    font-family: var(--zy-font-ar);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform var(--zy-duration-fast) var(--zy-ease),
+                box-shadow var(--zy-duration-fast) var(--zy-ease),
+                filter var(--zy-duration-fast) var(--zy-ease);
+}
+.zy-scope .zy-btn:hover,
+.zy-scope .nxr-btn:hover,
+.zy-scope .nxp-btn:hover {
+    filter: brightness(1.04);
+}
+.zy-scope .zy-btn:active,
+.zy-scope .nxr-btn:active,
+.zy-scope .nxp-btn:active {
+    transform: translateY(1px);
+}
+.zy-scope .zy-btn:focus-visible,
+.zy-scope .nxr-btn:focus-visible,
+.zy-scope .nxp-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--zy-focus-ring);
+}
+
+/* ===== 4. الزر الموحّد القياسي (.zy-btn variants) للاستخدام الجديد ===== */
+.zy-btn--primary {
+    background: var(--zy-electric-teal);
+    color: #fff;
+    border-color: var(--zy-electric-teal);
+}
+.zy-btn--ghost {
+    background: transparent;
+    color: var(--zy-text);
+    border-color: var(--zy-border);
+}
+.zy-btn--danger {
+    background: var(--zy-danger);
+    color: #fff;
+    border-color: var(--zy-danger);
+}
+.zy-btn--success {
+    background: var(--zy-success);
+    color: #fff;
+    border-color: var(--zy-success);
+}
