@@ -9,6 +9,15 @@
  *         هذا الملف يوحّد أساساً العناصر الأصلية غير المنسّقة (المصدر الأكبر للتفاوت).
  */
 
+/* ===== 0. لا خطوط سفلية تحت أي رابط داخل التطبيق (ستايل موحّد عام) ===== */
+.zy-scope a,
+.zy-scope a:hover,
+.zy-scope a:focus,
+.zy-scope a:active,
+.zy-scope a:visited {
+    text-decoration: none !important;
+}
+
 /* ===== 1. عناصر النماذج الأصلية: إدخال/نص/رقم/بحث ===== */
 .zy-scope input:not([type]),
 .zy-scope input[type="text"],
