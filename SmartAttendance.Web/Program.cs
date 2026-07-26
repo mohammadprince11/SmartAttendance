@@ -33,8 +33,6 @@ using SmartAttendance.Application.Permissions.Services;
 using SmartAttendance.Application.Setup.Services;
 using SmartAttendance.Application.Shifts.Mappings;
 using SmartAttendance.Application.Shifts.Services;
-using SmartAttendance.Application.SystemUsers.Mappings;
-using SmartAttendance.Application.SystemUsers.Services;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Infrastructure.Repositories;
 using SmartAttendance.Infrastructure.Seeding;
@@ -108,7 +106,6 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<AttendanceRecordProfile>();
     cfg.AddProfile<HolidayProfile>();
     cfg.AddProfile<LeaveRequestProfile>();
-    cfg.AddProfile<SystemUserProfile>();
     cfg.AddProfile<PermissionProfile>();
 });
 
@@ -129,7 +126,6 @@ builder.Services.AddScoped<IAttendanceReportService, AttendanceReportService>();
 builder.Services.AddScoped<IAttendanceAdvancedReportService, AttendanceAdvancedReportService>();
 builder.Services.AddScoped<IHolidayService, HolidayService>();
 builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
-builder.Services.AddScoped<ISystemUserService, SystemUserService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IEmployeePermissionService, EmployeePermissionService>();
 builder.Services.AddScoped<ILoginIdentityService, LoginIdentityService>();
