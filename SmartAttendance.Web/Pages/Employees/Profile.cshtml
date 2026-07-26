@@ -509,6 +509,14 @@
                 </div>
             }
 
+            @{
+                // ربط ملف 360: مؤشرا الإجازات والعهد كانا placeholder («غير مربوط»/«غير مفعلة»)
+                // رغم أن البيانات محمّلة أصلاً بالنموذج — نحسبهما من دفتر الإجازات وسجلات العهد.
+                var annualLeaveRow = Model.LeaveLedger
+                    .FirstOrDefault(l => l.Type == SmartAttendance.Domain.Enums.LeaveType.Annual);
+                var assetRecords = Model.RecordsOf(EmployeeRecordType.Asset).ToList();
+                var custodyHeld = assetRecords.Count(r => !r.IsReturned);
+            }
             <section class="z360-kpis" aria-label="مؤشرات الموظف">
                 <div class="z360-kpi @healthClass">
                     <span class="z360-kpi-label">مؤشر الصحة الوظيفية</span>
@@ -522,13 +530,13 @@
                 </div>
                 <div class="z360-kpi">
                     <span class="z360-kpi-label">رصيد الإجازات</span>
-                    <strong class="z360-kpi-value">—</strong>
-                    <small class="z360-kpi-note">غير مربوط حالياً</small>
+                    <strong class="z360-kpi-value">@(annualLeaveRow is null ? "—" : annualLeaveRow.Current.ToString("0.#"))</strong>
+                    <small class="z360-kpi-note">@(annualLeaveRow is null ? "لا سياسة إجازات" : $"يوم سنوي متبقٍّ — {Model.LeaveLedgerYear}")</small>
                 </div>
                 <div class="z360-kpi">
                     <span class="z360-kpi-label">العهد المسجلة</span>
-                    <strong class="z360-kpi-value">—</strong>
-                    <small class="z360-kpi-note">وحدة العهد غير مفعلة</small>
+                    <strong class="z360-kpi-value">@custodyHeld</strong>
+                    <small class="z360-kpi-note">@(assetRecords.Count == 0 ? "لا عهد مسجلة" : $"بحوزة الموظف — {assetRecords.Count} إجمالاً")</small>
                 </div>
             </section>
 
