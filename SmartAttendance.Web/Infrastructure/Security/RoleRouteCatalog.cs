@@ -26,7 +26,8 @@ public static class RoleRouteCatalog
         "/",
         "/index",
         "/account",
-        "/settings"
+        "/settings",
+        "/notifications"
     };
 
     public static readonly string[] HrManagerRoutes =

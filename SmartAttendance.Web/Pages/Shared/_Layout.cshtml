@@ -623,6 +623,8 @@
                 <div class="nexora-controls">
                     @if (isLoggedIn)
                     {
+                        @await Component.InvokeAsync("NotificationBell")
+
                         <div class="nexora-user-chip">
                             <span class="nexora-user-avatar">@(string.IsNullOrWhiteSpace(loginDisplayName) ? "Z" : loginDisplayName.Trim()[0])</span>
                             <span class="nexora-user-copy">

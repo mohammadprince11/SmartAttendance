@@ -9,6 +9,13 @@
       "url": "http://localhost:5080"
     },
     {
+      "name": "WebDev",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "SmartAttendance.Web", "--urls", "http://localhost:5091"],
+      "port": 5091,
+      "url": "http://localhost:5091"
+    },
+    {
       "name": "API",
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "SmartAttendance.API", "--urls", "http://localhost:5226"],

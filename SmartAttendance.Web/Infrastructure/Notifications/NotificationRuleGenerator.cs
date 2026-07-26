@@ -235,6 +235,23 @@ WHERE IsActive = 1 AND IsDeleted = 0;
                 pushed += rowPush;
             }
 
+            // القناة الثانية (back-office): صفّ SystemNotifications موجَّه للـHR — يراه أدوار HR
+            // (رمز «HR») والأدمن (يرى كل ما لا يستهدف الموظفين). هذا يوصِل الحدث للأدمن/HR
+            // غير المربوطين بموظف — الفجوة التي كانت تجعل الجدول يُكتَب ولا يُقرأ. يُكتب مرّة
+            // واحدة لكل حدث جديد (نفس idempotency جدول الأحداث).
+            await HrmsDatabase.ExecuteAsync(
+                db,
+                """
+INSERT INTO SystemNotifications (Title, Message, TargetRole, Url)
+VALUES (@Title, @Message, N'HR', @Url);
+""",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@Title", ev.Title);
+                    HrmsDatabase.AddParameter(command, "@Message", ev.Body);
+                    HrmsDatabase.AddParameter(command, "@Url", $"/Employees/Profile?id={ev.SubjectEmployeeId}");
+                });
+
             await HrmsDatabase.ExecuteAsync(
                 db,
                 """
