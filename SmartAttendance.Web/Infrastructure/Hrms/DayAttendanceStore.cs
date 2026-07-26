@@ -392,6 +392,18 @@ WHERE EmployeeId=@Emp AND WorkDate=@Date;
                 dayKind == "Weekend" ? "Weekend" : "Rest");
         }
 
+        // تعبئة البصمة المفقودة (إعداد كان صمّاءً حتى الآن): يُكمل الطرف المفقود بوقت
+        // المناوبة إن وُجد الطرف الآخر فقط. كلا الطرفين مفقود = غياب حقيقي فلا يُلفَّق
+        // يوم كامل من لا بيانات. محروس بالرايتين (الافتراضي false ⟹ لا تغيير للسلوك القائم).
+        if (!checkIn.HasValue && checkOut.HasValue && shift.FillMissingCheckIn)
+        {
+            checkIn = FillFromShift(checkOut.Value, day?.StartTime, day?.EndTime, fillingStart: true);
+        }
+        else if (checkIn.HasValue && !checkOut.HasValue && shift.FillMissingCheckOut)
+        {
+            checkOut = FillFromShift(checkIn.Value, day?.StartTime, day?.EndTime, fillingStart: false);
+        }
+
         if (!checkIn.HasValue)
         {
             return (null, null, 0, 0, 0, "Absent");
@@ -426,6 +438,31 @@ WHERE EmployeeId=@Emp AND WorkDate=@Date;
 
         var status = !checkOut.HasValue ? "Incomplete" : late > 0 ? "Late" : "Present";
         return (checkIn, checkOut, late, early, worked, status);
+    }
+
+    /// <summary>
+    /// يبني وقت التعبئة من مواقيت المناوبة على تاريخ البصمة المرساة. يعيد null إن كان
+    /// الوقت الهدف غير قابل للتحليل (⟹ يبقى الطرف مفقوداً فيسقط لغياب/غير مكتمل — آمن).
+    /// يراعي المناوبة العابرة لمنتصف الليل (نهاية ≤ بداية): البداية باليوم السابق للخروج،
+    /// والنهاية باليوم التالي للدخول.
+    /// </summary>
+    private static DateTime? FillFromShift(DateTime anchor, string? startStr, string? endStr, bool fillingStart)
+    {
+        var target = fillingStart ? startStr : endStr;
+        if (!TimeSpan.TryParse(target, out var time))
+        {
+            return null;
+        }
+
+        var result = anchor.Date + time;
+        var overnight = TimeSpan.TryParse(startStr, out var st)
+            && TimeSpan.TryParse(endStr, out var en) && en <= st;
+        if (overnight)
+        {
+            if (fillingStart && result > anchor) result = result.AddDays(-1);
+            if (!fillingStart && result < anchor) result = result.AddDays(1);
+        }
+        return result;
     }
 
     public static Task<List<DayRow>> ListAsync(
