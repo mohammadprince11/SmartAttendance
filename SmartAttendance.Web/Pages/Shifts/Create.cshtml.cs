@@ -1,43 +1,17 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using SmartAttendance.Application.Shifts.Services;
-using SmartAttendance.Application.Shifts.ViewModels;
 
 namespace SmartAttendance.Web.Pages.Shifts;
 
+// الطبقة القديمة (Shifts) صارت للعرض فقط — الإنشاء انتقل إلى «أنواع المناوبات» /ShiftTypes.
+// تبقى إعادة التوجيه لحماية الروابط المحفوظة من الكتابة على الجدول القديم.
 public class CreateModel : PageModel
 {
-    private readonly IShiftService _shiftService;
-
-    public CreateModel(IShiftService shiftService)
+    public IActionResult OnGet()
     {
-        _shiftService = shiftService;
-    }
-
-    [BindProperty]
-    public ShiftCreateViewModel Shift { get; set; } = new();
-
-    public string? ErrorMessage { get; set; }
-
-    public void OnGet()
-    {
-    }
-
-    public async Task<IActionResult> OnPostAsync()
-    {
-        if (!ModelState.IsValid)
-            return Page();
-
-        var created = await _shiftService.CreateAsync(Shift);
-
-        if (!created)
-        {
-            ErrorMessage = "Shift code already exists.";
-            return Page();
-        }
-
-        TempData["SuccessMessage"] = "Shift created successfully.";
-
+        TempData["SuccessMessage"] = "إنشاء المناوبات انتقل إلى «أنواع المناوبات». الطبقة القديمة للعرض فقط.";
         return RedirectToPage("./Index");
     }
+
+    public IActionResult OnPost() => RedirectToPage("./Index");
 }
