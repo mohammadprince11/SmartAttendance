@@ -368,7 +368,8 @@
 </div>
 
 <script src="~/js/nexora-employee-updates.js" asp-append-version="true"></script>
-    <script src="~/js/nexora-employee-updates-date-system.js" asp-append-version="true"></script>
+    @* نظام التاريخ المخصّص أُزيل: المحرّك القانوني nexora-calendar-v18 (بـMutationObserver)
+       يلتقط حقول type=date الديناميكية ويعرض منتقي .nxcal الموحّد — متحقَّق حياً. *@
 <script>
 (function () {
     "use strict";
