@@ -741,6 +741,7 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         Team = await LoadTeamAsync(Employee);
         FeedbackItems = await LoadFeedbackAsync(employeeId);
         PendingViolationReplies = await LoadPendingViolationRepliesAsync(employeeId);
+        DisciplinaryHistory = await LoadDisciplinaryHistoryAsync(employeeId);
         PendingAssetAcknowledgments = await LoadPendingAssetAcknowledgmentsAsync(employeeId);
         MyMissingPunches = await MissingPunchRequestStore.ListAsync(
             _dbContext, new MissingPunchRequestStore.Filter { EmployeeId = employeeId });
@@ -916,6 +917,60 @@ ORDER BY EventDate DESC;
                 ReferenceNo = HrmsDatabase.GetString(reader, "ReferenceNo"),
                 ViolationTitle = HrmsDatabase.GetString(reader, "ViolationTitle"),
                 EventDate = HrmsDatabase.GetDateOnly(reader, "EventDate")
+            });
+    }
+
+    /// <summary>سجل انضباط الموظف — بطاقة مخالفة بإجرائها وحالتها وأثرها المالي (لتبويب الانضباط).</summary>
+    public sealed class DisciplinaryRecord
+    {
+        public string ReferenceNo { get; set; } = string.Empty;
+        public DateOnly? EventDate { get; set; }
+        public string Category { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string ActionStatus { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string FinalPenaltyAction { get; set; } = string.Empty;
+        public decimal DeductionAmount { get; set; }
+        public string ReplyStatus { get; set; } = string.Empty;
+        public string EmployeeReply { get; set; } = string.Empty;
+    }
+
+    /// <summary>كامل مخالفات الموظف (سجل الانضباط) — يُعرض بتبويب «التقييم والانضباط».</summary>
+    public List<DisciplinaryRecord> DisciplinaryHistory { get; set; } = new();
+
+    private async Task<List<DisciplinaryRecord>> LoadDisciplinaryHistoryAsync(int employeeId)
+    {
+        await ViolationCaseSchema.EnsureAsync(_dbContext);
+        return await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT ReferenceNo,
+       EventDate,
+       ISNULL(ViolationCategory, N'') AS ViolationCategory,
+       ISNULL(ViolationTitle, N'') AS ViolationTitle,
+       ISNULL(ActionStatus, N'') AS ActionStatus,
+       ISNULL(Status, N'') AS Status,
+       ISNULL(FinalPenaltyAction, N'') AS FinalPenaltyAction,
+       ISNULL(DeductionAmount, 0) AS DeductionAmount,
+       ISNULL(EmployeeReplyStatus, N'NotRequested') AS EmployeeReplyStatus,
+       ISNULL(EmployeeReply, N'') AS EmployeeReply
+FROM EmployeeViolationCases
+WHERE EmployeeId = @EmployeeId AND ISNULL(IsDeleted, 0) = 0
+ORDER BY EventDate DESC, Id DESC;
+""",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => new DisciplinaryRecord
+            {
+                ReferenceNo = HrmsDatabase.GetString(reader, "ReferenceNo"),
+                EventDate = HrmsDatabase.GetDateOnly(reader, "EventDate"),
+                Category = HrmsDatabase.GetString(reader, "ViolationCategory"),
+                Title = HrmsDatabase.GetString(reader, "ViolationTitle"),
+                ActionStatus = HrmsDatabase.GetString(reader, "ActionStatus"),
+                Status = HrmsDatabase.GetString(reader, "Status"),
+                FinalPenaltyAction = HrmsDatabase.GetString(reader, "FinalPenaltyAction"),
+                DeductionAmount = GetDecimal(reader, "DeductionAmount"),
+                ReplyStatus = HrmsDatabase.GetString(reader, "EmployeeReplyStatus"),
+                EmployeeReply = HrmsDatabase.GetString(reader, "EmployeeReply")
             });
     }
 

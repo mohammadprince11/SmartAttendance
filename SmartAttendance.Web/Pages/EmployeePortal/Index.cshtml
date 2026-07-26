@@ -650,9 +650,21 @@
                     }
                 </section>
 
+                @{
+                    var pulseTotal = Model.Polls.Count;
+                    var pulseVoted = Model.Polls.Count(p => p.HasVoted);
+                    var pulsePct = pulseTotal > 0 ? (int)Math.Round(pulseVoted * 100.0 / pulseTotal) : 0;
+                }
                 <aside class="nxex-card nxex-pulse-insight">
-                    <header class="nxex-card-head compact"><h2>مؤشر نبضك</h2><span class="nxex-chip">Pulse</span></header>
-                    <div class="nxex-ring"><strong>78%</strong><span>نبض عام جيد</span></div>
+                    <header class="nxex-card-head compact"><h2>مؤشر مشاركتك</h2><span class="nxex-chip">Pulse</span></header>
+                    @if (pulseTotal > 0)
+                    {
+                        <div class="nxex-ring"><strong>@pulsePct%</strong><span>شاركت في @pulseVoted من @pulseTotal استبيان</span></div>
+                    }
+                    else
+                    {
+                        <div class="nxex-ring"><strong>—</strong><span>لم تُنشر استبيانات بعد</span></div>
+                    }
                     <p>كل مشاركة منك تساعد الموارد البشرية على تحسين بيئة العمل.</p>
                 </aside>
             </div>
@@ -712,18 +724,57 @@
             <div class="nxex-grid-2">
                 <section class="nxex-card">
                     <header class="nxex-card-head"><h2>التقييم والأداء</h2><span class="nxex-chip pending">قادم</span></header>
-                    <div class="nxex-performance">
-                        <article><strong>آخر تقييم</strong><span>لم يتم ربط جدول التقييم بعد</span></article>
-                        <article><strong>نقاط القوة</strong><span>الالتزام، التعاون، سرعة التعلم</span></article>
-                        <article><strong>نقاط التطوير</strong><span>تظهر بعد اعتماد تقييم الإدارة</span></article>
+                    <div class="nxex-note-box">
+                        وحدة تقييم الأداء الرسمية لم تُفعّل بعد. عند اعتماد دورة تقييم من الإدارة ستظهر نتيجتك ونقاط القوة والتطوير هنا.
                     </div>
                 </section>
 
                 <section class="nxex-card">
-                    <header class="nxex-card-head"><h2>الانضباط والعقوبات</h2><span class="nxex-chip">Discipline</span></header>
-                    <div class="nxex-note-box">
-                        هنا سيتم عرض العقوبات، الإنذارات، والمكافآت بعد ربط جدول الانضباط الرسمي.
-                    </div>
+                    <header class="nxex-card-head">
+                        <h2>الانضباط والعقوبات</h2>
+                        <span class="nxex-chip @(Model.DisciplinaryHistory.Any() ? "pending" : "")">@Model.DisciplinaryHistory.Count</span>
+                    </header>
+                    @if (!Model.DisciplinaryHistory.Any())
+                    {
+                        <div class="nxex-note-box">
+                            لا توجد مخالفات أو عقوبات مسجّلة على ملفك. سجلّك نظيف.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="nxex-timeline">
+                            @foreach (var v in Model.DisciplinaryHistory)
+                            {
+                                <article class="nxex-request-preview" style="margin-bottom:12px">
+                                    <span>@v.ReferenceNo · @(v.EventDate?.ToString("yyyy-MM-dd") ?? "—")@(string.IsNullOrWhiteSpace(v.Category) ? "" : " · " + v.Category)</span>
+                                    <strong>@(string.IsNullOrWhiteSpace(v.Title) ? "مخالفة" : v.Title)</strong>
+                                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+                                        <span class="nxex-chip">@v.Status</span>
+                                        @if (!string.IsNullOrWhiteSpace(v.ActionStatus))
+                                        {
+                                            <span class="nxex-chip">@v.ActionStatus</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(v.FinalPenaltyAction))
+                                        {
+                                            <span class="nxex-chip pending">@v.FinalPenaltyAction</span>
+                                        }
+                                        @if (v.DeductionAmount > 0)
+                                        {
+                                            <span class="nxex-chip pending">اقتطاع @v.DeductionAmount.ToString("#,0.##")</span>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(v.EmployeeReply))
+                                    {
+                                        <div class="nxex-reply" style="margin-top:8px"><strong>ردّك</strong><span>@v.EmployeeReply</span></div>
+                                    }
+                                    else if (v.ReplyStatus == "Pending")
+                                    {
+                                        <small style="display:block;margin-top:6px;color:#facc15">بانتظار ردّك — من تبويب «طلباتي».</small>
+                                    }
+                                </article>
+                            }
+                        </div>
+                    }
                 </section>
             </div>
         </section>
