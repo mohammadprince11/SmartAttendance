@@ -6,7 +6,6 @@
     var brandName = (await ThemeContextService.GetCurrentAsync(default)).DisplayName is string dn && !string.IsNullOrWhiteSpace(dn) ? dn : "ZYNORA";
 }
 
-<link rel="stylesheet" href="~/css/nexora-edit-custom-datepicker.css" asp-append-version="true" />
 @{
     ViewData["Title"] = "إضافة موظف جديد";
     var employeePhotoFallback = Url.Content("~/brand/employee-photo-placeholder.svg");
@@ -137,7 +136,7 @@
 
                 <div class="nxr-field">
                     <label asp-for="Employee.BirthDate">تاريخ الميلاد</label>
-                    <input data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" asp-for="Employee.BirthDate" type="text" />
+                    <input asp-for="Employee.BirthDate" type="date" />
                     <span asp-validation-for="Employee.BirthDate" class="text-danger"></span>
                 </div>
 @* NEXORA_DEMOGRAPHIC_FIELDS_START *@
@@ -317,13 +316,13 @@
 
                 <div class="nxr-field">
                     <label asp-for="Employee.HireDate">تاريخ التعيين (العقد)</label>
-                    <input data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" asp-for="Employee.HireDate" type="text" />
+                    <input asp-for="Employee.HireDate" type="date" />
                     <span asp-validation-for="Employee.HireDate" class="text-danger"></span>
                 </div>
 
                 <div class="nxr-field">
                     <label asp-for="Employee.JoiningDate">تاريخ المباشرة الفعلية (إن اختلفت)</label>
-                    <input data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" asp-for="Employee.JoiningDate" type="text" />
+                    <input asp-for="Employee.JoiningDate" type="date" />
                 </div>
 
                 <div class="nxr-field">
@@ -522,7 +521,6 @@
         </section>
 </form>
 </div>
-<script src="~/js/nexora-edit-custom-datepicker.js" asp-append-version="true" defer></script>
 @section Scripts {
     <!-- NEXORA_CREATE_ORGANIZATION_FILTER_START -->
     <script>
@@ -1165,15 +1163,6 @@
         resize: vertical !important;
     }
 
-    .nxr-create-clean-form input[data-nexora-date-field="true"] {
-        height: 50px !important;
-        min-height: 50px !important;
-        max-height: 50px !important;
-        padding-block: 0 !important;
-        padding-inline: 12px !important;
-        line-height: 1.2 !important;
-        box-sizing: border-box !important;
-    }
 
     .nxr-create-clean-form .nxr-field input:focus,
     .nxr-create-clean-form .nxr-field select:focus,

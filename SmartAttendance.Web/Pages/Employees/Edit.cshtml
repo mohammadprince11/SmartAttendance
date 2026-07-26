@@ -9,16 +9,11 @@
         : Model.CurrentPhotoPath;
 }
 
-<link rel="stylesheet" href="~/css/nexora-edit-custom-datepicker.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-photo-upload.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-edit-clean-layout.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-profile-dynamic-fields.css" asp-append-version="true" />
 
 <style>
-    /* توحيد الستايل مع النظام */
-    input[data-nexora-date-field="true"] { background-color: #0f172a !important; color: #e2e8f0 !important; border: 1px solid #334155 !important; border-radius: 8px !important; padding: 10px 16px !important; }
-    input[data-nexora-date-field="true"]:focus { border-color: #0ea5e9 !important; box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2) !important; }
-
     /* ستايل قائمة البحث الذكية */
     .nxr-searchable-wrapper { position: relative; width: 100%; }
     .nxr-search-input { width: 100%; background-color: #0f172a !important; color: #e2e8f0 !important; border: 1px solid #334155 !important; border-radius: 8px !important; padding: 10px 16px !important; transition: border-color 0.2s; cursor: pointer; }
@@ -193,16 +188,16 @@
 
                 <div class="nxr-edit-field">
                     <label asp-for="Employee.HireDate">تاريخ التعيين (العقد)</label>
-                    <input name="Employee.HireDate" id="Employee_HireDate" value="@Model.Employee.HireDate.ToString("yyyy-MM-dd")" type="text" data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" />
+                    <input name="Employee.HireDate" id="Employee_HireDate" value="@Model.Employee.HireDate.ToString("yyyy-MM-dd")" type="date" />
                     <span asp-validation-for="Employee.HireDate"></span>
                 </div>
                 <div class="nxr-edit-field">
                     <label asp-for="Employee.JoiningDate">تاريخ المباشرة الفعلية (إن اختلفت)</label>
-                    <input name="Employee.JoiningDate" id="Employee_JoiningDate" value="@(Model.Employee.JoiningDate?.ToString("yyyy-MM-dd"))" type="text" data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" />
+                    <input name="Employee.JoiningDate" id="Employee_JoiningDate" value="@(Model.Employee.JoiningDate?.ToString("yyyy-MM-dd"))" type="date" />
                 </div>
                 <div class="nxr-edit-field">
                     <label asp-for="Employee.BirthDate">تاريخ الميلاد</label>
-                    <input name="Employee.BirthDate" id="Employee_BirthDate" value="@(Model.Employee.BirthDate?.ToString("yyyy-MM-dd"))" type="text" data-nexora-date-field="true" inputmode="numeric" autocomplete="off" placeholder="yyyy-mm-dd" />
+                    <input name="Employee.BirthDate" id="Employee_BirthDate" value="@(Model.Employee.BirthDate?.ToString("yyyy-MM-dd"))" type="date" />
                     <span asp-validation-for="Employee.BirthDate"></span>
                 </div>
                 <div class="nxr-edit-field">
@@ -356,7 +351,6 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/nexora-edit-custom-datepicker.js" asp-append-version="true" defer></script>
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
 
     <!-- سكربت القائمة الذكية للمدير المباشر -->
