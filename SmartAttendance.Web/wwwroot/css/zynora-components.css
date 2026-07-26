@@ -233,3 +233,24 @@ html[dir="ltr"] .zy-scope select,
     filter: brightness(1.06);
     border-color: var(--zy-border-strong) !important;
 }
+
+/* ===== 6. طلب المستخدم: كل أزرار الأفعال بنفس ستايل «دفعة مسير جديدة» (تيل صلب) =====
+   يُطبَّق أخيراً فيتغلّب على ألوان المتغيّرات أعلاه. الاستثناءات المقصودة:
+   - الخطر/الحذف تبقى أحمر (سلامة)
+   - الإلغاء/الرجوع تبقى محايدة (تمييز الفعل التراجعي)
+   - الأيقونة/mini/ترقيم/pill/link/switch تبقى مضغوطة بلا تعبئة كاملة */
+.zy-scope [class*="-btn"]:not([class*="danger"]):not([class*="delete"]):not([class*="cancel"]):not([class*="back"]):not([class*="icon"]):not([class*="mini"]):not([class*="pager"]):not([class*="pagination"]):not([class*="pill"]):not([class*="link"]):not([class*="switch"]):not([class*="secondary"]),
+.zy-scope [class*="-button"]:not([class*="danger"]):not([class*="delete"]):not([class*="cancel"]):not([class*="back"]):not([class*="icon"]):not([class*="pagination"]):not([class*="switch"]):not([class*="pill"]):not([class*="logout"]),
+.zy-scope .nxos__button,
+.zy-scope a[class*="chip"]:not([class*="status"]),
+.zy-scope button[class*="chip"] {
+    background: var(--zy-electric-teal) !important;
+    background-image: none !important;
+    color: #04141d !important;
+    border: 1px solid var(--zy-electric-teal) !important;
+}
+.zy-scope [class*="-btn"]:not([class*="danger"]):not([class*="delete"]):not([class*="cancel"]):not([class*="back"]):not([class*="icon"]):not([class*="pill"]):not([class*="link"]):not([class*="switch"]):not([class*="secondary"]):hover:not(:disabled),
+.zy-scope [class*="-button"]:not([class*="danger"]):not([class*="cancel"]):not([class*="back"]):not([class*="icon"]):not([class*="pill"]):not([class*="logout"]):hover:not(:disabled),
+.zy-scope .nxos__button:hover:not(:disabled) {
+    filter: brightness(1.07) !important;
+}
