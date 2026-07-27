@@ -73,7 +73,7 @@
     <header class="geo-head">
         <div>
             <h1>المواقع الجغرافية للموظفين</h1>
-            <p>ربط موقع جغرافي (نطاق مسموح للبصم) بالموظفين — التعريفات تُدار من «إدارة المواقع». إنفاذ التحقق وقت البصم لاحقاً.</p>
+            <p>ربط موقع جغرافي (نطاق مسموح للبصم) بالموظفين — التعريفات تُدار من «إدارة المواقع». الإنفاذ وقت البصم يُفعَّل من «إعدادات الحضور».</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
             <span class="geo-stat" style="color:#4ade80">معيّن <b>@Model.AssignedCount</b></span>
@@ -172,8 +172,8 @@
                 <input type="hidden" name="LocId" id="geo-LocId" value="0" />
                 <label>اسم الموقع *<input type="text" name="LocName" id="geo-LocName" required placeholder="مثال: المكتب الرئيسي" /></label>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                    <label>خط العرض (Latitude)<input type="number" step="0.000001" name="LocLat" id="geo-LocLat" value="0" /></label>
-                    <label>خط الطول (Longitude)<input type="number" step="0.000001" name="LocLng" id="geo-LocLng" value="0" /></label>
+                    <label>خط العرض (Latitude)<input type="number" step="any" inputmode="decimal" name="LocLat" id="geo-LocLat" value="0" /></label>
+                    <label>خط الطول (Longitude)<input type="number" step="any" inputmode="decimal" name="LocLng" id="geo-LocLng" value="0" /></label>
                 </div>
                 <label>نصف القطر (متر)<input type="number" name="LocRadius" id="geo-LocRadius" value="100" min="1" style="max-width:160px" /></label>
                 <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="LocActive" value="true" id="geo-LocActive" checked /> الموقع نشط</label>

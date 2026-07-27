@@ -94,8 +94,12 @@ public class IndexModel : PageModel
         {
             Id = int.TryParse(form["LocId"], out var id) ? id : 0,
             Name = form["LocName"].ToString().Trim(),
-            Latitude = decimal.TryParse(form["LocLat"], out var la) ? la : 0,
-            Longitude = decimal.TryParse(form["LocLng"], out var lo) ? lo : 0,
+            // إحداثيات النموذج تصل بنقطة عشرية دوماً (input number) — ثقافة ثابتة كي لا
+            // يفشل التحليل بثقافة خادم عربية فيُحفظ 0,0 بصمت.
+            Latitude = decimal.TryParse(form["LocLat"], System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var la) ? la : 0,
+            Longitude = decimal.TryParse(form["LocLng"], System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var lo) ? lo : 0,
             RadiusMeters = int.TryParse(form["LocRadius"], out var r) ? Math.Max(1, r) : 100,
             IsActive = form["LocActive"] == "true"
         };
