@@ -1,0 +1,159 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeePortal.BiometricModel
+@{
+    Layout = "_EmployeePortalLayout";
+    ViewData["Title"] = "البصمة والوجه";
+}
+
+<section class="nxex-subpage" dir="rtl" data-nxex-page data-active-tab="home">
+    <header class="nxex-subpage-head">
+        <a class="nxex-back-btn" href="/EmployeePortal" aria-label="رجوع">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </a>
+        <div>
+            <h1>الدخول والبصم بالبصمة/الوجه</h1>
+            <p>سجّل بصمة جهازك (بصمة الإصبع أو الوجه) لتأكيد هويتك عند البصم وللدخول بلا كلمة مرور. بياناتك البيولوجية تبقى داخل جهازك ولا تُرسل للنظام إطلاقاً.</p>
+        </div>
+    </header>
+
+    @if (!Model.IsLinkedToEmployee)
+    {
+        <div class="nxex-flash" style="border-color:rgba(240,84,84,.4);background:rgba(240,84,84,.12);color:#ffb4b4">
+            الحساب غير مرتبط بموظف — لا يمكن تسجيل مفتاح.
+        </div>
+    }
+    else
+    {
+        <div id="bio-flash" class="nxex-flash" hidden></div>
+
+        <section class="nxex-card" style="margin-bottom:16px">
+            @if (Model.HasActive)
+            {
+                <div class="nxex-flash" style="border-color:rgba(70,220,150,.4);background:rgba(70,220,150,.12);color:#b8f5d6">
+                    ✅ لديك مفتاح بصمة/وجه <strong>معتمد ونشط</strong>. يمكنك استخدامه للتأكيد عند البصم وللدخول للبوابة.
+                </div>
+            }
+            else if (Model.HasPending)
+            {
+                <div class="nxex-flash" style="border-color:rgba(255,193,7,.4);background:rgba(255,193,7,.10);color:#ffe08a">
+                    ⏳ مفتاحك مسجَّل و<strong>بانتظار اعتماد الموارد البشرية</strong> — لن يعمل قبل الاعتماد.
+                </div>
+            }
+            else
+            {
+                <p class="nxex-dc-hint">لا يوجد مفتاح مسجَّل بعد. اضغط الزر أدناه وسيطلب جهازك بصمتك أو وجهك.</p>
+            }
+
+            <div class="nxex-field">
+                <label>اسم الجهاز (اختياري)</label>
+                <input type="text" id="bio-label" maxlength="100" placeholder="مثال: هاتفي الشخصي" />
+            </div>
+            <button type="button" id="bio-register-btn" class="nxex-leave-submit">
+                @(Model.Credentials.Count > 0 ? "تسجيل مفتاح جديد (يستبدل القديم)" : "تفعيل البصمة/الوجه")
+            </button>
+            <p class="nxex-dc-hint" style="margin-top:8px">
+                تسجيل مفتاح جديد يلغي أي مفتاح سابق ويحتاج اعتماداً جديداً — مفتاح واحد نشط لكل موظف.
+            </p>
+        </section>
+
+        @if (Model.Credentials.Any())
+        {
+            <section class="nxex-card">
+                <header class="nxex-card-head"><div><h2>مفاتيحي</h2></div></header>
+                @foreach (var c in Model.Credentials)
+                {
+                    <div class="nxex-punch-row" style="justify-content:space-between">
+                        <span>@(string.IsNullOrWhiteSpace(c.DeviceLabel) ? "جهاز غير مسمّى" : c.DeviceLabel)</span>
+                        <span class="nxex-punch-time">@c.CreatedAt.ToString("yyyy-MM-dd")</span>
+                        <span class="nxex-chip">@c.StatusText</span>
+                    </div>
+                }
+            </section>
+        }
+    }
+</section>
+
+@section Scripts {
+<script>
+(function () {
+    var btn = document.getElementById("bio-register-btn");
+    if (!btn) return;
+    var flash = document.getElementById("bio-flash");
+
+    function show(msg, ok) {
+        flash.hidden = false;
+        flash.textContent = msg;
+        flash.style.borderColor = ok ? "rgba(70,220,150,.4)" : "rgba(240,84,84,.4)";
+        flash.style.background = ok ? "rgba(70,220,150,.12)" : "rgba(240,84,84,.12)";
+        flash.style.color = ok ? "#b8f5d6" : "#ffb4b4";
+    }
+
+    // Base64Url ⇄ بايتات (صيغة WebAuthn القياسية)
+    function a2b(s) {
+        s = s.replace(/-/g, "+").replace(/_/g, "/");
+        while (s.length % 4) s += "=";
+        var bin = atob(s), u8 = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+        return u8.buffer;
+    }
+    function b2a(buf) {
+        var u8 = new Uint8Array(buf), bin = "";
+        for (var i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+        return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    }
+
+    btn.addEventListener("click", async function () {
+        if (!window.PublicKeyCredential) {
+            show("متصفحك أو جهازك لا يدعم البصمة/الوجه (WebAuthn).", false);
+            return;
+        }
+        btn.disabled = true;
+        try {
+            var r = await fetch("/api/webauthn/register/options", { method: "POST" });
+            var data = await r.json();
+            if (!r.ok) throw new Error(data.message || "تعذّر بدء التسجيل.");
+
+            var o = data.options;
+            o.challenge = a2b(o.challenge);
+            o.user.id = a2b(o.user.id);
+            (o.excludeCredentials || []).forEach(function (c) { c.id = a2b(c.id); });
+
+            var cred = await navigator.credentials.create({ publicKey: o });
+
+            var label = (document.getElementById("bio-label").value || "").trim()
+                || (navigator.userAgentData && navigator.userAgentData.platform)
+                || navigator.platform || "";
+
+            var payload = {
+                key: data.key,
+                label: label,
+                attestation: {
+                    id: cred.id,
+                    rawId: b2a(cred.rawId),
+                    type: cred.type,
+                    extensions: cred.getClientExtensionResults(),
+                    response: {
+                        attestationObject: b2a(cred.response.attestationObject),
+                        clientDataJSON: b2a(cred.response.clientDataJSON)
+                    }
+                }
+            };
+            var r2 = await fetch("/api/webauthn/register/complete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            var d2 = await r2.json();
+            if (!r2.ok) throw new Error(d2.message || "فشل حفظ المفتاح.");
+            show("✅ " + d2.message, true);
+            setTimeout(function () { location.reload(); }, 1500);
+        } catch (e) {
+            show(e.name === "NotAllowedError"
+                ? "أُلغيت العملية أو رفض الجهاز — أعد المحاولة."
+                : (e.message || "تعذّر التسجيل."), false);
+            btn.disabled = false;
+        }
+    });
+})();
+</script>
+}
