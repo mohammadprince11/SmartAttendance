@@ -13,6 +13,8 @@
     var locsJson = JsonSerializer.Serialize(Model.Locations.Select(l => new { l.Id, l.Name, l.Latitude, l.Longitude, l.RadiusMeters, l.IsActive }));
 }
 
+@* الأنماط برأس الصفحة (section Styles) لا بجسمها — منعاً لوميض «الشكل القديم ثم الجديد» (FOUC) *@
+@section Styles {
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/lib/leaflet/leaflet.css" asp-append-version="true" />
 
@@ -69,6 +71,7 @@
     .geo-locrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border: 1px solid rgba(73,111,151,.18); border-radius: 10px; font-size: 12px; font-weight: 800; }
     .geo-locrow .co { direction: ltr; color: var(--sa-muted, #8FA8BC); font-size: 11px; }
 </style>
+}
 
 <section class="geo-page" dir="rtl">
     <header class="geo-head">
