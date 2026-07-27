@@ -14,6 +14,7 @@
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/lib/leaflet/leaflet.css" asp-append-version="true" />
 
 <style>
     .geo-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
@@ -175,7 +176,11 @@
                     <label>خط العرض (Latitude)<input type="number" step="any" inputmode="decimal" name="LocLat" id="geo-LocLat" value="0" /></label>
                     <label>خط الطول (Longitude)<input type="number" step="any" inputmode="decimal" name="LocLng" id="geo-LocLng" value="0" /></label>
                 </div>
-                <label>نصف القطر (متر)<input type="number" name="LocRadius" id="geo-LocRadius" value="100" min="1" style="max-width:160px" /></label>
+                <label>نصف القطر (متر)<input type="number" name="LocRadius" id="geo-LocRadius" value="100" min="1" style="max-width:160px" oninput="geoMapCircle()" /></label>
+                <div>
+                    <label style="font-size:12px;font-weight:900;color:var(--sa-muted,#8FA8BC)">اختر الموقع من الخريطة (نقرة تحدّد الإحداثيات، والدائرة = نصف القطر)</label>
+                    <div id="geo-map" style="height:280px;border-radius:14px;margin-top:8px;border:1px solid rgba(73,111,151,.3)"></div>
+                </div>
                 <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="LocActive" value="true" id="geo-LocActive" checked /> الموقع نشط</label>
                 <div style="display:flex;gap:8px">
                     <button type="submit" class="geo-btn">حفظ الموقع</button>
@@ -215,6 +220,7 @@
 </section>
 
 @section Scripts {
+    <script src="~/lib/leaflet/leaflet.js" asp-append-version="true"></script>
     <script>
         var GEO_LOCS = @Html.Raw(locsJson);
 
@@ -235,6 +241,51 @@
         function geoManage() {
             document.getElementById('geo-slide').classList.add('open');
             document.getElementById('geo-backdrop').classList.add('open');
+            // الخريطة تُهيّأ عند أول فتح (اللوح كان مخفياً فيلزم invalidateSize بعد الظهور)
+            setTimeout(geoMapInit, 220);
+        }
+
+        // ===== خريطة اختيار الموقع (Leaflet + OpenStreetMap، ملفات محلية بلا CDN) =====
+        var geoMap = null, geoMarker = null, geoCircle = null;
+        function geoNum(id) { var v = parseFloat(document.getElementById(id).value); return isFinite(v) ? v : 0; }
+        function geoMapInit() {
+            if (typeof L === 'undefined') return;
+            var lat = geoNum('geo-LocLat'), lng = geoNum('geo-LocLng');
+            var hasPoint = lat !== 0 || lng !== 0;
+            if (!geoMap) {
+                geoMap = L.map('geo-map').setView(hasPoint ? [lat, lng] : [33.3152, 44.3661], hasPoint ? 16 : 11);
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19, attribution: '&copy; OpenStreetMap'
+                }).addTo(geoMap);
+                geoMap.on('click', function (e) {
+                    document.getElementById('geo-LocLat').value = e.latlng.lat.toFixed(6);
+                    document.getElementById('geo-LocLng').value = e.latlng.lng.toFixed(6);
+                    geoMapPoint(e.latlng.lat, e.latlng.lng, true);
+                });
+            }
+            geoMap.invalidateSize();
+            if (hasPoint) geoMapPoint(lat, lng, false);
+        }
+        function geoMapPoint(lat, lng, keepZoom) {
+            if (!geoMap) return;
+            if (!geoMarker) {
+                geoMarker = L.marker([lat, lng], { draggable: true }).addTo(geoMap);
+                geoMarker.on('dragend', function () {
+                    var p = geoMarker.getLatLng();
+                    document.getElementById('geo-LocLat').value = p.lat.toFixed(6);
+                    document.getElementById('geo-LocLng').value = p.lng.toFixed(6);
+                    geoMapPoint(p.lat, p.lng, true);
+                });
+            } else { geoMarker.setLatLng([lat, lng]); }
+            geoMapCircle();
+            if (!keepZoom) geoMap.setView([lat, lng], 16);
+        }
+        function geoMapCircle() {
+            if (!geoMap || !geoMarker) return;
+            var p = geoMarker.getLatLng();
+            var r = Math.max(10, geoNum('geo-LocRadius') || 100);
+            if (!geoCircle) geoCircle = L.circle(p, { radius: r, color: '#0d9488', fillOpacity: .15 }).addTo(geoMap);
+            else { geoCircle.setLatLng(p); geoCircle.setRadius(r); }
         }
         function geoClose() {
             document.getElementById('geo-slide').classList.remove('open');
