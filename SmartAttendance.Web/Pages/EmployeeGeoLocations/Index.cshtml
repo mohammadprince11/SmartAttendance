@@ -179,7 +179,15 @@
                 <label>نصف القطر (متر)<input type="number" name="LocRadius" id="geo-LocRadius" value="100" min="1" style="max-width:160px" oninput="geoMapCircle()" /></label>
                 <div>
                     <label style="font-size:12px;font-weight:900;color:var(--sa-muted,#8FA8BC)">اختر الموقع من الخريطة (نقرة تحدّد الإحداثيات، والدائرة = نصف القطر)</label>
-                    <div id="geo-map" style="height:280px;border-radius:14px;margin-top:8px;border:1px solid rgba(73,111,151,.3)"></div>
+                    <div style="display:flex;gap:6px;margin-top:8px">
+                        <input type="text" id="geo-search" placeholder="ابحث عن مكان… (مثال: المنصور بغداد)" style="flex:1"
+                               onkeydown="if(event.key==='Enter'){event.preventDefault();geoSearch();}" />
+                        <button type="button" class="geo-btn ghost sm" onclick="geoSearch()">بحث</button>
+                        <button type="button" class="geo-btn ghost sm" onclick="geoMyLocation()" title="موقعي الحالي">📍 موقعي</button>
+                        <button type="button" class="geo-btn ghost sm" onclick="geoToggleLayer()" id="geo-layerbtn" title="تبديل قمر صناعي/خريطة">🛰️</button>
+                    </div>
+                    <div id="geo-results" style="display:none;margin-top:6px;border:1px solid rgba(73,111,151,.3);border-radius:10px;overflow:hidden"></div>
+                    <div id="geo-map" style="height:320px;border-radius:14px;margin-top:8px;border:1px solid rgba(73,111,151,.3)"></div>
                 </div>
                 <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="LocActive" value="true" id="geo-LocActive" checked /> الموقع نشط</label>
                 <div style="display:flex;gap:8px">
@@ -246,7 +254,7 @@
         }
 
         // ===== خريطة اختيار الموقع (Leaflet + OpenStreetMap، ملفات محلية بلا CDN) =====
-        var geoMap = null, geoMarker = null, geoCircle = null;
+        var geoMap = null, geoMarker = null, geoCircle = null, geoBase = null, geoSat = false;
         function geoNum(id) { var v = parseFloat(document.getElementById(id).value); return isFinite(v) ? v : 0; }
         function geoMapInit() {
             if (typeof L === 'undefined') return;
@@ -254,7 +262,7 @@
             var hasPoint = lat !== 0 || lng !== 0;
             if (!geoMap) {
                 geoMap = L.map('geo-map').setView(hasPoint ? [lat, lng] : [33.3152, 44.3661], hasPoint ? 16 : 11);
-                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                geoBase = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19, attribution: '&copy; OpenStreetMap'
                 }).addTo(geoMap);
                 geoMap.on('click', function (e) {
@@ -262,9 +270,67 @@
                     document.getElementById('geo-LocLng').value = e.latlng.lng.toFixed(6);
                     geoMapPoint(e.latlng.lat, e.latlng.lng, true);
                 });
+                // النطاقات المحفوظة الأخرى — دوائر باهتة للسياق (لا تُعدَّل من الخريطة)
+                (GEO_LOCS || []).forEach(function (l) {
+                    if (l.Latitude || l.Longitude)
+                        L.circle([l.Latitude, l.Longitude], { radius: Math.max(10, l.RadiusMeters), color: '#64748b', fillOpacity: .06, weight: 1 })
+                         .bindTooltip(l.Name).addTo(geoMap);
+                });
             }
             geoMap.invalidateSize();
             if (hasPoint) geoMapPoint(lat, lng, false);
+        }
+
+        // تبديل الأساس: خريطة شوارع ↔ قمر صناعي (Esri World Imagery، بلا مفتاح)
+        function geoToggleLayer() {
+            if (!geoMap) return;
+            geoMap.removeLayer(geoBase);
+            geoSat = !geoSat;
+            geoBase = geoSat
+                ? L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri' })
+                : L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
+            geoBase.addTo(geoMap);
+            document.getElementById('geo-layerbtn').textContent = geoSat ? '🗺️' : '🛰️';
+        }
+
+        // بحث الأماكن عبر Nominatim (خدمة OpenStreetMap المجانية) بأولوية عربية
+        function geoSearch() {
+            var q = document.getElementById('geo-search').value.trim();
+            var box = document.getElementById('geo-results');
+            if (!q) { box.style.display = 'none'; return; }
+            box.style.display = 'block';
+            box.innerHTML = '<div style="padding:8px 12px;font-size:12px">جارٍ البحث…</div>';
+            fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=ar&q=' + encodeURIComponent(q))
+                .then(function (r) { return r.json(); })
+                .then(function (list) {
+                    if (!list.length) { box.innerHTML = '<div style="padding:8px 12px;font-size:12px">لا نتائج.</div>'; return; }
+                    box.innerHTML = '';
+                    list.forEach(function (item) {
+                        var row = document.createElement('button');
+                        row.type = 'button';
+                        row.textContent = item.display_name;
+                        row.style.cssText = 'display:block;width:100%;text-align:right;padding:8px 12px;font-size:12px;font-weight:800;background:transparent;border:0;border-bottom:1px solid rgba(73,111,151,.15);cursor:pointer;color:inherit';
+                        row.onclick = function () {
+                            box.style.display = 'none';
+                            var lat = parseFloat(item.lat), lng = parseFloat(item.lon);
+                            document.getElementById('geo-LocLat').value = lat.toFixed(6);
+                            document.getElementById('geo-LocLng').value = lng.toFixed(6);
+                            geoMapPoint(lat, lng, false);
+                        };
+                        box.appendChild(row);
+                    });
+                })
+                .catch(function () { box.innerHTML = '<div style="padding:8px 12px;font-size:12px">تعذّر البحث — تحقق من الإنترنت.</div>'; });
+        }
+
+        // «موقعي الحالي»: يتمركز على GPS الجهاز ويحدد الدبوس (يحتاج سماح إذن الموقع)
+        function geoMyLocation() {
+            if (!navigator.geolocation || !geoMap) return;
+            navigator.geolocation.getCurrentPosition(function (p) {
+                document.getElementById('geo-LocLat').value = p.coords.latitude.toFixed(6);
+                document.getElementById('geo-LocLng').value = p.coords.longitude.toFixed(6);
+                geoMapPoint(p.coords.latitude, p.coords.longitude, false);
+            }, function () { alert('تعذّر الحصول على موقعك — تأكد من السماح بإذن الموقع.'); }, { timeout: 8000 });
         }
         function geoMapPoint(lat, lng, keepZoom) {
             if (!geoMap) return;
