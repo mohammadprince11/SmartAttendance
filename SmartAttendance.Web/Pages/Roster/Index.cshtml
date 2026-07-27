@@ -28,9 +28,14 @@
         return wh > 0 ? $"{wh:0.#}س" : "";
     }
 
+    // عائلة المناوبة (صباحية/مسائية/ليلية/مرنة) لتجميع منتقي «كل المناوبات».
+    string FamilyLabel(ShiftTypeStore.ShiftType s) => ShiftTypeStore.FamilyOf(
+        s.Days.FirstOrDefault(d => d.IsWork && !string.IsNullOrWhiteSpace(d.StartTime))?.StartTime,
+        s.IsFlexible);
+
     var shiftJson = System.Text.Json.JsonSerializer.Serialize(
         Model.Shifts.ToDictionary(s => s.Id.ToString(),
-            s => new { n = s.Name, c = ShiftColor(s), h = HoursLabel(s) }));
+            s => new { n = s.Name, c = ShiftColor(s), h = HoursLabel(s), f = FamilyLabel(s) }));
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
@@ -60,7 +65,7 @@
 
     /* الاسم لا يحتوي «card/panel/form» عمداً: قاعدة nexora-calendar العامة تفرض overflow:visible!important على أي كلاس يحوي تلك الكلمات */
     .ros-grid-scroll { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); max-height: 66vh; }
-    .ros-grid { border-collapse: separate; border-spacing: 0; font-size: 11.5px; }
+    .ros-grid { border-collapse: separate; border-spacing: 0; font-size: 11.5px; user-select: none; }
     .ros-grid th, .ros-grid td { border-bottom: 1px solid rgba(143,168,188,.1); border-inline-start: 1px solid rgba(143,168,188,.06); white-space: nowrap; }
     .ros-grid thead th { position: sticky; top: 0; z-index: 3; background: #0a1f33; color: var(--sa-muted, #8FA8BC); font-weight: 1000; padding: 6px 8px; text-align: center; }
     html[data-theme="light"] .ros-grid thead th { background: #eef4f9; }
@@ -85,8 +90,23 @@
     .pchip { border: 1px solid rgba(73,111,151,.3); border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 800; cursor: pointer; background: transparent; color: inherit; display: flex; gap: 6px; align-items: center; }
     .pchip .dot { width: 12px; height: 12px; border-radius: 50%; }
     .pchip.active { outline: 2px solid #12D9E3; outline-offset: 1px; background: rgba(18,217,227,.12); }
+    .pchip.tool.on { outline: 2px solid #facc15; background: rgba(250,204,21,.12); }
     .ros-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
     .ros-actions { display: flex; gap: 8px; align-items: center; }
+
+    /* منتقي «كل المناوبات»: بحث + تجميع حسب العائلة — الشريط يبقى سطراً مضغوطاً */
+    .ros-pick-backdrop { position: fixed; inset: 0; background: rgba(2,10,18,.55); z-index: 60; }
+    .ros-pick { position: fixed; top: 12vh; inset-inline: max(16px, calc(50vw - 330px)); z-index: 61;
+        border: 1px solid rgba(73,111,151,.3); border-radius: 18px; background: var(--sa-surface, #0a1f33);
+        box-shadow: 0 22px 60px rgba(0,0,0,.5); max-height: 72vh; display: flex; flex-direction: column; }
+    html[data-theme="light"] .ros-pick { background: #fff; }
+    .ros-pick-head { display: flex; gap: 8px; padding: 12px 14px; border-bottom: 1px solid rgba(73,111,151,.2); }
+    .ros-pick-head input { flex: 1; min-height: 38px; border-radius: 10px; border: 1px solid rgba(73,111,151,.3);
+        background: rgba(0,0,0,.16); color: inherit; padding: 6px 12px; font-size: 13px; font-weight: 800; }
+    html[data-theme="light"] .ros-pick-head input { background: #f4f8fb; }
+    .ros-pick-body { overflow: auto; padding: 12px 14px 16px; }
+    .ros-pick-group { font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); margin: 10px 0 6px; }
+    .ros-pick-row { display: flex; gap: 6px; flex-wrap: wrap; }
 </style>
 
 <section class="ros-page" dir="rtl">
@@ -128,18 +148,25 @@
 
     @if (Model.Employees.Count > 0)
     {
+        @* الشريط يبقى سطراً مهما كبر الكتالوج: ثوابت + آخر المستخدمة + «كل المناوبات» ببحث *@
         <div class="ros-palette">
             <span class="lbl">الفرشاة:</span>
-            <button type="button" class="pchip active" onclick="rosBrush('', this)"><span class="dot" style="background:#64748b"></span>افتراضي —</button>
-            @for (var i = 0; i < Model.Shifts.Count; i++)
-            {
-                var shift = Model.Shifts[i];
-                var hlbl = HoursLabel(shift);
-                <button type="button" class="pchip" onclick="rosBrush('S@(shift.Id)', this)"><span class="dot" style="background:@ShiftColor(shift)"></span>@shift.Name@(hlbl.Length > 0 ? $" · {hlbl}" : "")</button>
-            }
-            <button type="button" class="pchip" onclick="rosBrush('Weekend', this)"><span class="dot" style="background:#f87171"></span>عطلة</button>
-            <button type="button" class="pchip" onclick="rosBrush('Rest', this)"><span class="dot" style="background:#facc15"></span>راحة</button>
-            <span style="margin-inline-start:auto;font-size:11px;font-weight:800;color:var(--sa-muted,#8FA8BC)">اختر فرشاة ثم انقر الخلايا لطليها · يُحفظ ما غيّرته فقط</span>
+            <button type="button" class="pchip active" data-bv="" onclick="setBrush('')"><span class="dot" style="background:#64748b"></span>افتراضي —</button>
+            <button type="button" class="pchip" data-bv="Weekend" onclick="setBrush('Weekend')"><span class="dot" style="background:#f87171"></span>عطلة</button>
+            <button type="button" class="pchip" data-bv="Rest" onclick="setBrush('Rest')"><span class="dot" style="background:#facc15"></span>راحة</button>
+            <span id="ros-recents" style="display:contents"></span>
+            <button type="button" class="pchip" onclick="openPicker()">كل المناوبات (@Model.Shifts.Count) ▾</button>
+            <button type="button" class="pchip tool" id="ros-eyedrop" onclick="toggleEyedrop()" title="القطّارة: انقرها ثم انقر خلية لالتقاط مناوبتها فرشاةً — أو انقر أي خلية بالزر الأيمن مباشرة">💧 قطّارة</button>
+            <span style="margin-inline-start:auto;font-size:11px;font-weight:800;color:var(--sa-muted,#8FA8BC)">انقر أو اسحب على الخلايا لطليها · الزر الأيمن يلتقط فرشاة الخلية · يُحفظ ما غيّرته فقط</span>
+        </div>
+
+        <div class="ros-pick-backdrop" id="ros-pick-backdrop" hidden onclick="closePicker()"></div>
+        <div class="ros-pick" id="ros-pick" hidden role="dialog" aria-label="كل المناوبات">
+            <div class="ros-pick-head">
+                <input type="text" id="ros-pick-search" placeholder="ابحث باسم المناوبة أو وقتها (مثال: 8 أو ليلاً)..." oninput="renderPicker()" />
+                <button type="button" class="pchip" onclick="closePicker()">إغلاق ✕</button>
+            </div>
+            <div class="ros-pick-body" id="ros-pick-body"></div>
         </div>
     }
 
@@ -224,11 +251,80 @@
     <script>
         const SHIFTS = @Html.Raw(shiftJson);
         let brush = '';
+        let eyedrop = false;
+        let painting = false;   // طلاء بالسحب (فأرة)
 
-        function rosBrush(v, el) {
+        // ===== آخر الفرشات المستخدمة (تبقى عبر الجلسات) =====
+        const RKEY = 'rosBrushRecent';
+        function recents() {
+            try { return (JSON.parse(localStorage.getItem(RKEY)) || []).filter(v => SHIFTS[v.slice(1)]); }
+            catch (e) { return []; }
+        }
+        function pushRecent(v) {
+            if (!v || !v.startsWith('S')) return;
+            const r = [v, ...recents().filter(x => x !== v)].slice(0, 8);
+            try { localStorage.setItem(RKEY, JSON.stringify(r)); } catch (e) { }
+            renderRecents();
+        }
+        function chipHtml(v) {
+            const s = SHIFTS[v.slice(1)];
+            return `<button type="button" class="pchip" data-bv="${v}" onclick="setBrush('${v}')">` +
+                `<span class="dot" style="background:${s.c}"></span>${esc(s.n)}${s.h ? ' · ' + esc(s.h) : ''}</button>`;
+        }
+        function renderRecents() {
+            document.getElementById('ros-recents').innerHTML = recents().map(chipHtml).join('');
+            refreshChips();
+        }
+        function refreshChips() {
+            document.querySelectorAll('.pchip[data-bv]').forEach(c =>
+                c.classList.toggle('active', c.dataset.bv === brush));
+        }
+
+        function setBrush(v) {
             brush = v;
-            document.querySelectorAll('.pchip').forEach(c => c.classList.remove('active'));
-            el.classList.add('active');
+            setEyedrop(false);
+            pushRecent(v);
+            refreshChips();
+        }
+
+        // ===== القطّارة: التقاط فرشاة من خلية موجودة =====
+        function setEyedrop(on) {
+            eyedrop = on;
+            document.getElementById('ros-eyedrop').classList.toggle('on', on);
+        }
+        function toggleEyedrop() { setEyedrop(!eyedrop); }
+
+        // ===== منتقي «كل المناوبات»: بحث + تجميع حسب العائلة =====
+        function openPicker() {
+            document.getElementById('ros-pick-backdrop').hidden = false;
+            document.getElementById('ros-pick').hidden = false;
+            renderPicker();
+            document.getElementById('ros-pick-search').focus();
+        }
+        function closePicker() {
+            document.getElementById('ros-pick-backdrop').hidden = true;
+            document.getElementById('ros-pick').hidden = true;
+        }
+        function pickShift(v) { setBrush(v); closePicker(); }
+        function renderPicker() {
+            const q = document.getElementById('ros-pick-search').value.trim();
+            const families = ['صباحية', 'مسائية', 'ليلية', 'مرنة', 'أخرى'];
+            const icons = { 'صباحية': '🌅', 'مسائية': '🌇', 'ليلية': '🌙', 'مرنة': '⏱', 'أخرى': '·' };
+            let html = '';
+            for (const fam of families) {
+                const items = Object.entries(SHIFTS)
+                    .filter(([, s]) => (s.f || 'أخرى') === fam)
+                    .filter(([, s]) => !q || s.n.includes(q) || (s.h || '').includes(q))
+                    .sort(([, a], [, b]) => (a.h || '').localeCompare(b.h || ''));
+                if (!items.length) continue;
+                html += `<div class="ros-pick-group">${icons[fam]} ${fam} (${items.length})</div><div class="ros-pick-row">` +
+                    items.map(([id, s]) =>
+                        `<button type="button" class="pchip" onclick="pickShift('S${id}')">` +
+                        `<span class="dot" style="background:${s.c}"></span>${esc(s.n)}${s.h ? ' · ' + esc(s.h) : ''}</button>`).join('') +
+                    '</div>';
+            }
+            document.getElementById('ros-pick-body').innerHTML =
+                html || '<div class="ros-empty">لا مناوبات مطابقة للبحث.</div>';
         }
 
         function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
@@ -261,8 +357,10 @@
             btn.dataset.v = v;
         }
 
-        // النقر يطلي الخلية بالفرشاة النشطة، ويفعّل الـinput المخفي ليُرسَل عند الحفظ
+        // النقر يطلي الخلية بالفرشاة النشطة، ويفعّل الـinput المخفي ليُرسَل عند الحفظ.
+        // والقطّارة المفعّلة تعكس الاتجاه: تلتقط قيمة الخلية فرشاةً بدل طليها.
         function rosPaint(btn) {
+            if (eyedrop) { setBrush(btn.dataset.v || ''); return; }
             styleCell(btn, brush);
             const inp = btn.nextElementSibling;
             inp.value = brush;
@@ -270,7 +368,25 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.rc').forEach(b => styleCell(b, b.dataset.v || ''));
+            renderRecents();
+            document.addEventListener('pointerup', () => painting = false);
+            document.addEventListener('keydown', e => { if (e.key === 'Escape') closePicker(); });
+
+            document.querySelectorAll('.rc').forEach(b => {
+                styleCell(b, b.dataset.v || '');
+                // طلاء بالسحب (فأرة): اضغط واسحب فتنطلي الخلايا تحت المؤشر.
+                b.addEventListener('pointerdown', e => {
+                    if (e.pointerType !== 'mouse' || e.button !== 0 || eyedrop) return;
+                    painting = true;
+                    try { b.releasePointerCapture(e.pointerId); } catch (err) { }
+                });
+                b.addEventListener('pointerenter', () => { if (painting) rosPaint(b); });
+                // الزر الأيمن = قطّارة فورية: يلتقط فرشاة الخلية بلا قائمة سياق.
+                b.addEventListener('contextmenu', e => {
+                    e.preventDefault();
+                    setBrush(b.dataset.v || '');
+                });
+            });
         });
     </script>
 }

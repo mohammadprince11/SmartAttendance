@@ -59,7 +59,10 @@ public class IndexModel : PageModel
         var (year, month) = Period;
         Month ??= $"{year:0000}-{month:00}";
 
-        Shifts = (await ShiftTypeStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
+        // الفرشاة تعرض النشطة «المتاحة بالروستر» فقط — تعطيل AvailableInRoster يؤرشف
+        // المناوبة من شاشة الجدولة بلا مساس بالتاريخ المالي (لا حذف أبداً).
+        Shifts = (await ShiftTypeStore.ListAsync(_dbContext))
+            .Where(s => s.IsActive && s.AvailableInRoster).ToList();
 
         var from = new DateOnly(year, month, 1);
         var to = from.AddMonths(1).AddDays(-1);

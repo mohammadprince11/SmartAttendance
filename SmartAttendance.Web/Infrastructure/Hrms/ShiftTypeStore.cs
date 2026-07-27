@@ -42,6 +42,18 @@ public static class ShiftTypeStore
     public static string LabelOf((string Key, string Label)[] list, string key) =>
         list.FirstOrDefault(x => x.Key == key).Label ?? key;
 
+    /// <summary>
+    /// عائلة المناوبة من وقت بدايتها (لتجميع منتقي الفرشاة بالروستر): صباحية
+    /// [5–12)، مسائية [12–18)، ليلية [18–5). نقية قابلة للاختبار.
+    /// </summary>
+    public static string FamilyOf(string? startTime, bool isFlexible)
+    {
+        if (isFlexible) return "مرنة";
+        if (startTime is not { Length: >= 2 } || !int.TryParse(startTime[..2], out var hour) || hour is < 0 or > 23)
+            return "أخرى";
+        return hour is >= 5 and < 12 ? "صباحية" : hour is >= 12 and < 18 ? "مسائية" : "ليلية";
+    }
+
     public sealed class ShiftDay
     {
         public int DayIndex { get; set; }                 // 0=السبت .. 6=الجمعة
