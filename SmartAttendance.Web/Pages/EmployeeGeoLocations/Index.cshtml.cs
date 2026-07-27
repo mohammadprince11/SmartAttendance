@@ -53,8 +53,14 @@ public class IndexModel : PageModel
                 r.Branch.Contains(v, StringComparison.OrdinalIgnoreCase)).ToList();
         }
         TotalRows = filtered.Count;
-        Rows = filtered;
+        // سقف العرض: رندرة 1350+ صفاً بجدول واحد كانت تجمّد الصفحة ثوانيَ عند كل
+        // فتح/حفظ (HTML ضخم عبر النفق). العدّادات تُحسب على الكل، والجدول يعرض أول
+        // دفعة — والبحث/الفلتر يصل لأي موظف.
+        Rows = filtered.Count > RenderCap ? filtered.Take(RenderCap).ToList() : filtered;
     }
+
+    /// <summary>أقصى صفوف تُرندر بالجدول — البحث والفلتر يغطيان البقية.</summary>
+    public const int RenderCap = 200;
 
     public async Task<IActionResult> OnPostAssignAsync()
     {

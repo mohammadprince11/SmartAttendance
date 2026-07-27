@@ -127,6 +127,12 @@
                             <th>الرمز</th><th>اسم الموظف</th><th>الهيكلية</th><th>وحدة عمل</th><th>Geo Location</th></tr>
                     </thead>
                     <tbody>
+                        @if (Model.TotalRows > Model.Rows.Count)
+                        {
+                            <tr><td colspan="6" style="padding:10px;font-size:12px;font-weight:900;color:var(--sa-muted,#8FA8BC)">
+                                يُعرض أول @Model.Rows.Count من @Model.TotalRows موظفاً — استخدم البحث أو فلتر «بلا موقع/معيّن» للوصول للبقية.
+                            </td></tr>
+                        }
                         @foreach (var row in Model.Rows)
                         {
                             <tr>
