@@ -22,6 +22,9 @@ public class NotificationsModel : PageModel
     private int EmployeeId =>
         int.TryParse(User.FindFirstValue("EmployeeId"), out var id) && id > 0 ? id : 0;
 
+    /// <summary>لا عرض مرئي هنا — فتح الرابط يدوياً يعود للبوابة بدل صفحة فارغة بقوقعة الباك-أوفيس.</summary>
+    public IActionResult OnGet() => RedirectToPage("/EmployeePortal/Index");
+
     public async Task<IActionResult> OnPostReadAsync(int id)
     {
         var affected = await EmployeeNotificationStore.MarkReadAsync(_db, EmployeeId, id, HttpContext.RequestAborted);
