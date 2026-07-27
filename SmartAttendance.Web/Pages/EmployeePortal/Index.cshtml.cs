@@ -673,8 +673,22 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             return RedirectToPage(new { tab = returnTab ?? "attendance" });
         }
 
-        var type = punchType == "Out" ? "Out" : "In";
         var now = DateTime.Now;
+
+        // زر واحد بلا اختيار نوع: النوع يُستنتج تلقائياً بالأسبقية الزمنية بين بصمات
+        // اليوم (كل المصادر) — أول بصمة دخول، التالية خروج، وهكذا (نفس محرك نسيان
+        // البصمة). تمرير النوع صراحةً يبقى مدعوماً للتوافق.
+        string type;
+        if (punchType is "In" or "Out")
+        {
+            type = punchType;
+        }
+        else
+        {
+            var todayTimes = await PunchTypingEngine.DayPunchTimesAsync(
+                _dbContext, employeeId, DateOnly.FromDateTime(now));
+            type = PunchTypingEngine.DeriveTypeFor(todayTimes, now);
+        }
         // الإثبات البيولوجي (إن وُجد) يُستهلك مرة واحدة ويُتحقق أنه لهذا الموظف وضمن نافذته.
         var biometricVerified = WebAuthnProofStore.Consume(bioToken, employeeId);
         var result = await OnlinePunchStore.RecordAsync(
