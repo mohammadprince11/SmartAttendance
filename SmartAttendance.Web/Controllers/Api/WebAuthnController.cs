@@ -42,13 +42,21 @@ public class WebAuthnController : ControllerBase
     /// <summary>
     /// نسخة Fido2 مضبوطة على نطاق الطلب الحالي: تعمل على النطاق الحي
     /// (portal.zynorahr.com عبر HTTPS) وعلى localhost أثناء التطوير بلا إعداد يدوي.
+    /// خلف نفق Cloudflare يصل الطلب للـKestrel بـHTTP بينما أصل المتصفح HTTPS —
+    /// فنحترم X-Forwarded-Proto وإلا فشل تحقق الـOrigin بكل عمليات WebAuthn.
     /// </summary>
-    private Fido2 CreateFido2() => new(new Fido2Configuration
+    private Fido2 CreateFido2()
     {
-        ServerDomain = Request.Host.Host,
-        ServerName = "Zynora HR",
-        Origins = new HashSet<string> { $"{Request.Scheme}://{Request.Host}" }
-    });
+        var scheme = Request.Headers["X-Forwarded-Proto"].FirstOrDefault() is { Length: > 0 } fwd
+            ? fwd.Split(',')[0].Trim()
+            : Request.Scheme;
+        return new Fido2(new Fido2Configuration
+        {
+            ServerDomain = Request.Host.Host,
+            ServerName = "Zynora HR",
+            Origins = new HashSet<string> { $"{scheme}://{Request.Host}" }
+        });
+    }
 
     private async Task<int> ResolveEmployeeIdAsync()
     {
@@ -154,6 +162,11 @@ public class WebAuthnController : ControllerBase
         {
             return BadRequest(new { message = $"فشل التحقق من المفتاح: {ex.Message}" });
         }
+        catch (Exception ex)
+        {
+            // نُظهر السبب الفعلي بدل «فشل حفظ المفتاح» العامة — التشخيص أهم من الإخفاء هنا.
+            return BadRequest(new { message = $"خطأ أثناء حفظ المفتاح: {ex.Message}" });
+        }
     }
 
     // ===== التأكيد البيولوجي لحظة البصم =====
@@ -231,6 +244,10 @@ public class WebAuthnController : ControllerBase
         {
             return BadRequest(new { message = $"فشل التأكيد البيولوجي: {ex.Message}" });
         }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = $"خطأ أثناء التأكيد: {ex.Message}" });
+        }
     }
 
     // ===== الدخول للبوابة بالمفتاح (بلا كلمة مرور) =====
@@ -291,6 +308,10 @@ public class WebAuthnController : ControllerBase
         catch (Fido2VerificationException ex)
         {
             return BadRequest(new { message = $"فشل التحقق: {ex.Message}" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = $"خطأ أثناء التحقق: {ex.Message}" });
         }
 
         // حساب الدخول المرتبط بالموظف (نفضّل حساب دور «موظف»).

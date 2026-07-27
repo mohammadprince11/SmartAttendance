@@ -101,6 +101,16 @@
         for (var i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
         return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
     }
+    // يستخرج سبب الفشل حتى من ProblemDetails (أخطاء ربط النموذج) لا حقل message فقط
+    function msgOf(d, fb) {
+        if (!d) return fb;
+        if (d.message) return d.message;
+        if (d.title) {
+            var e = d.errors ? Object.keys(d.errors).map(function (k) { return k + ": " + d.errors[k].join(" ,"); }).join(" | ") : "";
+            return d.title + (e ? " — " + e : "");
+        }
+        return fb;
+    }
 
     btn.addEventListener("click", async function () {
         if (!window.PublicKeyCredential) {
@@ -111,7 +121,7 @@
         try {
             var r = await fetch("/api/webauthn/register/options", { method: "POST" });
             var data = await r.json();
-            if (!r.ok) throw new Error(data.message || "تعذّر بدء التسجيل.");
+            if (!r.ok) throw new Error(msgOf(data, "تعذّر بدء التسجيل."));
 
             var o = data.options;
             o.challenge = a2b(o.challenge);
@@ -144,7 +154,7 @@
                 body: JSON.stringify(payload)
             });
             var d2 = await r2.json();
-            if (!r2.ok) throw new Error(d2.message || "فشل حفظ المفتاح.");
+            if (!r2.ok) throw new Error(msgOf(d2, "فشل حفظ المفتاح."));
             show("✅ " + d2.message, true);
             setTimeout(function () { location.reload(); }, 1500);
         } catch (e) {
