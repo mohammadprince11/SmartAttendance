@@ -144,7 +144,9 @@
                     extensions: cred.getClientExtensionResults(),
                     response: {
                         attestationObject: b2a(cred.response.attestationObject),
-                        clientDataJSON: b2a(cred.response.clientDataJSON)
+                        clientDataJSON: b2a(cred.response.clientDataJSON),
+                        // Fido2 4.x يتطلب Transports — قد لا تتوفر getTransports ببعض المتصفحات
+                        transports: (cred.response.getTransports ? cred.response.getTransports() : []) || []
                     }
                 }
             };
