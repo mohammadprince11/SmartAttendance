@@ -84,6 +84,7 @@ IF COL_LENGTH('EmployeeMonthAttendance', 'UnpaidLeaveDays') IS NULL
     {
         await EnsureAsync(dbContext);
         await DayAttendanceStore.EnsureAsync(dbContext);
+        await ShiftTypeStore.EnsureAsync(dbContext); // عمود TotalDurationMode مطلوب بالتجميع
 
         var from = new DateOnly(year, month, 1);
         var to = from.AddMonths(1).AddDays(-1);
@@ -101,8 +102,14 @@ WITH Aggregated AS
            SUM(CASE WHEN d.Status = N'LeaveUnpaid' THEN 1 ELSE 0 END) AS UnpaidLeaveDays,
            SUM(d.LateHours) AS LateHours,
            SUM(d.EarlyLeaveHours) AS EarlyLeaveHours,
-           SUM(d.WorkedHours) AS WorkedHours
+           -- TotalDurationMode للمناوبة: WorkOnly = ساعات أيام العمل فقط تدخل إجمالي
+           -- الشهر؛ IncludeOff/Both = تُضمّ أيضاً ساعات العطل/الراحة. صف اليوم يحتفظ
+           -- بساعاته الفعلية دوماً (مادة الأوفرتايم) — الوضع يحكم التجميع الشهري فقط.
+           SUM(CASE WHEN d.DayKind = N'Work'
+                      OR ISNULL(st.TotalDurationMode, N'WorkOnly') <> N'WorkOnly'
+                    THEN d.WorkedHours ELSE 0 END) AS WorkedHours
     FROM DayAttendances d
+    LEFT JOIN ShiftTypes st ON st.Id = d.ShiftTypeId
     WHERE d.WorkDate >= @From AND d.WorkDate <= @To AND d.IsAnalyzed = 1
     GROUP BY d.EmployeeId
 )

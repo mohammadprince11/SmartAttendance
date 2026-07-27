@@ -1,6 +1,7 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Domain.Attendance;
 using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
@@ -14,6 +15,13 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 /// </summary>
 public static class RecommendationStore
 {
+    /// <summary>
+    /// معرّفا قاعدتَي تعارض المغادرات الحارسان — سالبان عمداً فلا يصطدمان بمعرّفات
+    /// قواعد AV الموجبة (IDENTITY) في مفتاح منع التكرار (EmployeeId, WorkDate, RuleId).
+    /// </summary>
+    public const int ConflictEarlyLeaveRuleId = -1;
+    public const int ConflictLateReturnRuleId = -2;
+
     public sealed class Recommendation
     {
         public int Id { get; set; }
@@ -96,12 +104,16 @@ IF COL_LENGTH('AttendanceRecommendations', 'TransactionId') IS NULL
     {
         await EnsureAsync(dbContext);
 
+        // قواعد AV + قواعد تعارض المغادرات (تبويب «التعارض» بأنواع المناوبات) — غياب
+        // إحداهما لا يعطّل الأخرى.
         var rules = (await ShiftRuleStore.ListAsync(dbContext)).Where(r => r.IsActive).ToList();
-        if (rules.Count == 0) return (0, 0);
 
         var days = await DayAttendanceStore.ListAsync(dbContext, year, month, null);
-        var shifts = (await ShiftTypeStore.ListAsync(dbContext))
-            .ToDictionary(s => s.Id, s => s.Days.ToDictionary(d => d.DayIndex));
+        var shiftList = await ShiftTypeStore.ListAsync(dbContext);
+        var shifts = shiftList.ToDictionary(s => s.Id, s => s.Days.ToDictionary(d => d.DayIndex));
+        var shiftById = shiftList.ToDictionary(s => s.Id);
+        var hasConflictShifts = shiftList.Any(s => s.ConflictLateReturnEnabled || s.ConflictEarlyLeaveEnabled);
+        if (rules.Count == 0 && !hasConflictShifts) return (0, 0);
 
         // المفاتيح الموجودة مسبقاً (بأي حالة) — لمنع التكرار وإبقاء قرارات الفرز
         var existing = new HashSet<(int, DateOnly, int)>(
@@ -126,7 +138,7 @@ IF COL_LENGTH('AttendanceRecommendations', 'TransactionId') IS NULL
         var semanticCounts = await ShiftRuleStore.SemanticCountsAsync(dbContext, year, month);
 
         int created = 0, auto = 0;
-        foreach (var day in days)
+        foreach (var day in rules.Count == 0 ? new List<DayAttendanceStore.DayRow>() : days)
         {
             ShiftTypeStore.ShiftDay? shiftDay = null;
             if (day.ShiftTypeId.HasValue && shifts.TryGetValue(day.ShiftTypeId.Value, out var byIndex))
@@ -195,6 +207,70 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             }
         }
 
+        // ===== ممر تعارض المغادرات (تبويب «التعارض» بأنواع المناوبات) =====
+        // مقارنة الحركة الفعلية (بصمات اليوم المصنّفة تناوباً) بنافذة المغادرة المعتمدة؛
+        // كل تعارض = اقتراح Pending دائماً (لا تنفيذ تلقائي — العقوبة المالية بعين بشرية)،
+        // بمعرّف قاعدة حارس سالب فلا يصطدم بقواعد AV بمفتاح منع التكرار.
+        if (hasConflictShifts)
+        {
+            var monthStart = new DateOnly(year, month, 1);
+            var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+            var permissions = await DayAttendanceStore.ApprovedPermissionsAsync(dbContext, monthStart, monthEnd);
+            var punchTimes = permissions.Count == 0
+                ? new Dictionary<(int, DateOnly), List<DateTime>>()
+                : await MonthPunchTimesAsync(dbContext, monthStart, monthEnd);
+
+            foreach (var day in days)
+            {
+                if (day.ShiftTypeId is not int sid || !shiftById.TryGetValue(sid, out var conflictShift)) continue;
+                if (!conflictShift.ConflictLateReturnEnabled && !conflictShift.ConflictEarlyLeaveEnabled) continue;
+                if (!permissions.TryGetValue((day.EmployeeId, day.WorkDate), out var dayPerms)) continue;
+                if (!punchTimes.TryGetValue((day.EmployeeId, day.WorkDate), out var times) || times.Count == 0) continue;
+
+                foreach (var (permStart, permEnd) in dayPerms)
+                {
+                    var (leftAt, returnAt) = SelectMovementAround(times, day.WorkDate.ToDateTime(permStart));
+                    var window = $"{permStart:HH\\:mm}–{permEnd:HH\\:mm}";
+
+                    if (conflictShift.ConflictEarlyLeaveEnabled && leftAt is { } left
+                        && !existing.Contains((day.EmployeeId, day.WorkDate, ConflictEarlyLeaveRuleId)))
+                    {
+                        var result = MovementConflictPolicy.EvaluateEarlyLeave(
+                            new MovementConflictPolicy.Rule(true,
+                                conflictShift.ConflictEarlyLeaveAction, conflictShift.ConflictEarlyLeaveValue),
+                            permStart, TimeOnly.FromDateTime(left));
+                        if (result.Triggered)
+                        {
+                            table.Rows.Add(day.EmployeeId, day.WorkDate.ToDateTime(TimeOnly.MinValue),
+                                ConflictEarlyLeaveRuleId, "تعارض المغادرة — خروج مبكّر",
+                                $"خرج {left:HH\\:mm} قبل نافذة المغادرة المعتمدة {window} (تجاوز {result.MinutesOff} د)",
+                                result.Action, ConflictActionText(result.Action), result.Value, "Pending");
+                            existing.Add((day.EmployeeId, day.WorkDate, ConflictEarlyLeaveRuleId));
+                            created++;
+                        }
+                    }
+
+                    if (conflictShift.ConflictLateReturnEnabled && returnAt is { } returned
+                        && !existing.Contains((day.EmployeeId, day.WorkDate, ConflictLateReturnRuleId)))
+                    {
+                        var result = MovementConflictPolicy.EvaluateLateReturn(
+                            new MovementConflictPolicy.Rule(true,
+                                conflictShift.ConflictLateReturnAction, conflictShift.ConflictLateReturnValue),
+                            permEnd, TimeOnly.FromDateTime(returned));
+                        if (result.Triggered)
+                        {
+                            table.Rows.Add(day.EmployeeId, day.WorkDate.ToDateTime(TimeOnly.MinValue),
+                                ConflictLateReturnRuleId, "تعارض المغادرة — عودة متأخّرة",
+                                $"عاد {returned:HH\\:mm} بعد نافذة المغادرة المعتمدة {window} (تجاوز {result.MinutesOff} د)",
+                                result.Action, ConflictActionText(result.Action), result.Value, "Pending");
+                            existing.Add((day.EmployeeId, day.WorkDate, ConflictLateReturnRuleId));
+                            created++;
+                        }
+                    }
+                }
+            }
+        }
+
         if (table.Rows.Count > 0)
         {
             var connection = (SqlConnection)dbContext.Database.GetDbConnection();
@@ -217,6 +293,81 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             }
         }
         return (created, auto);
+    }
+
+    /// <summary>
+    /// تحديد حركة الموظف الفعلية حول نافذة مغادرة معتمدة من بصمات يومه المصنّفة تناوباً
+    /// (<see cref="PunchTypingEngine"/>): المغادرة الفعلية = بصمة «خروج» الأقرب زمنياً
+    /// لبداية النافذة، والعودة الفعلية = أول بصمة «دخول» بعدها. لا بصمة خروج = لا حركة
+    /// تُقارن (يوم بلا مغادرة مرصودة). نقية قابلة للاختبار.
+    /// </summary>
+    public static (DateTime? ActualLeft, DateTime? ActualReturn) SelectMovementAround(
+        IReadOnlyList<DateTime> dayTimes, DateTime approvedStart)
+    {
+        var typed = PunchTypingEngine.Derive(dayTimes);
+
+        PunchTypingEngine.TypedPunch? left = null;
+        foreach (var punch in typed)
+        {
+            if (punch.Type != "Out") continue;
+            if (left == null
+                || Math.Abs((punch.At - approvedStart).Ticks) < Math.Abs((left.At - approvedStart).Ticks))
+            {
+                left = punch;
+            }
+        }
+        if (left == null) return (null, null);
+
+        var returned = typed.FirstOrDefault(p => p.Type == "In" && p.At > left.At);
+        return (left.At, returned?.At);
+    }
+
+    /// <summary>نصّ أثر التعارض بحسب الإجراء المُعدّ (يظهر بالاقتراح وبالحركة المالية).</summary>
+    private static string ConflictActionText(string action) =>
+        action == MovementConflictPolicy.ActionPermission
+            ? "احتساب مغادرة إضافية (ساعات)"
+            : "اقتطاع مبلغ من المسير";
+
+    /// <summary>
+    /// كل أوقات بصم الشهر (غير المحذوفة، بكل الدلالات — حركة المغادرة قد تكون بصمة
+    /// غير-حضورية) مفهرسة موظف×يوم ومرتّبة. استعلام واحد للشهر كله.
+    /// </summary>
+    private static async Task<Dictionary<(int, DateOnly), List<DateTime>>> MonthPunchTimesAsync(
+        ApplicationDbContext dbContext, DateOnly from, DateOnly to)
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+SELECT EmployeeId, AttendanceDate, CheckIn, CheckOut
+FROM AttendanceRecords
+WHERE AttendanceDate >= @From AND AttendanceDate <= @To AND ISNULL(IsDeleted, 0) = 0;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
+            },
+            reader => new
+            {
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                Date = HrmsDatabase.GetDateOnly(reader, "AttendanceDate") ?? default,
+                CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn"),
+                CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut")
+            });
+
+        var result = new Dictionary<(int, DateOnly), List<DateTime>>();
+        foreach (var row in rows)
+        {
+            var key = (row.EmployeeId, row.Date);
+            if (!result.TryGetValue(key, out var list)) result[key] = list = new List<DateTime>();
+            if (row.CheckIn is { } ci) list.Add(ci);
+            if (row.CheckOut is { } co && (row.CheckIn is not { } c2 || co != c2)) list.Add(co);
+        }
+        foreach (var list in result.Values)
+        {
+            list.Sort();
+        }
+        return result;
     }
 
     public static async Task<List<Recommendation>> ListAsync(

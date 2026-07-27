@@ -77,3 +77,35 @@
 2. توصيل `StripSemantics`/`ConsiderPermissionsOutsideShift`/`TotalDurationMode` بحساب الساعات.
 3. توصيل `TimeLimitFrom/To`/`MidShiftTime` بتصفية/تقسيم البصمات الصالحة.
 4. بديل محافظ: إخفاء الحقول الصمّاء من الواجهة حتى تُنفَّذ، لمنع فخّ التوقّعات.
+
+---
+
+## تحديث 2026-07-27 — المعالجة (المجموعة أ + الخطوة صفر) ✅
+
+- **`FillMissingCheckIn/Out`**: فُعِّلا بجلسة سابقة داخل `Derive` (محروسان، الافتراضي false).
+- **`TimeLimitFrom/To` + المرساتان + `MidShiftTime`**: فُعِّلت — نافذة التقاط زمنية بمحرك
+  `AnalyzeMonthAsync` (`HasCaptureWindow`/`TrySelectWindowPunches` نقيّتان): البصمات تُلتقط
+  من النافذة بدل تاريخ الجهاز (فيلتقط خروجُ ما-بعد-منتصف-الليل ليومه الصحيح)، وMidShift
+  يقسم الدخول/الخروج. استعلام البصمات وُسِّع ±1 يوم. مناوبة بلا حدود = السلوك القائم حرفياً.
+  15 اختباراً جديداً (`PunchCaptureWindowTests`)، 294 أخضر.
+- **`TotalDurationMode`**: فُعِّل بتجميع `MonthAttendanceStore.BuildMonthAsync` (LEFT JOIN
+  ShiftTypes): `WorkOnly` = ساعات أيام العمل فقط تدخل إجمالي الشهر؛ `IncludeOff`/`Both` تضمّ
+  ساعات العطل/الراحة. صف اليوم يحتفظ بساعاته الفعلية دوماً (مادة الأوفرتايم).
+  ⚠️ **تغيير سلوك مقصود**: الافتراضي `WorkOnly` صار يستثني ساعات أيام العطل من إجمالي الشهر
+  (سابقاً كانت تُجمَع دائماً رغم أن الواجهة تعرض «أيام العمل فقط») — الواجهة صارت صادقة.
+- **الخطوة صفر (الواجهة)**: شارة «غير مفعّل بعد» على `ConsiderPermissionsOutsideShift`
+  و`ExcludePermsOutsideStartFromLate` وتبويب «التعارض» كاملاً؛ و`StripSemantics`/`RequestableFromEss`
+  أُخفيا (يبقيان بالنموذج حفاظاً على القيم المخزّنة).
+- **المجموعة ب ✅ (2026-07-27 لاحقاً بنفس الجلسة، 305 اختبارات خضراء):**
+  - `ExcludePermsOutsideStartFromLate`: المغادرات المعتمدة (`SelfServiceRequests` نوع
+    `ExitPermission` حالة Approved) تُحمَّل بـ`AnalyzeMonthAsync` وتولّد قسيمة تُطرح من مدة
+    التأخير قبل السماحية (`PermissionLatenessCredit` نقية + معامل `lateCredit` بـ`Derive`).
+  - `ConsiderPermissionsOutsideShift`: يحكم قصّ نافذة المغادرة على ساعات الدوام قبل
+    احتساب القسيمة (false = تُقص، true = النافذة كاملة).
+  - **تبويب «التعارض» كاملاً**: ممر رصد بـ`RecommendationStore.AnalyzeMonthAsync` يقارن
+    الحركة الفعلية (بصمات اليوم المصنّفة تناوباً؛ `SelectMovementAround` نقية: خروجٌ أقرب
+    لبداية النافذة + أول دخول بعده) بنافذة المغادرة عبر `MovementConflictPolicy`، ويولّد
+    **اقتراحاً Pending دائماً** (لا تنفيذ تلقائي) بمعرّفَي قاعدة حارسَين سالبَين (-1 خروج
+    مبكّر، -2 عودة متأخّرة) يعبران مفتاح منع التكرار، والاعتماد اليدوي ينفّذ الأثر المالي
+    (مغادرة=ساعات/اقتطاع=مبلغ) عبر مسار `AttendanceTransactionStore` القائم.
+  - لم يبقَ من الجرد صامّاً إلا المخفيّان (`StripSemantics`، `RequestableFromEss`) لحين بناء ميزتيهما.

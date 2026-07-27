@@ -134,6 +134,8 @@ END;
         // قراءة خام لا EF: العمود مُضاف بمسار الترقية الذاتي لا بهجرة.
         var attendanceSemanticId = await PunchSemanticStore.AttendanceSemanticIdAsync(dbContext);
 
+        // هامش يوم قبل/بعد الشهر: نافذة الالتقاط الزمنية (TimeLimit بمرساة اليوم
+        // السابق/التالي) قد تلتقط بصمة سجّلها الجهاز بتاريخ مجاور لحدود الشهر.
         var punches = await HrmsDatabase.QueryAsync(
             dbContext,
             """
@@ -145,8 +147,8 @@ WHERE AttendanceDate >= @From AND AttendanceDate <= @To
 """,
             command =>
             {
-                HrmsDatabase.AddParameter(command, "@From", monthStart.ToDateTime(TimeOnly.MinValue));
-                HrmsDatabase.AddParameter(command, "@To", monthEnd.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@From", monthStart.AddDays(-1).ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@To", monthEnd.AddDays(1).ToDateTime(TimeOnly.MinValue));
                 HrmsDatabase.AddParameter(command, "@Attendance", attendanceSemanticId);
             },
             reader => new
@@ -163,6 +165,18 @@ WHERE AttendanceDate >= @From AND AttendanceDate <= @To
             .ToDictionary(
                 g => g.Key,
                 g => (In: g.Min(p => p.CheckIn), Out: g.Max(p => p.CheckOut)));
+
+        // كل أوقات بصم الموظف مرتّبة (بلا تقيّد بتاريخ الجهاز) — تغذية نافذة الالتقاط
+        // الزمنية للمناوبات ذات TimeLimit، حيث قد ينتمي خروجُ ما-بعد-منتصف-الليل ليوم أمس.
+        var timesByEmployee = new Dictionary<int, List<DateTime>>();
+        foreach (var p in punches)
+        {
+            if (!timesByEmployee.TryGetValue(p.EmployeeId, out var list))
+                timesByEmployee[p.EmployeeId] = list = new List<DateTime>();
+            if (p.CheckIn != default) list.Add(p.CheckIn);
+            if (p.CheckOut is { } co && co != p.CheckIn) list.Add(co);
+        }
+        foreach (var list in timesByEmployee.Values) list.Sort();
 
         // العطل الرسمية والإجازات المعتمدة — لمنع احتساب يوم عطلة/إجازة كـ«غياب»
         // (سدّ فجوة المحرك الجديد مقابل القديم؛ حرج لصحة خصومات الرواتب لاحقاً).
@@ -187,6 +201,10 @@ WHERE AttendanceDate >= @From AND AttendanceDate <= @To
                 g => g.Key,
                 g => g.Select(l => (l.FromDate, l.ToDate,
                     Paid: SmartAttendance.Domain.Leave.IraqiLeavePolicy.IsPaid(l.LeaveType))).ToList());
+
+        // المغادرات المعتمدة (ExitPermission بنافذة زمنية) — تغذّي قسيمة التأخير حين
+        // تفعّل المناوبة «استثناء المغادرات خارج بداية المناوبة من التأخير».
+        var permissionsByDay = await ApprovedPermissionsAsync(dbContext, monthStart, monthEnd);
 
         // ترانزاكشن واحدة للحذف وكل دفعات الإدخال — فلَش لوغ واحد بدل واحد لكل أمر
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
@@ -264,7 +282,35 @@ WHERE AttendanceDate >= @From AND AttendanceDate <= @To
                 var day = shiftDays.TryGetValue(ToDayIndex(date), out var d) ? d : null;
                 var dayKind = forcedDayKind ?? (day?.DayKind ?? "Work");
                 byDay.TryGetValue((employeeId, date), out var punch);
-                var row = Derive(shift, day, dayKind, punch.In == default ? null : punch.In, punch.Out);
+                DateTime? checkIn = punch.In == default ? null : punch.In;
+                DateTime? checkOut = punch.Out;
+
+                // نافذة الالتقاط الزمنية (TimeLimitFrom/To + MidShiftTime): تتجاوز تاريخ
+                // الجهاز فتضمّ خروج ما-بعد-منتصف-الليل ليومه الصحيح. بلا نافذة = السلوك القائم.
+                if (HasCaptureWindow(shift)
+                    && TrySelectWindowPunches(shift, day, date,
+                        timesByEmployee.TryGetValue(employeeId, out var empTimes)
+                            ? empTimes : (IReadOnlyList<DateTime>)Array.Empty<DateTime>(),
+                        out var captured))
+                {
+                    (checkIn, checkOut) = captured;
+                }
+
+                // قسيمة التأخير من المغادرات المعتمدة — محروسة بإعداد المناوبة
+                var lateCredit = TimeSpan.Zero;
+                if (shift.ExcludePermsOutsideStartFromLate && checkIn.HasValue
+                    && permissionsByDay.TryGetValue((employeeId, date), out var dayPerms)
+                    && TimeSpan.TryParse(day?.StartTime, out var creditShiftStart))
+                {
+                    TimeSpan.TryParse(day?.EndTime, out var creditShiftEnd);
+                    lateCredit = PermissionLatenessCredit(
+                        dayPerms, TimeOnly.FromTimeSpan(creditShiftStart),
+                        TimeOnly.FromDateTime(checkIn.Value),
+                        shift.ConsiderPermissionsOutsideShift,
+                        TimeOnly.FromTimeSpan(creditShiftEnd));
+                }
+
+                var row = Derive(shift, day, dayKind, checkIn, checkOut, lateCredit);
 
                 // يوم بلا حضور فعلي (غياب) يُعاد تصنيفه إن كان عطلة رسمية أو ضمن إجازة
                 // معتمدة — فلا يُخصم بالرواتب. الأيام المشتغَل بها تبقى كما هي.
@@ -377,11 +423,148 @@ WHERE EmployeeId=@Emp AND WorkDate=@Date;
         return Math.Round((decimal)effective.TotalHours, 2);
     }
 
+    /// <summary>
+    /// المغادرات المعتمدة (SelfServiceRequests نوع ExitPermission حالة Approved) بنافذة
+    /// زمنية كاملة، مفهرسة موظف×يوم. جدول الطلبات يُنشأ بمسار EnsureCreated العام لا هنا،
+    /// فغيابه (قاعدة بكر) يعيد قاموساً فارغاً بدل خطأ.
+    /// </summary>
+    public static async Task<Dictionary<(int EmployeeId, DateOnly Date), List<(TimeOnly Start, TimeOnly End)>>>
+        ApprovedPermissionsAsync(ApplicationDbContext dbContext, DateOnly from, DateOnly to)
+    {
+        var result = new Dictionary<(int, DateOnly), List<(TimeOnly, TimeOnly)>>();
+
+        var tableExists = await HrmsDatabase.ScalarAsync<int>(
+            dbContext, "SELECT CASE WHEN OBJECT_ID('SelfServiceRequests','U') IS NULL THEN 0 ELSE 1 END;");
+        if (tableExists == 0) return result;
+
+        var rows = await HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+SELECT EmployeeId, COALESCE(FromDate, RequestDate) AS OnDate, StartTime, EndTime
+FROM SelfServiceRequests
+WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
+  AND StartTime IS NOT NULL AND EndTime IS NOT NULL
+  AND COALESCE(FromDate, RequestDate) >= @From AND COALESCE(FromDate, RequestDate) <= @To;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
+            },
+            reader => new
+            {
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                OnDate = HrmsDatabase.GetDateOnly(reader, "OnDate"),
+                Start = reader["StartTime"] is TimeSpan s ? (TimeOnly?)TimeOnly.FromTimeSpan(s) : null,
+                End = reader["EndTime"] is TimeSpan e ? (TimeOnly?)TimeOnly.FromTimeSpan(e) : null
+            });
+
+        foreach (var row in rows)
+        {
+            if (row.OnDate is not { } onDate || row.Start is not { } start || row.End is not { } end) continue;
+            var key = (row.EmployeeId, onDate);
+            if (!result.TryGetValue(key, out var list)) result[key] = list = new List<(TimeOnly, TimeOnly)>();
+            list.Add((start, end));
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// قسيمة المغادرات المعتمدة من التأخير (إعداد <c>ExcludePermsOutsideStartFromLate</c>):
+    /// مجموع تداخل نوافذ المغادرة المعتمدة مع فترة التأخير [بداية الدوام، الدخول الفعلي].
+    /// حين <paramref name="considerOutsideShift"/>=false تُقصّ نافذة المغادرة على ساعات
+    /// الدوام [البداية، النهاية] أولاً (إعداد <c>ConsiderPermissionsOutsideShift</c>).
+    /// تُطرح القسيمة من مدة التأخير قبل تطبيق السماحية. نقية قابلة للاختبار.
+    /// </summary>
+    public static TimeSpan PermissionLatenessCredit(
+        IEnumerable<(TimeOnly Start, TimeOnly End)> permissions,
+        TimeOnly shiftStart, TimeOnly checkIn, bool considerOutsideShift, TimeOnly shiftEnd)
+    {
+        if (checkIn <= shiftStart) return TimeSpan.Zero;
+
+        var credit = TimeSpan.Zero;
+        foreach (var (permStart, permEnd) in permissions)
+        {
+            var start = permStart;
+            var end = permEnd;
+            if (end <= start) continue;
+
+            if (!considerOutsideShift)
+            {
+                if (start < shiftStart) start = shiftStart;
+                if (shiftEnd > shiftStart && end > shiftEnd) end = shiftEnd;
+                if (end <= start) continue;
+            }
+
+            var overlapStart = start > shiftStart ? start : shiftStart;
+            var overlapEnd = end < checkIn ? end : checkIn;
+            if (overlapEnd > overlapStart) credit += overlapEnd - overlapStart;
+        }
+        return credit;
+    }
+
+    /// <summary>هل تُعرِّف المناوبة نافذة التقاط زمنية للبصمات الصالحة؟ (تبويب «القواعد»)</summary>
+    public static bool HasCaptureWindow(ShiftTypeStore.ShiftType shift) =>
+        TimeSpan.TryParse(shift.TimeLimitFrom, out _) || TimeSpan.TryParse(shift.TimeLimitTo, out _);
+
+    /// <summary>
+    /// اختيار بصمتي اليوم من نافذة الالتقاط الزمنية للمناوبة بدل تاريخ الجهاز:
+    /// النافذة = [TimeLimitFrom بمرساة نفس اليوم/السابق ، TimeLimitTo بمرساة نفس اليوم/التالي]،
+    /// والطرف غير المحدَّد يسقط لحدّ اليوم التقويمي. مع MidShiftTime تُقسَم بصمات النافذة:
+    /// الدخول = أبكر بصمة ≤ المنتصف، والخروج = أحدث بصمة بعده (منتصفٌ أبكر من بداية
+    /// الدوام يُرسى باليوم التالي — حالة المناوبة الليلية). بلا منتصف: أبكر/أحدث بصمة.
+    /// يعيد false (فيبقى سلوك تاريخ الجهاز) إن كانت النافذة غير صالحة (النهاية ≤ البداية).
+    /// نقي قابل للاختبار؛ يفترض orderedTimes مرتّبة تصاعدياً.
+    /// </summary>
+    public static bool TrySelectWindowPunches(
+        ShiftTypeStore.ShiftType shift, ShiftTypeStore.ShiftDay? day, DateOnly date,
+        IReadOnlyList<DateTime> orderedTimes, out (DateTime? CheckIn, DateTime? CheckOut) selected)
+    {
+        selected = (null, null);
+        var dayStart = date.ToDateTime(TimeOnly.MinValue);
+
+        var windowStart = TimeSpan.TryParse(shift.TimeLimitFrom, out var fromTime)
+            ? dayStart.AddDays(shift.TimeLimitFromDayBefore ? -1 : 0) + fromTime
+            : dayStart;
+        var windowEnd = TimeSpan.TryParse(shift.TimeLimitTo, out var toTime)
+            ? dayStart.AddDays(shift.TimeLimitToDayAfter ? 1 : 0) + toTime
+            : dayStart.AddDays(1).AddTicks(-1);
+        if (windowEnd <= windowStart) return false;
+
+        List<DateTime>? candidates = null;
+        foreach (var time in orderedTimes)
+        {
+            if (time < windowStart) continue;
+            if (time > windowEnd) break;
+            (candidates ??= new List<DateTime>()).Add(time);
+        }
+        if (candidates == null) return true; // نافذة صالحة بلا بصمات ⇒ غياب
+
+        if (TimeSpan.TryParse(shift.MidShiftTime, out var mid))
+        {
+            var midAt = dayStart + mid;
+            if (TimeSpan.TryParse(day?.StartTime, out var shiftStart) && mid < shiftStart)
+                midAt = midAt.AddDays(1);
+
+            DateTime? checkIn = null, checkOut = null;
+            foreach (var time in candidates)
+            {
+                if (time <= midAt) { checkIn ??= time; }
+                else { checkOut = time; }
+            }
+            selected = (checkIn, checkOut);
+            return true;
+        }
+
+        selected = (candidates[0], candidates.Count > 1 ? candidates[^1] : null);
+        return true;
+    }
+
     /// <summary>اشتقاق حقول اليوم: التأخير/الخروج المبكر/الساعات/الحالة. (عامة لتغطية الاختبارات)</summary>
     public static (DateTime? CheckIn, DateTime? CheckOut, decimal LateHours,
         decimal EarlyLeaveHours, decimal WorkedHours, string Status) Derive(
         ShiftTypeStore.ShiftType shift, ShiftTypeStore.ShiftDay? day,
-        string dayKind, DateTime? checkIn, DateTime? checkOut)
+        string dayKind, DateTime? checkIn, DateTime? checkOut, TimeSpan lateCredit = default)
     {
         if (dayKind != "Work")
         {
@@ -424,7 +607,8 @@ WHERE EmployeeId=@Emp AND WorkDate=@Date;
         decimal late = 0, early = 0;
         if (TimeSpan.TryParse(day?.StartTime, out var shiftStart))
         {
-            late = ApplyGrace(checkIn.Value.TimeOfDay - shiftStart,
+            // قسيمة المغادرة المعتمدة (إن وُجدت) تُطرح من مدة التأخير قبل السماحية
+            late = ApplyGrace(checkIn.Value.TimeOfDay - shiftStart - lateCredit,
                 shift.LatenessGraceMinutes, shift.GraceExceededPolicy);
         }
         if (checkOut.HasValue && checkOut.Value.Date == checkIn.Value.Date
