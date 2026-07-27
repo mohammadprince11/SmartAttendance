@@ -1,0 +1,143 @@
+@page "/BiometricKeys"
+@model SmartAttendance.Web.Pages.BiometricKeys.IndexModel
+@using SmartAttendance.Web.Infrastructure.Security
+
+@{
+    ViewData["Title"] = "اعتماد مفاتيح البصمة/الوجه";
+    var acc = "#38bdf8";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .bk-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
+    .bk-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
+    html[data-theme="light"] .bk-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+    .bk-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .bk-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .bk-btn { min-height:29px; padding:4px 12px; border-radius:10px; border:0; font-size:11.5px; font-weight:900; cursor:pointer; }
+    .bk-btn.ok { background:rgba(74,222,128,.16); border:1px solid rgba(74,222,128,.45); color:#4ade80; }
+    .bk-btn.ok:hover { background:rgba(74,222,128,.26); }
+    .bk-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
+    .bk-btn.danger:hover { background:rgba(248,113,113,.26); }
+    .bk-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+    .bk-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
+    .bk-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
+    .bk-kpi.p::before { background:#facc15; } .bk-kpi.a::before { background:#4ade80; }
+    .bk-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .bk-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .bk-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:12px 14px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .bk-bar select, .bk-bar input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:800; font-size:12.5px; }
+    html[data-theme="light"] .bk-bar select, html[data-theme="light"] .bk-bar input { background:#fff; }
+    .bk-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .bk-table { width:100%; border-collapse:collapse; font-size:13px; min-width:860px; }
+    .bk-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .bk-table th { background:#f2f7fb; }
+    .bk-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
+    .bk-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
+    .bk-emp b { font-weight:900; } .bk-emp span { display:block; font-size:11px; color:var(--sa-muted,#8FA8BC); direction:ltr; text-align:end; }
+    .bk-chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:900; }
+    .bk-chip.Pending { background:rgba(250,204,21,.14); color:#facc15; }
+    .bk-chip.Active { background:rgba(74,222,128,.14); color:#4ade80; }
+    .bk-chip.Rejected, .bk-chip.Revoked { background:rgba(248,113,113,.16); color:#f87171; }
+    .bk-chip.Superseded { background:rgba(143,168,188,.16); color:#8FA8BC; }
+    .bk-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .bk-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
+    .bk-actions { display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap; } .bk-actions form { display:inline; }
+    .bk-time { direction:ltr; font-size:12px; }
+</style>
+
+<section class="bk-page" dir="rtl">
+    <header class="bk-head">
+        <div>
+            <h1>🔐 اعتماد مفاتيح البصمة/الوجه</h1>
+            <p>كل مفتاح يسجّله موظف من بوابته يبقى معلّقاً حتى تعتمده الموارد البشرية — الاعتماد يفعّله للبصم والدخول، ولكل موظف مفتاح نشط واحد فقط.</p>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="bk-alert">@Model.StatusMessage</div>
+    }
+
+    <div class="bk-kpis">
+        <div class="bk-kpi p"><b style="color:#facc15">@Model.PendingCount</b><span>بانتظار الاعتماد</span></div>
+        <div class="bk-kpi a"><b style="color:#4ade80">@Model.ActiveCount</b><span>نشطة</span></div>
+    </div>
+
+    <form method="get" class="bk-bar">
+        <input type="text" name="Search" value="@Model.Search" placeholder="بحث: اسم/رقم موظف" style="min-width:180px" />
+        <select name="Status">
+            <option value="">كل الحالات</option>
+            @foreach (var s in new[] { WebAuthnCredentialStore.StatusPending, WebAuthnCredentialStore.StatusActive, WebAuthnCredentialStore.StatusRejected, WebAuthnCredentialStore.StatusSuperseded, WebAuthnCredentialStore.StatusRevoked })
+            { <option value="@s" selected="@(Model.Status == s)">@WebAuthnCredentialStore.StatusArabic(s)</option> }
+        </select>
+        <button type="submit" class="bk-btn ok">تصفية</button>
+    </form>
+
+    <div class="bk-card">
+        @if (Model.Credentials.Count == 0)
+        {
+            <div class="bk-empty">لا توجد مفاتيح مطابقة.</div>
+        }
+        else
+        {
+            <table class="bk-table">
+                <thead>
+                    <tr>
+                        <th>الموظف</th>
+                        <th>الجهاز</th>
+                        <th>تاريخ التسجيل</th>
+                        <th>الحالة</th>
+                        <th>البتّ</th>
+                        <th>آخر استخدام</th>
+                        <th style="text-align:end">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model.Credentials)
+                    {
+                        <tr>
+                            <td class="bk-emp"><b>@c.EmployeeName</b><span>@c.EmployeeNo</span></td>
+                            <td>@(string.IsNullOrWhiteSpace(c.DeviceLabel) ? "—" : c.DeviceLabel)</td>
+                            <td class="bk-time">@c.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td><span class="bk-chip @c.Status">@c.StatusText</span></td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(c.ApprovedBy))
+                                {
+                                    <span class="bk-time">@c.ApprovedBy · @(c.ApprovedAt?.ToString("MM-dd HH:mm"))</span>
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
+                            </td>
+                            <td class="bk-time">@(c.LastUsedAt?.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
+                            <td>
+                                <div class="bk-actions">
+                                    @if (c.Status == WebAuthnCredentialStore.StatusPending)
+                                    {
+                                        <form method="post" asp-page-handler="Approve" asp-route-id="@c.Id">
+                                            <button type="submit" class="bk-btn ok">اعتماد</button>
+                                        </form>
+                                        <form method="post" asp-page-handler="Reject" asp-route-id="@c.Id">
+                                            <button type="submit" class="bk-btn danger" data-zyconfirm="تأكيد رفض المفتاح؟">رفض</button>
+                                        </form>
+                                    }
+                                    else if (c.Status == WebAuthnCredentialStore.StatusActive)
+                                    {
+                                        <form method="post" asp-page-handler="Revoke" asp-route-id="@c.Id">
+                                            <button type="submit" class="bk-btn danger" data-zyconfirm="تأكيد إلغاء المفتاح؟ لن يعمل للبصم ولا للدخول.">إلغاء المفتاح</button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</section>

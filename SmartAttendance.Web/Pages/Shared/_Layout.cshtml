@@ -511,6 +511,12 @@
                                 <span>البصمات عبر الإنترنت</span>
                             </a>
                         }
+                        @if (CanRoute("/biometrickeys"))
+                        {
+                            <a href="/BiometricKeys" class="nexora-nav-link @(IsUnder("/BiometricKeys") ? "active nexora-active" : "")">
+                                <span>اعتماد مفاتيح البصمة/الوجه</span>
+                            </a>
+                        }
                         @if (CanRoute("/attendanceviewer"))
                         {
                             <a href="/AttendanceViewer" class="nexora-nav-link @(IsUnder("/AttendanceViewer") ? "active nexora-active" : "")">
