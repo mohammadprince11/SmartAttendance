@@ -1,0 +1,102 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeePortal.ShiftRequestModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+@{
+    Layout = "_EmployeePortalLayout";
+    ViewData["Title"] = "طلب مناوبة";
+}
+
+<style>
+    .esr { display:flex; flex-direction:column; gap:16px; color:var(--sa-text,#DCEAF4); }
+    .esr-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; background:var(--sa-surface,rgba(8,25,43,.9)); padding:18px; }
+    .esr-card h2 { margin:0 0 4px; font-size:16px; font-weight:1000; }
+    .esr-card p.sub { margin:0 0 14px; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .esr-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .esr-grid .full { grid-column:1/-1; }
+    .esr-field { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .esr-field select, .esr-field input, .esr-field textarea {
+        border:1px solid rgba(73,111,151,.3); border-radius:12px; background:transparent;
+        color:var(--sa-text,#DCEAF4); padding:10px 12px; font-size:14px; font-weight:800; }
+    .esr-btn { margin-top:14px; width:100%; border:0; border-radius:14px; padding:12px;
+        font-size:14px; font-weight:1000; cursor:pointer; background:#0d9488; color:#fff; }
+    .esr-msg { border-radius:12px; padding:10px 14px; font-size:13px; font-weight:900;
+        background:color-mix(in srgb,#38bdf8 12%,transparent); }
+    .esr-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .esr-table th, .esr-table td { padding:8px 6px; border-bottom:1px solid rgba(73,111,151,.18); text-align:right; }
+    .esr-table th { color:var(--sa-muted,#8FA8BC); font-weight:900; }
+    .esr-chip { border-radius:999px; padding:2px 10px; font-size:11px; font-weight:900; }
+    .esr-chip.Pending { color:#fbbf24; background:rgba(251,191,36,.12); }
+    .esr-chip.Approved { color:#34d399; background:rgba(52,211,153,.12); }
+    .esr-chip.Rejected { color:#f87171; background:rgba(248,113,113,.12); }
+</style>
+
+<div class="esr">
+    @if (Model.StatusMessage is { } statusMessage)
+    {
+        <div class="esr-msg">@statusMessage</div>
+    }
+
+    <div class="esr-card">
+        <h2>طلب مناوبة</h2>
+        <p class="sub">اختر مناوبةً متاحة ومدى الأيام — يُطبَّق التغيير بعد اعتماد الطلب.</p>
+
+        @if (!Model.HasEmployee)
+        {
+            <p class="sub">المستخدم غير مرتبط بموظف.</p>
+        }
+        else if (Model.Shifts.Count == 0)
+        {
+            <p class="sub">لا توجد مناوبات متاحة للطلب حالياً — تُعلَّم المناوبة «قابلة للطلب من الخدمة الذاتية» من إعدادات أنواع المناوبات.</p>
+        }
+        else
+        {
+            <form method="post">
+                <div class="esr-grid">
+                    <label class="esr-field full">المناوبة المطلوبة
+                        <select name="ShiftTypeId" required>
+                            @foreach (var (id, name) in Model.Shifts)
+                            {
+                                <option value="@id">@name</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="esr-field">من تاريخ
+                        <input type="date" name="FromDate" required />
+                    </label>
+                    <label class="esr-field">إلى تاريخ
+                        <input type="date" name="ToDate" />
+                    </label>
+                    <label class="esr-field full">السبب (اختياري)
+                        <textarea name="Reason" rows="2"></textarea>
+                    </label>
+                </div>
+                <button type="submit" class="esr-btn">إرسال الطلب</button>
+            </form>
+        }
+    </div>
+
+    @if (Model.MyRequests.Count > 0)
+    {
+        <div class="esr-card">
+            <h2>طلباتي السابقة</h2>
+            <table class="esr-table">
+                <thead><tr><th>المناوبة</th><th>من</th><th>إلى</th><th>الحالة</th></tr></thead>
+                <tbody>
+                    @foreach (var row in Model.MyRequests)
+                    {
+                        <tr>
+                            <td>@row.ShiftName</td>
+                            <td>@(row.FromDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                            <td>@(row.ToDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                            <td>
+                                <span class="esr-chip @row.Status">
+                                    @(row.Status switch { "Pending" => "قيد المراجعة", "Approved" => "معتمد", "Rejected" => "مرفوض", _ => row.Status })
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

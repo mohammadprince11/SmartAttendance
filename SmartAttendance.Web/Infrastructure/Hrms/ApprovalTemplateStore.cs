@@ -28,6 +28,7 @@ public static class ApprovalTemplateStore
 
         new("MissingPunch",   "بصمة مفقودة",             "الحضور"),
         new("ExitPermission", "مغادرة أثناء الدوام",      "الحضور"),
+        new("ShiftRequest",   "طلب مناوبة",              "الحضور"),
         new("ShiftChange",    "تغيير مناوبة",            "الحضور"),
         new("ShiftSwap",      "تبادل مناوبة مع زميل",     "الحضور"),
         new("WorkFromHome",   "عمل من المنزل",           "الحضور"),

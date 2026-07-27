@@ -296,12 +296,8 @@
                     <div class="sht-box">
                         <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="FillMissingCheckIn" value="true" id="sht-FMI" /> تعبئة وقت بدء المناوبة تلقائياً لأي بصمة دخول مفقودة</label>
                         <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="FillMissingCheckOut" value="true" id="sht-FMO" /> تعبئة وقت انتهاء المناوبة تلقائياً لأي بصمة خروج مفقودة</label>
-                        @* حقلان مخفيّان لحين بناء ميزتيهما (تجريد الدلالات / طلب المناوبة من ESS):
-                           يبقيان بالنموذج كي لا تُفقد قيم محفوظة عند إعادة الحفظ. *@
-                        <div style="display:none">
-                            <label><input type="checkbox" name="StripSemantics" value="true" id="sht-STS" /> تجريد فترة الدلالات (استراحة/صلاة…) من مدة الحضور</label>
-                            <label><input type="checkbox" name="RequestableFromEss" value="true" id="sht-RFE" /> قابلة للطلب من الخدمة الذاتية</label>
-                        </div>
+                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="StripSemantics" value="true" id="sht-STS" /> تجريد فترة الدلالات (استراحة/صلاة…) من مدة الحضور</label>
+                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="RequestableFromEss" value="true" id="sht-RFE" /> قابلة للطلب من الخدمة الذاتية (بوابة الموظف)</label>
                         <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="ConsiderPermissionsOutsideShift" value="true" id="sht-CPO" /> احتساب ساعات المغادرة الواقعة خارج المناوبة</label>
                         <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="ExcludePermsOutsideStartFromLate" value="true" id="sht-EPL" /> استثناء المغادرات خارج بداية المناوبة من التأخير</label>
                         <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="AvailableInRoster" value="true" id="sht-AIR" checked /> متاحة في جدول الحضور (الروستر)</label>

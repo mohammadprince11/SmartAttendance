@@ -23,6 +23,8 @@ public static class ApprovalWorkflowEngine
         ["خروج أثناء الدوام"] = "ExitPermission",
         ["Overtime"] = "Overtime",
         ["عمل إضافي"] = "Overtime",
+        ["ShiftRequest"] = "ShiftRequest",
+        ["طلب مناوبة"] = "ShiftRequest",
         // الطلبات المالية (FinancialRequestStore) — التسمية العربية ← مفتاح قالب اللجنة.
         ["قرض"] = "Loan",
         ["سُلفة"] = "Loan",

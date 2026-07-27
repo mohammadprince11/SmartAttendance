@@ -206,6 +206,33 @@ WHERE AttendanceDate >= @From AND AttendanceDate <= @To
         // تفعّل المناوبة «استثناء المغادرات خارج بداية المناوبة من التأخير».
         var permissionsByDay = await ApprovedPermissionsAsync(dbContext, monthStart, monthEnd);
 
+        // دقائق الأزواج غير-الحضورية (استراحة/صلاة/مهمة…) لكل موظف×يوم — تُجرَّد من
+        // مدة الحضور حين تفعّل المناوبة StripSemantics (وإلا لا تُقرأ أصلاً).
+        var semanticMinutesByDay = (await HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+SELECT EmployeeId, AttendanceDate, SUM(DATEDIFF(minute, CheckIn, CheckOut)) AS StripMinutes
+FROM AttendanceRecords
+WHERE AttendanceDate >= @From AND AttendanceDate <= @To
+  AND ISNULL(IsDeleted, 0) = 0
+  AND PunchSemanticId IS NOT NULL AND PunchSemanticId <> @Attendance
+  AND CheckOut IS NOT NULL AND CheckOut > CheckIn
+GROUP BY EmployeeId, AttendanceDate;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@From", monthStart.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@To", monthEnd.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@Attendance", attendanceSemanticId);
+            },
+            reader => new
+            {
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                Date = HrmsDatabase.GetDateOnly(reader, "AttendanceDate") ?? default,
+                Minutes = HrmsDatabase.GetInt(reader, "StripMinutes")
+            }))
+            .ToDictionary(r => (r.EmployeeId, r.Date), r => r.Minutes);
+
         // ترانزاكشن واحدة للحذف وكل دفعات الإدخال — فلَش لوغ واحد بدل واحد لكل أمر
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
@@ -312,6 +339,14 @@ WHERE AttendanceDate >= @From AND AttendanceDate <= @To
 
                 var row = Derive(shift, day, dayKind, checkIn, checkOut, lateCredit);
 
+                // تجريد فترات الدلالات من مدة الحضور — محروس بإعداد المناوبة
+                var workedHours = row.WorkedHours;
+                if (shift.StripSemantics && workedHours > 0
+                    && semanticMinutesByDay.TryGetValue((employeeId, date), out var stripMinutes))
+                {
+                    workedHours = StripSemanticHours(workedHours, stripMinutes);
+                }
+
                 // يوم بلا حضور فعلي (غياب) يُعاد تصنيفه إن كان عطلة رسمية أو ضمن إجازة
                 // معتمدة — فلا يُخصم بالرواتب. الأيام المشتغَل بها تبقى كما هي.
                 var status = row.Status;
@@ -331,7 +366,7 @@ WHERE AttendanceDate >= @From AND AttendanceDate <= @To
 
                 table.Rows.Add(employeeId, date.ToDateTime(TimeOnly.MinValue), shiftId, dayKind,
                     (object?)row.CheckIn ?? DBNull.Value, (object?)row.CheckOut ?? DBNull.Value,
-                    row.LateHours, row.EarlyLeaveHours, row.WorkedHours, status, true, analyzedAt);
+                    row.LateHours, row.EarlyLeaveHours, workedHours, status, true, analyzedAt);
             }
         }
 
@@ -502,6 +537,14 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
         }
         return credit;
     }
+
+    /// <summary>
+    /// تجريد دقائق الدلالات (استراحة/صلاة…) من ساعات الحضور (إعداد <c>StripSemantics</c>).
+    /// لا تنزل تحت الصفر، وبدقّة منزلتين كبقية ساعات الاشتقاق. نقية قابلة للاختبار.
+    /// </summary>
+    public static decimal StripSemanticHours(decimal workedHours, int semanticMinutes) =>
+        semanticMinutes <= 0 ? workedHours
+            : Math.Max(0m, workedHours - Math.Round(semanticMinutes / 60m, 2));
 
     /// <summary>هل تُعرِّف المناوبة نافذة التقاط زمنية للبصمات الصالحة؟ (تبويب «القواعد»)</summary>
     public static bool HasCaptureWindow(ShiftTypeStore.ShiftType shift) =>

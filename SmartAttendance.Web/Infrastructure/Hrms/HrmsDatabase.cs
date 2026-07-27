@@ -134,6 +134,10 @@ IF COL_LENGTH('SelfServiceRequests', 'ManagerNote') IS NULL
 IF COL_LENGTH('SelfServiceRequests', 'HrStatus') IS NULL
     ALTER TABLE SelfServiceRequests ADD HrStatus nvarchar(30) NULL;
 
+-- طلب مناوبة من الخدمة الذاتية (RequestType='ShiftRequest'): المناوبة المطلوبة
+IF COL_LENGTH('SelfServiceRequests', 'ShiftTypeId') IS NULL
+    ALTER TABLE SelfServiceRequests ADD ShiftTypeId int NULL;
+
 IF COL_LENGTH('SelfServiceRequests', 'HrReviewedBy') IS NULL
     ALTER TABLE SelfServiceRequests ADD HrReviewedBy nvarchar(150) NULL;
 
