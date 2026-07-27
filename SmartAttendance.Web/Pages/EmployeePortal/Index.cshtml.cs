@@ -84,6 +84,7 @@ public class IndexModel : PageModel
             "out" => "سُجّلت بصمة الانصراف عبر الإنترنت — تدخل الحضور عند «تحديث الحضور».",
             "toosoon" => $"لا يمكن تسجيل الانصراف قبل مرور {OnlinePunchStore.FormatDuration((pminm ?? 0) / 60d)} من تسجيل الحضور — تبقّى {OnlinePunchStore.FormatDuration((prem ?? 0) / 60d)}.",
             "dup" => "تم تجاهل البصمة: سُجّلت بصمة مماثلة خلال أقل من دقيقة.",
+            "geo" => "رُفضت البصمة: أنت خارج نطاق موقع العمل المحدد لك (أو لم يصل موقعك — تأكد من السماح بالوصول للموقع).",
             _ => StatusMessage
         };
         return Page();
@@ -652,7 +653,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     /// البصمة عبر الإنترنت (بصم ذاتي من البوابة — نمط كيان قسم 36.ج): يسجّل بصمة
     /// دخول/خروج بوقت الخادم الحالي بمصدر «موبايل»، فتدخل اشتقاق اليومية كأي بصمة.
     /// </summary>
-    public async Task<IActionResult> OnPostOnlinePunchAsync(string? punchType, string? returnTab)
+    public async Task<IActionResult> OnPostOnlinePunchAsync(
+        string? punchType, string? returnTab, double? geoLat, double? geoLng)
     {
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
@@ -665,7 +667,7 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
 
         var type = punchType == "Out" ? "Out" : "In";
         var now = DateTime.Now;
-        var result = await OnlinePunchStore.RecordAsync(_dbContext, employeeId, type, now, null);
+        var result = await OnlinePunchStore.RecordAsync(_dbContext, employeeId, type, now, null, geoLat, geoLng);
 
         // نمرّر نتيجة البصمة عبر معطيات الرابط (أعداد صحيحة آمنة ثقافياً) فتُعاد صياغة الرسالة
         // في OnGet — بديل موثوق لا يعتمد على بقاء TempData عبر إعادة التوجيه (PRG).
@@ -682,6 +684,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                     pminm = (int)Math.Round(result.MinCheckoutHours * 60),
                     prem = (int)Math.Ceiling(result.HoursRemaining * 60)
                 }),
+            OnlinePunchStore.PunchStatus.OutsideGeofence =>
+                RedirectToPage(new { tab, punch = "geo" }),
             _ =>
                 RedirectToPage(new { tab, punch = "dup" })
         };

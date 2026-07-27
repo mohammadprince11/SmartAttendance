@@ -43,6 +43,40 @@ public static class OnlinePunchStore
     /// <summary>القيمة الافتراضية إن لم يُضبط الإعداد بعد (٤ ساعات).</summary>
     public const double DefaultMinCheckoutHours = 4;
 
+    /// <summary>
+    /// مفتاح إعداد «إنفاذ النطاق الجغرافي للبصم الأونلاين»: حين يُفعَّل، الموظف المسنَد
+    /// لمواقع جغرافية (<c>EmployeeGeoLocations</c>) لا يُبصّم إلا داخل نصف قطر أحدها.
+    /// الافتراضي معطّل (سلوك ما قبل الميزة)، وموظف بلا مواقع مسنَدة لا تنطبق عليه القاعدة.
+    /// </summary>
+    public const string EnforceGeofenceKey = "Attendance.OnlinePunch.EnforceGeofence";
+
+    /// <summary>هل إنفاذ النطاق الجغرافي مفعّل؟ (داينمك من إعدادات الحضور، الافتراضي لا)</summary>
+    public static async Task<bool> GetEnforceGeofenceAsync(ApplicationDbContext db) =>
+        await HrSettingsStore.GetAsync(db, EnforceGeofenceKey, "0") == "1";
+
+    /// <summary>تفعيل/تعطيل إنفاذ النطاق الجغرافي.</summary>
+    public static Task SetEnforceGeofenceAsync(ApplicationDbContext db, bool enabled) =>
+        HrSettingsStore.SetAsync(db, EnforceGeofenceKey, enabled ? "1" : "0");
+
+    /// <summary>مسافة هافرساين بالأمتار بين إحداثيّين. نقية قابلة للاختبار.</summary>
+    public static double DistanceMeters(double lat1, double lng1, double lat2, double lng2)
+    {
+        const double earthRadius = 6371000d;
+        var dLat = (lat2 - lat1) * Math.PI / 180d;
+        var dLng = (lng2 - lng1) * Math.PI / 180d;
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+              + Math.Cos(lat1 * Math.PI / 180d) * Math.Cos(lat2 * Math.PI / 180d)
+              * Math.Sin(dLng / 2) * Math.Sin(dLng / 2);
+        return earthRadius * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+    }
+
+    /// <summary>هل الإحداثيان داخل نصف قطر أيٍّ من النطاقات؟ نقية قابلة للاختبار.</summary>
+    public static bool IsInsideAny(
+        IEnumerable<(double Latitude, double Longitude, int RadiusMeters)> zones,
+        double latitude, double longitude) =>
+        zones.Any(z => DistanceMeters(z.Latitude, z.Longitude, latitude, longitude)
+                       <= Math.Max(10, z.RadiusMeters));
+
     /// <summary>حالة محاولة تسجيل البصمة عبر الإنترنت.</summary>
     public enum PunchStatus
     {
@@ -51,7 +85,9 @@ public static class OnlinePunchStore
         /// <summary>رُفضت لأنها مكرّرة خلال نافذة <see cref="DebounceSeconds"/>.</summary>
         Duplicate,
         /// <summary>رُفضت لأن الانصراف قبل مرور المدة الدنيا من آخر حضور مفتوح.</summary>
-        TooSoonForCheckout
+        TooSoonForCheckout,
+        /// <summary>رُفضت لأن الموظف خارج نطاقاته الجغرافية المسنَدة (أو بلا إحداثيات والإنفاذ مفعّل).</summary>
+        OutsideGeofence
     }
 
     /// <summary>نتيجة محاولة تسجيل بصمة عبر الإنترنت (تحمل تفاصيل الرفض للرسائل).</summary>
@@ -96,9 +132,37 @@ public static class OnlinePunchStore
     /// الانصراف قبل مرور المدة الدنيا (قاعدة جازمة تمنع بصم خروج خاطئ عقب الحضور مباشرة).
     /// </summary>
     public static async Task<PunchResult> RecordAsync(
-        ApplicationDbContext db, int employeeId, string punchType, DateTime punchAt, int? semanticId)
+        ApplicationDbContext db, int employeeId, string punchType, DateTime punchAt, int? semanticId,
+        double? latitude = null, double? longitude = null)
     {
         await HrmsDatabase.EnsureCreatedAsync(db);
+
+        // إنفاذ النطاق الجغرافي (محروس بالإعداد، الافتراضي معطّل): الموظف المسنَد لمواقع
+        // نشطة يُرفَض بصمه خارج نصف قطر أحدها — وغياب الإحداثيات = رفض أيضاً (وإلا
+        // يُلتَفّ على القاعدة برفض إذن الموقع). موظف بلا إسنادات لا تنطبق عليه القاعدة.
+        if (await GetEnforceGeofenceAsync(db))
+        {
+            await GeoLocationStore.EnsureAsync(db);
+            var zones = await HrmsDatabase.QueryAsync(
+                db,
+                """
+SELECT g.Latitude, g.Longitude, g.RadiusMeters
+FROM EmployeeGeoLocations eg
+INNER JOIN GeoLocations g ON g.Id = eg.GeoLocationId AND g.IsActive = 1
+WHERE eg.EmployeeId = @Emp;
+""",
+                command => HrmsDatabase.AddParameter(command, "@Emp", employeeId),
+                reader => (
+                    Latitude: (double)(reader["Latitude"] is decimal la ? la : 0),
+                    Longitude: (double)(reader["Longitude"] is decimal lo ? lo : 0),
+                    RadiusMeters: HrmsDatabase.GetInt(reader, "RadiusMeters")));
+
+            if (zones.Count > 0
+                && (latitude is not { } lat || longitude is not { } lng || !IsInsideAny(zones, lat, lng)))
+            {
+                return new PunchResult(PunchStatus.OutsideGeofence, 0);
+            }
+        }
 
         // قاعدة صارمة: ارفض بصمة أونلاين مكرّرة خلال نافذة قصيرة (نقرة مزدوجة/شبكة بطيئة).
         var recent = await HrmsDatabase.ScalarAsync<int>(

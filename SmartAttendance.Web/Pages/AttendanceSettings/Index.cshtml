@@ -92,6 +92,15 @@
                 </label>
                 <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ القاعدة</button>
             </form>
+
+            <form method="post" asp-page-handler="SaveGeofenceRule" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
+                <label style="flex-direction:row;align-items:center;gap:8px">
+                    <input type="checkbox" name="EnforceGeofence" value="true" checked="@Model.EnforceGeofence" />
+                    إنفاذ النطاق الجغرافي: رفض بصمة الموظف المسنَد لمواقع جغرافية إن كان خارج نصف قطر أحدها
+                </label>
+                <span class="ats-hint">تُدار المواقع وإسناد الموظفين من صفحة «المواقع الجغرافية للموظفين». موظف بلا مواقع مسنَدة لا تنطبق عليه القاعدة، وغياب إحداثيات الجهاز (رفض إذن الموقع) = رفض البصمة.</span>
+                <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ الإنفاذ</button>
+            </form>
         </div>
     </div>
 

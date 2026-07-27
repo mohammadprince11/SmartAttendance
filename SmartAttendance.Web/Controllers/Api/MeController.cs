@@ -119,7 +119,7 @@ WHERE e.Id = @Id;
         }));
     }
 
-    public sealed record OnlinePunchRequest(string PunchType);
+    public sealed record OnlinePunchRequest(string PunchType, double? Latitude = null, double? Longitude = null);
 
     /// <summary>بصمة ذاتية (دخول/خروج) بوقت الخادم الحالي.</summary>
     [HttpPost("online-punch")]
@@ -128,9 +128,11 @@ WHERE e.Id = @Id;
         if (RequireEmployee() is { } bad) return bad;
         var type = body?.PunchType == "Out" ? "Out" : "In";
         var now = DateTime.Now;
-        var result = await OnlinePunchStore.RecordAsync(_db, EmployeeId, type, now, null);
+        var result = await OnlinePunchStore.RecordAsync(_db, EmployeeId, type, now, null, body?.Latitude, body?.Longitude);
         return result.Status switch
         {
+            OnlinePunchStore.PunchStatus.OutsideGeofence =>
+                BadRequest(new { message = "رُفضت البصمة: أنت خارج نطاق موقع العمل المحدد لك (أو لم يصل موقعك)." }),
             OnlinePunchStore.PunchStatus.Recorded =>
                 Ok(new { message = $"سُجّلت بصمة {(type == "Out" ? "الانصراف" : "الحضور")}.", at = now.ToString("yyyy-MM-dd HH:mm"), punchType = type }),
             OnlinePunchStore.PunchStatus.TooSoonForCheckout =>

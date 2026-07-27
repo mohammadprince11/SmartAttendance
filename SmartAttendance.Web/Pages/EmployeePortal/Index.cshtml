@@ -266,23 +266,45 @@
                     <span class="nxex-chip live">🌐</span>
                 </header>
                 <div class="nxex-punch-btns">
-                    <form method="post" asp-page-handler="OnlinePunch">
+                    <form method="post" asp-page-handler="OnlinePunch" class="nxex-punch-form">
                         <input type="hidden" name="returnTab" value="attendance" />
                         <input type="hidden" name="punchType" value="In" />
+                        <input type="hidden" name="geoLat" /><input type="hidden" name="geoLng" />
                         <button type="submit" class="nxex-punch-btn in">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5M15 12H3"/></svg>
                             تسجيل حضور الآن
                         </button>
                     </form>
-                    <form method="post" asp-page-handler="OnlinePunch">
+                    <form method="post" asp-page-handler="OnlinePunch" class="nxex-punch-form">
                         <input type="hidden" name="returnTab" value="attendance" />
                         <input type="hidden" name="punchType" value="Out" />
+                        <input type="hidden" name="geoLat" /><input type="hidden" name="geoLng" />
                         <button type="submit" class="nxex-punch-btn out">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
                             تسجيل انصراف الآن
                         </button>
                     </form>
                 </div>
+                <script>
+                    // إحداثيات البصمة (لإنفاذ النطاق الجغرافي): تُلتقط عند التحميل وتُحدَّث عند
+                    // الإرسال بلا تعطيل — الرفض قراره للخادم، فغياب الإذن يُرسل النموذج فارغاً.
+                    (function () {
+                        function fill(p) {
+                            document.querySelectorAll(".nxex-punch-form").forEach(function (f) {
+                                f.querySelector("[name=geoLat]").value = p.coords.latitude;
+                                f.querySelector("[name=geoLng]").value = p.coords.longitude;
+                            });
+                        }
+                        if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(fill, function () { }, { timeout: 8000, maximumAge: 60000 });
+                            document.querySelectorAll(".nxex-punch-form").forEach(function (f) {
+                                f.addEventListener("submit", function () {
+                                    navigator.geolocation.getCurrentPosition(fill, function () { }, { timeout: 1500, maximumAge: 120000 });
+                                });
+                            });
+                        }
+                    })();
+                </script>
 
                 @* ===== عدّاد ساعات العمل الحيّ (من أول بصمة اليوم) ===== *@
                 <div class="nxex-workclock" data-workclock='@Json.Serialize(Model.TodayPunchIso)' hidden>

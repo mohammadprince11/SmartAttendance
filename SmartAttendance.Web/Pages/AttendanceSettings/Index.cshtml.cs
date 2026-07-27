@@ -24,12 +24,25 @@ public class IndexModel : PageModel
 
     /// <summary>أقل عدد ساعات بين الحضور والانصراف بالبصمة عبر الإنترنت (0 = القاعدة معطّلة).</summary>
     public double MinCheckoutHours { get; set; }
+    public bool EnforceGeofence { get; set; }
 
     public async Task OnGetAsync()
     {
         Semantics = await PunchSemanticStore.ListAsync(_dbContext);
         Sources = await AttendanceSourceStore.ListAsync(_dbContext);
         MinCheckoutHours = await OnlinePunchStore.GetMinCheckoutHoursAsync(_dbContext);
+        EnforceGeofence = await OnlinePunchStore.GetEnforceGeofenceAsync(_dbContext);
+    }
+
+    /// <summary>تفعيل/تعطيل إنفاذ النطاق الجغرافي للبصم الأونلاين (للموظفين المسنَدين لمواقع).</summary>
+    public async Task<IActionResult> OnPostSaveGeofenceRuleAsync()
+    {
+        var enabled = Request.Form["EnforceGeofence"] == "true";
+        await OnlinePunchStore.SetEnforceGeofenceAsync(_dbContext, enabled);
+        TempData["SuccessMessage"] = enabled
+            ? "تم الحفظ: البصم الأونلاين للموظفين المسنَدين لمواقع جغرافية لا يُقبل إلا داخل نطاقاتهم."
+            : "تم الحفظ: إنفاذ النطاق الجغرافي معطّل.";
+        return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostSaveOnlinePunchRuleAsync()
