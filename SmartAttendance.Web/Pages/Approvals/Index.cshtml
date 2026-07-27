@@ -4,8 +4,20 @@
     ViewData["Title"] = "الموافقات";
     var acc = "#12D9E3";
 
+    // المفاتيح الإنجليزية المخزّنة (SelfServices/البوابة) ⟵ تسميتها العربية للعرض.
+    string TypeLabel(string t) => t switch
+    {
+        "Leave" => "إجازة",
+        "MissingPunch" => "نسيان بصمة",
+        "ExitPermission" => "خروج أثناء الدوام",
+        "Overtime" => "عمل إضافي",
+        "ShiftRequest" => "طلب مناوبة",
+        _ => t
+    };
+
     (string ic, string cls) TypeBadge(string t)
     {
+        if (t.Contains("مناوبة")) return ("🕐", "att");
         if (t.Contains("قرض") || t.Contains("سُلفة") || t.Contains("سلفة")) return ("🏦", "fin");
         if (t.Contains("بدل") || t.Contains("استرداد")) return ("🧾", "fin");
         if (t.Contains("زيادة")) return ("📈", "fin");
@@ -238,7 +250,7 @@
                     <option value="">كل الأنواع</option>
                     @foreach (var t in Model.RequestTypes)
                     {
-                        <option value="@t" selected="@(Model.RequestType == t)">@t</option>
+                        <option value="@t" selected="@(Model.RequestType == t)">@TypeLabel(t)</option>
                     }
                 </select>
             </label>
@@ -311,7 +323,8 @@
                 @foreach (var request in Model.Requests)
                 {
                     Model.Flows.TryGetValue(request.Id, out var flow);
-                    var badge = TypeBadge(request.RequestType);
+                    var typeLabel = TypeLabel(request.RequestType);
+                    var badge = TypeBadge(typeLabel);
                     var initials = string.IsNullOrWhiteSpace(request.EmployeeName) ? "؟" : request.EmployeeName.Trim()[..1];
                     var canAct = request.Status == "Pending" && flow?.Current != null;
                     var meta = string.Join(" · ", new[] { request.EmployeeNo, request.Department }.Where(s => !string.IsNullOrWhiteSpace(s)));
@@ -326,7 +339,7 @@
                             <span class="apv-ava">@initials</span>
                             <div style="min-width:0">
                                 <div class="nm">@request.EmployeeName</div>
-                                <div class="sub"><span class="apv-type @badge.cls">@badge.ic @request.RequestType</span>@if (!string.IsNullOrWhiteSpace(meta)) { <span class="apv-lmeta">@meta</span> }</div>
+                                <div class="sub"><span class="apv-type @badge.cls">@badge.ic @typeLabel</span>@if (!string.IsNullOrWhiteSpace(meta)) { <span class="apv-lmeta">@meta</span> }</div>
                             </div>
                         </div>
                         <div class="apv-lright">
@@ -352,7 +365,7 @@
                             <span class="apv-ava">@initials</span>
                             <div style="min-width:0">
                                 <div class="nm">@request.EmployeeName</div>
-                                <div class="mt">@request.RequestType@(string.IsNullOrWhiteSpace(meta) ? "" : " · " + meta)</div>
+                                <div class="mt">@TypeLabel(request.RequestType)@(string.IsNullOrWhiteSpace(meta) ? "" : " · " + meta)</div>
                             </div>
                         </div>
 
