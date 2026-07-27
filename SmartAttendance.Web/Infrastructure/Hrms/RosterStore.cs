@@ -23,6 +23,73 @@ public static class RosterStore
         public int? ShiftTypeId { get; set; }
     }
 
+    // ===== الجدولة السريعة (خلاصة دراسة Deputy/When I Work/7shifts):
+    // «لا تبنِ الجدول من الصفر كل مرة» — إما تكرار أسبوع مرسوم أو نسخ فترة سابقة. =====
+
+    /// <summary>
+    /// مصدر خلية اليوم عند «تعبئة الشهر من الأسبوع الأول»: اليوم المقابل بأول 7 أيام
+    /// من الشهر (نفس الإزاحة % 7) — يحافظ على نمط أيام الأسبوع تماماً. نقية.
+    /// </summary>
+    public static DateOnly FirstWeekSource(DateOnly monthStart, DateOnly day) =>
+        monthStart.AddDays((day.DayNumber - monthStart.DayNumber) % 7);
+
+    /// <summary>
+    /// مصدر خلية اليوم عند «نسخ الشهر الماضي»: قبل 28 يوماً بالضبط (4 أسابيع) —
+    /// يضمن نفس يوم الأسبوع (جمعة⟵جمعة) فلا تنكسر العطل. نقية.
+    /// </summary>
+    public static DateOnly PreviousMonthAlignedSource(DateOnly day) => day.AddDays(-28);
+
+    /// <summary>نسخ خلايا كل الموظفين من يوم مصدر إلى يوم هدف (upsert).</summary>
+    private static Task<int> CopyDayAsync(ApplicationDbContext dbContext, DateOnly source, DateOnly target) =>
+        HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            """
+MERGE RosterCells AS t
+USING (SELECT EmployeeId, CellType, ShiftTypeId FROM RosterCells WHERE WorkDate = @Src) AS s
+ON t.EmployeeId = s.EmployeeId AND t.WorkDate = @Dst
+WHEN MATCHED THEN
+    UPDATE SET CellType = s.CellType, ShiftTypeId = s.ShiftTypeId, UpdatedAt = SYSUTCDATETIME()
+WHEN NOT MATCHED THEN
+    INSERT (EmployeeId, WorkDate, CellType, ShiftTypeId)
+    VALUES (s.EmployeeId, @Dst, s.CellType, s.ShiftTypeId);
+SELECT @@ROWCOUNT;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Src", source);
+                HrmsDatabase.AddParameter(command, "@Dst", target);
+            });
+
+    /// <summary>
+    /// «ارسم أسبوعاً واحداً والباقي علينا»: يكرر أول 7 أيام من الشهر على بقية أيامه
+    /// لكل الموظفين الذين لهم خلايا بالأسبوع الأول. يرجع عدد الخلايا المكتوبة.
+    /// </summary>
+    public static async Task<int> FillMonthFromFirstWeekAsync(ApplicationDbContext dbContext, int year, int month)
+    {
+        await EnsureAsync(dbContext);
+        var start = new DateOnly(year, month, 1);
+        var end = start.AddMonths(1).AddDays(-1);
+        var total = 0;
+        for (var day = start.AddDays(7); day <= end; day = day.AddDays(1))
+            total += await CopyDayAsync(dbContext, FirstWeekSource(start, day), day);
+        return total;
+    }
+
+    /// <summary>
+    /// «نسخ الشهر الماضي» بمحاذاة أيام الأسبوع (كل يوم يأخذ خلية اليوم قبل 4 أسابيع)
+    /// لكل الموظفين. يرجع عدد الخلايا المكتوبة.
+    /// </summary>
+    public static async Task<int> CopyFromPreviousMonthAsync(ApplicationDbContext dbContext, int year, int month)
+    {
+        await EnsureAsync(dbContext);
+        var start = new DateOnly(year, month, 1);
+        var end = start.AddMonths(1).AddDays(-1);
+        var total = 0;
+        for (var day = start; day <= end; day = day.AddDays(1))
+            total += await CopyDayAsync(dbContext, PreviousMonthAlignedSource(day), day);
+        return total;
+    }
+
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
     {
         await HrmsDatabase.ExecuteAsync(

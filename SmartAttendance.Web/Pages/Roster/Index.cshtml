@@ -172,6 +172,32 @@
         </div>
     }
 
+    @* الجدولة السريعة: «لا تبنِ الجدول من الصفر» — تكرار الأسبوع الأول أو نسخ الشهر الماضي.
+       نماذج مستقلة عن نموذج الخلايا: احفظ تلوينك أولاً لأنها تعيد تحميل الصفحة. *@
+    @if (Model.Employees.Count > 0)
+    {
+        <div class="ros-bar">
+            <span style="font-size:12px;font-weight:1000">⚡ جدولة سريعة:</span>
+            <form method="post" asp-page-handler="FillFromFirstWeek" style="display:inline">
+                <input type="hidden" name="Month" value="@Model.Month" />
+                <input type="hidden" name="Search" value="@Model.Search" />
+                <input type="hidden" name="PageNumber" value="@Model.PageNumber" />
+                <button type="submit" class="ros-btn ghost" data-zyconfirm="تكرار نمط الأسبوع الأول على بقية الشهر لكل الموظفين؟ (احفظ تلوينك غير المحفوظ أولاً — الخلايا الموجودة بالأيام اللاحقة ستُستبدل)">
+                    🗓 ارسم أسبوعاً… ونعبّي الشهر
+                </button>
+            </form>
+            <form method="post" asp-page-handler="CopyPrevMonth" style="display:inline">
+                <input type="hidden" name="Month" value="@Model.Month" />
+                <input type="hidden" name="Search" value="@Model.Search" />
+                <input type="hidden" name="PageNumber" value="@Model.PageNumber" />
+                <button type="submit" class="ros-btn ghost" data-zyconfirm="نسخ جدول الشهر الماضي كاملاً بمحاذاة أيام الأسبوع (يوم ⟵ نفس اليوم قبل 4 أسابيع) لكل الموظفين؟ الخلايا الموجودة ستُستبدل.">
+                    📋 نسخ الشهر الماضي
+                </button>
+            </form>
+            <span style="font-size:11px;font-weight:800;color:var(--sa-muted,#8FA8BC)">تعمل على كل الموظفين (لا الصفحة الحالية فقط) — راجع النتيجة ثم «نشر الجدول»</span>
+        </div>
+    }
+
     <form method="post" id="ros-form">
         <input type="hidden" name="Month" value="@Model.Month" />
         <input type="hidden" name="Search" value="@Model.Search" />

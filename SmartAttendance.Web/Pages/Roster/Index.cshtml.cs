@@ -88,6 +88,28 @@ public class IndexModel : PageModel
         PublishedAt = await RosterStore.PublishedAtAsync(_dbContext, year, month);
     }
 
+    /// <summary>«ارسم أسبوعاً والباقي علينا»: تكرار الأسبوع الأول على بقية الشهر لكل الموظفين.</summary>
+    public async Task<IActionResult> OnPostFillFromFirstWeekAsync()
+    {
+        var (year, month) = Period;
+        var written = await RosterStore.FillMonthFromFirstWeekAsync(_dbContext, year, month);
+        TempData["SuccessMessage"] = written > 0
+            ? $"تمت تعبئة بقية الشهر من نمط الأسبوع الأول ({written} خلية) — راجع ثم انشر."
+            : "لا خلايا بالأسبوع الأول لتكرارها — ارسم الأسبوع الأول أولاً (واحفظه) ثم أعد المحاولة.";
+        return RedirectToPage(new { Month, Search, PageNumber });
+    }
+
+    /// <summary>نسخ جدول الشهر الماضي كاملاً بمحاذاة أيام الأسبوع (قبل 4 أسابيع يوماً بيوم).</summary>
+    public async Task<IActionResult> OnPostCopyPrevMonthAsync()
+    {
+        var (year, month) = Period;
+        var written = await RosterStore.CopyFromPreviousMonthAsync(_dbContext, year, month);
+        TempData["SuccessMessage"] = written > 0
+            ? $"تم نسخ جدول الشهر الماضي بمحاذاة أيام الأسبوع ({written} خلية) — عدّل الاستثناءات ثم انشر."
+            : "الشهر الماضي بلا خلايا روستر — لا شيء يُنسخ.";
+        return RedirectToPage(new { Month, Search, PageNumber });
+    }
+
     public async Task<IActionResult> OnPostSaveAsync()
     {
         var (year, month) = Period;
