@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.Cookies;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using SmartAttendance.Web.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
@@ -81,6 +82,58 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             : CookieSecurePolicy.SameAsRequest;
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
+
+        // حاجز إعارة الهاتف (دور الموظف فقط): «آخر نشاط» يُختم داخل التذكرة المشفّرة
+        // ويُفحص بكل طلب ضد مهلة خمول داينمك (إعدادات الحضور، 0=معطّل) — تجاوزها
+        // يُسقط الجلسة سيرفرياً فلا يُخدع بتعطيل جافاسكربت العميل.
+        options.Events.OnValidatePrincipal = async context =>
+        {
+            var role = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            if (!string.Equals(role, "Employee", StringComparison.OrdinalIgnoreCase)) return;
+
+            var now = DateTime.UtcNow;
+            if (!context.Properties.Items.TryGetValue(
+                    SmartAttendance.Web.Infrastructure.Security.PortalSessionPolicy.LastActivityItem,
+                    out var raw) || !long.TryParse(raw, out var ticks))
+            {
+                // جلسة صادرة قبل الميزة: نختمها الآن ونجدد التذكرة.
+                context.Properties.Items[SmartAttendance.Web.Infrastructure.Security.PortalSessionPolicy.LastActivityItem] =
+                    now.Ticks.ToString();
+                context.ShouldRenew = true;
+                return;
+            }
+
+            int idleMinutes;
+            try
+            {
+                var cache = context.HttpContext.RequestServices
+                    .GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+                idleMinutes = await Microsoft.Extensions.Caching.Memory.CacheExtensions.GetOrCreateAsync(
+                    cache, "portal:idleMinutes", async entry =>
+                    {
+                        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
+                        var db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+                        return await SmartAttendance.Web.Infrastructure.Security.PortalSessionPolicy
+                            .GetIdleMinutesAsync(db);
+                    });
+            }
+            catch { return; } // تعذّر قراءة الإعداد لا يقطع الجلسات
+
+            var lastActivity = new DateTime(ticks, DateTimeKind.Utc);
+            if (SmartAttendance.Web.Infrastructure.Security.PortalSessionPolicy.ShouldExpire(lastActivity, now, idleMinutes))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return;
+            }
+
+            if (SmartAttendance.Web.Infrastructure.Security.PortalSessionPolicy.ShouldRenew(lastActivity, now))
+            {
+                context.Properties.Items[SmartAttendance.Web.Infrastructure.Security.PortalSessionPolicy.LastActivityItem] =
+                    now.Ticks.ToString();
+                context.ShouldRenew = true;
+            }
+        };
     })
     // مصادقة توكن Bearer لواجهة الموبايل (بجانب الكوكيز) — كنترولرات /api/*
     .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,

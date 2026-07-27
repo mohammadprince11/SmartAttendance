@@ -316,6 +316,65 @@
         </div>
     </div>
 
+    @* ===== حاجز إعارة الهاتف (طبقة العميل): خمول/مغادرة التطبيق ⟵ خروج تلقائي.
+       القيم داينمك من إعدادات الحضور (مقروءة بذاكرة مؤقتة دقيقة)، والإنفاذ الحاسم
+       للخمول سيرفري بتذكرة الكوكي — هذي الطبقة للاستجابة الفورية بالواجهة. *@
+    @if (!embed)
+    {
+        var __zySessionDb = Context.RequestServices.GetRequiredService<SmartAttendance.Infrastructure.Persistence.ApplicationDbContext>();
+        var __zySessionCache = Context.RequestServices.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+        int __zyIdleMin = 0, __zyLeaveSec = 0;
+        try
+        {
+            (__zyIdleMin, __zyLeaveSec) = await Microsoft.Extensions.Caching.Memory.CacheExtensions.GetOrCreateAsync(
+                __zySessionCache, "portal:sessionPolicy", async entry =>
+                {
+                    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
+                    return (
+                        await SmartAttendance.Web.Infrastructure.Security.PortalSessionPolicy.GetIdleMinutesAsync(__zySessionDb),
+                        await SmartAttendance.Web.Infrastructure.Security.PortalSessionPolicy.GetLeaveSecondsAsync(__zySessionDb));
+                });
+        }
+        catch { }
+        <script>
+        (function () {
+            var idleMin = @__zyIdleMin, leaveSec = @__zyLeaveSec;
+            function out() {
+                try { localStorage.removeItem("zyHiddenAt"); } catch (e) { }
+                window.location.href = "/Account/Logout";
+            }
+            if (leaveSec > 0) {
+                // مغادرة التطبيق/إطفاء الشاشة: نختم لحظة الاختفاء، وعند العودة (أو فتح
+                // الصفحة من جديد) إن تجاوز الغياب السماح ⟵ خروج. يعمل حتى لو قُتل التطبيق.
+                function gone() {
+                    try {
+                        var t = +localStorage.getItem("zyHiddenAt") || 0;
+                        if (t && (Date.now() - t) / 1000 > leaveSec) { out(); return true; }
+                        localStorage.removeItem("zyHiddenAt");
+                    } catch (e) { }
+                    return false;
+                }
+                if (gone()) return;
+                document.addEventListener("visibilitychange", function () {
+                    try {
+                        if (document.hidden) localStorage.setItem("zyHiddenAt", Date.now());
+                        else gone();
+                    } catch (e) { }
+                });
+            }
+            if (idleMin > 0) {
+                var lastAct = Date.now();
+                ["click", "touchstart", "keydown", "scroll", "pointerdown"].forEach(function (ev) {
+                    document.addEventListener(ev, function () { lastAct = Date.now(); }, { passive: true });
+                });
+                setInterval(function () {
+                    if ((Date.now() - lastAct) / 60000 > idleMin) out();
+                }, 30000);
+            }
+        })();
+        </script>
+    }
+
     @await RenderSectionAsync("Scripts", required: false)
     <script src="~/js/nexora-calendar-v18.js" asp-append-version="true"></script>
     <script src="~/js/pwa.js" asp-append-version="true"></script>

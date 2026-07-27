@@ -110,6 +110,17 @@
                 <span class="ats-hint">المفاتيح تُسجَّل من درج إعدادات بوابة الموظف وتُعتمد من صفحة «اعتماد مفاتيح البصمة/الوجه». موظف بلا مفتاح معتمد لا تنطبق عليه القاعدة — يمنع بصم زميل بدل زميله (مع النطاق الجغرافي: من أنت + وين أنت).</span>
                 <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ الإنفاذ</button>
             </form>
+
+            <form method="post" asp-page-handler="SaveSessionRule" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
+                <label>الخروج التلقائي من بوابة الموظف بعد خمول (دقائق)
+                    <input type="number" name="IdleLogoutMinutes" value="@Model.IdleLogoutMinutes" min="0" max="1440" style="max-width:160px" />
+                </label>
+                <label>الخروج عند مغادرة التطبيق/إطفاء الشاشة أكثر من (ثوانٍ)
+                    <input type="number" name="LeaveLogoutSeconds" value="@Model.LeaveLogoutSeconds" min="0" max="3600" style="max-width:160px" />
+                </label>
+                <span class="ats-hint">حاجز إعارة الهاتف: موظف يدخل ثم يسلّم هاتفه لزميل — الجلسة تنتهي تلقائياً بعد الخمول (إنفاذ سيرفري) أو بعد مغادرة التطبيق مدة تتجاوز السماح. الصفر يعطّل القاعدة. مع الدخول بالبصمة/الوجه، العودة للبوابة لمسة واحدة.</span>
+                <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ قواعد الجلسة</button>
+            </form>
         </div>
     </div>
 

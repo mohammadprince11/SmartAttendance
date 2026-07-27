@@ -26,6 +26,8 @@ public class IndexModel : PageModel
     public double MinCheckoutHours { get; set; }
     public bool EnforceGeofence { get; set; }
     public bool RequireBiometric { get; set; }
+    public int IdleLogoutMinutes { get; set; }
+    public int LeaveLogoutSeconds { get; set; }
 
     public async Task OnGetAsync()
     {
@@ -34,6 +36,26 @@ public class IndexModel : PageModel
         MinCheckoutHours = await OnlinePunchStore.GetMinCheckoutHoursAsync(_dbContext);
         EnforceGeofence = await OnlinePunchStore.GetEnforceGeofenceAsync(_dbContext);
         RequireBiometric = await OnlinePunchStore.GetRequireBiometricAsync(_dbContext);
+        IdleLogoutMinutes = await Web.Infrastructure.Security.PortalSessionPolicy.GetIdleMinutesAsync(_dbContext);
+        LeaveLogoutSeconds = await Web.Infrastructure.Security.PortalSessionPolicy.GetLeaveSecondsAsync(_dbContext);
+    }
+
+    /// <summary>حفظ قواعد جلسة بوابة الموظف (الخمول/مغادرة التطبيق) — حاجز إعارة الهاتف.</summary>
+    public async Task<IActionResult> OnPostSaveSessionRuleAsync()
+    {
+        var idle = int.TryParse(Request.Form["IdleLogoutMinutes"], out var i) && i >= 0 ? i : -1;
+        var leave = int.TryParse(Request.Form["LeaveLogoutSeconds"], out var l) && l >= 0 ? l : -1;
+        if (idle < 0 || leave < 0)
+        {
+            TempData["SuccessMessage"] = "أدخل أرقاماً صحيحة (الصفر يعطّل القاعدة).";
+            return RedirectToPage();
+        }
+
+        await Web.Infrastructure.Security.PortalSessionPolicy.SetIdleMinutesAsync(_dbContext, idle);
+        await Web.Infrastructure.Security.PortalSessionPolicy.SetLeaveSecondsAsync(_dbContext, leave);
+        TempData["SuccessMessage"] =
+            $"تم الحفظ: الخمول = {(idle > 0 ? idle + " دقيقة" : "معطّل")} · مغادرة التطبيق = {(leave > 0 ? leave + " ثانية" : "معطّل")}. يسري خلال دقيقة.";
+        return RedirectToPage();
     }
 
     /// <summary>تفعيل/تعطيل التأكيد البيولوجي (WebAuthn) للبصم الأونلاين.</summary>
