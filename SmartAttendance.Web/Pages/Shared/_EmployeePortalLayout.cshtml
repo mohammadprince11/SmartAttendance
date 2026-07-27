@@ -151,6 +151,7 @@
                 <span>@brandName · <b style="color:#19d3e0">تجربة الموظف</b></span>
             </div>
             <div class="nxex-topbar-actions">
+                @await Component.InvokeAsync("EmployeeNotificationBell")
                 <button type="button" id="pwa-install-btn" class="nxex-install-btn" hidden>
                     ⬇ تثبيت التطبيق
                 </button>
