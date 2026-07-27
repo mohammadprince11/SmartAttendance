@@ -1,0 +1,120 @@
+@page
+@model SmartAttendance.Web.Pages.Employees.EmailImportModel
+
+@{
+    ViewData["Title"] = "استيراد بريد الموظفين";
+}
+
+<style>
+    .eml-wrap { max-width: 1000px; margin: 0 auto; }
+    .eml-card { background: var(--sa-surface, #ffffff); border: 1px solid var(--sa-border, #dbe4f0);
+        border-radius: 22px; padding: 24px; box-shadow: 0 22px 55px rgba(15, 23, 42, 0.08); margin-bottom: 22px; }
+    .eml-card h1 { margin: 0 0 8px; font-size: 26px; font-weight: 900; color: var(--sa-text, #0f172a); }
+    .eml-card p { margin: 0 0 14px; color: var(--sa-muted, #64748b); font-size: 14px; }
+    .eml-textarea { width: 100%; min-height: 180px; border: 1px solid var(--sa-border, #dbe4f0);
+        border-radius: 14px; padding: 12px; font-size: 14px; direction: ltr; text-align: left;
+        background: var(--sa-surface-2, #f8fafc); color: var(--sa-text, #0f172a); resize: vertical; }
+    .eml-stats { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
+    .eml-stat { border-radius: 999px; padding: 5px 14px; font-size: 13px; font-weight: 900;
+        border: 1px solid var(--sa-border, #dbe4f0); background: var(--sa-surface-2, #f8fafc); color: var(--sa-text, #0f172a); }
+    .eml-stat.upd { color: #0f766e; border-color: rgba(13,148,136,.4); background: rgba(13,148,136,.08); }
+    .eml-stat.bad { color: #b91c1c; border-color: rgba(220,38,38,.35); background: rgba(220,38,38,.07); }
+    .eml-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .eml-table th, .eml-table td { padding: 8px 10px; border-bottom: 1px solid var(--sa-border, #dbe4f0); text-align: right; }
+    .eml-table th { font-weight: 900; color: var(--sa-muted, #64748b); }
+    .eml-tag { border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 900; }
+    .eml-tag.Update { color: #0f766e; background: rgba(13,148,136,.1); }
+    .eml-tag.Same { color: #64748b; background: rgba(100,116,139,.12); }
+    .eml-tag.NotFound { color: #b91c1c; background: rgba(220,38,38,.08); }
+    .eml-msg { border-radius: 14px; padding: 12px 16px; font-weight: 900; margin-bottom: 16px; }
+    .eml-msg.ok { color: #0f766e; background: rgba(13,148,136,.1); }
+    .eml-msg.err { color: #b91c1c; background: rgba(220,38,38,.08); }
+    .eml-scroll { max-height: 420px; overflow: auto; }
+</style>
+
+<div class="eml-wrap">
+    <div class="eml-card">
+        <h1>استيراد بريد الموظفين</h1>
+        <p>
+            الصق عمودَين من Excel: <b>رقم الموظف</b> ثم <b>البريد الإلكتروني</b> (سطر لكل موظف).
+            لا يُعدَّل أي حقل آخر — عمود البريد فقط. تظهر معاينة كاملة قبل أي حفظ.
+        </p>
+
+        @if (Model.Message is { } message)
+        {
+            <div class="eml-msg ok">@message</div>
+        }
+        @if (Model.ErrorMessage is { } error)
+        {
+            <div class="eml-msg err">@error</div>
+        }
+
+        <form method="post">
+            <textarea asp-for="PastedData" class="eml-textarea"
+                      placeholder="1001&#9;ahmed@company.com&#10;1002&#9;sara@company.com"></textarea>
+            <div style="display:flex;gap:10px;margin-top:14px">
+                <button type="submit" asp-page-handler="Preview" class="hrms-btn-primary">معاينة</button>
+                @if (Model.ShowPreview && Model.UpdateCount > 0)
+                {
+                    <button type="submit" asp-page-handler="Apply" class="hrms-btn-primary">
+                        تطبيق التحديث (@Model.UpdateCount)
+                    </button>
+                }
+            </div>
+        </form>
+    </div>
+
+    @if (Model.ShowPreview)
+    {
+        <div class="eml-card">
+            <div class="eml-stats">
+                <span class="eml-stat upd">سيُحدَّث: @Model.UpdateCount</span>
+                <span class="eml-stat">مطابق أصلاً: @Model.SameCount</span>
+                <span class="eml-stat bad">رقم غير موجود: @Model.NotFoundCount</span>
+                <span class="eml-stat bad">مرفوض: @Model.RejectedRows.Count</span>
+            </div>
+
+            @if (Model.PreviewRows.Count > 0)
+            {
+                <div class="eml-scroll">
+                    <table class="eml-table">
+                        <thead>
+                            <tr><th>رقم الموظف</th><th>الاسم</th><th>البريد الحالي</th><th>البريد الجديد</th><th>الحالة</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in Model.PreviewRows)
+                            {
+                                <tr>
+                                    <td>@row.EmployeeNo</td>
+                                    <td>@row.EmployeeName</td>
+                                    <td style="direction:ltr;text-align:right">@(row.CurrentEmail is { Length: > 0 } ? row.CurrentEmail : "—")</td>
+                                    <td style="direction:ltr;text-align:right">@row.NewEmail</td>
+                                    <td><span class="eml-tag @row.Status">@(row.Status switch { "Update" => "سيُحدَّث", "Same" => "مطابق", _ => "غير موجود" })</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @if (Model.RejectedRows.Count > 0)
+            {
+                <h3 style="margin:16px 0 8px;font-size:15px;font-weight:900">صفوف مرفوضة</h3>
+                <table class="eml-table">
+                    <thead><tr><th>السطر</th><th>رقم الموظف</th><th>القيمة</th><th>السبب</th></tr></thead>
+                    <tbody>
+                        @foreach (var rejected in Model.RejectedRows)
+                        {
+                            <tr>
+                                <td>@rejected.LineNo</td>
+                                <td>@rejected.EmployeeNo</td>
+                                <td style="direction:ltr;text-align:right">@rejected.Email</td>
+                                <td>@rejected.Error</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+</div>
