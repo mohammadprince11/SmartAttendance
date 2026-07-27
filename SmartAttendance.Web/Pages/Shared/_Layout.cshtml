@@ -49,6 +49,18 @@
         })();
     </script>
 
+    @* حاجز الوميض: لا رسمة وسيطة إطلاقاً — الصفحة مخفية حتى يكتمل بناء DOM وتطبيق
+       كل أوراق الأنماط الحاجبة، فتظهر مرة واحدة بشكلها النهائي. مهلة أمان 3ث. *@
+    <style>html:not([data-ready]) body { visibility: hidden; }</style>
+    <script>
+        (function () {
+            function ready() { document.documentElement.setAttribute("data-ready", "1"); }
+            if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ready);
+            else ready();
+            setTimeout(ready, 3000);
+        })();
+    </script>
+
     @if (!string.IsNullOrWhiteSpace(companyTheme.FaviconPath))
     {
         <link rel="icon" href="@companyTheme.FaviconPath" />
