@@ -43,6 +43,58 @@ public static class ShiftTypeStore
         list.FirstOrDefault(x => x.Key == key).Label ?? key;
 
     /// <summary>
+    /// «استبدال وأرشفة» (سيناريو تغيير سياسة الدوام مثل 9⟵8 ساعات): المناوبة القديمة
+    /// المرتبطة برواتب مغلقة لا تُحذف أبداً — تُخفى من الفرشاة والخدمة الذاتية
+    /// (AvailableInRoster/RequestableFromEss=0 مع بقاء IsActive حتى تظل الأشهر
+    /// التاريخية قابلة لإعادة الاشتقاق)، وتُرحَّل خلايا الروستر **من تاريخ السريان
+    /// فصاعداً** للبديلة (الماضي يبقى على القديمة فالتاريخ المالي سليم)، ومعها
+    /// الإسناد الافتراضي اختيارياً. يرجع (خلايا مرحَّلة، إسنادات مرحَّلة).
+    /// </summary>
+    public static async Task<(int Cells, int Assignments)> ReplaceAndArchiveAsync(
+        ApplicationDbContext dbContext, int oldShiftId, int newShiftId,
+        DateOnly effectiveFrom, bool migrateAssignments)
+    {
+        if (oldShiftId <= 0 || newShiftId <= 0 || oldShiftId == newShiftId) return (0, 0);
+        await EnsureAsync(dbContext);
+        await RosterStore.EnsureAsync(dbContext);
+
+        var cells = await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            """
+UPDATE RosterCells SET ShiftTypeId = @New, UpdatedAt = SYSUTCDATETIME()
+WHERE ShiftTypeId = @Old AND WorkDate >= @From;
+SELECT @@ROWCOUNT;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Old", oldShiftId);
+                HrmsDatabase.AddParameter(command, "@New", newShiftId);
+                HrmsDatabase.AddParameter(command, "@From", effectiveFrom);
+            });
+
+        var assignments = 0;
+        if (migrateAssignments)
+        {
+            await EmployeeShiftTypeStore.EnsureAsync(dbContext);
+            assignments = await HrmsDatabase.ScalarAsync<int>(
+                dbContext,
+                "UPDATE EmployeeShiftTypes SET ShiftTypeId = @New WHERE ShiftTypeId = @Old; SELECT @@ROWCOUNT;",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@Old", oldShiftId);
+                    HrmsDatabase.AddParameter(command, "@New", newShiftId);
+                });
+        }
+
+        await HrmsDatabase.ExecuteAsync(
+            dbContext,
+            "UPDATE ShiftTypes SET AvailableInRoster = 0, RequestableFromEss = 0 WHERE Id = @Old;",
+            command => HrmsDatabase.AddParameter(command, "@Old", oldShiftId));
+
+        return (cells, assignments);
+    }
+
+    /// <summary>
     /// عائلة المناوبة من وقت بدايتها (لتجميع منتقي الفرشاة بالروستر): صباحية
     /// [5–12)، مسائية [12–18)، ليلية [18–5). نقية قابلة للاختبار.
     /// </summary>

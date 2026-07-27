@@ -47,6 +47,39 @@ public class IndexModel : PageModel
             .OrderBy(e => e.FullName).Select(e => new Lookup(e.Id.ToString(), e.FullName)).ToListAsync();
     }
 
+    /// <summary>
+    /// «استبدال وأرشفة»: سيناريو تغيير سياسة الدوام — القديمة تختفي من الفرشاة
+    /// والخدمة الذاتية (بلا حذف، التاريخ المالي سليم) وخلايا الروستر من تاريخ
+    /// السريان فصاعداً تنتقل للبديلة، مع ترحيل الإسناد الافتراضي اختيارياً.
+    /// </summary>
+    public async Task<IActionResult> OnPostReplaceArchiveAsync()
+    {
+        var oldId = int.TryParse(Request.Form["OldShiftId"], out var o) ? o : 0;
+        var newId = int.TryParse(Request.Form["NewShiftId"], out var n) ? n : 0;
+        var from = DateOnly.TryParse(Request.Form["EffectiveFrom"], out var f)
+            ? f : DateOnly.FromDateTime(DateTime.Today);
+        var migrate = Request.Form["MigrateAssignments"] == "true";
+
+        if (oldId <= 0 || newId <= 0)
+        {
+            TempData["SuccessMessage"] = "اختر المناوبة القديمة والبديلة.";
+            return RedirectToPage();
+        }
+        if (oldId == newId)
+        {
+            TempData["SuccessMessage"] = "المناوبة البديلة يجب أن تختلف عن القديمة.";
+            return RedirectToPage();
+        }
+
+        var (cells, assignments) = await ShiftTypeStore.ReplaceAndArchiveAsync(
+            _dbContext, oldId, newId, from, migrate);
+        TempData["SuccessMessage"] =
+            $"تم الاستبدال والأرشفة: رُحّلت {cells} خلية روستر من {from:yyyy-MM-dd} فصاعداً" +
+            (migrate ? $" و{assignments} إسناداً افتراضياً" : "") +
+            " — القديمة اختفت من الفرشاة والخدمة الذاتية وبقيت بالتاريخ المالي.";
+        return RedirectToPage();
+    }
+
     public async Task<IActionResult> OnPostSaveAsync()
     {
         var form = Request.Form;

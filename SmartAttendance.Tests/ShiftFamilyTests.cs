@@ -36,3 +36,20 @@ public class ShiftFamilyTests
     public void FamilyOf_Malformed_Other(string? start) =>
         Assert.Equal("أخرى", ShiftTypeStore.FamilyOf(start, isFlexible: false));
 }
+
+/// <summary>حراس «استبدال وأرشفة»: معرّفات غير صالحة أو متطابقة تُرفَض قبل أي مساس بالبيانات.</summary>
+public class ReplaceArchiveGuardTests
+{
+    [Theory]
+    [InlineData(0, 5)]    // قديمة غير محددة
+    [InlineData(5, 0)]    // بديلة غير محددة
+    [InlineData(-1, 5)]
+    [InlineData(7, 7)]    // نفس المناوبة
+    public async Task InvalidIds_NoOp(int oldId, int newId)
+    {
+        // db=null يثبت أن الحارس يرجع قبل أي وصول لقاعدة البيانات.
+        var result = await ShiftTypeStore.ReplaceAndArchiveAsync(
+            null!, oldId, newId, new DateOnly(2026, 7, 28), migrateAssignments: true);
+        Assert.Equal((0, 0), result);
+    }
+}

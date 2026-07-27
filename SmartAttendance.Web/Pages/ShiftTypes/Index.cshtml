@@ -132,6 +132,41 @@
         <div class="sht-alert">@TempData["SuccessMessage"]</div>
     }
 
+    @* استبدال وأرشفة — سيناريو تغيير سياسة الدوام (مثل 9⟵8 ساعات): بلا حذف، التاريخ
+       المالي سليم، والمستقبل ينتقل للبديلة. القديمة تختفي من الفرشاة والخدمة الذاتية. *@
+    <details class="sht-table-card" style="padding:14px 16px">
+        <summary style="cursor:pointer;font-weight:1000;font-size:13px">♻️ استبدال وأرشفة مناوبة (تغيير سياسة دوام بلا حذف)</summary>
+        <form method="post" asp-page-handler="ReplaceArchive"
+              style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-top:12px">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:900">القديمة (ستُؤرشف)
+                <select name="OldShiftId" required style="min-height:36px;border-radius:10px;border:1px solid rgba(73,111,151,.3);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px">
+                    <option value="">— اختر —</option>
+                    @foreach (var s in Model.Shifts.Where(x => x.IsActive && x.AvailableInRoster))
+                    { <option value="@s.Id">@s.Name</option> }
+                </select>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:900">البديلة الجديدة
+                <select name="NewShiftId" required style="min-height:36px;border-radius:10px;border:1px solid rgba(73,111,151,.3);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px">
+                    <option value="">— اختر —</option>
+                    @foreach (var s in Model.Shifts.Where(x => x.IsActive))
+                    { <option value="@s.Id">@s.Name</option> }
+                </select>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:900">سريان الترحيل من
+                <input type="date" name="EffectiveFrom" value="@DateTime.Today.ToString("yyyy-MM-dd")"
+                       style="min-height:36px;border-radius:10px;border:1px solid rgba(73,111,151,.3);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px" />
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:900;padding-bottom:8px">
+                <input type="checkbox" name="MigrateAssignments" value="true" checked />
+                ترحيل الإسناد الافتراضي للموظفين
+            </label>
+            <button type="submit" class="sht-btn" data-zyconfirm="تنفيذ الاستبدال؟ خلايا الروستر من تاريخ السريان فصاعداً تنتقل للبديلة وتُؤرشف القديمة من الفرشاة (الماضي يبقى كما هو).">تنفيذ الاستبدال</button>
+            <span style="flex-basis:100%;font-size:11px;font-weight:800;color:var(--sa-muted,#8FA8BC)">
+                الأيام الماضية والرواتب المغلقة تبقى مربوطة بالمناوبة القديمة — لا يُحذف شيء. القديمة تختفي فقط من فرشاة الروستر وطلبات الموظفين.
+            </span>
+        </form>
+    </details>
+
     <div class="sht-table-card">
         @if (Model.Shifts.Count == 0)
         {
