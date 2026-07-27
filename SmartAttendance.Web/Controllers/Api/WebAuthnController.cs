@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,11 +27,16 @@ public class WebAuthnController : ControllerBase
 
     private readonly ApplicationDbContext _db;
     private readonly IMemoryCache _cache;
+    private readonly SmartAttendance.Application.Common.Security.ILoginIdentityService _loginIdentityService;
 
-    public WebAuthnController(ApplicationDbContext db, IMemoryCache cache)
+    public WebAuthnController(
+        ApplicationDbContext db,
+        IMemoryCache cache,
+        SmartAttendance.Application.Common.Security.ILoginIdentityService loginIdentityService)
     {
         _db = db;
         _cache = cache;
+        _loginIdentityService = loginIdentityService;
     }
 
     /// <summary>
@@ -225,5 +231,136 @@ public class WebAuthnController : ControllerBase
         {
             return BadRequest(new { message = $"فشل التأكيد البيولوجي: {ex.Message}" });
         }
+    }
+
+    // ===== الدخول للبوابة بالمفتاح (بلا كلمة مرور) =====
+
+    /// <summary>
+    /// خيارات دخول بلا اسم مستخدم: قائمة مفاتيح مسموحة فارغة ⟹ الجهاز يعرض
+    /// passkeys المكتشفة (المسجّلة لنطاقنا) ويعيد userHandle يدلّنا على الموظف.
+    /// </summary>
+    [HttpPost("login/options")]
+    [AllowAnonymous]
+    public IActionResult LoginOptions()
+    {
+        var options = CreateFido2().GetAssertionOptions(new GetAssertionOptionsParams
+        {
+            AllowedCredentials = Array.Empty<PublicKeyCredentialDescriptor>(),
+            UserVerification = UserVerificationRequirement.Required
+        });
+
+        var key = Guid.NewGuid().ToString("N");
+        _cache.Set($"webauthn:login:{key}", options, ChallengeLifetime);
+        return Ok(new { key, options });
+    }
+
+    /// <summary>
+    /// تحقق الدخول: توقيع صحيح بمفتاح «نشط» (معتمد من HR) ⟹ جلسة كوكي بنفس
+    /// claims الدخول بكلمة المرور لحساب الموظف المرتبط. المفاتيح المعلّقة/الملغاة
+    /// لا تدخل، وكلمة المرور تبقى بديلاً دائماً.
+    /// </summary>
+    [HttpPost("login/verify")]
+    [AllowAnonymous]
+    public async Task<IActionResult> LoginVerify([FromBody] AssertVerifyRequest request)
+    {
+        var cacheKey = $"webauthn:login:{request.Key}";
+        if (!_cache.TryGetValue(cacheKey, out AssertionOptions? options) || options is null)
+            return BadRequest(new { message = "انتهت صلاحية جلسة الدخول — أعد المحاولة." });
+        _cache.Remove(cacheKey);
+
+        var credentialId = WebAuthnCredentialStore.ToBase64Url(request.Assertion.RawId);
+        var credential = await WebAuthnCredentialStore.FindByCredentialIdAsync(_db, credentialId);
+        if (credential is null || !WebAuthnCredentialStore.IsUsable(credential.Status))
+            return BadRequest(new { message = "المفتاح غير معروف أو غير معتمد بعد — سجّل الدخول بكلمة المرور." });
+
+        try
+        {
+            var result = await CreateFido2().MakeAssertionAsync(new MakeAssertionParams
+            {
+                AssertionResponse = request.Assertion,
+                OriginalOptions = options,
+                StoredPublicKey = Convert.FromBase64String(credential.PublicKey),
+                StoredSignatureCounter = (uint)Math.Max(0, credential.SignCount),
+                IsUserHandleOwnerOfCredentialIdCallback = (args, _) =>
+                    Task.FromResult(
+                        System.Text.Encoding.UTF8.GetString(args.UserHandle) == credential.EmployeeId.ToString())
+            });
+
+            await WebAuthnCredentialStore.UpdateSignCountAsync(_db, credential.Id, result.SignCount);
+        }
+        catch (Fido2VerificationException ex)
+        {
+            return BadRequest(new { message = $"فشل التحقق: {ex.Message}" });
+        }
+
+        // حساب الدخول المرتبط بالموظف (نفضّل حساب دور «موظف»).
+        var username = await HrmsDatabase.ScalarAsync<string>(
+            _db,
+            """
+SELECT TOP 1 Username FROM AppLoginUsers
+WHERE EmployeeId = @Emp AND IsActive = 1
+ORDER BY CASE WHEN Role = 'Employee' THEN 0 ELSE 1 END, Id;
+""",
+            c => HrmsDatabase.AddParameter(c, "@Emp", credential.EmployeeId));
+        if (string.IsNullOrWhiteSpace(username))
+            return BadRequest(new { message = "لا يوجد حساب دخول نشط مرتبط بهذا الموظف." });
+
+        var user = await LoginDatabase.GetByUsernameAsync(_db, username);
+        if (user is null || !user.IsActive)
+            return BadRequest(new { message = "الحساب غير متاح." });
+        if (user.IsLockedOut(DateTime.UtcNow))
+            return BadRequest(new { message = "الحساب مقفل مؤقتاً — حاول لاحقاً أو استخدم كلمة المرور." });
+
+        var displayName = string.IsNullOrWhiteSpace(user.EmployeeName) ? user.Username : user.EmployeeName;
+        int? systemUserId;
+        try
+        {
+            systemUserId = await _loginIdentityService.EnsureSystemUserAsync(
+                new SmartAttendance.Application.Common.Security.LoginIdentityRequest
+                {
+                    EmployeeId = user.EmployeeId,
+                    UserName = user.Username,
+                    DisplayName = displayName,
+                    CompatibilityRole = user.Role,
+                    IsActive = user.IsActive
+                },
+                HttpContext.RequestAborted);
+        }
+        catch
+        {
+            return BadRequest(new { message = "تعذر إكمال تسجيل الدخول حالياً — استخدم كلمة المرور." });
+        }
+        if (systemUserId is not > 0)
+            return BadRequest(new { message = "تعذر إكمال تسجيل الدخول حالياً — استخدم كلمة المرور." });
+
+        // نفس claims مسار كلمة المرور (Login.cshtml.cs) — جلسة قياسية 8 ساعات.
+        var issuedUtc = DateTimeOffset.UtcNow;
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Name, user.Username),
+            new(ClaimTypes.Role, user.Role),
+            new("DisplayName", displayName),
+            new("EmployeeId", user.EmployeeId?.ToString() ?? string.Empty),
+            new("SystemUserId", systemUserId.Value.ToString()),
+            new("SessionIssuedUtc", issuedUtc.ToString("O"))
+        };
+
+        await LoginDatabase.RecordSuccessfulLoginAsync(
+            _db, user, HttpContext.Connection.RemoteIpAddress?.ToString());
+
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)),
+            new Microsoft.AspNetCore.Authentication.AuthenticationProperties
+            {
+                IsPersistent = false,
+                IssuedUtc = issuedUtc,
+                ExpiresUtc = issuedUtc.AddHours(8),
+                AllowRefresh = true
+            });
+
+        var isEmployee = user.Role.Equals("Employee", StringComparison.OrdinalIgnoreCase);
+        return Ok(new { redirect = isEmployee ? "/EmployeePortal" : "/" });
     }
 }

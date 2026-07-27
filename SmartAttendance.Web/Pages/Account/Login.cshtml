@@ -40,6 +40,78 @@
             <button type="submit" class="login-button">دخول</button>
         </form>
 
+        @* الدخول بالبصمة/الوجه (Passkey): يظهر فقط حين يدعمه المتصفح — يتطلب مفتاحاً
+           مسجَّلاً من بوابة الموظف ومعتمَداً من الموارد البشرية. كلمة المرور تبقى بديلاً. *@
+        <button type="button" id="bio-login-btn" class="login-button" hidden
+                style="margin-top:10px;background:transparent;border:1px solid rgba(143,168,188,.45);color:inherit">
+            🔐 الدخول بالبصمة/الوجه
+        </button>
+        <div id="bio-login-error" class="login-error" hidden style="margin-top:10px"></div>
+
+        <script>
+        (function () {
+            var btn = document.getElementById("bio-login-btn");
+            var err = document.getElementById("bio-login-error");
+            if (!window.PublicKeyCredential) return;
+            btn.hidden = false;
+
+            function a2b(s) {
+                s = s.replace(/-/g, "+").replace(/_/g, "/");
+                while (s.length % 4) s += "=";
+                var bin = atob(s), u8 = new Uint8Array(bin.length);
+                for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+                return u8.buffer;
+            }
+            function b2a(buf) {
+                var u8 = new Uint8Array(buf), bin = "";
+                for (var i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+                return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+            }
+
+            btn.addEventListener("click", async function () {
+                err.hidden = true;
+                btn.disabled = true;
+                try {
+                    var r = await fetch("/api/webauthn/login/options", { method: "POST" });
+                    var data = await r.json();
+                    if (!r.ok) throw new Error(data.message || "تعذّر بدء الدخول.");
+                    var o = data.options;
+                    o.challenge = a2b(o.challenge);
+                    (o.allowCredentials || []).forEach(function (c) { c.id = a2b(c.id); });
+                    var cred = await navigator.credentials.get({ publicKey: o });
+                    var r2 = await fetch("/api/webauthn/login/verify", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            key: data.key,
+                            assertion: {
+                                id: cred.id,
+                                rawId: b2a(cred.rawId),
+                                type: cred.type,
+                                extensions: cred.getClientExtensionResults(),
+                                response: {
+                                    authenticatorData: b2a(cred.response.authenticatorData),
+                                    clientDataJSON: b2a(cred.response.clientDataJSON),
+                                    signature: b2a(cred.response.signature),
+                                    userHandle: cred.response.userHandle ? b2a(cred.response.userHandle) : null
+                                }
+                            }
+                        })
+                    });
+                    var d2 = await r2.json();
+                    if (!r2.ok) throw new Error(d2.message || "فشل الدخول بالمفتاح.");
+                    window.location.href = d2.redirect || "/";
+                } catch (e) {
+                    err.textContent = e.name === "NotAllowedError"
+                        ? "أُلغيت العملية أو لا يوجد مفتاح مسجَّل على هذا الجهاز."
+                        : (e.message || "تعذّر الدخول بالمفتاح.");
+                    err.hidden = false;
+                    btn.disabled = false;
+                }
+            });
+        })();
+        </script>
+
         <div class="login-note">
             أول دخول افتراضي:
             <strong>admin</strong>
