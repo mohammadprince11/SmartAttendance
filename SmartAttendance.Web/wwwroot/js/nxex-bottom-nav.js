@@ -38,6 +38,14 @@
   const reqSheet = makeSheet(
     document.getElementById('nxex-req-sheet'),
     document.getElementById('nxex-req-backdrop'));
+  // درج «الإعدادات»: يُفتح بزر الترس ⚙️ بالشريط العلوي (على كل الصفحات والمقاسات).
+  const settingsSheet = makeSheet(
+    document.getElementById('nxex-settings-sheet'),
+    document.getElementById('nxex-settings-backdrop'));
+  const settingsBtn = document.getElementById('nxex-settings-btn');
+  if (settingsBtn && settingsSheet) {
+    settingsBtn.addEventListener('click', () => settingsSheet.isOpen() ? settingsSheet.close() : settingsSheet.open());
+  }
   if (moreBtn && moreSheet) {
     moreBtn.addEventListener('click', () => moreSheet.isOpen() ? moreSheet.close() : moreSheet.open());
   }
@@ -71,6 +79,7 @@
     document.querySelectorAll('[data-embed-src]').forEach((el) => {
       el.addEventListener('click', () => {
         if (reqSheet) reqSheet.close();
+        if (settingsSheet) settingsSheet.close();
         openEmbed(el.getAttribute('data-embed-src'), el.getAttribute('data-embed-title'));
       });
     });

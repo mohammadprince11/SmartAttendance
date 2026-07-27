@@ -152,13 +152,9 @@
             </div>
             <div class="nxex-topbar-actions">
                 @await Component.InvokeAsync("EmployeeNotificationBell")
-                <button type="button" id="pwa-install-btn" class="nxex-install-btn" hidden>
-                    ⬇ تثبيت التطبيق
+                <button type="button" id="nxex-settings-btn" class="nxex-settings-btn" aria-label="الإعدادات" aria-haspopup="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 </button>
-                <button type="button" id="pwa-notify-btn" class="nxex-install-btn" hidden>
-                    🔔 تفعيل الإشعارات
-                </button>
-                <a href="/Account/Logout">خروج</a>
             </div>
         </div>
 
@@ -267,6 +263,48 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><path d="M8 14l-2 7 6-3 6 3-2-7"/></svg>
                 <span>التقييم والانضباط</span>
             </button>
+        </div>
+    </div>
+
+    @* ===== درج «الإعدادات»: يجمع الإشعارات وتغيير كلمة المرور والتثبيت والخروج =====
+       (يعمل على كل المقاسات؛ قابل للتوسّع مستقبلاً بإضافة صفوف جديدة) *@
+    <div class="nxex-settings-backdrop" id="nxex-settings-backdrop" hidden></div>
+    <div class="nxex-settings-sheet" id="nxex-settings-sheet" role="dialog" aria-label="الإعدادات" hidden>
+        <div class="nxex-more-handle"></div>
+        <h3>الإعدادات</h3>
+        <div class="nxex-set-list">
+            <div class="nxex-set-row">
+                <span class="nxex-set-ico">🔔</span>
+                <div class="nxex-set-body">
+                    <strong>الإشعارات</strong>
+                    <small>تنبيهات الطلبات والإعلانات</small>
+                </div>
+                <button type="button" id="pwa-notify-btn" class="nxex-set-action" hidden>تفعيل</button>
+            </div>
+            <button type="button" class="nxex-set-row nxex-set-btn" data-embed-src="/EmployeePortal/ChangePassword?embed=1" data-embed-title="تغيير كلمة المرور">
+                <span class="nxex-set-ico">🔑</span>
+                <div class="nxex-set-body">
+                    <strong>تغيير كلمة المرور</strong>
+                    <small>تحديث كلمة مرور دخولك</small>
+                </div>
+                <span class="nxex-set-chev">‹</span>
+            </button>
+            <button type="button" id="pwa-install-btn" class="nxex-set-row nxex-set-btn" hidden>
+                <span class="nxex-set-ico">⬇️</span>
+                <div class="nxex-set-body">
+                    <strong>تثبيت التطبيق</strong>
+                    <small>أضِف البوابة لشاشتك الرئيسية</small>
+                </div>
+                <span class="nxex-set-chev">‹</span>
+            </button>
+            <a class="nxex-set-row nxex-set-btn nxex-set-danger" href="/Account/Logout">
+                <span class="nxex-set-ico">🚪</span>
+                <div class="nxex-set-body">
+                    <strong>تسجيل الخروج</strong>
+                    <small>إنهاء الجلسة الحالية</small>
+                </div>
+                <span class="nxex-set-chev">‹</span>
+            </a>
         </div>
     </div>
 

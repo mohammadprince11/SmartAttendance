@@ -352,6 +352,37 @@ a{text-decoration:none;color:inherit}
     display:flex;align-items:center;gap:4px;white-space:nowrap
 }
 .nxex-install-btn:active{transform:scale(.97)}
+
+/* ===== زر ⚙️ + درج «الإعدادات» (يعمل على كل المقاسات) ===== */
+.nxex-settings-btn{width:38px;height:38px;flex:0 0 auto;border-radius:50%;border:1px solid rgba(91,132,176,.30);background:rgba(255,255,255,.03);color:#9ff4fa;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.nxex-settings-btn svg{width:20px;height:20px}
+.nxex-settings-btn:active{transform:scale(.94)}
+.nxex-settings-backdrop{position:fixed;inset:0;z-index:600;background:rgba(2,8,16,.60);opacity:0;transition:opacity .2s}
+.nxex-settings-backdrop.open{opacity:1}
+.nxex-settings-backdrop[hidden]{display:none}
+.nxex-settings-sheet{position:fixed;left:0;right:0;bottom:0;z-index:601;max-width:600px;margin-inline:auto;
+    background:#0a1a2e;border:1px solid rgba(91,132,176,.22);border-bottom:0;border-radius:22px 22px 0 0;
+    padding:10px 16px calc(22px + env(safe-area-inset-bottom));
+    transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1)}
+.nxex-settings-sheet.open{transform:translateY(0)}
+.nxex-settings-sheet[hidden]{display:none}
+html[data-theme="light"] .nxex-settings-sheet{background:#eef6f8}
+.nxex-settings-sheet h3{margin:6px 0 12px;font-size:16px;font-weight:1000;color:var(--sa-text,#e6f0fa);text-align:center}
+.nxex-set-list{display:flex;flex-direction:column;gap:8px}
+.nxex-set-row{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:16px;
+    border:1px solid rgba(91,132,176,.18);background:rgba(255,255,255,.03);color:#dce7f3;font-family:inherit;text-align:start}
+.nxex-set-btn{cursor:pointer}
+.nxex-set-btn:active{transform:scale(.985)}
+.nxex-set-ico{font-size:19px;flex:0 0 auto;width:26px;text-align:center}
+.nxex-set-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.nxex-set-body strong{font-size:14px;font-weight:1000;color:#e6f0fa}
+.nxex-set-body small{font-size:11.5px;font-weight:800;color:#8fa6bb}
+.nxex-set-action{min-height:32px;padding:0 15px;border-radius:999px;border:1px solid rgba(25,211,224,.5);
+    background:linear-gradient(135deg,rgba(18,211,224,.92),rgba(31,155,214,.86));color:#041018;
+    font-family:inherit;font-weight:1000;font-size:12px;cursor:pointer;flex:0 0 auto}
+.nxex-set-chev{color:#6f889e;font-size:20px;font-weight:900;flex:0 0 auto}
+.nxex-set-danger{border-color:rgba(240,84,84,.32)}
+.nxex-set-danger .nxex-set-ico,.nxex-set-danger .nxex-set-body strong{color:#ff9a9a}
 .nxex-ios-hint{
     margin:0 0 14px;padding:11px 15px;border-radius:16px;
     border:1px solid rgba(25,211,224,.28);background:rgba(9,24,42,.66);
