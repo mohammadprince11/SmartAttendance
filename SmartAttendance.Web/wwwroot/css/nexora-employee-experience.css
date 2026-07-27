@@ -179,7 +179,7 @@ a{text-decoration:none;color:inherit}
     .nxex-tabs{grid-template-columns:repeat(2,1fr)}
     .nxex-home-grid,.nxex-profile-grid,.nxex-comp-grid,.nxex-feedback-grid,.nxex-pulse-grid,.nxex-grid-2{grid-template-columns:1fr}
 }
-@media(max-width:720px){
+@media(max-width:1024px){
     .nxex-shell-main{padding:10px}
     .nxex-hero,.nxex-identity-card{display:grid;min-width:0}
     .nxex-command-center,.nxex-profile-meta,.nxex-info-grid,.nxex-pay-breakdown,.nxex-attendance-summary,.nxex-options,.nxex-request-actions{grid-template-columns:1fr}
@@ -330,7 +330,7 @@ a{text-decoration:none;color:inherit}
         grid-template-columns:repeat(2,1fr);
     }
 }
-@media(max-width:720px){
+@media(max-width:1024px){
     .nxex-request-type-grid,
     .nxex-form-row{
         grid-template-columns:1fr;
@@ -381,11 +381,13 @@ a{text-decoration:none;color:inherit}
 .nxex-bottom-nav{display:none}
 .nxex-more-sheet,.nxex-more-backdrop{display:none}
 
-@media(max-width:720px){
+@media(max-width:1024px){
     /* إزالة التكرار: نُخفي الشريط الجانبي والتبويبات الداخلية ونعتمد الشريط السفلي */
     .nxex-shell-sidebar{display:none}
     .nxex-tabs{display:none}
-    .nxex-shell-main{padding-bottom:calc(78px + env(safe-area-inset-bottom))}
+    /* عمود تطبيق مريح موسَّط: على الأجهزة العريضة (قابلة للطي/تابلت/وضع سطح المكتب)
+       لا يتمدّد المحتوى فيبدو صغيراً مشدوداً — يبقى بعرض هاتف طبيعي في المنتصف. */
+    .nxex-shell-main{padding-bottom:calc(78px + env(safe-area-inset-bottom));max-width:600px;margin-inline:auto}
 
     /* الهيرو للصفحة الرئيسية فقط؛ باقي الأقسام تبدأ من الأعلى (سلوك تطبيق) */
     [data-nxex-page]:not([data-current="home"]) .nxex-hero{display:none}
@@ -443,7 +445,7 @@ a{text-decoration:none;color:inherit}
     /* زر «طلب جديد» العائم */
     .nxex-fab{
         display:flex;align-items:center;justify-content:center;
-        position:fixed;left:18px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:390;
+        position:fixed;left:max(18px,calc(50% - 282px));bottom:calc(88px + env(safe-area-inset-bottom));z-index:390;
         width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;
         background:linear-gradient(135deg,#12d3e0,#1f9bd6);color:#041018;
         box-shadow:0 10px 24px rgba(18,211,224,.4)
@@ -453,6 +455,7 @@ a{text-decoration:none;color:inherit}
 
     .nxex-bottom-nav{
         display:flex;position:fixed;bottom:0;left:0;right:0;z-index:400;
+        max-width:600px;margin-inline:auto;
         justify-content:space-around;align-items:stretch;gap:2px;
         padding:6px 6px calc(6px + env(safe-area-inset-bottom));
         background:rgba(6,16,29,.94);
