@@ -25,6 +25,7 @@ public class IndexModel : PageModel
     /// <summary>أقل عدد ساعات بين الحضور والانصراف بالبصمة عبر الإنترنت (0 = القاعدة معطّلة).</summary>
     public double MinCheckoutHours { get; set; }
     public bool EnforceGeofence { get; set; }
+    public bool RequireBiometric { get; set; }
 
     public async Task OnGetAsync()
     {
@@ -32,6 +33,18 @@ public class IndexModel : PageModel
         Sources = await AttendanceSourceStore.ListAsync(_dbContext);
         MinCheckoutHours = await OnlinePunchStore.GetMinCheckoutHoursAsync(_dbContext);
         EnforceGeofence = await OnlinePunchStore.GetEnforceGeofenceAsync(_dbContext);
+        RequireBiometric = await OnlinePunchStore.GetRequireBiometricAsync(_dbContext);
+    }
+
+    /// <summary>تفعيل/تعطيل التأكيد البيولوجي (WebAuthn) للبصم الأونلاين.</summary>
+    public async Task<IActionResult> OnPostSaveBiometricRuleAsync()
+    {
+        var enabled = Request.Form["RequireBiometric"] == "true";
+        await OnlinePunchStore.SetRequireBiometricAsync(_dbContext, enabled);
+        TempData["SuccessMessage"] = enabled
+            ? "تم الحفظ: الموظف صاحب مفتاح بصمة/وجه معتمد لا تُقبل بصمته الأونلاين إلا بتأكيد بيولوجي لحظي."
+            : "تم الحفظ: التأكيد البيولوجي للبصم معطّل.";
+        return RedirectToPage();
     }
 
     /// <summary>تفعيل/تعطيل إنفاذ النطاق الجغرافي للبصم الأونلاين (للموظفين المسنَدين لمواقع).</summary>

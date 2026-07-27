@@ -58,6 +58,29 @@ public static class OnlinePunchStore
     public static Task SetEnforceGeofenceAsync(ApplicationDbContext db, bool enabled) =>
         HrSettingsStore.SetAsync(db, EnforceGeofenceKey, enabled ? "1" : "0");
 
+    /// <summary>
+    /// مفتاح إعداد «التأكيد البيولوجي للبصم الأونلاين»: حين يُفعَّل، الموظف صاحب مفتاح
+    /// بصمة/وجه نشط (معتمد من HR بجدول <c>EmployeeWebAuthnCredentials</c>) لا تُقبل
+    /// بصمته إلا بإثبات WebAuthn لحظي. الافتراضي معطّل، وموظف بلا مفتاح نشط لا تنطبق
+    /// عليه القاعدة (نفس نمط <see cref="EnforceGeofenceKey"/>).
+    /// </summary>
+    public const string RequireBiometricKey = "Attendance.OnlinePunch.RequireBiometric";
+
+    /// <summary>هل التأكيد البيولوجي للبصم مفعّل؟ (داينمك من إعدادات الحضور، الافتراضي لا)</summary>
+    public static async Task<bool> GetRequireBiometricAsync(ApplicationDbContext db) =>
+        await HrSettingsStore.GetAsync(db, RequireBiometricKey, "0") == "1";
+
+    /// <summary>تفعيل/تعطيل التأكيد البيولوجي للبصم الأونلاين.</summary>
+    public static Task SetRequireBiometricAsync(ApplicationDbContext db, bool enabled) =>
+        HrSettingsStore.SetAsync(db, RequireBiometricKey, enabled ? "1" : "0");
+
+    /// <summary>
+    /// هل تُحجب البصمة بقاعدة التأكيد البيولوجي؟ نقية قابلة للاختبار: تُحجب فقط حين
+    /// تكون الراية مفعّلة وللموظف مفتاح نشط ولم يقدّم إثباتاً لحظياً صالحاً.
+    /// </summary>
+    public static bool BiometricGateBlocks(bool flagEnabled, bool hasActiveKey, bool verified) =>
+        flagEnabled && hasActiveKey && !verified;
+
     /// <summary>مسافة هافرساين بالأمتار بين إحداثيّين. نقية قابلة للاختبار.</summary>
     public static double DistanceMeters(double lat1, double lng1, double lat2, double lng2)
     {
@@ -87,7 +110,9 @@ public static class OnlinePunchStore
         /// <summary>رُفضت لأن الانصراف قبل مرور المدة الدنيا من آخر حضور مفتوح.</summary>
         TooSoonForCheckout,
         /// <summary>رُفضت لأن الموظف خارج نطاقاته الجغرافية المسنَدة (أو بلا إحداثيات والإنفاذ مفعّل).</summary>
-        OutsideGeofence
+        OutsideGeofence,
+        /// <summary>رُفضت لغياب التأكيد البيولوجي (WebAuthn) والراية مفعّلة وللموظف مفتاح نشط.</summary>
+        BiometricRequired
     }
 
     /// <summary>نتيجة محاولة تسجيل بصمة عبر الإنترنت (تحمل تفاصيل الرفض للرسائل).</summary>
@@ -133,9 +158,20 @@ public static class OnlinePunchStore
     /// </summary>
     public static async Task<PunchResult> RecordAsync(
         ApplicationDbContext db, int employeeId, string punchType, DateTime punchAt, int? semanticId,
-        double? latitude = null, double? longitude = null)
+        double? latitude = null, double? longitude = null, bool biometricVerified = false)
     {
         await HrmsDatabase.EnsureCreatedAsync(db);
+
+        // إنفاذ التأكيد البيولوجي (محروس بالإعداد، الافتراضي معطّل): «من أنت» قبل
+        // «وين أنت» — الموظف صاحب مفتاح WebAuthn نشط يجب أن يقدّم إثباتاً لحظياً،
+        // وموظف بلا مفتاح نشط لا تنطبق عليه القاعدة (نفس نمط إنفاذ النطاق الجغرافي).
+        if (await GetRequireBiometricAsync(db))
+        {
+            var hasActiveKey = await Web.Infrastructure.Security.WebAuthnCredentialStore
+                .HasActiveForEmployeeAsync(db, employeeId);
+            if (BiometricGateBlocks(true, hasActiveKey, biometricVerified))
+                return new PunchResult(PunchStatus.BiometricRequired, 0);
+        }
 
         // إنفاذ النطاق الجغرافي (محروس بالإعداد، الافتراضي معطّل): الموظف المسنَد لمواقع
         // نشطة يُرفَض بصمه خارج نصف قطر أحدها — وغياب الإحداثيات = رفض أيضاً (وإلا

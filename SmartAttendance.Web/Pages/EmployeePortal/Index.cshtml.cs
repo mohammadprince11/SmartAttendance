@@ -4,6 +4,7 @@ using SmartAttendance.Application.Announcements.Services;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.EmployeePortal;
 
@@ -38,6 +39,12 @@ public class IndexModel : PageModel
 
     /// <summary>آخر بصمات الموظف عبر الإنترنت (تأكيد فوري للبصم الذاتي).</summary>
     public List<OnlinePunchStore.OnlinePunch> MyOnlinePunches { get; private set; } = new();
+
+    /// <summary>
+    /// هل بصمة هذا الموظف تتطلب تأكيداً بيولوجياً؟ (راية الإعدادات مفعّلة + لديه مفتاح
+    /// WebAuthn نشط معتمد) — تُشعِل اعتراض الإرسال بالواجهة لطلب بصمة/وجه الجهاز.
+    /// </summary>
+    public bool RequireBiometricPunch { get; private set; }
 
     /// <summary>الشهر المختار لعرض سجلات الحضور (yyyy-MM) — فارغ = الأحدث.</summary>
     [BindProperty(SupportsGet = true)]
@@ -85,6 +92,7 @@ public class IndexModel : PageModel
             "toosoon" => $"لا يمكن تسجيل الانصراف قبل مرور {OnlinePunchStore.FormatDuration((pminm ?? 0) / 60d)} من تسجيل الحضور — تبقّى {OnlinePunchStore.FormatDuration((prem ?? 0) / 60d)}.",
             "dup" => "تم تجاهل البصمة: سُجّلت بصمة مماثلة خلال أقل من دقيقة.",
             "geo" => "رُفضت البصمة: أنت خارج نطاق موقع العمل المحدد لك (أو لم يصل موقعك — تأكد من السماح بالوصول للموقع).",
+            "bio" => "رُفضت البصمة: مطلوب تأكيد بيولوجي (بصمة/وجه الجهاز) — أعد المحاولة واقبل طلب البصمة عند ظهوره.",
             _ => StatusMessage
         };
         return Page();
@@ -654,7 +662,7 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     /// دخول/خروج بوقت الخادم الحالي بمصدر «موبايل»، فتدخل اشتقاق اليومية كأي بصمة.
     /// </summary>
     public async Task<IActionResult> OnPostOnlinePunchAsync(
-        string? punchType, string? returnTab, double? geoLat, double? geoLng)
+        string? punchType, string? returnTab, double? geoLat, double? geoLng, string? bioToken)
     {
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
@@ -667,7 +675,10 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
 
         var type = punchType == "Out" ? "Out" : "In";
         var now = DateTime.Now;
-        var result = await OnlinePunchStore.RecordAsync(_dbContext, employeeId, type, now, null, geoLat, geoLng);
+        // الإثبات البيولوجي (إن وُجد) يُستهلك مرة واحدة ويُتحقق أنه لهذا الموظف وضمن نافذته.
+        var biometricVerified = WebAuthnProofStore.Consume(bioToken, employeeId);
+        var result = await OnlinePunchStore.RecordAsync(
+            _dbContext, employeeId, type, now, null, geoLat, geoLng, biometricVerified);
 
         // نمرّر نتيجة البصمة عبر معطيات الرابط (أعداد صحيحة آمنة ثقافياً) فتُعاد صياغة الرسالة
         // في OnGet — بديل موثوق لا يعتمد على بقاء TempData عبر إعادة التوجيه (PRG).
@@ -686,6 +697,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                 }),
             OnlinePunchStore.PunchStatus.OutsideGeofence =>
                 RedirectToPage(new { tab, punch = "geo" }),
+            OnlinePunchStore.PunchStatus.BiometricRequired =>
+                RedirectToPage(new { tab, punch = "bio" }),
             _ =>
                 RedirectToPage(new { tab, punch = "dup" })
         };
@@ -751,6 +764,14 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             _dbContext, new MissingPunchRequestStore.Filter { EmployeeId = employeeId });
         MyOnlinePunches = await OnlinePunchStore.ListAsync(
             _dbContext, new OnlinePunchStore.Filter { EmployeeId = employeeId, Top = 200 });
+
+        // إنفاذ التأكيد البيولوجي: لا نستعلم عن المفاتيح إلا والراية مفعّلة (الافتراضي لا).
+        try
+        {
+            RequireBiometricPunch = await OnlinePunchStore.GetRequireBiometricAsync(_dbContext)
+                && await WebAuthnCredentialStore.HasActiveForEmployeeAsync(_dbContext, employeeId);
+        }
+        catch { RequireBiometricPunch = false; }
 
         // رصيد الإجازات للوحة «إجراءاتي» — لوحة اختيارية لا تُسقط البوابة عند تعذّرها.
         try
