@@ -195,7 +195,7 @@ html[data-theme="light"] .zy-theme-btn .zy-tt-moon { display: block; }
     line-height: normal !important;
     background-image: none;
 }
-.zy-app input.nxcal-native, .zy-app select.nxcs-native {
+.zy-app input.nxcal-native.nxcal-native.nxcal-native, .zy-app select.nxcs-native.nxcs-native.nxcs-native {
     height: 1px !important; min-height: 1px !important; max-height: 1px !important;
     padding: 0 !important; border: 0 !important;
 }
@@ -338,15 +338,16 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
    nexora-ui-stabilization يفرض button=40px وinput=42px بـ!important عالمياً،
    وzynora-components (قديم) يفرض خط 14px على [class*="-btn"] — داخل الهوية
    الجديدة نستعيد القياس المضغوط بنفس القوة وبتحميل لاحق فنفوز. */
-.zy-app .zy-btn {
+/* تكرار الكلاس يرفع التخصصية فوق قاعدة [class*="-btn"]:not():not():not() القديمة */
+.zy-app .zy-btn.zy-btn.zy-btn.zy-btn.zy-btn {
     height: var(--control-h) !important; min-height: var(--control-h) !important;
     max-height: var(--control-h) !important; font-size: var(--fs-body) !important;
 }
-.zy-app .zy-btn--sm {
+.zy-app .zy-btn--sm.zy-btn--sm.zy-btn--sm.zy-btn--sm.zy-btn--sm {
     height: 27px !important; min-height: 27px !important; max-height: 27px !important;
     font-size: var(--fs-small) !important;
 }
-.zy-app .zy-btn--lg { height: 40px !important; min-height: 40px !important; max-height: 40px !important; }
+.zy-app .zy-btn--lg.zy-btn--lg.zy-btn--lg.zy-btn--lg.zy-btn--lg { height: 40px !important; min-height: 40px !important; max-height: 40px !important; }
 .zy-app .zy-input:not(.nxcal-native) {
     height: var(--control-h) !important; min-height: var(--control-h) !important;
     max-height: var(--control-h) !important; font-size: var(--fs-body) !important;
