@@ -122,3 +122,63 @@
     color: var(--color-primary-text) !important;
     border-color: color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
 }
+
+/* المنتقيات (البلد/العملة/المنطقة الزمنية…): وسمها <button> فاستُثنيت من التصفير
+   مع الأزرار الدلالية وبقيت داكنة. هي حقول إدخال لا أزرار إجراء — فتُعامل كحقل. */
+.nexora-setup-page .nx-search-select__button,
+.nexora-setup-page .nx-search-select,
+.nexora-setup-page [class*="search-select"] > button,
+.nexora-setup-page select {
+    background: var(--color-surface) !important;
+    background-image: none !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-strong) !important;
+    font-family: var(--font-family) !important;
+    font-size: var(--fs-body) !important;
+}
+
+.nexora-setup-page .nx-search-select__button:hover,
+.nexora-setup-page [class*="search-select"] > button:hover {
+    border-color: var(--color-primary-strong) !important;
+}
+
+/* لوحة الخيارات المنسدلة وعناصرها */
+.nexora-setup-page [class*="search-select"] [class*="panel"],
+.nexora-setup-page [class*="search-select"] [class*="menu"],
+.nexora-setup-page [class*="search-select"] [class*="option"],
+.nexora-setup-page [class*="search-select"] input {
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+    border-color: var(--color-border) !important;
+}
+
+.nexora-setup-page [class*="search-select"] [class*="option"]:hover,
+.nexora-setup-page [class*="search-select"] [class*="option"][aria-selected="true"] {
+    background: var(--color-primary-soft) !important;
+    color: var(--color-primary-text) !important;
+}
+
+/* آخر الأسطح الداكنة بالصفحة: أزرار التنقّل بين الصفحات وزر إغلاق النافذة
+   (وسمها <button> فاستُثنيت من التصفير). */
+.nexora-setup-page .nx-setup-pagination__button,
+.nexora-setup-page [class*="pagination"] button,
+.nexora-setup-page .nx-setup-modal__close {
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-strong) !important;
+}
+
+.nexora-setup-page .nx-setup-pagination__button:hover,
+.nexora-setup-page [class*="pagination"] button:hover,
+.nexora-setup-page .nx-setup-modal__close:hover {
+    background: var(--color-primary-soft) !important;
+    color: var(--color-primary-text) !important;
+    border-color: var(--color-primary-strong) !important;
+}
+
+.nexora-setup-page [class*="pagination"] button[aria-current],
+.nexora-setup-page [class*="pagination"] button.is-active {
+    background: var(--color-primary-strong) !important;
+    color: var(--color-on-primary) !important;
+    border-color: var(--color-primary-strong) !important;
+}
