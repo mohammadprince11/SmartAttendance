@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.HrSettings;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages.Payroll;
@@ -32,11 +33,31 @@ public class SettingsModel : PageModel
     public List<string> MembersOf(string baseKey, int profileId) =>
         SalaryBaseStore.Resolve(BaseMembers, baseKey, profileId);
 
+    /// <summary>سياسة ربط الراتب بالحضور المفعَّلة حالياً.</summary>
+    public string AttendanceLinkMode { get; set; } = AttendanceSalaryLink.Lenient;
+
     public async Task OnGetAsync()
     {
         TaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_db);
         GosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_db);
         BaseMembers = await SalaryBaseStore.AllAsync(_db);
+        AttendanceLinkMode = AttendanceSalaryLink.NormalizeMode(
+            await HrSettingsStore.GetAsync(_db, AttendanceSalaryLink.ModeKey, AttendanceSalaryLink.Lenient));
+    }
+
+    /// <summary>
+    /// حفظ سياسة الربط بالحضور. تُغيّر **كل قسيمة قادمة**، فالرسالة تصرّح بالأثر
+    /// بدل أن تكتفي بـ«حُفظ».
+    /// </summary>
+    public async Task<IActionResult> OnPostSaveAttendanceLinkAsync(string mode)
+    {
+        var resolved = AttendanceSalaryLink.NormalizeMode(mode);
+        await HrSettingsStore.SetAsync(_db, AttendanceSalaryLink.ModeKey, resolved);
+
+        TempData["PayrollMessage"] = resolved == AttendanceSalaryLink.Lenient
+            ? $"سياسة الربط بالحضور: {AttendanceSalaryLink.ModeLabel(resolved)}."
+            : $"سياسة الربط بالحضور: {AttendanceSalaryLink.ModeLabel(resolved)} — ⚠️ من لا بيانات حضور له لن يُحتسب بالمسير القادم.";
+        return RedirectToPage();
     }
 
     /// <summary>

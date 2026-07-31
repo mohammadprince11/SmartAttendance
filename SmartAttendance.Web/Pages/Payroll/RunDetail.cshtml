@@ -202,8 +202,12 @@
                   '<div><span>الرقم الوظيفي</span> <b>' + l.EmployeeNo + '</b></div>' +
                   '<div><span>القسم</span> <b>' + (l.Department || '—') + '</b></div>' +
                   '<div><span>المنصب</span> <b>' + (l.Position || '—') + '</b></div>' +
-                  '<div><span>أيام العمل</span> <b>' + (l.WorkDays - l.AbsentDays) + ' / ' + l.WorkDays + '</b></div>' +
-                  '<div><span>أيام الغياب</span> <b>' + l.AbsentDays + '</b></div>' +
+                  // «0 / 0» كانت تعني «لا بيانات حضور» وتُدفع كاملاً بلا تمييز عن الدوام
+                  // الكامل. الحالة تُعلَن الآن نصّاً بالقسيمة نفسها لا تُترك للتخمين.
+                  (l.WorkDays > 0
+                    ? '<div><span>أيام العمل</span> <b>' + (l.WorkDays - l.AbsentDays) + ' / ' + l.WorkDays + '</b></div>' +
+                      '<div><span>أيام الغياب</span> <b>' + l.AbsentDays + '</b></div>'
+                    : '<div style="grid-column:1/-1"><span>الحضور</span> <b style="color:#f59e0b">بلا بيانات حضور لهذا الشهر — دُفع الأساسي كاملاً</b></div>') +
                 '</div>' +
                 '<div class="pd-slip-cols">' +
                   '<div class="pd-slip-box earn"><h4>الاستحقاقات</h4>' + earnRows +

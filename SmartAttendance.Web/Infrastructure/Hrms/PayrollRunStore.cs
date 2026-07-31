@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore.Storage;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.HrSettings;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -242,6 +243,10 @@ WHERE r.Id = @Id;
         await LoanStore.EnsureAsync(dbContext);
         await LoanStore.PostDueInstallmentsAsync(dbContext, run.Year, run.Month, userName);
 
+        // سياسة ربط الراتب بالحضور تُقرأ مرّة للتشغيل كلّه.
+        var linkMode = AttendanceSalaryLink.NormalizeMode(
+            await HrSettingsStore.GetAsync(dbContext, AttendanceSalaryLink.ModeKey, AttendanceSalaryLink.Lenient));
+
         var taxProfile = await PayrollConfigStore.ActiveTaxProfileAsync(dbContext);
         var gosiProfile = await PayrollConfigStore.ActiveGosiProfileAsync(dbContext);
 
@@ -343,7 +348,7 @@ WHERE r.Id = @Id;
             "DELETE c FROM PayrollRunLineComponents c INNER JOIN PayrollRunLines l ON l.Id = c.LineId WHERE l.RunId = @RunId; DELETE FROM PayrollRunLines WHERE RunId = @RunId;",
             command => HrmsDatabase.AddParameter(command, "@RunId", runId));
 
-        int count = 0, skippedStopped = 0, skippedNoSalary = 0;
+        int count = 0, skippedStopped = 0, skippedNoSalary = 0, skippedNoAttendance = 0, paidWithoutAttendance = 0;
         decimal totalGross = 0, totalNet = 0, totalTax = 0, totalGosiCo = 0;
 
         foreach (var emp in candidates)
@@ -361,12 +366,22 @@ WHERE r.Id = @Id;
                 continue;
             }
 
-            // تنسيب الأساسي حسب أيام الحضور من الاعتماد الشهري
+            // تنسيب الأساسي حسب الحضور — بسياسة الربط المختارة لا بقاعدة مثبّتة.
+            // كان غياب صفّ الاعتماد يعني معامل 1 بصمت (قسيمة «0 / 0» براتب كامل).
             months.TryGetValue(emp.Id, out var month);
             var workDays = month?.WorkDays ?? 0;
             var absentDays = month?.AbsentDays ?? 0;
             var unpaidLeaveDays = month?.UnpaidLeaveDays ?? 0;
-            var factor = workDays > 0 ? Math.Max(0m, (workDays - absentDays)) / workDays : 1m;
+
+            var link = AttendanceSalaryLink.Evaluate(linkMode, workDays, absentDays, month?.WorkedHours ?? 0m);
+            if (!link.Include)
+            {
+                skippedNoAttendance++;
+                continue;
+            }
+            if (!AttendanceSalaryLink.HasAttendanceData(workDays)) paidWithoutAttendance++;
+
+            var factor = link.Factor;
             var proratedBasic = Math.Round(basic * factor, 2);
 
             var dailyRate = basic > 0 ? Math.Round(basic / 30m, 4) : 0;
@@ -638,8 +653,13 @@ WHERE Id = @Id;
         var skips = new List<string>();
         if (skippedNoSalary > 0) skips.Add($"{skippedNoSalary} بلا راتب أساسي أو حركات");
         if (skippedStopped > 0) skips.Add($"{skippedStopped} موقوف الاحتساب بالملف المالي");
+        if (skippedNoAttendance > 0) skips.Add($"{skippedNoAttendance} بلا بيانات حضور ({AttendanceSalaryLink.ModeLabel(linkMode)})");
         if (outsideScope > 0) skips.Add($"{outsideScope} من النطاق خارج قائمة النشطين");
         var skipText = skips.Count > 0 ? $" · تُخطّي: {string.Join(" · ", skips)}" : string.Empty;
+
+        // الدفع بلا بيانات حضور يُعلَن دائماً لا يُبتلع — هذا جوهر شكوى «0 / 0 براتب كامل».
+        if (paidWithoutAttendance > 0)
+            skipText += $" · ⚠ {paidWithoutAttendance} بلا بيانات حضور دُفعوا الأساسي كاملاً";
 
         var scopeText = scope.Count > 0 ? $"نطاق {scope.Count} موظفاً" : "كل النشطين";
         return (true, count == 0

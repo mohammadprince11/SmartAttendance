@@ -67,6 +67,35 @@
         <div class="ps-alert">@TempData["PayrollMessage"]</div>
     }
 
+    @* ----- ربط الراتب بالحضور ----- *@
+    <div class="ps-sec">
+        <h2>ربط الراتب بالحضور</h2>
+        <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin:0 0 8px">
+            الأساسي يُنسَّب من الاعتماد الشهري (بصمات ← أيام محلَّلة ← اعتماد الشهر).
+            هذه السياسة تحكم <b>ماذا يحدث لموظف بلا بيانات حضور</b> وكيف يُنسَّب من له بيانات.
+            <b>الحالة تُعلَن بالقسيمة وبرسالة الاحتساب مهما كان النمط.</b>
+        </p>
+        <form method="post" asp-page-handler="SaveAttendanceLink" style="display:flex;flex-direction:column;gap:8px">
+            @foreach (var m in new[] { AttendanceSalaryLink.Lenient, AttendanceSalaryLink.Strict, AttendanceSalaryLink.Hours })
+            {
+                <label class="ps-item @(Model.AttendanceLinkMode == m ? "active" : "")" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:0">
+                    <input type="radio" name="mode" value="@m" checked="@(Model.AttendanceLinkMode == m)" style="margin-top:3px" />
+                    <span>
+                        <b>@AttendanceSalaryLink.ModeLabel(m)</b>
+                        <span style="display:block;font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin-top:2px">
+                            @(m == AttendanceSalaryLink.Lenient
+                                ? "الافتراضي — لا يتوقّف المسير عند نقص بيانات الحضور، والحالة مُعلَنة بوضوح."
+                                : m == AttendanceSalaryLink.Strict
+                                    ? "⚠️ لا يُحتسب راتب من لا يوجد له اعتماد شهري بأيام عمل."
+                                    : "المعامل = ساعات العمل الفعلية ÷ (أيام العمل × 8)، مقصوصاً إلى 100% (الزائد أوفرتايم ببند مستقل).")
+                        </span>
+                    </span>
+                </label>
+            }
+            <button type="submit" class="ps-btn" style="align-self:flex-start">حفظ السياسة</button>
+        </form>
+    </div>
+
     <div class="ps-grid">
         @* ----- الضريبة ----- *@
         <div class="ps-sec">
