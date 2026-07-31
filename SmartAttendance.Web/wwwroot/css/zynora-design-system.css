@@ -17,27 +17,56 @@
     --color-primary: var(--brand-primary, #0ea5b5);
     --color-primary-hover: var(--brand-primary-hover, #0b7f95);
     --color-primary-soft: color-mix(in srgb, var(--color-primary) 11%, var(--color-surface));
+
+    /* تعميق مقصود للنسخة الحاملة للنص (تدقيق راحة العين 2026-07-31):
+       التيل اللامع #0ea5b5 يعطي أبيضَ فوقه 2.97:1 فقط — دون حد القراءة (4.5:1)،
+       وهو زرّنا الموحّد بكل النظام. فبدل تغيير لون العلامة نفسها نفصل استعمالين:
+       - --color-primary          يبقى للمساحات الكبيرة (أعمدة الرسوم، الأشرطة، الحدود).
+       - --color-primary-strong   خلفية أي عنصر يحمل نصاً (الأزرار) ⟹ أبيض فوقه 5.58:1.
+       - --color-primary-text     نص/أيقونة بالتيل فوق سطح فاتح ⟹ 5.58:1 بدل 2.97:1. */
+    --color-primary-strong: #0a7286;
+    --color-primary-text: #0a7286;
+    --color-on-primary: #ffffff;
+
     --color-secondary: #6366f1;          /* نيلي هادئ للتمييز الثانوي */
     --color-secondary-soft: #eef0ff;
     --color-background: #f2f5f9;
     --color-surface: #ffffff;
-    --color-border: #e4eaf1;
-    --color-border-strong: #cfd9e4;
+    --color-border: #e4eaf1;             /* فاصل بصري لا حدّ عنصر تفاعلي */
+    /* حدّ الحقول والعناصر التفاعلية: يحتاج 3:1 ليراه ضعيف النظر — كان #cfd9e4
+       بنسبة 1.43:1 (شبه غائب على الشاشات الساطعة). */
+    --color-border-strong: #74899f;
     --color-text-primary: #16283a;
-    --color-text-secondary: #6b7f92;
-    --color-success: #16a34a;  --color-success-soft: #ecfdf3;
-    --color-warning: #d97706;  --color-warning-soft: #fff7e6;
-    --color-danger: #dc2626;   --color-danger-soft: #fdecec;
-    --color-info: #0284c7;     --color-info-soft: #e8f5fd;
+    /* النص الثانوي كان #6b7f92 = 4.14:1 (دون الحد) وهو أكثر نص يُقرأ بالنظام. */
+    --color-text-secondary: #55687b;
+    --color-success: #15803d;  --color-success-soft: #ecfdf3;
+    --color-warning: #b45309;  --color-warning-soft: #fff7e6;
+    --color-danger: #b91c1c;   --color-danger-soft: #fdecec;
+    --color-info: #0369a1;     --color-info-soft: #e8f5fd;
 
     /* --- الخط والمقاسات (سلم موحد مضغوط بكثافة كيان — لا أحجام عشوائية) --- */
     --font-family: "Tajawal", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
-    --fs-page-title: 20px;   /* عنوان الصفحة */
-    --fs-section: 16px;      /* عنوان القسم */
-    --fs-card-title: 13.5px; /* عنوان البطاقة */
-    --fs-body: 13px;         /* النص الأساسي والأزرار */
-    --fs-small: 12px;        /* الثانوي */
-    --fs-tiny: 10.5px;       /* الوسوم والتلميحات */
+    /* السلم بـrem لا px (تدقيق راحة العين 2026-07-31): px يتجاهل إعداد حجم الخط
+       بمتصفح المستخدم تماماً، فمن يضعف نظره ويكبّر خط متصفحه لا يتغيّر عنده شيء.
+       بـrem يكبر النظام معه بلا تعديل كود. الجذر 16px ⟹ القيم بالتعليق.
+
+       المقاسات أدناه **قياس محمد المختار بالتجربة** (مختبر القياسات 2026-07-31):
+       root=13 · body=11.7 · small=9 · tiny=8.3 · control=26 — كثافة سطح مكتب
+       عالية بأسلوب كيان. تُطبَّق على الشاشات الكبيرة فقط، وتتدرّج صعوداً بالشاشات
+       الأصغر وأجهزة اللمس (قسم «التدرّج» بعد الوضع الداكن) — لأن الكثافة المريحة
+       على شاشة 27 بوصة تصير غير مقروءة على جوال بيد مرتجفة تحت شمس. */
+    --fs-page-title: 1.125rem;   /* 18px */
+    --fs-section: 0.875rem;      /* 14px */
+    --fs-card-title: 0.8125rem;  /* 13px */
+    --fs-body: 0.73rem;          /* 11.7px — قياس محمد */
+    --fs-small: 0.5625rem;       /* 9px — قياس محمد */
+    --fs-tiny: 0.52rem;          /* 8.3px — قياس محمد (أصغر مما تنصح به المقروئية) */
+
+    /* الإشباع السطري: العربية المتّصلة تحتاج فراغاً رأسياً أكثر من اللاتينية،
+       والنص المتلاصق أول ما يُتعب العين بالقراءة الطويلة.
+       ممنوع letter-spacing على العربية — يكسر اتصال الحروف. */
+    --lh-tight: 1.4;    /* العناوين والأرقام */
+    --lh-body: 1.75;    /* الفقرات — كلما صغر الحرف زاد احتياجه للفراغ الرأسي */
 
     /* --- المسافات (مضاعفات 4) --- */
     --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px;
@@ -50,7 +79,7 @@
     --shadow-pop: 0 12px 40px rgba(22, 40, 58, .16);
     /* ارتفاع موحد بكثافة كيان المقاسة حياً (select2=30px، BT-input=35px، خط 13px)
        — نوحّد على 31px بمستوى دروبهم. */
-    --control-h: 31px;
+    --control-h: 26px;
     --speed: 160ms;
 }
 
@@ -59,12 +88,19 @@ html[data-theme="dark"] {
     --color-primary: var(--brand-primary, #35aebb);
     --color-primary-hover: var(--brand-primary-hover, #2a8b96);
     --color-primary-soft: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
+
+    /* بالداكن العلاج معكوس: تعتيم الزر يذيبه بالخلفية، فنُبقيه فاتحاً ونضع نصاً
+       داكناً فوقه — أبيض على #35aebb = 2.65:1 بينما #08303a عليه = 5.30:1. */
+    --color-primary-strong: var(--brand-primary, #35aebb);
+    --color-primary-text: var(--brand-primary, #35aebb);   /* كنص على الغرافيت: 6.05:1 */
+    --color-on-primary: #08303a;
     --color-secondary: #8688e8;
     --color-secondary-soft: #222438;
     --color-background: #14191f;
     --color-surface: #1b222a;
     --color-border: #2a333d;
-    --color-border-strong: #3a4652;
+    /* حدّ العناصر التفاعلية بالداكن: 3.63:1 بدل #3a4652 (1.6:1 — غير مرئي عملياً) */
+    --color-border-strong: #697a8b;
     --color-text-primary: #c9d4dd;
     --color-text-secondary: #8496a5;
     --color-success: #66b789;  --color-success-soft: #1c2921;
@@ -73,6 +109,61 @@ html[data-theme="dark"] {
     --color-info: #5aa9d6;     --color-info-soft: #17222b;
     --shadow: 0 1px 3px rgba(0, 0, 0, .28);
     --shadow-pop: 0 12px 40px rgba(0, 0, 0, .5);
+}
+
+/* ===================== تدرّج المقاسات حسب الشاشة =========================
+   الكثافة العالية أعلاه مقاسة على شاشة مكتب كبيرة. تركها كما هي على جوال يعني
+   نصاً بحجم 8px بيد مهتزّة تحت شمس — فترتفع المقاسات كلما صغرت الشاشة، وترتفع
+   أكثر على أجهزة اللمس حيث الإصبع لا الفأرة (هدف اللمس الأدنى 24px بمعيار
+   WCAG 2.5.8، والمريح فعلياً ≥36px).
+   ملاحظة: لا نلمس الألوان هنا إطلاقاً — التباين ثابت عبر كل المقاسات.
+   ======================================================================== */
+
+/* لابتوبات ولوحات صغيرة */
+@media (max-width: 1200px) {
+    :root {
+        --fs-page-title: 1.25rem;    /* 20px */
+        --fs-section: 0.9375rem;     /* 15px */
+        --fs-card-title: 0.875rem;   /* 14px */
+        --fs-body: 0.8125rem;        /* 13px */
+        --fs-small: 0.6875rem;       /* 11px */
+        --fs-tiny: 0.625rem;         /* 10px */
+        --control-h: 29px;
+    }
+}
+
+/* أجهزة لوحية وشاشات ضيقة */
+@media (max-width: 900px) {
+    :root {
+        --fs-page-title: 1.3125rem;  /* 21px */
+        --fs-section: 1rem;          /* 16px */
+        --fs-card-title: 0.9375rem;  /* 15px */
+        --fs-body: 0.875rem;         /* 14px */
+        --fs-small: 0.8125rem;       /* 13px */
+        --fs-tiny: 0.75rem;          /* 12px */
+        --control-h: 34px;
+    }
+}
+
+/* جوالات */
+@media (max-width: 620px) {
+    :root {
+        --fs-page-title: 1.375rem;   /* 22px */
+        --fs-body: 0.9375rem;        /* 15px — القراءة بيد واحدة أصعب */
+        --fs-small: 0.8125rem;       /* 13px */
+        --fs-tiny: 0.75rem;          /* 12px */
+        --control-h: 38px;
+    }
+}
+
+/* أي جهاز لمس مهما كان عرضه (جهاز لوحي بوضع أفقي، شاشة لمس بالمكتب) */
+@media (pointer: coarse) {
+    :root {
+        --fs-body: max(0.875rem, 14px);
+        --fs-small: max(0.8125rem, 13px);
+        --fs-tiny: max(0.75rem, 12px);
+        --control-h: 38px;
+    }
 }
 
 /* تبديل الوضع بنعومة: كلاس مؤقت لحظة التبديل فقط. خاصيتان فقط (خلفية/نص) وبلا
@@ -93,7 +184,10 @@ html[data-theme="light"] .zy-theme-btn .zy-tt-moon { display: block; }
 
 /* ============================== الأساس ==================================== */
 
-.zy-app { font-family: var(--font-family); font-size: var(--fs-body); color: var(--color-text-primary); background: var(--color-background); }
+.zy-app { font-family: var(--font-family); font-size: var(--fs-body); color: var(--color-text-primary); background: var(--color-background);
+    line-height: var(--lh-body); }
+/* العناوين والأرقام بإشباع ضيّق (سطر واحد غالباً)، والنص المقروء بالإشباع الواسع. */
+.zy-app h1, .zy-app h2, .zy-app h3, .zy-app h4 { line-height: var(--lh-tight); }
 .zy-app *, .zy-app *::before, .zy-app *::after { box-sizing: border-box; }
 .zy-app svg.zy-ic { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
@@ -114,14 +208,14 @@ html[data-theme="light"] .zy-theme-btn .zy-tt-moon { display: block; }
     white-space: nowrap; text-decoration: none; }
 .zy-btn:active { transform: scale(.98); }
 .zy-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-.zy-btn--primary { background: var(--color-primary); color: #fff; }
+.zy-btn--primary { background: var(--color-primary-strong); color: var(--color-on-primary); }
 .zy-btn--primary:hover { background: var(--color-primary-hover); }
 .zy-btn--secondary { background: var(--color-surface); border: 1px solid var(--color-border-strong); color: var(--color-text-primary); }
-.zy-btn--secondary:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.zy-btn--secondary:hover { border-color: var(--color-primary-strong); color: var(--color-primary-text); }
 .zy-btn--danger { background: var(--color-danger-soft); border: 1px solid color-mix(in srgb, var(--color-danger) 45%, transparent); color: var(--color-danger); }
 .zy-btn--danger:hover { background: color-mix(in srgb, var(--color-danger) 18%, transparent); }
 .zy-btn--ghost { background: transparent; color: var(--color-text-secondary); }
-.zy-btn--ghost:hover { background: var(--color-primary-soft); color: var(--color-primary); }
+.zy-btn--ghost:hover { background: var(--color-primary-soft); color: var(--color-primary-text); }
 .zy-btn--sm { height: 27px; padding: 0 var(--sp-2); font-size: var(--fs-small); border-radius: 8px; }
 .zy-btn--lg { height: 40px; padding: 0 var(--sp-5); }
 .zy-btn:disabled { opacity: .55; cursor: not-allowed; }
@@ -240,7 +334,7 @@ html[dir="ltr"] .zy-toggle input:checked + i::after { transform: translateX(18px
 .zy-upload { border: 2px dashed var(--color-border-strong); border-radius: var(--radius-lg); padding: var(--sp-5);
     text-align: center; color: var(--color-text-secondary); font-size: var(--fs-small); font-weight: 700;
     transition: border-color var(--speed), background var(--speed); cursor: pointer; }
-.zy-upload:hover, .zy-upload.zy-drag { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary); }
+.zy-upload:hover, .zy-upload.zy-drag { border-color: var(--color-primary-text); background: var(--color-primary-soft); color: var(--color-primary); }
 .zy-upload input[type="file"] { display: none; }
 .zy-upload__file { display: flex; align-items: center; gap: var(--sp-2); background: var(--color-background);
     border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-2) var(--sp-3);
@@ -464,3 +558,101 @@ html[data-theme="light"] .nxcal__head, html[data-theme="light"] .nxcal__foot {
     .zy-modal { inset-inline: 10px; top: 5vh; }
     .zy-page-header h1 { font-size: 20px; }
 }
+
+/* ============================================================================
+   لوحة البيانات — طبقة «مهمة أولاً» (v1)
+   مرجعها docs/prototypes/dashboard-redesign-v1.html. كل الألوان والمقاسات من
+   التوكنز أعلاه، فتتبع الوضع الداكن ومحرك هوية الشركة تلقائياً.
+   ============================================================================ */
+
+.zy-dash { display: flex; flex-direction: column; gap: var(--sp-4); margin-bottom: var(--sp-5); }
+
+.zy-dash__greet h2 { font-size: var(--fs-page-title); font-weight: 800; color: var(--color-text-primary); margin: 0; }
+.zy-dash__greet p { font-size: var(--fs-small); color: var(--color-text-secondary); margin: var(--sp-1) 0 0; }
+
+.zy-dash__kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--sp-3); }
+
+.zy-dash__kpi {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); padding: var(--sp-4); box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: var(--sp-1);
+}
+.zy-dash__kpi-label { font-size: var(--fs-small); color: var(--color-text-secondary); font-weight: 700; }
+/* الأرقام LTR دائماً داخل صفحة RTL — وإلا انقلبت الفواصل والنسب */
+.zy-dash__kpi-value { font-size: 26px; font-weight: 800; direction: ltr; text-align: end; color: var(--color-text-primary); }
+
+.zy-dash__chip {
+    font-size: var(--fs-tiny); font-weight: 700; padding: 2px var(--sp-2);
+    border-radius: var(--radius-full); align-self: flex-start;
+}
+.zy-dash__chip--ok { color: var(--color-success); background: var(--color-success-soft); }
+.zy-dash__chip--warn { color: var(--color-warning); background: var(--color-warning-soft); }
+.zy-dash__chip--bad { color: var(--color-danger); background: var(--color-danger-soft); }
+
+.zy-dash__tasks {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow);
+}
+.zy-dash__tasks-head { padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--color-border); }
+.zy-dash__tasks-head h3 { font-size: var(--fs-card-title); font-weight: 800; margin: 0; color: var(--color-text-primary); }
+
+.zy-dash__empty { padding: var(--sp-5) var(--sp-4); margin: 0; text-align: center; font-size: var(--fs-small); color: var(--color-text-secondary); }
+
+.zy-dash__task {
+    display: flex; align-items: center; gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--color-border);
+}
+.zy-dash__task:last-child { border-bottom: 0; }
+.zy-dash__task-dot { width: 10px; height: 10px; border-radius: var(--radius-full); flex-shrink: 0; }
+.zy-dash__task-dot--bad { background: var(--color-danger); }
+.zy-dash__task-dot--warn { background: var(--color-warning); }
+.zy-dash__task-dot--accent { background: var(--color-primary); }
+
+.zy-dash__task-text { flex: 1; min-width: 0; }
+.zy-dash__task-text b { display: block; font-size: var(--fs-body); font-weight: 800; color: var(--color-text-primary); }
+.zy-dash__task-text span { font-size: var(--fs-small); color: var(--color-text-secondary); }
+
+.zy-dash__task-go {
+    font-size: var(--fs-small); font-weight: 800; text-decoration: none; white-space: nowrap;
+    color: var(--color-primary-text); background: var(--color-primary-soft);
+    border-radius: var(--radius); padding: var(--sp-2) var(--sp-4);
+    transition: background 150ms ease, color 150ms ease;
+}
+.zy-dash__task-go:hover { background: var(--color-primary-strong); color: var(--color-on-primary); }
+
+@media (max-width: 640px) {
+    .zy-dash__task { flex-wrap: wrap; }
+    .zy-dash__task-go { width: 100%; text-align: center; }
+}
+
+/* --- لوحة البيانات: عمودان + رسم الأسبوع + الاختصارات --- */
+
+.zy-dash__cols { display: grid; grid-template-columns: 1.7fr 1fr; gap: var(--sp-3); align-items: start; }
+@media (max-width: 900px) { .zy-dash__cols { grid-template-columns: 1fr; } }
+
+.zy-dash__tasks-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.zy-dash__tasks-head a { font-size: var(--fs-small); font-weight: 700; color: var(--color-primary-text); text-decoration: none; }
+
+.zy-dash__chart { display: flex; align-items: flex-end; gap: var(--sp-2); height: 140px; padding: var(--sp-4); }
+.zy-dash__col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: var(--sp-1); height: 100%; }
+.zy-dash__col-bar {
+    width: 100%; max-width: 30px; border-radius: var(--sp-1) var(--sp-1) 0 0;
+    background: var(--color-primary); opacity: .85;
+}
+.zy-dash__col.is-today .zy-dash__col-bar { opacity: 1; outline: 2px solid var(--color-primary); outline-offset: 2px; }
+/* يوم بلا تحليل: جذع باهت لا عمود بقيمة — الفراغ يجب أن يبدو فراغاً */
+.zy-dash__col.is-empty .zy-dash__col-bar { opacity: .22; }
+.zy-dash__col-val { font-size: var(--fs-tiny); font-weight: 800; direction: ltr; color: var(--color-text-primary); }
+.zy-dash__col.is-empty .zy-dash__col-val { color: var(--color-text-secondary); font-weight: 700; }
+.zy-dash__col-name { font-size: var(--fs-tiny); color: var(--color-text-secondary); font-weight: 700; }
+
+.zy-dash__quick { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--sp-3); }
+.zy-dash__q {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); padding: var(--sp-4); box-shadow: var(--shadow);
+    text-align: center; text-decoration: none; display: block;
+    transition: transform 150ms ease, border-color 150ms ease;
+}
+.zy-dash__q:hover { transform: translateY(-2px); border-color: var(--color-primary); }
+.zy-dash__q b { display: block; font-size: var(--fs-body); font-weight: 800; color: var(--color-text-primary); }
+.zy-dash__q span { display: block; font-size: var(--fs-tiny); color: var(--color-text-secondary); margin-top: var(--sp-1); }
