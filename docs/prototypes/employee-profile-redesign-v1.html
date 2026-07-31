@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ملف الموظف — التصميم الجديد (نموذج v2 غني)</title>
+<style>
+    :root {
+        --bg: #f2f5f9; --surface: #ffffff; --border: #e4eaf1;
+        --text: #16283a; --muted: #6b7f92; --accent: #0ea5b5; --accent2: #0b7f95; --accent-soft: #e6f7f9;
+        --ok: #16a34a; --ok-soft: #ecfdf3; --warn: #d97706; --warn-soft: #fff7e6;
+        --bad: #dc2626; --bad-soft: #fdecec; --ind: #6366f1; --ind-soft: #eef0ff;
+        --shadow: 0 1px 3px rgba(22,40,58,.07), 0 8px 24px rgba(22,40,58,.04);
+        --r: 16px;
+    }
+    [data-theme="dark"] {
+        --bg: #14191f; --surface: #1b222a; --border: #2a333d;
+        --text: #c9d4dd; --muted: #8496a5; --accent: #35aebb; --accent2: #2a8b96; --accent-soft: #1b2b30;
+        --ok: #66b789; --ok-soft: #1c2921; --warn: #cfa14c; --warn-soft: #2a2419;
+        --bad: #cd7676; --bad-soft: #2a1e1e; --ind: #8688e8; --ind-soft: #222438;
+        --shadow: 0 1px 3px rgba(0,0,0,.28);
+    }
+    * { box-sizing: border-box; margin: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Segoe UI", Tahoma, system-ui, sans-serif; min-height: 100vh; }
+    svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    .shell { display: flex; min-height: 100vh; }
+    .side { width: 232px; background: var(--surface); border-inline-end: 1px solid var(--border); padding: 20px 14px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; padding: 0 10px 18px; }
+    .logo .z { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; display: grid; place-items: center; font-size: 15px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; color: var(--muted); font-size: 13.5px; font-weight: 700; cursor: pointer; text-decoration: none; }
+    .nav-item:hover { background: var(--bg); color: var(--text); }
+    .nav-item.on { background: var(--accent-soft); color: var(--accent); }
+    .nav-item svg { width: 18px; height: 18px; }
+    @media (max-width: 900px) { .side { display: none; } }
+
+    .main { flex: 1; padding: 22px 30px 40px; max-width: 1220px; margin: 0 auto; }
+    .crumb { font-size: 12px; color: var(--muted); font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+    .crumb b { color: var(--text); }
+
+    /* ===== رأس الملف الغني: شريط متدرج + صورة بحلقة + وسوم + إحصائيات ===== */
+    .phead { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 16px; }
+    .cover { height: 74px; background: linear-gradient(120deg, var(--accent) 0%, var(--accent2) 55%, #155e75 100%); position: relative; }
+    .cover::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 85% 20%, rgba(255,255,255,.25), transparent 45%); }
+    .pbody { display: flex; gap: 18px; padding: 0 22px 16px; align-items: flex-end; flex-wrap: wrap; }
+    .avatar { width: 92px; height: 92px; border-radius: 50%; margin-top: -46px; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 30px; border: 4px solid var(--surface); box-shadow: var(--shadow); flex-shrink: 0; }
+    .who { padding-bottom: 4px; }
+    .who b { font-size: 19px; display: block; }
+    .who .sub { font-size: 12.5px; color: var(--muted); font-weight: 700; margin-top: 3px; }
+    .tags { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .chip { font-size: 11px; font-weight: 800; padding: 4px 11px; border-radius: 99px; display: inline-flex; align-items: center; gap: 5px; }
+    .chip svg { width: 12px; height: 12px; }
+    .chip.ok { background: var(--ok-soft); color: var(--ok); }
+    .chip.acc { background: var(--accent-soft); color: var(--accent); }
+    .chip.ind { background: var(--ind-soft); color: var(--ind); }
+    .chip.warn { background: var(--warn-soft); color: var(--warn); }
+    .sp { flex: 1; }
+    .btn { border: 0; border-radius: 12px; padding: 10px 18px; font: inherit; font-weight: 800; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+    .btn.acc { background: var(--accent); color: #fff; box-shadow: 0 4px 14px rgba(14,165,181,.35); }
+    .btn.ghost { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+    .btn svg { width: 15px; height: 15px; }
+    .pactions { padding-bottom: 10px; display: flex; gap: 8px; }
+
+    /* شريط الإحصائيات داخل الهيدر */
+    .pstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border-top: 1px solid var(--border); }
+    .ps { padding: 13px 18px; border-inline-start: 1px solid var(--border); display: flex; align-items: center; gap: 11px; }
+    .ps:first-child { border-inline-start: 0; }
+    .ps .i { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex-shrink: 0; }
+    .ps .i svg { width: 17px; height: 17px; }
+    .ps b { font-size: 15.5px; display: block; direction: ltr; text-align: end; }
+    .ps span { font-size: 11px; color: var(--muted); font-weight: 700; }
+
+    /* ===== التبويبات ===== */
+    .tabs { display: flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 13px; padding: 5px; margin-bottom: 16px; overflow-x: auto; box-shadow: var(--shadow); }
+    .tab { padding: 9px 16px; font-size: 12.5px; font-weight: 800; color: var(--muted); cursor: pointer; border-radius: 9px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+    .tab svg { width: 14px; height: 14px; }
+    .tab:hover { color: var(--text); background: var(--bg); }
+    .tab.on { color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 3px 10px rgba(14,165,181,.3); }
+    .tab .n { background: var(--bad); color: #fff; border-radius: 99px; font-size: 9.5px; padding: 1px 6px; }
+
+    .cols { display: grid; grid-template-columns: 1.8fr 1fr; gap: 15px; align-items: start; }
+    @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow); margin-bottom: 15px; }
+    .card .hd { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+    .card .hd .ci { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; }
+    .card .hd .ci svg { width: 16px; height: 16px; }
+    .card .hd h2 { font-size: 13.5px; font-weight: 800; flex: 1; }
+    .edit { height: 30px; border-radius: 9px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; padding: 0 11px; font: inherit; font-size: 11.5px; font-weight: 800; }
+    .edit:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+    .edit svg { width: 13px; height: 13px; }
+    .card .bd { padding: 16px 18px; }
+
+    .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 0 26px; }
+    .kv .f { padding: 10px 0; border-bottom: 1px dashed var(--border); }
+    .kv .f:nth-last-child(-n+2) { border-bottom: 0; }
+    .kv .f label { display: block; font-size: 11px; color: var(--muted); font-weight: 700; margin-bottom: 3px; }
+    .kv .f div { font-size: 13.5px; font-weight: 700; }
+    .kv .f div.ltr { direction: ltr; text-align: end; }
+    @media (max-width: 640px) { .kv { grid-template-columns: 1fr; } .kv .f:nth-last-child(-n+2) { border-bottom: 1px dashed var(--border); } }
+
+    /* مستندات بصفوف وأيقونات وحالة انتهاء */
+    .doc { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+    .doc:last-child { border-bottom: 0; }
+    .doc .di { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; flex-shrink: 0; }
+    .doc .di svg { width: 17px; height: 17px; }
+    .doc .dt { flex: 1; }
+    .doc .dt b { font-size: 13px; display: block; }
+    .doc .dt span { font-size: 11.5px; color: var(--muted); direction: ltr; }
+
+    .bal { margin-bottom: 15px; }
+    .bal .t { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; font-weight: 700; margin-bottom: 6px; }
+    .bal .t b { font-size: 14px; }
+    .bal .t b i { font-style: normal; color: var(--accent); font-size: 17px; }
+    .bar { height: 8px; border-radius: 99px; background: var(--bg); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+
+    .mini { display: flex; align-items: center; gap: 11px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; font-weight: 700; }
+    .mini:last-child { border-bottom: 0; }
+    .mini .mi { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; }
+    .mini .mi svg { width: 15px; height: 15px; }
+    .mini time { color: var(--muted); font-size: 10.5px; margin-inline-start: auto; direction: ltr; font-weight: 700; white-space: nowrap; }
+
+    .toggle { position: fixed; bottom: 18px; inset-inline-start: 18px; z-index: 9; }
+    .note { text-align: center; color: var(--muted); font-size: 11.5px; margin-top: 22px; }
+</style>
+</head>
+<body>
+<div class="shell">
+    <aside class="side">
+        <div class="logo"><span class="z">Z</span> ZYNORA HR</div>
+        <a class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> لوحة البيانات</a>
+        <a class="nav-item on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> الموظفون</a>
+        <a class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> الجدولة والحضور</a>
+        <a class="nav-item"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> الرواتب</a>
+        <a class="nav-item"><svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> الطلبات والموافقات</a>
+        <a class="nav-item"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> التقارير</a>
+        <a class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> الإعدادات</a>
+    </aside>
+
+    <main class="main">
+        <div class="crumb">الموظفون <svg viewBox="0 0 24 24" style="width:11px;height:11px"><polyline points="15 18 9 12 15 6"/></svg> <b>أحمد صلاح حسين</b></div>
+
+        <div class="phead">
+            <div class="cover"></div>
+            <div class="pbody">
+                <div class="avatar">أح</div>
+                <div class="who">
+                    <b>أحمد صلاح حسين علي</b>
+                    <div class="sub">فني صيانة أول · <span style="direction:ltr;display:inline-block">#10010</span> · انضم قبل 5 سنوات</div>
+                    <div class="tags">
+                        <span class="chip ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> على رأس العمل</span>
+                        <span class="chip acc"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> فرع الكرادة</span>
+                        <span class="chip ind"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg> مناوبة 8 ص - 5 م</span>
+                        <span class="chip warn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> جواز يقارب الانتهاء</span>
+                    </div>
+                </div>
+                <span class="sp"></span>
+                <div class="pactions">
+                    <button class="btn ghost"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> تصدير</button>
+                    <button class="btn acc"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg> تعديل الملف</button>
+                </div>
+            </div>
+            <div class="pstats">
+                <div class="ps"><span class="i" style="background:var(--ok-soft);color:var(--ok)"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span><div><b>96%</b><span>حضور آخر 90 يوماً</span></div></div>
+                <div class="ps"><span class="i" style="background:var(--accent-soft);color:var(--accent)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><div><b>6.5س</b><span>إضافي هذا الشهر</span></div></div>
+                <div class="ps"><span class="i" style="background:var(--ind-soft);color:var(--ind)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span><div><b>16</b><span>رصيد إجازات متبقٍ</span></div></div>
+                <div class="ps"><span class="i" style="background:var(--warn-soft);color:var(--warn)"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><div><b>2</b><span>تأخيرات هذا الشهر</span></div></div>
+                <div class="ps"><span class="i" style="background:var(--bad-soft);color:var(--bad)"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span><div><b>850 ألف</b><span>صافي راتب تموز (د.ع)</span></div></div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab on"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0 1 13 0"/></svg> المعلومات الشخصية</div>
+            <div class="tab"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg> بيانات التوظيف</div>
+            <div class="tab"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> الراتب</div>
+            <div class="tab"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> المستندات <span class="n">1</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24"><path d="M17 2.1l4 4-4 4"/><path d="M3 12.2v-2a4 4 0 0 1 4-4h12.8"/><path d="M7 21.9l-4-4 4-4"/><path d="M21 11.8v2a4 4 0 0 1-4 4H4.2"/></svg> الإجازات</div>
+            <div class="tab"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> الحضور</div>
+            <div class="tab"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> الانضباط</div>
+            <div class="tab"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg> العهد</div>
+        </div>
+
+        <div class="cols">
+            <div>
+                <section class="card">
+                    <div class="hd">
+                        <span class="ci" style="background:var(--accent-soft);color:var(--accent)"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0 1 13 0"/></svg></span>
+                        <h2>معلومات أساسية</h2>
+                        <button class="edit"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg> تعديل</button>
+                    </div>
+                    <div class="bd">
+                        <div class="kv">
+                            <div class="f"><label>الاسم الكامل</label><div>أحمد صلاح حسين علي</div></div>
+                            <div class="f"><label>الرقم الوظيفي</label><div class="ltr">10010</div></div>
+                            <div class="f"><label>تاريخ الميلاد</label><div class="ltr">1994-10-30 (31 سنة)</div></div>
+                            <div class="f"><label>محل الولادة</label><div>بغداد</div></div>
+                            <div class="f"><label>الجنس</label><div>ذكر</div></div>
+                            <div class="f"><label>الحالة الاجتماعية</label><div>متزوج · 2 أطفال</div></div>
+                            <div class="f"><label>الجنسية</label><div>عراقي</div></div>
+                            <div class="f"><label>فصيلة الدم</label><div class="ltr">AB+</div></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="hd">
+                        <span class="ci" style="background:var(--ind-soft);color:var(--ind)"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+                        <h2>معلومات الاتصال</h2>
+                        <button class="edit"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg> تعديل</button>
+                    </div>
+                    <div class="bd">
+                        <div class="kv">
+                            <div class="f"><label>الهاتف</label><div class="ltr">0781 323 3311</div></div>
+                            <div class="f"><label>البريد الإلكتروني</label><div class="ltr">ahmed.salah@zynorahr.com</div></div>
+                            <div class="f"><label>العنوان</label><div>بغداد · الكرادة · حي 903 · زقاق 12</div></div>
+                            <div class="f"><label>جهة اتصال طوارئ</label><div>صلاح حسين (الأب) · <span style="direction:ltr;display:inline-block">0770 111 2233</span></div></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="hd">
+                        <span class="ci" style="background:var(--warn-soft);color:var(--warn)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+                        <h2>الوثائق الرسمية</h2>
+                        <button class="edit"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> إضافة</button>
+                    </div>
+                    <div class="bd" style="padding-top:6px;padding-bottom:8px">
+                        <div class="doc">
+                            <span class="di" style="background:var(--accent-soft);color:var(--accent)"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 8h3M15 12h3M7 16h10"/></svg></span>
+                            <div class="dt"><b>البطاقة الوطنية الموحدة</b><span>1994 3382 7714</span></div>
+                            <span class="chip ok">سارية · 2029</span>
+                        </div>
+                        <div class="doc">
+                            <span class="di" style="background:var(--ind-soft);color:var(--ind)"><svg viewBox="0 0 24 24"><path d="M2 6h20v12H2z"/><path d="M2 10h20"/></svg></span>
+                            <div class="dt"><b>جواز السفر</b><span>A12933710</span></div>
+                            <span class="chip warn">ينتهي 09-10 · جدّد</span>
+                        </div>
+                        <div class="doc">
+                            <span class="di" style="background:var(--ok-soft);color:var(--ok)"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg></span>
+                            <div class="dt"><b>بطاقة السكن</b><span>KRD-90311</span></div>
+                            <span class="chip ok">سارية</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div>
+                <section class="card">
+                    <div class="hd">
+                        <span class="ci" style="background:var(--accent-soft);color:var(--accent)"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></span>
+                        <h2>ملخص التوظيف</h2>
+                    </div>
+                    <div class="bd">
+                        <div class="kv" style="grid-template-columns:1fr">
+                            <div class="f"><label>القسم / الفرع</label><div>الصيانة · فرع الكرادة</div></div>
+                            <div class="f"><label>تاريخ المباشرة</label><div class="ltr">2021-02-14 · 5 سنوات 5 أشهر</div></div>
+                            <div class="f"><label>نوع العقد</label><div>دائم · دوام كامل <span class="chip ok" style="margin-inline-start:6px">موثّق</span></div></div>
+                            <div class="f" style="border-bottom:0"><label>المدير المباشر</label><div>هنادي فاضل باره</div></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="hd">
+                        <span class="ci" style="background:var(--ok-soft);color:var(--ok)"><svg viewBox="0 0 24 24"><path d="M17 2.1l4 4-4 4"/><path d="M3 12.2v-2a4 4 0 0 1 4-4h12.8"/><path d="M7 21.9l-4-4 4-4"/><path d="M21 11.8v2a4 4 0 0 1-4 4H4.2"/></svg></span>
+                        <h2>أرصدة الإجازات</h2>
+                    </div>
+                    <div class="bd">
+                        <div class="bal"><div class="t"><b><i>16</i> / 21 اعتيادية</b><span>استُخدم 5</span></div><div class="bar"><i style="width:76%"></i></div></div>
+                        <div class="bal"><div class="t"><b><i>27</i> / 30 مرضية</b><span>استُخدم 3</span></div><div class="bar"><i style="width:90%"></i></div></div>
+                        <div class="bal" style="margin-bottom:0"><div class="t"><b><i>3</i> بلا راتب</b><span>هذا العام</span></div><div class="bar"><i style="width:10%;background:var(--warn)"></i></div></div>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="hd">
+                        <span class="ci" style="background:var(--ind-soft);color:var(--ind)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+                        <h2>آخر النشاط</h2>
+                    </div>
+                    <div class="bd" style="padding-top:4px;padding-bottom:6px">
+                        <div class="mini"><span class="mi" style="background:var(--ok-soft);color:var(--ok)"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> بصمة حضور — فرع الكرادة <time>اليوم 07:58</time></div>
+                        <div class="mini"><span class="mi" style="background:var(--accent-soft);color:var(--accent)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span> إجازة اعتيادية (يومان) — معتمدة <time>07-26</time></div>
+                        <div class="mini"><span class="mi" style="background:var(--warn-soft);color:var(--warn)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> تأخير 12 دقيقة — ضمن السماحية <time>07-24</time></div>
+                        <div class="mini"><span class="mi" style="background:var(--ind-soft);color:var(--ind)"><svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></span> فعّل بصمة الوجه — بانتظار الاعتماد <time>07-23</time></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <p class="note">نموذج تصميم v2 «غني» — البيانات توضيحية · بقية التبويبات بنفس النمط</p>
+    </main>
+</div>
+<button class="btn ghost toggle" onclick="const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark'">تبديل فاتح / داكن</button>
+</body>
+</html>

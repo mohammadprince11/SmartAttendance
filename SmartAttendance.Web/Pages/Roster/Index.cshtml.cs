@@ -59,7 +59,10 @@ public class IndexModel : PageModel
         var (year, month) = Period;
         Month ??= $"{year:0000}-{month:00}";
 
-        Shifts = (await ShiftTypeStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
+        // الفرشاة تعرض النشطة «المتاحة بالروستر» فقط — تعطيل AvailableInRoster يؤرشف
+        // المناوبة من شاشة الجدولة بلا مساس بالتاريخ المالي (لا حذف أبداً).
+        Shifts = (await ShiftTypeStore.ListAsync(_dbContext))
+            .Where(s => s.IsActive && s.AvailableInRoster).ToList();
 
         var from = new DateOnly(year, month, 1);
         var to = from.AddMonths(1).AddDays(-1);
@@ -83,6 +86,28 @@ public class IndexModel : PageModel
 
         Cells = await RosterStore.GetCellsAsync(_dbContext, year, month);
         PublishedAt = await RosterStore.PublishedAtAsync(_dbContext, year, month);
+    }
+
+    /// <summary>«ارسم أسبوعاً والباقي علينا»: تكرار الأسبوع الأول على بقية الشهر لكل الموظفين.</summary>
+    public async Task<IActionResult> OnPostFillFromFirstWeekAsync()
+    {
+        var (year, month) = Period;
+        var written = await RosterStore.FillMonthFromFirstWeekAsync(_dbContext, year, month);
+        TempData["SuccessMessage"] = written > 0
+            ? $"تمت تعبئة بقية الشهر من نمط الأسبوع الأول ({written} خلية) — راجع ثم انشر."
+            : "لا خلايا بالأسبوع الأول لتكرارها — ارسم الأسبوع الأول أولاً (واحفظه) ثم أعد المحاولة.";
+        return RedirectToPage(new { Month, Search, PageNumber });
+    }
+
+    /// <summary>نسخ جدول الشهر الماضي كاملاً بمحاذاة أيام الأسبوع (قبل 4 أسابيع يوماً بيوم).</summary>
+    public async Task<IActionResult> OnPostCopyPrevMonthAsync()
+    {
+        var (year, month) = Period;
+        var written = await RosterStore.CopyFromPreviousMonthAsync(_dbContext, year, month);
+        TempData["SuccessMessage"] = written > 0
+            ? $"تم نسخ جدول الشهر الماضي بمحاذاة أيام الأسبوع ({written} خلية) — عدّل الاستثناءات ثم انشر."
+            : "الشهر الماضي بلا خلايا روستر — لا شيء يُنسخ.";
+        return RedirectToPage(new { Month, Search, PageNumber });
     }
 
     public async Task<IActionResult> OnPostSaveAsync()

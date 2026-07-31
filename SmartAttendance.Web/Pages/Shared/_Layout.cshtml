@@ -37,14 +37,19 @@
                 });
             } catch (e) { }
 
+            // القائمة الجانبية موسّعة دائماً (فكرة الطي أُلغيت بطلب محمد)
+            try { localStorage.removeItem("ZY.Sidebar"); } catch (e) { }
             document.documentElement.setAttribute(
                 "data-sidebar",
                 "expanded"
             );
 
+            // الوضع المحفوظ (زر الشمس/الهلال بالشريط العلوي) — الافتراضي داكن حالياً.
+            var zyTheme = null;
+            try { zyTheme = localStorage.getItem("ZY.Theme"); } catch (e) { }
             document.documentElement.setAttribute(
                 "data-theme",
-                "dark"
+                zyTheme === "light" ? "light" : "dark"
             );
         })();
     </script>
@@ -78,6 +83,8 @@
     <link rel="stylesheet" href="~/css/nexora-select-system.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-theme-contract.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-design-tokens.css" asp-append-version="true" />
+    @* Design System v1 الموحد (كلاسات zy-*): مرجع إعادة التصميم صفحة-صفحة — إضافي لا يمس القديم *@
+    <link rel="stylesheet" href="~/css/zynora-design-system.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-brand.css" asp-append-version="true" />
 
     @await RenderSectionAsync("Styles", required: false)
@@ -226,16 +233,17 @@
     <div class="nexora-shell">
         <aside class="nexora-sidebar" aria-label="القائمة الجانبية">
             <div class="nexora-brand-card">
-                <a asp-page="/Index"
-                   class="nexora-brand-link"
-                   aria-label="@brandName Home">
+                @* الشعار عرض فقط (لا رابط) — وحرف Z نفسه هو زر الطي: خطوطه الثلاثة
+                   تتحول بأنميشن إلى ثلاث خطوط أفقية عند الانكماش. *@
+                @* الشعار عرض فقط لا رابط — التنقل للرئيسية من بند «لوحة البيانات» *@
+                <div class="nexora-brand-link" aria-label="@brandName">
                     <img class="nexora-brand-logo"
                          src="@(string.IsNullOrWhiteSpace(companyTheme.LogoPath) ? Url.Content("~/brand/zynora-logo-horizontal-light.svg") : companyTheme.LogoPath)"
                          alt="@brandName" />
                     <span class="nexora-brand-tagline">
                         Smarter People. Stronger Business.
                     </span>
-                </a>
+                </div>
             </div>
 
             @if (isLoggedIn)
@@ -416,39 +424,13 @@
                         <span class="nexora-nav-text">الحضور والانصراف</span>
                         <span class="nexora-chevron"></span>
                     </summary>
-                    <div class="nexora-nav-group-links">
+                    @* توزيع كيان (قسم 20 بالدراسة): عنوان المجموعة أول صف ← العمليات اليومية
+                       مباشرة ← أكورديونات حصرية (بصمات/جدولة/اعتماد دوري) ← الإعدادات آخر شيء. *@
+                    <div class="nexora-nav-group-links" data-ky-title="الحضور والانصراف">
                         @if (CanRoute("/attendanceoperations"))
                         {
-                            <a asp-page="/AttendanceOperations/Index" class="nexora-nav-link @(IsUnder("/AttendanceOperations") ? "active nexora-active" : "")">
+                            <a asp-page="/AttendanceOperations/Index" class="nexora-nav-link ky-drawer-title @(IsUnder("/AttendanceOperations") ? "active nexora-active" : "")">
                                 <span>مراقبة الحضور</span>
-                            </a>
-                        }
-                        @if (CanRoute("/attendancerecords"))
-                        {
-                            <a asp-page="/AttendanceRecords/Index" class="nexora-nav-link @(IsUnder("/AttendanceRecords") ? "active nexora-active" : "")">
-                                <span>سجلات الحضور</span>
-                            </a>
-                        }
-                        @if (CanRoute("/attendanceimports"))
-                        {
-                            <a asp-page="/AttendanceImports/Index" class="nexora-nav-link @(IsUnder("/AttendanceImports") ? "active nexora-active" : "")">
-                                <span>استيراد البصمات</span>
-                            </a>
-                        }
-                        @* «معالجة الحضور» و«تصحيحات الحضور» أُزيلا من القائمة: كلاهما مجرد
-                           إعادة توجيه لـ/AttendanceOperations — الأول بنفس التبويب الافتراضي
-                           (نسخة مطابقة)، والثاني بتبويب لا عرض له إطلاقاً. المساران يبقيان
-                           عاملين للروابط المحفوظة. *@
-                        @if (CanRoute("/shifttypes"))
-                        {
-                            <a href="/ShiftTypes" class="nexora-nav-link @(IsUnder("/ShiftTypes") ? "active nexora-active" : "")">
-                                <span>أنواع المناوبات</span>
-                            </a>
-                        }
-                        @if (CanRoute("/attendancesettings"))
-                        {
-                            <a href="/AttendanceSettings" class="nexora-nav-link @(IsUnder("/AttendanceSettings") ? "active nexora-active" : "")">
-                                <span>إعدادات الحضور</span>
                             </a>
                         }
                         @if (CanRoute("/dayattendance"))
@@ -457,16 +439,10 @@
                                 <span>الحضور اليومي</span>
                             </a>
                         }
-                        @if (CanRoute("/shiftrules"))
+                        @if (CanRoute("/attendanceviewer"))
                         {
-                            <a href="/ShiftRules" class="nexora-nav-link @(IsUnder("/ShiftRules") ? "active nexora-active" : "")">
-                                <span>قواعد المناوبات</span>
-                            </a>
-                        }
-                        @if (CanRoute("/periodrules"))
-                        {
-                            <a href="/PeriodRules" class="nexora-nav-link @(IsUnder("/PeriodRules") ? "active nexora-active" : "")">
-                                <span>القواعد الفترية</span>
+                            <a href="/AttendanceViewer" class="nexora-nav-link @(IsUnder("/AttendanceViewer") ? "active nexora-active" : "")">
+                                <span>مستعرض الحضور</span>
                             </a>
                         }
                         @if (CanRoute("/attendancerecommendations"))
@@ -475,86 +451,114 @@
                                 <span>الإجراءات المقترحة</span>
                             </a>
                         }
-                        @if (CanRoute("/shiftassignments"))
+
+                        @if (CanRoute("/employeeonlinepunches") || CanRoute("/missingpunchrequests") || CanRoute("/attendancerecords"))
                         {
-                            <a href="/ShiftAssignments" class="nexora-nav-link @(IsUnder("/ShiftAssignments") ? "active nexora-active" : "")">
-                                <span>مناوبات الموظفين</span>
-                            </a>
+                            <details class="ky-acc" @(IsUnder("/EmployeeOnlinePunches") || IsUnder("/MissingPunchRequests") || IsUnder("/AttendanceRecords") || IsUnder("/AttendanceImports") || IsUnder("/Devices") || IsUnder("/BiometricKeys") || IsUnder("/EmployeeGeoLocations") ? "open" : "")>
+                                <summary><span>البصمات ومصادرها</span><span class="ky-acc-chev"></span></summary>
+                                <div class="ky-acc-body">
+                                    @if (CanRoute("/employeeonlinepunches"))
+                                    {
+                                        <a href="/EmployeeOnlinePunches" class="nexora-nav-link @(IsUnder("/EmployeeOnlinePunches") ? "active nexora-active" : "")"><span>البصمات عبر الإنترنت</span></a>
+                                    }
+                                    @if (CanRoute("/missingpunchrequests"))
+                                    {
+                                        <a href="/MissingPunchRequests" class="nexora-nav-link @(IsUnder("/MissingPunchRequests") ? "active nexora-active" : "")"><span>طلبات البصمة المفقودة</span></a>
+                                    }
+                                    @if (CanRoute("/attendancerecords"))
+                                    {
+                                        <a asp-page="/AttendanceRecords/Index" class="nexora-nav-link @(IsUnder("/AttendanceRecords") ? "active nexora-active" : "")"><span>سجلات الحضور</span></a>
+                                    }
+                                    @if (CanRoute("/attendanceimports"))
+                                    {
+                                        <a asp-page="/AttendanceImports/Index" class="nexora-nav-link @(IsUnder("/AttendanceImports") ? "active nexora-active" : "")"><span>استيراد البصمات</span></a>
+                                    }
+                                    @if (CanRoute("/devices"))
+                                    {
+                                        <a asp-page="/Devices/Index" class="nexora-nav-link @(IsUnder("/Devices") ? "active nexora-active" : "")"><span>الأجهزة</span></a>
+                                    }
+                                    @if (CanRoute("/biometrickeys"))
+                                    {
+                                        <a href="/BiometricKeys" class="nexora-nav-link @(IsUnder("/BiometricKeys") ? "active nexora-active" : "")"><span>اعتماد مفاتيح البصمة/الوجه</span></a>
+                                    }
+                                    @if (CanRoute("/employeegeolocations"))
+                                    {
+                                        <a href="/EmployeeGeoLocations" class="nexora-nav-link @(IsUnder("/EmployeeGeoLocations") ? "active nexora-active" : "")"><span>المواقع الجغرافية للموظفين</span></a>
+                                    }
+                                </div>
+                            </details>
                         }
-                        @if (CanRoute("/shiftoverrides"))
+
+                        @if (CanRoute("/roster") || CanRoute("/shifttypes"))
                         {
-                            <a href="/ShiftOverrides" class="nexora-nav-link @(IsUnder("/ShiftOverrides") ? "active nexora-active" : "")">
-                                <span>تعديل مناوبات مؤقت</span>
-                            </a>
+                            <details class="ky-acc" @(IsUnder("/Roster") || IsUnder("/ShiftTypes") || IsUnder("/ShiftAssignments") || IsUnder("/ShiftOverrides") || IsUnder("/Shifts") ? "open" : "")>
+                                <summary><span>الجدولة والمناوبات</span><span class="ky-acc-chev"></span></summary>
+                                <div class="ky-acc-body">
+                                    @if (CanRoute("/roster"))
+                                    {
+                                        <a href="/Roster" class="nexora-nav-link @(IsUnder("/Roster") ? "active nexora-active" : "")"><span>جدولة مناوبات العمل</span></a>
+                                    }
+                                    @if (CanRoute("/shifttypes"))
+                                    {
+                                        <a href="/ShiftTypes" class="nexora-nav-link @(IsUnder("/ShiftTypes") ? "active nexora-active" : "")"><span>أنواع المناوبات</span></a>
+                                    }
+                                    @if (CanRoute("/shiftassignments"))
+                                    {
+                                        <a href="/ShiftAssignments" class="nexora-nav-link @(IsUnder("/ShiftAssignments") ? "active nexora-active" : "")"><span>مناوبات الموظفين</span></a>
+                                    }
+                                    @if (CanRoute("/shiftoverrides"))
+                                    {
+                                        <a href="/ShiftOverrides" class="nexora-nav-link @(IsUnder("/ShiftOverrides") ? "active nexora-active" : "")"><span>تعديل مناوبات مؤقت</span></a>
+                                    }
+                                    @if (CanRoute("/shifts"))
+                                    {
+                                        @* الطبقة القديمة (جدول Shifts) — تبقى حتى يكتمل ترحيل Shifts⟵ShiftTypes *@
+                                        <a asp-page="/Shifts/Index" class="nexora-nav-link @(IsUnder("/Shifts") ? "active nexora-active" : "")"><span>الشفتات (قديم)</span></a>
+                                    }
+                                </div>
+                            </details>
                         }
-                        @if (CanRoute("/roster"))
+
+                        @if (CanRoute("/weekattendance") || CanRoute("/monthattendance") || CanRoute("/attendancereports"))
                         {
-                            <a href="/Roster" class="nexora-nav-link @(IsUnder("/Roster") ? "active nexora-active" : "")">
-                                <span>جدولة مناوبات العمل</span>
-                            </a>
+                            <details class="ky-acc" @(IsUnder("/WeekAttendance") || IsUnder("/MonthAttendance") || IsUnder("/AttendanceReports") ? "open" : "")>
+                                <summary><span>الاعتماد الدوري والتقارير</span><span class="ky-acc-chev"></span></summary>
+                                <div class="ky-acc-body">
+                                    @if (CanRoute("/weekattendance"))
+                                    {
+                                        <a href="/WeekAttendance" class="nexora-nav-link @(IsUnder("/WeekAttendance") ? "active nexora-active" : "")"><span>الحضور الأسبوعي</span></a>
+                                    }
+                                    @if (CanRoute("/monthattendance"))
+                                    {
+                                        <a href="/MonthAttendance" class="nexora-nav-link @(IsUnder("/MonthAttendance") ? "active nexora-active" : "")"><span>الحضور الشهري والاعتماد</span></a>
+                                    }
+                                    @if (CanRoute("/attendancereports"))
+                                    {
+                                        <a href="/AttendanceReports" class="nexora-nav-link @(IsUnder("/AttendanceReports") ? "active nexora-active" : "")"><span>تقارير الحضور</span></a>
+                                    }
+                                </div>
+                            </details>
                         }
-                        @if (CanRoute("/employeegeolocations"))
+
+                        @if (CanRoute("/attendancesettings") || CanRoute("/shiftrules") || CanRoute("/periodrules"))
                         {
-                            <a href="/EmployeeGeoLocations" class="nexora-nav-link @(IsUnder("/EmployeeGeoLocations") ? "active nexora-active" : "")">
-                                <span>المواقع الجغرافية للموظفين</span>
-                            </a>
-                        }
-                        @if (CanRoute("/missingpunchrequests"))
-                        {
-                            <a href="/MissingPunchRequests" class="nexora-nav-link @(IsUnder("/MissingPunchRequests") ? "active nexora-active" : "")">
-                                <span>طلبات البصمة المفقودة</span>
-                            </a>
-                        }
-                        @if (CanRoute("/employeeonlinepunches"))
-                        {
-                            <a href="/EmployeeOnlinePunches" class="nexora-nav-link @(IsUnder("/EmployeeOnlinePunches") ? "active nexora-active" : "")">
-                                <span>البصمات عبر الإنترنت</span>
-                            </a>
-                        }
-                        @if (CanRoute("/biometrickeys"))
-                        {
-                            <a href="/BiometricKeys" class="nexora-nav-link @(IsUnder("/BiometricKeys") ? "active nexora-active" : "")">
-                                <span>اعتماد مفاتيح البصمة/الوجه</span>
-                            </a>
-                        }
-                        @if (CanRoute("/attendanceviewer"))
-                        {
-                            <a href="/AttendanceViewer" class="nexora-nav-link @(IsUnder("/AttendanceViewer") ? "active nexora-active" : "")">
-                                <span>مستعرض الحضور</span>
-                            </a>
-                        }
-                        @if (CanRoute("/monthattendance"))
-                        {
-                            <a href="/MonthAttendance" class="nexora-nav-link @(IsUnder("/MonthAttendance") ? "active nexora-active" : "")">
-                                <span>الحضور الشهري</span>
-                            </a>
-                        }
-                        @if (CanRoute("/weekattendance"))
-                        {
-                            <a href="/WeekAttendance" class="nexora-nav-link @(IsUnder("/WeekAttendance") ? "active nexora-active" : "")">
-                                <span>الحضور الأسبوعي</span>
-                            </a>
-                        }
-                        @if (CanRoute("/attendancereports"))
-                        {
-                            <a href="/AttendanceReports" class="nexora-nav-link @(IsUnder("/AttendanceReports") ? "active nexora-active" : "")">
-                                <span>تقارير الحضور</span>
-                            </a>
-                        }
-                        @if (CanRoute("/shifts"))
-                        {
-                            @* «الشفتات» = الطبقة القديمة (جدول Shifts) لسه يقرأها محرك المعالجة القديم +
-                               ملف الموظف + الإعداد؛ بديلها الحديث «أنواع المناوبات» /ShiftTypes الذي يغذّي الروستر.
-                               وُسِمت «(قديم)» لتمييزها ريثما يُنفَّذ ترحيل Shifts→ShiftTypes. *@
-                            <a asp-page="/Shifts/Index" class="nexora-nav-link @(IsUnder("/Shifts") ? "active nexora-active" : "")">
-                                <span>الشفتات (قديم)</span>
-                            </a>
-                        }
-                        @if (CanRoute("/devices"))
-                        {
-                            <a asp-page="/Devices/Index" class="nexora-nav-link @(IsUnder("/Devices") ? "active nexora-active" : "")">
-                                <span>الأجهزة</span>
-                            </a>
+                            <details class="ky-acc" @(IsUnder("/AttendanceSettings") || IsUnder("/ShiftRules") || IsUnder("/PeriodRules") ? "open" : "")>
+                                <summary><span>إعدادات الحضور</span><span class="ky-acc-chev"></span></summary>
+                                <div class="ky-acc-body">
+                                    @if (CanRoute("/attendancesettings"))
+                                    {
+                                        <a href="/AttendanceSettings" class="nexora-nav-link @(IsUnder("/AttendanceSettings") ? "active nexora-active" : "")"><span>إعدادات الحضور</span></a>
+                                    }
+                                    @if (CanRoute("/shiftrules"))
+                                    {
+                                        <a href="/ShiftRules" class="nexora-nav-link @(IsUnder("/ShiftRules") ? "active nexora-active" : "")"><span>قواعد المناوبات</span></a>
+                                    }
+                                    @if (CanRoute("/periodrules"))
+                                    {
+                                        <a href="/PeriodRules" class="nexora-nav-link @(IsUnder("/PeriodRules") ? "active nexora-active" : "")"><span>القواعد الفترية</span></a>
+                                    }
+                                </div>
+                            </details>
                         }
                     </div>
                 </details>
@@ -568,58 +572,47 @@
                         <span class="nexora-nav-text">&#x0627;&#x0644;&#x0631;&#x0648;&#x0627;&#x062A;&#x0628;</span>
                         <span class="nexora-chevron"></span>
                     </summary>
-                    <div class="nexora-nav-group-links">
-                        <a asp-page="/Payroll/Runs" class="nexora-nav-link @(IsUnder("/Payroll/Runs") || IsUnder("/Payroll/RunDetail") ? "active nexora-active" : "")">
+                    @* توزيع كيان: المسير عنواناً ← العمليات اليومية ← أكورديونات (حركات/التزامات) ← الإعدادات آخر شيء *@
+                    <div class="nexora-nav-group-links" data-ky-title="الرواتب">
+                        <a asp-page="/Payroll/Runs" class="nexora-nav-link ky-drawer-title @(IsUnder("/Payroll/Runs") || IsUnder("/Payroll/RunDetail") ? "active nexora-active" : "")">
                             <span>المسير</span>
-                        </a>
-                        <a href="/Payroll/Transactions?type=Income" class="nexora-nav-link">
-                            <span>حركات الدخل</span>
-                        </a>
-                        <a href="/Payroll/Transactions?type=Deduction" class="nexora-nav-link">
-                            <span>حركات الاقتطاع</span>
-                        </a>
-                        <a asp-page="/Payroll/Overtime" class="nexora-nav-link @(IsUnder("/Payroll/Overtime") ? "active nexora-active" : "")">
-                            <span>العمل الإضافي</span>
-                        </a>
-                        <a asp-page="/Payroll/SalaryDaysAdjustment" class="nexora-nav-link @(IsUnder("/Payroll/SalaryDaysAdjustment") ? "active nexora-active" : "")">
-                            <span>تعديل أيام الراتب</span>
-                        </a>
-                        <a asp-page="/Payroll/LeaveEncashment" class="nexora-nav-link @(IsUnder("/Payroll/LeaveEncashment") ? "active nexora-active" : "")">
-                            <span>بدل إجازة</span>
-                        </a>
-                        <a asp-page="/Payroll/Raises" class="nexora-nav-link @(IsUnder("/Payroll/Raises") ? "active nexora-active" : "")">
-                            <span>زيادات الراتب</span>
-                        </a>
-                        <a asp-page="/Payroll/Loans" class="nexora-nav-link @(IsUnder("/Payroll/Loans") ? "active nexora-active" : "")">
-                            <span>القروض والسُّلف</span>
                         </a>
                         <a asp-page="/Payroll/FinancialRequests" class="nexora-nav-link @(IsUnder("/Payroll/FinancialRequests") ? "active nexora-active" : "")">
                             <span>مركز الطلبات المالية</span>
                         </a>
-                        <a asp-page="/Payroll/EndOfService" class="nexora-nav-link @(IsUnder("/Payroll/EndOfService") ? "active nexora-active" : "")">
-                            <span>نهاية الخدمة</span>
-                        </a>
-                        <a href="/PayrollProvisions" class="nexora-nav-link @(IsUnder("/PayrollProvisions") ? "active nexora-active" : "")">
-                            <span>حساب الاحتياطي</span>
-                        </a>
-                        <a asp-page="/Payroll/SalaryItems" class="nexora-nav-link @(IsUnder("/Payroll/SalaryItems") ? "active nexora-active" : "")">
-                            <span>عناصر الراتب</span>
-                        </a>
-                        <a asp-page="/Payroll/Settings" class="nexora-nav-link @(IsUnder("/Payroll/Settings") ? "active nexora-active" : "")">
-                            <span>تهيئة الضريبة والضمان</span>
-                        </a>
-                        <a asp-page="/Payroll/BankTemplates" class="nexora-nav-link @(IsUnder("/Payroll/BankTemplates") ? "active nexora-active" : "")">
-                            <span>قوالب ملفات البنوك</span>
-                        </a>
-                        <a asp-page="/Payroll/TaxSocialSecurity" class="nexora-nav-link @(IsUnder("/Payroll/TaxSocialSecurity") ? "active nexora-active" : "")">
-                            <span>&#x0627;&#x0644;&#x0636;&#x0631;&#x0627;&#x0626;&#x0628; &#x0648;&#x0627;&#x0644;&#x0636;&#x0645;&#x0627;&#x0646;</span>
-                        </a>
-                        <a asp-page="/EmployeeUpdates/Index" asp-route-section="financial" class="nexora-nav-link">
-                            <span>&#x062A;&#x062D;&#x062F;&#x064A;&#x062B; &#x0627;&#x0644;&#x0645;&#x0639;&#x0644;&#x0648;&#x0645;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0627;&#x0644;&#x064A;&#x0629;</span>
-                        </a>
-                        <a asp-page="/EmployeeUpdates/Index" asp-route-section="payment" class="nexora-nav-link">
-                            <span>&#x0645;&#x0639;&#x0644;&#x0648;&#x0645;&#x0627;&#x062A; &#x0627;&#x0644;&#x062F;&#x0641;&#x0639;</span>
-                        </a>
+
+                        <details class="ky-acc" @(IsUnder("/Payroll/Transactions") || IsUnder("/Payroll/Overtime") || IsUnder("/Payroll/SalaryDaysAdjustment") || IsUnder("/Payroll/LeaveEncashment") ? "open" : "")>
+                            <summary><span>الحركات الشهرية</span><span class="ky-acc-chev"></span></summary>
+                            <div class="ky-acc-body">
+                                <a href="/Payroll/Transactions?type=Income" class="nexora-nav-link"><span>حركات الدخل</span></a>
+                                <a href="/Payroll/Transactions?type=Deduction" class="nexora-nav-link"><span>حركات الاقتطاع</span></a>
+                                <a asp-page="/Payroll/Overtime" class="nexora-nav-link @(IsUnder("/Payroll/Overtime") ? "active nexora-active" : "")"><span>العمل الإضافي</span></a>
+                                <a asp-page="/Payroll/SalaryDaysAdjustment" class="nexora-nav-link @(IsUnder("/Payroll/SalaryDaysAdjustment") ? "active nexora-active" : "")"><span>تعديل أيام الراتب</span></a>
+                                <a asp-page="/Payroll/LeaveEncashment" class="nexora-nav-link @(IsUnder("/Payroll/LeaveEncashment") ? "active nexora-active" : "")"><span>بدل إجازة</span></a>
+                            </div>
+                        </details>
+
+                        <details class="ky-acc" @(IsUnder("/Payroll/Loans") || IsUnder("/Payroll/Raises") || IsUnder("/Payroll/EndOfService") || IsUnder("/PayrollProvisions") ? "open" : "")>
+                            <summary><span>التزامات ومستحقات الموظف</span><span class="ky-acc-chev"></span></summary>
+                            <div class="ky-acc-body">
+                                <a asp-page="/Payroll/Loans" class="nexora-nav-link @(IsUnder("/Payroll/Loans") ? "active nexora-active" : "")"><span>القروض والسُّلف</span></a>
+                                <a asp-page="/Payroll/Raises" class="nexora-nav-link @(IsUnder("/Payroll/Raises") ? "active nexora-active" : "")"><span>زيادات الراتب</span></a>
+                                <a asp-page="/Payroll/EndOfService" class="nexora-nav-link @(IsUnder("/Payroll/EndOfService") ? "active nexora-active" : "")"><span>نهاية الخدمة</span></a>
+                                <a href="/PayrollProvisions" class="nexora-nav-link @(IsUnder("/PayrollProvisions") ? "active nexora-active" : "")"><span>حساب الاحتياطي</span></a>
+                                <a asp-page="/EmployeeUpdates/Index" asp-route-section="financial" class="nexora-nav-link"><span>تحديث المعلومات المالية</span></a>
+                                <a asp-page="/EmployeeUpdates/Index" asp-route-section="payment" class="nexora-nav-link"><span>معلومات الدفع</span></a>
+                            </div>
+                        </details>
+
+                        <details class="ky-acc" @(IsUnder("/Payroll/SalaryItems") || IsUnder("/Payroll/Settings") || IsUnder("/Payroll/BankTemplates") || IsUnder("/Payroll/TaxSocialSecurity") ? "open" : "")>
+                            <summary><span>إعدادات الرواتب</span><span class="ky-acc-chev"></span></summary>
+                            <div class="ky-acc-body">
+                                <a asp-page="/Payroll/SalaryItems" class="nexora-nav-link @(IsUnder("/Payroll/SalaryItems") ? "active nexora-active" : "")"><span>عناصر الراتب</span></a>
+                                <a asp-page="/Payroll/Settings" class="nexora-nav-link @(IsUnder("/Payroll/Settings") ? "active nexora-active" : "")"><span>تهيئة الضريبة والضمان</span></a>
+                                <a asp-page="/Payroll/TaxSocialSecurity" class="nexora-nav-link @(IsUnder("/Payroll/TaxSocialSecurity") ? "active nexora-active" : "")"><span>الضرائب والضمان</span></a>
+                                <a asp-page="/Payroll/BankTemplates" class="nexora-nav-link @(IsUnder("/Payroll/BankTemplates") ? "active nexora-active" : "")"><span>قوالب ملفات البنوك</span></a>
+                            </div>
+                        </details>
                     </div>
                 </details>
                 }
@@ -640,6 +633,26 @@
                 <div class="nexora-controls">
                     @if (isLoggedIn)
                     {
+                        @* زر الوضع الفاتح/الداكن (شمس/هلال) — بصف الإشعارات، بتبديل ناعم ومحفوظ *@
+                        <button type="button" class="zy-theme-btn" id="zy-theme-toggle" aria-label="تبديل الوضع الفاتح والداكن" title="الوضع الفاتح / الداكن">
+                            <svg class="zy-tt-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                            <svg class="zy-tt-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                        </button>
+                        <script>
+                            (function () {
+                                var btn = document.getElementById("zy-theme-toggle");
+                                if (!btn) return;
+                                btn.addEventListener("click", function () {
+                                    var h = document.documentElement;
+                                    h.classList.add("zy-theme-anim");
+                                    var next = h.getAttribute("data-theme") === "light" ? "dark" : "light";
+                                    h.setAttribute("data-theme", next);
+                                    try { localStorage.setItem("ZY.Theme", next); } catch (e) { }
+                                    setTimeout(function () { h.classList.remove("zy-theme-anim"); }, 450);
+                                });
+                            })();
+                        </script>
+
                         @await Component.InvokeAsync("NotificationBell")
 
                         <div class="nexora-user-chip">

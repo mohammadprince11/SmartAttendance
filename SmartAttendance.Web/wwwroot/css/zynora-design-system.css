@@ -1,0 +1,466 @@
+﻿/* ============================================================================
+   ZYNORA Design System v1 — الهوية البصرية الموحدة (مرجعها بروتوتايبا
+   docs/prototypes/dashboard-redesign-v1 + employee-profile-redesign-v1)
+   ----------------------------------------------------------------------------
+   القواعد:
+   - كل الألوان/المسافات/الأحجام من المتغيرات أدناه — ممنوع لون مباشر بالمكونات.
+   - كل الكلاسات ببادئة zy- فلا تتعارض مع ستايلات الصفحات القديمة أثناء التحول.
+   - RTL-أولاً بخصائص منطقية (inline-start/end) فيدعم LTR لاحقاً بلا تعديل.
+   - الوضع الداكن «الهادئ»: نفس المتغيرات تُقلَب بـ html[data-theme="dark"].
+   - حركات 150–200ms فقط. لا مكتبات خارجية.
+   ============================================================================ */
+
+:root {
+    /* --- الهوية اللونية (فاتح = الافتراضي المعتمد) ---
+       الأساسي يُجسَّر لمحرك الهوية (zynora-theme-contract) فيتلوّن مع علامة الشركة،
+       والدرجات الناعمة تُشتق منه تلقائياً بـcolor-mix. */
+    --color-primary: var(--brand-primary, #0ea5b5);
+    --color-primary-hover: var(--brand-primary-hover, #0b7f95);
+    --color-primary-soft: color-mix(in srgb, var(--color-primary) 11%, var(--color-surface));
+    --color-secondary: #6366f1;          /* نيلي هادئ للتمييز الثانوي */
+    --color-secondary-soft: #eef0ff;
+    --color-background: #f2f5f9;
+    --color-surface: #ffffff;
+    --color-border: #e4eaf1;
+    --color-border-strong: #cfd9e4;
+    --color-text-primary: #16283a;
+    --color-text-secondary: #6b7f92;
+    --color-success: #16a34a;  --color-success-soft: #ecfdf3;
+    --color-warning: #d97706;  --color-warning-soft: #fff7e6;
+    --color-danger: #dc2626;   --color-danger-soft: #fdecec;
+    --color-info: #0284c7;     --color-info-soft: #e8f5fd;
+
+    /* --- الخط والمقاسات (سلم موحد مضغوط بكثافة كيان — لا أحجام عشوائية) --- */
+    --font-family: "Tajawal", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+    --fs-page-title: 20px;   /* عنوان الصفحة */
+    --fs-section: 16px;      /* عنوان القسم */
+    --fs-card-title: 13.5px; /* عنوان البطاقة */
+    --fs-body: 13px;         /* النص الأساسي والأزرار */
+    --fs-small: 12px;        /* الثانوي */
+    --fs-tiny: 10.5px;       /* الوسوم والتلميحات */
+
+    /* --- المسافات (مضاعفات 4) --- */
+    --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px;
+
+    /* --- الشكل --- */
+    --radius: 12px;          /* الحقول والأزرار */
+    --radius-lg: 16px;       /* البطاقات والمودالات */
+    --radius-full: 999px;
+    --shadow: 0 1px 3px rgba(22, 40, 58, .07), 0 8px 24px rgba(22, 40, 58, .04);
+    --shadow-pop: 0 12px 40px rgba(22, 40, 58, .16);
+    /* ارتفاع موحد بكثافة كيان المقاسة حياً (select2=30px، BT-input=35px، خط 13px)
+       — نوحّد على 31px بمستوى دروبهم. */
+    --control-h: 31px;
+    --speed: 160ms;
+}
+
+/* الداكن «الهادئ»: غرافيت محايد بتباين مخفف وألوان مطفأة (قرار محمد 2026-07-28) */
+html[data-theme="dark"] {
+    --color-primary: var(--brand-primary, #35aebb);
+    --color-primary-hover: var(--brand-primary-hover, #2a8b96);
+    --color-primary-soft: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
+    --color-secondary: #8688e8;
+    --color-secondary-soft: #222438;
+    --color-background: #14191f;
+    --color-surface: #1b222a;
+    --color-border: #2a333d;
+    --color-border-strong: #3a4652;
+    --color-text-primary: #c9d4dd;
+    --color-text-secondary: #8496a5;
+    --color-success: #66b789;  --color-success-soft: #1c2921;
+    --color-warning: #cfa14c;  --color-warning-soft: #2a2419;
+    --color-danger: #cd7676;   --color-danger-soft: #2a1e1e;
+    --color-info: #5aa9d6;     --color-info-soft: #17222b;
+    --shadow: 0 1px 3px rgba(0, 0, 0, .28);
+    --shadow-pop: 0 12px 40px rgba(0, 0, 0, .5);
+}
+
+/* تبديل الوضع بنعومة: كلاس مؤقت لحظة التبديل فقط. خاصيتان فقط (خلفية/نص) وبلا
+   pseudo-elements — تعميم كل الخصائص على آلاف العناصر يسبب تقطيعاً. */
+html.zy-theme-anim body, html.zy-theme-anim body * {
+    transition: background-color .22s ease, color .22s ease !important;
+}
+
+/* زر الشمس/الهلال (بالشريط العلوي بصف الإشعارات) */
+.zy-theme-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--color-border, rgba(143,168,188,.25));
+    background: transparent; color: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.zy-theme-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.zy-theme-btn .zy-tt-sun { display: none; }
+html[data-theme="dark"] .zy-theme-btn .zy-tt-sun, html:not([data-theme="light"]) .zy-theme-btn .zy-tt-sun { display: block; }
+html[data-theme="light"] .zy-theme-btn .zy-tt-sun { display: none; }
+.zy-theme-btn .zy-tt-moon { display: none; }
+html[data-theme="light"] .zy-theme-btn .zy-tt-moon { display: block; }
+
+/* ============================== الأساس ==================================== */
+
+.zy-app { font-family: var(--font-family); font-size: var(--fs-body); color: var(--color-text-primary); background: var(--color-background); }
+.zy-app *, .zy-app *::before, .zy-app *::after { box-sizing: border-box; }
+.zy-app svg.zy-ic { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+/* ============================ رأس الصفحة ================================== */
+
+.zy-page-header { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-5); }
+.zy-page-header h1 { margin: 0; font-size: var(--fs-page-title); font-weight: 800; }
+.zy-page-header .zy-desc { font-size: var(--fs-small); color: var(--color-text-secondary); font-weight: 700; margin-top: 3px; }
+.zy-page-header .zy-spacer { flex: 1; }
+.zy-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: var(--fs-tiny); color: var(--color-text-secondary); font-weight: 700; margin-bottom: var(--sp-3); }
+.zy-breadcrumb b { color: var(--color-text-primary); }
+
+/* ============================== الأزرار =================================== */
+
+.zy-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: var(--control-h);
+    padding: 0 var(--sp-4); border: 0; border-radius: var(--radius); font: inherit; font-size: var(--fs-body);
+    font-weight: 800; cursor: pointer; transition: background var(--speed), border-color var(--speed), color var(--speed), transform var(--speed);
+    white-space: nowrap; text-decoration: none; }
+.zy-btn:active { transform: scale(.98); }
+.zy-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.zy-btn--primary { background: var(--color-primary); color: #fff; }
+.zy-btn--primary:hover { background: var(--color-primary-hover); }
+.zy-btn--secondary { background: var(--color-surface); border: 1px solid var(--color-border-strong); color: var(--color-text-primary); }
+.zy-btn--secondary:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.zy-btn--danger { background: var(--color-danger-soft); border: 1px solid color-mix(in srgb, var(--color-danger) 45%, transparent); color: var(--color-danger); }
+.zy-btn--danger:hover { background: color-mix(in srgb, var(--color-danger) 18%, transparent); }
+.zy-btn--ghost { background: transparent; color: var(--color-text-secondary); }
+.zy-btn--ghost:hover { background: var(--color-primary-soft); color: var(--color-primary); }
+.zy-btn--sm { height: 27px; padding: 0 var(--sp-2); font-size: var(--fs-small); border-radius: 8px; }
+.zy-btn--lg { height: 40px; padding: 0 var(--sp-5); }
+.zy-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* ============================== البطاقات ================================== */
+
+.zy-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow); }
+.zy-card--hover { transition: transform var(--speed), border-color var(--speed); }
+.zy-card--hover:hover { transform: translateY(-2px); border-color: var(--color-primary); }
+.zy-card__header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--color-border); }
+.zy-card__header h2 { margin: 0; font-size: var(--fs-card-title); font-weight: 800; flex: 1; }
+.zy-card__icon { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0;
+    background: var(--color-primary-soft); color: var(--color-primary); }
+.zy-card__icon svg.zy-ic { width: 15px; height: 15px; }
+.zy-card__icon--success { background: var(--color-success-soft); color: var(--color-success); }
+.zy-card__icon--warning { background: var(--color-warning-soft); color: var(--color-warning); }
+.zy-card__icon--danger { background: var(--color-danger-soft); color: var(--color-danger); }
+.zy-card__icon--secondary { background: var(--color-secondary-soft); color: var(--color-secondary); }
+.zy-card__body { padding: var(--sp-3) var(--sp-4); }
+
+/* بطاقة إحصائية */
+.zy-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-5); }
+.zy-stat { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+    padding: var(--sp-3) var(--sp-4); box-shadow: var(--shadow); display: flex; align-items: center; gap: var(--sp-3); }
+.zy-stat__icon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0;
+    background: var(--color-primary-soft); color: var(--color-primary); }
+.zy-stat__label { font-size: var(--fs-tiny); color: var(--color-text-secondary); font-weight: 700; }
+.zy-stat__value { font-size: 19px; font-weight: 800; direction: ltr; text-align: end; line-height: 1.2; }
+.zy-stat__delta { font-size: var(--fs-tiny); font-weight: 800; padding: 2px 8px; border-radius: var(--radius-full); display: inline-block; margin-top: 4px; }
+.zy-stat__delta--up { color: var(--color-success); background: var(--color-success-soft); }
+.zy-stat__delta--down { color: var(--color-danger); background: var(--color-danger-soft); }
+.zy-stat__delta--flat { color: var(--color-warning); background: var(--color-warning-soft); }
+
+/* ============================== الوسوم ==================================== */
+
+.zy-badge { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-tiny); font-weight: 800;
+    padding: 4px 11px; border-radius: var(--radius-full); }
+.zy-badge--success { background: var(--color-success-soft); color: var(--color-success); }   /* نشط/موافق/مكتمل */
+.zy-badge--warning { background: var(--color-warning-soft); color: var(--color-warning); }   /* قيد المراجعة/متأخر */
+.zy-badge--danger { background: var(--color-danger-soft); color: var(--color-danger); }      /* مرفوض/محظور */
+.zy-badge--info { background: var(--color-info-soft); color: var(--color-info); }
+.zy-badge--muted { background: color-mix(in srgb, var(--color-text-secondary) 14%, transparent); color: var(--color-text-secondary); } /* غير نشط/مؤرشف */
+.zy-badge__dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; } /* لا تعتمد على اللون وحده */
+
+/* ============================== الحقول ==================================== */
+
+.zy-field { display: flex; flex-direction: column; gap: 5px; }
+.zy-field > label { font-size: var(--fs-small); font-weight: 800; color: var(--color-text-primary); }
+.zy-field .zy-req { color: var(--color-danger); }
+.zy-input, .zy-select, .zy-textarea { height: var(--control-h); width: 100%; border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius); background: var(--color-surface); color: var(--color-text-primary);
+    padding: 0 var(--sp-3); font: inherit; font-size: var(--fs-body); transition: border-color var(--speed), box-shadow var(--speed); }
+.zy-textarea { height: auto; min-height: 90px; padding: var(--sp-2) var(--sp-3); resize: vertical; }
+.zy-input:focus, .zy-select:focus, .zy-textarea:focus { outline: none; border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent); }
+.zy-input::placeholder, .zy-textarea::placeholder { color: var(--color-text-secondary); opacity: .8; }
+
+/* تحييد تضخيم أنظمة الـselect والكلاندر القديمة (nexora-select/calendar العامة)
+   داخل نطاق الهوية الجديدة — الارتفاع الموحد المضغوط يفوز دائماً */
+/* الحقول الأصلية التي «تبتلعها» الودجتات (nxcs-native/nxcal-native) يجب أن تبقى
+   مخفية 1px — استثناؤها هنا وإلا أحياها التجاوز فظهر حقلان فوق بعض. */
+.zy-app select:not(.nxcs-native), .zy-app .zy-select:not(.nxcs-native),
+.zy-app input[type="date"]:not(.nxcal-native), .zy-app input[type="time"]:not(.nxcal-native),
+.zy-app input[type="month"]:not(.nxcal-native), .zy-app input[type="datetime-local"]:not(.nxcal-native) {
+    height: var(--control-h) !important;
+    min-height: var(--control-h) !important;
+    max-height: var(--control-h) !important;
+    padding: 0 var(--sp-3) !important;
+    font-size: var(--fs-body) !important;
+    font-family: var(--font-family) !important;
+    border-radius: var(--radius) !important;
+    line-height: normal !important;
+    background-image: none;
+}
+.zy-app input.nxcal-native.nxcal-native.nxcal-native, .zy-app select.nxcs-native.nxcs-native.nxcs-native {
+    height: 1px !important; min-height: 1px !important; max-height: 1px !important;
+    padding: 0 !important; border: 0 !important;
+}
+
+/* الودجتات المخصصة القديمة (nxcs-select للسلكت وnxcal للكلاندر) تُخفي الحقل الأصلي
+   وترسم زرها الخاص بـ42-44px !important — داخل الهوية الجديدة نقفلها على القياس
+   المضغوط الموحد (ملفنا يُحمَّل بعدها فيفوز بنفس القوة + تخصيص أعلى). */
+.zy-app .nxcs-trigger, .zy-app .nxcs-select, .zy-app .nxcal {
+    min-height: var(--control-h) !important;
+    height: var(--control-h) !important;
+    max-height: var(--control-h) !important;
+    padding: 0 10px !important;
+    font-size: var(--fs-body) !important;
+    border-radius: var(--radius) !important;
+    line-height: normal !important;
+    display: flex !important;
+    align-items: center !important;
+}
+.zy-app .nxcs-value { font-size: var(--fs-body) !important; height: auto !important; line-height: normal !important; }
+.zy-app .nxcs-option { font-size: var(--fs-body) !important; min-height: 30px !important; padding: 6px 10px !important; }
+.zy-app .nxcs-panel { font-size: var(--fs-body) !important; }
+.zy-app .nxcal * { line-height: normal; }
+.zy-input:disabled, .zy-select:disabled, .zy-textarea:disabled { background: var(--color-background); opacity: .7; cursor: not-allowed; }
+.zy-input[readonly] { background: var(--color-background); }
+.zy-field .zy-help { font-size: var(--fs-tiny); color: var(--color-text-secondary); font-weight: 700; }
+.zy-field .zy-error { font-size: var(--fs-tiny); color: var(--color-danger); font-weight: 800; }
+.zy-field--invalid .zy-input, .zy-field--invalid .zy-select, .zy-field--invalid .zy-textarea { border-color: var(--color-danger); }
+.zy-check { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-body); font-weight: 700; cursor: pointer; }
+.zy-check input { width: 17px; height: 17px; accent-color: var(--color-primary); }
+/* Toggle */
+.zy-toggle { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+.zy-toggle input { opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; position: absolute; z-index: 1; }
+.zy-toggle i { position: absolute; inset: 0; border-radius: var(--radius-full); background: var(--color-border-strong); transition: background var(--speed); }
+.zy-toggle i::after { content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform var(--speed); }
+.zy-toggle input:checked + i { background: var(--color-primary); }
+.zy-toggle input:checked + i::after { transform: translateX(-18px); }
+html[dir="ltr"] .zy-toggle input:checked + i::after { transform: translateX(18px); }
+
+/* رفع ملفات مخصص (بلا No file chosen) */
+.zy-upload { border: 2px dashed var(--color-border-strong); border-radius: var(--radius-lg); padding: var(--sp-5);
+    text-align: center; color: var(--color-text-secondary); font-size: var(--fs-small); font-weight: 700;
+    transition: border-color var(--speed), background var(--speed); cursor: pointer; }
+.zy-upload:hover, .zy-upload.zy-drag { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary); }
+.zy-upload input[type="file"] { display: none; }
+.zy-upload__file { display: flex; align-items: center; gap: var(--sp-2); background: var(--color-background);
+    border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-2) var(--sp-3);
+    margin-top: var(--sp-2); font-size: var(--fs-small); color: var(--color-text-primary); text-align: start; }
+.zy-upload__file .zy-size { color: var(--color-text-secondary); font-size: var(--fs-tiny); margin-inline-start: auto; direction: ltr; }
+
+/* ============================ شريط الفلاتر ================================= */
+
+.zy-filter-bar { display: flex; align-items: flex-end; gap: var(--sp-3); flex-wrap: wrap; background: var(--color-surface);
+    border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-3) var(--sp-4);
+    box-shadow: var(--shadow); margin-bottom: var(--sp-4); }
+.zy-filter-bar .zy-field { min-width: 150px; flex: 0 1 auto; }
+.zy-filter-bar .zy-field > label { font-size: var(--fs-tiny); color: var(--color-text-secondary); }
+.zy-filter-bar .zy-count { margin-inline-start: auto; font-size: var(--fs-small); font-weight: 800; color: var(--color-text-secondary); }
+.zy-filter-bar .zy-count b { color: var(--color-text-primary); direction: ltr; display: inline-block; }
+
+/* ============================== الجداول =================================== */
+
+.zy-table-wrap { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow); overflow-x: auto; }
+.zy-table { width: 100%; border-collapse: collapse; font-size: var(--fs-body); }
+.zy-table thead th { position: sticky; top: 0; background: var(--color-background); color: var(--color-text-secondary);
+    font-size: var(--fs-tiny); font-weight: 800; text-align: start; padding: 8px var(--sp-3);
+    border-bottom: 1px solid var(--color-border); white-space: nowrap; z-index: 1; }
+.zy-table tbody td { padding: 9px var(--sp-3); border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+.zy-table tbody tr:last-child td { border-bottom: 0; }
+.zy-table tbody tr { transition: background var(--speed); }
+.zy-table tbody tr:hover { background: color-mix(in srgb, var(--color-primary) 5%, transparent); }
+.zy-table .zy-cell-main { font-weight: 800; }
+.zy-table .zy-cell-sub { font-size: var(--fs-tiny); color: var(--color-text-secondary); font-weight: 700; }
+.zy-table .zy-cell-num { direction: ltr; text-align: end; font-weight: 700; }
+.zy-table .zy-row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+.zy-pagination { display: flex; align-items: center; gap: var(--sp-2); justify-content: flex-end; padding: var(--sp-3) var(--sp-4); font-size: var(--fs-small); font-weight: 800; }
+.zy-pagination .zy-btn { min-width: 32px; }
+
+/* ============================== المودال =================================== */
+
+.zy-modal-backdrop { position: fixed; inset: 0; background: rgba(10, 20, 30, .5); z-index: 80; opacity: 0; pointer-events: none; transition: opacity var(--speed); }
+.zy-modal { position: fixed; top: 8vh; inset-inline: max(16px, calc(50vw - 320px)); z-index: 81; background: var(--color-surface);
+    border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-pop);
+    max-height: 82vh; display: flex; flex-direction: column; opacity: 0; transform: translateY(10px); pointer-events: none;
+    transition: opacity var(--speed), transform var(--speed); }
+.zy-modal.zy-open, .zy-modal-backdrop.zy-open { opacity: 1; pointer-events: auto; transform: none; }
+.zy-modal__header { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); border-bottom: 1px solid var(--color-border); }
+.zy-modal__header h2 { margin: 0; font-size: var(--fs-section); font-weight: 800; flex: 1; }
+.zy-modal__body { padding: var(--sp-4) var(--sp-5); overflow-y: auto; }
+.zy-modal__footer { display: flex; gap: var(--sp-2); justify-content: flex-start; padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--color-border); }
+
+/* درج جانبي للتفاصيل الكبيرة */
+.zy-drawer { position: fixed; top: 0; bottom: 0; inset-inline-end: 0; width: min(480px, 94vw); z-index: 81;
+    background: var(--color-surface); border-inline-start: 1px solid var(--color-border); box-shadow: var(--shadow-pop);
+    transform: translateX(-100%); transition: transform 200ms; display: flex; flex-direction: column; }
+html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
+.zy-drawer.zy-open { transform: none !important; }
+
+/* ============================== التوست ==================================== */
+
+.zy-toasts { position: fixed; bottom: 18px; inset-inline-start: 18px; z-index: 99; display: flex; flex-direction: column; gap: var(--sp-2); }
+.zy-toast { display: flex; align-items: center; gap: var(--sp-2); background: var(--color-surface); color: var(--color-text-primary);
+    border: 1px solid var(--color-border); border-inline-start: 4px solid var(--color-info); border-radius: var(--radius);
+    box-shadow: var(--shadow-pop); padding: var(--sp-3) var(--sp-4); font-size: var(--fs-small); font-weight: 800; min-width: 240px; }
+.zy-toast--success { border-inline-start-color: var(--color-success); }
+.zy-toast--danger { border-inline-start-color: var(--color-danger); }
+.zy-toast--warning { border-inline-start-color: var(--color-warning); }
+
+/* ============================ حالات النظام ================================= */
+
+.zy-empty { padding: var(--sp-8); text-align: center; color: var(--color-text-secondary); }
+.zy-empty .zy-empty__icon { width: 56px; height: 56px; border-radius: 16px; margin: 0 auto var(--sp-3);
+    background: var(--color-background); display: grid; place-items: center; color: var(--color-text-secondary); }
+.zy-empty b { display: block; font-size: var(--fs-card-title); color: var(--color-text-primary); margin-bottom: 4px; }
+.zy-empty p { margin: 0 0 var(--sp-3); font-size: var(--fs-small); font-weight: 700; }
+
+.zy-skeleton { border-radius: var(--radius); background: linear-gradient(90deg, var(--color-border) 25%, color-mix(in srgb, var(--color-border) 45%, transparent) 50%, var(--color-border) 75%);
+    background-size: 200% 100%; animation: zy-shimmer 1.2s infinite linear; min-height: 14px; }
+@keyframes zy-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* ============================== التبويبات ================================== */
+
+.zy-tabs { display: flex; gap: 2px; background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: 13px; padding: 5px; overflow-x: auto; box-shadow: var(--shadow); margin-bottom: var(--sp-4); }
+.zy-tab { display: flex; align-items: center; gap: 6px; padding: 9px var(--sp-4); font-size: var(--fs-small); font-weight: 800;
+    color: var(--color-text-secondary); cursor: pointer; border-radius: 9px; white-space: nowrap; border: 0; background: transparent; font-family: inherit; transition: background var(--speed), color var(--speed); }
+.zy-tab:hover { color: var(--color-text-primary); background: var(--color-background); }
+.zy-tab.zy-on { color: #fff; background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover)); }
+
+/* شبكة «حقل: قيمة» للقراءة (نمط ملف الموظف) */
+.zy-kv { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--sp-6); }
+.zy-kv .zy-f { padding: 10px 0; border-bottom: 1px dashed var(--color-border); }
+.zy-kv .zy-f label { display: block; font-size: var(--fs-tiny); color: var(--color-text-secondary); font-weight: 700; margin-bottom: 3px; }
+.zy-kv .zy-f div { font-size: var(--fs-body); font-weight: 700; }
+.zy-kv .zy-f div.zy-ltr { direction: ltr; text-align: end; }
+@media (max-width: 640px) { .zy-kv { grid-template-columns: 1fr; } }
+
+/* ==================== الغلبة على العوامّ القديمة ==========================
+   nexora-ui-stabilization يفرض button=40px وinput=42px بـ!important عالمياً،
+   وzynora-components (قديم) يفرض خط 14px على [class*="-btn"] — داخل الهوية
+   الجديدة نستعيد القياس المضغوط بنفس القوة وبتحميل لاحق فنفوز. */
+/* تكرار الكلاس يرفع التخصصية فوق قاعدة [class*="-btn"]:not():not():not() القديمة */
+.zy-app .zy-btn.zy-btn.zy-btn.zy-btn.zy-btn {
+    height: var(--control-h) !important; min-height: var(--control-h) !important;
+    max-height: var(--control-h) !important; font-size: var(--fs-body) !important;
+}
+.zy-app .zy-btn--sm.zy-btn--sm.zy-btn--sm.zy-btn--sm.zy-btn--sm {
+    height: 27px !important; min-height: 27px !important; max-height: 27px !important;
+    font-size: var(--fs-small) !important;
+}
+.zy-app .zy-btn--lg.zy-btn--lg.zy-btn--lg.zy-btn--lg.zy-btn--lg { height: 40px !important; min-height: 40px !important; max-height: 40px !important; }
+.zy-app .zy-input:not(.nxcal-native) {
+    height: var(--control-h) !important; min-height: var(--control-h) !important;
+    max-height: var(--control-h) !important; font-size: var(--fs-body) !important;
+}
+.zy-app .zy-textarea {
+    height: auto !important; min-height: 90px !important; max-height: none !important;
+    font-size: var(--fs-body) !important;
+}
+
+/* ============ زناد الكلاندر: كثافة الهوية + احترام الوضع الفاتح ============
+   .nxcal__button القديم مقفول بـ44px وتدرّج داكن ثابت ونص فاتح — نعيده لقياس
+   الحقول الموحد ولألوان التوكنز (بالوضعين) داخل نطاق الهوية. */
+.zy-app .nxcal__button {
+    min-height: var(--control-h) !important;
+    height: var(--control-h) !important;
+    padding: 0 10px !important;
+    border-radius: var(--radius) !important;
+    border: 1px solid var(--color-border-strong) !important;
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+    box-shadow: none !important;
+    font-size: var(--fs-body) !important;
+    font-weight: 700 !important;
+    grid-template-columns: 22px minmax(0, 1fr) 22px !important;
+}
+.zy-app .nxcal__button:hover, .zy-app .nxcal.is-open .nxcal__button, .zy-app .nxcal__button:focus-visible {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent) !important;
+}
+/* نص القيمة داخل الزناد مقفول على أبيض (#F2FBFD) بالملف القديم — يختفي على
+   الخلفية البيضاء بالوضع الفاتح. نربطه بلون النص من التوكنز. */
+.zy-app .nxcal__value, .zy-app .nxcal__button .nxcal__value {
+    color: var(--color-text-primary) !important;
+}
+/* حالة «لا قيمة بعد» (yyyy-mm-dd) تبقى باهتة لكن مقروءة */
+.zy-app .nxcal__value:empty, .zy-app .nxcal.is-empty .nxcal__value,
+.zy-app .nxcal__value[data-placeholder="true"] { color: var(--color-text-secondary) !important; }
+.zy-app .nxcal__icon {
+    color: var(--color-primary) !important;
+    background: var(--color-primary-soft) !important;
+    border-color: color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
+}
+
+/* لوحة الكلاندر: خلايا أيام مضغوطة وعرض أصغر (كانت 36px/342px) */
+.nxcal__panel { width: min(292px, 94vw) !important; min-width: 262px !important; }
+.nxcal__day { height: 28px !important; border-radius: 9px !important; font-size: 12px !important; }
+.nxcal__weekday { font-size: 10.5px !important; }
+/* min-height يتغلب على height — لهذا !important على الاثنين (قاعدة
+   [class*="-button"] القديمة تفرض min-height:40px على period-button). */
+.nxcal__period-button, .zy-app .nxcal__period-button {
+    height: 28px !important; min-height: 28px !important; max-height: 28px !important;
+    font-size: 12.5px !important; padding: 0 10px !important;
+}
+.nxcal__nav { width: 28px !important; height: 28px !important; font-size: 15px !important; }
+.nxcal__action { min-height: 26px !important; font-size: 11.5px !important; }
+.nxcal__choice { min-height: 28px !important; font-size: 12px !important; }
+
+/* إغلاق فجوة عمود السايدبار (الجريد 288 والملف القديم يفرض 252) */
+.nexora-sidebar { width: 100% !important; max-width: 100% !important; }
+
+/* ==================== ثيم فاتح لبوب-أب الكلاندر القديم =====================
+   nexora-calendar-v18 مبني بألوان داكنة ثابتة بلا أي دعم للفاتح — نكسوه هنا
+   (عالمي: يصلح كل الصفحات لحظة تفعيل الوضع الفاتح). */
+html[data-theme="light"] .nxcal__panel {
+    background: #ffffff !important;
+    border: 1px solid var(--color-border) !important;
+    box-shadow: var(--shadow-pop) !important;
+    color: var(--color-text-primary) !important;
+}
+html[data-theme="light"] .nxcal__weekday { color: var(--color-text-secondary) !important; }
+/* خلايا الأيام بالوضع الفاتح: القديم يعطيها خلفية بيضاء شفافة ونصاً فاتحاً */
+html[data-theme="light"] .nxcal__day {
+    background: transparent !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-primary) !important;
+}
+html[data-theme="light"] .nxcal__day,
+html[data-theme="light"] .nxcal__choice,
+html[data-theme="light"] .nxcal__nav,
+html[data-theme="light"] .nxcal__action,
+html[data-theme="light"] .nxcal__chooser-title,
+html[data-theme="light"] .nxcal__year-range-label {
+    background: transparent !important;
+    color: var(--color-text-primary) !important;
+    border-color: var(--color-border) !important;
+}
+html[data-theme="light"] .nxcal__day:hover,
+html[data-theme="light"] .nxcal__choice:hover,
+html[data-theme="light"] .nxcal__nav:hover { background: var(--color-primary-soft) !important; }
+html[data-theme="light"] .nxcal__day[aria-disabled="true"],
+html[data-theme="light"] .nxcal__day.is-outside,
+html[data-theme="light"] .nxcal__day:disabled { color: var(--color-border-strong) !important; }
+html[data-theme="light"] .nxcal__head, html[data-theme="light"] .nxcal__foot {
+    background: var(--color-background) !important; border-color: var(--color-border) !important;
+}
+/* أزرار الشهر/السنة التيل تبقى تيل — نصها أبيض مقروء بالحالتين */
+
+/* ==================== تكثيف خيارات الدروب ليست (عالمي) =====================
+   لوحة الخيارات كبيرة بكل النظام — القياس المضغوط يشمل القديم والجديد. */
+.nxcs-panel { font-size: var(--fs-body) !important; }
+.nxcs-panel .nxcs-option {
+    min-height: 29px !important;
+    padding: 5px 12px !important;
+    font-size: var(--fs-body) !important;
+    line-height: 1.3 !important;
+}
+
+/* ============================== التجاوب =================================== */
+
+@media (max-width: 900px) {
+    .zy-filter-bar .zy-field { min-width: 100%; }
+    .zy-modal { inset-inline: 10px; top: 5vh; }
+    .zy-page-header h1 { font-size: 20px; }
+}

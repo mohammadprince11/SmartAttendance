@@ -113,7 +113,7 @@ html[dir="ltr"] .zy-scope select,
 /* ===== 3. الأزرار: توحيد شامل لكل العائلات (شكل/طباعة/تفاعل) ===== */
 /* baseline: أي صنف يحوي "-btn" أو "-button" + nxos__button — عدا الـpills.
    يوحّد الطباعة/الحواف/المحاذاة/التفاعل لكل الأزرار بلا فرض حجم (فتبقى المضغوطة). */
-.zy-scope [class*="-btn"]:not([class*="pill"]),
+.zy-scope [class*="-btn"]:not([class*="pill"]):not(.zy-btn),
 .zy-scope [class*="-button"]:not([class*="pill"]),
 .zy-scope .nxos__button {
     display: inline-flex !important;
@@ -132,8 +132,10 @@ html[dir="ltr"] .zy-scope select,
                 filter var(--zy-duration-fast) var(--zy-ease);
 }
 /* الحجم القياسي 40px — أزرار الإجراءات فقط (نستثني المضغوطة: أيقونة/mini/ترقيم/link/switch) */
-.zy-scope [class*="-btn"]:not([class*="pill"]):not([class*="icon"]):not([class*="mini"]):not([class*="pager"]):not([class*="pagination"]):not([class*="link"]):not([class*="switch"]),
-.zy-scope [class*="-button"]:not([class*="pill"]):not([class*="icon"]):not([class*="switch"]):not([class*="pagination"]),
+/* أزرار الهوية الجديدة (.zy-btn) مستثناة — قياسها من zynora-design-system */
+.zy-scope [class*="-btn"]:not([class*="pill"]):not([class*="icon"]):not([class*="mini"]):not([class*="pager"]):not([class*="pagination"]):not([class*="link"]):not([class*="switch"]):not(.zy-btn),
+/* عناصر الكلاندر (nxcal__*-button) مستثناة — قياسها من zynora-design-system */
+.zy-scope [class*="-button"]:not([class*="pill"]):not([class*="icon"]):not([class*="switch"]):not([class*="pagination"]):not([class*="nxcal"]),
 .zy-scope .nxos__button {
     min-height: 40px !important;
     padding: 0 18px;
