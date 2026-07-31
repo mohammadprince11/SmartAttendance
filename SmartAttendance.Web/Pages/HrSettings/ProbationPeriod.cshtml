@@ -1,11 +1,15 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.HrSettings.ProbationPeriodModel
+@using SmartAttendance.Web.Infrastructure.Hrms
 
 @{
     ViewData["Title"] = "فترة التجربة";
+    var editing = Model.EditingId.HasValue;
+    var parent = Model.ParentPayload();
 }
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
 
 <section class="nxhs-page nxhs-simple" dir="rtl">
     <header class="nxhs-titlebar">
@@ -22,7 +26,7 @@
         <header>
             <span>التهيئة</span>
             <h2>فترة التجربة على مستوى الشركة</h2>
-            <p>تغيير فترة التجربة على مستوى وحدة العمل، وتحديد بداية الاحتساب والاستثناءات.</p>
+            <p>هذه السياسة الأمّ وتسري على الجميع. لتغييرها لوحدة عمل أو فئة، أنشئ نسخة أدناه.</p>
         </header>
 
         <div class="nxhs-duration-row">
@@ -69,13 +73,162 @@
             <button type="submit">حفظ الإعدادات</button>
         </footer>
     </form>
+
+    @* ── العناصر المنسوخة ───────────────────────────────────────────────── *@
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>الاستثناءات</span>
+            <h2>العناصر المنسوخة</h2>
+            <p class="zyp-hint">
+                النُسَخ تُفحص بالترتيب، و<b>أول نسخة تنطبق شروطها هي التي تُطبَّق</b>.
+                غيّر الترتيب بالسهمين لتغيير الأسبقية. النسخة تحمل ما تغيّره فقط، وما تركته
+                فارغاً يبقى من السياسة الأمّ.
+            </p>
+        </header>
+
+        @if (Model.Copies.Count == 0)
+        {
+            <p class="zyc-empty">لا نُسَخ — السياسة الأمّ وحدها تسري على كل الموظفين.</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th style="width:56px">الأسبقية</th>
+                        <th>النسخة</th>
+                        <th>تُطبَّق على</th>
+                        <th>ما تغيّره</th>
+                        <th style="width:90px">عدد الموظفين</th>
+                        <th style="width:220px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Copies.Count; i++)
+                    {
+                        var copy = Model.Copies[i];
+                        var count = Model.MatchCounts.TryGetValue(copy.Id, out var value) ? value : 0;
+                        <tr class="@(copy.IsActive ? "" : "zyp-inactive")">
+                            <td>
+                                <span class="zyp-rank">@(i + 1)</span>
+                            </td>
+                            <td>
+                                <b>@copy.Name</b>
+                                @if (!copy.IsActive)
+                                {
+                                    <span class="zyp-conditions"> — معطّلة</span>
+                                }
+                            </td>
+                            <td class="zyp-conditions">@HrConditions.Describe(copy.Conditions)</td>
+                            <td class="zyp-conditions">@Model.DescribeCopy(copy)</td>
+                            <td class="zyp-count" data-zero="@((count == 0).ToString().ToLowerInvariant())">
+                                @count
+                                @if (count == 0 && copy.IsActive)
+                                {
+                                    <span title="شرطٌ لا يطابق أي موظف">⚠</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="zyp-actions">
+                                    <form method="post" asp-page-handler="MoveCopy" style="display:inline">
+                                        <input type="hidden" name="id" value="@copy.Id" />
+                                        <input type="hidden" name="direction" value="-1" />
+                                        <button type="submit" class="zyp-move" title="رفع الأسبقية" @(i == 0 ? "disabled" : "")>↑</button>
+                                    </form>
+                                    <form method="post" asp-page-handler="MoveCopy" style="display:inline">
+                                        <input type="hidden" name="id" value="@copy.Id" />
+                                        <input type="hidden" name="direction" value="1" />
+                                        <button type="submit" class="zyp-move" title="خفض الأسبقية" @(i == Model.Copies.Count - 1 ? "disabled" : "")>↓</button>
+                                    </form>
+                                    <a asp-page="./ProbationPeriod" asp-route-edit="@copy.Id">تعديل</a>
+                                    <form method="post" asp-page-handler="DuplicateCopy" style="display:inline">
+                                        <input type="hidden" name="id" value="@copy.Id" />
+                                        <button type="submit">انشئ نسخة</button>
+                                    </form>
+                                    <form method="post" asp-page-handler="DeleteCopy" style="display:inline">
+                                        <input type="hidden" name="id" value="@copy.Id" />
+                                        <button type="submit" data-zyconfirm="حذف النسخة؟">حذف</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        @if (!editing)
+        {
+            <p>
+                <a class="zyc-add-group" asp-page="./ProbationPeriod" asp-route-edit="0">+ أنشئ نسخة</a>
+            </p>
+        }
+    </div>
+
+    @if (editing)
+    {
+        <form method="post" asp-page-handler="SaveCopy" class="nxhs-panel zyp-editor">
+            <h3>@(Model.CopyId > 0 ? "تعديل النسخة" : "نسخة جديدة")</h3>
+            <input type="hidden" asp-for="CopyId" />
+
+            <div class="zyp-editor-grid">
+                <label>
+                    اسم النسخة
+                    <input asp-for="CopyName" placeholder="مثال: فرع البصرة — 90 يوماً" />
+                </label>
+                <label>
+                    المدة (اتركه فارغاً = كالأمّ @parent[SmartAttendance.Web.Pages.HrSettings.ProbationPeriodModel.KeyDuration])
+                    <input asp-for="CopyDuration" type="number" min="0" placeholder="—" />
+                </label>
+                <label>
+                    الوحدة
+                    <select asp-for="CopyUnit">
+                        <option value="">كالسياسة الأمّ</option>
+                        <option value="Day">يوم</option>
+                        <option value="Month">شهر</option>
+                    </select>
+                </label>
+                <label>
+                    تُحتسب من
+                    <select asp-for="CopyBasis">
+                        <option value="">كالسياسة الأمّ</option>
+                        <option value="HireDate">تاريخ التعيين</option>
+                        <option value="JoiningDate">تاريخ الانضمام</option>
+                    </select>
+                </label>
+                <label>
+                    أيام التمديد
+                    <input asp-for="CopyExtensionDays" type="number" min="0" placeholder="—" />
+                </label>
+                <label>
+                    الحالة
+                    <select asp-for="CopyIsActive">
+                        <option value="true">نشطة</option>
+                        <option value="false">معطّلة</option>
+                    </select>
+                </label>
+            </div>
+
+            <div>
+                <p class="zyp-section-title">معايير النسخة — من تنطبق عليه؟</p>
+                <input type="hidden" asp-for="CopyConditions" id="CopyConditions" />
+                <div class="zyc"
+                     data-zy-conditions
+                     data-input="#CopyConditions"
+                     data-criteria="@Model.CriteriaJson"></div>
+            </div>
+
+            <footer class="nxhs-actions">
+                <button type="submit">حفظ النسخة</button>
+                <a class="zyp-move" asp-page="./ProbationPeriod" style="padding:8px 14px">إلغاء</a>
+            </footer>
+        </form>
+    }
 </section>
 
 <script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>
+<script src="~/js/zynora-conditions.js" asp-append-version="true" defer></script>
 
 @section Scripts {
 
 }
-
-
-

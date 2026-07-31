@@ -1,0 +1,318 @@
+/*
+ * باني الشروط ونُسَخ السياسات — بهوية ZYNORA لا بألوان كيان.
+ *
+ * ما نُقل من كيان هو **السلوك والتخطيط** (مجموعة تحوي قواعد · «و» بين القواعد
+ * و«أو» بين المجموعات ظاهرتان كعلامتين لا كنصّ مخفيّ · صفّ القاعدة ثلاثة حقول
+ * بسطر واحد)، أمّا الألوان والخطوط والحواف فمن رموز Design System v1 كما هي،
+ * فيبقى المنتج White-Label ويتلوّن بهوية كل شركة.
+ */
+
+.zyc {
+    display: flex;
+    flex-direction: column;
+    gap: var(--zy-space-3);
+}
+
+.zyc-groups {
+    display: flex;
+    flex-direction: column;
+    gap: var(--zy-space-2);
+}
+
+.zyc-empty {
+    margin: 0;
+    padding: var(--zy-space-4);
+    border: 1px dashed var(--zy-border);
+    border-radius: var(--zy-radius-md);
+    color: var(--zy-text-muted);
+    font-size: .875rem;
+    text-align: center;
+}
+
+.zyc-group {
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-md);
+    background: var(--zy-surface-soft);
+    padding: var(--zy-space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--zy-space-2);
+}
+
+.zyc-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--zy-space-2);
+}
+
+.zyc-group-title {
+    font-weight: 600;
+    font-size: .8125rem;
+    color: var(--zy-text-muted);
+}
+
+.zyc-rules {
+    display: flex;
+    flex-direction: column;
+    gap: var(--zy-space-1);
+}
+
+/* «و» / «أو» علامتان مرئيتان: المنطق يُقرأ من الشاشة لا يُستنتج. */
+.zyc-and,
+.zyc-or {
+    align-self: center;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    padding: 2px var(--zy-space-2);
+    border-radius: var(--zy-radius-xs);
+}
+
+.zyc-and {
+    color: var(--zy-text-muted);
+    background: var(--zy-surface);
+    border: 1px solid var(--zy-border);
+}
+
+.zyc-or {
+    color: var(--zy-electric-teal);
+    background: var(--zy-primary-soft);
+}
+
+.zyc-rule {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) auto;
+    gap: var(--zy-space-2);
+    align-items: center;
+}
+
+.zyc-rule select,
+.zyc-rule input {
+    width: 100%;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-sm);
+    background: var(--zy-input, var(--zy-surface));
+    color: var(--zy-text);
+    font-family: inherit;
+    font-size: .875rem;
+}
+
+.zyc-rule select:focus-visible,
+.zyc-rule input:focus-visible {
+    outline: var(--zy-focus-ring);
+    outline-offset: 1px;
+    border-color: var(--zy-electric-teal);
+}
+
+.zyc-add-group,
+.zyc-add-rule {
+    align-self: flex-start;
+    border: 1px dashed var(--zy-border-strong);
+    background: transparent;
+    color: var(--zy-electric-teal);
+    border-radius: var(--zy-radius-sm);
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: .8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--zy-duration-fast) var(--zy-ease);
+}
+
+.zyc-add-group:hover,
+.zyc-add-rule:hover {
+    background: var(--zy-primary-soft);
+}
+
+.zyc-icon {
+    border: 1px solid var(--zy-border);
+    background: var(--zy-surface);
+    color: var(--zy-text-muted);
+    border-radius: var(--zy-radius-sm);
+    width: 32px;
+    height: 32px;
+    line-height: 1;
+    font-size: 1.125rem;
+    cursor: pointer;
+    transition: color var(--zy-duration-fast) var(--zy-ease),
+                border-color var(--zy-duration-fast) var(--zy-ease);
+}
+
+.zyc-icon.zyc-danger:hover {
+    color: var(--zy-danger);
+    border-color: var(--zy-danger);
+    background: var(--zy-danger-soft);
+}
+
+/* ملخّص عربي يُقرأ بسطر — أثر الشرط مفهوم بلا فكّ الحقول. */
+.zyc-summary {
+    margin: 0;
+    font-size: .8125rem;
+    color: var(--zy-text-muted);
+    background: var(--zy-surface-soft);
+    border-inline-start: 3px solid var(--zy-electric-teal);
+    border-radius: var(--zy-radius-xs);
+    padding: var(--zy-space-2) var(--zy-space-3);
+}
+
+/* ── قائمة نُسَخ السياسة ─────────────────────────────────────────────────── */
+
+.zyp-copies {
+    display: flex;
+    flex-direction: column;
+    gap: var(--zy-space-3);
+}
+
+.zyp-hint {
+    margin: 0;
+    font-size: .8125rem;
+    color: var(--zy-text-muted);
+}
+
+.zyp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .875rem;
+}
+
+.zyp-table th,
+.zyp-table td {
+    text-align: start;
+    padding: 10px var(--zy-space-3);
+    border-bottom: 1px solid var(--zy-border);
+    vertical-align: middle;
+}
+
+.zyp-table th {
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--zy-text-muted);
+    text-transform: none;
+}
+
+.zyp-table tbody tr:nth-child(even) {
+    background: var(--zy-table-row-alt);
+}
+
+.zyp-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    border-radius: var(--zy-radius-xs);
+    background: var(--zy-primary-soft);
+    color: var(--zy-electric-teal);
+    font-weight: 700;
+    font-size: .75rem;
+}
+
+.zyp-conditions {
+    color: var(--zy-text-muted);
+    font-size: .8125rem;
+}
+
+.zyp-count {
+    font-variant-numeric: tabular-nums;
+}
+
+/* نسخة لا تحكم أحداً = شرطٌ لم يطابق. تُعلَّم بصرياً لأنها الخطأ الأشيع. */
+.zyp-count[data-zero="true"] {
+    color: var(--zy-warning);
+    font-weight: 600;
+}
+
+.zyp-actions {
+    display: flex;
+    gap: var(--zy-space-1);
+    justify-content: flex-end;
+}
+
+.zyp-actions button,
+.zyp-actions a {
+    border: 1px solid var(--zy-border);
+    background: var(--zy-surface);
+    color: var(--zy-text);
+    border-radius: var(--zy-radius-sm);
+    padding: 5px 10px;
+    font-family: inherit;
+    font-size: .75rem;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.zyp-actions button:hover,
+.zyp-actions a:hover {
+    border-color: var(--zy-electric-teal);
+    color: var(--zy-electric-teal);
+}
+
+.zyp-move {
+    width: 28px;
+    padding: 5px 0 !important;
+    text-align: center;
+}
+
+.zyp-inactive td {
+    opacity: .55;
+}
+
+.zyp-editor {
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-md);
+    background: var(--zy-surface);
+    padding: var(--zy-space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--zy-space-4);
+}
+
+.zyp-editor h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.zyp-editor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: var(--zy-space-3);
+}
+
+.zyp-editor-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: .8125rem;
+    color: var(--zy-text-muted);
+}
+
+.zyp-editor-grid input,
+.zyp-editor-grid select {
+    padding: 8px 10px;
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-sm);
+    background: var(--zy-input, var(--zy-surface));
+    color: var(--zy-text);
+    font-family: inherit;
+    font-size: .875rem;
+}
+
+.zyp-section-title {
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--zy-text);
+    margin: 0;
+}
+
+@media (max-width: 720px) {
+    .zyc-rule {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .zyc-rule .zyc-value {
+        grid-column: 1 / -1;
+    }
+}
