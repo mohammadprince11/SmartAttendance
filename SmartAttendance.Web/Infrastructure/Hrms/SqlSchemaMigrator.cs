@@ -191,6 +191,32 @@ IF OBJECT_ID('SalaryBaseMembers', 'U') IS NOT NULL
    AND COL_LENGTH('SalaryBaseMembers', 'ProfileId') IS NOT NULL
     DELETE FROM SalaryBaseMembers WHERE ProfileId = 0;
 """),
+
+        // نطاق تشغيل المسير: كان المحرّك يحسب **كل** النشطين إجبارياً بلا أي اختيار،
+        // فصار للتشغيل نطاقٌ محفوظ معه (لا مع الجلسة) لتلتزم به إعادة الاحتساب
+        // ويبقى «لماذا غاب هذا الموظف؟» مُجاباً بعد شهر.
+        // ⚠️ لا صفوف = «الكل»: القرار بالكود (PayrollRunScope.Includes) لا بصفٍّ
+        // افتراضي بالقاعدة — نفس درس أوعية الاحتساب بالهجرة …-09.
+        // والعمود ScopeMode توثيقي (كيف حُدِّد النطاق) لا مصدرٌ للحساب.
+        new(
+            "20260731-10-payroll-run-scope",
+            """
+IF OBJECT_ID('PayrollRunScopeMembers', 'U') IS NULL
+BEGIN
+    CREATE TABLE PayrollRunScopeMembers (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        RunId int NOT NULL,
+        EmployeeId int NOT NULL,
+        CONSTRAINT UQ_PayrollRunScopeMembers UNIQUE (RunId, EmployeeId)
+    );
+
+    CREATE INDEX IX_PayrollRunScopeMembers_Run ON PayrollRunScopeMembers (RunId);
+END;
+
+IF OBJECT_ID('PayrollRuns', 'U') IS NOT NULL
+   AND COL_LENGTH('PayrollRuns', 'ScopeMode') IS NULL
+    ALTER TABLE PayrollRuns ADD ScopeMode nvarchar(20) NULL;
+"""),
     };
 
     /// <summary>

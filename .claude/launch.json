@@ -16,6 +16,13 @@
       "url": "http://localhost:5091"
     },
     {
+      "name": "WebDev2-release-nobuild",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "SmartAttendance.Web", "-c", "Release", "--no-build", "--urls", "http://localhost:5092"],
+      "port": 5092,
+      "url": "http://localhost:5092"
+    },
+    {
       "name": "API",
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "SmartAttendance.API", "--urls", "http://localhost:5226"],

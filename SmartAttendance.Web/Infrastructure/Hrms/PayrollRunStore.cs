@@ -40,7 +40,15 @@ public static class PayrollRunStore
         public string? CalculatedBy { get; set; }
         public DateTime? CalculatedAt { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        /// <summary>كيف حُدِّد النطاق (توثيقي) — الحساب يعتمد صفوف النطاق نفسها.</summary>
+        public string ScopeMode { get; set; } = PayrollRunScope.ModeAll;
+
+        /// <summary>عدد موظفي النطاق؛ صفر ⟹ التشغيل يشمل كل الموظفين النشطين.</summary>
+        public int ScopeCount { get; set; }
+
         public string StatusLabelText => StatusLabel(Status);
+        public string ScopeText => PayrollRunScope.Describe(ScopeMode, ScopeCount);
         public string PeriodText => $"{Month:00}/{Year}";
     }
 
@@ -93,6 +101,7 @@ BEGIN
         [Year] int NOT NULL,
         [Month] int NOT NULL,
         Status nvarchar(20) NOT NULL DEFAULT(N'Draft'),
+        ScopeMode nvarchar(20) NULL,
         EmployeeCount int NOT NULL DEFAULT(0),
         TotalGross decimal(18,2) NOT NULL DEFAULT(0),
         TotalNet decimal(18,2) NOT NULL DEFAULT(0),
@@ -149,7 +158,11 @@ END;
         await EnsureAsync(dbContext);
         return await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT * FROM PayrollRuns ORDER BY [Year] DESC, [Month] DESC, Id DESC;",
+            """
+SELECT r.*, (SELECT COUNT(1) FROM PayrollRunScopeMembers s WHERE s.RunId = r.Id) AS ScopeCount
+FROM PayrollRuns r
+ORDER BY r.[Year] DESC, r.[Month] DESC, r.Id DESC;
+""",
             command => { },
             ReadRun);
     }
@@ -159,14 +172,22 @@ END;
         await EnsureAsync(dbContext);
         return (await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT * FROM PayrollRuns WHERE Id = @Id;",
+            """
+SELECT r.*, (SELECT COUNT(1) FROM PayrollRunScopeMembers s WHERE s.RunId = r.Id) AS ScopeCount
+FROM PayrollRuns r
+WHERE r.Id = @Id;
+""",
             command => HrmsDatabase.AddParameter(command, "@Id", id),
             ReadRun)).FirstOrDefault();
     }
 
-    /// <summary>إنشاء دفعة مسير جديدة لشهر (رقم دفعة yyyy-M-seq نمط كيان).</summary>
+    /// <summary>
+    /// إنشاء دفعة مسير جديدة لشهر (رقم دفعة yyyy-M-seq نمط كيان).
+    /// <paramref name="scopeEmployeeIds"/> فارغة/null ⟹ الدفعة تشمل كل النشطين.
+    /// </summary>
     public static async Task<(bool Ok, string Message, int RunId)> CreateRunAsync(
-        ApplicationDbContext dbContext, int year, int month)
+        ApplicationDbContext dbContext, int year, int month,
+        string? scopeMode = null, IEnumerable<int>? scopeEmployeeIds = null)
     {
         await EnsureAsync(dbContext);
         if (year < 2000 || month is < 1 or > 12) return (false, "شهر غير صالح.", 0);
@@ -176,17 +197,28 @@ END;
             "SELECT COUNT(1) FROM PayrollRuns WHERE [Year] = @Y AND [Month] = @M;",
             command => { HrmsDatabase.AddParameter(command, "@Y", year); HrmsDatabase.AddParameter(command, "@M", month); }) + 1;
 
+        var ids = (scopeEmployeeIds ?? Enumerable.Empty<int>()).Distinct().ToList();
+        var mode = PayrollRunScope.NormalizeMode(scopeMode);
+        if (ids.Count == 0) mode = PayrollRunScope.ModeAll;   // نطاق بلا أعضاء = الكل
+
         var batchNo = $"{year}-{month}-{seq}";
         var id = await HrmsDatabase.ScalarAsync<int>(
             dbContext,
-            "INSERT INTO PayrollRuns (BatchNo, [Year], [Month], Status) VALUES (@Batch, @Y, @M, N'Draft'); SELECT CAST(SCOPE_IDENTITY() AS int);",
+            "INSERT INTO PayrollRuns (BatchNo, [Year], [Month], Status, ScopeMode) VALUES (@Batch, @Y, @M, N'Draft', @Scope); SELECT CAST(SCOPE_IDENTITY() AS int);",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Batch", batchNo);
                 HrmsDatabase.AddParameter(command, "@Y", year);
                 HrmsDatabase.AddParameter(command, "@M", month);
+                HrmsDatabase.AddParameter(command, "@Scope", mode);
             });
-        return (true, $"أُنشئت دفعة {batchNo} — شغّل «الاحتساب».", id);
+
+        if (ids.Count > 0) await PayrollRunScopeStore.ReplaceAsync(dbContext, id, ids);
+
+        var scopeText = ids.Count > 0
+            ? $" — النطاق: {PayrollRunScope.Describe(mode, ids.Count)}"
+            : " — النطاق: كل الموظفين النشطين";
+        return (true, $"أُنشئت دفعة {batchNo}{scopeText}. شغّل «الاحتساب».", id);
     }
 
     /// <summary>حساب المسير: يبني السطور والبنود. مسموح فقط على Draft/Calculated.</summary>
@@ -228,6 +260,13 @@ END;
             "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo, ISNULL(FullName, N'') AS FullName FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1 ORDER BY EmployeeNo;",
             command => { },
             reader => new { Id = HrmsDatabase.GetInt(reader, "Id"), No = HrmsDatabase.GetString(reader, "EmployeeNo"), Name = HrmsDatabase.GetString(reader, "FullName") });
+
+        // نطاق التشغيل محفوظ مع الدفعة: إعادة الاحتساب بعد شهر تلتزم بنفس النطاق.
+        // لا صفوف ⟹ كل النشطين — القرار بالكود (PayrollRunScope) لا بصفٍّ افتراضي.
+        var scope = await PayrollRunScopeStore.IdsAsync(dbContext, runId);
+        var scopeSet = new HashSet<int>(scope);
+        var outsideScope = PayrollRunScope.OutsideCandidates(scope, employees.Select(e => e.Id).ToList()).Count;
+        var candidates = employees.Where(e => PayrollRunScope.Includes(scopeSet, e.Id)).ToList();
 
         var financial = (await HrmsDatabase.QueryAsync(
             dbContext,
@@ -304,18 +343,23 @@ END;
             "DELETE c FROM PayrollRunLineComponents c INNER JOIN PayrollRunLines l ON l.Id = c.LineId WHERE l.RunId = @RunId; DELETE FROM PayrollRunLines WHERE RunId = @RunId;",
             command => HrmsDatabase.AddParameter(command, "@RunId", runId));
 
-        int count = 0;
+        int count = 0, skippedStopped = 0, skippedNoSalary = 0;
         decimal totalGross = 0, totalNet = 0, totalTax = 0, totalGosiCo = 0;
 
-        foreach (var emp in employees)
+        foreach (var emp in candidates)
         {
             financial.TryGetValue(emp.Id, out var fin);
-            if (fin?.Stop == true) continue;                 // مستبعَد من الاحتساب
+            if (fin?.Stop == true) { skippedStopped++; continue; }   // مستبعَد من الاحتساب
             var basic = fin?.Basic ?? 0;
             if (basic <= 0 && !allowances.ContainsKey(emp.Id) && !income.ContainsKey(emp.Id)
                 && !overtimeTx.ContainsKey(emp.Id) && !salaryDaysTx.ContainsKey(emp.Id)
                 && !leaveEncashTx.ContainsKey(emp.Id))
-                continue; // لا راتب ولا علاوات ولا حركات دخل/عمل إضافي/أيام/بدل إجازة
+            {
+                // لا راتب ولا علاوات ولا حركات دخل/عمل إضافي/أيام/بدل إجازة.
+                // يُعدّ لا يُبتلع: «لماذا قسيمة واحدة فقط؟» جوابه هنا عادةً.
+                skippedNoSalary++;
+                continue;
+            }
 
             // تنسيب الأساسي حسب أيام الحضور من الاعتماد الشهري
             months.TryGetValue(emp.Id, out var month);
@@ -588,9 +632,19 @@ WHERE Id = @Id;
             });
 
         await transaction.CommitAsync();
+
+        // تفصيل المتخطَّين يُعرض دائماً: تشغيلٌ يعيد قسيمة واحدة من ألف موظف كان
+        // يبدو عطلاً بالمحرك، وسببه غالباً بيانات (بلا راتب أساسي/موقوف الاحتساب).
+        var skips = new List<string>();
+        if (skippedNoSalary > 0) skips.Add($"{skippedNoSalary} بلا راتب أساسي أو حركات");
+        if (skippedStopped > 0) skips.Add($"{skippedStopped} موقوف الاحتساب بالملف المالي");
+        if (outsideScope > 0) skips.Add($"{outsideScope} من النطاق خارج قائمة النشطين");
+        var skipText = skips.Count > 0 ? $" · تُخطّي: {string.Join(" · ", skips)}" : string.Empty;
+
+        var scopeText = scope.Count > 0 ? $"نطاق {scope.Count} موظفاً" : "كل النشطين";
         return (true, count == 0
-            ? "لا موظفين بأرصدة قابلة للاحتساب — تأكد من الرواتب الأساسية بالملف المالي."
-            : $"احتُسب {count} موظفاً — إجمالي {totalGross:0.##}، صافي {totalNet:0.##}.");
+            ? $"لم يُحتسب أحد ({scopeText}){skipText} — تأكد من الرواتب الأساسية بالملف المالي."
+            : $"احتُسب {count} موظفاً من {scopeText} — إجمالي {totalGross:0.##}، صافي {totalNet:0.##}{skipText}.");
     }
 
     public static async Task<List<PayrollLine>> ListLinesAsync(ApplicationDbContext dbContext, int runId)
@@ -746,9 +800,40 @@ ORDER BY e.EmployeeNo;
         if (run.Status is not ("Draft" or "Calculated")) return (false, "لا تُحذف دفعة مقفلة/معتمدة.");
         await HrmsDatabase.ExecuteAsync(
             dbContext,
-            "DELETE c FROM PayrollRunLineComponents c INNER JOIN PayrollRunLines l ON l.Id = c.LineId WHERE l.RunId = @Id; DELETE FROM PayrollRunLines WHERE RunId = @Id; DELETE FROM PayrollRuns WHERE Id = @Id;",
+            "DELETE c FROM PayrollRunLineComponents c INNER JOIN PayrollRunLines l ON l.Id = c.LineId WHERE l.RunId = @Id; DELETE FROM PayrollRunLines WHERE RunId = @Id; DELETE FROM PayrollRunScopeMembers WHERE RunId = @Id; DELETE FROM PayrollRuns WHERE Id = @Id;",
             command => HrmsDatabase.AddParameter(command, "@Id", runId));
         return (true, "حُذفت الدفعة.");
+    }
+
+    /// <summary>
+    /// تعديل نطاق دفعة قبل قفلها. النطاق جزء من مدخلات الاحتساب فلا يُمسّ بعد
+    /// القفل: تغييرُه على دفعة مقفلة يجعل سطورها لا تطابق نطاقها المعلن.
+    /// قائمة فارغة ⟹ عودة لـ«كل الموظفين».
+    /// </summary>
+    public static async Task<(bool Ok, string Message)> SetScopeAsync(
+        ApplicationDbContext dbContext, int runId, string? scopeMode, IEnumerable<int> employeeIds)
+    {
+        var run = await GetRunAsync(dbContext, runId);
+        if (run == null) return (false, "الدفعة غير موجودة.");
+        if (run.Status is not ("Draft" or "Calculated"))
+            return (false, "لا يُعدَّل نطاق دفعة مقفلة/معتمدة.");
+
+        var ids = employeeIds.Distinct().ToList();
+        var mode = ids.Count == 0 ? PayrollRunScope.ModeAll : PayrollRunScope.NormalizeMode(scopeMode);
+
+        await PayrollRunScopeStore.ReplaceAsync(dbContext, runId, ids);
+        await HrmsDatabase.ExecuteAsync(
+            dbContext,
+            "UPDATE PayrollRuns SET ScopeMode = @Scope WHERE Id = @Id;",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", runId);
+                HrmsDatabase.AddParameter(command, "@Scope", mode);
+            });
+
+        return (true, run.Status == "Calculated"
+            ? $"حُدِّث النطاق: {PayrollRunScope.Describe(mode, ids.Count)} — أعد «الاحتساب» ليأخذ أثره."
+            : $"حُدِّث النطاق: {PayrollRunScope.Describe(mode, ids.Count)}.");
     }
 
     private static async Task<(bool, string)> TransitionAsync(
@@ -782,6 +867,8 @@ ORDER BY e.EmployeeNo;
         TotalGosiCompany = reader["TotalGosiCompany"] is decimal gc ? gc : 0,
         CalculatedBy = HrmsDatabase.GetString(reader, "CalculatedBy") is { Length: > 0 } by ? by : null,
         CalculatedAt = HrmsDatabase.GetDateTime(reader, "CalculatedAt"),
-        CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default
+        CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default,
+        ScopeMode = PayrollRunScope.NormalizeMode(HrmsDatabase.GetString(reader, "ScopeMode")),
+        ScopeCount = HrmsDatabase.GetInt(reader, "ScopeCount")
     };
 }

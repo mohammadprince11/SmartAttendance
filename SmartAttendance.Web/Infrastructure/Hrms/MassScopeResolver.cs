@@ -33,13 +33,24 @@ public static class MassScopeResolver
     public static async Task<(List<int> Ids, int Skipped, string Label, string? Error)> ResolveAsync(
         ApplicationDbContext db, IFormCollection f, IFormFile? file)
     {
+        var r = await ResolveDetailedAsync(db, f, file);
+        return (r.Ids, r.Skipped, r.Label, r.Error);
+    }
+
+    /// <summary>
+    /// نفس التحليل مع **نصوص الأكواد المفقودة** لا عددها فقط: كودٌ مخطئ واحد يعني
+    /// موظفاً يغيب بصمت، وعرض «12 تُخطّي» بلا معرفة أيّها لا يمكّن من التصحيح.
+    /// </summary>
+    public static async Task<(List<int> Ids, int Skipped, List<string> Missing, string Label, string? Error)>
+        ResolveDetailedAsync(ApplicationDbContext db, IFormCollection f, IFormFile? file)
+    {
         var emps = await LoadAsync(db);
-        var byCode = new Dictionary<string, int>();
-        foreach (var e in emps) { var k = e.No.Trim().ToLowerInvariant(); if (k.Length > 0) byCode[k] = e.Id; }
+        var byCode = PayrollRunScope.BuildCodeMap(emps.Select(e => (e.No, e.Id)));
 
         var mode = f["ScopeMode"].ToString();
         if (string.IsNullOrWhiteSpace(mode)) mode = "Manual";
         var ids = new List<int>();
+        var missing = new List<string>();
         int skipped = 0;
         string label;
 
@@ -48,24 +59,20 @@ public static class MassScopeResolver
             IEnumerable<string> codes;
             if (mode == "File")
             {
-                if (file == null || file.Length == 0) return (ids, 0, "ملف إكسل", "اختر ملف إكسل أو CSV.");
+                if (file == null || file.Length == 0) return (ids, 0, missing, "ملف إكسل", "اختر ملف إكسل أو CSV.");
                 List<string[]> rows;
                 try { await using var s = file.OpenReadStream(); rows = SpreadsheetReader.Read(s, file.FileName); }
-                catch (Exception ex) { return (ids, 0, "ملف إكسل", "تعذّر قراءة الملف: " + ex.Message); }
+                catch (Exception ex) { return (ids, 0, missing, "ملف إكسل", "تعذّر قراءة الملف: " + ex.Message); }
                 codes = rows.Where(r => r.Length > 0).Select(r => r[0]);
                 label = "ملف إكسل";
             }
             else
             {
-                codes = f["MassCodes"].ToString().Split(new[] { '\n', '\r', ',', ';', '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                codes = PayrollRunScope.ParseCodes(f["MassCodes"].ToString());
                 label = "لصق أكواد";
             }
-            foreach (var raw in codes)
-            {
-                var k = raw.Trim().ToLowerInvariant();
-                if (k.Length == 0) continue;
-                if (byCode.TryGetValue(k, out var id)) ids.Add(id); else skipped++;
-            }
+            (ids, missing) = PayrollRunScope.MatchCodes(codes, byCode);
+            skipped = missing.Count;
         }
         else if (mode == "Criteria")
         {
@@ -73,7 +80,7 @@ public static class MassScopeResolver
             var branch = f["MassBranch"].ToString().Trim();
             var job = f["MassJobTitle"].ToString().Trim();
             if (dept.Length == 0 && branch.Length == 0 && job.Length == 0)
-                return (ids, 0, "حسب معايير", "حدد معياراً واحداً على الأقل (قسم/فرع/مسمى وظيفي).");
+                return (ids, 0, missing, "حسب معايير", "حدد معياراً واحداً على الأقل (قسم/فرع/مسمى وظيفي).");
             ids = emps.Where(e =>
                 (dept.Length == 0 || e.Dept == dept) &&
                 (branch.Length == 0 || e.Branch == branch) &&
@@ -86,7 +93,7 @@ public static class MassScopeResolver
             label = "اختيار يدوي";
         }
 
-        return (ids.Distinct().ToList(), skipped, label, null);
+        return (ids.Distinct().ToList(), skipped, missing, label, null);
     }
 
     private static Task<List<EmpRow>> LoadAsync(ApplicationDbContext db) =>
