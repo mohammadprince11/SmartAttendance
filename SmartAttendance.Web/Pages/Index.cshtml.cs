@@ -35,6 +35,34 @@ public class IndexModel : PageModel
     public List<DashboardWidgetStore.Widget> AllWidgets { get; set; } = new();
     public List<(DashboardWidgetStore.Widget Widget, DashboardWidgetStore.WidgetData Data)> VisibleWidgets { get; set; } = new();
 
+    // ===== طبقة «مهمة أولاً» (Design System v1) =====
+    // تُضاف فوق شبكة الويدجتات ولا تلغيها: الويدجتات ميزة قائمة يبنيها المستخدم
+    // بنفسه، وحذفها لإحلال تصميم جديد يهدم عملاً موجوداً.
+
+    public int ActiveEmployees { get; private set; }
+    public int PresentToday { get; private set; }
+    public int AbsentToday { get; private set; }
+    public int PendingRequests { get; private set; }
+    public int ExpiringContracts { get; private set; }
+
+    public IReadOnlyList<DashboardTaskBuilder.DashboardTask> Tasks { get; private set; } =
+        Array.Empty<DashboardTaskBuilder.DashboardTask>();
+
+    public string Headline { get; private set; } = string.Empty;
+
+    /// <summary>نسبة الحضور من النشطين — للعرض بجانب العدّاد.</summary>
+    public int PresentPercent =>
+        ActiveEmployees > 0
+            ? (int)Math.Round(PresentToday * 100.0 / ActiveEmployees)
+            : 0;
+
+    public string Greeting => DateTime.Now.Hour switch
+    {
+        >= 5 and < 12 => "صباح الخير",
+        >= 12 and < 17 => "طاب يومك",
+        _ => "مساء الخير"
+    };
+
     public async Task OnGetAsync()
     {
         CompanyOptions = await _dbContext.Companies
@@ -63,10 +91,65 @@ public class IndexModel : PageModel
             return;
         }
 
+        await LoadTaskFirstLayerAsync(CompanyId.Value);
+
         foreach (var widget in AllWidgets.Where(w => w.IsVisible))
         {
             var data = await DashboardWidgetStore.ExecuteAsync(_dbContext, widget.Metric, CompanyId.Value);
             VisibleWidgets.Add((widget, data));
+        }
+    }
+
+    /// <summary>
+    /// مؤشرات الرأس والمهام — كلها من مصادر حقيقية مقيَّدة بالشركة المختارة:
+    /// المقاييس تعيد استخدام <see cref="DashboardWidgetStore.ExecuteAsync"/> (نفس
+    /// الاستعلامات المُختبرة) بدل كتابة SQL موازٍ يتفرّع عنها لاحقاً.
+    /// </summary>
+    private async Task LoadTaskFirstLayerAsync(int companyId)
+    {
+        async Task<int> CounterAsync(string metric) =>
+            (await DashboardWidgetStore.ExecuteAsync(_dbContext, metric, companyId)).Single;
+
+        ActiveEmployees = await CounterAsync("ActiveEmployees");
+        PresentToday = await CounterAsync("TodayPresent");
+        AbsentToday = await CounterAsync("TodayAbsent");
+        PendingRequests = await CounterAsync("PendingRequests");
+        ExpiringContracts = await CounterAsync("ExpiringContracts60");
+
+        Tasks = DashboardTaskBuilder.Build(new DashboardTaskBuilder.Counts(
+            PendingRequests: PendingRequests,
+            PendingBiometricKeys: await CountPendingBiometricKeysAsync(companyId),
+            ExpiringContracts: ExpiringContracts,
+            // الغياب «بلا مبرر» يحتاج تحليل الأعذار؛ حتى يُبنى مقياسه لا نعرض
+            // رقماً مضلّلاً — صفر هنا يعني «لا نقيسه بعد» لا «لا يوجد غياب».
+            UnexcusedAbsenceToday: 0));
+
+        Headline = DashboardTaskBuilder.BuildHeadline(Tasks);
+    }
+
+    /// <summary>مفاتيح البصمة المعلّقة — مقيَّدة بموظفي الشركة المختارة.</summary>
+    private async Task<int> CountPendingBiometricKeysAsync(int companyId)
+    {
+        try
+        {
+            return await HrmsDatabase.ScalarAsync<int>(
+                _dbContext,
+                """
+IF OBJECT_ID('EmployeeWebAuthnCredentials', 'U') IS NULL
+    SELECT 0;
+ELSE
+    SELECT COUNT(*)
+    FROM EmployeeWebAuthnCredentials c
+    INNER JOIN Employees e ON e.Id = c.EmployeeId
+    INNER JOIN Branches  b ON b.Id = e.BranchId
+    WHERE c.Status = 'Pending' AND e.IsDeleted = 0 AND b.CompanyId = @CompanyId;
+""",
+                command => HrmsDatabase.AddParameter(command, "@CompanyId", companyId));
+        }
+        catch
+        {
+            // تعذّر قراءة عدّاد ثانوي لا يُسقط اللوحة كلها.
+            return 0;
         }
     }
 

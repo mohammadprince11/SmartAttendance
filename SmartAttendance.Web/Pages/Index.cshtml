@@ -50,6 +50,82 @@
         <div class="zxd-alert">@TempData["SuccessMessage"]</div>
     }
 
+    @*
+        ---------- طبقة «مهمة أولاً» (Design System v1) ----------
+        الفلسفة المعتمدة: لا يبحث المدير في المؤشرات عمّا يجب فعله — النظام
+        يخبره. تُعرض فوق الويدجتات ولا تلغيها (الويدجتات يبنيها المستخدم بنفسه).
+    *@
+    @if (Model.CompanyId.HasValue)
+    {
+        <section class="zy-dash">
+            <div class="zy-dash__greet">
+                <h2>@Model.Greeting@(User?.FindFirst("DisplayName")?.Value is { Length: > 0 } name ? $"، {name}" : "")</h2>
+                <p>@Model.Headline</p>
+            </div>
+
+            <div class="zy-dash__kpis">
+                <div class="zy-dash__kpi">
+                    <span class="zy-dash__kpi-label">الحاضرون اليوم</span>
+                    <span class="zy-dash__kpi-value">@Model.PresentToday.ToString("N0")</span>
+                    <span class="zy-dash__chip zy-dash__chip--ok">@Model.PresentPercent% من @Model.ActiveEmployees.ToString("N0")</span>
+                </div>
+                <div class="zy-dash__kpi">
+                    <span class="zy-dash__kpi-label">الغياب اليوم</span>
+                    <span class="zy-dash__kpi-value">@Model.AbsentToday.ToString("N0")</span>
+                    <span class="zy-dash__chip @(Model.AbsentToday > 0 ? "zy-dash__chip--bad" : "zy-dash__chip--ok")">
+                        @(Model.AbsentToday > 0 ? "يحتاج معالجة قبل الاعتماد" : "لا غياب مسجَّل")
+                    </span>
+                </div>
+                <div class="zy-dash__kpi">
+                    <span class="zy-dash__kpi-label">بانتظار موافقتك</span>
+                    <span class="zy-dash__kpi-value">@Model.PendingRequests.ToString("N0")</span>
+                    <span class="zy-dash__chip @(Model.PendingRequests > 0 ? "zy-dash__chip--warn" : "zy-dash__chip--ok")">
+                        @(Model.PendingRequests > 0 ? "طلبات معلّقة" : "لا شيء معلّق")
+                    </span>
+                </div>
+                <div class="zy-dash__kpi">
+                    <span class="zy-dash__kpi-label">عقود تنتهي خلال 60 يوماً</span>
+                    <span class="zy-dash__kpi-value">@Model.ExpiringContracts.ToString("N0")</span>
+                    <span class="zy-dash__chip @(Model.ExpiringContracts > 0 ? "zy-dash__chip--warn" : "zy-dash__chip--ok")">
+                        @(Model.ExpiringContracts > 0 ? "قرار تجديد مطلوب" : "لا عقود قريبة")
+                    </span>
+                </div>
+            </div>
+
+            <div class="zy-dash__tasks">
+                <div class="zy-dash__tasks-head">
+                    <h3>مهامك اليوم</h3>
+                </div>
+
+                @if (Model.Tasks.Count == 0)
+                {
+                    <p class="zy-dash__empty">لا شيء ينتظر قرارك — كل الطلبات معتمَدة ولا مفاتيح ولا عقود تحتاج مراجعة.</p>
+                }
+                else
+                {
+                    @foreach (var task in Model.Tasks)
+                    {
+                        var tone = task.Tone switch
+                        {
+                            DashboardTaskBuilder.TaskTone.Danger => "bad",
+                            DashboardTaskBuilder.TaskTone.Warning => "warn",
+                            _ => "accent"
+                        };
+
+                        <div class="zy-dash__task">
+                            <span class="zy-dash__task-dot zy-dash__task-dot--@tone"></span>
+                            <div class="zy-dash__task-text">
+                                <b>@task.Title</b>
+                                <span>@task.Subtitle</span>
+                            </div>
+                            <a class="zy-dash__task-go" href="@task.Url">@task.ActionLabel</a>
+                        </div>
+                    }
+                }
+            </div>
+        </section>
+    }
+
     @* ---------- صف العدادات (ويدجتات «رقم») ---------- *@
     @if (counters.Count > 0)
     {

@@ -464,3 +464,69 @@ html[data-theme="light"] .nxcal__head, html[data-theme="light"] .nxcal__foot {
     .zy-modal { inset-inline: 10px; top: 5vh; }
     .zy-page-header h1 { font-size: 20px; }
 }
+
+/* ============================================================================
+   لوحة البيانات — طبقة «مهمة أولاً» (v1)
+   مرجعها docs/prototypes/dashboard-redesign-v1.html. كل الألوان والمقاسات من
+   التوكنز أعلاه، فتتبع الوضع الداكن ومحرك هوية الشركة تلقائياً.
+   ============================================================================ */
+
+.zy-dash { display: flex; flex-direction: column; gap: var(--sp-4); margin-bottom: var(--sp-5); }
+
+.zy-dash__greet h2 { font-size: var(--fs-page-title); font-weight: 800; color: var(--color-text-primary); margin: 0; }
+.zy-dash__greet p { font-size: var(--fs-small); color: var(--color-text-secondary); margin: var(--sp-1) 0 0; }
+
+.zy-dash__kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--sp-3); }
+
+.zy-dash__kpi {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); padding: var(--sp-4); box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: var(--sp-1);
+}
+.zy-dash__kpi-label { font-size: var(--fs-small); color: var(--color-text-secondary); font-weight: 700; }
+/* الأرقام LTR دائماً داخل صفحة RTL — وإلا انقلبت الفواصل والنسب */
+.zy-dash__kpi-value { font-size: 26px; font-weight: 800; direction: ltr; text-align: end; color: var(--color-text-primary); }
+
+.zy-dash__chip {
+    font-size: var(--fs-tiny); font-weight: 700; padding: 2px var(--sp-2);
+    border-radius: var(--radius-full); align-self: flex-start;
+}
+.zy-dash__chip--ok { color: var(--color-success); background: var(--color-success-soft); }
+.zy-dash__chip--warn { color: var(--color-warning); background: var(--color-warning-soft); }
+.zy-dash__chip--bad { color: var(--color-danger); background: var(--color-danger-soft); }
+
+.zy-dash__tasks {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow);
+}
+.zy-dash__tasks-head { padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--color-border); }
+.zy-dash__tasks-head h3 { font-size: var(--fs-card-title); font-weight: 800; margin: 0; color: var(--color-text-primary); }
+
+.zy-dash__empty { padding: var(--sp-5) var(--sp-4); margin: 0; text-align: center; font-size: var(--fs-small); color: var(--color-text-secondary); }
+
+.zy-dash__task {
+    display: flex; align-items: center; gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--color-border);
+}
+.zy-dash__task:last-child { border-bottom: 0; }
+.zy-dash__task-dot { width: 10px; height: 10px; border-radius: var(--radius-full); flex-shrink: 0; }
+.zy-dash__task-dot--bad { background: var(--color-danger); }
+.zy-dash__task-dot--warn { background: var(--color-warning); }
+.zy-dash__task-dot--accent { background: var(--color-primary); }
+
+.zy-dash__task-text { flex: 1; min-width: 0; }
+.zy-dash__task-text b { display: block; font-size: var(--fs-body); font-weight: 800; color: var(--color-text-primary); }
+.zy-dash__task-text span { font-size: var(--fs-small); color: var(--color-text-secondary); }
+
+.zy-dash__task-go {
+    font-size: var(--fs-small); font-weight: 800; text-decoration: none; white-space: nowrap;
+    color: var(--color-primary); background: var(--color-primary-soft);
+    border-radius: var(--radius); padding: var(--sp-2) var(--sp-4);
+    transition: background 150ms ease, color 150ms ease;
+}
+.zy-dash__task-go:hover { background: var(--color-primary); color: #fff; }
+
+@media (max-width: 640px) {
+    .zy-dash__task { flex-wrap: wrap; }
+    .zy-dash__task-go { width: 100%; text-align: center; }
+}
