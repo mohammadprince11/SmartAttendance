@@ -446,10 +446,10 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
 /* الحالة المطوية: القطري يستقيم أفقياً بين الشريطين ⟵ ثلاثة خطوط متوازية،
    والبكسلات والمرساة تتلاشى فيبقى الرمز قائمةً نظيفة. */
 html[data-sidebar="collapsed"] .zy-brand-z .zy-z-diag {
-    transform: rotate(48.5deg) scale(.94) translate(6px, 4px);
+    transform: rotate(48.5deg) scale(.9) translate(10px, 2px);
 }
-html[data-sidebar="collapsed"] .zy-brand-z .zy-z-top { transform: translateY(46px) scaleX(.98); }
-html[data-sidebar="collapsed"] .zy-brand-z .zy-z-bot { transform: translateY(-46px) scaleX(.98); }
+html[data-sidebar="collapsed"] .zy-brand-z .zy-z-top { transform: translateY(22px) scaleX(.96); }
+html[data-sidebar="collapsed"] .zy-brand-z .zy-z-bot { transform: translateY(-22px) scaleX(.96); }
 html[data-sidebar="collapsed"] .zy-brand-z .zy-z-pixels,
 html[data-sidebar="collapsed"] .zy-brand-z .zy-z-anchor { opacity: 0; }
 
