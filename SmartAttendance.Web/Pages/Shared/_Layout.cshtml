@@ -10,7 +10,7 @@
 }
 
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" data-theme="dark" data-sidebar="expanded">
+<html lang="ar" dir="rtl" data-theme="light" data-sidebar="expanded">
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -20,7 +20,7 @@
 
     <script>
         (function () {
-            // الثيم الداكن حصراً — أُلغي الوضع الفاتح نهائياً (قرار 2026-07)
+            // تنظيف مفاتيح قديمة (تخطيط الشريط الجانبي وأسماء ثيم سابقة)
             try {
                 [
                     "SmartAttendance.Sidebar",
@@ -44,13 +44,18 @@
                 "expanded"
             );
 
-            // الوضع المحفوظ (زر الشمس/الهلال بالشريط العلوي) — الافتراضي داكن حالياً.
+            // الوضع المحفوظ (زر الشمس/الهلال بالشريط العلوي). الافتراضي **فاتح**
+            // بحسب Design System v1؛ ومن لم يختر شيئاً بعدُ يتبع تفضيل نظام جهازه.
             var zyTheme = null;
             try { zyTheme = localStorage.getItem("ZY.Theme"); } catch (e) { }
-            document.documentElement.setAttribute(
-                "data-theme",
-                zyTheme === "light" ? "light" : "dark"
-            );
+
+            if (zyTheme !== "light" && zyTheme !== "dark") {
+                var prefersDark = window.matchMedia &&
+                    window.matchMedia("(prefers-color-scheme: dark)").matches;
+                zyTheme = prefersDark ? "dark" : "light";
+            }
+
+            document.documentElement.setAttribute("data-theme", zyTheme);
         })();
     </script>
 
