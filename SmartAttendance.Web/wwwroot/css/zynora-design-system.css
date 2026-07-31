@@ -410,7 +410,7 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
 /* ============ السايدبار: إغلاق فجوة العمود + زر الطي للأيقونات ==============
    عمود الجريد يساوي --zy-sidebar-width (288) بينما ملف السكرول يفرض عرضاً
    أصغر (252) فتظهر فجوة 36px — نجعل السايدبار يملأ عموده دائماً. */
-.nexora-sidebar { width: 100% !important; max-width: 100% !important; }
+.nexora-sidebar { width: 100% !important; max-width: 100% !important; min-width: 0 !important; }
 
 /* زر الطي: أيقونة أسهم مزدوجة بالشريط العلوي بجانب الجرس */
 .zy-side-toggle { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--color-border, rgba(143,168,188,.25));
