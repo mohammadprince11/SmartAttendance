@@ -29,7 +29,7 @@
 .distribution-filter-form button {
     border: 1px solid rgba(18, 217, 227, .26);
     background: rgba(18, 217, 227, .08);
-    color: var(--nx-teal, #12d9e3);
+    color: var(--nx-teal, var(--color-primary));
     border-radius: 999px;
     padding: 8px 12px;
     text-decoration: none;
@@ -91,7 +91,7 @@
 .distribution-tab.active {
     color: #07121F;
     border-color: rgba(18, 217, 227, .45);
-    background: linear-gradient(135deg, var(--nx-teal, #12d9e3), #7ceaf0);
+    background: linear-gradient(135deg, var(--nx-teal, var(--color-primary)), var(--color-primary-soft));
     box-shadow: 0 12px 30px rgba(18, 217, 227, .15);
 }
 
@@ -163,7 +163,7 @@
     min-width: 4px;
     max-width: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, var(--nx-teal, #12d9e3), var(--nx-gold, #d7b26d));
+    background: linear-gradient(90deg, var(--nx-teal, var(--color-primary)), var(--nx-gold, #d7b26d));
 }
 
 html[data-theme="dark"] .distribution-tab,
@@ -174,7 +174,7 @@ html[data-theme="dark"] .distribution-filter-form input[type="search"] {
 
 html[data-theme="dark"] .distribution-tab.active,
 html[data-theme="dark"] .distribution-tab:hover {
-    background: linear-gradient(135deg, var(--nx-teal, #12d9e3), #7ceaf0) !important;
+    background: linear-gradient(135deg, var(--nx-teal, var(--color-primary)), var(--color-primary-soft)) !important;
     color: #07121F !important;
 }
 

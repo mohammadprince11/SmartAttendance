@@ -399,12 +399,12 @@
 
 .bp-nav-item:not(.is-active):hover {
     background: var(--interactive-primary-soft, rgba(24,199,189,.12));
-    color: var(--brand-primary, #18C7BD);
+    color: var(--brand-primary, var(--color-primary));
 }
 
 .bp-nav-item.is-active {
     color: var(--text-on-primary, #081426);
-    background: var(--brand-primary, #18C7BD);
+    background: var(--brand-primary, var(--color-primary));
     font-weight: 600;
 }
 
@@ -450,14 +450,14 @@
 }
 
 .bp-btn-primary {
-    background: var(--brand-primary, #18C7BD);
+    background: var(--brand-primary, var(--color-primary));
     color: var(--text-on-primary, #081426);
     font-weight: 600;
 }
 
 .bp-btn-soft {
     background: var(--interactive-primary-soft, rgba(24,199,189,.12));
-    color: var(--brand-primary, #18C7BD);
+    color: var(--brand-primary, var(--color-primary));
     border: 1px solid var(--border-strong, rgba(24,199,189,.34));
 }
 
@@ -490,13 +490,13 @@
     border-radius: var(--zy-radius-md);
     background: var(--surface-base, #101C30);
     border: 1px solid var(--border-default, rgba(217,225,232,.14));
-    border-inline-start: 3px solid var(--brand-primary, #18C7BD);
+    border-inline-start: 3px solid var(--brand-primary, var(--color-primary));
 }
 
 .bp-kpi-num {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--brand-primary, #18C7BD);
+    color: var(--brand-primary, var(--color-primary));
 }
 
 .bp-kpi-label {
@@ -529,7 +529,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: var(--brand-primary, #18C7BD);
+    background: var(--brand-primary, var(--color-primary));
     color: var(--text-on-primary, #081426);
     font-weight: 700;
     font-size: .9rem;

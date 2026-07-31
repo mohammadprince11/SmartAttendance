@@ -25,7 +25,7 @@
 
 .hero-eyebrow {
     color: #07121F !important;
-    background: linear-gradient(135deg, var(--nx-teal), #7CEAF0) !important;
+    background: linear-gradient(135deg, var(--nx-teal), var(--color-primary-soft)) !important;
     border-color: rgba(18,217,227,.35) !important;
 }
 

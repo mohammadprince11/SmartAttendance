@@ -13,7 +13,7 @@
     --z360-muted: #6c7d8f;
     --z360-navy: #081426;
     --z360-navy-2: #0d2137;
-    --z360-teal: var(--brand-primary, #18c7bd);
+    --z360-teal: var(--brand-primary, var(--color-primary));
     --z360-aqua: var(--brand-primary-aqua, #42ded3);
     --z360-cyan: #18aee8;
     --z360-gold: var(--brand-accent, #d4b36a);
@@ -44,7 +44,7 @@
     --z360-border-strong: #bdd0df;
     --z360-text: #102238;
     --z360-muted: #6c7d8f;
-    --z360-teal: var(--brand-primary, #18c7bd);
+    --z360-teal: var(--brand-primary, var(--color-primary));
     --z360-cyan: #18aee8;
     --z360-aqua: var(--brand-primary-aqua, #42ded3);
     --z360-gold: var(--brand-accent, #d4b36a);

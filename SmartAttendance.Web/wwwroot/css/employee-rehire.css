@@ -27,7 +27,7 @@
     border-radius: 999px;
     border: 1px solid rgba(18,217,227,.30);
     background: rgba(18,217,227,.08);
-    color: #12D9E3;
+    color: var(--color-primary-text);
     font-weight: 1000;
 }
 
@@ -73,7 +73,7 @@
 .rehire-btn.primary {
     color: #07121F !important;
     border-color: rgba(18,217,227,.50);
-    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
 }
 
 .rehire-employee-card,
@@ -101,7 +101,7 @@
     display: grid;
     place-items: center;
     border-radius: 24px;
-    background: linear-gradient(135deg, #12D9E3, #D7B26D);
+    background: linear-gradient(135deg, var(--color-primary), #D7B26D);
     color: #07121F;
     font-size: 34px;
     font-weight: 1000;
@@ -131,13 +131,13 @@
     border-radius: 999px;
     border: 1px solid rgba(18,217,227,.22);
     background: rgba(18,217,227,.07);
-    color: #12D9E3;
+    color: var(--color-primary-text);
     font-weight: 1000;
 }
 
 .rehire-status.active {
     color: #07121F;
-    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
 }
 
 .rehire-status.inactive {
@@ -166,7 +166,7 @@
 }
 
 .rehire-warning strong {
-    color: #12D9E3;
+    color: var(--color-primary-text);
     font-weight: 1000;
 }
 
@@ -251,7 +251,7 @@
 
 .rehire-change-grid strong {
     display: block;
-    color: #12D9E3;
+    color: var(--color-primary-text);
     font-weight: 1000;
 }
 
@@ -271,7 +271,7 @@
 .rehire-confirm input {
     width: 18px;
     height: 18px;
-    accent-color: #12D9E3;
+    accent-color: var(--color-primary);
 }
 
 .rehire-actions {

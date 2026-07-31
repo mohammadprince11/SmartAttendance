@@ -72,7 +72,7 @@
 .lifecycle-timeline-btn.primary {
     color: #07121F !important;
     border-color: rgba(18,217,227,.50);
-    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
 }
 
 .lifecycle-timeline-hero,
@@ -100,7 +100,7 @@
     display: grid;
     place-items: center;
     border-radius: 24px;
-    background: linear-gradient(135deg, #12D9E3, #D7B26D);
+    background: linear-gradient(135deg, var(--color-primary), #D7B26D);
     color: #07121F;
     font-size: 34px;
     font-weight: 1000;
@@ -131,14 +131,14 @@
     border-radius: 999px;
     border: 1px solid rgba(18,217,227,.22);
     background: rgba(18,217,227,.07);
-    color: #12D9E3;
+    color: var(--color-primary-text);
     font-weight: 1000;
 }
 
 .lifecycle-timeline-status.ok,
 .lifecycle-timeline-badge.ok {
     color: #07121F;
-    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
 }
 
 .lifecycle-timeline-status.danger {
@@ -184,7 +184,7 @@
 .lifecycle-timeline-kpi strong {
     display: block;
     margin-top: 10px;
-    color: #12D9E3;
+    color: var(--color-primary-text);
     font-size: 26px;
     line-height: 1;
     font-weight: 1000;
@@ -195,7 +195,7 @@
 }
 
 .lifecycle-timeline-kpi.ok strong {
-    color: #12D9E3;
+    color: var(--color-primary-text);
 }
 
 .lifecycle-timeline-kpi small {
@@ -246,7 +246,7 @@
     margin-top: 20px;
     border-radius: 50%;
     border: 3px solid rgba(7,18,31,1);
-    background: #12D9E3;
+    background: var(--color-primary);
     box-shadow: 0 0 0 4px rgba(18,217,227,.14), 0 0 22px rgba(18,217,227,.35);
     z-index: 1;
 }
@@ -332,7 +332,7 @@
 }
 
 .lifecycle-timeline-details.info strong {
-    color: #12D9E3;
+    color: var(--color-primary-text);
 }
 
 .lifecycle-timeline-details.muted strong {

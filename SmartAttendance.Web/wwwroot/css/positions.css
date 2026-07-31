@@ -1020,7 +1020,7 @@ body.nxp-modal-open {
 }
 
 #positionForm > .nxp-position-profile-launchers .nxp-profile-launcher span {
-    color: #22d3ee !important;
+    color: var(--color-primary-text) !important;
     font-size: 11px !important;
     font-weight: 1000 !important;
 }
@@ -1089,7 +1089,7 @@ body.nxp-profile-modal-open {
 .nxp-profile-modal__head span {
     display: block !important;
     margin-bottom: 4px !important;
-    color: #22d3ee !important;
+    color: var(--color-primary-text) !important;
     font-size: 11px !important;
     font-weight: 1000 !important;
 }
@@ -1344,7 +1344,7 @@ body.nxp-profile-modal-open {
 .nxp-label-manage {
     border: 0 !important;
     background: transparent !important;
-    color: #22d3ee !important;
+    color: var(--color-primary-text) !important;
     font-size: 11px !important;
     font-weight: 1000 !important;
     cursor: pointer !important;
@@ -1407,7 +1407,7 @@ body.nxp-profile-modal-open {
 
 .nxp-reference-modal__head span {
     display: block !important;
-    color: #22d3ee !important;
+    color: var(--color-primary-text) !important;
     font-size: 12px !important;
     font-weight: 1000 !important;
     margin-bottom: 6px !important;
@@ -1627,7 +1627,7 @@ body.nxp-profile-modal-open {
     border-radius: 999px !important;
     border: 1px solid rgba(34, 211, 238, .32) !important;
     background: rgba(34, 211, 238, .10) !important;
-    color: #22d3ee !important;
+    color: var(--color-primary-text) !important;
     font-size: 11px !important;
     font-weight: 1000 !important;
     line-height: 1 !important;
@@ -1757,7 +1757,7 @@ It does not override the global .nxcs trigger structure.
     border: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
-    color: #22d3ee !important;
+    color: var(--color-primary-text) !important;
     padding: 0 !important;
     margin: 0 !important;
     min-width: auto !important;
@@ -2080,7 +2080,7 @@ so the caret moved right. This block restores the global flex behavior.
 
 .nxp-import-columns small {
     width: 100% !important;
-    color: #22d3ee !important;
+    color: var(--color-primary-text) !important;
     font-weight: 1000 !important;
 }
 

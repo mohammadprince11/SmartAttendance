@@ -383,7 +383,7 @@
 }
 
 .nx-ops-kpi.cyan::after {
-    background: linear-gradient(90deg, transparent, #19d3e0, transparent) !important;
+    background: linear-gradient(90deg, transparent, var(--color-primary), transparent) !important;
 }
 
 .nx-ops-kpi.gold::after {

@@ -289,7 +289,7 @@
     padding:5px 12px;
     border:1px solid rgba(25,211,224,.34);
     background:rgba(25,211,224,.09);
-    color:#9ff4fa;
+    color:var(--color-primary-soft);
     font-size:11px;
     font-weight:1000;
     white-space:nowrap;
@@ -524,7 +524,7 @@
 }
 
 .nxupd-change-table td:last-child{
-    color:#9ff4fa;
+    color:var(--color-primary-soft);
     font-weight:1000;
 }
 
@@ -560,7 +560,7 @@
     height:16px;
     border-radius:50%;
     margin-top:18px;
-    background:#19d3e0;
+    background:var(--color-primary);
     box-shadow:0 0 0 5px rgba(25,211,224,.10);
 }
 
@@ -619,13 +619,13 @@
 }
 
 .nxupd-history-body li i{
-    color:#19d3e0;
+    color: var(--color-primary-text);
     font-style:normal;
     text-align:center;
 }
 
 .nxupd-history-body li strong{
-    color:#9ff4fa;
+    color:var(--color-primary-soft);
 }
 
 @media(max-width:1100px){
@@ -666,7 +666,7 @@
 
 /* Merged employee information section */
 .nxupd-side-menu a[href*="employee-info"] span{
-    color:#9ff4fa;
+    color:var(--color-primary-soft);
 }
 .nxupd-fields{
     grid-template-columns:repeat(3,minmax(0,1fr));
@@ -754,7 +754,7 @@
     border-radius:24px;
     border:1px solid rgba(25,211,224,.46);
     background:rgba(25,211,224,.13);
-    color:#9ff4fa;
+    color:var(--color-primary-soft);
     font-size:34px;
     font-weight:1000;
     box-shadow:0 0 38px rgba(25,211,224,.14);
@@ -1037,7 +1037,7 @@ body.nxupd-modal-open{
     border-radius: 999px !important;
     border: 1px solid rgba(34, 211, 238, .28) !important;
     background: rgba(34, 211, 238, .10) !important;
-    color: #22d3ee !important;
+    color: var(--color-primary-text) !important;
     font-weight: 1000 !important;
 }
 
@@ -1518,7 +1518,7 @@ body.nxupd-modal-open{
 }
 
 .nxupd-date-day.is-selected {
-    background: linear-gradient(135deg, #22d3ee, #67e8f9) !important;
+    background: linear-gradient(135deg, var(--color-primary), #67e8f9) !important;
     color: #06111f !important;
     border-color: rgba(103, 232, 249, .95) !important;
     box-shadow: 0 8px 22px rgba(34, 211, 238, .22) !important;

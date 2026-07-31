@@ -3,7 +3,7 @@
     --deep-space: #101C30;
     /* Bridge the legacy people palette to the Theme Contract so .zhr-* components
        follow the Branding & Theme Engine (P7 migration). */
-    --electric-teal: var(--brand-primary, #18C7BD);
+    --electric-teal: var(--brand-primary, var(--color-primary));
     --refined-aqua: var(--brand-primary-aqua, #42DED3);
     --soft-silver: #D9E1E8;
     --cloud-white: #F7F9FB;

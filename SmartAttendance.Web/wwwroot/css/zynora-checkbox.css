@@ -36,18 +36,18 @@ input[type="checkbox"]:not([role="switch"]):not(.no-zy-check) {
 }
 
 input[type="checkbox"]:not([role="switch"]):not(.no-zy-check):hover:not(:disabled) {
-    border-color: var(--sa-primary, #18C7BD) !important;
+    border-color: var(--sa-primary, var(--color-primary)) !important;
 }
 
 input[type="checkbox"]:not([role="switch"]):not(.no-zy-check):focus-visible {
     outline: none !important;
-    border-color: var(--sa-primary, #18C7BD) !important;
+    border-color: var(--sa-primary, var(--color-primary)) !important;
     box-shadow: var(--zy-focus-ring, 0 0 0 3px color-mix(in srgb, var(--brand-primary) 22%, transparent)) !important;
 }
 
 input[type="checkbox"]:not([role="switch"]):not(.no-zy-check):checked {
-    background: var(--sa-primary, #18C7BD) !important;
-    border-color: var(--sa-primary, #18C7BD) !important;
+    background: var(--sa-primary, var(--color-primary)) !important;
+    border-color: var(--sa-primary, var(--color-primary)) !important;
 }
 
 /* White tick (rotated border), centred in the box. */

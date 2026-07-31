@@ -79,7 +79,7 @@
 .endservice-btn.primary {
     color: #07121F !important;
     border-color: rgba(18,217,227,.50);
-    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
 }
 
 .endservice-employee-card,
@@ -107,7 +107,7 @@
     display: grid;
     place-items: center;
     border-radius: 24px;
-    background: linear-gradient(135deg, #D7B26D, #12D9E3);
+    background: linear-gradient(135deg, #D7B26D, var(--color-primary));
     color: #07121F;
     font-size: 34px;
     font-weight: 1000;
@@ -137,13 +137,13 @@
     border-radius: 999px;
     border: 1px solid rgba(18,217,227,.22);
     background: rgba(18,217,227,.07);
-    color: #12D9E3;
+    color: var(--color-primary-text);
     font-weight: 1000;
 }
 
 .endservice-status.active {
     color: #07121F;
-    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
 }
 
 .endservice-status.inactive {
@@ -258,7 +258,7 @@
 .endservice-confirm input {
     width: 18px;
     height: 18px;
-    accent-color: #12D9E3;
+    accent-color: var(--color-primary);
 }
 
 .danger-zone {
@@ -296,7 +296,7 @@
 .endservice-alert.success {
     border: 1px solid rgba(18,217,227,.28);
     background: rgba(18,217,227,.10);
-    color: #12D9E3;
+    color: var(--color-primary-text);
 }
 
 @media (max-width: 900px) {

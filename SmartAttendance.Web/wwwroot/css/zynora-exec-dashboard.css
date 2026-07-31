@@ -7,7 +7,7 @@
 
 .zxd-page {
     --zxd-line: rgba(73, 111, 151, .2);
-    --zxd-teal: #12D9E3;
+    --zxd-teal: var(--color-primary);
     --zxd-green: #4ade80;
     --zxd-amber: #facc15;
     --zxd-red: #f87171;
