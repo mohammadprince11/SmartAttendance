@@ -48,7 +48,9 @@
     --radius-full: 999px;
     --shadow: 0 1px 3px rgba(22, 40, 58, .07), 0 8px 24px rgba(22, 40, 58, .04);
     --shadow-pop: 0 12px 40px rgba(22, 40, 58, .16);
-    --control-h: 33px;       /* ارتفاع موحد مضغوط للحقول والأزرار Medium (كثافة كيان) */
+    /* ارتفاع موحد بكثافة كيان المقاسة حياً (select2=30px، BT-input=35px، خط 13px)
+       — نوحّد على 31px بمستوى دروبهم. */
+    --control-h: 31px;
     --speed: 160ms;
 }
 
