@@ -134,7 +134,8 @@ html[dir="ltr"] .zy-scope select,
 /* الحجم القياسي 40px — أزرار الإجراءات فقط (نستثني المضغوطة: أيقونة/mini/ترقيم/link/switch) */
 /* أزرار الهوية الجديدة (.zy-btn) مستثناة — قياسها من zynora-design-system */
 .zy-scope [class*="-btn"]:not([class*="pill"]):not([class*="icon"]):not([class*="mini"]):not([class*="pager"]):not([class*="pagination"]):not([class*="link"]):not([class*="switch"]):not(.zy-btn),
-.zy-scope [class*="-button"]:not([class*="pill"]):not([class*="icon"]):not([class*="switch"]):not([class*="pagination"]),
+/* عناصر الكلاندر (nxcal__*-button) مستثناة — قياسها من zynora-design-system */
+.zy-scope [class*="-button"]:not([class*="pill"]):not([class*="icon"]):not([class*="switch"]):not([class*="pagination"]):not([class*="nxcal"]),
 .zy-scope .nxos__button {
     min-height: 40px !important;
     padding: 0 18px;
