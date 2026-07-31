@@ -30,8 +30,9 @@ public class RoleSecurityMiddleware
         await EnsureLoginDatabaseCreatedAsync(dbContext);
 
         var path = context.Request.Path.Value?.ToLowerInvariant() ?? "/";
+        var accessClass = PublicPathPolicy.Classify(path);
 
-        if (IsPublicPath(path))
+        if (accessClass == PathAccessClass.Public)
         {
             await _next(context);
             return;
@@ -55,6 +56,27 @@ public class RoleSecurityMiddleware
             string.IsNullOrWhiteSpace(role))
         {
             RedirectToLogin(context);
+            return;
+        }
+
+        // ملفات wwwroot التاريخية: لم تعد عامة. الصور تكفيها المصادقة، وما عداها
+        // (مستندات/نماذج تأديبية/مرفقات طلبات) للباك أوفيس فقط — والملفات الجديدة
+        // لا تُخزَّن هنا أصلاً بل خلف /files بفحص صلاحية لكل موظف.
+        if (accessClass == PathAccessClass.AnyAuthenticated)
+        {
+            await _next(context);
+            return;
+        }
+
+        if (accessClass == PathAccessClass.BackOfficeOnly)
+        {
+            if (role.Equals("Employee", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            await _next(context);
             return;
         }
 
@@ -110,54 +132,6 @@ public class RoleSecurityMiddleware
         {
             LoginDatabaseEnsureLock.Release();
         }
-    }
-
-    private static bool IsPublicPath(string path)
-    {
-        if (path == "/account/login" ||
-            path == "/account/logout" ||
-            path == "/accessdenied")
-        {
-            return true;
-        }
-
-        // ملفات الـPWA بالجذر يجب أن تُخدَم بلا مصادقة (المتصفح يجلبها قبل/بعد الدخول).
-        // ملاحظة: .NET يبصم اسم الملف (manifest.<hash>.webmanifest) فنطابق اللاحقة لا الاسم الحرفي.
-        if (path.EndsWith(".webmanifest") ||
-            path == "/sw.js" ||
-            path == "/offline.html" ||
-            path == "/app.apk")
-        {
-            return true;
-        }
-
-        // واجهة الموبايل (REST) تصادَق بتوكن Bearer داخل الكنترولرات لا بكوكيز هذا
-        // الحارس، فنتركها تمرّ ويتولّى [Authorize(ApiToken)] الحماية.
-        if (path.StartsWith("/api/"))
-        {
-            return true;
-        }
-
-        // نقاط Web-Push (كنترولر بمصادقة كوكي [Authorize]) خارج كتالوج الأدوار — لو
-        // حجبها الحارس بالكتالوج لحوّل الموظف إلى /AccessDenied فيفشل جلب مفتاح VAPID
-        // والاشتراك. نمرّرها هنا و[Authorize] يفرض المصادقة والكنترولر يحلّ الموظف بنفسه.
-        if (path.StartsWith("/push/"))
-        {
-            return true;
-        }
-
-        if (path.StartsWith("/css/") ||
-            path.StartsWith("/js/") ||
-            path.StartsWith("/lib/") ||
-            path.StartsWith("/images/") ||
-            path.StartsWith("/brand/") ||
-            path.StartsWith("/uploads/") ||
-            path.StartsWith("/favicon"))
-        {
-            return true;
-        }
-
-        return false;
     }
 
     private static void RedirectToLogin(HttpContext context)

@@ -77,7 +77,7 @@ public partial class ProfileModel
         var rows = await HrmsDatabase.QueryAsync(
             _dbContext,
             """
-SELECT TOP 1 StoredPath
+SELECT TOP 1 StoredPath, ISNULL(ProtectedKey, '') AS ProtectedKey
 FROM EmployeeProfileFiles
 WHERE Id = @FileId AND EmployeeId = @EmployeeId;
 """,
@@ -86,9 +86,15 @@ WHERE Id = @FileId AND EmployeeId = @EmployeeId;
                 HrmsDatabase.AddParameter(command, "@FileId", fileId);
                 HrmsDatabase.AddParameter(command, "@EmployeeId", id);
             },
-            reader => HrmsDatabase.GetString(reader, "StoredPath"));
+            reader => new
+            {
+                StoredPath = HrmsDatabase.GetString(reader, "StoredPath"),
+                ProtectedKey = HrmsDatabase.GetString(reader, "ProtectedKey")
+            });
 
-        var storedPath = rows.FirstOrDefault();
+        var row = rows.FirstOrDefault();
+        var storedPath = row?.StoredPath ?? string.Empty;
+        var protectedKey = row?.ProtectedKey ?? string.Empty;
 
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
@@ -99,8 +105,14 @@ WHERE Id = @FileId AND EmployeeId = @EmployeeId;
                 HrmsDatabase.AddParameter(command, "@EmployeeId", id);
             });
 
-        if (!string.IsNullOrWhiteSpace(storedPath) &&
-            storedPath.StartsWith("/uploads/employee-profile-files/", StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(protectedKey))
+        {
+            Infrastructure.Security.ProtectedFileStore.TryDelete(
+                Infrastructure.Security.ProtectedFileStore.ResolveRoot(_environment.ContentRootPath),
+                protectedKey);
+        }
+        else if (!string.IsNullOrWhiteSpace(storedPath) &&
+                 storedPath.StartsWith("/uploads/employee-profile-files/", StringComparison.OrdinalIgnoreCase))
         {
             TryDeleteProfileAreaPhysicalFile(storedPath);
         }
@@ -126,7 +138,8 @@ BEGIN
         [ContentType] nvarchar(120) NULL,
         [SizeBytes] bigint NOT NULL CONSTRAINT DF_EmployeeProfileFiles_SizeBytes DEFAULT 0,
         [UploadedAt] datetime2 NOT NULL CONSTRAINT DF_EmployeeProfileFiles_UploadedAt DEFAULT SYSUTCDATETIME(),
-        [UploadedBy] nvarchar(150) NULL
+        [UploadedBy] nvarchar(150) NULL,
+        [ProtectedKey] nvarchar(400) NULL
     );
 
     CREATE INDEX IX_EmployeeProfileFiles_Employee_Category
@@ -159,26 +172,25 @@ END;
             return string.Empty;
         }
 
-        var webRoot = _environment.WebRootPath;
+        // المرحلة 6: الملفات الجديدة تُخزَّن خارج wwwroot باسم مولَّد بالكامل، فلا
+        // يخدمها الخادم الثابت ولا يُخمَّن مسارها. القراءة عبر /files فقط.
+        var protectedRoot = Infrastructure.Security.ProtectedFileStore.ResolveRoot(
+            _environment.ContentRootPath);
+        var storageKey = Infrastructure.Security.ProtectedFileStore.BuildStorageKey(
+            employeeId, category, extension);
 
-        if (string.IsNullOrWhiteSpace(webRoot))
+        await using (var source = file.OpenReadStream())
         {
-            webRoot = Path.Combine(_environment.ContentRootPath, "wwwroot");
-        }
+            var stored = await Infrastructure.Security.ProtectedFileStore.SaveAsync(
+                protectedRoot, storageKey, source, HttpContext.RequestAborted);
 
-        var uploadsRoot = Path.Combine(webRoot, "uploads", "employee-profile-files", employeeId.ToString());
-        Directory.CreateDirectory(uploadsRoot);
+            if (!stored)
+            {
+                return string.Empty;
+            }
+        }
 
         var safeOriginalName = Path.GetFileName(file.FileName);
-        var fileName = $"{category}_{employeeId}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{extension.ToLowerInvariant()}";
-        var fullPath = Path.Combine(uploadsRoot, fileName);
-
-        await using (var stream = System.IO.File.Create(fullPath))
-        {
-            await file.CopyToAsync(stream);
-        }
-
-        var relativePath = $"/uploads/employee-profile-files/{employeeId}/{fileName}";
 
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
@@ -189,6 +201,7 @@ INSERT INTO EmployeeProfileFiles
     Category,
     FileName,
     StoredPath,
+    ProtectedKey,
     ContentType,
     SizeBytes,
     UploadedAt,
@@ -199,7 +212,8 @@ VALUES
     @EmployeeId,
     @Category,
     @FileName,
-    @StoredPath,
+    '',
+    @ProtectedKey,
     @ContentType,
     @SizeBytes,
     SYSUTCDATETIME(),
@@ -211,13 +225,13 @@ VALUES
                 HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
                 HrmsDatabase.AddParameter(command, "@Category", category);
                 HrmsDatabase.AddParameter(command, "@FileName", safeOriginalName);
-                HrmsDatabase.AddParameter(command, "@StoredPath", relativePath);
+                HrmsDatabase.AddParameter(command, "@ProtectedKey", storageKey);
                 HrmsDatabase.AddParameter(command, "@ContentType", file.ContentType ?? string.Empty);
                 HrmsDatabase.AddParameter(command, "@SizeBytes", file.Length);
                 HrmsDatabase.AddParameter(command, "@UploadedBy", User?.Identity?.Name ?? string.Empty);
             });
 
-        return relativePath;
+        return storageKey;
     }
 
     private async Task LoadProfileFilesAsync(int employeeId)
@@ -293,5 +307,11 @@ ORDER BY UploadedAt DESC;
         public string StoredPath { get; set; } = string.Empty;
 
         public DateTime? UploadedAt { get; set; }
+
+        /// <summary>
+        /// المسار الوحيد لفتح الملف: نقطة مصادَقة تفحص صلاحية الموظف المستهدف —
+        /// تخدم الملفات المحمية الجديدة والصفوف التاريخية معاً.
+        /// </summary>
+        public string DownloadUrl => $"/files/employee-profile/{Id}";
     }
 }
