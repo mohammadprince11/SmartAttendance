@@ -143,6 +143,22 @@ public static class ThemeCompiler
 
         sb.Append("--text-on-primary:").Append(ToHex(onPrimary)).Append(';');
 
+        // نسختان مقروءتان مشتقّتان من لون الشركة (AccessibleBrandPalette):
+        // لون العلامة يبقى للمساحات الكبيرة، وهاتان للنص والأزرار — فشركة تختار
+        // لوناً فاتحاً لا تحصل على نص بنسبة 2:1. القيم تُستهلك بتوكنز نظام التصميم
+        // (--color-primary-text / --color-primary-strong) مع رجوع للثابت عند غيابها.
+        var brandHex = ToHex(primary);
+        sb.Append("--brand-primary-text:")
+          .Append(AccessibleBrandPalette.EnsureReadableOn(brandHex, "#ffffff"))
+          .Append(';');
+        sb.Append("--brand-primary-strong:")
+          .Append(AccessibleBrandPalette.EnsureCarriesInk(brandHex, "#ffffff"))
+          .Append(';');
+        // نظير الوضع الداكن: يُقرأ على سطح الغرافيت لا على الأبيض.
+        sb.Append("--brand-primary-text-dark:")
+          .Append(AccessibleBrandPalette.EnsureReadableOn(brandHex, "#1b222a"))
+          .Append(';');
+
         // Derived interactive tints from the primary.
         sb.Append("--interactive-primary-soft:").Append(Rgba(primary, 0.12)).Append(';');
         sb.Append("--interactive-focus-ring:0 0 0 3px ").Append(Rgba(primary, 0.20)).Append(';');

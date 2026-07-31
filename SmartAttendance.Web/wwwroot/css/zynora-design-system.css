@@ -24,8 +24,8 @@
        - --color-primary          يبقى للمساحات الكبيرة (أعمدة الرسوم، الأشرطة، الحدود).
        - --color-primary-strong   خلفية أي عنصر يحمل نصاً (الأزرار) ⟹ أبيض فوقه 5.58:1.
        - --color-primary-text     نص/أيقونة بالتيل فوق سطح فاتح ⟹ 5.58:1 بدل 2.97:1. */
-    --color-primary-strong: #0a7286;
-    --color-primary-text: #0a7286;
+    --color-primary-strong: var(--brand-primary-strong, #0a7286);
+    --color-primary-text: var(--brand-primary-text, #0a7286);
     --color-on-primary: #ffffff;
 
     --color-secondary: #6366f1;          /* نيلي هادئ للتمييز الثانوي */
@@ -92,7 +92,7 @@ html[data-theme="dark"] {
     /* بالداكن العلاج معكوس: تعتيم الزر يذيبه بالخلفية، فنُبقيه فاتحاً ونضع نصاً
        داكناً فوقه — أبيض على #35aebb = 2.65:1 بينما #08303a عليه = 5.30:1. */
     --color-primary-strong: var(--brand-primary, #35aebb);
-    --color-primary-text: var(--brand-primary, #35aebb);   /* كنص على الغرافيت: 6.05:1 */
+    --color-primary-text: var(--brand-primary-text-dark, #35aebb);   /* كنص على الغرافيت: 6.05:1 */
     --color-on-primary: #08303a;
     --color-secondary: #8688e8;
     --color-secondary-soft: #222438;
