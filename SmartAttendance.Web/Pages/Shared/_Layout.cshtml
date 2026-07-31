@@ -611,11 +611,11 @@
                             </div>
                         </details>
 
-                        @* أُزيل رابط /Payroll/TaxSocialSecurity: صفحة تكتب جدولَي
-                           PayrollTaxSocialSecurity{Settings,Records} ولا يقرأهما أي شيء —
-                           محرّك المسير (PayrollRunStore) يقرأ TaxProfiles/GosiProfiles من
-                           «تهيئة الضريبة والضمان» أدناه. إبقاء الرابط كان يوقع الأدمن بتعديل
-                           صامت لا أثر له بالمسير. الصفحة نفسها باقية لحين البتّ ببياناتها. *@
+                        @* حُذفت صفحة /Payroll/TaxSocialSecurity: بذرة حاسبة سابقة لمحرّك
+                           المسير، كانت تكتب جدولَي PayrollTaxSocialSecurity{Settings,Records}
+                           ولا يقرأهما أحد، بينما المحرّك يقرأ TaxProfiles/GosiProfiles من
+                           «الضريبة والضمان» أدناه — فكان الأدمن يعدّل بلا أثر وبلا تحذير.
+                           الجدولان اليتيمان يبقيان بالقاعدة حتى تُسقطهما هجرة محكومة. *@
                         <details class="ky-acc" @(IsUnder("/Payroll/SalaryItems") || IsUnder("/Payroll/Settings") || IsUnder("/Payroll/BankTemplates") ? "open" : "")>
                             <summary><span>إعدادات الرواتب</span><span class="ky-acc-chev"></span></summary>
                             <div class="ky-acc-body">
