@@ -3,6 +3,7 @@ using SmartAttendance.Domain.Enums;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.HrSettings;
+using SmartAttendance.Web.Pages.HrSettings;
 
 namespace SmartAttendance.Web.Infrastructure.Notifications;
 
@@ -118,12 +119,32 @@ END;
         if (rules.Count == 0)
             return new GenerationResult(0, 0, 0);
 
-        // إعدادات فترة التجربة (تُقرأ مرّة)
+        // إعدادات فترة التجربة — السياسة الأمّ (تُقرأ مرّة)
         var probUnit = await HrSettingsStore.GetAsync(db, "Probation.DurationUnit", "Day");
         var probValue = int.TryParse(await HrSettingsStore.GetAsync(db, "Probation.DurationValue", "90"), out var pv) ? pv : 90;
         var probBasis = await HrSettingsStore.GetAsync(db, "Probation.StartBasis", "HireDate");
         var probAllowExt = bool.TryParse(await HrSettingsStore.GetAsync(db, "Probation.AllowExtension", "False"), out var ae) && ae;
         var probExtDays = int.TryParse(await HrSettingsStore.GetAsync(db, "Probation.ExtensionDays", "0"), out var ed) ? ed : 0;
+
+        var parentProbation = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [ProbationPeriodModel.KeyDuration] = probValue.ToString(),
+            [ProbationPeriodModel.KeyUnit] = probUnit,
+            [ProbationPeriodModel.KeyBasis] = probBasis,
+            [ProbationPeriodModel.KeyExtensionDays] = probExtDays.ToString()
+        };
+
+        // نُسَخ السياسة المشروطة. **تُقرأ الحقائق مرّة واحدة لكل الموظفين ويُحسم
+        // بالذاكرة** — استعلامٌ لكل موظف كان سيعني 1356 دورة ذهاب وإياب بكل تشغيل
+        // للكرون اليومي. وبلا نُسَخ لا يُقرأ شيء أصلاً، فالمسار القائم بلا كلفة.
+        var probationOverrides = (await HrPolicyOverrideStore.LoadAsync(db, HrPolicyOverrideStore.PolicyProbation))
+            .Select(row => row.ToOverride())
+            .ToList();
+
+        var factsByEmployee = probationOverrides.Count == 0
+            ? new Dictionary<int, Dictionary<string, HrConditions.Fact>>()
+            : (await HrConditionFacts.LoadAsync(db))
+                .ToDictionary(row => row.Id, row => HrConditionFacts.Build(row, today));
 
         // المشرفون: أدمن/HR فعّالون مرتبطون بموظف
         var supervisorIds = (await HrmsDatabase.QueryAsync(
@@ -169,10 +190,23 @@ WHERE IsActive = 1 AND IsDeleted = 0;
         var candidates = new List<PendingEvent>();
         foreach (var emp in employees)
         {
+            // فترة التجربة قد تختلف لهذا الموظف بنسخة سياسة مشروطة (فرع/فئة/راتب).
+            var probation = parentProbation;
+            if (probationOverrides.Count > 0 && factsByEmployee.TryGetValue(emp.Id, out var empFacts))
+            {
+                probation = (Dictionary<string, string>)HrPolicyResolver
+                    .Resolve(parentProbation, probationOverrides, empFacts).Values;
+            }
+
+            var empBasis = probation.GetValueOrDefault(ProbationPeriodModel.KeyBasis, probBasis);
+            var empUnit = probation.GetValueOrDefault(ProbationPeriodModel.KeyUnit, probUnit);
+            var empValue = int.TryParse(probation.GetValueOrDefault(ProbationPeriodModel.KeyDuration), out var rv) ? rv : probValue;
+            var empExtDays = int.TryParse(probation.GetValueOrDefault(ProbationPeriodModel.KeyExtensionDays), out var rd) ? rd : probExtDays;
+
             foreach (var (kind, rule) in rules)
             {
                 var ev = BuildEvent(kind, rule.DaysBefore, emp, today,
-                    probBasis, probUnit, probValue, probAllowExt, probExtDays);
+                    empBasis, empUnit, empValue, probAllowExt, empExtDays);
                 if (ev is not null && !firedKeys.Contains(ev.EventKey))
                     candidates.Add(ev with { IncludeManager = rule.Audience.Contains("مدير") });
             }
