@@ -116,6 +116,41 @@ BEGIN
             FOREIGN KEY (CompanyId) REFERENCES Companies (Id);
 END;
 """),
+
+        // عضوية أوعية الاحتساب: أي مكوّن قسيمة ينضمّ لوعاء الضريبة أو الضمان.
+        // كانت مثبّتة بالكود داخل PayrollRunStore فصارت صفوفاً يحرّرها المستخدم.
+        // **البذرة تُنتج السلوك القائم حرفياً** (ضريبة: الأساسي+العلاوات+الخاضع
+        // بأنواعه · ضمان: الإجمالي) وإلا تغيّر اقتطاع كل قسيمة بأثر رجعي.
+        // مشروطة بخلوّ الجدول فلا تدهس تعديلات المستخدم عند كل إقلاع.
+        new(
+            "20260731-07-salary-base-members",
+            """
+IF OBJECT_ID('SalaryBaseMembers', 'U') IS NULL
+BEGIN
+    CREATE TABLE SalaryBaseMembers (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        BaseKey nvarchar(32) NOT NULL,
+        ComponentKey nvarchar(32) NOT NULL,
+        SortOrder int NOT NULL DEFAULT(0),
+        CONSTRAINT UQ_SalaryBaseMembers UNIQUE (BaseKey, ComponentKey)
+    );
+
+    CREATE INDEX IX_SalaryBaseMembers_BaseKey ON SalaryBaseMembers (BaseKey);
+END;
+
+IF NOT EXISTS (SELECT 1 FROM SalaryBaseMembers)
+BEGIN
+    INSERT INTO SalaryBaseMembers (BaseKey, ComponentKey, SortOrder) VALUES
+        (N'TaxBase',  N'Basic',            1),
+        (N'TaxBase',  N'Allowances',       2),
+        (N'TaxBase',  N'TaxableIncome',    3),
+        (N'TaxBase',  N'TaxableOvertime',  4),
+        (N'TaxBase',  N'SalaryDays',       5),
+        (N'TaxBase',  N'LeaveEncashment',  6),
+        (N'TaxBase',  N'FormulaAdd',       7),
+        (N'GosiBase', N'Gross',            1);
+END;
+"""),
     };
 
     /// <summary>

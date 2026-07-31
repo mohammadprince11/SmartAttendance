@@ -89,4 +89,22 @@ public class SalaryBaseComposerTests
         // توثيق مقصود: التركيب جمعٌ خام، ومنعُ التكرار مسؤولية طبقة الحفظ.
         Assert.Equal(1_000_000m, SalaryBaseComposer.Compose(Sample(), new[] { "Basic", "Basic" }));
     }
+
+    [Fact]
+    public void DefaultMembers_AreAllKnownComponents()
+    {
+        // مفتاح افتراضي مكتوب خطأً يُتجاهَل بصمت عند التركيب فيَنقص الوعاء
+        // بلا أي عرَض ظاهر — نمسكه هنا بدل أن يظهر باقتطاع ناقص.
+        var known = SalaryBaseComposer.Components.Select(c => c.Key).ToHashSet();
+
+        Assert.All(SalaryBaseComposer.DefaultTaxMembers, m => Assert.Contains(m, known));
+        Assert.All(SalaryBaseComposer.DefaultGosiMembers, m => Assert.Contains(m, known));
+    }
+
+    [Fact]
+    public void DefaultTaxMembers_ExcludeGross_OtherwiseIncomeIsCountedTwice()
+    {
+        // الإجمالي يضمّ الأساسي والعلاوات، فانضمامه لوعاء الضريبة يضاعفهما.
+        Assert.DoesNotContain("Gross", SalaryBaseComposer.DefaultTaxMembers);
+    }
 }

@@ -1,9 +1,10 @@
 @page "/Payroll/Settings"
 @model SmartAttendance.Web.Pages.Payroll.SettingsModel
 @using System.Text.Json
+@using SmartAttendance.Web.Infrastructure.Hrms
 
 @{
-    ViewData["Title"] = "تهيئة الضريبة والضمان";
+    ViewData["Title"] = "الضريبة والضمان";
     var taxJson = JsonSerializer.Serialize(Model.TaxProfiles.Select(p => new
     {
         p.Id, p.Name, p.ExemptionAmount, p.IsActive,
@@ -99,6 +100,55 @@
         </div>
     </div>
 
+    @* ----- أوعية الاحتساب: أي مكوّن يدخل بالضريبة/الضمان (سحب وإفلات) ----- *@
+    <div class="ps-sec sb-sec">
+        <h2>أوعية الاحتساب</h2>
+        <p class="sb-hint">
+            اسحب المكوّن وأفلته داخل الوعاء ليدخل باحتسابه، أو أخرجه ليُستثنى.
+            <b>الأثر يظهر على كل قسيمة بالمسير القادم</b> — المسيرات المعتمدة لا تتغيّر.
+        </p>
+
+        @foreach (var (key, title) in new[] {
+            (SalaryBaseComposer.TaxBaseKey, "وعاء الضريبة"),
+            (SalaryBaseComposer.GosiBaseKey, "وعاء الضمان") })
+        {
+            var members = key == SalaryBaseComposer.TaxBaseKey ? Model.TaxMembers : Model.GosiMembers;
+
+            <form method="post" asp-page-handler="SaveBase" class="sb-board" data-base="@key">
+                <input type="hidden" name="BaseKey" value="@key" />
+
+                <div class="sb-cols">
+                    <div class="sb-col">
+                        <h3>@title</h3>
+                        <div class="sb-drop" data-role="in" ondragover="sbOver(event)" ondrop="sbDrop(event)">
+                            @foreach (var m in members)
+                            {
+                                <div class="sb-chip" draggable="true" ondragstart="sbStart(event)" data-key="@m">
+                                    <span>@SettingsModel.ComponentLabel(m)</span>
+                                    <input type="hidden" name="member" value="@m" />
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="sb-col">
+                        <h3>مستثنى</h3>
+                        <div class="sb-drop sb-out" data-role="out" ondragover="sbOver(event)" ondrop="sbDrop(event)">
+                            @foreach (var (ck, label) in Model.Unassigned(members))
+                            {
+                                <div class="sb-chip" draggable="true" ondragstart="sbStart(event)" data-key="@ck">
+                                    <span>@label</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="ps-btn">حفظ @title</button>
+            </form>
+        }
+    </div>
+
     @* سلايد الضريبة *@
     <div class="hrms-slideover-backdrop" id="tax-backdrop" onclick="taxClose()"></div>
     <aside class="hrms-slideover wide" id="tax-slide" aria-hidden="true">
@@ -192,5 +242,58 @@
         }
         function gosiClose() { document.getElementById('gosi-slide').classList.remove('open'); document.getElementById('gosi-backdrop').classList.remove('open'); }
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { taxClose(); gosiClose(); } });
+
+        // ===== أوعية الاحتساب: سحب وإفلات =====
+        // الحقيقة الوحيدة هي موضع الرقاقة: الحقل المخفي name="member" يُنشأ عند
+        // دخول الوعاء ويُحذف عند الخروج، فما يُرسَل يطابق ما يراه المستخدم تماماً.
+        let sbDragged = null;
+
+        function sbStart(e) {
+            sbDragged = e.currentTarget;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', sbDragged.dataset.key);
+        }
+
+        function sbOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+
+        function sbDrop(e) {
+            e.preventDefault();
+            const zone = e.currentTarget;
+            if (!sbDragged) return;
+
+            // لا نقل بين وعاءين مختلفين — كل لوحة مستقلة
+            if (sbDragged.closest('.sb-board') !== zone.closest('.sb-board')) { sbDragged = null; return; }
+
+            zone.appendChild(sbDragged);
+            sbSync(sbDragged, zone.dataset.role === 'in');
+            sbDragged = null;
+        }
+
+        function sbSync(chip, inside) {
+            const existing = chip.querySelector('input[name="member"]');
+            if (inside && !existing) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'member';
+                input.value = chip.dataset.key;
+                chip.appendChild(input);
+            } else if (!inside && existing) {
+                existing.remove();
+            }
+        }
     </script>
+
+    <style>
+        .sb-sec { margin-top: 18px; }
+        .sb-hint { color: var(--color-text-secondary); font-size: 13px; margin: 4px 0 14px; }
+        .sb-board { border: 1px solid var(--color-border); border-radius: 14px; padding: 14px; margin-bottom: 16px; background: var(--color-surface); }
+        .sb-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; }
+        .sb-col h3 { font-size: 13px; margin: 0 0 8px; color: var(--color-text-secondary); }
+        .sb-drop { min-height: 96px; border: 1px dashed var(--color-border-strong); border-radius: 12px; padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; background: var(--color-background); }
+        .sb-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; cursor: grab; user-select: none; background: var(--color-primary-soft); color: var(--color-primary-text); border: 1px solid var(--color-border); font-size: 13px; }
+        .sb-out .sb-chip { background: var(--color-surface); color: var(--color-text-secondary); }
+        .sb-chip:active { cursor: grabbing; }
+
+        @@media (max-width: 860px) { .sb-cols { grid-template-columns: 1fr; } }
+    </style>
 }

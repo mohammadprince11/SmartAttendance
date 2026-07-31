@@ -213,6 +213,9 @@ END;
         var taxProfile = await PayrollConfigStore.ActiveTaxProfileAsync(dbContext);
         var gosiProfile = await PayrollConfigStore.ActiveGosiProfileAsync(dbContext);
 
+        // عضوية الوعاءين تُقرأ مرّة واحدة للتشغيل كلّه لا لكل موظف.
+        var (taxMembers, gosiMembers) = await SalaryBaseStore.BothAsync(dbContext);
+
         var periodStart = new DateOnly(run.Year, run.Month, 1);
         var periodEnd = periodStart.AddMonths(1).AddDays(-1);
 
@@ -462,9 +465,10 @@ END;
                 Gross = gross
             };
 
-            var taxableBase = SalaryBaseComposer.TaxBase(baseAmounts);
+            var taxableBase = SalaryBaseComposer.Compose(baseAmounts, taxMembers);
             var tax = PayrollConfigStore.ComputeTax(taxableBase, taxProfile);
-            var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(SalaryBaseComposer.GosiBase(baseAmounts), gosiProfile);
+            var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(
+                SalaryBaseComposer.Compose(baseAmounts, gosiMembers), gosiProfile);
 
             // خصومات المخالفات: مباشر بالدينار + أيام×يومي + ساعات×ساعي
             decimal penaltyTotal = 0;

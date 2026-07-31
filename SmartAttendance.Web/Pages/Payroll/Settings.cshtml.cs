@@ -22,10 +22,49 @@ public class SettingsModel : PageModel
     public List<PayrollConfigStore.TaxProfile> TaxProfiles { get; set; } = new();
     public List<PayrollConfigStore.GosiProfile> GosiProfiles { get; set; } = new();
 
+    /// <summary>عضوية وعاء الضريبة — أي مكوّنات القسيمة تدخل باحتسابها.</summary>
+    public List<string> TaxMembers { get; set; } = new();
+
+    /// <summary>عضوية وعاء الضمان.</summary>
+    public List<string> GosiMembers { get; set; } = new();
+
+    /// <summary>المكوّنات غير المنضمّة لأي وعاء — مصدر السحب.</summary>
+    public List<(string Key, string Label)> Unassigned(List<string> members) =>
+        SalaryBaseComposer.Components.Where(c => !members.Contains(c.Key)).ToList();
+
+    public static string ComponentLabel(string key) =>
+        SalaryBaseComposer.Components.FirstOrDefault(c => c.Key == key).Label ?? key;
+
     public async Task OnGetAsync()
     {
         TaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_db);
         GosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_db);
+        (TaxMembers, GosiMembers) = await SalaryBaseStore.BothAsync(_db);
+    }
+
+    /// <summary>
+    /// حفظ عضوية وعاء واحد. الترتيب المرسل هو ترتيب الإفلات بالواجهة.
+    /// وعاء فارغ مسموح عمداً (يعطّل الاقتطاع) لكن يُنبَّه عليه بوضوح لأن أثره
+    /// يظهر على كل قسيمة.
+    /// </summary>
+    public async Task<IActionResult> OnPostSaveBaseAsync()
+    {
+        var baseKey = Request.Form["BaseKey"].ToString().Trim();
+        if (baseKey != SalaryBaseComposer.TaxBaseKey && baseKey != SalaryBaseComposer.GosiBaseKey)
+        {
+            TempData["PayrollMessage"] = "وعاء غير معروف.";
+            return RedirectToPage();
+        }
+
+        var components = Request.Form["member"].Where(m => m != null).Select(m => m!).ToList();
+        await SalaryBaseStore.SaveMembersAsync(_db, baseKey, components);
+
+        var name = baseKey == SalaryBaseComposer.GosiBaseKey ? "الضمان" : "الضريبة";
+        TempData["PayrollMessage"] = components.Count == 0
+            ? $"تم حفظ وعاء {name} فارغاً — سيصبح الاقتطاع صفراً بالمسير القادم."
+            : $"تم حفظ وعاء {name} ({components.Count} مكوّن).";
+
+        return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostSaveGosiAsync()
