@@ -98,9 +98,7 @@
     <link rel="stylesheet" href="~/css/zynora-file-input.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-kayan-nav.css" asp-append-version="true" />
 
-    @* جسر الصفحات القديمة: يُحمَّل بعد كل الملفات فيصحّح ما بقي من ألوان عهد القوقعة الداكنة *@
-
-    <link rel="stylesheet" href="~/css/zynora-legacy-bridge.css" asp-append-version="true" />
+    @* جسر الصفحات القديمة نُقل إلى ما بعد RenderBody — انظر التعليق هناك *@
 
     @* Branding & Theme Engine injection point (P4): overrides the token contract
        for the active company. Rendered last so it wins the cascade; absent for
@@ -692,6 +690,15 @@
 
     @* طبقة المكوّنات الموحّدة — تُحمّل بعد RenderBody فتفوز على CSS الصفحات بترتيب المصدر *@
     <link rel="stylesheet" href="~/css/zynora-components.css" asp-append-version="true" />
+
+    @* جسر الصفحات القديمة — آخر طبقة على الإطلاق.
+       كان بالـ<head> بعد RenderSection("Styles")، لكن صفحات كثيرة تضع وسم
+       <link> الخاص بها **داخل جسم الصفحة** (مثل positions.css بـPositions/Index)
+       فيُحمَّل بعد الـ<head> ويسبق الجسر بترتيب المصدر. النتيجة أن أي قاعدة بالجسر
+       تتساوى تخصصيتها مع قاعدة قديمة كانت تخسر — وهو ما ظهر بـ`#positionForm`
+       حيث تعادلت (1,2,0) وحسم الترتيبُ لصالح الملف القديم.
+       المكان الصحيح هنا بعد RenderBody (نفس علّة zynora-components.css أعلاه). *@
+    <link rel="stylesheet" href="~/css/zynora-legacy-bridge.css" asp-append-version="true" />
 
     <script>
         window.SA_AUTH = {
