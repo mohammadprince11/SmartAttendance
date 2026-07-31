@@ -234,16 +234,15 @@
     <div class="nexora-shell">
         <aside class="nexora-sidebar" aria-label="القائمة الجانبية">
             <div class="nexora-brand-card">
-                <a asp-page="/Index"
-                   class="nexora-brand-link"
-                   aria-label="@brandName Home">
+                @* عرض فقط لا رابط (طلب محمد) — التنقل للرئيسية من بند «لوحة البيانات» *@
+                <div class="nexora-brand-link" aria-label="@brandName">
                     <img class="nexora-brand-logo"
                          src="@(string.IsNullOrWhiteSpace(companyTheme.LogoPath) ? Url.Content("~/brand/zynora-logo-horizontal-light.svg") : companyTheme.LogoPath)"
                          alt="@brandName" />
                     <span class="nexora-brand-tagline">
                         Smarter People. Stronger Business.
                     </span>
-                </a>
+                </div>
             </div>
 
             @if (isLoggedIn)
@@ -634,8 +633,10 @@
                     @if (isLoggedIn)
                     {
                         @* زر طي القائمة الجانبية (أيقونات فقط) — الحالة محفوظة بـZY.Sidebar *@
+                        @* موسّعة: حرف Z بهوية الشعار · مطوية: ثلاث خطوط *@
                         <button type="button" class="zy-side-toggle" id="zy-sidebar-toggle" aria-label="طي القائمة الجانبية" title="طي / توسيع القائمة">
-                            <svg viewBox="0 0 24 24"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+                            <span class="zy-st-z" aria-hidden="true">Z</span>
+                            <svg class="zy-st-bars" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
                         </button>
                         <script>
                             (function () {

@@ -412,12 +412,17 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
    أصغر (252) فتظهر فجوة 36px — نجعل السايدبار يملأ عموده دائماً. */
 .nexora-sidebar { width: 100% !important; max-width: 100% !important; min-width: 0 !important; }
 
-/* زر الطي: أيقونة أسهم مزدوجة بالشريط العلوي بجانب الجرس */
-.zy-side-toggle { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--color-border, rgba(143,168,188,.25));
-    background: transparent; color: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
-.zy-side-toggle svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--speed, 160ms) ease; }
-html[data-sidebar="collapsed"] .zy-side-toggle svg { transform: scaleX(-1); }
-.zy-side-toggle:hover { border-color: var(--color-primary); color: var(--color-primary); }
+/* زر الطي: مربّع بهوية الشعار — حرف Z وهي موسّعة، وثلاث خطوط وهي مطوية */
+.zy-side-toggle { width: 36px; height: 36px; border-radius: 10px; border: 0;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+    color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+    transition: filter var(--speed, 160ms) ease, transform var(--speed, 160ms) ease; }
+.zy-side-toggle:hover { filter: brightness(1.08); }
+.zy-side-toggle:active { transform: scale(.95); }
+.zy-side-toggle .zy-st-z { font-size: 17px; font-weight: 900; line-height: 1; font-family: var(--font-family); }
+.zy-side-toggle .zy-st-bars { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; display: none; }
+html[data-sidebar="collapsed"] .zy-side-toggle .zy-st-z { display: none; }
+html[data-sidebar="collapsed"] .zy-side-toggle .zy-st-bars { display: block; }
 
 /* الحالة المطوية: أيقونات فقط + تلميح بالاسم عند الهوفر */
 html[data-sidebar="collapsed"] { --zy-sidebar-width: 62px; --nx-responsive-sidebar-width: 62px; --nxr-sidebar: 62px; }
@@ -425,6 +430,7 @@ html[data-sidebar="collapsed"] .nexora-nav-link > span:not(.nexora-nav-dot),
 html[data-sidebar="collapsed"] .nexora-nav-text,
 html[data-sidebar="collapsed"] .nexora-chevron,
 html[data-sidebar="collapsed"] .nexora-brand-copy,
+html[data-sidebar="collapsed"] .nexora-brand-tagline,
 html[data-sidebar="collapsed"] .nexora-nav-group-links,
 html[data-sidebar="collapsed"] .ky-acc { display: none !important; }
 html[data-sidebar="collapsed"] .nexora-nav-link,
