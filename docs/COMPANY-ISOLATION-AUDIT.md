@@ -95,9 +95,10 @@
 
 1. **نقل الملفات التاريخية** من `wwwroot/uploads/employee-profile-files` إلى
    `App_Data/ProtectedEmployeeFiles` وتعبئة `ProtectedKey` — يمسّ ملفات إنتاج.
-2. **تدوير كلمة مرور شهادة LAN** الظاهرة بـ`appsettings.json`
-   (`Kestrel:Certificates:Default:Password`) ونقلها لمتغيّر بيئة أو
-   User-Secrets — سرّ حقيقي بالمستودع ما زال قائماً.
+2. ~~تدوير كلمة مرور شهادة LAN «المكشوفة بالمستودع»~~ ❌ **تقييم خاطئ صُحّح:**
+   `appsettings*.json` مستثناة من Git منذ `1f7dac3` و`git grep` عبر كل التاريخ
+   لا يجد السلسلة — **لا تسريب ولا موجب تدوير**. يبقى مستحسناً نقلها لمتغيّر
+   بيئة (سرّ نصاً بملف يُنسخ مع النشر): `docs/SECURITY-CREDENTIAL-ROTATION.md`.
 3. مراجعة `AllowedHosts`/`KnownProxies` قبل تفعيل `ReverseProxy` بالإنتاج.
 
 ## 6. ما لا يجوز ادّعاؤه
