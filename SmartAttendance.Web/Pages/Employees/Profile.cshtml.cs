@@ -23,15 +23,22 @@ public partial class ProfileModel : PageModel
     private readonly IWebHostEnvironment _environment;
     private readonly IPermissionAuthorizationService _permissionAuthorizationService;
 
+    private readonly Infrastructure.Security.IProtectedFileService _protectedFiles;
+
     public ProfileModel(
         ApplicationDbContext dbContext,
         IWebHostEnvironment environment,
-        IPermissionAuthorizationService permissionAuthorizationService)
+        IPermissionAuthorizationService permissionAuthorizationService,
+        Infrastructure.Security.IProtectedFileService protectedFiles)
     {
         _dbContext = dbContext;
         _environment = environment;
         _permissionAuthorizationService = permissionAuthorizationService;
+        _protectedFiles = protectedFiles;
     }
+
+    /// <summary>رابط فتح أي مرفق بملف الموظف عبر نقطة التنزيل المصادَقة.</summary>
+    public string FileUrl(string? storedPath) => _protectedFiles.BuildUrl(Id, storedPath);
 
     [BindProperty(SupportsGet = true)]
     public int Id { get; set; }

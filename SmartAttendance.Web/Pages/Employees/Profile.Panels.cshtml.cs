@@ -309,21 +309,17 @@ public partial class ProfileModel
     private static readonly string[] AllowedRecordFileExtensions =
         { ".pdf", ".png", ".jpg", ".jpeg", ".webp", ".doc", ".docx", ".xls", ".xlsx" };
 
+    // المرحلة 6: سجلات الموظف (إنذارات/قرارات) خارج wwwroot والقراءة عبر /files.
     private async Task<(string? name, string? path)> SaveRecordFileAsync(IFormFile? file)
     {
         if (file == null || file.Length == 0) return (null, null);
-        var ext = Path.GetExtension(file.FileName);
-        if (string.IsNullOrWhiteSpace(ext) || !AllowedRecordFileExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase)) return (null, null);
-        if (file.Length > 10 * 1024 * 1024) return (null, null);
 
-        var root = Path.Combine(_environment.WebRootPath, "uploads", "employee-records");
-        Directory.CreateDirectory(root);
-        var fileName = $"rec_{Id}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{ext.ToLowerInvariant()}";
-        await using (var stream = System.IO.File.Create(Path.Combine(root, fileName)))
-        {
-            await file.CopyToAsync(stream);
-        }
-        return (Path.GetFileName(file.FileName), $"/uploads/employee-records/{fileName}");
+        var stored = await _protectedFiles.SaveAsync(
+            file, Id, "record", HttpContext.RequestAborted);
+
+        return stored is null
+            ? (null, null)
+            : (Path.GetFileName(file.FileName), stored);
     }
 
     // ---- العلاوات: حفظ (إضافة/تعديل) وحذف — نفس نمط المعالين ----

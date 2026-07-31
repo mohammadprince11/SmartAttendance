@@ -264,7 +264,7 @@
                                     <td>
                                         @if (!string.IsNullOrWhiteSpace(doc.StoredPath))
                                         {
-                                            <a href="@doc.StoredPath" target="_blank" class="nxr-btn">فتح</a>
+                                            <a href="@Model.FileUrl(doc)" target="_blank" class="nxr-btn">فتح</a>
                                         }
                                         else
                                         {

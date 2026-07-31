@@ -24,15 +24,59 @@ public sealed class EmployeeFilesController : ControllerBase
     private readonly ApplicationDbContext _db;
     private readonly IPermissionAuthorizationService _permissions;
     private readonly IWebHostEnvironment _environment;
+    private readonly ProtectedFileService _protectedFiles;
 
     public EmployeeFilesController(
         ApplicationDbContext db,
         IPermissionAuthorizationService permissions,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        IProtectedFileService protectedFiles)
     {
         _db = db;
         _permissions = permissions;
         _environment = environment;
+        _protectedFiles = (ProtectedFileService)protectedFiles;
+    }
+
+    /// <summary>
+    /// نقطة التنزيل العامة لكل موديولات المرفقات (مستندات، مالية، سجلات، تأديبية،
+    /// قروض، مرفقات طلبات). الرمز موقّع بـData Protection فيمنع تبديل الموظف أو
+    /// المفتاح، لكن **التخويل يُفحص بعده لا به**: الصلاحية على الموظف المستهدف
+    /// تُقيَّم من الخادم بنفس محرك نطاق البيانات.
+    /// </summary>
+    [HttpGet("download")]
+    public async Task<IActionResult> Download([FromQuery(Name = "t")] string? token)
+    {
+        if (!_protectedFiles.TryUnprotect(token, out var employeeId, out var storageKey))
+        {
+            return NotFound();
+        }
+
+        if (!await CanAccessEmployeeAsync(employeeId))
+        {
+            await WriteAuditAsync("Employee File Download Denied", employeeId, 0);
+            return Forbid();
+        }
+
+        if (!ProtectedFileStore.TryResolvePhysicalPath(
+                _protectedFiles.ResolveRoot(), storageKey, out var physicalPath) ||
+            !System.IO.File.Exists(physicalPath))
+        {
+            return NotFound();
+        }
+
+        await WriteAuditAsync("Employee File Downloaded", employeeId, 0);
+
+        Response.Headers["Cache-Control"] = "no-store, no-cache, max-age=0";
+        Response.Headers["Pragma"] = "no-cache";
+
+        var extension = Path.GetExtension(physicalPath);
+        var stream = System.IO.File.OpenRead(physicalPath);
+
+        return File(
+            stream,
+            ProtectedFileStore.ContentTypeFor(extension),
+            Path.GetFileName(physicalPath));
     }
 
     [HttpGet("employee-profile/{fileId:int}")]

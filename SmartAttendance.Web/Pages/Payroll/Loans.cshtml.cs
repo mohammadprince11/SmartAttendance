@@ -15,8 +15,14 @@ public class LoansModel : PageModel
     private readonly ApplicationDbContext _db;
     private readonly IWebHostEnvironment _env;
 
-    public LoansModel(ApplicationDbContext db, IWebHostEnvironment env)
+    private readonly Web.Infrastructure.Security.IProtectedFileService _protectedFiles;
+
+    public LoansModel(
+        ApplicationDbContext db,
+        IWebHostEnvironment env,
+        Web.Infrastructure.Security.IProtectedFileService protectedFiles)
     {
+        _protectedFiles = protectedFiles;
         _db = db;
         _env = env;
     }
@@ -61,15 +67,17 @@ public class LoansModel : PageModel
             return RedirectToPage();
         }
 
+        // المرحلة 6: مرفق القرض (عقد/كفالة) خارج wwwroot والقراءة عبر /files.
         if (attachment is { Length: > 0 })
         {
-            var dir = Path.Combine(_env.WebRootPath, "uploads", "loans");
-            Directory.CreateDirectory(dir);
-            var safeName = $"{Guid.NewGuid():N}{Path.GetExtension(attachment.FileName)}";
-            await using (var stream = System.IO.File.Create(Path.Combine(dir, safeName)))
-                await attachment.CopyToAsync(stream);
-            loan.AttachmentName = Path.GetFileName(attachment.FileName);
-            loan.AttachmentPath = $"/uploads/loans/{safeName}";
+            var stored = await _protectedFiles.SaveAsync(
+                attachment, loan.EmployeeId, "loan", HttpContext.RequestAborted);
+
+            if (stored is not null)
+            {
+                loan.AttachmentName = Path.GetFileName(attachment.FileName);
+                loan.AttachmentPath = stored;
+            }
         }
 
         await LoanStore.SaveAsync(_db, loan, CurrentUser);
