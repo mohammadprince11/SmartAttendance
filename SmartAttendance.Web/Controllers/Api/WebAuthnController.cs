@@ -28,15 +28,18 @@ public class WebAuthnController : ControllerBase
     private readonly ApplicationDbContext _db;
     private readonly IMemoryCache _cache;
     private readonly SmartAttendance.Application.Common.Security.ILoginIdentityService _loginIdentityService;
+    private readonly ReverseProxyOptions _reverseProxy;
 
     public WebAuthnController(
         ApplicationDbContext db,
         IMemoryCache cache,
-        SmartAttendance.Application.Common.Security.ILoginIdentityService loginIdentityService)
+        SmartAttendance.Application.Common.Security.ILoginIdentityService loginIdentityService,
+        Microsoft.Extensions.Options.IOptions<ReverseProxyOptions> reverseProxyOptions)
     {
         _db = db;
         _cache = cache;
         _loginIdentityService = loginIdentityService;
+        _reverseProxy = reverseProxyOptions.Value;
     }
 
     /// <summary>
@@ -47,14 +50,25 @@ public class WebAuthnController : ControllerBase
     /// </summary>
     private Fido2 CreateFido2()
     {
-        var scheme = Request.Headers["X-Forwarded-Proto"].FirstOrDefault() is { Length: > 0 } fwd
-            ? fwd.Split(',')[0].Trim()
-            : Request.Scheme;
+        // المرحلة 10: لا نقرأ X-Forwarded-Proto الخام هنا — ForwardedHeadersMiddleware
+        // يطبّعه لوسطاء موثوقين فقط ثم نبني الأصل من القيم المطبَّعة، مع قائمة
+        // مضيفات بيضاء اختيارية بالإعدادات. أصل غير موثوق ⟹ رفض صريح لا تخمين.
+        var origin = ForwardedOriginResolver.Resolve(
+            Request.Scheme,
+            Request.Host.Value,
+            _reverseProxy.AllowedHosts);
+
+        if (origin is null)
+        {
+            throw new InvalidOperationException(
+                "تعذّر اشتقاق أصل موثوق لطلب WebAuthn (المضيف خارج القائمة المسموح بها).");
+        }
+
         return new Fido2(new Fido2Configuration
         {
-            ServerDomain = Request.Host.Host,
+            ServerDomain = ForwardedOriginResolver.HostNameOnly(Request.Host.Value),
             ServerName = "Zynora HR",
-            Origins = new HashSet<string> { $"{scheme}://{Request.Host}" }
+            Origins = new HashSet<string> { origin }
         });
     }
 

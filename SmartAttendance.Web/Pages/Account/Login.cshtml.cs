@@ -182,6 +182,12 @@ public class LoginModel : PageModel
             return Page();
         }
 
+        // المرحلة 5: كل تذكرة تحمل ختم الأمان الحالي — تبديله سيرفرياً (تغيير كلمة
+        // مرور/دور/تعطيل) يُسقط كل التذاكر الصادرة قبله بالطلب التالي.
+        var securityStamp = !string.IsNullOrWhiteSpace(user.SecurityStamp)
+            ? user.SecurityStamp
+            : await AccountSecurityStore.EnsureStampAsync(_dbContext, user.Id);
+
         var issuedUtc = DateTimeOffset.UtcNow;
         var sessionDuration = RememberMe
             ? RememberedSessionDuration
@@ -196,7 +202,8 @@ public class LoginModel : PageModel
             new("DisplayName", displayName),
             new("EmployeeId", user.EmployeeId?.ToString() ?? string.Empty),
             new("SystemUserId", systemUserId.Value.ToString()),
-            new("SessionIssuedUtc", issuedUtc.ToString("O"))
+            new("SessionIssuedUtc", issuedUtc.ToString("O")),
+            new(AccountSecurityStore.SecurityStampClaimType, securityStamp)
         };
 
         var identity = new ClaimsIdentity(

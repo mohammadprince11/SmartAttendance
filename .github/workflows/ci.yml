@@ -1,0 +1,173 @@
+name: CI
+
+# يعمل على كل PR لـmain وكل دفع لـmain وعند الطلب اليدوي.
+# ملاحظة أمان: هذا الوركفلو لا ينشر شيئاً إطلاقاً — النشر إجراء يدوي بموافقة صريحة.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-and-test:
+    name: Build & Unit Tests
+    runs-on: windows-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Show SDK information
+        shell: pwsh
+        run: dotnet --info
+
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore SmartAttendance.slnx
+
+      - name: Build (Release)
+        shell: pwsh
+        run: dotnet build SmartAttendance.slnx -c Release --no-restore
+
+      # الاختبارات تُشغَّل بمسار المشروع صراحةً — لا اعتماد على شمول الحل،
+      # فلا يمكن أن يمر البناء «أخضر» بلا تشغيل اختبار واحد (العيب السابق).
+      - name: Unit tests
+        shell: pwsh
+        run: >
+          dotnet test SmartAttendance.Tests/SmartAttendance.Tests.csproj
+          -c Release
+          --no-build
+          --logger "trx;LogFileName=unit-tests.trx"
+          --results-directory ${{ github.workspace }}/TestResults
+          --collect:"XPlat Code Coverage"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: ${{ github.workspace }}/TestResults/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  security-audit:
+    name: NuGet Vulnerability Audit
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore SmartAttendance.slnx
+
+      # يفشل الوركفلو عند وجود حزمة مصابة — الخرج يُرفع كأثر للمراجعة.
+      - name: Audit vulnerable packages
+        shell: pwsh
+        run: |
+          $out = dotnet list SmartAttendance.slnx package --vulnerable --include-transitive 2>&1 | Out-String
+          $out | Tee-Object -FilePath vulnerable-packages.txt
+          if ($out -match 'has the following vulnerable packages') {
+            Write-Error 'حزم NuGet مصابة — راجع vulnerable-packages.txt'
+            exit 1
+          }
+          Write-Host 'لا حزم مصابة.'
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-audit
+          path: vulnerable-packages.txt
+          if-no-files-found: warn
+          retention-days: 14
+
+  e2e:
+    name: Playwright E2E (optional)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    needs: build-and-test
+    # لا يعمل إلا بتوفر بيئة اختبار مخصصة عبر أسرار المستودع — وممنوع تشغيله
+    # على الإنتاج. غياب الأسرار يتخطى الوظيفة بلا فشل وبلا بيانات اعتماد افتراضية.
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      vars.ZYNORA_E2E_ENABLED == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Verify E2E secrets present
+        shell: pwsh
+        env:
+          BASE_URL: ${{ secrets.ZYNORA_E2E_BASE_URL }}
+          E2E_USER: ${{ secrets.ZYNORA_E2E_USERNAME }}
+          E2E_PASS: ${{ secrets.ZYNORA_E2E_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:BASE_URL) -or
+              [string]::IsNullOrWhiteSpace($env:E2E_USER) -or
+              [string]::IsNullOrWhiteSpace($env:E2E_PASS)) {
+            Write-Error 'أسرار E2E ناقصة — عرّف ZYNORA_E2E_BASE_URL و_USERNAME و_PASSWORD.'
+            exit 1
+          }
+
+      - name: Build E2E
+        shell: pwsh
+        run: dotnet build SmartAttendance.E2E/SmartAttendance.E2E.csproj -c Release
+
+      - name: Install Playwright browsers
+        shell: pwsh
+        run: |
+          $ps1 = Get-ChildItem -Recurse -Filter playwright.ps1 `
+            -Path SmartAttendance.E2E/bin/Release | Select-Object -First 1
+          if (-not $ps1) { Write-Error 'playwright.ps1 غير موجود — تحقق من حزمة Microsoft.Playwright.'; exit 1 }
+          & $ps1.FullName install --with-deps chromium
+
+      - name: Run E2E
+        shell: pwsh
+        env:
+          ZYNORA_E2E_BASE_URL: ${{ secrets.ZYNORA_E2E_BASE_URL }}
+          ZYNORA_E2E_USERNAME: ${{ secrets.ZYNORA_E2E_USERNAME }}
+          ZYNORA_E2E_PASSWORD: ${{ secrets.ZYNORA_E2E_PASSWORD }}
+        run: >
+          dotnet test SmartAttendance.E2E/SmartAttendance.E2E.csproj
+          -c Release
+          --no-build
+          --logger "trx;LogFileName=e2e-tests.trx"
+          --results-directory ${{ github.workspace }}/E2EResults
+
+      - name: Upload E2E results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: ${{ github.workspace }}/E2EResults/**
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,9 +1,54 @@
+# CLAUDE.md — الوكيل المنفِّذ الأساسي
+
+> **اقرأ أولاً: [`docs/AI-DEVELOPMENT-RULES.md`](docs/AI-DEVELOPMENT-RULES.md)** —
+> مصدر الحقيقة الملزم لكل أدوات الـAI. ما هنا تفاصيل تخصّ Claude ولا يناقضه.
+
+## الدور
+
+**Claude ينفّذ**: يكتب الكود والاختبارات ويفتح Draft PR.
+المراجعة يتولّاها وكيل ثانوي (راجع `AGENTS.md`) — لا تراجع نفسك بدلاً منه ولا
+تدمج بلا مراجعة.
+
+## القواعد الحمراء (ملخّص — التفاصيل بملف القواعد)
+
+- ممنوع الدفع لـ`main` · فرع لكل مهمة · Draft PR.
+- **ممنوع النشر بلا موافقة صريحة لهذه العملية بالذات** — موافقة سابقة لا تُعمَّم.
+- ممنوع الوصول لبيانات/قاعدة الإنتاج.
+- ممنوع أي سرّ أو بيانات موظف حقيقية بالمستودع، وممنوع تسجيلها بأي لوج.
+- كل استعلام موظف يفرض نطاق التخويل؛ كل استعلام متعدد الشركات يفرض `CompanyId`.
+- الرواتب/الحضور/الإجازات/القروض/المالية: اختبارات انحدار إلزامية، ولا تغيير
+  بالصيغ إلا بطلب صريح.
+- تغيير المخطط بهجرات محكومة — **ممنوع** جدول/عمود جديد عبر الشفاء الذاتي.
+- كل كتابة تراعي التكرار والمعاملات والـidempotency.
+- الحفاظ على RTL وهوية ZYNORA (`docs/design-system-v1.md`).
+
+## قبل أي تعديل
+
+افحص: `CLAUDE.md` · `AGENTS.md` · `docs/` · ملف الحل · الوركفلوات · كود المصادقة
+وتوكنات الـAPI · رفع الملفات · مشاريع الاختبار.
+
+## التحقق قبل الـPR
+
+```bash
+dotnet restore SmartAttendance.slnx
+dotnet build SmartAttendance.slnx -c Release --no-restore
+dotnet test SmartAttendance.Tests/SmartAttendance.Tests.csproj -c Release --no-build
+dotnet list SmartAttendance.slnx package --vulnerable --include-transitive
+git diff --check
+```
+
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+المستودع فيه رسم معرفي بـ`graphify-out/`.
 
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- لأسئلة الكود: `graphify query "<سؤال>"` أولاً · `graphify path "<A>" "<B>"`
+  للعلاقات · `graphify explain "<مفهوم>"` للمفاهيم — أصغر بكثير من grep الخام.
+- `graphify-out/wiki/index.md` للتصفح الواسع إن وُجد.
+- `GRAPH_REPORT.md` فقط لمراجعة معمارية شاملة.
+- بعد تعديل الكود: `graphify update .` (AST فقط، بلا كلفة API).
+- **اعتبر المخرجات بائتة إذا كان كوميت مصدرها ≠ `HEAD`** — حدّثها أو ارجع للكود.
+
+## التزامن
+
+**ممنوع أن يعمل وكيلان على نفس شجرة العمل في آن واحد.** استخدم شجرة/فرعاً منفصلاً
+أو انتظر انتهاء الآخر.

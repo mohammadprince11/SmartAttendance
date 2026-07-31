@@ -59,6 +59,53 @@ builder.Services.AddScoped<IThemeContextService, ThemeContextService>();
 // في راية مستقلة (افتراضها false) فيبقى الإنتاج بمعالج أخطاء آمن بلا كسر التنفيل/الدخول.
 var forceHttps = builder.Configuration.GetValue<bool>("ForceHttps");
 
+// المرحلة 10: الوسيط العكسي (Cloudflare Tunnel) صريح بالإعدادات. بلا تفعيل ووسطاء
+// موثوقين لا تُقرأ ترويسات X-Forwarded إطلاقاً — فلا يستطيع أي عميل على الإنترنت
+// انتحال البروتوكول أو المضيف.
+var reverseProxyOptions = builder.Configuration
+    .GetSection(ReverseProxyOptions.SectionName)
+    .Get<ReverseProxyOptions>() ?? new ReverseProxyOptions();
+
+builder.Services.Configure<ReverseProxyOptions>(
+    builder.Configuration.GetSection(ReverseProxyOptions.SectionName));
+
+if (reverseProxyOptions.Enabled)
+{
+    builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders =
+            Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto |
+            Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedHost |
+            Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor;
+
+        // الافتراضات تثق بـlocalhost فقط؛ نمسحها ونعتمد المصرَّح به بالإعدادات.
+        options.KnownProxies.Clear();
+        options.KnownIPNetworks.Clear();
+        options.ForwardLimit = 1;
+
+        foreach (var proxy in reverseProxyOptions.KnownProxies)
+        {
+            if (System.Net.IPAddress.TryParse(proxy, out var address))
+            {
+                options.KnownProxies.Add(address);
+            }
+        }
+
+        foreach (var network in reverseProxyOptions.KnownNetworks)
+        {
+            if (System.Net.IPNetwork.TryParse(network, out var parsedNetwork))
+            {
+                options.KnownIPNetworks.Add(parsedNetwork);
+            }
+        }
+
+        foreach (var host in reverseProxyOptions.AllowedHosts)
+        {
+            options.AllowedHosts.Add(host);
+        }
+    });
+}
+
 // Persist data-protection keys so auth cookies survive app restarts
 // (otherwise every restart regenerates the keys and logs everyone out).
 var dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtection-Keys");
@@ -89,6 +136,53 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Events.OnValidatePrincipal = async context =>
         {
             var role = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+
+            // المرحلة 5: إبطال الجلسات البائتة لكل الأدوار. لا نضرب القاعدة بالأصول
+            // الثابتة، والقراءة نفسها بكاش 60 ثانية (AccountSecurityStore).
+            if (!PublicPathPolicy.IsStaticAsset(context.HttpContext.Request.Path.Value))
+            {
+                var username = context.Principal?.Identity?.Name;
+                var ticketStamp = context.Principal
+                    ?.FindFirst(AccountSecurityStore.SecurityStampClaimType)?.Value;
+
+                AccountSecurityState? accountState = null;
+
+                try
+                {
+                    accountState = await AccountSecurityStore.GetStateAsync(
+                        context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>(),
+                        context.HttpContext.RequestServices
+                            .GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),
+                        username);
+                }
+                catch
+                {
+                    // تعذّر الوصول للقاعدة لا يطرد الجلسات القائمة (توفّر قبل تشدّد).
+                    accountState = null;
+                }
+
+                if (accountState is not null)
+                {
+                    var decision = SessionSecurityValidator.Evaluate(ticketStamp, role, accountState);
+
+                    if (decision == SessionSecurityDecision.Reject)
+                    {
+                        context.RejectPrincipal();
+                        await context.HttpContext.SignOutAsync(
+                            CookieAuthenticationDefaults.AuthenticationScheme);
+                        return;
+                    }
+
+                    if (decision == SessionSecurityDecision.Refresh &&
+                        context.Principal?.Identity is System.Security.Claims.ClaimsIdentity identity)
+                    {
+                        SessionClaimsRefresher.Apply(identity, accountState);
+                        role = accountState.Role;
+                        context.ShouldRenew = true;
+                    }
+                }
+            }
+
             if (!string.Equals(role, "Employee", StringComparison.OrdinalIgnoreCase)) return;
 
             var now = DateTime.UtcNow;
@@ -229,8 +323,23 @@ builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Notificatio
 
 var app = builder.Build();
 
+// هجرات المخطط المحكومة للجداول القديمة (SQL خام) تعمل صراحةً مرة واحدة عند
+// الإقلاع — لا بكل طلب — وأي فشل يظهر فوراً بدل عطل صامت لاحق.
+using (var migrationScope = app.Services.CreateScope())
+{
+    await SmartAttendance.Web.Infrastructure.Hrms.SqlSchemaMigrator.ApplyAsync(
+        migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>());
+}
+
 await DefaultShiftSeeder.SeedAsync(app.Services);
 await PeoplePermissionSeeder.SeedAsync(app.Services);
+
+// ترويسات الوسيط تُعالَج أولاً: كل ما بعدها (تحويل HTTPS، الكوكيز الآمنة، أصل
+// WebAuthn) يرى بروتوكولاً ومضيفاً مطبَّعَين من وسيط موثوق فقط.
+if (reverseProxyOptions.Enabled)
+{
+    app.UseForwardedHeaders();
+}
 
 // معالج الأخطاء يعمل في الإنتاج بصرف النظر عن TLS: يمنع تسريب صفحة الاستثناء
 // المطوِّرة (stack trace) للمستخدم النهائي.
@@ -247,16 +356,15 @@ if (forceHttps)
     app.UseHttpsRedirection();
 }
 
+// ترويسات الأمان + سياسة المحتوى (CSP) — مصدرها SecurityHeaderPolicy النقي.
+var securityHeaders = SecurityHeaderPolicy.BuildStaticHeaders();
+
 app.Use(async (context, next) =>
 {
-    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-    // SAMEORIGIN لا DENY: تسمح لبوابة الموظف بتضمين صفحات طلباتها بمكانها (iframe)
-    // مع منع أي موقع خارجي من تأطيرنا (حماية من clickjacking).
-    context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
-    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-    // geolocation=(self): يسمح لبصمة الموقع (geofence) من نطاقنا فقط، ويمنع الكاميرا/المايك.
-    context.Response.Headers["Permissions-Policy"] =
-        "camera=(), microphone=(), geolocation=(self)";
+    foreach (var header in securityHeaders)
+    {
+        context.Response.Headers[header.Key] = header.Value;
+    }
 
     await next();
 });
