@@ -81,6 +81,41 @@ BEGIN
         CREATE INDEX IX_Employees_CompanyId ON Employees (CompanyId);
 END;
 """),
+
+        // تشديد العزل: العمود يصير إلزامياً بمفتاح أجنبي — بعد أن أثبت التحقق الحيّ
+        // على الإنتاج أن المتبقّي صفر (1357/1357 وانحراف صفر، 2026-07-31).
+        //
+        // **حاجز أمان مقصود**: التشديد لا يجري إلا إذا كان الجدول نظيفاً بالفعل بهذه
+        // البيئة. صفّ واحد بلا شركة ⟹ تُتخطّى الهجرة بلا فشل وبلا تعديل، فلا تكسر
+        // بيئة تطوير ناقصة البيانات ولا تُسجَّل كأنها طُبِّقت على مخطط لم يتشدّد.
+        new(
+            "20260731-06-employee-company-id-not-null",
+            """
+IF OBJECT_ID('Employees', 'U') IS NOT NULL
+   AND COL_LENGTH('Employees', 'CompanyId') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM Employees WHERE CompanyId IS NULL)
+   AND EXISTS (
+        SELECT 1 FROM sys.columns
+        WHERE object_id = OBJECT_ID('Employees')
+          AND name = 'CompanyId'
+          AND is_nullable = 1)
+BEGIN
+    -- الفهرس الذي أنشأته الهجرة 05 يعتمد على العمود، وSQL Server يرفض تعديل عمود
+    -- «تصل إليه كائنات أخرى» (Msg 5074). فيُسقَط ثم يُعاد بناؤه بعد التشديد.
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Employees_CompanyId')
+        DROP INDEX IX_Employees_CompanyId ON Employees;
+
+    ALTER TABLE Employees ALTER COLUMN CompanyId int NOT NULL;
+
+    CREATE INDEX IX_Employees_CompanyId ON Employees (CompanyId);
+
+    IF NOT EXISTS (
+        SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Employees_Companies_CompanyId')
+        ALTER TABLE Employees
+            ADD CONSTRAINT FK_Employees_Companies_CompanyId
+            FOREIGN KEY (CompanyId) REFERENCES Companies (Id);
+END;
+"""),
     };
 
     /// <summary>
