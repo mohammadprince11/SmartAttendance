@@ -180,9 +180,11 @@ html[data-theme="light"] .zy-theme-btn .zy-tt-moon { display: block; }
 
 /* تحييد تضخيم أنظمة الـselect والكلاندر القديمة (nexora-select/calendar العامة)
    داخل نطاق الهوية الجديدة — الارتفاع الموحد المضغوط يفوز دائماً */
-.zy-app select, .zy-app .zy-select,
-.zy-app input[type="date"], .zy-app input[type="time"],
-.zy-app input[type="month"], .zy-app input[type="datetime-local"] {
+/* الحقول الأصلية التي «تبتلعها» الودجتات (nxcs-native/nxcal-native) يجب أن تبقى
+   مخفية 1px — استثناؤها هنا وإلا أحياها التجاوز فظهر حقلان فوق بعض. */
+.zy-app select:not(.nxcs-native), .zy-app .zy-select:not(.nxcs-native),
+.zy-app input[type="date"]:not(.nxcal-native), .zy-app input[type="time"]:not(.nxcal-native),
+.zy-app input[type="month"]:not(.nxcal-native), .zy-app input[type="datetime-local"]:not(.nxcal-native) {
     height: var(--control-h) !important;
     min-height: var(--control-h) !important;
     max-height: var(--control-h) !important;
@@ -192,6 +194,10 @@ html[data-theme="light"] .zy-theme-btn .zy-tt-moon { display: block; }
     border-radius: var(--radius) !important;
     line-height: normal !important;
     background-image: none;
+}
+.zy-app input.nxcal-native, .zy-app select.nxcs-native {
+    height: 1px !important; min-height: 1px !important; max-height: 1px !important;
+    padding: 0 !important; border: 0 !important;
 }
 
 /* الودجتات المخصصة القديمة (nxcs-select للسلكت وnxcal للكلاندر) تُخفي الحقل الأصلي
