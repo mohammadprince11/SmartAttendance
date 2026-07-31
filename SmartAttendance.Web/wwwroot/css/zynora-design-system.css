@@ -428,12 +428,14 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
     transition: transform 380ms cubic-bezier(.65, 0, .35, 1), opacity 260ms ease;
     transform-origin: 512px 512px; transform-box: view-box;
 }
-/* الوضع الفاتح: الشريطان الفاتحان يصيران داكنين ليظهرا على الخلفية البيضاء */
-html[data-theme="light"] .zy-brand-z .zy-z-top,
-html[data-theme="light"] .zy-brand-z .zy-z-bot { fill: #16283a; }
-html[data-theme="light"] .zy-brand-word { color: #16283a; }
-.zy-brand-word { color: #F7F9FB; }
-.zy-brand-word svg { width: 100%; height: 100%; }
+/* السايدبار داكن بالوضعين — فالنص والشريطان يبقيان فاتحين كالشعار الأصلي */
+.zy-brand-word { color: #F7F9FB; display: block; flex: 1 1 auto; min-width: 0; }
+.zy-brand-word svg { width: 100%; height: auto; max-height: 34px; display: block; }
+/* الرمز والنص جنباً إلى جنب على سطر واحد */
+.nexora-brand-link { display: flex !important; flex-direction: row !important;
+    align-items: center !important; gap: 8px; flex-wrap: wrap; }
+.nexora-brand-link .nexora-brand-tagline { flex-basis: 100%; }
+.zy-brand-z { width: 46px; height: 46px; }
 
 /* الحالة المطوية: القطري يستقيم أفقياً بين الشريطين ⟵ ثلاثة خطوط متوازية،
    والبكسلات والمرساة تتلاشى فيبقى الرمز قائمةً نظيفة. */
