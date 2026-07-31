@@ -321,6 +321,34 @@ else
 // صندوق داخل النظام + Web-Push. يعمل دائماً (لا يحتاج SMTP) ويمنع التكرار بجدول أحداث.
 builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleGeneratorService>();
 
+// كلمة مرور شهادة HTTPS لم تعد بالمستودع: مصدرها متغيّر البيئة وحده. نفشل بوضوح
+// عند الحاجة إليها وغيابها بدل رسالة ربط غامضة من Kestrel أو تشغيل بلا TLS بصمت.
+var certificatePath = builder.Configuration["Kestrel:Certificates:Default:Path"];
+
+if (!string.IsNullOrWhiteSpace(certificatePath))
+{
+    var configuredUrls = new List<string?> { builder.Configuration["urls"] };
+    configuredUrls.AddRange(builder.Configuration
+        .GetSection("Kestrel:Endpoints")
+        .GetChildren()
+        .Select(endpoint => endpoint["Url"]));
+
+    var certificateFullPath = Path.IsPathRooted(certificatePath)
+        ? certificatePath
+        : Path.Combine(builder.Environment.ContentRootPath, certificatePath);
+
+    var certificateState = CertificateSecretGuard.Evaluate(
+        CertificateSecretGuard.HasHttpsEndpoint(configuredUrls),
+        File.Exists(certificateFullPath),
+        builder.Configuration["Kestrel:Certificates:Default:Password"]);
+
+    if (certificateState == CertificateSecretState.MissingPassword)
+    {
+        throw new InvalidOperationException(
+            CertificateSecretGuard.BuildFailureMessage(certificateFullPath));
+    }
+}
+
 var app = builder.Build();
 
 // هجرات المخطط المحكومة للجداول القديمة (SQL خام) تعمل صراحةً مرة واحدة عند
