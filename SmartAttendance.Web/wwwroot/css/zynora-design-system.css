@@ -379,7 +379,19 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
     border-color: var(--color-primary) !important;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent) !important;
 }
-.zy-app .nxcal__icon { color: var(--color-primary) !important; }
+/* نص القيمة داخل الزناد مقفول على أبيض (#F2FBFD) بالملف القديم — يختفي على
+   الخلفية البيضاء بالوضع الفاتح. نربطه بلون النص من التوكنز. */
+.zy-app .nxcal__value, .zy-app .nxcal__button .nxcal__value {
+    color: var(--color-text-primary) !important;
+}
+/* حالة «لا قيمة بعد» (yyyy-mm-dd) تبقى باهتة لكن مقروءة */
+.zy-app .nxcal__value:empty, .zy-app .nxcal.is-empty .nxcal__value,
+.zy-app .nxcal__value[data-placeholder="true"] { color: var(--color-text-secondary) !important; }
+.zy-app .nxcal__icon {
+    color: var(--color-primary) !important;
+    background: var(--color-primary-soft) !important;
+    border-color: color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
+}
 
 /* لوحة الكلاندر: خلايا أيام مضغوطة وعرض أصغر (كانت 36px/342px) */
 .nxcal__panel { width: min(292px, 94vw) !important; min-width: 262px !important; }
