@@ -217,6 +217,37 @@ IF OBJECT_ID('PayrollRuns', 'U') IS NOT NULL
    AND COL_LENGTH('PayrollRuns', 'ScopeMode') IS NULL
     ALTER TABLE PayrollRuns ADD ScopeMode nvarchar(20) NULL;
 """),
+
+        // طبقة «سياسة أمّ + نُسَخ مشروطة مرتّبة» (نمط كيان — راجع HrPolicyResolver).
+        // جدول **واحد لكل السياسات** لأن بنية النسخة ثابتة مهما اختلفت السياسة:
+        // اسم + شروط + حمولة + ترتيب. الشروط والحمولة JSON بعمودين لا بجدولين
+        // فرعيين، لأنهما لا يُستعلَمان بالـSQL أبداً — يُقرآن كاملين ويُقيَّمان
+        // بالذاكرة، فالتطبيع هنا كلفة بلا مقابل.
+        //
+        // ⚠️ **إضافيّ محض**: جدول جديد فقط، بلا مساس بأي عمود قائم. وخلوّه يعني
+        // «لا نُسَخ» أي أن كل سياسة قائمة تبقى على سلوكها الحالي حرفياً — لا بذرة
+        // ولا افتراض مخزَّن (درس الهجرة …-09).
+        new(
+            "20260801-11-hr-policy-overrides",
+            """
+IF OBJECT_ID('HrPolicyOverrides', 'U') IS NULL
+BEGIN
+    CREATE TABLE HrPolicyOverrides (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        PolicyKey nvarchar(60) NOT NULL,
+        Name nvarchar(150) NOT NULL,
+        SortOrder int NOT NULL CONSTRAINT DF_HrPolicyOverrides_SortOrder DEFAULT(0),
+        IsActive bit NOT NULL CONSTRAINT DF_HrPolicyOverrides_IsActive DEFAULT(1),
+        ConditionsJson nvarchar(max) NULL,
+        PayloadJson nvarchar(max) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_HrPolicyOverrides_CreatedAt DEFAULT(SYSUTCDATETIME()),
+        CreatedBy nvarchar(150) NULL,
+        UpdatedAt datetime2 NULL
+    );
+
+    CREATE INDEX IX_HrPolicyOverrides_Policy ON HrPolicyOverrides (PolicyKey, SortOrder, Id);
+END;
+"""),
     };
 
     /// <summary>
