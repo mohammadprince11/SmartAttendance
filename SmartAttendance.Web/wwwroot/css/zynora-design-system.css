@@ -73,10 +73,10 @@ html[data-theme="dark"] {
     --shadow-pop: 0 12px 40px rgba(0, 0, 0, .5);
 }
 
-/* تبديل الوضع بنعومة: كلاس مؤقت يضاف لحظة التبديل ويُزال بعده — لا انتقالات دائمة */
-html.zy-theme-anim, html.zy-theme-anim *, html.zy-theme-anim *::before, html.zy-theme-anim *::after {
-    transition: background-color .4s ease, color .4s ease, border-color .4s ease,
-        box-shadow .4s ease, fill .4s ease, stroke .4s ease !important;
+/* تبديل الوضع بنعومة: كلاس مؤقت لحظة التبديل فقط. خاصيتان فقط (خلفية/نص) وبلا
+   pseudo-elements — تعميم كل الخصائص على آلاف العناصر يسبب تقطيعاً. */
+html.zy-theme-anim body, html.zy-theme-anim body * {
+    transition: background-color .22s ease, color .22s ease !important;
 }
 
 /* زر الشمس/الهلال (بالشريط العلوي بصف الإشعارات) */
@@ -177,6 +177,22 @@ html[data-theme="light"] .zy-theme-btn .zy-tt-moon { display: block; }
 .zy-input:focus, .zy-select:focus, .zy-textarea:focus { outline: none; border-color: var(--color-primary);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent); }
 .zy-input::placeholder, .zy-textarea::placeholder { color: var(--color-text-secondary); opacity: .8; }
+
+/* تحييد تضخيم أنظمة الـselect والكلاندر القديمة (nexora-select/calendar العامة)
+   داخل نطاق الهوية الجديدة — الارتفاع الموحد المضغوط يفوز دائماً */
+.zy-app select, .zy-app .zy-select,
+.zy-app input[type="date"], .zy-app input[type="time"],
+.zy-app input[type="month"], .zy-app input[type="datetime-local"] {
+    height: var(--control-h) !important;
+    min-height: var(--control-h) !important;
+    max-height: var(--control-h) !important;
+    padding: 0 var(--sp-3) !important;
+    font-size: var(--fs-body) !important;
+    font-family: var(--font-family) !important;
+    border-radius: var(--radius) !important;
+    line-height: normal !important;
+    background-image: none;
+}
 .zy-input:disabled, .zy-select:disabled, .zy-textarea:disabled { background: var(--color-background); opacity: .7; cursor: not-allowed; }
 .zy-input[readonly] { background: var(--color-background); }
 .zy-field .zy-help { font-size: var(--fs-tiny); color: var(--color-text-secondary); font-weight: 700; }
