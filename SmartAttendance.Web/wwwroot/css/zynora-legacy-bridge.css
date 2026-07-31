@@ -182,3 +182,118 @@
     color: var(--color-on-primary) !important;
     border-color: var(--color-primary-strong) !important;
 }
+
+/* ============================================================================
+   نافذة «تعديل سياسة العلق» وأخواتها بـ/Setup
+   ثلاثة أعراض من لقطة محمد: شريط إجراءات داكن أسفل النافذة · هالة تيل ضخمة حول
+   الحقل المركَّز · نصّ تلميح باهت. النافذة خارج .nexora-setup-page أحياناً
+   (تُلحق بالـbody) فتُستهدف بمحدّداتها مباشرة لا بنطاق الصفحة.
+   ============================================================================ */
+
+.nx-setup-modal,
+.nx-setup-modal__dialog,
+.nx-setup-modal__body,
+[class*="nx-setup-modal"]:not([class*="backdrop"]):not([class*="overlay"]) {
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+    border-color: var(--color-border) !important;
+}
+
+/* شريط الإجراءات السفلي: كان كحلياً داكناً بزر «إلغاء» يذوب فيه */
+.nx-setup-modal__footer,
+.nx-setup-modal__actions,
+[class*="nx-setup-modal"] [class*="footer"],
+[class*="nx-setup-modal"] [class*="actions"] {
+    background: var(--color-background) !important;
+    border-top: 1px solid var(--color-border) !important;
+}
+
+[class*="nx-setup-modal"] [class*="footer"] button[type="submit"],
+[class*="nx-setup-modal"] [class*="actions"] button[type="submit"],
+[class*="nx-setup-modal"] .nx-setup-modal__save {
+    background: var(--color-primary-strong) !important;
+    color: var(--color-on-primary) !important;
+    border: 0 !important;
+}
+
+[class*="nx-setup-modal"] [class*="footer"] button:not([type="submit"]),
+[class*="nx-setup-modal"] [class*="actions"] button:not([type="submit"]),
+[class*="nx-setup-modal"] .nx-setup-modal__cancel {
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-strong) !important;
+}
+
+/* حقول النافذة + الهالة: كانت ظلاً تيلياً ضخماً يغمر ما حوله.
+   البديل حلقة تركيز واضحة بحدّين فقط — تفي بالوصول وتبقى هادئة. */
+[class*="nx-setup-modal"] input,
+[class*="nx-setup-modal"] select,
+[class*="nx-setup-modal"] textarea {
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-strong) !important;
+    box-shadow: none !important;
+    font-family: var(--font-family) !important;
+    font-size: var(--fs-body) !important;
+}
+
+[class*="nx-setup-modal"] input:focus,
+[class*="nx-setup-modal"] input:focus-visible,
+[class*="nx-setup-modal"] select:focus,
+[class*="nx-setup-modal"] textarea:focus {
+    outline: 2px solid var(--color-primary-strong) !important;
+    outline-offset: 1px !important;
+    border-color: var(--color-primary-strong) !important;
+    box-shadow: none !important;
+}
+
+/* التلميحات والملاحظات داخل النافذة */
+[class*="nx-setup-modal"] small,
+[class*="nx-setup-modal"] .nx-policy-note,
+[class*="nx-setup-modal"] [class*="hint"],
+[class*="nx-setup-modal"] p {
+    color: var(--color-text-secondary) !important;
+}
+
+[class*="nx-setup-modal"] label,
+[class*="nx-setup-modal"] legend {
+    color: var(--color-text-primary) !important;
+    font-size: var(--fs-small) !important;
+}
+
+/* قواعد النافذة أعلاه خسرت أمام قاعدة التصفير: تخصصية `.nexora-setup-page *:not(…)`
+   أعلى منها، والاثنتان !important — فالأعلى تخصصية تفوز مهما كان الترتيب.
+   نكرّر الكلاس لرفع التخصصية (نفس الحيلة المستعملة بمكوّنات zy-* مع الستايل القديم). */
+
+.nx-setup-modal.nx-setup-modal,
+.nx-setup-modal .nx-setup-modal__panel.nx-setup-modal__panel,
+.nx-setup-modal .nx-setup-modal-form.nx-setup-modal-form {
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+}
+
+.nx-setup-modal .nx-setup-modal__actions.nx-setup-modal__actions {
+    background: var(--color-background) !important;
+    border-top: 1px solid var(--color-border) !important;
+}
+
+.nx-setup-modal .nx-setup-btn.nx-setup-btn-primary {
+    background: var(--color-primary-strong) !important;
+    color: var(--color-on-primary) !important;
+    border: 0 !important;
+}
+
+.nx-setup-modal .nx-setup-btn.nx-setup-btn-secondary {
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-strong) !important;
+}
+
+.nx-setup-modal input.nx-setup-input:focus,
+.nx-setup-modal input:focus,
+.nx-setup-modal select:focus,
+.nx-setup-modal textarea:focus {
+    box-shadow: none !important;
+    outline: 2px solid var(--color-primary-strong) !important;
+    outline-offset: 1px !important;
+}
