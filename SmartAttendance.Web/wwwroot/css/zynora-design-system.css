@@ -30,14 +30,14 @@
     --color-danger: #dc2626;   --color-danger-soft: #fdecec;
     --color-info: #0284c7;     --color-info-soft: #e8f5fd;
 
-    /* --- الخط والمقاسات (سلم موحد — لا أحجام عشوائية) --- */
+    /* --- الخط والمقاسات (سلم موحد مضغوط بكثافة كيان — لا أحجام عشوائية) --- */
     --font-family: "Tajawal", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
-    --fs-page-title: 24px;   /* عنوان الصفحة */
-    --fs-section: 18px;      /* عنوان القسم */
-    --fs-card-title: 15px;   /* عنوان البطاقة */
-    --fs-body: 14px;         /* النص الأساسي والأزرار */
-    --fs-small: 12.5px;      /* الثانوي */
-    --fs-tiny: 11px;         /* الوسوم والتلميحات */
+    --fs-page-title: 20px;   /* عنوان الصفحة */
+    --fs-section: 16px;      /* عنوان القسم */
+    --fs-card-title: 13.5px; /* عنوان البطاقة */
+    --fs-body: 13px;         /* النص الأساسي والأزرار */
+    --fs-small: 12px;        /* الثانوي */
+    --fs-tiny: 10.5px;       /* الوسوم والتلميحات */
 
     /* --- المسافات (مضاعفات 4) --- */
     --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px;
@@ -48,7 +48,7 @@
     --radius-full: 999px;
     --shadow: 0 1px 3px rgba(22, 40, 58, .07), 0 8px 24px rgba(22, 40, 58, .04);
     --shadow-pop: 0 12px 40px rgba(22, 40, 58, .16);
-    --control-h: 38px;       /* ارتفاع موحد للحقول والأزرار Medium */
+    --control-h: 33px;       /* ارتفاع موحد مضغوط للحقول والأزرار Medium (كثافة كيان) */
     --speed: 160ms;
 }
 
@@ -72,6 +72,22 @@ html[data-theme="dark"] {
     --shadow: 0 1px 3px rgba(0, 0, 0, .28);
     --shadow-pop: 0 12px 40px rgba(0, 0, 0, .5);
 }
+
+/* تبديل الوضع بنعومة: كلاس مؤقت يضاف لحظة التبديل ويُزال بعده — لا انتقالات دائمة */
+html.zy-theme-anim, html.zy-theme-anim *, html.zy-theme-anim *::before, html.zy-theme-anim *::after {
+    transition: background-color .4s ease, color .4s ease, border-color .4s ease,
+        box-shadow .4s ease, fill .4s ease, stroke .4s ease !important;
+}
+
+/* زر الشمس/الهلال (بالشريط العلوي بصف الإشعارات) */
+.zy-theme-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--color-border, rgba(143,168,188,.25));
+    background: transparent; color: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.zy-theme-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.zy-theme-btn .zy-tt-sun { display: none; }
+html[data-theme="dark"] .zy-theme-btn .zy-tt-sun, html:not([data-theme="light"]) .zy-theme-btn .zy-tt-sun { display: block; }
+html[data-theme="light"] .zy-theme-btn .zy-tt-sun { display: none; }
+.zy-theme-btn .zy-tt-moon { display: none; }
+html[data-theme="light"] .zy-theme-btn .zy-tt-moon { display: block; }
 
 /* ============================== الأساس ==================================== */
 
@@ -104,8 +120,8 @@ html[data-theme="dark"] {
 .zy-btn--danger:hover { background: color-mix(in srgb, var(--color-danger) 18%, transparent); }
 .zy-btn--ghost { background: transparent; color: var(--color-text-secondary); }
 .zy-btn--ghost:hover { background: var(--color-primary-soft); color: var(--color-primary); }
-.zy-btn--sm { height: 30px; padding: 0 var(--sp-3); font-size: var(--fs-small); border-radius: 9px; }
-.zy-btn--lg { height: 46px; padding: 0 var(--sp-6); }
+.zy-btn--sm { height: 27px; padding: 0 var(--sp-2); font-size: var(--fs-small); border-radius: 8px; }
+.zy-btn--lg { height: 40px; padding: 0 var(--sp-5); }
 .zy-btn:disabled { opacity: .55; cursor: not-allowed; }
 
 /* ============================== البطاقات ================================== */
@@ -114,24 +130,25 @@ html[data-theme="dark"] {
     box-shadow: var(--shadow); }
 .zy-card--hover { transition: transform var(--speed), border-color var(--speed); }
 .zy-card--hover:hover { transform: translateY(-2px); border-color: var(--color-primary); }
-.zy-card__header { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); border-bottom: 1px solid var(--color-border); }
+.zy-card__header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--color-border); }
 .zy-card__header h2 { margin: 0; font-size: var(--fs-card-title); font-weight: 800; flex: 1; }
-.zy-card__icon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0;
+.zy-card__icon { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0;
     background: var(--color-primary-soft); color: var(--color-primary); }
+.zy-card__icon svg.zy-ic { width: 15px; height: 15px; }
 .zy-card__icon--success { background: var(--color-success-soft); color: var(--color-success); }
 .zy-card__icon--warning { background: var(--color-warning-soft); color: var(--color-warning); }
 .zy-card__icon--danger { background: var(--color-danger-soft); color: var(--color-danger); }
 .zy-card__icon--secondary { background: var(--color-secondary-soft); color: var(--color-secondary); }
-.zy-card__body { padding: var(--sp-4) var(--sp-5); }
+.zy-card__body { padding: var(--sp-3) var(--sp-4); }
 
 /* بطاقة إحصائية */
 .zy-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-5); }
 .zy-stat { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
-    padding: var(--sp-4) var(--sp-5); box-shadow: var(--shadow); display: flex; align-items: center; gap: var(--sp-3); }
-.zy-stat__icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0;
+    padding: var(--sp-3) var(--sp-4); box-shadow: var(--shadow); display: flex; align-items: center; gap: var(--sp-3); }
+.zy-stat__icon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0;
     background: var(--color-primary-soft); color: var(--color-primary); }
 .zy-stat__label { font-size: var(--fs-tiny); color: var(--color-text-secondary); font-weight: 700; }
-.zy-stat__value { font-size: 24px; font-weight: 800; direction: ltr; text-align: end; line-height: 1.2; }
+.zy-stat__value { font-size: 19px; font-weight: 800; direction: ltr; text-align: end; line-height: 1.2; }
 .zy-stat__delta { font-size: var(--fs-tiny); font-weight: 800; padding: 2px 8px; border-radius: var(--radius-full); display: inline-block; margin-top: 4px; }
 .zy-stat__delta--up { color: var(--color-success); background: var(--color-success-soft); }
 .zy-stat__delta--down { color: var(--color-danger); background: var(--color-danger-soft); }
@@ -203,9 +220,9 @@ html[dir="ltr"] .zy-toggle input:checked + i::after { transform: translateX(18px
     box-shadow: var(--shadow); overflow-x: auto; }
 .zy-table { width: 100%; border-collapse: collapse; font-size: var(--fs-body); }
 .zy-table thead th { position: sticky; top: 0; background: var(--color-background); color: var(--color-text-secondary);
-    font-size: var(--fs-tiny); font-weight: 800; text-align: start; padding: var(--sp-3) var(--sp-4);
+    font-size: var(--fs-tiny); font-weight: 800; text-align: start; padding: 8px var(--sp-3);
     border-bottom: 1px solid var(--color-border); white-space: nowrap; z-index: 1; }
-.zy-table tbody td { padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+.zy-table tbody td { padding: 9px var(--sp-3); border-bottom: 1px solid var(--color-border); vertical-align: middle; }
 .zy-table tbody tr:last-child td { border-bottom: 0; }
 .zy-table tbody tr { transition: background var(--speed); }
 .zy-table tbody tr:hover { background: color-mix(in srgb, var(--color-primary) 5%, transparent); }
