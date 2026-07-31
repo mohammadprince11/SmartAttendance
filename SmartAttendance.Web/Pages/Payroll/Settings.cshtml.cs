@@ -34,29 +34,37 @@ public class SettingsModel : PageModel
         SalaryBaseStore.Resolve(BaseMembers, baseKey, profileId);
 
     /// <summary>سياسة ربط الراتب بالحضور المفعَّلة حالياً.</summary>
-    public string AttendanceLinkMode { get; set; } = AttendanceSalaryLink.Lenient;
+    public AttendanceSalaryLink.Policy LinkPolicy { get; set; } = AttendanceSalaryLink.Policy.Default;
+
+    public string AttendanceLinkMode => LinkPolicy.Mode;
 
     public async Task OnGetAsync()
     {
         TaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_db);
         GosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_db);
         BaseMembers = await SalaryBaseStore.AllAsync(_db);
-        AttendanceLinkMode = AttendanceSalaryLink.NormalizeMode(
-            await HrSettingsStore.GetAsync(_db, AttendanceSalaryLink.ModeKey, AttendanceSalaryLink.Lenient));
+        LinkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(_db);
     }
 
     /// <summary>
     /// حفظ سياسة الربط بالحضور. تُغيّر **كل قسيمة قادمة**، فالرسالة تصرّح بالأثر
     /// بدل أن تكتفي بـ«حُفظ».
     /// </summary>
-    public async Task<IActionResult> OnPostSaveAttendanceLinkAsync(string mode)
+    public async Task<IActionResult> OnPostSaveAttendanceLinkAsync(
+        string mode, decimal absenceDays, bool allowNegative)
     {
-        var resolved = AttendanceSalaryLink.NormalizeMode(mode);
-        await HrSettingsStore.SetAsync(_db, AttendanceSalaryLink.ModeKey, resolved);
+        var policy = new AttendanceSalaryLink.Policy(mode, absenceDays, allowNegative).Normalized();
+        await AttendanceSalaryLinkSettings.SaveAsync(_db, policy);
 
-        TempData["PayrollMessage"] = resolved == AttendanceSalaryLink.Lenient
-            ? $"سياسة الربط بالحضور: {AttendanceSalaryLink.ModeLabel(resolved)}."
-            : $"سياسة الربط بالحضور: {AttendanceSalaryLink.ModeLabel(resolved)} — ⚠️ من لا بيانات حضور له لن يُحتسب بالمسير القادم.";
+        var notes = new List<string> { AttendanceSalaryLink.ModeLabel(policy.Mode) };
+        if (policy.Mode != AttendanceSalaryLink.Lenient)
+            notes.Add("⚠️ من لا بيانات حضور له لن يُحتسب بالمسير القادم");
+        if (policy.AbsenceDeductionDays != 1m)
+            notes.Add($"خصم يوم الغياب = {policy.AbsenceDeductionDays:0.##} يوم");
+        if (policy.AllowNegative)
+            notes.Add("⚠️ الصافي مسموح أن يكون سالباً");
+
+        TempData["PayrollMessage"] = "سياسة الربط بالحضور: " + string.Join(" · ", notes) + ".";
         return RedirectToPage();
     }
 

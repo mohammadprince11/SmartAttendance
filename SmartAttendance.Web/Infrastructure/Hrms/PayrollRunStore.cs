@@ -244,8 +244,8 @@ WHERE r.Id = @Id;
         await LoanStore.PostDueInstallmentsAsync(dbContext, run.Year, run.Month, userName);
 
         // سياسة ربط الراتب بالحضور تُقرأ مرّة للتشغيل كلّه.
-        var linkMode = AttendanceSalaryLink.NormalizeMode(
-            await HrSettingsStore.GetAsync(dbContext, AttendanceSalaryLink.ModeKey, AttendanceSalaryLink.Lenient));
+        var linkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(dbContext);
+        var linkMode = linkPolicy.Mode;
 
         var taxProfile = await PayrollConfigStore.ActiveTaxProfileAsync(dbContext);
         var gosiProfile = await PayrollConfigStore.ActiveGosiProfileAsync(dbContext);
@@ -373,7 +373,8 @@ WHERE r.Id = @Id;
             var absentDays = month?.AbsentDays ?? 0;
             var unpaidLeaveDays = month?.UnpaidLeaveDays ?? 0;
 
-            var link = AttendanceSalaryLink.Evaluate(linkMode, workDays, absentDays, month?.WorkedHours ?? 0m);
+            var link = AttendanceSalaryLink.Evaluate(
+                linkPolicy, workDays, month?.PresentDays ?? 0, absentDays, month?.WorkedHours ?? 0m);
             if (!link.Include)
             {
                 skippedNoAttendance++;
