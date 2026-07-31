@@ -359,6 +359,47 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
     font-size: var(--fs-body) !important;
 }
 
+/* ==================== ثيم فاتح لبوب-أب الكلاندر القديم =====================
+   nexora-calendar-v18 مبني بألوان داكنة ثابتة بلا أي دعم للفاتح — نكسوه هنا
+   (عالمي: يصلح كل الصفحات لحظة تفعيل الوضع الفاتح). */
+html[data-theme="light"] .nxcal__panel {
+    background: #ffffff !important;
+    border: 1px solid var(--color-border) !important;
+    box-shadow: var(--shadow-pop) !important;
+    color: var(--color-text-primary) !important;
+}
+html[data-theme="light"] .nxcal__weekday { color: var(--color-text-secondary) !important; }
+html[data-theme="light"] .nxcal__day,
+html[data-theme="light"] .nxcal__choice,
+html[data-theme="light"] .nxcal__nav,
+html[data-theme="light"] .nxcal__action,
+html[data-theme="light"] .nxcal__chooser-title,
+html[data-theme="light"] .nxcal__year-range-label {
+    background: transparent !important;
+    color: var(--color-text-primary) !important;
+    border-color: var(--color-border) !important;
+}
+html[data-theme="light"] .nxcal__day:hover,
+html[data-theme="light"] .nxcal__choice:hover,
+html[data-theme="light"] .nxcal__nav:hover { background: var(--color-primary-soft) !important; }
+html[data-theme="light"] .nxcal__day[aria-disabled="true"],
+html[data-theme="light"] .nxcal__day.is-outside,
+html[data-theme="light"] .nxcal__day:disabled { color: var(--color-border-strong) !important; }
+html[data-theme="light"] .nxcal__head, html[data-theme="light"] .nxcal__foot {
+    background: var(--color-background) !important; border-color: var(--color-border) !important;
+}
+/* أزرار الشهر/السنة التيل تبقى تيل — نصها أبيض مقروء بالحالتين */
+
+/* ==================== تكثيف خيارات الدروب ليست (عالمي) =====================
+   لوحة الخيارات كبيرة بكل النظام — القياس المضغوط يشمل القديم والجديد. */
+.nxcs-panel { font-size: var(--fs-body) !important; }
+.nxcs-panel .nxcs-option {
+    min-height: 29px !important;
+    padding: 5px 12px !important;
+    font-size: var(--fs-body) !important;
+    line-height: 1.3 !important;
+}
+
 /* ============================== التجاوب =================================== */
 
 @media (max-width: 900px) {
