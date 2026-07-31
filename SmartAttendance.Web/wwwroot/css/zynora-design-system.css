@@ -1,4 +1,4 @@
-/* ============================================================================
+﻿/* ============================================================================
    ZYNORA Design System v1 — الهوية البصرية الموحدة (مرجعها بروتوتايبا
    docs/prototypes/dashboard-redesign-v1 + employee-profile-redesign-v1)
    ----------------------------------------------------------------------------
@@ -407,90 +407,8 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
 .nxcal__action { min-height: 26px !important; font-size: 11.5px !important; }
 .nxcal__choice { min-height: 28px !important; font-size: 12px !important; }
 
-/* ============ السايدبار: إغلاق فجوة العمود + زر الطي للأيقونات ==============
-   عمود الجريد يساوي --zy-sidebar-width (288) بينما ملف السكرول يفرض عرضاً
-   أصغر (252) فتظهر فجوة 36px — نجعل السايدبار يملأ عموده دائماً. */
-.nexora-sidebar { width: 100% !important; max-width: 100% !important; min-width: 0 !important; }
-
-/* ============ حرف Z بالشعار = زر الطي (تحوّل Z ⟷ ثلاث خطوط) ==============
-   الحرف مرسوم بثلاثة خطوط (علوي/قطري/سفلي) — عند الطي يستقيم القطري ويتباعد
-   الثلاثة فيصيرون قائمة همبرغر، وبالعكس. أنميشن واحد بلا تبديل عناصر. */
-.zy-brand-z { width: 42px; height: 42px; padding: 0; border: 0; background: transparent;
-    cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-    transition: transform 220ms cubic-bezier(.4, 0, .2, 1); }
-.zy-brand-z:hover { transform: scale(1.06); }
-.zy-brand-z:active { transform: scale(.94); }
-.zy-brand-z:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: 12px; }
-.zy-brand-z svg { width: 100%; height: 100%; overflow: visible; }
-/* أجزاء الرمز الرسمي: الشريط العلوي والقطري والسفلي — تتحرك كوحدات مستقلة */
-.zy-brand-z .zy-z-top, .zy-brand-z .zy-z-diag, .zy-brand-z .zy-z-bot,
-.zy-brand-z .zy-z-pixels, .zy-brand-z .zy-z-anchor {
-    transition: transform 380ms cubic-bezier(.65, 0, .35, 1), opacity 260ms ease;
-    transform-origin: 512px 512px; transform-box: view-box;
-}
-/* السايدبار داكن بالوضعين — فالنص والشريطان يبقيان فاتحين كالشعار الأصلي */
-.zy-brand-word { color: #F7F9FB; display: block; flex: 1 1 auto; min-width: 0; }
-/* الـSVG يرث RTL فينزاح النص الطويل خارج الإطار — نفرض LTR داخله */
-.zy-brand-word, .zy-brand-word svg, .zy-brand-word text {
-    direction: ltr !important; unicode-bidi: isolate; text-anchor: start;
-}
-.zy-brand-word svg { width: 100%; height: auto; max-height: 34px; display: block; }
-/* الرمز والنص جنباً إلى جنب على سطر واحد */
-.nexora-sidebar .nexora-brand-card .nexora-brand-link {
-    display: flex !important; flex-direction: row !important;
-    align-items: center !important; gap: 8px !important; flex-wrap: wrap !important;
-}
-.nexora-sidebar .nexora-brand-card .nexora-brand-tagline { flex-basis: 100% !important; }
-.zy-brand-z { width: 46px; height: 46px; }
-
-/* الحالة المطوية: القطري يستقيم أفقياً بين الشريطين ⟵ ثلاثة خطوط متوازية،
-   والبكسلات والمرساة تتلاشى فيبقى الرمز قائمةً نظيفة. */
-html[data-sidebar="collapsed"] .zy-brand-z .zy-z-diag {
-    transform: rotate(48.5deg) scale(.9) translate(10px, 2px);
-}
-html[data-sidebar="collapsed"] .zy-brand-z .zy-z-top { transform: translateY(22px) scaleX(.96); }
-html[data-sidebar="collapsed"] .zy-brand-z .zy-z-bot { transform: translateY(-22px) scaleX(.96); }
-html[data-sidebar="collapsed"] .zy-brand-z .zy-z-pixels,
-html[data-sidebar="collapsed"] .zy-brand-z .zy-z-anchor { opacity: 0; }
-
-/* ================= سلاسة الطي/الفتح للقوقعة كاملة ======================== */
-.nexora-shell, .nexora-sidebar, .nexora-main {
-    transition: grid-template-columns 300ms cubic-bezier(.4, 0, .2, 1),
-                width 300ms cubic-bezier(.4, 0, .2, 1),
-                max-width 300ms cubic-bezier(.4, 0, .2, 1);
-}
-.nexora-nav-link, .nexora-nav-group > summary, .nexora-brand-logo, .nexora-brand-tagline {
-    transition: opacity 200ms ease, padding 260ms ease;
-}
-/* الإخفاء بالطي: تلاشٍ ثم انكماش العرض (لا قطع مفاجئ) */
-html[data-sidebar="collapsed"] .nexora-brand-logo,
-html[data-sidebar="collapsed"] .zy-brand-word {
-    opacity: 0; width: 0 !important; max-width: 0 !important; margin: 0 !important; overflow: hidden; flex: 0 0 0 !important;
-}
-html[data-sidebar="collapsed"] .nexora-brand-tagline { opacity: 0; }
-/* بطاقة الشعار وهي مطوية: زر Z وحده بالوسط */
-html[data-sidebar="collapsed"] .nexora-brand-link { justify-content: center !important; gap: 0 !important; }
-html[data-sidebar="collapsed"] .nexora-brand-card { padding-inline: 0 !important; }
-
-/* الحالة المطوية: أيقونات فقط + تلميح بالاسم عند الهوفر */
-html[data-sidebar="collapsed"] { --zy-sidebar-width: 62px; --nx-responsive-sidebar-width: 62px; --nxr-sidebar: 62px; }
-html[data-sidebar="collapsed"] .nexora-nav-link > span:not(.nexora-nav-dot),
-html[data-sidebar="collapsed"] .nexora-nav-text,
-html[data-sidebar="collapsed"] .nexora-chevron,
-html[data-sidebar="collapsed"] .nexora-brand-copy,
-html[data-sidebar="collapsed"] .nexora-brand-tagline,
-html[data-sidebar="collapsed"] .nexora-nav-group-links,
-html[data-sidebar="collapsed"] .ky-acc { display: none !important; }
-html[data-sidebar="collapsed"] .nexora-nav-link,
-html[data-sidebar="collapsed"] .nexora-nav-group > summary { justify-content: center !important; padding-inline: 0 !important; }
-html[data-sidebar="collapsed"] .nexora-nav-link[data-sidebar-label]:hover::after,
-html[data-sidebar="collapsed"] .nexora-nav-group > summary[data-sidebar-label]:hover::after {
-    content: attr(data-sidebar-label); position: absolute; inset-inline-end: calc(100% + 8px);
-    background: var(--color-text-primary); color: var(--color-surface); font-size: 11.5px; font-weight: 800;
-    padding: 4px 9px; border-radius: 7px; white-space: nowrap; z-index: 60; pointer-events: none;
-}
-html[data-sidebar="collapsed"] .nexora-nav-link,
-html[data-sidebar="collapsed"] .nexora-nav-group > summary { position: relative; }
+/* إغلاق فجوة عمود السايدبار (الجريد 288 والملف القديم يفرض 252) */
+.nexora-sidebar { width: 100% !important; max-width: 100% !important; }
 
 /* ==================== ثيم فاتح لبوب-أب الكلاندر القديم =====================
    nexora-calendar-v18 مبني بألوان داكنة ثابتة بلا أي دعم للفاتح — نكسوه هنا

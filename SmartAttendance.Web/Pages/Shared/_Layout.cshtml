@@ -37,12 +37,11 @@
                 });
             } catch (e) { }
 
-            // حالة القائمة الجانبية المحفوظة (زر الطي بالشريط العلوي)
-            var zySide = null;
-            try { zySide = localStorage.getItem("ZY.Sidebar"); } catch (e) { }
+            // القائمة الجانبية موسّعة دائماً (فكرة الطي أُلغيت بطلب محمد)
+            try { localStorage.removeItem("ZY.Sidebar"); } catch (e) { }
             document.documentElement.setAttribute(
                 "data-sidebar",
-                zySide === "collapsed" ? "collapsed" : "expanded"
+                "expanded"
             );
 
             // الوضع المحفوظ (زر الشمس/الهلال بالشريط العلوي) — الافتراضي داكن حالياً.
@@ -236,72 +235,15 @@
             <div class="nexora-brand-card">
                 @* الشعار عرض فقط (لا رابط) — وحرف Z نفسه هو زر الطي: خطوطه الثلاثة
                    تتحول بأنميشن إلى ثلاث خطوط أفقية عند الانكماش. *@
+                @* الشعار عرض فقط لا رابط — التنقل للرئيسية من بند «لوحة البيانات» *@
                 <div class="nexora-brand-link" aria-label="@brandName">
-                    @if (string.IsNullOrWhiteSpace(companyTheme.LogoPath))
-                    {
-                        @* رمز ZYNORA الرسمي مضمّناً: أجزاؤه الحقيقية (الشريط العلوي +
-                           القطري + الشريط السفلي) هي نفسها الزر — عند الطي يستقيم
-                           القطري فيصير الرمز ثلاثة خطوط، وعند الفتح يرجع حرف Z. *@
-                        <button type="button" class="zy-brand-z" id="zy-sidebar-toggle"
-                                aria-label="طي القائمة الجانبية" title="طي / توسيع القائمة">
-                            <svg viewBox="0 0 1024 1024" aria-hidden="true">
-                                <g fill="none" fill-rule="evenodd">
-                                    <path class="zy-z-top" fill="#F4F7FB" d="M170 218h520l-112 126H58z" />
-                                    <path class="zy-z-diag" fill="#18C7BD" d="M584 294h176L360 746H184z" />
-                                    <path class="zy-z-diag zy-z-facet" fill="#42DED3" opacity=".78" d="M584 294h88L272 746h-88z" />
-                                    <path class="zy-z-bot" fill="#F4F7FB" d="M334 680h520L742 806H222z" />
-                                    <rect class="zy-z-anchor" x="150" y="720" width="74" height="74" rx="8" fill="#D4B36A" />
-                                    <g class="zy-z-pixels" fill="#18C7BD">
-                                        <rect x="650" y="184" width="62" height="62" rx="6" />
-                                        <rect x="726" y="184" width="62" height="62" rx="6" />
-                                        <rect x="802" y="184" width="62" height="62" rx="6" />
-                                        <rect x="726" y="108" width="62" height="62" rx="6" />
-                                        <rect x="802" y="108" width="62" height="62" rx="6" />
-                                        <rect x="878" y="108" width="62" height="62" rx="6" />
-                                        <rect x="802" y="32" width="62" height="62" rx="6" />
-                                        <rect x="878" y="32" width="62" height="62" rx="6" />
-                                    </g>
-                                </g>
-                            </svg>
-                        </button>
-                        <span class="zy-brand-word">
-                            <svg viewBox="470 90 1080 230" preserveAspectRatio="xMinYMid meet" aria-hidden="true">
-                                <text x="480" y="268" font-family="Inter Display, Inter, Arial, sans-serif"
-                                      font-size="188" font-weight="500" letter-spacing="18" fill="#F7F9FB">ZYNORA</text>
-                                <text x="1370" y="268" font-family="Inter, Arial, sans-serif"
-                                      font-size="84" font-weight="600" letter-spacing="4" fill="#18C7BD">HR</text>
-                            </svg>
-                        </span>
-                    }
-                    else
-                    {
-                        @* شعار الشركة المخصص (White-Label): يبقى صورة، والطي بزر الرمز *@
-                        <button type="button" class="zy-brand-z zy-brand-z--custom" id="zy-sidebar-toggle"
-                                aria-label="طي القائمة الجانبية" title="طي / توسيع القائمة">
-                            <svg viewBox="0 0 40 40" aria-hidden="true">
-                                <path class="zy-z-top" fill="currentColor" d="M7 8h20l-4 5H2z" />
-                                <path class="zy-z-diag" fill="currentColor" d="M22 11h7L14 29H7z" />
-                                <path class="zy-z-bot" fill="currentColor" d="M13 27h20l-4 5H9z" />
-                            </svg>
-                        </button>
-                        <img class="nexora-brand-logo" src="@companyTheme.LogoPath" alt="@brandName" />
-                    }
+                    <img class="nexora-brand-logo"
+                         src="@(string.IsNullOrWhiteSpace(companyTheme.LogoPath) ? Url.Content("~/brand/zynora-logo-horizontal-light.svg") : companyTheme.LogoPath)"
+                         alt="@brandName" />
                     <span class="nexora-brand-tagline">
                         Smarter People. Stronger Business.
                     </span>
                 </div>
-                <script>
-                    (function () {
-                        var btn = document.getElementById("zy-sidebar-toggle");
-                        if (!btn) return;
-                        btn.addEventListener("click", function () {
-                            var h = document.documentElement;
-                            var next = h.getAttribute("data-sidebar") === "collapsed" ? "expanded" : "collapsed";
-                            h.setAttribute("data-sidebar", next);
-                            try { localStorage.setItem("ZY.Sidebar", next); } catch (e) { }
-                        });
-                    })();
-                </script>
             </div>
 
             @if (isLoggedIn)
@@ -691,7 +633,6 @@
                 <div class="nexora-controls">
                     @if (isLoggedIn)
                     {
-                        @* زر طي القائمة الجانبية (أيقونات فقط) — الحالة محفوظة بـZY.Sidebar *@
                         @* زر الوضع الفاتح/الداكن (شمس/هلال) — بصف الإشعارات، بتبديل ناعم ومحفوظ *@
                         <button type="button" class="zy-theme-btn" id="zy-theme-toggle" aria-label="تبديل الوضع الفاتح والداكن" title="الوضع الفاتح / الداكن">
                             <svg class="zy-tt-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
