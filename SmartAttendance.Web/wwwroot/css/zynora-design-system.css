@@ -457,8 +457,9 @@ html[data-sidebar="collapsed"] .zy-brand-z .zy-z-anchor { opacity: 0; }
     transition: opacity 200ms ease, padding 260ms ease;
 }
 /* الإخفاء بالطي: تلاشٍ ثم انكماش العرض (لا قطع مفاجئ) */
-html[data-sidebar="collapsed"] .nexora-brand-logo {
-    opacity: 0; width: 0 !important; max-width: 0 !important; margin: 0 !important; overflow: hidden;
+html[data-sidebar="collapsed"] .nexora-brand-logo,
+html[data-sidebar="collapsed"] .zy-brand-word {
+    opacity: 0; width: 0 !important; max-width: 0 !important; margin: 0 !important; overflow: hidden; flex: 0 0 0 !important;
 }
 html[data-sidebar="collapsed"] .nexora-brand-tagline { opacity: 0; }
 /* بطاقة الشعار وهي مطوية: زر Z وحده بالوسط */
