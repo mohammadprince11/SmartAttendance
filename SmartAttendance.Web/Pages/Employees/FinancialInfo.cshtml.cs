@@ -20,15 +20,22 @@ public class FinancialInfoModel : PageModel
     private readonly IWebHostEnvironment _environment;
     private readonly IPermissionAuthorizationService _permissionAuthorizationService;
 
+    private readonly Infrastructure.Security.IProtectedFileService _protectedFiles;
+
     public FinancialInfoModel(
         ApplicationDbContext dbContext,
         IWebHostEnvironment environment,
-        IPermissionAuthorizationService permissionAuthorizationService)
+        IPermissionAuthorizationService permissionAuthorizationService,
+        Infrastructure.Security.IProtectedFileService protectedFiles)
     {
         _dbContext = dbContext;
         _environment = environment;
         _permissionAuthorizationService = permissionAuthorizationService;
+        _protectedFiles = protectedFiles;
     }
+
+    /// <summary>رابط فتح مرفق مالي (تعهّد/مرفق) بنقطة مصادَقة موقّعة.</summary>
+    public string FileUrl(string? storedPath) => _protectedFiles.BuildUrl(EmployeeId, storedPath);
 
     public int EmployeeId { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
@@ -181,20 +188,17 @@ public class FinancialInfoModel : PageModel
 
     private static readonly string[] AllowedExtensions = { ".pdf", ".png", ".jpg", ".jpeg", ".webp", ".doc", ".docx", ".xls", ".xlsx" };
 
+    // المرحلة 6: المرفقات المالية (تعهّدات/حسابات) خارج wwwroot بمفتاح مولَّد،
+    // والقراءة عبر نقطة مصادَقة تفحص صلاحية الموظف المستهدف.
     private async Task<(string? name, string? path)> SaveFileAsync(IFormFile? file, int employeeId)
     {
         if (file == null || file.Length == 0) return (null, null);
-        var ext = Path.GetExtension(file.FileName);
-        if (string.IsNullOrWhiteSpace(ext) || !AllowedExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase)) return (null, null);
-        if (file.Length > 10 * 1024 * 1024) return (null, null);
 
-        var root = Path.Combine(_environment.WebRootPath, "uploads", "employee-financial");
-        Directory.CreateDirectory(root);
-        var fileName = $"fin_{employeeId}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{ext.ToLowerInvariant()}";
-        await using (var stream = System.IO.File.Create(Path.Combine(root, fileName)))
-        {
-            await file.CopyToAsync(stream);
-        }
-        return (Path.GetFileName(file.FileName), $"/uploads/employee-financial/{fileName}");
+        var stored = await _protectedFiles.SaveAsync(
+            file, employeeId, "financial", HttpContext.RequestAborted);
+
+        return stored is null
+            ? (null, null)
+            : (Path.GetFileName(file.FileName), stored);
     }
 }

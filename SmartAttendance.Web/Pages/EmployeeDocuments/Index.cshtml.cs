@@ -19,11 +19,21 @@ public class IndexModel : PageModel
         ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx", ".xls", ".xlsx"
     };
 
-    public IndexModel(ApplicationDbContext dbContext, IWebHostEnvironment environment)
+    private readonly Infrastructure.Security.IProtectedFileService _protectedFiles;
+
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        IWebHostEnvironment environment,
+        Infrastructure.Security.IProtectedFileService protectedFiles)
     {
         _dbContext = dbContext;
         _environment = environment;
+        _protectedFiles = protectedFiles;
     }
+
+    /// <summary>رابط فتح المستند: نقطة موقّعة للجديد، والمسار القديم للصفوف التاريخية.</summary>
+    public string FileUrl(DocumentRow row) =>
+        _protectedFiles.BuildUrl(row.EmployeeId, row.StoredPath);
 
     [BindProperty]
     public DocumentInput Input { get; set; } = new();
@@ -94,17 +104,18 @@ public class IndexModel : PageModel
         var selectedEmployeeId = Input.EmployeeId;
         var selectedDocumentType = string.IsNullOrWhiteSpace(Input.DocumentType) ? "ID" : Input.DocumentType.Trim();
 
-        var uploadRoot = Path.Combine(_environment.WebRootPath, "uploads", "employee-documents");
-        Directory.CreateDirectory(uploadRoot);
-
         var safeOriginalName = Path.GetFileName(Input.File.FileName);
-        var storedName = $"{Input.EmployeeId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}{extension}";
-        var physicalPath = Path.Combine(uploadRoot, storedName);
-        var relativePath = $"/uploads/employee-documents/{storedName}";
 
-        await using (var stream = System.IO.File.Create(physicalPath))
+        // المرحلة 6: مستندات الموظف (هويات، عقود…) لا تُكتب تحت wwwroot بعد اليوم.
+        var relativePath = await _protectedFiles.SaveAsync(
+            Input.File,
+            Input.EmployeeId,
+            selectedDocumentType,
+            HttpContext.RequestAborted);
+
+        if (string.IsNullOrWhiteSpace(relativePath))
         {
-            await Input.File.CopyToAsync(stream);
+            return await FailAsync("تعذّر حفظ الملف. تأكد من النوع والحجم (10MB كحد أقصى).");
         }
 
         await HrmsDatabase.ExecuteAsync(

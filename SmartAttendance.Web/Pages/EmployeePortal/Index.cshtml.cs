@@ -14,14 +14,18 @@ public class IndexModel : PageModel
     private readonly IAnnouncementService _announcementService;
     private readonly IWebHostEnvironment _environment;
 
+    private readonly Web.Infrastructure.Security.IProtectedFileService _protectedFiles;
+
     public IndexModel(
         ApplicationDbContext dbContext,
         IAnnouncementService announcementService,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        Web.Infrastructure.Security.IProtectedFileService protectedFiles)
     {
         _dbContext = dbContext;
         _announcementService = announcementService;
         _environment = environment;
+        _protectedFiles = protectedFiles;
     }
 
     public string Tab { get; private set; } = "home";
@@ -412,19 +416,10 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         string? attachmentPath = null;
         if (attachment is { Length: > 0 })
         {
-            var ext = Path.GetExtension(attachment.FileName);
-            var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf" };
-            if (allowed.Contains(ext.ToLowerInvariant()))
-            {
-                var dir = Path.Combine(_environment.WebRootPath, "uploads", "requests");
-                Directory.CreateDirectory(dir);
-                var fileName = $"req_{employeeId}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{ext}";
-                await using (var stream = System.IO.File.Create(Path.Combine(dir, fileName)))
-                {
-                    await attachment.CopyToAsync(stream);
-                }
-                attachmentPath = $"/uploads/requests/{fileName}";
-            }
+            // المرحلة 6: مرفق الطلب (تقرير طبي مثلاً) خارج wwwroot — كان يُخدَم
+            // من مسار عام يخمّنه أي أحد. القراءة الآن عبر /files بفحص صلاحية.
+            attachmentPath = await _protectedFiles.SaveAsync(
+                attachment, employeeId, "request", HttpContext.RequestAborted);
         }
 
         reason = string.IsNullOrWhiteSpace(reason) ? "تم الإرسال من بوابة الموظف" : reason.Trim();

@@ -54,6 +54,9 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IThemeContextService, ThemeContextService>();
 
+// مرفقات الموظفين الحسّاسة: حفظ خارج wwwroot + روابط تنزيل موقّعة (المرحلة 6).
+builder.Services.AddSingleton<IProtectedFileService, ProtectedFileService>();
+
 // إجبار HTTPS مفصول عن «البيئة»: النشر خلف Cloudflare Tunnel (ينهي TLS عند الحافة
 // ويمرّر HTTP محلياً) وعلى LAN يحتاج HTTP لبوت‑ستراب شهادة الـCA. لذا نفصل إنفاذ TLS
 // في راية مستقلة (افتراضها false) فيبقى الإنتاج بمعالج أخطاء آمن بلا كسر التنفيل/الدخول.
