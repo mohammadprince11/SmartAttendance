@@ -422,19 +422,28 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
 .zy-brand-z:active { transform: scale(.94); }
 .zy-brand-z:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: 12px; }
 .zy-brand-z svg { width: 100%; height: 100%; overflow: visible; }
-.zy-brand-z .zy-z-box { fill: #0b1b2e; stroke: color-mix(in srgb, var(--color-primary) 40%, transparent); stroke-width: 1.2;
-    transition: fill 260ms ease, stroke 260ms ease; }
-html[data-theme="light"] .zy-brand-z .zy-z-box { fill: #10233b; }
-.zy-brand-z line { stroke: var(--color-primary); stroke-width: 3.1; stroke-linecap: round;
-    transition: transform 320ms cubic-bezier(.65, 0, .35, 1), stroke 260ms ease;
-    transform-origin: 20px 20px; transform-box: fill-box; }
-.zy-brand-z .zy-z-dot { fill: var(--color-primary); transition: opacity 220ms ease; }
+/* أجزاء الرمز الرسمي: الشريط العلوي والقطري والسفلي — تتحرك كوحدات مستقلة */
+.zy-brand-z .zy-z-top, .zy-brand-z .zy-z-diag, .zy-brand-z .zy-z-bot,
+.zy-brand-z .zy-z-pixels, .zy-brand-z .zy-z-anchor {
+    transition: transform 380ms cubic-bezier(.65, 0, .35, 1), opacity 260ms ease;
+    transform-origin: 512px 512px; transform-box: view-box;
+}
+/* الوضع الفاتح: الشريطان الفاتحان يصيران داكنين ليظهرا على الخلفية البيضاء */
+html[data-theme="light"] .zy-brand-z .zy-z-top,
+html[data-theme="light"] .zy-brand-z .zy-z-bot { fill: #16283a; }
+html[data-theme="light"] .zy-brand-word { color: #16283a; }
+.zy-brand-word { color: #F7F9FB; }
+.zy-brand-word svg { width: 100%; height: 100%; }
 
-/* الحالة المطوية: القطري يستقيم أفقياً ⟵ ثلاث خطوط متوازية */
-html[data-sidebar="collapsed"] .zy-brand-z .zy-z-mid { transform: rotate(40.5deg) scaleX(1.14); }
-html[data-sidebar="collapsed"] .zy-brand-z .zy-z-top { transform: translateY(-1px); }
-html[data-sidebar="collapsed"] .zy-brand-z .zy-z-bot { transform: translateY(1px); }
-html[data-sidebar="collapsed"] .zy-brand-z .zy-z-dot { opacity: 0; }
+/* الحالة المطوية: القطري يستقيم أفقياً بين الشريطين ⟵ ثلاثة خطوط متوازية،
+   والبكسلات والمرساة تتلاشى فيبقى الرمز قائمةً نظيفة. */
+html[data-sidebar="collapsed"] .zy-brand-z .zy-z-diag {
+    transform: rotate(48.5deg) scale(.94) translate(6px, 4px);
+}
+html[data-sidebar="collapsed"] .zy-brand-z .zy-z-top { transform: translateY(46px) scaleX(.98); }
+html[data-sidebar="collapsed"] .zy-brand-z .zy-z-bot { transform: translateY(-46px) scaleX(.98); }
+html[data-sidebar="collapsed"] .zy-brand-z .zy-z-pixels,
+html[data-sidebar="collapsed"] .zy-brand-z .zy-z-anchor { opacity: 0; }
 
 /* ================= سلاسة الطي/الفتح للقوقعة كاملة ======================== */
 .nexora-shell, .nexora-sidebar, .nexora-main {

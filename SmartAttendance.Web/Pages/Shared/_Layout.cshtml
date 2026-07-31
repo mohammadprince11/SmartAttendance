@@ -237,20 +237,56 @@
                 @* الشعار عرض فقط (لا رابط) — وحرف Z نفسه هو زر الطي: خطوطه الثلاثة
                    تتحول بأنميشن إلى ثلاث خطوط أفقية عند الانكماش. *@
                 <div class="nexora-brand-link" aria-label="@brandName">
-                    <button type="button" class="zy-brand-z" id="zy-sidebar-toggle"
-                            aria-label="طي القائمة الجانبية" title="طي / توسيع القائمة">
-                        <svg viewBox="0 0 40 40" aria-hidden="true">
-                            <rect class="zy-z-box" x="1" y="1" width="38" height="38" rx="11" />
-                            <line class="zy-z-top" x1="12" y1="13" x2="28" y2="13" />
-                            <line class="zy-z-mid" x1="27" y1="14" x2="13" y2="26" />
-                            <line class="zy-z-bot" x1="12" y1="27" x2="28" y2="27" />
-                            <circle class="zy-z-dot" cx="31.5" cy="9" r="1.6" />
-                            <circle class="zy-z-dot" cx="35" cy="12.5" r="1.2" />
-                        </svg>
-                    </button>
-                    <img class="nexora-brand-logo"
-                         src="@(string.IsNullOrWhiteSpace(companyTheme.LogoPath) ? Url.Content("~/brand/zynora-logo-horizontal-light.svg") : companyTheme.LogoPath)"
-                         alt="@brandName" />
+                    @if (string.IsNullOrWhiteSpace(companyTheme.LogoPath))
+                    {
+                        @* رمز ZYNORA الرسمي مضمّناً: أجزاؤه الحقيقية (الشريط العلوي +
+                           القطري + الشريط السفلي) هي نفسها الزر — عند الطي يستقيم
+                           القطري فيصير الرمز ثلاثة خطوط، وعند الفتح يرجع حرف Z. *@
+                        <button type="button" class="zy-brand-z" id="zy-sidebar-toggle"
+                                aria-label="طي القائمة الجانبية" title="طي / توسيع القائمة">
+                            <svg viewBox="0 0 1024 1024" aria-hidden="true">
+                                <g fill="none" fill-rule="evenodd">
+                                    <path class="zy-z-top" fill="#F4F7FB" d="M170 218h520l-112 126H58z" />
+                                    <path class="zy-z-diag" fill="#18C7BD" d="M584 294h176L360 746H184z" />
+                                    <path class="zy-z-diag zy-z-facet" fill="#42DED3" opacity=".78" d="M584 294h88L272 746h-88z" />
+                                    <path class="zy-z-bot" fill="#F4F7FB" d="M334 680h520L742 806H222z" />
+                                    <rect class="zy-z-anchor" x="150" y="720" width="74" height="74" rx="8" fill="#D4B36A" />
+                                    <g class="zy-z-pixels" fill="#18C7BD">
+                                        <rect x="650" y="184" width="62" height="62" rx="6" />
+                                        <rect x="726" y="184" width="62" height="62" rx="6" />
+                                        <rect x="802" y="184" width="62" height="62" rx="6" />
+                                        <rect x="726" y="108" width="62" height="62" rx="6" />
+                                        <rect x="802" y="108" width="62" height="62" rx="6" />
+                                        <rect x="878" y="108" width="62" height="62" rx="6" />
+                                        <rect x="802" y="32" width="62" height="62" rx="6" />
+                                        <rect x="878" y="32" width="62" height="62" rx="6" />
+                                    </g>
+                                </g>
+                            </svg>
+                        </button>
+                        <span class="nexora-brand-logo zy-brand-word">
+                            <svg viewBox="480 60 1120 300" aria-hidden="true">
+                                <rect x="420" y="84" width="2" height="252" fill="#8FA3B8" opacity=".65" />
+                                <text x="480" y="268" font-family="Inter Display, Inter, Arial, sans-serif"
+                                      font-size="188" font-weight="500" letter-spacing="18" fill="currentColor">ZYNORA</text>
+                                <text x="1370" y="268" font-family="Inter, Arial, sans-serif"
+                                      font-size="84" font-weight="600" letter-spacing="4" fill="#18C7BD">HR</text>
+                            </svg>
+                        </span>
+                    }
+                    else
+                    {
+                        @* شعار الشركة المخصص (White-Label): يبقى صورة، والطي بزر الرمز *@
+                        <button type="button" class="zy-brand-z zy-brand-z--custom" id="zy-sidebar-toggle"
+                                aria-label="طي القائمة الجانبية" title="طي / توسيع القائمة">
+                            <svg viewBox="0 0 40 40" aria-hidden="true">
+                                <path class="zy-z-top" fill="currentColor" d="M7 8h20l-4 5H2z" />
+                                <path class="zy-z-diag" fill="currentColor" d="M22 11h7L14 29H7z" />
+                                <path class="zy-z-bot" fill="currentColor" d="M13 27h20l-4 5H9z" />
+                            </svg>
+                        </button>
+                        <img class="nexora-brand-logo" src="@companyTheme.LogoPath" alt="@brandName" />
+                    }
                     <span class="nexora-brand-tagline">
                         Smarter People. Stronger Business.
                     </span>
