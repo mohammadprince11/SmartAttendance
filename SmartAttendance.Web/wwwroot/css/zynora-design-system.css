@@ -193,6 +193,25 @@ html[data-theme="light"] .zy-theme-btn .zy-tt-moon { display: block; }
     line-height: normal !important;
     background-image: none;
 }
+
+/* الودجتات المخصصة القديمة (nxcs-select للسلكت وnxcal للكلاندر) تُخفي الحقل الأصلي
+   وترسم زرها الخاص بـ42-44px !important — داخل الهوية الجديدة نقفلها على القياس
+   المضغوط الموحد (ملفنا يُحمَّل بعدها فيفوز بنفس القوة + تخصيص أعلى). */
+.zy-app .nxcs-trigger, .zy-app .nxcs-select, .zy-app .nxcal {
+    min-height: var(--control-h) !important;
+    height: var(--control-h) !important;
+    max-height: var(--control-h) !important;
+    padding: 0 10px !important;
+    font-size: var(--fs-body) !important;
+    border-radius: var(--radius) !important;
+    line-height: normal !important;
+    display: flex !important;
+    align-items: center !important;
+}
+.zy-app .nxcs-value { font-size: var(--fs-body) !important; height: auto !important; line-height: normal !important; }
+.zy-app .nxcs-option { font-size: var(--fs-body) !important; min-height: 30px !important; padding: 6px 10px !important; }
+.zy-app .nxcs-panel { font-size: var(--fs-body) !important; }
+.zy-app .nxcal * { line-height: normal; }
 .zy-input:disabled, .zy-select:disabled, .zy-textarea:disabled { background: var(--color-background); opacity: .7; cursor: not-allowed; }
 .zy-input[readonly] { background: var(--color-background); }
 .zy-field .zy-help { font-size: var(--fs-tiny); color: var(--color-text-secondary); font-weight: 700; }
