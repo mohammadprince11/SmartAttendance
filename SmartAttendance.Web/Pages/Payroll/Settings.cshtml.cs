@@ -22,49 +22,36 @@ public class SettingsModel : PageModel
     public List<PayrollConfigStore.TaxProfile> TaxProfiles { get; set; } = new();
     public List<PayrollConfigStore.GosiProfile> GosiProfiles { get; set; } = new();
 
-    /// <summary>عضوية وعاء الضريبة — أي مكوّنات القسيمة تدخل باحتسابها.</summary>
-    public List<string> TaxMembers { get; set; } = new();
+    /// <summary>عضوية أوعية كل الملفات — تُغذّي نماذج السلايد بجافاسكربت.</summary>
+    public Dictionary<string, List<string>> BaseMembers { get; set; } = new();
 
-    /// <summary>عضوية وعاء الضمان.</summary>
-    public List<string> GosiMembers { get; set; } = new();
+    /// <summary>كتالوج المكوّنات المتاحة للسحب.</summary>
+    public static (string Key, string Label)[] BaseComponents => SalaryBaseComposer.Components;
 
-    /// <summary>المكوّنات غير المنضمّة لأي وعاء — مصدر السحب.</summary>
-    public List<(string Key, string Label)> Unassigned(List<string> members) =>
-        SalaryBaseComposer.Components.Where(c => !members.Contains(c.Key)).ToList();
-
-    public static string ComponentLabel(string key) =>
-        SalaryBaseComposer.Components.FirstOrDefault(c => c.Key == key).Label ?? key;
+    /// <summary>عضوية ملف بعينه بالرجوع المتدرّج (خاصّته ← العام ← افتراض الكود).</summary>
+    public List<string> MembersOf(string baseKey, int profileId) =>
+        SalaryBaseStore.Resolve(BaseMembers, baseKey, profileId);
 
     public async Task OnGetAsync()
     {
         TaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_db);
         GosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_db);
-        (TaxMembers, GosiMembers) = await SalaryBaseStore.BothAsync(_db);
+        BaseMembers = await SalaryBaseStore.AllAsync(_db);
     }
 
     /// <summary>
-    /// حفظ عضوية وعاء واحد. الترتيب المرسل هو ترتيب الإفلات بالواجهة.
-    /// وعاء فارغ مسموح عمداً (يعطّل الاقتطاع) لكن يُنبَّه عليه بوضوح لأن أثره
-    /// يظهر على كل قسيمة.
+    /// يحفظ عضوية وعاء الملف من نفس نموذج الملف. يُنادى بعد حفظ الملف لأن
+    /// الملف الجديد لا يملك معرّفاً قبل ذلك.
+    /// وعاء فارغ مسموح عمداً (يعطّل الاقتطاع) لكن الرسالة تُنبّه عليه.
     /// </summary>
-    public async Task<IActionResult> OnPostSaveBaseAsync()
+    private async Task<string> SaveBaseFromFormAsync(string baseKey, int profileId)
     {
-        var baseKey = Request.Form["BaseKey"].ToString().Trim();
-        if (baseKey != SalaryBaseComposer.TaxBaseKey && baseKey != SalaryBaseComposer.GosiBaseKey)
-        {
-            TempData["PayrollMessage"] = "وعاء غير معروف.";
-            return RedirectToPage();
-        }
-
         var components = Request.Form["member"].Where(m => m != null).Select(m => m!).ToList();
-        await SalaryBaseStore.SaveMembersAsync(_db, baseKey, components);
+        await SalaryBaseStore.SaveMembersAsync(_db, baseKey, profileId, components);
 
-        var name = baseKey == SalaryBaseComposer.GosiBaseKey ? "الضمان" : "الضريبة";
-        TempData["PayrollMessage"] = components.Count == 0
-            ? $"تم حفظ وعاء {name} فارغاً — سيصبح الاقتطاع صفراً بالمسير القادم."
-            : $"تم حفظ وعاء {name} ({components.Count} مكوّن).";
-
-        return RedirectToPage();
+        return components.Count == 0
+            ? " ⚠️ الوعاء فارغ — سيصبح الاقتطاع صفراً بالمسير القادم."
+            : $" (وعاء الاحتساب: {components.Count} مكوّن)";
     }
 
     public async Task<IActionResult> OnPostSaveGosiAsync()
@@ -84,8 +71,9 @@ public class SettingsModel : PageModel
             TempData["PayrollMessage"] = "اسم ملف الضمان مطلوب.";
             return RedirectToPage();
         }
-        await PayrollConfigStore.SaveGosiProfileAsync(_db, profile);
-        TempData["PayrollMessage"] = "تم حفظ ملف الضمان.";
+        var gosiId = await PayrollConfigStore.SaveGosiProfileAsync(_db, profile);
+        var gosiNote = await SaveBaseFromFormAsync(SalaryBaseComposer.GosiBaseKey, gosiId);
+        TempData["PayrollMessage"] = "تم حفظ ملف الضمان." + gosiNote;
         return RedirectToPage();
     }
 
@@ -123,8 +111,9 @@ public class SettingsModel : PageModel
             profile.Brackets.Add(new PayrollConfigStore.TaxBracket { FromAmount = from, ToAmount = to, Rate = rate });
         }
 
-        await PayrollConfigStore.SaveTaxProfileAsync(_db, profile);
-        TempData["PayrollMessage"] = "تم حفظ ملف الضريبة وشرائحه.";
+        var taxId = await PayrollConfigStore.SaveTaxProfileAsync(_db, profile);
+        var taxNote = await SaveBaseFromFormAsync(SalaryBaseComposer.TaxBaseKey, taxId);
+        TempData["PayrollMessage"] = "تم حفظ ملف الضريبة وشرائحه." + taxNote;
         return RedirectToPage();
     }
 

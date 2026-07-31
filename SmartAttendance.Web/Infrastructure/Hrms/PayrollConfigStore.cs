@@ -142,7 +142,8 @@ END;
         (await ListTaxProfilesAsync(dbContext)).FirstOrDefault(x => x.IsActive)
         ?? (await ListTaxProfilesAsync(dbContext)).FirstOrDefault();
 
-    public static async Task SaveTaxProfileAsync(ApplicationDbContext dbContext, TaxProfile profile)
+    /// <summary>يحفظ ملف الضريبة وشرائحه ويعيد معرّفه — يحتاجه المستدعي لربط وعاء الاحتساب.</summary>
+    public static async Task<int> SaveTaxProfileAsync(ApplicationDbContext dbContext, TaxProfile profile)
     {
         await EnsureAsync(dbContext);
         int id;
@@ -187,6 +188,8 @@ END;
                     HrmsDatabase.AddParameter(command, "@Rate", current.Rate);
                 });
         }
+
+        return id;
     }
 
     public static async Task DeleteTaxProfileAsync(ApplicationDbContext dbContext, int id)
@@ -239,7 +242,8 @@ END;
         (await ListGosiProfilesAsync(dbContext)).FirstOrDefault(x => x.IsActive)
         ?? (await ListGosiProfilesAsync(dbContext)).FirstOrDefault();
 
-    public static async Task SaveGosiProfileAsync(ApplicationDbContext dbContext, GosiProfile profile)
+    /// <summary>يحفظ ملف الضمان ويعيد معرّفه — يحتاجه المستدعي لربط وعاء الاحتساب.</summary>
+    public static async Task<int> SaveGosiProfileAsync(ApplicationDbContext dbContext, GosiProfile profile)
     {
         await EnsureAsync(dbContext);
         if (profile.Id > 0)
@@ -252,14 +256,14 @@ END;
                     HrmsDatabase.AddParameter(command, "@Id", profile.Id);
                     AddGosi(command, profile);
                 });
+
+            return profile.Id;
         }
-        else
-        {
-            await HrmsDatabase.ExecuteAsync(
-                dbContext,
-                "INSERT INTO PayrollGosiProfiles (Name, EmployeeRate, CompanyRate, Ceiling, IsActive) VALUES (@Name, @Emp, @Co, @Ceiling, @Active);",
-                command => AddGosi(command, profile));
-        }
+
+        return await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            "INSERT INTO PayrollGosiProfiles (Name, EmployeeRate, CompanyRate, Ceiling, IsActive) VALUES (@Name, @Emp, @Co, @Ceiling, @Active); SELECT CAST(SCOPE_IDENTITY() AS int);",
+            command => AddGosi(command, profile));
     }
 
     public static async Task DeleteGosiProfileAsync(ApplicationDbContext dbContext, int id)

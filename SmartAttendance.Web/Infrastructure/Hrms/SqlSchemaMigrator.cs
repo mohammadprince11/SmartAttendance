@@ -151,6 +151,46 @@ BEGIN
         (N'GosiBase', N'Gross',            1);
 END;
 """),
+
+        // الوعاء صار خاصية **لكل ملف** ضريبة/ضمان لا إعداداً عاماً واحداً، لأن
+        // المستخدم يحرّره من داخل نموذج إنشاء/تعديل الملف نفسه.
+        // الصفوف المبذورة تبقى بـProfileId = 0 وتعمل كافتراضٍ عام يرثه أي ملف
+        // لم تُحدَّد له عضوية — فلا ينكسر أي ملف قائم ولا يصير اقتطاعه صفراً.
+        new(
+            "20260731-08-salary-base-members-per-profile",
+            """
+IF OBJECT_ID('SalaryBaseMembers', 'U') IS NOT NULL
+   AND COL_LENGTH('SalaryBaseMembers', 'ProfileId') IS NULL
+BEGIN
+    ALTER TABLE SalaryBaseMembers ADD ProfileId int NOT NULL CONSTRAINT DF_SalaryBaseMembers_ProfileId DEFAULT(0);
+END;
+
+IF OBJECT_ID('SalaryBaseMembers', 'U') IS NOT NULL
+   AND EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'UQ_SalaryBaseMembers')
+BEGIN
+    ALTER TABLE SalaryBaseMembers DROP CONSTRAINT UQ_SalaryBaseMembers;
+END;
+
+IF OBJECT_ID('SalaryBaseMembers', 'U') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'UQ_SalaryBaseMembers_Profile')
+BEGIN
+    ALTER TABLE SalaryBaseMembers
+        ADD CONSTRAINT UQ_SalaryBaseMembers_Profile UNIQUE (BaseKey, ProfileId, ComponentKey);
+END;
+"""),
+
+        // إسقاط الصفوف المبذورة بـProfileId = 0.
+        // كانت تعمل «افتراضاً عاماً» يرثه أي ملف بلا عضوية، فتبيّن أنها حالة مخفية
+        // قابلة للتلف: تعديلها يغيّر اقتطاع كل الملفات دفعةً وبلا أثر ظاهر — وهو ما
+        // وقع فعلاً أثناء تجربة حيّة. الرجوع صار لافتراضات الكود مباشرة
+        // (SalaryBaseComposer.Default*Members)، فمصدر الحقيقة لغير المهيَّأ واحد.
+        new(
+            "20260731-09-drop-global-salary-base-seed",
+            """
+IF OBJECT_ID('SalaryBaseMembers', 'U') IS NOT NULL
+   AND COL_LENGTH('SalaryBaseMembers', 'ProfileId') IS NOT NULL
+    DELETE FROM SalaryBaseMembers WHERE ProfileId = 0;
+"""),
     };
 
     /// <summary>

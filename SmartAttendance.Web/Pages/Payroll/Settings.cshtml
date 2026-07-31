@@ -11,6 +11,16 @@
         Brackets = p.Brackets.Select(b => new { b.FromAmount, b.ToAmount, b.Rate })
     }));
     var gosiJson = JsonSerializer.Serialize(Model.GosiProfiles.Select(g => new { g.Id, g.Name, g.EmployeeRate, g.CompanyRate, g.Ceiling, g.IsActive }));
+
+    // كتالوج المكوّنات والعضوية المحفوظة والافتراضات — تبني لوحة الوعاء داخل السلايد
+    var componentsJson = JsonSerializer.Serialize(
+        SettingsModel.BaseComponents.Select(c => new { key = c.Key, label = c.Label }));
+    var membersJson = JsonSerializer.Serialize(Model.BaseMembers);
+    var defaultsJson = JsonSerializer.Serialize(new Dictionary<string, string[]>
+    {
+        [SalaryBaseComposer.TaxBaseKey] = SalaryBaseComposer.DefaultTaxMembers,
+        [SalaryBaseComposer.GosiBaseKey] = SalaryBaseComposer.DefaultGosiMembers
+    });
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
@@ -100,55 +110,6 @@
         </div>
     </div>
 
-    @* ----- أوعية الاحتساب: أي مكوّن يدخل بالضريبة/الضمان (سحب وإفلات) ----- *@
-    <div class="ps-sec sb-sec">
-        <h2>أوعية الاحتساب</h2>
-        <p class="sb-hint">
-            اسحب المكوّن وأفلته داخل الوعاء ليدخل باحتسابه، أو أخرجه ليُستثنى.
-            <b>الأثر يظهر على كل قسيمة بالمسير القادم</b> — المسيرات المعتمدة لا تتغيّر.
-        </p>
-
-        @foreach (var (key, title) in new[] {
-            (SalaryBaseComposer.TaxBaseKey, "وعاء الضريبة"),
-            (SalaryBaseComposer.GosiBaseKey, "وعاء الضمان") })
-        {
-            var members = key == SalaryBaseComposer.TaxBaseKey ? Model.TaxMembers : Model.GosiMembers;
-
-            <form method="post" asp-page-handler="SaveBase" class="sb-board" data-base="@key">
-                <input type="hidden" name="BaseKey" value="@key" />
-
-                <div class="sb-cols">
-                    <div class="sb-col">
-                        <h3>@title</h3>
-                        <div class="sb-drop" data-role="in" ondragover="sbOver(event)" ondrop="sbDrop(event)">
-                            @foreach (var m in members)
-                            {
-                                <div class="sb-chip" draggable="true" ondragstart="sbStart(event)" data-key="@m">
-                                    <span>@SettingsModel.ComponentLabel(m)</span>
-                                    <input type="hidden" name="member" value="@m" />
-                                </div>
-                            }
-                        </div>
-                    </div>
-
-                    <div class="sb-col">
-                        <h3>مستثنى</h3>
-                        <div class="sb-drop sb-out" data-role="out" ondragover="sbOver(event)" ondrop="sbDrop(event)">
-                            @foreach (var (ck, label) in Model.Unassigned(members))
-                            {
-                                <div class="sb-chip" draggable="true" ondragstart="sbStart(event)" data-key="@ck">
-                                    <span>@label</span>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                </div>
-
-                <button type="submit" class="ps-btn">حفظ @title</button>
-            </form>
-        }
-    </div>
-
     @* سلايد الضريبة *@
     <div class="hrms-slideover-backdrop" id="tax-backdrop" onclick="taxClose()"></div>
     <aside class="hrms-slideover wide" id="tax-slide" aria-hidden="true">
@@ -162,6 +123,23 @@
                 <div><b style="font-size:13px">الشرائح التصاعدية</b> <button type="button" class="ps-btn ghost sm" onclick="brkAdd()">+ شريحة</button></div>
                 <div class="ps-brk" style="color:var(--sa-muted,#8FA8BC);font-size:11px;font-weight:900"><span>من</span><span>إلى (فارغ=∞)</span><span>نسبة%</span><span></span></div>
                 <div id="brk-rows" style="display:flex;flex-direction:column;gap:6px"></div>
+
+                @* وعاء الاحتساب لهذا الملف — يُبنى بجافاسكربت عند فتح السلايد *@
+                <div class="sb-board" data-base="TaxBase">
+                    <b style="font-size:13px">وعاء الاحتساب</b>
+                    <p class="sb-hint">اسحب المكوّن داخل الوعاء ليدخل باحتساب الضريبة، أو أخرجه ليُستثنى.</p>
+                    <div class="sb-cols">
+                        <div class="sb-col">
+                            <h3>داخل الوعاء</h3>
+                            <div class="sb-drop" data-role="in" ondragover="sbOver(event)" ondrop="sbDrop(event)"></div>
+                        </div>
+                        <div class="sb-col">
+                            <h3>مستثنى</h3>
+                            <div class="sb-drop sb-out" data-role="out" ondragover="sbOver(event)" ondrop="sbDrop(event)"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" class="ps-btn">حفظ الملف</button>
             </form>
         </div>
@@ -181,6 +159,23 @@
                 </div>
                 <label>السقف (0 = بلا سقف)<input type="number" name="Ceiling" id="gosi-Ceiling" step="0.01" value="0" /></label>
                 <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IsActive" value="true" id="gosi-Active" checked /> الملف النشط</label>
+
+                @* وعاء الاحتساب لهذا الملف — يُبنى بجافاسكربت عند فتح السلايد *@
+                <div class="sb-board" data-base="GosiBase">
+                    <b style="font-size:13px">وعاء الاحتساب</b>
+                    <p class="sb-hint">اسحب المكوّن داخل الوعاء ليدخل باحتساب الضمان، أو أخرجه ليُستثنى.</p>
+                    <div class="sb-cols">
+                        <div class="sb-col">
+                            <h3>داخل الوعاء</h3>
+                            <div class="sb-drop" data-role="in" ondragover="sbOver(event)" ondrop="sbDrop(event)"></div>
+                        </div>
+                        <div class="sb-col">
+                            <h3>مستثنى</h3>
+                            <div class="sb-drop sb-out" data-role="out" ondragover="sbOver(event)" ondrop="sbDrop(event)"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" class="ps-btn">حفظ الملف</button>
             </form>
         </div>
@@ -191,6 +186,9 @@
     <script>
         var TAX_DATA = @Html.Raw(taxJson);
         var GOSI_DATA = @Html.Raw(gosiJson);
+        var SB_COMPONENTS = @Html.Raw(componentsJson);
+        var SB_MEMBERS = @Html.Raw(membersJson);
+        var SB_DEFAULTS = @Html.Raw(defaultsJson);
 
         function brkRow(from, to, rate) {
             var div = document.createElement('div');
@@ -218,6 +216,7 @@
                 }
             }
             if (document.getElementById('brk-rows').children.length === 0) brkAdd();
+            sbBuild('TaxBase', id || 0);
             document.getElementById('tax-slide').classList.add('open');
             document.getElementById('tax-backdrop').classList.add('open');
         }
@@ -237,6 +236,7 @@
                     document.getElementById('gosi-Active').checked = !!g.IsActive;
                 }
             }
+            sbBuild('GosiBase', id || 0);
             document.getElementById('gosi-slide').classList.add('open');
             document.getElementById('gosi-backdrop').classList.add('open');
         }
@@ -267,6 +267,44 @@
             zone.appendChild(sbDragged);
             sbSync(sbDragged, zone.dataset.role === 'in');
             sbDragged = null;
+        }
+
+        // يبني رقاقات لوحة الوعاء لملفٍ بعينه. يُنادى عند فتح السلايد لأن
+        // المحتوى يختلف بكل ملف، وملفٌ جديد يبدأ بعضوية الافتراض العام.
+        function sbBuild(baseKey, profileId) {
+            const board = document.querySelector('.sb-board[data-base="' + baseKey + '"]');
+            if (!board) return;
+
+            const inZone = board.querySelector('[data-role="in"]');
+            const outZone = board.querySelector('[data-role="out"]');
+            inZone.innerHTML = '';
+            outZone.innerHTML = '';
+
+            const members = sbResolve(baseKey, profileId);
+
+            SB_COMPONENTS.forEach(function (c) {
+                const inside = members.indexOf(c.key) >= 0;
+                const chip = document.createElement('div');
+                chip.className = 'sb-chip';
+                chip.draggable = true;
+                chip.dataset.key = c.key;
+                chip.addEventListener('dragstart', sbStart);
+                chip.appendChild(Object.assign(document.createElement('span'), { textContent: c.label }));
+                (inside ? inZone : outZone).appendChild(chip);
+                sbSync(chip, inside);
+            });
+
+            // الترتيب داخل الوعاء يتبع العضوية المحفوظة لا ترتيب الكتالوج
+            members.forEach(function (key) {
+                const chip = inZone.querySelector('[data-key="' + key + '"]');
+                if (chip) inZone.appendChild(chip);
+            });
+        }
+
+        // نفس الرجوع بالخادم: عضوية الملف ← افتراضات الكود (بلا طبقة «افتراض عام»)
+        function sbResolve(baseKey, profileId) {
+            const own = SB_MEMBERS[baseKey + ':' + profileId];
+            return (own && own.length) ? own : (SB_DEFAULTS[baseKey] || []);
         }
 
         function sbSync(chip, inside) {

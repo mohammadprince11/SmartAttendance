@@ -213,8 +213,11 @@ END;
         var taxProfile = await PayrollConfigStore.ActiveTaxProfileAsync(dbContext);
         var gosiProfile = await PayrollConfigStore.ActiveGosiProfileAsync(dbContext);
 
-        // عضوية الوعاءين تُقرأ مرّة واحدة للتشغيل كلّه لا لكل موظف.
-        var (taxMembers, gosiMembers) = await SalaryBaseStore.BothAsync(dbContext);
+        // عضوية وعاءَي الملفّين النشطين تُقرأ مرّة واحدة للتشغيل كلّه لا لكل موظف.
+        var taxMembers = await SalaryBaseStore.MembersAsync(
+            dbContext, SalaryBaseComposer.TaxBaseKey, taxProfile?.Id ?? 0);
+        var gosiMembers = await SalaryBaseStore.MembersAsync(
+            dbContext, SalaryBaseComposer.GosiBaseKey, gosiProfile?.Id ?? 0);
 
         var periodStart = new DateOnly(run.Year, run.Month, 1);
         var periodEnd = periodStart.AddMonths(1).AddDays(-1);
