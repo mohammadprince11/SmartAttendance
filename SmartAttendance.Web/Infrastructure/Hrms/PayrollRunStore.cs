@@ -446,9 +446,25 @@ END;
             }
 
             var gross = Math.Round(proratedBasic + allowancesTotal + incomeTotal + overtimeTotal + salaryDaysAdd + leaveEncashTotal + formulaAddTotal, 2);
-            var taxableBase = Math.Round(proratedBasic + allowancesTotal + taxableIncome + taxableOvertime + salaryDaysAdd + taxableLeaveEncash + formulaTaxableAdd, 2);
+
+            // مكوّنات القسيمة تُسلَّم لمركِّب الأوعية بدل جمعها هنا: العضوية صارت
+            // بيانات (SalaryBaseComposer.Default*Members) تمهيداً لتحريرها من الواجهة.
+            // الافتراضيان يعيدان نفس رقمَي ما قبل الفصل تماماً — مثبَّت باختبارات.
+            var baseAmounts = new SalaryBaseComposer.Amounts
+            {
+                Basic = proratedBasic,
+                Allowances = allowancesTotal,
+                TaxableIncome = taxableIncome,
+                TaxableOvertime = taxableOvertime,
+                SalaryDays = salaryDaysAdd,
+                LeaveEncashment = taxableLeaveEncash,
+                FormulaAdd = formulaTaxableAdd,
+                Gross = gross
+            };
+
+            var taxableBase = SalaryBaseComposer.TaxBase(baseAmounts);
             var tax = PayrollConfigStore.ComputeTax(taxableBase, taxProfile);
-            var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(gross, gosiProfile);
+            var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(SalaryBaseComposer.GosiBase(baseAmounts), gosiProfile);
 
             // خصومات المخالفات: مباشر بالدينار + أيام×يومي + ساعات×ساعي
             decimal penaltyTotal = 0;

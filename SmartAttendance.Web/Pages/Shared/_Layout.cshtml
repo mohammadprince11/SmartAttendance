@@ -611,12 +611,16 @@
                             </div>
                         </details>
 
-                        <details class="ky-acc" @(IsUnder("/Payroll/SalaryItems") || IsUnder("/Payroll/Settings") || IsUnder("/Payroll/BankTemplates") || IsUnder("/Payroll/TaxSocialSecurity") ? "open" : "")>
+                        @* أُزيل رابط /Payroll/TaxSocialSecurity: صفحة تكتب جدولَي
+                           PayrollTaxSocialSecurity{Settings,Records} ولا يقرأهما أي شيء —
+                           محرّك المسير (PayrollRunStore) يقرأ TaxProfiles/GosiProfiles من
+                           «تهيئة الضريبة والضمان» أدناه. إبقاء الرابط كان يوقع الأدمن بتعديل
+                           صامت لا أثر له بالمسير. الصفحة نفسها باقية لحين البتّ ببياناتها. *@
+                        <details class="ky-acc" @(IsUnder("/Payroll/SalaryItems") || IsUnder("/Payroll/Settings") || IsUnder("/Payroll/BankTemplates") ? "open" : "")>
                             <summary><span>إعدادات الرواتب</span><span class="ky-acc-chev"></span></summary>
                             <div class="ky-acc-body">
                                 <a asp-page="/Payroll/SalaryItems" class="nexora-nav-link @(IsUnder("/Payroll/SalaryItems") ? "active nexora-active" : "")"><span>عناصر الراتب</span></a>
-                                <a asp-page="/Payroll/Settings" class="nexora-nav-link @(IsUnder("/Payroll/Settings") ? "active nexora-active" : "")"><span>تهيئة الضريبة والضمان</span></a>
-                                <a asp-page="/Payroll/TaxSocialSecurity" class="nexora-nav-link @(IsUnder("/Payroll/TaxSocialSecurity") ? "active nexora-active" : "")"><span>الضرائب والضمان</span></a>
+                                <a asp-page="/Payroll/Settings" class="nexora-nav-link @(IsUnder("/Payroll/Settings") ? "active nexora-active" : "")"><span>الضريبة والضمان</span></a>
                                 <a asp-page="/Payroll/BankTemplates" class="nexora-nav-link @(IsUnder("/Payroll/BankTemplates") ? "active nexora-active" : "")"><span>قوالب ملفات البنوك</span></a>
                             </div>
                         </details>
