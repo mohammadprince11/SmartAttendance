@@ -21,6 +21,9 @@ public static class ApiTokenStore
         public string Username { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
+
+        /// <summary>ختم أمان الحساب وقت الإصدار — يُقارَن بالحالي عند كل طلب.</summary>
+        public string SecurityStamp { get; set; } = string.Empty;
     }
 
     public static async Task EnsureAsync(ApplicationDbContext db)
@@ -41,7 +44,8 @@ BEGIN
         DisplayName nvarchar(200) NULL,
         ExpiresAt datetime2 NOT NULL,
         CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME()),
-        RevokedAt datetime2 NULL
+        RevokedAt datetime2 NULL,
+        SecurityStamp nvarchar(64) NULL
     );
     CREATE UNIQUE INDEX UX_ApiTokens_Hash ON ApiTokens (TokenHash);
 END;
@@ -62,8 +66,8 @@ END;
         await HrmsDatabase.ExecuteAsync(
             db,
             """
-INSERT INTO ApiTokens (TokenHash, SystemUserId, EmployeeId, Username, Role, DisplayName, ExpiresAt)
-VALUES (@Hash, @Sys, @Emp, @User, @Role, @Name, @Exp);
+INSERT INTO ApiTokens (TokenHash, SystemUserId, EmployeeId, Username, Role, DisplayName, ExpiresAt, SecurityStamp)
+VALUES (@Hash, @Sys, @Emp, @User, @Role, @Name, @Exp, @Stamp);
 """,
             command =>
             {
@@ -74,6 +78,7 @@ VALUES (@Hash, @Sys, @Emp, @User, @Role, @Name, @Exp);
                 HrmsDatabase.AddParameter(command, "@Role", identity.Role);
                 HrmsDatabase.AddParameter(command, "@Name", (object?)identity.DisplayName ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@Exp", expires);
+                HrmsDatabase.AddParameter(command, "@Stamp", identity.SecurityStamp ?? string.Empty);
             });
 
         return token;
@@ -89,7 +94,7 @@ VALUES (@Hash, @Sys, @Emp, @User, @Role, @Name, @Exp);
         return (await HrmsDatabase.QueryAsync(
             db,
             """
-SELECT SystemUserId, EmployeeId, Username, Role, DisplayName
+SELECT SystemUserId, EmployeeId, Username, Role, DisplayName, ISNULL(SecurityStamp, '') AS SecurityStamp
 FROM ApiTokens
 WHERE TokenHash = @Hash AND RevokedAt IS NULL AND ExpiresAt > SYSUTCDATETIME();
 """,
@@ -100,7 +105,8 @@ WHERE TokenHash = @Hash AND RevokedAt IS NULL AND ExpiresAt > SYSUTCDATETIME();
                 EmployeeId = HrmsDatabase.GetNullableInt(reader, "EmployeeId"),
                 Username = HrmsDatabase.GetString(reader, "Username"),
                 Role = HrmsDatabase.GetString(reader, "Role"),
-                DisplayName = HrmsDatabase.GetString(reader, "DisplayName")
+                DisplayName = HrmsDatabase.GetString(reader, "DisplayName"),
+                SecurityStamp = HrmsDatabase.GetString(reader, "SecurityStamp")
             })).FirstOrDefault();
     }
 

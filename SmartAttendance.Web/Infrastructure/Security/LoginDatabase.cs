@@ -46,6 +46,7 @@ BEGIN
         LastFailedLoginAt datetime2 NULL,
         LastLoginAt datetime2 NULL,
         PasswordChangedAt datetime2 NULL,
+        SecurityStamp nvarchar(64) NULL,
         CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME()),
         UpdatedAt datetime2 NULL
     );
@@ -287,6 +288,7 @@ SELECT TOP 1
     u.IsActive,
     ISNULL(u.FailedLoginAttempts, 0) AS FailedLoginAttempts,
     u.LockoutEndUtc,
+    ISNULL(u.SecurityStamp, '') AS SecurityStamp,
     ISNULL(e.FullName, '') AS EmployeeName
 FROM AppLoginUsers u
 LEFT JOIN Employees e ON u.EmployeeId = e.Id
@@ -318,6 +320,9 @@ WHERE u.Username = @Username;
                 LockoutEndUtc = HrmsDatabase.GetDateTime(
                     reader,
                     "LockoutEndUtc"),
+                SecurityStamp = HrmsDatabase.GetString(
+                    reader,
+                    "SecurityStamp"),
                 EmployeeName = HrmsDatabase.GetString(
                     reader,
                     "EmployeeName")
@@ -678,6 +683,9 @@ VALUES
         public int FailedLoginAttempts { get; set; }
 
         public DateTime? LockoutEndUtc { get; set; }
+
+        /// <summary>ختم الأمان الحالي — يُختم بالكوكي/التوكن ويُقارَن بكل طلب.</summary>
+        public string SecurityStamp { get; set; } = string.Empty;
 
         public string EmployeeName { get; set; } = string.Empty;
 

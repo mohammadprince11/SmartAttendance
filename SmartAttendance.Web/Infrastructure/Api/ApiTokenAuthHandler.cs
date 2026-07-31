@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Api;
 
@@ -17,15 +19,18 @@ public sealed class ApiTokenAuthHandler : AuthenticationHandler<AuthenticationSc
     public const string SchemeName = "ApiToken";
 
     private readonly ApplicationDbContext _db;
+    private readonly IMemoryCache _cache;
 
     public ApiTokenAuthHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
-        ApplicationDbContext db)
+        ApplicationDbContext db,
+        IMemoryCache cache)
         : base(options, logger, encoder)
     {
         _db = db;
+        _cache = cache;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -39,6 +44,19 @@ public sealed class ApiTokenAuthHandler : AuthenticationHandler<AuthenticationSc
         var identity = await ApiTokenStore.ValidateAsync(_db, token);
         if (identity == null)
             return AuthenticateResult.Fail("توكن غير صالح أو منتهٍ.");
+
+        // المرحلة 5: التوكن وحده لا يكفي — الحساب قد عُطّل أو تغيّر دوره/كلمة مروره
+        // بعد إصداره. نفحص الحالة الحالية (بكاش 60 ثانية) ونرفض عند أي اختلاف ختم.
+        var account = await AccountSecurityStore.GetStateAsync(_db, _cache, identity.Username);
+        var decision = SessionSecurityValidator.Evaluate(
+            identity.SecurityStamp, identity.Role, account);
+
+        if (decision == SessionSecurityDecision.Reject)
+            return AuthenticateResult.Fail("انتهت صلاحية التوكن — يلزم تسجيل دخول جديد.");
+
+        // التوكن سليم لكن مطالباته بائتة: نبني الهوية بالدور الحالي لا المخزَّن.
+        if (decision == SessionSecurityDecision.Refresh && account.Exists)
+            identity.Role = account.Role;
 
         var claims = new List<Claim>
         {

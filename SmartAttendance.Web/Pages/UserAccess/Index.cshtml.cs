@@ -18,10 +18,14 @@ public class IndexModel : PageModel
     private const string AdminRole = "Admin";
 
     private readonly ApplicationDbContext _dbContext;
+    private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
     {
         _dbContext = dbContext;
+        _cache = cache;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -294,6 +298,18 @@ public class IndexModel : PageModel
                 ipAddress,
                 passwordChanged);
 
+            // المرحلة 5: أي تعديل على الحساب (دور/كلمة مرور/تفعيل/اسم مستخدم)
+            // يبدّل ختم الأمان داخل نفس المعاملة ⟹ كل كوكي وتوكن صادر سابقاً يُرفض.
+            if (loginId > 0)
+            {
+                await AccountSecurityStore.BumpStampAsync(
+                    _dbContext,
+                    _cache,
+                    loginId,
+                    "Login identity updated by an administrator",
+                    actor);
+            }
+
             await transaction.CommitAsync(
                 HttpContext.RequestAborted);
 
@@ -470,6 +486,16 @@ WHERE Id = @SystemUserId;
                 actor,
                 ipAddress,
                 false);
+
+            // التعطيل يجب أن يقطع الوصول الآن لا عند انتهاء الجلسة/التوكن.
+            await AccountSecurityStore.BumpStampAsync(
+                _dbContext,
+                _cache,
+                login.Id,
+                newState
+                    ? "Login identity activated by an administrator"
+                    : "Login identity deactivated by an administrator",
+                actor);
 
             await transaction.CommitAsync(
                 HttpContext.RequestAborted);

@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Caching.Memory;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Security;
 
@@ -10,10 +12,12 @@ namespace SmartAttendance.Web.Pages.EmployeePortal;
 public class ChangePasswordModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IMemoryCache _cache;
 
-    public ChangePasswordModel(ApplicationDbContext dbContext)
+    public ChangePasswordModel(ApplicationDbContext dbContext, IMemoryCache cache)
     {
         _dbContext = dbContext;
+        _cache = cache;
     }
 
     [BindProperty]
@@ -94,6 +98,27 @@ public class ChangePasswordModel : PageModel
             user,
             NewPassword,
             ipAddress);
+
+        // المرحلة 5: تغيير كلمة المرور يُبطل كل الجلسات والتوكنات الصادرة سابقاً
+        // (أجهزة أخرى/تطبيق الموبايل). الجلسة الحالية تُختم بالختم الجديد فلا
+        // يُطرد صاحبها من الصفحة التي غيّر منها.
+        var newStamp = await AccountSecurityStore.BumpStampAsync(
+            _dbContext,
+            _cache,
+            user.Id,
+            "Password changed by the account owner",
+            user.Username);
+
+        if (User.Identity is System.Security.Claims.ClaimsIdentity identity)
+        {
+            SessionClaimsRefresher.Apply(
+                identity,
+                new AccountSecurityState(true, true, false, user.Role, newStamp));
+
+            await HttpContext.SignInAsync(
+                Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme,
+                new System.Security.Claims.ClaimsPrincipal(identity));
+        }
 
         Success = true;
         return Page();

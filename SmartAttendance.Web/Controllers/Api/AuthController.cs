@@ -79,13 +79,20 @@ public sealed class AuthController : ControllerBase
 
         await LoginDatabase.RecordSuccessfulLoginAsync(_db, user, ip);
 
+        // المرحلة 5: التوكن يُختم بختم أمان الحساب — تعطيل الحساب أو تغيير كلمة
+        // المرور/الدور يبدّل الختم فيُرفض هذا التوكن فوراً بلا انتظار انتهائه.
+        var securityStamp = !string.IsNullOrWhiteSpace(user.SecurityStamp)
+            ? user.SecurityStamp
+            : await AccountSecurityStore.EnsureStampAsync(_db, user.Id);
+
         var token = await ApiTokenStore.IssueAsync(_db, new ApiTokenStore.TokenIdentity
         {
             SystemUserId = systemUserId.Value,
             EmployeeId = user.EmployeeId,
             Username = user.Username,
             Role = user.Role,
-            DisplayName = displayName
+            DisplayName = displayName,
+            SecurityStamp = securityStamp
         }, TokenLifetime);
 
         return Ok(new
