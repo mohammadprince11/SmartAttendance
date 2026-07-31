@@ -430,6 +430,10 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
 }
 /* السايدبار داكن بالوضعين — فالنص والشريطان يبقيان فاتحين كالشعار الأصلي */
 .zy-brand-word { color: #F7F9FB; display: block; flex: 1 1 auto; min-width: 0; }
+/* الـSVG يرث RTL فينزاح النص الطويل خارج الإطار — نفرض LTR داخله */
+.zy-brand-word, .zy-brand-word svg, .zy-brand-word text {
+    direction: ltr !important; unicode-bidi: isolate; text-anchor: start;
+}
 .zy-brand-word svg { width: 100%; height: auto; max-height: 34px; display: block; }
 /* الرمز والنص جنباً إلى جنب على سطر واحد */
 .nexora-brand-link { display: flex !important; flex-direction: row !important;
