@@ -51,3 +51,74 @@
 .nexora-logout-button {
     color: var(--color-danger);
 }
+
+/* ============================================================================
+   /Setup — «صفحة لايت كاملة» بتقنية التصفير ثم إعادة البناء
+   ----------------------------------------------------------------------------
+   المطاردة قاعدةً-قاعدة لا تتقارب: كل تصحيح يكشف زوجاً آخر (نصّ/سطح) موزّعاً على
+   قواعد متفرّقة بملف من 2859 سطراً يفرض ألوانه بـ!important. جُرّبت أربع جولات
+   وتأرجح العدد بين 19 و82.
+   الحل: **نُلغي كل ألوان الصفحة القديمة دفعة واحدة** ثم نعيد بناء ما نريده
+   بالتوكنز. النتيجة قابلة للتنبؤ لأن نقطة البداية صارت واحدة لا مئة.
+   ============================================================================ */
+
+/* 1) التصفير: لا خلفية ولا لون نصّ من العهد القديم داخل الصفحة —
+   عدا ما يحمل دلالة (أزرار/شارات/حالات) فله معالجة خاصة بعده. */
+.nexora-setup-page,
+.nexora-setup-page *:not([class*="btn"]):not(button):not([class*="status"]):not([class*="badge"]):not([class*="pill"]) {
+    background-color: transparent !important;
+    background-image: none !important;
+    color: inherit !important;
+    border-color: var(--color-border) !important;
+}
+
+/* 2) إعادة البناء: الصفحة والأسطح والنصوص من التوكنز */
+.nexora-setup-page {
+    background: var(--color-background) !important;
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+}
+
+.nexora-setup-page .nexora-setup-card,
+.nexora-setup-page .nx-setup-field,
+.nexora-setup-page .nx-setup-check,
+.nexora-setup-page .nx-company-logo-card,
+.nexora-setup-page .nx-company-selector,
+.nexora-setup-page .nx-company-setup-nav,
+.nexora-setup-page .nx-setup-pagination,
+.nexora-setup-page table {
+    background-color: var(--color-surface) !important;
+    border: 1px solid var(--color-border) !important;
+}
+
+.nexora-setup-page thead th { background-color: var(--color-background) !important; color: var(--color-text-secondary) !important; }
+.nexora-setup-page tbody tr:hover td { background-color: var(--color-primary-soft) !important; }
+
+/* النصّ الثانوي يستعيد تمييزه بعد التصفير */
+.nexora-setup-page small,
+.nexora-setup-page label,
+.nexora-setup-page .nx-policy-note,
+.nexora-setup-page .nx-setup-pagination__summary,
+.nexora-setup-page .nexora-setup-hero p,
+.nexora-setup-page .nx-company-setup-summary span { color: var(--color-text-secondary) !important; }
+
+.nexora-setup-page h1 { font-size: var(--fs-page-title); }
+.nexora-setup-page h2, .nexora-setup-page .nexora-setup-card-head strong { font-size: var(--fs-card-title); }
+
+/* 3) العناصر الدلالية: ألوانها من التوكنز لا من العهد الداكن */
+.nexora-setup-page .btn-table.btn-delete { background: var(--color-danger-soft) !important; color: var(--color-danger) !important; }
+.nexora-setup-page .btn-table:not(.btn-delete) { background: var(--color-primary-soft) !important; color: var(--color-primary-text) !important; }
+.nexora-setup-page [class*="status"].is-active,
+.nexora-setup-page .nx-setup-status { background: var(--color-primary-soft) !important; color: var(--color-primary-text) !important; }
+.nexora-setup-page .nx-company-setup-nav a.is-active { background: var(--color-primary-strong) !important; color: var(--color-on-primary) !important; }
+
+/* الشارات كانت مستثناة من التصفير (لأن لها دلالة لونية) فبقيت بألوان العهد
+   الداكن: خلفية داكنة ونصّ داكن معاً (1.21:1). تُعطى ألوان دلالية من التوكنز. */
+.nexora-setup-page [class*="badge"],
+.nexora-setup-page [class*="pill"] {
+    background: var(--color-primary-soft) !important;
+    color: var(--color-primary-text) !important;
+    border-color: color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
+}

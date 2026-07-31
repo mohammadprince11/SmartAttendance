@@ -24,8 +24,8 @@
     --brand-primary: #18C7BD;
     /* نسختان مقروءتان مشتقّتان من لون العلامة (تدقيق راحة العين): الخام يعطي
        2.11:1 على الأبيض. تُستهلكان بتوكنز نظام التصميم للنص والأزرار. */
-    --brand-primary-text: #0f7c76;   /* يمرّ على الأبيض (5.04) وعلى شارات 10% (4.64) */
-    --brand-primary-strong: #0f7c76;
+    --brand-primary-text: #0f7b75;   /* يمرّ على الأبيض (5.04) وعلى شارات 10% (4.64) */
+    --brand-primary-strong: #0f7b75;
     --brand-primary-aqua: #42DED3;
     --brand-primary-hover: #42DED3;
     --brand-secondary: #101C30;
