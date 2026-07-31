@@ -436,9 +436,11 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
 }
 .zy-brand-word svg { width: 100%; height: auto; max-height: 34px; display: block; }
 /* الرمز والنص جنباً إلى جنب على سطر واحد */
-.nexora-brand-link { display: flex !important; flex-direction: row !important;
-    align-items: center !important; gap: 8px; flex-wrap: wrap; }
-.nexora-brand-link .nexora-brand-tagline { flex-basis: 100%; }
+.nexora-sidebar .nexora-brand-card .nexora-brand-link {
+    display: flex !important; flex-direction: row !important;
+    align-items: center !important; gap: 8px !important; flex-wrap: wrap !important;
+}
+.nexora-sidebar .nexora-brand-card .nexora-brand-tagline { flex-basis: 100% !important; }
 .zy-brand-z { width: 46px; height: 46px; }
 
 /* الحالة المطوية: القطري يستقيم أفقياً بين الشريطين ⟵ ثلاثة خطوط متوازية،
