@@ -412,17 +412,47 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
    أصغر (252) فتظهر فجوة 36px — نجعل السايدبار يملأ عموده دائماً. */
 .nexora-sidebar { width: 100% !important; max-width: 100% !important; min-width: 0 !important; }
 
-/* زر الطي: مربّع بهوية الشعار — حرف Z وهي موسّعة، وثلاث خطوط وهي مطوية */
-.zy-side-toggle { width: 36px; height: 36px; border-radius: 10px; border: 0;
-    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
-    color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
-    transition: filter var(--speed, 160ms) ease, transform var(--speed, 160ms) ease; }
-.zy-side-toggle:hover { filter: brightness(1.08); }
-.zy-side-toggle:active { transform: scale(.95); }
-.zy-side-toggle .zy-st-z { font-size: 17px; font-weight: 900; line-height: 1; font-family: var(--font-family); }
-.zy-side-toggle .zy-st-bars { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; display: none; }
-html[data-sidebar="collapsed"] .zy-side-toggle .zy-st-z { display: none; }
-html[data-sidebar="collapsed"] .zy-side-toggle .zy-st-bars { display: block; }
+/* ============ حرف Z بالشعار = زر الطي (تحوّل Z ⟷ ثلاث خطوط) ==============
+   الحرف مرسوم بثلاثة خطوط (علوي/قطري/سفلي) — عند الطي يستقيم القطري ويتباعد
+   الثلاثة فيصيرون قائمة همبرغر، وبالعكس. أنميشن واحد بلا تبديل عناصر. */
+.zy-brand-z { width: 42px; height: 42px; padding: 0; border: 0; background: transparent;
+    cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+    transition: transform 220ms cubic-bezier(.4, 0, .2, 1); }
+.zy-brand-z:hover { transform: scale(1.06); }
+.zy-brand-z:active { transform: scale(.94); }
+.zy-brand-z:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: 12px; }
+.zy-brand-z svg { width: 100%; height: 100%; overflow: visible; }
+.zy-brand-z .zy-z-box { fill: #0b1b2e; stroke: color-mix(in srgb, var(--color-primary) 40%, transparent); stroke-width: 1.2;
+    transition: fill 260ms ease, stroke 260ms ease; }
+html[data-theme="light"] .zy-brand-z .zy-z-box { fill: #10233b; }
+.zy-brand-z line { stroke: var(--color-primary); stroke-width: 3.1; stroke-linecap: round;
+    transition: transform 320ms cubic-bezier(.65, 0, .35, 1), stroke 260ms ease;
+    transform-origin: 20px 20px; transform-box: fill-box; }
+.zy-brand-z .zy-z-dot { fill: var(--color-primary); transition: opacity 220ms ease; }
+
+/* الحالة المطوية: القطري يستقيم أفقياً ⟵ ثلاث خطوط متوازية */
+html[data-sidebar="collapsed"] .zy-brand-z .zy-z-mid { transform: rotate(40.5deg) scaleX(1.14); }
+html[data-sidebar="collapsed"] .zy-brand-z .zy-z-top { transform: translateY(-1px); }
+html[data-sidebar="collapsed"] .zy-brand-z .zy-z-bot { transform: translateY(1px); }
+html[data-sidebar="collapsed"] .zy-brand-z .zy-z-dot { opacity: 0; }
+
+/* ================= سلاسة الطي/الفتح للقوقعة كاملة ======================== */
+.nexora-shell, .nexora-sidebar, .nexora-main {
+    transition: grid-template-columns 300ms cubic-bezier(.4, 0, .2, 1),
+                width 300ms cubic-bezier(.4, 0, .2, 1),
+                max-width 300ms cubic-bezier(.4, 0, .2, 1);
+}
+.nexora-nav-link, .nexora-nav-group > summary, .nexora-brand-logo, .nexora-brand-tagline {
+    transition: opacity 200ms ease, padding 260ms ease;
+}
+/* الإخفاء بالطي: تلاشٍ ثم انكماش العرض (لا قطع مفاجئ) */
+html[data-sidebar="collapsed"] .nexora-brand-logo {
+    opacity: 0; width: 0 !important; max-width: 0 !important; margin: 0 !important; overflow: hidden;
+}
+html[data-sidebar="collapsed"] .nexora-brand-tagline { opacity: 0; }
+/* بطاقة الشعار وهي مطوية: زر Z وحده بالوسط */
+html[data-sidebar="collapsed"] .nexora-brand-link { justify-content: center !important; gap: 0 !important; }
+html[data-sidebar="collapsed"] .nexora-brand-card { padding-inline: 0 !important; }
 
 /* الحالة المطوية: أيقونات فقط + تلميح بالاسم عند الهوفر */
 html[data-sidebar="collapsed"] { --zy-sidebar-width: 62px; --nx-responsive-sidebar-width: 62px; --nxr-sidebar: 62px; }
