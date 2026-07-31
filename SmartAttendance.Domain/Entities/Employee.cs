@@ -112,4 +112,14 @@ public class Employee : AuditableEntity
     public int DepartmentId { get; set; }
 
     public Department Department { get; set; } = null!;
+
+    /// <summary>
+    /// شركة الموظف — عزل المستأجرين. كان انتماء الموظف مشتقّاً بالفرع فقط، فأي
+    /// استعلام يبدأ من Employees ولا يصل للفرع كان بلا حاجز عزل.
+    ///
+    /// قابل للإفراغ **مؤقتاً**: العمود يُضاف ويُعبَّأ بهجرة محكومة، ويصير
+    /// <c>NOT NULL</c> بهجرة لاحقة منفصلة بعد بلوغ المتبقّي صفراً — فلا تفشل
+    /// الترقية على صفّ شاذّ واحد. القيمة تُشتقّ دائماً من الفرع ولا تُخمَّن.
+    /// </summary>
+    public int? CompanyId { get; set; }
 }

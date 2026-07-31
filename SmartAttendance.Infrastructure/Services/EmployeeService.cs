@@ -355,9 +355,21 @@ public class EmployeeService : IEmployeeService
             return false;
         }
 
+        // شركة الموظف تُشتقّ من فرعه ولا تُخمَّن: عدم الاتساق يُرفض قبله بالتحقق
+        // أعلاه (department.CompanyId != branch.CompanyId)، وهذا الحاجز يمنع كتابة
+        // صفّ بلا شركة لو تغيّر ذلك التحقق مستقبلاً.
+        var companyId = SmartAttendance.Application.Common.Security.EmployeeCompanyGuard
+            .Resolve(branch.CompanyId, department.CompanyId);
+
+        if (companyId is null)
+        {
+            return false;
+        }
+
         var employee = _mapper.Map<Employee>(model);
         employee.BranchId = model.BranchId;
         employee.DepartmentId = model.DepartmentId;
+        employee.CompanyId = companyId;
         employee.PositionId = model.PositionId;
         employee.Position = position?.Name;
 
@@ -476,6 +488,18 @@ public class EmployeeService : IEmployeeService
         employee.DirectManagerId = model.DirectManagerId;
         employee.BranchId = model.BranchId;
         employee.DepartmentId = model.DepartmentId;
+
+        // نقل الموظف بين الفروع ينقل شركته معه — وإلا بقيت شركة قديمة تُخفي
+        // بياناته عن مستأجره الجديد أو تكشفها للقديم.
+        var updatedCompanyId = SmartAttendance.Application.Common.Security.EmployeeCompanyGuard
+            .Resolve(branch.CompanyId, department.CompanyId);
+
+        if (updatedCompanyId is null)
+        {
+            return false;
+        }
+
+        employee.CompanyId = updatedCompanyId;
 
         employee.FirstName = Trimmed(model.FirstName);
         employee.SecondName = Trimmed(model.SecondName);

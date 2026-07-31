@@ -51,6 +51,36 @@ IF OBJECT_ID('EmployeeProfileFiles', 'U') IS NOT NULL
    AND COL_LENGTH('EmployeeProfileFiles', 'ProtectedKey') IS NULL
     ALTER TABLE EmployeeProfileFiles ADD ProtectedKey nvarchar(400) NULL;
 """),
+
+        // عزل الشركات البنيوي: عمود شركة صريح على الموظف يُشتقّ من فرعه.
+        // NULL عمداً بهذه الهجرة — التشديد لـNOT NULL بهجرة لاحقة بعد التحقق من
+        // أن المتبقّي صفر بكل بيئة (تشخيص 2026-07-31: صفر شذوذ بالإنتاج).
+        new(
+            "20260731-04-employee-company-id",
+            """
+IF OBJECT_ID('Employees', 'U') IS NOT NULL
+   AND COL_LENGTH('Employees', 'CompanyId') IS NULL
+    ALTER TABLE Employees ADD CompanyId int NULL;
+"""),
+
+        // التعبئة من الفرع — الفرع هو مصدر الحقيقة الوحيد؛ لا تخمين لأي صفّ.
+        // آمنة التكرار: تكتب فقط حيث القيمة غائبة أو مخالفة لشركة الفرع.
+        new(
+            "20260731-05-employee-company-id-backfill",
+            """
+IF OBJECT_ID('Employees', 'U') IS NOT NULL
+   AND COL_LENGTH('Employees', 'CompanyId') IS NOT NULL
+BEGIN
+    UPDATE e
+    SET e.CompanyId = b.CompanyId
+    FROM Employees e
+    INNER JOIN Branches b ON b.Id = e.BranchId
+    WHERE e.CompanyId IS NULL OR e.CompanyId <> b.CompanyId;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Employees_CompanyId')
+        CREATE INDEX IX_Employees_CompanyId ON Employees (CompanyId);
+END;
+"""),
     };
 
     /// <summary>
