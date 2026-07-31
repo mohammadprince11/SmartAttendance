@@ -530,3 +530,35 @@ html[data-theme="light"] .nxcal__head, html[data-theme="light"] .nxcal__foot {
     .zy-dash__task { flex-wrap: wrap; }
     .zy-dash__task-go { width: 100%; text-align: center; }
 }
+
+/* --- لوحة البيانات: عمودان + رسم الأسبوع + الاختصارات --- */
+
+.zy-dash__cols { display: grid; grid-template-columns: 1.7fr 1fr; gap: var(--sp-3); align-items: start; }
+@media (max-width: 900px) { .zy-dash__cols { grid-template-columns: 1fr; } }
+
+.zy-dash__tasks-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.zy-dash__tasks-head a { font-size: var(--fs-small); font-weight: 700; color: var(--color-primary); text-decoration: none; }
+
+.zy-dash__chart { display: flex; align-items: flex-end; gap: var(--sp-2); height: 140px; padding: var(--sp-4); }
+.zy-dash__col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: var(--sp-1); height: 100%; }
+.zy-dash__col-bar {
+    width: 100%; max-width: 30px; border-radius: var(--sp-1) var(--sp-1) 0 0;
+    background: var(--color-primary); opacity: .85;
+}
+.zy-dash__col.is-today .zy-dash__col-bar { opacity: 1; outline: 2px solid var(--color-primary); outline-offset: 2px; }
+/* يوم بلا تحليل: جذع باهت لا عمود بقيمة — الفراغ يجب أن يبدو فراغاً */
+.zy-dash__col.is-empty .zy-dash__col-bar { opacity: .22; }
+.zy-dash__col-val { font-size: var(--fs-tiny); font-weight: 800; direction: ltr; color: var(--color-text-primary); }
+.zy-dash__col.is-empty .zy-dash__col-val { color: var(--color-text-secondary); font-weight: 700; }
+.zy-dash__col-name { font-size: var(--fs-tiny); color: var(--color-text-secondary); font-weight: 700; }
+
+.zy-dash__quick { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--sp-3); }
+.zy-dash__q {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); padding: var(--sp-4); box-shadow: var(--shadow);
+    text-align: center; text-decoration: none; display: block;
+    transition: transform 150ms ease, border-color 150ms ease;
+}
+.zy-dash__q:hover { transform: translateY(-2px); border-color: var(--color-primary); }
+.zy-dash__q b { display: block; font-size: var(--fs-body); font-weight: 800; color: var(--color-text-primary); }
+.zy-dash__q span { display: block; font-size: var(--fs-tiny); color: var(--color-text-secondary); margin-top: var(--sp-1); }

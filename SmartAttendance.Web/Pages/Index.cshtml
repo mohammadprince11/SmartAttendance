@@ -92,6 +92,7 @@
                 </div>
             </div>
 
+            <div class="zy-dash__cols">
             <div class="zy-dash__tasks">
                 <div class="zy-dash__tasks-head">
                     <h3>مهامك اليوم</h3>
@@ -122,6 +123,42 @@
                         </div>
                     }
                 }
+            </div>
+
+            @* حضور الأسبوع — أعمدة CSS خالصة بلا مكتبات. يوم بلا تحليل = «—» *@
+            <div class="zy-dash__tasks zy-dash__week">
+                <div class="zy-dash__tasks-head">
+                    <h3>حضور الأسبوع</h3>
+                    <a href="/AttendanceReports">التفاصيل</a>
+                </div>
+                @if (Model.WeekBars.Count == 0)
+                {
+                    <p class="zy-dash__empty">لا بيانات حضور محلَّلة لهذا الأسبوع بعد.</p>
+                }
+                else
+                {
+                    <div class="zy-dash__chart">
+                        @foreach (var bar in Model.WeekBars)
+                        {
+                            <div class="zy-dash__col @(bar.IsToday ? "is-today" : "") @(bar.HasData ? "" : "is-empty")">
+                                <span class="zy-dash__col-val">@bar.Display</span>
+                                <span class="zy-dash__col-bar" style="height:@(bar.BarHeight)%"></span>
+                                <span class="zy-dash__col-name">@bar.Label</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            </div>
+
+            @* اختصارات المهام الست — الوجهات فقط، بلا أرقام مخترَعة تحتها *@
+            <div class="zy-dash__quick">
+                <a class="zy-dash__q" href="/Roster"><b>جدولة المناوبات</b><span>ارسم أسبوعاً ونعبّي الشهر</span></a>
+                <a class="zy-dash__q" href="/Employees"><b>الموظفون</b><span>@Model.ActiveEmployees.ToString("N0") موظفاً نشطاً</span></a>
+                <a class="zy-dash__q" href="/DayAttendance"><b>حضور اليوم</b><span>من الأجهزة والجوال</span></a>
+                <a class="zy-dash__q" href="/Payroll/Runs"><b>مسير الرواتب</b><span>الاحتساب والاعتماد</span></a>
+                <a class="zy-dash__q" href="/AttendanceReports"><b>التقارير</b><span>حضور · إجازات · رواتب</span></a>
+                <a class="zy-dash__q" href="/Engagement/Announcements"><b>إعلان للموظفين</b><span>يصل للجوال فوراً</span></a>
             </div>
         </section>
     }

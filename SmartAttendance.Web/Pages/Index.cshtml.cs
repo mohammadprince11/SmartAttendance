@@ -50,6 +50,10 @@ public class IndexModel : PageModel
 
     public string Headline { get; private set; } = string.Empty;
 
+    /// <summary>أعمدة حضور الأيام السبعة الأخيرة (يوم بلا تحليل يظهر «—» لا 0%).</summary>
+    public IReadOnlyList<WeeklyAttendanceSeries.DayBar> WeekBars { get; private set; } =
+        Array.Empty<WeeklyAttendanceSeries.DayBar>();
+
     /// <summary>نسبة الحضور من النشطين — للعرض بجانب العدّاد.</summary>
     public int PresentPercent =>
         ActiveEmployees > 0
@@ -125,6 +129,17 @@ public class IndexModel : PageModel
             UnexcusedAbsenceToday: 0));
 
         Headline = DashboardTaskBuilder.BuildHeadline(Tasks);
+
+        try
+        {
+            WeekBars = await WeeklyAttendanceSeries.LoadAsync(
+                _dbContext, companyId, DateOnly.FromDateTime(DateTime.Today));
+        }
+        catch
+        {
+            // رسم ثانوي: تعذّر قراءته لا يُسقط اللوحة ولا يُظهر أرقاماً مخترَعة.
+            WeekBars = Array.Empty<WeeklyAttendanceSeries.DayBar>();
+        }
     }
 
     /// <summary>مفاتيح البصمة المعلّقة — مقيَّدة بموظفي الشركة المختارة.</summary>
