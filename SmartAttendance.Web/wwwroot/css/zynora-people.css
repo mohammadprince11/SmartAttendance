@@ -65,7 +65,7 @@ body {
 }
 
 .zhr-btn-primary {
-    background-color: var(--electric-teal);
+    background-color: var(--color-primary-text);
     color: var(--midnight-navy);
 }
 
@@ -77,7 +77,7 @@ body {
 
 .zhr-btn-secondary {
     background-color: rgba(217, 225, 232, 0.1);
-    color: var(--cloud-white);
+    color: var(--color-text-primary);
 }
 
 .zhr-btn-secondary:hover {
@@ -128,7 +128,7 @@ body {
     font-size: 28px;
     font-weight: 700;
     font-family: 'Inter', sans-serif;
-    color: var(--cloud-white);
+    color: var(--color-text-primary);
     display: block;
 }
 
@@ -165,7 +165,7 @@ body {
     border-radius: 8px;
     font-family: 'Tajawal', sans-serif;
     font-size: 14px;
-    color: var(--cloud-white);
+    color: var(--color-text-primary);
     background-color: var(--zhr-input-bg);
     outline: none;
     transition: all var(--transition-speed);
@@ -173,13 +173,13 @@ body {
 }
 
 .zhr-input:focus, .zhr-select:focus {
-    border-color: var(--electric-teal);
+    border-color: var(--color-primary-text);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 15%, transparent);
 }
 
 .zhr-select option {
     background-color: var(--deep-space);
-    color: var(--cloud-white);
+    color: var(--color-text-primary);
 }
 
 .zhr-table-card {
@@ -234,7 +234,7 @@ body {
     padding: 16px;
     font-size: 14px;
     border-bottom: 1px solid var(--zhr-border-color);
-    color: var(--cloud-white);
+    color: var(--color-text-primary);
     vertical-align: middle;
 }
 
@@ -257,7 +257,7 @@ body {
 
 .zhr-status-active {
     background-color: color-mix(in srgb, var(--brand-primary) 10%, transparent);
-    color: var(--electric-teal);
+    color: var(--color-primary-text);
     border: 1px solid color-mix(in srgb, var(--brand-primary) 20%, transparent);
 }
 
@@ -268,7 +268,7 @@ body {
 }
 
 .zhr-emp-meta strong {
-    color: var(--cloud-white);
+    color: var(--color-text-primary);
     font-weight: 600;
     font-size: 15px;
     display: block;
@@ -304,14 +304,14 @@ body {
 
 .zhr-page-link:hover:not(:disabled) {
     background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
-    border-color: var(--electric-teal);
-    color: var(--electric-teal);
+    border-color: var(--color-primary-text);
+    color: var(--color-primary-text);
 }
 
 .zhr-page-link.active {
     background: var(--electric-teal);
     color: var(--midnight-navy);
-    border-color: var(--electric-teal);
+    border-color: var(--color-primary-text);
     pointer-events: none;
 }
 
