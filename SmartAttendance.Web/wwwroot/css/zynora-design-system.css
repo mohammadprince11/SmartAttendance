@@ -334,6 +334,28 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
 .zy-kv .zy-f div.zy-ltr { direction: ltr; text-align: end; }
 @media (max-width: 640px) { .zy-kv { grid-template-columns: 1fr; } }
 
+/* ==================== الغلبة على العوامّ القديمة ==========================
+   nexora-ui-stabilization يفرض button=40px وinput=42px بـ!important عالمياً،
+   وzynora-components (قديم) يفرض خط 14px على [class*="-btn"] — داخل الهوية
+   الجديدة نستعيد القياس المضغوط بنفس القوة وبتحميل لاحق فنفوز. */
+.zy-app .zy-btn {
+    height: var(--control-h) !important; min-height: var(--control-h) !important;
+    max-height: var(--control-h) !important; font-size: var(--fs-body) !important;
+}
+.zy-app .zy-btn--sm {
+    height: 27px !important; min-height: 27px !important; max-height: 27px !important;
+    font-size: var(--fs-small) !important;
+}
+.zy-app .zy-btn--lg { height: 40px !important; min-height: 40px !important; max-height: 40px !important; }
+.zy-app .zy-input:not(.nxcal-native) {
+    height: var(--control-h) !important; min-height: var(--control-h) !important;
+    max-height: var(--control-h) !important; font-size: var(--fs-body) !important;
+}
+.zy-app .zy-textarea {
+    height: auto !important; min-height: 90px !important; max-height: none !important;
+    font-size: var(--fs-body) !important;
+}
+
 /* ============================== التجاوب =================================== */
 
 @media (max-width: 900px) {
