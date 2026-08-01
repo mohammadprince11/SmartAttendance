@@ -95,7 +95,7 @@ select[data-nxcs-enhanced="true"] {
     border-radius: 999px !important;
     border: 1px solid rgba(34, 211, 238, .45) !important;
     background: rgba(34, 211, 238, .12) !important;
-    color: #22D3EE !important;
+    color: var(--color-primary-text) !important;
     font-size: 11px !important;
     line-height: 1 !important;
 }
@@ -211,7 +211,7 @@ html[data-theme="light"] .nxcs-option:focus {
 }
 
 html[data-theme="light"] .nxcs-option.is-selected {
-    background: linear-gradient(135deg, #0fb5c0, #22D3EE) !important;
+    background: linear-gradient(135deg, #0fb5c0, var(--color-primary)) !important;
     color: #06222e !important;
 }
 

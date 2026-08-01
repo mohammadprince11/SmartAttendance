@@ -48,7 +48,8 @@ public class IndexModel : PageModel
     }
 
     // NEXORA_FIX14B_STAGE_METHOD_START
-    public async Task<IActionResult> OnPostStageAsync(int employeeId, string sectionKey, DateTime? effectiveDate, string? note)
+    public async Task<IActionResult> OnPostStageAsync(
+        int employeeId, string sectionKey, DateTime? effectiveDate, string? note, bool isRetroactive = false)
     {
         await EmployeeUpdateSchema.EnsureAsync(_dbContext);
         await EnsureMovementColumnsAsync();
@@ -100,9 +101,9 @@ public class IndexModel : PageModel
             _dbContext,
             """
 INSERT INTO EmployeeUpdateBatches
-(EmployeeId, SectionKey, SectionName, Status, RequestedBy, RequestedAt, EffectiveDate, Note)
+(EmployeeId, SectionKey, SectionName, Status, RequestedBy, RequestedAt, EffectiveDate, Note, IsRetroactive)
 VALUES
-(@EmployeeId, 'employee-master', @SectionName, 'Open', @RequestedBy, SYSUTCDATETIME(), @EffectiveDate, @Note);
+(@EmployeeId, 'employee-master', @SectionName, 'Open', @RequestedBy, SYSUTCDATETIME(), @EffectiveDate, @Note, @IsRetroactive);
 
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
@@ -113,6 +114,9 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                 HrmsDatabase.AddParameter(command, "@RequestedBy", requestedBy);
                 HrmsDatabase.AddParameter(command, "@EffectiveDate", resolvedEffectiveDate);
                 HrmsDatabase.AddParameter(command, "@Note", note ?? string.Empty);
+                // علَمٌ صريح لا استنتاج من التاريخ: سريانٌ بالماضي قد يكون تصحيح
+                // خطأ إدخال (بلا أثر مالي) أو قراراً بأثر رجعي (يستوجب إعادة احتساب).
+                HrmsDatabase.AddParameter(command, "@IsRetroactive", isRetroactive);
             });
 
         foreach (var change in changes)
@@ -587,7 +591,8 @@ SELECT TOP 50
     ISNULL(LockedBy, '') AS LockedBy,
     LockedAt,
     ISNULL(Note, '') AS Note,
-    ISNULL(EffectiveDate, CAST(RequestedAt AS date)) AS EffectiveDate
+    ISNULL(EffectiveDate, CAST(RequestedAt AS date)) AS EffectiveDate,
+    ISNULL(IsRetroactive, 0) AS IsRetroactive
 FROM EmployeeUpdateBatches
 WHERE EmployeeId = @EmployeeId AND Status = @Status
 ORDER BY ISNULL(LockedAt, RequestedAt) DESC, Id DESC;
@@ -609,7 +614,8 @@ ORDER BY ISNULL(LockedAt, RequestedAt) DESC, Id DESC;
                 EffectiveDate = HrmsDatabase.GetDateTime(reader, "EffectiveDate"),
                 LockedBy = HrmsDatabase.GetString(reader, "LockedBy"),
                 LockedAt = HrmsDatabase.GetDateTime(reader, "LockedAt"),
-                Note = HrmsDatabase.GetString(reader, "Note")
+                Note = HrmsDatabase.GetString(reader, "Note"),
+                IsRetroactive = HrmsDatabase.GetBool(reader, "IsRetroactive")
             });
 
         foreach (var batch in batches)
@@ -636,7 +642,8 @@ SELECT TOP 1
     ISNULL(LockedBy, '') AS LockedBy,
     LockedAt,
     ISNULL(Note, '') AS Note,
-    ISNULL(EffectiveDate, CAST(RequestedAt AS date)) AS EffectiveDate
+    ISNULL(EffectiveDate, CAST(RequestedAt AS date)) AS EffectiveDate,
+    ISNULL(IsRetroactive, 0) AS IsRetroactive
 FROM EmployeeUpdateBatches
 WHERE Id = @BatchId;
 """,
@@ -653,7 +660,8 @@ WHERE Id = @BatchId;
                 EffectiveDate = HrmsDatabase.GetDateTime(reader, "EffectiveDate"),
                 LockedBy = HrmsDatabase.GetString(reader, "LockedBy"),
                 LockedAt = HrmsDatabase.GetDateTime(reader, "LockedAt"),
-                Note = HrmsDatabase.GetString(reader, "Note")
+                Note = HrmsDatabase.GetString(reader, "Note"),
+                IsRetroactive = HrmsDatabase.GetBool(reader, "IsRetroactive")
             });
 
         var batch = batches.FirstOrDefault();
@@ -1311,6 +1319,13 @@ END
         public string RequestedBy { get; set; } = string.Empty;
         public DateTime? RequestedAt { get; set; }
         public DateTime? EffectiveDate { get; set; }
+
+        /// <summary>
+        /// حركة **بأثر رجعي** — قرارٌ يستوجب إعادة احتساب ما مضى، تمييزاً عن مجرّد
+        /// تصحيح خطأ إدخال بتاريخٍ ماضٍ. الفرق يقرّر هل يُعاد حساب رواتب أم لا.
+        /// </summary>
+        public bool IsRetroactive { get; set; }
+
         public string LockedBy { get; set; } = string.Empty;
         public DateTime? LockedAt { get; set; }
         public string Note { get; set; } = string.Empty;

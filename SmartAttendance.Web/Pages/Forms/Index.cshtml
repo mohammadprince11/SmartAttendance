@@ -1,0 +1,399 @@
+@page
+@model SmartAttendance.Web.Pages.Forms.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@{
+    ViewData["Title"] = "باني النماذج";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<style>
+    .fb-preview { border:1px solid var(--zy-border); border-radius:var(--zy-radius-md);
+        padding:20px; background:var(--zy-surface-soft); }
+    .fb-group { border:1px solid var(--zy-border); border-radius:var(--zy-radius-sm);
+        padding:14px; margin-bottom:14px; background:var(--zy-surface); }
+    .fb-group > h4 { margin:0 0 12px; font-size:.875rem; }
+    .fb-field { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; font-size:.8125rem; }
+    .fb-field > span { color:var(--zy-text-muted); }
+    .fb-field input, .fb-field select, .fb-field textarea {
+        padding:8px 10px; border:1px solid var(--zy-border); border-radius:var(--zy-radius-sm);
+        background:var(--zy-input,var(--zy-surface)); color:var(--zy-text); font-family:inherit; font-size:.875rem; }
+    .fb-rating { display:flex; gap:6px; }
+    .fb-rating span { width:34px; height:34px; display:inline-flex; align-items:center;
+        justify-content:center; border:1px solid var(--zy-border); border-radius:var(--zy-radius-sm);
+        font-size:.8125rem; }
+    .fb-req { color:var(--zy-danger); }
+</style>
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="/HrSettings/Index">إعدادات الموارد البشرية</a>
+        <h1>باني النماذج</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>بنية تحتية</span>
+            <h2>النماذج</h2>
+            <p class="zyp-hint">
+                <b>بانٍ واحد يخدم الطلبات المخصصة والاستبيانات معاً</b> — الفحص الحيّ
+                أثبت أن كيان يستعمل نفس البنية لكليهما. ونوع طلب أو استبيان جديد يصير
+                <b>إعداداً بالواجهة</b> بدل صفحة وجدول ومعالج ونشر.
+            </p>
+        </header>
+
+        <div class="zyp-actions" style="justify-content:flex-start;flex-wrap:wrap">
+            <a asp-page="./Index" style="@(Model.TypeFilter is null ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الكل</a>
+            @foreach (var (key, label) in FormBuilder.FormTypes)
+            {
+                <a asp-page="./Index" asp-route-type="@key"
+                   style="@(Model.TypeFilter == key ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">@label</a>
+            }
+        </div>
+
+        @if (Model.Templates.Count == 0)
+        {
+            <p class="zyc-empty">لا نماذج — أنشئ نموذجاً (طلب بدل موبايل · استبيان رضا · مقابلة نهاية خدمة…).</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>النوع</th>
+                        <th>الجمهور</th>
+                        <th>يقدّمه</th>
+                        <th>الحالة</th>
+                        <th style="width:200px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var template in Model.Templates)
+                    {
+                        <tr class="@(template.IsActive ? "" : "zyp-inactive")">
+                            <td><b>@template.Name</b></td>
+                            <td class="zyp-conditions">@template.TypeLabel</td>
+                            <td class="zyp-conditions">@HrConditions.Describe(template.Conditions)</td>
+                            <td class="zyp-conditions">
+                                @(template.AllowEmployeeRequest ? "الموظف" : "")
+                                @(template.AllowManagerRequest ? " · المدير" : "")
+                            </td>
+                            <td class="zyp-conditions">@(template.IsActive ? "نشط" : "معطّل")</td>
+                            <td>
+                                <div class="zyp-actions">
+                                    <a asp-page="./Index" asp-route-edit="@template.Id">افتح الباني</a>
+                                    <form method="post" asp-page-handler="Duplicate" style="display:inline">
+                                        <input type="hidden" name="id" value="@template.Id" />
+                                        <button type="submit">انشئ نسخة</button>
+                                    </form>
+                                    <form method="post" asp-page-handler="DeleteTemplate" style="display:inline">
+                                        <input type="hidden" name="id" value="@template.Id" />
+                                        <button type="submit" data-zyconfirm="حذف النموذج بحقوله؟">حذف</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        @if (Model.EditingId is null)
+        {
+            <p><a class="zyc-add-group" asp-page="./Index" asp-route-edit="0">+ نموذج جديد</a></p>
+        }
+    </div>
+
+    @if (Model.EditingId is not null)
+    {
+        <form method="post" asp-page-handler="SaveTemplate" class="nxhs-panel zyp-editor">
+            <h3>@(Model.TemplateId > 0 ? "تعديل النموذج" : "نموذج جديد")</h3>
+            <input type="hidden" asp-for="TemplateId" />
+
+            <div class="zyp-editor-grid">
+                <label>
+                    نوع النموذج
+                    <select asp-for="FormType">
+                        @foreach (var (key, label) in FormBuilder.FormTypes)
+                        {
+                            <option value="@key">@label</option>
+                        }
+                    </select>
+                </label>
+                <label>الاسم<input asp-for="Name" placeholder="طلب بدل موبايل" /></label>
+                <label>الاسم الإنجليزي<input asp-for="NameEn" /></label>
+                <label>الوصف<input asp-for="Description" /></label>
+                <label>
+                    يقدّمه الموظف
+                    <select asp-for="AllowEmployeeRequest"><option value="true">نعم</option><option value="false">لا</option></select>
+                </label>
+                <label>
+                    يقدّمه المدير عن مرؤوسه
+                    <select asp-for="AllowManagerRequest"><option value="false">لا</option><option value="true">نعم</option></select>
+                </label>
+                <label>
+                    الحالة
+                    <select asp-for="IsActive"><option value="true">نشط</option><option value="false">معطّل</option></select>
+                </label>
+            </div>
+
+            <div>
+                <p class="zyp-section-title">الجمهور — من يستحقّ هذا النموذج؟</p>
+                <p class="zyp-hint">نفس محرّك الشروط. اتركه فارغاً ليتاح للجميع.</p>
+                <input type="hidden" asp-for="Conditions" id="FormConditions" />
+                <div class="zyc" data-zy-conditions data-input="#FormConditions" data-criteria="@Model.CriteriaJson"></div>
+            </div>
+
+            <footer class="nxhs-actions">
+                <button type="submit">حفظ النموذج</button>
+                <a class="zyp-move" asp-page="./Index" style="padding:8px 14px">رجوع</a>
+            </footer>
+        </form>
+    }
+
+    @if (Model.Current is { } current)
+    {
+        <div class="nxhs-panel zyp-copies">
+            <header>
+                <span>@current.TypeLabel</span>
+                <h2>المجموعات والحقول</h2>
+                <p class="zyp-hint">
+                    السؤال قد يكون داخل مجموعة أو <b>حرّاً بلا مجموعة</b>.
+                    وحذف المجموعة <b>لا يحذف حقولها</b> — تصير غير مجمَّعة.
+                </p>
+            </header>
+
+            <form method="post" asp-page-handler="AddGroup" class="zyp-editor-grid" style="border:0;padding:0">
+                <input type="hidden" name="templateId" value="@current.Id" />
+                <label>مجموعة جديدة<input asp-for="GroupName" placeholder="المعلومات الأساسية" /></label>
+                <label>بالإنجليزية<input asp-for="GroupNameEn" /></label>
+                <label style="justify-content:flex-end">&nbsp;<button type="submit" class="zyc-add-rule" style="align-self:stretch">أضف مجموعة</button></label>
+            </form>
+
+            @if (Model.Groups.Count > 0)
+            {
+                <table class="zyp-table">
+                    <thead><tr><th>المجموعة</th><th>عدد الحقول</th><th style="width:90px"></th></tr></thead>
+                    <tbody>
+                        @foreach (var group in Model.Groups)
+                        {
+                            <tr>
+                                <td><b>@group.Name</b></td>
+                                <td class="zyp-count">@Model.Fields.Count(f => f.GroupId == group.Id)</td>
+                                <td>
+                                    <form method="post" asp-page-handler="DeleteGroup" style="display:inline">
+                                        <input type="hidden" name="id" value="@group.Id" />
+                                        <input type="hidden" name="templateId" value="@current.Id" />
+                                        <button type="submit" class="zyp-move" data-zyconfirm="حذف المجموعة؟ حقولها تبقى.">حذف</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+
+            <form method="post" asp-page-handler="SaveField" class="zyp-editor" style="border:0;padding:0">
+                <input type="hidden" name="templateId" value="@current.Id" />
+                <p class="zyp-section-title">إضافة حقل</p>
+
+                <div class="zyp-editor-grid">
+                    <label>نصّ الحقل<input asp-for="FieldLabel" placeholder="ما مدى رضاك عن…" /></label>
+                    <label>بالإنجليزية<input asp-for="FieldLabelEn" /></label>
+                    <label>
+                        النوع
+                        <select asp-for="FieldControl">
+                            @foreach (var control in Model.Controls)
+                            {
+                                <option value="@control.Key">@control.Label</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        المجموعة
+                        <select asp-for="FieldGroupId">
+                            <option value="">بلا مجموعة</option>
+                            @foreach (var group in Model.Groups)
+                            {
+                                <option value="@group.Id">@group.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        إلزامي
+                        <select asp-for="FieldRequired"><option value="false">لا</option><option value="true">نعم</option></select>
+                    </label>
+                    @if (current.IsSurvey)
+                    {
+                        <label>
+                            سلّم التقييم
+                            <select asp-for="FieldScale">
+                                @foreach (var scale in FormBuilder.Scales)
+                                {
+                                    <option value="@scale">@scale @(FormBuilder.ScaleAllowsNeutral(scale) ? "(يسمح بالحياد)" : "(يُجبر على الانحياز)")</option>
+                                }
+                            </select>
+                        </label>
+                    }
+                </div>
+
+                <label style="display:flex;flex-direction:column;gap:6px;font-size:.8125rem;color:var(--zy-text-muted)">
+                    خيارات القائمة المنسدلة (سطر لكل خيار)
+                    <textarea asp-for="FieldOptions" rows="3"
+                              style="padding:10px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:inherit;font-size:.875rem"
+                              placeholder="بغداد&#10;البصرة&#10;أربيل"></textarea>
+                </label>
+
+                <footer class="nxhs-actions"><button type="submit">أضف الحقل</button></footer>
+            </form>
+
+            @if (Model.Fields.Count > 0)
+            {
+                <table class="zyp-table">
+                    <thead>
+                        <tr><th>الحقل</th><th>النوع</th><th>المجموعة</th><th>إلزامي</th><th style="width:150px"></th></tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.Fields.Count; i++)
+                        {
+                            var field = Model.Fields[i];
+                            <tr>
+                                <td><b>@field.Label</b></td>
+                                <td class="zyp-conditions">
+                                    @field.ControlLabel
+                                    @if (field.Control?.NeedsScale == true)
+                                    {
+                                        <span> — سلّم @field.EffectiveScale</span>
+                                    }
+                                </td>
+                                <td class="zyp-conditions">
+                                    @(Model.Groups.FirstOrDefault(g => g.Id == field.GroupId)?.Name ?? "بلا مجموعة")
+                                </td>
+                                <td class="zyp-conditions">@(field.IsRequired ? "نعم" : "لا")</td>
+                                <td>
+                                    <div class="zyp-actions">
+                                        <form method="post" asp-page-handler="MoveField" style="display:inline">
+                                            <input type="hidden" name="id" value="@field.Id" />
+                                            <input type="hidden" name="templateId" value="@current.Id" />
+                                            <input type="hidden" name="direction" value="-1" />
+                                            <button type="submit" class="zyp-move" @(i == 0 ? "disabled" : "")>↑</button>
+                                        </form>
+                                        <form method="post" asp-page-handler="MoveField" style="display:inline">
+                                            <input type="hidden" name="id" value="@field.Id" />
+                                            <input type="hidden" name="templateId" value="@current.Id" />
+                                            <input type="hidden" name="direction" value="1" />
+                                            <button type="submit" class="zyp-move" @(i == Model.Fields.Count - 1 ? "disabled" : "")>↓</button>
+                                        </form>
+                                        <form method="post" asp-page-handler="DeleteField" style="display:inline">
+                                            <input type="hidden" name="id" value="@field.Id" />
+                                            <input type="hidden" name="templateId" value="@current.Id" />
+                                            <button type="submit" data-zyconfirm="حذف الحقل؟">حذف</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+
+        @if (Model.Fields.Count > 0)
+        {
+            <div class="nxhs-panel">
+                <header>
+                    <span>المعاينة</span>
+                    <h2>كما يراه الموظف</h2>
+                </header>
+
+                <div class="fb-preview">
+                    @foreach (var (group, fields) in Model.Layout())
+                    {
+                        <div class="fb-group">
+                            <h4>@(group?.Name ?? "حقول غير مجمَّعة")</h4>
+
+                            @foreach (var field in fields)
+                            {
+                                <label class="fb-field">
+                                    <span>
+                                        @field.Label
+                                        @if (field.IsRequired)
+                                        {
+                                            <b class="fb-req">*</b>
+                                        }
+                                    </span>
+
+                                    @switch (field.ControlType)
+                                    {
+                                        case FormBuilder.ControlTextArea:
+                                            <textarea rows="2" disabled></textarea>
+                                            break;
+                                        case FormBuilder.ControlNumber:
+                                            <input type="number" disabled />
+                                            break;
+                                        case FormBuilder.ControlDate:
+                                            <input type="date" disabled />
+                                            break;
+                                        case FormBuilder.ControlTime:
+                                            <input type="time" disabled />
+                                            break;
+                                        case FormBuilder.ControlFile:
+                                            <input type="file" disabled />
+                                            break;
+                                        case FormBuilder.ControlYesNo:
+                                            <select disabled><option>نعم</option><option>لا</option><option>بلا إجابة</option></select>
+                                            break;
+                                        case FormBuilder.ControlSelect:
+                                        case FormBuilder.ControlMultiSelect:
+                                            <select disabled multiple="@(field.ControlType == FormBuilder.ControlMultiSelect)">
+                                                @foreach (var option in field.OptionList)
+                                                {
+                                                    <option>@option</option>
+                                                }
+                                            </select>
+                                            break;
+                                        case FormBuilder.ControlRating:
+                                            <span class="fb-rating">
+                                                @for (var n = 1; n <= field.EffectiveScale; n++)
+                                                {
+                                                    <span>@n</span>
+                                                }
+                                            </span>
+                                            break;
+                                        default:
+                                            <input type="text" disabled />
+                                            break;
+                                    }
+                                </label>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <p class="zyp-hint" style="margin-top:12px">
+                    ⚠️ معاينة فقط — <b>شاشة التعبئة وتخزين الإجابات لم تُبنَ بعد</b>،
+                    ولم أُنشئ لها جداول: جدولٌ بلا كاتب هو نفسه الحقل الميت الذي ننتقده.
+                </p>
+            </div>
+        }
+    }
+</section>
+
+<script src="~/js/zynora-confirm.js" asp-append-version="true" defer></script>
+<script src="~/js/zynora-conditions.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+
+}

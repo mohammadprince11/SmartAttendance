@@ -46,7 +46,7 @@
     border-radius: 999px;
     border: 1px solid rgba(18, 217, 227, .34);
     color: #07121F;
-    background: linear-gradient(135deg, #12D9E3, #7CEAF0);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
     font-family: var(--nx-font-en, "Segoe UI", Arial, sans-serif);
     font-size: 12px;
     font-weight: 1000;
@@ -135,7 +135,7 @@
 .tax-kpi-card strong {
     display: block;
     margin-top: 10px;
-    color: var(--nx-teal, #12D9E3);
+    color: var(--nx-teal, var(--color-primary));
     font-size: 28px;
     line-height: 1;
     font-weight: 1000;
@@ -360,7 +360,7 @@
     padding: 6px 9px;
     border-radius: 999px;
     border: 1px solid rgba(18,217,227,.28);
-    color: var(--nx-teal, #12D9E3);
+    color: var(--nx-teal, var(--color-primary));
     background: rgba(18,217,227,.08);
     font-weight: 1000;
 }
@@ -427,7 +427,7 @@
 
 .tax-edit-btn {
     border: 1px solid rgba(18,217,227,.28);
-    color: var(--nx-teal, #12D9E3);
+    color: var(--nx-teal, var(--color-primary));
     background: rgba(18,217,227,.08);
 }
 

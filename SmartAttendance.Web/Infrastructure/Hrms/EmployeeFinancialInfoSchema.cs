@@ -27,6 +27,11 @@ BEGIN
         DailySalary decimal(18,4) NULL,
         HourlyRate decimal(18,4) NULL,
 
+        -- إسناد الملفات المالية لهذا الموظف؛ NULL ⟹ الملف النشط للنظام (سلوك اليوم).
+        -- تُضاف للقاعدة القائمة بهجرة محكومة (…-25)، وهنا لتتطابق القاعدة الجديدة معها.
+        TaxProfileId int NULL,
+        GosiProfileId int NULL,
+
         SocialSecurityType nvarchar(100) NULL,
         SocialSecuritySalary decimal(18,4) NULL,
         SocialSecurityNo nvarchar(50) NULL,

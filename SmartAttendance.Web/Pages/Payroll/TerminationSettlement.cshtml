@@ -1,0 +1,146 @@
+@page
+@model SmartAttendance.Web.Pages.Payroll.TerminationSettlementModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@{
+    ViewData["Title"] = "تسوية الإنهاء — الفروقات";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="/Employees/EndServiceList">إنهاء الخدمات</a>
+        <h1>تسوية الإنهاء — الفروقات</h1>
+    </header>
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>استشارية</span>
+            <h2>ما اقتُطع مقابل ما استُحقّ</h2>
+            <p class="zyp-hint">
+                الاقتطاعات الشهرية تُحسب بافتراض أن الموظف <b>سيكمل السنة</b>؛ فإذا خرج
+                بمنتصفها اختلّ الأساس السنوي — فيخرج بمبلغ خاطئ زيادةً أو نقصاً.
+                <b>هذه الشاشة تكشف الفرق ولا تطبّقه</b>: لا تكتب بالقاعدة ولا تغيّر
+                مبلغ نهاية خدمة. القرار بيدك.
+            </p>
+        </header>
+
+        <form method="post" class="zyp-editor-grid" style="border:0;padding:0">
+            <label>
+                الموظف
+                <select asp-for="EmployeeId">
+                    <option value="">— اختر —</option>
+                    @foreach (var (id, label) in Model.Employees)
+                    {
+                        <option value="@id">@label</option>
+                    }
+                </select>
+            </label>
+            <label>
+                السنة
+                <input asp-for="Year" type="number" min="2000" max="2100" placeholder="@Model.SelectedYear" />
+            </label>
+            <label>
+                الضريبة المستحقّة فعلاً (اتركه فارغاً لتخطّي البند)
+                <input asp-for="DueTax" type="number" step="0.01" placeholder="—" />
+            </label>
+            <label>
+                الضمان المستحقّ فعلاً (اتركه فارغاً لتخطّي البند)
+                <input asp-for="DueGosi" type="number" step="0.01" placeholder="—" />
+            </label>
+            <label style="justify-content:flex-end">
+                &nbsp;
+                <button type="submit" class="zyc-add-rule" style="align-self:stretch">احسب الفروقات</button>
+            </label>
+        </form>
+    </div>
+
+    @if (Model.Withheld is { } withheld)
+    {
+        <div class="nxhs-panel zyp-copies">
+            <header>
+                <span>@Model.EmployeeName</span>
+                <h2>سنة @Model.SelectedYear</h2>
+            </header>
+
+            @if (Model.MonthUnpaidWarning)
+            {
+                <p class="zyc-summary" style="border-inline-start-color:var(--zy-warning)">
+                    ⚠ <b>لم يُحتسب راتب شهر الإنهاء بعد</b> — أكمل مسير الشهر قبل إغلاق
+                    التسوية، وإلا خرج الموظف ناقصاً راتب شهر كامل.
+                </p>
+            }
+
+            <table class="zyp-table">
+                <tbody>
+                    <tr><td>مدة الخدمة</td><td><b>@Model.ServiceLength</b></td></tr>
+                    <tr><td>تاريخ المباشرة</td><td>@(Model.HireDate?.ToString("yyyy/MM/dd") ?? "—")</td></tr>
+                    <tr><td>تاريخ الإنهاء</td><td>@(Model.ServiceEndDate?.ToString("yyyy/MM/dd") ?? "—")</td></tr>
+                    <tr><td>أشهر مسيَّرة بالسنة</td><td>@withheld.MonthsPaid</td></tr>
+                    <tr><td>ضريبة اقتُطعت</td><td>@TerminationSettlementPolicy.Money(withheld.Tax)</td></tr>
+                    <tr><td>ضمان اقتُطع</td><td>@TerminationSettlementPolicy.Money(withheld.Gosi)</td></tr>
+                </tbody>
+            </table>
+
+            @if (withheld.MonthsPaid == 0)
+            {
+                <p class="zyc-empty">
+                    لا قسائم لهذا الموظف بسنة @Model.SelectedYear — لا اقتطاعات تُقارَن.
+                </p>
+            }
+        </div>
+    }
+
+    @if (Model.Differences.Count > 0)
+    {
+        <div class="nxhs-panel zyp-copies">
+            <header>
+                <span>النتيجة</span>
+                <h2>بنود الفروقات</h2>
+            </header>
+
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>البند</th>
+                        <th>اقتُطع</th>
+                        <th>استُحقّ</th>
+                        <th>الفرق</th>
+                        <th>الاتجاه</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Differences)
+                    {
+                        <tr>
+                            <td><b>@item.Label</b></td>
+                            <td>@TerminationSettlementPolicy.Money(item.Withheld)</td>
+                            <td>@TerminationSettlementPolicy.Money(item.Due)</td>
+                            <td class="zyp-count">@TerminationSettlementPolicy.Money(item.Amount)</td>
+                            <td class="zyp-conditions">@item.DirectionLabel</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <p class="zyc-summary">
+                <b>صافي الفروقات: @TerminationSettlementPolicy.Money(Model.Net)</b>
+                — @(Model.Net >= 0 ? "يُضاف للتسوية" : "يُخصم منها")
+                <br />
+                <span style="font-size:.8125rem">@Model.NetInWords</span>
+            </p>
+
+            <p class="zyp-hint">
+                ⚠️ هذه نتيجة استشارية. لتطبيقها أضفها يدوياً كبند بتسوية الموظف —
+                والتطبيق التلقائي ينتظر <b>الملفات المالية على الموظف</b> (ملف ضريبة
+                وضمان لكل موظف) التي لم تُبنَ بعد.
+            </p>
+        </div>
+    }
+</section>
+
+@section Scripts {
+
+}

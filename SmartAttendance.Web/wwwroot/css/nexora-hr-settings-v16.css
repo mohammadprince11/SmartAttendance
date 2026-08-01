@@ -6,7 +6,7 @@
     --nxhs-line: rgba(73, 111, 151, .24);
     --nxhs-text: #DCEAF4;
     --nxhs-muted: #8FA8BC;
-    --nxhs-cyan: #19D3E0;
+    --nxhs-cyan: var(--color-primary);
     --nxhs-green: #55D98A;
     --nxhs-red: #F87171;
     color: var(--nxhs-text);
@@ -231,7 +231,7 @@
 }
 
 .nxhs-segment input:checked + label {
-    background: linear-gradient(135deg, #19D3E0, #16B8C4);
+    background: linear-gradient(135deg, var(--color-primary), #16B8C4);
     color: #042231;
 }
 
@@ -253,7 +253,7 @@
 .nxhs-check-line input {
     width: 18px;
     height: 18px;
-    accent-color: #19D3E0;
+    accent-color: var(--color-primary);
     flex: 0 0 auto;
     margin: 0;
 }
@@ -318,7 +318,7 @@
     border: 1px solid rgba(25, 211, 224, .42);
     border-radius: 14px;
     padding: 0 16px;
-    background: linear-gradient(135deg, #19D3E0, #16B8C4);
+    background: linear-gradient(135deg, var(--color-primary), #16B8C4);
     color: #042231;
     font-size: 12px;
     font-weight: 1000;
@@ -372,7 +372,7 @@
 .nxhs-permission-grid input {
     width: 17px;
     height: 17px;
-    accent-color: #19D3E0;
+    accent-color: var(--color-primary);
     margin: 0;
 }
 

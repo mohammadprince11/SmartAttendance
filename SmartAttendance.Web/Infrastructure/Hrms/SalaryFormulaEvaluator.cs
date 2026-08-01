@@ -6,9 +6,18 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 /// مُقيِّم صيغ عناصر الراتب الخادمي (نظير الاختبار الحيّ ببوابة المعادلة، لكن آمن
 /// وبلا تنفيذ كود): يحلّل تعبيراً حسابياً على متغيّرات الموظف (Basic/Allowances/
 /// Gross/Hours/Days/DailyRate/HourlyRate) ويرجع قيمة عشرية. القواعد: + − × ÷،
-/// أقواس، سالب أحادي، والدوال ROUND(x[,n]) · MIN(..) · MAX(..) · ABS(x). أي رمز
-/// غير معروف أو قسمة على صفر ⟶ خطأ (لا استثناء يُسقط المسير — يتخطّى المحرك العنصر).
+/// أقواس، سالب أحادي، والدوال ROUND(x[,n]) · FLOOR(x) · CEIL(x) · MIN(..) ·
+/// MAX(..) · ABS(x) · IF(شرط، صحّ، خطأ) · AND(..) · OR(..) · NOT(x)،
+/// وعوامل المقارنة &lt; &gt; &lt;= &gt;= = &lt;&gt; (تُرجع 1 أو 0).
+/// أي رمز غير معروف أو قسمة على صفر ⟶ خطأ (لا استثناء يُسقط المسير — يتخطّى المحرك العنصر).
 /// محرك تحليل نزولي تعاودي بلا انعكاس ولا Function() — آمن للإدخال غير الموثوق.
+///
+/// ⚠️ <b>IF تُقيّم وسائطها الثلاثة جميعاً قبل الاختيار</b> (لا تقييم كسول): فرعٌ
+/// غير مأخوذ يقسم على صفر يُفشل الصيغة كلّها. الحلّ بكتابة الصيغة:
+/// <c>IF(Days &gt; 0, Basic / MAX(Days, 1), 0)</c>.
+///
+/// وإضافة المقارنة وIF **لا تغيّر ناتج أي صيغة قائمة**: صيغةٌ بلا رمز مقارنة
+/// تمرّ بنفس المسار الحسابي السابق حرفياً.
 /// </summary>
 public static class SalaryFormulaEvaluator
 {
@@ -73,8 +82,60 @@ public static class SalaryFormulaEvaluator
             return value;
         }
 
-        // expr := term (('+' | '-') term)*
+        /// <summary>
+        /// المستوى الأعلى: مقارنة اختيارية فوق الحساب.
+        /// <c>comparison := sum (('&lt;' | '&gt;' | '&lt;=' | '&gt;=' | '=' | '&lt;&gt;') sum)?</c>
+        ///
+        /// المقارنة تُرجع 1 أو 0 لا منطقياً — فتُستعمل داخل <c>IF</c> وتُضرب مباشرةً
+        /// (<c>Basic * (Basic &gt; 500000)</c>). وهي **إضافة محضة**: أي صيغة قائمة
+        /// بلا رمز مقارنة تُقيَّم بنفس المسار السابق حرفياً وبنفس الناتج.
+        /// </summary>
         private decimal ParseExpression()
+        {
+            var left = ParseSum();
+            SkipSpaces();
+
+            var op = ReadComparisonOperator();
+            if (op is null)
+            {
+                return left;
+            }
+
+            var right = ParseSum();
+            var comparison = left.CompareTo(right);
+
+            return op switch
+            {
+                "<" => comparison < 0 ? 1 : 0,
+                ">" => comparison > 0 ? 1 : 0,
+                "<=" => comparison <= 0 ? 1 : 0,
+                ">=" => comparison >= 0 ? 1 : 0,
+                "=" => comparison == 0 ? 1 : 0,
+                "<>" => comparison != 0 ? 1 : 0,
+                _ => throw new FormulaException($"عامل مقارنة غير معروف «{op}».")
+            };
+        }
+
+        private string? ReadComparisonOperator()
+        {
+            var c = Peek();
+            if (c is not ('<' or '>' or '='))
+            {
+                return null;
+            }
+
+            _pos++;
+            var next = Peek();
+
+            if (c == '<' && next == '=') { _pos++; return "<="; }
+            if (c == '<' && next == '>') { _pos++; return "<>"; }
+            if (c == '>' && next == '=') { _pos++; return ">="; }
+
+            return c.ToString();
+        }
+
+        // sum := term (('+' | '-') term)*
+        private decimal ParseSum()
         {
             var value = ParseTerm();
             while (true)
@@ -213,6 +274,32 @@ public static class SalaryFormulaEvaluator
                 case "MAX":
                     if (args.Count == 0) throw new FormulaException("MAX تحتاج وسيطاً واحداً على الأقل.");
                     return args.Max();
+                // IF شرطية: بدونها لا تُكتب شريحة ضريبية ولا حدّ أدنى/أعلى مشروط،
+                // وهما جوهر توطين الرواتب. الشرط أي تعبير: صفر = خطأ، وغيره = صحّ.
+                case "IF":
+                    if (args.Count != 3) throw new FormulaException("IF تقبل ثلاثة وسائط: IF(شرط، قيمة_صحّ، قيمة_خطأ).");
+                    return args[0] != 0 ? args[1] : args[2];
+                // FLOOR/CEIL: التقريب لأسفل/أعلى — لازمان بتقريب المستحقات لأقرب
+                // دينار أو لأقرب ألف، ولا يغنيان عن ROUND (الذي يقرّب للأقرب).
+                case "FLOOR":
+                    if (args.Count != 1) throw new FormulaException("FLOOR تقبل وسيطاً واحداً.");
+                    return Math.Floor(args[0]);
+                case "CEIL":
+                case "CEILING":
+                    if (args.Count != 1) throw new FormulaException("CEIL تقبل وسيطاً واحداً.");
+                    return Math.Ceiling(args[0]);
+                // AND/OR كدالّتين لا كعاملَين: العامل يحتاج مستوى أولوية إضافياً
+                // بالمحلّل، والدالّة تعطي نفس القدرة بلا لبس أسبقية.
+                // أي وسيط غير صفري = صحّ، والناتج 1 أو 0 ليتّسق مع المقارنة.
+                case "AND":
+                    if (args.Count == 0) throw new FormulaException("AND تحتاج وسيطاً واحداً على الأقل.");
+                    return args.All(value => value != 0) ? 1 : 0;
+                case "OR":
+                    if (args.Count == 0) throw new FormulaException("OR تحتاج وسيطاً واحداً على الأقل.");
+                    return args.Any(value => value != 0) ? 1 : 0;
+                case "NOT":
+                    if (args.Count != 1) throw new FormulaException("NOT تقبل وسيطاً واحداً.");
+                    return args[0] == 0 ? 1 : 0;
                 default:
                     throw new FormulaException($"دالة غير معروفة «{name}».");
             }

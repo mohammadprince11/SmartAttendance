@@ -1,0 +1,113 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeePortal.DocumentRequestModel
+@{
+    Layout = "_EmployeePortalLayout";
+    ViewData["Title"] = "طلب وثيقة";
+}
+
+<style>
+    .edr { display:flex; flex-direction:column; gap:16px; color:var(--sa-text,#DCEAF4); }
+    .edr-card { border:1px solid rgba(73,111,151,.22); border-radius:18px;
+        background:var(--sa-surface,rgba(8,25,43,.9)); padding:18px; }
+    .edr-card h2 { margin:0 0 4px; font-size:16px; font-weight:1000; }
+    .edr-card p.sub { margin:0 0 14px; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .edr-msg { border-radius:12px; padding:10px 14px; font-size:13px; font-weight:900;
+        background:color-mix(in srgb,#38bdf8 12%,transparent); }
+    .edr-field { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:900;
+        color:var(--sa-muted,#8FA8BC); margin-bottom:12px; }
+    .edr-field select, .edr-field input, .edr-field textarea {
+        border:1px solid rgba(73,111,151,.3); border-radius:12px; background:transparent;
+        color:var(--sa-text,#DCEAF4); padding:10px 12px; font-size:14px; font-weight:800; }
+    .edr-btn { width:100%; border:0; border-radius:14px; padding:12px; font-size:14px;
+        font-weight:1000; cursor:pointer; background:#0d9488; color:#fff; }
+    .edr-item { display:flex; align-items:center; justify-content:space-between; gap:10px;
+        padding:12px 0; border-bottom:1px solid rgba(73,111,151,.18); }
+    .edr-item:last-child { border-bottom:0; }
+    .edr-chip { border-radius:999px; padding:3px 11px; font-size:11px; font-weight:900; white-space:nowrap; }
+    .edr-chip.Pending { color:#fbbf24; background:rgba(251,191,36,.12); }
+    .edr-chip.Approved { color:#34d399; background:rgba(52,211,153,.12); }
+    .edr-chip.Rejected { color:#f87171; background:rgba(248,113,113,.12); }
+    .edr-mini { border:1px solid rgba(73,111,151,.3); background:transparent; color:#f87171;
+        border-radius:10px; padding:5px 10px; font-size:11px; font-weight:900; cursor:pointer; }
+    .edr-note { font-size:11px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+</style>
+
+<div class="edr">
+    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    {
+        <div class="edr-msg">@Model.StatusMessage</div>
+    }
+
+    <div class="edr-card">
+        <h2>طلب وثيقة</h2>
+        <p class="sub">اطلب شهادة راتب أو كتاب تعريف — تُصدر تلقائياً ببياناتك عند الاعتماد.</p>
+
+        @if (Model.Available.Count == 0)
+        {
+            <p class="sub">لا وثائق متاحة للطلب حالياً.</p>
+        }
+        else
+        {
+            <form method="post" enctype="multipart/form-data">
+                <label class="edr-field">
+                    نوع الوثيقة
+                    <select asp-for="TemplateId">
+                        <option value="0">— اختر —</option>
+                        @foreach (var template in Model.Available)
+                        {
+                            <option value="@template.Id">
+                                @template.Name@(template.IsReasonRequired ? " (السبب إلزامي)" : "")@(template.IsAttachmentRequired ? " (المرفق إلزامي)" : "")
+                            </option>
+                        }
+                    </select>
+                </label>
+
+                <label class="edr-field">
+                    سبب الطلب
+                    <textarea asp-for="Reason" rows="3" placeholder="لماذا تحتاج هذه الوثيقة؟"></textarea>
+                </label>
+
+                <label class="edr-field">
+                    مرفق (اختياري ما لم يُطلب)
+                    <input asp-for="Attachment" type="file" />
+                </label>
+
+                <button class="edr-btn" type="submit">أرسل الطلب</button>
+            </form>
+        }
+    </div>
+
+    <div class="edr-card">
+        <h2>طلباتي</h2>
+        @if (Model.MyRequests.Count == 0)
+        {
+            <p class="sub">لا طلبات بعد.</p>
+        }
+        else
+        {
+            @foreach (var request in Model.MyRequests)
+            {
+                <div class="edr-item">
+                    <div>
+                        <b style="font-size:14px">@request.TemplateName</b>
+                        <div class="edr-note">@request.RequestedAt.ToLocalTime().ToString("yyyy/MM/dd")</div>
+                        @if (!string.IsNullOrWhiteSpace(request.ReviewNote))
+                        {
+                            <div class="edr-note">سبب الرفض: @request.ReviewNote</div>
+                        }
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span class="edr-chip @request.Status">@request.StatusLabel</span>
+                        @if (request.IsPending)
+                        {
+                            <form method="post" asp-page-handler="Withdraw" style="display:inline">
+                                <input type="hidden" name="id" value="@request.Id" />
+                                <button class="edr-mini" type="submit">سحب</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>

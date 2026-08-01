@@ -76,7 +76,7 @@
 }
 
 .nxr-edit-btn.primary {
-    background: linear-gradient(135deg, #22d3ee, #2dd4bf);
+    background: linear-gradient(135deg, var(--color-primary), #2dd4bf);
     color: #04202a;
     border-color: rgba(34, 211, 238, .60);
 }
@@ -130,7 +130,7 @@
 }
 
 .nxr-edit-final-summary strong {
-    color: #22d3ee;
+    color: var(--color-primary-text);
     margin-inline-start: 4px;
 }
 
@@ -222,7 +222,7 @@
 .nxr-edit-status-switch input {
     width: 26px;
     height: 26px;
-    accent-color: #22d3ee;
+    accent-color: var(--color-primary);
 }
 
 .nxr-edit-final-grid {
@@ -462,7 +462,7 @@
 }
 
 .nxr-edit-final-summary p strong {
-    color: #22d3ee !important;
+    color: var(--color-primary-text) !important;
 }
 
 .nxr-edit-final-form {

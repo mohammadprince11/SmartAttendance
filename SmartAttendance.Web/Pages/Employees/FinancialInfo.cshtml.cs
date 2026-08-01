@@ -49,6 +49,19 @@ public class FinancialInfoModel : PageModel
     [BindProperty] public IFormFile? CommitmentFile { get; set; }
     [BindProperty] public IFormFile? Attachment { get; set; }
 
+    /// <summary>ملفات الضريبة/الضمان المتاحة للإسناد — تُعبّئ المنسدلتين.</summary>
+    public List<PayrollConfigStore.TaxProfile> TaxProfiles { get; set; } = new();
+    public List<PayrollConfigStore.GosiProfile> GosiProfiles { get; set; } = new();
+
+    /// <summary>الملف الذي سيُطبَّق فعلاً على هذا الموظف، ولماذا — «لماذا هذا الملف؟» يُجاب بالشاشة لا بالتخمين.</summary>
+    public PayrollProfileResolver.Resolution TaxChoice { get; set; } = PayrollProfileResolver.NoProfile;
+    public PayrollProfileResolver.Resolution GosiChoice { get; set; } = PayrollProfileResolver.NoProfile;
+
+    /// <summary>وعاء الضمان المحسوب (أساسي + علاوات نشطة بحسب عضوية وعاء الملف الفائز) وحصّتاه.</summary>
+    public decimal GosiBase { get; set; }
+    public decimal GosiEmployeeShare { get; set; }
+    public decimal GosiCompanyShare { get; set; }
+
     public static readonly string[] Currencies = { "IQD", "USD", "EUR", "SAR", "AED", "JOD", "EGP", "KWD", "BHD", "QAR", "OMR" };
     public static readonly string[] PaymentMethods = { "نقداً", "شيك", "تحويل بنكي" };
 
@@ -88,7 +101,49 @@ public class FinancialInfoModel : PageModel
             .ToListAsync();
         ActiveAllowancesTotal = allowances.Where(a => a.IsActiveOn(today)).Sum(a => a.Amount);
 
+        await LoadProfilesAsync(id, today);
+
         return Page();
+    }
+
+    /// <summary>
+    /// يقرأ الملفات ويحسم الفائز لهذا الموظف ثم يحسب وعاء الضمان **للعرض فقط**.
+    /// الرقم يُعاد حسابه بالمسير بنفس المركِّب (<see cref="SalaryBaseComposer"/>)
+    /// فلا نسخة ثانية من الصيغة هنا؛ وما يُعرض تقديرٌ باليوم لا التزامٌ بقسيمة.
+    /// </summary>
+    private async Task LoadProfilesAsync(int employeeId, DateOnly today)
+    {
+        TaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_dbContext);
+        GosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_dbContext);
+
+        var rows = await HrConditionFacts.LoadAsync(_dbContext, employeeId);
+        var facts = rows.Count > 0
+            ? HrConditionFacts.Build(rows[0], today)
+            : new Dictionary<string, HrConditions.Fact>();
+
+        TaxChoice = PayrollProfileResolver.Resolve(
+            Input.TaxProfileId, PayrollConfigStore.Candidates(TaxProfiles), facts);
+        GosiChoice = PayrollProfileResolver.Resolve(
+            Input.GosiProfileId, PayrollConfigStore.Candidates(GosiProfiles), facts);
+
+        var winner = GosiChoice.ProfileId is { } id
+            ? GosiProfiles.FirstOrDefault(profile => profile.Id == id)
+            : null;
+
+        var members = await SalaryBaseStore.MembersAsync(
+            _dbContext, SalaryBaseComposer.GosiBaseKey, winner?.Id ?? 0);
+
+        var basic = Input.BasicSalary ?? 0;
+        GosiBase = SalaryBaseComposer.Compose(
+            new SalaryBaseComposer.Amounts
+            {
+                Basic = basic,
+                Allowances = ActiveAllowancesTotal,
+                Gross = basic + ActiveAllowancesTotal
+            },
+            members);
+
+        (GosiEmployeeShare, GosiCompanyShare) = PayrollConfigStore.ComputeGosi(GosiBase, winner);
     }
 
     public async Task<IActionResult> OnPostAsync(int id)
@@ -126,6 +181,9 @@ public class FinancialInfoModel : PageModel
         entity.BasicSalary = Input.BasicSalary;
         entity.DailySalary = Input.DailySalary;
         entity.HourlyRate = Input.HourlyRate;
+        // إسناد الملفات المالية — 0/سالب يعني «بلا إسناد» (خيار «حسب الشرط/النشط»).
+        entity.TaxProfileId = Input.TaxProfileId is > 0 ? Input.TaxProfileId : null;
+        entity.GosiProfileId = Input.GosiProfileId is > 0 ? Input.GosiProfileId : null;
         // Social security
         entity.SocialSecurityType = Clean(Input.SocialSecurityType);
         entity.SocialSecuritySalary = Input.SocialSecuritySalary;

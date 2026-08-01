@@ -28,7 +28,18 @@ public class EmployeeFinancialInfo : AuditableEntity
 
     public decimal? HourlyRate { get; set; }
 
+    // --- إسناد الملفات المالية ---
+    /// <summary>
+    /// ملف الضريبة المسنَد لهذا الموظف (<c>PayrollTaxProfiles.Id</c>).
+    /// <c>null</c> ⟹ يحسمه <c>PayrollProfileResolver</c> بالشرط أو بالملف النشط.
+    /// </summary>
+    public int? TaxProfileId { get; set; }
+
+    /// <summary>ملف الضمان المسنَد لهذا الموظف (<c>PayrollGosiProfiles.Id</c>).</summary>
+    public int? GosiProfileId { get; set; }
+
     // --- الضمان الاجتماعي ---
+    /// <summary>وصف حرّ قديم لنوع الضمان — بقي للتوافق؛ الإسناد الفعلي <see cref="GosiProfileId"/>.</summary>
     public string? SocialSecurityType { get; set; }
 
     public decimal? SocialSecuritySalary { get; set; }
@@ -43,6 +54,7 @@ public class EmployeeFinancialInfo : AuditableEntity
     public int? RetirementAge { get; set; }
 
     // --- الضريبة ---
+    /// <summary>وصف حرّ قديم لملف الضريبة — بقي للتوافق؛ الإسناد الفعلي <see cref="TaxProfileId"/>.</summary>
     public string? TaxFile { get; set; }
 
     public string? TaxNo { get; set; }

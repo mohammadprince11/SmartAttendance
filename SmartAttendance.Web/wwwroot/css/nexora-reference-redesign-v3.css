@@ -14,8 +14,8 @@
     --nxr-text: #E6EAEE;
     --nxr-muted: #9FB0BE;
     --nxr-faint: #6F8495;
-    --nxr-teal: #12D9E3;
-    --nxr-teal2: #7CEAF0;
+    --nxr-teal: var(--color-primary);
+    --nxr-teal2: var(--color-primary-soft);
     --nxr-gold: #D7B26D;
     --nxr-green: #8FF0C2;
     --nxr-red: #FFB4B4;

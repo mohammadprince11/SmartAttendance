@@ -10,6 +10,59 @@ public class ApplicationDbContext : DbContext
     {
     }
 
+    /// <summary>
+    /// حاجز عزل المستأجرين على مستوى الحفظ: أي موظف يُكتب — من الشاشات أو
+    /// الاستيراد أو أي مسار مستقبلي — تُشتقّ شركته من فرعه قبل الحفظ.
+    ///
+    /// وضعه هنا لا بكل مسار على حدة مقصود: مساران للاستيراد كانا يضبطان الفرع
+    /// والقسم دون الشركة، وأي مسار جديد سينسى مثلهما. مركزية القاعدة تجعل النسيان
+    /// مستحيلاً بدل أن تجعله مكلفاً — وهي شرط تشديد العمود إلى NOT NULL.
+    /// </summary>
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        await FillEmployeeCompanyFromBranchAsync(cancellationToken);
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    public override int SaveChanges()
+    {
+        FillEmployeeCompanyFromBranchAsync(CancellationToken.None).GetAwaiter().GetResult();
+        return base.SaveChanges();
+    }
+
+    private async Task FillEmployeeCompanyFromBranchAsync(CancellationToken cancellationToken)
+    {
+        var pending = ChangeTracker.Entries<Employee>()
+            .Where(entry => entry.State is EntityState.Added or EntityState.Modified)
+            .Where(entry => entry.Entity.BranchId > 0)
+            .ToList();
+
+        if (pending.Count == 0)
+        {
+            return;
+        }
+
+        var branchIds = pending.Select(entry => entry.Entity.BranchId).Distinct().ToList();
+
+        var companyByBranch = await Branches
+            .AsNoTracking()
+            .Where(branch => branchIds.Contains(branch.Id))
+            .Select(branch => new { branch.Id, branch.CompanyId })
+            .ToDictionaryAsync(x => x.Id, x => x.CompanyId, cancellationToken);
+
+        foreach (var entry in pending)
+        {
+            // فرع غير موجود ⟹ لا نخمّن شركة؛ تُترك كما هي ويفشل قيد المفتاح
+            // الأجنبي بوضوح بدل كتابة انتماء مخترَع.
+            if (companyByBranch.TryGetValue(entry.Entity.BranchId, out var companyId) &&
+                companyId > 0 &&
+                entry.Entity.CompanyId != companyId)
+            {
+                entry.Entity.CompanyId = companyId;
+            }
+        }
+    }
+
     public DbSet<Company> Companies => Set<Company>();
 
     public DbSet<Branch> Branches => Set<Branch>();

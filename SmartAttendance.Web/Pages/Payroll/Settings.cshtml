@@ -1,18 +1,30 @@
 @page "/Payroll/Settings"
 @model SmartAttendance.Web.Pages.Payroll.SettingsModel
 @using System.Text.Json
+@using SmartAttendance.Web.Infrastructure.Hrms
 
 @{
-    ViewData["Title"] = "تهيئة الضريبة والضمان";
+    ViewData["Title"] = "الضريبة والضمان";
     var taxJson = JsonSerializer.Serialize(Model.TaxProfiles.Select(p => new
     {
-        p.Id, p.Name, p.ExemptionAmount, p.IsActive,
+        p.Id, p.Name, p.ExemptionAmount, p.IsActive, p.ConditionsJson, p.SortOrder,
         Brackets = p.Brackets.Select(b => new { b.FromAmount, b.ToAmount, b.Rate })
     }));
-    var gosiJson = JsonSerializer.Serialize(Model.GosiProfiles.Select(g => new { g.Id, g.Name, g.EmployeeRate, g.CompanyRate, g.Ceiling, g.IsActive }));
+    var gosiJson = JsonSerializer.Serialize(Model.GosiProfiles.Select(g => new { g.Id, g.Name, g.EmployeeRate, g.CompanyRate, g.Ceiling, g.IsActive, g.ConditionsJson, g.SortOrder }));
+
+    // كتالوج المكوّنات والعضوية المحفوظة والافتراضات — تبني لوحة الوعاء داخل السلايد
+    var componentsJson = JsonSerializer.Serialize(
+        SettingsModel.BaseComponents.Select(c => new { key = c.Key, label = c.Label }));
+    var membersJson = JsonSerializer.Serialize(Model.BaseMembers);
+    var defaultsJson = JsonSerializer.Serialize(new Dictionary<string, string[]>
+    {
+        [SalaryBaseComposer.TaxBaseKey] = SalaryBaseComposer.DefaultTaxMembers,
+        [SalaryBaseComposer.GosiBaseKey] = SalaryBaseComposer.DefaultGosiMembers
+    });
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
 
 <style>
     .ps-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
@@ -55,6 +67,60 @@
     {
         <div class="ps-alert">@TempData["PayrollMessage"]</div>
     }
+
+    @* ----- ربط الراتب بالحضور ----- *@
+    <div class="ps-sec">
+        <h2>ربط الراتب بالحضور</h2>
+        <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin:0 0 8px">
+            الأساسي يُنسَّب من الاعتماد الشهري (بصمات ← أيام محلَّلة ← اعتماد الشهر).
+            هذه السياسة تحكم <b>ماذا يحدث لموظف بلا بيانات حضور</b> وكيف يُنسَّب من له بيانات.
+            <b>الحالة تُعلَن بالقسيمة وبرسالة الاحتساب مهما كان النمط.</b>
+        </p>
+        <form method="post" asp-page-handler="SaveAttendanceLink" style="display:flex;flex-direction:column;gap:8px">
+            @foreach (var m in new[] { AttendanceSalaryLink.Lenient, AttendanceSalaryLink.PresentDays, AttendanceSalaryLink.Strict, AttendanceSalaryLink.Hours })
+            {
+                <label class="ps-item @(Model.AttendanceLinkMode == m ? "active" : "")" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:0">
+                    <input type="radio" name="mode" value="@m" checked="@(Model.AttendanceLinkMode == m)" style="margin-top:3px" />
+                    <span>
+                        <b>@AttendanceSalaryLink.ModeLabel(m)</b>
+                        <span style="display:block;font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin-top:2px">
+                            @(m == AttendanceSalaryLink.Lenient
+                                ? "الافتراضي — لا يتوقّف المسير عند نقص بيانات الحضور، والحالة مُعلَنة بوضوح."
+                                : m == AttendanceSalaryLink.PresentDays
+                                    ? "المعامل = أيام الحضور الفعلية ÷ أيام العمل. من داوَم 10 من 26 يأخذ راتب 10 أيام."
+                                    : m == AttendanceSalaryLink.Strict
+                                        ? "⚠️ لا يُحتسب راتب من لا يوجد له اعتماد شهري بأيام عمل. المعامل = (أيام العمل − الغياب) ÷ أيام العمل."
+                                        : "المعامل = ساعات العمل الفعلية ÷ (أيام العمل × 8)، مقصوصاً إلى 100% (الزائد أوفرتايم ببند مستقل).")
+                        </span>
+                    </span>
+                </label>
+            }
+
+            <div class="ps-item" style="display:flex;flex-direction:column;gap:8px">
+                <label style="display:flex;align-items:center;gap:8px;margin:0">
+                    <b style="min-width:190px">خصم يوم الغياب يساوي</b>
+                    <input type="number" name="absenceDays" step="0.25" min="0" max="10"
+                           value="@Model.LinkPolicy.AbsenceDeductionDays.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                           style="width:110px" />
+                    <span style="font-size:12px;font-weight:900">يوم من الراتب</span>
+                </label>
+                <span style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800">
+                    1 = يوم بيوم (الافتراضي). 2 = يوم الغياب يُخصم بيومين نمط لوائح الجزاءات.
+                    الخصم الزائد يُطبَّق فوق التنسيب مهما كان النمط.
+                </span>
+                <label style="display:flex;align-items:center;gap:8px;margin:0">
+                    <input type="checkbox" name="allowNegative" value="true" checked="@Model.LinkPolicy.AllowNegative" />
+                    <b>اسمح بأن يكون الراتب سالباً</b>
+                </label>
+                <span style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800">
+                    ⚠️ مع الخصم المضاعف قد يتجاوز الخصمُ الاستحقاقَ. بلا هذا الخيار يتوقّف التنسيب
+                    عند صفر (لا راتب، ولا مديونية)؛ ومعه يظهر الصافي سالباً ويُرحَّل كما هو.
+                </span>
+            </div>
+
+            <button type="submit" class="ps-btn" style="align-self:flex-start">حفظ السياسة</button>
+        </form>
+    </div>
 
     <div class="ps-grid">
         @* ----- الضريبة ----- *@
@@ -109,9 +175,36 @@
                 <label>اسم الملف *<input type="text" name="Name" id="tax-Name" required /></label>
                 <label>الإعفاء الشهري (يُطرح قبل الشرائح)<input type="number" name="ExemptionAmount" id="tax-Exemption" step="0.01" value="0" /></label>
                 <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IsActive" value="true" id="tax-Active" checked /> الملف النشط</label>
+
+                @* شروط انطباق الملف تلقائياً — نفس محرّك الشروط العام بلا بنية جديدة *@
+                <div>
+                    <b style="font-size:13px">على من يُطبَّق هذا الملف تلقائياً؟</b>
+                    <p class="sb-hint">اتركه بلا شروط ليُطبَّق بالإسناد اليدوي أو بكونه الملف النشط. الإسناد على الموظف يعلو على الشرط دائماً.</p>
+                    <label>أسبقية الفحص (الأصغر أولاً)<input type="number" name="SortOrder" id="tax-Sort" value="0" /></label>
+                    <input type="hidden" name="Conditions" id="tax-Conditions" />
+                    <div class="zyc" id="tax-cond" data-zy-conditions data-input="#tax-Conditions" data-criteria="@Model.CriteriaJson"></div>
+                </div>
+
                 <div><b style="font-size:13px">الشرائح التصاعدية</b> <button type="button" class="ps-btn ghost sm" onclick="brkAdd()">+ شريحة</button></div>
                 <div class="ps-brk" style="color:var(--sa-muted,#8FA8BC);font-size:11px;font-weight:900"><span>من</span><span>إلى (فارغ=∞)</span><span>نسبة%</span><span></span></div>
                 <div id="brk-rows" style="display:flex;flex-direction:column;gap:6px"></div>
+
+                @* وعاء الاحتساب لهذا الملف — يُبنى بجافاسكربت عند فتح السلايد *@
+                <div class="sb-board" data-base="TaxBase">
+                    <b style="font-size:13px">وعاء الاحتساب</b>
+                    <p class="sb-hint">اسحب المكوّن داخل الوعاء ليدخل باحتساب الضريبة، أو أخرجه ليُستثنى.</p>
+                    <div class="sb-cols">
+                        <div class="sb-col">
+                            <h3>داخل الوعاء</h3>
+                            <div class="sb-drop" data-role="in" ondragover="sbOver(event)" ondrop="sbDrop(event)"></div>
+                        </div>
+                        <div class="sb-col">
+                            <h3>مستثنى</h3>
+                            <div class="sb-drop sb-out" data-role="out" ondragover="sbOver(event)" ondrop="sbDrop(event)"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" class="ps-btn">حفظ الملف</button>
             </form>
         </div>
@@ -131,6 +224,33 @@
                 </div>
                 <label>السقف (0 = بلا سقف)<input type="number" name="Ceiling" id="gosi-Ceiling" step="0.01" value="0" /></label>
                 <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IsActive" value="true" id="gosi-Active" checked /> الملف النشط</label>
+
+                @* شروط انطباق الملف تلقائياً — هنا يُحلّ «اقتطاع المواطن يخالف الوافد»:
+                   معيار «مواطن» موجود بالكتالوج، فيكفي ملفٌّ شرطه «مواطن = نعم» *@
+                <div>
+                    <b style="font-size:13px">على من يُطبَّق هذا الملف تلقائياً؟</b>
+                    <p class="sb-hint">مثال: «مواطن يساوي نعم» ⟵ يأخذ كلُّ مواطنٍ هذا الملف بلا إسناد يدوي. الإسناد على الموظف يعلو على الشرط.</p>
+                    <label>أسبقية الفحص (الأصغر أولاً)<input type="number" name="SortOrder" id="gosi-Sort" value="0" /></label>
+                    <input type="hidden" name="Conditions" id="gosi-Conditions" />
+                    <div class="zyc" id="gosi-cond" data-zy-conditions data-input="#gosi-Conditions" data-criteria="@Model.CriteriaJson"></div>
+                </div>
+
+                @* وعاء الاحتساب لهذا الملف — يُبنى بجافاسكربت عند فتح السلايد *@
+                <div class="sb-board" data-base="GosiBase">
+                    <b style="font-size:13px">وعاء الاحتساب</b>
+                    <p class="sb-hint">اسحب المكوّن داخل الوعاء ليدخل باحتساب الضمان، أو أخرجه ليُستثنى.</p>
+                    <div class="sb-cols">
+                        <div class="sb-col">
+                            <h3>داخل الوعاء</h3>
+                            <div class="sb-drop" data-role="in" ondragover="sbOver(event)" ondrop="sbDrop(event)"></div>
+                        </div>
+                        <div class="sb-col">
+                            <h3>مستثنى</h3>
+                            <div class="sb-drop sb-out" data-role="out" ondragover="sbOver(event)" ondrop="sbDrop(event)"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" class="ps-btn">حفظ الملف</button>
             </form>
         </div>
@@ -138,9 +258,14 @@
 </section>
 
 @section Scripts {
+    @* غير مؤجَّل: condLoad تُنادى فور فتح السلايد فيجب أن يكون المحرّك محمّلاً *@
+    <script src="~/js/zynora-conditions.js" asp-append-version="true"></script>
     <script>
         var TAX_DATA = @Html.Raw(taxJson);
         var GOSI_DATA = @Html.Raw(gosiJson);
+        var SB_COMPONENTS = @Html.Raw(componentsJson);
+        var SB_MEMBERS = @Html.Raw(membersJson);
+        var SB_DEFAULTS = @Html.Raw(defaultsJson);
 
         function brkRow(from, to, rate) {
             var div = document.createElement('div');
@@ -153,6 +278,18 @@
         }
         function brkAdd() { brkRow(0, '', 0); }
 
+        // محرّر الشروط يُبنى مرّة واحدة لكل عقدة، والسلايد يُعاد استعماله لملفات
+        // مختلفة — فنعيد تهيئته صراحةً بقيمة الملف المفتوح وإلا بقيت شروط السابق.
+        function condLoad(nodeId, inputId, json) {
+            var input = document.getElementById(inputId);
+            var node = document.getElementById(nodeId);
+            if (!input || !node) return;
+            input.value = json || '';
+            node.__zyConditions = null;
+            node.innerHTML = '';
+            if (window.ZyConditions) window.ZyConditions.init(node.parentNode);
+        }
+
         function taxOpen(id) {
             var f = document.querySelector('#tax-slide form'); f.reset();
             document.getElementById('brk-rows').innerHTML = '';
@@ -164,10 +301,16 @@
                     document.getElementById('tax-Name').value = p.Name || '';
                     document.getElementById('tax-Exemption').value = p.ExemptionAmount;
                     document.getElementById('tax-Active').checked = !!p.IsActive;
+                    document.getElementById('tax-Sort').value = p.SortOrder || 0;
+                    condLoad('tax-cond', 'tax-Conditions', p.ConditionsJson);
                     (p.Brackets || []).forEach(function (b) { brkRow(b.FromAmount, b.ToAmount, b.Rate); });
                 }
+            } else {
+                document.getElementById('tax-Sort').value = 0;
+                condLoad('tax-cond', 'tax-Conditions', '');
             }
             if (document.getElementById('brk-rows').children.length === 0) brkAdd();
+            sbBuild('TaxBase', id || 0);
             document.getElementById('tax-slide').classList.add('open');
             document.getElementById('tax-backdrop').classList.add('open');
         }
@@ -185,12 +328,109 @@
                     document.getElementById('gosi-Co').value = g.CompanyRate;
                     document.getElementById('gosi-Ceiling').value = g.Ceiling;
                     document.getElementById('gosi-Active').checked = !!g.IsActive;
+                    document.getElementById('gosi-Sort').value = g.SortOrder || 0;
+                    condLoad('gosi-cond', 'gosi-Conditions', g.ConditionsJson);
                 }
+            } else {
+                document.getElementById('gosi-Sort').value = 0;
+                condLoad('gosi-cond', 'gosi-Conditions', '');
             }
+            sbBuild('GosiBase', id || 0);
             document.getElementById('gosi-slide').classList.add('open');
             document.getElementById('gosi-backdrop').classList.add('open');
         }
         function gosiClose() { document.getElementById('gosi-slide').classList.remove('open'); document.getElementById('gosi-backdrop').classList.remove('open'); }
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { taxClose(); gosiClose(); } });
+
+        // ===== أوعية الاحتساب: سحب وإفلات =====
+        // الحقيقة الوحيدة هي موضع الرقاقة: الحقل المخفي name="member" يُنشأ عند
+        // دخول الوعاء ويُحذف عند الخروج، فما يُرسَل يطابق ما يراه المستخدم تماماً.
+        let sbDragged = null;
+
+        function sbStart(e) {
+            sbDragged = e.currentTarget;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', sbDragged.dataset.key);
+        }
+
+        function sbOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+
+        function sbDrop(e) {
+            e.preventDefault();
+            const zone = e.currentTarget;
+            if (!sbDragged) return;
+
+            // لا نقل بين وعاءين مختلفين — كل لوحة مستقلة
+            if (sbDragged.closest('.sb-board') !== zone.closest('.sb-board')) { sbDragged = null; return; }
+
+            zone.appendChild(sbDragged);
+            sbSync(sbDragged, zone.dataset.role === 'in');
+            sbDragged = null;
+        }
+
+        // يبني رقاقات لوحة الوعاء لملفٍ بعينه. يُنادى عند فتح السلايد لأن
+        // المحتوى يختلف بكل ملف، وملفٌ جديد يبدأ بعضوية الافتراض العام.
+        function sbBuild(baseKey, profileId) {
+            const board = document.querySelector('.sb-board[data-base="' + baseKey + '"]');
+            if (!board) return;
+
+            const inZone = board.querySelector('[data-role="in"]');
+            const outZone = board.querySelector('[data-role="out"]');
+            inZone.innerHTML = '';
+            outZone.innerHTML = '';
+
+            const members = sbResolve(baseKey, profileId);
+
+            SB_COMPONENTS.forEach(function (c) {
+                const inside = members.indexOf(c.key) >= 0;
+                const chip = document.createElement('div');
+                chip.className = 'sb-chip';
+                chip.draggable = true;
+                chip.dataset.key = c.key;
+                chip.addEventListener('dragstart', sbStart);
+                chip.appendChild(Object.assign(document.createElement('span'), { textContent: c.label }));
+                (inside ? inZone : outZone).appendChild(chip);
+                sbSync(chip, inside);
+            });
+
+            // الترتيب داخل الوعاء يتبع العضوية المحفوظة لا ترتيب الكتالوج
+            members.forEach(function (key) {
+                const chip = inZone.querySelector('[data-key="' + key + '"]');
+                if (chip) inZone.appendChild(chip);
+            });
+        }
+
+        // نفس الرجوع بالخادم: عضوية الملف ← افتراضات الكود (بلا طبقة «افتراض عام»)
+        function sbResolve(baseKey, profileId) {
+            const own = SB_MEMBERS[baseKey + ':' + profileId];
+            return (own && own.length) ? own : (SB_DEFAULTS[baseKey] || []);
+        }
+
+        function sbSync(chip, inside) {
+            const existing = chip.querySelector('input[name="member"]');
+            if (inside && !existing) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'member';
+                input.value = chip.dataset.key;
+                chip.appendChild(input);
+            } else if (!inside && existing) {
+                existing.remove();
+            }
+        }
     </script>
+
+    <style>
+        .sb-sec { margin-top: 18px; }
+        .sb-hint { color: var(--color-text-secondary); font-size: 13px; margin: 4px 0 14px; }
+        .sb-board { border: 1px solid var(--color-border); border-radius: 14px; padding: 14px; margin-bottom: 16px; background: var(--color-surface); }
+        .sb-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; }
+        .sb-col h3 { font-size: 13px; margin: 0 0 8px; color: var(--color-text-secondary); }
+        .sb-drop { min-height: 96px; border: 1px dashed var(--color-border-strong); border-radius: 12px; padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; background: var(--color-background); }
+        .sb-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; cursor: grab; user-select: none; background: var(--color-primary-soft); color: var(--color-primary-text); border: 1px solid var(--color-border); font-size: 13px; }
+        .sb-out .sb-chip { background: var(--color-surface); color: var(--color-text-secondary); }
+        .sb-chip:active { cursor: grabbing; }
+
+        @@media (max-width: 860px) { .sb-cols { grid-template-columns: 1fr; } }
+    </style>
 }

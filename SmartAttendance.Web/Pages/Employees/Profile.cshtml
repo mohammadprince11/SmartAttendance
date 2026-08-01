@@ -717,8 +717,16 @@
                             <div class="z360-field"><span>البنك</span><strong>@finText(fin?.BankName)</strong></div>
                             <div class="z360-field"><span>IBAN</span><strong>@finText(fin?.Iban)</strong></div>
                         }
-                        <div class="z360-field"><span>الضمان الاجتماعي</span><strong>@finText(fin?.SocialSecurityType)</strong></div>
-                        <div class="z360-field"><span>ملف الضريبة</span><strong>@finText(fin?.TaxFile)</strong></div>
+                        <div class="z360-field"><span>مواطن</span><strong>@(Model.Employee?.IsCitizen == true ? "مواطن" : "غير مواطن")</strong></div>
+                        <div class="z360-field">
+                            <span>ملف الضمان الاجتماعي</span>
+                            <strong>@(Model.GosiChoice.ProfileId is null ? "—" : Model.GosiChoice.Name)</strong>
+                        </div>
+                        <div class="z360-field"><span>راتب الضمان الاجتماعي</span><strong>@finMoney(Model.GosiBase)</strong></div>
+                        <div class="z360-field">
+                            <span>ملف الضريبة</span>
+                            <strong>@(Model.TaxChoice.ProfileId is null ? "—" : Model.TaxChoice.Name)</strong>
+                        </div>
                         <div class="z360-field"><span>احتساب الراتب</span><strong>@(fin?.StopSalaryCalc == true ? "موقوف" : "مُفعّل")</strong></div>
                         <div class="z360-field"><span>جاهزية الراتب</span><strong>@readinessText</strong></div>
                     </div>

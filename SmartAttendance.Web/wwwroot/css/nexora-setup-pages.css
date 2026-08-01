@@ -29,7 +29,7 @@
     display: inline-flex;
     align-items: center;
     margin-bottom: 8px;
-    color: #22d3ee;
+    color: var(--color-primary-text);
     font-weight: 900;
     letter-spacing: .08em;
     font-size: 12px;
@@ -80,7 +80,7 @@
 .nx-setup-btn-primary,
 .nexora-setup-page .btn-primary {
     color: #04202a !important;
-    background: linear-gradient(135deg, #22d3ee, #2dd4bf) !important;
+    background: linear-gradient(135deg, var(--color-primary), #2dd4bf) !important;
     border: 1px solid rgba(103, 232, 249, .70) !important;
     box-shadow: 0 16px 34px rgba(34, 211, 238, .18);
 }
@@ -106,7 +106,7 @@
 
 .nexora-setup-card-head span {
     display: block;
-    color: #22d3ee;
+    color: var(--color-primary-text);
     font-size: 12px;
     font-weight: 950;
     margin-bottom: 5px;
@@ -595,7 +595,7 @@ body.nx-setup-modal-open {
 
 .nx-setup-modal__head span {
     display: inline-flex;
-    color: #22d3ee;
+    color: var(--color-primary-text);
     font-size: 12px;
     font-weight: 950;
     margin-bottom: 6px;
@@ -697,7 +697,7 @@ body.nx-setup-modal-open {
     width: 18px !important;
     height: 18px !important;
     min-height: 18px !important;
-    accent-color: #22d3ee;
+    accent-color: var(--color-primary);
 }
 
 .nx-setup-modal__actions {
@@ -820,7 +820,7 @@ body.nx-setup-modal-open {
 
 .nexora-import-card-head span {
     display: block;
-    color: #22d3ee;
+    color: var(--color-primary-text);
     font-size: 12px;
     font-weight: 950;
     margin-bottom: 5px;
@@ -871,7 +871,7 @@ body.nx-setup-modal-open {
     align-items: center;
     justify-content: center;
     color: #04202a;
-    background: linear-gradient(135deg, #22d3ee, #2dd4bf);
+    background: linear-gradient(135deg, var(--color-primary), #2dd4bf);
     border: 1px solid rgba(103, 232, 249, .7);
     font-weight: 950;
 }
@@ -906,7 +906,7 @@ body.nx-setup-modal-open {
     border-radius: 12px;
     padding: 9px 14px;
     color: #04202a;
-    background: linear-gradient(135deg, #22d3ee, #2dd4bf);
+    background: linear-gradient(135deg, var(--color-primary), #2dd4bf);
     font-weight: 950;
     cursor: pointer;
 }
@@ -950,7 +950,7 @@ body.nx-setup-modal-open {
 
 .nexora-import-required > div:first-child span {
     display: block;
-    color: #22d3ee;
+    color: var(--color-primary-text);
     font-size: 12px;
     font-weight: 950;
     margin-bottom: 5px;
@@ -1512,8 +1512,8 @@ html.nx-setup-modal-open body .nxos__menu.is-open {
     width: 9px;
     height: 9px;
     flex: 0 0 9px;
-    border-inline-end: 2px solid #22d3ee;
-    border-bottom: 2px solid #22d3ee;
+    border-inline-end: 2px solid var(--color-primary);
+    border-bottom: 2px solid var(--color-primary);
     transform: rotate(45deg) translateY(-2px);
     transition: transform .18s ease;
 }
@@ -1677,8 +1677,8 @@ html.nx-setup-modal-open body .nxcs-panel {
 }
 
 .nx-cutoff-type-option input:checked + .nx-cutoff-type-box {
-    border-color: #22d3ee;
-    background: linear-gradient(135deg, #22d3ee, #67e8f9);
+    border-color: var(--color-primary);
+    background: linear-gradient(135deg, var(--color-primary), #67e8f9);
     box-shadow: 0 0 0 3px rgba(34, 211, 238, .10);
 }
 
@@ -2248,7 +2248,7 @@ body.nx-setup-modal-open .nxcs-panel {
 
 .nx-company-setup-page .nx-setup-pagination__button.is-active {
     border-color: rgba(103, 232, 249, .72);
-    background: linear-gradient(135deg, #22d3ee, #2dd4bf);
+    background: linear-gradient(135deg, var(--color-primary), #2dd4bf);
     color: #04202a;
     box-shadow: 0 8px 20px rgba(34, 211, 238, .16);
 }
@@ -2729,7 +2729,7 @@ body.nx-setup-modal-open .nxcs-panel {
     background:
         linear-gradient(
             135deg,
-            #22d3ee,
+            var(--color-primary),
             #2dd4bf
         ) !important;
     color: #03202a !important;

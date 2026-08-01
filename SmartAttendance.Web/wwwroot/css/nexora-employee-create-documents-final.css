@@ -19,7 +19,7 @@
 }
 
 .nxr-selected-documents strong {
-    color: #12d9e3;
+    color: var(--color-primary-text);
 }
 
 .nxr-documents-modal {
@@ -109,7 +109,7 @@
     padding: 6px 10px;
     border-radius: 999px;
     color: #07121f;
-    background: linear-gradient(135deg, #12d9e3, #7ceaf0);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
     font-size: 11px;
     font-weight: 1000;
     letter-spacing: .04em;
@@ -133,7 +133,7 @@
 }
 
 .nxr-document-summary strong {
-    color: #12d9e3;
+    color: var(--color-primary-text);
 }
 
 .nxr-documents-list-modal {
@@ -174,7 +174,7 @@
 
 .nxr-document-file-name {
     margin-top: 6px;
-    color: #12d9e3;
+    color: var(--color-primary-text);
     font-size: 12px;
     font-weight: 900;
     min-height: 18px;
@@ -518,7 +518,7 @@
 
 .nxr-documents-modal .nxr-document-file-trigger.is-selected {
     border-color: rgba(34, 211, 238, .55) !important;
-    background: linear-gradient(135deg, #22d3ee, #67e8f9) !important;
+    background: linear-gradient(135deg, var(--color-primary), #67e8f9) !important;
     color: #06111f !important;
 }
 

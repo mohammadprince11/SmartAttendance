@@ -163,7 +163,7 @@
 
 .ky-acc > summary:hover { background: rgba(18, 217, 227, .06); color: var(--nxr-text, #E6EAEE); }
 
-.ky-acc[open] > summary { color: var(--nxr-teal, #12D9E3); }
+.ky-acc[open] > summary { color: var(--nxr-teal, var(--color-primary)); }
 
 .ky-acc-chev {
     width: 7px; height: 7px;

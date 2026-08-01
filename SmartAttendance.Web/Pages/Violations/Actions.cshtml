@@ -1,0 +1,131 @@
+@page
+@model SmartAttendance.Web.Pages.Violations.ActionsModel
+
+@{
+    ViewData["Title"] = "الإجراءات التأديبية";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">حالات المخالفات</a>
+        <h1>الإجراءات التأديبية</h1>
+    </header>
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>السجلّ</span>
+            <h2>العقوبات المطبَّقة</h2>
+            <p class="zyp-hint">
+                كان عندنا <b>قواعدُ العقوبة</b> و<b>حالاتُ المخالفات</b>، بلا شاشة تجيب:
+                ما العقوبات المطبَّقة فعلاً؟ وكم منها قابل للطعن؟ وكم سقط؟
+                @if (Model.ObjectionDays == 0 && Model.DropMonths == 0)
+                {
+                    <b>
+                        — لم تُهيَّأ مهلة اعتراض ولا مدّة إسقاط بعد؛
+                        <a asp-page="/HrSettings/ViolationConfiguration">هيّئها هنا</a>.
+                    </b>
+                }
+            </p>
+        </header>
+
+        <div class="zyp-actions" style="justify-content:flex-start;flex-wrap:wrap">
+            <span class="zyp-rank" style="min-width:auto;padding:4px 10px">الإجراءات: @Model.Actions.Count</span>
+            @if (Model.ObjectionDays > 0)
+            {
+                <span class="zyp-count" data-zero="@((Model.OpenForObjection > 0).ToString().ToLowerInvariant())" style="padding:4px 10px">
+                    قابلة للطعن: @Model.OpenForObjection
+                </span>
+            }
+            @if (Model.DropMonths > 0)
+            {
+                <span class="zyp-rank" style="min-width:auto;padding:4px 10px">ساقطة: @Model.Dropped</span>
+            }
+            <span class="zyp-rank" style="min-width:auto;padding:4px 10px">مجموع الاقتطاع: @Model.TotalDeductions.ToString("N2")</span>
+        </div>
+
+        <form method="get" class="zyp-editor-grid" style="border:0;padding:0">
+            <label>
+                بحث (اسم · رقم موظف · رقم مرجعي)
+                <input asp-for="Search" placeholder="اكتب للبحث…" />
+            </label>
+            <label>
+                الحالة
+                <select asp-for="StateFilter">
+                    <option value="All">الكل</option>
+                    <option value="Open">قابلة للطعن</option>
+                    <option value="Final">نهائية</option>
+                    <option value="Dropped">ساقطة</option>
+                </select>
+            </label>
+            <label style="justify-content:flex-end">
+                &nbsp;
+                <button type="submit" class="zyc-add-rule" style="align-self:stretch">تطبيق</button>
+            </label>
+        </form>
+
+        @if (Model.Actions.Count == 0)
+        {
+            <p class="zyc-empty">لا إجراءات تأديبية مطبَّقة تطابق التصفية.</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>الرقم المرجعي</th>
+                        <th>الموظف</th>
+                        <th>المخالفة</th>
+                        <th>الإجراء</th>
+                        <th>الأثر المالي</th>
+                        <th>تاريخ الواقعة</th>
+                        <th>التبليغ</th>
+                        <th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Actions)
+                    {
+                        var dropped = Model.IsDropped(row);
+                        <tr class="@(dropped ? "zyp-inactive" : "")">
+                            <td class="zyp-conditions">@row.ReferenceNo</td>
+                            <td>
+                                <b>@row.EmployeeName</b>
+                                <div class="zyp-conditions">@row.EmployeeNo</div>
+                            </td>
+                            <td class="zyp-conditions">@row.ViolationTitle</td>
+                            <td>@row.FinalPenaltyAction</td>
+                            <td class="zyp-count">
+                                @if (row.DeductionAmount > 0)
+                                {
+                                    <span>@row.DeductionAmount.ToString("N2")</span>
+                                }
+                                else
+                                {
+                                    <span class="zyp-conditions">—</span>
+                                }
+                            </td>
+                            <td class="zyp-conditions">@row.EventDate.ToString("yyyy/MM/dd")</td>
+                            <td class="zyp-conditions">
+                                @(row.NotifiedOn is { } notified ? notified.ToString("yyyy/MM/dd") : "لم يُبلَّغ")
+                            </td>
+                            <td class="zyp-conditions">@Model.StatusOf(row)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <p class="zyp-hint">
+                الحالة <b>مشتقّة من التهيئة لا مخزَّنة</b>: تغيير مدّة الإسقاط يغيّر
+                التصنيف فوراً بلا تعديل أي صفّ. والعقوبة الساقطة تبقى بالسجلّ لكنها
+                تخرج من عدّ تدرّج العقوبة.
+            </p>
+        }
+    </div>
+</section>
+
+@section Scripts {
+
+}

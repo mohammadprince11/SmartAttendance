@@ -101,7 +101,7 @@
     border-radius: 14px !important;
     background:
         radial-gradient(circle at 20% 12%, rgba(255, 255, 255, .30), transparent 28%),
-        linear-gradient(135deg, #19D3E0, #15B8C4) !important;
+        linear-gradient(135deg, var(--color-primary), #15B8C4) !important;
     color: #042231 !important;
     font-size: 12px !important;
     font-weight: 1000 !important;

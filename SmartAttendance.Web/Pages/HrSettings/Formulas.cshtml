@@ -1,0 +1,190 @@
+@page
+@model SmartAttendance.Web.Pages.HrSettings.FormulasModel
+
+@{
+    ViewData["Title"] = "مختبر الصيغ";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">إعدادات الموارد البشرية</a>
+        <h1>مختبر الصيغ</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["ErrorMessage"]</div>
+    }
+
+    <form method="post" asp-page-handler="Test" class="nxhs-panel zyp-editor">
+        <h3>جرّب الصيغة قبل أن تستعملها</h3>
+        <p class="zyp-hint">
+            محرّك الصيغ كان يعمل منذ زمن <b>بلا واجهة</b>: تُكتب الصيغة داخل عنصر راتب
+            ولا تُختبر إلا بتشغيل مسير كامل، وخطأٌ فيها يعني عنصراً <b>يُتخطّى بصمت</b>.
+            هنا تُجرَّب بقيم أولاً.
+        </p>
+
+        <input type="hidden" asp-for="FormulaId" />
+
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:.8125rem;color:var(--zy-text-muted)">
+            الصيغة
+            <textarea asp-for="Expression" rows="3" dir="ltr"
+                      style="padding:10px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:ui-monospace,monospace;font-size:.9375rem"
+                      placeholder="MIN(Basic * 0.25, 300000)"></textarea>
+        </label>
+
+        <div>
+            <p class="zyp-section-title">المتغيّرات المتاحة (نفس ما يمرّره المسير حرفياً)</p>
+            <div class="zyp-actions" style="justify-content:flex-start;flex-wrap:wrap">
+                @foreach (var (key, label) in SmartAttendance.Web.Pages.HrSettings.FormulasModel.Variables)
+                {
+                    <span class="zyp-rank" style="min-width:auto;padding:4px 10px" title="@label">@key</span>
+                }
+            </div>
+            <p class="zyp-hint" style="margin-top:8px">
+                والدوال: <code>ROUND(x[,n])</code> · <code>MIN(..)</code> · <code>MAX(..)</code> ·
+                <code>ABS(x)</code> · <code>IF(شرط، صحّ، خطأ)</code>، وعوامل المقارنة
+                <code dir="ltr">&lt; &gt; &lt;= &gt;= = &lt;&gt;</code> (تُرجع 1 أو 0).
+            </p>
+        </div>
+
+        <div>
+            <p class="zyp-section-title">قيم التجربة</p>
+            <div class="zyp-editor-grid">
+                <label>الراتب الأساسي<input asp-for="Basic" type="number" step="any" /></label>
+                <label>إجمالي العلاوات<input asp-for="Allowances" type="number" step="any" /></label>
+                <label>عدد الساعات<input asp-for="Hours" type="number" step="any" /></label>
+                <label>عدد الأيام<input asp-for="Days" type="number" step="any" /></label>
+            </div>
+        </div>
+
+        @if (Model.TestResult is not null)
+        {
+            <p class="zyc-summary" style="border-inline-start-color:var(--zy-success)">
+                <b>الناتج: @Model.TestResult</b>
+            </p>
+        }
+        @if (Model.TestError is not null)
+        {
+            <p class="zyc-summary" style="border-inline-start-color:var(--zy-danger)">
+                <b>خطأ بالصيغة:</b> @Model.TestError
+            </p>
+        }
+
+        <footer class="nxhs-actions">
+            <button type="submit">جرّب</button>
+            <button type="submit" asp-page-handler="Save">احفظ بالمكتبة</button>
+        </footer>
+
+        <div class="zyp-editor-grid">
+            <label>
+                اسم الصيغة (للحفظ)
+                <input asp-for="Name" placeholder="بدل النقل — 10% بسقف" />
+            </label>
+            <label>
+                الوصف
+                <input asp-for="Description" placeholder="اختياري" />
+            </label>
+            <label>
+                الحالة
+                <select asp-for="IsActive">
+                    <option value="true">نشطة</option>
+                    <option value="false">معطّلة</option>
+                </select>
+            </label>
+        </div>
+
+        <p class="zyp-hint">
+            ⚠️ <b>لا تُحفظ صيغة لا تُقيَّم.</b> صيغةٌ معطوبة بالمكتبة تُنسخ لعنصر راتب
+            فيُتخطّى العنصر بصمت بكل مسير — رفضُ الحفظ الآن أرحم.
+        </p>
+    </form>
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>أمثلة</span>
+            <h2>صيغ جاهزة</h2>
+        </header>
+
+        <table class="zyp-table">
+            <thead>
+                <tr><th>الصيغة</th><th>الغرض</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var (expression, purpose) in SmartAttendance.Web.Pages.HrSettings.FormulasModel.Examples)
+                {
+                    <tr>
+                        <td dir="ltr" style="font-family:ui-monospace,monospace">@expression</td>
+                        <td class="zyp-conditions">@purpose</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <p class="zyp-hint">
+            ⚠️ <code>IF</code> تُقيّم وسائطها الثلاثة جميعاً قبل الاختيار: فرعٌ غير مأخوذ
+            يقسم على صفر <b>يُفشل الصيغة كلّها</b>. اكتبها كالمثال الأخير.
+        </p>
+    </div>
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>المكتبة</span>
+            <h2>الصيغ المحفوظة</h2>
+            <p class="zyp-hint">حذف صيغة من المكتبة لا يؤثّر على عناصر الراتب التي نسختها.</p>
+        </header>
+
+        @if (Model.Library.Count == 0)
+        {
+            <p class="zyc-empty">لا صيغ محفوظة بعد.</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>الصيغة</th>
+                        <th>الوصف</th>
+                        <th style="width:170px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Library)
+                    {
+                        <tr class="@(row.IsActive ? "" : "zyp-inactive")">
+                            <td><b>@row.Name</b></td>
+                            <td dir="ltr" style="font-family:ui-monospace,monospace;font-size:.8125rem">@row.Expression</td>
+                            <td class="zyp-conditions">@row.Description</td>
+                            <td>
+                                <div class="zyp-actions">
+                                    <form method="post" asp-page-handler="Load" style="display:inline">
+                                        <input type="hidden" name="id" value="@row.Id" />
+                                        <button type="submit">افتح وجرّب</button>
+                                    </form>
+                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                        <input type="hidden" name="id" value="@row.Id" />
+                                        <button type="submit" data-zyconfirm="حذف الصيغة من المكتبة؟">حذف</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</section>
+
+<script src="~/js/zynora-confirm.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+
+}

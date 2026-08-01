@@ -9,7 +9,7 @@
     --nxv-line: rgba(73, 111, 151, .24);
     --nxv-text: #DCEAF4;
     --nxv-muted: #8FA8BC;
-    --nxv-cyan: #19D3E0;
+    --nxv-cyan: var(--color-primary);
     --nxv-gold: #D7B26D;
     --nxv-green: #55D98A;
     --nxv-red: #F87171;
@@ -99,7 +99,7 @@
     border-color: rgba(25, 211, 224, .46);
     background:
         radial-gradient(circle at 20% 10%, rgba(255, 255, 255, .30), transparent 30%),
-        linear-gradient(135deg, #19D3E0, #16B8C4);
+        linear-gradient(135deg, var(--color-primary), #16B8C4);
     color: #042231;
     box-shadow: 0 16px 32px rgba(25, 211, 224, .18), inset 0 1px 0 rgba(255, 255, 255, .38);
 }

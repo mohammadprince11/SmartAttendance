@@ -20,7 +20,7 @@
 .mass-emp.sel { background:color-mix(in srgb, var(--acc) 15%, transparent); }
 .mass-emp.hidden { display:none !important; }
 .mass-emp input[type=checkbox] { width:17px !important; height:17px; min-height:auto !important; flex:0 0 auto; margin:0; accent-color:var(--acc); }
-.mass-emp .av { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:1000; font-size:13px; color:#04141d; background:linear-gradient(135deg, var(--acc), #12D9E3); flex:0 0 auto; }
+.mass-emp .av { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:1000; font-size:13px; color:#04141d; background:linear-gradient(135deg, var(--acc), var(--color-primary)); flex:0 0 auto; }
 .mass-emp .nm { flex:1; font-weight:900; font-size:13px; text-align:start; color:var(--sa-text,#DCEAF4); }
 html[data-theme="light"] .mass-emp .nm { color:#0b1d31; }
 .mass-emp .cd { direction:ltr; color:var(--sa-muted,#8FA8BC); font-size:12px; font-weight:900; }

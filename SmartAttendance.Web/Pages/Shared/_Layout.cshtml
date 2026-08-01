@@ -10,7 +10,7 @@
 }
 
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" data-theme="dark" data-sidebar="expanded">
+<html lang="ar" dir="rtl" data-theme="light" data-sidebar="expanded">
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -20,7 +20,7 @@
 
     <script>
         (function () {
-            // الثيم الداكن حصراً — أُلغي الوضع الفاتح نهائياً (قرار 2026-07)
+            // تنظيف مفاتيح قديمة (تخطيط الشريط الجانبي وأسماء ثيم سابقة)
             try {
                 [
                     "SmartAttendance.Sidebar",
@@ -44,13 +44,18 @@
                 "expanded"
             );
 
-            // الوضع المحفوظ (زر الشمس/الهلال بالشريط العلوي) — الافتراضي داكن حالياً.
+            // الوضع المحفوظ (زر الشمس/الهلال بالشريط العلوي). الافتراضي **فاتح**
+            // بحسب Design System v1؛ ومن لم يختر شيئاً بعدُ يتبع تفضيل نظام جهازه.
             var zyTheme = null;
             try { zyTheme = localStorage.getItem("ZY.Theme"); } catch (e) { }
-            document.documentElement.setAttribute(
-                "data-theme",
-                zyTheme === "light" ? "light" : "dark"
-            );
+
+            if (zyTheme !== "light" && zyTheme !== "dark") {
+                var prefersDark = window.matchMedia &&
+                    window.matchMedia("(prefers-color-scheme: dark)").matches;
+                zyTheme = prefersDark ? "dark" : "light";
+            }
+
+            document.documentElement.setAttribute("data-theme", zyTheme);
         })();
     </script>
 
@@ -92,6 +97,8 @@
     <link rel="stylesheet" href="~/css/zynora-checkbox.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-file-input.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-kayan-nav.css" asp-append-version="true" />
+
+    @* جسر الصفحات القديمة نُقل إلى ما بعد RenderBody — انظر التعليق هناك *@
 
     @* Branding & Theme Engine injection point (P4): overrides the token contract
        for the active company. Rendered last so it wins the cascade; absent for
@@ -224,7 +231,7 @@
 
         Func<string, string> ActiveClass = path => IsCurrent(path) ? "active nexora-active" : "";
 
-        var employeesOpen = IsUnder("/Employees") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization") || IsUnder("/OrgStructures") || IsUnder("/Alerts") || IsUnder("/LeaveBalances") || IsUnder("/PeopleReports") || IsUnder("/EmployeeTasks") || IsUnder("/Engagement");
+        var employeesOpen = IsUnder("/Employees") || IsUnder("/Contracts") || IsUnder("/Acknowledgments") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization") || IsUnder("/OrgStructures") || IsUnder("/Alerts") || IsUnder("/LeaveBalances") || IsUnder("/PeopleReports") || IsUnder("/EmployeeTasks") || IsUnder("/Engagement");
         var attendanceOpen = IsUnder("/AttendanceOperations") || IsUnder("/AttendanceRecords") || IsUnder("/AttendanceImports") || IsUnder("/AttendanceProcessing") || IsUnder("/AttendanceCorrections") || IsUnder("/Shifts") || IsUnder("/Devices");
         var requestsOpen = IsUnder("/LeaveRequests") || IsUnder("/Approvals") || IsUnder("/SelfServices");
         var payrollOpen = IsUnder("/Payroll");
@@ -312,8 +319,47 @@
                                         <a asp-page="/EmployeeUpdates/Index" class="nexora-nav-link @(IsUnder("/EmployeeUpdates") ? "active nexora-active" : "")">
                                             <span>تحديثات الموظف</span>
                                         </a>
+                                        <a asp-page="/Contracts/Index" class="nexora-nav-link @(IsUnder("/Contracts") ? "active nexora-active" : "")">
+                                            <span>عقود الموظفين</span>
+                                        </a>
+                                        <a asp-page="/Acknowledgments/Index" class="nexora-nav-link @(IsUnder("/Acknowledgments") ? "active nexora-active" : "")">
+                                            <span>الإقرارات</span>
+                                        </a>
+                                        <a asp-page="/Employees/TemporaryHeads" class="nexora-nav-link">
+                                            <span>رئيس وحدة مؤقت</span>
+                                        </a>
+                                        <a asp-page="/CompanyDocuments/Index" class="nexora-nav-link @(IsUnder("/CompanyDocuments") ? "active nexora-active" : "")">
+                                            <span>وثائق الشركة</span>
+                                        </a>
+                                        <a asp-page="/Documents/Templates" class="nexora-nav-link @(IsUnder("/Documents") ? "active nexora-active" : "")">
+                                            <span>منشئ الوثائق</span>
+                                        </a>
+                                        <a asp-page="/Documents/Generate" class="nexora-nav-link">
+                                            <span>توليد الوثائق</span>
+                                        </a>
+                                        <a asp-page="/Documents/Requests" class="nexora-nav-link">
+                                            <span>طلبات الوثائق</span>
+                                        </a>
+                                        <a asp-page="/Payroll/TerminationSettlement" class="nexora-nav-link">
+                                            <span>تسوية الإنهاء — الفروقات</span>
+                                        </a>
+                                        <a asp-page="/HrSettings/ViolationConfiguration" class="nexora-nav-link">
+                                            <span>تهيئة المخالفات</span>
+                                        </a>
+                                        <a asp-page="/HrSettings/Formulas" class="nexora-nav-link">
+                                            <span>مختبر الصيغ</span>
+                                        </a>
+                                        <a asp-page="/Forms/Index" class="nexora-nav-link @(IsUnder("/Forms") ? "active nexora-active" : "")">
+                                            <span>باني النماذج</span>
+                                        </a>
+                                        <a asp-page="/Forms/Submissions" class="nexora-nav-link">
+                                            <span>متابعة النماذج</span>
+                                        </a>
                                         <a asp-page="/Violations/Index" class="nexora-nav-link @(IsUnder("/Violations") ? "active nexora-active" : "")">
                                             <span>حالات المخالفات</span>
+                                        </a>
+                                        <a asp-page="/Violations/Actions" class="nexora-nav-link">
+                                            <span>الإجراءات التأديبية</span>
                                         </a>
                                         <a asp-page="/AssetsManagement/Index" class="nexora-nav-link @(IsUnder("/AssetsManagement") ? "active nexora-active" : "")">
                                             <span>إدارة العهد</span>
@@ -408,8 +454,9 @@
 
                             @if (canManagePeoplePermissions)
                             {
+                                @* كانت معنونة «بطاقات الموظفين» وهي عن الصلاحيات — تسمية مضلِّلة رُصدت بدراسة مركز البطاقات. *@
                                 <a asp-page="/EmployeePermissions/Index" class="nexora-nav-link @(IsUnder("/EmployeePermissions") ? "active nexora-active" : "")">
-                                    <span>بطاقات الموظفين</span>
+                                    <span>صلاحيات الموظفين</span>
                                 </a>
                             }
                         </div>
@@ -604,12 +651,16 @@
                             </div>
                         </details>
 
-                        <details class="ky-acc" @(IsUnder("/Payroll/SalaryItems") || IsUnder("/Payroll/Settings") || IsUnder("/Payroll/BankTemplates") || IsUnder("/Payroll/TaxSocialSecurity") ? "open" : "")>
+                        @* حُذفت صفحة /Payroll/TaxSocialSecurity: بذرة حاسبة سابقة لمحرّك
+                           المسير، كانت تكتب جدولَي PayrollTaxSocialSecurity{Settings,Records}
+                           ولا يقرأهما أحد، بينما المحرّك يقرأ TaxProfiles/GosiProfiles من
+                           «الضريبة والضمان» أدناه — فكان الأدمن يعدّل بلا أثر وبلا تحذير.
+                           الجدولان اليتيمان يبقيان بالقاعدة حتى تُسقطهما هجرة محكومة. *@
+                        <details class="ky-acc" @(IsUnder("/Payroll/SalaryItems") || IsUnder("/Payroll/Settings") || IsUnder("/Payroll/BankTemplates") ? "open" : "")>
                             <summary><span>إعدادات الرواتب</span><span class="ky-acc-chev"></span></summary>
                             <div class="ky-acc-body">
                                 <a asp-page="/Payroll/SalaryItems" class="nexora-nav-link @(IsUnder("/Payroll/SalaryItems") ? "active nexora-active" : "")"><span>عناصر الراتب</span></a>
-                                <a asp-page="/Payroll/Settings" class="nexora-nav-link @(IsUnder("/Payroll/Settings") ? "active nexora-active" : "")"><span>تهيئة الضريبة والضمان</span></a>
-                                <a asp-page="/Payroll/TaxSocialSecurity" class="nexora-nav-link @(IsUnder("/Payroll/TaxSocialSecurity") ? "active nexora-active" : "")"><span>الضرائب والضمان</span></a>
+                                <a asp-page="/Payroll/Settings" class="nexora-nav-link @(IsUnder("/Payroll/Settings") ? "active nexora-active" : "")"><span>الضريبة والضمان</span></a>
                                 <a asp-page="/Payroll/BankTemplates" class="nexora-nav-link @(IsUnder("/Payroll/BankTemplates") ? "active nexora-active" : "")"><span>قوالب ملفات البنوك</span></a>
                             </div>
                         </details>
@@ -683,6 +734,15 @@
 
     @* طبقة المكوّنات الموحّدة — تُحمّل بعد RenderBody فتفوز على CSS الصفحات بترتيب المصدر *@
     <link rel="stylesheet" href="~/css/zynora-components.css" asp-append-version="true" />
+
+    @* جسر الصفحات القديمة — آخر طبقة على الإطلاق.
+       كان بالـ<head> بعد RenderSection("Styles")، لكن صفحات كثيرة تضع وسم
+       <link> الخاص بها **داخل جسم الصفحة** (مثل positions.css بـPositions/Index)
+       فيُحمَّل بعد الـ<head> ويسبق الجسر بترتيب المصدر. النتيجة أن أي قاعدة بالجسر
+       تتساوى تخصصيتها مع قاعدة قديمة كانت تخسر — وهو ما ظهر بـ`#positionForm`
+       حيث تعادلت (1,2,0) وحسم الترتيبُ لصالح الملف القديم.
+       المكان الصحيح هنا بعد RenderBody (نفس علّة zynora-components.css أعلاه). *@
+    <link rel="stylesheet" href="~/css/zynora-legacy-bridge.css" asp-append-version="true" />
 
     <script>
         window.SA_AUTH = {

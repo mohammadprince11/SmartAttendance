@@ -30,7 +30,7 @@ input[type="file"]:not(.no-zy-file):not(.z360-hidden-input):hover {
 
 input[type="file"]:not(.no-zy-file):not(.z360-hidden-input):focus-visible {
     outline: none !important;
-    border-color: var(--sa-primary, #18C7BD) !important;
+    border-color: var(--sa-primary, var(--color-primary)) !important;
     box-shadow: var(--zy-focus-ring, 0 0 0 3px color-mix(in srgb, var(--brand-primary) 22%, transparent)) !important;
 }
 
@@ -42,16 +42,16 @@ input[type="file"]:not(.no-zy-file):not(.z360-hidden-input)::file-selector-butto
     margin-inline-end: 10px !important;
     padding: 7px 16px !important;
     min-height: 30px !important;
-    border: 1px solid var(--sa-primary, #18C7BD) !important;
+    border: 1px solid var(--sa-primary, var(--color-primary)) !important;
     border-radius: 10px !important;
     background: var(--sa-primary-soft, color-mix(in srgb, var(--brand-primary) 12%, transparent)) !important;
-    color: var(--sa-primary, #18C7BD) !important;
+    color: var(--sa-primary, var(--color-primary)) !important;
     cursor: pointer !important;
     transition: background-color .15s ease, color .15s ease !important;
 }
 
 input[type="file"]:not(.no-zy-file):not(.z360-hidden-input)::file-selector-button:hover {
-    background: var(--sa-primary, #18C7BD) !important;
+    background: var(--sa-primary, var(--color-primary)) !important;
     color: #fff !important;
 }
 
@@ -61,9 +61,9 @@ input[type="file"]:not(.no-zy-file):not(.z360-hidden-input)::-webkit-file-upload
     font-weight: 900 !important;
     margin-inline-end: 10px !important;
     padding: 7px 16px !important;
-    border: 1px solid var(--sa-primary, #18C7BD) !important;
+    border: 1px solid var(--sa-primary, var(--color-primary)) !important;
     border-radius: 10px !important;
     background: var(--sa-primary-soft, color-mix(in srgb, var(--brand-primary) 12%, transparent)) !important;
-    color: var(--sa-primary, #18C7BD) !important;
+    color: var(--sa-primary, var(--color-primary)) !important;
     cursor: pointer !important;
 }

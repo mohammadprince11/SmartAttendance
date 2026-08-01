@@ -6,7 +6,7 @@
 
 .zua-page {
     --zua-line: rgba(73, 111, 151, .22);
-    --zua-teal: #12D9E3;
+    --zua-teal: var(--color-primary);
     --zua-green: #4ade80;
     --zua-amber: #facc15;
     --zua-red: #f87171;

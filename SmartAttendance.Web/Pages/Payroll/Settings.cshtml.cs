@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.HrSettings;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages.Payroll;
@@ -22,10 +23,84 @@ public class SettingsModel : PageModel
     public List<PayrollConfigStore.TaxProfile> TaxProfiles { get; set; } = new();
     public List<PayrollConfigStore.GosiProfile> GosiProfiles { get; set; } = new();
 
+    /// <summary>عضوية أوعية كل الملفات — تُغذّي نماذج السلايد بجافاسكربت.</summary>
+    public Dictionary<string, List<string>> BaseMembers { get; set; } = new();
+
+    /// <summary>كتالوج المكوّنات المتاحة للسحب.</summary>
+    public static (string Key, string Label)[] BaseComponents => SalaryBaseComposer.Components;
+
+    /// <summary>عضوية ملف بعينه بالرجوع المتدرّج (خاصّته ← العام ← افتراض الكود).</summary>
+    public List<string> MembersOf(string baseKey, int profileId) =>
+        SalaryBaseStore.Resolve(BaseMembers, baseKey, profileId);
+
+    /// <summary>كتالوج معايير الشروط — يغذّي محرّر شروط الملف (نفس محرّك الشروط العام).</summary>
+    public string CriteriaJson { get; private set; } = "[]";
+
+    /// <summary>سياسة ربط الراتب بالحضور المفعَّلة حالياً.</summary>
+    public AttendanceSalaryLink.Policy LinkPolicy { get; set; } = AttendanceSalaryLink.Policy.Default;
+
+    public string AttendanceLinkMode => LinkPolicy.Mode;
+
     public async Task OnGetAsync()
     {
         TaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_db);
         GosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_db);
+        BaseMembers = await SalaryBaseStore.AllAsync(_db);
+        CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_db);
+        LinkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(_db);
+    }
+
+    /// <summary>
+    /// حفظ سياسة الربط بالحضور. تُغيّر **كل قسيمة قادمة**، فالرسالة تصرّح بالأثر
+    /// بدل أن تكتفي بـ«حُفظ».
+    /// </summary>
+    public async Task<IActionResult> OnPostSaveAttendanceLinkAsync(
+        string mode, decimal absenceDays, bool allowNegative)
+    {
+        var policy = new AttendanceSalaryLink.Policy(mode, absenceDays, allowNegative).Normalized();
+        await AttendanceSalaryLinkSettings.SaveAsync(_db, policy);
+
+        var notes = new List<string> { AttendanceSalaryLink.ModeLabel(policy.Mode) };
+        if (policy.Mode != AttendanceSalaryLink.Lenient)
+            notes.Add("⚠️ من لا بيانات حضور له لن يُحتسب بالمسير القادم");
+        if (policy.AbsenceDeductionDays != 1m)
+            notes.Add($"خصم يوم الغياب = {policy.AbsenceDeductionDays:0.##} يوم");
+        if (policy.AllowNegative)
+            notes.Add("⚠️ الصافي مسموح أن يكون سالباً");
+
+        TempData["PayrollMessage"] = "سياسة الربط بالحضور: " + string.Join(" · ", notes) + ".";
+        return RedirectToPage();
+    }
+
+    /// <summary>
+    /// يحفظ عضوية وعاء الملف من نفس نموذج الملف. يُنادى بعد حفظ الملف لأن
+    /// الملف الجديد لا يملك معرّفاً قبل ذلك.
+    /// وعاء فارغ مسموح عمداً (يعطّل الاقتطاع) لكن الرسالة تُنبّه عليه.
+    /// </summary>
+    private async Task<string> SaveBaseFromFormAsync(string baseKey, int profileId)
+    {
+        var components = Request.Form["member"].Where(m => m != null).Select(m => m!).ToList();
+        await SalaryBaseStore.SaveMembersAsync(_db, baseKey, profileId, components);
+
+        return components.Count == 0
+            ? " ⚠️ الوعاء فارغ — سيصبح الاقتطاع صفراً بالمسير القادم."
+            : $" (وعاء الاحتساب: {components.Count} مكوّن)";
+    }
+
+    /// <summary>
+    /// شروط الملف تمرّ بالمحرّك ذهاباً وإياباً قبل التخزين: JSON ملفّق من الواجهة
+    /// أو حقلٌ بمعيارٍ محذوف يُنظَّف هنا بدل أن يُخزَّن ثم يُتجاهل بصمت وقت الاحتساب.
+    /// </summary>
+    private static string NormalizeConditions(string? raw) =>
+        HrConditions.Serialize(HrConditions.Deserialize(raw));
+
+    /// <summary>سطر يشرح أثر الشروط بالرسالة — الملف المشروط يغيّر اقتطاع من تنطبق عليهم.</summary>
+    private static string ConditionNote(string conditionsJson)
+    {
+        var set = HrConditions.Deserialize(conditionsJson);
+        return set.IsEmpty
+            ? " (بلا شروط — يُطبَّق بالإسناد اليدوي أو بكونه الملف النشط)"
+            : $" (يُطبَّق تلقائياً على: {HrConditions.Describe(set)})";
     }
 
     public async Task<IActionResult> OnPostSaveGosiAsync()
@@ -38,15 +113,18 @@ public class SettingsModel : PageModel
             EmployeeRate = decimal.TryParse(form["EmployeeRate"], out var er) ? er : 0,
             CompanyRate = decimal.TryParse(form["CompanyRate"], out var cr) ? cr : 0,
             Ceiling = decimal.TryParse(form["Ceiling"], out var c) ? c : 0,
-            IsActive = form["IsActive"] == "true"
+            IsActive = form["IsActive"] == "true",
+            ConditionsJson = NormalizeConditions(form["Conditions"]),
+            SortOrder = int.TryParse(form["SortOrder"], out var sort) ? sort : 0
         };
         if (string.IsNullOrWhiteSpace(profile.Name))
         {
             TempData["PayrollMessage"] = "اسم ملف الضمان مطلوب.";
             return RedirectToPage();
         }
-        await PayrollConfigStore.SaveGosiProfileAsync(_db, profile);
-        TempData["PayrollMessage"] = "تم حفظ ملف الضمان.";
+        var gosiId = await PayrollConfigStore.SaveGosiProfileAsync(_db, profile);
+        var gosiNote = await SaveBaseFromFormAsync(SalaryBaseComposer.GosiBaseKey, gosiId);
+        TempData["PayrollMessage"] = "تم حفظ ملف الضمان." + ConditionNote(profile.ConditionsJson) + gosiNote;
         return RedirectToPage();
     }
 
@@ -65,7 +143,9 @@ public class SettingsModel : PageModel
             Id = int.TryParse(form["Id"], out var id) ? id : 0,
             Name = form["Name"].ToString().Trim(),
             ExemptionAmount = decimal.TryParse(form["ExemptionAmount"], out var ex) ? ex : 0,
-            IsActive = form["IsActive"] == "true"
+            IsActive = form["IsActive"] == "true",
+            ConditionsJson = NormalizeConditions(form["Conditions"]),
+            SortOrder = int.TryParse(form["SortOrder"], out var sort) ? sort : 0
         };
         if (string.IsNullOrWhiteSpace(profile.Name))
         {
@@ -84,8 +164,9 @@ public class SettingsModel : PageModel
             profile.Brackets.Add(new PayrollConfigStore.TaxBracket { FromAmount = from, ToAmount = to, Rate = rate });
         }
 
-        await PayrollConfigStore.SaveTaxProfileAsync(_db, profile);
-        TempData["PayrollMessage"] = "تم حفظ ملف الضريبة وشرائحه.";
+        var taxId = await PayrollConfigStore.SaveTaxProfileAsync(_db, profile);
+        var taxNote = await SaveBaseFromFormAsync(SalaryBaseComposer.TaxBaseKey, taxId);
+        TempData["PayrollMessage"] = "تم حفظ ملف الضريبة وشرائحه." + ConditionNote(profile.ConditionsJson) + taxNote;
         return RedirectToPage();
     }
 

@@ -1,0 +1,181 @@
+@page
+@model SmartAttendance.Web.Pages.Forms.SubmissionsModel
+
+@{
+    ViewData["Title"] = "متابعة النماذج";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">باني النماذج</a>
+        <h1>متابعة النماذج</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>الاستجابات</span>
+            <h2>ما وصل</h2>
+            <p class="zyp-hint">
+                الطلبات المخصصة والاستبيانات بشاشة واحدة — لأن الباني واحد والمخزن واحد.
+            </p>
+        </header>
+
+        <div class="zyp-actions" style="justify-content:flex-start;flex-wrap:wrap">
+            <span class="zyp-count" data-zero="@((Model.PendingCount > 0).ToString().ToLowerInvariant())" style="padding:4px 10px">
+                مُستلَم بانتظار المراجعة: @Model.PendingCount
+            </span>
+        </div>
+
+        <form method="get" class="zyp-editor-grid" style="border:0;padding:0">
+            <label>
+                النموذج
+                <select asp-for="TemplateFilter" name="form">
+                    <option value="">كل النماذج</option>
+                    @foreach (var template in Model.Templates)
+                    {
+                        <option value="@template.Id">@template.Name — @template.TypeLabel</option>
+                    }
+                </select>
+            </label>
+            <label>
+                الحالة
+                <select asp-for="StatusFilter">
+                    <option value="All">الكل</option>
+                    <option value="Submitted">مُستلَم</option>
+                    <option value="Approved">معتمد</option>
+                    <option value="Rejected">مرفوض</option>
+                </select>
+            </label>
+            <label style="justify-content:flex-end">&nbsp;<button type="submit" class="zyc-add-rule" style="align-self:stretch">تطبيق</button></label>
+        </form>
+
+        @if (Model.Submissions.Count == 0)
+        {
+            <p class="zyc-empty">لا استجابات تطابق التصفية.</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>الموظف</th>
+                        <th>النموذج</th>
+                        <th>التاريخ</th>
+                        <th>الحالة</th>
+                        <th style="width:260px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Submissions)
+                    {
+                        <tr>
+                            <td>
+                                <b>@row.EmployeeName</b>
+                                <div class="zyp-conditions">@row.EmployeeNo</div>
+                            </td>
+                            <td>@row.TemplateName</td>
+                            <td class="zyp-conditions">@row.SubmittedAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
+                            <td class="zyp-conditions">
+                                @row.StatusText
+                                @if (!string.IsNullOrWhiteSpace(row.ReviewNote))
+                                {
+                                    <div>@row.ReviewNote</div>
+                                }
+                            </td>
+                            <td>
+                                <div class="zyp-actions" style="margin-bottom:6px">
+                                    <a asp-page="./Submissions" asp-route-open="@row.Id"
+                                       asp-route-form="@Model.TemplateFilter" asp-route-statusFilter="@Model.StatusFilter">عرض الإجابات</a>
+                                </div>
+                                @* الاستبيان لا يُعتمد ولا يُرفض — يُقرأ. الاعتماد للطلبات وحدها. *@
+                                @if (row.IsPending && !row.IsSurvey)
+                                {
+                                    <form method="post" asp-page-handler="Review" style="display:flex;gap:6px">
+                                        <input type="hidden" name="id" value="@row.Id" />
+                                        <input name="note" placeholder="ملاحظة / سبب الرفض"
+                                               style="flex:1;padding:5px 8px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:inherit;font-size:.75rem" />
+                                        <button type="submit" name="approve" value="true" class="zyp-move">اعتمد</button>
+                                        <button type="submit" name="approve" value="false" class="zyp-move">رفض</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @if (Model.Opened is { } opened)
+    {
+        <div class="nxhs-panel zyp-copies">
+            <header>
+                <span>@opened.EmployeeName</span>
+                <h2>@opened.TemplateName</h2>
+                <p class="zyp-hint">
+                    الإجابات محفوظة <b>مع نصّ أسئلتها</b> — تعديل السؤال لاحقاً لا يغيّر
+                    معنى إجابةٍ أُعطيت.
+                </p>
+            </header>
+
+            <table class="zyp-table">
+                <thead><tr><th>السؤال</th><th>الإجابة</th></tr></thead>
+                <tbody>
+                    @foreach (var answer in Model.Answers)
+                    {
+                        <tr>
+                            <td>@answer.FieldLabel</td>
+                            <td class="@(string.IsNullOrWhiteSpace(answer.Value) ? "zyp-conditions" : "")">
+                                @(string.IsNullOrWhiteSpace(answer.Value) ? "— لم يُجب" : answer.Value)
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (Model.RatingAverages.Count > 0)
+    {
+        <div class="nxhs-panel zyp-copies">
+            <header>
+                <span>تحليل</span>
+                <h2>متوسّط أسئلة التقييم</h2>
+                <p class="zyp-hint">
+                    <b>الإجابات غير الرقمية تُتجاهل لا تُعامَل صفراً</b> — صفرٌ بمكان
+                    «لم يُجب» يسحب المتوسّط لأسفل ويكذب على قارئه.
+                </p>
+            </header>
+
+            <table class="zyp-table">
+                <thead><tr><th>السؤال</th><th>المتوسّط</th><th>عدد المجيبين</th></tr></thead>
+                <tbody>
+                    @foreach (var (label, stats) in Model.RatingAverages.OrderByDescending(entry => entry.Value.Average))
+                    {
+                        <tr>
+                            <td>@label</td>
+                            <td class="zyp-count"><b>@stats.Average</b></td>
+                            <td class="zyp-count">@stats.Count</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@section Scripts {
+
+}

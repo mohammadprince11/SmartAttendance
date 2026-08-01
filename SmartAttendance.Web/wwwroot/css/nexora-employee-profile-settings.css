@@ -70,7 +70,7 @@
 
 .nxr-profile-settings-badge strong {
     display: block;
-    color: #22d3ee;
+    color: var(--color-primary-text);
     font-size: 36px;
     line-height: 1;
 }
@@ -170,7 +170,7 @@
 .nxr-profile-settings-check input {
     width: 18px;
     height: 18px;
-    accent-color: #22d3ee;
+    accent-color: var(--color-primary);
 }
 
 .nxr-profile-settings-actions {
@@ -181,7 +181,7 @@
 .nxr-profile-settings-field-row form button {
     border: 1px solid rgba(34, 211, 238, .30);
     border-radius: 15px;
-    background: linear-gradient(135deg, #22d3ee, #29d5d8);
+    background: linear-gradient(135deg, var(--color-primary), #29d5d8);
     color: #03202c;
     min-height: 48px;
     padding: 0 18px;
@@ -219,7 +219,7 @@
     border-radius: 14px;
     background: rgba(34, 211, 238, .10);
     border: 1px solid rgba(34, 211, 238, .22);
-    color: #22d3ee;
+    color: var(--color-primary-text);
     font-size: 20px;
 }
 
@@ -624,7 +624,7 @@ body.nxr-profile-settings-modal-active {
     display: grid;
     place-items: center;
     color: #03202c;
-    background: linear-gradient(135deg, #f5c96b, #22d3ee);
+    background: linear-gradient(135deg, #f5c96b, var(--color-primary));
     font-weight: 1000;
 }
 
@@ -1596,7 +1596,7 @@ body.nxr-profile-settings-modal-active .nxr-profile-settings-section:hover {
     border-radius: 13px;
     border: 1px solid rgba(34, 211, 238, .24);
     background: rgba(34, 211, 238, .08);
-    color: #22d3ee;
+    color: var(--color-primary-text);
     display: grid;
     place-items: center;
     font-weight: 1000;
@@ -1809,7 +1809,7 @@ body.nxr-profile-settings-modal-active .nxr-profile-settings-section:hover {
 
 .nxr-profile-settings-page-v2 .nxr-profile-settings-section button[aria-expanded="false"] {
     border-color: rgba(34,211,238,.28) !important;
-    color: #22d3ee !important;
+    color: var(--color-primary-text) !important;
     background: rgba(34,211,238,.08) !important;
 }
 /* NEXORA_FIX18E_PROFILE_SETTINGS_CLOSE_TOGGLE_STYLE_END */

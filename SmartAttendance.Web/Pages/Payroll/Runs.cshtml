@@ -1,9 +1,11 @@
 @page "/Payroll/Runs"
 @model SmartAttendance.Web.Pages.Payroll.RunsModel
 @using SmartAttendance.Web.Infrastructure.Hrms
+@using System.Text.Json
 
 @{
     ViewData["Title"] = "المسير";
+    var empJson = JsonSerializer.Serialize(Model.Employees.Select(e => new { e.Id, e.No, e.Name }));
     var months = new[] { "يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر" };
     string[] stages = { "Draft","Calculated","Locked","Issued","PayslipSent" };
     string[] stageLabels = { "مسودة","محتسب","مقفل","معتمد","قسائم" };
@@ -11,9 +13,19 @@
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/mass-scope.css" asp-append-version="true" />
 
 <style>
-    .pr-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
+    .pr-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:#12D9E3; }
+    .pr-scope { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:900; padding:2px 9px; border-radius:999px;
+        background:rgba(143,168,188,.16); color:var(--sa-muted,#8FA8BC); }
+    .pr-scope.narrow { background:rgba(96,165,250,.16); color:#60a5fa; }
+    .pr-prev { border:1px solid rgba(73,111,151,.25); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; background:rgba(0,0,0,.12); }
+    .pr-prev[hidden] { display:none; }
+    .pr-prev h4 { margin:0; font-size:12px; font-weight:1000; }
+    .pr-chips { display:flex; flex-wrap:wrap; gap:5px; max-height:132px; overflow-y:auto; }
+    .pr-chip { font-size:11px; font-weight:900; padding:3px 9px; border-radius:999px; background:rgba(74,222,128,.14); color:#4ade80; direction:ltr; }
+    .pr-chip.bad { background:rgba(248,113,113,.14); color:#f87171; }
     .pr-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
         padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
         background:radial-gradient(circle at 92% 8%,rgba(18,217,227,.12),transparent 38%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
@@ -115,6 +127,10 @@
     {
         <div class="pr-alert @((TempData["PayrollOk"] as bool?) == false ? "err" : "")">@TempData["PayrollMessage"]</div>
     }
+    @if (TempData["PayrollMissingCodes"] != null)
+    {
+        <div class="pr-alert err">@TempData["PayrollMissingCodes"]</div>
+    }
 
     <div class="pr-card">
         @if (Model.Runs.Count == 0)
@@ -126,7 +142,7 @@
             <table class="pr-table">
                 <thead>
                     <tr>
-                        <th>رقم الدفعة</th><th>الفترة</th><th>الحالة والتقدّم</th><th>الموظفون</th>
+                        <th>رقم الدفعة</th><th>الفترة</th><th>الحالة والتقدّم</th><th>النطاق</th><th>الموظفون</th>
                         <th>الإجمالي</th><th>الاستقطاعات</th><th>الصافي</th><th>حصة الشركة</th><th>محتسب بواسطة</th>
                         <th style="text-align:end">إجراءات</th>
                     </tr>
@@ -148,6 +164,7 @@
                                     <b class="st-@run.Status">@run.StatusLabelText</b>
                                 </div>
                             </td>
+                            <td><span class="pr-scope @(run.ScopeCount > 0 ? "narrow" : "")">@run.ScopeText</span></td>
                             <td class="pr-num">@run.EmployeeCount</td>
                             <td class="pr-num">@run.TotalGross.ToString("#,0.##")</td>
                             <td class="pr-num">@deductions.ToString("#,0.##")</td>
@@ -162,6 +179,7 @@
                                     }
                                     @if (run.Status is "Draft" or "Calculated")
                                     {
+                                        <button type="button" class="pr-btn ghost sm" onclick="prScopeEdit(@run.Id, '@run.ScopeMode')">النطاق</button>
                                         <form method="post" asp-page-handler="Calculate"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit">@(run.Status == "Draft" ? "احتساب" : "إعادة")</button></form>
                                     }
                                     @if (run.Status == "Calculated")
@@ -191,35 +209,202 @@
     </div>
 
     <div class="hrms-slideover-backdrop" id="pr-backdrop" onclick="prClose()"></div>
-    <aside class="hrms-slideover" id="pr-slide" aria-hidden="true">
+    <aside class="hrms-slideover wide" id="pr-slide" aria-hidden="true">
         <div class="hrms-slideover-head">
-            <h2>دفعة مسير جديدة</h2>
+            <h2 id="pr-slide-title">دفعة مسير جديدة</h2>
             <button type="button" class="hrms-slideover-close" onclick="prClose()">×</button>
         </div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="Create" class="pr-form" style="display:flex;flex-direction:column;gap:12px">
-                <label>السنة<input type="number" name="year" min="2000" max="2100" value="@Model.NewYear" /></label>
-                <label>الشهر
-                    <select name="month">
-                        @for (var m = 1; m <= 12; m++)
-                        {
-                            <option value="@m" selected="@(m == Model.NewMonth)">@months[m-1] (@m)</option>
-                        }
-                    </select>
-                </label>
-                <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800">
-                    تُنشأ الدفعة كمسودة. بعدها «احتساب» يبني رواتب الموظفين من الأساسي والعلاوات والحضور المعتمد وخصومات المخالفات.
+            <form method="post" id="pr-form" asp-page-handler="Create" enctype="multipart/form-data" class="pr-form" style="display:flex;flex-direction:column;gap:12px">
+                <input type="hidden" name="id" id="pr-run-id" value="0" />
+                <input type="hidden" name="ScopeMode" id="mass-ScopeMode" value="All" />
+
+                <div id="pr-period-block" style="display:flex;flex-direction:column;gap:12px">
+                    <label>السنة<input type="number" name="year" min="2000" max="2100" value="@Model.NewYear" /></label>
+                    <label>الشهر
+                        <select name="month">
+                            @for (var m = 1; m <= 12; m++)
+                            {
+                                <option value="@m" selected="@(m == Model.NewMonth)">@months[m-1] (@m)</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+
+                @* ===== النطاق — من يشمله هذا التشغيل (نمط كيان «النطاق») ===== *@
+                <div class="mass-sec">النطاق — من يشمله هذا التشغيل</div>
+                <div class="mass-tabs">
+                    <button type="button" class="mass-tab on" data-m="All" onclick="prScope('All')">كل الموظفين</button>
+                    <button type="button" class="mass-tab" data-m="Manual" onclick="prScope('Manual')">تحديد أشخاص</button>
+                    <button type="button" class="mass-tab" data-m="Paste" onclick="prScope('Paste')">لصق أكواد</button>
+                    <button type="button" class="mass-tab" data-m="File" onclick="prScope('File')">ملف إكسل</button>
+                    <button type="button" class="mass-tab" data-m="Criteria" onclick="prScope('Criteria')">قسم/فرع</button>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-All">
+                    <p class="mass-hint">يشمل التشغيل <b>كل الموظفين النشطين</b> — السلوك الافتراضي. من لا راتب أساسي له يُتخطّى ويُعرض عدده بعد الاحتساب.</p>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-Manual" hidden>
+                    <label>الموظفون <span id="mass-count" style="color:var(--acc)">(0 محدد)</span></label>
+                    <div style="display:flex;gap:6px">
+                        <input type="text" id="mass-empsearch" placeholder="بحث بالاسم أو الرمز" oninput="massRenderEmps()"
+                               style="flex:1;min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-weight:800" />
+                        <button type="button" class="pr-btn ghost sm" onclick="massSelectAll(true)">تحديد الظاهر</button>
+                        <button type="button" class="pr-btn ghost sm" onclick="massSelectAll(false)">مسح الكل</button>
+                    </div>
+                    <div id="mass-emplist" class="mass-list"></div>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-Paste" hidden>
+                    <div class="mass-paste-head">
+                        <b>أكواد الموظفين <span id="mass-codecount">(0 كود)</span></b>
+                        <span style="display:flex;gap:6px">
+                            <button type="button" class="pr-btn ghost sm" onclick="massPasteClip()">📋 لصق من الحافظة</button>
+                            <button type="button" class="pr-btn sm" onclick="prCheckCodes()">تحقّق من الأكواد</button>
+                        </span>
+                    </div>
+                    <textarea name="MassCodes" id="mass-codes" rows="6" placeholder="انسخ عمود الأكواد من إكسل وألصقه هنا (Ctrl+V) — الأسطر والتاب والفواصل تُفكَّك تلقائياً"
+                              oninput="massCodeCount()" onpaste="massOnPaste(event)"></textarea>
+                    <p class="mass-hint">اضغط «تحقّق من الأكواد» لترى <b>الموجود مقابل المفقود قبل التشغيل</b> — كود مخطئ واحد يعني موظفاً يغيب عن راتب الشهر.</p>
+                    <div class="pr-prev" id="pr-prev" hidden>
+                        <h4 id="pr-prev-ok" style="color:#4ade80"></h4>
+                        <div class="pr-chips" id="pr-prev-ok-list"></div>
+                        <h4 id="pr-prev-bad" style="color:#f87171"></h4>
+                        <div class="pr-chips" id="pr-prev-bad-list"></div>
+                    </div>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-File" hidden>
+                    <div class="mass-file-hint"><b style="color:var(--acc)">تنسيق الملف:</b> عمود واحد يحوي <b>رمز الموظف</b> (صف الترويسة يُتخطّى تلقائياً إن لم يكن كوداً).</div>
+                    <label>الملف (.xlsx أو .csv)<input type="file" name="massFile" accept=".xlsx,.csv" style="min-height:auto;padding:8px" /></label>
+                </div>
+
+                <div class="mass-pane" id="mass-pane-Criteria" hidden>
+                    <p class="mass-hint">يشمل التشغيل <b>كل الموظفين النشطين</b> المطابقين للمعايير المختارة.</p>
+                    <label>القسم
+                        <select name="MassDept">
+                            <option value="">كل الأقسام</option>
+                            @foreach (var s in Model.AllDepartments)
+                            { <option value="@s">@s</option> }
+                        </select>
+                    </label>
+                    <label>الفرع
+                        <select name="MassBranch">
+                            <option value="">كل الفروع</option>
+                            @foreach (var s in Model.AllBranches)
+                            { <option value="@s">@s</option> }
+                        </select>
+                    </label>
+                    <label>المسمى الوظيفي
+                        <select name="MassJobTitle">
+                            <option value="">كل المسميات</option>
+                            @foreach (var s in Model.AllJobTitles)
+                            { <option value="@s">@s</option> }
+                        </select>
+                    </label>
+                </div>
+
+                <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800" id="pr-foot-hint">
+                    تُنشأ الدفعة كمسودة. بعدها «احتساب» يبني رواتب من يشملهم النطاق من الأساسي والعلاوات والحضور المعتمد وخصومات المخالفات.
                 </p>
-                <button type="submit" class="pr-btn">إنشاء الدفعة</button>
+                <button type="submit" class="pr-btn" id="pr-submit">إنشاء الدفعة</button>
             </form>
         </div>
     </aside>
 </section>
 
 @section Scripts {
+    <script src="~/js/mass-scope.js" asp-append-version="true"></script>
     <script>
-        function prOpen() { document.getElementById('pr-slide').classList.add('open'); document.getElementById('pr-backdrop').classList.add('open'); }
+        window.MASS_EMP = @Html.Raw(empJson);
+        var PR_PANES = ['All', 'Manual', 'Paste', 'File', 'Criteria'];
+
+        // الأكواد نصٌّ يكتبه المستخدم والأسماء تأتي من القاعدة — كلاهما يُهرَّب قبل الحقن.
+        function prEsc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
+        // تبويبات النطاق: نسخة الصفحة تضيف تبويب «الكل» فوق الأربعة المشتركة.
+        function prScope(mode) {
+            document.getElementById('mass-ScopeMode').value = mode;
+            document.querySelectorAll('#pr-slide .mass-tab').forEach(function (t) {
+                t.classList.toggle('on', t.getAttribute('data-m') === mode);
+            });
+            PR_PANES.forEach(function (k) {
+                var p = document.getElementById('mass-pane-' + k); if (p) p.hidden = (k !== mode);
+            });
+            if (mode === 'Paste') massCodeCount();
+        }
+
+        function prReset() {
+            document.getElementById('pr-form').reset();
+            massBuildEmps(); massCount(); massCodeCount();
+            document.getElementById('pr-prev').hidden = true;
+            prScope('All');
+        }
+
+        function prOpen() {
+            var f = document.getElementById('pr-form');
+            f.setAttribute('action', window.location.pathname + '?handler=Create');
+            document.getElementById('pr-slide-title').textContent = 'دفعة مسير جديدة';
+            document.getElementById('pr-submit').textContent = 'إنشاء الدفعة';
+            document.getElementById('pr-period-block').hidden = false;
+            prReset();
+            document.getElementById('pr-run-id').value = '0';
+            document.getElementById('pr-slide').classList.add('open');
+            document.getElementById('pr-backdrop').classList.add('open');
+        }
+
+        // تعديل نطاق دفعة قائمة قبل قفلها — نفس النموذج بلا حقول الفترة.
+        function prScopeEdit(runId, mode) {
+            var f = document.getElementById('pr-form');
+            f.setAttribute('action', window.location.pathname + '?handler=SetScope');
+            document.getElementById('pr-slide-title').textContent = 'نطاق الدفعة #' + runId;
+            document.getElementById('pr-submit').textContent = 'حفظ النطاق';
+            document.getElementById('pr-foot-hint').textContent = 'النطاق يُحفظ مع الدفعة، فإعادة الاحتساب لاحقاً تلتزم به. بعد الحفظ شغّل «الاحتساب» ليأخذ أثره.';
+            prReset();
+            document.getElementById('pr-period-block').hidden = true;
+            document.getElementById('pr-run-id').value = runId;
+            prScope(mode && mode !== 'All' ? mode : 'All');
+            document.getElementById('pr-slide').classList.add('open');
+            document.getElementById('pr-backdrop').classList.add('open');
+        }
+
         function prClose() { document.getElementById('pr-slide').classList.remove('open'); document.getElementById('pr-backdrop').classList.remove('open'); }
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') prClose(); });
+
+        // معاينة الأكواد قبل التشغيل: الموجود مقابل المفقود — الفارق عن كيان/ZenHR
+        // حيث لا يظهر الكود المخطئ إلا بعد الاحتساب (وقد غاب موظف عن راتبه).
+        function prCheckCodes() {
+            var codes = document.getElementById('mass-codes').value || '';
+            var token = document.querySelector('#pr-form input[name="__RequestVerificationToken"]');
+            var body = new FormData();
+            body.append('codes', codes);
+            fetch(window.location.pathname + '?handler=PreviewCodes', {
+                method: 'POST',
+                headers: token ? { 'RequestVerificationToken': token.value } : {},
+                body: body
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var box = document.getElementById('pr-prev');
+                var ok = d.matched || [], bad = d.missing || [];
+                document.getElementById('pr-prev-ok').textContent = '✓ موجود: ' + ok.length;
+                document.getElementById('pr-prev-ok-list').innerHTML = ok.map(function (e) {
+                    return '<span class="pr-chip">' + prEsc(e.no) + ' — ' + prEsc(e.name) + '</span>';
+                }).join('');
+                document.getElementById('pr-prev-bad').textContent = bad.length ? ('✕ غير موجود: ' + bad.length) : '';
+                document.getElementById('pr-prev-bad-list').innerHTML = bad.map(function (c) {
+                    return '<span class="pr-chip bad">' + prEsc(c) + '</span>';
+                }).join('');
+                box.hidden = false;
+            })
+            .catch(function () { alert('تعذّر التحقق من الأكواد — أعد المحاولة.'); });
+        }
+
+        massBuildEmps();
     </script>
 }

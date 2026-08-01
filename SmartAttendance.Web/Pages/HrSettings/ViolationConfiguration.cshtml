@@ -1,0 +1,127 @@
+@page
+@model SmartAttendance.Web.Pages.HrSettings.ViolationConfigurationModel
+
+@{
+    ViewData["Title"] = "تهيئة المخالفات";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">إعدادات الموارد البشرية</a>
+        <h1>تهيئة المخالفات</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <form method="post" class="nxhs-panel zyp-editor">
+        <h3>ضمانات الانضباط</h3>
+        <p class="zyp-hint">
+            كل التواريخ تُحسب من <b>تاريخ التبليغ</b> لا من تاريخ وقوع المخالفة —
+            المهلة تبدأ حين يَعلم الموظف، وهذا فرق يحسم الطعون.
+        </p>
+
+        <div class="zyp-editor-grid">
+            <label>
+                مهلة الاعتراض (يوم) — صفر = لا اعتراض
+                <input asp-for="ObjectionDays" type="number" min="0" />
+            </label>
+            <label>
+                إلزام أخذ ردّ الموظف قبل القرار
+                <select asp-for="RequireEmployeeReply">
+                    <option value="false">لا</option>
+                    <option value="true">نعم</option>
+                </select>
+            </label>
+            <label>
+                مهلة الردّ (يوم)
+                <input asp-for="ReplyDays" type="number" min="0" />
+            </label>
+            <label>
+                إلزام موافقة لجنة
+                <select asp-for="RequireCommitteeApproval">
+                    <option value="false">لا</option>
+                    <option value="true">نعم</option>
+                </select>
+            </label>
+            <label>
+                مدّة إسقاط العقوبة (شهر) — صفر = لا تسقط
+                <input asp-for="DropMonths" type="number" min="0" />
+            </label>
+            <label>
+                بادئة الرقم المرجعي
+                <input asp-for="RefPrefix" placeholder="VC" />
+            </label>
+        </div>
+
+        <p class="zyp-hint">
+            <b>لماذا يهمّ الإسقاط؟</b> العقوبة الساقطة لا تُحتسب بتدرّج العقوبة اللاحق.
+            بلا مدّة، يُعاقَب الموظف اليوم كمكرِّر بسبب مخالفةٍ عمرها ثلاث سنوات.
+            @if (Model.DropMonths > 0)
+            {
+                <b> — بالمدّة الحالية: @Model.DroppedByCurrentSetting من @Model.TotalCases حالة ساقطة أصلاً.</b>
+            }
+            else
+            {
+                <span> — الآن: لا تسقط أي عقوبة (سلوك النظام الحالي، بلا تغيير).</span>
+            }
+        </p>
+
+        <footer class="nxhs-actions">
+            <button type="submit">حفظ التهيئة</button>
+        </footer>
+    </form>
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>السند النظامي</span>
+            <h2>رقم الفقرة من لائحة الجزاءات</h2>
+            <p class="zyp-hint">لكل نوع مخالفة سندُه بلائحة الجزاءات — يُذكر بكتاب العقوبة.</p>
+        </header>
+
+        @if (Model.ViolationTypes.Count == 0)
+        {
+            <p class="zyc-empty">
+                لا أنواع مخالفات معرَّفة — عرّفها أولاً من
+                <a asp-page="/DisciplinaryRules/Index">قواعد الانضباط</a>.
+            </p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>نوع المخالفة</th>
+                        <th style="width:220px">رقم الفقرة</th>
+                        <th style="width:110px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var (id, name, clause) in Model.ViolationTypes)
+                    {
+                        <tr>
+                            <td><b>@name</b></td>
+                            <td colspan="2">
+                                <form method="post" asp-page-handler="Clause" style="display:flex;gap:8px">
+                                    <input type="hidden" name="id" value="@id" />
+                                    <input name="clause" value="@clause" placeholder="مثال: المادة 12 / فقرة ب"
+                                           style="flex:1;padding:6px 10px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:inherit;font-size:.8125rem" />
+                                    <button type="submit" class="zyc-add-rule" style="align-self:stretch">حفظ</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</section>
+
+@section Scripts {
+
+}

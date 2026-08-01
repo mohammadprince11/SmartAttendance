@@ -1,0 +1,151 @@
+@page
+@model SmartAttendance.Web.Pages.Acknowledgments.TrackingModel
+
+@{
+    ViewData["Title"] = "متابعة الإقرارات";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">قوالب الإقرارات</a>
+        <h1>متابعة الإقرارات</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>الإثبات</span>
+            <h2>سجلّ الإبلاغ</h2>
+            <p class="zyp-hint">
+                <b>المشاهدة والموافقة حالتان منفصلتان.</b> «أُرسل ولم يُشاهَد» هو ما
+                تحتاجه لتقول «أُبلِغ ولم يستجب» — وهو موقف مختلف تماماً عن «شوهد ولم يُوافَق عليه».
+            </p>
+        </header>
+
+        <div class="zyp-actions" style="justify-content:flex-start;flex-wrap:wrap">
+            <span class="zyp-rank" style="min-width:auto;padding:4px 10px">أُرسل: @Model.TotalSent</span>
+            <span class="zyp-rank" style="min-width:auto;padding:4px 10px">شوهد: @Model.TotalViewed</span>
+            <span class="zyp-rank" style="min-width:auto;padding:4px 10px">وافق: @Model.TotalAccepted</span>
+            @if (Model.TotalDeclined > 0)
+            {
+                <span class="zyp-rank" style="min-width:auto;padding:4px 10px">رفض: @Model.TotalDeclined</span>
+            }
+            @if (Model.NeverOpened > 0)
+            {
+                <span class="zyp-count" data-zero="true" style="padding:4px 10px">⚠ لم يُفتح: @Model.NeverOpened</span>
+            }
+        </div>
+
+        <form method="get" class="zyp-editor-grid" style="border:0;padding:0">
+            <label>
+                القالب
+                <select asp-for="TemplateFilter">
+                    <option value="">كل القوالب</option>
+                    @foreach (var template in Model.Templates)
+                    {
+                        <option value="@template.Id">@template.Name</option>
+                    }
+                </select>
+            </label>
+            <label>
+                العرض
+                <select asp-for="PendingOnly">
+                    <option value="false">الكل</option>
+                    <option value="true">المعلّق فقط (بلا موافقة ولا رفض)</option>
+                </select>
+            </label>
+            <label style="justify-content:flex-end">
+                &nbsp;
+                <button type="submit" class="zyc-add-rule" style="align-self:stretch">تطبيق</button>
+            </label>
+        </form>
+
+        @if (Model.Assignments.Count == 0)
+        {
+            <p class="zyc-empty">لا إرسالات — أرسل قالباً من صفحة القوالب.</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>اسم الموظف</th>
+                        <th>اسم القالب</th>
+                        <th>تاريخ الإرسال</th>
+                        <th>تمت المشاهدة</th>
+                        <th>موافقة الموظف</th>
+                        <th>الحالة</th>
+                        <th style="width:160px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Assignments)
+                    {
+                        <tr>
+                            <td>
+                                <b>@row.EmployeeName</b>
+                                <div class="zyp-conditions">@row.EmployeeNo</div>
+                            </td>
+                            <td>@row.TemplateName</td>
+                            <td class="zyp-conditions">@row.SentAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
+                            <td class="zyp-conditions">
+                                @(row.Viewed ? row.ViewedAt!.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm") : "لا")
+                            </td>
+                            <td class="zyp-conditions">
+                                @if (row.Accepted)
+                                {
+                                    <span>نعم — @row.AcceptedAt!.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</span>
+                                }
+                                else if (row.Declined)
+                                {
+                                    <span>رفض — @row.DeclinedAt!.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</span>
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="zyp-count" data-zero="@(row.NeedsAction.ToString().ToLowerInvariant())">
+                                    @row.StatusLabel
+                                </span>
+                            </td>
+                            <td>
+                                <div class="zyp-actions">
+                                    @if (row.NeedsAction)
+                                    {
+                                        <form method="post" asp-page-handler="Remind" style="display:inline">
+                                            <input type="hidden" name="id" value="@row.Id" />
+                                            <button type="submit">إعادة إرسال</button>
+                                        </form>
+                                        <form method="post" asp-page-handler="Delete" style="display:inline">
+                                            <input type="hidden" name="id" value="@row.Id" />
+                                            <button type="submit" data-zyconfirm="حذف الإرسال؟">حذف</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="zyp-conditions">محسوم — يُحفظ كإثبات</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</section>
+
+<script src="~/js/zynora-confirm.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+
+}

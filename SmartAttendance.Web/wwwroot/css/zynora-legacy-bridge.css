@@ -1,0 +1,511 @@
+/* ============================================================================
+   جسر الصفحات القديمة — Design System v1
+   ----------------------------------------------------------------------------
+   لماذا ملف منفصل بدل تعديل الملفات القديمة:
+
+   جُرّب التعديل المباشر على nexora-setup-pages.css مرّتين وفشل مرّتين. السبب أن
+   ألوان النص وألوان السطح موزّعة على **قواعد منفصلة** بالملف، فأي تحويل ميكانيكي
+   يصلح طرفاً ويكسر الآخر: تحويل النصوص وحدها ترك نصّاً داكناً على بطاقة داكنة،
+   وتحويل الأسطح وحدها ترك نصّاً أبيض على سطح فاتح (ارتفعت المشاكل من 33 إلى 82).
+
+   الطريقة هنا معاكسة ومضمونة: تُقاس الصفحة **وهي تعمل** بالمتصفح، فيُستخرج اسم
+   القاعدة المسؤولة عن كل نصّ غير مقروء بالضبط، ويُكتب لها تصحيح واحد بالتوكنز.
+   النتيجة تنقلب مع الوضع الفاتح/الداكن تلقائياً، والملف القديم يبقى سليماً فيمكن
+   حذف هذا الجسر كلّه يوم تُرحَّل الصفحة بنيوياً.
+
+   قاعدة الإضافة: لا يُضاف سطر هنا إلا وقد قِيس قبله وبعده على الصفحة الحيّة.
+   ============================================================================ */
+
+/* ===================== /Setup — إعداد الشركة وهيكل العمل =====================
+   قياس 2026-07-31: 33 عنصراً دون حدّ القراءة، أسوأها عنوان الصفحة نفسه (1.12:1)
+   وأسماء الفروع والأقسام — نصوص بيضاء من عهد القوقعة الداكنة على أسطح فاتحة. */
+
+.nexora-setup-hero h1,
+.nexora-setup-card-head strong,
+.nx-company-setup-summary strong,
+.nx-company-logo-card > strong {
+    color: var(--color-text-primary);
+}
+
+.nexora-setup-hero p,
+.nexora-setup-card-head small,
+.nx-company-setup-summary span,
+.nx-company-setup-page .nx-setup-pagination__summary,
+.nx-company-selector label,
+.nx-company-logo-card > small,
+.nx-setup-field span,
+.nx-setup-check span {
+    color: var(--color-text-secondary);
+}
+
+/* شارة «فعال» ونظائرها: كانت تعتمد لون العلامة الخام (2.11:1 على الأبيض) */
+
+/* ===================== عناصر تظهر بكل الصفحات ===================== */
+
+/* منتقي التاريخ: قيمة الحقل كانت #F2FBFD شبه بيضاء على سطح فاتح (1.05:1).
+   يظهر المكوّن بأغلب الصفحات، فالسطر الواحد هنا أصلح 6 صفحات دفعةً (قياس آلي
+   بـ`scripts/ui/contrast-scan.js` قبل/بعد). بقية أجزاء المكوّن قِيست ومرّت. */
+.nxcal__value.nxcal__value {
+    color: var(--color-text-primary) !important;
+}
+
+/* «تعليم الكل كمقروء» بمنسدلة الإشعارات — كان بلون تيل فاتح (3.08:1) */
+.zy-bell-markall {
+    color: var(--color-primary-text);
+}
+
+/* زر الخروج بالشريط العلوي — أحمر باهت (4.02:1) */
+.nexora-logout-button {
+    color: var(--color-danger);
+}
+
+/* ============================================================================
+   /Setup — «صفحة لايت كاملة» بتقنية التصفير ثم إعادة البناء
+   ----------------------------------------------------------------------------
+   المطاردة قاعدةً-قاعدة لا تتقارب: كل تصحيح يكشف زوجاً آخر (نصّ/سطح) موزّعاً على
+   قواعد متفرّقة بملف من 2859 سطراً يفرض ألوانه بـ!important. جُرّبت أربع جولات
+   وتأرجح العدد بين 19 و82.
+   الحل: **نُلغي كل ألوان الصفحة القديمة دفعة واحدة** ثم نعيد بناء ما نريده
+   بالتوكنز. النتيجة قابلة للتنبؤ لأن نقطة البداية صارت واحدة لا مئة.
+   ============================================================================ */
+
+/* 1) التصفير: لا خلفية ولا لون نصّ من العهد القديم داخل الصفحة —
+   عدا ما يحمل دلالة (أزرار/شارات/حالات) فله معالجة خاصة بعده. */
+.nexora-setup-page,
+.nexora-setup-page *:not([class*="btn"]):not(button):not([class*="status"]):not([class*="badge"]):not([class*="pill"]) {
+    background-color: transparent !important;
+    background-image: none !important;
+    color: inherit !important;
+    border-color: var(--color-border) !important;
+}
+
+/* 2) إعادة البناء: الصفحة والأسطح والنصوص من التوكنز */
+.nexora-setup-page {
+    background: var(--color-background) !important;
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+}
+
+.nexora-setup-page .nexora-setup-card,
+.nexora-setup-page .nx-setup-field,
+.nexora-setup-page .nx-setup-check,
+.nexora-setup-page .nx-company-logo-card,
+.nexora-setup-page .nx-company-selector,
+.nexora-setup-page .nx-company-setup-nav,
+.nexora-setup-page .nx-setup-pagination,
+.nexora-setup-page table {
+    background-color: var(--color-surface) !important;
+    border: 1px solid var(--color-border) !important;
+}
+
+.nexora-setup-page thead th { background-color: var(--color-background) !important; color: var(--color-text-secondary) !important; }
+.nexora-setup-page tbody tr:hover td { background-color: var(--color-primary-soft) !important; }
+
+/* النصّ الثانوي يستعيد تمييزه بعد التصفير */
+.nexora-setup-page small,
+.nexora-setup-page label,
+.nexora-setup-page .nx-policy-note,
+.nexora-setup-page .nx-setup-pagination__summary,
+.nexora-setup-page .nexora-setup-hero p,
+.nexora-setup-page .nx-company-setup-summary span { color: var(--color-text-secondary) !important; }
+
+.nexora-setup-page h1 { font-size: var(--fs-page-title); }
+.nexora-setup-page h2, .nexora-setup-page .nexora-setup-card-head strong { font-size: var(--fs-card-title); }
+
+/* 3) العناصر الدلالية: ألوانها من التوكنز لا من العهد الداكن */
+.nexora-setup-page .btn-table.btn-delete { background: var(--color-danger-soft) !important; color: var(--color-danger) !important; }
+.nexora-setup-page .btn-table:not(.btn-delete) { background: var(--color-primary-soft) !important; color: var(--color-primary-text) !important; }
+.nexora-setup-page [class*="status"].is-active,
+.nexora-setup-page .nx-setup-status { background: var(--color-primary-soft) !important; color: var(--color-primary-text) !important; }
+.nexora-setup-page .nx-company-setup-nav a.is-active { background: var(--color-primary-strong) !important; color: var(--color-on-primary) !important; }
+
+/* الشارات كانت مستثناة من التصفير (لأن لها دلالة لونية) فبقيت بألوان العهد
+   الداكن: خلفية داكنة ونصّ داكن معاً (1.21:1). تُعطى ألوان دلالية من التوكنز. */
+.nexora-setup-page [class*="badge"],
+.nexora-setup-page [class*="pill"] {
+    background: var(--color-primary-soft) !important;
+    color: var(--color-primary-text) !important;
+    border-color: color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
+}
+
+/* المنتقيات (البلد/العملة/المنطقة الزمنية…): وسمها <button> فاستُثنيت من التصفير
+   مع الأزرار الدلالية وبقيت داكنة. هي حقول إدخال لا أزرار إجراء — فتُعامل كحقل. */
+.nexora-setup-page .nx-search-select__button,
+.nexora-setup-page .nx-search-select,
+.nexora-setup-page [class*="search-select"] > button,
+.nexora-setup-page select {
+    background: var(--color-surface) !important;
+    background-image: none !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-strong) !important;
+    font-family: var(--font-family) !important;
+    font-size: var(--fs-body) !important;
+}
+
+.nexora-setup-page .nx-search-select__button:hover,
+.nexora-setup-page [class*="search-select"] > button:hover {
+    border-color: var(--color-primary-strong) !important;
+}
+
+/* لوحة الخيارات المنسدلة وعناصرها */
+.nexora-setup-page [class*="search-select"] [class*="panel"],
+.nexora-setup-page [class*="search-select"] [class*="menu"],
+.nexora-setup-page [class*="search-select"] [class*="option"],
+.nexora-setup-page [class*="search-select"] input {
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+    border-color: var(--color-border) !important;
+}
+
+.nexora-setup-page [class*="search-select"] [class*="option"]:hover,
+.nexora-setup-page [class*="search-select"] [class*="option"][aria-selected="true"] {
+    background: var(--color-primary-soft) !important;
+    color: var(--color-primary-text) !important;
+}
+
+/* آخر الأسطح الداكنة بالصفحة: أزرار التنقّل بين الصفحات وزر إغلاق النافذة
+   (وسمها <button> فاستُثنيت من التصفير). */
+.nexora-setup-page .nx-setup-pagination__button,
+.nexora-setup-page [class*="pagination"] button,
+.nexora-setup-page .nx-setup-modal__close {
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-strong) !important;
+}
+
+.nexora-setup-page .nx-setup-pagination__button:hover,
+.nexora-setup-page [class*="pagination"] button:hover,
+.nexora-setup-page .nx-setup-modal__close:hover {
+    background: var(--color-primary-soft) !important;
+    color: var(--color-primary-text) !important;
+    border-color: var(--color-primary-strong) !important;
+}
+
+.nexora-setup-page [class*="pagination"] button[aria-current],
+.nexora-setup-page [class*="pagination"] button.is-active {
+    background: var(--color-primary-strong) !important;
+    color: var(--color-on-primary) !important;
+    border-color: var(--color-primary-strong) !important;
+}
+
+/* ============================================================================
+   نافذة «تعديل سياسة العلق» وأخواتها بـ/Setup
+   ثلاثة أعراض من لقطة محمد: شريط إجراءات داكن أسفل النافذة · هالة تيل ضخمة حول
+   الحقل المركَّز · نصّ تلميح باهت. النافذة خارج .nexora-setup-page أحياناً
+   (تُلحق بالـbody) فتُستهدف بمحدّداتها مباشرة لا بنطاق الصفحة.
+   ============================================================================ */
+
+.nx-setup-modal,
+.nx-setup-modal__dialog,
+.nx-setup-modal__body,
+[class*="nx-setup-modal"]:not([class*="backdrop"]):not([class*="overlay"]) {
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+    border-color: var(--color-border) !important;
+}
+
+/* شريط الإجراءات السفلي: كان كحلياً داكناً بزر «إلغاء» يذوب فيه */
+.nx-setup-modal__footer,
+.nx-setup-modal__actions,
+[class*="nx-setup-modal"] [class*="footer"],
+[class*="nx-setup-modal"] [class*="actions"] {
+    background: var(--color-background) !important;
+    border-top: 1px solid var(--color-border) !important;
+}
+
+[class*="nx-setup-modal"] [class*="footer"] button[type="submit"],
+[class*="nx-setup-modal"] [class*="actions"] button[type="submit"],
+[class*="nx-setup-modal"] .nx-setup-modal__save {
+    background: var(--color-primary-strong) !important;
+    color: var(--color-on-primary) !important;
+    border: 0 !important;
+}
+
+[class*="nx-setup-modal"] [class*="footer"] button:not([type="submit"]),
+[class*="nx-setup-modal"] [class*="actions"] button:not([type="submit"]),
+[class*="nx-setup-modal"] .nx-setup-modal__cancel {
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-strong) !important;
+}
+
+/* حقول النافذة + الهالة: كانت ظلاً تيلياً ضخماً يغمر ما حوله.
+   البديل حلقة تركيز واضحة بحدّين فقط — تفي بالوصول وتبقى هادئة. */
+[class*="nx-setup-modal"] input,
+[class*="nx-setup-modal"] select,
+[class*="nx-setup-modal"] textarea {
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-strong) !important;
+    box-shadow: none !important;
+    font-family: var(--font-family) !important;
+    font-size: var(--fs-body) !important;
+}
+
+[class*="nx-setup-modal"] input:focus,
+[class*="nx-setup-modal"] input:focus-visible,
+[class*="nx-setup-modal"] select:focus,
+[class*="nx-setup-modal"] textarea:focus {
+    outline: 2px solid var(--color-primary-strong) !important;
+    outline-offset: 1px !important;
+    border-color: var(--color-primary-strong) !important;
+    box-shadow: none !important;
+}
+
+/* التلميحات والملاحظات داخل النافذة */
+[class*="nx-setup-modal"] small,
+[class*="nx-setup-modal"] .nx-policy-note,
+[class*="nx-setup-modal"] [class*="hint"],
+[class*="nx-setup-modal"] p {
+    color: var(--color-text-secondary) !important;
+}
+
+[class*="nx-setup-modal"] label,
+[class*="nx-setup-modal"] legend {
+    color: var(--color-text-primary) !important;
+    font-size: var(--fs-small) !important;
+}
+
+/* قواعد النافذة أعلاه خسرت أمام قاعدة التصفير: تخصصية `.nexora-setup-page *:not(…)`
+   أعلى منها، والاثنتان !important — فالأعلى تخصصية تفوز مهما كان الترتيب.
+   نكرّر الكلاس لرفع التخصصية (نفس الحيلة المستعملة بمكوّنات zy-* مع الستايل القديم). */
+
+.nx-setup-modal.nx-setup-modal,
+.nx-setup-modal .nx-setup-modal__panel.nx-setup-modal__panel,
+.nx-setup-modal .nx-setup-modal-form.nx-setup-modal-form {
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+}
+
+.nx-setup-modal .nx-setup-modal__actions.nx-setup-modal__actions {
+    background: var(--color-background) !important;
+    border-top: 1px solid var(--color-border) !important;
+}
+
+.nx-setup-modal .nx-setup-btn.nx-setup-btn-primary {
+    background: var(--color-primary-strong) !important;
+    color: var(--color-on-primary) !important;
+    border: 0 !important;
+}
+
+.nx-setup-modal .nx-setup-btn.nx-setup-btn-secondary {
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-strong) !important;
+}
+
+.nx-setup-modal input.nx-setup-input:focus,
+.nx-setup-modal input:focus,
+.nx-setup-modal select:focus,
+.nx-setup-modal textarea:focus {
+    box-shadow: none !important;
+    outline: 2px solid var(--color-primary-strong) !important;
+    outline-offset: 1px !important;
+}
+
+/* ============================================================================
+   /Positions — المناصب الوظيفية (نفس وصفة /Setup: تصفير ثم إعادة بناء)
+   ----------------------------------------------------------------------------
+   قياس 2026-07-31: 40 عنصراً دون الحدّ + 5 مجموعات أسطح داكنة. الملف المسؤول
+   `positions.css` (2132 سطراً) مكتوب كلّه لقوقعة داكنة وبلا قسم فاتح — نفس حالة
+   `nexora-setup-pages.css` تماماً، فتُطبَّق الوصفة نفسها لا المطاردة قاعدةً-قاعدة.
+   ============================================================================ */
+
+/* 1) التصفير */
+.nxp-positions-page,
+.nxp-positions-page *:not([class*="btn"]):not(button):not([class*="status"]):not([class*="badge"]):not([class*="pill"]):not([class*="alert"]) {
+    background-color: transparent !important;
+    background-image: none !important;
+    color: inherit !important;
+    border-color: var(--color-border) !important;
+}
+
+/* 2) إعادة البناء: الصفحة ثم الأسطح ثم النصّ الثانوي */
+.nxp-positions-page {
+    background: var(--color-background) !important;
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+}
+
+.nxp-positions-page .nxp-card,
+.nxp-positions-page .nxp-admin-header,
+.nxp-positions-page .nxp-kpis > *,
+.nxp-positions-page .nxp-field,
+.nxp-positions-page .nxp-check,
+.nxp-positions-page .nxp-filters,
+.nxp-positions-page .nxp-import-box,
+.nxp-positions-page .nxp-employee-list,
+.nxp-positions-page table {
+    background-color: var(--color-surface) !important;
+    border: 1px solid var(--color-border) !important;
+}
+
+.nxp-positions-page thead th {
+    background-color: var(--color-background) !important;
+    color: var(--color-text-secondary) !important;
+}
+
+.nxp-positions-page tbody tr:hover td {
+    background-color: var(--color-primary-soft) !important;
+}
+
+/* النصّ الثانوي يستعيد تمييزه بعد التصفير (كان #cbd5e1 على فاتح = 1.33:1) */
+.nxp-positions-page small,
+.nxp-positions-page label,
+.nxp-positions-page .nxp-eyebrow,
+.nxp-positions-page .nxp-admin-header__eyebrow,
+.nxp-positions-page .nxp-empty,
+.nxp-positions-page .nxp-employee-count,
+.nxp-positions-page p {
+    color: var(--color-text-secondary) !important;
+}
+
+/* العناوين والأرقام كانت #f8fafc شبه بيضاء على سطح فاتح (1.07:1) */
+.nxp-positions-page h1,
+.nxp-positions-page h2,
+.nxp-positions-page h3,
+.nxp-positions-page strong,
+.nxp-positions-page b {
+    color: var(--color-text-primary) !important;
+}
+
+.nxp-positions-page h1 { font-size: var(--fs-page-title); }
+.nxp-positions-page h2 { font-size: var(--fs-card-title); }
+
+/* 3) العناصر الدلالية: الأزرار والروابط-الأزرار (كانت #99f6e4 = 1.06:1) */
+.nxp-positions-page .nxp-btn--primary,
+.nxp-positions-page button[type="submit"] {
+    background: var(--color-primary-strong) !important;
+    color: var(--color-on-primary) !important;
+    border: 0 !important;
+}
+
+.nxp-positions-page .nxp-btn,
+.nxp-positions-page .nxp-btn--ghost,
+.nxp-positions-page .nxp-admin-header__actions a {
+    background: var(--color-surface) !important;
+    color: var(--color-primary-text) !important;
+    border: 1px solid var(--color-border-strong) !important;
+}
+
+.nxp-positions-page .nxp-icon-btn {
+    background: var(--color-primary-soft) !important;
+    color: var(--color-primary-text) !important;
+    border: 1px solid var(--color-border) !important;
+}
+
+.nxp-positions-page .nxp-icon-btn--danger {
+    background: var(--color-danger-soft) !important;
+    color: var(--color-danger) !important;
+}
+
+.nxp-positions-page .nxp-icon-btn--muted {
+    background: var(--color-background) !important;
+    color: var(--color-text-secondary) !important;
+}
+
+.nxp-positions-page [class*="badge"],
+.nxp-positions-page [class*="pill"],
+.nxp-positions-page [class*="status"] {
+    background: var(--color-primary-soft) !important;
+    color: var(--color-primary-text) !important;
+    border-color: color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
+}
+
+.nxp-positions-page .nxp-alert--success {
+    background: var(--color-success-soft) !important;
+    color: var(--color-success) !important;
+    border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent) !important;
+}
+
+.nxp-positions-page .nxp-alert--error {
+    background: var(--color-danger-soft) !important;
+    color: var(--color-danger) !important;
+    border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent) !important;
+}
+
+/* الحقول: المنتقي وسمه <button> فيُستثنى من التصفير — يُعامل كحقل (درس /Setup) */
+.nxp-positions-page input,
+.nxp-positions-page select,
+.nxp-positions-page textarea,
+.nxp-positions-page .nxcs-trigger.nxcs-trigger,
+.nxp-positions-page .nxp-profile-launcher {
+    background: var(--color-surface) !important;
+    background-image: none !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-strong) !important;
+    box-shadow: none !important;
+    font-family: var(--font-family) !important;
+    font-size: var(--fs-body) !important;
+}
+
+.nxp-positions-page input:focus,
+.nxp-positions-page select:focus,
+.nxp-positions-page textarea:focus,
+.nxp-positions-page .nxcs-trigger.nxcs-trigger:focus {
+    outline: 2px solid var(--color-primary-strong) !important;
+    outline-offset: 1px !important;
+    border-color: var(--color-primary-strong) !important;
+    box-shadow: none !important;
+}
+
+/* درس جديد يخصّ هذا الملف: `positions.css` يستعمل محدّدات بـ**مُعرّف** (ID)
+   مثل `#positionForm .nxp-field .nxcs-trigger` وتخصصيتها (1,2,0) تسحق أي محدّد
+   بالأصناف مهما كرّرناه — تكرار الكلاس لا ينفع هنا، فنجاري المعرّف نفسه.
+   (بـ/Setup كان يكفي تكرار الكلاس لأن الملف القديم لا يستعمل المعرّفات.) */
+#positionForm .nxp-field .nxcs-trigger,
+#positionForm .nxp-field .nxcs-select,
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher {
+    background: var(--color-surface) !important;
+    background-image: none !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-strong) !important;
+    box-shadow: none !important;
+}
+
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher span {
+    color: inherit !important;
+}
+
+/* أزرار نصّية بلون تيل-400 من العهد الداكن (1.7:1 على الخلفية الفاتحة) */
+.nxp-positions-page .nxp-label-manage,
+.nxp-positions-page .nxp-link-btn,
+.nxp-positions-page .nxp-eyebrow,
+.nxp-positions-page .nxp-admin-header__eyebrow,
+#positionForm .nxp-label-manage {
+    color: var(--color-primary-text) !important;
+    background: transparent !important;
+}
+
+/* تفتيح الخلفيات أعلاه كشف الطرف الآخر من الزوج: نصوص بيضاء صريحة كانت مقروءة
+   على السطح الداكن فصارت بيضاء على أبيض (1:1). هذه محدّدات `positions.css`
+   نفسها بتخصصيتها كما هي — والجسر صار آخر ملف فيكفي التعادل ليفوز. */
+#positionForm .nxp-field .nxcs-value,
+#positionForm .nxp-field > span,
+#positionForm > .nxp-form-actions,
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher span,
+#positionForm > .nxp-position-profile-launchers .nxp-profile-launcher strong,
+#positionForm .nxp-profile-modal__body .nxp-field > span {
+    color: var(--color-text-primary) !important;
+}
+
+#positionForm .nxp-field > span > button.nxp-label-manage,
+.nxp-positions-page a.nxp-link-btn {
+    color: var(--color-primary-text) !important;
+}
+
+#positionForm .nxp-field > span > button.nxp-label-manage:hover,
+.nxp-label-manage:hover {
+    color: var(--color-primary-strong) !important;
+    text-decoration: underline !important;
+}
+
+#positionForm > .validation-summary-errors {
+    background: var(--color-danger-soft) !important;
+    color: var(--color-danger) !important;
+    border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent) !important;
+}

@@ -1,0 +1,153 @@
+namespace SmartAttendance.Web.Infrastructure.Hrms;
+
+/// <summary>
+/// سياسة ربط الراتب بالحضور — دالة نقيّة تقرّر لكل موظف: هل يُحتسب أصلاً؟ وبأي
+/// معامل يُنسَّب أساسيه؟
+///
+/// السلسلة القائمة: بصمات ⟵ <c>DayAttendances</c> المحلَّلة ⟵ الاعتماد الشهري
+/// <c>EmployeeMonthAttendance</c> ⟵ معامل التنسيب هنا. الخلل الذي كشفه محمد
+/// (2026-07-31) أن **غياب صفّ الاعتماد كان يعني معامل 1 بصمت** — قسيمة تقول
+/// «أيام العمل 0 / 0» وتدفع الأساسي كاملاً بلا أي تمييز بين «داوَم شهراً كاملاً»
+/// و«لا بيانات حضور إطلاقاً». الصمت هو العيب، لا الافتراض نفسه.
+///
+/// فصار السلوك **سياسة يختارها المستخدم** (<see cref="ModeKey"/>) بثلاثة أنماط،
+/// والحالة تُعلَن دائماً بالقسيمة وبرسالة الاحتساب مهما كان النمط.
+///
+/// ⚠️ النمط الافتراضي <see cref="Lenient"/> يعيد أرقام ما قبل هذا الملف حرفياً —
+/// أي تحوّل بالافتراضي يغيّر كل قسيمة بأثر رجعي. مثبَّت باختبارات انحدار.
+/// </summary>
+public static class AttendanceSalaryLink
+{
+    /// <summary>مفتاح الإعداد بـ<c>NexoraHrSettings</c>.</summary>
+    public const string ModeKey = "Payroll.AttendanceLink";
+
+    /// <summary>بلا بيانات حضور ⟹ يُدفع الأساسي كاملاً (مع إعلان) — السلوك القائم.</summary>
+    public const string Lenient = "Lenient";
+
+    /// <summary>بلا بيانات حضور ⟹ لا يُحتسب الموظف، ويُعدّ برسالة الاحتساب.</summary>
+    public const string Strict = "Strict";
+
+    /// <summary>
+    /// التنسيب على **أيام الحضور الفعلية**: من داوَم 10 أيام يأخذ راتب 10 أيام.
+    /// يختلف عن <see cref="Strict"/> بأن اليوم الناقص/غير المحسوم لا يُدفع لمجرد
+    /// أنه ليس «غياباً» مسجّلاً. بلا بيانات ⟹ لا يُحتسب.
+    /// </summary>
+    public const string PresentDays = "PresentDays";
+
+    /// <summary>التنسيب بالساعات الفعلية ÷ المتوقّعة بدل الأيام؛ بلا بيانات ⟹ لا يُحتسب.</summary>
+    public const string Hours = "Hours";
+
+    /// <summary>معامل خصم يوم الغياب (1 = يوم بيوم، 2 = يوم بيومين…).</summary>
+    public const string AbsenceFactorKey = "Payroll.AbsenceDeductionDays";
+
+    /// <summary>هل يُسمح لمعامل التنسيب بالنزول تحت الصفر (فيصير الراتب سالباً)؟</summary>
+    public const string AllowNegativeKey = "Payroll.AllowNegativeSalary";
+
+    /// <summary>
+    /// الساعات المعيارية لليوم. نفس الرقم المستعمل باشتقاق الأجر الساعي
+    /// (<c>يومي ÷ 8</c>) بـ<see cref="PayrollRunStore"/> — لو صار قابلاً للتهيئة
+    /// يوماً ما فليتغيّر بالموضعين معاً وإلا اختلف الأوفرتايم عن التنسيب.
+    /// </summary>
+    public const decimal StandardDailyHours = 8m;
+
+    /// <summary>
+    /// قرار الموظف الواحد: هل يدخل القسيمة؟ بأي معامل؟ وبأي ملاحظة تُعرض؟
+    /// الملاحظة ليست تجميلاً — هي الفرق بين «حضر كاملاً» و«لا بيانات».
+    /// </summary>
+    public sealed record Decision(bool Include, decimal Factor, string? Note);
+
+    /// <summary>
+    /// سياسة التنسيب كاملةً. <paramref name="AbsenceDeductionDays"/> = 1 و
+    /// <paramref name="AllowNegative"/> = false يعيدان سلوك ما قبل هذا الملف حرفياً.
+    /// </summary>
+    public sealed record Policy(string Mode, decimal AbsenceDeductionDays, bool AllowNegative)
+    {
+        public static Policy Default { get; } = new(Lenient, 1m, false);
+
+        public Policy Normalized() => this with
+        {
+            Mode = NormalizeMode(Mode),
+            // معامل سالب يقلب الخصم مكافأةً — يعود ليوم-بيوم لا لصفر.
+            AbsenceDeductionDays = AbsenceDeductionDays < 0m ? 1m : AbsenceDeductionDays
+        };
+    }
+
+    public static string NormalizeMode(string? mode) => mode switch
+    {
+        Strict => Strict,
+        PresentDays => PresentDays,
+        Hours => Hours,
+        _ => Lenient
+    };
+
+    public static string ModeLabel(string? mode) => NormalizeMode(mode) switch
+    {
+        Strict => "صارم — بلا بيانات حضور لا يُحتسب",
+        PresentDays => "أيام الحضور — من داوَم 10 أيام يأخذ راتب 10 أيام",
+        Hours => "بالساعات — التنسيب بساعات العمل الفعلية",
+        _ => "متساهل — بلا بيانات حضور يُدفع كاملاً (مع إعلان)"
+    };
+
+    /// <summary>
+    /// «بيانات الحضور موجودة» = صفّ اعتماد شهري بأيام عمل موجبة. صفٌّ بأيام صفر
+    /// (موظف بلا مناوبة مسنَدة مثلاً) يُعامَل معاملة الغياب التام للبيانات: القسمة
+    /// عليه مستحيلة، والادّعاء بأنه «صفر حضور» يصفّر راتباً بلا سند.
+    /// </summary>
+    public static bool HasAttendanceData(int workDays) => workDays > 0;
+
+    /// <summary>
+    /// يقرّر التنسيب لموظف واحد.
+    ///
+    /// السقف 100% دائماً: الزائد عن الدوام **أوفرتايم ببند مستقل** لا زيادة
+    /// بالأساسي. أما القاع فصفر إلا إذا سُمح بالسالب صراحةً — لأن معامل خصم
+    /// الغياب أكبر من 1 (يوم بيومين نمط لوائح الجزاءات) قد يبتلع الاستحقاق
+    /// كلّه فيصير الصافي سالباً، وهو **سلوك مقصود** حين يُفعَّل لا خطأ حسابي.
+    /// </summary>
+    public static Decision Evaluate(
+        Policy policy, int workDays, int presentDays, int absentDays, decimal workedHours)
+    {
+        var p = policy.Normalized();
+
+        if (!HasAttendanceData(workDays))
+        {
+            return p.Mode == Lenient
+                ? new Decision(true, 1m, "بلا بيانات حضور لهذا الشهر — دُفع الأساسي كاملاً")
+                : new Decision(false, 0m, "بلا بيانات حضور لهذا الشهر — لم يُحتسب");
+        }
+
+        // الخصم الزائد عن يوم-بيوم: (المعامل − 1) × أيام الغياب. المعامل 1 ⟹ صفر،
+        // فيبقى الأساس القديم كما هو تماماً.
+        var extraPenaltyDays = absentDays * (p.AbsenceDeductionDays - 1m);
+        var expectedHours = workDays * StandardDailyHours;
+
+        decimal earnedRatio;
+        string? note;
+
+        if (p.Mode == Hours)
+        {
+            earnedRatio = workedHours / expectedHours;
+            note = $"تنسيب بالساعات: {workedHours:0.##} من {expectedHours:0.##} ساعة";
+        }
+        else if (p.Mode == PresentDays)
+        {
+            earnedRatio = (decimal)presentDays / workDays;
+            note = $"تنسيب بأيام الحضور: {presentDays} من {workDays} يوم";
+        }
+        else
+        {
+            earnedRatio = (decimal)(workDays - absentDays) / workDays;
+            note = null;
+        }
+
+        var factor = earnedRatio - (extraPenaltyDays / workDays);
+
+        if (extraPenaltyDays > 0m)
+            note = (note == null ? "" : note + " · ") +
+                   $"خصم غياب مضاعف: {absentDays} يوم × {p.AbsenceDeductionDays:0.##}";
+
+        return new Decision(true, Clamp(factor, p.AllowNegative), note);
+    }
+
+    private static decimal Clamp(decimal value, bool allowNegative) =>
+        value > 1m ? 1m : value < 0m && !allowNegative ? 0m : value;
+}

@@ -79,7 +79,7 @@ input[type="month"].nxcal-native {
     background: rgba(25, 211, 224, .12) !important;
     display: grid !important;
     place-items: center !important;
-    color: #19D3E0 !important;
+    color: var(--color-primary-text) !important;
     font-size: 12px !important;
     line-height: 1 !important;
 }
@@ -254,7 +254,7 @@ input[type="month"].nxcal-native {
 
 .nxcal__day.is-selected {
     color: #00151E !important;
-    background: linear-gradient(135deg, #19D3E0, #7CF4FF) !important;
+    background: linear-gradient(135deg, var(--color-primary), #7CF4FF) !important;
     border-color: rgba(25, 211, 224, .90) !important;
     box-shadow: 0 0 0 4px rgba(25, 211, 224, .12) !important;
 }
@@ -443,7 +443,7 @@ input[type="month"].nxcal-native {
 
 .nxcal__choice.is-selected {
     border-color: rgba(25, 211, 224, .90) !important;
-    background: linear-gradient(135deg, #19D3E0, #7CF4FF) !important;
+    background: linear-gradient(135deg, var(--color-primary), #7CF4FF) !important;
     color: #00151E !important;
     box-shadow: 0 0 0 3px rgba(25, 211, 224, .11) !important;
 }
