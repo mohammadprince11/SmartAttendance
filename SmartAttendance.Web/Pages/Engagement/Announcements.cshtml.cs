@@ -18,12 +18,12 @@ public class AnnouncementsModel : EngagementPageModel
     [BindProperty]
     public AnnouncementInput Announcement { get; set; } = new();
 
-    public async Task OnGetAsync()
-    {
-        await EmployeeEngagementSchema.EnsureAsync(DbContext);
-        await LoadAudienceOptionsAsync();
-        await LoadAnnouncementsAsync();
-    }
+    /// <summary>
+    /// الشاشة صارت تبويباً بـ<c>/Engagement</c>. يبقى المسار حيّاً لروابطٍ قديمة
+    /// أو مفضّلات، ويعيد التوجيه بدل أن يعرض نسخةً ثانية من الشاشة نفسها.
+    /// أما معالجات الـPOST أدناه فتبقى **مالكة المنطق** وتُرسل إليها الشاشة الموحّدة.
+    /// </summary>
+    public IActionResult OnGet() => RedirectToPage("/Engagement/Index", new { tab = "announcements" });
 
     public async Task<IActionResult> OnPostCreateAsync()
     {
@@ -61,7 +61,7 @@ public class AnnouncementsModel : EngagementPageModel
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(body))
         {
             StatusMessage = "يرجى إدخال عنوان ووصف الإعلان.";
-            return RedirectToPage();
+            return RedirectToPage("/Engagement/Index", new { tab = "announcements" });
         }
 
         var targetType = string.IsNullOrWhiteSpace(Announcement.TargetType)
@@ -77,7 +77,7 @@ public class AnnouncementsModel : EngagementPageModel
         if (!string.IsNullOrWhiteSpace(targetError))
         {
             StatusMessage = targetError;
-            return RedirectToPage();
+            return RedirectToPage("/Engagement/Index", new { tab = "announcements" });
         }
 
         var request = new AnnouncementCreateRequest
@@ -111,7 +111,7 @@ public class AnnouncementsModel : EngagementPageModel
             HttpContext.RequestAborted);
 
         StatusMessage = result.Message;
-        return RedirectToPage();
+        return RedirectToPage("/Engagement/Index", new { tab = "announcements" });
     }
 
     public async Task<IActionResult> OnPostArchiveAsync(int id)
@@ -122,7 +122,7 @@ public class AnnouncementsModel : EngagementPageModel
             HttpContext.RequestAborted);
 
         StatusMessage = result.Message;
-        return RedirectToPage();
+        return RedirectToPage("/Engagement/Index", new { tab = "announcements" });
     }
 
     public async Task<IActionResult> OnPostToggleAsync(int id, bool publish)
@@ -138,7 +138,7 @@ public class AnnouncementsModel : EngagementPageModel
                 HttpContext.RequestAborted);
 
         StatusMessage = result.Message;
-        return RedirectToPage();
+        return RedirectToPage("/Engagement/Index", new { tab = "announcements" });
     }
 
     private string BuildTemplateTitle(string templateKey, string? personName)

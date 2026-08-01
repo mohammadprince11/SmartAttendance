@@ -1,0 +1,248 @@
+/* تفاعل الموظف — شاشة واحدة بتبويبات.
+ *
+ * ⚠️ هذا الملف **تخطيطٌ فقط**: شبكات ومسافات وحالات التبويب.
+ * لا مقاسات ولا استدارات ولا أحجام خطّ للودجتات — تلك تأتي من التوكنات
+ * (`zynora-tokens.css`) عبر أصناف يحكمها مختبر المقاسات: `zy-card` · `zy-pill`
+ * والحقول والأزرار القياسية. فالشاشة موحّدة **بالتكوين** لا بالترقيع، وأي تعديل
+ * بالمختبر يصلها تلقائياً.
+ *
+ * وُلد بديلاً لصفحة كانت تكرّر نفسها ثلاث مرات (أربع بطاقات KPI ⟵ بطاقة «ملخص»
+ * تعيد الأرقام ⟵ أربع بطاقات مودل تكرّر شريط التبويبات) وتُسمّي نفسها «عمليات
+ * الموارد البشرية» وهي شاشة تفاعل.
+ */
+
+.zyeng {
+    display: flex;
+    flex-direction: column;
+    gap: var(--zy-space-4);
+    direction: rtl;
+}
+
+/* ---------------------------------------------------------------- الترويسة */
+
+.zyeng-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--zy-space-4);
+    flex-wrap: wrap;
+}
+
+.zyeng-head h1 {
+    margin: 0;
+    color: var(--zy-text);
+    font-family: var(--zy-font-display, var(--zy-font-ar));
+}
+
+.zyeng-head p {
+    margin: var(--zy-space-1) 0 0;
+    color: var(--zy-text-muted);
+}
+
+/* الأرقام الإجمالية سطرٌ واحد لا أربع بطاقات: سياقٌ لا بطولة. */
+.zyeng-totals {
+    display: flex;
+    align-items: center;
+    gap: var(--zy-space-3);
+    flex-wrap: wrap;
+    color: var(--zy-text-muted);
+}
+
+.zyeng-totals b {
+    color: var(--zy-text);
+}
+
+/* ------------------------------------------------------------ شريط التبويب */
+
+.zyeng-tabs {
+    display: flex;
+    gap: var(--zy-space-2);
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--zy-border);
+    padding-bottom: var(--zy-space-2);
+}
+
+.zyeng-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--zy-space-2);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--zy-text-muted);
+    cursor: pointer;
+}
+
+.zyeng-tab[aria-selected="true"] {
+    border-color: var(--zy-border-strong);
+    background: var(--zy-primary-soft);
+    color: var(--zy-text);
+    font-weight: 800;
+}
+
+/* عدّاد المهامّ على التبويب — يظهر فقط حين يكون فيه عمل فعليّ. */
+.zyeng-tab-count {
+    min-width: 20px;
+    padding-inline: 6px;
+    border-radius: 999px;
+    background: var(--zy-danger-soft, rgba(220, 38, 38, .16));
+    color: var(--zy-danger, #dc2626);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 18px;
+    text-align: center;
+}
+
+.zyeng-panel[hidden] {
+    display: none;
+}
+
+.zyeng-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--zy-space-4);
+}
+
+/* ------------------------------------------------------------- قوائم العمل */
+
+/* «ما ينتظرك» أولاً: الشاشة تفتح على ما يحتاج قراراً، لا على أرقامٍ للزينة. */
+.zyeng-queue {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--zy-space-3);
+    align-items: start;
+}
+
+.zyeng-queue-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--zy-space-2);
+    margin-bottom: var(--zy-space-2);
+}
+
+.zyeng-queue-head h2 {
+    margin: 0;
+    color: var(--zy-text);
+}
+
+.zyeng-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--zy-space-3);
+    padding: var(--zy-space-2) 0;
+    border-top: 1px solid var(--zy-border);
+}
+
+.zyeng-item:first-of-type {
+    border-top: 0;
+}
+
+.zyeng-item-main {
+    min-width: 0;
+}
+
+.zyeng-item-main strong {
+    display: block;
+    color: var(--zy-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.zyeng-item-main small {
+    color: var(--zy-text-muted);
+}
+
+.zyeng-item-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--zy-space-2);
+    flex: 0 0 auto;
+}
+
+/* حالة الفراغ ليست خطأً: تقول ما الذي يعنيه الفراغ وما الخطوة التالية. */
+.zyeng-empty {
+    padding: var(--zy-space-4);
+    border: 1px dashed var(--zy-border);
+    border-radius: var(--zy-radius-lg);
+    color: var(--zy-text-muted);
+    text-align: center;
+}
+
+/* -------------------------------------------------------------- النماذج */
+
+.zyeng-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--zy-control-gap, 14px);
+}
+
+.zyeng-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.zyeng-field > label {
+    color: var(--zy-text-muted);
+    font-size: var(--zy-label-font, 12px);
+    font-weight: 700;
+}
+
+.zyeng-field--wide {
+    grid-column: 1 / -1;
+}
+
+.zyeng-form-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--zy-space-2);
+    flex-wrap: wrap;
+    margin-top: var(--zy-space-3);
+}
+
+/* حقول الاستهداف تظهر حسب نوعه — تُدار بالجافاسكربت بالصفحة. */
+.zyeng-target[hidden] {
+    display: none;
+}
+
+/* --------------------------------------------------------------- القوائم */
+
+.zyeng-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.zyeng-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--zy-space-3);
+    padding: var(--zy-space-2) 0;
+    border-top: 1px solid var(--zy-border);
+}
+
+.zyeng-row:first-of-type {
+    border-top: 0;
+}
+
+.zyeng-row-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--zy-space-2);
+    flex-wrap: wrap;
+    color: var(--zy-text-muted);
+}
+
+@media (max-width: 700px) {
+    .zyeng-row {
+        grid-template-columns: 1fr;
+    }
+
+    .zyeng-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

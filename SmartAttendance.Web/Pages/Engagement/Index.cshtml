@@ -1,140 +1,645 @@
 @page
 @model SmartAttendance.Web.Pages.Engagement.IndexModel
 @{
-    ViewData["Title"] = "عمليات الموارد البشرية";
+    ViewData["Title"] = "تفاعل الموظف";
+
+    string TabClass(string key) => Model.Tab.Equals(key, StringComparison.OrdinalIgnoreCase) ? "true" : "false";
+    bool IsTab(string key) => Model.Tab.Equals(key, StringComparison.OrdinalIgnoreCase);
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/nexora-hr-operations-page.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-announcement-studio-dynamic.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-engagement.css" asp-append-version="true" />
 }
 
-<section class="nx-approved-page nx-approved-page--overview" dir="rtl">
+<section class="zyeng zy-scope" dir="rtl">
+
+    <header class="zyeng-head">
+        <div>
+            <h1>تفاعل الموظف</h1>
+            <p>التواصل وصوت الموظف والحالات والتقدير — بشاشة واحدة.</p>
+        </div>
+
+        @* الأرقام سياقٌ لا بطولة: سطرٌ واحد بدل أربع بطاقات كانت تُعاد ثلاث مرات. *@
+        <div class="zyeng-totals">
+            <span><b>@Model.PublishedAnnouncements</b> إعلان منشور</span>
+            <span>·</span>
+            <span><b>@Model.PublishedPolls</b> استطلاع منشور</span>
+            <span>·</span>
+            <span><b>@Model.TotalPollVotes</b> صوت</span>
+            <span>·</span>
+            <span><b>@Model.TotalFeedback</b> حالة</span>
+        </div>
+    </header>
+
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="nx-approved-alert">@Model.StatusMessage</div>
+        <div class="zy-card" role="status">@Model.StatusMessage</div>
     }
 
-    <partial name="_EngagementNav" model="@("overview")" />
+    <nav class="zyeng-tabs" role="tablist" aria-label="أقسام تفاعل الموظف">
+        <button type="button" class="zyeng-tab" role="tab" data-zyeng-tab="work" aria-selected="@TabClass("work")">
+            ما ينتظرك
+            @if (Model.PendingWorkCount > 0)
+            {
+                <span class="zyeng-tab-count">@Model.PendingWorkCount</span>
+            }
+        </button>
+        <button type="button" class="zyeng-tab" role="tab" data-zyeng-tab="announcements" aria-selected="@TabClass("announcements")">الإعلانات</button>
+        <button type="button" class="zyeng-tab" role="tab" data-zyeng-tab="polls" aria-selected="@TabClass("polls")">الاستطلاعات</button>
+        <button type="button" class="zyeng-tab" role="tab" data-zyeng-tab="cases" aria-selected="@TabClass("cases")">
+            الحالات
+            @if (Model.CasesNeedingAction.Count > 0)
+            {
+                <span class="zyeng-tab-count">@Model.CasesNeedingAction.Count</span>
+            }
+        </button>
+        <button type="button" class="zyeng-tab" role="tab" data-zyeng-tab="recognition" aria-selected="@TabClass("recognition")">التقدير</button>
+    </nav>
 
-    <section class="nx-ops-overview" aria-label="لوحة عمليات الموارد البشرية">
-        <section class="nx-ops-kpi-grid">
-            <article class="nx-ops-kpi cyan">
-                <span>المحتوى النشط</span>
-                <strong>@Model.ActiveEngagementItems</strong>
-                <small>@Model.PublishedAnnouncements إعلان · @Model.PublishedPolls استطلاع</small>
-            </article>
-            <article class="nx-ops-kpi gold">
-                <span>الإعلانات</span>
-                <strong>@Model.TotalAnnouncements</strong>
-                <small>@Model.PublishedAnnouncements منشور · @Model.DraftAnnouncements مسودة</small>
-            </article>
-            <article class="nx-ops-kpi violet">
-                <span>صوت الموظف</span>
-                <strong>@Model.TotalPollVotes</strong>
-                <small>@Model.TotalPolls استطلاع · إجمالي الأصوات المسجلة</small>
-            </article>
-            <article class="nx-ops-kpi rose">
-                <span>الحالات المفتوحة</span>
-                <strong>@Model.OpenEngagementCases</strong>
-                <small>@Model.TotalFeedback إجمالي الشكاوى والمقترحات</small>
-            </article>
-        </section>
+    @* ==================================================== ما ينتظرك (الافتراضي) *@
+    <section class="zyeng-panel" data-zyeng-panel="work" role="tabpanel" hidden="@(!IsTab("work"))">
+        @if (Model.PendingWorkCount == 0)
+        {
+            <div class="zyeng-empty">
+                لا شيء ينتظر إجراءً الآن — كل الحالات مُعالَجة ولا مسوّدات معلّقة.
+            </div>
+        }
 
-        <section class="nx-ops-command-grid">
-            <article class="nx-ops-command-card">
-                <header>
-                    <div>
-                        <span class="nx-ops-label">إجراءات سريعة</span>
-                        <h2>ابدأ عملية جديدة</h2>
+        <div class="zyeng-queue">
+            @if (Model.CasesNeedingAction.Count > 0)
+            {
+                <article class="zy-card">
+                    <div class="zyeng-queue-head">
+                        <h2>حالات تنتظر ردّاً</h2>
+                        <span class="zy-pill">@Model.CasesNeedingAction.Count</span>
                     </div>
-                    <span class="nx-ops-status-dot live">مباشر</span>
-                </header>
-                <div class="nx-ops-quick-actions">
-                    <a asp-page="/Engagement/Announcements">إنشاء إعلان</a>
-                    <a asp-page="/Engagement/Polls">إنشاء استطلاع</a>
-                    <a asp-page="/Engagement/Announcements" asp-route-preset="appreciation">تكريم موظف</a>
-                    <a asp-page="/Engagement/Recognition">إطلاق حملة</a>
+                    <div class="zyeng-list">
+                        @foreach (var item in Model.CasesNeedingAction.Take(6))
+                        {
+                            <div class="zyeng-item">
+                                <div class="zyeng-item-main">
+                                    <strong>@item.Title</strong>
+                                    <small>@item.Type · @item.EmployeeName · @Model.StatusText(item.Status)</small>
+                                </div>
+                                <div class="zyeng-item-actions">
+                                    <button type="button" class="btn-secondary" data-zyeng-goto="cases">فتح</button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </article>
+            }
+
+            @if (Model.DraftAnnouncementRows.Count > 0)
+            {
+                <article class="zy-card">
+                    <div class="zyeng-queue-head">
+                        <h2>إعلانات لم تُنشر</h2>
+                        <span class="zy-pill">@Model.DraftAnnouncementRows.Count</span>
+                    </div>
+                    <div class="zyeng-list">
+                        @foreach (var item in Model.DraftAnnouncementRows.Take(6))
+                        {
+                            <div class="zyeng-item">
+                                <div class="zyeng-item-main">
+                                    <strong>@item.Title</strong>
+                                    <small>@item.Category · @Model.TargetText(item)</small>
+                                </div>
+                                <div class="zyeng-item-actions">
+                                    <form method="post" asp-page="/Engagement/Announcements" asp-page-handler="Toggle">
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <input type="hidden" name="publish" value="true" />
+                                        <button type="submit" class="btn-primary">نشر</button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </article>
+            }
+
+            @if (Model.DraftPollRows.Count > 0)
+            {
+                <article class="zy-card">
+                    <div class="zyeng-queue-head">
+                        <h2>استطلاعات لم تُنشر</h2>
+                        <span class="zy-pill">@Model.DraftPollRows.Count</span>
+                    </div>
+                    <div class="zyeng-list">
+                        @foreach (var item in Model.DraftPollRows.Take(6))
+                        {
+                            <div class="zyeng-item">
+                                <div class="zyeng-item-main">
+                                    <strong>@item.Title</strong>
+                                    <small>@item.OptionsCount خيار · @Model.TargetText(item)</small>
+                                </div>
+                                <div class="zyeng-item-actions">
+                                    <form method="post" asp-page="/Engagement/Polls" asp-page-handler="Toggle">
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <input type="hidden" name="publish" value="true" />
+                                        <button type="submit" class="btn-primary">نشر</button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </article>
+            }
+
+            @if (Model.SilentPolls.Count > 0)
+            {
+                <article class="zy-card">
+                    <div class="zyeng-queue-head">
+                        <h2>استطلاعات منشورة بلا صوت</h2>
+                        <span class="zy-pill">@Model.SilentPolls.Count</span>
+                    </div>
+                    <div class="zyeng-list">
+                        @foreach (var item in Model.SilentPolls.Take(4))
+                        {
+                            <div class="zyeng-item">
+                                <div class="zyeng-item-main">
+                                    <strong>@item.Title</strong>
+                                    <small>منشور ولم يصوّت أحد — راجع استهدافه: @Model.TargetText(item)</small>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </article>
+            }
+        </div>
+    </section>
+
+    @* ==================================================================== الإعلانات *@
+    <section class="zyeng-panel" data-zyeng-panel="announcements" role="tabpanel" hidden="@(!IsTab("announcements"))">
+        <article class="zy-card">
+            <div class="zyeng-queue-head"><h2>إعلان جديد</h2></div>
+
+            <form method="post" asp-page="/Engagement/Announcements" asp-page-handler="Create" data-zyeng-form="announcement">
+                <div class="zyeng-form-grid">
+                    <div class="zyeng-field zyeng-field--wide">
+                        <label for="ann-title">العنوان</label>
+                        <input id="ann-title" name="Announcement.Title" required />
+                    </div>
+
+                    <div class="zyeng-field">
+                        <label for="ann-mode">طريقة الكتابة</label>
+                        <select id="ann-mode" name="Announcement.UseTemplateMode" data-zyeng-ann-mode>
+                            <option value="Template">قالب جاهز</option>
+                            <option value="Custom">نصّ حرّ</option>
+                        </select>
+                    </div>
+
+                    <div class="zyeng-field">
+                        <label for="ann-template">القالب</label>
+                        <select id="ann-template" name="Announcement.TemplateKey">
+                            @foreach (var template in Model.AnnouncementTemplates)
+                            {
+                                <option value="@template.Key">@template.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="zyeng-field">
+                        <label for="ann-category">التصنيف</label>
+                        <input id="ann-category" name="Announcement.Category" value="عام" />
+                    </div>
+
+                    @* حقول القالب: يملؤها المحرّك بالنصّ الجاهز (ترقية · شكر · ترحيب…) *@
+                    <div class="zyeng-field" data-zyeng-ann-template-field>
+                        <label for="ann-person">اسم الموظف</label>
+                        <input id="ann-person" name="Announcement.PersonName" />
+                    </div>
+                    <div class="zyeng-field" data-zyeng-ann-template-field>
+                        <label for="ann-secondary">اسم ثانٍ (إن لزم)</label>
+                        <input id="ann-secondary" name="Announcement.SecondaryName" />
+                    </div>
+                    <div class="zyeng-field" data-zyeng-ann-template-field>
+                        <label for="ann-dept-name">القسم</label>
+                        <input id="ann-dept-name" name="Announcement.DepartmentName" />
+                    </div>
+                    <div class="zyeng-field" data-zyeng-ann-template-field>
+                        <label for="ann-date">التاريخ المعتمد</label>
+                        <input id="ann-date" name="Announcement.EffectiveDateText" />
+                    </div>
+
+                    <div class="zyeng-field zyeng-field--wide" data-zyeng-ann-body-field hidden>
+                        <label for="ann-body">النصّ</label>
+                        <textarea id="ann-body" name="Announcement.Body" rows="4"></textarea>
+                    </div>
+
+                    <div class="zyeng-field">
+                        <label for="ann-target">الاستهداف</label>
+                        <select id="ann-target" name="Announcement.TargetType" data-zyeng-target="announcement">
+                            <option value="All">كل الموظفين</option>
+                            <option value="Department">قسم</option>
+                            <option value="Branch">موقع عمل</option>
+                            <option value="Employees">موظفون محدّدون</option>
+                        </select>
+                    </div>
+
+                    <div class="zyeng-field zyeng-target" data-zyeng-target-for="announcement" data-zyeng-when="Department" hidden>
+                        <label for="ann-dept">القسم المستهدف</label>
+                        <select id="ann-dept" name="Announcement.DepartmentId">
+                            <option value="">—</option>
+                            @foreach (var d in Model.Departments)
+                            {
+                                <option value="@d.Id">@d.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="zyeng-field zyeng-target" data-zyeng-target-for="announcement" data-zyeng-when="Branch" hidden>
+                        <label for="ann-branch">موقع العمل المستهدف</label>
+                        <select id="ann-branch" name="Announcement.BranchId">
+                            <option value="">—</option>
+                            @foreach (var b in Model.Branches)
+                            {
+                                <option value="@b.Id">@b.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="zyeng-field zyeng-field--wide zyeng-target" data-zyeng-target-for="announcement" data-zyeng-when="Employees" hidden>
+                        <label for="ann-employees">الموظفون المستهدفون</label>
+                        <select id="ann-employees" name="Announcement.EmployeeIds" multiple size="6">
+                            @foreach (var e in Model.Employees)
+                            {
+                                <option value="@e.Id">@e.FullName (@e.EmployeeNo)</option>
+                            }
+                        </select>
+                    </div>
                 </div>
-            </article>
 
-            <article class="nx-ops-command-card nx-ops-health">
-                <header>
-                    <div>
-                        <span class="nx-ops-label">حالة المركز</span>
-                        <h2>ملخص التشغيل الحالي</h2>
-                    </div>
-                    <span class="nx-ops-health-score">@Model.ActiveEngagementItems</span>
-                </header>
-                <div class="nx-ops-health-list">
-                    <div><span>إعلانات منشورة</span><strong>@Model.PublishedAnnouncements</strong></div>
-                    <div><span>استبيانات منشورة</span><strong>@Model.PublishedPolls</strong></div>
-                    <div><span>حالات بانتظار المعالجة</span><strong>@Model.OpenEngagementCases</strong></div>
-                    <div><span>إجمالي التفاعلات المسجلة</span><strong>@Model.TotalPollVotes</strong></div>
+                <div class="zyeng-form-actions">
+                    <label>
+                        <input type="checkbox" name="Announcement.PublishNow" value="true" checked />
+                        نشر فوراً
+                    </label>
+                    <input type="hidden" name="Announcement.PublishNow" value="false" />
+                    <button type="submit" class="btn-primary">حفظ الإعلان</button>
                 </div>
-            </article>
-        </section>
+            </form>
+        </article>
 
-        <section class="nx-ops-module-grid">
-            <a class="nx-ops-module-card communication" asp-page="/Engagement/Announcements">
-                <span>01</span><strong>التواصل والإعلانات</strong><small>قوالب جاهزة، نشر مباشر، واستهداف الموظفين.</small>
-            </a>
-            <a class="nx-ops-module-card voice" asp-page="/Engagement/Polls">
-                <span>02</span><strong>صوت الموظف</strong><small>استبيانات وانتخابات ومتابعة المشاركة الفعلية.</small>
-            </a>
-            <a class="nx-ops-module-card cases" asp-page="/Engagement/Feedback">
-                <span>03</span><strong>الحالات</strong><small>الشكاوى والمقترحات والردود وحالة المعالجة.</small>
-            </a>
-            <a class="nx-ops-module-card recognition" asp-page="/Engagement/Recognition">
-                <span>04</span><strong>التقدير والحملات</strong><small>ترقيات وشكر وترحيب، وعطل وتعاميم وحملات داخلية.</small>
-            </a>
-        </section>
+        <article class="zy-card">
+            <div class="zyeng-queue-head">
+                <h2>الإعلانات</h2>
+                <span class="zy-pill">@Model.TotalAnnouncements</span>
+            </div>
 
-        <section class="nx-ops-activity-grid">
-            <article class="nx-ops-activity-card">
-                <header><h2>أحدث الإعلانات</h2><a asp-page="/Engagement/Announcements">عرض الكل</a></header>
-                @if (Model.Announcements.Count == 0)
+            @if (Model.Announcements.Count == 0)
+            {
+                <div class="zyeng-empty">لا إعلانات بعد. أنشئ أوّل إعلان من النموذج أعلاه.</div>
+            }
+
+            <div class="zyeng-list">
+                @foreach (var item in Model.Announcements)
                 {
-                    <div class="nx-ops-empty">لا توجد إعلانات بعد.</div>
-                }
-                @foreach (var item in Model.Announcements.Take(4))
-                {
-                    <div class="nx-ops-activity-row">
-                        <span class="@(item.IsPublished ? "live" : "draft")">@Model.PublishText(item.IsPublished)</span>
-                        <div><strong>@item.Title</strong><small>@item.Category · @Model.DisplayDate(item.PublishDate)</small></div>
+                    <div class="zyeng-row">
+                        <div class="zyeng-item-main">
+                            <strong>@item.Title</strong>
+                            <div class="zyeng-row-meta">
+                                <span class="zy-pill">@Model.AnnouncementStatusText(item.Status)</span>
+                                <small>@item.Category · @Model.TargetText(item) · @Model.DisplayDate(item.PublishDate) · @item.RecipientCount مستلم</small>
+                            </div>
+                        </div>
+                        <div class="zyeng-item-actions">
+                            <form method="post" asp-page="/Engagement/Announcements" asp-page-handler="Toggle">
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <input type="hidden" name="publish" value="@((!item.IsPublished).ToString().ToLowerInvariant())" />
+                                <button type="submit" class="btn-secondary">@(item.IsPublished ? "إلغاء النشر" : "نشر")</button>
+                            </form>
+                            <form method="post" asp-page="/Engagement/Announcements" asp-page-handler="Archive">
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <button type="submit" class="btn-secondary" data-zyconfirm="أرشفة الإعلان؟">أرشفة</button>
+                            </form>
+                        </div>
                     </div>
                 }
-            </article>
+            </div>
+        </article>
+    </section>
 
-            <article class="nx-ops-activity-card">
-                <header><h2>أحدث الاستبيانات</h2><a asp-page="/Engagement/Polls">عرض الكل</a></header>
-                @if (Model.Polls.Count == 0)
+    @* ================================================================= الاستطلاعات *@
+    <section class="zyeng-panel" data-zyeng-panel="polls" role="tabpanel" hidden="@(!IsTab("polls"))">
+        <article class="zy-card">
+            <div class="zyeng-queue-head"><h2>استطلاع جديد</h2></div>
+
+            <form method="post" asp-page="/Engagement/Polls" asp-page-handler="Create">
+                <div class="zyeng-form-grid">
+                    <div class="zyeng-field zyeng-field--wide">
+                        <label for="poll-title">العنوان</label>
+                        <input id="poll-title" name="Poll.Title" required />
+                    </div>
+
+                    <div class="zyeng-field zyeng-field--wide">
+                        <label for="poll-question">السؤال</label>
+                        <input id="poll-question" name="Poll.Question" required />
+                    </div>
+
+                    <div class="zyeng-field zyeng-field--wide">
+                        <label for="poll-options">الخيارات — خيارٌ بكل سطر</label>
+                        <textarea id="poll-options" name="Poll.OptionsText" rows="4" required></textarea>
+                    </div>
+
+                    <div class="zyeng-field">
+                        <label for="poll-category">التصنيف</label>
+                        <input id="poll-category" name="Poll.Category" value="استطلاع" />
+                    </div>
+
+                    <div class="zyeng-field">
+                        <label for="poll-target">الاستهداف</label>
+                        <select id="poll-target" name="Poll.TargetType" data-zyeng-target="poll">
+                            <option value="All">كل الموظفين</option>
+                            <option value="Department">قسم</option>
+                            <option value="Branch">موقع عمل</option>
+                            <option value="Employees">موظفون محدّدون</option>
+                        </select>
+                    </div>
+
+                    <div class="zyeng-field zyeng-target" data-zyeng-target-for="poll" data-zyeng-when="Department" hidden>
+                        <label for="poll-dept">القسم المستهدف</label>
+                        <select id="poll-dept" name="Poll.DepartmentId">
+                            <option value="">—</option>
+                            @foreach (var d in Model.Departments)
+                            {
+                                <option value="@d.Id">@d.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="zyeng-field zyeng-target" data-zyeng-target-for="poll" data-zyeng-when="Branch" hidden>
+                        <label for="poll-branch">موقع العمل المستهدف</label>
+                        <select id="poll-branch" name="Poll.BranchId">
+                            <option value="">—</option>
+                            @foreach (var b in Model.Branches)
+                            {
+                                <option value="@b.Id">@b.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="zyeng-field zyeng-field--wide zyeng-target" data-zyeng-target-for="poll" data-zyeng-when="Employees" hidden>
+                        <label for="poll-employees">الموظفون المستهدفون</label>
+                        <select id="poll-employees" name="Poll.EmployeeIds" multiple size="6">
+                            @foreach (var e in Model.Employees)
+                            {
+                                <option value="@e.Id">@e.FullName (@e.EmployeeNo)</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="zyeng-form-actions">
+                    <label>
+                        <input type="checkbox" name="Poll.PublishNow" value="true" checked />
+                        نشر فوراً
+                    </label>
+                    <input type="hidden" name="Poll.PublishNow" value="false" />
+                    <button type="submit" class="btn-primary">حفظ الاستطلاع</button>
+                </div>
+            </form>
+        </article>
+
+        <article class="zy-card">
+            <div class="zyeng-queue-head">
+                <h2>الاستطلاعات</h2>
+                <span class="zy-pill">@Model.TotalPolls</span>
+            </div>
+
+            @if (Model.Polls.Count == 0)
+            {
+                <div class="zyeng-empty">لا استطلاعات بعد.</div>
+            }
+
+            <div class="zyeng-list">
+                @foreach (var item in Model.Polls)
                 {
-                    <div class="nx-ops-empty">لا توجد استطلاعات بعد.</div>
-                }
-                @foreach (var item in Model.Polls.Take(4))
-                {
-                    <div class="nx-ops-activity-row">
-                        <span class="@(item.IsPublished ? "live" : "draft")">@Model.PublishText(item.IsPublished)</span>
-                        <div><strong>@item.Title</strong><small>@item.VotesCount تصويت · @Model.TargetText(item)</small></div>
+                    <div class="zyeng-row">
+                        <div class="zyeng-item-main">
+                            <strong>@item.Title</strong>
+                            <div class="zyeng-row-meta">
+                                <span class="zy-pill">@Model.PublishText(item.IsPublished)</span>
+                                <small>@item.VotesCount صوت · @item.OptionsCount خيار · @Model.TargetText(item)</small>
+                            </div>
+                        </div>
+                        <div class="zyeng-item-actions">
+                            <form method="post" asp-page="/Engagement/Polls" asp-page-handler="Toggle">
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <input type="hidden" name="publish" value="@((!item.IsPublished).ToString().ToLowerInvariant())" />
+                                <button type="submit" class="btn-secondary">@(item.IsPublished ? "إلغاء النشر" : "نشر")</button>
+                            </form>
+                            <form method="post" asp-page="/Engagement/Polls" asp-page-handler="Delete">
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <button type="submit" class="btn-secondary" data-zyconfirm="حذف الاستطلاع وأصواته؟">حذف</button>
+                            </form>
+                        </div>
                     </div>
                 }
-            </article>
+            </div>
+        </article>
+    </section>
 
-            <article class="nx-ops-activity-card">
-                <header><h2>أحدث الحالات</h2><a asp-page="/Engagement/Feedback">عرض الكل</a></header>
-                @if (Model.FeedbackItems.Count == 0)
+    @* ====================================================================== الحالات *@
+    <section class="zyeng-panel" data-zyeng-panel="cases" role="tabpanel" hidden="@(!IsTab("cases"))">
+        <article class="zy-card">
+            <div class="zyeng-queue-head">
+                <h2>الشكاوى والمقترحات</h2>
+                <span class="zy-pill">@Model.OpenEngagementCases مفتوحة من @Model.TotalFeedback</span>
+            </div>
+
+            @if (Model.FeedbackItems.Count == 0)
+            {
+                <div class="zyeng-empty">لا حالات — لم يرسل أحد شكوى أو مقترحاً بعد.</div>
+            }
+
+            <div class="zyeng-list">
+                @foreach (var item in Model.FeedbackItems)
                 {
-                    <div class="nx-ops-empty">لا توجد حالات بعد.</div>
-                }
-                @foreach (var item in Model.FeedbackItems.Take(4))
-                {
-                    <div class="nx-ops-activity-row">
-                        <span class="@Model.StatusClass(item.Status)">@Model.StatusText(item.Status)</span>
-                        <div><strong>@item.Title</strong><small>@item.Type · @item.EmployeeName</small></div>
+                    <div class="zyeng-item">
+                        <div class="zyeng-item-main">
+                            <strong>@item.Title</strong>
+                            <div class="zyeng-row-meta">
+                                <span class="zy-pill">@Model.StatusText(item.Status)</span>
+                                <small>@item.Type · @item.EmployeeName (@item.EmployeeNo) · @Model.DisplayDate(item.CreatedAt)</small>
+                            </div>
+                            <p>@item.Message</p>
+
+                            @if (!string.IsNullOrWhiteSpace(item.AdminReply))
+                            {
+                                <small>الردّ: @item.AdminReply — @item.RepliedBy</small>
+                            }
+                            else
+                            {
+                                <form method="post" asp-page="/Engagement/Feedback" asp-page-handler="Reply">
+                                    <input type="hidden" name="FeedbackReply.Id" value="@item.Id" />
+                                    <div class="zyeng-form-grid">
+                                        <div class="zyeng-field zyeng-field--wide">
+                                            <label for="reply-@item.Id">الردّ</label>
+                                            <textarea id="reply-@item.Id" name="FeedbackReply.Reply" rows="2" required></textarea>
+                                        </div>
+                                        <div class="zyeng-field">
+                                            <label for="reply-status-@item.Id">الحالة بعد الردّ</label>
+                                            <select id="reply-status-@item.Id" name="FeedbackReply.Status">
+                                                <option value="Answered">تم الرد</option>
+                                                <option value="Pending">قيد المعالجة</option>
+                                                <option value="Closed">مغلقة</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="zyeng-form-actions">
+                                        <button type="submit" class="btn-primary">إرسال الردّ</button>
+                                    </div>
+                                </form>
+                            }
+                        </div>
+
+                        <div class="zyeng-item-actions">
+                            <form method="post" asp-page="/Engagement/Feedback" asp-page-handler="Close">
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <button type="submit" class="btn-secondary" data-zyconfirm="إغلاق الحالة؟">إغلاق</button>
+                            </form>
+                        </div>
                     </div>
                 }
-            </article>
-        </section>
+            </div>
+        </article>
+    </section>
+
+    @* ===================================================================== التقدير *@
+    <section class="zyeng-panel" data-zyeng-panel="recognition" role="tabpanel" hidden="@(!IsTab("recognition"))">
+        <article class="zy-card">
+            <div class="zyeng-queue-head">
+                <h2>التكريم والشكر</h2>
+                <span class="zy-pill">@Model.RecognitionAnnouncements.Count</span>
+            </div>
+
+            @if (Model.RecognitionAnnouncements.Count == 0)
+            {
+                <div class="zyeng-empty">
+                    لا تكريمات بعد. تُنشأ من تبويب «الإعلانات» باختيار قالب ترقية أو شكر أو ترحيب.
+                </div>
+            }
+
+            <div class="zyeng-list">
+                @foreach (var item in Model.RecognitionAnnouncements)
+                {
+                    <div class="zyeng-row">
+                        <div class="zyeng-item-main">
+                            <strong>@item.Title</strong>
+                            <div class="zyeng-row-meta">
+                                <span class="zy-pill">@Model.TemplateName(item.TemplateKey)</span>
+                                <small>@Model.DisplayDate(item.PublishDate) · @item.RecipientCount مستلم</small>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </article>
+
+        <article class="zy-card">
+            <div class="zyeng-queue-head">
+                <h2>الحملات والتعاميم</h2>
+                <span class="zy-pill">@Model.CampaignAnnouncements.Count</span>
+            </div>
+
+            @if (Model.CampaignAnnouncements.Count == 0)
+            {
+                <div class="zyeng-empty">لا حملات أو تعاميم منشورة.</div>
+            }
+
+            <div class="zyeng-list">
+                @foreach (var item in Model.CampaignAnnouncements)
+                {
+                    <div class="zyeng-row">
+                        <div class="zyeng-item-main">
+                            <strong>@item.Title</strong>
+                            <div class="zyeng-row-meta">
+                                <span class="zy-pill">@item.Category</span>
+                                <small>@Model.DisplayDate(item.PublishDate) · @Model.TargetText(item)</small>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </article>
     </section>
 </section>
+
+@section Scripts {
+    <script>
+        // تبديل التبويب بلا إعادة تحميل، مع إبقاء `?tab=` بالرابط كي تعود إليه
+        // إعادةُ التوجيه بعد أي إجراء (النشر/الردّ) فلا تقفز الشاشة لأوّل تبويب.
+        (function () {
+            'use strict';
+
+            var tabs = Array.prototype.slice.call(document.querySelectorAll('[data-zyeng-tab]'));
+            var panels = Array.prototype.slice.call(document.querySelectorAll('[data-zyeng-panel]'));
+
+            function show(key) {
+                tabs.forEach(function (t) {
+                    t.setAttribute('aria-selected', String(t.dataset.zyengTab === key));
+                });
+                panels.forEach(function (p) {
+                    p.hidden = p.dataset.zyengPanel !== key;
+                });
+
+                var url = new URL(window.location.href);
+                url.searchParams.set('tab', key);
+                window.history.replaceState(window.history.state, '', url.pathname + url.search);
+
+                // كل نموذج يحمل تبويبه معه، فيعود إليه بعد التنفيذ.
+                document.querySelectorAll('form[method="post"]').forEach(function (form) {
+                    var field = form.querySelector('input[name="tab"]');
+                    if (!field) {
+                        field = document.createElement('input');
+                        field.type = 'hidden';
+                        field.name = 'tab';
+                        form.appendChild(field);
+                    }
+                    field.value = key;
+                });
+            }
+
+            tabs.forEach(function (t) {
+                t.addEventListener('click', function () { show(t.dataset.zyengTab); });
+            });
+
+            document.querySelectorAll('[data-zyeng-goto]').forEach(function (b) {
+                b.addEventListener('click', function () { show(b.dataset.zyengGoto); });
+            });
+
+            // حقول الاستهداف تظهر حسب نوعه — لا يرى المستخدم حقلاً لا يعنيه.
+            function syncTargets(scope) {
+                var select = document.querySelector('[data-zyeng-target="' + scope + '"]');
+                if (!select) return;
+                document.querySelectorAll('[data-zyeng-target-for="' + scope + '"]').forEach(function (box) {
+                    box.hidden = box.dataset.zyengWhen !== select.value;
+                });
+            }
+
+            ['announcement', 'poll'].forEach(function (scope) {
+                var select = document.querySelector('[data-zyeng-target="' + scope + '"]');
+                if (!select) return;
+                select.addEventListener('change', function () { syncTargets(scope); });
+                syncTargets(scope);
+            });
+
+            // «قالب جاهز» يخفي محرّر النصّ الحرّ والعكس — الحقلان لا يجتمعان.
+            var mode = document.querySelector('[data-zyeng-ann-mode]');
+            if (mode) {
+                var syncMode = function () {
+                    var isTemplate = mode.value === 'Template';
+                    document.querySelectorAll('[data-zyeng-ann-template-field]').forEach(function (f) { f.hidden = !isTemplate; });
+                    document.querySelectorAll('[data-zyeng-ann-body-field]').forEach(function (f) { f.hidden = isTemplate; });
+                };
+                mode.addEventListener('change', syncMode);
+                syncMode();
+            }
+
+            show(document.querySelector('[data-zyeng-tab][aria-selected="true"]')
+                ? document.querySelector('[data-zyeng-tab][aria-selected="true"]').dataset.zyengTab
+                : 'work');
+        })();
+    </script>
+}

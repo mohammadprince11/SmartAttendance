@@ -17,11 +17,12 @@ public class FeedbackModel : EngagementPageModel
     [BindProperty]
     public FeedbackReplyInput FeedbackReply { get; set; } = new();
 
-    public async Task OnGetAsync()
-    {
-        await EmployeeEngagementSchema.EnsureAsync(DbContext);
-        await LoadFeedbackAsync();
-    }
+    /// <summary>
+    /// الشاشة صارت تبويباً بـ<c>/Engagement</c>. يبقى المسار حيّاً لروابطٍ قديمة
+    /// أو مفضّلات، ويعيد التوجيه بدل أن يعرض نسخةً ثانية من الشاشة نفسها.
+    /// أما معالجات الـPOST أدناه فتبقى **مالكة المنطق** وتُرسل إليها الشاشة الموحّدة.
+    /// </summary>
+    public IActionResult OnGet() => RedirectToPage("/Engagement/Index", new { tab = "cases" });
 
     public async Task<IActionResult> OnPostReplyAsync()
     {
@@ -30,7 +31,7 @@ public class FeedbackModel : EngagementPageModel
         if (FeedbackReply.Id <= 0 || string.IsNullOrWhiteSpace(FeedbackReply.Reply))
         {
             StatusMessage = "يرجى كتابة الرد قبل الحفظ.";
-            return RedirectToPage();
+            return RedirectToPage("/Engagement/Index", new { tab = "cases" });
         }
 
         var user = User.Identity?.Name ?? "HR";
@@ -61,7 +62,7 @@ VALUES ('EmployeeFeedbackItems', CAST(@Id AS nvarchar(80)), 'Reply Employee Feed
             });
 
         StatusMessage = "تم حفظ الرد وسيظهر للموظف داخل بوابة الموظف.";
-        return RedirectToPage();
+        return RedirectToPage("/Engagement/Index", new { tab = "cases" });
     }
 
     public async Task<IActionResult> OnPostCloseAsync(int id)
@@ -86,6 +87,6 @@ WHERE Id = @Id;
             });
 
         StatusMessage = "تم إغلاق الطلب.";
-        return RedirectToPage();
+        return RedirectToPage("/Engagement/Index", new { tab = "cases" });
     }
 }

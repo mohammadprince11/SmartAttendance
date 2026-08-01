@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using SmartAttendance.Application.Announcements.Services;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -13,9 +14,9 @@ public class RecognitionModel : EngagementPageModel
     {
     }
 
-    public async Task OnGetAsync()
-    {
-        await EmployeeEngagementSchema.EnsureAsync(DbContext);
-        await LoadAnnouncementsAsync();
-    }
+    /// <summary>
+    /// الشاشة صارت تبويباً بـ<c>/Engagement</c>. يبقى المسار حيّاً لروابطٍ قديمة
+    /// أو مفضّلات، ويعيد التوجيه بدل أن يعرض نسخةً ثانية من الشاشة نفسها.
+    /// </summary>
+    public IActionResult OnGet() => RedirectToPage("/Engagement/Index", new { tab = "recognition" });
 }
