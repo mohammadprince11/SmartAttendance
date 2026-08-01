@@ -307,12 +307,14 @@
                                 (منشئ/توليد/طلبات) وإعدادات (مختبر الصيغ/تهيئة المخالفات). فوُزّعت
                                 كلٌّ على قسمها: الوثائق ⟵ مركز الوثائق، والإعدادات ⟵ إعدادات م.ب.
                             *@
-                            @if (canViewPeopleDirectory)
-                            {
-                                <a asp-page="/Employees/Index" class="nexora-nav-link ky-drawer-title @ActiveClass("/Employees/Index")">
-                                    <span>أشخاص</span>
-                                </a>
-                            }
+                            @* عنوان الدرج **اسمُ شاشةٍ لا رابط**: كان `<a>` إلى
+                               `/Employees/Index` — أي الوجهة نفسها لـ«عرض الموظفين»
+                               بعده بصفّين. فمن ضغط على «أشخاص» ظنّاً أنه عنوان
+                               القسم وجد نفسه بقائمة الموظفين. والعنوان يبقى بلا
+                               `ActiveClass` أيضاً: العنوان لا «يُنشَّط». *@
+                            <div class="nexora-nav-link ky-drawer-title" role="heading" aria-level="2">
+                                <span>أشخاص</span>
+                            </div>
 
                             @* ① الداشبورد أول القائمة كما بكيان — كان مدفوناً بالمرتبة السابعة *@
                             @if (canUseLegacyPeopleAdministration)
