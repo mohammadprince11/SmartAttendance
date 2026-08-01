@@ -78,7 +78,7 @@
                                         <input type="hidden" name="id" value="@template.Id" />
                                         <button type="submit" data-zyconfirm="إرسال الإقرار لجمهوره الآن؟">إرسال</button>
                                     </form>
-                                    <a asp-page="./Tracking" asp-route-template="@template.Id">المتابعة</a>
+                                    <a asp-page="./Tracking" asp-route-templatefilter="@template.Id">المتابعة</a>
                                     <a asp-page="./Index" asp-route-edit="@template.Id">تعديل</a>
                                     <form method="post" asp-page-handler="Delete" style="display:inline">
                                         <input type="hidden" name="id" value="@template.Id" />

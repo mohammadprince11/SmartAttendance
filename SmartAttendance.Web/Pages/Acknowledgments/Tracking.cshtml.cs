@@ -21,8 +21,10 @@ public class TrackingModel : PageModel
         _db = db;
     }
 
-    [BindProperty(SupportsGet = true, Name = "template")] public int? TemplateFilter { get; set; }
-    [BindProperty(SupportsGet = true, Name = "pending")] public bool PendingOnly { get; set; }
+    // ⚠️ بلا Name مخصَّص عمداً: asp-for يولّد name="TemplateFilter"/"PendingOnly"،
+    // فاسمٌ مخالف بالربط يعني مرشّحاً يُرسَل ولا يُقرأ.
+    [BindProperty(SupportsGet = true)] public int? TemplateFilter { get; set; }
+    [BindProperty(SupportsGet = true)] public bool PendingOnly { get; set; }
 
     public List<AcknowledgmentStore.Assignment> Assignments { get; private set; } = new();
     public List<AcknowledgmentStore.Template> Templates { get; private set; } = new();
@@ -55,13 +57,13 @@ public class TrackingModel : PageModel
             TempData["SuccessMessage"] = "أُعيد الإرسال — سُجِّل كإبلاغ مستقل بختمه الزمني.";
         }
 
-        return RedirectToPage(new { template = TemplateFilter, pending = PendingOnly });
+        return RedirectToPage(new { templateFilter = TemplateFilter, pendingOnly = PendingOnly });
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
         await AcknowledgmentStore.DeleteAssignmentAsync(_db, id);
         TempData["SuccessMessage"] = "حُذف الإرسال (المحسوم لا يُحذف).";
-        return RedirectToPage(new { template = TemplateFilter, pending = PendingOnly });
+        return RedirectToPage(new { templateFilter = TemplateFilter, pendingOnly = PendingOnly });
     }
 }

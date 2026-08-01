@@ -59,12 +59,6 @@ public class MovementsModel : PageModel
 
     public async Task<IActionResult> OnPostApplyAsync()
     {
-        if (EmployeeId <= 0 || string.IsNullOrWhiteSpace(ContractType))
-        {
-            TempData["ErrorMessage"] = "الموظف ونوع العقد إلزاميان.";
-            return RedirectToPage(new { contract = ContractId });
-        }
-
         // التمديد والتعديل يتطلّبان عقداً قائماً؛ بلا عقد لا شيء يُمدَّد.
         if (MovementKind != ContractPolicy.MovementRenew && ContractId is null)
         {
@@ -74,6 +68,20 @@ public class MovementsModel : PageModel
 
         var types = await ContractRegisterStore.LoadContractTypesAsync(_db);
         var current = ContractId is null ? null : await ContractRegisterStore.FindContractAsync(_db, ContractId.Value);
+
+        // الموظف **يُشتقّ من العقد** لا يُؤخذ من منسدلة مستقلة: اختيار عقدٍ ثم نسيان
+        // اختيار صاحبه كان يفشل الحفظ برسالة مربكة، وأسوأ منه أن اختياراً مخالفاً
+        // كان سيُسند حركة عقدِ فلانٍ لغيره.
+        if (current is not null)
+        {
+            EmployeeId = current.EmployeeId;
+        }
+
+        if (EmployeeId <= 0 || string.IsNullOrWhiteSpace(ContractType))
+        {
+            TempData["ErrorMessage"] = "الموظف ونوع العقد إلزاميان.";
+            return RedirectToPage(new { contract = ContractId });
+        }
 
         var start = current is null
             ? EffectiveDate

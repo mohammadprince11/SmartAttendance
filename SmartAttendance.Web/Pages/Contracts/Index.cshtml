@@ -106,7 +106,7 @@
                             <td>
                                 <div class="zyp-actions">
                                     <a asp-page="./Movements" asp-route-contract="@contract.Id">تجديد / تمديد</a>
-                                    <a asp-page="./Index" asp-route-employee="@contract.EmployeeId">سلسلته</a>
+                                    <a asp-page="./Index" asp-route-employeefilter="@contract.EmployeeId" asp-route-showexpired="true">سلسلته</a>
                                     <form method="post" asp-page-handler="Delete" style="display:inline">
                                         <input type="hidden" name="id" value="@contract.Id" />
                                         <button type="submit" data-zyconfirm="حذف العقد من السجلّ؟">حذف</button>

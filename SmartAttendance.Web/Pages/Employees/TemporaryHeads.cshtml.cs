@@ -63,11 +63,13 @@ public class TemporaryHeadsModel : PageModel
             return RedirectToPage();
         }
 
-        await TemporaryHeadStore.SaveAsync(
+        // المعرّف المُعاد لازم لفحص التداخل: بإسنادٍ جديد يبقى AllocationId صفراً،
+        // فيرى الصفُّ المحفوظ نفسَه «إسناداً آخر» ويحذّر من تداخله مع ذاته دائماً.
+        var savedId = await TemporaryHeadStore.SaveAsync(
             _db, AllocationId, DepartmentId, HeadEmployeeId, FromDate, ToDate, IsActive, Note, User.Identity?.Name);
 
         var overlaps = TemporaryHeadPolicy.Overlapping(
-            new TemporaryHeadPolicy.Allocation(AllocationId, DepartmentId, HeadEmployeeId, FromDate, ToDate, IsActive),
+            new TemporaryHeadPolicy.Allocation(savedId, DepartmentId, HeadEmployeeId, FromDate, ToDate, IsActive),
             (await TemporaryHeadStore.LoadAsync(_db)).Select(row => row.ToAllocation()));
 
         TempData["SuccessMessage"] = overlaps.Count > 0

@@ -22,9 +22,15 @@ public class IndexModel : PageModel
     }
 
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
-    [BindProperty(SupportsGet = true, Name = "employee")] public int? EmployeeFilter { get; set; }
-    /// <summary>يُظهر المنتهية أيضاً. مخفيّة افتراضياً لأن السجلّ يتضخّم بها بسرعة.</summary>
-    [BindProperty(SupportsGet = true, Name = "expired")] public bool ShowExpired { get; set; }
+    [BindProperty(SupportsGet = true)] public int? EmployeeFilter { get; set; }
+
+    /// <summary>
+    /// يُظهر المنتهية أيضاً. مخفيّة افتراضياً لأن السجلّ يتضخّم بها بسرعة.
+    ///
+    /// ⚠️ بلا <c>Name</c> مخصَّص عمداً: <c>asp-for</c> يولّد <c>name="ShowExpired"</c>،
+    /// فاسمٌ مخالف بالربط يعني مرشّحاً يُرسَل ولا يُقرأ — يبدو للمستخدم أنه «لا يعمل».
+    /// </summary>
+    [BindProperty(SupportsGet = true)] public bool ShowExpired { get; set; }
 
     [BindProperty] public int ContractId { get; set; }
     [BindProperty] public int EmployeeId { get; set; }
