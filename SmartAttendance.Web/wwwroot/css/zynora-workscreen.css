@@ -65,15 +65,33 @@
     padding-bottom: var(--zy-space-2);
 }
 
+/* ⚠️ التبويب قد يكون `<button>` (تبديل بالعميل) أو `<a>` (تنقّل خادميّ)، وهما
+   يبدوان **مختلفَين تماماً** إن تُرك المظهر للتوكنات: طبقة الاستهلاك تحكم
+   `button` فيأخذ حشوته وارتفاعه واستدارته، بينما `<a>` يبقى نصّاً عارياً.
+   وهو ما جعل شريط تبويبات إعدادات المخالفات يبدو «غير منسّق وبعيد عن النظام»
+   بينما شريط شاشة المخالفات (أزرار) يبدو سليماً — نفس الصنف ونفس الملف.
+   فالمقاس يُصرَّح هنا من التوكنات نفسها ليتساوى الوسمان. */
 .zyw-tab {
     position: relative;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: var(--zy-space-2);
+    min-height: var(--zy-button-h, 34px);
+    padding-inline: var(--zy-button-pad-x, 18px);
     border: 1px solid transparent;
+    border-radius: var(--zy-button-radius, 4px);
     background: transparent;
     color: var(--zy-text-muted);
+    font-size: var(--zy-button-font, 12px);
+    font-weight: 700;
+    text-decoration: none;
     cursor: pointer;
+}
+
+.zyw-tab:hover {
+    color: var(--zy-text);
+    background: var(--zy-primary-soft);
 }
 
 .zyw-tab[aria-selected="true"] {
