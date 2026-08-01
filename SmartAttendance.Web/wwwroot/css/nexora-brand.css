@@ -19,7 +19,9 @@ html {
 body {
     width: 100%;
     max-width: 100%;
-    overflow-x: clip;
+    /* لا `overflow` هنا: الحماية الأفقية على <html> وحدها، وأي قيمة غير
+       `visible` تجعل <body> حاوية تمرير فتموت الالتصاقات داخله.
+       انظر nexora-global-scroll-system.css — مِلكية التمرير مركزها هناك. */
     margin: 0;
     min-height: 100vh;
     background:
@@ -53,7 +55,6 @@ textarea {
     min-height: 100vh !important;
     display: grid !important;
     align-items: stretch !important;
-    overflow-x: clip !important;
     background: transparent !important;
 }
 
@@ -100,7 +101,6 @@ html[dir="ltr"] .nexora-sidebar {
     min-height: 100vh !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow-x: clip !important;
     background: transparent !important;
 }
 
@@ -377,9 +377,7 @@ html[lang="en"] .nexora-page-title {
     flex: 1 1 auto !important;
     margin-inline: auto !important;
     padding: var(--zy-space-4) !important;
-    overflow-x: clip !important;
-    scroll-padding-top:
-        calc(var(--zy-topbar-height) + var(--zy-space-3));
+    /* `scroll-padding-top` انتقل إلى <html> لأنه صار مالك التمرير. */
     background: transparent !important;
 }
 
@@ -635,7 +633,8 @@ html[data-theme="dark"] .nexora-theme-icon--moon {
     color: var(--zy-electric-teal);
 }
 
-.nexora-content {
+/* لون شريط التمرير على المستند لا على المحتوى — المحتوى لم يعد مُمرِّراً. */
+html {
     scrollbar-color: color-mix(in srgb, var(--brand-primary) 35%, transparent) transparent;
 }
 
