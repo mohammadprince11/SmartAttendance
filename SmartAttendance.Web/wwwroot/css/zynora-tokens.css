@@ -336,29 +336,32 @@
    المحتوى تحته، وكل عنصرٍ يمرّ تحته يقفز `translateY(-1px)` ويلمع ثم يهبط —
    فتبدو الحقول «تتحرّك معك ثم تفلت».
 
-   ⚠️ `* !important` هنا مقصود ومقيَّد: القواعد التي نُسكِتها هي نفسها مفروضة
-   بـ!important بعشرين ملفاً، فلا تُسكَت بغيره. والنطاق محصورٌ بلحظات التمرير
-   (~140ms بعد آخر حدث) فلا يمسّ سلوك الصفحة الساكنة إطلاقاً.
+   🔴 **لا تُلغِ `transform` على `*` مهما بدا مغرياً.** جُرِّبت فكسرت الواجهة:
+   عشرات العناصر عندنا **مخفيّةٌ بالتحويل** لا بالإظهار (اللوحات المنزلقة
+   `hrms-slideover` مزاحة بـ`translateX(-720px)`، والقوائم والنوافذ مثلها).
+   فإلغاء التحويل أثناء التمرير يُقحم اللوحة المغلقة إلى `left: 0` **فتقفز أمام
+   المستخدم مع كل دفعة عجلة** — قِيس حيّاً على `/Employees/Profile`:
+   `matrix(1,0,0,1,-720,0)` ⟵ `none` و`left: -720` ⟵ `0`.
+   وقائمة الاستثناءات التي كانت هنا (`nxcs-menu` · `zyep-modal` · `zyep-backdrop`
+   · spinner · loader · الدرج · الشريط) هي **سجلّ العطل نفسه وقد تكرّر سبع مرات**
+   وعولج بالترقيع كلَّ مرّة؛ وأيّ ودجت جديد يُخفى بالتحويل كان سيقع بها ثامناً.
+
+   العلاج الصحيح: `transform` يُلغى **لِما هو تحت المؤشّر فقط** — والعنصر المخفيّ
+   خارج الشاشة يستحيل أن يكون تحته، فيسقط العطل من أصله لا بقائمة أسماء.
+   (`:hover` يطابق سلسلة الأسلاف أيضاً، وهي لا تستعمل التحويل، فلا ضرر.)
+   والانتقالات تُسكَت عامّةً: لا تُحرّك موضع شيء، وإسكاتها هو ما يقتل اللمعان.
    ============================================================================ */
 
 html.zy-scrolling *,
 html.zy-scrolling *::before,
 html.zy-scrolling *::after {
-    transform: none !important;
     transition: none !important;
-    /* اللمعان جزء من نفس تأثير الـhover، وإبقاؤه بلا الحركة يترك وميضاً مزعجاً */
-    filter: none !important;
 }
 
-/* استثناءان إلزاميّان: عناصر يعتمد **وجودها** على التحويل لا على الـhover —
-   إسكاتها أثناء التمرير يفكّك تخطيطها بدل أن يهدّئه. */
-html.zy-scrolling .nxcs-menu,
-html.zy-scrolling .zyep-modal,
-html.zy-scrolling .zyep-backdrop,
-html.zy-scrolling [class*="spinner"],
-html.zy-scrolling [class*="loader"],
-html.zy-scrolling .nexora-sidebar,
-html.zy-scrolling .nexora-topbar {
-    transform: revert !important;
-    filter: revert !important;
+html.zy-scrolling *:hover,
+html.zy-scrolling *:hover::before,
+html.zy-scrolling *:hover::after {
+    transform: none !important;
+    /* اللمعان جزء من نفس تأثير الـhover، وإبقاؤه بلا الحركة يترك وميضاً مزعجاً */
+    filter: none !important;
 }
