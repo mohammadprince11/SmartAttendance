@@ -128,6 +128,46 @@ public class SalaryFormulaConditionalTests
         Assert.Equal(33_333.333333333333333333333333m, Eval("IF(Days > 0, Basic / MAX(Days, 1), 0)"));
     }
 
+    // ── التقريب المتّجه والمنطق ────────────────────────────────────────────────
+
+    [Fact]
+    public void FloorAndCeil_RoundDirectionally_UnlikeRound()
+    {
+        Assert.Equal(2m, Eval("FLOOR(2.9)"));
+        Assert.Equal(3m, Eval("CEIL(2.1)"));
+        Assert.Equal(3m, Eval("ROUND(2.5)"));
+        // السالب: FLOOR ينزل وCEIL يصعد — لا يقتربان من الصفر.
+        Assert.Equal(-3m, Eval("FLOOR(-2.1)"));
+        Assert.Equal(-2m, Eval("CEIL(-2.9)"));
+    }
+
+    [Fact]
+    public void FloorToNearestThousand_IsExpressible()
+    {
+        Assert.Equal(1_000_000m, Eval("FLOOR(Basic / 1000) * 1000"));
+    }
+
+    [Theory]
+    [InlineData("AND(1, 1)", 1)]
+    [InlineData("AND(1, 0)", 0)]
+    [InlineData("OR(0, 1)", 1)]
+    [InlineData("OR(0, 0)", 0)]
+    [InlineData("NOT(0)", 1)]
+    [InlineData("NOT(5)", 0)]
+    public void LogicalFunctions_ReturnOneOrZero(string expression, int expected)
+    {
+        Assert.Equal(expected, Eval(expression));
+    }
+
+    [Fact]
+    public void LogicalFunctions_ComposeWithComparisons()
+    {
+        // «الأساسي فوق نصف مليون **و** الإجمالي دون مليونين»
+        Assert.Equal(1m, Eval("AND(Basic > 500000, Gross < 2000000)"));
+        Assert.Equal(0m, Eval("AND(Basic > 500000, Gross < 1000000)"));
+        Assert.Equal(50_000m, Eval("IF(AND(Basic > 500000, Days = 30), Basic * 0.05, 0)"));
+    }
+
     // ── حراسة الأخطاء ──────────────────────────────────────────────────────────
 
     [Fact]

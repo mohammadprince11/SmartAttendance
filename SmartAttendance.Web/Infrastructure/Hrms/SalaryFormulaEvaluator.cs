@@ -6,8 +6,9 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 /// مُقيِّم صيغ عناصر الراتب الخادمي (نظير الاختبار الحيّ ببوابة المعادلة، لكن آمن
 /// وبلا تنفيذ كود): يحلّل تعبيراً حسابياً على متغيّرات الموظف (Basic/Allowances/
 /// Gross/Hours/Days/DailyRate/HourlyRate) ويرجع قيمة عشرية. القواعد: + − × ÷،
-/// أقواس، سالب أحادي، والدوال ROUND(x[,n]) · MIN(..) · MAX(..) · ABS(x) ·
-/// IF(شرط، صحّ، خطأ)، وعوامل المقارنة &lt; &gt; &lt;= &gt;= = &lt;&gt; (تُرجع 1 أو 0).
+/// أقواس، سالب أحادي، والدوال ROUND(x[,n]) · FLOOR(x) · CEIL(x) · MIN(..) ·
+/// MAX(..) · ABS(x) · IF(شرط، صحّ، خطأ) · AND(..) · OR(..) · NOT(x)،
+/// وعوامل المقارنة &lt; &gt; &lt;= &gt;= = &lt;&gt; (تُرجع 1 أو 0).
 /// أي رمز غير معروف أو قسمة على صفر ⟶ خطأ (لا استثناء يُسقط المسير — يتخطّى المحرك العنصر).
 /// محرك تحليل نزولي تعاودي بلا انعكاس ولا Function() — آمن للإدخال غير الموثوق.
 ///
@@ -278,6 +279,27 @@ public static class SalaryFormulaEvaluator
                 case "IF":
                     if (args.Count != 3) throw new FormulaException("IF تقبل ثلاثة وسائط: IF(شرط، قيمة_صحّ، قيمة_خطأ).");
                     return args[0] != 0 ? args[1] : args[2];
+                // FLOOR/CEIL: التقريب لأسفل/أعلى — لازمان بتقريب المستحقات لأقرب
+                // دينار أو لأقرب ألف، ولا يغنيان عن ROUND (الذي يقرّب للأقرب).
+                case "FLOOR":
+                    if (args.Count != 1) throw new FormulaException("FLOOR تقبل وسيطاً واحداً.");
+                    return Math.Floor(args[0]);
+                case "CEIL":
+                case "CEILING":
+                    if (args.Count != 1) throw new FormulaException("CEIL تقبل وسيطاً واحداً.");
+                    return Math.Ceiling(args[0]);
+                // AND/OR كدالّتين لا كعاملَين: العامل يحتاج مستوى أولوية إضافياً
+                // بالمحلّل، والدالّة تعطي نفس القدرة بلا لبس أسبقية.
+                // أي وسيط غير صفري = صحّ، والناتج 1 أو 0 ليتّسق مع المقارنة.
+                case "AND":
+                    if (args.Count == 0) throw new FormulaException("AND تحتاج وسيطاً واحداً على الأقل.");
+                    return args.All(value => value != 0) ? 1 : 0;
+                case "OR":
+                    if (args.Count == 0) throw new FormulaException("OR تحتاج وسيطاً واحداً على الأقل.");
+                    return args.Any(value => value != 0) ? 1 : 0;
+                case "NOT":
+                    if (args.Count != 1) throw new FormulaException("NOT تقبل وسيطاً واحداً.");
+                    return args[0] == 0 ? 1 : 0;
                 default:
                     throw new FormulaException($"دالة غير معروفة «{name}».");
             }
