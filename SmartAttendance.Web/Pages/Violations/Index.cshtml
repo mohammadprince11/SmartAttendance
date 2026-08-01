@@ -1,5 +1,6 @@
 @page
 @model SmartAttendance.Web.Pages.Violations.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
 @{
     ViewData["Title"] = "المخالفات";
 
@@ -244,73 +245,80 @@
     </section>
 
     @* ========================================================= الإجراءات التأديبية *@
+    @{
+        // المجموعات هي الفلتر نفسه: ثلاث حالاتٍ مشتقّة من التهيئة، فعرضُها
+        // مجموعاتٍ يُغني عن صفّ أزرار تصفية فوق جدولٍ واحد أصمّ.
+        var openActions = Model.DisciplinaryActions
+            .Where(r => ViolationConfigPolicy.CanObject(r.NotifiedOn, Model.ObjectionDays, Model.Today)).ToList();
+        var droppedActions = Model.DisciplinaryActions
+            .Where(r => ViolationConfigPolicy.IsDropped(r.DecidedOn, Model.DropMonths, Model.Today)).ToList();
+        var finalActions = Model.DisciplinaryActions
+            .Except(openActions).Except(droppedActions).ToList();
+    }
     <section class="zyw-panel" data-zyw-panel="actions" role="tabpanel" hidden="@(!IsTab("actions"))">
-        <article class="zy-card">
-            <div class="zyw-queue-head">
-                <h2>العقوبات المطبَّقة</h2>
-                <span class="zy-pill">@Model.DisciplinaryActions.Count</span>
-            </div>
+        @* القاعدة المطبَّقة تُعلَن أولاً: الحالة **مشتقّة من التهيئة لا مخزَّنة**،
+           فمن يرى عقوبةً «ساقطة» يجب أن يعرف من أين جاء الحكم. *@
+        <div class="zyw-totals">
+            <span>مدّة الطعن <b>@Model.ObjectionDays</b> يوماً</span>
+            <span>·</span>
+            <span>الإسقاط بعد <b>@Model.DropMonths</b> شهراً</span>
+            <span>·</span>
+            <span>إجمالي الخصومات <b>@Model.ActionsDeductions.ToString("N0")</b> دينار</span>
+        </div>
 
-            @* الحالة مشتقّة من التهيئة لا مخزَّنة: تغيير مدّة الطعن أو الإسقاط
-               يعيد التصنيف فوراً. ولذلك تُعلَن المدّتان هنا لا تُخفيان. *@
-            <div class="zyw-filters">
-                <div class="zyw-field">
-                    <label>الحالة</label>
-                    <div class="zyw-item-actions">
-                        <a class="btn-secondary" asp-page="/Violations/Index" asp-route-actionState="All" asp-route-tab="actions">الكل</a>
-                        <a class="btn-secondary" asp-page="/Violations/Index" asp-route-actionState="Open" asp-route-tab="actions">قابلة للطعن (@Model.OpenForObjection)</a>
-                        <a class="btn-secondary" asp-page="/Violations/Index" asp-route-actionState="Final" asp-route-tab="actions">نهائية</a>
-                        <a class="btn-secondary" asp-page="/Violations/Index" asp-route-actionState="Dropped" asp-route-tab="actions">ساقطة (@Model.DroppedActions)</a>
+        @if (Model.DisciplinaryActions.Count == 0)
+        {
+            <div class="zyw-empty">
+                لا عقوبات مطبَّقة بعد. تظهر هنا المخالفات التي صدرت بحقّها عقوبة فعلية.
+            </div>
+        }
+
+        <div class="zyw-queue">
+            @{
+                var actionGroups = new[]
+                {
+                    new { Title = "قابلة للطعن", Note = "ما زالت مدّة الاعتراض سارية", Rows = openActions },
+                    new { Title = "نهائية", Note = "انتهت مدّة الطعن ولم تسقط", Rows = finalActions },
+                    new { Title = "ساقطة", Note = "مضت مدّة الإسقاط فلا تُحتسب بالتكرار", Rows = droppedActions }
+                };
+            }
+
+            @foreach (var group in actionGroups.Where(g => g.Rows.Count > 0))
+            {
+                <article class="zy-card">
+                    <div class="zyw-queue-head">
+                        <h2>@group.Title</h2>
+                        <span class="zy-pill">@group.Rows.Count</span>
                     </div>
-                </div>
-                <div class="zyw-field zyw-field--grow">
-                    <label>القاعدة المطبَّقة</label>
-                    <p class="zyw-row-meta">
-                        مدّة الطعن <b>@Model.ObjectionDays</b> يوماً · الإسقاط بعد <b>@Model.DropMonths</b> شهراً ·
-                        إجمالي الخصومات <b>@Model.ActionsDeductions.ToString("N0")</b> دينار
-                    </p>
-                </div>
-            </div>
+                    <p class="zyw-row-meta">@group.Note</p>
 
-            @if (Model.DisciplinaryActions.Count == 0)
-            {
-                <div class="zyw-empty">
-                    لا عقوبات مطبَّقة بهذا الفلتر. تظهر هنا المخالفات التي صدرت بحقّها عقوبة فعلية.
-                </div>
+                    <div class="zyw-list">
+                        @foreach (var row in group.Rows)
+                        {
+                            <div class="zyw-item">
+                                <div class="zyw-item-main">
+                                    <strong>@row.EmployeeName — @row.ViolationTitle</strong>
+                                    <small>
+                                        @row.ReferenceNo · @row.EventDate.ToString("yyyy-MM-dd")
+                                        @if (!string.IsNullOrWhiteSpace(row.FinalPenaltyAction))
+                                        {
+                                            <text> · @row.FinalPenaltyAction</text>
+                                        }
+                                    </small>
+                                </div>
+                                <div class="zyw-item-actions">
+                                    @if (row.DeductionAmount > 0)
+                                    {
+                                        <span class="zy-pill">@row.DeductionAmount.ToString("N0") د</span>
+                                    }
+                                    <a class="btn-secondary" asp-page="/Violations/PrintForm" asp-route-id="@row.Id">طباعة</a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </article>
             }
-            else
-            {
-                <div class="zyw-table-wrap">
-                    <table class="zyw-table">
-                        <thead>
-                            <tr>
-                                <th>الرقم المرجعي</th>
-                                <th>الموظف</th>
-                                <th>المخالفة</th>
-                                <th>العقوبة</th>
-                                <th>الخصم</th>
-                                <th>تاريخ الحدث</th>
-                                <th>الحالة</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var row in Model.DisciplinaryActions)
-                            {
-                                <tr>
-                                    <td>@row.ReferenceNo</td>
-                                    <td>@row.EmployeeName<br /><small>@row.EmployeeNo</small></td>
-                                    <td>@row.ViolationTitle</td>
-                                    <td>@(string.IsNullOrWhiteSpace(row.FinalPenaltyAction) ? "—" : row.FinalPenaltyAction)</td>
-                                    <td>@(row.DeductionAmount > 0 ? row.DeductionAmount.ToString("N0") : "—")</td>
-                                    <td>@row.EventDate.ToString("yyyy-MM-dd")</td>
-                                    <td><span class="zy-pill">@Model.ActionStatusOf(row)</span></td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-        </article>
+        </div>
     </section>
 
     @* ========================================================== القوالب والرسائل *@
@@ -344,24 +352,31 @@
 
             @if (Model.Config.TemplateTypes.Count == 0)
             {
-                <div class="zyw-empty">لا أنواع قوالب بعد.</div>
+                <div class="zyw-empty">لا أنواع قوالب بعد — النوع هو غرض الكتاب (إشعار عقوبة · إنذار · لفت نظر).</div>
             }
             else
             {
                 <div class="zyw-list">
                     @foreach (var type in Model.Config.TemplateTypes)
                     {
-                        <div class="zyw-row">
+                        var used = Model.Config.MessageTemplates.Count(t => t.TemplateType == type.Code);
+                        <div class="zyw-item">
                             <div class="zyw-item-main">
                                 <strong>@type.Name</strong>
-                                <div class="zyw-row-meta">
-                                    <span class="zy-pill">@type.Code</span>
-                                    <small>@type.Description</small>
-                                    @if (!type.IsActive)
+                                <small>
+                                    @(string.IsNullOrWhiteSpace(type.Description) ? type.Code : type.Description)
+                                    @if (type.Code == Model.Config.Settings.DefaultTemplateType)
                                     {
-                                        <span class="zy-pill">معطّل</span>
+                                        <text> · الافتراضي بالتهيئة</text>
                                     }
-                                </div>
+                                </small>
+                            </div>
+                            <div class="zyw-item-actions">
+                                <span class="zy-pill">@used قالباً</span>
+                                @if (!type.IsActive)
+                                {
+                                    <span class="zy-pill">معطّل</span>
+                                }
                             </div>
                         </div>
                     }
@@ -377,28 +392,41 @@
 
             @if (Model.Config.MessageTemplates.Count == 0)
             {
-                <div class="zyw-empty">لا قوالب رسائل بعد.</div>
+                <div class="zyw-empty">لا قوالب رسائل بعد — القالب هو نصّ الكتاب الذي يصل الموظف.</div>
             }
             else
             {
-                <div class="zyw-list">
-                    @foreach (var template in Model.Config.MessageTemplates)
-                    {
-                        <div class="zyw-row">
-                            <div class="zyw-item-main">
-                                <strong>@template.Name</strong>
-                                <div class="zyw-row-meta">
-                                    <span class="zy-pill">@template.TemplateType</span>
+                @* مجموعاتٌ حسب النوع: القالب لا يُقرأ وحده بل مقابل أقرانه بنفس الغرض. *@
+                @foreach (var group in Model.Config.MessageTemplates.GroupBy(t => t.TemplateType))
+                {
+                    var typeName = Model.Config.TemplateTypes.FirstOrDefault(x => x.Code == group.Key)?.Name ?? group.Key;
+                    <div class="zyw-queue-head">
+                        <h2>@typeName</h2>
+                        <span class="zy-pill">@group.Count()</span>
+                    </div>
+                    <div class="zyw-list">
+                        @foreach (var template in group)
+                        {
+                            <div class="zyw-item">
+                                <div class="zyw-item-main">
+                                    <strong>@template.Name</strong>
+                                    <small>@(string.IsNullOrWhiteSpace(template.Subject) ? "بلا عنوان رسالة" : template.Subject)</small>
+                                </div>
+                                <div class="zyw-item-actions">
                                     @if (template.IsDefault)
                                     {
                                         <span class="zy-pill">الافتراضي</span>
                                     }
-                                    <small>@template.Subject</small>
+                                    @if (!template.IsActive)
+                                    {
+                                        <span class="zy-pill">معطّل</span>
+                                    }
+                                    <a class="btn-secondary" asp-page="/DisciplinaryRules/Index" asp-route-tab="templates">تحرير النصّ</a>
                                 </div>
                             </div>
-                        </div>
-                    }
-                </div>
+                        }
+                    </div>
+                }
             }
 
             @* تحرير نصّ القالب ومصمّم الفورمة يبقيان بشاشتهما: محرّر نصّ ورفع
@@ -412,77 +440,98 @@
 
     @* ==================================================================== التهيئة *@
     <section class="zyw-panel" data-zyw-panel="setup" role="tabpanel" hidden="@(!IsTab("setup"))">
-        <article class="zy-card">
-            <div class="zyw-queue-head"><h2>تهيئة نظام المخالفات</h2></div>
-
+            @* ثلاثة قرارات لا ستّة حقول: مَن يعتمد · بأيّ اسم يصدر الكتاب · كيف
+               يبدو. كلٌّ ببطاقته وسببه، ونموذجٌ واحد يحفظها معاً.
+               ولا غلافَ خارجيّاً حولها: بطاقةٌ داخل بطاقة هي بالضبط ما يجعل
+               الشاشة تبدو «قديمة» — صندوقٌ يحوي صناديق بلا معنى يضيفه. *@
             <form method="post" asp-page="/DisciplinaryRules/Index" asp-page-handler="SaveSettings">
                 @* الحفظ يعيدك إلى هذا التبويب لا إلى شاشة الإعدادات. *@
                 <input type="hidden" name="backTo" value="setup" />
 
                 <div class="zyw-queue">
-                    <div class="zy-card zyw-item">
-                        <div class="zyw-item-main">
-                            <strong>لجنة الموافقات</strong>
-                            <small>عند التفعيل لا تُقفل المخالفة إلا بعد مسار اللجنة.</small>
+                    <article class="zy-card">
+                        <div class="zyw-queue-head"><h2>مسار الاعتماد</h2></div>
+                        <p class="zyw-row-meta">من يقرّ المخالفة، وهل للموظف حقّ الردّ عليها.</p>
+
+                        <div class="zyw-list">
+                            <label class="zyw-item">
+                                <span class="zyw-item-main">
+                                    <strong>لجنة الموافقات</strong>
+                                    <small>لا تُقفل المخالفة إلا بعد مسار اللجنة.</small>
+                                </span>
+                                <span class="zyw-item-actions">
+                                    <input type="checkbox" name="requiresCommitteeApproval" value="true" checked="@Model.Config.Settings.RequiresCommitteeApproval" />
+                                </span>
+                            </label>
+
+                            <label class="zyw-item">
+                                <span class="zyw-item-main">
+                                    <strong>اعتراض الموظف</strong>
+                                    <small>يعترض من بوابته بعد صدور المخالفة.</small>
+                                </span>
+                                <span class="zyw-item-actions">
+                                    <input type="checkbox" name="allowEmployeeAppeal" value="true" checked="@Model.Config.Settings.AllowEmployeeAppeal" />
+                                </span>
+                            </label>
                         </div>
-                        <label class="zyw-checks">
-                            <input type="checkbox" name="requiresCommitteeApproval" value="true" checked="@Model.Config.Settings.RequiresCommitteeApproval" />
-                        </label>
-                    </div>
 
-                    <div class="zy-card zyw-item">
-                        <div class="zyw-item-main">
-                            <strong>اعتراض الموظف</strong>
-                            <small>السماح له بالاعتراض من بوابة الموظف بعد صدور المخالفة.</small>
+                        <div class="zyw-field">
+                            <label for="cfg-days">مدّة الاعتراض (أيام)</label>
+                            <input id="cfg-days" name="appealWindowDays" type="number" min="0" value="@Model.Config.Settings.AppealWindowDays" />
+                            <small class="zyw-row-meta">هي نفسها التي تصنّف العقوبة «قابلة للطعن» بتبويب الإجراءات.</small>
                         </div>
-                        <label class="zyw-checks">
-                            <input type="checkbox" name="allowEmployeeAppeal" value="true" checked="@Model.Config.Settings.AllowEmployeeAppeal" />
-                        </label>
-                    </div>
-                </div>
+                    </article>
 
-                <div class="zyw-form-grid">
-                    <div class="zyw-field">
-                        <label for="cfg-days">مدّة الاعتراض (أيام)</label>
-                        <input id="cfg-days" name="appealWindowDays" type="number" min="0" value="@Model.Config.Settings.AppealWindowDays" />
-                    </div>
+                    <article class="zy-card">
+                        <div class="zyw-queue-head"><h2>هوية الكتاب</h2></div>
+                        <p class="zyw-row-meta">باسم من يصدر الإشعار، وبأي ترقيم.</p>
 
-                    <div class="zyw-field">
-                        <label for="cfg-template">القالب الافتراضي</label>
-                        <select id="cfg-template" name="defaultTemplateType">
-                            @foreach (var type in Model.Config.TemplateTypes.Where(x => x.IsActive))
+                        <div class="zyw-field">
+                            <label for="cfg-authority">الجهة المعتمدة</label>
+                            <input id="cfg-authority" name="approvingAuthorityName" value="@Model.Config.Settings.ApprovingAuthorityName" />
+                        </div>
+
+                        <div class="zyw-field">
+                            <label for="cfg-number">صيغة رقم الكتاب</label>
+                            <input id="cfg-number" name="documentNumberFormat" value="@Model.Config.Settings.DocumentNumberFormat" />
+                        </div>
+
+                        <div class="zyw-field">
+                            <label for="cfg-template">القالب الافتراضي</label>
+                            <select id="cfg-template" name="defaultTemplateType">
+                                @foreach (var type in Model.Config.TemplateTypes.Where(x => x.IsActive))
+                                {
+                                    <option value="@type.Code" selected="@(type.Code == Model.Config.Settings.DefaultTemplateType)">@type.Name</option>
+                                }
+                            </select>
+                            @if (Model.Config.TemplateTypes.Count == 0)
                             {
-                                <option value="@type.Code" selected="@(type.Code == Model.Config.Settings.DefaultTemplateType)">@type.Name</option>
+                                <small class="zyw-row-meta">لا أنواع قوالب بعد — أضفها من تبويب «القوالب والرسائل».</small>
                             }
-                        </select>
-                    </div>
+                        </div>
+                    </article>
 
-                    <div class="zyw-field">
-                        <label for="cfg-authority">اسم الجهة المعتمدة</label>
-                        <input id="cfg-authority" name="approvingAuthorityName" value="@Model.Config.Settings.ApprovingAuthorityName" />
-                    </div>
+                    <article class="zy-card">
+                        <div class="zyw-queue-head"><h2>شكل الفورمة</h2></div>
+                        <p class="zyw-row-meta">ما يعلو الكتاب وما يذيّله. اتركهما فارغين ليُستعمل هيدر النظام.</p>
 
-                    <div class="zyw-field">
-                        <label for="cfg-number">صيغة رقم الكتاب</label>
-                        <input id="cfg-number" name="documentNumberFormat" value="@Model.Config.Settings.DocumentNumberFormat" />
-                    </div>
+                        <div class="zyw-field">
+                            <label for="cfg-header">الهيدر</label>
+                            <textarea id="cfg-header" name="formHeader" rows="4">@Model.Config.Settings.FormHeader</textarea>
+                        </div>
 
-                    <div class="zyw-field zyw-field--wide">
-                        <label for="cfg-header">هيدر الفورمة</label>
-                        <textarea id="cfg-header" name="formHeader" rows="4">@Model.Config.Settings.FormHeader</textarea>
-                    </div>
-
-                    <div class="zyw-field zyw-field--wide">
-                        <label for="cfg-footer">فوتر الفورمة</label>
-                        <textarea id="cfg-footer" name="formFooter" rows="4">@Model.Config.Settings.FormFooter</textarea>
-                    </div>
+                        <div class="zyw-field">
+                            <label for="cfg-footer">الفوتر</label>
+                            <textarea id="cfg-footer" name="formFooter" rows="4">@Model.Config.Settings.FormFooter</textarea>
+                        </div>
+                    </article>
                 </div>
 
                 <div class="zyw-form-actions">
                     <button type="submit" class="btn-primary">حفظ التهيئة</button>
+                    <a class="btn-secondary" asp-page="/DisciplinaryRules/Index" asp-route-tab="designer">مصمّم الفورمة ورفع الصور</a>
                 </div>
             </form>
-        </article>
     </section>
 
     @* ============================================================== تسجيل مخالفة *@
