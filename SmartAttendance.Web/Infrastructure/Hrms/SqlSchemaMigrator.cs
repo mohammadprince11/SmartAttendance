@@ -444,6 +444,51 @@ BEGIN
         ALTER TABLE EmployeeUpdateBatches ADD AttachmentPath nvarchar(500) NULL;
 END;
 """),
+
+        // وثائق الشركة وفئاتها — وثائق **مشتركة** (لوائح · نماذج · تعاميم) تمييزاً
+        // عن EmployeeDocuments التي هي وثائق **موظفٍ بعينه**. خلط الاثنين كان يعني
+        // إمّا نسخ اللائحة 1356 مرّة أو تركها خارج النظام بمجلّد شبكة.
+        //
+        // الجمهور بمحرّك الشروط العام (ConditionsJson): وثيقةٌ تخصّ فرعاً أو فئة
+        // لا تظهر لغيرهم، وبلا شروط تظهر للجميع.
+        new(
+            "20260801-17-company-documents",
+            """
+IF OBJECT_ID('CompanyDocumentCategories', 'U') IS NULL
+BEGIN
+    CREATE TABLE CompanyDocumentCategories (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        Name nvarchar(150) NOT NULL,
+        Description nvarchar(500) NULL,
+        SortOrder int NOT NULL CONSTRAINT DF_CompanyDocCat_Sort DEFAULT(0),
+        IsActive bit NOT NULL CONSTRAINT DF_CompanyDocCat_Active DEFAULT(1),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_CompanyDocCat_Created DEFAULT(SYSUTCDATETIME()),
+        IsDeleted bit NOT NULL CONSTRAINT DF_CompanyDocCat_Deleted DEFAULT(0)
+    );
+END;
+
+IF OBJECT_ID('CompanyDocuments', 'U') IS NULL
+BEGIN
+    CREATE TABLE CompanyDocuments (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        CategoryId int NULL,
+        Title nvarchar(250) NOT NULL,
+        Description nvarchar(1000) NULL,
+        FileName nvarchar(260) NULL,
+        StorageKey nvarchar(500) NULL,
+        ExpiryDate date NULL,
+        VisibleToEmployees bit NOT NULL CONSTRAINT DF_CompanyDoc_Visible DEFAULT(0),
+        ConditionsJson nvarchar(max) NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_CompanyDoc_Active DEFAULT(1),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_CompanyDoc_Created DEFAULT(SYSUTCDATETIME()),
+        CreatedBy nvarchar(150) NULL,
+        UpdatedAt datetime2 NULL,
+        IsDeleted bit NOT NULL CONSTRAINT DF_CompanyDoc_Deleted DEFAULT(0)
+    );
+
+    CREATE INDEX IX_CompanyDocuments_Category ON CompanyDocuments (CategoryId, Id);
+END;
+"""),
     };
 
     /// <summary>

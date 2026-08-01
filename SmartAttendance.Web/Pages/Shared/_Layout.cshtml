@@ -328,6 +328,9 @@
                                         <a asp-page="/Employees/TemporaryHeads" class="nexora-nav-link">
                                             <span>رئيس وحدة مؤقت</span>
                                         </a>
+                                        <a asp-page="/CompanyDocuments/Index" class="nexora-nav-link @(IsUnder("/CompanyDocuments") ? "active nexora-active" : "")">
+                                            <span>وثائق الشركة</span>
+                                        </a>
                                         <a asp-page="/HrSettings/ViolationConfiguration" class="nexora-nav-link">
                                             <span>تهيئة المخالفات</span>
                                         </a>

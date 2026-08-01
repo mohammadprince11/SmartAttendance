@@ -1,0 +1,264 @@
+@page
+@model SmartAttendance.Web.Pages.CompanyDocuments.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@{
+    ViewData["Title"] = "وثائق الشركة";
+    var editing = Model.EditingId.HasValue;
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="/Employees/Index">الأشخاص</a>
+        <h1>وثائق الشركة</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>مشتركة</span>
+            <h2>الوثائق</h2>
+            <p class="zyp-hint">
+                وثائق <b>مشتركة</b> (لوائح · نماذج · تعاميم · أدلّة) — تمييزاً عن وثائق
+                الموظف الشخصية. الجمهور يُحدَّد بشروط، وبلا شروط تظهر للجميع.
+                @if (Model.ExpiredCount > 0)
+                {
+                    <b> ⚠ @Model.ExpiredCount وثيقة منتهية الصلاحية.</b>
+                }
+            </p>
+        </header>
+
+        @if (Model.Categories.Count > 0)
+        {
+            <div class="zyp-actions" style="justify-content:flex-start;flex-wrap:wrap">
+                <a asp-page="./Index" style="@(Model.CategoryFilter is null ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الكل</a>
+                @foreach (var category in Model.Categories)
+                {
+                    <a asp-page="./Index" asp-route-cat="@category.Id"
+                       style="@(Model.CategoryFilter == category.Id ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">
+                        @category.Name (@category.DocumentCount)
+                    </a>
+                }
+            </div>
+        }
+
+        @if (Model.Documents.Count == 0)
+        {
+            <p class="zyc-empty">لا وثائق — أضف وثيقة أدناه (لائحة الجزاءات · دليل الموظف · نموذج طلب…).</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>العنوان</th>
+                        <th>الفئة</th>
+                        <th>الملف</th>
+                        <th>تنتهي</th>
+                        <th>الجمهور</th>
+                        <th>للموظفين</th>
+                        <th style="width:170px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var document in Model.Documents)
+                    {
+                        var expired = document.IsExpired(Model.Today);
+                        <tr class="@(document.IsActive ? "" : "zyp-inactive")">
+                            <td>
+                                <b>@document.Title</b>
+                                @if (!string.IsNullOrWhiteSpace(document.Description))
+                                {
+                                    <div class="zyp-conditions">@document.Description</div>
+                                }
+                            </td>
+                            <td class="zyp-conditions">@document.CategoryName</td>
+                            <td class="zyp-conditions">
+                                @if (document.HasFile)
+                                {
+                                    <a asp-page-handler="Download" asp-route-id="@document.Id">@document.FileName</a>
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
+                            </td>
+                            <td class="zyp-count" data-zero="@expired.ToString().ToLowerInvariant()">
+                                @(document.ExpiryDate is { } expiry ? expiry.ToString("yyyy/MM/dd") : "—")
+                                @if (expired)
+                                {
+                                    <span title="منتهية الصلاحية">⚠</span>
+                                }
+                            </td>
+                            <td class="zyp-conditions">@HrConditions.Describe(document.Conditions)</td>
+                            <td class="zyp-conditions">@(document.VisibleToEmployees ? "ظاهرة" : "داخلية")</td>
+                            <td>
+                                <div class="zyp-actions">
+                                    <a asp-page="./Index" asp-route-edit="@document.Id">تعديل</a>
+                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                        <input type="hidden" name="id" value="@document.Id" />
+                                        <button type="submit" data-zyconfirm="حذف الوثيقة؟">حذف</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        @if (!editing)
+        {
+            <p><a class="zyc-add-group" asp-page="./Index" asp-route-edit="0">+ وثيقة جديدة</a></p>
+        }
+    </div>
+
+    @if (editing)
+    {
+        <form method="post" asp-page-handler="Save" enctype="multipart/form-data" class="nxhs-panel zyp-editor">
+            <h3>@(Model.DocumentId > 0 ? "تعديل الوثيقة" : "وثيقة جديدة")</h3>
+            <input type="hidden" asp-for="DocumentId" />
+
+            <div class="zyp-editor-grid">
+                <label>
+                    العنوان
+                    <input asp-for="Title" placeholder="لائحة الجزاءات 2026" />
+                </label>
+                <label>
+                    الفئة
+                    <select asp-for="CategoryId">
+                        <option value="">بلا فئة</option>
+                        @foreach (var category in Model.Categories)
+                        {
+                            <option value="@category.Id">@category.Name</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    الوصف
+                    <input asp-for="Description" placeholder="اختياري" />
+                </label>
+                <label>
+                    تاريخ انتهاء الصلاحية
+                    <input asp-for="ExpiryDate" type="date" />
+                </label>
+                <label>
+                    ظاهرة لبوابة الموظف
+                    <select asp-for="VisibleToEmployees">
+                        <option value="false">لا — داخلية</option>
+                        <option value="true">نعم</option>
+                    </select>
+                </label>
+                <label>
+                    الحالة
+                    <select asp-for="IsActive">
+                        <option value="true">نشطة</option>
+                        <option value="false">معطّلة</option>
+                    </select>
+                </label>
+                <label>
+                    الملف
+                    <input asp-for="Upload" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" />
+                    @if (Model.DocumentId > 0)
+                    {
+                        <span style="font-size:.75rem">اتركه فارغاً للإبقاء على الملف الحالي.</span>
+                    }
+                </label>
+            </div>
+
+            <div>
+                <p class="zyp-section-title">الجمهور — من يرى هذه الوثيقة؟</p>
+                <p class="zyp-hint">اتركه بلا شروط لتظهر لكل من له صلاحية.</p>
+                <input type="hidden" asp-for="Conditions" id="DocConditions" />
+                <div class="zyc"
+                     data-zy-conditions
+                     data-input="#DocConditions"
+                     data-criteria="@Model.CriteriaJson"></div>
+            </div>
+
+            <footer class="nxhs-actions">
+                <button type="submit">حفظ الوثيقة</button>
+                <a class="zyp-move" asp-page="./Index" style="padding:8px 14px">إلغاء</a>
+            </footer>
+        </form>
+    }
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>التصنيف</span>
+            <h2>فئات وثائق الشركة</h2>
+            <p class="zyp-hint">حذف الفئة <b>لا يحذف وثائقها</b> — تصير بلا فئة وتبقى ظاهرة.</p>
+        </header>
+
+        @if (Model.Categories.Count > 0)
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>الفئة</th>
+                        <th>الوصف</th>
+                        <th>الترتيب</th>
+                        <th>عدد الوثائق</th>
+                        <th style="width:90px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var category in Model.Categories)
+                    {
+                        <tr>
+                            <td><b>@category.Name</b></td>
+                            <td class="zyp-conditions">@category.Description</td>
+                            <td class="zyp-conditions">@category.SortOrder</td>
+                            <td class="zyp-count">@category.DocumentCount</td>
+                            <td>
+                                <div class="zyp-actions">
+                                    <form method="post" asp-page-handler="DeleteCategory" style="display:inline">
+                                        <input type="hidden" name="id" value="@category.Id" />
+                                        <button type="submit" data-zyconfirm="حذف الفئة؟ وثائقها تبقى.">حذف</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        <form method="post" asp-page-handler="SaveCategory" class="zyp-editor-grid" style="border:0;padding:0">
+            <label>
+                اسم فئة جديدة
+                <input asp-for="CategoryName" placeholder="اللوائح والسياسات" />
+            </label>
+            <label>
+                الوصف
+                <input asp-for="CategoryDescription" placeholder="اختياري" />
+            </label>
+            <label>
+                الترتيب
+                <input asp-for="CategorySortOrder" type="number" min="0" />
+            </label>
+            <label style="justify-content:flex-end">
+                &nbsp;
+                <button type="submit" class="zyc-add-rule" style="align-self:stretch">إضافة فئة</button>
+            </label>
+        </form>
+    </div>
+</section>
+
+<script src="~/js/zynora-confirm.js" asp-append-version="true" defer></script>
+<script src="~/js/zynora-conditions.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+
+}
