@@ -20,7 +20,12 @@
 
 <link rel="stylesheet" href="~/css/zynora-workscreen.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-disciplinary-designer-preview-safe-v1.css" asp-append-version="true" />
-<section class="zyw nxpen-page nxpen-wide zy-scope" dir="rtl">
+@* أُزيلت أغلفة الصفحة القديمة (`nxpen-page` · `nxpen-wide` · `nxpen-layout` ·
+   `nxpen-content`). قِيس أن خطّ بطاقاتٍ جديدة بالكامل يخرج **Tahoma** — أي خطّ
+   الملف القديم يُورَّث لكل ما بالداخل مهما جدّدنا الأصناف. والحذف آمن بالقياس:
+   **صفر قاعدة** بالملفات القديمة مُقيّدة بـ`.nxpen-page <شيء>`، فالمصمّم يستند
+   إلى أصنافه الخاصة لا إلى غلاف الصفحة. *@
+<section class="zyw zy-scope" dir="rtl">
 
     @* كان العنوان يتكرّر **ثلاث مرات** قبل أوّل أداة: الشريط العلوي ⟵ بطاقة هيرو
        ضخمة بوصفٍ من أربعة أسطر ⟵ عنوان ثالث داخل بطاقة التبويب. فتلتهم الزينةُ
@@ -53,8 +58,8 @@
         <a class="zyw-tab" aria-selected="@((activeTab == "templates").ToString().ToLowerInvariant())" asp-page="./Index" asp-route-tab="templates">قوالب الرسائل</a>
     </nav>
 
-    <main class="nxpen-layout">
-        <section class="nxpen-content">
+    <main>
+        <section>
             @* «التهيئة» انتقلت لشاشة المخالفات، فحُذف فرعها من هنا: فرعٌ لا يُبلَغ
                أبداً (المسار يعيد التوجيه) هو كودٌ ميت يوهم قارئه بأن الشاشة تملكه. *@
             @if (activeTab == "library")
