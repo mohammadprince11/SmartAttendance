@@ -423,6 +423,27 @@ IF OBJECT_ID('DisciplinaryViolationTypes', 'U') IS NOT NULL
    AND COL_LENGTH('DisciplinaryViolationTypes', 'RegulationClause') IS NULL
     ALTER TABLE DisciplinaryViolationTypes ADD RegulationClause nvarchar(60) NULL;
 """),
+
+        // تحديثات الموظف: «بأثر رجعي» + مرفق. (تاريخ السريان كان موجوداً سلفاً.)
+        //
+        // الأثر الرجعي **علَمٌ صريح لا استنتاجٌ من التاريخ**: حركةٌ سريانها بالماضي
+        // قد تكون تصحيحاً لخطأ إدخال (لا أثر مالي) أو قراراً بأثر رجعي (يستوجب
+        // إعادة احتساب رواتب). دمجهما يجعل المسير يعيد حساب ما لا يجب أو يهمل ما يجب.
+        new(
+            "20260801-16-employee-update-retroactive",
+            """
+IF OBJECT_ID('EmployeeUpdateBatches', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeUpdateBatches', 'IsRetroactive') IS NULL
+        ALTER TABLE EmployeeUpdateBatches ADD IsRetroactive bit NULL;
+
+    IF COL_LENGTH('EmployeeUpdateBatches', 'AttachmentName') IS NULL
+        ALTER TABLE EmployeeUpdateBatches ADD AttachmentName nvarchar(260) NULL;
+
+    IF COL_LENGTH('EmployeeUpdateBatches', 'AttachmentPath') IS NULL
+        ALTER TABLE EmployeeUpdateBatches ADD AttachmentPath nvarchar(500) NULL;
+END;
+"""),
     };
 
     /// <summary>

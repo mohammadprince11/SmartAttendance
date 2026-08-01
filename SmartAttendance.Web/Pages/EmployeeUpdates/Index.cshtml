@@ -79,6 +79,14 @@
                                 <input type="date" name="effectiveDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
                                 <small>&#x064A;&#x0645;&#x0643;&#x0646; &#x0627;&#x062E;&#x062A;&#x064A;&#x0627;&#x0631; &#x062A;&#x0627;&#x0631;&#x064A;&#x062E; &#x0633;&#x0627;&#x0628;&#x0642; &#x0623;&#x0648; &#x0645;&#x0633;&#x062A;&#x0642;&#x0628;&#x0644;&#x064A; &#x0644;&#x062D;&#x0641;&#x0638; &#x0623;&#x062B;&#x0631; &#x0627;&#x0644;&#x062D;&#x0631;&#x0643;&#x0629;.</small>
                             </div>
+                            <div class="nxupd-field">
+                                <label>بأثر رجعي</label>
+                                <select name="isRetroactive">
+                                    <option value="false">لا — تصحيح بيانات فقط</option>
+                                    <option value="true">نعم — قرار يستوجب إعادة احتساب</option>
+                                </select>
+                                <small>تاريخٌ ماضٍ وحده لا يكفي: تصحيح خطأ الإدخال لا أثر مالي له، والقرار بأثر رجعي يستوجب إعادة حساب ما مضى.</small>
+                            </div>
                             <div class="nxupd-note">
                                 <label>&#x0645;&#x0644;&#x0627;&#x062D;&#x0638;&#x0629; &#x0627;&#x0644;&#x062D;&#x0631;&#x0643;&#x0629;</label>
                                 @* NEXORA_FIX14C_NOTE_INPUT_START *@
@@ -245,7 +253,7 @@
                                     <div>
                                         <span>@batch.SectionName</span>
                                         <h3>&#x062D;&#x0631;&#x0643;&#x0629; &#x0631;&#x0642;&#x0645; @batch.Id</h3>
-                                        <small>&#x0623;&#x0646;&#x0634;&#x0626;&#x062A; @Model.DisplayDateTime(batch.RequestedAt) &#x00B7; &#x0633;&#x0631;&#x064A;&#x0627;&#x0646; @Model.DisplayDate(batch.EffectiveDate) &#x00B7; @batch.RequestedBy</small>
+                                        <small>&#x0623;&#x0646;&#x0634;&#x0626;&#x062A; @Model.DisplayDateTime(batch.RequestedAt) &#x00B7; &#x0633;&#x0631;&#x064A;&#x0627;&#x0646; @Model.DisplayDate(batch.EffectiveDate)@(batch.IsRetroactive ? " (بأثر رجعي)" : "") &#x00B7; @batch.RequestedBy</small>
                                     </div>
                                     <strong>&#x063A;&#x064A;&#x0631; &#x0645;&#x0642;&#x0641;&#x0644;&#x0629;</strong>
                                 </header>
@@ -319,7 +327,7 @@
                                             <strong>@batch.SectionName</strong>
                                             <span>&#x062D;&#x0631;&#x0643;&#x0629; &#x0631;&#x0642;&#x0645; @batch.Id</span>
                                         </div>
-                                        <small>&#x0642;&#x0641;&#x0644; @Model.DisplayDateTime(batch.LockedAt) &#x00B7; &#x0633;&#x0631;&#x064A;&#x0627;&#x0646; @Model.DisplayDate(batch.EffectiveDate)</small>
+                                        <small>&#x0642;&#x0641;&#x0644; @Model.DisplayDateTime(batch.LockedAt) &#x00B7; &#x0633;&#x0631;&#x064A;&#x0627;&#x0646; @Model.DisplayDate(batch.EffectiveDate)@(batch.IsRetroactive ? " (بأثر رجعي)" : "")</small>
                                     </header>
 
                                     <ul>
