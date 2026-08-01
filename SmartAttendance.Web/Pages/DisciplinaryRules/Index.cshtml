@@ -48,7 +48,6 @@
     @* التبويبات روابط خادمية عمداً: «مصمّم الفورمة» يحتاج حالةً من الخادم
        (طبقات ومعاينة)، فتبويبٌ عميلٌ كان سيحمّل الأربعة بكل مرّة بلا داعٍ. *@
     <nav class="zyw-tabs" aria-label="أقسام إعدادات المخالفات">
-        <a class="zyw-tab" aria-selected="@((activeTab == "setup").ToString().ToLowerInvariant())" asp-page="./Index" asp-route-tab="setup">تهيئة</a>
         <a class="zyw-tab" aria-selected="@((activeTab == "library").ToString().ToLowerInvariant())" asp-page="./Index" asp-route-tab="library" asp-route-categoryId="@selectedCategory">المخالفات والجزاءات</a>
         <a class="zyw-tab" aria-selected="@((activeTab == "designer").ToString().ToLowerInvariant())" asp-page="./Index" asp-route-tab="designer">مصمم الفورمة</a>
         <a class="zyw-tab" aria-selected="@((activeTab == "templates").ToString().ToLowerInvariant())" asp-page="./Index" asp-route-tab="templates">قوالب الرسائل</a>
@@ -56,69 +55,43 @@
 
     <main class="nxpen-layout">
         <section class="nxpen-content">
-            @if (activeTab == "setup")
+            @* «التهيئة» انتقلت لشاشة المخالفات، فحُذف فرعها من هنا: فرعٌ لا يُبلَغ
+               أبداً (المسار يعيد التوجيه) هو كودٌ ميت يوهم قارئه بأن الشاشة تملكه. *@
+            @if (activeTab == "library")
             {
-                <section class="zy-card">
-                    <header class="zyw-queue-head">
-                        <div>
-                            <span>Configuration</span>
-                            <h2>تهيئة نظام المخالفات</h2>
-                            <p>هذه الصفحة تحدد طريقة عمل المخالفات قبل تسجيلها على الموظفين: الاعتماد، اعتراض الموظف، وصيغة الفورمة الرسمية.</p>
+                @* 🐞 كان `SeedLibrary` معالجاً حيّاً **بلا أي زرّ يبلغه**: صفر إشارة
+                   إليه بأي عرض أو سكربت بالمستودع. ومعالجٌ يكتب بالقاعدة بلا واجهة
+                   هو سطحٌ مفتوح بلا رقيب — إمّا يُحذف أو يُعلَن. وهو هنا **مفيد**:
+                   القاعدة فارغة تماماً (صفر فئة وصفر مخالفة وصفر جزاء)، وبلا مكتبة
+                   لا يمكن تسجيل مخالفة أصلاً لأن النموذج يفرض فئةً ونوعاً.
+                   فأُعلن بزرٍّ صريح **يظهر فقط حين تكون المكتبة فارغة**، بتأكيدٍ
+                   بنقرتين، ويقول ما سيكتبه قبل أن يكتبه. *@
+                @if (Model.Categories.Count == 0)
+                {
+                    <section class="zy-card">
+                        <div class="zyw-queue-head">
+                            <h2>المكتبة فارغة</h2>
+                            <span class="zy-pill">0 فئة</span>
                         </div>
-                    </header>
+                        <p class="zyw-row-meta">
+                            بلا فئاتٍ ومخالفاتٍ لا يمكن تسجيل مخالفة على موظف — نموذج التسجيل يفرض
+                            اختيار فئة ونوع. ابدأ بمكتبةٍ عربية جاهزة ثم عدّلها، أو أضف فئاتك يدوياً أدناه.
+                        </p>
+                        <p class="zyw-row-meta">
+                            ستُضاف أربع فئات: <b>الحضور والانصراف</b> · <b>المظهر العام</b> ·
+                            <b>نظام العمل</b> · <b>سلوكية</b>، ومعها مخالفاتها وسلّم جزاءاتها الافتراضي.
+                            كلّها قابلة للتعديل والحذف بعد الإضافة.
+                        </p>
+                        <form method="post" asp-page-handler="SeedLibrary">
+                            <div class="zyw-form-actions">
+                                <button type="submit" class="btn-primary" data-zyconfirm="إضافة المكتبة الافتراضية؟">
+                                    أضف المكتبة الافتراضية
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+                }
 
-                    <form method="post" asp-page-handler="SaveSettings" class="zyw-queue">
-                        <article class="zy-card zyw-item">
-                            <div class="zyw-item-main"><strong>لجنة الموافقات</strong><p>عند التفعيل، المخالفة لا تُقفل مباشرة إلا بعد المرور بمسار لجنة الموافقات.</p></div>
-                            <label class="zyw-checks"><input type="checkbox" name="requiresCommitteeApproval" value="true" checked="@Model.Settings.RequiresCommitteeApproval" /></label>
-                        </article>
-
-                        <article class="zy-card zyw-item">
-                            <div class="zyw-item-main"><strong>اعتراض الموظف</strong><p>السماح للموظف بتقديم اعتراض من بوابة الموظف بعد صدور المخالفة.</p></div>
-                            <label class="zyw-checks"><input type="checkbox" name="allowEmployeeAppeal" value="true" checked="@Model.Settings.AllowEmployeeAppeal" /></label>
-                        </article>
-
-                        <article class="zy-card zyw-item">
-                            <div class="zyw-item-main"><strong>مدة الاعتراض</strong><p>عدد الأيام المتاحة للموظف لتقديم اعتراض بعد استلام إشعار المخالفة.</p></div>
-                            <input name="appealWindowDays" type="number" min="0" value="@Model.Settings.AppealWindowDays" />
-                        </article>
-
-                        <article class="zy-card zyw-item">
-                            <div class="zyw-item-main"><strong>القالب الافتراضي</strong><p>إذا لم يتم اختيار قالب محدد، يستخدم النظام القالب الافتراضي لإشعار العقوبة.</p></div>
-                            <select data-nexora-select="true" name="defaultTemplateType">
-                                @foreach (var templateType in Model.TemplateTypes.Where(x => x.IsActive))
-                                {
-                                    <option value="@templateType.Code" selected="@(templateType.Code == Model.Settings.DefaultTemplateType)">@templateType.Name</option>
-                                }
-                            </select>
-                        </article>
-
-                        <article class="zy-card zyw-item">
-                            <div class="zyw-item-main"><strong>اسم الجهة المعتمدة</strong><p>يظهر في أسفل الفورمة مثل قسم الموارد البشرية أو لجنة الانضباط.</p></div>
-                            <input name="approvingAuthorityName" value="@Model.Settings.ApprovingAuthorityName" placeholder="قسم الموارد البشرية" />
-                        </article>
-
-                        <article class="zy-card zyw-item">
-                            <div class="zyw-item-main"><strong>صيغة رقم الكتاب</strong><p>تُستخدم لاحقاً عند توليد أرقام كتب المخالفات، مثال: DISC-{yyyy}-{0000}</p></div>
-                            <input name="documentNumberFormat" value="@Model.Settings.DocumentNumberFormat" placeholder="DISC-{yyyy}-{0000}" />
-                        </article>
-
-                        <article class="zy-card zyw-field zyw-field--wide">
-                            <header><div><strong>هيدر الفورمة</strong><p>إذا تركته فارغاً سيظهر هيدر تلقائي يحتوي شعار شركتك وبيانات النظام.</p></div><small>Header</small></header>
-                            <textarea name="formHeader" rows="7" placeholder="شركة الرغد الدولية\nقسم الموارد البشرية\nإشعار مخالفة وجزاء">@Model.Settings.FormHeader</textarea>
-                        </article>
-
-                        <article class="zy-card zyw-field zyw-field--wide">
-                            <header><div><strong>فوتر الفورمة</strong><p>يظهر أسفل رسالة العقوبة، مثل التوقيعات أو ملاحظات قانونية.</p></div><small>Footer</small></header>
-                            <textarea name="formFooter" rows="7" placeholder="قسم الموارد البشرية\nيعتمد هذا الإشعار حسب لائحة الجزاءات المعتمدة في الشركة.">@Model.Settings.FormFooter</textarea>
-                        </article>
-
-                        <footer class="zyw-form-actions"><button type="submit">حفظ إعدادات التهيئة</button></footer>
-                    </form>
-</section>
-            }
-            else if (activeTab == "library")
-            {
                 <section class="zy-card">
                     <header class="zyw-queue-head">
                         <div><span>Violation Library</span><h2>فئة المخالفة وقائمة المخالفات</h2><p>اختر الفئة حتى تظهر مخالفاتها فقط. هذا يجعل الصفحة مرتبة حتى لو وصلت المخالفات إلى أكثر من 100 نوع.</p></div>

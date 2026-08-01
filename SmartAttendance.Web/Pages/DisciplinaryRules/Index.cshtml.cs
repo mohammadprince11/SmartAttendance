@@ -86,6 +86,14 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(string? tab, int? categoryId)
     {
+        // «التهيئة» انتقلت إلى شاشة المخالفات حيث تُستعمل (تبويب `setup`)، فبقاؤها
+        // هنا يعني مكانين لنفس النموذج — والمكانان يفترقان مع أول تعديل.
+        // والمسار يبقى حيّاً بإعادة توجيه: الروابط والمفضّلات القديمة لا تُكسر.
+        if (string.Equals(tab, "setup", StringComparison.OrdinalIgnoreCase))
+        {
+            return RedirectToPage("/Violations/Index", new { tab = "setup" });
+        }
+
         await LoadPageAsync(tab, categoryId);
         return Page();
     }
@@ -166,32 +174,6 @@ public class IndexModel : PageModel
         }
 
         StatusMessage = "تم حفظ صور الهيدر والفوتر.";
-        return RedirectToPage(new { tab = "designer" });
-    }
-
-    public async Task<IActionResult> OnPostSaveMainBodyDesignAsync(
-        string? mainBodyText,
-        decimal mainBodyXPercent,
-        decimal mainBodyYPercent,
-        decimal mainBodyWidthPercent,
-        string mainBodyFontFamily,
-        int mainBodyFontSize,
-        string mainBodyFontColor,
-        string mainBodyTextAlign)
-    {
-        await DisciplinarySchema.EnsureAsync(_dbContext);
-
-        await UpsertSettingAsync("MainBodyText", string.IsNullOrWhiteSpace(mainBodyText) ? DefaultMainBodyText : mainBodyText.Trim());
-        await UpsertSettingAsync("MainBodyXPercent", Clamp(mainBodyXPercent, 0, 100).ToString("0.##"));
-        await UpsertSettingAsync("MainBodyYPercent", Clamp(mainBodyYPercent, 0, 100).ToString("0.##"));
-        await UpsertSettingAsync("MainBodyWidthPercent", Clamp(mainBodyWidthPercent, 5, 100).ToString("0.##"));
-        await UpsertSettingAsync("MainBodyFontFamily", NormalizeFont(mainBodyFontFamily));
-        await UpsertSettingAsync("MainBodyFontSize", Math.Clamp(mainBodyFontSize, 8, 60).ToString());
-        await UpsertSettingAsync("MainBodyFontColor", NormalizeColor(mainBodyFontColor));
-        await UpsertSettingAsync("MainBodyIsBold", Request.Form.ContainsKey("mainBodyIsBold") ? "true" : "false");
-        await UpsertSettingAsync("MainBodyTextAlign", NormalizeTextAlign(mainBodyTextAlign));
-
-        StatusMessage = "تم حفظ تعديل النص الأساسي داخل الورقة.";
         return RedirectToPage(new { tab = "designer" });
     }
 
@@ -1085,7 +1067,8 @@ await HrmsDatabase.ExecuteAsync(_dbContext, "UPDATE DisciplinaryMessageTemplates
         return templateType?.Name ?? type;
     }
 
-    private static string NormalizeTab(string? tab) => tab switch { "library" => "library", "designer" => "designer", "templates" => "templates", _ => "setup" };
+    // الافتراضي صار «المخالفات والجزاءات»: تبويب «التهيئة» انتقل لشاشة المخالفات.
+    private static string NormalizeTab(string? tab) => tab switch { "designer" => "designer", "templates" => "templates", _ => "library" };
     private static string NormalizeSeverity(string? value) => value switch { "A" => "A", "B" => "B", "C" => "C", "FinalWarning" => "FinalWarning", _ => "B" };
     private static string NormalizePeriod(string? value) => value switch { "Monthly" => "Monthly", "SixMonths" => "SixMonths", "Yearly" => "Yearly", "Contract" => "Contract", _ => "Monthly" };
     private static string NormalizeFinancialType(string? value) => value switch { "Days" => "Days", "Hours" => "Hours", "Amount" => "Amount", _ => "None" };
