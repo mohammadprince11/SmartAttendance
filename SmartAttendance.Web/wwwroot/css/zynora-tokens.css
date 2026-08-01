@@ -24,8 +24,13 @@
 
    وأغلب هذه الأزرار على `<a>` لا `<button>` — ولهذا لم تتأثّر: القاعدة السابقة
    كانت تطابق عنصر `button` وأربعة أصناف فقط. */
-.zy-scope.zy-scope button:not(.zyep-open):not(.zyep-close):not(.nxcs-native):not([class*="icon"]),
-.zy-scope.zy-scope [class*="btn"]:not([class*="icon"]):not(.zyep-open):not(.zyep-close),
+/* ⚠️ **الودجتات المبنيّة على `<button>` مستثناة**: الكلاندر والمنسدلة يرسمان
+   صندوقهما المرئيّ بزرٍّ داخليّ (`.nxcal__button` · `.nxcs-trigger`). وبلا هذا
+   الاستثناء يفرض عليه مقاسُ **الزرّ** بينما غلافه يأخذ مقاس **الكلاندر**،
+   فيطفح الزرّ خارج غلافه (قيس 42px داخل غلاف 31px) ويبدو الحقل أطول 12px من
+   جيرانه بالصفّ ويكسر خطّه. ارتفاعُه يجب أن يتبع ودجته لا الأزرار. */
+.zy-scope.zy-scope button:not(.zyep-open):not(.zyep-close):not(.nxcs-native):not([class*="icon"]):not([class*="nxcal"]):not([class*="nxcs"]),
+.zy-scope.zy-scope [class*="btn"]:not([class*="icon"]):not(.zyep-open):not(.zyep-close):not([class*="nxcal"]):not([class*="nxcs"]),
 .zy-scope.zy-scope input[type="submit"],
 .zy-scope.zy-scope input[type="button"] {
     min-height: var(--zy-button-h, 40px) !important;
@@ -87,12 +92,31 @@
     font-size: var(--zy-calendar-font, 13px) !important;
 }
 
+/* الصندوق المرئيّ للكلاندر هو زرُّه الداخلي لا غلافه — فيجب أن يملأ الغلاف
+   تماماً، وإلا كان المقيس شيئاً والمرئيّ شيئاً آخر. */
+.zy-scope .nxcal .nxcal__button {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    padding-block: 0 !important;
+    box-sizing: border-box !important;
+}
+
 /* المنسدلة */
 .zy-scope .nxcs {
     height: var(--zy-dropdown-h, 44px) !important;
     min-height: var(--zy-dropdown-h, 44px) !important;
     border-radius: var(--zy-dropdown-radius, 12px) !important;
     font-size: var(--zy-dropdown-font, 13px) !important;
+}
+
+/* نفس علّة الكلاندر: مُشغِّل المنسدلة زرٌّ داخليّ يرسم الصندوق المرئيّ */
+.zy-scope .nxcs .nxcs-trigger {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    padding-block: 0 !important;
+    box-sizing: border-box !important;
 }
 
 .zy-scope .nxcs-menu {
