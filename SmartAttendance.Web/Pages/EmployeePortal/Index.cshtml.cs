@@ -713,6 +713,38 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         };
     }
 
+    /// <summary>
+    /// يقصر أنواع الطلبات على ما ينطبق على هذا الموظف بمحرّك الشروط العام.
+    ///
+    /// نوعٌ **بلا شروط متاح للجميع** (<c>matchWhenEmpty: true</c>) — وهو ما يجعل
+    /// إضافة هذه الطبقة **صفرَ تغييرٍ بالسلوك** حتى يضع HR شرطاً فعلياً. ولو كان
+    /// الافتراض عكسه لاختفت كل أنواع الطلبات عن كل الموظفين لحظةَ النشر.
+    ///
+    /// وحقلا <c>Gender</c> و<c>ServiceMonths</c> القديمان **لا يُنفَّذان هنا**: لم
+    /// يكونا يُنفَّذان أصلاً، وتفعيلهما اليوم يخفي عن الموظفين أنواعاً يرونها.
+    /// </summary>
+    private async Task<List<RequestTypeStore.ReqType>> FilterEligibleTypesAsync(
+        List<RequestTypeStore.ReqType> types, int employeeId)
+    {
+        if (types.Count == 0 || types.All(t => string.IsNullOrWhiteSpace(t.ConditionsJson)))
+        {
+            return types;
+        }
+
+        var rows = await HrConditionFacts.LoadAsync(_dbContext, employeeId);
+        if (rows.Count == 0)
+        {
+            return types;
+        }
+
+        var facts = HrConditionFacts.Build(rows[0], DateOnly.FromDateTime(DateTime.Today));
+
+        return types
+            .Where(type => HrConditions.Matches(
+                HrConditions.Deserialize(type.ConditionsJson), facts, matchWhenEmpty: true))
+            .ToList();
+    }
+
     private async Task LoadAsync()
     {
         await EmployeeEngagementSchema.EnsureAsync(_dbContext);
@@ -799,6 +831,7 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             await RequestTypeStore.EnsureAsync(_dbContext);
             ReqCategories = await RequestTypeStore.ListCategoriesAsync(_dbContext, onlyActive: true);
             ReqTypes = await RequestTypeStore.ListTypesAsync(_dbContext, onlyActive: true);
+            ReqTypes = await FilterEligibleTypesAsync(ReqTypes, employeeId);
         }
         catch
         {

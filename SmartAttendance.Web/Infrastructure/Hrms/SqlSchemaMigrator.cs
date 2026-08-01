@@ -871,6 +871,32 @@ END;
 IF OBJECT_ID('Employees', 'U') IS NOT NULL AND COL_LENGTH('Employees', 'SignaturePath') IS NULL
     ALTER TABLE Employees ADD SignaturePath nvarchar(500) NULL;
 """),
+
+        // أهلية أنواع الطلبات بمحرّك الشروط العام بدل حقلَي Gender/ServiceMonths.
+        //
+        // ⚠️ اكتشاف: الحقلان **صمّاوان** — يُخزَّنان بالجدول ولا يقرؤهما أحد، وبوابة
+        // الموظف تسرد كل نوع نشط بلا ترشيح. لذلك **لم أُرحّل قيمتهما** للشروط
+        // الجديدة: ترحيلها يعني تفعيل إنفاذٍ لم يكن قائماً، فيختفي فجأةً عن الموظفين
+        // نوعُ طلبٍ يرونه اليوم. الشروط الجديدة فارغة ⟹ صفر تغيير بالسلوك، ومصير
+        // الحقلين القديمين قرارُ منتج لا قرارُ هجرة.
+        new(
+            "20260801-27-request-type-conditions",
+            """
+IF OBJECT_ID('RequestTypes', 'U') IS NOT NULL AND COL_LENGTH('RequestTypes', 'ConditionsJson') IS NULL
+    ALTER TABLE RequestTypes ADD ConditionsJson nvarchar(max) NULL;
+"""),
+
+        // نشر التقرير لبوابة الموظف (نظير شيك «مشاركة مع الموظفين بالخدمة الذاتية»).
+        //
+        // ⚠️ عندهم التقرير يُنشَر كما هو. عندنا **لا**: البوابة تعرض صفوف الموظف
+        // نفسه فقط. تقرير «معلومات الموظفين» بألف صفّ منشوراً كما هو يعني كشف رواتب
+        // الزملاء وهوياتهم بنقرة — والقاعدة عندنا أن كل استعلام موظف يفرض نطاق تخويله.
+        new(
+            "20260801-28-report-self-service-share",
+            """
+IF OBJECT_ID('PeopleReports', 'U') IS NOT NULL AND COL_LENGTH('PeopleReports', 'ShareWithEmployees') IS NULL
+    ALTER TABLE PeopleReports ADD ShareWithEmployees bit NULL;
+"""),
     };
 
     /// <summary>

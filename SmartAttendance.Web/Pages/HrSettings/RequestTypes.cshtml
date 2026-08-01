@@ -6,6 +6,8 @@
     string Paid(string m) => m switch { "unpaid" => "غير مدفوعة", "half" => "نصف أجر", _ => "مدفوعة" };
 }
 
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
 <style>
     .rtc-wrap{max-width:1000px;margin:0 auto;padding:8px 4px 40px}
     .rtc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
@@ -129,3 +131,7 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <script src="~/js/zynora-conditions.js" asp-append-version="true" defer></script>
+}

@@ -51,6 +51,14 @@
         <label><input type="checkbox" name="active" value="true" checked="@t.IsActive" /> مفعّل</label>
     </div>
 
+    @* أهلية النوع بمحرّك الشروط العام — بديل حقلَي الجنس/مدة الخدمة الصمّاوين *@
+    <div style="margin-top:12px">
+        <b style="font-size:12.5px;color:#cfe0f0">من يحقّ له هذا الطلب؟</b>
+        <p style="font-size:11.5px;color:#9fb3c7;margin:4px 0 8px">اتركه بلا شروط ليتاح للجميع. مثال: «الجنس يساوي أنثى» لإجازة الأمومة.</p>
+        <input type="hidden" name="conditions" id="rtcond-in-@(t.Id)" value="@t.ConditionsJson" />
+        <div class="zyc" data-zy-conditions data-input="#rtcond-in-@(t.Id)" data-criteria="@ViewData["CriteriaJson"]"></div>
+    </div>
+
     <div class="rtc-actions">
         <button type="submit" class="rtc-btn primary">@(isNew ? "إضافة" : "حفظ التعديلات")</button>
     </div>

@@ -23,6 +23,7 @@
             columns = r.Columns,
             filterColumns = r.FilterColumns,
             isShared = r.IsShared,
+            shareWithEmployees = r.ShareWithEmployees,
             sharedWith = r.SharedWith
         }));
 }
@@ -125,7 +126,10 @@
                     <div class="rep-card" data-rep-id="@report.Id" data-search="@report.Name"
                          onclick="if(!event.target.closest('.rep-pin')) location.href='?ReportId=@report.Id'">
                         <div class="rep-card-icon">📊</div>
-                        <div class="rep-card-text">@report.Name</div>
+                        <div class="rep-card-text">
+                            @report.Name
+                            <div class="hrms-tile-sub rep-count" data-rep-count="@report.Id"></div>
+                        </div>
                         @* الاستنساخ من تقرير النظام أهمّ استعمالاته: تعدّل جاهزاً بدل البناء من الصفر *@
                         <form method="post" action="@Model.SelfPath?handler=DuplicateReport" style="display:inline">
                             <input type="hidden" name="id" value="@report.Id" />
@@ -162,6 +166,7 @@
                                 @report.Name
                                 <div class="hrms-tile-sub" style="font-weight:800">
                                     @(Model.Datasets.FirstOrDefault(d => d.Key == report.DatasetKey)?.Label ?? report.DatasetKey) · @report.Columns.Count أعمدة
+                                    <span class="rep-count" data-rep-count="@report.Id"></span>
                                     @if (report.IsShared) { <span class="hrms-badge approved">مشارك</span> }
                                 </div>
                             </div>
@@ -436,6 +441,14 @@
                     }
                 </select>
             </div>
+            @* نشر التقرير ببوابة الموظف — الموظف يرى صفوفه هو فقط لا صفوف زملائه *@
+            <div class="hrms-field">
+                <label style="display:flex;align-items:center;gap:8px">
+                    <input type="checkbox" name="shareWithEmployees" value="true" id="rep-share-ess" />
+                    نشره ببوابة الموظف
+                </label>
+                <p class="rep-dnd-hint">الموظف يرى <b>صفوفه هو فقط</b> من هذا التقرير، لا صفوف زملائه.</p>
+            </div>
             <div class="hrms-field">
                 <label>أعمدة التقرير</label>
                 <p class="rep-dnd-hint">اختر المودل أولاً، ثم اسحب الحقل وأفلته بـ«أعمدة التقرير» (أو انقره). التبديل بين المودلات يحتفظ باختياراتك لكل مودل.</p>
@@ -486,6 +499,29 @@
 </aside>
 
 @section Scripts {
+    @if (Model.Current == null)
+    {
+        <script>
+            // عدّادات البطاقات تُجلب بعد الرسم: الصفحة تظهر فوراً ثم تمتلئ الأرقام،
+            // بدل انتظار عشرات الاستعلامات قبل أول بطاقة.
+            (function () {
+                var slots = document.querySelectorAll('[data-rep-count]');
+                if (!slots.length) return;
+
+                fetch('@Model.SelfPath?handler=Counts', { headers: { 'Accept': 'application/json' } })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (counts) {
+                        if (!counts) return;
+                        slots.forEach(function (slot) {
+                            var n = counts[slot.getAttribute('data-rep-count')];
+                            // صفر سجلّ يُكتب صراحةً: بطاقة بلا رقم تُقرأ «لم يُحسب» لا «فارغ».
+                            if (n !== undefined && n !== null) slot.textContent = n + ' سجل';
+                        });
+                    })
+                    .catch(function () { /* العدّاد كماليّ — فشلُه لا يُعطب الصفحة */ });
+            })();
+        </script>
+    }
     <script>
         var REP_DATASETS = @Html.Raw(datasetsJson);
 
@@ -700,6 +736,8 @@
             document.getElementById('rep-description').value = r.description;
             repVisibility.value = r.sharedWith.length ? 'specific' : (r.isShared ? 'everyone' : 'me');
             [...repSharedWith.options].forEach(function (o) { o.selected = r.sharedWith.indexOf(o.value) !== -1; });
+            var essBox = document.getElementById('rep-share-ess');
+            if (essBox) essBox.checked = !!r.shareWithEmployees;
             repDatasetSelect.value = r.datasetKey;
             repColumnsPicker.setMemory(r.datasetKey, r.columns);
             repFiltersPicker.setMemory(r.datasetKey, r.filterColumns);
