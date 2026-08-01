@@ -859,6 +859,18 @@ BEGIN
         ALTER TABLE PayrollGosiProfiles ADD SortOrder int NULL;
 END;
 """),
+
+        // توقيع الموظف — صورة تُغذّي رمز {Employee-Signature-Url} بمنشئ الوثائق.
+        //
+        // ⚠️ يُخزَّن بالمخزن **المحميّ** (خارج wwwroot بمفتاح مولَّد) لا كصورة الموظف:
+        // التوقيع أثرٌ قانونيّ، وكشفُه بمسار عام يعني إمكان لصقه على أي وثيقة.
+        // العمود يحمل مفتاح المخزن لا مساراً عاماً.
+        new(
+            "20260801-26-employee-signature",
+            """
+IF OBJECT_ID('Employees', 'U') IS NOT NULL AND COL_LENGTH('Employees', 'SignaturePath') IS NULL
+    ALTER TABLE Employees ADD SignaturePath nvarchar(500) NULL;
+"""),
     };
 
     /// <summary>

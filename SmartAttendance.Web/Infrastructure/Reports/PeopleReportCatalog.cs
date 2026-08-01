@@ -124,6 +124,64 @@ public static class PeopleReportCatalog
         }),
 
         // ===== مصادر الحضور (نمط كيان: التقارير الجدولية فوق يوميات المحرك الرسمي) =====
+        // المجموعات الأربع التالية تفتح تقارير الشاشات المبنيّة بفرع المطابقة —
+        // كل شاشة عند كيان لها تقريرها، وهذه شاشاتنا التي كانت بلا تقرير.
+        new ReportDataset("contracts", "عقود الموظفين", new[]
+        {
+            new ReportColumn("no", "الرقم الوظيفي"),
+            new ReportColumn("employee", "اسم الموظف"),
+            new ReportColumn("contractno", "رقم العقد"),
+            new ReportColumn("contracttype", "نوع العقد", FilterKind.Select),
+            new ReportColumn("fromdate", "من تاريخ", FilterKind.DateRange),
+            new ReportColumn("todate", "إلى تاريخ", FilterKind.DateRange),
+            new ReportColumn("effectivedate", "تاريخ السريان", FilterKind.DateRange),
+            new ReportColumn("iscurrent", "العقد الحالي", FilterKind.Select),
+            new ReportColumn("note", "ملاحظة")
+        }),
+
+        new ReportDataset("acknowledgments", "إقرارات الموظفين", new[]
+        {
+            new ReportColumn("no", "الرقم الوظيفي"),
+            new ReportColumn("employee", "اسم الموظف"),
+            new ReportColumn("template", "الإقرار", FilterKind.Select),
+            new ReportColumn("state", "الحالة", FilterKind.Select),
+            new ReportColumn("sentat", "أُرسل بتاريخ", FilterKind.DateRange),
+            new ReportColumn("viewedat", "شوهد بتاريخ", FilterKind.DateRange),
+            new ReportColumn("respondedat", "تاريخ الردّ", FilterKind.DateRange),
+            new ReportColumn("note", "ملاحظة")
+        }),
+
+        new ReportDataset("tasks", "مهام الموظفين", new[]
+        {
+            new ReportColumn("no", "الرقم الوظيفي"),
+            new ReportColumn("employee", "اسم الموظف"),
+            new ReportColumn("process", "نوع العملية", FilterKind.Select),
+            new ReportColumn("title", "المهمة"),
+            new ReportColumn("assignee", "الجهة المسؤولة", FilterKind.Select),
+            new ReportColumn("duedate", "تاريخ الاستحقاق", FilterKind.DateRange),
+            new ReportColumn("state", "الحالة", FilterKind.Select),
+            new ReportColumn("completedat", "أُنجزت بتاريخ", FilterKind.DateRange),
+            new ReportColumn("completedby", "أنجزها")
+        }),
+
+        // ⭐ التقرير الزمني: صفٌّ لكل **حقل تغيّر** لا لكل دفعة، مع القيمة القديمة
+        // والجديدة و**تاريخ السريان** — وهو ما يجعل «ماذا كان راتبه في آذار؟» سؤالاً
+        // له جواب. البيانات كانت تُكتب منذ شاشة تحديثات الموظف ولا يقرؤها تقرير.
+        new ReportDataset("updates", "تعديلات الموظفين", new[]
+        {
+            new ReportColumn("no", "الرقم الوظيفي"),
+            new ReportColumn("employee", "اسم الموظف"),
+            new ReportColumn("section", "القسم المحدَّث", FilterKind.Select),
+            new ReportColumn("field", "الحقل", FilterKind.Select),
+            new ReportColumn("oldvalue", "القيمة السابقة"),
+            new ReportColumn("newvalue", "القيمة الجديدة"),
+            new ReportColumn("effectivedate", "تاريخ السريان", FilterKind.DateRange),
+            new ReportColumn("retroactive", "بأثر رجعي", FilterKind.Select),
+            new ReportColumn("state", "الحالة", FilterKind.Select),
+            new ReportColumn("requestedat", "تاريخ الطلب", FilterKind.DateRange),
+            new ReportColumn("requestedby", "طلبها")
+        }),
+
         new ReportDataset("att_daily", "حضور الموظفين — التفاصيل اليومية", new[]
         {
             new ReportColumn("no", "الرقم الوظيفي"),
@@ -202,6 +260,10 @@ public static class PeopleReportCatalog
             "documents" => await LoadDocumentsAsync(db, filters),
             "leaves" => await LoadLeavesAsync(db, filters),
             "violations" => await LoadViolationsAsync(db, filters),
+            "contracts" => await LoadContractsAsync(db, filters),
+            "acknowledgments" => await LoadAcknowledgmentsAsync(db, filters),
+            "tasks" => await LoadTasksAsync(db, filters),
+            "updates" => await LoadUpdatesAsync(db, filters),
             "att_daily" => await LoadAttendanceDailyAsync(db, filters),
             "att_summary" => await LoadAttendanceSummaryAsync(db, filters),
             "att_online" => await LoadOnlinePunchesAsync(db, filters),
@@ -512,6 +574,169 @@ public static class PeopleReportCatalog
             ["iscurrent"] = B(r.IsCurrent),
             ["attachment"] = r.AttachmentName ?? ""
         }).ToList();
+    }
+
+    /// <summary>بحث نصّي موحّد على اسم الموظف ورقمه — نفس سلوك بقية المصادر.</summary>
+    private static List<Dictionary<string, string>> ApplySearch(
+        List<Dictionary<string, string>> rows, ReportFilters f)
+    {
+        if (string.IsNullOrWhiteSpace(f.Search))
+        {
+            return rows;
+        }
+
+        var s = f.Search.Trim();
+        return rows.Where(r =>
+            r.GetValueOrDefault("employee", "").Contains(s, StringComparison.OrdinalIgnoreCase) ||
+            r.GetValueOrDefault("no", "").Contains(s, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    private static async Task<List<Dictionary<string, string>>> LoadContractsAsync(
+        ApplicationDbContext db, ReportFilters f)
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            db,
+            """
+SELECT e.EmployeeNo, e.FullName, c.ContractNo, c.ContractType, c.FromDate, c.ToDate,
+       c.EffectiveDate, ISNULL(c.IsCurrent, 0) AS IsCurrent, c.Note
+FROM EmployeeContracts c
+INNER JOIN Employees e ON e.Id = c.EmployeeId
+WHERE ISNULL(e.IsDeleted, 0) = 0 AND ISNULL(c.IsDeleted, 0) = 0
+ORDER BY e.FullName, c.FromDate DESC;
+""",
+            command => { },
+            reader => new Dictionary<string, string>
+            {
+                ["no"] = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                ["employee"] = HrmsDatabase.GetString(reader, "FullName"),
+                ["contractno"] = HrmsDatabase.GetString(reader, "ContractNo"),
+                ["contracttype"] = HrmsDatabase.GetString(reader, "ContractType"),
+                ["fromdate"] = D(HrmsDatabase.GetDateOnly(reader, "FromDate")),
+                ["todate"] = D(HrmsDatabase.GetDateOnly(reader, "ToDate")),
+                ["effectivedate"] = D(HrmsDatabase.GetDateOnly(reader, "EffectiveDate")),
+                ["iscurrent"] = HrmsDatabase.GetBool(reader, "IsCurrent") ? "نعم" : "لا",
+                ["note"] = HrmsDatabase.GetString(reader, "Note")
+            });
+
+        return ApplySearch(rows, f);
+    }
+
+    private static async Task<List<Dictionary<string, string>>> LoadAcknowledgmentsAsync(
+        ApplicationDbContext db, ReportFilters f)
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            db,
+            """
+SELECT e.EmployeeNo, e.FullName, ISNULL(t.Name, N'') AS TemplateName,
+       a.SentAt, a.ViewedAt, a.AcceptedAt, a.DeclinedAt, a.Note
+FROM EmployeeAcknowledgments a
+INNER JOIN Employees e ON e.Id = a.EmployeeId
+LEFT JOIN AcknowledgmentTemplates t ON t.Id = a.TemplateId
+WHERE ISNULL(e.IsDeleted, 0) = 0
+ORDER BY e.FullName, a.SentAt DESC;
+""",
+            command => { },
+            reader =>
+            {
+                var accepted = HrmsDatabase.GetDateTime(reader, "AcceptedAt");
+                var declined = HrmsDatabase.GetDateTime(reader, "DeclinedAt");
+                var viewed = HrmsDatabase.GetDateTime(reader, "ViewedAt");
+
+                // الحالة مشتقّة من الطوابع لا مخزَّنة — فلا تتناقض مع نفسها أبداً.
+                var state = accepted is not null ? "مقبول"
+                    : declined is not null ? "مرفوض"
+                    : viewed is not null ? "مقروء"
+                    : "بانتظار الاطّلاع";
+
+                return new Dictionary<string, string>
+                {
+                    ["no"] = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                    ["employee"] = HrmsDatabase.GetString(reader, "FullName"),
+                    ["template"] = HrmsDatabase.GetString(reader, "TemplateName"),
+                    ["state"] = state,
+                    ["sentat"] = D(HrmsDatabase.GetDateTime(reader, "SentAt")),
+                    ["viewedat"] = D(viewed),
+                    ["respondedat"] = D(accepted ?? declined),
+                    ["note"] = HrmsDatabase.GetString(reader, "Note")
+                };
+            });
+
+        return ApplySearch(rows, f);
+    }
+
+    private static async Task<List<Dictionary<string, string>>> LoadTasksAsync(
+        ApplicationDbContext db, ReportFilters f)
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            db,
+            """
+SELECT e.EmployeeNo, e.FullName, t.ProcessType, t.Title, t.AssigneeRole, t.DueDate,
+       ISNULL(t.IsDone, 0) AS IsDone, t.CompletedAt, t.CompletedBy
+FROM EmployeeTasks t
+INNER JOIN Employees e ON e.Id = t.EmployeeId
+WHERE ISNULL(e.IsDeleted, 0) = 0 AND ISNULL(t.IsDeleted, 0) = 0
+ORDER BY e.FullName, t.DueDate;
+""",
+            command => { },
+            reader =>
+            {
+                var done = HrmsDatabase.GetBool(reader, "IsDone");
+                var due = HrmsDatabase.GetDateOnly(reader, "DueDate");
+
+                // «متأخرة» حالة مشتقّة لا مخزَّنة: مهمّة غير منجزة فات استحقاقها.
+                var state = done ? "منجزة"
+                    : due is { } d && d < DateOnly.FromDateTime(DateTime.Today) ? "متأخرة"
+                    : "قائمة";
+
+                return new Dictionary<string, string>
+                {
+                    ["no"] = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                    ["employee"] = HrmsDatabase.GetString(reader, "FullName"),
+                    ["process"] = HrmsDatabase.GetInt(reader, "ProcessType") == 2 ? "إنهاء خدمة" : "تعيين",
+                    ["title"] = HrmsDatabase.GetString(reader, "Title"),
+                    ["assignee"] = HrmsDatabase.GetString(reader, "AssigneeRole"),
+                    ["duedate"] = D(due),
+                    ["state"] = state,
+                    ["completedat"] = D(HrmsDatabase.GetDateTime(reader, "CompletedAt")),
+                    ["completedby"] = HrmsDatabase.GetString(reader, "CompletedBy")
+                };
+            });
+
+        return ApplySearch(rows, f);
+    }
+
+    private static async Task<List<Dictionary<string, string>>> LoadUpdatesAsync(
+        ApplicationDbContext db, ReportFilters f)
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            db,
+            """
+SELECT e.EmployeeNo, e.FullName, b.SectionName, b.Status, b.RequestedBy, b.RequestedAt,
+       b.EffectiveDate, ISNULL(b.IsRetroactive, 0) AS IsRetroactive,
+       c.FieldLabel, c.OldValue, c.NewValue
+FROM EmployeeUpdateChanges c
+INNER JOIN EmployeeUpdateBatches b ON b.Id = c.BatchId
+INNER JOIN Employees e ON e.Id = b.EmployeeId
+WHERE ISNULL(e.IsDeleted, 0) = 0
+ORDER BY b.EffectiveDate DESC, b.RequestedAt DESC, c.Id;
+""",
+            command => { },
+            reader => new Dictionary<string, string>
+            {
+                ["no"] = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                ["employee"] = HrmsDatabase.GetString(reader, "FullName"),
+                ["section"] = HrmsDatabase.GetString(reader, "SectionName"),
+                ["field"] = HrmsDatabase.GetString(reader, "FieldLabel"),
+                ["oldvalue"] = HrmsDatabase.GetString(reader, "OldValue"),
+                ["newvalue"] = HrmsDatabase.GetString(reader, "NewValue"),
+                ["effectivedate"] = D(HrmsDatabase.GetDateOnly(reader, "EffectiveDate")),
+                ["retroactive"] = HrmsDatabase.GetBool(reader, "IsRetroactive") ? "نعم" : "لا",
+                ["state"] = HrmsDatabase.GetString(reader, "Status"),
+                ["requestedat"] = D(HrmsDatabase.GetDateTime(reader, "RequestedAt")),
+                ["requestedby"] = HrmsDatabase.GetString(reader, "RequestedBy")
+            });
+
+        return ApplySearch(rows, f);
     }
 
     private static async Task<List<Dictionary<string, string>>> LoadDocumentsAsync(

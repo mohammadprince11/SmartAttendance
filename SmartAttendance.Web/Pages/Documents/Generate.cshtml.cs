@@ -15,7 +15,13 @@ public class GenerateModel : PageModel
 {
     private readonly ApplicationDbContext _db;
 
-    public GenerateModel(ApplicationDbContext db) => _db = db;
+    public GenerateModel(ApplicationDbContext db, Infrastructure.Security.IProtectedFileService protectedFiles)
+    {
+        _db = db;
+        _protectedFiles = protectedFiles;
+    }
+
+    private readonly Infrastructure.Security.IProtectedFileService _protectedFiles;
 
     [BindProperty(SupportsGet = true)] public int? TemplateId { get; set; }
     [BindProperty(SupportsGet = true)] public int? EmployeeFilter { get; set; }
@@ -53,7 +59,7 @@ public class GenerateModel : PageModel
 
         var (template, employeeId) = pair;
         var (_, html, unresolved) = await DocumentTemplateStore.GenerateAsync(
-            _db, template, employeeId, User.Identity?.Name, Notes, IssuedOn, persist: false);
+            _db, template, employeeId, User.Identity?.Name, Notes, IssuedOn, persist: false, fileUrl: _protectedFiles.BuildUrl);
 
         PreviewHtml = html;
         PreviewUnresolved = unresolved;
@@ -73,7 +79,7 @@ public class GenerateModel : PageModel
 
         var (template, employeeId) = pair;
         var (id, _, unresolved) = await DocumentTemplateStore.GenerateAsync(
-            _db, template, employeeId, User.Identity?.Name, Notes, IssuedOn, persist: true);
+            _db, template, employeeId, User.Identity?.Name, Notes, IssuedOn, persist: true, fileUrl: _protectedFiles.BuildUrl);
 
         var message = unresolved.Count == 0
             ? "صدرت الوثيقة وأُرشفت."
@@ -122,7 +128,7 @@ public class GenerateModel : PageModel
         foreach (var employeeId in ids)
         {
             var (id, _, unresolved) = await DocumentTemplateStore.GenerateAsync(
-                _db, template, employeeId, User.Identity?.Name, Notes, IssuedOn, persist: true, source: "جماعي");
+                _db, template, employeeId, User.Identity?.Name, Notes, IssuedOn, persist: true, source: "جماعي", fileUrl: _protectedFiles.BuildUrl);
 
             if (id > 0)
             {
