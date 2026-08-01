@@ -32,17 +32,120 @@ public class IndexModel : PageModel
     [BindProperty]
     public CreateViolationInput Input { get; set; } = new();
 
-    /// <summary>فلتر رد الموظف: all | pending (بانتظار الرد) | replied (تم الرد).</summary>
+    /// <summary>
+    /// فلتر رد الموظف: all | pending (بانتظار الرد) | replied (تم الرد).
+    ///
+    /// ⚠️ <c>string?</c> **عمداً**: خاصيةٌ غير قابلة للعدم ومربوطة بالـGET يعدّها
+    /// المُقيِّد «مطلوبة» حين لا يُمرَّر الفلتر بالرابط، فيرتدّ <c>ModelState</c>
+    /// غير صالح **بمجرّد فتح الصفحة**. وهو ما كان يُبقي شريط «يرجى مراجعة الحقول
+    /// المطلوبة» أحمرَ دائماً بالصفحة القديمة بلا سببٍ حقيقيّ حتى تعوّد المستخدم
+    /// على تجاهله — وهو أسوأ ما يصيب رسالة خطأ.
+    /// (<c>[ValidateNever]</c> جُرِّب أولاً فلم يُسقط الشرط؛ القابلية للعدم أسقطته.)
+    /// وهذه فلاتر عرضٍ لا مدخلات: لا شيء فيها يُتحقَّق منه أصلاً.
+    /// </summary>
     [BindProperty(SupportsGet = true)]
-    public string Reply { get; set; } = "all";
+    public string? Reply { get; set; } = "all";
+
+    /// <summary>
+    /// التبويب المفتوح: work (ما ينتظرك) · log (السجلّ) · create (تسجيل مخالفة).
+    /// يعبر إعادة التوجيه بعد الحفظ فلا تقفز الشاشة لأوّل تبويب.
+    /// </summary>
+    [BindProperty(SupportsGet = true)]
+    public string? Tab { get; set; } = "work";
 
     public int PendingReplyCount => Items.Count(i => i.EmployeeReplyStatus == "Pending");
+
+    // ---------------------------------------------------- الإجراءات التأديبية
+    //
+    // كانت شاشةً مستقلّة (`/Violations/Actions`) فيُخرجك فتحُها من المخالفات إلى
+    // صفحةٍ أخرى وتفقد سياقك. صارت تبويباً هنا: **نُقل استعلامها ولم يُكرَّر**،
+    // والشاشة القديمة تعيد التوجيه إلى هذا التبويب.
+    //
+    // الحالة (قابلة للطعن · نهائية · ساقطة) **مشتقّة من التهيئة لا مخزَّنة**:
+    // تغيير مدّة الطعن أو الإسقاط بصفحة الإعدادات يعيد تصنيف كل صفٍّ فوراً بلا
+    // تعديل بيانات. ولذلك تُصفّى بالذاكرة بعد القراءة لا بالاستعلام.
+
+    public List<ActionsModel.ActionRow> DisciplinaryActions { get; private set; } = new();
+
+    public int ObjectionDays { get; private set; }
+
+    public int DropMonths { get; private set; }
+
+    public DateOnly Today { get; } = DateOnly.FromDateTime(DateTime.Today);
+
+    /// <summary>مرشّح حالة الإجراء: All · Open (قابل للطعن) · Final · Dropped.</summary>
+    [BindProperty(SupportsGet = true)]
+    public string? ActionState { get; set; } = "All";
+
+    public int OpenForObjection => DisciplinaryActions.Count(row =>
+        ViolationConfigPolicy.CanObject(row.NotifiedOn, ObjectionDays, Today));
+
+    public int DroppedActions => DisciplinaryActions.Count(row =>
+        ViolationConfigPolicy.IsDropped(row.DecidedOn, DropMonths, Today));
+
+    public decimal ActionsDeductions => DisciplinaryActions.Sum(row => row.DeductionAmount);
+
+    public string ActionStatusOf(ActionsModel.ActionRow row) =>
+        ViolationConfigPolicy.StatusLabel(row.NotifiedOn, row.DecidedOn, ObjectionDays, DropMonths, Today);
 
     public async Task OnGetAsync()
     {
         Input.EventDate = DateTime.Today;
         await LoadPageDataAsync();
+        await LoadDisciplinaryActionsAsync();
     }
+
+    private async Task LoadDisciplinaryActionsAsync()
+    {
+        ObjectionDays = int.TryParse(await DisciplinarySettingAsync(ViolationConfigPolicy.KeyObjectionDays), out var days) ? days : 0;
+        DropMonths = int.TryParse(await DisciplinarySettingAsync(ViolationConfigPolicy.KeyDropMonths), out var months) ? months : 0;
+
+        var all = await HrmsDatabase.QueryAsync(
+            _db,
+            """
+SELECT c.Id, ISNULL(c.ReferenceNo, N'') AS ReferenceNo,
+       ISNULL(e.FullName, N'') AS EmployeeName, ISNULL(e.EmployeeNo, N'') AS EmployeeNo,
+       ISNULL(c.ViolationTitle, N'') AS ViolationTitle, c.FinalPenaltyAction,
+       ISNULL(c.FinancialImpactType, N'None') AS FinancialImpactType,
+       ISNULL(c.DeductionAmount, 0) AS DeductionAmount,
+       c.EventDate, c.NotifiedOn, c.DecidedOn
+FROM EmployeeViolationCases c
+LEFT JOIN Employees e ON e.Id = c.EmployeeId
+WHERE ISNULL(c.IsDeleted, 0) = 0
+  AND (c.FinalPenaltyAction IS NOT NULL AND LTRIM(RTRIM(c.FinalPenaltyAction)) <> N'')
+ORDER BY c.EventDate DESC, c.Id DESC;
+""",
+            _ => { },
+            reader => new ActionsModel.ActionRow(
+                HrmsDatabase.GetInt(reader, "Id"),
+                HrmsDatabase.GetString(reader, "ReferenceNo"),
+                HrmsDatabase.GetString(reader, "EmployeeName"),
+                HrmsDatabase.GetString(reader, "EmployeeNo"),
+                HrmsDatabase.GetString(reader, "ViolationTitle"),
+                HrmsDatabase.GetString(reader, "FinalPenaltyAction"),
+                HrmsDatabase.GetString(reader, "FinancialImpactType"),
+                HrmsDatabase.GetNullableDecimal(reader, "DeductionAmount") ?? 0,
+                HrmsDatabase.GetDateOnly(reader, "EventDate") ?? default,
+                HrmsDatabase.GetDateOnly(reader, "NotifiedOn"),
+                HrmsDatabase.GetDateOnly(reader, "DecidedOn")));
+
+        DisciplinaryActions = ActionState switch
+        {
+            "Open" => all.Where(row => ViolationConfigPolicy.CanObject(row.NotifiedOn, ObjectionDays, Today)).ToList(),
+            "Dropped" => all.Where(row => ViolationConfigPolicy.IsDropped(row.DecidedOn, DropMonths, Today)).ToList(),
+            "Final" => all.Where(row =>
+                !ViolationConfigPolicy.CanObject(row.NotifiedOn, ObjectionDays, Today)
+                && !ViolationConfigPolicy.IsDropped(row.DecidedOn, DropMonths, Today)
+                && row.DecidedOn is not null).ToList(),
+            _ => all
+        };
+    }
+
+    private async Task<string> DisciplinarySettingAsync(string key) =>
+        await HrmsDatabase.ScalarAsync<string>(
+            _db,
+            "SELECT TOP 1 [Value] FROM DisciplinarySettings WHERE [Key] = @Key;",
+            command => HrmsDatabase.AddParameter(command, "@Key", key)) ?? "0";
 
     /// <summary>طلب رد الموظف على المخالفة (حق الدفاع) — يظهر له ببوابته وإشعار.</summary>
     public async Task<IActionResult> OnPostRequestReplyAsync(int id)
@@ -63,7 +166,7 @@ FROM EmployeeViolationCases v WHERE v.Id = @Id;
             command => Add(command, "@Id", id));
 
         TempData["SuccessMessage"] = "تم طلب رد الموظف — ستظهر المخالفة ببوابته للرد عليها.";
-        return RedirectToPage(new { Reply });
+        return RedirectToPage(new { Reply, Tab });
     }
 
     public async Task<IActionResult> OnPostCreateAsync()

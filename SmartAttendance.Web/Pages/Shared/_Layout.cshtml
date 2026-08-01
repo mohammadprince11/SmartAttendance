@@ -381,18 +381,13 @@
                                             <span>إدارة مهام الموظفين</span>
                                         </a>
 
-                                        @* عندهم «حالات المخالفات» قسمٌ يضمّ الحالات والإجراءات معاً *@
-                                        <details class="ky-acc" @(IsUnder("/Violations") ? "open" : "")>
-                                            <summary><span>حالات المخالفات</span><span class="ky-acc-chev"></span></summary>
-                                            <div class="ky-acc-body">
-                                                <a asp-page="/Violations/Index" class="nexora-nav-link @(IsUnder("/Violations/Index") ? "active nexora-active" : "")">
-                                                    <span>حالات المخالفات</span>
-                                                </a>
-                                                <a asp-page="/Violations/Actions" class="nexora-nav-link @(IsUnder("/Violations/Actions") ? "active nexora-active" : "")">
-                                                    <span>الإجراءات التأديبية</span>
-                                                </a>
-                                            </div>
-                                        </details>
+                                        @* كان قسماً بفرعين (الحالات · الإجراءات). صارت الإجراءات
+                                           **تبويباً داخل شاشة المخالفات** لا صفحةً مستقلّة، فبقي
+                                           فرعٌ واحد — وقسمٌ بفرعٍ واحد ليس قسماً، بل نقرةٌ زائدة
+                                           تخفي وجهتها. فصار رابطاً مباشراً. *@
+                                        <a asp-page="/Violations/Index" class="nexora-nav-link @(IsUnder("/Violations") ? "active nexora-active" : "")">
+                                            <span>المخالفات</span>
+                                        </a>
 
                                         <a asp-page="/AssetsManagement/Index" class="nexora-nav-link @(IsUnder("/AssetsManagement") ? "active nexora-active" : "")">
                                             <span>إدارة العهد</span>

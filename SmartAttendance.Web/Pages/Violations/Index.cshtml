@@ -1,397 +1,526 @@
 @page
 @model SmartAttendance.Web.Pages.Violations.IndexModel
-
 @{
-    ViewData["Title"] = "حالات المخالفات";
+    ViewData["Title"] = "المخالفات";
 
-    var rows = Model.Items;
-    var pendingCount = rows.Count(x => x.ActionStatus == "بانتظار الإجراء");
-    var approvedCount = rows.Count(x => x.Status == "موافق عليه");
-    var directCount = rows.Count(x => x.Source == "مباشر");
-    var completedCount = rows.Count(x => x.Status == "تم اتخاذ الإجراء");
+    // النموذج يفتح تبويب التسجيل من تلقائه حين يرتدّ بخطأ تحقّق — وإلا فالتبويب
+    // من الرابط، وافتراضه «ما ينتظرك».
+    var tab = Model.OpenCreateModal
+        ? "create"
+        : (string.IsNullOrWhiteSpace(Model.Tab) ? "work" : Model.Tab);
+
+    bool IsTab(string key) => string.Equals(tab, key, StringComparison.OrdinalIgnoreCase);
+    string Sel(string key) => IsTab(key) ? "true" : "false";
+
+    var awaitingAction = Model.Items.Where(i => i.ActionStatus == "بانتظار الإجراء").ToList();
+    var awaitingReply = Model.Items.Where(i => i.EmployeeReplyStatus == "Pending").ToList();
+    var pendingWork = awaitingAction.Count + awaitingReply.Count;
+    var totalDeductions = Model.Items.Sum(i => i.DeductionAmount);
 }
 
-<link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-violations-phase1-v14.css" asp-append-version="true" />
-<script src="~/js/nexora-violations-phase1-v14.js" asp-append-version="true" defer></script>
+@section Styles {
+    <link rel="stylesheet" href="~/css/zynora-workscreen.css" asp-append-version="true" />
+}
 
-<div class="nxr-page nxv-page" dir="rtl">
-    <section class="nxv-hero">
+<section class="zyw zy-scope" dir="rtl">
+
+    <header class="zyw-head">
         <div>
-            <h1>حالات المخالفات</h1>
-            <p>تسجيل ومتابعة المخالفات المثبتة على الموظفين، مع متابعة العقوبة ومبلغ الخصم وفورمة المخالفة.</p>
+            <h1>المخالفات</h1>
+            <p>تسجيل المخالفة · طلب ردّ الموظف · العقوبة وأثرها المالي.</p>
         </div>
 
-        <div class="nxv-hero-actions">
-            <button type="button" class="nxv-btn primary" data-nxv-open-modal>+ إضافة مخالفة</button>
-            <button type="button" class="nxv-btn" data-nxv-print>طباعة السجل</button>
+        @* سطرٌ واحد بدل خمس بطاقات KPI كانت تحتلّ نصف الشاشة فوق جدولٍ فارغ. *@
+        <div class="zyw-totals">
+            <span><b>@Model.TotalCount</b> حالة</span>
+            <span>·</span>
+            <span><b>@awaitingAction.Count</b> بانتظار الإجراء</span>
+            <span>·</span>
+            <span><b>@Model.PendingReplyCount</b> بانتظار ردّ الموظف</span>
+            <span>·</span>
+            <span><b>@totalDeductions.ToString("N0")</b> دينار خصومات</span>
         </div>
-    </section>
+    </header>
 
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="nxv-alert success">@TempData["SuccessMessage"]</div>
+        <div class="zy-card" role="status">@TempData["SuccessMessage"]</div>
     }
 
     @if (!ViewData.ModelState.IsValid)
     {
-        <div class="nxv-alert danger">يرجى مراجعة الحقول المطلوبة داخل نافذة إضافة مخالفة.</div>
+        @* الخطأ يُعرض بنصّه لا برسالة «راجع الحقول داخل النافذة»: النافذة لم تعد
+           موجودة، والنصّ الصريح يغني عن البحث عن الحقل المعطوب. *@
+        <div class="zyw-empty" role="alert">
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@error.ErrorMessage</div>
+            }
+        </div>
     }
 
-    <section class="nxv-tabs-card">
-        <div class="nxv-tabs" aria-label="تبويبات المخالفات">
-            <button type="button" class="active" data-nxv-tab="all">كل الحالات</button>
-            <button type="button" data-nxv-tab="pending">بانتظار الإجراء</button>
-            <button type="button" data-nxv-tab="approved">موافق عليه</button>
-            <button type="button" data-nxv-tab="completed">تم اتخاذ الإجراء</button>
-        </div>
-    </section>
+    <nav class="zyw-tabs" role="tablist" aria-label="أقسام المخالفات">
+        <button type="button" class="zyw-tab" role="tab" data-zyw-tab="work" aria-selected="@Sel("work")">
+            ما ينتظرك
+            @if (pendingWork > 0)
+            {
+                <span class="zyw-tab-count">@pendingWork</span>
+            }
+        </button>
+        <button type="button" class="zyw-tab" role="tab" data-zyw-tab="log" aria-selected="@Sel("log")">السجلّ</button>
+        <button type="button" class="zyw-tab" role="tab" data-zyw-tab="create" aria-selected="@Sel("create")">تسجيل مخالفة</button>
+        <button type="button" class="zyw-tab" role="tab" data-zyw-tab="actions" aria-selected="@Sel("actions")">الإجراءات التأديبية</button>
+    </nav>
 
-    <section class="nxv-kpis">
-        <div class="nxv-kpi">
-            <span>إجمالي الحالات</span>
-            <strong>@Model.TotalCount</strong>
-            <small>كل المخالفات الحالية</small>
-        </div>
-
-        <div class="nxv-kpi warn">
-            <span>بانتظار الإجراء</span>
-            <strong>@pendingCount</strong>
-            <small>تحتاج مراجعة HR</small>
-        </div>
-
-        <div class="nxv-kpi ok">
-            <span>موافق عليه</span>
-            <strong>@approvedCount</strong>
-            <small>تم اعتماد الإجراء</small>
-        </div>
-
-        <div class="nxv-kpi done">
-            <span>تم اتخاذ الإجراء</span>
-            <strong>@completedCount</strong>
-            <small>حالات مكتملة</small>
-        </div>
-
-        <div class="nxv-kpi info">
-            <span>مصدر مباشر</span>
-            <strong>@directCount</strong>
-            <small>من الإدارة أو المسؤول المباشر</small>
-        </div>
-    </section>
-
-    <section class="nxv-filter-card">
-        <div class="nxv-search">
-            <span>⌕</span>
-            <input type="search"
-                   placeholder="ابحث عن الموظف، الرقم المرجعي، نوع المخالفة، العقوبة أو مبلغ الخصم..."
-                   data-nxv-search />
-        </div>
-
-        <select data-nexora-select="true" data-nxv-filter="status">
-            <option value="">كل الحالات</option>
-            <option value="مسودة">مسودة</option>
-            <option value="بانتظار الاعتماد">بانتظار الاعتماد</option>
-            <option value="موافق عليه">موافق عليه</option>
-            <option value="مرفوض">مرفوض</option>
-            <option value="تم اتخاذ الإجراء">تم اتخاذ الإجراء</option>
-        </select>
-
-        <select data-nexora-select="true" data-nxv-filter="source">
-            <option value="">كل المصادر</option>
-            <option value="مباشر">مباشر</option>
-            <option value="النظام">النظام</option>
-            <option value="HR">HR</option>
-            <option value="فرع">فرع</option>
-        </select>
-
-        <button type="button" class="nxv-btn ghost" data-nxv-reset>إعادة تعيين</button>
-
-        @* فلتر رد الموظف (حق الدفاع — نمط كيان) *@
-        <select data-nexora-select="true" onchange="location.href='?Reply='+this.value">
-            <option value="all" selected="@(Model.Reply == "all")">رد الموظف: الكل</option>
-            <option value="pending" selected="@(Model.Reply == "pending")">بانتظار رد الموظف</option>
-            <option value="replied" selected="@(Model.Reply == "replied")">تم الرد</option>
-        </select>
-    </section>
-
-    <section class="nxv-card nxv-table-card">
-        <div class="nxv-table-head">
-            <div>
-                <h2>سجل المخالفات</h2>
-                <p>اختيار الفئة يفلتر أنواع المخالفات، والفورمة مربوطة ببيانات الموظف والمخالفة.</p>
+    @* ==================================================== ما ينتظرك (الافتراضي) *@
+    <section class="zyw-panel" data-zyw-panel="work" role="tabpanel" hidden="@(!IsTab("work"))">
+        @if (pendingWork == 0)
+        {
+            <div class="zyw-empty">
+                لا مخالفة تنتظر إجراءً أو ردّاً. سجّل مخالفةً جديدة من تبويب «تسجيل مخالفة».
             </div>
+        }
 
-            <span class="nxv-count" data-nxv-count>@rows.Count حالة</span>
-        </div>
-
-        <div class="nxv-table-wrap">
-            <table class="nxv-table nxv-table-v15">
-                <colgroup>
-                    <col class="nxv-col-ref" />
-                    <col class="nxv-col-employee" />
-                    <col class="nxv-col-violation" />
-                    <col class="nxv-col-date" />
-                    <col class="nxv-col-source" />
-                    <col class="nxv-col-penalty" />
-                    <col class="nxv-col-deduction" />
-                    <col class="nxv-col-status" />
-                    <col class="nxv-col-options" />
-                </colgroup>
-
-                <thead>
-                    <tr>
-                        <th>الرقم المرجعي</th>
-                        <th>الموظف</th>
-                        <th>المخالفة</th>
-                        <th>تاريخ الحدث</th>
-                        <th>المصدر</th>
-                        <th>العقوبة</th>
-                        <th>مبلغ الخصم</th>
-                        <th>الحالة</th>
-                        <th>خيارات</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach (var item in rows)
-                    {
-                        <tr data-nxv-row
-                            data-status="@item.Status"
-                            data-action="@item.ActionStatus"
-                            data-source="@item.Source"
-                            data-search="@($"{item.ReferenceNo} {item.EmployeeCode} {item.EmployeeName} {item.Position} {item.Branch} {item.Department} {item.ViolationTitle} {item.ViolationCategory} {item.Source} {item.Status} {item.ActionStatus} {item.FinalPenaltyAction} {item.DeductionAmount}")">
-                            <td>
-                                <span class="nxv-ref">@item.ReferenceNo</span>
-                            </td>
-
-                            <td>
-                                <div class="nxv-employee">
-                                    <span class="nxv-avatar">@item.Avatar</span>
-                                    <div>
-                                        <strong>@item.EmployeeName</strong>
-                                        <small>@item.EmployeeCode</small>
-                                    </div>
+        <div class="zyw-queue">
+            @if (awaitingAction.Count > 0)
+            {
+                <article class="zy-card">
+                    <div class="zyw-queue-head">
+                        <h2>بانتظار الإجراء</h2>
+                        <span class="zy-pill">@awaitingAction.Count</span>
+                    </div>
+                    <div class="zyw-list">
+                        @foreach (var row in awaitingAction.Take(8))
+                        {
+                            <div class="zyw-item">
+                                <div class="zyw-item-main">
+                                    <strong>@row.EmployeeName — @row.ViolationTitle</strong>
+                                    <small>@row.ReferenceNo · @row.EventDate.ToString("yyyy-MM-dd") · @row.Source</small>
                                 </div>
-                            </td>
-
-                            <td>
-                                <div class="nxv-violation">
-                                    <strong>@item.ViolationTitle</strong>
-                                    <small>@item.ViolationCategory</small>
-                                </div>
-                            </td>
-
-                            <td>@item.EventDate.ToString("dd/MM/yyyy")</td>
-
-                            <td>
-                                <span class="nxv-chip source">@item.Source</span>
-                            </td>
-
-                            <td>
-                                <div class="nxv-violation">
-                                    <strong>@(!string.IsNullOrWhiteSpace(item.FinalPenaltyAction) ? item.FinalPenaltyAction : "-")</strong>
-                                    <small>@item.DisplayFinancialImpact</small>
-                                </div>
-                            </td>
-
-                            <td>
-                                <span class="nxv-money">@item.DeductionAmount.ToString("N0") د.ع</span>
-                            </td>
-
-                            <td>
-                                <span class="nxv-status @item.StatusCss">@item.Status</span>
-                                @if (item.EmployeeReplyStatus == "Pending")
-                                {
-                                    <small style="display:block;color:#facc15;font-weight:800;margin-top:2px">⏳ بانتظار رد الموظف</small>
-                                }
-                                else if (item.EmployeeReplyStatus == "Replied")
-                                {
-                                    <small style="display:block;color:#4ade80;font-weight:800;margin-top:2px" title="@item.EmployeeReply">✓ ردّ الموظف: @(item.EmployeeReply.Length > 40 ? item.EmployeeReply[..40] + "…" : item.EmployeeReply)</small>
-                                }
-                            </td>
-
-                            <td>
-                                <div class="nxv-options">
-                                    <a asp-page="/Employees/Profile" asp-route-id="@item.EmployeeId" title="فتح ملف الموظف">موظف</a>
-                                    <a asp-page="/Violations/PrintForm" asp-route-id="@item.Id" title="عرض فورمة A4 المربوطة">فورمة</a>
-                                    @if (item.EmployeeReplyStatus == "NotRequested")
+                                <div class="zyw-item-actions">
+                                    @if (row.EmployeeReplyStatus == "NotRequested")
                                     {
-                                        <form method="post" asp-page-handler="RequestReply" style="display:inline">
-                                            <input type="hidden" name="id" value="@item.Id" />
-                                            <button type="submit" title="طلب رد الموظف على المخالفة (حق الدفاع)" style="background:none;border:0;color:#67e8f9;cursor:pointer;font-weight:800;font-size:inherit;padding:0">طلب رد</button>
+                                        <form method="post" asp-page-handler="RequestReply">
+                                            <input type="hidden" name="id" value="@row.Id" />
+                                            <button type="submit" class="btn-secondary">طلب ردّ الموظف</button>
                                         </form>
                                     }
+                                    <a class="btn-secondary" asp-page="/Violations/PrintForm" asp-route-id="@row.Id">طباعة</a>
                                 </div>
-                            </td>
-                        </tr>
-                    }
+                            </div>
+                        }
+                    </div>
+                </article>
+            }
 
-                    <tr class="nxv-empty" data-nxv-empty @(rows.Any() ? "hidden" : "")>
-                        <td colspan="9">لا توجد مخالفات مسجلة حالياً.</td>
-                    </tr>
-                </tbody>
-            </table>
+            @if (awaitingReply.Count > 0)
+            {
+                <article class="zy-card">
+                    <div class="zyw-queue-head">
+                        <h2>بانتظار ردّ الموظف</h2>
+                        <span class="zy-pill">@awaitingReply.Count</span>
+                    </div>
+                    <div class="zyw-list">
+                        @foreach (var row in awaitingReply.Take(8))
+                        {
+                            <div class="zyw-item">
+                                <div class="zyw-item-main">
+                                    <strong>@row.EmployeeName — @row.ViolationTitle</strong>
+                                    <small>@row.ReferenceNo · طُلب الردّ ولم يصل بعد</small>
+                                </div>
+                                <div class="zyw-item-actions">
+                                    <a class="btn-secondary" asp-page="/Violations/PrintForm" asp-route-id="@row.Id">طباعة</a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </article>
+            }
         </div>
     </section>
 
-    <div class="nxv-modal" data-nxv-modal data-nxv-open-on-load="@Model.OpenCreateModal.ToString().ToLowerInvariant()" hidden>
-        <div class="nxv-modal-backdrop" data-nxv-close-modal></div>
-
-        <section class="nxv-modal-panel" role="dialog" aria-modal="true" aria-labelledby="nxv-modal-title">
-            <form method="post" asp-page-handler="Create" class="nxv-modal-form">
-                <div class="nxv-modal-head">
-                    <div>
-                        <h2 id="nxv-modal-title">إضافة مخالفة جديدة</h2>
-                        <p>ابحث عن الموظف بالكود أو الاسم، اختر الفئة ثم نوع المخالفة، وبعدها عدّل العقوبة أو مبلغ الخصم إذا احتجت.</p>
-                    </div>
-
-                    <button type="button" class="nxv-modal-close" data-nxv-close-modal aria-label="إغلاق">×</button>
+    @* ======================================================================= السجلّ *@
+    <section class="zyw-panel" data-zyw-panel="log" role="tabpanel" hidden="@(!IsTab("log"))">
+        <article class="zy-card">
+            <div class="zyw-filters">
+                <div class="zyw-field zyw-field--grow">
+                    <label for="vio-search">بحث — موظف · رقم مرجعي · مخالفة</label>
+                    <input id="vio-search" type="search" data-zyw-search placeholder="اكتب للتصفية الفورية" />
                 </div>
 
-                <div asp-validation-summary="ModelOnly" class="nxv-validation-summary"></div>
+                <div class="zyw-field">
+                    <label for="vio-status">الحالة</label>
+                    <select id="vio-status" data-zyw-filter="status">
+                        <option value="">الكل</option>
+                        @foreach (var status in Model.Items.Select(i => i.Status).Distinct().OrderBy(s => s))
+                        {
+                            <option value="@status">@status</option>
+                        }
+                    </select>
+                </div>
 
-                <div class="nxv-form-scroll">
-                    <div class="nxv-form-grid">
-                        <label class="wide">
-                            <span>الموظف</span>
-                            <input type="search"
-                                   list="nxv-employees-list"
-                                   autocomplete="off"
-                                   data-nxv-employee-search
-                                   placeholder="اكتب الكود أو اسم الموظف..." />
-                            <input asp-for="Input.EmployeeId" type="hidden" data-nxv-employee-id />
-                            <datalist id="nxv-employees-list">
-                                @foreach (var employee in Model.EmployeeOptions)
-                                {
-                                    <option value="@employee.SearchText" data-id="@employee.Id"></option>
-                                }
-                            </datalist>
-                            <small asp-validation-for="Input.EmployeeId"></small>
-                        </label>
+                <div class="zyw-field">
+                    <label for="vio-source">المصدر</label>
+                    <select id="vio-source" data-zyw-filter="source">
+                        <option value="">الكل</option>
+                        @foreach (var source in Model.Items.Select(i => i.Source).Distinct().OrderBy(s => s))
+                        {
+                            <option value="@source">@source</option>
+                        }
+                    </select>
+                </div>
 
-                        <label>
-                            <span>الفئة</span>
-                            <select data-nexora-select="true" asp-for="Input.CategoryId" data-nxv-category-select>
-                                <option value="">اختر الفئة أولاً</option>
-                                @foreach (var category in Model.CategoryOptions)
-                                {
-                                    <option value="@category.Id">@category.Name</option>
-                                }
-                            </select>
-                            <small asp-validation-for="Input.CategoryId"></small>
-                        </label>
-
-                        <label class="wide">
-                            <span>نوع المخالفة</span>
-                            <select data-nexora-select="true" asp-for="Input.ViolationTypeId" data-nxv-violation-type disabled>
-                                <option value="">اختر الفئة حتى تظهر المخالفات</option>
-                                @foreach (var violation in Model.ViolationOptions)
-                                {
-                                    <option value="@violation.Id"
-                                            data-category-id="@violation.CategoryId"
-                                            data-category="@violation.CategoryName"
-                                            data-penalty="@violation.PenaltyAction"
-                                            data-impact-type="@violation.FinancialImpactType"
-                                            data-impact-value="@violation.FinancialValue.ToString(System.Globalization.CultureInfo.InvariantCulture)">
-                                        @violation.ViolationName
-                                    </option>
-                                }
-                            </select>
-                            <small asp-validation-for="Input.ViolationTypeId"></small>
-                        </label>
-
-                        <label>
-                            <span>تاريخ الحدث</span>
-                            <input asp-for="Input.EventDate" type="date" />
-                            <small asp-validation-for="Input.EventDate"></small>
-                        </label>
-
-                        <label>
-                            <span>المصدر</span>
-                            <select data-nexora-select="true" asp-for="Input.Source">
-                                <option>مباشر</option>
-                                <option>النظام</option>
-                                <option>HR</option>
-                                <option>فرع</option>
-                            </select>
-                            <small asp-validation-for="Input.Source"></small>
-                        </label>
-
-                        <label>
-                            <span>حالة الإجراء</span>
-                            <select data-nexora-select="true" asp-for="Input.ActionStatus">
-                                <option>بانتظار الإجراء</option>
-                                <option>اتخذ الإجراء</option>
-                                <option>قيد المراجعة</option>
-                            </select>
-                            <small asp-validation-for="Input.ActionStatus"></small>
-                        </label>
-
-                        <label>
-                            <span>الحالة</span>
-                            <select data-nexora-select="true" asp-for="Input.Status">
-                                <option>مسودة</option>
-                                <option>بانتظار الاعتماد</option>
-                                <option>موافق عليه</option>
-                                <option>مرفوض</option>
-                                <option>تم اتخاذ الإجراء</option>
-                            </select>
-                            <small asp-validation-for="Input.Status"></small>
-                        </label>
-
-                        <label class="wide">
-                            <span>العقوبة</span>
-                            <input asp-for="Input.FinalPenaltyAction" data-nxv-penalty-action placeholder="تظهر العقوبة تلقائياً ويمكن تعديلها" />
-                            <small asp-validation-for="Input.FinalPenaltyAction"></small>
-                        </label>
-
-                        <div class="nxv-impact-box wide">
-                            <strong>أثر اللائحة</strong>
-                            <span data-nxv-impact-preview>اختر نوع المخالفة حتى يظهر أثر اللائحة.</span>
-                            <small>هذا وصف الجزاء من إعدادات المخالفات مثل: يوم، ساعة، أو مبلغ ثابت. لا يعني بالضرورة المبلغ النهائي في الراتب.</small>
-                        </div>
-
-                        <input asp-for="Input.FinancialImpactType" type="hidden" data-nxv-impact-type />
-                        <input asp-for="Input.FinancialImpactValue" type="hidden" data-nxv-impact-value />
-
-                        <label>
-                            <span>مبلغ الخصم بالدينار</span>
-                            <input asp-for="Input.DeductionAmount" type="number" min="0" step="0.01" data-nxv-deduction-amount placeholder="مثال: 25000" />
-                            <small asp-validation-for="Input.DeductionAmount"></small>
-                        </label>
-
-                        <label class="wide">
-                            <span>الإجراء المقترح</span>
-                            <input asp-for="Input.ProposedAction" placeholder="مثال: إنذار / تعهد / خصم" />
-                            <small asp-validation-for="Input.ProposedAction"></small>
-                        </label>
-
-                        <label class="wide">
-                            <span>ملاحظات</span>
-                            <textarea asp-for="Input.Notes" rows="3" placeholder="ملاحظات إضافية اختيارية"></textarea>
-                            <small asp-validation-for="Input.Notes"></small>
-                        </label>
+                @* فلتر ردّ الموظف **خادميّ** (يغيّر الاستعلام لا العرض) فيبقى روابطَ. *@
+                <div class="zyw-field">
+                    <label>ردّ الموظف</label>
+                    <div class="zyw-item-actions">
+                        <a class="btn-secondary" asp-page="/Violations/Index" asp-route-reply="all" asp-route-tab="log">الكل</a>
+                        <a class="btn-secondary" asp-page="/Violations/Index" asp-route-reply="pending" asp-route-tab="log">بانتظار</a>
+                        <a class="btn-secondary" asp-page="/Violations/Index" asp-route-reply="replied" asp-route-tab="log">تم الردّ</a>
                     </div>
                 </div>
+            </div>
 
-                <div class="nxv-modal-note">
-                    <strong>توضيح:</strong>
-                    أثر اللائحة هو القاعدة المسجلة في إعدادات المخالفات. مبلغ الخصم بالدينار هو الرقم الذي سيُستخدم لاحقاً في الرواتب والاستقطاعات.
+            @if (Model.Items.Count == 0)
+            {
+                <div class="zyw-empty">لا مخالفات مسجّلة بهذا الفلتر.</div>
+            }
+            else
+            {
+                <div class="zyw-table-wrap">
+                    <table class="zyw-table">
+                        <thead>
+                            <tr>
+                                <th>الرقم المرجعي</th>
+                                <th>الموظف</th>
+                                <th>المخالفة</th>
+                                <th>تاريخ الحدث</th>
+                                <th>المصدر</th>
+                                <th>الحالة</th>
+                                <th>ردّ الموظف</th>
+                                <th>العقوبة</th>
+                                <th>الخصم</th>
+                                <th>خيارات</th>
+                            </tr>
+                        </thead>
+                        <tbody data-zyw-rows>
+                            @foreach (var row in Model.Items)
+                            {
+                                <tr data-status="@row.Status"
+                                    data-source="@row.Source"
+                                    data-text="@($"{row.ReferenceNo} {row.EmployeeName} {row.EmployeeCode} {row.ViolationTitle} {row.ViolationCategory}")">
+                                    <td>@row.ReferenceNo</td>
+                                    <td>@row.EmployeeName<br /><small>@row.EmployeeCode</small></td>
+                                    <td>@row.ViolationTitle<br /><small>@row.ViolationCategory</small></td>
+                                    <td>@row.EventDate.ToString("yyyy-MM-dd")</td>
+                                    <td>@row.Source</td>
+                                    <td><span class="zy-pill">@row.Status</span></td>
+                                    <td>@row.ReplyStatusText</td>
+                                    <td>@(string.IsNullOrWhiteSpace(row.FinalPenaltyAction) ? "—" : row.FinalPenaltyAction)</td>
+                                    <td>@(row.DeductionAmount > 0 ? row.DeductionAmount.ToString("N0") : "—")</td>
+                                    <td>
+                                        <div class="zyw-item-actions">
+                                            @if (row.EmployeeReplyStatus == "NotRequested")
+                                            {
+                                                <form method="post" asp-page-handler="RequestReply">
+                                                    <input type="hidden" name="id" value="@row.Id" />
+                                                    <button type="submit" class="btn-secondary">طلب ردّ</button>
+                                                </form>
+                                            }
+                                            <a class="btn-secondary" asp-page="/Violations/PrintForm" asp-route-id="@row.Id">طباعة</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
 
-                <div class="nxv-modal-actions">
-                    <button type="button" class="nxv-btn ghost" data-nxv-close-modal>إلغاء</button>
-                    <button type="submit" class="nxv-btn primary">حفظ المخالفة</button>
+                <p class="zyw-row-meta">المعروض: <span data-zyw-count>@Model.Items.Count</span> من @Model.TotalCount</p>
+            }
+        </article>
+    </section>
+
+    @* ========================================================= الإجراءات التأديبية *@
+    <section class="zyw-panel" data-zyw-panel="actions" role="tabpanel" hidden="@(!IsTab("actions"))">
+        <article class="zy-card">
+            <div class="zyw-queue-head">
+                <h2>العقوبات المطبَّقة</h2>
+                <span class="zy-pill">@Model.DisciplinaryActions.Count</span>
+            </div>
+
+            @* الحالة مشتقّة من التهيئة لا مخزَّنة: تغيير مدّة الطعن أو الإسقاط
+               يعيد التصنيف فوراً. ولذلك تُعلَن المدّتان هنا لا تُخفيان. *@
+            <div class="zyw-filters">
+                <div class="zyw-field">
+                    <label>الحالة</label>
+                    <div class="zyw-item-actions">
+                        <a class="btn-secondary" asp-page="/Violations/Index" asp-route-actionState="All" asp-route-tab="actions">الكل</a>
+                        <a class="btn-secondary" asp-page="/Violations/Index" asp-route-actionState="Open" asp-route-tab="actions">قابلة للطعن (@Model.OpenForObjection)</a>
+                        <a class="btn-secondary" asp-page="/Violations/Index" asp-route-actionState="Final" asp-route-tab="actions">نهائية</a>
+                        <a class="btn-secondary" asp-page="/Violations/Index" asp-route-actionState="Dropped" asp-route-tab="actions">ساقطة (@Model.DroppedActions)</a>
+                    </div>
+                </div>
+                <div class="zyw-field zyw-field--grow">
+                    <label>القاعدة المطبَّقة</label>
+                    <p class="zyw-row-meta">
+                        مدّة الطعن <b>@Model.ObjectionDays</b> يوماً · الإسقاط بعد <b>@Model.DropMonths</b> شهراً ·
+                        إجمالي الخصومات <b>@Model.ActionsDeductions.ToString("N0")</b> دينار
+                    </p>
+                </div>
+            </div>
+
+            @if (Model.DisciplinaryActions.Count == 0)
+            {
+                <div class="zyw-empty">
+                    لا عقوبات مطبَّقة بهذا الفلتر. تظهر هنا المخالفات التي صدرت بحقّها عقوبة فعلية.
+                </div>
+            }
+            else
+            {
+                <div class="zyw-table-wrap">
+                    <table class="zyw-table">
+                        <thead>
+                            <tr>
+                                <th>الرقم المرجعي</th>
+                                <th>الموظف</th>
+                                <th>المخالفة</th>
+                                <th>العقوبة</th>
+                                <th>الخصم</th>
+                                <th>تاريخ الحدث</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in Model.DisciplinaryActions)
+                            {
+                                <tr>
+                                    <td>@row.ReferenceNo</td>
+                                    <td>@row.EmployeeName<br /><small>@row.EmployeeNo</small></td>
+                                    <td>@row.ViolationTitle</td>
+                                    <td>@(string.IsNullOrWhiteSpace(row.FinalPenaltyAction) ? "—" : row.FinalPenaltyAction)</td>
+                                    <td>@(row.DeductionAmount > 0 ? row.DeductionAmount.ToString("N0") : "—")</td>
+                                    <td>@row.EventDate.ToString("yyyy-MM-dd")</td>
+                                    <td><span class="zy-pill">@Model.ActionStatusOf(row)</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </article>
+    </section>
+
+    @* ============================================================== تسجيل مخالفة *@
+    <section class="zyw-panel" data-zyw-panel="create" role="tabpanel" hidden="@(!IsTab("create"))">
+        <article class="zy-card">
+            <div class="zyw-queue-head"><h2>تسجيل مخالفة</h2></div>
+
+            <form method="post" asp-page-handler="Create">
+                <input type="hidden" name="tab" value="create" />
+
+                <div class="zyw-form-grid">
+                    @* المنتقي المشترك بدل منسدلة تحمل كل الموظفين — نفس مكوّن الشاشات الستّ. *@
+                    <div class="zyw-field zyw-field--wide">
+                        <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
+                            Name = "Input.EmployeeId",
+                            Label = "الموظف",
+                            SelectedId = Model.Input.EmployeeId,
+                            SubmitOnSelect = false })" />
+                    </div>
+
+                    <div class="zyw-field">
+                        <label asp-for="Input.CategoryId">الفئة</label>
+                        <select asp-for="Input.CategoryId" data-zyw-category>
+                            <option value="">اختر الفئة</option>
+                            @foreach (var category in Model.CategoryOptions)
+                            {
+                                <option value="@category.Id">@category.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="zyw-field">
+                        <label asp-for="Input.ViolationTypeId">نوع المخالفة</label>
+                        <select asp-for="Input.ViolationTypeId" data-zyw-violation>
+                            <option value="">اختر النوع</option>
+                            @foreach (var violation in Model.ViolationOptions)
+                            {
+                                <option value="@violation.Id"
+                                        data-category="@violation.CategoryId"
+                                        data-penalty="@violation.PenaltyAction"
+                                        data-impact="@violation.FinancialImpactType">@violation.ViolationName</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="zyw-field">
+                        <label asp-for="Input.EventDate">تاريخ الحدث</label>
+                        <input asp-for="Input.EventDate" type="date" />
+                    </div>
+
+                    <div class="zyw-field">
+                        <label asp-for="Input.Source">المصدر</label>
+                        <select asp-for="Input.Source">
+                            <option value="مباشر">مباشر</option>
+                            <option value="تقرير الحضور">تقرير الحضور</option>
+                            <option value="بلاغ">بلاغ</option>
+                        </select>
+                    </div>
+
+                    <div class="zyw-field">
+                        <label asp-for="Input.Status">الحالة</label>
+                        <select asp-for="Input.Status">
+                            <option value="مسودة">مسودة</option>
+                            <option value="بانتظار الاعتماد">بانتظار الاعتماد</option>
+                            <option value="موافق عليه">موافق عليه</option>
+                            <option value="مرفوض">مرفوض</option>
+                            <option value="تم اتخاذ الإجراء">تم اتخاذ الإجراء</option>
+                        </select>
+                    </div>
+
+                    <div class="zyw-field">
+                        <label asp-for="Input.ActionStatus">حالة الإجراء</label>
+                        <select asp-for="Input.ActionStatus">
+                            <option value="بانتظار الإجراء">بانتظار الإجراء</option>
+                            <option value="تم اتخاذ الإجراء">تم اتخاذ الإجراء</option>
+                        </select>
+                    </div>
+
+                    <div class="zyw-field">
+                        <label asp-for="Input.ProposedAction">الإجراء المقترح</label>
+                        <input asp-for="Input.ProposedAction" />
+                    </div>
+
+                    <div class="zyw-field">
+                        <label asp-for="Input.FinalPenaltyAction">العقوبة</label>
+                        <input asp-for="Input.FinalPenaltyAction" data-zyw-penalty />
+                    </div>
+
+                    <div class="zyw-field">
+                        <label asp-for="Input.FinancialImpactType">نوع الأثر المالي</label>
+                        <select asp-for="Input.FinancialImpactType" data-zyw-impact>
+                            <option value="None">بلا أثر</option>
+                            <option value="Percent">نسبة</option>
+                            <option value="Days">أيام</option>
+                            <option value="Amount">مبلغ</option>
+                        </select>
+                    </div>
+
+                    <div class="zyw-field">
+                        <label asp-for="Input.FinancialImpactValue">قيمة الأثر</label>
+                        <input asp-for="Input.FinancialImpactValue" type="number" step="0.01" min="0" />
+                    </div>
+
+                    <div class="zyw-field">
+                        <label asp-for="Input.DeductionAmount">مبلغ الخصم (دينار)</label>
+                        <input asp-for="Input.DeductionAmount" type="number" step="0.01" min="0" />
+                    </div>
+
+                    <div class="zyw-field zyw-field--wide">
+                        <label asp-for="Input.Notes">ملاحظات</label>
+                        <textarea asp-for="Input.Notes" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="zyw-form-actions">
+                    <button type="submit" class="btn-primary">حفظ المخالفة</button>
                 </div>
             </form>
-        </section>
-    </div>
-</div>
+        </article>
+    </section>
+</section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            'use strict';
+
+            // ---------- التبويبات: نفس سلوك شاشة التفاعل، و`?tab=` يتبع الاختيار.
+            var tabs = Array.prototype.slice.call(document.querySelectorAll('[data-zyw-tab]'));
+            var panels = Array.prototype.slice.call(document.querySelectorAll('[data-zyw-panel]'));
+
+            function show(key) {
+                tabs.forEach(function (t) { t.setAttribute('aria-selected', String(t.dataset.zywTab === key)); });
+                panels.forEach(function (p) { p.hidden = p.dataset.zywPanel !== key; });
+
+                var url = new URL(window.location.href);
+                url.searchParams.set('tab', key);
+                window.history.replaceState(window.history.state, '', url.pathname + url.search);
+            }
+
+            tabs.forEach(function (t) {
+                t.addEventListener('click', function () { show(t.dataset.zywTab); });
+            });
+
+            // ---------- تصفية الجدول بالعميل: بحثٌ وحالةٌ ومصدر بلا إعادة تحميل.
+            // (فلتر ردّ الموظف وحده خادميّ لأنه يغيّر الاستعلام نفسه لا العرض.)
+            var search = document.querySelector('[data-zyw-search]');
+            var filters = Array.prototype.slice.call(document.querySelectorAll('[data-zyw-filter]'));
+            var body = document.querySelector('[data-zyw-rows]');
+            var counter = document.querySelector('[data-zyw-count]');
+
+            function applyFilters() {
+                if (!body) return;
+
+                var text = ((search && search.value) || '').trim().toLowerCase();
+                var statusBox = document.querySelector('[data-zyw-filter="status"]');
+                var sourceBox = document.querySelector('[data-zyw-filter="source"]');
+                var status = statusBox ? statusBox.value : '';
+                var source = sourceBox ? sourceBox.value : '';
+                var shown = 0;
+
+                Array.prototype.forEach.call(body.rows, function (row) {
+                    var hit = (!text || (row.dataset.text || '').toLowerCase().indexOf(text) !== -1)
+                        && (!status || row.dataset.status === status)
+                        && (!source || row.dataset.source === source);
+                    row.hidden = !hit;
+                    if (hit) shown++;
+                });
+
+                if (counter) counter.textContent = String(shown);
+            }
+
+            if (search) search.addEventListener('input', applyFilters);
+            filters.forEach(function (f) { f.addEventListener('change', applyFilters); });
+
+            // ---------- نوع المخالفة يتبع الفئة، ويقترح العقوبة وأثرها من اللائحة.
+            var category = document.querySelector('[data-zyw-category]');
+            var violation = document.querySelector('[data-zyw-violation]');
+            var penalty = document.querySelector('[data-zyw-penalty]');
+            var impact = document.querySelector('[data-zyw-impact]');
+
+            function syncViolations() {
+                if (!category || !violation) return;
+
+                var wanted = category.value;
+                Array.prototype.forEach.call(violation.options, function (option) {
+                    if (!option.value) return;
+                    option.hidden = Boolean(wanted) && option.dataset.category !== wanted;
+                });
+
+                var current = violation.selectedOptions[0];
+                if (current && current.hidden) violation.value = '';
+            }
+
+            function suggestPenalty() {
+                var option = violation && violation.selectedOptions[0];
+                if (!option || !option.value) return;
+
+                // **اقتراحٌ لا فرض**: يملأ الفارغ ولا يدوس ما كتبه المستخدم — العقوبة
+                // قرارٌ بشريّ وأثرها ماليّ، فلا تُكتب فوقه بصمت.
+                if (penalty && !penalty.value && option.dataset.penalty) {
+                    penalty.value = option.dataset.penalty;
+                }
+                if (impact && impact.value === 'None' && option.dataset.impact) {
+                    impact.value = option.dataset.impact;
+                }
+            }
+
+            if (category) category.addEventListener('change', syncViolations);
+            if (violation) violation.addEventListener('change', suggestPenalty);
+            syncViolations();
+        })();
+    </script>
 }
-
-
-
-

@@ -57,7 +57,13 @@ public class ActionsModel : PageModel
     public bool IsDropped(ActionRow row) =>
         ViolationConfigPolicy.IsDropped(row.DecidedOn, DropMonths, Today);
 
-    public async Task OnGetAsync()
+    /// <summary>
+    /// صارت تبويباً بـ`/Violations`. يبقى المسار حيّاً لروابطٍ قديمة ويعيد التوجيه،
+    /// فلا نسخة ثانية من الشاشة ولا خروجٌ من سياق المخالفات.
+    /// </summary>
+    public IActionResult OnGet() => RedirectToPage("/Violations/Index", new { tab = "actions" });
+
+    private async Task LegacyLoadAsync()
     {
         await ViolationCaseSchema.EnsureAsync(_db);
 
