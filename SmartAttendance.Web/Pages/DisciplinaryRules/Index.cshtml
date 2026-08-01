@@ -58,8 +58,8 @@
         <section class="nxpen-content">
             @if (activeTab == "setup")
             {
-                <section class="nxpen-card">
-                    <header class="nxpen-card-head relaxed">
+                <section class="zy-card">
+                    <header class="zyw-queue-head">
                         <div>
                             <span>Configuration</span>
                             <h2>تهيئة نظام المخالفات</h2>
@@ -67,24 +67,24 @@
                         </div>
                     </header>
 
-                    <form method="post" asp-page-handler="SaveSettings" class="nxpen-settings-grid">
-                        <article class="nxpen-setting-card">
-                            <div class="nxpen-setting-copy"><strong>لجنة الموافقات</strong><p>عند التفعيل، المخالفة لا تُقفل مباشرة إلا بعد المرور بمسار لجنة الموافقات.</p></div>
-                            <label class="nxpen-switch"><input type="checkbox" name="requiresCommitteeApproval" value="true" checked="@Model.Settings.RequiresCommitteeApproval" /><span></span></label>
+                    <form method="post" asp-page-handler="SaveSettings" class="zyw-queue">
+                        <article class="zy-card zyw-item">
+                            <div class="zyw-item-main"><strong>لجنة الموافقات</strong><p>عند التفعيل، المخالفة لا تُقفل مباشرة إلا بعد المرور بمسار لجنة الموافقات.</p></div>
+                            <label class="zyw-checks"><input type="checkbox" name="requiresCommitteeApproval" value="true" checked="@Model.Settings.RequiresCommitteeApproval" /></label>
                         </article>
 
-                        <article class="nxpen-setting-card">
-                            <div class="nxpen-setting-copy"><strong>اعتراض الموظف</strong><p>السماح للموظف بتقديم اعتراض من بوابة الموظف بعد صدور المخالفة.</p></div>
-                            <label class="nxpen-switch"><input type="checkbox" name="allowEmployeeAppeal" value="true" checked="@Model.Settings.AllowEmployeeAppeal" /><span></span></label>
+                        <article class="zy-card zyw-item">
+                            <div class="zyw-item-main"><strong>اعتراض الموظف</strong><p>السماح للموظف بتقديم اعتراض من بوابة الموظف بعد صدور المخالفة.</p></div>
+                            <label class="zyw-checks"><input type="checkbox" name="allowEmployeeAppeal" value="true" checked="@Model.Settings.AllowEmployeeAppeal" /></label>
                         </article>
 
-                        <article class="nxpen-setting-card">
-                            <div class="nxpen-setting-copy"><strong>مدة الاعتراض</strong><p>عدد الأيام المتاحة للموظف لتقديم اعتراض بعد استلام إشعار المخالفة.</p></div>
+                        <article class="zy-card zyw-item">
+                            <div class="zyw-item-main"><strong>مدة الاعتراض</strong><p>عدد الأيام المتاحة للموظف لتقديم اعتراض بعد استلام إشعار المخالفة.</p></div>
                             <input name="appealWindowDays" type="number" min="0" value="@Model.Settings.AppealWindowDays" />
                         </article>
 
-                        <article class="nxpen-setting-card">
-                            <div class="nxpen-setting-copy"><strong>القالب الافتراضي</strong><p>إذا لم يتم اختيار قالب محدد، يستخدم النظام القالب الافتراضي لإشعار العقوبة.</p></div>
+                        <article class="zy-card zyw-item">
+                            <div class="zyw-item-main"><strong>القالب الافتراضي</strong><p>إذا لم يتم اختيار قالب محدد، يستخدم النظام القالب الافتراضي لإشعار العقوبة.</p></div>
                             <select data-nexora-select="true" name="defaultTemplateType">
                                 @foreach (var templateType in Model.TemplateTypes.Where(x => x.IsActive))
                                 {
@@ -93,27 +93,27 @@
                             </select>
                         </article>
 
-                        <article class="nxpen-setting-card">
-                            <div class="nxpen-setting-copy"><strong>اسم الجهة المعتمدة</strong><p>يظهر في أسفل الفورمة مثل قسم الموارد البشرية أو لجنة الانضباط.</p></div>
+                        <article class="zy-card zyw-item">
+                            <div class="zyw-item-main"><strong>اسم الجهة المعتمدة</strong><p>يظهر في أسفل الفورمة مثل قسم الموارد البشرية أو لجنة الانضباط.</p></div>
                             <input name="approvingAuthorityName" value="@Model.Settings.ApprovingAuthorityName" placeholder="قسم الموارد البشرية" />
                         </article>
 
-                        <article class="nxpen-setting-card">
-                            <div class="nxpen-setting-copy"><strong>صيغة رقم الكتاب</strong><p>تُستخدم لاحقاً عند توليد أرقام كتب المخالفات، مثال: DISC-{yyyy}-{0000}</p></div>
+                        <article class="zy-card zyw-item">
+                            <div class="zyw-item-main"><strong>صيغة رقم الكتاب</strong><p>تُستخدم لاحقاً عند توليد أرقام كتب المخالفات، مثال: DISC-{yyyy}-{0000}</p></div>
                             <input name="documentNumberFormat" value="@Model.Settings.DocumentNumberFormat" placeholder="DISC-{yyyy}-{0000}" />
                         </article>
 
-                        <article class="nxpen-form-shell">
+                        <article class="zy-card zyw-field zyw-field--wide">
                             <header><div><strong>هيدر الفورمة</strong><p>إذا تركته فارغاً سيظهر هيدر تلقائي يحتوي شعار شركتك وبيانات النظام.</p></div><small>Header</small></header>
                             <textarea name="formHeader" rows="7" placeholder="شركة الرغد الدولية\nقسم الموارد البشرية\nإشعار مخالفة وجزاء">@Model.Settings.FormHeader</textarea>
                         </article>
 
-                        <article class="nxpen-form-shell">
+                        <article class="zy-card zyw-field zyw-field--wide">
                             <header><div><strong>فوتر الفورمة</strong><p>يظهر أسفل رسالة العقوبة، مثل التوقيعات أو ملاحظات قانونية.</p></div><small>Footer</small></header>
                             <textarea name="formFooter" rows="7" placeholder="قسم الموارد البشرية\nيعتمد هذا الإشعار حسب لائحة الجزاءات المعتمدة في الشركة.">@Model.Settings.FormFooter</textarea>
                         </article>
 
-                        <footer class="nxpen-settings-actions"><button type="submit">حفظ إعدادات التهيئة</button></footer>
+                        <footer class="zyw-form-actions"><button type="submit">حفظ إعدادات التهيئة</button></footer>
                     </form>
 </section>
             }
@@ -575,13 +575,13 @@ else if (Model.Settings.A4FormFileType == "Pdf")
             }
 else
             {
-                <section class="nxpen-card">
-                    <header class="nxpen-card-head">
+                <section class="zy-card">
+                    <header class="zyw-queue-head">
                         <div><span>Dynamic Company Forms</span><h2>قوالب الرسائل والفورم</h2><p>القالب يمثل نص العقوبة، ويأخذ الهيدر والفوتر من إعدادات التهيئة. إذا لم تحدد هيدر، سيستخدم النظام هيدر تلقائي بشعار النظام وتفاصيله.</p></div>
                     </header>
                     <section class="nxpen-template-type-box">
                         <header><div><h3>أنواع القوالب</h3><small>أضف أنواع قوالب جديدة حسب سياسة الشركة، مثل إنذار، استقطاع، إنذار نهائي، إحالة للجنة.</small></div></header>
-                        <form method="post" asp-page-handler="CreateTemplateType" class="nxpen-grid-form compact">
+                        <form method="post" asp-page-handler="CreateTemplateType" class="zyw-form-grid">
                             <input name="name" required placeholder="اسم نوع القالب" />
                             <input name="code" required placeholder="Code مثل CommitteeReferral" />
                             <textarea name="description" placeholder="وصف النوع"></textarea>
@@ -595,25 +595,25 @@ else
                                     <input name="name" value="@templateType.Name" required />
                                     <input name="code" value="@templateType.Code" required />
                                     <input name="description" value="@templateType.Description" />
-                                    <label class="nxpen-switch small"><input type="checkbox" name="isActive" value="true" checked="@templateType.IsActive" /><span></span></label>
+                                    <label class="zyw-checks"><input type="checkbox" name="isActive" value="true" checked="@templateType.IsActive" /></label>
                                     <button type="submit">حفظ</button>
                                 </form>
                             }
                         </div>
                     </section>
                     <section class="nxpen-template-vars"><strong>المتغيرات</strong>@foreach (var token in Model.TemplateTokens){<button type="button" data-nxpen-token="@token">@token</button>}</section>
-                    <form method="post" asp-page-handler="CreateTemplate" class="nxpen-grid-form template-form">
-                        <div><label>اسم القالب</label><input name="name" required placeholder="مثال: نموذج إشعار عقوبة" /></div>
-                        <div><label>نوع القالب</label><select data-nexora-select="true" name="templateType">
+                    <form method="post" asp-page-handler="CreateTemplate" class="zyw-form-grid">
+                        <div class="zyw-field"><label>اسم القالب</label><input name="name" required placeholder="مثال: نموذج إشعار عقوبة" /></div>
+                        <div class="zyw-field"><label>نوع القالب</label><select data-nexora-select="true" name="templateType">
                                         @foreach (var templateType in Model.TemplateTypes.Where(x => x.IsActive))
                                         {
                                             <option value="@templateType.Code" selected="@(templateType.Code == Model.Settings.DefaultTemplateType)">@templateType.Name</option>
                                         }
                                     </select></div>
-                        <div class="wide-2"><label>عنوان الرسالة</label><input name="subject" required value="إشعار مخالفة وجزاء - {EmployeeName}" /></div>
-                        <div class="wide"><label>نص القالب</label><textarea name="body" rows="12">@Model.DefaultTemplateBody</textarea></div>
-                        <div class="wide nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="isDefault" value="true" /><span></span><b>قالب افتراضي</b></label><label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked /><span></span><b>فعال</b></label></div>
-                        <footer class="wide"><button type="submit">إضافة قالب</button></footer>
+                        <div class="zyw-field zyw-field--wide"><label>عنوان الرسالة</label><input name="subject" required value="إشعار مخالفة وجزاء - {EmployeeName}" /></div>
+                        <div class="zyw-field zyw-field--wide"><label>نص القالب</label><textarea name="body" rows="12">@Model.DefaultTemplateBody</textarea></div>
+                        <div class="zyw-field zyw-field--wide zyw-checks"><label><input type="checkbox" name="isDefault" value="true" /> قالب افتراضي</label><label><input type="checkbox" name="isActive" value="true" checked /> فعال</label></div>
+                        <footer class="zyw-form-actions zyw-field--wide"><button type="submit">إضافة قالب</button></footer>
                     </form>
                     <section class="nxpen-form-preview">
                         <div class="nxpen-form-paper">
@@ -641,24 +641,24 @@ else
                         </div>
                     </section>
 
-                    <div class="nxpen-edit-list">
+                    <div class="zyw-list">
                         @foreach (var template in Model.MessageTemplates)
                         {
                             <details class="nxpen-edit-item @(template.IsActive ? "" : "disabled")">
                                 <summary><span>@(template.IsDefault ? "âک…" : "âœ‰")</span><strong>@template.Name</strong><small>@Model.DisplayTemplateType(template.TemplateType) / @template.Subject</small></summary>
-                                <form method="post" asp-page-handler="UpdateTemplate" class="nxpen-grid-form edit template-form">
+                                <form method="post" asp-page-handler="UpdateTemplate" class="zyw-form-grid">
                                     <input type="hidden" name="id" value="@template.Id" />
-                                    <div><label>اسم القالب</label><input name="name" value="@template.Name" required /></div>
-                                    <div><label>نوع القالب</label><select data-nexora-select="true" name="templateType">
+                                    <div class="zyw-field"><label>اسم القالب</label><input name="name" value="@template.Name" required /></div>
+                                    <div class="zyw-field"><label>نوع القالب</label><select data-nexora-select="true" name="templateType">
                                         @foreach (var templateType in Model.TemplateTypes.Where(x => x.IsActive))
                                         {
                                             <option value="@templateType.Code" selected="@(templateType.Code == template.TemplateType)">@templateType.Name</option>
                                         }
                                     </select></div>
-                                    <div class="wide-2"><label>العنوان</label><input name="subject" value="@template.Subject" required /></div>
-                                    <div class="wide"><label>نص القالب</label><textarea name="body" rows="12">@template.Body</textarea></div>
-                                    <div class="wide nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="isDefault" value="true" checked="@template.IsDefault" /><span></span><b>افتراضي</b></label><label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked="@template.IsActive" /><span></span><b>فعال</b></label></div>
-                                    <footer class="wide"><button type="submit">حفظ تعديل القالب</button></footer>
+                                    <div class="zyw-field zyw-field--wide"><label>العنوان</label><input name="subject" value="@template.Subject" required /></div>
+                                    <div class="zyw-field zyw-field--wide"><label>نص القالب</label><textarea name="body" rows="12">@template.Body</textarea></div>
+                                    <div class="zyw-field zyw-field--wide zyw-checks"><label><input type="checkbox" name="isDefault" value="true" checked="@template.IsDefault" /> افتراضي</label><label><input type="checkbox" name="isActive" value="true" checked="@template.IsActive" /> فعال</label></div>
+                                    <footer class="zyw-form-actions zyw-field--wide"><button type="submit">حفظ تعديل القالب</button></footer>
                                 </form>
                             </details>
                         }
