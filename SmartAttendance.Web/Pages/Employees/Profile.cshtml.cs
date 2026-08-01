@@ -88,8 +88,6 @@ public partial class ProfileModel : PageModel
 
     public bool CanEditEmployee { get; set; }
 
-    public bool CanUploadDocument { get; set; }
-
     public bool CanDeleteDocument { get; set; }
 
     public bool CanChangeAssignment { get; set; }
@@ -251,11 +249,6 @@ public partial class ProfileModel : PageModel
             systemUserId,
             role,
             PeoplePermissionCodes.Edit,
-            employeeId);
-        CanUploadDocument = await CanAccessAsync(
-            systemUserId,
-            role,
-            PeoplePermissionCodes.UploadDocument,
             employeeId);
         CanDeleteDocument = await CanAccessAsync(
             systemUserId,
