@@ -247,8 +247,8 @@
             
             else if (activeTab == "designer")
             {
-                <section class="nxpen-card">
-                    <header class="nxpen-card-head relaxed">
+                <section class="zy-card">
+                    <header class="zyw-queue-head">
                         <div>
                             <span>Company Form Designer</span>
                             <h2>مصمم فورمة العقوبة</h2>
@@ -261,30 +261,30 @@
 
                     <section class="nxpen-designer-grid">
                         <div class="nxpen-designer-panel">
-                    <section class="nxpen-subcard nxpen-a4-form-card" data-nxpen-a4-form-upload>
+                    <section class="zy-card nxpen-a4-form-card" data-nxpen-a4-form-upload>
                         <header>
                             <h3>&#1585;&#1601;&#1593; &#1601;&#1608;&#1585;&#1605;&#1577; &#1575;&#1604;&#1588;&#1585;&#1603;&#1577; A4</h3>
                             <small>&#1575;&#1585;&#1601;&#1593; &#1601;&#1608;&#1585;&#1605;&#1577; &#1601;&#1575;&#1585;&#1594;&#1577; &#1603;&#1575;&#1605;&#1604;&#1577; &#1576;&#1602;&#1610;&#1575;&#1587; A4. &#1610;&#1583;&#1593;&#1605; PDF &#1571;&#1608; &#1589;&#1608;&#1585;&#1577;. &#1575;&#1604;&#1606;&#1589;&#1608;&#1589; &#1587;&#1578;&#1592;&#1607;&#1585; &#1601;&#1608;&#1602;&#1607;&#1575;.</small>
                         </header>
 
-                        <form method="post" asp-page-handler="SaveA4Form" enctype="multipart/form-data" class="nxpen-grid-form">
+                        <form method="post" asp-page-handler="SaveA4Form" enctype="multipart/form-data" class="zyw-form-grid">
                             <div class="wide">
                                 <label>&#1601;&#1608;&#1585;&#1605;&#1577; A4 &#1601;&#1575;&#1585;&#1594;&#1577;</label>
                                 <input type="file" name="a4FormFile" accept=".png,.jpg,.jpeg,.webp,.pdf" />
                             </div>
-                            <footer class="wide">
+                            <footer class="zyw-form-actions zyw-field--wide">
                                 <button type="submit">&#1581;&#1601;&#1592; &#1601;&#1608;&#1585;&#1605;&#1577; A4</button>
                             </footer>
                         </form>
                     </section>
 
-                            <section class="nxpen-subcard">
+                            <section class="zy-card">
                                 <header>
                                     <h3>صور الهيدر والفوتر</h3>
                                     <small>يفضل استخدام صورة عريضة للهيدر والفوتر بعرض صفحة A4.</small>
                                 </header>
 
-                                <form method="post" asp-page-handler="SaveFormImages" enctype="multipart/form-data" class="nxpen-grid-form">
+                                <form method="post" asp-page-handler="SaveFormImages" enctype="multipart/form-data" class="zyw-form-grid">
                                     <div class="wide">
                                         <label>صورة الهيدر</label>
                                         <input type="file" name="headerImage" accept="image/*" />
@@ -293,13 +293,13 @@
                                         <label>صورة الفوتر</label>
                                         <input type="file" name="footerImage" accept="image/*" />
                                     </div>
-                                    <footer class="wide">
+                                    <footer class="zyw-form-actions zyw-field--wide">
                                         <button type="submit">حفظ صور الفورمة</button>
                                     </footer>
                                 </form>
                             </section>
 
-                            <section class="nxpen-subcard nxpen-main-text-card">
+                            <section class="zy-card nxpen-main-text-card">
                                 <header>
                                     <h3>تعديل النص كطبقات مستقلة</h3>
                                     <small>
@@ -320,7 +320,7 @@
                                     </article>
                                 </div>
 
-                                <form method="post" asp-page-handler="SeedBodyTextLayers" class="nxpen-grid-form">
+                                <form method="post" asp-page-handler="SeedBodyTextLayers" class="zyw-form-grid">
                                     <div class="wide">
                                         <label>إعادة بناء النصوص الأساسية كطبقات منفصلة</label>
                                         <small class="nxpen-form-note">
@@ -328,19 +328,19 @@
                                             لا يحذف النصوص الإضافية في الهيدر أو الفوتر.
                                         </small>
                                     </div>
-                                    <footer class="wide">
+                                    <footer class="zyw-form-actions zyw-field--wide">
                                         <button type="submit">إنشاء / تحديث طبقات النص الأساسية</button>
                                     </footer>
                                 </form>
                             </section>
 
-                            <section class="nxpen-subcard">
+                            <section class="zy-card">
                                 <header>
                                     <h3>إضافة طبقة نص جديدة</h3>
                                     <small>استخدم هذا الخيار لإضافة أي نص جديد فوق الهيدر أو المتن أو الفوتر.</small>
                                 </header>
 
-                                <form method="post" asp-page-handler="CreateTextBlock" class="nxpen-grid-form">
+                                <form method="post" asp-page-handler="CreateTextBlock" class="zyw-form-grid">
                                     <div>
                                         <label>المنطقة</label>
                                         <select data-nexora-select="true" name="area">
@@ -390,25 +390,21 @@
                                         <label>النص</label>
                                         <textarea name="text" rows="4" placeholder="مثال: السيد/ة {EmployeeName}"></textarea>
                                     </div>
-                                    <div class="wide nxpen-checks">
-                                        <label class="nxpen-check-pill">
-                                            <input type="checkbox" name="isBold" value="true" />
-                                            <span></span>
-                                            <b>Bold</b>
-                                        </label>
-                                        <label class="nxpen-check-pill">
-                                            <input type="checkbox" name="isActive" value="true" checked />
-                                            <span></span>
-                                            <b>فعال</b>
-                                        </label>
+                                    <div class="zyw-field zyw-field--wide zyw-checks">
+                                        <label>
+                                            <input type="checkbox" name="isBold" value="true" /> Bold
+                                            </label>
+                                        <label>
+                                            <input type="checkbox" name="isActive" value="true" checked /> فعال
+                                            </label>
                                     </div>
-                                    <footer class="wide">
+                                    <footer class="zyw-form-actions zyw-field--wide">
                                         <button type="submit">إضافة صندوق نص إضافي</button>
                                     </footer>
                                 </form>
                             </section>
 
-                            <section class="nxpen-subcard">
+                            <section class="zy-card">
                                 <header>
                                     <h3>صناديق النص الحالية</h3>
                                     <small>يمكن تعديل كل صندوق نص بشكل كامل.</small>
@@ -423,7 +419,7 @@
                                                 <strong>@block.Text</strong>
                                                 <small>@block.FontFamily / @block.FontSize px / @block.FontColor</small>
                                             </summary>
-                                            <form method="post" asp-page-handler="UpdateTextBlock" class="nxpen-grid-form edit" data-layer-form data-layer-id="@block.Id">
+                                            <form method="post" asp-page-handler="UpdateTextBlock" class="zyw-form-grid" data-layer-form data-layer-id="@block.Id">
                                                 <input type="hidden" name="id" value="@block.Id" />
                                                 <div>
                                                     <label>المنطقة</label>
@@ -474,19 +470,15 @@
                                                     <label>النص</label>
                                                     <textarea name="text" rows="4">@block.Text</textarea>
                                                 </div>
-                                                <div class="wide nxpen-checks">
-                                                    <label class="nxpen-check-pill">
-                                                        <input type="checkbox" name="isBold" value="true" checked="@block.IsBold" />
-                                                        <span></span>
-                                                        <b>Bold</b>
-                                                    </label>
-                                                    <label class="nxpen-check-pill">
-                                                        <input type="checkbox" name="isActive" value="true" checked="@block.IsActive" />
-                                                        <span></span>
-                                                        <b>فعال</b>
-                                                    </label>
+                                                <div class="zyw-field zyw-field--wide zyw-checks">
+                                                    <label>
+                                                        <input type="checkbox" name="isBold" value="true" checked="@block.IsBold" /> Bold
+                                                        </label>
+                                                    <label>
+                                                        <input type="checkbox" name="isActive" value="true" checked="@block.IsActive" /> فعال
+                                                        </label>
                                                 </div>
-                                                <footer class="wide">
+                                                <footer class="zyw-form-actions zyw-field--wide">
                                                     <button type="submit">حفظ طبقة النص</button>
                                                     <button class="danger-outline"
                                                             type="submit"
