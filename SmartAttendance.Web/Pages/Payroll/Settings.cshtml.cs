@@ -33,6 +33,9 @@ public class SettingsModel : PageModel
     public List<string> MembersOf(string baseKey, int profileId) =>
         SalaryBaseStore.Resolve(BaseMembers, baseKey, profileId);
 
+    /// <summary>كتالوج معايير الشروط — يغذّي محرّر شروط الملف (نفس محرّك الشروط العام).</summary>
+    public string CriteriaJson { get; private set; } = "[]";
+
     /// <summary>سياسة ربط الراتب بالحضور المفعَّلة حالياً.</summary>
     public AttendanceSalaryLink.Policy LinkPolicy { get; set; } = AttendanceSalaryLink.Policy.Default;
 
@@ -43,6 +46,7 @@ public class SettingsModel : PageModel
         TaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_db);
         GosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_db);
         BaseMembers = await SalaryBaseStore.AllAsync(_db);
+        CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_db);
         LinkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(_db);
     }
 
@@ -83,6 +87,22 @@ public class SettingsModel : PageModel
             : $" (وعاء الاحتساب: {components.Count} مكوّن)";
     }
 
+    /// <summary>
+    /// شروط الملف تمرّ بالمحرّك ذهاباً وإياباً قبل التخزين: JSON ملفّق من الواجهة
+    /// أو حقلٌ بمعيارٍ محذوف يُنظَّف هنا بدل أن يُخزَّن ثم يُتجاهل بصمت وقت الاحتساب.
+    /// </summary>
+    private static string NormalizeConditions(string? raw) =>
+        HrConditions.Serialize(HrConditions.Deserialize(raw));
+
+    /// <summary>سطر يشرح أثر الشروط بالرسالة — الملف المشروط يغيّر اقتطاع من تنطبق عليهم.</summary>
+    private static string ConditionNote(string conditionsJson)
+    {
+        var set = HrConditions.Deserialize(conditionsJson);
+        return set.IsEmpty
+            ? " (بلا شروط — يُطبَّق بالإسناد اليدوي أو بكونه الملف النشط)"
+            : $" (يُطبَّق تلقائياً على: {HrConditions.Describe(set)})";
+    }
+
     public async Task<IActionResult> OnPostSaveGosiAsync()
     {
         var form = Request.Form;
@@ -93,7 +113,9 @@ public class SettingsModel : PageModel
             EmployeeRate = decimal.TryParse(form["EmployeeRate"], out var er) ? er : 0,
             CompanyRate = decimal.TryParse(form["CompanyRate"], out var cr) ? cr : 0,
             Ceiling = decimal.TryParse(form["Ceiling"], out var c) ? c : 0,
-            IsActive = form["IsActive"] == "true"
+            IsActive = form["IsActive"] == "true",
+            ConditionsJson = NormalizeConditions(form["Conditions"]),
+            SortOrder = int.TryParse(form["SortOrder"], out var sort) ? sort : 0
         };
         if (string.IsNullOrWhiteSpace(profile.Name))
         {
@@ -102,7 +124,7 @@ public class SettingsModel : PageModel
         }
         var gosiId = await PayrollConfigStore.SaveGosiProfileAsync(_db, profile);
         var gosiNote = await SaveBaseFromFormAsync(SalaryBaseComposer.GosiBaseKey, gosiId);
-        TempData["PayrollMessage"] = "تم حفظ ملف الضمان." + gosiNote;
+        TempData["PayrollMessage"] = "تم حفظ ملف الضمان." + ConditionNote(profile.ConditionsJson) + gosiNote;
         return RedirectToPage();
     }
 
@@ -121,7 +143,9 @@ public class SettingsModel : PageModel
             Id = int.TryParse(form["Id"], out var id) ? id : 0,
             Name = form["Name"].ToString().Trim(),
             ExemptionAmount = decimal.TryParse(form["ExemptionAmount"], out var ex) ? ex : 0,
-            IsActive = form["IsActive"] == "true"
+            IsActive = form["IsActive"] == "true",
+            ConditionsJson = NormalizeConditions(form["Conditions"]),
+            SortOrder = int.TryParse(form["SortOrder"], out var sort) ? sort : 0
         };
         if (string.IsNullOrWhiteSpace(profile.Name))
         {
@@ -142,7 +166,7 @@ public class SettingsModel : PageModel
 
         var taxId = await PayrollConfigStore.SaveTaxProfileAsync(_db, profile);
         var taxNote = await SaveBaseFromFormAsync(SalaryBaseComposer.TaxBaseKey, taxId);
-        TempData["PayrollMessage"] = "تم حفظ ملف الضريبة وشرائحه." + taxNote;
+        TempData["PayrollMessage"] = "تم حفظ ملف الضريبة وشرائحه." + ConditionNote(profile.ConditionsJson) + taxNote;
         return RedirectToPage();
     }
 

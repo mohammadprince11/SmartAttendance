@@ -34,6 +34,13 @@ public partial class ProfileModel
     public List<string> SalaryItemOptions { get; set; } = new();
     public decimal ActiveAllowancesTotal { get; set; }
 
+    /// <summary>الملفان الماليان المطبَّقان فعلاً على هذا الموظف — كانا محسوبين وخفيّين.</summary>
+    public PayrollProfileResolver.Resolution GosiChoice { get; set; } = PayrollProfileResolver.NoProfile;
+    public PayrollProfileResolver.Resolution TaxChoice { get; set; } = PayrollProfileResolver.NoProfile;
+
+    /// <summary>وعاء الضمان المحتسَب اليوم — رقمٌ كان يُحسب بالمسير ولا يُعرض بالملف.</summary>
+    public decimal GosiBase { get; set; }
+
     // ---- العقود (نمط كيان: متعددة، التجديد صف جديد) ----
     public List<EmployeeContract> Contracts { get; set; } = new();
     public List<string> ContractTypeOptions { get; set; } = new();
@@ -118,8 +125,11 @@ public partial class ProfileModel
         var today = DateOnly.FromDateTime(DateTime.Today);
         ActiveAllowancesTotal = Allowances.Where(a => a.IsActiveOn(today)).Sum(a => a.Amount);
 
+        await LoadFinancialProfilesAsync(today);
+
         await HrLookups.EnsureSchemaAsync(_dbContext);
         SalaryItemOptions = await HrLookups.ValuesAsync(_dbContext, "salaryitems");
+
         ContractTypeOptions = await HrLookups.ValuesAsync(_dbContext, "contracttypes");
 
         await EmployeeContractSchema.EnsureAsync(_dbContext);
@@ -146,6 +156,40 @@ public partial class ProfileModel
 
     // نفس منطق صفحة /LeaveBalances: المنح من LeaveBalance (أو افتراضي السياسة)،
     // والاستخدام يُشتق من طلبات الإجازة المعتمدة المتداخلة مع السنة.
+    /// <summary>
+    /// يحسم ملفَّي الضريبة والضمان المطبَّقين على هذا الموظف ويحسب وعاء الضمان
+    /// **للعرض فقط** بنفس مركِّب المسير — لا صيغة ثانية هنا. بكيان «راتب الضمان
+    /// الاجتماعي» رقمٌ ظاهر بالبطاقة، وعندنا كان يُحتسب بالمسير ولا يراه أحد.
+    /// </summary>
+    private async Task LoadFinancialProfilesAsync(DateOnly today)
+    {
+        var taxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_dbContext);
+        var gosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_dbContext);
+
+        var rows = await HrConditionFacts.LoadAsync(_dbContext, Id);
+        var facts = rows.Count > 0
+            ? HrConditionFacts.Build(rows[0], today)
+            : new Dictionary<string, HrConditions.Fact>();
+
+        TaxChoice = PayrollProfileResolver.Resolve(
+            FinancialInfo?.TaxProfileId, PayrollConfigStore.Candidates(taxProfiles), facts);
+        GosiChoice = PayrollProfileResolver.Resolve(
+            FinancialInfo?.GosiProfileId, PayrollConfigStore.Candidates(gosiProfiles), facts);
+
+        var basic = FinancialInfo?.BasicSalary ?? 0;
+        var members = await SalaryBaseStore.MembersAsync(
+            _dbContext, SalaryBaseComposer.GosiBaseKey, GosiChoice.ProfileId ?? 0);
+
+        GosiBase = SalaryBaseComposer.Compose(
+            new SalaryBaseComposer.Amounts
+            {
+                Basic = basic,
+                Allowances = ActiveAllowancesTotal,
+                Gross = basic + ActiveAllowancesTotal
+            },
+            members);
+    }
+
     private async Task LoadLeaveLedgerAsync()
     {
         await LeaveBalanceSchema.EnsureAsync(_dbContext);

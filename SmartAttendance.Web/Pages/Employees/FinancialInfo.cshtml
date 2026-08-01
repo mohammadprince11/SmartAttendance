@@ -21,6 +21,8 @@
     .fin-field label { color: rgba(226,232,240,.82); font-size: 12.5px; font-weight: 900; }
     .fin-field input, .fin-field select { min-height: 42px; border-radius: 12px; padding: 8px 12px;
         border: 1px solid rgba(148,163,184,.22); background: rgba(3,16,28,.5); color: #f5f9ff; font-weight: 800; }
+    .fin-note { color: #9fb8c9; font-size: 11.5px; font-weight: 800; line-height: 1.5; }
+    html[data-theme="light"] .fin-note { color: #5a7085; }
     .fin-check { display: flex; align-items: center; gap: 8px; color: #e2e8f0; font-weight: 800; min-height: 42px; }
     .fin-actions { display: flex; gap: 10px; justify-content: flex-start; }
     .fin-btn { min-height: 44px; padding: 10px 20px; border-radius: 12px; font-weight: 1000; cursor: pointer;
@@ -77,8 +79,25 @@
     <section class="fin-card">
         <h2>الضمان الاجتماعي</h2>
         <div class="fin-grid">
-            <div class="fin-field"><label>نوع الضمان</label><input asp-for="Input.SocialSecurityType" /></div>
-            <div class="fin-field"><label>راتب الضمان</label><input asp-for="Input.SocialSecuritySalary" type="number" step="0.0001" /></div>
+            <div class="fin-field">
+                <label>ملف الضمان الاجتماعي</label>
+                <select asp-for="Input.GosiProfileId">
+                    <option value="">حسب الشرط / الملف النشط</option>
+                    @foreach (var g in Model.GosiProfiles)
+                    {
+                        <option value="@g.Id" selected="@(Model.Input.GosiProfileId == g.Id ? "selected" : null)">@g.Name</option>
+                    }
+                </select>
+                <span class="fin-note">المطبَّق: @(Model.GosiChoice.ProfileId is null ? "لا يوجد ملف" : Model.GosiChoice.Name) · @Model.GosiChoice.SourceLabel</span>
+            </div>
+            <div class="fin-field"><label>نوع الضمان (وصف)</label><input asp-for="Input.SocialSecurityType" /></div>
+            <div class="fin-field"><label>راتب الضمان (مُدخَل)</label><input asp-for="Input.SocialSecuritySalary" type="number" step="0.0001" /></div>
+            <div class="fin-field">
+                <label>راتب الضمان المحتسَب</label>
+                <input type="text" readonly tabindex="-1" value="@Model.GosiBase.ToString("N2")"
+                       style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.35);font-weight:1000" />
+                <span class="fin-note">حصة الموظف @Model.GosiEmployeeShare.ToString("N2") · حصة الشركة @Model.GosiCompanyShare.ToString("N2") — تقدير باليوم بوعاء الملف المطبَّق</span>
+            </div>
             <div class="fin-field"><label>رقم الضمان</label><input asp-for="Input.SocialSecurityNo" /></div>
             <div class="fin-field"><label>تاريخ الانضمام</label><input name="Input.SocialSecurityJoinDate" value="@d(Model.Input.SocialSecurityJoinDate)" type="date" /></div>
             <div class="fin-field"><label>اشتراكات سابقة (أشهر)</label><input asp-for="Input.SocialSecurityPreviousMonths" type="number" /></div>
@@ -89,7 +108,18 @@
     <section class="fin-card">
         <h2>الضريبة</h2>
         <div class="fin-grid">
-            <div class="fin-field"><label>ملف الضريبة</label><input asp-for="Input.TaxFile" /></div>
+            <div class="fin-field">
+                <label>ملف الضريبة</label>
+                <select asp-for="Input.TaxProfileId">
+                    <option value="">حسب الشرط / الملف النشط</option>
+                    @foreach (var t in Model.TaxProfiles)
+                    {
+                        <option value="@t.Id" selected="@(Model.Input.TaxProfileId == t.Id ? "selected" : null)">@t.Name</option>
+                    }
+                </select>
+                <span class="fin-note">المطبَّق: @(Model.TaxChoice.ProfileId is null ? "لا يوجد ملف" : Model.TaxChoice.Name) · @Model.TaxChoice.SourceLabel</span>
+            </div>
+            <div class="fin-field"><label>وصف ملف الضريبة</label><input asp-for="Input.TaxFile" /></div>
             <div class="fin-field"><label>الرقم الضريبي</label><input asp-for="Input.TaxNo" /></div>
             <div class="fin-field"><label>السنة</label><input asp-for="Input.TaxYear" type="number" /></div>
             <div class="fin-field"><label>راتب الضريبة السابق</label><input asp-for="Input.PreviousTaxSalary" type="number" step="0.0001" /></div>

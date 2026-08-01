@@ -28,6 +28,10 @@ public sealed class PayrollConfigIntegrationTests : IAsyncLifetime
         _db = NewContext();
         try
         {
+            // الهجرات المحكومة أولاً تماماً كما يفعل الإقلاع: أعمدة الملفات المضافة
+            // (ConditionsJson · SortOrder) تأتي من الهجرة لا من الشفاء الذاتي، فبدون
+            // هذا السطر يختبر الاختبارُ مخططاً أقدم من الذي يعمل به التطبيق.
+            await SqlSchemaMigrator.ApplyAsync(_db);
             await PayrollConfigStore.EnsureAsync(_db);
             await CleanupAsync();
             _dbAvailable = true;

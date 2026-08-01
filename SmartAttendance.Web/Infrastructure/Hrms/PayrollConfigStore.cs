@@ -25,6 +25,13 @@ public static class PayrollConfigStore
         public string Name { get; set; } = string.Empty;
         public decimal ExemptionAmount { get; set; }  // إعفاء شهري يُطرح قبل الشرائح
         public bool IsActive { get; set; } = true;
+
+        /// <summary>شروط انطباق الملف تلقائياً (محرّك الشروط العام)؛ فارغة ⟹ يُسنَد يدوياً فقط.</summary>
+        public string ConditionsJson { get; set; } = string.Empty;
+
+        /// <summary>أسبقية الملفات المشروطة — الأصغر يُفحص أولاً.</summary>
+        public int SortOrder { get; set; }
+
         public List<TaxBracket> Brackets { get; set; } = new();
     }
 
@@ -36,7 +43,28 @@ public static class PayrollConfigStore
         public decimal CompanyRate { get; set; }
         public decimal Ceiling { get; set; }          // 0 = بلا سقف
         public bool IsActive { get; set; } = true;
+
+        /// <summary>شروط انطباق الملف تلقائياً — «هذا الملف للمواطنين» مثلاً.</summary>
+        public string ConditionsJson { get; set; } = string.Empty;
+
+        public int SortOrder { get; set; }
     }
+
+    /// <summary>مرشَّحو الحسم لملفات الضريبة بترتيب القراءة نفسه.</summary>
+    public static List<PayrollProfileResolver.Candidate> Candidates(IEnumerable<TaxProfile> profiles) =>
+        profiles
+            .Select(profile => new PayrollProfileResolver.Candidate(
+                profile.Id, profile.Name, profile.SortOrder, profile.IsActive,
+                HrConditions.Deserialize(profile.ConditionsJson)))
+            .ToList();
+
+    /// <summary>مرشَّحو الحسم لملفات الضمان بترتيب القراءة نفسه.</summary>
+    public static List<PayrollProfileResolver.Candidate> Candidates(IEnumerable<GosiProfile> profiles) =>
+        profiles
+            .Select(profile => new PayrollProfileResolver.Candidate(
+                profile.Id, profile.Name, profile.SortOrder, profile.IsActive,
+                HrConditions.Deserialize(profile.ConditionsJson)))
+            .ToList();
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
     {
@@ -51,6 +79,8 @@ BEGIN
         Name nvarchar(150) NOT NULL,
         ExemptionAmount decimal(18,2) NOT NULL DEFAULT(0),
         IsActive bit NOT NULL DEFAULT(1),
+        ConditionsJson nvarchar(max) NULL,
+        SortOrder int NULL,
         CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
     );
 END;
@@ -78,6 +108,8 @@ BEGIN
         CompanyRate decimal(9,4) NOT NULL DEFAULT(0),
         Ceiling decimal(18,2) NOT NULL DEFAULT(0),
         IsActive bit NOT NULL DEFAULT(1),
+        ConditionsJson nvarchar(max) NULL,
+        SortOrder int NULL,
         CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
     );
 END;
@@ -113,7 +145,9 @@ END;
                 Id = HrmsDatabase.GetInt(reader, "Id"),
                 Name = HrmsDatabase.GetString(reader, "Name"),
                 ExemptionAmount = reader["ExemptionAmount"] is decimal e ? e : 0,
-                IsActive = HrmsDatabase.GetBool(reader, "IsActive")
+                IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
+                ConditionsJson = HrmsDatabase.GetString(reader, "ConditionsJson") ?? string.Empty,
+                SortOrder = HrmsDatabase.GetNullableInt(reader, "SortOrder") ?? 0
             });
 
         var brackets = await HrmsDatabase.QueryAsync(
@@ -152,26 +186,19 @@ END;
             id = profile.Id;
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
-                "UPDATE PayrollTaxProfiles SET Name=@Name, ExemptionAmount=@Exemption, IsActive=@Active WHERE Id=@Id; DELETE FROM PayrollTaxBrackets WHERE ProfileId=@Id;",
+                "UPDATE PayrollTaxProfiles SET Name=@Name, ExemptionAmount=@Exemption, IsActive=@Active, ConditionsJson=@Conditions, SortOrder=@Sort WHERE Id=@Id; DELETE FROM PayrollTaxBrackets WHERE ProfileId=@Id;",
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@Id", id);
-                    HrmsDatabase.AddParameter(command, "@Name", profile.Name);
-                    HrmsDatabase.AddParameter(command, "@Exemption", profile.ExemptionAmount);
-                    HrmsDatabase.AddParameter(command, "@Active", profile.IsActive ? 1 : 0);
+                    AddTax(command, profile);
                 });
         }
         else
         {
             id = await HrmsDatabase.ScalarAsync<int>(
                 dbContext,
-                "INSERT INTO PayrollTaxProfiles (Name, ExemptionAmount, IsActive) VALUES (@Name, @Exemption, @Active); SELECT CAST(SCOPE_IDENTITY() AS int);",
-                command =>
-                {
-                    HrmsDatabase.AddParameter(command, "@Name", profile.Name);
-                    HrmsDatabase.AddParameter(command, "@Exemption", profile.ExemptionAmount);
-                    HrmsDatabase.AddParameter(command, "@Active", profile.IsActive ? 1 : 0);
-                });
+                "INSERT INTO PayrollTaxProfiles (Name, ExemptionAmount, IsActive, ConditionsJson, SortOrder) VALUES (@Name, @Exemption, @Active, @Conditions, @Sort); SELECT CAST(SCOPE_IDENTITY() AS int);",
+                command => AddTax(command, profile));
         }
 
         foreach (var b in profile.Brackets.OrderBy(x => x.FromAmount))
@@ -234,7 +261,9 @@ END;
                 EmployeeRate = reader["EmployeeRate"] is decimal er ? er : 0,
                 CompanyRate = reader["CompanyRate"] is decimal cr ? cr : 0,
                 Ceiling = reader["Ceiling"] is decimal c ? c : 0,
-                IsActive = HrmsDatabase.GetBool(reader, "IsActive")
+                IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
+                ConditionsJson = HrmsDatabase.GetString(reader, "ConditionsJson") ?? string.Empty,
+                SortOrder = HrmsDatabase.GetNullableInt(reader, "SortOrder") ?? 0
             });
     }
 
@@ -250,7 +279,7 @@ END;
         {
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
-                "UPDATE PayrollGosiProfiles SET Name=@Name, EmployeeRate=@Emp, CompanyRate=@Co, Ceiling=@Ceiling, IsActive=@Active WHERE Id=@Id;",
+                "UPDATE PayrollGosiProfiles SET Name=@Name, EmployeeRate=@Emp, CompanyRate=@Co, Ceiling=@Ceiling, IsActive=@Active, ConditionsJson=@Conditions, SortOrder=@Sort WHERE Id=@Id;",
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@Id", profile.Id);
@@ -262,7 +291,7 @@ END;
 
         return await HrmsDatabase.ScalarAsync<int>(
             dbContext,
-            "INSERT INTO PayrollGosiProfiles (Name, EmployeeRate, CompanyRate, Ceiling, IsActive) VALUES (@Name, @Emp, @Co, @Ceiling, @Active); SELECT CAST(SCOPE_IDENTITY() AS int);",
+            "INSERT INTO PayrollGosiProfiles (Name, EmployeeRate, CompanyRate, Ceiling, IsActive, ConditionsJson, SortOrder) VALUES (@Name, @Emp, @Co, @Ceiling, @Active, @Conditions, @Sort); SELECT CAST(SCOPE_IDENTITY() AS int);",
             command => AddGosi(command, profile));
     }
 
@@ -291,5 +320,18 @@ END;
         HrmsDatabase.AddParameter(command, "@Co", profile.CompanyRate);
         HrmsDatabase.AddParameter(command, "@Ceiling", profile.Ceiling);
         HrmsDatabase.AddParameter(command, "@Active", profile.IsActive ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@Conditions", (object?)Blank(profile.ConditionsJson) ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@Sort", profile.SortOrder);
     }
+
+    private static void AddTax(System.Data.Common.DbCommand command, TaxProfile profile)
+    {
+        HrmsDatabase.AddParameter(command, "@Name", profile.Name);
+        HrmsDatabase.AddParameter(command, "@Exemption", profile.ExemptionAmount);
+        HrmsDatabase.AddParameter(command, "@Active", profile.IsActive ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@Conditions", (object?)Blank(profile.ConditionsJson) ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@Sort", profile.SortOrder);
+    }
+
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 }

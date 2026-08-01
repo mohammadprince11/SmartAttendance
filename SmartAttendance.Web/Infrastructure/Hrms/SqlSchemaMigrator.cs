@@ -818,6 +818,47 @@ BEGIN
     CREATE INDEX IX_FormAnswers_Submission ON FormAnswers (SubmissionId, SortOrder, Id);
 END;
 """),
+
+        // الملفات المالية على الموظف — إسنادُ ملف ضريبة/ضمان **لكل موظف** بدل ملفٍ
+        // نشطٍ واحدٍ للنظام كلّه، وشروطٌ على الملف نفسه ليُختار تلقائياً («هذا الملف
+        // للمواطنين») بمحرّك الشروط العام.
+        //
+        // ⚠️ **إضافية محضة وبلا أثر ما لم تُملأ**: كل الأعمدة nullable بلا قيمة
+        // افتراضية، وحسمُ الملف يرجع للملف النشط عند غيابها (PayrollProfileResolver
+        // الدرجة الثالثة) — أي أن قسائم اليوم لا تتغيّر بفلس حتى تُسنَد بيانات.
+        //
+        // العمودان النصّيان القديمان (SocialSecurityType · TaxFile) يبقيان بلا مساس:
+        // كانا نصّاً حرّاً لا يقرؤه أحد، ويصيران الآن وصفاً بجانب الإسناد الحقيقي.
+        new(
+            "20260801-25-per-employee-financial-profiles",
+            """
+IF OBJECT_ID('EmployeeFinancialInfos', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeFinancialInfos', 'TaxProfileId') IS NULL
+        ALTER TABLE EmployeeFinancialInfos ADD TaxProfileId int NULL;
+
+    IF COL_LENGTH('EmployeeFinancialInfos', 'GosiProfileId') IS NULL
+        ALTER TABLE EmployeeFinancialInfos ADD GosiProfileId int NULL;
+END;
+
+IF OBJECT_ID('PayrollTaxProfiles', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('PayrollTaxProfiles', 'ConditionsJson') IS NULL
+        ALTER TABLE PayrollTaxProfiles ADD ConditionsJson nvarchar(max) NULL;
+
+    IF COL_LENGTH('PayrollTaxProfiles', 'SortOrder') IS NULL
+        ALTER TABLE PayrollTaxProfiles ADD SortOrder int NULL;
+END;
+
+IF OBJECT_ID('PayrollGosiProfiles', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('PayrollGosiProfiles', 'ConditionsJson') IS NULL
+        ALTER TABLE PayrollGosiProfiles ADD ConditionsJson nvarchar(max) NULL;
+
+    IF COL_LENGTH('PayrollGosiProfiles', 'SortOrder') IS NULL
+        ALTER TABLE PayrollGosiProfiles ADD SortOrder int NULL;
+END;
+"""),
     };
 
     /// <summary>

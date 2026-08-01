@@ -247,17 +247,39 @@ WHERE r.Id = @Id;
         var linkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(dbContext);
         var linkMode = linkPolicy.Mode;
 
-        var taxProfile = await PayrollConfigStore.ActiveTaxProfileAsync(dbContext);
-        var gosiProfile = await PayrollConfigStore.ActiveGosiProfileAsync(dbContext);
+        // ملفات الضريبة/الضمان **كلّها** لا الملف النشط وحده: الملف صار خاصيةً لكل
+        // موظف (إسناد صريح أو شرط) ⟵ PayrollProfileResolver. من لا إسناد له ولا شرط
+        // ينطبق عليه يأخذ الملف النشط تماماً كما قبل هذا التغيير.
+        var taxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(dbContext);
+        var gosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(dbContext);
+        var taxById = taxProfiles.ToDictionary(profile => profile.Id);
+        var gosiById = gosiProfiles.ToDictionary(profile => profile.Id);
+        var taxCandidates = PayrollConfigStore.Candidates(taxProfiles);
+        var gosiCandidates = PayrollConfigStore.Candidates(gosiProfiles);
 
-        // عضوية وعاءَي الملفّين النشطين تُقرأ مرّة واحدة للتشغيل كلّه لا لكل موظف.
-        var taxMembers = await SalaryBaseStore.MembersAsync(
-            dbContext, SalaryBaseComposer.TaxBaseKey, taxProfile?.Id ?? 0);
-        var gosiMembers = await SalaryBaseStore.MembersAsync(
-            dbContext, SalaryBaseComposer.GosiBaseKey, gosiProfile?.Id ?? 0);
+        // عضوية أوعية **كل** الملفات دفعةً واحدة (قاموس بالذاكرة) بدل نداء لكل موظف.
+        var baseMembers = await SalaryBaseStore.AllAsync(dbContext);
 
         var periodStart = new DateOnly(run.Year, run.Month, 1);
         var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+
+        // حقائق الموظفين لتقييم شروط الملفات — بتاريخ مرجعي صريح (نهاية الفترة) لا
+        // بتاريخ اليوم، وإلا اختلف حسمُ الملف بإعادة احتساب شهرٍ ماضٍ.
+        // ولا تُقرأ أصلاً ما لم يوجد ملفٌ مشروط: قراءة 1356 موظفاً بحقولهم الإضافية
+        // ثمنٌ لا يُدفع لميزة لم تُستعمل بعد.
+        var hasConditionalProfiles = taxCandidates.Concat(gosiCandidates)
+            .Any(candidate => candidate.IsActive && candidate.Conditions is { IsEmpty: false });
+
+        var factsByEmployee = new Dictionary<int, Dictionary<string, HrConditions.Fact>>();
+        if (hasConditionalProfiles)
+        {
+            foreach (var row in await HrConditionFacts.LoadAsync(dbContext))
+            {
+                factsByEmployee[row.Id] = HrConditionFacts.Build(row, periodEnd);
+            }
+        }
+
+        var noFacts = new Dictionary<string, HrConditions.Fact>();
 
         // --- مدخلات: موظفون + ملف مالي + علاوات + حضور شهري + خصومات مخالفات ---
         var employees = await HrmsDatabase.QueryAsync(
@@ -275,9 +297,16 @@ WHERE r.Id = @Id;
 
         var financial = (await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT EmployeeId, ISNULL(BasicSalary,0) AS BasicSalary, ISNULL(StopSalaryCalc,0) AS StopSalaryCalc FROM EmployeeFinancialInfos WHERE ISNULL(IsDeleted,0)=0;",
+            "SELECT EmployeeId, ISNULL(BasicSalary,0) AS BasicSalary, ISNULL(StopSalaryCalc,0) AS StopSalaryCalc, TaxProfileId, GosiProfileId FROM EmployeeFinancialInfos WHERE ISNULL(IsDeleted,0)=0;",
             command => { },
-            reader => new { EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"), Basic = reader["BasicSalary"] is decimal b ? b : 0, Stop = HrmsDatabase.GetBool(reader, "StopSalaryCalc") }))
+            reader => new
+            {
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                Basic = reader["BasicSalary"] is decimal b ? b : 0,
+                Stop = HrmsDatabase.GetBool(reader, "StopSalaryCalc"),
+                TaxProfileId = HrmsDatabase.GetNullableInt(reader, "TaxProfileId"),
+                GosiProfileId = HrmsDatabase.GetNullableInt(reader, "GosiProfileId")
+            }))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.First());
 
         var allowances = (await HrmsDatabase.QueryAsync(
@@ -527,6 +556,21 @@ WHERE r.Id = @Id;
                 FormulaAdd = formulaTaxableAdd,
                 Gross = gross
             };
+
+            // حسم ملفَّي الضريبة والضمان لهذا الموظف: إسناده الصريح ⟵ فملفٌ تنطبق
+            // شروطه ⟵ فالملف النشط. ووعاء الاحتساب يتبع الملف الفائز لا ملفاً ثابتاً.
+            var facts = factsByEmployee.TryGetValue(emp.Id, out var empFacts) ? empFacts : noFacts;
+
+            var taxChoice = PayrollProfileResolver.Resolve(fin?.TaxProfileId, taxCandidates, facts);
+            var gosiChoice = PayrollProfileResolver.Resolve(fin?.GosiProfileId, gosiCandidates, facts);
+
+            var taxProfile = taxChoice.ProfileId is { } taxId ? taxById.GetValueOrDefault(taxId) : null;
+            var gosiProfile = gosiChoice.ProfileId is { } gosiId ? gosiById.GetValueOrDefault(gosiId) : null;
+
+            var taxMembers = SalaryBaseStore.Resolve(
+                baseMembers, SalaryBaseComposer.TaxBaseKey, taxProfile?.Id ?? 0);
+            var gosiMembers = SalaryBaseStore.Resolve(
+                baseMembers, SalaryBaseComposer.GosiBaseKey, gosiProfile?.Id ?? 0);
 
             var taxableBase = SalaryBaseComposer.Compose(baseAmounts, taxMembers);
             var tax = PayrollConfigStore.ComputeTax(taxableBase, taxProfile);

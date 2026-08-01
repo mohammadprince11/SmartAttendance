@@ -7,10 +7,10 @@
     ViewData["Title"] = "الضريبة والضمان";
     var taxJson = JsonSerializer.Serialize(Model.TaxProfiles.Select(p => new
     {
-        p.Id, p.Name, p.ExemptionAmount, p.IsActive,
+        p.Id, p.Name, p.ExemptionAmount, p.IsActive, p.ConditionsJson, p.SortOrder,
         Brackets = p.Brackets.Select(b => new { b.FromAmount, b.ToAmount, b.Rate })
     }));
-    var gosiJson = JsonSerializer.Serialize(Model.GosiProfiles.Select(g => new { g.Id, g.Name, g.EmployeeRate, g.CompanyRate, g.Ceiling, g.IsActive }));
+    var gosiJson = JsonSerializer.Serialize(Model.GosiProfiles.Select(g => new { g.Id, g.Name, g.EmployeeRate, g.CompanyRate, g.Ceiling, g.IsActive, g.ConditionsJson, g.SortOrder }));
 
     // كتالوج المكوّنات والعضوية المحفوظة والافتراضات — تبني لوحة الوعاء داخل السلايد
     var componentsJson = JsonSerializer.Serialize(
@@ -24,6 +24,7 @@
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
 
 <style>
     .ps-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
@@ -174,6 +175,16 @@
                 <label>اسم الملف *<input type="text" name="Name" id="tax-Name" required /></label>
                 <label>الإعفاء الشهري (يُطرح قبل الشرائح)<input type="number" name="ExemptionAmount" id="tax-Exemption" step="0.01" value="0" /></label>
                 <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IsActive" value="true" id="tax-Active" checked /> الملف النشط</label>
+
+                @* شروط انطباق الملف تلقائياً — نفس محرّك الشروط العام بلا بنية جديدة *@
+                <div>
+                    <b style="font-size:13px">على من يُطبَّق هذا الملف تلقائياً؟</b>
+                    <p class="sb-hint">اتركه بلا شروط ليُطبَّق بالإسناد اليدوي أو بكونه الملف النشط. الإسناد على الموظف يعلو على الشرط دائماً.</p>
+                    <label>أسبقية الفحص (الأصغر أولاً)<input type="number" name="SortOrder" id="tax-Sort" value="0" /></label>
+                    <input type="hidden" name="Conditions" id="tax-Conditions" />
+                    <div class="zyc" id="tax-cond" data-zy-conditions data-input="#tax-Conditions" data-criteria="@Model.CriteriaJson"></div>
+                </div>
+
                 <div><b style="font-size:13px">الشرائح التصاعدية</b> <button type="button" class="ps-btn ghost sm" onclick="brkAdd()">+ شريحة</button></div>
                 <div class="ps-brk" style="color:var(--sa-muted,#8FA8BC);font-size:11px;font-weight:900"><span>من</span><span>إلى (فارغ=∞)</span><span>نسبة%</span><span></span></div>
                 <div id="brk-rows" style="display:flex;flex-direction:column;gap:6px"></div>
@@ -214,6 +225,16 @@
                 <label>السقف (0 = بلا سقف)<input type="number" name="Ceiling" id="gosi-Ceiling" step="0.01" value="0" /></label>
                 <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IsActive" value="true" id="gosi-Active" checked /> الملف النشط</label>
 
+                @* شروط انطباق الملف تلقائياً — هنا يُحلّ «اقتطاع المواطن يخالف الوافد»:
+                   معيار «مواطن» موجود بالكتالوج، فيكفي ملفٌّ شرطه «مواطن = نعم» *@
+                <div>
+                    <b style="font-size:13px">على من يُطبَّق هذا الملف تلقائياً؟</b>
+                    <p class="sb-hint">مثال: «مواطن يساوي نعم» ⟵ يأخذ كلُّ مواطنٍ هذا الملف بلا إسناد يدوي. الإسناد على الموظف يعلو على الشرط.</p>
+                    <label>أسبقية الفحص (الأصغر أولاً)<input type="number" name="SortOrder" id="gosi-Sort" value="0" /></label>
+                    <input type="hidden" name="Conditions" id="gosi-Conditions" />
+                    <div class="zyc" id="gosi-cond" data-zy-conditions data-input="#gosi-Conditions" data-criteria="@Model.CriteriaJson"></div>
+                </div>
+
                 @* وعاء الاحتساب لهذا الملف — يُبنى بجافاسكربت عند فتح السلايد *@
                 <div class="sb-board" data-base="GosiBase">
                     <b style="font-size:13px">وعاء الاحتساب</b>
@@ -237,6 +258,8 @@
 </section>
 
 @section Scripts {
+    @* غير مؤجَّل: condLoad تُنادى فور فتح السلايد فيجب أن يكون المحرّك محمّلاً *@
+    <script src="~/js/zynora-conditions.js" asp-append-version="true"></script>
     <script>
         var TAX_DATA = @Html.Raw(taxJson);
         var GOSI_DATA = @Html.Raw(gosiJson);
@@ -255,6 +278,18 @@
         }
         function brkAdd() { brkRow(0, '', 0); }
 
+        // محرّر الشروط يُبنى مرّة واحدة لكل عقدة، والسلايد يُعاد استعماله لملفات
+        // مختلفة — فنعيد تهيئته صراحةً بقيمة الملف المفتوح وإلا بقيت شروط السابق.
+        function condLoad(nodeId, inputId, json) {
+            var input = document.getElementById(inputId);
+            var node = document.getElementById(nodeId);
+            if (!input || !node) return;
+            input.value = json || '';
+            node.__zyConditions = null;
+            node.innerHTML = '';
+            if (window.ZyConditions) window.ZyConditions.init(node.parentNode);
+        }
+
         function taxOpen(id) {
             var f = document.querySelector('#tax-slide form'); f.reset();
             document.getElementById('brk-rows').innerHTML = '';
@@ -266,8 +301,13 @@
                     document.getElementById('tax-Name').value = p.Name || '';
                     document.getElementById('tax-Exemption').value = p.ExemptionAmount;
                     document.getElementById('tax-Active').checked = !!p.IsActive;
+                    document.getElementById('tax-Sort').value = p.SortOrder || 0;
+                    condLoad('tax-cond', 'tax-Conditions', p.ConditionsJson);
                     (p.Brackets || []).forEach(function (b) { brkRow(b.FromAmount, b.ToAmount, b.Rate); });
                 }
+            } else {
+                document.getElementById('tax-Sort').value = 0;
+                condLoad('tax-cond', 'tax-Conditions', '');
             }
             if (document.getElementById('brk-rows').children.length === 0) brkAdd();
             sbBuild('TaxBase', id || 0);
@@ -288,7 +328,12 @@
                     document.getElementById('gosi-Co').value = g.CompanyRate;
                     document.getElementById('gosi-Ceiling').value = g.Ceiling;
                     document.getElementById('gosi-Active').checked = !!g.IsActive;
+                    document.getElementById('gosi-Sort').value = g.SortOrder || 0;
+                    condLoad('gosi-cond', 'gosi-Conditions', g.ConditionsJson);
                 }
+            } else {
+                document.getElementById('gosi-Sort').value = 0;
+                condLoad('gosi-cond', 'gosi-Conditions', '');
             }
             sbBuild('GosiBase', id || 0);
             document.getElementById('gosi-slide').classList.add('open');
