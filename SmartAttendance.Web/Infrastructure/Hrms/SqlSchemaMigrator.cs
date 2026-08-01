@@ -770,6 +770,54 @@ BEGIN
     CREATE INDEX IX_FormFields_Template ON FormFields (TemplateId, SortOrder, Id);
 END;
 """),
+
+        // تعبئة النماذج وتخزين الإجابات — الجداول التي أجّلتُها عمداً بالهجرة السابقة
+        // حتى تُبنى شاشة تكتب فيها.
+        //
+        // ⭐ **الإجابة تُخزَّن مع نصّ سؤالها** (`FieldLabel`) لا بمرجعٍ للحقل وحده:
+        // تعديل نصّ السؤال بعد سنة يجب ألا يغيّر معنى إجابةٍ أُعطيت — استبيانٌ
+        // يُقرأ بعد عام بأسئلةٍ عُدِّلت هو استبيانٌ مزوَّر بلا قصد.
+        //
+        // ولا قيد فريد على (النموذج، الموظف): الاستبيان يُعاد إرساله دورياً، وكل
+        // تعبئة سجلٌّ مستقل بختمه الزمني — نفس درس الإقرارات.
+        new(
+            "20260801-24-form-submissions",
+            """
+IF OBJECT_ID('FormSubmissions', 'U') IS NULL
+BEGIN
+    CREATE TABLE FormSubmissions (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        TemplateId int NOT NULL,
+        TemplateName nvarchar(200) NULL,
+        FormType nvarchar(30) NULL,
+        EmployeeId int NOT NULL,
+        Status nvarchar(20) NOT NULL CONSTRAINT DF_FormSub_Status DEFAULT(N'Submitted'),
+        SubmittedAt datetime2 NOT NULL CONSTRAINT DF_FormSub_At DEFAULT(SYSUTCDATETIME()),
+        SubmittedBy nvarchar(150) NULL,
+        ReviewedBy nvarchar(150) NULL,
+        ReviewedAt datetime2 NULL,
+        ReviewNote nvarchar(1000) NULL
+    );
+
+    CREATE INDEX IX_FormSubmissions_Template ON FormSubmissions (TemplateId, Id);
+    CREATE INDEX IX_FormSubmissions_Employee ON FormSubmissions (EmployeeId, Id);
+END;
+
+IF OBJECT_ID('FormAnswers', 'U') IS NULL
+BEGIN
+    CREATE TABLE FormAnswers (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        SubmissionId int NOT NULL,
+        FieldId int NULL,
+        FieldLabel nvarchar(300) NULL,
+        ControlType nvarchar(30) NULL,
+        Answer nvarchar(max) NULL,
+        SortOrder int NOT NULL CONSTRAINT DF_FormAnswers_Sort DEFAULT(0)
+    );
+
+    CREATE INDEX IX_FormAnswers_Submission ON FormAnswers (SubmissionId, SortOrder, Id);
+END;
+"""),
     };
 
     /// <summary>
