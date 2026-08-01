@@ -340,6 +340,9 @@
                                         <a asp-page="/Violations/Index" class="nexora-nav-link @(IsUnder("/Violations") ? "active nexora-active" : "")">
                                             <span>حالات المخالفات</span>
                                         </a>
+                                        <a asp-page="/Violations/Actions" class="nexora-nav-link">
+                                            <span>الإجراءات التأديبية</span>
+                                        </a>
                                         <a asp-page="/AssetsManagement/Index" class="nexora-nav-link @(IsUnder("/AssetsManagement") ? "active nexora-active" : "")">
                                             <span>إدارة العهد</span>
                                         </a>
@@ -433,8 +436,9 @@
 
                             @if (canManagePeoplePermissions)
                             {
+                                @* كانت معنونة «بطاقات الموظفين» وهي عن الصلاحيات — تسمية مضلِّلة رُصدت بدراسة مركز البطاقات. *@
                                 <a asp-page="/EmployeePermissions/Index" class="nexora-nav-link @(IsUnder("/EmployeePermissions") ? "active nexora-active" : "")">
-                                    <span>بطاقات الموظفين</span>
+                                    <span>صلاحيات الموظفين</span>
                                 </a>
                             }
                         </div>
