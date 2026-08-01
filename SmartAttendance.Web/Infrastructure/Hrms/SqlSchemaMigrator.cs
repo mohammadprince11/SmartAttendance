@@ -489,6 +489,28 @@ BEGIN
     CREATE INDEX IX_CompanyDocuments_Category ON CompanyDocuments (CategoryId, Id);
 END;
 """),
+
+        // مكتبة الصيغ: الطبقة البنيوية الثالثة. المحرّك (SalaryFormulaEvaluator) كان
+        // موجوداً منذ زمن **بلا واجهة** — يُكتب بصيغة داخل عنصر راتب ولا يُختبر إلا
+        // بتشغيل مسير كامل. المكتبة تجعل الصيغة كياناً مسمّى يُجرَّب قبل استعماله.
+        new(
+            "20260801-18-salary-formula-library",
+            """
+IF OBJECT_ID('SalaryFormulaLibrary', 'U') IS NULL
+BEGIN
+    CREATE TABLE SalaryFormulaLibrary (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        Name nvarchar(150) NOT NULL,
+        Description nvarchar(500) NULL,
+        Expression nvarchar(max) NOT NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_FormulaLib_Active DEFAULT(1),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_FormulaLib_Created DEFAULT(SYSUTCDATETIME()),
+        CreatedBy nvarchar(150) NULL,
+        UpdatedAt datetime2 NULL,
+        IsDeleted bit NOT NULL CONSTRAINT DF_FormulaLib_Deleted DEFAULT(0)
+    );
+END;
+"""),
     };
 
     /// <summary>
