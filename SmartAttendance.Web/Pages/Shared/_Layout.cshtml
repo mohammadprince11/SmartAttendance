@@ -779,7 +779,8 @@
             <header class="nexora-topbar">
                 <div class="nexora-topbar-left">
                     <div>
-                        <div class="nexora-page-title">@pageTitle</div>
+                        @* عنوان دلاليّ: كان `div` فلم يكن لأي صفحة عنوانٌ من المستوى الأول، و`/Employees` وحدها بلا h1 خاصّ. أُبقي العنصر والصنف كما هما (صفر أثر بصري) وأُضيف الدلالة بـARIA. *@
+                        <div class="nexora-page-title" role="heading" aria-level="1">@pageTitle</div>
                         <div class="nexora-page-subtitle">زينورا · عمليات موارد بشرية ذكية</div>
                     </div>
                 </div>

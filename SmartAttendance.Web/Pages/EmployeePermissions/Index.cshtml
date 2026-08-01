@@ -101,14 +101,14 @@
 
 <div class="page-header">
     <div>
-        <h1>Employee Permissions</h1>
-        <p>Select an employee and grant permissions directly from one page</p>
+        <h1>صلاحيات الموظفين</h1>
+        <p>اختر موظفاً وامنحه صلاحياته مباشرةً من صفحة واحدة</p>
     </div>
 
     <form method="post" asp-page-handler="Seed">
         <input type="hidden" name="EmployeeId" value="@Model.EmployeeId" />
         <input type="hidden" name="SearchTerm" value="@Model.SearchTerm" />
-        <button type="submit" class="btn-secondary">Seed Default Permissions</button>
+        <button type="submit" class="btn-secondary">بذر الصلاحيات الافتراضية</button>
     </form>
 </div>
 
@@ -130,8 +130,8 @@
     <div class="table-card">
         <div class="page-header" style="margin-bottom: 12px;">
             <div>
-                <h2>Employees</h2>
-                <p>Search and select employee</p>
+                <h2>الموظفون</h2>
+                <p>ابحث واختر موظفاً</p>
             </div>
         </div>
 
@@ -162,7 +162,7 @@
 
                         @if (employee.HasSystemUser)
                         {
-                            <span class="badge">Has Permissions Profile</span>
+                            <span class="badge">له ملف صلاحيات</span>
                         }
                     </a>
                 }
@@ -226,7 +226,7 @@
                 }
 
                 <div class="form-actions">
-                    <button type="submit" class="btn-primary">Save Permissions</button>
+                    <button type="submit" class="btn-primary">حفظ الصلاحيات</button>
                     <a asp-page="./Index" asp-route-EmployeeId="@Model.Assignment.EmployeeId" asp-route-SearchTerm="@Model.SearchTerm" class="btn-secondary">Cancel</a>
                 </div>
             </form>
