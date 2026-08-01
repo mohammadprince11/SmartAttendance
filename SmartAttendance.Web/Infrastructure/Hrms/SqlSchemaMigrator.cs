@@ -385,6 +385,44 @@ BEGIN
     CREATE INDEX IX_TempHeads_Dept ON TemporaryUnitHeads (DepartmentId, FromDate, ToDate);
 END;
 """),
+
+        // تهيئة المخالفات: ضمانات الانضباط التي كان غيابها يجعله إجراءً بلا حقوق.
+        //  - NotifiedOn: تاريخ التبليغ — منه تبدأ مهلة الاعتراض لا من تاريخ الوقوع.
+        //  - DecidedOn: تاريخ القرار — منه يُحسب سقوط العقوبة.
+        //  - ObjectionAt/ObjectionText: طعن الموظف.
+        //  - RegulationClause على أنواع المخالفات: رقم الفقرة من لائحة الجزاءات.
+        //
+        // ⚠️ إضافيّ محض. وكلّها NULL افتراضاً، والمدد تُقرأ من DisciplinarySettings
+        // بقيمٍ **صفرية المعنى حتى يهيّئها المستخدم**: بلا تهيئة لا تسقط عقوبة ولا
+        // يُغلق باب اعتراض — أي أن سلوك النظام القائم لا يتغيّر بمقدار يوم واحد.
+        new(
+            "20260801-15-violation-configuration",
+            """
+IF OBJECT_ID('EmployeeViolationCases', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeViolationCases', 'NotifiedOn') IS NULL
+        ALTER TABLE EmployeeViolationCases ADD NotifiedOn date NULL;
+
+    IF COL_LENGTH('EmployeeViolationCases', 'DecidedOn') IS NULL
+        ALTER TABLE EmployeeViolationCases ADD DecidedOn date NULL;
+
+    IF COL_LENGTH('EmployeeViolationCases', 'ObjectionAt') IS NULL
+        ALTER TABLE EmployeeViolationCases ADD ObjectionAt datetime2 NULL;
+
+    IF COL_LENGTH('EmployeeViolationCases', 'ObjectionText') IS NULL
+        ALTER TABLE EmployeeViolationCases ADD ObjectionText nvarchar(max) NULL;
+
+    IF COL_LENGTH('EmployeeViolationCases', 'DroppedOn') IS NULL
+        ALTER TABLE EmployeeViolationCases ADD DroppedOn date NULL;
+
+    IF COL_LENGTH('EmployeeViolationCases', 'DroppedBy') IS NULL
+        ALTER TABLE EmployeeViolationCases ADD DroppedBy nvarchar(150) NULL;
+END;
+
+IF OBJECT_ID('DisciplinaryViolationTypes', 'U') IS NOT NULL
+   AND COL_LENGTH('DisciplinaryViolationTypes', 'RegulationClause') IS NULL
+    ALTER TABLE DisciplinaryViolationTypes ADD RegulationClause nvarchar(60) NULL;
+"""),
     };
 
     /// <summary>
