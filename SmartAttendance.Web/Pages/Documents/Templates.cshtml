@@ -1,0 +1,207 @@
+@page
+@model SmartAttendance.Web.Pages.Documents.TemplatesModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@{
+    ViewData["Title"] = "قوالب الوثائق";
+    var editing = Model.EditingId.HasValue;
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<style>
+    .zydoc-editor { width:100%; min-height:320px; padding:14px; line-height:1.9; font-size:.9375rem;
+        border:1px solid var(--zy-border); border-radius:var(--zy-radius-sm);
+        background:var(--zy-input,var(--zy-surface)); color:var(--zy-text); font-family:inherit; }
+    .zydoc-tokens { display:flex; flex-wrap:wrap; gap:6px; max-height:230px; overflow:auto;
+        border:1px solid var(--zy-border); border-radius:var(--zy-radius-sm); padding:10px; }
+    .zydoc-token { border:1px solid var(--zy-border); background:var(--zy-surface); color:var(--zy-text);
+        border-radius:999px; padding:3px 10px; font-size:.75rem; cursor:pointer; font-family:inherit; }
+    .zydoc-token:hover { border-color:var(--zy-electric-teal); color:var(--zy-electric-teal); }
+    .zydoc-cat { width:100%; font-size:.6875rem; font-weight:700; color:var(--zy-text-muted); margin-top:6px; }
+</style>
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="/Employees/Index">الأشخاص</a>
+        <h1>قوالب الوثائق</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>التوليد</span>
+            <h2>القوالب</h2>
+            <p class="zyp-hint">
+                شهادات الراتب وكتب التعريف وخطابات التجربة كانت تُكتب بـWord <b>خارج النظام</b> —
+                بلا مرجع ولا أرشيف ولا بيانات محدَّثة. اكتب القالب مرّة، وضع فيه
+                <b>رموز دمج</b>، ويولّده النظام لأي موظف ببياناته.
+            </p>
+        </header>
+
+        @if (Model.Templates.Count == 0)
+        {
+            <p class="zyc-empty">لا قوالب — أنشئ قالباً (شهادة راتب · كتاب تعريف · خطاب تثبيت…).</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>اسم القالب</th>
+                        <th>الوصف</th>
+                        <th>الجمهور</th>
+                        <th>الرموز</th>
+                        <th>أُصدر منه</th>
+                        <th>الحالة</th>
+                        <th style="width:210px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var template in Model.Templates)
+                    {
+                        var issued = Model.GeneratedCounts.TryGetValue(template.Id, out var count) ? count : 0;
+                        <tr class="@(template.IsActive ? "" : "zyp-inactive")">
+                            <td>
+                                <b>@template.Name</b>
+                                @if (template.AllowEmployeeRequest)
+                                {
+                                    <div class="zyp-conditions">يطلبها الموظف بنفسه</div>
+                                }
+                            </td>
+                            <td class="zyp-conditions">@template.Description</td>
+                            <td class="zyp-conditions">@HrConditions.Describe(template.Conditions)</td>
+                            <td class="zyp-count">@template.Tokens.Count</td>
+                            <td class="zyp-count">@issued</td>
+                            <td class="zyp-conditions">@(template.IsActive ? "نشط" : "معطّل")</td>
+                            <td>
+                                <div class="zyp-actions">
+                                    <a asp-page="./Generate" asp-route-templateid="@template.Id">توليد</a>
+                                    <a asp-page="./Templates" asp-route-edit="@template.Id">تعديل</a>
+                                    <form method="post" asp-page-handler="Duplicate" style="display:inline">
+                                        <input type="hidden" name="id" value="@template.Id" />
+                                        <button type="submit">انشئ نسخة</button>
+                                    </form>
+                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                        <input type="hidden" name="id" value="@template.Id" />
+                                        <button type="submit" data-zyconfirm="حذف القالب؟ الوثائق الصادرة تبقى.">حذف</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        @if (!editing)
+        {
+            <p><a class="zyc-add-group" asp-page="./Templates" asp-route-edit="0">+ قالب جديد</a></p>
+        }
+    </div>
+
+    @if (editing)
+    {
+        <form method="post" asp-page-handler="Save" class="nxhs-panel zyp-editor">
+            <h3>@(Model.TemplateId > 0 ? "تعديل القالب" : "قالب جديد")</h3>
+            <input type="hidden" asp-for="TemplateId" />
+
+            <div class="zyp-editor-grid">
+                <label>اسم القالب<input asp-for="Name" placeholder="شهادة راتب" /></label>
+                <label>الاسم الإنجليزي<input asp-for="NameEn" placeholder="Salary Certificate" /></label>
+                <label>الوصف<input asp-for="Description" placeholder="اختياري" /></label>
+                <label>بادئة الرقم المرجعي<input asp-for="RefPrefix" placeholder="DOC" /></label>
+                <label>
+                    يطلبها الموظف من البوابة
+                    <select asp-for="AllowEmployeeRequest">
+                        <option value="false">لا</option>
+                        <option value="true">نعم</option>
+                    </select>
+                </label>
+                <label>
+                    الحالة
+                    <select asp-for="IsActive">
+                        <option value="true">نشط</option>
+                        <option value="false">معطّل</option>
+                    </select>
+                </label>
+            </div>
+
+            @if (Model.UnknownTokens.Count > 0)
+            {
+                <p class="zyc-summary" style="border-inline-start-color:var(--zy-warning)">
+                    ⚠ رموز غير معروفة ستظهر كما هي بالوثيقة: <b>@string.Join("، ", Model.UnknownTokens)</b>
+                </p>
+            }
+
+            <div>
+                <p class="zyp-section-title">نصّ القالب</p>
+                <p class="zyp-hint">
+                    انقر أي رمز أدناه ليُدرَج بموضع المؤشّر. الرمز يُستبدل بقيمة الموظف عند التوليد.
+                    <b>يُسمح بتنسيق HTML بسيط</b> (وسوم غير آمنة تُحذف تلقائياً عند الحفظ).
+                </p>
+                <textarea asp-for="Body" id="DocBody" class="zydoc-editor"
+                          placeholder="نشهد نحن {Company-Name} بأن السيد/ة {Employee-FullName} يعمل لدينا بوظيفة {Position} منذ {Hire-Date}، وأن راتبه الأساسي {Basic-Salary}."></textarea>
+            </div>
+
+            <div>
+                <p class="zyp-section-title">رموز الدمج (@Model.Tokens.Count رمزاً)</p>
+                <div class="zydoc-tokens">
+                    @foreach (var group in Model.Tokens.GroupBy(t => t.Category))
+                    {
+                        <span class="zydoc-cat">@group.Key</span>
+                        @foreach (var token in group)
+                        {
+                            <button type="button" class="zydoc-token" data-token="{@token.Key}" title="@token.Key">@token.Label</button>
+                        }
+                    }
+                </div>
+            </div>
+
+            <div>
+                <p class="zyp-section-title">جمهور القالب — من يستحقّه؟</p>
+                <p class="zyp-hint">نفس محرّك الشروط. اتركه فارغاً ليتاح للجميع.</p>
+                <input type="hidden" asp-for="Conditions" id="DocConditions" />
+                <div class="zyc" data-zy-conditions data-input="#DocConditions" data-criteria="@Model.CriteriaJson"></div>
+            </div>
+
+            <footer class="nxhs-actions">
+                <button type="submit">حفظ القالب</button>
+                @if (Model.TemplateId > 0)
+                {
+                    <a class="zyp-move" asp-page="./Generate" asp-route-templateid="@Model.TemplateId" style="padding:8px 14px">توليد ←</a>
+                }
+                <a class="zyp-move" asp-page="./Templates" style="padding:8px 14px">إلغاء</a>
+            </footer>
+        </form>
+    }
+</section>
+
+<script src="~/js/zynora-confirm.js" asp-append-version="true" defer></script>
+<script src="~/js/zynora-conditions.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+    <script>
+        // إدراج الرمز بموضع المؤشّر لا بآخر النصّ — الكاتب يضع الرمز داخل جملته.
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('.zydoc-token');
+            if (!btn) return;
+            var area = document.getElementById('DocBody');
+            if (!area) return;
+            var token = btn.getAttribute('data-token');
+            var start = area.selectionStart || 0, end = area.selectionEnd || 0;
+            area.value = area.value.slice(0, start) + token + area.value.slice(end);
+            area.focus();
+            area.selectionStart = area.selectionEnd = start + token.length;
+        });
+    </script>
+}

@@ -1,0 +1,171 @@
+@page
+@model SmartAttendance.Web.Pages.Documents.GenerateModel
+
+@{
+    ViewData["Title"] = "توليد الوثائق";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<style>
+    .zydoc-preview { border:1px solid var(--zy-border); border-radius:var(--zy-radius-md);
+        background:#fff; color:#111; padding:32px; line-height:2; font-size:.9375rem;
+        max-height:60vh; overflow:auto; }
+    .zydoc-preview table { border-collapse:collapse; }
+    .zydoc-preview td, .zydoc-preview th { border:1px solid #ccc; padding:6px 10px; }
+</style>
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Templates">قوالب الوثائق</a>
+        <h1>توليد الوثائق</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["ErrorMessage"]</div>
+    }
+
+    <form method="post" class="nxhs-panel zyp-editor">
+        <h3>وثيقة جديدة</h3>
+        <p class="zyp-hint">
+            <b>عاين قبل أن تصدر.</b> المعاينة لا تكتب شيئاً — والإصدار يؤرشف الوثيقة
+            بنصّها النهائي برقم مرجعي.
+        </p>
+
+        <div class="zyp-editor-grid">
+            <label>
+                القالب
+                <select asp-for="SelectedTemplateId">
+                    <option value="0">— اختر —</option>
+                    @foreach (var template in Model.Templates)
+                    {
+                        <option value="@template.Id">@template.Name</option>
+                    }
+                </select>
+            </label>
+            <label>
+                الموظف
+                <select asp-for="SelectedEmployeeId">
+                    <option value="0">— اختر —</option>
+                    @foreach (var (id, label) in Model.Employees)
+                    {
+                        <option value="@id">@label</option>
+                    }
+                </select>
+            </label>
+            <label>تاريخ الإصدار<input asp-for="IssuedOn" type="date" /></label>
+            <label>ملاحظات<input asp-for="Notes" placeholder="اختياري" /></label>
+        </div>
+
+        <footer class="nxhs-actions">
+            <button type="submit" asp-page-handler="Preview">عاين</button>
+            <button type="submit" asp-page-handler="Issue">أصدر وأرشف</button>
+        </footer>
+
+        <div>
+            <p class="zyp-section-title">توليد جماعي — الصق أكواد الموظفين</p>
+            <p class="zyp-hint">كودٌ مخطئ واحد يعني موظفاً بلا وثيقة بصمت، فالمفقود يُعرض بنصّه بعد التوليد.</p>
+            <textarea asp-for="BulkCodes" rows="3" dir="ltr"
+                      style="width:100%;padding:10px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:ui-monospace,monospace;font-size:.8125rem"
+                      placeholder="E-001, E-002, E-003"></textarea>
+            <p style="margin-top:8px">
+                <button type="submit" asp-page-handler="Bulk" class="zyc-add-rule">أصدر للأكواد الملصوقة</button>
+            </p>
+        </div>
+    </form>
+
+    @if (Model.PreviewHtml is not null)
+    {
+        <div class="nxhs-panel zyp-copies">
+            <header>
+                <span>معاينة</span>
+                <h2>@Model.PreviewEmployeeName</h2>
+                <p class="zyp-hint">هذه معاينة — لم يُكتب شيء بالقاعدة بعد.</p>
+            </header>
+
+            @if (Model.PreviewUnresolved.Count > 0)
+            {
+                <p class="zyc-summary" style="border-inline-start-color:var(--zy-warning)">
+                    ⚠ رموز بلا قيمة ستظهر كما هي: <b>@string.Join("، ", Model.PreviewUnresolved)</b>
+                </p>
+            }
+
+            <div class="zydoc-preview">@Html.Raw(Model.PreviewHtml)</div>
+        </div>
+    }
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>الأرشيف</span>
+            <h2>الوثائق الصادرة</h2>
+            <p class="zyp-hint">
+                الوثيقة تُخزَّن <b>بنصّها النهائي</b> لا بمرجعٍ للقالب — شهادةٌ سُلِّمت للبنك
+                واقعةٌ تاريخية، ولو حُسبت عند كل عرض لتغيّرت بتعديل القالب أو بترقية راتب.
+            </p>
+        </header>
+
+        @if (Model.Archive.Count == 0)
+        {
+            <p class="zyc-empty">لا وثائق صادرة بعد.</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>الرقم المرجعي</th>
+                        <th>الموظف</th>
+                        <th>نوع الوثيقة</th>
+                        <th>تاريخ الإصدار</th>
+                        <th>المصدر</th>
+                        <th>أصدرها</th>
+                        <th style="width:150px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Archive)
+                    {
+                        <tr>
+                            <td class="zyp-conditions">@row.ReferenceNo</td>
+                            <td>
+                                <b>@row.EmployeeName</b>
+                                <div class="zyp-conditions">@row.EmployeeNo</div>
+                            </td>
+                            <td>
+                                @row.TemplateName
+                                @if (row.HasUnresolved)
+                                {
+                                    <span title="رموز بلا قيمة: @row.UnresolvedTokens">⚠</span>
+                                }
+                            </td>
+                            <td class="zyp-conditions">@row.IssuedOn.ToString("yyyy/MM/dd")</td>
+                            <td class="zyp-conditions">@row.Source</td>
+                            <td class="zyp-conditions">@row.IssuedBy</td>
+                            <td>
+                                <div class="zyp-actions">
+                                    <a asp-page="./View" asp-route-id="@row.Id">عرض وطباعة</a>
+                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                        <input type="hidden" name="id" value="@row.Id" />
+                                        <button type="submit" data-zyconfirm="حذف الوثيقة من الأرشيف؟">حذف</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</section>
+
+<script src="~/js/zynora-confirm.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+
+}

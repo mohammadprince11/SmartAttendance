@@ -511,6 +511,59 @@ BEGIN
     );
 END;
 """),
+
+        // منشئ الوثائق — المرحلة الأولى: قوالب + أرشيف المولَّد.
+        //
+        // Body يُخزَّن **منقّىً** (DocumentHtmlSanitizer) لا خاماً: القالب يكتبه HR
+        // ويُعرض للموظفين، فتخزين HTML خام = ثغرة XSS مخزَّنة.
+        //
+        // والوثيقة المولَّدة تُخزَّن **بنصّها النهائي** لا بمرجعٍ للقالب: تعديل القالب
+        // بعد سنة يجب ألا يغيّر شهادةً صدرت وسُلِّمت — الوثيقة الصادرة واقعةٌ تاريخية
+        // لا عرضٌ محسوب.
+        new(
+            "20260801-19-document-builder",
+            """
+IF OBJECT_ID('DocumentTemplates', 'U') IS NULL
+BEGIN
+    CREATE TABLE DocumentTemplates (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        Name nvarchar(200) NOT NULL,
+        NameEn nvarchar(200) NULL,
+        Description nvarchar(1000) NULL,
+        Body nvarchar(max) NULL,
+        ConditionsJson nvarchar(max) NULL,
+        RefPrefix nvarchar(20) NULL,
+        AllowEmployeeRequest bit NOT NULL CONSTRAINT DF_DocTpl_Request DEFAULT(0),
+        IsActive bit NOT NULL CONSTRAINT DF_DocTpl_Active DEFAULT(1),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_DocTpl_Created DEFAULT(SYSUTCDATETIME()),
+        CreatedBy nvarchar(150) NULL,
+        UpdatedAt datetime2 NULL,
+        IsDeleted bit NOT NULL CONSTRAINT DF_DocTpl_Deleted DEFAULT(0)
+    );
+END;
+
+IF OBJECT_ID('GeneratedDocuments', 'U') IS NULL
+BEGIN
+    CREATE TABLE GeneratedDocuments (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        ReferenceNo nvarchar(40) NULL,
+        TemplateId int NOT NULL,
+        TemplateName nvarchar(200) NULL,
+        EmployeeId int NOT NULL,
+        BodyHtml nvarchar(max) NULL,
+        UnresolvedTokens nvarchar(1000) NULL,
+        IssuedOn date NOT NULL CONSTRAINT DF_GenDoc_IssuedOn DEFAULT(CAST(SYSUTCDATETIME() AS date)),
+        IssuedBy nvarchar(150) NULL,
+        Source nvarchar(40) NULL,
+        Notes nvarchar(1000) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_GenDoc_Created DEFAULT(SYSUTCDATETIME()),
+        IsDeleted bit NOT NULL CONSTRAINT DF_GenDoc_Deleted DEFAULT(0)
+    );
+
+    CREATE INDEX IX_GeneratedDocuments_Employee ON GeneratedDocuments (EmployeeId, Id);
+    CREATE INDEX IX_GeneratedDocuments_Template ON GeneratedDocuments (TemplateId, Id);
+END;
+"""),
     };
 
     /// <summary>
