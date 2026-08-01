@@ -360,6 +360,31 @@ BEGIN
     CREATE INDEX IX_EmpAck_Template ON EmployeeAcknowledgments (TemplateId, Id);
 END;
 """),
+
+        // رئيس وحدة مؤقت: نيابةٌ لمدى تواريخ تحلّ محلّ المدير المباشر لموظفي الوحدة.
+        // ⚠️ **طبقة فوق DirectManagerId لا بديلاً عنه** — الأصل يبقى مصدر الحقيقة
+        // والنيابة تنتهي بانتهاء تاريخها تلقائياً. دهسُ الأصل كان سيمنع رجوع المدير
+        // الحقيقي بعد إجازته إلا بتدخّل يدوي.
+        new(
+            "20260801-14-temporary-unit-heads",
+            """
+IF OBJECT_ID('TemporaryUnitHeads', 'U') IS NULL
+BEGIN
+    CREATE TABLE TemporaryUnitHeads (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        DepartmentId int NOT NULL,
+        HeadEmployeeId int NOT NULL,
+        FromDate date NOT NULL,
+        ToDate date NOT NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_TempHeads_Active DEFAULT(1),
+        Note nvarchar(500) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_TempHeads_CreatedAt DEFAULT(SYSUTCDATETIME()),
+        CreatedBy nvarchar(150) NULL
+    );
+
+    CREATE INDEX IX_TempHeads_Dept ON TemporaryUnitHeads (DepartmentId, FromDate, ToDate);
+END;
+"""),
     };
 
     /// <summary>

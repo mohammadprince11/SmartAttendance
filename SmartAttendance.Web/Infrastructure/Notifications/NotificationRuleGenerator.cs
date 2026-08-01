@@ -164,7 +164,7 @@ WHERE su.IsActive = 1 AND su.IsDeleted = 0
         var employees = await HrmsDatabase.QueryAsync(
             db,
             """
-SELECT Id, FullName, BirthDate, HireDate, JoiningDate, ContractEndDate, DirectManagerId
+SELECT Id, FullName, BirthDate, HireDate, JoiningDate, ContractEndDate, DirectManagerId, DepartmentId
 FROM Employees
 WHERE IsActive = 1 AND IsDeleted = 0;
 """,
@@ -176,7 +176,8 @@ WHERE IsActive = 1 AND IsDeleted = 0;
                 HrmsDatabase.GetDateOnly(reader, "HireDate"),
                 HrmsDatabase.GetDateOnly(reader, "JoiningDate"),
                 HrmsDatabase.GetDateOnly(reader, "ContractEndDate"),
-                HrmsDatabase.GetNullableInt(reader, "DirectManagerId")));
+                HrmsDatabase.GetNullableInt(reader, "DirectManagerId"),
+                HrmsDatabase.GetInt(reader, "DepartmentId")));
 
         // الأحداث المُطلَقة سابقاً (منع التكرار)
         var firedKeys = (await HrmsDatabase.QueryAsync(
@@ -188,8 +189,20 @@ WHERE IsActive = 1 AND IsDeleted = 0;
 
         // بناء أحداث اليوم المرشّحة
         var candidates = new List<PendingEvent>();
-        foreach (var emp in employees)
+        // رئيس وحدة مؤقت: خلال نيابةٍ سارية يُوجَّه ما هو «للمدير» للرئيس المؤقت،
+        // وإلا بقيت إشعارات المدير المسافر بلا قارئ — وهو سبب وجود الميزة أصلاً.
+        var actingHeads = await TemporaryHeadStore.LoadAllocationsAsync(db);
+
+        foreach (var employee in employees)
         {
+            var emp = actingHeads.Count == 0
+                ? employee
+                : employee with
+                {
+                    DirectManagerId = TemporaryHeadPolicy.EffectiveManagerId(
+                        employee.Id, employee.DepartmentId, employee.DirectManagerId, actingHeads, today)
+                };
+
             // فترة التجربة قد تختلف لهذا الموظف بنسخة سياسة مشروطة (فرع/فئة/راتب).
             var probation = parentProbation;
             if (probationOverrides.Count > 0 && factsByEmployee.TryGetValue(emp.Id, out var empFacts))
@@ -354,7 +367,7 @@ VALUES (@Key, @Kind, @Emp, @Recipients, @Push);
         new(key, kind, type, emp.Id, emp.DirectManagerId, title, body, false);
 
     private sealed record EmpRow(int Id, string FullName, DateOnly? BirthDate, DateOnly? HireDate,
-        DateOnly? JoiningDate, DateOnly? ContractEndDate, int? DirectManagerId);
+        DateOnly? JoiningDate, DateOnly? ContractEndDate, int? DirectManagerId, int DepartmentId);
 
     private sealed record PendingEvent(string EventKey, RuleKind Kind, UserNotificationType Type,
         int SubjectEmployeeId, int? DirectManagerId, string Title, string Body, bool IncludeManager);

@@ -1,0 +1,163 @@
+@page
+@model SmartAttendance.Web.Pages.Employees.TemporaryHeadsModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@{
+    ViewData["Title"] = "رئيس وحدة مؤقت";
+    var editing = Model.EditingId.HasValue;
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">الأشخاص</a>
+        <h1>تخصيص رئيس وحدة مؤقت</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>النيابة</span>
+            <h2>الإسنادات</h2>
+            <p class="zyp-hint">
+                إجازة مديرٍ كانت تجمّد كل ما يُوجَّه إليه. الإسناد يجعل موظفاً آخر
+                <b>المدير الفعّال</b> لوحدةٍ خلال مدى تواريخ.
+                <b>ولا يغيّر المدير المباشر بجدول الموظفين</b> — النيابة طبقةٌ فوقه
+                تنتهي بانتهاء تاريخها تلقائياً.
+                @if (Model.ActiveNow > 0)
+                {
+                    <b> — @Model.ActiveNow إسناداً سارٍ الآن.</b>
+                }
+            </p>
+        </header>
+
+        @if (Model.Allocations.Count == 0)
+        {
+            <p class="zyc-empty">لا إسنادات — أضف واحداً أدناه عند سفر مدير أو إجازته.</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>الوحدة</th>
+                        <th>الرئيس المؤقت</th>
+                        <th>من</th>
+                        <th>إلى</th>
+                        <th>الحالة</th>
+                        <th>ملاحظة</th>
+                        <th style="width:150px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Allocations)
+                    {
+                        var effective = TemporaryHeadPolicy.IsEffective(row.ToAllocation(), Model.Today);
+                        <tr class="@(row.IsActive ? "" : "zyp-inactive")">
+                            <td><b>@row.DepartmentName</b></td>
+                            <td>@row.HeadName</td>
+                            <td class="zyp-conditions">@row.FromDate.ToString("yyyy/MM/dd")</td>
+                            <td class="zyp-conditions">@row.ToDate.ToString("yyyy/MM/dd")</td>
+                            <td>
+                                @if (effective)
+                                {
+                                    <span class="zyp-rank" style="min-width:auto;padding:0 8px">سارٍ الآن</span>
+                                }
+                                else
+                                {
+                                    <span class="zyp-conditions">@TemporaryHeadPolicy.StatusLabel(row.ToAllocation(), Model.Today)</span>
+                                }
+                            </td>
+                            <td class="zyp-conditions">@row.Note</td>
+                            <td>
+                                <div class="zyp-actions">
+                                    <a asp-page="./TemporaryHeads" asp-route-edit="@row.Id">تعديل</a>
+                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                        <input type="hidden" name="id" value="@row.Id" />
+                                        <button type="submit" data-zyconfirm="حذف الإسناد؟">حذف</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        @if (!editing)
+        {
+            <p><a class="zyc-add-group" asp-page="./TemporaryHeads" asp-route-edit="0">+ إسناد جديد</a></p>
+        }
+    </div>
+
+    @if (editing)
+    {
+        <form method="post" asp-page-handler="Save" class="nxhs-panel zyp-editor">
+            <h3>@(Model.AllocationId > 0 ? "تعديل الإسناد" : "إسناد جديد")</h3>
+            <input type="hidden" asp-for="AllocationId" />
+
+            <div class="zyp-editor-grid">
+                <label>
+                    الوحدة (القسم)
+                    <select asp-for="DepartmentId">
+                        <option value="0">— اختر —</option>
+                        @foreach (var (id, name) in Model.Departments)
+                        {
+                            <option value="@id">@name</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    الرئيس المؤقت
+                    <select asp-for="HeadEmployeeId">
+                        <option value="0">— اختر —</option>
+                        @foreach (var (id, label) in Model.Employees)
+                        {
+                            <option value="@id">@label</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    من تاريخ
+                    <input asp-for="FromDate" type="date" />
+                </label>
+                <label>
+                    إلى تاريخ
+                    <input asp-for="ToDate" type="date" />
+                </label>
+                <label>
+                    الحالة
+                    <select asp-for="IsActive">
+                        <option value="true">نشط</option>
+                        <option value="false">معطّل</option>
+                    </select>
+                </label>
+                <label>
+                    ملاحظة
+                    <input asp-for="Note" placeholder="سبب النيابة (إجازة · سفر · تكليف)" />
+                </label>
+            </div>
+
+            <footer class="nxhs-actions">
+                <button type="submit">حفظ الإسناد</button>
+                <a class="zyp-move" asp-page="./TemporaryHeads" style="padding:8px 14px">إلغاء</a>
+            </footer>
+        </form>
+    }
+</section>
+
+<script src="~/js/zynora-confirm.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+
+}
