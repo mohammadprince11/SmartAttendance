@@ -28,16 +28,14 @@
         </header>
 
         <form method="post" class="zyp-editor-grid" style="border:0;padding:0">
-            <label>
-                الموظف
-                <select asp-for="EmployeeId">
-                    <option value="">— اختر —</option>
-                    @foreach (var (id, label) in Model.Employees)
-                    {
-                        <option value="@id">@label</option>
-                    }
-                </select>
-            </label>
+            @* المنتقي المشترك — بـIncludeInactive لأن موضوع الشاشة من أُنهيت خدمته *@
+            <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
+                Label = "الموظف",
+                Name = "EmployeeId",
+                SelectedId = Model.EmployeeId ?? 0,
+                SelectedCode = Model.EmployeeCode,
+                SelectedName = Model.EmployeeName,
+                IncludeInactive = true })" />
             <label>
                 السنة
                 <input asp-for="Year" type="number" min="2000" max="2100" placeholder="@Model.SelectedYear" />

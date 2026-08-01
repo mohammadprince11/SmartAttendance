@@ -33,7 +33,11 @@ public class LookupModel : PageModel
     /// <summary>صفّ النتيجة — نفس أعمدة نافذة كيان الأربعة.</summary>
     private sealed record Row(int id, string code, string name, string unit, string hierarchy);
 
-    public async Task<IActionResult> OnGetAsync(string? q, int take = 50)
+    /// <param name="includeInactive">
+    /// يشمل منتهيَ الخدمة. لا يوسّع التخويل بحال — نطاق المستخدم مفروضٌ بعده كما
+    /// هو؛ يوسّع الحالة فقط، لشاشات ما بعد الإنهاء التي موضوعها من أُنهيت خدمته.
+    /// </param>
+    public async Task<IActionResult> OnGetAsync(string? q, int take = 50, bool includeInactive = false)
     {
         var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
         var role = PeopleAccessContext.GetRole(HttpContext);
@@ -59,6 +63,12 @@ public class LookupModel : PageModel
             ? string.Empty
             : " AND (e.FullName LIKE @Q OR e.EmployeeNo LIKE @Q)";
 
+        var activeFilter = includeInactive ? string.Empty : " AND ISNULL(e.IsActive, 1) = 1";
+
+        // نقرأ صفّاً زائداً واحداً كي نعرف **أن** هناك مزيداً بلا عدّ الجدول كلّه:
+        // العدّاد الذي يعرض حجم الصفحة على أنه المجموع يكذب (1356 موظفاً ⟵ «(50)»).
+        var probe = take + 1;
+
         var rows = await HrmsDatabase.QueryAsync(
             _db,
             $"""
@@ -71,12 +81,12 @@ SELECT TOP (@Take)
 FROM Employees e
 LEFT JOIN Branches b     ON b.Id = e.BranchId
 LEFT JOIN Departments d  ON d.Id = e.DepartmentId
-WHERE ISNULL(e.IsDeleted, 0) = 0 AND ISNULL(e.IsActive, 1) = 1{filter}
+WHERE ISNULL(e.IsDeleted, 0) = 0{activeFilter}{filter}
 ORDER BY e.EmployeeNo;
 """,
             command =>
             {
-                HrmsDatabase.AddParameter(command, "@Take", take);
+                HrmsDatabase.AddParameter(command, "@Take", probe);
                 if (like is not null) HrmsDatabase.AddParameter(command, "@Q", like);
             },
             reader => new Row(
@@ -102,6 +112,14 @@ ORDER BY e.EmployeeNo;
             }
         }
 
-        return new JsonResult(new { total = allowed.Count, items = allowed });
+        // `capped` ⟺ الاستعلام أعاد الصفّ الزائد ⟹ ثمّة مطابقات لم تُعرض.
+        // العدّاد بالواجهة يقول عندها «+50» لا «50»، فلا يدّعي مجموعاً ليس مجموعاً.
+        var capped = rows.Count > take;
+        if (allowed.Count > take)
+        {
+            allowed.RemoveRange(take, allowed.Count - take);
+        }
+
+        return new JsonResult(new { total = allowed.Count, capped, items = allowed });
     }
 }

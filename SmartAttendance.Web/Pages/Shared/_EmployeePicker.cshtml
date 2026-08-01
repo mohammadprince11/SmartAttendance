@@ -16,7 +16,7 @@
     var uid = "zyep-" + Guid.NewGuid().ToString("N")[..8];
 }
 
-<div class="zyep" id="@uid" data-zyep>
+<div class="zyep" id="@uid" data-zyep data-zyep-inactive="@(Model.IncludeInactive ? "1" : "0")">
     @if (!string.IsNullOrWhiteSpace(Model.Label))
     {
         <label class="zyep-label" for="@(uid)-code">@Model.Label</label>
@@ -29,7 +29,14 @@
            فلا يُرسَل نموذجٌ باسمٍ لا يقابله موظف. *@
         <input type="text" class="zyep-name" placeholder="اسم الموظف" readonly
                value="@Model.SelectedName" title="انقر للاختيار من القائمة" />
-        <button type="button" class="zyep-open" title="بحث عن الموظف" aria-label="بحث عن الموظف">⌕</button>
+        @* أيقونة ستروك لا محرف نصّي: `⌕` يختلف رسمه بين الخطوط ويغيب ببعضها *@
+        <button type="button" class="zyep-open" title="بحث عن الموظف" aria-label="بحث عن الموظف">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+            </svg>
+        </button>
         <input type="hidden" name="@Model.Name" class="zyep-id" value="@(Model.SelectedId > 0 ? Model.SelectedId.ToString() : "")" />
     </div>
 

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Pages.Shared;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
@@ -27,7 +28,11 @@ public class TemporaryHeadsModel : PageModel
 
     public List<TemporaryHeadStore.Row> Allocations { get; private set; } = new();
     public List<(int Id, string Name)> Departments { get; private set; } = new();
-    public List<(int Id, string Label)> Employees { get; private set; } = new();
+
+    /// <summary>رمز الرئيس المؤقت المحسوم واسمه — لتعبئة المنتقي ابتداءً.</summary>
+    public string? HeadEmployeeCode { get; private set; }
+
+    public string? HeadEmployeeName { get; private set; }
     public DateOnly Today { get; } = DateOnly.FromDateTime(DateTime.Today);
 
     public int ActiveNow => Allocations.Count(row => TemporaryHeadPolicy.IsEffective(row.ToAllocation(), Today));
@@ -46,6 +51,8 @@ public class TemporaryHeadsModel : PageModel
             IsActive = row.IsActive;
             Note = row.Note;
         }
+
+        await LoadPickerIdentityAsync();
     }
 
     public async Task<IActionResult> OnPostSaveAsync()
@@ -96,18 +103,12 @@ public class TemporaryHeadsModel : PageModel
             command => { },
             reader => (HrmsDatabase.GetInt(reader, "Id"), HrmsDatabase.GetString(reader, "Name")))).ToList();
 
-        Employees = (await HrmsDatabase.QueryAsync(
-            _db,
-            """
-SELECT Id, ISNULL(FullName, N'') AS FullName, ISNULL(EmployeeNo, N'') AS EmployeeNo
-FROM Employees
-WHERE IsActive = 1 AND ISNULL(IsDeleted, 0) = 0
-ORDER BY FullName;
-""",
-            command => { },
-            reader => (
-                HrmsDatabase.GetInt(reader, "Id"),
-                $"{HrmsDatabase.GetString(reader, "FullName")} ({HrmsDatabase.GetString(reader, "EmployeeNo")})")))
-            .ToList();
+    }
+
+    private async Task LoadPickerIdentityAsync()
+    {
+        var identity = await EmployeePickerLookup.LoadAsync(_db, HeadEmployeeId);
+        HeadEmployeeCode = identity?.Code;
+        HeadEmployeeName = identity?.Name;
     }
 }

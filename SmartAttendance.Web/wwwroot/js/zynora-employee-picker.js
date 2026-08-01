@@ -15,14 +15,20 @@
         return n;
     }
 
-    function fetchEmployees(q) {
-        return fetch(ENDPOINT + '?q=' + encodeURIComponent(q || ''), {
+    // `root` يحدّد نطاق البحث: شاشات ما بعد الإنهاء تطلب منتهيَ الخدمة أيضاً.
+    function includesInactive(root) {
+        return !!root && root.getAttribute('data-zyep-inactive') === '1';
+    }
+
+    function fetchEmployees(q, root) {
+        return fetch(ENDPOINT + '?q=' + encodeURIComponent(q || '')
+            + (includesInactive(root) ? '&includeInactive=true' : ''), {
             headers: { 'Accept': 'application/json' }
         }).then(function (r) {
             // 403 = خارج نطاق التخويل. تُعامَل كنتيجة فارغة لا كعطل.
-            if (!r.ok) return { total: 0, items: [] };
+            if (!r.ok) return { total: 0, capped: false, items: [] };
             return r.json();
-        }).catch(function () { return { total: 0, items: [] }; });
+        }).catch(function () { return { total: 0, capped: false, items: [] }; });
     }
 
     function apply(root, emp) {
@@ -47,6 +53,8 @@
         head.appendChild(el('b', null, 'بحث عن الموظف'));
         var close = el('button', 'zyep-close', '×');
         close.type = 'button';
+        close.setAttribute('aria-label', 'إغلاق');
+        close.title = 'إغلاق';
         head.appendChild(close);
 
         var search = el('input', 'zyep-search');
@@ -77,9 +85,13 @@
         function run() {
             var q = search.value;
             count.textContent = 'جارٍ البحث…';
-            fetchEmployees(q).then(function (data) {
-                // العدّاد ظاهر كما عندهم: «مجموع النتائج: (925)».
-                count.textContent = 'مجموع النتائج: (' + data.total + ')';
+            fetchEmployees(q, modal.target).then(function (data) {
+                // العدّاد ظاهر كما عندهم: «مجموع النتائج: (925)» — لكن عندنا سقف
+                // صفحة. فحين يُبتَر نُعلن السقف («+50» ونداء بالتضييق) بدل أن
+                // نعرض حجم الصفحة كأنه المجموع.
+                count.textContent = data.capped
+                    ? 'مجموع النتائج: (+' + data.total + ') — ضيّق البحث لعرض الباقي'
+                    : 'مجموع النتائج: (' + data.total + ')';
                 list.innerHTML = '';
 
                 if (!data.items.length) {
@@ -150,7 +162,7 @@
                 if (!v) { code.classList.remove('zyep-bad'); return; }
 
                 t = setTimeout(function () {
-                    fetchEmployees(v).then(function (data) {
+                    fetchEmployees(v, root).then(function (data) {
                         var hit = data.items.filter(function (e) { return e.code === v; })[0];
                         if (hit) { code.classList.remove('zyep-bad'); apply(root, hit); }
                         else { code.classList.add('zyep-bad'); code.title = 'لا موظف بهذا الرمز'; }

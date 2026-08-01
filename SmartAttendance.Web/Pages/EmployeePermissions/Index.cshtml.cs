@@ -19,7 +19,10 @@ public class IndexModel : PageModel
         _permissionService = permissionService;
     }
 
-    public IEnumerable<EmployeePermissionEmployeeViewModel> Employees { get; set; } = new List<EmployeePermissionEmployeeViewModel>();
+    /// <summary>رمز الموظف المحسوم واسمه — لتعبئة المنتقي ابتداءً.</summary>
+    public string? SelectedEmployeeCode { get; set; }
+
+    public string? SelectedEmployeeName { get; set; }
 
     public EmployeePermissionAssignmentViewModel? Assignment { get; set; }
 
@@ -69,16 +72,16 @@ public class IndexModel : PageModel
 
     private async Task LoadPageAsync()
     {
-        Employees = await _employeePermissionService.GetEmployeesAsync(SearchTerm);
-
-        if (!EmployeeId.HasValue)
+        // سابقاً كانت الصفحة تُسقط الاختيار على **أول** موظف بالقائمة حين لا يُحدَّد
+        // أحد. مع منتقٍ لا يعرض قائمة، ذلك يعني تحرير صلاحيات موظفٍ لم يخترْه أحد —
+        // فالاختيار صار صريحاً، وبلا اختيارٍ تُعرض دعوةٌ للاختيار.
+        if (!EmployeeId.HasValue || EmployeeId.Value <= 0)
         {
-            var firstEmployee = Employees.FirstOrDefault();
-            if (firstEmployee != null)
-                EmployeeId = firstEmployee.EmployeeId;
+            return;
         }
 
-        if (EmployeeId.HasValue)
-            Assignment = await _employeePermissionService.GetAssignmentAsync(EmployeeId.Value);
+        Assignment = await _employeePermissionService.GetAssignmentAsync(EmployeeId.Value);
+        SelectedEmployeeCode = Assignment?.EmployeeNo;
+        SelectedEmployeeName = Assignment?.FullName;
     }
 }

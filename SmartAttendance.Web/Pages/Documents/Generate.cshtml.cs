@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Pages.Shared;
 
 namespace SmartAttendance.Web.Pages.Documents;
 
@@ -34,8 +35,12 @@ public class GenerateModel : PageModel
     [BindProperty] public string? BulkCodes { get; set; }
 
     public List<DocumentTemplateStore.Template> Templates { get; private set; } = new();
-    public List<(int Id, string Label)> Employees { get; private set; } = new();
     public List<DocumentTemplateStore.Generated> Archive { get; private set; } = new();
+
+    /// <summary>رمز الموظف المحسوم واسمه — لتعبئة المنتقي ابتداءً.</summary>
+    public string? SelectedEmployeeCode { get; private set; }
+
+    public string? SelectedEmployeeName { get; private set; }
 
     public string? PreviewHtml { get; private set; }
     public IReadOnlyList<string> PreviewUnresolved { get; private set; } = Array.Empty<string>();
@@ -63,7 +68,7 @@ public class GenerateModel : PageModel
 
         PreviewHtml = html;
         PreviewUnresolved = unresolved;
-        PreviewEmployeeName = Employees.FirstOrDefault(e => e.Id == employeeId).Label;
+        PreviewEmployeeName = SelectedEmployeeName;
 
         return Page();
     }
@@ -171,18 +176,8 @@ public class GenerateModel : PageModel
         Templates = await DocumentTemplateStore.LoadTemplatesAsync(_db, activeOnly: true);
         Archive = await DocumentTemplateStore.LoadGeneratedAsync(_db, templateId: TemplateId);
 
-        Employees = (await HrmsDatabase.QueryAsync(
-            _db,
-            """
-SELECT Id, ISNULL(FullName, N'') AS FullName, ISNULL(EmployeeNo, N'') AS EmployeeNo
-FROM Employees
-WHERE IsActive = 1 AND ISNULL(IsDeleted, 0) = 0
-ORDER BY FullName;
-""",
-            command => { },
-            reader => (
-                HrmsDatabase.GetInt(reader, "Id"),
-                $"{HrmsDatabase.GetString(reader, "FullName")} ({HrmsDatabase.GetString(reader, "EmployeeNo")})")))
-            .ToList();
+        var identity = await EmployeePickerLookup.LoadAsync(_db, SelectedEmployeeId);
+        SelectedEmployeeCode = identity?.Code;
+        SelectedEmployeeName = identity?.Name;
     }
 }

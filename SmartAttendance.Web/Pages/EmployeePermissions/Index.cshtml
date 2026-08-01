@@ -13,49 +13,6 @@
         align-items: start;
     }
 
-    .employee-list {
-        display: grid;
-        gap: 10px;
-        max-height: 75vh;
-        overflow-y: auto;
-        padding-right: 4px;
-    }
-
-    .employee-card {
-        display: block;
-        padding: 12px;
-        border: 1px solid var(--sa-border, #e2e8f0);
-        border-radius: 12px;
-        background: var(--sa-surface, #ffffff);
-        color: var(--sa-text, #0f172a);
-        text-decoration: none;
-    }
-
-    .employee-card.active {
-        border-color: var(--sa-primary, #2563eb);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-    }
-
-    .employee-card .name {
-        font-weight: 700;
-        margin-bottom: 4px;
-    }
-
-    .employee-card .meta {
-        color: var(--sa-muted, #64748b);
-        font-size: 12px;
-    }
-
-    .employee-card .badge {
-        display: inline-flex;
-        margin-top: 8px;
-        padding: 3px 8px;
-        font-size: 11px;
-        border-radius: 999px;
-        background: var(--sa-primary-soft, #e0f2fe);
-        color: var(--sa-info, #075985);
-    }
-
     .permission-group {
         border: 1px solid var(--sa-border, #e2e8f0);
         border-radius: 14px;
@@ -135,43 +92,16 @@
             </div>
         </div>
 
-        <form method="get" class="search-form" style="display:grid;">
-            <input type="text"
-                   name="SearchTerm"
-                   value="@Model.SearchTerm"
-                   placeholder="Search employee no, name, email..." />
-
-            <button type="submit" class="btn-primary">Search</button>
-            <a asp-page="./Index" class="btn-secondary">Clear</a>
+        @* المنتقي المشترك بدل قائمةٍ جانبية ببحثها الخاص — نفس نافذة كيان بكل الشاشات *@
+        <form method="get">
+            <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
+                Label = null,
+                Name = "EmployeeId",
+                SelectedId = Model.EmployeeId ?? 0,
+                SelectedCode = Model.SelectedEmployeeCode,
+                SelectedName = Model.SelectedEmployeeName,
+                SubmitOnSelect = true })" />
         </form>
-
-        <div class="employee-list">
-            @if (Model.Employees.Any())
-            {
-                foreach (var employee in Model.Employees)
-                {
-                    var activeClass = Model.EmployeeId == employee.EmployeeId ? "active" : "";
-
-                    <a asp-page="./Index"
-                       asp-route-EmployeeId="@employee.EmployeeId"
-                       asp-route-SearchTerm="@Model.SearchTerm"
-                       class="employee-card @activeClass">
-                        <div class="name">@employee.FullName</div>
-                        <div class="meta">@employee.EmployeeNo | @(employee.Email ?? "-")</div>
-                        <div class="meta">@(employee.IsActive ? "Active" : "Inactive")</div>
-
-                        @if (employee.HasSystemUser)
-                        {
-                            <span class="badge">له ملف صلاحيات</span>
-                        }
-                    </a>
-                }
-            }
-            else
-            {
-                <div style="text-align:center;">No employees found.</div>
-            }
-        </div>
     </div>
 
     <div class="table-card">

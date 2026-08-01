@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Pages.Shared;
 
 namespace SmartAttendance.Web.Pages.EmployeeDocuments;
 
@@ -41,7 +42,10 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int EmployeeId { get; set; }
 
-    public List<EmployeeOption> Employees { get; set; } = new();
+    /// <summary>رمز موظف نموذج الرفع المحسوم واسمه — لتعبئة المنتقي ابتداءً.</summary>
+    public string? InputEmployeeCode { get; set; }
+
+    public string? InputEmployeeName { get; set; }
 
     public List<DocumentRow> Documents { get; set; } = new();
 
@@ -169,15 +173,9 @@ VALUES ('EmployeeDocument', CAST(@EmployeeId AS nvarchar(80)), 'Upload Document'
 
     private async Task LoadAsync()
     {
-        Employees = await HrmsDatabase.QueryAsync(
-            _dbContext,
-            "SELECT TOP 1000 Id, EmployeeNo, FullName FROM Employees ORDER BY EmployeeNo",
-            null,
-            reader => new EmployeeOption
-            {
-                Id = HrmsDatabase.GetInt(reader, "Id"),
-                Text = $"{HrmsDatabase.GetString(reader, "EmployeeNo")} - {HrmsDatabase.GetString(reader, "FullName")}"
-            });
+        var inputIdentity = await EmployeePickerLookup.LoadAsync(_dbContext, Input.EmployeeId);
+        InputEmployeeCode = inputIdentity?.Code;
+        InputEmployeeName = inputIdentity?.Name;
 
         if (EmployeeId > 0)
         {
@@ -474,13 +472,6 @@ WHERE e.Id = @EmployeeId;
         public DateOnly? ExpiryDate { get; set; }
 
         public string? Notes { get; set; }
-    }
-
-    public class EmployeeOption
-    {
-        public int Id { get; set; }
-
-        public string Text { get; set; } = string.Empty;
     }
 
     public class SelectedEmployeeInfo

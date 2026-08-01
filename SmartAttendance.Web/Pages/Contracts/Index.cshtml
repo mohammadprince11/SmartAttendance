@@ -129,16 +129,13 @@
         <h3>إضافة عقد للسجلّ</h3>
 
         <div class="zyp-editor-grid">
-            <label>
-                الموظف
-                <select asp-for="EmployeeId">
-                    <option value="0">— اختر —</option>
-                    @foreach (var (id, label) in Model.Employees)
-                    {
-                        <option value="@id">@label</option>
-                    }
-                </select>
-            </label>
+            @* المنتقي المشترك بدل منسدلةٍ كانت تحمّل كل الموظفين النشطين بكل فتحة *@
+            <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
+                Label = "الموظف",
+                Name = "EmployeeId",
+                SelectedId = Model.EmployeeId,
+                SelectedCode = Model.EmployeeCode,
+                SelectedName = Model.EmployeeName })" />
             <label>
                 رقم العقد
                 <input asp-for="ContractNo" placeholder="اختياري" />

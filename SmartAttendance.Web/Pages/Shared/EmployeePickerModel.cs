@@ -25,4 +25,11 @@ public sealed class EmployeePickerModel
 
     /// <summary>يُرسِل النموذج فور الاختيار — لشاشات «اختر موظفاً فيُعاد التحميل».</summary>
     public bool SubmitOnSelect { get; set; }
+
+    /// <summary>
+    /// يشمل البحثُ منتهيَ الخدمة. الافتراضي <c>false</c> لأن أغلب الشاشات تُسنِد
+    /// لموظفٍ عامل. تفعّله شاشات ما بعد الإنهاء (تسوية الإنهاء) وإلا اختفى منها
+    /// **موضوعها نفسه** — من أُنهيت خدمته.
+    /// </summary>
+    public bool IncludeInactive { get; set; }
 }
