@@ -291,13 +291,36 @@
                         </summary>
                         @* بنية درج كيان: عنوان المجموعة أول صف + روابط مباشرة + أكورديونات فرعية حصرية (قسم 20 بالدراسة) *@
                         <div class="nexora-nav-group-links" data-ky-title="أشخاص">
+                            @*
+                                ⭐ ترتيب هذا الدرج **يطابق مودل أشخاص بكيان** (فحص حيّ 2026-08-01):
+                                رسومات بيانية · عرض الموظفين · عمليات م.ب. · الهياكل التنظيمية ·
+                                مركز الوثائق · مركز بطاقات الموظفين · التقارير · إعدادات م.ب.
+
+                                وكان عندنا قبل التوحيد قسمٌ واحد اسمه «عمليات الموارد البشرية» يحوي
+                                **عشرين رابطاً** خلطت ثلاث عائلات: تشغيل (عقود/مخالفات/عهد) ووثائق
+                                (منشئ/توليد/طلبات) وإعدادات (مختبر الصيغ/تهيئة المخالفات). فوُزّعت
+                                كلٌّ على قسمها: الوثائق ⟵ مركز الوثائق، والإعدادات ⟵ إعدادات م.ب.
+                            *@
                             @if (canViewPeopleDirectory)
                             {
                                 <a asp-page="/Employees/Index" class="nexora-nav-link ky-drawer-title @ActiveClass("/Employees/Index")">
                                     <span>أشخاص</span>
                                 </a>
+                            }
+
+                            @* ① الداشبورد أول القائمة كما بكيان — كان مدفوناً بالمرتبة السابعة *@
+                            @if (canUseLegacyPeopleAdministration)
+                            {
+                                <a href="/Employees/PeopleDashboard" class="nexora-nav-link @(IsUnder("/Employees/PeopleDashboard") ? "active nexora-active" : "")">
+                                    <span>رسومات بيانية</span>
+                                </a>
+                            }
+
+                            @* ② عرض الموظفين *@
+                            @if (canViewPeopleDirectory)
+                            {
                                 <a asp-page="/Employees/Index" class="nexora-nav-link @ActiveClass("/Employees/Index")">
-                                    <span>قائمة الموظفين</span>
+                                    <span>عرض الموظفين</span>
                                 </a>
                             }
 
@@ -308,14 +331,12 @@
                                 </a>
                             }
 
+                            @* ③ عمليات الموارد البشرية — تشغيلٌ محض بعد إخراج الوثائق والإعدادات *@
                             @if (canUseLegacyPeopleAdministration)
                             {
-                                <details class="ky-acc" @(IsUnder("/Engagement") || IsUnder("/EmployeeUpdates") || IsUnder("/Violations") || IsUnder("/AssetsManagement") || IsUnder("/EmployeeTasks") || IsUnder("/LeaveBalances") || IsUnder("/Alerts") ? "open" : "")>
+                                <details class="ky-acc" @(IsUnder("/Engagement") || IsUnder("/EmployeeUpdates") || IsUnder("/Contracts") || IsUnder("/Acknowledgments") || IsUnder("/Forms") || IsUnder("/Violations") || IsUnder("/AssetsManagement") || IsUnder("/EmployeeTasks") || IsUnder("/LeaveBalances") || IsUnder("/Alerts") ? "open" : "")>
                                     <summary><span>عمليات الموارد البشرية</span><span class="ky-acc-chev"></span></summary>
                                     <div class="ky-acc-body">
-                                        <a asp-page="/Engagement/Index" class="nexora-nav-link @(IsUnder("/Engagement") ? "active nexora-active" : "")">
-                                            <span>تفاعل الموظفين</span>
-                                        </a>
                                         <a asp-page="/EmployeeUpdates/Index" class="nexora-nav-link @(IsUnder("/EmployeeUpdates") ? "active nexora-active" : "")">
                                             <span>تحديثات الموظف</span>
                                         </a>
@@ -328,32 +349,14 @@
                                         <a asp-page="/Employees/TemporaryHeads" class="nexora-nav-link">
                                             <span>رئيس وحدة مؤقت</span>
                                         </a>
-                                        <a asp-page="/CompanyDocuments/Index" class="nexora-nav-link @(IsUnder("/CompanyDocuments") ? "active nexora-active" : "")">
-                                            <span>وثائق الشركة</span>
-                                        </a>
-                                        <a asp-page="/Documents/Templates" class="nexora-nav-link @(IsUnder("/Documents") ? "active nexora-active" : "")">
-                                            <span>منشئ الوثائق</span>
-                                        </a>
-                                        <a asp-page="/Documents/Generate" class="nexora-nav-link">
-                                            <span>توليد الوثائق</span>
-                                        </a>
-                                        <a asp-page="/Documents/Requests" class="nexora-nav-link">
-                                            <span>طلبات الوثائق</span>
-                                        </a>
-                                        <a asp-page="/Payroll/TerminationSettlement" class="nexora-nav-link">
-                                            <span>تسوية الإنهاء — الفروقات</span>
-                                        </a>
-                                        <a asp-page="/HrSettings/ViolationConfiguration" class="nexora-nav-link">
-                                            <span>تهيئة المخالفات</span>
-                                        </a>
-                                        <a asp-page="/HrSettings/Formulas" class="nexora-nav-link">
-                                            <span>مختبر الصيغ</span>
-                                        </a>
                                         <a asp-page="/Forms/Index" class="nexora-nav-link @(IsUnder("/Forms") ? "active nexora-active" : "")">
-                                            <span>باني النماذج</span>
+                                            <span>الطلبات المخصصة والاستبيانات</span>
                                         </a>
                                         <a asp-page="/Forms/Submissions" class="nexora-nav-link">
-                                            <span>متابعة النماذج</span>
+                                            <span>متابعة الطلبات المخصصة</span>
+                                        </a>
+                                        <a asp-page="/EmployeeTasks/Index" class="nexora-nav-link @(IsUnder("/EmployeeTasks") ? "active nexora-active" : "")">
+                                            <span>مهام التعيين والإنهاء</span>
                                         </a>
                                         <a asp-page="/Violations/Index" class="nexora-nav-link @(IsUnder("/Violations") ? "active nexora-active" : "")">
                                             <span>حالات المخالفات</span>
@@ -364,8 +367,12 @@
                                         <a asp-page="/AssetsManagement/Index" class="nexora-nav-link @(IsUnder("/AssetsManagement") ? "active nexora-active" : "")">
                                             <span>إدارة العهد</span>
                                         </a>
-                                        <a asp-page="/EmployeeTasks/Index" class="nexora-nav-link @(IsUnder("/EmployeeTasks") ? "active nexora-active" : "")">
-                                            <span>مهام التعيين والإنهاء</span>
+                                        <a asp-page="/Payroll/TerminationSettlement" class="nexora-nav-link">
+                                            <span>تسوية الإنهاء — الفروقات</span>
+                                        </a>
+                                        @* بلا نظير مباشر بكيان (عندهم الاستبيانات والتنبيهات خارج المودل) — أُبقيت هنا لأنها تشغيلية *@
+                                        <a asp-page="/Engagement/Index" class="nexora-nav-link @(IsUnder("/Engagement") ? "active nexora-active" : "")">
+                                            <span>تفاعل الموظفين</span>
                                         </a>
                                         <a asp-page="/LeaveBalances/Index" class="nexora-nav-link @(IsUnder("/LeaveBalances") ? "active nexora-active" : "")">
                                             <span>أرصدة الإجازات</span>
@@ -375,39 +382,80 @@
                                         </a>
                                     </div>
                                 </details>
-
-                                <a asp-page="/EmployeeDocuments/Index" class="nexora-nav-link @(IsUnder("/EmployeeDocuments") ? "active nexora-active" : "")">
-                                    <span>مركز الوثائق</span>
-                                </a>
                             }
 
+                            @* ④ الهياكل التنظيمية — صارت قسماً مطويّاً كما بكيان لا ثلاثة روابط سائبة *@
                             @if (canViewOrganization)
                             {
-                                <a asp-page="/Organization/Index" class="nexora-nav-link @(IsUnder("/Organization/Index") || (IsUnder("/Organization") && !IsUnder("/Organization/Chart")) ? "active nexora-active" : "")">
-                                    <span>الهياكل التنظيمية</span>
-                                </a>
-                                <a href="/Organization/Index#tab=chart" class="nexora-nav-link @(IsUnder("/Organization/Chart") ? "active nexora-active" : "")">
-                                    <span>الهيكل الإداري</span>
-                                </a>
-                                <a href="/OrgStructures" class="nexora-nav-link @(IsUnder("/OrgStructures") ? "active nexora-active" : "")">
-                                    <span>الهياكل الثلاث المتوازية</span>
-                                </a>
+                                <details class="ky-acc" @(IsUnder("/Organization") || IsUnder("/OrgStructures") ? "open" : "")>
+                                    <summary><span>الهياكل التنظيمية</span><span class="ky-acc-chev"></span></summary>
+                                    <div class="ky-acc-body">
+                                        <a asp-page="/Organization/Index" class="nexora-nav-link @(IsUnder("/Organization/Index") || (IsUnder("/Organization") && !IsUnder("/Organization/Chart")) ? "active nexora-active" : "")">
+                                            <span>وحدات العمل</span>
+                                        </a>
+                                        <a href="/Organization/Index#tab=chart" class="nexora-nav-link @(IsUnder("/Organization/Chart") ? "active nexora-active" : "")">
+                                            <span>الهيكل الإداري</span>
+                                        </a>
+                                        <a href="/OrgStructures" class="nexora-nav-link @(IsUnder("/OrgStructures") ? "active nexora-active" : "")">
+                                            <span>الهياكل الثلاث المتوازية</span>
+                                        </a>
+                                    </div>
+                                </details>
                             }
 
                             @if (canUseLegacyPeopleAdministration)
                             {
-                                <a href="/Employees/PeopleDashboard" class="nexora-nav-link @(IsUnder("/Employees/PeopleDashboard") ? "active nexora-active" : "")">
-                                    <span>داشبورد الأشخاص</span>
-                                </a>
-                                @* رابط صريح لا asp-page: AddPageRoute لمسار /AttendanceReports يجعل
-                                   توليد الرابط بالاسم يختار المسار المُضاف، فنثبّت مسار الأشخاص يدوياً. *@
+                                @* ⑤ مركز الوثائق — يجمع الأرشيف والتوليد والطلبات ووثائق الشركة *@
+                                <details class="ky-acc" @(IsUnder("/EmployeeDocuments") || IsUnder("/Documents") || IsUnder("/CompanyDocuments") ? "open" : "")>
+                                    <summary><span>مركز الوثائق</span><span class="ky-acc-chev"></span></summary>
+                                    <div class="ky-acc-body">
+                                        <a asp-page="/EmployeeDocuments/Index" class="nexora-nav-link @(IsUnder("/EmployeeDocuments") ? "active nexora-active" : "")">
+                                            <span>أرشيف وثائق الموظف</span>
+                                        </a>
+                                        <a asp-page="/Documents/Generate" class="nexora-nav-link @(IsUnder("/Documents/Generate") ? "active nexora-active" : "")">
+                                            <span>توليد وثائق الموظفين</span>
+                                        </a>
+                                        <a asp-page="/Documents/Requests" class="nexora-nav-link @(IsUnder("/Documents/Requests") ? "active nexora-active" : "")">
+                                            <span>طلبات الوثائق</span>
+                                        </a>
+                                        <a asp-page="/CompanyDocuments/Index" class="nexora-nav-link @(IsUnder("/CompanyDocuments") ? "active nexora-active" : "")">
+                                            <span>وثائق الشركة وفئاتها</span>
+                                        </a>
+                                    </div>
+                                </details>
+
+                                @* ⑥ مركز بطاقات الموظفين — كان مبنيّاً بلا مدخل بالقائمة إطلاقاً *@
+                                <details class="ky-acc" @(IsUnder("/BadgeCenter") ? "open" : "")>
+                                    <summary><span>مركز بطاقات الموظفين</span><span class="ky-acc-chev"></span></summary>
+                                    <div class="ky-acc-body">
+                                        <a href="/Documents/Templates?kind=Badge" class="nexora-nav-link">
+                                            <span>قوالب البطاقات</span>
+                                        </a>
+                                        <a href="/BadgeCenter" class="nexora-nav-link @(IsUnder("/BadgeCenter") ? "active nexora-active" : "")">
+                                            <span>بطاقات الموظفين وطباعتها</span>
+                                        </a>
+                                    </div>
+                                </details>
+
+                                @* ⑦ التقارير — رابط صريح لا asp-page: AddPageRoute لمسار /AttendanceReports
+                                   يجعل توليد الرابط بالاسم يختار المسار المُضاف، فنثبّت مسار الأشخاص يدوياً. *@
                                 <a href="/PeopleReports" class="nexora-nav-link @(IsUnder("/PeopleReports") ? "active nexora-active" : "")">
                                     <span>التقارير</span>
                                 </a>
 
-                                <details class="ky-acc" @(IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/HrSettings") ? "open" : "")>
+                                @* ⑧ إعدادات الموارد البشرية — استقبلت منشئ الوثائق ومختبر الصيغ وتهيئة المخالفات *@
+                                <details class="ky-acc" @(IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/HrSettings") || IsUnder("/Documents/Templates") ? "open" : "")>
                                     <summary><span>إعدادات الموارد البشرية</span><span class="ky-acc-chev"></span></summary>
                                     <div class="ky-acc-body">
+                                        <a asp-page="/Documents/Templates" class="nexora-nav-link @(IsUnder("/Documents/Templates") ? "active nexora-active" : "")">
+                                            <span>منشئ الوثائق</span>
+                                        </a>
+                                        <a asp-page="/HrSettings/Formulas" class="nexora-nav-link @(IsUnder("/HrSettings/Formulas") ? "active nexora-active" : "")">
+                                            <span>مختبر الصيغ</span>
+                                        </a>
+                                        <a asp-page="/HrSettings/ViolationConfiguration" class="nexora-nav-link @(IsUnder("/HrSettings/ViolationConfiguration") ? "active nexora-active" : "")">
+                                            <span>تهيئة المخالفات</span>
+                                        </a>
                                         <a asp-page="/DisciplinaryRules/Index" class="nexora-nav-link @(IsUnder("/DisciplinaryRules") ? "active nexora-active" : "")">
                                             <span>إعدادات المخالفات</span>
                                         </a>
