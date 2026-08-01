@@ -256,6 +256,72 @@
     color: var(--zy-text-muted);
 }
 
+/* -------------------------------------------------- صفٌّ يفتح نموذج تحريره */
+
+/* بديل «بطاقة التحرير» القديمة: الصفّ يُقرأ كسطر، وبفتحه يظهر نموذجه بمكانه —
+   فلا نافذة تنبثق ولا انتقال لصفحة أخرى لتعديل اسمٍ واحد. */
+.zyw-acc {
+    border-top: 1px solid var(--zy-border);
+}
+
+.zyw-acc:first-of-type {
+    border-top: 0;
+}
+
+.zyw-acc > summary {
+    display: flex;
+    align-items: center;
+    gap: var(--zy-space-2);
+    padding: var(--zy-space-2) 0;
+    cursor: pointer;
+    list-style: none;
+    color: var(--zy-text);
+}
+
+.zyw-acc > summary::-webkit-details-marker {
+    display: none;
+}
+
+/* الرقم/الرمز أول الصفّ: علامةٌ هادئة لا بطولة. */
+.zyw-acc > summary > span:first-child {
+    min-width: 34px;
+    padding-inline: 6px;
+    border-radius: var(--zy-pill-radius, 6px);
+    background: var(--zy-primary-soft);
+    color: var(--zy-text-muted);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 20px;
+    text-align: center;
+}
+
+.zyw-acc > summary strong {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zyw-acc > summary small {
+    color: var(--zy-text-muted);
+    flex: 0 0 auto;
+}
+
+.zyw-acc[open] > summary {
+    color: var(--zy-text);
+    font-weight: 800;
+}
+
+.zyw-acc > form {
+    padding: 0 0 var(--zy-space-3);
+}
+
+/* المعطَّل يبقى مقروءاً لا مطموساً: الخفوت يقول «موجود وغير فعّال». */
+.zyw-acc.disabled > summary {
+    opacity: .55;
+}
+
 /* ------------------------------------------------------------------ جدول */
 
 /* الجدول يمرّ أفقياً داخل غلافه وحده — لا الصفحة. */

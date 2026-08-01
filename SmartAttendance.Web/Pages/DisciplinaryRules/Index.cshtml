@@ -92,23 +92,26 @@
                     </section>
                 }
 
-                <section class="zy-card">
-                    <header class="zyw-queue-head">
-                        <div><span>Violation Library</span><h2>فئة المخالفة وقائمة المخالفات</h2><p>اختر الفئة حتى تظهر مخالفاتها فقط. هذا يجعل الصفحة مرتبة حتى لو وصلت المخالفات إلى أكثر من 100 نوع.</p></div>
-                        <b>@visibleTypes.Count مخالفة ظاهرة</b>
-                    </header>
+                @* لا غلافَ حول البطاقات: صندوقٌ يحوي صناديق يضيف إطاراً ولا يضيف
+                   معنى. المرشّح يعلو الأقسام لأنه يحكمها جميعاً. *@
+                <div class="zyw-totals">
+                    <span>المعروض: <b>@visibleTypes.Count</b> مخالفة</span>
+                    <span>·</span>
+                    <span><b>@visibleRules.Count</b> جزاء</span>
+                </div>
 
-                    <section class="zyw-filters">
-                        <a class="@(selectedCategory <= 0 ? "active" : "")" asp-page="./Index" asp-route-tab="library">كل الفئات</a>
-                        @foreach (var category in Model.Categories)
-                        {
-                            <a class="@(selectedCategory == category.Id ? "active" : "")" asp-page="./Index" asp-route-tab="library" asp-route-categoryId="@category.Id">@category.Name</a>
-                        }
-                    </section>
+                <nav class="zyw-tabs" aria-label="تصفية بالفئة">
+                    <a class="zyw-tab" aria-selected="@((selectedCategory <= 0).ToString().ToLowerInvariant())" asp-page="./Index" asp-route-tab="library">كل الفئات</a>
+                    @foreach (var category in Model.Categories)
+                    {
+                        <a class="zyw-tab" aria-selected="@((selectedCategory == category.Id).ToString().ToLowerInvariant())" asp-page="./Index" asp-route-tab="library" asp-route-categoryId="@category.Id">@category.Name</a>
+                    }
+                </nav>
 
                     <div class="zyw-queue">
                         <section class="zy-card">
-                            <header><h3>فئات المخالفات</h3><small>إضافة وتعديل أبواب المخالفات.</small></header>
+                            <div class="zyw-queue-head"><h2>الفئات</h2><span class="zy-pill">@Model.Categories.Count</span></div>
+                            <p class="zyw-row-meta">أبواب اللائحة — الحضور، المظهر، السلوك… كل مخالفة تتبع باباً.</p>
                             <form method="post" asp-page-handler="CreateCategory" class="zyw-form-grid">
                                 <input name="name" required placeholder="اسم الفئة" />
                                 <input name="displayOrder" type="number" value="10" placeholder="الترتيب" />
@@ -118,7 +121,7 @@
                             <div class="zyw-list">
                                 @foreach (var category in Model.Categories)
                                 {
-                                    <details class="nxpen-edit-item @(category.IsActive ? "" : "disabled")">
+                                    <details class="zyw-acc @(category.IsActive ? "" : "disabled")">
                                         <summary><span>@category.DisplayOrder.ToString("00")</span><strong>@category.Name</strong><small>@category.TypesCount مخالفة</small></summary>
                                         <form method="post" asp-page-handler="UpdateCategory" class="zyw-form-grid">
                                             <input type="hidden" name="id" value="@category.Id" />
@@ -134,7 +137,8 @@
                         </section>
 
                         <section class="zy-card">
-                            <header><h3>قائمة المخالفات</h3><small>كل مخالفة مرتبطة بفئة وصلاحية وتقييم.</small></header>
+                            <div class="zyw-queue-head"><h2>المخالفات</h2><span class="zy-pill">@visibleTypes.Count</span></div>
+                            <p class="zyw-row-meta">كل مخالفة تتبع فئةً ولها خطورة وصلاحية وفترة تكرار.</p>
                             <form method="post" asp-page-handler="CreateViolationType" class="zyw-form-grid">
                                 <div class="zyw-field"><label>الفئة</label><select data-nexora-select="true" name="categoryId" required><option value="">اختر الفئة</option>@foreach (var category in Model.Categories.Where(x => x.IsActive)){<option value="@category.Id" selected="@(selectedCategory == category.Id)">@category.Name</option>}</select></div>
                                 <div class="zyw-field"><label>الخطورة</label><select data-nexora-select="true" name="severity"><option value="A">A - بسيطة</option><option value="B" selected>B - متوسطة</option><option value="C">C - جسيمة</option><option value="FinalWarning">إنذار بالفصل</option></select></div>
@@ -152,7 +156,7 @@
                             <div class="zyw-list">
                                 @foreach (var violation in visibleTypes)
                                 {
-                                    <details class="nxpen-edit-item @(violation.IsActive ? "" : "disabled")">
+                                    <details class="zyw-acc @(violation.IsActive ? "" : "disabled")">
                                         <summary><span>@Model.DisplaySeverityShort(violation.Severity)</span><strong>@violation.Name</strong><small>@violation.CategoryName / @violation.RulesCount جزاء</small></summary>
                                         <form method="post" asp-page-handler="UpdateViolationType" class="zyw-form-grid">
                                             <input type="hidden" name="id" value="@violation.Id" />
@@ -176,7 +180,8 @@
                     </div>
 
                     <section class="zy-card">
-                        <header><h3>سلم الجزاءات حسب التكرار</h3><small>اختر الفئة أولاً، ثم تظهر فقط المخالفات التابعة لها داخل القائمة.</small></header>
+                        <div class="zyw-queue-head"><h2>سلّم الجزاءات</h2><span class="zy-pill">@visibleRules.Count</span></div>
+                        <p class="zyw-row-meta">ماذا يحدث بالتكرار الأول والثاني والثالث — ومنه يأتي الأثر المالي بالقسيمة.</p>
                         <form method="post" asp-page-handler="CreatePenaltyRule" class="zyw-form-grid" data-nxpen-rule-form>
                             <div class="zyw-field"><label>الفئة</label><select data-nexora-select="true" name="categoryFilter" data-nxpen-category-filter><option value="">كل الفئات</option>@foreach (var category in Model.Categories.Where(x => x.IsActive)){<option value="@category.Id" selected="@(selectedCategory == category.Id)">@category.Name</option>}</select></div>
                             <div class="zyw-field zyw-field--wide"><label>المخالفة</label><select data-nexora-select="true" name="violationTypeId" required data-nxpen-violation-list><option value="">اختر المخالفة</option>@foreach (var violation in Model.ViolationTypes.Where(x => x.IsActive)){<option value="@violation.Id" data-category-id="@violation.CategoryId">@violation.CategoryName — @violation.Name</option>}</select></div>
@@ -195,7 +200,7 @@
                         <div class="zyw-list">
                             @foreach (var rule in visibleRules)
                             {
-                                <details class="nxpen-edit-item">
+                                <details class="zyw-acc">
                                     <summary><span>@Model.DisplayOccurrenceRange(rule.OccurrenceFrom, rule.OccurrenceTo)</span><strong>@rule.PenaltyAction</strong><small>@rule.CategoryName / @rule.ViolationName / @Model.DisplayFinancialImpact(rule.FinancialImpactType, rule.FinancialValue)</small></summary>
                                     <form method="post" asp-page-handler="UpdatePenaltyRule" class="zyw-form-grid">
                                         <input type="hidden" name="id" value="@rule.Id" />
@@ -215,7 +220,6 @@
                             }
                         </div>
                     </section>
-                </section>
             }
             
             else if (activeTab == "designer")
@@ -223,7 +227,7 @@
                 <section class="zy-card">
                     <header class="zyw-queue-head">
                         <div>
-                            <span>Company Form Designer</span>
+                            
                             <h2>مصمم فورمة العقوبة</h2>
                             <p>
                                 ارفع صورة الهيدر والفوتر، ثم أضف مربعات نص في المكان الذي تريده مع التحكم بنوع وحجم ولون الخط.
@@ -542,7 +546,7 @@ else
             {
                 <section class="zy-card">
                     <header class="zyw-queue-head">
-                        <div><span>Dynamic Company Forms</span><h2>قوالب الرسائل والفورم</h2><p>القالب يمثل نص العقوبة، ويأخذ الهيدر والفوتر من إعدادات التهيئة. إذا لم تحدد هيدر، سيستخدم النظام هيدر تلقائي بشعار النظام وتفاصيله.</p></div>
+                        <div><h2>قوالب الرسائل والفورم</h2><p>القالب يمثل نص العقوبة، ويأخذ الهيدر والفوتر من إعدادات التهيئة. إذا لم تحدد هيدر، سيستخدم النظام هيدر تلقائي بشعار النظام وتفاصيله.</p></div>
                     </header>
                     <section class="nxpen-template-type-box">
                         <header><div><h3>أنواع القوالب</h3><small>أضف أنواع قوالب جديدة حسب سياسة الشركة، مثل إنذار، استقطاع، إنذار نهائي، إحالة للجنة.</small></div></header>
