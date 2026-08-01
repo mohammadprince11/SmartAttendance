@@ -705,6 +705,71 @@ BEGIN
         CREATE INDEX IX_GeneratedDocuments_VerifyToken ON GeneratedDocuments (VerifyToken);
 END;
 """),
+
+        // باني النماذج العام — الطبقة البنيوية الرابعة.
+        //
+        // ⭐ **باني واحد لا اثنان**: الفحص الحيّ أثبت أن كيان يستعمل نفس البنية
+        // (lstGroups → lstGroupFields) للطلبات المخصصة **وللاستبيانات**. فبناء
+        // بانيين كان سيكرّر المخزن والتحقق والواجهة لفجوتين هما فجوة واحدة.
+        //
+        // GroupId قابل للإفراغ عمداً: كيان يسمح بـ«حقول غير مجمعة» خارج أي مجموعة
+        // («انقر إضافة سؤال إذا كنت تريد إضافة حقول غير مجمعة إلى النموذج»).
+        //
+        // ⚠️ جداول الاستجابات **لم تُنشأ بعد** — تُبنى مع شاشة التعبئة. جدولٌ بلا
+        // كاتب هو نفسه الحقل الميت الذي ننتقده.
+        new(
+            "20260801-23-form-builder",
+            """
+IF OBJECT_ID('FormTemplates', 'U') IS NULL
+BEGIN
+    CREATE TABLE FormTemplates (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        Name nvarchar(200) NOT NULL,
+        NameEn nvarchar(200) NULL,
+        Description nvarchar(1000) NULL,
+        FormType nvarchar(30) NOT NULL CONSTRAINT DF_FormTemplates_Type DEFAULT(N'Request'),
+        ConditionsJson nvarchar(max) NULL,
+        AllowEmployeeRequest bit NOT NULL CONSTRAINT DF_FormTemplates_Emp DEFAULT(1),
+        AllowManagerRequest bit NOT NULL CONSTRAINT DF_FormTemplates_Mgr DEFAULT(0),
+        IsActive bit NOT NULL CONSTRAINT DF_FormTemplates_Active DEFAULT(1),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_FormTemplates_Created DEFAULT(SYSUTCDATETIME()),
+        CreatedBy nvarchar(150) NULL,
+        UpdatedAt datetime2 NULL,
+        IsDeleted bit NOT NULL CONSTRAINT DF_FormTemplates_Deleted DEFAULT(0)
+    );
+END;
+
+IF OBJECT_ID('FormGroups', 'U') IS NULL
+BEGIN
+    CREATE TABLE FormGroups (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        TemplateId int NOT NULL,
+        Name nvarchar(200) NOT NULL,
+        NameEn nvarchar(200) NULL,
+        SortOrder int NOT NULL CONSTRAINT DF_FormGroups_Sort DEFAULT(0)
+    );
+
+    CREATE INDEX IX_FormGroups_Template ON FormGroups (TemplateId, SortOrder, Id);
+END;
+
+IF OBJECT_ID('FormFields', 'U') IS NULL
+BEGIN
+    CREATE TABLE FormFields (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        TemplateId int NOT NULL,
+        GroupId int NULL,
+        Label nvarchar(300) NOT NULL,
+        LabelEn nvarchar(300) NULL,
+        ControlType nvarchar(30) NOT NULL CONSTRAINT DF_FormFields_Control DEFAULT(N'Text'),
+        Options nvarchar(max) NULL,
+        Scale int NULL,
+        IsRequired bit NOT NULL CONSTRAINT DF_FormFields_Required DEFAULT(0),
+        SortOrder int NOT NULL CONSTRAINT DF_FormFields_Sort DEFAULT(0)
+    );
+
+    CREATE INDEX IX_FormFields_Template ON FormFields (TemplateId, SortOrder, Id);
+END;
+"""),
     };
 
     /// <summary>
