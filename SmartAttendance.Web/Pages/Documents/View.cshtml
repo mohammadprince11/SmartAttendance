@@ -27,6 +27,9 @@
     .zydv-custom-foot { border-top:1px solid #ddd; margin-top:36px; padding-top:12px; }
     .zydv-stamp { margin-top:32px; text-align:start; }
     .zydv-stamp img { max-width:170px; max-height:170px; opacity:.92; }
+    /* كتلة التحقق تُطبَع مع الوثيقة — هي جزء منها لا زينة بالشاشة. */
+    .zydv-verify { margin-top:28px; border:1px dashed #bbb; border-radius:8px;
+        padding:12px 16px; font-size:12px; line-height:1.9; color:#333; }
 
     @@media print {
         .zydv-bar, .zydv-warn, .nexora-sidebar, .nexora-topbar, header, nav, footer { display:none !important; }
@@ -39,6 +42,13 @@
     <div class="zydv-bar">
         <a asp-page="./Generate">← الأرشيف</a>
         <div style="display:flex;gap:10px">
+            @if (Model.Document is { IsVerifiable: true, IsRevoked: false })
+            {
+                <form method="post" asp-page-handler="Revoke" style="display:inline">
+                    <input type="hidden" name="id" value="@Model.Document.Id" />
+                    <button type="submit" data-zyconfirm="سحب الوثيقة؟ سيُبطل التحقق منها.">اسحب الوثيقة</button>
+                </form>
+            }
             @if (Model.Document is not null && !Model.Document.IsFiled)
             {
                 <form method="post" asp-page-handler="File" style="display:inline">
@@ -67,6 +77,15 @@
     }
     else
     {
+        @if (Model.Document.IsRevoked)
+        {
+            <div class="zydv-warn">
+                ⚠ <b>هذه الوثيقة مسحوبة</b> — سحبها @Model.Document.RevokedBy
+                بتاريخ @Model.Document.RevokedAt?.ToLocalTime().ToString("yyyy/MM/dd").
+                التحقق منها يُظهر أنها مسحوبة.
+            </div>
+        }
+
         @if (Model.Document.HasUnresolved)
         {
             <div class="zydv-warn">
@@ -104,6 +123,23 @@
                 </div>
             }
 
+            @if (Model.Document.IsVerifiable)
+            {
+                <div class="zydv-verify">
+                    <b>التحقق من أصالة هذه الوثيقة</b>
+                    <div>افتح <span dir="ltr">@Model.VerifyUrl()</span></div>
+                    <div>رمز التحقق: <b dir="ltr">@Model.Document.VerifyToken</b></div>
+                    <div>
+                        عامل التحقق المطلوب:
+                        @SmartAttendance.Web.Infrastructure.Hrms.DocumentVerificationPolicy.FactorLabel(Model.Document.VerifyFactor)
+                    </div>
+                    @if (Model.Document.VerifyValidUntil is { } until)
+                    {
+                        <div>صالحة للتحقق حتى @until.ToString("yyyy/MM/dd")</div>
+                    }
+                </div>
+            }
+
             @{ var customFooter = Model.SafeFooter(); }
             @if (!string.IsNullOrWhiteSpace(customFooter))
             {
@@ -118,6 +154,8 @@
         </article>
     }
 </section>
+
+<script src="~/js/zynora-confirm.js" asp-append-version="true" defer></script>
 
 @section Scripts {
 

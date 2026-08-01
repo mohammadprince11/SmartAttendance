@@ -60,6 +60,20 @@ WHERE e.Id = @EmployeeId;
     public string SafeHeader() => DocumentHtmlSanitizer.Sanitize(Document?.HeaderHtml);
     public string SafeFooter() => DocumentHtmlSanitizer.Sanitize(Document?.FooterHtml);
 
+    /// <summary>رابط التحقق العامّ المطبوع على الوثيقة (وهو ما سيحمله رمز QR لاحقاً).</summary>
+    public string VerifyUrl() =>
+        Document?.VerifyToken is { } token
+            ? $"{Request.Scheme}://{Request.Host}/Verify?token={Uri.EscapeDataString(token)}"
+            : string.Empty;
+
+    /// <summary>سحب الوثيقة — يُبطل تحقّقها فوراً بلا حذفها من الأرشيف.</summary>
+    public async Task<IActionResult> OnPostRevokeAsync(int id)
+    {
+        await DocumentTemplateStore.RevokeAsync(_db, id, User.Identity?.Name);
+        TempData["SuccessMessage"] = "سُحبت الوثيقة — صار التحقق منها يُظهر أنها مسحوبة.";
+        return RedirectToPage(new { id });
+    }
+
     /// <summary>يودع الوثيقة ملف الموظف — إيداعٌ صريح لا تلقائي.</summary>
     public async Task<IActionResult> OnPostFileAsync(int id)
     {

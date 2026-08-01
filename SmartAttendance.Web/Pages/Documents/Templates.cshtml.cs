@@ -42,6 +42,9 @@ public class TemplatesModel : PageModel
     [BindProperty] public IFormFile? StampUpload { get; set; }
     [BindProperty] public bool IsReasonRequired { get; set; }
     [BindProperty] public bool IsAttachmentRequired { get; set; }
+    [BindProperty] public bool EnableVerification { get; set; }
+    [BindProperty] public string VerificationFactor { get; set; } = DocumentVerificationPolicy.FactorNationalId;
+    [BindProperty] public int? VerifyValidDays { get; set; }
 
     public List<DocumentTemplateStore.Template> Templates { get; private set; } = new();
     public List<DocumentTemplateStore.Template> Headers { get; private set; } = new();
@@ -73,6 +76,9 @@ public class TemplatesModel : PageModel
             CurrentStampName = template.StampFileName;
             IsReasonRequired = template.IsReasonRequired;
             IsAttachmentRequired = template.IsAttachmentRequired;
+            EnableVerification = template.EnableVerification;
+            VerificationFactor = template.VerificationFactor ?? DocumentVerificationPolicy.FactorNationalId;
+            VerifyValidDays = template.VerifyValidDays;
             UnknownTokens = DocumentTokenEngine.UnknownTokens(template.Body, Tokens);
         }
         else if (EditingId == 0 && !string.IsNullOrWhiteSpace(KindFilter))
@@ -135,7 +141,10 @@ public class TemplatesModel : PageModel
             isDocument ? stampKey : null,
             isDocument ? stampFileName : null,
             isDocument && IsReasonRequired,
-            isDocument && IsAttachmentRequired);
+            isDocument && IsAttachmentRequired,
+            isDocument && EnableVerification,
+            VerificationFactor,
+            VerifyValidDays);
 
         // الرمز المخطئ إملائياً يُحفظ ويبقى ظاهراً بالوثيقة — التنبيه هنا يمنع
         // اكتشافه بعد إصدار مئة شهادة.

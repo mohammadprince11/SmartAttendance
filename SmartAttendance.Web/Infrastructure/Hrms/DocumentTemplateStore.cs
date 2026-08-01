@@ -42,7 +42,10 @@ public static class DocumentTemplateStore
         string? StampKey,
         string? StampFileName,
         bool IsReasonRequired = false,
-        bool IsAttachmentRequired = false)
+        bool IsAttachmentRequired = false,
+        bool EnableVerification = false,
+        string? VerificationFactor = null,
+        int? VerifyValidDays = null)
     {
         public HrConditions.ConditionSet Conditions => HrConditions.Deserialize(ConditionsJson);
         public List<string> Tokens => DocumentTokenEngine.ExtractTokens(Body);
@@ -67,11 +70,18 @@ public static class DocumentTemplateStore
         string? HeaderHtml = null,
         string? FooterHtml = null,
         string? StampKey = null,
-        int? EmployeeDocumentId = null)
+        int? EmployeeDocumentId = null,
+        string? VerifyToken = null,
+        string? VerifyFactor = null,
+        DateOnly? VerifyValidUntil = null,
+        DateTime? RevokedAt = null,
+        string? RevokedBy = null)
     {
         public bool HasUnresolved => !string.IsNullOrWhiteSpace(UnresolvedTokens);
         public bool HasStamp => !string.IsNullOrWhiteSpace(StampKey);
         public bool IsFiled => EmployeeDocumentId is > 0;
+        public bool IsVerifiable => !string.IsNullOrWhiteSpace(VerifyToken);
+        public bool IsRevoked => RevokedAt is not null;
     }
 
     // ── القوالب ────────────────────────────────────────────────────────────────
@@ -92,7 +102,10 @@ SELECT Id, Name, NameEn, Description, Body, ISNULL(ConditionsJson, N'') AS Condi
        RefPrefix, AllowEmployeeRequest, IsActive, ISNULL(Kind, N'Document') AS Kind,
        HeaderTemplateId, FooterTemplateId, StampKey, StampFileName,
        ISNULL(IsReasonRequired, 0) AS IsReasonRequired,
-       ISNULL(IsAttachmentRequired, 0) AS IsAttachmentRequired
+       ISNULL(IsAttachmentRequired, 0) AS IsAttachmentRequired,
+       ISNULL(EnableVerification, 0) AS EnableVerification,
+       ISNULL(VerificationFactor, N'None') AS VerificationFactor,
+       VerifyValidDays
 FROM DocumentTemplates
 WHERE ISNULL(IsDeleted, 0) = 0{filter}
 ORDER BY Name;
@@ -117,7 +130,10 @@ ORDER BY Name;
                 HrmsDatabase.GetString(reader, "StampKey"),
                 HrmsDatabase.GetString(reader, "StampFileName"),
                 HrmsDatabase.GetBool(reader, "IsReasonRequired"),
-                HrmsDatabase.GetBool(reader, "IsAttachmentRequired")));
+                HrmsDatabase.GetBool(reader, "IsAttachmentRequired"),
+                HrmsDatabase.GetBool(reader, "EnableVerification"),
+                HrmsDatabase.GetString(reader, "VerificationFactor"),
+                HrmsDatabase.GetNullableInt(reader, "VerifyValidDays")));
     }
 
     public static async Task<Template?> FindTemplateAsync(ApplicationDbContext db, int id) =>
@@ -142,7 +158,10 @@ ORDER BY Name;
         string? stampKey = null,
         string? stampFileName = null,
         bool isReasonRequired = false,
-        bool isAttachmentRequired = false)
+        bool isAttachmentRequired = false,
+        bool enableVerification = false,
+        string? verificationFactor = null,
+        int? verifyValidDays = null)
     {
         var clean = DocumentHtmlSanitizer.Sanitize(body);
 
@@ -160,12 +179,13 @@ SET Name = @Name, NameEn = @NameEn, Description = @Description, Body = @Body,
     HeaderTemplateId = @HeaderId, FooterTemplateId = @FooterId,
     StampKey = ISNULL(@StampKey, StampKey), StampFileName = ISNULL(@StampFileName, StampFileName),
     IsReasonRequired = @ReasonRequired, IsAttachmentRequired = @AttachmentRequired,
+    EnableVerification = @EnableVerify, VerificationFactor = @VerifyFactor, VerifyValidDays = @VerifyDays,
     UpdatedAt = SYSUTCDATETIME()
 WHERE Id = @Id;
 """,
                 command => Bind(command, id, name, nameEn, description, clean, conditions, refPrefix,
                     allowEmployeeRequest, isActive, user, kind, headerTemplateId, footerTemplateId, stampKey, stampFileName,
-                    isReasonRequired, isAttachmentRequired));
+                    isReasonRequired, isAttachmentRequired, enableVerification, verificationFactor, verifyValidDays));
 
             return id;
         }
@@ -176,15 +196,15 @@ WHERE Id = @Id;
 INSERT INTO DocumentTemplates
     (Name, NameEn, Description, Body, ConditionsJson, RefPrefix, AllowEmployeeRequest, IsActive,
      Kind, HeaderTemplateId, FooterTemplateId, StampKey, StampFileName,
-     IsReasonRequired, IsAttachmentRequired, CreatedBy)
+     IsReasonRequired, IsAttachmentRequired, EnableVerification, VerificationFactor, VerifyValidDays, CreatedBy)
 OUTPUT INSERTED.Id
 VALUES (@Name, @NameEn, @Description, @Body, @Conditions, @RefPrefix, @AllowRequest, @IsActive,
         @Kind, @HeaderId, @FooterId, @StampKey, @StampFileName,
-        @ReasonRequired, @AttachmentRequired, @CreatedBy);
+        @ReasonRequired, @AttachmentRequired, @EnableVerify, @VerifyFactor, @VerifyDays, @CreatedBy);
 """,
             command => Bind(command, id, name, nameEn, description, clean, conditions, refPrefix,
                 allowEmployeeRequest, isActive, user, kind, headerTemplateId, footerTemplateId, stampKey, stampFileName,
-                isReasonRequired, isAttachmentRequired));
+                isReasonRequired, isAttachmentRequired, enableVerification, verificationFactor, verifyValidDays));
     }
 
     private static void Bind(
@@ -192,7 +212,7 @@ VALUES (@Name, @NameEn, @Description, @Body, @Conditions, @RefPrefix, @AllowRequ
         int id, string name, string? nameEn, string? description, string body,
         HrConditions.ConditionSet conditions, string? refPrefix, bool allowRequest, bool isActive, string? user,
         string kind, int? headerId, int? footerId, string? stampKey, string? stampFileName,
-        bool reasonRequired, bool attachmentRequired)
+        bool reasonRequired, bool attachmentRequired, bool enableVerify, string? verifyFactor, int? verifyDays)
     {
         if (id > 0) HrmsDatabase.AddParameter(command, "@Id", id);
         HrmsDatabase.AddParameter(command, "@Name", name);
@@ -210,6 +230,9 @@ VALUES (@Name, @NameEn, @Description, @Body, @Conditions, @RefPrefix, @AllowRequ
         HrmsDatabase.AddParameter(command, "@StampFileName", stampFileName);
         HrmsDatabase.AddParameter(command, "@ReasonRequired", reasonRequired);
         HrmsDatabase.AddParameter(command, "@AttachmentRequired", attachmentRequired);
+        HrmsDatabase.AddParameter(command, "@EnableVerify", enableVerify);
+        HrmsDatabase.AddParameter(command, "@VerifyFactor", verifyFactor ?? DocumentVerificationPolicy.FactorNone);
+        HrmsDatabase.AddParameter(command, "@VerifyDays", verifyDays);
         if (id <= 0) HrmsDatabase.AddParameter(command, "@CreatedBy", user);
     }
 
@@ -330,15 +353,38 @@ WHERE e.Id = @EmployeeId AND ISNULL(e.IsDeleted, 0) = 0;
             return (0, ComposePreview(header, render.Html, footer), all);
         }
 
+        // التحقق: رمزٌ وPIN يُولَّدان **عند الإصدار** لا عند العرض — الوثيقة تُطبَع
+        // وتخرج من الشركة، فرمزها يجب أن يكون ثابتاً لا مشتقّاً قابلاً للتغيّر.
+        string? verifyToken = null;
+        string? pinHash = null;
+        DateOnly? validUntil = null;
+        LastIssuedPin = null;
+
+        if (template.EnableVerification)
+        {
+            verifyToken = DocumentVerificationPolicy.NewToken();
+            validUntil = DocumentVerificationPolicy.ValidUntil(issuedOn, template.VerifyValidDays);
+
+            if (template.VerificationFactor == DocumentVerificationPolicy.FactorPin)
+            {
+                // الـPIN يُعرض **مرّة واحدة** بعد الإصدار ولا يُخزَّن خاماً؛ فقدُه
+                // يعني إعادة إصدار، وهو الثمن الصحيح لسرٍّ لا يُسترجَع.
+                LastIssuedPin = DocumentVerificationPolicy.NewPin();
+                pinHash = DocumentVerificationPolicy.HashPin(LastIssuedPin, verifyToken);
+            }
+        }
+
         var id = await HrmsDatabase.ScalarAsync<int>(
             db,
             """
 INSERT INTO GeneratedDocuments
     (ReferenceNo, TemplateId, TemplateName, EmployeeId, BodyHtml, UnresolvedTokens,
-     IssuedOn, IssuedBy, Source, Notes, HeaderHtml, FooterHtml, StampKey)
+     IssuedOn, IssuedBy, Source, Notes, HeaderHtml, FooterHtml, StampKey,
+     VerifyToken, VerifyPinHash, VerifyFactor, VerifyValidUntil)
 OUTPUT INSERTED.Id
 VALUES (@Ref, @TemplateId, @TemplateName, @EmployeeId, @Body, @Unresolved,
-        @IssuedOn, @IssuedBy, @Source, @Notes, @Header, @Footer, @StampKey);
+        @IssuedOn, @IssuedBy, @Source, @Notes, @Header, @Footer, @StampKey,
+        @VerifyToken, @PinHash, @VerifyFactor, @ValidUntil);
 """,
             command =>
             {
@@ -357,6 +403,11 @@ VALUES (@Ref, @TemplateId, @TemplateName, @EmployeeId, @Body, @Unresolved,
                 HrmsDatabase.AddParameter(command, "@Header", header);
                 HrmsDatabase.AddParameter(command, "@Footer", footer);
                 HrmsDatabase.AddParameter(command, "@StampKey", template.StampKey);
+                HrmsDatabase.AddParameter(command, "@VerifyToken", verifyToken);
+                HrmsDatabase.AddParameter(command, "@PinHash", pinHash);
+                HrmsDatabase.AddParameter(command, "@VerifyFactor",
+                    template.EnableVerification ? template.VerificationFactor : null);
+                HrmsDatabase.AddParameter(command, "@ValidUntil", validUntil?.ToDateTime(TimeOnly.MinValue));
             });
 
         return (id, render.Html, all);
@@ -480,7 +531,8 @@ VALUES (@EmployeeId, @Type, @FileName, @Path, @Notes, @By);
 SELECT g.Id, g.ReferenceNo, g.TemplateId, g.TemplateName, g.EmployeeId,
        ISNULL(e.FullName, N'') AS EmployeeName, ISNULL(e.EmployeeNo, N'') AS EmployeeNo,
        g.BodyHtml, g.UnresolvedTokens, g.IssuedOn, g.IssuedBy, g.Source, g.Notes,
-       g.HeaderHtml, g.FooterHtml, g.StampKey, g.EmployeeDocumentId
+       g.HeaderHtml, g.FooterHtml, g.StampKey, g.EmployeeDocumentId,
+       g.VerifyToken, g.VerifyFactor, g.VerifyValidUntil, g.RevokedAt, g.RevokedBy
 FROM GeneratedDocuments g
 LEFT JOIN Employees e ON e.Id = g.EmployeeId
 WHERE ISNULL(g.IsDeleted, 0) = 0{where}
@@ -508,11 +560,63 @@ ORDER BY g.Id DESC;
                 HrmsDatabase.GetString(reader, "HeaderHtml"),
                 HrmsDatabase.GetString(reader, "FooterHtml"),
                 HrmsDatabase.GetString(reader, "StampKey"),
-                HrmsDatabase.GetNullableInt(reader, "EmployeeDocumentId")));
+                HrmsDatabase.GetNullableInt(reader, "EmployeeDocumentId"),
+                HrmsDatabase.GetString(reader, "VerifyToken"),
+                HrmsDatabase.GetString(reader, "VerifyFactor"),
+                HrmsDatabase.GetDateOnly(reader, "VerifyValidUntil"),
+                HrmsDatabase.GetDateTime(reader, "RevokedAt"),
+                HrmsDatabase.GetString(reader, "RevokedBy")));
     }
 
     public static async Task<Generated?> FindGeneratedAsync(ApplicationDbContext db, int id) =>
         (await LoadGeneratedAsync(db)).FirstOrDefault(row => row.Id == id);
+
+    /// <summary>
+    /// الـPIN الصادر بآخر عملية توليد — يُعرض **مرّة واحدة** للمُصدِر ثم يُنسى.
+    /// حقلٌ ساكن لأن الاستدعاء متسلسل داخل الطلب الواحد؛ ولا يُقرأ إلا فور التوليد.
+    /// </summary>
+    [ThreadStatic] public static string? LastIssuedPin;
+
+    /// <summary>
+    /// البحث برمز التحقق — المدخل مطبَّع فتُقبل الشرطات والمسافات وحالة الأحرف.
+    /// <b>لا يُرجع نصّ الوثيقة</b>: التحقق إثباتُ أصالةٍ لا نافذةُ بيانات.
+    /// </summary>
+    public static async Task<Generated?> FindByVerifyTokenAsync(ApplicationDbContext db, string? token)
+    {
+        var normalized = DocumentVerificationPolicy.NormalizeToken(token);
+        if (normalized.Length == 0)
+        {
+            return null;
+        }
+
+        return (await LoadGeneratedAsync(db))
+            .FirstOrDefault(row => DocumentVerificationPolicy.NormalizeToken(row.VerifyToken) == normalized);
+    }
+
+    /// <summary>تجزئة الـPIN المخزَّنة — تُقرأ وحدها فلا تُحمَل بكل قراءة أرشيف.</summary>
+    public static async Task<string?> LoadPinHashAsync(ApplicationDbContext db, int generatedId) =>
+        await HrmsDatabase.ScalarAsync<string>(
+            db,
+            "SELECT TOP 1 VerifyPinHash FROM GeneratedDocuments WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", generatedId));
+
+    /// <summary>
+    /// سحب الوثيقة: يُبطل تحقّقها فوراً **بلا حذفها** من الأرشيف — الوثيقة الصادرة
+    /// واقعة تاريخية، والسحب واقعة أخرى فوقها لا محوٌ للأولى.
+    /// </summary>
+    public static async Task RevokeAsync(ApplicationDbContext db, int id, string? user) =>
+        await HrmsDatabase.ExecuteAsync(
+            db,
+            """
+UPDATE GeneratedDocuments
+SET RevokedAt = SYSUTCDATETIME(), RevokedBy = @By
+WHERE Id = @Id AND RevokedAt IS NULL;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", id);
+                HrmsDatabase.AddParameter(command, "@By", user);
+            });
 
     public static async Task DeleteGeneratedAsync(ApplicationDbContext db, int id) =>
         await HrmsDatabase.ExecuteAsync(

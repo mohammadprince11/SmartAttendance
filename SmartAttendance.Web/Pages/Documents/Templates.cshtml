@@ -220,6 +220,39 @@
             }
 
             <div>
+                <p class="zyp-section-title">التحقق من الأصالة</p>
+                <p class="zyp-hint">
+                    الوثيقة تحمل <b>رمز تحقق</b> يفحصه طرفٌ ثالث (بنك · سفارة) بصفحة
+                    <code>/Verify</code> العامّة — فتتحوّل من ورقة تُزوَّر إلى مستند قابل للتحقّق.
+                </p>
+                <div class="zyp-editor-grid">
+                    <label>
+                        تفعيل التحقق
+                        <select asp-for="EnableVerification">
+                            <option value="false">لا</option>
+                            <option value="true">نعم</option>
+                        </select>
+                    </label>
+                    <label>
+                        عامل التحقق
+                        <select asp-for="VerificationFactor">
+                            <option value="NationalId">الرقم الوطني للموظف</option>
+                            <option value="Pin">رمز PIN يُصدر مع الوثيقة</option>
+                            <option value="None">بلا عامل (غير موصى به)</option>
+                        </select>
+                    </label>
+                    <label>
+                        مدة صلاحية التحقق (يوم) — صفر = بلا انتهاء
+                        <input asp-for="VerifyValidDays" type="number" min="0" placeholder="0" />
+                    </label>
+                </div>
+                <p class="zyp-hint">
+                    ⚠️ <b>«بلا عامل» يعني أن الرمز وحده يكشف بيانات الوثيقة</b> — واستعماله
+                    يجعل تخمين الرموز طريقاً لمعرفة من صدرت له وثائق. اخترْه فقط لوثائق لا سرّية فيها.
+                </p>
+            </div>
+
+            <div>
                 <p class="zyp-section-title">نصّ القالب</p>
                 <p class="zyp-hint">
                     انقر أي رمز أدناه ليُدرَج بموضع المؤشّر. الرمز يُستبدل بقيمة الموظف عند التوليد.

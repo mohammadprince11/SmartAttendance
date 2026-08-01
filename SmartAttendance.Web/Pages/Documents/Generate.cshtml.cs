@@ -75,10 +75,17 @@ public class GenerateModel : PageModel
         var (id, _, unresolved) = await DocumentTemplateStore.GenerateAsync(
             _db, template, employeeId, User.Identity?.Name, Notes, IssuedOn, persist: true);
 
-        TempData["SuccessMessage"] = unresolved.Count == 0
+        var message = unresolved.Count == 0
             ? "صدرت الوثيقة وأُرشفت."
             : $"صدرت الوثيقة — لكن {unresolved.Count} رمزاً بقي بلا قيمة: {string.Join("، ", unresolved)}";
 
+        // ⚠️ الـPIN يُعرض **مرّة واحدة** ولا يُخزَّن خاماً؛ فقدُه يعني إعادة إصدار.
+        if (DocumentTemplateStore.LastIssuedPin is { } pin)
+        {
+            message += $" — رمز PIN للتحقق: {pin} (يُعرض مرّة واحدة فقط، سلّمه لحامل الوثيقة).";
+        }
+
+        TempData["SuccessMessage"] = message;
         return RedirectToPage("./View", new { id });
     }
 

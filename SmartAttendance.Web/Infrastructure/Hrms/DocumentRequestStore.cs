@@ -188,6 +188,12 @@ WHERE Id = @Id AND Status = N'Pending';
             ? "اعتُمد الطلب وصدرت الوثيقة."
             : $"اعتُمد الطلب وصدرت الوثيقة — لكن {unresolved.Count} رمزاً بقي بلا قيمة: {string.Join("، ", unresolved)}";
 
+        // الـPIN يُعرض مرّة واحدة للمعتمِد ليسلّمه للموظف.
+        if (DocumentTemplateStore.LastIssuedPin is { } pin)
+        {
+            message += $" — رمز PIN للتحقق: {pin} (يُعرض مرّة واحدة فقط).";
+        }
+
         return (true, documentId, message);
     }
 

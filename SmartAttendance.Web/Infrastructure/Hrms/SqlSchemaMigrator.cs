@@ -654,6 +654,57 @@ BEGIN
     CREATE INDEX IX_DocumentRequests_Status ON DocumentRequests (Status, Id);
 END;
 """),
+
+        // منشئ الوثائق — المرحلة الرابعة: التحقق من الأصالة + توقيع الموظف.
+        //
+        // ⭐ هذه أعلى قيمة مفردة بالمنشئ كلّه: الوثيقة تحمل رمزاً يفحصه **طرفٌ ثالث**
+        // (بنك · سفارة) فيتحقّق من صحّتها. تحوّل شهادة الراتب من ورقة تُزوَّر بـWord
+        // إلى مستند قابل للتحقّق.
+        //
+        // ⚠️ **الـPIN يُخزَّن مجزَّأً لا خاماً** — سرٌّ يُطبَع على ورقة تخرج من الشركة،
+        // وتسريب قاعدة البيانات لا يجوز أن يعطي مفاتيح التحقق بكل الوثائق.
+        new(
+            "20260801-22-document-verification",
+            """
+IF OBJECT_ID('DocumentTemplates', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('DocumentTemplates', 'EnableVerification') IS NULL
+        ALTER TABLE DocumentTemplates ADD EnableVerification bit NULL;
+
+    -- عامل التحقق: None | NationalId | Pin
+    IF COL_LENGTH('DocumentTemplates', 'VerificationFactor') IS NULL
+        ALTER TABLE DocumentTemplates ADD VerificationFactor nvarchar(20) NULL;
+
+    -- صفر أو NULL = بلا انتهاء (شهادة خبرة لا تنتهي، وشهادة راتب تنتهي).
+    IF COL_LENGTH('DocumentTemplates', 'VerifyValidDays') IS NULL
+        ALTER TABLE DocumentTemplates ADD VerifyValidDays int NULL;
+END;
+
+IF OBJECT_ID('GeneratedDocuments', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('GeneratedDocuments', 'VerifyToken') IS NULL
+        ALTER TABLE GeneratedDocuments ADD VerifyToken nvarchar(40) NULL;
+
+    IF COL_LENGTH('GeneratedDocuments', 'VerifyPinHash') IS NULL
+        ALTER TABLE GeneratedDocuments ADD VerifyPinHash nvarchar(100) NULL;
+
+    IF COL_LENGTH('GeneratedDocuments', 'VerifyFactor') IS NULL
+        ALTER TABLE GeneratedDocuments ADD VerifyFactor nvarchar(20) NULL;
+
+    IF COL_LENGTH('GeneratedDocuments', 'VerifyValidUntil') IS NULL
+        ALTER TABLE GeneratedDocuments ADD VerifyValidUntil date NULL;
+
+    -- سحب الوثيقة يُبطل تحقّقها فوراً بلا حذفها من الأرشيف.
+    IF COL_LENGTH('GeneratedDocuments', 'RevokedAt') IS NULL
+        ALTER TABLE GeneratedDocuments ADD RevokedAt datetime2 NULL;
+
+    IF COL_LENGTH('GeneratedDocuments', 'RevokedBy') IS NULL
+        ALTER TABLE GeneratedDocuments ADD RevokedBy nvarchar(150) NULL;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_GeneratedDocuments_VerifyToken')
+        CREATE INDEX IX_GeneratedDocuments_VerifyToken ON GeneratedDocuments (VerifyToken);
+END;
+"""),
     };
 
     /// <summary>
