@@ -61,7 +61,7 @@ public static class DesignTokenCatalog
         new Token("button-weight", "ثخانة خطّه", GroupButtons, 600, 400, 900, 100, ""),
 
         // ---- الحقول ----
-        new Token("control-h", "ارتفاع الحقل", GroupControls, 44, 32, 60,
+        new Token("control-h", "ارتفاع الحقل", GroupControls, 44, 28, 60,
             Hint: "كان مثبَّتاً بثمانِ قيمٍ مختلفة عبر 71 ملف CSS."),
         new Token("control-pad-x", "الحشوة الأفقية داخل الحقل", GroupControls, 12, 4, 28),
         new Token("control-radius", "استدارة الحقل", GroupControls, 12, 0, 24),
@@ -73,12 +73,12 @@ public static class DesignTokenCatalog
         // ثلاثتها كانت تتقاسم مقياساً واحداً، فلم يكن ممكناً جعل الكلاندر 44
         // والمنتقي 52. صار لكلٍّ مختبره. والافتراضات متطابقة عمداً: اختلاف
         // ارتفاعاتها هو ما سبّب الإزاحة الرأسية بصفوف الحقول.
-        new Token("calendar-h", "ارتفاع حقل التاريخ", GroupCalendar, 44, 32, 60,
+        new Token("calendar-h", "ارتفاع حقل التاريخ", GroupCalendar, 44, 28, 60,
             Hint: "يُطابَق بارتفاع الحقل العادي افتراضياً — اختلافهما كان يزيح الصفّ."),
         new Token("calendar-radius", "استدارته", GroupCalendar, 12, 0, 24),
         new Token("calendar-font", "حجم خطّه", GroupCalendar, 13, 10, 18, 0.5),
 
-        new Token("dropdown-h", "ارتفاع المنسدلة", GroupDropdown, 44, 32, 60),
+        new Token("dropdown-h", "ارتفاع المنسدلة", GroupDropdown, 44, 28, 60),
         new Token("dropdown-radius", "استدارتها", GroupDropdown, 12, 0, 24),
         new Token("dropdown-font", "حجم خطّها", GroupDropdown, 13, 10, 18, 0.5),
         new Token("dropdown-menu-radius", "استدارة القائمة المفتوحة", GroupDropdown, 14, 0, 28),

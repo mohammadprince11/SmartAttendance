@@ -859,6 +859,10 @@
        متغيّرات الـ:root المحقونة أدناه؛ وبلا تخصيصٍ محفوظ تبقى القيم الاحتياطية
        داخل الملف = مظهر ما قبل الميزة حرفياً. *@
     <link rel="stylesheet" href="~/css/zynora-tokens.css" asp-append-version="true" />
+
+    @* يُسكِت تأثيرات «التمرير-فوق» أثناء السكرول — انظر تعليق السكربت.
+       غير مؤجَّل (بلا defer) عمداً: تأجيله يترك أول تمريرةٍ بعد التحميل بلا حماية. *@
+    <script src="~/js/zynora-scroll-hover-guard.js" asp-append-version="true"></script>
     @if (!string.IsNullOrEmpty(designTokenCss))
     {
         <style id="zy-design-tokens">@Html.Raw(designTokenCss)</style>

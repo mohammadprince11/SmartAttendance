@@ -231,3 +231,37 @@
     min-height: var(--zy-tab-h, 40px) !important;
     font-size: var(--zy-tab-font, 13px) !important;
 }
+
+/* ============================================================================
+   إسكات تأثيرات «التمرير-فوق» أثناء السكرول — يرافقه `zynora-scroll-hover-guard.js`
+
+   السبب موثَّق بالسكربت. الخلاصة: المؤشّر يبقى ثابتاً أثناء التمرير فينزلق
+   المحتوى تحته، وكل عنصرٍ يمرّ تحته يقفز `translateY(-1px)` ويلمع ثم يهبط —
+   فتبدو الحقول «تتحرّك معك ثم تفلت».
+
+   ⚠️ `* !important` هنا مقصود ومقيَّد: القواعد التي نُسكِتها هي نفسها مفروضة
+   بـ!important بعشرين ملفاً، فلا تُسكَت بغيره. والنطاق محصورٌ بلحظات التمرير
+   (~140ms بعد آخر حدث) فلا يمسّ سلوك الصفحة الساكنة إطلاقاً.
+   ============================================================================ */
+
+html.zy-scrolling *,
+html.zy-scrolling *::before,
+html.zy-scrolling *::after {
+    transform: none !important;
+    transition: none !important;
+    /* اللمعان جزء من نفس تأثير الـhover، وإبقاؤه بلا الحركة يترك وميضاً مزعجاً */
+    filter: none !important;
+}
+
+/* استثناءان إلزاميّان: عناصر يعتمد **وجودها** على التحويل لا على الـhover —
+   إسكاتها أثناء التمرير يفكّك تخطيطها بدل أن يهدّئه. */
+html.zy-scrolling .nxcs-menu,
+html.zy-scrolling .zyep-modal,
+html.zy-scrolling .zyep-backdrop,
+html.zy-scrolling [class*="spinner"],
+html.zy-scrolling [class*="loader"],
+html.zy-scrolling .nexora-sidebar,
+html.zy-scrolling .nexora-topbar {
+    transform: revert !important;
+    filter: revert !important;
+}
