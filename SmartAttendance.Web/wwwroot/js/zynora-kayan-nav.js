@@ -112,6 +112,28 @@
         });
     });
 
+    // 🐞 **سقف الارتفاع يُحرَّر بعد الفتح.**
+    //
+    // الأنميشن يحتاج رقماً ينتقل إليه، فالـCSS يضع `max-height: 460px` للمفتوح.
+    // لكنه سقفٌ مثبَّت: حين يُفتح أكورديونٌ **داخل** أكورديون يزيد المحتوى عن 460
+    // فيُقصّ ما فوقه و`overflow: hidden` يبتلعه بصمت. قِيس حيّاً على الإنتاج:
+    // «عمليات الموارد البشرية» بارتفاع 460 و`scrollHeight` 460 والسقف 460 — أي
+    // مقصوصٌ تماماً عند الحدّ، فبدت «الإجراءات التأديبية» شريحةً مبتورة.
+    //
+    // فبعد انتهاء حركة الفتح نرفع السقف إلى `none`: تبقى الحركة، ويسقط القصّ.
+    // (والإغلاق يعيد قياس الارتفاع الفعليّ أولاً فيبقى متحرّكاً كما هو.)
+    function releaseHeight(acc, body) {
+        window.setTimeout(function () {
+            if (acc.hasAttribute("open")) body.style.maxHeight = "none";
+        }, 360);
+    }
+
+    // الأكورديونات المفتوحة بالرندر (قسم الصفحة الحالية) تُحرَّر فوراً بلا انتظار
+    // حركةٍ لم تحدث أصلاً.
+    document.querySelectorAll(".ky-acc[open] > .ky-acc-body").forEach(function (body) {
+        body.style.maxHeight = "none";
+    });
+
     // الأكورديون الداخلي: حصري + انميشن إغلاق.
     document.querySelectorAll(".ky-acc > summary").forEach(function (summary) {
         summary.addEventListener("click", function (e) {
@@ -121,7 +143,7 @@
             e.preventDefault();
 
             if (acc.hasAttribute("open")) {
-                // إغلاق بانميشن: صفّر الارتفاع ثم أزل open بعد الترانزيشن (0.35s).
+                // إغلاق بانميشن: من ارتفاعه الفعليّ إلى صفر، ثم أزل open بعد الترانزيشن.
                 body.style.maxHeight = body.scrollHeight + "px";
                 requestAnimationFrame(function () { body.style.maxHeight = "0"; });
                 setTimeout(function () { acc.removeAttribute("open"); body.style.maxHeight = ""; }, 350);
@@ -130,6 +152,7 @@
                 var siblings = acc.parentElement.querySelectorAll(":scope > .ky-acc[open]");
                 siblings.forEach(function (other) { if (other !== acc) other.removeAttribute("open"); });
                 acc.setAttribute("open", "");
+                releaseHeight(acc, body);
             }
         });
     });
