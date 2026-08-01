@@ -97,6 +97,8 @@
     <link rel="stylesheet" href="~/css/zynora-checkbox.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-file-input.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-kayan-nav.css" asp-append-version="true" />
+    @* منتقي الموظف المشترك — متاح لكل صفحة بسطر واحد     <link rel="stylesheet" href="~/css/zynora-kayan-nav.css" asp-append-version="true" />lt;partial name="_EmployeePicker" /    <link rel="stylesheet" href="~/css/zynora-kayan-nav.css" asp-append-version="true" />gt; *@
+    <link rel="stylesheet" href="~/css/zynora-employee-picker.css" asp-append-version="true" />
 
     @* جسر الصفحات القديمة نُقل إلى ما بعد RenderBody — انظر التعليق هناك *@
 
@@ -860,6 +862,7 @@
     <script src="~/js/zynora-theme.js" asp-append-version="true"></script>
     <script src="~/js/zynora-kayan-nav.js" asp-append-version="true"></script>
     <script src="~/js/nexora-ui-stabilization-phase1.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-employee-picker.js" asp-append-version="true" defer></script>
     @await RenderSectionAsync("Scripts", required: false)
 <script src="~/js/nexora-calendar-v18.js" asp-append-version="true" defer></script>
 <script src="~/js/nexora-month-picker-v1.js" asp-append-version="true" defer></script>

@@ -28,20 +28,13 @@
         <form method="get" class="nxupd-employee-select">
             <input type="hidden" name="tab" value="@Model.Tab" />
             <input type="hidden" name="section" value="employee-master" />
-            <label>&#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</label>
-            <select data-nexora-select="true" name="employeeId" onchange="this.form.submit()">
-                @foreach (var employee in Model.Employees)
-                {
-                    if (employee.Id == Model.SelectedEmployeeId)
-                    {
-                        <option value="@employee.Id" selected>@employee.FullName - @employee.EmployeeNo</option>
-                    }
-                    else
-                    {
-                        <option value="@employee.Id">@employee.FullName - @employee.EmployeeNo</option>
-                    }
-                }
-            </select>
+            @* المنتقي المشترك بدل منسدلةٍ كانت تحمّل 1356 موظفاً بكل فتحة صفحة *@
+            <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
+                Name = "employeeId",
+                SelectedId = Model.SelectedEmployeeId,
+                SelectedCode = Model.SelectedEmployee.EmployeeNo,
+                SelectedName = Model.SelectedEmployee.FullName,
+                SubmitOnSelect = true })" />
         </form>
     </section>
 
