@@ -614,6 +614,46 @@ BEGIN
         ALTER TABLE GeneratedDocuments ADD EmployeeDocumentId int NULL;
 END;
 """),
+
+        // منشئ الوثائق — المرحلة الثالثة: طلب الموظف + سبب/مرفق + موافقة.
+        //
+        // الطلب **كيان مستقل** لا حقلٌ على الوثيقة: طلبٌ مرفوض لا وثيقة له أصلاً،
+        // وطلبٌ معلّق كذلك. وربطه بالوثيقة يتمّ عند الاعتماد فقط
+        // (GeneratedDocumentId)، فيبقى «طُلبت ورُفضت» سؤالاً مُجاباً.
+        new(
+            "20260801-21-document-requests",
+            """
+IF OBJECT_ID('DocumentTemplates', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('DocumentTemplates', 'IsReasonRequired') IS NULL
+        ALTER TABLE DocumentTemplates ADD IsReasonRequired bit NULL;
+
+    IF COL_LENGTH('DocumentTemplates', 'IsAttachmentRequired') IS NULL
+        ALTER TABLE DocumentTemplates ADD IsAttachmentRequired bit NULL;
+END;
+
+IF OBJECT_ID('DocumentRequests', 'U') IS NULL
+BEGIN
+    CREATE TABLE DocumentRequests (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        EmployeeId int NOT NULL,
+        TemplateId int NOT NULL,
+        TemplateName nvarchar(200) NULL,
+        Reason nvarchar(1000) NULL,
+        AttachmentKey nvarchar(500) NULL,
+        AttachmentName nvarchar(260) NULL,
+        Status nvarchar(20) NOT NULL CONSTRAINT DF_DocReq_Status DEFAULT(N'Pending'),
+        RequestedAt datetime2 NOT NULL CONSTRAINT DF_DocReq_Requested DEFAULT(SYSUTCDATETIME()),
+        ReviewedBy nvarchar(150) NULL,
+        ReviewedAt datetime2 NULL,
+        ReviewNote nvarchar(1000) NULL,
+        GeneratedDocumentId int NULL
+    );
+
+    CREATE INDEX IX_DocumentRequests_Employee ON DocumentRequests (EmployeeId, Id);
+    CREATE INDEX IX_DocumentRequests_Status ON DocumentRequests (Status, Id);
+END;
+"""),
     };
 
     /// <summary>

@@ -40,7 +40,9 @@ public static class DocumentTemplateStore
         int? HeaderTemplateId,
         int? FooterTemplateId,
         string? StampKey,
-        string? StampFileName)
+        string? StampFileName,
+        bool IsReasonRequired = false,
+        bool IsAttachmentRequired = false)
     {
         public HrConditions.ConditionSet Conditions => HrConditions.Deserialize(ConditionsJson);
         public List<string> Tokens => DocumentTokenEngine.ExtractTokens(Body);
@@ -88,7 +90,9 @@ public static class DocumentTemplateStore
             $"""
 SELECT Id, Name, NameEn, Description, Body, ISNULL(ConditionsJson, N'') AS ConditionsJson,
        RefPrefix, AllowEmployeeRequest, IsActive, ISNULL(Kind, N'Document') AS Kind,
-       HeaderTemplateId, FooterTemplateId, StampKey, StampFileName
+       HeaderTemplateId, FooterTemplateId, StampKey, StampFileName,
+       ISNULL(IsReasonRequired, 0) AS IsReasonRequired,
+       ISNULL(IsAttachmentRequired, 0) AS IsAttachmentRequired
 FROM DocumentTemplates
 WHERE ISNULL(IsDeleted, 0) = 0{filter}
 ORDER BY Name;
@@ -111,7 +115,9 @@ ORDER BY Name;
                 HrmsDatabase.GetNullableInt(reader, "HeaderTemplateId"),
                 HrmsDatabase.GetNullableInt(reader, "FooterTemplateId"),
                 HrmsDatabase.GetString(reader, "StampKey"),
-                HrmsDatabase.GetString(reader, "StampFileName")));
+                HrmsDatabase.GetString(reader, "StampFileName"),
+                HrmsDatabase.GetBool(reader, "IsReasonRequired"),
+                HrmsDatabase.GetBool(reader, "IsAttachmentRequired")));
     }
 
     public static async Task<Template?> FindTemplateAsync(ApplicationDbContext db, int id) =>
@@ -134,7 +140,9 @@ ORDER BY Name;
         int? headerTemplateId = null,
         int? footerTemplateId = null,
         string? stampKey = null,
-        string? stampFileName = null)
+        string? stampFileName = null,
+        bool isReasonRequired = false,
+        bool isAttachmentRequired = false)
     {
         var clean = DocumentHtmlSanitizer.Sanitize(body);
 
@@ -151,11 +159,13 @@ SET Name = @Name, NameEn = @NameEn, Description = @Description, Body = @Body,
     AllowEmployeeRequest = @AllowRequest, IsActive = @IsActive, Kind = @Kind,
     HeaderTemplateId = @HeaderId, FooterTemplateId = @FooterId,
     StampKey = ISNULL(@StampKey, StampKey), StampFileName = ISNULL(@StampFileName, StampFileName),
+    IsReasonRequired = @ReasonRequired, IsAttachmentRequired = @AttachmentRequired,
     UpdatedAt = SYSUTCDATETIME()
 WHERE Id = @Id;
 """,
                 command => Bind(command, id, name, nameEn, description, clean, conditions, refPrefix,
-                    allowEmployeeRequest, isActive, user, kind, headerTemplateId, footerTemplateId, stampKey, stampFileName));
+                    allowEmployeeRequest, isActive, user, kind, headerTemplateId, footerTemplateId, stampKey, stampFileName,
+                    isReasonRequired, isAttachmentRequired));
 
             return id;
         }
@@ -165,20 +175,24 @@ WHERE Id = @Id;
             """
 INSERT INTO DocumentTemplates
     (Name, NameEn, Description, Body, ConditionsJson, RefPrefix, AllowEmployeeRequest, IsActive,
-     Kind, HeaderTemplateId, FooterTemplateId, StampKey, StampFileName, CreatedBy)
+     Kind, HeaderTemplateId, FooterTemplateId, StampKey, StampFileName,
+     IsReasonRequired, IsAttachmentRequired, CreatedBy)
 OUTPUT INSERTED.Id
 VALUES (@Name, @NameEn, @Description, @Body, @Conditions, @RefPrefix, @AllowRequest, @IsActive,
-        @Kind, @HeaderId, @FooterId, @StampKey, @StampFileName, @CreatedBy);
+        @Kind, @HeaderId, @FooterId, @StampKey, @StampFileName,
+        @ReasonRequired, @AttachmentRequired, @CreatedBy);
 """,
             command => Bind(command, id, name, nameEn, description, clean, conditions, refPrefix,
-                allowEmployeeRequest, isActive, user, kind, headerTemplateId, footerTemplateId, stampKey, stampFileName));
+                allowEmployeeRequest, isActive, user, kind, headerTemplateId, footerTemplateId, stampKey, stampFileName,
+                isReasonRequired, isAttachmentRequired));
     }
 
     private static void Bind(
         System.Data.Common.DbCommand command,
         int id, string name, string? nameEn, string? description, string body,
         HrConditions.ConditionSet conditions, string? refPrefix, bool allowRequest, bool isActive, string? user,
-        string kind, int? headerId, int? footerId, string? stampKey, string? stampFileName)
+        string kind, int? headerId, int? footerId, string? stampKey, string? stampFileName,
+        bool reasonRequired, bool attachmentRequired)
     {
         if (id > 0) HrmsDatabase.AddParameter(command, "@Id", id);
         HrmsDatabase.AddParameter(command, "@Name", name);
@@ -194,6 +208,8 @@ VALUES (@Name, @NameEn, @Description, @Body, @Conditions, @RefPrefix, @AllowRequ
         HrmsDatabase.AddParameter(command, "@FooterId", footerId);
         HrmsDatabase.AddParameter(command, "@StampKey", stampKey);
         HrmsDatabase.AddParameter(command, "@StampFileName", stampFileName);
+        HrmsDatabase.AddParameter(command, "@ReasonRequired", reasonRequired);
+        HrmsDatabase.AddParameter(command, "@AttachmentRequired", attachmentRequired);
         if (id <= 0) HrmsDatabase.AddParameter(command, "@CreatedBy", user);
     }
 

@@ -40,6 +40,8 @@ public class TemplatesModel : PageModel
     [BindProperty] public int? HeaderTemplateId { get; set; }
     [BindProperty] public int? FooterTemplateId { get; set; }
     [BindProperty] public IFormFile? StampUpload { get; set; }
+    [BindProperty] public bool IsReasonRequired { get; set; }
+    [BindProperty] public bool IsAttachmentRequired { get; set; }
 
     public List<DocumentTemplateStore.Template> Templates { get; private set; } = new();
     public List<DocumentTemplateStore.Template> Headers { get; private set; } = new();
@@ -69,6 +71,8 @@ public class TemplatesModel : PageModel
             HeaderTemplateId = template.HeaderTemplateId;
             FooterTemplateId = template.FooterTemplateId;
             CurrentStampName = template.StampFileName;
+            IsReasonRequired = template.IsReasonRequired;
+            IsAttachmentRequired = template.IsAttachmentRequired;
             UnknownTokens = DocumentTokenEngine.UnknownTokens(template.Body, Tokens);
         }
         else if (EditingId == 0 && !string.IsNullOrWhiteSpace(KindFilter))
@@ -129,7 +133,9 @@ public class TemplatesModel : PageModel
             isDocument ? HeaderTemplateId : null,
             isDocument ? FooterTemplateId : null,
             isDocument ? stampKey : null,
-            isDocument ? stampFileName : null);
+            isDocument ? stampFileName : null,
+            isDocument && IsReasonRequired,
+            isDocument && IsAttachmentRequired);
 
         // الرمز المخطئ إملائياً يُحفظ ويبقى ظاهراً بالوثيقة — التنبيه هنا يمنع
         // اكتشافه بعد إصدار مئة شهادة.

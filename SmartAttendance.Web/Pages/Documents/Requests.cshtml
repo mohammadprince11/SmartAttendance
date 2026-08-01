@@ -1,0 +1,140 @@
+@page
+@model SmartAttendance.Web.Pages.Documents.RequestsModel
+
+@{
+    ViewData["Title"] = "طلبات الوثائق";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Templates">قوالب الوثائق</a>
+        <h1>طلبات الوثائق</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>الخدمة الذاتية</span>
+            <h2>طلبات الموظفين</h2>
+            <p class="zyp-hint">
+                <b>الاعتماد يولّد الوثيقة فوراً</b> بمعاملة واحدة — اعتمادٌ بلا توليد
+                يترك موظفاً ينتظر وثيقةً «معتمدة» لا وجود لها.
+                والموظف لا يرى إلا القوالب التي تنطبق عليه شروطها.
+            </p>
+        </header>
+
+        <div class="zyp-actions" style="justify-content:flex-start;flex-wrap:wrap">
+            <span class="zyp-count" data-zero="@((Model.PendingCount > 0).ToString().ToLowerInvariant())" style="padding:4px 10px">
+                قيد المراجعة: @Model.PendingCount
+            </span>
+        </div>
+
+        <form method="get" class="zyp-editor-grid" style="border:0;padding:0">
+            <label>
+                الحالة
+                <select asp-for="StatusFilter">
+                    <option value="Pending">قيد المراجعة</option>
+                    <option value="Approved">معتمدة</option>
+                    <option value="Rejected">مرفوضة</option>
+                    <option value="All">الكل</option>
+                </select>
+            </label>
+            <label style="justify-content:flex-end">
+                &nbsp;
+                <button type="submit" class="zyc-add-rule" style="align-self:stretch">تطبيق</button>
+            </label>
+        </form>
+
+        @if (Model.Requests.Count == 0)
+        {
+            <p class="zyc-empty">لا طلبات تطابق التصفية.</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>الموظف</th>
+                        <th>الوثيقة</th>
+                        <th>السبب</th>
+                        <th>المرفق</th>
+                        <th>تاريخ الطلب</th>
+                        <th>الحالة</th>
+                        <th style="width:300px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var request in Model.Requests)
+                    {
+                        <tr>
+                            <td>
+                                <b>@request.EmployeeName</b>
+                                <div class="zyp-conditions">@request.EmployeeNo</div>
+                            </td>
+                            <td>@request.TemplateName</td>
+                            <td class="zyp-conditions">@request.Reason</td>
+                            <td class="zyp-conditions">
+                                @if (request.HasAttachment)
+                                {
+                                    <a asp-page-handler="Attachment" asp-route-id="@request.Id">@request.AttachmentName</a>
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
+                            </td>
+                            <td class="zyp-conditions">@request.RequestedAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
+                            <td class="zyp-conditions">
+                                @request.StatusLabel
+                                @if (!string.IsNullOrWhiteSpace(request.ReviewedBy))
+                                {
+                                    <div>@request.ReviewedBy</div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(request.ReviewNote))
+                                {
+                                    <div>@request.ReviewNote</div>
+                                }
+                            </td>
+                            <td>
+                                @if (request.IsPending)
+                                {
+                                    <form method="post" asp-page-handler="Reject" style="display:flex;gap:6px;margin-bottom:6px">
+                                        <input type="hidden" name="id" value="@request.Id" />
+                                        <input name="note" placeholder="سبب الرفض (إلزامي)"
+                                               style="flex:1;padding:5px 8px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:inherit;font-size:.75rem" />
+                                        <button type="submit" class="zyp-move" style="padding:5px 10px">رفض</button>
+                                    </form>
+                                    <form method="post" asp-page-handler="Approve">
+                                        <input type="hidden" name="id" value="@request.Id" />
+                                        <button type="submit" class="zyc-add-rule" style="width:100%">اعتمد وأصدر الوثيقة</button>
+                                    </form>
+                                }
+                                else if (request.GeneratedDocumentId is > 0)
+                                {
+                                    <div class="zyp-actions">
+                                        <a asp-page="./View" asp-route-id="@request.GeneratedDocumentId">عرض الوثيقة</a>
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</section>
+
+@section Scripts {
+
+}

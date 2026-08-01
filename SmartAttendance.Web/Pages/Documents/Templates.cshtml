@@ -152,6 +152,20 @@
                     </select>
                 </label>
                 <label>
+                    السبب إلزامي عند الطلب
+                    <select asp-for="IsReasonRequired">
+                        <option value="false">لا</option>
+                        <option value="true">نعم</option>
+                    </select>
+                </label>
+                <label>
+                    المرفق إلزامي عند الطلب
+                    <select asp-for="IsAttachmentRequired">
+                        <option value="false">لا</option>
+                        <option value="true">نعم</option>
+                    </select>
+                </label>
+                <label>
                     الحالة
                     <select asp-for="IsActive">
                         <option value="true">نشط</option>
