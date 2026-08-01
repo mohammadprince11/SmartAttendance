@@ -107,7 +107,13 @@
                                 @if (t.HasBalance){<span class="rtc-chip">رصيد</span>}
                                 @if (t.NeedsTime){<span class="rtc-chip">وقت</span>}
                                 @if (t.AttachmentRequired){<span class="rtc-chip">مرفق إلزامي</span>}
-                                @if (t.Gender != "all"){<span class="rtc-chip">@(t.Gender=="female" ? "نساء" : "رجال")</span>}
+                                @* الشارة تعرض **الشرط المُنفَّذ فعلاً** لا حقل الجنس القديم:
+                                   شارةٌ تقول «نساء» بينما لا ترشيح يجري هي كذبةٌ بالواجهة. *@
+                                @{ var typeConditions = HrConditions.Deserialize(t.ConditionsJson); }
+                                @if (!typeConditions.IsEmpty)
+                                {
+                                    <span class="rtc-chip" title="@HrConditions.Describe(typeConditions)">مشروط</span>
+                                }
                             </div>
                         </div>
                         <span style="color:#9fb3c7;font-size:12px">تعديل ▾</span>

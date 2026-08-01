@@ -21,15 +21,15 @@
                 <option value="once" selected="@(t.Repeat=="once")">مرة/العمر</option>
             </select>
         </label>
-        <label>شرط الخدمة (أشهر)<input type="number" name="serviceMonths" value="@t.ServiceMonths" min="0" /></label>
+        @* ⚠️ «شرط الخدمة» و«الجنس المستحقّ» كانا **حقلين صمّاوين**: يُخزَّنان منذ زمن
+           ولا يقرؤهما أحد — البوابة كانت تسرد كل نوع نشط بلا ترشيح. أُخفيا بقرار محمد
+           لأن محرّك الشروط العام أدناه يغطّيهما وأزيد (31 معياراً).
 
-        <label>الجنس المستحقّ
-            <select name="gender">
-                <option value="all" selected="@(t.Gender=="all")">الكل</option>
-                <option value="male" selected="@(t.Gender=="male")">رجال</option>
-                <option value="female" selected="@(t.Gender=="female")">نساء</option>
-            </select>
-        </label>
+           ويُمرَّران **مخفيَّين بقيمتهما الحالية** لا محذوفَين من النموذج: حذفهما يجعل
+           الحفظَ يدوس المخزَّن بالقيم الافتراضية (0 و«all») فتضيع بيانات صامتةً.
+           العمودان بالقاعدة بلا مساس. *@
+        <input type="hidden" name="serviceMonths" value="@t.ServiceMonths" />
+        <input type="hidden" name="gender" value="@(string.IsNullOrWhiteSpace(t.Gender) ? "all" : t.Gender)" />
         <label>الأجر
             <select name="paidMode">
                 <option value="full" selected="@(t.PaidMode=="full")">مدفوعة كاملاً</option>
