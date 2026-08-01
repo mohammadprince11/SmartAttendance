@@ -37,7 +37,7 @@ public static class DesignTokenCatalog
     public const string GroupChecks = "الجيك بوكس والراديو";
     public const string GroupText = "العناوين والنصوص";
     public const string GroupSurfaces = "الجداول والبطاقات";
-    public const string GroupChips = "الشارات والتبويبات";
+    public const string GroupChips = "الشارات";
 
     /// <summary>ترتيب المجموعات كما تُعرض بالمختبر.</summary>
     public static readonly IReadOnlyList<string> Groups = new[]
@@ -77,6 +77,10 @@ public static class DesignTokenCatalog
             Hint: "يُطابَق بارتفاع الحقل العادي افتراضياً — اختلافهما كان يزيح الصفّ."),
         new Token("calendar-radius", "استدارته", GroupCalendar, 12, 0, 24),
         new Token("calendar-font", "حجم خطّه", GroupCalendar, 13, 10, 18, 0.5),
+        // اللوحة المنسدلة (شبكة الأيام) كانت وحدها بلا مقياس بينما للمنسدلة
+        // `dropdown-menu-radius` — الافتراضي 22 هو رقمها الحاليّ بـv18 كي لا
+        // يتغيّر مظهر أحد بمجرّد ظهور المقياس.
+        new Token("calendar-menu-radius", "استدارة اللوحة المنسدلة", GroupCalendar, 22, 0, 34),
 
         new Token("dropdown-h", "ارتفاع المنسدلة", GroupDropdown, 44, 28, 60),
         new Token("dropdown-radius", "استدارتها", GroupDropdown, 12, 0, 24),
@@ -112,12 +116,25 @@ public static class DesignTokenCatalog
         new Token("card-radius", "استدارة البطاقة", GroupSurfaces, 18, 0, 34),
         new Token("card-gap", "المسافة بين البطاقات", GroupSurfaces, 14, 4, 32),
 
-        // ---- الشارات والتبويبات ----
+        // ---- الشارات ----
+        //
+        // ⚠️ **حُذف `tab-h` و`tab-font` عمداً — ولا يُعادان.** كانت التبويبات
+        // العلوية للصفحات (`nxupd-top-tabs > a`) تُرسَم كأزرار تماماً بينما
+        // يحكمها مقياسٌ آخر، فمن ضبط الأزرار على 34px وجد ثلاثة «أزرار» بـ51px
+        // وسط صفحته ولم يعرف من أين تأتي. الشكل البصريّ الواحد لا يحتمل مصدرَي
+        // حقيقة: التبويبات صارت تتبع مقاس الزرّ، فتتساوى بلا ضبطٍ منفصل.
+        //
+        // الشارة تبقى مستقلّة لأنها **شكلٌ مختلف فعلاً**: كبسولة صغيرة للعرض لا
+        // هدفَ نقرٍ، ولها حدّ أدنى أصغر (18px) لا يصحّ لزرّ.
+        //
+        // الافتراضات تتبع **الغالبية المقيسة حيّاً** لا أرقاماً قديمة: بعد ضمّ
+        // عائلة شارة الحالة صار 27 من 29 شارةً بالنظام على حشوة 10 وخطّ 12
+        // واستدارة 6 (قِيست على ثلاث صفحات). فالافتراضي يُحاذي الكتلة كي لا
+        // يتغيّر شكل 25 شارةً يوم الضمّ.
         new Token("pill-h", "ارتفاع الشارة", GroupChips, 28, 18, 44),
-        new Token("pill-pad-x", "حشوتها الأفقية", GroupChips, 12, 4, 26),
-        new Token("pill-font", "حجم خطّها", GroupChips, 11, 8, 16, 0.5),
-        new Token("tab-h", "ارتفاع التبويب", GroupChips, 40, 28, 60),
-        new Token("tab-font", "حجم خطّ التبويب", GroupChips, 13, 10, 18, 0.5),
+        new Token("pill-pad-x", "حشوتها الأفقية", GroupChips, 10, 4, 26),
+        new Token("pill-radius", "استدارتها", GroupChips, 6, 0, 20),
+        new Token("pill-font", "حجم خطّها", GroupChips, 12, 8, 16, 0.5),
     };
 
     private static readonly Dictionary<string, Token> ByKey =

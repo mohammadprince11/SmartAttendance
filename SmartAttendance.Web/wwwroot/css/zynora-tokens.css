@@ -93,33 +93,68 @@
 }
 
 /* الصندوق المرئيّ للكلاندر هو زرُّه الداخلي لا غلافه — فيجب أن يملأ الغلاف
-   تماماً، وإلا كان المقيس شيئاً والمرئيّ شيئاً آخر. */
+   تماماً، وإلا كان المقيس شيئاً والمرئيّ شيئاً آخر.
+   ⚠️ ولنفس السبب **لا يكفي أن تُضبَط الاستدارة وحجم الخطّ على الغلاف**: الغلاف
+   بلا خلفية ولا حدّ فاستدارته غير مرئية أصلاً، و`nexora-calendar-v18.css` يثبّت
+   الزرّ على `border-radius: 16px` و`font-size: 13px` بـ`!important` فيبتلع أيّ
+   قيمة موروثة. فكان مقياسا «الاستدارة» و«حجم الخطّ» يتحرّكان ويُحفظان بالقاعدة
+   ولا يحرّكان شيئاً على الشاشة (قيس حيّاً: التوكن 7px/14.5px والمرئيّ 16px/13px)
+   — نفس عطل `.nxcs` الصامت بالمنسدلة.
+   وحجم الخطّ هنا يكفي وحده: `.nxcal__value` و`.nxcal__spacer` لا يضبطان حجماً
+   فيرثانه من الزرّ. */
 .zy-scope .nxcal .nxcal__button {
     height: 100% !important;
     min-height: 0 !important;
     max-height: 100% !important;
     padding-block: 0 !important;
     box-sizing: border-box !important;
+    border-radius: var(--zy-calendar-radius, 12px) !important;
+    font-size: var(--zy-calendar-font, 13px) !important;
+}
+
+/* اللوحة المنسدلة للكلاندر (شبكة الأيام). التكرار (`.nxcal__panel.nxcal__panel`)
+   يعوّض `!important` بـv18 برفع التخصصية بلا سلفٍ إضافيّ. واللوحة تبقى داخل
+   `.nxcal` — لا تُلحَق بـ`body` كلوحة المنسدلة — فنطاق `.zy-scope` يطابقها. */
+.zy-scope .nxcal .nxcal__panel.nxcal__panel {
+    border-radius: var(--zy-calendar-menu-radius, 22px) !important;
 }
 
 /* المنسدلة */
-.zy-scope .nxcs {
+/* ⚠️ الغلاف اسمه `nxcs-select` لا `nxcs`. كان المحدِّد هنا `.nxcs` وهو صنفٌ
+   **لا وجود له بالمستودع إطلاقاً**، فكانت مجموعة «المنسدلة» كلها صمّاء: يُخزَّن
+   `--zy-dropdown-h` بالقاعدة ويظهر بالـ`:root` ولا يقرؤه أحد، فتبقى المنسدلة
+   على 48px مهما حرّكتَ المقياس (قيس حيّاً: التوكن 30px والمرئيّ 48px). */
+.zy-scope .nxcs-select {
     height: var(--zy-dropdown-h, 44px) !important;
     min-height: var(--zy-dropdown-h, 44px) !important;
     border-radius: var(--zy-dropdown-radius, 12px) !important;
     font-size: var(--zy-dropdown-font, 13px) !important;
 }
 
-/* نفس علّة الكلاندر: مُشغِّل المنسدلة زرٌّ داخليّ يرسم الصندوق المرئيّ */
-.zy-scope .nxcs .nxcs-trigger {
-    height: 100% !important;
-    min-height: 0 !important;
-    max-height: 100% !important;
+/* نفس علّة الكلاندر: مُشغِّل المنسدلة زرٌّ داخليّ يرسم الصندوق المرئيّ.
+   ⚠️ **بالتوكن مباشرةً لا بـ`height:100%`**: قيس حيّاً أن الغلاف يتبع التوكن
+   (32⟵44⟵56) بينما الزرّ يبقى **28px ثابتاً** بكل الحالات — أي المقيس شيء
+   والمرئيّ شيء. وتكرار الصنف يرفع التخصصية إلى (0,4,0) فيغلب ما يثبّت الـ28.
+   بلا هذا يتمدّد الغلاف وحده فيطفو الزرّ داخل فراغٍ متزايد. */
+.zy-scope .nxcs-select .nxcs-trigger.nxcs-trigger {
+    height: var(--zy-dropdown-h, 44px) !important;
+    min-height: var(--zy-dropdown-h, 44px) !important;
+    max-height: var(--zy-dropdown-h, 44px) !important;
     padding-block: 0 !important;
     box-sizing: border-box !important;
+    /* الاستدارة والخطّ كانا على الغلاف وحده — والغلاف `<span>` بلا خلفية ولا
+       حدّ، فاستدارته غير مرئية أصلاً، و`nexora-select-system.css` يثبّت الزرّ
+       على 12px و11.68px. فكان المقياسان يتحرّكان ويُحفظان ولا يظهر أثرهما
+       (قيس حيّاً: الغلاف 5px/14px والمرئيّ 12px/11.68px). نفس عطل الكلاندر. */
+    border-radius: var(--zy-dropdown-radius, 12px) !important;
+    font-size: var(--zy-dropdown-font, 13px) !important;
 }
 
-.zy-scope .nxcs-menu {
+/* ⚠️ بلا `.zy-scope`: اللوحة تُلحَق بـ`document.body` (نظام المنسدلة، سطر 381)
+   فهي **خارج** نطاق المحتوى. التوكنات تُحقَن بـ`:root` فتصلها، أما محدِّدٌ
+   يشترط سلفاً داخل `.zy-scope` فلا يطابقها أبداً. التكرار يعوّض التخصصية
+   المفقودة بزوال السلف. */
+.nxcs-menu.nxcs-menu {
     border-radius: var(--zy-dropdown-menu-radius, 14px) !important;
 }
 
@@ -151,7 +186,9 @@
     max-width: var(--zy-empicker-code-w, 108px) !important;
 }
 
-.zy-scope .zyep-modal {
+/* نفس علّة لوحة المنسدلة: نافذة المنتقي تُلحَق بـ`document.body`
+   (`zynora-employee-picker.js` سطر 73) فلا سلف `.zy-scope` لها. */
+.zyep-modal.zyep-modal {
     border-radius: var(--zy-empicker-modal-radius, 14px) !important;
 }
 
@@ -220,9 +257,27 @@
 
 .zy-scope th { font-size: var(--zy-label-font, 12px) !important; }
 
+/* ⚠️ القائمة بالاسم عمداً — وهذه أكبر فجوة كانت بالنظام: قِيس حيّاً أن 20 بطاقة
+   مرئية من 21 على ستّ صفحات **لا يطالها المقياس** (تغطية 5%)، فكانت كل بطاقة
+   برقمها: 26px بـ`nxp-card` · 24 بـ`nxupd` · 16 بـ`zxd` · 18 بـ`att`.
+
+   والاستثناءات بالقياس لا بالذوق:
+   · عائلة `zhr-*-card` — تقرأ `var(--border-radius)` من **محرّك الهوية**
+     (White-Label). ضمّها يسلب الشركة العميلة هويتها لصالح المختبر، ويضع
+     مصدرَي حقيقة على عنصرٍ واحد — وهو العطل نفسه الذي نعالجه.
+   · الأجزاء الداخلية (`*-body` `*-head` `__head`) — حشوتها 0 عمداً لأن البطاقة
+     الأمّ تحملها؛ ضمّها يضاعف الحشوة.
+   · `nxcal__panel` له توكنه (`calendar-menu-radius`)، و`nxp-reference-modal__card`
+     سطح نافذة لا بطاقة. */
 .zy-scope .zy-card,
 .zy-scope .table-card,
-.zy-scope .nxhs-panel {
+.zy-scope .nxhs-panel,
+.zy-scope .zxd-card,
+.zy-scope .nxp-card,
+.zy-scope .nxupd-card,
+.zy-scope .nxupd-selector-card,
+.zy-scope .att-filter-card,
+.zy-scope .pr-card {
     padding: var(--zy-card-pad, 16px) !important;
     border-radius: var(--zy-card-radius, 18px) !important;
 }
@@ -235,25 +290,43 @@
 }
 
 /* ------------------------------------------ الشارات والتبويبات */
+/* ⚠️ القائمة بالاسم عمداً، وكل إضافة إليها قرارٌ بشريّ.
+   كانت تغطّي **موضعاً واحداً** بستّ صفحات حقيقية بينما 43 شارةً مرئية لا يطالها
+   المقياس — أي مجموعةٌ تتحرّك وتُحفظ ولا تكاد تُرى. فضُمّت عائلة شارة الحالة
+   (`zhr-status-badge` 25 موضعاً · `zxd-badge`) بعد قياسها حيّاً.
+
+   واستُثني بالقياس لا بالذوق:
+   · `zy-dash__chip` — 15px بخطّ 8.3 ⟵ رقاقة داشبورد مصغّرة، فرضُ 28px يكسر بطاقاتها
+   · `zhr-company-badge` — 37px بخطّ 14 ⟵ لوحة اسم شركة لا شارة حالة
+   · `zhr-*-card` وأخواتها تقرأ `var(--border-radius)` من محرّك الهوية — ضمّها
+     يسلب الشركة العميلة هويتها لصالح المختبر، ومصدرا حقيقة على عنصرٍ واحد هو
+     العطل نفسه الذي نعالجه. */
 .zy-scope .zy-pill,
 .zy-scope .nxupd-pill,
 .zy-scope .badge,
-.zy-scope .zy-badge {
+.zy-scope .zy-badge,
+.zy-scope .zhr-status-badge,
+.zy-scope .zxd-badge {
     min-height: var(--zy-pill-h, 28px) !important;
-    padding-inline: var(--zy-pill-pad-x, 12px) !important;
-    font-size: var(--zy-pill-font, 11px) !important;
+    padding-inline: var(--zy-pill-pad-x, 10px) !important;
+    border-radius: var(--zy-pill-radius, 6px) !important;
+    font-size: var(--zy-pill-font, 12px) !important;
 }
 
-/* التبويبات روابط `inline` افتراضياً، و`min-height` **لا أثر له على عنصر
-   inline** — فكان مقياس ارتفاع التبويب يتحرّك بلا أي نتيجة. `inline-flex`
-   يجعله صندوقاً يحترم الارتفاع، والمحاذاة الوسطى تُبقي النصّ بالمنتصف. */
-.zy-scope .zy-tab,
+/* التبويبات العلوية للصفحات **تتبع مقاس الزرّ** — مصدر حقيقة واحد لشكلٍ واحد.
+   كانت لها توكناتها (`tab-h`/`tab-font`) فظهرت بـ51px وسط أزرارٍ بـ34px، وهي
+   تُرسَم كالأزرار حرفياً، فبدت الصفحة «غير متوافقة مع المختبر» وهي متوافقة —
+   بمقياسٍ آخر لا يعرف المستخدم بوجوده. حُذف التوكنان من الكتالوج فلا يعودان.
+
+   التبويبات روابط `inline` افتراضياً، و`min-height` **لا أثر له على عنصر
+   inline** — فكان المقياس يتحرّك بلا أي نتيجة. `inline-flex` يجعله صندوقاً
+   يحترم الارتفاع، والمحاذاة الوسطى تُبقي النصّ بالمنتصف. */
 .zy-scope .nxupd-top-tabs > a {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    min-height: var(--zy-tab-h, 40px) !important;
-    font-size: var(--zy-tab-font, 13px) !important;
+    min-height: var(--zy-button-h, 40px) !important;
+    font-size: var(--zy-button-font, 14px) !important;
 }
 
 /* ============================================================================
