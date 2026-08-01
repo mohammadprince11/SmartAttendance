@@ -30,7 +30,8 @@ public static class HrConditionOptions
         ("nationality", "Nationality"),
         ("contracttype", "ContractType"),
         ("worktype", "WorkType"),
-        ("jobgrade", "JobGrade")
+        ("jobgrade", "JobGrade"),
+        ("sponsor", "SponsorName")
     };
 
     private static readonly (string Criterion, string Table)[] ReferenceTables =

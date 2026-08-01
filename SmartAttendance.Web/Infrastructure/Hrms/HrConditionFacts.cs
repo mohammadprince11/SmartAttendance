@@ -43,9 +43,15 @@ public static class HrConditionFacts
         public DateOnly? JoiningDate { get; init; }
         public DateOnly? ContractEndDate { get; init; }
 
+        public string? SponsorName { get; init; }
+
         public decimal? BasicSalary { get; init; }
         public string? SalaryScale { get; init; }
         public string? SocialSecurityType { get; init; }
+
+        /// <summary>مجموع العلاوات من <c>EmployeeCompensations</c> — مصدرٌ مختلف عن الأساسي.</summary>
+        public decimal? Allowances { get; init; }
+        public string? BankName { get; init; }
 
         /// <summary>قيم الحقول الإضافية بمفتاحها الخام (بلا بادئة <c>custom:</c>).</summary>
         public IReadOnlyDictionary<string, string> CustomFields { get; init; } =
@@ -123,9 +129,18 @@ public static class HrConditionFacts
             ["contractenddate"] = HrConditions.Fact.Of(row.ContractEndDate),
             ["servicemonths"] = HrConditions.Fact.Of(ServiceMonths(row.HireDate, row.JoiningDate, asOf)),
 
+            ["sponsor"] = HrConditions.Fact.Of(row.SponsorName),
+
             ["basicsalary"] = HrConditions.Fact.Of(row.BasicSalary),
+            ["allowances"] = HrConditions.Fact.Of(row.Allowances),
+            // الإجمالي **مشتقّ لا مخزَّن**: أساسيٌّ بلا علاوات إجماليُّه الأساسي،
+            // لكن غياب الأساسي نفسه يعني إجمالياً **مجهولاً** لا صفراً — وإلا طابق
+            // «الراتب الكلي أقل من كذا» كلَّ من لا راتب مسجَّل له (1355 موظفاً).
+            ["grosssalary"] = HrConditions.Fact.Of(
+                row.BasicSalary is null ? null : row.BasicSalary + (row.Allowances ?? 0)),
             ["salaryscale"] = HrConditions.Fact.Of(row.SalaryScale),
             ["gosiType"] = HrConditions.Fact.Of(row.SocialSecurityType),
+            ["bank"] = HrConditions.Fact.Of(row.BankName),
 
             ["employee"] = HrConditions.Fact.Of(row.Id),
             ["employeecode"] = HrConditions.Fact.Of(row.EmployeeNo)
@@ -164,11 +179,13 @@ SELECT e.Id, e.EmployeeNo, e.BranchId, e.DepartmentId, e.CompanyId, e.PositionId
        e.DirectManagerId, e.Gender, e.MaritalStatus, e.Religion, e.Nationality,
        e.Country, e.BirthDate, ISNULL(e.IsCitizen, 1) AS IsCitizen,
        e.ContractType, e.WorkType, e.JobGrade, e.EmploymentStatus, e.IsActive,
-       e.HireDate, e.JoiningDate, e.ContractEndDate,
-       fi.BasicSalary, fi.SalaryScale, fi.SocialSecurityType
+       e.HireDate, e.JoiningDate, e.ContractEndDate, e.SponsorName,
+       fi.BasicSalary, fi.SalaryScale, fi.SocialSecurityType,
+       ec.Allowances, ec.BankName
 FROM Employees e
 LEFT JOIN EmployeeFinancialInfos fi
        ON fi.EmployeeId = e.Id AND ISNULL(fi.IsDeleted, 0) = 0
+LEFT JOIN EmployeeCompensations ec ON ec.EmployeeId = e.Id
 WHERE ISNULL(e.IsDeleted, 0) = 0{filter}{companyFilter};
 """,
             command =>
@@ -200,9 +217,12 @@ WHERE ISNULL(e.IsDeleted, 0) = 0{filter}{companyFilter};
                 HireDate = HrmsDatabase.GetDateOnly(reader, "HireDate") ?? default,
                 JoiningDate = HrmsDatabase.GetDateOnly(reader, "JoiningDate"),
                 ContractEndDate = HrmsDatabase.GetDateOnly(reader, "ContractEndDate"),
+                SponsorName = HrmsDatabase.GetString(reader, "SponsorName"),
                 BasicSalary = HrmsDatabase.GetNullableDecimal(reader, "BasicSalary"),
                 SalaryScale = HrmsDatabase.GetString(reader, "SalaryScale"),
-                SocialSecurityType = HrmsDatabase.GetString(reader, "SocialSecurityType")
+                SocialSecurityType = HrmsDatabase.GetString(reader, "SocialSecurityType"),
+                Allowances = HrmsDatabase.GetNullableDecimal(reader, "Allowances"),
+                BankName = HrmsDatabase.GetString(reader, "BankName")
             });
 
         await AttachCustomFieldsAsync(db, rows, employeeId);

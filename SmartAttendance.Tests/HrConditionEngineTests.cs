@@ -188,6 +188,42 @@ public class HrConditionEngineTests
     }
 
     [Fact]
+    public void GrossSalary_IsDerived_ButMissingBasicMakesItUnknownNotZero()
+    {
+        // ⭐ لو صار الإجمالي صفراً عند غياب الأساسي، لطابق «الراتب الكلي أقل من كذا»
+        // كلَّ من لا راتب مسجَّل له — 1355 من 1356 بالإنتاج.
+        var withSalary = HrConditionFacts.Build(Row(basic: 900_000m) with { Allowances = 100_000m }, AsOf);
+        var withoutSalary = HrConditionFacts.Build(Row(basic: null) with { Allowances = 100_000m }, AsOf);
+
+        Assert.True(HrConditions.Matches(
+            Set(new[] { Rule("grosssalary", HrConditions.Operator.Equal, "1000000") }), withSalary, false));
+
+        Assert.False(HrConditions.Matches(
+            Set(new[] { Rule("grosssalary", HrConditions.Operator.LessThan, "500000") }), withoutSalary, false));
+    }
+
+    [Fact]
+    public void GrossSalary_WithoutAllowances_EqualsBasic()
+    {
+        var facts = HrConditionFacts.Build(Row(basic: 900_000m), AsOf);
+
+        Assert.True(HrConditions.Matches(
+            Set(new[] { Rule("grosssalary", HrConditions.Operator.Equal, "900000") }), facts, false));
+    }
+
+    [Fact]
+    public void SponsorAndBank_AreAvailableCriteria()
+    {
+        var facts = HrConditionFacts.Build(
+            Row() with { SponsorName = "شركة الكفالة", BankName = "مصرف الرافدين" }, AsOf);
+
+        Assert.True(HrConditions.Matches(
+            Set(new[] { Rule("sponsor", HrConditions.Operator.Equal, "شركة الكفالة") }), facts, false));
+        Assert.True(HrConditions.Matches(
+            Set(new[] { Rule("bank", HrConditions.Operator.In, "مصرف الرافدين,مصرف الرشيد") }), facts, false));
+    }
+
+    [Fact]
     public void UnknownCriterion_DoesNotMatch()
     {
         var facts = Facts(Row());

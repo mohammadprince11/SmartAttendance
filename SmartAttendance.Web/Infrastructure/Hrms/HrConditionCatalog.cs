@@ -70,10 +70,15 @@ public static class HrConditionCatalog
         new("contractenddate",  "تاريخ انتهاء العقد",   HrConditions.ValueKind.Date,   CategoryContract),
         new("servicemonths",    "مدة الخدمة (شهر)",     HrConditions.ValueKind.Number, CategoryContract),
 
+        new("sponsor",          "الكفيل",               HrConditions.ValueKind.Text,   CategoryContract),
+
         // مالية — ⭐ غيابها هو ما يجعل شروطنا اليوم عاجزة عن «الراتب أقل من كذا»
         new("basicsalary",      "الراتب الأساسي",       HrConditions.ValueKind.Number, CategoryFinancial),
+        new("allowances",       "مجموع العلاوات",       HrConditions.ValueKind.Number, CategoryFinancial),
+        new("grosssalary",      "الراتب الكلي",         HrConditions.ValueKind.Number, CategoryFinancial),
         new("salaryscale",      "سلم الرواتب",          HrConditions.ValueKind.Text,   CategoryFinancial),
         new("gosiType",         "نوع الضمان",           HrConditions.ValueKind.Text,   CategoryFinancial),
+        new("bank",             "البنك",                HrConditions.ValueKind.Text,   CategoryFinancial),
 
         // تحديد أفراد
         new("employee",         "الموظف (بالمعرّف)",    HrConditions.ValueKind.Reference, CategoryIdentity, "Employees"),
