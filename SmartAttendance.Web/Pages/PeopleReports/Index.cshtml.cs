@@ -181,6 +181,71 @@ public class IndexModel : PageModel
             .Distinct()
             .ToList();
 
+    /// <summary>
+    /// «أنشئ نسخة» — نمط كيان المتكرّر بكل شاشاته: الاستنساخ بديلٌ عن البناء من
+    /// الصفر. ويعمل على **تقارير النظام أيضاً** وهو أهمّ استعمالاته: تأخذ تقريراً
+    /// جاهزاً وتعدّل أعمدته بدل أن تبنيه حقلاً حقلاً.
+    ///
+    /// النسخة تُولَد **مملوكةً لك وغير مشاركة** مهما كان الأصل — مشاركةُ الأصل
+    /// قرارُ صاحبه لا يُورَّث بالنسخ.
+    /// </summary>
+    public async Task<IActionResult> OnPostDuplicateReportAsync(int id)
+    {
+        var source = await PeopleReportsStore.GetAsync(_dbContext, id);
+        if (source == null)
+        {
+            Message = "التقرير غير موجود.";
+            return Redirect(SelfPath);
+        }
+
+        // تحميل القوائم لازم قبل تسمية النسخة: NextCopyName يقرأ أسماء تقاريري
+        // ليتجنّب التكرار، وهي فارغة بمسار POST ما لم تُحمَّل.
+        await LoadListsAsync();
+
+        await PeopleReportsStore.CreateAsync(
+            _dbContext,
+            NextCopyName(source.Name),
+            source.Description,
+            source.DatasetKey,
+            source.ColumnsCsv,
+            CurrentUser,
+            isShared: false,
+            sharedWithCsv: null,
+            filterColumnsCsv: source.FilterColumnsCsv);
+
+        Message = "تم إنشاء نسخة بتبويب «تقاريري».";
+        return Redirect(SelfPath + "#mine");
+    }
+
+    /// <summary>
+    /// اسم النسخة: «س — نسخة»، ثم «(2)» فما فوق عند التكرار. بلا ترقيم يصير
+    /// عند المستخدم خمسة تقارير بنفس الاسم فلا يميّزها.
+    /// </summary>
+    private string NextCopyName(string sourceName)
+    {
+        const string suffix = " — نسخة";
+        var baseName = sourceName.EndsWith(suffix, StringComparison.Ordinal)
+            ? sourceName
+            : sourceName + suffix;
+
+        var taken = MyReports.Select(r => r.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!taken.Contains(baseName))
+        {
+            return baseName;
+        }
+
+        for (var n = 2; n < 100; n++)
+        {
+            var candidate = $"{baseName} ({n})";
+            if (!taken.Contains(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return $"{baseName} ({DateTime.Now:HHmmss})";
+    }
+
     public async Task<IActionResult> OnPostDeleteReportAsync(int id)
     {
         await PeopleReportsStore.DeleteOwnAsync(_dbContext, id, CurrentUser);

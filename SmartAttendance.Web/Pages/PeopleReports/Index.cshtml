@@ -65,6 +65,10 @@
     @@media (max-width:760px){ .rep-dnd{ grid-template-columns:1fr; } }
     /* ag-Grid run table (Kayan-style) */
     .rep-run-toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 14px; }
+    .rep-collist { display:flex; flex-direction:column; gap:6px; }
+    .rep-colrow { display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--sa-border); border-radius:10px; background:var(--sa-surface); font-weight:800; }
+    .rep-colrow button { padding:2px 9px; line-height:1.5; }
+    .rep-colrow button[disabled] { opacity:.35; cursor:default; }
     .rep-run-toolbar input { flex:0 1 320px; min-width:180px; border-radius:10px; border:1px solid var(--sa-border); background:var(--sa-input); color:var(--sa-text); padding:9px 12px; font-weight:800; }
     #run-grid { height:calc(100vh - 350px); min-height:440px; width:100%; }
     #run-grid.ag-theme-quartz, #run-grid.ag-theme-quartz-dark { --ag-font-family:inherit; border-radius:12px; overflow:hidden; }
@@ -122,6 +126,11 @@
                          onclick="if(!event.target.closest('.rep-pin')) location.href='?ReportId=@report.Id'">
                         <div class="rep-card-icon">📊</div>
                         <div class="rep-card-text">@report.Name</div>
+                        @* الاستنساخ من تقرير النظام أهمّ استعمالاته: تعدّل جاهزاً بدل البناء من الصفر *@
+                        <form method="post" action="@Model.SelfPath?handler=DuplicateReport" style="display:inline">
+                            <input type="hidden" name="id" value="@report.Id" />
+                            <button type="submit" class="rep-pin" title="أنشئ نسخة">⧉</button>
+                        </form>
                         <button type="button" class="rep-pin" data-pin="@report.Id" title="تثبيت">📌</button>
                     </div>
                 }
@@ -157,6 +166,10 @@
                                 </div>
                             </div>
                             <button type="button" class="rep-pin" title="تعديل" onclick="repEdit(@report.Id)">✏️</button>
+                            <form method="post" action="@Model.SelfPath?handler=DuplicateReport" style="display:inline">
+                                <input type="hidden" name="id" value="@report.Id" />
+                                <button type="submit" class="rep-pin" title="أنشئ نسخة">⧉</button>
+                            </form>
                             <form method="post" action="@Model.SelfPath?handler=ToggleShare" style="display:inline">
                                 <input type="hidden" name="id" value="@report.Id" />
                                 <button type="submit" class="rep-pin" title="@(report.IsShared ? "إلغاء المشاركة" : "مشاركة")">@(report.IsShared ? "🔓" : "🔒")</button>
@@ -185,12 +198,17 @@
                 <div class="hrms-grid">
                     @foreach (var report in Model.SharedReports)
                     {
-                        <div class="rep-card" onclick="location.href='?ReportId=@report.Id'">
+                        <div class="rep-card" onclick="if(!event.target.closest('form,button')) location.href='?ReportId=@report.Id'">
                             <div class="rep-card-icon">📄</div>
                             <div class="rep-card-text">
                                 @report.Name
                                 <div class="hrms-tile-sub" style="font-weight:800">بواسطة @report.OwnerUser</div>
                             </div>
+                            @* النسخ يمنحك ملكيةَ تعديلٍ لا تملكها على تقرير غيرك *@
+                            <form method="post" action="@Model.SelfPath?handler=DuplicateReport" style="display:inline">
+                                <input type="hidden" name="id" value="@report.Id" />
+                                <button type="submit" class="rep-pin" title="أنشئ نسخة">⧉</button>
+                            </form>
                         </div>
                     }
                 </div>
@@ -258,7 +276,25 @@
                 <link rel="stylesheet" href="~/lib/ag-grid/ag-theme-quartz.css" />
                 <div class="rep-run-toolbar">
                     <input type="search" id="run-quick-search" placeholder="بحث سريع بكل الأعمدة..." autocomplete="off" />
+                    <button type="button" class="hrms-btn-ghost" id="run-columns-open">الأعمدة</button>
                 </div>
+
+                @* لوحة الأعمدة (نظير «أعمدة» بكيان): إظهار/إخفاء/ترتيب **بعد** التشغيل.
+                   ag-Grid Community بلا شريط جانبي (ميزة Enterprise) فبُنيت اللوحة يدوياً
+                   على واجهات الشبكة العامّة — بلا ترخيص ولا مكتبة إضافية. *@
+                <aside class="hrms-slideover" id="run-columns" aria-hidden="true">
+                    <div class="hrms-slideover-head">
+                        <h2>الأعمدة</h2>
+                        <button type="button" class="hrms-slideover-close" data-hrms-close>×</button>
+                    </div>
+                    <div class="hrms-slideover-body">
+                        <p class="hrms-muted" style="margin:0 0 10px">أزل علامة العمود لإخفائه، أو حرّكه بالسهمين. الترتيب يُحفظ لهذا التقرير بهذا المتصفح.</p>
+                        <div id="run-columns-list" class="rep-collist"></div>
+                        <div style="display:flex; gap:8px; margin-top:14px">
+                            <button type="button" class="hrms-btn-ghost" id="run-columns-reset">إعادة الافتراضي</button>
+                        </div>
+                    </div>
+                </aside>
                 <div id="run-grid" class="ag-theme-quartz" dir="rtl"></div>
             }
         </div>
@@ -798,6 +834,120 @@
                 if (quick) {
                     quick.addEventListener('input', function () {
                         window.repRunGridApi.setGridOption('quickFilterText', quick.value);
+                    });
+                }
+
+                // ---- لوحة الأعمدة: إظهار/إخفاء/ترتيب بعد التشغيل ----
+                // الحالة تُحفظ بـlocalStorage لكل تقرير: تفضيلُ عرضٍ شخصي لا بيانات،
+                // فلا يستحق عموداً بالقاعدة ولا يجوز أن يفرضه مستخدم على غيره.
+                var STORE_KEY = 'zy-rep-cols-@Model.ReportId';
+                var api = window.repRunGridApi;
+
+                function defaultState() {
+                    return RUN_COLUMNS.map(function (c) { return { key: c.key, visible: true }; });
+                }
+
+                function loadState() {
+                    try {
+                        var raw = localStorage.getItem(STORE_KEY);
+                        if (!raw) return defaultState();
+                        var saved = JSON.parse(raw);
+                        var known = {};
+                        RUN_COLUMNS.forEach(function (c) { known[c.key] = true; });
+                        // أعمدة التقرير قد تتغيّر بالتعديل: نُبقي المعروفة فقط ونُلحق الجديدة.
+                        var state = saved.filter(function (s) { return known[s.key]; });
+                        RUN_COLUMNS.forEach(function (c) {
+                            if (!state.some(function (s) { return s.key === c.key; })) {
+                                state.push({ key: c.key, visible: true });
+                            }
+                        });
+                        return state.length ? state : defaultState();
+                    } catch (e) { return defaultState(); }
+                }
+
+                function saveState(state) {
+                    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* وضع خاص */ }
+                }
+
+                function applyState(state) {
+                    state.forEach(function (s) { api.setColumnsVisible([s.key], s.visible); });
+                    // الترتيب: نحرّك كل عمود لموضعه بالتسلسل فيستقرّ الترتيب النهائي.
+                    state.forEach(function (s, index) { api.moveColumns([s.key], index); });
+                }
+
+                function labelOf(key) {
+                    var hit = RUN_COLUMNS.filter(function (c) { return c.key === key; })[0];
+                    return hit ? hit.label : key;
+                }
+
+                function render(state) {
+                    var list = document.getElementById('run-columns-list');
+                    if (!list) return;
+                    list.innerHTML = '';
+
+                    state.forEach(function (item, index) {
+                        var row = document.createElement('div');
+                        row.className = 'rep-colrow';
+
+                        var check = document.createElement('input');
+                        check.type = 'checkbox';
+                        check.checked = item.visible;
+                        check.addEventListener('change', function () {
+                            // آخر عمود ظاهر لا يُخفى: شبكة بلا أعمدة تبدو كأنها عطل.
+                            if (!check.checked && state.filter(function (s) { return s.visible; }).length <= 1) {
+                                check.checked = true;
+                                return;
+                            }
+                            item.visible = check.checked;
+                            saveState(state); applyState(state);
+                        });
+
+                        var name = document.createElement('span');
+                        name.textContent = labelOf(item.key);
+                        name.style.flex = '1';
+
+                        function mover(text, delta) {
+                            var b = document.createElement('button');
+                            b.type = 'button';
+                            b.className = 'hrms-btn-ghost';
+                            b.textContent = text;
+                            b.disabled = (delta < 0 && index === 0) || (delta > 0 && index === state.length - 1);
+                            b.addEventListener('click', function () {
+                                var moved = state.splice(index, 1)[0];
+                                state.splice(index + delta, 0, moved);
+                                saveState(state); applyState(state); render(state);
+                            });
+                            return b;
+                        }
+
+                        row.appendChild(check);
+                        row.appendChild(name);
+                        row.appendChild(mover('▲', -1));
+                        row.appendChild(mover('▼', 1));
+                        list.appendChild(row);
+                    });
+                }
+
+                var state = loadState();
+                applyState(state);
+                render(state);
+
+                var openBtn = document.getElementById('run-columns-open');
+                if (openBtn) {
+                    openBtn.addEventListener('click', function () {
+                        var panel = document.getElementById('run-columns');
+                        panel.classList.add('open');
+                        panel.setAttribute('aria-hidden', 'false');
+                    });
+                }
+
+                var resetBtn = document.getElementById('run-columns-reset');
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', function () {
+                        try { localStorage.removeItem(STORE_KEY); } catch (e) { /* تجاهل */ }
+                        state = defaultState();
+                        applyState(state);
+                        render(state);
                     });
                 }
             })();
