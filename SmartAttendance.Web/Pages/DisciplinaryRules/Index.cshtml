@@ -18,24 +18,40 @@
 <link rel="stylesheet" href="~/css/nexora-a4-custom-file-picker-v13-1.css" asp-append-version="true" />
 
 
-<link rel="stylesheet" href="~/css/nexora-disciplinary-designer-preview-safe-v1.css" asp-append-version="true" /><section class="nxpen-page nxpen-wide" dir="rtl">
-    <header class="nxpen-hero">
-        <div class="nxpen-hero-copy">
+<link rel="stylesheet" href="~/css/zynora-workscreen.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nexora-disciplinary-designer-preview-safe-v1.css" asp-append-version="true" />
+<section class="zyw nxpen-page nxpen-wide zy-scope" dir="rtl">
+
+    @* كان العنوان يتكرّر **ثلاث مرات** قبل أوّل أداة: الشريط العلوي ⟵ بطاقة هيرو
+       ضخمة بوصفٍ من أربعة أسطر ⟵ عنوان ثالث داخل بطاقة التبويب. فتلتهم الزينةُ
+       نصف الشاشة قبل أن يرى المستخدم حقلاً واحداً. صار عنواناً واحداً بسطرٍ واحد،
+       والتفصيل حيث يلزم: داخل التبويب المعنيّ. *@
+    <header class="zyw-head">
+        <div>
             <h1>إعدادات المخالفات</h1>
-            <p>نبني هنا دستور المخالفات للشركة: هل تحتاج لجنة موافقات؟ هل يحق للموظف الاعتراض؟ ما هي الفئات والمخالفات؟ وما هو شكل فورمة العقوبة التي ستصدر باسم الشركة؟</p>
+            <p>الفئات والمخالفات وسلّم الجزاءات وقوالب الفورمة.</p>
         </div>
-</header>
+        <div class="zyw-totals">
+            <span><b>@Model.Categories.Count</b> فئة</span>
+            <span>·</span>
+            <span><b>@Model.ViolationTypes.Count</b> مخالفة</span>
+            <span>·</span>
+            <span><b>@Model.PenaltyRules.Count</b> جزاء</span>
+        </div>
+    </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="nxpen-alert">@Model.StatusMessage</div>
+        <div class="zy-card" role="status">@Model.StatusMessage</div>
     }
 
-    <nav class="nxpen-tabs">
-        <a class="@(activeTab == "setup" ? "active" : "")" asp-page="./Index" asp-route-tab="setup">تهيئة</a>
-        <a class="@(activeTab == "library" ? "active" : "")" asp-page="./Index" asp-route-tab="library" asp-route-categoryId="@selectedCategory">فئة المخالفة وقائمة المخالفات</a>
-        <a class="@(activeTab == "designer" ? "active" : "")" asp-page="./Index" asp-route-tab="designer">مصمم الفورمة</a>
-        <a class="@(activeTab == "templates" ? "active" : "")" asp-page="./Index" asp-route-tab="templates">قوالب الرسائل والفورم</a>
+    @* التبويبات روابط خادمية عمداً: «مصمّم الفورمة» يحتاج حالةً من الخادم
+       (طبقات ومعاينة)، فتبويبٌ عميلٌ كان سيحمّل الأربعة بكل مرّة بلا داعٍ. *@
+    <nav class="zyw-tabs" aria-label="أقسام إعدادات المخالفات">
+        <a class="zyw-tab" aria-selected="@((activeTab == "setup").ToString().ToLowerInvariant())" asp-page="./Index" asp-route-tab="setup">تهيئة</a>
+        <a class="zyw-tab" aria-selected="@((activeTab == "library").ToString().ToLowerInvariant())" asp-page="./Index" asp-route-tab="library" asp-route-categoryId="@selectedCategory">المخالفات والجزاءات</a>
+        <a class="zyw-tab" aria-selected="@((activeTab == "designer").ToString().ToLowerInvariant())" asp-page="./Index" asp-route-tab="designer">مصمم الفورمة</a>
+        <a class="zyw-tab" aria-selected="@((activeTab == "templates").ToString().ToLowerInvariant())" asp-page="./Index" asp-route-tab="templates">قوالب الرسائل</a>
     </nav>
 
     <main class="nxpen-layout">
@@ -103,13 +119,13 @@
             }
             else if (activeTab == "library")
             {
-                <section class="nxpen-card">
-                    <header class="nxpen-card-head">
+                <section class="zy-card">
+                    <header class="zyw-queue-head">
                         <div><span>Violation Library</span><h2>فئة المخالفة وقائمة المخالفات</h2><p>اختر الفئة حتى تظهر مخالفاتها فقط. هذا يجعل الصفحة مرتبة حتى لو وصلت المخالفات إلى أكثر من 100 نوع.</p></div>
                         <b>@visibleTypes.Count مخالفة ظاهرة</b>
                     </header>
 
-                    <section class="nxpen-category-filter">
+                    <section class="zyw-filters">
                         <a class="@(selectedCategory <= 0 ? "active" : "")" asp-page="./Index" asp-route-tab="library">كل الفئات</a>
                         @foreach (var category in Model.Categories)
                         {
@@ -117,68 +133,68 @@
                         }
                     </section>
 
-                    <div class="nxpen-split">
-                        <section class="nxpen-subcard">
+                    <div class="zyw-queue">
+                        <section class="zy-card">
                             <header><h3>فئات المخالفات</h3><small>إضافة وتعديل أبواب المخالفات.</small></header>
-                            <form method="post" asp-page-handler="CreateCategory" class="nxpen-grid-form compact">
+                            <form method="post" asp-page-handler="CreateCategory" class="zyw-form-grid">
                                 <input name="name" required placeholder="اسم الفئة" />
                                 <input name="displayOrder" type="number" value="10" placeholder="الترتيب" />
                                 <textarea name="description" placeholder="وصف الفئة"></textarea>
                                 <button type="submit">إضافة فئة</button>
                             </form>
-                            <div class="nxpen-edit-list">
+                            <div class="zyw-list">
                                 @foreach (var category in Model.Categories)
                                 {
                                     <details class="nxpen-edit-item @(category.IsActive ? "" : "disabled")">
                                         <summary><span>@category.DisplayOrder.ToString("00")</span><strong>@category.Name</strong><small>@category.TypesCount مخالفة</small></summary>
-                                        <form method="post" asp-page-handler="UpdateCategory" class="nxpen-grid-form edit">
+                                        <form method="post" asp-page-handler="UpdateCategory" class="zyw-form-grid">
                                             <input type="hidden" name="id" value="@category.Id" />
-                                            <div><label>اسم الفئة</label><input name="name" value="@category.Name" required /></div>
-                                            <div><label>الترتيب</label><input name="displayOrder" type="number" value="@category.DisplayOrder" /></div>
-                                            <div class="wide"><label>الوصف</label><textarea name="description">@category.Description</textarea></div>
-                                            <div class="wide nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked="@category.IsActive" /><span></span><b>فعالة</b></label></div>
-                                            <footer class="wide"><button type="submit">حفظ تعديل الفئة</button></footer>
+                                            <div class="zyw-field"><label>اسم الفئة</label><input name="name" value="@category.Name" required /></div>
+                                            <div class="zyw-field"><label>الترتيب</label><input name="displayOrder" type="number" value="@category.DisplayOrder" /></div>
+                                            <div class="zyw-field zyw-field--wide"><label>الوصف</label><textarea name="description">@category.Description</textarea></div>
+                                            <div class="zyw-field zyw-field--wide zyw-checks"><label><input type="checkbox" name="isActive" value="true" checked="@category.IsActive" /> فعالة</label></div>
+                                            <footer class="zyw-form-actions zyw-field--wide"><button type="submit">حفظ تعديل الفئة</button></footer>
                                         </form>
                                     </details>
                                 }
                             </div>
                         </section>
 
-                        <section class="nxpen-subcard">
+                        <section class="zy-card">
                             <header><h3>قائمة المخالفات</h3><small>كل مخالفة مرتبطة بفئة وصلاحية وتقييم.</small></header>
-                            <form method="post" asp-page-handler="CreateViolationType" class="nxpen-grid-form">
-                                <div><label>الفئة</label><select data-nexora-select="true" name="categoryId" required><option value="">اختر الفئة</option>@foreach (var category in Model.Categories.Where(x => x.IsActive)){<option value="@category.Id" selected="@(selectedCategory == category.Id)">@category.Name</option>}</select></div>
-                                <div><label>الخطورة</label><select data-nexora-select="true" name="severity"><option value="A">A - بسيطة</option><option value="B" selected>B - متوسطة</option><option value="C">C - جسيمة</option><option value="FinalWarning">إنذار بالفصل</option></select></div>
-                                <div><label>الصلاحية</label><input name="validityMonths" type="number" min="1" value="6" /></div>
-                                <div><label>فترة التكرار</label><select data-nexora-select="true" name="countingPeriod"><option value="Monthly" selected>شهرية</option><option value="SixMonths">خلال 6 أشهر</option><option value="Yearly">خلال سنة</option><option value="Contract">مدة العقد</option></select></div>
-                                <div class="wide"><label>اسم المخالفة</label><input name="name" required placeholder="مثال: الإهمال في المحافظة على أصول الشركة." /></div>
-                                <div class="wide"><label>الوصف</label><textarea name="description" placeholder="مثال: استخدام معدات زملاء العمل دون إذن، أو إتلافها عمدًا، أو عدم إعادتها."></textarea></div>
-                                <div class="wide nxpen-checks">
-                                    <label class="nxpen-check-pill"><input type="checkbox" name="includeInEvaluation" value="true" checked /><span></span><b>تدخل بالتقييم</b></label>
-                                    <label class="nxpen-check-pill"><input type="checkbox" name="showToEmployee" value="true" checked /><span></span><b>تظهر للموظف</b></label>
-                                    <label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked /><span></span><b>فعالة</b></label>
+                            <form method="post" asp-page-handler="CreateViolationType" class="zyw-form-grid">
+                                <div class="zyw-field"><label>الفئة</label><select data-nexora-select="true" name="categoryId" required><option value="">اختر الفئة</option>@foreach (var category in Model.Categories.Where(x => x.IsActive)){<option value="@category.Id" selected="@(selectedCategory == category.Id)">@category.Name</option>}</select></div>
+                                <div class="zyw-field"><label>الخطورة</label><select data-nexora-select="true" name="severity"><option value="A">A - بسيطة</option><option value="B" selected>B - متوسطة</option><option value="C">C - جسيمة</option><option value="FinalWarning">إنذار بالفصل</option></select></div>
+                                <div class="zyw-field"><label>الصلاحية</label><input name="validityMonths" type="number" min="1" value="6" /></div>
+                                <div class="zyw-field"><label>فترة التكرار</label><select data-nexora-select="true" name="countingPeriod"><option value="Monthly" selected>شهرية</option><option value="SixMonths">خلال 6 أشهر</option><option value="Yearly">خلال سنة</option><option value="Contract">مدة العقد</option></select></div>
+                                <div class="zyw-field zyw-field--wide"><label>اسم المخالفة</label><input name="name" required placeholder="مثال: الإهمال في المحافظة على أصول الشركة." /></div>
+                                <div class="zyw-field zyw-field--wide"><label>الوصف</label><textarea name="description" placeholder="مثال: استخدام معدات زملاء العمل دون إذن، أو إتلافها عمدًا، أو عدم إعادتها."></textarea></div>
+                                <div class="zyw-field zyw-field--wide zyw-checks">
+                                    <label><input type="checkbox" name="includeInEvaluation" value="true" checked /> تدخل بالتقييم</label>
+                                    <label><input type="checkbox" name="showToEmployee" value="true" checked /> تظهر للموظف</label>
+                                    <label><input type="checkbox" name="isActive" value="true" checked /> فعالة</label>
                                 </div>
-                                <footer class="wide"><button type="submit">إضافة مخالفة</button></footer>
+                                <footer class="zyw-form-actions zyw-field--wide"><button type="submit">إضافة مخالفة</button></footer>
                             </form>
-                            <div class="nxpen-edit-list">
+                            <div class="zyw-list">
                                 @foreach (var violation in visibleTypes)
                                 {
                                     <details class="nxpen-edit-item @(violation.IsActive ? "" : "disabled")">
                                         <summary><span>@Model.DisplaySeverityShort(violation.Severity)</span><strong>@violation.Name</strong><small>@violation.CategoryName / @violation.RulesCount جزاء</small></summary>
-                                        <form method="post" asp-page-handler="UpdateViolationType" class="nxpen-grid-form edit">
+                                        <form method="post" asp-page-handler="UpdateViolationType" class="zyw-form-grid">
                                             <input type="hidden" name="id" value="@violation.Id" />
-                                            <div><label>الفئة</label><select data-nexora-select="true" name="categoryId">@foreach (var category in Model.Categories){<option value="@category.Id" selected="@(category.Id == violation.CategoryId)">@category.Name</option>}</select></div>
-                                            <div><label>الخطورة</label><select data-nexora-select="true" name="severity"><option value="A" selected="@(violation.Severity == "A")">A - بسيطة</option><option value="B" selected="@(violation.Severity == "B")">B - متوسطة</option><option value="C" selected="@(violation.Severity == "C")">C - جسيمة</option><option value="FinalWarning" selected="@(violation.Severity == "FinalWarning")">إنذار بالفصل</option></select></div>
-                                            <div><label>الصلاحية</label><input name="validityMonths" type="number" min="1" value="@violation.ValidityMonths" /></div>
-                                            <div><label>فترة التكرار</label><select data-nexora-select="true" name="countingPeriod"><option value="Monthly" selected="@(violation.CountingPeriod == "Monthly")">شهرية</option><option value="SixMonths" selected="@(violation.CountingPeriod == "SixMonths")">خلال 6 أشهر</option><option value="Yearly" selected="@(violation.CountingPeriod == "Yearly")">خلال سنة</option><option value="Contract" selected="@(violation.CountingPeriod == "Contract")">مدة العقد</option></select></div>
-                                            <div class="wide"><label>اسم المخالفة</label><input name="name" value="@violation.Name" required /></div>
-                                            <div class="wide"><label>الوصف</label><textarea name="description">@violation.Description</textarea></div>
-                                            <div class="wide nxpen-checks">
-                                                <label class="nxpen-check-pill"><input type="checkbox" name="includeInEvaluation" value="true" checked="@violation.IncludeInEvaluation" /><span></span><b>تدخل بالتقييم</b></label>
-                                                <label class="nxpen-check-pill"><input type="checkbox" name="showToEmployee" value="true" checked="@violation.ShowToEmployee" /><span></span><b>تظهر للموظف</b></label>
-                                                <label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked="@violation.IsActive" /><span></span><b>فعالة</b></label>
+                                            <div class="zyw-field"><label>الفئة</label><select data-nexora-select="true" name="categoryId">@foreach (var category in Model.Categories){<option value="@category.Id" selected="@(category.Id == violation.CategoryId)">@category.Name</option>}</select></div>
+                                            <div class="zyw-field"><label>الخطورة</label><select data-nexora-select="true" name="severity"><option value="A" selected="@(violation.Severity == "A")">A - بسيطة</option><option value="B" selected="@(violation.Severity == "B")">B - متوسطة</option><option value="C" selected="@(violation.Severity == "C")">C - جسيمة</option><option value="FinalWarning" selected="@(violation.Severity == "FinalWarning")">إنذار بالفصل</option></select></div>
+                                            <div class="zyw-field"><label>الصلاحية</label><input name="validityMonths" type="number" min="1" value="@violation.ValidityMonths" /></div>
+                                            <div class="zyw-field"><label>فترة التكرار</label><select data-nexora-select="true" name="countingPeriod"><option value="Monthly" selected="@(violation.CountingPeriod == "Monthly")">شهرية</option><option value="SixMonths" selected="@(violation.CountingPeriod == "SixMonths")">خلال 6 أشهر</option><option value="Yearly" selected="@(violation.CountingPeriod == "Yearly")">خلال سنة</option><option value="Contract" selected="@(violation.CountingPeriod == "Contract")">مدة العقد</option></select></div>
+                                            <div class="zyw-field zyw-field--wide"><label>اسم المخالفة</label><input name="name" value="@violation.Name" required /></div>
+                                            <div class="zyw-field zyw-field--wide"><label>الوصف</label><textarea name="description">@violation.Description</textarea></div>
+                                            <div class="zyw-field zyw-field--wide zyw-checks">
+                                                <label><input type="checkbox" name="includeInEvaluation" value="true" checked="@violation.IncludeInEvaluation" /> تدخل بالتقييم</label>
+                                                <label><input type="checkbox" name="showToEmployee" value="true" checked="@violation.ShowToEmployee" /> تظهر للموظف</label>
+                                                <label><input type="checkbox" name="isActive" value="true" checked="@violation.IsActive" /> فعالة</label>
                                             </div>
-                                            <footer class="wide"><button type="submit">حفظ تعديل المخالفة</button></footer>
+                                            <footer class="zyw-form-actions zyw-field--wide"><button type="submit">حفظ تعديل المخالفة</button></footer>
                                         </form>
                                     </details>
                                 }
@@ -186,41 +202,41 @@
                         </section>
                     </div>
 
-                    <section class="nxpen-subcard">
+                    <section class="zy-card">
                         <header><h3>سلم الجزاءات حسب التكرار</h3><small>اختر الفئة أولاً، ثم تظهر فقط المخالفات التابعة لها داخل القائمة.</small></header>
-                        <form method="post" asp-page-handler="CreatePenaltyRule" class="nxpen-grid-form" data-nxpen-rule-form>
-                            <div><label>الفئة</label><select data-nexora-select="true" name="categoryFilter" data-nxpen-category-filter><option value="">كل الفئات</option>@foreach (var category in Model.Categories.Where(x => x.IsActive)){<option value="@category.Id" selected="@(selectedCategory == category.Id)">@category.Name</option>}</select></div>
-                            <div class="wide-2"><label>المخالفة</label><select data-nexora-select="true" name="violationTypeId" required data-nxpen-violation-list><option value="">اختر المخالفة</option>@foreach (var violation in Model.ViolationTypes.Where(x => x.IsActive)){<option value="@violation.Id" data-category-id="@violation.CategoryId">@violation.CategoryName — @violation.Name</option>}</select></div>
-                            <div><label>فترة الاحتساب</label><select data-nexora-select="true" name="countingPeriod"><option value="Monthly" selected>شهرية</option><option value="SixMonths">خلال 6 أشهر</option><option value="Yearly">خلال سنة</option><option value="Contract">مدة العقد</option></select></div>
-                            <div><label>من تكرار</label><input name="occurrenceFrom" type="number" min="1" value="1" required /></div>
-                            <div><label>إلى تكرار</label><input name="occurrenceTo" type="number" min="1" value="1" required /></div>
-                            <div class="wide-2"><label>العقوبة / الإجراء</label><input name="penaltyAction" required placeholder="مثال: خصم نصف يوم من الراتب" /></div>
-                            <div><label>الأثر المالي</label><select data-nexora-select="true" name="financialImpactType"><option value="None">لا يوجد</option><option value="Days" selected>أيام</option><option value="Hours">ساعات</option><option value="Amount">مبلغ ثابت</option></select></div>
-                            <div><label>قيمة الأثر</label><input name="financialValue" type="number" step="0.01" value="0.5" /></div>
-                            <div><label>صلاحية الجزاء</label><input name="validityMonths" type="number" min="1" value="6" /></div>
-                            <div><label>طريقة الاحتساب</label><select data-nexora-select="true" name="calculationMode"><option value="Cumulative" selected>تراكمي</option><option value="ReplacePrevious">استبدال السابق</option><option value="DifferenceOnly">فرق فقط</option></select></div>
-                            <div class="nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="requiresApproval" value="true" /><span></span><b>اعتماد إضافي</b></label></div>
-                            <footer class="wide"><button type="submit">إضافة جزاء</button></footer>
+                        <form method="post" asp-page-handler="CreatePenaltyRule" class="zyw-form-grid" data-nxpen-rule-form>
+                            <div class="zyw-field"><label>الفئة</label><select data-nexora-select="true" name="categoryFilter" data-nxpen-category-filter><option value="">كل الفئات</option>@foreach (var category in Model.Categories.Where(x => x.IsActive)){<option value="@category.Id" selected="@(selectedCategory == category.Id)">@category.Name</option>}</select></div>
+                            <div class="zyw-field zyw-field--wide"><label>المخالفة</label><select data-nexora-select="true" name="violationTypeId" required data-nxpen-violation-list><option value="">اختر المخالفة</option>@foreach (var violation in Model.ViolationTypes.Where(x => x.IsActive)){<option value="@violation.Id" data-category-id="@violation.CategoryId">@violation.CategoryName — @violation.Name</option>}</select></div>
+                            <div class="zyw-field"><label>فترة الاحتساب</label><select data-nexora-select="true" name="countingPeriod"><option value="Monthly" selected>شهرية</option><option value="SixMonths">خلال 6 أشهر</option><option value="Yearly">خلال سنة</option><option value="Contract">مدة العقد</option></select></div>
+                            <div class="zyw-field"><label>من تكرار</label><input name="occurrenceFrom" type="number" min="1" value="1" required /></div>
+                            <div class="zyw-field"><label>إلى تكرار</label><input name="occurrenceTo" type="number" min="1" value="1" required /></div>
+                            <div class="zyw-field zyw-field--wide"><label>العقوبة / الإجراء</label><input name="penaltyAction" required placeholder="مثال: خصم نصف يوم من الراتب" /></div>
+                            <div class="zyw-field"><label>الأثر المالي</label><select data-nexora-select="true" name="financialImpactType"><option value="None">لا يوجد</option><option value="Days" selected>أيام</option><option value="Hours">ساعات</option><option value="Amount">مبلغ ثابت</option></select></div>
+                            <div class="zyw-field"><label>قيمة الأثر</label><input name="financialValue" type="number" step="0.01" value="0.5" /></div>
+                            <div class="zyw-field"><label>صلاحية الجزاء</label><input name="validityMonths" type="number" min="1" value="6" /></div>
+                            <div class="zyw-field"><label>طريقة الاحتساب</label><select data-nexora-select="true" name="calculationMode"><option value="Cumulative" selected>تراكمي</option><option value="ReplacePrevious">استبدال السابق</option><option value="DifferenceOnly">فرق فقط</option></select></div>
+                            <div class="zyw-field zyw-checks"><label><input type="checkbox" name="requiresApproval" value="true" /> اعتماد إضافي</label></div>
+                            <footer class="zyw-form-actions zyw-field--wide"><button type="submit">إضافة جزاء</button></footer>
                         </form>
 
-                        <div class="nxpen-edit-list rules">
+                        <div class="zyw-list">
                             @foreach (var rule in visibleRules)
                             {
                                 <details class="nxpen-edit-item">
                                     <summary><span>@Model.DisplayOccurrenceRange(rule.OccurrenceFrom, rule.OccurrenceTo)</span><strong>@rule.PenaltyAction</strong><small>@rule.CategoryName / @rule.ViolationName / @Model.DisplayFinancialImpact(rule.FinancialImpactType, rule.FinancialValue)</small></summary>
-                                    <form method="post" asp-page-handler="UpdatePenaltyRule" class="nxpen-grid-form edit">
+                                    <form method="post" asp-page-handler="UpdatePenaltyRule" class="zyw-form-grid">
                                         <input type="hidden" name="id" value="@rule.Id" />
-                                        <div class="wide"><label>المخالفة</label><select data-nexora-select="true" name="violationTypeId">@foreach (var violation in Model.ViolationTypes){<option value="@violation.Id" selected="@(violation.Id == rule.ViolationTypeId)">@violation.CategoryName — @violation.Name</option>}</select></div>
-                                        <div><label>من</label><input name="occurrenceFrom" type="number" min="1" value="@rule.OccurrenceFrom" /></div>
-                                        <div><label>إلى</label><input name="occurrenceTo" type="number" min="1" value="@rule.OccurrenceTo" /></div>
-                                        <div><label>فترة الاحتساب</label><select data-nexora-select="true" name="countingPeriod"><option value="Monthly" selected="@(rule.CountingPeriod == "Monthly")">شهرية</option><option value="SixMonths" selected="@(rule.CountingPeriod == "SixMonths")">خلال 6 أشهر</option><option value="Yearly" selected="@(rule.CountingPeriod == "Yearly")">خلال سنة</option><option value="Contract" selected="@(rule.CountingPeriod == "Contract")">مدة العقد</option></select></div>
-                                        <div><label>طريقة الاحتساب</label><select data-nexora-select="true" name="calculationMode"><option value="Cumulative" selected="@(rule.CalculationMode == "Cumulative")">تراكمي</option><option value="ReplacePrevious" selected="@(rule.CalculationMode == "ReplacePrevious")">استبدال السابق</option><option value="DifferenceOnly" selected="@(rule.CalculationMode == "DifferenceOnly")">فرق فقط</option></select></div>
-                                        <div class="wide"><label>العقوبة</label><input name="penaltyAction" value="@rule.PenaltyAction" required /></div>
-                                        <div><label>الأثر المالي</label><select data-nexora-select="true" name="financialImpactType"><option value="None" selected="@(rule.FinancialImpactType == "None")">لا يوجد</option><option value="Days" selected="@(rule.FinancialImpactType == "Days")">أيام</option><option value="Hours" selected="@(rule.FinancialImpactType == "Hours")">ساعات</option><option value="Amount" selected="@(rule.FinancialImpactType == "Amount")">مبلغ ثابت</option></select></div>
-                                        <div><label>قيمة الأثر</label><input name="financialValue" type="number" step="0.01" value="@rule.FinancialValue" /></div>
-                                        <div><label>الصلاحية</label><input name="validityMonths" type="number" min="1" value="@rule.ValidityMonths" /></div>
-                                        <div class="nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="requiresApproval" value="true" checked="@rule.RequiresApproval" /><span></span><b>اعتماد إضافي</b></label></div>
-                                        <footer class="wide"><button type="submit">حفظ تعديل الجزاء</button><button class="danger-outline" type="submit" formaction="?handler=DeletePenaltyRule" formmethod="post" name="id" value="@rule.Id">حذف الجزاء</button></footer>
+                                        <div class="zyw-field zyw-field--wide"><label>المخالفة</label><select data-nexora-select="true" name="violationTypeId">@foreach (var violation in Model.ViolationTypes){<option value="@violation.Id" selected="@(violation.Id == rule.ViolationTypeId)">@violation.CategoryName — @violation.Name</option>}</select></div>
+                                        <div class="zyw-field"><label>من</label><input name="occurrenceFrom" type="number" min="1" value="@rule.OccurrenceFrom" /></div>
+                                        <div class="zyw-field"><label>إلى</label><input name="occurrenceTo" type="number" min="1" value="@rule.OccurrenceTo" /></div>
+                                        <div class="zyw-field"><label>فترة الاحتساب</label><select data-nexora-select="true" name="countingPeriod"><option value="Monthly" selected="@(rule.CountingPeriod == "Monthly")">شهرية</option><option value="SixMonths" selected="@(rule.CountingPeriod == "SixMonths")">خلال 6 أشهر</option><option value="Yearly" selected="@(rule.CountingPeriod == "Yearly")">خلال سنة</option><option value="Contract" selected="@(rule.CountingPeriod == "Contract")">مدة العقد</option></select></div>
+                                        <div class="zyw-field"><label>طريقة الاحتساب</label><select data-nexora-select="true" name="calculationMode"><option value="Cumulative" selected="@(rule.CalculationMode == "Cumulative")">تراكمي</option><option value="ReplacePrevious" selected="@(rule.CalculationMode == "ReplacePrevious")">استبدال السابق</option><option value="DifferenceOnly" selected="@(rule.CalculationMode == "DifferenceOnly")">فرق فقط</option></select></div>
+                                        <div class="zyw-field zyw-field--wide"><label>العقوبة</label><input name="penaltyAction" value="@rule.PenaltyAction" required /></div>
+                                        <div class="zyw-field"><label>الأثر المالي</label><select data-nexora-select="true" name="financialImpactType"><option value="None" selected="@(rule.FinancialImpactType == "None")">لا يوجد</option><option value="Days" selected="@(rule.FinancialImpactType == "Days")">أيام</option><option value="Hours" selected="@(rule.FinancialImpactType == "Hours")">ساعات</option><option value="Amount" selected="@(rule.FinancialImpactType == "Amount")">مبلغ ثابت</option></select></div>
+                                        <div class="zyw-field"><label>قيمة الأثر</label><input name="financialValue" type="number" step="0.01" value="@rule.FinancialValue" /></div>
+                                        <div class="zyw-field"><label>الصلاحية</label><input name="validityMonths" type="number" min="1" value="@rule.ValidityMonths" /></div>
+                                        <div class="zyw-field zyw-checks"><label><input type="checkbox" name="requiresApproval" value="true" checked="@rule.RequiresApproval" /> اعتماد إضافي</label></div>
+                                        <footer class="zyw-form-actions zyw-field--wide"><button type="submit">حفظ تعديل الجزاء</button><button class="danger-outline" type="submit" formaction="?handler=DeletePenaltyRule" formmethod="post" name="id" value="@rule.Id">حذف الجزاء</button></footer>
                                     </form>
                                 </details>
                             }

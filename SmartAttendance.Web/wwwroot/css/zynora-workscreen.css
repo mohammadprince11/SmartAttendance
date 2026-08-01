@@ -1,4 +1,6 @@
-/* تفاعل الموظف — شاشة واحدة بتبويبات.
+/* «شاشة العمل» — تخطيطٌ مشترك لشاشات: ترويسة · سطر أرقام · تبويبات · قوائم عمل.
+ *
+ * تستعمله اليوم: `/Engagement` (تفاعل الموظف) و`/Violations` (المخالفات).
  *
  * ⚠️ هذا الملف **تخطيطٌ فقط**: شبكات ومسافات وحالات التبويب.
  * لا مقاسات ولا استدارات ولا أحجام خطّ للودجتات — تلك تأتي من التوكنات
@@ -6,12 +8,13 @@
  * والحقول والأزرار القياسية. فالشاشة موحّدة **بالتكوين** لا بالترقيع، وأي تعديل
  * بالمختبر يصلها تلقائياً.
  *
- * وُلد بديلاً لصفحة كانت تكرّر نفسها ثلاث مرات (أربع بطاقات KPI ⟵ بطاقة «ملخص»
- * تعيد الأرقام ⟵ أربع بطاقات مودل تكرّر شريط التبويبات) وتُسمّي نفسها «عمليات
- * الموارد البشرية» وهي شاشة تفاعل.
+ * ولماذا ملفٌ مشترك لا ملفٌ لكل شاشة؟ لأن ملفَّي تخطيطٍ متطابقين هما بذرة
+ * التنافر نفسها التي نعالجها: يتحرّك أحدهما ويبقى الآخر. الشاشتان وُلدتا من
+ * صفحتين تكرّران أنفسهما (أربع بطاقات KPI ⟵ «ملخص» يعيدها ⟵ بطاقات تكرّر
+ * التبويبات)، فلا يصحّ أن نعيد إنتاج التكرار بطبقة الأنماط.
  */
 
-.zyeng {
+.zyw {
     display: flex;
     flex-direction: column;
     gap: var(--zy-space-4);
@@ -20,7 +23,7 @@
 
 /* ---------------------------------------------------------------- الترويسة */
 
-.zyeng-head {
+.zyw-head {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
@@ -28,19 +31,19 @@
     flex-wrap: wrap;
 }
 
-.zyeng-head h1 {
+.zyw-head h1 {
     margin: 0;
     color: var(--zy-text);
     font-family: var(--zy-font-display, var(--zy-font-ar));
 }
 
-.zyeng-head p {
+.zyw-head p {
     margin: var(--zy-space-1) 0 0;
     color: var(--zy-text-muted);
 }
 
 /* الأرقام الإجمالية سطرٌ واحد لا أربع بطاقات: سياقٌ لا بطولة. */
-.zyeng-totals {
+.zyw-totals {
     display: flex;
     align-items: center;
     gap: var(--zy-space-3);
@@ -48,13 +51,13 @@
     color: var(--zy-text-muted);
 }
 
-.zyeng-totals b {
+.zyw-totals b {
     color: var(--zy-text);
 }
 
 /* ------------------------------------------------------------ شريط التبويب */
 
-.zyeng-tabs {
+.zyw-tabs {
     display: flex;
     gap: var(--zy-space-2);
     flex-wrap: wrap;
@@ -62,7 +65,7 @@
     padding-bottom: var(--zy-space-2);
 }
 
-.zyeng-tab {
+.zyw-tab {
     position: relative;
     display: inline-flex;
     align-items: center;
@@ -73,7 +76,7 @@
     cursor: pointer;
 }
 
-.zyeng-tab[aria-selected="true"] {
+.zyw-tab[aria-selected="true"] {
     border-color: var(--zy-border-strong);
     background: var(--zy-primary-soft);
     color: var(--zy-text);
@@ -81,7 +84,7 @@
 }
 
 /* عدّاد المهامّ على التبويب — يظهر فقط حين يكون فيه عمل فعليّ. */
-.zyeng-tab-count {
+.zyw-tab-count {
     min-width: 20px;
     padding-inline: 6px;
     border-radius: 999px;
@@ -93,11 +96,11 @@
     text-align: center;
 }
 
-.zyeng-panel[hidden] {
+.zyw-panel[hidden] {
     display: none;
 }
 
-.zyeng-panel {
+.zyw-panel {
     display: flex;
     flex-direction: column;
     gap: var(--zy-space-4);
@@ -106,14 +109,14 @@
 /* ------------------------------------------------------------- قوائم العمل */
 
 /* «ما ينتظرك» أولاً: الشاشة تفتح على ما يحتاج قراراً، لا على أرقامٍ للزينة. */
-.zyeng-queue {
+.zyw-queue {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: var(--zy-space-3);
     align-items: start;
 }
 
-.zyeng-queue-head {
+.zyw-queue-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -121,12 +124,12 @@
     margin-bottom: var(--zy-space-2);
 }
 
-.zyeng-queue-head h2 {
+.zyw-queue-head h2 {
     margin: 0;
     color: var(--zy-text);
 }
 
-.zyeng-item {
+.zyw-item {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -135,26 +138,26 @@
     border-top: 1px solid var(--zy-border);
 }
 
-.zyeng-item:first-of-type {
+.zyw-item:first-of-type {
     border-top: 0;
 }
 
-.zyeng-item-main {
+.zyw-item-main {
     min-width: 0;
 }
 
-.zyeng-item-main strong {
+.zyw-item-main strong {
     display: block;
     color: var(--zy-text);
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.zyeng-item-main small {
+.zyw-item-main small {
     color: var(--zy-text-muted);
 }
 
-.zyeng-item-actions {
+.zyw-item-actions {
     display: flex;
     align-items: center;
     gap: var(--zy-space-2);
@@ -162,7 +165,7 @@
 }
 
 /* حالة الفراغ ليست خطأً: تقول ما الذي يعنيه الفراغ وما الخطوة التالية. */
-.zyeng-empty {
+.zyw-empty {
     padding: var(--zy-space-4);
     border: 1px dashed var(--zy-border);
     border-radius: var(--zy-radius-lg);
@@ -172,30 +175,30 @@
 
 /* -------------------------------------------------------------- النماذج */
 
-.zyeng-form-grid {
+.zyw-form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: var(--zy-control-gap, 14px);
 }
 
-.zyeng-field {
+.zyw-field {
     display: flex;
     flex-direction: column;
     gap: 6px;
     min-width: 0;
 }
 
-.zyeng-field > label {
+.zyw-field > label {
     color: var(--zy-text-muted);
     font-size: var(--zy-label-font, 12px);
     font-weight: 700;
 }
 
-.zyeng-field--wide {
+.zyw-field--wide {
     grid-column: 1 / -1;
 }
 
-.zyeng-form-actions {
+.zyw-form-actions {
     display: flex;
     align-items: center;
     gap: var(--zy-space-2);
@@ -204,18 +207,35 @@
 }
 
 /* حقول الاستهداف تظهر حسب نوعه — تُدار بالجافاسكربت بالصفحة. */
-.zyeng-target[hidden] {
+.zyw-target[hidden] {
     display: none;
+}
+
+/* صفّ خيارات ثنائية (تدخل بالتقييم · تظهر للموظف · فعّالة). المربّع نفسه يأتي
+   مقاسه من توكن الجيك بوكس، فلا مقاس هنا. */
+.zyw-checks {
+    display: flex;
+    align-items: center;
+    gap: var(--zy-space-3);
+    flex-wrap: wrap;
+}
+
+.zyw-checks label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--zy-text);
+    cursor: pointer;
 }
 
 /* --------------------------------------------------------------- القوائم */
 
-.zyeng-list {
+.zyw-list {
     display: flex;
     flex-direction: column;
 }
 
-.zyeng-row {
+.zyw-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
@@ -224,11 +244,11 @@
     border-top: 1px solid var(--zy-border);
 }
 
-.zyeng-row:first-of-type {
+.zyw-row:first-of-type {
     border-top: 0;
 }
 
-.zyeng-row-meta {
+.zyw-row-meta {
     display: flex;
     align-items: center;
     gap: var(--zy-space-2);
@@ -236,12 +256,65 @@
     color: var(--zy-text-muted);
 }
 
+/* ------------------------------------------------------------------ جدول */
+
+/* الجدول يمرّ أفقياً داخل غلافه وحده — لا الصفحة. */
+.zyw-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+.zyw-table {
+    width: 100%;
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+
+.zyw-table th,
+.zyw-table td {
+    padding-block: var(--zy-space-2);
+    text-align: start;
+    border-bottom: 1px solid var(--zy-border);
+}
+
+.zyw-table th {
+    color: var(--zy-text-muted);
+    font-weight: 800;
+}
+
+.zyw-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+/* صفٌّ أخفاه فلترُ العميل — بلا إعادة تحميل. */
+.zyw-table tr[hidden] {
+    display: none;
+}
+
+/* شريط الفلاتر: صفٌّ واحد بدل ثلاثة صفوف متراكمة فوق الجدول. */
+.zyw-filters {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--zy-control-gap, 14px);
+    flex-wrap: wrap;
+    margin-bottom: var(--zy-space-3);
+}
+
+.zyw-filters .zyw-field {
+    flex: 0 1 200px;
+}
+
+.zyw-filters .zyw-field--grow {
+    flex: 1 1 240px;
+}
+
 @media (max-width: 700px) {
-    .zyeng-row {
+    .zyw-row {
         grid-template-columns: 1fr;
     }
 
-    .zyeng-item {
+    .zyw-item {
         flex-direction: column;
         align-items: stretch;
     }
