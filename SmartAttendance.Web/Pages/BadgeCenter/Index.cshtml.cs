@@ -26,6 +26,9 @@ public class IndexModel : PageModel
         _db = db;
     }
 
+    /// <summary>أقصى عدد بطاقات بالطبعة الواحدة — يُعلَن للمستخدم عند تجاوزه.</summary>
+    private const int MaxBadgesPerRun = 200;
+
     [BindProperty(SupportsGet = true)] public int TemplateId { get; set; }
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
 
@@ -66,7 +69,17 @@ public class IndexModel : PageModel
             return;
         }
 
-        foreach (var employeeId in EmployeeIds.Distinct().Take(200))
+        // سقفٌ لكل طبعة: توليد ألف بطاقة بطلبٍ واحد يُثقل الصفحة والطابعة معاً.
+        // ⚠️ لكنه **يُعلَن** لا يُطبَّق بصمت: من يختار أكثر ويحصل على أقلّ بلا رسالة
+        // يظنّ أنه طبع الجميع — وهو أسوأ من رفض الطلب.
+        var selected = EmployeeIds.Distinct().ToList();
+        if (selected.Count > MaxBadgesPerRun)
+        {
+            Message = $"اخترت {selected.Count} موظفاً، وهذه الطبعة تعرض أول {MaxBadgesPerRun} فقط. قسّم الاختيار على دفعات.";
+            selected = selected.Take(MaxBadgesPerRun).ToList();
+        }
+
+        foreach (var employeeId in selected)
         {
             // نفس محرّك توليد الوثائق، وبـ persist:false: البطاقة تُطبع ولا تُؤرشَف
             // كوثيقة برقم مرجعي — أرشفة ألف بطاقة بكل طبعة ضجيجٌ لا سجلّ.
