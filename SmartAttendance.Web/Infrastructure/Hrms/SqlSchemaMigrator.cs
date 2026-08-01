@@ -309,6 +309,57 @@ BEGIN
     CREATE INDEX IX_ContractMovements_Status ON EmployeeContractMovements (Status, Id);
 END;
 """),
+
+        // الإقرارات: قالب + سجلّ إرسال لكل موظف.
+        //
+        // القيمة كلها بالإثبات — أن فلاناً **رأى ووافق بتاريخ محدَّد**. ولذلك
+        // ViewedAt وAcceptedAt عمودان **منفصلان**: «أُرسل ولم يُفتح» حالةٌ قانونية
+        // مستقلة عن «فُتح ولم يُوافَق عليه»، ودمجهما بعمود واحد يمحو أهمّ ما تحتاجه
+        // الشركة بنزاع عمّالي.
+        //
+        // وتكرار الصفوف لنفس (الموظف، القالب) مقصود: الإقرار يُعاد إرساله دورياً
+        // عند تحديث السياسة، وكل إرسال سجلّ مستقل — فلا قيد فريد عليهما.
+        new(
+            "20260801-13-employee-acknowledgments",
+            """
+IF OBJECT_ID('AcknowledgmentTemplates', 'U') IS NULL
+BEGIN
+    CREATE TABLE AcknowledgmentTemplates (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        Name nvarchar(200) NOT NULL,
+        Description nvarchar(1000) NULL,
+        Title nvarchar(300) NULL,
+        Body nvarchar(max) NULL,
+        AttachmentName nvarchar(260) NULL,
+        AttachmentPath nvarchar(500) NULL,
+        SendToNewHires bit NOT NULL CONSTRAINT DF_AckTemplates_NewHires DEFAULT(0),
+        IsActive bit NOT NULL CONSTRAINT DF_AckTemplates_Active DEFAULT(1),
+        ConditionsJson nvarchar(max) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_AckTemplates_CreatedAt DEFAULT(SYSUTCDATETIME()),
+        CreatedBy nvarchar(150) NULL,
+        UpdatedAt datetime2 NULL,
+        IsDeleted bit NOT NULL CONSTRAINT DF_AckTemplates_Deleted DEFAULT(0)
+    );
+END;
+
+IF OBJECT_ID('EmployeeAcknowledgments', 'U') IS NULL
+BEGIN
+    CREATE TABLE EmployeeAcknowledgments (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        TemplateId int NOT NULL,
+        EmployeeId int NOT NULL,
+        SentAt datetime2 NOT NULL CONSTRAINT DF_EmpAck_SentAt DEFAULT(SYSUTCDATETIME()),
+        SentBy nvarchar(150) NULL,
+        ViewedAt datetime2 NULL,
+        AcceptedAt datetime2 NULL,
+        DeclinedAt datetime2 NULL,
+        Note nvarchar(1000) NULL
+    );
+
+    CREATE INDEX IX_EmpAck_Employee ON EmployeeAcknowledgments (EmployeeId, Id);
+    CREATE INDEX IX_EmpAck_Template ON EmployeeAcknowledgments (TemplateId, Id);
+END;
+"""),
     };
 
     /// <summary>

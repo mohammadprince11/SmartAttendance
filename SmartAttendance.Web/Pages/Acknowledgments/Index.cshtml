@@ -1,0 +1,166 @@
+@page
+@model SmartAttendance.Web.Pages.Acknowledgments.IndexModel
+
+@{
+    ViewData["Title"] = "قوالب الإقرارات";
+    var editing = Model.EditingId.HasValue;
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="/Employees/Index">الأشخاص</a>
+        <h1>قوالب الإقرارات</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>الإثبات</span>
+            <h2>القوالب</h2>
+            <p class="zyp-hint">
+                الإقرار مستند تُلزِم الشركة الموظف بقراءته والموافقة عليه صراحةً.
+                <b>القيمة كلها بالإثبات</b>: أن فلاناً رأى ووافق بتاريخ محدَّد —
+                وهو الصفّ الذي يُحسم به أي نزاع «هل أُبلغ الموظف باللائحة؟».
+            </p>
+        </header>
+
+        @if (Model.Templates.Count == 0)
+        {
+            <p class="zyc-empty">لا قوالب بعد — أنشئ قالباً أدناه (سياسة أخلاقيات العمل · لائحة الجزاءات · اتفاقية عدم إفشاء…).</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>اسم القالب</th>
+                        <th>الوصف</th>
+                        <th>الجمهور</th>
+                        <th>للموظفين الجدد</th>
+                        <th>أُرسل</th>
+                        <th>وافق</th>
+                        <th>معلّق</th>
+                        <th style="width:200px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var template in Model.Templates)
+                    {
+                        var stats = Model.Stats.TryGetValue(template.Id, out var value) ? value : (Sent: 0, Accepted: 0, Pending: 0);
+                        <tr class="@(template.IsActive ? "" : "zyp-inactive")">
+                            <td>
+                                <b>@template.Name</b>
+                                @if (!template.IsActive)
+                                {
+                                    <span class="zyp-conditions"> — معطّل</span>
+                                }
+                            </td>
+                            <td class="zyp-conditions">@template.Description</td>
+                            <td class="zyp-conditions">@SmartAttendance.Web.Infrastructure.Hrms.HrConditions.Describe(template.Conditions)</td>
+                            <td class="zyp-conditions">@(template.SendToNewHires ? "نعم" : "لا")</td>
+                            <td class="zyp-count">@stats.Sent</td>
+                            <td class="zyp-count">@stats.Accepted</td>
+                            <td class="zyp-count" data-zero="@((stats.Pending > 0).ToString().ToLowerInvariant())">@stats.Pending</td>
+                            <td>
+                                <div class="zyp-actions">
+                                    <form method="post" asp-page-handler="Send" style="display:inline">
+                                        <input type="hidden" name="id" value="@template.Id" />
+                                        <button type="submit" data-zyconfirm="إرسال الإقرار لجمهوره الآن؟">إرسال</button>
+                                    </form>
+                                    <a asp-page="./Tracking" asp-route-template="@template.Id">المتابعة</a>
+                                    <a asp-page="./Index" asp-route-edit="@template.Id">تعديل</a>
+                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                        <input type="hidden" name="id" value="@template.Id" />
+                                        <button type="submit" data-zyconfirm="حذف القالب؟ الإرسالات تبقى.">حذف</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        @if (!editing)
+        {
+            <p><a class="zyc-add-group" asp-page="./Index" asp-route-edit="0">+ قالب جديد</a></p>
+        }
+    </div>
+
+    @if (editing)
+    {
+        <form method="post" asp-page-handler="Save" class="nxhs-panel zyp-editor">
+            <h3>@(Model.TemplateId > 0 ? "تعديل القالب" : "قالب جديد")</h3>
+            <input type="hidden" asp-for="TemplateId" />
+
+            <div class="zyp-editor-grid">
+                <label>
+                    اسم القالب
+                    <input asp-for="Name" placeholder="سياسة أخلاقيات العمل" />
+                </label>
+                <label>
+                    الوصف الإداري
+                    <input asp-for="Description" placeholder="اختياري" />
+                </label>
+                <label>
+                    عنوان الإقرار (ما يراه الموظف)
+                    <input asp-for="Title" placeholder="إقرار بالاطلاع على سياسة أخلاقيات العمل" />
+                </label>
+                <label>
+                    أرسل تلقائياً للموظفين الجدد
+                    <select asp-for="SendToNewHires">
+                        <option value="false">لا</option>
+                        <option value="true">نعم</option>
+                    </select>
+                </label>
+                <label>
+                    الحالة
+                    <select asp-for="IsActive">
+                        <option value="true">نشط</option>
+                        <option value="false">معطّل</option>
+                    </select>
+                </label>
+            </div>
+
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:.8125rem;color:var(--zy-text-muted)">
+                نصّ الإقرار (ما يوافق عليه الموظف)
+                <textarea asp-for="Body" rows="10"
+                          style="padding:10px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:inherit;font-size:.875rem;line-height:1.7"
+                          placeholder="اكتب نصّ الإقرار كاملاً…"></textarea>
+            </label>
+
+            <div>
+                <p class="zyp-section-title">جمهور الإرسال — من يستلم هذا الإقرار؟</p>
+                <p class="zyp-hint">اتركه بلا شروط ليُرسل لكل الموظفين النشطين.</p>
+                <input type="hidden" asp-for="Conditions" id="AckConditions" />
+                <div class="zyc"
+                     data-zy-conditions
+                     data-input="#AckConditions"
+                     data-criteria="@Model.CriteriaJson"></div>
+            </div>
+
+            <footer class="nxhs-actions">
+                <button type="submit">حفظ القالب</button>
+                <a class="zyp-move" asp-page="./Index" style="padding:8px 14px">إلغاء</a>
+            </footer>
+        </form>
+    }
+</section>
+
+<script src="~/js/zynora-confirm.js" asp-append-version="true" defer></script>
+<script src="~/js/zynora-conditions.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+
+}

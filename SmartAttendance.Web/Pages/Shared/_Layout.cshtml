@@ -231,7 +231,7 @@
 
         Func<string, string> ActiveClass = path => IsCurrent(path) ? "active nexora-active" : "";
 
-        var employeesOpen = IsUnder("/Employees") || IsUnder("/Contracts") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization") || IsUnder("/OrgStructures") || IsUnder("/Alerts") || IsUnder("/LeaveBalances") || IsUnder("/PeopleReports") || IsUnder("/EmployeeTasks") || IsUnder("/Engagement");
+        var employeesOpen = IsUnder("/Employees") || IsUnder("/Contracts") || IsUnder("/Acknowledgments") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization") || IsUnder("/OrgStructures") || IsUnder("/Alerts") || IsUnder("/LeaveBalances") || IsUnder("/PeopleReports") || IsUnder("/EmployeeTasks") || IsUnder("/Engagement");
         var attendanceOpen = IsUnder("/AttendanceOperations") || IsUnder("/AttendanceRecords") || IsUnder("/AttendanceImports") || IsUnder("/AttendanceProcessing") || IsUnder("/AttendanceCorrections") || IsUnder("/Shifts") || IsUnder("/Devices");
         var requestsOpen = IsUnder("/LeaveRequests") || IsUnder("/Approvals") || IsUnder("/SelfServices");
         var payrollOpen = IsUnder("/Payroll");
@@ -321,6 +321,9 @@
                                         </a>
                                         <a asp-page="/Contracts/Index" class="nexora-nav-link @(IsUnder("/Contracts") ? "active nexora-active" : "")">
                                             <span>عقود الموظفين</span>
+                                        </a>
+                                        <a asp-page="/Acknowledgments/Index" class="nexora-nav-link @(IsUnder("/Acknowledgments") ? "active nexora-active" : "")">
+                                            <span>الإقرارات</span>
                                         </a>
                                         <a asp-page="/Violations/Index" class="nexora-nav-link @(IsUnder("/Violations") ? "active nexora-active" : "")">
                                             <span>حالات المخالفات</span>

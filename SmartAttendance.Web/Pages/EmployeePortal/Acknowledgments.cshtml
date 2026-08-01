@@ -1,0 +1,117 @@
+@page
+@model SmartAttendance.Web.Pages.EmployeePortal.AcknowledgmentsModel
+@{
+    Layout = "_EmployeePortalLayout";
+    ViewData["Title"] = "الإقرارات";
+}
+
+<style>
+    .eak { display:flex; flex-direction:column; gap:16px; color:var(--sa-text,#DCEAF4); }
+    .eak-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; background:var(--sa-surface,rgba(8,25,43,.9)); padding:18px; }
+    .eak-card h2 { margin:0 0 4px; font-size:16px; font-weight:1000; }
+    .eak-card p.sub { margin:0 0 14px; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .eak-msg { border-radius:12px; padding:10px 14px; font-size:13px; font-weight:900;
+        background:color-mix(in srgb,#38bdf8 12%,transparent); }
+    .eak-item { display:flex; align-items:center; justify-content:space-between; gap:10px;
+        padding:12px 0; border-bottom:1px solid rgba(73,111,151,.18); }
+    .eak-item:last-child { border-bottom:0; }
+    .eak-item b { font-size:14px; font-weight:1000; }
+    .eak-item .meta { font-size:11px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
+    .eak-chip { border-radius:999px; padding:3px 11px; font-size:11px; font-weight:900; white-space:nowrap; }
+    .eak-chip.pending { color:#fbbf24; background:rgba(251,191,36,.12); }
+    .eak-chip.done { color:#34d399; background:rgba(52,211,153,.12); }
+    .eak-chip.declined { color:#f87171; background:rgba(248,113,113,.12); }
+    .eak-open { border:0; border-radius:12px; padding:8px 14px; font-size:12px; font-weight:1000;
+        cursor:pointer; background:#0d9488; color:#fff; text-decoration:none; display:inline-block; }
+    .eak-body { white-space:pre-wrap; line-height:1.9; font-size:13px; font-weight:700;
+        border:1px solid rgba(73,111,151,.22); border-radius:14px; padding:14px; max-height:50vh; overflow:auto; }
+    .eak-actions { display:flex; gap:10px; margin-top:14px; }
+    .eak-btn { flex:1; border:0; border-radius:14px; padding:12px; font-size:14px; font-weight:1000; cursor:pointer; }
+    .eak-btn.ok { background:#0d9488; color:#fff; }
+    .eak-btn.no { background:transparent; color:#f87171; border:1px solid rgba(248,113,113,.4); }
+    .eak-note { width:100%; margin-top:10px; border:1px solid rgba(73,111,151,.3); border-radius:12px;
+        background:transparent; color:var(--sa-text,#DCEAF4); padding:10px 12px; font-size:13px; font-weight:800; }
+</style>
+
+<div class="eak">
+    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    {
+        <div class="eak-msg">@Model.StatusMessage</div>
+    }
+
+    @if (Model.Opened is { } opened)
+    {
+        <div class="eak-card">
+            <h2>@(string.IsNullOrWhiteSpace(opened.Title) ? opened.TemplateName : opened.Title)</h2>
+            <p class="sub">أُرسل @opened.SentAt.ToLocalTime().ToString("yyyy/MM/dd")</p>
+
+            <div class="eak-body">@opened.Body</div>
+
+            @if (opened.NeedsAction)
+            {
+                <form method="post" asp-page-handler="Respond">
+                    <input type="hidden" name="id" value="@opened.Id" />
+                    <input class="eak-note" name="note" placeholder="ملاحظة (اختيارية — إلزامية عملياً عند عدم الموافقة)" />
+                    <div class="eak-actions">
+                        <button class="eak-btn ok" type="submit" name="accept" value="true">أوافق</button>
+                        <button class="eak-btn no" type="submit" name="accept" value="false">لا أوافق</button>
+                    </div>
+                </form>
+            }
+            else
+            {
+                <p class="sub" style="margin-top:14px">
+                    @if (opened.Accepted)
+                    {
+                        <span>وافقت بتاريخ @opened.AcceptedAt!.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</span>
+                    }
+                    else
+                    {
+                        <span>سجّلت عدم موافقتك بتاريخ @opened.DeclinedAt!.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</span>
+                    }
+                </p>
+            }
+
+            <p style="margin-top:12px"><a class="eak-open" asp-page="./Acknowledgments">← رجوع للقائمة</a></p>
+        </div>
+    }
+
+    <div class="eak-card">
+        <h2>الإقرارات</h2>
+        <p class="sub">
+            @if (Model.PendingCount > 0)
+            {
+                <span>لديك @Model.PendingCount إقراراً بانتظار ردّك.</span>
+            }
+            else
+            {
+                <span>لا إقرارات معلّقة.</span>
+            }
+        </p>
+
+        @if (Model.Items.Count == 0)
+        {
+            <p class="sub">لم يُرسل إليك أي إقرار بعد.</p>
+        }
+        else
+        {
+            @foreach (var item in Model.Items)
+            {
+                <div class="eak-item">
+                    <div>
+                        <b>@(string.IsNullOrWhiteSpace(item.Title) ? item.TemplateName : item.Title)</b>
+                        <div class="meta">@item.SentAt.ToLocalTime().ToString("yyyy/MM/dd")</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span class="eak-chip @(item.Accepted ? "done" : item.Declined ? "declined" : "pending")">
+                            @item.StatusLabel
+                        </span>
+                        <a class="eak-open" asp-page="./Acknowledgments" asp-route-open="@item.Id">
+                            @(item.NeedsAction ? "افتح ووافق" : "عرض")
+                        </a>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
