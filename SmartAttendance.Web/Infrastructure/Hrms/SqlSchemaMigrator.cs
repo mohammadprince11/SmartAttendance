@@ -897,6 +897,23 @@ IF OBJECT_ID('RequestTypes', 'U') IS NOT NULL AND COL_LENGTH('RequestTypes', 'Co
 IF OBJECT_ID('PeopleReports', 'U') IS NOT NULL AND COL_LENGTH('PeopleReports', 'ShareWithEmployees') IS NULL
     ALTER TABLE PeopleReports ADD ShareWithEmployees bit NULL;
 """),
+
+        // مقاسات الواجهة المختارة من مختبر التصميم (`/DesignLab`).
+        //
+        // جدولٌ جديد محض — صفر مساس بجدولٍ قائم. ويُخزَّن فيه **المخالف للافتراضي
+        // فقط**، فبنظامٍ لم يُخصَّص فيه شيء يبقى الجدول فارغاً والمظهر مطابقاً
+        // تماماً لما قبل الميزة.
+        new(
+            "20260801-29-design-tokens",
+            """
+IF OBJECT_ID('DesignTokens', 'U') IS NULL
+    CREATE TABLE DesignTokens (
+        TokenKey   nvarchar(80)  NOT NULL PRIMARY KEY,
+        TokenValue nvarchar(40)  NOT NULL,
+        UpdatedAt  datetime2     NULL,
+        UpdatedBy  nvarchar(200) NULL
+    );
+"""),
     };
 
     /// <summary>

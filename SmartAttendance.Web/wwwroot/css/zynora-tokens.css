@@ -1,0 +1,233 @@
+/* ============================================================================
+   طبقة استهلاك مقاسات الواجهة — تربط توكنات `DesignTokenCatalog` بعناصر النظام.
+
+   ⚠️ **تُحمَّل آخر ملفٍ عمداً.** بالمشروع 71 ملف CSS و6735 `!important`، وأغلبها
+   يفرض مقاسه بتخصصيةٍ عالية. فبلا `!important` هنا لا يغيّر المختبر شيئاً على
+   أغلب الصفحات، ويصير شاشةً تُخزِّن ولا تُطبِّق — وهو بالضبط «الحقل الصمّاء»
+   الذي ننتقده على غيرنا.
+
+   القيمة الاحتياطية بكل `var()` هي الافتراض الحالي بالنظام. فبقاعدةٍ فارغة
+   (لا تخصيص) يخرج المظهر مطابقاً لما قبل هذا الملف تماماً.
+   ============================================================================ */
+
+/* ---------------------------------------------------------------- الأزرار */
+/* `zy-*` نظام التصميم · `btn-*` و`nx*` الصفحات القديمة — كلّها هدفٌ واحد. */
+/* `.zy-scope.zy-scope` يرفع التخصصية بصنفٍ إضافي: أزرار الصفحات القديمة مثبَّتة
+   بقواعد بـ!important تخصصيتها أعلى من صنفين.
+
+   ⚠️ **المطابقة بـ`[class*="btn"]` عمداً.** جرد المستودع: **104 عائلة زرّ**
+   (`nx-setup-btn` 57 موضعاً · `hrms-btn-*` 71 · `sd-btn` 30 · `pr-btn` 22 ·
+   `btn-table` 21 · `tx-btn` · `nxp-btn` · `rz-btn` · `ot-btn` · `mat-btn` ·
+   `geo-btn` · `ln-btn` · `ats-btn` …). تعدادها صنفاً صنفاً يعني قائمةً تتقادم
+   مع أول زرٍّ جديد يُكتب. والجرد أثبت أن الملتقَط خطأً محصورٌ بأزرار الأيقونات
+   (`nxp-icon-btn`) وهي مستثناة.
+
+   وأغلب هذه الأزرار على `<a>` لا `<button>` — ولهذا لم تتأثّر: القاعدة السابقة
+   كانت تطابق عنصر `button` وأربعة أصناف فقط. */
+.zy-scope.zy-scope button:not(.zyep-open):not(.zyep-close):not(.nxcs-native):not([class*="icon"]),
+.zy-scope.zy-scope [class*="btn"]:not([class*="icon"]):not(.zyep-open):not(.zyep-close),
+.zy-scope.zy-scope input[type="submit"],
+.zy-scope.zy-scope input[type="button"] {
+    min-height: var(--zy-button-h, 40px) !important;
+    padding-inline: var(--zy-button-pad-x, 18px) !important;
+    border-radius: var(--zy-button-radius, 12px) !important;
+    font-size: var(--zy-button-font, 14px) !important;
+    font-weight: var(--zy-button-weight, 600) !important;
+}
+
+/* الأزرار المبنيّة على `<a>` عناصرُ `inline`، و`min-height` **لا أثر له على
+   inline** — نفس علّة التبويبات. بلا هذا يتحرّك المقياس ويبقى الزرّ بارتفاع
+   سطر نصّه، وهو أحد أسباب «أزرارٌ كثيرة لا تتأثّر». */
+.zy-scope.zy-scope a[class*="btn"]:not([class*="icon"]),
+.zy-scope.zy-scope a.zy-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* ------------------------------------------------ الحقول (البوكس) */
+/* الحقول التي تبتلعها الودجتات مستثناة: تعديل مقاسها يُظهر المخفيّ. */
+.zy-scope input:not([type="checkbox"]):not([type="radio"]):not(.nxcal-native):not(.nxcs-native),
+.zy-scope select:not(.nxcs-native),
+.zy-scope .zy-input {
+    height: var(--zy-control-h, 44px) !important;
+    min-height: var(--zy-control-h, 44px) !important;
+    padding-inline: var(--zy-control-pad-x, 12px) !important;
+    border-radius: var(--zy-control-radius, 12px) !important;
+    font-size: var(--zy-control-font, 13px) !important;
+}
+
+/* النصّ متعدّد الأسطر ارتفاعه محتواه لا مقاس الحقل */
+.zy-scope textarea {
+    min-height: calc(var(--zy-control-h, 44px) * 2) !important;
+    padding: var(--zy-control-pad-x, 12px) !important;
+    border-radius: var(--zy-control-radius, 12px) !important;
+    font-size: var(--zy-control-font, 13px) !important;
+    line-height: var(--zy-line-height, 1.55) !important;
+}
+
+/* المسافة بين الحقول — كانت التوكن معرَّفةً بلا مستهلك، أي مقياسٌ يتحرّك ولا
+   يحرّك شيئاً. هذه شبكات الحقول الفعلية بالنظام. */
+.zy-scope .nxupd-fields,
+.zy-scope .nxupd-movement-meta,
+.zy-scope .zyp-editor-grid,
+.zy-scope .zdl-demo {
+    gap: var(--zy-control-gap, 14px) !important;
+}
+
+/* -------------------------------- المنسدلات والكلاندر ومنتقي الموظف */
+/* لكلٍّ مقياسه: الكلاندر والمنسدلة والمنتقي كانت تتقاسم توكناً واحداً فتعذّر
+   ضبط أحدها دون الآخرين. */
+
+/* الكلاندر */
+.zy-scope .nxcal {
+    height: var(--zy-calendar-h, 44px) !important;
+    min-height: var(--zy-calendar-h, 44px) !important;
+    border-radius: var(--zy-calendar-radius, 12px) !important;
+    font-size: var(--zy-calendar-font, 13px) !important;
+}
+
+/* المنسدلة */
+.zy-scope .nxcs {
+    height: var(--zy-dropdown-h, 44px) !important;
+    min-height: var(--zy-dropdown-h, 44px) !important;
+    border-radius: var(--zy-dropdown-radius, 12px) !important;
+    font-size: var(--zy-dropdown-font, 13px) !important;
+}
+
+.zy-scope .nxcs-menu {
+    border-radius: var(--zy-dropdown-menu-radius, 14px) !important;
+}
+
+/* منتقي الموظف */
+.zy-scope .zyep-box {
+    height: var(--zy-empicker-h, 44px) !important;
+    min-height: var(--zy-empicker-h, 44px) !important;
+    border-radius: var(--zy-empicker-radius, 12px) !important;
+    font-size: var(--zy-empicker-font, 13px) !important;
+}
+
+/* حقلاه داخل إطارٍ واحد: الارتفاع على الإطار لا على كلٍّ منهما.
+   سلسلة `:not` هنا ليست زخرفاً — بدونها تغلب قاعدةُ الحقول العامّة (تخصصيتها
+   0,5,1) هذه القاعدةَ (0,2,1) فتمنح كل حقلٍ استدارته الخاصّة، فيبدو المنتقي
+   ثلاثةَ صناديق منفصلة بدل إطارٍ واحد. */
+.zy-scope .zyep-box input:not([type="checkbox"]):not([type="radio"]):not(.nxcal-native):not(.nxcs-native) {
+    height: 100% !important;
+    min-height: 0 !important;
+    border-radius: 0 !important;
+    font-size: var(--zy-empicker-font, 13px) !important;
+}
+
+/* `flex-basis` وحده لم يكفِ: قاعدةٌ أخرى تمنح الحقل نموّاً فيتمدّد رغم الأساس
+   (قيس 192px بينما الأساس 108). العرض الصريح بحدَّيه يحسمها. */
+.zy-scope .zyep-code {
+    flex: 0 0 var(--zy-empicker-code-w, 108px) !important;
+    width: var(--zy-empicker-code-w, 108px) !important;
+    min-width: var(--zy-empicker-code-w, 108px) !important;
+    max-width: var(--zy-empicker-code-w, 108px) !important;
+}
+
+.zy-scope .zyep-modal {
+    border-radius: var(--zy-empicker-modal-radius, 14px) !important;
+}
+
+.zy-scope .zyep-row {
+    min-height: var(--zy-empicker-row-h, 40px) !important;
+}
+
+/* ------------------------------------------------------- الجيك بوكس */
+/* تكرار محدّد النوع يرفع التخصصية عمداً: بنظام التصميم قاعدةٌ بـ
+   `input[type="checkbox"]:not([role="switch"]):not(.no-zy-check)` — تخصصيتها
+   (0,3,1) بـ!important وتثبّت 18px، فكانت تغلب `.zy-scope input[type=checkbox]`
+   (0,2,1) فلا يتحرّك المقاس. التكرار يرفعنا إلى (0,4,1) بلا افتراضِ شكلِ
+   سلسلة `:not` عندهم — فلو تغيّرت لاحقاً بقينا فائزين. */
+.zy-scope input[type="checkbox"][type="checkbox"][type="checkbox"],
+.zy-scope input[type="radio"][type="radio"][type="radio"] {
+    /* الحدّان الأدنى والأقصى **إلزاميان** هنا: القاعدة القائمة تثبّت
+       `max-width:18px` و`min-width:18px`، والحدّ الأقصى يقصّ العنصر مهما كان
+       `width`. فضبط العرض وحده كان يبدو ناجحاً بالكود وعديمَ الأثر بالشاشة. */
+    width: var(--zy-check-size, 18px) !important;
+    height: var(--zy-check-size, 18px) !important;
+    min-width: var(--zy-check-size, 18px) !important;
+    max-width: var(--zy-check-size, 18px) !important;
+    min-height: var(--zy-check-size, 18px) !important;
+    max-height: var(--zy-check-size, 18px) !important;
+    inline-size: var(--zy-check-size, 18px) !important;
+    block-size: var(--zy-check-size, 18px) !important;
+    margin-inline-end: var(--zy-check-gap, 10px) !important;
+    padding: 0 !important;
+    flex: 0 0 auto !important;
+}
+
+.zy-scope input[type="checkbox"][type="checkbox"][type="checkbox"] { border-radius: var(--zy-check-radius, 5px) !important; }
+.zy-scope input[type="radio"][type="radio"][type="radio"]           { border-radius: 50% !important; }
+
+.zy-scope label:has(> input[type="checkbox"]),
+.zy-scope label:has(> input[type="radio"]) {
+    font-size: var(--zy-check-font, 13px) !important;
+    gap: var(--zy-check-gap, 10px) !important;
+}
+
+/* --------------------------------------------- العناوين والنصوص */
+.zy-scope h1 { font-size: var(--zy-h1, 26px) !important; }
+.zy-scope h2 { font-size: var(--zy-h2, 20px) !important; }
+.zy-scope h3 { font-size: var(--zy-h3, 16px) !important; }
+
+.zy-scope p,
+.zy-scope td,
+.zy-scope li {
+    font-size: var(--zy-body-font, 13px) !important;
+    line-height: var(--zy-line-height, 1.55) !important;
+}
+
+/* عنوان الحقل فقط — لا العناوين الحاضنة لجيك بوكس (نصّها يتبع مقاس الجيك بوكس) */
+.zy-scope label:not(:has(> input[type="checkbox"])):not(:has(> input[type="radio"])) {
+    font-size: var(--zy-label-font, 12px) !important;
+}
+
+.zy-scope small { font-size: var(--zy-hint-font, 11px) !important; }
+
+/* -------------------------------------------- الجداول والبطاقات */
+.zy-scope table th,
+.zy-scope table td {
+    height: var(--zy-row-h, 44px) !important;
+    padding-inline: var(--zy-cell-pad-x, 12px) !important;
+}
+
+.zy-scope th { font-size: var(--zy-label-font, 12px) !important; }
+
+.zy-scope .zy-card,
+.zy-scope .table-card,
+.zy-scope .nxhs-panel {
+    padding: var(--zy-card-pad, 16px) !important;
+    border-radius: var(--zy-card-radius, 18px) !important;
+}
+
+/* المسافة بين البطاقات — كانت هي الأخرى توكناً بلا مستهلك */
+.zy-scope .nxupd-stage-blocks,
+.zy-scope .permissions-layout,
+.zy-scope .zdl-card-grid {
+    gap: var(--zy-card-gap, 14px) !important;
+}
+
+/* ------------------------------------------ الشارات والتبويبات */
+.zy-scope .zy-pill,
+.zy-scope .nxupd-pill,
+.zy-scope .badge,
+.zy-scope .zy-badge {
+    min-height: var(--zy-pill-h, 28px) !important;
+    padding-inline: var(--zy-pill-pad-x, 12px) !important;
+    font-size: var(--zy-pill-font, 11px) !important;
+}
+
+/* التبويبات روابط `inline` افتراضياً، و`min-height` **لا أثر له على عنصر
+   inline** — فكان مقياس ارتفاع التبويب يتحرّك بلا أي نتيجة. `inline-flex`
+   يجعله صندوقاً يحترم الارتفاع، والمحاذاة الوسطى تُبقي النصّ بالمنتصف. */
+.zy-scope .zy-tab,
+.zy-scope .nxupd-top-tabs > a {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: var(--zy-tab-h, 40px) !important;
+    font-size: var(--zy-tab-font, 13px) !important;
+}

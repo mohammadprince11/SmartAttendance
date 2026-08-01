@@ -1602,3 +1602,123 @@ body.nxupd-modal-open{
     font-family: Arial, "Segoe UI", Tahoma, sans-serif !important;
 }
 /* NEXORA_FIX14H_V2_DATEPICKER_ENCODING_CARET_END */
+/* ZY_MOVEMENT_META_THREE_FIELDS_START */
+/*
+   شريط بيانات الحركة صار **ثلاثة** حقول لا اثنين: أُضيف «بأثر رجعي» بعد أن
+   صُمِّمت الشبكة لعمودين (تاريخ + ملاحظة). فبثلاثة أطفال بعمودين تنزل الملاحظة
+   وحدها بصفٍّ ثانٍ وتبقى خانةٌ فارغة بجانبها.
+
+   والأسوأ: صفوف الطفل كانت مثبَّتة `18px 46px 18px`، وتوضيح «بأثر رجعي» فقرةٌ
+   من سطرين — فكان يُحشر بـ18px ويُقصّ.
+*/
+
+/* الملاحظة تمتدّ على العرض كاملاً ⟹ لا خانة فارغة */
+.nxupd-page-v14b .nxupd-movement-meta > .nxupd-note {
+    grid-column: 1 / -1 !important;
+}
+
+/* صفٌّ أول وثالث بارتفاعٍ تلقائي: العنوان سطرٌ واحد فيبقى متعادلاً، والتوضيح
+   يلتفّ بدل أن يُقصّ. الحقل نفسه يبقى 46px فتبقى الحقول متعادلة أفقياً. */
+/* الصفّ الأوسط كان مثبَّتاً 46px، فحقلٌ أطول (كلاندر بمقاسٍ مختار من المختبر)
+   يتجاوز خانته. `auto` يجعل كل حقلٍ بارتفاع عنصره، والتعادل الأفقي يأتي من
+   تعادل مقاسات التوكنات لا من رقمٍ مثبَّت هنا. */
+.nxupd-page-v14b .nxupd-movement-meta > .nxupd-field,
+.nxupd-page-v14b .nxupd-movement-meta > .nxupd-note {
+    grid-template-rows: auto auto auto !important;
+}
+
+/* الفاصل الوهمي كان يعوّض غياب التوضيح تحت الملاحظة حين كانت بعمودٍ جانبيّ؛
+   وقد صارت بصفٍّ مستقلّ فما عاد يفعل إلا فراغاً ميتاً. */
+.nxupd-page-v14b .nxupd-movement-meta > .nxupd-note::after {
+    content: none !important;
+}
+
+/* المنسدلة كانت 44px داخل خانة 46px فتبدو غير محاذية لحقل التاريخ */
+.nxupd-page-v14b .nxupd-movement-meta select[name="isRetroactive"] {
+    height: 46px !important;
+    padding: 0 12px !important;
+    box-sizing: border-box !important;
+}
+
+.nxupd-page-v14b .nxupd-movement-meta > .nxupd-field small {
+    line-height: 1.55 !important;
+}
+/* ZY_MOVEMENT_META_THREE_FIELDS_END */
+
+/* ZY_MOVEMENT_META_NATIVE_DATE_START */
+/* حقل التاريخ الأصليّ يبتلعه ودجت التقويم (nexora-calendar-v18) ويُخفيه، لكن
+   قاعدة هذه الصفحة `input[name="effectiveDate"]{height:46px!important}` أقوى
+   تخصصيةً من قاعدة الإخفاء، فكانت تعيده **محجوزاً بلا ظهور**: 46px فارغة تدفع
+   صندوق التاريخ للأسفل فلا يحاذي منسدلة «بأثر رجعي».
+   الاستثناء يعيد الإخفاء المقصود، بلا مساس بالحقل المرئيّ. */
+.nxupd-page-v14b .nxupd-movement-meta input[name="effectiveDate"].nxcal-native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    min-height: 1px !important;
+    max-height: 1px !important;
+    padding: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    clip-path: inset(50%) !important;
+}
+/* ZY_MOVEMENT_META_NATIVE_DATE_END */
+
+/* ZY_STAGE_FIELDS_SIZING_START */
+/*
+   عدد أعمدة شبكة الحقول كان يستجيب لعرض **النافذة** عبر @media، والبطاقات
+   نفسها نصف عرض الصفحة. فبنافذةٍ عريضة تُفرض ثلاثة أعمدة داخل بطاقة 451px
+   ⟹ 141px للحقل الواحد ⟹ تُقصّ النصوص: «Cash / Bank / Card» تظهر
+   «ash / Bank / Card»، و«مثال: IQ...» مبتورة.
+
+   الحلّ أن تستجيب الشبكة لعرض **حاويتها**: auto-fit بحدٍّ أدنى 190px يعطي
+   عمودين داخل البطاقة النصفية وثلاثة إن اتّسعت — بلا @media وبلا تخمين.
+*/
+.nxupd-page-v14b .nxupd-fields,
+.nxupd-page-v14b .nxupd-stage-block .nxupd-fields,
+.nxupd-page-v14b .nxupd-stage-block[data-section-key="financial"] .nxupd-fields {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)) !important;
+}
+
+/* ودجتا التاريخ والمنسدلة كانتا 40px بينما الحقول النصّية 44px، فتبدو حقول
+   الصفّ الواحد غير متعادلة الارتفاع ومزاحة رأسياً.
+   ⚠️ الرقم يأتي من التوكن لا مثبَّتاً: تثبيتُه هنا كان يغلب مختبر المقاسات
+   (تخصصية أعلى) فيستجيب «تاريخ سريان الحركة» ولا يستجيب «تاريخ الميلاد» —
+   انقسامٌ رصدتُه بالفحص الحيّ وسببه هذا السطر نفسه. */
+.nxupd-page-v14b .nxupd-fields .nxcal {
+    height: var(--zy-calendar-h, 44px) !important;
+    min-height: var(--zy-calendar-h, 44px) !important;
+    box-sizing: border-box !important;
+}
+
+.nxupd-page-v14b .nxupd-fields .nxcs {
+    height: var(--zy-dropdown-h, 44px) !important;
+    min-height: var(--zy-dropdown-h, 44px) !important;
+    box-sizing: border-box !important;
+}
+/* ZY_STAGE_FIELDS_SIZING_END */
+
+/* ZY_NATIVE_WIDGET_INPUTS_START */
+/*
+   تعميمٌ لإصلاح حقل «تاريخ سريان الحركة»: كل حقلٍ أصليّ تبتلعه ودجت
+   (`nxcal-native` للتاريخ · `nxcs-native` للمنسدلة) يجب أن يبقى مخفياً بلا حجز
+   مساحة. قواعد هذه الصفحة تفرض عليه ارتفاعاً بتخصصيةٍ أعلى من قاعدة الإخفاء،
+   فيعود «مرئيَّ المساحة معدومَ الظهور»: 40px فارغة فوق كل حقل تاريخ تدفعه
+   للأسفل فلا يحاذي جيرانه بنفس الصفّ (لوحظ بـ«تاريخ الميلاد» مقابل «رقم الهوية»).
+
+   تكرار الصنف يرفع التخصصية فوق قواعد الصفحة بلا !important إضافي عليها.
+*/
+.nxupd-page input.nxcal-native.nxcal-native,
+.nxupd-page select.nxcs-native.nxcs-native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    min-height: 1px !important;
+    max-height: 1px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    clip-path: inset(50%) !important;
+}
+/* ZY_NATIVE_WIDGET_INPUTS_END */

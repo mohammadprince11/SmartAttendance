@@ -137,9 +137,14 @@ html[dir="ltr"] .zy-scope select,
 /* عناصر الكلاندر (nxcal__*-button) مستثناة — قياسها من zynora-design-system */
 .zy-scope [class*="-button"]:not([class*="pill"]):not([class*="icon"]):not([class*="switch"]):not([class*="pagination"]):not([class*="nxcal"]),
 .zy-scope .nxos__button {
-    min-height: 40px !important;
-    padding: 0 18px;
-    font-size: 14px !important;
+    /* الأرقام من مختبر المقاسات لا مثبَّتة: هذه القاعدة هي الموحِّد الفعليّ لكل
+       أزرار النظام، فتثبيتُها هنا كان يغلب المختبر ويجعل عشرات الأزرار
+       «لا تتأثّر». الاحتياطيّات هي القيم السابقة نفسها ⟹ صفر تغيير بلا تخصيص. */
+    min-height: var(--zy-button-h, 40px) !important;
+    padding: 0 var(--zy-button-pad-x, 18px);
+    font-size: var(--zy-button-font, 14px) !important;
+    font-weight: var(--zy-button-weight, 600);
+    border-radius: var(--zy-button-radius, 12px);
 }
 /* hover/active/focus موحّد لكل الأزرار */
 .zy-scope [class*="-btn"]:not([class*="pill"]):hover:not(:disabled),

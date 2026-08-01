@@ -4,9 +4,13 @@
 @inject IPermissionAuthorizationService PermissionAuthorizationService
 @inject IThemeContextService ThemeContextService
 @inject IAccessRoleService AccessRoleService
+@inject SmartAttendance.Infrastructure.Persistence.ApplicationDbContext DesignTokenDb
 @{
     var companyTheme = await ThemeContextService.GetCurrentAsync(Context.RequestAborted);
     var brandName = string.IsNullOrWhiteSpace(companyTheme.DisplayName) ? "ZYNORA HR" : companyTheme.DisplayName;
+
+    // مقاسات الواجهة المخصَّصة. مكشوفةٌ من كاش العملية لا من القاعدة بكل طلب.
+    var designTokenCss = DesignTokenStore.CompileCss(await DesignTokenStore.LoadAsync(DesignTokenDb));
 }
 
 <!DOCTYPE html>
@@ -849,6 +853,16 @@
        حيث تعادلت (1,2,0) وحسم الترتيبُ لصالح الملف القديم.
        المكان الصحيح هنا بعد RenderBody (نفس علّة zynora-components.css أعلاه). *@
     <link rel="stylesheet" href="~/css/zynora-legacy-bridge.css" asp-append-version="true" />
+
+    @* مقاسات الواجهة — **بعد الجسر** لأنها آخر كلمة بالمقاسات، ولأن الجسر نفسه
+       يفرض مقاسات قديمة بـ!important فلو سبقناه لخسرنا. القيم الفعلية تأتي من
+       متغيّرات الـ:root المحقونة أدناه؛ وبلا تخصيصٍ محفوظ تبقى القيم الاحتياطية
+       داخل الملف = مظهر ما قبل الميزة حرفياً. *@
+    <link rel="stylesheet" href="~/css/zynora-tokens.css" asp-append-version="true" />
+    @if (!string.IsNullOrEmpty(designTokenCss))
+    {
+        <style id="zy-design-tokens">@Html.Raw(designTokenCss)</style>
+    }
 
     <script>
         window.SA_AUTH = {
