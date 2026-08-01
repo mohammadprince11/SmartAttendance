@@ -23,6 +23,10 @@
     .zydv-foot { border-top:1px solid #ddd; margin-top:36px; padding-top:12px; font-size:12px; color:#777; }
     .zydv-paper table { border-collapse:collapse; }
     .zydv-paper td, .zydv-paper th { border:1px solid #ccc; padding:6px 10px; }
+    .zydv-custom-head { border-bottom:1px solid #ddd; padding-bottom:14px; margin-bottom:28px; }
+    .zydv-custom-foot { border-top:1px solid #ddd; margin-top:36px; padding-top:12px; }
+    .zydv-stamp { margin-top:32px; text-align:start; }
+    .zydv-stamp img { max-width:170px; max-height:170px; opacity:.92; }
 
     @@media print {
         .zydv-bar, .zydv-warn, .nexora-sidebar, .nexora-topbar, header, nav, footer { display:none !important; }
@@ -34,8 +38,28 @@
 <section dir="rtl" style="padding:20px">
     <div class="zydv-bar">
         <a asp-page="./Generate">← الأرشيف</a>
-        <button type="button" class="primary" onclick="window.print()">طباعة / حفظ PDF</button>
+        <div style="display:flex;gap:10px">
+            @if (Model.Document is not null && !Model.Document.IsFiled)
+            {
+                <form method="post" asp-page-handler="File" style="display:inline">
+                    <input type="hidden" name="id" value="@Model.Document.Id" />
+                    <button type="submit">أودِع بملف الموظف</button>
+                </form>
+            }
+            else if (Model.Document is not null)
+            {
+                <span style="font-size:.8125rem;color:var(--zy-text-muted);align-self:center">✓ مودعة بملف الموظف</span>
+            }
+            <button type="button" class="primary" onclick="window.print()">طباعة / حفظ PDF</button>
+        </div>
     </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="zydv-warn" style="border-inline-start-color:var(--zy-success);background:var(--zy-success-soft)">
+            @TempData["SuccessMessage"]
+        </div>
+    }
 
     @if (Model.Document is null)
     {
@@ -52,22 +76,45 @@
         }
 
         <article class="zydv-paper">
-            <div class="zydv-head">
-                <div>
-                    <b>@Model.CompanyName</b>
-                    <div>@Model.Document.TemplateName</div>
+            @{ var customHeader = Model.SafeHeader(); }
+            @if (!string.IsNullOrWhiteSpace(customHeader))
+            {
+                <div class="zydv-custom-head">@Html.Raw(customHeader)</div>
+            }
+            else
+            {
+                <div class="zydv-head">
+                    <div>
+                        <b>@Model.CompanyName</b>
+                        <div>@Model.Document.TemplateName</div>
+                    </div>
+                    <div style="text-align:end">
+                        <div>الرقم المرجعي: <b>@Model.Document.ReferenceNo</b></div>
+                        <div>التاريخ: @Model.Document.IssuedOn.ToString("yyyy/MM/dd")</div>
+                    </div>
                 </div>
-                <div style="text-align:end">
-                    <div>الرقم المرجعي: <b>@Model.Document.ReferenceNo</b></div>
-                    <div>التاريخ: @Model.Document.IssuedOn.ToString("yyyy/MM/dd")</div>
-                </div>
-            </div>
+            }
 
             @Html.Raw(Model.SafeBody())
 
-            <div class="zydv-foot">
-                صدرت عن @Model.Document.IssuedBy — @Model.Document.EmployeeName (@Model.Document.EmployeeNo)
-            </div>
+            @if (Model.Document.HasStamp)
+            {
+                <div class="zydv-stamp">
+                    <img src="@Url.Page("./View", "Stamp", new { id = Model.Document.Id })" alt="ختم الشركة" />
+                </div>
+            }
+
+            @{ var customFooter = Model.SafeFooter(); }
+            @if (!string.IsNullOrWhiteSpace(customFooter))
+            {
+                <div class="zydv-custom-foot">@Html.Raw(customFooter)</div>
+            }
+            else
+            {
+                <div class="zydv-foot">
+                    صدرت عن @Model.Document.IssuedBy — @Model.Document.EmployeeName (@Model.Document.EmployeeNo)
+                </div>
+            }
         </article>
     }
 </section>

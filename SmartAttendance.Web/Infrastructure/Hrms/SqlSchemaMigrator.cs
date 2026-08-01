@@ -564,6 +564,56 @@ BEGIN
     CREATE INDEX IX_GeneratedDocuments_Template ON GeneratedDocuments (TemplateId, Id);
 END;
 """),
+
+        // منشئ الوثائق — المرحلة الثانية: ترويسة وتذييل وختم وأرشفة بملف الموظف.
+        //
+        // ⭐ **الترويسة والتذييل قوالبُ من نفس الجدول بنوعٍ مختلف** (`Kind`)، لا
+        // جدولان جديدان: بنيتهما مطابقة (اسم + نصّ + رموز دمج) كما أثبت الفحص الحيّ،
+        // فجدولان منفصلان يعنيان تكرار المخزن والـStore والصفحة بلا مقابل.
+        //
+        // ⚠️ Kind الفارغ = 'Document' — فكل قالب قائم يبقى وثيقةً كما هو، وصفر
+        // تغيير على سلوك ما بُني بالمرحلة الأولى.
+        //
+        // وHeaderHtml/FooterHtml تُخزَّنان **بالوثيقة الصادرة** لا يُقرآن من القالب
+        // عند العرض: نفس مبدأ المرحلة الأولى — تغيير الترويسة بعد سنة يجب ألا يغيّر
+        // شهادةً صدرت وسُلِّمت.
+        new(
+            "20260801-20-document-header-footer-stamp",
+            """
+IF OBJECT_ID('DocumentTemplates', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('DocumentTemplates', 'Kind') IS NULL
+        ALTER TABLE DocumentTemplates ADD Kind nvarchar(20) NULL;
+
+    IF COL_LENGTH('DocumentTemplates', 'HeaderTemplateId') IS NULL
+        ALTER TABLE DocumentTemplates ADD HeaderTemplateId int NULL;
+
+    IF COL_LENGTH('DocumentTemplates', 'FooterTemplateId') IS NULL
+        ALTER TABLE DocumentTemplates ADD FooterTemplateId int NULL;
+
+    IF COL_LENGTH('DocumentTemplates', 'StampKey') IS NULL
+        ALTER TABLE DocumentTemplates ADD StampKey nvarchar(500) NULL;
+
+    IF COL_LENGTH('DocumentTemplates', 'StampFileName') IS NULL
+        ALTER TABLE DocumentTemplates ADD StampFileName nvarchar(260) NULL;
+END;
+
+IF OBJECT_ID('GeneratedDocuments', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('GeneratedDocuments', 'HeaderHtml') IS NULL
+        ALTER TABLE GeneratedDocuments ADD HeaderHtml nvarchar(max) NULL;
+
+    IF COL_LENGTH('GeneratedDocuments', 'FooterHtml') IS NULL
+        ALTER TABLE GeneratedDocuments ADD FooterHtml nvarchar(max) NULL;
+
+    IF COL_LENGTH('GeneratedDocuments', 'StampKey') IS NULL
+        ALTER TABLE GeneratedDocuments ADD StampKey nvarchar(500) NULL;
+
+    -- ربط الوثيقة الصادرة بصفّها بملف الموظف (EmployeeDocuments) عند الأرشفة.
+    IF COL_LENGTH('GeneratedDocuments', 'EmployeeDocumentId') IS NULL
+        ALTER TABLE GeneratedDocuments ADD EmployeeDocumentId int NULL;
+END;
+"""),
     };
 
     /// <summary>

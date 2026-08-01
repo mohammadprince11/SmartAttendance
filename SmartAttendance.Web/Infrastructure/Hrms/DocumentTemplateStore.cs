@@ -11,6 +11,21 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 /// </summary>
 public static class DocumentTemplateStore
 {
+    /// <summary>
+    /// أنواع القوالب — جدول واحد بثلاثة أنواع لا ثلاثة جداول: بنية الترويسة
+    /// والتذييل مطابقة للوثيقة (اسم + نصّ + رموز دمج) كما أثبت الفحص الحيّ لكيان.
+    /// </summary>
+    public const string KindDocument = "Document";
+    public const string KindHeader = "Header";
+    public const string KindFooter = "Footer";
+
+    public static string KindLabel(string? kind) => kind switch
+    {
+        KindHeader => "ترويسة",
+        KindFooter => "تذييل",
+        _ => "وثيقة"
+    };
+
     public sealed record Template(
         int Id,
         string Name,
@@ -20,10 +35,17 @@ public static class DocumentTemplateStore
         string ConditionsJson,
         string? RefPrefix,
         bool AllowEmployeeRequest,
-        bool IsActive)
+        bool IsActive,
+        string Kind,
+        int? HeaderTemplateId,
+        int? FooterTemplateId,
+        string? StampKey,
+        string? StampFileName)
     {
         public HrConditions.ConditionSet Conditions => HrConditions.Deserialize(ConditionsJson);
         public List<string> Tokens => DocumentTokenEngine.ExtractTokens(Body);
+        public bool IsDocument => Kind == KindDocument;
+        public bool HasStamp => !string.IsNullOrWhiteSpace(StampKey);
     }
 
     public sealed record Generated(
@@ -39,27 +61,42 @@ public static class DocumentTemplateStore
         DateOnly IssuedOn,
         string? IssuedBy,
         string? Source,
-        string? Notes)
+        string? Notes,
+        string? HeaderHtml = null,
+        string? FooterHtml = null,
+        string? StampKey = null,
+        int? EmployeeDocumentId = null)
     {
         public bool HasUnresolved => !string.IsNullOrWhiteSpace(UnresolvedTokens);
+        public bool HasStamp => !string.IsNullOrWhiteSpace(StampKey);
+        public bool IsFiled => EmployeeDocumentId is > 0;
     }
 
     // ── القوالب ────────────────────────────────────────────────────────────────
 
-    public static async Task<List<Template>> LoadTemplatesAsync(ApplicationDbContext db, bool activeOnly = false)
+    public static async Task<List<Template>> LoadTemplatesAsync(
+        ApplicationDbContext db, bool activeOnly = false, string? kind = null)
     {
-        var filter = activeOnly ? " AND IsActive = 1" : string.Empty;
+        var filters = new List<string>();
+        if (activeOnly) filters.Add("IsActive = 1");
+        // Kind الفارغ = وثيقة: صفوف المرحلة الأولى كُتبت قبل وجود العمود.
+        if (kind is not null) filters.Add("ISNULL(Kind, N'Document') = @Kind");
+        var filter = filters.Count == 0 ? string.Empty : " AND " + string.Join(" AND ", filters);
 
         return await HrmsDatabase.QueryAsync(
             db,
             $"""
 SELECT Id, Name, NameEn, Description, Body, ISNULL(ConditionsJson, N'') AS ConditionsJson,
-       RefPrefix, AllowEmployeeRequest, IsActive
+       RefPrefix, AllowEmployeeRequest, IsActive, ISNULL(Kind, N'Document') AS Kind,
+       HeaderTemplateId, FooterTemplateId, StampKey, StampFileName
 FROM DocumentTemplates
 WHERE ISNULL(IsDeleted, 0) = 0{filter}
 ORDER BY Name;
 """,
-            command => { },
+            command =>
+            {
+                if (kind is not null) HrmsDatabase.AddParameter(command, "@Kind", kind);
+            },
             reader => new Template(
                 HrmsDatabase.GetInt(reader, "Id"),
                 HrmsDatabase.GetString(reader, "Name"),
@@ -69,7 +106,12 @@ ORDER BY Name;
                 HrmsDatabase.GetString(reader, "ConditionsJson"),
                 HrmsDatabase.GetString(reader, "RefPrefix"),
                 HrmsDatabase.GetBool(reader, "AllowEmployeeRequest"),
-                HrmsDatabase.GetBool(reader, "IsActive")));
+                HrmsDatabase.GetBool(reader, "IsActive"),
+                HrmsDatabase.GetString(reader, "Kind"),
+                HrmsDatabase.GetNullableInt(reader, "HeaderTemplateId"),
+                HrmsDatabase.GetNullableInt(reader, "FooterTemplateId"),
+                HrmsDatabase.GetString(reader, "StampKey"),
+                HrmsDatabase.GetString(reader, "StampFileName")));
     }
 
     public static async Task<Template?> FindTemplateAsync(ApplicationDbContext db, int id) =>
@@ -87,22 +129,33 @@ ORDER BY Name;
         string? refPrefix,
         bool allowEmployeeRequest,
         bool isActive,
-        string? user)
+        string? user,
+        string kind = KindDocument,
+        int? headerTemplateId = null,
+        int? footerTemplateId = null,
+        string? stampKey = null,
+        string? stampFileName = null)
     {
         var clean = DocumentHtmlSanitizer.Sanitize(body);
 
         if (id > 0)
         {
+            // الختم يُحدَّث **فقط إن رُفع جديد** — حفظُ تعديلٍ بلا اختيار ملف كان
+            // سيمسح ختم الشركة ويترك وثائق بلا ختم بلا أن يلاحظ أحد.
             await HrmsDatabase.ExecuteAsync(
                 db,
                 """
 UPDATE DocumentTemplates
 SET Name = @Name, NameEn = @NameEn, Description = @Description, Body = @Body,
     ConditionsJson = @Conditions, RefPrefix = @RefPrefix,
-    AllowEmployeeRequest = @AllowRequest, IsActive = @IsActive, UpdatedAt = SYSUTCDATETIME()
+    AllowEmployeeRequest = @AllowRequest, IsActive = @IsActive, Kind = @Kind,
+    HeaderTemplateId = @HeaderId, FooterTemplateId = @FooterId,
+    StampKey = ISNULL(@StampKey, StampKey), StampFileName = ISNULL(@StampFileName, StampFileName),
+    UpdatedAt = SYSUTCDATETIME()
 WHERE Id = @Id;
 """,
-                command => Bind(command, id, name, nameEn, description, clean, conditions, refPrefix, allowEmployeeRequest, isActive, user));
+                command => Bind(command, id, name, nameEn, description, clean, conditions, refPrefix,
+                    allowEmployeeRequest, isActive, user, kind, headerTemplateId, footerTemplateId, stampKey, stampFileName));
 
             return id;
         }
@@ -111,17 +164,21 @@ WHERE Id = @Id;
             db,
             """
 INSERT INTO DocumentTemplates
-    (Name, NameEn, Description, Body, ConditionsJson, RefPrefix, AllowEmployeeRequest, IsActive, CreatedBy)
+    (Name, NameEn, Description, Body, ConditionsJson, RefPrefix, AllowEmployeeRequest, IsActive,
+     Kind, HeaderTemplateId, FooterTemplateId, StampKey, StampFileName, CreatedBy)
 OUTPUT INSERTED.Id
-VALUES (@Name, @NameEn, @Description, @Body, @Conditions, @RefPrefix, @AllowRequest, @IsActive, @CreatedBy);
+VALUES (@Name, @NameEn, @Description, @Body, @Conditions, @RefPrefix, @AllowRequest, @IsActive,
+        @Kind, @HeaderId, @FooterId, @StampKey, @StampFileName, @CreatedBy);
 """,
-            command => Bind(command, id, name, nameEn, description, clean, conditions, refPrefix, allowEmployeeRequest, isActive, user));
+            command => Bind(command, id, name, nameEn, description, clean, conditions, refPrefix,
+                allowEmployeeRequest, isActive, user, kind, headerTemplateId, footerTemplateId, stampKey, stampFileName));
     }
 
     private static void Bind(
         System.Data.Common.DbCommand command,
         int id, string name, string? nameEn, string? description, string body,
-        HrConditions.ConditionSet conditions, string? refPrefix, bool allowRequest, bool isActive, string? user)
+        HrConditions.ConditionSet conditions, string? refPrefix, bool allowRequest, bool isActive, string? user,
+        string kind, int? headerId, int? footerId, string? stampKey, string? stampFileName)
     {
         if (id > 0) HrmsDatabase.AddParameter(command, "@Id", id);
         HrmsDatabase.AddParameter(command, "@Name", name);
@@ -132,6 +189,11 @@ VALUES (@Name, @NameEn, @Description, @Body, @Conditions, @RefPrefix, @AllowRequ
         HrmsDatabase.AddParameter(command, "@RefPrefix", refPrefix);
         HrmsDatabase.AddParameter(command, "@AllowRequest", allowRequest);
         HrmsDatabase.AddParameter(command, "@IsActive", isActive);
+        HrmsDatabase.AddParameter(command, "@Kind", kind);
+        HrmsDatabase.AddParameter(command, "@HeaderId", headerId);
+        HrmsDatabase.AddParameter(command, "@FooterId", footerId);
+        HrmsDatabase.AddParameter(command, "@StampKey", stampKey);
+        HrmsDatabase.AddParameter(command, "@StampFileName", stampFileName);
         if (id <= 0) HrmsDatabase.AddParameter(command, "@CreatedBy", user);
     }
 
@@ -241,9 +303,15 @@ WHERE e.Id = @EmployeeId AND ISNULL(e.IsDeleted, 0) = 0;
         var tokens = DocumentTokenEngine.Build(rows[0], extras, context, issuedOn);
         var render = DocumentTokenEngine.Render(template.Body, tokens);
 
+        // الترويسة والتذييل يمرّان **بنفس محرّك الرموز**: ترويسة تحمل اسم الفرع أو
+        // تاريخ الإصدار تحتاجهما تماماً كما يحتاجهما المتن.
+        var all = new List<string>(render.UnresolvedTokens);
+        var header = await RenderPartAsync(db, template.HeaderTemplateId, tokens, all);
+        var footer = await RenderPartAsync(db, template.FooterTemplateId, tokens, all);
+
         if (!persist)
         {
-            return (0, render.Html, render.UnresolvedTokens);
+            return (0, ComposePreview(header, render.Html, footer), all);
         }
 
         var id = await HrmsDatabase.ScalarAsync<int>(
@@ -251,10 +319,10 @@ WHERE e.Id = @EmployeeId AND ISNULL(e.IsDeleted, 0) = 0;
             """
 INSERT INTO GeneratedDocuments
     (ReferenceNo, TemplateId, TemplateName, EmployeeId, BodyHtml, UnresolvedTokens,
-     IssuedOn, IssuedBy, Source, Notes)
+     IssuedOn, IssuedBy, Source, Notes, HeaderHtml, FooterHtml, StampKey)
 OUTPUT INSERTED.Id
 VALUES (@Ref, @TemplateId, @TemplateName, @EmployeeId, @Body, @Unresolved,
-        @IssuedOn, @IssuedBy, @Source, @Notes);
+        @IssuedOn, @IssuedBy, @Source, @Notes, @Header, @Footer, @StampKey);
 """,
             command =>
             {
@@ -263,15 +331,101 @@ VALUES (@Ref, @TemplateId, @TemplateName, @EmployeeId, @Body, @Unresolved,
                 HrmsDatabase.AddParameter(command, "@TemplateName", template.Name);
                 HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
                 HrmsDatabase.AddParameter(command, "@Body", render.Html);
-                HrmsDatabase.AddParameter(command, "@Unresolved",
-                    render.UnresolvedTokens.Count == 0 ? null : string.Join(", ", render.UnresolvedTokens));
+                HrmsDatabase.AddParameter(command, "@Unresolved", all.Count == 0 ? null : string.Join(", ", all));
                 HrmsDatabase.AddParameter(command, "@IssuedOn", issuedOn.ToDateTime(TimeOnly.MinValue));
                 HrmsDatabase.AddParameter(command, "@IssuedBy", issuedBy);
                 HrmsDatabase.AddParameter(command, "@Source", source);
                 HrmsDatabase.AddParameter(command, "@Notes", notes);
+                // تُخزَّن **بالوثيقة** لا تُقرأ من القالب عند العرض: تغيير الترويسة
+                // بعد سنة يجب ألا يغيّر شهادةً صدرت وسُلِّمت.
+                HrmsDatabase.AddParameter(command, "@Header", header);
+                HrmsDatabase.AddParameter(command, "@Footer", footer);
+                HrmsDatabase.AddParameter(command, "@StampKey", template.StampKey);
             });
 
-        return (id, render.Html, render.UnresolvedTokens);
+        return (id, render.Html, all);
+    }
+
+    /// <summary>يرسم ترويسةً أو تذييلاً بنفس الرموز، ويضمّ ما لم يُحَلّ لقائمة الوثيقة.</summary>
+    private static async Task<string?> RenderPartAsync(
+        ApplicationDbContext db, int? templateId, IReadOnlyDictionary<string, string> tokens, List<string> unresolved)
+    {
+        if (templateId is not { } id)
+        {
+            return null;
+        }
+
+        var part = await FindTemplateAsync(db, id);
+        if (part is null)
+        {
+            return null;
+        }
+
+        var rendered = DocumentTokenEngine.Render(part.Body, tokens);
+
+        foreach (var token in rendered.UnresolvedTokens)
+        {
+            if (!unresolved.Contains(token, StringComparer.OrdinalIgnoreCase))
+            {
+                unresolved.Add(token);
+            }
+        }
+
+        return rendered.Html;
+    }
+
+    private static string ComposePreview(string? header, string body, string? footer)
+    {
+        var builder = new System.Text.StringBuilder();
+        if (!string.IsNullOrWhiteSpace(header)) builder.Append(header);
+        builder.Append(body);
+        if (!string.IsNullOrWhiteSpace(footer)) builder.Append(footer);
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// يودع الوثيقة الصادرة **ملف الموظف** (<c>EmployeeDocuments</c>) فتظهر بملفه
+    /// 360 لا بشاشة التوليد وحدها. الإيداع صريح لا تلقائي: ليست كل وثيقة تُولَّد
+    /// جديرةً بأرشيف الموظف الدائم (معاينات · مسودّات · نسخ بديلة).
+    /// </summary>
+    public static async Task<bool> FileToEmployeeAsync(ApplicationDbContext db, int generatedId, string? user)
+    {
+        var document = await FindGeneratedAsync(db, generatedId);
+
+        if (document is null || document.IsFiled)
+        {
+            return false;
+        }
+
+        var employeeDocumentId = await HrmsDatabase.ScalarAsync<int>(
+            db,
+            """
+INSERT INTO EmployeeDocuments (EmployeeId, DocumentType, FileName, StoredPath, Notes, UploadedBy)
+OUTPUT INSERTED.Id
+VALUES (@EmployeeId, @Type, @FileName, @Path, @Notes, @By);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", document.EmployeeId);
+                HrmsDatabase.AddParameter(command, "@Type", document.TemplateName ?? "وثيقة مولَّدة");
+                HrmsDatabase.AddParameter(command, "@FileName", $"{document.ReferenceNo}.html");
+                // مسار داخلي لصفحة العرض لا ملفّ على القرص: الوثيقة نصّها بالقاعدة،
+                // وتوليد ملفٍ لكل وثيقة يضاعف التخزين بلا فائدة.
+                HrmsDatabase.AddParameter(command, "@Path", $"/Documents/View?id={document.Id}");
+                HrmsDatabase.AddParameter(command, "@Notes", document.Notes);
+                HrmsDatabase.AddParameter(command, "@By", user);
+            });
+
+        await HrmsDatabase.ExecuteAsync(
+            db,
+            "UPDATE GeneratedDocuments SET EmployeeDocumentId = @DocId WHERE Id = @Id;",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@DocId", employeeDocumentId);
+                HrmsDatabase.AddParameter(command, "@Id", generatedId);
+            });
+
+        return true;
     }
 
     /// <summary>ترقيم سنوي متسلسل — يُعاد من واحد كل سنة فيبقى الرقم قصيراً.</summary>
@@ -309,7 +463,8 @@ VALUES (@Ref, @TemplateId, @TemplateName, @EmployeeId, @Body, @Unresolved,
             $"""
 SELECT g.Id, g.ReferenceNo, g.TemplateId, g.TemplateName, g.EmployeeId,
        ISNULL(e.FullName, N'') AS EmployeeName, ISNULL(e.EmployeeNo, N'') AS EmployeeNo,
-       g.BodyHtml, g.UnresolvedTokens, g.IssuedOn, g.IssuedBy, g.Source, g.Notes
+       g.BodyHtml, g.UnresolvedTokens, g.IssuedOn, g.IssuedBy, g.Source, g.Notes,
+       g.HeaderHtml, g.FooterHtml, g.StampKey, g.EmployeeDocumentId
 FROM GeneratedDocuments g
 LEFT JOIN Employees e ON e.Id = g.EmployeeId
 WHERE ISNULL(g.IsDeleted, 0) = 0{where}
@@ -333,7 +488,11 @@ ORDER BY g.Id DESC;
                 HrmsDatabase.GetDateOnly(reader, "IssuedOn") ?? default,
                 HrmsDatabase.GetString(reader, "IssuedBy"),
                 HrmsDatabase.GetString(reader, "Source"),
-                HrmsDatabase.GetString(reader, "Notes")));
+                HrmsDatabase.GetString(reader, "Notes"),
+                HrmsDatabase.GetString(reader, "HeaderHtml"),
+                HrmsDatabase.GetString(reader, "FooterHtml"),
+                HrmsDatabase.GetString(reader, "StampKey"),
+                HrmsDatabase.GetNullableInt(reader, "EmployeeDocumentId")));
     }
 
     public static async Task<Generated?> FindGeneratedAsync(ApplicationDbContext db, int id) =>

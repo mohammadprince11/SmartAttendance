@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Documents;
 
@@ -15,8 +16,13 @@ namespace SmartAttendance.Web.Pages.Documents;
 public class ViewModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly IWebHostEnvironment _environment;
 
-    public ViewModel(ApplicationDbContext db) => _db = db;
+    public ViewModel(ApplicationDbContext db, IWebHostEnvironment environment)
+    {
+        _db = db;
+        _environment = environment;
+    }
 
     [BindProperty(SupportsGet = true)] public int Id { get; set; }
 
@@ -51,4 +57,37 @@ WHERE e.Id = @EmployeeId;
     /// ألا يكون الأمن معتمداً على نقطة واحدة.
     /// </summary>
     public string SafeBody() => DocumentHtmlSanitizer.Sanitize(Document?.BodyHtml);
+    public string SafeHeader() => DocumentHtmlSanitizer.Sanitize(Document?.HeaderHtml);
+    public string SafeFooter() => DocumentHtmlSanitizer.Sanitize(Document?.FooterHtml);
+
+    /// <summary>يودع الوثيقة ملف الموظف — إيداعٌ صريح لا تلقائي.</summary>
+    public async Task<IActionResult> OnPostFileAsync(int id)
+    {
+        var filed = await DocumentTemplateStore.FileToEmployeeAsync(_db, id, User.Identity?.Name);
+
+        TempData["SuccessMessage"] = filed
+            ? "أُودعت الوثيقة بملف الموظف."
+            : "الوثيقة مودعة أصلاً بملف الموظف.";
+
+        return RedirectToPage(new { id });
+    }
+
+    /// <summary>ختم الوثيقة الصادرة — من الجذر المحميّ، والمفتاح مخزَّن بالوثيقة نفسها.</summary>
+    public async Task<IActionResult> OnGetStampAsync(int id)
+    {
+        var document = await DocumentTemplateStore.FindGeneratedAsync(_db, id);
+        if (document is null || !document.HasStamp)
+        {
+            return NotFound();
+        }
+
+        var root = ProtectedFileStore.ResolveRoot(_environment.ContentRootPath);
+        if (!ProtectedFileStore.TryResolvePhysicalPath(root, document.StampKey, out var path)
+            || !System.IO.File.Exists(path))
+        {
+            return NotFound();
+        }
+
+        return PhysicalFile(path, ProtectedFileStore.ContentTypeFor(Path.GetExtension(path)));
+    }
 }

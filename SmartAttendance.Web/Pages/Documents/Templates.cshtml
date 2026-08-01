@@ -48,6 +48,13 @@
             </p>
         </header>
 
+        <div class="zyp-actions" style="justify-content:flex-start;flex-wrap:wrap">
+            <a asp-page="./Templates" style="@(Model.KindFilter is null ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الكل</a>
+            <a asp-page="./Templates" asp-route-kind="Document" style="@(Model.KindFilter == "Document" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الوثائق</a>
+            <a asp-page="./Templates" asp-route-kind="Header" style="@(Model.KindFilter == "Header" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الترويسات</a>
+            <a asp-page="./Templates" asp-route-kind="Footer" style="@(Model.KindFilter == "Footer" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">التذييلات</a>
+        </div>
+
         @if (Model.Templates.Count == 0)
         {
             <p class="zyc-empty">لا قوالب — أنشئ قالباً (شهادة راتب · كتاب تعريف · خطاب تثبيت…).</p>
@@ -58,7 +65,7 @@
                 <thead>
                     <tr>
                         <th>اسم القالب</th>
-                        <th>الوصف</th>
+                        <th>النوع</th>
                         <th>الجمهور</th>
                         <th>الرموز</th>
                         <th>أُصدر منه</th>
@@ -78,14 +85,23 @@
                                     <div class="zyp-conditions">يطلبها الموظف بنفسه</div>
                                 }
                             </td>
-                            <td class="zyp-conditions">@template.Description</td>
+                            <td class="zyp-conditions">
+                                @DocumentTemplateStore.KindLabel(template.Kind)
+                                @if (template.HasStamp)
+                                {
+                                    <span title="عليه ختم">🔏</span>
+                                }
+                            </td>
                             <td class="zyp-conditions">@HrConditions.Describe(template.Conditions)</td>
                             <td class="zyp-count">@template.Tokens.Count</td>
                             <td class="zyp-count">@issued</td>
                             <td class="zyp-conditions">@(template.IsActive ? "نشط" : "معطّل")</td>
                             <td>
                                 <div class="zyp-actions">
-                                    <a asp-page="./Generate" asp-route-templateid="@template.Id">توليد</a>
+                                    @if (template.IsDocument)
+                                    {
+                                        <a asp-page="./Generate" asp-route-templateid="@template.Id">توليد</a>
+                                    }
                                     <a asp-page="./Templates" asp-route-edit="@template.Id">تعديل</a>
                                     <form method="post" asp-page-handler="Duplicate" style="display:inline">
                                         <input type="hidden" name="id" value="@template.Id" />
@@ -111,11 +127,19 @@
 
     @if (editing)
     {
-        <form method="post" asp-page-handler="Save" class="nxhs-panel zyp-editor">
+        <form method="post" asp-page-handler="Save" enctype="multipart/form-data" class="nxhs-panel zyp-editor">
             <h3>@(Model.TemplateId > 0 ? "تعديل القالب" : "قالب جديد")</h3>
             <input type="hidden" asp-for="TemplateId" />
 
             <div class="zyp-editor-grid">
+                <label>
+                    نوع القالب
+                    <select asp-for="Kind">
+                        <option value="Document">وثيقة</option>
+                        <option value="Header">ترويسة</option>
+                        <option value="Footer">تذييل</option>
+                    </select>
+                </label>
                 <label>اسم القالب<input asp-for="Name" placeholder="شهادة راتب" /></label>
                 <label>الاسم الإنجليزي<input asp-for="NameEn" placeholder="Salary Certificate" /></label>
                 <label>الوصف<input asp-for="Description" placeholder="اختياري" /></label>
@@ -134,6 +158,44 @@
                         <option value="false">معطّل</option>
                     </select>
                 </label>
+            </div>
+
+            <div>
+                <p class="zyp-section-title">الترويسة والتذييل والختم</p>
+                <p class="zyp-hint">
+                    تُطبَّق على الوثائق فقط. الترويسة والتذييل يمرّان
+                    <b>بنفس محرّك الرموز</b>، فيمكن أن يحملا اسم الفرع أو تاريخ الإصدار.
+                </p>
+                <div class="zyp-editor-grid">
+                    <label>
+                        الترويسة
+                        <select asp-for="HeaderTemplateId">
+                            <option value="">بلا ترويسة</option>
+                            @foreach (var header in Model.Headers)
+                            {
+                                <option value="@header.Id">@header.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        التذييل
+                        <select asp-for="FooterTemplateId">
+                            <option value="">بلا تذييل</option>
+                            @foreach (var footer in Model.Footers)
+                            {
+                                <option value="@footer.Id">@footer.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        صورة الختم
+                        <input asp-for="StampUpload" type="file" accept=".png,.jpg,.jpeg,.webp" />
+                        @if (!string.IsNullOrWhiteSpace(Model.CurrentStampName))
+                        {
+                            <span style="font-size:.75rem">الحالي: @Model.CurrentStampName — اتركه فارغاً للإبقاء عليه.</span>
+                        }
+                    </label>
+                </div>
             </div>
 
             @if (Model.UnknownTokens.Count > 0)

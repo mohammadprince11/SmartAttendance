@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Documents;
 
@@ -14,10 +15,17 @@ namespace SmartAttendance.Web.Pages.Documents;
 public class TemplatesModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly IWebHostEnvironment _environment;
 
-    public TemplatesModel(ApplicationDbContext db) => _db = db;
+    public TemplatesModel(ApplicationDbContext db, IWebHostEnvironment environment)
+    {
+        _db = db;
+        _environment = environment;
+    }
 
     [BindProperty(SupportsGet = true, Name = "edit")] public int? EditingId { get; set; }
+    /// <summary>تصفية القائمة بالنوع: وثائق أم ترويسات أم تذييلات.</summary>
+    [BindProperty(SupportsGet = true, Name = "kind")] public string? KindFilter { get; set; }
 
     [BindProperty] public int TemplateId { get; set; }
     [BindProperty] public string Name { get; set; } = string.Empty;
@@ -28,8 +36,15 @@ public class TemplatesModel : PageModel
     [BindProperty] public bool AllowEmployeeRequest { get; set; }
     [BindProperty] public bool IsActive { get; set; } = true;
     [BindProperty] public string Conditions { get; set; } = string.Empty;
+    [BindProperty] public string Kind { get; set; } = DocumentTemplateStore.KindDocument;
+    [BindProperty] public int? HeaderTemplateId { get; set; }
+    [BindProperty] public int? FooterTemplateId { get; set; }
+    [BindProperty] public IFormFile? StampUpload { get; set; }
 
     public List<DocumentTemplateStore.Template> Templates { get; private set; } = new();
+    public List<DocumentTemplateStore.Template> Headers { get; private set; } = new();
+    public List<DocumentTemplateStore.Template> Footers { get; private set; } = new();
+    public string? CurrentStampName { get; private set; }
     public IReadOnlyList<DocumentTokenEngine.Token> Tokens { get; private set; } = DocumentTokenEngine.Catalog;
     public string CriteriaJson { get; private set; } = "[]";
     public List<string> UnknownTokens { get; private set; } = new();
@@ -50,7 +65,15 @@ public class TemplatesModel : PageModel
             AllowEmployeeRequest = template.AllowEmployeeRequest;
             IsActive = template.IsActive;
             Conditions = template.ConditionsJson;
+            Kind = template.Kind;
+            HeaderTemplateId = template.HeaderTemplateId;
+            FooterTemplateId = template.FooterTemplateId;
+            CurrentStampName = template.StampFileName;
             UnknownTokens = DocumentTokenEngine.UnknownTokens(template.Body, Tokens);
+        }
+        else if (EditingId == 0 && !string.IsNullOrWhiteSpace(KindFilter))
+        {
+            Kind = KindFilter;
         }
     }
 
@@ -62,9 +85,51 @@ public class TemplatesModel : PageModel
             return RedirectToPage();
         }
 
+        string? stampKey = null;
+        string? stampFileName = null;
+
+        if (StampUpload is { Length: > 0 })
+        {
+            var extension = Path.GetExtension(StampUpload.FileName);
+
+            // الختم صورة فقط: ملفٌ آخر بمكانه لا يُعرض ويترك وثيقةً بختمٍ مكسور.
+            if (!ProtectedFileStore.IsAllowedExtension(extension)
+                || extension.ToLowerInvariant() is not (".png" or ".jpg" or ".jpeg" or ".webp"))
+            {
+                TempData["ErrorMessage"] = "الختم يجب أن يكون صورة (png · jpg · webp).";
+                return RedirectToPage(new { edit = TemplateId });
+            }
+
+            if (!ProtectedFileStore.IsAllowedSize(StampUpload.Length))
+            {
+                TempData["ErrorMessage"] = "حجم صورة الختم يتجاوز الحدّ المسموح.";
+                return RedirectToPage(new { edit = TemplateId });
+            }
+
+            stampKey = ProtectedFileStore.BuildStorageKey(0, "doc-stamp", extension);
+            var root = ProtectedFileStore.ResolveRoot(_environment.ContentRootPath);
+
+            await using var stream = StampUpload.OpenReadStream();
+            if (!await ProtectedFileStore.SaveAsync(root, stampKey, stream))
+            {
+                TempData["ErrorMessage"] = "تعذّر حفظ صورة الختم.";
+                return RedirectToPage(new { edit = TemplateId });
+            }
+
+            stampFileName = Path.GetFileName(StampUpload.FileName);
+        }
+
+        // الترويسة والتذييل لا يحملان ترويسةً ولا ختماً — وإلا صار التداخل لا نهائياً.
+        var isDocument = Kind == DocumentTemplateStore.KindDocument;
+
         var id = await DocumentTemplateStore.SaveTemplateAsync(
             _db, TemplateId, Name.Trim(), NameEn, Description, Body,
-            HrConditions.Deserialize(Conditions), RefPrefix, AllowEmployeeRequest, IsActive, User.Identity?.Name);
+            HrConditions.Deserialize(Conditions), RefPrefix, AllowEmployeeRequest, IsActive, User.Identity?.Name,
+            Kind,
+            isDocument ? HeaderTemplateId : null,
+            isDocument ? FooterTemplateId : null,
+            isDocument ? stampKey : null,
+            isDocument ? stampFileName : null);
 
         // الرمز المخطئ إملائياً يُحفظ ويبقى ظاهراً بالوثيقة — التنبيه هنا يمنع
         // اكتشافه بعد إصدار مئة شهادة.
@@ -101,9 +166,30 @@ public class TemplatesModel : PageModel
         return RedirectToPage();
     }
 
+    /// <summary>صورة الختم — من الجذر المحميّ، لا رابط مباشر.</summary>
+    public async Task<IActionResult> OnGetStampAsync(int id)
+    {
+        var template = await DocumentTemplateStore.FindTemplateAsync(_db, id);
+        if (template is null || !template.HasStamp)
+        {
+            return NotFound();
+        }
+
+        var root = ProtectedFileStore.ResolveRoot(_environment.ContentRootPath);
+        if (!ProtectedFileStore.TryResolvePhysicalPath(root, template.StampKey, out var path)
+            || !System.IO.File.Exists(path))
+        {
+            return NotFound();
+        }
+
+        return PhysicalFile(path, ProtectedFileStore.ContentTypeFor(Path.GetExtension(path)));
+    }
+
     private async Task LoadAsync()
     {
-        Templates = await DocumentTemplateStore.LoadTemplatesAsync(_db);
+        Templates = await DocumentTemplateStore.LoadTemplatesAsync(_db, kind: KindFilter);
+        Headers = await DocumentTemplateStore.LoadTemplatesAsync(_db, activeOnly: true, kind: DocumentTemplateStore.KindHeader);
+        Footers = await DocumentTemplateStore.LoadTemplatesAsync(_db, activeOnly: true, kind: DocumentTemplateStore.KindFooter);
         CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_db);
 
         var customFields = await HrConditionFacts.LoadCustomFieldDefinitionsAsync(_db);
