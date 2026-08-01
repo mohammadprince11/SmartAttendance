@@ -19,10 +19,22 @@ public static class DocumentTemplateStore
     public const string KindHeader = "Header";
     public const string KindFooter = "Footer";
 
+    /// <summary>
+    /// بطاقة الموظف — **نوعٌ رابع بنفس الجدول لا مودل جديد**.
+    ///
+    /// الفحص الحيّ لمركز بطاقات كيان أظهر أن قالب البطاقة عندهم هو حرفياً نمط
+    /// «سياسة أمّ + نُسَخ مشروطة مرتّبة» + منتقي رموز بفئات — وكلاهما مبنيّ عندنا.
+    /// الفرق الوحيد أن سطح التصميم عندهم **محرّر SVG** وعندنا **HTML**؛ والقرار
+    /// (بموافقة محمد) ألّا نستنسخ محرّر SVG: مكتبة ثالثة ضخمة مقابل الرسم الحرّ وحده.
+    /// فالبطاقة قالبٌ بمقاس بطاقة، ويرث المحرّر والرموز والشروط والمعاينة كما هي.
+    /// </summary>
+    public const string KindBadge = "Badge";
+
     public static string KindLabel(string? kind) => kind switch
     {
         KindHeader => "ترويسة",
         KindFooter => "تذييل",
+        KindBadge => "بطاقة",
         _ => "وثيقة"
     };
 
