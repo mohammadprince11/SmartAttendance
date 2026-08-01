@@ -1,0 +1,189 @@
+@page
+@model SmartAttendance.Web.Pages.Contracts.MovementsModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@{
+    ViewData["Title"] = "تحديثات العقود";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">عقود الموظفين</a>
+        <h1>تحديثات العقود</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>الحركات</span>
+            <h2>@(Model.ShowLocked ? "حركات مقفلة" : "حركات غير مقفلة")</h2>
+            <p class="zyp-hint">
+                <b>التمديد</b> يُبقي العقد واحداً — الخدمة متصلة ورقم العقد لا يتغيّر.
+                <b>التجديد</b> يُنشئ عقداً جديداً يبدأ بعد انتهاء السابق.
+                والفرق يمسّ مكافأة نهاية الخدمة وفترة التجربة، فلا يُستنتج بل يُسجَّل.
+            </p>
+        </header>
+
+        <div class="zyp-actions" style="justify-content:flex-start">
+            <a asp-page="./Movements" asp-route-locked="false"
+               style="@(Model.ShowLocked ? "" : "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)")">حركات غير مقفلة</a>
+            <a asp-page="./Movements" asp-route-locked="true"
+               style="@(Model.ShowLocked ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">حركات مقفلة</a>
+        </div>
+
+        @if (Model.Movements.Count == 0)
+        {
+            <p class="zyc-empty">لا حركات @(Model.ShowLocked ? "مقفلة" : "غير مقفلة").</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>الرقم المرجعي</th>
+                        <th>اسم الموظف</th>
+                        <th>نوع العقد</th>
+                        <th>نوع الحركة</th>
+                        <th>من – إلى تاريخ</th>
+                        <th>تاريخ التنفيذ</th>
+                        <th>المصدر</th>
+                        <th style="width:150px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var movement in Model.Movements)
+                    {
+                        <tr>
+                            <td class="zyp-conditions">@movement.RefNo</td>
+                            <td><b>@movement.EmployeeName</b></td>
+                            <td>@movement.ContractType</td>
+                            <td>
+                                <span class="zyp-rank" style="min-width:auto;padding:0 8px">@movement.KindLabel</span>
+                            </td>
+                            <td class="zyp-conditions">
+                                @(movement.FromDate is { } from ? from.ToString("yyyy/MM/dd") : "—")
+                                –
+                                @(movement.ToDate is { } to ? to.ToString("yyyy/MM/dd") : "غير محدود")
+                            </td>
+                            <td class="zyp-conditions">@(movement.EffectiveDate is { } eff ? eff.ToString("yyyy/MM/dd") : "—")</td>
+                            <td class="zyp-conditions">@movement.Source</td>
+                            <td>
+                                <div class="zyp-actions">
+                                    @if (!movement.IsLocked)
+                                    {
+                                        <form method="post" asp-page-handler="Lock" style="display:inline">
+                                            <input type="hidden" name="id" value="@movement.Id" />
+                                            <button type="submit" data-zyconfirm="قفل الحركة؟ لن تُعدَّل بعدها.">قفل</button>
+                                        </form>
+                                        <form method="post" asp-page-handler="Delete" style="display:inline">
+                                            <input type="hidden" name="id" value="@movement.Id" />
+                                            <button type="submit" data-zyconfirm="حذف الحركة؟">حذف</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="zyp-conditions">مقفلة</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <form method="post" asp-page-handler="Apply" class="nxhs-panel zyp-editor">
+        <h3>حركة جديدة</h3>
+
+        @if (Model.Preselected is not null)
+        {
+            <p class="zyp-hint">
+                العقد المختار: <b>@Model.Preselected.EmployeeName</b> —
+                @Model.Preselected.ContractType (@Model.Preselected.RangeLabel)
+            </p>
+        }
+
+        <div class="zyp-editor-grid">
+            <label>
+                العقد القائم
+                <select asp-for="ContractId">
+                    <option value="">— بلا عقد سابق (عقد أول) —</option>
+                    @foreach (var contract in Model.CurrentContracts)
+                    {
+                        <option value="@contract.Id">@contract.EmployeeName — @contract.ContractType (@contract.RangeLabel)</option>
+                    }
+                </select>
+            </label>
+            <label>
+                الموظف (يُملأ تلقائياً من العقد)
+                <select asp-for="EmployeeId">
+                    <option value="0">— اختر —</option>
+                    @foreach (var contract in Model.CurrentContracts)
+                    {
+                        <option value="@contract.EmployeeId">@contract.EmployeeName</option>
+                    }
+                </select>
+            </label>
+            <label>
+                نوع الحركة
+                <select asp-for="MovementKind">
+                    <option value="@ContractPolicy.MovementRenew">تجديد عقد (عقد جديد)</option>
+                    <option value="@ContractPolicy.MovementExtend">تمديد العقد الحالي (خدمة متصلة)</option>
+                    <option value="@ContractPolicy.MovementAmend">تعديل عقد (بلا تجديد)</option>
+                </select>
+            </label>
+            <label>
+                نوع العقد
+                <select asp-for="ContractType">
+                    <option value="">— اختر —</option>
+                    @foreach (var (name, months) in Model.ContractTypes)
+                    {
+                        <option value="@name">@name @(months is > 0 ? $"({months} شهر)" : "(غير محدود)")</option>
+                    }
+                </select>
+            </label>
+            <label>
+                يعتمد تاريخ الانتهاء على
+                <select asp-for="UseDefaultDuration">
+                    <option value="true">مدة العقد الافتراضية</option>
+                    <option value="false">تاريخ محدد</option>
+                </select>
+            </label>
+            <label>
+                تاريخ الانتهاء (عند «تاريخ محدد»)
+                <input asp-for="ToDate" type="date" />
+            </label>
+            <label>
+                تطبيق هذه التغييرات في
+                <input asp-for="EffectiveDate" type="date" />
+            </label>
+            <label>
+                ملاحظات
+                <input asp-for="Notes" placeholder="اختياري" />
+            </label>
+        </div>
+
+        <footer class="nxhs-actions">
+            <button type="submit">تنفيذ الحركة</button>
+            <a class="zyp-move" asp-page="./Index" style="padding:8px 14px">← السجلّ</a>
+        </footer>
+    </form>
+</section>
+
+<script src="~/js/zynora-confirm.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+
+}

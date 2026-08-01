@@ -248,6 +248,67 @@ BEGIN
     CREATE INDEX IX_HrPolicyOverrides_Policy ON HrPolicyOverrides (PolicyKey, SortOrder, Id);
 END;
 """),
+
+        // سجلّ العقود: العقد كان **حالةً راهنة** تُدهَس عند التغيير، فصار **كياناً
+        // له تاريخ**. الجدول EmployeeContracts موجود سلفاً؛ هذه الهجرة تضيف ما
+        // يجعله سجلّاً حقيقياً:
+        //  - PreviousContractId: سلسلة التجديد (من أي عقد وُلد هذا).
+        //  - MovementKind: كيف وُلد (تمديد/تجديد/تعديل) — الفرق مالي على نهاية
+        //    الخدمة وفترة التجربة، فلا يُستنتج بل يُسجَّل.
+        //  - EffectiveDate + Notes: تاريخ سريان الحركة كما بكيان.
+        // وأنواع العقود تكتسب **مدة افتراضية** فيُشتقّ تاريخ الانتهاء تلقائياً.
+        //
+        // ⚠️ إضافيّ محض: أعمدة nullable على جداول قائمة + جدول حركات جديد.
+        // NULL بكل الأعمدة الجديدة = صفوف اليوم تبقى بمعناها حرفياً.
+        new(
+            "20260801-12-employee-contracts-register",
+            """
+IF OBJECT_ID('EmployeeContracts', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeContracts', 'PreviousContractId') IS NULL
+        ALTER TABLE EmployeeContracts ADD PreviousContractId int NULL;
+
+    IF COL_LENGTH('EmployeeContracts', 'MovementKind') IS NULL
+        ALTER TABLE EmployeeContracts ADD MovementKind nvarchar(20) NULL;
+
+    IF COL_LENGTH('EmployeeContracts', 'EffectiveDate') IS NULL
+        ALTER TABLE EmployeeContracts ADD EffectiveDate date NULL;
+END;
+
+-- المدة الافتراضية لنوع العقد: مصدر اشتقاق «يعتمد تاريخ الانتهاء على مدة العقد
+-- الافتراضية». NULL = غير محدود، وهو التمثيل الصحيح لـ«بلا مدة».
+IF OBJECT_ID('HrLookups', 'U') IS NOT NULL
+   AND COL_LENGTH('HrLookups', 'DefaultMonths') IS NULL
+    ALTER TABLE HrLookups ADD DefaultMonths int NULL;
+
+IF OBJECT_ID('EmployeeContractMovements', 'U') IS NULL
+BEGIN
+    CREATE TABLE EmployeeContractMovements (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        RefNo nvarchar(40) NULL,
+        EmployeeId int NOT NULL,
+        ContractId int NULL,
+        ResultContractId int NULL,
+        MovementKind nvarchar(20) NOT NULL,
+        ContractType nvarchar(100) NULL,
+        FromDate date NULL,
+        ToDate date NULL,
+        EffectiveDate date NULL,
+        Source nvarchar(40) NULL,
+        Status nvarchar(20) NOT NULL CONSTRAINT DF_ContractMovements_Status DEFAULT(N'Open'),
+        Notes nvarchar(max) NULL,
+        AttachmentName nvarchar(260) NULL,
+        AttachmentPath nvarchar(500) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_ContractMovements_CreatedAt DEFAULT(SYSUTCDATETIME()),
+        CreatedBy nvarchar(150) NULL,
+        LockedAt datetime2 NULL,
+        LockedBy nvarchar(150) NULL
+    );
+
+    CREATE INDEX IX_ContractMovements_Employee ON EmployeeContractMovements (EmployeeId, Id);
+    CREATE INDEX IX_ContractMovements_Status ON EmployeeContractMovements (Status, Id);
+END;
+"""),
     };
 
     /// <summary>

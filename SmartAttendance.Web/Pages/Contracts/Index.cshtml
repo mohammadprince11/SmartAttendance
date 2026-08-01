@@ -1,0 +1,195 @@
+@page
+@model SmartAttendance.Web.Pages.Contracts.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@{
+    ViewData["Title"] = "عقود الموظفين";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="/Employees/Index">الأشخاص</a>
+        <h1>عقود الموظفين</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="nxhs-panel zyp-copies">
+        <header>
+            <span>السجلّ</span>
+            <h2>سجلّ العقود</h2>
+            <p class="zyp-hint">
+                العقود <b>لا تُدهَس، تُضاف</b> — التجديد يُنشئ عقداً جديداً ويُبقي السابق،
+                فيبقى تاريخ الموظف التعاقدي قابلاً للإجابة عنه.
+                @if (Model.ExpiringSoon > 0)
+                {
+                    <b> ⚠ @Model.ExpiringSoon عقداً ينتهي خلال 60 يوماً.</b>
+                }
+            </p>
+        </header>
+
+        <form method="get" class="zyp-editor-grid" style="border:0;padding:0">
+            <label>
+                بحث (اسم · رقم موظف · رقم عقد)
+                <input asp-for="Search" placeholder="اكتب للبحث…" />
+            </label>
+            <label>
+                المنتهية
+                <select asp-for="ShowExpired">
+                    <option value="false">إخفاء المنتهية</option>
+                    <option value="true">إظهار الكل</option>
+                </select>
+            </label>
+            <label style="justify-content:flex-end">
+                &nbsp;
+                <button type="submit" class="zyc-add-rule" style="align-self:stretch">تطبيق</button>
+            </label>
+        </form>
+
+        @if (Model.Contracts.Count == 0)
+        {
+            <p class="zyc-empty">لا عقود بالسجلّ — أضف عقداً أو استعمل الإسناد الجماعي.</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>اسم الموظف</th>
+                        <th>رقم العقد</th>
+                        <th>نوع العقد</th>
+                        <th>من – إلى تاريخ</th>
+                        <th>الأيام المتبقية</th>
+                        <th>الحالة</th>
+                        <th style="width:190px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var contract in Model.Contracts)
+                    {
+                        var remaining = contract.Remaining(Model.Today);
+                        <tr class="@(contract.IsCurrent ? "" : "zyp-inactive")">
+                            <td>
+                                <b>@contract.EmployeeName</b>
+                                <div class="zyp-conditions">@contract.EmployeeNo</div>
+                            </td>
+                            <td class="zyp-conditions">@(string.IsNullOrWhiteSpace(contract.ContractNo) ? "—" : contract.ContractNo)</td>
+                            <td>@contract.ContractType</td>
+                            <td class="zyp-conditions">@contract.RangeLabel</td>
+                            <td class="zyp-count" data-zero="@((remaining is 0).ToString().ToLowerInvariant())">
+                                @contract.RemainingLabel(Model.Today)
+                            </td>
+                            <td class="zyp-conditions">
+                                @if (contract.IsCurrent)
+                                {
+                                    <span class="zyp-rank" style="min-width:auto;padding:0 8px">حالي</span>
+                                }
+                                else if (remaining is 0)
+                                {
+                                    <span>منتهٍ</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(contract.MovementKind))
+                                {
+                                    <div>@ContractPolicy.MovementLabel(contract.MovementKind)</div>
+                                }
+                            </td>
+                            <td>
+                                <div class="zyp-actions">
+                                    <a asp-page="./Movements" asp-route-contract="@contract.Id">تجديد / تمديد</a>
+                                    <a asp-page="./Index" asp-route-employee="@contract.EmployeeId">سلسلته</a>
+                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                        <input type="hidden" name="id" value="@contract.Id" />
+                                        <button type="submit" data-zyconfirm="حذف العقد من السجلّ؟">حذف</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        @if (Model.EmployeeFilter is not null)
+        {
+            <p><a class="zyc-add-group" asp-page="./Index">← كل الموظفين</a></p>
+        }
+    </div>
+
+    <form method="post" asp-page-handler="Save" class="nxhs-panel zyp-editor">
+        <h3>إضافة عقد للسجلّ</h3>
+
+        <div class="zyp-editor-grid">
+            <label>
+                الموظف
+                <select asp-for="EmployeeId">
+                    <option value="0">— اختر —</option>
+                    @foreach (var (id, label) in Model.Employees)
+                    {
+                        <option value="@id">@label</option>
+                    }
+                </select>
+            </label>
+            <label>
+                رقم العقد
+                <input asp-for="ContractNo" placeholder="اختياري" />
+            </label>
+            <label>
+                نوع العقد
+                <select asp-for="ContractType">
+                    <option value="">— اختر —</option>
+                    @foreach (var (name, months) in Model.ContractTypes)
+                    {
+                        <option value="@name">@name @(months is > 0 ? $"({months} شهر)" : "(غير محدود)")</option>
+                    }
+                </select>
+            </label>
+            <label>
+                تاريخ البدء
+                <input asp-for="FromDate" type="date" />
+            </label>
+            <label>
+                يعتمد تاريخ الانتهاء على
+                <select asp-for="UseDefaultDuration">
+                    <option value="true">مدة العقد الافتراضية</option>
+                    <option value="false">تاريخ محدد</option>
+                </select>
+            </label>
+            <label>
+                تاريخ الانتهاء (عند «تاريخ محدد»)
+                <input asp-for="ToDate" type="date" />
+            </label>
+            <label>
+                اجعله العقد الحالي
+                <select asp-for="MakeCurrent">
+                    <option value="true">نعم</option>
+                    <option value="false">لا</option>
+                </select>
+            </label>
+            <label>
+                ملاحظة
+                <input asp-for="Note" placeholder="اختياري" />
+            </label>
+        </div>
+
+        <footer class="nxhs-actions">
+            <button type="submit">حفظ العقد</button>
+            <a class="zyp-move" asp-page="./Movements" style="padding:8px 14px">تحديثات العقود ←</a>
+        </footer>
+    </form>
+</section>
+
+<script src="~/js/zynora-confirm.js" asp-append-version="true" defer></script>
+
+@section Scripts {
+
+}
