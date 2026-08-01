@@ -70,6 +70,8 @@
         <button type="button" class="zyw-tab" role="tab" data-zyw-tab="log" aria-selected="@Sel("log")">السجلّ</button>
         <button type="button" class="zyw-tab" role="tab" data-zyw-tab="create" aria-selected="@Sel("create")">تسجيل مخالفة</button>
         <button type="button" class="zyw-tab" role="tab" data-zyw-tab="actions" aria-selected="@Sel("actions")">الإجراءات التأديبية</button>
+        <button type="button" class="zyw-tab" role="tab" data-zyw-tab="templates" aria-selected="@Sel("templates")">القوالب والرسائل</button>
+        <button type="button" class="zyw-tab" role="tab" data-zyw-tab="setup" aria-selected="@Sel("setup")">التهيئة</button>
     </nav>
 
     @* ==================================================== ما ينتظرك (الافتراضي) *@
@@ -308,6 +310,178 @@
                     </table>
                 </div>
             }
+        </article>
+    </section>
+
+    @* ========================================================== القوالب والرسائل *@
+    <section class="zyw-panel" data-zyw-panel="templates" role="tabpanel" hidden="@(!IsTab("templates"))">
+        <article class="zy-card">
+            <div class="zyw-queue-head">
+                <h2>أنواع القوالب</h2>
+                <span class="zy-pill">@Model.Config.TemplateTypes.Count</span>
+            </div>
+
+            @* الكتابة تُرسل لمعالجات `/DisciplinaryRules` — لا يُنسخ منطق الحفظ. *@
+            <form method="post" asp-page="/DisciplinaryRules/Index" asp-page-handler="CreateTemplateType">
+                <div class="zyw-form-grid">
+                    <div class="zyw-field">
+                        <label for="tt-name">اسم النوع</label>
+                        <input id="tt-name" name="name" required placeholder="إشعار عقوبة" />
+                    </div>
+                    <div class="zyw-field">
+                        <label for="tt-code">الرمز</label>
+                        <input id="tt-code" name="code" required placeholder="PenaltyNotice" />
+                    </div>
+                    <div class="zyw-field zyw-field--wide">
+                        <label for="tt-desc">الوصف</label>
+                        <input id="tt-desc" name="description" />
+                    </div>
+                </div>
+                <div class="zyw-form-actions">
+                    <button type="submit" class="btn-primary">إضافة نوع</button>
+                </div>
+            </form>
+
+            @if (Model.Config.TemplateTypes.Count == 0)
+            {
+                <div class="zyw-empty">لا أنواع قوالب بعد.</div>
+            }
+            else
+            {
+                <div class="zyw-list">
+                    @foreach (var type in Model.Config.TemplateTypes)
+                    {
+                        <div class="zyw-row">
+                            <div class="zyw-item-main">
+                                <strong>@type.Name</strong>
+                                <div class="zyw-row-meta">
+                                    <span class="zy-pill">@type.Code</span>
+                                    <small>@type.Description</small>
+                                    @if (!type.IsActive)
+                                    {
+                                        <span class="zy-pill">معطّل</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </article>
+
+        <article class="zy-card">
+            <div class="zyw-queue-head">
+                <h2>قوالب الرسائل</h2>
+                <span class="zy-pill">@Model.Config.MessageTemplates.Count</span>
+            </div>
+
+            @if (Model.Config.MessageTemplates.Count == 0)
+            {
+                <div class="zyw-empty">لا قوالب رسائل بعد.</div>
+            }
+            else
+            {
+                <div class="zyw-list">
+                    @foreach (var template in Model.Config.MessageTemplates)
+                    {
+                        <div class="zyw-row">
+                            <div class="zyw-item-main">
+                                <strong>@template.Name</strong>
+                                <div class="zyw-row-meta">
+                                    <span class="zy-pill">@template.TemplateType</span>
+                                    @if (template.IsDefault)
+                                    {
+                                        <span class="zy-pill">الافتراضي</span>
+                                    }
+                                    <small>@template.Subject</small>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            @* تحرير نصّ القالب ومصمّم الفورمة يبقيان بشاشتهما: محرّر نصّ ورفع
+               ملفات وطبقات بمعاينة حيّة — نسخُها هنا يعني نسخ سلوكٍ لا عرضاً. *@
+            <div class="zyw-form-actions">
+                <a class="btn-secondary" asp-page="/DisciplinaryRules/Index" asp-route-tab="templates">تحرير نصوص القوالب</a>
+                <a class="btn-secondary" asp-page="/DisciplinaryRules/Index" asp-route-tab="designer">مصمّم الفورمة</a>
+            </div>
+        </article>
+    </section>
+
+    @* ==================================================================== التهيئة *@
+    <section class="zyw-panel" data-zyw-panel="setup" role="tabpanel" hidden="@(!IsTab("setup"))">
+        <article class="zy-card">
+            <div class="zyw-queue-head"><h2>تهيئة نظام المخالفات</h2></div>
+
+            <form method="post" asp-page="/DisciplinaryRules/Index" asp-page-handler="SaveSettings">
+                @* الحفظ يعيدك إلى هذا التبويب لا إلى شاشة الإعدادات. *@
+                <input type="hidden" name="backTo" value="setup" />
+
+                <div class="zyw-queue">
+                    <div class="zy-card zyw-item">
+                        <div class="zyw-item-main">
+                            <strong>لجنة الموافقات</strong>
+                            <small>عند التفعيل لا تُقفل المخالفة إلا بعد مسار اللجنة.</small>
+                        </div>
+                        <label class="zyw-checks">
+                            <input type="checkbox" name="requiresCommitteeApproval" value="true" checked="@Model.Config.Settings.RequiresCommitteeApproval" />
+                        </label>
+                    </div>
+
+                    <div class="zy-card zyw-item">
+                        <div class="zyw-item-main">
+                            <strong>اعتراض الموظف</strong>
+                            <small>السماح له بالاعتراض من بوابة الموظف بعد صدور المخالفة.</small>
+                        </div>
+                        <label class="zyw-checks">
+                            <input type="checkbox" name="allowEmployeeAppeal" value="true" checked="@Model.Config.Settings.AllowEmployeeAppeal" />
+                        </label>
+                    </div>
+                </div>
+
+                <div class="zyw-form-grid">
+                    <div class="zyw-field">
+                        <label for="cfg-days">مدّة الاعتراض (أيام)</label>
+                        <input id="cfg-days" name="appealWindowDays" type="number" min="0" value="@Model.Config.Settings.AppealWindowDays" />
+                    </div>
+
+                    <div class="zyw-field">
+                        <label for="cfg-template">القالب الافتراضي</label>
+                        <select id="cfg-template" name="defaultTemplateType">
+                            @foreach (var type in Model.Config.TemplateTypes.Where(x => x.IsActive))
+                            {
+                                <option value="@type.Code" selected="@(type.Code == Model.Config.Settings.DefaultTemplateType)">@type.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="zyw-field">
+                        <label for="cfg-authority">اسم الجهة المعتمدة</label>
+                        <input id="cfg-authority" name="approvingAuthorityName" value="@Model.Config.Settings.ApprovingAuthorityName" />
+                    </div>
+
+                    <div class="zyw-field">
+                        <label for="cfg-number">صيغة رقم الكتاب</label>
+                        <input id="cfg-number" name="documentNumberFormat" value="@Model.Config.Settings.DocumentNumberFormat" />
+                    </div>
+
+                    <div class="zyw-field zyw-field--wide">
+                        <label for="cfg-header">هيدر الفورمة</label>
+                        <textarea id="cfg-header" name="formHeader" rows="4">@Model.Config.Settings.FormHeader</textarea>
+                    </div>
+
+                    <div class="zyw-field zyw-field--wide">
+                        <label for="cfg-footer">فوتر الفورمة</label>
+                        <textarea id="cfg-footer" name="formFooter" rows="4">@Model.Config.Settings.FormFooter</textarea>
+                    </div>
+                </div>
+
+                <div class="zyw-form-actions">
+                    <button type="submit" class="btn-primary">حفظ التهيئة</button>
+                </div>
+            </form>
         </article>
     </section>
 

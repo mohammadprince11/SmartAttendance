@@ -88,11 +88,21 @@ public class IndexModel : PageModel
     public string ActionStatusOf(ActionsModel.ActionRow row) =>
         ViolationConfigPolicy.StatusLabel(row.NotifiedOn, row.DecidedOn, ObjectionDays, DropMonths, Today);
 
+    /// <summary>
+    /// تهيئة المخالفات وقوالب رسائلها — تُقرأ من `DisciplinaryConfigStore` نفسه
+    /// الذي تقرأ منه صفحة الإعدادات، فلا نسختان تفترقان.
+    ///
+    /// ⚠️ **العرض هنا والكتابة هناك**: نماذج هذين التبويبين تُرسل إلى معالجات
+    /// `/DisciplinaryRules` بـ`asp-page`، ولا يُنسخ منطق حفظٍ يمسّ سلّم الجزاءات.
+    /// </summary>
+    public DisciplinaryConfigStore.ConfigView Config { get; private set; } = new();
+
     public async Task OnGetAsync()
     {
         Input.EventDate = DateTime.Today;
         await LoadPageDataAsync();
         await LoadDisciplinaryActionsAsync();
+        Config = await DisciplinaryConfigStore.LoadAsync(_db);
     }
 
     private async Task LoadDisciplinaryActionsAsync()

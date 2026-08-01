@@ -99,7 +99,11 @@ public class IndexModel : PageModel
     }
 
 
-    public async Task<IActionResult> OnPostSaveSettingsAsync(int appealWindowDays, string? defaultTemplateType, string? approvingAuthorityName, string? documentNumberFormat, string? formHeader, string? formFooter)
+    /// <summary>
+    /// `backTo` اختيارية: النموذج نفسه يُعرض بتبويب «التهيئة» داخل شاشة المخالفات،
+    /// فمن حفظ من هناك يجب أن يعود إلى هناك لا أن يُقذف لشاشة الإعدادات.
+    /// </summary>
+    public async Task<IActionResult> OnPostSaveSettingsAsync(int appealWindowDays, string? defaultTemplateType, string? approvingAuthorityName, string? documentNumberFormat, string? formHeader, string? formFooter, string? backTo = null)
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
         await UpsertSettingAsync("RequiresCommitteeApproval", Request.Form.ContainsKey("requiresCommitteeApproval") ? "true" : "false");
@@ -111,7 +115,9 @@ public class IndexModel : PageModel
         await UpsertSettingAsync("FormHeader", formHeader?.Trim() ?? string.Empty);
         await UpsertSettingAsync("FormFooter", formFooter?.Trim() ?? string.Empty);
         StatusMessage = "تم حفظ إعدادات التهيئة.";
-        return RedirectToPage(new { tab = "setup" });
+        return string.IsNullOrWhiteSpace(backTo)
+            ? RedirectToPage(new { tab = "setup" })
+            : RedirectToPage("/Violations/Index", new { tab = backTo });
     }
 
 
@@ -1006,47 +1012,13 @@ ORDER BY c.DisplayOrder, t.Name, r.OccurrenceFrom;
     }
 
 
-    private async Task<List<TemplateType>> LoadTemplateTypesAsync()
-    {
-        return await HrmsDatabase.QueryAsync(_dbContext,
-            """
-SELECT Id, Name, Code, ISNULL(Description, '') AS Description, IsActive, CreatedAt
-FROM DisciplinaryTemplateTypes
-ORDER BY Name;
-""",
-            command => { },
-            reader => new TemplateType
-            {
-                Id = HrmsDatabase.GetInt(reader, "Id"),
-                Name = HrmsDatabase.GetString(reader, "Name"),
-                Code = HrmsDatabase.GetString(reader, "Code"),
-                Description = HrmsDatabase.GetString(reader, "Description"),
-                IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
-                CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt")
-            });
-    }
+    // القراءة انتقلت إلى `DisciplinaryConfigStore`: تقرأ منه هذه الشاشة وشاشة
+    // المخالفات معاً، فلا نسختان من الاستعلام تفترقان مع أول تعديل.
+    private async Task<List<TemplateType>> LoadTemplateTypesAsync() =>
+        await DisciplinaryConfigStore.LoadTemplateTypesAsync(_dbContext);
 
-    private async Task<List<MessageTemplate>> LoadMessageTemplatesAsync()
-    {
-        return await HrmsDatabase.QueryAsync(_dbContext,
-            """
-SELECT Id, Name, TemplateType, Subject, Body, IsDefault, IsActive, CreatedAt
-FROM DisciplinaryMessageTemplates
-ORDER BY IsDefault DESC, Name;
-""",
-            command => { },
-            reader => new MessageTemplate
-            {
-                Id = HrmsDatabase.GetInt(reader, "Id"),
-                Name = HrmsDatabase.GetString(reader, "Name"),
-                TemplateType = HrmsDatabase.GetString(reader, "TemplateType"),
-                Subject = HrmsDatabase.GetString(reader, "Subject"),
-                Body = HrmsDatabase.GetString(reader, "Body"),
-                IsDefault = HrmsDatabase.GetBool(reader, "IsDefault"),
-                IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
-                CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt")
-            });
-    }
+    private async Task<List<MessageTemplate>> LoadMessageTemplatesAsync() =>
+        await DisciplinaryConfigStore.LoadMessageTemplatesAsync(_dbContext);
 
 
     private async Task<List<FormTextBlock>> LoadTextBlocksAsync()
