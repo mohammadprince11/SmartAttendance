@@ -24,16 +24,20 @@ public class EditModel : PageModel
         ".jpg", ".jpeg", ".png", ".webp"
     };
 
+    private readonly Infrastructure.Security.IProtectedFileService _protectedFiles;
+
     public EditModel(
         IEmployeeService employeeService,
         ApplicationDbContext dbContext,
         IWebHostEnvironment environment,
-        IPermissionAuthorizationService permissionAuthorizationService)
+        IPermissionAuthorizationService permissionAuthorizationService,
+        Infrastructure.Security.IProtectedFileService protectedFiles)
     {
         _employeeService = employeeService;
         _dbContext = dbContext;
         _environment = environment;
         _permissionAuthorizationService = permissionAuthorizationService;
+        _protectedFiles = protectedFiles;
     }
 
     [BindProperty]
@@ -41,6 +45,13 @@ public class EditModel : PageModel
 
     [BindProperty]
     public IFormFile? EmployeePhoto { get; set; }
+
+    /// <summary>صورة توقيع الموظف — تغذّي رمز الوثائق ولا تُخزَّن بمسار عام.</summary>
+    [BindProperty]
+    public IFormFile? EmployeeSignature { get; set; }
+
+    /// <summary>رابط التوقيع الحالي بنقطة مصادَقة، أو فارغ إن لم يُرفع.</summary>
+    public string CurrentSignatureUrl { get; set; } = string.Empty;
 
     [BindProperty]
     public int? DirectManagerId { get; set; }
@@ -100,6 +111,7 @@ public class EditModel : PageModel
 
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
         CurrentPhotoPath = await GetEmployeePhotoPathAsync(Employee.Id);
+        CurrentSignatureUrl = await GetSignatureUrlAsync(Employee.Id);
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, Employee.Id);
         Managers = await LoadManagersAsync(Employee.Id);
         DirectManagerId = Employee.DirectManagerId;
@@ -160,10 +172,15 @@ public class EditModel : PageModel
         }
 
         var photoResult = await SaveEmployeePhotoAsync(Employee.Id);
+        var signatureResult = await SaveEmployeeSignatureAsync(Employee.Id);
 
-        TempData["SuccessMessage"] = string.IsNullOrWhiteSpace(photoResult)
+        var notes = new[] { photoResult, signatureResult }
+            .Where(note => !string.IsNullOrWhiteSpace(note))
+            .ToList();
+
+        TempData["SuccessMessage"] = notes.Count == 0
             ? "تم تحديث بيانات الموظف بنجاح."
-            : $"تم تحديث بيانات الموظف بنجاح. {photoResult}";
+            : "تم تحديث بيانات الموظف بنجاح. " + string.Join(" ", notes);
 
         return RedirectToPage("./Profile", new { id = Employee.Id });
     }
@@ -234,6 +251,44 @@ public class EditModel : PageModel
             .Where(x => x.Id == employeeId)
             .Select(x => x.PhotoPath ?? string.Empty)
             .FirstOrDefaultAsync() ?? string.Empty;
+    }
+
+    /// <summary>
+    /// يحفظ صورة التوقيع بالمخزن المحميّ ويخزّن مفتاحها. نفس تحقّق الصورة المستعمل
+    /// للصورة الشخصية (امتداد + حجم + **بصمة محتوى**) لأن ملفاً بامتداد صورة ومحتوى
+    /// تنفيذيّ هو الثغرة المعروفة برفع الملفات.
+    /// </summary>
+    private async Task<string> GetSignatureUrlAsync(int employeeId)
+    {
+        var stored = await _dbContext.Employees.AsNoTracking()
+            .Where(x => x.Id == employeeId)
+            .Select(x => x.SignaturePath)
+            .FirstOrDefaultAsync();
+
+        return string.IsNullOrWhiteSpace(stored) ? string.Empty : _protectedFiles.BuildUrl(employeeId, stored);
+    }
+
+    private async Task<string> SaveEmployeeSignatureAsync(int employeeId)
+    {
+        if (EmployeeSignature == null || EmployeeSignature.Length == 0) return string.Empty;
+
+        var extension = Path.GetExtension(EmployeeSignature.FileName);
+        if (string.IsNullOrWhiteSpace(extension) || !AllowedEmployeePhotoExtensions.Contains(extension))
+            return "صيغة التوقيع غير مدعومة.";
+        if (EmployeeSignature.Length > 2 * 1024 * 1024) return "حجم التوقيع أكبر من 2MB.";
+        if (!await UploadSignatureValidator.IsValidImageAsync(EmployeeSignature)) return "محتوى الملف ليس صورة صالحة.";
+
+        var stored = await _protectedFiles.SaveAsync(
+            EmployeeSignature, employeeId, "signature", HttpContext.RequestAborted);
+
+        if (stored is null) return "تعذّر حفظ التوقيع.";
+
+        await _dbContext.Employees
+            .Where(x => x.Id == employeeId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.SignaturePath, stored));
+
+        CurrentSignatureUrl = _protectedFiles.BuildUrl(employeeId, stored);
+        return "تم حفظ التوقيع.";
     }
 
     private async Task<string> SaveEmployeePhotoAsync(int employeeId)

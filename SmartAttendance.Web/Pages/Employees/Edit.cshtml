@@ -77,6 +77,17 @@
                     <span>اختر صورة PNG أو JPG أو WEBP.</span>
                     <small>Max 5MB</small>
                 </div>
+                @* التوقيع يغذّي رمز {Employee-Signature-Url} بمنشئ الوثائق.
+                   يُخزَّن بالمخزن المحميّ لا بمسار عام — أثرٌ قانونيّ لا يُكشف بلا مصادقة. *@
+                <div class="nxr-edit-photo-info">
+                    <strong>توقيع الموظف</strong>
+                    <input asp-for="EmployeeSignature" type="file" accept="image/png,image/jpeg,image/webp" />
+                    <small>يُستعمل بالوثائق المولَّدة · Max 2MB</small>
+                    @if (!string.IsNullOrWhiteSpace(Model.CurrentSignatureUrl))
+                    {
+                        <img src="@Model.CurrentSignatureUrl" alt="توقيع الموظف" style="max-height:56px;max-width:180px;margin-top:6px;background:#fff;border-radius:6px;padding:4px" />
+                    }
+                </div>
                 <div class="nxr-edit-status-near-photo">
                     <label>حالة الموظف</label>
                     <label class="nxr-edit-status-switch">

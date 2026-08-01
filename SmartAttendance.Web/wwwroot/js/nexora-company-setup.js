@@ -391,34 +391,17 @@
 
     const logoInput = document.querySelector("[data-logo-file]");
     const logoPreview = document.querySelector("[data-logo-preview]");
-    const logoContentScroller =
-        document.querySelector(".nexora-content");
-
+    // فتح منتقي الملفات يُقفز الصفحة عند العودة، فنلتقط موضع التمرير ونعيده.
+    // سابقاً كان الموضع يُلتقط من `.nexora-content` ويُصفَّر تمرير المستند معه؛
+    // وبعد توحيد البنية صار المستند هو المُمرِّر الوحيد، فتصفيره = قفزٌ للأعلى.
     let logoScrollSnapshot = null;
     let logoRestoreSequence = 0;
 
-    function normalizeDocumentScroll() {
-        document.documentElement.scrollTop = 0;
-        document.documentElement.scrollLeft = 0;
-        document.body.scrollTop = 0;
-        document.body.scrollLeft = 0;
-
-        window.scrollTo({
-            left: 0,
-            top: 0,
-            behavior: "auto"
-        });
-    }
-
     function rememberLogoScrollPosition() {
         logoScrollSnapshot = {
-            contentScrollTop:
-                logoContentScroller?.scrollTop || 0,
-            contentScrollLeft:
-                logoContentScroller?.scrollLeft || 0
+            top: window.scrollY,
+            left: window.scrollX
         };
-
-        normalizeDocumentScroll();
     }
 
     function restoreLogoScrollPosition() {
@@ -432,12 +415,10 @@
                 return;
             }
 
-            normalizeDocumentScroll();
-
-            if (snapshot && logoContentScroller) {
-                logoContentScroller.scrollTo({
-                    left: snapshot.contentScrollLeft,
-                    top: snapshot.contentScrollTop,
+            if (snapshot) {
+                window.scrollTo({
+                    left: snapshot.left,
+                    top: snapshot.top,
                     behavior: "auto"
                 });
             }
@@ -895,11 +876,8 @@
         navigation.querySelectorAll('a[href^="#"]')
     );
 
-    const contentScroller =
-        page.closest(".nexora-content") ||
-        document.scrollingElement ||
-        document.documentElement;
-
+    // القوقعة لا تصنع مُمرِّراً متداخلاً (nexora-global-scroll-system.css):
+    // المستند هو مالك التمرير بكل المقاسات، فكل ما تحت يخاطب النافذة مباشرة.
     const reducedMotion = window.matchMedia(
         "(prefers-reduced-motion: reduce)"
     );
@@ -921,14 +899,6 @@
         }
     }
 
-    function isDocumentScroller(scroller) {
-        return (
-            scroller === document.scrollingElement ||
-            scroller === document.documentElement ||
-            scroller === document.body
-        );
-    }
-
     function stickyTopbarOffset() {
         const topbar = document.querySelector(".nexora-topbar");
         const topbarHeight =
@@ -941,21 +911,9 @@
         const targetRect = target.getBoundingClientRect();
         const offset = stickyTopbarOffset();
 
-        if (isDocumentScroller(contentScroller)) {
-            return Math.max(
-                0,
-                window.scrollY + targetRect.top - offset
-            );
-        }
-
-        const scrollerRect = contentScroller.getBoundingClientRect();
-
         return Math.max(
             0,
-            contentScroller.scrollTop +
-                targetRect.top -
-                scrollerRect.top -
-                offset
+            window.scrollY + targetRect.top - offset
         );
     }
 
@@ -1015,17 +973,10 @@
 
         setActiveLink(link);
 
-        if (isDocumentScroller(contentScroller)) {
-            window.scrollTo({
-                top,
-                behavior
-            });
-        } else {
-            contentScroller.scrollTo({
-                top,
-                behavior
-            });
-        }
+        window.scrollTo({
+            top,
+            behavior
+        });
 
         updateHash(link.getAttribute("href"));
 
@@ -1048,9 +999,7 @@
         });
     });
 
-    function resetOuterDocumentScroll() {
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
+    function resetDocumentScroll() {
         window.scrollTo({
             left: 0,
             top: 0,
@@ -1067,7 +1016,7 @@
             : window.location.hash;
 
         if (!initialHash) {
-            resetOuterDocumentScroll();
+            resetDocumentScroll();
             return;
         }
 
@@ -1079,30 +1028,20 @@
             : null;
 
         if (!initialLink || !target) {
-            resetOuterDocumentScroll();
+            resetDocumentScroll();
             return;
         }
 
-        resetOuterDocumentScroll();
+        resetDocumentScroll();
 
         window.requestAnimationFrame(() => {
-            resetOuterDocumentScroll();
+            // القياس من الأعلى ثم القفز لمرّة واحدة — لا مُمرِّرَين نوفّق بينهما.
+            resetDocumentScroll();
 
-            const top = targetScrollTop(target);
-
-            if (isDocumentScroller(contentScroller)) {
-                window.scrollTo({
-                    top,
-                    behavior: "auto"
-                });
-            } else {
-                contentScroller.scrollTo({
-                    top,
-                    behavior: "auto"
-                });
-
-                resetOuterDocumentScroll();
-            }
+            window.scrollTo({
+                top: targetScrollTop(target),
+                behavior: "auto"
+            });
 
             setActiveLink(initialLink);
             updateHash(initialHash);

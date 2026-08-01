@@ -21,6 +21,9 @@ public static class PeopleReportsStore
         public string? OwnerUser { get; set; }
         public bool IsSystem { get; set; }
         public bool IsShared { get; set; }
+
+        /// <summary>منشور ببوابة الموظف — يرى الموظف صفوفه هو فقط.</summary>
+        public bool ShareWithEmployees { get; set; }
         public string? SharedWithCsv { get; set; }
         public string? FilterColumnsCsv { get; set; }
         public int SortOrder { get; set; }
@@ -55,6 +58,7 @@ BEGIN
         [OwnerUser] nvarchar(150) NULL,
         [IsSystem] bit NOT NULL CONSTRAINT DF_PeopleReports_IsSystem DEFAULT 0,
         [IsShared] bit NOT NULL CONSTRAINT DF_PeopleReports_IsShared DEFAULT 0,
+        [ShareWithEmployees] bit NULL,
         [SortOrder] int NOT NULL CONSTRAINT DF_PeopleReports_SortOrder DEFAULT 0,
         [IsDeleted] bit NOT NULL CONSTRAINT DF_PeopleReports_IsDeleted DEFAULT 0,
         [CreatedAt] datetime2 NOT NULL CONSTRAINT DF_PeopleReports_CreatedAt DEFAULT SYSUTCDATETIME()
@@ -137,7 +141,7 @@ END;
         return await HrmsDatabase.QueryAsync(
             db,
             """
-SELECT Id, Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, SharedWithCsv, FilterColumnsCsv, SortOrder
+SELECT Id, Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, ISNULL(ShareWithEmployees, 0) AS ShareWithEmployees, SharedWithCsv, FilterColumnsCsv, SortOrder
 FROM PeopleReports
 WHERE IsDeleted = 0
 ORDER BY SortOrder, Id;
@@ -153,7 +157,7 @@ ORDER BY SortOrder, Id;
         var rows = await HrmsDatabase.QueryAsync(
             db,
             """
-SELECT Id, Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, SharedWithCsv, FilterColumnsCsv, SortOrder
+SELECT Id, Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, ISNULL(ShareWithEmployees, 0) AS ShareWithEmployees, SharedWithCsv, FilterColumnsCsv, SortOrder
 FROM PeopleReports
 WHERE Id = @Id AND IsDeleted = 0;
 """,
@@ -165,13 +169,13 @@ WHERE Id = @Id AND IsDeleted = 0;
 
     public static async Task CreateAsync(
         ApplicationDbContext db, string name, string? description, string datasetKey, string columnsCsv, string ownerUser, bool isShared,
-        string? sharedWithCsv = null, string? filterColumnsCsv = null)
+        string? sharedWithCsv = null, string? filterColumnsCsv = null, bool shareWithEmployees = false)
     {
         await HrmsDatabase.ExecuteAsync(
             db,
             """
-INSERT INTO PeopleReports (Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, SharedWithCsv, FilterColumnsCsv, SortOrder)
-VALUES (@Name, @Description, @DatasetKey, NULL, @ColumnsCsv, @OwnerUser, 0, @IsShared, @SharedWith, @FilterColumns, 1000);
+INSERT INTO PeopleReports (Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, ShareWithEmployees, SharedWithCsv, FilterColumnsCsv, SortOrder)
+VALUES (@Name, @Description, @DatasetKey, NULL, @ColumnsCsv, @OwnerUser, 0, @IsShared, @ShareEss, @SharedWith, @FilterColumns, 1000);
 """,
             command =>
             {
@@ -181,6 +185,7 @@ VALUES (@Name, @Description, @DatasetKey, NULL, @ColumnsCsv, @OwnerUser, 0, @IsS
                 HrmsDatabase.AddParameter(command, "@ColumnsCsv", columnsCsv);
                 HrmsDatabase.AddParameter(command, "@OwnerUser", ownerUser);
                 HrmsDatabase.AddParameter(command, "@IsShared", isShared ? 1 : 0);
+                HrmsDatabase.AddParameter(command, "@ShareEss", shareWithEmployees ? 1 : 0);
                 HrmsDatabase.AddParameter(command, "@SharedWith", string.IsNullOrWhiteSpace(sharedWithCsv) ? DBNull.Value : sharedWithCsv);
                 HrmsDatabase.AddParameter(command, "@FilterColumns", string.IsNullOrWhiteSpace(filterColumnsCsv) ? DBNull.Value : filterColumnsCsv);
             });
@@ -189,7 +194,7 @@ VALUES (@Name, @Description, @DatasetKey, NULL, @ColumnsCsv, @OwnerUser, 0, @IsS
     /// <summary>Owner-only update of a custom report (name/columns/sharing/filters).</summary>
     public static async Task UpdateOwnAsync(
         ApplicationDbContext db, int id, string name, string? description, string datasetKey, string columnsCsv, string ownerUser, bool isShared,
-        string? sharedWithCsv, string? filterColumnsCsv)
+        string? sharedWithCsv, string? filterColumnsCsv, bool shareWithEmployees = false)
     {
         await HrmsDatabase.ExecuteAsync(
             db,
@@ -200,6 +205,7 @@ SET Name = @Name,
     DatasetKey = @DatasetKey,
     ColumnsCsv = @ColumnsCsv,
     IsShared = @IsShared,
+    ShareWithEmployees = @ShareEss,
     SharedWithCsv = @SharedWith,
     FilterColumnsCsv = @FilterColumns
 WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner AND IsDeleted = 0;
@@ -213,6 +219,7 @@ WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner AND IsDeleted = 0;
                 HrmsDatabase.AddParameter(command, "@DatasetKey", datasetKey);
                 HrmsDatabase.AddParameter(command, "@ColumnsCsv", columnsCsv);
                 HrmsDatabase.AddParameter(command, "@IsShared", isShared ? 1 : 0);
+                HrmsDatabase.AddParameter(command, "@ShareEss", shareWithEmployees ? 1 : 0);
                 HrmsDatabase.AddParameter(command, "@SharedWith", string.IsNullOrWhiteSpace(sharedWithCsv) ? DBNull.Value : sharedWithCsv);
                 HrmsDatabase.AddParameter(command, "@FilterColumns", string.IsNullOrWhiteSpace(filterColumnsCsv) ? DBNull.Value : filterColumnsCsv);
             });
@@ -257,6 +264,7 @@ WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner;
         OwnerUser = HrmsDatabase.GetString(reader, "OwnerUser"),
         IsSystem = HrmsDatabase.GetBool(reader, "IsSystem"),
         IsShared = HrmsDatabase.GetBool(reader, "IsShared"),
+        ShareWithEmployees = HrmsDatabase.GetBool(reader, "ShareWithEmployees"),
         SharedWithCsv = HrmsDatabase.GetString(reader, "SharedWithCsv"),
         FilterColumnsCsv = HrmsDatabase.GetString(reader, "FilterColumnsCsv"),
         SortOrder = HrmsDatabase.GetInt(reader, "SortOrder")

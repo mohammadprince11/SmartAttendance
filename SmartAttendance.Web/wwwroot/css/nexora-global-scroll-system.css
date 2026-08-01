@@ -1,22 +1,57 @@
 /* NEXORA_GLOBAL_SCROLL_SYSTEM_START
    Canonical responsive shell and scroll ownership.
+
+   مالك التمرير = المستند، دائماً وبكل المقاسات.
+   القوقعة لا تصنع مُمرِّراً متداخلاً: لا `overflow` على <html>/<body> ولا على
+   الشِّل/الرئيسي/المحتوى، ولا ارتفاع مقفول بـ100dvh عليها. الاستثناء الوحيد
+   المشروع هو درج التنقّل (`.nexora-sidebar`) لأنه ملتصق بارتفاع الشاشة وقائمته
+   قد تفيض وحدها، وحاويات الجداول العريضة أفقياً.
+
+   لماذا: المُمرِّر المتداخل كان يعطي سلوكين مختلفين لنفس الصفحة (سطح مكتب مقابل
+   ≤980px)، ويكسر `position: sticky` داخل الصفحات، ويجعل تمرير المتصفح الأصلي
+   (لوحة المفاتيح، الرجوع للموضع، #anchor) يخاطب حاوية غير التي يراها المستخدم.
+
+   ⚠️ أي `overflow` (حتى `clip` على محورٍ واحد) على أسلاف المحتوى يحوّلها لحاوية
+   تمرير ويقتل الالتصاق داخلها — احصر الحماية الأفقية بـ<html>.
 */
 
 :root {
     --nx-responsive-sidebar-width: var(--nx-sidebar-width, 292px);
 }
 
-html,
-body {
+html {
     width: 100% !important;
     max-width: 100% !important;
-    height: 100% !important;
+    height: auto !important;
     min-height: 100% !important;
-    overflow: hidden !important;
+    max-height: none !important;
+    /* الحماية من التمدّد الأفقي مركزها هنا وحدها. */
+    overflow-x: clip !important;
+    overflow-y: auto !important;
+    /* حتى لا يختفي هدف #anchor خلف الشريط العلوي الملتصق. */
+    scroll-padding-top: calc(var(--zy-topbar-height, 64px) + 16px);
 }
 
 body {
+    width: 100% !important;
     max-width: 100vw !important;
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    /* `visible` مقصودة: أي قيمة أخرى تجعل <body> حاوية تمرير فتموت الالتصاقات. */
+    overflow: visible !important;
+}
+
+/* قفل التمرير عند فتح النوافذ.
+   الصفحات تضع صنف القفل على <body> (وبعضها على <html> أيضاً). حين كان <html>
+   مقفول التمرير أصلاً كان القفل يعمل بالصدفة؛ والآن أن صار <html> هو المُمرِّر
+   يلزم أن يصله القفل صراحةً — وإلا مرّت الخلفية تحت النافذة.
+   `overflow: hidden` يحفظ موضع التمرير فلا تقفز الصفحة عند الإغلاق. */
+html.nxex-scroll-lock,
+html:has(> body[class*="modal-open"]),
+html:has(> body[class*="modal-active"]),
+html:has(> body[class*="scroll-lock"]) {
+    overflow: hidden !important;
 }
 
 .nexora-shell {
@@ -25,9 +60,10 @@ body {
     align-items: stretch !important;
     width: 100% !important;
     max-width: 100vw !important;
-    height: 100dvh !important;
+    height: auto !important;
     min-height: 100dvh !important;
-    overflow: hidden !important;
+    max-height: none !important;
+    overflow: visible !important;
     direction: ltr !important;
 }
 
@@ -37,12 +73,12 @@ body {
     width: auto !important;
     min-width: 0 !important;
     max-width: calc(100vw - var(--nx-responsive-sidebar-width)) !important;
-    height: 100dvh !important;
-    min-height: 0 !important;
-    max-height: 100dvh !important;
+    height: auto !important;
+    min-height: 100dvh !important;
+    max-height: none !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     direction: rtl !important;
 }
 
@@ -74,6 +110,11 @@ body {
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
+    /* كان يبقى ظاهراً لأن المحتوى كان يمرّ تحته داخل مُمرِّره؛ ومع تمرير المستند
+       يحتاج التصاقاً صريحاً ليحافظ على السلوك نفسه. */
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 40 !important;
     direction: rtl !important;
 }
 
@@ -91,10 +132,9 @@ body {
     min-height: 0 !important;
     height: auto !important;
     max-height: none !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    /* لم يعد مُمرِّراً — التمرير للمستند. */
+    overflow: visible !important;
     direction: rtl !important;
-    scrollbar-gutter: stable !important;
     padding: clamp(14px, 1.55vw, 22px) !important;
 }
 
@@ -120,9 +160,7 @@ body {
     overflow-y: visible !important;
 }
 
-.nexora-main,
 .nexora-sidebar,
-.nexora-content,
 .table-responsive,
 .table-wrap,
 .table-wrapper,
@@ -134,9 +172,7 @@ body {
     scrollbar-width: thin;
 }
 
-.nexora-main::-webkit-scrollbar,
 .nexora-sidebar::-webkit-scrollbar,
-.nexora-content::-webkit-scrollbar,
 .table-responsive::-webkit-scrollbar,
 .table-wrap::-webkit-scrollbar,
 .table-wrapper::-webkit-scrollbar,
@@ -149,15 +185,23 @@ body {
     height: 7px;
 }
 
-.nexora-main::-webkit-scrollbar-track,
-.nexora-sidebar::-webkit-scrollbar-track,
-.nexora-content::-webkit-scrollbar-track {
+/* شريط تمرير المستند يرث المظهر نفسه بعد أن صار هو الشريط الوحيد الظاهر. */
+html {
+    scrollbar-width: thin;
+}
+
+html::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+}
+
+html::-webkit-scrollbar-track,
+.nexora-sidebar::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.nexora-main::-webkit-scrollbar-thumb,
-.nexora-sidebar::-webkit-scrollbar-thumb,
-.nexora-content::-webkit-scrollbar-thumb {
+html::-webkit-scrollbar-thumb,
+.nexora-sidebar::-webkit-scrollbar-thumb {
     border-radius: 999px;
     background: rgba(124, 234, 240, .34);
 }
@@ -224,22 +268,13 @@ body {
     }
 }
 
+/* ≤980px: يتغيّر التخطيط فقط (الدرج فوق المحتوى بدل جانبه) — أما مِلكية التمرير
+   فهي هي نفسها بكل المقاسات، فلا شيء هنا يعيد تعريفها. */
 @media (max-width: 980px) {
-    html,
-    body {
-        height: auto !important;
-        min-height: 100% !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-    }
-
     .nexora-shell {
         display: block !important;
         width: 100% !important;
         max-width: 100% !important;
-        height: auto !important;
-        min-height: 100dvh !important;
-        overflow: visible !important;
         direction: rtl !important;
     }
 
@@ -266,22 +301,18 @@ body {
         display: flex !important;
         width: 100% !important;
         max-width: 100% !important;
-        height: auto !important;
+        /* الدرج فوق المحتوى هنا، فلا يلزم الرئيسيَّ ملء الشاشة بنفسه. */
         min-height: 0 !important;
-        max-height: none !important;
-        overflow: visible !important;
     }
 
+    /* الشريط العلوي بالموبايل يمرّ مع الصفحة (سلوك قائم مقصود): الشريط هنا يتمدّد
+       عمودياً فالتصاقه يبتلع نصف الشاشة. */
     .nexora-topbar {
-        position: sticky !important;
-        top: 0 !important;
-        width: 100% !important;
-        z-index: 90 !important;
+        position: relative !important;
+        top: auto !important;
     }
 
     .nexora-content {
-        overflow: visible !important;
-        min-height: 0 !important;
         padding: 12px !important;
     }
 }

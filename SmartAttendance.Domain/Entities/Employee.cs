@@ -77,6 +77,13 @@ public class Employee : AuditableEntity
 
     public string? PhotoPath { get; set; }
 
+    /// <summary>
+    /// مفتاح صورة توقيع الموظف بالمخزن المحميّ (خارج <c>wwwroot</c>). يغذّي رمز
+    /// <c>{Employee-Signature-Url}</c> بمنشئ الوثائق. ليس مساراً عاماً — التوقيع
+    /// أثرٌ قانونيّ لا يُكشف بلا مصادقة.
+    /// </summary>
+    public string? SignaturePath { get; set; }
+
     public string? ContractType { get; set; }
 
     public DateOnly? ContractEndDate { get; set; }

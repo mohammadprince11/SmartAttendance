@@ -47,6 +47,10 @@ public static class DocumentTokenEngine
         new("Birth-Date",           "تاريخ الميلاد",           CategoryIdentity),
         new("Age",                  "العمر",                   CategoryIdentity),
         new("Is-Citizen",           "مواطن",                   CategoryIdentity),
+        // ⚠️ **رابط** لا وسم صورة: قيم الرموز تُهرَّب HTML عمداً (Render)، وإرجاع
+        // <img> هنا يعني فتح باب حقن بقالبٍ يحرّره المستخدم. كاتب القالب يضعه
+        // بنفسه: <img src="{Employee-Signature-Url}"> — فيُهرَّب الرابط داخل السمة بأمان.
+        new("Employee-Signature-Url", "رابط توقيع الموظف",     CategoryIdentity),
         new("Phone",                "الهاتف",                  CategoryIdentity),
         new("Email",                "البريد الإلكتروني",       CategoryIdentity),
 
@@ -124,7 +128,9 @@ public static class DocumentTokenEngine
         string? ManagerName,
         string? ContractNo,
         DateOnly? ContractStart,
-        string? BankName);
+        string? BankName,
+        /// <summary>رابط توقيع الموظف بنقطة مصادَقة؛ فارغ إن لم يُرفع توقيع.</summary>
+        string? SignatureUrl = null);
 
     /// <summary>
     /// يبني قاموس الرموز. القيم **نصوص جاهزة للعرض** لا خام: التواريخ منسَّقة
@@ -158,6 +164,7 @@ public static class DocumentTokenEngine
             ["Birth-Date"] = Date(row.BirthDate),
             ["Age"] = Number(HrConditionFacts.AgeYears(row.BirthDate, asOf)),
             ["Is-Citizen"] = row.IsCitizen ? "مواطن" : "غير مواطن",
+            ["Employee-Signature-Url"] = Text(extras.SignatureUrl),
             ["Phone"] = Text(extras.Phone),
             ["Email"] = Text(extras.Email),
 

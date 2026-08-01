@@ -1,0 +1,47 @@
+@model SmartAttendance.Web.Pages.Shared.EmployeePickerModel
+@*
+    منتقي الموظف المشترك — نظير مكوّن كيان المفحوص حيّاً 2026-08-01.
+
+    **عقده المرصود عندهم، وطُبِّق حرفياً:**
+      · حقل «رمز» قابل للكتابة (autocomplete=off) — تكتب الرقم فيُحسم الموظف
+      · حقل «اسم الموظف» **للقراءة فقط**، والنقر عليه يفتح نافذة الاختيار
+      · نافذة «بحث عن الموظف»: بحث + عدّاد نتائج + جدول
+        (رمز · اسم الموظف · وحدة عمل · الهيكلية)
+      · حقل مخفيّ يحمل معرّف الموظف المحسوم — وهو ما يُرسَل بالنموذج
+
+    **لماذا مكوّن واحد؟** كل شاشة كانت تحمّل منسدلةً بـ1356 موظفاً عند كل فتحة.
+    هنا لا يُقرأ أحد حتى تُفتح النافذة، والبحث خادميّ بنطاق تخويل مفروض.
+*@
+@{
+    var uid = "zyep-" + Guid.NewGuid().ToString("N")[..8];
+}
+
+<div class="zyep" id="@uid" data-zyep data-zyep-inactive="@(Model.IncludeInactive ? "1" : "0")">
+    @if (!string.IsNullOrWhiteSpace(Model.Label))
+    {
+        <label class="zyep-label" for="@(uid)-code">@Model.Label</label>
+    }
+
+    <div class="zyep-box">
+        <input type="text" id="@(uid)-code" class="zyep-code" placeholder="رمز"
+               autocomplete="off" value="@Model.SelectedCode" />
+        @* للقراءة فقط عمداً كما عندهم: الاسم يُحسَم بالاختيار لا بالكتابة الحرّة،
+           فلا يُرسَل نموذجٌ باسمٍ لا يقابله موظف. *@
+        <input type="text" class="zyep-name" placeholder="اسم الموظف" readonly
+               value="@Model.SelectedName" title="انقر للاختيار من القائمة" />
+        @* أيقونة ستروك لا محرف نصّي: `⌕` يختلف رسمه بين الخطوط ويغيب ببعضها *@
+        <button type="button" class="zyep-open" title="بحث عن الموظف" aria-label="بحث عن الموظف">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+            </svg>
+        </button>
+        <input type="hidden" name="@Model.Name" class="zyep-id" value="@(Model.SelectedId > 0 ? Model.SelectedId.ToString() : "")" />
+    </div>
+
+    @if (Model.SubmitOnSelect)
+    {
+        <span class="zyep-auto" hidden></span>
+    }
+</div>

@@ -53,6 +53,7 @@
             <a asp-page="./Templates" asp-route-kind="Document" style="@(Model.KindFilter == "Document" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الوثائق</a>
             <a asp-page="./Templates" asp-route-kind="Header" style="@(Model.KindFilter == "Header" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الترويسات</a>
             <a asp-page="./Templates" asp-route-kind="Footer" style="@(Model.KindFilter == "Footer" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">التذييلات</a>
+            <a asp-page="./Templates" asp-route-kind="Badge" style="@(Model.KindFilter == "Badge" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">بطاقات الموظفين</a>
         </div>
 
         @if (Model.Templates.Count == 0)

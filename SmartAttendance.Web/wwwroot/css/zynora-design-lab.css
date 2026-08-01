@@ -1,0 +1,190 @@
+/* مختبر المقاسات — تخطيط الصفحة نفسها.
+   ⚠️ لا يفرض هذا الملف أي مقاسٍ على عناصر المعاينة: المعاينة يجب أن تتبع
+   التوكنات وحدها، وإلا أرَتْ ما نريد لا ما سيحدث. */
+
+/* الصفحة تملأ ارتفاع منطقة المحتوى تماماً ولا تمرّ هي نفسها: الترويسة والملاحظة
+   وأزرار الاعتماد ثابتة، والعمودان يأخذان كل ما تبقّى ويمرّان وحدهما.
+   `min-height:0` على كل حلقة إلزاميّ — بدونه يرفض عنصر الفلكس الانكماش دون
+   حجم محتواه فيتمدّد العمود ويعود التمرير للصفحة كلّها. */
+.zdl {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    direction: rtl;
+    /* كان `height: 100%` يرث ارتفاعاً مقفولاً من القوقعة. وبعد توحيد بنية التمرير
+       (المستند هو المُمرِّر) لم يعد لمنطقة المحتوى ارتفاعٌ محدَّد، فصارت النسبة
+       المئوية تُحلّ إلى `auto` ويتمدّد العمودان بطول محتواهما — فتعود الصفحة كلّها
+       للتمرير ويضيع الغرض. القياس الآن من نافذة العرض مباشرة: ارتفاع الشاشة ناقص
+       الشريط العلوي الملتصق وحشوتَي منطقة المحتوى — بالتوكنَين نفسيهما اللذين
+       يضبطانهما فعلاً (`.nexora-topbar` و`.nexora-content` بـnexora-brand.css)،
+       لا برقمٍ منسوخ يبيت. */
+    height: calc(
+        100dvh
+        - var(--zy-topbar-height, 72px)
+        - 2 * var(--zy-space-4, 24px)
+    );
+    min-height: 0;
+}
+
+#zdl-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* الترويسة والملاحظة ثابتتان فوق العمودين، فكل بكسلٍ فيهما يُقتطع من مساحة
+   العمل. مضغوطتان عمداً. */
+.zdl-hero {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    flex: 0 0 auto;
+    padding: 10px 16px; border-radius: 16px;
+    border: 1px solid var(--sa-border, rgba(148, 163, 184, .22));
+    background: var(--sa-surface, rgba(8, 22, 38, .6));
+}
+.zdl-hero p { max-width: 70ch; color: var(--sa-muted, #9fb3c7); margin: 6px 0 0; }
+.zdl-hero-status { text-align: center; }
+.zdl-hero-status strong { display: block; font-size: 22px; color: var(--zy-electric-teal, #22d3ee); }
+.zdl-hero-status small { color: var(--sa-muted, #9fb3c7); }
+
+.zdl-alert {
+    padding: 12px 16px; border-radius: 14px;
+    border: 1px solid rgba(34, 211, 238, .35); background: rgba(34, 211, 238, .10);
+}
+
+.zdl-note {
+    flex: 0 0 auto;
+    padding: 7px 12px; border-radius: 10px; font-size: 12px;
+    border: 1px solid rgba(245, 201, 107, .25); background: rgba(245, 201, 107, .07);
+    color: var(--sa-muted, #cbd5e1);
+}
+
+/* عمودان **يمرّ كلٌّ منهما وحده**.
+   الالتصاق (sticky) وحده لم يكفِ: المعاينة أطول من الشاشة، فكنت تمرّر الصفحة
+   كلّها لترى الجدول ثم تعود لتصل إلى مقياسٍ بأسفل قائمة التحكّم. بعمودين
+   مستقلَّي التمرير تبقى المعاينة أمامك وأنت تنزل بين المجموعات. */
+.zdl-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: stretch;
+    flex: 1 1 auto;
+    /* أرضيّةٌ للعمودين: على شاشةٍ قصيرة كانا ينكمشان إلى ~127px فيصيران غير
+       صالحين للاستعمال. عند بلوغ الأرضية تمرّ الصفحة قليلاً — وهو أهون
+       بكثيرٍ من عمودٍ بارتفاع ثلاثة أسطر. */
+    min-height: 340px;
+}
+
+/* `!important` هنا ليس تكاسلاً: قاعدةٌ عامّة بالجسر القديم تفرض
+   `overflow: visible` على العناصر، فكان عمود المعاينة (<aside>) يبقى بلا تمرير
+   بينما عمود التحكّم (<div>) يمرّ — عمودان بسلوكين، وهو أسوأ من بلا تمرير أصلاً.
+   والارتفاع بـmax() كي لا ينكمش العمود إلى لا شيء على شاشةٍ قصيرة. */
+.zdl .zdl-controls,
+.zdl .zdl-preview {
+    /* الارتفاع يأتي من شبكة العمودين (تملأ ما تبقّى)، لا من رقمٍ نخمّنه */
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto !important;
+    /* لا يسحب الصفحة معه حين يبلغ نهايته — وإلا قفزت الصفحة كلّها فجأة */
+    overscroll-behavior: contain;
+    padding-inline-end: 6px;
+}
+
+.zdl-controls { display: grid; gap: 14px; align-content: start; }
+
+.zdl-group {
+    padding: 16px; border-radius: 18px;
+    border: 1px solid var(--sa-border, rgba(148, 163, 184, .22));
+    background: var(--sa-surface, rgba(8, 22, 38, .5));
+}
+.zdl-group > h2 { margin: 0 0 12px; }
+
+.zdl-row { display: grid; gap: 6px; padding: 9px 0; border-top: 1px solid rgba(148, 163, 184, .12); }
+.zdl-row:first-of-type { border-top: 0; }
+
+.zdl-row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.zdl-value { font-variant-numeric: tabular-nums; color: var(--sa-muted, #9fb3c7); }
+
+/* مخصَّص عن الافتراضي */
+.zdl-row-custom .zdl-value { color: var(--zy-electric-teal, #22d3ee); }
+/* معدَّل ولم يُعتمد بعد — إعلانٌ صريح بدل أن يظنّ المستخدم أنه حفظ */
+.zdl-row-dirty { box-shadow: inset 2px 0 0 #f5c96b; padding-inline-start: 10px; }
+.zdl-row-dirty .zdl-value::after { content: " ● غير معتمَد"; color: #f5c96b; font-size: .85em; }
+
+.zdl-row input[type="range"] { width: 100%; accent-color: var(--zy-electric-teal, #22d3ee); }
+.zdl-hint { color: var(--sa-muted, #8fa8bc); }
+
+.zdl-preview-inner {
+    display: grid; gap: 14px; padding: 16px; border-radius: 18px;
+    border: 1px solid var(--sa-border, rgba(148, 163, 184, .22));
+    background: var(--sa-surface, rgba(8, 22, 38, .5));
+}
+.zdl-demo {
+    display: grid; gap: 8px; padding: 12px; border-radius: 14px;
+    border: 1px dashed rgba(148, 163, 184, .22);
+}
+.zdl-demo-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+/* عناصر تُعرض «مفتوحةً» بالمعاينة (قائمة منسدلة · صفّ نتيجة المنتقي): مواضعها
+   بالنظام عابرة، فلولا عرضها هنا لبقي مقياساها بلا أثرٍ مرئيّ. */
+.zdl-static { position: static !important; display: block !important; opacity: 1 !important;
+    visibility: visible !important; pointer-events: none; inset: auto !important;
+    transform: none !important; clip-path: none !important; }
+.zdl-static.nxcs-menu { border: 1px solid rgba(148, 163, 184, .22); padding: 6px; }
+/* النافذة الساكنة: تُلغى قيود الحجم والتموضع التي تجعلها نافذةً حقيقية */
+.zdl-static.zyep-modal { width: auto !important; max-height: none !important; padding: 10px 12px; }
+.zdl-static.nxcs { display: flex !important; align-items: center; padding-inline: 12px;
+    border: 1px solid rgba(148, 163, 184, .28); background: var(--sa-input, rgba(6, 16, 29, .55)); }
+/* عمودان فقط بالمعاينة: بأعمدة المنتقي الأربعة يلتفّ النصّ داخل العمود الضيّق
+   فيصير ارتفاع الصفّ الطبيعي ~87px، ولا يُرى أثر مقياس ارتفاع الصفّ حتى
+   يتجاوزه — فيبدو المقياس معطّلاً وهو سليم. */
+.zdl-static .zyep-row {
+    border-bottom: 1px solid rgba(148, 163, 184, .16);
+    grid-template-columns: 70px 1fr !important;
+    align-items: center;
+}
+.zdl-static .zyep-row span:nth-child(3),
+.zdl-static .zyep-row span:nth-child(4) { display: none; }
+
+.zdl-card-grid { display: grid; grid-template-columns: 1fr 1fr; }
+.zdl-card-grid .zy-card { border: 1px dashed rgba(148, 163, 184, .28); }
+.zdl-demo table { width: 100%; border-collapse: collapse; }
+.zdl-demo th, .zdl-demo td { border-bottom: 1px solid rgba(148, 163, 184, .16); text-align: start; }
+.zdl-demo label { display: flex; align-items: center; }
+
+.zdl-actions { display: flex; flex-wrap: wrap; gap: 10px; flex: 0 0 auto; }
+
+/* عناوين المجموعات تبقى ظاهرة أثناء تمرير عمود التحكّم — كي تعرف أين أنت */
+/* ⚠️ `top` **صفر لا سالب**. بقيمةٍ سالبة يلتصق العنوان وهو مرتفعٌ عن حافّة
+   الحاوية، فيتأرجح بين حالتَي الالتصاق مع كل بكسل تمرير — وهو «اهتزاز الكلام»
+   أثناء السكرول. والحاويةُ تُعوَّض بحشوةٍ علوية صفر بدل الهوامش السالبة. */
+.zdl-group > h2,
+.zdl-preview-inner > h3 {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin: 0 -16px 12px;
+    padding: 12px 16px;
+    background: var(--sa-surface, #0b1a2b);
+    /* يمنع تسرّب البكسل الجزئي من تحت العنوان أثناء التمرير */
+    box-shadow: 0 1px 0 var(--sa-surface, #0b1a2b);
+}
+
+.zdl-group,
+.zdl-preview-inner { padding-top: 0 !important; }
+
+@media (max-width: 1100px) {
+    /* بعمودٍ واحد يصير التمرير المستقلّ ضرراً: صندوقان يمرّان داخل صفحةٍ تمرّ.
+       فتعود الصفحة كلّها للتمرير الطبيعي. */
+    .zdl { height: auto; }
+    #zdl-form { flex: 0 0 auto; }
+    .zdl-layout { grid-template-columns: 1fr; flex: 0 0 auto; }
+    .zdl .zdl-controls,
+    .zdl .zdl-preview {
+        height: auto;
+        max-height: none !important;
+        overflow: visible !important;
+        padding-inline-end: 0;
+    }
+}

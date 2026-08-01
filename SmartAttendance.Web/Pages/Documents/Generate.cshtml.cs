@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Pages.Shared;
 
 namespace SmartAttendance.Web.Pages.Documents;
 
@@ -15,7 +16,13 @@ public class GenerateModel : PageModel
 {
     private readonly ApplicationDbContext _db;
 
-    public GenerateModel(ApplicationDbContext db) => _db = db;
+    public GenerateModel(ApplicationDbContext db, Infrastructure.Security.IProtectedFileService protectedFiles)
+    {
+        _db = db;
+        _protectedFiles = protectedFiles;
+    }
+
+    private readonly Infrastructure.Security.IProtectedFileService _protectedFiles;
 
     [BindProperty(SupportsGet = true)] public int? TemplateId { get; set; }
     [BindProperty(SupportsGet = true)] public int? EmployeeFilter { get; set; }
@@ -28,8 +35,12 @@ public class GenerateModel : PageModel
     [BindProperty] public string? BulkCodes { get; set; }
 
     public List<DocumentTemplateStore.Template> Templates { get; private set; } = new();
-    public List<(int Id, string Label)> Employees { get; private set; } = new();
     public List<DocumentTemplateStore.Generated> Archive { get; private set; } = new();
+
+    /// <summary>رمز الموظف المحسوم واسمه — لتعبئة المنتقي ابتداءً.</summary>
+    public string? SelectedEmployeeCode { get; private set; }
+
+    public string? SelectedEmployeeName { get; private set; }
 
     public string? PreviewHtml { get; private set; }
     public IReadOnlyList<string> PreviewUnresolved { get; private set; } = Array.Empty<string>();
@@ -53,11 +64,11 @@ public class GenerateModel : PageModel
 
         var (template, employeeId) = pair;
         var (_, html, unresolved) = await DocumentTemplateStore.GenerateAsync(
-            _db, template, employeeId, User.Identity?.Name, Notes, IssuedOn, persist: false);
+            _db, template, employeeId, User.Identity?.Name, Notes, IssuedOn, persist: false, fileUrl: _protectedFiles.BuildUrl);
 
         PreviewHtml = html;
         PreviewUnresolved = unresolved;
-        PreviewEmployeeName = Employees.FirstOrDefault(e => e.Id == employeeId).Label;
+        PreviewEmployeeName = SelectedEmployeeName;
 
         return Page();
     }
@@ -73,7 +84,7 @@ public class GenerateModel : PageModel
 
         var (template, employeeId) = pair;
         var (id, _, unresolved) = await DocumentTemplateStore.GenerateAsync(
-            _db, template, employeeId, User.Identity?.Name, Notes, IssuedOn, persist: true);
+            _db, template, employeeId, User.Identity?.Name, Notes, IssuedOn, persist: true, fileUrl: _protectedFiles.BuildUrl);
 
         var message = unresolved.Count == 0
             ? "صدرت الوثيقة وأُرشفت."
@@ -122,7 +133,7 @@ public class GenerateModel : PageModel
         foreach (var employeeId in ids)
         {
             var (id, _, unresolved) = await DocumentTemplateStore.GenerateAsync(
-                _db, template, employeeId, User.Identity?.Name, Notes, IssuedOn, persist: true, source: "جماعي");
+                _db, template, employeeId, User.Identity?.Name, Notes, IssuedOn, persist: true, source: "جماعي", fileUrl: _protectedFiles.BuildUrl);
 
             if (id > 0)
             {
@@ -165,18 +176,8 @@ public class GenerateModel : PageModel
         Templates = await DocumentTemplateStore.LoadTemplatesAsync(_db, activeOnly: true);
         Archive = await DocumentTemplateStore.LoadGeneratedAsync(_db, templateId: TemplateId);
 
-        Employees = (await HrmsDatabase.QueryAsync(
-            _db,
-            """
-SELECT Id, ISNULL(FullName, N'') AS FullName, ISNULL(EmployeeNo, N'') AS EmployeeNo
-FROM Employees
-WHERE IsActive = 1 AND ISNULL(IsDeleted, 0) = 0
-ORDER BY FullName;
-""",
-            command => { },
-            reader => (
-                HrmsDatabase.GetInt(reader, "Id"),
-                $"{HrmsDatabase.GetString(reader, "FullName")} ({HrmsDatabase.GetString(reader, "EmployeeNo")})")))
-            .ToList();
+        var identity = await EmployeePickerLookup.LoadAsync(_db, SelectedEmployeeId);
+        SelectedEmployeeCode = identity?.Code;
+        SelectedEmployeeName = identity?.Name;
     }
 }

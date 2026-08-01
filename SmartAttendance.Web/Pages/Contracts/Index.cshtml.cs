@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Pages.Shared;
 
 namespace SmartAttendance.Web.Pages.Contracts;
 
@@ -44,7 +45,10 @@ public class IndexModel : PageModel
 
     public List<ContractRegisterStore.ContractRow> Contracts { get; private set; } = new();
     public Dictionary<string, int?> ContractTypes { get; private set; } = new();
-    public List<(int Id, string Label)> Employees { get; private set; } = new();
+    /// <summary>رمز الموظف المحسوم واسمه — لتعبئة المنتقي ابتداءً.</summary>
+    public string? EmployeeCode { get; private set; }
+
+    public string? EmployeeName { get; private set; }
     public DateOnly Today { get; } = DateOnly.FromDateTime(DateTime.Today);
 
     /// <summary>عقود تنتهي خلال 60 يوماً — الرقم الذي يفتح الشاشة عادةً.</summary>
@@ -117,18 +121,8 @@ public class IndexModel : PageModel
 
         ContractTypes = await ContractRegisterStore.LoadContractTypesAsync(_db);
 
-        Employees = (await HrmsDatabase.QueryAsync(
-            _db,
-            """
-SELECT Id, ISNULL(FullName, N'') AS FullName, ISNULL(EmployeeNo, N'') AS EmployeeNo
-FROM Employees
-WHERE IsActive = 1 AND ISNULL(IsDeleted, 0) = 0
-ORDER BY FullName;
-""",
-            command => { },
-            reader => (
-                HrmsDatabase.GetInt(reader, "Id"),
-                $"{HrmsDatabase.GetString(reader, "FullName")} ({HrmsDatabase.GetString(reader, "EmployeeNo")})")))
-            .ToList();
+        var identity = await EmployeePickerLookup.LoadAsync(_db, EmployeeId);
+        EmployeeCode = identity?.Code;
+        EmployeeName = identity?.Name;
     }
 }

@@ -100,6 +100,49 @@ public class IndexModel : PageModel
     private static DateOnly? ParseDate(string? value) =>
         DateOnly.TryParse(value, out var d) ? d : null;
 
+    /// <summary>
+    /// عدّادات بطاقات التقارير (نمط كيان: كل بطاقة عليها عدّاد) — تُطلب **بعد**
+    /// رسم الصفحة لا معها.
+    ///
+    /// ⚠️ العدّ الفوريّ كان سيعني تشغيل كل تقرير عند كل فتحة للصفحة: عشرات
+    /// الاستعلامات على 1356 موظفاً قبل ظهور أول بطاقة. فالعدّ كسول، و**مجمَّع
+    /// بمفتاح (المصدر، المرشّح)**: تقريران يختلفان بالأعمدة فقط يقرآن نفس الصفوف
+    /// مرّة واحدة — عشرون تقريراً غالباً أقلّ من عشرة استعلامات.
+    /// </summary>
+    public async Task<IActionResult> OnGetCountsAsync()
+    {
+        await LoadListsAsync();
+
+        var reports = SystemReports.Concat(MyReports).Concat(SharedReports).ToList();
+        var filters = new PeopleReportCatalog.ReportFilters
+        {
+            CompanyId = CompanyId,
+            ActiveOnly = ActiveOnly,
+            From = ParseDate(From),
+            To = ParseDate(To)
+        };
+
+        var bySource = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var counts = new Dictionary<string, int>();
+
+        foreach (var report in reports)
+        {
+            var sourceKey = report.DatasetKey + "|" + (report.FilterKey ?? "");
+
+            if (!bySource.TryGetValue(sourceKey, out var count))
+            {
+                var rows = await PeopleReportCatalog.LoadAsync(
+                    _dbContext, report.DatasetKey, report.FilterKey, filters);
+                count = rows.Count;
+                bySource[sourceKey] = count;
+            }
+
+            counts[report.Id.ToString()] = count;
+        }
+
+        return new JsonResult(counts);
+    }
+
     public async Task<IActionResult> OnGetExportAsync()
     {
         var report = await PeopleReportsStore.GetAsync(_dbContext, ReportId);
@@ -126,7 +169,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostCreateReportAsync(
         string name, string? description, string datasetKey, string columnsCsv, string visibility,
-        int id = 0, string? filterColumnsCsv = null, List<string>? sharedWith = null)
+        int id = 0, string? filterColumnsCsv = null, List<string>? sharedWith = null, bool shareWithEmployees = false)
     {
         await PeopleReportsStore.EnsureSchemaAsync(_dbContext);
 
@@ -160,14 +203,14 @@ public class IndexModel : PageModel
         {
             await PeopleReportsStore.UpdateOwnAsync(
                 _dbContext, id, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared,
-                sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null);
+                sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null, shareWithEmployees);
             Message = "تم تحديث التقرير.";
         }
         else
         {
             await PeopleReportsStore.CreateAsync(
                 _dbContext, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared,
-                sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null);
+                sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null, shareWithEmployees);
             Message = "تم حفظ التقرير.";
         }
 
@@ -180,6 +223,71 @@ public class IndexModel : PageModel
             .Where(c => dataset.Columns.Any(dc => dc.Key.Equals(c, StringComparison.OrdinalIgnoreCase)))
             .Distinct()
             .ToList();
+
+    /// <summary>
+    /// «أنشئ نسخة» — نمط كيان المتكرّر بكل شاشاته: الاستنساخ بديلٌ عن البناء من
+    /// الصفر. ويعمل على **تقارير النظام أيضاً** وهو أهمّ استعمالاته: تأخذ تقريراً
+    /// جاهزاً وتعدّل أعمدته بدل أن تبنيه حقلاً حقلاً.
+    ///
+    /// النسخة تُولَد **مملوكةً لك وغير مشاركة** مهما كان الأصل — مشاركةُ الأصل
+    /// قرارُ صاحبه لا يُورَّث بالنسخ.
+    /// </summary>
+    public async Task<IActionResult> OnPostDuplicateReportAsync(int id)
+    {
+        var source = await PeopleReportsStore.GetAsync(_dbContext, id);
+        if (source == null)
+        {
+            Message = "التقرير غير موجود.";
+            return Redirect(SelfPath);
+        }
+
+        // تحميل القوائم لازم قبل تسمية النسخة: NextCopyName يقرأ أسماء تقاريري
+        // ليتجنّب التكرار، وهي فارغة بمسار POST ما لم تُحمَّل.
+        await LoadListsAsync();
+
+        await PeopleReportsStore.CreateAsync(
+            _dbContext,
+            NextCopyName(source.Name),
+            source.Description,
+            source.DatasetKey,
+            source.ColumnsCsv,
+            CurrentUser,
+            isShared: false,
+            sharedWithCsv: null,
+            filterColumnsCsv: source.FilterColumnsCsv);
+
+        Message = "تم إنشاء نسخة بتبويب «تقاريري».";
+        return Redirect(SelfPath + "#mine");
+    }
+
+    /// <summary>
+    /// اسم النسخة: «س — نسخة»، ثم «(2)» فما فوق عند التكرار. بلا ترقيم يصير
+    /// عند المستخدم خمسة تقارير بنفس الاسم فلا يميّزها.
+    /// </summary>
+    private string NextCopyName(string sourceName)
+    {
+        const string suffix = " — نسخة";
+        var baseName = sourceName.EndsWith(suffix, StringComparison.Ordinal)
+            ? sourceName
+            : sourceName + suffix;
+
+        var taken = MyReports.Select(r => r.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!taken.Contains(baseName))
+        {
+            return baseName;
+        }
+
+        for (var n = 2; n < 100; n++)
+        {
+            var candidate = $"{baseName} ({n})";
+            if (!taken.Contains(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return $"{baseName} ({DateTime.Now:HHmmss})";
+    }
 
     public async Task<IActionResult> OnPostDeleteReportAsync(int id)
     {

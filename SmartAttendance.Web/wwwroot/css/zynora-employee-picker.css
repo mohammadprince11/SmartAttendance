@@ -1,0 +1,88 @@
+/* منتقي الموظف المشترك — بترتيبة كيان: رمز + اسم ملتصقان بإطار واحد، ثم عدسة. */
+
+/* التراتب البصري: كل شيء كان بوزن 800–1000 فبدا سميكاً بلا تمييز. الوزن الآن
+   يفرّق: العنوان والترويسة خفيفان مكتومان · البيانات متوسطة · الاسم المختار أثقل. */
+
+.zyep { display: grid; gap: 6px; direction: rtl; }
+.zyep-label { font-size: 12px; font-weight: 600; letter-spacing: .01em; color: var(--sa-muted, #9fb3c7); }
+
+.zyep-box {
+    display: flex; align-items: stretch;
+    border: 1px solid var(--sa-border, rgba(148, 163, 184, .28));
+    border-radius: 10px; overflow: hidden;
+    background: var(--sa-input, rgba(6, 16, 29, .55));
+}
+
+/* التركيز يظهر على الإطار كله لا على حقلٍ منه — الحقلان صندوقٌ واحد بصرياً */
+.zyep-box:focus-within { border-color: var(--zy-electric-teal, #22d3ee);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .16); }
+
+.zyep-box input { border: 0; background: transparent; color: var(--sa-text, #e6f0fa);
+    font-family: inherit; font-size: 13px; font-weight: 500; padding: 9px 11px; min-height: 40px; outline: none; }
+
+/* «رمز» ضيّق كما عندهم، ويفصله خطّ عن الاسم. أرقامٌ جدوليّة كي لا يرقص العرض. */
+.zyep-code { flex: 0 0 108px; border-inline-end: 1px solid var(--sa-border, rgba(148, 163, 184, .28)) !important;
+    text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+/* الاسم هو المعلومة التي يقرأها المستخدم فعلاً ⟹ أثقل عنصر بالمكوّن */
+.zyep-name { flex: 1 1 auto; cursor: pointer; font-weight: 600; }
+.zyep-name::placeholder, .zyep-code::placeholder { color: var(--sa-muted, #8fa8bc); font-weight: 400; }
+
+/* رمزٌ لا يقابل موظفاً — إعلانٌ لا صمت */
+.zyep-code.zyep-bad { color: #f87171; box-shadow: inset 0 -2px 0 #f87171; }
+
+/* أزرار المكوّن: هدفُ نقرٍ ≥40px وحالاتٌ ظاهرة (تمرير · ضغط · تركيز بلوحة
+   المفاتيح). كانت بلا أي حالة تركيز — زرٌّ لا يُرى تركيزه لا يُستعمل بالكيبورد. */
+.zyep-open, .zyep-close {
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 0; background: transparent; cursor: pointer;
+    color: var(--sa-muted, #9fb3c7); transition: color .15s, background-color .15s;
+}
+.zyep-open:hover, .zyep-close:hover { color: var(--zy-electric-teal, #22d3ee); background: rgba(34, 211, 238, .10); }
+.zyep-open:active, .zyep-close:active { background: rgba(34, 211, 238, .18); }
+.zyep-open:focus-visible, .zyep-close:focus-visible {
+    outline: 2px solid var(--zy-electric-teal, #22d3ee); outline-offset: -2px; color: var(--zy-electric-teal, #22d3ee);
+}
+
+.zyep-open { flex: 0 0 44px; align-self: stretch;
+    border-inline-start: 1px solid var(--sa-border, rgba(148, 163, 184, .28)); }
+.zyep-open svg { width: 17px; height: 17px; }
+
+/* ---- النافذة ---- */
+.zyep-backdrop { position: fixed; inset: 0; background: rgba(2, 8, 18, .6); z-index: 1200;
+    display: none; align-items: flex-start; justify-content: center; padding: 60px 16px; }
+.zyep-backdrop.open { display: flex; }
+
+.zyep-modal { width: min(820px, 100%); max-height: 78vh; display: flex; flex-direction: column; gap: 10px;
+    background: var(--sa-surface, #0b1a2b); border: 1px solid var(--sa-border, rgba(148, 163, 184, .28));
+    border-radius: 14px; padding: 16px 18px; direction: rtl; }
+
+.zyep-modal-head { display: flex; align-items: center; justify-content: space-between; }
+.zyep-modal-head b { font-size: 15px; font-weight: 700; color: var(--sa-text, #e6f0fa); }
+.zyep-close { width: 32px; height: 32px; border-radius: 8px; font-size: 20px; line-height: 1; }
+
+.zyep-search { min-height: 42px; padding: 9px 12px; border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 500;
+    border: 1px solid var(--sa-border, rgba(148, 163, 184, .28)); background: var(--sa-input, rgba(6, 16, 29, .55)); color: var(--sa-text, #e6f0fa); }
+.zyep-search::placeholder { color: var(--sa-muted, #8fa8bc); font-weight: 400; }
+.zyep-search:focus-visible { outline: 0; border-color: var(--zy-electric-teal, #22d3ee);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .16); }
+
+.zyep-count { font-size: 12px; font-weight: 500; color: var(--sa-muted, #9fb3c7); }
+
+.zyep-list { overflow: auto; display: flex; flex-direction: column; }
+.zyep-row { display: grid; grid-template-columns: 120px 1fr 140px 140px; gap: 10px; align-items: center;
+    padding: 10px 8px; border-bottom: 1px solid var(--sa-border, rgba(148, 163, 184, .16));
+    font-size: 12.5px; font-weight: 400; color: var(--sa-text, #e6f0fa); cursor: pointer; }
+/* الرمز رقمٌ يُقارَن بصرياً ⟹ أرقام جدوليّة · والاسم هو عمود الصفّ ⟹ أثقل */
+.zyep-row span:nth-child(1) { font-variant-numeric: tabular-nums; color: var(--sa-muted, #9fb3c7); }
+.zyep-row:not(.zyep-head) span:nth-child(2) { font-weight: 600; }
+.zyep-row:not(.zyep-head) span:nth-child(3), .zyep-row:not(.zyep-head) span:nth-child(4) { color: var(--sa-muted, #9fb3c7); }
+.zyep-row:hover:not(.zyep-head) { background: rgba(34, 211, 238, .08); }
+.zyep-head { cursor: default; position: sticky; top: 0; background: var(--sa-surface, #0b1a2b);
+    color: var(--sa-muted, #9fb3c7); font-size: 11.5px; font-weight: 600; letter-spacing: .02em; }
+.zyep-head span:nth-child(1) { color: inherit; }
+.zyep-empty { padding: 18px 8px; color: var(--sa-muted, #9fb3c7); font-size: 12.5px; font-weight: 400; }
+
+@media (max-width: 700px) {
+    .zyep-row { grid-template-columns: 90px 1fr; }
+    .zyep-row span:nth-child(3), .zyep-row span:nth-child(4) { display: none; }
+}

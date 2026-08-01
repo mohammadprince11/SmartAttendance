@@ -19,10 +19,22 @@ public static class DocumentTemplateStore
     public const string KindHeader = "Header";
     public const string KindFooter = "Footer";
 
+    /// <summary>
+    /// بطاقة الموظف — **نوعٌ رابع بنفس الجدول لا مودل جديد**.
+    ///
+    /// الفحص الحيّ لمركز بطاقات كيان أظهر أن قالب البطاقة عندهم هو حرفياً نمط
+    /// «سياسة أمّ + نُسَخ مشروطة مرتّبة» + منتقي رموز بفئات — وكلاهما مبنيّ عندنا.
+    /// الفرق الوحيد أن سطح التصميم عندهم **محرّر SVG** وعندنا **HTML**؛ والقرار
+    /// (بموافقة محمد) ألّا نستنسخ محرّر SVG: مكتبة ثالثة ضخمة مقابل الرسم الحرّ وحده.
+    /// فالبطاقة قالبٌ بمقاس بطاقة، ويرث المحرّر والرموز والشروط والمعاينة كما هي.
+    /// </summary>
+    public const string KindBadge = "Badge";
+
     public static string KindLabel(string? kind) => kind switch
     {
         KindHeader => "ترويسة",
         KindFooter => "تذييل",
+        KindBadge => "بطاقة",
         _ => "وثيقة"
     };
 
@@ -249,8 +261,13 @@ VALUES (@Name, @NameEn, @Description, @Body, @Conditions, @RefPrefix, @AllowRequ
     /// (الأسماء والمسمّيات والعقد الحالي). استعلامٌ واحد لموظف واحد — التوليد
     /// الجماعي يستدعيه بحلقة، وهو مقبول لأن التوليد فعلٌ مقصود لا صفحةُ عرض.
     /// </summary>
+    /// <param name="fileUrl">
+    /// باني رابط الملف المحميّ (<c>IProtectedFileService.BuildUrl</c>) — يُمرَّر
+    /// لأن الرابط موقَّع بمُحافظ بيانات لا يمكن بناؤه بدالّة ساكنة. إغفاله يعني
+    /// توقيعاً فارغاً بالوثيقة لا رابطاً مكسوراً.
+    /// </param>
     public static async Task<DocumentTokenEngine.EmployeeExtras?> LoadExtrasAsync(
-        ApplicationDbContext db, int employeeId)
+        ApplicationDbContext db, int employeeId, Func<int, string?, string>? fileUrl = null)
     {
         var rows = await HrmsDatabase.QueryAsync(
             db,
@@ -260,7 +277,7 @@ SELECT e.FullName, e.FirstNameEn, e.LastNameEn, e.FirstName, e.LastName,
        ISNULL(d.Name, N'') AS DepartmentName, ISNULL(b.Name, N'') AS BranchName,
        ISNULL(m.FullName, N'') AS ManagerName,
        ISNULL(p.Name, N'') AS PositionName,
-       ec.BankName,
+       ec.BankName, e.SignaturePath,
        c.ContractNo, c.FromDate AS ContractStart
 FROM Employees e
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
@@ -301,7 +318,8 @@ WHERE e.Id = @EmployeeId AND ISNULL(e.IsDeleted, 0) = 0;
                     HrmsDatabase.GetString(reader, "ManagerName"),
                     HrmsDatabase.GetString(reader, "ContractNo"),
                     HrmsDatabase.GetDateOnly(reader, "ContractStart"),
-                    HrmsDatabase.GetString(reader, "BankName"));
+                    HrmsDatabase.GetString(reader, "BankName"),
+                    fileUrl?.Invoke(employeeId, HrmsDatabase.GetString(reader, "SignaturePath")));
             });
 
         return rows.FirstOrDefault();
@@ -322,10 +340,11 @@ WHERE e.Id = @EmployeeId AND ISNULL(e.IsDeleted, 0) = 0;
         string? notes,
         DateOnly issuedOn,
         bool persist,
-        string source = "مباشر")
+        string source = "مباشر",
+        Func<int, string?, string>? fileUrl = null)
     {
         var rows = await HrConditionFacts.LoadAsync(db, employeeId);
-        var extras = await LoadExtrasAsync(db, employeeId);
+        var extras = await LoadExtrasAsync(db, employeeId, fileUrl);
 
         if (rows.Count == 0 || extras is null)
         {

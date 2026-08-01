@@ -132,14 +132,13 @@
                 @Html.AntiForgeryToken()
 
                 <div class="nxr-field">
-                    <label>الموظف</label>
-                    <select asp-for="Input.EmployeeId" required>
-                        <option value="">اختر الموظف</option>
-                        @foreach (var employee in Model.Employees)
-                        {
-                            <option value="@employee.Id">@employee.Text</option>
-                        }
-                    </select>
+                    @* المنتقي المشترك بدل منسدلة `TOP 1000` كانت تبتر 356 موظفاً بصمت *@
+                    <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
+                        Label = "الموظف",
+                        Name = "Input.EmployeeId",
+                        SelectedId = Model.Input.EmployeeId,
+                        SelectedCode = Model.InputEmployeeCode,
+                        SelectedName = Model.InputEmployeeName })" />
                 </div>
 
                 <div class="nxr-field">

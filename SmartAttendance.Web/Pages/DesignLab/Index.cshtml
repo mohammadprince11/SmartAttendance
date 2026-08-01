@@ -1,0 +1,175 @@
+@page
+@model SmartAttendance.Web.Pages.DesignLab.IndexModel
+@using SmartAttendance.Web.Infrastructure.Theming
+@{
+    ViewData["Title"] = "مختبر المقاسات";
+}
+
+<link rel="stylesheet" href="~/css/zynora-design-lab.css" asp-append-version="true" />
+
+<section class="zdl" dir="rtl">
+    <header class="zdl-hero">
+        <div>
+            <h1>مختبر المقاسات</h1>
+            <p>
+                غيّر المقاس فتتغيّر المعاينة فوراً. المعاينة بعناصر <b>حقيقية</b> من
+                النظام لا برسومٍ تحاكيها — فما تراه هنا هو ما سيصير عليه الموقع.
+            </p>
+        </div>
+        <div class="zdl-hero-status">
+            <strong>@Model.CustomisedCount</strong>
+            <small>مقاساً مخصَّصاً</small>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="zdl-alert">@Model.StatusMessage</div>
+    }
+
+    <p class="zdl-note">
+        التغيير هنا <b>معاينةٌ محلّية</b> بمتصفّحك حتى تضغط «اعتمد». والاعتماد يكتب
+        <b>لكل المستخدمين</b> لا لك وحدك.
+    </p>
+
+    <form method="post" id="zdl-form">
+        <div class="zdl-layout">
+            <div class="zdl-controls">
+                @foreach (var group in DesignTokenCatalog.Groups)
+                {
+                    <section class="zdl-group">
+                        <h2>@group</h2>
+
+                        @foreach (var token in Model.TokensIn(group))
+                        {
+                            var value = Model.Value(token);
+                            var display = value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+
+                            <div class="zdl-row @(Model.IsCustomised(token) ? "zdl-row-custom" : "")"
+                                 data-token="@token.Key" data-unit="@token.Unit" data-default="@token.Default.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                                <div class="zdl-row-head">
+                                    <label for="t_@token.Key">@token.Label</label>
+                                    <output class="zdl-value">@display@token.Unit</output>
+                                </div>
+
+                                <input type="range" id="t_@token.Key" name="t_@token.Key"
+                                       min="@token.Min.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                       max="@token.Max.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                       step="@token.Step.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                       value="@display" />
+
+                                @if (!string.IsNullOrWhiteSpace(token.Hint))
+                                {
+                                    <small class="zdl-hint">@token.Hint</small>
+                                }
+                            </div>
+                        }
+                    </section>
+                }
+            </div>
+
+            @* المعاينة: عناصر حقيقية بأصناف النظام نفسها. لو حاكيناها بأصنافٍ
+               خاصّة بالمختبر لأرَتْنا ما نريد لا ما سيحدث. *@
+            <aside class="zdl-preview" id="zdl-preview">
+                <div class="zdl-preview-inner zy-app">
+                    <h3>معاينة حيّة</h3>
+
+                    <div class="zdl-demo">
+                        <h1>عنوان صفحة</h1>
+                        <h2>عنوان قسم</h2>
+                        <p>نصٌّ عادي يوضّح تباعد الأسطر وحجم الخطّ داخل الفقرة.</p>
+                        <small>نصّ توضيحي صغير.</small>
+                    </div>
+
+                    <div class="zdl-demo">
+                        <label for="zdl-demo-input">عنوان الحقل</label>
+                        <input id="zdl-demo-input" type="text" placeholder="حقل إدخال (البوكس)" />
+                        <label for="zdl-demo-date">حقل تاريخ (كلاندر)</label>
+                        <input id="zdl-demo-date" type="date" />
+                        <label for="zdl-demo-select">منسدلة</label>
+                        <select id="zdl-demo-select">
+                            <option>الخيار الأول</option>
+                            <option>الخيار الثاني</option>
+                        </select>
+                    </div>
+
+                    @* منتقي الموظف الحقيقي + صفٌّ من نافذته وقائمةٌ منسدلة معروضة
+                       مفتوحةً عمداً: استدارة القائمة وارتفاع صفّ النتيجة توكنان
+                       لا يظهر أثرهما إلا والعنصر مفتوح، فبلا هذا يسحب المستخدم
+                       المقياس ولا يرى شيئاً ويظنّه معطّلاً. *@
+                    <div class="zdl-demo">
+                        <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
+                            Label = "منتقي الموظف", Name = "zdlDemoEmployee" })" />
+
+                        @* نافذة البحث معروضةً ساكنةً: استدارتها توكنٌ لا يُرى أثره
+                           إلا والنافذة مفتوحة، وهي بالنظام عابرة. *@
+                        <div class="zdl-static zyep-modal">
+                            <div class="zyep-modal-head"><b>بحث عن الموظف</b></div>
+                            <div class="zyep-list">
+                                <div class="zyep-row zyep-head"><span>رمز</span><span>اسم الموظف</span><span>وحدة عمل</span><span>الهيكلية</span></div>
+                                <div class="zyep-row"><span>10011</span><span>قتيبة اسماعيل محمود</span><span>HQ</span><span>Finance</span></div>
+                            </div>
+                        </div>
+
+                        @* المنسدلة المخصَّصة: الـ<select> الأصليّ يرقّيه JS بصفحات
+                           بعينها فقط، فلولا نسخةٌ ساكنة هنا لبقيت مقاييسها الثلاثة
+                           بلا هدفٍ تحرّكه. *@
+                        <div class="zdl-static nxcs">منسدلة مخصَّصة</div>
+                        <div class="zdl-static nxcs-menu">
+                            <div>خيار بالقائمة المنسدلة</div>
+                            <div>خيار آخر</div>
+                        </div>
+                    </div>
+
+                    <div class="zdl-demo">
+                        <label><input type="checkbox" checked /> جيك بوكس مؤشَّر</label>
+                        <label><input type="checkbox" /> جيك بوكس فارغ</label>
+                        <label><input type="radio" name="zdl-demo-radio" checked /> راديو</label>
+                    </div>
+
+                    <div class="zdl-demo zdl-demo-buttons">
+                        <button type="button" class="btn-primary">زرّ رئيسي</button>
+                        <button type="button" class="btn-secondary">زرّ ثانوي</button>
+                        <span class="zy-pill">شارة</span>
+                    </div>
+
+                    @* التبويبات والبطاقات — بأصنافها الحقيقية بالنظام *@
+                    <nav class="nxupd-top-tabs">
+                        <a class="active" href="#" onclick="return false;">تبويب نشط</a>
+                        <a href="#" onclick="return false;">تبويب آخر</a>
+                    </nav>
+
+                    <div class="zdl-card-grid">
+                        <div class="zy-card">بطاقة أولى</div>
+                        <div class="zy-card">بطاقة ثانية</div>
+                    </div>
+
+                    <div class="zdl-demo">
+                        <table>
+                            <thead>
+                                <tr><th>رمز</th><th>اسم الموظف</th><th>وحدة عمل</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>10011</td><td>قتيبة اسماعيل محمود</td><td>HQ</td></tr>
+                                <tr><td>10020</td><td>عمار زهير كريم</td><td>HQ</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <footer class="zdl-actions">
+            <button type="submit" asp-page-handler="Apply" class="btn-primary">اعتمد للنظام كلّه</button>
+            <button type="button" id="zdl-revert" class="btn-secondary">تراجع عن التغييرات غير المعتمَدة</button>
+            <button type="submit" asp-page-handler="Reset" class="btn-secondary"
+                    data-zyconfirm="يعيد كل المقاسات لافتراضها للنظام كلّه — اضغط ثانيةً للتأكيد">
+                أعِد كل شيء للافتراضي
+            </button>
+        </footer>
+    </form>
+</section>
+
+@section Scripts {
+    <script src="~/js/zynora-design-lab.js" asp-append-version="true"></script>
+}

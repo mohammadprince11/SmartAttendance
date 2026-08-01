@@ -49,16 +49,13 @@
                     }
                 </select>
             </label>
-            <label>
-                الموظف
-                <select asp-for="SelectedEmployeeId">
-                    <option value="0">— اختر —</option>
-                    @foreach (var (id, label) in Model.Employees)
-                    {
-                        <option value="@id">@label</option>
-                    }
-                </select>
-            </label>
+            @* المنتقي المشترك بدل منسدلةٍ كانت تحمّل كل الموظفين النشطين بكل فتحة *@
+            <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
+                Label = "الموظف",
+                Name = "SelectedEmployeeId",
+                SelectedId = Model.SelectedEmployeeId,
+                SelectedCode = Model.SelectedEmployeeCode,
+                SelectedName = Model.SelectedEmployeeName })" />
             <label>تاريخ الإصدار<input asp-for="IssuedOn" type="date" /></label>
             <label>ملاحظات<input asp-for="Notes" placeholder="اختياري" /></label>
         </div>

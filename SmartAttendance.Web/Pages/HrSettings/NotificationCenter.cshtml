@@ -140,7 +140,9 @@
         });
 
         // حفظ التفاصيل يعيد التحميل (redirect) — نحفظ موضع التمرير ونرجعه حتى لا تقفز الصفحة.
-        var scroller = document.querySelector(".nexora-content") || document.scrollingElement;
+        // المستند هو مالك التمرير (nexora-global-scroll-system.css) — و`.nexora-content`
+        // لم يعد مُمرِّراً فـ scrollTop عليه صفر دائماً.
+        var scroller = document.scrollingElement || document.documentElement;
         document.querySelectorAll(".nxhs-notification-details").forEach(function (form) {
             form.addEventListener("submit", function () {
                 try { sessionStorage.setItem("nxhs-notif-scroll", scroller.scrollTop); } catch (e) { }

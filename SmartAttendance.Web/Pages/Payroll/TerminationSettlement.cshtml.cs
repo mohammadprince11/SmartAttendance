@@ -28,7 +28,6 @@ public class TerminationSettlementModel : PageModel
     [BindProperty] public decimal? DueTax { get; set; }
     [BindProperty] public decimal? DueGosi { get; set; }
 
-    public List<(int Id, string Label)> Employees { get; private set; } = new();
     public TerminationSettlementStore.YearWithholding? Withheld { get; private set; }
     public List<TerminationSettlementPolicy.Difference> Differences { get; private set; } = new();
     public decimal Net { get; private set; }
@@ -40,12 +39,13 @@ public class TerminationSettlementModel : PageModel
     public bool MonthUnpaidWarning { get; private set; }
     public string? EmployeeName { get; private set; }
 
+    /// <summary>رمز الموظف المحسوم — لتعبئة المنتقي ابتداءً.</summary>
+    public string? EmployeeCode { get; private set; }
+
     public int SelectedYear => Year ?? DateTime.Today.Year;
 
     public async Task OnGetAsync()
     {
-        await LoadEmployeesAsync();
-
         if (EmployeeId is > 0)
         {
             await LoadEmployeeAsync(EmployeeId.Value);
@@ -54,8 +54,6 @@ public class TerminationSettlementModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        await LoadEmployeesAsync();
-
         if (EmployeeId is > 0)
         {
             await LoadEmployeeAsync(EmployeeId.Value);
@@ -100,12 +98,14 @@ public class TerminationSettlementModel : PageModel
         var rows = await HrmsDatabase.QueryAsync(
             _db,
             """
-SELECT ISNULL(FullName, N'') AS FullName, HireDate, JoiningDate, ServiceEndDate
+SELECT ISNULL(FullName, N'') AS FullName, ISNULL(EmployeeNo, N'') AS EmployeeNo,
+       HireDate, JoiningDate, ServiceEndDate
 FROM Employees WHERE Id = @Id;
 """,
             command => HrmsDatabase.AddParameter(command, "@Id", employeeId),
             reader => (
                 Name: HrmsDatabase.GetString(reader, "FullName"),
+                Code: HrmsDatabase.GetString(reader, "EmployeeNo"),
                 Hire: HrmsDatabase.GetDateOnly(reader, "HireDate"),
                 Joining: HrmsDatabase.GetDateOnly(reader, "JoiningDate"),
                 End: HrmsDatabase.GetDateOnly(reader, "ServiceEndDate")));
@@ -113,6 +113,7 @@ FROM Employees WHERE Id = @Id;
         if (rows.FirstOrDefault() is var row && row.Name is not null)
         {
             EmployeeName = row.Name;
+            EmployeeCode = row.Code;
             HireDate = row.Joining ?? row.Hire;
             ServiceEndDate = row.End;
 
@@ -129,19 +130,4 @@ FROM Employees WHERE Id = @Id;
         }
     }
 
-    private async Task LoadEmployeesAsync() =>
-        Employees = (await HrmsDatabase.QueryAsync(
-            _db,
-            """
-SELECT Id, ISNULL(FullName, N'') AS FullName, ISNULL(EmployeeNo, N'') AS EmployeeNo, ServiceEndDate
-FROM Employees
-WHERE ISNULL(IsDeleted, 0) = 0
-ORDER BY CASE WHEN ServiceEndDate IS NULL THEN 1 ELSE 0 END, FullName;
-""",
-            command => { },
-            reader => (
-                HrmsDatabase.GetInt(reader, "Id"),
-                $"{HrmsDatabase.GetString(reader, "FullName")} ({HrmsDatabase.GetString(reader, "EmployeeNo")})"
-                + (HrmsDatabase.GetDateOnly(reader, "ServiceEndDate") is { } end ? $" — أُنهيت {end:yyyy/MM/dd}" : ""))))
-            .ToList();
 }

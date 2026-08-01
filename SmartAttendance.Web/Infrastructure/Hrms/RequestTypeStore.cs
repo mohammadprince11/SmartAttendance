@@ -40,6 +40,9 @@ public static class RequestTypeStore
         public bool AttachmentRequired { get; set; }
         public string? AttachmentLabel { get; set; }
         public bool NeedsTime { get; set; }
+
+        /// <summary>شروط أهلية النوع بمحرّك الشروط العام؛ فارغة ⟹ متاح للجميع.</summary>
+        public string ConditionsJson { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
         public int DisplayOrder { get; set; }
     }
@@ -80,7 +83,9 @@ BEGIN
         AttachmentLabel nvarchar(120) NULL,
         NeedsTime bit NOT NULL DEFAULT(0),
         IsActive bit NOT NULL DEFAULT(1),
-        DisplayOrder int NOT NULL DEFAULT(0)
+        DisplayOrder int NOT NULL DEFAULT(0),
+        -- شروط الأهلية بالمحرّك العام؛ تُضاف لقاعدة قائمة بهجرة `…-27`.
+        ConditionsJson nvarchar(max) NULL
     );
 END;
 """);
@@ -173,7 +178,8 @@ INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,Ne
         AttachmentLabel = HrmsDatabase.GetString(r, "AttachmentLabel"),
         NeedsTime = HrmsDatabase.GetBool(r, "NeedsTime"),
         IsActive = HrmsDatabase.GetBool(r, "IsActive"),
-        DisplayOrder = HrmsDatabase.GetInt(r, "DisplayOrder")
+        DisplayOrder = HrmsDatabase.GetInt(r, "DisplayOrder"),
+        ConditionsJson = HrmsDatabase.GetString(r, "ConditionsJson") ?? string.Empty
     };
 
     public static async Task SaveCategoryAsync(ApplicationDbContext db, Category c)
@@ -199,13 +205,13 @@ INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,Ne
 
     public static async Task SaveTypeAsync(ApplicationDbContext db, ReqType t)
     {
-        const string cols = "CategoryId=@cat,Name=@n,NameEn=@e,AllowedDays=@days,Repeat=@rep,ServiceMonths=@sm,Gender=@g,PaidMode=@pm,DeductFromSalary=@ded,CountsInService=@cis,HasBalance=@bal,MaxPerRequest=@max,AttachmentRequired=@att,AttachmentLabel=@attl,NeedsTime=@time,IsActive=@a,DisplayOrder=@o";
+        const string cols = "CategoryId=@cat,Name=@n,NameEn=@e,AllowedDays=@days,Repeat=@rep,ServiceMonths=@sm,Gender=@g,PaidMode=@pm,DeductFromSalary=@ded,CountsInService=@cis,HasBalance=@bal,MaxPerRequest=@max,AttachmentRequired=@att,AttachmentLabel=@attl,NeedsTime=@time,IsActive=@a,DisplayOrder=@o,ConditionsJson=@cond";
         if (t.Id > 0)
             await HrmsDatabase.ExecuteAsync(db, $"UPDATE RequestTypes SET {cols} WHERE Id=@id",
                 cmd => { TypeParams(cmd, t); HrmsDatabase.AddParameter(cmd, "@id", t.Id); });
         else
             await HrmsDatabase.ExecuteAsync(db,
-                "INSERT INTO RequestTypes(CategoryId,Name,NameEn,AllowedDays,Repeat,ServiceMonths,Gender,PaidMode,DeductFromSalary,CountsInService,HasBalance,MaxPerRequest,AttachmentRequired,AttachmentLabel,NeedsTime,IsActive,DisplayOrder) VALUES(@cat,@n,@e,@days,@rep,@sm,@g,@pm,@ded,@cis,@bal,@max,@att,@attl,@time,@a,@o)",
+                "INSERT INTO RequestTypes(CategoryId,Name,NameEn,AllowedDays,Repeat,ServiceMonths,Gender,PaidMode,DeductFromSalary,CountsInService,HasBalance,MaxPerRequest,AttachmentRequired,AttachmentLabel,NeedsTime,IsActive,DisplayOrder,ConditionsJson) VALUES(@cat,@n,@e,@days,@rep,@sm,@g,@pm,@ded,@cis,@bal,@max,@att,@attl,@time,@a,@o,@cond)",
                 cmd => TypeParams(cmd, t));
     }
 
@@ -226,6 +232,9 @@ INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,Ne
         HrmsDatabase.AddParameter(cmd, "@att", t.AttachmentRequired);
         HrmsDatabase.AddParameter(cmd, "@attl", (object?)t.AttachmentLabel ?? DBNull.Value);
         HrmsDatabase.AddParameter(cmd, "@time", t.NeedsTime);
+        HrmsDatabase.AddParameter(
+            cmd, "@cond",
+            string.IsNullOrWhiteSpace(t.ConditionsJson) ? DBNull.Value : t.ConditionsJson);
         HrmsDatabase.AddParameter(cmd, "@a", t.IsActive);
         HrmsDatabase.AddParameter(cmd, "@o", t.DisplayOrder);
     }
