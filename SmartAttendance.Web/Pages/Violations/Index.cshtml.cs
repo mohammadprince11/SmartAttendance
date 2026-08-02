@@ -158,6 +158,69 @@ ORDER BY c.EventDate DESC, c.Id DESC;
             "SELECT TOP 1 [Value] FROM DisciplinarySettings WHERE [Key] = @Key;",
             command => HrmsDatabase.AddParameter(command, "@Key", key)) ?? "0";
 
+    private async Task<int> DisciplinaryIntSettingAsync(string key, int fallback) =>
+        int.TryParse(await DisciplinarySettingAsync(key), out var value) ? value : fallback;
+
+    /// <summary>
+    /// تنبيهات «هام» باللائحة — تُعرض بعد التسجيل ولا تمنعه.
+    ///
+    /// **تنبيهٌ لا منع** عمداً: نصّ اللائحة يجعل عدم التجديد والإنهاء المباشر
+    /// **قراراً إدارياً**، والنظام يقوله ولا يوقّعه. منعُ التسجيل هنا كان سيمنع
+    /// توثيق المخالفة أصلاً، وهو عكس المقصود.
+    /// </summary>
+    private async Task<string?> BuildEscalationNoticeAsync(int employeeId, string categoryName)
+    {
+        if (!DisciplinaryPolicyRules.CountsForEscalation(categoryName))
+        {
+            return null;
+        }
+
+        var threshold = await DisciplinaryIntSettingAsync("NonRenewalThreshold", 0);
+        var notices = new List<string>();
+
+        // عدد جزاءات الفئتين (ب) و(ج) — نافذة العقد يقاربها العام الحالي.
+        var count = await ScalarAsync<int>(
+            """
+SELECT COUNT(1) FROM EmployeeViolationCases
+WHERE EmployeeId = @Id AND ISNULL(IsDeleted,0) = 0
+  AND (ViolationCategory LIKE N'ب%' OR ViolationCategory LIKE N'ج%')
+  AND EventDate >= @Since;
+""",
+            command =>
+            {
+                Add(command, "@Id", employeeId);
+                Add(command, "@Since", new DateTime(DateTime.Today.Year, 1, 1));
+            });
+
+        if (DisciplinaryPolicyRules.ReachedNonRenewal(count, threshold))
+        {
+            notices.Add($"بلغ الموظف {count} جزاءات من الفئتين (ب) و(ج) — اللائحة تنصّ على عدم تجديد العقد عند {threshold} فأكثر.");
+        }
+
+        // إنذار بالفصل ما زال سارياً؟ السريان من تاريخ الإجراء ومدّته بقاعدته.
+        var activeFinalWarning = await ScalarAsync<int>(
+            """
+SELECT COUNT(1)
+FROM EmployeeViolationCases v
+INNER JOIN DisciplinaryPenaltyRules r ON r.Id = v.PenaltyRuleId
+WHERE v.EmployeeId = @Id AND ISNULL(v.IsDeleted,0) = 0
+  AND r.ActionType = N'FinalWarning'
+  AND DATEADD(MONTH, ISNULL(r.DropEvery, 12), v.EventDate) >= @Today;
+""",
+            command =>
+            {
+                Add(command, "@Id", employeeId);
+                Add(command, "@Today", DateTime.Today);
+            });
+
+        if (DisciplinaryPolicyRules.TriggersImmediateTermination(activeFinalWarning > 0, categoryName))
+        {
+            notices.Add("على الموظف إنذار بالفصل ما زال سارياً — اللائحة تنصّ على إنهاء التعاقد مباشرة عند مخالفةٍ من الفئتين (ب) أو (ج).");
+        }
+
+        return notices.Count == 0 ? null : string.Join(" · ", notices);
+    }
+
     /// <summary>مخالفات محجوزة على اعتماد اللجنة — الوجه الظاهر لبوّابة الاعتماد.</summary>
     public IReadOnlyList<ViolationCaseRow> AwaitingApproval =>
         Items.Where(i => i.Status == "بانتظار الاعتماد").ToList();
@@ -298,6 +361,23 @@ FROM EmployeeViolationCases v WHERE v.Id = @Id;
             }
         }
 
+        // 🔒 مادة 6 من اللائحة: تقادم الاتهام.
+        //
+        // «لا يجوز اتهام الموظف بمخالفة مضى على علم الشركة بها أكثر من ثلاثين
+        // يوماً». كانت مادّةً بالوثيقة لا تمنع تسجيلاً بتاريخٍ قبل سنة. والمنع
+        // هنا **يقيّد ولا يُحرّر**: أسوأ ما يفعله ردّ تسجيلٍ متأخّر، لا إصدار
+        // عقوبةٍ ساقطةٍ بالتقادم.
+        var staleDays = await DisciplinaryIntSettingAsync("StaleAccusationDays", 0);
+
+        if (Input.EventDate != default
+            && DisciplinaryPolicyRules.IsStale(
+                DateOnly.FromDateTime(Input.EventDate), Today, staleDays))
+        {
+            ModelState.AddModelError(
+                "Input.EventDate",
+                $"مضى أكثر من {staleDays} يوماً على تاريخ الحدث — لا يجوز الاتهام بمخالفة متقادمة (مادة 6 من اللائحة).");
+        }
+
         if (!ModelState.IsValid)
         {
             OpenCreateModal = true;
@@ -379,6 +459,12 @@ VALUES
             {
                 await DisciplinaryLetterStore.IssueAsync(_db, caseId, User?.Identity?.Name ?? "قسم الموارد البشرية");
             }
+        }
+
+        var escalation = await BuildEscalationNoticeAsync(Input.EmployeeId, selectedRule.CategoryName);
+        if (!string.IsNullOrWhiteSpace(escalation))
+        {
+            TempData["PolicyNotice"] = escalation;
         }
 
         TempData["SuccessMessage"] = heldForCommittee

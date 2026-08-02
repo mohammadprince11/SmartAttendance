@@ -48,6 +48,12 @@
         <div class="zy-card" role="status">@TempData["SuccessMessage"]</div>
     }
 
+    @* تنبيهات «هام» باللائحة — تُقال بعد التسجيل ولا تمنعه، فالقرار إداريّ. *@
+    @if (TempData["PolicyNotice"] != null)
+    {
+        <div class="zy-card" role="alert">⚠️ @TempData["PolicyNotice"]</div>
+    }
+
     @if (!ViewData.ModelState.IsValid)
     {
         @* الخطأ يُعرض بنصّه لا برسالة «راجع الحقول داخل النافذة»: النافذة لم تعد

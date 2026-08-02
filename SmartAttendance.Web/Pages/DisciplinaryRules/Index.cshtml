@@ -75,6 +75,7 @@
     @* روابط لا أزرار: كل تبويب يحمّل بياناته من الخادم (المصمّم يحتاج طبقاته). *@
     <nav class="zyw-tabs" aria-label="أقسام لائحة المخالفات">
         <a class="zyw-tab" aria-selected="@Sel("library")" asp-page="./Index" asp-route-tab="library" asp-route-categoryId="@selectedCategory">المخالفات والجزاءات</a>
+        <a class="zyw-tab" aria-selected="@Sel("articles")" asp-page="./Index" asp-route-tab="articles">قواعد اللائحة</a>
         <a class="zyw-tab" aria-selected="@Sel("templates")" asp-page="./Index" asp-route-tab="templates">قوالب الرسائل</a>
         <a class="zyw-tab" aria-selected="@Sel("designer")" asp-page="./Index" asp-route-tab="designer">مصمّم الفورمة</a>
     </nav>
@@ -244,7 +245,28 @@
                         }
                         else
                         {
+                            @* ⚠️ **مجموعةٌ لكل فئة، مطويّة**. جدولٌ واحد بخمسٍ وستين
+                               مخالفة لا يُعمل عليه: تبحث عن بندٍ فتمرّ على أربعة أبواب
+                               لا يخصّك منها إلا واحد. الفئة تُفتح وحدها ويبقى الحفظ
+                               واحداً للشبكة كلّها — الطيّ عرضٌ لا انفصال. *@
                             <form method="post" asp-page-handler="SaveViolationTypes" data-zyw-grid="violations">
+                                @foreach (var category in Model.Categories)
+                                {
+                                    var rows = Model.ViolationTypes
+                                        .Where(v => v.CategoryId == category.Id)
+                                        .Where(v => Model.Matches(new[] { v.Name, v.NameEn, v.ArticleNo }))
+                                        .ToList();
+
+                                    if (rows.Count == 0 && !string.IsNullOrWhiteSpace(Model.Search)) { continue; }
+
+                                    @* البحث يفتح ما وجد فيه — وإلا بقيت النتيجة مخبوءة. *@
+                                    <details class="zyw-acc" open="@(!string.IsNullOrWhiteSpace(Model.Search) || Model.Categories.Count == 1)">
+                                        <summary>
+                                            <span>@rows.Count</span>
+                                            <strong>@category.Name</strong>
+                                            <small>@(category.IsSystem ? "فئة نظام · " : "")@Model.PenaltyRules.Count(r => rows.Any(v => v.Id == r.ViolationTypeId)) درجة جزاء</small>
+                                        </summary>
+
                                 <div class="zyw-table-wrap">
                                     <table class="zyw-table">
                                         <thead>
@@ -259,16 +281,16 @@
                                             </tr>
                                         </thead>
                                         <tbody data-zyw-rows>
-                                            @foreach (var violation in Model.ViolationTypes.Where(v => Model.Matches(new[] { v.Name, v.NameEn, v.ArticleNo })))
+                                            @foreach (var violation in rows)
                                             {
                                                 <tr>
                                                     <td><input type="checkbox" name="deleteId" value="@violation.Id" aria-label="حذف @violation.Name" /></td>
                                                     <td>
                                                         <input type="hidden" name="rowId" value="@violation.Id" />
                                                         <select name="rowCategoryId">
-                                                            @foreach (var category in Model.Categories)
+                                                            @foreach (var option in Model.Categories)
                                                             {
-                                                                <option value="@category.Id" selected="@(category.Id == violation.CategoryId)">@category.Name</option>
+                                                                <option value="@option.Id" selected="@(option.Id == violation.CategoryId)">@option.Name</option>
                                                             }
                                                         </select>
                                                     </td>
@@ -291,6 +313,8 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                    </details>
+                                }
 
                                 <template data-zyw-template>
                                     <tr>
@@ -330,7 +354,17 @@
                             </div>
                             <p class="zyw-row-meta">ماذا يترتّب بالتكرار الأول والثاني والثالث — <b>ونوع الإجراء هو ما يقود الحساب</b>، لا نصّ العقوبة.</p>
 
-                            @foreach (var violation in Model.ViolationTypes.Where(v => openType <= 0 || v.Id == openType))
+                            @* ⚠️ **لا يُعرض سلّمٌ إلا لمخالفةٍ مطلوبة**. عرضُ سلالم سبعين
+                               مخالفة دفعةً واحدة يعني ألف حقلٍ بصفحةٍ واحدة، ولا أحد
+                               يحرّرها كلّها. المدخل من زرّ «•••» بالجدول أعلاه. *@
+                            @if (openType <= 0)
+                            {
+                                <div class="zyw-empty">
+                                    اختر مخالفةً من زرّ <b>•••</b> بالجدول أعلاه ليظهر سلّم جزاءاتها هنا.
+                                </div>
+                            }
+
+                            @foreach (var violation in Model.ViolationTypes.Where(v => openType > 0 && v.Id == openType))
                             {
                                 var rules = Model.PenaltyRules.Where(r => r.ViolationTypeId == violation.Id)
                                     .OrderBy(r => r.OccurrenceFrom).ToList();
@@ -394,6 +428,51 @@
                 </div>
             }
             
+            else if (activeTab == "articles")
+            {
+                @* موادّ اللائحة، **ولكلٍّ حالة إنفاذها الصريحة**. مادّةٌ تُعرض كأنها
+                   منفَّذة وهي نصٌّ فقط أسوأ من غيابها: يطمئنّ إليها من يقرأ الشاشة
+                   وهي لا تمنع شيئاً — وهو عين ما كانت عليه راية «موافقة اللجنة». *@
+                <article class="zy-card">
+                    <div class="zyw-queue-head">
+                        <h2>قواعد اللائحة الانضباطية</h2>
+                        <span class="zy-pill">@SmartAttendance.Web.Infrastructure.Hrms.DisciplinaryPolicyPack.Articles.Length مادّة</span>
+                    </div>
+                    <p class="zyw-row-meta">
+                        نصّ الموادّ كما وردت بالوثيقة الرسمية، وبجانب كلٍّ منها <b>ما يفعله النظام بها فعلاً</b>:
+                        هل تمنع إجراءً، أم تُنبّه فقط، أم تُحتسب داخل المحرّك، أم هي نصٌّ مرجعيّ بلا أثر تلقائيّ.
+                    </p>
+
+                    <div class="zyw-table-wrap">
+                        <table class="zyw-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:70px">المادة</th>
+                                    <th style="width:200px">الموضوع</th>
+                                    <th>النصّ</th>
+                                    <th style="width:110px">الإنفاذ</th>
+                                    <th>أين</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var article in SmartAttendance.Web.Infrastructure.Hrms.DisciplinaryPolicyPack.Articles)
+                                {
+                                    <tr>
+                                        <td><b>@article.Number</b></td>
+                                        <td>@article.Title</td>
+                                        <td style="white-space:normal">@article.Text</td>
+                                        <td>
+                                            <span class="zy-pill">@Model.EnforcementLabel(article.State)</span>
+                                        </td>
+                                        <td style="white-space:normal">@article.Where</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+            }
+
             else if (activeTab == "designer")
             {
                 <section class="zy-card">

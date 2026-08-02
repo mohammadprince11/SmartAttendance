@@ -1523,7 +1523,16 @@ await HrmsDatabase.ExecuteAsync(_dbContext, "UPDATE DisciplinaryMessageTemplates
     }
 
     // الافتراضي صار «المخالفات والجزاءات»: تبويب «التهيئة» انتقل لشاشة المخالفات.
-    private static string NormalizeTab(string? tab) => tab switch { "designer" => "designer", "templates" => "templates", _ => "library" };
+    private static string NormalizeTab(string? tab) => tab switch { "designer" => "designer", "templates" => "templates", "articles" => "articles", _ => "library" };
+
+    /// <summary>تسمية حالة إنفاذ المادّة بالعربية — تُقرأ حكماً لا مصطلحاً.</summary>
+    public string EnforcementLabel(DisciplinaryPolicyPack.Enforcement state) => state switch
+    {
+        DisciplinaryPolicyPack.Enforcement.Blocks => "🔒 يمنع",
+        DisciplinaryPolicyPack.Enforcement.Warns => "⚠️ يُنبّه",
+        DisciplinaryPolicyPack.Enforcement.Computed => "⚙️ محسوبة",
+        _ => "📄 نصّ مرجعيّ"
+    };
     private static string NormalizeSeverity(string? value) => value switch { "A" => "A", "B" => "B", "C" => "C", "FinalWarning" => "FinalWarning", _ => "B" };
     private static string NormalizePeriod(string? value) => value switch { "Monthly" => "Monthly", "SixMonths" => "SixMonths", "Yearly" => "Yearly", "Contract" => "Contract", _ => "Monthly" };
     private static string NormalizeFinancialType(string? value) => value switch { "Days" => "Days", "Hours" => "Hours", "Amount" => "Amount", _ => "None" };

@@ -23,8 +23,17 @@
 
     function addRow(form) {
         var template = form.querySelector('[data-zyw-template]');
-        var body = form.querySelector('[data-zyw-rows]');
+
+        // **آخر** جدولٍ لا أوّله: الشبكة قد تكون مجموعةً بمجموعات مطويّة، وإلحاق
+        // الصفّ بأعلاها يدفنه داخل قسمٍ مغلق. وترتيب الحقول يبقى صحيحاً بأي حال
+        // لأن الخادم يزاوجها بترتيب المستند.
+        var bodies = form.querySelectorAll('[data-zyw-rows]');
+        var body = bodies.length ? bodies[bodies.length - 1] : null;
         if (!template || !body) return;
+
+        // يُفتح القسم الحاوي كي يُرى الصفّ الجديد لا أن يُضاف بالخفاء.
+        var group = body.closest('details');
+        if (group) group.open = true;
 
         var row = template.content.cloneNode(true);
         body.appendChild(row);
