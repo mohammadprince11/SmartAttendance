@@ -4,24 +4,30 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using SmartAttendance.Application.AttendanceRecords.Services;
 using SmartAttendance.Application.AttendanceRecords.ViewModels;
 using SmartAttendance.Application.Devices.ViewModels;
-using SmartAttendance.Application.Employees.ViewModels;
 using SmartAttendance.Domain.Enums;
+using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Pages.Shared;
 
 namespace SmartAttendance.Web.Pages.AttendanceRecords;
 
 public class EditModel : PageModel
 {
     private readonly IAttendanceRecordService _attendanceRecordService;
+    private readonly ApplicationDbContext _db;
 
-    public EditModel(IAttendanceRecordService attendanceRecordService)
+    public EditModel(IAttendanceRecordService attendanceRecordService, ApplicationDbContext db)
     {
         _attendanceRecordService = attendanceRecordService;
+        _db = db;
     }
 
     [BindProperty]
     public AttendanceRecordEditViewModel AttendanceRecord { get; set; } = new();
 
-    public IEnumerable<EmployeeListViewModel> Employees { get; set; } = new List<EmployeeListViewModel>();
+    /// <summary>رمز الموظف المحسوم واسمه — يبدأ بهما <c>_EmployeePicker</c> معبَّأً.</summary>
+    public string? SelectedEmployeeCode { get; set; }
+
+    public string? SelectedEmployeeName { get; set; }
 
     public IEnumerable<DeviceListViewModel> Devices { get; set; } = new List<DeviceListViewModel>();
 
@@ -42,12 +48,17 @@ public class EditModel : PageModel
 
         AttendanceRecord = attendanceRecord;
 
+        // ⚠️ بعد إسناد السجلّ لا قبله: `LoadDropdownsAsync` يعمل قبل القراءة،
+        //    فلو وُضع النداء هناك لبحث عن الموظف صفر وبدأ المنتقي فارغاً بالتعديل.
+        await LoadPickerIdentityAsync();
+
         return Page();
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
         await LoadDropdownsAsync();
+        await LoadPickerIdentityAsync();
 
         if (!ModelState.IsValid)
             return Page();
@@ -65,9 +76,16 @@ public class EditModel : PageModel
         return RedirectToPage("./Index");
     }
 
+    /// <summary>صفٌّ واحد للموظف المحسوم — المنتقي لا يحمّل قائمة.</summary>
+    private async Task LoadPickerIdentityAsync()
+    {
+        var identity = await EmployeePickerLookup.LoadAsync(_db, AttendanceRecord.EmployeeId);
+        SelectedEmployeeCode = identity?.Code;
+        SelectedEmployeeName = identity?.Name;
+    }
+
     private async Task LoadDropdownsAsync()
     {
-        Employees = await _attendanceRecordService.GetEmployeesForDropdownAsync();
         Devices = await _attendanceRecordService.GetDevicesForDropdownAsync();
 
         Sources = Enum.GetValues<AttendanceSource>()

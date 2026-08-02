@@ -17,7 +17,10 @@ public class IndexModel : PageModel
     [BindProperty]
     public RequestInput Input { get; set; } = new();
 
-    public List<EmployeeOption> Employees { get; set; } = new();
+    /// <summary>رمز الموظف المحسوم واسمه — يبدأ بهما <c>_EmployeePicker</c> معبَّأً.</summary>
+    public string? SelectedEmployeeCode { get; set; }
+
+    public string? SelectedEmployeeName { get; set; }
 
     public List<RequestRow> Requests { get; set; } = new();
 
@@ -77,15 +80,10 @@ SELECT @RequestId;
 
     private async Task LoadAsync()
     {
-        Employees = await HrmsDatabase.QueryAsync(
-            _dbContext,
-            "SELECT TOP 500 Id, EmployeeNo, FullName FROM Employees ORDER BY EmployeeNo",
-            null,
-            reader => new EmployeeOption
-            {
-                Id = HrmsDatabase.GetInt(reader, "Id"),
-                Text = $"{HrmsDatabase.GetString(reader, "EmployeeNo")} - {HrmsDatabase.GetString(reader, "FullName")}"
-            });
+        // المنتقي لا يحمّل قائمة — صفٌّ واحد للموظف المحسوم إن وُجد.
+        var identity = await Shared.EmployeePickerLookup.LoadAsync(_dbContext, Input.EmployeeId);
+        SelectedEmployeeCode = identity?.Code;
+        SelectedEmployeeName = identity?.Name;
 
         Requests = await HrmsDatabase.QueryAsync(
             _dbContext,
@@ -144,13 +142,6 @@ ORDER BY r.CreatedAt DESC;
         public TimeOnly? EndTime { get; set; }
 
         public string? Reason { get; set; }
-    }
-
-    public class EmployeeOption
-    {
-        public int Id { get; set; }
-
-        public string Text { get; set; } = string.Empty;
     }
 
     public class RequestRow

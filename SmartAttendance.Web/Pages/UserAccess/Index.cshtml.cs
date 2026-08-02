@@ -47,6 +47,11 @@ public class IndexModel : PageModel
 
     public List<EmployeeOption> Employees { get; set; } = new();
 
+    /// <summary>رمز الموظف المرتبط واسمه — يبدأ بهما <c>_EmployeePicker</c> معبَّأً.</summary>
+    public string? SelectedEmployeeCode { get; set; }
+
+    public string? SelectedEmployeeName { get; set; }
+
     public IReadOnlyList<RoleOption> Roles { get; } =
     [
         new("Admin", "مدير النظام", "Admin"),
@@ -525,6 +530,14 @@ WHERE Id = @SystemUserId;
     private async Task LoadAsync()
     {
         Employees = await LoadEmployeesAsync();
+
+        // المنتقي لا يحمّل قائمة — صفٌّ واحد للموظف المرتبط إن وُجد.
+        var identity = await Shared.EmployeePickerLookup.LoadAsync(
+            _dbContext,
+            Input.EmployeeId ?? 0);
+        SelectedEmployeeCode = identity?.Code;
+        SelectedEmployeeName = identity?.Name;
+
         Identities = await LoadIdentityRowsAsync();
 
         if (!string.IsNullOrWhiteSpace(Search))

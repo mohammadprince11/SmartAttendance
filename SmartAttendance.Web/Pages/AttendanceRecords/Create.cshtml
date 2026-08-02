@@ -24,15 +24,14 @@
 <div class="form-card">
     <form method="post">
         <div class="form-group">
-            <label asp-for="AttendanceRecord.EmployeeId">الموظف</label>
-            <select asp-for="AttendanceRecord.EmployeeId" class="form-control">
-                <option value="">-- Select Employee --</option>
-
-                @foreach (var employee in Model.Employees)
-                {
-                    <option value="@employee.Id">@employee.EmployeeNo - @employee.FullName</option>
-                }
-            </select>
+            @* المنتقي المشترك (رمز + اسم) بدل منسدلةٍ تحمّل كل الموظفين بكل فتحة *@
+            <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
+                Label = "الموظف",
+                Name = "AttendanceRecord.EmployeeId",
+                SelectedId = Model.AttendanceRecord.EmployeeId,
+                SelectedCode = Model.SelectedEmployeeCode,
+                SelectedName = Model.SelectedEmployeeName
+            })" />
             <span asp-validation-for="AttendanceRecord.EmployeeId" class="text-danger"></span>
         </div>
 

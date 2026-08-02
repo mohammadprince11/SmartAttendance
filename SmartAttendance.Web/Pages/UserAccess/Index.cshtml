@@ -143,16 +143,18 @@
                 <input type="hidden" name="Search" value="@Model.Search" />
                 <input type="hidden" name="Status" value="@Model.Status" />
 
-                <label>الموظف المرتبط (اختياري)
-                    <select asp-for="Input.EmployeeId">
-                        <option value="">بدون ربط بموظف</option>
-                        @foreach (var employee in Model.Employees)
-                        {
-                            <option value="@employee.Id">@employee.FullName — @employee.EmployeeNo@(employee.IsLinked ? " · مرتبط" : "")</option>
-                        }
-                    </select>
-                    <span class="hint">عند اختيار موظف يُعتمد اسمه تلقائياً إن تُرك الاسم فارغاً.</span>
-                </label>
+                @* المنتقي المشترك (رمز + اسم). الحقل اختياري: تركه فارغاً = بلا ربط.
+                   ⚠️ سقطت معه شارة «· مرتبط» التي كانت بالمنسدلة — والإنفاذ لم
+                   يسقط: الحفظ يرفض موظفاً مرتبطاً مسبقاً برسالةٍ صريحة، فالشارة
+                   كانت تسهيلاً لا حارساً. *@
+                <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
+                    Label = "الموظف المرتبط (اختياري)",
+                    Name = "Input.EmployeeId",
+                    SelectedId = Model.Input.EmployeeId ?? 0,
+                    SelectedCode = Model.SelectedEmployeeCode,
+                    SelectedName = Model.SelectedEmployeeName
+                })" />
+                <span class="hint">عند اختيار موظف يُعتمد اسمه تلقائياً إن تُرك الاسم فارغاً. اتركه فارغاً لحسابٍ بلا ربط.</span>
 
                 <div class="row2">
                     <label>الاسم الكامل
