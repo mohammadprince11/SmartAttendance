@@ -81,11 +81,9 @@ public static class DisciplinaryPolicyRules
     public static bool TriggersImmediateTermination(bool hasActiveFinalWarning, string? categoryName) =>
         hasActiveFinalWarning && CountsForEscalation(categoryName);
 
-    /// <summary>
-    /// «يُحرم الموظف من جميع المزايا أو المكافآت التي تشترط عدم وجود جزاءات
-    /// سارية» — تُستهلك عند الترقيات وجائزة العامل المثالي.
-    /// </summary>
-    public static bool BlocksBenefits(int activePenalties) => activePenalties > 0;
+    // ⚠️ **حُذفت `BlocksBenefits`**: دالّةٌ بلا مستهلك — مودل الترقيات لم يُبنَ
+    // بعد. ومادة «هام/3» معلَنة **نصّاً مرجعياً** بتبويب القواعد، فلا شيء يَعِد
+    // بإنفاذها. دالّةٌ صمّاء تنتظر مستهلكاً هي دَينٌ لا رصيد.
 
     // ── مادة 6 · التحقيق قبل الجزاء ──────────────────────────────────────────
 
@@ -111,15 +109,12 @@ public static class DisciplinaryPolicyRules
     }
 
     // ── مادة 8 · مهلة التظلّم ────────────────────────────────────────────────
-
-    /// <summary>
-    /// آخر يومٍ يجوز فيه التظلّم (مادة 8: عشرة أيام من تاريخ العلم). <c>null</c>
-    /// حين لا مهلة معلنة — لا «انتهت المهلة» بصمت.
-    /// </summary>
-    public static DateOnly? AppealDeadline(DateOnly? notifiedOn, int windowDays) =>
-        notifiedOn is { } date && windowDays > 0 ? date.AddDays(windowDays) : null;
-
-    /// <summary>موعد البتّ بالتظلّم (مادة 8: سبعة أيام من تقديمه).</summary>
-    public static DateOnly? DecisionDeadline(DateOnly? appealedOn, int days = 7) =>
-        appealedOn is { } date && days > 0 ? date.AddDays(days) : null;
+    //
+    // ⚠️ **لا تُنفَّذ هنا.** مهلة الاعتراض مبنيّةٌ أصلاً بـ<see cref="ViolationConfigPolicy"/>
+    // (`CanObject`) ويستهلكها تبويب الإجراءات التأديبية. كتبتُ لها نسخةً ثانية
+    // بهذا الملف ثم حذفتُها: **مصدران لقاعدةٍ واحدة** أسوأ من غياب أحدهما —
+    // يتغيّر أحدهما ويبقى الآخر، وهو نمط العطل الذي عالجناه بحقل «رقم الفقرة».
+    //
+    // وأمّا **مهلة البتّ بالتظلّم (سبعة أيام)** فغير منفَّذة بأي موضع، ومعلَنة
+    // كذلك بتبويب «قواعد اللائحة» — لا يُدّعى إنفاذها.
 }

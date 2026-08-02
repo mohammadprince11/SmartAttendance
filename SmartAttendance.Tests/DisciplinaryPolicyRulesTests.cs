@@ -120,20 +120,4 @@ public class DisciplinaryPolicyRulesTests
         Assert.False(DisciplinaryPolicyRules.RequiresInvestigation(PenaltyAction.Termination, enforce: false));
     }
 
-    // ── مادة 8 · مهل التظلّم ─────────────────────────────────────────────────
-
-    [Fact]
-    public void Appeal_deadline_is_ten_days_from_notification() =>
-        Assert.Equal(new DateOnly(2026, 8, 12),
-            DisciplinaryPolicyRules.AppealDeadline(new DateOnly(2026, 8, 2), 10));
-
-    [Fact]
-    public void Decision_deadline_is_seven_days_from_the_appeal() =>
-        Assert.Equal(new DateOnly(2026, 8, 19),
-            DisciplinaryPolicyRules.DecisionDeadline(new DateOnly(2026, 8, 12)));
-
-    [Fact]
-    public void An_unnotified_penalty_has_no_appeal_deadline_rather_than_an_expired_one() =>
-        // «انتهت المهلة» بصمت لموظفٍ لم يُبلَّغ أصلاً إسقاطٌ لحقّه.
-        Assert.Null(DisciplinaryPolicyRules.AppealDeadline(null, 10));
 }
