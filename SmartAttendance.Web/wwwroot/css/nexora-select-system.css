@@ -136,7 +136,7 @@ select[data-nxcs-enhanced="true"] {
     position: fixed !important;
     z-index: 2147482500 !important;
     display: grid !important;
-    gap: 5px !important;
+    gap: 0 !important;   /* الفصل بالخطّ الشعريّ لا بالفجوة — انظر .nxcs-option */
     padding: 8px !important;
     border-radius: 16px !important;
     border: 1px solid rgba(34, 211, 238, .28) !important;
@@ -147,28 +147,42 @@ select[data-nxcs-enhanced="true"] {
     direction: rtl !important;
 }
 
+/* صفوف الخيارات: خطٌّ فاصلٌ شعريّ بدل صفوفٍ مستديرة متباعدة.
+   كانت كل خيارٍ صندوقاً مستديراً 11px بفجوة 5px بينه وبين جاره، فالقائمة الطويلة
+   (العملات · الجنسيات · الموظفون) تُقرأ **كومةَ أزرار** لا قائمةَ اختيار، والعين
+   تفكّ كل صندوقٍ على حدة. والفجوات تترك شرائط ميتة لا تستجيب للمرور.
+   الخطّ الشعريّ أهدأ ويُحاذي العين عمودياً، والصفّ كامل العرض فيصير هدف المرور
+   متّصلاً بلا فراغات. */
 .nxcs-option {
     min-height: 34px !important;
     width: 100% !important;
     border: 0 !important;
-    border-radius: 11px !important;
-    padding: 8px 10px !important;
+    border-bottom: 1px solid var(--color-border, rgba(217, 225, 232, .14)) !important;
+    border-radius: 0 !important;
+    padding: 8px 12px !important;
     background: transparent !important;
-    color: var(--sa-text, #E6EAEE) !important;
-    font-weight: 900 !important;
+    color: var(--color-text-primary, #E6EAEE) !important;
+    font-weight: 600 !important;
     text-align: right !important;
     cursor: pointer !important;
 }
 
-.nxcs-option:hover,
-.nxcs-option:focus {
-    background: rgba(34, 211, 238, .12) !important;
-    color: #FFFFFF !important;
+/* آخر صفٍّ بلا خطّ — وإلا بدا الخطّ حدّاً سفلياً للّوحة مكرّراً */
+.nxcs-option:last-child {
+    border-bottom: 0 !important;
 }
 
+.nxcs-option:hover,
+.nxcs-option:focus {
+    background: var(--color-primary-soft, rgba(72, 108, 143, .14)) !important;
+    color: var(--color-text-primary, #FFFFFF) !important;
+}
+
+/* المختار: لون الهوية صلباً بدل تدرّج تيل مثبَّت (نصفه هوية ونصفه سماويّ قديم) */
 .nxcs-option.is-selected {
-    background: linear-gradient(135deg, rgba(34, 211, 238, .95), rgba(124, 234, 240, .88)) !important;
-    color: #07121F !important;
+    background: var(--color-primary-strong, #486C8F) !important;
+    background-image: none !important;
+    color: var(--color-on-primary, #ffffff) !important;
 }
 
 .nxcs-option:disabled {
@@ -184,7 +198,8 @@ select[data-nxcs-enhanced="true"] {
 /* NEXORA_FIX15D_DROPDOWN_POSITION_START */
 .nxcs-panel {
     overscroll-behavior: contain !important;
-    scrollbar-color: rgba(34, 211, 238, .45) rgba(7, 18, 31, .85) !important;
+    /* كان تيلاً مثبَّتاً بالوضعين — آخر بقايا التيل بهذا الملف */
+    scrollbar-color: color-mix(in srgb, var(--color-primary) 55%, transparent) transparent !important;
     scrollbar-width: thin !important;
 }
 
@@ -226,23 +241,13 @@ html[data-theme="light"] .nxcs-panel {
     background: #ffffff !important;
     border-color: rgba(13, 148, 158, .3) !important;
     box-shadow: 0 22px 55px rgba(15, 40, 70, .22) !important;
-    scrollbar-color: rgba(13, 148, 158, .45) #eef3f6 !important;
+    scrollbar-color: color-mix(in srgb, var(--color-primary) 55%, transparent) transparent !important;
 }
 
-html[data-theme="light"] .nxcs-option {
-    color: #0b2239 !important;
-}
-
-html[data-theme="light"] .nxcs-option:hover,
-html[data-theme="light"] .nxcs-option:focus {
-    background: rgba(13, 148, 158, .10) !important;
-    color: #0b2239 !important;
-}
-
-html[data-theme="light"] .nxcs-option.is-selected {
-    background: linear-gradient(135deg, #0fb5c0, var(--color-primary)) !important;
-    color: #06222e !important;
-}
+/* ⛔ حُذف طقم الفاتح للخيارات (اللون والمرور والمختار): كان يعيد تيلاً مثبَّتاً
+   (`rgba(13,148,158,.10)` وتدرّج `#0fb5c0`) — أي قائمتان بهويّتين حسب الوضع.
+   قواعد الأساس أعلاه بالتوكنز (`--color-text-primary` · `--color-primary-soft` ·
+   `--color-primary-strong`) تخدم الوضعين وتتبع محرّك هوية الشركة. */
 
 html[data-theme="light"] .nxcs-panel::-webkit-scrollbar-track {
     background: #eef3f6 !important;
