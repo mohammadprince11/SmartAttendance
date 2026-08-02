@@ -54,9 +54,13 @@ select[data-nxcs-enhanced="true"] {
     justify-content: space-between !important;
     gap: 10px !important;
     border-radius: 14px !important;
-    border: 1px solid rgba(18, 217, 227, .34) !important;
-    background:
-        linear-gradient(135deg, rgba(3, 16, 28, .92), rgba(5, 24, 39, .94)) !important;
+    /* ⚠️ كان حدّاً **تركوازياً** مثبّتاً `rgba(18,217,227,.34)` — وهذا أوسع
+       مكوّن بالنظام: مسحٌ حيّ لـ81 صفحة أحصى **231 منسدلة على 57 صفحة**، كلّها
+       بهذا الحدّ. فبقي التيل حاضراً بكل شاشة بعد اعتماد سلايت-بلو.
+       الآن يشتقّ من لون العلامة فيتبعه ويتبع أي هوية White-Label. */
+    border: 1px solid color-mix(in srgb, var(--brand-primary, #486C8F) 40%, transparent) !important;
+    /* والخلفية كانت كحليّاً مثبّتاً من عهد سابق — تتبع سطح الحقل بالتوكن. */
+    background: var(--surface-input, #0B1A2D) !important;
     color: var(--sa-text, #E6EAEE) !important;
     padding: 0 14px !important;
     font-weight: 950 !important;

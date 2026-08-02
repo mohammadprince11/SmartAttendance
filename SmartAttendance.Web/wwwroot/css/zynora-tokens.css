@@ -53,10 +53,23 @@
 /* ------------------------------------------------ الحقول (البوكس) */
 /* الحقول التي تبتلعها الودجتات مستثناة: تعديل مقاسها يُظهر المخفيّ. */
 .zy-scope input:not([type="checkbox"]):not([type="radio"]):not(.nxcal-native):not(.nxcs-native),
-.zy-scope select:not(.nxcs-native),
+/* ⚠️ `[multiple]`/`[size]` مستثناة: تلك **قوائم** لا منسدلات، ارتفاعها يجب أن
+   ينمو بصفوفها. وبدون الاستثناء يسحقها `--zy-control-h` إلى 30px فتُخفي
+   محتواها — رُصد على `f_Watchers` بصفحة قوالب الموافقات (size=4 داخل 30px)
+   بمسحٍ حيّ لـ81 صفحة 2026-08-02. تُنسَّق أدناه بدل ذلك. */
+.zy-scope select:not(.nxcs-native):not([multiple]):not([size]),
 .zy-scope .zy-input {
     height: var(--zy-control-h, 44px) !important;
     min-height: var(--zy-control-h, 44px) !important;
+    padding-inline: var(--zy-control-pad-x, 12px) !important;
+    border-radius: var(--zy-control-radius, 12px) !important;
+    font-size: var(--zy-control-font, 13px) !important;
+}
+
+/* القوائم متعدّدة الاختيار: تأخذ هوية المنسدلة (انحناء/حشوة/خطّ) لكن ارتفاعها
+   يبقى لصفوفها. بلا هذا كانت تبدو عنصراً غريباً وسط منسدلاتٍ مصقولة. */
+.zy-scope select[multiple],
+.zy-scope select[size] {
     padding-inline: var(--zy-control-pad-x, 12px) !important;
     border-radius: var(--zy-control-radius, 12px) !important;
     font-size: var(--zy-control-font, 13px) !important;
