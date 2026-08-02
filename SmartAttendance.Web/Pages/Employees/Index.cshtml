@@ -20,17 +20,24 @@
         @if (Model.CanCreateEmployee || Model.CanImportEmployees) 
         { 
             <div style="display:flex; gap:12px;"> 
-                @if (Model.CanImportEmployees) { <a asp-page="./Import" class="zhr-btn zhr-btn-secondary">استيراد الموظفين</a> } 
+                @if (Model.CanImportEmployees) { <button type="button" class="zhr-btn zhr-btn-secondary" data-import-open>استيراد الموظفين</button> }
                 @if (Model.CanCreateEmployee) { <a asp-page="./Create" class="zhr-btn zhr-btn-primary">إضافة موظف</a> } 
             </div> 
         }
     </div>
 
-    @if (TempData["SuccessMessage"] != null) 
-    { 
+    @if (TempData["SuccessMessage"] != null)
+    {
         <div style="background:rgba(40, 167, 69, 0.1); color:var(--success); border: 1px solid var(--success); padding:12px; border-radius:8px; margin-bottom:20px; font-weight:bold;">
             @TempData["SuccessMessage"]
-        </div> 
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div style="background:rgba(220, 53, 69, 0.1); color:var(--danger); border: 1px solid var(--danger); padding:12px; border-radius:8px; margin-bottom:20px; font-weight:bold;">
+            @TempData["ErrorMessage"]
+        </div>
     }
 
     <section class="zhr-kpi-grid">
@@ -142,3 +149,74 @@
         }
     </section>
 </div>
+
+@if (Model.CanImportEmployees)
+{
+    @* inert لا hidden: القوقعة تعطي .zy-modal ‏display:flex فيهزم أي hidden *@
+    <div class="zy-modal-backdrop" id="zhr-import-backdrop" inert></div>
+    <div class="zy-modal" id="zhr-import-modal" role="dialog" aria-modal="true" aria-labelledby="zhr-import-title" inert>
+        <div class="zy-modal__header">
+            <h2 id="zhr-import-title">استيراد بيانات الموظفين</h2>
+            <button type="button" class="zhr-btn zhr-btn-secondary" data-import-close>إغلاق</button>
+        </div>
+        <form method="post" asp-page-handler="Import" enctype="multipart/form-data">
+            <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+            <div class="zy-modal__body">
+                <div class="zhr-form-group">
+                    <label class="zhr-label" for="zhr-import-file">ملف البيانات (xlsx أو csv)</label>
+                    <input type="file" id="zhr-import-file" name="importFile" class="zhr-input" accept=".xlsx,.csv" required />
+                </div>
+                <div style="display:flex; gap:16px; margin-top:12px;">
+                    <a asp-page-handler="Template" style="color:var(--electric-teal); font-weight:600;">تحميل القالب</a>
+                    <a asp-page-handler="TemplateData" style="color:var(--electric-teal); font-weight:600;">تحميل البيانات</a>
+                </div>
+            </div>
+            <div class="zy-modal__footer">
+                <button type="submit" class="zhr-btn zhr-btn-primary">استيراد</button>
+                <button type="button" class="zhr-btn zhr-btn-secondary" data-import-close>إلغاء</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        (function () {
+            var modal = document.getElementById('zhr-import-modal');
+            var backdrop = document.getElementById('zhr-import-backdrop');
+
+            if (!modal || !backdrop) { return; }
+
+            function open() {
+                modal.removeAttribute('inert');
+                backdrop.removeAttribute('inert');
+                modal.classList.add('zy-open');
+                backdrop.classList.add('zy-open');
+                document.documentElement.style.overflow = 'hidden';
+
+                var file = document.getElementById('zhr-import-file');
+                if (file) { file.focus(); }
+            }
+
+            function close() {
+                modal.classList.remove('zy-open');
+                backdrop.classList.remove('zy-open');
+                modal.setAttribute('inert', '');
+                backdrop.setAttribute('inert', '');
+                document.documentElement.style.overflow = '';
+            }
+
+            document.querySelectorAll('[data-import-open]').forEach(function (trigger) {
+                trigger.addEventListener('click', open);
+            });
+
+            modal.querySelectorAll('[data-import-close]').forEach(function (trigger) {
+                trigger.addEventListener('click', close);
+            });
+
+            backdrop.addEventListener('click', close);
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && modal.classList.contains('zy-open')) { close(); }
+            });
+        })();
+    </script>
+}
