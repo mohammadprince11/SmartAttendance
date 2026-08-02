@@ -54,6 +54,12 @@
         this.root = root;
         this.input = document.querySelector(root.getAttribute('data-input'));
         this.criteria = JSON.parse(root.getAttribute('data-criteria') || '[]');
+
+        // معنى «بلا شروط» يختلف بحسب المستدعي — نسخة سياسة لا تنطبق على أحد،
+        // بينما مخالفة بلا شروط تنطبق على الجميع. النصّ المثبَّت كان يكذب على
+        // نصف الشاشات، فصار من الوسم وافتراضه سلوك النسخة كما كان.
+        this.emptyText = root.getAttribute('data-empty-text')
+            || 'بلا شروط — لن تنطبق هذه النسخة على أحد.';
         this.byKey = {};
         for (var i = 0; i < this.criteria.length; i++) this.byKey[this.criteria[i].key] = this.criteria[i];
 
@@ -281,7 +287,7 @@
     ZyConditions.prototype.describe = function () {
         var self = this;
         var groups = this.state.groups.filter(function (g) { return g.rules.length; });
-        if (!groups.length) return 'بلا شروط — لن تنطبق هذه النسخة على أحد.';
+        if (!groups.length) return this.emptyText;
 
         return groups.map(function (group) {
             return '(' + group.rules.map(function (rule) {

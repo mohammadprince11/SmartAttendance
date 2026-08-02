@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
@@ -17,7 +18,16 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 /// </summary>
 public static class HrConditionOptions
 {
-    public sealed record Option(string Value, string Label);
+    /// <summary>
+    /// ⚠️ الأسماء صغيرة صراحةً: بقيّة الحمولة كائنٌ مجهول بأسماء صغيرة
+    /// (<c>key</c> · <c>label</c> · <c>options</c>) بينما هذا سجلّ بأسماء كبيرة،
+    /// فكانت المنسدلة تقرأ <c>item.value</c> فتجد <c>undefined</c>: **قوائم
+    /// الاختيار كلّها (جنسية · جنس · فرع · قسم…) تخرج بخيارات بلا نصّ ولا قيمة**
+    /// بكل شاشة تستعمل باني الشروط. رُصد حياً بلائحة المخالفات.
+    /// </summary>
+    public sealed record Option(
+        [property: JsonPropertyName("value")] string Value,
+        [property: JsonPropertyName("label")] string Label);
 
     /// <summary>معايير تُملأ من أعمدة الموظفين نفسها (قيمها نصوص حرّة تاريخياً).</summary>
     private static readonly (string Criterion, string Column)[] DistinctColumns =
