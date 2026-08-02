@@ -800,13 +800,25 @@
                             (function () {
                                 var btn = document.getElementById("zy-theme-toggle");
                                 if (!btn) return;
+                                // التبديل فوريّ: أُزيل صنف `zy-theme-anim` ومؤقّته (450ms)
+                                // مع حذف انتقال الـ220ms من نظام التصميم — انظر التعليق هناك.
+                                // و`data-theme-switching` يُسكِت انتقالات المكوّنات الخاصة
+                                // (المكتوبة لتأثير المرور) إطارين فقط، وإلا تلاشى 123 عنصراً
+                                // من كل 400 رغم حذف قاعدتنا. يُرفع بعد إطارين لا بمؤقّت:
+                                // الإطار الأول يطبّق الألوان الجديدة، والثاني يضمن رسمها.
                                 btn.addEventListener("click", function () {
                                     var h = document.documentElement;
-                                    h.classList.add("zy-theme-anim");
                                     var next = h.getAttribute("data-theme") === "light" ? "dark" : "light";
+                                    h.setAttribute("data-theme-switching", "");
                                     h.setAttribute("data-theme", next);
                                     try { localStorage.setItem("ZY.Theme", next); } catch (e) { }
-                                    setTimeout(function () { h.classList.remove("zy-theme-anim"); }, 450);
+                                    // ⚠️ الرفع بحارسين لا بواحد. rAF **لا ينطلق** إن كان
+                                    // التبويب خلفياً أو خُنق المتصفح، ووقتها تبقى السمة
+                                    // فتُسكِت كل حركة بالنظام للأبد (رُصد فعلياً بالقياس).
+                                    // فمؤقّتٌ قصير يضمن الرفع مهما حدث، وأيّهما سبق كفى.
+                                    var clear = function () { h.removeAttribute("data-theme-switching"); };
+                                    requestAnimationFrame(function () { requestAnimationFrame(clear); });
+                                    setTimeout(clear, 200);
                                 });
                             })();
                         </script>
