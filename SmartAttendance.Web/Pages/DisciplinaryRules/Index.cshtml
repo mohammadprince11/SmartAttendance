@@ -201,7 +201,12 @@
                                                 <td><input name="rowOrder" type="number" value="@category.DisplayOrder" /></td>
                                                 <td>
                                                     <input type="hidden" name="rowConditions" id="cat-cond-@category.Id" value="@category.ConditionsJson" />
-                                                    <div class="zyc" data-zy-conditions data-input="#cat-cond-@category.Id" data-criteria="@Model.CriteriaJson"
+                                                    <button type="button" class="btn-secondary" aria-expanded="false"
+                                                            data-zy-conditions-open="#cat-cond-@category.Id-box">
+                                                        @HrConditions.Describe(category.Conditions)
+                                                    </button>
+                                                    <div class="zyc" id="cat-cond-@category.Id-box" hidden
+                                                         data-zy-conditions data-zy-lazy data-input="#cat-cond-@category.Id"
                                                          data-empty-text="بلا شروط — تنطبق على كل الموظفين."></div>
                                                 </td>
                                             </tr>
@@ -299,7 +304,12 @@
                                                     <td><input name="rowArticle" value="@violation.ArticleNo" placeholder="3/ب" /></td>
                                                     <td>
                                                         <input type="hidden" name="rowConditions" id="vt-cond-@violation.Id" value="@violation.ConditionsJson" />
-                                                        <div class="zyc" data-zy-conditions data-input="#vt-cond-@violation.Id" data-criteria="@Model.CriteriaJson"
+                                                        <button type="button" class="btn-secondary" aria-expanded="false"
+                                                                data-zy-conditions-open="#vt-cond-@violation.Id-box">
+                                                            @HrConditions.Describe(violation.Conditions)
+                                                        </button>
+                                                        <div class="zyc" id="vt-cond-@violation.Id-box" hidden
+                                                             data-zy-conditions data-zy-lazy data-input="#vt-cond-@violation.Id"
                                                              data-empty-text="بلا شروط — تنطبق على كل الموظفين."></div>
                                                     </td>
                                                     <td>
@@ -980,6 +990,8 @@ else if (Model.Settings.A4FormFileType == "Pdf")
 
 @if (activeTab == "library")
 {
+    @* كتالوج المعايير **مرّةً واحدة للصفحة**: كان يُنسخ بكل صفّ (4KB × 79 = 336KB). *@
+    <script type="application/json" id="zy-criteria-catalog">@Html.Raw(Model.CriteriaJson)</script>
     <script src="~/js/zynora-conditions.js" asp-append-version="true" defer></script>
     <script src="~/js/zynora-grid-editor.js" asp-append-version="true" defer></script>
 }

@@ -73,6 +73,65 @@
         }
     });
 
+    // ── لا يُرسَل إلا ما تغيّر ────────────────────────────────────────────────
+    //
+    // ⚠️ كان «حفظ» يرسل الشبكة كاملةً: تعديل اسمٍ واحد بشاشة فيها سبعون مخالفة
+    // يبعث 421 حقلاً ويُعيد كتابة السبعين صفّاً بالقاعدة. قِيست الدورة 1.5 ثانية،
+    // ورسالة النجاح تقول «عُدّلت 70» لمن عدّل واحداً.
+    //
+    // الحلّ **بتعطيل حقول الصفّ غير المتغيّر** لا بحذفها: الخادم يزاوج المصفوفات
+    // بالفهرس، والحقل المعطَّل لا يُرسَل — فتسقط كل حقول الصفّ معاً وتبقى الفهارس
+    // متطابقة. حذفُ حقلٍ واحد كان سيُزيح الأعمدة فيُحفظ اسمٌ بفئةٍ غيرها.
+
+    // JSON لا وصلٌ بفاصل: قيمةٌ تحوي الفاصل نفسه كانت ستجعل صفَّين مختلفين
+    // يتطابقان توقيعاً فلا يُرسَل تعديلٌ حقيقيّ — وJSON يهرب كل شيء بنفسه.
+    function rowSignature(row) {
+        return JSON.stringify(Array.prototype.map.call(
+            row.querySelectorAll('input:not([type=checkbox]), select, textarea'),
+            function (field) { return field.value; }
+        ));
+    }
+
+    function stampRows(form) {
+        form.querySelectorAll('[data-zyw-rows] > tr').forEach(function (row) {
+            if (row.dataset.zywClean === undefined) row.dataset.zywClean = rowSignature(row);
+        });
+    }
+
+    function isNewRow(row) {
+        var id = row.querySelector('[name="rowId"]');
+        return !id || id.value === '0' || id.value === '';
+    }
+
+    function isMarkedForDelete(row) {
+        var box = row.querySelector('[name="deleteId"]');
+        return !!(box && box.checked);
+    }
+
+    document.addEventListener('submit', function (event) {
+        var form = event.target;
+        if (!form.matches || !form.matches('[data-zyw-grid]')) return;
+
+        var kept = 0;
+
+        form.querySelectorAll('[data-zyw-rows] > tr').forEach(function (row) {
+            var changed = row.dataset.zywClean !== rowSignature(row);
+
+            // الجديد والمحذوف يُرسلان دائماً؛ وغيرهما لا يُرسَل إن لم يتغيّر.
+            if (changed || isNewRow(row) || isMarkedForDelete(row)) { kept++; return; }
+
+            row.querySelectorAll('input, select, textarea').forEach(function (field) {
+                field.disabled = true;
+            });
+        });
+
+        // شبكةٌ بلا تغييرٍ واحد: لا داعي لدورةٍ كاملة تعيد تحميل الصفحة.
+        if (kept === 0) {
+            event.preventDefault();
+            window.alert('لا تغييرات للحفظ.');
+        }
+    });
+
     // ── حقول الجزاء تتبع نوع الإجراء ─────────────────────────────────────────
 
     function syncPenaltyFields(select) {
@@ -96,5 +155,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         var selects = document.querySelectorAll('[data-zyw-action-type]');
         for (var i = 0; i < selects.length; i++) syncPenaltyFields(selects[i]);
+
+        document.querySelectorAll('[data-zyw-grid]').forEach(stampRows);
     });
 })();
