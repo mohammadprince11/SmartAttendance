@@ -169,33 +169,24 @@
                                 <table class="zyw-table">
                                     <thead>
                                         <tr>
-                                            <th style="width:34px"></th>
                                             <th>الفئة (عربي)</th>
                                             <th>الفئة (English)</th>
                                             <th style="width:90px">الترتيب</th>
                                             <th>على من تنطبق</th>
+                                            <th style="width:120px"></th>
                                         </tr>
                                     </thead>
                                     <tbody data-zyw-rows>
                                         @foreach (var category in Model.Categories.Where(c => Model.Matches(new[] { c.Name, c.NameEn })))
                                         {
+                                            var linkedCases = Model.CasesInCategory(category.Id);
+
                                             <tr>
                                                 <td>
-                                                    @* فئة النظام لا تُحذف: يُولَّد عليها آلياً من قواعد المناوبات. *@
-                                                    @if (category.IsSystem)
-                                                    {
-                                                        <span class="zy-pill" title="فئة نظام — يُولَّد عليها آلياً">🔒</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <input type="checkbox" name="deleteId" value="@category.Id" aria-label="حذف @category.Name" />
-                                                    }
-                                                </td>
-                                                <td>
                                                     <input type="hidden" name="rowId" value="@category.Id" />
-                                                    <input name="rowName" value="@category.Name" readonly="@category.IsSystem" required />
+                                                    <input name="rowName" value="@category.Name" required />
                                                 </td>
-                                                <td><input name="rowNameEn" value="@category.NameEn" readonly="@category.IsSystem" placeholder="Attendance" /></td>
+                                                <td><input name="rowNameEn" value="@category.NameEn" placeholder="Attendance" /></td>
                                                 <td><input name="rowOrder" type="number" value="@category.DisplayOrder" /></td>
                                                 <td>
                                                     <input type="hidden" name="rowConditions" id="cat-cond-@category.Id" value="@category.ConditionsJson" />
@@ -207,6 +198,22 @@
                                                          data-zy-conditions data-zy-lazy data-input="#cat-cond-@category.Id"
                                                          data-empty-text="بلا شروط — تنطبق على كل الموظفين."></div>
                                                 </td>
+                                                <td>
+                                                    @* زرّ حذفٍ مستقلّ: فعلٌ مباشر لا تأشيرٌ ثم «حفظ».
+                                                       والحدّ الوحيد ارتباطُ موظف — فإن وُجد، يُقال العدد
+                                                       بدل أن يُترك الزرّ يفشل بنقرةٍ لا لزوم لها. *@
+                                                    @if (linkedCases > 0)
+                                                    {
+                                                        <span class="zy-pill" title="لا تُحذف ما دامت الحالات قائمة">@linkedCases حالة مرتبطة</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button type="submit" class="btn-secondary"
+                                                                formaction="?handler=DeleteCategory" name="id" value="@category.Id"
+                                                                data-zyw-delete
+                                                                data-zyconfirm="حذف «@category.Name» بمخالفاتها؟">حذف</button>
+                                                    }
+                                                </td>
                                             </tr>
                                         }
                                     </tbody>
@@ -216,13 +223,13 @@
                             @* قالب الصفّ الجديد: يُستنسخ بالمتصفّح فلا يُعاد تحميل الصفحة. *@
                             <template data-zyw-template>
                                 <tr>
-                                    <td></td>
                                     <td>
                                         <input type="hidden" name="rowId" value="0" />
                                         <input name="rowName" placeholder="اسم الفئة" />
                                     </td>
                                     <td><input name="rowNameEn" placeholder="English" /></td>
                                     <td><input name="rowOrder" type="number" value="10" /></td>
+                                    <td></td>
                                     <td><button type="button" class="btn-secondary" data-zyw-remove>✖ إزالة</button></td>
                                 </tr>
                             </template>
@@ -274,20 +281,20 @@
                                     <table class="zyw-table">
                                         <thead>
                                             <tr>
-                                                <th style="width:34px"></th>
                                                 <th style="width:170px">الفئة</th>
                                                 <th>المخالفة (عربي)</th>
                                                 <th>المخالفة (English)</th>
                                                 <th style="width:90px">الفقرة</th>
                                                 <th>على من تنطبق</th>
-                                                <th style="width:70px"></th>
+                                                <th style="width:180px"></th>
                                             </tr>
                                         </thead>
                                         <tbody data-zyw-rows>
                                             @foreach (var violation in rows)
                                             {
+                                                var linkedCases = Model.CasesOnViolation(violation.Id);
+
                                                 <tr>
-                                                    <td><input type="checkbox" name="deleteId" value="@violation.Id" aria-label="حذف @violation.Name" /></td>
                                                     <td>
                                                         <input type="hidden" name="rowId" value="@violation.Id" />
                                                         <select name="rowCategoryId">
@@ -315,6 +322,18 @@
                                                         <a class="btn-secondary" asp-page="./Index" asp-route-tab="library"
                                                            asp-route-categoryId="@violation.CategoryId" asp-route-openTypeId="@violation.Id"
                                                            title="سلّم الجزاءات">•••</a>
+
+                                                        @if (linkedCases > 0)
+                                                        {
+                                                            <span class="zy-pill" title="لا تُحذف ما دامت الحالات قائمة">@linkedCases حالة</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <button type="submit" class="btn-secondary"
+                                                                    formaction="?handler=DeleteViolationType" name="id" value="@violation.Id"
+                                                                    data-zyw-delete
+                                                                    data-zyconfirm="حذف «@violation.Name»؟">حذف</button>
+                                                        }
                                                     </td>
                                                 </tr>
                                             }
@@ -326,7 +345,6 @@
 
                                 <template data-zyw-template>
                                     <tr>
-                                        <td></td>
                                         <td>
                                             <input type="hidden" name="rowId" value="0" />
                                             <select name="rowCategoryId">

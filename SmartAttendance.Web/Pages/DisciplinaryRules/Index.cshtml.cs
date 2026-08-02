@@ -59,6 +59,22 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int OpenTypeId { get; set; }
 
+    /// <summary>
+    /// عدد حالات الموظفين على كل مخالفة — **يُقرأ مرّةً واحدة لا صفّاً صفّاً**.
+    ///
+    /// الشاشة تسأل عن سبعين مخالفة؛ استعلامٌ لكلٍّ يعني سبعين دورة على القاعدة
+    /// بفتحةٍ واحدة. استعلامٌ واحد مجمَّع يجيب عنها كلّها.
+    /// </summary>
+    private Dictionary<int, int> _casesByViolation = new();
+
+    /// <summary>حالات موظفين على هذه المخالفة — صفر يعني أنها تُحذف بأمان.</summary>
+    public int CasesOnViolation(int violationTypeId) =>
+        _casesByViolation.GetValueOrDefault(violationTypeId);
+
+    /// <summary>حالات موظفين على أي مخالفةٍ بهذه الفئة.</summary>
+    public int CasesInCategory(int categoryId) =>
+        ViolationTypes.Where(v => v.CategoryId == categoryId).Sum(v => CasesOnViolation(v.Id));
+
     public bool Matches(string?[] fields)
     {
         if (string.IsNullOrWhiteSpace(Search)) return true;
@@ -478,14 +494,13 @@ WHERE Id = @Id;
     // يُلحَق بأسفلها لا بمودال، والحفظ يمرّ على الصفوف كلّها دفعةً واحدة. كان
     // إدخال خمس فئات عندنا يعني خمس دورات ذهاب وإياب للخادم؛ صار دورةً واحدة.
 
-    /// <summary>حفظ شبكة الفئات: تعديل القائم · إدراج الجديد · حذف المؤشَّر.</summary>
+    /// <summary>حفظ شبكة الفئات: تعديل القائم وإدراج الجديد. الحذف بزرّ الصفّ.</summary>
     public async Task<IActionResult> OnPostSaveCategoriesAsync(
         int[]? rowId, string[]? rowName, string[]? rowNameEn, string[]? rowConditions,
-        int[]? rowOrder, int[]? deleteId)
+        int[]? rowOrder)
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
 
-        var systemIds = (await LoadCategoriesAsync()).Where(c => c.IsSystem).Select(c => c.Id).ToHashSet();
         int saved = 0, added = 0, removed = 0;
 
         for (var i = 0; rowName is not null && i < rowName.Length; i++)
@@ -503,13 +518,10 @@ WHERE Id = @Id;
             var conditions = rowConditions is not null && i < rowConditions.Length ? rowConditions[i] : null;
             var order = rowOrder is not null && i < rowOrder.Length ? rowOrder[i] : (i + 1) * 10;
 
-            var isSystem = id > 0 && systemIds.Contains(id);
 
+            // لا استثناء لفئةٍ دون أخرى: الفئات كلّها أمثلةٌ تُعدَّل وتُحذف.
             var sql = id > 0
-                ? isSystem
-                    // فئة نظام: شروطها وترتيبها فقط — اسمها مرجعٌ يعتمد عليه التوليد الآلي.
-                    ? "UPDATE DisciplinaryViolationCategories SET ConditionsJson = @Conditions, DisplayOrder = @Order WHERE Id = @Id;"
-                    : "UPDATE DisciplinaryViolationCategories SET Name = @Name, NameEn = @NameEn, ConditionsJson = @Conditions, DisplayOrder = @Order WHERE Id = @Id;"
+                ? "UPDATE DisciplinaryViolationCategories SET Name = @Name, NameEn = @NameEn, ConditionsJson = @Conditions, DisplayOrder = @Order WHERE Id = @Id;"
                 : """
 INSERT INTO DisciplinaryViolationCategories (Name, NameEn, ConditionsJson, DisplayOrder, IsActive, CreatedAt)
 VALUES (@Name, @NameEn, @Conditions, @Order, 1, SYSUTCDATETIME());
@@ -529,55 +541,45 @@ VALUES (@Name, @NameEn, @Conditions, @Order, 1, SYSUTCDATETIME());
             if (id > 0) saved++; else added++;
         }
 
-        removed = await DeleteCategoriesAsync(deleteId, systemIds);
-
-        StatusMessage = BuildGridMessage("فئة", added, saved, removed);
+        StatusMessage = BuildGridMessage("فئة", added, saved, 0);
         return RedirectToPage(new { tab = "library" });
     }
 
     /// <summary>
-    /// حذف الفئات المؤشَّرة. **فئات النظام لا تُحذف**، وفئةٌ لها مخالفات لا تُحذف
-    /// أيضاً — الحذف الصامت كان سيترك مخالفاتٍ يتيمة لا تظهر بأي شاشة.
+    /// حذف فئةٍ واحدة بزرّها — **فعلٌ مباشر لا تأشيرٌ ثم حفظ**.
+    ///
+    /// كان الحذف يمرّ بمربّع تأشيرٍ ثم زرّ «حفظ»، فيختلط فعلان لا علاقة بينهما:
+    /// من أراد حذف بابٍ وجب أن «يحفظ» الشبكة كلّها، ومن أراد الحفظ خشي أن يكون
+    /// أشّر شيئاً سهواً.
     /// </summary>
-    private async Task<int> DeleteCategoriesAsync(int[]? ids, HashSet<int> systemIds)
+    public async Task<IActionResult> OnPostDeleteCategoryAsync(int id)
     {
-        if (ids is null || ids.Length == 0) return 0;
+        await DisciplinarySchema.EnsureAsync(_dbContext);
 
-        var blocked = new List<string>();
-        var removed = 0;
-        var names = (await LoadCategoriesAsync()).ToDictionary(c => c.Id, c => c.Name);
+        var name = await HrmsDatabase.ScalarAsync<string>(
+            _dbContext,
+            "SELECT TOP 1 Name FROM DisciplinaryViolationCategories WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", id));
 
-        foreach (var id in ids.Where(x => x > 0).Distinct())
+        if (string.IsNullOrEmpty(name))
         {
-            if (systemIds.Contains(id))
-            {
-                blocked.Add("فئة نظام");
-                continue;
-            }
+            StatusMessage = "الفئة غير موجودة.";
+            return RedirectToPage(new { tab = "library" });
+        }
 
-            // ⚠️ الحدّ الحقيقي **الحالات لا المخالفات**: باب فيه إحدى وعشرون
-            // مخالفة كان يلزم إفراغه صفّاً صفّاً قبل حذفه — وهو عملٌ لا معنى له.
-            // فيُحذف بمخالفاته دفعةً واحدة **ما لم تكن عليها حالاتٌ مسجَّلة**؛
-            // وحينها يُرفض الحذف كلّه، لأن قطع سند حالةٍ قائمة أسوأ من بقاء باب.
-            var cases = await HrmsDatabase.ScalarAsync<int>(
-                _dbContext,
-                """
-SELECT CASE WHEN OBJECT_ID('EmployeeViolationCases','U') IS NULL THEN 0 ELSE
-    (SELECT COUNT(1) FROM EmployeeViolationCases c
-     INNER JOIN DisciplinaryViolationTypes t ON t.Id = c.ViolationTypeId
-     WHERE t.CategoryId = @Id) END;
-""",
-                command => HrmsDatabase.AddParameter(command, "@Id", id));
+        // 🔒 الحدّ الوحيد **ارتباط موظف**: بابٌ سُجّلت على مخالفاته حالات لا يُحذف،
+        // لأن حذفه يقطع سند حالةٍ قائمة وكتابٍ صدر عنها. وما عدا ذلك يُحذف بمخالفاته.
+        var cases = await CategoryCaseCountAsync(id);
 
-            if (cases > 0)
-            {
-                blocked.Add("فئة سُجّلت على مخالفاتها حالات");
-                continue;
-            }
+        if (cases > 0)
+        {
+            BlockedMessage = $"«{name}» مرتبطة بـ{cases} حالة مسجَّلة على موظفين — لا تُحذف ما دامت الحالات قائمة.";
+            return RedirectToPage(new { tab = "library" });
+        }
 
-            await HrmsDatabase.ExecuteAsync(
-                _dbContext,
-                """
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
 DELETE r FROM DisciplinaryPenaltyRules r
 INNER JOIN DisciplinaryViolationTypes t ON t.Id = r.ViolationTypeId
 WHERE t.CategoryId = @Id;
@@ -585,23 +587,71 @@ WHERE t.CategoryId = @Id;
 DELETE FROM DisciplinaryViolationTypes WHERE CategoryId = @Id;
 DELETE FROM DisciplinaryViolationCategories WHERE Id = @Id;
 """,
-                command => HrmsDatabase.AddParameter(command, "@Id", id));
+            command => HrmsDatabase.AddParameter(command, "@Id", id));
 
-            removed++;
-        }
-
-        if (blocked.Count > 0)
-        {
-            BlockedMessage = $"تُرك بلا حذف: {string.Join(" · ", blocked.Distinct())}.";
-        }
-
-        return removed;
+        StatusMessage = $"حُذفت الفئة «{name}» بمخالفاتها.";
+        return RedirectToPage(new { tab = "library" });
     }
 
-    /// <summary>حفظ شبكة المخالفات: تعديل القائم · إدراج الجديد · حذف المؤشَّر.</summary>
+    /// <summary>حذف نوع مخالفةٍ واحد بزرّه — بنفس الحدّ: لا ارتباط بموظف.</summary>
+    public async Task<IActionResult> OnPostDeleteViolationTypeAsync(int id)
+    {
+        await DisciplinarySchema.EnsureAsync(_dbContext);
+
+        var name = await HrmsDatabase.ScalarAsync<string>(
+            _dbContext,
+            "SELECT TOP 1 Name FROM DisciplinaryViolationTypes WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", id));
+
+        if (string.IsNullOrEmpty(name))
+        {
+            StatusMessage = "المخالفة غير موجودة.";
+            return RedirectToPage(new { tab = "library" });
+        }
+
+        var cases = await ViolationCaseCountAsync(id);
+
+        if (cases > 0)
+        {
+            BlockedMessage = $"«{name}» مسجَّلة على {cases} حالة موظف — لا تُحذف ما دامت الحالات قائمة.";
+            return RedirectToPage(new { tab = "library" });
+        }
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            "DELETE FROM DisciplinaryPenaltyRules WHERE ViolationTypeId = @Id; DELETE FROM DisciplinaryViolationTypes WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", id));
+
+        StatusMessage = $"حُذفت المخالفة «{name}» وسلّم جزاءاتها.";
+        return RedirectToPage(new { tab = "library" });
+    }
+
+    private async Task<int> CategoryCaseCountAsync(int categoryId) =>
+        await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            """
+SELECT CASE WHEN OBJECT_ID('EmployeeViolationCases','U') IS NULL THEN 0 ELSE
+    (SELECT COUNT(1) FROM EmployeeViolationCases c
+     INNER JOIN DisciplinaryViolationTypes t ON t.Id = c.ViolationTypeId
+     WHERE t.CategoryId = @Id AND ISNULL(c.IsDeleted, 0) = 0) END;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", categoryId));
+
+    private async Task<int> ViolationCaseCountAsync(int violationId) =>
+        await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            """
+SELECT CASE WHEN OBJECT_ID('EmployeeViolationCases','U') IS NULL THEN 0 ELSE
+    (SELECT COUNT(1) FROM EmployeeViolationCases
+     WHERE ViolationTypeId = @Id AND ISNULL(IsDeleted, 0) = 0) END;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", violationId));
+
+
+    /// <summary>حفظ شبكة المخالفات: تعديل القائم · إدراج الجديد. الحذف بزرّ الصفّ.</summary>
     public async Task<IActionResult> OnPostSaveViolationTypesAsync(
         int[]? rowId, int[]? rowCategoryId, string[]? rowName, string[]? rowNameEn,
-        string[]? rowArticle, string[]? rowConditions, int[]? deleteId)
+        string[]? rowArticle, string[]? rowConditions)
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
 
@@ -651,52 +701,8 @@ VALUES
             if (id > 0) saved++; else added++;
         }
 
-        var removed = await DeleteViolationTypesAsync(deleteId);
-
-        StatusMessage = BuildGridMessage("مخالفة", added, saved, removed);
+        StatusMessage = BuildGridMessage("مخالفة", added, saved, 0);
         return RedirectToPage(new { tab = "library" });
-    }
-
-    /// <summary>
-    /// حذف المخالفات المؤشَّرة. مخالفةٌ سُجّلت عليها حالاتٌ **لا تُحذف**: حذفها
-    /// يقطع سند حالاتٍ قائمة وكتبٍ صدرت عنها.
-    /// </summary>
-    private async Task<int> DeleteViolationTypesAsync(int[]? ids)
-    {
-        if (ids is null || ids.Length == 0) return 0;
-
-        var blocked = false;
-        var removed = 0;
-
-        foreach (var id in ids.Where(x => x > 0).Distinct())
-        {
-            var cases = await HrmsDatabase.ScalarAsync<int>(
-                _dbContext,
-                """
-SELECT CASE WHEN OBJECT_ID('EmployeeViolationCases','U') IS NULL THEN 0
-       ELSE (SELECT COUNT(1) FROM EmployeeViolationCases WHERE ViolationTypeId = @Id) END;
-""",
-                command => HrmsDatabase.AddParameter(command, "@Id", id));
-
-            if (cases > 0)
-            {
-                blocked = true;
-                continue;
-            }
-
-            await HrmsDatabase.ExecuteAsync(
-                _dbContext,
-                "DELETE FROM DisciplinaryPenaltyRules WHERE ViolationTypeId = @Id; DELETE FROM DisciplinaryViolationTypes WHERE Id = @Id;",
-                command => HrmsDatabase.AddParameter(command, "@Id", id));
-            removed++;
-        }
-
-        if (blocked)
-        {
-            BlockedMessage = "تُركت بلا حذف مخالفاتٌ سُجّلت عليها حالات — حذفها يقطع سند حالاتٍ قائمة.";
-        }
-
-        return removed;
     }
 
     private static string BuildGridMessage(string noun, int added, int saved, int removed)
@@ -1146,6 +1152,19 @@ VALUES
             .ToList();
 
         TerminationReasons = await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.LoadTerminationReasonsAsync(_dbContext);
+
+        _casesByViolation = (await HrmsDatabase.QueryAsync(
+                _dbContext,
+                """
+SELECT ViolationTypeId, COUNT(1) AS Cases
+FROM EmployeeViolationCases
+WHERE ISNULL(IsDeleted, 0) = 0 AND ViolationTypeId IS NOT NULL
+GROUP BY ViolationTypeId;
+""",
+                command => { },
+                reader => (Id: HrmsDatabase.GetInt(reader, "ViolationTypeId"),
+                           Cases: HrmsDatabase.GetInt(reader, "Cases"))))
+            .ToDictionary(x => x.Id, x => x.Cases);
     }
 
     private async Task SeedDefaultLibraryAsync(bool onlyIfEmpty)

@@ -112,6 +112,11 @@
         var form = event.target;
         if (!form.matches || !form.matches('[data-zyw-grid]')) return;
 
+        // ⚠️ **زرّ الحذف يمرّ بلا ترشيح.** هو داخل نفس النموذج ويحمل `id` الصفّ
+        // بـ`name`/`value`؛ ولو عُطّل صفُّه لكونه غير متغيّر لسقط المعرّف معه
+        // فيصل للخادم أمرُ حذفٍ بلا هدف.
+        if (event.submitter && event.submitter.hasAttribute('data-zyw-delete')) return;
+
         var kept = 0;
 
         form.querySelectorAll('[data-zyw-rows] > tr').forEach(function (row) {
