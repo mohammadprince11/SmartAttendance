@@ -6,8 +6,10 @@
 :root {
     color-scheme: light;
 
-    --zy-midnight-navy: #081426;
-    --zy-deep-space: #101C30;
+    /* كحلي اللوحة الفاتحة #0D1B2A (لوحة الهوية v2، 2026-08-02) — كان #081426
+       وهو أميل للتيل؛ لوحة الشعار والعناوين أزرقُ أنقى. */
+    --zy-midnight-navy: #0D1B2A;
+    --zy-deep-space: #0F1A2E;
     /* Brand colours bridge to the Theme Contract (zynora-theme-contract.css);
        the engine overrides the brand and status tokens and these follow. */
     --zy-electric-teal: var(--brand-primary);
@@ -52,7 +54,7 @@
     --zy-topbar-height: 72px;
     --zy-content-max: 1760px;
 
-    --zy-bg: #EEF3F6;
+    --zy-bg: #F4F6F8;              /* خلفية اللوحة الفاتحة */
     --zy-bg-elevated: var(--zy-cloud-white);
     --zy-surface: #FFFFFF;
     --zy-surface-raised: #F3F6F8;
@@ -60,7 +62,7 @@
     --zy-input: #FFFFFF;
     --zy-text: var(--zy-midnight-navy);
     --zy-text-muted: #627386;
-    --zy-border: rgba(8, 20, 38, .11);
+    --zy-border: #E6EBF1;          /* حدّ اللوحة الفاتحة (كان rgba شفافاً) */
     --zy-border-strong: rgba(24, 199, 189, .40);
     --zy-focus-ring: 0 0 0 3px rgba(24, 199, 189, .20);
     --zy-table-row-alt: rgba(8, 20, 38, .018);

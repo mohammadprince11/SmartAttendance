@@ -48,15 +48,15 @@
                 "expanded"
             );
 
-            // الوضع المحفوظ (زر الشمس/الهلال بالشريط العلوي). الافتراضي **فاتح**
-            // بحسب Design System v1؛ ومن لم يختر شيئاً بعدُ يتبع تفضيل نظام جهازه.
+            // الوضع المحفوظ (زر الشمس/الهلال بالشريط العلوي). الافتراضي **داكن**
+            // بقرار محمد 2026-08-02 مع اعتماد لوحة الهوية v2 — اللوحة الداكنة هي
+            // الوجه الأول للمنتج. ولا نتبع تفضيل الجهاز هنا عمداً: مَن لم يختر
+            // يجب أن يرى هويةَ المنتج لا إعدادَ نظامه. اختيارُه يبقى محفوظاً.
             var zyTheme = null;
             try { zyTheme = localStorage.getItem("ZY.Theme"); } catch (e) { }
 
             if (zyTheme !== "light" && zyTheme !== "dark") {
-                var prefersDark = window.matchMedia &&
-                    window.matchMedia("(prefers-color-scheme: dark)").matches;
-                zyTheme = prefersDark ? "dark" : "light";
+                zyTheme = "dark";
             }
 
             document.documentElement.setAttribute("data-theme", zyTheme);
