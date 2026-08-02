@@ -438,3 +438,77 @@ html.zy-scrolling *:hover::after {
     /* اللمعان جزء من نفس تأثير الـhover، وإبقاؤه بلا الحركة يترك وميضاً مزعجاً */
     filter: none !important;
 }
+
+/* ================== بطاقة الإحصاء (KPI) — ضمّ عائلةٍ كاملة ==================
+   قِيست حيّاً على 24 صفحة (2026-08-02): **اثنتا عشرة عائلة** لنفس العنصر —
+   ارتفاعات 56 ← 104px، أرقام 18 ← 28px، انحناءات 12 ← 20px. أضخمها ضِعف
+   أصغرها، وكلّها تعرض سطرَ عنوان ورقماً واحداً. هذا ما رآه محمد «مبالغاً به».
+
+   الضمّ هنا لا بطبقةٍ جديدة — `zynora-tokens.css` هو السلطة الوحيدة للمقاسات،
+   وتوسيع تغطيته هو الحلّ المنصوص عليه بحوكمة التوكنز.
+
+   ⚠️ `!important` ضروريّ: كل عائلة تثبّت حشوتها بملف صفحتها، وبعضها بتخصصية
+   أعلى من صنفٍ واحد — لذلك تُكرَّر الأصناف حيث لزم. */
+.zhr-kpi-card.zhr-kpi-card,
+.zy-dash__kpi.zy-dash__kpi,
+.hrms-stat.hrms-stat,
+.nxr-doc-kpi.nxr-doc-kpi,
+.zxd-kpi.zxd-kpi,
+.tx-kpi.tx-kpi,
+.ln-kpi.ln-kpi,
+.mp-kpi.mp-kpi,
+.rv-kpi.rv-kpi,
+.apv-kpi.apv-kpi,
+.zua-stat.zua-stat,
+.zxd-stat.zxd-stat,
+.z360-kpi.z360-kpi,
+.zy-dash__kpi {
+    padding: var(--zy-kpi-pad-y, 8px) var(--zy-kpi-pad-x, 14px) !important;
+    border-radius: var(--zy-kpi-radius, 12px) !important;
+    min-height: 0 !important;
+    height: auto !important;
+}
+
+/* الرقم — هو ما يضخّم البطاقة فعلاً (كان يصل 28px داخل حشوة 20px).
+   ⚠️ **بالوسم لا بالصنف**: قِيس أن أغلب العائلات تكتب الرقم في `<b>`/`<strong>`
+   عارياً بلا صنف (`hrms-stat` · `zxd-kpi` · `apv-kpi` · `tx-kpi` · `zua-stat` …)،
+   فمحدِّدٌ بأصناف `*-value` وحدها يطابق ثلاثاً ويترك تسعاً — وهو ما حدث بأول
+   محاولة: الحشوة توحّدت والرقم بقي 18←28px. */
+.zhr-kpi-card b, .zhr-kpi-card strong, .zhr-kpi-value,
+.zy-dash__kpi b, .zy-dash__kpi strong, .zy-dash__kpi-value,
+.hrms-stat b, .hrms-stat strong,
+.nxr-doc-kpi b, .nxr-doc-kpi strong,
+.zxd-kpi b, .zxd-kpi strong,
+.zxd-stat b, .zxd-stat strong,
+.tx-kpi b, .tx-kpi strong,
+.ln-kpi b, .ln-kpi strong,
+.mp-kpi b, .mp-kpi strong,
+.rv-kpi b, .rv-kpi strong,
+.apv-kpi b, .apv-kpi strong,
+.zua-stat b, .zua-stat strong,
+.z360-kpi .z360-kpi-value,
+.zy-dash__kpi b, .zy-dash__kpi strong, .zy-dash__kpi-value {
+    font-size: var(--zy-kpi-value-font, 18px) !important;
+    line-height: 1.25 !important;
+}
+
+/* العنوان الصغير فوق الرقم */
+/* ⚠️ `zhr-kpi-title` لا `zhr-kpi-label` — رصده حارس
+   `DesignTokenConsumptionTests.EveryTargetedClass_ExistsInTheUi` عند أول تشغيل،
+   وهو بالضبط سبب وجوده: قاعدةٌ تستهدف صنفاً لا تُنتجه أي واجهة = قاعدة ميتة. */
+.zhr-kpi-title,
+.zy-dash__kpi-label,
+.hrms-stat span:not([class]),
+.nxr-doc-kpi span:not([class]),
+.zxd-kpi span:not([class]),
+.tx-kpi span:not([class]),
+.ln-kpi span:not([class]),
+.mp-kpi span:not([class]),
+.rv-kpi span:not([class]),
+.apv-kpi span:not([class]),
+.zua-stat span:not([class]),
+.z360-kpi .z360-kpi-label,
+.zy-dash__kpi-label {
+    font-size: var(--zy-kpi-label-font, 11px) !important;
+    line-height: 1.4 !important;
+}
