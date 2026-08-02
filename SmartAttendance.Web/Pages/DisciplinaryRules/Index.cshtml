@@ -198,33 +198,43 @@
                                         <option value="FinalWarning">إنذار بالفصل</option>
                                     </select>
                                 </div>
-                                <div class="zyw-field">
-                                    <label for="vt-valid">الصلاحية (شهر)</label>
-                                    <input id="vt-valid" name="validityMonths" type="number" min="1" value="6" />
-                                </div>
-                                <div class="zyw-field">
-                                    <label for="vt-period">فترة التكرار</label>
-                                    <select id="vt-period" name="countingPeriod">
-                                        <option value="Monthly" selected>شهرية</option>
-                                        <option value="SixMonths">خلال 6 أشهر</option>
-                                        <option value="Yearly">خلال سنة</option>
-                                        <option value="Contract">مدة العقد</option>
-                                    </select>
-                                </div>
                                 <div class="zyw-field zyw-field--wide">
                                     <label for="vt-name">اسم المخالفة</label>
                                     <input id="vt-name" name="name" required placeholder="الإهمال في المحافظة على أصول الشركة" />
                                 </div>
-                                <div class="zyw-field zyw-field--wide">
-                                    <label for="vt-desc">الوصف</label>
-                                    <input id="vt-desc" name="description" placeholder="استخدام معدات الزملاء دون إذن أو إتلافها" />
-                                </div>
-                                <div class="zyw-field zyw-field--wide zyw-checks">
-                                    <label><input type="checkbox" name="includeInEvaluation" value="true" checked /> تدخل بالتقييم</label>
-                                    <label><input type="checkbox" name="showToEmployee" value="true" checked /> تظهر للموظف</label>
-                                    <label><input type="checkbox" name="isActive" value="true" checked /> فعّالة</label>
-                                </div>
                             </div>
+
+                            @* ⚠️ **ثلاثة حقول ظاهرة لا تسعة.** كان النموذج يطلب تسعة دفعةً واحدة
+                               فيبدو إدخال مخالفةٍ واحدة مشروعاً. الباقي له افتراضات صالحة (صلاحية
+                               6 أشهر · تكرار شهريّ · تدخل بالتقييم وتظهر للموظف)، فمن يقبلها لا
+                               يفتح شيئاً، ومن يريد ضبطها يفتح سطراً واحداً. *@
+                            <details class="zyw-acc">
+                                <summary><span>⚙</span><strong>خيارات متقدّمة</strong><small>صلاحية · تكرار · ظهور</small></summary>
+                                <div class="zyw-form-grid">
+                                    <div class="zyw-field">
+                                        <label for="vt-valid">الصلاحية (شهر)</label>
+                                        <input id="vt-valid" name="validityMonths" type="number" min="1" value="6" />
+                                    </div>
+                                    <div class="zyw-field">
+                                        <label for="vt-period">فترة التكرار</label>
+                                        <select id="vt-period" name="countingPeriod">
+                                            <option value="Monthly" selected>شهرية</option>
+                                            <option value="SixMonths">خلال 6 أشهر</option>
+                                            <option value="Yearly">خلال سنة</option>
+                                            <option value="Contract">مدة العقد</option>
+                                        </select>
+                                    </div>
+                                    <div class="zyw-field zyw-field--wide">
+                                        <label for="vt-desc">الوصف</label>
+                                        <input id="vt-desc" name="description" placeholder="استخدام معدات الزملاء دون إذن أو إتلافها" />
+                                    </div>
+                                    <div class="zyw-field zyw-field--wide zyw-checks">
+                                        <label><input type="checkbox" name="includeInEvaluation" value="true" checked /> تدخل بالتقييم</label>
+                                        <label><input type="checkbox" name="showToEmployee" value="true" checked /> تظهر للموظف</label>
+                                        <label><input type="checkbox" name="isActive" value="true" checked /> فعّالة</label>
+                                    </div>
+                                </div>
+                            </details>
                             <div class="zyw-form-actions">
                                 <button type="submit" class="btn-primary">إضافة مخالفة</button>
                             </div>
@@ -291,6 +301,79 @@
                                             <button type="submit" class="btn-primary">حفظ</button>
                                         </div>
                                     </form>
+
+                                    @* ⚠️ **الجزاء يُضاف من داخل مخالفته.** كان بنموذجٍ مستقلّ يبدأ
+                                       باختيار الفئة ثم المخالفة — أي حقلان من أحد عشر لا يقولان شيئاً
+                                       جديداً، ومن يضيف جزاءً يكون واقفاً على مخالفته أصلاً. هنا
+                                       المخالفة **مضمرة** (حقل مخفيّ)، فيبقى السؤال الحقيقي: عند أي
+                                       تكرار، وما العقوبة، وكم أثرها. *@
+                                    @{
+                                        var violationRules = Model.PenaltyRules
+                                            .Where(r => r.ViolationTypeId == violation.Id)
+                                            .OrderBy(r => r.OccurrenceFrom)
+                                            .ToList();
+                                    }
+
+                                    <div class="zyw-queue-head">
+                                        <h2>سلّم جزاءاتها</h2>
+                                        <span class="zy-pill">@violationRules.Count</span>
+                                    </div>
+
+                                    @if (violationRules.Count == 0)
+                                    {
+                                        <p class="zyw-row-meta">لا جزاء بعد — بلا سلّم لا يترتّب على المخالفة شيء.</p>
+                                    }
+                                    else
+                                    {
+                                        <div class="zyw-list">
+                                            @foreach (var rule in violationRules)
+                                            {
+                                                <div class="zyw-item">
+                                                    <div class="zyw-item-main">
+                                                        <strong>@Model.DisplayOccurrenceRange(rule.OccurrenceFrom, rule.OccurrenceTo) · @rule.PenaltyAction</strong>
+                                                        <small>@Model.DisplayFinancialImpact(rule.FinancialImpactType, rule.FinancialValue)</small>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+
+                                    <form method="post" asp-page-handler="CreatePenaltyRule">
+                                        <input type="hidden" name="violationTypeId" value="@violation.Id" />
+                                        <div class="zyw-form-grid">
+                                            <div class="zyw-field">
+                                                <label>من تكرار</label>
+                                                <input name="occurrenceFrom" type="number" min="1" value="@(violationRules.Count + 1)" required />
+                                            </div>
+                                            <div class="zyw-field">
+                                                <label>إلى تكرار</label>
+                                                <input name="occurrenceTo" type="number" min="1" value="@(violationRules.Count + 1)" required />
+                                            </div>
+                                            <div class="zyw-field zyw-field--wide">
+                                                <label>العقوبة</label>
+                                                <input name="penaltyAction" required placeholder="خصم نصف يوم من الراتب" />
+                                            </div>
+                                            <div class="zyw-field">
+                                                <label>الأثر المالي</label>
+                                                <select name="financialImpactType">
+                                                    <option value="None">لا يوجد</option>
+                                                    <option value="Days" selected>أيام</option>
+                                                    <option value="Hours">ساعات</option>
+                                                    <option value="Amount">مبلغ ثابت</option>
+                                                </select>
+                                            </div>
+                                            <div class="zyw-field">
+                                                <label>القيمة</label>
+                                                <input name="financialValue" type="number" step="0.01" value="0.5" />
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="countingPeriod" value="@violation.CountingPeriod" />
+                                        <input type="hidden" name="validityMonths" value="@violation.ValidityMonths" />
+                                        <input type="hidden" name="calculationMode" value="Cumulative" />
+                                        <div class="zyw-form-actions">
+                                            <button type="submit" class="btn-secondary">أضف جزاءً لهذه المخالفة</button>
+                                        </div>
+                                    </form>
                                 </details>
                             }
                         </div>
@@ -306,82 +389,10 @@
                         ماذا يحدث بالتكرار الأول والثاني والثالث — ومن هنا يأتي الأثر المالي بالقسيمة.
                     </p>
 
-                    <form method="post" asp-page-handler="CreatePenaltyRule">
-                        <div class="zyw-form-grid">
-                            <div class="zyw-field">
-                                <label for="pr-cat">الفئة</label>
-                                <select id="pr-cat" name="categoryFilter" data-zyw-rule-category>
-                                    <option value="">كل الفئات</option>
-                                    @foreach (var category in Model.Categories.Where(x => x.IsActive))
-                                    {
-                                        <option value="@category.Id" selected="@(selectedCategory == category.Id)">@category.Name</option>
-                                    }
-                                </select>
-                            </div>
-                            <div class="zyw-field zyw-field--wide">
-                                <label for="pr-violation">المخالفة</label>
-                                <select id="pr-violation" name="violationTypeId" required data-zyw-rule-violation>
-                                    <option value="">اختر المخالفة</option>
-                                    @foreach (var violation in Model.ViolationTypes.Where(x => x.IsActive))
-                                    {
-                                        <option value="@violation.Id" data-category="@violation.CategoryId">@violation.CategoryName — @violation.Name</option>
-                                    }
-                                </select>
-                            </div>
-                            <div class="zyw-field">
-                                <label for="pr-from">من تكرار</label>
-                                <input id="pr-from" name="occurrenceFrom" type="number" min="1" value="1" required />
-                            </div>
-                            <div class="zyw-field">
-                                <label for="pr-to">إلى تكرار</label>
-                                <input id="pr-to" name="occurrenceTo" type="number" min="1" value="1" required />
-                            </div>
-                            <div class="zyw-field">
-                                <label for="pr-period">فترة الاحتساب</label>
-                                <select id="pr-period" name="countingPeriod">
-                                    <option value="Monthly" selected>شهرية</option>
-                                    <option value="SixMonths">خلال 6 أشهر</option>
-                                    <option value="Yearly">خلال سنة</option>
-                                    <option value="Contract">مدة العقد</option>
-                                </select>
-                            </div>
-                            <div class="zyw-field zyw-field--wide">
-                                <label for="pr-action">العقوبة</label>
-                                <input id="pr-action" name="penaltyAction" required placeholder="خصم نصف يوم من الراتب" />
-                            </div>
-                            <div class="zyw-field">
-                                <label for="pr-impact">الأثر المالي</label>
-                                <select id="pr-impact" name="financialImpactType">
-                                    <option value="None">لا يوجد</option>
-                                    <option value="Days" selected>أيام</option>
-                                    <option value="Hours">ساعات</option>
-                                    <option value="Amount">مبلغ ثابت</option>
-                                </select>
-                            </div>
-                            <div class="zyw-field">
-                                <label for="pr-value">قيمة الأثر</label>
-                                <input id="pr-value" name="financialValue" type="number" step="0.01" value="0.5" />
-                            </div>
-                            <div class="zyw-field">
-                                <label for="pr-valid">صلاحية الجزاء</label>
-                                <input id="pr-valid" name="validityMonths" type="number" min="1" value="6" />
-                            </div>
-                            <div class="zyw-field">
-                                <label for="pr-mode">طريقة الاحتساب</label>
-                                <select id="pr-mode" name="calculationMode">
-                                    <option value="Cumulative" selected>تراكمي</option>
-                                    <option value="ReplacePrevious">استبدال السابق</option>
-                                    <option value="DifferenceOnly">فرق فقط</option>
-                                </select>
-                            </div>
-                            <div class="zyw-field zyw-checks">
-                                <label><input type="checkbox" name="requiresApproval" value="true" /> اعتماد إضافي</label>
-                            </div>
-                        </div>
-                        <div class="zyw-form-actions">
-                            <button type="submit" class="btn-primary">إضافة جزاء</button>
-                        </div>
-                    </form>
+                    @* حُذف نموذج «إضافة جزاء» المستقلّ: كان يبدأ باختيار الفئة ثم المخالفة
+                       (حقلان من أحد عشر لا يضيفان معلومة) ويطلب أحد عشر حقلاً دفعةً واحدة.
+                       صار الجزاء يُضاف من داخل مخالفته أعلاه، والمخالفة مضمرة. وهذه
+                       البطاقة صارت **نظرةً شاملة**: ترى السلّم كلّه بمكانٍ واحد وتحرّره. *@
 
                     <div class="zyw-list">
                         @foreach (var rule in visibleRules)
