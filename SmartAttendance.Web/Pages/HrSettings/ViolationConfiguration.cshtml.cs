@@ -77,12 +77,19 @@ public class ViolationConfigurationModel : PageModel
         return RedirectToPage();
     }
 
-    /// <summary>رقم الفقرة لكل نوع مخالفة — سند العقوبة النظامي.</summary>
+    /// <summary>
+    /// رقم الفقرة لكل نوع مخالفة — سند العقوبة النظامي.
+    ///
+    /// ⚠️ يكتب `ArticleNo` **لا `RegulationClause`**. كان لنفس المعنى عمودان على
+    /// نفس الجدول: هذه الشاشة تكتب أحدهما، ولائحة المخالفات تكتب الآخر، و**كتاب
+    /// العقوبة يقرأ الثاني وحده**. فمن ملأ هنا ظنّ السند مثبّتاً ويخرج الكتاب
+    /// بفقرة «—». الشاشتان الآن على عمودٍ واحد.
+    /// </summary>
     public async Task<IActionResult> OnPostClauseAsync(int id, string? clause)
     {
         await HrmsDatabase.ExecuteAsync(
             _db,
-            "UPDATE DisciplinaryViolationTypes SET RegulationClause = @Clause WHERE Id = @Id;",
+            "UPDATE DisciplinaryViolationTypes SET ArticleNo = @Clause WHERE Id = @Id;",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Id", id);
@@ -136,7 +143,7 @@ ELSE
         ViolationTypes = (await HrmsDatabase.QueryAsync(
             _db,
             """
-SELECT Id, ISNULL(Name, N'') AS Name, RegulationClause
+SELECT Id, ISNULL(Name, N'') AS Name, ArticleNo
 FROM DisciplinaryViolationTypes
 ORDER BY Name
 OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;
@@ -149,7 +156,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;
             reader => (
                 HrmsDatabase.GetInt(reader, "Id"),
                 HrmsDatabase.GetString(reader, "Name"),
-                (string?)HrmsDatabase.GetString(reader, "RegulationClause")))).ToList();
+                (string?)HrmsDatabase.GetString(reader, "ArticleNo")))).ToList();
 
         // معاينة الأثر قبل الحفظ: التهيئة بلا رقمٍ يُظهر أثرها تخمينٌ لا قرار.
         var decisions = await HrmsDatabase.QueryAsync(

@@ -48,6 +48,12 @@ END;
 IF COL_LENGTH('DisciplinaryViolationTypes','ArticleNo') IS NULL
     ALTER TABLE DisciplinaryViolationTypes ADD ArticleNo nvarchar(40) NULL;
 
+-- توسيعٌ إلى ستّين محرفاً قبل دمج `RegulationClause` فيه: كان العمود القديم
+-- بستّين والجديد بأربعين، ودمجٌ بلا توسيع **يقصّ سند العقوبة** بصمت.
+-- (COL_LENGTH بالبايتات: nvarchar(40) = 80.)
+IF COL_LENGTH('DisciplinaryViolationTypes','ArticleNo') < 120
+    ALTER TABLE DisciplinaryViolationTypes ALTER COLUMN ArticleNo nvarchar(60) NULL;
+
 -- «معايير الاستحقاق» (نظير EligibilityCriteriaID بكيان): المخالفة نفسها قد لا
 -- تنطبق على كل الموظفين — «التأخر» لا معنى له لمن عقده «عن بعد»، و«الزيّ» لا
 -- يخصّ الإداريين. تُخزَّن كـJSON بنفس صيغة <see cref="HrConditions"/> المستعملة
@@ -265,6 +271,31 @@ BEGIN
 
     INSERT INTO DisciplinarySettings([Key], [Value], UpdatedAt)
     VALUES (N'PenaltyModelBackfilled', N'true', SYSUTCDATETIME());
+END;
+
+-- ⚠️ دمج «رقم الفقرة» المزدوج مرّةً واحدة.
+--
+-- كان لنفس المعنى عمودان على نفس الجدول: `ArticleNo` تحرّره لائحة المخالفات
+-- **وهو ما يستشهد به كتاب العقوبة**، و`RegulationClause` تحرّره شاشة تهيئة
+-- المخالفات **ولا يقرؤه أحد**. فمن ملأ الثانية ظنّ السند مثبّتاً، ويخرج الكتاب
+-- بفقرة «—».
+--
+-- ⚠️ **النقل يملأ ولا يدهس**: القيمة التي يستشهد بها الكتاب فعلاً هي الأصحّ عند
+-- التعارض، لا المهجورة.
+--
+-- والعمود القديم **يبقى ولا يُحذف**: إسقاط عمودٍ بقاعدةٍ مشتركة فعلٌ لا رجعة
+-- فيه ولا مكسب منه — يكفي أن يتوقّف كل شيء عن قراءته والكتابة فيه.
+IF NOT EXISTS (SELECT 1 FROM DisciplinarySettings WHERE [Key] = N'ArticleNoMerged')
+BEGIN
+    IF COL_LENGTH('DisciplinaryViolationTypes','RegulationClause') IS NOT NULL
+        EXEC sp_executesql N'
+UPDATE DisciplinaryViolationTypes
+SET ArticleNo = LTRIM(RTRIM(RegulationClause))
+WHERE ISNULL(LTRIM(RTRIM(ArticleNo)), N'''') = N''''
+  AND ISNULL(LTRIM(RTRIM(RegulationClause)), N'''') <> N'''';';
+
+    INSERT INTO DisciplinarySettings([Key], [Value], UpdatedAt)
+    VALUES (N'ArticleNoMerged', N'true', SYSUTCDATETIME());
 END;
 
 -- ⚠️ رفع قفل «فئة نظام» مرّةً واحدة.
