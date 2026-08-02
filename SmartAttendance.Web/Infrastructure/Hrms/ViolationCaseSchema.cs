@@ -41,6 +41,16 @@ BEGIN
     );
 END;
 
+-- اعتماد المخالفة: من اعتمدها ومتى.
+-- راية «تتطلّب موافقة اللجنة» بالتهيئة كانت تُحفظ **ولا تفعل شيئاً** — راية
+-- تَعِد بضبطٍ غير موجود أسوأ من غيابها. صارت تُنفَّذ ببوّابة على تحوّل الحالة،
+-- وهذان العمودان أثرُ الاعتماد: بلا تسجيل «من» يبقى القرار بلا مسؤول.
+IF COL_LENGTH('EmployeeViolationCases', 'ApprovedBy') IS NULL
+    ALTER TABLE EmployeeViolationCases ADD ApprovedBy nvarchar(200) NULL;
+
+IF COL_LENGTH('EmployeeViolationCases', 'ApprovedAt') IS NULL
+    ALTER TABLE EmployeeViolationCases ADD ApprovedAt datetime2 NULL;
+
 IF COL_LENGTH('EmployeeViolationCases', 'ViolationTypeId') IS NULL
     ALTER TABLE EmployeeViolationCases ADD ViolationTypeId int NULL;
 

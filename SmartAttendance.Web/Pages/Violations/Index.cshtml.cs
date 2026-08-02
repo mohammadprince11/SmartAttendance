@@ -157,6 +157,38 @@ ORDER BY c.EventDate DESC, c.Id DESC;
             "SELECT TOP 1 [Value] FROM DisciplinarySettings WHERE [Key] = @Key;",
             command => HrmsDatabase.AddParameter(command, "@Key", key)) ?? "0";
 
+    /// <summary>مخالفات محجوزة على اعتماد اللجنة — الوجه الظاهر لبوّابة الاعتماد.</summary>
+    public IReadOnlyList<ViolationCaseRow> AwaitingApproval =>
+        Items.Where(i => i.Status == "بانتظار الاعتماد").ToList();
+
+    /// <summary>
+    /// اعتماد المخالفة بعد قرار اللجنة.
+    ///
+    /// يسجّل **من** اعتمد ومتى: قرارٌ يرتّب خصماً على راتب موظف لا يصحّ أن يبقى
+    /// بلا صاحب. ولا يلمس المبالغ ولا العقوبة — يرفع الحالة فقط.
+    /// </summary>
+    public async Task<IActionResult> OnPostApproveAsync(int id)
+    {
+        await ViolationCaseSchema.EnsureAsync(_db);
+        await ExecuteAsync(
+            """
+UPDATE EmployeeViolationCases
+SET Status = N'موافق عليه',
+    ApprovedBy = @By,
+    ApprovedAt = SYSUTCDATETIME(),
+    UpdatedAt = SYSUTCDATETIME()
+WHERE Id = @Id AND ISNULL(IsDeleted, 0) = 0 AND Status = N'بانتظار الاعتماد';
+""",
+            command =>
+            {
+                Add(command, "@Id", id);
+                Add(command, "@By", User?.Identity?.Name ?? "—");
+            });
+
+        TempData["SuccessMessage"] = "اعتُمدت المخالفة، وسُجّل من اعتمدها وتاريخه.";
+        return RedirectToPage(new { Reply, Tab });
+    }
+
     /// <summary>طلب رد الموظف على المخالفة (حق الدفاع) — يظهر له ببوابته وإشعار.</summary>
     public async Task<IActionResult> OnPostRequestReplyAsync(int id)
     {
@@ -233,6 +265,27 @@ FROM EmployeeViolationCases v WHERE v.Id = @Id;
             return Page();
         }
 
+        // 🔒 بوّابة اعتماد اللجنة.
+        //
+        // راية «تتطلّب موافقة اللجنة» بالتهيئة كانت تُحفظ **ولا تفعل شيئاً**: يستطيع
+        // المسجِّل أن يعتمد المخالفة بنفسه لحظة إنشائها. وراية تَعِد بضبطٍ غير موجود
+        // أسوأ من غيابها — يطمئنّ إليها من يقرأ الإعدادات وهي لا تمنع شيئاً.
+        //
+        // فحين تكون مفعّلة **لا تُقفَل المخالفة بالإنشاء**: تُحجز على «بانتظار
+        // الاعتماد» مهما اختار المسجِّل، ولا تُعتمد إلا بإجراء منفصل يسجّل من اعتمد
+        // ومتى. البوّابة **تقيّد ولا تُحرّر**: أسوأ ما قد تفعله تأخير اعتمادٍ، لا
+        // إصدار عقوبةٍ بغير وجه.
+        var config = await DisciplinaryConfigStore.LoadSettingsAsync(_db);
+        var heldForCommittee = false;
+
+        if (config.RequiresCommitteeApproval
+            && (Input.Status == "موافق عليه" || Input.ActionStatus == "تم اتخاذ الإجراء"))
+        {
+            Input.Status = "بانتظار الاعتماد";
+            Input.ActionStatus = "بانتظار الإجراء";
+            heldForCommittee = true;
+        }
+
         var penaltyAction = string.IsNullOrWhiteSpace(Input.FinalPenaltyAction)
             ? selectedRule!.PenaltyAction
             : Input.FinalPenaltyAction.Trim();
@@ -270,7 +323,9 @@ VALUES
                 Add(command, "@Notes", string.IsNullOrWhiteSpace(Input.Notes) ? DBNull.Value : Input.Notes.Trim());
             });
 
-        TempData["SuccessMessage"] = $"تم تسجيل المخالفة بنجاح بالرقم المرجعي {referenceNo}.";
+        TempData["SuccessMessage"] = heldForCommittee
+            ? $"سُجّلت المخالفة {referenceNo} بحالة «بانتظار الاعتماد» — التهيئة تشترط موافقة اللجنة قبل نفاذها."
+            : $"تم تسجيل المخالفة بنجاح بالرقم المرجعي {referenceNo}.";
         return RedirectToPage();
     }
 

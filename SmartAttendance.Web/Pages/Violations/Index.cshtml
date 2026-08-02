@@ -15,7 +15,7 @@
 
     var awaitingAction = Model.Items.Where(i => i.ActionStatus == "بانتظار الإجراء").ToList();
     var awaitingReply = Model.Items.Where(i => i.EmployeeReplyStatus == "Pending").ToList();
-    var pendingWork = awaitingAction.Count + awaitingReply.Count;
+    var pendingWork = awaitingAction.Count + awaitingReply.Count + Model.AwaitingApproval.Count;
     var totalDeductions = Model.Items.Sum(i => i.DeductionAmount);
 }
 
@@ -85,6 +85,36 @@
         }
 
         <div class="zyw-queue">
+            @* بوّابة اعتماد اللجنة: مخالفات حُجزت بالإنشاء لأن التهيئة تشترط
+               الموافقة. تظهر أولاً لأنها الوحيدة التي **لا تنفذ** بلا قرار. *@
+            @if (Model.AwaitingApproval.Count > 0)
+            {
+                <article class="zy-card">
+                    <div class="zyw-queue-head">
+                        <h2>بانتظار اعتماد اللجنة</h2>
+                        <span class="zy-pill">@Model.AwaitingApproval.Count</span>
+                    </div>
+                    <p class="zyw-row-meta">التهيئة تشترط موافقة اللجنة — لا تنفذ هذه المخالفات قبل الاعتماد.</p>
+                    <div class="zyw-list">
+                        @foreach (var row in Model.AwaitingApproval.Take(8))
+                        {
+                            <div class="zyw-item">
+                                <div class="zyw-item-main">
+                                    <strong>@row.EmployeeName — @row.ViolationTitle</strong>
+                                    <small>@row.ReferenceNo · @row.EventDate.ToString("yyyy-MM-dd")</small>
+                                </div>
+                                <div class="zyw-item-actions">
+                                    <form method="post" asp-page-handler="Approve">
+                                        <input type="hidden" name="id" value="@row.Id" />
+                                        <button type="submit" class="btn-primary" data-zyconfirm="اعتماد المخالفة؟">اعتماد</button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </article>
+            }
+
             @if (awaitingAction.Count > 0)
             {
                 <article class="zy-card">
