@@ -409,7 +409,7 @@ WHERE Id = @Id;
         return RedirectToPage(new { tab = "library", categoryId = id });
     }
 
-    public async Task<IActionResult> OnPostCreateViolationTypeAsync(int categoryId, string name, string? description, string severity, int validityMonths, string countingPeriod)
+    public async Task<IActionResult> OnPostCreateViolationTypeAsync(int categoryId, string name, string? description, string severity, int validityMonths, string countingPeriod, string? articleNo = null)
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
         if (categoryId <= 0 || string.IsNullOrWhiteSpace(name))
@@ -421,18 +421,20 @@ WHERE Id = @Id;
         await HrmsDatabase.ExecuteAsync(_dbContext,
             """
 INSERT INTO DisciplinaryViolationTypes
-(CategoryId, Name, Description, Severity, ValidityMonths, CountingPeriod, IncludeInEvaluation, ShowToEmployee, IsActive, CreatedAt)
+(CategoryId, Name, Description, Severity, ValidityMonths, CountingPeriod, ArticleNo, IncludeInEvaluation, ShowToEmployee, IsActive, CreatedAt)
 VALUES
-(@CategoryId, @Name, @Description, @Severity, @ValidityMonths, @CountingPeriod, @IncludeInEvaluation, @ShowToEmployee, @IsActive, SYSUTCDATETIME());
+(@CategoryId, @Name, @Description, @Severity, @ValidityMonths, @CountingPeriod, @ArticleNo, @IncludeInEvaluation, @ShowToEmployee, @IsActive, SYSUTCDATETIME());
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@CategoryId", categoryId);
+                HrmsDatabase.AddParameter(command, "@ArticleNo", string.IsNullOrWhiteSpace(articleNo) ? (object)DBNull.Value : articleNo.Trim());
                 HrmsDatabase.AddParameter(command, "@Name", name.Trim());
                 HrmsDatabase.AddParameter(command, "@Description", description?.Trim() ?? string.Empty);
                 HrmsDatabase.AddParameter(command, "@Severity", NormalizeSeverity(severity));
                 HrmsDatabase.AddParameter(command, "@ValidityMonths", Math.Max(1, validityMonths));
                 HrmsDatabase.AddParameter(command, "@CountingPeriod", NormalizePeriod(countingPeriod));
+                HrmsDatabase.AddParameter(command, "@ArticleNo", string.IsNullOrWhiteSpace(articleNo) ? (object)DBNull.Value : articleNo.Trim());
                 HrmsDatabase.AddParameter(command, "@IncludeInEvaluation", Request.Form.ContainsKey("includeInEvaluation"));
                 HrmsDatabase.AddParameter(command, "@ShowToEmployee", Request.Form.ContainsKey("showToEmployee"));
                 HrmsDatabase.AddParameter(command, "@IsActive", Request.Form.ContainsKey("isActive"));
@@ -442,13 +444,14 @@ VALUES
         return RedirectToPage(new { tab = "library", categoryId });
     }
 
-    public async Task<IActionResult> OnPostUpdateViolationTypeAsync(int id, int categoryId, string name, string? description, string severity, int validityMonths, string countingPeriod)
+    public async Task<IActionResult> OnPostUpdateViolationTypeAsync(int id, int categoryId, string name, string? description, string severity, int validityMonths, string countingPeriod, string? articleNo = null)
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
         await HrmsDatabase.ExecuteAsync(_dbContext,
             """
 UPDATE DisciplinaryViolationTypes
 SET CategoryId = @CategoryId,
+    ArticleNo = @ArticleNo,
     Name = @Name,
     Description = @Description,
     Severity = @Severity,
@@ -934,6 +937,7 @@ ORDER BY c.DisplayOrder, c.Name;
         return await HrmsDatabase.QueryAsync(_dbContext,
             """
 SELECT t.Id, t.CategoryId, c.Name AS CategoryName, t.Name, ISNULL(t.Description, '') AS Description, t.Severity,
+       ISNULL(t.ArticleNo, '') AS ArticleNo,
        t.ValidityMonths, t.CountingPeriod, t.IncludeInEvaluation, t.ShowToEmployee, t.IsActive, t.CreatedAt,
        (SELECT COUNT(1) FROM DisciplinaryPenaltyRules r WHERE r.ViolationTypeId = t.Id) AS RulesCount
 FROM DisciplinaryViolationTypes t
@@ -949,6 +953,7 @@ ORDER BY c.DisplayOrder, t.Name;
                 Name = HrmsDatabase.GetString(reader, "Name"),
                 Description = HrmsDatabase.GetString(reader, "Description"),
                 Severity = HrmsDatabase.GetString(reader, "Severity"),
+                ArticleNo = HrmsDatabase.GetString(reader, "ArticleNo"),
                 ValidityMonths = HrmsDatabase.GetInt(reader, "ValidityMonths"),
                 CountingPeriod = HrmsDatabase.GetString(reader, "CountingPeriod"),
                 IncludeInEvaluation = HrmsDatabase.GetBool(reader, "IncludeInEvaluation"),
@@ -1196,6 +1201,9 @@ public sealed class ViolationCategory
 
 public sealed class ViolationType
 {
+    /// <summary>رقم الفقرة بلائحة الجزاءات (مثال 3/ب) — يستشهد به الكتاب الرسمي.</summary>
+    public string ArticleNo { get; set; } = string.Empty;
+
     public int Id { get; set; }
     public int CategoryId { get; set; }
     public string CategoryName { get; set; } = "";

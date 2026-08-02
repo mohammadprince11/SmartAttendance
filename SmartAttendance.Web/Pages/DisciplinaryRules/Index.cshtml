@@ -202,6 +202,12 @@
                                     <label for="vt-name">اسم المخالفة</label>
                                     <input id="vt-name" name="name" required placeholder="الإهمال في المحافظة على أصول الشركة" />
                                 </div>
+                                @* ظاهرٌ لا مطويّ: **سندٌ قانونيّ** لا خيار تجميلي. الكتاب الرسمي
+                                   يستشهد به، وعقوبةٌ بلا رقم فقرة عقوبةٌ بلا مرجع باللائحة. *@
+                                <div class="zyw-field">
+                                    <label for="vt-article">رقم الفقرة باللائحة</label>
+                                    <input id="vt-article" name="articleNo" placeholder="3/ب" />
+                                </div>
                             </div>
 
                             @* ⚠️ **ثلاثة حقول ظاهرة لا تسعة.** كان النموذج يطلب تسعة دفعةً واحدة
@@ -247,7 +253,7 @@
                                     <summary>
                                         <span>@Model.DisplaySeverityShort(violation.Severity)</span>
                                         <strong>@violation.Name</strong>
-                                        <small>@violation.CategoryName · @violation.RulesCount جزاء</small>
+                                        <small>@violation.CategoryName · @violation.RulesCount جزاء@(string.IsNullOrWhiteSpace(violation.ArticleNo) ? "" : " · فقرة " + violation.ArticleNo)</small>
                                     </summary>
                                     <form method="post" asp-page-handler="UpdateViolationType">
                                         <input type="hidden" name="id" value="@violation.Id" />
@@ -286,6 +292,10 @@
                                             <div class="zyw-field zyw-field--wide">
                                                 <label>الاسم</label>
                                                 <input name="name" value="@violation.Name" required />
+                                            </div>
+                                            <div class="zyw-field">
+                                                <label>رقم الفقرة</label>
+                                                <input name="articleNo" value="@violation.ArticleNo" placeholder="3/ب" />
                                             </div>
                                             <div class="zyw-field zyw-field--wide">
                                                 <label>الوصف</label>

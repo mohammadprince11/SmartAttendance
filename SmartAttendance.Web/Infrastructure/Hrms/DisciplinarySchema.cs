@@ -42,6 +42,12 @@ BEGIN
     );
 END;
 
+-- رقم الفقرة باللائحة (مثال: 3/ب). كيان يعرضه بقائمة المخالفات ويستشهد به
+-- الكتاب الرسمي، فبدونه تصدر العقوبة بلا سندٍ نصّيّ من لائحة الجزاءات.
+-- إضافة محضة: عمود nullable بلا مساس بصفٍّ قائم.
+IF COL_LENGTH('DisciplinaryViolationTypes','ArticleNo') IS NULL
+    ALTER TABLE DisciplinaryViolationTypes ADD ArticleNo nvarchar(40) NULL;
+
 IF OBJECT_ID('DisciplinaryPenaltyRules', 'U') IS NULL
 BEGIN
     CREATE TABLE DisciplinaryPenaltyRules
