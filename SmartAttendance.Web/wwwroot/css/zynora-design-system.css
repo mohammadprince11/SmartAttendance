@@ -14,8 +14,12 @@
     /* --- الهوية اللونية (فاتح = الافتراضي المعتمد) ---
        الأساسي يُجسَّر لمحرك الهوية (zynora-theme-contract) فيتلوّن مع علامة الشركة،
        والدرجات الناعمة تُشتق منه تلقائياً بـcolor-mix. */
-    --color-primary: var(--brand-primary, #0ea5b5);
-    --color-primary-hover: var(--brand-primary-hover, #0b7f95);
+    /* ⚠️ الاحتياطيّ سلايت-بلو لا تيل: بوابة الموظف **لا تحمّل**
+       `zynora-theme-contract.css`، فكانت `--brand-primary` غير معرّفة هناك
+       فتسقط القوقعتان على لونين مختلفين — الخلفية تيل بالبوابة وسلايت-بلو
+       بالـback-office. (رُصد بمسح الكلاندر 2026-08-02.) */
+    --color-primary: var(--brand-primary, #486C8F);
+    --color-primary-hover: var(--brand-primary-hover, #3A5A78);
     --color-primary-soft: color-mix(in srgb, var(--color-primary) 11%, var(--color-surface));
 
     /* تعميق مقصود للنسخة الحاملة للنص (تدقيق راحة العين 2026-07-31):
@@ -24,8 +28,8 @@
        - --color-primary          يبقى للمساحات الكبيرة (أعمدة الرسوم، الأشرطة، الحدود).
        - --color-primary-strong   خلفية أي عنصر يحمل نصاً (الأزرار) ⟹ أبيض فوقه 5.58:1.
        - --color-primary-text     نص/أيقونة بالتيل فوق سطح فاتح ⟹ 5.58:1 بدل 2.97:1. */
-    --color-primary-strong: var(--brand-primary-strong, #0a7286);
-    --color-primary-text: var(--brand-primary-text, #0a7286);
+    --color-primary-strong: var(--brand-primary-strong, #486C8F);
+    --color-primary-text: var(--brand-primary-text, #486C8F);
     --color-on-primary: #ffffff;
 
     --color-secondary: #6366f1;          /* نيلي هادئ للتمييز الثانوي */
@@ -321,7 +325,14 @@ html[data-theme="light"] .zy-theme-btn .zy-tt-moon { display: block; }
     line-height: normal !important;
     background-image: none;
 }
-.zy-app input.nxcal-native.nxcal-native.nxcal-native, .zy-app select.nxcs-native.nxcs-native.nxcs-native {
+/* ⚠️ بلا نطاق: كانت هذه بسابقة `.zy-app` الميتة (موجودة بصفحتين فقط)، فالحقل
+   الأصليّ الذي «تبتلعه» الودجت **لم يكن مخفيّاً**: `zynora-components` يفرض
+   `min-height:40px` على حقول `.zy-scope`، و`min-height` يغلب `height:1px` الذي
+   يضعه `nexora-calendar-v18` بنفس التخصصية، فيبقى الحقل يحجز 40px من التخطيط
+   بجانب الودجت المرئيّة. قيس حيّاً على `/ShiftTypes` وغيرها 2026-08-02.
+   تكرار الصنف ثلاثاً يرفع التخصصية فوق `.zy-scope input[type="date"]`. */
+input.nxcal-native.nxcal-native.nxcal-native,
+select.nxcs-native.nxcs-native.nxcs-native {
     height: 1px !important; min-height: 1px !important; max-height: 1px !important;
     padding: 0 !important; border: 0 !important;
 }
@@ -483,36 +494,37 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
     font-size: var(--fs-body) !important;
 }
 
-/* ============ زناد الكلاندر: كثافة الهوية + احترام الوضع الفاتح ============
-   .nxcal__button القديم مقفول بـ44px وتدرّج داكن ثابت ونص فاتح — نعيده لقياس
-   الحقول الموحد ولألوان التوكنز (بالوضعين) داخل نطاق الهوية. */
-.zy-app .nxcal__button {
-    min-height: var(--control-h) !important;
-    height: var(--control-h) !important;
-    padding: 0 10px !important;
-    border-radius: var(--radius) !important;
+/* ============ زناد الكلاندر: لون التوكنز بالوضعين (لا نطاق ولا مقاس) ========
+   `nexora-calendar-v18.css` يقفل الزناد على تدرّجٍ كحليّ داكن وحدٍّ تيل ونصٍّ
+   شبه أبيض — بالوضعين. فبالوضع الفاتح يظهر كل حقل تاريخ **شريطاً كحلياً صلباً**
+   وسط حقولٍ بيضاء، ونصّه داكنٌ على داكن.
+
+   ⚠️ **العلّة كانت النطاق لا القواعد**: هذا الطقم كان مكتوباً أصلاً لكن بسابقة
+   `.zy-app`، و`zy-app` **لا وجود له بأي صفحة حقيقية** — فقط `/DesignLab`
+   و`/DesignPreview`. أي أنّ الإصلاح كان يعمل بالمختبر وحده. (قيس حيّاً على 31
+   صفحة: 46 زناداً كلها `GRAD` + `rgba(25,211,224,.32)` بالوضعين.)
+   وهو نفس نمط «العطل الصامت» بمذكّرة حوكمة التوكنز.
+
+   🔑 **لون فقط — لا مقاس**: الارتفاع والاستدارة وحجم الخطّ يملكها
+   `zynora-tokens.css` (`--zy-calendar-*`). لو أعدناها هنا لتنافست طبقتان على
+   نفس القياس. التخصصية `.nxcal .nxcal__button` = (0,2,0) تكفي لغلبة v18. */
+.nxcal .nxcal__button {
     border: 1px solid var(--color-border-strong) !important;
     background: var(--color-surface) !important;
     color: var(--color-text-primary) !important;
     box-shadow: none !important;
-    font-size: var(--fs-body) !important;
-    font-weight: 700 !important;
-    grid-template-columns: 22px minmax(0, 1fr) 22px !important;
 }
-.zy-app .nxcal__button:hover, .zy-app .nxcal.is-open .nxcal__button, .zy-app .nxcal__button:focus-visible {
+.nxcal .nxcal__button:hover, .nxcal.is-open .nxcal__button, .nxcal .nxcal__button:focus-visible {
     border-color: var(--color-primary) !important;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent) !important;
 }
-/* نص القيمة داخل الزناد مقفول على أبيض (#F2FBFD) بالملف القديم — يختفي على
-   الخلفية البيضاء بالوضع الفاتح. نربطه بلون النص من التوكنز. */
-.zy-app .nxcal__value, .zy-app .nxcal__button .nxcal__value {
-    color: var(--color-text-primary) !important;
-}
+/* نص القيمة مقفول على أبيض (#F2FBFD) بالملف القديم — يختفي على الخلفية البيضاء. */
+.nxcal .nxcal__value { color: var(--color-text-primary) !important; }
 /* حالة «لا قيمة بعد» (yyyy-mm-dd) تبقى باهتة لكن مقروءة */
-.zy-app .nxcal__value:empty, .zy-app .nxcal.is-empty .nxcal__value,
-.zy-app .nxcal__value[data-placeholder="true"] { color: var(--color-text-secondary) !important; }
-.zy-app .nxcal__icon {
-    color: var(--color-primary) !important;
+.nxcal .nxcal__value:empty, .nxcal.is-empty .nxcal__value,
+.nxcal .nxcal__value[data-placeholder="true"] { color: var(--color-text-secondary) !important; }
+.nxcal .nxcal__icon {
+    color: var(--color-primary-text) !important;
     background: var(--color-primary-soft) !important;
     border-color: color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
 }
@@ -534,42 +546,80 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
 /* إغلاق فجوة عمود السايدبار (الجريد 288 والملف القديم يفرض 252) */
 .nexora-sidebar { width: 100% !important; max-width: 100% !important; }
 
-/* ==================== ثيم فاتح لبوب-أب الكلاندر القديم =====================
-   nexora-calendar-v18 مبني بألوان داكنة ثابتة بلا أي دعم للفاتح — نكسوه هنا
-   (عالمي: يصلح كل الصفحات لحظة تفعيل الوضع الفاتح). */
-html[data-theme="light"] .nxcal__panel {
-    background: #ffffff !important;
+/* ================= لوحة الكلاندر: طقم واحد للوضعين =========================
+   كان هنا طقمٌ مشروطٌ بـ`html[data-theme="light"]` فقط، فبالوضع الداكن تبقى
+   اللوحة على تيل `nexora-calendar-v18` القديم (`rgba(25,211,224,…)`) وذهبه
+   المثبّت (`#F6D98D`) — أي **لوحتان بهويّتين** حسب الوضع، وكلتاهما تتجاهلان
+   سلايت-بلو. الآن قاعدةٌ واحدة بالتوكنز تخدم الوضعين، فيتطابق الكلاندر مع
+   نفسه ومع بقية النظام أيّاً كان الوضع أو لون الشركة بمحرّك الهوية.
+
+   لماذا `.nxcal .nxcal__X`: v18 يكتب كلّ شيء بـ`!important` على صنفٍ واحد،
+   فرفع التخصصية درجةً واحدة (0,2,0) يكفي — بلا `html[...]` ولا تكرار أصناف. */
+.nxcal .nxcal__panel {
+    background: var(--color-surface) !important;
     border: 1px solid var(--color-border) !important;
     box-shadow: var(--shadow-pop) !important;
     color: var(--color-text-primary) !important;
+    --nxcal-scrollbar-track: color-mix(in srgb, var(--color-text-secondary) 10%, transparent);
+    --nxcal-scrollbar-thumb: color-mix(in srgb, var(--color-primary) 62%, transparent);
+    --nxcal-scrollbar-thumb-hover: var(--color-primary);
 }
-html[data-theme="light"] .nxcal__weekday { color: var(--color-text-secondary) !important; }
-/* خلايا الأيام بالوضع الفاتح: القديم يعطيها خلفية بيضاء شفافة ونصاً فاتحاً */
-html[data-theme="light"] .nxcal__day {
+.nxcal .nxcal__weekday { color: var(--color-text-secondary) !important; }
+.nxcal .nxcal__head, .nxcal .nxcal__foot { border-color: var(--color-border) !important; }
+
+/* الأيام والخيارات وأزرار التنقّل: سطحٌ شفّاف وحدٌّ من التوكنز بالوضعين */
+.nxcal .nxcal__day,
+.nxcal .nxcal__choice,
+.nxcal .nxcal__nav,
+.nxcal .nxcal__range-nav,
+.nxcal .nxcal__action,
+.nxcal .nxcal__period-button {
     background: transparent !important;
+    color: var(--color-text-primary) !important;
     border-color: var(--color-border) !important;
+    box-shadow: none !important;
+}
+.nxcal .nxcal__day:hover,
+.nxcal .nxcal__choice:hover,
+.nxcal .nxcal__nav:hover,
+.nxcal .nxcal__range-nav:hover,
+.nxcal .nxcal__action:hover,
+.nxcal .nxcal__period-button:hover,
+.nxcal .nxcal__period-button:focus-visible,
+.nxcal .nxcal__period-button[aria-expanded="true"] {
+    background: var(--color-primary-soft) !important;
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent) !important;
     color: var(--color-text-primary) !important;
 }
-html[data-theme="light"] .nxcal__day,
-html[data-theme="light"] .nxcal__choice,
-html[data-theme="light"] .nxcal__nav,
-html[data-theme="light"] .nxcal__action,
-html[data-theme="light"] .nxcal__chooser-title,
-html[data-theme="light"] .nxcal__year-range-label {
-    background: transparent !important;
+.nxcal .nxcal__day[aria-disabled="true"],
+.nxcal .nxcal__day.is-outside,
+.nxcal .nxcal__day:disabled { color: var(--color-border-strong) !important; }
+
+/* اليوم/الخيار المختار: لون الهوية صلباً بنصّ التوكن المقابل — بدل تدرّج
+   `var(--color-primary) → #7CF4FF` المثبّت بv18 (نصفه هوية ونصفه سماويّ قديم). */
+.nxcal .nxcal__day.is-selected,
+.nxcal .nxcal__choice.is-selected {
+    background: var(--color-primary-strong) !important;
+    background-image: none !important;
+    color: var(--color-on-primary) !important;
+    border-color: var(--color-primary-strong) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent) !important;
+}
+
+/* الذهبيّ توقيعُ اللوحة (docs/design-system-v2-brandboard.md) — يبقى **علامةً**
+   لا نصَّ متن: «اليوم» وإطارا عنوان المنتقي ومدى السنوات. نصُّ زرّ السنة يتبع
+   لون النصّ لا الذهب، لأن #F2C560 على أبيض ≈ 1.9:1 — غير مقروء بالوضع الفاتح. */
+.nxcal .nxcal__day.is-today:not(.is-selected) {
+    color: var(--brand-accent, #F2C560) !important;
+    border-color: color-mix(in srgb, var(--brand-accent, #F2C560) 55%, transparent) !important;
+}
+.nxcal .nxcal__chooser-title,
+.nxcal .nxcal__year-range-label {
+    background: color-mix(in srgb, var(--brand-accent, #F2C560) 10%, transparent) !important;
+    border-color: color-mix(in srgb, var(--brand-accent, #F2C560) 32%, transparent) !important;
     color: var(--color-text-primary) !important;
-    border-color: var(--color-border) !important;
 }
-html[data-theme="light"] .nxcal__day:hover,
-html[data-theme="light"] .nxcal__choice:hover,
-html[data-theme="light"] .nxcal__nav:hover { background: var(--color-primary-soft) !important; }
-html[data-theme="light"] .nxcal__day[aria-disabled="true"],
-html[data-theme="light"] .nxcal__day.is-outside,
-html[data-theme="light"] .nxcal__day:disabled { color: var(--color-border-strong) !important; }
-html[data-theme="light"] .nxcal__head, html[data-theme="light"] .nxcal__foot {
-    background: var(--color-background) !important; border-color: var(--color-border) !important;
-}
-/* أزرار الشهر/السنة التيل تبقى تيل — نصها أبيض مقروء بالحالتين */
+.nxcal .nxcal__year-button { color: var(--color-text-primary) !important; }
 
 /* ==================== تكثيف خيارات الدروب ليست (عالمي) =====================
    لوحة الخيارات كبيرة بكل النظام — القياس المضغوط يشمل القديم والجديد. */
