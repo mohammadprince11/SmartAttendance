@@ -86,3 +86,56 @@
     .zyep-row { grid-template-columns: 90px 1fr; }
     .zyep-row span:nth-child(3), .zyep-row span:nth-child(4) { display: none; }
 }
+
+/* ===================== المنتقي المتعدّد (شرائح) =========================
+   الألوان من التوكنز لا مثبّتة: هذا المكوّن يظهر بالوضعين، وأي قيمة صمّاء هنا
+   تجعله يخالف بقية الحقول بأحدهما (نفس درس توحيد الكلاندر 2026-08-02). */
+.zyepm { display: grid; gap: 6px; }
+
+.zyepm-box { display: grid; gap: 8px; padding: 8px;
+    border: 1px solid var(--color-border, rgba(148, 163, 184, .28));
+    border-radius: var(--radius, 12px);
+    background: var(--color-surface, rgba(6, 16, 29, .35)); }
+
+.zyepm-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.zyepm-chips:empty { display: none; }
+
+.zyepm-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 6px 3px 3px;
+    border: 1px solid color-mix(in srgb, var(--color-primary, #486C8F) 32%, transparent);
+    border-radius: 999px;
+    background: var(--color-primary-soft, rgba(72, 108, 143, .12));
+    font-size: 12px; line-height: 1.6; }
+.zyepm-chip-code { font-variant-numeric: tabular-nums; font-weight: 700;
+    color: var(--color-primary-text, #486C8F); }
+.zyepm-chip-name { color: var(--color-text-primary, #e6f0fa); }
+.zyepm-remove { width: 18px; height: 18px; display: grid; place-items: center; padding: 0;
+    border: 0; border-radius: 999px; background: transparent; cursor: pointer;
+    font-size: 14px; line-height: 1; color: var(--color-text-secondary, #9fb3c7); }
+.zyepm-remove:hover { background: var(--color-danger-soft, rgba(217, 79, 92, .14));
+    color: var(--color-danger, #d94f5c); }
+
+.zyepm-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.zyepm-add { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px;
+    height: var(--control-h, 30px);
+    border: 1px solid var(--color-border-strong, rgba(148, 163, 184, .4));
+    border-radius: var(--radius, 12px);
+    background: transparent; color: var(--color-text-primary, #e6f0fa);
+    font-family: inherit; font-size: var(--fs-body, 12.5px); font-weight: 600; cursor: pointer; }
+.zyepm-add svg { width: 14px; height: 14px; }
+.zyepm-add:hover { border-color: var(--color-primary, #486C8F);
+    background: var(--color-primary-soft, rgba(72, 108, 143, .12)); }
+.zyepm-count { font-size: 12px; color: var(--color-text-secondary, #9fb3c7); }
+
+/* تذييل النافذة — يظهر بوضع التعدّد وحده */
+.zyep-foot { display: none; padding-top: 10px; justify-content: flex-start; }
+.zyep-backdrop.is-multi .zyep-foot { display: flex; }
+.zyep-done { padding: 0 18px; height: var(--control-h, 30px);
+    border: 1px solid var(--color-primary-strong, #486C8F); border-radius: var(--radius, 12px);
+    background: var(--color-primary-strong, #486C8F); color: var(--color-on-primary, #fff);
+    font-family: inherit; font-size: var(--fs-body, 12.5px); font-weight: 700; cursor: pointer; }
+.zyep-done:hover { filter: brightness(1.07); }
+
+/* الصفّ المختار بوضع التعدّد — بلا هذا يختار المستخدم مرّتين ولا يدري */
+.zyep-row.is-picked { background: var(--color-primary-soft, rgba(72, 108, 143, .16)); }
+.zyep-row.is-picked span:nth-child(2)::after { content: " ✓";
+    color: var(--color-primary-text, #486C8F); font-weight: 800; }

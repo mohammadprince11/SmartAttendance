@@ -195,21 +195,13 @@ ORDER BY f.CreatedAt DESC, f.Id DESC;
 
     protected async Task LoadAudienceOptionsAsync()
     {
-        Employees = await HrmsDatabase.QueryAsync(
-            DbContext,
-            """
-SELECT TOP 500 Id, EmployeeNo, FullName
-FROM Employees
-WHERE IsActive = 1
-ORDER BY FullName;
-""",
-            null,
-            reader => new EmployeeOption
-            {
-                Id = HrmsDatabase.GetInt(reader, "Id"),
-                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
-                FullName = HrmsDatabase.GetString(reader, "FullName")
-            });
+        // ⛔ لم تعد تُحمَّل قائمة الموظفين هنا. كانت `SELECT TOP 500 … ORDER BY
+        //    FullName` تغذّي `<select multiple>` — وعندنا 1357 موظفاً نشطاً، أي
+        //    أن **857 موظفاً لم يكونوا قابلين للاستهداف أصلاً** ولا إشارة اقتطاع.
+        //    محلّها `_EmployeePickerMulti` ببحثٍ خادميّ بلا سقفٍ صامت.
+        //    (الخاصية باقية لأن `Announcements.cshtml`/`Polls.cshtml` تشيران إليها،
+        //     وهما صفحتا معالِجات لا واجهة — `OnGet` فيهما يعيد التوجيه هنا.)
+        Employees = new List<EmployeeOption>();
 
         Departments = await HrmsDatabase.QueryAsync(
             DbContext,

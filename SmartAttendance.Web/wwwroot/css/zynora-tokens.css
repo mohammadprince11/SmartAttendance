@@ -29,7 +29,7 @@
    الاستثناء يفرض عليه مقاسُ **الزرّ** بينما غلافه يأخذ مقاس **الكلاندر**،
    فيطفح الزرّ خارج غلافه (قيس 42px داخل غلاف 31px) ويبدو الحقل أطول 12px من
    جيرانه بالصفّ ويكسر خطّه. ارتفاعُه يجب أن يتبع ودجته لا الأزرار. */
-.zy-scope.zy-scope button:not(.zyep-open):not(.zyep-close):not(.nxcs-native):not([class*="icon"]):not([class*="nxcal"]):not([class*="nxcs"]),
+.zy-scope.zy-scope button:not(.zyep-open):not(.zyep-close):not(.zyepm-remove):not(.nxcs-native):not([class*="icon"]):not([class*="nxcal"]):not([class*="nxcs"]),
 .zy-scope.zy-scope [class*="btn"]:not([class*="icon"]):not(.zyep-open):not(.zyep-close):not([class*="nxcal"]):not([class*="nxcs"]),
 .zy-scope.zy-scope input[type="submit"],
 .zy-scope.zy-scope input[type="button"] {

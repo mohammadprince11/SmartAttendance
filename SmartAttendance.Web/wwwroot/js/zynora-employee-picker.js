@@ -65,16 +65,25 @@
         var count = el('div', 'zyep-count', '');
         var list = el('div', 'zyep-list');
 
+        // تذييل التعدّد: يظهر بوضع `multi` فقط. بلا زرّ إغلاق صريح تصير النافذة
+        // بلا مخرجٍ مفهوم — فالنقر لم يعد يُغلقها كما بالمفرد.
+        var foot = el('div', 'zyep-foot');
+        var done = el('button', 'zyep-done', 'تمّ');
+        done.type = 'button';
+        foot.appendChild(done);
+
         box.appendChild(head);
         box.appendChild(search);
         box.appendChild(count);
         box.appendChild(list);
+        box.appendChild(foot);
         back.appendChild(box);
         document.body.appendChild(back);
 
-        modal = { back: back, search: search, count: count, list: list, target: null };
+        modal = { back: back, search: search, count: count, list: list, foot: foot, target: null, mode: 'single' };
 
         function hide() { back.classList.remove('open'); modal.target = null; }
+        done.addEventListener('click', hide);
         close.addEventListener('click', hide);
         back.addEventListener('click', function (e) { if (e.target === back) hide(); });
         document.addEventListener('keydown', function (e) {
@@ -110,10 +119,24 @@
                     [emp.code, emp.name, emp.unit || '—', emp.hierarchy || '—'].forEach(function (v) {
                         row.appendChild(el('span', null, v));
                     });
-                    row.addEventListener('click', function () {
-                        if (modal.target) apply(modal.target, emp);
-                        hide();
-                    });
+
+                    if (modal.mode === 'multi') {
+                        // المختار سلفاً يظهر معلَّماً — وإلا أعاد المستخدم اختيار
+                        // من اختاره ولا يدري، ثم بحث عن سبب عدم تكرار الشريحة.
+                        if (modal.target && hasChip(modal.target, emp.id)) row.classList.add('is-picked');
+
+                        row.addEventListener('click', function () {
+                            if (!modal.target) return;
+                            var on = toggleChip(modal.target, emp);
+                            row.classList.toggle('is-picked', on);
+                        });
+                    } else {
+                        row.addEventListener('click', function () {
+                            if (modal.target) apply(modal.target, emp);
+                            hide();
+                        });
+                    }
+
                     list.appendChild(row);
                 });
             });
@@ -129,9 +152,66 @@
         return modal;
     }
 
-    function open(root) {
+    // ---- التعدّد: شرائح + حقل مخفيّ لكلٍّ منها ----
+    // الحقول المخفيّة تحمل **نفس الاسم** مكرّراً، فالربط بـint[] بالخادم يبقى
+    // كما كان مع `<select multiple>` — لا تتغيّر جهة الخادم إطلاقاً.
+
+    function chipsBox(root) { return root.querySelector('[data-zyepm-chips]'); }
+
+    function hasChip(root, id) {
+        return !!chipsBox(root).querySelector('[data-zyepm-chip][data-id="' + id + '"]');
+    }
+
+    function syncCount(root) {
+        var n = chipsBox(root).querySelectorAll('[data-zyepm-chip]').length;
+        var c = root.querySelector('[data-zyepm-count]');
+        if (c) c.textContent = 'المحدَّدون: ' + n;
+        root.dispatchEvent(new CustomEvent('zyepm:change', { detail: { count: n }, bubbles: true }));
+    }
+
+    function removeChip(root, id) {
+        var chip = chipsBox(root).querySelector('[data-zyepm-chip][data-id="' + id + '"]');
+        if (chip) chip.remove();
+        syncCount(root);
+    }
+
+    function addChip(root, emp) {
+        var name = root.getAttribute('data-zyep-name') || 'employeeIds';
+        var chip = el('span', 'zyepm-chip');
+        chip.setAttribute('data-zyepm-chip', '');
+        chip.setAttribute('data-id', emp.id);
+        chip.appendChild(el('span', 'zyepm-chip-code', emp.code));
+        chip.appendChild(el('span', 'zyepm-chip-name', emp.name));
+
+        var x = el('button', 'zyepm-remove', '×');
+        x.type = 'button';
+        x.title = 'إزالة';
+        x.setAttribute('aria-label', 'إزالة');
+        x.addEventListener('click', function () { removeChip(root, emp.id); });
+        chip.appendChild(x);
+
+        var hidden = el('input');
+        hidden.type = 'hidden';
+        hidden.name = name;
+        hidden.value = emp.id;
+        chip.appendChild(hidden);
+
+        chipsBox(root).appendChild(chip);
+        syncCount(root);
+    }
+
+    /// يبدّل الاختيار ويرجع true إذا صار مختاراً.
+    function toggleChip(root, emp) {
+        if (hasChip(root, emp.id)) { removeChip(root, emp.id); return false; }
+        addChip(root, emp);
+        return true;
+    }
+
+    function open(root, mode) {
         var m = ensureModal();
         m.target = root;
+        m.mode = mode || 'single';
+        m.back.classList.toggle('is-multi', m.mode === 'multi');
         m.search.value = '';
         m.back.classList.add('open');
         m.run();
@@ -169,6 +249,26 @@
                     });
                 }, 350);
             });
+        });
+
+        // المنتقي المتعدّد
+        (scope || document).querySelectorAll('[data-zyep-multi]').forEach(function (root) {
+            if (root.__zyepm) return;
+            root.__zyepm = true;
+
+            var add = root.querySelector('[data-zyepm-add]');
+            if (add) add.addEventListener('click', function () { open(root, 'multi'); });
+
+            // الشرائح المرسومة من الخادم تحتاج ربط زرّ الحذف (المضافة بالـJS
+            // تُربَط عند إنشائها).
+            root.querySelectorAll('[data-zyepm-chip]').forEach(function (chip) {
+                var x = chip.querySelector('.zyepm-remove');
+                if (x) x.addEventListener('click', function () {
+                    removeChip(root, chip.getAttribute('data-id'));
+                });
+            });
+
+            syncCount(root);
         });
     }
 
