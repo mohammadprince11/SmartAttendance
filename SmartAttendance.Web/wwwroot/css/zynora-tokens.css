@@ -38,6 +38,12 @@
     border-radius: var(--zy-button-radius, 12px) !important;
     font-size: var(--zy-button-font, 14px) !important;
     font-weight: var(--zy-button-weight, 600) !important;
+    /* ⚠️ تصفير الحشوة الرأسية **شرطٌ لعمل المقياس**: `min-height` أرضيّةٌ لا
+       تُقلّص الأطول، وأغلب الأزرار ترسم ارتفاعها بحشوتها هي. فبدونه بقيت 196
+       زراً خارج القياس رغم حكم التوكن — أكبرها `zhr-btn` (padding:10px 20px
+       ⟹ 42px) بـ150 زراً على صفحتين. رُصد بمسحٍ حيّ لـ81 صفحة و1477 زراً.
+       نفس علّة التبويبات المعالَجة أدناه. الحشوة الأفقية تبقى بالتوكن. */
+    padding-block: 0 !important;
 }
 
 /* الأزرار المبنيّة على `<a>` عناصرُ `inline`، و`min-height` **لا أثر له على
