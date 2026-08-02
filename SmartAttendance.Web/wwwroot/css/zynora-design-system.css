@@ -85,15 +85,22 @@
 
 /* الداكن «الهادئ»: غرافيت محايد بتباين مخفف وألوان مطفأة (قرار محمد 2026-07-28) */
 html[data-theme="dark"] {
-    --color-primary: var(--brand-primary, #35aebb);
-    --color-primary-hover: var(--brand-primary-hover, #2a8b96);
+    --color-primary-hover: color-mix(in srgb, var(--brand-primary, #486C8F) 75%, #ffffff);
     --color-primary-soft: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
 
     /* بالداكن العلاج معكوس: تعتيم الزر يذيبه بالخلفية، فنُبقيه فاتحاً ونضع نصاً
-       داكناً فوقه — أبيض على #35aebb = 2.65:1 بينما #08303a عليه = 5.30:1. */
-    --color-primary-strong: var(--brand-primary, #35aebb);
-    --color-primary-text: var(--brand-primary-text-dark, #35aebb);   /* كنص على الغرافيت: 6.05:1 */
-    --color-on-primary: #08303a;
+       داكناً فوقه.
+
+       ومع سلايت-بلو (#486C8F) صار هذا **إلزامياً لا تحسيناً**: اللون الخام يعطي
+       3.44:1 فقط على خلفية التطبيق #0B1020 — أزرقٌ على كحليّ — فيغرق العنصر
+       النشط وخطوط المخططات. والاشتقاق بـcolor-mix لا بقيمةٍ ثابتة **عمداً**:
+       محرّك الهوية يغيّر `--brand-primary` وحده، فلو ثبّتنا درجةً فاتحة هنا
+       لبقيت زرقاء يوم تختار شركةٌ أحمر. هكذا تُفتَح درجةُ أي لونٍ تلقائياً.
+       الناتج بالقيمة الحالية ≈ #91A7BC ⟹ 7.4:1 على الخلفية ✅ */
+    --color-primary: color-mix(in srgb, var(--brand-primary, #486C8F) 60%, #ffffff);
+    --color-primary-strong: color-mix(in srgb, var(--brand-primary, #486C8F) 60%, #ffffff);
+    --color-primary-text: color-mix(in srgb, var(--brand-primary, #486C8F) 60%, #ffffff);
+    --color-on-primary: #0B1020;   /* نصّ داكن فوق الدرجة الفاتحة: 7.4:1 */
     --color-secondary: #8688e8;
     --color-secondary-soft: #222438;
     --color-background: #14191f;
