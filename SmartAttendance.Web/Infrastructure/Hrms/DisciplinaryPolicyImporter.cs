@@ -37,13 +37,221 @@ public static class DisciplinaryPolicyImporter
         return new Result(categoriesAdded, violations, rules, skipped);
     }
 
+    /// <summary>
+    /// دمج الفئات المكرّرة بالفئات المرقّمة بحروف اللائحة.
+    ///
+    /// خلّفها زرّ «اللائحة الافتراضية» القديم: «مخالفات نظام العمل» بجانب «ب —
+    /// مخالفات نظام العمل»، فيحتار المسجِّل أيّهما يختار وتتوزّع الحالات على
+    /// بابين لنفس الباب.
+    ///
+    /// ⚠️ **نقلٌ لا حذف**: مخالفات الفئة المكرّرة تُنقل إلى نظيرتها المرقّمة،
+    /// ولا تُحذف إلا إن كان لها اسمٌ مطابق هناك أصلاً **ولا حالات عليها**. حذفُ
+    /// مخالفةٍ سُجّلت عليها حالة يقطع سند حالةٍ قائمة وكتابٍ صدر عنها.
+    /// </summary>
+    public static async Task<string> MergeDuplicateCategoriesAsync(ApplicationDbContext db)
+    {
+        await DisciplinarySchema.EnsureAsync(db);
+
+        int moved = 0, dropped = 0, removedCategories = 0, blocked = 0;
+
+        var categories = await HrmsDatabase.QueryAsync(
+            db,
+            "SELECT Id, Name FROM DisciplinaryViolationCategories ORDER BY Id;",
+            command => { },
+            reader => (Id: HrmsDatabase.GetInt(reader, "Id"), Name: HrmsDatabase.GetString(reader, "Name")));
+
+        // الفئات المرقّمة هي الوجهة؛ وما عداها مرشَّحٌ للدمج.
+        var lettered = categories.Where(c => IsLettered(c.Name)).ToList();
+        var duplicates = categories.Where(c => !IsLettered(c.Name)).ToList();
+
+        foreach (var duplicate in duplicates)
+        {
+            var target = lettered.FirstOrDefault(c => SameTheme(c.Name, duplicate.Name));
+
+            var violations = await HrmsDatabase.QueryAsync(
+                db,
+                "SELECT Id, Name FROM DisciplinaryViolationTypes WHERE CategoryId = @Id;",
+                command => HrmsDatabase.AddParameter(command, "@Id", duplicate.Id),
+                reader => (Id: HrmsDatabase.GetInt(reader, "Id"), Name: HrmsDatabase.GetString(reader, "Name")));
+
+            foreach (var violation in violations)
+            {
+                if (target.Id == 0)
+                {
+                    blocked++;
+                    continue;
+                }
+
+                var twinElsewhere = await HrmsDatabase.ScalarAsync<int>(
+                    db,
+                    """
+SELECT COUNT(1) FROM DisciplinaryViolationTypes
+WHERE Name = @Name AND CategoryId = @Target AND Id <> @Id;
+""",
+                    command =>
+                    {
+                        HrmsDatabase.AddParameter(command, "@Name", violation.Name);
+                        HrmsDatabase.AddParameter(command, "@Target", target.Id);
+                        HrmsDatabase.AddParameter(command, "@Id", violation.Id);
+                    });
+
+                var cases = await CaseCountAsync(db, violation.Id);
+
+                if (twinElsewhere > 0 && cases == 0)
+                {
+                    await HrmsDatabase.ExecuteAsync(
+                        db,
+                        "DELETE FROM DisciplinaryPenaltyRules WHERE ViolationTypeId = @Id; DELETE FROM DisciplinaryViolationTypes WHERE Id = @Id;",
+                        command => HrmsDatabase.AddParameter(command, "@Id", violation.Id));
+                    dropped++;
+                    continue;
+                }
+
+                await HrmsDatabase.ExecuteAsync(
+                    db,
+                    "UPDATE DisciplinaryViolationTypes SET CategoryId = @Target WHERE Id = @Id;",
+                    command =>
+                    {
+                        HrmsDatabase.AddParameter(command, "@Target", target.Id);
+                        HrmsDatabase.AddParameter(command, "@Id", violation.Id);
+                    });
+                moved++;
+            }
+
+            var remaining = await HrmsDatabase.ScalarAsync<int>(
+                db,
+                "SELECT COUNT(1) FROM DisciplinaryViolationTypes WHERE CategoryId = @Id;",
+                command => HrmsDatabase.AddParameter(command, "@Id", duplicate.Id));
+
+            if (remaining == 0)
+            {
+                await HrmsDatabase.ExecuteAsync(
+                    db,
+                    "DELETE FROM DisciplinaryViolationCategories WHERE Id = @Id;",
+                    command => HrmsDatabase.AddParameter(command, "@Id", duplicate.Id));
+                removedCategories++;
+            }
+        }
+
+        if (moved + dropped + removedCategories == 0)
+        {
+            return "لا فئات مكرّرة — الأبواب كلّها مرقّمة بحروف اللائحة.";
+        }
+
+        var parts = new List<string>();
+        if (removedCategories > 0) parts.Add($"دُمجت {removedCategories} فئة مكرّرة");
+        if (moved > 0) parts.Add($"نُقلت {moved} مخالفة");
+        if (dropped > 0) parts.Add($"حُذفت {dropped} مكرّرة");
+        if (blocked > 0) parts.Add($"تُركت {blocked} بلا نظيرٍ مرقّم");
+
+        return string.Join(" · ", parts) + ".";
+    }
+
+    /// <summary>الفئة المرقّمة تبدأ بحرف اللائحة متبوعاً بشرطة — «أ — …».</summary>
+    private static bool IsLettered(string name) =>
+        name.StartsWith("أ ", StringComparison.Ordinal)
+        || name.StartsWith("ب ", StringComparison.Ordinal)
+        || name.StartsWith("ج ", StringComparison.Ordinal)
+        || name.StartsWith("ت ", StringComparison.Ordinal);
+
+    /// <summary>
+    /// نظير الفئة المكرّرة بالمرقّمة — بالكلمة المميّزة لا بالتطابق الحرفيّ،
+    /// فالاسم القديم «مخالفات نظام العمل» والجديد «ب — مخالفات نظام العمل».
+    /// </summary>
+    private static bool SameTheme(string lettered, string duplicate)
+    {
+        var keys = new (string Word, string Letter)[]
+        {
+            ("الحضور", "أ"), ("المظهر", "أ"), ("السلامة", "ب"),
+            ("نظام العمل", "ب"), ("سلوك", "ج")
+        };
+
+        foreach (var (word, letter) in keys)
+        {
+            if (duplicate.Contains(word, StringComparison.Ordinal)
+                && lettered.StartsWith(letter + " ", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static async Task<int> CaseCountAsync(ApplicationDbContext db, int violationId) =>
+        await HrmsDatabase.ScalarAsync<int>(
+            db,
+            """
+SELECT CASE WHEN OBJECT_ID('EmployeeViolationCases','U') IS NULL THEN 0
+       ELSE (SELECT COUNT(1) FROM EmployeeViolationCases WHERE ViolationTypeId = @Id) END;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", violationId));
+
+    /// <summary>مفتاح الإعدادات الذي يحفظ أبواب اللائحة التي استغنت عنها الشركة.</summary>
+    public const string DeclinedKey = "DeclinedPolicyCategories";
+
+    /// <summary>
+    /// أبوابٌ من اللائحة حذفتها الشركة عن قصد — لا يُعيدها الاستيراد.
+    ///
+    /// ⚠️ بدون هذا كانت إعادة الاستيراد **تُلغي قراراً** اتّخذه المستخدم بصمت:
+    /// يحذف «ت — المنطقة الأمامية» لأنها لا تخصّه، ثم يستورد لسببٍ آخر فتعود
+    /// بإحدى وعشرين مخالفة. والاستيراد يجب أن يضيف الناقص لا أن ينقض المحذوف.
+    /// </summary>
+    public static async Task<HashSet<string>> DeclinedAsync(ApplicationDbContext db)
+    {
+        var raw = await HrmsDatabase.ScalarAsync<string>(
+            db,
+            "SELECT TOP 1 [Value] FROM DisciplinarySettings WHERE [Key] = @Key;",
+            command => HrmsDatabase.AddParameter(command, "@Key", DeclinedKey));
+
+        return (raw ?? string.Empty)
+            .Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    /// <summary>يسجّل أن باباً من اللائحة حُذف عمداً — يُستدعى عند حذف الفئة.</summary>
+    public static async Task DeclineAsync(ApplicationDbContext db, string categoryName)
+    {
+        if (!DisciplinaryPolicyPack.Categories.Any(c => c.Name == categoryName))
+        {
+            return;   // ليست من اللائحة — لا شيء يُعاد استيراده أصلاً.
+        }
+
+        var declined = await DeclinedAsync(db);
+        if (!declined.Add(categoryName)) return;
+
+        await HrmsDatabase.ExecuteAsync(
+            db,
+            """
+IF EXISTS (SELECT 1 FROM DisciplinarySettings WHERE [Key] = @Key)
+    UPDATE DisciplinarySettings SET [Value] = @Value, UpdatedAt = SYSUTCDATETIME() WHERE [Key] = @Key;
+ELSE
+    INSERT INTO DisciplinarySettings([Key], [Value], UpdatedAt) VALUES (@Key, @Value, SYSUTCDATETIME());
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Key", DeclinedKey);
+                HrmsDatabase.AddParameter(command, "@Value", string.Join('|', declined));
+            });
+    }
+
+    /// <summary>يُلغي الاستبعاد فيعود الباب بالاستيراد التالي.</summary>
+    public static async Task RestoreAllAsync(ApplicationDbContext db) =>
+        await HrmsDatabase.ExecuteAsync(
+            db,
+            "DELETE FROM DisciplinarySettings WHERE [Key] = @Key;",
+            command => HrmsDatabase.AddParameter(command, "@Key", DeclinedKey));
+
     private static async Task<Dictionary<int, (int Id, bool Added)>> ImportCategoriesAsync(ApplicationDbContext db)
     {
         var map = new Dictionary<int, (int Id, bool Added)>();
+        var declined = await DeclinedAsync(db);
 
         for (var index = 0; index < DisciplinaryPolicyPack.Categories.Length; index++)
         {
             var (name, nameEn, order, isSystem) = DisciplinaryPolicyPack.Categories[index];
+
+            if (declined.Contains(name)) continue;
 
             var existing = await HrmsDatabase.ScalarAsync<int>(
                 db,

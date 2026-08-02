@@ -94,16 +94,15 @@
                         </div>
                         <p class="zyw-row-meta">
                             نموذج تسجيل المخالفة يفرض اختيار فئة ونوع — وبلا لائحة يبقى معطّلاً.
-                            ابدأ بلائحة عربية جاهزة ثم عدّلها، أو اكتب فئاتك بنفسك أدناه.
+                            ابدأ بلائحة الشركة الرسمية من الزرّ أدناه، أو اكتب فئاتك بنفسك بالشبكة.
                         </p>
-                        <p class="zyw-row-meta">
-                            ستُضاف: <b>الحضور والانصراف</b> · <b>المظهر العام</b> · <b>نظام العمل</b> ·
-                            <b>سلوكية</b>، ومعها مخالفاتها وسلّم جزاءاتها. كلّها قابلة للتعديل والحذف.
-                        </p>
-                        <form method="post" asp-page-handler="SeedLibrary">
+                        @* ⚠️ **حُذف زرّ «اللائحة الافتراضية»** بعد أن صار للشركة لائحتها:
+                           كان ينشئ «مخالفات نظام العمل» بجانب «ب — مخالفات نظام العمل»
+                           فيحتار المسجِّل أيّهما يختار وتتوزّع الحالات على بابين لباب. *@
+                        <form method="post" asp-page-handler="ImportPolicy">
                             <div class="zyw-form-actions">
-                                <button type="submit" class="btn-primary" data-zyconfirm="إضافة اللائحة الافتراضية؟">
-                                    أضف اللائحة الافتراضية
+                                <button type="submit" class="btn-primary" data-zyconfirm="استيراد لائحة الجزاءات؟">
+                                    استورد لائحة الجزاءات (HRD013)
                                 </button>
                             </div>
                         </form>
@@ -126,13 +125,42 @@
                         الاستيراد <b>يضيف الناقص ولا يستبدل القائم</b>: مخالفةٌ لها سلّمٌ عندك تبقى بسلّمها،
                         لأن المذكور باللائحة هو الحدّ الأقصى الجائز وللإدارة النزول عنه (مادة 2).
                     </p>
-                    <form method="post" asp-page-handler="ImportPolicy">
-                        <div class="zyw-form-actions">
+
+                    @* الاستبعاد يُعرض ويُلغى — لا يبقى قراراً خفيّاً بجدول إعدادات. *@
+                    @if (Model.DeclinedCategories.Count > 0)
+                    {
+                        <p class="zyw-row-meta">
+                            🚫 أبوابٌ استُبعدت عمداً فلا يُعيدها الاستيراد:
+                            <b>@string.Join(" · ", Model.DeclinedCategories)</b>.
+                        </p>
+                    }
+                    <div class="zyw-form-actions">
+                        <form method="post" asp-page-handler="ImportPolicy">
                             <button type="submit" class="btn-primary" data-zyconfirm="استيراد لائحة الجزاءات الرسمية؟">
                                 استورد لائحة الجزاءات
                             </button>
-                        </div>
-                    </form>
+                        </form>
+
+                        @* أبوابٌ خلّفها البذر القديم بجانب أبواب اللائحة — تُدمج بنظيراتها. *@
+                        @if (Model.Categories.Any(c => !c.Name.StartsWith("أ ") && !c.Name.StartsWith("ب ")
+                                                    && !c.Name.StartsWith("ج ") && !c.Name.StartsWith("ت ")))
+                        {
+                            <form method="post" asp-page-handler="MergeDuplicates">
+                                <button type="submit" class="btn-secondary" data-zyconfirm="دمج الفئات المكرّرة بأبواب اللائحة؟">
+                                    ادمج الفئات المكرّرة
+                                </button>
+                            </form>
+                        }
+
+                        @if (Model.DeclinedCategories.Count > 0)
+                        {
+                            <form method="post" asp-page-handler="RestoreDeclined">
+                                <button type="submit" class="btn-secondary" data-zyconfirm="إعادة الأبواب المستبعَدة؟">
+                                    أعد الأبواب المستبعَدة
+                                </button>
+                            </form>
+                        }
+                    </div>
                 </article>
 
                 @* ══════════ شبكتان محرَّرتان — نمطٌ منقول عن كيان بعد فحصٍ حيّ ══════════

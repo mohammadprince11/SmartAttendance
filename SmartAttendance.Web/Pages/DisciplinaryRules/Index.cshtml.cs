@@ -143,6 +143,32 @@ public class IndexModel : PageModel
         return RedirectToPage(new { tab = "library" });
     }
 
+    /// <summary>أبواب اللائحة المستبعَدة عمداً — تُعرض كي لا يكون الاستبعاد خفيّاً.</summary>
+    public IReadOnlyCollection<string> DeclinedCategories { get; private set; } = Array.Empty<string>();
+
+    /// <summary>إعادة الأبواب المستبعَدة إلى الاستيراد.</summary>
+    public async Task<IActionResult> OnPostRestoreDeclinedAsync()
+    {
+        await DisciplinaryPolicyImporter.RestoreAllAsync(_dbContext);
+        StatusMessage = "أُلغي الاستبعاد — الاستيراد التالي يُعيد الأبواب المحذوفة من اللائحة.";
+        return RedirectToPage(new { tab = "library" });
+    }
+
+    /// <summary>دمج ما خلّفه البذر الافتراضي القديم بفئات اللائحة المرقّمة.</summary>
+    public async Task<IActionResult> OnPostMergeDuplicatesAsync()
+    {
+        StatusMessage = await DisciplinaryPolicyImporter.MergeDuplicateCategoriesAsync(_dbContext);
+        return RedirectToPage(new { tab = "library" });
+    }
+
+    /// <summary>
+    /// ⚠️ **البذر الافتراضي العامّ لم يعد يُعرض بالشاشة** بعد أن صار للشركة لائحتها
+    /// الرسمية: كان ينشئ «مخالفات نظام العمل» بجانب «ب — مخالفات نظام العمل»
+    /// فيحتار المسجِّل أيّهما يختار وتتوزّع الحالات على بابين لنفس الباب.
+    ///
+    /// المعالج يبقى حيّاً لعميلٍ بلا لائحةٍ رسمية بعد (المنتج White-Label)، ولا
+    /// يُستدعى إلا من مسارٍ صريح.
+    /// </summary>
     public async Task<IActionResult> OnPostSeedLibraryAsync()
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
@@ -527,6 +553,7 @@ VALUES (@Name, @NameEn, @Conditions, @Order, 1, SYSUTCDATETIME());
 
         var blocked = new List<string>();
         var removed = 0;
+        var names = (await LoadCategoriesAsync()).ToDictionary(c => c.Id, c => c.Name);
 
         foreach (var id in ids.Where(x => x > 0).Distinct())
         {
@@ -536,21 +563,44 @@ VALUES (@Name, @NameEn, @Conditions, @Order, 1, SYSUTCDATETIME());
                 continue;
             }
 
-            var types = await HrmsDatabase.ScalarAsync<int>(
+            // ⚠️ الحدّ الحقيقي **الحالات لا المخالفات**: باب فيه إحدى وعشرون
+            // مخالفة كان يلزم إفراغه صفّاً صفّاً قبل حذفه — وهو عملٌ لا معنى له.
+            // فيُحذف بمخالفاته دفعةً واحدة **ما لم تكن عليها حالاتٌ مسجَّلة**؛
+            // وحينها يُرفض الحذف كلّه، لأن قطع سند حالةٍ قائمة أسوأ من بقاء باب.
+            var cases = await HrmsDatabase.ScalarAsync<int>(
                 _dbContext,
-                "SELECT COUNT(1) FROM DisciplinaryViolationTypes WHERE CategoryId = @Id;",
+                """
+SELECT CASE WHEN OBJECT_ID('EmployeeViolationCases','U') IS NULL THEN 0 ELSE
+    (SELECT COUNT(1) FROM EmployeeViolationCases c
+     INNER JOIN DisciplinaryViolationTypes t ON t.Id = c.ViolationTypeId
+     WHERE t.CategoryId = @Id) END;
+""",
                 command => HrmsDatabase.AddParameter(command, "@Id", id));
 
-            if (types > 0)
+            if (cases > 0)
             {
-                blocked.Add("فئة فيها مخالفات");
+                blocked.Add("فئة سُجّلت على مخالفاتها حالات");
                 continue;
             }
 
             await HrmsDatabase.ExecuteAsync(
                 _dbContext,
-                "DELETE FROM DisciplinaryViolationCategories WHERE Id = @Id;",
+                """
+DELETE r FROM DisciplinaryPenaltyRules r
+INNER JOIN DisciplinaryViolationTypes t ON t.Id = r.ViolationTypeId
+WHERE t.CategoryId = @Id;
+
+DELETE FROM DisciplinaryViolationTypes WHERE CategoryId = @Id;
+DELETE FROM DisciplinaryViolationCategories WHERE Id = @Id;
+""",
                 command => HrmsDatabase.AddParameter(command, "@Id", id));
+
+            // بابٌ من اللائحة حُذف عن قصد: يُسجَّل كي لا يُعيده الاستيراد التالي.
+            if (names.TryGetValue(id, out var deletedName))
+            {
+                await DisciplinaryPolicyImporter.DeclineAsync(_dbContext, deletedName);
+            }
+
             removed++;
         }
 
@@ -1110,6 +1160,7 @@ VALUES
             .ToList();
 
         TerminationReasons = await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.LoadTerminationReasonsAsync(_dbContext);
+        DeclinedCategories = await DisciplinaryPolicyImporter.DeclinedAsync(_dbContext);
     }
 
     private async Task SeedDefaultLibraryAsync(bool onlyIfEmpty)
