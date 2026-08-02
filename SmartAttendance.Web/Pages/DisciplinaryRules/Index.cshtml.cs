@@ -33,6 +33,9 @@ public class IndexModel : PageModel
     public List<TemplateType> TemplateTypes { get; private set; } = new();
     public List<FormTextBlock> TextBlocks { get; private set; } = new();
 
+    /// <summary>كتالوج معايير الشروط لباني «معايير الاستحقاق» — نفس الكتالوج بكل الشاشات.</summary>
+    public string CriteriaJson { get; private set; } = "[]";
+
     public string[] FontFamilies { get; } = { "Tahoma", "Arial", "Calibri", "Times New Roman", "Cairo" };
 
     public string[] TemplateTokens { get; } =
@@ -409,7 +412,7 @@ WHERE Id = @Id;
         return RedirectToPage(new { tab = "library", categoryId = id });
     }
 
-    public async Task<IActionResult> OnPostCreateViolationTypeAsync(int categoryId, string name, string? description, string severity, int validityMonths, string countingPeriod, string? articleNo = null)
+    public async Task<IActionResult> OnPostCreateViolationTypeAsync(int categoryId, string name, string? description, string severity, int validityMonths, string countingPeriod, string? articleNo = null, string? conditions = null)
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
         if (categoryId <= 0 || string.IsNullOrWhiteSpace(name))
@@ -421,30 +424,21 @@ WHERE Id = @Id;
         await HrmsDatabase.ExecuteAsync(_dbContext,
             """
 INSERT INTO DisciplinaryViolationTypes
-(CategoryId, Name, Description, Severity, ValidityMonths, CountingPeriod, ArticleNo, IncludeInEvaluation, ShowToEmployee, IsActive, CreatedAt)
+(CategoryId, Name, Description, Severity, ValidityMonths, CountingPeriod, ArticleNo, ConditionsJson, IncludeInEvaluation, ShowToEmployee, IsActive, CreatedAt)
 VALUES
-(@CategoryId, @Name, @Description, @Severity, @ValidityMonths, @CountingPeriod, @ArticleNo, @IncludeInEvaluation, @ShowToEmployee, @IsActive, SYSUTCDATETIME());
+(@CategoryId, @Name, @Description, @Severity, @ValidityMonths, @CountingPeriod, @ArticleNo, @Conditions, @IncludeInEvaluation, @ShowToEmployee, @IsActive, SYSUTCDATETIME());
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@CategoryId", categoryId);
-                HrmsDatabase.AddParameter(command, "@ArticleNo", string.IsNullOrWhiteSpace(articleNo) ? (object)DBNull.Value : articleNo.Trim());
-                HrmsDatabase.AddParameter(command, "@Name", name.Trim());
-                HrmsDatabase.AddParameter(command, "@Description", description?.Trim() ?? string.Empty);
-                HrmsDatabase.AddParameter(command, "@Severity", NormalizeSeverity(severity));
-                HrmsDatabase.AddParameter(command, "@ValidityMonths", Math.Max(1, validityMonths));
-                HrmsDatabase.AddParameter(command, "@CountingPeriod", NormalizePeriod(countingPeriod));
-                HrmsDatabase.AddParameter(command, "@ArticleNo", string.IsNullOrWhiteSpace(articleNo) ? (object)DBNull.Value : articleNo.Trim());
-                HrmsDatabase.AddParameter(command, "@IncludeInEvaluation", Request.Form.ContainsKey("includeInEvaluation"));
-                HrmsDatabase.AddParameter(command, "@ShowToEmployee", Request.Form.ContainsKey("showToEmployee"));
-                HrmsDatabase.AddParameter(command, "@IsActive", Request.Form.ContainsKey("isActive"));
+                AddViolationTypeParameters(command, name, description, severity, validityMonths, countingPeriod, articleNo, conditions);
             });
 
         StatusMessage = "تمت إضافة مخالفة جديدة داخل الفئة.";
         return RedirectToPage(new { tab = "library", categoryId });
     }
 
-    public async Task<IActionResult> OnPostUpdateViolationTypeAsync(int id, int categoryId, string name, string? description, string severity, int validityMonths, string countingPeriod, string? articleNo = null)
+    public async Task<IActionResult> OnPostUpdateViolationTypeAsync(int id, int categoryId, string name, string? description, string severity, int validityMonths, string countingPeriod, string? articleNo = null, string? conditions = null)
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
         await HrmsDatabase.ExecuteAsync(_dbContext,
@@ -452,6 +446,7 @@ VALUES
 UPDATE DisciplinaryViolationTypes
 SET CategoryId = @CategoryId,
     ArticleNo = @ArticleNo,
+    ConditionsJson = @Conditions,
     Name = @Name,
     Description = @Description,
     Severity = @Severity,
@@ -466,18 +461,45 @@ WHERE Id = @Id;
             {
                 HrmsDatabase.AddParameter(command, "@Id", id);
                 HrmsDatabase.AddParameter(command, "@CategoryId", categoryId);
-                HrmsDatabase.AddParameter(command, "@Name", name.Trim());
-                HrmsDatabase.AddParameter(command, "@Description", description?.Trim() ?? string.Empty);
-                HrmsDatabase.AddParameter(command, "@Severity", NormalizeSeverity(severity));
-                HrmsDatabase.AddParameter(command, "@ValidityMonths", Math.Max(1, validityMonths));
-                HrmsDatabase.AddParameter(command, "@CountingPeriod", NormalizePeriod(countingPeriod));
-                HrmsDatabase.AddParameter(command, "@IncludeInEvaluation", Request.Form.ContainsKey("includeInEvaluation"));
-                HrmsDatabase.AddParameter(command, "@ShowToEmployee", Request.Form.ContainsKey("showToEmployee"));
-                HrmsDatabase.AddParameter(command, "@IsActive", Request.Form.ContainsKey("isActive"));
+                AddViolationTypeParameters(command, name, description, severity, validityMonths, countingPeriod, articleNo, conditions);
             });
 
         StatusMessage = "تم تعديل المخالفة.";
         return RedirectToPage(new { tab = "library", categoryId });
+    }
+
+    /// <summary>
+    /// معطيات المخالفة مشتركة بين الإضافة والتعديل — **مصدر واحد عمداً**.
+    ///
+    /// كانتا نسختين متباعدتين فانفرط عقدهما مع أول عمود جديد: الإضافة تضيف
+    /// <c>@ArticleNo</c> مرّتين (وSQL Server يرفض معطىً مكرّراً)، والتعديل يذكره
+    /// بالجملة ولا يضيفه أصلاً. النتيجة أن **حفظ المخالفة وتعديلها كانا يفشلان
+    /// كلاهما** بلا أن يظهر ذلك — القاعدة فارغة فلم يجرّبهما أحد.
+    /// </summary>
+    private void AddViolationTypeParameters(
+        DbCommand command,
+        string name,
+        string? description,
+        string severity,
+        int validityMonths,
+        string countingPeriod,
+        string? articleNo,
+        string? conditions)
+    {
+        HrmsDatabase.AddParameter(command, "@Name", name.Trim());
+        HrmsDatabase.AddParameter(command, "@Description", description?.Trim() ?? string.Empty);
+        HrmsDatabase.AddParameter(command, "@Severity", NormalizeSeverity(severity));
+        HrmsDatabase.AddParameter(command, "@ValidityMonths", Math.Max(1, validityMonths));
+        HrmsDatabase.AddParameter(command, "@CountingPeriod", NormalizePeriod(countingPeriod));
+        HrmsDatabase.AddParameter(command, "@ArticleNo", string.IsNullOrWhiteSpace(articleNo) ? (object)DBNull.Value : articleNo.Trim());
+
+        // يُعاد تسلسله عبر المحرّك لا يُخزَّن كما وصل: نصّ مشوّه من الواجهة يصير
+        // مجموعةً فارغة («تنطبق على الجميع») بدل صفٍّ لا يُقرأ لاحقاً.
+        HrmsDatabase.AddParameter(command, "@Conditions", HrConditions.Serialize(HrConditions.Deserialize(conditions)));
+
+        HrmsDatabase.AddParameter(command, "@IncludeInEvaluation", Request.Form.ContainsKey("includeInEvaluation"));
+        HrmsDatabase.AddParameter(command, "@ShowToEmployee", Request.Form.ContainsKey("showToEmployee"));
+        HrmsDatabase.AddParameter(command, "@IsActive", Request.Form.ContainsKey("isActive"));
     }
 
     public async Task<IActionResult> OnPostCreatePenaltyRuleAsync(int violationTypeId, int occurrenceFrom, int occurrenceTo, string countingPeriod, string penaltyAction, string financialImpactType, decimal financialValue, int validityMonths, string calculationMode)
@@ -690,6 +712,7 @@ VALUES
         TemplateTypes = await LoadTemplateTypesAsync();
         MessageTemplates = await LoadMessageTemplatesAsync();
         TextBlocks = await LoadTextBlocksAsync();
+        CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_dbContext);
     }
 
     private async Task SeedDefaultLibraryAsync(bool onlyIfEmpty)
@@ -937,7 +960,7 @@ ORDER BY c.DisplayOrder, c.Name;
         return await HrmsDatabase.QueryAsync(_dbContext,
             """
 SELECT t.Id, t.CategoryId, c.Name AS CategoryName, t.Name, ISNULL(t.Description, '') AS Description, t.Severity,
-       ISNULL(t.ArticleNo, '') AS ArticleNo,
+       ISNULL(t.ArticleNo, '') AS ArticleNo, ISNULL(t.ConditionsJson, '') AS ConditionsJson,
        t.ValidityMonths, t.CountingPeriod, t.IncludeInEvaluation, t.ShowToEmployee, t.IsActive, t.CreatedAt,
        (SELECT COUNT(1) FROM DisciplinaryPenaltyRules r WHERE r.ViolationTypeId = t.Id) AS RulesCount
 FROM DisciplinaryViolationTypes t
@@ -954,6 +977,7 @@ ORDER BY c.DisplayOrder, t.Name;
                 Description = HrmsDatabase.GetString(reader, "Description"),
                 Severity = HrmsDatabase.GetString(reader, "Severity"),
                 ArticleNo = HrmsDatabase.GetString(reader, "ArticleNo"),
+                ConditionsJson = HrmsDatabase.GetString(reader, "ConditionsJson"),
                 ValidityMonths = HrmsDatabase.GetInt(reader, "ValidityMonths"),
                 CountingPeriod = HrmsDatabase.GetString(reader, "CountingPeriod"),
                 IncludeInEvaluation = HrmsDatabase.GetBool(reader, "IncludeInEvaluation"),
@@ -1203,6 +1227,11 @@ public sealed class ViolationType
 {
     /// <summary>رقم الفقرة بلائحة الجزاءات (مثال 3/ب) — يستشهد به الكتاب الرسمي.</summary>
     public string ArticleNo { get; set; } = string.Empty;
+
+    /// <summary>معايير الاستحقاق كما تُخزَّن. فارغ ⟹ المخالفة تنطبق على الجميع.</summary>
+    public string ConditionsJson { get; set; } = string.Empty;
+
+    public HrConditions.ConditionSet Conditions => HrConditions.Deserialize(ConditionsJson);
 
     public int Id { get; set; }
     public int CategoryId { get; set; }

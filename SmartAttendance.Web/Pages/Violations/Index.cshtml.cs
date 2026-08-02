@@ -258,6 +258,42 @@ FROM EmployeeViolationCases v WHERE v.Id = @Id;
             ModelState.AddModelError("Input.ViolationTypeId", "نوع المخالفة لا يتبع الفئة المختارة.");
         }
 
+        // 🔒 معايير استحقاق المخالفة.
+        //
+        // مخالفةٌ مشروطة بفئة موظفين لا تُسجَّل على غيرهم: «التأخّر» لا معنى له لمن
+        // عقده «عن بعد»، و«الزيّ الرسمي» لا يخصّ الإداريين.
+        //
+        // ⚠️ **مَنعٌ لا إخفاء.** كان بالوسع ترشيح المنسدلة فتختفي المخالفة ممن لا
+        // يطابق — لكنّ الاختفاء يترك المسجِّل يبحث عن بندٍ يراه بلائحة الشركة ولا
+        // يجده بالشاشة، بلا سبب معروض. والرسالة الصريحة تعلّمه القاعدة؛ والصمت
+        // يجعله يسجّل تحت بندٍ آخر خطأً.
+        if (selectedRule != null && Input.EmployeeId > 0)
+        {
+            var eligibility = HrConditions.Deserialize(selectedRule.ConditionsJson);
+
+            if (!eligibility.IsEmpty)
+            {
+                var rows = await HrConditionFacts.LoadAsync(_db, Input.EmployeeId);
+                var employee = rows.FirstOrDefault();
+
+                // التاريخ المرجعي **تاريخ الحدث** لا اليوم: مخالفةٌ تُسجَّل بأثر رجعيّ
+                // تُقاس بشروط الموظف حين وقعت، لا بشروطه بعد نقلٍ أو ترقية.
+                var asOf = Input.EventDate == default
+                    ? DateOnly.FromDateTime(DateTime.Today)
+                    : DateOnly.FromDateTime(Input.EventDate);
+
+                var matches = employee != null
+                    && HrConditions.Matches(eligibility, HrConditionFacts.Build(employee, asOf), matchWhenEmpty: true);
+
+                if (!matches)
+                {
+                    ModelState.AddModelError(
+                        "Input.ViolationTypeId",
+                        $"هذه المخالفة مشروطة بـ«{HrConditions.Describe(eligibility)}» والموظف المحدّد لا يطابقها.");
+                }
+            }
+        }
+
         if (!ModelState.IsValid)
         {
             OpenCreateModal = true;
@@ -393,13 +429,24 @@ SELECT CASE WHEN OBJECT_ID('DisciplinaryViolationTypes', 'U') IS NOT NULL
         var hasPenaltyTable = await ScalarAsync<int>(
             "SELECT CASE WHEN OBJECT_ID('DisciplinaryPenaltyRules', 'U') IS NOT NULL THEN 1 ELSE 0 END;");
 
+        // العمود يُضاف بـ`DisciplinarySchema` وهذه الشاشة تقرأ بلا `Ensure`، فقاعدةٌ
+        // لم تمرّ بعد على شاشة اللائحة تفتقده — والاستعلام يجب أن يُنقص عموداً لا أن
+        // يُسقط تسجيل المخالفات كلّه.
+        var hasConditions = await ScalarAsync<int>(
+            "SELECT CASE WHEN COL_LENGTH('DisciplinaryViolationTypes','ConditionsJson') IS NOT NULL THEN 1 ELSE 0 END;");
+
+        var conditionsColumn = hasConditions == 1
+            ? "ISNULL(t.ConditionsJson, N'')"
+            : "N''";
+
         var sql = hasPenaltyTable == 1
-            ? """
+            ? $"""
 SELECT
     t.Id,
     t.CategoryId,
     ISNULL(c.Name, N'') AS CategoryName,
     t.Name AS ViolationName,
+    {conditionsColumn} AS ConditionsJson,
     ISNULL(p.Id, 0) AS PenaltyRuleId,
     ISNULL(p.PenaltyAction, N'') AS PenaltyAction,
     ISNULL(p.FinancialImpactType, N'None') AS FinancialImpactType,
@@ -417,12 +464,13 @@ OUTER APPLY
 WHERE ISNULL(t.IsActive, 1) = 1
 ORDER BY ISNULL(c.DisplayOrder, 999), c.Name, t.Name;
 """
-            : """
+            : $"""
 SELECT
     t.Id,
     t.CategoryId,
     ISNULL(c.Name, N'') AS CategoryName,
     t.Name AS ViolationName,
+    {conditionsColumn} AS ConditionsJson,
     0 AS PenaltyRuleId,
     N'' AS PenaltyAction,
     N'None' AS FinancialImpactType,
@@ -439,6 +487,7 @@ ORDER BY ISNULL(c.DisplayOrder, 999), c.Name, t.Name;
             CategoryId = ToInt(reader["CategoryId"]),
             CategoryName = ToStringValue(reader["CategoryName"]),
             ViolationName = ToStringValue(reader["ViolationName"]),
+            ConditionsJson = ToStringValue(reader["ConditionsJson"]),
             PenaltyRuleId = ToInt(reader["PenaltyRuleId"]),
             PenaltyAction = ToStringValue(reader["PenaltyAction"]),
             FinancialImpactType = ToStringValue(reader["FinancialImpactType"], "None"),
@@ -721,6 +770,9 @@ public sealed class ViolationTypePickerItem
     public string PenaltyAction { get; set; } = string.Empty;
     public string FinancialImpactType { get; set; } = "None";
     public decimal FinancialValue { get; set; }
+
+    /// <summary>معايير استحقاق المخالفة. فارغ ⟹ تنطبق على الجميع.</summary>
+    public string ConditionsJson { get; set; } = string.Empty;
 }
 
 public sealed class ViolationCaseRow

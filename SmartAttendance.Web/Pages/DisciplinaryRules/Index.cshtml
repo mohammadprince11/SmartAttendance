@@ -1,6 +1,7 @@
 @page
 @model SmartAttendance.Web.Pages.DisciplinaryRules.IndexModel
 @using SmartAttendance.Web.Infrastructure.Theming
+@using SmartAttendance.Web.Infrastructure.Hrms
 @inject IThemeContextService ThemeContextService
 @{
     ViewData["Title"] = "لائحة المخالفات";
@@ -28,6 +29,10 @@
    يحتاجها (ورقة A4 · طبقات · منتقي ملف)، فحُصرت به. *@
 @section Styles {
     <link rel="stylesheet" href="~/css/zynora-workscreen.css" asp-append-version="true" />
+    @if (activeTab == "library")
+    {
+        <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+    }
     @if (activeTab == "designer")
     {
         <link rel="stylesheet" href="~/css/nexora-disciplinary-rules.css" asp-append-version="true" />
@@ -240,6 +245,15 @@
                                         <label><input type="checkbox" name="isActive" value="true" checked /> فعّالة</label>
                                     </div>
                                 </div>
+
+                                @* معايير الاستحقاق — بالمتقدّم لأن الأغلب «تنطبق على الجميع»،
+                                   وإظهارها دائماً يوحي بأن كل مخالفة تحتاج شرطاً. *@
+                                <div class="zyw-field zyw-field--wide">
+                                    <label>على من تنطبق هذه المخالفة؟</label>
+                                    <p class="zyw-row-meta">اتركها بلا شروط لتنطبق على الجميع. ومتى وُضع شرط <b>مُنع</b> تسجيلها على من لا يطابقه.</p>
+                                    <input type="hidden" name="conditions" id="vt-conditions" />
+                                    <div class="zyc" data-zy-conditions data-input="#vt-conditions" data-criteria="@Model.CriteriaJson"></div>
+                                </div>
                             </details>
                             <div class="zyw-form-actions">
                                 <button type="submit" class="btn-primary">إضافة مخالفة</button>
@@ -305,6 +319,11 @@
                                                 <label><input type="checkbox" name="includeInEvaluation" value="true" checked="@violation.IncludeInEvaluation" /> تدخل بالتقييم</label>
                                                 <label><input type="checkbox" name="showToEmployee" value="true" checked="@violation.ShowToEmployee" /> تظهر للموظف</label>
                                                 <label><input type="checkbox" name="isActive" value="true" checked="@violation.IsActive" /> فعّالة</label>
+                                            </div>
+                                            <div class="zyw-field zyw-field--wide">
+                                                <label>على من تنطبق؟ <small>@HrConditions.Describe(violation.Conditions)</small></label>
+                                                <input type="hidden" name="conditions" id="vt-cond-@violation.Id" value="@violation.ConditionsJson" />
+                                                <div class="zyc" data-zy-conditions data-input="#vt-cond-@violation.Id" data-criteria="@Model.CriteriaJson"></div>
                                             </div>
                                         </div>
                                         <div class="zyw-form-actions">
@@ -990,6 +1009,11 @@ else if (Model.Settings.A4FormFileType == "Pdf")
 </section>
 
 <script src="~/js/nexora-disciplinary-rules.js" asp-append-version="true"></script>
+
+@if (activeTab == "library")
+{
+    <script src="~/js/zynora-conditions.js" asp-append-version="true" defer></script>
+}
 
 
 

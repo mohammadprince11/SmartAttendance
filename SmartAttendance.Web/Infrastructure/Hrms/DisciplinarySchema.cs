@@ -48,6 +48,14 @@ END;
 IF COL_LENGTH('DisciplinaryViolationTypes','ArticleNo') IS NULL
     ALTER TABLE DisciplinaryViolationTypes ADD ArticleNo nvarchar(40) NULL;
 
+-- «معايير الاستحقاق» (نظير EligibilityCriteriaID بكيان): المخالفة نفسها قد لا
+-- تنطبق على كل الموظفين — «التأخر» لا معنى له لمن عقده «عن بعد»، و«الزيّ» لا
+-- يخصّ الإداريين. تُخزَّن كـJSON بنفس صيغة <see cref="HrConditions"/> المستعملة
+-- بالوثائق والنماذج والسياسات، لا كجدولٍ سادس بمحرّك شرطٍ سادس.
+-- إضافة محضة: عمود nullable، والفراغ يعني «تنطبق على الجميع» كما كانت.
+IF COL_LENGTH('DisciplinaryViolationTypes','ConditionsJson') IS NULL
+    ALTER TABLE DisciplinaryViolationTypes ADD ConditionsJson nvarchar(max) NULL;
+
 IF OBJECT_ID('DisciplinaryPenaltyRules', 'U') IS NULL
 BEGIN
     CREATE TABLE DisciplinaryPenaltyRules
