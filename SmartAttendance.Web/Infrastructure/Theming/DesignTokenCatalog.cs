@@ -87,7 +87,9 @@ public static class DesignTokenCatalog
         new Token("dropdown-font", "حجم خطّها", GroupDropdown, 13, 10, 18, 0.5),
         new Token("dropdown-menu-radius", "استدارة القائمة المفتوحة", GroupDropdown, 14, 0, 28),
 
-        new Token("empicker-h", "ارتفاع المنتقي", GroupEmployeePicker, 44, 32, 60),
+        // الحدّ الأدنى 32 ⟵ 24: كان يمنع مساواة المنتقي ببقية الحقول (30px) —
+        // فيبقى أطول منها بـ2px مهما ضُبط. والمنتقي حقلٌ بصفٍّ واحد كجيرانه.
+        new Token("empicker-h", "ارتفاع المنتقي", GroupEmployeePicker, 44, 24, 60),
         new Token("empicker-radius", "استدارته", GroupEmployeePicker, 12, 0, 24),
         new Token("empicker-font", "حجم خطّه", GroupEmployeePicker, 13, 10, 18, 0.5),
         new Token("empicker-code-w", "عرض خانة «رمز»", GroupEmployeePicker, 108, 60, 200),
