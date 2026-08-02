@@ -88,12 +88,17 @@
                         <img src="@Model.CurrentSignatureUrl" alt="توقيع الموظف" style="max-height:56px;max-width:180px;margin-top:6px;background:#fff;border-radius:6px;padding:4px" />
                     }
                 </div>
+                @* منسدلة بسيطة بدل مربّع اختيار بتسمية طويلة: «فعال داخل النظام»
+                   كان يلتفّ ثلاثة أسطر داخل صندوقٍ عرضه 106px وسط حقولٍ بسطرٍ
+                   واحد. والحالة قيمةٌ من اثنتين، فالمنسدلة تعبّر عنها أوضح
+                   وتُقرأ بلا تأويل. `bool` يربط من `true`/`false` كما بحقول
+                   «مواطن» و«احتساب الراتب» بنفس المودل. *@
                 <div class="nxr-edit-status-near-photo">
-                    <label>حالة الموظف</label>
-                    <label class="nxr-edit-status-switch">
-                        <input asp-for="Employee.IsActive" />
-                        <span>فعال داخل النظام</span>
-                    </label>
+                    <label asp-for="Employee.IsActive">حالة الموظف</label>
+                    <select asp-for="Employee.IsActive">
+                        <option value="true">نشط</option>
+                        <option value="false">غير نشط</option>
+                    </select>
                 </div>
             </div>
 

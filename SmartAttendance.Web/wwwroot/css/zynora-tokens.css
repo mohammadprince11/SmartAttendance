@@ -58,7 +58,13 @@
 
 /* ------------------------------------------------ الحقول (البوكس) */
 /* الحقول التي تبتلعها الودجتات مستثناة: تعديل مقاسها يُظهر المخفيّ. */
-.zy-scope input:not([type="checkbox"]):not([type="radio"]):not(.nxcal-native):not(.nxcs-native),
+/* ⚠️ `[type="file"]` مستثنى لنفس سبب `[multiple]` أدناه: ارتفاعه ليس سطرَ نصّ
+   بل **زرٌّ أصليّ يرسمه المتصفّح** («Choose File») واسم الملف بجانبه، وهذا لا
+   ينضغط. فقصْره على 30px بحشوة 6px يترك صندوقاً داخلياً ≈16px فيُقصّ الزرّ
+   والنصّ معاً — رُصد على «توقيع الموظف» بـ`/Employees/Edit` 2026-08-02.
+   و`zynora-file-input.css` يضبط له 42px عن قصد، وهذه القاعدة كانت تهزمه.
+   يُنسَّق أدناه (حشوة/انحناء/خطّ) بلا قصْر ارتفاع. */
+.zy-scope input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.nxcal-native):not(.nxcs-native),
 /* ⚠️ `[multiple]`/`[size]` مستثناة: تلك **قوائم** لا منسدلات، ارتفاعها يجب أن
    ينمو بصفوفها. وبدون الاستثناء يسحقها `--zy-control-h` إلى 30px فتُخفي
    محتواها — رُصد على `f_Watchers` بصفحة قوالب الموافقات (size=4 داخل 30px)
@@ -75,7 +81,10 @@
 /* القوائم متعدّدة الاختيار: تأخذ هوية المنسدلة (انحناء/حشوة/خطّ) لكن ارتفاعها
    يبقى لصفوفها. بلا هذا كانت تبدو عنصراً غريباً وسط منسدلاتٍ مصقولة. */
 .zy-scope select[multiple],
-.zy-scope select[size] {
+.zy-scope select[size],
+/* حقل الملف: ينال هوية الحقول (حشوة أفقية وانحناء وخطّ) دون قصْر ارتفاعه —
+   الارتفاع يتركه لـ`zynora-file-input.css` لأنه يتبع الزرّ الأصليّ لا سطر نصّ. */
+.zy-scope input[type="file"] {
     padding-inline: var(--zy-control-pad-x, 12px) !important;
     border-radius: var(--zy-control-radius, 12px) !important;
     font-size: var(--zy-control-font, 13px) !important;
