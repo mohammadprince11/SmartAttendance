@@ -17,6 +17,9 @@
     var visibleTypes = Model.ViolationTypes.Where(x => selectedCategory <= 0 || x.CategoryId == selectedCategory).ToList();
     var visibleRules = Model.PenaltyRules.Where(x => selectedCategory <= 0 || x.CategoryId == selectedCategory).ToList();
 
+    // المخالفة المفتوح سلّمها (زرّ الثلاث نقاط) — صفر يعني كلّها.
+    var openType = Model.OpenTypeId;
+
     string Sel(string key) => (activeTab == key).ToString().ToLowerInvariant();
 }
 
@@ -62,6 +65,13 @@
         <div class="zy-card" role="status">@Model.StatusMessage</div>
     }
 
+    @* ما رُفض حذفه يُعرض **بجانب** النجاح لا بدلاً منه: حفظٌ نجح وحذفٌ رُفض
+       حدثان مختلفان، وابتلاع أحدهما يترك المستخدم يظنّ أن الصفّ اختفى. *@
+    @if (!string.IsNullOrWhiteSpace(Model.BlockedMessage))
+    {
+        <div class="zy-card" role="alert">@Model.BlockedMessage</div>
+    }
+
     @* روابط لا أزرار: كل تبويب يحمّل بياناته من الخادم (المصمّم يحتاج طبقاته). *@
     <nav class="zyw-tabs" aria-label="أقسام لائحة المخالفات">
         <a class="zyw-tab" aria-selected="@Sel("library")" asp-page="./Index" asp-route-tab="library" asp-route-categoryId="@selectedCategory">المخالفات والجزاءات</a>
@@ -99,412 +109,264 @@
                     </article>
                 }
 
-                @if (Model.Categories.Count > 0)
-                {
-                    <nav class="zyw-tabs" aria-label="تصفية بالفئة">
-                        <a class="zyw-tab" aria-selected="@((selectedCategory <= 0).ToString().ToLowerInvariant())" asp-page="./Index" asp-route-tab="library">كل الفئات</a>
-                        @foreach (var category in Model.Categories)
-                        {
-                            <a class="zyw-tab" aria-selected="@((selectedCategory == category.Id).ToString().ToLowerInvariant())" asp-page="./Index" asp-route-tab="library" asp-route-categoryId="@category.Id">@category.Name</a>
-                        }
-                    </nav>
-                }
+                @* ══════════ شبكتان محرَّرتان — نمطٌ منقول عن كيان بعد فحصٍ حيّ ══════════
 
-                <div class="zyw-queue">
+                   كل صفٍّ حقول إدخال حيّة، والصفّ الجديد **يُلحَق بأسفل الشبكة** لا
+                   بمودال، و**زرّ حفظٍ واحد** يمرّ على الصفوف كلّها. كان إدخال خمس
+                   فئات يعني خمس دورات ذهابٍ وإياب؛ صار دورةً واحدة. *@
+
+                <form method="get" class="zyw-filters" asp-page="./Index">
+                    <input type="hidden" name="tab" value="library" />
+                    <div class="zyw-field zyw-field--grow">
+                        <label for="lib-search">بحث بالشاشة</label>
+                        <input id="lib-search" name="search" value="@Model.Search" placeholder="اسم عربي أو إنجليزي أو رقم فقرة" />
+                    </div>
+                    <div class="zyw-form-actions">
+                        <button type="submit" class="btn-secondary">بحث</button>
+                        @if (!string.IsNullOrWhiteSpace(Model.Search))
+                        {
+                            <a class="btn-secondary" asp-page="./Index" asp-route-tab="library">مسح</a>
+                        }
+                    </div>
+                </form>
+
+                <div class="zyw-queue zyw-queue--stacked">
+
+                    @* ─────────────── الفئات ─────────────── *@
                     <article class="zy-card">
                         <div class="zyw-queue-head">
-                            <h2>الفئات</h2>
+                            <h2>فئات المخالفات</h2>
                             <span class="zy-pill">@Model.Categories.Count</span>
                         </div>
-                        <p class="zyw-row-meta">أبواب اللائحة. كل مخالفة تتبع باباً واحداً.</p>
+                        <p class="zyw-row-meta">أبواب اللائحة. كل مخالفة تتبع باباً واحداً — واترك «على من تنطبق» فارغاً لتشمل الجميع.</p>
 
-                        <form method="post" asp-page-handler="CreateCategory">
-                            <div class="zyw-form-grid">
-                                <div class="zyw-field zyw-field--wide">
-                                    <label for="cat-name">اسم الفئة</label>
-                                    <input id="cat-name" name="name" required placeholder="مخالفات الحضور والانصراف" />
-                                </div>
-                                <div class="zyw-field">
-                                    <label for="cat-order">الترتيب</label>
-                                    <input id="cat-order" name="displayOrder" type="number" value="10" />
-                                </div>
-                                <div class="zyw-field zyw-field--wide">
-                                    <label for="cat-desc">الوصف</label>
-                                    <input id="cat-desc" name="description" placeholder="التأخير والغياب ونسيان البصمة" />
-                                </div>
+                        <form method="post" asp-page-handler="SaveCategories" data-zyw-grid="categories">
+                            <div class="zyw-table-wrap">
+                                <table class="zyw-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:34px"></th>
+                                            <th>الفئة (عربي)</th>
+                                            <th>الفئة (English)</th>
+                                            <th style="width:90px">الترتيب</th>
+                                            <th>على من تنطبق</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody data-zyw-rows>
+                                        @foreach (var category in Model.Categories.Where(c => Model.Matches(new[] { c.Name, c.NameEn })))
+                                        {
+                                            <tr>
+                                                <td>
+                                                    @* فئة النظام لا تُحذف: يُولَّد عليها آلياً من قواعد المناوبات. *@
+                                                    @if (category.IsSystem)
+                                                    {
+                                                        <span class="zy-pill" title="فئة نظام — يُولَّد عليها آلياً">🔒</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <input type="checkbox" name="deleteId" value="@category.Id" aria-label="حذف @category.Name" />
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <input type="hidden" name="rowId" value="@category.Id" />
+                                                    <input name="rowName" value="@category.Name" readonly="@category.IsSystem" required />
+                                                </td>
+                                                <td><input name="rowNameEn" value="@category.NameEn" readonly="@category.IsSystem" placeholder="Attendance" /></td>
+                                                <td><input name="rowOrder" type="number" value="@category.DisplayOrder" /></td>
+                                                <td>
+                                                    <input type="hidden" name="rowConditions" id="cat-cond-@category.Id" value="@category.ConditionsJson" />
+                                                    <div class="zyc" data-zy-conditions data-input="#cat-cond-@category.Id" data-criteria="@Model.CriteriaJson"
+                                                         data-empty-text="بلا شروط — تنطبق على كل الموظفين."></div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
                             </div>
+
+                            @* قالب الصفّ الجديد: يُستنسخ بالمتصفّح فلا يُعاد تحميل الصفحة. *@
+                            <template data-zyw-template>
+                                <tr>
+                                    <td></td>
+                                    <td>
+                                        <input type="hidden" name="rowId" value="0" />
+                                        <input name="rowName" placeholder="اسم الفئة" />
+                                    </td>
+                                    <td><input name="rowNameEn" placeholder="English" /></td>
+                                    <td><input name="rowOrder" type="number" value="10" /></td>
+                                    <td><button type="button" class="btn-secondary" data-zyw-remove>✖ إزالة</button></td>
+                                </tr>
+                            </template>
+
                             <div class="zyw-form-actions">
-                                <button type="submit" class="btn-primary">إضافة فئة</button>
+                                <button type="button" class="btn-secondary" data-zyw-add>+ فئة جديدة</button>
+                                <button type="submit" class="btn-primary">حفظ الفئات</button>
                             </div>
                         </form>
-
-                        <div class="zyw-list">
-                            @foreach (var category in Model.Categories)
-                            {
-                                <details class="zyw-acc @(category.IsActive ? "" : "disabled")">
-                                    <summary>
-                                        <span>@category.DisplayOrder.ToString("00")</span>
-                                        <strong>@category.Name</strong>
-                                        <small>@category.TypesCount مخالفة</small>
-                                    </summary>
-                                    <form method="post" asp-page-handler="UpdateCategory">
-                                        <input type="hidden" name="id" value="@category.Id" />
-                                        <div class="zyw-form-grid">
-                                            <div class="zyw-field zyw-field--wide">
-                                                <label>الاسم</label>
-                                                <input name="name" value="@category.Name" required />
-                                            </div>
-                                            <div class="zyw-field">
-                                                <label>الترتيب</label>
-                                                <input name="displayOrder" type="number" value="@category.DisplayOrder" />
-                                            </div>
-                                            <div class="zyw-field zyw-field--wide">
-                                                <label>الوصف</label>
-                                                <input name="description" value="@category.Description" />
-                                            </div>
-                                            <div class="zyw-field zyw-checks">
-                                                <label><input type="checkbox" name="isActive" value="true" checked="@category.IsActive" /> فعّالة</label>
-                                            </div>
-                                        </div>
-                                        <div class="zyw-form-actions">
-                                            <button type="submit" class="btn-primary">حفظ</button>
-                                        </div>
-                                    </form>
-                                </details>
-                            }
-                        </div>
                     </article>
 
+                    @* ─────────────── المخالفات ─────────────── *@
                     <article class="zy-card">
                         <div class="zyw-queue-head">
-                            <h2>المخالفات</h2>
-                            <span class="zy-pill">@visibleTypes.Count</span>
+                            <h2>قائمة المخالفات</h2>
+                            <span class="zy-pill">@Model.ViolationTypes.Count</span>
                         </div>
-                        <p class="zyw-row-meta">لكلٍّ خطورة وصلاحية وفترة تكرار — ومنها يُحتسب الجزاء.</p>
+                        <p class="zyw-row-meta">لكلٍّ فئتها ورقم فقرتها باللائحة — ومنها يُبنى سلّم الجزاءات أدناه.</p>
 
-                        <form method="post" asp-page-handler="CreateViolationType">
-                            <div class="zyw-form-grid">
-                                <div class="zyw-field">
-                                    <label for="vt-cat">الفئة</label>
-                                    <select id="vt-cat" name="categoryId" required>
-                                        <option value="">اختر الفئة</option>
-                                        @foreach (var category in Model.Categories.Where(x => x.IsActive))
-                                        {
-                                            <option value="@category.Id" selected="@(selectedCategory == category.Id)">@category.Name</option>
-                                        }
-                                    </select>
+                        @if (Model.Categories.Count == 0)
+                        {
+                            <div class="zyw-empty">أضف فئةً واحدة على الأقل أوّلاً — كل مخالفة تتبع فئة.</div>
+                        }
+                        else
+                        {
+                            <form method="post" asp-page-handler="SaveViolationTypes" data-zyw-grid="violations">
+                                <div class="zyw-table-wrap">
+                                    <table class="zyw-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width:34px"></th>
+                                                <th style="width:170px">الفئة</th>
+                                                <th>المخالفة (عربي)</th>
+                                                <th>المخالفة (English)</th>
+                                                <th style="width:90px">الفقرة</th>
+                                                <th>على من تنطبق</th>
+                                                <th style="width:70px"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody data-zyw-rows>
+                                            @foreach (var violation in Model.ViolationTypes.Where(v => Model.Matches(new[] { v.Name, v.NameEn, v.ArticleNo })))
+                                            {
+                                                <tr>
+                                                    <td><input type="checkbox" name="deleteId" value="@violation.Id" aria-label="حذف @violation.Name" /></td>
+                                                    <td>
+                                                        <input type="hidden" name="rowId" value="@violation.Id" />
+                                                        <select name="rowCategoryId">
+                                                            @foreach (var category in Model.Categories)
+                                                            {
+                                                                <option value="@category.Id" selected="@(category.Id == violation.CategoryId)">@category.Name</option>
+                                                            }
+                                                        </select>
+                                                    </td>
+                                                    <td><input name="rowName" value="@violation.Name" required /></td>
+                                                    <td><input name="rowNameEn" value="@violation.NameEn" placeholder="English" /></td>
+                                                    <td><input name="rowArticle" value="@violation.ArticleNo" placeholder="3/ب" /></td>
+                                                    <td>
+                                                        <input type="hidden" name="rowConditions" id="vt-cond-@violation.Id" value="@violation.ConditionsJson" />
+                                                        <div class="zyc" data-zy-conditions data-input="#vt-cond-@violation.Id" data-criteria="@Model.CriteriaJson"
+                                                             data-empty-text="بلا شروط — تنطبق على كل الموظفين."></div>
+                                                    </td>
+                                                    <td>
+                                                        @* الثلاث نقاط بكيان: تفتح تفاصيل المخالفة وسلّم جزاءاتها. *@
+                                                        <a class="btn-secondary" asp-page="./Index" asp-route-tab="library"
+                                                           asp-route-categoryId="@violation.CategoryId" asp-route-openTypeId="@violation.Id"
+                                                           title="سلّم الجزاءات">•••</a>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <div class="zyw-field">
-                                    <label for="vt-sev">الخطورة</label>
-                                    <select id="vt-sev" name="severity">
-                                        <option value="A">A — بسيطة</option>
-                                        <option value="B" selected>B — متوسطة</option>
-                                        <option value="C">C — جسيمة</option>
-                                        <option value="FinalWarning">إنذار بالفصل</option>
-                                    </select>
+
+                                <template data-zyw-template>
+                                    <tr>
+                                        <td></td>
+                                        <td>
+                                            <input type="hidden" name="rowId" value="0" />
+                                            <select name="rowCategoryId">
+                                                @foreach (var category in Model.Categories)
+                                                {
+                                                    <option value="@category.Id">@category.Name</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td><input name="rowName" placeholder="اسم المخالفة" /></td>
+                                        <td><input name="rowNameEn" placeholder="English" /></td>
+                                        <td><input name="rowArticle" placeholder="3/ب" /></td>
+                                        <td></td>
+                                        <td><button type="button" class="btn-secondary" data-zyw-remove>✖</button></td>
+                                    </tr>
+                                </template>
+
+                                <div class="zyw-form-actions">
+                                    <button type="button" class="btn-secondary" data-zyw-add>+ نوع مخالفة جديد</button>
+                                    <button type="submit" class="btn-primary">حفظ المخالفات</button>
                                 </div>
-                                <div class="zyw-field zyw-field--wide">
-                                    <label for="vt-name">اسم المخالفة</label>
-                                    <input id="vt-name" name="name" required placeholder="الإهمال في المحافظة على أصول الشركة" />
-                                </div>
-                                @* ظاهرٌ لا مطويّ: **سندٌ قانونيّ** لا خيار تجميلي. الكتاب الرسمي
-                                   يستشهد به، وعقوبةٌ بلا رقم فقرة عقوبةٌ بلا مرجع باللائحة. *@
-                                <div class="zyw-field">
-                                    <label for="vt-article">رقم الفقرة باللائحة</label>
-                                    <input id="vt-article" name="articleNo" placeholder="3/ب" />
-                                </div>
+                            </form>
+                        }
+                    </article>
+
+                    @* ─────────────── سلّم الجزاءات ─────────────── *@
+                    @if (Model.ViolationTypes.Count > 0)
+                    {
+                        <article class="zy-card">
+                            <div class="zyw-queue-head">
+                                <h2>برنامج التأديب التدريجي</h2>
+                                <span class="zy-pill">@Model.PenaltyRules.Count</span>
                             </div>
+                            <p class="zyw-row-meta">ماذا يترتّب بالتكرار الأول والثاني والثالث — <b>ونوع الإجراء هو ما يقود الحساب</b>، لا نصّ العقوبة.</p>
 
-                            @* ⚠️ **ثلاثة حقول ظاهرة لا تسعة.** كان النموذج يطلب تسعة دفعةً واحدة
-                               فيبدو إدخال مخالفةٍ واحدة مشروعاً. الباقي له افتراضات صالحة (صلاحية
-                               6 أشهر · تكرار شهريّ · تدخل بالتقييم وتظهر للموظف)، فمن يقبلها لا
-                               يفتح شيئاً، ومن يريد ضبطها يفتح سطراً واحداً. *@
-                            <details class="zyw-acc">
-                                <summary><span>⚙</span><strong>خيارات متقدّمة</strong><small>صلاحية · تكرار · ظهور</small></summary>
-                                <div class="zyw-form-grid">
-                                    <div class="zyw-field">
-                                        <label for="vt-valid">الصلاحية (شهر)</label>
-                                        <input id="vt-valid" name="validityMonths" type="number" min="1" value="6" />
-                                    </div>
-                                    <div class="zyw-field">
-                                        <label for="vt-period">فترة التكرار</label>
-                                        <select id="vt-period" name="countingPeriod">
-                                            <option value="Monthly" selected>شهرية</option>
-                                            <option value="SixMonths">خلال 6 أشهر</option>
-                                            <option value="Yearly">خلال سنة</option>
-                                            <option value="Contract">مدة العقد</option>
-                                        </select>
-                                    </div>
-                                    <div class="zyw-field zyw-field--wide">
-                                        <label for="vt-desc">الوصف</label>
-                                        <input id="vt-desc" name="description" placeholder="استخدام معدات الزملاء دون إذن أو إتلافها" />
-                                    </div>
-                                    <div class="zyw-field zyw-field--wide zyw-checks">
-                                        <label><input type="checkbox" name="includeInEvaluation" value="true" checked /> تدخل بالتقييم</label>
-                                        <label><input type="checkbox" name="showToEmployee" value="true" checked /> تظهر للموظف</label>
-                                        <label><input type="checkbox" name="isActive" value="true" checked /> فعّالة</label>
-                                    </div>
-                                </div>
-
-                                @* معايير الاستحقاق — بالمتقدّم لأن الأغلب «تنطبق على الجميع»،
-                                   وإظهارها دائماً يوحي بأن كل مخالفة تحتاج شرطاً. *@
-                                <div class="zyw-field zyw-field--wide">
-                                    <label>على من تنطبق هذه المخالفة؟</label>
-                                    <p class="zyw-row-meta">اتركها بلا شروط لتنطبق على الجميع. ومتى وُضع شرط <b>مُنع</b> تسجيلها على من لا يطابقه.</p>
-                                    <input type="hidden" name="conditions" id="vt-conditions" />
-                                    <div class="zyc" data-zy-conditions data-input="#vt-conditions" data-criteria="@Model.CriteriaJson"
-                                         data-empty-text="بلا شروط — تنطبق على كل الموظفين."></div>
-                                </div>
-                            </details>
-                            <div class="zyw-form-actions">
-                                <button type="submit" class="btn-primary">إضافة مخالفة</button>
-                            </div>
-                        </form>
-
-                        <div class="zyw-list">
-                            @foreach (var violation in visibleTypes)
+                            @foreach (var violation in Model.ViolationTypes.Where(v => openType <= 0 || v.Id == openType))
                             {
-                                <details class="zyw-acc @(violation.IsActive ? "" : "disabled")">
+                                var rules = Model.PenaltyRules.Where(r => r.ViolationTypeId == violation.Id)
+                                    .OrderBy(r => r.OccurrenceFrom).ToList();
+
+                                <details class="zyw-acc" open="@(openType == violation.Id)">
                                     <summary>
                                         <span>@Model.DisplaySeverityShort(violation.Severity)</span>
                                         <strong>@violation.Name</strong>
-                                        <small>@violation.CategoryName · @violation.RulesCount جزاء@(string.IsNullOrWhiteSpace(violation.ArticleNo) ? "" : " · فقرة " + violation.ArticleNo)</small>
+                                        <small>@violation.CategoryName · @rules.Count جزاء</small>
                                     </summary>
-                                    <form method="post" asp-page-handler="UpdateViolationType">
-                                        <input type="hidden" name="id" value="@violation.Id" />
-                                        <div class="zyw-form-grid">
-                                            <div class="zyw-field">
-                                                <label>الفئة</label>
-                                                <select name="categoryId">
-                                                    @foreach (var category in Model.Categories)
-                                                    {
-                                                        <option value="@category.Id" selected="@(category.Id == violation.CategoryId)">@category.Name</option>
-                                                    }
-                                                </select>
-                                            </div>
-                                            <div class="zyw-field">
-                                                <label>الخطورة</label>
-                                                <select name="severity">
-                                                    <option value="A" selected="@(violation.Severity == "A")">A — بسيطة</option>
-                                                    <option value="B" selected="@(violation.Severity == "B")">B — متوسطة</option>
-                                                    <option value="C" selected="@(violation.Severity == "C")">C — جسيمة</option>
-                                                    <option value="FinalWarning" selected="@(violation.Severity == "FinalWarning")">إنذار بالفصل</option>
-                                                </select>
-                                            </div>
-                                            <div class="zyw-field">
-                                                <label>الصلاحية</label>
-                                                <input name="validityMonths" type="number" min="1" value="@violation.ValidityMonths" />
-                                            </div>
-                                            <div class="zyw-field">
-                                                <label>فترة التكرار</label>
-                                                <select name="countingPeriod">
-                                                    <option value="Monthly" selected="@(violation.CountingPeriod == "Monthly")">شهرية</option>
-                                                    <option value="SixMonths" selected="@(violation.CountingPeriod == "SixMonths")">خلال 6 أشهر</option>
-                                                    <option value="Yearly" selected="@(violation.CountingPeriod == "Yearly")">خلال سنة</option>
-                                                    <option value="Contract" selected="@(violation.CountingPeriod == "Contract")">مدة العقد</option>
-                                                </select>
-                                            </div>
-                                            <div class="zyw-field zyw-field--wide">
-                                                <label>الاسم</label>
-                                                <input name="name" value="@violation.Name" required />
-                                            </div>
-                                            <div class="zyw-field">
-                                                <label>رقم الفقرة</label>
-                                                <input name="articleNo" value="@violation.ArticleNo" placeholder="3/ب" />
-                                            </div>
-                                            <div class="zyw-field zyw-field--wide">
-                                                <label>الوصف</label>
-                                                <input name="description" value="@violation.Description" />
-                                            </div>
-                                            <div class="zyw-field zyw-field--wide zyw-checks">
-                                                <label><input type="checkbox" name="includeInEvaluation" value="true" checked="@violation.IncludeInEvaluation" /> تدخل بالتقييم</label>
-                                                <label><input type="checkbox" name="showToEmployee" value="true" checked="@violation.ShowToEmployee" /> تظهر للموظف</label>
-                                                <label><input type="checkbox" name="isActive" value="true" checked="@violation.IsActive" /> فعّالة</label>
-                                            </div>
-                                            <div class="zyw-field zyw-field--wide">
-                                                <label>على من تنطبق؟ <small>@HrConditions.Describe(violation.Conditions)</small></label>
-                                                <input type="hidden" name="conditions" id="vt-cond-@violation.Id" value="@violation.ConditionsJson" />
-                                                <div class="zyc" data-zy-conditions data-input="#vt-cond-@violation.Id" data-criteria="@Model.CriteriaJson"
-                                                     data-empty-text="بلا شروط — تنطبق على كل الموظفين."></div>
-                                            </div>
-                                        </div>
-                                        <div class="zyw-form-actions">
-                                            <button type="submit" class="btn-primary">حفظ</button>
-                                        </div>
-                                    </form>
 
-                                    @* ⚠️ **الجزاء يُضاف من داخل مخالفته.** كان بنموذجٍ مستقلّ يبدأ
-                                       باختيار الفئة ثم المخالفة — أي حقلان من أحد عشر لا يقولان شيئاً
-                                       جديداً، ومن يضيف جزاءً يكون واقفاً على مخالفته أصلاً. هنا
-                                       المخالفة **مضمرة** (حقل مخفيّ)، فيبقى السؤال الحقيقي: عند أي
-                                       تكرار، وما العقوبة، وكم أثرها. *@
-                                    @{
-                                        var violationRules = Model.PenaltyRules
-                                            .Where(r => r.ViolationTypeId == violation.Id)
-                                            .OrderBy(r => r.OccurrenceFrom)
-                                            .ToList();
+                                    @if (rules.Count == 0)
+                                    {
+                                        <div class="zyw-empty">لا جزاء بعد — بلا سلّم لا يترتّب على المخالفة شيء.</div>
                                     }
 
-                                    <div class="zyw-queue-head">
-                                        <h2>سلّم جزاءاتها</h2>
-                                        <span class="zy-pill">@violationRules.Count</span>
+                                    <div class="zyw-list">
+                                        @foreach (var rule in rules)
+                                        {
+                                            <div class="zyw-item">
+                                                <div class="zyw-item-main">
+                                                    <strong>@rule.ActionLabel — @rule.PenaltyAction</strong>
+                                                    <small>
+                                                        التكرار @rule.OccurrenceFrom@(rule.OccurrenceTo > rule.OccurrenceFrom ? $"–{rule.OccurrenceTo}" : "") ·
+                                                        @rule.DropText
+                                                        @if (rule.IsFinancial)
+                                                        {
+                                                            <text> · @rule.BaseText ÷ @rule.DivisorText</text>
+                                                        }
+                                                    </small>
+                                                </div>
+                                                <div class="zyw-item-actions">
+                                                    <button type="button" class="btn-secondary" data-zyw-edit-rule="@rule.Id">تعديل</button>
+                                                    <form method="post" asp-page-handler="DeletePenaltyRule">
+                                                        <input type="hidden" name="id" value="@rule.Id" />
+                                                        <button type="submit" class="btn-secondary" data-zyconfirm="حذف الجزاء؟">حذف</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+
+                                            @* نموذج التعديل مطويّ بجانب صفّه — لا مودال ولا صفحة. *@
+                                            <form method="post" asp-page-handler="UpdatePenaltyRule" class="zyw-rule-form" data-zyw-rule-form="@rule.Id" hidden>
+                                                <input type="hidden" name="id" value="@rule.Id" />
+                                                <input type="hidden" name="ViolationTypeId" value="@violation.Id" />
+                                                @await Html.PartialAsync("_PenaltyRuleFields", new SmartAttendance.Web.Pages.DisciplinaryRules.PenaltyRuleFieldsModel(Model, rule))
+                                            </form>
+                                        }
                                     </div>
 
-                                    @if (violationRules.Count == 0)
-                                    {
-                                        <p class="zyw-row-meta">لا جزاء بعد — بلا سلّم لا يترتّب على المخالفة شيء.</p>
-                                    }
-                                    else
-                                    {
-                                        <div class="zyw-list">
-                                            @foreach (var rule in violationRules)
-                                            {
-                                                <div class="zyw-item">
-                                                    <div class="zyw-item-main">
-                                                        <strong>@Model.DisplayOccurrenceRange(rule.OccurrenceFrom, rule.OccurrenceTo) · @rule.PenaltyAction</strong>
-                                                        <small>@Model.DisplayFinancialImpact(rule.FinancialImpactType, rule.FinancialValue)</small>
-                                                    </div>
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-
-                                    <form method="post" asp-page-handler="CreatePenaltyRule">
-                                        <input type="hidden" name="violationTypeId" value="@violation.Id" />
-                                        <div class="zyw-form-grid">
-                                            <div class="zyw-field">
-                                                <label>من تكرار</label>
-                                                <input name="occurrenceFrom" type="number" min="1" value="@(violationRules.Count + 1)" required />
-                                            </div>
-                                            <div class="zyw-field">
-                                                <label>إلى تكرار</label>
-                                                <input name="occurrenceTo" type="number" min="1" value="@(violationRules.Count + 1)" required />
-                                            </div>
-                                            <div class="zyw-field zyw-field--wide">
-                                                <label>العقوبة</label>
-                                                <input name="penaltyAction" required placeholder="خصم نصف يوم من الراتب" />
-                                            </div>
-                                            <div class="zyw-field">
-                                                <label>الأثر المالي</label>
-                                                <select name="financialImpactType">
-                                                    <option value="None">لا يوجد</option>
-                                                    <option value="Days" selected>أيام</option>
-                                                    <option value="Hours">ساعات</option>
-                                                    <option value="Amount">مبلغ ثابت</option>
-                                                </select>
-                                            </div>
-                                            <div class="zyw-field">
-                                                <label>القيمة</label>
-                                                <input name="financialValue" type="number" step="0.01" value="0.5" />
-                                            </div>
-                                        </div>
-                                        <input type="hidden" name="countingPeriod" value="@violation.CountingPeriod" />
-                                        <input type="hidden" name="validityMonths" value="@violation.ValidityMonths" />
-                                        <input type="hidden" name="calculationMode" value="Cumulative" />
-                                        <div class="zyw-form-actions">
-                                            <button type="submit" class="btn-secondary">أضف جزاءً لهذه المخالفة</button>
-                                        </div>
-                                    </form>
+                                    <details class="zyw-acc">
+                                        <summary><span>+</span><strong>قاعدة إجراءات تأديبية جديدة</strong><small>عند التكرار رقم @(rules.Count + 1)</small></summary>
+                                        <form method="post" asp-page-handler="CreatePenaltyRule">
+                                            <input type="hidden" name="ViolationTypeId" value="@violation.Id" />
+                                            @await Html.PartialAsync("_PenaltyRuleFields", new SmartAttendance.Web.Pages.DisciplinaryRules.PenaltyRuleFieldsModel(Model, null, rules.Count + 1))
+                                        </form>
+                                    </details>
                                 </details>
                             }
-                        </div>
-                    </article>
+                        </article>
+                    }
                 </div>
-
-                <article class="zy-card">
-                    <div class="zyw-queue-head">
-                        <h2>سلّم الجزاءات</h2>
-                        <span class="zy-pill">@visibleRules.Count</span>
-                    </div>
-                    <p class="zyw-row-meta">
-                        ماذا يحدث بالتكرار الأول والثاني والثالث — ومن هنا يأتي الأثر المالي بالقسيمة.
-                    </p>
-
-                    @* حُذف نموذج «إضافة جزاء» المستقلّ: كان يبدأ باختيار الفئة ثم المخالفة
-                       (حقلان من أحد عشر لا يضيفان معلومة) ويطلب أحد عشر حقلاً دفعةً واحدة.
-                       صار الجزاء يُضاف من داخل مخالفته أعلاه، والمخالفة مضمرة. وهذه
-                       البطاقة صارت **نظرةً شاملة**: ترى السلّم كلّه بمكانٍ واحد وتحرّره. *@
-
-                    <div class="zyw-list">
-                        @foreach (var rule in visibleRules)
-                        {
-                            <details class="zyw-acc">
-                                <summary>
-                                    <span>@Model.DisplayOccurrenceRange(rule.OccurrenceFrom, rule.OccurrenceTo)</span>
-                                    <strong>@rule.PenaltyAction</strong>
-                                    <small>@rule.ViolationName · @Model.DisplayFinancialImpact(rule.FinancialImpactType, rule.FinancialValue)</small>
-                                </summary>
-                                <form method="post" asp-page-handler="UpdatePenaltyRule">
-                                    <input type="hidden" name="id" value="@rule.Id" />
-                                    <div class="zyw-form-grid">
-                                        <div class="zyw-field zyw-field--wide">
-                                            <label>المخالفة</label>
-                                            <select name="violationTypeId">
-                                                @foreach (var violation in Model.ViolationTypes)
-                                                {
-                                                    <option value="@violation.Id" selected="@(violation.Id == rule.ViolationTypeId)">@violation.CategoryName — @violation.Name</option>
-                                                }
-                                            </select>
-                                        </div>
-                                        <div class="zyw-field">
-                                            <label>من</label>
-                                            <input name="occurrenceFrom" type="number" min="1" value="@rule.OccurrenceFrom" />
-                                        </div>
-                                        <div class="zyw-field">
-                                            <label>إلى</label>
-                                            <input name="occurrenceTo" type="number" min="1" value="@rule.OccurrenceTo" />
-                                        </div>
-                                        <div class="zyw-field">
-                                            <label>فترة الاحتساب</label>
-                                            <select name="countingPeriod">
-                                                <option value="Monthly" selected="@(rule.CountingPeriod == "Monthly")">شهرية</option>
-                                                <option value="SixMonths" selected="@(rule.CountingPeriod == "SixMonths")">خلال 6 أشهر</option>
-                                                <option value="Yearly" selected="@(rule.CountingPeriod == "Yearly")">خلال سنة</option>
-                                                <option value="Contract" selected="@(rule.CountingPeriod == "Contract")">مدة العقد</option>
-                                            </select>
-                                        </div>
-                                        <div class="zyw-field">
-                                            <label>طريقة الاحتساب</label>
-                                            <select name="calculationMode">
-                                                <option value="Cumulative" selected="@(rule.CalculationMode == "Cumulative")">تراكمي</option>
-                                                <option value="ReplacePrevious" selected="@(rule.CalculationMode == "ReplacePrevious")">استبدال السابق</option>
-                                                <option value="DifferenceOnly" selected="@(rule.CalculationMode == "DifferenceOnly")">فرق فقط</option>
-                                            </select>
-                                        </div>
-                                        <div class="zyw-field zyw-field--wide">
-                                            <label>العقوبة</label>
-                                            <input name="penaltyAction" value="@rule.PenaltyAction" required />
-                                        </div>
-                                        <div class="zyw-field">
-                                            <label>الأثر المالي</label>
-                                            <select name="financialImpactType">
-                                                <option value="None" selected="@(rule.FinancialImpactType == "None")">لا يوجد</option>
-                                                <option value="Days" selected="@(rule.FinancialImpactType == "Days")">أيام</option>
-                                                <option value="Hours" selected="@(rule.FinancialImpactType == "Hours")">ساعات</option>
-                                                <option value="Amount" selected="@(rule.FinancialImpactType == "Amount")">مبلغ ثابت</option>
-                                            </select>
-                                        </div>
-                                        <div class="zyw-field">
-                                            <label>قيمة الأثر</label>
-                                            <input name="financialValue" type="number" step="0.01" value="@rule.FinancialValue" />
-                                        </div>
-                                        <div class="zyw-field">
-                                            <label>الصلاحية</label>
-                                            <input name="validityMonths" type="number" min="1" value="@rule.ValidityMonths" />
-                                        </div>
-                                        <div class="zyw-field zyw-checks">
-                                            <label><input type="checkbox" name="requiresApproval" value="true" checked="@rule.RequiresApproval" /> اعتماد إضافي</label>
-                                        </div>
-                                    </div>
-                                    <div class="zyw-form-actions">
-                                        <button type="submit" class="btn-primary">حفظ</button>
-                                        <button type="submit" class="btn-secondary" formaction="?handler=DeletePenaltyRule" formmethod="post" name="id" value="@rule.Id" data-zyconfirm="حذف الجزاء؟">حذف</button>
-                                    </div>
-                                </form>
-                            </details>
-                        }
-                    </div>
-                </article>
             }
             
             else if (activeTab == "designer")
@@ -1015,6 +877,7 @@ else if (Model.Settings.A4FormFileType == "Pdf")
 @if (activeTab == "library")
 {
     <script src="~/js/zynora-conditions.js" asp-append-version="true" defer></script>
+    <script src="~/js/zynora-grid-editor.js" asp-append-version="true" defer></script>
 }
 
 

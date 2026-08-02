@@ -31,7 +31,7 @@ public static class DisciplinaryLetterStore
         }
 
         var settings = await DisciplinaryConfigStore.LoadSettingsAsync(db);
-        var template = await PickTemplateAsync(db, settings.DefaultTemplateType);
+        var template = await PickTemplateForCaseAsync(db, caseId, settings.DefaultTemplateType);
 
         var issuedOn = DateOnly.FromDateTime(DateTime.Today);
         var subject = DisciplinaryLetter.Render(
@@ -78,6 +78,80 @@ WHERE v.Id = @Id AND v.LetterIssuedAt IS NOT NULL AND @@ROWCOUNT > 0;
     }
 
     private sealed record TemplatePick(int Id, string Subject, string Body);
+
+    /// <summary>
+    /// اختيار قالب الكتاب بترتيبٍ من الأخصّ للأعمّ:
+    /// <list type="number">
+    /// <item>قالب **درجة الجزاء** نفسها — إنذارٌ أوّل ونهائيّ لا يُكتبان بنصٍّ واحد.</item>
+    /// <item>قالب **المسار الآليّ** على المخالفة، حين تكون مولَّدة لا مُسجَّلة يدوياً.</item>
+    /// <item>القالب النشط لنوع الكتاب المختار بالتهيئة.</item>
+    /// <item>النصّ الاحتياطي — فلا يُترك موظفٌ بقرار خصمٍ بلا ورقة.</item>
+    /// </list>
+    /// </summary>
+    private static async Task<TemplatePick?> PickTemplateForCaseAsync(
+        ApplicationDbContext db,
+        int caseId,
+        string defaultTemplateType)
+    {
+        var ids = await HrmsDatabase.QueryAsync(
+            db,
+            """
+SELECT TOP 1
+    r.MessageTemplateId AS RuleTemplateId,
+    r.AutoMessageTemplateId AS RuleAutoTemplateId,
+    t.AutoMessageTemplateId AS TypeAutoTemplateId,
+    ISNULL(v.Source, N'') AS Source
+FROM EmployeeViolationCases v
+LEFT JOIN DisciplinaryPenaltyRules r ON r.Id = v.PenaltyRuleId
+LEFT JOIN DisciplinaryViolationTypes t ON t.Id = v.ViolationTypeId
+WHERE v.Id = @Id;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", caseId),
+            reader => new
+            {
+                Rule = HrmsDatabase.GetNullableInt(reader, "RuleTemplateId"),
+                RuleAuto = HrmsDatabase.GetNullableInt(reader, "RuleAutoTemplateId"),
+                TypeAuto = HrmsDatabase.GetNullableInt(reader, "TypeAutoTemplateId"),
+                Source = HrmsDatabase.GetString(reader, "Source")
+            });
+
+        var row = ids.FirstOrDefault();
+
+        // «مباشر» تعني تسجيلاً يدوياً؛ ما عداه (تقرير الحضور · بلاغ) مسارٌ مولَّد.
+        var isAutomated = row is not null
+            && !string.IsNullOrWhiteSpace(row.Source)
+            && !row.Source.Contains("مباشر", StringComparison.Ordinal);
+
+        var preferred = isAutomated
+            ? row!.RuleAuto ?? row.TypeAuto ?? row.Rule
+            : row?.Rule;
+
+        if (preferred is > 0)
+        {
+            var byId = await ByIdAsync(db, preferred.Value);
+            if (byId is not null) return byId;
+        }
+
+        return await PickTemplateAsync(db, defaultTemplateType);
+    }
+
+    private static async Task<TemplatePick?> ByIdAsync(ApplicationDbContext db, int id)
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            db,
+            """
+SELECT TOP 1 Id, ISNULL(Subject, N'') AS Subject, ISNULL(Body, N'') AS Body
+FROM DisciplinaryMessageTemplates
+WHERE Id = @Id AND ISNULL(IsActive, 1) = 1;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", id),
+            reader => new TemplatePick(
+                HrmsDatabase.GetInt(reader, "Id"),
+                HrmsDatabase.GetString(reader, "Subject"),
+                HrmsDatabase.GetString(reader, "Body")));
+
+        return rows.FirstOrDefault();
+    }
 
     /// <summary>
     /// القالب النشط لنوع الكتاب المختار بالتهيئة، والافتراضي منه أوّلاً. لا قالب

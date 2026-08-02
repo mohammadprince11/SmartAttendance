@@ -1,0 +1,228 @@
+@model SmartAttendance.Web.Pages.DisciplinaryRules.PenaltyRuleFieldsModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+@{
+    var rule = Model.Rule;
+    var page = Model.Page;
+    var uid = rule?.Id.ToString() ?? $"new{Model.NextOccurrence}";
+
+    var actionType = rule?.ActionType ?? PenaltyAction.VerbalWarning;
+    var pool = rule?.BasePool ?? PenaltyBasePool.Default;
+    decimal PoolPercent(string key) =>
+        pool.FirstOrDefault(m => string.Equals(m.Key, key, StringComparison.OrdinalIgnoreCase))?.Percent ?? 0m;
+    bool InPool(string key) => pool.Any(m => string.Equals(m.Key, key, StringComparison.OrdinalIgnoreCase));
+}
+
+@* ══════════ حقول قاعدة الجزاء ══════════
+
+   **نوع الإجراء يقود الشاشة**: اختيار «اقتطاع من الراتب» يفتح الوعاء والمقام
+   والوجهة، و«إنهاء الخدمة» يفتح سبب الإيقاف، وما عداهما لا يعرض حساباً ماليّاً
+   أصلاً. كان النموذج يعرض تسعة حقول مالية لإنذارٍ شفويّ لا يخصم فلساً. *@
+
+<div class="zyw-form-grid" data-zyw-penalty="@uid">
+
+    <div class="zyw-field">
+        <label for="pr-type-@uid">نوع الإجراء</label>
+        <select id="pr-type-@uid" name="ActionType" data-zyw-action-type>
+            @foreach (var type in PenaltyAction.Types)
+            {
+                <option value="@type.Key" selected="@(type.Key == actionType)">@type.Label</option>
+            }
+        </select>
+    </div>
+
+    <div class="zyw-field zyw-field--grow">
+        <label for="pr-title-@uid">عنوان الإجراء</label>
+        <input id="pr-title-@uid" name="PenaltyAction" value="@rule?.PenaltyAction"
+               placeholder="يُترك فارغاً فيُكتب اسم النوع" />
+    </div>
+
+    <div class="zyw-field">
+        <label for="pr-from-@uid">من تكرار</label>
+        <input id="pr-from-@uid" name="OccurrenceFrom" type="number" min="1"
+               value="@(rule?.OccurrenceFrom ?? Model.NextOccurrence)" />
+    </div>
+
+    <div class="zyw-field">
+        <label for="pr-to-@uid">إلى تكرار</label>
+        <input id="pr-to-@uid" name="OccurrenceTo" type="number" min="1"
+               value="@(rule?.OccurrenceTo ?? Model.NextOccurrence)" />
+    </div>
+
+    @* ─── سبب الإيقاف — لإنهاء الخدمة وحده ─── *@
+    <div class="zyw-field zyw-field--wide" data-zyw-when="Termination" hidden="@(!PenaltyAction.IsTermination(actionType))">
+        <label for="pr-stop-@uid">سبب الإيقاف</label>
+        <select id="pr-stop-@uid" name="TerminationReasonId">
+            <option value="">— اختر —</option>
+            @foreach (var reason in page.TerminationReasons.Where(r => r.IsActive))
+            {
+                <option value="@reason.Id" selected="@(rule?.TerminationReasonId == reason.Id)">@reason.Name</option>
+            }
+        </select>
+        <small class="zyw-row-meta">يصل مباشرةً لمودل إنهاء الخدمة، فيُحتسب بدل نهاية الخدمة بنسبته.</small>
+    </div>
+
+    @* ─── الكتلة المالية — لاقتطاع الراتب وحده ─── *@
+    <div class="zyw-field zyw-field--wide" data-zyw-when="SalaryDeduction" hidden="@(!PenaltyAction.IsFinancial(actionType))">
+        <div class="zyw-form-grid">
+
+            <div class="zyw-field">
+                <label for="pr-item-@uid">عنصر الراتب (وجهة الترحيل)</label>
+                <select id="pr-item-@uid" name="SalaryItemId">
+                    <option value="">خصومات المخالفات (سطر عام)</option>
+                    @foreach (var item in page.DeductionItems)
+                    {
+                        <option value="@item.Id" selected="@(rule?.SalaryItemId == item.Id)">@item.Name</option>
+                    }
+                </select>
+                <small class="zyw-row-meta">البند الذي يظهر بالقسيمة ويُرحَّل إليه المبلغ.</small>
+            </div>
+
+            <div class="zyw-field">
+                <label for="pr-impact-@uid">وحدة الخصم</label>
+                <select id="pr-impact-@uid" name="FinancialImpactType">
+                    <option value="Days" selected="@(rule?.FinancialImpactType == "Days")">أيام</option>
+                    <option value="Hours" selected="@(rule?.FinancialImpactType == "Hours")">ساعات</option>
+                    <option value="Amount" selected="@(rule?.FinancialImpactType == "Amount")">مبلغ ثابت</option>
+                </select>
+            </div>
+
+            <div class="zyw-field">
+                <label for="pr-value-@uid">المقدار</label>
+                <input id="pr-value-@uid" name="FinancialValue" type="number" step="0.01" min="0"
+                       value="@(rule?.FinancialValue ?? 0)" />
+            </div>
+
+            @* ─── وعاء الخصم ─── *@
+            <div class="zyw-field zyw-field--wide">
+                <label>وعاء الخصم — من أي المكوّنات يُحتسب؟</label>
+                <p class="zyw-row-meta">
+                    أشّر المكوّنات وحدّد نسبة كلٍّ منها. <b>بلا اختيار = الراتب الأساسي 100%</b>،
+                    وهو ما كان يفعله النظام دائماً قبل هذا الحقل.
+                </p>
+                <div class="zyw-checks">
+                    @foreach (var component in SalaryBaseComposer.Components)
+                    {
+                        <label class="zyw-pool-row">
+                            <input type="checkbox" name="PoolKeys" value="@component.Key" checked="@InPool(component.Key)" />
+                            <span>@component.Label</span>
+                            <input name="PoolPercents" type="number" step="0.01" min="0"
+                                   value="@(InPool(component.Key) ? PoolPercent(component.Key) : 0)" style="width:88px" />
+                            <span>%</span>
+                        </label>
+                    }
+                </div>
+            </div>
+
+            @* ─── مقام أيام العمل ─── *@
+            <div class="zyw-field">
+                <label for="pr-basis-@uid">أيام العمل تعتمد على</label>
+                <select id="pr-basis-@uid" name="WorkDaysBasis">
+                    @foreach (var option in WorkDaysBasis.Options)
+                    {
+                        <option value="@option.Key" selected="@(option.Key == (rule?.WorkDaysBasis ?? WorkDaysBasis.Fixed))">@option.Label</option>
+                    }
+                </select>
+            </div>
+
+            <div class="zyw-field">
+                <label for="pr-days-@uid">عدد أيام الدوام الفعلية</label>
+                <input id="pr-days-@uid" name="WorkDaysFixed" type="number" min="1" max="31"
+                       value="@(rule?.WorkDaysFixed ?? WorkDaysBasis.DefaultFixedDays)" />
+                <small class="zyw-row-meta">يُستعمل مع «عدد ثابت».</small>
+            </div>
+
+            <div class="zyw-field">
+                <label for="pr-exclude-@uid">استثناء من المقام</label>
+                <select id="pr-exclude-@uid" name="ExcludeHolidays">
+                    @foreach (var option in WorkDaysBasis.ExcludeOptions)
+                    {
+                        <option value="@option.Key" selected="@(option.Key == (rule?.ExcludeHolidays ?? WorkDaysBasis.ExcludeNone))">@option.Label</option>
+                    }
+                </select>
+                <small class="zyw-row-meta">استثناء العطل يصغّر المقام فيرفع أجر اليوم.</small>
+            </div>
+        </div>
+    </div>
+
+    @* ─── سياسة الإسقاط ─── *@
+    <div class="zyw-field zyw-field--wide">
+        <label>إسقاط الإجراء التأديبي</label>
+        <div class="zyw-form-grid">
+            <div class="zyw-field">
+                <label for="pr-dmode-@uid">النمط</label>
+                <select id="pr-dmode-@uid" name="DropMode">
+                    @foreach (var mode in PenaltyDropPolicy.Modes)
+                    {
+                        <option value="@mode.Key" selected="@(mode.Key == (rule?.DropMode ?? PenaltyDropPolicy.ModeOnce))">@mode.Label</option>
+                    }
+                </select>
+            </div>
+            <div class="zyw-field">
+                <label for="pr-devery-@uid">المدّة</label>
+                <input id="pr-devery-@uid" name="DropEvery" type="number" min="0" value="@(rule?.DropEvery ?? 6)" />
+                <small class="zyw-row-meta">صفر = لا يسقط أبداً.</small>
+            </div>
+            <div class="zyw-field">
+                <label for="pr-dunit-@uid">الوحدة</label>
+                <select id="pr-dunit-@uid" name="DropUnit">
+                    @foreach (var unit in PenaltyDropPolicy.Units)
+                    {
+                        <option value="@unit.Key" selected="@(unit.Key == (rule?.DropUnit ?? PenaltyDropPolicy.UnitMonths))">@unit.Label</option>
+                    }
+                </select>
+            </div>
+            <div class="zyw-field">
+                <label for="pr-danchor-@uid">المرساة</label>
+                <select id="pr-danchor-@uid" name="DropAnchor">
+                    @foreach (var anchor in PenaltyDropPolicy.Anchors)
+                    {
+                        <option value="@anchor.Key" selected="@(anchor.Key == (rule?.DropAnchor ?? PenaltyDropPolicy.AnchorActionDate))">@anchor.Label</option>
+                    }
+                </select>
+                <small class="zyw-row-meta">«نهاية السنة» تُسقط الجميع دفعةً واحدة لا بعد سنةٍ من كل مخالفة.</small>
+            </div>
+        </div>
+    </div>
+
+    @* ─── قوالب الكتاب ─── *@
+    <div class="zyw-field">
+        <label for="pr-tpl-@uid">قالب الكتاب</label>
+        <select id="pr-tpl-@uid" name="MessageTemplateId">
+            <option value="">القالب الافتراضي بالتهيئة</option>
+            @foreach (var template in page.MessageTemplates.Where(t => t.IsActive))
+            {
+                <option value="@template.Id" selected="@(rule?.MessageTemplateId == template.Id)">@template.Name</option>
+            }
+        </select>
+    </div>
+
+    <div class="zyw-field">
+        <label for="pr-atpl-@uid">قالب الكتاب عند الأتمتة</label>
+        <select id="pr-atpl-@uid" name="AutoMessageTemplateId">
+            <option value="">نفس القالب أعلاه</option>
+            @foreach (var template in page.MessageTemplates.Where(t => t.IsActive))
+            {
+                <option value="@template.Id" selected="@(rule?.AutoMessageTemplateId == template.Id)">@template.Name</option>
+            }
+        </select>
+        <small class="zyw-row-meta">للمخالفات المولَّدة من تقرير الحضور — لا يوقّعها مسجِّل.</small>
+    </div>
+
+    <div class="zyw-field">
+        <label for="pr-period-@uid">فترة عدّ التكرار</label>
+        <select id="pr-period-@uid" name="CountingPeriod">
+            <option value="Monthly" selected="@(rule?.CountingPeriod == "Monthly")">شهرية</option>
+            <option value="SixMonths" selected="@(rule?.CountingPeriod == "SixMonths")">خلال 6 أشهر</option>
+            <option value="Yearly" selected="@(rule?.CountingPeriod == "Yearly")">خلال سنة</option>
+            <option value="Contract" selected="@(rule?.CountingPeriod == "Contract")">مدة العقد</option>
+        </select>
+    </div>
+
+    <div class="zyw-field zyw-checks">
+        <label><input type="checkbox" name="requiresApproval" value="true" checked="@(rule?.RequiresApproval ?? false)" /> يتطلّب اعتماداً إضافياً</label>
+    </div>
+</div>
+
+<div class="zyw-form-actions">
+    <button type="submit" class="btn-primary">@(rule is null ? "أضف القاعدة" : "حفظ")</button>
+</div>

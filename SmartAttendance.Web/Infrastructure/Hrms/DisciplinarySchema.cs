@@ -56,6 +56,29 @@ IF COL_LENGTH('DisciplinaryViolationTypes','ArticleNo') IS NULL
 IF COL_LENGTH('DisciplinaryViolationTypes','ConditionsJson') IS NULL
     ALTER TABLE DisciplinaryViolationTypes ADD ConditionsJson nvarchar(max) NULL;
 
+-- الاسم بالإنجليزية على الفئة والمخالفة: كيان تفرض عمودين، ونظامنا White-Label
+-- يُباع لشركاتٍ تصدر كتبها بلغتين. إضافة محضة، والفراغ يعني «استعمل العربي».
+IF COL_LENGTH('DisciplinaryViolationCategories','NameEn') IS NULL
+    ALTER TABLE DisciplinaryViolationCategories ADD NameEn nvarchar(180) NULL;
+
+-- معايير الاستحقاق على **الفئة** أيضاً (كيان تضعها بالمستويين).
+IF COL_LENGTH('DisciplinaryViolationCategories','ConditionsJson') IS NULL
+    ALTER TABLE DisciplinaryViolationCategories ADD ConditionsJson nvarchar(max) NULL;
+
+-- فئات النظام: «الحضور والانصراف» تُولَّد عليها المخالفات آلياً من قواعد المناوبات،
+-- فحذفها يقطع التوليد بصمت. تُعلَّم فتُمنع إعادة تسميتها وحذفها.
+IF COL_LENGTH('DisciplinaryViolationCategories','IsSystem') IS NULL
+    ALTER TABLE DisciplinaryViolationCategories ADD IsSystem bit NOT NULL
+        CONSTRAINT DF_DisciplinaryViolationCategories_IsSystem DEFAULT(0);
+
+IF COL_LENGTH('DisciplinaryViolationTypes','NameEn') IS NULL
+    ALTER TABLE DisciplinaryViolationTypes ADD NameEn nvarchar(250) NULL;
+
+-- قالب الرسالة **عند الأتمتة** مستقلّ عن اليدوي: مخالفةٌ يولّدها المحرّك لا
+-- يوقّعها مسجِّل، فنصّها يختلف.
+IF COL_LENGTH('DisciplinaryViolationTypes','AutoMessageTemplateId') IS NULL
+    ALTER TABLE DisciplinaryViolationTypes ADD AutoMessageTemplateId int NULL;
+
 IF OBJECT_ID('DisciplinaryPenaltyRules', 'U') IS NULL
 BEGIN
     CREATE TABLE DisciplinaryPenaltyRules
@@ -75,6 +98,65 @@ BEGIN
         CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
     );
 END;
+
+-- ══════════ الجزاء يصير كائناً لا نصّاً ══════════
+--
+-- `PenaltyAction` نصٌّ حرّ **لا يقود شيئاً**: لا يعرف النظام أهو إنذارٌ أم خصمٌ
+-- أم إنهاء خدمة. يبقى عنواناً للعرض، ويقود السلوكَ `ActionType` أدناه.
+IF COL_LENGTH('DisciplinaryPenaltyRules','ActionType') IS NULL
+    ALTER TABLE DisciplinaryPenaltyRules ADD ActionType nvarchar(40) NOT NULL
+        CONSTRAINT DF_DisciplinaryPenaltyRules_ActionType DEFAULT(N'VerbalWarning');
+
+-- سبب الإيقاف — لإجراء «إنهاء الخدمة» وحده، مربوط بـNexoraTerminationReasons.
+IF COL_LENGTH('DisciplinaryPenaltyRules','TerminationReasonId') IS NULL
+    ALTER TABLE DisciplinaryPenaltyRules ADD TerminationReasonId int NULL;
+
+-- وجهة الخصم بالمسير: عنصر راتب من نوع اقتطاع. بدونه الخصم رقمٌ لا يعرف أين
+-- يُرحَّل، ويظهر بالقسيمة سطراً عامّاً بلا حساب.
+IF COL_LENGTH('DisciplinaryPenaltyRules','SalaryItemId') IS NULL
+    ALTER TABLE DisciplinaryPenaltyRules ADD SalaryItemId int NULL;
+
+-- وعاء الخصم: [{key,percent}] بمفاتيح SalaryBaseComposer. الفراغ = الأساسي 100%
+-- (سلوك ما قبل الميزة بالضبط).
+IF COL_LENGTH('DisciplinaryPenaltyRules','BasePoolJson') IS NULL
+    ALTER TABLE DisciplinaryPenaltyRules ADD BasePoolJson nvarchar(max) NULL;
+
+-- مقام معدّل اليوم: كان `÷ 30` مثبّتاً بالكود، و«30» قرارٌ لا حقيقة.
+IF COL_LENGTH('DisciplinaryPenaltyRules','WorkDaysBasis') IS NULL
+    ALTER TABLE DisciplinaryPenaltyRules ADD WorkDaysBasis nvarchar(30) NOT NULL
+        CONSTRAINT DF_DisciplinaryPenaltyRules_WorkDaysBasis DEFAULT(N'Fixed');
+
+IF COL_LENGTH('DisciplinaryPenaltyRules','WorkDaysFixed') IS NULL
+    ALTER TABLE DisciplinaryPenaltyRules ADD WorkDaysFixed int NOT NULL
+        CONSTRAINT DF_DisciplinaryPenaltyRules_WorkDaysFixed DEFAULT(30);
+
+IF COL_LENGTH('DisciplinaryPenaltyRules','ExcludeHolidays') IS NULL
+    ALTER TABLE DisciplinaryPenaltyRules ADD ExcludeHolidays nvarchar(40) NOT NULL
+        CONSTRAINT DF_DisciplinaryPenaltyRules_ExcludeHolidays DEFAULT(N'None');
+
+-- سياسة الإسقاط: كانت رقم أشهرٍ واحداً (`ValidityMonths`) بلا نمطٍ ولا مرساة.
+IF COL_LENGTH('DisciplinaryPenaltyRules','DropMode') IS NULL
+    ALTER TABLE DisciplinaryPenaltyRules ADD DropMode nvarchar(20) NOT NULL
+        CONSTRAINT DF_DisciplinaryPenaltyRules_DropMode DEFAULT(N'Once');
+
+IF COL_LENGTH('DisciplinaryPenaltyRules','DropEvery') IS NULL
+    ALTER TABLE DisciplinaryPenaltyRules ADD DropEvery int NOT NULL
+        CONSTRAINT DF_DisciplinaryPenaltyRules_DropEvery DEFAULT(0);
+
+IF COL_LENGTH('DisciplinaryPenaltyRules','DropUnit') IS NULL
+    ALTER TABLE DisciplinaryPenaltyRules ADD DropUnit nvarchar(20) NOT NULL
+        CONSTRAINT DF_DisciplinaryPenaltyRules_DropUnit DEFAULT(N'Months');
+
+IF COL_LENGTH('DisciplinaryPenaltyRules','DropAnchor') IS NULL
+    ALTER TABLE DisciplinaryPenaltyRules ADD DropAnchor nvarchar(40) NOT NULL
+        CONSTRAINT DF_DisciplinaryPenaltyRules_DropAnchor DEFAULT(N'ActionDate');
+
+-- قالب الكتاب لكل درجةِ جزاء (إنذارٌ أوّل ونهائيّ لا يُكتبان بنصٍّ واحد).
+IF COL_LENGTH('DisciplinaryPenaltyRules','MessageTemplateId') IS NULL
+    ALTER TABLE DisciplinaryPenaltyRules ADD MessageTemplateId int NULL;
+
+IF COL_LENGTH('DisciplinaryPenaltyRules','AutoMessageTemplateId') IS NULL
+    ALTER TABLE DisciplinaryPenaltyRules ADD AutoMessageTemplateId int NULL;
 
 IF OBJECT_ID('DisciplinaryMessageTemplates', 'U') IS NULL
 BEGIN
@@ -132,6 +214,62 @@ BEGIN
         IsActive bit NOT NULL DEFAULT(1),
         CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
     );
+END;
+""");
+
+        await BackfillPenaltyModelAsync(dbContext);
+    }
+
+    /// <summary>
+    /// ترحيلٌ **لمرّة واحدة** لصفوف الجزاءات القديمة إلى النموذج الجديد.
+    ///
+    /// ⚠️ استدعاءان لا واحد: الأعمدة المضافة أعلاه لا يمكن أن تُذكَر بنفس الدفعة
+    /// التي تضيفها — SQL Server يحلّل أسماء الأعمدة عند التحليل لا عند التنفيذ،
+    /// فتفشل الدفعة كلّها بـ«Invalid column name».
+    ///
+    /// ⚠️ ومحكومٌ براية بالإعدادات لا بشرطٍ على البيانات: شرطٌ مثل
+    /// «حيث النوع = تنبيه شفوي» يُعاد تطبيقه بكل إقلاع، فيدوس على تصنيفٍ **اختاره
+    /// المستخدم بنفسه**. الراية تجعل الترحيل حدثاً تاريخياً لا سلوكاً دائماً.
+    /// </summary>
+    private static async Task BackfillPenaltyModelAsync(ApplicationDbContext dbContext)
+    {
+        await HrmsDatabase.ExecuteAsync(
+            dbContext,
+            """
+IF NOT EXISTS (SELECT 1 FROM DisciplinarySettings WHERE [Key] = N'PenaltyModelBackfilled')
+BEGIN
+    -- `ValidityMonths` كان يحمل معنى «يسقط بعد N شهراً» — يُنقل بدل أن يُهجَر.
+    UPDATE DisciplinaryPenaltyRules
+    SET DropEvery = ValidityMonths,
+        DropUnit = N'Months',
+        DropAnchor = N'ActionDate',
+        DropMode = N'Once'
+    WHERE DropEvery = 0 AND ISNULL(ValidityMonths, 0) > 0;
+
+    -- النوع يُستنتج من النصّ الحرّ مرّةً واحدة. الأثر المالي أقوى دليل: صفٌّ
+    -- يخصم فعلاً هو اقتطاع مهما كان نصّه. وما لا يُطابَق يبقى «تنبيه شفوي» —
+    -- **الافتراض الآمن أن لا يُخصم** لا أن يُخصم.
+    UPDATE DisciplinaryPenaltyRules
+    SET ActionType =
+        CASE
+            WHEN ISNULL(FinancialImpactType, N'None') <> N'None' THEN N'SalaryDeduction'
+            WHEN PenaltyAction LIKE N'%فصل%' OR PenaltyAction LIKE N'%طرد%'
+              OR PenaltyAction LIKE N'%إنهاء%' OR PenaltyAction LIKE N'%انهاء%' THEN N'Termination'
+            WHEN PenaltyAction LIKE N'%خصم%' OR PenaltyAction LIKE N'%اقتطاع%' THEN N'SalaryDeduction'
+            WHEN PenaltyAction LIKE N'%زيادة%' OR PenaltyAction LIKE N'%علاوة%' THEN N'RaiseDenial'
+            WHEN PenaltyAction LIKE N'%نهائي%' THEN N'FinalWarning'
+            WHEN PenaltyAction LIKE N'%إنذار%' OR PenaltyAction LIKE N'%انذار%' THEN N'Warning'
+            WHEN PenaltyAction LIKE N'%خطي%' OR PenaltyAction LIKE N'%خطّي%' THEN N'WrittenWarning'
+            ELSE N'VerbalWarning'
+        END;
+
+    -- فئات النظام: ما تُولَّد عليه المخالفات آلياً من قواعد المناوبات.
+    UPDATE DisciplinaryViolationCategories
+    SET IsSystem = 1
+    WHERE Name LIKE N'%الحضور%';
+
+    INSERT INTO DisciplinarySettings([Key], [Value], UpdatedAt)
+    VALUES (N'PenaltyModelBackfilled', N'true', SYSUTCDATETIME());
 END;
 """);
     }

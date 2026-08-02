@@ -403,3 +403,69 @@
         align-items: stretch;
     }
 }
+
+/* ── الشبكة المحرَّرة داخل الصفّ ─────────────────────────────────────────────
+   الحقول داخل الخلايا لا تحمل حدودها الكاملة: جدولٌ بحدّ لكل حقل يصير شبكة
+   مربّعات لا جدولاً. الحدّ السفليّ وحده يكفي ليُقرأ الحقل حقلاً.
+   والمقاسات كلّها من التوكنات — لا رقم خامّ هنا. */
+.zyw-table td > input,
+.zyw-table td > select {
+    inline-size: 100%;
+    min-inline-size: 7rem;
+    border: 0;
+    border-bottom: 1px solid var(--zy-border);
+    border-radius: 0;
+    background: transparent;
+    padding-inline: var(--zy-space-1);
+}
+
+.zyw-table td > input:focus,
+.zyw-table td > select:focus {
+    border-bottom-color: var(--zy-accent);
+    outline: none;
+}
+
+/* حقلٌ للقراءة فقط (فئة نظام): يُرى أنه غير قابل للتحرير قبل أن يُنقَر. */
+.zyw-table td > input[readonly] {
+    color: var(--zy-text-muted);
+    border-bottom-style: dashed;
+    cursor: not-allowed;
+}
+
+.zyw-table td > .zyc {
+    min-inline-size: 16rem;
+    white-space: normal;
+}
+
+/* سطر مكوّن بوعاء الخصم: مربّع · اسم · نسبة · علامة٪ بمحاذاةٍ واحدة. */
+.zyw-pool-row {
+    display: flex;
+    align-items: center;
+    gap: var(--zy-space-2);
+}
+
+.zyw-pool-row > span:first-of-type {
+    min-inline-size: 14rem;
+}
+
+/* نموذج تعديل قاعدة الجزاء ينفتح تحت صفّه — يُفصَل بصرياً عن الصفّ. */
+.zyw-rule-form {
+    border-inline-start: 3px solid var(--zy-accent);
+    padding-inline-start: var(--zy-space-3);
+    margin-block: var(--zy-space-2);
+}
+
+/* شبكةٌ ذات جدول تحتاج العرض كلّه: عمودان بعرض 280px يجعلان الجدول شريطاً
+   يُمرَّر أفقياً بلا داعٍ. الطابور يصير عموداً واحداً حين يحمل شبكات. */
+.zyw-queue--stacked {
+    grid-template-columns: 1fr;
+}
+
+/* ⚠️ `hidden` تُهزَم بأي `display` من صنف.
+   `.zyw-field { display: flex }` أقوى تخصّصاً من قاعدة المتصفّح
+   `[hidden] { display: none }`، فحقلٌ مخفيّ من الخادم أو بالسكربت يبقى ظاهراً.
+   رُصد حياً: كتلة الاقتطاع وسبب الإيقاف تظهران معاً لإنذارٍ شفويّ.
+   القاعدة محصورة بالقوقعة فلا تمسّ ما خارجها. */
+.zyw [hidden] {
+    display: none !important;
+}

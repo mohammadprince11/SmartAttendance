@@ -333,9 +333,26 @@ WHERE r.Id = @Id;
         var months = (await MonthAttendanceStore.ListAsync(dbContext, run.Year, run.Month))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.First());
 
+        // المخالفات مع **قاعدة جزائها**: الوعاء والمقام صارا بياناتٍ على القاعدة لا
+        // ثابتين بالكود (`Basic ÷ 30`). صفٌّ بلا قاعدة أو بقاعدةٍ بلا وعاء يرجع
+        // للافتراضين المعلنين — أي **نفس رقم اليوم بالضبط**.
         var penalties = (await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT EmployeeId, ISNULL(DeductionAmount,0) AS DeductionAmount, ISNULL(FinancialImpactType,N'None') AS FinancialImpactType, ISNULL(FinancialImpactValue,0) AS FinancialImpactValue FROM EmployeeViolationCases WHERE ISNULL(IsDeleted,0)=0 AND EventDate >= @From AND EventDate <= @To;",
+            """
+SELECT v.EmployeeId,
+       ISNULL(v.DeductionAmount,0) AS DeductionAmount,
+       ISNULL(v.FinancialImpactType,N'None') AS FinancialImpactType,
+       ISNULL(v.FinancialImpactValue,0) AS FinancialImpactValue,
+       ISNULL(r.BasePoolJson, N'') AS BasePoolJson,
+       ISNULL(r.WorkDaysBasis, N'Fixed') AS WorkDaysBasis,
+       ISNULL(r.WorkDaysFixed, 30) AS WorkDaysFixed,
+       ISNULL(r.ExcludeHolidays, N'None') AS ExcludeHolidays,
+       ISNULL(s.Name, N'') AS SalaryItemName
+FROM EmployeeViolationCases v
+LEFT JOIN DisciplinaryPenaltyRules r ON r.Id = v.PenaltyRuleId
+LEFT JOIN SalaryItems s ON s.Id = r.SalaryItemId
+WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
+""",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@From", periodStart.ToDateTime(TimeOnly.MinValue));
@@ -346,9 +363,17 @@ WHERE r.Id = @Id;
                 EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
                 Direct = reader["DeductionAmount"] is decimal da ? da : 0,
                 Type = HrmsDatabase.GetString(reader, "FinancialImpactType"),
-                Value = reader["FinancialImpactValue"] is decimal v ? v : 0
+                Value = reader["FinancialImpactValue"] is decimal v ? v : 0,
+                Pool = HrmsDatabase.GetString(reader, "BasePoolJson"),
+                Basis = HrmsDatabase.GetString(reader, "WorkDaysBasis"),
+                BasisDays = HrmsDatabase.GetInt(reader, "WorkDaysFixed"),
+                Exclude = HrmsDatabase.GetString(reader, "ExcludeHolidays"),
+                ItemName = HrmsDatabase.GetString(reader, "SalaryItemName")
             }))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
+
+        // أيام الفترة الفعلية — مقامٌ للخيار «أيام فترة الراتب».
+        var daysInPeriod = periodEnd.DayNumber - periodStart.DayNumber + 1;
 
         // حركات الدخل/الاقتطاع للفترة (شاشة «الحركات») — بنود إضافية/خصم بالقسيمة
         var income = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.Income))
@@ -577,20 +602,58 @@ WHERE r.Id = @Id;
             var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(
                 SalaryBaseComposer.Compose(baseAmounts, gosiMembers), gosiProfile);
 
-            // خصومات المخالفات: مباشر بالدينار + أيام×يومي + ساعات×ساعي
+            // خصومات المخالفات: مباشر بالدينار + أيام×يومي + ساعات×ساعي.
+            //
+            // ⚠️ **اليوميّ هنا يخصّ كل مخالفة على حدة** لا الموظف: وعاء الخصم ومقام
+            // أيام العمل صارا حقلين على قاعدة الجزاء، فقد تُخصم مخالفةٌ من الأساسي
+            // وحده وأخرى من الأساسي زائد بدل السكن. الفراغ يعطي `Basic ÷ 30` —
+            // سلوك ما قبل الميزة بالضبط.
+            //
+            // وأيام غير العمل تُطرح من المقام حين يطلبها الجزاء: أيام الفترة ناقص
+            // أيام عمل الموظف بالاعتماد الشهري. لا اعتماد ⟹ لا طرح.
+            var nonWorkDays = month is { WorkDays: > 0 }
+                ? Math.Max(0, daysInPeriod - month.WorkDays)
+                : 0;
+
             decimal penaltyTotal = 0;
             if (penalties.TryGetValue(emp.Id, out var empPen))
             {
+                var penaltyByItem = new Dictionary<string, decimal>(StringComparer.Ordinal);
+
                 foreach (var p in empPen)
                 {
+                    var pool = PenaltyBasePool.Amount(baseAmounts, PenaltyBasePool.Parse(p.Pool));
+                    var divisor = WorkDaysBasis.Divisor(
+                        p.Basis, p.BasisDays, daysInPeriod,
+                        companyHolidays: 0, restDays: nonWorkDays, excludeMode: p.Exclude);
+
+                    var penaltyDaily = WorkDaysBasis.DailyRate(pool, divisor);
+                    var penaltyHourly = WorkDaysBasis.HourlyRate(penaltyDaily);
+
                     var amt = p.Direct;
-                    if (p.Type == "Days") amt += Math.Round(p.Value * dailyRate, 2);
-                    else if (p.Type == "Hours") amt += Math.Round(p.Value * hourlyRate, 2);
+                    if (p.Type == "Days") amt += Math.Round(p.Value * penaltyDaily, 2);
+                    else if (p.Type == "Hours") amt += Math.Round(p.Value * penaltyHourly, 2);
                     else if (p.Type == "Amount") amt += p.Value;
-                    penaltyTotal += amt;
+
+                    if (amt == 0) continue;
+
+                    // وجهة الترحيل: بند الاقتطاع المسمّى إن وُجد، وإلا السطر العام.
+                    // بدونها كان الخصم يظهر رقماً بلا حسابٍ يُرحَّل إليه.
+                    var itemName = string.IsNullOrWhiteSpace(p.ItemName) ? "خصومات المخالفات" : p.ItemName;
+                    penaltyByItem[itemName] = penaltyByItem.GetValueOrDefault(itemName) + amt;
                 }
-                if (penaltyTotal > 0)
-                    comps.Add(new Component { ItemName = "خصومات المخالفات", Amount = penaltyTotal, IsAddition = false, Kind = "Penalty" });
+
+                foreach (var entry in penaltyByItem.Where(e => e.Value > 0))
+                {
+                    penaltyTotal += entry.Value;
+                    comps.Add(new Component
+                    {
+                        ItemName = entry.Key,
+                        Amount = entry.Value,
+                        IsAddition = false,
+                        Kind = "Penalty"
+                    });
+                }
             }
 
             if (tax > 0) comps.Add(new Component { ItemName = "ضريبة الدخل", Amount = tax, IsAddition = false, Kind = "Tax" });
