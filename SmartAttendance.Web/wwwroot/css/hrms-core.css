@@ -743,3 +743,56 @@ html[data-theme="light"] body .dat-num, html[data-theme="light"] body .mat-num {
     line-height: 1.5;
     color: var(--sa-danger, #f87171);
 }
+
+/* ================== .hrms-inline-form — صنفٌ كان بلا تعريف ==================
+   يُستعمل بثماني صفحات لشريط الفلاتر ولصفّ أزرار الإجراءات داخل خلايا الجداول،
+   واسمه يَعِد بصفٍّ أفقيّ — **ولم يكن له أيّ CSS بالمستودع إطلاقاً**. فالنموذج
+   يسقط إلى `display:block` الافتراضي، و`.nxcs-select` بعرض 100% ⟹ كل حقلٍ يأخذ
+   سطراً كاملاً: «زر تحت زر».
+
+   والنيّة موثّقة بالمصدر نفسه لا باجتهادٍ منّي: `EmployeeTasks/Index.cshtml:43`
+   يكتب `style="flex-wrap:wrap"` و`:96` يكتب `style="justify-content:center"` —
+   وكلتاهما **لا تعملان إلا على flex**. أي أن الكاتب افترض flex وكتب فوقه.
+
+   قِيس حيّاً على 48 صفحة: هذا الصنف وحده هو مصدر العطل، ولا حالة أخرى بالنظام. */
+.hrms-inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+}
+
+/* الحقول: عرضٌ مرن بدل 100%. بلا هذا يبقى كلٌّ منها بعرض الأب فيلتفّ لسطرٍ
+   وحده — أي أن flex وحده لا يكفي، لأن `nexora-select-system` يفرض
+   `width:100% !important` على غلاف المنسدلة. */
+.hrms-inline-form > .nxcs-select,
+.hrms-inline-form > .nxcal,
+.hrms-inline-form > select,
+.hrms-inline-form > input[type="search"],
+.hrms-inline-form > input[type="text"],
+.hrms-inline-form > input[type="number"],
+.hrms-inline-form > input[type="date"]:not(.nxcal-native) {
+    flex: 0 1 190px !important;
+    width: auto !important;
+    min-width: 0 !important;
+}
+
+/* التسميات تلتصق بحقلها ولا تُقطَع */
+.hrms-inline-form > label {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    margin: 0;
+}
+
+/* الأزرار وأي نموذج إجراءٍ متداخل (زرّ لكل إجراء بخلايا الجداول) */
+.hrms-inline-form > button,
+.hrms-inline-form > input[type="submit"],
+.hrms-inline-form > a {
+    flex: 0 0 auto;
+}
+
+.hrms-inline-form > form {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+}
