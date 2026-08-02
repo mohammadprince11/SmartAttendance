@@ -71,8 +71,13 @@
 
 /* 1) التصفير: لا خلفية ولا لون نصّ من العهد القديم داخل الصفحة —
    عدا ما يحمل دلالة (أزرار/شارات/حالات) فله معالجة خاصة بعده. */
+/* ⚠️ `nxcs-caret` مستثنى كالأزرار والشارات: سهم المنسدلة أيقونةٌ لها لونها
+   الدلاليّ (رمادي ثانويّ، ويتلوّن بالهوية عند الفتح) — و`color: inherit` هنا كان
+   يجعله يرث لون نصّ الحقل فيخرج `#E6E6E6` بهذه الصفحة وحدها وسط 7 صفحات على
+   الرمادي الثانوي (قيس حيّاً 2026-08-02). وتخصصية هذه القاعدة (0,5,1) بسبب
+   الـ`:not` الخمسة، فلا يغلبها محدِّدٌ معقول بملف المنسدلة — الاستثناء هنا أصحّ. */
 .nexora-setup-page,
-.nexora-setup-page *:not([class*="btn"]):not(button):not([class*="status"]):not([class*="badge"]):not([class*="pill"]) {
+.nexora-setup-page *:not([class*="btn"]):not(button):not([class*="status"]):not([class*="badge"]):not([class*="pill"]):not(.nxcs-caret) {
     background-color: transparent !important;
     background-image: none !important;
     color: inherit !important;
