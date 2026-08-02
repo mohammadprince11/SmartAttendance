@@ -133,24 +133,16 @@ public class IndexModel : PageModel
     }
 
     /// <summary>
-    /// استيراد لائحة جزاءات الشركة الرسمية (HRD013) — الفئات الأربع ومخالفاتها
-    /// وسلالم جزاءاتها كما نصّت الوثيقة، ومعها إعدادات موادّها العامّة.
+    /// إضافة المثال الجاهز — أبوابٌ ومخالفاتٌ وسلالم جزاءات يُبدأ منها ثم تُعدَّل.
+    ///
+    /// ⚠️ **يُعرض بالشاشة الفارغة وحدها.** كان زرّاً دائماً بأعلى الشاشة، فكانت
+    /// نقرةٌ واحدة تُعيد أبواباً حذفها المستخدم عمداً — واحتاج ذلك آلةً كاملة
+    /// تتذكّر «المستبعَد» لتمنعه. وإظهاره حيث ينفع وحده أبسط من حراسته.
     /// </summary>
-    public async Task<IActionResult> OnPostImportPolicyAsync()
+    public async Task<IActionResult> OnPostAddSampleAsync()
     {
         var result = await DisciplinaryPolicyImporter.ImportAsync(_dbContext);
         StatusMessage = result.Message;
-        return RedirectToPage(new { tab = "library" });
-    }
-
-    /// <summary>أبواب اللائحة المستبعَدة عمداً — تُعرض كي لا يكون الاستبعاد خفيّاً.</summary>
-    public IReadOnlyCollection<string> DeclinedCategories { get; private set; } = Array.Empty<string>();
-
-    /// <summary>إعادة الأبواب المستبعَدة إلى الاستيراد.</summary>
-    public async Task<IActionResult> OnPostRestoreDeclinedAsync()
-    {
-        await DisciplinaryPolicyImporter.RestoreAllAsync(_dbContext);
-        StatusMessage = "أُلغي الاستبعاد — الاستيراد التالي يُعيد الأبواب المحذوفة من اللائحة.";
         return RedirectToPage(new { tab = "library" });
     }
 
@@ -594,12 +586,6 @@ DELETE FROM DisciplinaryViolationTypes WHERE CategoryId = @Id;
 DELETE FROM DisciplinaryViolationCategories WHERE Id = @Id;
 """,
                 command => HrmsDatabase.AddParameter(command, "@Id", id));
-
-            // بابٌ من اللائحة حُذف عن قصد: يُسجَّل كي لا يُعيده الاستيراد التالي.
-            if (names.TryGetValue(id, out var deletedName))
-            {
-                await DisciplinaryPolicyImporter.DeclineAsync(_dbContext, deletedName);
-            }
 
             removed++;
         }
@@ -1160,7 +1146,6 @@ VALUES
             .ToList();
 
         TerminationReasons = await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.LoadTerminationReasonsAsync(_dbContext);
-        DeclinedCategories = await DisciplinaryPolicyImporter.DeclinedAsync(_dbContext);
     }
 
     private async Task SeedDefaultLibraryAsync(bool onlyIfEmpty)

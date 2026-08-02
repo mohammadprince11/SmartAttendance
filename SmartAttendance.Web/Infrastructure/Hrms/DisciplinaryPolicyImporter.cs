@@ -19,8 +19,8 @@ public static class DisciplinaryPolicyImporter
     {
         public string Message =>
             Categories + Violations + Rules == 0
-                ? "اللائحة موجودة بالكامل — لا جديد لاستيراده."
-                : $"استُوردت لائحة الجزاءات: {Categories} فئة · {Violations} مخالفة · {Rules} درجة جزاء"
+                ? "المثال موجود بالكامل — لا جديد يُضاف."
+                : $"أُضيف المثال: {Categories} فئة · {Violations} مخالفة · {Rules} درجة جزاء"
                   + (SkippedViolations > 0 ? $" (تُركت {SkippedViolations} مخالفة لها سلّمٌ قائم كما هي)." : ".");
     }
 
@@ -187,71 +187,14 @@ SELECT CASE WHEN OBJECT_ID('EmployeeViolationCases','U') IS NULL THEN 0
 """,
             command => HrmsDatabase.AddParameter(command, "@Id", violationId));
 
-    /// <summary>مفتاح الإعدادات الذي يحفظ أبواب اللائحة التي استغنت عنها الشركة.</summary>
-    public const string DeclinedKey = "DeclinedPolicyCategories";
-
-    /// <summary>
-    /// أبوابٌ من اللائحة حذفتها الشركة عن قصد — لا يُعيدها الاستيراد.
-    ///
-    /// ⚠️ بدون هذا كانت إعادة الاستيراد **تُلغي قراراً** اتّخذه المستخدم بصمت:
-    /// يحذف «ت — المنطقة الأمامية» لأنها لا تخصّه، ثم يستورد لسببٍ آخر فتعود
-    /// بإحدى وعشرين مخالفة. والاستيراد يجب أن يضيف الناقص لا أن ينقض المحذوف.
-    /// </summary>
-    public static async Task<HashSet<string>> DeclinedAsync(ApplicationDbContext db)
-    {
-        var raw = await HrmsDatabase.ScalarAsync<string>(
-            db,
-            "SELECT TOP 1 [Value] FROM DisciplinarySettings WHERE [Key] = @Key;",
-            command => HrmsDatabase.AddParameter(command, "@Key", DeclinedKey));
-
-        return (raw ?? string.Empty)
-            .Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .ToHashSet(StringComparer.Ordinal);
-    }
-
-    /// <summary>يسجّل أن باباً من اللائحة حُذف عمداً — يُستدعى عند حذف الفئة.</summary>
-    public static async Task DeclineAsync(ApplicationDbContext db, string categoryName)
-    {
-        if (!DisciplinaryPolicyPack.Categories.Any(c => c.Name == categoryName))
-        {
-            return;   // ليست من اللائحة — لا شيء يُعاد استيراده أصلاً.
-        }
-
-        var declined = await DeclinedAsync(db);
-        if (!declined.Add(categoryName)) return;
-
-        await HrmsDatabase.ExecuteAsync(
-            db,
-            """
-IF EXISTS (SELECT 1 FROM DisciplinarySettings WHERE [Key] = @Key)
-    UPDATE DisciplinarySettings SET [Value] = @Value, UpdatedAt = SYSUTCDATETIME() WHERE [Key] = @Key;
-ELSE
-    INSERT INTO DisciplinarySettings([Key], [Value], UpdatedAt) VALUES (@Key, @Value, SYSUTCDATETIME());
-""",
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@Key", DeclinedKey);
-                HrmsDatabase.AddParameter(command, "@Value", string.Join('|', declined));
-            });
-    }
-
-    /// <summary>يُلغي الاستبعاد فيعود الباب بالاستيراد التالي.</summary>
-    public static async Task RestoreAllAsync(ApplicationDbContext db) =>
-        await HrmsDatabase.ExecuteAsync(
-            db,
-            "DELETE FROM DisciplinarySettings WHERE [Key] = @Key;",
-            command => HrmsDatabase.AddParameter(command, "@Key", DeclinedKey));
 
     private static async Task<Dictionary<int, (int Id, bool Added)>> ImportCategoriesAsync(ApplicationDbContext db)
     {
         var map = new Dictionary<int, (int Id, bool Added)>();
-        var declined = await DeclinedAsync(db);
 
         for (var index = 0; index < DisciplinaryPolicyPack.Categories.Length; index++)
         {
-            var (name, nameEn, order, isSystem) = DisciplinaryPolicyPack.Categories[index];
-
-            if (declined.Contains(name)) continue;
+            var (name, nameEn, order) = DisciplinaryPolicyPack.Categories[index];
 
             var existing = await HrmsDatabase.ScalarAsync<int>(
                 db,
@@ -268,14 +211,13 @@ ELSE
                 db,
                 """
 INSERT INTO DisciplinaryViolationCategories (Name, NameEn, DisplayOrder, IsSystem, IsActive, CreatedAt)
-VALUES (@Name, @NameEn, @Order, @IsSystem, 1, SYSUTCDATETIME());
+VALUES (@Name, @NameEn, @Order, 0, 1, SYSUTCDATETIME());
 """,
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@Name", name);
                     HrmsDatabase.AddParameter(command, "@NameEn", nameEn);
                     HrmsDatabase.AddParameter(command, "@Order", order);
-                    HrmsDatabase.AddParameter(command, "@IsSystem", isSystem);
                 });
 
             var created = await HrmsDatabase.ScalarAsync<int>(

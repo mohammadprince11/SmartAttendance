@@ -94,74 +94,44 @@
                         </div>
                         <p class="zyw-row-meta">
                             نموذج تسجيل المخالفة يفرض اختيار فئة ونوع — وبلا لائحة يبقى معطّلاً.
-                            ابدأ بلائحة الشركة الرسمية من الزرّ أدناه، أو اكتب فئاتك بنفسك بالشبكة.
+                            اكتب فئاتك بنفسك بالشبكة أدناه، أو ابدأ من <b>مثالٍ جاهز</b> ثم عدّله.
                         </p>
-                        @* ⚠️ **حُذف زرّ «اللائحة الافتراضية»** بعد أن صار للشركة لائحتها:
-                           كان ينشئ «مخالفات نظام العمل» بجانب «ب — مخالفات نظام العمل»
-                           فيحتار المسجِّل أيّهما يختار وتتوزّع الحالات على بابين لباب. *@
-                        <form method="post" asp-page-handler="ImportPolicy">
+                        <p class="zyw-row-meta">
+                            المثال أبوابٌ أربعة (أ · ب · ج · ت) ومخالفاتها وسلالم جزاءاتها —
+                            <b>كلّها قابلة للتعديل والحذف</b>، ولا شيء فيها ثابت.
+                        </p>
+                        <form method="post" asp-page-handler="AddSample">
                             <div class="zyw-form-actions">
-                                <button type="submit" class="btn-primary" data-zyconfirm="استيراد لائحة الجزاءات؟">
-                                    استورد لائحة الجزاءات (HRD013)
+                                <button type="submit" class="btn-primary" data-zyconfirm="إضافة المثال الجاهز؟">
+                                    ابدأ بمثال جاهز
                                 </button>
                             </div>
                         </form>
                     </article>
                 }
+                @* ⚠️ **لا زرّ «مثال» بعد أن تصير للشركة لائحتها.**
 
-                @* لائحة الشركة الرسمية: تُستورَد كما نصّت الوثيقة، ولا تدهس ما
-                   أُدخل أو عُدّل — من غيّر درجةً فعلها عن قصد. *@
-                <article class="zy-card">
-                    <div class="zyw-queue-head">
-                        <h2>لائحة جزاءات الشركة (HRD013)</h2>
-                        <span class="zy-pill">@SmartAttendance.Web.Infrastructure.Hrms.DisciplinaryPolicyPack.Violations.Length مخالفة</span>
-                    </div>
-                    <p class="zyw-row-meta">
-                        الفئات الأربع بحروفها (أ · ب · ج · ت) ومخالفاتها وسلالم جزاءاتها بأربع درجات،
-                        ومعها موادّ اللائحة العامّة: مهلة تظلّم <b>10 أيام</b> وسقف اقتطاع
-                        <b>20%</b> من الراتب الشهري (مادة 6 و9) يُنفَّذ بالمسير.
-                    </p>
-                    <p class="zyw-row-meta">
-                        الاستيراد <b>يضيف الناقص ولا يستبدل القائم</b>: مخالفةٌ لها سلّمٌ عندك تبقى بسلّمها،
-                        لأن المذكور باللائحة هو الحدّ الأقصى الجائز وللإدارة النزول عنه (مادة 2).
-                    </p>
+                   كان يقف بأعلى الشاشة دائماً فيغري بنقرةٍ تُعيد ما حُذف عمداً،
+                   واحتاج آلةً كاملة تتذكّر «المستبعَد» لتمنع ذلك. والأبسط أن
+                   يظهر حيث ينفع وحده: **الشاشة الفارغة**. من عنده لائحته لا
+                   يحتاج مثالاً، ومن أراده لاحقاً يحذف فئاته ويبدأ من جديد. *@
 
-                    @* الاستبعاد يُعرض ويُلغى — لا يبقى قراراً خفيّاً بجدول إعدادات. *@
-                    @if (Model.DeclinedCategories.Count > 0)
-                    {
+                @if (Model.Categories.Any(c => !c.Name.StartsWith("أ ") && !c.Name.StartsWith("ب ")
+                                            && !c.Name.StartsWith("ج ") && !c.Name.StartsWith("ت ")))
+                {
+                    <article class="zy-card">
                         <p class="zyw-row-meta">
-                            🚫 أبوابٌ استُبعدت عمداً فلا يُعيدها الاستيراد:
-                            <b>@string.Join(" · ", Model.DeclinedCategories)</b>.
+                            عندك أبوابٌ خارج ترقيم اللائحة — تُدمج بنظيراتها فتُنقل مخالفاتها ولا تضيع.
                         </p>
-                    }
-                    <div class="zyw-form-actions">
-                        <form method="post" asp-page-handler="ImportPolicy">
-                            <button type="submit" class="btn-primary" data-zyconfirm="استيراد لائحة الجزاءات الرسمية؟">
-                                استورد لائحة الجزاءات
-                            </button>
-                        </form>
-
-                        @* أبوابٌ خلّفها البذر القديم بجانب أبواب اللائحة — تُدمج بنظيراتها. *@
-                        @if (Model.Categories.Any(c => !c.Name.StartsWith("أ ") && !c.Name.StartsWith("ب ")
-                                                    && !c.Name.StartsWith("ج ") && !c.Name.StartsWith("ت ")))
-                        {
+                        <div class="zyw-form-actions">
                             <form method="post" asp-page-handler="MergeDuplicates">
-                                <button type="submit" class="btn-secondary" data-zyconfirm="دمج الفئات المكرّرة بأبواب اللائحة؟">
+                                <button type="submit" class="btn-secondary" data-zyconfirm="دمج الفئات المكرّرة؟">
                                     ادمج الفئات المكرّرة
                                 </button>
                             </form>
-                        }
-
-                        @if (Model.DeclinedCategories.Count > 0)
-                        {
-                            <form method="post" asp-page-handler="RestoreDeclined">
-                                <button type="submit" class="btn-secondary" data-zyconfirm="إعادة الأبواب المستبعَدة؟">
-                                    أعد الأبواب المستبعَدة
-                                </button>
-                            </form>
-                        }
-                    </div>
-                </article>
+                        </div>
+                    </article>
+                }
 
                 @* ══════════ شبكتان محرَّرتان — نمطٌ منقول عن كيان بعد فحصٍ حيّ ══════════
 

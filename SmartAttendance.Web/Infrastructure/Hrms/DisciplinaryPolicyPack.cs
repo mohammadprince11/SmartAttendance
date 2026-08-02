@@ -15,13 +15,19 @@ public static class DisciplinaryPolicyPack
 {
     public const string PackKey = "AlTaawonPolicyHRD013";
 
-    /// <summary>الفئات الأربع كما نصّت اللائحة، بحروفها.</summary>
-    public static readonly (string Name, string NameEn, int Order, bool IsSystem)[] Categories =
+    /// <summary>
+    /// الفئات الأربع كما نصّت الوثيقة — **مثالٌ يُبدأ منه لا هيكلٌ ثابت**.
+    ///
+    /// ⚠️ لا فئة نظام بينها. كانت «أ» مقفلةً بحجّة أن التوليد الآلي يبني عليها،
+    /// والتوليد يكتب اسم الفئة **نصّاً حرفياً بالحالة** ولا يقرأ هذا الجدول أصلاً
+    /// — فالقفل كان يمنع المستخدم ولا يحمي شيئاً. كلّها تُعدَّل وتُحذف.
+    /// </summary>
+    public static readonly (string Name, string NameEn, int Order)[] Categories =
     {
-        ("أ — مخالفات الحضور والانصراف والمظهر العام", "Attendance & Appearance", 10, true),
-        ("ب — مخالفات نظام العمل", "Work System", 20, false),
-        ("ج — مخالفات سلوكية قد تؤدي إلى الفصل", "Conduct", 30, false),
-        ("ت — مخالفات المنطقة الأمامية", "Front Line", 40, false)
+        ("أ — مخالفات الحضور والانصراف والمظهر العام", "Attendance & Appearance", 10),
+        ("ب — مخالفات نظام العمل", "Work System", 20),
+        ("ج — مخالفات سلوكية قد تؤدي إلى الفصل", "Conduct", 30),
+        ("ت — مخالفات المنطقة الأمامية", "Front Line", 40)
     };
 
     /// <summary>

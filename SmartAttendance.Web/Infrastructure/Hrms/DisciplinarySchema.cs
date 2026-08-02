@@ -263,13 +263,22 @@ BEGIN
             ELSE N'VerbalWarning'
         END;
 
-    -- فئات النظام: ما تُولَّد عليه المخالفات آلياً من قواعد المناوبات.
-    UPDATE DisciplinaryViolationCategories
-    SET IsSystem = 1
-    WHERE Name LIKE N'%الحضور%';
-
     INSERT INTO DisciplinarySettings([Key], [Value], UpdatedAt)
     VALUES (N'PenaltyModelBackfilled', N'true', SYSUTCDATETIME());
+END;
+
+-- ⚠️ رفع قفل «فئة نظام» مرّةً واحدة.
+--
+-- قُفلت فئة الحضور بحجّة أن التوليد الآلي يبني عليها، والتوليد يكتب اسمها
+-- **نصّاً حرفياً بالحالة** ولا يقرأ هذا الجدول أصلاً — فالقفل كان يمنع
+-- المستخدم من تعديل اسمٍ أو حذف بابٍ لا يستعمله، ولا يحمي شيئاً.
+-- الفئات كلّها أمثلةٌ يُبدأ منها، لا هيكلٌ ثابت.
+IF NOT EXISTS (SELECT 1 FROM DisciplinarySettings WHERE [Key] = N'CategoryLockLifted')
+BEGIN
+    UPDATE DisciplinaryViolationCategories SET IsSystem = 0 WHERE IsSystem = 1;
+
+    INSERT INTO DisciplinarySettings([Key], [Value], UpdatedAt)
+    VALUES (N'CategoryLockLifted', N'true', SYSUTCDATETIME());
 END;
 """);
     }
