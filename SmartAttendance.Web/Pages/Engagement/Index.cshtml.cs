@@ -30,9 +30,15 @@ public class IndexModel : EngagementPageModel
     {
     }
 
-    /// <summary>التبويب المفتوح — يعبر إعادة التوجيه بعد كل إجراء.</summary>
+    /// <summary>
+    /// التبويب المفتوح — يعبر إعادة التوجيه بعد كل إجراء.
+    ///
+    /// ⚠️ <c>string?</c> عمداً: خاصيةٌ غير قابلة للعدم ومربوطة بالـGET يعدّها المُقيِّد
+    /// «مطلوبة» حين لا يُمرَّر الوسيط بالرابط، فيرتدّ ModelState غير صالح بمجرّد فتح
+    /// الصفحة. (رُصد فعلياً بشاشة المخالفات: شريط «راجع الحقول المطلوبة» دائم بلا سبب.)
+    /// </summary>
     [BindProperty(SupportsGet = true)]
-    public string Tab { get; set; } = "work";
+    public string? Tab { get; set; } = "work";
 
     /// <summary>حالات تنتظر ردّاً أو إغلاقاً.</summary>
     public IReadOnlyList<FeedbackRow> CasesNeedingAction =>
