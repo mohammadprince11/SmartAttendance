@@ -132,6 +132,17 @@ public class IndexModel : PageModel
         return Page();
     }
 
+    /// <summary>
+    /// استيراد لائحة جزاءات الشركة الرسمية (HRD013) — الفئات الأربع ومخالفاتها
+    /// وسلالم جزاءاتها كما نصّت الوثيقة، ومعها إعدادات موادّها العامّة.
+    /// </summary>
+    public async Task<IActionResult> OnPostImportPolicyAsync()
+    {
+        var result = await DisciplinaryPolicyImporter.ImportAsync(_dbContext);
+        StatusMessage = result.Message;
+        return RedirectToPage(new { tab = "library" });
+    }
+
     public async Task<IActionResult> OnPostSeedLibraryAsync()
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);

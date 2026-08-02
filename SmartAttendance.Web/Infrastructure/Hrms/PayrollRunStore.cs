@@ -375,6 +375,14 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
         // أيام الفترة الفعلية — مقامٌ للخيار «أيام فترة الراتب».
         var daysInPeriod = periodEnd.DayNumber - periodStart.DayNumber + 1;
 
+        // سقف اقتطاع المخالفات الشهري من تهيئة اللائحة (صفر = بلا سقف).
+        var maxDeductionPercent = decimal.TryParse(
+            await HrmsDatabase.ScalarAsync<string>(
+                dbContext,
+                "SELECT TOP 1 [Value] FROM DisciplinarySettings WHERE [Key] = N'MaxDeductionPercentOfSalary';",
+                command => { }),
+            out var parsedCap) ? parsedCap : 0m;
+
         // حركات الدخل/الاقتطاع للفترة (شاشة «الحركات») — بنود إضافية/خصم بالقسيمة
         var income = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.Income))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
@@ -643,13 +651,36 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                     penaltyByItem[itemName] = penaltyByItem.GetValueOrDefault(itemName) + amt;
                 }
 
+                // 🔒 سقف الاقتطاع الشهري (لائحة الجزاءات مادة 6 و9: 20% من الراتب).
+                //
+                // يُطبَّق على **المجموع** لا على كل مخالفة: خمس مخالفات بشهرٍ واحد
+                // كانت ستبتلع الراتب كلّه، وحدٌّ على المفردة وحدها يلتفّ عليه التكرار.
+                // والتخفيض يُوزَّع تناسبياً على البنود كي تبقى الوجهات المحاسبية صحيحة.
+                var rawPenalty = penaltyByItem.Values.Where(v => v > 0).Sum();
+                var cappedPenalty = PenaltyBasePool.CapMonthlyDeduction(rawPenalty, gross, maxDeductionPercent);
+                var capFactor = rawPenalty > 0 ? cappedPenalty / rawPenalty : 1m;
+
                 foreach (var entry in penaltyByItem.Where(e => e.Value > 0))
                 {
-                    penaltyTotal += entry.Value;
+                    var amount = decimal.Round(entry.Value * capFactor, 2);
+                    if (amount <= 0) continue;
+
+                    penaltyTotal += amount;
                     comps.Add(new Component
                     {
                         ItemName = entry.Key,
-                        Amount = entry.Value,
+                        Amount = amount,
+                        IsAddition = false,
+                        Kind = "Penalty"
+                    });
+                }
+
+                if (cappedPenalty < rawPenalty)
+                {
+                    comps.Add(new Component
+                    {
+                        ItemName = $"— حُدّ خصم المخالفات بسقف {maxDeductionPercent:0.##}% من الراتب",
+                        Amount = 0,
                         IsAddition = false,
                         Kind = "Penalty"
                     });

@@ -90,6 +90,27 @@ public static class PenaltyBasePool
         return decimal.Round(total, 2);
     }
 
+    /// <summary>
+    /// سقف الاقتطاع الشهري — **حدٌّ قانونيّ لا إعداد تجميلي**.
+    ///
+    /// لائحة الجزاءات (مادة 6 و9): «لا يجوز أن يزيد ما يُقتطع من أجر الموظف على
+    /// 20% من راتبه الشهري». وشركةٌ تسجّل خمس مخالفات بشهرٍ واحد كانت ستخصم
+    /// راتباً كاملاً بلا أن يمنعها شيء — والحدّ يُطبَّق على **مجموع** خصومات
+    /// المخالفات لا على كل مخالفةٍ وحدها، وإلا التفّ عليه التكرار.
+    ///
+    /// نسبةٌ صفرية أو سالبة تعني «بلا سقف» — لا «اخصم صفراً».
+    /// </summary>
+    public static decimal CapMonthlyDeduction(decimal total, decimal monthlySalary, decimal maxPercent)
+    {
+        if (maxPercent <= 0 || monthlySalary <= 0 || total <= 0)
+        {
+            return total;
+        }
+
+        var cap = decimal.Round(monthlySalary * (maxPercent / 100m), 2);
+        return total > cap ? cap : total;
+    }
+
     /// <summary>وصف عربي مقروء للوعاء — يُعرض بالشاشة وبالكتاب الرسمي.</summary>
     public static string Describe(IEnumerable<Member>? members)
     {
