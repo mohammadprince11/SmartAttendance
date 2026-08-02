@@ -696,30 +696,19 @@
                         <h3>المعلومات المالية</h3>
                         <a class="z360-card-tool" asp-page="./FinancialInfo" asp-route-id="@Model.Id" title="تعديل المعلومات المالية">✎</a>
                     </div>
+                    @* خمسة حقول للعرض فقط (قرار محمد 2026-08-02). كانت ثلاثة عشر
+                       حقلاً فصارت البطاقة جرداً لا ملخّصاً.
+                       الباقي **لم يُحذف** بل صار مكانه شاشة التعديل
+                       (`./FinancialInfo` بزرّ ✎ أعلى البطاقة): سلم الرواتب ·
+                       البنك · IBAN · ملفّا الضمان والضريبة · احتساب الراتب.
+                       واستثناءان: «مواطن» يُحرَّر من تعديل الموظف، و«جاهزية
+                       الراتب» معروضة أصلاً ببطاقات المؤشّرات أعلى الصفحة. *@
                     <div class="z360-fields">
                         <div class="z360-field"><span>الراتب الأساسي</span><strong>@finMoney(fin?.BasicSalary)</strong></div>
                         <div class="z360-field"><span>الراتب الكلي</span><strong>@finMoney((fin?.BasicSalary ?? 0) + Model.ActiveAllowancesTotal)</strong></div>
                         <div class="z360-field"><span>العملة</span><strong>@finText(fin?.Currency)</strong></div>
-                        <div class="z360-field"><span>سلم الرواتب</span><strong>@finText(fin?.SalaryScale)</strong></div>
-                        <div class="z360-field"><span>طريقة الدفع</span><strong>@payText</strong></div>
-                        @if (payText == "تحويل بنكي")
-                        {
-                            @* بيانات البنك تعني شيئاً فقط عند الدفع بالتحويل البنكي *@
-                            <div class="z360-field"><span>البنك</span><strong>@finText(fin?.BankName)</strong></div>
-                            <div class="z360-field"><span>IBAN</span><strong>@finText(fin?.Iban)</strong></div>
-                        }
-                        <div class="z360-field"><span>مواطن</span><strong>@(Model.Employee?.IsCitizen == true ? "مواطن" : "غير مواطن")</strong></div>
-                        <div class="z360-field">
-                            <span>ملف الضمان الاجتماعي</span>
-                            <strong>@(Model.GosiChoice.ProfileId is null ? "—" : Model.GosiChoice.Name)</strong>
-                        </div>
                         <div class="z360-field"><span>راتب الضمان الاجتماعي</span><strong>@finMoney(Model.GosiBase)</strong></div>
-                        <div class="z360-field">
-                            <span>ملف الضريبة</span>
-                            <strong>@(Model.TaxChoice.ProfileId is null ? "—" : Model.TaxChoice.Name)</strong>
-                        </div>
-                        <div class="z360-field"><span>احتساب الراتب</span><strong>@(fin?.StopSalaryCalc == true ? "موقوف" : "مُفعّل")</strong></div>
-                        <div class="z360-field"><span>جاهزية الراتب</span><strong>@readinessText</strong></div>
+                        <div class="z360-field"><span>طريقة الدفع</span><strong>@payText</strong></div>
                     </div>
                 </article>
 

@@ -2,15 +2,22 @@
    One isolated visual system for /Employees/Profile.
    No legacy profile selector overrides. */
 
+/* ⚠️ **لوحةٌ موازية كانت سبب «كأنها بعالمٍ آخر»**: هذه الصفحة كانت تعرّف
+   بالتصميم الفاتح والداكن معاً سطوحَها وحدودها ونصوصها بقيمٍ مثبَّتة تقارب
+   قيم النظام ولا تطابقها (#0b1d31 و#0c192b مقابل سطح النظام #0F1A2E، وحدّ
+   #25415d مقابل #22304A). الفرق صغيرٌ رقمياً وواضحٌ للعين — بطاقةٌ بلونٍ
+   يكاد يكون لون جيرانها.
+   الآن تُشتَقّ من توكنات النظام، فتتبع الوضعين ومحرّك هوية الشركة تلقائياً.
+   أسماء `--z360-*` باقية كي لا يُمسّ 900 سطرٍ يستهلكها. */
 .z360-page {
-    --z360-bg: #f4f7fb;
-    --z360-surface: #ffffff;
-    --z360-surface-soft: #f7f9fc;
-    --z360-surface-raised: #eef4f8;
-    --z360-border: #d8e3ec;
-    --z360-border-strong: #bdd0df;
-    --z360-text: #102238;
-    --z360-muted: #6c7d8f;
+    --z360-bg: var(--color-background, #f4f7fb);
+    --z360-surface: var(--color-surface, #ffffff);
+    --z360-surface-soft: var(--color-surface, #f7f9fc);
+    --z360-surface-raised: var(--color-background, #eef4f8);
+    --z360-border: var(--color-border, #d8e3ec);
+    --z360-border-strong: var(--color-border-strong, #bdd0df);
+    --z360-text: var(--color-text-primary, #102238);
+    --z360-muted: var(--color-text-secondary, #6c7d8f);
     --z360-navy: #081426;
     --z360-navy-2: #0d2137;
     --z360-teal: var(--brand-primary, var(--color-primary));
@@ -64,15 +71,10 @@ html[data-theme="dark"] .z360-modal {
     --z360-muted: #9aadc0;
 }
 
+/* الداكن يرث نفس الاشتقاق أعلاه — لم يبقَ هنا إلا الظلّ (وهو الشيء الوحيد
+   الذي لا توكن له بالنظام). كانت هذه الكتلة تعيد تعريف اللوحة كاملةً بقيمٍ
+   مثبّتة فتفصل الصفحة عن الوضع الداكن الموحّد. */
 html[data-theme="dark"] .z360-page {
-    --z360-bg: #06111f;
-    --z360-surface: #0b1d31;
-    --z360-surface-soft: #0c192b;
-    --z360-surface-raised: #10243b;
-    --z360-border: #25415d;
-    --z360-border-strong: #365a77;
-    --z360-text: #f3f7fb;
-    --z360-muted: #9aadc0;
     --z360-shadow: 0 16px 38px rgba(0, 0, 0, .28);
     --z360-shadow-soft: 0 8px 24px rgba(0, 0, 0, .22);
 }

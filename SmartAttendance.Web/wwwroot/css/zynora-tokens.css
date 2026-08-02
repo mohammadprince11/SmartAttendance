@@ -340,7 +340,9 @@
 .zy-scope .nxhs-panel,
 .zy-scope .zhr-kpi-card,
 .zy-scope .zhr-filter-card,
-.zy-scope .zhr-table-card {
+.zy-scope .zhr-table-card,
+/* بطاقة ملف الموظف — كانت 13px بينما بقية النظام على التوكن */
+.z360-card {
     border-radius: var(--zy-card-radius, 18px) !important;
 }
 
