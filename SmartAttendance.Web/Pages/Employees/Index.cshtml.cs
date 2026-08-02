@@ -7,28 +7,38 @@ using SmartAttendance.Application.Companies.ViewModels;
 using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Application.Employees.Services;
 using SmartAttendance.Application.Employees.ViewModels;
+using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
+using SmartAttendance.Web.Infrastructure.Imports;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
 public class IndexModel : PageModel
 {
+    private const string ImportFolderName = "Employees";
+
     private readonly IEmployeeService _employeeService;
     private readonly ICompanyService _companyService;
     private readonly IPermissionAuthorizationService _permissionAuthorizationService;
     private readonly SmartAttendance.Web.Infrastructure.Security.IEffectiveScopeService _effectiveScopeService;
+    private readonly IWebHostEnvironment _environment;
+    private readonly EmployeeBootstrapImportEngine _importEngine;
 
     public IndexModel(
         IEmployeeService employeeService,
         ICompanyService companyService,
         IPermissionAuthorizationService permissionAuthorizationService,
-        SmartAttendance.Web.Infrastructure.Security.IEffectiveScopeService effectiveScopeService)
+        SmartAttendance.Web.Infrastructure.Security.IEffectiveScopeService effectiveScopeService,
+        IWebHostEnvironment environment,
+        ApplicationDbContext dbContext)
     {
         _employeeService = employeeService;
         _companyService = companyService;
         _permissionAuthorizationService = permissionAuthorizationService;
         _effectiveScopeService = effectiveScopeService;
+        _environment = environment;
+        _importEngine = new EmployeeBootstrapImportEngine(dbContext);
     }
 
     public List<EmployeeListViewModel> Employees { get; set; } = new();
@@ -142,14 +152,7 @@ public class IndexModel : PageModel
                     PeoplePermissionCodes.Create),
                 HttpContext.RequestAborted);
 
-        CanImportEmployees = await _permissionAuthorizationService
-            .HasGlobalPermissionAsync(
-                systemUserId,
-                PeoplePermissionCodes.Import,
-                PeopleCompatibilityAccess.IsAllowed(
-                    role,
-                    PeoplePermissionCodes.Import),
-                HttpContext.RequestAborted);
+        CanImportEmployees = await HasImportPermissionAsync();
 
         CompanyId = CompanySelectionContext.Resolve(
             HttpContext,
@@ -251,6 +254,141 @@ public class IndexModel : PageModel
         PageNumber = result.PageNumber;
         PageSize = result.PageSize;
         TotalPages = result.TotalPages;
+    }
+
+    /// <summary>القالب الفارغ: ترويسة الأعمدة وقوائم المراجع فقط.</summary>
+    public async Task<IActionResult> OnGetTemplateAsync()
+    {
+        if (!await HasImportPermissionAsync())
+        {
+            return Forbid();
+        }
+
+        return BuildTemplateFile(
+            await _importEngine.BuildTemplateWorkbookAsync(),
+            "Zynora_Employees_Template");
+    }
+
+    /// <summary>القالب نفسه معبّأً بالموظفين الحاليين.</summary>
+    public async Task<IActionResult> OnGetTemplateDataAsync()
+    {
+        if (!await HasImportPermissionAsync())
+        {
+            return Forbid();
+        }
+
+        return BuildTemplateFile(
+            await _importEngine.BuildTemplateWorkbookAsync(
+                includeData: true),
+            "Zynora_Employees_Data");
+    }
+
+    /// <summary>
+    /// استيراد بخطوة واحدة: ملفٌ يُرفع فيُنفَّذ فوراً، ثم رسالةٌ وعودة
+    /// للقائمة. لا معاينة — القالب نفسه هو ضابط الشكل.
+    /// </summary>
+    public async Task<IActionResult> OnPostImportAsync(
+        IFormFile? importFile)
+    {
+        if (!await HasImportPermissionAsync())
+        {
+            return Forbid();
+        }
+
+        if (importFile == null || importFile.Length == 0)
+        {
+            TempData["ErrorMessage"] = "اختر ملفاً أولاً.";
+            return RedirectToPage("./Index", new { CompanyId });
+        }
+
+        if (importFile.Length > EmployeeBootstrapImportEngine.MaxFileBytes)
+        {
+            TempData["ErrorMessage"] =
+                "حجم الملف يتجاوز الحدّ المسموح (10 ميغابايت).";
+            return RedirectToPage("./Index", new { CompanyId });
+        }
+
+        var extension = Path
+            .GetExtension(importFile.FileName)
+            .ToLowerInvariant();
+
+        if (extension is not ".xlsx" and not ".csv")
+        {
+            TempData["ErrorMessage"] =
+                "نوع الملف غير مدعوم — استخدم xlsx أو csv.";
+            return RedirectToPage("./Index", new { CompanyId });
+        }
+
+        var folder = Path.Combine(
+            _environment.ContentRootPath,
+            "App_Data",
+            "PageImports",
+            ImportFolderName);
+        Directory.CreateDirectory(folder);
+
+        var originalFileName = Path.GetFileName(importFile.FileName);
+        var storedPath = Path.Combine(
+            folder,
+            $"{Guid.NewGuid():N}_{MakeSafeFileName(originalFileName)}");
+
+        try
+        {
+            await using (var stream = System.IO.File.Create(storedPath))
+            {
+                await importFile.CopyToAsync(stream);
+            }
+
+            var result = await _importEngine.ImportAsync(
+                storedPath,
+                originalFileName);
+
+            TempData["SuccessMessage"] = result.Message;
+        }
+        catch (Exception exception)
+        {
+            TempData["ErrorMessage"] = exception.Message;
+        }
+
+        return RedirectToPage("./Index", new { CompanyId });
+    }
+
+    private Task<bool> HasImportPermissionAsync()
+    {
+        var systemUserId =
+            PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        var role = PeopleAccessContext.GetRole(HttpContext);
+
+        return _permissionAuthorizationService
+            .HasGlobalPermissionAsync(
+                systemUserId,
+                PeoplePermissionCodes.Import,
+                PeopleCompatibilityAccess.IsAllowed(
+                    role,
+                    PeoplePermissionCodes.Import),
+                HttpContext.RequestAborted);
+    }
+
+    private static FileContentResult BuildTemplateFile(
+        byte[] workbook,
+        string namePrefix)
+    {
+        return new FileContentResult(
+            workbook,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        {
+            FileDownloadName =
+                $"{namePrefix}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx"
+        };
+    }
+
+    private static string MakeSafeFileName(string fileName)
+    {
+        foreach (var invalidChar in Path.GetInvalidFileNameChars())
+        {
+            fileName = fileName.Replace(invalidChar, '_');
+        }
+
+        return fileName;
     }
 
     private static int NormalizePageSize(int value)

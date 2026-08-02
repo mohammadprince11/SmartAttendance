@@ -16,7 +16,7 @@ namespace SmartAttendance.Web.Infrastructure.Imports;
 /// <summary>
 /// محرك الاستيراد الشامل للموظفين: يقرأ ملفات Excel/CSV ويؤسس الموظفين مع
 /// فروعهم وأقسامهم ومناصبهم دفعة واحدة (إنشاء المراجع الناقصة تلقائياً).
-/// يُستخدم من صفحة /Employees/Import — أثقل ملف بالمشروع، عدّل بحذر.
+/// يُستخدم من نافذة الاستيراد بـ/Employees — أثقل ملف بالمشروع، عدّل بحذر.
 /// </summary>
 public sealed class EmployeeBootstrapImportEngine
 {
@@ -111,7 +111,12 @@ public sealed class EmployeeBootstrapImportEngine
         return required;
     }
 
-    public async Task<byte[]> BuildTemplateWorkbookAsync()
+    /// <summary>
+    /// يبني قالب الاستيراد. مع <paramref name="includeData"/> يخرج القالب
+    /// معبّأً بالموظفين الحاليين ليُعدَّل ويُعاد استيراده.
+    /// </summary>
+    public async Task<byte[]> BuildTemplateWorkbookAsync(
+        bool includeData = false)
     {
         await EmployeeProfileDynamicFields.EnsureSchemaAsync(_dbContext);
 
@@ -120,11 +125,15 @@ public sealed class EmployeeBootstrapImportEngine
         var usedHeaders = new HashSet<string>(
             columns.Select(column => column.Name),
             StringComparer.OrdinalIgnoreCase);
+        var dynamicHeadersByKey =
+            new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase);
 
         foreach (var field in dynamicFields)
         {
             var header = BuildDynamicHeader(field, usedHeaders);
             usedHeaders.Add(header);
+            dynamicHeadersByKey[field.FieldKey] = header;
             columns.Add(
                 new EmployeeTemplateColumn(
                     header,
@@ -135,7 +144,13 @@ public sealed class EmployeeBootstrapImportEngine
 
         var references = await LoadTemplateReferencesAsync();
 
-        return BuildWorkbook(columns, references);
+        var dataRows = includeData
+            ? await LoadTemplateDataRowsAsync(
+                columns,
+                dynamicHeadersByKey)
+            : new List<List<string>>();
+
+        return BuildWorkbook(columns, references, dataRows);
     }
 
     public async Task<MasterDataImportPreviewViewModel> PreviewAsync(
@@ -1639,6 +1654,197 @@ public sealed class EmployeeBootstrapImportEngine
             positionReferences);
     }
 
+    /// <summary>
+    /// يقرأ الموظفين الحاليين بترتيب أعمدة القالب نفسه — كل صفٍّ جاهزٌ
+    /// لإعادة الاستيراد كما هو. محدودٌ بـ<see cref="MaxRows"/> لأن الاستيراد
+    /// يرفض ما زاد عنها.
+    /// </summary>
+    private async Task<List<List<string>>> LoadTemplateDataRowsAsync(
+        IReadOnlyList<EmployeeTemplateColumn> columns,
+        IReadOnlyDictionary<string, string> dynamicHeadersByKey)
+    {
+        var positions = await LoadPositionsAsync();
+        var positionCodes = positions
+            .GroupBy(position => position.Id)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First().Code);
+
+        var employees = await QueryAsync(
+            """
+            SELECT TOP (@MaxRows)
+                e.Id,
+                e.PositionId,
+                e.EmployeeNo,
+                e.FullName,
+                ISNULL(c.Name, N'') AS CompanyName,
+                ISNULL(c.Code, N'') AS CompanyCode,
+                ISNULL(b.Name, N'') AS WorkLocationName,
+                ISNULL(b.Code, N'') AS WorkLocationCode,
+                ISNULL(d.Name, N'') AS DepartmentName,
+                ISNULL(d.Code, N'') AS DepartmentCode,
+                ISNULL(e.Position, N'') AS PositionName,
+                CONVERT(varchar(10), e.HireDate, 23) AS HireDate,
+                CONVERT(varchar(10), e.BirthDate, 23) AS BirthDate,
+                CONVERT(varchar(10), e.ContractEndDate, 23)
+                    AS ContractEndDate,
+                ISNULL(e.NationalId, N'') AS NationalId,
+                ISNULL(e.Phone, N'') AS Phone,
+                ISNULL(e.Email, N'') AS Email,
+                ISNULL(e.Gender, N'') AS Gender,
+                ISNULL(e.MaritalStatus, N'') AS MaritalStatus,
+                ISNULL(e.Nationality, N'') AS Nationality,
+                ISNULL(e.Country, N'') AS Country,
+                ISNULL(e.ContractType, N'') AS ContractType,
+                ISNULL(e.EmploymentStatus, N'') AS EmploymentStatus,
+                CASE
+                    WHEN e.IsActive = 1 THEN 'true'
+                    ELSE 'false'
+                END AS IsActive,
+                ISNULL(m.EmployeeNo, N'') AS DirectManagerEmployeeNo
+            FROM dbo.Employees e
+            LEFT JOIN dbo.Branches b
+                ON b.Id = e.BranchId
+            LEFT JOIN dbo.Companies c
+                ON c.Id = b.CompanyId
+            LEFT JOIN dbo.Departments d
+                ON d.Id = e.DepartmentId
+            LEFT JOIN dbo.Employees m
+                ON m.Id = e.DirectManagerId
+            WHERE e.IsDeleted = 0
+            ORDER BY e.EmployeeNo;
+            """,
+            command => AddParameter(command, "@MaxRows", MaxRows),
+            reader => new TemplateEmployeeRow(
+                GetInt32(reader, "Id"),
+                GetNullableInt32(reader, "PositionId"),
+                new Dictionary<string, string>(
+                    StringComparer.OrdinalIgnoreCase)
+                {
+                    ["EmployeeNo"] =
+                        GetString(reader, "EmployeeNo"),
+                    ["FullName"] =
+                        GetString(reader, "FullName"),
+                    ["CompanyName"] =
+                        GetString(reader, "CompanyName"),
+                    ["CompanyCode"] =
+                        GetString(reader, "CompanyCode"),
+                    ["WorkLocationName"] =
+                        GetString(reader, "WorkLocationName"),
+                    ["WorkLocationCode"] =
+                        GetString(reader, "WorkLocationCode"),
+                    ["DepartmentName"] =
+                        GetString(reader, "DepartmentName"),
+                    ["DepartmentCode"] =
+                        GetString(reader, "DepartmentCode"),
+                    ["PositionName"] =
+                        GetString(reader, "PositionName"),
+                    ["HireDate"] =
+                        GetString(reader, "HireDate"),
+                    ["BirthDate"] =
+                        GetString(reader, "BirthDate"),
+                    ["ContractEndDate"] =
+                        GetString(reader, "ContractEndDate"),
+                    ["NationalId"] =
+                        GetString(reader, "NationalId"),
+                    ["Phone"] = GetString(reader, "Phone"),
+                    ["Email"] = GetString(reader, "Email"),
+                    ["Gender"] = GetString(reader, "Gender"),
+                    ["MaritalStatus"] =
+                        GetString(reader, "MaritalStatus"),
+                    ["Nationality"] =
+                        GetString(reader, "Nationality"),
+                    ["Country"] = GetString(reader, "Country"),
+                    ["ContractType"] =
+                        GetString(reader, "ContractType"),
+                    ["EmploymentStatus"] =
+                        GetString(reader, "EmploymentStatus"),
+                    ["IsActive"] =
+                        GetString(reader, "IsActive"),
+                    ["DirectManagerEmployeeNo"] =
+                        GetString(
+                            reader,
+                            "DirectManagerEmployeeNo")
+                }));
+
+        if (employees.Count == 0)
+        {
+            return new List<List<string>>();
+        }
+
+        if (dynamicHeadersByKey.Count > 0)
+        {
+            await FillCustomFieldValuesAsync(
+                employees,
+                dynamicHeadersByKey);
+        }
+
+        var rows = new List<List<string>>(employees.Count);
+
+        foreach (var employee in employees)
+        {
+            if (employee.PositionId.HasValue &&
+                positionCodes.TryGetValue(
+                    employee.PositionId.Value,
+                    out var positionCode))
+            {
+                employee.Values["PositionCode"] = positionCode;
+            }
+
+            rows.Add(
+                columns
+                    .Select(column =>
+                        employee.Values.TryGetValue(
+                            column.Name,
+                            out var value)
+                            ? value
+                            : string.Empty)
+                    .ToList());
+        }
+
+        return rows;
+    }
+
+    private async Task FillCustomFieldValuesAsync(
+        List<TemplateEmployeeRow> employees,
+        IReadOnlyDictionary<string, string> dynamicHeadersByKey)
+    {
+        var employeesById = employees
+            .GroupBy(employee => employee.Id)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First());
+
+        var values = await QueryAsync(
+            """
+            SELECT
+                EmployeeId,
+                FieldKey,
+                ISNULL(FieldValue, N'') AS FieldValue
+            FROM dbo.EmployeeCustomFields;
+            """,
+            command => { },
+            reader => (
+                EmployeeId: GetInt32(reader, "EmployeeId"),
+                FieldKey: GetString(reader, "FieldKey"),
+                FieldValue: GetString(reader, "FieldValue")));
+
+        foreach (var value in values)
+        {
+            if (!employeesById.TryGetValue(
+                    value.EmployeeId,
+                    out var employee) ||
+                !dynamicHeadersByKey.TryGetValue(
+                    value.FieldKey,
+                    out var header))
+            {
+                continue;
+            }
+
+            employee.Values[header] = value.FieldValue;
+        }
+    }
+
     private async Task<List<DynamicFieldDefinition>>
         LoadDynamicFieldDefinitionsAsync()
     {
@@ -2198,7 +2404,8 @@ public sealed class EmployeeBootstrapImportEngine
 
     private static byte[] BuildWorkbook(
         IReadOnlyList<EmployeeTemplateColumn> dataColumns,
-        TemplateReferenceData references)
+        TemplateReferenceData references,
+        IReadOnlyList<IReadOnlyList<string>> dataRows)
     {
         var referenceColumns =
             BuildReferenceColumns(references);
@@ -2212,7 +2419,9 @@ public sealed class EmployeeBootstrapImportEngine
                 ? 1
                 : referenceColumns.Max(column =>
                     column.Values.Count) + 1;
-        var maxRow = Math.Max(5000, maxReferenceRows);
+        var maxRow = Math.Max(
+            Math.Max(5000, maxReferenceRows),
+            dataRows.Count + 1);
 
         using var memory = new MemoryStream();
 
@@ -2247,6 +2456,7 @@ public sealed class EmployeeBootstrapImportEngine
                 BuildWorksheetXml(
                     dataColumns,
                     referenceColumns,
+                    dataRows,
                     firstReferenceColumn,
                     totalColumns,
                     maxReferenceRows,
@@ -2408,6 +2618,7 @@ public sealed class EmployeeBootstrapImportEngine
     private static string BuildWorksheetXml(
         IReadOnlyList<EmployeeTemplateColumn> dataColumns,
         IReadOnlyList<ReferenceColumn> referenceColumns,
+        IReadOnlyList<IReadOnlyList<string>> dataRows,
         int firstReferenceColumn,
         int totalColumns,
         int maxReferenceRows,
@@ -2415,11 +2626,16 @@ public sealed class EmployeeBootstrapImportEngine
     {
         var builder = new StringBuilder();
         var dataEndColumn = dataColumns.Count;
+        var lastBodyRow = Math.Max(
+            maxReferenceRows,
+            dataRows.Count + 1);
         var dataEndReference =
-            GetCellReference(1, dataEndColumn);
+            GetCellReference(
+                Math.Max(1, dataRows.Count + 1),
+                dataEndColumn);
         var totalEndReference =
             GetCellReference(
-                Math.Max(1, maxReferenceRows),
+                Math.Max(1, lastBodyRow),
                 totalColumns);
 
         builder.Append(
@@ -2504,12 +2720,37 @@ public sealed class EmployeeBootstrapImportEngine
         builder.Append("</row>");
 
         for (var row = 2;
-             row <= maxReferenceRows;
+             row <= lastBodyRow;
              row++)
         {
             builder.Append("<row r=\"");
             builder.Append(row);
             builder.Append("\">");
+
+            var dataRowIndex = row - 2;
+
+            if (dataRowIndex < dataRows.Count)
+            {
+                var dataRow = dataRows[dataRowIndex];
+
+                for (var index = 0;
+                     index < dataColumns.Count &&
+                     index < dataRow.Count;
+                     index++)
+                {
+                    if (string.IsNullOrEmpty(dataRow[index]))
+                    {
+                        continue;
+                    }
+
+                    builder.Append(
+                        BuildInlineCell(
+                            row,
+                            index + 1,
+                            dataRow[index],
+                            5));
+                }
+            }
 
             for (var index = 0;
                  index < referenceColumns.Count;
@@ -3543,6 +3784,11 @@ public sealed class EmployeeBootstrapImportEngine
         string Name,
         string Code,
         string Company);
+
+    private sealed record TemplateEmployeeRow(
+        int Id,
+        int? PositionId,
+        Dictionary<string, string> Values);
 
     private sealed record TemplateReferenceData(
         List<TemplateReferenceRow> Companies,
