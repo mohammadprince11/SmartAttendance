@@ -17,12 +17,12 @@ public class PollsModel : EngagementPageModel
     [BindProperty]
     public PollInput Poll { get; set; } = new();
 
-    public async Task OnGetAsync()
-    {
-        await EmployeeEngagementSchema.EnsureAsync(DbContext);
-        await LoadAudienceOptionsAsync();
-        await LoadPollsAsync();
-    }
+    /// <summary>
+    /// الشاشة صارت تبويباً بـ<c>/Engagement</c>. يبقى المسار حيّاً لروابطٍ قديمة
+    /// أو مفضّلات، ويعيد التوجيه بدل أن يعرض نسخةً ثانية من الشاشة نفسها.
+    /// أما معالجات الـPOST أدناه فتبقى **مالكة المنطق** وتُرسل إليها الشاشة الموحّدة.
+    /// </summary>
+    public IActionResult OnGet() => RedirectToPage("/Engagement/Index", new { tab = "polls" });
 
     public async Task<IActionResult> OnPostCreateAsync()
     {
@@ -41,7 +41,7 @@ public class PollsModel : EngagementPageModel
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(question) || options.Count < 2)
         {
             StatusMessage = "يرجى إدخال عنوان وسؤال وخيارين على الأقل للاستطلاع.";
-            return RedirectToPage();
+            return RedirectToPage("/Engagement/Index", new { tab = "polls" });
         }
 
         var targetType = string.IsNullOrWhiteSpace(Poll.TargetType) ? "All" : Poll.TargetType.Trim();
@@ -49,7 +49,7 @@ public class PollsModel : EngagementPageModel
         if (!string.IsNullOrWhiteSpace(targetError))
         {
             StatusMessage = targetError;
-            return RedirectToPage();
+            return RedirectToPage("/Engagement/Index", new { tab = "polls" });
         }
 
         var targetValue = BuildTargetValue(targetType, Poll.EmployeeIds, Poll.DepartmentId, Poll.BranchId);
@@ -108,7 +108,7 @@ VALUES ('EmployeePoll', CAST(@PollId AS nvarchar(80)), 'Create Poll', @NewValues
             });
 
         StatusMessage = isPublished ? "تم نشر الاستطلاع وسيظهر للموظفين حسب الجهة المستهدفة." : "تم حفظ الاستطلاع كمسودة.";
-        return RedirectToPage();
+        return RedirectToPage("/Engagement/Index", new { tab = "polls" });
     }
 
     public async Task<IActionResult> OnPostToggleAsync(int id, bool publish)
@@ -137,7 +137,7 @@ VALUES ('EmployeePoll', CAST(@Id AS nvarchar(80)), 'Toggle Poll Publish', @NewVa
             });
 
         StatusMessage = publish ? "تم نشر الاستطلاع." : "تم تحويل الاستطلاع إلى مسودة.";
-        return RedirectToPage();
+        return RedirectToPage("/Engagement/Index", new { tab = "polls" });
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
@@ -163,6 +163,6 @@ VALUES ('EmployeePoll', CAST(@Id AS nvarchar(80)), 'Delete Poll', 'Deleted from 
             });
 
         StatusMessage = "تم حذف الاستطلاع من قاعدة البيانات.";
-        return RedirectToPage();
+        return RedirectToPage("/Engagement/Index", new { tab = "polls" });
     }
 }

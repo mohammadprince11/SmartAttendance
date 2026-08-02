@@ -1,240 +1,510 @@
 @page
 @model SmartAttendance.Web.Pages.DisciplinaryRules.IndexModel
 @using SmartAttendance.Web.Infrastructure.Theming
+@using SmartAttendance.Web.Infrastructure.Hrms
 @inject IThemeContextService ThemeContextService
 @{
-    ViewData["Title"] = "إعدادات المخالفات";
+    ViewData["Title"] = "لائحة المخالفات";
+
+    // هوية الشركة تلزم **معاينة الورقة** بتبويب المصمّم وحده (شعار وترويسة).
     var brandTheme = await ThemeContextService.GetCurrentAsync(default);
     var brandName = string.IsNullOrWhiteSpace(brandTheme.DisplayName) ? "ZYNORA HR" : brandTheme.DisplayName!;
     var brandSymbol = new string(brandName.Where(char.IsLetterOrDigit).Take(1).ToArray()).ToUpperInvariant();
     if (string.IsNullOrEmpty(brandSymbol)) { brandSymbol = "Z"; }
+
     var activeTab = Model.Tab;
     var selectedCategory = Model.SelectedCategoryId;
     var visibleTypes = Model.ViolationTypes.Where(x => selectedCategory <= 0 || x.CategoryId == selectedCategory).ToList();
     var visibleRules = Model.PenaltyRules.Where(x => selectedCategory <= 0 || x.CategoryId == selectedCategory).ToList();
+
+    // المخالفة المفتوح سلّمها (زرّ الثلاث نقاط) — صفر يعني كلّها.
+    var openType = Model.OpenTypeId;
+
+    string Sel(string key) => (activeTab == key).ToString().ToLowerInvariant();
 }
 
-<link rel="stylesheet" href="~/css/nexora-disciplinary-rules.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-a4-custom-file-picker-v13-1.css" asp-append-version="true" />
+@* أُعيد بناء الصفحة من جذرها على «شاشة العمل» (`zynora-workscreen.css`) وطبقة
+   التوكنات وحدهما.
 
+   ⚠️ **الأنماط القديمة لم تعد تُحمَّل إلا بتبويب المصمّم.** كانت ثلاثة ملفات
+   تُحمَّل بكل تبويب فتصبغ ما لا يخصّها: قِيس أن خطّ بطاقةٍ جديدة يخرج `Tahoma`
+   لا `Tajawal` لأن غلاف الصفحة القديم يورّثه لكل ما بالداخل. والمصمّم وحده
+   يحتاجها (ورقة A4 · طبقات · منتقي ملف)، فحُصرت به. *@
+@section Styles {
+    <link rel="stylesheet" href="~/css/zynora-workscreen.css" asp-append-version="true" />
+    @if (activeTab == "library")
+    {
+        <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+    }
+    @if (activeTab == "designer")
+    {
+        <link rel="stylesheet" href="~/css/nexora-disciplinary-rules.css" asp-append-version="true" />
+        <link rel="stylesheet" href="~/css/nexora-a4-custom-file-picker-v13-1.css" asp-append-version="true" />
+        <link rel="stylesheet" href="~/css/nexora-disciplinary-designer-preview-safe-v1.css" asp-append-version="true" />
+    }
+}
 
-<link rel="stylesheet" href="~/css/nexora-disciplinary-designer-preview-safe-v1.css" asp-append-version="true" /><section class="nxpen-page nxpen-wide" dir="rtl">
-    <header class="nxpen-hero">
-        <div class="nxpen-hero-copy">
-            <h1>إعدادات المخالفات</h1>
-            <p>نبني هنا دستور المخالفات للشركة: هل تحتاج لجنة موافقات؟ هل يحق للموظف الاعتراض؟ ما هي الفئات والمخالفات؟ وما هو شكل فورمة العقوبة التي ستصدر باسم الشركة؟</p>
+<section class="zyw zy-scope" dir="rtl">
+
+    <header class="zyw-head">
+        <div>
+            <h1>لائحة المخالفات</h1>
+            <p>ما الذي يُعدّ مخالفة، وماذا يترتّب عليها بالتكرار — قبل أن تُسجَّل على أحد.</p>
         </div>
-</header>
+        <div class="zyw-totals">
+            <span><b>@Model.Categories.Count</b> فئة</span>
+            <span>·</span>
+            <span><b>@Model.ViolationTypes.Count</b> مخالفة</span>
+            <span>·</span>
+            <span><b>@Model.PenaltyRules.Count</b> جزاء</span>
+        </div>
+    </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="nxpen-alert">@Model.StatusMessage</div>
+        <div class="zy-card" role="status">@Model.StatusMessage</div>
     }
 
-    <nav class="nxpen-tabs">
-        <a class="@(activeTab == "setup" ? "active" : "")" asp-page="./Index" asp-route-tab="setup">تهيئة</a>
-        <a class="@(activeTab == "library" ? "active" : "")" asp-page="./Index" asp-route-tab="library" asp-route-categoryId="@selectedCategory">فئة المخالفة وقائمة المخالفات</a>
-        <a class="@(activeTab == "designer" ? "active" : "")" asp-page="./Index" asp-route-tab="designer">مصمم الفورمة</a>
-        <a class="@(activeTab == "templates" ? "active" : "")" asp-page="./Index" asp-route-tab="templates">قوالب الرسائل والفورم</a>
+    @* ما رُفض حذفه يُعرض **بجانب** النجاح لا بدلاً منه: حفظٌ نجح وحذفٌ رُفض
+       حدثان مختلفان، وابتلاع أحدهما يترك المستخدم يظنّ أن الصفّ اختفى. *@
+    @if (!string.IsNullOrWhiteSpace(Model.BlockedMessage))
+    {
+        <div class="zy-card" role="alert">@Model.BlockedMessage</div>
+    }
+
+    @* روابط لا أزرار: كل تبويب يحمّل بياناته من الخادم (المصمّم يحتاج طبقاته). *@
+    <nav class="zyw-tabs" aria-label="أقسام لائحة المخالفات">
+        <a class="zyw-tab" aria-selected="@Sel("library")" asp-page="./Index" asp-route-tab="library" asp-route-categoryId="@selectedCategory">المخالفات والجزاءات</a>
+        <a class="zyw-tab" aria-selected="@Sel("articles")" asp-page="./Index" asp-route-tab="articles">قواعد اللائحة</a>
+        <a class="zyw-tab" aria-selected="@Sel("templates")" asp-page="./Index" asp-route-tab="templates">قوالب الرسائل</a>
+        <a class="zyw-tab" aria-selected="@Sel("designer")" asp-page="./Index" asp-route-tab="designer">مصمّم الفورمة</a>
     </nav>
 
-    <main class="nxpen-layout">
-        <section class="nxpen-content">
-            @if (activeTab == "setup")
+    <main>
+        <section>
+            @if (activeTab == "library")
             {
-                <section class="nxpen-card">
-                    <header class="nxpen-card-head relaxed">
-                        <div>
-                            <span>Configuration</span>
-                            <h2>تهيئة نظام المخالفات</h2>
-                            <p>هذه الصفحة تحدد طريقة عمل المخالفات قبل تسجيلها على الموظفين: الاعتماد، اعتراض الموظف، وصيغة الفورمة الرسمية.</p>
+                @* الخطوة صفر: بلا لائحة لا يمكن تسجيل مخالفة أصلاً. *@
+                @if (Model.Categories.Count == 0)
+                {
+                    <article class="zy-card">
+                        <div class="zyw-queue-head">
+                            <h2>ابدأ اللائحة</h2>
+                            <span class="zy-pill">فارغة</span>
                         </div>
-                    </header>
+                        <p class="zyw-row-meta">
+                            نموذج تسجيل المخالفة يفرض اختيار فئة ونوع — وبلا لائحة يبقى معطّلاً.
+                            اكتب فئاتك بنفسك بالشبكة أدناه، أو ابدأ من <b>مثالٍ جاهز</b> ثم عدّله.
+                        </p>
+                        <p class="zyw-row-meta">
+                            المثال أبوابٌ أربعة (أ · ب · ج · ت) ومخالفاتها وسلالم جزاءاتها —
+                            <b>كلّها قابلة للتعديل والحذف</b>، ولا شيء فيها ثابت.
+                        </p>
+                        <form method="post" asp-page-handler="AddSample">
+                            <div class="zyw-form-actions">
+                                <button type="submit" class="btn-primary" data-zyconfirm="إضافة المثال الجاهز؟">
+                                    ابدأ بمثال جاهز
+                                </button>
+                            </div>
+                        </form>
+                    </article>
+                }
+                @* ⚠️ **لا زرّ «مثال» بعد أن تصير للشركة لائحتها.**
 
-                    <form method="post" asp-page-handler="SaveSettings" class="nxpen-settings-grid">
-                        <article class="nxpen-setting-card">
-                            <div class="nxpen-setting-copy"><strong>لجنة الموافقات</strong><p>عند التفعيل، المخالفة لا تُقفل مباشرة إلا بعد المرور بمسار لجنة الموافقات.</p></div>
-                            <label class="nxpen-switch"><input type="checkbox" name="requiresCommitteeApproval" value="true" checked="@Model.Settings.RequiresCommitteeApproval" /><span></span></label>
-                        </article>
+                   كان يقف بأعلى الشاشة دائماً فيغري بنقرةٍ تُعيد ما حُذف عمداً،
+                   واحتاج آلةً كاملة تتذكّر «المستبعَد» لتمنع ذلك. والأبسط أن
+                   يظهر حيث ينفع وحده: **الشاشة الفارغة**. من عنده لائحته لا
+                   يحتاج مثالاً، ومن أراده لاحقاً يحذف فئاته ويبدأ من جديد. *@
 
-                        <article class="nxpen-setting-card">
-                            <div class="nxpen-setting-copy"><strong>اعتراض الموظف</strong><p>السماح للموظف بتقديم اعتراض من بوابة الموظف بعد صدور المخالفة.</p></div>
-                            <label class="nxpen-switch"><input type="checkbox" name="allowEmployeeAppeal" value="true" checked="@Model.Settings.AllowEmployeeAppeal" /><span></span></label>
-                        </article>
-
-                        <article class="nxpen-setting-card">
-                            <div class="nxpen-setting-copy"><strong>مدة الاعتراض</strong><p>عدد الأيام المتاحة للموظف لتقديم اعتراض بعد استلام إشعار المخالفة.</p></div>
-                            <input name="appealWindowDays" type="number" min="0" value="@Model.Settings.AppealWindowDays" />
-                        </article>
-
-                        <article class="nxpen-setting-card">
-                            <div class="nxpen-setting-copy"><strong>القالب الافتراضي</strong><p>إذا لم يتم اختيار قالب محدد، يستخدم النظام القالب الافتراضي لإشعار العقوبة.</p></div>
-                            <select data-nexora-select="true" name="defaultTemplateType">
-                                @foreach (var templateType in Model.TemplateTypes.Where(x => x.IsActive))
-                                {
-                                    <option value="@templateType.Code" selected="@(templateType.Code == Model.Settings.DefaultTemplateType)">@templateType.Name</option>
-                                }
-                            </select>
-                        </article>
-
-                        <article class="nxpen-setting-card">
-                            <div class="nxpen-setting-copy"><strong>اسم الجهة المعتمدة</strong><p>يظهر في أسفل الفورمة مثل قسم الموارد البشرية أو لجنة الانضباط.</p></div>
-                            <input name="approvingAuthorityName" value="@Model.Settings.ApprovingAuthorityName" placeholder="قسم الموارد البشرية" />
-                        </article>
-
-                        <article class="nxpen-setting-card">
-                            <div class="nxpen-setting-copy"><strong>صيغة رقم الكتاب</strong><p>تُستخدم لاحقاً عند توليد أرقام كتب المخالفات، مثال: DISC-{yyyy}-{0000}</p></div>
-                            <input name="documentNumberFormat" value="@Model.Settings.DocumentNumberFormat" placeholder="DISC-{yyyy}-{0000}" />
-                        </article>
-
-                        <article class="nxpen-form-shell">
-                            <header><div><strong>هيدر الفورمة</strong><p>إذا تركته فارغاً سيظهر هيدر تلقائي يحتوي شعار شركتك وبيانات النظام.</p></div><small>Header</small></header>
-                            <textarea name="formHeader" rows="7" placeholder="شركة الرغد الدولية\nقسم الموارد البشرية\nإشعار مخالفة وجزاء">@Model.Settings.FormHeader</textarea>
-                        </article>
-
-                        <article class="nxpen-form-shell">
-                            <header><div><strong>فوتر الفورمة</strong><p>يظهر أسفل رسالة العقوبة، مثل التوقيعات أو ملاحظات قانونية.</p></div><small>Footer</small></header>
-                            <textarea name="formFooter" rows="7" placeholder="قسم الموارد البشرية\nيعتمد هذا الإشعار حسب لائحة الجزاءات المعتمدة في الشركة.">@Model.Settings.FormFooter</textarea>
-                        </article>
-
-                        <footer class="nxpen-settings-actions"><button type="submit">حفظ إعدادات التهيئة</button></footer>
-                    </form>
-</section>
-            }
-            else if (activeTab == "library")
-            {
-                <section class="nxpen-card">
-                    <header class="nxpen-card-head">
-                        <div><span>Violation Library</span><h2>فئة المخالفة وقائمة المخالفات</h2><p>اختر الفئة حتى تظهر مخالفاتها فقط. هذا يجعل الصفحة مرتبة حتى لو وصلت المخالفات إلى أكثر من 100 نوع.</p></div>
-                        <b>@visibleTypes.Count مخالفة ظاهرة</b>
-                    </header>
-
-                    <section class="nxpen-category-filter">
-                        <a class="@(selectedCategory <= 0 ? "active" : "")" asp-page="./Index" asp-route-tab="library">كل الفئات</a>
-                        @foreach (var category in Model.Categories)
-                        {
-                            <a class="@(selectedCategory == category.Id ? "active" : "")" asp-page="./Index" asp-route-tab="library" asp-route-categoryId="@category.Id">@category.Name</a>
-                        }
-                    </section>
-
-                    <div class="nxpen-split">
-                        <section class="nxpen-subcard">
-                            <header><h3>فئات المخالفات</h3><small>إضافة وتعديل أبواب المخالفات.</small></header>
-                            <form method="post" asp-page-handler="CreateCategory" class="nxpen-grid-form compact">
-                                <input name="name" required placeholder="اسم الفئة" />
-                                <input name="displayOrder" type="number" value="10" placeholder="الترتيب" />
-                                <textarea name="description" placeholder="وصف الفئة"></textarea>
-                                <button type="submit">إضافة فئة</button>
+                @if (Model.Categories.Any(c => !c.Name.StartsWith("أ ") && !c.Name.StartsWith("ب ")
+                                            && !c.Name.StartsWith("ج ") && !c.Name.StartsWith("ت ")))
+                {
+                    <article class="zy-card">
+                        <p class="zyw-row-meta">
+                            عندك أبوابٌ خارج ترقيم اللائحة — تُدمج بنظيراتها فتُنقل مخالفاتها ولا تضيع.
+                        </p>
+                        <div class="zyw-form-actions">
+                            <form method="post" asp-page-handler="MergeDuplicates">
+                                <button type="submit" class="btn-secondary" data-zyconfirm="دمج الفئات المكرّرة؟">
+                                    ادمج الفئات المكرّرة
+                                </button>
                             </form>
-                            <div class="nxpen-edit-list">
+                        </div>
+                    </article>
+                }
+
+                @* ══════════ شبكتان محرَّرتان — نمطٌ منقول عن كيان بعد فحصٍ حيّ ══════════
+
+                   كل صفٍّ حقول إدخال حيّة، والصفّ الجديد **يُلحَق بأسفل الشبكة** لا
+                   بمودال، و**زرّ حفظٍ واحد** يمرّ على الصفوف كلّها. كان إدخال خمس
+                   فئات يعني خمس دورات ذهابٍ وإياب؛ صار دورةً واحدة. *@
+
+                <form method="get" class="zyw-filters" asp-page="./Index">
+                    <input type="hidden" name="tab" value="library" />
+                    <div class="zyw-field zyw-field--grow">
+                        <label for="lib-search">بحث بالشاشة</label>
+                        <input id="lib-search" name="search" value="@Model.Search" placeholder="اسم عربي أو إنجليزي أو رقم فقرة" />
+                    </div>
+                    <div class="zyw-form-actions">
+                        <button type="submit" class="btn-secondary">بحث</button>
+                        @if (!string.IsNullOrWhiteSpace(Model.Search))
+                        {
+                            <a class="btn-secondary" asp-page="./Index" asp-route-tab="library">مسح</a>
+                        }
+                    </div>
+                </form>
+
+                <div class="zyw-queue zyw-queue--stacked">
+
+                    @* ─────────────── الفئات ─────────────── *@
+                    <article class="zy-card">
+                        <div class="zyw-queue-head">
+                            <h2>فئات المخالفات</h2>
+                            <span class="zy-pill">@Model.Categories.Count</span>
+                        </div>
+                        <p class="zyw-row-meta">أبواب اللائحة. كل مخالفة تتبع باباً واحداً — واترك «على من تنطبق» فارغاً لتشمل الجميع.</p>
+
+                        <form method="post" asp-page-handler="SaveCategories" data-zyw-grid="categories">
+                            <div class="zyw-table-wrap">
+                                <table class="zyw-table">
+                                    <thead>
+                                        <tr>
+                                            <th>الفئة (عربي)</th>
+                                            <th>الفئة (English)</th>
+                                            <th style="width:90px">الترتيب</th>
+                                            <th>على من تنطبق</th>
+                                            <th style="width:120px"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody data-zyw-rows>
+                                        @foreach (var category in Model.Categories.Where(c => Model.Matches(new[] { c.Name, c.NameEn })))
+                                        {
+                                            var linkedCases = Model.CasesInCategory(category.Id);
+
+                                            <tr>
+                                                <td>
+                                                    <input type="hidden" name="rowId" value="@category.Id" />
+                                                    <input name="rowName" value="@category.Name" required />
+                                                </td>
+                                                <td><input name="rowNameEn" value="@category.NameEn" placeholder="Attendance" /></td>
+                                                <td><input name="rowOrder" type="number" value="@category.DisplayOrder" /></td>
+                                                <td>
+                                                    <input type="hidden" name="rowConditions" id="cat-cond-@category.Id" value="@category.ConditionsJson" />
+                                                    <button type="button" class="btn-secondary" aria-expanded="false"
+                                                            data-zy-conditions-open="#cat-cond-@category.Id-box">
+                                                        @HrConditions.Describe(category.Conditions)
+                                                    </button>
+                                                    <div class="zyc" id="cat-cond-@category.Id-box" hidden
+                                                         data-zy-conditions data-zy-lazy data-input="#cat-cond-@category.Id"
+                                                         data-empty-text="بلا شروط — تنطبق على كل الموظفين."></div>
+                                                </td>
+                                                <td>
+                                                    @* زرّ حذفٍ مستقلّ: فعلٌ مباشر لا تأشيرٌ ثم «حفظ».
+                                                       والحدّ الوحيد ارتباطُ موظف — فإن وُجد، يُقال العدد
+                                                       بدل أن يُترك الزرّ يفشل بنقرةٍ لا لزوم لها. *@
+                                                    @if (linkedCases > 0)
+                                                    {
+                                                        <span class="zy-pill" title="لا تُحذف ما دامت الحالات قائمة">@linkedCases حالة مرتبطة</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button type="submit" class="btn-secondary"
+                                                                formaction="?handler=DeleteCategory" name="id" value="@category.Id"
+                                                                data-zyw-delete
+                                                                data-zyconfirm="حذف «@category.Name» بمخالفاتها؟">حذف</button>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            @* قالب الصفّ الجديد: يُستنسخ بالمتصفّح فلا يُعاد تحميل الصفحة. *@
+                            <template data-zyw-template>
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="rowId" value="0" />
+                                        <input name="rowName" placeholder="اسم الفئة" />
+                                    </td>
+                                    <td><input name="rowNameEn" placeholder="English" /></td>
+                                    <td><input name="rowOrder" type="number" value="10" /></td>
+                                    <td></td>
+                                    <td><button type="button" class="btn-secondary" data-zyw-remove>✖ إزالة</button></td>
+                                </tr>
+                            </template>
+
+                            <div class="zyw-form-actions">
+                                <button type="button" class="btn-secondary" data-zyw-add>+ فئة جديدة</button>
+                                <button type="submit" class="btn-primary">حفظ الفئات</button>
+                            </div>
+                        </form>
+                    </article>
+
+                    @* ─────────────── المخالفات ─────────────── *@
+                    <article class="zy-card">
+                        <div class="zyw-queue-head">
+                            <h2>قائمة المخالفات</h2>
+                            <span class="zy-pill">@Model.ViolationTypes.Count</span>
+                        </div>
+                        <p class="zyw-row-meta">لكلٍّ فئتها ورقم فقرتها باللائحة — ومنها يُبنى سلّم الجزاءات أدناه.</p>
+
+                        @if (Model.Categories.Count == 0)
+                        {
+                            <div class="zyw-empty">أضف فئةً واحدة على الأقل أوّلاً — كل مخالفة تتبع فئة.</div>
+                        }
+                        else
+                        {
+                            @* ⚠️ **مجموعةٌ لكل فئة، مطويّة**. جدولٌ واحد بخمسٍ وستين
+                               مخالفة لا يُعمل عليه: تبحث عن بندٍ فتمرّ على أربعة أبواب
+                               لا يخصّك منها إلا واحد. الفئة تُفتح وحدها ويبقى الحفظ
+                               واحداً للشبكة كلّها — الطيّ عرضٌ لا انفصال. *@
+                            <form method="post" asp-page-handler="SaveViolationTypes" data-zyw-grid="violations">
                                 @foreach (var category in Model.Categories)
                                 {
-                                    <details class="nxpen-edit-item @(category.IsActive ? "" : "disabled")">
-                                        <summary><span>@category.DisplayOrder.ToString("00")</span><strong>@category.Name</strong><small>@category.TypesCount مخالفة</small></summary>
-                                        <form method="post" asp-page-handler="UpdateCategory" class="nxpen-grid-form edit">
-                                            <input type="hidden" name="id" value="@category.Id" />
-                                            <div><label>اسم الفئة</label><input name="name" value="@category.Name" required /></div>
-                                            <div><label>الترتيب</label><input name="displayOrder" type="number" value="@category.DisplayOrder" /></div>
-                                            <div class="wide"><label>الوصف</label><textarea name="description">@category.Description</textarea></div>
-                                            <div class="wide nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked="@category.IsActive" /><span></span><b>فعالة</b></label></div>
-                                            <footer class="wide"><button type="submit">حفظ تعديل الفئة</button></footer>
-                                        </form>
-                                    </details>
-                                }
-                            </div>
-                        </section>
+                                    var rows = Model.ViolationTypes
+                                        .Where(v => v.CategoryId == category.Id)
+                                        .Where(v => Model.Matches(new[] { v.Name, v.NameEn, v.ArticleNo }))
+                                        .ToList();
 
-                        <section class="nxpen-subcard">
-                            <header><h3>قائمة المخالفات</h3><small>كل مخالفة مرتبطة بفئة وصلاحية وتقييم.</small></header>
-                            <form method="post" asp-page-handler="CreateViolationType" class="nxpen-grid-form">
-                                <div><label>الفئة</label><select data-nexora-select="true" name="categoryId" required><option value="">اختر الفئة</option>@foreach (var category in Model.Categories.Where(x => x.IsActive)){<option value="@category.Id" selected="@(selectedCategory == category.Id)">@category.Name</option>}</select></div>
-                                <div><label>الخطورة</label><select data-nexora-select="true" name="severity"><option value="A">A - بسيطة</option><option value="B" selected>B - متوسطة</option><option value="C">C - جسيمة</option><option value="FinalWarning">إنذار بالفصل</option></select></div>
-                                <div><label>الصلاحية</label><input name="validityMonths" type="number" min="1" value="6" /></div>
-                                <div><label>فترة التكرار</label><select data-nexora-select="true" name="countingPeriod"><option value="Monthly" selected>شهرية</option><option value="SixMonths">خلال 6 أشهر</option><option value="Yearly">خلال سنة</option><option value="Contract">مدة العقد</option></select></div>
-                                <div class="wide"><label>اسم المخالفة</label><input name="name" required placeholder="مثال: الإهمال في المحافظة على أصول الشركة." /></div>
-                                <div class="wide"><label>الوصف</label><textarea name="description" placeholder="مثال: استخدام معدات زملاء العمل دون إذن، أو إتلافها عمدًا، أو عدم إعادتها."></textarea></div>
-                                <div class="wide nxpen-checks">
-                                    <label class="nxpen-check-pill"><input type="checkbox" name="includeInEvaluation" value="true" checked /><span></span><b>تدخل بالتقييم</b></label>
-                                    <label class="nxpen-check-pill"><input type="checkbox" name="showToEmployee" value="true" checked /><span></span><b>تظهر للموظف</b></label>
-                                    <label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked /><span></span><b>فعالة</b></label>
+                                    if (rows.Count == 0 && !string.IsNullOrWhiteSpace(Model.Search)) { continue; }
+
+                                    @* البحث يفتح ما وجد فيه — وإلا بقيت النتيجة مخبوءة. *@
+                                    <details class="zyw-acc" open="@(!string.IsNullOrWhiteSpace(Model.Search) || Model.Categories.Count == 1)">
+                                        <summary>
+                                            <span>@rows.Count</span>
+                                            <strong>@category.Name</strong>
+                                            <small>@(category.IsSystem ? "فئة نظام · " : "")@Model.PenaltyRules.Count(r => rows.Any(v => v.Id == r.ViolationTypeId)) درجة جزاء</small>
+                                        </summary>
+
+                                <div class="zyw-table-wrap">
+                                    <table class="zyw-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width:170px">الفئة</th>
+                                                <th>المخالفة (عربي)</th>
+                                                <th>المخالفة (English)</th>
+                                                <th style="width:90px">الفقرة</th>
+                                                <th>على من تنطبق</th>
+                                                <th style="width:180px"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody data-zyw-rows>
+                                            @foreach (var violation in rows)
+                                            {
+                                                var linkedCases = Model.CasesOnViolation(violation.Id);
+
+                                                <tr>
+                                                    <td>
+                                                        <input type="hidden" name="rowId" value="@violation.Id" />
+                                                        <select name="rowCategoryId">
+                                                            @foreach (var option in Model.Categories)
+                                                            {
+                                                                <option value="@option.Id" selected="@(option.Id == violation.CategoryId)">@option.Name</option>
+                                                            }
+                                                        </select>
+                                                    </td>
+                                                    <td><input name="rowName" value="@violation.Name" required /></td>
+                                                    <td><input name="rowNameEn" value="@violation.NameEn" placeholder="English" /></td>
+                                                    <td><input name="rowArticle" value="@violation.ArticleNo" placeholder="3/ب" /></td>
+                                                    <td>
+                                                        <input type="hidden" name="rowConditions" id="vt-cond-@violation.Id" value="@violation.ConditionsJson" />
+                                                        <button type="button" class="btn-secondary" aria-expanded="false"
+                                                                data-zy-conditions-open="#vt-cond-@violation.Id-box">
+                                                            @HrConditions.Describe(violation.Conditions)
+                                                        </button>
+                                                        <div class="zyc" id="vt-cond-@violation.Id-box" hidden
+                                                             data-zy-conditions data-zy-lazy data-input="#vt-cond-@violation.Id"
+                                                             data-empty-text="بلا شروط — تنطبق على كل الموظفين."></div>
+                                                    </td>
+                                                    <td>
+                                                        @* الثلاث نقاط بكيان: تفتح تفاصيل المخالفة وسلّم جزاءاتها. *@
+                                                        <a class="btn-secondary" asp-page="./Index" asp-route-tab="library"
+                                                           asp-route-categoryId="@violation.CategoryId" asp-route-openTypeId="@violation.Id"
+                                                           title="سلّم الجزاءات">•••</a>
+
+                                                        @if (linkedCases > 0)
+                                                        {
+                                                            <span class="zy-pill" title="لا تُحذف ما دامت الحالات قائمة">@linkedCases حالة</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <button type="submit" class="btn-secondary"
+                                                                    formaction="?handler=DeleteViolationType" name="id" value="@violation.Id"
+                                                                    data-zyw-delete
+                                                                    data-zyconfirm="حذف «@violation.Name»؟">حذف</button>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <footer class="wide"><button type="submit">إضافة مخالفة</button></footer>
-                            </form>
-                            <div class="nxpen-edit-list">
-                                @foreach (var violation in visibleTypes)
-                                {
-                                    <details class="nxpen-edit-item @(violation.IsActive ? "" : "disabled")">
-                                        <summary><span>@Model.DisplaySeverityShort(violation.Severity)</span><strong>@violation.Name</strong><small>@violation.CategoryName / @violation.RulesCount جزاء</small></summary>
-                                        <form method="post" asp-page-handler="UpdateViolationType" class="nxpen-grid-form edit">
-                                            <input type="hidden" name="id" value="@violation.Id" />
-                                            <div><label>الفئة</label><select data-nexora-select="true" name="categoryId">@foreach (var category in Model.Categories){<option value="@category.Id" selected="@(category.Id == violation.CategoryId)">@category.Name</option>}</select></div>
-                                            <div><label>الخطورة</label><select data-nexora-select="true" name="severity"><option value="A" selected="@(violation.Severity == "A")">A - بسيطة</option><option value="B" selected="@(violation.Severity == "B")">B - متوسطة</option><option value="C" selected="@(violation.Severity == "C")">C - جسيمة</option><option value="FinalWarning" selected="@(violation.Severity == "FinalWarning")">إنذار بالفصل</option></select></div>
-                                            <div><label>الصلاحية</label><input name="validityMonths" type="number" min="1" value="@violation.ValidityMonths" /></div>
-                                            <div><label>فترة التكرار</label><select data-nexora-select="true" name="countingPeriod"><option value="Monthly" selected="@(violation.CountingPeriod == "Monthly")">شهرية</option><option value="SixMonths" selected="@(violation.CountingPeriod == "SixMonths")">خلال 6 أشهر</option><option value="Yearly" selected="@(violation.CountingPeriod == "Yearly")">خلال سنة</option><option value="Contract" selected="@(violation.CountingPeriod == "Contract")">مدة العقد</option></select></div>
-                                            <div class="wide"><label>اسم المخالفة</label><input name="name" value="@violation.Name" required /></div>
-                                            <div class="wide"><label>الوصف</label><textarea name="description">@violation.Description</textarea></div>
-                                            <div class="wide nxpen-checks">
-                                                <label class="nxpen-check-pill"><input type="checkbox" name="includeInEvaluation" value="true" checked="@violation.IncludeInEvaluation" /><span></span><b>تدخل بالتقييم</b></label>
-                                                <label class="nxpen-check-pill"><input type="checkbox" name="showToEmployee" value="true" checked="@violation.ShowToEmployee" /><span></span><b>تظهر للموظف</b></label>
-                                                <label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked="@violation.IsActive" /><span></span><b>فعالة</b></label>
-                                            </div>
-                                            <footer class="wide"><button type="submit">حفظ تعديل المخالفة</button></footer>
-                                        </form>
                                     </details>
                                 }
+
+                                <template data-zyw-template>
+                                    <tr>
+                                        <td>
+                                            <input type="hidden" name="rowId" value="0" />
+                                            <select name="rowCategoryId">
+                                                @foreach (var category in Model.Categories)
+                                                {
+                                                    <option value="@category.Id">@category.Name</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td><input name="rowName" placeholder="اسم المخالفة" /></td>
+                                        <td><input name="rowNameEn" placeholder="English" /></td>
+                                        <td><input name="rowArticle" placeholder="3/ب" /></td>
+                                        <td></td>
+                                        <td><button type="button" class="btn-secondary" data-zyw-remove>✖</button></td>
+                                    </tr>
+                                </template>
+
+                                <div class="zyw-form-actions">
+                                    <button type="button" class="btn-secondary" data-zyw-add>+ نوع مخالفة جديد</button>
+                                    <button type="submit" class="btn-primary">حفظ المخالفات</button>
+                                </div>
+                            </form>
+                        }
+                    </article>
+
+                    @* ─────────────── سلّم الجزاءات ─────────────── *@
+                    @if (Model.ViolationTypes.Count > 0)
+                    {
+                        <article class="zy-card">
+                            <div class="zyw-queue-head">
+                                <h2>برنامج التأديب التدريجي</h2>
+                                <span class="zy-pill">@Model.PenaltyRules.Count</span>
                             </div>
-                        </section>
-                    </div>
+                            <p class="zyw-row-meta">ماذا يترتّب بالتكرار الأول والثاني والثالث — <b>ونوع الإجراء هو ما يقود الحساب</b>، لا نصّ العقوبة.</p>
 
-                    <section class="nxpen-subcard">
-                        <header><h3>سلم الجزاءات حسب التكرار</h3><small>اختر الفئة أولاً، ثم تظهر فقط المخالفات التابعة لها داخل القائمة.</small></header>
-                        <form method="post" asp-page-handler="CreatePenaltyRule" class="nxpen-grid-form" data-nxpen-rule-form>
-                            <div><label>الفئة</label><select data-nexora-select="true" name="categoryFilter" data-nxpen-category-filter><option value="">كل الفئات</option>@foreach (var category in Model.Categories.Where(x => x.IsActive)){<option value="@category.Id" selected="@(selectedCategory == category.Id)">@category.Name</option>}</select></div>
-                            <div class="wide-2"><label>المخالفة</label><select data-nexora-select="true" name="violationTypeId" required data-nxpen-violation-list><option value="">اختر المخالفة</option>@foreach (var violation in Model.ViolationTypes.Where(x => x.IsActive)){<option value="@violation.Id" data-category-id="@violation.CategoryId">@violation.CategoryName — @violation.Name</option>}</select></div>
-                            <div><label>فترة الاحتساب</label><select data-nexora-select="true" name="countingPeriod"><option value="Monthly" selected>شهرية</option><option value="SixMonths">خلال 6 أشهر</option><option value="Yearly">خلال سنة</option><option value="Contract">مدة العقد</option></select></div>
-                            <div><label>من تكرار</label><input name="occurrenceFrom" type="number" min="1" value="1" required /></div>
-                            <div><label>إلى تكرار</label><input name="occurrenceTo" type="number" min="1" value="1" required /></div>
-                            <div class="wide-2"><label>العقوبة / الإجراء</label><input name="penaltyAction" required placeholder="مثال: خصم نصف يوم من الراتب" /></div>
-                            <div><label>الأثر المالي</label><select data-nexora-select="true" name="financialImpactType"><option value="None">لا يوجد</option><option value="Days" selected>أيام</option><option value="Hours">ساعات</option><option value="Amount">مبلغ ثابت</option></select></div>
-                            <div><label>قيمة الأثر</label><input name="financialValue" type="number" step="0.01" value="0.5" /></div>
-                            <div><label>صلاحية الجزاء</label><input name="validityMonths" type="number" min="1" value="6" /></div>
-                            <div><label>طريقة الاحتساب</label><select data-nexora-select="true" name="calculationMode"><option value="Cumulative" selected>تراكمي</option><option value="ReplacePrevious">استبدال السابق</option><option value="DifferenceOnly">فرق فقط</option></select></div>
-                            <div class="nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="requiresApproval" value="true" /><span></span><b>اعتماد إضافي</b></label></div>
-                            <footer class="wide"><button type="submit">إضافة جزاء</button></footer>
-                        </form>
-
-                        <div class="nxpen-edit-list rules">
-                            @foreach (var rule in visibleRules)
+                            @* ⚠️ **لا يُعرض سلّمٌ إلا لمخالفةٍ مطلوبة**. عرضُ سلالم سبعين
+                               مخالفة دفعةً واحدة يعني ألف حقلٍ بصفحةٍ واحدة، ولا أحد
+                               يحرّرها كلّها. المدخل من زرّ «•••» بالجدول أعلاه. *@
+                            @if (openType <= 0)
                             {
-                                <details class="nxpen-edit-item">
-                                    <summary><span>@Model.DisplayOccurrenceRange(rule.OccurrenceFrom, rule.OccurrenceTo)</span><strong>@rule.PenaltyAction</strong><small>@rule.CategoryName / @rule.ViolationName / @Model.DisplayFinancialImpact(rule.FinancialImpactType, rule.FinancialValue)</small></summary>
-                                    <form method="post" asp-page-handler="UpdatePenaltyRule" class="nxpen-grid-form edit">
-                                        <input type="hidden" name="id" value="@rule.Id" />
-                                        <div class="wide"><label>المخالفة</label><select data-nexora-select="true" name="violationTypeId">@foreach (var violation in Model.ViolationTypes){<option value="@violation.Id" selected="@(violation.Id == rule.ViolationTypeId)">@violation.CategoryName — @violation.Name</option>}</select></div>
-                                        <div><label>من</label><input name="occurrenceFrom" type="number" min="1" value="@rule.OccurrenceFrom" /></div>
-                                        <div><label>إلى</label><input name="occurrenceTo" type="number" min="1" value="@rule.OccurrenceTo" /></div>
-                                        <div><label>فترة الاحتساب</label><select data-nexora-select="true" name="countingPeriod"><option value="Monthly" selected="@(rule.CountingPeriod == "Monthly")">شهرية</option><option value="SixMonths" selected="@(rule.CountingPeriod == "SixMonths")">خلال 6 أشهر</option><option value="Yearly" selected="@(rule.CountingPeriod == "Yearly")">خلال سنة</option><option value="Contract" selected="@(rule.CountingPeriod == "Contract")">مدة العقد</option></select></div>
-                                        <div><label>طريقة الاحتساب</label><select data-nexora-select="true" name="calculationMode"><option value="Cumulative" selected="@(rule.CalculationMode == "Cumulative")">تراكمي</option><option value="ReplacePrevious" selected="@(rule.CalculationMode == "ReplacePrevious")">استبدال السابق</option><option value="DifferenceOnly" selected="@(rule.CalculationMode == "DifferenceOnly")">فرق فقط</option></select></div>
-                                        <div class="wide"><label>العقوبة</label><input name="penaltyAction" value="@rule.PenaltyAction" required /></div>
-                                        <div><label>الأثر المالي</label><select data-nexora-select="true" name="financialImpactType"><option value="None" selected="@(rule.FinancialImpactType == "None")">لا يوجد</option><option value="Days" selected="@(rule.FinancialImpactType == "Days")">أيام</option><option value="Hours" selected="@(rule.FinancialImpactType == "Hours")">ساعات</option><option value="Amount" selected="@(rule.FinancialImpactType == "Amount")">مبلغ ثابت</option></select></div>
-                                        <div><label>قيمة الأثر</label><input name="financialValue" type="number" step="0.01" value="@rule.FinancialValue" /></div>
-                                        <div><label>الصلاحية</label><input name="validityMonths" type="number" min="1" value="@rule.ValidityMonths" /></div>
-                                        <div class="nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="requiresApproval" value="true" checked="@rule.RequiresApproval" /><span></span><b>اعتماد إضافي</b></label></div>
-                                        <footer class="wide"><button type="submit">حفظ تعديل الجزاء</button><button class="danger-outline" type="submit" formaction="?handler=DeletePenaltyRule" formmethod="post" name="id" value="@rule.Id">حذف الجزاء</button></footer>
-                                    </form>
+                                <div class="zyw-empty">
+                                    اختر مخالفةً من زرّ <b>•••</b> بالجدول أعلاه ليظهر سلّم جزاءاتها هنا.
+                                </div>
+                            }
+
+                            @foreach (var violation in Model.ViolationTypes.Where(v => openType > 0 && v.Id == openType))
+                            {
+                                var rules = Model.PenaltyRules.Where(r => r.ViolationTypeId == violation.Id)
+                                    .OrderBy(r => r.OccurrenceFrom).ToList();
+
+                                <details class="zyw-acc" open="@(openType == violation.Id)">
+                                    <summary>
+                                        <span>@Model.DisplaySeverityShort(violation.Severity)</span>
+                                        <strong>@violation.Name</strong>
+                                        <small>@violation.CategoryName · @rules.Count جزاء</small>
+                                    </summary>
+
+                                    @if (rules.Count == 0)
+                                    {
+                                        <div class="zyw-empty">لا جزاء بعد — بلا سلّم لا يترتّب على المخالفة شيء.</div>
+                                    }
+
+                                    <div class="zyw-list">
+                                        @foreach (var rule in rules)
+                                        {
+                                            <div class="zyw-item">
+                                                <div class="zyw-item-main">
+                                                    <strong>@rule.ActionLabel — @rule.PenaltyAction</strong>
+                                                    <small>
+                                                        التكرار @rule.OccurrenceFrom@(rule.OccurrenceTo > rule.OccurrenceFrom ? $"–{rule.OccurrenceTo}" : "") ·
+                                                        @rule.DropText
+                                                        @if (rule.IsFinancial)
+                                                        {
+                                                            <text> · @rule.BaseText ÷ @rule.DivisorText</text>
+                                                        }
+                                                    </small>
+                                                </div>
+                                                <div class="zyw-item-actions">
+                                                    <button type="button" class="btn-secondary" data-zyw-edit-rule="@rule.Id">تعديل</button>
+                                                    <form method="post" asp-page-handler="DeletePenaltyRule">
+                                                        <input type="hidden" name="id" value="@rule.Id" />
+                                                        <button type="submit" class="btn-secondary" data-zyconfirm="حذف الجزاء؟">حذف</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+
+                                            @* نموذج التعديل مطويّ بجانب صفّه — لا مودال ولا صفحة. *@
+                                            <form method="post" asp-page-handler="UpdatePenaltyRule" class="zyw-rule-form" data-zyw-rule-form="@rule.Id" hidden>
+                                                <input type="hidden" name="id" value="@rule.Id" />
+                                                <input type="hidden" name="ViolationTypeId" value="@violation.Id" />
+                                                @await Html.PartialAsync("_PenaltyRuleFields", new SmartAttendance.Web.Pages.DisciplinaryRules.PenaltyRuleFieldsModel(Model, rule))
+                                            </form>
+                                        }
+                                    </div>
+
+                                    <details class="zyw-acc">
+                                        <summary><span>+</span><strong>قاعدة إجراءات تأديبية جديدة</strong><small>عند التكرار رقم @(rules.Count + 1)</small></summary>
+                                        <form method="post" asp-page-handler="CreatePenaltyRule">
+                                            <input type="hidden" name="ViolationTypeId" value="@violation.Id" />
+                                            @await Html.PartialAsync("_PenaltyRuleFields", new SmartAttendance.Web.Pages.DisciplinaryRules.PenaltyRuleFieldsModel(Model, null, rules.Count + 1))
+                                        </form>
+                                    </details>
                                 </details>
                             }
-                        </div>
-                    </section>
-                </section>
+                        </article>
+                    }
+                </div>
             }
             
+            else if (activeTab == "articles")
+            {
+                @* موادّ اللائحة، **ولكلٍّ حالة إنفاذها الصريحة**. مادّةٌ تُعرض كأنها
+                   منفَّذة وهي نصٌّ فقط أسوأ من غيابها: يطمئنّ إليها من يقرأ الشاشة
+                   وهي لا تمنع شيئاً — وهو عين ما كانت عليه راية «موافقة اللجنة». *@
+                <article class="zy-card">
+                    <div class="zyw-queue-head">
+                        <h2>قواعد اللائحة الانضباطية</h2>
+                        <span class="zy-pill">@SmartAttendance.Web.Infrastructure.Hrms.DisciplinaryPolicyPack.Articles.Length مادّة</span>
+                    </div>
+                    <p class="zyw-row-meta">
+                        نصّ الموادّ كما وردت بالوثيقة الرسمية، وبجانب كلٍّ منها <b>ما يفعله النظام بها فعلاً</b>:
+                        هل تمنع إجراءً، أم تُنبّه فقط، أم تُحتسب داخل المحرّك، أم هي نصٌّ مرجعيّ بلا أثر تلقائيّ.
+                    </p>
+
+                    <div class="zyw-table-wrap">
+                        <table class="zyw-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:70px">المادة</th>
+                                    <th style="width:200px">الموضوع</th>
+                                    <th>النصّ</th>
+                                    <th style="width:110px">الإنفاذ</th>
+                                    <th>أين</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var article in SmartAttendance.Web.Infrastructure.Hrms.DisciplinaryPolicyPack.Articles)
+                                {
+                                    <tr>
+                                        <td><b>@article.Number</b></td>
+                                        <td>@article.Title</td>
+                                        <td style="white-space:normal">@article.Text</td>
+                                        <td>
+                                            <span class="zy-pill">@Model.EnforcementLabel(article.State)</span>
+                                        </td>
+                                        <td style="white-space:normal">@article.Where</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+            }
+
             else if (activeTab == "designer")
             {
-                <section class="nxpen-card">
-                    <header class="nxpen-card-head relaxed">
+                <section class="zy-card">
+                    <header class="zyw-queue-head">
                         <div>
-                            <span>Company Form Designer</span>
+
                             <h2>مصمم فورمة العقوبة</h2>
                             <p>
                                 ارفع صورة الهيدر والفوتر، ثم أضف مربعات نص في المكان الذي تريده مع التحكم بنوع وحجم ولون الخط.
@@ -245,30 +515,30 @@
 
                     <section class="nxpen-designer-grid">
                         <div class="nxpen-designer-panel">
-                    <section class="nxpen-subcard nxpen-a4-form-card" data-nxpen-a4-form-upload>
+                    <section class="zy-card nxpen-a4-form-card" data-nxpen-a4-form-upload>
                         <header>
                             <h3>&#1585;&#1601;&#1593; &#1601;&#1608;&#1585;&#1605;&#1577; &#1575;&#1604;&#1588;&#1585;&#1603;&#1577; A4</h3>
                             <small>&#1575;&#1585;&#1601;&#1593; &#1601;&#1608;&#1585;&#1605;&#1577; &#1601;&#1575;&#1585;&#1594;&#1577; &#1603;&#1575;&#1605;&#1604;&#1577; &#1576;&#1602;&#1610;&#1575;&#1587; A4. &#1610;&#1583;&#1593;&#1605; PDF &#1571;&#1608; &#1589;&#1608;&#1585;&#1577;. &#1575;&#1604;&#1606;&#1589;&#1608;&#1589; &#1587;&#1578;&#1592;&#1607;&#1585; &#1601;&#1608;&#1602;&#1607;&#1575;.</small>
                         </header>
 
-                        <form method="post" asp-page-handler="SaveA4Form" enctype="multipart/form-data" class="nxpen-grid-form">
+                        <form method="post" asp-page-handler="SaveA4Form" enctype="multipart/form-data" class="zyw-form-grid">
                             <div class="wide">
                                 <label>&#1601;&#1608;&#1585;&#1605;&#1577; A4 &#1601;&#1575;&#1585;&#1594;&#1577;</label>
                                 <input type="file" name="a4FormFile" accept=".png,.jpg,.jpeg,.webp,.pdf" />
                             </div>
-                            <footer class="wide">
+                            <footer class="zyw-form-actions zyw-field--wide">
                                 <button type="submit">&#1581;&#1601;&#1592; &#1601;&#1608;&#1585;&#1605;&#1577; A4</button>
                             </footer>
                         </form>
                     </section>
 
-                            <section class="nxpen-subcard">
+                            <section class="zy-card">
                                 <header>
                                     <h3>صور الهيدر والفوتر</h3>
                                     <small>يفضل استخدام صورة عريضة للهيدر والفوتر بعرض صفحة A4.</small>
                                 </header>
 
-                                <form method="post" asp-page-handler="SaveFormImages" enctype="multipart/form-data" class="nxpen-grid-form">
+                                <form method="post" asp-page-handler="SaveFormImages" enctype="multipart/form-data" class="zyw-form-grid">
                                     <div class="wide">
                                         <label>صورة الهيدر</label>
                                         <input type="file" name="headerImage" accept="image/*" />
@@ -277,13 +547,13 @@
                                         <label>صورة الفوتر</label>
                                         <input type="file" name="footerImage" accept="image/*" />
                                     </div>
-                                    <footer class="wide">
+                                    <footer class="zyw-form-actions zyw-field--wide">
                                         <button type="submit">حفظ صور الفورمة</button>
                                     </footer>
                                 </form>
                             </section>
 
-                            <section class="nxpen-subcard nxpen-main-text-card">
+                            <section class="zy-card nxpen-main-text-card">
                                 <header>
                                     <h3>تعديل النص كطبقات مستقلة</h3>
                                     <small>
@@ -304,7 +574,7 @@
                                     </article>
                                 </div>
 
-                                <form method="post" asp-page-handler="SeedBodyTextLayers" class="nxpen-grid-form">
+                                <form method="post" asp-page-handler="SeedBodyTextLayers" class="zyw-form-grid">
                                     <div class="wide">
                                         <label>إعادة بناء النصوص الأساسية كطبقات منفصلة</label>
                                         <small class="nxpen-form-note">
@@ -312,19 +582,19 @@
                                             لا يحذف النصوص الإضافية في الهيدر أو الفوتر.
                                         </small>
                                     </div>
-                                    <footer class="wide">
+                                    <footer class="zyw-form-actions zyw-field--wide">
                                         <button type="submit">إنشاء / تحديث طبقات النص الأساسية</button>
                                     </footer>
                                 </form>
                             </section>
 
-                            <section class="nxpen-subcard">
+                            <section class="zy-card">
                                 <header>
                                     <h3>إضافة طبقة نص جديدة</h3>
                                     <small>استخدم هذا الخيار لإضافة أي نص جديد فوق الهيدر أو المتن أو الفوتر.</small>
                                 </header>
 
-                                <form method="post" asp-page-handler="CreateTextBlock" class="nxpen-grid-form">
+                                <form method="post" asp-page-handler="CreateTextBlock" class="zyw-form-grid">
                                     <div>
                                         <label>المنطقة</label>
                                         <select data-nexora-select="true" name="area">
@@ -374,25 +644,21 @@
                                         <label>النص</label>
                                         <textarea name="text" rows="4" placeholder="مثال: السيد/ة {EmployeeName}"></textarea>
                                     </div>
-                                    <div class="wide nxpen-checks">
-                                        <label class="nxpen-check-pill">
-                                            <input type="checkbox" name="isBold" value="true" />
-                                            <span></span>
-                                            <b>Bold</b>
-                                        </label>
-                                        <label class="nxpen-check-pill">
-                                            <input type="checkbox" name="isActive" value="true" checked />
-                                            <span></span>
-                                            <b>فعال</b>
-                                        </label>
+                                    <div class="zyw-field zyw-field--wide zyw-checks">
+                                        <label>
+                                            <input type="checkbox" name="isBold" value="true" /> Bold
+                                            </label>
+                                        <label>
+                                            <input type="checkbox" name="isActive" value="true" checked /> فعال
+                                            </label>
                                     </div>
-                                    <footer class="wide">
+                                    <footer class="zyw-form-actions zyw-field--wide">
                                         <button type="submit">إضافة صندوق نص إضافي</button>
                                     </footer>
                                 </form>
                             </section>
 
-                            <section class="nxpen-subcard">
+                            <section class="zy-card">
                                 <header>
                                     <h3>صناديق النص الحالية</h3>
                                     <small>يمكن تعديل كل صندوق نص بشكل كامل.</small>
@@ -407,7 +673,7 @@
                                                 <strong>@block.Text</strong>
                                                 <small>@block.FontFamily / @block.FontSize px / @block.FontColor</small>
                                             </summary>
-                                            <form method="post" asp-page-handler="UpdateTextBlock" class="nxpen-grid-form edit" data-layer-form data-layer-id="@block.Id">
+                                            <form method="post" asp-page-handler="UpdateTextBlock" class="zyw-form-grid" data-layer-form data-layer-id="@block.Id">
                                                 <input type="hidden" name="id" value="@block.Id" />
                                                 <div>
                                                     <label>المنطقة</label>
@@ -458,19 +724,15 @@
                                                     <label>النص</label>
                                                     <textarea name="text" rows="4">@block.Text</textarea>
                                                 </div>
-                                                <div class="wide nxpen-checks">
-                                                    <label class="nxpen-check-pill">
-                                                        <input type="checkbox" name="isBold" value="true" checked="@block.IsBold" />
-                                                        <span></span>
-                                                        <b>Bold</b>
-                                                    </label>
-                                                    <label class="nxpen-check-pill">
-                                                        <input type="checkbox" name="isActive" value="true" checked="@block.IsActive" />
-                                                        <span></span>
-                                                        <b>فعال</b>
-                                                    </label>
+                                                <div class="zyw-field zyw-field--wide zyw-checks">
+                                                    <label>
+                                                        <input type="checkbox" name="isBold" value="true" checked="@block.IsBold" /> Bold
+                                                        </label>
+                                                    <label>
+                                                        <input type="checkbox" name="isActive" value="true" checked="@block.IsActive" /> فعال
+                                                        </label>
                                                 </div>
-                                                <footer class="wide">
+                                                <footer class="zyw-form-actions zyw-field--wide">
                                                     <button type="submit">حفظ طبقة النص</button>
                                                     <button class="danger-outline"
                                                             type="submit"
@@ -557,103 +819,198 @@ else if (Model.Settings.A4FormFileType == "Pdf")
                     </section>
                 </section>
             }
-else
+            else
             {
-                <section class="nxpen-card">
-                    <header class="nxpen-card-head">
-                        <div><span>Dynamic Company Forms</span><h2>قوالب الرسائل والفورم</h2><p>القالب يمثل نص العقوبة، ويأخذ الهيدر والفوتر من إعدادات التهيئة. إذا لم تحدد هيدر، سيستخدم النظام هيدر تلقائي بشعار النظام وتفاصيله.</p></div>
-                    </header>
-                    <section class="nxpen-template-type-box">
-                        <header><div><h3>أنواع القوالب</h3><small>أضف أنواع قوالب جديدة حسب سياسة الشركة، مثل إنذار، استقطاع، إنذار نهائي، إحالة للجنة.</small></div></header>
-                        <form method="post" asp-page-handler="CreateTemplateType" class="nxpen-grid-form compact">
-                            <input name="name" required placeholder="اسم نوع القالب" />
-                            <input name="code" required placeholder="Code مثل CommitteeReferral" />
-                            <textarea name="description" placeholder="وصف النوع"></textarea>
-                            <button type="submit">إضافة نوع قالب</button>
+                <div class="zyw-queue">
+                    <article class="zy-card">
+                        <div class="zyw-queue-head">
+                            <h2>أنواع القوالب</h2>
+                            <span class="zy-pill">@Model.TemplateTypes.Count</span>
+                        </div>
+                        <p class="zyw-row-meta">النوع هو غرض الكتاب: إشعار عقوبة · إحالة للجنة · لفت نظر.</p>
+
+                        <form method="post" asp-page-handler="CreateTemplateType">
+                            <div class="zyw-form-grid">
+                                <div class="zyw-field">
+                                    <label for="tt-name">الاسم</label>
+                                    <input id="tt-name" name="name" required placeholder="إشعار عقوبة" />
+                                </div>
+                                <div class="zyw-field">
+                                    <label for="tt-code">الرمز</label>
+                                    <input id="tt-code" name="code" required placeholder="PenaltyNotice" />
+                                </div>
+                                <div class="zyw-field zyw-field--wide">
+                                    <label for="tt-desc">الوصف</label>
+                                    <input id="tt-desc" name="description" />
+                                </div>
+                            </div>
+                            <div class="zyw-form-actions">
+                                <button type="submit" class="btn-primary">إضافة نوع</button>
+                            </div>
                         </form>
-                        <div class="nxpen-template-type-list">
+
+                        <div class="zyw-list">
                             @foreach (var templateType in Model.TemplateTypes)
                             {
-                                <form method="post" asp-page-handler="UpdateTemplateType" class="nxpen-template-type-row">
-                                    <input type="hidden" name="id" value="@templateType.Id" />
-                                    <input name="name" value="@templateType.Name" required />
-                                    <input name="code" value="@templateType.Code" required />
-                                    <input name="description" value="@templateType.Description" />
-                                    <label class="nxpen-switch small"><input type="checkbox" name="isActive" value="true" checked="@templateType.IsActive" /><span></span></label>
-                                    <button type="submit">حفظ</button>
-                                </form>
+                                var used = Model.MessageTemplates.Count(t => t.TemplateType == templateType.Code);
+                                <details class="zyw-acc @(templateType.IsActive ? "" : "disabled")">
+                                    <summary>
+                                        <span>@used</span>
+                                        <strong>@templateType.Name</strong>
+                                        <small>@templateType.Code</small>
+                                    </summary>
+                                    <form method="post" asp-page-handler="UpdateTemplateType">
+                                        <input type="hidden" name="id" value="@templateType.Id" />
+                                        <div class="zyw-form-grid">
+                                            <div class="zyw-field">
+                                                <label>الاسم</label>
+                                                <input name="name" value="@templateType.Name" required />
+                                            </div>
+                                            <div class="zyw-field">
+                                                <label>الرمز</label>
+                                                <input name="code" value="@templateType.Code" required />
+                                            </div>
+                                            <div class="zyw-field zyw-field--wide">
+                                                <label>الوصف</label>
+                                                <input name="description" value="@templateType.Description" />
+                                            </div>
+                                            <div class="zyw-field zyw-checks">
+                                                <label><input type="checkbox" name="isActive" value="true" checked="@templateType.IsActive" /> فعّال</label>
+                                            </div>
+                                        </div>
+                                        <div class="zyw-form-actions">
+                                            <button type="submit" class="btn-primary">حفظ</button>
+                                        </div>
+                                    </form>
+                                </details>
                             }
                         </div>
-                    </section>
-                    <section class="nxpen-template-vars"><strong>المتغيرات</strong>@foreach (var token in Model.TemplateTokens){<button type="button" data-nxpen-token="@token">@token</button>}</section>
-                    <form method="post" asp-page-handler="CreateTemplate" class="nxpen-grid-form template-form">
-                        <div><label>اسم القالب</label><input name="name" required placeholder="مثال: نموذج إشعار عقوبة" /></div>
-                        <div><label>نوع القالب</label><select data-nexora-select="true" name="templateType">
-                                        @foreach (var templateType in Model.TemplateTypes.Where(x => x.IsActive))
-                                        {
-                                            <option value="@templateType.Code" selected="@(templateType.Code == Model.Settings.DefaultTemplateType)">@templateType.Name</option>
-                                        }
-                                    </select></div>
-                        <div class="wide-2"><label>عنوان الرسالة</label><input name="subject" required value="إشعار مخالفة وجزاء - {EmployeeName}" /></div>
-                        <div class="wide"><label>نص القالب</label><textarea name="body" rows="12">@Model.DefaultTemplateBody</textarea></div>
-                        <div class="wide nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="isDefault" value="true" /><span></span><b>قالب افتراضي</b></label><label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked /><span></span><b>فعال</b></label></div>
-                        <footer class="wide"><button type="submit">إضافة قالب</button></footer>
-                    </form>
-                    <section class="nxpen-form-preview">
-                        <div class="nxpen-form-paper">
-                            <header class="nxpen-paper-header">
-                                @if (string.IsNullOrWhiteSpace(Model.Settings.FormHeader))
-                                {
-                                    <div class="nxpen-auto-header"><div class="nxpen-logo-mark">@brandSymbol</div><div><strong>@brandName</strong><small>Disciplinary Notice / إشعار مخالفة وجزاء</small></div></div>
-                                }
-                                else
-                                {
-                                    <pre>@Model.Settings.FormHeader</pre>
-                                }
-                            </header>
-                            <main class="nxpen-paper-body"><h3>نص القالب يظهر هنا داخل فورمة الشركة</h3><p>السيد/ة: {EmployeeName}<br />المخالفة: {ViolationName}<br />العقوبة: {PenaltyAction}<br />الأثر المالي: {FinancialImpact}</p></main>
-                            <footer class="nxpen-paper-footer">
-                                @if (string.IsNullOrWhiteSpace(Model.Settings.FormFooter))
-                                {
-                                    <span>@Model.Settings.ApprovingAuthorityName</span><small>تم إنشاء هذا الإشعار آلياً من نظام الموارد البشرية</small>
-                                }
-                                else
-                                {
-                                    <pre>@Model.Settings.FormFooter</pre>
-                                }
-                            </footer>
-                        </div>
-                    </section>
+                    </article>
 
-                    <div class="nxpen-edit-list">
+                    <article class="zy-card">
+                        <div class="zyw-queue-head">
+                            <h2>المتغيّرات</h2>
+                            <span class="zy-pill">@Model.TemplateTokens.Count</span>
+                        </div>
+                        <p class="zyw-row-meta">
+                            تُكتب داخل نصّ القالب فيستبدلها النظام ببيانات الموظف والمخالفة عند التوليد.
+                        </p>
+                        <div class="zyw-checks">
+                            @foreach (var token in Model.TemplateTokens)
+                            {
+                                <span class="zy-pill">@token</span>
+                            }
+                        </div>
+                    </article>
+                </div>
+
+                <article class="zy-card">
+                    <div class="zyw-queue-head">
+                        <h2>قوالب الرسائل</h2>
+                        <span class="zy-pill">@Model.MessageTemplates.Count</span>
+                    </div>
+                    <p class="zyw-row-meta">
+                        نصّ الكتاب الذي يصل الموظف. الهيدر والفوتر يأتيان من تهيئة المخالفات لا من هنا.
+                    </p>
+
+                    <form method="post" asp-page-handler="CreateTemplate">
+                        <div class="zyw-form-grid">
+                            <div class="zyw-field">
+                                <label for="tp-name">اسم القالب</label>
+                                <input id="tp-name" name="name" required placeholder="نموذج إشعار عقوبة" />
+                            </div>
+                            <div class="zyw-field">
+                                <label for="tp-type">نوع القالب</label>
+                                <select id="tp-type" name="templateType">
+                                    @foreach (var templateType in Model.TemplateTypes.Where(x => x.IsActive))
+                                    {
+                                        <option value="@templateType.Code">@templateType.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="zyw-field zyw-field--wide">
+                                <label for="tp-subject">عنوان الرسالة</label>
+                                <input id="tp-subject" name="subject" required value="إشعار مخالفة وجزاء - {EmployeeName}" />
+                            </div>
+                            <div class="zyw-field zyw-field--wide">
+                                <label for="tp-body">نصّ القالب</label>
+                                <textarea id="tp-body" name="body" rows="10">@Model.DefaultTemplateBody</textarea>
+                            </div>
+                            <div class="zyw-field zyw-field--wide zyw-checks">
+                                <label><input type="checkbox" name="isDefault" value="true" /> قالب افتراضي</label>
+                                <label><input type="checkbox" name="isActive" value="true" checked /> فعّال</label>
+                            </div>
+                        </div>
+                        <div class="zyw-form-actions">
+                            <button type="submit" class="btn-primary">إضافة قالب</button>
+                        </div>
+                    </form>
+
+                    @if (Model.MessageTemplates.Count == 0)
+                    {
+                        <div class="zyw-empty">لا قوالب بعد — أضف واحداً ليصدر إشعار العقوبة بنصٍّ ثابت.</div>
+                    }
+
+                    <div class="zyw-list">
                         @foreach (var template in Model.MessageTemplates)
                         {
-                            <details class="nxpen-edit-item @(template.IsActive ? "" : "disabled")">
-                                <summary><span>@(template.IsDefault ? "âک…" : "âœ‰")</span><strong>@template.Name</strong><small>@Model.DisplayTemplateType(template.TemplateType) / @template.Subject</small></summary>
-                                <form method="post" asp-page-handler="UpdateTemplate" class="nxpen-grid-form edit template-form">
+                            <details class="zyw-acc @(template.IsActive ? "" : "disabled")">
+                                <summary>
+                                    <span>@(template.IsDefault ? "★" : "—")</span>
+                                    <strong>@template.Name</strong>
+                                    <small>@template.TemplateType</small>
+                                </summary>
+                                <form method="post" asp-page-handler="UpdateTemplate">
                                     <input type="hidden" name="id" value="@template.Id" />
-                                    <div><label>اسم القالب</label><input name="name" value="@template.Name" required /></div>
-                                    <div><label>نوع القالب</label><select data-nexora-select="true" name="templateType">
-                                        @foreach (var templateType in Model.TemplateTypes.Where(x => x.IsActive))
-                                        {
-                                            <option value="@templateType.Code" selected="@(templateType.Code == template.TemplateType)">@templateType.Name</option>
-                                        }
-                                    </select></div>
-                                    <div class="wide-2"><label>العنوان</label><input name="subject" value="@template.Subject" required /></div>
-                                    <div class="wide"><label>نص القالب</label><textarea name="body" rows="12">@template.Body</textarea></div>
-                                    <div class="wide nxpen-checks"><label class="nxpen-check-pill"><input type="checkbox" name="isDefault" value="true" checked="@template.IsDefault" /><span></span><b>افتراضي</b></label><label class="nxpen-check-pill"><input type="checkbox" name="isActive" value="true" checked="@template.IsActive" /><span></span><b>فعال</b></label></div>
-                                    <footer class="wide"><button type="submit">حفظ تعديل القالب</button></footer>
+                                    <div class="zyw-form-grid">
+                                        <div class="zyw-field">
+                                            <label>الاسم</label>
+                                            <input name="name" value="@template.Name" required />
+                                        </div>
+                                        <div class="zyw-field">
+                                            <label>النوع</label>
+                                            <select name="templateType">
+                                                @foreach (var templateType in Model.TemplateTypes)
+                                                {
+                                                    <option value="@templateType.Code" selected="@(templateType.Code == template.TemplateType)">@templateType.Name</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="zyw-field zyw-field--wide">
+                                            <label>عنوان الرسالة</label>
+                                            <input name="subject" value="@template.Subject" required />
+                                        </div>
+                                        <div class="zyw-field zyw-field--wide">
+                                            <label>نصّ القالب</label>
+                                            <textarea name="body" rows="10">@template.Body</textarea>
+                                        </div>
+                                        <div class="zyw-field zyw-field--wide zyw-checks">
+                                            <label><input type="checkbox" name="isDefault" value="true" checked="@template.IsDefault" /> قالب افتراضي</label>
+                                            <label><input type="checkbox" name="isActive" value="true" checked="@template.IsActive" /> فعّال</label>
+                                        </div>
+                                    </div>
+                                    <div class="zyw-form-actions">
+                                        <button type="submit" class="btn-primary">حفظ</button>
+                                    </div>
                                 </form>
                             </details>
                         }
                     </div>
-                </section>
+                </article>
             }
         </section>
     </main>
 </section>
 
 <script src="~/js/nexora-disciplinary-rules.js" asp-append-version="true"></script>
+
+@if (activeTab == "library")
+{
+    @* كتالوج المعايير **مرّةً واحدة للصفحة**: كان يُنسخ بكل صفّ (4KB × 79 = 336KB). *@
+    <script type="application/json" id="zy-criteria-catalog">@Html.Raw(Model.CriteriaJson)</script>
+    <script src="~/js/zynora-conditions.js" asp-append-version="true" defer></script>
+    <script src="~/js/zynora-grid-editor.js" asp-append-version="true" defer></script>
+}
 
 
 

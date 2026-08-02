@@ -793,3 +793,39 @@ body.nxhs-modal-open {
     font-size: 12px;
     line-height: 1.6;
 }
+
+/* ── شريط التصفّح ────────────────────────────────────────────────────────────
+   روابط لا أزرار (زرٌّ داخل صفحةٍ مليئة بالنماذج يُرسل أحدها بالخطأ).
+   المقاسات من التوكنات، والصفحة الحالية تُميَّز باللون لا بالحجم كي لا يقفز
+   الشريط عند التنقّل. */
+.zyp-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--zy-space-1, 6px);
+    margin-block-start: var(--zy-space-3, 16px);
+}
+
+.zyp-pager > a,
+.zyp-pager > span {
+    min-inline-size: 2rem;
+    padding: 6px 10px;
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-sm, 6px);
+    text-align: center;
+    font-size: .8125rem;
+    text-decoration: none;
+    color: var(--zy-text);
+}
+
+.zyp-pager > a:hover {
+    border-color: var(--zy-accent);
+    color: var(--zy-accent);
+}
+
+.zyp-pager > span[aria-current="page"] {
+    background: var(--zy-accent);
+    border-color: var(--zy-accent);
+    color: var(--zy-on-accent, #04252b);
+    font-weight: 800;
+}

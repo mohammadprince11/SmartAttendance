@@ -43,6 +43,16 @@
         }
     }
 
+    var sharedCache = null;
+
+    /// الكتالوج المبثوث مرّةً واحدة بالصفحة — يُقرأ ويُخزَّن فلا يُحلَّل مرّتين.
+    function sharedCriteria() {
+        if (sharedCache !== null) return sharedCache;
+        var node = document.getElementById('zy-criteria-catalog');
+        sharedCache = node ? node.textContent : '';
+        return sharedCache;
+    }
+
     function el(tag, className, text) {
         var node = document.createElement(tag);
         if (className) node.className = className;
@@ -53,7 +63,20 @@
     function ZyConditions(root) {
         this.root = root;
         this.input = document.querySelector(root.getAttribute('data-input'));
-        this.criteria = JSON.parse(root.getAttribute('data-criteria') || '[]');
+        // الكتالوج مشتركٌ بالصفحة لا منسوخٌ بكل باني.
+        //
+        // كان كل عنصر يحمل `data-criteria` بنفسه: بشاشةٍ فيها 79 صفاً صار الكتالوج
+        // (4KB) مكرّراً 79 مرّة = **336KB من نفس النصّ**، وقِيست الصفحة 1.3MB.
+        // الآن يُبثّ مرّةً واحدة بوسم `<script>` ويقرؤه الجميع، ويبقى
+        // `data-criteria` مدعوماً للشاشات التي تحمل باني واحد.
+        this.criteria = JSON.parse(
+            root.getAttribute('data-criteria') || sharedCriteria() || '[]');
+
+        // معنى «بلا شروط» يختلف بحسب المستدعي — نسخة سياسة لا تنطبق على أحد،
+        // بينما مخالفة بلا شروط تنطبق على الجميع. النصّ المثبَّت كان يكذب على
+        // نصف الشاشات، فصار من الوسم وافتراضه سلوك النسخة كما كان.
+        this.emptyText = root.getAttribute('data-empty-text')
+            || 'بلا شروط — لن تنطبق هذه النسخة على أحد.';
         this.byKey = {};
         for (var i = 0; i < this.criteria.length; i++) this.byKey[this.criteria[i].key] = this.criteria[i];
 
@@ -281,7 +304,7 @@
     ZyConditions.prototype.describe = function () {
         var self = this;
         var groups = this.state.groups.filter(function (g) { return g.rules.length; });
-        if (!groups.length) return 'بلا شروط — لن تنطبق هذه النسخة على أحد.';
+        if (!groups.length) return this.emptyText;
 
         return groups.map(function (group) {
             return '(' + group.rules.map(function (rule) {
@@ -306,12 +329,36 @@
         if (this.summary) this.summary.textContent = this.describe();
     };
 
-    function init(scope) {
-        (scope || document).querySelectorAll('[data-zy-conditions]').forEach(function (node) {
-            if (node.__zyConditions) return;
-            node.__zyConditions = new ZyConditions(node);
-        });
+    function mount(node) {
+        if (!node || node.__zyConditions) return;
+        node.__zyConditions = new ZyConditions(node);
     }
+
+    /// <summary>
+    /// ⚠️ **`data-zy-lazy` لا يُبنى عند التحميل.**
+    ///
+    /// بناء 79 بانياً بشاشة اللائحة كان يصنع مئات العُقد وعشرات المنسدلات قبل أن
+    /// يطلب المستخدم شرطاً واحداً. الشرط استثناءٌ لا قاعدة — فالصفّ يعرض ملخّصه
+    /// نصّاً، ويُبنى الباني عند أوّل نقرةٍ عليه.
+    /// </summary>
+    function init(scope) {
+        (scope || document)
+            .querySelectorAll('[data-zy-conditions]:not([data-zy-lazy])')
+            .forEach(mount);
+    }
+
+    // فتح باني الشروط عند الطلب — النقرة الأولى تبنيه ثم تُظهره.
+    document.addEventListener('click', function (event) {
+        var toggle = event.target.closest('[data-zy-conditions-open]');
+        if (!toggle) return;
+
+        var host = document.querySelector(toggle.getAttribute('data-zy-conditions-open'));
+        if (!host) return;
+
+        mount(host);
+        host.hidden = !host.hidden;
+        toggle.setAttribute('aria-expanded', host.hidden ? 'false' : 'true');
+    });
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () { init(document); });
@@ -319,5 +366,5 @@
         init(document);
     }
 
-    window.ZyConditions = { init: init };
+    window.ZyConditions = { init: init, mount: mount };
 })();

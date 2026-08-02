@@ -335,18 +335,9 @@
                         </a>
                     }
 
-                    @if (Model.CanOpenEmployeeDocuments)
-                    {
-                        <a asp-page="/EmployeeDocuments/Index"
-                           asp-route-employeeId="@employee.Id"
-                           class="z360-action">
-                            إضافة مستند
-                        </a>
-                    }
-                    else if (Model.CanUploadDocument)
-                    {
-                        <a href="#profile-files" class="z360-action">إضافة مستند</a>
-                    }
+                    @* حُذف زرّ «إضافة مستند» من هنا: مكرَّر بفرعيه معاً — فرعُ المركز
+                       يذهب إلى وجهة زرّ «فتح المركز» نفسها بقسم «المستندات» أدناه،
+                       وفرعُ المرساة `#profile-files` يكرّر تبويب «ملفات الموظف». *@
 
                     @if (employee.IsActive && Model.CanEndService)
                     {

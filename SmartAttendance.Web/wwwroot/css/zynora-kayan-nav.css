@@ -117,7 +117,16 @@
         flex: none;
     }
 
-    /* عنوان المجموعة يلي صف الرجوع (مثل كيان: العنوان رابط للصفحة الرئيسية) */
+    /* عنوان المجموعة يلي صف الرجوع — **اسم شاشة لا رابط**.
+       كان `<a>` إلى قائمة الموظفين فيفتح صفحةً لمن ظنّه عنواناً، وهي وجهة
+       «عرض الموظفين» نفسها. صار `<div>`، فيلزم إبطال ما يوحي بالنقر:
+       المؤشّر وتأثير المرور الموروثان من `.nexora-nav-link`. */
+    .ky-drawer-title,
+    .ky-drawer-title:hover {
+        cursor: default !important;
+        transform: none !important;
+    }
+
     .ky-drawer-title {
         min-height: 46px !important;
         margin: 0 -10px 8px !important;

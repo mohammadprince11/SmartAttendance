@@ -6,6 +6,11 @@ using Microsoft.AspNetCore.Hosting;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
+// اسمٌ مستعار لازم: صنف `PenaltyRule` بهذا الملف فيه خاصية اسمها `PenaltyAction`،
+// فتحجب الصنفَ العام ذا الاسم نفسه. التأهيل بـ`Hrms.` يفكّ التعارض بلا إعادة تسمية
+// عمودٍ تقرؤه شاشاتٌ أخرى.
+using Hrms = SmartAttendance.Web.Infrastructure.Hrms;
+
 namespace SmartAttendance.Web.Pages.DisciplinaryRules;
 
 /// <summary>
@@ -33,14 +38,59 @@ public class IndexModel : PageModel
     public List<TemplateType> TemplateTypes { get; private set; } = new();
     public List<FormTextBlock> TextBlocks { get; private set; } = new();
 
+    /// <summary>كتالوج معايير الشروط لباني «معايير الاستحقاق» — نفس الكتالوج بكل الشاشات.</summary>
+    public string CriteriaJson { get; private set; } = "[]";
+
+    /// <summary>ما رُفض حذفه ولماذا — يُعرض بجانب رسالة النجاح لا بدلاً منها.</summary>
+    [TempData]
+    public string? BlockedMessage { get; set; }
+
+    /// <summary>بنود الاقتطاع بالمسير — وجهة ترحيل الخصم التأديبي.</summary>
+    public List<SalaryItemStore.SalaryItem> DeductionItems { get; private set; } = new();
+
+    /// <summary>أسباب الإيقاف — لإجراء «إنهاء الخدمة».</summary>
+    public List<SmartAttendance.Web.Infrastructure.HrSettings.TerminationReasonRow> TerminationReasons { get; private set; } = new();
+
+    /// <summary>ترشيح نصّي داخل الشاشة (اسم عربي/إنجليزي أو رقم فقرة).</summary>
+    [BindProperty(SupportsGet = true)]
+    public string? Search { get; set; }
+
+    /// <summary>المخالفة التي فُتح سلّم جزاءاتها من زرّ «•••» — صفر يعني كلّها.</summary>
+    [BindProperty(SupportsGet = true)]
+    public int OpenTypeId { get; set; }
+
+    /// <summary>
+    /// عدد حالات الموظفين على كل مخالفة — **يُقرأ مرّةً واحدة لا صفّاً صفّاً**.
+    ///
+    /// الشاشة تسأل عن سبعين مخالفة؛ استعلامٌ لكلٍّ يعني سبعين دورة على القاعدة
+    /// بفتحةٍ واحدة. استعلامٌ واحد مجمَّع يجيب عنها كلّها.
+    /// </summary>
+    private Dictionary<int, int> _casesByViolation = new();
+
+    /// <summary>حالات موظفين على هذه المخالفة — صفر يعني أنها تُحذف بأمان.</summary>
+    public int CasesOnViolation(int violationTypeId) =>
+        _casesByViolation.GetValueOrDefault(violationTypeId);
+
+    /// <summary>حالات موظفين على أي مخالفةٍ بهذه الفئة.</summary>
+    public int CasesInCategory(int categoryId) =>
+        ViolationTypes.Where(v => v.CategoryId == categoryId).Sum(v => CasesOnViolation(v.Id));
+
+    public bool Matches(string?[] fields)
+    {
+        if (string.IsNullOrWhiteSpace(Search)) return true;
+
+        var needle = Search.Trim();
+        return fields.Any(f => !string.IsNullOrWhiteSpace(f)
+            && f!.Contains(needle, StringComparison.OrdinalIgnoreCase));
+    }
+
     public string[] FontFamilies { get; } = { "Tahoma", "Arial", "Calibri", "Times New Roman", "Cairo" };
 
-    public string[] TemplateTokens { get; } =
-    {
-        "{EmployeeName}", "{EmployeeCode}", "{Department}", "{Position}",
-        "{ViolationDate}", "{ViolationCategory}", "{ViolationName}", "{ViolationDescription}",
-        "{OccurrenceNumber}", "{PenaltyAction}", "{FinancialImpact}", "{ApprovedBy}"
-    };
+    /// <summary>
+    /// الرموز المعروضة بشاشة القوالب تأتي من **المركّب نفسه** لا من قائمة يدوية:
+    /// قائمةٌ منفصلة تَعِد برمزٍ لا يُستبدل، فيخرج الكتاب وفيه <c>{Foo}</c> حرفياً.
+    /// </summary>
+    public IReadOnlyList<string> TemplateTokens => DisciplinaryLetter.Tokens;
 
     public string DefaultTemplateBody { get; } = """
 السيد/ة: {EmployeeName}
@@ -86,10 +136,47 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(string? tab, int? categoryId)
     {
+        // «التهيئة» انتقلت إلى شاشة المخالفات حيث تُستعمل (تبويب `setup`)، فبقاؤها
+        // هنا يعني مكانين لنفس النموذج — والمكانان يفترقان مع أول تعديل.
+        // والمسار يبقى حيّاً بإعادة توجيه: الروابط والمفضّلات القديمة لا تُكسر.
+        if (string.Equals(tab, "setup", StringComparison.OrdinalIgnoreCase))
+        {
+            return RedirectToPage("/Violations/Index", new { tab = "setup" });
+        }
+
         await LoadPageAsync(tab, categoryId);
         return Page();
     }
 
+    /// <summary>
+    /// إضافة المثال الجاهز — أبوابٌ ومخالفاتٌ وسلالم جزاءات يُبدأ منها ثم تُعدَّل.
+    ///
+    /// ⚠️ **يُعرض بالشاشة الفارغة وحدها.** كان زرّاً دائماً بأعلى الشاشة، فكانت
+    /// نقرةٌ واحدة تُعيد أبواباً حذفها المستخدم عمداً — واحتاج ذلك آلةً كاملة
+    /// تتذكّر «المستبعَد» لتمنعه. وإظهاره حيث ينفع وحده أبسط من حراسته.
+    /// </summary>
+    public async Task<IActionResult> OnPostAddSampleAsync()
+    {
+        var result = await DisciplinaryPolicyImporter.ImportAsync(_dbContext);
+        StatusMessage = result.Message;
+        return RedirectToPage(new { tab = "library" });
+    }
+
+    /// <summary>دمج ما خلّفه البذر الافتراضي القديم بفئات اللائحة المرقّمة.</summary>
+    public async Task<IActionResult> OnPostMergeDuplicatesAsync()
+    {
+        StatusMessage = await DisciplinaryPolicyImporter.MergeDuplicateCategoriesAsync(_dbContext);
+        return RedirectToPage(new { tab = "library" });
+    }
+
+    /// <summary>
+    /// ⚠️ **البذر الافتراضي العامّ لم يعد يُعرض بالشاشة** بعد أن صار للشركة لائحتها
+    /// الرسمية: كان ينشئ «مخالفات نظام العمل» بجانب «ب — مخالفات نظام العمل»
+    /// فيحتار المسجِّل أيّهما يختار وتتوزّع الحالات على بابين لنفس الباب.
+    ///
+    /// المعالج يبقى حيّاً لعميلٍ بلا لائحةٍ رسمية بعد (المنتج White-Label)، ولا
+    /// يُستدعى إلا من مسارٍ صريح.
+    /// </summary>
     public async Task<IActionResult> OnPostSeedLibraryAsync()
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
@@ -99,7 +186,11 @@ public class IndexModel : PageModel
     }
 
 
-    public async Task<IActionResult> OnPostSaveSettingsAsync(int appealWindowDays, string? defaultTemplateType, string? approvingAuthorityName, string? documentNumberFormat, string? formHeader, string? formFooter)
+    /// <summary>
+    /// `backTo` اختيارية: النموذج نفسه يُعرض بتبويب «التهيئة» داخل شاشة المخالفات،
+    /// فمن حفظ من هناك يجب أن يعود إلى هناك لا أن يُقذف لشاشة الإعدادات.
+    /// </summary>
+    public async Task<IActionResult> OnPostSaveSettingsAsync(int appealWindowDays, string? defaultTemplateType, string? approvingAuthorityName, string? documentNumberFormat, string? formHeader, string? formFooter, string? backTo = null)
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
         await UpsertSettingAsync("RequiresCommitteeApproval", Request.Form.ContainsKey("requiresCommitteeApproval") ? "true" : "false");
@@ -111,7 +202,9 @@ public class IndexModel : PageModel
         await UpsertSettingAsync("FormHeader", formHeader?.Trim() ?? string.Empty);
         await UpsertSettingAsync("FormFooter", formFooter?.Trim() ?? string.Empty);
         StatusMessage = "تم حفظ إعدادات التهيئة.";
-        return RedirectToPage(new { tab = "setup" });
+        return string.IsNullOrWhiteSpace(backTo)
+            ? RedirectToPage(new { tab = "setup" })
+            : RedirectToPage("/Violations/Index", new { tab = backTo });
     }
 
 
@@ -160,32 +253,6 @@ public class IndexModel : PageModel
         }
 
         StatusMessage = "تم حفظ صور الهيدر والفوتر.";
-        return RedirectToPage(new { tab = "designer" });
-    }
-
-    public async Task<IActionResult> OnPostSaveMainBodyDesignAsync(
-        string? mainBodyText,
-        decimal mainBodyXPercent,
-        decimal mainBodyYPercent,
-        decimal mainBodyWidthPercent,
-        string mainBodyFontFamily,
-        int mainBodyFontSize,
-        string mainBodyFontColor,
-        string mainBodyTextAlign)
-    {
-        await DisciplinarySchema.EnsureAsync(_dbContext);
-
-        await UpsertSettingAsync("MainBodyText", string.IsNullOrWhiteSpace(mainBodyText) ? DefaultMainBodyText : mainBodyText.Trim());
-        await UpsertSettingAsync("MainBodyXPercent", Clamp(mainBodyXPercent, 0, 100).ToString("0.##"));
-        await UpsertSettingAsync("MainBodyYPercent", Clamp(mainBodyYPercent, 0, 100).ToString("0.##"));
-        await UpsertSettingAsync("MainBodyWidthPercent", Clamp(mainBodyWidthPercent, 5, 100).ToString("0.##"));
-        await UpsertSettingAsync("MainBodyFontFamily", NormalizeFont(mainBodyFontFamily));
-        await UpsertSettingAsync("MainBodyFontSize", Math.Clamp(mainBodyFontSize, 8, 60).ToString());
-        await UpsertSettingAsync("MainBodyFontColor", NormalizeColor(mainBodyFontColor));
-        await UpsertSettingAsync("MainBodyIsBold", Request.Form.ContainsKey("mainBodyIsBold") ? "true" : "false");
-        await UpsertSettingAsync("MainBodyTextAlign", NormalizeTextAlign(mainBodyTextAlign));
-
-        StatusMessage = "تم حفظ تعديل النص الأساسي داخل الورقة.";
         return RedirectToPage(new { tab = "designer" });
     }
 
@@ -421,7 +488,234 @@ WHERE Id = @Id;
         return RedirectToPage(new { tab = "library", categoryId = id });
     }
 
-    public async Task<IActionResult> OnPostCreateViolationTypeAsync(int categoryId, string name, string? description, string severity, int validityMonths, string countingPeriod)
+    // ══════════ الشبكة المحرَّرة — حفظٌ واحد لكل الصفوف ══════════
+    //
+    // نمطٌ منقول عن كيان بعد فحصٍ حيّ: الشبكة **نموذج واحد**، والصفّ الجديد
+    // يُلحَق بأسفلها لا بمودال، والحفظ يمرّ على الصفوف كلّها دفعةً واحدة. كان
+    // إدخال خمس فئات عندنا يعني خمس دورات ذهاب وإياب للخادم؛ صار دورةً واحدة.
+
+    /// <summary>حفظ شبكة الفئات: تعديل القائم وإدراج الجديد. الحذف بزرّ الصفّ.</summary>
+    public async Task<IActionResult> OnPostSaveCategoriesAsync(
+        int[]? rowId, string[]? rowName, string[]? rowNameEn, string[]? rowConditions,
+        int[]? rowOrder)
+    {
+        await DisciplinarySchema.EnsureAsync(_dbContext);
+
+        int saved = 0, added = 0, removed = 0;
+
+        for (var i = 0; rowName is not null && i < rowName.Length; i++)
+        {
+            var name = rowName[i]?.Trim() ?? string.Empty;
+            var id = rowId is not null && i < rowId.Length ? rowId[i] : 0;
+
+            // صفٌّ فارغ بلا معرّف = صفّ أُضيف ولم يُملأ — يُتجاهَل بلا خطأ.
+            if (id == 0 && string.IsNullOrWhiteSpace(name)) continue;
+
+            // اسمٌ مُسِح من صفٍّ قائم ليس أمراً بالحذف — الحذف له مربّعه.
+            if (id > 0 && string.IsNullOrWhiteSpace(name)) continue;
+
+            var nameEn = rowNameEn is not null && i < rowNameEn.Length ? rowNameEn[i]?.Trim() : null;
+            var conditions = rowConditions is not null && i < rowConditions.Length ? rowConditions[i] : null;
+            var order = rowOrder is not null && i < rowOrder.Length ? rowOrder[i] : (i + 1) * 10;
+
+
+            // لا استثناء لفئةٍ دون أخرى: الفئات كلّها أمثلةٌ تُعدَّل وتُحذف.
+            var sql = id > 0
+                ? "UPDATE DisciplinaryViolationCategories SET Name = @Name, NameEn = @NameEn, ConditionsJson = @Conditions, DisplayOrder = @Order WHERE Id = @Id;"
+                : """
+INSERT INTO DisciplinaryViolationCategories (Name, NameEn, ConditionsJson, DisplayOrder, IsActive, CreatedAt)
+VALUES (@Name, @NameEn, @Conditions, @Order, 1, SYSUTCDATETIME());
+""";
+
+            await HrmsDatabase.ExecuteAsync(_dbContext, sql, command =>
+            {
+                if (id > 0) HrmsDatabase.AddParameter(command, "@Id", id);
+                HrmsDatabase.AddParameter(command, "@Name", name);
+                HrmsDatabase.AddParameter(command, "@NameEn",
+                    string.IsNullOrWhiteSpace(nameEn) ? (object)DBNull.Value : nameEn!);
+                HrmsDatabase.AddParameter(command, "@Conditions",
+                    HrConditions.Serialize(HrConditions.Deserialize(conditions)));
+                HrmsDatabase.AddParameter(command, "@Order", order);
+            });
+
+            if (id > 0) saved++; else added++;
+        }
+
+        StatusMessage = BuildGridMessage("فئة", added, saved, 0);
+        return RedirectToPage(new { tab = "library" });
+    }
+
+    /// <summary>
+    /// حذف فئةٍ واحدة بزرّها — **فعلٌ مباشر لا تأشيرٌ ثم حفظ**.
+    ///
+    /// كان الحذف يمرّ بمربّع تأشيرٍ ثم زرّ «حفظ»، فيختلط فعلان لا علاقة بينهما:
+    /// من أراد حذف بابٍ وجب أن «يحفظ» الشبكة كلّها، ومن أراد الحفظ خشي أن يكون
+    /// أشّر شيئاً سهواً.
+    /// </summary>
+    public async Task<IActionResult> OnPostDeleteCategoryAsync(int id)
+    {
+        await DisciplinarySchema.EnsureAsync(_dbContext);
+
+        var name = await HrmsDatabase.ScalarAsync<string>(
+            _dbContext,
+            "SELECT TOP 1 Name FROM DisciplinaryViolationCategories WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", id));
+
+        if (string.IsNullOrEmpty(name))
+        {
+            StatusMessage = "الفئة غير موجودة.";
+            return RedirectToPage(new { tab = "library" });
+        }
+
+        // 🔒 الحدّ الوحيد **ارتباط موظف**: بابٌ سُجّلت على مخالفاته حالات لا يُحذف،
+        // لأن حذفه يقطع سند حالةٍ قائمة وكتابٍ صدر عنها. وما عدا ذلك يُحذف بمخالفاته.
+        var cases = await CategoryCaseCountAsync(id);
+
+        if (cases > 0)
+        {
+            BlockedMessage = $"«{name}» مرتبطة بـ{cases} حالة مسجَّلة على موظفين — لا تُحذف ما دامت الحالات قائمة.";
+            return RedirectToPage(new { tab = "library" });
+        }
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+DELETE r FROM DisciplinaryPenaltyRules r
+INNER JOIN DisciplinaryViolationTypes t ON t.Id = r.ViolationTypeId
+WHERE t.CategoryId = @Id;
+
+DELETE FROM DisciplinaryViolationTypes WHERE CategoryId = @Id;
+DELETE FROM DisciplinaryViolationCategories WHERE Id = @Id;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", id));
+
+        StatusMessage = $"حُذفت الفئة «{name}» بمخالفاتها.";
+        return RedirectToPage(new { tab = "library" });
+    }
+
+    /// <summary>حذف نوع مخالفةٍ واحد بزرّه — بنفس الحدّ: لا ارتباط بموظف.</summary>
+    public async Task<IActionResult> OnPostDeleteViolationTypeAsync(int id)
+    {
+        await DisciplinarySchema.EnsureAsync(_dbContext);
+
+        var name = await HrmsDatabase.ScalarAsync<string>(
+            _dbContext,
+            "SELECT TOP 1 Name FROM DisciplinaryViolationTypes WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", id));
+
+        if (string.IsNullOrEmpty(name))
+        {
+            StatusMessage = "المخالفة غير موجودة.";
+            return RedirectToPage(new { tab = "library" });
+        }
+
+        var cases = await ViolationCaseCountAsync(id);
+
+        if (cases > 0)
+        {
+            BlockedMessage = $"«{name}» مسجَّلة على {cases} حالة موظف — لا تُحذف ما دامت الحالات قائمة.";
+            return RedirectToPage(new { tab = "library" });
+        }
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            "DELETE FROM DisciplinaryPenaltyRules WHERE ViolationTypeId = @Id; DELETE FROM DisciplinaryViolationTypes WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", id));
+
+        StatusMessage = $"حُذفت المخالفة «{name}» وسلّم جزاءاتها.";
+        return RedirectToPage(new { tab = "library" });
+    }
+
+    private async Task<int> CategoryCaseCountAsync(int categoryId) =>
+        await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            """
+SELECT CASE WHEN OBJECT_ID('EmployeeViolationCases','U') IS NULL THEN 0 ELSE
+    (SELECT COUNT(1) FROM EmployeeViolationCases c
+     INNER JOIN DisciplinaryViolationTypes t ON t.Id = c.ViolationTypeId
+     WHERE t.CategoryId = @Id AND ISNULL(c.IsDeleted, 0) = 0) END;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", categoryId));
+
+    private async Task<int> ViolationCaseCountAsync(int violationId) =>
+        await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            """
+SELECT CASE WHEN OBJECT_ID('EmployeeViolationCases','U') IS NULL THEN 0 ELSE
+    (SELECT COUNT(1) FROM EmployeeViolationCases
+     WHERE ViolationTypeId = @Id AND ISNULL(IsDeleted, 0) = 0) END;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", violationId));
+
+
+    /// <summary>حفظ شبكة المخالفات: تعديل القائم · إدراج الجديد. الحذف بزرّ الصفّ.</summary>
+    public async Task<IActionResult> OnPostSaveViolationTypesAsync(
+        int[]? rowId, int[]? rowCategoryId, string[]? rowName, string[]? rowNameEn,
+        string[]? rowArticle, string[]? rowConditions)
+    {
+        await DisciplinarySchema.EnsureAsync(_dbContext);
+
+        int saved = 0, added = 0;
+
+        for (var i = 0; rowName is not null && i < rowName.Length; i++)
+        {
+            var name = rowName[i]?.Trim() ?? string.Empty;
+            var id = rowId is not null && i < rowId.Length ? rowId[i] : 0;
+            var categoryId = rowCategoryId is not null && i < rowCategoryId.Length ? rowCategoryId[i] : 0;
+
+            if (id == 0 && (string.IsNullOrWhiteSpace(name) || categoryId <= 0)) continue;
+            if (id > 0 && string.IsNullOrWhiteSpace(name)) continue;
+
+            var nameEn = rowNameEn is not null && i < rowNameEn.Length ? rowNameEn[i]?.Trim() : null;
+            var article = rowArticle is not null && i < rowArticle.Length ? rowArticle[i]?.Trim() : null;
+            var conditions = rowConditions is not null && i < rowConditions.Length ? rowConditions[i] : null;
+
+            var sql = id > 0
+                ? """
+UPDATE DisciplinaryViolationTypes
+SET CategoryId = @CategoryId, Name = @Name, NameEn = @NameEn, ArticleNo = @ArticleNo, ConditionsJson = @Conditions
+WHERE Id = @Id;
+"""
+                : """
+INSERT INTO DisciplinaryViolationTypes
+(CategoryId, Name, NameEn, ArticleNo, ConditionsJson, Description, Severity, ValidityMonths,
+ CountingPeriod, IncludeInEvaluation, ShowToEmployee, IsActive, CreatedAt)
+VALUES
+(@CategoryId, @Name, @NameEn, @ArticleNo, @Conditions, N'', N'B', 6,
+ N'Monthly', 1, 1, 1, SYSUTCDATETIME());
+""";
+
+            await HrmsDatabase.ExecuteAsync(_dbContext, sql, command =>
+            {
+                if (id > 0) HrmsDatabase.AddParameter(command, "@Id", id);
+                HrmsDatabase.AddParameter(command, "@CategoryId", categoryId);
+                HrmsDatabase.AddParameter(command, "@Name", name);
+                HrmsDatabase.AddParameter(command, "@NameEn",
+                    string.IsNullOrWhiteSpace(nameEn) ? (object)DBNull.Value : nameEn!);
+                HrmsDatabase.AddParameter(command, "@ArticleNo",
+                    string.IsNullOrWhiteSpace(article) ? (object)DBNull.Value : article!);
+                HrmsDatabase.AddParameter(command, "@Conditions",
+                    HrConditions.Serialize(HrConditions.Deserialize(conditions)));
+            });
+
+            if (id > 0) saved++; else added++;
+        }
+
+        StatusMessage = BuildGridMessage("مخالفة", added, saved, 0);
+        return RedirectToPage(new { tab = "library" });
+    }
+
+    private static string BuildGridMessage(string noun, int added, int saved, int removed)
+    {
+        var parts = new List<string>();
+        if (added > 0) parts.Add($"أُضيفت {added} {noun}");
+        if (saved > 0) parts.Add($"عُدّلت {saved}");
+        if (removed > 0) parts.Add($"حُذفت {removed}");
+
+        return parts.Count == 0 ? "لا تغييرات للحفظ." : string.Join(" · ", parts) + ".";
+    }
+
+    public async Task<IActionResult> OnPostCreateViolationTypeAsync(int categoryId, string name, string? description, string severity, int validityMonths, string countingPeriod, string? articleNo = null, string? conditions = null)
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
         if (categoryId <= 0 || string.IsNullOrWhiteSpace(name))
@@ -433,34 +727,29 @@ WHERE Id = @Id;
         await HrmsDatabase.ExecuteAsync(_dbContext,
             """
 INSERT INTO DisciplinaryViolationTypes
-(CategoryId, Name, Description, Severity, ValidityMonths, CountingPeriod, IncludeInEvaluation, ShowToEmployee, IsActive, CreatedAt)
+(CategoryId, Name, Description, Severity, ValidityMonths, CountingPeriod, ArticleNo, ConditionsJson, IncludeInEvaluation, ShowToEmployee, IsActive, CreatedAt)
 VALUES
-(@CategoryId, @Name, @Description, @Severity, @ValidityMonths, @CountingPeriod, @IncludeInEvaluation, @ShowToEmployee, @IsActive, SYSUTCDATETIME());
+(@CategoryId, @Name, @Description, @Severity, @ValidityMonths, @CountingPeriod, @ArticleNo, @Conditions, @IncludeInEvaluation, @ShowToEmployee, @IsActive, SYSUTCDATETIME());
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@CategoryId", categoryId);
-                HrmsDatabase.AddParameter(command, "@Name", name.Trim());
-                HrmsDatabase.AddParameter(command, "@Description", description?.Trim() ?? string.Empty);
-                HrmsDatabase.AddParameter(command, "@Severity", NormalizeSeverity(severity));
-                HrmsDatabase.AddParameter(command, "@ValidityMonths", Math.Max(1, validityMonths));
-                HrmsDatabase.AddParameter(command, "@CountingPeriod", NormalizePeriod(countingPeriod));
-                HrmsDatabase.AddParameter(command, "@IncludeInEvaluation", Request.Form.ContainsKey("includeInEvaluation"));
-                HrmsDatabase.AddParameter(command, "@ShowToEmployee", Request.Form.ContainsKey("showToEmployee"));
-                HrmsDatabase.AddParameter(command, "@IsActive", Request.Form.ContainsKey("isActive"));
+                AddViolationTypeParameters(command, name, description, severity, validityMonths, countingPeriod, articleNo, conditions);
             });
 
         StatusMessage = "تمت إضافة مخالفة جديدة داخل الفئة.";
         return RedirectToPage(new { tab = "library", categoryId });
     }
 
-    public async Task<IActionResult> OnPostUpdateViolationTypeAsync(int id, int categoryId, string name, string? description, string severity, int validityMonths, string countingPeriod)
+    public async Task<IActionResult> OnPostUpdateViolationTypeAsync(int id, int categoryId, string name, string? description, string severity, int validityMonths, string countingPeriod, string? articleNo = null, string? conditions = null)
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
         await HrmsDatabase.ExecuteAsync(_dbContext,
             """
 UPDATE DisciplinaryViolationTypes
 SET CategoryId = @CategoryId,
+    ArticleNo = @ArticleNo,
+    ConditionsJson = @Conditions,
     Name = @Name,
     Description = @Description,
     Severity = @Severity,
@@ -475,40 +764,67 @@ WHERE Id = @Id;
             {
                 HrmsDatabase.AddParameter(command, "@Id", id);
                 HrmsDatabase.AddParameter(command, "@CategoryId", categoryId);
-                HrmsDatabase.AddParameter(command, "@Name", name.Trim());
-                HrmsDatabase.AddParameter(command, "@Description", description?.Trim() ?? string.Empty);
-                HrmsDatabase.AddParameter(command, "@Severity", NormalizeSeverity(severity));
-                HrmsDatabase.AddParameter(command, "@ValidityMonths", Math.Max(1, validityMonths));
-                HrmsDatabase.AddParameter(command, "@CountingPeriod", NormalizePeriod(countingPeriod));
-                HrmsDatabase.AddParameter(command, "@IncludeInEvaluation", Request.Form.ContainsKey("includeInEvaluation"));
-                HrmsDatabase.AddParameter(command, "@ShowToEmployee", Request.Form.ContainsKey("showToEmployee"));
-                HrmsDatabase.AddParameter(command, "@IsActive", Request.Form.ContainsKey("isActive"));
+                AddViolationTypeParameters(command, name, description, severity, validityMonths, countingPeriod, articleNo, conditions);
             });
 
         StatusMessage = "تم تعديل المخالفة.";
         return RedirectToPage(new { tab = "library", categoryId });
     }
 
-    public async Task<IActionResult> OnPostCreatePenaltyRuleAsync(int violationTypeId, int occurrenceFrom, int occurrenceTo, string countingPeriod, string penaltyAction, string financialImpactType, decimal financialValue, int validityMonths, string calculationMode)
+    /// <summary>
+    /// معطيات المخالفة مشتركة بين الإضافة والتعديل — **مصدر واحد عمداً**.
+    ///
+    /// كانتا نسختين متباعدتين فانفرط عقدهما مع أول عمود جديد: الإضافة تضيف
+    /// <c>@ArticleNo</c> مرّتين (وSQL Server يرفض معطىً مكرّراً)، والتعديل يذكره
+    /// بالجملة ولا يضيفه أصلاً. النتيجة أن **حفظ المخالفة وتعديلها كانا يفشلان
+    /// كلاهما** بلا أن يظهر ذلك — القاعدة فارغة فلم يجرّبهما أحد.
+    /// </summary>
+    private void AddViolationTypeParameters(
+        DbCommand command,
+        string name,
+        string? description,
+        string severity,
+        int validityMonths,
+        string countingPeriod,
+        string? articleNo,
+        string? conditions)
+    {
+        HrmsDatabase.AddParameter(command, "@Name", name.Trim());
+        HrmsDatabase.AddParameter(command, "@Description", description?.Trim() ?? string.Empty);
+        HrmsDatabase.AddParameter(command, "@Severity", NormalizeSeverity(severity));
+        HrmsDatabase.AddParameter(command, "@ValidityMonths", Math.Max(1, validityMonths));
+        HrmsDatabase.AddParameter(command, "@CountingPeriod", NormalizePeriod(countingPeriod));
+        HrmsDatabase.AddParameter(command, "@ArticleNo", string.IsNullOrWhiteSpace(articleNo) ? (object)DBNull.Value : articleNo.Trim());
+
+        // يُعاد تسلسله عبر المحرّك لا يُخزَّن كما وصل: نصّ مشوّه من الواجهة يصير
+        // مجموعةً فارغة («تنطبق على الجميع») بدل صفٍّ لا يُقرأ لاحقاً.
+        HrmsDatabase.AddParameter(command, "@Conditions", HrConditions.Serialize(HrConditions.Deserialize(conditions)));
+
+        HrmsDatabase.AddParameter(command, "@IncludeInEvaluation", Request.Form.ContainsKey("includeInEvaluation"));
+        HrmsDatabase.AddParameter(command, "@ShowToEmployee", Request.Form.ContainsKey("showToEmployee"));
+        HrmsDatabase.AddParameter(command, "@IsActive", Request.Form.ContainsKey("isActive"));
+    }
+
+    public async Task<IActionResult> OnPostCreatePenaltyRuleAsync([FromForm] PenaltyRuleInput input)
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
-        if (violationTypeId <= 0 || string.IsNullOrWhiteSpace(penaltyAction))
+        if (input.ViolationTypeId <= 0)
         {
-            StatusMessage = "اختر المخالفة واكتب العقوبة.";
+            StatusMessage = "اختر المخالفة أولاً.";
             return RedirectToPage(new { tab = "library" });
         }
 
-        await SavePenaltyRuleAsync(null, violationTypeId, occurrenceFrom, occurrenceTo, countingPeriod, penaltyAction, financialImpactType, financialValue, validityMonths, calculationMode);
-        var categoryId = await GetViolationCategoryIdAsync(violationTypeId);
-        StatusMessage = "تمت إضافة جزاء للتكرار.";
+        await SavePenaltyRuleAsync(null, input);
+        var categoryId = await GetViolationCategoryIdAsync(input.ViolationTypeId);
+        StatusMessage = $"أُضيف الجزاء: {Hrms.PenaltyAction.Label(input.ActionType)}.";
         return RedirectToPage(new { tab = "library", categoryId });
     }
 
-    public async Task<IActionResult> OnPostUpdatePenaltyRuleAsync(int id, int violationTypeId, int occurrenceFrom, int occurrenceTo, string countingPeriod, string penaltyAction, string financialImpactType, decimal financialValue, int validityMonths, string calculationMode)
+    public async Task<IActionResult> OnPostUpdatePenaltyRuleAsync(int id, [FromForm] PenaltyRuleInput input)
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
-        await SavePenaltyRuleAsync(id, violationTypeId, occurrenceFrom, occurrenceTo, countingPeriod, penaltyAction, financialImpactType, financialValue, validityMonths, calculationMode);
-        var categoryId = await GetViolationCategoryIdAsync(violationTypeId);
+        await SavePenaltyRuleAsync(id, input);
+        var categoryId = await GetViolationCategoryIdAsync(input.ViolationTypeId);
         StatusMessage = "تم تعديل جزاء التكرار.";
         return RedirectToPage(new { tab = "library", categoryId });
     }
@@ -641,11 +957,84 @@ WHERE Id = @Id;
         return RedirectToPage(new { tab = "templates" });
     }
 
-    private async Task SavePenaltyRuleAsync(int? id, int violationTypeId, int occurrenceFrom, int occurrenceTo, string countingPeriod, string penaltyAction, string financialImpactType, decimal financialValue, int validityMonths, string calculationMode)
+    /// <summary>
+    /// حقول قاعدة الجزاء كما تصل من النموذج — كائنٌ واحد بدل ستّة عشر معطىً.
+    /// </summary>
+    public sealed class PenaltyRuleInput
     {
-        occurrenceFrom = Math.Max(1, occurrenceFrom);
-        occurrenceTo = Math.Max(occurrenceFrom, occurrenceTo);
-        validityMonths = Math.Max(1, validityMonths);
+        public int ViolationTypeId { get; set; }
+        public int OccurrenceFrom { get; set; } = 1;
+        public int OccurrenceTo { get; set; } = 1;
+        public string CountingPeriod { get; set; } = "Monthly";
+        public string PenaltyAction { get; set; } = string.Empty;
+        public string CalculationMode { get; set; } = "Cumulative";
+
+        public string ActionType { get; set; } = Hrms.PenaltyAction.VerbalWarning;
+        public int? TerminationReasonId { get; set; }
+        public int? SalaryItemId { get; set; }
+
+        public string FinancialImpactType { get; set; } = "None";
+        public decimal FinancialValue { get; set; }
+
+        /// <summary>مفاتيح مكوّنات الوعاء المختارة ونِسَبها — متوازيتان بالترتيب.</summary>
+        public string[]? PoolKeys { get; set; }
+        public decimal[]? PoolPercents { get; set; }
+
+        public string WorkDaysBasis { get; set; } = Hrms.WorkDaysBasis.Fixed;
+        public int WorkDaysFixed { get; set; } = Hrms.WorkDaysBasis.DefaultFixedDays;
+        public string ExcludeHolidays { get; set; } = Hrms.WorkDaysBasis.ExcludeNone;
+
+        public string DropMode { get; set; } = PenaltyDropPolicy.ModeOnce;
+        public int DropEvery { get; set; }
+        public string DropUnit { get; set; } = PenaltyDropPolicy.UnitMonths;
+        public string DropAnchor { get; set; } = PenaltyDropPolicy.AnchorActionDate;
+
+        public int? MessageTemplateId { get; set; }
+        public int? AutoMessageTemplateId { get; set; }
+    }
+
+    /// <summary>
+    /// يبني وعاء الخصم من الحقول المتوازية بالنموذج.
+    ///
+    /// المكوّنات **غير المؤشَّرة تُستبعَد** حتى لو حملت نسبةً: مربّع غير مؤشَّر
+    /// ونسبةٌ باقية من اختيارٍ سابق كانا سيدخلان الوعاء بلا أن يقصدهما أحد.
+    /// </summary>
+    private static string BuildPoolJson(PenaltyRuleInput input)
+    {
+        if (input.PoolKeys is null || input.PoolKeys.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var members = new List<PenaltyBasePool.Member>();
+        for (var i = 0; i < input.PoolKeys.Length; i++)
+        {
+            var key = input.PoolKeys[i];
+            if (string.IsNullOrWhiteSpace(key)) continue;
+
+            var percent = input.PoolPercents is not null && i < input.PoolPercents.Length
+                ? input.PoolPercents[i]
+                : 0m;
+
+            if (percent <= 0) continue;
+            members.Add(new PenaltyBasePool.Member { Key = key.Trim(), Percent = percent });
+        }
+
+        return PenaltyBasePool.Serialize(members);
+    }
+
+    private async Task SavePenaltyRuleAsync(int? id, PenaltyRuleInput input)
+    {
+        var occurrenceFrom = Math.Max(1, input.OccurrenceFrom);
+        var occurrenceTo = Math.Max(occurrenceFrom, input.OccurrenceTo);
+
+        var actionType = Hrms.PenaltyAction.Normalize(input.ActionType);
+
+        // النوع يقود المال لا العكس: إجراءٌ غير ماليّ يُصفَّر أثره وقيمته ووعاؤه
+        // ووجهته. كان النصّ الحرّ يسمح بإنذارٍ يخصم بصمت.
+        var isFinancial = Hrms.PenaltyAction.IsFinancial(actionType);
+        var impactType = Hrms.PenaltyAction.FinancialImpact(
+            actionType, NormalizeFinancialType(input.FinancialImpactType));
 
         var sql = id.HasValue
             ? """
@@ -655,6 +1044,19 @@ SET ViolationTypeId = @ViolationTypeId,
     OccurrenceTo = @OccurrenceTo,
     CountingPeriod = @CountingPeriod,
     PenaltyAction = @PenaltyAction,
+    ActionType = @ActionType,
+    TerminationReasonId = @TerminationReasonId,
+    SalaryItemId = @SalaryItemId,
+    BasePoolJson = @BasePoolJson,
+    WorkDaysBasis = @WorkDaysBasis,
+    WorkDaysFixed = @WorkDaysFixed,
+    ExcludeHolidays = @ExcludeHolidays,
+    DropMode = @DropMode,
+    DropEvery = @DropEvery,
+    DropUnit = @DropUnit,
+    DropAnchor = @DropAnchor,
+    MessageTemplateId = @MessageTemplateId,
+    AutoMessageTemplateId = @AutoMessageTemplateId,
     FinancialImpactType = @FinancialImpactType,
     FinancialValue = @FinancialValue,
     ValidityMonths = @ValidityMonths,
@@ -664,23 +1066,65 @@ WHERE Id = @Id;
 """
             : """
 INSERT INTO DisciplinaryPenaltyRules
-(ViolationTypeId, OccurrenceFrom, OccurrenceTo, CountingPeriod, PenaltyAction, FinancialImpactType, FinancialValue, ValidityMonths, CalculationMode, RequiresApproval, IsActive, CreatedAt)
+(ViolationTypeId, OccurrenceFrom, OccurrenceTo, CountingPeriod, PenaltyAction, ActionType,
+ TerminationReasonId, SalaryItemId, BasePoolJson, WorkDaysBasis, WorkDaysFixed, ExcludeHolidays,
+ DropMode, DropEvery, DropUnit, DropAnchor, MessageTemplateId, AutoMessageTemplateId,
+ FinancialImpactType, FinancialValue, ValidityMonths, CalculationMode, RequiresApproval, IsActive, CreatedAt)
 VALUES
-(@ViolationTypeId, @OccurrenceFrom, @OccurrenceTo, @CountingPeriod, @PenaltyAction, @FinancialImpactType, @FinancialValue, @ValidityMonths, @CalculationMode, @RequiresApproval, 1, SYSUTCDATETIME());
+(@ViolationTypeId, @OccurrenceFrom, @OccurrenceTo, @CountingPeriod, @PenaltyAction, @ActionType,
+ @TerminationReasonId, @SalaryItemId, @BasePoolJson, @WorkDaysBasis, @WorkDaysFixed, @ExcludeHolidays,
+ @DropMode, @DropEvery, @DropUnit, @DropAnchor, @MessageTemplateId, @AutoMessageTemplateId,
+ @FinancialImpactType, @FinancialValue, @ValidityMonths, @CalculationMode, @RequiresApproval, 1, SYSUTCDATETIME());
 """;
 
         await HrmsDatabase.ExecuteAsync(_dbContext, sql, command =>
         {
             if (id.HasValue) HrmsDatabase.AddParameter(command, "@Id", id.Value);
-            HrmsDatabase.AddParameter(command, "@ViolationTypeId", violationTypeId);
+            HrmsDatabase.AddParameter(command, "@ViolationTypeId", input.ViolationTypeId);
             HrmsDatabase.AddParameter(command, "@OccurrenceFrom", occurrenceFrom);
             HrmsDatabase.AddParameter(command, "@OccurrenceTo", occurrenceTo);
-            HrmsDatabase.AddParameter(command, "@CountingPeriod", NormalizePeriod(countingPeriod));
-            HrmsDatabase.AddParameter(command, "@PenaltyAction", penaltyAction.Trim());
-            HrmsDatabase.AddParameter(command, "@FinancialImpactType", NormalizeFinancialType(financialImpactType));
-            HrmsDatabase.AddParameter(command, "@FinancialValue", Math.Max(0, financialValue));
-            HrmsDatabase.AddParameter(command, "@ValidityMonths", validityMonths);
-            HrmsDatabase.AddParameter(command, "@CalculationMode", NormalizeCalculationMode(calculationMode));
+            HrmsDatabase.AddParameter(command, "@CountingPeriod", NormalizePeriod(input.CountingPeriod));
+            HrmsDatabase.AddParameter(command, "@PenaltyAction",
+                string.IsNullOrWhiteSpace(input.PenaltyAction)
+                    ? Hrms.PenaltyAction.Label(actionType)
+                    : input.PenaltyAction.Trim());
+            HrmsDatabase.AddParameter(command, "@ActionType", actionType);
+
+            HrmsDatabase.AddParameter(command, "@TerminationReasonId",
+                Hrms.PenaltyAction.IsTermination(actionType) && input.TerminationReasonId is > 0
+                    ? input.TerminationReasonId!.Value : (object)DBNull.Value);
+
+            HrmsDatabase.AddParameter(command, "@SalaryItemId",
+                isFinancial && input.SalaryItemId is > 0 ? input.SalaryItemId!.Value : (object)DBNull.Value);
+
+            HrmsDatabase.AddParameter(command, "@BasePoolJson", isFinancial ? BuildPoolJson(input) : string.Empty);
+            HrmsDatabase.AddParameter(command, "@WorkDaysBasis", Hrms.WorkDaysBasis.Normalize(input.WorkDaysBasis));
+            HrmsDatabase.AddParameter(command, "@WorkDaysFixed",
+                input.WorkDaysFixed > 0 ? input.WorkDaysFixed : Hrms.WorkDaysBasis.DefaultFixedDays);
+            HrmsDatabase.AddParameter(command, "@ExcludeHolidays",
+                Hrms.WorkDaysBasis.NormalizeExclude(input.ExcludeHolidays));
+
+            HrmsDatabase.AddParameter(command, "@DropMode",
+                string.Equals(input.DropMode, PenaltyDropPolicy.ModePeriodic, StringComparison.OrdinalIgnoreCase)
+                    ? PenaltyDropPolicy.ModePeriodic : PenaltyDropPolicy.ModeOnce);
+            HrmsDatabase.AddParameter(command, "@DropEvery", Math.Max(0, input.DropEvery));
+            HrmsDatabase.AddParameter(command, "@DropUnit", input.DropUnit ?? PenaltyDropPolicy.UnitMonths);
+            HrmsDatabase.AddParameter(command, "@DropAnchor", input.DropAnchor ?? PenaltyDropPolicy.AnchorActionDate);
+
+            HrmsDatabase.AddParameter(command, "@MessageTemplateId",
+                input.MessageTemplateId is > 0 ? input.MessageTemplateId!.Value : (object)DBNull.Value);
+            HrmsDatabase.AddParameter(command, "@AutoMessageTemplateId",
+                input.AutoMessageTemplateId is > 0 ? input.AutoMessageTemplateId!.Value : (object)DBNull.Value);
+
+            HrmsDatabase.AddParameter(command, "@FinancialImpactType", impactType);
+            HrmsDatabase.AddParameter(command, "@FinancialValue", isFinancial ? Math.Max(0, input.FinancialValue) : 0m);
+
+            // `ValidityMonths` يبقى مرآةً للسياسة الجديدة كي لا تنكسر قراءةٌ قديمة.
+            HrmsDatabase.AddParameter(command, "@ValidityMonths",
+                string.Equals(input.DropUnit, PenaltyDropPolicy.UnitMonths, StringComparison.OrdinalIgnoreCase)
+                    ? Math.Max(0, input.DropEvery) : 0);
+
+            HrmsDatabase.AddParameter(command, "@CalculationMode", NormalizeCalculationMode(input.CalculationMode));
             HrmsDatabase.AddParameter(command, "@RequiresApproval", Request.Form.ContainsKey("requiresApproval"));
         });
     }
@@ -699,6 +1143,28 @@ VALUES
         TemplateTypes = await LoadTemplateTypesAsync();
         MessageTemplates = await LoadMessageTemplatesAsync();
         TextBlocks = await LoadTextBlocksAsync();
+        CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_dbContext);
+
+        // وجهة الخصم وأسباب الإيقاف: قوائم يملكها مودلان آخران — تُقرأ ولا تُنسَخ.
+        DeductionItems = (await SalaryItemStore.ListAsync(_dbContext))
+            .Where(x => x.IsActive && string.Equals(x.ItemType, "Deduction", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(x => x.SortOrder).ThenBy(x => x.Name)
+            .ToList();
+
+        TerminationReasons = await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.LoadTerminationReasonsAsync(_dbContext);
+
+        _casesByViolation = (await HrmsDatabase.QueryAsync(
+                _dbContext,
+                """
+SELECT ViolationTypeId, COUNT(1) AS Cases
+FROM EmployeeViolationCases
+WHERE ISNULL(IsDeleted, 0) = 0 AND ViolationTypeId IS NOT NULL
+GROUP BY ViolationTypeId;
+""",
+                command => { },
+                reader => (Id: HrmsDatabase.GetInt(reader, "ViolationTypeId"),
+                           Cases: HrmsDatabase.GetInt(reader, "Cases"))))
+            .ToDictionary(x => x.Id, x => x.Cases);
     }
 
     private async Task SeedDefaultLibraryAsync(bool onlyIfEmpty)
@@ -923,7 +1389,9 @@ ELSE
     {
         return await HrmsDatabase.QueryAsync(_dbContext,
             """
-SELECT c.Id, c.Name, ISNULL(c.Description, '') AS Description, c.DisplayOrder, c.IsActive, c.CreatedAt,
+SELECT c.Id, c.Name, ISNULL(c.NameEn, '') AS NameEn, ISNULL(c.Description, '') AS Description,
+       ISNULL(c.ConditionsJson, '') AS ConditionsJson, ISNULL(c.IsSystem, 0) AS IsSystem,
+       c.DisplayOrder, c.IsActive, c.CreatedAt,
        (SELECT COUNT(1) FROM DisciplinaryViolationTypes t WHERE t.CategoryId = c.Id) AS TypesCount
 FROM DisciplinaryViolationCategories c
 ORDER BY c.DisplayOrder, c.Name;
@@ -933,6 +1401,9 @@ ORDER BY c.DisplayOrder, c.Name;
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
                 Name = HrmsDatabase.GetString(reader, "Name"),
+                NameEn = HrmsDatabase.GetString(reader, "NameEn"),
+                ConditionsJson = HrmsDatabase.GetString(reader, "ConditionsJson"),
+                IsSystem = HrmsDatabase.GetBool(reader, "IsSystem"),
                 Description = HrmsDatabase.GetString(reader, "Description"),
                 DisplayOrder = HrmsDatabase.GetInt(reader, "DisplayOrder"),
                 IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
@@ -945,7 +1416,10 @@ ORDER BY c.DisplayOrder, c.Name;
     {
         return await HrmsDatabase.QueryAsync(_dbContext,
             """
-SELECT t.Id, t.CategoryId, c.Name AS CategoryName, t.Name, ISNULL(t.Description, '') AS Description, t.Severity,
+SELECT t.Id, t.CategoryId, c.Name AS CategoryName, t.Name, ISNULL(t.NameEn, '') AS NameEn,
+       t.AutoMessageTemplateId,
+       ISNULL(t.Description, '') AS Description, t.Severity,
+       ISNULL(t.ArticleNo, '') AS ArticleNo, ISNULL(t.ConditionsJson, '') AS ConditionsJson,
        t.ValidityMonths, t.CountingPeriod, t.IncludeInEvaluation, t.ShowToEmployee, t.IsActive, t.CreatedAt,
        (SELECT COUNT(1) FROM DisciplinaryPenaltyRules r WHERE r.ViolationTypeId = t.Id) AS RulesCount
 FROM DisciplinaryViolationTypes t
@@ -959,8 +1433,12 @@ ORDER BY c.DisplayOrder, t.Name;
                 CategoryId = HrmsDatabase.GetInt(reader, "CategoryId"),
                 CategoryName = HrmsDatabase.GetString(reader, "CategoryName"),
                 Name = HrmsDatabase.GetString(reader, "Name"),
+                NameEn = HrmsDatabase.GetString(reader, "NameEn"),
+                AutoMessageTemplateId = HrmsDatabase.GetNullableInt(reader, "AutoMessageTemplateId"),
                 Description = HrmsDatabase.GetString(reader, "Description"),
                 Severity = HrmsDatabase.GetString(reader, "Severity"),
+                ArticleNo = HrmsDatabase.GetString(reader, "ArticleNo"),
+                ConditionsJson = HrmsDatabase.GetString(reader, "ConditionsJson"),
                 ValidityMonths = HrmsDatabase.GetInt(reader, "ValidityMonths"),
                 CountingPeriod = HrmsDatabase.GetString(reader, "CountingPeriod"),
                 IncludeInEvaluation = HrmsDatabase.GetBool(reader, "IncludeInEvaluation"),
@@ -977,7 +1455,14 @@ ORDER BY c.DisplayOrder, t.Name;
             """
 SELECT r.Id, r.ViolationTypeId, t.CategoryId, t.Name AS ViolationName, c.Name AS CategoryName, r.OccurrenceFrom,
        r.OccurrenceTo, r.CountingPeriod, r.PenaltyAction, r.FinancialImpactType, r.FinancialValue, r.ValidityMonths,
-       r.CalculationMode, r.RequiresApproval, r.IsActive, r.CreatedAt
+       r.CalculationMode, r.RequiresApproval, r.IsActive, r.CreatedAt,
+       ISNULL(r.ActionType, N'VerbalWarning') AS ActionType,
+       r.TerminationReasonId, r.SalaryItemId, ISNULL(r.BasePoolJson, '') AS BasePoolJson,
+       ISNULL(r.WorkDaysBasis, N'Fixed') AS WorkDaysBasis, ISNULL(r.WorkDaysFixed, 30) AS WorkDaysFixed,
+       ISNULL(r.ExcludeHolidays, N'None') AS ExcludeHolidays,
+       ISNULL(r.DropMode, N'Once') AS DropMode, ISNULL(r.DropEvery, 0) AS DropEvery,
+       ISNULL(r.DropUnit, N'Months') AS DropUnit, ISNULL(r.DropAnchor, N'ActionDate') AS DropAnchor,
+       r.MessageTemplateId, r.AutoMessageTemplateId
 FROM DisciplinaryPenaltyRules r
 INNER JOIN DisciplinaryViolationTypes t ON t.Id = r.ViolationTypeId
 INNER JOIN DisciplinaryViolationCategories c ON c.Id = t.CategoryId
@@ -1001,52 +1486,31 @@ ORDER BY c.DisplayOrder, t.Name, r.OccurrenceFrom;
                 CalculationMode = HrmsDatabase.GetString(reader, "CalculationMode"),
                 RequiresApproval = HrmsDatabase.GetBool(reader, "RequiresApproval"),
                 IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
-                CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt")
+                CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt"),
+                ActionType = HrmsDatabase.GetString(reader, "ActionType"),
+                TerminationReasonId = HrmsDatabase.GetNullableInt(reader, "TerminationReasonId"),
+                SalaryItemId = HrmsDatabase.GetNullableInt(reader, "SalaryItemId"),
+                BasePoolJson = HrmsDatabase.GetString(reader, "BasePoolJson"),
+                WorkDaysBasis = HrmsDatabase.GetString(reader, "WorkDaysBasis"),
+                WorkDaysFixed = HrmsDatabase.GetInt(reader, "WorkDaysFixed"),
+                ExcludeHolidays = HrmsDatabase.GetString(reader, "ExcludeHolidays"),
+                DropMode = HrmsDatabase.GetString(reader, "DropMode"),
+                DropEvery = HrmsDatabase.GetInt(reader, "DropEvery"),
+                DropUnit = HrmsDatabase.GetString(reader, "DropUnit"),
+                DropAnchor = HrmsDatabase.GetString(reader, "DropAnchor"),
+                MessageTemplateId = HrmsDatabase.GetNullableInt(reader, "MessageTemplateId"),
+                AutoMessageTemplateId = HrmsDatabase.GetNullableInt(reader, "AutoMessageTemplateId")
             });
     }
 
 
-    private async Task<List<TemplateType>> LoadTemplateTypesAsync()
-    {
-        return await HrmsDatabase.QueryAsync(_dbContext,
-            """
-SELECT Id, Name, Code, ISNULL(Description, '') AS Description, IsActive, CreatedAt
-FROM DisciplinaryTemplateTypes
-ORDER BY Name;
-""",
-            command => { },
-            reader => new TemplateType
-            {
-                Id = HrmsDatabase.GetInt(reader, "Id"),
-                Name = HrmsDatabase.GetString(reader, "Name"),
-                Code = HrmsDatabase.GetString(reader, "Code"),
-                Description = HrmsDatabase.GetString(reader, "Description"),
-                IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
-                CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt")
-            });
-    }
+    // القراءة انتقلت إلى `DisciplinaryConfigStore`: تقرأ منه هذه الشاشة وشاشة
+    // المخالفات معاً، فلا نسختان من الاستعلام تفترقان مع أول تعديل.
+    private async Task<List<TemplateType>> LoadTemplateTypesAsync() =>
+        await DisciplinaryConfigStore.LoadTemplateTypesAsync(_dbContext);
 
-    private async Task<List<MessageTemplate>> LoadMessageTemplatesAsync()
-    {
-        return await HrmsDatabase.QueryAsync(_dbContext,
-            """
-SELECT Id, Name, TemplateType, Subject, Body, IsDefault, IsActive, CreatedAt
-FROM DisciplinaryMessageTemplates
-ORDER BY IsDefault DESC, Name;
-""",
-            command => { },
-            reader => new MessageTemplate
-            {
-                Id = HrmsDatabase.GetInt(reader, "Id"),
-                Name = HrmsDatabase.GetString(reader, "Name"),
-                TemplateType = HrmsDatabase.GetString(reader, "TemplateType"),
-                Subject = HrmsDatabase.GetString(reader, "Subject"),
-                Body = HrmsDatabase.GetString(reader, "Body"),
-                IsDefault = HrmsDatabase.GetBool(reader, "IsDefault"),
-                IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
-                CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt")
-            });
-    }
+    private async Task<List<MessageTemplate>> LoadMessageTemplatesAsync() =>
+        await DisciplinaryConfigStore.LoadMessageTemplatesAsync(_dbContext);
 
 
     private async Task<List<FormTextBlock>> LoadTextBlocksAsync()
@@ -1113,7 +1577,17 @@ await HrmsDatabase.ExecuteAsync(_dbContext, "UPDATE DisciplinaryMessageTemplates
         return templateType?.Name ?? type;
     }
 
-    private static string NormalizeTab(string? tab) => tab switch { "library" => "library", "designer" => "designer", "templates" => "templates", _ => "setup" };
+    // الافتراضي صار «المخالفات والجزاءات»: تبويب «التهيئة» انتقل لشاشة المخالفات.
+    private static string NormalizeTab(string? tab) => tab switch { "designer" => "designer", "templates" => "templates", "articles" => "articles", _ => "library" };
+
+    /// <summary>تسمية حالة إنفاذ المادّة بالعربية — تُقرأ حكماً لا مصطلحاً.</summary>
+    public string EnforcementLabel(DisciplinaryPolicyPack.Enforcement state) => state switch
+    {
+        DisciplinaryPolicyPack.Enforcement.Blocks => "🔒 يمنع",
+        DisciplinaryPolicyPack.Enforcement.Warns => "⚠️ يُنبّه",
+        DisciplinaryPolicyPack.Enforcement.Computed => "⚙️ محسوبة",
+        _ => "📄 نصّ مرجعيّ"
+    };
     private static string NormalizeSeverity(string? value) => value switch { "A" => "A", "B" => "B", "C" => "C", "FinalWarning" => "FinalWarning", _ => "B" };
     private static string NormalizePeriod(string? value) => value switch { "Monthly" => "Monthly", "SixMonths" => "SixMonths", "Yearly" => "Yearly", "Contract" => "Contract", _ => "Monthly" };
     private static string NormalizeFinancialType(string? value) => value switch { "Days" => "Days", "Hours" => "Hours", "Amount" => "Amount", _ => "None" };
@@ -1232,19 +1706,43 @@ public sealed class ViolationCategory
 {
     public int Id { get; set; }
     public string Name { get; set; } = "";
+
+    /// <summary>الاسم بالإنجليزية — يُطبع بالكتب ثنائية اللغة.</summary>
+    public string NameEn { get; set; } = "";
+
     public string Description { get; set; } = "";
     public int DisplayOrder { get; set; }
     public bool IsActive { get; set; }
+
+    /// <summary>فئة نظام: يُولَّد عليها آلياً، فلا تُحذف ولا يُعاد تسميتها.</summary>
+    public bool IsSystem { get; set; }
+
+    public string ConditionsJson { get; set; } = "";
+    public HrConditions.ConditionSet Conditions => HrConditions.Deserialize(ConditionsJson);
+
     public DateTime? CreatedAt { get; set; }
     public int TypesCount { get; set; }
 }
 
 public sealed class ViolationType
 {
+    /// <summary>رقم الفقرة بلائحة الجزاءات (مثال 3/ب) — يستشهد به الكتاب الرسمي.</summary>
+    public string ArticleNo { get; set; } = string.Empty;
+
+    /// <summary>معايير الاستحقاق كما تُخزَّن. فارغ ⟹ المخالفة تنطبق على الجميع.</summary>
+    public string ConditionsJson { get; set; } = string.Empty;
+
+    public HrConditions.ConditionSet Conditions => HrConditions.Deserialize(ConditionsJson);
+
     public int Id { get; set; }
     public int CategoryId { get; set; }
     public string CategoryName { get; set; } = "";
     public string Name { get; set; } = "";
+    public string NameEn { get; set; } = "";
+
+    /// <summary>قالب الكتاب للمسار الآليّ — مخالفةٌ يولّدها المحرّك لا يوقّعها مسجِّل.</summary>
+    public int? AutoMessageTemplateId { get; set; }
+
     public string Description { get; set; } = "";
     public string Severity { get; set; } = "B";
     public int ValidityMonths { get; set; } = 6;
@@ -1266,7 +1764,33 @@ public sealed class PenaltyRule
     public int OccurrenceFrom { get; set; }
     public int OccurrenceTo { get; set; }
     public string CountingPeriod { get; set; } = "Monthly";
+
+    /// <summary>عنوان الإجراء كما يظهر بالكتاب — نصٌّ للعرض لا للسلوك.</summary>
     public string PenaltyAction { get; set; } = "";
+
+    /// <summary>**النوع هو ما يقود السلوك** (انظر <see cref="Hrms.PenaltyAction"/>).</summary>
+    public string ActionType { get; set; } = Hrms.PenaltyAction.VerbalWarning;
+
+    public int? TerminationReasonId { get; set; }
+
+    /// <summary>عنصر الراتب الذي يُرحَّل إليه الخصم بالقسيمة.</summary>
+    public int? SalaryItemId { get; set; }
+
+    public string BasePoolJson { get; set; } = "";
+    public IReadOnlyList<PenaltyBasePool.Member> BasePool => PenaltyBasePool.Parse(BasePoolJson);
+
+    public string WorkDaysBasis { get; set; } = Hrms.WorkDaysBasis.Fixed;
+    public int WorkDaysFixed { get; set; } = Hrms.WorkDaysBasis.DefaultFixedDays;
+    public string ExcludeHolidays { get; set; } = Hrms.WorkDaysBasis.ExcludeNone;
+
+    public string DropMode { get; set; } = PenaltyDropPolicy.ModeOnce;
+    public int DropEvery { get; set; }
+    public string DropUnit { get; set; } = PenaltyDropPolicy.UnitMonths;
+    public string DropAnchor { get; set; } = PenaltyDropPolicy.AnchorActionDate;
+
+    public int? MessageTemplateId { get; set; }
+    public int? AutoMessageTemplateId { get; set; }
+
     public string FinancialImpactType { get; set; } = "None";
     public decimal FinancialValue { get; set; }
     public int ValidityMonths { get; set; } = 6;
@@ -1274,6 +1798,12 @@ public sealed class PenaltyRule
     public bool RequiresApproval { get; set; }
     public bool IsActive { get; set; }
     public DateTime? CreatedAt { get; set; }
+
+    public bool IsFinancial => Hrms.PenaltyAction.IsFinancial(ActionType);
+    public string ActionLabel => Hrms.PenaltyAction.Label(ActionType);
+    public string DropText => PenaltyDropPolicy.Describe(DropMode, DropEvery, DropUnit, DropAnchor);
+    public string BaseText => PenaltyBasePool.Describe(BasePool);
+    public string DivisorText => Hrms.WorkDaysBasis.Describe(WorkDaysBasis, WorkDaysFixed, ExcludeHolidays);
 }
 
 public sealed class MessageTemplate

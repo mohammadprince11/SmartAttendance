@@ -1,0 +1,471 @@
+/* «شاشة العمل» — تخطيطٌ مشترك لشاشات: ترويسة · سطر أرقام · تبويبات · قوائم عمل.
+ *
+ * تستعمله اليوم: `/Engagement` (تفاعل الموظف) و`/Violations` (المخالفات).
+ *
+ * ⚠️ هذا الملف **تخطيطٌ فقط**: شبكات ومسافات وحالات التبويب.
+ * لا مقاسات ولا استدارات ولا أحجام خطّ للودجتات — تلك تأتي من التوكنات
+ * (`zynora-tokens.css`) عبر أصناف يحكمها مختبر المقاسات: `zy-card` · `zy-pill`
+ * والحقول والأزرار القياسية. فالشاشة موحّدة **بالتكوين** لا بالترقيع، وأي تعديل
+ * بالمختبر يصلها تلقائياً.
+ *
+ * ولماذا ملفٌ مشترك لا ملفٌ لكل شاشة؟ لأن ملفَّي تخطيطٍ متطابقين هما بذرة
+ * التنافر نفسها التي نعالجها: يتحرّك أحدهما ويبقى الآخر. الشاشتان وُلدتا من
+ * صفحتين تكرّران أنفسهما (أربع بطاقات KPI ⟵ «ملخص» يعيدها ⟵ بطاقات تكرّر
+ * التبويبات)، فلا يصحّ أن نعيد إنتاج التكرار بطبقة الأنماط.
+ */
+
+.zyw {
+    display: flex;
+    flex-direction: column;
+    gap: var(--zy-space-4);
+    direction: rtl;
+}
+
+/* ---------------------------------------------------------------- الترويسة */
+
+.zyw-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--zy-space-4);
+    flex-wrap: wrap;
+}
+
+.zyw-head h1 {
+    margin: 0;
+    color: var(--zy-text);
+    font-family: var(--zy-font-display, var(--zy-font-ar));
+}
+
+.zyw-head p {
+    margin: var(--zy-space-1) 0 0;
+    color: var(--zy-text-muted);
+}
+
+/* الأرقام الإجمالية سطرٌ واحد لا أربع بطاقات: سياقٌ لا بطولة. */
+.zyw-totals {
+    display: flex;
+    align-items: center;
+    gap: var(--zy-space-3);
+    flex-wrap: wrap;
+    color: var(--zy-text-muted);
+}
+
+.zyw-totals b {
+    color: var(--zy-text);
+}
+
+/* ------------------------------------------------------------ شريط التبويب */
+
+.zyw-tabs {
+    display: flex;
+    gap: var(--zy-space-2);
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--zy-border);
+    padding-bottom: var(--zy-space-2);
+}
+
+/* ⚠️ التبويب قد يكون `<button>` (تبديل بالعميل) أو `<a>` (تنقّل خادميّ)، وهما
+   يبدوان **مختلفَين تماماً** إن تُرك المظهر للتوكنات: طبقة الاستهلاك تحكم
+   `button` فيأخذ حشوته وارتفاعه واستدارته، بينما `<a>` يبقى نصّاً عارياً.
+   وهو ما جعل شريط تبويبات إعدادات المخالفات يبدو «غير منسّق وبعيد عن النظام»
+   بينما شريط شاشة المخالفات (أزرار) يبدو سليماً — نفس الصنف ونفس الملف.
+   فالمقاس يُصرَّح هنا من التوكنات نفسها ليتساوى الوسمان. */
+.zyw-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--zy-space-2);
+    min-height: var(--zy-button-h, 34px);
+    padding-inline: var(--zy-button-pad-x, 18px);
+    border: 1px solid transparent;
+    border-radius: var(--zy-button-radius, 4px);
+    background: transparent;
+    color: var(--zy-text-muted);
+    font-size: var(--zy-button-font, 12px);
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.zyw-tab:hover {
+    color: var(--zy-text);
+    background: var(--zy-primary-soft);
+}
+
+.zyw-tab[aria-selected="true"] {
+    border-color: var(--zy-border-strong);
+    background: var(--zy-primary-soft);
+    color: var(--zy-text);
+    font-weight: 800;
+}
+
+/* عدّاد المهامّ على التبويب — يظهر فقط حين يكون فيه عمل فعليّ. */
+.zyw-tab-count {
+    min-width: 20px;
+    padding-inline: 6px;
+    border-radius: 999px;
+    background: var(--zy-danger-soft, rgba(220, 38, 38, .16));
+    color: var(--zy-danger, #dc2626);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 18px;
+    text-align: center;
+}
+
+.zyw-panel[hidden] {
+    display: none;
+}
+
+.zyw-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--zy-space-4);
+}
+
+/* ------------------------------------------------------------- قوائم العمل */
+
+/* «ما ينتظرك» أولاً: الشاشة تفتح على ما يحتاج قراراً، لا على أرقامٍ للزينة. */
+.zyw-queue {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--zy-space-3);
+    align-items: start;
+}
+
+.zyw-queue-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--zy-space-2);
+    margin-bottom: var(--zy-space-2);
+}
+
+.zyw-queue-head h2 {
+    margin: 0;
+    color: var(--zy-text);
+}
+
+.zyw-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--zy-space-3);
+    padding: var(--zy-space-2) 0;
+    border-top: 1px solid var(--zy-border);
+}
+
+.zyw-item:first-of-type {
+    border-top: 0;
+}
+
+.zyw-item-main {
+    min-width: 0;
+}
+
+.zyw-item-main strong {
+    display: block;
+    color: var(--zy-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.zyw-item-main small {
+    color: var(--zy-text-muted);
+}
+
+.zyw-item-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--zy-space-2);
+    flex: 0 0 auto;
+}
+
+/* حالة الفراغ ليست خطأً: تقول ما الذي يعنيه الفراغ وما الخطوة التالية. */
+.zyw-empty {
+    padding: var(--zy-space-4);
+    border: 1px dashed var(--zy-border);
+    border-radius: var(--zy-radius-lg);
+    color: var(--zy-text-muted);
+    text-align: center;
+}
+
+/* -------------------------------------------------------------- النماذج */
+
+.zyw-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--zy-control-gap, 14px);
+}
+
+.zyw-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.zyw-field > label {
+    color: var(--zy-text-muted);
+    font-size: var(--zy-label-font, 12px);
+    font-weight: 700;
+}
+
+.zyw-field--wide {
+    grid-column: 1 / -1;
+}
+
+.zyw-form-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--zy-space-2);
+    flex-wrap: wrap;
+    margin-top: var(--zy-space-3);
+}
+
+/* حقول الاستهداف تظهر حسب نوعه — تُدار بالجافاسكربت بالصفحة. */
+.zyw-target[hidden] {
+    display: none;
+}
+
+/* صفّ خيارات ثنائية (تدخل بالتقييم · تظهر للموظف · فعّالة). المربّع نفسه يأتي
+   مقاسه من توكن الجيك بوكس، فلا مقاس هنا. */
+.zyw-checks {
+    display: flex;
+    align-items: center;
+    gap: var(--zy-space-3);
+    flex-wrap: wrap;
+}
+
+.zyw-checks label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--zy-text);
+    cursor: pointer;
+}
+
+/* --------------------------------------------------------------- القوائم */
+
+.zyw-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.zyw-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--zy-space-3);
+    padding: var(--zy-space-2) 0;
+    border-top: 1px solid var(--zy-border);
+}
+
+.zyw-row:first-of-type {
+    border-top: 0;
+}
+
+.zyw-row-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--zy-space-2);
+    flex-wrap: wrap;
+    color: var(--zy-text-muted);
+}
+
+/* -------------------------------------------------- صفٌّ يفتح نموذج تحريره */
+
+/* بديل «بطاقة التحرير» القديمة: الصفّ يُقرأ كسطر، وبفتحه يظهر نموذجه بمكانه —
+   فلا نافذة تنبثق ولا انتقال لصفحة أخرى لتعديل اسمٍ واحد. */
+.zyw-acc {
+    border-top: 1px solid var(--zy-border);
+}
+
+.zyw-acc:first-of-type {
+    border-top: 0;
+}
+
+.zyw-acc > summary {
+    display: flex;
+    align-items: center;
+    gap: var(--zy-space-2);
+    padding: var(--zy-space-2) 0;
+    cursor: pointer;
+    list-style: none;
+    color: var(--zy-text);
+}
+
+.zyw-acc > summary::-webkit-details-marker {
+    display: none;
+}
+
+/* الرقم/الرمز أول الصفّ: علامةٌ هادئة لا بطولة. */
+.zyw-acc > summary > span:first-child {
+    min-width: 34px;
+    padding-inline: 6px;
+    border-radius: var(--zy-pill-radius, 6px);
+    background: var(--zy-primary-soft);
+    color: var(--zy-text-muted);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 20px;
+    text-align: center;
+}
+
+.zyw-acc > summary strong {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zyw-acc > summary small {
+    color: var(--zy-text-muted);
+    flex: 0 0 auto;
+}
+
+.zyw-acc[open] > summary {
+    color: var(--zy-text);
+    font-weight: 800;
+}
+
+.zyw-acc > form {
+    padding: 0 0 var(--zy-space-3);
+}
+
+/* المعطَّل يبقى مقروءاً لا مطموساً: الخفوت يقول «موجود وغير فعّال». */
+.zyw-acc.disabled > summary {
+    opacity: .55;
+}
+
+/* ------------------------------------------------------------------ جدول */
+
+/* الجدول يمرّ أفقياً داخل غلافه وحده — لا الصفحة. */
+.zyw-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+.zyw-table {
+    width: 100%;
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+
+.zyw-table th,
+.zyw-table td {
+    padding-block: var(--zy-space-2);
+    text-align: start;
+    border-bottom: 1px solid var(--zy-border);
+}
+
+.zyw-table th {
+    color: var(--zy-text-muted);
+    font-weight: 800;
+}
+
+.zyw-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+/* صفٌّ أخفاه فلترُ العميل — بلا إعادة تحميل. */
+.zyw-table tr[hidden] {
+    display: none;
+}
+
+/* شريط الفلاتر: صفٌّ واحد بدل ثلاثة صفوف متراكمة فوق الجدول. */
+.zyw-filters {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--zy-control-gap, 14px);
+    flex-wrap: wrap;
+    margin-bottom: var(--zy-space-3);
+}
+
+.zyw-filters .zyw-field {
+    flex: 0 1 200px;
+}
+
+.zyw-filters .zyw-field--grow {
+    flex: 1 1 240px;
+}
+
+@media (max-width: 700px) {
+    .zyw-row {
+        grid-template-columns: 1fr;
+    }
+
+    .zyw-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* ── الشبكة المحرَّرة داخل الصفّ ─────────────────────────────────────────────
+   الحقول داخل الخلايا لا تحمل حدودها الكاملة: جدولٌ بحدّ لكل حقل يصير شبكة
+   مربّعات لا جدولاً. الحدّ السفليّ وحده يكفي ليُقرأ الحقل حقلاً.
+   والمقاسات كلّها من التوكنات — لا رقم خامّ هنا. */
+.zyw-table td > input,
+.zyw-table td > select {
+    inline-size: 100%;
+    min-inline-size: 7rem;
+    border: 0;
+    border-bottom: 1px solid var(--zy-border);
+    border-radius: 0;
+    background: transparent;
+    padding-inline: var(--zy-space-1);
+}
+
+.zyw-table td > input:focus,
+.zyw-table td > select:focus {
+    border-bottom-color: var(--zy-accent);
+    outline: none;
+}
+
+/* حقلٌ للقراءة فقط (فئة نظام): يُرى أنه غير قابل للتحرير قبل أن يُنقَر. */
+.zyw-table td > input[readonly] {
+    color: var(--zy-text-muted);
+    border-bottom-style: dashed;
+    cursor: not-allowed;
+}
+
+.zyw-table td > .zyc {
+    min-inline-size: 16rem;
+    white-space: normal;
+}
+
+/* سطر مكوّن بوعاء الخصم: مربّع · اسم · نسبة · علامة٪ بمحاذاةٍ واحدة. */
+.zyw-pool-row {
+    display: flex;
+    align-items: center;
+    gap: var(--zy-space-2);
+}
+
+.zyw-pool-row > span:first-of-type {
+    min-inline-size: 14rem;
+}
+
+/* نموذج تعديل قاعدة الجزاء ينفتح تحت صفّه — يُفصَل بصرياً عن الصفّ. */
+.zyw-rule-form {
+    border-inline-start: 3px solid var(--zy-accent);
+    padding-inline-start: var(--zy-space-3);
+    margin-block: var(--zy-space-2);
+}
+
+/* شبكةٌ ذات جدول تحتاج العرض كلّه: عمودان بعرض 280px يجعلان الجدول شريطاً
+   يُمرَّر أفقياً بلا داعٍ. الطابور يصير عموداً واحداً حين يحمل شبكات. */
+.zyw-queue--stacked {
+    grid-template-columns: 1fr;
+}
+
+/* ⚠️ `hidden` تُهزَم بأي `display` من صنف.
+   `.zyw-field { display: flex }` أقوى تخصّصاً من قاعدة المتصفّح
+   `[hidden] { display: none }`، فحقلٌ مخفيّ من الخادم أو بالسكربت يبقى ظاهراً.
+   رُصد حياً: كتلة الاقتطاع وسبب الإيقاف تظهران معاً لإنذارٍ شفويّ.
+   القاعدة محصورة بالقوقعة فلا تمسّ ما خارجها. */
+.zyw [hidden] {
+    display: none !important;
+}

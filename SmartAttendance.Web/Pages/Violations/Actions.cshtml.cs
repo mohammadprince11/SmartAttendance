@@ -32,7 +32,8 @@ public class ActionsModel : PageModel
         decimal DeductionAmount,
         DateOnly EventDate,
         DateOnly? NotifiedOn,
-        DateOnly? DecidedOn);
+        DateOnly? DecidedOn,
+        DateTime? LetterIssuedAt);
 
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
     /// <summary>Open = قابلة للطعن · Final = نهائية · Dropped = ساقطة.</summary>
@@ -57,7 +58,13 @@ public class ActionsModel : PageModel
     public bool IsDropped(ActionRow row) =>
         ViolationConfigPolicy.IsDropped(row.DecidedOn, DropMonths, Today);
 
-    public async Task OnGetAsync()
+    /// <summary>
+    /// صارت تبويباً بـ`/Violations`. يبقى المسار حيّاً لروابطٍ قديمة ويعيد التوجيه،
+    /// فلا نسخة ثانية من الشاشة ولا خروجٌ من سياق المخالفات.
+    /// </summary>
+    public IActionResult OnGet() => RedirectToPage("/Violations/Index", new { tab = "actions" });
+
+    private async Task LegacyLoadAsync()
     {
         await ViolationCaseSchema.EnsureAsync(_db);
 
@@ -74,7 +81,7 @@ SELECT c.Id, ISNULL(c.ReferenceNo, N'') AS ReferenceNo,
        ISNULL(c.ViolationTitle, N'') AS ViolationTitle, c.FinalPenaltyAction,
        ISNULL(c.FinancialImpactType, N'None') AS FinancialImpactType,
        ISNULL(c.DeductionAmount, 0) AS DeductionAmount,
-       c.EventDate, c.NotifiedOn, c.DecidedOn
+       c.EventDate, c.NotifiedOn, c.DecidedOn, c.LetterIssuedAt
 FROM EmployeeViolationCases c
 LEFT JOIN Employees e ON e.Id = c.EmployeeId
 WHERE ISNULL(c.IsDeleted, 0) = 0
@@ -94,7 +101,8 @@ ORDER BY c.EventDate DESC, c.Id DESC;
                 HrmsDatabase.GetNullableDecimal(reader, "DeductionAmount") ?? 0,
                 HrmsDatabase.GetDateOnly(reader, "EventDate") ?? default,
                 HrmsDatabase.GetDateOnly(reader, "NotifiedOn"),
-                HrmsDatabase.GetDateOnly(reader, "DecidedOn")));
+                HrmsDatabase.GetDateOnly(reader, "DecidedOn"),
+                HrmsDatabase.GetDateTime(reader, "LetterIssuedAt")));
 
         // التصفية بالحالة تتمّ بالذاكرة لأنها **مشتقّة من التهيئة** لا مخزَّنة:
         // تغيير مدّة الإسقاط يجب أن يغيّر التصنيف فوراً بلا تعديل أي صفّ.

@@ -307,12 +307,14 @@
                                 (منشئ/توليد/طلبات) وإعدادات (مختبر الصيغ/تهيئة المخالفات). فوُزّعت
                                 كلٌّ على قسمها: الوثائق ⟵ مركز الوثائق، والإعدادات ⟵ إعدادات م.ب.
                             *@
-                            @if (canViewPeopleDirectory)
-                            {
-                                <a asp-page="/Employees/Index" class="nexora-nav-link ky-drawer-title @ActiveClass("/Employees/Index")">
-                                    <span>أشخاص</span>
-                                </a>
-                            }
+                            @* عنوان الدرج **اسمُ شاشةٍ لا رابط**: كان `<a>` إلى
+                               `/Employees/Index` — أي الوجهة نفسها لـ«عرض الموظفين»
+                               بعده بصفّين. فمن ضغط على «أشخاص» ظنّاً أنه عنوان
+                               القسم وجد نفسه بقائمة الموظفين. والعنوان يبقى بلا
+                               `ActiveClass` أيضاً: العنوان لا «يُنشَّط». *@
+                            <div class="nexora-nav-link ky-drawer-title" role="heading" aria-level="2">
+                                <span>أشخاص</span>
+                            </div>
 
                             @* ① الداشبورد أول القائمة كما بكيان — كان مدفوناً بالمرتبة السابعة *@
                             @if (canUseLegacyPeopleAdministration)
@@ -379,18 +381,13 @@
                                             <span>إدارة مهام الموظفين</span>
                                         </a>
 
-                                        @* عندهم «حالات المخالفات» قسمٌ يضمّ الحالات والإجراءات معاً *@
-                                        <details class="ky-acc" @(IsUnder("/Violations") ? "open" : "")>
-                                            <summary><span>حالات المخالفات</span><span class="ky-acc-chev"></span></summary>
-                                            <div class="ky-acc-body">
-                                                <a asp-page="/Violations/Index" class="nexora-nav-link @(IsUnder("/Violations/Index") ? "active nexora-active" : "")">
-                                                    <span>حالات المخالفات</span>
-                                                </a>
-                                                <a asp-page="/Violations/Actions" class="nexora-nav-link @(IsUnder("/Violations/Actions") ? "active nexora-active" : "")">
-                                                    <span>الإجراءات التأديبية</span>
-                                                </a>
-                                            </div>
-                                        </details>
+                                        @* كان قسماً بفرعين (الحالات · الإجراءات). صارت الإجراءات
+                                           **تبويباً داخل شاشة المخالفات** لا صفحةً مستقلّة، فبقي
+                                           فرعٌ واحد — وقسمٌ بفرعٍ واحد ليس قسماً، بل نقرةٌ زائدة
+                                           تخفي وجهتها. فصار رابطاً مباشراً. *@
+                                        <a asp-page="/Violations/Index" class="nexora-nav-link @(IsUnder("/Violations") ? "active nexora-active" : "")">
+                                            <span>المخالفات</span>
+                                        </a>
 
                                         <a asp-page="/AssetsManagement/Index" class="nexora-nav-link @(IsUnder("/AssetsManagement") ? "active nexora-active" : "")">
                                             <span>إدارة العهد</span>

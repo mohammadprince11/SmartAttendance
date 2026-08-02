@@ -26,6 +26,35 @@ public class ViolationConfigurationModel : PageModel
 
     public List<(int Id, string Name, string? Clause)> ViolationTypes { get; private set; } = new();
 
+    // ── تصفّح: خمسة وعشرون بالصفحة ───────────────────────────────────────────
+    //
+    // بلائحةٍ من خمسين نوعاً فأكثر كان الجدول يمتدّ حتى يضيع فيه ما تبحث عنه،
+    // ولكل صفٍّ نموذجُ حفظٍ مستقلّ — أي مئةُ حقلٍ بصفحةٍ واحدة.
+
+    public const int PageSize = 25;
+
+    /// <summary>رقم الصفحة من الرابط — يبدأ من واحد.</summary>
+    [BindProperty(SupportsGet = true)]
+    public int PageNo { get; set; } = 1;
+
+    /// <summary>عدد الأنواع كلّها قبل التقطيع.</summary>
+    public int TotalTypes { get; private set; }
+
+    public int PageCount => TotalTypes == 0 ? 1 : (int)Math.Ceiling(TotalTypes / (double)PageSize);
+
+    /// <summary>ترتيب أول صفٍّ بالصفحة — يُعرض كي يعرف المستخدم أين هو من القائمة.</summary>
+    public int FirstIndex => TotalTypes == 0 ? 0 : ((CurrentPage - 1) * PageSize) + 1;
+
+    public int LastIndex => Math.Min(CurrentPage * PageSize, TotalTypes);
+
+    /// <summary>
+    /// الصفحة بعد الحصر بالمدى الصالح.
+    ///
+    /// ⚠️ رقمٌ خارج المدى يُقصَر ولا يُفرغ الجدول: رابطٌ قديم لصفحةٍ سابعة بعد
+    /// حذف مخالفات كان سيُظهر شاشةً فارغة توحي بأن اللائحة ضاعت.
+    /// </summary>
+    public int CurrentPage => Math.Clamp(PageNo <= 0 ? 1 : PageNo, 1, PageCount);
+
     /// <summary>معاينة الأثر: كم حالة ستخرج من عدّ التدرّج بهذه المدّة؟</summary>
     public int TotalCases { get; private set; }
     public int DroppedByCurrentSetting { get; private set; }
@@ -61,7 +90,10 @@ public class ViolationConfigurationModel : PageModel
             });
 
         TempData["SuccessMessage"] = "تم حفظ رقم الفقرة.";
-        return RedirectToPage();
+
+        // العودة لنفس الصفحة: من حفظ صفّاً بالصفحة الثانية لا يُقذف للأولى ليبحث
+        // عن موضعه من جديد.
+        return RedirectToPage(new { pageNo = PageNo <= 1 ? (int?)null : PageNo });
     }
 
     private async Task SetAsync(string key, string value) =>
@@ -96,14 +128,24 @@ ELSE
         DropMonths = int.TryParse(await GetAsync(ViolationConfigPolicy.KeyDropMonths, "0"), out var dm) ? dm : 0;
         RefPrefix = await GetAsync(ViolationConfigPolicy.KeyRefPrefix, "VC");
 
+        TotalTypes = await HrmsDatabase.ScalarAsync<int>(
+            _db, "SELECT COUNT(1) FROM DisciplinaryViolationTypes;", command => { });
+
+        // التقطيع بالقاعدة لا بالذاكرة: قراءة الخمسين كلّها لعرض خمسٍ وعشرين
+        // تنقل ضعف ما يُعرض، وتكبر مع كل مخالفة تُضاف.
         ViolationTypes = (await HrmsDatabase.QueryAsync(
             _db,
             """
 SELECT Id, ISNULL(Name, N'') AS Name, RegulationClause
 FROM DisciplinaryViolationTypes
-ORDER BY Name;
+ORDER BY Name
+OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;
 """,
-            command => { },
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Skip", (CurrentPage - 1) * PageSize);
+                HrmsDatabase.AddParameter(command, "@Take", PageSize);
+            },
             reader => (
                 HrmsDatabase.GetInt(reader, "Id"),
                 HrmsDatabase.GetString(reader, "Name"),
