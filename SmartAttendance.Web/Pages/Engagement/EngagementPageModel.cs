@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using SmartAttendance.Application.Announcements.Models;
 using SmartAttendance.Application.Announcements.Services;
@@ -269,11 +270,32 @@ ORDER BY FullName;
     public string TemplateIcon(string? key) => GetTemplate(key).Icon;
     public string TemplateCss(string? key) => GetTemplate(key).CssClass;
 
+    /// <summary>
+    /// ⚠️ الدور يُقرأ من **مطالبة الهوية** لا من كوكي `SA.Role`.
+    ///
+    /// **هذا إصلاحٌ أمنيّ: كوكي `SA.Role` كان مدخلَ تخويلٍ يتحكّم به العميل.**
+    /// وهو كوكي **ميت**: يُحذف بتسجيل الدخول والخروج و**لا يُكتب بأي مكان
+    /// بالمستودع إطلاقاً** (بقيّة من مخطّط مصادقة قديم). فكانت له نتيجتان
+    /// متقابلتان، كلتاهما من نفس السطر:
+    ///
+    ///   • **تصعيد صلاحيات**: أيّ مستخدمٍ مسجَّل دخوله يكتب <c>SA.Role=Admin</c>
+    ///     بمتصفّحه فيمرّ من اختصار الأدمن بـ<c>AnnouncementService</c>
+    ///     (<c>HasPermissionAsync</c>) ويتجاوز جدول <c>SystemUserPermissions</c>
+    ///     كلياً — إنشاء الإعلانات والاستطلاعات ونشرها وإلغاء نشرها وأرشفتها.
+    ///   • **وتعطيلٌ للمودل**: الأدمن الحقيقي لا يملك الكوكي فيُرفَض برسالة
+    ///     «ليس لديك صلاحية» (رُصد بمحاولة نشر إعلان حيّاً 2026-08-02).
+    ///
+    /// و<c>ClaimTypes.Role</c> هو مصدر الدور المعتمد ببقية النظام:
+    /// <c>PeopleAccessContext</c> · <c>RoleSecurityMiddleware</c> ·
+    /// <c>NotificationBellViewComponent</c> — وتكتبه صفحة الدخول ويحدّثه
+    /// <c>SessionClaimsRefresher</c>. ومسار الصلاحيات الجدوليّ لغير الأدمن يبقى
+    /// كما هو بلا تغيير.
+    /// </summary>
     protected AnnouncementActorContext BuildAnnouncementActor() =>
         new()
         {
             UserName = User.Identity?.Name ?? "System",
-            Role = Request.Cookies["SA.Role"] ?? string.Empty,
+            Role = User.FindFirstValue(ClaimTypes.Role) ?? string.Empty,
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         };
 
