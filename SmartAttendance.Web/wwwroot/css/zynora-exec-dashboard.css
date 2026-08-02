@@ -101,7 +101,8 @@ a.zxd-stat:hover { background: rgba(18, 217, 227, .06); border-radius: 10px; }
     align-items: center;
     gap: 11px;
     padding: 12px 14px;
-    background: var(--zxd-card, #12223a);
+    /* الاحتياطي كان #12223a (سطح ما قبل لوحة v2) — حُدّث ليطابق التوكن. */
+    background: var(--zxd-card, var(--surface-panel, #0F1A2E));
     border: 1px solid var(--zxd-line, rgba(217, 225, 232, .14));
     border-radius: 12px;
     text-decoration: none;

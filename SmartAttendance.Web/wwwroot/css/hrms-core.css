@@ -263,8 +263,11 @@ html[data-theme="dark"] .hrms-filter-card,
 html[data-theme="dark"] .hrms-table-card,
 html[data-theme="dark"] .hrms-form-card,
 html[data-theme="dark"] .hrms-stats-card {
-    background: #111a2c !important;
-    border-color: #30415f !important;
+    /* ⚠️ كان #111a2c مثبّتاً فلم يتبع لوحة الهوية v2، فظهرت ستّ صفحات (المهام ·
+       التنبيهات · العهد · الهيكل · القوائم · مخطط كود الموظف) بكحليٍّ مغاير عن
+       جاراتها — رصده مسحٌ حيّ لـ44 صفحة بترجيح المساحة. */
+    background: var(--surface-panel, #0F1A2E) !important;
+    border-color: var(--border-default, #22304A) !important;
 }
 
 html[data-theme="dark"] .hrms-field input,
@@ -273,9 +276,11 @@ html[data-theme="dark"] .hrms-field textarea,
 html[data-theme="dark"] .hrms-stat,
 html[data-theme="dark"] .hrms-empty,
 html[data-theme="dark"] .hrms-btn-secondary {
-    background: #162238 !important;
-    border-color: #30415f !important;
-    color: #e6edf7 !important;
+    /* السطح المرتفع (حقول · إحصاءات · حالة فارغة · زرّ ثانوي) — كان #162238
+       مثبّتاً فبقي شاذّاً بعد توحيد بقية الأسطح (رُصد بمسحٍ ثانٍ: 3 صفحات). */
+    background: var(--surface-raised, #16233C) !important;
+    border-color: var(--border-default, #22304A) !important;
+    color: var(--text-default, #E6E6E6) !important;
 }
 
 html[dir="rtl"] .hrms-page,
