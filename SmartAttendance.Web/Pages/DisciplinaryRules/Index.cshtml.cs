@@ -38,12 +38,11 @@ public class IndexModel : PageModel
 
     public string[] FontFamilies { get; } = { "Tahoma", "Arial", "Calibri", "Times New Roman", "Cairo" };
 
-    public string[] TemplateTokens { get; } =
-    {
-        "{EmployeeName}", "{EmployeeCode}", "{Department}", "{Position}",
-        "{ViolationDate}", "{ViolationCategory}", "{ViolationName}", "{ViolationDescription}",
-        "{OccurrenceNumber}", "{PenaltyAction}", "{FinancialImpact}", "{ApprovedBy}"
-    };
+    /// <summary>
+    /// الرموز المعروضة بشاشة القوالب تأتي من **المركّب نفسه** لا من قائمة يدوية:
+    /// قائمةٌ منفصلة تَعِد برمزٍ لا يُستبدل، فيخرج الكتاب وفيه <c>{Foo}</c> حرفياً.
+    /// </summary>
+    public IReadOnlyList<string> TemplateTokens => DisciplinaryLetter.Tokens;
 
     public string DefaultTemplateBody { get; } = """
 السيد/ة: {EmployeeName}

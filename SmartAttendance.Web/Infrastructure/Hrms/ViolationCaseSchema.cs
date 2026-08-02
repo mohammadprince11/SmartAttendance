@@ -88,6 +88,21 @@ IF COL_LENGTH('EmployeeViolationCases', 'ReplyRequestedAt') IS NULL
 
 IF COL_LENGTH('EmployeeViolationCases', 'EmployeeRepliedAt') IS NULL
     ALTER TABLE EmployeeViolationCases ADD EmployeeRepliedAt datetime2 NULL;
+
+-- «كتاب العقوبة» يُصدَر لحظة اتخاذ الإجراء ويُحفظ **نصّاً على الحالة** لا يُولَّد
+-- عند كل طباعة: القالب قد يُعدَّل غداً، والكتاب الذي وقّعه الموظف يجب أن يبقى
+-- كما قرأه. تعديل القالب يغيّر كتب المستقبل وحدها.
+IF COL_LENGTH('EmployeeViolationCases', 'LetterSubject') IS NULL
+    ALTER TABLE EmployeeViolationCases ADD LetterSubject nvarchar(300) NULL;
+
+IF COL_LENGTH('EmployeeViolationCases', 'LetterBody') IS NULL
+    ALTER TABLE EmployeeViolationCases ADD LetterBody nvarchar(max) NULL;
+
+IF COL_LENGTH('EmployeeViolationCases', 'LetterIssuedAt') IS NULL
+    ALTER TABLE EmployeeViolationCases ADD LetterIssuedAt datetime2 NULL;
+
+IF COL_LENGTH('EmployeeViolationCases', 'LetterTemplateId') IS NULL
+    ALTER TABLE EmployeeViolationCases ADD LetterTemplateId int NULL;
 """);
     }
 }

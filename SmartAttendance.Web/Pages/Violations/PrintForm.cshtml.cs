@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages.Violations;
 
@@ -24,6 +25,11 @@ public class PrintFormModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
+        // الورقة صارت تقرأ رقم الفقرة والمعتمِد — وهما عمودان مضافان، فلا تُفتح
+        // الصفحة على قاعدةٍ لم تُهيَّأ بعد بخطأ استعلام.
+        await ViolationCaseSchema.EnsureAsync(_db);
+        await DisciplinarySchema.EnsureAsync(_db);
+
         Settings = await LoadSettingsAsync();
         Violation = await LoadViolationAsync(id);
 
@@ -49,20 +55,26 @@ public class PrintFormModel : PageModel
             return text;
         }
 
-        return (text ?? string.Empty)
-            .Replace("{EmployeeName}", Violation.EmployeeName)
-            .Replace("{EmployeeCode}", Violation.EmployeeCode)
-            .Replace("{Department}", Violation.Department)
-            .Replace("{Position}", Violation.Position)
-            .Replace("{ViolationDate}", Violation.EventDate.ToString("yyyy-MM-dd"))
-            .Replace("{ViolationCategory}", Violation.ViolationCategory)
-            .Replace("{ViolationName}", Violation.ViolationTitle)
-            .Replace("{ViolationDescription}", Violation.Notes)
-            .Replace("{PenaltyAction}", Violation.PenaltyAction)
-            .Replace("{FinancialImpact}", Violation.FinancialImpactText)
-            .Replace("{ApprovedBy}", "قسم الموارد البشرية")
-            .Replace("{ReferenceNo}", Violation.ReferenceNo)
-            .Replace("{DeductionAmount}", Violation.DeductionAmount.ToString("N0"));
+        // نفس مركّب كتاب العقوبة: نسختان من الاستبدال تعنيان ورقتين بنصّين مختلفين
+        // لنفس المخالفة متى أُضيف رمزٌ لإحداهما.
+        return DisciplinaryLetter.Render(
+            text,
+            new DisciplinaryLetter.Context(
+                ReferenceNo: Violation.ReferenceNo,
+                EmployeeName: Violation.EmployeeName,
+                EmployeeCode: Violation.EmployeeCode,
+                Department: Violation.Department,
+                Position: Violation.Position,
+                EventDate: DateOnly.FromDateTime(Violation.EventDate),
+                ViolationCategory: Violation.ViolationCategory,
+                ViolationName: Violation.ViolationTitle,
+                Description: Violation.Notes,
+                PenaltyAction: Violation.PenaltyAction,
+                FinancialImpact: Violation.FinancialImpactText,
+                DeductionAmount: Violation.DeductionAmount,
+                ArticleNo: Violation.ArticleNo,
+                ApprovedBy: string.IsNullOrWhiteSpace(Violation.ApprovedBy) ? "قسم الموارد البشرية" : Violation.ApprovedBy),
+            DateOnly.FromDateTime(DateTime.Today));
     }
 
     public string BlockStyle(PrintTextBlock block)
@@ -98,11 +110,14 @@ SELECT TOP 1
     ISNULL(v.FinancialImpactType, N'None') AS FinancialImpactType,
     ISNULL(v.FinancialImpactValue, 0) AS FinancialImpactValue,
     ISNULL(v.DeductionAmount, 0) AS DeductionAmount,
-    ISNULL(v.Notes, N'') AS Notes
+    ISNULL(v.Notes, N'') AS Notes,
+    ISNULL(t.ArticleNo, N'') AS ArticleNo,
+    ISNULL(v.ApprovedBy, N'') AS ApprovedBy
 FROM EmployeeViolationCases v
 LEFT JOIN Employees e ON e.Id = v.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
 LEFT JOIN Branches b ON b.Id = d.BranchId
+LEFT JOIN DisciplinaryViolationTypes t ON t.Id = v.ViolationTypeId
 WHERE v.Id = @Id AND ISNULL(v.IsDeleted, 0) = 0;
 """,
             reader =>
@@ -132,6 +147,8 @@ WHERE v.Id = @Id AND ISNULL(v.IsDeleted, 0) = 0;
                     FinancialImpactValue = value,
                     DeductionAmount = amount,
                     Notes = ToStringValue(reader["Notes"]),
+                    ArticleNo = ToStringValue(reader["ArticleNo"]),
+                    ApprovedBy = ToStringValue(reader["ApprovedBy"]),
                     FinancialImpactText = BuildFinancialImpactText(type, value, amount)
                 };
             },
@@ -366,6 +383,11 @@ public sealed class ViolationPrintData
     public decimal DeductionAmount { get; set; }
     public string FinancialImpactText { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
+
+    /// <summary>رقم الفقرة باللائحة — سند العقوبة النصّي بالورقة المطبوعة.</summary>
+    public string ArticleNo { get; set; } = string.Empty;
+
+    public string ApprovedBy { get; set; } = string.Empty;
 }
 
 public sealed class PrintFormSettings

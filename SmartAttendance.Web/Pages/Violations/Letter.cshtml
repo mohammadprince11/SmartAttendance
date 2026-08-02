@@ -1,0 +1,38 @@
+@page
+@model SmartAttendance.Web.Pages.Violations.LetterModel
+@{
+    ViewData["Title"] = "كتاب العقوبة";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/zynora-workscreen.css" asp-append-version="true" />
+}
+
+<section class="zyw zy-scope" dir="rtl">
+
+    <header class="zyw-head">
+        <div>
+            <h1>كتاب العقوبة</h1>
+            <p>@Model.ReferenceNo · @Model.EmployeeName · صدر @(Model.IssuedAt?.ToString("yyyy-MM-dd"))</p>
+        </div>
+        <div class="zyw-item-actions">
+            <button type="button" class="btn-secondary" onclick="window.print()">طباعة</button>
+            <a class="btn-secondary" asp-page="./Index">رجوع</a>
+        </div>
+    </header>
+
+    @if (Model.UnresolvedTokens.Count > 0)
+    {
+        @* قالبٌ يذكر رمزاً لا نعرفه — يظهر بالنصّ كما هو، فيُنبَّه إليه قبل التوقيع. *@
+        <div class="zy-card" role="alert">
+            رموز لم تُستبدل بالكتاب: @string.Join(" · ", Model.UnresolvedTokens) — راجع القالب بلائحة المخالفات.
+        </div>
+    }
+
+    <article class="zy-card">
+        <h2>@Model.Subject</h2>
+        @* النصّ محفوظ كما صدر: `white-space: pre-wrap` يحفظ أسطره بلا HTML بالقالب. *@
+        <div style="white-space:pre-wrap;line-height:2">@Model.Body</div>
+    </article>
+
+</section>

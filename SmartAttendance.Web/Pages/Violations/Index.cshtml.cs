@@ -118,7 +118,7 @@ SELECT c.Id, ISNULL(c.ReferenceNo, N'') AS ReferenceNo,
        ISNULL(c.ViolationTitle, N'') AS ViolationTitle, c.FinalPenaltyAction,
        ISNULL(c.FinancialImpactType, N'None') AS FinancialImpactType,
        ISNULL(c.DeductionAmount, 0) AS DeductionAmount,
-       c.EventDate, c.NotifiedOn, c.DecidedOn
+       c.EventDate, c.NotifiedOn, c.DecidedOn, c.LetterIssuedAt
 FROM EmployeeViolationCases c
 LEFT JOIN Employees e ON e.Id = c.EmployeeId
 WHERE ISNULL(c.IsDeleted, 0) = 0
@@ -137,7 +137,8 @@ ORDER BY c.EventDate DESC, c.Id DESC;
                 HrmsDatabase.GetNullableDecimal(reader, "DeductionAmount") ?? 0,
                 HrmsDatabase.GetDateOnly(reader, "EventDate") ?? default,
                 HrmsDatabase.GetDateOnly(reader, "NotifiedOn"),
-                HrmsDatabase.GetDateOnly(reader, "DecidedOn")));
+                HrmsDatabase.GetDateOnly(reader, "DecidedOn"),
+                HrmsDatabase.GetDateTime(reader, "LetterIssuedAt")));
 
         DisciplinaryActions = ActionState switch
         {
@@ -185,7 +186,10 @@ WHERE Id = @Id AND ISNULL(IsDeleted, 0) = 0 AND Status = N'بانتظار الا
                 Add(command, "@By", User?.Identity?.Name ?? "—");
             });
 
-        TempData["SuccessMessage"] = "اعتُمدت المخالفة، وسُجّل من اعتمدها وتاريخه.";
+        // الاعتماد هو لحظة «اتخاذ الإجراء» بمسار اللجنة — فيخرج الكتاب هنا.
+        await DisciplinaryLetterStore.IssueAsync(_db, id, User?.Identity?.Name ?? "قسم الموارد البشرية");
+
+        TempData["SuccessMessage"] = "اعتُمدت المخالفة، وصدر كتاب العقوبة، وسُجّل من اعتمدها وتاريخه.";
         return RedirectToPage(new { Reply, Tab });
     }
 
@@ -359,9 +363,29 @@ VALUES
                 Add(command, "@Notes", string.IsNullOrWhiteSpace(Input.Notes) ? DBNull.Value : Input.Notes.Trim());
             });
 
+        // كتاب العقوبة يخرج لحظة اتخاذ الإجراء لا قبله: مخالفةٌ ما زالت مسوّدة أو
+        // محجوزة على اللجنة لا كتاب لها بعد — وإصداره مبكراً يُبلّغ الموظف بعقوبةٍ
+        // قد لا تُقرّ. والمحجوزة يخرج كتابها عند الاعتماد.
+        var actionTaken = !heldForCommittee
+            && (Input.ActionStatus == "تم اتخاذ الإجراء" || Input.Status == "موافق عليه");
+
+        if (actionTaken)
+        {
+            var caseId = await ScalarAsync<int>(
+                "SELECT TOP 1 Id FROM EmployeeViolationCases WHERE ReferenceNo = @Ref ORDER BY Id DESC;",
+                command => Add(command, "@Ref", referenceNo));
+
+            if (caseId > 0)
+            {
+                await DisciplinaryLetterStore.IssueAsync(_db, caseId, User?.Identity?.Name ?? "قسم الموارد البشرية");
+            }
+        }
+
         TempData["SuccessMessage"] = heldForCommittee
             ? $"سُجّلت المخالفة {referenceNo} بحالة «بانتظار الاعتماد» — التهيئة تشترط موافقة اللجنة قبل نفاذها."
-            : $"تم تسجيل المخالفة بنجاح بالرقم المرجعي {referenceNo}.";
+            : actionTaken
+                ? $"تم تسجيل المخالفة {referenceNo} وصدر كتاب العقوبة."
+                : $"تم تسجيل المخالفة بنجاح بالرقم المرجعي {referenceNo}.";
         return RedirectToPage();
     }
 
@@ -521,7 +545,8 @@ SELECT
     ISNULL(v.Notes, N'') AS Notes,
     ISNULL(v.EmployeeReplyStatus, N'NotRequested') AS EmployeeReplyStatus,
     ISNULL(v.EmployeeReply, N'') AS EmployeeReply,
-    v.EmployeeRepliedAt
+    v.EmployeeRepliedAt,
+    v.LetterIssuedAt
 FROM EmployeeViolationCases v
 LEFT JOIN Employees e ON e.Id = v.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
@@ -555,7 +580,8 @@ ORDER BY v.EventDate DESC, v.Id DESC;
                 Notes = ToStringValue(reader["Notes"]),
                 EmployeeReplyStatus = ToStringValue(reader["EmployeeReplyStatus"], "NotRequested"),
                 EmployeeReply = ToStringValue(reader["EmployeeReply"]),
-                EmployeeRepliedAt = reader["EmployeeRepliedAt"] as DateTime?
+                EmployeeRepliedAt = reader["EmployeeRepliedAt"] as DateTime?,
+                LetterIssuedAt = reader["LetterIssuedAt"] as DateTime?
             },
             command => Add(command, "@Reply", string.IsNullOrWhiteSpace(Reply) ? "all" : Reply));
     }
@@ -796,6 +822,9 @@ public sealed class ViolationCaseRow
     public decimal FinancialImpactValue { get; set; }
     public decimal DeductionAmount { get; set; }
     public string Notes { get; set; } = string.Empty;
+    /// <summary>تاريخ إصدار كتاب العقوبة — فارغ ⟹ لم يصدر بعد.</summary>
+    public DateTime? LetterIssuedAt { get; set; }
+
     public string EmployeeReplyStatus { get; set; } = "NotRequested";
     public string EmployeeReply { get; set; } = string.Empty;
     public DateTime? EmployeeRepliedAt { get; set; }
