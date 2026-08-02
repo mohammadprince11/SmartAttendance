@@ -439,10 +439,16 @@
         var value = document.createElement("span");
         value.className = "nxcs-value";
 
+        // \u0634\u064A\u0641\u0631\u0648\u0646 \u0633\u062A\u0631\u0648\u0643 \u0644\u0627 \u0645\u062D\u0631\u0641\u0627\u064B \u0646\u0635\u0651\u064A\u0627\u064B: `\u25BE` (U+25BE) \u064A\u062E\u062A\u0644\u0641 \u0631\u0633\u0645\u0647 \u0648\u0648\u0632\u0646\u0647 \u0628\u064A\u0646
+        // \u0627\u0644\u062E\u0637\u0648\u0637 \u0648\u064A\u063A\u064A\u0628 \u0628\u0628\u0639\u0636\u0647\u0627 \u2014 \u0646\u0641\u0633 \u0633\u0628\u0628 \u0627\u0633\u062A\u0628\u062F\u0627\u0644 `\u2315` \u0628\u0623\u064A\u0642\u0648\u0646\u0629 SVG \u0628\u0645\u0646\u062A\u0642\u064A \u0627\u0644\u0645\u0648\u0638\u0641.
+        // \u0648\u0647\u0648\u064A\u0629 v1 \u062A\u0646\u0635\u0651 \u0639\u0644\u0649 \u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0633\u062A\u0631\u0648\u0643 (`docs/design-system-v1.md`).
         var caret = document.createElement("span");
         caret.className = "nxcs-caret";
         caret.setAttribute("aria-hidden", "true");
-        caret.textContent = "\u25BE";
+        caret.innerHTML =
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"' +
+            ' stroke-linecap="round" stroke-linejoin="round" focusable="false">' +
+            '<path d="m6 9 6 6 6-6"/></svg>';
 
         trigger.appendChild(value);
         trigger.appendChild(caret);

@@ -1,6 +1,9 @@
 ﻿:root {
-    --midnight-navy: #081426;
-    --deep-space: #101C30;
+    /* ⚠️ كانت ألواناً مثبّتة (#081426 / #101C30) فلم تتبع لوحة الهوية v2 يوم
+       تغيّرت الأسطح، فظهرت قائمة الموظفين بكحليٍّ مغاير على **2039k px²** —
+       أوسع انحراف لوني بالمودل (مسح حيّ 2026-08-02). الآن تجسّر للتوكن. */
+    --midnight-navy: var(--surface-app, #0B1020);
+    --deep-space: var(--surface-panel, #0F1A2E);
     /* Bridge the legacy people palette to the Theme Contract so .zhr-* components
        follow the Branding & Theme Engine (P7 migration). */
     --electric-teal: var(--brand-primary, var(--color-primary));
@@ -13,7 +16,7 @@
     --border-radius: 12px;
     --transition-speed: 0.2s;
     
-    --zhr-card-bg: #101C30;
+    --zhr-card-bg: var(--surface-panel, #0F1A2E);
     --zhr-border-color: rgba(217, 225, 232, 0.08);
     --zhr-text-primary: #F7F9FB;
     --zhr-text-secondary: #8895A7;

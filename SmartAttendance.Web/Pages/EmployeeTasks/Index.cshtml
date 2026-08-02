@@ -210,14 +210,12 @@
                 </select>
             </div>
             <div class="hrms-field">
-                <label>الموظف</label>
-                <input name="employeeRef" list="employee-list" required placeholder="اكتب الرقم أو الاسم..." autocomplete="off" />
-                <datalist id="employee-list">
-                    @foreach (var employee in Model.EmployeeOptions)
-                    {
-                        <option value="@employee.EmployeeNo — @employee.FullName"></option>
-                    }
-                </datalist>
+                @* المنتقي المشترك (رمز + اسم) بدل حقلٍ حرّ بـ`datalist` كان يُرسِل
+                   نصّاً يُشقّ بالخادم — وهو النمط الثالث لاختيار الموظف بالنظام. *@
+                <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
+                    Label = "الموظف",
+                    Name = "employeeId"
+                })" />
             </div>
             <div class="hrms-field">
                 <label>تاريخ البدء</label>

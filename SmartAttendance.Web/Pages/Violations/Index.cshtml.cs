@@ -6,6 +6,10 @@ using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
+// اسمٌ مستعار لازم: صنف `ViolationTypePickerItem` فيه خاصية `PenaltyAction`
+// تحجب الصنفَ العامّ ذا الاسم نفسه.
+using Hrms = SmartAttendance.Web.Infrastructure.Hrms;
+
 namespace SmartAttendance.Web.Pages.Violations;
 
 public class IndexModel : PageModel
@@ -461,10 +465,30 @@ VALUES
             }
         }
 
+        var notices = new List<string>();
+
         var escalation = await BuildEscalationNoticeAsync(Input.EmployeeId, selectedRule.CategoryName);
         if (!string.IsNullOrWhiteSpace(escalation))
         {
-            TempData["PolicyNotice"] = escalation;
+            notices.Add(escalation);
+        }
+
+        // مادة 6/ج: «لا يجوز فرض جزاء إلا بعد إشعار الموظف والتحقيق معه تحريرياً،
+        // ويُكتفى بالشفهي بالمخالفات البسيطة».
+        //
+        // **تنبيهٌ لا منع**: نصّ المادة يجيز الشفهيّ بالبسيط، ومنعُ التسجيل كان
+        // سيوقف توثيق المخالفة نفسها. والقاعدة معطّلة افتراضياً حتى تشغّلها الشركة.
+        if (DisciplinaryPolicyRules.RequiresInvestigation(
+                selectedRule.ActionType,
+                enforce: bool.TryParse(await DisciplinarySettingAsync("RequireInvestigation"), out var enforce) && enforce)
+            && Input.ActionStatus == "تم اتخاذ الإجراء")
+        {
+            notices.Add($"جزاءٌ جسيم ({PenaltyAction.Label(selectedRule.ActionType)}) — اللائحة تشترط التحقيق مع الموظف قبل فرضه (مادة 6). اطلب ردّه من زرّ «طلب ردّ الموظف».");
+        }
+
+        if (notices.Count > 0)
+        {
+            TempData["PolicyNotice"] = string.Join(" · ", notices);
         }
 
         TempData["SuccessMessage"] = heldForCommittee
@@ -560,12 +584,13 @@ SELECT
     ISNULL(p.Id, 0) AS PenaltyRuleId,
     ISNULL(p.PenaltyAction, N'') AS PenaltyAction,
     ISNULL(p.FinancialImpactType, N'None') AS FinancialImpactType,
-    ISNULL(p.FinancialValue, 0) AS FinancialValue
+    ISNULL(p.FinancialValue, 0) AS FinancialValue,
+    ISNULL(p.ActionType, N'VerbalWarning') AS ActionType
 FROM DisciplinaryViolationTypes t
 LEFT JOIN DisciplinaryViolationCategories c ON c.Id = t.CategoryId
 OUTER APPLY
 (
-    SELECT TOP 1 r.Id, r.PenaltyAction, r.FinancialImpactType, r.FinancialValue
+    SELECT TOP 1 r.Id, r.PenaltyAction, r.FinancialImpactType, r.FinancialValue, r.ActionType
     FROM DisciplinaryPenaltyRules r
     WHERE r.ViolationTypeId = t.Id
       AND ISNULL(r.IsActive, 1) = 1
@@ -584,7 +609,8 @@ SELECT
     0 AS PenaltyRuleId,
     N'' AS PenaltyAction,
     N'None' AS FinancialImpactType,
-    CAST(0 AS decimal(18,2)) AS FinancialValue
+    CAST(0 AS decimal(18,2)) AS FinancialValue,
+    N'VerbalWarning' AS ActionType
 FROM DisciplinaryViolationTypes t
 LEFT JOIN DisciplinaryViolationCategories c ON c.Id = t.CategoryId
 WHERE ISNULL(t.IsActive, 1) = 1
@@ -601,7 +627,8 @@ ORDER BY ISNULL(c.DisplayOrder, 999), c.Name, t.Name;
             PenaltyRuleId = ToInt(reader["PenaltyRuleId"]),
             PenaltyAction = ToStringValue(reader["PenaltyAction"]),
             FinancialImpactType = ToStringValue(reader["FinancialImpactType"], "None"),
-            FinancialValue = ToDecimal(reader["FinancialValue"])
+            FinancialValue = ToDecimal(reader["FinancialValue"]),
+            ActionType = ToStringValue(reader["ActionType"], "VerbalWarning")
         });
     }
 
@@ -885,6 +912,14 @@ public sealed class ViolationTypePickerItem
 
     /// <summary>معايير استحقاق المخالفة. فارغ ⟹ تنطبق على الجميع.</summary>
     public string ConditionsJson { get; set; } = string.Empty;
+
+    /// <summary>
+    /// نوع إجراء الدرجة الأولى — يقرّر أيلزم التحقيق قبل فرضه (مادة 6/ج).
+    ///
+    /// ⚠️ الاسم مؤهَّل بالمساحة: خاصية `PenaltyAction` أعلاه بهذا الصنف نفسه
+    /// تحجب الصنفَ العامّ ذا الاسم نفسه.
+    /// </summary>
+    public string ActionType { get; set; } = Hrms.PenaltyAction.VerbalWarning;
 }
 
 public sealed class ViolationCaseRow

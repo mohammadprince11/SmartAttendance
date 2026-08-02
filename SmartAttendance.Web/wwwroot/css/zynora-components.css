@@ -254,9 +254,14 @@ html[dir="ltr"] .zy-scope select,
    يُطبَّق أخيراً فيتغلّب على ألوان المتغيّرات أعلاه. الاستثناءات المقصودة:
    - الخطر/الحذف تبقى أحمر (سلامة)
    - الإلغاء/الرجوع تبقى محايدة (تمييز الفعل التراجعي)
-   - الأيقونة/mini/ترقيم/pill/link/switch تبقى مضغوطة بلا تعبئة كاملة */
+   - الأيقونة/mini/ترقيم/pill/link/switch تبقى مضغوطة بلا تعبئة كاملة
+   - **عناصر الكلاندر مستثناة** (كما بقاعدة المقاسات أعلاه): `nxcal__period-button`
+     يحوي «-button» فكانت هذه القاعدة تصبغه أساسياً صلباً بنصّ `#04141d` مثبّت،
+     بينما جاراه بنفس الترويسة (`nxcal__nav`) مفرّغان — فترويسة الكلاندر تناقض
+     نفسها، والنصّ الداكن يغرق بالوضع الداكن (قيس حيّاً: rgb(4,20,29) على
+     سطحٍ #0F1A2E). ألوان الكلاندر كلها من `zynora-design-system`. */
 .zy-scope [class*="-btn"]:not([class*="danger"]):not([class*="delete"]):not([class*="cancel"]):not([class*="back"]):not([class*="icon"]):not([class*="mini"]):not([class*="pager"]):not([class*="pagination"]):not([class*="pill"]):not([class*="link"]):not([class*="switch"]):not([class*="secondary"]),
-.zy-scope [class*="-button"]:not([class*="danger"]):not([class*="delete"]):not([class*="cancel"]):not([class*="back"]):not([class*="icon"]):not([class*="pagination"]):not([class*="switch"]):not([class*="pill"]):not([class*="logout"]),
+.zy-scope [class*="-button"]:not([class*="danger"]):not([class*="delete"]):not([class*="cancel"]):not([class*="back"]):not([class*="icon"]):not([class*="pagination"]):not([class*="switch"]):not([class*="pill"]):not([class*="logout"]):not([class*="nxcal"]),
 .zy-scope .nxos__button,
 .zy-scope a[class*="chip"]:not([class*="status"]),
 .zy-scope button[class*="chip"] {
@@ -266,7 +271,7 @@ html[dir="ltr"] .zy-scope select,
     border: 1px solid var(--zy-electric-teal) !important;
 }
 .zy-scope [class*="-btn"]:not([class*="danger"]):not([class*="delete"]):not([class*="cancel"]):not([class*="back"]):not([class*="icon"]):not([class*="pill"]):not([class*="link"]):not([class*="switch"]):not([class*="secondary"]):hover:not(:disabled),
-.zy-scope [class*="-button"]:not([class*="danger"]):not([class*="cancel"]):not([class*="back"]):not([class*="icon"]):not([class*="pill"]):not([class*="logout"]):hover:not(:disabled),
+.zy-scope [class*="-button"]:not([class*="danger"]):not([class*="cancel"]):not([class*="back"]):not([class*="icon"]):not([class*="pill"]):not([class*="logout"]):not([class*="nxcal"]):hover:not(:disabled),
 .zy-scope .nxos__button:hover:not(:disabled) {
     filter: brightness(1.07) !important;
 }

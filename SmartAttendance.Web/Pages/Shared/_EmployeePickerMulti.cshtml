@@ -1,0 +1,53 @@
+@model SmartAttendance.Web.Pages.Shared.EmployeePickerMultiModel
+@*
+    منتقي الموظفين المتعدّد — يشارك نافذة البحث نفسها مع المنتقي المفرد.
+
+    **عقده:**
+      · شرائح للمختارين (رمز — اسم) بزرّ حذف على كل شريحة
+      · زرّ «إضافة موظف» يفتح نافذة البحث بوضع التعدّد (النقر يبدّل الاختيار
+        والنافذة تبقى مفتوحة حتى «تمّ»)
+      · حقل مخفيّ **لكل** مختار بنفس الاسم ⟹ يربط بـint[] كما كانت المنسدلة
+        المتعدّدة تماماً، فلا يتغيّر شيء بجهة الخادم
+      · عدّاد «المحدَّدون: N»
+
+    **لماذا بدل `<select multiple>`؟** المنسدلة كانت تُحمَّل بـ`TOP 500` من
+    القاعدة، وعندنا 1357 موظفاً نشطاً — أي أن 857 موظفاً **لم يكونوا قابلين
+    للاستهداف أصلاً** ولا إشارة للاقتطاع. البحث هنا خادميّ بلا سقفٍ صامت.
+*@
+@{
+    var uid = "zyepm-" + Guid.NewGuid().ToString("N")[..8];
+}
+
+<div class="zyepm" id="@uid" data-zyep-multi data-zyep-name="@Model.Name"
+     data-zyep-inactive="@(Model.IncludeInactive ? "1" : "0")">
+    @if (!string.IsNullOrWhiteSpace(Model.Label))
+    {
+        <label class="zyep-label">@Model.Label</label>
+    }
+
+    <div class="zyepm-box">
+        <div class="zyepm-chips" data-zyepm-chips>
+            @foreach (var s in Model.Selected)
+            {
+                <span class="zyepm-chip" data-zyepm-chip data-id="@s.Id">
+                    <span class="zyepm-chip-code">@s.Code</span>
+                    <span class="zyepm-chip-name">@s.Name</span>
+                    <button type="button" class="zyepm-remove" title="إزالة" aria-label="إزالة">×</button>
+                    <input type="hidden" name="@Model.Name" value="@s.Id" />
+                </span>
+            }
+        </div>
+
+        <div class="zyepm-bar">
+            <button type="button" class="zyepm-add" data-zyepm-add>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-3.5-3.5" />
+                </svg>
+                إضافة موظف
+            </button>
+            <span class="zyepm-count" data-zyepm-count>المحدَّدون: @Model.Selected.Count</span>
+        </div>
+    </div>
+</div>

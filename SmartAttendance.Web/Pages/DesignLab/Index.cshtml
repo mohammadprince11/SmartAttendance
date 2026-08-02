@@ -144,6 +144,23 @@
                         <div class="zy-card">بطاقة ثانية</div>
                     </div>
 
+                    @* بطاقات الإحصاء (KPI) — نموذجان: بسطرين وبثلاثة أسطر.
+                       بلا هذا كانت مزاليج `kpi-*` تتحرّك بلا شيءٍ يُقاس عليها،
+                       وهو نصف مقياس: من يضبط لا يرى أثره. الأصناف هي الحقيقية
+                       المستعملة بالنظام (`hrms-stat` · `zy-dash__kpi`) لا أصنافاً
+                       تجريبية، وإلا عاينّا شيئاً وطبّقنا على آخر. *@
+                    <div class="zdl-demo zdl-demo-kpis">
+                        <div class="hrms-stat">
+                            <span>مهام تعيين مفتوحة</span>
+                            <strong>12</strong>
+                        </div>
+                        <div class="zy-dash__kpi">
+                            <span class="zy-dash__kpi-label">الحاضرون اليوم</span>
+                            <span class="zy-dash__kpi-value">1,204</span>
+                            <span class="zy-dash__chip">89% من 1,356</span>
+                        </div>
+                    </div>
+
                     <div class="zdl-demo">
                         <table>
                             <thead>

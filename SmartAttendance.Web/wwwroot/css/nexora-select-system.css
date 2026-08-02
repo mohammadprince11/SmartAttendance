@@ -54,9 +54,13 @@ select[data-nxcs-enhanced="true"] {
     justify-content: space-between !important;
     gap: 10px !important;
     border-radius: 14px !important;
-    border: 1px solid rgba(18, 217, 227, .34) !important;
-    background:
-        linear-gradient(135deg, rgba(3, 16, 28, .92), rgba(5, 24, 39, .94)) !important;
+    /* ⚠️ كان حدّاً **تركوازياً** مثبّتاً `rgba(18,217,227,.34)` — وهذا أوسع
+       مكوّن بالنظام: مسحٌ حيّ لـ81 صفحة أحصى **231 منسدلة على 57 صفحة**، كلّها
+       بهذا الحدّ. فبقي التيل حاضراً بكل شاشة بعد اعتماد سلايت-بلو.
+       الآن يشتقّ من لون العلامة فيتبعه ويتبع أي هوية White-Label. */
+    border: 1px solid color-mix(in srgb, var(--brand-primary, #486C8F) 40%, transparent) !important;
+    /* والخلفية كانت كحليّاً مثبّتاً من عهد سابق — تتبع سطح الحقل بالتوكن. */
+    background: var(--surface-input, #0B1A2D) !important;
     color: var(--sa-text, #E6EAEE) !important;
     padding: 0 14px !important;
     font-weight: 950 !important;
@@ -85,19 +89,47 @@ select[data-nxcs-enhanced="true"] {
     color: inherit !important;
 }
 
+/* سهم المنسدلة: شيفرون مجرَّد لا زرٌّ دائريّ.
+   كان قرصاً 26×26 بحدٍّ وخلفية داخل حقلٍ ارتفاعه 30px — أي أنه يملأ الحقل تقريباً
+   فيبدو كزرٍّ ثانٍ ملصوقٍ بالحقل لا كمؤشّر فتح. ولونه كان تيلاً مثبَّتاً
+   (`rgba(34,211,238,…)`) بالوضعين، فلا يتبع سلايت-بلو ولا محرّك هوية الشركة.
+   الآن: بلا حدّ ولا خلفية، وبلون النصّ الثانوي، ويتلوّن بالهوية عند الفتح. */
 .nxcs-caret {
-    width: 26px !important;
-    height: 26px !important;
-    flex: 0 0 26px !important;
+    width: 16px !important;
+    height: 16px !important;
+    flex: 0 0 16px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border-radius: 999px !important;
-    border: 1px solid rgba(34, 211, 238, .45) !important;
-    background: rgba(34, 211, 238, .12) !important;
-    color: var(--color-primary-text) !important;
-    font-size: 11px !important;
-    line-height: 1 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    transition: transform .15s ease, color .15s ease !important;
+}
+
+/* ⚠️ اللون بتخصصية (0,3,0) عمداً: `zynora-legacy-bridge` — وهو **آخر ملف
+   يُحمَّل** — يفرض `color: inherit` على كل سليلٍ بـ`.nexora-setup-page`، فيرث
+   السهم لون نصّ الحقل ويصير `#E6E6E6` بدل الرمادي الثانوي. صنفٌ واحد يتعادل معه
+   فيخسر بترتيب التحميل. رُصد بمسحٍ حيّ: 7 صفحات على `rgb(132,150,165)`
+   و`/Setup` وحدها على `rgb(230,230,230)`. */
+.nxcs-trigger .nxcs-caret.nxcs-caret {
+    color: var(--color-text-secondary, #8496a5) !important;
+}
+
+.nxcs-caret svg {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+}
+
+/* الشيفرون ينقلب عند الفتح — إشارةٌ للحالة كانت غائبة تماماً */
+.nxcs-select.is-open .nxcs-caret {
+    transform: rotate(180deg) !important;
+    color: var(--color-primary-text, #486C8F) !important;
+}
+
+.nxcs-trigger:hover .nxcs-caret {
+    color: var(--color-primary-text, #486C8F) !important;
 }
 
 .nxcs-panel {
@@ -187,11 +219,8 @@ html[data-theme="light"] .nxcs-trigger:focus {
     box-shadow: 0 0 0 4px rgba(13, 148, 158, .10) !important;
 }
 
-html[data-theme="light"] .nxcs-caret {
-    border-color: rgba(13, 148, 158, .4) !important;
-    background: rgba(13, 148, 158, .08) !important;
-    color: #0d949e !important;
-}
+/* ⛔ حُذف طقم الفاتح للسهم: كان يعيد الحدّ والخلفية بتيلٍ آخر مثبَّت (#0d949e)،
+   أي قرصان بلونين حسب الوضع. القاعدة أعلاه بالتوكنز تخدم الوضعين. */
 
 html[data-theme="light"] .nxcs-panel {
     background: #ffffff !important;

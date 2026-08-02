@@ -107,20 +107,21 @@ public class IndexModel : PageModel
     }
 
     // ---- Launch a process for an employee ----
-    public async Task<IActionResult> OnPostLaunchAsync(int processType, string employeeRef, DateOnly? startDate)
+    public async Task<IActionResult> OnPostLaunchAsync(int processType, int employeeId, DateOnly? startDate)
     {
         await EmployeeTasksSchema.EnsureAsync(_dbContext);
 
-        if (processType is not (1 or 2) || string.IsNullOrWhiteSpace(employeeRef))
+        if (processType is not (1 or 2) || employeeId <= 0)
         {
             Message = "اختر الموظف ونوع العملية.";
             return RedirectToPage();
         }
 
-        // The picker posts "EmployeeNo — FullName"; the number prefix is the key.
-        var employeeNo = employeeRef.Split('—', '-', StringSplitOptions.TrimEntries)[0].Trim();
+        // المنتقي المشترك يرسل معرّف الموظف مباشرةً. سابقاً كان حقلاً حرّاً بـ
+        // `datalist` يُرسِل نصّ «الرقم — الاسم» ويُشقّ بالخادم، فأي كتابةٍ حرّة
+        // لا تطابق صيغته كانت تُسقِط الطلب.
         var employee = await _dbContext.Employees
-            .FirstOrDefaultAsync(e => e.EmployeeNo == employeeNo && !e.IsDeleted);
+            .FirstOrDefaultAsync(e => e.Id == employeeId && !e.IsDeleted);
 
         if (employee == null)
         {

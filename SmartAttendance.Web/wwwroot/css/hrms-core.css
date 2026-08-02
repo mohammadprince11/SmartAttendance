@@ -263,8 +263,11 @@ html[data-theme="dark"] .hrms-filter-card,
 html[data-theme="dark"] .hrms-table-card,
 html[data-theme="dark"] .hrms-form-card,
 html[data-theme="dark"] .hrms-stats-card {
-    background: #111a2c !important;
-    border-color: #30415f !important;
+    /* ⚠️ كان #111a2c مثبّتاً فلم يتبع لوحة الهوية v2، فظهرت ستّ صفحات (المهام ·
+       التنبيهات · العهد · الهيكل · القوائم · مخطط كود الموظف) بكحليٍّ مغاير عن
+       جاراتها — رصده مسحٌ حيّ لـ44 صفحة بترجيح المساحة. */
+    background: var(--surface-panel, #0F1A2E) !important;
+    border-color: var(--border-default, #22304A) !important;
 }
 
 html[data-theme="dark"] .hrms-field input,
@@ -273,9 +276,11 @@ html[data-theme="dark"] .hrms-field textarea,
 html[data-theme="dark"] .hrms-stat,
 html[data-theme="dark"] .hrms-empty,
 html[data-theme="dark"] .hrms-btn-secondary {
-    background: #162238 !important;
-    border-color: #30415f !important;
-    color: #e6edf7 !important;
+    /* السطح المرتفع (حقول · إحصاءات · حالة فارغة · زرّ ثانوي) — كان #162238
+       مثبّتاً فبقي شاذّاً بعد توحيد بقية الأسطح (رُصد بمسحٍ ثانٍ: 3 صفحات). */
+    background: var(--surface-raised, #16233C) !important;
+    border-color: var(--border-default, #22304A) !important;
+    color: var(--text-default, #E6E6E6) !important;
 }
 
 html[dir="rtl"] .hrms-page,
@@ -737,4 +742,57 @@ html[data-theme="light"] body .dat-num, html[data-theme="light"] body .mat-num {
     font-weight: 800;
     line-height: 1.5;
     color: var(--sa-danger, #f87171);
+}
+
+/* ================== .hrms-inline-form — صنفٌ كان بلا تعريف ==================
+   يُستعمل بثماني صفحات لشريط الفلاتر ولصفّ أزرار الإجراءات داخل خلايا الجداول،
+   واسمه يَعِد بصفٍّ أفقيّ — **ولم يكن له أيّ CSS بالمستودع إطلاقاً**. فالنموذج
+   يسقط إلى `display:block` الافتراضي، و`.nxcs-select` بعرض 100% ⟹ كل حقلٍ يأخذ
+   سطراً كاملاً: «زر تحت زر».
+
+   والنيّة موثّقة بالمصدر نفسه لا باجتهادٍ منّي: `EmployeeTasks/Index.cshtml:43`
+   يكتب `style="flex-wrap:wrap"` و`:96` يكتب `style="justify-content:center"` —
+   وكلتاهما **لا تعملان إلا على flex**. أي أن الكاتب افترض flex وكتب فوقه.
+
+   قِيس حيّاً على 48 صفحة: هذا الصنف وحده هو مصدر العطل، ولا حالة أخرى بالنظام. */
+.hrms-inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+}
+
+/* الحقول: عرضٌ مرن بدل 100%. بلا هذا يبقى كلٌّ منها بعرض الأب فيلتفّ لسطرٍ
+   وحده — أي أن flex وحده لا يكفي، لأن `nexora-select-system` يفرض
+   `width:100% !important` على غلاف المنسدلة. */
+.hrms-inline-form > .nxcs-select,
+.hrms-inline-form > .nxcal,
+.hrms-inline-form > select,
+.hrms-inline-form > input[type="search"],
+.hrms-inline-form > input[type="text"],
+.hrms-inline-form > input[type="number"],
+.hrms-inline-form > input[type="date"]:not(.nxcal-native) {
+    flex: 0 1 190px !important;
+    width: auto !important;
+    min-width: 0 !important;
+}
+
+/* التسميات تلتصق بحقلها ولا تُقطَع */
+.hrms-inline-form > label {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    margin: 0;
+}
+
+/* الأزرار وأي نموذج إجراءٍ متداخل (زرّ لكل إجراء بخلايا الجداول) */
+.hrms-inline-form > button,
+.hrms-inline-form > input[type="submit"],
+.hrms-inline-form > a {
+    flex: 0 0 auto;
+}
+
+.hrms-inline-form > form {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
 }

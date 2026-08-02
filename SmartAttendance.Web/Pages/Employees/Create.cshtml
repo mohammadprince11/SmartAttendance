@@ -1307,7 +1307,11 @@
         container-name: employee-create !important;
     }
 
-    .nxr-create-clean-page *,
+    /* ⚠️ الاستثناء ليس تجميلاً: `*` هنا يفرض `min-width:0` على **كل** سليل،
+       ومنه لوحة الكلاندر المنسدلة — فتنكمش من 292px إلى عرض حقلها (قيس حيّاً:
+       253px بهذه الصفحة وحدها من بين 31 صفحة). اللوحة تُلحَق داخل `.nxcal`
+       فتصطادها القاعدة. */
+    .nxr-create-clean-page *:not(.nxcal__panel),
     .nxr-create-clean-form,
     .nxr-create-clean-header,
     .nxr-create-section,

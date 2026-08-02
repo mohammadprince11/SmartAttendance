@@ -16,7 +16,11 @@
     var validDocs = Model.Documents.Count(d => Model.DocumentStatusKey(d.ExpiryDate) == "valid");
 }
 
-<link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
+@* أُزيل ربطٌ مكرَّر لـ`nexora-reference-redesign-v3.css`: الملف محمَّل أصلاً
+   بالقوقعة (_Layout)، وإعادة ربطه هنا كانت تضعه **بعد** طبقات الثيم بترتيب
+   المصدر فيفوز `html, body { background: … #030913 !important }` بداخله،
+   فتبقى هذه الصفحة وحدها بتدرّجٍ داكن بينما الـ43 الأخرى فاتحة (قِيس 2026-08-02).
+   لا ستايل يُفقد — الملف ما زال محمّلاً، وإنما بترتيبه الصحيح. *@
 <link rel="stylesheet" href="~/css/nexora-v3-hotfix.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-documents-kayan-style.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-document-rules-phase1.css" asp-append-version="true" />

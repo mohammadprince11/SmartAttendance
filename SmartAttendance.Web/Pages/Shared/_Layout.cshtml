@@ -48,15 +48,15 @@
                 "expanded"
             );
 
-            // الوضع المحفوظ (زر الشمس/الهلال بالشريط العلوي). الافتراضي **فاتح**
-            // بحسب Design System v1؛ ومن لم يختر شيئاً بعدُ يتبع تفضيل نظام جهازه.
+            // الوضع المحفوظ (زر الشمس/الهلال بالشريط العلوي). الافتراضي **داكن**
+            // بقرار محمد 2026-08-02 مع اعتماد لوحة الهوية v2 — اللوحة الداكنة هي
+            // الوجه الأول للمنتج. ولا نتبع تفضيل الجهاز هنا عمداً: مَن لم يختر
+            // يجب أن يرى هويةَ المنتج لا إعدادَ نظامه. اختيارُه يبقى محفوظاً.
             var zyTheme = null;
             try { zyTheme = localStorage.getItem("ZY.Theme"); } catch (e) { }
 
             if (zyTheme !== "light" && zyTheme !== "dark") {
-                var prefersDark = window.matchMedia &&
-                    window.matchMedia("(prefers-color-scheme: dark)").matches;
-                zyTheme = prefersDark ? "dark" : "light";
+                zyTheme = "dark";
             }
 
             document.documentElement.setAttribute("data-theme", zyTheme);
@@ -101,7 +101,7 @@
     <link rel="stylesheet" href="~/css/zynora-checkbox.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-file-input.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-kayan-nav.css" asp-append-version="true" />
-    @* منتقي الموظف المشترك — متاح لكل صفحة بسطر واحد     <link rel="stylesheet" href="~/css/zynora-kayan-nav.css" asp-append-version="true" />lt;partial name="_EmployeePicker" /    <link rel="stylesheet" href="~/css/zynora-kayan-nav.css" asp-append-version="true" />gt; *@
+    @* منتقي الموظف المشترك — متاح لكل صفحة بسطر واحد: partial name="_EmployeePicker" *@
     <link rel="stylesheet" href="~/css/zynora-employee-picker.css" asp-append-version="true" />
 
     @* جسر الصفحات القديمة نُقل إلى ما بعد RenderBody — انظر التعليق هناك *@
@@ -800,13 +800,25 @@
                             (function () {
                                 var btn = document.getElementById("zy-theme-toggle");
                                 if (!btn) return;
+                                // التبديل فوريّ: أُزيل صنف `zy-theme-anim` ومؤقّته (450ms)
+                                // مع حذف انتقال الـ220ms من نظام التصميم — انظر التعليق هناك.
+                                // و`data-theme-switching` يُسكِت انتقالات المكوّنات الخاصة
+                                // (المكتوبة لتأثير المرور) إطارين فقط، وإلا تلاشى 123 عنصراً
+                                // من كل 400 رغم حذف قاعدتنا. يُرفع بعد إطارين لا بمؤقّت:
+                                // الإطار الأول يطبّق الألوان الجديدة، والثاني يضمن رسمها.
                                 btn.addEventListener("click", function () {
                                     var h = document.documentElement;
-                                    h.classList.add("zy-theme-anim");
                                     var next = h.getAttribute("data-theme") === "light" ? "dark" : "light";
+                                    h.setAttribute("data-theme-switching", "");
                                     h.setAttribute("data-theme", next);
                                     try { localStorage.setItem("ZY.Theme", next); } catch (e) { }
-                                    setTimeout(function () { h.classList.remove("zy-theme-anim"); }, 450);
+                                    // ⚠️ الرفع بحارسين لا بواحد. rAF **لا ينطلق** إن كان
+                                    // التبويب خلفياً أو خُنق المتصفح، ووقتها تبقى السمة
+                                    // فتُسكِت كل حركة بالنظام للأبد (رُصد فعلياً بالقياس).
+                                    // فمؤقّتٌ قصير يضمن الرفع مهما حدث، وأيّهما سبق كفى.
+                                    var clear = function () { h.removeAttribute("data-theme-switching"); };
+                                    requestAnimationFrame(function () { requestAnimationFrame(clear); });
+                                    setTimeout(clear, 200);
                                 });
                             })();
                         </script>

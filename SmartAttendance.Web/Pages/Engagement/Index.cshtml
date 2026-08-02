@@ -236,7 +236,12 @@
                             <option value="All">كل الموظفين</option>
                             <option value="Department">قسم</option>
                             <option value="Branch">موقع عمل</option>
-                            <option value="Employees">موظفون محدّدون</option>
+                            @* ⚠️ القيمة `Employee` بالمفرد — والخادم كلّه يقارن بها
+                               (`ValidateTarget` · `BuildTargetValue` · بناء الطلب ·
+                               تسمية الاستهداف). كانت `Employees` بالجمع فلا تطابق
+                               أيّ فرع: الحارس لا يعمل، والمستلمون يصيرون صفراً،
+                               ويُعلَن النجاح. حارس الانحدار: `EngagementTargetTypeTests`. *@
+                            <option value="Employee">موظفون محدّدون</option>
                         </select>
                     </div>
 
@@ -262,14 +267,11 @@
                         </select>
                     </div>
 
-                    <div class="zyw-field zyw-field--wide zyw-target" data-zyw-target-for="announcement" data-zyw-when="Employees" hidden>
-                        <label for="ann-employees">الموظفون المستهدفون</label>
-                        <select id="ann-employees" name="Announcement.EmployeeIds" multiple size="6">
-                            @foreach (var e in Model.Employees)
-                            {
-                                <option value="@e.Id">@e.FullName (@e.EmployeeNo)</option>
-                            }
-                        </select>
+                    <div class="zyw-field zyw-field--wide zyw-target" data-zyw-target-for="announcement" data-zyw-when="Employee" hidden>
+                        <partial name="_EmployeePickerMulti" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerMultiModel {
+                            Label = "الموظفون المستهدفون",
+                            Name = "Announcement.EmployeeIds"
+                        })" />
                     </div>
                 </div>
 
@@ -356,7 +358,12 @@
                             <option value="All">كل الموظفين</option>
                             <option value="Department">قسم</option>
                             <option value="Branch">موقع عمل</option>
-                            <option value="Employees">موظفون محدّدون</option>
+                            @* ⚠️ القيمة `Employee` بالمفرد — والخادم كلّه يقارن بها
+                               (`ValidateTarget` · `BuildTargetValue` · بناء الطلب ·
+                               تسمية الاستهداف). كانت `Employees` بالجمع فلا تطابق
+                               أيّ فرع: الحارس لا يعمل، والمستلمون يصيرون صفراً،
+                               ويُعلَن النجاح. حارس الانحدار: `EngagementTargetTypeTests`. *@
+                            <option value="Employee">موظفون محدّدون</option>
                         </select>
                     </div>
 
@@ -382,14 +389,11 @@
                         </select>
                     </div>
 
-                    <div class="zyw-field zyw-field--wide zyw-target" data-zyw-target-for="poll" data-zyw-when="Employees" hidden>
-                        <label for="poll-employees">الموظفون المستهدفون</label>
-                        <select id="poll-employees" name="Poll.EmployeeIds" multiple size="6">
-                            @foreach (var e in Model.Employees)
-                            {
-                                <option value="@e.Id">@e.FullName (@e.EmployeeNo)</option>
-                            }
-                        </select>
+                    <div class="zyw-field zyw-field--wide zyw-target" data-zyw-target-for="poll" data-zyw-when="Employee" hidden>
+                        <partial name="_EmployeePickerMulti" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerMultiModel {
+                            Label = "الموظفون المستهدفون",
+                            Name = "Poll.EmployeeIds"
+                        })" />
                     </div>
                 </div>
 

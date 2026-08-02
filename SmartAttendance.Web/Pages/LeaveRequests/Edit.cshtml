@@ -26,15 +26,14 @@
         <input type="hidden" asp-for="LeaveRequest.Id" />
 
         <div class="form-group">
-            <label asp-for="LeaveRequest.EmployeeId">الموظف</label>
-            <select asp-for="LeaveRequest.EmployeeId" class="form-control">
-                <option value="">-- Select Employee --</option>
-
-                @foreach (var employee in Model.Employees)
-                {
-                    <option value="@employee.Id">@employee.EmployeeNo - @employee.FullName</option>
-                }
-            </select>
+            @* المنتقي المشترك (رمز + اسم) بدل منسدلةٍ تحمّل كل الموظفين بكل فتحة *@
+            <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
+                Label = "الموظف",
+                Name = "LeaveRequest.EmployeeId",
+                SelectedId = Model.LeaveRequest.EmployeeId,
+                SelectedCode = Model.SelectedEmployeeCode,
+                SelectedName = Model.SelectedEmployeeName
+            })" />
             <span asp-validation-for="LeaveRequest.EmployeeId" class="text-danger"></span>
         </div>
 

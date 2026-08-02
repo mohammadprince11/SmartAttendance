@@ -4,24 +4,30 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using SmartAttendance.Application.AttendanceRecords.Services;
 using SmartAttendance.Application.AttendanceRecords.ViewModels;
 using SmartAttendance.Application.Devices.ViewModels;
-using SmartAttendance.Application.Employees.ViewModels;
 using SmartAttendance.Domain.Enums;
+using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Pages.Shared;
 
 namespace SmartAttendance.Web.Pages.AttendanceRecords;
 
 public class CreateModel : PageModel
 {
     private readonly IAttendanceRecordService _attendanceRecordService;
+    private readonly ApplicationDbContext _db;
 
-    public CreateModel(IAttendanceRecordService attendanceRecordService)
+    public CreateModel(IAttendanceRecordService attendanceRecordService, ApplicationDbContext db)
     {
         _attendanceRecordService = attendanceRecordService;
+        _db = db;
     }
 
     [BindProperty]
     public AttendanceRecordCreateViewModel AttendanceRecord { get; set; } = new();
 
-    public IEnumerable<EmployeeListViewModel> Employees { get; set; } = new List<EmployeeListViewModel>();
+    /// <summary>رمز الموظف المحسوم واسمه — يبدأ بهما <c>_EmployeePicker</c> معبَّأً بعد إعادة العرض.</summary>
+    public string? SelectedEmployeeCode { get; set; }
+
+    public string? SelectedEmployeeName { get; set; }
 
     public IEnumerable<DeviceListViewModel> Devices { get; set; } = new List<DeviceListViewModel>();
 
@@ -58,7 +64,11 @@ public class CreateModel : PageModel
 
     private async Task LoadDropdownsAsync()
     {
-        Employees = await _attendanceRecordService.GetEmployeesForDropdownAsync();
+        // المنتقي لا يحمّل أحداً — يُقرأ صفٌّ واحد فقط للموظف المحسوم إن وُجد.
+        var identity = await EmployeePickerLookup.LoadAsync(_db, AttendanceRecord.EmployeeId);
+        SelectedEmployeeCode = identity?.Code;
+        SelectedEmployeeName = identity?.Name;
+
         Devices = await _attendanceRecordService.GetDevicesForDropdownAsync();
 
         Sources = Enum.GetValues<AttendanceSource>()
