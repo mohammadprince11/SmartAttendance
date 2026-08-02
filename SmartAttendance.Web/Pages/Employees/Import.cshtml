@@ -222,11 +222,11 @@
 
 <style>
 /* NEXORA_FIX18A_V3_EMPLOYEE_IMPORT_STYLE_START */
-body {
-    background:
-        radial-gradient(circle at 20% 0%, rgba(34, 211, 238, .11), transparent 35%),
-        linear-gradient(180deg, #06121f 0%, #04101b 100%) !important;
-}
+/* حُذف تدرّجٌ داكن مثبّت كان يُفرض هنا على `body` بـ!important
+   (radial + linear بألوان #06121f/#04101b). بقيّةٌ من عهد القوقعة الداكنة:
+   بقي يفرض خلفيةً داكنة على هذه الصفحة وحدها بينما الوضع الفاتح يعطي بقية
+   الـ44 صفحة rgb(238,243,246) — قِيس بمسحٍ حيّ 2026-08-02. الخلفية الآن
+   تأتي من التوكن بالقوقعة فتنقلب مع الثيم كأخواتها. */
 
 .import-v3-page,
 .nexora-import-page {

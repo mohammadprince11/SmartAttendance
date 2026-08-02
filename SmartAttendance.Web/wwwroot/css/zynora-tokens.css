@@ -277,8 +277,51 @@
 .zy-scope .nxupd-card,
 .zy-scope .nxupd-selector-card,
 .zy-scope .att-filter-card,
-.zy-scope .pr-card {
+.zy-scope .pr-card,
+/* ⬇ ضُمّت بعد مسحٍ حيّ لـ44 صفحة بمودل الأشخاص (2026-08-02): البطاقة أكبر
+   مساحة بالصفحة فانحناؤها أظهر مصدرٍ لتشتّت العين. كانت هذه العائلات خارج
+   التغطية فأعطت 14px (`rep-card` بالتقارير) و18px (`hrms-*`) و0px (`zyw-panel`)
+   بينما المغطّى 18px — أربعة انحناءات بمودلٍ واحد.
+   و`zhr-*-card` ضُمّت أخيراً — انظر سلسلة الانحناء أسفل الكتلة. */
+.zy-scope .rep-card,
+.zy-scope .hrms-card,
+.zy-scope .hrms-stats-card,
+.zy-scope .hrms-table-card,
+.zy-scope .zyw-panel,
+.zy-scope .nxhs-panel {
     padding: var(--zy-card-pad, 16px) !important;
+    border-radius: var(--zy-card-radius, 18px) !important;
+}
+
+/* ---- `zhr-*-card`: توحيدٌ يحفظ White-Label بدل أن يسلبه ------------------
+   الاستثناء أعلاه كان مبنيّاً على مخاوف صحيحة، لكن نتيجته بالقياس (2026-08-02)
+   كانت **مصدرَي حقيقة فعليّين**: محرّك الهوية يحكم 6 بطاقات بقائمة الموظفين
+   (12px) بينما توكن المختبر يحكم 81 بطاقة ببقية المودل (18px). فالهوية لم تكن
+   تحكم «الشركة» بل صفحةً واحدة، والعين ترى الفرق.
+
+   جُرِّبت أولاً سلسلةٌ تحترم الهوية `var(--zy-card-radius, var(--border-radius,
+   18px))` — وفشلت بالقياس: `--border-radius` ليس معرَّفاً على `:root` بل موروثاً
+   بنطاقٍ ضيّق، فأعطت 79 بطاقة 18px و7 بـ12px — أي أبقت الانقسام نفسه.
+
+   فالحسم: مصدر حقيقة واحد للانحناء = توكن المختبر. محرّك الهوية يبقى صاحب
+   الكلمة بالألوان والشعار (وظيفته الأساسية)، ولا يزاحم المقاسَ على عنصرٍ واحد.
+   ومن أراد انحناءً مختلفاً للشركة يضبطه من المختبر فيسري على المودل بأسره. */
+.zy-scope .zy-card,
+.zy-scope .table-card,
+.zy-scope .nxp-card,
+.zy-scope .nxupd-card,
+.zy-scope .att-filter-card,
+.zy-scope .pr-card,
+.zy-scope .rep-card,
+.zy-scope .hrms-card,
+.zy-scope .hrms-stats-card,
+.zy-scope .hrms-table-card,
+.zy-scope .zxd-card,
+.zy-scope .zyw-panel,
+.zy-scope .nxhs-panel,
+.zy-scope .zhr-kpi-card,
+.zy-scope .zhr-filter-card,
+.zy-scope .zhr-table-card {
     border-radius: var(--zy-card-radius, 18px) !important;
 }
 
@@ -321,7 +364,18 @@
    التبويبات روابط `inline` افتراضياً، و`min-height` **لا أثر له على عنصر
    inline** — فكان المقياس يتحرّك بلا أي نتيجة. `inline-flex` يجعله صندوقاً
    يحترم الارتفاع، والمحاذاة الوسطى تُبقي النصّ بالمنتصف. */
-.zy-scope .nxupd-top-tabs > a {
+/* نفس العلّة رُصدت بمودل الأشخاص (مسح حيّ 2026-08-02): `hrms-tab` و`ost-tab`
+   بـ40.67px بينما `zyw-tab` بـ34px والأزرار جنبها بـ34px. تتبع الزرَّ كأختها. */
+.zy-scope .nxupd-top-tabs > a,
+.zy-scope .hrms-tab,
+.zy-scope .ost-tab,
+.zy-scope .zyw-tab {
+    /* ⚠️ هذه الثلاث `<button>` لها حشوة رأسية، وارتفاعها ينبع منها لا من غيابه.
+       و`min-height` أرضيّةٌ فقط فلا تُقلّص الأطول — قِيس: بقيت 40.67px بعد
+       min-height:34px. فتحتاج `height` صريحاً وتصفير الحشوة الرأسية.
+       (تختلف عن `.nxupd-top-tabs > a` أدناه: تلك روابط inline بلا ارتفاع.) */
+    height: var(--zy-button-h, 40px) !important;
+    padding-block: 0 !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
