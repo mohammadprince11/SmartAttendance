@@ -12,6 +12,9 @@
 
     function disarm(el, original) {
         delete el.dataset.zyArmed;
+        // مسح علم التسليح إلزامي: تركُه مرفوعاً بعد انتهاء النافذة يجعل النقرة
+        // التالية تمرّ بلا تأكيد — أي أن زر الحذف ينفّذ من نقرة واحدة صامتة.
+        delete el.dataset.zyArmed;
         el.classList.remove('zy-armed');
         if (original != null) el.innerHTML = original;
     }

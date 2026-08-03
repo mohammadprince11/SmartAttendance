@@ -116,14 +116,57 @@ public class DayAttendanceDeriveTests
         Assert.Equal(0, row.WorkedHours);
     }
 
-    [Fact]
-    public void MissingCheckOut_IsIncomplete_ButLateStillDerived()
+    /// <summary>
+    /// **بصمة ناقصة ⟹ كل المقادير صفر** (قرار محمد 2026-08-03).
+    ///
+    /// طرفٌ واحد لا يكفي لاشتقاق كمية. والبصمة الوحيدة قد تكون بصمة **انصراف**
+    /// سُجّلت أولاً، فاحتساب التأخير منها يولّد أرقاماً كاذبة تدخل المسير خصماً —
+    /// شوهد حياً: بصمة 17:33 وحيدة أعطت «تأخير 9.55 ساعة».
+    /// </summary>
+    [Theory]
+    [InlineData("09:20")]  // متأخر ظاهرياً
+    [InlineData("17:33")]  // بصمة انصراف سُجّلت وحدها — الحالة التي كشفت العطل
+    [InlineData("08:04")]  // متأخر بدقائق
+    [InlineData("06:39")]  // مبكر
+    public void MissingCheckOut_ZeroesEveryDerivedAmount(string onlyPunch)
     {
         var row = DayAttendanceStore.Derive(
-            Shift(latenessGrace: 15), Day(), "Work", At("09:20"), null);
+            Shift(latenessGrace: 15), Day(), "Work", At(onlyPunch), null);
 
         Assert.Equal("Incomplete", row.Status);
+        Assert.Equal(0, row.LateHours);
+        Assert.Equal(0, row.EarlyLeaveHours);
+        Assert.Equal(0, row.WorkedHours);
+        Assert.Null(row.CheckOut);
+    }
+
+    /// <summary>البصمة الناقصة بمناوبة مرنة تُصفَّر أيضاً — لا نقصَ ساعاتٍ يُحتسب.</summary>
+    [Fact]
+    public void MissingCheckOut_OnFlexibleShift_AlsoZeroed()
+    {
+        var flexible = Shift();
+        flexible.IsFlexible = true;
+        flexible.FlexDailyHours = 8m;
+
+        var row = DayAttendanceStore.Derive(flexible, Day(), "Work", At("09:20"), null);
+
+        Assert.Equal("Incomplete", row.Status);
+        Assert.Equal(0, row.EarlyLeaveHours);
+        Assert.Equal(0, row.WorkedHours);
+        Assert.Equal(0, row.LateHours);
+    }
+
+    /// <summary>حارس: وجود الطرفين يُبقي الاشتقاق كما هو — الإصلاح لا يُصفّر السليم.</summary>
+    [Fact]
+    public void BothPunches_StillDeriveNormally()
+    {
+        var row = DayAttendanceStore.Derive(
+            Shift(latenessGrace: 15), Day(), "Work", At("09:20"), At("16:00"));
+
+        Assert.Equal("Late", row.Status);
         Assert.Equal(0.08m, row.LateHours);
+        Assert.Equal(1m, row.EarlyLeaveHours);
+        Assert.Equal(6.67m, row.WorkedHours);
     }
 
     [Fact]
