@@ -26,6 +26,14 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string? Search { get; set; }
 
+    /// <summary>
+    /// فلتر الحالة من أزرار العدّادات أعلى الشاشة: Present · Late · Incomplete ·
+    /// Absent. فارغ = الكل. العدّادات تبقى محسوبة على **كل** الشهر لا على
+    /// المفلتَر، وإلا صار الضغط على «متأخر» يصفّر بقية الأزرار فيستحيل الرجوع.
+    /// </summary>
+    [BindProperty(SupportsGet = true)]
+    public string? StatusFilter { get; set; }
+
     [BindProperty(SupportsGet = true)]
     public int PageNumber { get; set; } = 1;
 
@@ -63,11 +71,22 @@ public class IndexModel : PageModel
         AbsentCount = all.Count(r => r.Status == "Absent");
         IncompleteCount = all.Count(r => r.Status == "Incomplete");
 
-        TotalRows = all.Count;
+        // الفلتر يُطبَّق بعد العدّادات، والترتيب من الأحدث للأقدم ثم برقم الموظف
+        // ليكون ترتيب الصفحات ثابتاً (بلا مُرتِّب ثانوي تتبدّل الصفوف بين الصفحات).
+        var view = string.IsNullOrWhiteSpace(StatusFilter)
+            ? all
+            : all.Where(row => row.Status == StatusFilter).ToList();
+
+        view = view
+            .OrderByDescending(row => row.WorkDate)
+            .ThenBy(row => row.EmployeeNo, StringComparer.Ordinal)
+            .ToList();
+
+        TotalRows = view.Count;
         TotalPages = TotalRows == 0 ? 1 : (int)Math.Ceiling(TotalRows / (double)PageSize);
         if (PageNumber < 1) PageNumber = 1;
         if (PageNumber > TotalPages) PageNumber = TotalPages;
-        Rows = all.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
+        Rows = view.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
     }
 
     public async Task<IActionResult> OnPostAnalyzeAsync()
@@ -93,6 +112,6 @@ public class IndexModel : PageModel
                 : $"لم تُولَّد يوميات لشهر {month:00}/{year} — لا بصمات بالفترة " +
                   "للموظفين المسنَدين لهذه المناوبة. تحقّق من إسناد الموظفين ومن نطاق تواريخ البصمات.";
         }
-        return RedirectToPage(new { Month, Search });
+        return RedirectToPage(new { Month, Search, StatusFilter });
     }
 }

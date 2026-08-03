@@ -1,4 +1,4 @@
-@page "/DayAttendance"
+﻿@page "/DayAttendance"
 @model SmartAttendance.Web.Pages.DayAttendance.IndexModel
 @using SmartAttendance.Web.Infrastructure.Hrms
 
@@ -37,6 +37,11 @@
     .dat-stat b { direction: ltr; display: inline-block; }
     .dat-stat.present { color: #4ade80; } .dat-stat.late { color: #facc15; }
     .dat-stat.absent { color: #f87171; } .dat-stat.incomplete { color: #f97316; }
+    /* العدّادات صارت أزرار فلترة: مؤشّر يد وحالة نشطة واضحة، وبلا خطّ رابط. */
+    a.dat-stat { text-decoration: none; cursor: pointer; transition: background .15s, border-color .15s; }
+    a.dat-stat:hover { border-color: rgba(18,217,227,.55); }
+    a.dat-stat.is-active { background: rgba(18,217,227,.14); border-color: #12D9E3; }
+    .dat-stat-clear { color: var(--sa-muted, #8FA8BC); }
 
     .dat-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
     .dat-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 900px; }
@@ -44,7 +49,11 @@
     html[data-theme="light"] .dat-table th { background: #f2f7fb; }
     .dat-table td { padding: 9px 12px; border-bottom: 1px solid rgba(143,168,188,.08); white-space: nowrap; }
     .dat-table tr:hover td { background: rgba(18,217,227,.04); }
-    .dat-num { direction: ltr; text-align: start; font-weight: 900; }
+    /* الأرقام تُقرأ LTR (تواريخ · أوقات · ساعات) لكن محاذاتها يجب أن تطابق
+       عنوانها. مع direction:ltr تصير start = يسار بينما عنوان الجدول RTL
+       فيحاذي يميناً — فينفصل العمود عن رأسه. التثبيت على right يوحّدهما. */
+    .dat-num { direction: ltr; text-align: right; font-weight: 900; }
+    .dat-table th { text-align: right; }
     .dat-num.warn { color: #facc15; } .dat-num.bad { color: #f97316; }
     .dat-shift { display: inline-flex; align-items: center; gap: 6px; }
     .dat-shift i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
@@ -94,13 +103,37 @@
         </label>
         <label>بحث (رمز/اسم موظف)
             <input type="text" name="Search" value="@Model.Search" placeholder="بحث..." />
+            <input type="hidden" name="StatusFilter" value="@Model.StatusFilter" />
         </label>
         <button type="submit" class="dat-btn ghost">عرض</button>
         <div class="dat-stats" style="margin-inline-start:auto">
-            <span class="dat-stat present">حاضر <b>@Model.PresentCount</b></span>
-            <span class="dat-stat late">متأخر <b>@Model.LateCount</b></span>
-            <span class="dat-stat incomplete">بصمة ناقصة <b>@Model.IncompleteCount</b></span>
-            <span class="dat-stat absent">غائب <b>@Model.AbsentCount</b></span>
+@{
+    // الضغط على عدّاد يفلتر عليه، والضغط عليه وهو نشط يرفع الفلتر — فلا يعلق
+    // المستخدم بحالةٍ لا يعرف كيف يخرج منها.
+    Func<string, string?> toggle = key => Model.StatusFilter == key ? null : key;
+}
+            <a class="dat-stat present @(Model.StatusFilter == "Present" ? "is-active" : null)"
+               asp-route-Month="@Model.Month" asp-route-Search="@Model.Search"
+               asp-route-StatusFilter="@toggle("Present")" asp-route-PageNumber="1"
+               title="اعرض الحاضرين فقط">حاضر <b>@Model.PresentCount</b></a>
+            <a class="dat-stat late @(Model.StatusFilter == "Late" ? "is-active" : null)"
+               asp-route-Month="@Model.Month" asp-route-Search="@Model.Search"
+               asp-route-StatusFilter="@toggle("Late")" asp-route-PageNumber="1"
+               title="اعرض المتأخرين فقط">متأخر <b>@Model.LateCount</b></a>
+            <a class="dat-stat incomplete @(Model.StatusFilter == "Incomplete" ? "is-active" : null)"
+               asp-route-Month="@Model.Month" asp-route-Search="@Model.Search"
+               asp-route-StatusFilter="@toggle("Incomplete")" asp-route-PageNumber="1"
+               title="اعرض البصمات الناقصة فقط">بصمة ناقصة <b>@Model.IncompleteCount</b></a>
+            <a class="dat-stat absent @(Model.StatusFilter == "Absent" ? "is-active" : null)"
+               asp-route-Month="@Model.Month" asp-route-Search="@Model.Search"
+               asp-route-StatusFilter="@toggle("Absent")" asp-route-PageNumber="1"
+               title="اعرض الغائبين فقط">غائب <b>@Model.AbsentCount</b></a>
+            @if (!string.IsNullOrWhiteSpace(Model.StatusFilter))
+            {
+                <a class="dat-stat dat-stat-clear"
+                   asp-route-Month="@Model.Month" asp-route-Search="@Model.Search"
+                   asp-route-PageNumber="1">✕ إلغاء الفلتر</a>
+            }
         </div>
     </form>
 
@@ -114,7 +147,7 @@
             <table class="dat-table">
                 <thead>
                     <tr>
-                        <th>الموظف</th><th>التاريخ</th><th>المناوبة</th><th>ختم الدخول</th><th>ختم الخروج</th>
+                        <th>الكود</th><th>الموظف</th><th>التاريخ</th><th>المناوبة</th><th>ختم الدخول</th><th>ختم الخروج</th>
                         <th>ساعات العمل</th><th>ساعات التأخير</th><th>الخروج المبكر</th><th>الحالة</th><th>تم التحليل</th>
                     </tr>
                 </thead>
@@ -122,8 +155,9 @@
                     @foreach (var row in Model.Rows)
                     {
                         <tr>
-                            <td><b>@row.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @row.EmployeeNo</span></td>
-                            <td class="dat-num">@row.WorkDate.ToString("yyyy-MM-dd") <span style="color:var(--sa-muted,#8FA8BC)">@ShiftTypeStore.DayNames[DayAttendanceStore.ToDayIndex(row.WorkDate)]</span></td>
+                            <td class="dat-num">@row.EmployeeNo</td>
+                            <td><b>@row.EmployeeName</b></td>
+                            <td class="dat-num">@row.WorkDate.ToString("yyyy-MM-dd")</td>
                             <td>
                                 @if (row.ShiftName != null)
                                 {
@@ -150,12 +184,12 @@
         <div class="dat-pager">
             @if (Model.PageNumber > 1)
             {
-                <a class="dat-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&PageNumber=@(Model.PageNumber - 1)">السابق</a>
+                <a class="dat-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&StatusFilter=@Model.StatusFilter&PageNumber=@(Model.PageNumber - 1)">السابق</a>
             }
             <span>صفحة @Model.PageNumber من @Model.TotalPages (@Model.TotalRows يومية)</span>
             @if (Model.PageNumber < Model.TotalPages)
             {
-                <a class="dat-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&PageNumber=@(Model.PageNumber + 1)">التالي</a>
+                <a class="dat-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&StatusFilter=@Model.StatusFilter&PageNumber=@(Model.PageNumber + 1)">التالي</a>
             }
         </div>
     }
