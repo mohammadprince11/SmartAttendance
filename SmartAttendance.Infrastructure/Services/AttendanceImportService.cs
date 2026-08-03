@@ -1,12 +1,16 @@
+﻿using System.Data;
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 using System.Xml.Linq;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.AttendanceImports.Services;
 using SmartAttendance.Application.AttendanceImports.ViewModels;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Domain.Enums;
+using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Infrastructure.Services;
 
@@ -17,13 +21,21 @@ namespace SmartAttendance.Infrastructure.Services;
 public class AttendanceImportService : IAttendanceImportService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ApplicationDbContext _dbContext;
+
+    /// <summary>سقف أخطاء القراءة المحفوظة للعرض — تجميعها كلها يعيد الانفجار.</summary>
+    private const int MaxReportedParseErrors = 200;
+
+    /// <summary>حجم دفعة SqlBulkCopy.</summary>
+    private const int BulkBatchSize = 10000;
 
     private static readonly TimeOnly NightShiftMoveFrom = new(0, 0);
     private static readonly TimeOnly NightShiftMoveTo = new(6, 30);
 
-    public AttendanceImportService(IUnitOfWork unitOfWork)
+    public AttendanceImportService(IUnitOfWork unitOfWork, ApplicationDbContext dbContext)
     {
         _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
     }
 
     public async Task<AttendanceImportPreviewViewModel> PreviewAsync(
@@ -32,26 +44,20 @@ public class AttendanceImportService : IAttendanceImportService
         string originalFileName,
         int previewLimit = 500)
     {
-        var buildResult = await BuildPreviewRowsAsync(filePath, originalFileName);
+        var build = await BuildAsync(filePath, previewLimit);
 
         return new AttendanceImportPreviewViewModel
         {
             Token = token,
             FileName = originalFileName,
-            TotalRawRows = buildResult.TotalRawRows,
-            TotalGroups = buildResult.Rows.Count,
-            ReadyToImportCount = buildResult.Rows.Count(x => x.CanImport),
-            WarningCount = buildResult.Rows.Count(x => x.Status == "Warning"),
-            ErrorCount = buildResult.Rows.Count(x => x.Status == "Error"),
-            ExistingRecordsCount = buildResult.Rows.Count(x => x.Status == "Existing"),
+            TotalRawRows = build.TotalRawRows,
+            TotalGroups = build.TotalGroups,
+            ReadyToImportCount = build.ReadyCount + build.WarningCount,
+            WarningCount = build.WarningCount,
+            ErrorCount = build.ErrorCount,
+            ExistingRecordsCount = build.ExistingCount,
             PreviewLimit = previewLimit,
-            Rows = buildResult.Rows
-                .OrderByDescending(x => x.Status == "Error")
-                .ThenByDescending(x => x.Status == "Warning")
-                .ThenByDescending(x => x.AttendanceDate)
-                .ThenBy(x => x.EmployeeNo)
-                .Take(previewLimit)
-                .ToList()
+            Rows = build.PreviewRows
         };
     }
 
@@ -59,168 +65,249 @@ public class AttendanceImportService : IAttendanceImportService
         string filePath,
         string originalFileName)
     {
-        var buildResult = await BuildPreviewRowsAsync(filePath, originalFileName);
+        // لا نبني صفوف العرض عند الاستيراد — يكفي التجميع نفسه.
+        var build = await BuildAsync(filePath, previewLimit: 0);
 
-        var rowsToImport = buildResult.Rows
-            .Where(x => x.CanImport && x.EmployeeId.HasValue && x.AttendanceDate.HasValue && x.CheckIn.HasValue)
-            .ToList();
-
-        var importedCount = 0;
-        var warningImportedCount = 0;
-
-        foreach (var row in rowsToImport)
-        {
-            var notes = BuildImportNotes(originalFileName, row);
-
-            var attendanceRecord = new AttendanceRecord
-            {
-                EmployeeId = row.EmployeeId!.Value,
-                AttendanceDate = row.AttendanceDate!.Value,
-                CheckIn = row.CheckIn!.Value,
-                CheckOut = row.CheckOut,
-                Source = AttendanceSource.Device,
-                Status = AttendanceStatus.Present,
-                Notes = notes
-            };
-
-            await _unitOfWork.AttendanceRecords.AddAsync(attendanceRecord);
-
-            importedCount++;
-
-            if (row.Status == "Warning")
-                warningImportedCount++;
-        }
-
-        if (importedCount > 0)
-            await _unitOfWork.SaveChangesAsync();
-
-        var skippedCount = buildResult.Rows.Count - importedCount;
+        var importedCount = await BulkInsertAsync(build, originalFileName);
+        var skippedCount = build.TotalGroups - importedCount;
 
         return new AttendanceImportResultViewModel
         {
             ImportedCount = importedCount,
             SkippedCount = skippedCount,
-            WarningImportedCount = warningImportedCount,
-            ErrorCount = buildResult.Rows.Count(x => x.Status == "Error"),
+            WarningImportedCount = build.WarningCount,
+            ErrorCount = build.ErrorCount,
             Message = $"Imported {importedCount} attendance records. Skipped {skippedCount} rows/groups."
         };
     }
 
-    private async Task<AttendanceImportBuildResult> BuildPreviewRowsAsync(
-        string filePath,
-        string originalFileName)
+    /// <summary>
+    /// يقرأ الملف **متدفّقاً** ويجمّعه إلى سجلّات يومية، ويحسب العدادات بمرور
+    /// واحد. لا يُبنى كائن عرضٍ إلا لأعلى <paramref name="previewLimit"/> صفّاً —
+    /// وهذا جوهر الإصلاح: النسخة السابقة كانت تبني مليونَي كائن ثم تقتطع 500.
+    /// </summary>
+    private async Task<AttendanceBuild> BuildAsync(string filePath, int previewLimit)
     {
-        var rawReadResult = ReadRawPunches(filePath);
+        var build = new AttendanceBuild();
+        var aggregator = new AttendancePunchAggregator();
 
-        var employees = (await _unitOfWork.Employees.GetAllAsync()).ToList();
-        var existingRecords = (await _unitOfWork.AttendanceRecords.GetAllAsync()).ToList();
-
-        var employeeLookup = employees
-            .Where(x => !string.IsNullOrWhiteSpace(x.EmployeeNo))
-            .GroupBy(x => NormalizeKey(x.EmployeeNo))
-            .ToDictionary(x => x.Key, x => x.First());
-
-        var existingLookup = existingRecords
-            .GroupBy(x => $"{x.EmployeeId}|{x.AttendanceDate:yyyy-MM-dd}")
-            .ToDictionary(x => x.Key, x => x.First());
-
-        var rows = new List<AttendanceImportRowViewModel>();
-
-        foreach (var error in rawReadResult.Errors)
+        foreach (var line in StreamPunchLines(filePath))
         {
+            build.TotalRawRows++;
+
+            if (!line.Ok)
+            {
+                build.ErrorCount++;
+
+                // نحتفظ بعيّنة من أخطاء القراءة فقط — تجميعها كلها يعيد الانفجار.
+                if (build.ParseErrors.Count < MaxReportedParseErrors)
+                {
+                    build.ParseErrors.Add(new RawPunchError
+                    {
+                        EmployeeNo = line.EmployeeNo,
+                        Message = line.Error
+                    });
+                }
+
+                continue;
+            }
+
+            aggregator.Add(
+                line.EmployeeNo,
+                line.AttendanceDate,
+                line.PunchTime,
+                line.FunctionType,
+                line.MachineName);
+        }
+
+        build.TotalGroups = aggregator.DayCount;
+
+        var employeeLookup = await LoadEmployeeLookupAsync();
+        var existingKeys = await LoadExistingKeysAsync(aggregator);
+
+        var top = previewLimit > 0
+            ? new SortedSet<PreviewCandidate>(PreviewCandidateComparer.Instance)
+            : null;
+
+        foreach (var pair in aggregator.Days)
+        {
+            var employeeNo = aggregator.EmployeeNumberAt(
+                AttendancePunchAggregator.EmployeeIndexOf(pair.Key));
+            var date = AttendancePunchAggregator.DateOf(pair.Key);
+
+            employeeLookup.TryGetValue(NormalizeKey(employeeNo), out var employee);
+
+            var status = ResolveStatus(employee, date, pair.Value, existingKeys);
+
+            switch (status)
+            {
+                case RowStatus.Error: build.ErrorCount++; break;
+                case RowStatus.Existing: build.ExistingCount++; break;
+                case RowStatus.Warning: build.WarningCount++; break;
+                default: build.ReadyCount++; break;
+            }
+
+            if (status is RowStatus.Ready or RowStatus.Warning && employee is not null)
+            {
+                build.Importable.Add(new ImportableDay(
+                    employee.Id,
+                    date,
+                    new DateTime(pair.Value.FirstPunchTicks),
+                    pair.Value.PunchCount > 1 ? new DateTime(pair.Value.LastPunchTicks) : null,
+                    pair.Value.PunchCount,
+                    aggregator.DescribeMachines(pair.Value.MachineMask)));
+            }
+
+            if (top is null)
+            {
+                continue;
+            }
+
+            top.Add(new PreviewCandidate(status, date, employeeNo, pair.Key));
+
+            // مجموعة مقيّدة: نحتفظ بأفضل previewLimit فقط بدل ترتيب المليونين.
+            if (top.Count > previewLimit)
+            {
+                top.Remove(top.Max);
+            }
+        }
+
+        if (top is not null)
+        {
+            build.PreviewRows = BuildPreviewRows(top, aggregator, employeeLookup);
+        }
+
+        return build;
+    }
+
+    private List<AttendanceImportRowViewModel> BuildPreviewRows(
+        SortedSet<PreviewCandidate> candidates,
+        AttendancePunchAggregator aggregator,
+        Dictionary<string, Employee> employeeLookup)
+    {
+        var rows = new List<AttendanceImportRowViewModel>(candidates.Count);
+
+        foreach (var candidate in candidates)
+        {
+            aggregator.TryGetDay(candidate.Key, out var day);
+            employeeLookup.TryGetValue(NormalizeKey(candidate.EmployeeNo), out var employee);
+
             rows.Add(new AttendanceImportRowViewModel
             {
-                EmployeeNo = error.EmployeeNo,
-                Status = "Error",
-                Message = error.Message,
-                CanImport = false
+                EmployeeId = employee?.Id,
+                EmployeeNo = candidate.EmployeeNo,
+                EmployeeName = employee?.FullName ?? string.Empty,
+                AttendanceDate = candidate.Date,
+                CheckIn = new DateTime(day.FirstPunchTicks),
+                CheckOut = day.PunchCount > 1 ? new DateTime(day.LastPunchTicks) : null,
+                PunchCount = day.PunchCount,
+                FunctionTypes = aggregator.DescribeFunctions(day.FunctionMask),
+                MachineNames = aggregator.DescribeMachines(day.MachineMask),
+                Status = StatusName(candidate.Status),
+                Message = StatusMessage(candidate.Status, day.PunchCount),
+                CanImport = candidate.Status is RowStatus.Ready or RowStatus.Warning
             });
         }
 
-        var groupedPunches = rawReadResult.Punches
-            .GroupBy(x => new
-            {
-                EmployeeNoKey = NormalizeKey(x.EmployeeNo),
-                x.EmployeeNo,
-                x.AttendanceDate
-            })
-            .ToList();
+        return rows;
+    }
 
-        foreach (var group in groupedPunches)
+    private static RowStatus ResolveStatus(
+        Employee? employee,
+        DateOnly date,
+        AttendancePunchAggregator.DayAggregate day,
+        HashSet<long> existingKeys)
+    {
+        if (employee is null)
         {
-            var punches = group
-                .OrderBy(x => x.PunchTime)
-                .ToList();
-
-            var firstPunch = punches.First();
-            var lastPunch = punches.Last();
-
-            employeeLookup.TryGetValue(group.Key.EmployeeNoKey, out var employee);
-
-            var row = new AttendanceImportRowViewModel
-            {
-                EmployeeId = employee?.Id,
-                EmployeeNo = group.Key.EmployeeNo,
-                EmployeeName = employee?.FullName ?? string.Empty,
-                AttendanceDate = group.Key.AttendanceDate,
-                CheckIn = firstPunch.PunchTime,
-                CheckOut = punches.Count > 1 ? lastPunch.PunchTime : null,
-                PunchCount = punches.Count,
-                FunctionTypes = string.Join(", ", punches
-                    .Select(x => x.FunctionType)
-                    .Where(x => !string.IsNullOrWhiteSpace(x))
-                    .Distinct()),
-                MachineNames = string.Join(", ", punches
-                    .Select(x => x.MachineName)
-                    .Where(x => !string.IsNullOrWhiteSpace(x))
-                    .Distinct()),
-                CanImport = true
-            };
-
-            if (employee == null)
-            {
-                row.Status = "Error";
-                row.Message = "Employee number not found in Employees table.";
-                row.CanImport = false;
-            }
-            else
-            {
-                var existingKey = $"{employee.Id}|{group.Key.AttendanceDate:yyyy-MM-dd}";
-
-                if (existingLookup.ContainsKey(existingKey))
-                {
-                    row.Status = "Existing";
-                    row.Message = "Attendance record already exists for this employee and date. Skipped to avoid duplicates.";
-                    row.CanImport = false;
-                }
-                else if (punches.Count == 1)
-                {
-                    row.Status = "Warning";
-                    row.Message = "Single punch only. It will be imported with missing Check Out.";
-                    row.CanImport = true;
-                }
-                else if (punches.Count > 2)
-                {
-                    row.Status = "Warning";
-                    row.Message = $"More than two punches found ({punches.Count}). First punch will be Check In and last punch will be Check Out.";
-                    row.CanImport = true;
-                }
-                else
-                {
-                    row.Status = "Ready";
-                    row.Message = "Ready to import.";
-                    row.CanImport = true;
-                }
-            }
-
-            rows.Add(row);
+            return RowStatus.Error;
         }
 
-        return new AttendanceImportBuildResult
+        if (existingKeys.Contains(ExistingKey(employee.Id, date)))
         {
-            TotalRawRows = rawReadResult.TotalRawRows,
-            Rows = rows
-        };
+            return RowStatus.Existing;
+        }
+
+        return day.PunchCount == 1 || day.PunchCount > 2
+            ? RowStatus.Warning
+            : RowStatus.Ready;
+    }
+
+    private static string StatusName(RowStatus status) => status switch
+    {
+        RowStatus.Error => "Error",
+        RowStatus.Warning => "Warning",
+        RowStatus.Existing => "Existing",
+        _ => "Ready"
+    };
+
+    private static string StatusMessage(RowStatus status, int punchCount) => status switch
+    {
+        RowStatus.Error => "Employee number not found in Employees table.",
+        RowStatus.Existing => "Attendance record already exists for this employee and date. Skipped to avoid duplicates.",
+        RowStatus.Warning when punchCount == 1 => "Single punch only. It will be imported with missing Check Out.",
+        RowStatus.Warning => $"More than two punches found ({punchCount}). First punch will be Check In and last punch will be Check Out.",
+        _ => "Ready to import."
+    };
+
+    private static long ExistingKey(int employeeId, DateOnly date) =>
+        ((long)employeeId << 32) | (uint)date.DayNumber;
+
+    private async Task<Dictionary<string, Employee>> LoadEmployeeLookupAsync()
+    {
+        var employees = await _dbContext.Employees
+            .AsNoTracking()
+            .Where(x => x.EmployeeNo != null && x.EmployeeNo != string.Empty)
+            .ToListAsync();
+
+        var lookup = new Dictionary<string, Employee>(StringComparer.Ordinal);
+
+        foreach (var employee in employees)
+        {
+            lookup.TryAdd(NormalizeKey(employee.EmployeeNo), employee);
+        }
+
+        return lookup;
+    }
+
+    /// <summary>
+    /// مفاتيح السجلات القائمة **بنطاق تواريخ الملف فقط**. النسخة السابقة كانت
+    /// تسحب جدول الحضور كلّه للذاكرة لتفحص التكرار.
+    /// </summary>
+    private async Task<HashSet<long>> LoadExistingKeysAsync(AttendancePunchAggregator aggregator)
+    {
+        var keys = new HashSet<long>();
+
+        if (aggregator.DayCount == 0)
+        {
+            return keys;
+        }
+
+        var minDay = int.MaxValue;
+        var maxDay = int.MinValue;
+
+        foreach (var pair in aggregator.Days)
+        {
+            var dayNumber = AttendancePunchAggregator.DateOf(pair.Key).DayNumber;
+            if (dayNumber < minDay) minDay = dayNumber;
+            if (dayNumber > maxDay) maxDay = dayNumber;
+        }
+
+        var from = DateOnly.FromDayNumber(minDay);
+        var to = DateOnly.FromDayNumber(maxDay);
+
+        var existing = await _dbContext.AttendanceRecords
+            .AsNoTracking()
+            .Where(x => x.AttendanceDate >= from && x.AttendanceDate <= to)
+            .Select(x => new { x.EmployeeId, x.AttendanceDate })
+            .ToListAsync();
+
+        foreach (var record in existing)
+        {
+            keys.Add(ExistingKey(record.EmployeeId, record.AttendanceDate));
+        }
+
+        return keys;
     }
 
     private static string BuildImportNotes(string originalFileName, AttendanceImportRowViewModel row)
@@ -684,5 +771,305 @@ public class AttendanceImportService : IAttendanceImportService
         public string EmployeeNo { get; set; } = string.Empty;
 
         public string Message { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// إدراج دفعي بـ<c>SqlBulkCopy</c>. النسخة السابقة كانت تضيف كل سجلّ
+    /// لمتتبِّع EF ثم تستدعي SaveChanges مرة واحدة — مليونا كيان بالذاكرة.
+    /// </summary>
+    private async Task<int> BulkInsertAsync(AttendanceBuild build, string originalFileName)
+    {
+        if (build.Importable.Count == 0)
+        {
+            return 0;
+        }
+
+        var fileLabel = Path.GetFileName(originalFileName);
+
+        using var table = new DataTable();
+        table.Columns.Add("EmployeeId", typeof(int));
+        table.Columns.Add("AttendanceDate", typeof(DateTime));
+        table.Columns.Add("CheckIn", typeof(DateTime));
+        table.Columns.Add("CheckOut", typeof(DateTime));
+        table.Columns.Add("Source", typeof(int));
+        table.Columns.Add("Status", typeof(int));
+        table.Columns.Add("Notes", typeof(string));
+
+        foreach (var day in build.Importable)
+        {
+            var notes = $"Imported from {fileLabel} | Punches: {day.PunchCount} | Machines: {day.Machines}";
+            if (notes.Length > 490) notes = notes[..490];
+
+            table.Rows.Add(
+                day.EmployeeId,
+                day.Date.ToDateTime(TimeOnly.MinValue),
+                day.CheckIn,
+                (object?)day.CheckOut ?? DBNull.Value,
+                (int)AttendanceSource.Device,
+                (int)AttendanceStatus.Present,
+                notes);
+        }
+
+        var connection = _dbContext.Database.GetDbConnection();
+
+        if (connection is not SqlConnection sqlConnection)
+        {
+            throw new InvalidOperationException(
+                "الإدراج الدفعي يتطلّب SQL Server.");
+        }
+
+        var opened = sqlConnection.State != ConnectionState.Open;
+        if (opened) await sqlConnection.OpenAsync();
+
+        try
+        {
+            using var bulk = new SqlBulkCopy(sqlConnection)
+            {
+                DestinationTableName = "AttendanceRecords",
+                BatchSize = BulkBatchSize,
+                BulkCopyTimeout = 0
+            };
+
+            foreach (DataColumn column in table.Columns)
+            {
+                bulk.ColumnMappings.Add(column.ColumnName, column.ColumnName);
+            }
+
+            await bulk.WriteToServerAsync(table);
+        }
+        finally
+        {
+            if (opened) await sqlConnection.CloseAsync();
+        }
+
+        return build.Importable.Count;
+    }
+
+    /// <summary>
+    /// يقرأ الملف سطراً سطراً بلا تحميله كاملاً. CSV يُقرأ متدفّقاً حقيقياً؛
+    /// وxlsx يمرّ عبر القارئ القائم (ملفات الأجهزة الضخمة تأتي CSV عملياً).
+    /// </summary>
+    private static IEnumerable<PunchLine> StreamPunchLines(string filePath)
+    {
+        var extension = Path.GetExtension(filePath).ToLowerInvariant();
+
+        return extension switch
+        {
+            ".csv" => StreamCsvPunchLines(filePath),
+            ".xlsx" => StreamXlsxPunchLines(filePath),
+            _ => throw new InvalidOperationException(
+                "Unsupported file type. Please upload .xlsx or .csv file.")
+        };
+    }
+
+    private static IEnumerable<PunchLine> StreamCsvPunchLines(string filePath)
+    {
+        var rowNumber = 1;
+        List<string>? headers = null;
+        var employeeIndex = -1;
+        var dateIndex = -1;
+        var functionIndex = -1;
+        var machineIndex = -1;
+
+        // File.ReadLines كسولة: لا تُحمَّل الأسطر كلها للذاكرة.
+        foreach (var line in File.ReadLines(filePath, Encoding.UTF8))
+        {
+            if (headers is null)
+            {
+                headers = SplitCsvLine(line);
+
+                employeeIndex = FindHeaderIndex(headers, "EmployeeCardNumber", "EmployeeNo", "Employee No", "AC-No", "ACNo", "CardNo", "PIN");
+                dateIndex = FindHeaderIndex(headers, "AttendanceDate", "Attendance Date", "DateTime", "PunchTime", "Time", "Date");
+                functionIndex = FindHeaderIndex(headers, "FunctionType", "Function Type", "InOut", "In Out", "Status");
+                machineIndex = FindHeaderIndex(headers, "MachineName", "Machine Name", "Device", "DeviceName", "Device Name");
+
+                if (employeeIndex < 0 || dateIndex < 0)
+                {
+                    throw new InvalidOperationException(
+                        "Required columns not found. Expected EmployeeCardNumber and AttendanceDate.");
+                }
+
+                continue;
+            }
+
+            rowNumber++;
+
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            var values = SplitCsvLine(line);
+
+            yield return ParsePunchLine(
+                rowNumber,
+                GetCsvValue(values, employeeIndex).Trim(),
+                GetCsvValue(values, dateIndex).Trim(),
+                functionIndex >= 0 ? GetCsvValue(values, functionIndex).Trim() : string.Empty,
+                machineIndex >= 0 ? GetCsvValue(values, machineIndex).Trim() : string.Empty);
+        }
+    }
+
+    private static IEnumerable<PunchLine> StreamXlsxPunchLines(string filePath)
+    {
+        var raw = ReadXlsxRawPunches(filePath);
+
+        foreach (var error in raw.Errors)
+        {
+            yield return PunchLine.Failed(error.EmployeeNo, error.Message);
+        }
+
+        foreach (var punch in raw.Punches)
+        {
+            yield return new PunchLine(
+                punch.EmployeeNo,
+                punch.AttendanceDate,
+                punch.PunchTime,
+                punch.FunctionType,
+                punch.MachineName);
+        }
+    }
+
+    /// <summary>
+    /// يحوّل قيم صفٍّ خام إلى بصمة صالحة أو خطأ. **تعديل المناوبة الليلية هنا**
+    /// (بصمة بعد منتصف الليل وقبل 6:30 تُنسب ليوم العمل السابق) — سلوك النسخة
+    /// السابقة نفسه حرفياً حتى لا يتغيّر أي احتساب حضور.
+    /// </summary>
+    private static PunchLine ParsePunchLine(
+        int rowNumber,
+        string employeeNo,
+        string dateText,
+        string functionType,
+        string machineName)
+    {
+        if (string.IsNullOrWhiteSpace(employeeNo))
+        {
+            return PunchLine.Failed("-", $"Row {rowNumber}: Employee number is empty.");
+        }
+
+        if (!TryParseDateTime(dateText, out var punchTime))
+        {
+            return PunchLine.Failed(
+                employeeNo,
+                $"Row {rowNumber}: Invalid AttendanceDate value ({dateText}).");
+        }
+
+        var attendanceDate = DateOnly.FromDateTime(punchTime);
+        var punchTimeOnly = TimeOnly.FromDateTime(punchTime);
+
+        if (punchTimeOnly >= NightShiftMoveFrom && punchTimeOnly <= NightShiftMoveTo)
+        {
+            attendanceDate = attendanceDate.AddDays(-1);
+        }
+
+        return new PunchLine(employeeNo, attendanceDate, punchTime, functionType, machineName);
+    }
+
+    private enum RowStatus
+    {
+        Ready,
+        Warning,
+        Existing,
+        Error
+    }
+
+    private readonly struct PunchLine
+    {
+        public PunchLine(
+            string employeeNo,
+            DateOnly attendanceDate,
+            DateTime punchTime,
+            string functionType,
+            string machineName)
+        {
+            Ok = true;
+            EmployeeNo = employeeNo;
+            AttendanceDate = attendanceDate;
+            PunchTime = punchTime;
+            FunctionType = functionType;
+            MachineName = machineName;
+            Error = string.Empty;
+        }
+
+        private PunchLine(string employeeNo, string error)
+        {
+            Ok = false;
+            EmployeeNo = employeeNo;
+            AttendanceDate = default;
+            PunchTime = default;
+            FunctionType = string.Empty;
+            MachineName = string.Empty;
+            Error = error;
+        }
+
+        public bool Ok { get; }
+        public string EmployeeNo { get; }
+        public DateOnly AttendanceDate { get; }
+        public DateTime PunchTime { get; }
+        public string FunctionType { get; }
+        public string MachineName { get; }
+        public string Error { get; }
+
+        public static PunchLine Failed(string employeeNo, string error) =>
+            new(employeeNo, error);
+    }
+
+    private readonly record struct ImportableDay(
+        int EmployeeId,
+        DateOnly Date,
+        DateTime CheckIn,
+        DateTime? CheckOut,
+        int PunchCount,
+        string Machines);
+
+    private readonly record struct PreviewCandidate(
+        RowStatus Status,
+        DateOnly Date,
+        string EmployeeNo,
+        long Key);
+
+    /// <summary>
+    /// ترتيب العرض كما كان: الأخطاء ثم التحذيرات، ثم الأحدث تاريخاً، ثم رقم
+    /// الموظف. المفتاح آخرَ الترتيب ليضمن تمييز المتساويات داخل SortedSet.
+    /// </summary>
+    private sealed class PreviewCandidateComparer : IComparer<PreviewCandidate>
+    {
+        public static readonly PreviewCandidateComparer Instance = new();
+
+        public int Compare(PreviewCandidate x, PreviewCandidate y)
+        {
+            var byStatus = Rank(y.Status).CompareTo(Rank(x.Status));
+            if (byStatus != 0) return byStatus;
+
+            var byDate = y.Date.CompareTo(x.Date);
+            if (byDate != 0) return byDate;
+
+            var byEmployee = string.CompareOrdinal(x.EmployeeNo, y.EmployeeNo);
+            if (byEmployee != 0) return byEmployee;
+
+            return x.Key.CompareTo(y.Key);
+        }
+
+        private static int Rank(RowStatus status) => status switch
+        {
+            RowStatus.Error => 3,
+            RowStatus.Warning => 2,
+            RowStatus.Existing => 1,
+            _ => 0
+        };
+    }
+
+    private sealed class AttendanceBuild
+    {
+        public int TotalRawRows { get; set; }
+        public int TotalGroups { get; set; }
+        public int ReadyCount { get; set; }
+        public int WarningCount { get; set; }
+        public int ExistingCount { get; set; }
+        public int ErrorCount { get; set; }
+
+        public List<RawPunchError> ParseErrors { get; } = new();
+        public List<ImportableDay> Importable { get; } = new();
+        public List<AttendanceImportRowViewModel> PreviewRows { get; set; } = new();
     }
 }
