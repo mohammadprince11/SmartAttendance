@@ -75,14 +75,23 @@ public class IndexModel : PageModel
         var (year, month) = Period;
         var shiftTypeId = int.TryParse(Request.Form["ShiftTypeId"], out var id) ? id : 0;
 
-        if (shiftTypeId <= 0)
+        // الفحص المسبق يقول **لماذا** لم يُحلَّل شيء. بدونه كان المحرّك يعيد صفراً
+        // صامتاً فتُقرأ الرسالة «تم التحديث — 0 يومية» كأنها نجاح، والشاشة فارغة.
+        var blocker = await DayAttendanceStore.FindAnalyzeBlockerAsync(
+            _dbContext, year, month, shiftTypeId);
+
+        if (blocker is not null)
         {
-            TempData["SuccessMessage"] = "اختر مناوبة التحليل أولاً.";
+            TempData["SuccessMessage"] = blocker;
         }
         else
         {
             var count = await DayAttendanceStore.AnalyzeMonthAsync(_dbContext, year, month, shiftTypeId);
-            TempData["SuccessMessage"] = $"تم تحديث الحضور — {count} يومية مولّدة لشهر {month:00}/{year}.";
+
+            TempData["SuccessMessage"] = count > 0
+                ? $"تم تحديث الحضور — {count} يومية مولّدة لشهر {month:00}/{year}."
+                : $"لم تُولَّد يوميات لشهر {month:00}/{year} — لا بصمات بالفترة " +
+                  "للموظفين المسنَدين لهذه المناوبة. تحقّق من إسناد الموظفين ومن نطاق تواريخ البصمات.";
         }
         return RedirectToPage(new { Month, Search });
     }
