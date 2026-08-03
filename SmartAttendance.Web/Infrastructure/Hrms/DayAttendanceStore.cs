@@ -677,16 +677,25 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
             return (null, null, 0, 0, 0, "Absent");
         }
 
-        var worked = checkOut.HasValue
-            ? Math.Max(0, Math.Round((decimal)(checkOut.Value - checkIn.Value).TotalHours, 2)) : 0;
+        // بصمة ناقصة ⟹ **كل المقادير صفر**.
+        //
+        // طرفٌ واحد لا يكفي لاشتقاق أي كمية، والأسوأ أن البصمة الوحيدة قد تكون
+        // بصمة **انصراف** سُجّلت أوّلاً — فاحتساب التأخير منها يعطي «تأخير 9.55
+        // ساعة» لموظفٍ بصم 17:33. رقمٌ كاذب يدخل المسير خصماً.
+        // القرار: لا تأخير ولا خروج مبكر ولا ساعات عمل بلا طرفَين.
+        if (!checkOut.HasValue)
+        {
+            return (checkIn, null, 0, 0, 0, "Incomplete");
+        }
+
+        var worked = Math.Max(0, Math.Round((decimal)(checkOut.Value - checkIn.Value).TotalHours, 2));
 
         if (shift.IsFlexible)
         {
-            // مرنة: لا تأخير بالساعة؛ النقص عن الساعات المطلوبة = خروج مبكر
-            var shortfall = checkOut.HasValue
-                ? Math.Max(0, Math.Round(shift.FlexDailyHours - worked, 2)) : 0;
-            return (checkIn, checkOut, 0, shortfall, worked,
-                !checkOut.HasValue ? "Incomplete" : "Present");
+            // مرنة: لا تأخير بالساعة؛ النقص عن الساعات المطلوبة = خروج مبكر.
+            // الطرفان مضمونان هنا — البصمة الناقصة خرجت أعلاه بأصفارها.
+            var shortfall = Math.Max(0, Math.Round(shift.FlexDailyHours - worked, 2));
+            return (checkIn, checkOut, 0, shortfall, worked, "Present");
         }
 
         decimal late = 0, early = 0;
@@ -696,7 +705,7 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
             late = ApplyGrace(checkIn.Value.TimeOfDay - shiftStart - lateCredit,
                 shift.LatenessGraceMinutes, shift.GraceExceededPolicy);
         }
-        if (checkOut.HasValue && checkOut.Value.Date == checkIn.Value.Date
+        if (checkOut.Value.Date == checkIn.Value.Date
             && TimeSpan.TryParse(day?.StartTime, out var dayStart)
             && TimeSpan.TryParse(day?.EndTime, out var shiftEnd)
             && shiftEnd > dayStart) // العابرة لمنتصف الليل (نهاية < بداية) خروجها باليوم التالي — لا اشتقاق مبكر هنا
@@ -705,7 +714,7 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
                 shift.EarlyLeaveGraceMinutes, shift.GraceExceededPolicy);
         }
 
-        var status = !checkOut.HasValue ? "Incomplete" : late > 0 ? "Late" : "Present";
+        var status = late > 0 ? "Late" : "Present";
         return (checkIn, checkOut, late, early, worked, status);
     }
 
