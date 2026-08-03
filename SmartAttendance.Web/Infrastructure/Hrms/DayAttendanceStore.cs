@@ -89,6 +89,48 @@ END;
     /// البصمات الخام — آمن للإعادة (إعادة تحليل).
     /// </summary>
     /// <returns>عدد الصفوف المولّدة.</returns>
+    /// <summary>
+    /// يفحص ما يمنع التحليل **قبل** تشغيله، ويعيد سبباً مقروءاً أو <c>null</c>.
+    ///
+    /// سببه عطلٌ حقيقي: <see cref="AnalyzeMonthAsync"/> يخرج بـ<c>return 0</c>
+    /// صامتاً حين لا توجد مناوبة، فتظهر كل شاشات الحضور فارغةً وكأن لا بيانات —
+    /// والحقيقة أن المحرّك لم يعمل أصلاً. الصفر ليس نتيجةً هنا بل امتناع.
+    /// </summary>
+    public static async Task<string?> FindAnalyzeBlockerAsync(
+        ApplicationDbContext dbContext, int year, int month, int shiftTypeId)
+    {
+        var shiftTypes = await ShiftTypeStore.ListAsync(dbContext);
+
+        if (shiftTypes.Count == 0)
+        {
+            return "لا توجد أنواع مناوبات بالنظام — أنشئ مناوبة من «أنواع المناوبات» " +
+                   "وأسنِد إليها الموظفين، ثم أعِد تحديث الحضور.";
+        }
+
+        if (shiftTypeId <= 0)
+        {
+            return "اختر مناوبة التحليل أولاً.";
+        }
+
+        if (shiftTypes.All(shift => shift.Id != shiftTypeId))
+        {
+            return "المناوبة المختارة لم تعد موجودة — حدّث الصفحة واختر مناوبة قائمة.";
+        }
+
+        if (new DateOnly(year, month, 1) > DateOnly.FromDateTime(DateTime.Today))
+        {
+            return "الشهر المطلوب لم يبدأ بعد — لا يوجد ما يُحلَّل.";
+        }
+
+        // التحليل يشمل الفعّالين فقط؛ ذكرُ ذلك يمنع حيرةً حين تكون القاعدة مملوءة.
+        if (!await dbContext.Employees.AsNoTracking().AnyAsync(employee => employee.IsActive))
+        {
+            return "لا يوجد موظفون فعّالون — التحليل يشمل الفعّالين فقط.";
+        }
+
+        return null;
+    }
+
     public static async Task<int> AnalyzeMonthAsync(
         ApplicationDbContext dbContext, int year, int month, int defaultShiftTypeId)
     {
