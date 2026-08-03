@@ -37,33 +37,34 @@ public sealed class EmployeeBootstrapImportEngine
 
     private static readonly EmployeeTemplateColumn[] BaseColumns =
     {
-        new("EmployeeNo", true, EmployeeTemplateColumnKind.Text, 16),
-        new("FullName", true, EmployeeTemplateColumnKind.Text, 30),
-        new("CompanyName", true, EmployeeTemplateColumnKind.Text, 28),
-        new("CompanyCode", false, EmployeeTemplateColumnKind.Text, 16),
-        new("WorkLocationName", true, EmployeeTemplateColumnKind.Text, 26),
-        new("WorkLocationCode", false, EmployeeTemplateColumnKind.Text, 18),
-        new("DepartmentName", true, EmployeeTemplateColumnKind.Text, 24),
-        new("DepartmentCode", false, EmployeeTemplateColumnKind.Text, 17),
-        new("PositionName", true, EmployeeTemplateColumnKind.Text, 28),
-        new("PositionCode", false, EmployeeTemplateColumnKind.Text, 16),
-        new("HireDate", true, EmployeeTemplateColumnKind.Date, 15),
-        new("NationalId", false, EmployeeTemplateColumnKind.Text, 20),
-        new("Phone", false, EmployeeTemplateColumnKind.Text, 18),
-        new("Email", false, EmployeeTemplateColumnKind.Text, 28),
-        new("BirthDate", false, EmployeeTemplateColumnKind.Date, 15),
-        new("Gender", false, EmployeeTemplateColumnKind.Text, 14),
-        new("MaritalStatus", false, EmployeeTemplateColumnKind.Text, 17),
-        new("Nationality", false, EmployeeTemplateColumnKind.Text, 18),
-        new("Country", false, EmployeeTemplateColumnKind.Text, 18),
-        new("ContractType", false, EmployeeTemplateColumnKind.Text, 18),
-        new("ContractEndDate", false, EmployeeTemplateColumnKind.Date, 17),
-        new("EmploymentStatus", false, EmployeeTemplateColumnKind.Text, 18),
-        new("IsActive", false, EmployeeTemplateColumnKind.Text, 13),
-        new("DirectManagerEmployeeNo", false, EmployeeTemplateColumnKind.Text, 24),
+        new("EmployeeNo", true, EmployeeTemplateColumnKind.Text, 16, "رقم الموظف"),
+        new("FullName", true, EmployeeTemplateColumnKind.Text, 30, "الاسم الكامل"),
+        new("CompanyName", true, EmployeeTemplateColumnKind.Text, 28, "اسم الشركة"),
+        new("CompanyCode", false, EmployeeTemplateColumnKind.Text, 16, "رمز الشركة"),
+        new("WorkLocationName", true, EmployeeTemplateColumnKind.Text, 26, "اسم موقع العمل"),
+        new("WorkLocationCode", false, EmployeeTemplateColumnKind.Text, 18, "رمز موقع العمل"),
+        new("DepartmentName", true, EmployeeTemplateColumnKind.Text, 24, "اسم القسم"),
+        new("DepartmentCode", false, EmployeeTemplateColumnKind.Text, 17, "رمز القسم"),
+        new("PositionName", true, EmployeeTemplateColumnKind.Text, 28, "المسمى الوظيفي"),
+        new("PositionCode", false, EmployeeTemplateColumnKind.Text, 16, "رمز المسمى الوظيفي"),
+        new("HireDate", true, EmployeeTemplateColumnKind.Date, 15, "تاريخ التعيين"),
+        new("NationalId", false, EmployeeTemplateColumnKind.Text, 20, "رقم الهوية الوطنية"),
+        new("Phone", false, EmployeeTemplateColumnKind.Text, 18, "رقم الهاتف"),
+        new("Email", false, EmployeeTemplateColumnKind.Text, 28, "البريد الإلكتروني"),
+        new("BirthDate", false, EmployeeTemplateColumnKind.Date, 15, "تاريخ الميلاد"),
+        new("Gender", false, EmployeeTemplateColumnKind.Text, 14, "الجنس"),
+        new("MaritalStatus", false, EmployeeTemplateColumnKind.Text, 17, "الحالة الاجتماعية"),
+        new("Nationality", false, EmployeeTemplateColumnKind.Text, 18, "الجنسية"),
+        new("Country", false, EmployeeTemplateColumnKind.Text, 18, "البلد"),
+        new("ContractType", false, EmployeeTemplateColumnKind.Text, 18, "نوع العقد"),
+        new("ContractEndDate", false, EmployeeTemplateColumnKind.Date, 17, "تاريخ انتهاء العقد"),
+        new("EmploymentStatus", false, EmployeeTemplateColumnKind.Text, 18, "الحالة الوظيفية"),
+        new("IsActive", false, EmployeeTemplateColumnKind.Text, 13, "فعال"),
+        new("DirectManagerEmployeeNo", false, EmployeeTemplateColumnKind.Text, 24,
+            "رقم الموظف للمدير المباشر"),
         // الراتب الأساسي يسكن EmployeeFinancialInfos لا Employees — عمود بآخر
         // القالب حتى لا ينزاح ترتيب الأعمدة على ملفٍ معبّأ سابقاً.
-        new("BasicSalary", false, EmployeeTemplateColumnKind.Text, 16)
+        new("BasicSalary", false, EmployeeTemplateColumnKind.Text, 16, "الراتب الأساسي")
     };
 
     private readonly ApplicationDbContext _dbContext;
@@ -2560,57 +2561,68 @@ public sealed class EmployeeBootstrapImportEngine
         {
             new(
                 "Ref Company Name",
-                references.Companies
+                DisplayName: "اسم الشركة المرجعي",
+                Values: references.Companies
                     .Select(item => item.Name)
                     .ToList()),
             new(
                 "Ref Company Code",
-                references.Companies
+                DisplayName: "رمز الشركة المرجعي",
+                Values: references.Companies
                     .Select(item => item.Code)
                     .ToList()),
             new(
                 "Ref Work Location Name",
-                references.Branches
+                DisplayName: "اسم موقع العمل المرجعي",
+                Values: references.Branches
                     .Select(item => item.Name)
                     .ToList()),
             new(
                 "Ref Work Location Code",
-                references.Branches
+                DisplayName: "رمز موقع العمل المرجعي",
+                Values: references.Branches
                     .Select(item => item.Code)
                     .ToList()),
             new(
                 "Ref Work Location Company",
-                references.Branches
+                DisplayName: "شركة موقع العمل المرجعية",
+                Values: references.Branches
                     .Select(item => item.Company)
                     .ToList()),
             new(
                 "Ref Department Name",
-                references.Departments
+                DisplayName: "اسم القسم المرجعي",
+                Values: references.Departments
                     .Select(item => item.Name)
                     .ToList()),
             new(
                 "Ref Department Code",
-                references.Departments
+                DisplayName: "رمز القسم المرجعي",
+                Values: references.Departments
                     .Select(item => item.Code)
                     .ToList()),
             new(
                 "Ref Department Company",
-                references.Departments
+                DisplayName: "شركة القسم المرجعية",
+                Values: references.Departments
                     .Select(item => item.Company)
                     .ToList()),
             new(
                 "Ref Position Name",
-                references.Positions
+                DisplayName: "اسم المسمى الوظيفي المرجعي",
+                Values: references.Positions
                     .Select(item => item.Name)
                     .ToList()),
             new(
                 "Ref Position Code",
-                references.Positions
+                DisplayName: "رمز المسمى الوظيفي المرجعي",
+                Values: references.Positions
                     .Select(item => item.Code)
                     .ToList()),
             new(
                 "Ref Position Company",
-                references.Positions
+                DisplayName: "شركة المسمى الوظيفي المرجعية",
+                Values: references.Positions
                     .Select(item => item.Company)
                     .ToList())
         };
@@ -2781,8 +2793,8 @@ public sealed class EmployeeBootstrapImportEngine
                     ? 1
                     : 2;
             var header = column.Required
-                ? column.Name + " *"
-                : column.Name;
+                ? column.Header + " *"
+                : column.Header;
 
             builder.Append(
                 BuildInlineCell(
@@ -2800,7 +2812,7 @@ public sealed class EmployeeBootstrapImportEngine
                 BuildInlineCell(
                     1,
                     firstReferenceColumn + index,
-                    referenceColumns[index].Header,
+                    referenceColumns[index].Caption,
                     4));
         }
 
@@ -3494,14 +3506,15 @@ public sealed class EmployeeBootstrapImportEngine
         return value.Trim();
     }
 
+    /// <summary>
+    /// تطبيع الترويسة **مع ترجمة العربية للاسم المعياري**. نقطة واحدة يمرّ بها
+    /// كل مقارنة ترويسة بالمحرك (<c>ValidateHeaders</c> · <c>GetValue</c> ·
+    /// <c>IsReferenceHeader</c>)، فقبول القالب المترجَم يسري عليها كلها معاً.
+    /// </summary>
     private static string NormalizeHeader(
         string? value)
     {
-        return new string(
-            (value ?? string.Empty)
-                .Where(char.IsLetterOrDigit)
-                .Select(char.ToLowerInvariant)
-                .ToArray());
+        return ImportHeaderAliases.Canonicalize(value);
     }
 
     private static string NormalizeKey(
@@ -3884,15 +3897,33 @@ public sealed class EmployeeBootstrapImportEngine
         List<TemplateReferenceRow> Departments,
         List<TemplateReferenceRow> Positions);
 
+    /// <summary>
+    /// <paramref name="Header"/> مفتاح إنجليزي تُبنى عليه صيغ التحقق من الصحة،
+    /// و<paramref name="DisplayName"/> نصّ الترويسة العربي المعروض.
+    /// </summary>
     private sealed record ReferenceColumn(
         string Header,
-        List<string> Values);
+        List<string> Values,
+        string? DisplayName = null)
+    {
+        public string Caption => DisplayName ?? Header;
+    }
 
+    /// <summary>
+    /// <paramref name="Name"/> هو **مفتاح المطابقة** المعياري (إنجليزي) الذي
+    /// تُبنى عليه القراءة والتحقق وصيغ التحقق من الصحة.
+    /// <paramref name="DisplayName"/> هو **نصّ الترويسة المعروض** بالملف — عربي
+    /// لأن النظام عربيّ. فصلهما يمنع أن تكسر الترجمةُ المطابقةَ.
+    /// </summary>
     private sealed record EmployeeTemplateColumn(
         string Name,
         bool Required,
         EmployeeTemplateColumnKind Kind,
-        double Width);
+        double Width,
+        string? DisplayName = null)
+    {
+        public string Header => DisplayName ?? Name;
+    }
 
     private enum EmployeeTemplateColumnKind
     {
