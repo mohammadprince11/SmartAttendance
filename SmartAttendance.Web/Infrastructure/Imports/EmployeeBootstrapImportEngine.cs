@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.IO.Compression;
@@ -60,7 +60,10 @@ public sealed class EmployeeBootstrapImportEngine
         new("ContractEndDate", false, EmployeeTemplateColumnKind.Date, 17),
         new("EmploymentStatus", false, EmployeeTemplateColumnKind.Text, 18),
         new("IsActive", false, EmployeeTemplateColumnKind.Text, 13),
-        new("DirectManagerEmployeeNo", false, EmployeeTemplateColumnKind.Text, 24)
+        new("DirectManagerEmployeeNo", false, EmployeeTemplateColumnKind.Text, 24),
+        // الراتب الأساسي يسكن EmployeeFinancialInfos لا Employees — عمود بآخر
+        // القالب حتى لا ينزاح ترتيب الأعمدة على ملفٍ معبّأ سابقاً.
+        new("BasicSalary", false, EmployeeTemplateColumnKind.Text, 16)
     };
 
     private readonly ApplicationDbContext _dbContext;
@@ -412,6 +415,10 @@ public sealed class EmployeeBootstrapImportEngine
                     }
                 }
 
+                await SaveBasicSalaryAsync(
+                    resolved.Employee.Id,
+                    resolved.Plan.BasicSalary);
+
                 dynamicValues +=
                     await SaveDynamicFieldsAsync(
                         resolved.Employee.Id,
@@ -718,6 +725,31 @@ public sealed class EmployeeBootstrapImportEngine
             {
                 plan.ContractEndDate =
                     contractEndDate;
+            }
+        }
+
+        var basicSalaryText = GetValue(
+            row.Values,
+            "BasicSalary");
+
+        if (!string.IsNullOrWhiteSpace(basicSalaryText))
+        {
+            if (!ImportAmountParser.TryParse(
+                    basicSalaryText,
+                    out var basicSalary))
+            {
+                plan.Errors.Add(
+                    $"Invalid BasicSalary: {basicSalaryText}");
+            }
+            else if (basicSalary < 0)
+            {
+                plan.Errors.Add(
+                    $"BasicSalary must not be negative: " +
+                    $"{basicSalaryText}");
+            }
+            else
+            {
+                plan.BasicSalary = basicSalary;
             }
         }
 
@@ -1494,6 +1526,53 @@ public sealed class EmployeeBootstrapImportEngine
             });
     }
 
+    /// <summary>
+    /// يكتب الراتب الأساسي بملف الموظف المالي (<c>EmployeeFinancialInfos</c>).
+    ///
+    /// خليّة فارغة ⟹ **لا تغيير** — الاستيراد لا يمسح راتباً مُدخلاً بالنظام
+    /// لمجرد أن العمود تُرك فارغاً بالملف، وهذا يطابق سلوك بقية الأعمدة الاختيارية.
+    /// idempotent: تحديث للصفّ القائم وإدراج لغير الموجود.
+    /// </summary>
+    private async Task SaveBasicSalaryAsync(
+        int employeeId,
+        decimal? basicSalary)
+    {
+        if (basicSalary is null || employeeId <= 0)
+        {
+            return;
+        }
+
+        await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);
+
+        await ExecuteSqlAsync(
+            """
+            UPDATE dbo.EmployeeFinancialInfos
+            SET BasicSalary = @BasicSalary,
+                UpdatedAt = SYSUTCDATETIME()
+            WHERE EmployeeId = @EmployeeId
+              AND ISNULL(IsDeleted, 0) = 0;
+
+            IF @@ROWCOUNT = 0
+            BEGIN
+                INSERT INTO dbo.EmployeeFinancialInfos
+                    (EmployeeId, BasicSalary, CreatedAt, IsDeleted)
+                VALUES
+                    (@EmployeeId, @BasicSalary, SYSUTCDATETIME(), 0);
+            END;
+            """,
+            command =>
+            {
+                AddParameter(
+                    command,
+                    "@EmployeeId",
+                    employeeId);
+                AddParameter(
+                    command,
+                    "@BasicSalary",
+                    basicSalary.Value);
+            });
+    }
+
     private async Task<int> SaveDynamicFieldsAsync(
         int employeeId,
         Dictionary<string, string> values,
@@ -1697,6 +1776,12 @@ public sealed class EmployeeBootstrapImportEngine
                 ISNULL(e.Country, N'') AS Country,
                 ISNULL(e.ContractType, N'') AS ContractType,
                 ISNULL(e.EmploymentStatus, N'') AS EmploymentStatus,
+                ISNULL(CONVERT(varchar(30), (
+                    SELECT TOP 1 fi.BasicSalary
+                    FROM dbo.EmployeeFinancialInfos AS fi
+                    WHERE fi.EmployeeId = e.Id
+                      AND ISNULL(fi.IsDeleted, 0) = 0
+                    ORDER BY fi.Id DESC)), N'') AS BasicSalary,
                 CASE
                     WHEN e.IsActive = 1 THEN 'true'
                     ELSE 'false'
@@ -1764,7 +1849,9 @@ public sealed class EmployeeBootstrapImportEngine
                     ["DirectManagerEmployeeNo"] =
                         GetString(
                             reader,
-                            "DirectManagerEmployeeNo")
+                            "DirectManagerEmployeeNo"),
+                    ["BasicSalary"] =
+                        GetString(reader, "BasicSalary")
                 }));
 
         if (employees.Count == 0)
@@ -3606,6 +3693,7 @@ public sealed class EmployeeBootstrapImportEngine
         public string EmploymentStatus { get; set; } = string.Empty;
         public bool? IsActive { get; set; }
         public string DirectManagerEmployeeNo { get; set; } = string.Empty;
+        public decimal? BasicSalary { get; set; }
         public string EmployeeAction { get; set; } = "Create";
         public CompanyReference? Company { get; set; }
         public BranchReference? Branch { get; set; }
