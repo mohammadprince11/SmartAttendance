@@ -1,5 +1,6 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -48,6 +49,38 @@ public class IndexModel : PageModel
     public int AbsentCount { get; set; }
     public int IncompleteCount { get; set; }
 
+    /// <summary>الفترة الفعلية المعروضة بعد تطبيق سياسة الغلق.</summary>
+    public AttendancePeriodPolicy.Period CutoffPeriod { get; private set; }
+
+    /// <summary>اسم سياسة الغلق المطبَّقة — يُعرض ليعرف المستخدم لمَ تغيّرت الحدود.</summary>
+    public string? CutoffPolicyName { get; private set; }
+
+    /// <summary>
+    /// يقرأ سياسة غلق **الحضور** النشطة ويحسب منها الفترة. بلا سياسة يبقى
+    /// السلوك القديم (الشهر التقويمي كاملاً) فلا تنكسر شركةٌ لم تُعرّف سياسةً.
+    /// </summary>
+    private async Task<AttendancePeriodPolicy.Period> ResolvePeriodAsync(int year, int month)
+    {
+        var policy = await (
+            from p in _dbContext.PayrollCutoffPolicies.AsNoTracking()
+            join t in _dbContext.PayrollCutoffPolicyTypes.AsNoTracking()
+                on p.Id equals t.PayrollCutoffPolicyId
+            where p.IsActive && !p.IsDeleted && !t.IsDeleted
+                  && t.PolicyType == SmartAttendance.Domain.Enums.PayrollCutoffType.Attendance
+            orderby p.Id
+            select new { p.Name, p.FromDay, p.ToDay }).FirstOrDefaultAsync();
+
+        if (policy is null)
+        {
+            return AttendancePeriodPolicy.Resolve(year, month, 1, DateTime.DaysInMonth(year, month));
+        }
+
+        CutoffPolicyName = policy.Name;
+        return AttendancePeriodPolicy.Resolve(year, month, policy.FromDay, policy.ToDay);
+    }
+
+
+
     public (int Year, int Month) Period
     {
         get
@@ -65,7 +98,11 @@ public class IndexModel : PageModel
 
         Shifts = (await ShiftTypeStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
 
-        var all = await DayAttendanceStore.ListAsync(_dbContext, year, month, Search);
+        // الفترة تتبع سياسة غلق الحضور (مثلاً 21 → 20) لا الشهر التقويمي.
+        CutoffPeriod = await ResolvePeriodAsync(year, month);
+
+        var all = await DayAttendanceStore.ListRangeAsync(
+            _dbContext, CutoffPeriod.From, CutoffPeriod.To, Search);
         PresentCount = all.Count(r => r.Status == "Present");
         LateCount = all.Count(r => r.Status == "Late");
         AbsentCount = all.Count(r => r.Status == "Absent");
@@ -105,12 +142,23 @@ public class IndexModel : PageModel
         }
         else
         {
-            var count = await DayAttendanceStore.AnalyzeMonthAsync(_dbContext, year, month, shiftTypeId);
+            // فترة الغلق (21 → 20) تعبر حدّ الشهر، والتحليل يُبنى شهراً تقويمياً.
+            // بناء شهر التسمية وحده يترك نصف الفترة بلا يوميات — فنبني كل شهر تلمسه.
+            var period = await ResolvePeriodAsync(year, month);
+            var count = 0;
+
+            foreach (var (coveredYear, coveredMonth) in period.CoveredMonths())
+            {
+                count += await DayAttendanceStore.AnalyzeMonthAsync(
+                    _dbContext, coveredYear, coveredMonth, shiftTypeId);
+            }
+
+            var label = $"{period.From:yyyy-MM-dd} → {period.To:yyyy-MM-dd}";
 
             TempData["SuccessMessage"] = count > 0
-                ? $"تم تحديث الحضور — {count} يومية مولّدة لشهر {month:00}/{year}."
-                : $"لم تُولَّد يوميات لشهر {month:00}/{year} — لا بصمات بالفترة " +
-                  "للموظفين المسنَدين لهذه المناوبة. تحقّق من إسناد الموظفين ومن نطاق تواريخ البصمات.";
+                ? $"تم تحديث الحضور — {count} يومية مولّدة للفترة {label}."
+                : $"لم تُولَّد يوميات للفترة {label} — لا بصمات بها للموظفين المسنَدين " +
+                  "لهذه المناوبة. تحقّق من إسناد الموظفين ومن نطاق تواريخ البصمات.";
         }
         return RedirectToPage(new { Month, Search, StatusFilter });
     }
