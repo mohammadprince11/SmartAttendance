@@ -166,6 +166,20 @@ GROUP BY EmployeeId, AttendanceDate, PunchSemanticId;
         public bool IsAutomatic { get; set; }
         public bool IsActive { get; set; } = true;
 
+        /// <summary>
+        /// **معايير الاستحقاق** (نمط كيان — تبويب «معايير الاستحقاق» داخل نموذج القاعدة):
+        /// شروط على الموظف نفسه (وحدة عمل · جنسية · مواطن · نوع عقد · مدة خدمة …) بمحرّك
+        /// <see cref="HrConditions"/> العام — AND داخل المجموعة، OR بين المجموعات.
+        /// **فارغ = تنطبق على الجميع** (لا شرط ⟹ لا تقييد)، وهو سلوك ما قبل الميزة.
+        /// </summary>
+        public string ConditionsJson { get; set; } = string.Empty;
+
+        public HrConditions.ConditionSet Conditions => HrConditions.Deserialize(ConditionsJson);
+
+        /// <summary>وصف الاستحقاق للعرض بالبطاقة.</summary>
+        public string EligibilityText =>
+            Conditions.IsEmpty ? "كل الموظفين" : HrConditions.Describe(Conditions);
+
         public List<int> ShiftTypeIdList =>
             ShiftTypeIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(s => int.TryParse(s, out var v) ? v : 0).Where(v => v > 0).ToList();
@@ -253,6 +267,7 @@ IF COL_LENGTH('ShiftRules', 'ValueHours2') IS NULL ALTER TABLE ShiftRules ADD Va
 IF COL_LENGTH('ShiftRules', 'ActionValue') IS NULL ALTER TABLE ShiftRules ADD ActionValue decimal(12,2) NOT NULL DEFAULT(0);
 IF COL_LENGTH('ShiftRules', 'AllowEdit') IS NULL ALTER TABLE ShiftRules ADD AllowEdit bit NOT NULL DEFAULT(0);
 IF COL_LENGTH('ShiftRules', 'UseEscalation') IS NULL ALTER TABLE ShiftRules ADD UseEscalation bit NOT NULL DEFAULT(0);
+IF COL_LENGTH('ShiftRules', 'ConditionsJson') IS NULL ALTER TABLE ShiftRules ADD ConditionsJson nvarchar(max) NULL;
 """);
     }
 
@@ -287,7 +302,8 @@ IF COL_LENGTH('ShiftRules', 'UseEscalation') IS NULL ALTER TABLE ShiftRules ADD 
                 AllowEdit = HrmsDatabase.GetBool(reader, "AllowEdit"),
                 UseEscalation = HrmsDatabase.GetBool(reader, "UseEscalation"),
                 IsAutomatic = HrmsDatabase.GetBool(reader, "IsAutomatic"),
-                IsActive = HrmsDatabase.GetBool(reader, "IsActive")
+                IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
+                ConditionsJson = HrmsDatabase.GetString(reader, "ConditionsJson")
             });
     }
 
@@ -306,7 +322,8 @@ SET Name = @Name, ShiftTypeIds = @Shifts, ApplyOn = @ApplyOn, WeekDays = @Days,
     ValueTime = @Time, ValueAnchor = @Anchor, ValueTime2 = @Time2, ValueAnchor2 = @Anchor2,
     OffsetMinutes = @Offset, ValueHours = @Hours, ValueHours2 = @Hours2, ActionType = @ActionType,
     ActionText = @ActionText, ActionValue = @ActionValue, AllowEdit = @AllowEdit,
-    UseEscalation = @Escalation, IsAutomatic = @Auto, IsActive = @Active
+    UseEscalation = @Escalation, IsAutomatic = @Auto, IsActive = @Active,
+    ConditionsJson = @Conditions
 WHERE Id = @Id;
 """,
                 command =>
@@ -323,11 +340,13 @@ WHERE Id = @Id;
 INSERT INTO ShiftRules
     (Name, ShiftTypeIds, ApplyOn, WeekDays, PunchSemanticId, ConditionField, Comparison, ValueKind,
      ValueTime, ValueAnchor, ValueTime2, ValueAnchor2, OffsetMinutes, ValueHours, ValueHours2,
-     ActionType, ActionText, ActionValue, AllowEdit, UseEscalation, IsAutomatic, IsActive)
+     ActionType, ActionText, ActionValue, AllowEdit, UseEscalation, IsAutomatic, IsActive,
+     ConditionsJson)
 VALUES
     (@Name, @Shifts, @ApplyOn, @Days, @Semantic, @Field, @Cmp, @Kind,
      @Time, @Anchor, @Time2, @Anchor2, @Offset, @Hours, @Hours2,
-     @ActionType, @ActionText, @ActionValue, @AllowEdit, @Escalation, @Auto, @Active);
+     @ActionType, @ActionText, @ActionValue, @AllowEdit, @Escalation, @Auto, @Active,
+     @Conditions);
 """,
                 command => AddParameters(command, rule));
         }
@@ -538,5 +557,7 @@ VALUES
         HrmsDatabase.AddParameter(command, "@Escalation", rule.UseEscalation ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@Auto", rule.IsAutomatic ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@Active", rule.IsActive ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@Conditions",
+            HrConditions.Serialize(HrConditions.Deserialize(rule.ConditionsJson)));
     }
 }
