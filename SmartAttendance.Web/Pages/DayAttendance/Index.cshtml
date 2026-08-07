@@ -71,6 +71,34 @@
     .dat-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
     .dat-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
     .dat-pager { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; font-weight: 900; }
+
+    /* منبثقة الإشعار. `z-index` أدنى من منسدلة الكلاندر (2147482500) فلا تحجبها،
+       وأعلى من الترويسة اللاصقة (20) و رأس الجدول اللاصق. */
+    .dat-modal-bg { display: none; position: fixed; inset: 0; background: rgba(2,8,16,.62); z-index: 900; }
+    .dat-modal {
+        display: none; position: fixed; z-index: 901;
+        top: 50%; left: 50%; transform: translate(-50%, -50%);
+        width: min(560px, calc(100% - 32px)); max-height: 86vh; overflow: auto;
+        padding: 20px; border-radius: 20px; border: 1px solid rgba(73,111,151,.3);
+        background: var(--sa-surface, rgba(8,25,43,.98)); color: var(--sa-text, #DCEAF4);
+        box-shadow: 0 24px 60px rgba(0,0,0,.42);
+    }
+    html[data-theme="light"] .dat-modal { background: #fff; }
+    .dat-modal h3 { margin: 0 0 10px; font-size: 16px; font-weight: 1000; }
+    .dat-modal-scope { margin: 0 0 14px; font-size: 12px; font-weight: 800; line-height: 1.8; color: var(--sa-muted, #8FA8BC); }
+    .dat-modal-scope b { color: #12D9E3; }
+    .dat-modal-form { display: flex; flex-direction: column; gap: 14px; }
+    .dat-modal-label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 6px; }
+    .dat-modal-radios { display: flex; gap: 14px; margin-top: 6px; font-size: 13px; font-weight: 900; flex-wrap: wrap; }
+    .dat-modal-radios label { display: flex; align-items: center; gap: 6px; }
+    .dat-modal-text {
+        border-radius: 10px; border: 1px solid rgba(73,111,151,.3); background: rgba(0,0,0,.16);
+        color: inherit; padding: 8px 10px; font-size: 13px; font-weight: 700; font-family: inherit; resize: vertical;
+    }
+    html[data-theme="light"] .dat-modal-text { background: #fff; }
+    .dat-modal-legend { font-size: 11px; font-weight: 800; line-height: 1.9; color: var(--sa-muted, #8FA8BC); }
+    .dat-modal-check { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 900; }
+    .dat-modal-actions { display: flex; gap: 8px; }
 </style>
 
 <section class="dat-page" dir="rtl">
@@ -94,6 +122,14 @@
             </label>
             <button type="submit" class="dat-btn" data-zyconfirm="يعيد بناء الشهر — تأكيد؟">تحديث الحضور</button>
         </form>
+
+        @* 🔔 إشعار الموظفين — نطاقه **العرض الحالي** لا مؤلّف نطاقٍ مستقل. العدد
+           على الزرّ كي يُعرف حجم الإرسال قبل الضغط. *@
+        <button type="button" class="dat-btn ghost" onclick="datNotify(true)"
+                title="إشعار موظفي العرض الحالي بملخّص حضورهم"
+                disabled="@(Model.NotifyEmployeeCount == 0)">
+            🔔 إشعار الموظفين <b>@Model.NotifyEmployeeCount</b>
+        </button>
     </header>
 
     @if (TempData["SuccessMessage"] != null)
@@ -215,3 +251,74 @@
         </div>
     }
 </section>
+
+@* ═══ منبثقة إشعار الموظفين ═══
+   بلا مؤلّف نطاق: النطاق هو العرض الحالي، ويُذكَر صراحةً بالمنبثقة كي لا يُرسِل
+   المستخدم لمجموعةٍ يظنّها غير التي أمامه. *@
+<div class="dat-modal-bg" id="dat-notifbg" onclick="datNotify(false)"></div>
+<div class="dat-modal" id="dat-notif" role="dialog" aria-modal="true" aria-labelledby="dat-notif-title">
+    <h3 id="dat-notif-title">إشعار الموظفين — ملخّص الحضور</h3>
+
+    <p class="dat-modal-scope">
+        سيُشعَر <b>@Model.NotifyEmployeeCount</b> موظفاً — وهم موظّفو العرض الحالي
+        @if (!string.IsNullOrWhiteSpace(Model.StatusFilter))
+        {
+            <text>(المفلتَر على «@(Model.StatusFilter == IndexModel.StaleFilterKey ? "لم تُحلَّل" : Model.StatusFilter)»)</text>
+        }
+        للفترة <span dir="ltr">@Model.CutoffPeriod.From.ToString("yyyy-MM-dd") → @Model.CutoffPeriod.To.ToString("yyyy-MM-dd")</span>.
+    </p>
+
+    <form method="post" asp-page-handler="Notify" class="dat-modal-form">
+        <input type="hidden" name="Month" value="@Model.Month" />
+        <input type="hidden" name="Search" value="@Model.Search" />
+        <input type="hidden" name="StatusFilter" value="@Model.StatusFilter" />
+
+        <div>
+            <label class="dat-modal-label">قناة الإشعار</label>
+            <div class="dat-modal-radios">
+                @foreach (var (key, label) in AttendanceNotificationStore.Channels)
+                {
+                    @* القيمة تُحسب خارج الوسم: `checked="@(key == "System")"` يضع
+                       اقتباساً مزدوجاً داخل قيمة سمةٍ مقتبَسة — مزلق تحليل بـRazor. *@
+                    var isDefaultChannel = key == "System";
+                    <label><input type="radio" name="Channel" value="@key" checked="@isDefaultChannel" /> @label</label>
+                }
+            </div>
+        </div>
+
+        <label class="dat-modal-label">نص الرسالة
+            <textarea name="Message" rows="4" class="dat-modal-text">@AttendanceNotificationStore.DefaultTemplate("Summary")</textarea>
+        </label>
+
+        <div class="dat-modal-legend">
+            الرموز تُملأ من حضور كل موظف الفعليّ:
+            <span dir="ltr">{0}</span> أيام الغياب ·
+            <span dir="ltr">{1}</span> ساعات التأخير ·
+            <span dir="ltr">{2}</span> ساعات الخروج المبكر ·
+            <span dir="ltr">{3}</span> الفترة ·
+            <span dir="ltr">{4}</span> البصمات المفقودة.
+        </div>
+
+        <label class="dat-modal-check">
+            <input type="checkbox" name="CcManager" value="1" /> نسخة للمدير المباشر
+        </label>
+
+        <div class="dat-modal-actions">
+            <button type="button" class="dat-btn ghost" onclick="datNotify(false)">إلغاء</button>
+            <button type="submit" class="dat-btn">إشعار الموظفين</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function datNotify(open) {
+            document.getElementById('dat-notifbg').style.display = open ? 'block' : 'none';
+            document.getElementById('dat-notif').style.display = open ? 'block' : 'none';
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { datNotify(false); }
+        });
+    </script>
+}

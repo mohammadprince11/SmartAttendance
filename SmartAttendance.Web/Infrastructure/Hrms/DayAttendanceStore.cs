@@ -46,6 +46,28 @@ public static class DayAttendanceStore
         public bool IsUpToDate => IsAnalyzed && !IsStale;
     }
 
+    /// <summary>
+    /// مفتاح فلتر «لم تُحلَّل». ليس حالةً بل خاصية حداثة، فيُميَّز عن قيم
+    /// <see cref="DayRow.Status"/> (Present · Late · Absent · Incomplete …) ولا يتصادم معها.
+    /// </summary>
+    public const string StaleFilterKey = "Stale";
+
+    /// <summary>
+    /// فلتر أزرار العدّادات بشاشة الحضور اليومي. فارغ = الكل.
+    ///
+    /// <para>هنا لا بالصفحة عمداً: تستهلكه الشاشة لبناء العرض، **ويستهلكه زرّ إشعار
+    /// الموظفين** لتحديد من يُشعَر. لو تفرّع المنطقان لصار الزرّ يُرسل لمجموعةٍ غير
+    /// التي يراها المستخدم أمامه — وهو عطلٌ صامت أسوأ من غياب الميزة. دالّة نقيّة
+    /// كي تُختبَر بلا قاعدة بيانات.</para>
+    /// </summary>
+    public static List<DayRow> FilterByStatus(IEnumerable<DayRow> rows, string? statusFilter) =>
+        statusFilter switch
+        {
+            null or "" => rows.ToList(),
+            StaleFilterKey => rows.Where(row => row.IsStale).ToList(),
+            _ => rows.Where(row => row.Status == statusFilter).ToList()
+        };
+
     /// <summary>0=السبت .. 6=الجمعة (ترتيب ShiftTypeStore) من DayOfWeek.</summary>
     public static int ToDayIndex(DateOnly date) => ((int)date.DayOfWeek + 1) % 7;
 
