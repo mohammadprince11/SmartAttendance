@@ -4,6 +4,8 @@ using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Pages.Shared;
 
+using SmartAttendance.Web.Infrastructure.Security;
+
 namespace SmartAttendance.Web.Pages.EmployeeDocuments;
 
 /// <summary>
@@ -22,11 +24,14 @@ public class IndexModel : PageModel
 
     private readonly Infrastructure.Security.IProtectedFileService _protectedFiles;
 
+    private readonly ICompanyScopeProvider _companyScope;
+
     public IndexModel(
         ApplicationDbContext dbContext,
         IWebHostEnvironment environment,
-        Infrastructure.Security.IProtectedFileService protectedFiles)
+        Infrastructure.Security.IProtectedFileService protectedFiles, ICompanyScopeProvider companyScope)
     {
+        _companyScope = companyScope;
         _dbContext = dbContext;
         _environment = environment;
         _protectedFiles = protectedFiles;
@@ -182,9 +187,21 @@ VALUES ('EmployeeDocument', CAST(@EmployeeId AS nvarchar(80)), 'Upload Document'
             SelectedEmployee = await LoadSelectedEmployeeAsync(EmployeeId);
         }
 
+        // ═══ حصر السرد بشركات المستخدم ═══
+        //
+        // الشرط `@EmployeeId <= 0` يعني «بلا موظف محدّد» — أي فتح الشاشة بلا معامل —
+        // فكان يسرد 300 وثيقة من **كل** الموظفين بكل الشركات: النوع والاسم وتاريخ
+        // الانتهاء والملاحظات. الملفّ نفسه محميّ (نقطة التنزيل تعيد فحص الصلاحية)
+        // لكنّ الوصف الوصفيّ كان يتسرّب.
+        //
+        // هذه حالة **سرد** لا كيان مفرد: لا «موظف مستهدَف» يُفحص بل مجموعة تُرشَّح،
+        // فالعلاج شرطٌ بالاستعلام لا رفضٌ للصفحة.
+        var companyFilter = EmployeeCompanyGuard.ListFilter(
+            await _companyScope.GetAsync(HttpContext.RequestAborted), "e.CompanyId");
+
         Documents = await HrmsDatabase.QueryAsync(
             _dbContext,
-            """
+            $"""
 SELECT TOP 300
     d.Id,
     d.EmployeeId,
@@ -199,6 +216,7 @@ SELECT TOP 300
 FROM EmployeeDocuments d
 INNER JOIN Employees e ON d.EmployeeId = e.Id
 WHERE (@EmployeeId <= 0 OR d.EmployeeId = @EmployeeId)
+  AND {companyFilter}
 ORDER BY d.UploadedAt DESC;
 """,
             command => HrmsDatabase.AddParameter(command, "@EmployeeId", EmployeeId),

@@ -19,6 +19,49 @@ public static class PeopleRoutePermissionResolver
         HttpContext context,
         string normalizedPath)
     {
+        // ═══════════ مسارات تستهدف موظفاً خارج /employees ═══════════
+        //
+        // كان المحلِّل يعرف مسارات `/employees/*` وحدها، فكل ما عداها يُفحص بمستوى
+        // «هل يفتح هذا الدور هذه الشاشة؟» لا «هل هذا الصفّ لك؟» — وهو جذر كل ثغرة
+        // رصدها مسح العزل. تسجيل المسار هنا ينقل قراره لمحرك الصلاحيات، فيُفحص
+        // الموظف المستهدَف بنطاق البيانات كاملاً (شركة · فرع · قسم · استثناءات).
+        //
+        // ⚠️ **شرط التسجيل**: أن يكون الموظف المستهدَف **بالطلب نفسه**، فـ
+        // `PeopleTargetEmployeeResolver` يقرأه من المسار أو الاستعلام أو النموذج.
+        // مسارٌ هدفه مشتقّ بعد قراءة القاعدة (مثل `/documents/view?Id=` حيث المعرّف
+        // معرّف **وثيقة**) لا يُسجَّل هنا — المحلِّل لا يستطيع استخراجه، والتسجيل
+        // يجعله يفشل دائماً فيحجب شاشةً مشروعة. تلك تُحرَس داخلها.
+        //
+        // ⚠️ ولا يُسجَّل مسار **سرد** (كثيرون لا واحد): لا هدف يُفحص، والتسجيل
+        // يحجبه كلياً. يُرشَّح استعلامه بدل ذلك.
+        //
+        // التوافقية محفوظة: `GetPeopleDataScopeAsync` يجعل النطاق غير مقيَّد حين
+        // يسمح كتالوج الأدوار ولا توجد قواعد صلاحيات صريحة — فمن كان يصل يبقى
+        // يصل، والتقييد يقع فقط على من له نطاق مضبوط فعلاً.
+
+        if (normalizedPath.StartsWith("/leavebalances/adjust", StringComparison.Ordinal))
+        {
+            return Employee(PeoplePermissionCodes.Edit);
+        }
+
+        if (normalizedPath.StartsWith("/payroll/terminationsettlement", StringComparison.Ordinal))
+        {
+            return Employee(PeoplePermissionCodes.EndService);
+        }
+
+        if (normalizedPath.StartsWith("/employees" ) is false &&
+            normalizedPath.StartsWith("/employeedocuments", StringComparison.Ordinal))
+        {
+            // الشاشة تسرد وتستقبل رفعاً لموظف محدَّد. حين يُمرَّر موظف يُفحص هدفاً؛
+            // وبلا موظف تبقى سرداً مُرشَّحاً بالاستعلام (لا يصل المحلِّل لهدف فيسقط
+            // للتوافقية، وهو المطلوب هنا لا حجب الشاشة).
+            var target = context.Request.Query["EmployeeId"].ToString();
+            if (!string.IsNullOrWhiteSpace(target) && target != "0")
+            {
+                return Employee(PeoplePermissionCodes.UploadDocument);
+            }
+        }
+
         if (normalizedPath == "/employees" ||
             normalizedPath == "/employees/index")
         {

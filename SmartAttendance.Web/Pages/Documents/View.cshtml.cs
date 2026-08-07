@@ -18,8 +18,11 @@ public class ViewModel : PageModel
     private readonly ApplicationDbContext _db;
     private readonly IWebHostEnvironment _environment;
 
-    public ViewModel(ApplicationDbContext db, IWebHostEnvironment environment)
+    private readonly ICompanyScopeProvider _companyScope;
+
+    public ViewModel(ApplicationDbContext db, IWebHostEnvironment environment, ICompanyScopeProvider companyScope)
     {
+        _companyScope = companyScope;
         _db = db;
         _environment = environment;
     }
@@ -35,6 +38,19 @@ public class ViewModel : PageModel
 
         if (Document is null)
         {
+            return NotFound();
+        }
+
+        // حارس الملكية. المعرّف هنا معرّف **وثيقة** لا موظف، فلا يستطيع الحارس
+        // المركزيّ استخراج الهدف من الطلب — يُشتقّ بعد التحميل ثم يُفحص.
+        // المفارقة قبل الإصلاح: الصفحة كانت تستعلم عن **شركة** صاحب الوثيقة لتعرض
+        // اسمها، فتملك المعلومة اللازمة للفحص ولا تفحص.
+        if (!await EmployeeCompanyGuard.CanAccessEmployeeAsync(
+                _db, Document.EmployeeId, await _companyScope.GetAsync(HttpContext.RequestAborted),
+                HttpContext.RequestAborted))
+        {
+            // NotFound لا Forbid: لا نؤكّد وجود وثيقة بشركة أخرى.
+            Document = null;
             return NotFound();
         }
 
