@@ -35,6 +35,15 @@ public static class DayAttendanceStore
         public decimal WorkedHours { get; set; }
         public string Status { get; set; } = "Absent";    // Present | Late | Incomplete | Absent | Weekend | Rest
         public bool IsAnalyzed { get; set; }
+
+        /// <summary>
+        /// طرأ على هذا اليوم تغييرٌ **بعد** آخر تحليل (اعتماد نسيان بصمة · إجازة ·
+        /// مغادرة · تعديل بصمة · إعادة استيراد) فصارت اليومية بائتة.
+        /// </summary>
+        public bool IsStale { get; set; }
+
+        /// <summary>محلَّلة وحديثة — العلامة التي تظهر بعمود «تم التحليل».</summary>
+        public bool IsUpToDate => IsAnalyzed && !IsStale;
     }
 
     /// <summary>0=السبت .. 6=الجمعة (ترتيب ShiftTypeStore) من DayOfWeek.</summary>
@@ -776,10 +785,47 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
         // كما كان (صفر تغيير على الشاشات)، والنداء المفرد يضيف شرطاً مُوسَّطاً.
         var employeeClause = employeeId is > 0 ? " AND d.EmployeeId = @Employee" : string.Empty;
 
+        // SQL يترجم الاستعلام كاملاً، فذكرُ جدولٍ غير موجود يفشل حتى داخل شرطٍ
+        // معطّل. لذلك يُدرَج جزء الخدمة الذاتية **نصّياً** بعد التأكد من وجوده.
+        var hasSelfService = await HrmsDatabase.ScalarAsync<int>(
+            dbContext, "SELECT CASE WHEN OBJECT_ID('SelfServiceRequests','U') IS NULL THEN 0 ELSE 1 END;");
+
+        var selfServiceClause = hasSelfService == 1
+            ? """
+                WHEN EXISTS (
+                    SELECT 1 FROM SelfServiceRequests r
+                    WHERE r.EmployeeId = d.EmployeeId
+                      AND COALESCE(r.FromDate, r.RequestDate) = d.WorkDate
+                      AND COALESCE(r.UpdatedAt, r.CreatedAt) > d.AnalyzedAt) THEN 1
+            """
+            : string.Empty;
+
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,
             $"""
-SELECT d.*, e.EmployeeNo, e.FullName, s.Name AS ShiftName, s.ColorHex AS ShiftColor
+SELECT d.*, e.EmployeeNo, e.FullName, s.Name AS ShiftName, s.ColorHex AS ShiftColor,
+    -- بائتة = طرأ تغيير على اليوم بعد لحظة تحليله. ثلاثة مصادر:
+    --   1) البصمات (يشمل اعتماد «نسيان بصمة» لأنه يُنشئ بصمة فعلية، وإلغاءه
+    --      لأنه يحذفها منطقياً ويحدّث UpdatedAt) وأي تعديل يدوي أو إعادة استيراد.
+    --   2) الإجازات المعتمدة المتقاطعة مع اليوم.
+    --   3) المغادرات/الزمنية المعتمدة بذلك اليوم.
+    -- AnalyzedAt NULL ⟹ لم تُحلَّل أصلاً.
+    CAST(CASE
+        WHEN d.AnalyzedAt IS NULL THEN 1
+        WHEN EXISTS (
+            SELECT 1 FROM AttendanceRecords a
+            WHERE a.EmployeeId = d.EmployeeId
+              AND a.AttendanceDate = d.WorkDate
+              AND COALESCE(a.UpdatedAt, a.CreatedAt) > d.AnalyzedAt) THEN 1
+        WHEN EXISTS (
+            SELECT 1 FROM LeaveRequests l
+            WHERE l.EmployeeId = d.EmployeeId
+              AND ISNULL(l.IsDeleted, 0) = 0
+              AND d.WorkDate BETWEEN l.FromDate AND l.ToDate
+              AND COALESCE(l.UpdatedAt, l.CreatedAt) > d.AnalyzedAt) THEN 1
+{selfServiceClause}
+        ELSE 0
+    END AS bit) AS IsStale
 FROM DayAttendances d
 INNER JOIN Employees e ON e.Id = d.EmployeeId
 LEFT JOIN ShiftTypes s ON s.Id = d.ShiftTypeId
@@ -809,7 +855,8 @@ ORDER BY e.EmployeeNo, d.WorkDate;
                 EarlyLeaveHours = reader["EarlyLeaveHours"] is decimal early ? early : 0,
                 WorkedHours = reader["WorkedHours"] is decimal worked ? worked : 0,
                 Status = HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } st ? st : "Absent",
-                IsAnalyzed = HrmsDatabase.GetBool(reader, "IsAnalyzed")
+                IsAnalyzed = HrmsDatabase.GetBool(reader, "IsAnalyzed"),
+                IsStale = HrmsDatabase.GetBool(reader, "IsStale")
             });
 
         if (!string.IsNullOrWhiteSpace(search))
