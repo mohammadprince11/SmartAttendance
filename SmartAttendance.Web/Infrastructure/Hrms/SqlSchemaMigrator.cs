@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
@@ -1108,6 +1109,24 @@ END;
             // 180 ثانية مهلة: أطول من أبطأ هجرة (إنشاء فهرس على جدول كبير) وأقصر من
             // أن تُعلّق الإقلاع بلا نهاية. انتهاؤها يرفع استثناءً واضحاً — مخطط ناقص
             // يجب أن يمنع الإقلاع لا أن يمرّ صامتاً.
+            //
+            // ⚠️ القفل بنطاق `Session` معلَّق بالاتصال الذي أخذه بعينه: إغلاق الاتصال
+            // يعيده للمجمّع، و`sp_reset_connection` عند إعادة استعماله يُفلت أقفال
+            // الجلسة ضمناً. ودوالّ `HrmsDatabase` تغلق ما فتحته هي، فلو دخلنا هنا
+            // والاتصال مغلق لضاع القفل فور أخذه — تعمل الهجرات بلا حماية ثم يفشل
+            // الإفلات بالخطأ 1223. لذا نفتح الاتصال هنا صراحةً ونُبقيه مفتوحاً حتى
+            // بعد الإفلات: عندئذٍ ترى تلك الدوالّ اتصالاً مفتوحاً فلا تغلقه.
+            var lockConnection = dbContext.Database.GetDbConnection();
+            var openedForLock = lockConnection.State != System.Data.ConnectionState.Open;
+
+            if (openedForLock)
+            {
+                await lockConnection.OpenAsync();
+            }
+
+            try
+            {
+
             var lockResult = await HrmsDatabase.ScalarAsync<int>(
                 dbContext,
                 """
@@ -1176,6 +1195,16 @@ END;
                 await HrmsDatabase.ExecuteAsync(
                     dbContext,
                     "EXEC sp_releaseapplock @Resource = 'ZYNORA.SqlSchemaMigrator', @LockOwner = 'Session';");
+            }
+
+            }
+            finally
+            {
+                // لا نغلق إلا ما فتحناه: لو جاءنا الاتصال مفتوحاً فمالكه غيرنا.
+                if (openedForLock)
+                {
+                    await lockConnection.CloseAsync();
+                }
             }
         }
         finally
