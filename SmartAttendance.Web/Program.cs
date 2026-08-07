@@ -290,6 +290,32 @@ builder.Services.AddAuthorization(options =>
 // كنترولرات واجهة الموبايل (REST/JSON) — بجانب Razor Pages
 builder.Services.AddControllers();
 
+// حدّ معدّل محاولات الدخول — يخنق رشّ كلمات المرور الذي لا يلمس قفل الحساب
+// (القفل لكل حساب؛ الرشّ يجرّب كلمة واحدة على ألف حساب). المحدِّد **عام** بمُقسِّم
+// يعفي كل ما ليس مسار دخول، فلا يُخنق استعمال مشروع.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(
+        context =>
+        {
+            if (!LoginRateLimitPolicy.AppliesTo(context.Request.Path.Value))
+            {
+                return System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("free");
+            }
+
+            return System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+                LoginRateLimitPolicy.PartitionKey(context.Connection.RemoteIpAddress?.ToString()),
+                _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = LoginRateLimitPolicy.PermitLimit,
+                    Window = TimeSpan.FromMinutes(LoginRateLimitPolicy.WindowMinutes),
+                    QueueLimit = 0
+                });
+        });
+});
+
 // فحوص الصحّة: المنصّات السحابية توجّه الحركة بمسبار جاهزية. بدونه تتلقّى النسخة
 // طلبات قبل اكتمال الهجرات والبذور — أي بأخطر لحظة بدورة حياتها.
 //   /health/live  — العملية حيّة (بلا لمس القاعدة، فلا يُعاد تشغيلها لعطل قاعدة عابر).
@@ -461,6 +487,11 @@ app.Use(async (context, next) =>
 });
 
 app.UseRouting();
+
+// بعد UseForwardedHeaders (أعلاه) فيكون عنوان الطالب مُطبَّعاً من وسيطٍ موثوق —
+// وقبل المصادقة فلا تُستهلك دورات تجزئة كلمة المرور على طلبٍ سيُرفض أصلاً.
+app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseMiddleware<RoleSecurityMiddleware>();
 

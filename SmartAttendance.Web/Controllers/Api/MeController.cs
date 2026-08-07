@@ -72,8 +72,7 @@ WHERE e.Id = @Id;
         days = Math.Clamp(days, 1, 90);
         var to = DateOnly.FromDateTime(DateTime.Today);
         var from = to.AddDays(-days);
-        var rows = await DayAttendanceStore.ListRangeAsync(_db, from, to, null);
-        var mine = rows.Where(r => r.EmployeeId == EmployeeId)
+        var mine = (await DayAttendanceStore.ListForEmployeeAsync(_db, EmployeeId, from, to))
             .OrderByDescending(r => r.WorkDate)
             .Select(r => new
             {
