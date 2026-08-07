@@ -700,25 +700,46 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
     }
 
     /// <summary>يوميات مدى تواريخ حر — تغذّي شاشة «إدارة الحضور» من المحرك الرسمي.</summary>
+    /// <summary>
+    /// يوميات **موظف واحد** بمدى — بترشيحٍ بالـSQL لا بالذاكرة.
+    ///
+    /// <para><b>العطل المُصلَح</b> (تدقيق الجاهزية، P1-6): كانت بوابة الموبايل
+    /// <c>/api/me/attendance</c> تنادي <see cref="ListRangeAsync"/> بلا مرشِّح —
+    /// فتحمّل يوميات <b>كل الموظفين</b> للمدى — ثم ترشّح صاحب التوكن بالذاكرة.
+    /// عند عشرة آلاف موظف و90 يوماً ≈ 900,000 صفّ لكل فتحة تطبيق، ولكل موظف.</para>
+    ///
+    /// <para>ليس تسريباً — الترشيح يقع قبل الإرجاع — لكنه سبب انهيارٍ مؤكّد تحت
+    /// الحمل ومتّجه إساءة استخدام صريح.</para>
+    /// </summary>
+    public static Task<List<DayRow>> ListForEmployeeAsync(
+        ApplicationDbContext dbContext, int employeeId, DateOnly from, DateOnly to) =>
+        ListRangeAsync(dbContext, from, to, search: null, employeeId: employeeId);
+
     public static async Task<List<DayRow>> ListRangeAsync(
-        ApplicationDbContext dbContext, DateOnly from, DateOnly to, string? search)
+        ApplicationDbContext dbContext, DateOnly from, DateOnly to, string? search,
+        int? employeeId = null)
     {
         await EnsureAsync(dbContext);
 
+        // الترشيح بالموظف يقع بالـSQL: النداء العام يمرّر null فيبقى الاستعلام حرفياً
+        // كما كان (صفر تغيير على الشاشات)، والنداء المفرد يضيف شرطاً مُوسَّطاً.
+        var employeeClause = employeeId is > 0 ? " AND d.EmployeeId = @Employee" : string.Empty;
+
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,
-            """
+            $"""
 SELECT d.*, e.EmployeeNo, e.FullName, s.Name AS ShiftName, s.ColorHex AS ShiftColor
 FROM DayAttendances d
 INNER JOIN Employees e ON e.Id = d.EmployeeId
 LEFT JOIN ShiftTypes s ON s.Id = d.ShiftTypeId
-WHERE d.WorkDate >= @From AND d.WorkDate <= @To
+WHERE d.WorkDate >= @From AND d.WorkDate <= @To{employeeClause}
 ORDER BY e.EmployeeNo, d.WorkDate;
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
                 HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
+                if (employeeId is > 0) HrmsDatabase.AddParameter(command, "@Employee", employeeId.Value);
             },
             reader => new DayRow
             {

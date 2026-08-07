@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore.Storage;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 using SmartAttendance.Web.Infrastructure.HrSettings;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
@@ -47,6 +48,12 @@ public static class PayrollRunStore
 
         /// <summary>عدد موظفي النطاق؛ صفر ⟹ التشغيل يشمل كل الموظفين النشطين.</summary>
         public int ScopeCount { get; set; }
+
+        /// <summary>
+        /// الشركة المالكة للدفعة — حدّ العزل. <c>null</c> للدفعات السابقة للعمود
+        /// وللمختلطة التي تعذّرت نسبتها، ولا يراها إلا غير المقيَّد.
+        /// </summary>
+        public int? CompanyId { get; set; }
 
         public string StatusLabelText => StatusLabel(Status);
         public string ScopeText => PayrollRunScope.Describe(ScopeMode, ScopeCount);
@@ -154,18 +161,104 @@ END;
 """);
     }
 
-    public static async Task<List<PayrollRun>> ListRunsAsync(ApplicationDbContext dbContext)
+    // ═══════════════════════ عزل الشركات بالمسير ═══════════════════════
+    //
+    // كانت دفعات المسير بلا حدّ شركة إطلاقاً: القائمة تعرض دفعات الجميع، وكل نقطة
+    // تأخذ `runId` من الطلب (احتساب · قفل · إصدار · **إرسال قسائم بالبريد** · حذف ·
+    // **تصدير ملف البنك بالآيبانات**) تعمل على أي دفعة بأي شركة. تصحيحُ ذلك يحتاج
+    // ثلاثة أشياء معاً — ونقص أيٍّ منها يُبقي الثغرة:
+    //   1. نسبة الدفعة لشركة (هجرة `20260807-04/05`).
+    //   2. حصر موظفي الاحتساب بتلك الشركة (`CalculateAsync`).
+    //   3. فحص ملكية قبل كل عملية (`CanAccessRunAsync` أدناه).
+
+    /// <summary>
+    /// دفعات المسير ضمن نطاق شركات المستخدم. الشرط يُبنى من أعداد صحيحة موثوقة
+    /// (انظر <see cref="CompanyScope.ToSqlPredicate"/>) لا من مدخل مستخدم.
+    /// </summary>
+    public static async Task<List<PayrollRun>> ListRunsAsync(
+        ApplicationDbContext dbContext, CompanyScope scope)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+
+        if (scope.IsDeniedAll) return new List<PayrollRun>();
+
+        // الدفعة بلا شركة (تاريخية أو مختلطة) لغير المقيَّد وحده — نفس قاعدة
+        // `CompanyScope.Allows(null)`، مطبَّقة هنا بالـSQL كي لا تُقرأ أصلاً.
+        var predicate = scope.IsUnrestricted
+            ? "1 = 1"
+            : scope.ToSqlPredicate("r.CompanyId");
+
         return await HrmsDatabase.QueryAsync(
             dbContext,
-            """
+            $"""
 SELECT r.*, (SELECT COUNT(1) FROM PayrollRunScopeMembers s WHERE s.RunId = r.Id) AS ScopeCount
 FROM PayrollRuns r
+WHERE {predicate}
 ORDER BY r.[Year] DESC, r.[Month] DESC, r.Id DESC;
 """,
             command => { },
             ReadRun);
+    }
+
+    /// <summary>
+    /// شركة الدفعة عند أول احتساب: تُشتقّ من أعضاء نطاقها إن اتفقوا على شركة واحدة،
+    /// وتُثبَّت على الصفّ فلا تُشتقّ ثانيةً. اختلافهم ⟹ <c>null</c> والدفعة تبقى
+    /// على السلوك القديم — لا نُسند شركةً بالتخمين لصفٍّ ماليّ.
+    /// </summary>
+    private static async Task<int?> ResolveRunCompanyAsync(
+        ApplicationDbContext dbContext, int runId)
+    {
+        var companies = await HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+SELECT DISTINCT e.CompanyId
+FROM PayrollRunScopeMembers s
+INNER JOIN Employees e ON e.Id = s.EmployeeId
+WHERE s.RunId = @Run AND e.CompanyId IS NOT NULL;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Run", runId),
+            reader => HrmsDatabase.GetNullableInt(reader, "CompanyId"));
+
+        if (companies.Count != 1 || companies[0] is not { } companyId) return null;
+
+        await HrmsDatabase.ExecuteAsync(
+            dbContext,
+            "UPDATE PayrollRuns SET CompanyId = @Company WHERE Id = @Run AND CompanyId IS NULL;",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Company", companyId);
+                HrmsDatabase.AddParameter(command, "@Run", runId);
+            });
+
+        return companyId;
+    }
+
+    /// <summary>
+    /// بوابة كل عملية على دفعة. <b>مغلقة الفشل</b>: دفعة غير موجودة، أو شركتها
+    /// خارج النطاق، أو بلا شركة لمستخدمٍ مقيَّد ⟹ <c>false</c>.
+    ///
+    /// <para>تُستدعى من الصفحة قبل استدعاء أي عملية بالمتجر — والحارس النصّي
+    /// <c>PayrollCompanyIsolationTests</c> يفشل إن ظهرت نقطة تتجاوزها.</para>
+    /// </summary>
+    public static async Task<bool> CanAccessRunAsync(
+        ApplicationDbContext dbContext, int runId, CompanyScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (runId <= 0 || scope.IsDeniedAll) return false;
+        if (scope.IsUnrestricted) return true;
+
+        await EnsureAsync(dbContext);
+
+        var companyId = await HrmsDatabase.QueryAsync(
+            dbContext,
+            "SELECT CompanyId FROM PayrollRuns WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", runId),
+            reader => HrmsDatabase.GetNullableInt(reader, "CompanyId"));
+
+        // لا صفّ ⟹ الدفعة غير موجودة ⟹ رفض (لا نميّز «غير موجودة» عن «ممنوعة»
+        // فلا يُستدلّ على وجود دفعات شركةٍ أخرى بعدّ الاستجابات).
+        return companyId.Count == 1 && scope.Allows(companyId[0]);
     }
 
     public static async Task<PayrollRun?> GetRunAsync(ApplicationDbContext dbContext, int id)
@@ -188,7 +281,8 @@ WHERE r.Id = @Id;
     /// </summary>
     public static async Task<(bool Ok, string Message, int RunId)> CreateRunAsync(
         ApplicationDbContext dbContext, int year, int month,
-        string? scopeMode = null, IEnumerable<int>? scopeEmployeeIds = null)
+        string? scopeMode = null, IEnumerable<int>? scopeEmployeeIds = null,
+        int? companyId = null)
     {
         await EnsureAsync(dbContext);
         if (year < 2000 || month is < 1 or > 12) return (false, "شهر غير صالح.", 0);
@@ -205,13 +299,14 @@ WHERE r.Id = @Id;
         var batchNo = $"{year}-{month}-{seq}";
         var id = await HrmsDatabase.ScalarAsync<int>(
             dbContext,
-            "INSERT INTO PayrollRuns (BatchNo, [Year], [Month], Status, ScopeMode) VALUES (@Batch, @Y, @M, N'Draft', @Scope); SELECT CAST(SCOPE_IDENTITY() AS int);",
+            "INSERT INTO PayrollRuns (BatchNo, [Year], [Month], Status, ScopeMode, CompanyId) VALUES (@Batch, @Y, @M, N'Draft', @Scope, @Company); SELECT CAST(SCOPE_IDENTITY() AS int);",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Batch", batchNo);
                 HrmsDatabase.AddParameter(command, "@Y", year);
                 HrmsDatabase.AddParameter(command, "@M", month);
                 HrmsDatabase.AddParameter(command, "@Scope", mode);
+                HrmsDatabase.AddParameter(command, "@Company", (object?)companyId ?? DBNull.Value);
             });
 
         if (ids.Count > 0) await PayrollRunScopeStore.ReplaceAsync(dbContext, id, ids);
@@ -282,10 +377,21 @@ WHERE r.Id = @Id;
         var noFacts = new Dictionary<string, HrConditions.Fact>();
 
         // --- مدخلات: موظفون + ملف مالي + علاوات + حضور شهري + خصومات مخالفات ---
+        // ⚠️ **حدّ العزل الحقيقي للمسير.** كان هذا الاستعلام يختار موظفي **كل
+        // الشركات** (`WHERE IsDeleted=0 AND IsActive=1` بلا شيء آخر)، فدفعة شركة
+        // تولّد قسائم لموظفي شركةٍ أخرى — لا بخطأ استخدام بل بالسلوك الافتراضي.
+        //
+        // الآن يُحصر بشركة الدفعة. ودفعةٌ بلا شركة (تاريخية أو مسوّدة لم تُنسَب بعد)
+        // تأخذ شركتها **من أول احتساب** — وحتى ذلك الحين تبقى على السلوك القديم
+        // للتوافق مع نشرٍ أحادي الشركة، فلا ينكسر مسير قائم عند الترقية.
+        var runCompanyId = run.CompanyId ?? await ResolveRunCompanyAsync(dbContext, runId);
+
+        var companyFilter = runCompanyId is > 0 ? " AND e.CompanyId = @Company" : string.Empty;
+
         var employees = await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo, ISNULL(FullName, N'') AS FullName FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1 ORDER BY EmployeeNo;",
-            command => { },
+            $"SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName FROM Employees e WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1{companyFilter} ORDER BY e.EmployeeNo;",
+            command => { if (runCompanyId is > 0) HrmsDatabase.AddParameter(command, "@Company", runCompanyId.Value); },
             reader => new { Id = HrmsDatabase.GetInt(reader, "Id"), No = HrmsDatabase.GetString(reader, "EmployeeNo"), Name = HrmsDatabase.GetString(reader, "FullName") });
 
         // نطاق التشغيل محفوظ مع الدفعة: إعادة الاحتساب بعد شهر تلتزم بنفس النطاق.
@@ -1028,6 +1134,7 @@ ORDER BY e.EmployeeNo;
         CalculatedAt = HrmsDatabase.GetDateTime(reader, "CalculatedAt"),
         CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default,
         ScopeMode = PayrollRunScope.NormalizeMode(HrmsDatabase.GetString(reader, "ScopeMode")),
-        ScopeCount = HrmsDatabase.GetInt(reader, "ScopeCount")
+        ScopeCount = HrmsDatabase.GetInt(reader, "ScopeCount"),
+        CompanyId = HrmsDatabase.GetNullableInt(reader, "CompanyId")
     };
 }

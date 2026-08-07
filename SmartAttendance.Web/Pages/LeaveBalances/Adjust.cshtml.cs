@@ -7,14 +7,19 @@ using SmartAttendance.Domain.Leave;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
+using SmartAttendance.Web.Infrastructure.Security;
+
 namespace SmartAttendance.Web.Pages.LeaveBalances;
 
 public class AdjustModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
 
-    public AdjustModel(ApplicationDbContext dbContext)
+    private readonly ICompanyScopeProvider _companyScope;
+
+    public AdjustModel(ApplicationDbContext dbContext, ICompanyScopeProvider companyScope)
     {
+        _companyScope = companyScope;
         _dbContext = dbContext;
     }
 
@@ -39,6 +44,15 @@ public class AdjustModel : PageModel
     public async Task<IActionResult> OnGetAsync()
     {
         await LeaveBalanceSchema.EnsureAsync(_dbContext);
+
+        // حارس الملكية: كان الفحص الوحيد «هل الموظف موجود» لا «هل هو لك» — فأي
+        // مستخدمٍ يفتح الشاشة كان يقرأ **ويكتب** رصيد أي موظف بأي شركة.
+        if (!await EmployeeCompanyGuard.CanAccessEmployeeAsync(
+                _dbContext, EmployeeId, await _companyScope.GetAsync(HttpContext.RequestAborted),
+                HttpContext.RequestAborted))
+        {
+            return NotFound();
+        }
 
         var employee = await _dbContext.Employees
             .AsNoTracking()
@@ -78,6 +92,15 @@ public class AdjustModel : PageModel
     public async Task<IActionResult> OnPostAsync()
     {
         await LeaveBalanceSchema.EnsureAsync(_dbContext);
+
+        // حارس الملكية: كان الفحص الوحيد «هل الموظف موجود» لا «هل هو لك» — فأي
+        // مستخدمٍ يفتح الشاشة كان يقرأ **ويكتب** رصيد أي موظف بأي شركة.
+        if (!await EmployeeCompanyGuard.CanAccessEmployeeAsync(
+                _dbContext, EmployeeId, await _companyScope.GetAsync(HttpContext.RequestAborted),
+                HttpContext.RequestAborted))
+        {
+            return NotFound();
+        }
 
         var employeeExists = await _dbContext.Employees
             .AnyAsync(e => e.Id == EmployeeId && !e.IsDeleted);

@@ -18,8 +18,11 @@ public class ViewModel : PageModel
     private readonly ApplicationDbContext _db;
     private readonly IWebHostEnvironment _environment;
 
-    public ViewModel(ApplicationDbContext db, IWebHostEnvironment environment)
+    private readonly ICompanyScopeProvider _companyScope;
+
+    public ViewModel(ApplicationDbContext db, IWebHostEnvironment environment, ICompanyScopeProvider companyScope)
     {
+        _companyScope = companyScope;
         _db = db;
         _environment = environment;
     }
@@ -29,12 +32,40 @@ public class ViewModel : PageModel
     public DocumentTemplateStore.Generated? Document { get; private set; }
     public string? CompanyName { get; private set; }
 
+
+    /// <summary>
+    /// بوابة كل معالج بهذه الصفحة. المعرّف معرّف **وثيقة**، فالموظف المالك يُشتقّ
+    /// بتحميلها ثم يُفحص — ولهذا لا يمكن تسجيل المسار بالحارس المركزيّ.
+    /// </summary>
+    private async Task<bool> CanAccessDocumentAsync(int documentId)
+    {
+        var document = await DocumentTemplateStore.FindGeneratedAsync(_db, documentId);
+
+        return document is not null
+            && await EmployeeCompanyGuard.CanAccessEmployeeAsync(
+                _db, document.EmployeeId, await _companyScope.GetAsync(HttpContext.RequestAborted),
+                HttpContext.RequestAborted);
+    }
+
     public async Task<IActionResult> OnGetAsync()
     {
         Document = await DocumentTemplateStore.FindGeneratedAsync(_db, Id);
 
         if (Document is null)
         {
+            return NotFound();
+        }
+
+        // حارس الملكية. المعرّف هنا معرّف **وثيقة** لا موظف، فلا يستطيع الحارس
+        // المركزيّ استخراج الهدف من الطلب — يُشتقّ بعد التحميل ثم يُفحص.
+        // المفارقة قبل الإصلاح: الصفحة كانت تستعلم عن **شركة** صاحب الوثيقة لتعرض
+        // اسمها، فتملك المعلومة اللازمة للفحص ولا تفحص.
+        if (!await EmployeeCompanyGuard.CanAccessEmployeeAsync(
+                _db, Document.EmployeeId, await _companyScope.GetAsync(HttpContext.RequestAborted),
+                HttpContext.RequestAborted))
+        {
+            // NotFound لا Forbid: لا نؤكّد وجود وثيقة بشركة أخرى.
+            Document = null;
             return NotFound();
         }
 
@@ -69,6 +100,8 @@ WHERE e.Id = @EmployeeId;
     /// <summary>سحب الوثيقة — يُبطل تحقّقها فوراً بلا حذفها من الأرشيف.</summary>
     public async Task<IActionResult> OnPostRevokeAsync(int id)
     {
+        if (!await CanAccessDocumentAsync(id)) return NotFound();
+
         await DocumentTemplateStore.RevokeAsync(_db, id, User.Identity?.Name);
         TempData["SuccessMessage"] = "سُحبت الوثيقة — صار التحقق منها يُظهر أنها مسحوبة.";
         return RedirectToPage(new { id });
@@ -77,6 +110,8 @@ WHERE e.Id = @EmployeeId;
     /// <summary>يودع الوثيقة ملف الموظف — إيداعٌ صريح لا تلقائي.</summary>
     public async Task<IActionResult> OnPostFileAsync(int id)
     {
+        if (!await CanAccessDocumentAsync(id)) return NotFound();
+
         var filed = await DocumentTemplateStore.FileToEmployeeAsync(_db, id, User.Identity?.Name);
 
         TempData["SuccessMessage"] = filed
@@ -89,6 +124,8 @@ WHERE e.Id = @EmployeeId;
     /// <summary>ختم الوثيقة الصادرة — من الجذر المحميّ، والمفتاح مخزَّن بالوثيقة نفسها.</summary>
     public async Task<IActionResult> OnGetStampAsync(int id)
     {
+        if (!await CanAccessDocumentAsync(id)) return NotFound();
+
         var document = await DocumentTemplateStore.FindGeneratedAsync(_db, id);
         if (document is null || !document.HasStamp)
         {

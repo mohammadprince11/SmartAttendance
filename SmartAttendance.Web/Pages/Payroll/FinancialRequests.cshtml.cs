@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
+using SmartAttendance.Web.Infrastructure.Security;
+
 namespace SmartAttendance.Web.Pages.Payroll;
 
 /// <summary>
@@ -16,7 +18,13 @@ public class FinancialRequestsModel : PageModel
 {
     private readonly ApplicationDbContext _db;
 
-    public FinancialRequestsModel(ApplicationDbContext db) => _db = db;
+    private readonly ICompanyScopeProvider _companyScope;
+
+    public FinancialRequestsModel(ApplicationDbContext db, ICompanyScopeProvider companyScope)
+    {
+        _db = db;
+        _companyScope = companyScope;
+    }
 
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
     [BindProperty(SupportsGet = true)] public string? Status { get; set; }
@@ -105,6 +113,17 @@ public class FinancialRequestsModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
+        // الطلب المالي صفٌّ بـSelfServiceRequests يخصّ موظفاً — والحذف كان بمعرّفٍ
+        // من النموذج بلا فحص. (بوابة الموظف تفحص الملكية أصلاً؛ الباك أوفيس لا.)
+        if (!await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                _db, EmployeeCompanyGuard.Tables.SelfServiceRequests, "Id", id,
+                await _companyScope.GetAsync(HttpContext.RequestAborted),
+                HttpContext.RequestAborted))
+        {
+            TempData["SuccessMessage"] = "الطلب غير موجود أو خارج نطاق صلاحيتك.";
+            return RedirectToPage();
+        }
+
         var ok = await FinancialRequestStore.DeletePendingAsync(_db, id);
         TempData["SuccessMessage"] = ok ? "تم حذف الطلب المعلّق." : "لا يمكن حذف طلب بُتّ فيه.";
         return RedirectToPage();

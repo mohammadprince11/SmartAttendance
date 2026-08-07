@@ -1,4 +1,5 @@
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Infrastructure.Notifications;
 
@@ -58,13 +59,23 @@ public sealed class NotificationRuleGeneratorService : BackgroundService
 
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var result = await NotificationRuleGenerator.GenerateAsync(db, _webPush, today, stoppingToken);
-            _lastRunDate = today;
 
-            if (result.NewEvents > 0)
-                _logger.LogInformation(
-                    "مولّد الإشعارات ({Date}): {Events} حدث جديد، {Created} إشعار، {Push} دفعة Web-Push.",
-                    today, result.NewEvents, result.NotificationsCreated, result.PushDelivered);
+            // القفل على مستوى القاعدة لا العملية. حراسة جدول الأحداث وحدها لا تكفي:
+            // نمطها «اقرأ ثم اكتب» فنسختان تقرآن «لم يُولَّد بعد» معاً ثم تكتبان.
+            // و`_lastRunDate` حقل داخل العملية — لا يرى النسخ الأخرى إطلاقاً.
+            var ran = await SqlDistributedLock.TryRunAsync(db, "ZYNORA.NotificationRuleGenerator", async () =>
+            {
+                var result = await NotificationRuleGenerator.GenerateAsync(db, _webPush, today, stoppingToken);
+
+                if (result.NewEvents > 0)
+                    _logger.LogInformation(
+                        "مولّد الإشعارات ({Date}): {Events} حدث جديد، {Created} إشعار، {Push} دفعة Web-Push.",
+                        today, result.NewEvents, result.NotificationsCreated, result.PushDelivered);
+            }, stoppingToken);
+
+            // يُختم اليوم فقط عند التشغيل الفعليّ. ختمُه عند التخطّي يجعل هذه النسخة
+            // تظنّ اليوم مُنجزاً، فلو تعطّلت النسخة المالكة قبل أن تُنجز لضاع اليوم كله.
+            if (ran) _lastRunDate = today;
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {

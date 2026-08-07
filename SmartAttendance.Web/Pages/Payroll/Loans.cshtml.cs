@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
+using SmartAttendance.Web.Infrastructure.Security;
+
 namespace SmartAttendance.Web.Pages.Payroll;
 
 /// <summary>
@@ -17,11 +19,14 @@ public class LoansModel : PageModel
 
     private readonly Web.Infrastructure.Security.IProtectedFileService _protectedFiles;
 
+    private readonly ICompanyScopeProvider _companyScope;
+
     public LoansModel(
         ApplicationDbContext db,
         IWebHostEnvironment env,
-        Web.Infrastructure.Security.IProtectedFileService protectedFiles)
+        Web.Infrastructure.Security.IProtectedFileService protectedFiles, ICompanyScopeProvider companyScope)
     {
+        _companyScope = companyScope;
         _protectedFiles = protectedFiles;
         _db = db;
         _env = env;
@@ -87,6 +92,17 @@ public class LoansModel : PageModel
 
     public async Task<IActionResult> OnPostSetStatusAsync(int id, string status)
     {
+        // اعتماد القرض كتابةٌ مالية: يبدأ الخصم من راتب الموظف. كان يعمل بمعرّفٍ من
+        // النموذج بلا فحص ملكية ⟹ اعتماد/رفض/إغلاق قرض موظفٍ بشركة أخرى.
+        if (!await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                _db, EmployeeCompanyGuard.Tables.EmployeeLoans, "Id", id,
+                await _companyScope.GetAsync(HttpContext.RequestAborted),
+                HttpContext.RequestAborted))
+        {
+            TempData["SuccessMessage"] = "القرض غير موجود أو خارج نطاق صلاحيتك.";
+            return RedirectToPage();
+        }
+
         await LoanStore.SetStatusAsync(_db, id, status, CurrentUser);
         TempData["SuccessMessage"] = status switch
         {

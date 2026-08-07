@@ -57,6 +57,14 @@ public static class PublicPathPolicy
             return PathAccessClass.Public;
         }
 
+        // مسبارا المنصّة: تستدعيهما البنية التحتية قبل وجود أي جلسة، فحجبهما بالحارس
+        // يجعل النسخة تبدو «غير جاهزة» دائماً فلا تصلها حركة أبداً.
+        // لا يكشفان شيئاً: `live` بلا أي فحص، و`ready` حالة نجاح/فشل بلا تفاصيل.
+        if (path == "/health/live" || path == "/health/ready")
+        {
+            return PathAccessClass.Public;
+        }
+
         // نقاط Web-Push (كنترولر بمصادقة كوكي [Authorize]) خارج كتالوج الأدوار.
         if (path.StartsWith("/push/"))
         {
