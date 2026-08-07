@@ -598,6 +598,13 @@
                             </a>
                         }
 
+                        @if (CanRoute("/attendancedashboard"))
+                        {
+                            <a href="/AttendanceDashboard" class="nexora-nav-link @(IsUnder("/AttendanceDashboard") ? "active nexora-active" : "")">
+                                <span>رسومات الحضور</span>
+                            </a>
+                        }
+
                         @if (CanRoute("/workfromhome"))
                         {
                             <a href="/WorkFromHome" class="nexora-nav-link @(IsUnder("/WorkFromHome") ? "active nexora-active" : "")">

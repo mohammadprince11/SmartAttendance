@@ -48,8 +48,9 @@ public static class RoleRouteCatalog
         "/shifttypes",
         "/attendancesettings",
         "/dayattendance",
-        // شاشة قراءةٍ لليوميات المحلَّلة كنظيرتها /dayattendance تماماً، فتأخذ صلاحيتها.
+        // شاشتا قراءةٍ لليوميات المحلَّلة كنظيرتها /dayattendance تماماً، فتأخذان صلاحيتها.
         "/workfromhome",
+        "/attendancedashboard",
         "/shiftrules",
         "/periodrules",
         "/attendancerecommendations",
