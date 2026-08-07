@@ -193,6 +193,10 @@ WHERE Id=@Id AND Status=N'Pending';
             return (true, "تم تحديث الطلب.");
         }
 
+        // الحدود تُفرَض على **الإنشاء** وحده — الطلب القائم قُدّم تحت سياسة وقتها.
+        if (await MissingPunchPolicy.ValidateAsync(db, r.EmployeeId, r.PunchAt, r.Reason) is { } rejection)
+            return (false, rejection);
+
         var refNo = await GenerateRefNoAsync(db);
         await HrmsDatabase.ExecuteAsync(
             db,
