@@ -29,7 +29,8 @@
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)][string] $TaskName,
+    # مطلوب للنشر، لا للفحص وحده (-CheckOnly) — يُتحقق منه بعد تحديد الوضع.
+    [string] $TaskName,
 
     [string] $SitePath   = 'C:\ZynoraPortal',
     [string] $RepoPath   = (Get-Location).Path,
@@ -47,7 +48,11 @@ param(
     [switch] $Approve,
 
     # مخرجٌ صريح لبيئةٍ تُنسخ قاعدتها بوسيلة أخرى. يُسجَّل تحذيراً ولا يمرّ صامتاً.
-    [switch] $SkipDbBackup
+    [switch] $SkipDbBackup,
+
+    # يفحص البيئة والإعدادات ويخرج — بلا نسخ ولا إيقاف ولا نشر.
+    # لا يحتاج -Approve ولا نسخة قاعدة: لا يكتب شيئاً.
+    [switch] $CheckOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -64,14 +69,19 @@ function Write-Warn { param([string] $Text) Write-Host "  [!]  $Text"    -Foregr
 # ─────────────────────────────────────────────────────────────────────────────
 # ٠) شروط البدء
 # ─────────────────────────────────────────────────────────────────────────────
-if (-not $Approve) {
+if (-not $Approve -and -not $CheckOnly) {
     throw @'
 النشر يحتاج موافقة صريحة لهذه العملية بالذات — أعد التشغيل بـ-Approve.
 موافقةٌ سابقة على نشرٍ سابق لا تُعمَّم على هذا.
+(للفحص وحده بلا نشر: -CheckOnly)
 '@
 }
 
-if (-not $SkipDbBackup -and (-not $Database -or -not $SqlServer)) {
+if (-not $CheckOnly -and -not $TaskName) {
+    throw 'النشر يحتاج -TaskName (اسم المهمة المجدولة التي تشغّل الموقع).'
+}
+
+if (-not $CheckOnly -and -not $SkipDbBackup -and (-not $Database -or -not $SqlServer)) {
     throw @'
 نسخة القاعدة إلزامية: مرّر -SqlServer و-Database.
 السبب: هجرات المخطط تُطبَّق عند أول إقلاع، والرجوع بالملفات لا يبطلها.
@@ -100,6 +110,84 @@ if (Test-Path $migrator) {
     $ids = Select-String -Path $migrator -Pattern '"\d{8}-\d{2}-[a-z0-9-]+"' -AllMatches |
            ForEach-Object { $_.Matches } | ForEach-Object { $_.Value.Trim('"') }
     Write-Warn "هجرات المخطط بالكود: $($ids.Count). ستُطبَّق غير المسجَّلة منها بأول إقلاع."
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ٠٫٥) فحص ما قبل الإقلاع — أرخص من نشرٍ يرفض الإقلاع ثم رجوع
+#
+# `CookieSecurityPolicy` يرمي عند الإقلاع إن كانت البيئة Production بلا إثبات
+# TLS. المصيدة أن `launchSettings.json` (الذي يضبط Development) **ملف تطوير لا
+# يُنسخ لمخرَج publish**، فالنشر المُصدَّر بلا متغيّر بيئة يُقلع افتراضاً على
+# Production — أي أن الوضع الافتراضيّ تماماً هو الوضع الذي يُرفض.
+#
+# نحاكي القرار هنا بنفس منطق CookieSecurityPolicy.Evaluate قبل لمس أي شيء.
+# ─────────────────────────────────────────────────────────────────────────────
+Write-Step '٠٫٥) فحص ما قبل الإقلاع'
+
+function Get-ConfigFlag {
+    param([object] $Json, [string[]] $Path)
+    $node = $Json
+    foreach ($seg in $Path) {
+        if ($null -eq $node) { return $false }
+        $prop = $node.PSObject.Properties[$seg]
+        if (-not $prop) { return $false }
+        $node = $prop.Value
+    }
+    return [bool] $node
+}
+
+# ترتيب ASP.NET Core: متغيّر العملية ← المستخدم ← الجهاز. وغيابها كلها ⟹ Production.
+$aspnetEnv = $env:ASPNETCORE_ENVIRONMENT
+if (-not $aspnetEnv) { $aspnetEnv = [Environment]::GetEnvironmentVariable('ASPNETCORE_ENVIRONMENT','Machine') }
+if (-not $aspnetEnv) {
+    $aspnetEnv = 'Production'
+    Write-Warn 'ASPNETCORE_ENVIRONMENT غير مضبوط — ASP.NET Core يفترض Production.'
+}
+Write-Host "  البيئة: $aspnetEnv"
+
+$forceHttps = $false; $revProxy = $false; $allowInsecure = $false
+foreach ($name in @('appsettings.json', "appsettings.$aspnetEnv.json")) {
+    $file = Join-Path $SitePath $name
+    if (-not (Test-Path $file)) { continue }
+    try {
+        $cfg = Get-Content $file -Raw -Encoding UTF8 | ConvertFrom-Json
+    } catch {
+        Write-Warn "تعذّرت قراءة $name كـJSON — أتخطّاه بالفحص."
+        continue
+    }
+    # اللاحق يغلب السابق، تماماً كترتيب ASP.NET Core.
+    if (Get-ConfigFlag $cfg @('ForceHttps'))                      { $forceHttps    = $true }
+    if (Get-ConfigFlag $cfg @('ReverseProxy','Enabled'))           { $revProxy      = $true }
+    if (Get-ConfigFlag $cfg @('Security','AllowInsecureCookies'))  { $allowInsecure = $true }
+    Write-Host "  قُرئ: $name"
+}
+
+Write-Host "  ForceHttps=$forceHttps · ReverseProxy:Enabled=$revProxy · Security:AllowInsecureCookies=$allowInsecure"
+
+$isProd = ($aspnetEnv -eq 'Production')
+if ($isProd -and -not $forceHttps -and -not $revProxy -and -not $allowInsecure) {
+    throw @"
+سيرفض الموقع الإقلاع بعد النشر — أُوقفه الآن قبل أن ألمس شيئاً.
+
+البيئة Production ولا إثبات على TLS، فكوكي الجلسة ستُصدَر بلا راية Secure.
+اضبط **واحداً** بـ$SitePath\appsettings.json ثم أعد التشغيل:
+
+  • نشر داخليّ على HTTP (حالتك الأرجح):
+      "Security": { "AllowInsecureCookies": true }
+
+  • التطبيق نفسه يستقبل HTTPS:
+      "ForceHttps": true
+
+  • خلف وسيط عكسيّ موثوق ينهي TLS (لا تضبطه بلا وسيط فعليّ —
+    يجعل التطبيق يثق بترويسات X-Forwarded المُزوَّرة بسهولة):
+      "ReverseProxy": { "Enabled": true }
+"@
+}
+Write-Ok 'الإعدادات تسمح بالإقلاع'
+
+if ($CheckOnly) {
+    Write-Host "`nالفحص وحده (-CheckOnly) — لم يُنشر شيء ولم يُلمس $SitePath." -ForegroundColor Green
+    return
 }
 
 Write-Host "`nاكتب DEPLOY للمتابعة: " -ForegroundColor Yellow -NoNewline
