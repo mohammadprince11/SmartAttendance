@@ -99,6 +99,30 @@
     .dat-modal-legend { font-size: 11px; font-weight: 800; line-height: 1.9; color: var(--sa-muted, #8FA8BC); }
     .dat-modal-check { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 900; }
     .dat-modal-actions { display: flex; gap: 8px; }
+
+    /* ═══ التحديد الجماعي ═══ */
+    .dat-pick { width: 16px; height: 16px; accent-color: #12D9E3; cursor: pointer; }
+    .dat-table th.dat-pick-col, .dat-table td.dat-pick-col { width: 34px; text-align: center; padding-inline: 8px; }
+    tr.is-picked td { background: rgba(18,217,227,.09) !important; }
+
+    /* بار الإجراءات الجماعية: عائم ثابت أسفل الشاشة (المعيار الموحّد) — لا يظهر
+       إلا بوجود تحديد، فلا يحجب شيئاً بالحالة الطبيعية. */
+    .dat-bulkbar {
+        display: none; position: fixed; inset-inline: 0; bottom: 18px; z-index: 880;
+        margin-inline: auto; width: max-content; max-width: calc(100% - 24px);
+        align-items: center; gap: 12px; padding: 10px 16px; border-radius: 999px;
+        border: 1px solid rgba(18,217,227,.45); background: var(--sa-surface, rgba(8,25,43,.98));
+        color: var(--sa-text, #DCEAF4); box-shadow: 0 18px 44px rgba(0,0,0,.42);
+        font-size: 13px; font-weight: 900;
+    }
+    html[data-theme="light"] .dat-bulkbar { background: #fff; }
+    .dat-bulkbar.is-on { display: flex; }
+    .dat-bulkbar b { color: #12D9E3; direction: ltr; display: inline-block; }
+
+    /* تقرير الاستثناء — القرار: يُستثنى غير المستحقّ **مع بيان السبب**. */
+    .dat-skips { border: 1px solid rgba(249,115,22,.4); background: rgba(249,115,22,.07); border-radius: 14px; padding: 12px 16px; }
+    .dat-skips h4 { margin: 0 0 8px; font-size: 13px; font-weight: 1000; color: #f97316; }
+    .dat-skips ul { margin: 0; padding-inline-start: 18px; font-size: 12.5px; font-weight: 800; line-height: 2; }
 </style>
 
 <section class="dat-page" dir="rtl">
@@ -135,6 +159,19 @@
     @if (TempData["SuccessMessage"] != null)
     {
         <div class="dat-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    @if (Model.LastSkips.Count > 0)
+    {
+        <div class="dat-skips">
+            <h4>استُثني @Model.LastSkips.Count موظفاً — ولماذا</h4>
+            <ul>
+                @foreach (var skip in Model.LastSkips)
+                {
+                    <li>@skip.EmployeeName — @skip.Reason</li>
+                }
+            </ul>
+        </div>
     }
 
     <form method="get" class="dat-bar">
@@ -191,6 +228,12 @@
             <table class="dat-table">
                 <thead>
                     <tr>
+                        <th class="dat-pick-col">
+                            @* تحديد الكل = صفوف **هذه الصفحة** لا الشهر كلّه: الإرسال
+                               يحمل ما تراه، فوعدُ «الكل» على 50 صفاً معروضاً صادق. *@
+                            <input type="checkbox" class="dat-pick" id="dat-pick-all"
+                                   onchange="datPickAll(this.checked)" title="تحديد كل صفوف الصفحة" />
+                        </th>
                         <th>الكود</th><th>الموظف</th><th>التاريخ</th><th>المناوبة</th><th>ختم الدخول</th><th>ختم الخروج</th>
                         <th>ساعات العمل</th><th>ساعات التأخير</th><th>الخروج المبكر</th><th>الحالة</th><th>تم التحليل</th>
                     </tr>
@@ -199,6 +242,12 @@
                     @foreach (var row in Model.Rows)
                     {
                         <tr>
+                            <td class="dat-pick-col">
+                                <input type="checkbox" class="dat-pick dat-row-pick"
+                                       value="@row.EmployeeId|@row.WorkDate.ToString("yyyy-MM-dd")"
+                                       data-name="@row.EmployeeName"
+                                       onchange="datPickChanged(this)" />
+                            </td>
                             <td class="dat-num">@row.EmployeeNo</td>
                             <td><b>@row.EmployeeName</b></td>
                             <td class="dat-num">@row.WorkDate.ToString("yyyy-MM-dd")</td>
@@ -251,6 +300,91 @@
         </div>
     }
 </section>
+
+@* ═══ بار الإجراءات الجماعية ═══
+   يظهر بأول تحديد ويحمل العدّادين اللذين يحسمان الالتباس: كم صفّاً وكم موظفاً —
+   لأن الموظف الواحد قد يحمل خمسة صفوف، والطلب يُقدَّم عن موظف لا عن صفّ. *@
+<div class="dat-bulkbar" id="dat-bulkbar">
+    <span>محدَّد: <b id="dat-pick-rows">0</b> يومية · <b id="dat-pick-emps">0</b> موظف</span>
+    <button type="button" class="dat-btn" onclick="datRequest(true)">تقديم طلب</button>
+    <button type="button" class="dat-btn ghost" onclick="datPickAll(false)">إلغاء التحديد</button>
+</div>
+
+@* ═══ منبثقة تقديم طلب نيابةً عن الموظفين ═══
+   الاعتماد **فوريّ بلا لجنة** (قرار محمد 2026-08-07) لأن المُقدِّم HR لا الموظف؛
+   وغير المستحقّ يُستثنى مع تقرير بدل أن يختفي النوع عن الجميع. *@
+<div class="dat-modal-bg" id="dat-reqbg" onclick="datRequest(false)"></div>
+<div class="dat-modal" id="dat-req" role="dialog" aria-modal="true" aria-labelledby="dat-req-title">
+    <h3 id="dat-req-title">تقديم طلب نيابةً عن الموظفين</h3>
+
+    <p class="dat-modal-scope">
+        سيُقدَّم على <b id="dat-req-rows">0</b> يومية لـ<b id="dat-req-emps">0</b> موظفاً.
+        الأيام المتتالية تُدمج بطلبٍ واحد، والمتباعدة تُقسَّم طلبات.
+        <br />
+        <b>اعتماد فوريّ</b> بلا لجنة موافقات — ومن لا يستحقّ (شرط أهلية · رصيد · تكرار)
+        يُستثنى ويُذكر سببه بالتقرير.
+    </p>
+
+    <form method="post" asp-page-handler="BulkRequest" class="dat-modal-form" id="dat-req-form">
+        <input type="hidden" name="Month" value="@Model.Month" />
+        <input type="hidden" name="Search" value="@Model.Search" />
+        <input type="hidden" name="StatusFilter" value="@Model.StatusFilter" />
+        <input type="hidden" name="PageNumber" value="@Model.PageNumber" />
+        <div id="dat-req-selected"></div>
+
+        <label class="dat-modal-label">نوع الطلب
+            <select name="ReqTypeId" id="dat-req-type" class="dat-modal-text"
+                    onchange="datTypeChanged()" required>
+                <option value="">— اختر —</option>
+                @foreach (var group in Model.RequestTypes.GroupBy(t => t.CategoryName))
+                {
+                    <optgroup label="@group.Key">
+                        @foreach (var type in group)
+                        {
+                            <option value="@type.Id" data-timed="@(Model.TimedTypeIds.Contains(type.Id) ? "1" : "0")">@type.Name</option>
+                        }
+                    </optgroup>
+                }
+                @if (Model.Shifts.Count > 0)
+                {
+                    <optgroup label="المناوبات">
+                        <option value="shift" data-timed="0">تغيير المناوبة</option>
+                    </optgroup>
+                }
+            </select>
+        </label>
+
+        <label class="dat-modal-label" id="dat-req-shift-wrap" style="display:none">
+            المناوبة البديلة
+            <select name="ReqShiftTypeId" id="dat-req-shift" class="dat-modal-text">
+                @foreach (var shift in Model.Shifts)
+                {
+                    <option value="@shift.Id">@shift.Name</option>
+                }
+            </select>
+        </label>
+
+        <div id="dat-req-time-wrap" style="display:none;gap:10px" class="dat-modal-radios">
+            <label class="dat-modal-label">من الساعة
+                <input type="time" name="ReqFromTime" class="dat-modal-text" />
+            </label>
+            <label class="dat-modal-label">إلى الساعة
+                <input type="time" name="ReqToTime" class="dat-modal-text" />
+            </label>
+        </div>
+
+        <label class="dat-modal-label">السبب (اختياري)
+            <textarea name="ReqReason" rows="3" class="dat-modal-text"
+                      placeholder="يُسجَّل بسجلّ الطلب وتاريخ الموافقات"></textarea>
+        </label>
+
+        <div class="dat-modal-actions">
+            <button type="button" class="dat-btn ghost" onclick="datRequest(false)">إلغاء</button>
+            <button type="submit" class="dat-btn"
+                    data-zyconfirm="سيُقدَّم الطلب ويُعتمد فوراً بلا لجنة — تأكيد؟">تقديم واعتماد</button>
+        </div>
+    </form>
+</div>
 
 @* ═══ منبثقة إشعار الموظفين ═══
    بلا مؤلّف نطاق: النطاق هو العرض الحالي، ويُذكَر صراحةً بالمنبثقة كي لا يُرسِل
@@ -317,8 +451,84 @@
             document.getElementById('dat-notif').style.display = open ? 'block' : 'none';
         }
 
+        // ═══ التحديد الجماعي ═══
+        // مصدر الحقيقة الوحيد هو مربّعات الصفحة نفسها؛ لا نسخة موازية بذاكرة JS
+        // تفترق عن الشاشة بعد إعادة الرسم.
+        function datPicked() {
+            return Array.prototype.filter.call(
+                document.querySelectorAll('.dat-row-pick'), function (b) { return b.checked; });
+        }
+
+        function datSyncBar() {
+            var picked = datPicked();
+            var employees = {};
+            picked.forEach(function (b) { employees[b.value.split('|')[0]] = 1; });
+            var empCount = Object.keys(employees).length;
+
+            document.getElementById('dat-pick-rows').textContent = picked.length;
+            document.getElementById('dat-pick-emps').textContent = empCount;
+            document.getElementById('dat-req-rows').textContent = picked.length;
+            document.getElementById('dat-req-emps').textContent = empCount;
+            document.getElementById('dat-bulkbar').classList.toggle('is-on', picked.length > 0);
+
+            var all = document.getElementById('dat-pick-all');
+            var boxes = document.querySelectorAll('.dat-row-pick');
+            if (all) {
+                all.checked = boxes.length > 0 && picked.length === boxes.length;
+                all.indeterminate = picked.length > 0 && picked.length < boxes.length;
+            }
+        }
+
+        function datPickChanged(box) {
+            var row = box.closest('tr');
+            if (row) { row.classList.toggle('is-picked', box.checked); }
+            datSyncBar();
+        }
+
+        function datPickAll(checked) {
+            Array.prototype.forEach.call(document.querySelectorAll('.dat-row-pick'), function (b) {
+                b.checked = checked;
+                var row = b.closest('tr');
+                if (row) { row.classList.toggle('is-picked', checked); }
+            });
+            datSyncBar();
+        }
+
+        function datTypeChanged() {
+            var select = document.getElementById('dat-req-type');
+            var option = select.options[select.selectedIndex];
+            var isShift = select.value === 'shift';
+            var timed = option && option.getAttribute('data-timed') === '1';
+
+            document.getElementById('dat-req-shift-wrap').style.display = isShift ? 'flex' : 'none';
+            document.getElementById('dat-req-time-wrap').style.display = timed ? 'flex' : 'none';
+            document.querySelector('#dat-req-time-wrap input[name="ReqFromTime"]').required = timed;
+            document.querySelector('#dat-req-time-wrap input[name="ReqToTime"]').required = timed;
+        }
+
+        function datRequest(open) {
+            if (open) {
+                // التحديد يُنسخ لحظة الفتح: المربّعات خارج نموذج الإرسال (نموذج
+                // الفلترة GET يلفّ أعلى الصفحة)، فلا تُرسَل من تلقائها.
+                var host = document.getElementById('dat-req-selected');
+                host.innerHTML = '';
+                datPicked().forEach(function (b) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'Selected';
+                    input.value = b.value;
+                    host.appendChild(input);
+                });
+                if (host.children.length === 0) { return; }
+            }
+            document.getElementById('dat-reqbg').style.display = open ? 'block' : 'none';
+            document.getElementById('dat-req').style.display = open ? 'block' : 'none';
+        }
+
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') { datNotify(false); }
+            if (e.key === 'Escape') { datNotify(false); datRequest(false); }
         });
+
+        datSyncBar();
     </script>
 }

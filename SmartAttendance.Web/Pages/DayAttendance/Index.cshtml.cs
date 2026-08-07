@@ -46,6 +46,19 @@ public class IndexModel : PageModel
 
     public List<DayAttendanceStore.DayRow> Rows { get; set; } = new();
     public List<ShiftTypeStore.ShiftType> Shifts { get; set; } = new();
+
+    /// <summary>
+    /// أنواع الطلبات القابلة للتقديم نيابةً — كتالوج <see cref="RequestTypeStore"/>
+    /// مقصوراً على ما له أثرٌ منفَّذ (<see cref="BulkRequestStore.ResolveEffect"/>).
+    /// عرض نوعٍ بلا أثر كان يعني زرّاً يكتب صفّاً لا يقرؤه محرّك.
+    /// </summary>
+    public List<RequestTypeStore.ReqType> RequestTypes { get; set; } = new();
+
+    /// <summary>الأنواع الزمنية (مغادرات) — تُظهر حقلي الوقت بالمنبثقة.</summary>
+    public HashSet<int> TimedTypeIds { get; set; } = new();
+
+    /// <summary>تقرير المستثنَين من آخر تقديمٍ جماعي (القرار 1: استثنِ مع تقرير).</summary>
+    public List<BulkRequestStore.Skipped> LastSkips { get; set; } = new();
     public int TotalRows { get; set; }
     public int TotalPages { get; set; }
     public int PresentCount { get; set; }
@@ -108,6 +121,16 @@ public class IndexModel : PageModel
 
         Shifts = (await ShiftTypeStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
 
+        await LoadRequestCatalogAsync();
+
+        // تقرير الاستثناء يعبر PRG كـJSON: TempData لا يحمل كائنات، ونصٌّ واحد لا
+        // يكفي — المستخدم يحتاج «من» و«لماذا» صفّاً صفّاً.
+        if (TempData["BulkSkips"] is string skipsJson && skipsJson.Length > 0)
+        {
+            LastSkips = System.Text.Json.JsonSerializer
+                .Deserialize<List<BulkRequestStore.Skipped>>(skipsJson) ?? new();
+        }
+
         // الفترة تتبع سياسة غلق الحضور (مثلاً 21 → 20) لا الشهر التقويمي.
         CutoffPeriod = await ResolvePeriodAsync(year, month);
 
@@ -144,6 +167,85 @@ public class IndexModel : PageModel
     private List<DayAttendanceStore.DayRow> ApplyStatusFilter(
         IEnumerable<DayAttendanceStore.DayRow> rows) =>
         DayAttendanceStore.FilterByStatus(rows, StatusFilter);
+
+    /// <summary>
+    /// كتالوج الطلبات القابل للتقديم من هذه الشاشة. لا يُسقط الصفحة عند تعذّره —
+    /// شاشة الحضور تعمل بلا كتالوج، والزرّ وحده يختفي.
+    /// </summary>
+    private async Task LoadRequestCatalogAsync()
+    {
+        try
+        {
+            await RequestTypeStore.EnsureAsync(_dbContext);
+            var types = await RequestTypeStore.ListTypesAsync(_dbContext, onlyActive: true);
+
+            RequestTypes = types
+                .Where(type => BulkRequestStore.ResolveEffect(type).Kind
+                            != BulkRequestStore.EffectKind.None)
+                .ToList();
+
+            TimedTypeIds = RequestTypes
+                .Where(type => type.NeedsTime
+                            || BulkRequestStore.ResolveEffect(type).Kind
+                               == BulkRequestStore.EffectKind.ExitPermission)
+                .Select(type => type.Id)
+                .ToHashSet();
+        }
+        catch
+        {
+            RequestTypes = new();
+            TimedTypeIds = new();
+        }
+    }
+
+    /// <summary>
+    /// تقديم طلبٍ نيابةً عن موظّفي اليوميات المحدَّدة، باعتمادٍ فوريّ بلا لجنة
+    /// (قرار محمد 2026-08-07). المنطق كلّه بـ<see cref="BulkRequestStore"/>؛ هنا
+    /// تفكيك التحديد وعرض النتيجة.
+    /// </summary>
+    public async Task<IActionResult> OnPostBulkRequestAsync()
+    {
+        var targets = ParseSelection(Request.Form["Selected"]);
+
+        var options = new BulkRequestStore.Options(
+            TypeId: int.TryParse(Request.Form["ReqTypeId"], out var typeId) ? typeId : 0,
+            ShiftTypeId: int.TryParse(Request.Form["ReqShiftTypeId"], out var shiftId) ? shiftId : 0,
+            FromTime: Request.Form["ReqFromTime"].ToString(),
+            ToTime: Request.Form["ReqToTime"].ToString(),
+            Reason: Request.Form["ReqReason"].ToString());
+
+        var outcome = await BulkRequestStore.SubmitAsync(
+            _dbContext, options, targets, User.Identity?.Name ?? "hr");
+
+        TempData["SuccessMessage"] = outcome.Message;
+        TempData["BulkSkips"] = outcome.Skips.Count > 0
+            ? System.Text.Json.JsonSerializer.Serialize(outcome.Skips)
+            : null;
+
+        return RedirectToPage(new { Month, Search, StatusFilter, PageNumber });
+    }
+
+    /// <summary>
+    /// قيم مربّعات التحديد <c>"{employeeId}|{yyyy-MM-dd}"</c> ⟵ أزواج موظف×يوم.
+    /// نقيّة وثابتة: أي قيمة مشوَّهة تُهمَل بصمت بدل أن تُسقط الإرسال كلّه — التحديد
+    /// يأتي من الشاشة، والقيمة الوحيدة الموثوقة منه هي ما يُفكّ صحيحاً.
+    /// </summary>
+    public static List<(int EmployeeId, DateOnly Date)> ParseSelection(IEnumerable<string?> values)
+    {
+        var targets = new List<(int, DateOnly)>();
+
+        foreach (var value in values)
+        {
+            if (string.IsNullOrWhiteSpace(value)) continue;
+            var parts = value.Split('|');
+            if (parts.Length != 2) continue;
+            if (!int.TryParse(parts[0], out var employeeId) || employeeId <= 0) continue;
+            if (!DateOnly.TryParse(parts[1], out var date)) continue;
+            targets.Add((employeeId, date));
+        }
+
+        return targets.Distinct().ToList();
+    }
 
     public async Task<IActionResult> OnPostAnalyzeAsync()
     {
