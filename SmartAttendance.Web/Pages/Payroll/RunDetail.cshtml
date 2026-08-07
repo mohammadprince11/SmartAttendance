@@ -157,6 +157,38 @@
         </table>
     </div>
 
+    @*
+        الرواتب المستثناة — نظير تبويب كيان. كانت الأسباب عدّاداً مجمّعاً بسطر
+        الرسالة فقط، فسؤال «لماذا لم يُحتسب فلان؟» يحتاج قراءة كود. الآن كل اسم
+        بسببه وبسبيل معالجته. لا يظهر القسم أصلاً حين لا يُستبعَد أحد.
+    *@
+    @if (Model.Exclusions.Count > 0)
+    {
+        <div class="pd-card" style="margin-top:16px">
+            <div style="padding:14px 16px 0">
+                <b style="font-size:15px">الرواتب المستثناة (@Model.Exclusions.Count)</b>
+                <div style="font-size:12px;opacity:.7;margin-top:4px">
+                    موظفون ضمن نطاق الدفعة ولم تُحتسب رواتبهم — عالِج السبب ثم أعد الاحتساب.
+                </div>
+            </div>
+            <table class="pd-table">
+                <thead>
+                    <tr><th>الموظف</th><th>التصنيف</th><th>السبب وسبيل المعالجة</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var x in Model.Exclusions)
+                    {
+                        <tr>
+                            <td class="pd-emp"><b>@x.EmployeeName</b><span>@x.EmployeeNo</span></td>
+                            <td style="font-size:12px;white-space:nowrap">@x.ReasonLabel</td>
+                            <td style="font-size:12px">@x.Reason</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
     @* قسيمة راتب احترافية *@
     <div class="hrms-slideover-backdrop" id="pd-backdrop" onclick="pdClose()"></div>
     <aside class="hrms-slideover wide" id="pd-slide" aria-hidden="true">

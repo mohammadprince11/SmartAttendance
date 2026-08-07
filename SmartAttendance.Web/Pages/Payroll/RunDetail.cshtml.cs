@@ -36,6 +36,9 @@ public class RunDetailModel : PageModel
     public PayrollRunStore.PayrollRun? Run { get; set; }
     public List<PayrollRunStore.PayrollLine> Lines { get; set; } = new();
     public string CompanyName { get; set; } = "الشركة";
+    /// <summary>المستبعَدون من الدفعة بأسبابهم — يجيبون «لماذا لم يُحتسب فلان؟».</summary>
+    public List<PayrollRunStore.Exclusion> Exclusions { get; set; } = new();
+
     public List<BankFileTemplateStore.Template> BankTemplates { get; set; } = new();
 
     public decimal TotalDeductions => Lines.Sum(l => l.TotalDeductions);
@@ -50,6 +53,7 @@ public class RunDetailModel : PageModel
         Run = await PayrollRunStore.GetRunAsync(_db, Id);
         if (Run == null) return RedirectToPage("Runs");
         Lines = await PayrollRunStore.ListLinesAsync(_db, Id);
+        Exclusions = await PayrollRunStore.ListExclusionsAsync(_db, Id);
         BankTemplates = await BankFileTemplateStore.ActiveAsync(_db);
         CompanyName = await HrmsDatabase.ScalarAsync<string>(_db,
             "SELECT TOP 1 ISNULL(Name, N'الشركة') FROM Companies WHERE ISNULL(IsDeleted,0)=0 ORDER BY Id;")
