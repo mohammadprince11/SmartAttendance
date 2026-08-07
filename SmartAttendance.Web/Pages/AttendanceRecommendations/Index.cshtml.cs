@@ -61,6 +61,12 @@ public class IndexModel : PageModel
     /// <summary>قواعد تسمح بتعديل إجرائها الموصى به — تُظهر أدوات التعديل بالصفّ.</summary>
     public HashSet<int> EditableRuleIds { get; set; } = new();
 
+    /// <summary>
+    /// قواعد أثرها **نسبة من قيمة اليوم** لا مبلغاً. لولاها لعُرضت «25 مبلغ» —
+    /// رقمٌ يقرؤه المستخدم ديناراً وهو نسبة مئوية.
+    /// </summary>
+    public HashSet<int> PercentRuleIds { get; set; } = new();
+
     public (int Year, int Month) Period
     {
         get
@@ -130,6 +136,11 @@ public class IndexModel : PageModel
         if (PageNumber > TotalPages) PageNumber = TotalPages;
         Rows = filtered.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
         EditableRuleIds = await RecommendationStore.EditableRuleIdsAsync(_dbContext);
+
+        PercentRuleIds = (await ShiftRuleStore.ListAsync(_dbContext))
+            .Where(rule => ShiftRuleStore.IsPercentOfDay(rule.ValueKind, rule.ActionType))
+            .Select(rule => rule.Id)
+            .ToHashSet();
     }
 
     /// <summary>تعديل الإجراء الموصى به — المتجر يفرض راية «السماح بالتعديل» على القاعدة.</summary>

@@ -663,11 +663,49 @@ VALUES
                 return (violationId, null);
 
             default: // Leave | Permission | Overtime | Income | Deduction
+                var (amount, note) = await ResolveMoneyAsync(
+                    dbContext, employeeId, ruleId, actionType, actionValue);
+
                 var transactionId = await AttendanceTransactionStore.CreateAsync(dbContext,
                     employeeId, workDate, recommendationId, ruleId, ruleName,
-                    actionType, actionText, actionValue);
+                    actionType, string.IsNullOrEmpty(note) ? actionText : $"{actionText} ({note})", amount);
                 return (null, transactionId);
         }
+    }
+
+    /// <summary>
+    /// المبلغ الفعليّ للأثر الماليّ. القاعدة العادية تعطي مبلغاً ثابتاً؛ وقاعدة
+    /// <see cref="ShiftRuleStore.PercentOfDayValueKind"/> تعطي **نسبةً من قيمة اليوم**
+    /// تُحسب هنا — لحظة الاعتماد — من الراتب الأساسي ÷ ٣٠ (نفس مقام المسير).
+    ///
+    /// <para>راتبٌ مفقود يعني مبلغَ صفر لا خصماً عشوائياً: يُنشأ الأثر بقيمة صفر
+    /// وبيانٍ يقول السبب، فيراه المستخدم بدل أن يخصم رقماً لا أساس له.</para>
+    /// </summary>
+    private static async Task<(decimal Amount, string Note)> ResolveMoneyAsync(
+        ApplicationDbContext dbContext, int employeeId, int ruleId,
+        string actionType, decimal actionValue)
+    {
+        if (ruleId <= 0) return (actionValue, string.Empty);
+
+        var rule = (await ShiftRuleStore.ListAsync(dbContext)).FirstOrDefault(r => r.Id == ruleId);
+        if (rule is null || !ShiftRuleStore.IsPercentOfDay(rule.ValueKind, actionType))
+            return (actionValue, string.Empty);
+
+        var basic = await HrmsDatabase.ScalarAsync<decimal?>(
+            dbContext,
+            """
+SELECT TOP 1 BasicSalary FROM EmployeeFinancialInfos
+WHERE EmployeeId = @Employee AND ISNULL(IsDeleted, 0) = 0;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Employee", employeeId)) ?? 0m;
+
+        if (basic <= 0)
+            return (0m, "بلا راتب أساسي مسجَّل — لم يُحتسب مبلغ");
+
+        var dailyRate = WorkDaysBasis.DailyRate(basic, 30m);
+        var amount = decimal.Round(dailyRate * actionValue / 100m, 2);
+
+        return (amount, $"{actionValue:0.##}% من قيمة اليوم {dailyRate:0.##}");
     }
 
     public static async Task IgnoreAsync(ApplicationDbContext dbContext, int id)

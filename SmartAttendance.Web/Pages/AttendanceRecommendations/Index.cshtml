@@ -309,7 +309,18 @@
                                 <td>
                                     <span class="rec-chip @(row.ActionType == "Note" ? "note" : row.ActionType == "Violation" ? "Pending" : "fin")" style="@(row.ActionType is "Note" or "Violation" ? "background:rgba(18,217,227,.08);color:inherit" : "")">@ShiftRuleStore.LabelOf(ShiftRuleStore.ActionTypes, row.ActionType)@(string.IsNullOrWhiteSpace(row.ActionText) ? "" : $" · {row.ActionText}")</span>
                                     @if (ShiftRuleStore.ActionNeedsValue(row.ActionType) && row.ActionValue > 0)
-                                    { <span class="rec-ref" style="color:#60a5fa">@row.ActionValue.ToString("0.##") @ShiftRuleStore.ActionValueUnit(row.ActionType)</span> }
+                                    {
+                                        @* النسبة تُعرض نسبةً: «25 مبلغ» يُقرأ ديناراً وهو ٪.
+                                           والمبلغ الفعليّ يُحسب لحظة الاعتماد من راتب الموظف. *@
+                                        if (Model.PercentRuleIds.Contains(row.RuleId))
+                                        {
+                                            <span class="rec-ref" style="color:#60a5fa" title="يُحتسب المبلغ عند الاعتماد من الراتب الأساسي ÷ 30">@row.ActionValue.ToString("0.##")% من قيمة اليوم</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="rec-ref" style="color:#60a5fa">@row.ActionValue.ToString("0.##") @ShiftRuleStore.ActionValueUnit(row.ActionType)</span>
+                                        }
+                                    }
                                     @if (row.ViolationCaseId != null)
                                     {
                                         <a class="rec-ref" href="/Violations">مخالفة #@row.ViolationCaseId</a>
