@@ -98,7 +98,15 @@
     html[data-theme="light"] .dat-modal-text { background: #fff; }
     .dat-modal-legend { font-size: 11px; font-weight: 800; line-height: 1.9; color: var(--sa-muted, #8FA8BC); }
     .dat-modal-check { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 900; }
-    .dat-modal-actions { display: flex; gap: 8px; }
+    /* أزرار الإرسال ملتصقة بأسفل المنبثقة: بقائمة أيامٍ طويلة كانت تهبط تحت الحافة
+       فيبدو أن لا زرّ أصلاً. تلتصق بلونٍ صلب لئلا تعبر الصفوف من تحتها. */
+    .dat-modal-actions {
+        display: flex; gap: 8px; position: sticky; bottom: -20px;
+        margin: 4px -20px -20px; padding: 12px 20px 20px;
+        background: var(--sa-surface, rgba(8,25,43,.98));
+        border-top: 1px solid rgba(73,111,151,.22);
+    }
+    html[data-theme="light"] .dat-modal-actions { background: #fff; }
 
     /* ═══ التحديد الجماعي ═══ */
     .dat-pick { width: 16px; height: 16px; accent-color: #12D9E3; cursor: pointer; }
@@ -127,7 +135,10 @@
     /* قائمة أيام الطلب الزمنيّ: سطر لكل تاريخ بنافذته المستقلّة. */
     .dat-days-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
     .dat-days-head span { font-size: 12px; font-weight: 900; }
-    .dat-days-list { max-height: 34vh; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+    /* بلا `max-height`/`overflow`: مُمرِّرٌ داخل مُمرِّرٍ داخل المنبثقة يعني أن عجلة
+       الفأرة تحرّك القائمة الصغيرة بينما المستخدم يظنّ أنه ينزل بالمنبثقة — فتبقى
+       أزرار الإرسال تحت الحافة ولا يصل إليها. مُمرِّرٌ واحد: المنبثقة نفسها. */
+    .dat-days-list { display: flex; flex-direction: column; gap: 6px; }
     .dat-day {
         display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
         padding: 8px 10px; border-radius: 12px; border: 1px solid rgba(73,111,151,.28);
