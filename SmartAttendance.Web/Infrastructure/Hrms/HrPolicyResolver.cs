@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -101,10 +101,9 @@ public static class HrPolicyResolver
 
     // ── تسلسل الحمولة ──────────────────────────────────────────────────────────
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    };
+    // ⚠️ بلا مُرمِّز متساهل: الحمولة تعود من القاعدة لواجهاتٍ تُحقن بـ<script>،
+    // وتوحيد السياسة يمنع تسرّب < عبر مسارٍ آخر لاحقاً.
+    private static readonly JsonSerializerOptions JsonOptions = new();
 
     public static string SerializePayload(IReadOnlyDictionary<string, string>? payload) =>
         payload is null || payload.Count == 0

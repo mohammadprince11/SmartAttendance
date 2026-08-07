@@ -87,10 +87,15 @@ public static class HrConditionOptions
             options = options.TryGetValue(criterion.Key, out var list) ? list : null
         });
 
-        return JsonSerializer.Serialize(payload, new JsonSerializerOptions
-        {
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        });
+        // ⚠️ **لا تُعِد UnsafeRelaxedJsonEscaping هنا.** هذا الناتج يُحقن بصفحاتٍ
+        // داخل <script type="application/json"> عبر @Html.Raw، ومحتواه يأتي من
+        // القاعدة (أسماء أقسام وفروع ومناصب وحقول مخصّصة يكتبها المستخدمون).
+        //
+        // المُرمِّز الافتراضي يحوّل < إلى < وهو **بالضبط** ما يمنع الهروب من
+        // وسم السكربت. قسمٌ اسمه:  المبيعات</script><img src=x onerror=...>
+        // كان ينفّذ سكربتاً بجلسة كل من يفتح الصفحة — وCSP الحالية فيها
+        // 'unsafe-inline' فلا تمنعه.
+        return JsonSerializer.Serialize(payload);
     }
 
     private static async Task<List<Option>> LoadReferenceAsync(ApplicationDbContext db, string table) =>

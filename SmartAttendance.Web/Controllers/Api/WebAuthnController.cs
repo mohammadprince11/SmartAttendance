@@ -368,6 +368,14 @@ ORDER BY CASE WHEN Role = 'Employee' THEN 0 ELSE 1 END, Id;
         if (systemUserId is not > 0)
             return BadRequest(new { message = "تعذر إكمال تسجيل الدخول حالياً — استخدم كلمة المرور." });
 
+        // ختم الأمان **إلزامي** بكل تذكرة. بدونه يعيد SessionSecurityValidator
+        // القرار Refresh لا Reject، فتُختم جلسة الـpasskey تلقائياً بالختم الجديد
+        // بعد أي تدوير — أي أن تغيير كلمة المرور أو سحب الصلاحية لا يُسقطها،
+        // ويبقى مهاجمٌ يملك جلسة passkey داخلاً بعد أن تغيّر الضحية كلمة مرورها.
+        var securityStamp = !string.IsNullOrWhiteSpace(user.SecurityStamp)
+            ? user.SecurityStamp
+            : await AccountSecurityStore.EnsureStampAsync(_db, user.Id);
+
         // نفس claims مسار كلمة المرور (Login.cshtml.cs) — جلسة قياسية 8 ساعات.
         var issuedUtc = DateTimeOffset.UtcNow;
         var claims = new List<Claim>
@@ -378,7 +386,8 @@ ORDER BY CASE WHEN Role = 'Employee' THEN 0 ELSE 1 END, Id;
             new("DisplayName", displayName),
             new("EmployeeId", user.EmployeeId?.ToString() ?? string.Empty),
             new("SystemUserId", systemUserId.Value.ToString()),
-            new("SessionIssuedUtc", issuedUtc.ToString("O"))
+            new("SessionIssuedUtc", issuedUtc.ToString("O")),
+            new(AccountSecurityStore.SecurityStampClaimType, securityStamp)
         };
 
         await LoginDatabase.RecordSuccessfulLoginAsync(
