@@ -72,6 +72,18 @@ var reverseProxyOptions = builder.Configuration
 builder.Services.Configure<ReverseProxyOptions>(
     builder.Configuration.GetSection(ReverseProxyOptions.SectionName));
 
+// أمان كوكي الجلسة — يُحسم قبل تسجيل المصادقة، ويرفض الإقلاع بالإنتاج بلا إثبات TLS.
+var cookieSecurity = CookieSecurityPolicy.Evaluate(
+    forceHttps,
+    reverseProxyOptions.Enabled,
+    builder.Environment.IsProduction(),
+    builder.Configuration.GetValue<bool>(CookieSecurityPolicy.AllowInsecureCookiesKey));
+
+if (cookieSecurity == CookieSecurityDecision.RefuseToStart)
+{
+    throw new InvalidOperationException(CookieSecurityPolicy.BuildRefusalMessage());
+}
+
 if (reverseProxyOptions.Enabled)
 {
     builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(options =>
@@ -109,12 +121,34 @@ if (reverseProxyOptions.Enabled)
     });
 }
 
-// Persist data-protection keys so auth cookies survive app restarts
-// (otherwise every restart regenerates the keys and logs everyone out).
-var dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtection-Keys");
-Directory.CreateDirectory(dataProtectionKeysPath);
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+// ═══ حلقة مفاتيح Data Protection ═══
+//
+// كانت على قرص العملية حصراً — صالح لخادم واحد لا أكثر. بنسختين، كلٌّ تولّد حلقتها:
+// كوكي صادر من A يُرفض على B (طرد عشوائي)، و**روابط تنزيل الملفات الموقّعة**
+// (/files/download?t=) تصير غير قابلة لفكّ التشفير عبر النسخ. وبكل نشرٍ على حاوية
+// جديدة يُطرد الجميع لأن القرص جديد.
+//
+// المخزن الآن **قاعدة البيانات** حين تتوفّر: هي مشتركة بين كل النسخ أصلاً وتنجو من
+// إعادة النشر — بلا Redis ولا تخزين سحابيّ ولا أي بنية جديدة. وبلا سلسلة اتصال
+// (تطوير محليّ) يبقى القرص كما كان، فلا ينكسر أي مسار قائم.
+//
+// `SetApplicationName` ثابت وصريح: بدونه يشتقّه الإطار من اسم مجلد المحتوى، فيختلف
+// بين مسار محليّ و`/app` بحاوية ⟹ نفس المفاتيح تُعطي أغلفة مختلفة ولا تُفكّ.
+var dataProtection = builder.Services.AddDataProtection()
+    .SetApplicationName("ZYNORA.HR");
+
+var dataProtectionConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+if (!string.IsNullOrWhiteSpace(dataProtectionConnectionString))
+{
+    dataProtection.PersistKeysToDbContext<ApplicationDbContext>();
+}
+else
+{
+    var dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtection-Keys");
+    Directory.CreateDirectory(dataProtectionKeysPath);
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+}
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -126,8 +160,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.IsEssential = true;
         options.Cookie.Path = "/";
         options.Cookie.SameSite = SameSiteMode.Lax;
-        // SameAsRequest يسمح بالدخول عبر HTTP (التنفيل/LAN)؛ Always فقط عند إجبار HTTPS.
-        options.Cookie.SecurePolicy = forceHttps
+        // القرار من `CookieSecurityPolicy` لا من رايةٍ واحدة: الوسيط العكسيّ الموثوق
+        // يعني TLS منتهٍ عند الحافة فتُصدَر Secure دائماً، وإنتاجٌ بلا إثبات لا يصل
+        // هنا أصلاً (رُفض الإقلاع أعلاه).
+        options.Cookie.SecurePolicy = cookieSecurity == CookieSecurityDecision.AlwaysSecure
             ? CookieSecurePolicy.Always
             : CookieSecurePolicy.SameAsRequest;
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
@@ -239,6 +275,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 // كنترولرات واجهة الموبايل (REST/JSON) — بجانب Razor Pages
 builder.Services.AddControllers();
+
+// فحوص الصحّة: المنصّات السحابية توجّه الحركة بمسبار جاهزية. بدونه تتلقّى النسخة
+// طلبات قبل اكتمال الهجرات والبذور — أي بأخطر لحظة بدورة حياتها.
+//   /health/live  — العملية حيّة (بلا لمس القاعدة، فلا يُعاد تشغيلها لعطل قاعدة عابر).
+//   /health/ready — القاعدة مستجيبة فعلاً.
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<ApplicationDbContext>("database", tags: new[] { "ready" });
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -414,6 +457,18 @@ app.MapRazorPages()
    .WithStaticAssets();
 
 app.MapControllers();
+
+// المسباران عامّان بلا مصادقة: المنصّة تستدعيهما قبل وجود أي جلسة، ولا يكشفان
+// تفاصيل — `live` يردّ بلا أي فحص، و`ready` يردّ نجاحاً/فشلاً بلا رسالة استثناء.
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+}).AllowAnonymous();
+
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+}).AllowAnonymous();
 
 // تحميل تطبيق أندرويد الملفوف (APK) — نقطة عامة بنوع MIME الصحيح ليثبّته الموظف مباشرة.
 app.MapGet("/app.apk", (IWebHostEnvironment env) =>

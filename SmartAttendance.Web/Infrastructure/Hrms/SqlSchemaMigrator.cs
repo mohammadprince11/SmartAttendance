@@ -963,6 +963,26 @@ BEGIN
         CREATE INDEX IX_PayrollRuns_CompanyId ON PayrollRuns (CompanyId);
 END;
 """),
+
+        // جدول حلقة مفاتيح Data Protection — المخزن المشترك بين نسخ التطبيق.
+        //
+        // المخطط مطابق لما يتوقّعه `Microsoft.AspNetCore.DataProtection.EntityFrameworkCore`
+        // (كيان `DataProtectionKey`: Id · FriendlyName · Xml). يُنشأ هنا بالقناة
+        // المحكومة لا بهجرة EF لأن هجرات EF متوقفة بهذا المستودع ولا تُطبَّق عند الإقلاع.
+        //
+        // ⚠️ الترتيب حرج: هذه الهجرة تعمل عند الإقلاع **بعد** بناء التطبيق، بينما
+        // حلقة المفاتيح تُقرأ عند أول استعمال (أول كوكي/رمز) لا عند التسجيل — فالجدول
+        // يكون موجوداً قبل الحاجة إليه.
+        new(
+            "20260807-06-data-protection-keys",
+            """
+IF OBJECT_ID('DataProtectionKeys', 'U') IS NULL
+    CREATE TABLE DataProtectionKeys (
+        Id           int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        FriendlyName nvarchar(max) NULL,
+        Xml          nvarchar(max) NULL
+    );
+"""),
     };
 
     /// <summary>
@@ -983,6 +1003,46 @@ END;
             {
                 return;
             }
+
+            // ═══ قفل موزَّع على مستوى القاعدة ═══
+            //
+            // `Gate` أعلاه `SemaphoreSlim` — يحمي **داخل العملية الواحدة** فقط. وبأي
+            // نشرٍ بأكثر من نسخة (App Service بتدوير، حاويات، أو مجرّد إعادة تشغيل
+            // متداخلة) تقلع عمليتان فتدخلان الحلقة معاً: فحصُ `__SchemaMigrations`
+            // ثم التنفيذ **ليس ذرّياً**، فتُنفَّذ الهجرة مرتين.
+            //
+            // النتيجة ليست نظرية: `20260731-06` تُسقط فهرساً ثم تعدّل عموداً ثم تعيد
+            // بناءه — تشغيلها متزامناً يفشل أو يترك المخطط ناقصاً. و`sp_getapplock`
+            // بنطاق `Session` يجعل الانتظار على مستوى **القاعدة** لا العملية، فتنتظر
+            // النسخة الثانية حتى تنتهي الأولى ثم ترى الهجرات مطبَّقة فتتخطّاها.
+            //
+            // 180 ثانية مهلة: أطول من أبطأ هجرة (إنشاء فهرس على جدول كبير) وأقصر من
+            // أن تُعلّق الإقلاع بلا نهاية. انتهاؤها يرفع استثناءً واضحاً — مخطط ناقص
+            // يجب أن يمنع الإقلاع لا أن يمرّ صامتاً.
+            var lockResult = await HrmsDatabase.ScalarAsync<int>(
+                dbContext,
+                """
+DECLARE @result int;
+EXEC @result = sp_getapplock
+    @Resource = 'ZYNORA.SqlSchemaMigrator',
+    @LockMode = 'Exclusive',
+    @LockOwner = 'Session',
+    @LockTimeout = 180000;
+SELECT @result;
+""");
+
+            // 0 = مُنح فوراً · 1 = مُنح بعد انتظار · ما دونهما فشل (‏-1 مهلة · -2 ألغي
+            // · -3 جمود · -999 خطأ وسائط).
+            if (lockResult < 0)
+            {
+                throw new InvalidOperationException(
+                    $"تعذّر الحصول على قفل هجرات المخطط (sp_getapplock = {lockResult}). " +
+                    "نسخة أخرى قد تكون تطبّق الهجرات، أو المهلة انتهت. " +
+                    "الإقلاع أُوقف عمداً: مخطط ناقص يعني عطلاً صامتاً لاحقاً.");
+            }
+
+            try
+            {
 
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
@@ -1018,6 +1078,16 @@ END;
             }
 
             _applied = true;
+
+            }
+            finally
+            {
+                // الإفلات بنطاق Session مربوط بالاتصال؛ نُفلته صراحةً كي لا ننتظر
+                // عودة الاتصال للمجمّع، فتُحرَّر النسخة التالية فوراً.
+                await HrmsDatabase.ExecuteAsync(
+                    dbContext,
+                    "EXEC sp_releaseapplock @Resource = 'ZYNORA.SqlSchemaMigrator', @LockOwner = 'Session';");
+            }
         }
         finally
         {

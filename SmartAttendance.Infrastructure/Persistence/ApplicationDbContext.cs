@@ -1,10 +1,24 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Domain.Entities;
 
 namespace SmartAttendance.Infrastructure.Persistence;
 
-public class ApplicationDbContext : DbContext
+public class ApplicationDbContext : DbContext, IDataProtectionKeyContext
 {
+    /// <summary>
+    /// حلقة مفاتيح Data Protection مخزَّنة بالقاعدة.
+    ///
+    /// <para>كانت تُحفظ على قرص العملية (<c>App_Data/DataProtection-Keys</c>) — وهو
+    /// صالح لخادمٍ واحد فقط. بنسختين، كلٌّ تولّد حلقتها ⟹ كوكي صادر من A يُرفض على
+    /// B (طرد عشوائي)، و<b>روابط تنزيل الملفات الموقّعة</b> (<c>/files/download?t=</c>)
+    /// تصير غير قابلة لفكّ التشفير عبر النسخ. وبكل نشرٍ على حاوية جديدة يُطرد الجميع.</para>
+    ///
+    /// <para>القاعدة مشتركة بين كل النسخ أصلاً، فهي المخزن الطبيعي — بلا Redis ولا
+    /// تخزين سحابيّ ولا أي بنية جديدة.</para>
+    /// </summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
