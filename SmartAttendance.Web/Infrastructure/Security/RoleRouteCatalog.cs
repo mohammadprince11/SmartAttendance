@@ -44,7 +44,6 @@ public static class RoleRouteCatalog
         "/myprofile",
         "/useraccess",
         "/devices",
-        "/shifts",
         "/shifttypes",
         "/attendancesettings",
         "/dayattendance",

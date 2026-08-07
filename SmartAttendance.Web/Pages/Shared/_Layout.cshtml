@@ -248,7 +248,7 @@
             || IsUnder("/MonthAttendance") || IsUnder("/EmployeeOnlinePunches") || IsUnder("/MissingPunchRequests")
             || IsUnder("/WorkFromHome") || IsUnder("/Roster") || IsUnder("/ShiftAssignments") || IsUnder("/ShiftOverrides")
             || IsUnder("/ShiftTypes") || IsUnder("/ShiftRules") || IsUnder("/PeriodRules") || IsUnder("/BiometricKeys")
-            || IsUnder("/EmployeeGeoLocations") || IsUnder("/Holidays") || IsUnder("/Shifts") || IsUnder("/Devices");
+            || IsUnder("/EmployeeGeoLocations") || IsUnder("/Holidays") || IsUnder("/Devices");
         var requestsOpen = IsUnder("/LeaveRequests") || IsUnder("/Approvals") || IsUnder("/SelfServices");
         var payrollOpen = IsUnder("/Payroll");
     }
@@ -734,9 +734,9 @@
                              البصمات · اعتماد مفاتيح البصمة/الوجه. و«أيام العطل» كانت
                              مساراً حيّاً بلا رابطٍ بالقائمة إطلاقاً. *@
                         @if (CanRoute("/attendancesettings") || CanRoute("/shifttypes") || CanRoute("/holidays")
-                             || CanRoute("/devices") || CanRoute("/attendanceimports") || CanRoute("/biometrickeys") || CanRoute("/shifts"))
+                             || CanRoute("/devices") || CanRoute("/biometrickeys"))
                         {
-                            <details class="ky-acc" @(IsUnder("/AttendanceSettings") || IsUnder("/ShiftTypes") || IsUnder("/Holidays") || IsUnder("/Devices") || IsUnder("/AttendanceImports") || IsUnder("/BiometricKeys") || IsUnder("/Shifts") ? "open" : "")>
+                            <details class="ky-acc" @(IsUnder("/AttendanceSettings") || IsUnder("/ShiftTypes") || IsUnder("/Holidays") || IsUnder("/Devices") || IsUnder("/BiometricKeys") ? "open" : "")>
                                 <summary><span>إعدادات تسجيل الحضور</span><span class="ky-acc-chev"></span></summary>
                                 <div class="ky-acc-body">
                                     @if (CanRoute("/attendancesettings"))
@@ -751,10 +751,11 @@
                                     {
                                         <a asp-page="/Devices/Index" class="nexora-nav-link @(IsUnder("/Devices") ? "active nexora-active" : "")"><span>الأجهزة</span></a>
                                     }
-                                    @if (CanRoute("/attendanceimports"))
-                                    {
-                                        <a asp-page="/AttendanceImports/Index" class="nexora-nav-link @(IsUnder("/AttendanceImports") ? "active nexora-active" : "")"><span>استيراد البصمات</span></a>
-                                    }
+                                    @* «استيراد البصمات» حُذف من القائمة: `/AttendanceImports`
+                                       مجرّد إعادة توجيه لـ`/AttendanceOperations?Tab=import`،
+                                       و«مراقبة الحضور» بهذا الدرج نفسه تفتح النافذة ذاتها.
+                                       المسار يبقى حيّاً — `AttendanceSourceStore` يبذره
+                                       بالقاعدة كمصدر إكسل النظامي. *@
                                     @if (CanRoute("/biometrickeys"))
                                     {
                                         <a href="/BiometricKeys" class="nexora-nav-link @(IsUnder("/BiometricKeys") ? "active nexora-active" : "")"><span>اعتماد مفاتيح البصمة/الوجه</span></a>
@@ -762,11 +763,6 @@
                                     @if (CanRoute("/holidays"))
                                     {
                                         <a asp-page="/Holidays/Index" class="nexora-nav-link @(IsUnder("/Holidays") ? "active nexora-active" : "")"><span>أيام العطل</span></a>
-                                    }
-                                    @if (CanRoute("/shifts"))
-                                    {
-                                        @* الطبقة القديمة (جدول Shifts) — تبقى حتى يكتمل ترحيل Shifts⟵ShiftTypes *@
-                                        <a asp-page="/Shifts/Index" class="nexora-nav-link @(IsUnder("/Shifts") ? "active nexora-active" : "")"><span>الشفتات (قديم)</span></a>
                                     }
                                 </div>
                             </details>
