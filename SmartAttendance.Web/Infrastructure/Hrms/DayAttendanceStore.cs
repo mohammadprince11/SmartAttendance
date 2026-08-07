@@ -341,16 +341,26 @@ WHERE AttendanceDate >= @From AND AttendanceDate <= @To
 
         // دقائق الأزواج غير-الحضورية (استراحة/صلاة/مهمة…) لكل موظف×يوم — تُجرَّد من
         // مدة الحضور حين تفعّل المناوبة StripSemantics (وإلا لا تُقرأ أصلاً).
+        //
+        // ═══ صارت الدلالة كياناً زمنياً (الفجوة #7) ═══
+        // الأزواج تُقرأ **مفردةً** لا مجموعةً بالـSQL، لسببين:
+        //   1. `IsDeducted` لكل دلالة — «الصلاة لا تُخصم والدخان يُخصم». الجمع
+        //      بالـSQL كان يخلط الاثنين بمجموعٍ واحد لا يمكن فكّه.
+        //   2. `WindowFrom`/`WindowTo` — تُقصّ الفترة على نافذتها قبل الجمع، فاستراحةُ
+        //      ساعتين بنافذة نصف ساعة تُخصم نصف ساعة والباقي يبقى محسوباً على الموظف.
+        // الافتراضيات (تُخصم · بلا نافذة) تعطي المجموع السابق نفسه رقماً برقم.
+        var deductionRules = (await PunchSemanticStore.ListAsync(dbContext))
+            .ToDictionary(semantic => semantic.Id);
+
         var semanticMinutesByDay = (await HrmsDatabase.QueryAsync(
             dbContext,
             """
-SELECT EmployeeId, AttendanceDate, SUM(DATEDIFF(minute, CheckIn, CheckOut)) AS StripMinutes
+SELECT EmployeeId, AttendanceDate, PunchSemanticId, CheckIn, CheckOut
 FROM AttendanceRecords
 WHERE AttendanceDate >= @From AND AttendanceDate <= @To
   AND ISNULL(IsDeleted, 0) = 0
   AND PunchSemanticId IS NOT NULL AND PunchSemanticId <> @Attendance
-  AND CheckOut IS NOT NULL AND CheckOut > CheckIn
-GROUP BY EmployeeId, AttendanceDate;
+  AND CheckOut IS NOT NULL AND CheckOut > CheckIn;
 """,
             command =>
             {
@@ -362,9 +372,22 @@ GROUP BY EmployeeId, AttendanceDate;
             {
                 EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
                 Date = HrmsDatabase.GetDateOnly(reader, "AttendanceDate") ?? default,
-                Minutes = HrmsDatabase.GetInt(reader, "StripMinutes")
+                SemanticId = HrmsDatabase.GetNullableInt(reader, "PunchSemanticId") ?? 0,
+                CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn"),
+                CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut")
             }))
-            .ToDictionary(r => (r.EmployeeId, r.Date), r => r.Minutes);
+            .Select(pair => new
+            {
+                pair.EmployeeId,
+                pair.Date,
+                Minutes = DeductibleMinutes(
+                    deductionRules.TryGetValue(pair.SemanticId, out var rule) ? rule : null,
+                    pair.CheckIn,
+                    pair.CheckOut)
+            })
+            .Where(pair => pair.Minutes > 0)
+            .GroupBy(pair => (pair.EmployeeId, pair.Date))
+            .ToDictionary(g => g.Key, g => g.Sum(pair => pair.Minutes));
 
         // ترانزاكشن واحدة للحذف وكل دفعات الإدخال — فلَش لوغ واحد بدل واحد لكل أمر
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
@@ -755,6 +778,49 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
     public static decimal StripSemanticHours(decimal workedHours, int semanticMinutes) =>
         semanticMinutes <= 0 ? workedHours
             : Math.Max(0m, workedHours - Math.Round(semanticMinutes / 60m, 2));
+
+    /// <summary>
+    /// الدقائق القابلة للخصم من زوج بصمةٍ غير-حضوريّ، بعد تطبيق قواعد دلالته
+    /// (الفجوة #7 — الدلالة ككيان زمنيّ لا وسمٍ مسطّح).
+    ///
+    /// <para><b>ثلاث بوابات بالترتيب:</b>
+    /// <list type="number">
+    /// <item>دلالة مجهولة (حُذفت بعد تسجيل البصمة) ⟹ صفر. لا نخصم بقاعدةٍ لا نعرفها.</item>
+    /// <item><c>IsDeducted = false</c> ⟹ صفر. هذا هو «الصلاة لا تُخصم والدخان يُخصم».</item>
+    /// <item>نافذة الدلالة ⟹ تُقصّ الفترة عليها. استراحةُ ساعتين بنافذة 12:00–12:30
+    ///       تُخصم نصف ساعة، والساعة والنصف الزائدة تبقى محسوبةً على الموظف.</item>
+    /// </list></para>
+    ///
+    /// <para>الزوج العابر لمنتصف الليل لا يُقصّ: النافذة أوقاتُ يومٍ واحد، وقصُّ زوجٍ
+    /// يمتدّ ليومين عليها يعطي رقماً بلا معنى. يُخصم كاملاً (سلوك ما قبل النافذة).</para>
+    ///
+    /// <para>دالّة نقيّة كي تُختبَر بلا قاعدة — وهي تمسّ مدّة الحضور فالراتب.</para>
+    /// </summary>
+    public static int DeductibleMinutes(
+        PunchSemanticStore.PunchSemantic? semantic, DateTime? checkIn, DateTime? checkOut)
+    {
+        if (semantic is null || !semantic.IsDeducted) return 0;
+        if (checkIn is not { } start || checkOut is not { } end || end <= start) return 0;
+
+        var from = start;
+        var to = end;
+
+        var sameDay = start.Date == end.Date;
+        if (sameDay && TimeSpan.TryParse(semantic.WindowFrom, out var windowFrom))
+        {
+            var bound = start.Date + windowFrom;
+            if (from < bound) from = bound;
+        }
+        if (sameDay && TimeSpan.TryParse(semantic.WindowTo, out var windowTo))
+        {
+            var bound = start.Date + windowTo;
+            if (to > bound) to = bound;
+        }
+
+        // الفترة كلها خارج النافذة ⟹ لا خصم: الوقت المصروف خارج نافذته يبقى
+        // محسوباً على الموظف لا مُعفى منه.
+        return to <= from ? 0 : (int)Math.Round((to - from).TotalMinutes);
+    }
 
     /// <summary>هل تُعرِّف المناوبة نافذة التقاط زمنية للبصمات الصالحة؟ (تبويب «القواعد»)</summary>
     public static bool HasCaptureWindow(ShiftTypeStore.ShiftType shift) =>
