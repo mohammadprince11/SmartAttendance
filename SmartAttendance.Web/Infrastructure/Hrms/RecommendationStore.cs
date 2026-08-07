@@ -673,7 +673,7 @@ VALUES
 
             default: // Leave | Permission | Overtime | Income | Deduction
                 var (amount, note) = await ResolveMoneyAsync(
-                    dbContext, employeeId, ruleId, actionType, actionValue);
+                    dbContext, employeeId, workDate, ruleId, actionType, actionValue);
 
                 var transactionId = await AttendanceTransactionStore.CreateAsync(dbContext,
                     employeeId, workDate, recommendationId, ruleId, ruleName,
@@ -691,7 +691,7 @@ VALUES
     /// وبيانٍ يقول السبب، فيراه المستخدم بدل أن يخصم رقماً لا أساس له.</para>
     /// </summary>
     private static async Task<(decimal Amount, string Note)> ResolveMoneyAsync(
-        ApplicationDbContext dbContext, int employeeId, int ruleId,
+        ApplicationDbContext dbContext, int employeeId, DateOnly workDate, int ruleId,
         string actionType, decimal actionValue)
     {
         if (ruleId <= 0) return (actionValue, string.Empty);
@@ -699,6 +699,29 @@ VALUES
         var rule = (await ShiftRuleStore.ListAsync(dbContext)).FirstOrDefault(r => r.Id == ruleId);
         if (rule is null || !ShiftRuleStore.IsPercentOfDay(rule.ValueKind, actionType))
             return (actionValue, string.Empty);
+
+        // سلسلة التصاعد: النسبة تكبر بتكرار المخالفة. كان `UseEscalation` يكتب رقم
+        // التكرار بالنصّ **ولا يمسّ المال** — أي إنذارٌ لفظيّ لا تصعيد. الدرجات
+        // تُقرأ من أعمدة القاعدة القائمة (بلا عمودٍ جديد): الأولى `ActionValue`،
+        // والثانية `ValueHours`، والثالثة فما فوق `ValueHours2` — وصفرٌ يعني «كما
+        // سبقتها»، فقاعدةٌ بلا سلّم تبقى بنسبةٍ واحدة كما كانت.
+        var percent = actionValue;
+        var occurrenceNote = string.Empty;
+
+        if (rule.UseEscalation)
+        {
+            var occurrence = await OccurrenceAsync(dbContext, employeeId, ruleId, workDate);
+            var ladder = new[] { actionValue, rule.ValueHours, rule.ValueHours2 };
+
+            var step = actionValue;
+            for (var index = 0; index < ladder.Length && index < occurrence; index++)
+            {
+                if (ladder[index] > 0) step = ladder[index];
+            }
+
+            percent = step;
+            occurrenceNote = $"التكرار {occurrence} · ";
+        }
 
         var basic = await HrmsDatabase.ScalarAsync<decimal?>(
             dbContext,
@@ -712,9 +735,36 @@ WHERE EmployeeId = @Employee AND ISNULL(IsDeleted, 0) = 0;
             return (0m, "بلا راتب أساسي مسجَّل — لم يُحتسب مبلغ");
 
         var dailyRate = WorkDaysBasis.DailyRate(basic, 30m);
-        var amount = decimal.Round(dailyRate * actionValue / 100m, 2);
+        var amount = decimal.Round(dailyRate * percent / 100m, 2);
 
-        return (amount, $"{actionValue:0.##}% من قيمة اليوم {dailyRate:0.##}");
+        return (amount, $"{occurrenceNote}{percent:0.##}% من قيمة اليوم {dailyRate:0.##}");
+    }
+
+    /// <summary>
+    /// رقم تكرار هذه المخالفة لهذا الموظف حتى هذا اليوم (ضمن السنة). يُحسب **لحظة
+    /// الاعتماد** لا وقت التحليل، فيوافق ما بُتَّ فيه فعلاً: المتجاهَل لا يُحتسب —
+    /// تجاهُل المسؤول يعني أن المخالفة لم تقع، فلا تُصعِّد ما بعدها.
+    /// </summary>
+    private static async Task<int> OccurrenceAsync(
+        ApplicationDbContext dbContext, int employeeId, int ruleId, DateOnly workDate)
+    {
+        var prior = await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            """
+SELECT COUNT(1) FROM AttendanceRecommendations
+WHERE EmployeeId = @Employee AND RuleId = @Rule
+  AND Status <> N'Ignored'
+  AND WorkDate < @Date
+  AND YEAR(WorkDate) = YEAR(@Date);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Employee", employeeId);
+                HrmsDatabase.AddParameter(command, "@Rule", ruleId);
+                HrmsDatabase.AddParameter(command, "@Date", workDate.ToDateTime(TimeOnly.MinValue));
+            });
+
+        return prior + 1;
     }
 
     public static async Task IgnoreAsync(ApplicationDbContext dbContext, int id)
