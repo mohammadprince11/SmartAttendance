@@ -1,0 +1,153 @@
+@page "/WorkFromHome"
+@model SmartAttendance.Web.Pages.WorkFromHome.IndexModel
+@using SmartAttendance.Web.Infrastructure.Hrms
+
+@*
+    العمل خارج المكتب — «العمل من المنزل» بقائمة إدارة الحضور.
+    قراءة فقط: الإنشاء بالخدمة الذاتية والاعتماد بمساره المركزي.
+*@
+
+@{
+    ViewData["Title"] = "العمل خارج المكتب";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .wfh-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
+    .wfh-head {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
+                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
+    }
+    html[data-theme="light"] .wfh-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
+    .wfh-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .wfh-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .wfh-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; text-decoration: none; display: inline-flex; align-items: center; }
+    .wfh-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
+
+    .wfh-bar { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .wfh-bar label { font-size: 11px; font-weight: 900; color: var(--sa-muted, #8FA8BC); display: flex; flex-direction: column; gap: 4px; }
+    .wfh-bar input, .wfh-bar select { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; font-size: 13px; }
+    html[data-theme="light"] .wfh-bar input, html[data-theme="light"] .wfh-bar select { background: #fff; color: inherit; }
+
+    .wfh-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-inline-start: auto; }
+    .wfh-stat { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 900; border: 1px solid rgba(73,111,151,.22); }
+    .wfh-stat b { direction: ltr; display: inline-block; }
+    .wfh-stat.remote { color: #12D9E3; }
+    .wfh-stat.trip { color: #facc15; }
+    .wfh-stat.absent { color: #f87171; border-style: dashed; }
+
+    .wfh-note {
+        padding: 12px 16px; border-radius: 14px; font-size: 12.5px; font-weight: 800; line-height: 1.9;
+        border: 1px solid rgba(249,115,22,.34); background: rgba(249,115,22,.08);
+    }
+
+    .wfh-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .wfh-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 860px; }
+    .wfh-table th { text-align: right; padding: 10px 12px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); position: sticky; top: 0; }
+    html[data-theme="light"] .wfh-table th { background: #f2f7fb; }
+    .wfh-table td { padding: 9px 12px; border-bottom: 1px solid rgba(143,168,188,.08); white-space: nowrap; }
+    .wfh-table tr:hover td { background: rgba(18,217,227,.04); }
+    .wfh-num { direction: ltr; text-align: right; font-weight: 900; }
+    .wfh-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; }
+    .wfh-chip.Remote { background: rgba(18,217,227,.12); color: #12D9E3; }
+    .wfh-chip.BusinessTrip { background: rgba(250,204,21,.12); color: #facc15; }
+    .wfh-chip.Present { background: rgba(74,222,128,.12); color: #4ade80; }
+    .wfh-chip.Late { background: rgba(250,204,21,.12); color: #facc15; }
+    .wfh-chip.Absent { background: rgba(248,113,113,.12); color: #f87171; }
+    .wfh-chip.Incomplete { background: rgba(249,115,22,.14); color: #f97316; }
+    .wfh-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; line-height: 1.9; }
+</style>
+
+<section class="wfh-page" dir="rtl">
+    <header class="wfh-head">
+        <div>
+            <h1>العمل خارج المكتب</h1>
+            <p>أيام «عمل من المنزل» و«رحلة عمل» المعتمَدة — كما دخلت محرّك الحضور فعلاً.</p>
+        </div>
+        <a class="wfh-btn" asp-page="/SelfServices/Index">+ طلب جديد بالخدمة الذاتية</a>
+    </header>
+
+    <form method="get" class="wfh-bar">
+        <label>الشهر
+            <input type="month" name="Month" value="@Model.Month" />
+        </label>
+        <label>بحث (رمز/اسم موظف)
+            <input type="text" name="Search" value="@Model.Search" placeholder="بحث..." />
+        </label>
+        @* القيم تُحسب خارج الوسم — اقتباس مزدوج داخل قيمة سمةٍ مقتبَسة مزلق تحليل بـRazor. *@
+        @{
+            var isRemoteSelected = Model.Kind == "WorkFromHome";
+            var isTripSelected = Model.Kind == "BusinessTrip";
+        }
+        <label>النوع
+            <select name="Kind">
+                <option value="">الكل</option>
+                <option value="WorkFromHome" selected="@isRemoteSelected">عمل من المنزل</option>
+                <option value="BusinessTrip" selected="@isTripSelected">رحلة عمل</option>
+            </select>
+        </label>
+        <button type="submit" class="wfh-btn ghost">عرض</button>
+
+        <div class="wfh-stats">
+            <span class="wfh-stat remote">عمل من المنزل <b>@Model.RemoteDays</b></span>
+            <span class="wfh-stat trip">رحلة عمل <b>@Model.BusinessTripDays</b></span>
+            @if (Model.AbsentDespiteApproval > 0)
+            {
+                <span class="wfh-stat absent" title="أيام معتمَدة ومع ذلك حالتها غياب — بلا بصمة">غياب رغم الاعتماد <b>@Model.AbsentDespiteApproval</b></span>
+            }
+        </div>
+    </form>
+
+    @if (Model.AbsentDespiteApproval > 0)
+    {
+        <div class="wfh-note">
+            <b>@Model.AbsentDespiteApproval</b> يوماً معتمَداً للعمل خارج المكتب حالته «غياب».
+            هذا ليس عطلاً: الأثر المالي لهذه الأيام <b>محايد بقرار صريح</b> — المحرّك يسجّل
+            السياق ولا يمنح إعفاءً، فبلا بصمةٍ يبقى اليوم غياباً.
+            إن أردتَ احتسابها حضوراً فابنِ قاعدةً على سياق «أيام العمل من المنزل» من
+            <a asp-page="/ShiftRules/Index">قواعد المناوبات</a>.
+        </div>
+    }
+
+    <div class="wfh-table-card">
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="wfh-empty">
+                لا أيام عملٍ خارج المكتب بهذه الفترة.<br />
+                الأيام تظهر هنا بعد <b>اعتماد</b> الطلب <b>و</b> تشغيل «تحديث الحضور» بالحضور اليومي —
+                فالمعروض هنا اليوميات المحلَّلة لا الطلبات.
+            </div>
+        }
+        else
+        {
+            <table class="wfh-table">
+                <thead>
+                    <tr>
+                        <th>الكود</th><th>الموظف</th><th>التاريخ</th><th>النوع</th>
+                        <th>ختم الدخول</th><th>ختم الخروج</th><th>ساعات العمل</th>
+                        <th>ساعات التأخير</th><th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            <td class="wfh-num">@row.EmployeeNo</td>
+                            <td>@row.EmployeeName</td>
+                            <td class="wfh-num">@row.WorkDate.ToString("yyyy-MM-dd")</td>
+                            <td><span class="wfh-chip @row.DayKind">@DayAttendanceStore.DayKindLabel(row.DayKind)</span></td>
+                            <td class="wfh-num">@(row.CheckIn?.ToString("HH:mm") ?? "—")</td>
+                            <td class="wfh-num">@(row.CheckOut?.ToString("HH:mm") ?? "—")</td>
+                            <td class="wfh-num">@row.WorkedHours</td>
+                            <td class="wfh-num">@row.LateHours</td>
+                            <td><span class="wfh-chip @row.Status">@DayAttendanceStore.StatusLabel(row.Status)</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</section>

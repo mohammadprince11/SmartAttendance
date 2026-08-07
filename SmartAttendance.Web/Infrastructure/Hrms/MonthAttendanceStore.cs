@@ -94,8 +94,12 @@ IF COL_LENGTH('EmployeeMonthAttendance', 'UnpaidLeaveDays') IS NULL
             """
 WITH Aggregated AS
 (
+    -- «أيام العمل» تشمل العمل من المنزل ورحلة العمل: هي أيام دوامٍ اختلف مكانها لا
+    -- حكمها، ويوميّاتها تُشتقّ بقواعد الدوام كاملةً (DayAttendanceStore.IsWorkingKind).
+    -- استثناؤها كان سيُنقص مقام كل نسبة شهرية بينما بسطها (الحضور) يعدّها — فتظهر
+    -- نسبةُ حضورٍ فوق 100% لموظفٍ عمل أسبوعاً من بيته.
     SELECT d.EmployeeId,
-           SUM(CASE WHEN d.DayKind = N'Work' THEN 1 ELSE 0 END) AS WorkDays,
+           SUM(CASE WHEN d.DayKind IN (N'Work', N'Remote', N'BusinessTrip') THEN 1 ELSE 0 END) AS WorkDays,
            SUM(CASE WHEN d.Status IN (N'Present', N'Late') THEN 1 ELSE 0 END) AS PresentDays,
            SUM(CASE WHEN d.Status = N'Absent' THEN 1 ELSE 0 END) AS AbsentDays,
            SUM(CASE WHEN d.Status = N'Incomplete' THEN 1 ELSE 0 END) AS IncompleteDays,
@@ -105,7 +109,7 @@ WITH Aggregated AS
            -- TotalDurationMode للمناوبة: WorkOnly = ساعات أيام العمل فقط تدخل إجمالي
            -- الشهر؛ IncludeOff/Both = تُضمّ أيضاً ساعات العطل/الراحة. صف اليوم يحتفظ
            -- بساعاته الفعلية دوماً (مادة الأوفرتايم) — الوضع يحكم التجميع الشهري فقط.
-           SUM(CASE WHEN d.DayKind = N'Work'
+           SUM(CASE WHEN d.DayKind IN (N'Work', N'Remote', N'BusinessTrip')
                       OR ISNULL(st.TotalDurationMode, N'WorkOnly') <> N'WorkOnly'
                     THEN d.WorkedHours ELSE 0 END) AS WorkedHours
     FROM DayAttendances d
