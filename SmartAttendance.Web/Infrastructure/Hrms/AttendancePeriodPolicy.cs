@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Infrastructure.Persistence;
+
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
 /// <summary>
@@ -12,6 +15,35 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 /// </summary>
 public static class AttendancePeriodPolicy
 {
+    /// <summary>
+    /// يقرأ **سياسة غلق الحضور** النشطة من القاعدة ويحسم الفترة للشهر المُسمّى.
+    /// بلا سياسة نشطة ⟹ الشهر التقويمي كاملاً (سلوك ما قبل السياسات).
+    ///
+    /// <para>كان هذا المنطق مكرّراً داخل صفحة الحضور اليومي وحدها، فكانت الشاشات
+    /// الأخرى تعرض الشهر التقويمي بينما المسير يقرأ فترة الغلق — أي رقمان مختلفان
+    /// لنفس الشهر. مركزيّته هنا تجعل كل الشاشات تتبع نفس الحدّ.</para>
+    /// </summary>
+    /// <returns>الفترة، واسم السياسة (فارغ إن لم توجد سياسة نشطة).</returns>
+    public static async Task<(Period Period, string? PolicyName)> ResolveFromPolicyAsync(
+        ApplicationDbContext dbContext, int labelYear, int labelMonth)
+    {
+        var policy = await (
+            from p in dbContext.PayrollCutoffPolicies.AsNoTracking()
+            join t in dbContext.PayrollCutoffPolicyTypes.AsNoTracking()
+                on p.Id equals t.PayrollCutoffPolicyId
+            where p.IsActive && !p.IsDeleted && !t.IsDeleted
+                  && t.PolicyType == SmartAttendance.Domain.Enums.PayrollCutoffType.Attendance
+            orderby p.Id
+            select new { p.Name, p.FromDay, p.ToDay }).FirstOrDefaultAsync();
+
+        if (policy is null)
+        {
+            return (Resolve(labelYear, labelMonth, 1, DateTime.DaysInMonth(labelYear, labelMonth)), null);
+        }
+
+        return (Resolve(labelYear, labelMonth, policy.FromDay, policy.ToDay), policy.Name);
+    }
+
     /// <summary>فترة محسومة: مداها، والشهر الذي تُسمّى به.</summary>
     public readonly record struct Period(
         DateOnly From,
@@ -20,6 +52,19 @@ public static class AttendancePeriodPolicy
         int LabelMonth)
     {
         public int DayCount => To.DayNumber - From.DayNumber + 1;
+
+        /// <summary>
+        /// أيام الفترة بالترتيب — أعمدة أي شبكة تقويمية تتبع الغلق.
+        /// تُعدَّد كتواريخ كاملة لا كأرقام أيام: الترقيم يصلح للفترة القياسية
+        /// بالمصادفة وحدها، ويلتبس بأي فترة تتجاوز شهراً.
+        /// </summary>
+        public IEnumerable<DateOnly> EachDay()
+        {
+            for (var day = From; day <= To; day = day.AddDays(1))
+            {
+                yield return day;
+            }
+        }
 
         /// <summary>الأشهر التقويمية التي تلمسها الفترة — التحليل يُبنى شهراً شهراً.</summary>
         public IEnumerable<(int Year, int Month)> CoveredMonths()

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages.AttendanceRecords;
 
@@ -49,7 +50,7 @@ public class IndexModel : PageModel
     public int PageNumber { get; set; } = 1;
 
     [BindProperty(SupportsGet = true)]
-    public int PageSize { get; set; } = 25;
+    public int PageSize { get; set; } = 30;
 
     public List<AttendanceRecordRow> Records { get; set; } = new();
 
@@ -69,6 +70,16 @@ public class IndexModel : PageModel
 
     public bool HasPositionField { get; set; }
 
+    /// <summary>
+    /// هل طلب المستخدم مدىً زمنياً صريحاً (ولو طرفاً واحداً)؟ يميّز «فتح الصفحة بلا
+    /// فلتر» عن «توسيع المدى عمداً»، فلا يُفرَض الافتراضي على من وسّعه بنفسه.
+    /// </summary>
+    [BindProperty(SupportsGet = true)]
+    public bool AllDates { get; set; }
+
+    /// <summary>فترة الغلق المطبَّقة افتراضياً (للعرض بالواجهة) — فارغ إن اختار المستخدم مداه.</summary>
+    public string? DefaultPeriodNote { get; private set; }
+
     public async Task OnGetAsync()
     {
         NormalizePaging();
@@ -77,19 +88,44 @@ public class IndexModel : PageModel
             .FindEntityType(typeof(Employee))
             ?.FindProperty("Position") != null;
 
+        await ApplyDefaultDateWindowAsync();
         await LoadFilterListsAsync();
         await LoadRecordsAsync();
     }
 
+    /// <summary>
+    /// **حارس أداء**: بلا مدىً زمنيّ كانت الصفحة تعدّ وتفرز جدول الحضور كلّه
+    /// (مئات الآلاف من السجلات) لتعرض 25 صفاً — قيس 7.8 ثانية بالخادم مقابل 0.35
+    /// ثانية بمدى خمسة أيام (٢٢ ضعفاً).
+    ///
+    /// <para>فالفتح الأول يقتصر على **فترة غلق الحضور الجارية** — نفس الحدّ الذي
+    /// تتبعه بقية شاشات الحضور والمسير، فالافتراضي مفهوم لا اعتباطيّ. ويبقى
+    /// بيد المستخدم توسيعه (بتحديد تواريخه) أو رفعه كلياً بـ<c>AllDates</c>.</para>
+    /// </summary>
+    private async Task ApplyDefaultDateWindowAsync()
+    {
+        if (AllDates || FromDate.HasValue || ToDate.HasValue) return;
+
+        var today = DateTime.Today;
+        var (period, _) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(
+            _dbContext, today.Year, today.Month);
+
+        FromDate = period.From;
+        ToDate = period.To;
+        DefaultPeriodNote = $"{period.From:yyyy-MM-dd} → {period.To:yyyy-MM-dd}";
+    }
+
     private void NormalizePaging()
     {
+        // 25 استُبدلت بـ30 (طلب محمد) — والقيمة غير المعروفة تعود للافتراضي 30،
+        // فرابطٌ قديم فيه PageSize=25 لا يفشل بل يُطبَّع.
         PageSize = PageSize switch
         {
             10 => 10,
-            25 => 25,
+            30 => 30,
             50 => 50,
             100 => 100,
-            _ => 25
+            _ => 30
         };
 
         if (PageNumber < 1)
@@ -136,10 +172,12 @@ public class IndexModel : PageModel
 
     private async Task LoadRecordsAsync()
     {
+        // 🔧 الفرع يُقرأ من **الموظف مباشرةً** (`Employee.Branch`) لا عبر
+        // `Employee.Department.Branch`: القسم قد لا يحمل فرعاً فكان العمود يظهر فارغاً
+        // دائماً، بينما `Employee.BranchId` مضبوط. (رُصد حيّاً 2026-08-07.)
         var query = _dbContext.AttendanceRecords
             .AsNoTracking()
             .Include(x => x.Employee)
-            .ThenInclude(x => x.Department)
             .ThenInclude(x => x.Branch)
             .Include(x => x.Device)
             .AsQueryable();
@@ -168,19 +206,10 @@ public class IndexModel : PageModel
 
         if (!string.IsNullOrWhiteSpace(Branch))
         {
-            query = query.Where(x => x.Employee.Department.Branch.Name == Branch);
+            query = query.Where(x => x.Employee.Branch.Name == Branch);
         }
 
-        if (!string.IsNullOrWhiteSpace(Department))
-        {
-            query = query.Where(x => x.Employee.Department.Name == Department);
-        }
-
-        if (!string.IsNullOrWhiteSpace(Position) && HasPositionField)
-        {
-            var value = Position.Trim();
-            query = query.Where(x => EF.Property<string?>(x.Employee, "Position") == value);
-        }
+        // القسم والمنصب حُذفا من العرض والفلترة (طلب محمد) — الفرع يكفي للتصنيف هنا.
 
         if (!string.IsNullOrWhiteSpace(Status))
         {
@@ -199,8 +228,7 @@ public class IndexModel : PageModel
             query = query.Where(x =>
                 x.Employee.EmployeeNo.Contains(value) ||
                 x.Employee.FullName.Contains(value) ||
-                x.Employee.Department.Name.Contains(value) ||
-                x.Employee.Department.Branch.Name.Contains(value) ||
+                x.Employee.Branch.Name.Contains(value) ||
                 (x.Device != null && x.Device.Name.Contains(value)) ||
                 (x.Notes != null && x.Notes.Contains(value)));
         }
@@ -239,9 +267,7 @@ public class IndexModel : PageModel
             Id = record.Id,
             EmployeeNo = record.Employee?.EmployeeNo ?? string.Empty,
             EmployeeName = record.Employee?.FullName ?? string.Empty,
-            Branch = record.Employee?.Department?.Branch?.Name ?? string.Empty,
-            Department = record.Employee?.Department?.Name ?? string.Empty,
-            Position = HasPositionField ? ReadStringProperty(record.Employee, "Position") : string.Empty,
+            Branch = record.Employee?.Branch?.Name ?? string.Empty,
             Date = record.AttendanceDate.ToString("yyyy-MM-dd"),
             CheckIn = record.CheckIn.ToString("HH:mm"),
             CheckOut = record.CheckOut?.ToString("HH:mm") ?? "-",

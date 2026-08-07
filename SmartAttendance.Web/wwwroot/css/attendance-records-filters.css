@@ -198,3 +198,197 @@ html[dir="rtl"] .att-records-table {
         grid-column: span 1;
     }
 }
+
+/* شريط «فترة الغلق الافتراضية» — حارس الأداء بصفحة سجلات الحضور */
+.att-period-note {
+    margin: 0 0 12px;
+    padding: 9px 13px;
+    border: 1px solid rgba(18, 217, 227, .3);
+    border-radius: 12px;
+    background: rgba(18, 217, 227, .07);
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 1.7;
+}
+
+.att-period-note a { color: #12D9E3; font-weight: 900; }
+
+/*
+    فخّ الشبكة الكلاسيكي: `.attendance-records-page` شبكة، وعمودها الضمني حجمه
+    `auto` = من min-content إلى **max-content**. والجدول عرضه الطبيعي 1214px،
+    فيتمدّد المسار إلى 1248px داخل حاوية 1020px ⟹ تخرج **كل** أبناء الصفحة
+    (الترويسة والفلاتر والشريط والجدول) عن القوقعة وتدفع المستند للتمرير الأفقي.
+
+    `minmax(0, 1fr)` يمنع المسار من تجاوز الحاوية، ثم يملك الجدول تمريره بنفسه.
+*/
+.attendance-records-page { grid-template-columns: minmax(0, 1fr); }
+
+/* الجدول يمرّر داخل بطاقته — و`data-zy-scroll` يستثنيها من فكّ القصّ الكاسح
+   بملف الكلاندر (اسم الصنف يحوي "card" فتُصاب بغيره). */
+.att-table-card { overflow-x: auto; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ترحيل الصفحة إلى توكنز التصميم (--sa-*)
+
+   الصفحة كانت على أصناف ما قبل Design System v1 (`data-table` · `btn-primary`
+   · `page-header` · `table-card`) بألوان **مثبَّتة بالكود** داخل app.css:
+       .data-table td        { color: #334155 }
+       .data-table tbody tr:hover { background: #f8fafc }
+   وهي ألوان وضعٍ فاتح، فبالوضع الداكن يصير الصفّ المُمرَّر عليه **أبيض بنصّ
+   رماديّ باهت** — غير مقروء إطلاقاً (رُصد بلقطة محمد 2026-08-07).
+
+   العلاج: مُحدِّدات محكومة بنطاق `.attendance-records-page` (تخصصية أعلى من
+   `app.css`) تعيد كل لون إلى التوكن، فيتبع الوضعين معاً بلا تفريع.
+   لا طبقة CSS منافسة ولا !important — النطاق وحده يكفي.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── الترويسة ───────────────────────────────────────────────────── */
+.attendance-records-page .page-header h1 {
+    font-size: 20px;
+    font-weight: 950;
+    color: var(--sa-text, #DCEAF4);
+    margin: 0;
+}
+
+.attendance-records-page .page-header p {
+    color: var(--sa-muted, #8FA8BC);
+    font-size: 13px;
+    margin: 4px 0 0;
+}
+
+/* ── البطاقات: نفس قوقعة الشاشات الحديثة ───────────────────────── */
+.attendance-records-page .att-filter-card,
+.attendance-records-page .table-card,
+.attendance-records-page .att-results-toolbar {
+    border: 1px solid var(--sa-border, rgba(73, 111, 151, .22));
+    border-radius: 16px;
+    background: var(--sa-surface, rgba(8, 25, 43, .9));
+    box-shadow: var(--sa-shadow, none);
+}
+
+.attendance-records-page .att-filter-head h2 {
+    font-size: 15px;
+    font-weight: 900;
+    color: var(--sa-text, #DCEAF4);
+}
+
+.attendance-records-page .att-filter-head p,
+.attendance-records-page .filter-field label,
+.attendance-records-page .att-results-toolbar span {
+    color: var(--sa-muted, #8FA8BC);
+}
+
+/* ── الحقول ─────────────────────────────────────────────────────── */
+.attendance-records-page input,
+.attendance-records-page select {
+    min-height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--sa-border, rgba(73, 111, 151, .25));
+    background: var(--sa-input, rgba(0, 0, 0, .16));
+    color: var(--sa-text, #DCEAF4);
+    font-size: 13px;
+    font-family: inherit;
+}
+
+.attendance-records-page input:focus,
+.attendance-records-page select:focus {
+    outline: none;
+    border-color: var(--sa-primary, #12D9E3);
+    box-shadow: 0 0 0 3px var(--sa-primary-soft, rgba(18, 217, 227, .18));
+}
+
+/* ── الجدول: نزع الألوان المثبَّتة ونقلها للتوكنز ───────────────── */
+.attendance-records-page .data-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.attendance-records-page .data-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--sa-surface-2, #0a1f33);
+    color: var(--sa-muted, #8FA8BC);
+    font-size: 11.5px;
+    font-weight: 950;
+    letter-spacing: .2px;
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--sa-border, rgba(73, 111, 151, .22));
+    white-space: nowrap;
+}
+
+.attendance-records-page .data-table tbody td {
+    color: var(--sa-text, #DCEAF4);
+    background: transparent;
+    border-bottom: 1px solid var(--sa-border, rgba(73, 111, 151, .14));
+    padding: 10px 12px;
+    font-size: 12.5px;
+    vertical-align: middle;
+}
+
+/* 🔴 الإصلاح الجوهري: التمرير كان `background:#f8fafc` مثبَّتاً ⟹ صفّ أبيض
+   بنصّ باهت بالوضع الداكن. التوكن يجعله تظليلاً خفيفاً يتبع الوضع. */
+.attendance-records-page .data-table tbody tr:hover td {
+    background: var(--sa-primary-soft, rgba(18, 217, 227, .08));
+    color: var(--sa-text, #DCEAF4);
+}
+
+.attendance-records-page .data-table tbody tr:last-child td { border-bottom: 0; }
+
+/* ── الأزرار ────────────────────────────────────────────────────── */
+.attendance-records-page .btn-primary,
+.attendance-records-page .btn-secondary,
+.attendance-records-page .btn-table {
+    min-height: 34px;
+    padding: 7px 14px;
+    border-radius: 11px;
+    font-size: 12.5px;
+    font-weight: 900;
+    font-family: inherit;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+.attendance-records-page .btn-primary {
+    background: var(--sa-primary, #12D9E3);
+    color: #06222b;
+}
+
+.attendance-records-page .btn-primary:hover {
+    background: var(--sa-primary-hover, #35e6ef);
+}
+
+.attendance-records-page .btn-secondary,
+.attendance-records-page .btn-table.btn-edit {
+    background: transparent;
+    border-color: var(--sa-border, rgba(73, 111, 151, .3));
+    color: var(--sa-text, #DCEAF4);
+}
+
+.attendance-records-page .btn-secondary:hover,
+.attendance-records-page .btn-table.btn-edit:hover {
+    border-color: var(--sa-primary, #12D9E3);
+    background: var(--sa-primary-soft, rgba(18, 217, 227, .1));
+}
+
+.attendance-records-page .btn-table.btn-delete {
+    background: transparent;
+    border-color: var(--sa-danger-soft, rgba(248, 113, 113, .35));
+    color: var(--sa-danger, #f87171);
+}
+
+.attendance-records-page .btn-table.btn-delete:hover {
+    background: var(--sa-danger-soft, rgba(248, 113, 113, .12));
+}
+
+/* ── الترقيم ────────────────────────────────────────────────────── */
+.attendance-records-page .att-pagination .att-page-badge {
+    border: 1px solid var(--sa-border, rgba(73, 111, 151, .25));
+    border-radius: 999px;
+    padding: 5px 12px;
+    color: var(--sa-muted, #8FA8BC);
+    font-weight: 900;
+    font-size: 12px;
+}
