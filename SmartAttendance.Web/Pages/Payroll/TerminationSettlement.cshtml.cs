@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
+using SmartAttendance.Web.Infrastructure.Security;
+
 namespace SmartAttendance.Web.Pages.Payroll;
 
 /// <summary>
@@ -19,7 +21,22 @@ public class TerminationSettlementModel : PageModel
 {
     private readonly ApplicationDbContext _db;
 
-    public TerminationSettlementModel(ApplicationDbContext db) => _db = db;
+    private readonly ICompanyScopeProvider _companyScope;
+
+    public TerminationSettlementModel(ApplicationDbContext db, ICompanyScopeProvider companyScope)
+    {
+        _db = db;
+        _companyScope = companyScope;
+    }
+
+    /// <summary>
+    /// حارس الملكية. الشاشة تكشف الضريبة والضمان المحتجزين سنوياً لأي موظف بمعرّفٍ
+    /// من الـquery — بلا أي فحص قبل هذا الإصلاح.
+    /// </summary>
+    private async Task<bool> CanAccessAsync(int employeeId) =>
+        await EmployeeCompanyGuard.CanAccessEmployeeAsync(
+            _db, employeeId, await _companyScope.GetAsync(HttpContext.RequestAborted),
+            HttpContext.RequestAborted);
 
     [BindProperty(SupportsGet = true)] public int? EmployeeId { get; set; }
     [BindProperty(SupportsGet = true)] public int? Year { get; set; }
@@ -46,15 +63,20 @@ public class TerminationSettlementModel : PageModel
 
     public async Task OnGetAsync()
     {
-        if (EmployeeId is > 0)
+        if (EmployeeId is > 0 && await CanAccessAsync(EmployeeId.Value))
         {
             await LoadEmployeeAsync(EmployeeId.Value);
+        }
+        else
+        {
+            // خارج النطاق ⟹ الشاشة فارغة كما لو لم يُمرَّر موظف. لا رسالة تؤكّد وجوده.
+            EmployeeId = null;
         }
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
-        if (EmployeeId is > 0)
+        if (EmployeeId is > 0 && await CanAccessAsync(EmployeeId.Value))
         {
             await LoadEmployeeAsync(EmployeeId.Value);
             BuildDifferences();
