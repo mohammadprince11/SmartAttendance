@@ -889,6 +889,18 @@
                             <div class="z360-mini-kpi"><span>ساعات العمل</span><strong>@Model.TotalWorkingHours</strong></div>
                         </div>
 
+                        @* الحضور/التأخير/الغياب تُقرأ من اليوميات المحلَّلة. بلا تحليلٍ
+                           للفترة تكون الثلاثة أصفاراً — وهو ما يُقرأ خطأً كـ«انضباط
+                           تامّ» إن لم يُقل السبب صراحةً. *@
+                        @if (Model.AttendanceCount > 0 && Model.AnalyzedDays == 0)
+                        {
+                            <p class="z360-analysis-hint">
+                                للفترة بصمات لكن <strong>لا يوميات محلَّلة</strong> — لذلك الحضور
+                                والتأخير والغياب أصفار. شغّل «تحديث الحضور» من
+                                <a href="/DayAttendance">الحضور اليومي</a>.
+                            </p>
+                        }
+
                         <div class="z360-table-wrap">
                             <table class="z360-table">
                                 <thead>

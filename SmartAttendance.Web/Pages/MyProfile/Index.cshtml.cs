@@ -272,14 +272,21 @@ WHERE e.Id = @EmployeeId;",
             "SELECT COUNT(*) FROM AttendanceRecords WHERE EmployeeId = @EmployeeId",
             command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId));
 
+        // ⚠️ «حاضر» و«متأخر» كانا يُحسبان من `AttendanceRecords.Status`، وهو عمود صامّ
+        // يُختم `Present` ثابتاً بكل مسار كتابة ⟹ **«متأخر» صفر دائماً بكل بوابة
+        // موظف**، و«حاضر» = عدد أيام البصم. المصدر الصحيح `DayAttendances` المحلَّلة
+        // — نفس ما تعرضه `/DayAttendance` ويقرأه المسير. (الشرح الكامل بنظيره
+        // في `Pages/Employees/Profile.cshtml.cs`.)
+        await DayAttendanceStore.EnsureAsync(_dbContext);
+
         PresentCount = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
-            "SELECT COUNT(*) FROM AttendanceRecords WHERE EmployeeId = @EmployeeId AND Status = 1",
+            "SELECT COUNT(*) FROM DayAttendances WHERE EmployeeId = @EmployeeId AND Status = N'Present'",
             command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId));
 
         LateCount = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
-            "SELECT COUNT(*) FROM AttendanceRecords WHERE EmployeeId = @EmployeeId AND Status = 2",
+            "SELECT COUNT(*) FROM DayAttendances WHERE EmployeeId = @EmployeeId AND Status = N'Late'",
             command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId));
 
         MissingCheckoutCount = await HrmsDatabase.ScalarAsync<int>(
