@@ -59,7 +59,13 @@ public class IndexModel : PageModel
         public string EmployeeNo { get; set; } = string.Empty;
         public string EmployeeName { get; set; } = string.Empty;
         public string? Position { get; set; }
-        public Dictionary<int, DayAttendanceStore.DayRow> Days { get; set; } = new(); // اليوم ← اليومية
+        /// <summary>
+        /// **التاريخ** ← اليومية. كان المفتاح رقم اليوم (1..31): يعمل مع فترة الغلق
+        /// القياسية بالمصادفة (لأن <c>to &lt; from</c> فلا يتقاطع الطرفان)، لكنه
+        /// اعتماد هشّ — أي فترة تتجاوز شهراً تكرّر الرقم فتدهس خليّة خليّةً.
+        /// التاريخ لا يلتبس.
+        /// </summary>
+        public Dictionary<DateOnly, DayAttendanceStore.DayRow> Days { get; set; } = new();
         public int PresentDays { get; set; }
         public int WorkDays { get; set; }
 
@@ -86,7 +92,14 @@ public class IndexModel : PageModel
     }
 
     public List<EmployeeRow> Rows { get; set; } = new();
+    /// <summary>عدد أيام الفترة المعروضة (أعمدة الشبكة) — من فترة الغلق لا من الشهر.</summary>
     public int DaysInMonth { get; set; }
+
+    /// <summary>فترة غلق الحضور المعروضة — مصدر أعمدة الشبكة ومدى الاستعلام.</summary>
+    public AttendancePeriodPolicy.Period CutoffPeriod { get; set; }
+
+    /// <summary>اسم سياسة الغلق النشطة (فارغ ⟹ شهر تقويمي كامل).</summary>
+    public string? CutoffPolicyName { get; set; }
     public int TotalRows { get; set; }
     public int TotalPages { get; set; }
     public (int Year, int Month) MonthPair => Period;
@@ -105,11 +118,17 @@ public class IndexModel : PageModel
     {
         var (year, month) = Period;
         Month ??= $"{year:0000}-{month:00}";
-        DaysInMonth = DateTime.DaysInMonth(year, month);
+
+        // العرض يتبع **فترة غلق الحضور** لا الشهر التقويمي — نفس الحدّ الذي يقرأه
+        // المسير. بلا سياسة نشطة تعود الفترة للشهر كاملاً فلا يتغيّر شيء.
+        (CutoffPeriod, CutoffPolicyName) =
+            await AttendancePeriodPolicy.ResolveFromPolicyAsync(_dbContext, year, month);
+        DaysInMonth = CutoffPeriod.DayCount;
 
         await LoadLookupsAsync();
 
-        var all = await DayAttendanceStore.ListAsync(_dbContext, year, month, Search);
+        var all = await DayAttendanceStore.ListRangeAsync(
+            _dbContext, CutoffPeriod.From, CutoffPeriod.To, Search);
 
         // فلتر سمات الموظف: نجلب معرّفات الموظفين المطابقين ونقصر المصفوفة عليهم
         if (HasFilter)
@@ -131,7 +150,7 @@ public class IndexModel : PageModel
                 EmployeeId = g.Key.EmployeeId,
                 EmployeeNo = g.Key.EmployeeNo,
                 EmployeeName = g.Key.EmployeeName,
-                Days = g.ToDictionary(r => r.WorkDate.Day),
+                Days = g.ToDictionary(r => r.WorkDate),
                 PresentDays = g.Count(r => r.Status is "Present" or "Late"),
                 WorkDays = g.Count(r => r.DayKind == "Work")
             })

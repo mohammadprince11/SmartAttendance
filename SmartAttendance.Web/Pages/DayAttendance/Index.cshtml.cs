@@ -70,22 +70,13 @@ public class IndexModel : PageModel
     /// </summary>
     private async Task<AttendancePeriodPolicy.Period> ResolvePeriodAsync(int year, int month)
     {
-        var policy = await (
-            from p in _dbContext.PayrollCutoffPolicies.AsNoTracking()
-            join t in _dbContext.PayrollCutoffPolicyTypes.AsNoTracking()
-                on p.Id equals t.PayrollCutoffPolicyId
-            where p.IsActive && !p.IsDeleted && !t.IsDeleted
-                  && t.PolicyType == SmartAttendance.Domain.Enums.PayrollCutoffType.Attendance
-            orderby p.Id
-            select new { p.Name, p.FromDay, p.ToDay }).FirstOrDefaultAsync();
+        // المنطق مركزيّ بـAttendancePeriodPolicy — كان مكرّراً هنا وحده، فكانت بقية
+        // الشاشات تعرض الشهر التقويمي بينما المسير يقرأ فترة الغلق.
+        var (period, policyName) =
+            await AttendancePeriodPolicy.ResolveFromPolicyAsync(_dbContext, year, month);
 
-        if (policy is null)
-        {
-            return AttendancePeriodPolicy.Resolve(year, month, 1, DateTime.DaysInMonth(year, month));
-        }
-
-        CutoffPolicyName = policy.Name;
-        return AttendancePeriodPolicy.Resolve(year, month, policy.FromDay, policy.ToDay);
+        CutoffPolicyName = policyName;
+        return period;
     }
 
 
