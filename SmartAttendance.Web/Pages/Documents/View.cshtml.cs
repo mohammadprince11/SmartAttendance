@@ -32,6 +32,21 @@ public class ViewModel : PageModel
     public DocumentTemplateStore.Generated? Document { get; private set; }
     public string? CompanyName { get; private set; }
 
+
+    /// <summary>
+    /// بوابة كل معالج بهذه الصفحة. المعرّف معرّف **وثيقة**، فالموظف المالك يُشتقّ
+    /// بتحميلها ثم يُفحص — ولهذا لا يمكن تسجيل المسار بالحارس المركزيّ.
+    /// </summary>
+    private async Task<bool> CanAccessDocumentAsync(int documentId)
+    {
+        var document = await DocumentTemplateStore.FindGeneratedAsync(_db, documentId);
+
+        return document is not null
+            && await EmployeeCompanyGuard.CanAccessEmployeeAsync(
+                _db, document.EmployeeId, await _companyScope.GetAsync(HttpContext.RequestAborted),
+                HttpContext.RequestAborted);
+    }
+
     public async Task<IActionResult> OnGetAsync()
     {
         Document = await DocumentTemplateStore.FindGeneratedAsync(_db, Id);
@@ -85,6 +100,8 @@ WHERE e.Id = @EmployeeId;
     /// <summary>سحب الوثيقة — يُبطل تحقّقها فوراً بلا حذفها من الأرشيف.</summary>
     public async Task<IActionResult> OnPostRevokeAsync(int id)
     {
+        if (!await CanAccessDocumentAsync(id)) return NotFound();
+
         await DocumentTemplateStore.RevokeAsync(_db, id, User.Identity?.Name);
         TempData["SuccessMessage"] = "سُحبت الوثيقة — صار التحقق منها يُظهر أنها مسحوبة.";
         return RedirectToPage(new { id });
@@ -93,6 +110,8 @@ WHERE e.Id = @EmployeeId;
     /// <summary>يودع الوثيقة ملف الموظف — إيداعٌ صريح لا تلقائي.</summary>
     public async Task<IActionResult> OnPostFileAsync(int id)
     {
+        if (!await CanAccessDocumentAsync(id)) return NotFound();
+
         var filed = await DocumentTemplateStore.FileToEmployeeAsync(_db, id, User.Identity?.Name);
 
         TempData["SuccessMessage"] = filed
@@ -105,6 +124,8 @@ WHERE e.Id = @EmployeeId;
     /// <summary>ختم الوثيقة الصادرة — من الجذر المحميّ، والمفتاح مخزَّن بالوثيقة نفسها.</summary>
     public async Task<IActionResult> OnGetStampAsync(int id)
     {
+        if (!await CanAccessDocumentAsync(id)) return NotFound();
+
         var document = await DocumentTemplateStore.FindGeneratedAsync(_db, id);
         if (document is null || !document.HasStamp)
         {

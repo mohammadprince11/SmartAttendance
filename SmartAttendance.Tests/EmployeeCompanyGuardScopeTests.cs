@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.RegularExpressions;
 using SmartAttendance.Web.Infrastructure.Security;
 using Xunit;
 
@@ -132,4 +133,79 @@ public class EmployeeCompanyGuardScopeTests
         Assert.False(CompanyScope.ForCompanies(new[] { 1 }).Allows(null));
         Assert.True(CompanyScope.Unrestricted().Allows(null));
     }
+
+    // ═══ تغطية المعالجات — الدرس الذي كلّف ثغرة ═══
+
+    /// <summary>
+    /// <b>الاختبار الذي كان ناقصاً.</b> الفحص السابق كان
+    /// <c>Assert.Contains("EmployeeCompanyGuard…")</c> — يمرّ بحارسٍ واحد من أربعة.
+    /// وهذا بالضبط ما وقع: <c>Documents/View</c> فيه أربعة معالجات
+    /// (<c>OnGetAsync</c> · <c>OnPostRevokeAsync</c> · <c>OnPostFileAsync</c> ·
+    /// <c>OnGetStampAsync</c>) وحُرس أوّلها وحده، فبقي الإبطال والإيداع وخدمة ملف
+    /// الختم مفتوحةً بمعرّفٍ من الطلب.
+    ///
+    /// <para>الدرس: اختبارُ <b>وجودٍ</b> يُطمئن زوراً؛ المطلوب اختبارُ <b>تغطية</b>.
+    /// هذا الاختبار يعدّ المعالجات ويعدّ البوابات ويوجب تساويهما.</para>
+    /// </summary>
+    [Theory]
+    [InlineData("Documents/View.cshtml.cs", "CanAccessDocumentAsync(id)", 3)]
+    public void EveryHandlerOnGuardedPage_IsCovered(string page, string gateCall, int expectedGuardedHandlers)
+    {
+        var source = ReadPage(page);
+        var gates = source.Split(gateCall).Length - 1;
+
+        Assert.True(gates >= expectedGuardedHandlers,
+            $"«{page}»: بوابات = {gates}، والمطلوب {expectedGuardedHandlers} على الأقل. "
+            + "معالجٌ بلا بوابة يعني معرّفاً من الطلب يعمل بلا فحص ملكية.");
+    }
+
+    /// <summary>عددُ المعالجات التي تأخذ معرّفاً يجب ألّا يتجاوز عدد البوابات.</summary>
+    [Fact]
+    public void DocumentView_HasNoHandlerWithoutAGate()
+    {
+        var source = ReadPage("Documents/View.cshtml.cs");
+
+        var handlersTakingId = Regex.Matches(source, @"public async Task<IActionResult> On\w+Async\(int id\)").Count;
+        var gates = source.Split("CanAccessDocumentAsync(id)").Length - 1;
+
+        Assert.Equal(handlersTakingId, gates);
+    }
+
+    // ═══ بوابة الصفّ المملوك ═══
+
+    /// <summary>
+    /// أسماء الجداول تُحقن نصّاً بالاستعلام، فالحارس يرفض أي معرّف غير صالح —
+    /// الخطأ البرمجيّ يُرفع استثناءً لا يُترجم استعلاماً.
+    /// </summary>
+    [Theory]
+    [InlineData("Employees; DROP TABLE X")]
+    [InlineData("Employees WHERE 1=1")]
+    [InlineData("")]
+    [InlineData("1Table")]
+    [InlineData("Employees'")]
+    public void RowGuard_RejectsAnythingButAPlainIdentifier(string identifier) =>
+        Assert.Throws<ArgumentException>(() => EmployeeCompanyGuard.GuardIdentifier(identifier));
+
+    [Theory]
+    [InlineData("EmployeeLoans")]
+    [InlineData("SelfServiceRequests")]
+    [InlineData("_Staging1")]
+    public void RowGuard_AcceptsValidIdentifiers(string identifier) =>
+        EmployeeCompanyGuard.GuardIdentifier(identifier);
+
+    /// <summary>الأسماء المستعملة فعلاً بالكود يجب أن تجتاز الحارس.</summary>
+    [Fact]
+    public void DeclaredTableNames_AreValidIdentifiers()
+    {
+        EmployeeCompanyGuard.GuardIdentifier(EmployeeCompanyGuard.Tables.EmployeeLoans);
+        EmployeeCompanyGuard.GuardIdentifier(EmployeeCompanyGuard.Tables.SelfServiceRequests);
+    }
+
+    /// <summary>الكتابات المالية بمعرّفٍ من النموذج تمرّ ببوابة الصفّ.</summary>
+    [Theory]
+    [InlineData("Payroll/Loans.cshtml.cs")]
+    [InlineData("Payroll/FinancialRequests.cshtml.cs")]
+    public void FinancialWritesByRequestId_AreGated(string page) =>
+        Assert.Contains("EmployeeCompanyGuard.CanAccessOwnedRowAsync", ReadPage(page));
+
 }
