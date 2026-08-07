@@ -89,8 +89,13 @@ WHERE EmployeeId = @Employee AND WorkDate = @Date
 
     /// <summary>
     /// خطّاف مسار الاعتماد المركزي (نظير <c>ApplyIfFinancialAsync</c>): إن كان الطلب
-    /// المعتمَد من نوع يمسّ اليومية (إجازة أو مغادرة) فأعد تحليل شهر تاريخ بدايته.
-    /// يتجاهل ما عداه، وidempotent (إعادة التحليل نفسها idempotent).
+    /// المعتمَد من نوع يمسّ اليومية (إجازة · مغادرة · عمل من المنزل · رحلة عمل)
+    /// فأعد تحليل شهر تاريخ بدايته. يتجاهل ما عداه، وidempotent.
+    ///
+    /// <para>⚠️ يُعاد تحليل **شهر تاريخ البداية** وحده. طلبٌ يعبر حدّ الشهر (28/07 →
+    /// 03/08) يترك أيامه بالشهر التالي غير محلَّلة — لكنها تظهر «لم تُحلَّل» بشاشة
+    /// الحضور اليومي بفضل مطابقة المدى بحساب البائتة، فيراها المستخدم ويشغّل
+    /// التحليل. قيدٌ معروف لا عطل صامت.</para>
     /// </summary>
     public static async Task<Outcome> ApplyIfAttendanceAffectingAsync(
         ApplicationDbContext db, int requestId)
@@ -101,7 +106,7 @@ WHERE EmployeeId = @Employee AND WorkDate = @Date
 SELECT TOP 1 EmployeeId, FromDate
 FROM SelfServiceRequests
 WHERE Id = @Request AND Status = N'Approved'
-  AND RequestType IN (N'Leave', N'Permission')
+  AND RequestType IN (N'Leave', N'Permission', N'WorkFromHome', N'BusinessTrip')
   AND EmployeeId IS NOT NULL AND FromDate IS NOT NULL;
 """,
             command => HrmsDatabase.AddParameter(command, "@Request", requestId),
