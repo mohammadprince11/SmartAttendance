@@ -35,6 +35,9 @@ secrets.json
 *.bak_*
 _NEXORA_CLEANUP_QUARANTINE_*/
 *.ps1
+# ...عدا سكربتات التشغيل المعتمدة: القاعدة أعلاه لسكربتات الترقيع العابرة،
+# وأداةُ نشرٍ يعتمد عليها الإصدار ليست عابرة.
+!scripts/deploy/*.ps1
 README_V*.md
 
 # Employee uploaded photos
