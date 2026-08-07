@@ -200,3 +200,4 @@ public class IndexModel : PageModel
     /// </summary>
     private static decimal? ParseRate(string? raw) =>
         decimal.TryParse(raw, out var value) && value >= 0 ? value : null;
+}

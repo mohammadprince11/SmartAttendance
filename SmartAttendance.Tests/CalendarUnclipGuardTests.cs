@@ -30,9 +30,21 @@ public class CalendarUnclipGuardTests
         return dir!.FullName;
     }
 
-    private static string CalendarCss() =>
-        File.ReadAllText(Path.Combine(
+    /// <summary>
+    /// نصّ ملف الكلاندر **بلا تعليقات**.
+    ///
+    /// <para>الحذف مقصود: الحارس يفحص القواعد لا التوثيق. وثّقنا القاعدة الكاسحة
+    /// المحذوفة باقتباسها حرفياً داخل تعليق (<c>.nxcal-ready [class*="card"] { … }</c>)
+    /// فصار التعليق نفسه يطابق نمط «قاعدة فكّ قصّ بلا مخرج طوارئ» ويُسقط الاختبارين.
+    /// أي حارسٍ يقرأ البرمجة والنثر معاً يعاقب على شرح الخطأ كما يعاقب على ارتكابه.</para>
+    /// </summary>
+    private static string CalendarCss()
+    {
+        var css = File.ReadAllText(Path.Combine(
             RepoRoot(), "SmartAttendance.Web", "wwwroot", "css", "nexora-calendar-v18.css"));
+
+        return Regex.Replace(css, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
+    }
 
     /// <summary>كل مُحدِّد يفرض overflow:visible!important يجب أن يحمل مخرج الطوارئ.</summary>
     [Fact]
