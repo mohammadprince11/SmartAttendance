@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Infrastructure.Notifications;
 
@@ -45,10 +46,17 @@ public sealed class NotificationDispatcherService : BackgroundService
             {
                 using var scope = _scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                var (sent, failed) = await NotificationDispatcher.DispatchPendingAsync(
-                    db, _sender, _options.BatchSize, _options.MaxAttempts, stoppingToken);
-                if (sent > 0 || failed > 0)
-                    _logger.LogInformation("تسليم الإشعارات: أُرسل {Sent}، فشل {Failed}.", sent, failed);
+
+                // قفل على مستوى القاعدة: الخدمة تعمل على **كل نسخة**، فبثلاث نسخ
+                // تُسحب نفس الدفعة ثلاث مرّات ويصل الموظف ثلاث رسائل. مهلة صفر —
+                // إن كانت نسخة أخرى تسلّم فهذه التكّة مؤدّاة لا ناقصة.
+                await SqlDistributedLock.TryRunAsync(db, "ZYNORA.NotificationDispatcher", async () =>
+                {
+                    var (sent, failed) = await NotificationDispatcher.DispatchPendingAsync(
+                        db, _sender, _options.BatchSize, _options.MaxAttempts, stoppingToken);
+                    if (sent > 0 || failed > 0)
+                        _logger.LogInformation("تسليم الإشعارات: أُرسل {Sent}، فشل {Failed}.", sent, failed);
+                }, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
