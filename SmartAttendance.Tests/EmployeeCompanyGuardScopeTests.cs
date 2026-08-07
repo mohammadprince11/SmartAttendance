@@ -78,19 +78,37 @@ public class EmployeeCompanyGuardScopeTests
     /// <summary>
     /// الرفض يجب ألّا يؤكّد وجود الصفّ بشركة أخرى — وإلا صار فرقُ الاستجابات
     /// قناةَ استدلال على موظفي المنافس.
+    ///
+    /// <para><b>لماذا لا نقيس مسافةً نصّيّة بعد نداء الحارس؟</b> النسخة الأولى قرأت
+    /// ٤٠٠ محرف بعد أول <c>CanAccessEmployeeAsync</c> وبحثت فيها عن <c>NotFound()</c>.
+    /// حين جُمِعت الحراسة ببوّابة واحدة (<c>CanAccessDocumentAsync</c>) صار النداء
+    /// داخل البوّابة و<c>NotFound()</c> عند مستدعيها، فسقط الاختبار مع أن الصفحة
+    /// صارت <i>أحكم</i>: أربعة معالِجات محروسة بدل واحد. مقياسُ قربٍ نصّيّ يعاقب
+    /// إعادةَ التنظيم بدل أن يحرس الخاصيّة — والخاصيّة هي: لا <c>Forbid</c> بالصفحة
+    /// إطلاقاً، وكل بوّابةٍ تُرفض بـ<c>NotFound</c>.</para>
     /// </summary>
     [Fact]
     public void DocumentView_DeniesWithNotFound_NotForbid()
     {
         var source = ReadPage("Documents/View.cshtml.cs");
-        var guard = source.IndexOf("EmployeeCompanyGuard.CanAccessEmployeeAsync", StringComparison.Ordinal);
 
-        Assert.True(guard > 0);
+        Assert.Contains("EmployeeCompanyGuard.CanAccessEmployeeAsync", source);
 
-        var after = source[guard..Math.Min(source.Length, guard + 400)];
+        // لا استجابة تفرّق «ممنوع» عن «غير موجود» بهذه الصفحة — وإلا عاد التسريب.
+        Assert.DoesNotContain("Forbid()", source);
 
-        Assert.Contains("NotFound()", after);
-        Assert.DoesNotContain("Forbid()", after);
+        // وكل بوّابة تُرفض بـNotFound: مسارُ رفضٍ منسيّ يعيد فتح القناة.
+        var denials = Regex.Matches(source, @"if \(!await CanAccess\w+Async\([^)]*\)\)");
+
+        Assert.NotEmpty(denials);
+
+        foreach (Match denial in denials)
+        {
+            var tail = source[denial.Index..Math.Min(source.Length, denial.Index + 240)];
+
+            Assert.True(tail.Contains("NotFound()", StringComparison.Ordinal),
+                $"بوّابة عند المحرف {denial.Index} لا تُرفض بـNotFound: «{denial.Value}».");
+        }
     }
 
     // ═══ (ب) الحارس المركزيّ ═══
