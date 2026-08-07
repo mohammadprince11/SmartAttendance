@@ -106,15 +106,16 @@
     <div class="rec-bar">
         @* الفلترة شرطُ استعمالٍ لا رفاهية: شهرٌ واحد يولّد آلاف الاقتراحات، وقرار
            «كل الغياب» غير قرار «تأخير موظف بعينه» — فبلا فرزٍ لا يُبتّ بشيء. *@
-        <form method="get" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        @* سطرٌ واحد: الحقول عريضة افتراضياً بقوقعة النظام (width:100%)، فتنزل كلٌّ
+           بسطر. `flex:0 0 auto` بعرضٍ صريح يبقيها متجاورة، و`wrap` يبقى للمقاسات
+           الضيّقة فلا تُقصّ. *@
+        <form method="get" class="rec-filters">
             <input type="hidden" name="Tab" value="@Model.Tab" />
-            <input type="month" name="Month" value="@Model.Month" />
-            <input type="text" name="Search" value="@Model.Search" placeholder="رمز أو اسم موظف"
-                   style="min-height:34px;border-radius:10px;border:1px solid rgba(73,111,151,.3);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-size:13px" />
+            <input type="month" name="Month" value="@Model.Month" style="flex:0 0 auto;width:150px" />
+            <input type="text" name="Search" value="@Model.Search" placeholder="رمز أو اسم موظف" style="flex:0 0 auto;width:170px" />
             @if (Model.RuleFilterOptions.Count > 0)
             {
-                <select name="RuleId"
-                        style="min-height:34px;border-radius:10px;border:1px solid rgba(73,111,151,.3);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-size:13px">
+                <select name="RuleId" style="flex:0 0 auto;width:250px">
                     <option value="0">كل القواعد</option>
                     @foreach (var (id, name, count) in Model.RuleFilterOptions)
                     {
@@ -122,10 +123,10 @@
                     }
                 </select>
             }
-            <button type="submit" class="rec-btn ghost">عرض</button>
+            <button type="submit" class="rec-btn ghost" style="flex:0 0 auto">عرض</button>
             @if (!string.IsNullOrWhiteSpace(Model.Search) || Model.RuleId != 0)
             {
-                <a class="rec-btn ghost" href="?Month=@Model.Month&Tab=@Model.Tab">✕ إلغاء الفلتر</a>
+                <a class="rec-btn ghost" style="flex:0 0 auto" href="?Month=@Model.Month&Tab=@Model.Tab">✕ إلغاء الفلتر</a>
             }
         </form>
         <nav class="rec-tabs">
@@ -398,6 +399,21 @@
 </div>
 
 <style>
+    .rec-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    /* الكلاندر والمنسدلة يستبدلهما محرّك الواجهة بعنصرين مرئيّين (`nxcal` و
+       `nxcs-select`) عرضهما 100%، والأصليّان يُخفيان — فتقييد عرض الأصليّ لا يفعل
+       شيئاً، والقياس هو ما كشف ذلك. التقييد هنا على المرئيّ. */
+    /* `!important` مقصود لا كسل: محرّك الكلاندر يفرض `.nxcal { width:100% !important }`
+       (قِسته: قاعدتي 160px تخسر أمامها)، ولا سبيل لتجاوز `!important` إلا بمثلها. */
+    .rec-filters .nxcal { flex: 0 0 auto; width: 160px !important; }
+    .rec-filters .nxcs-select { flex: 0 0 auto; width: 250px !important; }
+    .rec-filters input[type="text"] { flex: 0 0 auto; width: 170px; }
+    .rec-filters input, .rec-filters select {
+        min-height: 34px; border-radius: 10px; border: 1px solid rgba(73,111,151,.3);
+        background: rgba(0,0,0,.16); color: inherit; padding: 4px 10px; font-size: 13px; font-weight: 800;
+    }
+    html[data-theme="light"] .rec-filters input, html[data-theme="light"] .rec-filters select { background: #fff; }
+
     .rec-pick { width: 16px; height: 16px; accent-color: #12D9E3; cursor: pointer; }
     .rec-bulkbar {
         display: none; position: fixed; inset-inline: 0; bottom: 18px; z-index: 880;
