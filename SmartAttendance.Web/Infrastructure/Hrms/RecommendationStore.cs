@@ -400,13 +400,22 @@ WHERE AttendanceDate >= @From AND AttendanceDate <= @To AND ISNULL(IsDeleted, 0)
         return result;
     }
 
-    public static async Task<List<Recommendation>> ListAsync(
+    public static Task<List<Recommendation>> ListAsync(
         ApplicationDbContext dbContext, int year, int month, string? status)
     {
-        await EnsureAsync(dbContext);
-
         var from = new DateOnly(year, month, 1);
-        var to = from.AddMonths(1).AddDays(-1);
+        return ListRangeAsync(dbContext, from, from.AddMonths(1).AddDays(-1), status);
+    }
+
+    /// <summary>
+    /// اقتراحات مدىً صريح — تستعمله الشاشات التي تتبع **فترة غلق الحضور** (مثلاً
+    /// 21 → 20) لا الشهر التقويمي: عرضُ شهرٍ تقويميّ بينما المسير يقرأ فترة الغلق
+    /// يعني قراراً على أيامٍ خارج الفترة، وأيامَ فترةٍ لا تُعرض أصلاً.
+    /// </summary>
+    public static async Task<List<Recommendation>> ListRangeAsync(
+        ApplicationDbContext dbContext, DateOnly from, DateOnly to, string? status)
+    {
+        await EnsureAsync(dbContext);
 
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,
