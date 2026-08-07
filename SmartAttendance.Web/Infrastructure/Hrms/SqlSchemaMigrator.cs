@@ -949,6 +949,35 @@ IF OBJECT_ID('AttendanceRecords', 'U') IS NOT NULL
     CREATE INDEX IX_AttendanceRecords_AttendanceDate_CheckIn_EmployeeId
         ON AttendanceRecords (AttendanceDate, CheckIn, EmployeeId);
 """),
+
+        // سعر ساعة العمل الإضافي بسياق اليوم — على المناوبة (الفجوة #6 بدراسة كيان).
+        //
+        // اليوم `AttendanceTransactionStore.TransferToPayrollAsync` يختم كل ساعة
+        // أوفرتايم بـ`PayrollTransactionStore.DefaultRateFactor` = **1.5 ثابتة**، سواء
+        // كُسبت بيوم عملٍ عادي أو بجمعةٍ أو بعطلةٍ رسمية. كيان يضع المعامل على
+        // المناوبة بأربعة سياقات، وهو المعنى الحقيقيّ لـ«سعر ساعة العمل».
+        //
+        // ⚠️ **NULL عمداً بلا افتراضي**: NULL = «غير محدَّد» ⟹ يسقط للمعامل الافتراضي
+        // 1.5 كما اليوم بالحرف. فالهجرة **لا تغيّر رقماً واحداً** بأي مسير قائم، وتفعيل
+        // السلوك الجديد قرارٌ صريح لكل مناوبة على حدة. لو وُضع افتراضيّ هنا لتغيّرت
+        // رواتب شركاتٍ لم تطلب شيئاً — وهو ما تمنعه قاعدة «لا تغيير بالصيغ إلا بطلب صريح».
+        //
+        // decimal(6,3) يكفي معاملات مثل 1.5 · 2 · 2.25 ويمنع خطأ إدخالٍ بأربعة أرقام.
+        new(
+            "20260807-02-shift-overtime-rate-by-day-context",
+            """
+IF OBJECT_ID('ShiftTypes', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('ShiftTypes', 'OvertimeRateWeekend') IS NULL
+        ALTER TABLE ShiftTypes ADD OvertimeRateWeekend decimal(6,3) NULL;
+    IF COL_LENGTH('ShiftTypes', 'OvertimeRateRest') IS NULL
+        ALTER TABLE ShiftTypes ADD OvertimeRateRest decimal(6,3) NULL;
+    IF COL_LENGTH('ShiftTypes', 'OvertimeRateHoliday') IS NULL
+        ALTER TABLE ShiftTypes ADD OvertimeRateHoliday decimal(6,3) NULL;
+    IF COL_LENGTH('ShiftTypes', 'OvertimeRateLeave') IS NULL
+        ALTER TABLE ShiftTypes ADD OvertimeRateLeave decimal(6,3) NULL;
+END;
+"""),
     };
 
     /// <summary>

@@ -262,9 +262,78 @@ WHERE t.Id IN ({inList});
     }
 
     /// <summary>
+    /// معامل ساعة الأوفرتايم لكل (موظف × يوم) من اليوميات المحلَّلة.
+    ///
+    /// <para>الأوفرتايم يُكسَب <b>بيومٍ بعينه</b>، ومعامله عند كيان يتبع سياق ذلك اليوم
+    /// (عطلة أسبوعية · راحة · عطلة رسمية · إجازة). فالسياق يُقرأ من
+    /// <c>DayAttendances</c> — مصدر الحقيقة نفسه الذي بُني منه الاقتراح — لا يُستنتج
+    /// من التقويم، وإلا اختلف حكم المحرّك عن حكم الأجر بيومٍ فرضه الروستر عطلةً.</para>
+    ///
+    /// <para>يومٌ بلا يومية محلَّلة (حالة نادرة: حُذفت اليومية بعد توليد الحركة) يعود
+    /// بلا سياق ⟹ المعامل الافتراضي، أي سلوك اليوم بالحرف.</para>
+    /// </summary>
+    private static async Task<Dictionary<(int EmployeeId, DateOnly Date), decimal>> OvertimeFactorsAsync(
+        ApplicationDbContext dbContext, IReadOnlyCollection<TransactionRow> rows)
+    {
+        var result = new Dictionary<(int, DateOnly), decimal>();
+
+        var overtimeRows = rows.Where(row => row.ActionType == "Overtime").ToList();
+        if (overtimeRows.Count == 0) return result;
+
+        await DayAttendanceStore.EnsureAsync(dbContext);
+
+        var from = overtimeRows.Min(row => row.WorkDate);
+        var to = overtimeRows.Max(row => row.WorkDate);
+        var employeeIds = overtimeRows.Select(row => row.EmployeeId).Distinct().ToHashSet();
+
+        var days = await HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+SELECT EmployeeId, WorkDate, DayKind, Status, ShiftTypeId
+FROM DayAttendances
+WHERE WorkDate >= @From AND WorkDate <= @To;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
+            },
+            reader => new
+            {
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                WorkDate = HrmsDatabase.GetDateOnly(reader, "WorkDate") ?? default,
+                DayKind = HrmsDatabase.GetString(reader, "DayKind"),
+                Status = HrmsDatabase.GetString(reader, "Status"),
+                ShiftTypeId = HrmsDatabase.GetNullableInt(reader, "ShiftTypeId")
+            });
+
+        var shifts = (await ShiftTypeStore.ListAsync(dbContext)).ToDictionary(shift => shift.Id);
+
+        foreach (var day in days)
+        {
+            if (!employeeIds.Contains(day.EmployeeId)) continue;
+
+            var shift = day.ShiftTypeId is int shiftId && shifts.TryGetValue(shiftId, out var s) ? s : null;
+
+            // نفس دالّة سياق اليوم التي تحسم انطباق القواعد — مصدر واحد لمعنى
+            // «أيّ يومٍ كان هذا»، فلا تنطبق قاعدة العطلة ويُحتسب الأجر بمعامل الراحة.
+            var context = ShiftRuleStore.EffectiveContext(new DayAttendanceStore.DayRow
+            {
+                DayKind = day.DayKind,
+                Status = day.Status
+            });
+
+            result[(day.EmployeeId, day.WorkDate)] =
+                ShiftTypeStore.ResolveOvertimeFactor(shift, context);
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// ترحيل حركات حضور إلى حركات المسير (نمط كيان «انقل إلى وحدة الرواتب»).
-    /// الخريطة: أوفرتايم ← <c>Overtime</c> بالساعات + معامل البدل الافتراضي (المبلغ يُحتسب
-    /// بالمسير من الأجر الساعي)؛ دخل/اقتطاع ← <c>Income</c>/<c>Deduction</c> بالمبلغ.
+    /// الخريطة: أوفرتايم ← <c>Overtime</c> بالساعات + <b>معامل البدل بسياق يوم الكسب</b>
+    /// (المبلغ يُحتسب بالمسير من الأجر الساعي)؛ دخل/اقتطاع ← <c>Income</c>/<c>Deduction</c> بالمبلغ.
     /// الحركة المُرحَّلة سابقاً أو غير القابلة للترحيل (مغادرة/إجازة) تُتخطّى بلا خطأ.
     /// لا نمنع الترحيل لشهر فيه مسير مقفل: <c>PayrollTransactionStore</c> يقفل الحركات
     /// لكل حركة لا للفترة، فالحركة الجديدة تبقى غير مقفلة وتدخل مسيراً لاحقاً.
@@ -274,6 +343,9 @@ WHERE t.Id IN ({inList});
     {
         await EnsureAsync(dbContext);
         var rows = await ByIdsAsync(dbContext, ids);
+
+        // معاملات الأوفرتايم بسياق يوم الكسب — استعلام واحد للدفعة كلها لا واحد لكل صفّ.
+        var overtimeFactors = await OvertimeFactorsAsync(dbContext, rows);
 
         int done = 0, skipped = 0;
 
@@ -291,7 +363,13 @@ WHERE t.Id IN ({inList});
                 TxType = isOvertime ? PayrollTransactionStore.Overtime : row.ActionType,
                 Amount = isOvertime ? 0 : row.Amount,
                 Hours = isOvertime ? row.Hours : null,
-                RateFactor = isOvertime ? PayrollTransactionStore.DefaultRateFactor : null,
+                // المعامل من سياق يوم الكسب. غياب المفتاح (لا يومية) أو مناوبةٌ لم
+                // تُملأ حقولها ⟹ الافتراضي — أي سلوك ما قبل الميزة بالحرف.
+                RateFactor = isOvertime
+                    ? (overtimeFactors.TryGetValue((row.EmployeeId, row.WorkDate), out var factor)
+                        ? factor
+                        : PayrollTransactionStore.DefaultRateFactor)
+                    : null,
                 Taxable = true,
                 PaymentType = "InSalary",
                 Status = "Approved",
