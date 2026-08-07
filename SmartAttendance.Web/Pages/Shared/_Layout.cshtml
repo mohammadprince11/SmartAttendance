@@ -596,10 +596,20 @@
                        ───────────────────────────────────────────────────────────── *@
                     <div class="nexora-nav-group-links" data-ky-title="الحضور والانصراف">
 
-                        @* ١) رسومات بيانية — صفحة المودل الرئيسية عند كيان، فهي العنوان. *@
+                        @* عنوان الدرج **اسم قسمٍ لا رابط** — نفس تصحيح مجموعة «أشخاص»
+                           أعلاه: `.ky-drawer-title` يأخذ `cursor:default` بالـCSS،
+                           و`zynora-kayan-nav.js` يستثنيه من إغلاق الدرج عند النقر.
+                           فوضعُ شاشةٍ حقيقية بهذه الخانة يجعلها تبدو غير قابلة للنقر
+                           ولا يُغلق الدرج إن نُقرت. العنوان يبقى بلا `IsUnder` أيضاً:
+                           العنوان لا «يُنشَّط». *@
+                        <div class="nexora-nav-link ky-drawer-title" role="heading" aria-level="2">
+                            <span>الحضور والانصراف</span>
+                        </div>
+
+                        @* ١) رسومات بيانية — صفحة المودل الرئيسية عند كيان، فهي أول رابط. *@
                         @if (CanRoute("/attendancedashboard"))
                         {
-                            <a href="/AttendanceDashboard" class="nexora-nav-link ky-drawer-title @(IsUnder("/AttendanceDashboard") ? "active nexora-active" : "")">
+                            <a href="/AttendanceDashboard" class="nexora-nav-link @(IsUnder("/AttendanceDashboard") ? "active nexora-active" : "")">
                                 <span>رسومات بيانية</span>
                             </a>
                         }
