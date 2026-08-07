@@ -59,6 +59,36 @@ public class IndexModel : PageModel
 
     /// <summary>تقرير المستثنَين من آخر تقديمٍ جماعي (القرار 1: استثنِ مع تقرير).</summary>
     public List<BulkRequestStore.Skipped> LastSkips { get; set; } = new();
+
+    /// <summary>كل المناوبات بمعرّفها — لقراءة نافذة دوام الصفّ (تشمل المعطّلة: صفٌّ قديم قد يحملها).</summary>
+    private Dictionary<int, ShiftTypeStore.ShiftType> _allShifts = new();
+
+    /// <summary>
+    /// نافذة دوام الصفّ ("HH:mm") من مناوبته ويومِ أسبوعه — مصدر الاقتراح التلقائي
+    /// لوقت المغادرة: التأخير = [بداية الدوام ← الدخول الفعلي]، والخروج المبكر =
+    /// [الخروج الفعلي ← نهاية الدوام]. المناوبة بفتراتٍ متعددة تُقرأ بأول فترة وآخرها.
+    /// </summary>
+    public (string? Start, string? End) ShiftWindow(DayAttendanceStore.DayRow row)
+    {
+        if (row.ShiftTypeId is not int shiftId || !_allShifts.TryGetValue(shiftId, out var shift))
+            return (null, null);
+
+        var day = shift.Days.FirstOrDefault(d => d.DayIndex == DayAttendanceStore.ToDayIndex(row.WorkDate));
+        var start = day?.StartTime;
+        var end = day?.EndTime;
+
+        if (string.IsNullOrWhiteSpace(start) && shift.Periods.Count > 0)
+        {
+            start = shift.Periods[0].StartTime;
+            end = shift.Periods[^1].EndTime;
+        }
+
+        return (Hhmm(start), Hhmm(end));
+    }
+
+    /// <summary>"HH:mm" أو فارغ — القيمة تدخل حقل <c>input[type=time]</c> فلا تحتمل صيغةً أخرى.</summary>
+    private static string? Hhmm(string? value) =>
+        TimeSpan.TryParse(value, out var parsed) ? parsed.ToString(@"hh\:mm") : null;
     public int TotalRows { get; set; }
     public int TotalPages { get; set; }
     public int PresentCount { get; set; }
@@ -119,7 +149,9 @@ public class IndexModel : PageModel
         var (year, month) = Period;
         Month ??= $"{year:0000}-{month:00}";
 
-        Shifts = (await ShiftTypeStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
+        var shifts = await ShiftTypeStore.ListAsync(_dbContext);
+        _allShifts = shifts.ToDictionary(shift => shift.Id);
+        Shifts = shifts.Where(s => s.IsActive).ToList();
 
         await LoadRequestCatalogAsync();
 

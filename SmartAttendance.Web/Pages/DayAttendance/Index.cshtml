@@ -243,11 +243,20 @@
                 <tbody>
                     @foreach (var row in Model.Rows)
                     {
+                        @* نافذة الدوام والبصمتان تُحمَل على الصفّ نفسه ليقترح المتصفح وقت
+                           المغادرة من التأخير/الخروج المبكر بلا رحلة خادم — والقيم هي
+                           عين ما يعرضه الصفّ، فلا يُقترح ما لا يراه المستخدم. *@
+                        var window = Model.ShiftWindow(row);
                         <tr>
                             <td class="dat-pick-col">
                                 <input type="checkbox" class="dat-pick dat-row-pick"
                                        value="@row.EmployeeId|@row.WorkDate.ToString("yyyy-MM-dd")"
                                        data-name="@row.EmployeeName"
+                                       data-start="@window.Start" data-end="@window.End"
+                                       data-in="@(row.CheckIn?.ToString("HH:mm"))"
+                                       data-out="@(row.CheckOut?.ToString("HH:mm"))"
+                                       data-late="@row.LateHours.ToString("0.##")"
+                                       data-early="@row.EarlyLeaveHours.ToString("0.##")"
                                        aria-label="تحديد يومية @row.EmployeeName @row.WorkDate.ToString("yyyy-MM-dd")"
                                        onchange="datPickChanged(this)" />
                             </td>
@@ -367,13 +376,25 @@
             </select>
         </label>
 
-        <div id="dat-req-time-wrap" style="display:none;gap:10px" class="dat-modal-radios">
-            <label class="dat-modal-label">من الساعة
-                <input type="time" name="ReqFromTime" class="dat-modal-text" />
-            </label>
-            <label class="dat-modal-label">إلى الساعة
-                <input type="time" name="ReqToTime" class="dat-modal-text" />
-            </label>
+        @* الوقت يُقترح تلقائياً من اليوميات المحدَّدة ويبقى قابلاً للتعديل: التأخير
+           نافذتُه [بداية الدوام ← الدخول الفعلي]، والخروج المبكر [الخروج ← نهاية
+           الدوام]. الاقتراح لا يدهس تعديل المستخدم — يتوقّف أول ما يلمس الحقل. *@
+        <div id="dat-req-time-block" style="display:none">
+            <div id="dat-req-time-wrap" style="gap:10px" class="dat-modal-radios">
+                <label class="dat-modal-label">من الساعة
+                    <input type="time" name="ReqFromTime" class="dat-modal-text"
+                           oninput="this.dataset.touched='1'" />
+                </label>
+                <label class="dat-modal-label">إلى الساعة
+                    <input type="time" name="ReqToTime" class="dat-modal-text"
+                           oninput="this.dataset.touched='1'" />
+                </label>
+                <button type="button" class="dat-btn ghost" style="align-self:end"
+                        onclick="datSuggestTimes(true)" title="أعِد حساب الوقت من اليوميات المحدَّدة">
+                    ↻ اقتراح تلقائي
+                </button>
+            </div>
+            <div class="dat-modal-legend" id="dat-req-time-hint"></div>
         </div>
 
         <label class="dat-modal-label">السبب (اختياري)
@@ -504,9 +525,78 @@
             var timed = option && option.getAttribute('data-timed') === '1';
 
             document.getElementById('dat-req-shift-wrap').style.display = isShift ? 'flex' : 'none';
-            document.getElementById('dat-req-time-wrap').style.display = timed ? 'flex' : 'none';
+            document.getElementById('dat-req-time-block').style.display = timed ? 'block' : 'none';
             document.querySelector('#dat-req-time-wrap input[name="ReqFromTime"]').required = timed;
             document.querySelector('#dat-req-time-wrap input[name="ReqToTime"]').required = timed;
+
+            if (timed) { datSuggestTimes(false); }
+        }
+
+        // ═══ اقتراح وقت المغادرة من اليوميات المحدَّدة ═══
+        // مَن يقدّم مغادرةً إنما يغطّي تأخيراً أو خروجاً مبكراً وقع فعلاً، فالنافذة
+        // المطلوبة معروفة من الصفّ نفسه: التأخير = [بداية الدوام ← الدخول]، والخروج
+        // المبكر = [الخروج ← نهاية الدوام]. نُغطّي المدى الأوسع بالتحديد كي لا تبقى
+        // دقيقةٌ خارج الطلب (أدنى بداية وأقصى نهاية).
+        function datSuggestTimes(force) {
+            var from = document.querySelector('#dat-req-time-wrap input[name="ReqFromTime"]');
+            var to = document.querySelector('#dat-req-time-wrap input[name="ReqToTime"]');
+            var hint = document.getElementById('dat-req-time-hint');
+
+            if (force) { delete from.dataset.touched; delete to.dataset.touched; }
+            var edited = from.dataset.touched === '1' || to.dataset.touched === '1';
+
+            var picked = datPicked();
+            var late = picked.filter(function (b) {
+                return parseFloat(b.dataset.late || '0') > 0 && b.dataset.start && b.dataset.in;
+            });
+            var early = picked.filter(function (b) {
+                return parseFloat(b.dataset.early || '0') > 0 && b.dataset.end && b.dataset.out;
+            });
+
+            // كلا النوعين بتحديدٍ واحد: الأكثر عدداً يفوز (وعند التعادل التأخير)، ويُذكر
+            // الآخر بالتلميح — لأن النموذج نافذةٌ واحدة تُطبَّق على كل الأيام.
+            var useLate = late.length > 0 && late.length >= early.length;
+            var group = useLate ? late : early;
+
+            if (group.length === 0) {
+                // تُفرَّغ القيم وإلا بقي اقتراحُ تحديدٍ سابق معلّقاً بالحقل فيُرسَل وقتاً
+                // لا علاقة له بما هو محدَّد الآن.
+                if (!edited) { from.value = ''; to.value = ''; }
+                hint.textContent = picked.length === 0
+                    ? ''
+                    : 'لا تأخير ولا خروجاً مبكراً باليوميات المحدَّدة — أدخل وقت المغادرة يدوياً.';
+                return;
+            }
+
+            // "HH:mm" مصفوف صفرياً، فمقارنة النصوص هي مقارنة الوقت نفسها.
+            var starts = group.map(function (b) { return useLate ? b.dataset.start : b.dataset.out; });
+            var ends = group.map(function (b) { return useLate ? b.dataset.in : b.dataset.end; });
+            var suggestedFrom = starts.slice().sort()[0];
+            var suggestedTo = ends.slice().sort().pop();
+
+            var label = useLate
+                ? 'اقتُرح من تأخير ' + group.length + ' يومية: من بداية الدوام ' + suggestedFrom +
+                  ' إلى الدخول الفعلي ' + suggestedTo
+                : 'اقتُرح من خروجٍ مبكر بـ' + group.length + ' يومية: من الخروج الفعلي ' + suggestedFrom +
+                  ' إلى نهاية الدوام ' + suggestedTo;
+
+            label += ' — عدّله كما تشاء.';
+
+            var other = useLate ? early.length : late.length;
+            if (other > 0) {
+                label += ' وبالتحديد أيضاً ' + other +
+                    (useLate ? ' يومية بخروجٍ مبكر' : ' يومية بتأخير') + ' لم تدخل الاقتراح.';
+            }
+
+            if (edited) {
+                hint.textContent = 'عدّلت الوقت يدوياً فلم يُستبدَل. الاقتراح: ' +
+                    suggestedFrom + ' → ' + suggestedTo + ' (اضغط «اقتراح تلقائي» لاعتماده).';
+                return;
+            }
+
+            from.value = suggestedFrom;
+            to.value = suggestedTo;
+            hint.textContent = label;
         }
 
         function datRequest(open) {
@@ -523,6 +613,8 @@
                     host.appendChild(input);
                 });
                 if (host.children.length === 0) { return; }
+                // التحديد قد تغيّر منذ آخر فتح، فيُعاد حساب الاقتراح على ما هو محدَّد الآن.
+                datTypeChanged();
             }
             document.getElementById('dat-reqbg').style.display = open ? 'block' : 'none';
             document.getElementById('dat-req').style.display = open ? 'block' : 'none';
