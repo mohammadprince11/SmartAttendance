@@ -222,18 +222,58 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
             command => HrmsDatabase.AddParameter(command, "@Id", id));
     }
 
+    /// <summary>
+    /// فضاء أسماء معرّفات القواعد الفترية داخل <c>AttendanceRecommendations.RuleId</c>.
+    /// مفتاح منع التكرار هناك هو (EmployeeId, WorkDate, RuleId)، وقواعد اليوميات تستهلك
+    /// المعرّفات الموجبة (IDENTITY) بينما حارسا التعارض يستهلكان -1 و-2. فلكي لا تصطدم
+    /// القاعدة الفترية رقم 1 بقاعدة اليوميات رقم 1، تُطرح بإزاحة كبيرة.
+    /// </summary>
+    public const int RuleIdOffset = 1000;
+
+    /// <summary>معرّف القاعدة الفترية كما يُخزَّن باقتراحات الحضور (سالب ومُزاح).</summary>
+    public static int RecommendationRuleId(int periodRuleId) => -(RuleIdOffset + periodRuleId);
+
+    /// <summary>هل هذا المعرّف عائد لقاعدة فترية؟</summary>
+    public static bool IsPeriodRuleId(int recommendationRuleId) =>
+        recommendationRuleId <= -RuleIdOffset;
+
+    /// <summary>
+    /// تاريخ مرساة الفترة — يوم واحد يمثّل الفترة كلها باقتراح الحضور (آخر يوم بالشهر،
+    /// أو أحد الأسبوع بترقيم ISO). يجعل (موظف × فترة × قاعدة) مفتاحاً فريداً.
+    /// </summary>
+    public static DateOnly PeriodAnchorDate(string periodType, int year, int period)
+    {
+        if (periodType == "Week")
+        {
+            // ISO: الأسبوع 1 هو الذي يحوي أول خميس؛ المرساة = أحد ذلك الأسبوع.
+            var jan4 = new DateOnly(year, 1, 4);
+            var isoMonday = jan4.AddDays(-((int)jan4.DayOfWeek + 6) % 7);
+            return isoMonday.AddDays((period - 1) * 7 + 6);
+        }
+
+        var monthStart = new DateOnly(year, Math.Clamp(period, 1, 12), 1);
+        return monthStart.AddMonths(1).AddDays(-1);
+    }
+
     public sealed class Match
     {
+        public int EmployeeId { get; set; }
         public string EmployeeNo { get; set; } = string.Empty;
         public string EmployeeName { get; set; } = string.Empty;
+        public int RuleId { get; set; }
         public string RuleName { get; set; } = string.Empty;
         public string MetricLabel { get; set; } = string.Empty;
         public decimal Value { get; set; }
         public string RangeText { get; set; } = string.Empty;
+        public string ActionType { get; set; } = "Violation";
         public string ActionTypeLabel { get; set; } = string.Empty;
         public string ActionText { get; set; } = string.Empty;
         public decimal ActionValue { get; set; }
         public bool MetricIsHours { get; set; }
+
+        /// <summary>جملة الاقتراح كما تُخزَّن بملخّص اقتراح الحضور.</summary>
+        public string Summary =>
+            $"{MetricLabel} = {Value:0.##}{(MetricIsHours ? " ساعة" : " يوم")} ضمن الشريحة {RangeText}";
     }
 
     /// <summary>الشريحة المطابِقة لقيمة (SliceFrom ≤ value &lt; SliceTo؛ الأعلى فأعلى تفوز عند التداخل). دالة نقية.</summary>
@@ -261,18 +301,18 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
         var result = new List<Match>();
         if (rules.Count == 0) return result;
 
-        // (EmployeeNo, Name, metricAccessor)
-        List<(string No, string Name, Func<string, decimal> Metric)> rows;
+        // (EmployeeId, EmployeeNo, Name, metricAccessor)
+        List<(int Id, string No, string Name, Func<string, decimal> Metric)> rows;
         if (periodType == "Week")
         {
             var weekRows = await WeekAttendanceStore.ListAsync(db, year, period);
-            rows = weekRows.Select(w => (w.EmployeeNo, w.EmployeeName,
+            rows = weekRows.Select(w => (w.EmployeeId, w.EmployeeNo, w.EmployeeName,
                 (Func<string, decimal>)(key => WeekMetric(w, key)))).ToList();
         }
         else
         {
             var monthRows = await MonthAttendanceStore.ListAsync(db, year, period);
-            rows = monthRows.Select(m => (m.EmployeeNo, m.EmployeeName,
+            rows = monthRows.Select(m => (m.EmployeeId, m.EmployeeNo, m.EmployeeName,
                 (Func<string, decimal>)(key => MonthMetric(m, key)))).ToList();
         }
 
@@ -285,8 +325,11 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
                 if (slice == null) continue;
                 result.Add(new Match
                 {
+                    EmployeeId = row.Id,
                     EmployeeNo = row.No,
                     EmployeeName = row.Name,
+                    RuleId = rule.Id,
+                    ActionType = slice.ActionType,
                     RuleName = rule.Name,
                     MetricLabel = rule.MetricText,
                     Value = value,

@@ -29,6 +29,12 @@ public class IndexModel : PageModel
     public int IdleLogoutMinutes { get; set; }
     public int LeaveLogoutSeconds { get; set; }
 
+    /// <summary>إعادة تحليل اليومية تلقائياً فور الموافقة على إجازة/مغادرة/بصمة مفقودة.</summary>
+    public bool AutoReanalyze { get; set; }
+
+    /// <summary>حارس: امنع إعادة التحليل إذا كانت هناك إجراءات منفَّذة على اليوم.</summary>
+    public bool GuardExecutedActions { get; set; }
+
     public async Task OnGetAsync()
     {
         Semantics = await PunchSemanticStore.ListAsync(_dbContext);
@@ -38,6 +44,19 @@ public class IndexModel : PageModel
         RequireBiometric = await OnlinePunchStore.GetRequireBiometricAsync(_dbContext);
         IdleLogoutMinutes = await Web.Infrastructure.Security.PortalSessionPolicy.GetIdleMinutesAsync(_dbContext);
         LeaveLogoutSeconds = await Web.Infrastructure.Security.PortalSessionPolicy.GetLeaveSecondsAsync(_dbContext);
+        AutoReanalyze = await AttendanceReanalysisPolicy.GetAutoReanalyzeAsync(_dbContext);
+        GuardExecutedActions = await AttendanceReanalysisPolicy.GetGuardExecutedAsync(_dbContext);
+    }
+
+    /// <summary>حفظ مفتاحَي إعادة التحليل بعد الموافقات (المفتاح + حارسه المضاد).</summary>
+    public async Task<IActionResult> OnPostSaveReanalysisRuleAsync()
+    {
+        await AttendanceReanalysisPolicy.SetAutoReanalyzeAsync(
+            _dbContext, Request.Form["AutoReanalyze"] == "true");
+        await AttendanceReanalysisPolicy.SetGuardExecutedAsync(
+            _dbContext, Request.Form["GuardExecutedActions"] == "true");
+        TempData["SuccessMessage"] = "حُفظت قواعد إعادة التحليل.";
+        return RedirectToPage();
     }
 
     /// <summary>حفظ قواعد جلسة بوابة الموظف (الخمول/مغادرة التطبيق) — حاجز إعارة الهاتف.</summary>

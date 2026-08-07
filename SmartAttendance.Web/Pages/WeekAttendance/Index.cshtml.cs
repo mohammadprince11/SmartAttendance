@@ -82,9 +82,16 @@ public class IndexModel : PageModel
     {
         var (year, week) = Period;
         var count = await WeekAttendanceStore.BuildWeekAsync(_dbContext, year, week);
+
+        // نفس منطق الشهري: التجميع الأسبوعي الطازج يُقيَّم بالقواعد الفترية الأسبوعية.
+        var suggested = count == 0
+            ? 0
+            : await RecommendationStore.AnalyzePeriodAsync(_dbContext, "Week", year, week);
+
         TempData["SuccessMessage"] = count == 0
             ? "لا يوميات محللة لهذا الأسبوع — شغّل «تحديث الحضور» أولاً."
-            : $"بُني الأسبوع {week} لسنة {year} — {count} موظفاً (أرقام المعتمد/المقفل لم تُمس).";
+            : $"بُني الأسبوع {week} لسنة {year} — {count} موظفاً (أرقام المعتمد/المقفل لم تُمس)."
+              + (suggested > 0 ? $" وأنتجت القواعد الفترية {suggested} اقتراحاً جديداً." : string.Empty);
         return RedirectToPage(Route());
     }
 

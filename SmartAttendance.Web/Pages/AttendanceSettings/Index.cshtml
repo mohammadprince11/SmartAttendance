@@ -102,6 +102,20 @@
                 <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ الإنفاذ</button>
             </form>
 
+            <form method="post" asp-page-handler="SaveReanalysisRule" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
+                <label style="flex-direction:row;align-items:center;gap:8px">
+                    <input type="checkbox" name="AutoReanalyze" value="true" checked="@Model.AutoReanalyze" />
+                    إعادة تحليل الحضور تلقائياً بمجرد الموافقة على الإجازة أو المغادرة أو البصمة المفقودة
+                </label>
+                <span class="ats-hint">معطّل افتراضياً — عند تفعيله لا يحتاج المستخدم تشغيل «تحديث الحضور» يدوياً بعد كل موافقة لتظهر باليومية.</span>
+                <label style="flex-direction:row;align-items:center;gap:8px;margin-top:10px">
+                    <input type="checkbox" name="GuardExecutedActions" value="true" checked="@Model.GuardExecutedActions" />
+                    امنع إعادة التحليل التلقائية إذا كانت هناك إجراءات منفَّذة على حضور ذلك اليوم
+                </label>
+                <span class="ats-hint">مفعّل افتراضياً. «إجراء منفَّذ» = اقتراح معتمَد أو تلقائي أنشأ قضية مخالفة أو حركة مالية — إعادة تحليله تدهس قراراً بشرياً أو أثراً مالياً سبق ترحيله. الاقتراح المعلّق أو المتجاهَل لا يمنع.</span>
+                <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ قواعد إعادة التحليل</button>
+            </form>
+
             <form method="post" asp-page-handler="SaveBiometricRule" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
                 <label style="flex-direction:row;align-items:center;gap:8px">
                     <input type="checkbox" name="RequireBiometric" value="true" checked="@Model.RequireBiometric" />
