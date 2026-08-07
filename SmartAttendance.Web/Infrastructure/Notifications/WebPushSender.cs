@@ -49,7 +49,7 @@ public sealed class WebPushSender : IWebPushSender
             catch (WebPushException ex) when (ex.StatusCode is HttpStatusCode.Gone or HttpStatusCode.NotFound)
             {
                 // الاشتراك منتهٍ/محذوف من الجهاز — نظّفه فلا نعيد المحاولة عليه.
-                await PushSubscriptionStore.DeleteAsync(dbContext, sub.Endpoint);
+                await PushSubscriptionStore.DeleteAsync(dbContext, sub.Endpoint, employeeId);
                 _logger.LogInformation("حُذف اشتراك دفع منتهٍ للموظف {Emp}.", employeeId);
             }
             catch (Exception ex)

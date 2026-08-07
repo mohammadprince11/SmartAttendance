@@ -9,6 +9,7 @@ using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Account;
 
+[Microsoft.AspNetCore.Authorization.AllowAnonymous]
 public class LoginModel : PageModel
 {
     private const string GenericLoginError =

@@ -237,6 +237,20 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         SmartAttendance.Web.Infrastructure.Api.ApiTokenAuthHandler>(
         SmartAttendance.Web.Infrastructure.Api.ApiTokenAuthHandler.SchemeName, null);
 
+// سياسة تفويض احتياطية: **كل** نقطة تتطلّب مستخدماً مصادقاً ما لم تُعفَ صراحةً
+// بـ[AllowAnonymous]. سببها أن PublicPathPolicy يصنّف /api/ و/push/ و/files/
+// كـPublic (لأن مصادقتها بالتوكن داخل الكنترولرات لا بكوكيز الحارس)، فأي
+// كنترولر أو MapGet جديد يُنسى فيه [Authorize] كان يصبح مكشوفاً للإنترنت بلا
+// أي إنذار. الفشل هنا مغلق لا مفتوح.
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            SmartAttendance.Web.Infrastructure.Api.ApiTokenAuthHandler.SchemeName)
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
 // كنترولرات واجهة الموبايل (REST/JSON) — بجانب Razor Pages
 builder.Services.AddControllers();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -406,7 +420,10 @@ app.UseMiddleware<RoleSecurityMiddleware>();
 
 app.UseAuthorization();
 
-app.MapStaticAssets();
+// الأصول الساكنة تُخدَم كنقاط نهاية بـ.NET 10، فسياسة التفويض الاحتياطية تشملها
+// وتردّ 401 على CSS وJS وعامل خدمة الـPWA — أي أن صفحة الدخول نفسها تفقد تنسيقها
+// وتطبيق الموظف ينكسر. إعفاؤها صريح: الحماية على البيانات لا على ملفات الواجهة.
+app.MapStaticAssets().AllowAnonymous();
 app.MapRazorPages()
    .WithStaticAssets();
 
