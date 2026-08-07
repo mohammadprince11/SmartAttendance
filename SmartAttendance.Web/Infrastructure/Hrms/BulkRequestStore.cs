@@ -166,6 +166,13 @@ public static class BulkRequestStore
         string? ToTime,
         string? Reason);
 
+    /// <summary>
+    /// يومية محدَّدة، ومعها نافذتها الزمنية إن كان النوع زمنياً. النافذة **لكل يوم
+    /// على حدة**: تأخيرُ الأحد ليس تأخير الاثنين، ونافذةٌ واحدة تُفرَض على أيامٍ
+    /// مختلفة تعني طلباً لا يطابق ما جرى فعلاً بأكثرها.
+    /// </summary>
+    public sealed record Target(int EmployeeId, DateOnly Date, TimeSpan? From = null, TimeSpan? To = null);
+
     public sealed record Skipped(string EmployeeName, string Reason);
 
     public sealed record Outcome(
@@ -185,7 +192,7 @@ public static class BulkRequestStore
     public static async Task<Outcome> SubmitAsync(
         ApplicationDbContext db,
         Options options,
-        IReadOnlyList<(int EmployeeId, DateOnly Date)> targets,
+        IReadOnlyList<Target> targets,
         string actor)
     {
         if (targets.Count == 0)
@@ -221,25 +228,41 @@ public static class BulkRequestStore
             return Fail("اختر نوع الطلب أو المناوبة البديلة.");
         }
 
-        TimeSpan? startTime = null, endTime = null;
-        if (effect.Kind == EffectKind.ExitPermission || type is { NeedsTime: true })
-        {
-            if (!TimeSpan.TryParse(options.FromTime, out var from) ||
-                !TimeSpan.TryParse(options.ToTime, out var to))
-            {
-                return Fail("هذا النوع زمنيّ — حدّد وقت البداية والنهاية.");
-            }
-            if (to <= from)
-                return Fail("وقت النهاية يجب أن يكون بعد وقت البداية.");
+        var timed = effect.Kind == EffectKind.ExitPermission || type is { NeedsTime: true };
 
-            startTime = from;
-            endTime = to;
+        // نافذة كل يوم: ما جاء مع اليومية نفسها، وإلا النافذة العامة بالنموذج (حالة
+        // اليوم الواحد). القاموس هو مصدر الوقت وقت الكتابة.
+        var windows = new Dictionary<(int, DateOnly), (TimeSpan From, TimeSpan To)>();
+
+        if (timed)
+        {
+            TimeSpan.TryParse(options.FromTime, out var globalFrom);
+            TimeSpan.TryParse(options.ToTime, out var globalTo);
+
+            foreach (var target in targets)
+            {
+                var from = target.From ?? (globalFrom == default ? (TimeSpan?)null : globalFrom);
+                var to = target.To ?? (globalTo == default ? (TimeSpan?)null : globalTo);
+
+                if (from is null || to is null)
+                    return Fail($"النوع زمنيّ — يومية {target.Date:yyyy-MM-dd} بلا وقت بداية أو نهاية.");
+
+                if (to <= from)
+                    return Fail($"يومية {target.Date:yyyy-MM-dd}: وقت النهاية يجب أن يكون بعد وقت البداية.");
+
+                windows[(target.EmployeeId, target.Date)] = (from.Value, to.Value);
+            }
         }
 
+        // النوع الزمنيّ **لا تُدمج أيامه**: لكل يومٍ نافذتُه، ودمجُها بمدىً واحد يُلغي
+        // الأوقات المختلفة. غير الزمنيّ يُدمج (ثلاثة أيام متتالية = إجازة من 3 أيام).
         var runsByEmployee = targets
             .GroupBy(t => t.EmployeeId)
-            .ToDictionary(g => g.Key, g => (IReadOnlyList<(DateOnly From, DateOnly To)>)
-                MergeRuns(g.Select(t => t.Date)));
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<(DateOnly From, DateOnly To)>)(
+                timed
+                    ? g.Select(t => t.Date).Distinct().OrderBy(d => d.DayNumber)
+                       .Select(d => (d, d)).ToList()
+                    : MergeRuns(g.Select(t => t.Date))));
 
         var names = await EmployeeNamesAsync(db, runsByEmployee.Keys.ToList());
 
@@ -262,8 +285,17 @@ public static class BulkRequestStore
                 ? HrConditions.Matches(conditions, HrConditionFacts.Build(row, today), matchWhenEmpty: true)
                 : true;
 
-            var span = (runs[0].From, runs[^1].To);
-            var overlap = await HasOverlappingRequestAsync(db, employeeId, effect, span.Item1, span.Item2);
+            // الفحص **بكل مدىً على حدة** لا بالامتداد الكلّي: مغادرةٌ قائمة يوم 11
+            // كانت تُلغي طلباً على 9 و13 لأن الامتداد يبتلع ما بينهما.
+            var overlap = false;
+            foreach (var run in runs)
+            {
+                if (await HasOverlappingRequestAsync(db, employeeId, effect, run.From, run.To))
+                {
+                    overlap = true;
+                    break;
+                }
+            }
 
             var remaining = 0m;
             if (effect.Kind == EffectKind.Leave && effect.Leave is { } leaveType
@@ -304,9 +336,15 @@ public static class BulkRequestStore
                 {
                     var days = run.To.DayNumber - run.From.DayNumber + 1;
 
+                    var window = windows.TryGetValue((candidate.EmployeeId, run.From), out var w)
+                        ? w
+                        : default;
+
                     await InsertApprovedRequestAsync(
                         db, candidate.EmployeeId, effect, options.ShiftTypeId,
-                        run.From, run.To, startTime, endTime, days, requestReason, actor, label);
+                        run.From, run.To,
+                        timed ? window.From : null, timed ? window.To : null,
+                        days, requestReason, actor, label);
 
                     if (effect.Kind == EffectKind.Leave && effect.Leave is { } leaveType)
                     {

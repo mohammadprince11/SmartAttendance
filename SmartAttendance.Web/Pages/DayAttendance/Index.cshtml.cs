@@ -258,25 +258,39 @@ public class IndexModel : PageModel
     }
 
     /// <summary>
-    /// قيم مربّعات التحديد <c>"{employeeId}|{yyyy-MM-dd}"</c> ⟵ أزواج موظف×يوم.
-    /// نقيّة وثابتة: أي قيمة مشوَّهة تُهمَل بصمت بدل أن تُسقط الإرسال كلّه — التحديد
-    /// يأتي من الشاشة، والقيمة الوحيدة الموثوقة منه هي ما يُفكّ صحيحاً.
+    /// قيم مربّعات التحديد ⟵ يوميات مستهدَفة. الصيغة
+    /// <c>"{employeeId}|{yyyy-MM-dd}"</c>، وللأنواع الزمنية تُلحَق نافذة اليوم:
+    /// <c>"{employeeId}|{yyyy-MM-dd}|{HH:mm}|{HH:mm}"</c> — فلكل يومٍ وقتُه المستقلّ.
+    ///
+    /// <para>نقيّة وثابتة: أي قيمة مشوَّهة تُهمَل بصمت بدل أن تُسقط الإرسال كلّه —
+    /// التحديد يأتي من الشاشة، والموثوق منه ما يُفكّ صحيحاً. ووقتٌ مشوَّه يسقط
+    /// وحده فتبقى اليومية بلا نافذة، فيمسكها التحقّق برسالةٍ تسمّي تاريخها.</para>
     /// </summary>
-    public static List<(int EmployeeId, DateOnly Date)> ParseSelection(IEnumerable<string?> values)
+    public static List<BulkRequestStore.Target> ParseSelection(IEnumerable<string?> values)
     {
-        var targets = new List<(int, DateOnly)>();
+        var targets = new List<BulkRequestStore.Target>();
+        var seen = new HashSet<(int, DateOnly)>();
 
         foreach (var value in values)
         {
             if (string.IsNullOrWhiteSpace(value)) continue;
             var parts = value.Split('|');
-            if (parts.Length != 2) continue;
+            if (parts.Length is not (2 or 4)) continue;
             if (!int.TryParse(parts[0], out var employeeId) || employeeId <= 0) continue;
             if (!DateOnly.TryParse(parts[1], out var date)) continue;
-            targets.Add((employeeId, date));
+            if (!seen.Add((employeeId, date))) continue;
+
+            TimeSpan? from = null, to = null;
+            if (parts.Length == 4)
+            {
+                if (TimeSpan.TryParse(parts[2], out var parsedFrom)) from = parsedFrom;
+                if (TimeSpan.TryParse(parts[3], out var parsedTo)) to = parsedTo;
+            }
+
+            targets.Add(new BulkRequestStore.Target(employeeId, date, from, to));
         }
 
-        return targets.Distinct().ToList();
+        return targets;
     }
 
     public async Task<IActionResult> OnPostAnalyzeAsync()

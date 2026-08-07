@@ -123,6 +123,26 @@
     .dat-skips { border: 1px solid rgba(249,115,22,.4); background: rgba(249,115,22,.07); border-radius: 14px; padding: 12px 16px; }
     .dat-skips h4 { margin: 0 0 8px; font-size: 13px; font-weight: 1000; color: #f97316; }
     .dat-skips ul { margin: 0; padding-inline-start: 18px; font-size: 12.5px; font-weight: 800; line-height: 2; }
+
+    /* قائمة أيام الطلب الزمنيّ: سطر لكل تاريخ بنافذته المستقلّة. */
+    .dat-days-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .dat-days-head span { font-size: 12px; font-weight: 900; }
+    .dat-days-list { max-height: 34vh; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+    .dat-day {
+        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        padding: 8px 10px; border-radius: 12px; border: 1px solid rgba(73,111,151,.28);
+        background: rgba(0,0,0,.12);
+    }
+    html[data-theme="light"] .dat-day { background: #f7fafc; }
+    .dat-day-label { flex: 1 1 190px; font-size: 12px; font-weight: 900; line-height: 1.7; }
+    .dat-day-label b { direction: ltr; display: inline-block; }
+    .dat-day-why { display: block; font-size: 11px; font-weight: 800; color: #facc15; }
+    .dat-day-why.none { color: var(--sa-muted, #8FA8BC); }
+    .dat-day input[type="time"] {
+        min-height: 32px; border-radius: 9px; border: 1px solid rgba(73,111,151,.3);
+        background: rgba(0,0,0,.16); color: inherit; padding: 4px 8px; font-size: 12.5px; font-weight: 800;
+    }
+    html[data-theme="light"] .dat-day input[type="time"] { background: #fff; }
 </style>
 
 <section class="dat-page" dir="rtl">
@@ -379,6 +399,10 @@
         @* الوقت يُقترح تلقائياً من اليوميات المحدَّدة ويبقى قابلاً للتعديل: التأخير
            نافذتُه [بداية الدوام ← الدخول الفعلي]، والخروج المبكر [الخروج ← نهاية
            الدوام]. الاقتراح لا يدهس تعديل المستخدم — يتوقّف أول ما يلمس الحقل. *@
+        @* تحديدٌ بأكثر من يومية: **كل تاريخ بسطره ووقته** — نافذة الأحد ليست نافذة
+           الاثنين، وفرضُ نافذةٍ واحدة على أيامٍ مختلفة يُنتج طلباً لا يطابق ما جرى. *@
+        <div id="dat-req-days" style="display:none"></div>
+
         <div id="dat-req-time-block" style="display:none">
             <div id="dat-req-time-wrap" style="gap:10px" class="dat-modal-radios">
                 <label class="dat-modal-label">من الساعة
@@ -525,11 +549,114 @@
             var timed = option && option.getAttribute('data-timed') === '1';
 
             document.getElementById('dat-req-shift-wrap').style.display = isShift ? 'flex' : 'none';
-            document.getElementById('dat-req-time-block').style.display = timed ? 'block' : 'none';
-            document.querySelector('#dat-req-time-wrap input[name="ReqFromTime"]').required = timed;
-            document.querySelector('#dat-req-time-wrap input[name="ReqToTime"]').required = timed;
 
-            if (timed) { datSuggestTimes(false); }
+            datBuildTargets(false);
+        }
+
+        // ═══ نافذة يومٍ واحد من حالته ═══
+        // تأخير ⟹ [بداية الدوام ← الدخول]، وخروج مبكر ⟹ [الخروج ← نهاية الدوام].
+        function datWindowOf(box) {
+            var late = parseFloat(box.dataset.late || '0');
+            var early = parseFloat(box.dataset.early || '0');
+
+            if (late > 0 && box.dataset.start && box.dataset.in) {
+                return { from: box.dataset.start, to: box.dataset.in, why: 'تأخير ' + late + ' ساعة' };
+            }
+            if (early > 0 && box.dataset.end && box.dataset.out) {
+                return { from: box.dataset.out, to: box.dataset.end, why: 'خروج مبكر ' + early + ' ساعة' };
+            }
+            return { from: '', to: '', why: '' };
+        }
+
+        // ═══ بناء اليوميات المرسَلة ═══
+        // النوع الزمنيّ بأكثر من يومية ⟹ **سطر لكل تاريخ بنافذته**، لأن نافذةً واحدة
+        // على أيامٍ مختلفة لا تطابق ما جرى بأكثرها. ويومية واحدة تبقى بحقلَي النموذج.
+        function datBuildTargets(force) {
+            var select = document.getElementById('dat-req-type');
+            var option = select.options[select.selectedIndex];
+            var timed = !!option && option.getAttribute('data-timed') === '1';
+
+            var picked = datPicked();
+            var host = document.getElementById('dat-req-selected');
+            var daysHost = document.getElementById('dat-req-days');
+            var timeBlock = document.getElementById('dat-req-time-block');
+            var perDay = timed && picked.length > 1;
+
+            timeBlock.style.display = (timed && !perDay) ? 'block' : 'none';
+            document.querySelector('#dat-req-time-wrap input[name="ReqFromTime"]').required = timed && !perDay;
+            document.querySelector('#dat-req-time-wrap input[name="ReqToTime"]').required = timed && !perDay;
+
+            if (!perDay) {
+                daysHost.style.display = 'none';
+                daysHost.innerHTML = '';
+                host.innerHTML = '';
+                picked.forEach(function (b) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'Selected';
+                    input.value = b.value;
+                    host.appendChild(input);
+                });
+                if (timed) { datSuggestTimes(force); }
+                return;
+            }
+
+            // بالوضع اليوميّ تحمل أسطرُ الأيام حقولَ الإرسال، فتُفرَّغ المخفيّة وإلا
+            // أُرسلت كل يومية مرتين: مرّةً بلا وقت ومرّةً بوقتها.
+            host.innerHTML = '';
+            daysHost.style.display = 'block';
+
+            var previous = {};
+            [].forEach.call(daysHost.querySelectorAll('.dat-day'), function (row) {
+                previous[row.dataset.key] = {
+                    from: row.querySelector('.dat-day-from').value,
+                    to: row.querySelector('.dat-day-to').value,
+                    touched: row.dataset.touched === '1'
+                };
+            });
+
+            var html = '<div class="dat-days-head"><span>وقت كل يومية (مقترَح من حالتها — عدّل ما تشاء)</span>'
+                     + '<button type="button" class="dat-btn ghost" onclick="datBuildTargets(true)">↻ اقتراح تلقائي للكل</button></div>'
+                     + '<div class="dat-days-list">';
+
+            picked.forEach(function (b) {
+                var parts = b.value.split('|');
+                var suggestion = datWindowOf(b);
+                var kept = (!force && previous[b.value] && previous[b.value].touched) ? previous[b.value] : null;
+                var from = kept ? kept.from : suggestion.from;
+                var to = kept ? kept.to : suggestion.to;
+
+                html += '<div class="dat-day" data-key="' + b.value + '"' + (kept ? ' data-touched="1"' : '') + '>'
+                     +   '<span class="dat-day-label">' + (b.dataset.name || '') + ' — <b>' + parts[1] + '</b>'
+                     +     '<span class="dat-day-why' + (suggestion.why ? '' : ' none') + '">'
+                     +       (suggestion.why || 'بلا تأخير ولا خروج مبكر — أدخل الوقت يدوياً') + '</span>'
+                     +   '</span>'
+                     +   '<input type="time" class="dat-day-from" value="' + from + '" required '
+                     +     'aria-label="من الساعة ' + parts[1] + '" oninput="datDayChanged(this)" />'
+                     +   '<input type="time" class="dat-day-to" value="' + to + '" required '
+                     +     'aria-label="إلى الساعة ' + parts[1] + '" oninput="datDayChanged(this)" />'
+                     +   '<input type="hidden" name="Selected" value="" />'
+                     + '</div>';
+            });
+
+            html += '</div>';
+            daysHost.innerHTML = html;
+
+            [].forEach.call(daysHost.querySelectorAll('.dat-day'), datSyncDayValue);
+        }
+
+        /// قيمة الإرسال لسطر يوم: "موظف|تاريخ|من|إلى" — الوقت جزءٌ من الهُويّة لا حقلٌ عام.
+        function datSyncDayValue(row) {
+            var from = row.querySelector('.dat-day-from').value;
+            var to = row.querySelector('.dat-day-to').value;
+            row.querySelector('input[type="hidden"]').value =
+                from && to ? row.dataset.key + '|' + from + '|' + to : row.dataset.key;
+        }
+
+        function datDayChanged(input) {
+            var row = input.closest('.dat-day');
+            row.dataset.touched = '1';
+            datSyncDayValue(row);
         }
 
         // ═══ اقتراح وقت المغادرة من اليوميات المحدَّدة ═══
@@ -602,18 +729,9 @@
         function datRequest(open) {
             if (open) {
                 // التحديد يُنسخ لحظة الفتح: المربّعات خارج نموذج الإرسال (نموذج
-                // الفلترة GET يلفّ أعلى الصفحة)، فلا تُرسَل من تلقائها.
-                var host = document.getElementById('dat-req-selected');
-                host.innerHTML = '';
-                datPicked().forEach(function (b) {
-                    var input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'Selected';
-                    input.value = b.value;
-                    host.appendChild(input);
-                });
-                if (host.children.length === 0) { return; }
-                // التحديد قد تغيّر منذ آخر فتح، فيُعاد حساب الاقتراح على ما هو محدَّد الآن.
+                // الفلترة GET يلفّ أعلى الصفحة)، فلا تُرسَل من تلقائها. والبناء يعيد
+                // الحساب على ما هو محدَّد الآن لا على تحديدٍ سابق.
+                if (datPicked().length === 0) { return; }
                 datTypeChanged();
             }
             document.getElementById('dat-reqbg').style.display = open ? 'block' : 'none';

@@ -223,7 +223,37 @@ public class BulkRequestTests
         });
 
         Assert.Equal(2, targets.Count);
-        Assert.Contains((7, new DateOnly(2026, 8, 1)), targets);
-        Assert.Contains((9, new DateOnly(2026, 8, 2)), targets);
+        Assert.Contains(targets, t => t.EmployeeId == 7 && t.Date == new DateOnly(2026, 8, 1));
+        Assert.Contains(targets, t => t.EmployeeId == 9 && t.Date == new DateOnly(2026, 8, 2));
+        Assert.All(targets, t => Assert.Null(t.From));
+    }
+
+    [Fact]
+    public void Selection_CarriesPerDayWindow_SoEachDateKeepsItsOwnTime()
+    {
+        // جوهر الأنواع الزمنية: نافذة الأحد ليست نافذة الاثنين. الوقت يسافر مع
+        // اليومية نفسها لا كحقلٍ عامّ يُفرَض على الجميع.
+        var targets = IndexModel.ParseSelection(new[]
+        {
+            "7|2026-08-01|08:00|09:28",
+            "7|2026-08-02|16:24|17:00"
+        });
+
+        Assert.Equal(new TimeSpan(8, 0, 0), targets[0].From);
+        Assert.Equal(new TimeSpan(9, 28, 0), targets[0].To);
+        Assert.Equal(new TimeSpan(16, 24, 0), targets[1].From);
+        Assert.Equal(new TimeSpan(17, 0, 0), targets[1].To);
+    }
+
+    [Fact]
+    public void Selection_WithBrokenTime_KeepsTheDay_ButDropsTheWindow()
+    {
+        // الوقت المشوَّه يسقط وحده فتُمسَك اليومية بالتحقّق برسالةٍ تسمّي تاريخها،
+        // بدل أن تُهمَل بصمت فيُقدَّم طلبٌ ناقص يومَه.
+        var targets = IndexModel.ParseSelection(new[] { "7|2026-08-01|xx|09:28" });
+
+        Assert.Single(targets);
+        Assert.Null(targets[0].From);
+        Assert.Equal(new TimeSpan(9, 28, 0), targets[0].To);
     }
 }
