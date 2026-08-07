@@ -29,8 +29,19 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string SubTab { get; set; } = "Financial";
 
+    /// <summary>بحث برمز الموظف أو اسمه — خمسة آلاف اقتراح لا تُفرَز بالتصفّح.</summary>
+    [BindProperty(SupportsGet = true)]
+    public string? Search { get; set; }
+
+    /// <summary>قصر العرض على قاعدة بعينها (0 = الكل) — لأن قرار «كل الغياب» يختلف عن قرار «كل تأخير».</summary>
+    [BindProperty(SupportsGet = true)]
+    public int RuleId { get; set; }
+
     [BindProperty(SupportsGet = true)]
     public int PageNumber { get; set; } = 1;
+
+    /// <summary>القواعد الحاضرة بنتائج الشهر — منتقي الفلترة يُبنى منها لا من كل القواعد.</summary>
+    public List<(int Id, string Name, int Count)> RuleFilterOptions { get; set; } = new();
 
     public const int PageSize = 50;
 
@@ -90,6 +101,29 @@ public class IndexModel : PageModel
         }
 
         var filtered = Tab == "All" ? all : all.Where(r => r.Status == Tab).ToList();
+
+        // منتقي القواعد يُبنى **بعد فلتر الحالة وقبل فلتر القاعدة**: فيعرض ما هو
+        // قابل للاختيار فعلاً بهذا التبويب، ولا يختفي الخيار المختار من قائمته.
+        RuleFilterOptions = filtered
+            .GroupBy(row => (row.RuleId, row.RuleName))
+            .Select(group => (group.Key.RuleId, group.Key.RuleName, Count: group.Count()))
+            .OrderByDescending(option => option.Count)
+            .ToList();
+
+        if (RuleId != 0)
+        {
+            filtered = filtered.Where(row => row.RuleId == RuleId).ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(Search))
+        {
+            var term = Search.Trim();
+            filtered = filtered
+                .Where(row => row.EmployeeNo.Contains(term, StringComparison.OrdinalIgnoreCase)
+                           || row.EmployeeName.Contains(term, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
         TotalRows = filtered.Count;
         TotalPages = TotalRows == 0 ? 1 : (int)Math.Ceiling(TotalRows / (double)PageSize);
         if (PageNumber < 1) PageNumber = 1;
@@ -131,6 +165,46 @@ public class IndexModel : PageModel
         await RecommendationStore.IgnoreAsync(_dbContext, id);
         TempData["SuccessMessage"] = "تم تجاهل الاقتراح.";
         return RedirectToPage(new { Month, Tab });
+    }
+
+    /// <summary>
+    /// اعتماد جماعي للمحدَّد. **كل اعتماد يُنشئ أثراً حقيقياً** (قضية مخالفة أو حركة
+    /// مالية)، فالنطاق مقصورٌ على ما أشّر عليه المستخدم بالصفحة — لا على الفلتر كلّه:
+    /// خمسة آلاف اقتراح باعتمادٍ واحد قرارٌ لا يُتخذ بزرّ.
+    /// </summary>
+    public async Task<IActionResult> OnPostBulkApproveAsync(int[] selectedIds)
+    {
+        var ids = (selectedIds ?? Array.Empty<int>()).Distinct().ToList();
+        var done = 0;
+
+        foreach (var id in ids)
+        {
+            if (await RecommendationStore.ApproveAsync(_dbContext, id)) done++;
+        }
+
+        TempData[done == 0 ? "ErrorMessage" : "SuccessMessage"] = done == 0
+            ? "لم يُعتمد شيء — المحدَّد مبتوتٌ سابقاً أو غير موجود."
+            : $"اعتُمد {done} اقتراحاً — نُفِّذ أثر كلٍّ منها (قضية مخالفة أو حركة)"
+              + (ids.Count > done ? $" · تُخطّي {ids.Count - done} (مبتوت سابقاً)." : ".");
+
+        return RedirectToPage(new { Month, Tab, Search, RuleId, PageNumber });
+    }
+
+    /// <summary>تجاهل جماعي: يُغلق المحدَّد بلا أي أثر، ولا يُعاد توليده بتحليلٍ لاحق.</summary>
+    public async Task<IActionResult> OnPostBulkIgnoreAsync(int[] selectedIds)
+    {
+        var ids = (selectedIds ?? Array.Empty<int>()).Distinct().ToList();
+
+        foreach (var id in ids)
+        {
+            await RecommendationStore.IgnoreAsync(_dbContext, id);
+        }
+
+        TempData["SuccessMessage"] = ids.Count == 0
+            ? "لم يُحدَّد شيء."
+            : $"تُجوهل {ids.Count} اقتراحاً — بلا أثر، ولن يُعاد توليدها.";
+
+        return RedirectToPage(new { Month, Tab, Search, RuleId, PageNumber });
     }
 
     /// <summary>ترحيل الحركات المحددة لوحدة الرواتب (نمط كيان «انقل إلى وحدة الرواتب»).</summary>
