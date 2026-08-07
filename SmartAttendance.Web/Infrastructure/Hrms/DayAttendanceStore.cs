@@ -194,12 +194,10 @@ END;
                    "وأسنِد إليها الموظفين، ثم أعِد تحديث الحضور.";
         }
 
-        if (shiftTypeId <= 0)
-        {
-            return "اختر مناوبة التحليل أولاً.";
-        }
-
-        if (shiftTypes.All(shift => shift.Id != shiftTypeId))
+        // shiftTypeId = 0 ⟹ «تلقائي»: كل موظف بمناوبته المسنَدة، والمناوبة المُمرَّرة
+        // احتياطٌ لغير المسنَدين وحدهم (انظر ResolveDefaultShiftAsync). كان إجباراً
+        // على الاختيار، وهو خطأ مفهوميّ: المحرّك يقرأ إسناد الموظف أولاً بأي حال.
+        if (shiftTypeId > 0 && shiftTypes.All(shift => shift.Id != shiftTypeId))
         {
             return "المناوبة المختارة لم تعد موجودة — حدّث الصفحة واختر مناوبة قائمة.";
         }
@@ -216,6 +214,17 @@ END;
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// المناوبة الاحتياطية للتحليل حين لا يختار المستخدم شيئاً: أول مناوبة فعّالة
+    /// (ثم أي مناوبة). تُستعمل <b>لغير المسنَدين وحدهم</b> — فالمحرّك يقرأ التجاوز
+    /// ثم الروستر ثم التعيين ثم الاستحقاق قبل أن يصل إليها.
+    /// </summary>
+    public static async Task<int> ResolveDefaultShiftAsync(ApplicationDbContext dbContext)
+    {
+        var shifts = await ShiftTypeStore.ListAsync(dbContext);
+        return shifts.FirstOrDefault(shift => shift.IsActive)?.Id ?? shifts.FirstOrDefault()?.Id ?? 0;
     }
 
     public static async Task<int> AnalyzeMonthAsync(

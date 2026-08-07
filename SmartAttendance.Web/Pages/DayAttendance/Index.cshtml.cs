@@ -252,6 +252,12 @@ public class IndexModel : PageModel
         var (year, month) = Period;
         var shiftTypeId = int.TryParse(Request.Form["ShiftTypeId"], out var id) ? id : 0;
 
+        // بلا اختيار = تلقائي: كل موظف بمناوبته المسنَدة، وهذه احتياطُ غير المسنَدين
+        // وحدهم. إجبار الاختيار كان يوهم أن التحليل يجري «على مناوبة» واحدة — وهو
+        // لا يفعل: يقرأ التجاوز ثم الروستر ثم التعيين ثم الاستحقاق قبلها.
+        var autoShift = shiftTypeId <= 0;
+        if (autoShift) shiftTypeId = await DayAttendanceStore.ResolveDefaultShiftAsync(_dbContext);
+
         // الفحص المسبق يقول **لماذا** لم يُحلَّل شيء. بدونه كان المحرّك يعيد صفراً
         // صامتاً فتُقرأ الرسالة «تم التحديث — 0 يومية» كأنها نجاح، والشاشة فارغة.
         var blocker = await DayAttendanceStore.FindAnalyzeBlockerAsync(
@@ -276,8 +282,10 @@ public class IndexModel : PageModel
 
             var label = $"{period.From:yyyy-MM-dd} → {period.To:yyyy-MM-dd}";
 
+            var scope = autoShift ? " (مناوبة كل موظف المسنَدة)" : "";
+
             TempData["SuccessMessage"] = count > 0
-                ? $"تم تحديث الحضور — {count} يومية مولّدة للفترة {label}."
+                ? $"تم تحديث الحضور — {count} يومية مولّدة للفترة {label}{scope}."
                 : $"لم تُولَّد يوميات للفترة {label} — لا بصمات بها للموظفين المسنَدين " +
                   "لهذه المناوبة. تحقّق من إسناد الموظفين ومن نطاق تواريخ البصمات.";
         }
