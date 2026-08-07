@@ -52,8 +52,14 @@ public sealed class PushController : ControllerBase
     [HttpPost("unsubscribe")]
     public async Task<IActionResult> Unsubscribe([FromBody] SubscribeRequest req)
     {
+        // كل نقطة بهذا الكنترولر تحلّ الموظف من الجلسة إلا هذه — فكان أي موظف
+        // مصادَق يلغي اشتراك غيره بمعرفة الـendpoint ويحجب عنه الإشعارات بصمت.
+        var employeeId = await ResolveEmployeeIdAsync();
+        if (employeeId <= 0) return BadRequest(new { message = "الحساب غير مرتبط بموظف." });
+
         if (!string.IsNullOrWhiteSpace(req.Endpoint))
-            await PushSubscriptionStore.DeleteAsync(_db, req.Endpoint);
+            await PushSubscriptionStore.DeleteAsync(_db, req.Endpoint, employeeId);
+
         return Ok(new { ok = true });
     }
 

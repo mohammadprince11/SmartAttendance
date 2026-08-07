@@ -56,13 +56,25 @@ WHEN NOT MATCHED THEN INSERT (EmployeeId, Endpoint, P256dh, Auth)
             });
     }
 
-    public static async Task DeleteAsync(ApplicationDbContext dbContext, string endpoint)
+    /// <summary>
+    /// يحذف اشتراكاً **مملوكاً للموظف المُمرَّر**.
+    ///
+    /// ⚠️ <paramref name="employeeId"/> ليس اختيارياً بالمعنى الأمني: بدونه كان
+    /// أي موظف مصادَق يلغي اشتراك إشعارات موظفٍ آخر إن عرف أو خمّن الـendpoint،
+    /// فيحجب عنه الإشعارات بصمت. القيد بالاستعلام لا بالمستدعي.
+    /// </summary>
+    public static async Task DeleteAsync(
+        ApplicationDbContext dbContext, string endpoint, int employeeId)
     {
         await EnsureAsync(dbContext);
         await HrmsDatabase.ExecuteAsync(
             dbContext,
-            "DELETE FROM PushSubscriptions WHERE Endpoint = @Endpoint;",
-            command => HrmsDatabase.AddParameter(command, "@Endpoint", endpoint));
+            "DELETE FROM PushSubscriptions WHERE Endpoint = @Endpoint AND EmployeeId = @Emp;",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Endpoint", endpoint);
+                HrmsDatabase.AddParameter(command, "@Emp", employeeId);
+            });
     }
 
     public static async Task<List<Subscription>> ListByEmployeeAsync(ApplicationDbContext dbContext, int employeeId)
