@@ -45,10 +45,28 @@
     a.dat-stat.is-active { background: rgba(18,217,227,.14); border-color: #12D9E3; }
     .dat-stat-clear { color: var(--sa-muted, #8FA8BC); }
 
-    .dat-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .dat-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 900px; }
-    .dat-table th { text-align: start; padding: 10px 12px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); position: sticky; top: 0; }
+    /* ⚠️ **بلا `overflow` هنا**: أي قيمة تجعل البطاقة حاوية التمرير، فيلتصق رأس
+       الجدول بها لا بالشاشة — والبطاقة بطول الجدول كلّه فلا تُمرَّر أصلاً ⟹ الرأس
+       يهرب مع الصفوف وتبقى الأرقام بلا عناوين. نفس قاعدة «المستند هو المُمرِّر».
+       التمرير الأفقي يعود بالمقاسات الضيّقة وحدها (أدناه) حيث لا يسع الجدول. */
+    .dat-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .dat-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .dat-table th {
+        text-align: start; padding: 10px 12px; font-size: 11px; font-weight: 1000;
+        color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22);
+        background: #0b1e33;
+        /* أسفل الشريط العلويّ الملتصق لا تحته، وإلا اختفى الرأس خلفه. */
+        position: sticky; top: var(--zy-topbar-height, 64px); z-index: 3;
+    }
     html[data-theme="light"] .dat-table th { background: #f2f7fb; }
+
+    @@media (max-width: 1100px) {
+        /* الجدول لا يسع: يستعيد مُمرِّره الأفقي، ويسقط الالتصاق معه — وهو ثمنٌ
+           مقبول بمقاسٍ يُقرأ بالتمرير الأفقي أصلاً. */
+        .dat-table-card { overflow-x: auto; }
+        .dat-table { min-width: 900px; }
+        .dat-table th { position: static; }
+    }
     .dat-table td { padding: 9px 12px; border-bottom: 1px solid rgba(143,168,188,.08); white-space: nowrap; }
     .dat-table tr:hover td { background: rgba(18,217,227,.04); }
     /* الأرقام تُقرأ LTR (تواريخ · أوقات · ساعات) لكن محاذاتها يجب أن تطابق
@@ -77,7 +95,12 @@
     .dat-modal-bg { display: none; position: fixed; inset: 0; background: rgba(2,8,16,.62); z-index: 900; }
     .dat-modal {
         display: none; position: fixed; z-index: 901;
-        top: 50%; left: 50%; transform: translate(-50%, -50%);
+        /* التوسيط بـ`inset:0 + margin:auto` لا بـ`top/left:50% + translate(-50%,-50%)`:
+           أثناء سحب شريط التمرير يرسم المتصفّح الطبقة الثابتة **بلا** الـtransform
+           للحظات، فتقفز النافذة لزاوية اليمين السفلى (ركنها الأعلى يصير بمنتصف
+           الشاشة) ثم ترتدّ عند الإفلات. بلا transform لا يوجد ما يسقط. */
+        inset: 0; margin: auto;
+        height: max-content;
         width: min(560px, calc(100% - 32px)); max-height: 86vh; overflow: auto;
         /* لا يمتدّ تمرير المنبثقة للصفحة تحتها حين يبلغ آخره (سلسلة التمرير). */
         overscroll-behavior: contain;
