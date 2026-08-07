@@ -102,6 +102,38 @@
                 <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ الإنفاذ</button>
             </form>
 
+            <form method="post" asp-page-handler="SaveGeofenceDirection" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
+                <label style="flex-direction:row;align-items:center;gap:8px">
+                    <input type="checkbox" name="AllowOutsideCheckIn" value="true" checked="@Model.AllowOutsideCheckIn" />
+                    استثنِ بصمة <b>الدخول</b> من إنفاذ النطاق الجغرافي
+                </label>
+                <label style="flex-direction:row;align-items:center;gap:8px">
+                    <input type="checkbox" name="AllowOutsideCheckOut" value="true" checked="@Model.AllowOutsideCheckOut" />
+                    استثنِ بصمة <b>الخروج</b> من إنفاذ النطاق الجغرافي
+                </label>
+                <span class="ats-hint">كلاهما معطّل افتراضياً — الإنفاذ يشمل الاتجاهين. فعّل واحداً لحالة المندوب الذي يبصم دخولاً بالمكتب وخروجاً من موقع العميل. لا أثر لهما إن كان الإنفاذ نفسه معطّلاً.</span>
+                <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ الاستثناءات</button>
+            </form>
+
+            <form method="post" asp-page-handler="SaveMissingPunchLimits" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
+                <label>الحدّ الأعلى لطلبات البصمة المفقودة شهرياً للموظف
+                    <input type="number" name="MissingPunchMonthlyLimit" value="@Model.MissingPunchMonthlyLimit"
+                           min="0" max="60" step="1" style="max-width:160px" />
+                    <span class="ats-hint">الصفر = بلا سقف. المرفوض والملغى لا يُحتسبان.</span>
+                </label>
+                <label>يُقبل الطلب عن بصمة أقدم بحدّ أقصى (أيام)
+                    <input type="number" name="MissingPunchWindowDays" value="@Model.MissingPunchWindowDays"
+                           min="0" max="365" step="1" style="max-width:160px" />
+                    <span class="ats-hint">الصفر = بلا حدّ زمني. يمنع «إحياء» أيام قديمة بعد إغلاق الشهر.</span>
+                </label>
+                <label style="flex-direction:row;align-items:center;gap:8px">
+                    <input type="checkbox" name="MissingPunchReasonRequired" value="true" checked="@Model.MissingPunchReasonRequired" />
+                    السبب إلزامي بطلب البصمة المفقودة
+                </label>
+                <span class="ats-hint">الحدود تُفرَض على <b>الطلبات الجديدة</b> فقط — الطلب القائم قُدّم تحت سياسة وقتها ولا يُعاد تقييمه.</span>
+                <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ حدود البصمة المفقودة</button>
+            </form>
+
             <form method="post" asp-page-handler="SaveReanalysisRule" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
                 <label style="flex-direction:row;align-items:center;gap:8px">
                     <input type="checkbox" name="AutoReanalyze" value="true" checked="@Model.AutoReanalyze" />
@@ -269,7 +301,8 @@
                 </label>
                 <label>القراءة من
                     <select name="ReadType" id="ats-src-ReadType" onchange="atsReadTypeChanged()">
-                        @foreach (var (key, label) in AttendanceSourceStore.ReadTypes)
+                        @* المنفَّذة وحدها — النوع بلا منفِّذ يُنشئ مصدراً لا يفعل شيئاً *@
+                        @foreach (var (key, label) in AttendanceSourceStore.SelectableReadTypes)
                         {
                             <option value="@key">@label</option>
                         }

@@ -59,6 +59,28 @@ public static class OnlinePunchStore
         HrSettingsStore.SetAsync(db, EnforceGeofenceKey, enabled ? "1" : "0");
 
     /// <summary>
+    /// استثناءان يفصلان اتجاه البصمة عن الإنفاذ (نمط كيان — مفتاحان منفصلان «السماح
+    /// ببصمة الدخول خارج النطاق» و«السماح ببصمة الخروج خارجه»).
+    ///
+    /// <para>الحاجة عملية: مندوب يبصم <b>دخولاً</b> بالمكتب و<b>خروجاً</b> من موقع
+    /// العميل — إنفاذٌ واحد للاتجاهين يجبره على العودة ليبصم.</para>
+    ///
+    /// <para>كلاهما <b>معطّل افتراضياً</b>: أي أن الإنفاذ يبقى على الاتجاهين كما كان،
+    /// ولا يُخفَّف إلا بقرار صريح — الاستثناء يُطلَب لا يُفترَض.</para>
+    /// </summary>
+    public const string AllowOutsideCheckInKey = "Attendance.OnlinePunch.AllowOutsideGeofence.In";
+
+    public const string AllowOutsideCheckOutKey = "Attendance.OnlinePunch.AllowOutsideGeofence.Out";
+
+    public static async Task<bool> GetAllowOutsideAsync(ApplicationDbContext db, string punchType) =>
+        await HrSettingsStore.GetAsync(
+            db, punchType == "Out" ? AllowOutsideCheckOutKey : AllowOutsideCheckInKey, "0") == "1";
+
+    public static Task SetAllowOutsideAsync(ApplicationDbContext db, string punchType, bool enabled) =>
+        HrSettingsStore.SetAsync(
+            db, punchType == "Out" ? AllowOutsideCheckOutKey : AllowOutsideCheckInKey, enabled ? "1" : "0");
+
+    /// <summary>
     /// مفتاح إعداد «التأكيد البيولوجي للبصم الأونلاين»: حين يُفعَّل، الموظف صاحب مفتاح
     /// بصمة/وجه نشط (معتمد من HR بجدول <c>EmployeeWebAuthnCredentials</c>) لا تُقبل
     /// بصمته إلا بإثبات WebAuthn لحظي. الافتراضي معطّل، وموظف بلا مفتاح نشط لا تنطبق
@@ -176,7 +198,9 @@ public static class OnlinePunchStore
         // إنفاذ النطاق الجغرافي (محروس بالإعداد، الافتراضي معطّل): الموظف المسنَد لمواقع
         // نشطة يُرفَض بصمه خارج نصف قطر أحدها — وغياب الإحداثيات = رفض أيضاً (وإلا
         // يُلتَفّ على القاعدة برفض إذن الموقع). موظف بلا إسنادات لا تنطبق عليه القاعدة.
-        if (await GetEnforceGeofenceAsync(db))
+        // الاستثناء بحسب الاتجاه يُفحص أولاً: «اسمح بالخروج خارج النطاق» يعطّل الإنفاذ
+        // على بصمة الخروج وحدها ويبقيه على الدخول.
+        if (await GetEnforceGeofenceAsync(db) && !await GetAllowOutsideAsync(db, punchType))
         {
             await GeoLocationStore.EnsureAsync(db);
             var zones = await HrmsDatabase.QueryAsync(

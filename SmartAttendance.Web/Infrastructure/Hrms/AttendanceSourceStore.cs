@@ -18,6 +18,20 @@ public static class AttendanceSourceStore
         ("Api", "واجهة API خارجية")
     };
 
+    /// <summary>
+    /// أنواع القراءة التي لها **منفِّذ فعليّ**. `DbView` و`Api` معرَّفان بالكتالوج
+    /// ولا يقرأ منهما أي كود — واختيارهما بالشاشة كان يُنشئ مصدراً لا يفعل شيئاً
+    /// (إعداد صامت: يبدو مُهيَّأً وهو ميّت). يبقيان بالكتالوج لتسمية المصادر القديمة
+    /// إن وُجدت، ويُحجبان عن الإنشاء حتى يُنفَّذا.
+    /// </summary>
+    public static readonly string[] ImplementedReadTypes = { "Excel" };
+
+    public static bool IsImplemented(string key) => ImplementedReadTypes.Contains(key);
+
+    /// <summary>أنواع القراءة المعروضة بنموذج الإنشاء — المنفَّذة وحدها.</summary>
+    public static IEnumerable<(string Key, string Label)> SelectableReadTypes =>
+        ReadTypes.Where(t => IsImplemented(t.Key));
+
     public static string ReadTypeLabel(string key) =>
         ReadTypes.FirstOrDefault(t => t.Key == key).Label ?? key;
 
