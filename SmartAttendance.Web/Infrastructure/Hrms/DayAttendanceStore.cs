@@ -35,7 +35,79 @@ public static class DayAttendanceStore
         public decimal WorkedHours { get; set; }
         public string Status { get; set; } = "Absent";    // Present | Late | Incomplete | Absent | Weekend | Rest
         public bool IsAnalyzed { get; set; }
+
+        /// <summary>
+        /// طرأ على هذا اليوم تغييرٌ **بعد** آخر تحليل (اعتماد نسيان بصمة · إجازة ·
+        /// مغادرة · تعديل بصمة · إعادة استيراد) فصارت اليومية بائتة.
+        /// </summary>
+        public bool IsStale { get; set; }
+
+        /// <summary>محلَّلة وحديثة — العلامة التي تظهر بعمود «تم التحليل».</summary>
+        public bool IsUpToDate => IsAnalyzed && !IsStale;
     }
+
+    /// <summary>
+    /// مفتاح فلتر «لم تُحلَّل». ليس حالةً بل خاصية حداثة، فيُميَّز عن قيم
+    /// <see cref="DayRow.Status"/> (Present · Late · Absent · Incomplete …) ولا يتصادم معها.
+    /// </summary>
+    public const string StaleFilterKey = "Stale";
+
+    /// <summary>
+    /// فلتر أزرار العدّادات بشاشة الحضور اليومي. فارغ = الكل.
+    ///
+    /// <para>هنا لا بالصفحة عمداً: تستهلكه الشاشة لبناء العرض، **ويستهلكه زرّ إشعار
+    /// الموظفين** لتحديد من يُشعَر. لو تفرّع المنطقان لصار الزرّ يُرسل لمجموعةٍ غير
+    /// التي يراها المستخدم أمامه — وهو عطلٌ صامت أسوأ من غياب الميزة. دالّة نقيّة
+    /// كي تُختبَر بلا قاعدة بيانات.</para>
+    /// </summary>
+    public static List<DayRow> FilterByStatus(IEnumerable<DayRow> rows, string? statusFilter) =>
+        statusFilter switch
+        {
+            null or "" => rows.ToList(),
+            StaleFilterKey => rows.Where(row => row.IsStale).ToList(),
+            _ => rows.Where(row => row.Status == statusFilter).ToList()
+        };
+
+    // ═══ أيام العمل خارج المكتب: «عمل من المنزل» و«رحلة عمل» ═══
+    //
+    // كلاهما **سياق يوم** يُنتَج من طلبٍ معتمد بالخدمة الذاتية — لا جدول جديد ولا
+    // هجرة: `SelfServiceRequests` يحمل `FromDate`/`ToDate`/`Reason`/`Status` أصلاً،
+    // ومسار الاعتماد (`ApprovalWorkflowEngine`) يعمل عليه كما يعمل على المغادرة.
+    //
+    // ⚠️ **الأثر المالي محايد بقرارٍ صريح** (محمد، 2026-08-07): المحرّك يسجّل السياق
+    // فقط ولا يمنح إعفاءً. فيومُ عملٍ عن بُعد يُشتقّ **تماماً كيوم عمل عادي**: بصماته
+    // تعطي حاضراً/متأخراً/ناقصاً، وبلا بصمة يبقى **غياباً**. من أراد غير ذلك يبنيه
+    // قاعدةً بمنشئ القواعد على السياق `Remote` — كما تُبنى قواعد العطلة والراحة.
+    // هذا يعني صراحةً: **تفعيل الميزة وحده لا يغيّر أي رقم بالمسير**.
+    //
+    // ولهذا صار `BusinessTrip` منتَجاً بنفس الضربة: كان خياراً بمنشئ القواعد
+    // (`ShiftRuleStore.ApplyOnOptions`) **بلا أي منتِج** — `grep` يعطي تعريفه وحده —
+    // فأيّ قاعدة تُبنى عليه لا تنطبق أبداً. نفس عائلة الحقول الصمّاء (`DbView` · `UseEscalation`).
+
+    /// <summary>سياق «عمل من المنزل» على اليومية.</summary>
+    public const string RemoteDayKind = "Remote";
+
+    /// <summary>سياق «رحلة عمل» على اليومية — مطابق لمفتاح <c>ShiftRuleStore.ApplyOnOptions</c>.</summary>
+    public const string BusinessTripDayKind = "BusinessTrip";
+
+    /// <summary>
+    /// نوع الطلب بالخدمة الذاتية ⟵ سياق اليوم الذي ينتجه اعتماده.
+    /// المصدر الوحيد للربط — تستهلكه الشاشة والتحليل وسياسة إعادة التحليل معاً.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> RequestTypeDayKinds =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["WorkFromHome"] = RemoteDayKind,
+            ["BusinessTrip"] = BusinessTripDayKind
+        };
+
+    /// <summary>
+    /// هل هذا السياق «يوم عمل» يُشتقّ بقواعد الدوام الكاملة (تأخير · خروج مبكر ·
+    /// غياب)؟ العطلة والراحة لا — تُسجَّل ساعاتها بلا أحكام. والعمل عن بُعد ورحلة
+    /// العمل **نعم**: هما يوما عملٍ اختلف مكانه لا حكمه.
+    /// </summary>
+    public static bool IsWorkingKind(string dayKind) =>
+        dayKind is "Work" or RemoteDayKind or BusinessTripDayKind;
 
     /// <summary>0=السبت .. 6=الجمعة (ترتيب ShiftTypeStore) من DayOfWeek.</summary>
     public static int ToDayIndex(DateOnly date) => ((int)date.DayOfWeek + 1) % 7;
@@ -52,6 +124,21 @@ public static class DayAttendanceStore
         "Leave" => "إجازة",
         "LeaveUnpaid" => "إجازة بدون راتب",
         _ => status
+    };
+
+    /// <summary>
+    /// تسمية سياق اليوم. تظهر بشاشة «العمل خارج المكتب» وبعمود المناوبة حين يختلف
+    /// السياق عن يوم العمل العادي — فبلا عرضه لا يفرّق المستخدم بين غيابٍ حقيقي
+    /// وغيابٍ بيومٍ كان مُعتمَداً للعمل من المنزل.
+    /// </summary>
+    public static string DayKindLabel(string dayKind) => dayKind switch
+    {
+        "Work" => "يوم عمل",
+        RemoteDayKind => "عمل من المنزل",
+        BusinessTripDayKind => "رحلة عمل",
+        "Weekend" => "عطلة أسبوعية",
+        "Rest" => "يوم راحة",
+        _ => dayKind
     };
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
@@ -89,6 +176,48 @@ END;
     /// البصمات الخام — آمن للإعادة (إعادة تحليل).
     /// </summary>
     /// <returns>عدد الصفوف المولّدة.</returns>
+    /// <summary>
+    /// يفحص ما يمنع التحليل **قبل** تشغيله، ويعيد سبباً مقروءاً أو <c>null</c>.
+    ///
+    /// سببه عطلٌ حقيقي: <see cref="AnalyzeMonthAsync"/> يخرج بـ<c>return 0</c>
+    /// صامتاً حين لا توجد مناوبة، فتظهر كل شاشات الحضور فارغةً وكأن لا بيانات —
+    /// والحقيقة أن المحرّك لم يعمل أصلاً. الصفر ليس نتيجةً هنا بل امتناع.
+    /// </summary>
+    public static async Task<string?> FindAnalyzeBlockerAsync(
+        ApplicationDbContext dbContext, int year, int month, int shiftTypeId)
+    {
+        var shiftTypes = await ShiftTypeStore.ListAsync(dbContext);
+
+        if (shiftTypes.Count == 0)
+        {
+            return "لا توجد أنواع مناوبات بالنظام — أنشئ مناوبة من «أنواع المناوبات» " +
+                   "وأسنِد إليها الموظفين، ثم أعِد تحديث الحضور.";
+        }
+
+        if (shiftTypeId <= 0)
+        {
+            return "اختر مناوبة التحليل أولاً.";
+        }
+
+        if (shiftTypes.All(shift => shift.Id != shiftTypeId))
+        {
+            return "المناوبة المختارة لم تعد موجودة — حدّث الصفحة واختر مناوبة قائمة.";
+        }
+
+        if (new DateOnly(year, month, 1) > DateOnly.FromDateTime(DateTime.Today))
+        {
+            return "الشهر المطلوب لم يبدأ بعد — لا يوجد ما يُحلَّل.";
+        }
+
+        // التحليل يشمل الفعّالين فقط؛ ذكرُ ذلك يمنع حيرةً حين تكون القاعدة مملوءة.
+        if (!await dbContext.Employees.AsNoTracking().AnyAsync(employee => employee.IsActive))
+        {
+            return "لا يوجد موظفون فعّالون — التحليل يشمل الفعّالين فقط.";
+        }
+
+        return null;
+    }
+
     public static async Task<int> AnalyzeMonthAsync(
         ApplicationDbContext dbContext, int year, int month, int defaultShiftTypeId)
     {
@@ -206,18 +335,32 @@ WHERE AttendanceDate >= @From AND AttendanceDate <= @To
         // تفعّل المناوبة «استثناء المغادرات خارج بداية المناوبة من التأخير».
         var permissionsByDay = await ApprovedPermissionsAsync(dbContext, monthStart, monthEnd);
 
+        // أيام العمل خارج المكتب المعتمدة (عمل من المنزل · رحلة عمل) — تُبدّل **سياق**
+        // اليوم لا حكمه. الأثر المالي محايد بقرار صريح؛ انظر التعليق عند RemoteDayKind.
+        var outOfOfficeByDay = await ApprovedOutOfOfficeDaysAsync(dbContext, monthStart, monthEnd);
+
         // دقائق الأزواج غير-الحضورية (استراحة/صلاة/مهمة…) لكل موظف×يوم — تُجرَّد من
         // مدة الحضور حين تفعّل المناوبة StripSemantics (وإلا لا تُقرأ أصلاً).
+        //
+        // ═══ صارت الدلالة كياناً زمنياً (الفجوة #7) ═══
+        // الأزواج تُقرأ **مفردةً** لا مجموعةً بالـSQL، لسببين:
+        //   1. `IsDeducted` لكل دلالة — «الصلاة لا تُخصم والدخان يُخصم». الجمع
+        //      بالـSQL كان يخلط الاثنين بمجموعٍ واحد لا يمكن فكّه.
+        //   2. `WindowFrom`/`WindowTo` — تُقصّ الفترة على نافذتها قبل الجمع، فاستراحةُ
+        //      ساعتين بنافذة نصف ساعة تُخصم نصف ساعة والباقي يبقى محسوباً على الموظف.
+        // الافتراضيات (تُخصم · بلا نافذة) تعطي المجموع السابق نفسه رقماً برقم.
+        var deductionRules = (await PunchSemanticStore.ListAsync(dbContext))
+            .ToDictionary(semantic => semantic.Id);
+
         var semanticMinutesByDay = (await HrmsDatabase.QueryAsync(
             dbContext,
             """
-SELECT EmployeeId, AttendanceDate, SUM(DATEDIFF(minute, CheckIn, CheckOut)) AS StripMinutes
+SELECT EmployeeId, AttendanceDate, PunchSemanticId, CheckIn, CheckOut
 FROM AttendanceRecords
 WHERE AttendanceDate >= @From AND AttendanceDate <= @To
   AND ISNULL(IsDeleted, 0) = 0
   AND PunchSemanticId IS NOT NULL AND PunchSemanticId <> @Attendance
-  AND CheckOut IS NOT NULL AND CheckOut > CheckIn
-GROUP BY EmployeeId, AttendanceDate;
+  AND CheckOut IS NOT NULL AND CheckOut > CheckIn;
 """,
             command =>
             {
@@ -229,9 +372,22 @@ GROUP BY EmployeeId, AttendanceDate;
             {
                 EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
                 Date = HrmsDatabase.GetDateOnly(reader, "AttendanceDate") ?? default,
-                Minutes = HrmsDatabase.GetInt(reader, "StripMinutes")
+                SemanticId = HrmsDatabase.GetNullableInt(reader, "PunchSemanticId") ?? 0,
+                CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn"),
+                CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut")
             }))
-            .ToDictionary(r => (r.EmployeeId, r.Date), r => r.Minutes);
+            .Select(pair => new
+            {
+                pair.EmployeeId,
+                pair.Date,
+                Minutes = DeductibleMinutes(
+                    deductionRules.TryGetValue(pair.SemanticId, out var rule) ? rule : null,
+                    pair.CheckIn,
+                    pair.CheckOut)
+            })
+            .Where(pair => pair.Minutes > 0)
+            .GroupBy(pair => (pair.EmployeeId, pair.Date))
+            .ToDictionary(g => g.Key, g => g.Sum(pair => pair.Minutes));
 
         // ترانزاكشن واحدة للحذف وكل دفعات الإدخال — فلَش لوغ واحد بدل واحد لكل أمر
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
@@ -308,6 +464,15 @@ GROUP BY EmployeeId, AttendanceDate;
 
                 var day = shiftDays.TryGetValue(ToDayIndex(date), out var d) ? d : null;
                 var dayKind = forcedDayKind ?? (day?.DayKind ?? "Work");
+
+                // العمل خارج المكتب يبدّل **يوم عمل** فقط. طلبٌ يغطّي جمعةً لا يحوّل
+                // العطلة إلى دوام — المكان تغيّر لا التقويم. وبهذا يبقى الروستر
+                // والعطلة الأسبوعية أعلى سلطةً من الطلب، وهو الترتيب الصحيح.
+                if (dayKind == "Work"
+                    && outOfOfficeByDay.TryGetValue((employeeId, date), out var outOfOffice))
+                {
+                    dayKind = outOfOffice;
+                }
                 byDay.TryGetValue((employeeId, date), out var punch);
                 DateTime? checkIn = punch.In == default ? null : punch.In;
                 DateTime? checkOut = punch.Out;
@@ -459,6 +624,74 @@ WHERE EmployeeId=@Emp AND WorkDate=@Date;
     }
 
     /// <summary>
+    /// أيام العمل خارج المكتب المعتمدة، مفهرسة (موظف × يوم) ⟶ سياق اليوم.
+    ///
+    /// <para>تُوسَّع من مدى الطلب <c>FromDate..ToDate</c> ليومياتٍ مفردة. طلبٌ بلا
+    /// <c>ToDate</c> يُقرأ يوماً واحداً. والمدى يُقصّ على الفترة المطلوبة، فطلبُ
+    /// أسبوعٍ يعبر حدّ الشهر لا يولّد مفاتيح خارج الشهر المُحلَّل.</para>
+    ///
+    /// <para>حارس الجدول كنظيره بالمغادرات: قاعدة بكر بلا خدمة ذاتية تعيد قاموساً
+    /// فارغاً بدل خطأ.</para>
+    /// </summary>
+    public static async Task<Dictionary<(int EmployeeId, DateOnly Date), string>>
+        ApprovedOutOfOfficeDaysAsync(ApplicationDbContext dbContext, DateOnly from, DateOnly to)
+    {
+        var result = new Dictionary<(int, DateOnly), string>();
+
+        var tableExists = await HrmsDatabase.ScalarAsync<int>(
+            dbContext, "SELECT CASE WHEN OBJECT_ID('SelfServiceRequests','U') IS NULL THEN 0 ELSE 1 END;");
+        if (tableExists == 0) return result;
+
+        var rows = await HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+SELECT EmployeeId,
+       RequestType,
+       COALESCE(FromDate, RequestDate) AS StartDate,
+       COALESCE(ToDate, FromDate, RequestDate) AS EndDate
+FROM SelfServiceRequests
+WHERE Status = N'Approved'
+  AND RequestType IN (N'WorkFromHome', N'BusinessTrip')
+  AND COALESCE(FromDate, RequestDate) IS NOT NULL
+  AND COALESCE(FromDate, RequestDate) <= @To
+  AND COALESCE(ToDate, FromDate, RequestDate) >= @From;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
+            },
+            reader => new
+            {
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                RequestType = HrmsDatabase.GetString(reader, "RequestType"),
+                Start = HrmsDatabase.GetDateOnly(reader, "StartDate"),
+                End = HrmsDatabase.GetDateOnly(reader, "EndDate")
+            });
+
+        foreach (var row in rows)
+        {
+            if (row.Start is not { } start) continue;
+            if (!RequestTypeDayKinds.TryGetValue(row.RequestType, out var dayKind)) continue;
+
+            var last = row.End is { } end && end >= start ? end : start;
+
+            // القصّ على الفترة — وإلا ولّد طلبُ شهرٍ مفاتيحَ لأيامٍ لا تُحلَّل الآن.
+            if (start < from) start = from;
+            if (last > to) last = to;
+
+            for (var date = start; date <= last; date = date.AddDays(1))
+            {
+                // أول طلبٍ معتمد لليوم يفوز. التعارض (عمل من المنزل ورحلة عمل بنفس
+                // اليوم) حالةٌ إدارية لا تُحسم بالتحليل — والثبات أهمّ من الاختيار.
+                result.TryAdd((row.EmployeeId, date), dayKind);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// المغادرات المعتمدة (SelfServiceRequests نوع ExitPermission حالة Approved) بنافذة
     /// زمنية كاملة، مفهرسة موظف×يوم. جدول الطلبات يُنشأ بمسار EnsureCreated العام لا هنا،
     /// فغيابه (قاعدة بكر) يعيد قاموساً فارغاً بدل خطأ.
@@ -546,6 +779,49 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
         semanticMinutes <= 0 ? workedHours
             : Math.Max(0m, workedHours - Math.Round(semanticMinutes / 60m, 2));
 
+    /// <summary>
+    /// الدقائق القابلة للخصم من زوج بصمةٍ غير-حضوريّ، بعد تطبيق قواعد دلالته
+    /// (الفجوة #7 — الدلالة ككيان زمنيّ لا وسمٍ مسطّح).
+    ///
+    /// <para><b>ثلاث بوابات بالترتيب:</b>
+    /// <list type="number">
+    /// <item>دلالة مجهولة (حُذفت بعد تسجيل البصمة) ⟹ صفر. لا نخصم بقاعدةٍ لا نعرفها.</item>
+    /// <item><c>IsDeducted = false</c> ⟹ صفر. هذا هو «الصلاة لا تُخصم والدخان يُخصم».</item>
+    /// <item>نافذة الدلالة ⟹ تُقصّ الفترة عليها. استراحةُ ساعتين بنافذة 12:00–12:30
+    ///       تُخصم نصف ساعة، والساعة والنصف الزائدة تبقى محسوبةً على الموظف.</item>
+    /// </list></para>
+    ///
+    /// <para>الزوج العابر لمنتصف الليل لا يُقصّ: النافذة أوقاتُ يومٍ واحد، وقصُّ زوجٍ
+    /// يمتدّ ليومين عليها يعطي رقماً بلا معنى. يُخصم كاملاً (سلوك ما قبل النافذة).</para>
+    ///
+    /// <para>دالّة نقيّة كي تُختبَر بلا قاعدة — وهي تمسّ مدّة الحضور فالراتب.</para>
+    /// </summary>
+    public static int DeductibleMinutes(
+        PunchSemanticStore.PunchSemantic? semantic, DateTime? checkIn, DateTime? checkOut)
+    {
+        if (semantic is null || !semantic.IsDeducted) return 0;
+        if (checkIn is not { } start || checkOut is not { } end || end <= start) return 0;
+
+        var from = start;
+        var to = end;
+
+        var sameDay = start.Date == end.Date;
+        if (sameDay && TimeSpan.TryParse(semantic.WindowFrom, out var windowFrom))
+        {
+            var bound = start.Date + windowFrom;
+            if (from < bound) from = bound;
+        }
+        if (sameDay && TimeSpan.TryParse(semantic.WindowTo, out var windowTo))
+        {
+            var bound = start.Date + windowTo;
+            if (to > bound) to = bound;
+        }
+
+        // الفترة كلها خارج النافذة ⟹ لا خصم: الوقت المصروف خارج نافذته يبقى
+        // محسوباً على الموظف لا مُعفى منه.
+        return to <= from ? 0 : (int)Math.Round((to - from).TotalMinutes);
+    }
+
     /// <summary>هل تُعرِّف المناوبة نافذة التقاط زمنية للبصمات الصالحة؟ (تبويب «القواعد»)</summary>
     public static bool HasCaptureWindow(ShiftTypeStore.ShiftType shift) =>
         TimeSpan.TryParse(shift.TimeLimitFrom, out _) || TimeSpan.TryParse(shift.TimeLimitTo, out _);
@@ -609,7 +885,9 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
         ShiftTypeStore.ShiftType shift, ShiftTypeStore.ShiftDay? day,
         string dayKind, DateTime? checkIn, DateTime? checkOut, TimeSpan lateCredit = default)
     {
-        if (dayKind != "Work")
+        // `Remote` و`BusinessTrip` يمرّان من هنا **كيوم عمل**: الأثر المالي محايد،
+        // فالمحرّك لا يمنحهما إعفاءً من التأخير ولا من الغياب — القواعد تقرّر.
+        if (!IsWorkingKind(dayKind))
         {
             // بصمة بيوم عطلة/راحة تُسجل كساعات عمل بلا تأخير (مادة أوفرتايم لاحقاً)
             var offWorked = checkIn.HasValue && checkOut.HasValue
@@ -635,16 +913,25 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
             return (null, null, 0, 0, 0, "Absent");
         }
 
-        var worked = checkOut.HasValue
-            ? Math.Max(0, Math.Round((decimal)(checkOut.Value - checkIn.Value).TotalHours, 2)) : 0;
+        // بصمة ناقصة ⟹ **كل المقادير صفر**.
+        //
+        // طرفٌ واحد لا يكفي لاشتقاق أي كمية، والأسوأ أن البصمة الوحيدة قد تكون
+        // بصمة **انصراف** سُجّلت أوّلاً — فاحتساب التأخير منها يعطي «تأخير 9.55
+        // ساعة» لموظفٍ بصم 17:33. رقمٌ كاذب يدخل المسير خصماً.
+        // القرار: لا تأخير ولا خروج مبكر ولا ساعات عمل بلا طرفَين.
+        if (!checkOut.HasValue)
+        {
+            return (checkIn, null, 0, 0, 0, "Incomplete");
+        }
+
+        var worked = Math.Max(0, Math.Round((decimal)(checkOut.Value - checkIn.Value).TotalHours, 2));
 
         if (shift.IsFlexible)
         {
-            // مرنة: لا تأخير بالساعة؛ النقص عن الساعات المطلوبة = خروج مبكر
-            var shortfall = checkOut.HasValue
-                ? Math.Max(0, Math.Round(shift.FlexDailyHours - worked, 2)) : 0;
-            return (checkIn, checkOut, 0, shortfall, worked,
-                !checkOut.HasValue ? "Incomplete" : "Present");
+            // مرنة: لا تأخير بالساعة؛ النقص عن الساعات المطلوبة = خروج مبكر.
+            // الطرفان مضمونان هنا — البصمة الناقصة خرجت أعلاه بأصفارها.
+            var shortfall = Math.Max(0, Math.Round(shift.FlexDailyHours - worked, 2));
+            return (checkIn, checkOut, 0, shortfall, worked, "Present");
         }
 
         decimal late = 0, early = 0;
@@ -654,7 +941,7 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
             late = ApplyGrace(checkIn.Value.TimeOfDay - shiftStart - lateCredit,
                 shift.LatenessGraceMinutes, shift.GraceExceededPolicy);
         }
-        if (checkOut.HasValue && checkOut.Value.Date == checkIn.Value.Date
+        if (checkOut.Value.Date == checkIn.Value.Date
             && TimeSpan.TryParse(day?.StartTime, out var dayStart)
             && TimeSpan.TryParse(day?.EndTime, out var shiftEnd)
             && shiftEnd > dayStart) // العابرة لمنتصف الليل (نهاية < بداية) خروجها باليوم التالي — لا اشتقاق مبكر هنا
@@ -663,7 +950,7 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
                 shift.EarlyLeaveGraceMinutes, shift.GraceExceededPolicy);
         }
 
-        var status = !checkOut.HasValue ? "Incomplete" : late > 0 ? "Late" : "Present";
+        var status = late > 0 ? "Late" : "Present";
         return (checkIn, checkOut, late, early, worked, status);
     }
 
@@ -725,10 +1012,52 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
         // كما كان (صفر تغيير على الشاشات)، والنداء المفرد يضيف شرطاً مُوسَّطاً.
         var employeeClause = employeeId is > 0 ? " AND d.EmployeeId = @Employee" : string.Empty;
 
+        // SQL يترجم الاستعلام كاملاً، فذكرُ جدولٍ غير موجود يفشل حتى داخل شرطٍ
+        // معطّل. لذلك يُدرَج جزء الخدمة الذاتية **نصّياً** بعد التأكد من وجوده.
+        var hasSelfService = await HrmsDatabase.ScalarAsync<int>(
+            dbContext, "SELECT CASE WHEN OBJECT_ID('SelfServiceRequests','U') IS NULL THEN 0 ELSE 1 END;");
+
+        // المطابقة بالمدى لا باليوم الواحد. كانت `= d.WorkDate` فتلتقط **أول يوم**
+        // بالطلب وحده: طلب «عمل من المنزل» لخمسة أيام يُعتمد بعد التحليل كان يُبيّت
+        // يومه الأول ويترك الأربعة الباقية تبدو محدَّثة وهي ليست كذلك. وينطبق
+        // الإصلاح على كل طلبٍ متعدّد الأيام لا على الجديدين وحدهما.
+        var selfServiceClause = hasSelfService == 1
+            ? """
+                WHEN EXISTS (
+                    SELECT 1 FROM SelfServiceRequests r
+                    WHERE r.EmployeeId = d.EmployeeId
+                      AND d.WorkDate BETWEEN COALESCE(r.FromDate, r.RequestDate)
+                                         AND COALESCE(r.ToDate, r.FromDate, r.RequestDate)
+                      AND COALESCE(r.UpdatedAt, r.CreatedAt) > d.AnalyzedAt) THEN 1
+            """
+            : string.Empty;
+
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,
             $"""
-SELECT d.*, e.EmployeeNo, e.FullName, s.Name AS ShiftName, s.ColorHex AS ShiftColor
+SELECT d.*, e.EmployeeNo, e.FullName, s.Name AS ShiftName, s.ColorHex AS ShiftColor,
+    -- بائتة = طرأ تغيير على اليوم بعد لحظة تحليله. ثلاثة مصادر:
+    --   1) البصمات (يشمل اعتماد «نسيان بصمة» لأنه يُنشئ بصمة فعلية، وإلغاءه
+    --      لأنه يحذفها منطقياً ويحدّث UpdatedAt) وأي تعديل يدوي أو إعادة استيراد.
+    --   2) الإجازات المعتمدة المتقاطعة مع اليوم.
+    --   3) المغادرات/الزمنية المعتمدة بذلك اليوم.
+    -- AnalyzedAt NULL ⟹ لم تُحلَّل أصلاً.
+    CAST(CASE
+        WHEN d.AnalyzedAt IS NULL THEN 1
+        WHEN EXISTS (
+            SELECT 1 FROM AttendanceRecords a
+            WHERE a.EmployeeId = d.EmployeeId
+              AND a.AttendanceDate = d.WorkDate
+              AND COALESCE(a.UpdatedAt, a.CreatedAt) > d.AnalyzedAt) THEN 1
+        WHEN EXISTS (
+            SELECT 1 FROM LeaveRequests l
+            WHERE l.EmployeeId = d.EmployeeId
+              AND ISNULL(l.IsDeleted, 0) = 0
+              AND d.WorkDate BETWEEN l.FromDate AND l.ToDate
+              AND COALESCE(l.UpdatedAt, l.CreatedAt) > d.AnalyzedAt) THEN 1
+{selfServiceClause}
+        ELSE 0
+    END AS bit) AS IsStale
 FROM DayAttendances d
 INNER JOIN Employees e ON e.Id = d.EmployeeId
 LEFT JOIN ShiftTypes s ON s.Id = d.ShiftTypeId
@@ -758,7 +1087,8 @@ ORDER BY e.EmployeeNo, d.WorkDate;
                 EarlyLeaveHours = reader["EarlyLeaveHours"] is decimal early ? early : 0,
                 WorkedHours = reader["WorkedHours"] is decimal worked ? worked : 0,
                 Status = HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } st ? st : "Absent",
-                IsAnalyzed = HrmsDatabase.GetBool(reader, "IsAnalyzed")
+                IsAnalyzed = HrmsDatabase.GetBool(reader, "IsAnalyzed"),
+                IsStale = HrmsDatabase.GetBool(reader, "IsStale")
             });
 
         if (!string.IsNullOrWhiteSpace(search))

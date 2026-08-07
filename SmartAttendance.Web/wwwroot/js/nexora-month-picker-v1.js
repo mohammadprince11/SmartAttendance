@@ -29,6 +29,14 @@
         return parsed ? `${MONTHS_AR[parsed.month]} ${parsed.year}` : "اختر الشهر";
     }
 
+    /* نظير `syncOpenState` بـnexora-calendar-v18.js — الشرح الكامل هناك. */
+    function syncOpenState() {
+        document.documentElement.classList.toggle(
+            "nxcal-open",
+            !!document.querySelector(".nxcal.is-open")
+        );
+    }
+
     function closeAll(except = null) {
         document.querySelectorAll(".nxcal.is-open").forEach((picker) => {
             if (picker !== except) {
@@ -36,16 +44,17 @@
                 picker.querySelector(".nxcal__button")?.setAttribute("aria-expanded", "false");
             }
         });
+
+        syncOpenState();
     }
 
+    /* بلا حدّ عمق — نظير `markParents` بمنتقي التاريخ، والشرح هناك. */
     function markParents(node) {
         let current = node.parentElement;
-        let depth = 0;
 
-        while (current && current !== document.body && depth < 6) {
+        while (current && current !== document.body) {
             current.classList.add("nxcal-ready");
             current = current.parentElement;
-            depth++;
         }
     }
 
@@ -355,6 +364,7 @@
                 yearPageStart = state.year - 5;
                 render();
                 picker.classList.add("is-open");
+                syncOpenState();
                 button.setAttribute("aria-expanded", "true");
                 window.requestAnimationFrame(positionPanel);
             }
@@ -384,6 +394,21 @@
     });
 
     window.addEventListener("resize", closeAll, { passive: true });
+
+    /*
+        الإغلاق بالتمرير — كان موجوداً بمنتقي التاريخ وحده وغائباً هنا. صار لازماً
+        لكليهما بعد ربط فكّ القصّ بلحظة الفتح: هكذا لا تتقاطع نافذة فكّ القصّ مع
+        تمريرٍ نشط. الالتقاط (`true`) ضروريّ لأن حدث scroll لا يصعد.
+    */
+    window.addEventListener("scroll", (event) => {
+        const target = event.target;
+
+        if (target instanceof Element && target.closest(".nxcal__panel")) {
+            return;
+        }
+
+        closeAll();
+    }, true);
 
     document.addEventListener("DOMContentLoaded", () => {
         buildAll();

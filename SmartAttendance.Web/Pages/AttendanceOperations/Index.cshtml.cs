@@ -13,6 +13,12 @@ namespace SmartAttendance.Web.Pages.AttendanceOperations;
 /// عمليات الحضور اليومية: لوحة تجميعية لسجلات الدخول/الخروج مع تصحيح سريع
 /// وفلاتر — الواجهة التشغيلية الأولى لمودل الحضور (سيُعاد بناؤه بدراسة كيان).
 /// </summary>
+// ملفات أجهزة البصمة ضخمة بطبيعتها: تفريغ 10,000 موظف لسبعة أشهر = 131 م.ب.
+// الافتراضيات (Kestrel ~28.6 م.ب · النموذج 128 م.ب) ترفضه بـ413 قبل أن يبدأ.
+// الحدّ يُرفع **على هذه الصفحة وحدها** لا عالمياً — رفعه عالمياً يفتح سطح
+// حرمان خدمة على كل نقطة بالنظام.
+[RequestSizeLimit(AttendanceUploadLimits.MaxUploadBytes)]
+[RequestFormLimits(MultipartBodyLengthLimit = AttendanceUploadLimits.MaxUploadBytes)]
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;

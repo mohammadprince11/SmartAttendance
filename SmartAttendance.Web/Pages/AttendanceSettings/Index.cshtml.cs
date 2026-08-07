@@ -29,6 +29,21 @@ public class IndexModel : PageModel
     public int IdleLogoutMinutes { get; set; }
     public int LeaveLogoutSeconds { get; set; }
 
+    /// <summary>إعادة تحليل اليومية تلقائياً فور الموافقة على إجازة/مغادرة/بصمة مفقودة.</summary>
+    public bool AutoReanalyze { get; set; }
+
+    /// <summary>حارس: امنع إعادة التحليل إذا كانت هناك إجراءات منفَّذة على اليوم.</summary>
+    public bool GuardExecutedActions { get; set; }
+
+    /// <summary>استثناءا النطاق الجغرافي بحسب اتجاه البصمة (الافتراضي: لا استثناء).</summary>
+    public bool AllowOutsideCheckIn { get; set; }
+    public bool AllowOutsideCheckOut { get; set; }
+
+    /// <summary>حدود طلبات البصمة المفقودة (0 = بلا حدّ).</summary>
+    public int MissingPunchMonthlyLimit { get; set; }
+    public int MissingPunchWindowDays { get; set; }
+    public bool MissingPunchReasonRequired { get; set; }
+
     public async Task OnGetAsync()
     {
         Semantics = await PunchSemanticStore.ListAsync(_dbContext);
@@ -38,6 +53,48 @@ public class IndexModel : PageModel
         RequireBiometric = await OnlinePunchStore.GetRequireBiometricAsync(_dbContext);
         IdleLogoutMinutes = await Web.Infrastructure.Security.PortalSessionPolicy.GetIdleMinutesAsync(_dbContext);
         LeaveLogoutSeconds = await Web.Infrastructure.Security.PortalSessionPolicy.GetLeaveSecondsAsync(_dbContext);
+        AutoReanalyze = await AttendanceReanalysisPolicy.GetAutoReanalyzeAsync(_dbContext);
+        GuardExecutedActions = await AttendanceReanalysisPolicy.GetGuardExecutedAsync(_dbContext);
+        AllowOutsideCheckIn = await OnlinePunchStore.GetAllowOutsideAsync(_dbContext, "In");
+        AllowOutsideCheckOut = await OnlinePunchStore.GetAllowOutsideAsync(_dbContext, "Out");
+        MissingPunchMonthlyLimit = await MissingPunchPolicy.GetMonthlyLimitAsync(_dbContext);
+        MissingPunchWindowDays = await MissingPunchPolicy.GetWindowDaysAsync(_dbContext);
+        MissingPunchReasonRequired = await MissingPunchPolicy.GetReasonRequiredAsync(_dbContext);
+    }
+
+    /// <summary>حفظ استثناءي النطاق الجغرافي بحسب اتجاه البصمة.</summary>
+    public async Task<IActionResult> OnPostSaveGeofenceDirectionAsync()
+    {
+        await OnlinePunchStore.SetAllowOutsideAsync(
+            _dbContext, "In", Request.Form["AllowOutsideCheckIn"] == "true");
+        await OnlinePunchStore.SetAllowOutsideAsync(
+            _dbContext, "Out", Request.Form["AllowOutsideCheckOut"] == "true");
+        TempData["SuccessMessage"] = "حُفظت استثناءات النطاق الجغرافي.";
+        return RedirectToPage();
+    }
+
+    /// <summary>حفظ حدود طلبات البصمة المفقودة (سقف شهري · نافذة أيام · سبب إلزامي).</summary>
+    public async Task<IActionResult> OnPostSaveMissingPunchLimitsAsync()
+    {
+        await MissingPunchPolicy.SetMonthlyLimitAsync(
+            _dbContext, int.TryParse(Request.Form["MissingPunchMonthlyLimit"], out var limit) ? limit : 0);
+        await MissingPunchPolicy.SetWindowDaysAsync(
+            _dbContext, int.TryParse(Request.Form["MissingPunchWindowDays"], out var days) ? days : 0);
+        await MissingPunchPolicy.SetReasonRequiredAsync(
+            _dbContext, Request.Form["MissingPunchReasonRequired"] == "true");
+        TempData["SuccessMessage"] = "حُفظت حدود طلبات البصمة المفقودة.";
+        return RedirectToPage();
+    }
+
+    /// <summary>حفظ مفتاحَي إعادة التحليل بعد الموافقات (المفتاح + حارسه المضاد).</summary>
+    public async Task<IActionResult> OnPostSaveReanalysisRuleAsync()
+    {
+        await AttendanceReanalysisPolicy.SetAutoReanalyzeAsync(
+            _dbContext, Request.Form["AutoReanalyze"] == "true");
+        await AttendanceReanalysisPolicy.SetGuardExecutedAsync(
+            _dbContext, Request.Form["GuardExecutedActions"] == "true");
+        TempData["SuccessMessage"] = "حُفظت قواعد إعادة التحليل.";
+        return RedirectToPage();
     }
 
     /// <summary>حفظ قواعد جلسة بوابة الموظف (الخمول/مغادرة التطبيق) — حاجز إعارة الهاتف.</summary>
@@ -106,7 +163,12 @@ public class IndexModel : PageModel
             Name = form["Name"].ToString().Trim(),
             NameEn = string.IsNullOrWhiteSpace(form["NameEn"]) ? null : form["NameEn"].ToString().Trim(),
             IsActive = form["IsActive"] == "true",
-            SortOrder = int.TryParse(form["SortOrder"], out var sort) ? sort : 0
+            SortOrder = int.TryParse(form["SortOrder"], out var sort) ? sort : 0,
+            IsDeducted = form["IsDeducted"] == "true",
+            // نصّ "HH:mm" كما يرسله <input type="time">. الفارغ يبقى null = «بلا نافذة»
+            // ⟹ تُخصم الفترة كاملةً، وهو سلوك ما قبل الميزة.
+            WindowFrom = string.IsNullOrWhiteSpace(form["WindowFrom"]) ? null : form["WindowFrom"].ToString(),
+            WindowTo = string.IsNullOrWhiteSpace(form["WindowTo"]) ? null : form["WindowTo"].ToString()
         };
 
         if (string.IsNullOrWhiteSpace(semantic.Name))
@@ -143,6 +205,14 @@ public class IndexModel : PageModel
         if (string.IsNullOrWhiteSpace(source.Name))
         {
             TempData["SuccessMessage"] = "اسم المصدر مطلوب.";
+            return RedirectToPage();
+        }
+
+        // حارس خادم: إخفاء الخيار من المنسدلة لا يكفي — النوع بلا منفِّذ يُرفض هنا أيضاً.
+        if (!AttendanceSourceStore.IsImplemented(source.ReadType))
+        {
+            TempData["SuccessMessage"] =
+                $"نوع القراءة «{AttendanceSourceStore.ReadTypeLabel(source.ReadType)}» غير منفَّذ بعد.";
             return RedirectToPage();
         }
 

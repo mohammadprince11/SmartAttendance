@@ -356,3 +356,87 @@ html[data-theme="light"] .zhr-page-link.active {
     background: var(--electric-teal);
     color: #04141F;
 }
+
+/* نافذة استيراد الموظفين — بطاقة نوعٍ واحدة، وحقل ملفٍ بزرّه الظاهر */
+.zhr-import-close {
+    background: transparent;
+    border: 0;
+    padding: 4px;
+    line-height: 0;
+    cursor: pointer;
+    color: var(--zhr-text-secondary);
+    transition: color var(--transition-speed);
+}
+
+.zhr-import-close:hover {
+    color: var(--zhr-text-primary);
+}
+
+.zhr-import-question {
+    margin: 0 0 16px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--zhr-text-primary);
+}
+
+.zhr-import-type {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 132px;
+    min-height: 72px;
+    padding: 10px 12px;
+    font-size: 13px;
+    border: 1px solid var(--color-primary-text);
+    border-radius: var(--border-radius);
+    background: var(--color-primary-text);
+    color: var(--midnight-navy);
+    font-weight: 700;
+}
+
+.zhr-import-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 24px 0 8px;
+}
+
+.zhr-import-links {
+    display: flex;
+    gap: 12px;
+}
+
+.zhr-import-links a {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--electric-teal);
+}
+
+.zhr-import-file {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 5px 5px 12px;
+    border: 1px solid var(--zhr-border-color);
+    border-radius: var(--border-radius);
+    background: var(--zhr-input-bg);
+    cursor: pointer;
+}
+
+.zhr-import-file .zhr-btn {
+    padding: 7px 14px;
+    font-size: 13px;
+    gap: 6px;
+}
+
+.zhr-import-file-name {
+    overflow: hidden;
+    font-size: 13px;
+    color: var(--zhr-text-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

@@ -48,6 +48,11 @@
                     <option value="MissingPunch">نسيان بصمة</option>
                     <option value="ExitPermission">خروج أثناء الدوام</option>
                     <option value="Overtime">عمل إضافي</option>
+                    @* النوعان يُنتجان **سياق يوم** باليومية عند الاعتماد (Remote /
+                       BusinessTrip) — انظر DayAttendanceStore.RequestTypeDayKinds.
+                       يستعملان «من تاريخ / إلى تاريخ» فيغطّيان مدىً لا يوماً. *@
+                    <option value="WorkFromHome">عمل من المنزل</option>
+                    <option value="BusinessTrip">رحلة عمل</option>
                 </select>
             </div>
 

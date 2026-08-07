@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
@@ -983,6 +984,95 @@ IF OBJECT_ID('DataProtectionKeys', 'U') IS NULL
         Xml          nvarchar(max) NULL
     );
 """),
+
+        // فهرس ترتيب/مدى سجلات الحضور — الرافعة الثانية لأداء `/AttendanceRecords`.
+        //
+        // الفهرس الوحيد القائم هو `(EmployeeId, AttendanceDate)`، وعموده الأول
+        // الموظف. وشاشة السجلات لا ترشّح بموظفٍ بالحالة العامة: ترشّح **بمدى تاريخ**
+        // ثم ترتّب `AttendanceDate DESC, CheckIn DESC` وتقتطع صفحة. فالعمود الأول
+        // غير مقيَّد ⟹ المُحسِّن يمسح الجدول كاملاً ثم يفرزه، ثم يرمي كل شيء عدا
+        // الصفوف الخمسين الأولى (قياس 2026-08-07: 63 ألف صفّ بالفترة · 2.4ث).
+        //
+        // هذا الفهرس يجعل المدى **بحثاً** والترتيب **مجانياً** (الفهرس مرتَّب أصلاً؛
+        // وSQL Server يمسحه للخلف لخدمة DESC فلا حاجة لإعلان الاتجاه)، فيصير
+        // الاقتطاع Top-N seek بدل فرزٍ كامل.
+        //
+        // `EmployeeId` ثالثاً يطابق فاصل التعادل بعد أن صار `x.EmployeeId` بدل
+        // `x.Employee.EmployeeNo` (انظر `Pages/AttendanceRecords/Index.cshtml.cs`)
+        // ⟹ الترتيب كلّه يُخدَم من الفهرس بلا ضمّ جدول الموظفين قبل الاقتطاع.
+        //
+        // ⚠️ إنشاء فهرس على جدولٍ كبيرٍ يقفله بنسخة SQL Server القياسية. الجدول
+        // بالقياس عشرات الآلاف من الصفوف — ثوانٍ معدودة — لكن التطبيق **يطبّق
+        // الهجرات عند الإقلاع**، فالقفل يقع بنافذة النشر لا بوقت العمل.
+        new(
+            "20260807-01-attendance-records-date-index",
+            """
+IF OBJECT_ID('AttendanceRecords', 'U') IS NOT NULL
+   AND NOT EXISTS (
+       SELECT 1 FROM sys.indexes
+       WHERE name = 'IX_AttendanceRecords_AttendanceDate_CheckIn_EmployeeId'
+         AND object_id = OBJECT_ID('AttendanceRecords'))
+    CREATE INDEX IX_AttendanceRecords_AttendanceDate_CheckIn_EmployeeId
+        ON AttendanceRecords (AttendanceDate, CheckIn, EmployeeId);
+"""),
+
+        // سعر ساعة العمل الإضافي بسياق اليوم — على المناوبة (الفجوة #6 بدراسة كيان).
+        //
+        // اليوم `AttendanceTransactionStore.TransferToPayrollAsync` يختم كل ساعة
+        // أوفرتايم بـ`PayrollTransactionStore.DefaultRateFactor` = **1.5 ثابتة**، سواء
+        // كُسبت بيوم عملٍ عادي أو بجمعةٍ أو بعطلةٍ رسمية. كيان يضع المعامل على
+        // المناوبة بأربعة سياقات، وهو المعنى الحقيقيّ لـ«سعر ساعة العمل».
+        //
+        // ⚠️ **NULL عمداً بلا افتراضي**: NULL = «غير محدَّد» ⟹ يسقط للمعامل الافتراضي
+        // 1.5 كما اليوم بالحرف. فالهجرة **لا تغيّر رقماً واحداً** بأي مسير قائم، وتفعيل
+        // السلوك الجديد قرارٌ صريح لكل مناوبة على حدة. لو وُضع افتراضيّ هنا لتغيّرت
+        // رواتب شركاتٍ لم تطلب شيئاً — وهو ما تمنعه قاعدة «لا تغيير بالصيغ إلا بطلب صريح».
+        //
+        // decimal(6,3) يكفي معاملات مثل 1.5 · 2 · 2.25 ويمنع خطأ إدخالٍ بأربعة أرقام.
+        new(
+            "20260807-02-shift-overtime-rate-by-day-context",
+            """
+IF OBJECT_ID('ShiftTypes', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('ShiftTypes', 'OvertimeRateWeekend') IS NULL
+        ALTER TABLE ShiftTypes ADD OvertimeRateWeekend decimal(6,3) NULL;
+    IF COL_LENGTH('ShiftTypes', 'OvertimeRateRest') IS NULL
+        ALTER TABLE ShiftTypes ADD OvertimeRateRest decimal(6,3) NULL;
+    IF COL_LENGTH('ShiftTypes', 'OvertimeRateHoliday') IS NULL
+        ALTER TABLE ShiftTypes ADD OvertimeRateHoliday decimal(6,3) NULL;
+    IF COL_LENGTH('ShiftTypes', 'OvertimeRateLeave') IS NULL
+        ALTER TABLE ShiftTypes ADD OvertimeRateLeave decimal(6,3) NULL;
+END;
+"""),
+
+        // الدلالة ككيان زمنيّ لا وسمٍ مسطّح (الفجوة #7 بدراسة كيان).
+        //
+        // اليوم `PunchSemantic` = اسم · اسم إنجليزي · نظامية · نشطة · ترتيب. **لا شيء
+        // غير ذلك.** ورايةُ `ShiftTypes.StripSemantics` واحدة للجميع: إمّا تُخصم فترات
+        // **كل** الدلالات غير-الحضورية من مدّة الحضور أو لا تُخصم أيٌّ منها.
+        // ⟹ لا يمكن قول «الصلاة 12:00–12:30 لا تُخصم، والدخان يُخصم» — وهو المثال
+        // الذي رصدته الدراسة بالضبط.
+        //
+        // ⚠️ **الافتراضيات تُبقي السلوك الحالي بالحرف**:
+        //   • `IsDeducted = 1` للجميع — اليوم تُخصم كلُّ دلالةٍ غير حضورية حين تُفعَّل
+        //     الراية، فالافتراضي يعيد النتيجة نفسها رقماً برقم. من أراد استثناء الصلاة
+        //     أطفأها لها وحدها.
+        //   • `WindowFrom`/`WindowTo` NULL = بلا نافذة ⟹ لا قصّ ⟹ نفس الحساب.
+        // الراية على المناوبة تبقى المفتاح الرئيس: مطفأةً لا يُخصم شيء مهما ضُبطت الدلالات.
+        new(
+            "20260807-03-punch-semantic-window-and-deduction",
+            """
+IF OBJECT_ID('PunchSemantics', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('PunchSemantics', 'IsDeducted') IS NULL
+        ALTER TABLE PunchSemantics ADD IsDeducted bit NOT NULL
+            CONSTRAINT DF_PunchSemantics_IsDeducted DEFAULT(1);
+    IF COL_LENGTH('PunchSemantics', 'WindowFrom') IS NULL
+        ALTER TABLE PunchSemantics ADD WindowFrom time(0) NULL;
+    IF COL_LENGTH('PunchSemantics', 'WindowTo') IS NULL
+        ALTER TABLE PunchSemantics ADD WindowTo time(0) NULL;
+END;
+"""),
     };
 
     /// <summary>
@@ -1019,6 +1109,24 @@ IF OBJECT_ID('DataProtectionKeys', 'U') IS NULL
             // 180 ثانية مهلة: أطول من أبطأ هجرة (إنشاء فهرس على جدول كبير) وأقصر من
             // أن تُعلّق الإقلاع بلا نهاية. انتهاؤها يرفع استثناءً واضحاً — مخطط ناقص
             // يجب أن يمنع الإقلاع لا أن يمرّ صامتاً.
+            //
+            // ⚠️ القفل بنطاق `Session` معلَّق بالاتصال الذي أخذه بعينه: إغلاق الاتصال
+            // يعيده للمجمّع، و`sp_reset_connection` عند إعادة استعماله يُفلت أقفال
+            // الجلسة ضمناً. ودوالّ `HrmsDatabase` تغلق ما فتحته هي، فلو دخلنا هنا
+            // والاتصال مغلق لضاع القفل فور أخذه — تعمل الهجرات بلا حماية ثم يفشل
+            // الإفلات بالخطأ 1223. لذا نفتح الاتصال هنا صراحةً ونُبقيه مفتوحاً حتى
+            // بعد الإفلات: عندئذٍ ترى تلك الدوالّ اتصالاً مفتوحاً فلا تغلقه.
+            var lockConnection = dbContext.Database.GetDbConnection();
+            var openedForLock = lockConnection.State != System.Data.ConnectionState.Open;
+
+            if (openedForLock)
+            {
+                await lockConnection.OpenAsync();
+            }
+
+            try
+            {
+
             var lockResult = await HrmsDatabase.ScalarAsync<int>(
                 dbContext,
                 """
@@ -1087,6 +1195,16 @@ END;
                 await HrmsDatabase.ExecuteAsync(
                     dbContext,
                     "EXEC sp_releaseapplock @Resource = 'ZYNORA.SqlSchemaMigrator', @LockOwner = 'Session';");
+            }
+
+            }
+            finally
+            {
+                // لا نغلق إلا ما فتحناه: لو جاءنا الاتصال مفتوحاً فمالكه غيرنا.
+                if (openedForLock)
+                {
+                    await lockConnection.CloseAsync();
+                }
             }
         }
         finally

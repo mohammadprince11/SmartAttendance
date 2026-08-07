@@ -101,6 +101,13 @@ public class IndexModel : PageModel
             TotalDurationMode = form["TotalDurationMode"].ToString() is { Length: > 0 } tdm ? tdm : "WorkOnly",
             AvailableInRoster = form["AvailableInRoster"] == "true",
             RequestableFromEss = form["RequestableFromEss"] == "true",
+            // معاملات سعر ساعة العمل الإضافي: **فارغ ⟹ null** («غير محدَّد» فيسقط
+            // للافتراضي)، لا صفر. الصفر قيمة صالحة تعني «لا أجر إضافيّ لهذه الساعة»،
+            // فتحويل الفارغ إليه كان يصفّر أجر كل مناوبةٍ لم تُملأ حقولها.
+            OvertimeRateWeekend = ParseRate(form["OvertimeRateWeekend"]),
+            OvertimeRateRest = ParseRate(form["OvertimeRateRest"]),
+            OvertimeRateHoliday = ParseRate(form["OvertimeRateHoliday"]),
+            OvertimeRateLeave = ParseRate(form["OvertimeRateLeave"]),
             LatenessGraceMinutes = int.TryParse(form["LatenessGraceMinutes"], out var lgm) ? Math.Max(0, lgm) : 0,
             EarlyLeaveGraceMinutes = int.TryParse(form["EarlyLeaveGraceMinutes"], out var elg) ? Math.Max(0, elg) : 0,
             GraceExceededPolicy = form["GraceExceededPolicy"] == "Full" ? "Full" : "Subtract",
@@ -186,4 +193,11 @@ public class IndexModel : PageModel
         TempData["SuccessMessage"] = "تم حذف المناوبة.";
         return RedirectToPage();
     }
+
+    /// <summary>
+    /// معامل سعر الساعة من الحقل: فارغ أو غير صالح ⟹ <c>null</c> («غير محدَّد»)،
+    /// والسالب يُهمَل كذلك فلا يقلب إشارة الأجر. الصفر يُقبَل — «لا أجر إضافيّ».
+    /// </summary>
+    private static decimal? ParseRate(string? raw) =>
+        decimal.TryParse(raw, out var value) && value >= 0 ? value : null;
 }

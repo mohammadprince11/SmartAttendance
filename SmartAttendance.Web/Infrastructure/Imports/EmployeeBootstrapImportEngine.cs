@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.IO.Compression;
@@ -16,7 +16,7 @@ namespace SmartAttendance.Web.Infrastructure.Imports;
 /// <summary>
 /// محرك الاستيراد الشامل للموظفين: يقرأ ملفات Excel/CSV ويؤسس الموظفين مع
 /// فروعهم وأقسامهم ومناصبهم دفعة واحدة (إنشاء المراجع الناقصة تلقائياً).
-/// يُستخدم من صفحة /Employees/Import — أثقل ملف بالمشروع، عدّل بحذر.
+/// يُستخدم من نافذة الاستيراد بـ/Employees — أثقل ملف بالمشروع، عدّل بحذر.
 /// </summary>
 public sealed class EmployeeBootstrapImportEngine
 {
@@ -37,30 +37,34 @@ public sealed class EmployeeBootstrapImportEngine
 
     private static readonly EmployeeTemplateColumn[] BaseColumns =
     {
-        new("EmployeeNo", true, EmployeeTemplateColumnKind.Text, 16),
-        new("FullName", true, EmployeeTemplateColumnKind.Text, 30),
-        new("CompanyName", true, EmployeeTemplateColumnKind.Text, 28),
-        new("CompanyCode", false, EmployeeTemplateColumnKind.Text, 16),
-        new("WorkLocationName", true, EmployeeTemplateColumnKind.Text, 26),
-        new("WorkLocationCode", false, EmployeeTemplateColumnKind.Text, 18),
-        new("DepartmentName", true, EmployeeTemplateColumnKind.Text, 24),
-        new("DepartmentCode", false, EmployeeTemplateColumnKind.Text, 17),
-        new("PositionName", true, EmployeeTemplateColumnKind.Text, 28),
-        new("PositionCode", false, EmployeeTemplateColumnKind.Text, 16),
-        new("HireDate", true, EmployeeTemplateColumnKind.Date, 15),
-        new("NationalId", false, EmployeeTemplateColumnKind.Text, 20),
-        new("Phone", false, EmployeeTemplateColumnKind.Text, 18),
-        new("Email", false, EmployeeTemplateColumnKind.Text, 28),
-        new("BirthDate", false, EmployeeTemplateColumnKind.Date, 15),
-        new("Gender", false, EmployeeTemplateColumnKind.Text, 14),
-        new("MaritalStatus", false, EmployeeTemplateColumnKind.Text, 17),
-        new("Nationality", false, EmployeeTemplateColumnKind.Text, 18),
-        new("Country", false, EmployeeTemplateColumnKind.Text, 18),
-        new("ContractType", false, EmployeeTemplateColumnKind.Text, 18),
-        new("ContractEndDate", false, EmployeeTemplateColumnKind.Date, 17),
-        new("EmploymentStatus", false, EmployeeTemplateColumnKind.Text, 18),
-        new("IsActive", false, EmployeeTemplateColumnKind.Text, 13),
-        new("DirectManagerEmployeeNo", false, EmployeeTemplateColumnKind.Text, 24)
+        new("EmployeeNo", true, EmployeeTemplateColumnKind.Text, 16, "رقم الموظف"),
+        new("FullName", true, EmployeeTemplateColumnKind.Text, 30, "الاسم الكامل"),
+        new("CompanyName", true, EmployeeTemplateColumnKind.Text, 28, "اسم الشركة"),
+        new("CompanyCode", false, EmployeeTemplateColumnKind.Text, 16, "رمز الشركة"),
+        new("WorkLocationName", true, EmployeeTemplateColumnKind.Text, 26, "اسم موقع العمل"),
+        new("WorkLocationCode", false, EmployeeTemplateColumnKind.Text, 18, "رمز موقع العمل"),
+        new("DepartmentName", true, EmployeeTemplateColumnKind.Text, 24, "اسم القسم"),
+        new("DepartmentCode", false, EmployeeTemplateColumnKind.Text, 17, "رمز القسم"),
+        new("PositionName", true, EmployeeTemplateColumnKind.Text, 28, "المسمى الوظيفي"),
+        new("PositionCode", false, EmployeeTemplateColumnKind.Text, 16, "رمز المسمى الوظيفي"),
+        new("HireDate", true, EmployeeTemplateColumnKind.Date, 15, "تاريخ التعيين"),
+        new("NationalId", false, EmployeeTemplateColumnKind.Text, 20, "رقم الهوية الوطنية"),
+        new("Phone", false, EmployeeTemplateColumnKind.Text, 18, "رقم الهاتف"),
+        new("Email", false, EmployeeTemplateColumnKind.Text, 28, "البريد الإلكتروني"),
+        new("BirthDate", false, EmployeeTemplateColumnKind.Date, 15, "تاريخ الميلاد"),
+        new("Gender", false, EmployeeTemplateColumnKind.Text, 14, "الجنس"),
+        new("MaritalStatus", false, EmployeeTemplateColumnKind.Text, 17, "الحالة الاجتماعية"),
+        new("Nationality", false, EmployeeTemplateColumnKind.Text, 18, "الجنسية"),
+        new("Country", false, EmployeeTemplateColumnKind.Text, 18, "البلد"),
+        new("ContractType", false, EmployeeTemplateColumnKind.Text, 18, "نوع العقد"),
+        new("ContractEndDate", false, EmployeeTemplateColumnKind.Date, 17, "تاريخ انتهاء العقد"),
+        new("EmploymentStatus", false, EmployeeTemplateColumnKind.Text, 18, "الحالة الوظيفية"),
+        new("IsActive", false, EmployeeTemplateColumnKind.Text, 13, "فعال"),
+        new("DirectManagerEmployeeNo", false, EmployeeTemplateColumnKind.Text, 24,
+            "رقم الموظف للمدير المباشر"),
+        // الراتب الأساسي يسكن EmployeeFinancialInfos لا Employees — عمود بآخر
+        // القالب حتى لا ينزاح ترتيب الأعمدة على ملفٍ معبّأ سابقاً.
+        new("BasicSalary", false, EmployeeTemplateColumnKind.Text, 16, "الراتب الأساسي")
     };
 
     private readonly ApplicationDbContext _dbContext;
@@ -111,7 +115,12 @@ public sealed class EmployeeBootstrapImportEngine
         return required;
     }
 
-    public async Task<byte[]> BuildTemplateWorkbookAsync()
+    /// <summary>
+    /// يبني قالب الاستيراد. مع <paramref name="includeData"/> يخرج القالب
+    /// معبّأً بالموظفين الحاليين ليُعدَّل ويُعاد استيراده.
+    /// </summary>
+    public async Task<byte[]> BuildTemplateWorkbookAsync(
+        bool includeData = false)
     {
         await EmployeeProfileDynamicFields.EnsureSchemaAsync(_dbContext);
 
@@ -120,11 +129,15 @@ public sealed class EmployeeBootstrapImportEngine
         var usedHeaders = new HashSet<string>(
             columns.Select(column => column.Name),
             StringComparer.OrdinalIgnoreCase);
+        var dynamicHeadersByKey =
+            new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase);
 
         foreach (var field in dynamicFields)
         {
             var header = BuildDynamicHeader(field, usedHeaders);
             usedHeaders.Add(header);
+            dynamicHeadersByKey[field.FieldKey] = header;
             columns.Add(
                 new EmployeeTemplateColumn(
                     header,
@@ -135,7 +148,13 @@ public sealed class EmployeeBootstrapImportEngine
 
         var references = await LoadTemplateReferencesAsync();
 
-        return BuildWorkbook(columns, references);
+        var dataRows = includeData
+            ? await LoadTemplateDataRowsAsync(
+                columns,
+                dynamicHeadersByKey)
+            : new List<List<string>>();
+
+        return BuildWorkbook(columns, references, dataRows);
     }
 
     public async Task<MasterDataImportPreviewViewModel> PreviewAsync(
@@ -396,6 +415,10 @@ public sealed class EmployeeBootstrapImportEngine
                             });
                     }
                 }
+
+                await SaveBasicSalaryAsync(
+                    resolved.Employee.Id,
+                    resolved.Plan.BasicSalary);
 
                 dynamicValues +=
                     await SaveDynamicFieldsAsync(
@@ -703,6 +726,31 @@ public sealed class EmployeeBootstrapImportEngine
             {
                 plan.ContractEndDate =
                     contractEndDate;
+            }
+        }
+
+        var basicSalaryText = GetValue(
+            row.Values,
+            "BasicSalary");
+
+        if (!string.IsNullOrWhiteSpace(basicSalaryText))
+        {
+            if (!ImportAmountParser.TryParse(
+                    basicSalaryText,
+                    out var basicSalary))
+            {
+                plan.Errors.Add(
+                    $"Invalid BasicSalary: {basicSalaryText}");
+            }
+            else if (basicSalary < 0)
+            {
+                plan.Errors.Add(
+                    $"BasicSalary must not be negative: " +
+                    $"{basicSalaryText}");
+            }
+            else
+            {
+                plan.BasicSalary = basicSalary;
             }
         }
 
@@ -1479,6 +1527,53 @@ public sealed class EmployeeBootstrapImportEngine
             });
     }
 
+    /// <summary>
+    /// يكتب الراتب الأساسي بملف الموظف المالي (<c>EmployeeFinancialInfos</c>).
+    ///
+    /// خليّة فارغة ⟹ **لا تغيير** — الاستيراد لا يمسح راتباً مُدخلاً بالنظام
+    /// لمجرد أن العمود تُرك فارغاً بالملف، وهذا يطابق سلوك بقية الأعمدة الاختيارية.
+    /// idempotent: تحديث للصفّ القائم وإدراج لغير الموجود.
+    /// </summary>
+    private async Task SaveBasicSalaryAsync(
+        int employeeId,
+        decimal? basicSalary)
+    {
+        if (basicSalary is null || employeeId <= 0)
+        {
+            return;
+        }
+
+        await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);
+
+        await ExecuteSqlAsync(
+            """
+            UPDATE dbo.EmployeeFinancialInfos
+            SET BasicSalary = @BasicSalary,
+                UpdatedAt = SYSUTCDATETIME()
+            WHERE EmployeeId = @EmployeeId
+              AND ISNULL(IsDeleted, 0) = 0;
+
+            IF @@ROWCOUNT = 0
+            BEGIN
+                INSERT INTO dbo.EmployeeFinancialInfos
+                    (EmployeeId, BasicSalary, CreatedAt, IsDeleted)
+                VALUES
+                    (@EmployeeId, @BasicSalary, SYSUTCDATETIME(), 0);
+            END;
+            """,
+            command =>
+            {
+                AddParameter(
+                    command,
+                    "@EmployeeId",
+                    employeeId);
+                AddParameter(
+                    command,
+                    "@BasicSalary",
+                    basicSalary.Value);
+            });
+    }
+
     private async Task<int> SaveDynamicFieldsAsync(
         int employeeId,
         Dictionary<string, string> values,
@@ -1637,6 +1732,205 @@ public sealed class EmployeeBootstrapImportEngine
             branches,
             departments,
             positionReferences);
+    }
+
+    /// <summary>
+    /// يقرأ الموظفين الحاليين بترتيب أعمدة القالب نفسه — كل صفٍّ جاهزٌ
+    /// لإعادة الاستيراد كما هو. محدودٌ بـ<see cref="MaxRows"/> لأن الاستيراد
+    /// يرفض ما زاد عنها.
+    /// </summary>
+    private async Task<List<List<string>>> LoadTemplateDataRowsAsync(
+        IReadOnlyList<EmployeeTemplateColumn> columns,
+        IReadOnlyDictionary<string, string> dynamicHeadersByKey)
+    {
+        var positions = await LoadPositionsAsync();
+        var positionCodes = positions
+            .GroupBy(position => position.Id)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First().Code);
+
+        var employees = await QueryAsync(
+            """
+            SELECT TOP (@MaxRows)
+                e.Id,
+                e.PositionId,
+                e.EmployeeNo,
+                e.FullName,
+                ISNULL(c.Name, N'') AS CompanyName,
+                ISNULL(c.Code, N'') AS CompanyCode,
+                ISNULL(b.Name, N'') AS WorkLocationName,
+                ISNULL(b.Code, N'') AS WorkLocationCode,
+                ISNULL(d.Name, N'') AS DepartmentName,
+                ISNULL(d.Code, N'') AS DepartmentCode,
+                ISNULL(e.Position, N'') AS PositionName,
+                CONVERT(varchar(10), e.HireDate, 23) AS HireDate,
+                CONVERT(varchar(10), e.BirthDate, 23) AS BirthDate,
+                CONVERT(varchar(10), e.ContractEndDate, 23)
+                    AS ContractEndDate,
+                ISNULL(e.NationalId, N'') AS NationalId,
+                ISNULL(e.Phone, N'') AS Phone,
+                ISNULL(e.Email, N'') AS Email,
+                ISNULL(e.Gender, N'') AS Gender,
+                ISNULL(e.MaritalStatus, N'') AS MaritalStatus,
+                ISNULL(e.Nationality, N'') AS Nationality,
+                ISNULL(e.Country, N'') AS Country,
+                ISNULL(e.ContractType, N'') AS ContractType,
+                ISNULL(e.EmploymentStatus, N'') AS EmploymentStatus,
+                ISNULL(CONVERT(varchar(30), (
+                    SELECT TOP 1 fi.BasicSalary
+                    FROM dbo.EmployeeFinancialInfos AS fi
+                    WHERE fi.EmployeeId = e.Id
+                      AND ISNULL(fi.IsDeleted, 0) = 0
+                    ORDER BY fi.Id DESC)), N'') AS BasicSalary,
+                CASE
+                    WHEN e.IsActive = 1 THEN 'true'
+                    ELSE 'false'
+                END AS IsActive,
+                ISNULL(m.EmployeeNo, N'') AS DirectManagerEmployeeNo
+            FROM dbo.Employees e
+            LEFT JOIN dbo.Branches b
+                ON b.Id = e.BranchId
+            LEFT JOIN dbo.Companies c
+                ON c.Id = b.CompanyId
+            LEFT JOIN dbo.Departments d
+                ON d.Id = e.DepartmentId
+            LEFT JOIN dbo.Employees m
+                ON m.Id = e.DirectManagerId
+            WHERE e.IsDeleted = 0
+            ORDER BY e.EmployeeNo;
+            """,
+            command => AddParameter(command, "@MaxRows", MaxRows),
+            reader => new TemplateEmployeeRow(
+                GetInt32(reader, "Id"),
+                GetNullableInt32(reader, "PositionId"),
+                new Dictionary<string, string>(
+                    StringComparer.OrdinalIgnoreCase)
+                {
+                    ["EmployeeNo"] =
+                        GetString(reader, "EmployeeNo"),
+                    ["FullName"] =
+                        GetString(reader, "FullName"),
+                    ["CompanyName"] =
+                        GetString(reader, "CompanyName"),
+                    ["CompanyCode"] =
+                        GetString(reader, "CompanyCode"),
+                    ["WorkLocationName"] =
+                        GetString(reader, "WorkLocationName"),
+                    ["WorkLocationCode"] =
+                        GetString(reader, "WorkLocationCode"),
+                    ["DepartmentName"] =
+                        GetString(reader, "DepartmentName"),
+                    ["DepartmentCode"] =
+                        GetString(reader, "DepartmentCode"),
+                    ["PositionName"] =
+                        GetString(reader, "PositionName"),
+                    ["HireDate"] =
+                        GetString(reader, "HireDate"),
+                    ["BirthDate"] =
+                        GetString(reader, "BirthDate"),
+                    ["ContractEndDate"] =
+                        GetString(reader, "ContractEndDate"),
+                    ["NationalId"] =
+                        GetString(reader, "NationalId"),
+                    ["Phone"] = GetString(reader, "Phone"),
+                    ["Email"] = GetString(reader, "Email"),
+                    ["Gender"] = GetString(reader, "Gender"),
+                    ["MaritalStatus"] =
+                        GetString(reader, "MaritalStatus"),
+                    ["Nationality"] =
+                        GetString(reader, "Nationality"),
+                    ["Country"] = GetString(reader, "Country"),
+                    ["ContractType"] =
+                        GetString(reader, "ContractType"),
+                    ["EmploymentStatus"] =
+                        GetString(reader, "EmploymentStatus"),
+                    ["IsActive"] =
+                        GetString(reader, "IsActive"),
+                    ["DirectManagerEmployeeNo"] =
+                        GetString(
+                            reader,
+                            "DirectManagerEmployeeNo"),
+                    ["BasicSalary"] =
+                        GetString(reader, "BasicSalary")
+                }));
+
+        if (employees.Count == 0)
+        {
+            return new List<List<string>>();
+        }
+
+        if (dynamicHeadersByKey.Count > 0)
+        {
+            await FillCustomFieldValuesAsync(
+                employees,
+                dynamicHeadersByKey);
+        }
+
+        var rows = new List<List<string>>(employees.Count);
+
+        foreach (var employee in employees)
+        {
+            if (employee.PositionId.HasValue &&
+                positionCodes.TryGetValue(
+                    employee.PositionId.Value,
+                    out var positionCode))
+            {
+                employee.Values["PositionCode"] = positionCode;
+            }
+
+            rows.Add(
+                columns
+                    .Select(column =>
+                        employee.Values.TryGetValue(
+                            column.Name,
+                            out var value)
+                            ? value
+                            : string.Empty)
+                    .ToList());
+        }
+
+        return rows;
+    }
+
+    private async Task FillCustomFieldValuesAsync(
+        List<TemplateEmployeeRow> employees,
+        IReadOnlyDictionary<string, string> dynamicHeadersByKey)
+    {
+        var employeesById = employees
+            .GroupBy(employee => employee.Id)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First());
+
+        var values = await QueryAsync(
+            """
+            SELECT
+                EmployeeId,
+                FieldKey,
+                ISNULL(FieldValue, N'') AS FieldValue
+            FROM dbo.EmployeeCustomFields;
+            """,
+            command => { },
+            reader => (
+                EmployeeId: GetInt32(reader, "EmployeeId"),
+                FieldKey: GetString(reader, "FieldKey"),
+                FieldValue: GetString(reader, "FieldValue")));
+
+        foreach (var value in values)
+        {
+            if (!employeesById.TryGetValue(
+                    value.EmployeeId,
+                    out var employee) ||
+                !dynamicHeadersByKey.TryGetValue(
+                    value.FieldKey,
+                    out var header))
+            {
+                continue;
+            }
+
+            employee.Values[header] = value.FieldValue;
+        }
     }
 
     private async Task<List<DynamicFieldDefinition>>
@@ -2198,7 +2492,8 @@ public sealed class EmployeeBootstrapImportEngine
 
     private static byte[] BuildWorkbook(
         IReadOnlyList<EmployeeTemplateColumn> dataColumns,
-        TemplateReferenceData references)
+        TemplateReferenceData references,
+        IReadOnlyList<IReadOnlyList<string>> dataRows)
     {
         var referenceColumns =
             BuildReferenceColumns(references);
@@ -2212,7 +2507,9 @@ public sealed class EmployeeBootstrapImportEngine
                 ? 1
                 : referenceColumns.Max(column =>
                     column.Values.Count) + 1;
-        var maxRow = Math.Max(5000, maxReferenceRows);
+        var maxRow = Math.Max(
+            Math.Max(5000, maxReferenceRows),
+            dataRows.Count + 1);
 
         using var memory = new MemoryStream();
 
@@ -2247,6 +2544,7 @@ public sealed class EmployeeBootstrapImportEngine
                 BuildWorksheetXml(
                     dataColumns,
                     referenceColumns,
+                    dataRows,
                     firstReferenceColumn,
                     totalColumns,
                     maxReferenceRows,
@@ -2263,57 +2561,68 @@ public sealed class EmployeeBootstrapImportEngine
         {
             new(
                 "Ref Company Name",
-                references.Companies
+                DisplayName: "اسم الشركة المرجعي",
+                Values: references.Companies
                     .Select(item => item.Name)
                     .ToList()),
             new(
                 "Ref Company Code",
-                references.Companies
+                DisplayName: "رمز الشركة المرجعي",
+                Values: references.Companies
                     .Select(item => item.Code)
                     .ToList()),
             new(
                 "Ref Work Location Name",
-                references.Branches
+                DisplayName: "اسم موقع العمل المرجعي",
+                Values: references.Branches
                     .Select(item => item.Name)
                     .ToList()),
             new(
                 "Ref Work Location Code",
-                references.Branches
+                DisplayName: "رمز موقع العمل المرجعي",
+                Values: references.Branches
                     .Select(item => item.Code)
                     .ToList()),
             new(
                 "Ref Work Location Company",
-                references.Branches
+                DisplayName: "شركة موقع العمل المرجعية",
+                Values: references.Branches
                     .Select(item => item.Company)
                     .ToList()),
             new(
                 "Ref Department Name",
-                references.Departments
+                DisplayName: "اسم القسم المرجعي",
+                Values: references.Departments
                     .Select(item => item.Name)
                     .ToList()),
             new(
                 "Ref Department Code",
-                references.Departments
+                DisplayName: "رمز القسم المرجعي",
+                Values: references.Departments
                     .Select(item => item.Code)
                     .ToList()),
             new(
                 "Ref Department Company",
-                references.Departments
+                DisplayName: "شركة القسم المرجعية",
+                Values: references.Departments
                     .Select(item => item.Company)
                     .ToList()),
             new(
                 "Ref Position Name",
-                references.Positions
+                DisplayName: "اسم المسمى الوظيفي المرجعي",
+                Values: references.Positions
                     .Select(item => item.Name)
                     .ToList()),
             new(
                 "Ref Position Code",
-                references.Positions
+                DisplayName: "رمز المسمى الوظيفي المرجعي",
+                Values: references.Positions
                     .Select(item => item.Code)
                     .ToList()),
             new(
                 "Ref Position Company",
-                references.Positions
+                DisplayName: "شركة المسمى الوظيفي المرجعية",
+                Values: references.Positions
                     .Select(item => item.Company)
                     .ToList())
         };
@@ -2408,6 +2717,7 @@ public sealed class EmployeeBootstrapImportEngine
     private static string BuildWorksheetXml(
         IReadOnlyList<EmployeeTemplateColumn> dataColumns,
         IReadOnlyList<ReferenceColumn> referenceColumns,
+        IReadOnlyList<IReadOnlyList<string>> dataRows,
         int firstReferenceColumn,
         int totalColumns,
         int maxReferenceRows,
@@ -2415,11 +2725,16 @@ public sealed class EmployeeBootstrapImportEngine
     {
         var builder = new StringBuilder();
         var dataEndColumn = dataColumns.Count;
+        var lastBodyRow = Math.Max(
+            maxReferenceRows,
+            dataRows.Count + 1);
         var dataEndReference =
-            GetCellReference(1, dataEndColumn);
+            GetCellReference(
+                Math.Max(1, dataRows.Count + 1),
+                dataEndColumn);
         var totalEndReference =
             GetCellReference(
-                Math.Max(1, maxReferenceRows),
+                Math.Max(1, lastBodyRow),
                 totalColumns);
 
         builder.Append(
@@ -2478,8 +2793,8 @@ public sealed class EmployeeBootstrapImportEngine
                     ? 1
                     : 2;
             var header = column.Required
-                ? column.Name + " *"
-                : column.Name;
+                ? column.Header + " *"
+                : column.Header;
 
             builder.Append(
                 BuildInlineCell(
@@ -2497,19 +2812,44 @@ public sealed class EmployeeBootstrapImportEngine
                 BuildInlineCell(
                     1,
                     firstReferenceColumn + index,
-                    referenceColumns[index].Header,
+                    referenceColumns[index].Caption,
                     4));
         }
 
         builder.Append("</row>");
 
         for (var row = 2;
-             row <= maxReferenceRows;
+             row <= lastBodyRow;
              row++)
         {
             builder.Append("<row r=\"");
             builder.Append(row);
             builder.Append("\">");
+
+            var dataRowIndex = row - 2;
+
+            if (dataRowIndex < dataRows.Count)
+            {
+                var dataRow = dataRows[dataRowIndex];
+
+                for (var index = 0;
+                     index < dataColumns.Count &&
+                     index < dataRow.Count;
+                     index++)
+                {
+                    if (string.IsNullOrEmpty(dataRow[index]))
+                    {
+                        continue;
+                    }
+
+                    builder.Append(
+                        BuildInlineCell(
+                            row,
+                            index + 1,
+                            dataRow[index],
+                            5));
+                }
+            }
 
             for (var index = 0;
                  index < referenceColumns.Count;
@@ -3166,14 +3506,15 @@ public sealed class EmployeeBootstrapImportEngine
         return value.Trim();
     }
 
+    /// <summary>
+    /// تطبيع الترويسة **مع ترجمة العربية للاسم المعياري**. نقطة واحدة يمرّ بها
+    /// كل مقارنة ترويسة بالمحرك (<c>ValidateHeaders</c> · <c>GetValue</c> ·
+    /// <c>IsReferenceHeader</c>)، فقبول القالب المترجَم يسري عليها كلها معاً.
+    /// </summary>
     private static string NormalizeHeader(
         string? value)
     {
-        return new string(
-            (value ?? string.Empty)
-                .Where(char.IsLetterOrDigit)
-                .Select(char.ToLowerInvariant)
-                .ToArray());
+        return ImportHeaderAliases.Canonicalize(value);
     }
 
     private static string NormalizeKey(
@@ -3365,6 +3706,7 @@ public sealed class EmployeeBootstrapImportEngine
         public string EmploymentStatus { get; set; } = string.Empty;
         public bool? IsActive { get; set; }
         public string DirectManagerEmployeeNo { get; set; } = string.Empty;
+        public decimal? BasicSalary { get; set; }
         public string EmployeeAction { get; set; } = "Create";
         public CompanyReference? Company { get; set; }
         public BranchReference? Branch { get; set; }
@@ -3544,21 +3886,44 @@ public sealed class EmployeeBootstrapImportEngine
         string Code,
         string Company);
 
+    private sealed record TemplateEmployeeRow(
+        int Id,
+        int? PositionId,
+        Dictionary<string, string> Values);
+
     private sealed record TemplateReferenceData(
         List<TemplateReferenceRow> Companies,
         List<TemplateReferenceRow> Branches,
         List<TemplateReferenceRow> Departments,
         List<TemplateReferenceRow> Positions);
 
+    /// <summary>
+    /// <paramref name="Header"/> مفتاح إنجليزي تُبنى عليه صيغ التحقق من الصحة،
+    /// و<paramref name="DisplayName"/> نصّ الترويسة العربي المعروض.
+    /// </summary>
     private sealed record ReferenceColumn(
         string Header,
-        List<string> Values);
+        List<string> Values,
+        string? DisplayName = null)
+    {
+        public string Caption => DisplayName ?? Header;
+    }
 
+    /// <summary>
+    /// <paramref name="Name"/> هو **مفتاح المطابقة** المعياري (إنجليزي) الذي
+    /// تُبنى عليه القراءة والتحقق وصيغ التحقق من الصحة.
+    /// <paramref name="DisplayName"/> هو **نصّ الترويسة المعروض** بالملف — عربي
+    /// لأن النظام عربيّ. فصلهما يمنع أن تكسر الترجمةُ المطابقةَ.
+    /// </summary>
     private sealed record EmployeeTemplateColumn(
         string Name,
         bool Required,
         EmployeeTemplateColumnKind Kind,
-        double Width);
+        double Width,
+        string? DisplayName = null)
+    {
+        public string Header => DisplayName ?? Name;
+    }
 
     private enum EmployeeTemplateColumnKind
     {

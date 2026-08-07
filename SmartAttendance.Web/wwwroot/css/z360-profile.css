@@ -1333,3 +1333,21 @@ body.nxr-modal-open {
         padding: 10px 8px 36px;
     }
 }
+
+/* تنبيه «لا يوميات محلَّلة» أسفل شريط مؤشّرات الحضور — يميّز الصفر الحقيقي عن
+   الصفر الناتج عن عدم تشغيل التحليل. توكنز لا ألوان مثبَّتة ليتبع الوضعين. */
+.z360-analysis-hint {
+    margin: 10px 0 0;
+    padding: 10px 14px;
+    border: 1px solid var(--zy-border, #E6EBF1);
+    border-radius: var(--zy-radius-lg, 12px);
+    background: var(--zy-warning-soft, rgba(183, 122, 20, .11));
+    color: var(--zy-text, #0D1B2A);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.z360-analysis-hint a {
+    color: var(--brand-primary-text, #486C8F);
+    font-weight: 800;
+}

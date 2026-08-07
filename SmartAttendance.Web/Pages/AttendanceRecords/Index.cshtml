@@ -37,10 +37,19 @@
     <form method="get" class="att-filter-card">
         <input type="hidden" name="PageNumber" value="1" />
 
+        @* حارس الأداء: بلا مدىً زمنيّ يُفرَز جدول الحضور كلّه (7.8ث مقيسة) *@
+        @if (Model.DefaultPeriodNote is { Length: > 0 })
+        {
+            <div class="att-period-note">
+                يعرض <b>فترة الغلق الجارية</b> افتراضياً (@Model.DefaultPeriodNote) — حدّد تواريخك للتوسيع،
+                أو <a href="?AllDates=true">اعرض كل السجلات</a> (أبطأ بكثير على جدولٍ ضخم).
+            </div>
+        }
+
         <div class="att-filter-head">
             <div>
                 <h2 data-att-text="filters">فلاتر البحث</h2>
-                <p data-att-text="filtersHint">ابحث حسب رقم الموظف، الاسم، التاريخ، القسم، الفرع، المنصب، الحالة والمصدر.</p>
+                <p data-att-text="filtersHint">ابحث حسب رقم الموظف، الاسم، التاريخ، الفرع، الحالة والمصدر.</p>
             </div>
 
             <div class="att-filter-actions">
@@ -81,34 +90,7 @@
                 </select>
             </div>
 
-            <div class="filter-field">
-                <label data-att-text="department">القسم</label>
-                <select asp-for="Department">
-                    <option value="" data-att-text="all">الكل</option>
-                    @foreach (var department in Model.Departments)
-                    {
-                        <option value="@department">@department</option>
-                    }
-                </select>
-            </div>
-
-            <div class="filter-field">
-                <label data-att-text="position">المنصب</label>
-                @if (Model.HasPositionField)
-                {
-                    <select asp-for="Position">
-                        <option value="" data-att-text="all">الكل</option>
-                        @foreach (var position in Model.Positions)
-                        {
-                            <option value="@position">@position</option>
-                        }
-                    </select>
-                }
-                else
-                {
-                    <input disabled value="يضاف بعد إضافة حقل المنصب للموظفين" data-att-value="positionNotAvailable" />
-                }
-            </div>
+            @* مرشّحا «القسم» و«المنصب» حُذفا مع عموديهما (طلب محمد) *@
 
             <div class="filter-field">
                 <label data-att-text="status">الحالة</label>
@@ -136,7 +118,7 @@
                 <label data-att-text="rowsPerPage">عدد الصفوف</label>
                 <select asp-for="PageSize">
                     <option value="10">10</option>
-                    <option value="25">25</option>
+                    <option value="30">30</option>
                     <option value="50">50</option>
                     <option value="100">100</option>
                 </select>
@@ -176,25 +158,28 @@
         </div>
     </div>
 
-    <div class="table-card att-table-card">
-        <table class="data-table att-records-table">
+    @* data-zy-scroll: البطاقة تملك تمريرها الأفقي.
+       (2026-08-07: الكسح الذي استدعى هذا الوسم أُلغي — صار فكّ القصّ مقصوراً على
+       سلسلة أسلاف المنتقي وعلى لحظة فتحه وحدها. الوسم يبقى كإعلان ملكيةٍ صريح.) *@
+    <div class="table-card att-table-card" data-zy-scroll>
+        @*
+            data-no-pagination: هذا الجدول **مُرقَّم بالخادم** (PageSize من 63 ألف سجل).
+            و`table-pagination.js` محمَّل عالمياً بالـLayout ويلتقط كل `table.data-table`
+            فيرقّمها ثانيةً بعشرة صفوف افتراضياً ⟹ ترقيمان متداخلان وعدّادان متناقضان
+            («1-25 من 63010» فوق و«1-10 من 25» تحت)، والمستخدم يرى عُشر ما طلبه.
+            المخرج المقصود بالسكربت نفسه هو هذه الراية.
+        *@
+        <table class="data-table att-records-table" data-no-pagination="true">
             <thead>
                 <tr>
                     <th data-att-text="actions">الإجراءات</th>
                     <th data-att-text="employeeNo">رقم الموظف</th>
                     <th data-att-text="employeeName">اسم الموظف</th>
                     <th data-att-text="branch">الفرع</th>
-                    <th data-att-text="department">القسم</th>
-                    @if (Model.HasPositionField)
-                    {
-                        <th data-att-text="position">المنصب</th>
-                    }
                     <th data-att-text="date">التاريخ</th>
                     <th data-att-text="checkIn">دخول</th>
                     <th data-att-text="checkOut">خروج</th>
                     <th data-att-text="status">الحالة</th>
-                    <th data-att-text="source">المصدر</th>
-                    <th data-att-text="device">جهاز</th>
                 </tr>
             </thead>
 
@@ -211,24 +196,18 @@
                             <td>@record.EmployeeNo</td>
                             <td>@record.EmployeeName</td>
                             <td>@record.Branch</td>
-                            <td>@record.Department</td>
-                            @if (Model.HasPositionField)
-                            {
-                                <td>@record.Position</td>
-                            }
                             <td>@record.Date</td>
                             <td>@record.CheckIn</td>
                             <td>@record.CheckOut</td>
                             <td>@record.Status</td>
-                            <td>@record.Source</td>
-                            <td>@record.Device</td>
                         </tr>
                     }
                 }
                 else
                 {
                     <tr>
-                        <td colspan="@(Model.HasPositionField ? 12 : 11)" class="empty-cell" data-att-text="noData">لا توجد بيانات حسب الفلاتر المحددة.</td>
+                        @* 8 أعمدة: إجراءات · رقم · اسم · الفرع · التاريخ · دخول · خروج · الحالة *@
+                        <td colspan="8" class="empty-cell" data-att-text="noData">لا توجد بيانات حسب الفلاتر المحددة.</td>
                     </tr>
                 }
             </tbody>

@@ -52,13 +52,24 @@
     .avw-grid3 select { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px; font-size: 13px; }
     html[data-theme="light"] .avw-grid3 select { background: #fff; }
 
+    /* منتقي الشهر يجاور حقل البحث بنفس السطر: غلاف الكلاندر يفرض
+       `width: 100% !important` فيبتلع السطر ويدفع البحث و«عرض» لسطرٍ ثانٍ.
+       التخصصية هنا (0,2,0) تغلب (0,1,0) فيصحّ التجاوز. */
+    .avw-bar .nxcal { width: auto !important; flex: 0 0 auto; min-width: 190px; }
+    .avw-bar input[name="Search"] { min-width: 220px; }
+
     .avw-chips { display: flex; gap: 8px; flex-wrap: wrap; }
     .avw-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 900; cursor: pointer; border: 1px solid transparent; user-select: none; }
     .avw-chip i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
     .avw-chip.off { opacity: .38; filter: grayscale(.6); }
+    /* الشريحة المختارة: الحالة المعروضة وحدها */
+    .avw-chip.on { border-color: currentColor; box-shadow: 0 0 0 2px rgba(18,217,227,.25); }
     .avw-chip .cnt { direction: ltr; font-size: 11px; opacity: .85; }
 
-    .avw-matrix-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); max-height: 66vh; }
+    /* احتواء **أفقيّ فقط**: الجدول أعرض من الشاشة فيمرّر داخل بطاقته (وإلا جرّ
+       المستند والقوقعة معه). أما رأسياً فالمستند هو المُمرِّر — لا مُمرِّر متداخل:
+       `max-height: 66vh` كان يقصّ صفحة الـ20 موظفاً إلى 6 صفوف مرئية. */
+    .avw-matrix-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow-x: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
     .avw-matrix { border-collapse: separate; border-spacing: 0; font-size: 11px; }
     .avw-matrix th { padding: 6px 6px; font-size: 10px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: #0a1f33; text-align: center; position: sticky; top: 0; z-index: 3; }
     html[data-theme="light"] .avw-matrix th { background: #eef4f9; }
@@ -183,9 +194,13 @@
                 <i style="background:@color"></i>@label <span class="cnt" data-cnt="@key">0</span>
             </span>
         }
+        <span id="avw-filter-note" style="font-size:12px;font-weight:800;opacity:.75"></span>
     </div>
 
-    <div class="avw-matrix-card">
+    @* data-zy-scroll: هذه الحاوية تملك تمريرها (overflow:auto + max-height أدناه)،
+       فتُستثنى من فكّ القصّ الكاسح بـnexora-calendar-v18.css — وبدونه يخرج الجدول
+       من الحاوية ويجرّ القوقعة كلها، ويتعطّل تجميد عمود الموظف والترويسة. *@
+    <div class="avw-matrix-card" data-zy-scroll>
         @if (Model.Rows.Count == 0)
         {
             <div class="avw-empty">لا يوميات مطابقة — شغّل «تحديث الحضور» أو عدّل الفلتر.</div>
@@ -196,12 +211,12 @@
                 <thead>
                     <tr>
                         <th class="emp">الموظف</th>
-                        @for (var day = 1; day <= Model.DaysInMonth; day++)
+                        @* الأعمدة = أيام **فترة الغلق** (قد تعبر حدّ الشهر) لا 1..31 *@
+                        @foreach (var date in Model.CutoffPeriod.EachDay())
                         {
-                            var date = new DateOnly(year, month, day);
                             var dow = DayAttendanceStore.ToDayIndex(date);
                             var isFri = date.DayOfWeek == DayOfWeek.Friday;
-                            <th class="dcol @(isFri ? "fri" : "")">@day<div class="dn">@dayShort[dow]</div></th>
+                            <th class="dcol @(isFri ? "fri" : "")" title="@date.ToString("yyyy-MM-dd")">@date.Day<div class="dn">@dayShort[dow]</div></th>
                         }
                         <th>المجموع</th>
                     </tr>
@@ -219,11 +234,10 @@
                                     </div>
                                 </div>
                             </td>
-                            @for (var day = 1; day <= Model.DaysInMonth; day++)
+                            @foreach (var date in Model.CutoffPeriod.EachDay())
                             {
-                                var date = new DateOnly(year, month, day);
                                 var isFri = date.DayOfWeek == DayOfWeek.Friday;
-                                @if (row.Days.TryGetValue(day, out var cell))
+                                @if (row.Days.TryGetValue(date, out var cell))
                                 {
                                     var color = colorMap.TryGetValue(cell.Status, out var c) ? c : "#8FA8BC";
                                     var abbr = abbrMap.TryGetValue(cell.Status, out var a) ? a : "?";
@@ -413,7 +427,6 @@
 
 @section Scripts {
     <script>
-        var avwHidden = new Set();
         function avwCounts() {
             var counts = {};
             document.querySelectorAll('.avw-cell[data-status]').forEach(function (el) {
@@ -421,11 +434,44 @@
             });
             document.querySelectorAll('[data-cnt]').forEach(function (el) { el.textContent = counts[el.getAttribute('data-cnt')] || 0; });
         }
+        /*
+            فلترة الحالات بالإظهار لا بالإخفاء: النقر على شريحة يعرض **حالتها وحدها**.
+            (كان النقر يخفي المنقور — أي أن الوصول لحالة واحدة يتطلّب إطفاء الثماني الباقية.)
+
+            النقر على الشريحة النشطة يلغي الفلتر ويعيد الكل.
+            وتُخفى صفوف الموظفين التي لا تحوي أي خليّة بالحالة المختارة، وإلا بقيت
+            صفوفٌ فارغة تماماً تُوهم بوجود بيانات.
+        */
+        var avwOnly = null;
+
         function avwToggle(chip) {
             var s = chip.getAttribute('data-status');
-            if (avwHidden.has(s)) { avwHidden.delete(s); chip.classList.remove('off'); }
-            else { avwHidden.add(s); chip.classList.add('off'); }
-            document.querySelectorAll('.avw-cell[data-status="' + s + '"]').forEach(function (el) { el.classList.toggle('dim', avwHidden.has(s)); });
+            avwOnly = (avwOnly === s) ? null : s;
+            avwApplyStatusFilter();
+        }
+
+        function avwApplyStatusFilter() {
+            document.querySelectorAll('#avw-chips .avw-chip').forEach(function (c) {
+                var s = c.getAttribute('data-status');
+                c.classList.toggle('on', avwOnly === s);
+                c.classList.toggle('off', avwOnly !== null && avwOnly !== s);
+            });
+
+            document.querySelectorAll('.avw-cell').forEach(function (el) {
+                el.classList.toggle('dim', avwOnly !== null && el.getAttribute('data-status') !== avwOnly);
+            });
+
+            document.querySelectorAll('#avw-matrix tbody tr').forEach(function (tr) {
+                var keep = avwOnly === null
+                    || tr.querySelector('.avw-cell[data-status="' + avwOnly + '"]') !== null;
+                tr.hidden = !keep;
+            });
+
+            var note = document.getElementById('avw-filter-note');
+            if (note) {
+                var shown = document.querySelectorAll('#avw-matrix tbody tr:not([hidden])').length;
+                note.textContent = avwOnly === null ? '' : ' — عرض الحالة المختارة فقط (' + shown + ' موظفاً)';
+            }
         }
 
         function avwPanel(which) {

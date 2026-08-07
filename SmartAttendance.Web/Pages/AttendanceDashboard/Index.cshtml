@@ -1,0 +1,247 @@
+@page "/AttendanceDashboard"
+@model SmartAttendance.Web.Pages.AttendanceDashboard.IndexModel
+
+@*
+    رسومات مودل الحضور — لوحة قراءةٍ محضة على اليوميات المحلَّلة بفترة الغلق.
+*@
+
+@{
+    ViewData["Title"] = "رسومات الحضور";
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<style>
+    .zxd-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
+    .zxd-head {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
+                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
+    }
+    html[data-theme="light"] .zxd-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
+    .zxd-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .zxd-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
+    .zxd-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; text-decoration: none; display: inline-flex; align-items: center; }
+    .zxd-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
+
+    .zxd-bar { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .zxd-bar label { font-size: 11px; font-weight: 900; color: var(--sa-muted, #8FA8BC); display: flex; flex-direction: column; gap: 4px; }
+    .zxd-bar input { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; font-size: 13px; }
+    html[data-theme="light"] .zxd-bar input { background: #fff; color: inherit; }
+
+    .zxd-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+    .zxd-kpi { padding: 14px 16px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .zxd-kpi span { display: block; font-size: 11px; font-weight: 900; color: var(--sa-muted, #8FA8BC); }
+    .zxd-kpi b { display: block; margin-top: 6px; font-size: 26px; font-weight: 1000; direction: ltr; text-align: start; }
+    .zxd-kpi small { display: block; margin-top: 2px; font-size: 11px; font-weight: 800; color: var(--sa-muted, #8FA8BC); }
+    .zxd-kpi.rate b { color: #12D9E3; }
+    .zxd-kpi.late b { color: #facc15; }
+    .zxd-kpi.absent b { color: #f87171; }
+    .zxd-kpi.stale b { color: #f97316; }
+
+    .zxd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+    @@media (max-width: 980px) { .zxd-grid { grid-template-columns: 1fr; } }
+
+    .zxd-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; background: var(--sa-surface, rgba(8,25,43,.9)); overflow: hidden; }
+    .zxd-card-head { padding: 12px 16px; border-bottom: 1px solid rgba(73,111,151,.22); }
+    .zxd-card-head h2 { margin: 0; font-size: 14px; font-weight: 1000; }
+    .zxd-card-head p { margin: 2px 0 0; font-size: 11px; font-weight: 800; color: var(--sa-muted, #8FA8BC); }
+    .zxd-card-body { padding: 14px 16px; }
+
+    /* توزيع الحالات — أعمدة أفقية تُقرأ بلا مكتبة رسم. */
+    .zxd-dist { display: flex; flex-direction: column; gap: 10px; }
+    .zxd-dist-row { display: grid; grid-template-columns: 110px 1fr 84px; gap: 10px; align-items: center; font-size: 12px; font-weight: 900; }
+    .zxd-track { height: 10px; border-radius: 999px; background: rgba(143,168,188,.14); overflow: hidden; }
+    .zxd-fill { height: 100%; border-radius: 999px; background: #12D9E3; }
+    .zxd-fill.Present { background: #4ade80; }
+    .zxd-fill.Late { background: #facc15; }
+    .zxd-fill.Absent { background: #f87171; }
+    .zxd-fill.Incomplete { background: #f97316; }
+    .zxd-fill.Weekend, .zxd-fill.Rest { background: #8FA8BC; }
+    .zxd-fill.Holiday, .zxd-fill.Leave, .zxd-fill.LeaveUnpaid { background: #a78bfa; }
+    .zxd-dist-num { direction: ltr; text-align: end; color: var(--sa-muted, #8FA8BC); }
+
+    .zxd-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .zxd-table th { text-align: right; padding: 8px 10px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); }
+    .zxd-table td { padding: 8px 10px; border-bottom: 1px solid rgba(143,168,188,.08); white-space: nowrap; }
+    .zxd-num { direction: ltr; text-align: right; font-weight: 900; }
+    .zxd-empty { padding: 22px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; line-height: 1.9; }
+</style>
+
+<section class="zxd-page" dir="rtl">
+    <header class="zxd-head">
+        <div>
+            <h1>رسومات الحضور</h1>
+            <p>
+                لوحة قراءةٍ على اليوميات المحلَّلة —
+                <span dir="ltr">@Model.CutoffPeriod.From.ToString("yyyy-MM-dd") → @Model.CutoffPeriod.To.ToString("yyyy-MM-dd")</span>
+                @if (!string.IsNullOrWhiteSpace(Model.CutoffPolicyName))
+                {
+                    <text> · سياسة الغلق: @Model.CutoffPolicyName</text>
+                }
+            </p>
+        </div>
+        <a class="zxd-btn ghost" href="/DayAttendance?Month=@Model.Month">الحضور اليومي</a>
+    </header>
+
+    <form method="get" class="zxd-bar">
+        <label>الشهر
+            <input type="month" name="Month" value="@Model.Month" />
+        </label>
+        <button type="submit" class="zxd-btn ghost">عرض</button>
+    </form>
+
+    @if (Model.AnalyzedDays == 0)
+    {
+        <div class="zxd-card">
+            <div class="zxd-empty">
+                لا يوميات محلَّلة بهذه الفترة — فلا شيء يُرسم.<br />
+                شغّل «تحديث الحضور» من <a href="/DayAttendance?Month=@Model.Month">الحضور اليومي</a> أولاً.
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="zxd-kpis">
+            <div class="zxd-kpi rate">
+                <span>نسبة الالتزام</span>
+                <b>@Model.AttendanceRate%</b>
+                <small>(حاضر + متأخر) ÷ اليوميات المحلَّلة</small>
+            </div>
+            <div class="zxd-kpi">
+                <span>الموظفون</span>
+                <b>@Model.Employees</b>
+                <small>@Model.AnalyzedDays يومية محلَّلة</small>
+            </div>
+            <div class="zxd-kpi late">
+                <span>ساعات التأخير</span>
+                <b>@Model.LateHours</b>
+                <small>@Model.LateDays يومية متأخرة</small>
+            </div>
+            <div class="zxd-kpi absent">
+                <span>أيام الغياب</span>
+                <b>@Model.AbsentDays</b>
+                <small>@Model.IncompleteDays بصمة ناقصة</small>
+            </div>
+            <div class="zxd-kpi">
+                <span>ساعات العمل</span>
+                <b>@Model.WorkedHours</b>
+                <small>@Model.EarlyLeaveHours ساعة خروج مبكر</small>
+            </div>
+            @if (Model.StaleDays > 0)
+            {
+                <div class="zxd-kpi stale">
+                    <span>لم تُحلَّل</span>
+                    <b>@Model.StaleDays</b>
+                    <small>طرأ عليها تغيير بعد التحليل — الأرقام أعلاه بائتة بقدرها</small>
+                </div>
+            }
+        </div>
+
+        <div class="zxd-grid">
+            <div class="zxd-card">
+                <div class="zxd-card-head">
+                    <h2>توزيع الحالات</h2>
+                    <p>حصّة كل حالة من يوميات الفترة.</p>
+                </div>
+                <div class="zxd-card-body">
+                    <div class="zxd-dist">
+                        @foreach (var slice in Model.Distribution)
+                        {
+                            <div class="zxd-dist-row">
+                                <span>@slice.Label</span>
+                                <span class="zxd-track">
+                                    <span class="zxd-fill @slice.Key" style="width:@(Math.Max(slice.Percent, 1))%"></span>
+                                </span>
+                                <span class="zxd-dist-num">@slice.Count · @slice.Percent%</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="zxd-card">
+                <div class="zxd-card-head">
+                    <h2>الأكثر تأخّراً</h2>
+                    <p>بالساعات لا بعدد المرّات — تأخيرُ ثلاث ساعات مرّةً أثقل من خمس دقائق ثلاث مرّات.</p>
+                </div>
+                <div class="zxd-card-body">
+                    @if (Model.TopLate.Count == 0)
+                    {
+                        <div class="zxd-empty">لا تأخير بهذه الفترة.</div>
+                    }
+                    else
+                    {
+                        <table class="zxd-table">
+                            <thead>
+                                <tr><th>الكود</th><th>الموظف</th><th>ساعات</th><th>أيام</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var stat in Model.TopLate)
+                                {
+                                    <tr>
+                                        <td class="zxd-num">@stat.EmployeeNo</td>
+                                        <td>@stat.EmployeeName</td>
+                                        <td class="zxd-num">@stat.Value</td>
+                                        <td class="zxd-num">@stat.Days</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+
+            <div class="zxd-card">
+                <div class="zxd-card-head">
+                    <h2>الأكثر غياباً</h2>
+                    <p>أيام حالتها «غائب» بالفترة.</p>
+                </div>
+                <div class="zxd-card-body">
+                    @if (Model.TopAbsent.Count == 0)
+                    {
+                        <div class="zxd-empty">لا غياب بهذه الفترة.</div>
+                    }
+                    else
+                    {
+                        <table class="zxd-table">
+                            <thead>
+                                <tr><th>الكود</th><th>الموظف</th><th>أيام الغياب</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var stat in Model.TopAbsent)
+                                {
+                                    <tr>
+                                        <td class="zxd-num">@stat.EmployeeNo</td>
+                                        <td>@stat.EmployeeName</td>
+                                        <td class="zxd-num">@stat.Days</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+
+            <div class="zxd-card">
+                <div class="zxd-card-head">
+                    <h2>روابط سريعة</h2>
+                    <p>اللوحة تقرأ ولا تُشغّل شيئاً — الإجراء من شاشته.</p>
+                </div>
+                <div class="zxd-card-body" style="display:flex;flex-wrap:wrap;gap:8px">
+                    <a class="zxd-btn ghost" href="/DayAttendance?Month=@Model.Month">الحضور اليومي</a>
+                    <a class="zxd-btn ghost" href="/AttendanceRecommendations">الإجراءات المقترحة</a>
+                    <a class="zxd-btn ghost" href="/MonthAttendance">الحضور الشهري والاعتماد</a>
+                    <a class="zxd-btn ghost" href="/AttendanceReports">تقارير الحضور</a>
+                    @if (Model.StaleDays > 0)
+                    {
+                        <a class="zxd-btn" href="/DayAttendance?Month=@Model.Month&StatusFilter=Stale">
+                            راجع الـ@(Model.StaleDays) يومية البائتة
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</section>

@@ -20,6 +20,7 @@
         s.TimeLimitTo, s.TimeLimitToDayAfter, s.MidShiftTime,
         s.ConflictLateReturnEnabled, s.ConflictLateReturnAction, s.ConflictLateReturnValue,
         s.ConflictEarlyLeaveEnabled, s.ConflictEarlyLeaveAction, s.ConflictEarlyLeaveValue,
+        s.OvertimeRateWeekend, s.OvertimeRateRest, s.OvertimeRateHoliday, s.OvertimeRateLeave,
         Days = s.Days.Select(d => new { d.DayIndex, d.DayKind, d.StartTime, d.EndTime }),
         Periods = s.Periods.Select(p => new { p.StartTime, p.EndTime }),
         Eligibility = s.Eligibility.Select(e => new { e.GroupNo, e.Field, e.Value })
@@ -100,6 +101,10 @@
     .sht-period-row .rm { background: rgba(248,113,113,.14); border: 1px solid rgba(248,113,113,.4); color: #f87171; border-radius: 8px; min-height: 32px; cursor: pointer; font-weight: 900; }
     .sht-hint { font-size: 12px; font-weight: 800; color: var(--sa-muted,#8FA8BC); }
     .sht-box { display: flex; flex-direction: column; gap: 10px; border: 1px solid rgba(73,111,151,.18); border-radius: 12px; padding: 12px; }
+    /* أربعة معاملات سعر الساعة — تنهار لعمودين ثم عمود بالشاشات الضيّقة. */
+    .sht-grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    @@media (max-width: 900px) { .sht-grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @@media (max-width: 520px) { .sht-grid4 { grid-template-columns: 1fr; } }
     .sht-select { min-height: 34px; border-radius: 8px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: inherit; padding: 4px 8px; font-size: 12px; }
     html[data-theme="light"] .sht-select { background: #fff; }
 
@@ -343,6 +348,29 @@
                                 <option value="Both">كلاهما</option>
                             </select>
                         </label>
+                    </div>
+
+                    <label style="margin-top:6px">سعر ساعة العمل الإضافي <span class="sht-hint">— معامل الأجر بحسب نوع اليوم الذي كُسبت فيه الساعة</span></label>
+                    <div class="sht-box">
+                        <p class="sht-hint" style="margin:0 0 4px">
+                            اتركه فارغاً ليبقى على الافتراضي (<b>@SmartAttendance.Web.Infrastructure.Hrms.PayrollTransactionStore.DefaultRateFactor</b>) —
+                            وهو ما يُطبَّق اليوم على كل ساعة. الصفر يعني «لا أجر إضافيّ لهذه الساعة» وهو قيمة صالحة.
+                            المعامل يُطبَّق عند ترحيل حركة الأوفرتايم للرواتب، بحسب سياق اليوم كما حلّله محرّك الحضور.
+                        </p>
+                        <div class="sht-grid4">
+                            <label>في عطلة نهاية الأسبوع
+                                <input type="number" step="0.001" min="0" max="99" name="OvertimeRateWeekend" id="sht-ORW" placeholder="افتراضي" />
+                            </label>
+                            <label>في يوم الراحة
+                                <input type="number" step="0.001" min="0" max="99" name="OvertimeRateRest" id="sht-ORR" placeholder="افتراضي" />
+                            </label>
+                            <label>في عطلة رسمية
+                                <input type="number" step="0.001" min="0" max="99" name="OvertimeRateHoliday" id="sht-ORH" placeholder="افتراضي" />
+                            </label>
+                            <label>في إجازة
+                                <input type="number" step="0.001" min="0" max="99" name="OvertimeRateLeave" id="sht-ORL" placeholder="افتراضي" />
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -619,6 +647,14 @@
                     document.getElementById('sht-AIR').checked = !!s.AvailableInRoster;
                     document.getElementById('sht-RFE').checked = !!s.RequestableFromEss;
                     document.getElementById('sht-TDM').value = s.TotalDurationMode || 'WorkOnly';
+                    // معاملات سعر الساعة: null ⟹ حقل فارغ (= «افتراضي»)، والصفر يُعرض صفراً.
+                    // `|| ''` وحده كان يمسح الصفر لأنه falsy — فيتحوّل «لا أجر» إلى «افتراضي».
+                    ['ORW', 'ORR', 'ORH', 'ORL'].forEach(function (key, i) {
+                        var value = [s.OvertimeRateWeekend, s.OvertimeRateRest,
+                                     s.OvertimeRateHoliday, s.OvertimeRateLeave][i];
+                        document.getElementById('sht-' + key).value =
+                            (value === null || value === undefined) ? '' : value;
+                    });
                     document.getElementById('sht-LGM').value = s.LatenessGraceMinutes || 0;
                     document.getElementById('sht-ELG').value = s.EarlyLeaveGraceMinutes || 0;
                     document.getElementById('sht-GXP').value = s.GraceExceededPolicy || 'Subtract';

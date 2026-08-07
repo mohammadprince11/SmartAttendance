@@ -24,17 +24,59 @@ public static class PeriodRuleStore
         ("EarlyLeaveHours", "إجمالي ساعات الخروج المبكر", true),
         ("WorkedHours", "إجمالي ساعات العمل", true),
         ("AbsentDays", "أيام الغياب", false),
+        ("ConsecutiveAbsentDays", "أطول غياب متواصل (أيام)", false),
         ("IncompleteDays", "أيام البصمة الناقصة", false),
         ("UnpaidLeaveDays", "أيام إجازة بدون راتب", false),
         ("PresentDays", "أيام الحضور", false)
     };
 
-    public static readonly (string Key, string Label)[] ActionTypes =
+    /// <summary>
+    /// المقاييس المحسوبة من اليوميات لا من صفّ التجميع — تحتاج قراءة أيام الفترة.
+    /// </summary>
+    public static bool IsDayDerivedMetric(string key) => key == "ConsecutiveAbsentDays";
+
+    /// <summary>
+    /// **أطول سلسلة غياب متواصل** داخل الفترة. دالة نقية على أيام مرتّبة تصاعدياً:
+    /// يوم غائب يمدّ السلسلة، وأي يوم غير غائب يقطعها.
+    ///
+    /// <para>الفرق عن «أيام الغياب» جوهريّ قانونياً: خمسة أيام متفرّقة عبر الشهر ليست
+    /// كخمسة أيام متتالية — والثانية وحدها تفتح باب الفصل بقانون العمل العراقي. ولهذا
+    /// يفصلهما كيان بمقياسين («الغياب المتقطع» و«الغياب المتواصل»).</para>
+    /// </summary>
+    /// <param name="absenceByDate">أيام الفترة: التاريخ ⟵ هل هو غياب؟</param>
+    public static int LongestAbsenceStreak(IEnumerable<(DateOnly Date, bool IsAbsent)> absenceByDate)
     {
-        ("Violation", "مخالفة"),
-        ("Note", "ملاحظة (رصد فقط)"),
-        ("Deduction", "اقتطاع")
-    };
+        var longest = 0;
+        var current = 0;
+        DateOnly? previous = null;
+
+        foreach (var (date, isAbsent) in absenceByDate.OrderBy(d => d.Date))
+        {
+            if (!isAbsent)
+            {
+                current = 0;
+            }
+            else
+            {
+                // فجوة بالتواريخ (يوم بلا يومية أصلاً) تقطع التواصل — لا تُفترَض استمراريةً.
+                current = previous is { } prev && date.DayNumber == prev.DayNumber + 1
+                    ? current + 1
+                    : 1;
+                if (current > longest) longest = current;
+            }
+
+            previous = date;
+        }
+
+        return longest;
+    }
+
+    /// <summary>
+    /// فئات الأثر — **مطابِقة لقواعد اليوميات** (<see cref="ShiftRuleStore.ActionTypes"/>).
+    /// كانت ثلاثاً فقط بلا سبب، فشريحة شهرية لم تكن تستطيع منح أوفرتايم أو خصم دخل
+    /// بينما تستطيعه قاعدة يومية على نفس الموظف.
+    /// </summary>
+    public static readonly (string Key, string Label)[] ActionTypes = ShiftRuleStore.ActionTypes;
 
     public static string LabelOf((string Key, string Label)[] list, string key) =>
         list.FirstOrDefault(x => x.Key == key).Label ?? key;
@@ -222,18 +264,58 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
             command => HrmsDatabase.AddParameter(command, "@Id", id));
     }
 
+    /// <summary>
+    /// فضاء أسماء معرّفات القواعد الفترية داخل <c>AttendanceRecommendations.RuleId</c>.
+    /// مفتاح منع التكرار هناك هو (EmployeeId, WorkDate, RuleId)، وقواعد اليوميات تستهلك
+    /// المعرّفات الموجبة (IDENTITY) بينما حارسا التعارض يستهلكان -1 و-2. فلكي لا تصطدم
+    /// القاعدة الفترية رقم 1 بقاعدة اليوميات رقم 1، تُطرح بإزاحة كبيرة.
+    /// </summary>
+    public const int RuleIdOffset = 1000;
+
+    /// <summary>معرّف القاعدة الفترية كما يُخزَّن باقتراحات الحضور (سالب ومُزاح).</summary>
+    public static int RecommendationRuleId(int periodRuleId) => -(RuleIdOffset + periodRuleId);
+
+    /// <summary>هل هذا المعرّف عائد لقاعدة فترية؟</summary>
+    public static bool IsPeriodRuleId(int recommendationRuleId) =>
+        recommendationRuleId <= -RuleIdOffset;
+
+    /// <summary>
+    /// تاريخ مرساة الفترة — يوم واحد يمثّل الفترة كلها باقتراح الحضور (آخر يوم بالشهر،
+    /// أو أحد الأسبوع بترقيم ISO). يجعل (موظف × فترة × قاعدة) مفتاحاً فريداً.
+    /// </summary>
+    public static DateOnly PeriodAnchorDate(string periodType, int year, int period)
+    {
+        if (periodType == "Week")
+        {
+            // ISO: الأسبوع 1 هو الذي يحوي أول خميس؛ المرساة = أحد ذلك الأسبوع.
+            var jan4 = new DateOnly(year, 1, 4);
+            var isoMonday = jan4.AddDays(-((int)jan4.DayOfWeek + 6) % 7);
+            return isoMonday.AddDays((period - 1) * 7 + 6);
+        }
+
+        var monthStart = new DateOnly(year, Math.Clamp(period, 1, 12), 1);
+        return monthStart.AddMonths(1).AddDays(-1);
+    }
+
     public sealed class Match
     {
+        public int EmployeeId { get; set; }
         public string EmployeeNo { get; set; } = string.Empty;
         public string EmployeeName { get; set; } = string.Empty;
+        public int RuleId { get; set; }
         public string RuleName { get; set; } = string.Empty;
         public string MetricLabel { get; set; } = string.Empty;
         public decimal Value { get; set; }
         public string RangeText { get; set; } = string.Empty;
+        public string ActionType { get; set; } = "Violation";
         public string ActionTypeLabel { get; set; } = string.Empty;
         public string ActionText { get; set; } = string.Empty;
         public decimal ActionValue { get; set; }
         public bool MetricIsHours { get; set; }
+
+        /// <summary>جملة الاقتراح كما تُخزَّن بملخّص اقتراح الحضور.</summary>
+        public string Summary =>
+            $"{MetricLabel} = {Value:0.##}{(MetricIsHours ? " ساعة" : " يوم")} ضمن الشريحة {RangeText}";
     }
 
     /// <summary>الشريحة المطابِقة لقيمة (SliceFrom ≤ value &lt; SliceTo؛ الأعلى فأعلى تفوز عند التداخل). دالة نقية.</summary>
@@ -261,32 +343,42 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
         var result = new List<Match>();
         if (rules.Count == 0) return result;
 
-        // (EmployeeNo, Name, metricAccessor)
-        List<(string No, string Name, Func<string, decimal> Metric)> rows;
+        // (EmployeeId, EmployeeNo, Name, metricAccessor)
+        List<(int Id, string No, string Name, Func<string, decimal> Metric)> rows;
         if (periodType == "Week")
         {
             var weekRows = await WeekAttendanceStore.ListAsync(db, year, period);
-            rows = weekRows.Select(w => (w.EmployeeNo, w.EmployeeName,
+            rows = weekRows.Select(w => (w.EmployeeId, w.EmployeeNo, w.EmployeeName,
                 (Func<string, decimal>)(key => WeekMetric(w, key)))).ToList();
         }
         else
         {
             var monthRows = await MonthAttendanceStore.ListAsync(db, year, period);
-            rows = monthRows.Select(m => (m.EmployeeNo, m.EmployeeName,
+            rows = monthRows.Select(m => (m.EmployeeId, m.EmployeeNo, m.EmployeeName,
                 (Func<string, decimal>)(key => MonthMetric(m, key)))).ToList();
         }
+
+        // المقاييس المشتقّة من اليوميات تُحسب مرّة واحدة، وفقط إن طلبتها قاعدة نشطة.
+        var streaks = rules.Any(r => IsDayDerivedMetric(r.Metric))
+            ? await AbsenceStreaksAsync(db, periodType, year, period)
+            : new Dictionary<int, int>();
 
         foreach (var rule in rules)
         {
             foreach (var row in rows)
             {
-                var value = row.Metric(rule.Metric);
+                var value = IsDayDerivedMetric(rule.Metric)
+                    ? (streaks.TryGetValue(row.Id, out var streak) ? streak : 0)
+                    : row.Metric(rule.Metric);
                 var slice = MatchSlice(rule.Slices, value);
                 if (slice == null) continue;
                 result.Add(new Match
                 {
+                    EmployeeId = row.Id,
                     EmployeeNo = row.No,
                     EmployeeName = row.Name,
+                    RuleId = rule.Id,
+                    ActionType = slice.ActionType,
                     RuleName = rule.Name,
                     MetricLabel = rule.MetricText,
                     Value = value,
@@ -299,6 +391,34 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
             }
         }
         return result.OrderBy(r => r.RuleName).ThenByDescending(r => r.Value).ToList();
+    }
+
+    /// <summary>
+    /// أطول سلسلة غياب متواصل لكل موظف داخل الفترة — تُقرأ من اليوميات مباشرةً لأن
+    /// صفّ التجميع يحمل **عدد** أيام الغياب لا **ترتيبها**.
+    /// </summary>
+    private static async Task<Dictionary<int, int>> AbsenceStreaksAsync(
+        ApplicationDbContext db, string periodType, int year, int period)
+    {
+        DateOnly from, to;
+        if (periodType == "Week")
+        {
+            to = PeriodAnchorDate("Week", year, period);
+            from = to.AddDays(-6);
+        }
+        else
+        {
+            from = new DateOnly(year, Math.Clamp(period, 1, 12), 1);
+            to = PeriodAnchorDate("Month", year, period);
+        }
+
+        var days = await DayAttendanceStore.ListRangeAsync(db, from, to, null);
+
+        return days
+            .GroupBy(d => d.EmployeeId)
+            .ToDictionary(
+                g => g.Key,
+                g => LongestAbsenceStreak(g.Select(d => (d.WorkDate, d.Status == "Absent"))));
     }
 
     private static decimal MonthMetric(MonthAttendanceStore.MonthRow m, string key) => key switch

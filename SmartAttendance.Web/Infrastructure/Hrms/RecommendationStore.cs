@@ -137,6 +137,19 @@ IF COL_LENGTH('AttendanceRecommendations', 'TransactionId') IS NULL
         // الدلالي («عدد المرات» لنوع بصمة). استعلام واحد بدل استعلام لكل يومية.
         var semanticCounts = await ShiftRuleStore.SemanticCountsAsync(dbContext, year, month);
 
+        // عدّاد التكرار للقواعد ذات «تسلسل إجراءات تصاعدي»: كم مرّة سبق أن خالف هذا
+        // الموظف هذه القاعدة **قبل** هذا الشهر ضمن نفس السنة (المتجاهَل لا يُحتسب —
+        // تجاهُل المسؤول يعني أن المخالفة لم تقع). يُحمَّل باستعلام واحد ثم يُزاد داخل
+        // الحلقة، فيصير رقم التكرار متسلسلاً عبر أيام الشهر أيضاً.
+        var escalationCounts = await EscalationBaselineAsync(
+            dbContext, year, month, rules.Where(r => r.UseEscalation).Select(r => r.Id).ToList());
+
+        // **معايير الاستحقاق**: حقائق الموظف تُبنى مرّة واحدة لكل موظف (لا لكل يومية)
+        // بمرجع زمني = آخر يوم بالشهر المُحلَّل، فتكون «مدة الخدمة» و«العمر» و«في فترة
+        // التجربة» محسوبةً على نهاية الفترة لا على لحظة التشغيل. تُحمَّل فقط إن وُجدت
+        // قاعدة واحدة ذات شروط — فلا كلفة على المستخدم الذي لا يستعملها.
+        var facts = await EligibilityFactsAsync(dbContext, year, month, rules);
+
         int created = 0, auto = 0;
         foreach (var day in rules.Count == 0 ? new List<DayAttendanceStore.DayRow>() : days)
         {
@@ -147,10 +160,27 @@ IF COL_LENGTH('AttendanceRecommendations', 'TransactionId') IS NULL
             foreach (var rule in rules)
             {
                 if (!ShiftRuleStore.AppliesTo(rule, day)) continue;
+                if (!IsEligible(rule, day.EmployeeId, facts)) continue;
                 if (existing.Contains((day.EmployeeId, day.WorkDate, rule.Id))) continue;
 
                 var summary = ShiftRuleStore.Evaluate(rule, day, shiftDay, semanticCounts);
                 if (summary == null) continue;
+
+                // «تسلسل إجراءات تصاعدي»: رقم التكرار يُثبَّت بنصّ الاقتراح وبعنوان
+                // الإجراء، فتلتقطه لائحة العقوبات المتدرّجة بمودل المخالفات (درجة العقوبة
+                // عندها تُحدَّد بـOccurrenceFrom/OccurrenceTo). لا يمسّ القيمة المالية عمداً.
+                var actionText = rule.ActionText;
+                if (rule.UseEscalation)
+                {
+                    var key = (day.EmployeeId, rule.Id);
+                    escalationCounts.TryGetValue(key, out var prior);
+                    var occurrence = prior + 1;
+                    escalationCounts[key] = occurrence;
+
+                    summary = $"{summary} — التكرار رقم {occurrence}";
+                    if (actionText is { Length: > 0 })
+                        actionText = $"{actionText} (تكرار {occurrence})";
+                }
 
                 // اقتراح متعارض مع حركة قائمة (إجازة/عطلة) لا يُنفَّذ تلقائياً — للمراجعة اليدوية
                 var conflict = IsConflict(rule, day);
@@ -175,13 +205,13 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                             HrmsDatabase.AddParameter(command, "@RuleName", rule.Name);
                             HrmsDatabase.AddParameter(command, "@Summary", summary);
                             HrmsDatabase.AddParameter(command, "@ActionType", rule.ActionType);
-                            HrmsDatabase.AddParameter(command, "@ActionText", rule.ActionText);
+                            HrmsDatabase.AddParameter(command, "@ActionText", actionText);
                             HrmsDatabase.AddParameter(command, "@ActionValue", rule.ActionValue);
                         });
 
                     var (violationId, transactionId) = await ExecuteEffectAsync(
                         dbContext, day.EmployeeId, day.WorkDate, recId, rule.Id, rule.Name,
-                        rule.ActionType, rule.ActionText, rule.ActionValue, summary);
+                        rule.ActionType, actionText, rule.ActionValue, summary);
 
                     if (violationId.HasValue || transactionId.HasValue)
                         await HrmsDatabase.ExecuteAsync(
@@ -198,7 +228,7 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                 else
                 {
                     table.Rows.Add(day.EmployeeId, day.WorkDate.ToDateTime(TimeOnly.MinValue), rule.Id,
-                        rule.Name, summary, rule.ActionType, rule.ActionText, rule.ActionValue,
+                        rule.Name, summary, rule.ActionType, actionText, rule.ActionValue,
                         conflict ? "Conflicted" : "Pending");
                 }
 
@@ -467,6 +497,156 @@ WHERE Id = @Id;
     /// تنفيذ أثر القاعدة حسب نوعه: مخالفة ← قضية EmployeeViolationCase، الأنواع المالية/
     /// الإجازة/المغادرة ← حركة AttendanceTransaction، ملاحظة ← بلا أثر.
     /// </summary>
+    /// <summary>
+    /// حقائق «معايير الاستحقاق» لكل موظف — تُحمَّل مرّة واحدة لكل تحليل.
+    /// تُرجع قاموساً فارغاً إن لم تكن أي قاعدة تحمل شروطاً (فلا استعلام بلا داعٍ).
+    /// </summary>
+    private static async Task<Dictionary<int, IReadOnlyDictionary<string, HrConditions.Fact>>>
+        EligibilityFactsAsync(
+            ApplicationDbContext dbContext, int year, int month,
+            IReadOnlyCollection<ShiftRuleStore.ShiftRule> rules)
+    {
+        var map = new Dictionary<int, IReadOnlyDictionary<string, HrConditions.Fact>>();
+        if (!rules.Any(r => !r.Conditions.IsEmpty)) return map;
+
+        var asOf = new DateOnly(year, month, 1).AddMonths(1).AddDays(-1);
+        foreach (var row in await HrConditionFacts.LoadAsync(dbContext))
+            map[row.Id] = HrConditionFacts.Build(row, asOf);
+
+        return map;
+    }
+
+    /// <summary>
+    /// هل هذا الموظف مستحقّ لهذه القاعدة؟ **قاعدة بلا شروط تنطبق على الجميع**
+    /// (<c>matchWhenEmpty: true</c>) — سلوك ما قبل الميزة، ونمط كيان: «إذا كانت هذه
+    /// القاعدة مستحقّة لبعض الموظفين فقط». وموظف بلا حقائق (غير محمَّل) لا يُستثنى إلا
+    /// إذا كانت القاعدة مشروطة فعلاً.
+    /// </summary>
+    private static bool IsEligible(
+        ShiftRuleStore.ShiftRule rule, int employeeId,
+        IReadOnlyDictionary<int, IReadOnlyDictionary<string, HrConditions.Fact>> facts)
+    {
+        var conditions = rule.Conditions;
+        if (conditions.IsEmpty) return true;
+
+        return facts.TryGetValue(employeeId, out var employeeFacts)
+            && HrConditions.Matches(conditions, employeeFacts, matchWhenEmpty: true);
+    }
+
+    /// <summary>
+    /// خطّ الأساس لعدّاد «تسلسل الإجراءات التصاعدي»: لكل (موظف × قاعدة) عددُ الاقتراحات
+    /// السابقة **من بداية السنة حتى ما قبل الشهر المُحلَّل**، مستثنياً المتجاهَلة.
+    /// استعلام واحد لكل التحليل بدل استعلام لكل يومية.
+    /// </summary>
+    private static async Task<Dictionary<(int EmployeeId, int RuleId), int>> EscalationBaselineAsync(
+        ApplicationDbContext dbContext, int year, int month, IReadOnlyCollection<int> ruleIds)
+    {
+        var counts = new Dictionary<(int, int), int>();
+        if (ruleIds.Count == 0) return counts;
+
+        var yearStart = new DateTime(year, 1, 1);
+        var monthStart = new DateTime(year, month, 1);
+        var inList = string.Join(",", ruleIds.Select((_, i) => $"@R{i}"));
+
+        var rows = await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+SELECT EmployeeId, RuleId, COUNT(1) AS Occurrences
+FROM AttendanceRecommendations
+WHERE RuleId IN ({inList})
+  AND WorkDate >= @YearStart AND WorkDate < @MonthStart
+  AND Status <> N'Ignored'
+GROUP BY EmployeeId, RuleId;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@YearStart", yearStart);
+                HrmsDatabase.AddParameter(command, "@MonthStart", monthStart);
+                var index = 0;
+                foreach (var id in ruleIds)
+                    HrmsDatabase.AddParameter(command, $"@R{index++}", id);
+            },
+            reader => (
+                EmployeeId: HrmsDatabase.GetInt(reader, "EmployeeId"),
+                RuleId: HrmsDatabase.GetInt(reader, "RuleId"),
+                Occurrences: HrmsDatabase.GetInt(reader, "Occurrences")));
+
+        foreach (var row in rows)
+            counts[(row.EmployeeId, row.RuleId)] = row.Occurrences;
+
+        return counts;
+    }
+
+    /// <summary>
+    /// «تحليل القواعد الفترية» (نمط كيان — منشئ القواعد الشهرية/الأسبوعية): يقيّم شرائح
+    /// <see cref="PeriodRuleStore"/> على التجميع الفتري ويحفظ مطابقاتها **كاقتراحات حضور**
+    /// عادية، فتظهر بشاشة المتابعة وتمرّ بنفس دورة الاعتماد/التجاهل ونفس تنفيذ الأثر.
+    ///
+    /// <para>ثلاثة قرارات تصميم مقصودة:</para>
+    /// <list type="number">
+    /// <item>المعرّف يُخزَّن مُزاحاً وسالباً (<see cref="PeriodRuleStore.RecommendationRuleId"/>)
+    /// فلا يصطدم بقواعد اليوميات الموجبة ولا بحارسَي التعارض (-1، -2).</item>
+    /// <item>التاريخ = مرساة الفترة (آخر يوم بالشهر / أحد الأسبوع)، فيصير
+    /// (موظف × فترة × قاعدة) مفتاحاً فريداً ⟹ إعادة التحليل لا تُكرّر ولا تُلغي فرزاً.</item>
+    /// <item>الحالة **دائماً معلّقة** ولا تنفيذ تلقائي: القاعدة الفترية عقوبة متدرّجة
+    /// على تجميع شهر كامل، فتُترك لعين بشرية — نفس مبدأ حارسَي التعارض.</item>
+    /// </list>
+    /// </summary>
+    /// <returns>عدد الاقتراحات الجديدة.</returns>
+    public static async Task<int> AnalyzePeriodAsync(
+        ApplicationDbContext dbContext, string periodType, int year, int period)
+    {
+        await EnsureAsync(dbContext);
+
+        var matches = await PeriodRuleStore.EvaluateAsync(dbContext, periodType, year, period);
+        if (matches.Count == 0) return 0;
+
+        var anchor = PeriodRuleStore.PeriodAnchorDate(periodType, year, period);
+        var anchorDate = anchor.ToDateTime(TimeOnly.MinValue);
+
+        var existing = new HashSet<(int, int)>(
+            await HrmsDatabase.QueryAsync(
+                dbContext,
+                "SELECT EmployeeId, RuleId FROM AttendanceRecommendations WHERE WorkDate = @Date AND RuleId <= @Ceiling;",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@Date", anchorDate);
+                    HrmsDatabase.AddParameter(command, "@Ceiling", -PeriodRuleStore.RuleIdOffset);
+                },
+                reader => (HrmsDatabase.GetInt(reader, "EmployeeId"), HrmsDatabase.GetInt(reader, "RuleId"))));
+
+        var created = 0;
+        foreach (var match in matches)
+        {
+            if (match.EmployeeId <= 0) continue;
+            var ruleKey = PeriodRuleStore.RecommendationRuleId(match.RuleId);
+            if (!existing.Add((match.EmployeeId, ruleKey))) continue;
+
+            await HrmsDatabase.ExecuteAsync(
+                dbContext,
+                """
+INSERT INTO AttendanceRecommendations
+    (EmployeeId, WorkDate, RuleId, RuleName, Summary, ActionType, ActionText, ActionValue, Status)
+VALUES
+    (@Employee, @Date, @Rule, @RuleName, @Summary, @ActionType, @ActionText, @ActionValue, N'Pending');
+""",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@Employee", match.EmployeeId);
+                    HrmsDatabase.AddParameter(command, "@Date", anchorDate);
+                    HrmsDatabase.AddParameter(command, "@Rule", ruleKey);
+                    HrmsDatabase.AddParameter(command, "@RuleName", match.RuleName);
+                    HrmsDatabase.AddParameter(command, "@Summary", match.Summary);
+                    HrmsDatabase.AddParameter(command, "@ActionType", match.ActionType);
+                    HrmsDatabase.AddParameter(command, "@ActionText", match.ActionText);
+                    HrmsDatabase.AddParameter(command, "@ActionValue", match.ActionValue);
+                });
+            created++;
+        }
+
+        return created;
+    }
+
     private static async Task<(int? ViolationId, int? TransactionId)> ExecuteEffectAsync(
         ApplicationDbContext dbContext, int employeeId, DateOnly workDate, int recommendationId,
         int ruleId, string ruleName, string actionType, string actionText, decimal actionValue,
@@ -498,6 +678,58 @@ WHERE Id = @Id;
             "UPDATE AttendanceRecommendations SET Status = N'Ignored', DecidedAt = SYSUTCDATETIME() WHERE Id = @Id AND Status IN (N'Pending', N'Conflicted');",
             command => HrmsDatabase.AddParameter(command, "@Id", id));
     }
+
+    /// <summary>
+    /// تعديل الإجراء الموصى به **قبل اعتماده** — محكوم براية «السماح بتعديل الإجراء
+    /// الموصى به» (<see cref="ShiftRuleStore.ShiftRule.AllowEdit"/>) على القاعدة المُصدِرة.
+    ///
+    /// <para>يُرفض التعديل إذا: الاقتراح ليس معلّقاً/متعارضاً (فالمعتمَد نفّذ أثره
+    /// فعلاً)، أو القاعدة لا تسمح، أو كانت القاعدة فترية أو حارس تعارض (لا راية لها).</para>
+    /// </summary>
+    public static async Task<(bool Ok, string Message)> UpdateActionAsync(
+        ApplicationDbContext dbContext, int id, string actionText, decimal actionValue)
+    {
+        await EnsureAsync(dbContext);
+
+        var row = (await HrmsDatabase.QueryAsync(
+            dbContext,
+            "SELECT TOP 1 RuleId, Status FROM AttendanceRecommendations WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", id),
+            reader => (
+                RuleId: HrmsDatabase.GetInt(reader, "RuleId"),
+                Status: HrmsDatabase.GetString(reader, "Status")))).FirstOrDefault();
+
+        if (row.Status is not ("Pending" or "Conflicted"))
+            return (false, "لا يُعدَّل إلا اقتراح معلّق أو متعارض — المعتمَد نفّذ أثره.");
+
+        if (row.RuleId <= 0)
+            return (false, "هذا الاقتراح صادر عن قاعدة فترية أو حارس تعارض، ولا يقبل التعديل.");
+
+        var rule = (await ShiftRuleStore.ListAsync(dbContext)).FirstOrDefault(r => r.Id == row.RuleId);
+        if (rule is null)
+            return (false, "القاعدة المُصدِرة غير موجودة.");
+        if (!rule.AllowEdit)
+            return (false, $"القاعدة «{rule.Name}» لا تسمح بتعديل الإجراء الموصى به.");
+
+        await HrmsDatabase.ExecuteAsync(
+            dbContext,
+            "UPDATE AttendanceRecommendations SET ActionText = @Text, ActionValue = @Value WHERE Id = @Id;",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", id);
+                HrmsDatabase.AddParameter(command, "@Text", actionText.Trim());
+                HrmsDatabase.AddParameter(command, "@Value", actionValue);
+            });
+
+        return (true, "عُدِّل الإجراء الموصى به.");
+    }
+
+    /// <summary>معرّفات القواعد التي تسمح بتعديل إجرائها — لإظهار أدوات التعديل بالشاشة.</summary>
+    public static async Task<HashSet<int>> EditableRuleIdsAsync(ApplicationDbContext dbContext) =>
+        (await ShiftRuleStore.ListAsync(dbContext))
+            .Where(r => r.AllowEdit)
+            .Select(r => r.Id)
+            .ToHashSet();
 
     /// <summary>إنشاء قضية مخالفة من الحضور — بمرجع AV مستقل ومصدر «محرك الحضور».</summary>
     private static async Task<int> CreateViolationAsync(ApplicationDbContext dbContext,

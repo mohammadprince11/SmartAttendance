@@ -75,6 +75,8 @@ public static class PageCatalog
             new CatalogPage("Attendance.ShiftTypes", "أنواع المناوبات"),
             new CatalogPage("Attendance.Settings", "إعدادات الحضور"),
             new CatalogPage("Attendance.DayAttendance", "الحضور اليومي"),
+            new CatalogPage("Attendance.WorkFromHome", "العمل خارج المكتب"),
+            new CatalogPage("Attendance.Dashboard", "رسومات الحضور"),
             new CatalogPage("Attendance.ShiftRules", "قواعد المناوبات"),
             new CatalogPage("Attendance.PeriodRules", "القواعد الفترية"),
             new CatalogPage("Attendance.Recommendations", "الإجراءات المقترحة"),

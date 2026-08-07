@@ -20,17 +20,24 @@
         @if (Model.CanCreateEmployee || Model.CanImportEmployees) 
         { 
             <div style="display:flex; gap:12px;"> 
-                @if (Model.CanImportEmployees) { <a asp-page="./Import" class="zhr-btn zhr-btn-secondary">استيراد الموظفين</a> } 
+                @if (Model.CanImportEmployees) { <button type="button" class="zhr-btn zhr-btn-secondary" data-import-open>استيراد الموظفين</button> }
                 @if (Model.CanCreateEmployee) { <a asp-page="./Create" class="zhr-btn zhr-btn-primary">إضافة موظف</a> } 
             </div> 
         }
     </div>
 
-    @if (TempData["SuccessMessage"] != null) 
-    { 
+    @if (TempData["SuccessMessage"] != null)
+    {
         <div style="background:rgba(40, 167, 69, 0.1); color:var(--success); border: 1px solid var(--success); padding:12px; border-radius:8px; margin-bottom:20px; font-weight:bold;">
             @TempData["SuccessMessage"]
-        </div> 
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div style="background:rgba(220, 53, 69, 0.1); color:var(--danger); border: 1px solid var(--danger); padding:12px; border-radius:8px; margin-bottom:20px; font-weight:bold;">
+            @TempData["ErrorMessage"]
+        </div>
     }
 
     <section class="zhr-kpi-grid">
@@ -142,3 +149,110 @@
         }
     </section>
 </div>
+
+@if (Model.CanImportEmployees)
+{
+    @* inert لا hidden: القوقعة تعطي .zy-modal ‏display:flex فيهزم أي hidden *@
+    <div class="zy-modal-backdrop" id="zhr-import-backdrop" inert></div>
+    @* عرضٌ أضيق من الافتراضي (640px) — النافذة أربعة عناصر لا صفحة *@
+    <div class="zy-modal" id="zhr-import-modal" role="dialog" aria-modal="true" aria-labelledby="zhr-import-title" style="inset-inline:max(16px, calc(50vw - 250px));" inert>
+        <div class="zy-modal__header">
+            <h2 id="zhr-import-title">استيراد</h2>
+            <button type="button" class="zhr-import-close" data-import-close aria-label="إغلاق">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <form method="post" asp-page-handler="Import" enctype="multipart/form-data">
+            <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+            <div class="zy-modal__body">
+                <p class="zhr-import-question">ما الذي تريد استيراده؟</p>
+                <div class="zhr-import-type" aria-current="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                    <span>بيانات الموظفين</span>
+                </div>
+
+                <div class="zhr-import-row">
+                    <span class="zhr-label" style="margin:0;">أرفق ملف</span>
+                    <span class="zhr-import-links">
+                        <a asp-page-handler="Template">تحميل القالب</a>
+                        <a asp-page-handler="TemplateData">تحميل البيانات</a>
+                    </span>
+                </div>
+
+                <label class="zhr-import-file" for="zhr-import-file">
+                    <span class="zhr-import-file-name" data-import-filename>لا يوجد ملف محدد</span>
+                    <span class="zhr-btn zhr-btn-secondary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M12 16V4m0 0L8 8m4-4 4 4" />
+                            <path d="M20 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2" />
+                        </svg>
+                        اضف ملف
+                    </span>
+                    <input type="file" id="zhr-import-file" name="importFile" accept=".xlsx,.csv" style="display:none;" />
+                </label>
+            </div>
+            <div class="zy-modal__footer" style="justify-content:center;">
+                <button type="submit" class="zhr-btn zhr-btn-primary" style="min-width:150px;">استيراد</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        (function () {
+            var modal = document.getElementById('zhr-import-modal');
+            var backdrop = document.getElementById('zhr-import-backdrop');
+
+            if (!modal || !backdrop) { return; }
+
+            function open() {
+                modal.removeAttribute('inert');
+                backdrop.removeAttribute('inert');
+                modal.classList.add('zy-open');
+                backdrop.classList.add('zy-open');
+                document.documentElement.style.overflow = 'hidden';
+
+                var file = document.getElementById('zhr-import-file');
+                if (file) { file.focus(); }
+            }
+
+            function close() {
+                modal.classList.remove('zy-open');
+                backdrop.classList.remove('zy-open');
+                modal.setAttribute('inert', '');
+                backdrop.setAttribute('inert', '');
+                document.documentElement.style.overflow = '';
+            }
+
+            document.querySelectorAll('[data-import-open]').forEach(function (trigger) {
+                trigger.addEventListener('click', open);
+            });
+
+            modal.querySelectorAll('[data-import-close]').forEach(function (trigger) {
+                trigger.addEventListener('click', close);
+            });
+
+            backdrop.addEventListener('click', close);
+
+            var fileInput = document.getElementById('zhr-import-file');
+            var fileName = modal.querySelector('[data-import-filename]');
+
+            if (fileInput && fileName) {
+                fileInput.addEventListener('change', function () {
+                    fileName.textContent = fileInput.files.length
+                        ? fileInput.files[0].name
+                        : 'لا يوجد ملف محدد';
+                });
+            }
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && modal.classList.contains('zy-open')) { close(); }
+            });
+        })();
+    </script>
+}

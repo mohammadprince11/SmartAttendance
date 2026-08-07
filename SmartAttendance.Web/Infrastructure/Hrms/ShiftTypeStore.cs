@@ -172,6 +172,20 @@ SELECT @@ROWCOUNT;
         public bool ConflictLateReturnEnabled { get; set; }          // تأخّر العودة من المغادرة
         public string ConflictLateReturnAction { get; set; } = "Deduction"; // Permission | Deduction
         public decimal ConflictLateReturnValue { get; set; }
+        // ═══ سعر ساعة العمل الإضافي بسياق اليوم (نظير كيان «سعر ساعة العمل») ═══
+        //
+        // **null = غير محدَّد** ⟹ يسقط لـ`PayrollTransactionStore.DefaultRateFactor`،
+        // وهو ما يفعله النظام اليوم لكل ساعة. فالحقول الأربعة **لا تغيّر رقماً** حتى
+        // تُملأ عمداً لهذه المناوبة بالذات — لا افتراضيّ ولا ترحيل قيم.
+        //
+        // السياق يُحسم بـ`ShiftRuleStore.EffectiveContext` نفسها التي تحسم انطباق
+        // القواعد: عطلة رسمية ← إجازة ← نوع اليوم. مصدرٌ واحد لمعنى «أيّ يومٍ كان
+        // هذا»، وإلا أمكن أن تنطبق قاعدة «العطلة» بينما يُحتسب الأجر بمعامل «الراحة».
+        public decimal? OvertimeRateWeekend { get; set; }            // في عطلة نهاية الأسبوع
+        public decimal? OvertimeRateRest { get; set; }               // في يوم الراحة
+        public decimal? OvertimeRateHoliday { get; set; }            // في عطلة رسمية
+        public decimal? OvertimeRateLeave { get; set; }              // في إجازة
+
         public bool ConflictEarlyLeaveEnabled { get; set; }          // الذهاب مبكراً للمغادرة
         public string ConflictEarlyLeaveAction { get; set; } = "Deduction";
         public decimal ConflictEarlyLeaveValue { get; set; }
@@ -383,6 +397,7 @@ SET Name = @Name, NameEn = @NameEn, ColorHex = @Color,
     TimeLimitFrom = @TLF, TimeLimitFromDayBefore = @TLFB, TimeLimitTo = @TLT, TimeLimitToDayAfter = @TLTA, MidShiftTime = @MST,
     ConflictLateReturnEnabled = @CLRE, ConflictLateReturnAction = @CLRA, ConflictLateReturnValue = @CLRV,
     ConflictEarlyLeaveEnabled = @CELE, ConflictEarlyLeaveAction = @CELA, ConflictEarlyLeaveValue = @CELV,
+    OvertimeRateWeekend = @ORW, OvertimeRateRest = @ORR, OvertimeRateHoliday = @ORH, OvertimeRateLeave = @ORL,
     IsActive = @Active
 WHERE Id = @Id;
 DELETE FROM ShiftTypeDays WHERE ShiftTypeId = @Id;
@@ -405,11 +420,13 @@ INSERT INTO ShiftTypes (Name, NameEn, ColorHex, IsFlexible, FlexDailyHours, Mult
     ExcludePermsOutsideStartFromLate, TotalDurationMode, AvailableInRoster, RequestableFromEss,
     LatenessGraceMinutes, EarlyLeaveGraceMinutes, GraceExceededPolicy, TimeLimitFrom, TimeLimitFromDayBefore, TimeLimitTo, TimeLimitToDayAfter, MidShiftTime,
     ConflictLateReturnEnabled, ConflictLateReturnAction, ConflictLateReturnValue,
-    ConflictEarlyLeaveEnabled, ConflictEarlyLeaveAction, ConflictEarlyLeaveValue, IsActive)
+    ConflictEarlyLeaveEnabled, ConflictEarlyLeaveAction, ConflictEarlyLeaveValue,
+    OvertimeRateWeekend, OvertimeRateRest, OvertimeRateHoliday, OvertimeRateLeave, IsActive)
 VALUES (@Name, @NameEn, @Color, @Flex, @FlexHours, @Multi,
     @FMI, @FMO, @STS, @CPO, @EPL, @TDM, @AIR, @RFE,
     @LGM, @ELG, @GXP, @TLF, @TLFB, @TLT, @TLTA, @MST,
-    @CLRE, @CLRA, @CLRV, @CELE, @CELA, @CELV, @Active);
+    @CLRE, @CLRA, @CLRV, @CELE, @CELA, @CELV,
+    @ORW, @ORR, @ORH, @ORL, @Active);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
                 command => AddShiftParameters(command, shift));
@@ -528,8 +545,47 @@ DELETE FROM ShiftTypes WHERE Id = @Id;
         ConflictEarlyLeaveEnabled = HrmsDatabase.GetBool(reader, "ConflictEarlyLeaveEnabled"),
         ConflictEarlyLeaveAction = HrmsDatabase.GetString(reader, "ConflictEarlyLeaveAction") is { Length: > 0 } cela ? cela : "Deduction",
         ConflictEarlyLeaveValue = reader["ConflictEarlyLeaveValue"] is decimal celv ? celv : 0,
+        // نمط `is decimal x ? x : null` يُبقي DBNull على null — وهو المقصود هنا:
+        // «غير محدَّد» يختلف عن صفر (انظر التعليق عند الحقول).
+        OvertimeRateWeekend = reader["OvertimeRateWeekend"] is decimal orw ? orw : null,
+        OvertimeRateRest = reader["OvertimeRateRest"] is decimal orr ? orr : null,
+        OvertimeRateHoliday = reader["OvertimeRateHoliday"] is decimal orh ? orh : null,
+        OvertimeRateLeave = reader["OvertimeRateLeave"] is decimal orl ? orl : null,
         IsActive = HrmsDatabase.GetBool(reader, "IsActive")
     };
+
+    /// <summary>
+    /// معامل ساعة العمل الإضافي بسياق اليوم (نظير كيان «سعر ساعة العمل»).
+    ///
+    /// <para>السياق يأتي من <see cref="ShiftRuleStore.EffectiveContext"/> — نفس الدالة
+    /// التي تحسم انطباق قواعد المناوبات، فلا يقع أن تنطبق قاعدة «العطلة الرسمية»
+    /// بينما يُحتسب الأجر بمعامل «يوم الراحة».</para>
+    ///
+    /// <para><b>غير محدَّد ⟹ الافتراضي</b> (<c>PayrollTransactionStore.DefaultRateFactor</c>)
+    /// — وهو ما يفعله النظام اليوم لكل ساعة. فمناوبةٌ لم تُملأ حقولها تعطي القيمة
+    /// نفسها بالضبط، ولا يتغيّر أي مسير قائم.</para>
+    ///
+    /// <para>دالّة نقيّة كي تُختبَر بلا قاعدة — وهي حسابٌ ماليّ.</para>
+    /// </summary>
+    public static decimal ResolveOvertimeFactor(ShiftType? shift, string effectiveContext)
+    {
+        var configured = effectiveContext switch
+        {
+            "Weekend" => shift?.OvertimeRateWeekend,
+            "Rest" => shift?.OvertimeRateRest,
+            "Holiday" => shift?.OvertimeRateHoliday,
+            "Leave" => shift?.OvertimeRateLeave,
+            // «يوم عمل» (ومعه العمل عن بُعد ورحلة العمل) لا معامل خاصّ له بكيان ولا
+            // عندنا: الأوفرتايم بيوم عملٍ عاديّ يبقى على الافتراضي.
+            _ => null
+        };
+
+        // معاملٌ سالب لا معنى له — يُهمَل ويسقط للافتراضي بدل أن يقلب إشارة الأجر.
+        // والصفر يُقبَل عمداً: «لا أجر إضافيّ لهذه الساعة» قرارٌ صالح.
+        return configured is { } factor && factor >= 0
+            ? factor
+            : PayrollTransactionStore.DefaultRateFactor;
+    }
 
     private static ShiftDay ReadDay(System.Data.Common.DbDataReader reader) => new()
     {
@@ -570,6 +626,12 @@ DELETE FROM ShiftTypes WHERE Id = @Id;
         HrmsDatabase.AddParameter(command, "@CELE", shift.ConflictEarlyLeaveEnabled ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@CELA", string.IsNullOrWhiteSpace(shift.ConflictEarlyLeaveAction) ? "Deduction" : shift.ConflictEarlyLeaveAction);
         HrmsDatabase.AddParameter(command, "@CELV", shift.ConflictEarlyLeaveValue);
+        // null يُكتب NULL لا صفراً: الصفر معامل صالح («لا أجر لهذه الساعة») بينما
+        // NULL يعني «غير محدَّد ⟹ استعمل الافتراضي». خلطهما يجعل حقلاً فارغاً يصفّر أجراً.
+        HrmsDatabase.AddParameter(command, "@ORW", (object?)shift.OvertimeRateWeekend ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@ORR", (object?)shift.OvertimeRateRest ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@ORH", (object?)shift.OvertimeRateHoliday ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@ORL", (object?)shift.OvertimeRateLeave ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@Active", shift.IsActive ? 1 : 0);
     }
 

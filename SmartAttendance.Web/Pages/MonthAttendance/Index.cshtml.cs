@@ -80,9 +80,17 @@ public class IndexModel : PageModel
     {
         var (year, month) = Period;
         var count = await MonthAttendanceStore.BuildMonthAsync(_dbContext, year, month);
+
+        // التجميع صار طازجاً ⟹ قيّم القواعد الفترية الشهرية عليه فوراً. الاقتراحات
+        // تُحفظ معلّقة بشاشة «الإجراءات المقترحة» (لا تنفيذ تلقائي — راجع AnalyzePeriodAsync).
+        var suggested = count == 0
+            ? 0
+            : await RecommendationStore.AnalyzePeriodAsync(_dbContext, "Month", year, month);
+
         TempData["SuccessMessage"] = count == 0
             ? "لا يوميات محللة لهذا الشهر — شغّل «تحديث الحضور» أولاً."
-            : $"بُني شهر {month:00}/{year} — {count} موظفاً (أرقام المعتمد/المقفل لم تُمس).";
+            : $"بُني شهر {month:00}/{year} — {count} موظفاً (أرقام المعتمد/المقفل لم تُمس)."
+              + (suggested > 0 ? $" وأنتجت القواعد الفترية {suggested} اقتراحاً جديداً." : string.Empty);
         return RedirectToPage(new { Month, Search, Filter, PageNumber });
     }
 

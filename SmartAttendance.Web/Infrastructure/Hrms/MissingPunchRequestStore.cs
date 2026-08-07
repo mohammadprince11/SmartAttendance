@@ -193,6 +193,10 @@ WHERE Id=@Id AND Status=N'Pending';
             return (true, "تم تحديث الطلب.");
         }
 
+        // الحدود تُفرَض على **الإنشاء** وحده — الطلب القائم قُدّم تحت سياسة وقتها.
+        if (await MissingPunchPolicy.ValidateAsync(db, r.EmployeeId, r.PunchAt, r.Reason) is { } rejection)
+            return (false, rejection);
+
         var refNo = await GenerateRefNoAsync(db);
         await HrmsDatabase.ExecuteAsync(
             db,
@@ -261,7 +265,11 @@ WHERE Id=@Id AND Status=N'Pending';
                 HrmsDatabase.AddParameter(command, "@Rec", recordId);
                 HrmsDatabase.AddParameter(command, "@By", userName);
             });
-        return (true, $"وُوفق على {r.RefNo} وأُنشئت البصمة — شغّل «تحديث الحضور» لتظهر باليومية.");
+        // نمط كيان: الموافقة قد تعيد تحليل اليومية تلقائياً (محكوم بمفتاح + حارس).
+        var reanalysis = await AttendanceReanalysisPolicy.AfterApprovalAsync(
+            db, r.EmployeeId, DateOnly.FromDateTime(r.PunchAt));
+
+        return (true, $"وُوفق على {r.RefNo} وأُنشئت البصمة — {reanalysis.Message}");
     }
 
     public static async Task<(bool Ok, string Message)> RejectAsync(

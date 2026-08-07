@@ -299,18 +299,35 @@ body {
    Tables
 ========================= */
 
+/*
+    ⚠️ ألوان هذه العائلة كانت مثبَّتة بقيم فاتحة (`#ffffff` · `#334155` · `#f8fafc`)
+    وهي بقيّةٌ من زمنٍ كان التطبيق فيه فاتحاً حصراً. بعد Design System v1 صارت
+    `.table-card` تُفرَض **داكنةً** من `nexora-ui-stabilization-phase1.css`
+    (`background: linear-gradient(...) !important`) بينما بقي نصّ الخليّة `#334155`
+    كما هو ⟹ **نصّ داكن على بطاقة داكنة** ≈ 1.7:1 — غير مقروء بالوضع الداكن،
+    وترويسةٌ وصفُّ مرورٍ بلون `#f8fafc` يومضان كجزيرةٍ فاتحة.
+
+    القياس بالكود (2026-08-07): ثلاث عشرة صفحة تستعمل `table.data-table`؛ سبعٌ منها
+    محميّة بنطاقها (`.nexora-setup-page` بـ`nexora-setup-pages.css`، و
+    `/AttendanceRecords` بـ`attendance-records-filters.css`) وتبقى **ستّ** مكشوفة:
+    `Devices/{Index,Import}` · `Holidays/{Index,Import}` · `LeaveRequests/{Index,Import}`.
+
+    العلاج جذريّ لا بنطاق: القيم صارت توكنز — `--zy-*` تُعرَّف فاتحةً بـ`:root`
+    وتُقلَب بـ`html[data-theme="dark"]`، فالعائلة كلها تتبع الوضع تلقائياً ولا
+    تحتاج قاعدةً لكل شاشة. الوضع الفاتح يبقى كما هو تقريباً (نفس درجات اللوحة).
+*/
 .table-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--zy-surface, #ffffff);
+    border: 1px solid var(--zy-border, #e2e8f0);
     border-radius: 18px;
-    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+    box-shadow: var(--zy-shadow-md, 0 10px 25px rgba(15, 23, 42, 0.06));
     padding: 22px;
     overflow-x: auto;
 }
 
 .table-card-header {
     padding: 0 0 18px 0;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--zy-border, #e2e8f0);
     margin-bottom: 16px;
 }
 
@@ -332,7 +349,7 @@ body {
 
     .data-table thead,
     .app-table thead {
-        background: #f8fafc;
+        background: var(--zy-surface-raised, #f8fafc);
     }
 
     .data-table th,
@@ -340,27 +357,27 @@ body {
         text-align: left;
         padding: 14px 12px;
         font-weight: 800;
-        color: #0f172a;
-        border-bottom: 1px solid #e5e7eb;
+        color: var(--zy-text, #0f172a);
+        border-bottom: 1px solid var(--zy-border, #e5e7eb);
         white-space: nowrap;
     }
 
     .data-table td,
     .app-table td {
         padding: 14px 12px;
-        border-bottom: 1px solid #e5e7eb;
-        color: #334155;
+        border-bottom: 1px solid var(--zy-border, #e5e7eb);
+        color: var(--zy-text, #334155);
         vertical-align: middle;
     }
 
     .data-table tbody tr:hover,
     .app-table tbody tr:hover {
-        background: #f8fafc;
+        background: var(--zy-surface-soft, #f8fafc);
     }
 
 .empty-row {
     text-align: center;
-    color: #64748b;
+    color: var(--zy-text-muted, #64748b);
     padding: 28px !important;
 }
 

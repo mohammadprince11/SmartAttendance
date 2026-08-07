@@ -35,6 +35,9 @@ secrets.json
 *.bak_*
 _NEXORA_CLEANUP_QUARANTINE_*/
 *.ps1
+# ...عدا سكربتات التشغيل المعتمدة: القاعدة أعلاه لسكربتات الترقيع العابرة،
+# وأداةُ نشرٍ يعتمد عليها الإصدار ليست عابرة.
+!scripts/deploy/*.ps1
 README_V*.md
 
 # Employee uploaded photos
@@ -69,3 +72,12 @@ SmartAttendance.Web/App_Data/DataProtection-Keys/
 # LAN dev TLS private key (never commit)
 SmartAttendance.Web/certs/
 *.pfx
+
+# حزم نقل الأجهزة — تحوي أسراراً ونسخ قاعدة
+handover_*/
+ZynoraHandover/
+
+# آثار أدوات التنسيق (ruflo/claude-flow) — ليست من المشروع
+.claude-flow/
+.swarm/
+ruvector.db

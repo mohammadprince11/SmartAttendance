@@ -74,6 +74,12 @@ public partial class ProfileModel : PageModel
 
     public int AbsentCount { get; set; }
 
+    /// <summary>
+    /// عدد اليوميات المحلَّلة بالفترة. يميّز «صفر تأخير» عن «لم يُحلَّل الحضور بعد»
+    /// — وبدونه تُقرأ الأصفار كأنها انضباط تامّ.
+    /// </summary>
+    public int AnalyzedDays { get; set; }
+
     public int MissingCheckoutCount { get; set; }
 
     public int TotalWorkingMinutes { get; set; }
@@ -408,20 +414,43 @@ WHERE
 
     private async Task LoadAttendanceAsync(int employeeId)
     {
+        // نفس حارس بقية قارئي اليوميات (`MonthAttendanceStore` · `WeekAttendanceStore`
+        // · `DashboardWidgetStore`): الجدول يُنشأ كسولاً، وبلا هذا يفشل الملفّ كلّه
+        // بقاعدةٍ لم يُشغَّل عليها التحليل بعد.
+        await DayAttendanceStore.EnsureAsync(_dbContext);
+
         AttendanceCount = await CountAsync(
             @"SELECT COUNT(*) FROM AttendanceRecords WHERE EmployeeId = @EmployeeId AND AttendanceDate BETWEEN @FromDate AND @ToDate",
             employeeId);
 
+        // ⚠️ هذه العدّادات الثلاثة كانت تُحسب من `AttendanceRecords.Status` — وهو
+        // عمود **صامّ**: كل مسار كتابةٍ يختمه `Present` ثابتاً (الاستيراد الدفعي
+        // بـ`AttendanceImportService` يمرّر `(int)AttendanceStatus.Present`، والبصمة
+        // الأونلاين بـ`OnlinePunchStore` تكتب `Status` بقيمة `1` نصّاً بالـSQL).
+        // ⟹ «التأخير» و«الغياب» كانا **صفراً دائماً** بملف كل موظف، و«الحضور»
+        // يساوي عدد أيام البصم لا عدد أيام الحضور المحسوبة.
+        //
+        // ولم يكن العطل عرضياً: `AbsentCount` يغذّي `PayrollRiskItems` ومؤشّر
+        // الصحة أدناه (`score -= AbsentCount * 8`) — فكان النظام يمنح كل موظفٍ
+        // درجةً كاملة لأن مصدر الخصم صفر بنيوياً.
+        //
+        // المصدر الصحيح `DayAttendances`: اليوميات المحلَّلة — نفس ما تعرضه
+        // `/DayAttendance` ونفس ما يقرأه المسير عبر `AttendanceSalaryLink`، فتتّحد
+        // الحقيقة بدل حقيقتين متناقضتين بالتطبيق نفسه.
         PresentCount = await CountAsync(
-            @"SELECT COUNT(*) FROM AttendanceRecords WHERE EmployeeId = @EmployeeId AND AttendanceDate BETWEEN @FromDate AND @ToDate AND Status = 1",
+            @"SELECT COUNT(*) FROM DayAttendances WHERE EmployeeId = @EmployeeId AND WorkDate BETWEEN @FromDate AND @ToDate AND Status = N'Present'",
             employeeId);
 
         LateCount = await CountAsync(
-            @"SELECT COUNT(*) FROM AttendanceRecords WHERE EmployeeId = @EmployeeId AND AttendanceDate BETWEEN @FromDate AND @ToDate AND Status = 2",
+            @"SELECT COUNT(*) FROM DayAttendances WHERE EmployeeId = @EmployeeId AND WorkDate BETWEEN @FromDate AND @ToDate AND Status = N'Late'",
             employeeId);
 
         AbsentCount = await CountAsync(
-            @"SELECT COUNT(*) FROM AttendanceRecords WHERE EmployeeId = @EmployeeId AND AttendanceDate BETWEEN @FromDate AND @ToDate AND Status = 3",
+            @"SELECT COUNT(*) FROM DayAttendances WHERE EmployeeId = @EmployeeId AND WorkDate BETWEEN @FromDate AND @ToDate AND Status = N'Absent'",
+            employeeId);
+
+        AnalyzedDays = await CountAsync(
+            @"SELECT COUNT(*) FROM DayAttendances WHERE EmployeeId = @EmployeeId AND WorkDate BETWEEN @FromDate AND @ToDate",
             employeeId);
 
         MissingCheckoutCount = await CountAsync(

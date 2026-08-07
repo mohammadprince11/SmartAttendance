@@ -1,5 +1,6 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -14,10 +15,14 @@ namespace SmartAttendance.Web.Pages.DayAttendance;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender _push;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender push)
     {
         _dbContext = dbContext;
+        _push = push;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -25,6 +30,14 @@ public class IndexModel : PageModel
 
     [BindProperty(SupportsGet = true)]
     public string? Search { get; set; }
+
+    /// <summary>
+    /// فلتر الحالة من أزرار العدّادات أعلى الشاشة: Present · Late · Incomplete ·
+    /// Absent. فارغ = الكل. العدّادات تبقى محسوبة على **كل** الشهر لا على
+    /// المفلتَر، وإلا صار الضغط على «متأخر» يصفّر بقية الأزرار فيستحيل الرجوع.
+    /// </summary>
+    [BindProperty(SupportsGet = true)]
+    public string? StatusFilter { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public int PageNumber { get; set; } = 1;
@@ -39,6 +52,44 @@ public class IndexModel : PageModel
     public int LateCount { get; set; }
     public int AbsentCount { get; set; }
     public int IncompleteCount { get; set; }
+
+    /// <summary>يوميات طرأ عليها تغيير بعد التحليل — «لم تُحلَّل» بواجهة الفلترة.</summary>
+    public int StaleCount { get; set; }
+
+    /// <summary>
+    /// عدد الموظفين المميَّزين بالعرض الحالي — نطاق زرّ «إشعار الموظفين»، ويُعرض
+    /// على الزرّ نفسه كي يعرف المستخدم كم سيُشعِر **قبل** أن يضغط.
+    /// </summary>
+    public int NotifyEmployeeCount { get; set; }
+
+    /// <summary>
+    /// مفتاح فلتر البائتة — مُعرَّف بـ<see cref="DayAttendanceStore.StaleFilterKey"/>
+    /// حيث يعيش منطق الفلترة. يبقى هنا اسماً مألوفاً للواجهة (`IndexModel.StaleFilterKey`).
+    /// </summary>
+    public const string StaleFilterKey = DayAttendanceStore.StaleFilterKey;
+
+    /// <summary>الفترة الفعلية المعروضة بعد تطبيق سياسة الغلق.</summary>
+    public AttendancePeriodPolicy.Period CutoffPeriod { get; private set; }
+
+    /// <summary>اسم سياسة الغلق المطبَّقة — يُعرض ليعرف المستخدم لمَ تغيّرت الحدود.</summary>
+    public string? CutoffPolicyName { get; private set; }
+
+    /// <summary>
+    /// يقرأ سياسة غلق **الحضور** النشطة ويحسب منها الفترة. بلا سياسة يبقى
+    /// السلوك القديم (الشهر التقويمي كاملاً) فلا تنكسر شركةٌ لم تُعرّف سياسةً.
+    /// </summary>
+    private async Task<AttendancePeriodPolicy.Period> ResolvePeriodAsync(int year, int month)
+    {
+        // المنطق مركزيّ بـAttendancePeriodPolicy — كان مكرّراً هنا وحده، فكانت بقية
+        // الشاشات تعرض الشهر التقويمي بينما المسير يقرأ فترة الغلق.
+        var (period, policyName) =
+            await AttendancePeriodPolicy.ResolveFromPolicyAsync(_dbContext, year, month);
+
+        CutoffPolicyName = policyName;
+        return period;
+    }
+
+
 
     public (int Year, int Month) Period
     {
@@ -57,33 +108,158 @@ public class IndexModel : PageModel
 
         Shifts = (await ShiftTypeStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
 
-        var all = await DayAttendanceStore.ListAsync(_dbContext, year, month, Search);
+        // الفترة تتبع سياسة غلق الحضور (مثلاً 21 → 20) لا الشهر التقويمي.
+        CutoffPeriod = await ResolvePeriodAsync(year, month);
+
+        var all = await DayAttendanceStore.ListRangeAsync(
+            _dbContext, CutoffPeriod.From, CutoffPeriod.To, Search);
         PresentCount = all.Count(r => r.Status == "Present");
         LateCount = all.Count(r => r.Status == "Late");
         AbsentCount = all.Count(r => r.Status == "Absent");
         IncompleteCount = all.Count(r => r.Status == "Incomplete");
+        StaleCount = all.Count(r => r.IsStale);
 
-        TotalRows = all.Count;
+        // الفلتر يُطبَّق بعد العدّادات، والترتيب من الأحدث للأقدم ثم برقم الموظف
+        // ليكون ترتيب الصفحات ثابتاً (بلا مُرتِّب ثانوي تتبدّل الصفوف بين الصفحات).
+        var view = ApplyStatusFilter(all)
+            .OrderByDescending(row => row.WorkDate)
+            .ThenBy(row => row.EmployeeNo, StringComparer.Ordinal)
+            .ToList();
+
+        // موظّفو العرض الحالي — نطاق زرّ الإشعار. **مميَّزون** لا صفوف: الموظف
+        // المتأخر خمسة أيام إنسانٌ واحد يُشعَر مرّة، لا خمس رسائل.
+        NotifyEmployeeCount = view.Select(row => row.EmployeeId).Distinct().Count();
+
+        TotalRows = view.Count;
         TotalPages = TotalRows == 0 ? 1 : (int)Math.Ceiling(TotalRows / (double)PageSize);
         if (PageNumber < 1) PageNumber = 1;
         if (PageNumber > TotalPages) PageNumber = TotalPages;
-        Rows = all.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
+        Rows = view.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
     }
+
+    /// <summary>
+    /// فلتر الحالة — مشترك بين العرض وزرّ الإشعار، ومنطقه بـ
+    /// <see cref="DayAttendanceStore.FilterByStatus"/> (دالّة نقيّة مُختبَرة).
+    /// </summary>
+    private List<DayAttendanceStore.DayRow> ApplyStatusFilter(
+        IEnumerable<DayAttendanceStore.DayRow> rows) =>
+        DayAttendanceStore.FilterByStatus(rows, StatusFilter);
 
     public async Task<IActionResult> OnPostAnalyzeAsync()
     {
         var (year, month) = Period;
         var shiftTypeId = int.TryParse(Request.Form["ShiftTypeId"], out var id) ? id : 0;
 
-        if (shiftTypeId <= 0)
+        // الفحص المسبق يقول **لماذا** لم يُحلَّل شيء. بدونه كان المحرّك يعيد صفراً
+        // صامتاً فتُقرأ الرسالة «تم التحديث — 0 يومية» كأنها نجاح، والشاشة فارغة.
+        var blocker = await DayAttendanceStore.FindAnalyzeBlockerAsync(
+            _dbContext, year, month, shiftTypeId);
+
+        if (blocker is not null)
         {
-            TempData["SuccessMessage"] = "اختر مناوبة التحليل أولاً.";
+            TempData["SuccessMessage"] = blocker;
         }
         else
         {
-            var count = await DayAttendanceStore.AnalyzeMonthAsync(_dbContext, year, month, shiftTypeId);
-            TempData["SuccessMessage"] = $"تم تحديث الحضور — {count} يومية مولّدة لشهر {month:00}/{year}.";
+            // فترة الغلق (21 → 20) تعبر حدّ الشهر، والتحليل يُبنى شهراً تقويمياً.
+            // بناء شهر التسمية وحده يترك نصف الفترة بلا يوميات — فنبني كل شهر تلمسه.
+            var period = await ResolvePeriodAsync(year, month);
+            var count = 0;
+
+            foreach (var (coveredYear, coveredMonth) in period.CoveredMonths())
+            {
+                count += await DayAttendanceStore.AnalyzeMonthAsync(
+                    _dbContext, coveredYear, coveredMonth, shiftTypeId);
+            }
+
+            var label = $"{period.From:yyyy-MM-dd} → {period.To:yyyy-MM-dd}";
+
+            TempData["SuccessMessage"] = count > 0
+                ? $"تم تحديث الحضور — {count} يومية مولّدة للفترة {label}."
+                : $"لم تُولَّد يوميات للفترة {label} — لا بصمات بها للموظفين المسنَدين " +
+                  "لهذه المناوبة. تحقّق من إسناد الموظفين ومن نطاق تواريخ البصمات.";
         }
-        return RedirectToPage(new { Month, Search });
+        return RedirectToPage(new { Month, Search, StatusFilter });
+    }
+
+    /// <summary>
+    /// إشعار موظّفي **العرض الحالي** بملخّص حضورهم للفترة (نظير 🔔 بالحضور اليومي
+    /// عند كيان — الفجوة #7 بدراسة 2026-08-07، وكانت مغلقةً بـ/AttendanceViewer وحده).
+    ///
+    /// <para>الفرق عن مؤلّف المستعرض مقصود: هناك النطاق يُبنى بخمسة فلاتر مستقلّة
+    /// (قسم · فرع · مسمّى · عقد · جنسية)، وهنا النطاق **هو ما تراه بالشاشة**. فقيمة
+    /// هذا الزرّ بالضبط أنّ الفلترة سبقته: تضغط «متأخر» فترى المتأخرين، ثم تُشعرهم
+    /// وحدهم. تكرار مؤلّف النطاق هنا يُلغي هذه القيمة ويكرّر شاشةً قائمة.</para>
+    ///
+    /// <para>النوع مقصورٌ على «ملخّص الحضور»: النوعان الأسبوعيان يحتاجان رقم أسبوعٍ
+    /// صريحاً لملء رموزهما ({2}/{3} بقالب الغياب الأسبوعي)، وفترة هذه الشاشة فترةُ
+    /// غلقٍ شهرية قد تعبر حدّ الشهر — فتوليدهما هنا ينتج رسائل برقم أسبوع صفر.
+    /// محلّهما المؤلّف الأسبوعي بـ/AttendanceViewer.</para>
+    /// </summary>
+    public async Task<IActionResult> OnPostNotifyAsync()
+    {
+        var (year, month) = Period;
+        var form = Request.Form;
+
+        var channel = form["Channel"].ToString() is { Length: > 0 } ch ? ch : "System";
+        var template = form["Message"].ToString();
+        var ccManager = form["CcManager"].ToString() is { Length: > 0 };
+
+        var period = await ResolvePeriodAsync(year, month);
+
+        // نفس القراءة والفلترة اللتين بنتا الشاشة — فالمُشعَرون هم المعروضون حرفياً.
+        var rows = await DayAttendanceStore.ListRangeAsync(
+            _dbContext, period.From, period.To, Search);
+
+        var employeeIds = ApplyStatusFilter(rows)
+            .Select(row => row.EmployeeId)
+            .Distinct()
+            .ToList();
+
+        if (employeeIds.Count == 0)
+        {
+            TempData["SuccessMessage"] =
+                "لا موظفين بالعرض الحالي — عدّل الفلتر أو شغّل «تحديث الحضور» أولاً.";
+            return RedirectToPage(new { Month, Search, StatusFilter });
+        }
+
+        var (_, recipients, ccCount) = await AttendanceNotificationStore.SendAsync(
+            _dbContext,
+            type: "Summary",
+            from: period.From,
+            to: period.To,
+            week: 0,
+            channel: channel,
+            template: template,
+            employeeIds: employeeIds,
+            ccMode: ccManager ? "Manager" : "None",
+            ccEmployeeIds: Array.Empty<int>());
+
+        // دفع فوري موازٍ للصادر — best-effort، وNo-Op حين القناة معطّلة. نظير
+        // /AttendanceViewer: التطبيق المثبَّت يومض الإشعار بلا انتظار البريد.
+        if (_push.IsEnabled)
+        {
+            var body = $"لديك إشعار حضور جديد ({period.From:MM-dd} → {period.To:MM-dd}). "
+                     + "افتح البوابة للتفاصيل.";
+
+            foreach (var employeeId in employeeIds)
+            {
+                await _push.SendToEmployeeAsync(
+                    _dbContext,
+                    employeeId,
+                    new SmartAttendance.Web.Infrastructure.Notifications.PushPayload(
+                        AttendanceNotificationStore.LabelOf("Summary"), body, "/EmployeePortal"));
+            }
+        }
+
+        var channelLabel = AttendanceNotificationStore.Channels
+            .FirstOrDefault(c => c.Key == channel).Label ?? channel;
+
+        TempData["SuccessMessage"] =
+            $"تم تأليف «ملخص الحضور» عبر {channelLabel} لـ{recipients} موظفاً"
+            + (ccCount > 0 ? $" (+{ccCount} نسخة للمدير المباشر)" : "")
+            + $" ({period.From:yyyy-MM-dd} → {period.To:yyyy-MM-dd}) — وُلّدت الرسائل بصندوق الصادر.";
+
+        return RedirectToPage(new { Month, Search, StatusFilter });
     }
 }
