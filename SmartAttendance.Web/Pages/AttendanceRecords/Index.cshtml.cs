@@ -233,10 +233,22 @@ public class IndexModel : PageModel
                 (x.Notes != null && x.Notes.Contains(value)));
         }
 
+        // فاصل التعادل كان `x.Employee.EmployeeNo` — عمودٌ **بجدول آخر**. وجوده
+        // بالـORDER BY يفرض ضمّ جدول الموظفين **قبل** الفرز والاقتطاع، فيُبنى الصفّ
+        // المضموم لكل سجلٍّ بالفترة (63 ألفاً بالقياس) ثم يُرمى منه كلُّ شيء عدا
+        // خمسين صفاً. وبنفس السبب يمتنع الفهرس عن خدمة الترتيب: أعمدة الفرز ليست
+        // كلها بجدول واحد.
+        //
+        // `x.EmployeeId` مفتاحٌ أجنبيّ **على الجدول نفسه** — يعطي حتميّةً مكافئة
+        // (وهي المطلوب من فاصل التعادل: ألّا يتنقّل صفٌّ بين الصفحات) ويُخدَم من
+        // الفهرس `IX_AttendanceRecords_AttendanceDate_CheckIn_EmployeeId` بلا ضمّ.
+        //
+        // الأثر المرئيّ الوحيد: عند تساوي التاريخ **ووقت الدخول بالثانية**، الترتيب
+        // بين المتساوين يتبع معرّف الموظف لا رقمه الوظيفي.
         query = query
             .OrderByDescending(x => x.AttendanceDate)
             .ThenByDescending(x => x.CheckIn)
-            .ThenBy(x => x.Employee.EmployeeNo);
+            .ThenBy(x => x.EmployeeId);
 
         TotalRows = await query.CountAsync();
 

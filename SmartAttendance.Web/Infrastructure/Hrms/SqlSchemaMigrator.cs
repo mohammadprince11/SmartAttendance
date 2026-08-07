@@ -918,6 +918,37 @@ IF OBJECT_ID('DesignTokens', 'U') IS NULL
         UpdatedBy  nvarchar(200) NULL
     );
 """),
+
+        // فهرس ترتيب/مدى سجلات الحضور — الرافعة الثانية لأداء `/AttendanceRecords`.
+        //
+        // الفهرس الوحيد القائم هو `(EmployeeId, AttendanceDate)`، وعموده الأول
+        // الموظف. وشاشة السجلات لا ترشّح بموظفٍ بالحالة العامة: ترشّح **بمدى تاريخ**
+        // ثم ترتّب `AttendanceDate DESC, CheckIn DESC` وتقتطع صفحة. فالعمود الأول
+        // غير مقيَّد ⟹ المُحسِّن يمسح الجدول كاملاً ثم يفرزه، ثم يرمي كل شيء عدا
+        // الصفوف الخمسين الأولى (قياس 2026-08-07: 63 ألف صفّ بالفترة · 2.4ث).
+        //
+        // هذا الفهرس يجعل المدى **بحثاً** والترتيب **مجانياً** (الفهرس مرتَّب أصلاً؛
+        // وSQL Server يمسحه للخلف لخدمة DESC فلا حاجة لإعلان الاتجاه)، فيصير
+        // الاقتطاع Top-N seek بدل فرزٍ كامل.
+        //
+        // `EmployeeId` ثالثاً يطابق فاصل التعادل بعد أن صار `x.EmployeeId` بدل
+        // `x.Employee.EmployeeNo` (انظر `Pages/AttendanceRecords/Index.cshtml.cs`)
+        // ⟹ الترتيب كلّه يُخدَم من الفهرس بلا ضمّ جدول الموظفين قبل الاقتطاع.
+        //
+        // ⚠️ إنشاء فهرس على جدولٍ كبيرٍ يقفله بنسخة SQL Server القياسية. الجدول
+        // بالقياس عشرات الآلاف من الصفوف — ثوانٍ معدودة — لكن التطبيق **يطبّق
+        // الهجرات عند الإقلاع**، فالقفل يقع بنافذة النشر لا بوقت العمل.
+        new(
+            "20260807-01-attendance-records-date-index",
+            """
+IF OBJECT_ID('AttendanceRecords', 'U') IS NOT NULL
+   AND NOT EXISTS (
+       SELECT 1 FROM sys.indexes
+       WHERE name = 'IX_AttendanceRecords_AttendanceDate_CheckIn_EmployeeId'
+         AND object_id = OBJECT_ID('AttendanceRecords'))
+    CREATE INDEX IX_AttendanceRecords_AttendanceDate_CheckIn_EmployeeId
+        ON AttendanceRecords (AttendanceDate, CheckIn, EmployeeId);
+"""),
     };
 
     /// <summary>
