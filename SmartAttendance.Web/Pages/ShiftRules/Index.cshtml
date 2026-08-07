@@ -281,9 +281,13 @@
                         مستحقّة لبعضهم فقط (وحدة عمل · جنسية · نوع عقد · مدة خدمة …).
                     </p>
                     <input type="hidden" name="ConditionsJson" id="shr-Conditions" />
+                    @* data-empty-text إلزامي هنا: افتراض المحرّر مصمَّم لنُسَخ السياسة
+                       («بلا شروط ⟹ لا تنطبق على أحد») وهو **عكس** معنانا تماماً —
+                       قاعدة الحضور بلا شروط تنطبق على الجميع (matchWhenEmpty:true). *@
                     <div class="zyc"
                          data-zy-conditions
                          data-input="#shr-Conditions"
+                         data-empty-text="بلا شروط — تنطبق هذه القاعدة على كل الموظفين."
                          data-criteria="@Model.CriteriaJson"></div>
                 </div>
 
