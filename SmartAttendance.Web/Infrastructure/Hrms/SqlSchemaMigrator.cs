@@ -1007,6 +1007,51 @@ BEGIN
         ALTER TABLE PunchSemantics ADD WindowTo time(0) NULL;
 END;
 """),
+
+        // نسبة دفعة المسير لشركة — أساس عزل الرواتب متعدد الشركات.
+        //
+        // ⚠️ قبلها: `PayrollRuns` **بلا أي عمود شركة**، فالدفعة غير منسوبة أصلاً ولا
+        // يمكن حتى *سؤال* «لمن هذه الدفعة». ومعه كان الاحتساب يختار الموظفين بـ
+        // `WHERE IsDeleted=0 AND IsActive=1` بلا ترشيح شركة ⟹ مسير شركة A يولّد
+        // قسائم لموظفي B — بالسلوك الافتراضي لا بخطأ استخدام.
+        new(
+            "20260807-04-payroll-run-company-id",
+            """
+IF OBJECT_ID('PayrollRuns', 'U') IS NOT NULL
+   AND COL_LENGTH('PayrollRuns', 'CompanyId') IS NULL
+    ALTER TABLE PayrollRuns ADD CompanyId int NULL;
+"""),
+
+        // التعبئة منفصلة عن إضافة العمود: SQL Server لا يرى عموداً أُضيف بنفس الدفعة.
+        //
+        // **من السطور لا بالتخمين**: شركة الدفعة تُشتقّ من موظفيها المحسوبين فعلاً،
+        // وفقط حين يتفقون على شركة واحدة. الدفعة المختلطة (موظفو أكثر من شركة — وهي
+        // الثمرة المرّة للعطل نفسه) تبقى **NULL عمداً**: نسبتها لإحداهما تُخفي التسريب
+        // بدل كشفه، وتركها NULL يجعلها مرئية لغير المقيَّد وحده حتى تُراجَع يدوياً.
+        new(
+            "20260807-05-payroll-run-company-id-backfill",
+            """
+IF OBJECT_ID('PayrollRuns', 'U') IS NOT NULL
+   AND COL_LENGTH('PayrollRuns', 'CompanyId') IS NOT NULL
+   AND OBJECT_ID('PayrollRunLines', 'U') IS NOT NULL
+BEGIN
+    UPDATE r
+    SET r.CompanyId = src.CompanyId
+    FROM PayrollRuns r
+    INNER JOIN (
+        SELECT l.RunId, MIN(e.CompanyId) AS CompanyId
+        FROM PayrollRunLines l
+        INNER JOIN Employees e ON e.Id = l.EmployeeId
+        WHERE e.CompanyId IS NOT NULL
+        GROUP BY l.RunId
+        HAVING COUNT(DISTINCT e.CompanyId) = 1
+    ) src ON src.RunId = r.Id
+    WHERE r.CompanyId IS NULL;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_PayrollRuns_CompanyId')
+        CREATE INDEX IX_PayrollRuns_CompanyId ON PayrollRuns (CompanyId);
+END;
+"""),
     };
 
     /// <summary>

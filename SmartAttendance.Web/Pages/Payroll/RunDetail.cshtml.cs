@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Payroll;
 
@@ -13,10 +14,21 @@ public class RunDetailModel : PageModel
 {
     private readonly ApplicationDbContext _db;
 
-    public RunDetailModel(ApplicationDbContext db)
+    public RunDetailModel(ApplicationDbContext db, ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
     }
+
+    private readonly ICompanyScopeProvider _companyScope;
+
+    /// <summary>
+    /// بوابة الصفحة: تفاصيل الدفعة وقسائمها وملفها البنكيّ (بالآيبانات) كانت تُفتح
+    /// بمعرّفٍ من الـquery بلا أي فحص ملكية — تعداد `?Id=` يقرأ رواتب كل الشركات.
+    /// </summary>
+    private async Task<bool> CanAccessAsync() =>
+        await PayrollRunStore.CanAccessRunAsync(
+            _db, Id, await _companyScope.GetAsync(HttpContext.RequestAborted));
 
     [BindProperty(SupportsGet = true)]
     public int Id { get; set; }
@@ -33,6 +45,8 @@ public class RunDetailModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
+        if (!await CanAccessAsync()) return RedirectToPage("Runs");
+
         Run = await PayrollRunStore.GetRunAsync(_db, Id);
         if (Run == null) return RedirectToPage("Runs");
         Lines = await PayrollRunStore.ListLinesAsync(_db, Id);
@@ -50,6 +64,8 @@ public class RunDetailModel : PageModel
     /// </summary>
     public async Task<IActionResult> OnGetBankFileAsync(int? templateId)
     {
+        if (!await CanAccessAsync()) return RedirectToPage("Runs");
+
         var run = await PayrollRunStore.GetRunAsync(_db, Id);
         if (run == null) return RedirectToPage("Runs");
 

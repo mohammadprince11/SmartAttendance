@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Payroll;
 
@@ -13,10 +14,12 @@ namespace SmartAttendance.Web.Pages.Payroll;
 public class RunsModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public RunsModel(ApplicationDbContext db)
+    public RunsModel(ApplicationDbContext db, ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
     }
 
     public sealed class EmployeeOption
@@ -51,7 +54,7 @@ public class RunsModel : PageModel
 
     public async Task OnGetAsync()
     {
-        var all = await PayrollRunStore.ListRunsAsync(_db);
+        var all = await PayrollRunStore.ListRunsAsync(_db, await _companyScope.GetAsync(HttpContext.RequestAborted));
         AvailableYears = all.Select(r => r.Year).Distinct().OrderByDescending(y => y).ToList();
         if (AvailableYears.Count == 0) AvailableYears.Add(DateTime.Today.Year);
 
@@ -89,7 +92,16 @@ public class RunsModel : PageModel
             return RedirectToPage();
         }
 
-        var (ok, message, _) = await PayrollRunStore.CreateRunAsync(_db, year, month, scopeMode, ids);
+        // شركة الدفعة من نطاق مُنشئها حين يكون قاطعاً (شركة واحدة مسموحة). المقيَّد
+        // بشركةٍ لا يستطيع إنشاء دفعة لغيرها، وغير المقيَّد تبقى دفعته بلا نسبة حتى
+        // الاحتساب فتُشتقّ من أعضاء نطاقها.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var creatorCompanyId = !scope.IsUnrestricted && scope.AllowedCompanyIds.Count == 1
+            ? scope.AllowedCompanyIds.Single()
+            : (int?)null;
+
+        var (ok, message, _) = await PayrollRunStore.CreateRunAsync(
+            _db, year, month, scopeMode, ids, creatorCompanyId);
         TempData["PayrollMessage"] = message;
         TempData["PayrollOk"] = ok;
         return RedirectToPage();
@@ -105,7 +117,7 @@ public class RunsModel : PageModel
             return RedirectToPage();
         }
 
-        return await ActAsync(PayrollRunStore.SetScopeAsync(_db, id, scopeMode, ids));
+        return await ActAsync(id, () => PayrollRunStore.SetScopeAsync(_db, id, scopeMode, ids));
     }
 
     /// <summary>
@@ -145,23 +157,34 @@ public class RunsModel : PageModel
         return (mode, ids, null);
     }
 
-    public async Task<IActionResult> OnPostCalculateAsync(int id)
-    {
-        var (ok, message) = await PayrollRunStore.CalculateAsync(_db, id, User?.Identity?.Name ?? "system");
-        TempData["PayrollMessage"] = message;
-        TempData["PayrollOk"] = ok;
-        return RedirectToPage();
-    }
+    public async Task<IActionResult> OnPostCalculateAsync(int id) =>
+        await ActAsync(id, () => PayrollRunStore.CalculateAsync(_db, id, User?.Identity?.Name ?? "system"));
 
-    public async Task<IActionResult> OnPostLockAsync(int id) => await ActAsync(PayrollRunStore.LockAsync(_db, id));
-    public async Task<IActionResult> OnPostIssueAsync(int id) => await ActAsync(PayrollRunStore.IssueAsync(_db, id));
-    public async Task<IActionResult> OnPostSendAsync(int id) => await ActAsync(PayrollRunStore.SendPayslipsAsync(_db, id));
-    public async Task<IActionResult> OnPostReopenAsync(int id) => await ActAsync(PayrollRunStore.ReopenAsync(_db, id));
-    public async Task<IActionResult> OnPostDeleteAsync(int id) => await ActAsync(PayrollRunStore.DeleteRunAsync(_db, id));
+    public async Task<IActionResult> OnPostLockAsync(int id) => await ActAsync(id, () => PayrollRunStore.LockAsync(_db, id));
+    public async Task<IActionResult> OnPostIssueAsync(int id) => await ActAsync(id, () => PayrollRunStore.IssueAsync(_db, id));
+    public async Task<IActionResult> OnPostSendAsync(int id) => await ActAsync(id, () => PayrollRunStore.SendPayslipsAsync(_db, id));
+    public async Task<IActionResult> OnPostReopenAsync(int id) => await ActAsync(id, () => PayrollRunStore.ReopenAsync(_db, id));
+    public async Task<IActionResult> OnPostDeleteAsync(int id) => await ActAsync(id, () => PayrollRunStore.DeleteRunAsync(_db, id));
 
-    private async Task<IActionResult> ActAsync(Task<(bool Ok, string Message)> action)
+    /// <summary>
+    /// كل عملية على دفعة تمرّ من هنا، و<b>الفحص يسبق تشغيل العملية</b>.
+    ///
+    /// <para>كان التوقيع يستقبل <c>Task</c> — أي مهمّةً <b>بدأت فعلاً</b> عند
+    /// استدعاء الدالة، فلا موضع لحارسٍ قبلها. صار يستقبل مصنعاً (<c>Func</c>)
+    /// فلا تنطلق العملية إلا بعد اجتياز الفحص. التغيير بنيويّ لا تجميليّ: يجعل
+    /// «نسيان الحارس بنقطة جديدة» خطأ تصريف لا ثغرةً صامتة.</para>
+    /// </summary>
+    private async Task<IActionResult> ActAsync(int id, Func<Task<(bool Ok, string Message)>> action)
     {
-        var (ok, message) = await action;
+        if (!await PayrollRunStore.CanAccessRunAsync(
+                _db, id, await _companyScope.GetAsync(HttpContext.RequestAborted)))
+        {
+            TempData["PayrollMessage"] = "الدفعة غير موجودة أو خارج نطاق صلاحيتك.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+
+        var (ok, message) = await action();
         TempData["PayrollMessage"] = message;
         TempData["PayrollOk"] = ok;
         return RedirectToPage();

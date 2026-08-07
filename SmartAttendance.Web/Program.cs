@@ -300,6 +300,9 @@ builder.Services.AddScoped<ISetupService, SetupService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Security.IAccessRoleService, SmartAttendance.Web.Infrastructure.Security.AccessRoleService>();
 builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Security.IEffectiveScopeService, SmartAttendance.Web.Infrastructure.Security.EffectiveScopeService>();
+// نطاق شركات الطلب — يُشتقّ من محرك الصلاحيات نفسه (IEffectiveScopeService) فلا
+// يتباعد عنه مصدرُ حقيقةٍ ثانٍ. Scoped لأن نتيجته تُكاش بعمر الطلب.
+builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider, SmartAttendance.Web.Infrastructure.Security.CompanyScopeProvider>();
 
 // قناة الإشعارات الخارجية (SMTP): تُفعَّل عمداً عبر قسم "Smtp" (Enabled=true). حين
 // تكون معطّلة يُحقَن مرسِل No-Op ولا تعمل خدمة التسليم الخلفية (بلا استهلاك).
