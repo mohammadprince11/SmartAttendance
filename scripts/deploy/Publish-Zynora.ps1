@@ -240,7 +240,7 @@ Stop-ScheduledTask    -TaskName $TaskName -ErrorAction SilentlyContinue
 
 # الحلقة تعيد الإحياء، فلا يكفي إيقاف المهمة — نقتل عمليات المجلّد نفسه
 # دون غيرها حتى لا نُسقط تطبيق dotnet آخر على الخادم.
-Get-Process dotnet -ErrorAction SilentlyContinue |
+Get-Process -ErrorAction SilentlyContinue |
     Where-Object { $_.Path -and $_.Path.StartsWith($SitePath, [StringComparison]::OrdinalIgnoreCase) } |
     ForEach-Object { Write-Host "  قتل PID $($_.Id)"; Stop-Process -Id $_.Id -Force }
 
