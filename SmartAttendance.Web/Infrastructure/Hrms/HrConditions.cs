@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -312,8 +312,9 @@ public static class HrConditions
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         Converters = { new JsonStringEnumConverter() },
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        // ⚠️ بلا مُرمِّز متساهل: هذه القيم تعود من القاعدة إلى كتالوج المعايير
+        // الذي يُحقن داخل <script>. توحيد السياسة يمنع تسرّب < عبر مسارٍ آخر.
     };
 
     /// <summary>
