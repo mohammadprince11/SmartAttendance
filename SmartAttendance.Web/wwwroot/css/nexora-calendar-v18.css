@@ -29,7 +29,15 @@ input[type="month"].nxcal-native {
     min-width: 0 !important;
     direction: rtl !important;
     font-family: inherit !important;
-    z-index: 45 !important;
+    /*
+        الحقل **المغلق** لا يحتاج ارتفاعاً بالتكديس — الرفع مكانه `.nxcal.is-open`
+        أدناه (2147482500) وقتَ ظهور المنسدلة فقط.
+
+        كان هنا `z-index: 45` دائم، وهو أعلى من الترويسة اللاصقة (`.nexora-topbar`
+        بـ20) ⟹ عند تمرير الصفحة يمرّ منتقي الشهر **فوق** الترويسة ويغطّي بطاقة
+        المستخدم (رُصد حيّاً 2026-08-07 بـ/AttendanceViewer).
+    */
+    z-index: auto !important;
 }
 
 .nxcal.is-open {
@@ -287,12 +295,27 @@ input[type="month"].nxcal-native {
     border-color: rgba(25, 211, 224, .55) !important;
 }
 
-.nxcal-ready,
-.nxcal-ready [class*="card"],
-.nxcal-ready [class*="panel"],
-.nxcal-ready [class*="form"],
-.nxcal-ready [class*="field"],
-.nxcal-ready [class*="section"] {
+/*
+    فكّ القصّ عن أسلاف منسدلة الكلاندر: المنسدلة مطلقة الموضع، فأي سلف بـoverflow
+    غير visible يقصّها. ولأن أسماء الحاويات غير موحّدة استُهدفت بمطابقة جزئية.
+
+    ⚠️ **هذه القاعدة كاسحة**: `[class*="card"]` يصيب **كل** حاوية اسمها يحوي card
+    ولو لم تكن سلفاً للمنسدلة أصلاً — والـ`!important` يسحق حتى قاعدة الصفحة نفسها.
+    رُصد حيّاً بـ/AttendanceViewer: `.avw-matrix-card` كانت تعلن
+    `overflow:auto; max-height:66vh` فسُحقت، فخرج جدول 1885px من حاوية 1003px ودفع
+    **المستند** لـ2198px ⟹ التمرير الأفقي يجرّ القوقعة كلها (الشريط الجانبي ينزلق
+    للوسط)، و`position:sticky` للعمود الأول والترويسة يفقد مُمرِّره فيتعطّل التجميد.
+
+    **مخرج الطوارئ**: الحاوية التي **تملك تمريرها** تُوسَم `data-zy-scroll` فتُستثنى
+    هنا وتعود قاعدتها الخاصة للعمل. الوسم مقصود وصريح — لا تُوسَم حاوية إلا بعد
+    التحقّق أن منسدلة الكلاندر لا تُقصّ بداخلها.
+*/
+.nxcal-ready:not([data-zy-scroll]),
+.nxcal-ready [class*="card"]:not([data-zy-scroll]),
+.nxcal-ready [class*="panel"]:not([data-zy-scroll]),
+.nxcal-ready [class*="form"]:not([data-zy-scroll]),
+.nxcal-ready [class*="field"]:not([data-zy-scroll]),
+.nxcal-ready [class*="section"]:not([data-zy-scroll]) {
     overflow: visible !important;
 }
 
