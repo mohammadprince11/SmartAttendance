@@ -261,7 +261,11 @@ WHERE Id=@Id AND Status=N'Pending';
                 HrmsDatabase.AddParameter(command, "@Rec", recordId);
                 HrmsDatabase.AddParameter(command, "@By", userName);
             });
-        return (true, $"وُوفق على {r.RefNo} وأُنشئت البصمة — شغّل «تحديث الحضور» لتظهر باليومية.");
+        // نمط كيان: الموافقة قد تعيد تحليل اليومية تلقائياً (محكوم بمفتاح + حارس).
+        var reanalysis = await AttendanceReanalysisPolicy.AfterApprovalAsync(
+            db, r.EmployeeId, DateOnly.FromDateTime(r.PunchAt));
+
+        return (true, $"وُوفق على {r.RefNo} وأُنشئت البصمة — {reanalysis.Message}");
     }
 
     public static async Task<(bool Ok, string Message)> RejectAsync(

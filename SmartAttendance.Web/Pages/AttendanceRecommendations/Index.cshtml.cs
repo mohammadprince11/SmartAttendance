@@ -47,6 +47,9 @@ public class IndexModel : PageModel
     public int ConflictedCount { get; set; }
     public int TransactionsCount { get; set; }
 
+    /// <summary>قواعد تسمح بتعديل إجرائها الموصى به — تُظهر أدوات التعديل بالصفّ.</summary>
+    public HashSet<int> EditableRuleIds { get; set; } = new();
+
     public (int Year, int Month) Period
     {
         get
@@ -92,6 +95,16 @@ public class IndexModel : PageModel
         if (PageNumber < 1) PageNumber = 1;
         if (PageNumber > TotalPages) PageNumber = TotalPages;
         Rows = filtered.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
+        EditableRuleIds = await RecommendationStore.EditableRuleIdsAsync(_dbContext);
+    }
+
+    /// <summary>تعديل الإجراء الموصى به — المتجر يفرض راية «السماح بالتعديل» على القاعدة.</summary>
+    public async Task<IActionResult> OnPostEditActionAsync(int id, string actionText, decimal actionValue)
+    {
+        var (ok, message) = await RecommendationStore.UpdateActionAsync(
+            _dbContext, id, actionText ?? string.Empty, actionValue);
+        TempData[ok ? "SuccessMessage" : "ErrorMessage"] = message;
+        return RedirectToPage(new { Month, Tab, SubTab, PageNumber });
     }
 
     public async Task<IActionResult> OnPostAnalyzeAsync()

@@ -129,6 +129,9 @@ public class IndexModel : PageModel
         await DataChangeRequestStore.ApplyIfDataChangeAsync(_dbContext, id, ActorName(), ip);
         await FinancialRequestStore.ApplyIfFinancialAsync(_dbContext, id, ActorName(), ip);
         await ShiftRequestStore.ApplyIfShiftRequestAsync(_dbContext, id);
+
+        // الإجازة/المغادرة المعتمَدة تغيّر اليومية — أعد تحليلها إن كان المفتاح مفعّلاً.
+        await AttendanceReanalysisPolicy.ApplyIfAttendanceAffectingAsync(_dbContext, id);
     }
 
     private string ActorName() => User?.Identity?.Name ?? "HR";

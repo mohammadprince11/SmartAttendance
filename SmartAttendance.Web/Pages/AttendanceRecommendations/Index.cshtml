@@ -306,6 +306,18 @@
                                             <input type="hidden" name="Tab" value="@Model.Tab" />
                                             <button type="submit" class="rec-btn no" style="min-height:32px;padding:5px 14px">تجاهل</button>
                                         </form>
+                                        @* راية «السماح بتعديل الإجراء الموصى به» على القاعدة المُصدِرة *@
+                                        @if (Model.EditableRuleIds.Contains(row.RuleId))
+                                        {
+                                            <form method="post" asp-page-handler="EditAction" style="display:inline-flex;gap:4px;align-items:center;margin-inline-start:6px">
+                                                <input type="hidden" name="id" value="@row.Id" />
+                                                <input type="hidden" name="Month" value="@Model.Month" />
+                                                <input type="hidden" name="Tab" value="@Model.Tab" />
+                                                <input type="text" name="actionText" value="@row.ActionText" placeholder="الإجراء" style="width:120px;min-height:32px" />
+                                                <input type="number" step="0.01" name="actionValue" value="@row.ActionValue" style="width:78px;min-height:32px" />
+                                                <button type="submit" class="rec-btn" style="min-height:32px;padding:5px 12px">حفظ</button>
+                                            </form>
+                                        }
                                     }
                                     else
                                     {
