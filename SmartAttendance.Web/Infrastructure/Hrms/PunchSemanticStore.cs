@@ -18,6 +18,20 @@ public static class PunchSemanticStore
         public bool IsSystem { get; set; }
         public bool IsActive { get; set; } = true;
         public int SortOrder { get; set; }
+
+        // ═══ الدلالة ككيان زمنيّ (نظير كيان) ═══
+        //
+        // `IsDeducted`: هل تُخصم فترة هذه الدلالة من مدّة الحضور؟ كانت الراية واحدة
+        // على المناوبة (`ShiftTypes.StripSemantics`) للجميع — إمّا الكلّ أو لا أحد.
+        // الآن: الراية تبقى المفتاح الرئيس (مطفأةً لا يُخصم شيء)، وهذا الحقل يقرّر
+        // **أيّ** الدلالات تُخصم حين تكون مُشغَّلة. الافتراضي `true` = سلوك اليوم.
+        //
+        // `WindowFrom`/`WindowTo`: نافذة الدلالة المسموحة ("HH:mm"). فترةٌ تتجاوزها
+        // تُقصّ عليها قبل الخصم — فاستراحةُ ساعتين بنافذة نصف ساعة تُخصم نصف ساعة
+        // فقط ويبقى الباقي محسوباً على الموظف. null = بلا نافذة ⟹ بلا قصّ.
+        public bool IsDeducted { get; set; } = true;
+        public string? WindowFrom { get; set; }
+        public string? WindowTo { get; set; }
     }
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
@@ -62,7 +76,10 @@ END;
                 NameEn = HrmsDatabase.GetString(reader, "NameEn") is { Length: > 0 } en ? en : null,
                 IsSystem = HrmsDatabase.GetBool(reader, "IsSystem"),
                 IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
-                SortOrder = HrmsDatabase.GetInt(reader, "SortOrder")
+                SortOrder = HrmsDatabase.GetInt(reader, "SortOrder"),
+                IsDeducted = HrmsDatabase.GetBool(reader, "IsDeducted"),
+                WindowFrom = ReadTime(reader, "WindowFrom"),
+                WindowTo = ReadTime(reader, "WindowTo")
             });
     }
 
@@ -104,7 +121,8 @@ END;
                 dbContext,
                 """
 UPDATE PunchSemantics
-SET Name = @Name, NameEn = @NameEn, IsActive = @Active, SortOrder = @Sort
+SET Name = @Name, NameEn = @NameEn, IsActive = @Active, SortOrder = @Sort,
+    IsDeducted = @Deducted, WindowFrom = @WinFrom, WindowTo = @WinTo
 WHERE Id = @Id;
 """,
                 command =>
@@ -118,8 +136,8 @@ WHERE Id = @Id;
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
                 """
-INSERT INTO PunchSemantics (Name, NameEn, IsSystem, IsActive, SortOrder)
-VALUES (@Name, @NameEn, 0, @Active, @Sort);
+INSERT INTO PunchSemantics (Name, NameEn, IsSystem, IsActive, SortOrder, IsDeducted, WindowFrom, WindowTo)
+VALUES (@Name, @NameEn, 0, @Active, @Sort, @Deducted, @WinFrom, @WinTo);
 """,
                 command => AddParameters(command, semantic));
         }
@@ -140,5 +158,22 @@ VALUES (@Name, @NameEn, 0, @Active, @Sort);
         HrmsDatabase.AddParameter(command, "@NameEn", (object?)semantic.NameEn ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@Active", semantic.IsActive ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@Sort", semantic.SortOrder);
+        HrmsDatabase.AddParameter(command, "@Deducted", semantic.IsDeducted ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@WinFrom", ToTime(semantic.WindowFrom));
+        HrmsDatabase.AddParameter(command, "@WinTo", ToTime(semantic.WindowTo));
     }
+
+    /// <summary>عمود time ⟵ نصّ "HH:mm". قيمة غير صالحة تُقرأ null (بلا نافذة) لا صفراً.</summary>
+    private static string? ReadTime(System.Data.Common.DbDataReader reader, string column)
+    {
+        var ordinal = reader.GetOrdinal(column);
+        if (reader.IsDBNull(ordinal)) return null;
+        return reader.GetValue(ordinal) is TimeSpan span
+            ? $"{span.Hours:00}:{span.Minutes:00}"
+            : null;
+    }
+
+    /// <summary>نصّ "HH:mm" ⟶ عمود time. الفارغ أو غير الصالح يُكتب NULL — «بلا نافذة».</summary>
+    private static object ToTime(string? value) =>
+        TimeSpan.TryParse(value, out var span) ? span : DBNull.Value;
 }

@@ -1043,6 +1043,35 @@ BEGIN
         ALTER TABLE ShiftTypes ADD OvertimeRateLeave decimal(6,3) NULL;
 END;
 """),
+
+        // الدلالة ككيان زمنيّ لا وسمٍ مسطّح (الفجوة #7 بدراسة كيان).
+        //
+        // اليوم `PunchSemantic` = اسم · اسم إنجليزي · نظامية · نشطة · ترتيب. **لا شيء
+        // غير ذلك.** ورايةُ `ShiftTypes.StripSemantics` واحدة للجميع: إمّا تُخصم فترات
+        // **كل** الدلالات غير-الحضورية من مدّة الحضور أو لا تُخصم أيٌّ منها.
+        // ⟹ لا يمكن قول «الصلاة 12:00–12:30 لا تُخصم، والدخان يُخصم» — وهو المثال
+        // الذي رصدته الدراسة بالضبط.
+        //
+        // ⚠️ **الافتراضيات تُبقي السلوك الحالي بالحرف**:
+        //   • `IsDeducted = 1` للجميع — اليوم تُخصم كلُّ دلالةٍ غير حضورية حين تُفعَّل
+        //     الراية، فالافتراضي يعيد النتيجة نفسها رقماً برقم. من أراد استثناء الصلاة
+        //     أطفأها لها وحدها.
+        //   • `WindowFrom`/`WindowTo` NULL = بلا نافذة ⟹ لا قصّ ⟹ نفس الحساب.
+        // الراية على المناوبة تبقى المفتاح الرئيس: مطفأةً لا يُخصم شيء مهما ضُبطت الدلالات.
+        new(
+            "20260807-03-punch-semantic-window-and-deduction",
+            """
+IF OBJECT_ID('PunchSemantics', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('PunchSemantics', 'IsDeducted') IS NULL
+        ALTER TABLE PunchSemantics ADD IsDeducted bit NOT NULL
+            CONSTRAINT DF_PunchSemantics_IsDeducted DEFAULT(1);
+    IF COL_LENGTH('PunchSemantics', 'WindowFrom') IS NULL
+        ALTER TABLE PunchSemantics ADD WindowFrom time(0) NULL;
+    IF COL_LENGTH('PunchSemantics', 'WindowTo') IS NULL
+        ALTER TABLE PunchSemantics ADD WindowTo time(0) NULL;
+END;
+"""),
     };
 
     /// <summary>

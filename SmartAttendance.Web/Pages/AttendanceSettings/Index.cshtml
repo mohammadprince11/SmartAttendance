@@ -12,7 +12,8 @@
     ViewData["Title"] = "إعدادات الحضور";
     var semanticsJson = JsonSerializer.Serialize(Model.Semantics.Select(s => new
     {
-        s.Id, s.Name, s.NameEn, s.IsSystem, s.IsActive, s.SortOrder
+        s.Id, s.Name, s.NameEn, s.IsSystem, s.IsActive, s.SortOrder,
+        s.IsDeducted, s.WindowFrom, s.WindowTo
     }));
     var sourcesJson = JsonSerializer.Serialize(Model.Sources.Select(s => new
     {
@@ -60,6 +61,14 @@
     html[data-theme="light"] .ats-form input[type=text], html[data-theme="light"] .ats-form input[type=number], html[data-theme="light"] .ats-form select { background: #fff; }
     .ats-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
     .ats-hint { font-size: 11px; color: var(--sa-muted, #8FA8BC); font-weight: 700; }
+    /* نافذة الدلالة — حقلا وقت جنباً إلى جنب، ينهاران لعمود بالشاشات الضيّقة. */
+    .ats-sem-window { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @@media (max-width: 480px) { .ats-sem-window { grid-template-columns: 1fr; } }
+    .ats-form input[type=time] {
+        min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25);
+        background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px; font-family: inherit;
+    }
+    html[data-theme="light"] .ats-form input[type=time] { background: #fff; }
 </style>
 
 <section class="ats-page" dir="rtl">
@@ -187,7 +196,7 @@
         {
             <table class="ats-table">
                 <thead>
-                    <tr><th>الدلالة</th><th>English</th><th>النوع</th><th>الحالة</th><th style="text-align:end">إجراءات</th></tr>
+                    <tr><th>الدلالة</th><th>English</th><th>النوع</th><th>الخصم</th><th>النافذة</th><th>الحالة</th><th style="text-align:end">إجراءات</th></tr>
                 </thead>
                 <tbody>
                     @foreach (var semantic in Model.Semantics)
@@ -196,6 +205,8 @@
                             <td><b>@semantic.Name</b></td>
                             <td dir="ltr" style="text-align:start">@(semantic.NameEn ?? "—")</td>
                             <td><span class="ats-chip @(semantic.IsSystem ? "sys" : "")">@(semantic.IsSystem ? "نظامية" : "مخصصة")</span></td>
+                            <td><span class="ats-chip @(semantic.IsDeducted ? "" : "off")">@(semantic.IsDeducted ? "تُخصم" : "لا تُخصم")</span></td>
+                            <td dir="ltr" style="text-align:start">@(semantic.WindowFrom is { Length: > 0 } wf && semantic.WindowTo is { Length: > 0 } wt ? $"{wf} – {wt}" : "—")</td>
                             <td><span class="ats-chip @(semantic.IsActive ? "" : "off")">@(semantic.IsActive ? "نشطة" : "متوقفة")</span></td>
                             <td style="text-align:end;white-space:nowrap">
                                 <button type="button" class="ats-btn ghost" onclick="atsOpenSemantic(@semantic.Id)">تعديل</button>
@@ -281,7 +292,32 @@
                 <label style="flex-direction:row;align-items:center;gap:8px">
                     <input type="checkbox" name="IsActive" value="true" id="ats-sem-Active" checked /> الدلالة نشطة
                 </label>
-                <span class="ats-hint">الدلالات تغذّي لاحقاً أزرار البصم بالخدمة الذاتية ومنشئ قواعد المناوبات.</span>
+
+                <label style="flex-direction:row;align-items:center;gap:8px">
+                    <input type="checkbox" name="IsDeducted" value="true" id="ats-sem-Deducted" checked />
+                    تُخصم فترتها من مدّة الحضور
+                </label>
+                <span class="ats-hint">
+                    هذا ما يفرّق «الصلاة لا تُخصم» عن «الدخان يُخصم». يعمل فقط حين تُفعِّل
+                    المناوبة <b>«تجريد فترة الدلالات من مدة الحضور»</b> — مطفأةً بالمناوبة
+                    لا يُخصم شيء مهما ضُبط هنا.
+                </span>
+
+                <div class="ats-sem-window">
+                    <label>نافذة الدلالة — من
+                        <input type="time" name="WindowFrom" id="ats-sem-WinFrom" />
+                    </label>
+                    <label>إلى
+                        <input type="time" name="WindowTo" id="ats-sem-WinTo" />
+                    </label>
+                </div>
+                <span class="ats-hint">
+                    اتركها فارغة = بلا نافذة (تُخصم الفترة كاملةً). بنافذةٍ تُقصّ الفترة
+                    عليها: استراحةُ ساعتين بنافذة 12:00–12:30 تُخصم نصف ساعة، والباقي
+                    يبقى محسوباً على الموظف. الزوج العابر لمنتصف الليل لا يُقصّ.
+                </span>
+
+                <span class="ats-hint">الدلالات تغذّي أيضاً أزرار البصم بالخدمة الذاتية ومنشئ قواعد المناوبات.</span>
                 <button type="submit" class="ats-btn">حفظ الدلالة</button>
             </form>
         </div>
@@ -346,6 +382,10 @@
             document.getElementById('ats-sem-NameEn').value = '';
             document.getElementById('ats-sem-Sort').value = 10;
             document.getElementById('ats-sem-Active').checked = true;
+            // دلالة جديدة تبدأ «تُخصم» بلا نافذة — نفس ما يفعله النظام اليوم بكل دلالة.
+            document.getElementById('ats-sem-Deducted').checked = true;
+            document.getElementById('ats-sem-WinFrom').value = '';
+            document.getElementById('ats-sem-WinTo').value = '';
             if (id) {
                 var s = ATS_SEMANTICS.find(function (x) { return x.Id === id; });
                 if (s) {
@@ -353,6 +393,9 @@
                     document.getElementById('ats-sem-NameEn').value = s.NameEn || '';
                     document.getElementById('ats-sem-Sort').value = s.SortOrder || 0;
                     document.getElementById('ats-sem-Active').checked = !!s.IsActive;
+                    document.getElementById('ats-sem-Deducted').checked = !!s.IsDeducted;
+                    document.getElementById('ats-sem-WinFrom').value = s.WindowFrom || '';
+                    document.getElementById('ats-sem-WinTo').value = s.WindowTo || '';
                 }
             }
             atsShow('ats-sem-slide');

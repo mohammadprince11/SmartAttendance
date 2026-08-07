@@ -163,7 +163,12 @@ public class IndexModel : PageModel
             Name = form["Name"].ToString().Trim(),
             NameEn = string.IsNullOrWhiteSpace(form["NameEn"]) ? null : form["NameEn"].ToString().Trim(),
             IsActive = form["IsActive"] == "true",
-            SortOrder = int.TryParse(form["SortOrder"], out var sort) ? sort : 0
+            SortOrder = int.TryParse(form["SortOrder"], out var sort) ? sort : 0,
+            IsDeducted = form["IsDeducted"] == "true",
+            // نصّ "HH:mm" كما يرسله <input type="time">. الفارغ يبقى null = «بلا نافذة»
+            // ⟹ تُخصم الفترة كاملةً، وهو سلوك ما قبل الميزة.
+            WindowFrom = string.IsNullOrWhiteSpace(form["WindowFrom"]) ? null : form["WindowFrom"].ToString(),
+            WindowTo = string.IsNullOrWhiteSpace(form["WindowTo"]) ? null : form["WindowTo"].ToString()
         };
 
         if (string.IsNullOrWhiteSpace(semantic.Name))
