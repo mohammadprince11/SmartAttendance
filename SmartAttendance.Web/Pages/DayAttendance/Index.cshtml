@@ -32,13 +32,13 @@
     .dat-bar input, .dat-bar select { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; font-size: 13px; }
     html[data-theme="light"] .dat-bar input, html[data-theme="light"] .dat-bar select { background: #fff; color: inherit; }
 
-    .dat-period { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 900; color: var(--sa-muted, #8FA8BC); }
-    .dat-period b { direction: ltr; font-size: 12.5px; color: #12D9E3; }
     .dat-stats { display: flex; gap: 8px; flex-wrap: wrap; }
     .dat-stat { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 900; border: 1px solid rgba(73,111,151,.22); }
     .dat-stat b { direction: ltr; display: inline-block; }
     .dat-stat.present { color: #4ade80; } .dat-stat.late { color: #facc15; }
     .dat-stat.absent { color: #f87171; } .dat-stat.incomplete { color: #f97316; }
+    /* «لم تُحلَّل» ليست حالة حضور بل تنبيه إجراء — تُميَّز بحدٍّ متقطّع. */
+    .dat-stat.stale { color: #f97316; border-style: dashed; }
     /* العدّادات صارت أزرار فلترة: مؤشّر يد وحالة نشطة واضحة، وبلا خطّ رابط. */
     a.dat-stat { text-decoration: none; cursor: pointer; transition: background .15s, border-color .15s; }
     a.dat-stat:hover { border-color: rgba(18,217,227,.55); }
@@ -66,6 +66,8 @@
     .dat-chip.Incomplete { background: rgba(249,115,22,.14); color: #f97316; }
     .dat-chip.Weekend, .dat-chip.Rest { background: rgba(143,168,188,.14); color: var(--sa-muted, #8FA8BC); }
     .dat-check { color: #12D9E3; font-weight: 900; }
+    /* بائتة: طرأ تغيير بعد التحليل. لون تحذيري لا خطأ — البيانات سليمة لكنها قديمة. */
+    .dat-stale { color: #f97316; font-weight: 900; cursor: help; }
     .dat-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
     .dat-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
     .dat-pager { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; font-weight: 900; }
@@ -103,13 +105,6 @@
         <label>الشهر
             <input type="month" name="Month" value="@Model.Month" />
         </label>
-        @if (Model.CutoffPolicyName != null)
-        {
-            <div class="dat-period" title="@Model.CutoffPolicyName">
-                <span>فترة الغلق</span>
-                <b>@Model.CutoffPeriod.From.ToString("yyyy-MM-dd") → @Model.CutoffPeriod.To.ToString("yyyy-MM-dd")</b>
-            </div>
-        }
         <label>بحث (رمز/اسم موظف)
             <input type="text" name="Search" value="@Model.Search" placeholder="بحث..." />
             <input type="hidden" name="StatusFilter" value="@Model.StatusFilter" />
@@ -137,6 +132,10 @@
                asp-route-Month="@Model.Month" asp-route-Search="@Model.Search"
                asp-route-StatusFilter="@toggle("Absent")" asp-route-PageNumber="1"
                title="اعرض الغائبين فقط">غائب <b>@Model.AbsentCount</b></a>
+            <a class="dat-stat stale @(Model.StatusFilter == IndexModel.StaleFilterKey ? "is-active" : null)"
+               asp-route-Month="@Model.Month" asp-route-Search="@Model.Search"
+               asp-route-StatusFilter="@toggle(IndexModel.StaleFilterKey)" asp-route-PageNumber="1"
+               title="يوميات طرأ عليها تغيير بعد التحليل (طلب معتمد أو تعديل بصمة) ولم تُحتسب بعد">لم تُحلَّل <b>@Model.StaleCount</b></a>
             @if (!string.IsNullOrWhiteSpace(Model.StatusFilter))
             {
                 <a class="dat-stat dat-stat-clear"
@@ -180,7 +179,20 @@
                             <td class="dat-num @(row.LateHours > 0 ? "warn" : "")">@row.LateHours.ToString("0.##")</td>
                             <td class="dat-num @(row.EarlyLeaveHours > 0 ? "bad" : "")">@row.EarlyLeaveHours.ToString("0.##")</td>
                             <td><span class="dat-chip @row.Status">@DayAttendanceStore.StatusLabel(row.Status)</span></td>
-                            <td>@if (row.IsAnalyzed) { <span class="dat-check">✓</span> } else { <text>—</text> }</td>
+                            <td>
+                                @if (row.IsUpToDate)
+                                {
+                                    <span class="dat-check" title="محلّلة وحديثة">✓</span>
+                                }
+                                else if (row.IsStale)
+                                {
+                                    <span class="dat-stale" title="طرأ تغيير بعد التحليل (اعتماد نسيان بصمة · إجازة · مغادرة · تعديل بصمة) — شغّل «تحديث الحضور» ليُحتسب">✗</span>
+                                }
+                                else
+                                {
+                                    <text>—</text>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>

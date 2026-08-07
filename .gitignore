@@ -73,3 +73,8 @@ SmartAttendance.Web/certs/
 # حزم نقل الأجهزة — تحوي أسراراً ونسخ قاعدة
 handover_*/
 ZynoraHandover/
+
+# آثار أدوات التنسيق (ruflo/claude-flow) — ليست من المشروع
+.claude-flow/
+.swarm/
+ruvector.db

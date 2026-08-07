@@ -49,6 +49,15 @@ public class IndexModel : PageModel
     public int AbsentCount { get; set; }
     public int IncompleteCount { get; set; }
 
+    /// <summary>يوميات طرأ عليها تغيير بعد التحليل — «لم تُحلَّل» بواجهة الفلترة.</summary>
+    public int StaleCount { get; set; }
+
+    /// <summary>
+    /// مفتاح فلتر البائتة. ليس حالةً بل خاصية حداثة، فيُميَّز عن قيم
+    /// <c>Status</c> (Present · Late · Absent · Incomplete …) ولا يتصادم معها.
+    /// </summary>
+    public const string StaleFilterKey = "Stale";
+
     /// <summary>الفترة الفعلية المعروضة بعد تطبيق سياسة الغلق.</summary>
     public AttendancePeriodPolicy.Period CutoffPeriod { get; private set; }
 
@@ -107,12 +116,16 @@ public class IndexModel : PageModel
         LateCount = all.Count(r => r.Status == "Late");
         AbsentCount = all.Count(r => r.Status == "Absent");
         IncompleteCount = all.Count(r => r.Status == "Incomplete");
+        StaleCount = all.Count(r => r.IsStale);
 
         // الفلتر يُطبَّق بعد العدّادات، والترتيب من الأحدث للأقدم ثم برقم الموظف
         // ليكون ترتيب الصفحات ثابتاً (بلا مُرتِّب ثانوي تتبدّل الصفوف بين الصفحات).
-        var view = string.IsNullOrWhiteSpace(StatusFilter)
-            ? all
-            : all.Where(row => row.Status == StatusFilter).ToList();
+        var view = StatusFilter switch
+        {
+            null or "" => all,
+            StaleFilterKey => all.Where(row => row.IsStale).ToList(),
+            _ => all.Where(row => row.Status == StatusFilter).ToList()
+        };
 
         view = view
             .OrderByDescending(row => row.WorkDate)
