@@ -75,4 +75,52 @@ public class CalendarUnclipGuardTests
         Assert.Matches(@"\.avw-matrix-card\s*\{[^}]*overflow-x:\s*auto", page);
         Assert.DoesNotMatch(@"\.avw-matrix-card\s*\{[^}]*max-height", page);
     }
+
+    /// <summary>
+    /// فكّ القصّ يخصّ **أسلاف** المنسدلة وحدهم. مطابقة أسماء السلائل
+    /// (<c>[class*="card"]</c> وأخواتها) كانت تصيب إخوةً وأعماماً لا علاقة لهم
+    /// بالمنسدلة — 58 صنف حاوية تعلن overflow خاصاً بها بالقياس (2026-08-07).
+    /// </summary>
+    [Fact]
+    public void UnclipTargetsAncestorsOnly_NotDescendantsByNameMatch()
+    {
+        var css = CalendarCss();
+
+        var selectors = Regex
+            .Matches(css, @"([^{}]+)\{[^}]*overflow\s*:\s*visible\s*!important[^}]*\}")
+            .SelectMany(m => m.Groups[1].Value.Split(','))
+            .Select(s => s.Trim())
+            .Where(s => s.Contains("nxcal-ready"));
+
+        foreach (var selector in selectors)
+        {
+            Assert.False(
+                Regex.IsMatch(selector, @"nxcal-ready\s+\S"),
+                $"المُحدِّد «{selector}» يفكّ القصّ عن **سليل** لـ.nxcal-ready. "
+                + "القاصّ هو السلف لا السليل، و`markParents` يعلّم السلسلة الأبوية "
+                + "بدقّة — فمطابقة أسماء السلائل تسلب حاوياتٍ بريئةً تمريرها.");
+        }
+    }
+
+    /// <summary>
+    /// فكّ القصّ **لحظيّ**: مشروط بـ<c>html.nxcal-open</c> التي يرفعها السكربت عند
+    /// الفتح ويُنزلها عند الإغلاق. بلا الشرط تفقد الحاوية تمريرها طوال عمر الصفحة
+    /// من أجل منسدلةٍ تظهر لحظات.
+    /// </summary>
+    [Fact]
+    public void UnclipIsGatedOnTheOpenState()
+    {
+        Assert.Matches(@"html\.nxcal-open\s+\.nxcal-ready", CalendarCss());
+
+        // والراية تُرفع وتُنزل بكلا المنتقيين — منتقي التاريخ ومنتقي الشهر يتشاركان
+        // الصنف `.nxcal`، فلو رفعها أحدهما ولم يُنزلها الآخر بقي القصّ مفكوكاً.
+        foreach (var script in new[] { "nexora-calendar-v18.js", "nexora-month-picker-v1.js" })
+        {
+            var source = File.ReadAllText(Path.Combine(
+                RepoRoot(), "SmartAttendance.Web", "wwwroot", "js", script));
+
+            Assert.Contains("nxcal-open", source);
+            Assert.Contains("syncOpenState", source);
+        }
+    }
 }
