@@ -147,22 +147,39 @@ VALUES (@Name, @Description, @Expression, @IsActive, @CreatedBy);
         return Page();
     }
 
-    private Dictionary<string, decimal> BuildVariables()
-    {
-        var gross = Basic + Allowances;
+    /// <summary>
+    /// قيم التجربة تُحوَّل لسياق المسير نفسه ثم يبني <see cref="PayrollFormulaVariables"/>
+    /// القاموس. <b>لا يُبنى القاموس هنا بيده</b> — الطريقة السابقة هي التي جعلت
+    /// المختبر يمرّر <c>Days=30, Hours=8</c> بينما يمرّر المسير صفرين، فتُجرَّب
+    /// الصيغة بنجاح ثم تُنتج بالقسيمة رقماً آخر.
+    /// </summary>
+    /// <summary>
+    /// القيم الثابتة المسمّاة — تُحمَّل مع الصفحة وتُدمج بفضاء التجربة، وإلا فشلت
+    /// بالمختبر كل صيغة تستعمل ثابتاً بينما تنجح بالمسير: نفس عيب الافتراق مقلوباً.
+    /// </summary>
+    public List<SalaryConstantStore.SalaryConstant> Constants { get; private set; } = new();
 
-        return new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
+    private Dictionary<string, decimal> ConstantMap() =>
+        Constants.Where(c => c.IsActive)
+                 .ToDictionary(c => c.Key, c => c.Value, StringComparer.OrdinalIgnoreCase);
+
+    private Dictionary<string, decimal> BuildVariables() =>
+        PayrollFormulaVariables.Build(new PayrollFormulaVariables.Context
         {
-            ["Basic"] = Basic,
-            ["Allowances"] = Allowances,
-            ["Gross"] = gross,
-            ["Hours"] = Hours,
-            ["Days"] = Days,
+            Basic = Basic,
+            // شهر كامل بالتجربة: المستحقّ = الأساسي والمعامل = 1.
+            ProratedBasic = Basic,
+            Allowances = Allowances,
+            Days = (int)Days,
+            PresentDays = (int)Days,
+            DaysInPeriod = (int)Days,
+            Hours = Hours,
             // مشتقّان بنفس قاعدة المسير: الشهر ثلاثون يوماً واليوم ثماني ساعات.
-            ["DailyRate"] = Basic / 30m,
-            ["HourlyRate"] = Basic / 30m / 8m
-        };
-    }
+            DailyRate = Basic / 30m,
+            HourlyRate = Basic / 30m / 8m,
+            Factor = 1m
+        },
+        ConstantMap());
 
     private void Evaluate()
     {
@@ -183,7 +200,52 @@ VALUES (@Name, @Description, @Expression, @IsActive, @CreatedBy);
         }
     }
 
-    private async Task LoadAsync() =>
+    // ═══════════ القيم الثابتة المسمّاة (نظير «قيم ثابتة» بكيان) ═══════════
+
+    [BindProperty] public int ConstantId { get; set; }
+    [BindProperty] public string ConstantKey { get; set; } = string.Empty;
+    [BindProperty] public string ConstantName { get; set; } = string.Empty;
+    [BindProperty] public decimal ConstantValue { get; set; }
+    [BindProperty] public string? ConstantNote { get; set; }
+
+    public async Task<IActionResult> OnPostSaveConstantAsync()
+    {
+        var error = await SalaryConstantStore.SaveAsync(_db, new SalaryConstantStore.SalaryConstant
+        {
+            Id = ConstantId,
+            Key = ConstantKey,
+            Name = ConstantName,
+            Value = ConstantValue,
+            Note = ConstantNote,
+            IsActive = true
+        });
+
+        if (error is not null)
+        {
+            TempData["ErrorMessage"] = $"لم يُحفظ الثابت: {error}";
+        }
+        else
+        {
+            TempData["SuccessMessage"] = "حُفظ الثابت — صار متاحاً بكل الصيغ فوراً.";
+        }
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostDeleteConstantAsync(int id)
+    {
+        await SalaryConstantStore.DeleteAsync(_db, id);
+        TempData["SuccessMessage"] = "حُذف الثابت — راجع الصيغ التي كانت تستعمله.";
+        return RedirectToPage();
+    }
+
+    private async Task LoadAsync()
+    {
+        Constants = await SalaryConstantStore.ListAsync(_db);
+        await LoadLibraryAsync();
+    }
+
+    private async Task LoadLibraryAsync() =>
         Library = await HrmsDatabase.QueryAsync(
             _db,
             """

@@ -158,6 +158,23 @@ BEGIN
     );
     CREATE INDEX IX_PayrollRunLineComponents_Line ON PayrollRunLineComponents (LineId);
 END;
+
+-- سجلّ المستبعَدين (نظير تبويب «الرواتب المستثناة» بكيان): كنّا نعدّ المتخطَّين
+-- عدّاً مجمّعاً بسطر رسالة، فسؤال «لماذا لم يُحتسب فلان؟» بلا جواب إلا بقراءة الكود.
+-- الآن كل استبعاد يُسجَّل باسم صاحبه وسببه وسبيل معالجته.
+IF OBJECT_ID('PayrollRunExclusions', 'U') IS NULL
+BEGIN
+    CREATE TABLE PayrollRunExclusions
+    (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        RunId int NOT NULL,
+        EmployeeId int NOT NULL,
+        ReasonCode nvarchar(40) NOT NULL,
+        Reason nvarchar(300) NOT NULL,
+        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
+    );
+    CREATE INDEX IX_PayrollRunExclusions_Run ON PayrollRunExclusions (RunId);
+END;
 """);
     }
 
@@ -508,6 +525,11 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
             .Where(x => x.IsActive && !x.IsSystem && x.ValueKind == "Formula" && !string.IsNullOrWhiteSpace(x.Formula))
             .OrderBy(x => x.SortOrder).ToList();
 
+        // القيم الثابتة المسمّاة تُقرأ مرّة للدفعة كلّها لا لكل موظف.
+        var salaryConstants = formulaItems.Count > 0
+            ? await SalaryConstantStore.ActiveMapAsync(dbContext)
+            : new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
         // --- بناء السطور ---
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
@@ -519,10 +541,20 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
         int count = 0, skippedStopped = 0, skippedNoSalary = 0, skippedNoAttendance = 0, paidWithoutAttendance = 0;
         decimal totalGross = 0, totalNet = 0, totalTax = 0, totalGosiCo = 0;
 
+        // سجلّ المستبعَدين لهذه الدفعة — يُجمع بالذاكرة ويُكتب دفعةً واحدة داخل
+        // المعاملة نفسها، فلا يبقى سجلٌّ لدفعةٍ فشل احتسابها.
+        var exclusions = new List<(int EmployeeId, string Code, string Reason)>();
+
         foreach (var emp in candidates)
         {
             financial.TryGetValue(emp.Id, out var fin);
-            if (fin?.Stop == true) { skippedStopped++; continue; }   // مستبعَد من الاحتساب
+            if (fin?.Stop == true)
+            {
+                // مستبعَد من الاحتساب بالملف المالي
+                skippedStopped++;
+                exclusions.Add((emp.Id, "Stopped", "موقوف الاحتساب بالملف المالي — ارفع الإيقاف من الملف المالي للموظف."));
+                continue;
+            }
             var basic = fin?.Basic ?? 0;
             if (basic <= 0 && !allowances.ContainsKey(emp.Id) && !income.ContainsKey(emp.Id)
                 && !overtimeTx.ContainsKey(emp.Id) && !salaryDaysTx.ContainsKey(emp.Id)
@@ -531,6 +563,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                 // لا راتب ولا علاوات ولا حركات دخل/عمل إضافي/أيام/بدل إجازة.
                 // يُعدّ لا يُبتلع: «لماذا قسيمة واحدة فقط؟» جوابه هنا عادةً.
                 skippedNoSalary++;
+                exclusions.Add((emp.Id, "NoSalary", "بلا راتب أساسي ولا علاوات ولا حركات مالية بالفترة — أدخل الراتب الأساسي بالملف المالي."));
                 continue;
             }
 
@@ -546,6 +579,10 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
             if (!link.Include)
             {
                 skippedNoAttendance++;
+                exclusions.Add((emp.Id,
+                    "NoAttendance",
+                    $"لا يستوفي شرط ربط الحضور بالمسير ({AttendanceSalaryLink.ModeLabel(linkMode)}) — "
+                    + $"أيام دوام {workDays} · حضور {month?.PresentDays ?? 0} · غياب {absentDays}. شغّل «تحديث الحضور» للفترة."));
                 continue;
             }
             if (!AttendanceSalaryLink.HasAttendanceData(workDays)) paidWithoutAttendance++;
@@ -650,16 +687,36 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
             decimal formulaAddTotal = 0, formulaTaxableAdd = 0, formulaDeductTotal = 0;
             if (formulaItems.Count > 0)
             {
-                var formulaVars = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
+                // ⚠️ كان القاموس يُبنى هنا بيده بسبعة مفاتيح، **واثنان منها صفران
+                // مثبّتان** (`Hours`/`Days`) رغم توفّر قيمتيهما الفعليتين بالنطاق
+                // نفسه. فصيغةٌ كـ`Basic / 30 * Days` تُنتج صفراً فيُتخطّى بندها،
+                // و`Basic / Days` تفشل بقسمة على صفر فيُتخطّى **بصمت**. والأسوأ أن
+                // مختبر الصيغ كان يمرّر `Days=30, Hours=8` — فالرقم الذي يراه
+                // المستخدم بالتجربة ليس الرقم الذي يدخل القسيمة.
+                // البناء الآن من مصدر واحد: PayrollFormulaVariables.
+                var formulaVars = PayrollFormulaVariables.Build(new PayrollFormulaVariables.Context
                 {
-                    ["Basic"] = basic,
-                    ["Allowances"] = allowancesTotal,
-                    ["Gross"] = basic + allowancesTotal,
-                    ["DailyRate"] = dailyRate,
-                    ["HourlyRate"] = hourlyRate,
-                    ["Hours"] = 0,
-                    ["Days"] = 0
-                };
+                    Basic = basic,
+                    ProratedBasic = proratedBasic,
+                    Allowances = allowancesTotal,
+                    Days = workDays,
+                    PresentDays = month?.PresentDays ?? 0,
+                    AbsentDays = absentDays,
+                    UnpaidLeaveDays = unpaidLeaveDays,
+                    DaysInPeriod = daysInPeriod,
+                    Hours = month?.WorkedHours ?? 0m,
+                    DailyRate = dailyRate,
+                    HourlyRate = hourlyRate,
+                    Factor = factor,
+                    IncomeTx = incomeTotal,
+                    OvertimeTx = overtimeTotal,
+                    SalaryDaysTx = salaryDaysAdd - salaryDaysDeduct,
+                    LeaveEncashTx = leaveEncashTotal,
+                    DeductionTx = deductionTx.TryGetValue(emp.Id, out var empDedPreview)
+                        ? empDedPreview.Sum(t => t.Amount)
+                        : 0m
+                },
+                salaryConstants);
                 foreach (var item in formulaItems)
                 {
                     if (!SalaryFormulaEvaluator.TryEvaluate(item.Formula, formulaVars, out var raw, out _)) continue;
@@ -872,6 +929,27 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             totalGross += gross; totalNet += net; totalTax += tax; totalGosiCo += gosiCo;
         }
 
+        // سجلّ المستبعَدين يُستبدل كاملاً مع كل احتساب (idempotent كسطور الدفعة):
+        // إعادة الاحتساب بعد إصلاح البيانات يجب أن تُخلي السجلّ من الأسماء التي عولجت.
+        await HrmsDatabase.ExecuteAsync(
+            dbContext,
+            "DELETE FROM PayrollRunExclusions WHERE RunId = @RunId;",
+            command => HrmsDatabase.AddParameter(command, "@RunId", runId));
+
+        foreach (var (employeeId, code, reason) in exclusions)
+        {
+            await HrmsDatabase.ExecuteAsync(
+                dbContext,
+                "INSERT INTO PayrollRunExclusions (RunId, EmployeeId, ReasonCode, Reason) VALUES (@RunId, @Emp, @Code, @Reason);",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@RunId", runId);
+                    HrmsDatabase.AddParameter(command, "@Emp", employeeId);
+                    HrmsDatabase.AddParameter(command, "@Code", code);
+                    HrmsDatabase.AddParameter(command, "@Reason", reason);
+                });
+        }
+
         await HrmsDatabase.ExecuteAsync(
             dbContext,
             """
@@ -910,6 +988,52 @@ WHERE Id = @Id;
         return (true, count == 0
             ? $"لم يُحتسب أحد ({scopeText}){skipText} — تأكد من الرواتب الأساسية بالملف المالي."
             : $"احتُسب {count} موظفاً من {scopeText} — إجمالي {totalGross:0.##}، صافي {totalNet:0.##}{skipText}.");
+    }
+
+    /// <summary>صفّ بسجلّ المستبعَدين — الموظف وسبب استبعاده من هذه الدفعة.</summary>
+    public sealed class Exclusion
+    {
+        public int EmployeeId { get; set; }
+        public string EmployeeNo { get; set; } = string.Empty;
+        public string EmployeeName { get; set; } = string.Empty;
+        public string ReasonCode { get; set; } = string.Empty;
+        public string Reason { get; set; } = string.Empty;
+
+        public string ReasonLabel => ReasonCode switch
+        {
+            "Stopped" => "موقوف الاحتساب",
+            "NoSalary" => "بلا راتب أو حركات",
+            "NoAttendance" => "لا يستوفي ربط الحضور",
+            _ => "استبعاد"
+        };
+    }
+
+    /// <summary>
+    /// المستبعَدون من دفعةٍ بأسمائهم وأسبابهم (نظير تبويب «الرواتب المستثناة» بكيان).
+    /// يُعرض بتبويب مستقلّ بشاشة الدفعة — العدّاد المجمّع وحده لا يجيب «لماذا فلان؟».
+    /// </summary>
+    public static async Task<List<Exclusion>> ListExclusionsAsync(ApplicationDbContext dbContext, int runId)
+    {
+        await EnsureAsync(dbContext);
+        return await HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+SELECT x.EmployeeId, x.ReasonCode, x.Reason,
+       ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName
+FROM PayrollRunExclusions x
+INNER JOIN Employees e ON e.Id = x.EmployeeId
+WHERE x.RunId = @RunId
+ORDER BY x.ReasonCode, e.EmployeeNo;
+""",
+            command => HrmsDatabase.AddParameter(command, "@RunId", runId),
+            reader => new Exclusion
+            {
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+                ReasonCode = HrmsDatabase.GetString(reader, "ReasonCode"),
+                Reason = HrmsDatabase.GetString(reader, "Reason")
+            });
     }
 
     public static async Task<List<PayrollLine>> ListLinesAsync(ApplicationDbContext dbContext, int runId)
