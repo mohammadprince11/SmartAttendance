@@ -144,6 +144,12 @@ IF COL_LENGTH('AttendanceRecommendations', 'TransactionId') IS NULL
         var escalationCounts = await EscalationBaselineAsync(
             dbContext, year, month, rules.Where(r => r.UseEscalation).Select(r => r.Id).ToList());
 
+        // **معايير الاستحقاق**: حقائق الموظف تُبنى مرّة واحدة لكل موظف (لا لكل يومية)
+        // بمرجع زمني = آخر يوم بالشهر المُحلَّل، فتكون «مدة الخدمة» و«العمر» و«في فترة
+        // التجربة» محسوبةً على نهاية الفترة لا على لحظة التشغيل. تُحمَّل فقط إن وُجدت
+        // قاعدة واحدة ذات شروط — فلا كلفة على المستخدم الذي لا يستعملها.
+        var facts = await EligibilityFactsAsync(dbContext, year, month, rules);
+
         int created = 0, auto = 0;
         foreach (var day in rules.Count == 0 ? new List<DayAttendanceStore.DayRow>() : days)
         {
@@ -154,6 +160,7 @@ IF COL_LENGTH('AttendanceRecommendations', 'TransactionId') IS NULL
             foreach (var rule in rules)
             {
                 if (!ShiftRuleStore.AppliesTo(rule, day)) continue;
+                if (!IsEligible(rule, day.EmployeeId, facts)) continue;
                 if (existing.Contains((day.EmployeeId, day.WorkDate, rule.Id))) continue;
 
                 var summary = ShiftRuleStore.Evaluate(rule, day, shiftDay, semanticCounts);
@@ -490,6 +497,42 @@ WHERE Id = @Id;
     /// تنفيذ أثر القاعدة حسب نوعه: مخالفة ← قضية EmployeeViolationCase، الأنواع المالية/
     /// الإجازة/المغادرة ← حركة AttendanceTransaction، ملاحظة ← بلا أثر.
     /// </summary>
+    /// <summary>
+    /// حقائق «معايير الاستحقاق» لكل موظف — تُحمَّل مرّة واحدة لكل تحليل.
+    /// تُرجع قاموساً فارغاً إن لم تكن أي قاعدة تحمل شروطاً (فلا استعلام بلا داعٍ).
+    /// </summary>
+    private static async Task<Dictionary<int, IReadOnlyDictionary<string, HrConditions.Fact>>>
+        EligibilityFactsAsync(
+            ApplicationDbContext dbContext, int year, int month,
+            IReadOnlyCollection<ShiftRuleStore.ShiftRule> rules)
+    {
+        var map = new Dictionary<int, IReadOnlyDictionary<string, HrConditions.Fact>>();
+        if (!rules.Any(r => !r.Conditions.IsEmpty)) return map;
+
+        var asOf = new DateOnly(year, month, 1).AddMonths(1).AddDays(-1);
+        foreach (var row in await HrConditionFacts.LoadAsync(dbContext))
+            map[row.Id] = HrConditionFacts.Build(row, asOf);
+
+        return map;
+    }
+
+    /// <summary>
+    /// هل هذا الموظف مستحقّ لهذه القاعدة؟ **قاعدة بلا شروط تنطبق على الجميع**
+    /// (<c>matchWhenEmpty: true</c>) — سلوك ما قبل الميزة، ونمط كيان: «إذا كانت هذه
+    /// القاعدة مستحقّة لبعض الموظفين فقط». وموظف بلا حقائق (غير محمَّل) لا يُستثنى إلا
+    /// إذا كانت القاعدة مشروطة فعلاً.
+    /// </summary>
+    private static bool IsEligible(
+        ShiftRuleStore.ShiftRule rule, int employeeId,
+        IReadOnlyDictionary<int, IReadOnlyDictionary<string, HrConditions.Fact>> facts)
+    {
+        var conditions = rule.Conditions;
+        if (conditions.IsEmpty) return true;
+
+        return facts.TryGetValue(employeeId, out var employeeFacts)
+            && HrConditions.Matches(conditions, employeeFacts, matchWhenEmpty: true);
+    }
+
     /// <summary>
     /// خطّ الأساس لعدّاد «تسلسل الإجراءات التصاعدي»: لكل (موظف × قاعدة) عددُ الاقتراحات
     /// السابقة **من بداية السنة حتى ما قبل الشهر المُحلَّل**، مستثنياً المتجاهَلة.

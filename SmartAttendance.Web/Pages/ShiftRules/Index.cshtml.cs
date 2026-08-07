@@ -23,11 +23,15 @@ public class IndexModel : PageModel
     public List<ShiftTypeStore.ShiftType> Shifts { get; set; } = new();
     public List<PunchSemanticStore.PunchSemantic> Semantics { get; set; } = new();
 
+    /// <summary>كتالوج معايير الاستحقاق لمحرّر الشروط المشترك (zynora-conditions.js).</summary>
+    public string CriteriaJson { get; private set; } = "[]";
+
     public async Task OnGetAsync()
     {
         Rules = await ShiftRuleStore.ListAsync(_dbContext);
         Shifts = (await ShiftTypeStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
         Semantics = (await PunchSemanticStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
+        CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_dbContext);
     }
 
     public async Task<IActionResult> OnPostSaveAsync()
@@ -57,7 +61,8 @@ public class IndexModel : PageModel
             AllowEdit = form["AllowEdit"] == "true",
             UseEscalation = form["UseEscalation"] == "true",
             IsAutomatic = form["IsAutomatic"] == "true",
-            IsActive = form["IsActive"] == "true"
+            IsActive = form["IsActive"] == "true",
+            ConditionsJson = form["ConditionsJson"].ToString()
         };
 
         if (string.IsNullOrWhiteSpace(rule.Name) || string.IsNullOrWhiteSpace(rule.ActionText))

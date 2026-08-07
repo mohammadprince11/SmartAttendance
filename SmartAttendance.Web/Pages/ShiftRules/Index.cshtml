@@ -15,9 +15,11 @@
         r.Id, r.Name, r.ShiftTypeIds, r.ApplyOn, r.WeekDays, r.PunchSemanticId, r.ConditionField, r.Comparison,
         r.ValueKind, r.ValueTime, r.ValueAnchor, r.ValueTime2, r.ValueAnchor2, r.OffsetMinutes,
         r.ValueHours, r.ValueHours2, r.ActionType, r.ActionText, r.ActionValue,
-        r.AllowEdit, r.UseEscalation, r.IsAutomatic, r.IsActive
+        r.AllowEdit, r.UseEscalation, r.IsAutomatic, r.IsActive, r.ConditionsJson
     }));
 }
+
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
@@ -100,7 +102,13 @@
                         <tr>
                             <td><b>@rule.Name</b></td>
                             <td class="shr-sentence">@rule.Sentence</td>
-                            <td style="font-size:12px">@scopeText · @ShiftRuleStore.LabelOf(ShiftRuleStore.ApplyOnOptions, rule.ApplyOn)</td>
+                            <td style="font-size:12px">
+                                @scopeText · @ShiftRuleStore.LabelOf(ShiftRuleStore.ApplyOnOptions, rule.ApplyOn)
+                                @if (!rule.Conditions.IsEmpty)
+                                {
+                                    <br /><span class="shr-sentence" title="@rule.EligibilityText">مستحقّة لبعض الموظفين (@rule.Conditions.RuleCount شرط)</span>
+                                }
+                            </td>
                             <td>
                                 <span class="shr-chip @(rule.ActionType == "Violation" ? "" : rule.ActionType == "Note" ? "note" : "fin")">@ShiftRuleStore.LabelOf(ShiftRuleStore.ActionTypes, rule.ActionType)</span>
                                 @if (ShiftRuleStore.ActionNeedsValue(rule.ActionType) && rule.ActionValue > 0)
@@ -265,6 +273,20 @@
                     </div>
                 </div>
 
+                @* معايير الاستحقاق (نمط كيان) — شروط على الموظف نفسه، فارغة = الجميع *@
+                <div class="shr-section">
+                    <b>معايير الاستحقاق</b>
+                    <p class="shr-sentence" style="margin:0">
+                        اتركها بلا شروط لتنطبق القاعدة على كل الموظفين. أضف شروطاً إن كانت
+                        مستحقّة لبعضهم فقط (وحدة عمل · جنسية · نوع عقد · مدة خدمة …).
+                    </p>
+                    <input type="hidden" name="ConditionsJson" id="shr-Conditions" />
+                    <div class="zyc"
+                         data-zy-conditions
+                         data-input="#shr-Conditions"
+                         data-criteria="@Model.CriteriaJson"></div>
+                </div>
+
                 <button type="submit" class="shr-btn">حفظ القاعدة</button>
             </form>
         </div>
@@ -272,6 +294,7 @@
 </section>
 
 @section Scripts {
+    <script src="~/js/zynora-conditions.js" asp-append-version="true"></script>
     <script>
         var SHR_DATA = @Html.Raw(rulesJson);
         var SHR_TIME_CMPS = [['Before','قبل'],['BeforeOrAt','قبل/في'],['After','بعد'],['AfterOrAt','بعد/في'],['Between','بين']];
@@ -376,6 +399,8 @@
             form.reset();
             document.getElementById('shr-Id').value = id || 0;
             document.getElementById('shr-title').textContent = id ? 'تعديل القاعدة' : 'قاعدة جديدة';
+            // form.reset() يفرّغ الحقل المخفي لكن شجرة المحرّر تبقى معروضة — تُصفَّر صراحةً.
+            shrSetConditions('');
 
             if (id) {
                 var r = SHR_DATA.find(function (x) { return x.Id === id; });
@@ -399,6 +424,7 @@
                     document.getElementById('shr-AllowEdit').checked = !!r.AllowEdit;
                     document.getElementById('shr-Escalation').checked = !!r.UseEscalation;
                     document.getElementById('shr-Active').checked = !!r.IsActive;
+                    shrSetConditions(r.ConditionsJson || '');
                     (r.ShiftTypeIds || '').split(',').forEach(function (v) {
                         var cb = document.querySelector('[name="ShiftTypeIds"][value="' + v + '"]');
                         if (cb) cb.checked = true;
@@ -424,6 +450,19 @@
             document.getElementById('shr-slide').classList.remove('open');
             document.getElementById('shr-backdrop').classList.remove('open');
         }
+        // إعادة تحميل محرّر معايير الاستحقاق بقيمة القاعدة المفتوحة. المحرّر يقرأ الحقل
+        // المخفي مرّة واحدة عند التركيب ويحرس نفسه بعلامة __zyConditions، فتغيير القيمة
+        // وحده لا يُحدّث الشاشة — تُمسح العلامة ويُعاد التركيب.
+        function shrSetConditions(json) {
+            var input = document.getElementById('shr-Conditions');
+            var host = document.querySelector('#shr-slide [data-zy-conditions]');
+            if (!input || !host) return;
+            input.value = json || '';
+            host.__zyConditions = null;
+            host.innerHTML = '';
+            if (window.ZyConditions) window.ZyConditions.mount(host);
+        }
+
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') shrClose(); });
         shrFieldChanged();
         shrActionChanged();
