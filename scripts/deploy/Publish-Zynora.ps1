@@ -66,6 +66,31 @@ function Write-Step { param([string] $Text) Write-Host "`n=== $Text ===" -Foregr
 function Write-Ok   { param([string] $Text) Write-Host "  [ok] $Text"    -ForegroundColor Green }
 function Write-Warn { param([string] $Text) Write-Host "  [!]  $Text"    -ForegroundColor Yellow }
 
+<#
+.SYNOPSIS
+    يُسكِت كل ما يشغّل الموقع فعلاً — لا العملية وحدها.
+
+.DESCRIPTION
+    إيقاف المهمة المجدولة لا يكفي: `run-server.bat` حلقةٌ لا نهائية تعيد إطلاق
+    التطبيق كل ٣ ثوانٍ، وهي تعمل بـ`cmd.exe` **من System32** لا من مجلّد الموقع —
+    فالفلترة بمسار العملية وحدها تتركها حيّة، فتُقيم الموقع وسط النسخ ويعلق
+    `robocopy` على ملفاتٍ مقفولة (أوقف نشرَي 2026-08-07 دقائق بلا تقدّم).
+
+    فيُقتل صنفان: ما يعمل **من** مجلّد الموقع، وما يذكر مجلّد الموقع **بسطر
+    أوامره** (cmd/wscript/timeout). والقيد على السطر يمنع إسقاط تطبيقٍ آخر بالخادم.
+#>
+function Stop-SiteProcesses {
+    param([Parameter(Mandatory)][string] $SitePath)
+
+    Get-Process -ErrorAction SilentlyContinue |
+        Where-Object { $_.Path -and $_.Path.StartsWith($SitePath, [StringComparison]::OrdinalIgnoreCase) } |
+        ForEach-Object { Write-Host "  قتل PID $($_.Id) ($($_.ProcessName))"; Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
+
+    Get-CimInstance Win32_Process -Filter "Name='cmd.exe' OR Name='wscript.exe' OR Name='timeout.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -and $_.CommandLine.IndexOf($SitePath, [StringComparison]::OrdinalIgnoreCase) -ge 0 } |
+        ForEach-Object { Write-Host "  قتل حلقة PID $($_.ProcessId) ($($_.Name))"; Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ٠) شروط البدء
 # ─────────────────────────────────────────────────────────────────────────────
@@ -238,11 +263,7 @@ Write-Step '٣) إيقاف الموقع'
 Disable-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue | Out-Null
 Stop-ScheduledTask    -TaskName $TaskName -ErrorAction SilentlyContinue
 
-# الحلقة تعيد الإحياء، فلا يكفي إيقاف المهمة — نقتل عمليات المجلّد نفسه
-# دون غيرها حتى لا نُسقط تطبيق dotnet آخر على الخادم.
-Get-Process -ErrorAction SilentlyContinue |
-    Where-Object { $_.Path -and $_.Path.StartsWith($SitePath, [StringComparison]::OrdinalIgnoreCase) } |
-    ForEach-Object { Write-Host "  قتل PID $($_.Id)"; Stop-Process -Id $_.Id -Force }
+Stop-SiteProcesses -SitePath $SitePath
 
 Start-Sleep -Seconds 3
 if (Test-NetConnection -ComputerName localhost -Port $Port -InformationLevel Quiet -WarningAction SilentlyContinue) {
@@ -319,9 +340,7 @@ if (-not $ready) {
     Write-Warn 'المخارج: ForceHttps=true · ReverseProxy:Enabled=true · Security:AllowInsecureCookies=true'
 
     Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-    Get-Process dotnet -ErrorAction SilentlyContinue |
-        Where-Object { $_.Path -and $_.Path.StartsWith($SitePath, [StringComparison]::OrdinalIgnoreCase) } |
-        Stop-Process -Force -ErrorAction SilentlyContinue
+    Stop-SiteProcesses -SitePath $SitePath
     robocopy $backupDir $SitePath /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
     Start-ScheduledTask -TaskName $TaskName
 
