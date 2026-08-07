@@ -26,6 +26,18 @@
         return value || "yyyy-mm-dd";
     }
 
+    /*
+        راية لحظة الفتح. `nexora-calendar-v18.css` يفكّ قصّ أسلاف المنسدلة تحتها
+        فقط — فخارجها تملك كلُّ حاوية تمريرها. تُحسَب من الـDOM لا من متغيّر محليّ
+        كي يتشارك ملفَّا المنتقي (التاريخ والشهر) الرايةَ نفسها بلا تنسيق بينهما.
+    */
+    function syncOpenState() {
+        document.documentElement.classList.toggle(
+            "nxcal-open",
+            !!document.querySelector(".nxcal.is-open")
+        );
+    }
+
     function closeAll(except = null) {
         document.querySelectorAll(".nxcal.is-open").forEach((picker) => {
             if (picker !== except) {
@@ -33,6 +45,8 @@
                 picker.querySelector(".nxcal__button")?.setAttribute("aria-expanded", "false");
             }
         });
+
+        syncOpenState();
     }
 
     function monthStart(date) {
@@ -46,14 +60,18 @@
             a.getDate() === b.getDate();
     }
 
+    /*
+        تعليم **سلسلة الأسلاف كاملةً** حتى `body`. كان الحدّ ستّة مستويات، وكانت
+        القاعدة الكاسحة بالـCSS تسدّ ما بعدها عرَضاً (بمطابقة أسماء السلائل). بعد
+        حذف الكسح صار الحدّ ثغرةً حقيقية: سلفٌ قاصٌّ بالمستوى السابع يقصّ المنسدلة.
+        السلسلة قصيرة (عمق DOM نموذجي < 20) والتعليم يقع مرّةً واحدة عند البناء.
+    */
     function markParents(node) {
         let current = node.parentElement;
-        let depth = 0;
 
-        while (current && current !== document.body && depth < 6) {
+        while (current && current !== document.body) {
             current.classList.add("nxcal-ready");
             current = current.parentElement;
-            depth++;
         }
     }
 
@@ -466,6 +484,7 @@ function changeMonth(delta) {
                 yearPageStart = state.view.getFullYear() - 5;
                 render();
                 picker.classList.add("is-open");
+                syncOpenState();
                 button.setAttribute("aria-expanded", "true");
                 window.requestAnimationFrame(positionPanel);
             }

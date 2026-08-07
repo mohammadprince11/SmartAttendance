@@ -652,8 +652,10 @@ html.nxex-scroll-lock,body.nxex-scroll-lock{overflow:hidden !important}
 .nxex-modal-body,.nxex-more-sheet{overscroll-behavior:contain}
 .nxex-modal-body{-webkit-overflow-scrolling:touch}
 
-/* التقويم يضيف .nxcal-ready بـoverflow:visible!important للآباء (لإظهار لوحته) —
-   لكن هذا يكسر تمرير جسم الشاشة. نُعيد التمرير للجسم بخصوصية أعلى. */
+/* التقويم يضيف .nxcal-ready لأسلاف الحقل ويُفكّ قصُّها (لإظهار لوحته) — ونزعُ القصّ
+   عن جسم الشاشة يكسر تمريره. نُعيده بخصوصية أعلى.
+   ملاحظة (2026-08-07): فكّ القصّ صار لحظياً (`html.nxcal-open`)، وتبقى هذه القاعدة
+   لأن نزع القصّ عن جسمٍ مُمرَّرٍ يُصفّر `scrollTop` فيقفز المحتوى. */
 .nxex-modal-body.nxcal-ready{overflow-y:auto !important}
 
 /* ===== منتقي التاريخ المخصّص (يوم واحد / أيام متعددة) ===== */
