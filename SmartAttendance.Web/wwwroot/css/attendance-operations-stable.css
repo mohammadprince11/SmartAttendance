@@ -1,5 +1,19 @@
 /* Stable Attendance Operations layout - rollback clean */
 
+/* «غير متوافقة مع الشاشة»: القوقعة تعطي هذه الصفحة صنف .hrms-page (display:grid)
+   بعمودٍ ضمنيّ auto، فينمو مع الجدول العريض (min-width:1180) متجاوزاً عرض القوقعة
+   فيُقَصّ المحتوى (بالـRTL يُقَصّ من اليسار). نحصر العمود في minmax(0,1fr) ونسمح
+   للبطاقات بالانكماش دون محتواها، فيتكفّل .attendance-table-wrap بتمرير الجدول
+   داخليّاً وحده. مقصورٌ على هذه الصفحة — لا يمسّ .hrms-page عالميّاً. */
+.attendance-operations-page {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 100%;
+}
+
+.attendance-operations-page > * {
+    min-width: 0;
+}
+
 .attendance-header-actions {
     display: flex;
     gap: 8px;

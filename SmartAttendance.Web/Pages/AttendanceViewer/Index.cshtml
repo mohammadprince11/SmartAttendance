@@ -69,7 +69,8 @@
     /* احتواء **أفقيّ فقط**: الجدول أعرض من الشاشة فيمرّر داخل بطاقته (وإلا جرّ
        المستند والقوقعة معه). أما رأسياً فالمستند هو المُمرِّر — لا مُمرِّر متداخل:
        `max-height: 66vh` كان يقصّ صفحة الـ20 موظفاً إلى 6 صفوف مرئية. */
-    .avw-matrix-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow-x: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .avw-matrix-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow-x: auto; background: var(--sa-surface, rgba(8,25,43,.9)); cursor: grab; }
+    .avw-matrix-card.is-grabbing { cursor: grabbing; user-select: none; }
     .avw-matrix { border-collapse: separate; border-spacing: 0; font-size: 11px; }
     .avw-matrix th { padding: 6px 6px; font-size: 10px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: #0a1f33; text-align: center; position: sticky; top: 0; z-index: 3; }
     html[data-theme="light"] .avw-matrix th { background: #eef4f9; }
@@ -587,6 +588,26 @@
                 document.getElementById('avw-n-title').textContent = 'إشعار الموظفين — بماذا تود إبلاغهم؟';
             }
         }
+
+        // سحبٌ بالماوس لكشف باقي أعمدة المصفوفة (grab-and-drag). لا يتعارض مع نقر
+        // الخلية: النقرة تُلغى فقط إذا تحرّك المؤشّر فعليّاً (سحبٌ لا نقرة).
+        (function () {
+            var card = document.querySelector('.avw-matrix-card[data-zy-scroll]');
+            if (!card) return;
+            var down = false, moved = false, startX = 0, startLeft = 0;
+            card.addEventListener('pointerdown', function (e) {
+                if (e.button !== 0) return;
+                down = true; moved = false; startX = e.clientX; startLeft = card.scrollLeft;
+            });
+            window.addEventListener('pointermove', function (e) {
+                if (!down) return;
+                var dx = e.clientX - startX;
+                if (Math.abs(dx) > 3) { moved = true; card.classList.add('is-grabbing'); }
+                card.scrollLeft = startLeft - dx;   // المحتوى يتبع اليد
+            });
+            window.addEventListener('pointerup', function () { down = false; card.classList.remove('is-grabbing'); });
+            card.addEventListener('click', function (e) { if (moved) { e.preventDefault(); e.stopPropagation(); } }, true);
+        })();
 
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { avwModal('edit', false); avwModal('notif', false); } });
         avwCounts();
