@@ -1,7 +1,7 @@
 @using SmartAttendance.Web.Infrastructure.Security
 @{
     // W4 — شريط عروض «إدارة الحضور» (②): يطوي مسارات الحضور المتفرّقة في مساحة
-    // عملٍ واحدة بصريّاً (اليوميات · المصفوفة · سجلات البصمات · مراقبة الحضور).
+    // عملٍ واحدة بصريّاً (اليوميات · المصفوفة · سجلات البصمات · المعالجة والتصحيح).
     //
     // لا دمج صلاحيات ولا هجرة أدوار: كل عرضٍ يظهر فقط إن سمح مسارُه الأصلي عبر
     // RoleRouteCatalog — نفس مصدر الحقيقة الذي ينفّذه RoleSecurityMiddleware — فلا
@@ -15,7 +15,7 @@
         ("اليوميات", "/DayAttendance/Index", "/dayattendance"),
         ("المصفوفة", "/AttendanceViewer/Index", "/attendanceviewer"),
         ("سجلات البصمات", "/AttendanceRecords/Index", "/attendancerecords"),
-        ("مراقبة الحضور", "/AttendanceOperations/Index", "/attendanceoperations"),
+        ("المعالجة والتصحيح", "/AttendanceOperations/Index", "/attendanceoperations"),
     };
 
     var visible = views

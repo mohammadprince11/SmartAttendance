@@ -1,5 +1,6 @@
 using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
@@ -185,6 +186,121 @@ WHERE i.IsPosted = 0 AND l.Status = N'Approved'
   AND {companyPredicate};
 """;
         return (int)(await command.ExecuteScalarAsync())!;
+    }
+
+    /// <summary>
+    /// عزل تحليل الحضور — «حرفاً بحرف» لشركة B: التحليل المقيَّد بشركة A يحذف ويعيد
+    /// بناء يوميات موظفي A وحدهم، فصفوف B خارج مجموعة الحذف ومجموعة البناء كلتيهما.
+    ///
+    /// <para><b>لماذا لا ننادي <see cref="DayAttendanceStore.AnalyzeMonthAsync"/>
+    /// مباشرةً؟</b> لأنه يفتح معاملته الخاصة ويستخدم <c>SqlBulkCopy</c> ثم يُثبِّت
+    /// (commit) — فنداؤه على بياناتٍ حقيقية يكتب على القاعدة بلا تراجع، وهو ممنوع
+    /// (لا أثر). فنُثبت **دلالة الحذف/البناء التي يستعملها حرفياً**: أمرُ الحذف
+    /// المقيَّد (<c>DayAttendanceStore</c> سطر 442) يصل الجدول بـ<c>Employees</c>
+    /// وشرط <see cref="CompanyScope.ToSqlPredicate"/>، فلا يطال صفوف B؛ ومجموعة البناء
+    /// هي موظفو النطاق النشطون وحدهم. نفس عُرف <see cref="PostDueSelect_IsIsolatedByCompany_OnRealData"/>.</para>
+    ///
+    /// <para>أحمر أولاً: أمرُ الأدمن (غير المقيَّد) بلا شرط شركة يطال صفوف B كلَّها —
+    /// فلو استعمل المقيَّد صيغته لتغيّرت يوميات B. العدّان يُظهران الفرق (0 مقابل countB).</para>
+    /// </summary>
+    [SkippableFact]
+    public async Task AnalyzeMonthDeleteRebuild_ScopedToOneCompany_NeverTouchesAnotherCompanyRows()
+    {
+        Skip.IfNot(_dbAvailable, "SmartAttendance_Dev غير متاح محلياً.");
+
+        var connection = _db.Database.GetDbConnection();
+        await using var tx = await _db.Database.BeginTransactionAsync();
+        var dbTx = tx.GetDbTransaction();
+
+        // شركة B لها أكثر يوميات محلَّلة في شهرٍ ما — الطرف الذي يجب ألا يُمَسّ.
+        int companyB = 0, year = 0, month = 0;
+        long countB = 0;
+        await using (var pick = connection.CreateCommand())
+        {
+            pick.Transaction = dbTx;
+            pick.CommandText = """
+SELECT TOP 1 e.CompanyId, YEAR(d.WorkDate), MONTH(d.WorkDate), COUNT_BIG(*)
+FROM DayAttendances d
+INNER JOIN Employees e ON e.Id = d.EmployeeId
+WHERE e.CompanyId IS NOT NULL
+GROUP BY e.CompanyId, YEAR(d.WorkDate), MONTH(d.WorkDate)
+ORDER BY COUNT_BIG(*) DESC;
+""";
+            await using var r = await pick.ExecuteReaderAsync();
+            if (await r.ReadAsync())
+            {
+                companyB = r.GetInt32(0);
+                year = r.GetInt32(1);
+                month = r.GetInt32(2);
+                countB = r.GetInt64(3);
+            }
+        }
+
+        Skip.If(companyB == 0 || countB == 0, "لا يوميات محلَّلة على القاعدة.");
+
+        // شركة A مختلفة، مأهولة بموظف نشط — نطاق التحليل.
+        var companyA = await ScalarIntAsync(connection, dbTx, $"""
+SELECT TOP 1 CompanyId FROM Employees
+WHERE CompanyId IS NOT NULL AND CompanyId <> {companyB} AND IsActive = 1
+GROUP BY CompanyId ORDER BY CompanyId;
+""");
+        Skip.If(companyA == 0, "تحتاج شركةً ثانية مأهولة بموظف نشط.");
+
+        // نفس الشرط الذي يحقنه AnalyzeMonthAsync في أمر الحذف والبناء.
+        var scopedPredicate = CompanyScope.ForCompanies(new[] { companyA }).ToSqlPredicate("e.CompanyId");
+
+        // (أ) أمر الحذف المقيَّد بشركة A — كم صفّاً من صفوف شهر B يطاله؟ يجب صفر.
+        var scopedDeleteHitsOnB = await CountDeleteHitsOnCompanyAsync(
+            connection, dbTx, companyB, year, month, scopedPredicate);
+
+        // (ب) أمر الأدمن غير المقيَّد (بلا شرط شركة) — يطال صفوف شهر B كلَّها (أحمر أولاً).
+        var adminDeleteHitsOnB = await CountDeleteHitsOnCompanyAsync(
+            connection, dbTx, companyB, year, month, companyPredicate: null);
+
+        // (ج) مجموعة البناء المقيَّدة بـA لا تضمّ أيّ موظفٍ نشطٍ من B.
+        var buildEmployeesFromB = await ScalarIntAsync(connection, dbTx, $"""
+SELECT COUNT_BIG(*) FROM Employees e
+WHERE e.IsActive = 1 AND e.CompanyId = {companyB} AND {scopedPredicate};
+""");
+
+        await tx.RollbackAsync();   // قراءةٌ محضة — لا أثر أصلاً.
+
+        Assert.Equal(0, scopedDeleteHitsOnB);       // حذف A لا يطال صفّاً واحداً من B.
+        Assert.Equal(countB, adminDeleteHitsOnB);   // بينما غير المقيَّد يطالها كلَّها.
+        Assert.Equal(0, buildEmployeesFromB);       // وبناء A لا يشمل موظفي B.
+    }
+
+    private static async Task<int> ScalarIntAsync(DbConnection connection, DbTransaction tx, string sql)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = tx;
+        command.CommandText = sql;
+        var value = await command.ExecuteScalarAsync();
+        return value is null || value == DBNull.Value ? 0 : Convert.ToInt32(value);
+    }
+
+    /// <summary>
+    /// عدد صفوف شهر الشركة التي يطالها أمرُ حذف <c>AnalyzeMonthAsync</c> بشرط الشركة
+    /// المُمرَّر (<c>null</c> = أمر الأدمن غير المقيَّد الذي يطال المدى كلَّه). يحاكي بنية
+    /// الحذف بالمتجر (WorkDate بالمدى + EXISTS على Employees بالشرط)، مقصوراً على صفوف الشركة.
+    /// </summary>
+    private static async Task<long> CountDeleteHitsOnCompanyAsync(
+        DbConnection connection, DbTransaction tx, int companyId, int year, int month, string? companyPredicate)
+    {
+        var scopeClause = companyPredicate is null
+            ? string.Empty
+            : $" AND EXISTS (SELECT 1 FROM Employees e WHERE e.Id = d.EmployeeId AND {companyPredicate})";
+
+        await using var command = connection.CreateCommand();
+        command.Transaction = tx;
+        command.CommandText = $"""
+SELECT COUNT_BIG(*)
+FROM DayAttendances d
+WHERE YEAR(d.WorkDate) = {year} AND MONTH(d.WorkDate) = {month}
+  AND EXISTS (SELECT 1 FROM Employees b WHERE b.Id = d.EmployeeId AND b.CompanyId = {companyId})
+  {scopeClause};
+""";
+        return (long)(await command.ExecuteScalarAsync())!;
     }
 
     private static async Task<int> GetAppLockAsync(
