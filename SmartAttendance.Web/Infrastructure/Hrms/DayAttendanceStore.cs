@@ -1334,6 +1334,175 @@ OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
         };
     }
 
+    public sealed record DashboardStatusCount(string Status, int Count);
+
+    /// <summary><c>Value</c> ساعات بالتأخير وأيام بالغياب؛ <c>Days</c> عدد اليوميات.</summary>
+    public sealed record DashboardEmployeeStat(string EmployeeNo, string EmployeeName, decimal Value, int Days);
+
+    /// <summary>تجميعة لوحة الحضور — محسوبة بالـSQL كاملةً بلا شحن صفوف المدى.</summary>
+    public sealed class DashboardAggregate
+    {
+        public int AnalyzedDays { get; init; }
+        public int Employees { get; init; }
+        public int PresentDays { get; init; }
+        public int LateDays { get; init; }
+        public int IncompleteDays { get; init; }
+        public int AbsentDays { get; init; }
+        public int StaleDays { get; init; }
+        public decimal LateHours { get; init; }
+        public decimal EarlyLeaveHours { get; init; }
+        public decimal WorkedHours { get; init; }
+        public List<DashboardStatusCount> StatusCounts { get; init; } = new();
+        public List<DashboardEmployeeStat> TopLate { get; init; } = new();
+        public List<DashboardEmployeeStat> TopAbsent { get; init; } = new();
+    }
+
+    /// <summary>
+    /// تجميعة لوحة الحضور بالـSQL (الموجة 6 — P1): كانت اللوحة تستدعي
+    /// <see cref="ListRangeAsync"/> فتحمّل يوميات المدى كاملةً (~80 ألف صفّ لفترة
+    /// شهرية بثلاث شركات) ثم تعدّ وتجمّع وترتّب بالذاكرة — وتقرأ <c>IsStale</c>
+    /// فتعذّر تخطّي حسابه كبقية الشاشات. الآن: كل رقمٍ يُحسب بتجميعةٍ بالـSQL
+    /// (مسحٌ واحد لكل تجميعة) ولا يصل التطبيقَ إلا الأرقام النهائية وقائمتا العشرة.
+    ///
+    /// البائتة تُعدّ بنفس نمط <see cref="PageRangeAsync"/> المجموعيّ (وصلات مسبقة
+    /// التجميع) لا بـEXISTS مترابط لكل صفّ — نفس الناتج بجزءٍ من الكلفة. النطاق
+    /// إلزاميّ ومغلق الفشل كبقية القراءات.
+    /// </summary>
+    public static async Task<DashboardAggregate> DashboardAggregateAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, DateOnly from, DateOnly to)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new DashboardAggregate();
+
+        await EnsureAsync(dbContext);
+
+        var companyClause = scope.IsUnrestricted
+            ? string.Empty
+            : $" AND {scope.ToSqlPredicate("e.CompanyId")}";
+
+        void AddRange(System.Data.Common.DbCommand command)
+        {
+            HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
+            HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
+        }
+
+        // 1) توزيع الحالات (يشتقّ منه AnalyzedDays وأعداد كل حالة).
+        var statusCounts = await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+SELECT d.Status AS Status, COUNT(*) AS Cnt
+FROM DayAttendances d
+INNER JOIN Employees e ON e.Id = d.EmployeeId
+WHERE d.WorkDate >= @From AND d.WorkDate <= @To{companyClause}
+GROUP BY d.Status;
+""",
+            AddRange,
+            reader => new DashboardStatusCount(
+                HrmsDatabase.GetString(reader, "Status"),
+                HrmsDatabase.GetInt(reader, "Cnt")));
+
+        int CountOf(string status) => statusCounts.Where(s => s.Status == status).Sum(s => s.Count);
+
+        // 2) المجاميع القياسية: الساعات وعدد الموظفين المميَّزين بمسحٍ واحد.
+        var scalars = (await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+SELECT ISNULL(SUM(d.LateHours),0) AS LateH,
+       ISNULL(SUM(d.EarlyLeaveHours),0) AS EarlyH,
+       ISNULL(SUM(d.WorkedHours),0) AS WorkedH,
+       COUNT(DISTINCT d.EmployeeId) AS EmpCnt
+FROM DayAttendances d
+INNER JOIN Employees e ON e.Id = d.EmployeeId
+WHERE d.WorkDate >= @From AND d.WorkDate <= @To{companyClause};
+""",
+            AddRange,
+            reader => new
+            {
+                LateH = reader["LateH"] is decimal l ? l : 0,
+                EarlyH = reader["EarlyH"] is decimal ea ? ea : 0,
+                WorkedH = reader["WorkedH"] is decimal w ? w : 0,
+                EmpCnt = HrmsDatabase.GetInt(reader, "EmpCnt")
+            })).FirstOrDefault();
+
+        // 3) البائتة — مجموعياً بوصلات مسبقة التجميع (نفس نمط PageRangeAsync).
+        var staleDays = await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            $"""
+SELECT COUNT(DISTINCT d.Id)
+FROM DayAttendances d
+INNER JOIN Employees e ON e.Id = d.EmployeeId
+LEFT JOIN (SELECT EmployeeId, AttendanceDate, MAX(COALESCE(UpdatedAt, CreatedAt)) AS Mx
+           FROM AttendanceRecords GROUP BY EmployeeId, AttendanceDate) rec
+       ON rec.EmployeeId = d.EmployeeId AND rec.AttendanceDate = d.WorkDate
+LEFT JOIN LeaveRequests lv
+       ON lv.EmployeeId = d.EmployeeId AND ISNULL(lv.IsDeleted, 0) = 0
+      AND d.WorkDate BETWEEN lv.FromDate AND lv.ToDate
+{(await SelfServiceJoinSqlAsync(dbContext))}
+WHERE d.WorkDate >= @From AND d.WorkDate <= @To{companyClause}
+  AND (d.AnalyzedAt IS NULL
+       OR rec.Mx > d.AnalyzedAt
+       OR COALESCE(lv.UpdatedAt, lv.CreatedAt) > d.AnalyzedAt{(await SelfServiceStaleOrSqlAsync(dbContext))});
+""",
+            AddRange);
+
+        // 4) العشرة الأكثر تأخّراً بالساعات (لا بعدد الأيام) + كسر تعادلٍ ثابت.
+        var topLate = await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+SELECT TOP 10 e.EmployeeNo AS EmployeeNo, e.FullName AS FullName,
+       SUM(d.LateHours) AS Val, COUNT(*) AS Days
+FROM DayAttendances d
+INNER JOIN Employees e ON e.Id = d.EmployeeId
+WHERE d.WorkDate >= @From AND d.WorkDate <= @To{companyClause} AND d.LateHours > 0
+GROUP BY e.EmployeeNo, e.FullName
+ORDER BY SUM(d.LateHours) DESC, e.EmployeeNo;
+""",
+            AddRange,
+            reader => new DashboardEmployeeStat(
+                HrmsDatabase.GetString(reader, "EmployeeNo"),
+                HrmsDatabase.GetString(reader, "FullName"),
+                reader["Val"] is decimal v ? Math.Round(v, 2) : 0,
+                HrmsDatabase.GetInt(reader, "Days")));
+
+        // 5) العشرة الأكثر غياباً بعدد الأيام.
+        var topAbsent = await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+SELECT TOP 10 e.EmployeeNo AS EmployeeNo, e.FullName AS FullName, COUNT(*) AS Val
+FROM DayAttendances d
+INNER JOIN Employees e ON e.Id = d.EmployeeId
+WHERE d.WorkDate >= @From AND d.WorkDate <= @To{companyClause} AND d.Status = N'Absent'
+GROUP BY e.EmployeeNo, e.FullName
+ORDER BY COUNT(*) DESC, e.EmployeeNo;
+""",
+            AddRange,
+            reader =>
+            {
+                var days = HrmsDatabase.GetInt(reader, "Val");
+                return new DashboardEmployeeStat(
+                    HrmsDatabase.GetString(reader, "EmployeeNo"),
+                    HrmsDatabase.GetString(reader, "FullName"),
+                    days, days);
+            });
+
+        return new DashboardAggregate
+        {
+            AnalyzedDays = statusCounts.Sum(s => s.Count),
+            Employees = scalars?.EmpCnt ?? 0,
+            PresentDays = CountOf("Present"),
+            LateDays = CountOf("Late"),
+            IncompleteDays = CountOf("Incomplete"),
+            AbsentDays = CountOf("Absent"),
+            StaleDays = staleDays,
+            LateHours = Math.Round(scalars?.LateH ?? 0, 2),
+            EarlyLeaveHours = Math.Round(scalars?.EarlyH ?? 0, 2),
+            WorkedHours = Math.Round(scalars?.WorkedH ?? 0, 2),
+            StatusCounts = statusCounts,
+            TopLate = topLate,
+            TopAbsent = topAbsent
+        };
+    }
+
     /// <summary>
     /// صفحة موظفي عارض الحضور (الموجة 4 — P1-2): كانت الشاشة تحمّل يوميات المدى
     /// كلّها ثم تجمّع بالذاكرة (<c>GroupBy</c>) لعرض عشرين موظفاً. الآن: صفحة

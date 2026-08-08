@@ -262,4 +262,20 @@ public class EmployeeCompanyGuardScopeTests
         Assert.Contains("BeginTransactionAsync", store);
     }
 
+    /// <summary>
+    /// لوحة الحضور تجمّع بالـSQL لا بشحن يوميات المدى للذاكرة (الموجة 6 — P1):
+    /// الشاشة تنادي التجميعة، والمتجر يحسب البائتة مجموعياً لا بـEXISTS لكل صفّ.
+    /// </summary>
+    [Fact]
+    public void AttendanceDashboard_AggregatesInSql()
+    {
+        var page = ReadPage("AttendanceDashboard/Index.cshtml.cs");
+        Assert.Contains("DashboardAggregateAsync", page);
+        Assert.DoesNotContain("ListRangeAsync", page);
+
+        // البائتة مجموعياً بوصلة مسبقة التجميع (نفس نمط الترقيم) لا مترابطة لكل صفّ.
+        var store = ReadHrms("DayAttendanceStore.cs");
+        Assert.Contains("DashboardAggregateAsync", store);
+    }
+
 }

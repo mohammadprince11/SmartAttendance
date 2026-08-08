@@ -10,8 +10,9 @@ namespace SmartAttendance.Web.Pages.AttendanceDashboard;
 /// («رسومات بيانية»)، وآخر ما كان ناقصاً بجرد الشاشات بعد «العمل خارج المكتب».
 ///
 /// <para>قراءة محضة: لا تكتب شيئاً ولا تشغّل تحليلاً. مصدرها اليوميات المحلَّلة
-/// عبر <see cref="DayAttendanceStore.ListRangeAsync"/> — نفس قراءة الحضور اليومي
-/// وبنفس فترة الغلق، فلا يقع أن تعرض اللوحة رقماً والشاشة رقماً آخر لنفس الفترة.</para>
+/// عبر <see cref="DayAttendanceStore.DashboardAggregateAsync"/> — تجميعةٌ بالـSQL
+/// على نفس جدول الحضور اليومي وبنفس فترة الغلق، فلا يقع أن تعرض اللوحة رقماً
+/// والشاشة رقماً آخر لنفس الفترة.</para>
 /// </summary>
 public class IndexModel : PageModel
 {
@@ -78,58 +79,44 @@ public class IndexModel : PageModel
         (CutoffPeriod, CutoffPolicyName) =
             await AttendancePeriodPolicy.ResolveFromPolicyAsync(_dbContext, year, month);
 
-        var days = await DayAttendanceStore.ListRangeAsync(
-            _dbContext, await _companyScope.GetAsync(), CutoffPeriod.From, CutoffPeriod.To, search: null);
+        // التجميعة كاملةً بالـSQL: لا تُشحن يوميات المدى (~80 ألف صفّ) إلى التطبيق
+        // لتُعدّ بالذاكرة. اللوحة تقرأ IsStale فلا يمكنها تخطّي حسابه كبقية الشاشات،
+        // فيُحسب مجموعياً بالـSQL بدل EXISTS مترابط لكل صفّ.
+        var agg = await DayAttendanceStore.DashboardAggregateAsync(
+            _dbContext, await _companyScope.GetAsync(), CutoffPeriod.From, CutoffPeriod.To);
 
-        if (days.Count == 0) return;
+        if (agg.AnalyzedDays == 0) return;
 
-        AnalyzedDays = days.Count;
-        Employees = days.Select(day => day.EmployeeId).Distinct().Count();
+        AnalyzedDays = agg.AnalyzedDays;
+        Employees = agg.Employees;
 
-        PresentDays = days.Count(day => day.Status == "Present");
-        LateDays = days.Count(day => day.Status == "Late");
-        IncompleteDays = days.Count(day => day.Status == "Incomplete");
-        AbsentDays = days.Count(day => day.Status == "Absent");
-        StaleDays = days.Count(day => day.IsStale);
+        PresentDays = agg.PresentDays;
+        LateDays = agg.LateDays;
+        IncompleteDays = agg.IncompleteDays;
+        AbsentDays = agg.AbsentDays;
+        StaleDays = agg.StaleDays;
 
-        LateHours = Math.Round(days.Sum(day => day.LateHours), 2);
-        EarlyLeaveHours = Math.Round(days.Sum(day => day.EarlyLeaveHours), 2);
-        WorkedHours = Math.Round(days.Sum(day => day.WorkedHours), 2);
+        LateHours = agg.LateHours;
+        EarlyLeaveHours = agg.EarlyLeaveHours;
+        WorkedHours = agg.WorkedHours;
 
-        Distribution = days
-            .GroupBy(day => day.Status)
-            .Select(group => new StatusSlice(
-                group.Key,
-                DayAttendanceStore.StatusLabel(group.Key),
-                group.Count(),
-                (int)Math.Round(group.Count() * 100.0 / AnalyzedDays)))
+        Distribution = agg.StatusCounts
+            .Select(sc => new StatusSlice(
+                sc.Status,
+                DayAttendanceStore.StatusLabel(sc.Status),
+                sc.Count,
+                (int)Math.Round(sc.Count * 100.0 / AnalyzedDays)))
             .OrderByDescending(slice => slice.Count)
             .ToList();
 
         // «الأكثر تأخّراً» بالساعات لا بعدد الأيام: موظفٌ تأخّر يوماً ثلاث ساعات
         // أسوأ من آخرَ تأخّر ثلاثة أيام خمس دقائق — والعدّ وحده يقلب الترتيب.
-        TopLate = days
-            .Where(day => day.LateHours > 0)
-            .GroupBy(day => (day.EmployeeNo, day.EmployeeName))
-            .Select(group => new EmployeeStat(
-                group.Key.EmployeeNo,
-                group.Key.EmployeeName,
-                Math.Round(group.Sum(day => day.LateHours), 2),
-                group.Count()))
-            .OrderByDescending(stat => stat.Value)
-            .Take(10)
+        TopLate = agg.TopLate
+            .Select(s => new EmployeeStat(s.EmployeeNo, s.EmployeeName, s.Value, s.Days))
             .ToList();
 
-        TopAbsent = days
-            .Where(day => day.Status == "Absent")
-            .GroupBy(day => (day.EmployeeNo, day.EmployeeName))
-            .Select(group => new EmployeeStat(
-                group.Key.EmployeeNo,
-                group.Key.EmployeeName,
-                group.Count(),
-                group.Count()))
-            .OrderByDescending(stat => stat.Value)
-            .Take(10)
+        TopAbsent = agg.TopAbsent
+            .Select(s => new EmployeeStat(s.EmployeeNo, s.EmployeeName, s.Value, s.Days))
             .ToList();
     }
 
