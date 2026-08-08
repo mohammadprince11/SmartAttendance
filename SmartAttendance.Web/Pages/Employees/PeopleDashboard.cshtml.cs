@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.HrSettings;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
 
@@ -36,6 +37,10 @@ public class PeopleDashboardModel : PageModel
     public int ActiveEmployees { get; set; }
     public int NewThisMonth { get; set; }
     public int InProbation { get; set; }
+
+    /// <summary>مدة التجربة المستعملة بالمؤشّر — من إعداد الشركة لا رقماً صلباً.</summary>
+    public int ProbationDays { get; private set; } = 90;
+
     public int Suspended { get; set; }
     public int EndedThisMonth { get; set; }
 
@@ -81,6 +86,21 @@ public class PeopleDashboardModel : PageModel
             directoryScope.IsUnrestricted && !directoryScope.HasAnyDenial &&
             accessRoleScope.IsUnrestricted && !accessRoleScope.HasAnyDenial;
 
+        // مدة التجربة من **إعداد الشركة الأمّ** (نفس مصدر مولّد إشعارات انتهاء التجربة)
+        // لا رقماً صلباً: إن غيّرت الشركة مدتها تبع المؤشّر. الوحدة تُحوَّل لأيام،
+        // والتمديد يُضاف إن كان مسموحاً — مطابقةً لتعريف «انتهاء التجربة» بالنظام.
+        var probUnit = await HrSettingsStore.GetAsync(_dbContext, "Probation.DurationUnit", "Day");
+        var probValue = int.TryParse(await HrSettingsStore.GetAsync(_dbContext, "Probation.DurationValue", "90"), out var pv) ? pv : 90;
+        var probBasis = await HrSettingsStore.GetAsync(_dbContext, "Probation.StartBasis", "HireDate");
+        var probAllowExt = bool.TryParse(await HrSettingsStore.GetAsync(_dbContext, "Probation.AllowExtension", "False"), out var ae) && ae;
+        var probExtDays = int.TryParse(await HrSettingsStore.GetAsync(_dbContext, "Probation.ExtensionDays", "0"), out var ed) ? ed : 0;
+        ProbationDays = ProbationDaysFromPolicy(probUnit, probValue, probAllowExt, probExtDays);
+
+        // تعبير تاريخ الأساس من الإعداد — قائمةٌ بيضاء (خياران فقط)، فلا حقن رغم الحقن النصّيّ.
+        var basisExpr = probBasis.Equals("JoiningDate", StringComparison.OrdinalIgnoreCase)
+            ? "ISNULL(JoiningDate, HireDate)"
+            : "ISNULL(HireDate, JoiningDate)";
+
         // مرشِّحان يُحقنان داخل الاستعلامات: على Employees (العمود Id) وعلى
         // EmployeeEndServices (العمود EmployeeId). القيم أعداد صحيحة فقط — لا حقن.
         var empFilter = string.Empty;
@@ -103,15 +123,24 @@ public class PeopleDashboardModel : PageModel
             _dbContext,
             $"""
 DECLARE @MonthStart date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
+DECLARE @Today date = CAST(GETDATE() AS date);
 DECLARE @YearAgo date = DATEADD(year, -1, GETDATE());
 
 SELECT
     TotalEmployees   = (SELECT COUNT(*) FROM Employees WHERE IsDeleted = 0{empFilter}),
     ActiveEmployees  = (SELECT COUNT(*) FROM Employees WHERE IsDeleted = 0 AND IsActive = 1{empFilter}),
-    NewThisMonth     = (SELECT COUNT(*) FROM Employees WHERE IsDeleted = 0 AND HireDate >= @MonthStart{empFilter}),
+    -- جديد هذا الشهر: من بداية الشهر حتى اليوم فقط — تعيينٌ مستقبليّ ليس «جديداً هذا الشهر».
+    NewThisMonth     = (SELECT COUNT(*) FROM Employees WHERE IsDeleted = 0
+                          AND HireDate >= @MonthStart AND HireDate <= @Today{empFilter}),
+    -- في فترة التجربة: مدةٌ من إعداد الشركة (@ProbationDays)، ومن باشر فعلاً (لا تعيين مستقبليّ).
     InProbation      = (SELECT COUNT(*) FROM Employees WHERE IsDeleted = 0 AND IsActive = 1
-                          AND DATEADD(day, 90, ISNULL(JoiningDate, HireDate)) >= GETDATE(){empFilter}),
-    Suspended        = (SELECT COUNT(*) FROM Employees WHERE IsDeleted = 0 AND IsActive = 0{empFilter}),
+                          AND {basisExpr} <= @Today
+                          AND DATEADD(day, @ProbationDays, {basisExpr}) >= @Today{empFilter}),
+    -- موقوف عن العمل = حالة توظيفٍ حقيقيّة (موقوف/معلّق) لموظفٍ فعّال، لا كلّ منتهي الخدمة (IsActive=0).
+    Suspended        = (SELECT COUNT(*) FROM Employees WHERE IsDeleted = 0 AND IsActive = 1
+                          AND EmploymentStatus IS NOT NULL
+                          AND (EmploymentStatus LIKE N'%موقوف%' OR EmploymentStatus LIKE N'%إيقاف%'
+                               OR EmploymentStatus LIKE N'%معلّق%' OR EmploymentStatus LIKE N'%Suspend%'){empFilter}),
     EndedThisMonth   = (SELECT COUNT(*) FROM EmployeeEndServices WHERE LastWorkingDate >= @MonthStart{endSvcFilter}),
     VoluntaryExits   = (SELECT COUNT(*) FROM EmployeeEndServices
                         WHERE LastWorkingDate >= @YearAgo
@@ -122,7 +151,7 @@ SELECT
     MaleCount        = (SELECT COUNT(*) FROM Employees WHERE IsDeleted = 0 AND Gender = 'Male'{empFilter}),
     FemaleCount      = (SELECT COUNT(*) FROM Employees WHERE IsDeleted = 0 AND Gender = 'Female'{empFilter});
 """,
-            command => { },
+            command => HrmsDatabase.AddParameter(command, "@ProbationDays", ProbationDays),
             reader => new
             {
                 TotalEmployees = HrmsDatabase.GetInt(reader, "TotalEmployees"),
@@ -151,11 +180,14 @@ SELECT
         MaleCount = stats.MaleCount;
         FemaleCount = stats.FemaleCount;
 
-        // معدل الدوران = المغادرون خلال سنة ÷ متوسط قوة العمل (تقريب: الفعالون الحاليون).
+        // معدل الدوران القياسيّ = المغادرون خلال سنة ÷ **متوسّط القوى العاملة** خلال
+        // السنة، لا عدد الفعّالين الآن. المقام موثَّق: بلا لقطاتٍ تاريخيّة نقرّبه بـ
+        // «الفعّالون الآن + نصف المغادرين» — إذ كان المغادر حاضراً جزءاً من الفترة،
+        // فمتوسّط (بداية+نهاية)/2 ≈ النهاية + نصف من غادر. يمنع تضخيم النسبة بمقامٍ ناقص.
         var exits = VoluntaryExits + InvoluntaryExits;
-        var basis = Math.Max(1, ActiveEmployees);
-        TurnoverRate = Math.Round(exits * 100.0 / basis, 1);
-        VoluntaryRate = Math.Round(VoluntaryExits * 100.0 / basis, 1);
+        var averageHeadcount = Math.Max(1.0, ActiveEmployees + exits / 2.0);
+        TurnoverRate = Math.Round(exits * 100.0 / averageHeadcount, 1);
+        VoluntaryRate = Math.Round(VoluntaryExits * 100.0 / averageHeadcount, 1);
 
         TenureBuckets = await HrmsDatabase.QueryAsync(
             _dbContext,
@@ -225,5 +257,24 @@ WHERE e.IsDeleted = 0;
                 accessRoleScope.AllowsEmployee(r.Id, r.CompanyId, r.BranchId, r.DepartmentId))
             .Select(r => r.Id)
             .ToList();
+    }
+
+    /// <summary>
+    /// يحوّل مدة التجربة المعرّفة بالإعداد (قيمة + وحدة) إلى أيام، بنفس دلالة
+    /// <see cref="Infrastructure.Notifications.NotificationRuleGenerator.ProbationEnd"/>:
+    /// شهر≈30 يوماً · أسبوع=7 · يوم=1، والتمديد يُضاف إن كان مسموحاً. لا يقلّ عن يوم.
+    /// </summary>
+    public static int ProbationDaysFromPolicy(string unit, int value, bool allowExtension, int extensionDays)
+    {
+        var days = unit.Equals("Month", StringComparison.OrdinalIgnoreCase) ? value * 30
+                 : unit.Equals("Week", StringComparison.OrdinalIgnoreCase) ? value * 7
+                 : value;
+
+        if (allowExtension && extensionDays > 0)
+        {
+            days += extensionDays;
+        }
+
+        return Math.Max(1, days);
     }
 }
