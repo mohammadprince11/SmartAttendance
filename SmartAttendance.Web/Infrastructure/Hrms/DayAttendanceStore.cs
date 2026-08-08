@@ -1,5 +1,6 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
+using SmartAttendance.Web.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using SmartAttendance.Domain.Enums;
@@ -227,9 +228,24 @@ END;
         return shifts.FirstOrDefault(shift => shift.IsActive)?.Id ?? shifts.FirstOrDefault()?.Id ?? 0;
     }
 
+    /// <param name="scope">
+    /// نطاق شركات المستخدم — <b>وسيط إلزامي بلا قيمة افتراضية عمداً</b>. كان
+    /// التوقيع بلا شركة إطلاقاً، فكان التحليل يقرأ موظفي كل الشركات **ويحذف
+    /// يومياتها جميعاً** (<c>DELETE FROM DayAttendances WHERE WorkDate BETWEEN</c>
+    /// بلا أي قيد) ثم يعيد بناءها بالمناوبة التي اختارها مستخدمُ شركةٍ واحدة.
+    /// أي أن مستخدم الشركة (أ) كان يُتلف حضور الشركتين (ب) و(ج) بضغطة زر.
+    ///
+    /// جعله إلزامياً يعني أن <b>المترجم</b> يمنع النسيان: كل نداء قائم يتوقّف عن
+    /// البناء حتى يمرّر نطاقاً — لا مراجعة بشرية ولا اتفاق شفهيّ.
+    /// </param>
     public static async Task<int> AnalyzeMonthAsync(
-        ApplicationDbContext dbContext, int year, int month, int defaultShiftTypeId)
+        ApplicationDbContext dbContext, CompanyScope scope, int year, int month, int defaultShiftTypeId)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+
+        // مغلق الفشل: لا شركة مسموحة ⟹ لا قراءة ولا حذف ولا بناء.
+        if (scope.IsDeniedAll) return 0;
+
         await EnsureAsync(dbContext);
 
         var shifts = (await ShiftTypeStore.ListAsync(dbContext))
@@ -243,8 +259,22 @@ END;
         if (monthEnd > today) monthEnd = today;
         if (monthEnd < monthStart) return 0;
 
-        var employees = await dbContext.Employees.AsNoTracking()
-            .Where(e => e.IsActive)
+        // مجموعة الموظفين المعاد بناء يومياتهم — محصورة بنطاق الشركات.
+        // ⚠️ هذه والحذف أدناه **متلازمان**: الفهرس الفريد (EmployeeId, WorkDate)
+        // يعني أن حذفاً أوسع من البناء يفقد بيانات، وبناءً أوسع من الحذف يصطدم
+        // بمفتاح مكرّر. فلا يجوز عزل أحدهما دون الآخر.
+        var employeeQuery = dbContext.Employees.AsNoTracking().Where(e => e.IsActive);
+
+        if (!scope.IsUnrestricted)
+        {
+            // الصفوف بلا شركة (سابقة لعمود CompanyId) لا يراها المقيَّد — نفس قرار
+            // CompanyScope.Allows: يراها الأدمن وحده حتى تُنسَب.
+            var allowedCompanyIds = scope.AllowedCompanyIds.ToList();
+            employeeQuery = employeeQuery.Where(
+                e => e.CompanyId != null && allowedCompanyIds.Contains(e.CompanyId.Value));
+        }
+
+        var employees = await employeeQuery
             .Select(e => new
             {
                 e.Id, e.DepartmentId, e.BranchId, e.PositionId,
@@ -401,9 +431,27 @@ WHERE AttendanceDate >= @From AND AttendanceDate <= @To
         // ترانزاكشن واحدة للحذف وكل دفعات الإدخال — فلَش لوغ واحد بدل واحد لكل أمر
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
+        // 🔴 كان هذا الأمر بلا أي قيد شركة: مستخدم شركةٍ يضغط «تحديث الحضور» فتُحذف
+        // يوميات كل الشركات للفترة ثم يُعاد بناؤها بمناوبته هو. إتلافُ بيانات عابر
+        // للشركات لا تسريبَ قراءة — وأثره ينتقل للرواتب عبر EmployeeMonthAttendance.
+        //
+        // غير المقيَّد يبقى على **نفس الأمر حرفياً** لا على صيغة مكافئة: الصيغة
+        // المعزولة تصل الجدول بـEmployees، فتترك اليوميات اليتيمة (التي حُذف
+        // موظفها نهائياً) بلا حذف. الإبقاء على الأمر الأصلي للأدمن يضمن أن سلوكه
+        // لم يتغيّر بمقدار صفّ واحد.
+        var deleteSql = scope.IsUnrestricted
+            ? "DELETE FROM DayAttendances WHERE WorkDate >= @From AND WorkDate <= @To;"
+            : $"""
+DELETE d FROM DayAttendances d
+WHERE d.WorkDate >= @From AND d.WorkDate <= @To
+  AND EXISTS (
+        SELECT 1 FROM Employees e
+        WHERE e.Id = d.EmployeeId AND {scope.ToSqlPredicate("e.CompanyId")});
+""";
+
         await HrmsDatabase.ExecuteAsync(
             dbContext,
-            "DELETE FROM DayAttendances WHERE WorkDate >= @From AND WorkDate <= @To;",
+            deleteSql,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@From", monthStart.ToDateTime(TimeOnly.MinValue));

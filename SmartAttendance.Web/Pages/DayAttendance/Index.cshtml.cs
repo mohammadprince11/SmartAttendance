@@ -17,12 +17,21 @@ public class IndexModel : PageModel
     private readonly ApplicationDbContext _dbContext;
     private readonly SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender _push;
 
+    /// <summary>
+    /// نطاق شركات المستخدم — نفس المحرّك الذي تستهلكه صفحات الرواتب
+    /// (<see cref="SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider"/>)،
+    /// لا مصدر حقيقة ثانٍ.
+    /// </summary>
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
     public IndexModel(
         ApplicationDbContext dbContext,
-        SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender push)
+        SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender push,
+        SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
         _push = push;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -320,10 +329,13 @@ public class IndexModel : PageModel
             var period = await ResolvePeriodAsync(year, month);
             var count = 0;
 
+            // نطاق الشركات يُحسم مرّة قبل الحلقة — لا يتغيّر داخل الطلب.
+            var companyScope = await _companyScope.GetAsync();
+
             foreach (var (coveredYear, coveredMonth) in period.CoveredMonths())
             {
                 count += await DayAttendanceStore.AnalyzeMonthAsync(
-                    _dbContext, coveredYear, coveredMonth, shiftTypeId);
+                    _dbContext, companyScope, coveredYear, coveredMonth, shiftTypeId);
             }
 
             var label = $"{period.From:yyyy-MM-dd} → {period.To:yyyy-MM-dd}";

@@ -1,5 +1,6 @@
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.HrSettings;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -83,7 +84,12 @@ WHERE EmployeeId = @Employee AND WorkDate = @Date
         if (shiftTypeId == 0)
             return new Outcome(false, "لم يُعَد التحليل: لا مناوبة مسنَدة ولا مناوبة افتراضية.");
 
-        var count = await DayAttendanceStore.AnalyzeMonthAsync(db, date.Year, date.Month, shiftTypeId);
+        // النطاق هنا **شركة الموظف نفسه** لا نطاق المستخدم: هذا مسار خلفيّ يُطلق من
+        // اعتماد طلبٍ يخصّ موظفاً بعينه، فإعادة التحليل يجب أن تقف عند حدود شركته.
+        // بلا هذا كانت موافقةٌ على إجازة موظفٍ واحد تعيد بناء يوميات كل الشركات.
+        var scope = await CompanyScopeForEmployeeAsync(db, employeeId);
+
+        var count = await DayAttendanceStore.AnalyzeMonthAsync(db, scope, date.Year, date.Month, shiftTypeId);
         return new Outcome(true, $"وأُعيد تحليل الحضور تلقائياً ({count} يومية).");
     }
 
@@ -121,6 +127,26 @@ WHERE Id = @Request AND Status = N'Approved'
     }
 
     /// <summary>مناوبة الموظف المسنَدة، وإلا أول مناوبة فعّالة كافتراضية للتحليل.</summary>
+    /// <summary>
+    /// نطاق شركةٍ واحدة مشتقّ من الموظف المستهدَف. موظفٌ بلا شركة (صفّ سابق لعمود
+    /// <c>CompanyId</c>) ⟹ <see cref="CompanyScope.DeniedAll"/> لا
+    /// <see cref="CompanyScope.Unrestricted"/>: تعذّر تحديد الشركة حالةُ شكّ،
+    /// والشكّ يمنع إعادة بناءٍ جماعية لا يأذن بها أحد.
+    /// </summary>
+    private static async Task<CompanyScope> CompanyScopeForEmployeeAsync(
+        ApplicationDbContext db, int employeeId)
+    {
+        var companyId = (await HrmsDatabase.QueryAsync(
+            db,
+            "SELECT CompanyId FROM Employees WHERE Id = @Id AND ISNULL(IsDeleted, 0) = 0;",
+            command => HrmsDatabase.AddParameter(command, "@Id", employeeId),
+            reader => HrmsDatabase.GetNullableInt(reader, "CompanyId"))).FirstOrDefault();
+
+        return companyId is > 0
+            ? CompanyScope.ForCompanies(new[] { companyId.Value })
+            : CompanyScope.DeniedAll();
+    }
+
     private static async Task<int> ResolveShiftTypeAsync(ApplicationDbContext db, int employeeId)
     {
         var assignments = await EmployeeShiftTypeStore.MapAsync(db);
