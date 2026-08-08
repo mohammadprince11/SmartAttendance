@@ -15,6 +15,7 @@ public class PeopleCompatibilityAccessTests
     private static readonly string[] SensitiveCodes =
     {
         PeoplePermissionCodes.Delete,
+        PeoplePermissionCodes.AdministrativeDelete,
         PeoplePermissionCodes.EndService,
         PeoplePermissionCodes.Rehire,
         PeoplePermissionCodes.Import,

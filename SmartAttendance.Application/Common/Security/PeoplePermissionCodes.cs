@@ -23,6 +23,12 @@ public static class PeoplePermissionCodes
     public const string ViewLifecycle = "People.ViewLifecycle";
     public const string ViewHistory = "People.ViewHistory";
     public const string Delete = "People.Delete";
+
+    // الحذف الإداريّ: إزالة سجلٍّ **باطل** (أُنشئ خطأً) بلا أثرٍ تشغيليّ. يختلف عن
+    // إنهاء الخدمة (الذي يحفظ التاريخ بتاريخ/سبب/نوع)، ولا يمنحه تفويض الإنهاء
+    // العاديّ — بل صلاحيةٌ مخصّصة (أو Admin). راجع سياسة Delete-vs-EndService.
+    public const string AdministrativeDelete = "People.AdministrativeDelete";
+
     public const string ManagePermissions = "People.ManagePermissions";
 
     // التعويض بيانٌ ماليّ حسّاس: قراءتُه/تعديلُه يتطلّب صلاحيةً مخصّصة، لا مجرّد
@@ -47,6 +53,7 @@ public static class PeoplePermissionCodes
             new("People", ViewLifecycle, "عرض دورة حياة الموظف", "عرض حركات التعيين والنقل وإنهاء الخدمة وإعادة التعيين.", 210),
             new("People", ViewHistory, "عرض سجل التغييرات", "عرض سجل تغييرات بيانات الشخص.", 220),
             new("People", Delete, "حذف الشخص", "حذف سجل الشخص وفق سياسة النظام.", 230),
+            new("People", AdministrativeDelete, "حذف إداريّ", "حذف سجل شخص باطل بلا تاريخ تشغيليّ (لا يُغني عن إنهاء الخدمة).", 235),
             new("People", ManagePermissions, "إدارة صلاحيات الأشخاص", "إدارة صلاحيات مستخدمي منظومة الأشخاص.", 240),
             new("People", ViewCompensation, "عرض التعويض", "عرض الراتب الأساسي والبدلات والبيانات المالية للموظف.", 250),
             new("People", EditCompensation, "تعديل التعويض", "تعديل الراتب الأساسي والبدلات والبيانات المالية للموظف.", 260)

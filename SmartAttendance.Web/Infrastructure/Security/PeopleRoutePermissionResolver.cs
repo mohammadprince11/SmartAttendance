@@ -80,7 +80,9 @@ public static class PeopleRoutePermissionResolver
 
         if (normalizedPath.StartsWith("/employees/delete", StringComparison.Ordinal))
         {
-            return Employee(PeoplePermissionCodes.Delete);
+            // حذفٌ إداريٌّ لا «حذف» عامّ: صلاحيةٌ مخصّصة لا يمنحها تفويض الإنهاء العاديّ،
+            // والصفحة نفسها ترفض التنفيذ إن وُجد أثرٌ تشغيليّ (تُوجّه لإنهاء الخدمة).
+            return Employee(PeoplePermissionCodes.AdministrativeDelete);
         }
 
         if (normalizedPath.StartsWith("/employees/import", StringComparison.Ordinal))

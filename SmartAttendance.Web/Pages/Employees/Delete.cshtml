@@ -7,7 +7,7 @@
 }
 
 @{
-    ViewData["Title"] = "إيقاف موظف";
+    ViewData["Title"] = "حذف إداريّ";
 }
 
 <link rel="stylesheet" href="~/css/employee-lifecycle-action.css" asp-append-version="true" />
@@ -16,8 +16,8 @@
     <div class="lifecycle-header">
         <div>
             <div class="lifecycle-eyebrow">@brandName Employee Lifecycle</div>
-            <h1>إيقاف موظف</h1>
-            <p>لا يتم حذف الموظف نهائياً لأن لديه تاريخ حضور وطلبات وسجلات مرتبطة. هذا الإجراء يحافظ على كل التاريخ ويجعل الموظف غير فعال فقط.</p>
+            <h1>حذف إداريّ</h1>
+            <p>الحذف الإداريّ مخصّصٌ للسجلات الباطلة التي أُنشئت خطأً وليس لها أيّ تاريخ تشغيليّ. الموظف الحقيقيّ الذي له تاريخ يُنهى عبر «إنهاء الخدمة» لا الحذف.</p>
         </div>
 
         <a asp-page="./Index" class="hrms-btn-secondary">رجوع للموظفين</a>
@@ -33,7 +33,7 @@
     <div class="lifecycle-card">
         <div class="lifecycle-warning">
             <strong>تنبيه مهم</strong>
-            <span>الحذف النهائي غير صحيح في أنظمة HR لأن الموظف مرتبط بسجلات حضور، طلبات، موافقات، وتاريخ وظيفي. سيتم إيقاف الموظف فقط.</span>
+            <span>الحذف الإداريّ إزالةٌ نهائية للسجل من القوائم، ولا يُسمح به إلا إذا كان السجل باطلاً بلا تاريخ تشغيليّ. إن كان للموظف تاريخ حضور أو رواتب أو عقود أو طلبات، استخدم «إنهاء الخدمة» للحفاظ على التاريخ.</span>
         </div>
 
         <div class="lifecycle-details">
@@ -68,12 +68,26 @@
             </div>
         </div>
 
-        <form method="post" class="lifecycle-actions">
-            <input type="hidden" name="id" value="@Model.Employee.Id" />
+        @if (Model.HasOperationalHistory)
+        {
+            <div class="lifecycle-alert danger">
+                للموظف تاريخ تشغيليّ، فلا يمكن حذفه إدارياً. استخدم «إنهاء الخدمة» بدلاً من ذلك.
+            </div>
 
-            <button type="submit" class="lifecycle-btn-warning">إيقاف الموظف</button>
-            <a asp-page="./Index" class="hrms-btn-secondary">إلغاء</a>
-        </form>
+            <div class="lifecycle-actions">
+                <a asp-page="./EndService" asp-route-id="@Model.Employee.Id" class="lifecycle-btn-warning">إنهاء الخدمة</a>
+                <a asp-page="./Index" class="hrms-btn-secondary">رجوع</a>
+            </div>
+        }
+        else
+        {
+            <form method="post" class="lifecycle-actions">
+                <input type="hidden" name="id" value="@Model.Employee.Id" />
+
+                <button type="submit" class="lifecycle-btn-warning">حذف إداريّ</button>
+                <a asp-page="./Index" class="hrms-btn-secondary">إلغاء</a>
+            </form>
+        }
     </div>
 </div>
 

@@ -13,6 +13,7 @@ public static class PeopleCompatibilityAccess
         new(StringComparer.OrdinalIgnoreCase)
         {
             PeoplePermissionCodes.Delete,
+            PeoplePermissionCodes.AdministrativeDelete,
             PeoplePermissionCodes.EndService,
             PeoplePermissionCodes.Rehire,
             PeoplePermissionCodes.Import,
