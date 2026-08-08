@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Infrastructure.Security;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
 
@@ -449,57 +450,34 @@ Tab = NormalizeTab(tab);
 
     private async Task<List<UpdateEmployee>> LoadEmployeesAsync()
     {
-        var rows = await HrmsDatabase.QueryAsync(
-            _dbContext,
-            """
-SELECT TOP 500
-    e.Id,
-    ISNULL(e.EmployeeNo, '') AS EmployeeNo,
-    ISNULL(e.FullName, '') AS FullName,
-    ISNULL(e.Position, '') AS Position,
-    ISNULL(d.Name, '') AS DepartmentName,
-    ISNULL(b.Name, '') AS BranchName,
-    ISNULL(eb.CompanyId, 0)   AS CompanyId,
-    ISNULL(e.BranchId, 0)     AS BranchId,
-    ISNULL(e.DepartmentId, 0) AS DepartmentId
-FROM Employees e
-LEFT JOIN Departments d ON e.DepartmentId = d.Id
-LEFT JOIN Branches b ON d.BranchId = b.Id
-LEFT JOIN Branches eb ON eb.Id = e.BranchId
-ORDER BY e.FullName;
-""",
-            null,
-            reader => new
-            {
-                Employee = new UpdateEmployee
-                {
-                    Id = HrmsDatabase.GetInt(reader, "Id"),
-                    EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
-                    FullName = HrmsDatabase.GetString(reader, "FullName"),
-                    Position = HrmsDatabase.GetString(reader, "Position"),
-                    DepartmentName = HrmsDatabase.GetString(reader, "DepartmentName"),
-                    BranchName = HrmsDatabase.GetString(reader, "BranchName")
-                },
-                CompanyId = HrmsDatabase.GetInt(reader, "CompanyId"),
-                BranchId = HrmsDatabase.GetInt(reader, "BranchId"),
-                DepartmentId = HrmsDatabase.GetInt(reader, "DepartmentId")
-            });
+        // النطاق (قواعد ∩ أدوار الوصول) يُطبَّق **داخل SQL قبل الحدّ** لا صفّاً-صفّاً
+        // بعده — نفس مسار قائمة الأشخاص/المنتقي (P0-1 · Task 3). قبل ذلك كان الحدّ
+        // يسبق النطاق ثمّ يُرشَّح بالذاكرة، فالمقيَّد قد يخسر مخوّلين خلف أوّل خمسمئة،
+        // ويُحمَّل خمسمئة صفٍّ لترشيحها بالذاكرة على 10k+ موظف.
+        var query = _dbContext.Employees
+            .AsNoTracking()
+            .Where(e => !e.IsDeleted);
 
-        // حصْر السرد بنطاق المستخدم (قواعد ∩ أدوار الوصول) بلغة C# — لا صفوف موظفٍ
-        // خارج النطاق. مسارٌ سريع للنطاق غير المقيَّد (الأدمن نموذجيّاً).
-        if (_actor is null || _actor.Unrestricted)
+        if (_actor is not null && !_actor.Unrestricted)
         {
-            return rows.Select(row => row.Employee).ToList();
+            query = query
+                .ApplyPeopleDataScope(_actor.DirectoryScope)
+                .ApplyPeopleDataScope(_actor.AccessRoleScope);
         }
 
-        return rows
-            .Where(row =>
-                _actor.DirectoryScope.AllowsEmployee(
-                    row.Employee.Id, row.CompanyId, row.BranchId, row.DepartmentId) &&
-                _actor.AccessRoleScope.AllowsEmployee(
-                    row.Employee.Id, row.CompanyId, row.BranchId, row.DepartmentId))
-            .Select(row => row.Employee)
-            .ToList();
+        return await query
+            .OrderBy(e => e.FullName)
+            .Take(500)
+            .Select(e => new UpdateEmployee
+            {
+                Id = e.Id,
+                EmployeeNo = e.EmployeeNo ?? string.Empty,
+                FullName = e.FullName ?? string.Empty,
+                Position = e.Position ?? string.Empty,
+                DepartmentName = e.Department.Name ?? string.Empty,
+                BranchName = e.Department.Branch.Name ?? string.Empty
+            })
+            .ToListAsync(HttpContext.RequestAborted);
     }
 
     private async Task<UpdateEmployee?> LoadEmployeeAsync(int employeeId)
