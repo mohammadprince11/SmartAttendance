@@ -19,27 +19,60 @@ public static class SecurityHeaderPolicy
 
     private const string MapApiHosts = "https://nominatim.openstreetmap.org";
 
+    /// <summary>
+    /// التوجيهات المشتركة بين السياسة المُنفَّذة و«التقرير فقط» — كل ما عدا
+    /// <c>script-src</c>/<c>style-src</c> اللذين يفترقان في <c>'unsafe-inline'</c>.
+    /// </summary>
+    private static readonly string[] SharedDirectives =
+    {
+        "default-src 'self'",
+        // data:/blob: لمعاينة الصور المرفوعة وقراءات الكانفس؛ الخرائط من مضيفيها.
+        $"img-src 'self' data: blob: {MapTileHosts}",
+        "font-src 'self' data:",
+        $"connect-src 'self' {MapApiHosts}",
+        // WebAuthn وGeolocation لا يحتاجان أصولاً خارجية — نمنع كل ما عداها.
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'self'",
+        // عامل خدمة الـPWA يُسجَّل من أصلنا فقط.
+        "worker-src 'self'",
+        "manifest-src 'self'"
+    };
+
     public static string BuildContentSecurityPolicy()
     {
-        var directives = new[]
+        var directives = new List<string>
         {
-            "default-src 'self'",
+            SharedDirectives[0],
             // Razor + جافاسكربت محلي؛ 'unsafe-inline' مطلوب للسكربتات المضمّنة الحالية.
             "script-src 'self' 'unsafe-inline'",
-            "style-src 'self' 'unsafe-inline'",
-            // data:/blob: لمعاينة الصور المرفوعة وقراءات الكانفس؛ الخرائط من مضيفيها.
-            $"img-src 'self' data: blob: {MapTileHosts}",
-            "font-src 'self' data:",
-            $"connect-src 'self' {MapApiHosts}",
-            // WebAuthn وGeolocation لا يحتاجان أصولاً خارجية — نمنع كل ما عداها.
-            "object-src 'none'",
-            "base-uri 'self'",
-            "form-action 'self'",
-            "frame-ancestors 'self'",
-            // عامل خدمة الـPWA يُسجَّل من أصلنا فقط.
-            "worker-src 'self'",
-            "manifest-src 'self'"
+            "style-src 'self' 'unsafe-inline'"
         };
+        directives.AddRange(SharedDirectives[1..]);
+
+        return string.Join("; ", directives);
+    }
+
+    /// <summary>
+    /// السياسة الصارمة الهدف (بلا <c>'unsafe-inline'</c>) تُبَثّ كـ
+    /// <c>Content-Security-Policy-Report-Only</c> — أوّل خطوة ترحيل #8 (PR6).
+    ///
+    /// <para><b>لا تحجب شيئاً بالتصميم</b>: ترويسة «التقرير فقط» تُبلّغ المتصفّح
+    /// بالمخالفات دون منعها، فبثّها آمنٌ على الواجهة الحيّة كاملاً — بينما تكشف بدقّة
+    /// السكربتات/الأنماط/المعالِجات المضمّنة التي يجب ترحيلها قبل قلب الإنفاذ. تبقى
+    /// السياسة المُنفَّذة أعلاه كما هي حرفيّاً حتى يكتمل الترحيل (nonce + refactor
+    /// معالِجات الأحداث المضمّنة).</para>
+    /// </summary>
+    public static string BuildReportOnlyContentSecurityPolicy()
+    {
+        var directives = new List<string>
+        {
+            SharedDirectives[0],
+            "script-src 'self'",
+            "style-src 'self'"
+        };
+        directives.AddRange(SharedDirectives[1..]);
 
         return string.Join("; ", directives);
     }
@@ -57,6 +90,8 @@ public static class SecurityHeaderPolicy
             // publickey-credentials-get=(self) يلزم WebAuthn داخل نطاقنا.
             ["Permissions-Policy"] =
                 "camera=(), microphone=(), geolocation=(self), publickey-credentials-get=(self)",
-            ["Content-Security-Policy"] = BuildContentSecurityPolicy()
+            ["Content-Security-Policy"] = BuildContentSecurityPolicy(),
+            // بثّ الهدف الصارم بلا إنفاذ — يكشف سطح الترحيل بلا كسر الواجهة (#8).
+            ["Content-Security-Policy-Report-Only"] = BuildReportOnlyContentSecurityPolicy()
         };
 }
