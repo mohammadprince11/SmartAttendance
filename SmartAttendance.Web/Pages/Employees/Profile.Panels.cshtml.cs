@@ -499,15 +499,19 @@ public partial class ProfileModel
 
     public async Task<IActionResult> OnPostDeleteContractAsync(int recordId)
     {
-        var c = await _dbContext.EmployeeContracts.FirstOrDefaultAsync(x => x.Id == recordId && x.EmployeeId == Id);
-        if (c != null)
-        {
-            c.IsDeleted = true;
-            c.UpdatedAt = DateTime.UtcNow;
-            c.UpdatedBy = User.Identity?.Name ?? "System";
-            await _dbContext.SaveChangesAsync();
-            PanelSuccess = "تم حذف العقد.";
-        }
+        // المسار القانونيّ الوحيد لحذف العقود = ContractRegisterStore (كالإضافة والتعديل):
+        // نطاقٌ + تحقّق ملكية العقد لهذا الموظف + ثابت العقد الحاليّ الواحد + مزامنة الحقول
+        // المسطّحة + معاملة + idempotency. لا كتابة EF مباشرة هنا (لا محرّك حذفٍ ثانٍ).
+        var ok = await ContractRegisterStore.DeleteContractAsync(
+            _dbContext,
+            await _companyScope.GetAsync(HttpContext.RequestAborted),
+            recordId,
+            User.Identity?.Name ?? "System",
+            expectedEmployeeId: Id);
+
+        if (ok) { PanelSuccess = "تم حذف العقد."; }
+        else { PanelError = "تعذّر حذف العقد (غير موجود أو خارج نطاقك)."; }
+
         return BackToFiles();
     }
 

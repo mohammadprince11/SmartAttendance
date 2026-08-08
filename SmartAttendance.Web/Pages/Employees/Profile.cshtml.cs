@@ -25,16 +25,21 @@ public partial class ProfileModel : PageModel
 
     private readonly Infrastructure.Security.IProtectedFileService _protectedFiles;
 
+    // لتمرير نطاق الشركات للمسار القانونيّ لحذف العقود (ContractRegisterStore).
+    private readonly Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
     public ProfileModel(
         ApplicationDbContext dbContext,
         IWebHostEnvironment environment,
         IPermissionAuthorizationService permissionAuthorizationService,
-        Infrastructure.Security.IProtectedFileService protectedFiles)
+        Infrastructure.Security.IProtectedFileService protectedFiles,
+        Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
         _environment = environment;
         _permissionAuthorizationService = permissionAuthorizationService;
         _protectedFiles = protectedFiles;
+        _companyScope = companyScope;
     }
 
     /// <summary>رابط فتح أي مرفق بملف الموظف عبر نقطة التنزيل المصادَقة.</summary>

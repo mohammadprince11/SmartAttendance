@@ -90,8 +90,11 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
-        await ContractRegisterStore.DeleteContractAsync(_db, id);
-        TempData["SuccessMessage"] = "تم حذف العقد من السجلّ (حذف منطقي).";
+        var ok = await ContractRegisterStore.DeleteContractAsync(
+            _db, await _companyScope.GetAsync(), id, User.Identity?.Name);
+        TempData[ok ? "SuccessMessage" : "ErrorMessage"] = ok
+            ? "تم حذف العقد من السجلّ (حذف منطقي)."
+            : "تعذّر حذف العقد (غير موجود أو خارج نطاق شركاتك).";
         return RedirectToPage();
     }
 

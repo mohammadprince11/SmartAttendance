@@ -273,12 +273,120 @@ WHERE Id = @Id;
         await transaction.CommitAsync();
     }
 
-    /// <summary>حذف منطقي — عقدٌ يُمحى فعلياً يمحو معه تاريخ خدمةٍ قد يُحتاج مالياً.</summary>
-    public static async Task DeleteContractAsync(ApplicationDbContext db, int id) =>
+    /// <summary>
+    /// حذفٌ منطقيٌّ **قانونيّ** للعقد — المسار الوحيد لحذف العقود (شاشة السجلّ وملف
+    /// الموظف كلاهما يمرّ به). عقدٌ يُمحى فعلياً يمحو معه تاريخ خدمةٍ قد يُحتاج مالياً،
+    /// فالحذف ناعمٌ دائماً (<c>IsDeleted=1</c>) والصفّ يبقى تاريخاً.
+    ///
+    /// <para>يفرض النطاق قبل الكتابة (الموظف المالك ضمن شركات المستخدم)، ويتحقّق أن
+    /// العقد يخصّ <paramref name="expectedEmployeeId"/> حين يُمرَّر (منعُ حذفٍ بمعرّفٍ
+    /// مزوَّر لعقد موظفٍ آخر). <b>ثابت العقد الحاليّ الواحد</b>: إن كان المحذوف هو
+    /// الحاليّ، يُرقَّى أحدثُ عقدٍ باقٍ ليكون الحاليّ وتُزامَن حقول الموظف المسطّحة
+    /// (<c>ContractType</c>/<c>ContractEndDate</c>)؛ وإن لم يبقَ عقدٌ تُصفَّر تلك الحقول.
+    /// كل ذلك بمعاملةٍ واحدة، و<b>idempotent</b>: تكرار الحذف على عقدٍ محذوفٍ لا يُعيد
+    /// الترقية ولا يُفسد الحالة.</para>
+    /// </summary>
+    /// <returns><c>true</c> إن حُذف أو كان محذوفاً سلفاً؛ <c>false</c> إن لم يوجد أو خارج النطاق أو لموظفٍ آخر.</returns>
+    public static async Task<bool> DeleteContractAsync(
+        ApplicationDbContext db,
+        Security.CompanyScope scope,
+        int id,
+        string? deletedBy,
+        int expectedEmployeeId = 0)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (id <= 0) return false;
+
+        // النطاق أوّلاً: الموظف المالك للعقد يجب أن يكون ضمن شركات المستخدم. مغلق الفشل.
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                db, Security.EmployeeCompanyGuard.Tables.EmployeeContracts, "Id", id, scope))
+            return false;
+
+        var info = (await HrmsDatabase.QueryAsync(
+            db,
+            "SELECT EmployeeId, IsCurrent, ISNULL(IsDeleted, 0) AS IsDeleted FROM EmployeeContracts WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", id),
+            reader => new
+            {
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                IsCurrent = HrmsDatabase.GetBool(reader, "IsCurrent"),
+                IsDeleted = HrmsDatabase.GetBool(reader, "IsDeleted")
+            })).FirstOrDefault();
+
+        if (info is null) return false;                                              // لا يوجد
+        if (expectedEmployeeId > 0 && info.EmployeeId != expectedEmployeeId) return false; // ليس لهذا الموظف
+        if (info.IsDeleted) return true;                                             // idempotent: محذوفٌ سلفاً
+
+        await using var transaction = await db.Database.BeginTransactionAsync();
+
         await HrmsDatabase.ExecuteAsync(
             db,
-            "UPDATE EmployeeContracts SET IsDeleted = 1, UpdatedAt = SYSUTCDATETIME() WHERE Id = @Id;",
-            command => HrmsDatabase.AddParameter(command, "@Id", id));
+            """
+UPDATE EmployeeContracts SET IsDeleted = 1, UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @By
+WHERE Id = @Id AND ISNULL(IsDeleted, 0) = 0;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", id);
+                HrmsDatabase.AddParameter(command, "@By", deletedBy);
+            });
+
+        // ثابت العقد الحاليّ الواحد + مزامنة الحقول المسطّحة عند حذف الحاليّ.
+        if (info.IsCurrent)
+        {
+            var next = (await HrmsDatabase.QueryAsync(
+                db,
+                """
+SELECT TOP (1) Id, ContractType, ToDate FROM EmployeeContracts
+WHERE EmployeeId = @EmployeeId AND ISNULL(IsDeleted, 0) = 0 AND Id <> @Id
+ORDER BY FromDate DESC, Id DESC;
+""",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@EmployeeId", info.EmployeeId);
+                    HrmsDatabase.AddParameter(command, "@Id", id);
+                },
+                reader => new
+                {
+                    Id = HrmsDatabase.GetInt(reader, "Id"),
+                    ContractType = HrmsDatabase.GetString(reader, "ContractType"),
+                    ToDate = HrmsDatabase.GetDateOnly(reader, "ToDate")
+                })).FirstOrDefault();
+
+            if (next is not null)
+            {
+                await HrmsDatabase.ExecuteAsync(
+                    db,
+                    "UPDATE EmployeeContracts SET IsCurrent = 1, UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @By WHERE Id = @NextId;",
+                    command =>
+                    {
+                        HrmsDatabase.AddParameter(command, "@NextId", next.Id);
+                        HrmsDatabase.AddParameter(command, "@By", deletedBy);
+                    });
+
+                await HrmsDatabase.ExecuteAsync(
+                    db,
+                    "UPDATE Employees SET ContractType = @ContractType, ContractEndDate = @ContractEndDate WHERE Id = @EmployeeId;",
+                    command =>
+                    {
+                        HrmsDatabase.AddParameter(command, "@ContractType", next.ContractType);
+                        HrmsDatabase.AddParameter(command, "@ContractEndDate", next.ToDate?.ToDateTime(TimeOnly.MinValue));
+                        HrmsDatabase.AddParameter(command, "@EmployeeId", info.EmployeeId);
+                    });
+            }
+            else
+            {
+                // لا عقد باقٍ ⟹ صفّر مرآة العقد الحاليّ بكيان الموظف بدل ترك قيمةٍ بائتة.
+                await HrmsDatabase.ExecuteAsync(
+                    db,
+                    "UPDATE Employees SET ContractType = NULL, ContractEndDate = NULL WHERE Id = @EmployeeId;",
+                    command => HrmsDatabase.AddParameter(command, "@EmployeeId", info.EmployeeId));
+            }
+        }
+
+        await transaction.CommitAsync();
+        return true;
+    }
 
     // ── الحركات ────────────────────────────────────────────────────────────────
 
