@@ -342,6 +342,48 @@ public class IndexModel : PageModel
     }
 
     /// <summary>
+    /// يحسب نطاق الكتابة للاستيراد: تقاطع نطاق القواعد (ViewDirectory) مع أدوار الوصول،
+    /// وصلاحية EditCompensation لكتابة الراتب. النطاق العام (أدمن/«All») يُبقي الاستيراد
+    /// التأسيسي كاملاً؛ المقيَّد يُحصَر بموظفي بنيته القائمة داخل نطاقه (فرضٌ صارم).
+    /// </summary>
+    private async Task<EmployeeBootstrapImportEngine.ImportScope> BuildImportScopeAsync()
+    {
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        var role = PeopleAccessContext.GetRole(HttpContext);
+        var isAdmin = role.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+
+        var canEditCompensation = await _permissionAuthorizationService.HasPermissionAsync(
+            systemUserId,
+            PeoplePermissionCodes.EditCompensation,
+            PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.EditCompensation),
+            HttpContext.RequestAborted);
+
+        var directoryScope = await _permissionAuthorizationService.GetPeopleDataScopeAsync(
+            systemUserId,
+            PeoplePermissionCodes.ViewDirectory,
+            PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.ViewDirectory),
+            HttpContext.RequestAborted);
+
+        var accessRoleScope = await _effectiveScopeService.GetEmployeesAccessScopeAsync(
+            systemUserId, isAdmin, HttpContext.RequestAborted);
+
+        var unrestricted =
+            directoryScope.IsUnrestricted && !directoryScope.HasAnyDenial &&
+            accessRoleScope.IsUnrestricted && !accessRoleScope.HasAnyDenial;
+
+        if (unrestricted)
+        {
+            return EmployeeBootstrapImportEngine.ImportScope.Unrestricted(canEditCompensation);
+        }
+
+        return new EmployeeBootstrapImportEngine.ImportScope(
+            IsUnrestricted: false,
+            DirectoryScope: directoryScope,
+            AccessRoleScope: accessRoleScope,
+            CanEditCompensation: canEditCompensation);
+    }
+
+    /// <summary>
     /// استيراد بخطوة واحدة: ملفٌ يُرفع فيُنفَّذ فوراً، ثم رسالةٌ وعودة
     /// للقائمة. لا معاينة — القالب نفسه هو ضابط الشكل.
     /// </summary>
@@ -396,9 +438,11 @@ public class IndexModel : PageModel
                 await importFile.CopyToAsync(stream);
             }
 
+            var importScope = await BuildImportScopeAsync();
             var result = await _importEngine.ImportAsync(
                 storedPath,
-                originalFileName);
+                originalFileName,
+                importScope);
 
             TempData["SuccessMessage"] = result.Message;
         }

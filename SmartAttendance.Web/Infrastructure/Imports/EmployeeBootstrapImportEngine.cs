@@ -130,6 +130,34 @@ public sealed class EmployeeBootstrapImportEngine
         IReadOnlySet<int>? AllowedEmployeeIds,
         bool IncludeSalary);
 
+    /// <summary>
+    /// نطاق الاستيراد (P0 — جانب الكتابة). قبل هذا كان <see cref="ImportAsync"/> محروساً
+    /// بصلاحية Import العالمية فقط بلا أي فحص نطاق صفّاً-صفّاً، فأمكن:
+    /// (1) تحديث موظفٍ بشركةٍ أخرى بمطابقة EmployeeNo عالميّاً — بل نقله عابراً
+    /// للشركات متخطّياً حارس ChangeAssignment؛ (2) إنشاء شركات/فروع/أقسام/مناصب
+    /// خارج النطاق؛ (3) كتابة الرواتب بلا EditCompensation.
+    ///
+    /// <para>القرار (فرضٌ صارم): بنطاقٍ مقيَّد يُسمح فقط بإنشاء/تحديث موظفٍ ضمن بنيةٍ
+    /// <b>قائمة</b> وداخل نطاق المستخدم — لا إنشاء بنية جديدة (يتطلّب نطاقاً عاماً)،
+    /// ولا لمس موظفٍ خارج النطاق. والراتب لا يُكتب إلا مع <see cref="CanEditCompensation"/>.</para>
+    ///
+    /// <para><see cref="IsUnrestricted"/> (أدمن/عام) يُبقي السلوك التأسيسي كاملاً.
+    /// النطاقان يُقاطَعان (AND) بنفس <see cref="PeopleDataScope.AllowsEmployee"/>.</para>
+    /// </summary>
+    public sealed record ImportScope(
+        bool IsUnrestricted,
+        PeopleDataScope DirectoryScope,
+        PeopleDataScope AccessRoleScope,
+        bool CanEditCompensation)
+    {
+        /// <summary>نطاقٌ عام (أدمن): استيرادٌ تأسيسيٌّ كامل بلا قيود صفّية.</summary>
+        public static ImportScope Unrestricted(bool canEditCompensation = true) =>
+            new(true,
+                PeopleDataScope.Unrestricted(),
+                PeopleDataScope.Unrestricted(),
+                canEditCompensation);
+    }
+
     public async Task<byte[]> BuildTemplateWorkbookAsync(
         bool includeData = false,
         TemplateExportScope? exportScope = null)
@@ -176,7 +204,8 @@ public sealed class EmployeeBootstrapImportEngine
         string originalFileName,
         int previewLimit)
     {
-        var plan = await BuildPlanAsync(filePath);
+        // المعاينة غير مستعملة بمسار الاستيراد بخطوة واحدة؛ تُبقى غير مقيَّدة.
+        var plan = await BuildPlanAsync(filePath, ImportScope.Unrestricted());
 
         return new MasterDataImportPreviewViewModel
         {
@@ -204,12 +233,15 @@ public sealed class EmployeeBootstrapImportEngine
 
     public async Task<MasterDataImportResultViewModel> ImportAsync(
         string filePath,
-        string originalFileName)
+        string originalFileName,
+        ImportScope scope)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         await EmployeeProfileDynamicFields.EnsureSchemaAsync(_dbContext);
 
-        var plan = await BuildPlanAsync(filePath);
+        var plan = await BuildPlanAsync(filePath, scope);
         var validRows = plan.Rows
             .Where(row => row.CanImport)
             .OrderBy(row => row.RowNumber)
@@ -429,9 +461,14 @@ public sealed class EmployeeBootstrapImportEngine
                     }
                 }
 
-                await SaveBasicSalaryAsync(
-                    resolved.Employee.Id,
-                    resolved.Plan.BasicSalary);
+                // الراتب لا يُكتب إلا مع EditCompensation — وإلا فصلاحية Import تصبح
+                // باباً خلفيّاً لكتابة التعويض (مطابقةً لحارس FinancialInfo).
+                if (scope.CanEditCompensation)
+                {
+                    await SaveBasicSalaryAsync(
+                        resolved.Employee.Id,
+                        resolved.Plan.BasicSalary);
+                }
 
                 dynamicValues +=
                     await SaveDynamicFieldsAsync(
@@ -470,7 +507,8 @@ public sealed class EmployeeBootstrapImportEngine
     }
 
     private async Task<EmployeeBootstrapPlan> BuildPlanAsync(
-        string filePath)
+        string filePath,
+        ImportScope scope)
     {
         var file = ReadFile(filePath);
         ValidateHeaders(file.Headers);
@@ -540,7 +578,141 @@ public sealed class EmployeeBootstrapImportEngine
             }
         }
 
+        await ApplyImportScopeAsync(plans, scope);
+
         return new EmployeeBootstrapPlan(plans);
+    }
+
+    /// <summary>
+    /// فرض نطاق الاستيراد صفّاً-صفّاً (فرضٌ صارم). النطاق العام لا يتأثّر. للمقيَّد:
+    /// (1) لا إنشاء بنية جديدة (شركة/فرع/قسم/منصب) — كلّها يجب أن تكون قائمة؛
+    /// (2) وجهة الصفّ (شركة/فرع/قسم) ضمن نطاق المستخدم؛
+    /// (3) عند تحديث موظفٍ قائم، يجب أن يكون هو نفسه ضمن النطاق — يسدّ اختطاف موظفٍ
+    ///     بشركةٍ أخرى بمطابقة EmployeeNo عالميّاً (منع النقل العابر للشركات).
+    /// الصفوف المخالفة تُعلَّم بخطأٍ فتُتخطّى بآلية التخطّي القائمة نفسها.
+    /// </summary>
+    private async Task ApplyImportScopeAsync(
+        List<EmployeeBootstrapRowPlan> plans,
+        ImportScope scope)
+    {
+        if (scope.IsUnrestricted)
+        {
+            return;
+        }
+
+        // الوجهة (شركة/فرع/قسم) تُقيَّم موقعيّاً — لا معرّف موظفٍ بعد للصفّ المُنشأ.
+        bool LocationAllowed(int companyId, int branchId, int departmentId) =>
+            scope.DirectoryScope.AllowsLocation(companyId, branchId, departmentId) &&
+            scope.AccessRoleScope.AllowsLocation(companyId, branchId, departmentId);
+
+        // الموظف القائم يُقيَّم بمعرّفه الحقيقي (يحترم بُعدَي الموظف/الذات).
+        bool EmployeeAllowed(int employeeId, int companyId, int branchId, int departmentId) =>
+            scope.DirectoryScope.AllowsEmployee(employeeId, companyId, branchId, departmentId) &&
+            scope.AccessRoleScope.AllowsEmployee(employeeId, companyId, branchId, departmentId);
+
+        // الموظفون القائمون بهويّة كاملة — لفحص «الموجود داخل النطاق» بدقّة بدل
+        // الاكتفاء بوجهة الملف (التي قد تُحاول نقله). الشركة تُشتقّ عبر الفرع.
+        var existingByNo = (await QueryAsync(
+                """
+                SELECT e.Id, e.EmployeeNo, b.CompanyId, e.BranchId,
+                       ISNULL(e.DepartmentId, 0) AS DepartmentId
+                FROM dbo.Employees e
+                INNER JOIN dbo.Branches b ON b.Id = e.BranchId
+                WHERE e.IsDeleted = 0;
+                """,
+                command => { },
+                reader => new
+                {
+                    Id = GetInt32(reader, "Id"),
+                    EmployeeNo = GetString(reader, "EmployeeNo"),
+                    CompanyId = GetInt32(reader, "CompanyId"),
+                    BranchId = GetInt32(reader, "BranchId"),
+                    DepartmentId = GetInt32(reader, "DepartmentId")
+                }))
+            .GroupBy(item => NormalizeKey(item.EmployeeNo), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var plan in plans)
+        {
+            if (!plan.CanImport || plan.Company is null)
+            {
+                continue;   // أصلاً مخطئ أو بلا شركة محسومة.
+            }
+
+            var anyStructurePlanned =
+                plan.Company.IsPlanned ||
+                plan.Branch is null || plan.Branch.IsPlanned ||
+                plan.Department is null || plan.Department.IsPlanned ||
+                plan.Position is null || plan.Position.IsPlanned;
+
+            var targetAllowed = !anyStructurePlanned &&
+                LocationAllowed(plan.Company.Id, plan.Branch!.Id, plan.Department!.Id);
+
+            var isUpdate = plan.EmployeeAction == "Update";
+            var existingFound = existingByNo.TryGetValue(
+                NormalizeKey(plan.EmployeeNo), out var current);
+            var existingAllowed = existingFound &&
+                EmployeeAllowed(current!.Id, current.CompanyId, current.BranchId, current.DepartmentId);
+
+            var error = EvaluateRowScope(
+                scope.IsUnrestricted,
+                anyStructurePlanned,
+                targetAllowed,
+                isUpdate,
+                existingFound,
+                existingAllowed);
+
+            if (error is not null)
+            {
+                plan.Errors.Add(error);
+            }
+        }
+    }
+
+    // رسائل رفض النطاق — ثوابت ليشترك فيها الفرض والاختبار.
+    public const string ImportStructureScopeError =
+        "الاستيراد بنطاق مقيَّد لا يُنشئ شركاتٍ أو فروعاً أو أقساماً أو مناصب جديدة — يتطلّب صلاحيةً عامة.";
+
+    public const string ImportDestinationScopeError =
+        "وجهة هذا الصفّ (الشركة/الفرع/القسم) خارج نطاق صلاحياتك.";
+
+    public const string ImportHijackScopeError =
+        "لا تملك صلاحيةً على الموظف المراد تحديثه (خارج نطاقك).";
+
+    /// <summary>
+    /// قرار فرض النطاق لصفٍّ واحد (نقيّ، بلا قاعدة بيانات) — يُرجع رسالة الخطأ أو
+    /// <c>null</c> إن مرّ الصفّ. عامٌّ ⟹ يمرّ دائماً. مقيَّدٌ: يُرفض إنشاء بنية جديدة،
+    /// ثم وجهةٌ خارج النطاق، ثم اختطاف موظفٍ قائمٍ خارج النطاق (تحديث فقط).
+    /// </summary>
+    public static string? EvaluateRowScope(
+        bool isUnrestricted,
+        bool anyStructurePlanned,
+        bool targetAllowed,
+        bool isUpdate,
+        bool existingFound,
+        bool existingAllowed)
+    {
+        if (isUnrestricted)
+        {
+            return null;
+        }
+
+        if (anyStructurePlanned)
+        {
+            return ImportStructureScopeError;
+        }
+
+        if (!targetAllowed)
+        {
+            return ImportDestinationScopeError;
+        }
+
+        if (isUpdate && existingFound && !existingAllowed)
+        {
+            return ImportHijackScopeError;
+        }
+
+        return null;
     }
 
     private EmployeeBootstrapRowPlan BuildRowPlan(
