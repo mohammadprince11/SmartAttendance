@@ -6,6 +6,7 @@ using System.Text;
 using System.Xml.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Application.MasterDataImports.ViewModels;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Infrastructure.Persistence;
@@ -119,8 +120,19 @@ public sealed class EmployeeBootstrapImportEngine
     /// يبني قالب الاستيراد. مع <paramref name="includeData"/> يخرج القالب
     /// معبّأً بالموظفين الحاليين ليُعدَّل ويُعاد استيراده.
     /// </summary>
+    /// <summary>
+    /// نطاق التصدير (P0-4): <see cref="AllowedEmployeeIds"/> = <c>null</c> يعني غير
+    /// مقيَّد (يُصدَّر الجميع)؛ خلافه يقصر الصفوف على المعرّفات المسموح بها فقط. و
+    /// <see cref="IncludeSalary"/> يحكم إخراج عمود الراتب — يُفرَّغ لمن لا يملك
+    /// People.ViewCompensation فلا يتسرّب التعويض عبر «تصدير البيانات».
+    /// </summary>
+    public sealed record TemplateExportScope(
+        IReadOnlySet<int>? AllowedEmployeeIds,
+        bool IncludeSalary);
+
     public async Task<byte[]> BuildTemplateWorkbookAsync(
-        bool includeData = false)
+        bool includeData = false,
+        TemplateExportScope? exportScope = null)
     {
         await EmployeeProfileDynamicFields.EnsureSchemaAsync(_dbContext);
 
@@ -151,7 +163,8 @@ public sealed class EmployeeBootstrapImportEngine
         var dataRows = includeData
             ? await LoadTemplateDataRowsAsync(
                 columns,
-                dynamicHeadersByKey)
+                dynamicHeadersByKey,
+                exportScope)
             : new List<List<string>>();
 
         return BuildWorkbook(columns, references, dataRows);
@@ -1739,9 +1752,48 @@ public sealed class EmployeeBootstrapImportEngine
     /// لإعادة الاستيراد كما هو. محدودٌ بـ<see cref="MaxRows"/> لأن الاستيراد
     /// يرفض ما زاد عنها.
     /// </summary>
+    /// <summary>
+    /// P0-4 — يحسم معرّفات الموظفين المسموح بها بتقاطع نطاق القواعد مع نطاق أدوار
+    /// الوصول (نفس <see cref="PeopleDataScope.AllowsEmployee"/> لصفحة السرد)، لتمريرها
+    /// كـ <c>AllowedEmployeeIds</c> عند تصدير البيانات فلا يتسرّب موظفو شركةٍ أخرى.
+    /// </summary>
+    public async Task<IReadOnlySet<int>> ResolveAllowedEmployeeIdsAsync(
+        PeopleDataScope directoryScope,
+        PeopleDataScope accessRoleScope)
+    {
+        var rows = await QueryAsync(
+            """
+            SELECT e.Id, b.CompanyId, e.BranchId, ISNULL(e.DepartmentId, 0) AS DepartmentId
+            FROM dbo.Employees e
+            INNER JOIN dbo.Branches b ON b.Id = e.BranchId
+            WHERE e.IsDeleted = 0;
+            """,
+            command => { },
+            reader => new
+            {
+                Id = GetInt32(reader, "Id"),
+                CompanyId = GetInt32(reader, "CompanyId"),
+                BranchId = GetInt32(reader, "BranchId"),
+                DepartmentId = GetInt32(reader, "DepartmentId")
+            });
+
+        var allowed = new HashSet<int>();
+        foreach (var r in rows)
+        {
+            if (directoryScope.AllowsEmployee(r.Id, r.CompanyId, r.BranchId, r.DepartmentId) &&
+                accessRoleScope.AllowsEmployee(r.Id, r.CompanyId, r.BranchId, r.DepartmentId))
+            {
+                allowed.Add(r.Id);
+            }
+        }
+
+        return allowed;
+    }
+
     private async Task<List<List<string>>> LoadTemplateDataRowsAsync(
         IReadOnlyList<EmployeeTemplateColumn> columns,
-        IReadOnlyDictionary<string, string> dynamicHeadersByKey)
+        IReadOnlyDictionary<string, string> dynamicHeadersByKey,
+        TemplateExportScope? exportScope = null)
     {
         var positions = await LoadPositionsAsync();
         var positionCodes = positions
@@ -1750,8 +1802,33 @@ public sealed class EmployeeBootstrapImportEngine
                 group => group.Key,
                 group => group.First().Code);
 
+        // P0-4 — قصر الصفوف على نطاق المستخدم: null = غير مقيَّد؛ مجموعةٌ فارغة =
+        // لا صفوف. القيم أعداد صحيحة (معرّفات) فلا حقن. وعمود الراتب يُفرَّغ لمن لا
+        // يملك ViewCompensation فلا يتسرّب التعويض عبر التصدير.
+        var allowedIds = exportScope?.AllowedEmployeeIds;
+        if (allowedIds is { Count: 0 })
+        {
+            return new List<List<string>>();
+        }
+
+        var scopeFilter = allowedIds is null
+            ? string.Empty
+            : $" AND e.Id IN ({string.Join(",", allowedIds)})";
+
+        var includeSalary = exportScope?.IncludeSalary ?? true;
+        var basicSalaryExpr = includeSalary
+            ? """
+                ISNULL(CONVERT(varchar(30), (
+                    SELECT TOP 1 fi.BasicSalary
+                    FROM dbo.EmployeeFinancialInfos AS fi
+                    WHERE fi.EmployeeId = e.Id
+                      AND ISNULL(fi.IsDeleted, 0) = 0
+                    ORDER BY fi.Id DESC)), N'')
+              """
+            : "N''";
+
         var employees = await QueryAsync(
-            """
+            $"""
             SELECT TOP (@MaxRows)
                 e.Id,
                 e.PositionId,
@@ -1777,12 +1854,7 @@ public sealed class EmployeeBootstrapImportEngine
                 ISNULL(e.Country, N'') AS Country,
                 ISNULL(e.ContractType, N'') AS ContractType,
                 ISNULL(e.EmploymentStatus, N'') AS EmploymentStatus,
-                ISNULL(CONVERT(varchar(30), (
-                    SELECT TOP 1 fi.BasicSalary
-                    FROM dbo.EmployeeFinancialInfos AS fi
-                    WHERE fi.EmployeeId = e.Id
-                      AND ISNULL(fi.IsDeleted, 0) = 0
-                    ORDER BY fi.Id DESC)), N'') AS BasicSalary,
+                {basicSalaryExpr} AS BasicSalary,
                 CASE
                     WHEN e.IsActive = 1 THEN 'true'
                     ELSE 'false'
@@ -1797,7 +1869,7 @@ public sealed class EmployeeBootstrapImportEngine
                 ON d.Id = e.DepartmentId
             LEFT JOIN dbo.Employees m
                 ON m.Id = e.DirectManagerId
-            WHERE e.IsDeleted = 0
+            WHERE e.IsDeleted = 0{scopeFilter}
             ORDER BY e.EmployeeNo;
             """,
             command => AddParameter(command, "@MaxRows", MaxRows),

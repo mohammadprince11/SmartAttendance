@@ -269,7 +269,7 @@ public class IndexModel : PageModel
             "Zynora_Employees_Template");
     }
 
-    /// <summary>القالب نفسه معبّأً بالموظفين الحاليين.</summary>
+    /// <summary>القالب نفسه معبّأً بالموظفين الحاليين — ضمن نطاق المستخدم فقط.</summary>
     public async Task<IActionResult> OnGetTemplateDataAsync()
     {
         if (!await HasImportPermissionAsync())
@@ -277,10 +277,65 @@ public class IndexModel : PageModel
             return Forbid();
         }
 
+        // P0-4 — تصدير البيانات كان يخرج **كل الموظفين** ومعهم الراتب الأساسي بلا
+        // نطاق ولا حارس تعويض. الآن يُحصر بمعرّفات نطاق المستخدم، ويُفرَّغ عمود
+        // الراتب لمن لا يملك ViewCompensation.
+        var exportScope = await BuildExportScopeAsync();
+
         return BuildTemplateFile(
             await _importEngine.BuildTemplateWorkbookAsync(
-                includeData: true),
+                includeData: true,
+                exportScope),
             "Zynora_Employees_Data");
+    }
+
+    /// <summary>
+    /// يحسب نطاق التصدير: تقاطع نطاق القواعد (ViewDirectory) مع نطاق أدوار الوصول
+    /// لتحديد الموظفين المسموح بتصديرهم، وصلاحية ViewCompensation لعمود الراتب.
+    /// </summary>
+    private async Task<EmployeeBootstrapImportEngine.TemplateExportScope> BuildExportScopeAsync()
+    {
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        var role = PeopleAccessContext.GetRole(HttpContext);
+        var isAdmin = role.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+
+        var includeSalary = await _permissionAuthorizationService.HasPermissionAsync(
+            systemUserId,
+            PeoplePermissionCodes.ViewCompensation,
+            PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.ViewCompensation),
+            HttpContext.RequestAborted);
+
+        var directoryScope = await _permissionAuthorizationService.GetPeopleDataScopeAsync(
+            systemUserId,
+            PeoplePermissionCodes.ViewDirectory,
+            PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.ViewDirectory),
+            HttpContext.RequestAborted);
+
+        var accessRoleScope = await _effectiveScopeService.GetEmployeesAccessScopeAsync(
+            systemUserId, isAdmin, HttpContext.RequestAborted);
+
+        // حرمانٌ كليّ ⟹ لا صفوف. غير مقيَّد ⟹ null (الجميع). خلافه ⟹ ترشيح بالمعرّفات.
+        if (directoryScope.IsDeniedAll || accessRoleScope.IsDeniedAll)
+        {
+            return new EmployeeBootstrapImportEngine.TemplateExportScope(
+                new HashSet<int>(), includeSalary);
+        }
+
+        var unrestricted =
+            directoryScope.IsUnrestricted && !directoryScope.HasAnyDenial &&
+            accessRoleScope.IsUnrestricted && !accessRoleScope.HasAnyDenial;
+
+        if (unrestricted)
+        {
+            return new EmployeeBootstrapImportEngine.TemplateExportScope(
+                null, includeSalary);
+        }
+
+        var allowedIds = await _importEngine.ResolveAllowedEmployeeIdsAsync(
+            directoryScope, accessRoleScope);
+
+        return new EmployeeBootstrapImportEngine.TemplateExportScope(
+            allowedIds, includeSalary);
     }
 
     /// <summary>
