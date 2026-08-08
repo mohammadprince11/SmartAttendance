@@ -52,4 +52,21 @@ public class EmployeeUpdatesScopeBeforeLimitTests
         Assert.DoesNotContain("TOP 500", body);        // لا حدٌّ قبل النطاق بالخام
         Assert.DoesNotContain("AllowsEmployee", body); // لا ترشيح نطاقٍ بالذاكرة
     }
+
+    /// <summary>
+    /// منتقي المدراء محصورٌ بشركة الموظف المُحدَّد — لا يكشف أسماء/أرقام موظفي شركةٍ
+    /// أخرى للمستخدم المقيَّد (نظير Edit.LoadManagersAsync).
+    /// </summary>
+    [Fact]
+    public void ManagerPicker_IsScopedToTheSelectedEmployeesCompany()
+    {
+        var source = Source();
+        var at = source.IndexOf("Task<List<EmployeeLookupOption>> LoadActiveManagersAsync", StringComparison.Ordinal);
+        Assert.True(at > 0, "تعريف LoadActiveManagersAsync غير موجود.");
+        var end = source.IndexOf("private ", at + 1, StringComparison.Ordinal);
+        var body = source[at..(end > at ? end : source.Length)];
+
+        Assert.Contains("b.CompanyId = (", body);       // محصورٌ بشركة الموظف المُحدَّد
+        Assert.Contains("INNER JOIN Branches", body);
+    }
 }

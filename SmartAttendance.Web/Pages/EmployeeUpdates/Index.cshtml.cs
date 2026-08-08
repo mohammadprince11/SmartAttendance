@@ -649,6 +649,9 @@ DROP TABLE #NationalityOptions;
 
     private async Task<List<EmployeeLookupOption>> LoadActiveManagersAsync(int currentEmployeeId)
     {
+        // المدراء المرشَّحون محصورون بشركة الموظف المُحدَّد (نظير Edit.LoadManagersAsync) —
+        // منتقٍ عامّ يكشف أسماء/أرقام موظفي شركةٍ أخرى للمستخدم المقيَّد. بلا موظفٍ محدَّد
+        // (@EmployeeId=0) لا شركة تُطابَق فتعود القائمة فارغة (المدير يُنتقى بعد اختيار الموظف).
         return await HrmsDatabase.QueryAsync(
             _dbContext,
             """
@@ -656,8 +659,14 @@ SELECT TOP 500
     e.Id,
     CONCAT(ISNULL(e.FullName, ''), N' - ', ISNULL(e.EmployeeNo, '')) AS Name
 FROM Employees e
-WHERE ISNULL(e.IsActive, 0) = 1
+INNER JOIN Branches b ON e.BranchId = b.Id
+WHERE e.IsActive = 1
+  AND ISNULL(e.IsDeleted, 0) = 0
   AND e.Id <> @EmployeeId
+  AND b.CompanyId = (
+      SELECT b2.CompanyId FROM Employees e2
+      INNER JOIN Branches b2 ON e2.BranchId = b2.Id
+      WHERE e2.Id = @EmployeeId)
 ORDER BY e.FullName, e.EmployeeNo;
 """,
             command => HrmsDatabase.AddParameter(command, "@EmployeeId", currentEmployeeId),
