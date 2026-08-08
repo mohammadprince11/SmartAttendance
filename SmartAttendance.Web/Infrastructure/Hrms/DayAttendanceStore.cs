@@ -1411,7 +1411,7 @@ OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
     /// </param>
     public static async Task<List<DayRow>> ListRangeAsync(
         ApplicationDbContext dbContext, CompanyScope scope, DateOnly from, DateOnly to, string? search,
-        int? employeeId = null, IReadOnlyCollection<int>? employeeIds = null)
+        int? employeeId = null, IReadOnlyCollection<int>? employeeIds = null, bool computeStale = true)
     {
         ArgumentNullException.ThrowIfNull(scope);
         if (scope.IsDeniedAll) return new List<DayRow>();
@@ -1433,7 +1433,11 @@ OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
             ? string.Empty
             : $" AND {scope.ToSqlPredicate("e.CompanyId")}";
 
-        var staleCase = await StaleCaseSqlAsync(dbContext);
+        // حساب «البائتة» استعلامٌ مترابط لكل صفّ (EXISTS × سجلات/إجازات/خدمة ذاتية).
+        // شاشاتٌ لا تستعمل الراية أصلاً (كتبويب المعالجة بـ/AttendanceOperations الذي
+        // يدمج المحرّك بالقديم ولا يقرأ IsStale) — لها تخطّي الحساب بالكامل فيصير
+        // الاستعلام مسحَ مدى بوصلاتٍ بسيطة بدل عشرات الآلاف من الاستعلامات المترابطة.
+        var staleCase = computeStale ? await StaleCaseSqlAsync(dbContext) : "CAST(0 AS bit)";
 
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,

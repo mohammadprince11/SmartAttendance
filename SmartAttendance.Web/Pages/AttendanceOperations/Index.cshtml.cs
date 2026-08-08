@@ -896,8 +896,11 @@ WHERE ar.AttendanceDate >= @FromDate
         // المخالفات والرواتب، فتُطبَّق فترة السماح وسياستها ولا تتناقض الشاشة مع
         // ما سُجِّل (قسم 35). الأيام غير المحلّلة تبقى بقراءة المحرك القديم حتى لا
         // يختفي موظف من الكشف، ومع تنبيه صريح بأنها قراءة أولية.
+        // هذا التبويب يدمج المحرّك الرسمي بالقديم ولا يقرأ IsStale (انظر MapDayRow)،
+        // فنتخطّى حساب «البائتة» المترابط — كان يُوقِت الفترة الشهرية على مدى شركات.
         var dayRows = await DayAttendanceStore.ListRangeAsync(
-            _dbContext, await _companyScope.GetAsync(), ProcessFromDate.Value, ProcessToDate.Value, null);
+            _dbContext, await _companyScope.GetAsync(), ProcessFromDate.Value, ProcessToDate.Value, null,
+            computeStale: false);
 
         var official = dayRows.ToDictionary(
             r => BuildAttendanceNoteKey(r.EmployeeNo, r.WorkDate),
