@@ -308,4 +308,28 @@ public class EmployeeCompanyGuardScopeTests
             ReadSecurity("EmployeeCompanyGuard.cs"));
     }
 
+    /// <summary>
+    /// طيّ «البصمات عبر الإنترنت» داخل «سجلات الحضور» بلا فقدان وظيفة: الميزات الثلاث
+    /// المنقولة موجودة (حذف جماعي محصور + عمود الدلالة + عدّادا مفتوح/مكتمل)، والمسار
+    /// القديم صار redirect حيّاً لـ<c>/AttendanceRecords?Source=Mobile</c>.
+    /// </summary>
+    [Fact]
+    public void OnlinePunches_MergedIntoRecords_WithoutFeatureLoss()
+    {
+        var code = ReadPage("AttendanceRecords/Index.cshtml.cs");
+        Assert.Contains("OnPostDeleteSelectedAsync", code);                 // حذف جماعي
+        Assert.Contains("CanAccessOwnedRowAsync", code);                    // محصورٌ بالنطاق لكل معرّف
+        Assert.Contains("OpenPunches", code);                              // عدّاد مفتوح/مكتمل
+        Assert.Contains("Semantic", code);                                 // عمود الدلالة
+
+        var view = ReadPage("AttendanceRecords/Index.cshtml");
+        Assert.Contains("selectedIds", view);                              // مربّعات التحديد
+        Assert.Contains("DeleteSelected", view);                           // زرّ الحذف الجماعي
+
+        // المسار القديم redirect حيّ لا صفحة مستقلّة — الروابط المحفوظة لا تنكسر.
+        var stub = ReadPage("EmployeeOnlinePunches/Index.cshtml");
+        Assert.Contains("RedirectToPage(\"/AttendanceRecords/Index\"", stub);
+        Assert.Contains("Source = \"Mobile\"", stub);
+    }
+
 }

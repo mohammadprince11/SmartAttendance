@@ -677,10 +677,9 @@
                                     {
                                         <a href="/WeekAttendance" class="nexora-nav-link @(IsUnder("/WeekAttendance") ? "active nexora-active" : "")"><span>الحضور الأسبوعي</span></a>
                                     }
-                                    @if (CanRoute("/employeeonlinepunches"))
-                                    {
-                                        <a href="/EmployeeOnlinePunches" class="nexora-nav-link @(IsUnder("/EmployeeOnlinePunches") ? "active nexora-active" : "")"><span>البصمات عبر الإنترنت</span></a>
-                                    }
+                                    @* «البصمات عبر الإنترنت» طُويت داخل «سجلات الحضور» (فلتر المصدر=موبايل) بلا فقدان
+                                       وظيفة — الحذف الجماعي وعمود الدلالة والعدّادات نُقلت. المسار /EmployeeOnlinePunches
+                                       يبقى redirect لـ/AttendanceRecords?Source=Mobile فلا تنكسر الروابط المحفوظة. *@
                                     @if (CanRoute("/workfromhome"))
                                     {
                                         <a href="/WorkFromHome" class="nexora-nav-link @(IsUnder("/WorkFromHome") ? "active nexora-active" : "")"><span>العمل من المنزل</span></a>
