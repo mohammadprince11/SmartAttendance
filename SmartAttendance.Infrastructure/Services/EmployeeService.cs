@@ -50,6 +50,15 @@ public class EmployeeService : IEmployeeService
         employeesQuery = employeesQuery.ApplyPeopleDataScope(
             query.DataScope ?? PeopleDataScope.Unrestricted());
 
+        // تقاطع نطاق أدوار الوصول (AND): تطبيقٌ ثانٍ لنفس المرشِّح القابل للترجمة
+        // لـSQL. غيابه (null) أو كونه غير مقيَّد لا يضيف قيداً؛ وجوده الأضيق يحصر
+        // عضوية القائمة نفسها لا بوّابة الرابط فقط — وإلا رأى المستخدم أسطر موظفين
+        // خارج نطاق أدواره بالدليل (P0-1).
+        if (query.AccessRoleScope is not null)
+        {
+            employeesQuery = employeesQuery.ApplyPeopleDataScope(query.AccessRoleScope);
+        }
+
         if (query.CompanyId.HasValue &&
             query.CompanyId.Value > 0)
         {

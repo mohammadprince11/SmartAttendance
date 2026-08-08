@@ -200,10 +200,21 @@ public class IndexModel : PageModel
             ? DepartmentId
             : null;
 
+        // Unify the Access Roles Employees data scope with the rules-based scope:
+        // a row is viewable only if BOTH allow it. Admin, no Data role, or an
+        // "All" scope resolve to Unrestricted, so this can only tighten.
+        // P0-1 — تمريره لـGetPagedAsync يحصر **عضوية القائمة** بالتقاطع بمستوى SQL،
+        // لا بوّابة رابط الملف صفّاً-صفّاً فقط؛ وإلا ظهرت أسطر موظفين خارج نطاق أدواره.
+        var accessRoleScope = await _effectiveScopeService.GetEmployeesAccessScopeAsync(
+            systemUserId,
+            role.Equals("Admin", StringComparison.OrdinalIgnoreCase),
+            HttpContext.RequestAborted);
+
         var result = await _employeeService.GetPagedAsync(
             new EmployeeListQueryViewModel
             {
                 DataScope = directoryScope,
+                AccessRoleScope = accessRoleScope,
                 CompanyId = CompanyId,
                 SearchTerm = SearchTerm,
                 BranchId = BranchId,
@@ -222,14 +233,6 @@ public class IndexModel : PageModel
                     role,
                     PeoplePermissionCodes.ViewProfile),
                 HttpContext.RequestAborted);
-
-        // Unify the Access Roles Employees data scope with the rules-based scope:
-        // a row is viewable only if BOTH allow it. Admin, no Data role, or an
-        // "All" scope resolve to Unrestricted, so this can only tighten.
-        var accessRoleScope = await _effectiveScopeService.GetEmployeesAccessScopeAsync(
-            systemUserId,
-            role.Equals("Admin", StringComparison.OrdinalIgnoreCase),
-            HttpContext.RequestAborted);
 
         foreach (var employee in result.Items)
         {
