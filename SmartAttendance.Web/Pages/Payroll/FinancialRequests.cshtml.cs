@@ -44,8 +44,9 @@ public class FinancialRequestsModel : PageModel
     public async Task OnGetAsync()
     {
         await HrmsDatabase.EnsureCreatedAsync(_db);
-        Rows = await FinancialRequestStore.ListAsync(_db, kind: Kind, status: Status, search: Search);
-        Employees = await FinancialRequestStore.EmployeeBasicsAsync(_db);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        Rows = await FinancialRequestStore.ListAsync(_db, scope, kind: Kind, status: Status, search: Search);
+        Employees = await FinancialRequestStore.EmployeeBasicsAsync(_db, scope);
 
         PendingCount = Rows.Count(r => r.Status == "Pending");
         PendingAmount = Rows.Where(r => r.Status == "Pending").Sum(r => r.Detail.Amount);

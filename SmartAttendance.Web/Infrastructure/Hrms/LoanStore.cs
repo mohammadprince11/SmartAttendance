@@ -132,15 +132,20 @@ END;
         public string Name { get; set; } = string.Empty;
     }
 
-    public static async Task<List<EmployeeBasic>> EmployeeBasicsAsync(ApplicationDbContext dbContext)
+    /// <summary>منتقي الموظفين — بنطاق الشركات: تسريب الـlookup يكشف هيكل شركةٍ أخرى.</summary>
+    public static async Task<List<EmployeeBasic>> EmployeeBasicsAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<EmployeeBasic>();
         await EnsureAsync(dbContext);
         return await HrmsDatabase.QueryAsync(
             dbContext,
-            """
+            $"""
 SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName
 FROM Employees e
 WHERE ISNULL(e.IsDeleted,0) = 0 AND ISNULL(e.IsActive,1) = 1
+  AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY e.FullName;
 """,
             command => { },
@@ -153,12 +158,15 @@ ORDER BY e.FullName;
     }
 
     public static async Task<List<Loan_>> ListAsync(
-        ApplicationDbContext dbContext, int? employeeId = null, string? status = null, string? type = null, string? search = null)
+        ApplicationDbContext dbContext, Security.CompanyScope scope,
+        int? employeeId = null, string? status = null, string? type = null, string? search = null)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<Loan_>();
         await EnsureAsync(dbContext);
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,
-            """
+            $"""
 SELECT l.*, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
        ISNULL(d.Name, N'') AS DepartmentName,
        (SELECT ISNULL(SUM(i.Amount),0) FROM EmployeeLoanInstallments i WHERE i.LoanId = l.Id AND i.IsPosted = 1) AS PaidAmount,
@@ -166,6 +174,7 @@ SELECT l.*, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS 
 FROM EmployeeLoans l
 INNER JOIN Employees e ON e.Id = l.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
+WHERE {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY l.CreatedAt DESC;
 """,
             command => { },

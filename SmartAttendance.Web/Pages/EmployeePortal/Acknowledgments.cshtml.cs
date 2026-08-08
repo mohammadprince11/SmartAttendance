@@ -37,7 +37,7 @@ public class AcknowledgmentsModel : PageModel
             return;
         }
 
-        Items = await AcknowledgmentStore.LoadAssignmentsAsync(_db, employeeId);
+        Items = await AcknowledgmentStore.LoadAssignmentsAsync(_db, SmartAttendance.Web.Infrastructure.Security.CompanyScope.Unrestricted(), employeeId);
 
         if (OpenId is { } id && Items.FirstOrDefault(row => row.Id == id) is { } opened)
         {

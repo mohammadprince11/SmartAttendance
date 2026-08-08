@@ -45,8 +45,9 @@ public class LoansModel : PageModel
 
     public async Task OnGetAsync()
     {
-        Loans = await LoanStore.ListAsync(_db, status: Status, type: LoanType, search: Search);
-        Employees = await LoanStore.EmployeeBasicsAsync(_db);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        Loans = await LoanStore.ListAsync(_db, scope, status: Status, type: LoanType, search: Search);
+        Employees = await LoanStore.EmployeeBasicsAsync(_db, scope);
     }
 
     public async Task<IActionResult> OnPostSaveAsync(IFormFile? attachment)

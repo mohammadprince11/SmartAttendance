@@ -103,15 +103,20 @@ END;
     }
 
     /// <summary>الموظفون النشطون مع راتبهم الأساسي الحالي (لمنتقي النموذج ومعاينة الزيادة).</summary>
-    public static async Task<List<EmployeeBasic>> EmployeeBasicsAsync(ApplicationDbContext db)
+    /// <summary>منتقي الموظفين — بنطاق الشركات (تسريب الـlookup يكشف هيكل شركة أخرى وراتبها الأساسي).</summary>
+    public static async Task<List<EmployeeBasic>> EmployeeBasicsAsync(
+        ApplicationDbContext db, Security.CompanyScope scope)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<EmployeeBasic>();
         await EnsureAsync(db);
-        return await HrmsDatabase.QueryAsync(db, """
+        return await HrmsDatabase.QueryAsync(db, $"""
 SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
        ISNULL(f.BasicSalary, 0) AS BasicSalary
 FROM Employees e
 LEFT JOIN EmployeeFinancialInfos f ON f.EmployeeId = e.Id AND ISNULL(f.IsDeleted,0) = 0
 WHERE ISNULL(e.IsDeleted,0) = 0 AND ISNULL(e.IsActive,1) = 1
+  AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY e.FullName;
 """,
             null,
@@ -237,10 +242,13 @@ VALUES
 
     /// <summary>قائمة الطلبات المالية للمركز، مع فلاتر النوع/الحالة/البحث.</summary>
     public static async Task<List<Row>> ListAsync(
-        ApplicationDbContext db, string? kind = null, string? status = null, string? search = null)
+        ApplicationDbContext db, Security.CompanyScope scope,
+        string? kind = null, string? status = null, string? search = null)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<Row>();
         await EnsureAsync(db);
-        var rows = await HrmsDatabase.QueryAsync(db, """
+        var rows = await HrmsDatabase.QueryAsync(db, $"""
 SELECT r.Id AS RequestId, r.EmployeeId, r.RequestType, ISNULL(r.Status,'Pending') AS Status,
        ISNULL(r.CurrentStep,'') AS CurrentStep, r.CreatedAt,
        ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
@@ -251,6 +259,7 @@ FROM FinancialRequestDetails f
 INNER JOIN SelfServiceRequests r ON r.Id = f.RequestId
 INNER JOIN Employees e ON e.Id = r.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
+WHERE {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY r.CreatedAt DESC;
 """,
             null,

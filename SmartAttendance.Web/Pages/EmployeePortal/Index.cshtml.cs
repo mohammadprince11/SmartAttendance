@@ -801,8 +801,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         PendingViolationReplies = await LoadPendingViolationRepliesAsync(employeeId);
         DisciplinaryHistory = await LoadDisciplinaryHistoryAsync(employeeId);
         PendingAssetAcknowledgments = await LoadPendingAssetAcknowledgmentsAsync(employeeId);
-        MyMissingPunches = await MissingPunchRequestStore.ListAsync(
-            _dbContext, new MissingPunchRequestStore.Filter { EmployeeId = employeeId });
+        MyMissingPunches = await MissingPunchRequestStore.ListAsync(_dbContext, SmartAttendance.Web.Infrastructure.Security.CompanyScope.Unrestricted(),
+            new MissingPunchRequestStore.Filter { EmployeeId = employeeId });
         MyOnlinePunches = await OnlinePunchStore.ListAsync(
             _dbContext, new OnlinePunchStore.Filter { EmployeeId = employeeId, Top = 200 });
 

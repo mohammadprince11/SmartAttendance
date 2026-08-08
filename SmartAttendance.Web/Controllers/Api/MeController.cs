@@ -107,7 +107,7 @@ WHERE e.Id = @Id;
     public async Task<IActionResult> MyMissingPunches()
     {
         if (RequireEmployee() is { } bad) return bad;
-        var rows = await MissingPunchRequestStore.ListAsync(_db, new MissingPunchRequestStore.Filter { EmployeeId = EmployeeId });
+        var rows = await MissingPunchRequestStore.ListAsync(_db, SmartAttendance.Web.Infrastructure.Security.CompanyScope.Unrestricted(), new MissingPunchRequestStore.Filter { EmployeeId = EmployeeId });
         return Ok(rows.Select(r => new
         {
             refNo = r.RefNo,

@@ -294,7 +294,7 @@ END;
         var overrideMap = await ShiftOverrideStore.MapAsync(dbContext, monthStart, monthEnd);
 
         // الروستر الشهري — أولوية تحت التجاوز وفوق التعيين الدائم (مناوبة أو عطلة/راحة)
-        var rosterMap = await RosterStore.MapAsync(dbContext, year, month);
+        var rosterMap = await RosterStore.MapAsync(dbContext, scope, year, month);
 
         // أزواج البصمات الحضورية فقط: الأزواج غير-الحضورية (استراحة/صلاة/مهمة عمل)
         // مستثناة حتى لا تصبح استراحةٌ «آخر خروج» فتُحتسب خروجاً مبكراً كاذباً.

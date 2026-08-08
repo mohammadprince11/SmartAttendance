@@ -16,10 +16,13 @@ public class IndexModel : PageModel
     private readonly ApplicationDbContext _db;
     private readonly IAccessRoleService _accessRoles;
 
-    public IndexModel(ApplicationDbContext db, IAccessRoleService accessRoles)
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
+    public IndexModel(ApplicationDbContext db, IAccessRoleService accessRoles, SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _db = db;
         _accessRoles = accessRoles;
+        _companyScope = companyScope;
     }
 
     public const string PageCode = "Attendance.MissingPunch";
@@ -75,7 +78,7 @@ public class IndexModel : PageModel
     {
         await ResolvePermissionsAsync();
 
-        Items = await MissingPunchRequestStore.ListAsync(_db, new MissingPunchRequestStore.Filter
+        Items = await MissingPunchRequestStore.ListAsync(_db, await _companyScope.GetAsync(), new MissingPunchRequestStore.Filter
         {
             Search = Search,
             Status = Status,
@@ -88,7 +91,7 @@ public class IndexModel : PageModel
         });
 
         // العدّادات على كامل الطلبات (بلا فلتر الحالة) لعرض النبض الصحيح
-        var all = await MissingPunchRequestStore.ListAsync(_db, new MissingPunchRequestStore.Filter());
+        var all = await MissingPunchRequestStore.ListAsync(_db, await _companyScope.GetAsync(), new MissingPunchRequestStore.Filter());
         PendingCount = all.Count(r => r.Status == MissingPunchRequestStore.Pending);
         ApprovedCount = all.Count(r => r.Status == MissingPunchRequestStore.Approved);
         RejectedCount = all.Count(r => r.Status == MissingPunchRequestStore.Rejected);
@@ -158,7 +161,7 @@ public class IndexModel : PageModel
         await ResolvePermissionsAsync();
         if (!CanEdit) { TempData["MpMessage"] = "لا تملك صلاحية البتّ في الطلبات."; TempData["MpOk"] = false; return RedirectToPage(Route()); }
         var note = Request.Form["DecisionNote"].ToString();
-        var (ok, message) = await MissingPunchRequestStore.ApproveAsync(_db, id, string.IsNullOrWhiteSpace(note) ? null : note.Trim(), UserName);
+        var (ok, message) = await MissingPunchRequestStore.ApproveAsync(_db, await _companyScope.GetAsync(), id, string.IsNullOrWhiteSpace(note) ? null : note.Trim(), UserName);
         TempData["MpMessage"] = message; TempData["MpOk"] = ok;
         return RedirectToPage(Route());
     }
@@ -168,7 +171,7 @@ public class IndexModel : PageModel
         await ResolvePermissionsAsync();
         if (!CanEdit) { TempData["MpMessage"] = "لا تملك صلاحية البتّ في الطلبات."; TempData["MpOk"] = false; return RedirectToPage(Route()); }
         var note = Request.Form["DecisionNote"].ToString();
-        var (ok, message) = await MissingPunchRequestStore.RejectAsync(_db, id, string.IsNullOrWhiteSpace(note) ? null : note.Trim(), UserName);
+        var (ok, message) = await MissingPunchRequestStore.RejectAsync(_db, await _companyScope.GetAsync(), id, string.IsNullOrWhiteSpace(note) ? null : note.Trim(), UserName);
         TempData["MpMessage"] = message; TempData["MpOk"] = ok;
         return RedirectToPage(Route());
     }
@@ -177,7 +180,7 @@ public class IndexModel : PageModel
     {
         await ResolvePermissionsAsync();
         if (!CanEdit) { TempData["MpMessage"] = "لا تملك صلاحية البتّ في الطلبات."; TempData["MpOk"] = false; return RedirectToPage(Route()); }
-        var (ok, message) = await MissingPunchRequestStore.CancelAsync(_db, id, UserName);
+        var (ok, message) = await MissingPunchRequestStore.CancelAsync(_db, await _companyScope.GetAsync(), id, UserName);
         TempData["MpMessage"] = message; TempData["MpOk"] = ok;
         return RedirectToPage(Route());
     }
@@ -186,7 +189,7 @@ public class IndexModel : PageModel
     {
         await ResolvePermissionsAsync();
         if (!CanDelete) { TempData["MpMessage"] = "لا تملك صلاحية حذف الطلبات."; TempData["MpOk"] = false; return RedirectToPage(Route()); }
-        await MissingPunchRequestStore.DeleteAsync(_db, id);
+        await MissingPunchRequestStore.DeleteAsync(_db, await _companyScope.GetAsync(), id);
         TempData["MpMessage"] = "حُذف الطلب.";
         TempData["MpOk"] = true;
         return RedirectToPage(Route());

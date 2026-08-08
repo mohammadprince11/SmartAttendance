@@ -16,9 +16,12 @@ public class TrackingModel : PageModel
 {
     private readonly ApplicationDbContext _db;
 
-    public TrackingModel(ApplicationDbContext db)
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
+    public TrackingModel(ApplicationDbContext db, SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
     }
 
     // ⚠️ بلا Name مخصَّص عمداً: asp-for يولّد name="TemplateFilter"/"PendingOnly"،
@@ -40,14 +43,14 @@ public class TrackingModel : PageModel
     {
         Templates = await AcknowledgmentStore.LoadTemplatesAsync(_db);
         Assignments = await AcknowledgmentStore.LoadAssignmentsAsync(
-            _db, templateId: TemplateFilter, pendingOnly: PendingOnly);
+            _db, await _companyScope.GetAsync(), templateId: TemplateFilter, pendingOnly: PendingOnly);
     }
 
     public async Task<IActionResult> OnPostRemindAsync(int id)
     {
         // إعادة إرسال = صفّ جديد بختم زمني جديد، لا تعديل للصفّ القائم — وإلا ضاع
         // إثبات الإبلاغ الأول.
-        var assignment = (await AcknowledgmentStore.LoadAssignmentsAsync(_db))
+        var assignment = (await AcknowledgmentStore.LoadAssignmentsAsync(_db, await _companyScope.GetAsync()))
             .FirstOrDefault(row => row.Id == id);
 
         if (assignment is not null)

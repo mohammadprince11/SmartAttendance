@@ -17,9 +17,12 @@ public class MovementsModel : PageModel
 {
     private readonly ApplicationDbContext _db;
 
-    public MovementsModel(ApplicationDbContext db)
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
+    public MovementsModel(ApplicationDbContext db, SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true, Name = "locked")] public bool ShowLocked { get; set; }
@@ -46,7 +49,7 @@ public class MovementsModel : PageModel
         if (PreselectContractId is { } id)
         {
             Preselected = CurrentContracts.FirstOrDefault(row => row.Id == id)
-                          ?? await ContractRegisterStore.FindContractAsync(_db, id);
+                          ?? await ContractRegisterStore.FindContractAsync(_db, await _companyScope.GetAsync(), id);
 
             if (Preselected is not null)
             {
@@ -67,7 +70,7 @@ public class MovementsModel : PageModel
         }
 
         var types = await ContractRegisterStore.LoadContractTypesAsync(_db);
-        var current = ContractId is null ? null : await ContractRegisterStore.FindContractAsync(_db, ContractId.Value);
+        var current = ContractId is null ? null : await ContractRegisterStore.FindContractAsync(_db, await _companyScope.GetAsync(), ContractId.Value);
 
         // الموظف **يُشتقّ من العقد** لا يُؤخذ من منسدلة مستقلة: اختيار عقدٍ ثم نسيان
         // اختيار صاحبه كان يفشل الحفظ برسالة مربكة، وأسوأ منه أن اختياراً مخالفاً
@@ -92,7 +95,7 @@ public class MovementsModel : PageModel
             : ToDate;
 
         await ContractRegisterStore.ApplyMovementAsync(
-            _db, EmployeeId, ContractId, MovementKind, ContractType.Trim(),
+            _db, await _companyScope.GetAsync(), EmployeeId, ContractId, MovementKind, ContractType.Trim(),
             end, EffectiveDate, Notes, User.Identity?.Name);
 
         TempData["SuccessMessage"] = MovementKind switch
@@ -123,11 +126,11 @@ public class MovementsModel : PageModel
     {
         await ContractRegisterStore.EnsureAsync(_db);
 
-        Movements = await ContractRegisterStore.LoadMovementsAsync(_db, ShowLocked);
+        Movements = await ContractRegisterStore.LoadMovementsAsync(_db, await _companyScope.GetAsync(), ShowLocked);
         ContractTypes = await ContractRegisterStore.LoadContractTypesAsync(_db);
 
         // العقود الحالية فقط: التجديد والتمديد يقعان على ما هو سارٍ، لا على أرشيف.
-        CurrentContracts = (await ContractRegisterStore.LoadContractsAsync(_db))
+        CurrentContracts = (await ContractRegisterStore.LoadContractsAsync(_db, await _companyScope.GetAsync()))
             .Where(row => row.IsCurrent)
             .ToList();
     }

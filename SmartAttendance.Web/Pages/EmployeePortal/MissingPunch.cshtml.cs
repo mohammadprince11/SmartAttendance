@@ -30,8 +30,8 @@ public class MissingPunchModel : PageModel
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId > 0)
         {
-            MyRequests = await MissingPunchRequestStore.ListAsync(
-                _dbContext, new MissingPunchRequestStore.Filter { EmployeeId = employeeId });
+            MyRequests = await MissingPunchRequestStore.ListAsync(_dbContext, SmartAttendance.Web.Infrastructure.Security.CompanyScope.Unrestricted(),
+                new MissingPunchRequestStore.Filter { EmployeeId = employeeId });
         }
         return Page();
     }

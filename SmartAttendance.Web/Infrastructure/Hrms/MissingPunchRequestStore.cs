@@ -106,12 +106,15 @@ END;
         public DateOnly? To { get; set; }
     }
 
-    public static async Task<List<Request>> ListAsync(ApplicationDbContext db, Filter filter)
+    public static async Task<List<Request>> ListAsync(
+        ApplicationDbContext db, Security.CompanyScope scope, Filter filter)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<Request>();
         await EnsureAsync(db);
         var rows = await HrmsDatabase.QueryAsync(
             db,
-            """
+            $"""
 SELECT r.*, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
        ISNULL(d.Name, N'') AS DepartmentName, ISNULL(b.Name, N'') AS BranchName,
        ISNULL(e.Position, N'') AS Position, ISNULL(ps.Name, N'حضور') AS SemanticName
@@ -121,6 +124,7 @@ LEFT JOIN Departments d ON d.Id = e.DepartmentId
 LEFT JOIN Branches b ON b.Id = e.BranchId
 LEFT JOIN PunchSemantics ps ON ps.Id = r.PunchSemanticId
 WHERE ISNULL(r.IsDeleted, 0) = 0
+  AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY r.CreatedAt DESC;
 """,
             command => { },
@@ -220,8 +224,12 @@ VALUES (@Ref, @Emp, @At, @Type, @Semantic, @Reason, N'Pending', @Source, @By);
     /// «دخول» ⟶ CheckIn، «خروج» ⟶ CheckOut (مع CheckIn=نفس الوقت لأن العمود غير قابل للتفريغ).
     /// </summary>
     public static async Task<(bool Ok, string Message)> ApproveAsync(
-        ApplicationDbContext db, int id, string? note, string userName)
+        ApplicationDbContext db, Security.CompanyScope scope, int id, string? note, string userName)
     {
+        // الطلب يُملَك بموظفه: معرّفٌ من المتصفّح لا يُقبل قبل إثبات أن موظفه ضمن نطاق الشركات.
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                db, Security.EmployeeCompanyGuard.Tables.MissingPunchRequests, "Id", id, scope))
+            return (false, "الطلب خارج نطاقك.");
         var r = await GetAsync(db, id);
         if (r == null) return (false, "الطلب غير موجود.");
         if (!r.IsPending) return (false, "الطلب ليس قيد الانتظار.");
@@ -273,8 +281,11 @@ WHERE Id=@Id AND Status=N'Pending';
     }
 
     public static async Task<(bool Ok, string Message)> RejectAsync(
-        ApplicationDbContext db, int id, string? note, string userName)
+        ApplicationDbContext db, Security.CompanyScope scope, int id, string? note, string userName)
     {
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                db, Security.EmployeeCompanyGuard.Tables.MissingPunchRequests, "Id", id, scope))
+            return (false, "الطلب خارج نطاقك.");
         var r = await GetAsync(db, id);
         if (r == null) return (false, "الطلب غير موجود.");
         if (!r.IsPending) return (false, "الطلب ليس قيد الانتظار.");
@@ -293,8 +304,11 @@ WHERE Id=@Id AND Status=N'Pending';
 
     /// <summary>إلغاء طلب موافَق عليه: يحذف البصمة المُنشأة ويعيد الحالة إلى «ملغى».</summary>
     public static async Task<(bool Ok, string Message)> CancelAsync(
-        ApplicationDbContext db, int id, string userName)
+        ApplicationDbContext db, Security.CompanyScope scope, int id, string userName)
     {
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                db, Security.EmployeeCompanyGuard.Tables.MissingPunchRequests, "Id", id, scope))
+            return (false, "الطلب خارج نطاقك.");
         var r = await GetAsync(db, id);
         if (r == null) return (false, "الطلب غير موجود.");
         if (r.Status != Approved) return (false, "الإلغاء متاح فقط لطلب موافَق عليه.");
@@ -318,8 +332,12 @@ WHERE Id=@Id AND Status=N'Pending';
         return (true, $"أُلغيت الموافقة على {r.RefNo} وحُذفت البصمة — شغّل «تحديث الحضور».");
     }
 
-    public static async Task DeleteAsync(ApplicationDbContext db, int id)
+    public static async Task DeleteAsync(ApplicationDbContext db, Security.CompanyScope scope, int id)
     {
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                db, Security.EmployeeCompanyGuard.Tables.MissingPunchRequests, "Id", id, scope))
+            return;
+
         await EnsureAsync(db);
         await HrmsDatabase.ExecuteAsync(
             db,
