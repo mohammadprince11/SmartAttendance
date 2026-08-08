@@ -1071,40 +1071,46 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
         // شركة. تمرير نطاق شركةٍ هنا كان سيتطلّب استعلاماً إضافياً بلا أثر أمنيّ.
         ListRangeAsync(dbContext, CompanyScope.Unrestricted(), from, to, search: null, employeeId: employeeId);
 
-    /// <param name="scope">
-    /// نطاق شركات المستخدم — <b>إلزامي بلا قيمة افتراضية</b> (P0-4 بدراسة العزل):
-    /// كانت القراءة تعيد يوميات كل الشركات، وتتغذّى منها شاشات الحضور اليومي
-    /// والعارض والعمليات والداشبورد **وزرّ الإشعار** (P0-5) — فكان يُرسل لموظفي
-    /// شركاتٍ أخرى. الوصل بـ<c>Employees</c> قائم أصلاً فالشرط يُحقن عليه.
-    /// </param>
-    public static async Task<List<DayRow>> ListRangeAsync(
-        ApplicationDbContext dbContext, CompanyScope scope, DateOnly from, DateOnly to, string? search,
-        int? employeeId = null)
+    /// <summary>
+    /// تعبير «البائتة» — <b>المصدر الوحيد</b>، تستهلكه القراءة الكاملة والمرقّمة
+    /// معاً فلا تفترق دلالة «بائتة» بين شاشتين.
+    ///
+    /// بائتة = طرأ تغيير على اليوم بعد لحظة تحليله. ثلاثة مصادر: (1) البصمات —
+    /// يشمل اعتماد «نسيان بصمة» لأنه يُنشئ بصمة فعلية، وإلغاءه لأنه يحذفها منطقياً
+    /// ويحدّث UpdatedAt — وأي تعديل يدوي أو إعادة استيراد. (2) الإجازات المعتمدة
+    /// المتقاطعة مع اليوم. (3) طلبات الخدمة الذاتية متعدّدة الأيام (المطابقة
+    /// بالمدى لا باليوم الأول وحده). AnalyzedAt NULL ⟹ لم تُحلَّل أصلاً.
+    ///
+    /// SQL يترجم الاستعلام كاملاً، فذكرُ جدولٍ غير موجود يفشل حتى داخل شرطٍ
+    /// معطّل — لذلك يُدرَج جزء الخدمة الذاتية نصّياً بعد التأكد من وجوده.
+    /// </summary>
+    /// <summary>قارئ صفّ اليومية — مشترك بين القراءة الكاملة والمرقّمة.</summary>
+    private static DayRow ReadDayRow(System.Data.Common.DbDataReader reader) => new()
     {
-        ArgumentNullException.ThrowIfNull(scope);
-        if (scope.IsDeniedAll) return new List<DayRow>();
+        Id = HrmsDatabase.GetInt(reader, "Id"),
+        EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+        EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+        EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+        WorkDate = HrmsDatabase.GetDateOnly(reader, "WorkDate") ?? default,
+        ShiftTypeId = reader["ShiftTypeId"] is int s ? s : null,
+        ShiftName = HrmsDatabase.GetString(reader, "ShiftName") is { Length: > 0 } n ? n : null,
+        ShiftColor = HrmsDatabase.GetString(reader, "ShiftColor") is { Length: > 0 } c ? c : null,
+        DayKind = HrmsDatabase.GetString(reader, "DayKind") is { Length: > 0 } k ? k : "Work",
+        CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn"),
+        CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut"),
+        LateHours = reader["LateHours"] is decimal late ? late : 0,
+        EarlyLeaveHours = reader["EarlyLeaveHours"] is decimal early ? early : 0,
+        WorkedHours = reader["WorkedHours"] is decimal worked ? worked : 0,
+        Status = HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } st ? st : "Absent",
+        IsAnalyzed = HrmsDatabase.GetBool(reader, "IsAnalyzed"),
+        IsStale = HrmsDatabase.GetBool(reader, "IsStale")
+    };
 
-        await EnsureAsync(dbContext);
-
-        // الترشيح بالموظف يقع بالـSQL: النداء العام يمرّر null فيبقى الاستعلام حرفياً
-        // كما كان (صفر تغيير على الشاشات)، والنداء المفرد يضيف شرطاً مُوسَّطاً.
-        var employeeClause = employeeId is > 0 ? " AND d.EmployeeId = @Employee" : string.Empty;
-
-        // شرط الشركة على الوصل القائم. غير المقيَّد لا يضيف شيئاً — نصّ الاستعلام
-        // يبقى حرفياً كما كان للأدمن، فسلوكه القديم مثبَت لا مكافَأ.
-        var companyClause = scope.IsUnrestricted
-            ? string.Empty
-            : $" AND {scope.ToSqlPredicate("e.CompanyId")}";
-
-        // SQL يترجم الاستعلام كاملاً، فذكرُ جدولٍ غير موجود يفشل حتى داخل شرطٍ
-        // معطّل. لذلك يُدرَج جزء الخدمة الذاتية **نصّياً** بعد التأكد من وجوده.
+    private static async Task<string> StaleCaseSqlAsync(ApplicationDbContext dbContext)
+    {
         var hasSelfService = await HrmsDatabase.ScalarAsync<int>(
             dbContext, "SELECT CASE WHEN OBJECT_ID('SelfServiceRequests','U') IS NULL THEN 0 ELSE 1 END;");
 
-        // المطابقة بالمدى لا باليوم الواحد. كانت `= d.WorkDate` فتلتقط **أول يوم**
-        // بالطلب وحده: طلب «عمل من المنزل» لخمسة أيام يُعتمد بعد التحليل كان يُبيّت
-        // يومه الأول ويترك الأربعة الباقية تبدو محدَّثة وهي ليست كذلك. وينطبق
-        // الإصلاح على كل طلبٍ متعدّد الأيام لا على الجديدين وحدهما.
         var selfServiceClause = hasSelfService == 1
             ? """
                 WHEN EXISTS (
@@ -1116,16 +1122,7 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
             """
             : string.Empty;
 
-        var rows = await HrmsDatabase.QueryAsync(
-            dbContext,
-            $"""
-SELECT d.*, e.EmployeeNo, e.FullName, s.Name AS ShiftName, s.ColorHex AS ShiftColor,
-    -- بائتة = طرأ تغيير على اليوم بعد لحظة تحليله. ثلاثة مصادر:
-    --   1) البصمات (يشمل اعتماد «نسيان بصمة» لأنه يُنشئ بصمة فعلية، وإلغاءه
-    --      لأنه يحذفها منطقياً ويحدّث UpdatedAt) وأي تعديل يدوي أو إعادة استيراد.
-    --   2) الإجازات المعتمدة المتقاطعة مع اليوم.
-    --   3) المغادرات/الزمنية المعتمدة بذلك اليوم.
-    -- AnalyzedAt NULL ⟹ لم تُحلَّل أصلاً.
+        return $"""
     CAST(CASE
         WHEN d.AnalyzedAt IS NULL THEN 1
         WHEN EXISTS (
@@ -1141,7 +1138,308 @@ SELECT d.*, e.EmployeeNo, e.FullName, s.Name AS ShiftName, s.ColorHex AS ShiftCo
               AND COALESCE(l.UpdatedAt, l.CreatedAt) > d.AnalyzedAt) THEN 1
 {selfServiceClause}
         ELSE 0
-    END AS bit) AS IsStale
+    END AS bit)
+""";
+    }
+
+    /// <summary>وصلة الخدمة الذاتية للعدّ المجموعي — نصّياً بعد التأكد من وجود الجدول.</summary>
+    private static async Task<string> SelfServiceJoinSqlAsync(ApplicationDbContext dbContext)
+    {
+        var has = await HrmsDatabase.ScalarAsync<int>(
+            dbContext, "SELECT CASE WHEN OBJECT_ID('SelfServiceRequests','U') IS NULL THEN 0 ELSE 1 END;");
+        return has == 1
+            ? """
+LEFT JOIN SelfServiceRequests ss
+       ON ss.EmployeeId = d.EmployeeId
+      AND d.WorkDate BETWEEN COALESCE(ss.FromDate, ss.RequestDate)
+                         AND COALESCE(ss.ToDate, ss.FromDate, ss.RequestDate)
+"""
+            : string.Empty;
+    }
+
+    private static async Task<string> SelfServiceStaleOrSqlAsync(ApplicationDbContext dbContext)
+    {
+        var has = await HrmsDatabase.ScalarAsync<int>(
+            dbContext, "SELECT CASE WHEN OBJECT_ID('SelfServiceRequests','U') IS NULL THEN 0 ELSE 1 END;");
+        return has == 1
+            ? " OR COALESCE(ss.UpdatedAt, ss.CreatedAt) > d.AnalyzedAt"
+            : string.Empty;
+    }
+
+    /// <summary>نتيجة القراءة المرقّمة بالـSQL لشاشة الحضور اليومي.</summary>
+    public sealed class PagedDays
+    {
+        public List<DayRow> Rows { get; init; } = new();
+        public int TotalRows { get; init; }
+        public int PresentCount { get; init; }
+        public int LateCount { get; init; }
+        public int AbsentCount { get; init; }
+        public int IncompleteCount { get; init; }
+        public int StaleCount { get; init; }
+        /// <summary>موظفو العرض الحالي المميَّزون — نطاق زرّ الإشعار.</summary>
+        public int NotifyEmployeeCount { get; init; }
+    }
+
+    /// <summary>
+    /// القراءة المرقّمة (الموجة 4 — P1-1): كانت الشاشة تحمّل المدى كاملاً
+    /// (~84 ألف صفّ لفترة شهرية بثلاث شركات) ثم تعدّ وترشّح وترتّب وتقصّ 50 صفاً
+    /// بالذاكرة — والبحث نفسه كان بالذاكرة بعد التحميل. الآن: العدّ المجمّع
+    /// والترشيح والبحث والترتيب و<c>OFFSET/FETCH</c> كلها بالـSQL، ولا يصل
+    /// التطبيقَ إلا صفوفُ الصفحة المطلوبة.
+    ///
+    /// الترتيب مطابق حرفياً للسابق: الأحدث فالأقدم ثم برقم الموظف — ترتيب صفحات
+    /// ثابت بلا صفوف تتبدّل بين الصفحات.
+    /// </summary>
+    public static async Task<PagedDays> PageRangeAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, DateOnly from, DateOnly to,
+        string? search, string? statusFilter, int pageNumber, int pageSize)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll || pageSize <= 0) return new PagedDays();
+
+        await EnsureAsync(dbContext);
+
+        var companyClause = scope.IsUnrestricted
+            ? string.Empty
+            : $" AND {scope.ToSqlPredicate("e.CompanyId")}";
+
+        var searchClause = string.IsNullOrWhiteSpace(search)
+            ? string.Empty
+            : " AND (e.EmployeeNo LIKE @Search OR e.FullName LIKE @Search)";
+
+        var staleCase = await StaleCaseSqlAsync(dbContext);
+
+        void AddSharedParameters(System.Data.Common.DbCommand command)
+        {
+            HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
+            HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
+            if (!string.IsNullOrWhiteSpace(search))
+                HrmsDatabase.AddParameter(command, "@Search", $"%{search.Trim()}%");
+        }
+
+        // 1) العدادات: تجميعة الحالات بلا حساب «البائتة» — ذلك يُحسب على حدة.
+        var aggregates = await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+SELECT d.Status, COUNT(*) AS Cnt
+FROM DayAttendances d
+INNER JOIN Employees e ON e.Id = d.EmployeeId
+WHERE d.WorkDate >= @From AND d.WorkDate <= @To{companyClause}{searchClause}
+GROUP BY d.Status;
+""",
+            AddSharedParameters,
+            reader => new
+            {
+                Status = HrmsDatabase.GetString(reader, "Status"),
+                Count = HrmsDatabase.GetInt(reader, "Cnt")
+            });
+
+        int CountOf(string status) => aggregates.Where(a => a.Status == status).Sum(a => a.Count);
+
+        // عدّاد البائتة **مجموعياً** لا لكل صف: EXISTS المترابط × عشرات الآلاف كان
+        // يستهلك ~2.5 ثانية للفترة؛ الوصلات مسبقة التجميع تعطي نفس الناتج بـ~0.5
+        // ثانية (مقيس على SmartAttendance_Dev — 84,444 صفاً، الناتجان متطابقان).
+        // حساب الصفّ الواحد (CROSS APPLY) يبقى لصفوف الصفحة الخمسين فقط.
+        var staleTotal = await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            $"""
+SELECT COUNT(DISTINCT d.Id)
+FROM DayAttendances d
+INNER JOIN Employees e ON e.Id = d.EmployeeId
+LEFT JOIN (SELECT EmployeeId, AttendanceDate, MAX(COALESCE(UpdatedAt, CreatedAt)) AS Mx
+           FROM AttendanceRecords GROUP BY EmployeeId, AttendanceDate) rec
+       ON rec.EmployeeId = d.EmployeeId AND rec.AttendanceDate = d.WorkDate
+LEFT JOIN LeaveRequests lv
+       ON lv.EmployeeId = d.EmployeeId AND ISNULL(lv.IsDeleted, 0) = 0
+      AND d.WorkDate BETWEEN lv.FromDate AND lv.ToDate
+{(await SelfServiceJoinSqlAsync(dbContext))}
+WHERE d.WorkDate >= @From AND d.WorkDate <= @To{companyClause}{searchClause}
+  AND (d.AnalyzedAt IS NULL
+       OR rec.Mx > d.AnalyzedAt
+       OR COALESCE(lv.UpdatedAt, lv.CreatedAt) > d.AnalyzedAt{(await SelfServiceStaleOrSqlAsync(dbContext))});
+""",
+            AddSharedParameters);
+        var total = statusFilter switch
+        {
+            null or "" => aggregates.Sum(a => a.Count),
+            StaleFilterKey => staleTotal,
+            _ => CountOf(statusFilter)
+        };
+
+        // 2) فلتر الصفحة — نفس دلالة FilterByStatus حرفياً لكن بالـSQL.
+        var statusClause = statusFilter switch
+        {
+            null or "" => string.Empty,
+            StaleFilterKey => " AND Stale.IsStale = 1",
+            _ => " AND d.Status = @Status"
+        };
+
+        // 3) موظفو العرض المميَّزون بعد الفلتر — نطاق زرّ الإشعار (يبقى العرضَ حرفياً).
+        var notifyEmployees = await CountDistinctEmployeesAsync();
+
+        async Task<int> CountDistinctEmployeesAsync() =>
+            await HrmsDatabase.ScalarAsync<int>(
+                dbContext,
+                $"""
+SELECT COUNT(DISTINCT d.EmployeeId)
+FROM DayAttendances d
+INNER JOIN Employees e ON e.Id = d.EmployeeId
+CROSS APPLY (SELECT {staleCase} AS IsStale) AS Stale
+WHERE d.WorkDate >= @From AND d.WorkDate <= @To{companyClause}{searchClause}{statusClause};
+""",
+                command =>
+                {
+                    AddSharedParameters(command);
+                    if (statusClause.Contains("@Status"))
+                        HrmsDatabase.AddParameter(command, "@Status", statusFilter!);
+                });
+
+        // 4) صفوف الصفحة وحدها.
+        var totalPages = total == 0 ? 1 : (int)Math.Ceiling(total / (double)pageSize);
+        var page = Math.Clamp(pageNumber, 1, totalPages);
+
+        var rows = await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+SELECT d.*, e.EmployeeNo, e.FullName, s.Name AS ShiftName, s.ColorHex AS ShiftColor,
+    Stale.IsStale
+FROM DayAttendances d
+INNER JOIN Employees e ON e.Id = d.EmployeeId
+LEFT JOIN ShiftTypes s ON s.Id = d.ShiftTypeId
+CROSS APPLY (SELECT {staleCase} AS IsStale) AS Stale
+WHERE d.WorkDate >= @From AND d.WorkDate <= @To{companyClause}{searchClause}{statusClause}
+ORDER BY d.WorkDate DESC, e.EmployeeNo
+OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+""",
+            command =>
+            {
+                AddSharedParameters(command);
+                if (statusClause.Contains("@Status"))
+                    HrmsDatabase.AddParameter(command, "@Status", statusFilter!);
+                HrmsDatabase.AddParameter(command, "@Offset", (page - 1) * pageSize);
+                HrmsDatabase.AddParameter(command, "@PageSize", pageSize);
+            },
+            ReadDayRow);
+
+        return new PagedDays
+        {
+            Rows = rows,
+            TotalRows = total,
+            PresentCount = CountOf("Present"),
+            LateCount = CountOf("Late"),
+            AbsentCount = CountOf("Absent"),
+            IncompleteCount = CountOf("Incomplete"),
+            StaleCount = staleTotal,
+            NotifyEmployeeCount = notifyEmployees
+        };
+    }
+
+    /// <summary>
+    /// صفحة موظفي عارض الحضور (الموجة 4 — P1-2): كانت الشاشة تحمّل يوميات المدى
+    /// كلّها ثم تجمّع بالذاكرة (<c>GroupBy</c>) لعرض عشرين موظفاً. الآن: صفحة
+    /// الموظفين تُحسم بالـSQL أولاً (عدّ + <c>OFFSET/FETCH</c>)، ثم تُقرأ يوميات
+    /// موظفي الصفحة وحدهم — ‎20 × 30 ≈ 600 صفّ بدل عشرات الآلاف.
+    /// </summary>
+    public static async Task<(List<int> EmployeeIds, int TotalEmployees)> PageViewerEmployeesAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, DateOnly from, DateOnly to, string? search,
+        int? departmentId, int? branchId, int? positionId, string? contract, string? nationality,
+        int pageNumber, int pageSize)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll || pageSize <= 0) return (new List<int>(), 0);
+
+        await EnsureAsync(dbContext);
+
+        var clauses = new System.Text.StringBuilder();
+        if (!scope.IsUnrestricted) clauses.Append($" AND {scope.ToSqlPredicate("e.CompanyId")}");
+        if (!string.IsNullOrWhiteSpace(search)) clauses.Append(" AND (e.EmployeeNo LIKE @Search OR e.FullName LIKE @Search)");
+        if (departmentId is > 0) clauses.Append(" AND e.DepartmentId = @Dept");
+        if (branchId is > 0) clauses.Append(" AND e.BranchId = @Branch");
+        if (positionId is > 0) clauses.Append(" AND e.PositionId = @Position");
+        if (!string.IsNullOrWhiteSpace(contract)) clauses.Append(" AND e.ContractType = @Contract");
+        if (!string.IsNullOrWhiteSpace(nationality)) clauses.Append(" AND e.Nationality = @Nationality");
+
+        void AddParameters(System.Data.Common.DbCommand command)
+        {
+            HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
+            HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
+            if (!string.IsNullOrWhiteSpace(search)) HrmsDatabase.AddParameter(command, "@Search", $"%{search.Trim()}%");
+            if (departmentId is > 0) HrmsDatabase.AddParameter(command, "@Dept", departmentId.Value);
+            if (branchId is > 0) HrmsDatabase.AddParameter(command, "@Branch", branchId.Value);
+            if (positionId is > 0) HrmsDatabase.AddParameter(command, "@Position", positionId.Value);
+            if (!string.IsNullOrWhiteSpace(contract)) HrmsDatabase.AddParameter(command, "@Contract", contract);
+            if (!string.IsNullOrWhiteSpace(nationality)) HrmsDatabase.AddParameter(command, "@Nationality", nationality);
+        }
+
+        var baseFrom = $"""
+FROM (SELECT DISTINCT d.EmployeeId, e.EmployeeNo
+      FROM DayAttendances d
+      INNER JOIN Employees e ON e.Id = d.EmployeeId
+      WHERE d.WorkDate >= @From AND d.WorkDate <= @To{clauses}) AS x
+""";
+
+        var total = await HrmsDatabase.ScalarAsync<int>(
+            dbContext, $"SELECT COUNT(*) {baseFrom};", AddParameters);
+        if (total == 0) return (new List<int>(), 0);
+
+        var totalPages = (int)Math.Ceiling(total / (double)pageSize);
+        var page = Math.Clamp(pageNumber, 1, totalPages);
+
+        var ids = await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+SELECT x.EmployeeId {baseFrom}
+ORDER BY x.EmployeeNo
+OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+""",
+            command =>
+            {
+                AddParameters(command);
+                HrmsDatabase.AddParameter(command, "@Offset", (page - 1) * pageSize);
+                HrmsDatabase.AddParameter(command, "@PageSize", pageSize);
+            },
+            reader => HrmsDatabase.GetInt(reader, "EmployeeId"));
+
+        return (ids, total);
+    }
+
+    /// <param name="scope">
+    /// نطاق شركات المستخدم — <b>إلزامي بلا قيمة افتراضية</b> (P0-4 بدراسة العزل):
+    /// كانت القراءة تعيد يوميات كل الشركات، وتتغذّى منها شاشات الحضور اليومي
+    /// والعارض والعمليات والداشبورد **وزرّ الإشعار** (P0-5) — فكان يُرسل لموظفي
+    /// شركاتٍ أخرى. الوصل بـ<c>Employees</c> قائم أصلاً فالشرط يُحقن عليه.
+    /// </param>
+    public static async Task<List<DayRow>> ListRangeAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, DateOnly from, DateOnly to, string? search,
+        int? employeeId = null, IReadOnlyCollection<int>? employeeIds = null)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<DayRow>();
+        if (employeeIds is { Count: 0 }) return new List<DayRow>();
+
+        await EnsureAsync(dbContext);
+
+        // الترشيح بالموظف يقع بالـSQL: النداء العام يمرّر null فيبقى الاستعلام حرفياً
+        // كما كان (صفر تغيير على الشاشات)، والنداء المفرد يضيف شرطاً مُوسَّطاً.
+        // قائمة المعرّفات (صفحة العارض) تُدرَج نصّياً — أعداد صحيحة من قاعدةِ
+        // بياناتنا لا من مدخل مستخدم، فلا سطح حقن.
+        var employeeClause = employeeId is > 0 ? " AND d.EmployeeId = @Employee" : string.Empty;
+        if (employeeIds is { Count: > 0 })
+            employeeClause += $" AND d.EmployeeId IN ({string.Join(", ", employeeIds.OrderBy(id => id))})";
+
+        // شرط الشركة على الوصل القائم. غير المقيَّد لا يضيف شيئاً — نصّ الاستعلام
+        // يبقى حرفياً كما كان للأدمن، فسلوكه القديم مثبَت لا مكافَأ.
+        var companyClause = scope.IsUnrestricted
+            ? string.Empty
+            : $" AND {scope.ToSqlPredicate("e.CompanyId")}";
+
+        var staleCase = await StaleCaseSqlAsync(dbContext);
+
+        var rows = await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+SELECT d.*, e.EmployeeNo, e.FullName, s.Name AS ShiftName, s.ColorHex AS ShiftColor,
+    {staleCase} AS IsStale
 FROM DayAttendances d
 INNER JOIN Employees e ON e.Id = d.EmployeeId
 LEFT JOIN ShiftTypes s ON s.Id = d.ShiftTypeId
@@ -1154,26 +1452,7 @@ ORDER BY e.EmployeeNo, d.WorkDate;
                 HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
                 if (employeeId is > 0) HrmsDatabase.AddParameter(command, "@Employee", employeeId.Value);
             },
-            reader => new DayRow
-            {
-                Id = HrmsDatabase.GetInt(reader, "Id"),
-                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
-                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
-                EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
-                WorkDate = HrmsDatabase.GetDateOnly(reader, "WorkDate") ?? default,
-                ShiftTypeId = reader["ShiftTypeId"] is int s ? s : null,
-                ShiftName = HrmsDatabase.GetString(reader, "ShiftName") is { Length: > 0 } n ? n : null,
-                ShiftColor = HrmsDatabase.GetString(reader, "ShiftColor") is { Length: > 0 } c ? c : null,
-                DayKind = HrmsDatabase.GetString(reader, "DayKind") is { Length: > 0 } k ? k : "Work",
-                CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn"),
-                CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut"),
-                LateHours = reader["LateHours"] is decimal late ? late : 0,
-                EarlyLeaveHours = reader["EarlyLeaveHours"] is decimal early ? early : 0,
-                WorkedHours = reader["WorkedHours"] is decimal worked ? worked : 0,
-                Status = HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } st ? st : "Absent",
-                IsAnalyzed = HrmsDatabase.GetBool(reader, "IsAnalyzed"),
-                IsStale = HrmsDatabase.GetBool(reader, "IsStale")
-            });
+            ReadDayRow);
 
         if (!string.IsNullOrWhiteSpace(search))
         {

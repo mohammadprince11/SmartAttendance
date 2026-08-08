@@ -175,30 +175,27 @@ public class IndexModel : PageModel
         // الفترة تتبع سياسة غلق الحضور (مثلاً 21 → 20) لا الشهر التقويمي.
         CutoffPeriod = await ResolvePeriodAsync(year, month);
 
-        var all = await DayAttendanceStore.ListRangeAsync(
-            _dbContext, await _companyScope.GetAsync(), CutoffPeriod.From, CutoffPeriod.To, Search);
-        PresentCount = all.Count(r => r.Status == "Present");
-        LateCount = all.Count(r => r.Status == "Late");
-        AbsentCount = all.Count(r => r.Status == "Absent");
-        IncompleteCount = all.Count(r => r.Status == "Incomplete");
-        StaleCount = all.Count(r => r.IsStale);
-
-        // الفلتر يُطبَّق بعد العدّادات، والترتيب من الأحدث للأقدم ثم برقم الموظف
-        // ليكون ترتيب الصفحات ثابتاً (بلا مُرتِّب ثانوي تتبدّل الصفوف بين الصفحات).
-        var view = ApplyStatusFilter(all)
-            .OrderByDescending(row => row.WorkDate)
-            .ThenBy(row => row.EmployeeNo, StringComparer.Ordinal)
-            .ToList();
-
-        // موظّفو العرض الحالي — نطاق زرّ الإشعار. **مميَّزون** لا صفوف: الموظف
-        // المتأخر خمسة أيام إنسانٌ واحد يُشعَر مرّة، لا خمس رسائل.
-        NotifyEmployeeCount = view.Select(row => row.EmployeeId).Distinct().Count();
-
-        TotalRows = view.Count;
-        TotalPages = TotalRows == 0 ? 1 : (int)Math.Ceiling(TotalRows / (double)PageSize);
+        // القراءة المرقّمة (الموجة 4): العدّ والفلترة والبحث والترتيب والقصّ كلها
+        // بالـSQL — كانت الشاشة تحمّل المدى كاملاً (~84 ألف صفّ) لعرض خمسين.
+        // موظّفو العرض (نطاق زرّ الإشعار) **مميَّزون** لا صفوف: الموظف المتأخر
+        // خمسة أيام إنسانٌ واحد يُشعَر مرّة، لا خمس رسائل.
         if (PageNumber < 1) PageNumber = 1;
+
+        var paged = await DayAttendanceStore.PageRangeAsync(
+            _dbContext, await _companyScope.GetAsync(), CutoffPeriod.From, CutoffPeriod.To,
+            Search, StatusFilter, PageNumber, PageSize);
+
+        PresentCount = paged.PresentCount;
+        LateCount = paged.LateCount;
+        AbsentCount = paged.AbsentCount;
+        IncompleteCount = paged.IncompleteCount;
+        StaleCount = paged.StaleCount;
+        NotifyEmployeeCount = paged.NotifyEmployeeCount;
+
+        TotalRows = paged.TotalRows;
+        TotalPages = TotalRows == 0 ? 1 : (int)Math.Ceiling(TotalRows / (double)PageSize);
         if (PageNumber > TotalPages) PageNumber = TotalPages;
-        Rows = view.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
+        Rows = paged.Rows;
     }
 
     /// <summary>

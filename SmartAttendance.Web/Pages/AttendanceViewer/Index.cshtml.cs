@@ -130,23 +130,27 @@ public class IndexModel : PageModel
 
         await LoadLookupsAsync();
 
-        var all = await DayAttendanceStore.ListRangeAsync(
-            _dbContext, await _companyScope.GetAsync(), CutoffPeriod.From, CutoffPeriod.To, Search);
+        // الموجة 4 (P1-2): صفحة الموظفين تُحسم بالـSQL أولاً، ثم تُقرأ يوميات
+        // موظفي الصفحة وحدهم — ‎20 × 30 ≈ 600 صفّ بدل تحميل المدى كاملاً
+        // وتجميعه بالذاكرة. فلاتر السمات صارت شروطاً بنفس الاستعلام لا مصفوفة
+        // معرّفات تُطبَّق بعد التحميل.
+        var scope = await _companyScope.GetAsync();
+        if (PageNumber < 1) PageNumber = 1;
 
-        // فلتر سمات الموظف: نجلب معرّفات الموظفين المطابقين ونقصر المصفوفة عليهم
-        if (HasFilter)
-        {
-            var q = _dbContext.Employees.AsNoTracking().Where(e => e.IsActive);
-            if (FDept != null) q = q.Where(e => e.DepartmentId == FDept);
-            if (FBranch != null) q = q.Where(e => e.BranchId == FBranch);
-            if (FPosition != null) q = q.Where(e => e.PositionId == FPosition);
-            if (!string.IsNullOrWhiteSpace(FContract)) q = q.Where(e => e.ContractType == FContract);
-            if (!string.IsNullOrWhiteSpace(FNationality)) q = q.Where(e => e.Nationality == FNationality);
-            var matchIds = new HashSet<int>(await q.Select(e => e.Id).ToListAsync());
-            all = all.Where(r => matchIds.Contains(r.EmployeeId)).ToList();
-        }
+        var (pageIds, totalEmployees) = await DayAttendanceStore.PageViewerEmployeesAsync(
+            _dbContext, scope, CutoffPeriod.From, CutoffPeriod.To, Search,
+            FDept, FBranch, FPosition, FContract, FNationality,
+            PageNumber, PageSize);
 
-        var employees = all
+        TotalRows = totalEmployees;
+        TotalPages = TotalRows == 0 ? 1 : (int)Math.Ceiling(TotalRows / (double)PageSize);
+        if (PageNumber > TotalPages) PageNumber = TotalPages;
+
+        var pageDays = await DayAttendanceStore.ListRangeAsync(
+            _dbContext, scope, CutoffPeriod.From, CutoffPeriod.To, search: null,
+            employeeIds: pageIds);
+
+        Rows = pageDays
             .GroupBy(r => (r.EmployeeId, r.EmployeeNo, r.EmployeeName))
             .Select(g => new EmployeeRow
             {
@@ -159,12 +163,6 @@ public class IndexModel : PageModel
             })
             .OrderBy(e => e.EmployeeNo)
             .ToList();
-
-        TotalRows = employees.Count;
-        TotalPages = TotalRows == 0 ? 1 : (int)Math.Ceiling(TotalRows / (double)PageSize);
-        if (PageNumber < 1) PageNumber = 1;
-        if (PageNumber > TotalPages) PageNumber = TotalPages;
-        Rows = employees.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
 
         // المناصب للصفوف المعروضة فقط (بطاقة الموظف نمط كيان)
         var ids = Rows.Select(r => r.EmployeeId).ToList();
