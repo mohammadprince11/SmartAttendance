@@ -351,8 +351,9 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, ReportFilters f)
     {
         var (from, to) = AttendanceRange(f);
+        // تقرير لا يعرض IsStale — نتخطّى حسابها المترابط على المدى الواسع.
         var rows = await DayAttendanceStore.ListRangeAsync(
-            db, f.Scope ?? Security.CompanyScope.DeniedAll(), from, to, f.Search);
+            db, f.Scope ?? Security.CompanyScope.DeniedAll(), from, to, f.Search, computeStale: false);
 
         return rows.Select(r => new Dictionary<string, string>
         {
@@ -375,8 +376,9 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, ReportFilters f)
     {
         var (from, to) = AttendanceRange(f);
+        // ملخّص لا يعرض IsStale — نتخطّى حسابها المترابط على المدى الواسع.
         var rows = await DayAttendanceStore.ListRangeAsync(
-            db, f.Scope ?? Security.CompanyScope.DeniedAll(), from, to, f.Search);
+            db, f.Scope ?? Security.CompanyScope.DeniedAll(), from, to, f.Search, computeStale: false);
 
         return rows
             .GroupBy(r => (r.EmployeeId, r.EmployeeNo, r.EmployeeName))

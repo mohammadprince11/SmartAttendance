@@ -78,8 +78,10 @@ public class IndexModel : PageModel
         // المصدر هو اليوميات المحلَّلة لا الطلبات: الطلب نيّة، واليومية هي ما دخل
         // المحرّك فعلاً. عرض الطلبات هنا كان يُظهر أياماً «معتمدة» لم تُحلَّل بعد
         // فتبدو مطبَّقة وهي ليست كذلك.
+        // لا تُقرأ IsStale هنا (تصفية بـDayKind/Status فقط) — نتخطّى حسابها المترابط.
         var days = await DayAttendanceStore.ListRangeAsync(
-            _dbContext, await _companyScope.GetAsync(), CutoffPeriod.From, CutoffPeriod.To, Search);
+            _dbContext, await _companyScope.GetAsync(), CutoffPeriod.From, CutoffPeriod.To, Search,
+            computeStale: false);
 
         var outOfOffice = days
             .Where(day => day.DayKind is DayAttendanceStore.RemoteDayKind

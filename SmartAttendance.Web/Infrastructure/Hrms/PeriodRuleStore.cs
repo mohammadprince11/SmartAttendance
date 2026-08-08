@@ -415,7 +415,8 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
             to = PeriodAnchorDate("Month", year, period);
         }
 
-        var days = await DayAttendanceStore.ListRangeAsync(db, scope, from, to, null);
+        // حساب أطول سلسلة غياب — لا يقرأ IsStale، فنتخطّى حسابها المترابط.
+        var days = await DayAttendanceStore.ListRangeAsync(db, scope, from, to, null, computeStale: false);
 
         return days
             .GroupBy(d => d.EmployeeId)
