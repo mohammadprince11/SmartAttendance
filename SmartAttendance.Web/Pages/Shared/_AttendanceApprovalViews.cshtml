@@ -1,0 +1,39 @@
+@using SmartAttendance.Web.Infrastructure.Security
+@{
+    // ③ اعتماد الحضور — مبدّل الفترة: نفس دورة الاعتماد (بناء/مراجعة/اعتماد/قفل)،
+    // الفرق «الفترة» فقط (شهري ↔ أسبوعي). Stores منفصلة تبقى — هذا مبدّل عرضٍ لا دمج
+    // بيانات. كل فترةٍ محكومة بصلاحية مسارها الأصلي عبر RoleRouteCatalog (نفس ما
+    // ينفّذه RoleSecurityMiddleware) ⟹ لا توسيع رؤية، والمساران يبقيان حيّين.
+    var loginRole = Context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+    var currentPath = (Context.Request.Path.Value ?? "/").TrimEnd('/').ToLowerInvariant();
+
+    var views = new (string Label, string Page, string Route)[]
+    {
+        ("شهري", "/MonthAttendance/Index", "/monthattendance"),
+        ("أسبوعي", "/WeekAttendance/Index", "/weekattendance"),
+    };
+
+    var visible = views
+        .Where(v => RoleRouteCatalog.IsAllowed(loginRole, v.Route))
+        .ToList();
+}
+@if (visible.Count > 1)
+{
+    <nav class="att-views" aria-label="فترة اعتماد الحضور">
+        @foreach (var v in visible)
+        {
+            var active = currentPath == v.Route
+                || currentPath.StartsWith(v.Route + "/", StringComparison.Ordinal);
+            <a asp-page="@v.Page" class="att-view @(active ? "is-active" : "")">@v.Label</a>
+        }
+    </nav>
+    <style>
+        .att-views { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px;
+            border: 1px solid var(--sa-border, rgba(73,111,151,.22)); border-radius: 14px;
+            background: var(--sa-surface, rgba(8,25,43,.9)); }
+        .att-view { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 900;
+            color: var(--sa-muted, #8FA8BC); text-decoration: none; border: 1px solid transparent; }
+        .att-view:hover { color: var(--sa-text, #DCEAF4); }
+        .att-view.is-active { color: #04141d; background: linear-gradient(135deg, #12D9E3, #0ea5b5); }
+    </style>
+}
