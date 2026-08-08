@@ -43,9 +43,11 @@ public class LoansModel : PageModel
 
     private string CurrentUser => User.Identity?.Name ?? "system";
 
+    private Task<CompanyScope> ScopeAsync() => _companyScope.GetAsync(HttpContext.RequestAborted);
+
     public async Task OnGetAsync()
     {
-        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var scope = await ScopeAsync();
         Loans = await LoanStore.ListAsync(_db, scope, status: Status, type: LoanType, search: Search);
         Employees = await LoanStore.EmployeeBasicsAsync(_db, scope);
     }
@@ -86,25 +88,28 @@ public class LoansModel : PageModel
             }
         }
 
-        await LoanStore.SaveAsync(_db, loan, CurrentUser);
+        try
+        {
+            await LoanStore.SaveAsync(_db, await ScopeAsync(), loan, CurrentUser);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            TempData["SuccessMessage"] = "الموظف أو القرض خارج نطاق صلاحيتك.";
+            return RedirectToPage();
+        }
         TempData["SuccessMessage"] = loan.Id > 0 ? "تم تحديث القرض." : "تم إنشاء القرض.";
         return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostSetStatusAsync(int id, string status)
     {
-        // اعتماد القرض كتابةٌ مالية: يبدأ الخصم من راتب الموظف. كان يعمل بمعرّفٍ من
-        // النموذج بلا فحص ملكية ⟹ اعتماد/رفض/إغلاق قرض موظفٍ بشركة أخرى.
-        if (!await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
-                _db, EmployeeCompanyGuard.Tables.EmployeeLoans, "Id", id,
-                await _companyScope.GetAsync(HttpContext.RequestAborted),
-                HttpContext.RequestAborted))
+        // اعتماد القرض كتابةٌ مالية: يبدأ الخصم من راتب الموظف. المعرّف من النموذج،
+        // والحارس بالمتجر يرفض قرض موظفٍ خارج النطاق (مغلق الفشل).
+        if (!await LoanStore.SetStatusAsync(_db, await ScopeAsync(), id, status, CurrentUser))
         {
             TempData["SuccessMessage"] = "القرض غير موجود أو خارج نطاق صلاحيتك.";
             return RedirectToPage();
         }
-
-        await LoanStore.SetStatusAsync(_db, id, status, CurrentUser);
         TempData["SuccessMessage"] = status switch
         {
             LoanStore.Approved => "تم اعتماد القرض — يبدأ الخصم من الشهر المحدّد.",
@@ -117,14 +122,14 @@ public class LoansModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
-        await LoanStore.DeleteAsync(_db, id);
-        TempData["SuccessMessage"] = "تم حذف القرض (إن لم يُخصم منه قسط).";
+        await LoanStore.DeleteAsync(_db, await ScopeAsync(), id);
+        TempData["SuccessMessage"] = "تم حذف القرض (إن لم يُخصم منه قسط وكان ضمن نطاقك).";
         return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostPostDueAsync()
     {
-        var n = await LoanStore.PostDueInstallmentsAsync(_db, PostYear, PostMonth, CurrentUser);
+        var n = await LoanStore.PostDueInstallmentsAsync(_db, await ScopeAsync(), PostYear, PostMonth, CurrentUser);
         TempData["SuccessMessage"] = n > 0
             ? $"تم ترحيل {n} قسط كاقتطاع لشهر {PostMonth:00}/{PostYear}."
             : $"لا أقساط مستحقة غير مرحّلة حتى {PostMonth:00}/{PostYear}.";
@@ -133,7 +138,7 @@ public class LoansModel : PageModel
 
     public async Task<IActionResult> OnGetScheduleAsync(int id)
     {
-        var rows = await LoanStore.InstallmentsAsync(_db, id);
+        var rows = await LoanStore.InstallmentsAsync(_db, await ScopeAsync(), id);
         return new JsonResult(rows.Select(r => new
         {
             r.SeqNo, r.DueText, r.Amount, r.IsPosted

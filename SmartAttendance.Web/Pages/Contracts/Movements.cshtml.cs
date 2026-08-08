@@ -110,15 +110,19 @@ public class MovementsModel : PageModel
 
     public async Task<IActionResult> OnPostLockAsync(int id)
     {
-        await ContractRegisterStore.LockMovementAsync(_db, id, User.Identity?.Name);
-        TempData["SuccessMessage"] = "تم قفل الحركة — لم تعد قابلة للتعديل أو الحذف.";
+        // القفل كتابةٌ على حركة عقد بمعرّفٍ من النموذج — الحارس بالمتجر يرفض حركة
+        // موظفٍ خارج النطاق (مغلق الفشل).
+        TempData["SuccessMessage"] = await ContractRegisterStore.LockMovementAsync(_db, await _companyScope.GetAsync(), id, User.Identity?.Name)
+            ? "تم قفل الحركة — لم تعد قابلة للتعديل أو الحذف."
+            : "الحركة غير موجودة أو خارج نطاق صلاحيتك.";
         return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
-        await ContractRegisterStore.DeleteMovementAsync(_db, id);
-        TempData["SuccessMessage"] = "تم حذف الحركة.";
+        TempData["SuccessMessage"] = await ContractRegisterStore.DeleteMovementAsync(_db, await _companyScope.GetAsync(), id)
+            ? "تم حذف الحركة."
+            : "الحركة غير موجودة أو خارج نطاق صلاحيتك.";
         return RedirectToPage();
     }
 

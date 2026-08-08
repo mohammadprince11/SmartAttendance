@@ -34,6 +34,10 @@ public class EmployeeCompanyGuardScopeTests
         File.ReadAllText(Path.Combine(
             RepoRoot(), "SmartAttendance.Web", "Infrastructure", "Security", fileName));
 
+    private static string ReadHrms(string fileName) =>
+        File.ReadAllText(Path.Combine(
+            RepoRoot(), "SmartAttendance.Web", "Infrastructure", "Hrms", fileName));
+
     // ═══ (أ) حرّاس الشاشات ═══
 
     /// <summary>
@@ -219,11 +223,43 @@ public class EmployeeCompanyGuardScopeTests
         EmployeeCompanyGuard.GuardIdentifier(EmployeeCompanyGuard.Tables.SelfServiceRequests);
     }
 
-    /// <summary>الكتابات المالية بمعرّفٍ من النموذج تمرّ ببوابة الصفّ.</summary>
+    /// <summary>
+    /// الكتابات المالية بمعرّفٍ من النموذج تمرّ ببوابة الصفّ — لكن <b>بطبقة المتجر</b>
+    /// لا الصفحة (موجة التحصين 2026-08-08): جعل النطاق وسيطاً إلزامياً بتوقيع المتجر
+    /// يجعل المترجم يفرض الفحص على كل مستدعٍ، فلا يعتمد على تذكّر كاتب الصفحة.
+    /// <see cref="StoresEnforceOwnershipGuard"/> يحرس ذلك؛ وهنا نبقي على ما تبقّى
+    /// بالصفحة (حذف الطلب المالي محروسٌ بالصفحة أصلاً).
+    /// </summary>
+    [Fact]
+    public void FinancialRequestsPage_DeleteIsGated() =>
+        Assert.Contains("EmployeeCompanyGuard.CanAccessOwnedRowAsync",
+            ReadPage("Payroll/FinancialRequests.cshtml.cs"));
+
+    /// <summary>
+    /// موجة التحصين (2026-08-08): الكتابات المالية بمعرّفٍ من النموذج (اعتماد/رفض/
+    /// حذف/قفل/ترحيل قسط) عُزلت بطبقة المتجر — كل متجرٍ منها يستدعي بوابة الصفّ
+    /// المملوك، فالمترجم يفرض تمرير النطاق ولا يُنسى فحصٌ عند مستدعٍ جديد.
+    /// </summary>
     [Theory]
-    [InlineData("Payroll/Loans.cshtml.cs")]
-    [InlineData("Payroll/FinancialRequests.cshtml.cs")]
-    public void FinancialWritesByRequestId_AreGated(string page) =>
-        Assert.Contains("EmployeeCompanyGuard.CanAccessOwnedRowAsync", ReadPage(page));
+    [InlineData("LoanStore.cs")]                 // ترحيل الأقساط + الاعتماد/الحذف/الجدول
+    [InlineData("ContractRegisterStore.cs")]     // قفل/حذف حركة العقد
+    [InlineData("ApprovalWorkflowEngine.cs")]    // اعتماد/رفض الطلب المالي المشترك
+    public void StoresEnforceOwnershipGuard(string store) =>
+        Assert.Contains("EmployeeCompanyGuard.CanAccessOwnedRowAsync", ReadHrms(store));
+
+    /// <summary>
+    /// ترحيل أقساط القروض كان يعبر كل الشركات (P0): يجب أن يحصر بالنطاق عبر
+    /// <see cref="EmployeeCompanyGuard.ListFilter"/>، وأن يكون idempotent بقفلٍ
+    /// محدِّث داخل معاملة كي لا تُرحّل ضغطتان متزامنتان نفس القسط مرتين.
+    /// </summary>
+    [Fact]
+    public void PostDueInstallments_IsScopedAndIdempotent()
+    {
+        var store = ReadHrms("LoanStore.cs");
+
+        Assert.Contains("EmployeeCompanyGuard.ListFilter", store);
+        Assert.Contains("UPDLOCK, HOLDLOCK", store);
+        Assert.Contains("BeginTransactionAsync", store);
+    }
 
 }

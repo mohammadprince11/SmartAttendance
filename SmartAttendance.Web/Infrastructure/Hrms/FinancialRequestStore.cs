@@ -341,7 +341,10 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
             case Loan:
             case Advance:
             {
-                var loanId = await LoanStore.SaveAsync(db, new LoanStore.Loan_
+                // مسارٌ داخليّ بعد اعتماد الطلب: التخويل حُسم بمسار الاعتماد (يُفحَص
+                // بالنطاق)، والموظف هنا من صفّ الطلب المعتمَد لا من مدخل مستخدم —
+                // فالنطاق غير مقيَّد عمداً كي لا يُرفَض تطبيقُ طلبٍ اعتُمد بحقّه.
+                var loanId = await LoanStore.SaveAsync(db, Security.CompanyScope.Unrestricted(), new LoanStore.Loan_
                 {
                     EmployeeId = employeeId,
                     LoanType = detail.Kind == Advance ? LoanStore.Advance : LoanStore.Loan,

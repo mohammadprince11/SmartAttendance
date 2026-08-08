@@ -41,6 +41,7 @@ public class RemainingStoresCompanyScopeTests
     [Theory]
     [InlineData(EmployeeCompanyGuard.Tables.MissingPunchRequests)]
     [InlineData(EmployeeCompanyGuard.Tables.EmployeeContracts)]
+    [InlineData(EmployeeCompanyGuard.Tables.EmployeeContractMovements)]
     [InlineData(EmployeeCompanyGuard.Tables.EmployeeLoans)]
     [InlineData(EmployeeCompanyGuard.Tables.SelfServiceRequests)]
     [InlineData(EmployeeCompanyGuard.Tables.EmployeeEndOfService)]

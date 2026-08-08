@@ -195,9 +195,16 @@ ORDER BY l.CreatedAt DESC;
         return rows;
     }
 
-    public static async Task<List<Installment>> InstallmentsAsync(ApplicationDbContext dbContext, int loanId)
+    public static async Task<List<Installment>> InstallmentsAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int loanId)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+        // جدول الأقساط يكشف مبالغ وتواريخ خصمٍ من راتب موظف — قراءةٌ بمعرّفٍ من
+        // النموذج بلا فحص ملكية تكشف جدول قرض موظفٍ بشركة أخرى. مغلق الفشل.
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                dbContext, Security.EmployeeCompanyGuard.Tables.EmployeeLoans, "Id", loanId, scope))
+            return new List<Installment>();
         return await HrmsDatabase.QueryAsync(
             dbContext,
             "SELECT * FROM EmployeeLoanInstallments WHERE LoanId = @Id ORDER BY SeqNo;",
@@ -217,9 +224,19 @@ ORDER BY l.CreatedAt DESC;
     }
 
     /// <summary>ينشئ/يحدّث القرض ويولّد جدول الأقساط (لغير المُغلق). يرجع Id.</summary>
-    public static async Task<int> SaveAsync(ApplicationDbContext dbContext, Loan_ loan, string userName)
+    public static async Task<int> SaveAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope, Loan_ loan, string userName)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+
+        // إنشاء/تعديل قرضٍ يبدأ خصماً من راتب موظف. المعرّفان (الموظف عند الإنشاء،
+        // والقرض عند التعديل) من النموذج ⟹ يجب أن يكونا ضمن نطاق المستخدم. مغلق الفشل.
+        if (!await Security.EmployeeCompanyGuard.CanAccessEmployeeAsync(dbContext, loan.EmployeeId, scope))
+            throw new UnauthorizedAccessException("الموظف خارج نطاق صلاحيتك.");
+        if (loan.Id > 0 && !await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                dbContext, Security.EmployeeCompanyGuard.Tables.EmployeeLoans, "Id", loan.Id, scope))
+            throw new UnauthorizedAccessException("القرض خارج نطاق صلاحيتك.");
 
         if (loan.InstallmentCount < 1) loan.InstallmentCount = 1;
         loan.MonthlyAmount = Math.Round(loan.Amount / loan.InstallmentCount, 2, MidpointRounding.AwayFromZero);
@@ -295,9 +312,14 @@ ORDER BY l.CreatedAt DESC;
         }
     }
 
-    public static async Task<bool> SetStatusAsync(ApplicationDbContext dbContext, int id, string status, string userName)
+    public static async Task<bool> SetStatusAsync(ApplicationDbContext dbContext, Security.CompanyScope scope, int id, string status, string userName)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+        // اعتماد/رفض/إغلاق القرض كتابةٌ مالية بمعرّفٍ من النموذج — يُفحَص بالنطاق.
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                dbContext, Security.EmployeeCompanyGuard.Tables.EmployeeLoans, "Id", id, scope))
+            return false;
         var approvedStamp = status == Approved ? ", ApprovedAt = SYSUTCDATETIME(), ApprovedBy = @By" : "";
         await HrmsDatabase.ExecuteAsync(dbContext,
             $"UPDATE EmployeeLoans SET Status = @St{approvedStamp} WHERE Id = @Id;",
@@ -310,9 +332,14 @@ ORDER BY l.CreatedAt DESC;
         return true;
     }
 
-    public static async Task DeleteAsync(ApplicationDbContext dbContext, int id)
+    public static async Task DeleteAsync(ApplicationDbContext dbContext, Security.CompanyScope scope, int id)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+        // حذف قرضٍ بمعرّفٍ من النموذج — يُفحَص بالنطاق قبل أي حذف. مغلق الفشل.
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                dbContext, Security.EmployeeCompanyGuard.Tables.EmployeeLoans, "Id", id, scope))
+            return;
         // لا نحذف قرضاً خُصم منه أي قسط.
         var postedCount = await HrmsDatabase.ScalarAsync<int>(dbContext,
             "SELECT COUNT(1) FROM EmployeeLoanInstallments WHERE LoanId = @Id AND IsPosted = 1;",
@@ -329,19 +356,34 @@ ORDER BY l.CreatedAt DESC;
     /// الهدف، يُنشئ اقتطاعاً بحركات المسير ويُعلّم القسط مرحّلاً. يُغلق القرض عند تسديد آخر قسط.
     /// يرجع عدد الأقساط المُرحّلة.
     /// </summary>
-    public static async Task<int> PostDueInstallmentsAsync(ApplicationDbContext dbContext, int year, int month, string userName)
+    public static async Task<int> PostDueInstallmentsAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int year, int month, string userName)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return 0;
         await EnsureAsync(dbContext);
         var target = year * 12 + month;
 
+        // 🔴 كان هذا الأمر يرحّل أقساط **كل الشركات**: مستخدم شركةٍ يضغط «ترحيل
+        // الأقساط المستحقة» فتُنشأ اقتطاعاتٌ برواتب موظفي شركاتٍ أخرى. أثرٌ مالي
+        // عابر للشركات لا تسريبَ قراءة. الحصر بوصل الموظف بالنطاق.
+        //
+        // idempotency: الترحيل «اقرأ المستحق ⟹ اكتب اقتطاعاً ⟹ علّم مرحّلاً» —
+        // بلا تسلسل، ضغطتان متزامنتان تقرآن نفس القسط وترحّلانه مرتين (خصم مضاعف).
+        // معاملةٌ واحدة + قفلٌ محدِّث (UPDLOCK, HOLDLOCK) على الأقساط المستحقة
+        // يجعل الضغطة الثانية تنتظر ثم ترى IsPosted=1 فتتخطّى.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
         var due = await HrmsDatabase.QueryAsync(dbContext,
-            """
+            $"""
 SELECT i.Id AS InstId, i.LoanId, i.SeqNo, i.DueYear, i.DueMonth, i.Amount,
        l.EmployeeId, l.ReferenceNo, l.LoanType, l.InstallmentCount
-FROM EmployeeLoanInstallments i
+FROM EmployeeLoanInstallments i WITH (UPDLOCK, HOLDLOCK)
 INNER JOIN EmployeeLoans l ON l.Id = i.LoanId
+INNER JOIN Employees e ON e.Id = l.EmployeeId
 WHERE i.IsPosted = 0 AND l.Status = N'Approved'
   AND (i.DueYear * 12 + i.DueMonth) <= @T
+  AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY i.DueYear, i.DueMonth, i.SeqNo;
 """,
             command => HrmsDatabase.AddParameter(command, "@T", target),
@@ -394,6 +436,8 @@ ORDER BY i.DueYear, i.DueMonth, i.SeqNo;
                     "UPDATE EmployeeLoans SET Status = N'Closed' WHERE Id = @L;",
                     command => HrmsDatabase.AddParameter(command, "@L", d.LoanId));
         }
+
+        await transaction.CommitAsync();
         return posted;
     }
 

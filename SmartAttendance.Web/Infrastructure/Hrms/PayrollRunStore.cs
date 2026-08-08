@@ -352,8 +352,16 @@ WHERE r.Id = @Id;
         // كانت خطوة يدوية منفصلة بصفحة القروض تُنسى فتضيع خصومات القروض بصمت. النداء
         // idempotent: يرحّل الأقساط غير المرحّلة فقط ولقروض معتمدة فقط، فإعادة الاحتساب
         // لا تُكرّر الخصم، وتُلتقط الحركة الناتجة ضمن حركات الاقتطاع أدناه.
+        // نطاق الترحيل = شركة الدفعة لا كل الشركات: مستخدمٌ مقيَّد يحتسب دفعة شركته
+        // كان — عبر هذا المسار — يرحّل أقساط قروض موظفي كل الشركات (نفس ثغرة زر
+        // «ترحيل الأقساط» بصفحة القروض، من باب خلفيّ). دفعةٌ بلا شركة (تاريخية) تبقى
+        // على السلوك القديم للتوافق مع نشرٍ أحادي الشركة.
+        var runCompanyForLoans = run.CompanyId ?? await ResolveRunCompanyAsync(dbContext, runId);
+        var loanScope = runCompanyForLoans is > 0
+            ? CompanyScope.ForCompanies(new[] { runCompanyForLoans.Value })
+            : CompanyScope.Unrestricted();
         await LoanStore.EnsureAsync(dbContext);
-        await LoanStore.PostDueInstallmentsAsync(dbContext, run.Year, run.Month, userName);
+        await LoanStore.PostDueInstallmentsAsync(dbContext, loanScope, run.Year, run.Month, userName);
 
         // سياسة ربط الراتب بالحضور تُقرأ مرّة للتشغيل كلّه.
         var linkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(dbContext);

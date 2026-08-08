@@ -432,7 +432,14 @@ VALUES (@EmployeeId, @ContractId, @ResultContractId, @MovementKind, @ContractTyp
     }
 
     /// <summary>قفل الحركة — نمط «حركات مقفلة» بكيان: بعد القفل لا تُعدَّل ولا تُحذف.</summary>
-    public static async Task LockMovementAsync(ApplicationDbContext db, int id, string? lockedBy) =>
+    public static async Task<bool> LockMovementAsync(
+        ApplicationDbContext db, Security.CompanyScope scope, int id, string? lockedBy)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        // قفل حركة عقدٍ بمعرّفٍ من النموذج — يُفحَص بالنطاق قبل الكتابة. مغلق الفشل.
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                db, Security.EmployeeCompanyGuard.Tables.EmployeeContractMovements, "Id", id, scope))
+            return false;
         await HrmsDatabase.ExecuteAsync(
             db,
             """
@@ -445,10 +452,20 @@ WHERE Id = @Id AND Status = N'Open';
                 HrmsDatabase.AddParameter(command, "@Id", id);
                 HrmsDatabase.AddParameter(command, "@LockedBy", lockedBy);
             });
+        return true;
+    }
 
-    public static async Task DeleteMovementAsync(ApplicationDbContext db, int id) =>
+    public static async Task<bool> DeleteMovementAsync(ApplicationDbContext db, Security.CompanyScope scope, int id)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        // حذف حركة عقدٍ بمعرّفٍ من النموذج — يُفحَص بالنطاق قبل الحذف. مغلق الفشل.
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                db, Security.EmployeeCompanyGuard.Tables.EmployeeContractMovements, "Id", id, scope))
+            return false;
         await HrmsDatabase.ExecuteAsync(
             db,
             "DELETE FROM EmployeeContractMovements WHERE Id = @Id AND Status = N'Open';",
             command => HrmsDatabase.AddParameter(command, "@Id", id));
+        return true;
+    }
 }

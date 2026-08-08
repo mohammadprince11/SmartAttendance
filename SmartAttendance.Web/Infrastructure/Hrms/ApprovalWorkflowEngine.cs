@@ -236,8 +236,17 @@ VALUES (@RequestId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayNam
 
     public sealed record ActionResult(bool Ok, string Message, bool FinalApproved = false, bool Rejected = false);
 
-    public static async Task<ActionResult> ApproveAsync(ApplicationDbContext dbContext, int requestId, string actor, string? note)
+    public static async Task<ActionResult> ApproveAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int requestId, string actor, string? note)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        // الاعتماد يقدّم الطلب نحو أثرٍ ماليّ (قرض/بدل/زيادة) على موظف. المعرّف من
+        // النموذج ⟹ يجب أن يخصّ موظفاً ضمن نطاق المُعتمِد. مغلق الفشل: طلبٌ خارج
+        // النطاق يُعامَل كأنه غير موجود فلا يُستدلّ على طلبات شركةٍ أخرى.
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                dbContext, Security.EmployeeCompanyGuard.Tables.SelfServiceRequests, "Id", requestId, scope))
+            return new ActionResult(false, "الطلب غير موجود أو خارج نطاق صلاحيتك.");
+
         var flow = await GetFlowAsync(dbContext, requestId);
         var current = flow?.Current;
         if (flow == null || current == null)
@@ -316,8 +325,15 @@ VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى خط
         return new ActionResult(true, $"تمت الموافقة وانتقل الطلب إلى: {next.DisplayName}.");
     }
 
-    public static async Task<ActionResult> RejectAsync(ApplicationDbContext dbContext, int requestId, string actor, string? note)
+    public static async Task<ActionResult> RejectAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int requestId, string actor, string? note)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        // الرفض كتابةٌ على طلب موظف بمعرّفٍ من النموذج — يُفحَص بالنطاق كالاعتماد.
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                dbContext, Security.EmployeeCompanyGuard.Tables.SelfServiceRequests, "Id", requestId, scope))
+            return new ActionResult(false, "الطلب غير موجود أو خارج نطاق صلاحيتك.");
+
         var flow = await GetFlowAsync(dbContext, requestId);
         var current = flow?.Current;
         if (flow == null || current == null)

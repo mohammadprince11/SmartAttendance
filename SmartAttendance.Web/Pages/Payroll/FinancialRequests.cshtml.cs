@@ -80,6 +80,15 @@ public class FinancialRequestsModel : PageModel
             Note = NullIfEmpty(form["Note"])
         };
 
+        // الموظف من النموذج — HR ينشئ الطلب نيابةً عنه. يجب أن يكون ضمن نطاق المُنشئ
+        // وإلّا كان بابَ إنشاء أثرٍ ماليّ لموظف شركةٍ أخرى. مغلق الفشل.
+        if (!await EmployeeCompanyGuard.CanAccessEmployeeAsync(
+                _db, employeeId, await _companyScope.GetAsync(HttpContext.RequestAborted), HttpContext.RequestAborted))
+        {
+            TempData["SuccessMessage"] = "الموظف خارج نطاق صلاحيتك.";
+            return RedirectToPage();
+        }
+
         var requestId = await FinancialRequestStore.SubmitAsync(_db, detail, employeeId, CurrentUser);
         TempData["SuccessMessage"] = requestId > 0
             ? $"تم إنشاء طلب {FinancialRequestStore.KindLabel(kind)} وإرساله للجنة الموافقة."
@@ -90,7 +99,8 @@ public class FinancialRequestsModel : PageModel
     public async Task<IActionResult> OnPostApproveAsync(int id)
     {
         await HrmsDatabase.EnsureCreatedAsync(_db);
-        var result = await ApprovalWorkflowEngine.ApproveAsync(_db, id, CurrentUser, Note);
+        var result = await ApprovalWorkflowEngine.ApproveAsync(
+            _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id, CurrentUser, Note);
         var message = result.Message;
 
         if (result.FinalApproved)
@@ -107,7 +117,8 @@ public class FinancialRequestsModel : PageModel
     public async Task<IActionResult> OnPostRejectAsync(int id)
     {
         await HrmsDatabase.EnsureCreatedAsync(_db);
-        var result = await ApprovalWorkflowEngine.RejectAsync(_db, id, CurrentUser, Note);
+        var result = await ApprovalWorkflowEngine.RejectAsync(
+            _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id, CurrentUser, Note);
         TempData["SuccessMessage"] = result.Message;
         return RedirectToPage();
     }
