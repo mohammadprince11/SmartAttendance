@@ -23,15 +23,25 @@ public class LookupModel : PageModel
 {
     private readonly ApplicationDbContext _db;
     private readonly IPermissionAuthorizationService _permissions;
+    private readonly IEffectiveScopeService _effectiveScopeService;
 
-    public LookupModel(ApplicationDbContext db, IPermissionAuthorizationService permissions)
+    public LookupModel(
+        ApplicationDbContext db,
+        IPermissionAuthorizationService permissions,
+        IEffectiveScopeService effectiveScopeService)
     {
         _db = db;
         _permissions = permissions;
+        _effectiveScopeService = effectiveScopeService;
     }
 
-    /// <summary>صفّ النتيجة — نفس أعمدة نافذة كيان الأربعة.</summary>
-    private sealed record Row(int id, string code, string name, string unit, string hierarchy);
+    /// <summary>
+    /// صفّ النتيجة — الأعمدة الأربعة المعروضة، مع معرّفات النطاق (شركة/فرع/قسم)
+    /// للفحص الداخليّ فقط؛ لا تُعاد في الـJSON (يُبنى بمعطياتٍ صريحة).
+    /// </summary>
+    private sealed record Row(
+        int id, string code, string name, string unit, string hierarchy,
+        int companyId, int branchId, int departmentId);
 
     /// <param name="includeInactive">
     /// يشمل منتهيَ الخدمة. لا يوسّع التخويل بحال — نطاق المستخدم مفروضٌ بعده كما
@@ -52,6 +62,13 @@ public class LookupModel : PageModel
         {
             return Forbid();
         }
+
+        // نطاق «موظفي أدوار الوصول» — يُقاطَع (AND) مع نطاق القواعد صفّاً-صفّاً أدناه،
+        // كما بقائمة الأشخاص (P0-1): من نطاق أدواره أضيق من قواعده لا يجد بالمنتقي من
+        // لا يراه بالقائمة. أدمن/«All» يُحسَم غير مقيَّد فلا يضيّق.
+        var isAdmin = role.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+        var accessRoleScope = await _effectiveScopeService.GetEmployeesAccessScopeAsync(
+            systemUserId, isAdmin, HttpContext.RequestAborted);
 
         // الحدّ الأعلى مقيَّد بالكود لا بالمعطى: طلبٌ بـtake=100000 يجعل النقطة
         // تصديراً كاملاً لدليل الموظفين بنداء واحد.
@@ -77,7 +94,10 @@ SELECT TOP (@Take)
        ISNULL(e.EmployeeNo, N'') AS EmployeeNo,
        ISNULL(e.FullName, N'')   AS FullName,
        ISNULL(b.Name, N'')       AS UnitName,
-       ISNULL(d.Name, N'')       AS DeptName
+       ISNULL(d.Name, N'')       AS DeptName,
+       ISNULL(b.CompanyId, 0)    AS CompanyId,
+       ISNULL(e.BranchId, 0)     AS BranchId,
+       ISNULL(e.DepartmentId, 0) AS DepartmentId
 FROM Employees e
 LEFT JOIN Branches b     ON b.Id = e.BranchId
 LEFT JOIN Departments d  ON d.Id = e.DepartmentId
@@ -94,19 +114,26 @@ ORDER BY e.EmployeeNo;
                 HrmsDatabase.GetString(reader, "EmployeeNo"),
                 HrmsDatabase.GetString(reader, "FullName"),
                 HrmsDatabase.GetString(reader, "UnitName"),
-                HrmsDatabase.GetString(reader, "DeptName")));
+                HrmsDatabase.GetString(reader, "DeptName"),
+                HrmsDatabase.GetInt(reader, "CompanyId"),
+                HrmsDatabase.GetInt(reader, "BranchId"),
+                HrmsDatabase.GetInt(reader, "DepartmentId")));
 
         // القصْر لنطاق المستخدم **بعد** القراءة وقبل الإرجاع: من لا يرى موظفاً
         // بقائمة الموظفين لا يجده بالمنتقي.
         var allowed = new List<Row>(rows.Count);
         foreach (var row in rows)
         {
-            if (await _permissions.CanAccessEmployeeAsync(
-                    systemUserId,
-                    PeoplePermissionCodes.ViewDirectory,
-                    row.id,
-                    PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.ViewDirectory),
-                    HttpContext.RequestAborted))
+            // تقاطع (AND): نطاق القواعد (CanAccessEmployeeAsync) ونطاق أدوار الوصول.
+            var rulesAllows = await _permissions.CanAccessEmployeeAsync(
+                systemUserId,
+                PeoplePermissionCodes.ViewDirectory,
+                row.id,
+                PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.ViewDirectory),
+                HttpContext.RequestAborted);
+
+            if (rulesAllows &&
+                accessRoleScope.AllowsEmployee(row.id, row.companyId, row.branchId, row.departmentId))
             {
                 allowed.Add(row);
             }
@@ -120,6 +147,11 @@ ORDER BY e.EmployeeNo;
             allowed.RemoveRange(take, allowed.Count - take);
         }
 
-        return new JsonResult(new { total = allowed.Count, capped, items = allowed });
+        // إسقاطٌ صريح للأعمدة الأربعة المعروضة فقط — معرّفات النطاق داخليّة لا تُعاد.
+        var items = allowed
+            .Select(r => new { r.id, r.code, r.name, r.unit, r.hierarchy })
+            .ToList();
+
+        return new JsonResult(new { total = items.Count, capped, items });
     }
 }
