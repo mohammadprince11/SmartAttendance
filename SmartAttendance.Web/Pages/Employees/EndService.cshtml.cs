@@ -103,83 +103,95 @@ public class EndServiceModel : PageModel
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
             @"
-INSERT INTO EmployeeEndServices
-(
-    EmployeeId,
-    EmployeeNo,
-    EmployeeName,
-    EndServiceType,
-    EndServiceTypeText,
-    LastWorkingDate,
-    Reason,
-    HrNotes,
-    ClearanceAssets,
-    ClearanceDocuments,
-    ClearanceAccommodation,
-    ClearanceDevices,
-    ClearanceBadge,
-    ClearanceFinance,
-    ClearanceStatus,
-    CreatedBy,
-    IpAddress,
-    CreatedAt
-)
-VALUES
-(
-    @EmployeeId,
-    @EmployeeNo,
-    @EmployeeName,
-    @EndServiceType,
-    @EndServiceTypeText,
-    @LastWorkingDate,
-    @Reason,
-    @HrNotes,
-    @ClearanceAssets,
-    @ClearanceDocuments,
-    @ClearanceAccommodation,
-    @ClearanceDevices,
-    @ClearanceBadge,
-    @ClearanceFinance,
-    @ClearanceStatus,
-    @CreatedBy,
-    @IpAddress,
-    GETDATE()
-);
+-- ذرّية + idempotency: السجلّ والتعطيل والتدقيق دفعةٌ واحدة كلٌّ-أو-لا-شيء
+-- (XACT_ABORT يُرجِع كل شيء عند أي خطأ)، والحارس IsActive=1 يمنع إعادة الإرسال/
+-- النقرة المزدوجة من إنشاء سجلَّي إنهاءٍ مكرَّرين. موظفٌ أُعيد تعيينه يعود IsActive=1
+-- فيُنهى ثانيةً بمشروعية.
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
 
-UPDATE Employees
-SET
-    IsActive = 0,
-    EmploymentStatus = @EmploymentStatus,
-    ServiceEndDate = @LastWorkingDate,
-    ServiceEndType = @EndServiceType,
-    ServiceEndReason = @Reason,
-    ServiceEndNotes = @HrNotes,
-    ClearanceStatus = @ClearanceStatus
-WHERE Id = @EmployeeId;
-
-IF OBJECT_ID('AuditLogs', 'U') IS NOT NULL
+IF EXISTS (SELECT 1 FROM Employees WHERE Id = @EmployeeId AND ISNULL(IsActive, 0) = 1)
 BEGIN
-    INSERT INTO AuditLogs
+    INSERT INTO EmployeeEndServices
     (
-        EntityName,
-        EntityId,
-        Action,
-        OldValues,
-        NewValues,
-        UserName,
-        IpAddress
+        EmployeeId,
+        EmployeeNo,
+        EmployeeName,
+        EndServiceType,
+        EndServiceTypeText,
+        LastWorkingDate,
+        Reason,
+        HrNotes,
+        ClearanceAssets,
+        ClearanceDocuments,
+        ClearanceAccommodation,
+        ClearanceDevices,
+        ClearanceBadge,
+        ClearanceFinance,
+        ClearanceStatus,
+        CreatedBy,
+        IpAddress,
+        CreatedAt
     )
     VALUES
     (
-        'Employee',
-        CAST(@EmployeeId AS nvarchar(80)),
-        'Employee End Service',
-        @OldValues,
-        @NewValues,
+        @EmployeeId,
+        @EmployeeNo,
+        @EmployeeName,
+        @EndServiceType,
+        @EndServiceTypeText,
+        @LastWorkingDate,
+        @Reason,
+        @HrNotes,
+        @ClearanceAssets,
+        @ClearanceDocuments,
+        @ClearanceAccommodation,
+        @ClearanceDevices,
+        @ClearanceBadge,
+        @ClearanceFinance,
+        @ClearanceStatus,
         @CreatedBy,
-        @IpAddress
+        @IpAddress,
+        GETDATE()
     );
-END;",
+
+    UPDATE Employees
+    SET
+        IsActive = 0,
+        EmploymentStatus = @EmploymentStatus,
+        ServiceEndDate = @LastWorkingDate,
+        ServiceEndType = @EndServiceType,
+        ServiceEndReason = @Reason,
+        ServiceEndNotes = @HrNotes,
+        ClearanceStatus = @ClearanceStatus
+    WHERE Id = @EmployeeId;
+
+    IF OBJECT_ID('AuditLogs', 'U') IS NOT NULL
+    BEGIN
+        INSERT INTO AuditLogs
+        (
+            EntityName,
+            EntityId,
+            Action,
+            OldValues,
+            NewValues,
+            UserName,
+            IpAddress
+        )
+        VALUES
+        (
+            'Employee',
+            CAST(@EmployeeId AS nvarchar(80)),
+            'Employee End Service',
+            @OldValues,
+            @NewValues,
+            @CreatedBy,
+            @IpAddress
+        );
+    END;
+END;
+
+COMMIT TRANSACTION;",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@EmployeeId", Id);

@@ -82,74 +82,85 @@ public class RehireModel : PageModel
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
             @"
-INSERT INTO EmployeeRehires
-(
-    EmployeeId,
-    EmployeeNo,
-    EmployeeName,
-    PreviousHireDate,
-    RehireDate,
-    PreviousEmploymentStatus,
-    Reason,
-    HrNotes,
-    CreatedBy,
-    IpAddress,
-    CreatedAt
-)
-VALUES
-(
-    @EmployeeId,
-    @EmployeeNo,
-    @EmployeeName,
-    @PreviousHireDate,
-    @RehireDate,
-    @PreviousEmploymentStatus,
-    @Reason,
-    @HrNotes,
-    @CreatedBy,
-    @IpAddress,
-    GETDATE()
-);
+-- ذرّية + idempotency: السجلّ والتفعيل والتدقيق دفعةٌ واحدة كلٌّ-أو-لا-شيء
+-- (XACT_ABORT)، والحارس IsActive=0 يمنع إعادة الإرسال/النقرة المزدوجة من إنشاء
+-- سجلَّي إعادةٍ مكرَّرين وتضخيم RehireCount. موظفٌ نشطٌ أصلاً لا يُعاد تعيينه.
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
 
-UPDATE Employees
-SET
-    IsActive = 1,
-    HireDate = @RehireDate,
-    EmploymentStatus = 'Active',
-    ServiceEndDate = NULL,
-    ServiceEndType = NULL,
-    ServiceEndReason = NULL,
-    ServiceEndNotes = NULL,
-    ClearanceStatus = NULL,
-    LastRehireDate = @RehireDate,
-    RehireReason = @Reason,
-    RehireNotes = @HrNotes,
-    RehireCount = ISNULL(RehireCount, 0) + 1
-WHERE Id = @EmployeeId;
-
-IF OBJECT_ID('AuditLogs', 'U') IS NOT NULL
+IF EXISTS (SELECT 1 FROM Employees WHERE Id = @EmployeeId AND ISNULL(IsActive, 0) = 0)
 BEGIN
-    INSERT INTO AuditLogs
+    INSERT INTO EmployeeRehires
     (
-        EntityName,
-        EntityId,
-        Action,
-        OldValues,
-        NewValues,
-        UserName,
-        IpAddress
+        EmployeeId,
+        EmployeeNo,
+        EmployeeName,
+        PreviousHireDate,
+        RehireDate,
+        PreviousEmploymentStatus,
+        Reason,
+        HrNotes,
+        CreatedBy,
+        IpAddress,
+        CreatedAt
     )
     VALUES
     (
-        'Employee',
-        CAST(@EmployeeId AS nvarchar(80)),
-        'Employee Rehired',
-        @OldValues,
-        @NewValues,
+        @EmployeeId,
+        @EmployeeNo,
+        @EmployeeName,
+        @PreviousHireDate,
+        @RehireDate,
+        @PreviousEmploymentStatus,
+        @Reason,
+        @HrNotes,
         @CreatedBy,
-        @IpAddress
+        @IpAddress,
+        GETDATE()
     );
-END;",
+
+    UPDATE Employees
+    SET
+        IsActive = 1,
+        HireDate = @RehireDate,
+        EmploymentStatus = 'Active',
+        ServiceEndDate = NULL,
+        ServiceEndType = NULL,
+        ServiceEndReason = NULL,
+        ServiceEndNotes = NULL,
+        ClearanceStatus = NULL,
+        LastRehireDate = @RehireDate,
+        RehireReason = @Reason,
+        RehireNotes = @HrNotes,
+        RehireCount = ISNULL(RehireCount, 0) + 1
+    WHERE Id = @EmployeeId;
+
+    IF OBJECT_ID('AuditLogs', 'U') IS NOT NULL
+    BEGIN
+        INSERT INTO AuditLogs
+        (
+            EntityName,
+            EntityId,
+            Action,
+            OldValues,
+            NewValues,
+            UserName,
+            IpAddress
+        )
+        VALUES
+        (
+            'Employee',
+            CAST(@EmployeeId AS nvarchar(80)),
+            'Employee Rehired',
+            @OldValues,
+            @NewValues,
+            @CreatedBy,
+            @IpAddress
+        );
+    END;
+END;
+
+COMMIT TRANSACTION;",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@EmployeeId", Id);
