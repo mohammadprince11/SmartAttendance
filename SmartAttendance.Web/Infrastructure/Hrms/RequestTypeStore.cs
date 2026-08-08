@@ -92,32 +92,55 @@ END;
         await SeedAsync(db);
     }
 
+    /// <summary>
+    /// بذرة الكتالوج — <b>بحارسين مستقلّين</b>: التبويبات والأنواع. كان حارساً واحداً
+    /// على التبويبات، فقاعدةٌ فيها التبويبات الأربع وصفر نوع (وهي حالة قواعدنا
+    /// القائمة) لا تُبذَر أنواعُها أبداً: يخرج المستخدم بكتالوج فارغ بلا رسالة، ويظنّ
+    /// شاشة الطلبات معطّلة وهي بلا بيانات. وكل مجموعة تُبذَر بشرط وجود تبويبها بالاسم
+    /// فلا يفشل الإدراج على قاعدةٍ أُعيدت تسمية تبويبها.
+    /// </summary>
     private static async Task SeedAsync(ApplicationDbContext db)
     {
-        var count = await HrmsDatabase.ScalarAsync<int>(db, "SELECT COUNT(1) FROM RequestCategories");
-        if (count > 0) return;
-
-        await HrmsDatabase.ExecuteAsync(db, """
+        var categories = await HrmsDatabase.ScalarAsync<int>(db, "SELECT COUNT(1) FROM RequestCategories");
+        if (categories == 0)
+        {
+            await HrmsDatabase.ExecuteAsync(db, """
 INSERT INTO RequestCategories(Name, NameEn, DisplayOrder, IsPickerEntry) VALUES
 (N'الإجازات', 'Leaves', 1, 0),
 (N'العرضية', 'Casual', 2, 0),
 (N'المغادرات', 'Departures', 3, 0),
 (N'الأوفرتايم', 'Overtime', 4, 1);
+""");
+        }
 
+        var types = await HrmsDatabase.ScalarAsync<int>(db, "SELECT COUNT(1) FROM RequestTypes");
+        if (types > 0) return;
+
+        await HrmsDatabase.ExecuteAsync(db, """
 DECLARE @lv int=(SELECT Id FROM RequestCategories WHERE Name=N'الإجازات');
 DECLARE @cs int=(SELECT Id FROM RequestCategories WHERE Name=N'العرضية');
 DECLARE @dp int=(SELECT Id FROM RequestCategories WHERE Name=N'المغادرات');
 DECLARE @ot int=(SELECT Id FROM RequestCategories WHERE Name=N'الأوفرتايم');
 
+IF @lv IS NOT NULL
 INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,NeedsTime,AttachmentRequired,DisplayOrder) VALUES
 (@lv,N'إجازة سنوية','full',0,1,0,0,1),
-(@lv,N'إجازة مرضية','full',0,1,0,0,2),
+(@lv,N'إجازة مرضية','full',0,1,0,0,2);
+
+IF @cs IS NOT NULL
+INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,NeedsTime,AttachmentRequired,DisplayOrder) VALUES
 (@cs,N'مهمة عمل','full',0,0,0,0,1),
 (@cs,N'إجازة وفاة','full',0,0,0,0,2),
-(@cs,N'إجازة غير مدفوعة','unpaid',1,0,0,0,3),
+(@cs,N'إجازة غير مدفوعة','unpaid',1,0,0,0,3);
+
+IF @dp IS NOT NULL
+INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,NeedsTime,AttachmentRequired,DisplayOrder) VALUES
 (@dp,N'مغادرة شخصية','full',0,0,1,0,1),
 (@dp,N'مغادرة عمل','full',0,0,1,0,2),
-(@dp,N'مغادرة غير مدفوعة','unpaid',1,0,1,0,3),
+(@dp,N'مغادرة غير مدفوعة','unpaid',1,0,1,0,3);
+
+IF @ot IS NOT NULL
+INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,NeedsTime,AttachmentRequired,DisplayOrder) VALUES
 (@ot,N'عمل إضافي','full',0,0,1,0,1);
 """);
     }

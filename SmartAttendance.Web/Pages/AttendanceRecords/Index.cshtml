@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="~/css/attendance-records-filters.css" asp-append-version="true" />
 
 <div class="attendance-records-page">
+    <partial name="_AttendanceViews" />
     <div class="page-header">
         <div>
             <h1 data-att-text="title">سجلات الحضور</h1>
@@ -139,6 +140,11 @@
                 <span data-att-text="of">من</span>
                 @Model.TotalRows
             </span>
+            @* عدّادان منقولان من «البصمات عبر الإنترنت»: دخولٌ مفتوح مقابل مكتمل. *@
+            <span class="att-count-badges">
+                <span class="att-badge att-badge-in">مفتوح (دخول): @Model.OpenPunches</span>
+                <span class="att-badge att-badge-out">مكتمل: @Model.CompletePunches</span>
+            </span>
         </div>
 
         <div class="att-pagination">
@@ -161,6 +167,15 @@
     @* data-zy-scroll: البطاقة تملك تمريرها الأفقي.
        (2026-08-07: الكسح الذي استدعى هذا الوسم أُلغي — صار فكّ القصّ مقصوراً على
        سلسلة أسلاف المنتقي وعلى لحظة فتحه وحدها. الوسم يبقى كإعلان ملكيةٍ صريح.) *@
+    @* حذفٌ جماعيّ منقول من «البصمات عبر الإنترنت»: تحديد متعدد ⟹ حذف المختار (محصور بالنطاق). *@
+    <form method="post" asp-page-handler="DeleteSelected">
+        <div class="att-bulk-bar">
+            <button type="submit" class="btn-delete"
+                    data-zyconfirm="سيُحذف كل ما حدّدته من السجلّات. متابعة؟">
+                حذف المحدد
+            </button>
+        </div>
+
     <div class="table-card att-table-card" data-zy-scroll>
         @*
             data-no-pagination: هذا الجدول **مُرقَّم بالخادم** (PageSize من 63 ألف سجل).
@@ -172,6 +187,7 @@
         <table class="data-table att-records-table" data-no-pagination="true">
             <thead>
                 <tr>
+                    <th class="att-check-col"><input type="checkbox" data-att-checkall aria-label="تحديد الكل" /></th>
                     <th data-att-text="actions">الإجراءات</th>
                     <th data-att-text="employeeNo">رقم الموظف</th>
                     <th data-att-text="employeeName">اسم الموظف</th>
@@ -179,6 +195,7 @@
                     <th data-att-text="date">التاريخ</th>
                     <th data-att-text="checkIn">دخول</th>
                     <th data-att-text="checkOut">خروج</th>
+                    <th data-att-text="semantic">الدلالة</th>
                     <th data-att-text="status">الحالة</th>
                 </tr>
             </thead>
@@ -189,6 +206,9 @@
                     foreach (var record in Model.Records)
                     {
                         <tr>
+                            <td class="att-check-col">
+                                <input type="checkbox" name="selectedIds" value="@record.Id" data-att-check aria-label="تحديد" />
+                            </td>
                             <td class="row-actions">
                                 <a asp-page="./Edit" asp-route-id="@record.Id" class="btn-table btn-edit" data-att-text="edit">تعديل</a>
                                 <a asp-page="./Delete" asp-route-id="@record.Id" class="btn-table btn-delete" data-att-text="delete">حذف</a>
@@ -199,6 +219,7 @@
                             <td>@record.Date</td>
                             <td>@record.CheckIn</td>
                             <td>@record.CheckOut</td>
+                            <td>@record.Semantic</td>
                             <td>@record.Status</td>
                         </tr>
                     }
@@ -206,15 +227,27 @@
                 else
                 {
                     <tr>
-                        @* 8 أعمدة: إجراءات · رقم · اسم · الفرع · التاريخ · دخول · خروج · الحالة *@
-                        <td colspan="8" class="empty-cell" data-att-text="noData">لا توجد بيانات حسب الفلاتر المحددة.</td>
+                        @* 10 أعمدة: تحديد · إجراءات · رقم · اسم · الفرع · التاريخ · دخول · خروج · الدلالة · الحالة *@
+                        <td colspan="10" class="empty-cell" data-att-text="noData">لا توجد بيانات حسب الفلاتر المحددة.</td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
+    </form>
 </div>
 
 @section Scripts {
     <script src="~/js/attendance-records-filters.js" asp-append-version="true"></script>
+    <script>
+        // «تحديد الكل» للحذف الجماعي — منقول مع الميزة من صفحة البصمات عبر الإنترنت.
+        (function () {
+            var master = document.querySelector('[data-att-checkall]');
+            if (!master) return;
+            var boxes = function () { return document.querySelectorAll('[data-att-check]'); };
+            master.addEventListener('change', function () {
+                boxes().forEach(function (b) { b.checked = master.checked; });
+            });
+        })();
+    </script>
 }

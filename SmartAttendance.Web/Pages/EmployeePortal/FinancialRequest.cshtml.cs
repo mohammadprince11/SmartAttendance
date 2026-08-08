@@ -32,7 +32,7 @@ public class FinancialRequestModel : PageModel
         var employeeId = await ResolveEmployeeIdAsync();
         HasEmployee = employeeId > 0;
         if (employeeId > 0)
-            MyRequests = (await FinancialRequestStore.ListAsync(_db))
+            MyRequests = (await FinancialRequestStore.ListAsync(_db, SmartAttendance.Web.Infrastructure.Security.CompanyScope.Unrestricted()))
                 .Where(r => r.EmployeeId == employeeId).ToList();
     }
 
@@ -80,7 +80,7 @@ public class FinancialRequestModel : PageModel
         // تأكّد أن الطلب لهذا الموظف قبل الحذف.
         if (employeeId > 0)
         {
-            var mine = (await FinancialRequestStore.ListAsync(_db)).Any(r => r.RequestId == id && r.EmployeeId == employeeId);
+            var mine = (await FinancialRequestStore.ListAsync(_db, SmartAttendance.Web.Infrastructure.Security.CompanyScope.Unrestricted())).Any(r => r.RequestId == id && r.EmployeeId == employeeId);
             if (mine) await FinancialRequestStore.DeletePendingAsync(_db, id);
         }
         StatusMessage = "تم حذف الطلب المعلّق.";

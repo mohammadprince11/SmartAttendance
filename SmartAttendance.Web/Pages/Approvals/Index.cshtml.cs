@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Approvals;
 
@@ -14,11 +15,15 @@ namespace SmartAttendance.Web.Pages.Approvals;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(ApplicationDbContext dbContext, ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
+
+    private Task<CompanyScope> ScopeAsync() => _companyScope.GetAsync(HttpContext.RequestAborted);
 
     [BindProperty(SupportsGet = true)] public string Status { get; set; } = "Pending";
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
@@ -71,7 +76,7 @@ public class IndexModel : PageModel
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         // سجّل قرار الحقول قبل البتّ (طلبات تعديل البيانات فقط تتأثر؛ غيرها بلا حقول = بلا أثر).
         await DataChangeRequestStore.SetFieldDecisionsAsync(_dbContext, id, ApprovedFieldKeys);
-        var result = await ApprovalWorkflowEngine.ApproveAsync(_dbContext, id, ActorName(), Note);
+        var result = await ApprovalWorkflowEngine.ApproveAsync(_dbContext, await ScopeAsync(), id, ActorName(), Note);
         Message = result.Message;
         MessageIsError = !result.Ok;
         if (result.FinalApproved) await ApplyEffectsAsync(id);
@@ -82,7 +87,7 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostRejectAsync(int id)
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        var result = await ApprovalWorkflowEngine.RejectAsync(_dbContext, id, ActorName(), Note);
+        var result = await ApprovalWorkflowEngine.RejectAsync(_dbContext, await ScopeAsync(), id, ActorName(), Note);
         Message = result.Message;
         MessageIsError = !result.Ok;
         await LoadAsync();
@@ -94,9 +99,10 @@ public class IndexModel : PageModel
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         int ok = 0, final = 0;
+        var scope = await ScopeAsync();
         foreach (var id in Ids.Distinct())
         {
-            var r = await ApprovalWorkflowEngine.ApproveAsync(_dbContext, id, ActorName(), Note);
+            var r = await ApprovalWorkflowEngine.ApproveAsync(_dbContext, scope, id, ActorName(), Note);
             if (r.Ok) ok++;
             if (r.FinalApproved) { await ApplyEffectsAsync(id); final++; }
         }
@@ -112,9 +118,10 @@ public class IndexModel : PageModel
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         int ok = 0;
+        var scope = await ScopeAsync();
         foreach (var id in Ids.Distinct())
         {
-            var r = await ApprovalWorkflowEngine.RejectAsync(_dbContext, id, ActorName(), Note);
+            var r = await ApprovalWorkflowEngine.RejectAsync(_dbContext, scope, id, ActorName(), Note);
             if (r.Ok) ok++;
         }
         Message = ok == 0 ? "لم يُرفض أي طلب." : $"تم رفض {ok} طلب.";
@@ -140,9 +147,20 @@ public class IndexModel : PageModel
     {
         await LoadFilterOptionsAsync();
 
+        // 🔴 كانت هذه الشاشة تسرد وتعدّ طلبات **كل الشركات**: مستخدم مقيَّد يرى طلبات
+        // موظفي شركاتٍ أخرى ويبتّها. الحصر بوصل الطلب بموظفه ثم بنطاق المستخدم.
+        var scope = await ScopeAsync();
+        var scopeFilter = EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId");
+
         var counts = await HrmsDatabase.QueryAsync(
             _dbContext,
-            "SELECT ISNULL(Status,'Pending') AS S, COUNT(*) AS C FROM SelfServiceRequests GROUP BY ISNULL(Status,'Pending');",
+            $"""
+SELECT ISNULL(r.Status,'Pending') AS S, COUNT(*) AS C
+FROM SelfServiceRequests r
+INNER JOIN Employees e ON e.Id = r.EmployeeId
+WHERE {scopeFilter}
+GROUP BY ISNULL(r.Status,'Pending');
+""",
             null,
             reader => new { S = HrmsDatabase.GetString(reader, "S"), C = HrmsDatabase.GetInt(reader, "C") });
         PendingCount = counts.FirstOrDefault(x => x.S == "Pending")?.C ?? 0;
@@ -151,7 +169,7 @@ public class IndexModel : PageModel
 
         Requests = await HrmsDatabase.QueryAsync(
             _dbContext,
-            """
+            $"""
 SELECT TOP 300
     r.Id,
     e.EmployeeNo,
@@ -177,7 +195,8 @@ INNER JOIN Employees e ON r.EmployeeId = e.Id
 LEFT JOIN Employees m ON e.DirectManagerId = m.Id
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
 LEFT JOIN Branches b ON b.Id = e.BranchId
-WHERE (@Status = 'All' OR r.Status = @Status)
+WHERE {scopeFilter}
+  AND (@Status = 'All' OR r.Status = @Status)
   AND (@Search IS NULL OR e.FullName LIKE '%' + @Search + '%' OR e.EmployeeNo LIKE '%' + @Search + '%')
   AND (@ReqType IS NULL OR r.RequestType = @ReqType)
   AND (@DeptId IS NULL OR e.DepartmentId = @DeptId)

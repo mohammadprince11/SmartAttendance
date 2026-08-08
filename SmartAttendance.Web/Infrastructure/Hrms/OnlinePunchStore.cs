@@ -1,6 +1,7 @@
 using System.Globalization;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.HrSettings;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -311,8 +312,10 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         public int Top { get; set; } = 500;
     }
 
-    public static async Task<List<OnlinePunch>> ListAsync(ApplicationDbContext db, Filter filter)
+    public static async Task<List<OnlinePunch>> ListAsync(ApplicationDbContext db, CompanyScope scope, Filter filter)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<OnlinePunch>();
         await HrmsDatabase.EnsureCreatedAsync(db);
 
         var rows = await HrmsDatabase.QueryAsync(
@@ -327,7 +330,7 @@ INNER JOIN Employees e ON e.Id = ar.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
 LEFT JOIN Branches b ON b.Id = e.BranchId
 LEFT JOIN PunchSemantics ps ON ps.Id = ar.PunchSemanticId
-WHERE ISNULL(ar.IsDeleted, 0) = 0 AND ar.Source = @Src
+WHERE ISNULL(ar.IsDeleted, 0) = 0 AND ar.Source = @Src AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY ar.CheckIn DESC;
 """,
             command => HrmsDatabase.AddParameter(command, "@Src", MobileSource),
@@ -365,9 +368,14 @@ ORDER BY ar.CheckIn DESC;
         return rows;
     }
 
-    /// <summary>حذف بصمات عبر الإنترنت مختارة (نمط كيان «حذف العناصر المختارة»).</summary>
-    public static async Task<int> DeleteManyAsync(ApplicationDbContext db, IReadOnlyCollection<int> ids)
+    /// <summary>
+    /// حذف بصمات عبر الإنترنت مختارة (نمط كيان «حذف العناصر المختارة»). محصور بشركات
+    /// المستخدم: صفوف موظفٍ خارج النطاق لا تُمسّ حتى لو مُرِّر معرّفها من المتصفح.
+    /// </summary>
+    public static async Task<int> DeleteManyAsync(ApplicationDbContext db, CompanyScope scope, IReadOnlyCollection<int> ids)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return 0;
         await HrmsDatabase.EnsureCreatedAsync(db);
         if (ids.Count == 0) return 0;
         var total = 0;
@@ -376,7 +384,13 @@ ORDER BY ar.CheckIn DESC;
             var inList = string.Join(",", chunk.Select((_, i) => $"@P{i}"));
             total += await HrmsDatabase.ScalarAsync<int>(
                 db,
-                $"UPDATE AttendanceRecords SET IsDeleted=1, UpdatedAt=SYSUTCDATETIME() WHERE Source=@Src AND Id IN ({inList}); SELECT @@ROWCOUNT;",
+                $"""
+UPDATE ar SET ar.IsDeleted=1, ar.UpdatedAt=SYSUTCDATETIME()
+FROM AttendanceRecords ar
+INNER JOIN Employees e ON e.Id = ar.EmployeeId
+WHERE ar.Source=@Src AND ar.Id IN ({inList}) AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};
+SELECT @@ROWCOUNT;
+""",
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@Src", MobileSource);

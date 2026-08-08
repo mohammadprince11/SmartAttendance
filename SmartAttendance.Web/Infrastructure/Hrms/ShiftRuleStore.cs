@@ -97,6 +97,22 @@ GROUP BY EmployeeId, AttendanceDate, PunchSemanticId;
         ("Hours", "عدد ساعات")
     };
 
+    /// <summary>
+    /// أثرٌ ماليّ بـ**نسبة من قيمة اليوم** لا بمبلغٍ ثابت (قرار محمد 2026-08-08:
+    /// «نسيان البصمة يخصم 25% من قيمة اليوم»). القيمة تُخزَّن بـ<c>ActionValue</c>
+    /// نسبةً مئوية، ويُحسب المبلغ **لحظة الاعتماد** من راتب الموظف — فمبلغٌ يُجمَّد
+    /// وقت التحليل يصير خاطئاً لمن تغيّر راتبه، والنسبة تبقى صحيحة للجميع.
+    ///
+    /// <para>خُزِّن بـ<c>ValueKind</c> القائم لا بعمودٍ جديد — القاعدة الحمراء تمنع
+    /// توليد الأعمدة بالشفاء الذاتي، والقيمة الجديدة لا تحتاج مخطّطاً.</para>
+    /// </summary>
+    public const string PercentOfDayValueKind = "PercentOfDay";
+
+    /// <summary>هل الأثر الماليّ لهذه القاعدة نسبةٌ من قيمة اليوم؟</summary>
+    public static bool IsPercentOfDay(string? valueKind, string? actionType) =>
+        string.Equals(valueKind, PercentOfDayValueKind, StringComparison.Ordinal)
+        && actionType is "Deduction" or "Income";
+
     /// <summary>مرساة اليوم للقيمة الزمنية — حل عبور منتصف الليل (نمط كيان).</summary>
     public static readonly (string Key, string Label)[] DayAnchors =
     {

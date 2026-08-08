@@ -17,9 +17,12 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _db;
 
-    public IndexModel(ApplicationDbContext db)
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
+    public IndexModel(ApplicationDbContext db, SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
@@ -111,7 +114,7 @@ public class IndexModel : PageModel
     {
         await ContractRegisterStore.EnsureAsync(_db);
 
-        Contracts = await ContractRegisterStore.LoadContractsAsync(_db, EmployeeFilter, Search);
+        Contracts = await ContractRegisterStore.LoadContractsAsync(_db, await _companyScope.GetAsync(), EmployeeFilter, Search);
         if (!ShowExpired)
         {
             Contracts = Contracts

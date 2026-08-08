@@ -100,7 +100,7 @@ IF COL_LENGTH('AttendanceRecommendations', 'TransactionId') IS NULL
     /// </summary>
     /// <returns>(مقترحة جديدة، منها تلقائية معتمدة)</returns>
     public static async Task<(int Created, int Auto)> AnalyzeMonthAsync(
-        ApplicationDbContext dbContext, int year, int month)
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int year, int month)
     {
         await EnsureAsync(dbContext);
 
@@ -108,7 +108,7 @@ IF COL_LENGTH('AttendanceRecommendations', 'TransactionId') IS NULL
         // إحداهما لا يعطّل الأخرى.
         var rules = (await ShiftRuleStore.ListAsync(dbContext)).Where(r => r.IsActive).ToList();
 
-        var days = await DayAttendanceStore.ListAsync(dbContext, year, month, null);
+        var days = await DayAttendanceStore.ListAsync(dbContext, scope, year, month, null);
         var shiftList = await ShiftTypeStore.ListAsync(dbContext);
         var shifts = shiftList.ToDictionary(s => s.Id, s => s.Days.ToDictionary(d => d.DayIndex));
         var shiftById = shiftList.ToDictionary(s => s.Id);
@@ -400,13 +400,22 @@ WHERE AttendanceDate >= @From AND AttendanceDate <= @To AND ISNULL(IsDeleted, 0)
         return result;
     }
 
-    public static async Task<List<Recommendation>> ListAsync(
+    public static Task<List<Recommendation>> ListAsync(
         ApplicationDbContext dbContext, int year, int month, string? status)
     {
-        await EnsureAsync(dbContext);
-
         var from = new DateOnly(year, month, 1);
-        var to = from.AddMonths(1).AddDays(-1);
+        return ListRangeAsync(dbContext, from, from.AddMonths(1).AddDays(-1), status);
+    }
+
+    /// <summary>
+    /// اقتراحات مدىً صريح — تستعمله الشاشات التي تتبع **فترة غلق الحضور** (مثلاً
+    /// 21 → 20) لا الشهر التقويمي: عرضُ شهرٍ تقويميّ بينما المسير يقرأ فترة الغلق
+    /// يعني قراراً على أيامٍ خارج الفترة، وأيامَ فترةٍ لا تُعرض أصلاً.
+    /// </summary>
+    public static async Task<List<Recommendation>> ListRangeAsync(
+        ApplicationDbContext dbContext, DateOnly from, DateOnly to, string? status)
+    {
+        await EnsureAsync(dbContext);
 
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,
@@ -594,11 +603,11 @@ GROUP BY EmployeeId, RuleId;
     /// </summary>
     /// <returns>عدد الاقتراحات الجديدة.</returns>
     public static async Task<int> AnalyzePeriodAsync(
-        ApplicationDbContext dbContext, string periodType, int year, int period)
+        ApplicationDbContext dbContext, Security.CompanyScope scope, string periodType, int year, int period)
     {
         await EnsureAsync(dbContext);
 
-        var matches = await PeriodRuleStore.EvaluateAsync(dbContext, periodType, year, period);
+        var matches = await PeriodRuleStore.EvaluateAsync(dbContext, scope, periodType, year, period);
         if (matches.Count == 0) return 0;
 
         var anchor = PeriodRuleStore.PeriodAnchorDate(periodType, year, period);
@@ -663,11 +672,99 @@ VALUES
                 return (violationId, null);
 
             default: // Leave | Permission | Overtime | Income | Deduction
+                var (amount, note) = await ResolveMoneyAsync(
+                    dbContext, employeeId, workDate, ruleId, actionType, actionValue);
+
                 var transactionId = await AttendanceTransactionStore.CreateAsync(dbContext,
                     employeeId, workDate, recommendationId, ruleId, ruleName,
-                    actionType, actionText, actionValue);
+                    actionType, string.IsNullOrEmpty(note) ? actionText : $"{actionText} ({note})", amount);
                 return (null, transactionId);
         }
+    }
+
+    /// <summary>
+    /// المبلغ الفعليّ للأثر الماليّ. القاعدة العادية تعطي مبلغاً ثابتاً؛ وقاعدة
+    /// <see cref="ShiftRuleStore.PercentOfDayValueKind"/> تعطي **نسبةً من قيمة اليوم**
+    /// تُحسب هنا — لحظة الاعتماد — من الراتب الأساسي ÷ ٣٠ (نفس مقام المسير).
+    ///
+    /// <para>راتبٌ مفقود يعني مبلغَ صفر لا خصماً عشوائياً: يُنشأ الأثر بقيمة صفر
+    /// وبيانٍ يقول السبب، فيراه المستخدم بدل أن يخصم رقماً لا أساس له.</para>
+    /// </summary>
+    private static async Task<(decimal Amount, string Note)> ResolveMoneyAsync(
+        ApplicationDbContext dbContext, int employeeId, DateOnly workDate, int ruleId,
+        string actionType, decimal actionValue)
+    {
+        if (ruleId <= 0) return (actionValue, string.Empty);
+
+        var rule = (await ShiftRuleStore.ListAsync(dbContext)).FirstOrDefault(r => r.Id == ruleId);
+        if (rule is null || !ShiftRuleStore.IsPercentOfDay(rule.ValueKind, actionType))
+            return (actionValue, string.Empty);
+
+        // سلسلة التصاعد: النسبة تكبر بتكرار المخالفة. كان `UseEscalation` يكتب رقم
+        // التكرار بالنصّ **ولا يمسّ المال** — أي إنذارٌ لفظيّ لا تصعيد. الدرجات
+        // تُقرأ من أعمدة القاعدة القائمة (بلا عمودٍ جديد): الأولى `ActionValue`،
+        // والثانية `ValueHours`، والثالثة فما فوق `ValueHours2` — وصفرٌ يعني «كما
+        // سبقتها»، فقاعدةٌ بلا سلّم تبقى بنسبةٍ واحدة كما كانت.
+        var percent = actionValue;
+        var occurrenceNote = string.Empty;
+
+        if (rule.UseEscalation)
+        {
+            var occurrence = await OccurrenceAsync(dbContext, employeeId, ruleId, workDate);
+            var ladder = new[] { actionValue, rule.ValueHours, rule.ValueHours2 };
+
+            var step = actionValue;
+            for (var index = 0; index < ladder.Length && index < occurrence; index++)
+            {
+                if (ladder[index] > 0) step = ladder[index];
+            }
+
+            percent = step;
+            occurrenceNote = $"التكرار {occurrence} · ";
+        }
+
+        var basic = await HrmsDatabase.ScalarAsync<decimal?>(
+            dbContext,
+            """
+SELECT TOP 1 BasicSalary FROM EmployeeFinancialInfos
+WHERE EmployeeId = @Employee AND ISNULL(IsDeleted, 0) = 0;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Employee", employeeId)) ?? 0m;
+
+        if (basic <= 0)
+            return (0m, "بلا راتب أساسي مسجَّل — لم يُحتسب مبلغ");
+
+        var dailyRate = WorkDaysBasis.DailyRate(basic, 30m);
+        var amount = decimal.Round(dailyRate * percent / 100m, 2);
+
+        return (amount, $"{occurrenceNote}{percent:0.##}% من قيمة اليوم {dailyRate:0.##}");
+    }
+
+    /// <summary>
+    /// رقم تكرار هذه المخالفة لهذا الموظف حتى هذا اليوم (ضمن السنة). يُحسب **لحظة
+    /// الاعتماد** لا وقت التحليل، فيوافق ما بُتَّ فيه فعلاً: المتجاهَل لا يُحتسب —
+    /// تجاهُل المسؤول يعني أن المخالفة لم تقع، فلا تُصعِّد ما بعدها.
+    /// </summary>
+    private static async Task<int> OccurrenceAsync(
+        ApplicationDbContext dbContext, int employeeId, int ruleId, DateOnly workDate)
+    {
+        var prior = await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            """
+SELECT COUNT(1) FROM AttendanceRecommendations
+WHERE EmployeeId = @Employee AND RuleId = @Rule
+  AND Status <> N'Ignored'
+  AND WorkDate < @Date
+  AND YEAR(WorkDate) = YEAR(@Date);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Employee", employeeId);
+                HrmsDatabase.AddParameter(command, "@Rule", ruleId);
+                HrmsDatabase.AddParameter(command, "@Date", workDate.ToDateTime(TimeOnly.MinValue));
+            });
+
+        return prior + 1;
     }
 
     public static async Task IgnoreAsync(ApplicationDbContext dbContext, int id)

@@ -440,6 +440,16 @@ if (!string.IsNullOrWhiteSpace(certificatePath))
 
 var app = builder.Build();
 
+// حارس فصل البيئات — **قبل المهاجر لا بعده.** تشغيلٌ غير إنتاجي يشير لقاعدة
+// الإنتاج يعني هجرةً تلقائية وبياناتٍ تجريبية على بيانات حقيقية. يُرفض الإقلاع
+// صراحةً بدل تحذيرٍ بسجلٍّ لا يقرأه أحد.
+if (SmartAttendance.Web.Infrastructure.Hrms.EnvironmentDatabaseGuard.Validate(
+        app.Environment.EnvironmentName,
+        builder.Configuration.GetConnectionString("DefaultConnection")) is { } environmentRefusal)
+{
+    throw new InvalidOperationException(environmentRefusal);
+}
+
 // هجرات المخطط المحكومة للجداول القديمة (SQL خام) تعمل صراحةً مرة واحدة عند
 // الإقلاع — لا بكل طلب — وأي فشل يظهر فوراً بدل عطل صامت لاحق.
 using (var migrationScope = app.Services.CreateScope())

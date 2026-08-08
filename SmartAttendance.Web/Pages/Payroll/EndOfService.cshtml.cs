@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Payroll;
 
@@ -13,10 +14,12 @@ namespace SmartAttendance.Web.Pages.Payroll;
 public class EndOfServiceModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public EndOfServiceModel(ApplicationDbContext db)
+    public EndOfServiceModel(ApplicationDbContext db, ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -40,7 +43,8 @@ public class EndOfServiceModel : PageModel
     {
         if (Tab != "Approved") Tab = "Draft";
 
-        var all = await EndOfServiceStore.ListAsync(_db, search: Search);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var all = await EndOfServiceStore.ListAsync(_db, scope, search: Search);
         DraftCount = all.Count(x => !x.IsApproved);
         ApprovedCount = all.Count(x => x.IsApproved);
         TotalNet = all.Where(x => x.IsApproved).Sum(x => x.NetSettlement);
@@ -48,7 +52,7 @@ public class EndOfServiceModel : PageModel
         Items = all.Where(x => x.IsApproved == IsApproved).ToList();
         TotalCount = Items.Count;
 
-        Employees = await EndOfServiceStore.EmployeeInfosAsync(_db);
+        Employees = await EndOfServiceStore.EmployeeInfosAsync(_db, scope);
     }
 
     public async Task<IActionResult> OnPostSaveAsync()
@@ -104,14 +108,25 @@ public class EndOfServiceModel : PageModel
             Status = "Draft"
         };
 
-        await EndOfServiceStore.SaveAsync(_db, s, User?.Identity?.Name ?? "system");
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        try
+        {
+            await EndOfServiceStore.SaveAsync(_db, scope, s, User?.Identity?.Name ?? "system");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            TempData["PayrollMessage"] = "لا صلاحية على هذا الموظف/التسوية.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
         TempData["PayrollMessage"] = id > 0 ? "تم تحديث التسوية." : $"تمت إضافة التسوية (صافي {net:#,0.##}).";
         return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostApproveAsync(int id)
     {
-        var ok = await EndOfServiceStore.ApproveAsync(_db, id, User?.Identity?.Name ?? "system");
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var ok = await EndOfServiceStore.ApproveAsync(_db, scope, id, User?.Identity?.Name ?? "system");
         TempData["PayrollMessage"] = ok ? "اعتُمدت التسوية." : "تعذّر الاعتماد (ربما معتمدة سابقاً).";
         TempData["PayrollOk"] = ok;
         return RedirectToPage(new { Tab = ok ? "Approved" : "Draft" });
@@ -125,7 +140,8 @@ public class EndOfServiceModel : PageModel
             TempData["PayrollOk"] = false;
             return RedirectToPage(new { Tab = "Approved" });
         }
-        await EndOfServiceStore.DeleteAsync(_db, id);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        await EndOfServiceStore.DeleteAsync(_db, scope, id);
         TempData["PayrollMessage"] = "تم حذف التسوية.";
         return RedirectToPage();
     }

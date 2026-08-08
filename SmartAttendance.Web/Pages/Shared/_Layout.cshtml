@@ -248,7 +248,7 @@
             || IsUnder("/MonthAttendance") || IsUnder("/EmployeeOnlinePunches") || IsUnder("/MissingPunchRequests")
             || IsUnder("/WorkFromHome") || IsUnder("/Roster") || IsUnder("/ShiftAssignments") || IsUnder("/ShiftOverrides")
             || IsUnder("/ShiftTypes") || IsUnder("/ShiftRules") || IsUnder("/PeriodRules") || IsUnder("/BiometricKeys")
-            || IsUnder("/EmployeeGeoLocations") || IsUnder("/Holidays") || IsUnder("/Shifts") || IsUnder("/Devices");
+            || IsUnder("/EmployeeGeoLocations") || IsUnder("/Holidays") || IsUnder("/Devices");
         var requestsOpen = IsUnder("/LeaveRequests") || IsUnder("/Approvals") || IsUnder("/SelfServices");
         var payrollOpen = IsUnder("/Payroll");
     }
@@ -610,15 +610,79 @@
                         @if (CanRoute("/attendancedashboard"))
                         {
                             <a href="/AttendanceDashboard" class="nexora-nav-link @(IsUnder("/AttendanceDashboard") ? "active nexora-active" : "")">
-                                <span>رسومات بيانية</span>
+                                <span>نظرة عامة</span>
                             </a>
                         }
 
-                        @* ٢) حضور الموظفين — المناوبة حالةً وجدولةً وموقعاً. *@
-                        @if (CanRoute("/shiftassignments") || CanRoute("/shiftoverrides") || CanRoute("/roster") || CanRoute("/employeegeolocations"))
+                        @{
+                            // القسم 10 — الوجهة الأولى المسموحة لكل مساحة عمل: لا نوجّه
+                            // المستخدم قسراً لعرضٍ يُمنع منه. الترتيب واضح، وأوّل مسموحٍ يفوز.
+                            string? FirstAllowedNavUrl(params (string Route, string Url)[] pairs) =>
+                                pairs.FirstOrDefault(p => CanRoute(p.Route)).Url;
+
+                            var manageUrl = FirstAllowedNavUrl(
+                                ("/dayattendance", "/DayAttendance"),
+                                ("/attendanceviewer", "/AttendanceViewer"),
+                                ("/attendancerecords", "/AttendanceRecords"),
+                                ("/attendanceoperations", "/AttendanceOperations"));
+                            var manageActive = IsUnder("/DayAttendance") || IsUnder("/AttendanceViewer")
+                                || IsUnder("/AttendanceRecords") || IsUnder("/AttendanceOperations");
+
+                            var approvalUrl = FirstAllowedNavUrl(
+                                ("/monthattendance", "/MonthAttendance"),
+                                ("/weekattendance", "/WeekAttendance"));
+                            var approvalActive = IsUnder("/MonthAttendance") || IsUnder("/WeekAttendance");
+                        }
+
+                        @* ② إدارة الحضور — رابطٌ واحد لمساحة العمل. العروض (اليوميات · المصفوفة ·
+                             سجلات البصمات · المعالجة والتصحيح) داخل الصفحة عبر _AttendanceViews.
+                             الوجهة أوّل عرضٍ يسمح به مسارُ المستخدم (لا توجيه قسريّ لممنوع). *@
+                        @if (manageUrl != null)
                         {
-                            <details class="ky-acc" @(IsUnder("/ShiftAssignments") || IsUnder("/ShiftOverrides") || IsUnder("/Roster") || IsUnder("/EmployeeGeoLocations") ? "open" : "")>
-                                <summary><span>حضور الموظفين</span><span class="ky-acc-chev"></span></summary>
+                            <a href="@manageUrl" class="nexora-nav-link @(manageActive ? "active nexora-active" : "")">
+                                <span>إدارة الحضور</span>
+                            </a>
+                        }
+
+                        @* ③ اعتماد الحضور — رابطٌ واحد؛ «شهري · أسبوعي» داخل الصفحة عبر
+                             _AttendanceApprovalViews. الوجهة أوّل فترةٍ مسموحة. *@
+                        @if (approvalUrl != null)
+                        {
+                            <a href="@approvalUrl" class="nexora-nav-link @(approvalActive ? "active nexora-active" : "")">
+                                <span>اعتماد الحضور</span>
+                            </a>
+                        }
+
+                        @* ④ الإجراءات المقترحة — مفهوم مستقل. *@
+                        @if (CanRoute("/attendancerecommendations"))
+                        {
+                            <a href="/AttendanceRecommendations" class="nexora-nav-link @(IsUnder("/AttendanceRecommendations") ? "active nexora-active" : "")">
+                                <span>الإجراءات المقترحة</span>
+                            </a>
+                        }
+
+                        @* العمل من المنزل — عرضٌ للقراءة؛ يبقى ظاهراً كي لا تُخفى وظيفة (القسم 11). *@
+                        @if (CanRoute("/workfromhome"))
+                        {
+                            <a href="/WorkFromHome" class="nexora-nav-link @(IsUnder("/WorkFromHome") ? "active nexora-active" : "")">
+                                <span>العمل من المنزل</span>
+                            </a>
+                        }
+
+                        @* ⑤ طلبات البصمة المفقودة — شاشة واحدة. *@
+                        @if (CanRoute("/missingpunchrequests"))
+                        {
+                            <a href="/MissingPunchRequests" class="nexora-nav-link @(IsUnder("/MissingPunchRequests") ? "active nexora-active" : "")">
+                                <span>طلبات البصمة المفقودة</span>
+                            </a>
+                        }
+
+                        @* ⑥ الجداول والمناوبات — الجدولة وقواعدها معاً (منطق الأعمال بلا تغيير). *@
+                        @if (CanRoute("/shiftassignments") || CanRoute("/shiftoverrides") || CanRoute("/roster")
+                             || CanRoute("/shiftrules") || CanRoute("/periodrules"))
+                        {
+                            <details class="ky-acc" @(IsUnder("/ShiftAssignments") || IsUnder("/ShiftOverrides") || IsUnder("/Roster") || IsUnder("/ShiftRules") || IsUnder("/PeriodRules") ? "open" : "")>
+                                <summary><span>الجداول والمناوبات</span><span class="ky-acc-chev"></span></summary>
                                 <div class="ky-acc-body">
                                     @if (CanRoute("/shiftassignments"))
                                     {
@@ -626,81 +690,12 @@
                                     }
                                     @if (CanRoute("/shiftoverrides"))
                                     {
-                                        <a href="/ShiftOverrides" class="nexora-nav-link @(IsUnder("/ShiftOverrides") ? "active nexora-active" : "")"><span>تعديل مناوبات مؤقت</span></a>
+                                        <a href="/ShiftOverrides" class="nexora-nav-link @(IsUnder("/ShiftOverrides") ? "active nexora-active" : "")"><span>التعديلات المؤقتة</span></a>
                                     }
                                     @if (CanRoute("/roster"))
                                     {
-                                        <a href="/Roster" class="nexora-nav-link @(IsUnder("/Roster") ? "active nexora-active" : "")"><span>جدولة مناوبات العمل</span></a>
+                                        <a href="/Roster" class="nexora-nav-link @(IsUnder("/Roster") ? "active nexora-active" : "")"><span>جدولة المناوبات</span></a>
                                     }
-                                    @if (CanRoute("/employeegeolocations"))
-                                    {
-                                        <a href="/EmployeeGeoLocations" class="nexora-nav-link @(IsUnder("/EmployeeGeoLocations") ? "active nexora-active" : "")"><span>المواقع الجغرافية للموظفين</span></a>
-                                    }
-                                </div>
-                            </details>
-                        }
-
-                        @* ٣) مستعرض الحضور — شاشة واحدة. *@
-                        @if (CanRoute("/attendanceviewer"))
-                        {
-                            <a href="/AttendanceViewer" class="nexora-nav-link @(IsUnder("/AttendanceViewer") ? "active nexora-active" : "")">
-                                <span>مستعرض الحضور</span>
-                            </a>
-                        }
-
-                        @* ٤) إدارة الحضور — العمليات اليومية والاعتماد الدوري ومصادر البصمة الحيّة. *@
-                        @if (CanRoute("/dayattendance") || CanRoute("/attendancerecommendations") || CanRoute("/monthattendance")
-                             || CanRoute("/weekattendance") || CanRoute("/employeeonlinepunches") || CanRoute("/workfromhome")
-                             || CanRoute("/attendanceoperations") || CanRoute("/attendancerecords"))
-                        {
-                            <details class="ky-acc" @(IsUnder("/DayAttendance") || IsUnder("/AttendanceRecommendations") || IsUnder("/MonthAttendance") || IsUnder("/WeekAttendance") || IsUnder("/EmployeeOnlinePunches") || IsUnder("/WorkFromHome") || IsUnder("/AttendanceOperations") || IsUnder("/AttendanceRecords") ? "open" : "")>
-                                <summary><span>إدارة الحضور</span><span class="ky-acc-chev"></span></summary>
-                                <div class="ky-acc-body">
-                                    @if (CanRoute("/attendanceoperations"))
-                                    {
-                                        @* لا مقابل لها عند كيان — مراقبة حيّة تسبق كل شيء بهذه المجموعة. *@
-                                        <a asp-page="/AttendanceOperations/Index" class="nexora-nav-link @(IsUnder("/AttendanceOperations") ? "active nexora-active" : "")"><span>مراقبة الحضور</span></a>
-                                    }
-                                    @if (CanRoute("/dayattendance"))
-                                    {
-                                        <a href="/DayAttendance" class="nexora-nav-link @(IsUnder("/DayAttendance") ? "active nexora-active" : "")"><span>الحضور اليومي</span></a>
-                                    }
-                                    @if (CanRoute("/attendancerecommendations"))
-                                    {
-                                        <a href="/AttendanceRecommendations" class="nexora-nav-link @(IsUnder("/AttendanceRecommendations") ? "active nexora-active" : "")"><span>متابعة الإجراءات المقترحة</span></a>
-                                    }
-                                    @if (CanRoute("/monthattendance"))
-                                    {
-                                        <a href="/MonthAttendance" class="nexora-nav-link @(IsUnder("/MonthAttendance") ? "active nexora-active" : "")"><span>الحضور الشهري</span></a>
-                                    }
-                                    @if (CanRoute("/weekattendance"))
-                                    {
-                                        <a href="/WeekAttendance" class="nexora-nav-link @(IsUnder("/WeekAttendance") ? "active nexora-active" : "")"><span>الحضور الأسبوعي</span></a>
-                                    }
-                                    @if (CanRoute("/employeeonlinepunches"))
-                                    {
-                                        <a href="/EmployeeOnlinePunches" class="nexora-nav-link @(IsUnder("/EmployeeOnlinePunches") ? "active nexora-active" : "")"><span>البصمات عبر الإنترنت</span></a>
-                                    }
-                                    @if (CanRoute("/workfromhome"))
-                                    {
-                                        <a href="/WorkFromHome" class="nexora-nav-link @(IsUnder("/WorkFromHome") ? "active nexora-active" : "")"><span>العمل من المنزل</span></a>
-                                    }
-                                    @if (CanRoute("/attendancerecords"))
-                                    {
-                                        @* لا مقابل لها عند كيان — مستعرض البصمة الخام. *@
-                                        <a asp-page="/AttendanceRecords/Index" class="nexora-nav-link @(IsUnder("/AttendanceRecords") ? "active nexora-active" : "")"><span>سجلات الحضور</span></a>
-                                    }
-                                </div>
-                            </details>
-                        }
-
-                        @* ٥) منشئ قواعد المناوبات — «يومية · شهرية · أسبوعية» عند كيان،
-                             وعندنا محرّكان: قواعد المناوبات والقواعد الفترية. *@
-                        @if (CanRoute("/shiftrules") || CanRoute("/periodrules"))
-                        {
-                            <details class="ky-acc" @(IsUnder("/ShiftRules") || IsUnder("/PeriodRules") ? "open" : "")>
-                                <summary><span>منشئ قواعد المناوبات</span><span class="ky-acc-chev"></span></summary>
-                                <div class="ky-acc-body">
                                     @if (CanRoute("/shiftrules"))
                                     {
                                         <a href="/ShiftRules" class="nexora-nav-link @(IsUnder("/ShiftRules") ? "active nexora-active" : "")"><span>قواعد المناوبات</span></a>
@@ -711,14 +706,6 @@
                                     }
                                 </div>
                             </details>
-                        }
-
-                        @* ٦) طلبات البصمات المفقودة — شاشة واحدة. *@
-                        @if (CanRoute("/missingpunchrequests"))
-                        {
-                            <a href="/MissingPunchRequests" class="nexora-nav-link @(IsUnder("/MissingPunchRequests") ? "active nexora-active" : "")">
-                                <span>طلبات البصمات المفقودة</span>
-                            </a>
                         }
 
                         @* ٧) التقارير — شاشة واحدة. *@
@@ -734,10 +721,10 @@
                              البصمات · اعتماد مفاتيح البصمة/الوجه. و«أيام العطل» كانت
                              مساراً حيّاً بلا رابطٍ بالقائمة إطلاقاً. *@
                         @if (CanRoute("/attendancesettings") || CanRoute("/shifttypes") || CanRoute("/holidays")
-                             || CanRoute("/devices") || CanRoute("/attendanceimports") || CanRoute("/biometrickeys") || CanRoute("/shifts"))
+                             || CanRoute("/devices") || CanRoute("/biometrickeys") || CanRoute("/employeegeolocations"))
                         {
-                            <details class="ky-acc" @(IsUnder("/AttendanceSettings") || IsUnder("/ShiftTypes") || IsUnder("/Holidays") || IsUnder("/Devices") || IsUnder("/AttendanceImports") || IsUnder("/BiometricKeys") || IsUnder("/Shifts") ? "open" : "")>
-                                <summary><span>إعدادات تسجيل الحضور</span><span class="ky-acc-chev"></span></summary>
+                            <details class="ky-acc" @(IsUnder("/AttendanceSettings") || IsUnder("/ShiftTypes") || IsUnder("/Holidays") || IsUnder("/Devices") || IsUnder("/BiometricKeys") || IsUnder("/EmployeeGeoLocations") ? "open" : "")>
+                                <summary><span>الإعدادات</span><span class="ky-acc-chev"></span></summary>
                                 <div class="ky-acc-body">
                                     @if (CanRoute("/attendancesettings"))
                                     {
@@ -751,10 +738,11 @@
                                     {
                                         <a asp-page="/Devices/Index" class="nexora-nav-link @(IsUnder("/Devices") ? "active nexora-active" : "")"><span>الأجهزة</span></a>
                                     }
-                                    @if (CanRoute("/attendanceimports"))
-                                    {
-                                        <a asp-page="/AttendanceImports/Index" class="nexora-nav-link @(IsUnder("/AttendanceImports") ? "active nexora-active" : "")"><span>استيراد البصمات</span></a>
-                                    }
+                                    @* «استيراد البصمات» حُذف من القائمة: `/AttendanceImports`
+                                       مجرّد إعادة توجيه لـ`/AttendanceOperations?Tab=import`،
+                                       و«مراقبة الحضور» بهذا الدرج نفسه تفتح النافذة ذاتها.
+                                       المسار يبقى حيّاً — `AttendanceSourceStore` يبذره
+                                       بالقاعدة كمصدر إكسل النظامي. *@
                                     @if (CanRoute("/biometrickeys"))
                                     {
                                         <a href="/BiometricKeys" class="nexora-nav-link @(IsUnder("/BiometricKeys") ? "active nexora-active" : "")"><span>اعتماد مفاتيح البصمة/الوجه</span></a>
@@ -763,10 +751,9 @@
                                     {
                                         <a asp-page="/Holidays/Index" class="nexora-nav-link @(IsUnder("/Holidays") ? "active nexora-active" : "")"><span>أيام العطل</span></a>
                                     }
-                                    @if (CanRoute("/shifts"))
+                                    @if (CanRoute("/employeegeolocations"))
                                     {
-                                        @* الطبقة القديمة (جدول Shifts) — تبقى حتى يكتمل ترحيل Shifts⟵ShiftTypes *@
-                                        <a asp-page="/Shifts/Index" class="nexora-nav-link @(IsUnder("/Shifts") ? "active nexora-active" : "")"><span>الشفتات (قديم)</span></a>
+                                        <a href="/EmployeeGeoLocations" class="nexora-nav-link @(IsUnder("/EmployeeGeoLocations") ? "active nexora-active" : "")"><span>المواقع الجغرافية للموظفين</span></a>
                                     }
                                 </div>
                             </details>

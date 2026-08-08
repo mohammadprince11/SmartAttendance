@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="~/css/attendance-operations-notes-fix.css" asp-append-version="true" />
 
 <div class="hrms-page attendance-operations-page">
+    <partial name="_AttendanceViews" />
     <div class="page-header">
         <div>
             <h1>إدارة الحضور</h1>
@@ -84,12 +85,13 @@
                         <span>النتائج محدودة للأداء، استخدم البحث أو فترة أصغر.</span>
                     }
                 </p>
-                @if (Model.IsLegacyEngineFallback && Model.ProcessedRecords.Any())
+                @if (Model.HasUnanalyzedRows && Model.ProcessedRecords.Any())
                 {
                     <p class="hrms-alert warning" style="margin-top:8px">
-                        ⚠️ @Model.UnanalyzedRows صفاً من الفترة بلا يومية محلّلة، فهي قراءة أولية لا يُبنى عليها احتساب.
-                        شغّل <strong>«تحديث الحضور»</strong> من <a asp-page="/DayAttendance/Index">مستعرض الحضور</a>
-                        ليصير العرض كله من المحرك الرسمي بفترة السماح وسياستها.
+                        ⚠️ @Model.UnanalyzedRows صفاً <strong>لم يُحلَّل بعد</strong> — يظهر بحالة «غير محلَّل» بلا احتساب
+                        (لا تأخير ولا خروج مبكر ولا ساعات). شغّل <strong>«تحديث الحضور»</strong> من
+                        <a asp-page="/DayAttendance/Index">الحضور اليومي</a> ليُحلَّل بالمحرّك الرسمي وحده
+                        بفترة السماح وسياستها.
                     </p>
                 }
             </div>
@@ -118,6 +120,7 @@
                     {
                         var statusText = SmartAttendance.Web.Pages.AttendanceOperations.IndexModel.ProcessingAutoStatusText(item.CheckIn, item.CheckOut, item.CalculatedStatus);
                         var statusValue = SmartAttendance.Web.Pages.AttendanceOperations.IndexModel.ProcessingStatusValueForEdit(item.CheckIn, item.CheckOut, item.CalculatedStatus);
+                        var notAnalyzed = item.CalculatedStatus == SmartAttendance.Web.Pages.AttendanceOperations.IndexModel.NotAnalyzedStatus;
                         var shiftText = string.IsNullOrWhiteSpace(item.ShiftName)
                             ? "-"
                             : string.IsNullOrWhiteSpace(item.ShiftCode) ? item.ShiftName : $"{item.ShiftCode} - {item.ShiftName}";
@@ -129,10 +132,10 @@
                             <td>@shiftText</td>
                             <td>@(item.CheckIn?.ToString("HH:mm") ?? "-")</td>
                             <td>@(item.CheckOut?.ToString("HH:mm") ?? "-")</td>
-                            <td>@(item.WorkingHours?.ToString("0.##") ?? "-")</td>
-                            <td>@item.LateMinutes دقيقة</td>
-                            <td>@(item.EarlyLeaveMinutes.HasValue ? $"{item.EarlyLeaveMinutes} دقيقة" : "-")</td>
-                            <td><span class="attendance-status">@statusText</span></td>
+                            <td>@(notAnalyzed ? "—" : (item.WorkingHours?.ToString("0.##") ?? "-"))</td>
+                            <td>@(notAnalyzed ? "—" : $"{item.LateMinutes} دقيقة")</td>
+                            <td>@(notAnalyzed ? "—" : (item.EarlyLeaveMinutes.HasValue ? $"{item.EarlyLeaveMinutes} دقيقة" : "-"))</td>
+                            <td><span class="attendance-status @(notAnalyzed ? "is-unanalyzed" : "")">@statusText</span></td>
                             <td class="attendance-note-cell">@Model.GetAttendanceNote(item.EmployeeNo, item.AttendanceDate)</td>
                             <td>
                                 <button type="button"

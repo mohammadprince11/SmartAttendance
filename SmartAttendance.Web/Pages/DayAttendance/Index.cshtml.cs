@@ -17,12 +17,21 @@ public class IndexModel : PageModel
     private readonly ApplicationDbContext _dbContext;
     private readonly SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender _push;
 
+    /// <summary>
+    /// نطاق شركات المستخدم — نفس المحرّك الذي تستهلكه صفحات الرواتب
+    /// (<see cref="SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider"/>)،
+    /// لا مصدر حقيقة ثانٍ.
+    /// </summary>
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
     public IndexModel(
         ApplicationDbContext dbContext,
-        SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender push)
+        SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender push,
+        SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
         _push = push;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -46,6 +55,49 @@ public class IndexModel : PageModel
 
     public List<DayAttendanceStore.DayRow> Rows { get; set; } = new();
     public List<ShiftTypeStore.ShiftType> Shifts { get; set; } = new();
+
+    /// <summary>
+    /// أنواع الطلبات القابلة للتقديم نيابةً — كتالوج <see cref="RequestTypeStore"/>
+    /// مقصوراً على ما له أثرٌ منفَّذ (<see cref="BulkRequestStore.ResolveEffect"/>).
+    /// عرض نوعٍ بلا أثر كان يعني زرّاً يكتب صفّاً لا يقرؤه محرّك.
+    /// </summary>
+    public List<RequestTypeStore.ReqType> RequestTypes { get; set; } = new();
+
+    /// <summary>الأنواع الزمنية (مغادرات) — تُظهر حقلي الوقت بالمنبثقة.</summary>
+    public HashSet<int> TimedTypeIds { get; set; } = new();
+
+    /// <summary>تقرير المستثنَين من آخر تقديمٍ جماعي (القرار 1: استثنِ مع تقرير).</summary>
+    public List<BulkRequestStore.Skipped> LastSkips { get; set; } = new();
+
+    /// <summary>كل المناوبات بمعرّفها — لقراءة نافذة دوام الصفّ (تشمل المعطّلة: صفٌّ قديم قد يحملها).</summary>
+    private Dictionary<int, ShiftTypeStore.ShiftType> _allShifts = new();
+
+    /// <summary>
+    /// نافذة دوام الصفّ ("HH:mm") من مناوبته ويومِ أسبوعه — مصدر الاقتراح التلقائي
+    /// لوقت المغادرة: التأخير = [بداية الدوام ← الدخول الفعلي]، والخروج المبكر =
+    /// [الخروج الفعلي ← نهاية الدوام]. المناوبة بفتراتٍ متعددة تُقرأ بأول فترة وآخرها.
+    /// </summary>
+    public (string? Start, string? End) ShiftWindow(DayAttendanceStore.DayRow row)
+    {
+        if (row.ShiftTypeId is not int shiftId || !_allShifts.TryGetValue(shiftId, out var shift))
+            return (null, null);
+
+        var day = shift.Days.FirstOrDefault(d => d.DayIndex == DayAttendanceStore.ToDayIndex(row.WorkDate));
+        var start = day?.StartTime;
+        var end = day?.EndTime;
+
+        if (string.IsNullOrWhiteSpace(start) && shift.Periods.Count > 0)
+        {
+            start = shift.Periods[0].StartTime;
+            end = shift.Periods[^1].EndTime;
+        }
+
+        return (Hhmm(start), Hhmm(end));
+    }
+
+    /// <summary>"HH:mm" أو فارغ — القيمة تدخل حقل <c>input[type=time]</c> فلا تحتمل صيغةً أخرى.</summary>
+    private static string? Hhmm(string? value) =>
+        TimeSpan.TryParse(value, out var parsed) ? parsed.ToString(@"hh\:mm") : null;
     public int TotalRows { get; set; }
     public int TotalPages { get; set; }
     public int PresentCount { get; set; }
@@ -106,35 +158,44 @@ public class IndexModel : PageModel
         var (year, month) = Period;
         Month ??= $"{year:0000}-{month:00}";
 
-        Shifts = (await ShiftTypeStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
+        var shifts = await ShiftTypeStore.ListAsync(_dbContext);
+        _allShifts = shifts.ToDictionary(shift => shift.Id);
+        Shifts = shifts.Where(s => s.IsActive).ToList();
+
+        await LoadRequestCatalogAsync();
+
+        // تقرير الاستثناء يعبر PRG كـJSON: TempData لا يحمل كائنات، ونصٌّ واحد لا
+        // يكفي — المستخدم يحتاج «من» و«لماذا» صفّاً صفّاً.
+        if (TempData["BulkSkips"] is string skipsJson && skipsJson.Length > 0)
+        {
+            LastSkips = System.Text.Json.JsonSerializer
+                .Deserialize<List<BulkRequestStore.Skipped>>(skipsJson) ?? new();
+        }
 
         // الفترة تتبع سياسة غلق الحضور (مثلاً 21 → 20) لا الشهر التقويمي.
         CutoffPeriod = await ResolvePeriodAsync(year, month);
 
-        var all = await DayAttendanceStore.ListRangeAsync(
-            _dbContext, CutoffPeriod.From, CutoffPeriod.To, Search);
-        PresentCount = all.Count(r => r.Status == "Present");
-        LateCount = all.Count(r => r.Status == "Late");
-        AbsentCount = all.Count(r => r.Status == "Absent");
-        IncompleteCount = all.Count(r => r.Status == "Incomplete");
-        StaleCount = all.Count(r => r.IsStale);
-
-        // الفلتر يُطبَّق بعد العدّادات، والترتيب من الأحدث للأقدم ثم برقم الموظف
-        // ليكون ترتيب الصفحات ثابتاً (بلا مُرتِّب ثانوي تتبدّل الصفوف بين الصفحات).
-        var view = ApplyStatusFilter(all)
-            .OrderByDescending(row => row.WorkDate)
-            .ThenBy(row => row.EmployeeNo, StringComparer.Ordinal)
-            .ToList();
-
-        // موظّفو العرض الحالي — نطاق زرّ الإشعار. **مميَّزون** لا صفوف: الموظف
-        // المتأخر خمسة أيام إنسانٌ واحد يُشعَر مرّة، لا خمس رسائل.
-        NotifyEmployeeCount = view.Select(row => row.EmployeeId).Distinct().Count();
-
-        TotalRows = view.Count;
-        TotalPages = TotalRows == 0 ? 1 : (int)Math.Ceiling(TotalRows / (double)PageSize);
+        // القراءة المرقّمة (الموجة 4): العدّ والفلترة والبحث والترتيب والقصّ كلها
+        // بالـSQL — كانت الشاشة تحمّل المدى كاملاً (~84 ألف صفّ) لعرض خمسين.
+        // موظّفو العرض (نطاق زرّ الإشعار) **مميَّزون** لا صفوف: الموظف المتأخر
+        // خمسة أيام إنسانٌ واحد يُشعَر مرّة، لا خمس رسائل.
         if (PageNumber < 1) PageNumber = 1;
+
+        var paged = await DayAttendanceStore.PageRangeAsync(
+            _dbContext, await _companyScope.GetAsync(), CutoffPeriod.From, CutoffPeriod.To,
+            Search, StatusFilter, PageNumber, PageSize);
+
+        PresentCount = paged.PresentCount;
+        LateCount = paged.LateCount;
+        AbsentCount = paged.AbsentCount;
+        IncompleteCount = paged.IncompleteCount;
+        StaleCount = paged.StaleCount;
+        NotifyEmployeeCount = paged.NotifyEmployeeCount;
+
+        TotalRows = paged.TotalRows;
+        TotalPages = TotalRows == 0 ? 1 : (int)Math.Ceiling(TotalRows / (double)PageSize);
         if (PageNumber > TotalPages) PageNumber = TotalPages;
-        Rows = view.Skip((PageNumber - 1) * PageSize).Take(PageSize).ToList();
+        Rows = paged.Rows;
     }
 
     /// <summary>
@@ -145,10 +206,109 @@ public class IndexModel : PageModel
         IEnumerable<DayAttendanceStore.DayRow> rows) =>
         DayAttendanceStore.FilterByStatus(rows, StatusFilter);
 
+    /// <summary>
+    /// كتالوج الطلبات القابل للتقديم من هذه الشاشة. لا يُسقط الصفحة عند تعذّره —
+    /// شاشة الحضور تعمل بلا كتالوج، والزرّ وحده يختفي.
+    /// </summary>
+    private async Task LoadRequestCatalogAsync()
+    {
+        try
+        {
+            await RequestTypeStore.EnsureAsync(_dbContext);
+            var types = await RequestTypeStore.ListTypesAsync(_dbContext, onlyActive: true);
+
+            RequestTypes = types
+                .Where(type => BulkRequestStore.ResolveEffect(type).Kind
+                            != BulkRequestStore.EffectKind.None)
+                .ToList();
+
+            TimedTypeIds = RequestTypes
+                .Where(type => type.NeedsTime
+                            || BulkRequestStore.ResolveEffect(type).Kind
+                               == BulkRequestStore.EffectKind.ExitPermission)
+                .Select(type => type.Id)
+                .ToHashSet();
+        }
+        catch
+        {
+            RequestTypes = new();
+            TimedTypeIds = new();
+        }
+    }
+
+    /// <summary>
+    /// تقديم طلبٍ نيابةً عن موظّفي اليوميات المحدَّدة، باعتمادٍ فوريّ بلا لجنة
+    /// (قرار محمد 2026-08-07). المنطق كلّه بـ<see cref="BulkRequestStore"/>؛ هنا
+    /// تفكيك التحديد وعرض النتيجة.
+    /// </summary>
+    public async Task<IActionResult> OnPostBulkRequestAsync()
+    {
+        var targets = ParseSelection(Request.Form["Selected"]);
+
+        var options = new BulkRequestStore.Options(
+            TypeId: int.TryParse(Request.Form["ReqTypeId"], out var typeId) ? typeId : 0,
+            ShiftTypeId: int.TryParse(Request.Form["ReqShiftTypeId"], out var shiftId) ? shiftId : 0,
+            FromTime: Request.Form["ReqFromTime"].ToString(),
+            ToTime: Request.Form["ReqToTime"].ToString(),
+            Reason: Request.Form["ReqReason"].ToString());
+
+        var outcome = await BulkRequestStore.SubmitAsync(
+            _dbContext, options, targets, User.Identity?.Name ?? "hr");
+
+        TempData["SuccessMessage"] = outcome.Message;
+        TempData["BulkSkips"] = outcome.Skips.Count > 0
+            ? System.Text.Json.JsonSerializer.Serialize(outcome.Skips)
+            : null;
+
+        return RedirectToPage(new { Month, Search, StatusFilter, PageNumber });
+    }
+
+    /// <summary>
+    /// قيم مربّعات التحديد ⟵ يوميات مستهدَفة. الصيغة
+    /// <c>"{employeeId}|{yyyy-MM-dd}"</c>، وللأنواع الزمنية تُلحَق نافذة اليوم:
+    /// <c>"{employeeId}|{yyyy-MM-dd}|{HH:mm}|{HH:mm}"</c> — فلكل يومٍ وقتُه المستقلّ.
+    ///
+    /// <para>نقيّة وثابتة: أي قيمة مشوَّهة تُهمَل بصمت بدل أن تُسقط الإرسال كلّه —
+    /// التحديد يأتي من الشاشة، والموثوق منه ما يُفكّ صحيحاً. ووقتٌ مشوَّه يسقط
+    /// وحده فتبقى اليومية بلا نافذة، فيمسكها التحقّق برسالةٍ تسمّي تاريخها.</para>
+    /// </summary>
+    public static List<BulkRequestStore.Target> ParseSelection(IEnumerable<string?> values)
+    {
+        var targets = new List<BulkRequestStore.Target>();
+        var seen = new HashSet<(int, DateOnly)>();
+
+        foreach (var value in values)
+        {
+            if (string.IsNullOrWhiteSpace(value)) continue;
+            var parts = value.Split('|');
+            if (parts.Length is not (2 or 4)) continue;
+            if (!int.TryParse(parts[0], out var employeeId) || employeeId <= 0) continue;
+            if (!DateOnly.TryParse(parts[1], out var date)) continue;
+            if (!seen.Add((employeeId, date))) continue;
+
+            TimeSpan? from = null, to = null;
+            if (parts.Length == 4)
+            {
+                if (TimeSpan.TryParse(parts[2], out var parsedFrom)) from = parsedFrom;
+                if (TimeSpan.TryParse(parts[3], out var parsedTo)) to = parsedTo;
+            }
+
+            targets.Add(new BulkRequestStore.Target(employeeId, date, from, to));
+        }
+
+        return targets;
+    }
+
     public async Task<IActionResult> OnPostAnalyzeAsync()
     {
         var (year, month) = Period;
         var shiftTypeId = int.TryParse(Request.Form["ShiftTypeId"], out var id) ? id : 0;
+
+        // بلا اختيار = تلقائي: كل موظف بمناوبته المسنَدة، وهذه احتياطُ غير المسنَدين
+        // وحدهم. إجبار الاختيار كان يوهم أن التحليل يجري «على مناوبة» واحدة — وهو
+        // لا يفعل: يقرأ التجاوز ثم الروستر ثم التعيين ثم الاستحقاق قبلها.
+        var autoShift = shiftTypeId <= 0;
+        if (autoShift) shiftTypeId = await DayAttendanceStore.ResolveDefaultShiftAsync(_dbContext);
 
         // الفحص المسبق يقول **لماذا** لم يُحلَّل شيء. بدونه كان المحرّك يعيد صفراً
         // صامتاً فتُقرأ الرسالة «تم التحديث — 0 يومية» كأنها نجاح، والشاشة فارغة.
@@ -166,16 +326,21 @@ public class IndexModel : PageModel
             var period = await ResolvePeriodAsync(year, month);
             var count = 0;
 
+            // نطاق الشركات يُحسم مرّة قبل الحلقة — لا يتغيّر داخل الطلب.
+            var companyScope = await _companyScope.GetAsync();
+
             foreach (var (coveredYear, coveredMonth) in period.CoveredMonths())
             {
                 count += await DayAttendanceStore.AnalyzeMonthAsync(
-                    _dbContext, coveredYear, coveredMonth, shiftTypeId);
+                    _dbContext, companyScope, coveredYear, coveredMonth, shiftTypeId);
             }
 
             var label = $"{period.From:yyyy-MM-dd} → {period.To:yyyy-MM-dd}";
 
+            var scope = autoShift ? " (مناوبة كل موظف المسنَدة)" : "";
+
             TempData["SuccessMessage"] = count > 0
-                ? $"تم تحديث الحضور — {count} يومية مولّدة للفترة {label}."
+                ? $"تم تحديث الحضور — {count} يومية مولّدة للفترة {label}{scope}."
                 : $"لم تُولَّد يوميات للفترة {label} — لا بصمات بها للموظفين المسنَدين " +
                   "لهذه المناوبة. تحقّق من إسناد الموظفين ومن نطاق تواريخ البصمات.";
         }
@@ -208,8 +373,9 @@ public class IndexModel : PageModel
         var period = await ResolvePeriodAsync(year, month);
 
         // نفس القراءة والفلترة اللتين بنتا الشاشة — فالمُشعَرون هم المعروضون حرفياً.
+        // وبنفس النطاق أيضاً (P0-5): زرّ الإشعار كان يبني قائمته بلا نطاق شركة.
         var rows = await DayAttendanceStore.ListRangeAsync(
-            _dbContext, period.From, period.To, Search);
+            _dbContext, await _companyScope.GetAsync(), period.From, period.To, Search);
 
         var employeeIds = ApplyStatusFilter(rows)
             .Select(row => row.EmployeeId)

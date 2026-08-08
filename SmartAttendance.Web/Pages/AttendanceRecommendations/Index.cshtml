@@ -104,10 +104,36 @@
     }
 
     <div class="rec-bar">
-        <form method="get" style="display:flex;align-items:center;gap:8px">
+        @* الفلترة شرطُ استعمالٍ لا رفاهية: شهرٌ واحد يولّد آلاف الاقتراحات، وقرار
+           «كل الغياب» غير قرار «تأخير موظف بعينه» — فبلا فرزٍ لا يُبتّ بشيء. *@
+        @* سطرٌ واحد: الحقول عريضة افتراضياً بقوقعة النظام (width:100%)، فتنزل كلٌّ
+           بسطر. `flex:0 0 auto` بعرضٍ صريح يبقيها متجاورة، و`wrap` يبقى للمقاسات
+           الضيّقة فلا تُقصّ. *@
+        <form method="get" class="rec-filters">
             <input type="hidden" name="Tab" value="@Model.Tab" />
-            <input type="month" name="Month" value="@Model.Month" />
-            <button type="submit" class="rec-btn ghost">عرض</button>
+            <input type="month" name="Month" value="@Model.Month" style="flex:0 0 auto;width:150px" />
+            <input type="text" name="Search" value="@Model.Search" placeholder="رمز أو اسم موظف" style="flex:0 0 auto;width:170px" />
+            @if (Model.RuleFilterOptions.Count > 0)
+            {
+                <select name="RuleId" style="flex:0 0 auto;width:250px">
+                    <option value="0">كل القواعد</option>
+                    @foreach (var (id, name, count) in Model.RuleFilterOptions)
+                    {
+                        <option value="@id" selected="@(Model.RuleId == id)">@name (@count)</option>
+                    }
+                </select>
+            }
+            <button type="submit" class="rec-btn ghost" style="flex:0 0 auto">عرض</button>
+            @* حدود الفترة مكتوبة لا مضمرة: «آب» قد تعني 21/07 → 20/08 بسياسة الغلق،
+               فبلا ذكرها يقرأ المستخدم رقماً على مدىً غير الذي يظنّه. *@
+            <span style="flex:0 0 auto;font-size:11.5px;font-weight:800;color:var(--sa-muted,#8FA8BC)"
+                  dir="ltr" title="فترة غلق الحضور المطبَّقة@(string.IsNullOrWhiteSpace(Model.CutoffPolicyName) ? "" : $" — {Model.CutoffPolicyName}")">
+                @Model.CutoffPeriod.From.ToString("yyyy-MM-dd") → @Model.CutoffPeriod.To.ToString("yyyy-MM-dd")
+            </span>
+            @if (!string.IsNullOrWhiteSpace(Model.Search) || Model.RuleId != 0)
+            {
+                <a class="rec-btn ghost" style="flex:0 0 auto" href="?Month=@Model.Month&Tab=@Model.Tab">✕ إلغاء الفلتر</a>
+            }
         </form>
         <nav class="rec-tabs">
             @foreach (var (key, label, count) in tabs)
@@ -264,6 +290,9 @@
                 <table class="rec-table">
                     <thead>
                         <tr>
+                            @* التحديد على الصفوف القابلة للبتّ وحدها — تحديد صفٍّ مبتوتٍ
+                               سابقاً يَعِد بفعلٍ لا يقع. *@
+                            <th style="width:34px"><input type="checkbox" class="rec-pick" onchange="recPickAll(this.checked)" title="تحديد كل صفوف الصفحة" /></th>
                             <th>الموظف</th><th>التاريخ</th><th>القاعدة</th><th>ما تحقق</th>
                             <th>الإجراء المقترح</th><th>الحالة</th><th style="text-align:end">فرز</th>
                         </tr>
@@ -273,6 +302,12 @@
                         {
                             var canDecide = row.Status is "Pending" or "Conflicted";
                             <tr>
+                                <td>
+                                    @if (canDecide)
+                                    {
+                                        <input type="checkbox" class="rec-pick rec-row-pick" value="@row.Id" onchange="recPickSync()" />
+                                    }
+                                </td>
                                 <td><b>@row.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @row.EmployeeNo</span></td>
                                 <td style="direction:ltr;text-align:start">@row.WorkDate.ToString("yyyy-MM-dd")</td>
                                 <td style="font-size:12px">@row.RuleName</td>
@@ -280,7 +315,18 @@
                                 <td>
                                     <span class="rec-chip @(row.ActionType == "Note" ? "note" : row.ActionType == "Violation" ? "Pending" : "fin")" style="@(row.ActionType is "Note" or "Violation" ? "background:rgba(18,217,227,.08);color:inherit" : "")">@ShiftRuleStore.LabelOf(ShiftRuleStore.ActionTypes, row.ActionType)@(string.IsNullOrWhiteSpace(row.ActionText) ? "" : $" · {row.ActionText}")</span>
                                     @if (ShiftRuleStore.ActionNeedsValue(row.ActionType) && row.ActionValue > 0)
-                                    { <span class="rec-ref" style="color:#60a5fa">@row.ActionValue.ToString("0.##") @ShiftRuleStore.ActionValueUnit(row.ActionType)</span> }
+                                    {
+                                        @* النسبة تُعرض نسبةً: «25 مبلغ» يُقرأ ديناراً وهو ٪.
+                                           والمبلغ الفعليّ يُحسب لحظة الاعتماد من راتب الموظف. *@
+                                        if (Model.PercentRuleIds.Contains(row.RuleId))
+                                        {
+                                            <span class="rec-ref" style="color:#60a5fa" title="يُحتسب المبلغ عند الاعتماد من الراتب الأساسي ÷ 30">@row.ActionValue.ToString("0.##")% من قيمة اليوم</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="rec-ref" style="color:#60a5fa">@row.ActionValue.ToString("0.##") @ShiftRuleStore.ActionValueUnit(row.ActionType)</span>
+                                        }
+                                    }
                                     @if (row.ViolationCaseId != null)
                                     {
                                         <a class="rec-ref" href="/Violations">مخالفة #@row.ViolationCaseId</a>
@@ -335,15 +381,105 @@
     @if (Model.TotalPages > 1)
     {
         <div style="display:flex;align-items:center;justify-content:center;gap:10px;font-size:12px;font-weight:900">
+            @* الفلتر يسافر مع التصفّح: بدونه ترجع الصفحة الثانية لكل الشهر فيضيع الفرز. *@
             @if (Model.PageNumber > 1)
             {
-                <a class="rec-btn ghost" href="?Month=@Model.Month&Tab=@Model.Tab&PageNumber=@(Model.PageNumber - 1)">السابق</a>
+                <a class="rec-btn ghost" href="?Month=@Model.Month&Tab=@Model.Tab&Search=@Model.Search&RuleId=@Model.RuleId&PageNumber=@(Model.PageNumber - 1)">السابق</a>
             }
             <span>صفحة @Model.PageNumber من @Model.TotalPages (@Model.TotalRows اقتراح)</span>
             @if (Model.PageNumber < Model.TotalPages)
             {
-                <a class="rec-btn ghost" href="?Month=@Model.Month&Tab=@Model.Tab&PageNumber=@(Model.PageNumber + 1)">التالي</a>
+                <a class="rec-btn ghost" href="?Month=@Model.Month&Tab=@Model.Tab&Search=@Model.Search&RuleId=@Model.RuleId&PageNumber=@(Model.PageNumber + 1)">التالي</a>
             }
         </div>
     }
 </section>
+
+@* ═══ بار الفرز الجماعي ═══
+   خارج جدول الصفوف عمداً: كل صفّ يحمل نموذجَي «اعتماد»/«تجاهل» المفردين، والنماذج
+   لا تتداخل بـHTML — فالمربّعات تُنسخ لهذا النموذج لحظة الضغط. *@
+<div class="rec-bulkbar" id="rec-bulkbar">
+    <span>محدَّد: <b id="rec-pick-count">0</b> اقتراح</span>
+    <form method="post" id="rec-bulk-form" style="display:flex;gap:8px;margin:0">
+        <input type="hidden" name="Month" value="@Model.Month" />
+        <input type="hidden" name="Tab" value="@Model.Tab" />
+        <input type="hidden" name="Search" value="@Model.Search" />
+        <input type="hidden" name="RuleId" value="@Model.RuleId" />
+        <input type="hidden" name="PageNumber" value="@Model.PageNumber" />
+        <div id="rec-bulk-ids"></div>
+        <button type="submit" class="rec-btn ok" formaction="?handler=BulkApprove"
+                data-zyconfirm="الاعتماد يُنشئ قضايا مخالفة وحركات فعلية للمحدَّد — تأكيد؟">اعتماد المحدَّد</button>
+        <button type="submit" class="rec-btn no" formaction="?handler=BulkIgnore"
+                data-zyconfirm="تجاهل المحدَّد نهائياً (لن يُعاد توليده) — تأكيد؟">تجاهل المحدَّد</button>
+    </form>
+    <button type="button" class="rec-btn ghost" onclick="recPickAll(false)">إلغاء التحديد</button>
+</div>
+
+<style>
+    .rec-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    /* الكلاندر والمنسدلة يستبدلهما محرّك الواجهة بعنصرين مرئيّين (`nxcal` و
+       `nxcs-select`) عرضهما 100%، والأصليّان يُخفيان — فتقييد عرض الأصليّ لا يفعل
+       شيئاً، والقياس هو ما كشف ذلك. التقييد هنا على المرئيّ. */
+    /* `!important` مقصود لا كسل: محرّك الكلاندر يفرض `.nxcal { width:100% !important }`
+       (قِسته: قاعدتي 160px تخسر أمامها)، ولا سبيل لتجاوز `!important` إلا بمثلها. */
+    .rec-filters .nxcal { flex: 0 0 auto; width: 160px !important; }
+    .rec-filters .nxcs-select { flex: 0 0 auto; width: 250px !important; }
+    .rec-filters input[type="text"] { flex: 0 0 auto; width: 170px; }
+    .rec-filters input, .rec-filters select {
+        min-height: 34px; border-radius: 10px; border: 1px solid rgba(73,111,151,.3);
+        background: rgba(0,0,0,.16); color: inherit; padding: 4px 10px; font-size: 13px; font-weight: 800;
+    }
+    html[data-theme="light"] .rec-filters input, html[data-theme="light"] .rec-filters select { background: #fff; }
+
+    .rec-pick { width: 16px; height: 16px; accent-color: #12D9E3; cursor: pointer; }
+    .rec-bulkbar {
+        display: none; position: fixed; inset-inline: 0; bottom: 18px; z-index: 880;
+        margin-inline: auto; width: max-content; max-width: calc(100% - 24px);
+        align-items: center; gap: 12px; padding: 10px 16px; border-radius: 999px;
+        border: 1px solid rgba(18,217,227,.45); background: var(--sa-surface, rgba(8,25,43,.98));
+        color: var(--sa-text, #DCEAF4); box-shadow: 0 18px 44px rgba(0,0,0,.42);
+        font-size: 13px; font-weight: 900;
+    }
+    html[data-theme="light"] .rec-bulkbar { background: #fff; }
+    .rec-bulkbar.is-on { display: flex; }
+    .rec-bulkbar b { color: #12D9E3; direction: ltr; display: inline-block; }
+</style>
+
+@section Scripts {
+    <script>
+        function recPicked() {
+            return Array.prototype.filter.call(
+                document.querySelectorAll('.rec-row-pick'), function (b) { return b.checked; });
+        }
+
+        function recPickSync() {
+            var picked = recPicked();
+            document.getElementById('rec-pick-count').textContent = picked.length;
+            document.getElementById('rec-bulkbar').classList.toggle('is-on', picked.length > 0);
+
+            // المعرّفات تُنسخ فوراً لا عند الضغط: زرّ التأكيد بنقرتين يُرسل النموذج
+            // بنفسه، فلا مكان لخطّاف «قبل الإرسال» يملؤها.
+            var host = document.getElementById('rec-bulk-ids');
+            host.innerHTML = '';
+            picked.forEach(function (b) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selectedIds';
+                input.value = b.value;
+                host.appendChild(input);
+            });
+        }
+
+        function recPickAll(checked) {
+            Array.prototype.forEach.call(document.querySelectorAll('.rec-row-pick'), function (b) {
+                b.checked = checked;
+            });
+            Array.prototype.forEach.call(document.querySelectorAll('thead .rec-pick'), function (b) {
+                b.checked = checked;
+            });
+            recPickSync();
+        }
+
+        recPickSync();
+    </script>
+}

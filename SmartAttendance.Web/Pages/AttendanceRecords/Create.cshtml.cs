@@ -6,6 +6,7 @@ using SmartAttendance.Application.AttendanceRecords.ViewModels;
 using SmartAttendance.Application.Devices.ViewModels;
 using SmartAttendance.Domain.Enums;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 using SmartAttendance.Web.Pages.Shared;
 
 namespace SmartAttendance.Web.Pages.AttendanceRecords;
@@ -14,11 +15,16 @@ public class CreateModel : PageModel
 {
     private readonly IAttendanceRecordService _attendanceRecordService;
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public CreateModel(IAttendanceRecordService attendanceRecordService, ApplicationDbContext db)
+    public CreateModel(
+        IAttendanceRecordService attendanceRecordService,
+        ApplicationDbContext db,
+        ICompanyScopeProvider companyScope)
     {
         _attendanceRecordService = attendanceRecordService;
         _db = db;
+        _companyScope = companyScope;
     }
 
     [BindProperty]
@@ -48,6 +54,14 @@ public class CreateModel : PageModel
 
         if (!ModelState.IsValid)
             return Page();
+
+        // 🛡️ لا تُنشئ بصمةً لموظفٍ خارج شركاتك — المعرّف يأتي من النموذج فلا يُوثَق به.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (!await EmployeeCompanyGuard.CanAccessEmployeeAsync(_db, AttendanceRecord.EmployeeId, scope))
+        {
+            ErrorMessage = "الموظف غير موجود أو خارج نطاق صلاحيتك.";
+            return Page();
+        }
 
         var created = await _attendanceRecordService.CreateAsync(AttendanceRecord);
 

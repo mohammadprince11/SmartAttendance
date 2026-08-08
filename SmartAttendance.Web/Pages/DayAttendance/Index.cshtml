@@ -45,11 +45,34 @@
     a.dat-stat.is-active { background: rgba(18,217,227,.14); border-color: #12D9E3; }
     .dat-stat-clear { color: var(--sa-muted, #8FA8BC); }
 
-    .dat-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .dat-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 900px; }
-    .dat-table th { text-align: start; padding: 10px 12px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); position: sticky; top: 0; }
+    /* ⚠️ **بلا `overflow` هنا**: أي قيمة تجعل البطاقة حاوية التمرير، فيلتصق رأس
+       الجدول بها لا بالشاشة — والبطاقة بطول الجدول كلّه فلا تُمرَّر أصلاً ⟹ الرأس
+       يهرب مع الصفوف وتبقى الأرقام بلا عناوين. نفس قاعدة «المستند هو المُمرِّر».
+       التمرير الأفقي يعود بالمقاسات الضيّقة وحدها (أدناه) حيث لا يسع الجدول. */
+    .dat-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; background: var(--sa-surface, rgba(8,25,43,.9)); }
+    .dat-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .dat-table th {
+        text-align: start; padding: 10px 12px; font-size: 11px; font-weight: 1000;
+        color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22);
+        background: #0b1e33;
+        /* أسفل الشريط العلويّ الملتصق لا تحته، وإلا اختفى الرأس خلفه. */
+        position: sticky; top: var(--zy-topbar-height, 64px); z-index: 3;
+    }
     html[data-theme="light"] .dat-table th { background: #f2f7fb; }
-    .dat-table td { padding: 9px 12px; border-bottom: 1px solid rgba(143,168,188,.08); white-space: nowrap; }
+
+    @@media (max-width: 1100px) {
+        /* الجدول لا يسع: يستعيد مُمرِّره الأفقي، ويسقط الالتصاق معه — وهو ثمنٌ
+           مقبول بمقاسٍ يُقرأ بالتمرير الأفقي أصلاً. */
+        .dat-table-card { overflow-x: auto; }
+        .dat-table { min-width: 900px; }
+        .dat-table th { position: static; }
+    }
+    .dat-table td { padding: 9px 7px; border-bottom: 1px solid rgba(143,168,188,.08); white-space: nowrap; }
+    /* اثنتا عشرة خانة بمقاسٍ واحد: العنوان يلتفّ على سطرين، واسم الموظف يلتفّ،
+       والباقي أرقامٌ قصيرة — فيدخل الجدول كاملاً بلا قصٍّ ولا تمرير أفقيّ. */
+    .dat-table th { white-space: normal; line-height: 1.35; padding-inline: 7px; }
+    .dat-table td:nth-child(3) { white-space: normal; min-width: 118px; }
+    .dat-table td:nth-child(5) { font-size: 11.5px; }
     .dat-table tr:hover td { background: rgba(18,217,227,.04); }
     /* الأرقام تُقرأ LTR (تواريخ · أوقات · ساعات) لكن محاذاتها يجب أن تطابق
        عنوانها. مع direction:ltr تصير start = يسار بينما عنوان الجدول RTL
@@ -77,8 +100,15 @@
     .dat-modal-bg { display: none; position: fixed; inset: 0; background: rgba(2,8,16,.62); z-index: 900; }
     .dat-modal {
         display: none; position: fixed; z-index: 901;
-        top: 50%; left: 50%; transform: translate(-50%, -50%);
+        /* التوسيط بـ`inset:0 + margin:auto` لا بـ`top/left:50% + translate(-50%,-50%)`:
+           أثناء سحب شريط التمرير يرسم المتصفّح الطبقة الثابتة **بلا** الـtransform
+           للحظات، فتقفز النافذة لزاوية اليمين السفلى (ركنها الأعلى يصير بمنتصف
+           الشاشة) ثم ترتدّ عند الإفلات. بلا transform لا يوجد ما يسقط. */
+        inset: 0; margin: auto;
+        height: max-content;
         width: min(560px, calc(100% - 32px)); max-height: 86vh; overflow: auto;
+        /* لا يمتدّ تمرير المنبثقة للصفحة تحتها حين يبلغ آخره (سلسلة التمرير). */
+        overscroll-behavior: contain;
         padding: 20px; border-radius: 20px; border: 1px solid rgba(73,111,151,.3);
         background: var(--sa-surface, rgba(8,25,43,.98)); color: var(--sa-text, #DCEAF4);
         box-shadow: 0 24px 60px rgba(0,0,0,.42);
@@ -98,10 +128,66 @@
     html[data-theme="light"] .dat-modal-text { background: #fff; }
     .dat-modal-legend { font-size: 11px; font-weight: 800; line-height: 1.9; color: var(--sa-muted, #8FA8BC); }
     .dat-modal-check { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 900; }
-    .dat-modal-actions { display: flex; gap: 8px; }
+    /* أزرار الإرسال ملتصقة بأسفل المنبثقة: بقائمة أيامٍ طويلة كانت تهبط تحت الحافة
+       فيبدو أن لا زرّ أصلاً. تلتصق بلونٍ صلب لئلا تعبر الصفوف من تحتها. */
+    .dat-modal-actions {
+        display: flex; gap: 8px; position: sticky; bottom: -20px;
+        margin: 4px -20px -20px; padding: 12px 20px 20px;
+        background: var(--sa-surface, rgba(8,25,43,.98));
+        border-top: 1px solid rgba(73,111,151,.22);
+    }
+    html[data-theme="light"] .dat-modal-actions { background: #fff; }
+
+    /* ═══ التحديد الجماعي ═══ */
+    .dat-pick { width: 16px; height: 16px; accent-color: #12D9E3; cursor: pointer; }
+    .dat-table th.dat-pick-col, .dat-table td.dat-pick-col { width: 34px; text-align: center; padding-inline: 8px; }
+    tr.is-picked td { background: rgba(18,217,227,.09) !important; }
+
+    /* بار الإجراءات الجماعية: عائم ثابت أسفل الشاشة (المعيار الموحّد) — لا يظهر
+       إلا بوجود تحديد، فلا يحجب شيئاً بالحالة الطبيعية. */
+    .dat-bulkbar {
+        display: none; position: fixed; inset-inline: 0; bottom: 18px; z-index: 880;
+        margin-inline: auto; width: max-content; max-width: calc(100% - 24px);
+        align-items: center; gap: 12px; padding: 10px 16px; border-radius: 999px;
+        border: 1px solid rgba(18,217,227,.45); background: var(--sa-surface, rgba(8,25,43,.98));
+        color: var(--sa-text, #DCEAF4); box-shadow: 0 18px 44px rgba(0,0,0,.42);
+        font-size: 13px; font-weight: 900;
+    }
+    html[data-theme="light"] .dat-bulkbar { background: #fff; }
+    .dat-bulkbar.is-on { display: flex; }
+    .dat-bulkbar b { color: #12D9E3; direction: ltr; display: inline-block; }
+
+    /* تقرير الاستثناء — القرار: يُستثنى غير المستحقّ **مع بيان السبب**. */
+    .dat-skips { border: 1px solid rgba(249,115,22,.4); background: rgba(249,115,22,.07); border-radius: 14px; padding: 12px 16px; }
+    .dat-skips h4 { margin: 0 0 8px; font-size: 13px; font-weight: 1000; color: #f97316; }
+    .dat-skips ul { margin: 0; padding-inline-start: 18px; font-size: 12.5px; font-weight: 800; line-height: 2; }
+
+    /* قائمة أيام الطلب الزمنيّ: سطر لكل تاريخ بنافذته المستقلّة. */
+    .dat-days-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .dat-days-head span { font-size: 12px; font-weight: 900; }
+    /* بلا `max-height`/`overflow`: مُمرِّرٌ داخل مُمرِّرٍ داخل المنبثقة يعني أن عجلة
+       الفأرة تحرّك القائمة الصغيرة بينما المستخدم يظنّ أنه ينزل بالمنبثقة — فتبقى
+       أزرار الإرسال تحت الحافة ولا يصل إليها. مُمرِّرٌ واحد: المنبثقة نفسها. */
+    .dat-days-list { display: flex; flex-direction: column; gap: 6px; }
+    .dat-day {
+        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        padding: 8px 10px; border-radius: 12px; border: 1px solid rgba(73,111,151,.28);
+        background: rgba(0,0,0,.12);
+    }
+    html[data-theme="light"] .dat-day { background: #f7fafc; }
+    .dat-day-label { flex: 1 1 190px; font-size: 12px; font-weight: 900; line-height: 1.7; }
+    .dat-day-label b { direction: ltr; display: inline-block; }
+    .dat-day-why { display: block; font-size: 11px; font-weight: 800; color: #facc15; }
+    .dat-day-why.none { color: var(--sa-muted, #8FA8BC); }
+    .dat-day input[type="time"] {
+        min-height: 32px; border-radius: 9px; border: 1px solid rgba(73,111,151,.3);
+        background: rgba(0,0,0,.16); color: inherit; padding: 4px 8px; font-size: 12.5px; font-weight: 800;
+    }
+    html[data-theme="light"] .dat-day input[type="time"] { background: #fff; }
 </style>
 
 <section class="dat-page" dir="rtl">
+    <partial name="_AttendanceViews" />
     <header class="dat-head">
         <div>
             <h1>الحضور اليومي</h1>
@@ -110,10 +196,12 @@
         <form method="post" asp-page-handler="Analyze" style="display:flex;align-items:end;gap:8px">
             <input type="hidden" name="Month" value="@Model.Month" />
             <input type="hidden" name="Search" value="@Model.Search" />
+            @* بلا `required`: التحليل يقرأ مناوبة كل موظف المسنَدة، وهذا الحقل احتياطُ
+               غير المسنَدين وحدهم. إجبار الاختيار كان يوهم أن التحليل «على مناوبة». *@
             <label style="font-size:11px;font-weight:900;display:flex;flex-direction:column;gap:4px">
-                المناوبة الافتراضية (لغير المعيّنين)
-                <select name="ShiftTypeId" required style="min-height:36px;border-radius:10px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:6px 10px">
-                    <option value="">— اختر —</option>
+                احتياط غير المسنَدين (اختياري)
+                <select name="ShiftTypeId" style="min-height:36px;border-radius:10px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:6px 10px">
+                    <option value="">— تلقائي: مناوبة كل موظف —</option>
                     @foreach (var shift in Model.Shifts)
                     {
                         <option value="@shift.Id">@shift.Name</option>
@@ -135,6 +223,19 @@
     @if (TempData["SuccessMessage"] != null)
     {
         <div class="dat-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    @if (Model.LastSkips.Count > 0)
+    {
+        <div class="dat-skips">
+            <h4>استُثني @Model.LastSkips.Count موظفاً — ولماذا</h4>
+            <ul>
+                @foreach (var skip in Model.LastSkips)
+                {
+                    <li>@skip.EmployeeName — @skip.Reason</li>
+                }
+            </ul>
+        </div>
     }
 
     <form method="get" class="dat-bar">
@@ -191,6 +292,12 @@
             <table class="dat-table">
                 <thead>
                     <tr>
+                        <th class="dat-pick-col">
+                            @* تحديد الكل = صفوف **هذه الصفحة** لا الشهر كلّه: الإرسال
+                               يحمل ما تراه، فوعدُ «الكل» على 50 صفاً معروضاً صادق. *@
+                            <input type="checkbox" class="dat-pick" id="dat-pick-all"
+                                   onchange="datPickAll(this.checked)" title="تحديد كل صفوف الصفحة" />
+                        </th>
                         <th>الكود</th><th>الموظف</th><th>التاريخ</th><th>المناوبة</th><th>ختم الدخول</th><th>ختم الخروج</th>
                         <th>ساعات العمل</th><th>ساعات التأخير</th><th>الخروج المبكر</th><th>الحالة</th><th>تم التحليل</th>
                     </tr>
@@ -198,7 +305,23 @@
                 <tbody>
                     @foreach (var row in Model.Rows)
                     {
+                        @* نافذة الدوام والبصمتان تُحمَل على الصفّ نفسه ليقترح المتصفح وقت
+                           المغادرة من التأخير/الخروج المبكر بلا رحلة خادم — والقيم هي
+                           عين ما يعرضه الصفّ، فلا يُقترح ما لا يراه المستخدم. *@
+                        var window = Model.ShiftWindow(row);
                         <tr>
+                            <td class="dat-pick-col">
+                                <input type="checkbox" class="dat-pick dat-row-pick"
+                                       value="@row.EmployeeId|@row.WorkDate.ToString("yyyy-MM-dd")"
+                                       data-name="@row.EmployeeName"
+                                       data-start="@window.Start" data-end="@window.End"
+                                       data-in="@(row.CheckIn?.ToString("HH:mm"))"
+                                       data-out="@(row.CheckOut?.ToString("HH:mm"))"
+                                       data-late="@row.LateHours.ToString("0.##")"
+                                       data-early="@row.EarlyLeaveHours.ToString("0.##")"
+                                       aria-label="تحديد يومية @row.EmployeeName @row.WorkDate.ToString("yyyy-MM-dd")"
+                                       onchange="datPickChanged(this)" />
+                            </td>
                             <td class="dat-num">@row.EmployeeNo</td>
                             <td><b>@row.EmployeeName</b></td>
                             <td class="dat-num">@row.WorkDate.ToString("yyyy-MM-dd")</td>
@@ -251,6 +374,107 @@
         </div>
     }
 </section>
+
+@* ═══ بار الإجراءات الجماعية ═══
+   يظهر بأول تحديد ويحمل العدّادين اللذين يحسمان الالتباس: كم صفّاً وكم موظفاً —
+   لأن الموظف الواحد قد يحمل خمسة صفوف، والطلب يُقدَّم عن موظف لا عن صفّ. *@
+<div class="dat-bulkbar" id="dat-bulkbar">
+    <span>محدَّد: <b id="dat-pick-rows">0</b> يومية · <b id="dat-pick-emps">0</b> موظف</span>
+    <button type="button" class="dat-btn" onclick="datRequest(true)">تقديم طلب</button>
+    <button type="button" class="dat-btn ghost" onclick="datPickAll(false)">إلغاء التحديد</button>
+</div>
+
+@* ═══ منبثقة تقديم طلب نيابةً عن الموظفين ═══
+   الاعتماد **فوريّ بلا لجنة** (قرار محمد 2026-08-07) لأن المُقدِّم HR لا الموظف؛
+   وغير المستحقّ يُستثنى مع تقرير بدل أن يختفي النوع عن الجميع. *@
+<div class="dat-modal-bg" id="dat-reqbg" onclick="datRequest(false)"></div>
+<div class="dat-modal" id="dat-req" role="dialog" aria-modal="true" aria-labelledby="dat-req-title">
+    <h3 id="dat-req-title">تقديم طلب نيابةً عن الموظفين</h3>
+
+    <p class="dat-modal-scope">
+        سيُقدَّم على <b id="dat-req-rows">0</b> يومية لـ<b id="dat-req-emps">0</b> موظفاً.
+        الأيام المتتالية تُدمج بطلبٍ واحد، والمتباعدة تُقسَّم طلبات.
+        <br />
+        <b>اعتماد فوريّ</b> بلا لجنة موافقات — ومن لا يستحقّ (شرط أهلية · رصيد · تكرار)
+        يُستثنى ويُذكر سببه بالتقرير.
+    </p>
+
+    <form method="post" asp-page-handler="BulkRequest" class="dat-modal-form" id="dat-req-form">
+        <input type="hidden" name="Month" value="@Model.Month" />
+        <input type="hidden" name="Search" value="@Model.Search" />
+        <input type="hidden" name="StatusFilter" value="@Model.StatusFilter" />
+        <input type="hidden" name="PageNumber" value="@Model.PageNumber" />
+        <div id="dat-req-selected"></div>
+
+        <label class="dat-modal-label">نوع الطلب
+            <select name="ReqTypeId" id="dat-req-type" class="dat-modal-text"
+                    onchange="datTypeChanged()" required>
+                <option value="">— اختر —</option>
+                @foreach (var group in Model.RequestTypes.GroupBy(t => t.CategoryName))
+                {
+                    <optgroup label="@group.Key">
+                        @foreach (var type in group)
+                        {
+                            <option value="@type.Id" data-timed="@(Model.TimedTypeIds.Contains(type.Id) ? "1" : "0")">@type.Name</option>
+                        }
+                    </optgroup>
+                }
+                @if (Model.Shifts.Count > 0)
+                {
+                    <optgroup label="المناوبات">
+                        <option value="shift" data-timed="0">تغيير المناوبة</option>
+                    </optgroup>
+                }
+            </select>
+        </label>
+
+        <label class="dat-modal-label" id="dat-req-shift-wrap" style="display:none">
+            المناوبة البديلة
+            <select name="ReqShiftTypeId" id="dat-req-shift" class="dat-modal-text">
+                @foreach (var shift in Model.Shifts)
+                {
+                    <option value="@shift.Id">@shift.Name</option>
+                }
+            </select>
+        </label>
+
+        @* الوقت يُقترح تلقائياً من اليوميات المحدَّدة ويبقى قابلاً للتعديل: التأخير
+           نافذتُه [بداية الدوام ← الدخول الفعلي]، والخروج المبكر [الخروج ← نهاية
+           الدوام]. الاقتراح لا يدهس تعديل المستخدم — يتوقّف أول ما يلمس الحقل. *@
+        @* تحديدٌ بأكثر من يومية: **كل تاريخ بسطره ووقته** — نافذة الأحد ليست نافذة
+           الاثنين، وفرضُ نافذةٍ واحدة على أيامٍ مختلفة يُنتج طلباً لا يطابق ما جرى. *@
+        <div id="dat-req-days" style="display:none"></div>
+
+        <div id="dat-req-time-block" style="display:none">
+            <div id="dat-req-time-wrap" style="gap:10px" class="dat-modal-radios">
+                <label class="dat-modal-label">من الساعة
+                    <input type="time" name="ReqFromTime" class="dat-modal-text"
+                           oninput="this.dataset.touched='1'" />
+                </label>
+                <label class="dat-modal-label">إلى الساعة
+                    <input type="time" name="ReqToTime" class="dat-modal-text"
+                           oninput="this.dataset.touched='1'" />
+                </label>
+                <button type="button" class="dat-btn ghost" style="align-self:end"
+                        onclick="datSuggestTimes(true)" title="أعِد حساب الوقت من اليوميات المحدَّدة">
+                    ↻ اقتراح تلقائي
+                </button>
+            </div>
+            <div class="dat-modal-legend" id="dat-req-time-hint"></div>
+        </div>
+
+        <label class="dat-modal-label">السبب (اختياري)
+            <textarea name="ReqReason" rows="3" class="dat-modal-text"
+                      placeholder="يُسجَّل بسجلّ الطلب وتاريخ الموافقات"></textarea>
+        </label>
+
+        <div class="dat-modal-actions">
+            <button type="button" class="dat-btn ghost" onclick="datRequest(false)">إلغاء</button>
+            <button type="submit" class="dat-btn"
+                    data-zyconfirm="سيُقدَّم الطلب ويُعتمد فوراً بلا لجنة — تأكيد؟">تقديم واعتماد</button>
+        </div>
+    </form>
+</div>
 
 @* ═══ منبثقة إشعار الموظفين ═══
    بلا مؤلّف نطاق: النطاق هو العرض الحالي، ويُذكَر صراحةً بالمنبثقة كي لا يُرسِل
@@ -312,13 +536,297 @@
 
 @section Scripts {
     <script>
+        // ═══ قفل تمرير الصفحة تحت المنبثقة ═══
+        // بلا قفل: العجلة تحرّك **الصفحة خلف المنبثقة** بينما المنبثقة ثابتة بمكانها،
+        // فيرى المستخدم الشاشة تنزل تحت النافذة بلا سبب — وهو ما لا يفعله أي حوار.
+        //
+        // القفل بصنف `nxex-scroll-lock` على <html> لا بستايل مباشر: قوقعة النظام
+        // تفرض `html { overflow-y: auto !important }` (هي التي جعلت المستند مالك
+        // التمرير)، فأي `style.overflowY` يُكتب هنا يخسر أمام `!important` — قِسته
+        // حيّاً: الخاصية المباشرة `hidden` والمحسوبة `auto`، والخلفية تمرّ. والصنف
+        // معرَّف بـnexora-global-scroll-system.css بـ`!important` فيغلب.
+        function datLockScroll() {
+            var html = document.documentElement;
+            var body = document.body;
+            var open = document.getElementById('dat-req').style.display === 'block'
+                    || document.getElementById('dat-notif').style.display === 'block';
+
+            if (open === html.classList.contains('nxex-scroll-lock')) { return; }
+
+            if (open) {
+                // `overflow: hidden` وحده لم يكفِ — قِسته حيّاً بكروم: المحسوبة
+                // `hidden` والخلفية تمرّ 150px تحت النافذة. فيُثبَّت <body> بموضعه
+                // السالب: يفقد المستند ارتفاعه القابل للتمرير فلا يبقى ما يتحرّك،
+                // والموضع محفوظ ليُعاد تماماً عند الإغلاق (بلا قفزة للأعلى).
+                var y = window.scrollY;
+                html.classList.add('nxex-scroll-lock');
+                body.dataset.datScrollY = String(y);
+                body.style.position = 'fixed';
+                body.style.top = (-y) + 'px';
+                body.style.insetInline = '0';
+                body.style.width = '100%';
+            } else {
+                var restore = parseInt(body.dataset.datScrollY || '0', 10);
+                html.classList.remove('nxex-scroll-lock');
+                body.style.position = '';
+                body.style.top = '';
+                body.style.insetInline = '';
+                body.style.width = '';
+                delete body.dataset.datScrollY;
+                window.scrollTo(0, restore);
+            }
+        }
+
         function datNotify(open) {
             document.getElementById('dat-notifbg').style.display = open ? 'block' : 'none';
             document.getElementById('dat-notif').style.display = open ? 'block' : 'none';
+            datLockScroll();
+        }
+
+        // ═══ التحديد الجماعي ═══
+        // مصدر الحقيقة الوحيد هو مربّعات الصفحة نفسها؛ لا نسخة موازية بذاكرة JS
+        // تفترق عن الشاشة بعد إعادة الرسم.
+        function datPicked() {
+            return Array.prototype.filter.call(
+                document.querySelectorAll('.dat-row-pick'), function (b) { return b.checked; });
+        }
+
+        function datSyncBar() {
+            var picked = datPicked();
+            var employees = {};
+            picked.forEach(function (b) { employees[b.value.split('|')[0]] = 1; });
+            var empCount = Object.keys(employees).length;
+
+            document.getElementById('dat-pick-rows').textContent = picked.length;
+            document.getElementById('dat-pick-emps').textContent = empCount;
+            document.getElementById('dat-req-rows').textContent = picked.length;
+            document.getElementById('dat-req-emps').textContent = empCount;
+            document.getElementById('dat-bulkbar').classList.toggle('is-on', picked.length > 0);
+
+            var all = document.getElementById('dat-pick-all');
+            var boxes = document.querySelectorAll('.dat-row-pick');
+            if (all) {
+                all.checked = boxes.length > 0 && picked.length === boxes.length;
+                all.indeterminate = picked.length > 0 && picked.length < boxes.length;
+            }
+        }
+
+        function datPickChanged(box) {
+            var row = box.closest('tr');
+            if (row) { row.classList.toggle('is-picked', box.checked); }
+            datSyncBar();
+        }
+
+        function datPickAll(checked) {
+            Array.prototype.forEach.call(document.querySelectorAll('.dat-row-pick'), function (b) {
+                b.checked = checked;
+                var row = b.closest('tr');
+                if (row) { row.classList.toggle('is-picked', checked); }
+            });
+            datSyncBar();
+        }
+
+        function datTypeChanged() {
+            var select = document.getElementById('dat-req-type');
+            var option = select.options[select.selectedIndex];
+            var isShift = select.value === 'shift';
+            var timed = option && option.getAttribute('data-timed') === '1';
+
+            document.getElementById('dat-req-shift-wrap').style.display = isShift ? 'flex' : 'none';
+
+            datBuildTargets(false);
+        }
+
+        // ═══ نافذة يومٍ واحد من حالته ═══
+        // تأخير ⟹ [بداية الدوام ← الدخول]، وخروج مبكر ⟹ [الخروج ← نهاية الدوام].
+        function datWindowOf(box) {
+            var late = parseFloat(box.dataset.late || '0');
+            var early = parseFloat(box.dataset.early || '0');
+
+            if (late > 0 && box.dataset.start && box.dataset.in) {
+                return { from: box.dataset.start, to: box.dataset.in, why: 'تأخير ' + late + ' ساعة' };
+            }
+            if (early > 0 && box.dataset.end && box.dataset.out) {
+                return { from: box.dataset.out, to: box.dataset.end, why: 'خروج مبكر ' + early + ' ساعة' };
+            }
+            return { from: '', to: '', why: '' };
+        }
+
+        // ═══ بناء اليوميات المرسَلة ═══
+        // النوع الزمنيّ بأكثر من يومية ⟹ **سطر لكل تاريخ بنافذته**، لأن نافذةً واحدة
+        // على أيامٍ مختلفة لا تطابق ما جرى بأكثرها. ويومية واحدة تبقى بحقلَي النموذج.
+        function datBuildTargets(force) {
+            var select = document.getElementById('dat-req-type');
+            var option = select.options[select.selectedIndex];
+            var timed = !!option && option.getAttribute('data-timed') === '1';
+
+            var picked = datPicked();
+            var host = document.getElementById('dat-req-selected');
+            var daysHost = document.getElementById('dat-req-days');
+            var timeBlock = document.getElementById('dat-req-time-block');
+            var perDay = timed && picked.length > 1;
+
+            timeBlock.style.display = (timed && !perDay) ? 'block' : 'none';
+            document.querySelector('#dat-req-time-wrap input[name="ReqFromTime"]').required = timed && !perDay;
+            document.querySelector('#dat-req-time-wrap input[name="ReqToTime"]').required = timed && !perDay;
+
+            if (!perDay) {
+                daysHost.style.display = 'none';
+                daysHost.innerHTML = '';
+                host.innerHTML = '';
+                picked.forEach(function (b) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'Selected';
+                    input.value = b.value;
+                    host.appendChild(input);
+                });
+                if (timed) { datSuggestTimes(force); }
+                return;
+            }
+
+            // بالوضع اليوميّ تحمل أسطرُ الأيام حقولَ الإرسال، فتُفرَّغ المخفيّة وإلا
+            // أُرسلت كل يومية مرتين: مرّةً بلا وقت ومرّةً بوقتها.
+            host.innerHTML = '';
+            daysHost.style.display = 'block';
+
+            var previous = {};
+            [].forEach.call(daysHost.querySelectorAll('.dat-day'), function (row) {
+                previous[row.dataset.key] = {
+                    from: row.querySelector('.dat-day-from').value,
+                    to: row.querySelector('.dat-day-to').value,
+                    touched: row.dataset.touched === '1'
+                };
+            });
+
+            var html = '<div class="dat-days-head"><span>وقت كل يومية (مقترَح من حالتها — عدّل ما تشاء)</span>'
+                     + '<button type="button" class="dat-btn ghost" onclick="datBuildTargets(true)">↻ اقتراح تلقائي للكل</button></div>'
+                     + '<div class="dat-days-list">';
+
+            picked.forEach(function (b) {
+                var parts = b.value.split('|');
+                var suggestion = datWindowOf(b);
+                var kept = (!force && previous[b.value] && previous[b.value].touched) ? previous[b.value] : null;
+                var from = kept ? kept.from : suggestion.from;
+                var to = kept ? kept.to : suggestion.to;
+
+                html += '<div class="dat-day" data-key="' + b.value + '"' + (kept ? ' data-touched="1"' : '') + '>'
+                     +   '<span class="dat-day-label">' + (b.dataset.name || '') + ' — <b>' + parts[1] + '</b>'
+                     +     '<span class="dat-day-why' + (suggestion.why ? '' : ' none') + '">'
+                     +       (suggestion.why || 'بلا تأخير ولا خروج مبكر — أدخل الوقت يدوياً') + '</span>'
+                     +   '</span>'
+                     +   '<input type="time" class="dat-day-from" value="' + from + '" required '
+                     +     'aria-label="من الساعة ' + parts[1] + '" oninput="datDayChanged(this)" />'
+                     +   '<input type="time" class="dat-day-to" value="' + to + '" required '
+                     +     'aria-label="إلى الساعة ' + parts[1] + '" oninput="datDayChanged(this)" />'
+                     +   '<input type="hidden" name="Selected" value="" />'
+                     + '</div>';
+            });
+
+            html += '</div>';
+            daysHost.innerHTML = html;
+
+            [].forEach.call(daysHost.querySelectorAll('.dat-day'), datSyncDayValue);
+        }
+
+        /// قيمة الإرسال لسطر يوم: "موظف|تاريخ|من|إلى" — الوقت جزءٌ من الهُويّة لا حقلٌ عام.
+        function datSyncDayValue(row) {
+            var from = row.querySelector('.dat-day-from').value;
+            var to = row.querySelector('.dat-day-to').value;
+            row.querySelector('input[type="hidden"]').value =
+                from && to ? row.dataset.key + '|' + from + '|' + to : row.dataset.key;
+        }
+
+        function datDayChanged(input) {
+            var row = input.closest('.dat-day');
+            row.dataset.touched = '1';
+            datSyncDayValue(row);
+        }
+
+        // ═══ اقتراح وقت المغادرة من اليوميات المحدَّدة ═══
+        // مَن يقدّم مغادرةً إنما يغطّي تأخيراً أو خروجاً مبكراً وقع فعلاً، فالنافذة
+        // المطلوبة معروفة من الصفّ نفسه: التأخير = [بداية الدوام ← الدخول]، والخروج
+        // المبكر = [الخروج ← نهاية الدوام]. نُغطّي المدى الأوسع بالتحديد كي لا تبقى
+        // دقيقةٌ خارج الطلب (أدنى بداية وأقصى نهاية).
+        function datSuggestTimes(force) {
+            var from = document.querySelector('#dat-req-time-wrap input[name="ReqFromTime"]');
+            var to = document.querySelector('#dat-req-time-wrap input[name="ReqToTime"]');
+            var hint = document.getElementById('dat-req-time-hint');
+
+            if (force) { delete from.dataset.touched; delete to.dataset.touched; }
+            var edited = from.dataset.touched === '1' || to.dataset.touched === '1';
+
+            var picked = datPicked();
+            var late = picked.filter(function (b) {
+                return parseFloat(b.dataset.late || '0') > 0 && b.dataset.start && b.dataset.in;
+            });
+            var early = picked.filter(function (b) {
+                return parseFloat(b.dataset.early || '0') > 0 && b.dataset.end && b.dataset.out;
+            });
+
+            // كلا النوعين بتحديدٍ واحد: الأكثر عدداً يفوز (وعند التعادل التأخير)، ويُذكر
+            // الآخر بالتلميح — لأن النموذج نافذةٌ واحدة تُطبَّق على كل الأيام.
+            var useLate = late.length > 0 && late.length >= early.length;
+            var group = useLate ? late : early;
+
+            if (group.length === 0) {
+                // تُفرَّغ القيم وإلا بقي اقتراحُ تحديدٍ سابق معلّقاً بالحقل فيُرسَل وقتاً
+                // لا علاقة له بما هو محدَّد الآن.
+                if (!edited) { from.value = ''; to.value = ''; }
+                hint.textContent = picked.length === 0
+                    ? ''
+                    : 'لا تأخير ولا خروجاً مبكراً باليوميات المحدَّدة — أدخل وقت المغادرة يدوياً.';
+                return;
+            }
+
+            // "HH:mm" مصفوف صفرياً، فمقارنة النصوص هي مقارنة الوقت نفسها.
+            var starts = group.map(function (b) { return useLate ? b.dataset.start : b.dataset.out; });
+            var ends = group.map(function (b) { return useLate ? b.dataset.in : b.dataset.end; });
+            var suggestedFrom = starts.slice().sort()[0];
+            var suggestedTo = ends.slice().sort().pop();
+
+            var label = useLate
+                ? 'اقتُرح من تأخير ' + group.length + ' يومية: من بداية الدوام ' + suggestedFrom +
+                  ' إلى الدخول الفعلي ' + suggestedTo
+                : 'اقتُرح من خروجٍ مبكر بـ' + group.length + ' يومية: من الخروج الفعلي ' + suggestedFrom +
+                  ' إلى نهاية الدوام ' + suggestedTo;
+
+            label += ' — عدّله كما تشاء.';
+
+            var other = useLate ? early.length : late.length;
+            if (other > 0) {
+                label += ' وبالتحديد أيضاً ' + other +
+                    (useLate ? ' يومية بخروجٍ مبكر' : ' يومية بتأخير') + ' لم تدخل الاقتراح.';
+            }
+
+            if (edited) {
+                hint.textContent = 'عدّلت الوقت يدوياً فلم يُستبدَل. الاقتراح: ' +
+                    suggestedFrom + ' → ' + suggestedTo + ' (اضغط «اقتراح تلقائي» لاعتماده).';
+                return;
+            }
+
+            from.value = suggestedFrom;
+            to.value = suggestedTo;
+            hint.textContent = label;
+        }
+
+        function datRequest(open) {
+            if (open) {
+                // التحديد يُنسخ لحظة الفتح: المربّعات خارج نموذج الإرسال (نموذج
+                // الفلترة GET يلفّ أعلى الصفحة)، فلا تُرسَل من تلقائها. والبناء يعيد
+                // الحساب على ما هو محدَّد الآن لا على تحديدٍ سابق.
+                if (datPicked().length === 0) { return; }
+                datTypeChanged();
+            }
+            document.getElementById('dat-reqbg').style.display = open ? 'block' : 'none';
+            document.getElementById('dat-req').style.display = open ? 'block' : 'none';
+            datLockScroll();
         }
 
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') { datNotify(false); }
+            if (e.key === 'Escape') { datNotify(false); datRequest(false); }
         });
+
+        datSyncBar();
     </script>
 }

@@ -15,9 +15,12 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
+    public IndexModel(ApplicationDbContext dbContext, SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -84,7 +87,7 @@ public class IndexModel : PageModel
             .Select(e => new EmpRow(e.Id, e.EmployeeNo, e.FullName, e.Department.Name))
             .ToListAsync();
 
-        Cells = await RosterStore.GetCellsAsync(_dbContext, year, month);
+        Cells = await RosterStore.GetCellsAsync(_dbContext, await _companyScope.GetAsync(), year, month);
         PublishedAt = await RosterStore.PublishedAtAsync(_dbContext, year, month);
     }
 
@@ -114,7 +117,7 @@ public class IndexModel : PageModel
     {
         var (year, month) = Period;
         var cells = ParseCells(year, month);
-        await RosterStore.SaveCellsAsync(_dbContext, cells);
+        await RosterStore.SaveCellsAsync(_dbContext, await _companyScope.GetAsync(), cells);
         TempData["SuccessMessage"] = $"تم حفظ الجدول ({cells.Count} خلية).";
         return RedirectToPage(new { Month, Search, PageNumber });
     }
@@ -123,7 +126,7 @@ public class IndexModel : PageModel
     {
         var (year, month) = Period;
         var cells = ParseCells(year, month);
-        await RosterStore.SaveCellsAsync(_dbContext, cells);
+        await RosterStore.SaveCellsAsync(_dbContext, await _companyScope.GetAsync(), cells);
         await RosterStore.PublishAsync(_dbContext, year, month);
         TempData["SuccessMessage"] = $"تم نشر جدول {month:00}/{year}.";
         return RedirectToPage(new { Month, Search, PageNumber });

@@ -1,5 +1,6 @@
 using System.Globalization;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -158,16 +159,20 @@ WHEN NOT MATCHED THEN
             });
     }
 
-    public static async Task<List<WeekRow>> ListAsync(ApplicationDbContext dbContext, int isoYear, int weekNumber)
+    public static async Task<List<WeekRow>> ListAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int isoYear, int weekNumber)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<WeekRow>();
         await EnsureAsync(dbContext);
         return await HrmsDatabase.QueryAsync(
             dbContext,
-            """
+            $"""
 SELECT w.*, e.EmployeeNo, e.FullName
 FROM EmployeeWeekAttendance w
 INNER JOIN Employees e ON e.Id = w.EmployeeId
 WHERE w.IsoYear = @Year AND w.WeekNumber = @Week
+  AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY e.EmployeeNo;
 """,
             command =>

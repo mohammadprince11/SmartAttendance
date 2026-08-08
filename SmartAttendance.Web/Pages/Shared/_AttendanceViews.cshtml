@@ -1,0 +1,44 @@
+@using SmartAttendance.Web.Infrastructure.Security
+@{
+    // W4 — شريط عروض «إدارة الحضور» (②): يطوي مسارات الحضور المتفرّقة في مساحة
+    // عملٍ واحدة بصريّاً (اليوميات · المصفوفة · سجلات البصمات · المعالجة والتصحيح).
+    //
+    // لا دمج صلاحيات ولا هجرة أدوار: كل عرضٍ يظهر فقط إن سمح مسارُه الأصلي عبر
+    // RoleRouteCatalog — نفس مصدر الحقيقة الذي ينفّذه RoleSecurityMiddleware — فلا
+    // توسيع رؤية بالدمج البصريّ. كل المسارات تبقى حيّة، والتراجع فوريّ بإزالة سطر
+    // الاستدعاء من الشاشة. (هذا يُغني عن Sub-Permissions/W7 لهذا الدمج.)
+    var loginRole = Context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+    var currentPath = (Context.Request.Path.Value ?? "/").TrimEnd('/').ToLowerInvariant();
+
+    var views = new (string Label, string Page, string Route)[]
+    {
+        ("اليوميات", "/DayAttendance/Index", "/dayattendance"),
+        ("المصفوفة", "/AttendanceViewer/Index", "/attendanceviewer"),
+        ("سجلات البصمات", "/AttendanceRecords/Index", "/attendancerecords"),
+        ("المعالجة والتصحيح", "/AttendanceOperations/Index", "/attendanceoperations"),
+    };
+
+    var visible = views
+        .Where(v => RoleRouteCatalog.IsAllowed(loginRole, v.Route))
+        .ToList();
+}
+@if (visible.Count > 1)
+{
+    <nav class="att-views" aria-label="عروض إدارة الحضور">
+        @foreach (var v in visible)
+        {
+            var active = currentPath == v.Route
+                || currentPath.StartsWith(v.Route + "/", StringComparison.Ordinal);
+            <a asp-page="@v.Page" class="att-view @(active ? "is-active" : "")">@v.Label</a>
+        }
+    </nav>
+    <style>
+        .att-views { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px;
+            border: 1px solid var(--sa-border, rgba(73,111,151,.22)); border-radius: 14px;
+            background: var(--sa-surface, rgba(8,25,43,.9)); }
+        .att-view { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 900;
+            color: var(--sa-muted, #8FA8BC); text-decoration: none; border: 1px solid transparent; }
+        .att-view:hover { color: var(--sa-text, #DCEAF4); }
+        .att-view.is-active { color: #04141d; background: linear-gradient(135deg, #12D9E3, #0ea5b5); }
+    </style>
+}

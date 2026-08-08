@@ -58,10 +58,14 @@ public static class ContractRegisterStore
     /// </summary>
     public static async Task<List<ContractRow>> LoadContractsAsync(
         ApplicationDbContext db,
+        Security.CompanyScope scope,
         int? employeeId = null,
         string? search = null)
     {
-        var filters = new List<string>();
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<ContractRow>();
+
+        var filters = new List<string> { Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId") };
         if (employeeId is not null) filters.Add("c.EmployeeId = @EmployeeId");
         if (!string.IsNullOrWhiteSpace(search))
             filters.Add("(e.FullName LIKE @Search OR e.EmployeeNo LIKE @Search OR c.ContractNo LIKE @Search)");
@@ -99,8 +103,9 @@ ORDER BY e.FullName, c.FromDate DESC, c.Id DESC;
                 HrmsDatabase.GetString(reader, "Note")));
     }
 
-    public static async Task<ContractRow?> FindContractAsync(ApplicationDbContext db, int id) =>
-        (await LoadContractsAsync(db)).FirstOrDefault(row => row.Id == id);
+    public static async Task<ContractRow?> FindContractAsync(
+        ApplicationDbContext db, Security.CompanyScope scope, int id) =>
+        (await LoadContractsAsync(db, scope)).FirstOrDefault(row => row.Id == id);
 
     /// <summary>المدة الافتراضية لكل نوع عقد — مصدر اشتقاق تاريخ الانتهاء.</summary>
     public static async Task<Dictionary<string, int?>> LoadContractTypesAsync(ApplicationDbContext db)
@@ -234,19 +239,24 @@ WHERE Id = @Id;
 
     // ── الحركات ────────────────────────────────────────────────────────────────
 
-    public static async Task<List<MovementRow>> LoadMovementsAsync(ApplicationDbContext db, bool locked)
+    public static async Task<List<MovementRow>> LoadMovementsAsync(
+        ApplicationDbContext db, Security.CompanyScope scope, bool locked)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<MovementRow>();
+
         var status = locked ? "Locked" : "Open";
 
         return await HrmsDatabase.QueryAsync(
             db,
-            """
+            $"""
 SELECT m.Id, m.RefNo, m.EmployeeId, ISNULL(e.FullName, N'') AS EmployeeName, m.ContractId,
        m.MovementKind, m.ContractType, m.FromDate, m.ToDate, m.EffectiveDate,
        m.Source, m.Status, m.Notes
 FROM EmployeeContractMovements m
 LEFT JOIN Employees e ON e.Id = m.EmployeeId
 WHERE m.Status = @Status
+  AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY m.Id DESC;
 """,
             command => HrmsDatabase.AddParameter(command, "@Status", status),
@@ -275,6 +285,7 @@ ORDER BY m.Id DESC;
     /// </summary>
     public static async Task<int> ApplyMovementAsync(
         ApplicationDbContext db,
+        Security.CompanyScope scope,
         int employeeId,
         int? contractId,
         string movementKind,
@@ -285,7 +296,11 @@ ORDER BY m.Id DESC;
         string? createdBy,
         string source = "يدوي")
     {
-        var current = contractId is null ? null : await FindContractAsync(db, contractId.Value);
+        // الموظف المستهدَف يجب أن يكون ضمن نطاق المستخدم — معرّفٌ من الطلب.
+        if (!await Security.EmployeeCompanyGuard.CanAccessEmployeeAsync(db, employeeId, scope))
+            throw new InvalidOperationException("الموظف خارج نطاق شركاتك.");
+
+        var current = contractId is null ? null : await FindContractAsync(db, scope, contractId.Value);
 
         await using var transaction = await db.Database.BeginTransactionAsync();
 
@@ -417,7 +432,14 @@ VALUES (@EmployeeId, @ContractId, @ResultContractId, @MovementKind, @ContractTyp
     }
 
     /// <summary>قفل الحركة — نمط «حركات مقفلة» بكيان: بعد القفل لا تُعدَّل ولا تُحذف.</summary>
-    public static async Task LockMovementAsync(ApplicationDbContext db, int id, string? lockedBy) =>
+    public static async Task<bool> LockMovementAsync(
+        ApplicationDbContext db, Security.CompanyScope scope, int id, string? lockedBy)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        // قفل حركة عقدٍ بمعرّفٍ من النموذج — يُفحَص بالنطاق قبل الكتابة. مغلق الفشل.
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                db, Security.EmployeeCompanyGuard.Tables.EmployeeContractMovements, "Id", id, scope))
+            return false;
         await HrmsDatabase.ExecuteAsync(
             db,
             """
@@ -430,10 +452,20 @@ WHERE Id = @Id AND Status = N'Open';
                 HrmsDatabase.AddParameter(command, "@Id", id);
                 HrmsDatabase.AddParameter(command, "@LockedBy", lockedBy);
             });
+        return true;
+    }
 
-    public static async Task DeleteMovementAsync(ApplicationDbContext db, int id) =>
+    public static async Task<bool> DeleteMovementAsync(ApplicationDbContext db, Security.CompanyScope scope, int id)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        // حذف حركة عقدٍ بمعرّفٍ من النموذج — يُفحَص بالنطاق قبل الحذف. مغلق الفشل.
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                db, Security.EmployeeCompanyGuard.Tables.EmployeeContractMovements, "Id", id, scope))
+            return false;
         await HrmsDatabase.ExecuteAsync(
             db,
             "DELETE FROM EmployeeContractMovements WHERE Id = @Id AND Status = N'Open';",
             command => HrmsDatabase.AddParameter(command, "@Id", id));
+        return true;
+    }
 }

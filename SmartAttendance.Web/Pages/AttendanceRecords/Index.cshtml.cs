@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Application.AttendanceRecords.Services;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.AttendanceRecords;
 
@@ -11,10 +13,35 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    /// <summary>
+    /// نطاق شركات المستخدم — «سجلات الحضور» كانت تقرأ الجدول بلا حدّ شركة, فتعرض
+    /// بصمات كل الشركات لأي مستخدم يفتحها. تُحصر القراءة هنا بشركة الموظف صاحبِ
+    /// السجلّ، بنفس دلالة <see cref="CompanyScope.ToSqlPredicate"/> التي يتبعها
+    /// بقية مودل الحضور.
+    /// </summary>
+    private readonly ICompanyScopeProvider _companyScope;
+
+    /// <summary>للحذف الجماعي المحصور بالنطاق — منقولٌ من صفحة «البصمات عبر الإنترنت» عند طيّها هنا.</summary>
+    private readonly IAttendanceRecordService _attendanceRecordService;
+
+    /// <summary>دلالة البصمة بمعرّفها (حضور/استراحة/صلاة…) — عمودٌ منقول من صفحة الأونلاين.</summary>
+    private Dictionary<int, string> _semantics = new();
+
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        ICompanyScopeProvider companyScope,
+        IAttendanceRecordService attendanceRecordService)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
+        _attendanceRecordService = attendanceRecordService;
     }
+
+    /// <summary>بصمات بلا خروج (دخولٌ مفتوح) ضمن الفلاتر الحالية — عدّاد منقول من الأونلاين.</summary>
+    public int OpenPunches { get; private set; }
+
+    /// <summary>بصمات مكتملة (دخول/خروج) ضمن الفلاتر الحالية.</summary>
+    public int CompletePunches { get; private set; }
 
     [BindProperty(SupportsGet = true)]
     public string? Search { get; set; }
@@ -182,6 +209,20 @@ public class IndexModel : PageModel
             .Include(x => x.Device)
             .AsQueryable();
 
+        // 🛡️ حدّ الشركة أولاً: نفس دلالة ToSqlPredicate — غير مقيَّد يرى الكل،
+        // ممنوعُ الكلِّ لا يرى شيئاً، والمقيَّد يرى موظفي شركاته وحدهم.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (scope.IsDeniedAll)
+        {
+            query = query.Where(_ => false);
+        }
+        else if (!scope.IsUnrestricted)
+        {
+            var allowedCompanyIds = scope.AllowedCompanyIds.ToArray();
+            query = query.Where(x =>
+                x.Employee.CompanyId != null && allowedCompanyIds.Contains(x.Employee.CompanyId.Value));
+        }
+
         if (FromDate.HasValue)
         {
             query = query.Where(x => x.AttendanceDate >= FromDate.Value);
@@ -252,6 +293,11 @@ public class IndexModel : PageModel
 
         TotalRows = await query.CountAsync();
 
+        // عدّادا الأونلاين المنقولان: دخولٌ مفتوح (بلا خروج) مقابل بصمة مكتملة —
+        // على كامل الفلاتر لا على الصفحة الظاهرة، كما كانت صفحة الأونلاين تعدّ.
+        OpenPunches = await query.CountAsync(x => x.CheckOut == null);
+        CompletePunches = TotalRows - OpenPunches;
+
         TotalPages = TotalRows <= 0
             ? 1
             : (int)Math.Ceiling(TotalRows / (double)PageSize);
@@ -265,6 +311,10 @@ public class IndexModel : PageModel
             .Skip((PageNumber - 1) * PageSize)
             .Take(PageSize)
             .ToListAsync();
+
+        // قاموس الدلالات صغير (حضور/استراحة/صلاة…) — يُحمَّل مرّة ويُخرَّط بالمعرّف.
+        _semantics = (await PunchSemanticStore.ListAsync(_dbContext))
+            .ToDictionary(s => s.Id, s => s.Name);
 
         Records = rows.Select(ToRow).ToList();
 
@@ -286,8 +336,40 @@ public class IndexModel : PageModel
             Status = record.Status.ToString(),
             Source = record.Source.ToString(),
             Device = record.Device?.Name ?? "-",
-            Notes = record.Notes ?? string.Empty
+            Notes = record.Notes ?? string.Empty,
+            // الدلالة: null ⟹ «حضور» (نفس افتراض صفحة الأونلاين ISNULL(ps.Name,N'حضور')).
+            Semantic = record.PunchSemanticId is int sid && _semantics.TryGetValue(sid, out var name)
+                ? name
+                : "حضور"
         };
+    }
+
+    /// <summary>
+    /// حذفٌ جماعيّ محصورٌ بالنطاق — منقولٌ من «البصمات عبر الإنترنت» عند طيّها. كل
+    /// معرّفٍ يُفحَص ملكيةً قبل حذفه، فلا يُمسّ سجلّ شركةٍ أخرى ولو مُرِّر معرّفه.
+    /// </summary>
+    public async Task<IActionResult> OnPostDeleteSelectedAsync(int[]? selectedIds)
+    {
+        var ids = (selectedIds ?? Array.Empty<int>()).Where(id => id > 0).Distinct().ToArray();
+        if (ids.Length == 0)
+        {
+            TempData["ErrorMessage"] = "حدّد سجلّات أولاً.";
+            return RedirectToPage("./Index");
+        }
+
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var deleted = 0;
+        foreach (var id in ids)
+        {
+            if (!await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                    _dbContext, EmployeeCompanyGuard.Tables.AttendanceRecords, "Id", id, scope))
+                continue;
+
+            if (await _attendanceRecordService.DeleteAsync(id)) deleted++;
+        }
+
+        TempData["SuccessMessage"] = $"حُذف {deleted} سجلّاً.";
+        return RedirectToPage("./Index");
     }
 
     private static string ReadStringProperty(object? source, string propertyName)
@@ -334,5 +416,8 @@ public class IndexModel : PageModel
         public string Device { get; set; } = string.Empty;
 
         public string Notes { get; set; } = string.Empty;
+
+        /// <summary>دلالة البصمة (حضور/استراحة/صلاة…) — عمودٌ منقول من صفحة الأونلاين.</summary>
+        public string Semantic { get; set; } = string.Empty;
     }
 }

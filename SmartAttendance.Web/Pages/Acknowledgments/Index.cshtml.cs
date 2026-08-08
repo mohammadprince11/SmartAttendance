@@ -16,9 +16,12 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _db;
 
-    public IndexModel(ApplicationDbContext db)
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
+    public IndexModel(ApplicationDbContext db, SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true, Name = "edit")] public int? EditingId { get; set; }
@@ -87,7 +90,7 @@ public class IndexModel : PageModel
         }
 
         var audience = await AcknowledgmentStore.ResolveAudienceAsync(
-            _db, template.Conditions, DateOnly.FromDateTime(DateTime.Today));
+            _db, await _companyScope.GetAsync(), template.Conditions, DateOnly.FromDateTime(DateTime.Today));
 
         var sent = await AcknowledgmentStore.SendAsync(_db, id, audience, User.Identity?.Name);
 
@@ -103,7 +106,7 @@ public class IndexModel : PageModel
         Templates = await AcknowledgmentStore.LoadTemplatesAsync(_db);
         CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_db);
 
-        var assignments = await AcknowledgmentStore.LoadAssignmentsAsync(_db);
+        var assignments = await AcknowledgmentStore.LoadAssignmentsAsync(_db, await _companyScope.GetAsync());
         Stats = assignments
             .GroupBy(row => row.TemplateId)
             .ToDictionary(

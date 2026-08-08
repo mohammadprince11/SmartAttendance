@@ -34,6 +34,10 @@ public class EmployeeCompanyGuardScopeTests
         File.ReadAllText(Path.Combine(
             RepoRoot(), "SmartAttendance.Web", "Infrastructure", "Security", fileName));
 
+    private static string ReadHrms(string fileName) =>
+        File.ReadAllText(Path.Combine(
+            RepoRoot(), "SmartAttendance.Web", "Infrastructure", "Hrms", fileName));
+
     // ═══ (أ) حرّاس الشاشات ═══
 
     /// <summary>
@@ -219,11 +223,113 @@ public class EmployeeCompanyGuardScopeTests
         EmployeeCompanyGuard.GuardIdentifier(EmployeeCompanyGuard.Tables.SelfServiceRequests);
     }
 
-    /// <summary>الكتابات المالية بمعرّفٍ من النموذج تمرّ ببوابة الصفّ.</summary>
+    /// <summary>
+    /// الكتابات المالية بمعرّفٍ من النموذج تمرّ ببوابة الصفّ — لكن <b>بطبقة المتجر</b>
+    /// لا الصفحة (موجة التحصين 2026-08-08): جعل النطاق وسيطاً إلزامياً بتوقيع المتجر
+    /// يجعل المترجم يفرض الفحص على كل مستدعٍ، فلا يعتمد على تذكّر كاتب الصفحة.
+    /// <see cref="StoresEnforceOwnershipGuard"/> يحرس ذلك؛ وهنا نبقي على ما تبقّى
+    /// بالصفحة (حذف الطلب المالي محروسٌ بالصفحة أصلاً).
+    /// </summary>
+    [Fact]
+    public void FinancialRequestsPage_DeleteIsGated() =>
+        Assert.Contains("EmployeeCompanyGuard.CanAccessOwnedRowAsync",
+            ReadPage("Payroll/FinancialRequests.cshtml.cs"));
+
+    /// <summary>
+    /// موجة التحصين (2026-08-08): الكتابات المالية بمعرّفٍ من النموذج (اعتماد/رفض/
+    /// حذف/قفل/ترحيل قسط) عُزلت بطبقة المتجر — كل متجرٍ منها يستدعي بوابة الصفّ
+    /// المملوك، فالمترجم يفرض تمرير النطاق ولا يُنسى فحصٌ عند مستدعٍ جديد.
+    /// </summary>
     [Theory]
-    [InlineData("Payroll/Loans.cshtml.cs")]
-    [InlineData("Payroll/FinancialRequests.cshtml.cs")]
-    public void FinancialWritesByRequestId_AreGated(string page) =>
-        Assert.Contains("EmployeeCompanyGuard.CanAccessOwnedRowAsync", ReadPage(page));
+    [InlineData("LoanStore.cs")]                 // ترحيل الأقساط + الاعتماد/الحذف/الجدول
+    [InlineData("ContractRegisterStore.cs")]     // قفل/حذف حركة العقد
+    [InlineData("ApprovalWorkflowEngine.cs")]    // اعتماد/رفض الطلب المالي المشترك
+    public void StoresEnforceOwnershipGuard(string store) =>
+        Assert.Contains("EmployeeCompanyGuard.CanAccessOwnedRowAsync", ReadHrms(store));
+
+    /// <summary>
+    /// ترحيل أقساط القروض كان يعبر كل الشركات (P0): يجب أن يحصر بالنطاق عبر
+    /// <see cref="EmployeeCompanyGuard.ListFilter"/>، وأن يكون idempotent بقفلٍ
+    /// محدِّث داخل معاملة كي لا تُرحّل ضغطتان متزامنتان نفس القسط مرتين.
+    /// </summary>
+    [Fact]
+    public void PostDueInstallments_IsScopedAndIdempotent()
+    {
+        var store = ReadHrms("LoanStore.cs");
+
+        Assert.Contains("EmployeeCompanyGuard.ListFilter", store);
+        Assert.Contains("UPDLOCK, HOLDLOCK", store);
+        Assert.Contains("BeginTransactionAsync", store);
+    }
+
+    /// <summary>
+    /// لوحة الحضور تجمّع بالـSQL لا بشحن يوميات المدى للذاكرة (الموجة 6 — P1):
+    /// الشاشة تنادي التجميعة، والمتجر يحسب البائتة مجموعياً لا بـEXISTS لكل صفّ.
+    /// </summary>
+    [Fact]
+    public void AttendanceDashboard_AggregatesInSql()
+    {
+        var page = ReadPage("AttendanceDashboard/Index.cshtml.cs");
+        Assert.Contains("DashboardAggregateAsync", page);
+        Assert.DoesNotContain("ListRangeAsync", page);
+
+        // البائتة مجموعياً بوصلة مسبقة التجميع (نفس نمط الترقيم) لا مترابطة لكل صفّ.
+        var store = ReadHrms("DayAttendanceStore.cs");
+        Assert.Contains("DashboardAggregateAsync", store);
+    }
+
+    /// <summary>
+    /// «سجلات الحضور» كانت تقرأ جدول <c>AttendanceRecords</c> بلا حدّ شركة (تعرض
+    /// بصمات كل الشركات) وتحرّر/تحذف/تنشئ بمعرّفٍ من الرابط بلا فحص ملكية. كل سطح
+    /// من الأربعة يجب أن يحمل حارسه: القائمة تحقن النطاق، والتعديل/الحذف يفحصان
+    /// الصفّ المملوك، والإنشاء/التعديل يفحصان شركة الموظف.
+    ///
+    /// <para>أحمر أولاً: قبل الإصلاح لا شيء من هذه السلاسل موجود بالصفحات.</para>
+    /// </summary>
+    [Fact]
+    public void AttendanceRecords_AreCompanyScoped()
+    {
+        var index = ReadPage("AttendanceRecords/Index.cshtml.cs");
+        Assert.Contains("ICompanyScopeProvider", index);
+        Assert.Contains("AllowedCompanyIds", index);       // القراءة محصورة بشركات المستخدم
+
+        var edit = ReadPage("AttendanceRecords/Edit.cshtml.cs");
+        Assert.Contains("EmployeeCompanyGuard.CanAccessOwnedRowAsync", edit);
+        Assert.Contains("EmployeeCompanyGuard.CanAccessEmployeeAsync", edit);
+
+        var delete = ReadPage("AttendanceRecords/Delete.cshtml.cs");
+        Assert.Contains("EmployeeCompanyGuard.CanAccessOwnedRowAsync", delete);
+
+        var create = ReadPage("AttendanceRecords/Create.cshtml.cs");
+        Assert.Contains("EmployeeCompanyGuard.CanAccessEmployeeAsync", create);
+
+        // الجدول مُسجَّل بكتالوج الحارس الثابت لا سلسلةً حرّة.
+        Assert.Contains("AttendanceRecords = \"AttendanceRecords\"",
+            ReadSecurity("EmployeeCompanyGuard.cs"));
+    }
+
+    /// <summary>
+    /// طيّ «البصمات عبر الإنترنت» داخل «سجلات الحضور» بلا فقدان وظيفة: الميزات الثلاث
+    /// المنقولة موجودة (حذف جماعي محصور + عمود الدلالة + عدّادا مفتوح/مكتمل)، والمسار
+    /// القديم صار redirect حيّاً لـ<c>/AttendanceRecords?Source=Mobile</c>.
+    /// </summary>
+    [Fact]
+    public void OnlinePunches_MergedIntoRecords_WithoutFeatureLoss()
+    {
+        var code = ReadPage("AttendanceRecords/Index.cshtml.cs");
+        Assert.Contains("OnPostDeleteSelectedAsync", code);                 // حذف جماعي
+        Assert.Contains("CanAccessOwnedRowAsync", code);                    // محصورٌ بالنطاق لكل معرّف
+        Assert.Contains("OpenPunches", code);                              // عدّاد مفتوح/مكتمل
+        Assert.Contains("Semantic", code);                                 // عمود الدلالة
+
+        var view = ReadPage("AttendanceRecords/Index.cshtml");
+        Assert.Contains("selectedIds", view);                              // مربّعات التحديد
+        Assert.Contains("DeleteSelected", view);                           // زرّ الحذف الجماعي
+
+        // المسار القديم redirect حيّ لا صفحة مستقلّة — الروابط المحفوظة لا تنكسر.
+        var stub = ReadPage("EmployeeOnlinePunches/Index.cshtml");
+        Assert.Contains("RedirectToPage(\"/AttendanceRecords/Index\"", stub);
+        Assert.Contains("Source = \"Mobile\"", stub);
+    }
 
 }

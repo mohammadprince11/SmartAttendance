@@ -26,6 +26,14 @@ public static class PeopleReportCatalog
 
     public sealed class ReportFilters
     {
+        /// <summary>
+        /// نطاق شركات المستخدم لمصادر الحضور — مغلق الفشل: <c>null</c> يعني
+        /// «لم يُمرَّر نطاق» فتعيد مصادر الحضور صفراً من الصفوف، لا كل الشركات.
+        /// (المستهلكون: صفحة التقارير تمرّر نطاق المستخدم، وبوابة الموظف نطاق
+        /// شركته هو.)
+        /// </summary>
+        public Security.CompanyScope? Scope { get; set; }
+
         public int? CompanyId { get; set; }
         public string? Search { get; set; }
         public bool ActiveOnly { get; set; }
@@ -276,7 +284,7 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, ReportFilters f)
     {
         var (from, to) = AttendanceRange(f);
-        var rows = await OnlinePunchStore.ListAsync(db, new OnlinePunchStore.Filter
+        var rows = await OnlinePunchStore.ListAsync(db, f.Scope, new OnlinePunchStore.Filter
         {
             From = from, To = to, Search = f.Search, Top = 2000
         });
@@ -297,10 +305,8 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, ReportFilters f)
     {
         var (from, to) = AttendanceRange(f);
-        var rows = await MissingPunchRequestStore.ListAsync(db, new MissingPunchRequestStore.Filter
-        {
-            From = from, To = to, Search = f.Search
-        });
+        var rows = await MissingPunchRequestStore.ListAsync(db, f.Scope ?? Security.CompanyScope.DeniedAll(),
+            new MissingPunchRequestStore.Filter { From = from, To = to, Search = f.Search });
         return rows.Select(r => new Dictionary<string, string>
         {
             ["refno"] = r.RefNo,
@@ -345,7 +351,9 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, ReportFilters f)
     {
         var (from, to) = AttendanceRange(f);
-        var rows = await DayAttendanceStore.ListRangeAsync(db, from, to, f.Search);
+        // تقرير لا يعرض IsStale — نتخطّى حسابها المترابط على المدى الواسع.
+        var rows = await DayAttendanceStore.ListRangeAsync(
+            db, f.Scope ?? Security.CompanyScope.DeniedAll(), from, to, f.Search, computeStale: false);
 
         return rows.Select(r => new Dictionary<string, string>
         {
@@ -368,7 +376,9 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, ReportFilters f)
     {
         var (from, to) = AttendanceRange(f);
-        var rows = await DayAttendanceStore.ListRangeAsync(db, from, to, f.Search);
+        // ملخّص لا يعرض IsStale — نتخطّى حسابها المترابط على المدى الواسع.
+        var rows = await DayAttendanceStore.ListRangeAsync(
+            db, f.Scope ?? Security.CompanyScope.DeniedAll(), from, to, f.Search, computeStale: false);
 
         return rows
             .GroupBy(r => (r.EmployeeId, r.EmployeeNo, r.EmployeeName))
@@ -399,6 +409,15 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, string? filterKey, ReportFilters f)
     {
         var q = db.Employees.AsNoTracking().Where(e => !e.IsDeleted);
+        // عزل الشركات (P1 بدراسة العزل): مصدر التقرير يُرشَّح بنطاق المستخدم قبل
+        // أي مرشّح آخر. غير المقيَّد يمرّ، والمقيَّد يرى شركاته وصفوفها المنسوبة فقط.
+        var reportScope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        if (reportScope.IsDeniedAll) return new List<Dictionary<string, string>>();
+        if (!reportScope.IsUnrestricted)
+        {
+            var allowedCompanies = reportScope.AllowedCompanyIds.ToList();
+            q = q.Where(x => x.CompanyId != null && allowedCompanies.Contains(x.CompanyId.Value));
+        }
         if (f.ActiveOnly) q = q.Where(e => e.IsActive);
         if (f.CompanyId.HasValue) q = q.Where(e => e.Branch.CompanyId == f.CompanyId.Value);
         if (!string.IsNullOrWhiteSpace(f.Search))
@@ -473,6 +492,15 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, string? filterKey, ReportFilters f)
     {
         var q = db.EmployeeDependents.AsNoTracking().Where(d => !d.Employee.IsDeleted);
+        // عزل الشركات (P1 بدراسة العزل): مصدر التقرير يُرشَّح بنطاق المستخدم قبل
+        // أي مرشّح آخر. غير المقيَّد يمرّ، والمقيَّد يرى شركاته وصفوفها المنسوبة فقط.
+        var reportScope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        if (reportScope.IsDeniedAll) return new List<Dictionary<string, string>>();
+        if (!reportScope.IsUnrestricted)
+        {
+            var allowedCompanies = reportScope.AllowedCompanyIds.ToList();
+            q = q.Where(x => x.Employee.CompanyId != null && allowedCompanies.Contains(x.Employee.CompanyId.Value));
+        }
         if (f.ActiveOnly) q = q.Where(d => d.Employee.IsActive);
         if (f.CompanyId.HasValue) q = q.Where(d => d.Employee.Branch.CompanyId == f.CompanyId.Value);
         if (!string.IsNullOrWhiteSpace(f.Search))
@@ -535,6 +563,15 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, string? filterKey, ReportFilters f)
     {
         var q = db.EmployeeFileRecords.AsNoTracking().Where(r => !r.Employee.IsDeleted);
+        // عزل الشركات (P1 بدراسة العزل): مصدر التقرير يُرشَّح بنطاق المستخدم قبل
+        // أي مرشّح آخر. غير المقيَّد يمرّ، والمقيَّد يرى شركاته وصفوفها المنسوبة فقط.
+        var reportScope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        if (reportScope.IsDeniedAll) return new List<Dictionary<string, string>>();
+        if (!reportScope.IsUnrestricted)
+        {
+            var allowedCompanies = reportScope.AllowedCompanyIds.ToList();
+            q = q.Where(x => x.Employee.CompanyId != null && allowedCompanies.Contains(x.Employee.CompanyId.Value));
+        }
         if (f.ActiveOnly) q = q.Where(r => r.Employee.IsActive);
         if (f.CompanyId.HasValue) q = q.Where(r => r.Employee.Branch.CompanyId == f.CompanyId.Value);
         if (!string.IsNullOrWhiteSpace(f.Search))
@@ -596,12 +633,13 @@ public static class PeopleReportCatalog
     {
         var rows = await HrmsDatabase.QueryAsync(
             db,
-            """
+            $"""
 SELECT e.EmployeeNo, e.FullName, c.ContractNo, c.ContractType, c.FromDate, c.ToDate,
        c.EffectiveDate, ISNULL(c.IsCurrent, 0) AS IsCurrent, c.Note
 FROM EmployeeContracts c
 INNER JOIN Employees e ON e.Id = c.EmployeeId
 WHERE ISNULL(e.IsDeleted, 0) = 0 AND ISNULL(c.IsDeleted, 0) = 0
+  AND {Security.EmployeeCompanyGuard.ListFilter(f.Scope ?? Security.CompanyScope.DeniedAll(), "e.CompanyId")}
 ORDER BY e.FullName, c.FromDate DESC;
 """,
             command => { },
@@ -626,7 +664,7 @@ ORDER BY e.FullName, c.FromDate DESC;
     {
         var rows = await HrmsDatabase.QueryAsync(
             db,
-            """
+            $"""
 SELECT e.EmployeeNo, e.FullName, ISNULL(t.Name, N'') AS TemplateName,
        a.SentAt, a.ViewedAt, a.AcceptedAt, a.DeclinedAt, a.Note
 FROM EmployeeAcknowledgments a
@@ -669,12 +707,13 @@ ORDER BY e.FullName, a.SentAt DESC;
     {
         var rows = await HrmsDatabase.QueryAsync(
             db,
-            """
+            $"""
 SELECT e.EmployeeNo, e.FullName, t.ProcessType, t.Title, t.AssigneeRole, t.DueDate,
        ISNULL(t.IsDone, 0) AS IsDone, t.CompletedAt, t.CompletedBy
 FROM EmployeeTasks t
 INNER JOIN Employees e ON e.Id = t.EmployeeId
 WHERE ISNULL(e.IsDeleted, 0) = 0 AND ISNULL(t.IsDeleted, 0) = 0
+  AND {Security.EmployeeCompanyGuard.ListFilter(f.Scope ?? Security.CompanyScope.DeniedAll(), "e.CompanyId")}
 ORDER BY e.FullName, t.DueDate;
 """,
             command => { },
@@ -710,7 +749,7 @@ ORDER BY e.FullName, t.DueDate;
     {
         var rows = await HrmsDatabase.QueryAsync(
             db,
-            """
+            $"""
 SELECT e.EmployeeNo, e.FullName, b.SectionName, b.Status, b.RequestedBy, b.RequestedAt,
        b.EffectiveDate, ISNULL(b.IsRetroactive, 0) AS IsRetroactive,
        c.FieldLabel, c.OldValue, c.NewValue
@@ -718,6 +757,7 @@ FROM EmployeeUpdateChanges c
 INNER JOIN EmployeeUpdateBatches b ON b.Id = c.BatchId
 INNER JOIN Employees e ON e.Id = b.EmployeeId
 WHERE ISNULL(e.IsDeleted, 0) = 0
+  AND {Security.EmployeeCompanyGuard.ListFilter(f.Scope ?? Security.CompanyScope.DeniedAll(), "e.CompanyId")}
 ORDER BY b.EffectiveDate DESC, b.RequestedAt DESC, c.Id;
 """,
             command => { },
@@ -744,11 +784,12 @@ ORDER BY b.EffectiveDate DESC, b.RequestedAt DESC, c.Id;
     {
         var rows = await HrmsDatabase.QueryAsync(
             db,
-            """
+            $"""
 SELECT e.EmployeeNo, e.FullName, d.DocumentType, d.FileName, d.ExpiryDate, d.UploadedAt, d.UploadedBy
 FROM EmployeeDocuments d
 INNER JOIN Employees e ON e.Id = d.EmployeeId
 WHERE e.IsDeleted = 0
+  AND {Security.EmployeeCompanyGuard.ListFilter(f.Scope ?? Security.CompanyScope.DeniedAll(), "e.CompanyId")}
 ORDER BY e.FullName, d.UploadedAt DESC;
 """,
             command => { },
@@ -778,6 +819,15 @@ ORDER BY e.FullName, d.UploadedAt DESC;
         ApplicationDbContext db, ReportFilters f)
     {
         var q = db.LeaveRequests.AsNoTracking().Where(l => !l.Employee.IsDeleted);
+        // عزل الشركات (P1 بدراسة العزل): مصدر التقرير يُرشَّح بنطاق المستخدم قبل
+        // أي مرشّح آخر. غير المقيَّد يمرّ، والمقيَّد يرى شركاته وصفوفها المنسوبة فقط.
+        var reportScope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        if (reportScope.IsDeniedAll) return new List<Dictionary<string, string>>();
+        if (!reportScope.IsUnrestricted)
+        {
+            var allowedCompanies = reportScope.AllowedCompanyIds.ToList();
+            q = q.Where(x => x.Employee.CompanyId != null && allowedCompanies.Contains(x.Employee.CompanyId.Value));
+        }
         if (f.ActiveOnly) q = q.Where(l => l.Employee.IsActive);
         if (f.CompanyId.HasValue) q = q.Where(l => l.Employee.Branch.CompanyId == f.CompanyId.Value);
         if (!string.IsNullOrWhiteSpace(f.Search))
@@ -826,6 +876,15 @@ ORDER BY e.FullName, d.UploadedAt DESC;
         ApplicationDbContext db, ReportFilters f)
     {
         var q = db.EmployeeViolationCases.AsNoTracking().Where(v => !v.Employee.IsDeleted);
+        // عزل الشركات (P1 بدراسة العزل): مصدر التقرير يُرشَّح بنطاق المستخدم قبل
+        // أي مرشّح آخر. غير المقيَّد يمرّ، والمقيَّد يرى شركاته وصفوفها المنسوبة فقط.
+        var reportScope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        if (reportScope.IsDeniedAll) return new List<Dictionary<string, string>>();
+        if (!reportScope.IsUnrestricted)
+        {
+            var allowedCompanies = reportScope.AllowedCompanyIds.ToList();
+            q = q.Where(x => x.Employee.CompanyId != null && allowedCompanies.Contains(x.Employee.CompanyId.Value));
+        }
         if (f.ActiveOnly) q = q.Where(v => v.Employee.IsActive);
         if (f.CompanyId.HasValue) q = q.Where(v => v.Employee.Branch.CompanyId == f.CompanyId.Value);
         if (!string.IsNullOrWhiteSpace(f.Search))

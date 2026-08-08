@@ -125,15 +125,18 @@ END;
 
     /// <summary>خلايا الشهر لموظفين محددين (فارغ = الكل): مفتاح (موظف×يوم).</summary>
     public static async Task<Dictionary<(int EmployeeId, DateOnly Date), Cell>> GetCellsAsync(
-        ApplicationDbContext dbContext, int year, int month)
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int year, int month)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new Dictionary<(int, DateOnly), Cell>();
+
         await EnsureAsync(dbContext);
         var from = new DateOnly(year, month, 1);
         var to = from.AddMonths(1).AddDays(-1);
 
         var cells = await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT EmployeeId, WorkDate, CellType, ShiftTypeId FROM RosterCells WHERE WorkDate >= @From AND WorkDate <= @To;",
+            $"SELECT c.EmployeeId, c.WorkDate, c.CellType, c.ShiftTypeId FROM RosterCells c INNER JOIN Employees e ON e.Id = c.EmployeeId WHERE c.WorkDate >= @From AND c.WorkDate <= @To AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
@@ -151,11 +154,20 @@ END;
     }
 
     /// <summary>حفظ خلايا (upsert). قيمة فارغة (CellType فارغ) ⇒ حذف الخلية (رجوع للافتراضية).</summary>
-    public static async Task SaveCellsAsync(ApplicationDbContext dbContext, IEnumerable<Cell> cells)
+    public static async Task SaveCellsAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope, IEnumerable<Cell> cells)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return;
+
         await EnsureAsync(dbContext);
         foreach (var cell in cells)
         {
+            // كل خلية تُملَك بموظفها — معرّفٌ خارج النطاق يُتخطّى بصمت (سردُ
+            // الشاشة معزول أصلاً فلا يصل هنا إلا بتلاعب بالطلب).
+            if (!await Security.EmployeeCompanyGuard.CanAccessEmployeeAsync(dbContext, cell.EmployeeId, scope))
+                continue;
+
             var c = cell;
             if (string.IsNullOrWhiteSpace(c.CellType) || (c.CellType == CellShift && c.ShiftTypeId is null or 0))
             {
@@ -230,9 +242,9 @@ WHEN NOT MATCHED THEN INSERT ([Year], [Month], PublishedAt) VALUES (@Y, @M, SYSU
     /// يستخدمها المحلل بأولوية تحت التجاوز المؤقت وفوق التعيين الدائم.
     /// </summary>
     public static async Task<Dictionary<(int EmployeeId, DateOnly Date), (int? ShiftId, string? ForcedDayKind)>> MapAsync(
-        ApplicationDbContext dbContext, int year, int month)
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int year, int month)
     {
-        var cells = await GetCellsAsync(dbContext, year, month);
+        var cells = await GetCellsAsync(dbContext, scope, year, month);
         var map = new Dictionary<(int, DateOnly), (int?, string?)>();
         foreach (var ((emp, date), c) in cells)
         {

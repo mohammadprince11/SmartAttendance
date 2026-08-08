@@ -1,4 +1,5 @@
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -334,8 +335,10 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
     /// تقييم القواعد الفترية على فترة مُحدَّدة: يقرأ الحضور المُجمَّع (شهري/أسبوعي)
     /// ويطابق قيمة كل موظف بشريحتها، فينتج قائمة العقوبات المتدرّجة المُقترحة.
     /// </summary>
+    /// <param name="scope">نطاق الشركات — إلزامي، يسري على اليوميات المقروءة فلا
+    /// تُقترح إجراءات (سلسلة التصاعد تمسّ المال) على موظفي شركات أخرى.</param>
     public static async Task<List<Match>> EvaluateAsync(
-        ApplicationDbContext db, string periodType, int year, int period)
+        ApplicationDbContext db, CompanyScope scope, string periodType, int year, int period)
     {
         var rules = (await ListRulesAsync(db))
             .Where(r => r.IsActive && r.PeriodType == periodType && r.Slices.Count > 0)
@@ -347,20 +350,20 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
         List<(int Id, string No, string Name, Func<string, decimal> Metric)> rows;
         if (periodType == "Week")
         {
-            var weekRows = await WeekAttendanceStore.ListAsync(db, year, period);
+            var weekRows = await WeekAttendanceStore.ListAsync(db, scope, year, period);
             rows = weekRows.Select(w => (w.EmployeeId, w.EmployeeNo, w.EmployeeName,
                 (Func<string, decimal>)(key => WeekMetric(w, key)))).ToList();
         }
         else
         {
-            var monthRows = await MonthAttendanceStore.ListAsync(db, year, period);
+            var monthRows = await MonthAttendanceStore.ListAsync(db, scope, year, period);
             rows = monthRows.Select(m => (m.EmployeeId, m.EmployeeNo, m.EmployeeName,
                 (Func<string, decimal>)(key => MonthMetric(m, key)))).ToList();
         }
 
         // المقاييس المشتقّة من اليوميات تُحسب مرّة واحدة، وفقط إن طلبتها قاعدة نشطة.
         var streaks = rules.Any(r => IsDayDerivedMetric(r.Metric))
-            ? await AbsenceStreaksAsync(db, periodType, year, period)
+            ? await AbsenceStreaksAsync(db, scope, periodType, year, period)
             : new Dictionary<int, int>();
 
         foreach (var rule in rules)
@@ -398,7 +401,7 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
     /// صفّ التجميع يحمل **عدد** أيام الغياب لا **ترتيبها**.
     /// </summary>
     private static async Task<Dictionary<int, int>> AbsenceStreaksAsync(
-        ApplicationDbContext db, string periodType, int year, int period)
+        ApplicationDbContext db, CompanyScope scope, string periodType, int year, int period)
     {
         DateOnly from, to;
         if (periodType == "Week")
@@ -412,7 +415,8 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
             to = PeriodAnchorDate("Month", year, period);
         }
 
-        var days = await DayAttendanceStore.ListRangeAsync(db, from, to, null);
+        // حساب أطول سلسلة غياب — لا يقرأ IsStale، فنتخطّى حسابها المترابط.
+        var days = await DayAttendanceStore.ListRangeAsync(db, scope, from, to, null, computeStale: false);
 
         return days
             .GroupBy(d => d.EmployeeId)

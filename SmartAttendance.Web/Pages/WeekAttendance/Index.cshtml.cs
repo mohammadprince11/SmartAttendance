@@ -13,9 +13,14 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)] public int? IsoYear { get; set; }
@@ -55,7 +60,7 @@ public class IndexModel : PageModel
         WeeksInYear = WeekAttendanceStore.WeeksInYear(year);
         Range = WeekAttendanceStore.WeekRange(year, week);
 
-        var all = await WeekAttendanceStore.ListAsync(_dbContext, year, week);
+        var all = await WeekAttendanceStore.ListAsync(_dbContext, await _companyScope.GetAsync(), year, week);
         UnderReviewCount = all.Count(r => r.Status == "UnderReview");
         ApprovedCount = all.Count(r => r.Status == "Approved");
         LockedCount = all.Count(r => r.Status == "Locked");
@@ -86,7 +91,7 @@ public class IndexModel : PageModel
         // نفس منطق الشهري: التجميع الأسبوعي الطازج يُقيَّم بالقواعد الفترية الأسبوعية.
         var suggested = count == 0
             ? 0
-            : await RecommendationStore.AnalyzePeriodAsync(_dbContext, "Week", year, week);
+            : await RecommendationStore.AnalyzePeriodAsync(_dbContext, await _companyScope.GetAsync(), "Week", year, week);
 
         TempData["SuccessMessage"] = count == 0
             ? "لا يوميات محللة لهذا الأسبوع — شغّل «تحديث الحضور» أولاً."

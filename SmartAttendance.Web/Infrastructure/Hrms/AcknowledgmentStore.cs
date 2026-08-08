@@ -158,11 +158,17 @@ VALUES (@Name, @Description, @Title, @Body, @SendToNewHires, @IsActive, @Conditi
 
     public static async Task<List<Assignment>> LoadAssignmentsAsync(
         ApplicationDbContext db,
+        Security.CompanyScope scope,
         int? employeeId = null,
         int? templateId = null,
         bool pendingOnly = false)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<Assignment>();
+
         var filters = new List<string>();
+        if (!scope.IsUnrestricted)
+            filters.Add(Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId"));
         if (employeeId is not null) filters.Add("a.EmployeeId = @EmployeeId");
         if (templateId is not null) filters.Add("a.TemplateId = @TemplateId");
         if (pendingOnly) filters.Add("a.AcceptedAt IS NULL AND a.DeclinedAt IS NULL");
@@ -248,13 +254,19 @@ VALUES (@TemplateId, @EmployeeId, @SentBy);
     /// </summary>
     public static async Task<List<int>> ResolveAudienceAsync(
         ApplicationDbContext db,
+        Security.CompanyScope scope,
         HrConditions.ConditionSet conditions,
         DateOnly asOf)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<int>();
+
         var rows = await HrConditionFacts.LoadAsync(db);
 
         return rows
             .Where(row => row.IsActive)
+            // جمهور «أرسل للجميع» = جميعُ نطاقك لا جميعُ النظام (نفس درس إشعارات الحضور).
+            .Where(row => scope.Allows(row.CompanyId))
             .Where(row => HrConditions.Matches(conditions, HrConditionFacts.Build(row, asOf), matchWhenEmpty: true))
             .Select(row => row.Id)
             .ToList();

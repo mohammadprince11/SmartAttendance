@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     نشر ZYNORA HR على خادم الويندوز بالإجراء الآمن المعتمد.
 
@@ -65,6 +65,31 @@ $dbBackup  = Join-Path $BackupRoot "db-$stamp.bak"
 function Write-Step { param([string] $Text) Write-Host "`n=== $Text ===" -ForegroundColor Cyan }
 function Write-Ok   { param([string] $Text) Write-Host "  [ok] $Text"    -ForegroundColor Green }
 function Write-Warn { param([string] $Text) Write-Host "  [!]  $Text"    -ForegroundColor Yellow }
+
+<#
+.SYNOPSIS
+    يُسكِت كل ما يشغّل الموقع فعلاً — لا العملية وحدها.
+
+.DESCRIPTION
+    إيقاف المهمة المجدولة لا يكفي: `run-server.bat` حلقةٌ لا نهائية تعيد إطلاق
+    التطبيق كل ٣ ثوانٍ، وهي تعمل بـ`cmd.exe` **من System32** لا من مجلّد الموقع —
+    فالفلترة بمسار العملية وحدها تتركها حيّة، فتُقيم الموقع وسط النسخ ويعلق
+    `robocopy` على ملفاتٍ مقفولة (أوقف نشرَي 2026-08-07 دقائق بلا تقدّم).
+
+    فيُقتل صنفان: ما يعمل **من** مجلّد الموقع، وما يذكر مجلّد الموقع **بسطر
+    أوامره** (cmd/wscript/timeout). والقيد على السطر يمنع إسقاط تطبيقٍ آخر بالخادم.
+#>
+function Stop-SiteProcesses {
+    param([Parameter(Mandatory)][string] $SitePath)
+
+    Get-Process -ErrorAction SilentlyContinue |
+        Where-Object { $_.Path -and $_.Path.StartsWith($SitePath, [StringComparison]::OrdinalIgnoreCase) } |
+        ForEach-Object { Write-Host "  قتل PID $($_.Id) ($($_.ProcessName))"; Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
+
+    Get-CimInstance Win32_Process -Filter "Name='cmd.exe' OR Name='wscript.exe' OR Name='timeout.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -and $_.CommandLine.IndexOf($SitePath, [StringComparison]::OrdinalIgnoreCase) -ge 0 } |
+        ForEach-Object { Write-Host "  قتل حلقة PID $($_.ProcessId) ($($_.Name))"; Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ٠) شروط البدء
@@ -210,8 +235,22 @@ Write-Step '٢) نسخة رجوع للقاعدة'
 if ($SkipDbBackup) {
     Write-Warn 'تُخُطّيت بطلبك (-SkipDbBackup). الرجوع لن يبطل الهجرات المطبَّقة.'
 } else {
-    $sql = "BACKUP DATABASE [$Database] TO DISK=N'$dbBackup' WITH INIT, COMPRESSION, CHECKSUM, STATS=10;"
-    & sqlcmd -S $SqlServer -E -b -Q $sql
+    # الضغط غير مدعوم على SQL Server Express (وهي نسخة خادمنا) — وطلبُه يُفشل
+    # النسخة كلّها لا يتجاهلها، فتتوقّف عملية النشر عند خطوتها الثانية.
+    # EngineEdition = 4 ⟹ Express.
+    $engineEdition = (& sqlcmd -S $SqlServer -E -C -h -1 -W -Q `
+        "SET NOCOUNT ON; SELECT CAST(SERVERPROPERTY('EngineEdition') AS int);") | Select-Object -First 1
+    $withOptions = if ("$engineEdition".Trim() -eq '4') {
+        'INIT, CHECKSUM, STATS=10'
+    } else {
+        'INIT, COMPRESSION, CHECKSUM, STATS=10'
+    }
+
+    $sql = "BACKUP DATABASE [$Database] TO DISK=N'$dbBackup' WITH $withOptions;"
+    # `-C` (ثق بشهادة الخادم) إلزاميّ مع ODBC Driver 18: صار يشفّر الاتصال افتراضاً
+    # فيرفض شهادة SQL المحليّة الموقَّعة ذاتياً — نفس ما تقوله TrustServerCertificate
+    # بسلسلة الاتصال. بدونه تفشل نسخة القاعدة ويتوقّف النشر عند خطوته الثانية.
+    & sqlcmd -S $SqlServer -E -C -b -Q $sql
     if ($LASTEXITCODE -ne 0) { throw "فشلت نسخة القاعدة (sqlcmd=$LASTEXITCODE). أُوقف النشر." }
     if (-not (Test-Path $dbBackup)) { throw "sqlcmd نجح ولا ملف نسخة على القرص: $dbBackup" }
     Write-Ok "نُسخت ← $dbBackup"
@@ -224,11 +263,7 @@ Write-Step '٣) إيقاف الموقع'
 Disable-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue | Out-Null
 Stop-ScheduledTask    -TaskName $TaskName -ErrorAction SilentlyContinue
 
-# الحلقة تعيد الإحياء، فلا يكفي إيقاف المهمة — نقتل عمليات المجلّد نفسه
-# دون غيرها حتى لا نُسقط تطبيق dotnet آخر على الخادم.
-Get-Process dotnet -ErrorAction SilentlyContinue |
-    Where-Object { $_.Path -and $_.Path.StartsWith($SitePath, [StringComparison]::OrdinalIgnoreCase) } |
-    ForEach-Object { Write-Host "  قتل PID $($_.Id)"; Stop-Process -Id $_.Id -Force }
+Stop-SiteProcesses -SitePath $SitePath
 
 Start-Sleep -Seconds 3
 if (Test-NetConnection -ComputerName localhost -Port $Port -InformationLevel Quiet -WarningAction SilentlyContinue) {
@@ -249,15 +284,39 @@ Write-Ok 'بُني'
 # ٥) نسخ يستبعد الإعدادات
 # ─────────────────────────────────────────────────────────────────────────────
 Write-Step '٥) نسخ لمجلّد الموقع'
-# /XF appsettings*.json: ملفات الإعدادات تعيش على الخادم وليست بالمستودع،
-# و/MIR بلا هذا الاستبعاد يحذفها فيفقد الموقع سلسلة الاتصال.
-robocopy $PublishDir $SitePath /MIR /XF appsettings*.json /NFL /NDL /NJH /NJS /NP | Out-Null
+# ⚠️ `/MIR` يحذف من الموقع كل ما ليس بمخرجات النشر — وعلى الخادم أشياء **يملكها
+# الخادم لا المستودع**، فتُستثنى صراحةً وإلا مُسحت بصمت:
+#   • appsettings*.json — سلسلة الاتصال والأسرار.
+#   • certs\ — شهادة Kestrel (`lan.pfx`). حذفها يعني أن التطبيق **لا يقلع أصلاً**:
+#     `DirectoryNotFoundException` عند ربط 5443، فيفشل النشر ويفشل الرجوع معه —
+#     وهو ما حدث فعلاً بنشر 2026-08-07 وأسقط الموقع.
+#   • run-*.vbs / run-*.bat — مشغّلات المهمة المجدولة. حذفها يترك المهمة تنادي
+#     ملفاً غير موجود («Can not find script file»).
+#   • App_Data و uploads — بيانات ومرفقات المستخدمين، لا مخرجات بناء.
+$preserveDirs  = @('certs', 'App_Data', 'uploads', 'logs', 'keys')
+$preserveFiles = @('appsettings*.json', 'run-*.vbs', 'run-*.bat', '*.dev-backup', '*.pfx')
+
+robocopy $PublishDir $SitePath /MIR /XD $preserveDirs /XF $preserveFiles /NFL /NDL /NJH /NJS /NP | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "فشل النسخ (robocopy=$LASTEXITCODE). ارجع: robocopy `"$backupDir`" `"$SitePath`" /MIR" }
 
 if (-not (Get-ChildItem -Path $SitePath -Filter 'appsettings*.json' -ErrorAction SilentlyContinue)) {
     throw "لا appsettings*.json بـ$SitePath بعد النسخ — لن يقلع. ارجع: robocopy `"$backupDir`" `"$SitePath`" /MIR"
 }
-Write-Ok 'نُسخ والإعدادات سليمة'
+
+# حارس ما بعد النسخ: أصولٌ يملكها الخادم وغيابها يمنع الإقلاع أو التشغيل. يُفحص
+# **هنا** لا بعد الإقلاع، لأن اكتشافها متأخراً يعني موقعاً ساقطاً ورجوعاً عاجزاً
+# عن استعادتها (نسخة الرجوع تكون قد أُخذت وهي ناقصة أصلاً).
+$mustExist = @(
+    @{ Path = Join-Path $SitePath 'certs\lan.pfx';   Why = 'شهادة Kestrel — بدونها يفشل ربط 5443 والتطبيق لا يقلع' },
+    @{ Path = Join-Path $SitePath 'run-hidden.vbs';  Why = 'مشغّل المهمة المجدولة — بدونه لا يعمل التشغيل التلقائي' }
+)
+foreach ($item in $mustExist) {
+    if (-not (Test-Path $item.Path)) {
+        throw "مفقود بعد النسخ: $($item.Path) — $($item.Why). ارجع: robocopy `"$backupDir`" `"$SitePath`" /MIR"
+    }
+}
+
+Write-Ok 'نُسخ والإعدادات وأصول الخادم سليمة'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ٦) تشغيل ثم قياس
@@ -281,9 +340,7 @@ if (-not $ready) {
     Write-Warn 'المخارج: ForceHttps=true · ReverseProxy:Enabled=true · Security:AllowInsecureCookies=true'
 
     Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-    Get-Process dotnet -ErrorAction SilentlyContinue |
-        Where-Object { $_.Path -and $_.Path.StartsWith($SitePath, [StringComparison]::OrdinalIgnoreCase) } |
-        Stop-Process -Force -ErrorAction SilentlyContinue
+    Stop-SiteProcesses -SitePath $SitePath
     robocopy $backupDir $SitePath /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
     Start-ScheduledTask -TaskName $TaskName
 

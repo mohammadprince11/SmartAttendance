@@ -103,15 +103,20 @@ END;
     }
 
     /// <summary>الموظفون النشطون مع راتبهم الأساسي الحالي (لمنتقي النموذج ومعاينة الزيادة).</summary>
-    public static async Task<List<EmployeeBasic>> EmployeeBasicsAsync(ApplicationDbContext db)
+    /// <summary>منتقي الموظفين — بنطاق الشركات (تسريب الـlookup يكشف هيكل شركة أخرى وراتبها الأساسي).</summary>
+    public static async Task<List<EmployeeBasic>> EmployeeBasicsAsync(
+        ApplicationDbContext db, Security.CompanyScope scope)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<EmployeeBasic>();
         await EnsureAsync(db);
-        return await HrmsDatabase.QueryAsync(db, """
+        return await HrmsDatabase.QueryAsync(db, $"""
 SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
        ISNULL(f.BasicSalary, 0) AS BasicSalary
 FROM Employees e
 LEFT JOIN EmployeeFinancialInfos f ON f.EmployeeId = e.Id AND ISNULL(f.IsDeleted,0) = 0
 WHERE ISNULL(e.IsDeleted,0) = 0 AND ISNULL(e.IsActive,1) = 1
+  AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY e.FullName;
 """,
             null,
@@ -237,10 +242,13 @@ VALUES
 
     /// <summary>قائمة الطلبات المالية للمركز، مع فلاتر النوع/الحالة/البحث.</summary>
     public static async Task<List<Row>> ListAsync(
-        ApplicationDbContext db, string? kind = null, string? status = null, string? search = null)
+        ApplicationDbContext db, Security.CompanyScope scope,
+        string? kind = null, string? status = null, string? search = null)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<Row>();
         await EnsureAsync(db);
-        var rows = await HrmsDatabase.QueryAsync(db, """
+        var rows = await HrmsDatabase.QueryAsync(db, $"""
 SELECT r.Id AS RequestId, r.EmployeeId, r.RequestType, ISNULL(r.Status,'Pending') AS Status,
        ISNULL(r.CurrentStep,'') AS CurrentStep, r.CreatedAt,
        ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
@@ -251,6 +259,7 @@ FROM FinancialRequestDetails f
 INNER JOIN SelfServiceRequests r ON r.Id = f.RequestId
 INNER JOIN Employees e ON e.Id = r.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
+WHERE {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY r.CreatedAt DESC;
 """,
             null,
@@ -332,7 +341,10 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
             case Loan:
             case Advance:
             {
-                var loanId = await LoanStore.SaveAsync(db, new LoanStore.Loan_
+                // مسارٌ داخليّ بعد اعتماد الطلب: التخويل حُسم بمسار الاعتماد (يُفحَص
+                // بالنطاق)، والموظف هنا من صفّ الطلب المعتمَد لا من مدخل مستخدم —
+                // فالنطاق غير مقيَّد عمداً كي لا يُرفَض تطبيقُ طلبٍ اعتُمد بحقّه.
+                var loanId = await LoanStore.SaveAsync(db, Security.CompanyScope.Unrestricted(), new LoanStore.Loan_
                 {
                     EmployeeId = employeeId,
                     LoanType = detail.Kind == Advance ? LoanStore.Advance : LoanStore.Loan,
@@ -381,7 +393,11 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
                     ? Math.Round(oldBasic * (1 + detail.Amount / 100m), 2)
                     : oldBasic + detail.Amount;
 
-                var raiseId = await SalaryRaiseStore.SaveAsync(db, new SalaryRaiseStore.Raise
+                // تطبيق داخلي بعد اعتماد الطلب المالي: معرّف الموظف من صفّ الطلب المُعتمَد
+                // (لا من المتصفح) وقد مرّ بعزل الطلبات المالية عند السرد/الاعتماد، فالنطاق
+                // هنا غير مقيَّد عمداً (نمط المسارات الداخلية الموثوقة).
+                var internalScope = Security.CompanyScope.Unrestricted();
+                var raiseId = await SalaryRaiseStore.SaveAsync(db, internalScope, new SalaryRaiseStore.Raise
                 {
                     EmployeeId = employeeId,
                     OldBasic = oldBasic,
@@ -393,7 +409,7 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
                     Note = $"من طلب مالي #{requestId}",
                     Status = "Approved"
                 }, actor);
-                await SalaryRaiseStore.ApplyAsync(db, raiseId, actor);
+                await SalaryRaiseStore.ApplyAsync(db, internalScope, raiseId, actor);
                 refId = raiseId;
                 effect = $"زيادة راتب معتمدة (#{raiseId}) — الأساسي {oldBasic:0.##} ← {newBasic:0.##}";
                 break;

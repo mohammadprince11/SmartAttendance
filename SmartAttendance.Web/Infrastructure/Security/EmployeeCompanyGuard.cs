@@ -97,6 +97,12 @@ public static class EmployeeCompanyGuard
     {
         public const string EmployeeLoans = "EmployeeLoans";
         public const string SelfServiceRequests = "SelfServiceRequests";
+        public const string MissingPunchRequests = "MissingPunchRequests";
+        public const string EmployeeContracts = "EmployeeContracts";
+        public const string EmployeeContractMovements = "EmployeeContractMovements";
+        public const string EmployeeEndOfService = "EmployeeEndOfService";
+        public const string EmployeeSalaryRaises = "EmployeeSalaryRaises";
+        public const string AttendanceRecords = "AttendanceRecords";
     }
 
     /// <summary>

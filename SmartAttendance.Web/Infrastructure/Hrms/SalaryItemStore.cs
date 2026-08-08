@@ -27,17 +27,14 @@ public static class SalaryItemStore
         ("PerEmployee", "لكل موظف (من ملفه المالي)")
     };
 
-    /// <summary>متغيّرات المعادلة المتاحة ببوابة المعادلة (مفتاح ← تسمية) — تُعرض كرقاقات قابلة للإدراج.</summary>
+    /// <summary>
+    /// متغيّرات المعادلة المتاحة ببوابة المعادلة (مفتاح ← تسمية) — تُعرض كرقاقات
+    /// قابلة للإدراج. <b>مشتقّة من <see cref="PayrollFormulaVariables.Catalog"/>
+    /// لا مكتوبة يدوياً</b>: قائمةٌ موازية تعني أن تُعرض للمستخدم رقاقةٌ لا
+    /// يعرفها المسير (أو العكس).
+    /// </summary>
     public static readonly (string Key, string Label)[] FormulaVars =
-    {
-        ("Basic", "الراتب الأساسي"),
-        ("Allowances", "إجمالي العلاوات"),
-        ("Gross", "الراتب الإجمالي"),
-        ("Hours", "عدد الساعات"),
-        ("Days", "عدد الأيام"),
-        ("DailyRate", "الأجر اليومي"),
-        ("HourlyRate", "الأجر الساعي"),
-    };
+        PayrollFormulaVariables.Catalog.Select(v => (v.Key, v.Label)).ToArray();
 
     public static string LabelOf((string Key, string Label)[] list, string key) =>
         list.FirstOrDefault(x => x.Key == key).Label ?? key;

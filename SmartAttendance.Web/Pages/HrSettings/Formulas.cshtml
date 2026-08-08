@@ -47,6 +47,11 @@
                 {
                     <span class="zyp-rank" style="min-width:auto;padding:4px 10px" title="@label">@key</span>
                 }
+                @foreach (var c in Model.Constants.Where(c => c.IsActive))
+                {
+                    <span class="zyp-rank" style="min-width:auto;padding:4px 10px;border-style:dashed"
+                          title="@c.Name — ثابت مسمّى = @SmartAttendance.Web.Infrastructure.Hrms.SalaryConstantStore.Format(c.Value)">@c.Key</span>
+                }
             </div>
             <p class="zyp-hint" style="margin-top:8px">
                 والدوال: <code>ROUND(x[,n])</code> · <code>MIN(..)</code> · <code>MAX(..)</code> ·
@@ -174,6 +179,80 @@
                                         <button type="submit" data-zyconfirm="حذف الصيغة من المكتبة؟">حذف</button>
                                     </form>
                                 </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @*
+        القيم الثابتة المسمّاة — نظير «قيم ثابتة» بكيان. بدونها يُكتب الرقم السحري
+        (الحد الأدنى للأجور · سقف راتب الضمان) داخل كل صيغة على حدة، فتغييره يعني
+        تتبّع عشرات الصيغ يدوياً وأيّ صيغةٍ تُنسى تبقى تحسب بالقديم بصمت.
+    *@
+    <div class="nxhs-panel">
+        <header>
+            <span>الثوابت</span>
+            <h2>القيم الثابتة المسمّاة</h2>
+            <p class="zyp-hint">
+                تُستعمل داخل أي صيغة باسمها. المفتاح <b>حروف إنجليزية فقط</b> بلا أرقام
+                أو فراغات — هذا قيد مُقيِّم الصيغ لا اختياراً.
+            </p>
+        </header>
+
+        <form method="post" asp-page-handler="SaveConstant" class="zyp-editor-grid" style="margin-bottom:16px">
+            <label>
+                <span>المفتاح</span>
+                <input asp-for="ConstantKey" dir="ltr" placeholder="MinimumWage" />
+            </label>
+            <label>
+                <span>الاسم</span>
+                <input asp-for="ConstantName" placeholder="الحد الأدنى للأجور" />
+            </label>
+            <label>
+                <span>القيمة</span>
+                <input asp-for="ConstantValue" type="number" step="0.0001" dir="ltr" />
+            </label>
+            <label>
+                <span>ملاحظة</span>
+                <input asp-for="ConstantNote" placeholder="مرجع القرار أو تاريخ السريان" />
+            </label>
+            <div class="zyp-actions" style="align-self:end">
+                <button type="submit" class="zy-btn">حفظ الثابت</button>
+            </div>
+        </form>
+
+        @if (Model.Constants.Count == 0)
+        {
+            <p class="zyc-empty">لا ثوابت معرَّفة بعد.</p>
+        }
+        else
+        {
+            <table class="zyp-table">
+                <thead>
+                    <tr>
+                        <th>المفتاح</th>
+                        <th>الاسم</th>
+                        <th>القيمة</th>
+                        <th>ملاحظة</th>
+                        <th style="width:90px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model.Constants)
+                    {
+                        <tr class="@(c.IsActive ? "" : "zyp-inactive")">
+                            <td dir="ltr" style="font-family:ui-monospace,monospace"><b>@c.Key</b></td>
+                            <td>@c.Name</td>
+                            <td dir="ltr">@SmartAttendance.Web.Infrastructure.Hrms.SalaryConstantStore.Format(c.Value)</td>
+                            <td class="zyp-conditions">@c.Note</td>
+                            <td>
+                                <form method="post" asp-page-handler="DeleteConstant" style="display:inline">
+                                    <input type="hidden" name="id" value="@c.Id" />
+                                    <button type="submit" data-zyconfirm="حذف الثابت؟ الصيغ التي تستعمله ستفشل.">حذف</button>
+                                </form>
                             </td>
                         </tr>
                     }
