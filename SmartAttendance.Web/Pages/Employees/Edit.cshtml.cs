@@ -154,6 +154,31 @@ public class EditModel : PageModel
 
         Employee.DirectManagerId = DirectManagerId;
 
+        // P0-7 — الارتباط الوظيفي (موقع العمل · القسم · المنصب · المدير المباشر) بيانٌ
+        // تنظيميّ حسّاس: نقلُ موظفٍ بين الجهات يتطلّب صلاحية People.ChangeAssignment لا
+        // مجرّد People.Edit. الفحص هنا (سيرفر) لا بالواجهة: نقارن القيم المُرسَلة بالقيم
+        // المخزَّنة، وإن تغيّر أيّ حقل إسناد ولم يملك المستخدم الصلاحية نرفض قبل الحفظ.
+        var current = await _dbContext.Employees
+            .AsNoTracking()
+            .Where(x => x.Id == Employee.Id)
+            .Select(x => new { x.BranchId, x.DepartmentId, x.PositionId, x.DirectManagerId })
+            .FirstOrDefaultAsync();
+
+        if (current is not null)
+        {
+            var assignmentChanged =
+                current.BranchId != Employee.BranchId ||
+                current.DepartmentId != Employee.DepartmentId ||
+                current.PositionId != Employee.PositionId ||
+                current.DirectManagerId != Employee.DirectManagerId;
+
+            if (assignmentChanged && !await CanChangeAssignmentAsync(Employee.Id))
+            {
+                ErrorMessage = "تغيير الارتباط الوظيفي (موقع العمل أو القسم أو المنصب أو المدير المباشر) يتطلّب صلاحية «تغيير الارتباط الوظيفي».";
+                return Page();
+            }
+        }
+
         // بيانات الموظف والمدير المباشر والحقول الديناميكية تُحفظ ضمن معاملة واحدة؛
         // حفظ الصورة (عملية ملفات) يبقى خارجها حتى لا يؤثر فشله على البيانات.
         await using (var transaction = await _dbContext.Database.BeginTransactionAsync())
@@ -217,6 +242,22 @@ public class EditModel : PageModel
             PeoplePermissionCodes.Edit,
             employeeId,
             PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.Edit),
+            HttpContext.RequestAborted);
+    }
+
+    // P0-7 — بوّابة تغيير الارتباط الوظيفي: نفس مسار CanAccessEmployeeAsync لكن برمز
+    // ChangeAssignment، والتوافقية تمنعه لغير (Admin · HR Manager) — فالنقل التنظيمي
+    // يتطلّب تخصيصاً صريحاً بأدوار الوصول (P0-3).
+    private Task<bool> CanChangeAssignmentAsync(int employeeId)
+    {
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        var role = PeopleAccessContext.GetRole(HttpContext);
+
+        return _permissionAuthorizationService.CanAccessEmployeeAsync(
+            systemUserId,
+            PeoplePermissionCodes.ChangeAssignment,
+            employeeId,
+            PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.ChangeAssignment),
             HttpContext.RequestAborted);
     }
 
