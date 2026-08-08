@@ -176,7 +176,7 @@ public class IndexModel : PageModel
         CutoffPeriod = await ResolvePeriodAsync(year, month);
 
         var all = await DayAttendanceStore.ListRangeAsync(
-            _dbContext, CutoffPeriod.From, CutoffPeriod.To, Search);
+            _dbContext, await _companyScope.GetAsync(), CutoffPeriod.From, CutoffPeriod.To, Search);
         PresentCount = all.Count(r => r.Status == "Present");
         LateCount = all.Count(r => r.Status == "Late");
         AbsentCount = all.Count(r => r.Status == "Absent");
@@ -376,8 +376,9 @@ public class IndexModel : PageModel
         var period = await ResolvePeriodAsync(year, month);
 
         // نفس القراءة والفلترة اللتين بنتا الشاشة — فالمُشعَرون هم المعروضون حرفياً.
+        // وبنفس النطاق أيضاً (P0-5): زرّ الإشعار كان يبني قائمته بلا نطاق شركة.
         var rows = await DayAttendanceStore.ListRangeAsync(
-            _dbContext, period.From, period.To, Search);
+            _dbContext, await _companyScope.GetAsync(), period.From, period.To, Search);
 
         var employeeIds = ApplyStatusFilter(rows)
             .Select(row => row.EmployeeId)

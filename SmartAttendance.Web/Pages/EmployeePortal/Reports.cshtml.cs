@@ -94,11 +94,27 @@ public class ReportsModel : PageModel
             Columns = dataset.Columns.ToList();
         }
 
+        // نطاق البوابة = شركة الموظف نفسه: لا يقرأ مصدرُ الحضور صفوف شركات أخرى
+        // حتى قبل ترشيح «صفوفي أنا» بالأسفل. موظف بلا شركة ⟹ مغلق الفشل.
+        var companyId = (await SmartAttendance.Web.Infrastructure.Hrms.HrmsDatabase.QueryAsync(
+            _dbContext,
+            "SELECT CompanyId FROM Employees WHERE Id = @Id;",
+            command => SmartAttendance.Web.Infrastructure.Hrms.HrmsDatabase.AddParameter(
+                command, "@Id", employee.Value.Id),
+            reader => SmartAttendance.Web.Infrastructure.Hrms.HrmsDatabase.GetNullableInt(
+                reader, "CompanyId"))).FirstOrDefault();
+
         var rows = await PeopleReportCatalog.LoadAsync(
             _dbContext,
             Current.DatasetKey,
             Current.FilterKey,
-            new PeopleReportCatalog.ReportFilters { ActiveOnly = false });
+            new PeopleReportCatalog.ReportFilters
+            {
+                ActiveOnly = false,
+                Scope = companyId is > 0
+                    ? SmartAttendance.Web.Infrastructure.Security.CompanyScope.ForCompanies(new[] { companyId.Value })
+                    : SmartAttendance.Web.Infrastructure.Security.CompanyScope.DeniedAll()
+            });
 
         Rows = rows
             .Where(row => string.Equals(

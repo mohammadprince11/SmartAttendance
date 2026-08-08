@@ -13,9 +13,14 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _db;
 
-    public IndexModel(ApplicationDbContext db)
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
+    public IndexModel(
+        ApplicationDbContext db,
+        SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)] public string EvalPeriodType { get; set; } = "Month";
@@ -61,7 +66,7 @@ public class IndexModel : PageModel
 
         if (DidEvaluate)
         {
-            Matches = await PeriodRuleStore.EvaluateAsync(_db, EvalPeriodType, year, period);
+            Matches = await PeriodRuleStore.EvaluateAsync(_db, await _companyScope.GetAsync(), EvalPeriodType, year, period);
         }
     }
 

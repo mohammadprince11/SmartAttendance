@@ -614,9 +614,18 @@ WHERE d.WorkDate >= @From AND d.WorkDate <= @To
     /// ويعيد اشتقاق التأخير/الخروج المبكر/الساعات/الحالة بمناوبة اليوم نفسها. يتطلب
     /// وجود يومية محللة مسبقاً (لمعرفة المناوبة ونوع اليوم).
     /// </summary>
+    /// <param name="scope">
+    /// نطاق شركات المستخدم — إلزامي (P0-3): <c>employeeId</c> يأتي من المتصفّح،
+    /// وكان يُقبل بلا إثبات ملكية، فمستخدم شركةٍ يعدّل حضور موظف بشركة أخرى
+    /// بتغيير رقمٍ بالطلب. الحارس <see cref="EmployeeCompanyGuard"/> موجود منذ
+    /// زمن ويُستهلك بالرواتب — هنا صار على المسار أيضاً. مغلق الفشل.
+    /// </param>
     public static async Task<bool> UpdateDayAsync(
-        ApplicationDbContext dbContext, int employeeId, DateOnly date, DateTime? checkIn, DateTime? checkOut)
+        ApplicationDbContext dbContext, CompanyScope scope, int employeeId, DateOnly date, DateTime? checkIn, DateTime? checkOut)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (!await EmployeeCompanyGuard.CanAccessEmployeeAsync(dbContext, employeeId, scope)) return false;
+
         await EnsureAsync(dbContext);
 
         var existing = (await HrmsDatabase.QueryAsync(
@@ -1037,10 +1046,10 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
     }
 
     public static Task<List<DayRow>> ListAsync(
-        ApplicationDbContext dbContext, int year, int month, string? search)
+        ApplicationDbContext dbContext, CompanyScope scope, int year, int month, string? search)
     {
         var from = new DateOnly(year, month, 1);
-        return ListRangeAsync(dbContext, from, from.AddMonths(1).AddDays(-1), search);
+        return ListRangeAsync(dbContext, scope, from, from.AddMonths(1).AddDays(-1), search);
     }
 
     /// <summary>يوميات مدى تواريخ حر — تغذّي شاشة «إدارة الحضور» من المحرك الرسمي.</summary>
@@ -1057,17 +1066,35 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
     /// </summary>
     public static Task<List<DayRow>> ListForEmployeeAsync(
         ApplicationDbContext dbContext, int employeeId, DateOnly from, DateOnly to) =>
-        ListRangeAsync(dbContext, from, to, search: null, employeeId: employeeId);
+        // نطاق غير مقيَّد **عمداً لا سهواً**: المسار ذاتيّ — بوابة الموبايل تشتق
+        // employeeId من التوكن لا من الطلب، وشرط الموظف الواحد أضيق من أي شرط
+        // شركة. تمرير نطاق شركةٍ هنا كان سيتطلّب استعلاماً إضافياً بلا أثر أمنيّ.
+        ListRangeAsync(dbContext, CompanyScope.Unrestricted(), from, to, search: null, employeeId: employeeId);
 
+    /// <param name="scope">
+    /// نطاق شركات المستخدم — <b>إلزامي بلا قيمة افتراضية</b> (P0-4 بدراسة العزل):
+    /// كانت القراءة تعيد يوميات كل الشركات، وتتغذّى منها شاشات الحضور اليومي
+    /// والعارض والعمليات والداشبورد **وزرّ الإشعار** (P0-5) — فكان يُرسل لموظفي
+    /// شركاتٍ أخرى. الوصل بـ<c>Employees</c> قائم أصلاً فالشرط يُحقن عليه.
+    /// </param>
     public static async Task<List<DayRow>> ListRangeAsync(
-        ApplicationDbContext dbContext, DateOnly from, DateOnly to, string? search,
+        ApplicationDbContext dbContext, CompanyScope scope, DateOnly from, DateOnly to, string? search,
         int? employeeId = null)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<DayRow>();
+
         await EnsureAsync(dbContext);
 
         // الترشيح بالموظف يقع بالـSQL: النداء العام يمرّر null فيبقى الاستعلام حرفياً
         // كما كان (صفر تغيير على الشاشات)، والنداء المفرد يضيف شرطاً مُوسَّطاً.
         var employeeClause = employeeId is > 0 ? " AND d.EmployeeId = @Employee" : string.Empty;
+
+        // شرط الشركة على الوصل القائم. غير المقيَّد لا يضيف شيئاً — نصّ الاستعلام
+        // يبقى حرفياً كما كان للأدمن، فسلوكه القديم مثبَت لا مكافَأ.
+        var companyClause = scope.IsUnrestricted
+            ? string.Empty
+            : $" AND {scope.ToSqlPredicate("e.CompanyId")}";
 
         // SQL يترجم الاستعلام كاملاً، فذكرُ جدولٍ غير موجود يفشل حتى داخل شرطٍ
         // معطّل. لذلك يُدرَج جزء الخدمة الذاتية **نصّياً** بعد التأكد من وجوده.
@@ -1118,7 +1145,7 @@ SELECT d.*, e.EmployeeNo, e.FullName, s.Name AS ShiftName, s.ColorHex AS ShiftCo
 FROM DayAttendances d
 INNER JOIN Employees e ON e.Id = d.EmployeeId
 LEFT JOIN ShiftTypes s ON s.Id = d.ShiftTypeId
-WHERE d.WorkDate >= @From AND d.WorkDate <= @To{employeeClause}
+WHERE d.WorkDate >= @From AND d.WorkDate <= @To{employeeClause}{companyClause}
 ORDER BY e.EmployeeNo, d.WorkDate;
 """,
             command =>

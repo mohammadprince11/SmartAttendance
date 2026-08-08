@@ -16,12 +16,15 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender _push;
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
 
     public IndexModel(ApplicationDbContext dbContext,
-        SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender push)
+        SmartAttendance.Web.Infrastructure.Notifications.IWebPushSender push,
+        SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
         _push = push;
+        _companyScope = companyScope;
     }
 
     [Microsoft.AspNetCore.Mvc.BindProperty(SupportsGet = true)]
@@ -128,7 +131,7 @@ public class IndexModel : PageModel
         await LoadLookupsAsync();
 
         var all = await DayAttendanceStore.ListRangeAsync(
-            _dbContext, CutoffPeriod.From, CutoffPeriod.To, Search);
+            _dbContext, await _companyScope.GetAsync(), CutoffPeriod.From, CutoffPeriod.To, Search);
 
         // فلتر سمات الموظف: نجلب معرّفات الموظفين المطابقين ونقصر المصفوفة عليهم
         if (HasFilter)
@@ -208,10 +211,12 @@ public class IndexModel : PageModel
         }
         else
         {
-            var ok = await DayAttendanceStore.UpdateDayAsync(_dbContext, empId, date, checkIn, checkOut);
+            // empId من المتصفّح — الحارس داخل UpdateDayAsync يرفض موظفاً خارج النطاق.
+            var ok = await DayAttendanceStore.UpdateDayAsync(
+                _dbContext, await _companyScope.GetAsync(), empId, date, checkIn, checkOut);
             TempData["SuccessMessage"] = ok
                 ? $"تم تعديل حضور {date:yyyy-MM-dd}."
-                : "تعذّر التعديل — لا يومية محللة لهذا اليوم (شغّل «تحديث الحضور» أولاً).";
+                : "تعذّر التعديل — الموظف خارج نطاقك أو لا يومية محللة لهذا اليوم (شغّل «تحديث الحضور» أولاً).";
         }
         return RedirectToPage(RouteValues());
     }

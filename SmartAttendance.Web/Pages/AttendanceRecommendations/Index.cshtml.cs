@@ -14,9 +14,14 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -202,7 +207,7 @@ public class IndexModel : PageModel
         foreach (var (coveredYear, coveredMonth) in period.CoveredMonths())
         {
             var (monthCreated, monthAuto) =
-                await RecommendationStore.AnalyzeMonthAsync(_dbContext, coveredYear, coveredMonth);
+                await RecommendationStore.AnalyzeMonthAsync(_dbContext, await _companyScope.GetAsync(), coveredYear, coveredMonth);
             created += monthCreated;
             auto += monthAuto;
         }

@@ -26,6 +26,14 @@ public static class PeopleReportCatalog
 
     public sealed class ReportFilters
     {
+        /// <summary>
+        /// نطاق شركات المستخدم لمصادر الحضور — مغلق الفشل: <c>null</c> يعني
+        /// «لم يُمرَّر نطاق» فتعيد مصادر الحضور صفراً من الصفوف، لا كل الشركات.
+        /// (المستهلكون: صفحة التقارير تمرّر نطاق المستخدم، وبوابة الموظف نطاق
+        /// شركته هو.)
+        /// </summary>
+        public Security.CompanyScope? Scope { get; set; }
+
         public int? CompanyId { get; set; }
         public string? Search { get; set; }
         public bool ActiveOnly { get; set; }
@@ -345,7 +353,8 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, ReportFilters f)
     {
         var (from, to) = AttendanceRange(f);
-        var rows = await DayAttendanceStore.ListRangeAsync(db, from, to, f.Search);
+        var rows = await DayAttendanceStore.ListRangeAsync(
+            db, f.Scope ?? Security.CompanyScope.DeniedAll(), from, to, f.Search);
 
         return rows.Select(r => new Dictionary<string, string>
         {
@@ -368,7 +377,8 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, ReportFilters f)
     {
         var (from, to) = AttendanceRange(f);
-        var rows = await DayAttendanceStore.ListRangeAsync(db, from, to, f.Search);
+        var rows = await DayAttendanceStore.ListRangeAsync(
+            db, f.Scope ?? Security.CompanyScope.DeniedAll(), from, to, f.Search);
 
         return rows
             .GroupBy(r => (r.EmployeeId, r.EmployeeNo, r.EmployeeName))

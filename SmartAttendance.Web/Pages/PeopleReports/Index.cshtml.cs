@@ -11,9 +11,14 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     // ---- Run parameters ----
@@ -116,6 +121,7 @@ public class IndexModel : PageModel
         var reports = SystemReports.Concat(MyReports).Concat(SharedReports).ToList();
         var filters = new PeopleReportCatalog.ReportFilters
         {
+            Scope = await _companyScope.GetAsync(),
             CompanyId = CompanyId,
             ActiveOnly = ActiveOnly,
             From = ParseDate(From),
@@ -361,6 +367,7 @@ public class IndexModel : PageModel
             report.FilterKey,
             new PeopleReportCatalog.ReportFilters
             {
+                Scope = await _companyScope.GetAsync(),
                 CompanyId = CompanyId,
                 Search = Search,
                 ActiveOnly = ActiveOnly,

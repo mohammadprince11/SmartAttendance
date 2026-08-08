@@ -26,16 +26,20 @@ public class IndexModel : PageModel
     private readonly IAttendanceImportService _attendanceImportService;
     private readonly IWebHostEnvironment _environment;
 
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
     public IndexModel(
         ApplicationDbContext dbContext,
         IAttendanceProcessingService attendanceProcessingService,
         IAttendanceImportService attendanceImportService,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
         _attendanceProcessingService = attendanceProcessingService;
         _attendanceImportService = attendanceImportService;
         _environment = environment;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -619,7 +623,8 @@ WHERE EmployeeId = @EmployeeId AND AttendanceDate = @Date
 
         var day = derived.FirstOrDefault();
         var reDerived = day != null &&
-            await DayAttendanceStore.UpdateDayAsync(_dbContext, employeeId, date, day.FirstIn, day.LastOut);
+            await DayAttendanceStore.UpdateDayAsync(
+                _dbContext, await _companyScope.GetAsync(), employeeId, date, day.FirstIn, day.LastOut);
 
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
@@ -892,7 +897,7 @@ WHERE ar.AttendanceDate >= @FromDate
         // ما سُجِّل (قسم 35). الأيام غير المحلّلة تبقى بقراءة المحرك القديم حتى لا
         // يختفي موظف من الكشف، ومع تنبيه صريح بأنها قراءة أولية.
         var dayRows = await DayAttendanceStore.ListRangeAsync(
-            _dbContext, ProcessFromDate.Value, ProcessToDate.Value, null);
+            _dbContext, await _companyScope.GetAsync(), ProcessFromDate.Value, ProcessToDate.Value, null);
 
         var official = dayRows.ToDictionary(
             r => BuildAttendanceNoteKey(r.EmployeeNo, r.WorkDate),

@@ -14,9 +14,14 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -85,7 +90,7 @@ public class IndexModel : PageModel
         // تُحفظ معلّقة بشاشة «الإجراءات المقترحة» (لا تنفيذ تلقائي — راجع AnalyzePeriodAsync).
         var suggested = count == 0
             ? 0
-            : await RecommendationStore.AnalyzePeriodAsync(_dbContext, "Month", year, month);
+            : await RecommendationStore.AnalyzePeriodAsync(_dbContext, await _companyScope.GetAsync(), "Month", year, month);
 
         TempData["SuccessMessage"] = count == 0
             ? "لا يوميات محللة لهذا الشهر — شغّل «تحديث الحضور» أولاً."

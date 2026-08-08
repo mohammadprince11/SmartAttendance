@@ -100,7 +100,7 @@ IF COL_LENGTH('AttendanceRecommendations', 'TransactionId') IS NULL
     /// </summary>
     /// <returns>(مقترحة جديدة، منها تلقائية معتمدة)</returns>
     public static async Task<(int Created, int Auto)> AnalyzeMonthAsync(
-        ApplicationDbContext dbContext, int year, int month)
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int year, int month)
     {
         await EnsureAsync(dbContext);
 
@@ -108,7 +108,7 @@ IF COL_LENGTH('AttendanceRecommendations', 'TransactionId') IS NULL
         // إحداهما لا يعطّل الأخرى.
         var rules = (await ShiftRuleStore.ListAsync(dbContext)).Where(r => r.IsActive).ToList();
 
-        var days = await DayAttendanceStore.ListAsync(dbContext, year, month, null);
+        var days = await DayAttendanceStore.ListAsync(dbContext, scope, year, month, null);
         var shiftList = await ShiftTypeStore.ListAsync(dbContext);
         var shifts = shiftList.ToDictionary(s => s.Id, s => s.Days.ToDictionary(d => d.DayIndex));
         var shiftById = shiftList.ToDictionary(s => s.Id);
@@ -603,11 +603,11 @@ GROUP BY EmployeeId, RuleId;
     /// </summary>
     /// <returns>عدد الاقتراحات الجديدة.</returns>
     public static async Task<int> AnalyzePeriodAsync(
-        ApplicationDbContext dbContext, string periodType, int year, int period)
+        ApplicationDbContext dbContext, Security.CompanyScope scope, string periodType, int year, int period)
     {
         await EnsureAsync(dbContext);
 
-        var matches = await PeriodRuleStore.EvaluateAsync(dbContext, periodType, year, period);
+        var matches = await PeriodRuleStore.EvaluateAsync(dbContext, scope, periodType, year, period);
         if (matches.Count == 0) return 0;
 
         var anchor = PeriodRuleStore.PeriodAnchorDate(periodType, year, period);

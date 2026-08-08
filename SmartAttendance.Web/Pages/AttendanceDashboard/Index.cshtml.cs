@@ -17,9 +17,14 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -74,7 +79,7 @@ public class IndexModel : PageModel
             await AttendancePeriodPolicy.ResolveFromPolicyAsync(_dbContext, year, month);
 
         var days = await DayAttendanceStore.ListRangeAsync(
-            _dbContext, CutoffPeriod.From, CutoffPeriod.To, search: null);
+            _dbContext, await _companyScope.GetAsync(), CutoffPeriod.From, CutoffPeriod.To, search: null);
 
         if (days.Count == 0) return;
 
