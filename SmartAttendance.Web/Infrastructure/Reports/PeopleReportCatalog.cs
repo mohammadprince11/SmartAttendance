@@ -407,6 +407,15 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, string? filterKey, ReportFilters f)
     {
         var q = db.Employees.AsNoTracking().Where(e => !e.IsDeleted);
+        // عزل الشركات (P1 بدراسة العزل): مصدر التقرير يُرشَّح بنطاق المستخدم قبل
+        // أي مرشّح آخر. غير المقيَّد يمرّ، والمقيَّد يرى شركاته وصفوفها المنسوبة فقط.
+        var reportScope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        if (reportScope.IsDeniedAll) return new List<Dictionary<string, string>>();
+        if (!reportScope.IsUnrestricted)
+        {
+            var allowedCompanies = reportScope.AllowedCompanyIds.ToList();
+            q = q.Where(x => x.CompanyId != null && allowedCompanies.Contains(x.CompanyId.Value));
+        }
         if (f.ActiveOnly) q = q.Where(e => e.IsActive);
         if (f.CompanyId.HasValue) q = q.Where(e => e.Branch.CompanyId == f.CompanyId.Value);
         if (!string.IsNullOrWhiteSpace(f.Search))
@@ -481,6 +490,15 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, string? filterKey, ReportFilters f)
     {
         var q = db.EmployeeDependents.AsNoTracking().Where(d => !d.Employee.IsDeleted);
+        // عزل الشركات (P1 بدراسة العزل): مصدر التقرير يُرشَّح بنطاق المستخدم قبل
+        // أي مرشّح آخر. غير المقيَّد يمرّ، والمقيَّد يرى شركاته وصفوفها المنسوبة فقط.
+        var reportScope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        if (reportScope.IsDeniedAll) return new List<Dictionary<string, string>>();
+        if (!reportScope.IsUnrestricted)
+        {
+            var allowedCompanies = reportScope.AllowedCompanyIds.ToList();
+            q = q.Where(x => x.Employee.CompanyId != null && allowedCompanies.Contains(x.Employee.CompanyId.Value));
+        }
         if (f.ActiveOnly) q = q.Where(d => d.Employee.IsActive);
         if (f.CompanyId.HasValue) q = q.Where(d => d.Employee.Branch.CompanyId == f.CompanyId.Value);
         if (!string.IsNullOrWhiteSpace(f.Search))
@@ -543,6 +561,15 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, string? filterKey, ReportFilters f)
     {
         var q = db.EmployeeFileRecords.AsNoTracking().Where(r => !r.Employee.IsDeleted);
+        // عزل الشركات (P1 بدراسة العزل): مصدر التقرير يُرشَّح بنطاق المستخدم قبل
+        // أي مرشّح آخر. غير المقيَّد يمرّ، والمقيَّد يرى شركاته وصفوفها المنسوبة فقط.
+        var reportScope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        if (reportScope.IsDeniedAll) return new List<Dictionary<string, string>>();
+        if (!reportScope.IsUnrestricted)
+        {
+            var allowedCompanies = reportScope.AllowedCompanyIds.ToList();
+            q = q.Where(x => x.Employee.CompanyId != null && allowedCompanies.Contains(x.Employee.CompanyId.Value));
+        }
         if (f.ActiveOnly) q = q.Where(r => r.Employee.IsActive);
         if (f.CompanyId.HasValue) q = q.Where(r => r.Employee.Branch.CompanyId == f.CompanyId.Value);
         if (!string.IsNullOrWhiteSpace(f.Search))
@@ -790,6 +817,15 @@ ORDER BY e.FullName, d.UploadedAt DESC;
         ApplicationDbContext db, ReportFilters f)
     {
         var q = db.LeaveRequests.AsNoTracking().Where(l => !l.Employee.IsDeleted);
+        // عزل الشركات (P1 بدراسة العزل): مصدر التقرير يُرشَّح بنطاق المستخدم قبل
+        // أي مرشّح آخر. غير المقيَّد يمرّ، والمقيَّد يرى شركاته وصفوفها المنسوبة فقط.
+        var reportScope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        if (reportScope.IsDeniedAll) return new List<Dictionary<string, string>>();
+        if (!reportScope.IsUnrestricted)
+        {
+            var allowedCompanies = reportScope.AllowedCompanyIds.ToList();
+            q = q.Where(x => x.Employee.CompanyId != null && allowedCompanies.Contains(x.Employee.CompanyId.Value));
+        }
         if (f.ActiveOnly) q = q.Where(l => l.Employee.IsActive);
         if (f.CompanyId.HasValue) q = q.Where(l => l.Employee.Branch.CompanyId == f.CompanyId.Value);
         if (!string.IsNullOrWhiteSpace(f.Search))
@@ -838,6 +874,15 @@ ORDER BY e.FullName, d.UploadedAt DESC;
         ApplicationDbContext db, ReportFilters f)
     {
         var q = db.EmployeeViolationCases.AsNoTracking().Where(v => !v.Employee.IsDeleted);
+        // عزل الشركات (P1 بدراسة العزل): مصدر التقرير يُرشَّح بنطاق المستخدم قبل
+        // أي مرشّح آخر. غير المقيَّد يمرّ، والمقيَّد يرى شركاته وصفوفها المنسوبة فقط.
+        var reportScope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        if (reportScope.IsDeniedAll) return new List<Dictionary<string, string>>();
+        if (!reportScope.IsUnrestricted)
+        {
+            var allowedCompanies = reportScope.AllowedCompanyIds.ToList();
+            q = q.Where(x => x.Employee.CompanyId != null && allowedCompanies.Contains(x.Employee.CompanyId.Value));
+        }
         if (f.ActiveOnly) q = q.Where(v => v.Employee.IsActive);
         if (f.CompanyId.HasValue) q = q.Where(v => v.Employee.Branch.CompanyId == f.CompanyId.Value);
         if (!string.IsNullOrWhiteSpace(f.Search))
