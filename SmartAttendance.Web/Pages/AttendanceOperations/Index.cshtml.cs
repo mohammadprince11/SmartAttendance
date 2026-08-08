@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Application.AttendanceImports.Services;
 using SmartAttendance.Application.AttendanceImports.ViewModels;
-using SmartAttendance.Application.AttendanceProcessing.Services;
 using SmartAttendance.Application.AttendanceProcessing.ViewModels;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -22,7 +21,6 @@ namespace SmartAttendance.Web.Pages.AttendanceOperations;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
-    private readonly IAttendanceProcessingService _attendanceProcessingService;
     private readonly IAttendanceImportService _attendanceImportService;
     private readonly IWebHostEnvironment _environment;
 
@@ -30,13 +28,11 @@ public class IndexModel : PageModel
 
     public IndexModel(
         ApplicationDbContext dbContext,
-        IAttendanceProcessingService attendanceProcessingService,
         IAttendanceImportService attendanceImportService,
         IWebHostEnvironment environment,
         SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
-        _attendanceProcessingService = attendanceProcessingService;
         _attendanceImportService = attendanceImportService;
         _environment = environment;
         _companyScope = companyScope;
@@ -72,10 +68,11 @@ public class IndexModel : PageModel
     public int ProcessTotalResults { get; set; }
 
     /// <summary>
-    /// بالفترة صفوف غير محلّلة تُقرأ من المحرك القديم (عرض فقط) — تنبيه الشاشة
-    /// يطلب تشغيل «تحديث الحضور» ليصير العرض كله من المحرك الرسمي.
+    /// بالفترة صفوف لها بصمات خام بلا يومية محلَّلة — تُعرَض «غير محلَّل» بلا احتساب.
+    /// تنبيه الشاشة يطلب «تحديث الحضور» ليصير العرض كله من المحرّك الرسمي. لم يعُد
+    /// ثمّة محرّك قديم يحسب: التعداد من البصمات الخام مباشرةً (مقيَّداً بالنطاق).
     /// </summary>
-    public bool IsLegacyEngineFallback { get; set; }
+    public bool HasUnanalyzedRows { get; set; }
 
     /// <summary>عدد صفوف الفترة التي لا يقابلها يومية محلّلة.</summary>
     public int UnanalyzedRows { get; set; }
@@ -900,14 +897,14 @@ WHERE ar.AttendanceDate >= @FromDate
 
         MaxRows = NormalizeMaxRows(MaxRows);
 
+        var scope = await _companyScope.GetAsync();
+
         // المحرك الرسمي (DayAttendances) هو المصدر لكل يوم محلَّل — نفس ما يغذّي
         // المخالفات والرواتب، فتُطبَّق فترة السماح وسياستها ولا تتناقض الشاشة مع
-        // ما سُجِّل (قسم 35). الأيام غير المحلّلة تبقى بقراءة المحرك القديم حتى لا
-        // يختفي موظف من الكشف، ومع تنبيه صريح بأنها قراءة أولية.
-        // هذا التبويب يدمج المحرّك الرسمي بالقديم ولا يقرأ IsStale (انظر MapDayRow)،
-        // فنتخطّى حساب «البائتة» المترابط — كان يُوقِت الفترة الشهرية على مدى شركات.
+        // ما سُجِّل (قسم 35). لا يقرأ IsStale (انظر MapDayRow) فنتخطّى حساب «البائتة»
+        // المترابط — كان يُوقِت الفترة الشهرية على مدى شركات.
         var dayRows = await DayAttendanceStore.ListRangeAsync(
-            _dbContext, await _companyScope.GetAsync(), ProcessFromDate.Value, ProcessToDate.Value, null,
+            _dbContext, scope, ProcessFromDate.Value, ProcessToDate.Value, null,
             computeStale: false);
 
         var official = dayRows.ToDictionary(
@@ -915,42 +912,40 @@ WHERE ar.AttendanceDate >= @FromDate
             MapDayRow,
             StringComparer.OrdinalIgnoreCase);
 
-        var legacy = await _attendanceProcessingService.GetProcessedRecordsAsync(
-            ProcessFromDate,
-            ProcessToDate,
-            null);
+        // W9 — إعدام المحرّك القديم: تعداد الأيام التي لها بصمات خام يأتي مباشرةً من
+        // AttendanceRecords (مقيَّداً بنطاق الشركة)، لا من IAttendanceProcessingService.
+        // اليوم المحلَّل يأتي من official (مصدر المسير)؛ ويومٌ له بصمة بلا يومية يُعرَض
+        // «غير محلَّل» بلا احتساب حتى «تحديث الحضور». محرّكٌ واحدٌ للحقيقة، لا محرّكان.
+        var rawRows = await DayAttendanceStore.ListUnanalyzedPunchRowsAsync(
+            _dbContext, scope, ProcessFromDate.Value, ProcessToDate.Value);
 
-        var processedRecords = new List<AttendanceProcessingResultViewModel>();
-        var legacyKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var legacyCount = 0;
+        var processedRecords = new List<AttendanceProcessingResultViewModel>(official.Values);
+        var unanalyzedCount = 0;
 
-        foreach (var row in legacy)
+        foreach (var raw in rawRows)
         {
-            var key = BuildAttendanceNoteKey(row.EmployeeNo ?? string.Empty, row.AttendanceDate);
-            legacyKeys.Add(key);
+            var key = BuildAttendanceNoteKey(raw.EmployeeNo, raw.AttendanceDate);
 
-            if (official.TryGetValue(key, out var derived))
+            // يومية محلَّلة موجودة ⟹ حكمها الرسمي أُضيف أصلاً من official؛ نتخطّى الخام.
+            if (official.ContainsKey(key))
             {
-                processedRecords.Add(derived);
+                continue;
             }
-            else
-            {
-                // لا يومية محلَّلة لهذا الصف ⟹ لا نعرض حكم المحرّك القديم (تأخير/خروج
-                // مبكر/ساعات/حالة). نبقي هُويّة الصف وأوقاته الخام ونضع «غير محلَّل»،
-                // فيبقى الموظف ظاهراً بالكشف ويطلب المستخدم «تحديث الحضور» ليُحلَّل
-                // بالمحرّك الرسمي وحده. (توحيد مصدر الحقيقة — لا محرّكين.)
-                legacyCount++;
-                processedRecords.Add(BuildNotAnalyzedRow(row));
-            }
+
+            // لا يومية محلَّلة ⟹ «غير محلَّل»: هُويّة الصف وأوقاته الخام تُحفَظ ويُطلَب
+            // «تحديث الحضور» ليُحلَّل بالمحرّك الرسمي وحده. لا حكمَ قديماً مشتقّاً.
+            unanalyzedCount++;
+            processedRecords.Add(BuildNotAnalyzedRow(raw));
         }
 
-        // يوميات محلّلة لا يقابلها صف بالمحرك القديم (موظف خارج نطاقه مثلاً)
-        processedRecords.AddRange(official
-            .Where(pair => !legacyKeys.Contains(pair.Key))
-            .Select(pair => pair.Value));
+        UnanalyzedRows = unanalyzedCount;
+        HasUnanalyzedRows = unanalyzedCount > 0;
 
-        UnanalyzedRows = legacyCount;
-        IsLegacyEngineFallback = legacyCount > 0;
+        // ترتيب عرضٍ حتميّ: الأحدث أولاً ثم اسم الموظف (نظير ترتيب المحرّك القديم).
+        processedRecords = processedRecords
+            .OrderByDescending(r => r.AttendanceDate)
+            .ThenBy(r => r.EmployeeName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
         var materialized = CleanProcessFilter(processedRecords);
 
@@ -1031,6 +1026,26 @@ WHERE ar.AttendanceDate >= @FromDate
             CalculatedStatus = NotAnalyzedStatus
         };
     }
+
+    /// <summary>
+    /// نظير <see cref="BuildNotAnalyzedRow(AttendanceProcessingResultViewModel)"/> من
+    /// صفّ بصمات خام: يبني الهُويّة والأوقات الخام ثم يمرّرها لنفس منطق التفريغ
+    /// المُختبَر، فمصدرُ تعريف «تفريغ الحكم» واحدٌ لا يتكرّر.
+    /// </summary>
+    public static AttendanceProcessingResultViewModel BuildNotAnalyzedRow(DayAttendanceStore.RawPunchRow raw) =>
+        BuildNotAnalyzedRow(new AttendanceProcessingResultViewModel
+        {
+            AttendanceRecordId = raw.AttendanceRecordId,
+            EmployeeId = raw.EmployeeId,
+            EmployeeNo = raw.EmployeeNo,
+            EmployeeName = raw.EmployeeName,
+            AttendanceDate = raw.AttendanceDate,
+            CheckIn = raw.CheckIn,
+            CheckOut = raw.CheckOut,
+            MissingCheckOut = raw.CheckIn.HasValue && !raw.CheckOut.HasValue,
+            Source = raw.Source,
+            Notes = raw.Notes ?? string.Empty
+        });
 
     private void NormalizeDefaults()
     {

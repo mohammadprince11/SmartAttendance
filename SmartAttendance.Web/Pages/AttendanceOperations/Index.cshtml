@@ -84,7 +84,7 @@
                         <span>النتائج محدودة للأداء، استخدم البحث أو فترة أصغر.</span>
                     }
                 </p>
-                @if (Model.IsLegacyEngineFallback && Model.ProcessedRecords.Any())
+                @if (Model.HasUnanalyzedRows && Model.ProcessedRecords.Any())
                 {
                     <p class="hrms-alert warning" style="margin-top:8px">
                         ⚠️ @Model.UnanalyzedRows صفاً <strong>لم يُحلَّل بعد</strong> — يظهر بحالة «غير محلَّل» بلا احتساب

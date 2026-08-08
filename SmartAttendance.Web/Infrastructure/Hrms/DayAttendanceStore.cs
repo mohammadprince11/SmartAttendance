@@ -1636,4 +1636,90 @@ ORDER BY e.EmployeeNo, d.WorkDate;
         }
         return rows;
     }
+
+    /// <summary>
+    /// تعداد صفوف البصمات الخام (أول دخول / آخر خروج لكل موظف×يوم) — مقيَّداً بنطاق
+    /// الشركة عبر الوصل بـ<c>Employees</c>. يحلّ محلّ تعداد المحرّك القديم في
+    /// «مراقبة الحضور»: لا حساب حكم، فقط حقائق البصمات ليُعرَض الصفّ «غير محلَّل»
+    /// حتى يُشغَّل «تحديث الحضور». الأزواج غير-الحضورية (PunchSemanticId ≠ NULL)
+    /// مستثناة كاصطلاح موحّد، والموظفون النشطون فقط (نظير activeEmployees القديم).
+    /// أول دخول = MIN(CheckIn) وآخر خروج = MAX(CheckOut) مطابقةً للاشتقاق القديم.
+    /// </summary>
+    public static async Task<List<RawPunchRow>> ListUnanalyzedPunchRowsAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, DateOnly from, DateOnly to)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<RawPunchRow>();
+        if (to < from) return new List<RawPunchRow>();
+
+        await EnsureAsync(dbContext);
+
+        // شرط الشركة على الوصل القائم بـEmployees — بخلاف المحرّك القديم الذي كان
+        // يقرأ كل الموظفين والبصمات بلا نطاق (تسريب عبر الشركات في صفوف «غير محلَّل»).
+        var companyClause = scope.IsUnrestricted
+            ? string.Empty
+            : $" AND {scope.ToSqlPredicate("e.CompanyId")}";
+
+        return await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+WITH Ranked AS (
+    SELECT a.EmployeeId, a.AttendanceDate, a.CheckIn, a.CheckOut, a.Source, a.Notes, a.Id,
+           ROW_NUMBER() OVER (PARTITION BY a.EmployeeId, a.AttendanceDate ORDER BY a.CheckIn, a.Id) AS rn
+    FROM AttendanceRecords a
+    WHERE a.PunchSemanticId IS NULL
+      AND a.AttendanceDate >= @From AND a.AttendanceDate <= @To
+),
+Agg AS (
+    SELECT EmployeeId, AttendanceDate,
+           MIN(CheckIn) AS FirstIn,
+           MAX(CheckOut) AS LastOut
+    FROM Ranked
+    GROUP BY EmployeeId, AttendanceDate
+)
+SELECT g.EmployeeId, e.EmployeeNo, e.FullName,
+       g.AttendanceDate, g.FirstIn AS CheckIn, g.LastOut AS CheckOut,
+       f.Source, f.Notes, f.Id AS AttendanceRecordId
+FROM Agg g
+INNER JOIN Employees e ON e.Id = g.EmployeeId
+INNER JOIN Ranked f ON f.EmployeeId = g.EmployeeId
+    AND f.AttendanceDate = g.AttendanceDate AND f.rn = 1
+WHERE e.IsActive = 1{companyClause}
+ORDER BY e.EmployeeNo, g.AttendanceDate;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
+            },
+            ReadRawPunchRow);
+    }
+
+    private static RawPunchRow ReadRawPunchRow(System.Data.Common.DbDataReader reader) => new()
+    {
+        EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+        EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+        EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+        AttendanceDate = HrmsDatabase.GetDateOnly(reader, "AttendanceDate") ?? default,
+        CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn"),
+        CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut"),
+        // نظير record.Source.ToString() القديم: العمود يُخزَّن كـint (بلا HasConversion).
+        Source = ((SmartAttendance.Domain.Enums.AttendanceSource)HrmsDatabase.GetInt(reader, "Source")).ToString(),
+        Notes = HrmsDatabase.GetString(reader, "Notes") is { Length: > 0 } notes ? notes : null,
+        AttendanceRecordId = HrmsDatabase.GetInt(reader, "AttendanceRecordId")
+    };
+
+    /// <summary>صفّ بصمات خام لموظف×يوم لم يُحلَّل — حقائق لا أحكام.</summary>
+    public sealed record RawPunchRow
+    {
+        public int EmployeeId { get; init; }
+        public string EmployeeNo { get; init; } = string.Empty;
+        public string EmployeeName { get; init; } = string.Empty;
+        public DateOnly AttendanceDate { get; init; }
+        public DateTime? CheckIn { get; init; }
+        public DateTime? CheckOut { get; init; }
+        public string Source { get; init; } = string.Empty;
+        public string? Notes { get; init; }
+        public int AttendanceRecordId { get; init; }
+    }
 }
