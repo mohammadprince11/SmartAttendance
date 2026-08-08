@@ -278,4 +278,34 @@ public class EmployeeCompanyGuardScopeTests
         Assert.Contains("DashboardAggregateAsync", store);
     }
 
+    /// <summary>
+    /// «سجلات الحضور» كانت تقرأ جدول <c>AttendanceRecords</c> بلا حدّ شركة (تعرض
+    /// بصمات كل الشركات) وتحرّر/تحذف/تنشئ بمعرّفٍ من الرابط بلا فحص ملكية. كل سطح
+    /// من الأربعة يجب أن يحمل حارسه: القائمة تحقن النطاق، والتعديل/الحذف يفحصان
+    /// الصفّ المملوك، والإنشاء/التعديل يفحصان شركة الموظف.
+    ///
+    /// <para>أحمر أولاً: قبل الإصلاح لا شيء من هذه السلاسل موجود بالصفحات.</para>
+    /// </summary>
+    [Fact]
+    public void AttendanceRecords_AreCompanyScoped()
+    {
+        var index = ReadPage("AttendanceRecords/Index.cshtml.cs");
+        Assert.Contains("ICompanyScopeProvider", index);
+        Assert.Contains("AllowedCompanyIds", index);       // القراءة محصورة بشركات المستخدم
+
+        var edit = ReadPage("AttendanceRecords/Edit.cshtml.cs");
+        Assert.Contains("EmployeeCompanyGuard.CanAccessOwnedRowAsync", edit);
+        Assert.Contains("EmployeeCompanyGuard.CanAccessEmployeeAsync", edit);
+
+        var delete = ReadPage("AttendanceRecords/Delete.cshtml.cs");
+        Assert.Contains("EmployeeCompanyGuard.CanAccessOwnedRowAsync", delete);
+
+        var create = ReadPage("AttendanceRecords/Create.cshtml.cs");
+        Assert.Contains("EmployeeCompanyGuard.CanAccessEmployeeAsync", create);
+
+        // الجدول مُسجَّل بكتالوج الحارس الثابت لا سلسلةً حرّة.
+        Assert.Contains("AttendanceRecords = \"AttendanceRecords\"",
+            ReadSecurity("EmployeeCompanyGuard.cs"));
+    }
+
 }

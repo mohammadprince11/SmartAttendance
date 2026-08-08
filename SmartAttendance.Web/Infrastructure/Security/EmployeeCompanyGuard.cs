@@ -102,6 +102,7 @@ public static class EmployeeCompanyGuard
         public const string EmployeeContractMovements = "EmployeeContractMovements";
         public const string EmployeeEndOfService = "EmployeeEndOfService";
         public const string EmployeeSalaryRaises = "EmployeeSalaryRaises";
+        public const string AttendanceRecords = "AttendanceRecords";
     }
 
     /// <summary>

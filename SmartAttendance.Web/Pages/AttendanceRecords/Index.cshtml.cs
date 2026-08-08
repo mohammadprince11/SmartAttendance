@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.AttendanceRecords;
 
@@ -11,9 +12,18 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    /// <summary>
+    /// نطاق شركات المستخدم — «سجلات الحضور» كانت تقرأ الجدول بلا حدّ شركة، فتعرض
+    /// بصمات كل الشركات لأي مستخدم يفتحها. تُحصر القراءة هنا بشركة الموظف صاحبِ
+    /// السجلّ، بنفس دلالة <see cref="CompanyScope.ToSqlPredicate"/> التي يتبعها
+    /// بقية مودل الحضور.
+    /// </summary>
+    private readonly ICompanyScopeProvider _companyScope;
+
+    public IndexModel(ApplicationDbContext dbContext, ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -181,6 +191,20 @@ public class IndexModel : PageModel
             .ThenInclude(x => x.Branch)
             .Include(x => x.Device)
             .AsQueryable();
+
+        // 🛡️ حدّ الشركة أولاً: نفس دلالة ToSqlPredicate — غير مقيَّد يرى الكل،
+        // ممنوعُ الكلِّ لا يرى شيئاً، والمقيَّد يرى موظفي شركاته وحدهم.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (scope.IsDeniedAll)
+        {
+            query = query.Where(_ => false);
+        }
+        else if (!scope.IsUnrestricted)
+        {
+            var allowedCompanyIds = scope.AllowedCompanyIds.ToArray();
+            query = query.Where(x =>
+                x.Employee.CompanyId != null && allowedCompanyIds.Contains(x.Employee.CompanyId.Value));
+        }
 
         if (FromDate.HasValue)
         {
