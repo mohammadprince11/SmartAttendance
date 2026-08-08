@@ -1,4 +1,5 @@
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -80,17 +81,19 @@ END;
     }
 
     /// <summary>الموظفون النشطون مع راتبهم الأساسي الحالي (لمنتقي النموذج والمعاينة).</summary>
-    public static async Task<List<EmployeeBasic>> EmployeeBasicsAsync(ApplicationDbContext dbContext)
+    public static async Task<List<EmployeeBasic>> EmployeeBasicsAsync(ApplicationDbContext dbContext, CompanyScope scope)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<EmployeeBasic>();
         await EnsureAsync(dbContext);
         return await HrmsDatabase.QueryAsync(
             dbContext,
-            """
+            $"""
 SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
        ISNULL(f.BasicSalary, 0) AS BasicSalary
 FROM Employees e
 LEFT JOIN EmployeeFinancialInfos f ON f.EmployeeId = e.Id AND ISNULL(f.IsDeleted,0) = 0
-WHERE ISNULL(e.IsDeleted,0) = 0 AND ISNULL(e.IsActive,1) = 1
+WHERE ISNULL(e.IsDeleted,0) = 0 AND ISNULL(e.IsActive,1) = 1 AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY e.FullName;
 """,
             command => { },
@@ -104,17 +107,21 @@ ORDER BY e.FullName;
     }
 
     public static async Task<List<Raise>> ListAsync(
-        ApplicationDbContext dbContext, int? employeeId = null, string? status = null, bool? applied = null, string? search = null)
+        ApplicationDbContext dbContext, CompanyScope scope,
+        int? employeeId = null, string? status = null, bool? applied = null, string? search = null)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<Raise>();
         await EnsureAsync(dbContext);
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,
-            """
+            $"""
 SELECT r.*, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
        ISNULL(d.Name, N'') AS DepartmentName
 FROM EmployeeSalaryRaises r
 INNER JOIN Employees e ON e.Id = r.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
+WHERE {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY r.CreatedAt DESC;
 """,
             command => { },
@@ -145,8 +152,16 @@ ORDER BY r.CreatedAt DESC;
         return v == 1;
     }
 
-    public static async Task<int> SaveAsync(ApplicationDbContext dbContext, Raise raise, string userName)
+    public static async Task<int> SaveAsync(ApplicationDbContext dbContext, CompanyScope scope, Raise raise, string userName)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        // معرّف الموظف من النموذج لا يُوثَق به: ارفض زيادةً لموظف خارج شركاتي.
+        if (!await EmployeeCompanyGuard.CanAccessEmployeeAsync(dbContext, raise.EmployeeId, scope))
+            throw new UnauthorizedAccessException("لا صلاحية على هذا الموظف.");
+        // تعديل زيادةٍ قائمة: تأكّد أنها ضمن شركاتي كذلك (المعرّف من المتصفح).
+        if (raise.Id > 0 && !await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                dbContext, EmployeeCompanyGuard.Tables.EmployeeSalaryRaises, "Id", raise.Id, scope))
+            throw new UnauthorizedAccessException("لا صلاحية على هذه الزيادة.");
         await EnsureAsync(dbContext);
         if (raise.Id > 0)
         {
@@ -169,9 +184,13 @@ ORDER BY r.CreatedAt DESC;
         });
     }
 
-    public static async Task DeleteAsync(ApplicationDbContext dbContext, int id)
+    public static async Task DeleteAsync(ApplicationDbContext dbContext, CompanyScope scope, int id)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+        if (!await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                dbContext, EmployeeCompanyGuard.Tables.EmployeeSalaryRaises, "Id", id, scope))
+            return;
         await HrmsDatabase.ExecuteAsync(dbContext,
             "DELETE FROM EmployeeSalaryRaises WHERE Id = @Id AND ISNULL(IsApplied,0) = 0;",
             command => HrmsDatabase.AddParameter(command, "@Id", id));
@@ -181,9 +200,13 @@ ORDER BY r.CreatedAt DESC;
     /// تطبيق الزيادة: تحدّث الراتب الأساسي للموظف بـ NewBasic (تُنشئ سجل المعلومات
     /// المالية إن لم يوجد)، وتعلّم الزيادة كمُطبَّقة. لا يُعاد تطبيقها.
     /// </summary>
-    public static async Task<bool> ApplyAsync(ApplicationDbContext dbContext, int id, string userName)
+    public static async Task<bool> ApplyAsync(ApplicationDbContext dbContext, CompanyScope scope, int id, string userName)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+        if (!await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                dbContext, EmployeeCompanyGuard.Tables.EmployeeSalaryRaises, "Id", id, scope))
+            return false;
         var raise = (await HrmsDatabase.QueryAsync(
             dbContext,
             "SELECT r.*, N'' AS EmployeeNo, N'' AS FullName, N'' AS DepartmentName FROM EmployeeSalaryRaises r WHERE r.Id = @Id;",
@@ -223,20 +246,22 @@ ELSE
         return true;
     }
 
-    /// <summary>تطبيق جماعي (= «قفل») لعدة زيادات قيد الانتظار. يرجع عدد ما طُبّق فعلاً.</summary>
-    public static async Task<int> ApplyManyAsync(ApplicationDbContext dbContext, IEnumerable<int> ids, string userName)
+    /// <summary>تطبيق جماعي (= «قفل») لعدة زيادات قيد الانتظار. يرجع عدد ما طُبّق فعلاً (خارج النطاق يُتخطّى).</summary>
+    public static async Task<int> ApplyManyAsync(ApplicationDbContext dbContext, CompanyScope scope, IEnumerable<int> ids, string userName)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         int n = 0;
         foreach (var id in ids.Distinct())
-            if (await ApplyAsync(dbContext, id, userName)) n++;
+            if (await ApplyAsync(dbContext, scope, id, userName)) n++;
         return n;
     }
 
-    /// <summary>حذف جماعي للزيادات غير المُطبَّقة المحددة.</summary>
-    public static async Task DeleteManyAsync(ApplicationDbContext dbContext, IEnumerable<int> ids)
+    /// <summary>حذف جماعي للزيادات غير المُطبَّقة المحددة (خارج النطاق يُتخطّى بصمت داخل الحارس).</summary>
+    public static async Task DeleteManyAsync(ApplicationDbContext dbContext, CompanyScope scope, IEnumerable<int> ids)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         foreach (var id in ids.Distinct())
-            await DeleteAsync(dbContext, id);
+            await DeleteAsync(dbContext, scope, id);
     }
 
     private static async Task<string> GenerateReferenceNoAsync(ApplicationDbContext dbContext)

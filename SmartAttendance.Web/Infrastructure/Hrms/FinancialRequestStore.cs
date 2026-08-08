@@ -390,7 +390,11 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
                     ? Math.Round(oldBasic * (1 + detail.Amount / 100m), 2)
                     : oldBasic + detail.Amount;
 
-                var raiseId = await SalaryRaiseStore.SaveAsync(db, new SalaryRaiseStore.Raise
+                // تطبيق داخلي بعد اعتماد الطلب المالي: معرّف الموظف من صفّ الطلب المُعتمَد
+                // (لا من المتصفح) وقد مرّ بعزل الطلبات المالية عند السرد/الاعتماد، فالنطاق
+                // هنا غير مقيَّد عمداً (نمط المسارات الداخلية الموثوقة).
+                var internalScope = Security.CompanyScope.Unrestricted();
+                var raiseId = await SalaryRaiseStore.SaveAsync(db, internalScope, new SalaryRaiseStore.Raise
                 {
                     EmployeeId = employeeId,
                     OldBasic = oldBasic,
@@ -402,7 +406,7 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
                     Note = $"من طلب مالي #{requestId}",
                     Status = "Approved"
                 }, actor);
-                await SalaryRaiseStore.ApplyAsync(db, raiseId, actor);
+                await SalaryRaiseStore.ApplyAsync(db, internalScope, raiseId, actor);
                 refId = raiseId;
                 effect = $"زيادة راتب معتمدة (#{raiseId}) — الأساسي {oldBasic:0.##} ← {newBasic:0.##}";
                 break;

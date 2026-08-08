@@ -43,6 +43,8 @@ public class RemainingStoresCompanyScopeTests
     [InlineData(EmployeeCompanyGuard.Tables.EmployeeContracts)]
     [InlineData(EmployeeCompanyGuard.Tables.EmployeeLoans)]
     [InlineData(EmployeeCompanyGuard.Tables.SelfServiceRequests)]
+    [InlineData(EmployeeCompanyGuard.Tables.EmployeeEndOfService)]
+    [InlineData(EmployeeCompanyGuard.Tables.EmployeeSalaryRaises)]
     public void أسماء_جداول_الحرّاس_معرّفات_صالحة(string table)
     {
         // لا يرمي ⟹ معرّف SQL صالح (حروف/أرقام/شرطة سفلية فقط).

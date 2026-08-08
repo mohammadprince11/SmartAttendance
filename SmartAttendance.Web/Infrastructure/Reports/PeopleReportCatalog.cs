@@ -284,7 +284,7 @@ public static class PeopleReportCatalog
         ApplicationDbContext db, ReportFilters f)
     {
         var (from, to) = AttendanceRange(f);
-        var rows = await OnlinePunchStore.ListAsync(db, new OnlinePunchStore.Filter
+        var rows = await OnlinePunchStore.ListAsync(db, f.Scope, new OnlinePunchStore.Filter
         {
             From = from, To = to, Search = f.Search, Top = 2000
         });

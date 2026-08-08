@@ -1,4 +1,5 @@
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -110,17 +111,19 @@ END;
     }
 
     /// <summary>الموظفون مع الأساسي الحالي وتاريخ التعيين (لمنتقي النموذج والافتراضات).</summary>
-    public static async Task<List<EmployeeInfo>> EmployeeInfosAsync(ApplicationDbContext dbContext)
+    public static async Task<List<EmployeeInfo>> EmployeeInfosAsync(ApplicationDbContext dbContext, CompanyScope scope)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<EmployeeInfo>();
         await EnsureAsync(dbContext);
         return await HrmsDatabase.QueryAsync(
             dbContext,
-            """
+            $"""
 SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
        ISNULL(f.BasicSalary, 0) AS BasicSalary, COALESCE(e.HireDate, e.JoiningDate) AS HireDate
 FROM Employees e
 LEFT JOIN EmployeeFinancialInfos f ON f.EmployeeId = e.Id AND ISNULL(f.IsDeleted,0) = 0
-WHERE ISNULL(e.IsDeleted,0) = 0
+WHERE ISNULL(e.IsDeleted,0) = 0 AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY e.FullName;
 """,
             command => { },
@@ -135,17 +138,20 @@ ORDER BY e.FullName;
     }
 
     public static async Task<List<Settlement>> ListAsync(
-        ApplicationDbContext dbContext, string? status = null, string? search = null)
+        ApplicationDbContext dbContext, CompanyScope scope, string? status = null, string? search = null)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<Settlement>();
         await EnsureAsync(dbContext);
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,
-            """
+            $"""
 SELECT s.*, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
        ISNULL(d.Name, N'') AS DepartmentName
 FROM EmployeeEndOfService s
 INNER JOIN Employees e ON e.Id = s.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
+WHERE {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY s.CreatedAt DESC;
 """,
             command => { },
@@ -174,8 +180,16 @@ ORDER BY s.CreatedAt DESC;
         return v == "Approved";
     }
 
-    public static async Task<int> SaveAsync(ApplicationDbContext dbContext, Settlement s, string userName)
+    public static async Task<int> SaveAsync(ApplicationDbContext dbContext, CompanyScope scope, Settlement s, string userName)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        // معرّف الموظف من النموذج لا يُوثَق به: ارفض تسويةً لموظف خارج شركاتي.
+        if (!await EmployeeCompanyGuard.CanAccessEmployeeAsync(dbContext, s.EmployeeId, scope))
+            throw new UnauthorizedAccessException("لا صلاحية على هذا الموظف.");
+        // تعديل تسويةٍ قائمة: تأكّد أنها ضمن شركاتي كذلك (المعرّف من المتصفح).
+        if (s.Id > 0 && !await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                dbContext, EmployeeCompanyGuard.Tables.EmployeeEndOfService, "Id", s.Id, scope))
+            throw new UnauthorizedAccessException("لا صلاحية على هذه التسوية.");
         await EnsureAsync(dbContext);
         if (s.Id > 0)
         {
@@ -198,9 +212,13 @@ ORDER BY s.CreatedAt DESC;
         });
     }
 
-    public static async Task<bool> ApproveAsync(ApplicationDbContext dbContext, int id, string userName)
+    public static async Task<bool> ApproveAsync(ApplicationDbContext dbContext, CompanyScope scope, int id, string userName)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+        if (!await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                dbContext, EmployeeCompanyGuard.Tables.EmployeeEndOfService, "Id", id, scope))
+            return false;
         if (await IsApprovedAsync(dbContext, id)) return false;
         await HrmsDatabase.ExecuteAsync(
             dbContext,
@@ -213,9 +231,13 @@ ORDER BY s.CreatedAt DESC;
         return true;
     }
 
-    public static async Task DeleteAsync(ApplicationDbContext dbContext, int id)
+    public static async Task DeleteAsync(ApplicationDbContext dbContext, CompanyScope scope, int id)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+        if (!await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                dbContext, EmployeeCompanyGuard.Tables.EmployeeEndOfService, "Id", id, scope))
+            return;
         await HrmsDatabase.ExecuteAsync(dbContext,
             "DELETE FROM EmployeeEndOfService WHERE Id = @Id AND ISNULL(Status, N'Draft') <> N'Approved';",
             command => HrmsDatabase.AddParameter(command, "@Id", id));

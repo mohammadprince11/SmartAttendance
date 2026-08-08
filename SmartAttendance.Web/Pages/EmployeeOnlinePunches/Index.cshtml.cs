@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.EmployeeOnlinePunches;
 
@@ -13,11 +14,15 @@ namespace SmartAttendance.Web.Pages.EmployeeOnlinePunches;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext db)
+    public IndexModel(ApplicationDbContext db, ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
     }
+
+    private Task<CompanyScope> ScopeAsync() => _companyScope.GetAsync(HttpContext.RequestAborted);
 
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
     [BindProperty(SupportsGet = true)] public string? PunchType { get; set; }
@@ -35,7 +40,7 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        Items = await OnlinePunchStore.ListAsync(_db, new OnlinePunchStore.Filter
+        Items = await OnlinePunchStore.ListAsync(_db, await ScopeAsync(), new OnlinePunchStore.Filter
         {
             Search = Search,
             PunchType = PunchType,
@@ -58,7 +63,7 @@ public class IndexModel : PageModel
         var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
         if (ids.Count > 0)
         {
-            var n = await OnlinePunchStore.DeleteManyAsync(_db, ids);
+            var n = await OnlinePunchStore.DeleteManyAsync(_db, await ScopeAsync(), ids);
             TempData["OpMessage"] = $"حُذفت {n} بصمة عبر الإنترنت.";
             TempData["OpOk"] = true;
         }
@@ -72,7 +77,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
-        await OnlinePunchStore.DeleteManyAsync(_db, new[] { id });
+        await OnlinePunchStore.DeleteManyAsync(_db, await ScopeAsync(), new[] { id });
         TempData["OpMessage"] = "حُذفت البصمة.";
         TempData["OpOk"] = true;
         return RedirectToPage(Route());

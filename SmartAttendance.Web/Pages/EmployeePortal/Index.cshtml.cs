@@ -803,8 +803,10 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         PendingAssetAcknowledgments = await LoadPendingAssetAcknowledgmentsAsync(employeeId);
         MyMissingPunches = await MissingPunchRequestStore.ListAsync(_dbContext, SmartAttendance.Web.Infrastructure.Security.CompanyScope.Unrestricted(),
             new MissingPunchRequestStore.Filter { EmployeeId = employeeId });
+        // مسار ذاتي: المعرّف من جلسة الموظف لا من المتصفح، فالنطاق غير مقيَّد عمداً.
         MyOnlinePunches = await OnlinePunchStore.ListAsync(
-            _dbContext, new OnlinePunchStore.Filter { EmployeeId = employeeId, Top = 200 });
+            _dbContext, SmartAttendance.Web.Infrastructure.Security.CompanyScope.Unrestricted(),
+            new OnlinePunchStore.Filter { EmployeeId = employeeId, Top = 200 });
 
         // إنفاذ التأكيد البيولوجي: لا نستعلم عن المفاتيح إلا والراية مفعّلة (الافتراضي لا).
         try

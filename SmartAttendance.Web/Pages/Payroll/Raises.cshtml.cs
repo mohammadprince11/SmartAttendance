@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Payroll;
 
@@ -13,11 +14,15 @@ namespace SmartAttendance.Web.Pages.Payroll;
 public class RaisesModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public RaisesModel(ApplicationDbContext db)
+    public RaisesModel(ApplicationDbContext db, ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
     }
+
+    private Task<CompanyScope> ScopeAsync() => _companyScope.GetAsync(HttpContext.RequestAborted);
 
     [BindProperty(SupportsGet = true)]
     public string? Search { get; set; }
@@ -47,7 +52,8 @@ public class RaisesModel : PageModel
     {
         if (Tab != "Applied") Tab = "Pending";
 
-        var all = await SalaryRaiseStore.ListAsync(_db, Emp, search: Search);
+        var scope = await ScopeAsync();
+        var all = await SalaryRaiseStore.ListAsync(_db, scope, Emp, search: Search);
         PendingCount = all.Count(x => !x.IsApplied);
         AppliedCount = all.Count(x => x.IsApplied);
         TotalIncrease = all.Where(x => x.IsApplied).Sum(x => x.Increase);
@@ -55,7 +61,7 @@ public class RaisesModel : PageModel
         Items = all.Where(x => x.IsApplied == IsApplied).ToList();
         TotalCount = Items.Count;
 
-        Employees = await SalaryRaiseStore.EmployeeBasicsAsync(_db);
+        Employees = await SalaryRaiseStore.EmployeeBasicsAsync(_db, scope);
         (AllDepartments, AllBranches, AllJobTitles) = await MassScopeResolver.OrgListsAsync(_db);
     }
 
@@ -64,7 +70,7 @@ public class RaisesModel : PageModel
     {
         var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
         if (ids.Count == 0) { TempData["PayrollMessage"] = "حدد زيادات أولاً."; TempData["PayrollOk"] = false; return RedirectToPage(); }
-        var n = await SalaryRaiseStore.ApplyManyAsync(_db, ids, User?.Identity?.Name ?? "system");
+        var n = await SalaryRaiseStore.ApplyManyAsync(_db, await ScopeAsync(), ids, User?.Identity?.Name ?? "system");
         TempData["PayrollMessage"] = $"طُبّقت {n} زيادة وحُدّثت رواتبها الأساسية.";
         TempData["PayrollOk"] = n > 0;
         return RedirectToPage(new { Tab = "Applied" });
@@ -74,7 +80,7 @@ public class RaisesModel : PageModel
     {
         var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
         if (ids.Count == 0) { TempData["PayrollMessage"] = "حدد زيادات أولاً."; TempData["PayrollOk"] = false; return RedirectToPage(); }
-        await SalaryRaiseStore.DeleteManyAsync(_db, ids);
+        await SalaryRaiseStore.DeleteManyAsync(_db, await ScopeAsync(), ids);
         TempData["PayrollMessage"] = $"تم حذف {ids.Count} زيادة.";
         return RedirectToPage();
     }
@@ -92,18 +98,21 @@ public class RaisesModel : PageModel
         if (err != null) { TempData["PayrollMessage"] = err; TempData["PayrollOk"] = false; return RedirectToPage(); }
         if (empIds.Count == 0) { TempData["PayrollMessage"] = "لم يُحدَّد أي موظف مطابق."; TempData["PayrollOk"] = false; return RedirectToPage(); }
 
-        var basics = (await SalaryRaiseStore.EmployeeBasicsAsync(_db)).ToDictionary(x => x.Id, x => x.Basic);
+        var scope = await ScopeAsync();
+        // القاموس مقيَّد بشركاتي؛ فأي معرّف يحلّه النطاق الجماعي خارج شركاتي لا يوجد
+        // هنا فيُتخطّى — لا تُنشأ زيادة لموظف خارج العزل (الحارس يرفضه كذلك بالمتجر).
+        var basics = (await SalaryRaiseStore.EmployeeBasicsAsync(_db, scope)).ToDictionary(x => x.Id, x => x.Basic);
         var reason = string.IsNullOrWhiteSpace(f["Reason"]) ? null : f["Reason"].ToString().Trim();
         var eff = D("EffectiveDate");
         var user = User?.Identity?.Name ?? "system";
         int n = 0;
         foreach (var empId in empIds)
         {
-            var oldBasic = basics.TryGetValue(empId, out var b) ? b : 0;
+            if (!basics.TryGetValue(empId, out var oldBasic)) { skipped++; continue; }
             var newBasic = type == SalaryRaiseStore.ByPercentage
                 ? Math.Round(oldBasic * (1 + value / 100m), 2)
                 : Math.Round(oldBasic + value, 2);
-            await SalaryRaiseStore.SaveAsync(_db, new SalaryRaiseStore.Raise
+            await SalaryRaiseStore.SaveAsync(_db, scope, new SalaryRaiseStore.Raise
             {
                 EmployeeId = empId, OldBasic = oldBasic, RaiseType = type, RaiseValue = value, NewBasic = newBasic,
                 EffectiveDate = eff, Reason = reason, Status = "Approved"
@@ -126,7 +135,8 @@ public class RaisesModel : PageModel
         try { await using var s = importFile.OpenReadStream(); rows = SpreadsheetReader.Read(s, importFile.FileName); }
         catch (Exception ex) { TempData["PayrollMessage"] = "تعذّر قراءة الملف: " + ex.Message; TempData["PayrollOk"] = false; return RedirectToPage(); }
 
-        var basics = await SalaryRaiseStore.EmployeeBasicsAsync(_db);
+        var scope = await ScopeAsync();
+        var basics = await SalaryRaiseStore.EmployeeBasicsAsync(_db, scope);
         var byCode = new Dictionary<string, SalaryRaiseStore.EmployeeBasic>();
         foreach (var e in basics) { var k = e.No.Trim().ToLowerInvariant(); if (k.Length > 0) byCode[k] = e; }
 
@@ -147,7 +157,7 @@ public class RaisesModel : PageModel
                 ? Math.Round(emp.Basic * (1 + value / 100m), 2)
                 : Math.Round(emp.Basic + value, 2);
 
-            await SalaryRaiseStore.SaveAsync(_db, new SalaryRaiseStore.Raise
+            await SalaryRaiseStore.SaveAsync(_db, scope, new SalaryRaiseStore.Raise
             {
                 EmployeeId = emp.Id, OldBasic = emp.Basic, RaiseType = type, RaiseValue = value, NewBasic = newBasic,
                 Reason = reason, Status = "Approved"
@@ -172,7 +182,8 @@ public class RaisesModel : PageModel
         if (value <= 0) { TempData["PayrollMessage"] = "قيمة الزيادة يجب أن تكون أكبر من صفر."; TempData["PayrollOk"] = false; return RedirectToPage(); }
 
         // الأساسي الحالي من السيرفر (لا من العميل)
-        var basics = await SalaryRaiseStore.EmployeeBasicsAsync(_db);
+        var scope = await ScopeAsync();
+        var basics = await SalaryRaiseStore.EmployeeBasicsAsync(_db, scope);
         var oldBasic = basics.FirstOrDefault(x => x.Id == empId)?.Basic ?? 0;
         var newBasic = type == SalaryRaiseStore.ByPercentage
             ? Math.Round(oldBasic * (1 + value / 100m), 2)
@@ -200,14 +211,23 @@ public class RaisesModel : PageModel
             Status = "Approved"
         };
 
-        await SalaryRaiseStore.SaveAsync(_db, raise, User?.Identity?.Name ?? "system");
+        try
+        {
+            await SalaryRaiseStore.SaveAsync(_db, scope, raise, User?.Identity?.Name ?? "system");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            TempData["PayrollMessage"] = "لا صلاحية على هذا الموظف/الزيادة.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
         TempData["PayrollMessage"] = id > 0 ? "تم تحديث الزيادة." : $"تمت إضافة الزيادة (الأساسي {oldBasic:#,0.##} ← {newBasic:#,0.##}).";
         return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostApplyAsync(int id)
     {
-        var ok = await SalaryRaiseStore.ApplyAsync(_db, id, User?.Identity?.Name ?? "system");
+        var ok = await SalaryRaiseStore.ApplyAsync(_db, await ScopeAsync(), id, User?.Identity?.Name ?? "system");
         TempData["PayrollMessage"] = ok ? "طُبّقت الزيادة وحُدّث الراتب الأساسي." : "تعذّر تطبيق الزيادة (ربما مُطبَّقة سابقاً).";
         TempData["PayrollOk"] = ok;
         return RedirectToPage(new { Tab = ok ? "Applied" : "Pending" });
@@ -221,7 +241,7 @@ public class RaisesModel : PageModel
             TempData["PayrollOk"] = false;
             return RedirectToPage(new { Tab = "Applied" });
         }
-        await SalaryRaiseStore.DeleteAsync(_db, id);
+        await SalaryRaiseStore.DeleteAsync(_db, await ScopeAsync(), id);
         TempData["PayrollMessage"] = "تم حذف الزيادة.";
         return RedirectToPage();
     }
