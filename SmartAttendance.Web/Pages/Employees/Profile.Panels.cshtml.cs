@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Domain.Enums;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
@@ -85,10 +87,23 @@ public partial class ProfileModel
     {
         var allowedRoles = await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetAsync(
             _dbContext, "Sensitive.SalaryRoles", "Admin,HR Manager");
-        var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? string.Empty;
-        CanViewSalary = allowedRoles
+        var role = PeopleAccessContext.GetRole(HttpContext);
+        var roleAllowed = allowedRoles
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Contains(role, StringComparer.OrdinalIgnoreCase);
+
+        // التعويض بيانٌ ماليّ حسّاس: بجانب قائمة الأدوار القديمة (توافقية)، نُكرم منح
+        // People.ViewCompensation صريحاً بأدوار الوصول ضمن نطاق هذا الموظف — فالرؤية
+        // تصير صلاحيةً من الدرجة الأولى لا مجرّد قائمة أدوار عامة. راجع تقرير أمان People.
+        if (roleAllowed)
+        {
+            CanViewSalary = true;
+            return;
+        }
+
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        CanViewSalary = await CanAccessAsync(
+            systemUserId, role, PeoplePermissionCodes.ViewCompensation, Id);
     }
 
     [BindProperty] public DependentInput Dependent { get; set; } = new();
