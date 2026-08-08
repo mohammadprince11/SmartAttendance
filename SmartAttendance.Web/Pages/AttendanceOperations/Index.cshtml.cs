@@ -80,6 +80,14 @@ public class IndexModel : PageModel
     /// <summary>عدد صفوف الفترة التي لا يقابلها يومية محلّلة.</summary>
     public int UnanalyzedRows { get; set; }
 
+    /// <summary>
+    /// رمزٌ داخليّ لحالة «لم تُحلَّل بعد» — لا حكمَ مشتقّاً. الصفوف التي لا يقابلها
+    /// يومية محلَّلة تُعرَض بهذه الحالة بدل حساب المحرّك القديم: المسير يقرأ
+    /// <c>DayAttendances</c> المحلَّلة فقط، فصفٌّ بلا يومية لا يُسهم بأي رقم رواتب،
+    /// وعرضُه حكماً قديماً كان يوهم بحقيقةٍ ثانية. المستخدم يشغّل «تحديث الحضور».
+    /// </summary>
+    public const string NotAnalyzedStatus = "__NotAnalyzed__";
+
     public bool ProcessIsLimited { get; set; }
 
     public AttendanceImportPreviewViewModel? Preview { get; set; }
@@ -927,8 +935,12 @@ WHERE ar.AttendanceDate >= @FromDate
             }
             else
             {
+                // لا يومية محلَّلة لهذا الصف ⟹ لا نعرض حكم المحرّك القديم (تأخير/خروج
+                // مبكر/ساعات/حالة). نبقي هُويّة الصف وأوقاته الخام ونضع «غير محلَّل»،
+                // فيبقى الموظف ظاهراً بالكشف ويطلب المستخدم «تحديث الحضور» ليُحلَّل
+                // بالمحرّك الرسمي وحده. (توحيد مصدر الحقيقة — لا محرّكين.)
                 legacyCount++;
-                processedRecords.Add(row);
+                processedRecords.Add(BuildNotAnalyzedRow(row));
             }
         }
 
@@ -981,6 +993,42 @@ WHERE ar.AttendanceDate >= @FromDate
             EarlyLeaveMinutes = (int)Math.Round(row.EarlyLeaveHours * 60, MidpointRounding.AwayFromZero),
             MissingCheckOut = row.CheckIn.HasValue && !row.CheckOut.HasValue,
             CalculatedStatus = status
+        };
+    }
+
+    /// <summary>
+    /// صفٌّ خام بلا يومية محلَّلة ← عرض «غير محلَّل». تُحفَظ الهُويّة والمناوبة
+    /// والأوقات الخام (حقائق بصمات لا أحكام)، وتُفرَّغ حقول الحكم (التأخير/الخروج
+    /// المبكر/الساعات) وتُوضَع الحالة رمزَ <see cref="NotAnalyzedStatus"/>. لا حساب.
+    /// </summary>
+    public static AttendanceProcessingResultViewModel BuildNotAnalyzedRow(AttendanceProcessingResultViewModel r)
+    {
+        return new AttendanceProcessingResultViewModel
+        {
+            AttendanceRecordId = r.AttendanceRecordId,
+            EmployeeId = r.EmployeeId,
+            EmployeeNo = r.EmployeeNo,
+            EmployeeName = r.EmployeeName,
+            AttendanceDate = r.AttendanceDate,
+            ShiftCode = r.ShiftCode,
+            ShiftName = r.ShiftName,
+            ShiftStartTime = r.ShiftStartTime,
+            ShiftEndTime = r.ShiftEndTime,
+            WeeklyOffDays = r.WeeklyOffDays,
+            IsWeeklyOff = r.IsWeeklyOff,
+            CheckIn = r.CheckIn,
+            CheckOut = r.CheckOut,
+            MissingCheckOut = r.MissingCheckOut,
+            Source = r.Source,
+            OriginalStatus = r.OriginalStatus,
+            Notes = r.Notes,
+            // حقول الحكم مُفرَّغة عمداً — لا محرّك قديم:
+            WorkingHours = null,
+            LateMinutes = 0,
+            EarlyLeaveMinutes = null,
+            LeaveType = null,
+            HolidayName = null,
+            CalculatedStatus = NotAnalyzedStatus
         };
     }
 
@@ -1128,6 +1176,12 @@ WHERE ar.AttendanceDate >= @FromDate
 
     public static string ProcessingAutoStatusText(DateTime? checkIn, DateTime? checkOut, string? calculatedStatus)
     {
+        // «غير محلَّل» يسبق كل اشتقاق: الصف بلا يومية محلَّلة لا يحمل حكماً بعد.
+        if (calculatedStatus == NotAnalyzedStatus)
+        {
+            return "غير محلَّل";
+        }
+
         if (calculatedStatus == "Weekly Off")
         {
             return "\u0631\u0627\u062D\u0629 \u0623\u0633\u0628\u0648\u0639\u064A\u0629";
