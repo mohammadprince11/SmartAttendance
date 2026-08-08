@@ -21,6 +21,8 @@ public class PeopleCompatibilityAccessTests
         PeoplePermissionCodes.Export,
         PeoplePermissionCodes.ChangeAssignment,
         PeoplePermissionCodes.ManagePermissions,
+        PeoplePermissionCodes.ViewCompensation,
+        PeoplePermissionCodes.EditCompensation,
     };
 
     private static readonly string[] BasicCodes =

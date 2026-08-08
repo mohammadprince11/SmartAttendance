@@ -19,6 +19,9 @@ public static class PeopleCompatibilityAccess
             PeoplePermissionCodes.Export,
             PeoplePermissionCodes.ChangeAssignment,
             PeoplePermissionCodes.ManagePermissions,
+            // التعويض بيانٌ ماليّ حسّاس — لا يُمنَح ضمنيّاً لغير (Admin · HR Manager).
+            PeoplePermissionCodes.ViewCompensation,
+            PeoplePermissionCodes.EditCompensation,
         };
 
     public static bool IsAllowed(string? role, string permissionCode)

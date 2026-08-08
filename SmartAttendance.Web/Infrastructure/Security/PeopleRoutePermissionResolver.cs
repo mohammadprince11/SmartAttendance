@@ -125,6 +125,15 @@ public static class PeopleRoutePermissionResolver
                     return Employee(PeoplePermissionCodes.UploadDocument);
                 }
 
+                // التعويض (الراتب/البدلات) بيانٌ ماليّ حسّاس: تعديلُه يتطلّب صلاحية
+                // EditCompensation لا مجرّد People.Edit — فـPOST مُلفَّق لا يتخطّى إخفاء
+                // الواجهة (CanViewSalary). راجع تقرير أمان People (P0).
+                if (handler.Equals("SaveAllowance", StringComparison.OrdinalIgnoreCase) ||
+                    handler.Equals("DeleteAllowance", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Employee(PeoplePermissionCodes.EditCompensation);
+                }
+
                 if (handler.Equals("DeleteProfileAreaFile", StringComparison.OrdinalIgnoreCase))
                 {
                     return Employee(PeoplePermissionCodes.DeleteDocument);
