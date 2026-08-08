@@ -60,7 +60,7 @@ public class IndexModel : PageModel
         var (year, month) = Period;
         Month ??= $"{year:0000}-{month:00}";
 
-        var all = await MonthAttendanceStore.ListAsync(_dbContext, year, month);
+        var all = await MonthAttendanceStore.ListAsync(_dbContext, await _companyScope.GetAsync(), year, month);
         UnderReviewCount = all.Count(r => r.Status == "UnderReview");
         ApprovedCount = all.Count(r => r.Status == "Approved");
         LockedCount = all.Count(r => r.Status == "Locked");

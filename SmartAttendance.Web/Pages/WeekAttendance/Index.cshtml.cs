@@ -60,7 +60,7 @@ public class IndexModel : PageModel
         WeeksInYear = WeekAttendanceStore.WeeksInYear(year);
         Range = WeekAttendanceStore.WeekRange(year, week);
 
-        var all = await WeekAttendanceStore.ListAsync(_dbContext, year, week);
+        var all = await WeekAttendanceStore.ListAsync(_dbContext, await _companyScope.GetAsync(), year, week);
         UnderReviewCount = all.Count(r => r.Status == "UnderReview");
         ApprovedCount = all.Count(r => r.Status == "Approved");
         LockedCount = all.Count(r => r.Status == "Locked");

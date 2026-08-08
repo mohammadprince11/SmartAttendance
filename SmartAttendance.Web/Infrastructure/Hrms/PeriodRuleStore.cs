@@ -350,13 +350,13 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
         List<(int Id, string No, string Name, Func<string, decimal> Metric)> rows;
         if (periodType == "Week")
         {
-            var weekRows = await WeekAttendanceStore.ListAsync(db, year, period);
+            var weekRows = await WeekAttendanceStore.ListAsync(db, scope, year, period);
             rows = weekRows.Select(w => (w.EmployeeId, w.EmployeeNo, w.EmployeeName,
                 (Func<string, decimal>)(key => WeekMetric(w, key)))).ToList();
         }
         else
         {
-            var monthRows = await MonthAttendanceStore.ListAsync(db, year, period);
+            var monthRows = await MonthAttendanceStore.ListAsync(db, scope, year, period);
             rows = monthRows.Select(m => (m.EmployeeId, m.EmployeeNo, m.EmployeeName,
                 (Func<string, decimal>)(key => MonthMetric(m, key)))).ToList();
         }

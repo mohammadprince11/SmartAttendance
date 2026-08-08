@@ -1,4 +1,5 @@
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -151,16 +152,20 @@ WHEN NOT MATCHED THEN
             });
     }
 
-    public static async Task<List<MonthRow>> ListAsync(ApplicationDbContext dbContext, int year, int month)
+    public static async Task<List<MonthRow>> ListAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int year, int month)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<MonthRow>();
         await EnsureAsync(dbContext);
         return await HrmsDatabase.QueryAsync(
             dbContext,
-            """
+            $"""
 SELECT m.*, e.EmployeeNo, e.FullName
 FROM EmployeeMonthAttendance m
 INNER JOIN Employees e ON e.Id = m.EmployeeId
 WHERE m.[Year] = @Year AND m.[Month] = @Month
+  AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY e.EmployeeNo;
 """,
             command =>
