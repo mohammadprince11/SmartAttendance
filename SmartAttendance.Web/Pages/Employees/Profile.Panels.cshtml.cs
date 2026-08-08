@@ -451,45 +451,48 @@ public partial class ProfileModel
         { PanelError = "تاريخ نهاية العقد قبل بدايته."; return BackToFiles(); }
 
         var user = User.Identity?.Name ?? "System";
-        var now = DateTime.UtcNow;
-        var c = Contract.Id > 0
-            ? await _dbContext.EmployeeContracts.FirstOrDefaultAsync(x => x.Id == Contract.Id && x.EmployeeId == Id)
-            : null;
-        if (c == null) { c = new EmployeeContract { EmployeeId = Id, CreatedAt = now, CreatedBy = user }; _dbContext.EmployeeContracts.Add(c); }
-        else { c.UpdatedAt = now; c.UpdatedBy = user; }
+        var contractType = Contract.ContractType.Trim();
+        var contractNo = CleanText(Contract.ContractNo);
+        var note = CleanText(Contract.Note);
+        var (attachmentName, attachmentPath) = await SaveRecordFileAsync(ContractAttachment);
 
-        c.ContractNo = CleanText(Contract.ContractNo);
-        c.ContractType = Contract.ContractType.Trim();
-        c.FromDate = Contract.FromDate;
-        c.ToDate = Contract.ToDate;
-        c.IsCurrent = Contract.IsCurrent;
-        c.Note = CleanText(Contract.Note);
-
-        // عقد حالي واحد فقط لكل موظف.
-        if (c.IsCurrent)
+        // المحرّك الرسمي الوحيد لكتابة العقود = ContractRegisterStore. هذه الشاشة سطح
+        // إدخالٍ يوجّه الكتابة إليه: فلا يتكرّر ثابت «العقد الحالي الواحد» ولا يُفقَد
+        // نسب renew/extend كما كان بالمحرّك الثاني السابق.
+        int contractId;
+        if (Contract.Id > 0)
         {
-            var others = await _dbContext.EmployeeContracts
-                .Where(x => x.EmployeeId == Id && x.IsCurrent && x.Id != c.Id)
-                .ToListAsync();
-            foreach (var other in others) { other.IsCurrent = false; other.UpdatedAt = now; other.UpdatedBy = user; }
+            // العقد يجب أن يخصّ هذا الموظف — معرّفٌ من النموذج لا يُعدَّل عقد موظفٍ آخر.
+            if (!await _dbContext.EmployeeContracts
+                    .AnyAsync(x => x.Id == Contract.Id && x.EmployeeId == Id && !x.IsDeleted))
+            { PanelError = "العقد غير موجود."; return BackToFiles(); }
+
+            await ContractRegisterStore.UpdateContractAsync(
+                _dbContext, Contract.Id, contractNo, contractType, Contract.FromDate, Contract.ToDate,
+                note, user, makeCurrent: Contract.IsCurrent,
+                attachmentName: attachmentName, attachmentPath: attachmentPath);
+            contractId = Contract.Id;
+        }
+        else
+        {
+            contractId = await ContractRegisterStore.AddContractAsync(
+                _dbContext, Id, contractNo, contractType, Contract.FromDate, Contract.ToDate,
+                makeCurrent: Contract.IsCurrent, previousContractId: null, movementKind: null,
+                effectiveDate: null, note: note, createdBy: user,
+                attachmentName: attachmentName, attachmentPath: attachmentPath);
         }
 
-        var (name, path) = await SaveRecordFileAsync(ContractAttachment);
-        if (path != null) { c.AttachmentName = name; c.AttachmentPath = path; }
-
-        await _dbContext.SaveChangesAsync();
-
         // مزامنة حقول العقد المختصرة بكيان الموظف (نوع العقد الحالي وانتهاؤه) — تغذّي التنبيهات والتقارير.
-        if (c.IsCurrent)
+        if (Contract.IsCurrent)
         {
             await _dbContext.Employees
                 .Where(e => e.Id == Id)
                 .ExecuteUpdateAsync(s => s
-                    .SetProperty(e => e.ContractType, c.ContractType)
-                    .SetProperty(e => e.ContractEndDate, c.ToDate));
+                    .SetProperty(e => e.ContractType, contractType)
+                    .SetProperty(e => e.ContractEndDate, Contract.ToDate));
         }
 
-        await EntityCustomFields.SaveValuesFromFormAsync(_dbContext, "Contract", c.Id, Request.Form);
+        await EntityCustomFields.SaveValuesFromFormAsync(_dbContext, "Contract", contractId, Request.Form);
         PanelSuccess = "تم حفظ العقد.";
         return BackToFiles();
     }

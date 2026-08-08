@@ -161,7 +161,9 @@ ORDER BY SortOrder, Id;
         string? movementKind,
         DateOnly? effectiveDate,
         string? note,
-        string? createdBy)
+        string? createdBy,
+        string? attachmentName = null,
+        string? attachmentPath = null)
     {
         await using var transaction = await db.Database.BeginTransactionAsync();
 
@@ -178,10 +180,10 @@ ORDER BY SortOrder, Id;
             """
 INSERT INTO EmployeeContracts
     (EmployeeId, ContractNo, ContractType, FromDate, ToDate, IsCurrent,
-     PreviousContractId, MovementKind, EffectiveDate, Note, CreatedBy)
+     PreviousContractId, MovementKind, EffectiveDate, Note, AttachmentName, AttachmentPath, CreatedBy)
 OUTPUT INSERTED.Id
 VALUES (@EmployeeId, @ContractNo, @ContractType, @FromDate, @ToDate, @IsCurrent,
-        @PreviousContractId, @MovementKind, @EffectiveDate, @Note, @CreatedBy);
+        @PreviousContractId, @MovementKind, @EffectiveDate, @Note, @AttachmentName, @AttachmentPath, @CreatedBy);
 """,
             command =>
             {
@@ -195,6 +197,8 @@ VALUES (@EmployeeId, @ContractNo, @ContractType, @FromDate, @ToDate, @IsCurrent,
                 HrmsDatabase.AddParameter(command, "@MovementKind", movementKind);
                 HrmsDatabase.AddParameter(command, "@EffectiveDate", effectiveDate?.ToDateTime(TimeOnly.MinValue));
                 HrmsDatabase.AddParameter(command, "@Note", note);
+                HrmsDatabase.AddParameter(command, "@AttachmentName", attachmentName);
+                HrmsDatabase.AddParameter(command, "@AttachmentPath", attachmentPath);
                 HrmsDatabase.AddParameter(command, "@CreatedBy", createdBy);
             });
 
@@ -202,6 +206,14 @@ VALUES (@EmployeeId, @ContractNo, @ContractType, @FromDate, @ToDate, @IsCurrent,
         return id;
     }
 
+    /// <summary>
+    /// يعدّل بنود عقدٍ قائم. <paramref name="makeCurrent"/>:
+    /// <c>null</c> يُبقي صفة «الحالي» كما هي (سلوك سجلّ العقود)، و<c>true</c> يرقّيه
+    /// للحالي وينزع الصفة عن بقية عقود نفس الموظف بنفس المعاملة (نفس ثابت
+    /// <see cref="AddContractAsync"/>)، و<c>false</c> ينزعها عنه.
+    /// المرفق يُكتب فقط حين يُمرَّر <paramref name="attachmentPath"/> — فتعديلٌ بلا
+    /// رفعٍ جديد لا يمحو مرفقاً قائماً.
+    /// </summary>
     public static async Task UpdateContractAsync(
         ApplicationDbContext db,
         int id,
@@ -210,13 +222,36 @@ VALUES (@EmployeeId, @ContractNo, @ContractType, @FromDate, @ToDate, @IsCurrent,
         DateOnly fromDate,
         DateOnly? toDate,
         string? note,
-        string? updatedBy) =>
+        string? updatedBy,
+        bool? makeCurrent = null,
+        string? attachmentName = null,
+        string? attachmentPath = null)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync();
+
+        // عقد حاليّ واحد: عند الترقية للحالي، انزع الصفة عن بقية عقود الموظف بنفس المعاملة.
+        if (makeCurrent == true)
+        {
+            await HrmsDatabase.ExecuteAsync(
+                db,
+                """
+UPDATE EmployeeContracts SET IsCurrent = 0
+WHERE Id <> @Id
+  AND EmployeeId = (SELECT EmployeeId FROM EmployeeContracts WHERE Id = @Id);
+""",
+                command => HrmsDatabase.AddParameter(command, "@Id", id));
+        }
+
         await HrmsDatabase.ExecuteAsync(
             db,
             """
 UPDATE EmployeeContracts
 SET ContractNo = @ContractNo, ContractType = @ContractType, FromDate = @FromDate,
-    ToDate = @ToDate, Note = @Note, UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @UpdatedBy
+    ToDate = @ToDate, Note = @Note,
+    IsCurrent = CASE WHEN @SetCurrent = 1 THEN @IsCurrent ELSE IsCurrent END,
+    AttachmentName = CASE WHEN @HasAttachment = 1 THEN @AttachmentName ELSE AttachmentName END,
+    AttachmentPath = CASE WHEN @HasAttachment = 1 THEN @AttachmentPath ELSE AttachmentPath END,
+    UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @UpdatedBy
 WHERE Id = @Id;
 """,
             command =>
@@ -228,7 +263,15 @@ WHERE Id = @Id;
                 HrmsDatabase.AddParameter(command, "@ToDate", toDate?.ToDateTime(TimeOnly.MinValue));
                 HrmsDatabase.AddParameter(command, "@Note", note);
                 HrmsDatabase.AddParameter(command, "@UpdatedBy", updatedBy);
+                HrmsDatabase.AddParameter(command, "@SetCurrent", makeCurrent.HasValue);
+                HrmsDatabase.AddParameter(command, "@IsCurrent", makeCurrent ?? false);
+                HrmsDatabase.AddParameter(command, "@HasAttachment", attachmentPath is not null);
+                HrmsDatabase.AddParameter(command, "@AttachmentName", attachmentName);
+                HrmsDatabase.AddParameter(command, "@AttachmentPath", attachmentPath);
             });
+
+        await transaction.CommitAsync();
+    }
 
     /// <summary>حذف منطقي — عقدٌ يُمحى فعلياً يمحو معه تاريخ خدمةٍ قد يُحتاج مالياً.</summary>
     public static async Task DeleteContractAsync(ApplicationDbContext db, int id) =>
