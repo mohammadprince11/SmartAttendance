@@ -1,5 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/launchsettings.json",
+  "_warning": "لا تحذف ConnectionStrings__DefaultConnection أدناه: يوجد متغيّر بيئة على مستوى المستخدم بنفس الاسم يشير لقاعدة الإنتاج ويتجاوز كل ملفات appsettings، ومستخدم الإنتاج هو نفسه (Lenovo) فحذف متغيّر المستخدم يعيد توجيه الإنتاج. يُتجاوَز هنا على مستوى العملية المحلية وحدها، وEnvironmentDatabaseGuard يمنع الإقلاع إن سقط هذا التجاوز.",
   "profiles": {
     "http": {
       "commandName": "Project",
@@ -7,7 +8,8 @@
       "launchBrowser": true,
       "applicationUrl": "http://localhost:5080",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ConnectionStrings__DefaultConnection": "Server=localhost;Database=SmartAttendance_Dev;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
       }
     },
     "https": {
@@ -16,7 +18,8 @@
       "launchBrowser": true,
       "applicationUrl": "https://localhost:7142;http://localhost:5080",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ConnectionStrings__DefaultConnection": "Server=localhost;Database=SmartAttendance_Dev;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
       }
     }
   }
