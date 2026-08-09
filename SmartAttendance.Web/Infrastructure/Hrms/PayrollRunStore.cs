@@ -317,14 +317,20 @@ WHERE r.Id = @Id;
         await EnsureAsync(dbContext);
         if (year < 2000 || month is < 1 or > 12) return (false, "شهر غير صالح.", 0);
 
-        var seq = await HrmsDatabase.ScalarAsync<int>(
-            dbContext,
-            "SELECT COUNT(1) FROM PayrollRuns WHERE [Year] = @Y AND [Month] = @M;",
-            command => { HrmsDatabase.AddParameter(command, "@Y", year); HrmsDatabase.AddParameter(command, "@M", month); }) + 1;
-
         var ids = (scopeEmployeeIds ?? Enumerable.Empty<int>()).Distinct().ToList();
         var mode = PayrollRunScope.NormalizeMode(scopeMode);
         if (ids.Count == 0) mode = PayrollRunScope.ModeAll;   // نطاق بلا أعضاء = الكل
+
+        // إنشاء الدفعة وأعضاء نطاقها معاملةٌ واحدة (Phase 8): إن فشل حفظ الأعضاء تُلغى
+        // الدفعة كاملةً فلا يبقى Draft يتيمٌ بلا أعضاء يُفسَّر لاحقاً «كل الموظفين».
+        // وتخصيص الرقم يقفل مدى (السنة،الشهر) بـUPDLOCK/HOLDLOCK فيتسلسل المُنشئون
+        // المتزامنون ويستحيل رقمان متطابقان — كان COUNT+1 بلا قفلٍ سباقاً صريحاً.
+        await using var tx = await dbContext.Database.BeginTransactionAsync();
+
+        var seq = await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            "SELECT COUNT(1) FROM PayrollRuns WITH (UPDLOCK, HOLDLOCK) WHERE [Year] = @Y AND [Month] = @M;",
+            command => { HrmsDatabase.AddParameter(command, "@Y", year); HrmsDatabase.AddParameter(command, "@M", month); }) + 1;
 
         var batchNo = $"{year}-{month}-{seq}";
         var id = await HrmsDatabase.ScalarAsync<int>(
@@ -340,6 +346,8 @@ WHERE r.Id = @Id;
             });
 
         if (ids.Count > 0) await PayrollRunScopeStore.ReplaceAsync(dbContext, id, ids);
+
+        await tx.CommitAsync();
 
         var scopeText = ids.Count > 0
             ? $" — النطاق: {PayrollRunScope.Describe(mode, ids.Count)}"
