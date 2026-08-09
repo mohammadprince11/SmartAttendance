@@ -27,30 +27,34 @@
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
 
 <style>
-    .ps-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
+    /* تخطيط خاصٌّ بالصفحة فقط (المكوّنات المرئية صارت zy-*). كلّه من التوكنز. */
+    .ps-page { display:flex; flex-direction:column; gap:14px; color:var(--zy-text,inherit); }
+    /* رأس الصفحة/الأقسام/الأزرار — ألوانها من التوكنز (لا ألوان علامة مباشرة). */
     .ps-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
-        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px; background:linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
-    html[data-theme="light"] .ps-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
+        padding:16px 20px; border:1px solid var(--zy-border,rgba(73,111,151,.22)); border-radius:20px; background:var(--zy-bg-elevated,var(--zy-bg,transparent)); }
     .ps-head h1 { margin:0; font-size:20px; font-weight:1000; }
-    .ps-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .ps-warn { padding:10px 14px; border-radius:12px; font-size:12px; font-weight:900; border:1px solid rgba(250,204,21,.4); background:rgba(250,204,21,.08); color:#facc15; }
-    .ps-btn { min-height:34px; padding:6px 15px; border-radius:11px; border:0; font-size:12px; font-weight:900; cursor:pointer; background:linear-gradient(135deg,#12D9E3,#0ea5b5); color:#04141d; }
-    .ps-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
+    .ps-head p { margin:2px 0 0; font-size:12px; color:var(--zy-text-muted,var(--sa-muted,#8FA8BC)); font-weight:800; }
+    .ps-warn { padding:10px 14px; border-radius:12px; font-size:12px; font-weight:900; border-inline-start:3px solid var(--status-warning,#B77A14); background:var(--status-warning-soft,rgba(183,122,20,.12)); color:var(--zy-text,inherit); }
+    .ps-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border-inline-start:3px solid var(--status-success,#238C63); background:var(--status-success-soft,rgba(35,140,99,.12)); color:var(--zy-text,inherit); }
+    .ps-sec { border:1px solid var(--zy-border,rgba(73,111,151,.22)); border-radius:18px; background:var(--zy-bg-elevated,var(--sa-surface,rgba(8,25,43,.9))); padding:16px; display:flex; flex-direction:column; gap:10px; }
+    .ps-sec h2 { margin:0; font-size:15px; font-weight:1000; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .ps-btn { min-height:34px; padding:6px 15px; border-radius:11px; border:0; font-size:12px; font-weight:900; cursor:pointer; background:var(--brand-primary,#3a5a8c); color:var(--brand-primary-text,#fff); }
+    .ps-btn.ghost { background:transparent; border:1px solid var(--zy-border,rgba(73,111,151,.3)); color:inherit; }
+    .ps-btn.danger { background:transparent; border:1px solid var(--status-danger,#D94F5C); color:var(--status-danger,#D94F5C); }
     .ps-btn.sm { min-height:28px; padding:3px 10px; font-size:11px; }
     .ps-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
     @@media (max-width:900px){ .ps-grid { grid-template-columns:1fr; } }
-    .ps-sec { border:1px solid rgba(73,111,151,.22); border-radius:18px; background:var(--sa-surface,rgba(8,25,43,.9)); padding:16px; display:flex; flex-direction:column; gap:10px; }
-    .ps-sec h2 { margin:0; font-size:15px; font-weight:1000; display:flex; justify-content:space-between; align-items:center; }
-    .ps-item { border:1px solid rgba(73,111,151,.18); border-radius:12px; padding:10px 12px; font-size:13px; }
-    .ps-item.active { border-color:rgba(74,222,128,.4); }
+    /* عنصر قائمة/بطاقة اختيار — تخطيط داخليّ، ألوانه من التوكنز، يعمل بالوضعين. */
+    .ps-item { border:1px solid var(--zy-border,rgba(73,111,151,.18)); border-radius:var(--zy-card-radius,12px); padding:10px 12px; font-size:var(--zy-body-font,13px); background:var(--zy-bg-elevated,transparent); }
+    .ps-item.active { border-color:var(--status-success,#238C63); }
     .ps-item b { direction:ltr; }
-    .ps-tag { font-size:10px; font-weight:900; padding:2px 8px; border-radius:999px; background:rgba(74,222,128,.14); color:#4ade80; }
-    .ps-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
+    .ps-tag { font-size:10px; font-weight:900; padding:2px 8px; border-radius:999px; background:var(--status-success-soft,rgba(35,140,99,.14)); color:var(--status-success,#238C63); }
+    /* نماذج السلايد — تخطيط عموديّ خاصّ؛ الحقول ترث نظام الإدخال العامّ. */
     .ps-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
-    .ps-form input { min-height:36px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; }
-    html[data-theme="light"] .ps-form input { background:#fff; }
+    .ps-form input { min-height:var(--zy-control-h,36px); border-radius:var(--zy-control-radius,10px); border:1px solid var(--zy-border,rgba(73,111,151,.25)); background:var(--zy-bg,transparent); color:inherit; padding:6px 10px; }
     .ps-brk { display:grid; grid-template-columns:1fr 1fr 80px 34px; gap:6px; align-items:center; }
     .ps-brk input { min-height:32px; font-size:12px; }
+    .ps-muted { font-size:12px; color:var(--zy-text-muted,var(--sa-muted,#8FA8BC)); font-weight:800; }
 </style>
 
 <section class="ps-page" dir="rtl">
@@ -174,7 +178,7 @@
                         <div><b>@p.Name</b> @(p.IsActive ? Html.Raw("<span class=\"ps-tag\">نشط</span>") : Html.Raw(""))</div>
                         <div style="white-space:nowrap">
                             <button type="button" class="ps-btn ghost sm" onclick="taxOpen(@p.Id)">تعديل</button>
-                            <form method="post" asp-page-handler="DeleteTax" style="display:inline"><input type="hidden" name="id" value="@p.Id" /><button class="ps-btn ghost sm" style="color:#f87171" data-zyconfirm="حذف؟">حذف</button></form>
+                            <form method="post" asp-page-handler="DeleteTax" style="display:inline"><input type="hidden" name="id" value="@p.Id" /><button class="ps-btn danger sm" data-zyconfirm="حذف؟">حذف</button></form>
                         </div>
                     </div>
                     <div style="font-size:12px;color:var(--sa-muted,#8FA8BC);margin-top:4px">
@@ -195,7 +199,7 @@
                         <div><b>@g.Name</b> @(g.IsActive ? Html.Raw("<span class=\"ps-tag\">نشط</span>") : Html.Raw(""))</div>
                         <div style="white-space:nowrap">
                             <button type="button" class="ps-btn ghost sm" onclick="gosiOpen(@g.Id)">تعديل</button>
-                            <form method="post" asp-page-handler="DeleteGosi" style="display:inline"><input type="hidden" name="id" value="@g.Id" /><button class="ps-btn ghost sm" style="color:#f87171" data-zyconfirm="حذف؟">حذف</button></form>
+                            <form method="post" asp-page-handler="DeleteGosi" style="display:inline"><input type="hidden" name="id" value="@g.Id" /><button class="ps-btn danger sm" data-zyconfirm="حذف؟">حذف</button></form>
                         </div>
                     </div>
                     <div style="font-size:12px;color:var(--sa-muted,#8FA8BC);margin-top:4px">
