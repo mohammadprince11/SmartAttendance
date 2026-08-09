@@ -8,8 +8,8 @@ _2026-08-09. Study-first architecture correction, then full dynamic configuratio
 |---|---|
 | Branch | `claude/smartattendance-local-rebuild-wftwb3` |
 | Starting SHA | `42b1549` (People acceptance report) |
-| Ending SHA | `a5790db` |
-| Commits added | `2940d4a` (attendance base), `0291391` (gosi/tax employee-defined), `dc769f2`+`56e645d` (report), `f3a0ea7` (unpaid-leave/overtime/divisor), `031b02d` (config UI), `a5790db` (double-deduction guard) |
+| Ending SHA | `032ed75` |
+| Commits added | `2940d4a` (attendance base), `0291391` (gosi/tax employee-defined), `f3a0ea7` (unpaid-leave/overtime/divisor), `031b02d` (config UI), `a5790db` (double-deduction guard), `032ed75` (per-allowance tax/gosi + payslip trace), + report commits |
 | Main SHA (`origin/main`) | `73169433` (not modified) |
 
 Working HEAD was `beee200` at task start; only my People report `42b1549` sat above it (preserved). No reset/rebase/merge.
@@ -20,8 +20,8 @@ Working HEAD was `beee200` at task start; only my People report `42b1549` sat ab
 - **Allowances**: totalled as one full amount; the `SalaryItem.Prorated` flag existed but was **never consumed** for employee allowances.
 - **GOSI**: `EmployeeFinancialInfos.SocialSecuritySalary` was captured/saved but **never read** by payroll; GOSI always computed on full Gross (default `GosiBase = Gross`).
 - **Tax**: no current tax-salary concept; `PreviousTaxSalary` is an opening balance. Tax always from composed components.
-- **Unpaid leave**: `unpaidDays × (basic/30)` — Basic-only, hidden `30` (L884). _(not yet changed)_
-- **Overtime**: `hours × (basic/30/8) × rateFactor` — Basic-only, hidden `30`/`8` (L644). _(not yet changed)_
+- **Unpaid leave**: was `unpaidDays × (basic/30)` — Basic-only, hidden `30` (L884). _(now configurable base + divisor)_
+- **Overtime**: was `hours × (basic/30/8) × rateFactor` — Basic-only, hidden `30`/`8` (L644). _(now configurable base + divisor)_
 - **Penalties**: already correct/configurable via `BasePoolJson` + `WorkDaysBasis` — the model the others should follow. _(unchanged, by design)_
 
 ## 3. New Salary Base Architecture
@@ -36,9 +36,7 @@ Working HEAD was `beee200` at task start; only my People report `42b1549` sat ab
 | **OvertimeBase, UnpaidLeaveBase** | **new (this session)** | `PayrollEarningBase` (Basic vs Basic+eligible allowances) ÷ `PayrollDivisorPolicy` |
 | **Divisor policy** | **new (this session)** | `PayrollDivisorPolicy` owns `Payroll.SalaryDaysBasis` (Fixed30) + `Payroll.StandardDailyHours` (8) |
 
-New pure, tested units total: `AttendanceSalaryBase`, `EmployeeDefinedSalaryBase`, `PayrollEarningBase`, `PayrollRateBasis`, `PayrollDivisorPolicy`.
-
-New pure, tested units: `AttendanceSalaryBase`, `EmployeeDefinedSalaryBase`. Both live in infrastructure payroll logic (no duplicated calculation in pages).
+New pure, tested units total: `AttendanceSalaryBase`, `EmployeeDefinedSalaryBase`, `PayrollEarningBase`, `PayrollRateBasis`, `PayrollDivisorPolicy` — all in infrastructure payroll logic (no duplicated calculation in pages).
 
 ## 4. Employee Financial Fields
 
@@ -47,7 +45,7 @@ New pure, tested units: `AttendanceSalaryBase`, `EmployeeDefinedSalaryBase`. Bot
 - `SocialSecuritySalary` — **now consumed** when `GosiBaseMode = EmployeeDefined`.
 - `CurrentTaxSalary` — **new column**; consumed when `TaxBaseMode = EmployeeDefined`. Distinct from `PreviousTaxSalary` (untouched).
 - `TaxBaseMode`, `GosiBaseMode` — **new columns**; empty ⇒ `SalaryComponents` (today's behavior).
-- Daily/Hourly rate — still `basic/30`, `/8` (central divisor policy planned).
+- Daily/Hourly rate — overtime/unpaid-leave rates now flow through `PayrollDivisorPolicy` (defaults `basic/30`, `/8`); generic daily/hourly for salary-days/leave-encashment still `basic/30`.
 
 Migration `20260809-01-employee-defined-tax-gosi-base`: three nullable columns, idempotent, non-destructive; `PreviousTaxSalary` preserved.
 
@@ -55,12 +53,12 @@ Migration `20260809-01-employee-defined-tax-gosi-base`: three nullable columns, 
 
 - Absence/late/early/missing-punch flow through the attendance **factor** (`EmployeeMonthAttendance` → `AttendanceSalaryLink`), unchanged.
 - What changed: the factor now applies to **each attendance-sensitive earning component**, not Basic alone. Basic is always sensitive; an allowance is sensitive iff its `SalaryItem.Prorated = true`. Fixed allowances stay full.
-- Paid leave / unpaid leave day handling unchanged this session (unpaid-leave base is planned).
+- Unpaid-leave deduction now uses the configurable `UnpaidLeaveBase` ÷ divisor (default Basic ÷ 30).
 
 ## 6. Allowance Behavior
 
 - **Attendance participation**: `SalaryItem.Prorated` (existing flag, now consumed). Default false ⇒ allowance is attendance-fixed = old behavior.
-- **Tax / GOSI eligibility**: still at the base-membership (aggregate) level via `SalaryBaseComposer`; per-allowance tax/GOSI split not changed this session.
+- **Tax / GOSI eligibility**: per-allowance via `SalaryItem.Taxable` / `GosiEligible`, surfaced as the `TaxableAllowances` / `GosiAllowances` composer components (a profile opts in by swapping base membership); default membership still uses all allowances.
 - EmployeeAllowance inherits the SalaryItem policy by `ItemName` (free-text match, case-insensitive).
 
 ## 7. Tax
@@ -103,8 +101,8 @@ Full end-to-end line integration test (all effects combined) requires a SQL-back
 | Metric | Value |
 |---|---|
 | Release build | **0 errors** |
-| Total tests | **1470** |
-| Passed | 1470 |
+| Total tests | **1474** |
+| Passed | 1474 |
 | Failed | 0 |
 | Skipped | 0 |
 | `git diff --check` | clean |
@@ -126,11 +124,11 @@ All default to legacy behavior; nothing changes until an operator opts in.
 
 ## 15. Remaining Risks
 
-- **LOW** — Per-allowance tax/GOSI eligibility (Phase 2 full model) not implemented; tax/GOSI still compose via aggregate base membership (already per-profile editable).
-- **LOW** — Payslip trace (Phase 15): the per-line component breakdown already exists via each component's `Kind` (earnings/deductions with amounts). A *persisted* base+factor header (AttendanceBase, factor, TaxBase source, GOSI source per line) would need new line columns + RunDetail rework — documented as an enhancement, not a blocker.
-- **LOW** — Live two-company end-to-end payroll run not executed here (the dev server shares the production DB; running migrations/calcs there needs deploy authorization). Compile + 1470 unit tests cover the logic; a real run is part of acceptance testing itself.
+- **DONE** — Per-allowance tax/GOSI eligibility (Phase 2): `SalaryItem.GosiEligible` + `Taxable` drive the new `TaxableAllowances`/`GosiAllowances` composer components; a profile opts in by swapping its base membership. Editable from Salary Items.
+- **DONE** — Payslip trace (Phase 15): AttendanceBase/factor + Tax/GOSI base and source persisted per line and shown in the RunDetail payslip ("أثر الاحتساب").
+- **LOW** — Live two-company end-to-end payroll run not executed here (the dev server shares the production DB; running migrations/calcs there needs deploy authorization). Compile + 1474 unit tests cover the logic; a real run is part of acceptance testing itself.
 
-`No known payroll release blocker remains; all changes are backward-compatible, opt-in, and now operator-configurable.`
+`No known payroll release blocker remains; all changes are backward-compatible, opt-in, and operator-configurable.`
 
 ## 15. Data Safety
 
@@ -145,4 +143,4 @@ All default to legacy behavior; nothing changes until an operator opts in.
 
 `PAYROLL ENGINE READY FOR ACCEPTANCE TESTING`
 
-All six salary bases (Attendance, Tax, GOSI, Overtime, UnpaidLeave, Penalty) compose from explicit, **user-configurable** sources; all seven golden scenarios pass with exact decimals; the three deduction channels are guarded against double-counting; and everything is backward-compatible (**1470/1470 green**, defaults reproduce the old numbers). Every new policy and flag is editable from the UI, so HR can select and verify each base end-to-end. Remaining items (§15) are LOW enhancements, not blockers. Acceptance testing should now be run against a controlled non-production two-company database. Do **not** merge to main, and do **not** deploy — the additive migrations (`20260809-01/02`) apply on the next authorized deploy.
+All six salary bases (Attendance, Tax, GOSI, Overtime, UnpaidLeave, Penalty) compose from explicit, **user-configurable** sources; all seven golden scenarios pass with exact decimals; the three deduction channels are guarded against double-counting; and everything is backward-compatible (**1474/1474 green**, defaults reproduce the old numbers). Every new policy and flag is editable from the UI, so HR can select and verify each base end-to-end. Remaining items (§15) are LOW enhancements, not blockers. Acceptance testing should now be run against a controlled non-production two-company database. Do **not** merge to main, and do **not** deploy — the additive migrations (`20260809-01/02`) apply on the next authorized deploy.
