@@ -8,8 +8,8 @@ _2026-08-09. Study-first architecture correction, then full dynamic configuratio
 |---|---|
 | Branch | `claude/smartattendance-local-rebuild-wftwb3` |
 | Starting SHA | `42b1549` (People acceptance report) |
-| Ending SHA | `032ed75` |
-| Commits added | `2940d4a` (attendance base), `0291391` (gosi/tax employee-defined), `f3a0ea7` (unpaid-leave/overtime/divisor), `031b02d` (config UI), `a5790db` (double-deduction guard), `032ed75` (per-allowance tax/gosi + payslip trace), + report commits |
+| Ending SHA | `ca9c57a` |
+| Commits added | `2940d4a` (attendance base), `0291391` (gosi/tax employee-defined), `f3a0ea7` (unpaid-leave/overtime/divisor), `031b02d` (config UI), `a5790db` (double-deduction guard), `032ed75` (per-allowance tax/gosi + payslip trace), `ca9c57a` (config validation), + report commits |
 | Main SHA (`origin/main`) | `73169433` (not modified) |
 
 Working HEAD was `beee200` at task start; only my People report `42b1549` sat above it (preserved). No reset/rebase/merge.
@@ -101,8 +101,8 @@ Full end-to-end line integration test (all effects combined) requires a SQL-back
 | Metric | Value |
 |---|---|
 | Release build | **0 errors** |
-| Total tests | **1474** |
-| Passed | 1474 |
+| Total tests | **1489** |
+| Passed | 1489 |
 | Failed | 0 |
 | Skipped | 0 |
 | `git diff --check` | clean |
@@ -124,9 +124,10 @@ All default to legacy behavior; nothing changes until an operator opts in.
 
 ## 15. Remaining Risks
 
+- **DONE** — Config validation (Phase 24): `PayrollConfigValidation` rejects negative GOSI/tax rates, overlapping/misordered tax brackets, open-ended-not-last brackets, negative salaries, and non-positive daily hours — wired into the Settings and Financial Info save handlers (bad input refused, old value kept, no silent coercion).
 - **DONE** — Per-allowance tax/GOSI eligibility (Phase 2): `SalaryItem.GosiEligible` + `Taxable` drive the new `TaxableAllowances`/`GosiAllowances` composer components; a profile opts in by swapping its base membership. Editable from Salary Items.
 - **DONE** — Payslip trace (Phase 15): AttendanceBase/factor + Tax/GOSI base and source persisted per line and shown in the RunDetail payslip ("أثر الاحتساب").
-- **LOW** — Live two-company end-to-end payroll run not executed here (the dev server shares the production DB; running migrations/calcs there needs deploy authorization). Compile + 1474 unit tests cover the logic; a real run is part of acceptance testing itself.
+- **LOW** — Live two-company end-to-end payroll run not executed here (the dev server shares the production DB; running migrations/calcs there needs deploy authorization). Compile + 1489 unit tests cover the logic; a real run is part of acceptance testing itself.
 
 `No known payroll release blocker remains; all changes are backward-compatible, opt-in, and operator-configurable.`
 
@@ -143,4 +144,4 @@ All default to legacy behavior; nothing changes until an operator opts in.
 
 `PAYROLL ENGINE READY FOR ACCEPTANCE TESTING`
 
-All six salary bases (Attendance, Tax, GOSI, Overtime, UnpaidLeave, Penalty) compose from explicit, **user-configurable** sources; all seven golden scenarios pass with exact decimals; the three deduction channels are guarded against double-counting; and everything is backward-compatible (**1474/1474 green**, defaults reproduce the old numbers). Every new policy and flag is editable from the UI, so HR can select and verify each base end-to-end. Remaining items (§15) are LOW enhancements, not blockers. Acceptance testing should now be run against a controlled non-production two-company database. Do **not** merge to main, and do **not** deploy — the additive migrations (`20260809-01/02`) apply on the next authorized deploy.
+All six salary bases (Attendance, Tax, GOSI, Overtime, UnpaidLeave, Penalty) compose from explicit, **user-configurable** sources; all seven golden scenarios pass with exact decimals; the three deduction channels are guarded against double-counting; and everything is backward-compatible (**1489/1489 green**, defaults reproduce the old numbers). Every new policy and flag is editable from the UI, so HR can select and verify each base end-to-end. Remaining items (§15) are LOW enhancements, not blockers. Acceptance testing should now be run against a controlled non-production two-company database. Do **not** merge to main, and do **not** deploy — the additive migrations (`20260809-01/02`) apply on the next authorized deploy.
