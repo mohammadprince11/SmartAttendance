@@ -52,6 +52,7 @@ jobs:
           dotnet test SmartAttendance.Tests/SmartAttendance.Tests.csproj
           -c Release
           --no-build
+          --filter "FullyQualifiedName!~ProductionClosureSqlTests"
           --logger "trx;LogFileName=unit-tests.trx"
           --results-directory ${{ github.workspace }}/TestResults
           --collect:"XPlat Code Coverage"
@@ -62,6 +63,51 @@ jobs:
         with:
           name: unit-test-results
           path: ${{ github.workspace }}/TestResults/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  sql-acceptance:
+    name: SQL Server Acceptance
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore SmartAttendance.slnx
+
+      - name: Build tests (Release)
+        shell: pwsh
+        run: dotnet build SmartAttendance.Tests/SmartAttendance.Tests.csproj -c Release --no-restore
+
+      - name: Start disposable SQL Server LocalDB
+        shell: pwsh
+        run: sqllocaldb start MSSQLLocalDB
+
+      - name: Tenant isolation and sequence invariants
+        shell: pwsh
+        run: >
+          dotnet test SmartAttendance.Tests/SmartAttendance.Tests.csproj
+          -c Release
+          --no-build
+          --filter "FullyQualifiedName~ProductionClosureSqlTests"
+          --logger "trx;LogFileName=sql-acceptance.trx"
+          --results-directory ${{ github.workspace }}/SqlAcceptanceResults
+
+      - name: Upload SQL acceptance results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sql-acceptance-results
+          path: ${{ github.workspace }}/SqlAcceptanceResults/**
           if-no-files-found: warn
           retention-days: 14
 
