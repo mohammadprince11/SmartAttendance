@@ -118,7 +118,8 @@ public class IndexModel : PageModel
             .ToList();
 
     private async Task<IActionResult> TransitionAsync(
-        Func<ApplicationDbContext, IReadOnlyCollection<int>, Task<int>> action, string messageFormat)
+        Func<ApplicationDbContext, SmartAttendance.Web.Infrastructure.Security.CompanyScope, IReadOnlyCollection<int>, Task<int>> action,
+        string messageFormat)
     {
         var ids = SelectedIds();
         if (ids.Count == 0)
@@ -127,7 +128,7 @@ public class IndexModel : PageModel
         }
         else
         {
-            var count = await action(_dbContext, ids);
+            var count = await action(_dbContext, await _companyScope.GetAsync(HttpContext.RequestAborted), ids);
             TempData["SuccessMessage"] = count == 0
                 ? "لا صفوف بحالة تسمح بهذا الانتقال ضمن المحدد."
                 : string.Format(messageFormat, count);
