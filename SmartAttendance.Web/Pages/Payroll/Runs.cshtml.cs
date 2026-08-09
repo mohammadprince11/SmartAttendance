@@ -117,6 +117,29 @@ public class RunsModel : PageModel
         }
     }
 
+    /// <summary>
+    /// موظفو/أقسام/فروع/مسميات شركةٍ بعينها (JSON) — لتحميل بيانات النطاق عند اختيار
+    /// الشركة بنافذة الإنشاء <b>دون إعادة تحميل الصفحة</b>. نفس استعلامات <see cref="OnGetAsync"/>.
+    /// </summary>
+    public async Task<IActionResult> OnGetCompanyScopeAsync(int companyId)
+    {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (companyId <= 0 || !scope.Allows(companyId)) return Forbid();
+
+        var employees = await HrmsDatabase.QueryAsync(_db,
+            "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo, ISNULL(FullName, N'') AS FullName FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1 AND CompanyId=@Company ORDER BY EmployeeNo;",
+            command => HrmsDatabase.AddParameter(command, "@Company", companyId),
+            reader => new
+            {
+                id = HrmsDatabase.GetInt(reader, "Id"),
+                no = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                name = HrmsDatabase.GetString(reader, "FullName")
+            });
+
+        var (departments, branches, jobTitles) = await MassScopeResolver.OrgListsAsync(_db, companyId);
+        return new JsonResult(new { employees, departments, branches, jobTitles });
+    }
+
     public async Task<IActionResult> OnPostCreateAsync(
         int companyId, int year, int month, IFormFile? massFile)
     {

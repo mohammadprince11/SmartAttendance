@@ -241,7 +241,7 @@
                 <div id="pr-period-block" style="display:flex;flex-direction:column;gap:12px">
                     <label>الشركة
                         <select name="companyId" id="pr-company" required
-                                onchange="if(this.value){window.location.search='?CompanyId='+encodeURIComponent(this.value)+'&openrun=1'}">
+                                onchange="prLoadCompany(this.value)">
                             @if (Model.Companies.Count != 1)
                             {
                                 <option value="">اختر الشركة</option>
@@ -390,15 +390,30 @@
             document.getElementById('pr-backdrop').classList.add('open');
         }
 
-        // اختيار الشركة يعيد تحميل الصفحة لجلب موظفي/أقسام تلك الشركة للنطاق؛ نعيد فتح
-        // نافذة «دفعة جديدة» تلقائياً بعدها (الشركة مختارة والبيانات محمّلة) فلا ينقطع العمل.
-        (function () {
-            if (!new URLSearchParams(window.location.search).has('openrun')) return;
-            if (document.readyState === 'loading')
-                document.addEventListener('DOMContentLoaded', prOpen);
-            else
-                prOpen();
-        })();
+        // اختيار الشركة يحمّل موظفيها وأقسامها عبر AJAX ويحدّث منتقيات النطاق **دون إعادة
+        // تحميل الصفحة** — النافذة تبقى مفتوحة كما هي. النطاق يُعاد لـ«الكل» لأن التحديد
+        // السابق قد يخصّ شركة أخرى.
+        function prFillSelect(name, items, allLabel) {
+            var sel = document.querySelector('#pr-slide select[name="' + name + '"]');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">' + allLabel + '</option>' +
+                (items || []).map(function (s) { return '<option value="' + prEsc(s) + '">' + prEsc(s) + '</option>'; }).join('');
+        }
+        function prLoadCompany(id) {
+            prScope('All');
+            if (!id) { window.MASS_EMP = []; massBuildEmps(); massCount(); return; }
+            fetch(window.location.pathname + '?handler=CompanyScope&companyId=' + encodeURIComponent(id),
+                  { headers: { 'X-Requested-With': 'fetch' } })
+                .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+                .then(function (d) {
+                    window.MASS_EMP = (d.employees || []).map(function (e) { return { Id: e.id, No: e.no, Name: e.name }; });
+                    massBuildEmps(); massCount();
+                    prFillSelect('MassDept', d.departments, 'كل الأقسام');
+                    prFillSelect('MassBranch', d.branches, 'كل الفروع');
+                    prFillSelect('MassJobTitle', d.jobTitles, 'كل المسميات');
+                })
+                .catch(function () { /* تجاهُل صامت — يبقى التحديد السابق */ });
+        }
 
         // قائمة الإجراءات (⋯) بنمط كيان: زرّ واحد يفتح لوحة الخيارات.
         // اللوحة position:fixed فتُموضَع يدوياً تحت الزرّ لتفادي قصّ الجدول المُمرَّر.
