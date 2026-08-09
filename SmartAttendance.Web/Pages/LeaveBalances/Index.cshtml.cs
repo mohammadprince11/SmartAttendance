@@ -6,16 +6,19 @@ using SmartAttendance.Domain.Leave;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.LeaveBalances;
 
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(ApplicationDbContext dbContext, ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -57,17 +60,16 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostCarryOverAsync()
     {
         var form = Request.Form;
-        if (!CompanyId.HasValue)
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (!CompanyId.HasValue || !scope.Allows(CompanyId.Value))
         {
-            var companyIds = await _dbContext.Companies.AsNoTracking()
-                .Where(c => !c.IsDeleted && c.IsActive).Select(c => c.Id).ToArrayAsync();
-            CompanyId = CompanySelectionContext.Resolve(HttpContext, CompanyId, companyIds);
+            return Forbid();
         }
-        if (!CompanyId.HasValue)
-        {
-            CarryMessage = "اختر الشركة أولاً.";
-            return RedirectToPage(new { CompanyId, Year });
-        }
+
+        var selectedCompanyExists = await _dbContext.Companies.AsNoTracking()
+            .AnyAsync(c => c.Id == CompanyId.Value && !c.IsDeleted && c.IsActive,
+                HttpContext.RequestAborted);
+        if (!selectedCompanyExists) return Forbid();
 
         var types = form["CarryTypes"]
             .Where(v => Enum.TryParse<LeaveType>(v, out _))
@@ -82,7 +84,14 @@ public class IndexModel : PageModel
         decimal? cap = decimal.TryParse(form["CarryCap"], out var c) && c > 0 ? c : null;
 
         var result = await LeaveCarryoverService.CarryOverAsync(
-            _dbContext, CompanyId.Value, Year, types, cap, User.Identity?.Name ?? "System");
+            _dbContext,
+            scope,
+            CompanyId.Value,
+            Year,
+            types,
+            cap,
+            User.Identity?.Name ?? "System",
+            HttpContext.RequestAborted);
 
         var typeSummary = string.Join("، ",
             result.ByType.Select(kv => $"{LeaveTypeText(kv.Key)} {kv.Value:0.#}"));
@@ -108,13 +117,27 @@ public class IndexModel : PageModel
             Year = currentYear;
         }
 
-        CompanyOptions = await _dbContext.Companies
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var companyQuery = _dbContext.Companies
             .AsNoTracking()
-            .Where(x => !x.IsDeleted && x.IsActive)
+            .Where(x => !x.IsDeleted && x.IsActive);
+        if (!scope.IsUnrestricted)
+        {
+            var allowed = scope.AllowedCompanyIds.ToArray();
+            companyQuery = companyQuery.Where(x => allowed.Contains(x.Id));
+        }
+
+        CompanyOptions = await companyQuery
             .OrderBy(x => x.Name)
             .ThenBy(x => x.Code)
             .Select(x => new CompanyOption { Id = x.Id, Name = x.Name })
-            .ToListAsync();
+            .ToListAsync(HttpContext.RequestAborted);
+
+        if (CompanyId.HasValue && !CompanyOptions.Any(x => x.Id == CompanyId.Value))
+        {
+            CompanyId = null;
+            return;
+        }
 
         CompanyId = CompanySelectionContext.Resolve(
             HttpContext,
