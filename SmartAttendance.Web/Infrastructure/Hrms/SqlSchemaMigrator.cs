@@ -1192,7 +1192,7 @@ BEGIN
         WHERE CHARINDEX('-', REVERSE(BatchNo)) > 1
         GROUP BY [Year], [Month]
     )
-    MERGE PayrollRunSequences AS target
+MERGE PayrollRunSequences AS target
     USING ExistingMax AS source
        ON target.[Year] = source.[Year] AND target.[Month] = source.[Month]
     WHEN MATCHED AND target.NextValue < source.NextValue THEN
@@ -1200,6 +1200,52 @@ BEGIN
     WHEN NOT MATCHED THEN
         INSERT ([Year], [Month], NextValue)
         VALUES (source.[Year], source.[Month], source.NextValue);
+END;
+"""),
+
+        // Employee allowance identity is a real FK. ItemName remains a snapshot only;
+        // ambiguous or unmatched historic names are a hard migration blocker.
+        new(
+            "20260809-06-employee-allowance-salary-item-id",
+            """
+IF OBJECT_ID('EmployeeAllowances', 'U') IS NOT NULL
+   AND OBJECT_ID('SalaryItems', 'U') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT LTRIM(RTRIM(Name))
+        FROM SalaryItems
+        GROUP BY LTRIM(RTRIM(Name))
+        HAVING COUNT(*) > 1)
+        THROW 51001, 'Duplicate SalaryItems.Name values make EmployeeAllowance backfill ambiguous.', 1;
+
+    IF COL_LENGTH('EmployeeAllowances', 'SalaryItemId') IS NULL
+        ALTER TABLE EmployeeAllowances ADD SalaryItemId int NULL;
+
+    UPDATE a
+       SET SalaryItemId = s.Id
+    FROM EmployeeAllowances a
+    INNER JOIN SalaryItems s
+      ON LTRIM(RTRIM(s.Name)) = LTRIM(RTRIM(a.ItemName))
+    WHERE a.SalaryItemId IS NULL;
+
+    IF EXISTS (SELECT 1 FROM EmployeeAllowances WHERE SalaryItemId IS NULL)
+        THROW 51002, 'Unmatched EmployeeAllowance.ItemName values must be remediated before enabling SalaryItemId.', 1;
+
+    IF EXISTS (
+        SELECT 1 FROM sys.columns
+        WHERE object_id = OBJECT_ID('EmployeeAllowances')
+          AND name = 'SalaryItemId' AND is_nullable = 1)
+        ALTER TABLE EmployeeAllowances ALTER COLUMN SalaryItemId int NOT NULL;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('EmployeeAllowances') AND name = 'IX_EmployeeAllowances_SalaryItemId')
+        CREATE INDEX IX_EmployeeAllowances_SalaryItemId ON EmployeeAllowances (SalaryItemId);
+
+    IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_EmployeeAllowances_SalaryItems_SalaryItemId')
+        ALTER TABLE EmployeeAllowances ADD CONSTRAINT FK_EmployeeAllowances_SalaryItems_SalaryItemId
+            FOREIGN KEY (SalaryItemId) REFERENCES SalaryItems (Id);
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('SalaryItems') AND name = 'UX_SalaryItems_Name')
+        CREATE UNIQUE INDEX UX_SalaryItems_Name ON SalaryItems (Name);
 END;
 """),
     };

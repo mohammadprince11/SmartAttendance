@@ -456,6 +456,10 @@ if (SmartAttendance.Web.Infrastructure.Hrms.EnvironmentDatabaseGuard.Validate(
 using (var migrationScope = app.Services.CreateScope())
 {
     var migrationDb = migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    // These legacy tables pre-date the controlled migrator. Ensure their base shape
+    // at startup so the SalaryItemId migration also covers a clean database.
+    await SmartAttendance.Web.Infrastructure.Hrms.SalaryItemStore.EnsureAsync(migrationDb);
+    await SmartAttendance.Web.Infrastructure.Hrms.EmployeeAllowanceSchema.EnsureAsync(migrationDb);
     await SmartAttendance.Web.Infrastructure.Hrms.SqlSchemaMigrator.ApplyAsync(migrationDb);
 
     // مخطط توكنات الـAPI يُضمَن هنا مرّة واحدة عند الإقلاع — لا بمسار التحقّق الساخن.

@@ -33,7 +33,7 @@ public partial class ProfileModel
 
     // ---- العلاوات (نمط كيان: عنصر راتب + مبلغ + نطاق + حالة مشتقة) ----
     public List<EmployeeAllowance> Allowances { get; set; } = new();
-    public List<string> SalaryItemOptions { get; set; } = new();
+    public List<SalaryItemStore.SalaryItem> SalaryItemOptions { get; set; } = new();
     public decimal ActiveAllowancesTotal { get; set; }
 
     /// <summary>الملفان الماليان المطبَّقان فعلاً على هذا الموظف — كانا محسوبين وخفيّين.</summary>
@@ -142,8 +142,9 @@ public partial class ProfileModel
 
         await LoadFinancialProfilesAsync(today);
 
+        SalaryItemOptions = await SalaryItemStore.ActiveIncomeItemsAsync(_dbContext);
+
         await HrLookups.EnsureSchemaAsync(_dbContext);
-        SalaryItemOptions = await HrLookups.ValuesAsync(_dbContext, "salaryitems");
 
         ContractTypeOptions = await HrLookups.ValuesAsync(_dbContext, "contracttypes");
 
@@ -386,7 +387,11 @@ public partial class ProfileModel
     {
         await EmployeeAllowanceSchema.EnsureAsync(_dbContext);
         if (!await _dbContext.Employees.AnyAsync(e => e.Id == Id && !e.IsDeleted)) return NotFound();
-        if (string.IsNullOrWhiteSpace(Allowance.ItemName)) { PanelError = "عنصر الراتب مطلوب."; return BackToFiles(); }
+        var salaryItem = Allowance.SalaryItemId > 0
+            ? (await SalaryItemStore.ActiveIncomeItemsAsync(_dbContext))
+                .SingleOrDefault(x => x.Id == Allowance.SalaryItemId)
+            : null;
+        if (salaryItem == null) { PanelError = "عنصر الراتب غير موجود أو غير نشط."; return BackToFiles(); }
         if (Allowance.FromDate == default) { PanelError = "تاريخ بداية العلاوة مطلوب."; return BackToFiles(); }
         if (Allowance.ToDate.HasValue && Allowance.ToDate.Value < Allowance.FromDate)
         { PanelError = "تاريخ نهاية العلاوة قبل بدايتها."; return BackToFiles(); }
@@ -399,7 +404,8 @@ public partial class ProfileModel
         if (a == null) { a = new EmployeeAllowance { EmployeeId = Id, CreatedAt = now, CreatedBy = user }; _dbContext.EmployeeAllowances.Add(a); }
         else { a.UpdatedAt = now; a.UpdatedBy = user; }
 
-        a.ItemName = Allowance.ItemName.Trim();
+        a.SalaryItemId = salaryItem.Id;
+        a.ItemName = salaryItem.Name;
         a.Amount = Allowance.Amount;
         a.FromDate = Allowance.FromDate;
         a.ToDate = Allowance.ToDate;
@@ -432,7 +438,7 @@ public partial class ProfileModel
     public class AllowanceInput
     {
         public int Id { get; set; }
-        public string ItemName { get; set; } = string.Empty;
+        public int SalaryItemId { get; set; }
         public decimal Amount { get; set; }
         public DateOnly FromDate { get; set; }
         public DateOnly? ToDate { get; set; }

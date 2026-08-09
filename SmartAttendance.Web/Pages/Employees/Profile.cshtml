@@ -1200,7 +1200,7 @@
                                                         <td><span class="z360-badge @(isActive ? "z360-badge-ok" : "z360-badge-warn")">@(isActive ? "نشطة" : "توقفت")</span></td>
                                                         <td style="white-space:nowrap">
                                                             <button type="button" class="z360-card-tool" title="تعديل" data-hrms-open="allowance-form"
-                                                                    onclick="allowanceOpen(@allowance.Id,'@Html.Raw(allowance.ItemName.Replace("'", "\\'"))',@allowance.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture),this,'@allowance.FromDate.ToString("yyyy-MM-dd")','@(allowance.ToDate?.ToString("yyyy-MM-dd") ?? "")',@(allowance.EndAfterDate ? "true" : "false"),'@Html.Raw((allowance.Note ?? "").Replace("'", "\\'"))')">✎</button>
+                                                                    onclick="allowanceOpen(@allowance.Id,@allowance.SalaryItemId,@allowance.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture),this,'@allowance.FromDate.ToString("yyyy-MM-dd")','@(allowance.ToDate?.ToString("yyyy-MM-dd") ?? "")',@(allowance.EndAfterDate ? "true" : "false"),'@Html.Raw((allowance.Note ?? "").Replace("'", "\\'"))')">✎</button>
                                                             <form method="post" asp-page-handler="DeleteAllowance" asp-route-id="@Model.Id" style="display:inline" data-zyconfirm="حذف العلاوة؟">
                                                                 <input type="hidden" name="recordId" value="@allowance.Id" />
                                                                 <button type="submit" class="z360-card-tool" title="حذف">🗑</button>
@@ -1451,11 +1451,11 @@
         <form method="post" asp-page-handler="SaveAllowance" asp-route-id="@Model.Id" enctype="multipart/form-data" class="hrms-page">
             <input type="hidden" name="Allowance.Id" id="alw-Id" value="0" />
             <div class="hrms-field"><label>عنصر الراتب</label>
-                <select name="Allowance.ItemName" id="alw-ItemName" required>
+                <select name="Allowance.SalaryItemId" id="alw-SalaryItemId" required>
                     <option value="">اختر</option>
                     @foreach (var item in Model.SalaryItemOptions)
                     {
-                        <option value="@item">@item</option>
+                        <option value="@item.Id">@item.Name</option>
                     }
                 </select>
             </div>
@@ -1473,14 +1473,10 @@
 
 <script>
     // تعبئة درج العلاوة للإضافة (id=0) أو التعديل (قيم الصف).
-    function allowanceOpen(id, itemName, amount, btn, fromDate, toDate, endAfter, note) {
+    function allowanceOpen(id, salaryItemId, amount, btn, fromDate, toDate, endAfter, note) {
         document.getElementById('alw-Id').value = id || 0;
         document.getElementById('allowance-form-title').textContent = id ? 'تعديل العلاوة' : 'إضافة علاوة';
-        var sel = document.getElementById('alw-ItemName');
-        sel.value = itemName || '';
-        if (itemName && sel.value !== itemName) { // قيمة قديمة مو بالقائمة
-            var opt = document.createElement('option'); opt.value = itemName; opt.textContent = itemName; sel.appendChild(opt); sel.value = itemName;
-        }
+        document.getElementById('alw-SalaryItemId').value = salaryItemId || '';
         document.getElementById('alw-Amount').value = amount || '';
         document.getElementById('alw-FromDate').value = fromDate || '';
         document.getElementById('alw-ToDate').value = toDate || '';

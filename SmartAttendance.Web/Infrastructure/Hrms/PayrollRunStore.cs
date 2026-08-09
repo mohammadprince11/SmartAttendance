@@ -103,6 +103,25 @@ public static class PayrollRunStore
         public string Kind { get; set; } = string.Empty;   // Basic|Allowance|Income|Overtime|SalaryDays|LeaveEncashment|Formula|Deduction|Leave|Tax|Gosi|Penalty
     }
 
+    public sealed record AllowancePolicy(
+        bool InGross,
+        bool Prorated,
+        bool OvertimeEligible,
+        bool UnpaidLeaveEligible,
+        bool Taxable,
+        bool GosiEligible);
+
+    public static AllowancePolicy ResolveAllowancePolicy(
+        IReadOnlyDictionary<int, SalaryItemStore.SalaryItem> salaryItemsById,
+        int salaryItemId)
+    {
+        if (!salaryItemsById.TryGetValue(salaryItemId, out var item))
+            return new(true, false, false, false, true, true);
+
+        return new(item.InGross, item.Prorated, item.OvertimeEligible,
+            item.UnpaidLeaveEligible, item.Taxable, item.GosiEligible);
+    }
+
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
     {
         await HrmsDatabase.ExecuteAsync(
@@ -495,11 +514,12 @@ SELECT SequenceNo FROM @allocated;
 
         var allowances = (await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT EmployeeId, ItemName, ISNULL(Amount,0) AS Amount, FromDate, ToDate, ISNULL(EndAfterDate,0) AS EndAfterDate FROM EmployeeAllowances WHERE ISNULL(IsDeleted,0)=0;",
+            "SELECT EmployeeId, SalaryItemId, ItemName, ISNULL(Amount,0) AS Amount, FromDate, ToDate, ISNULL(EndAfterDate,0) AS EndAfterDate FROM EmployeeAllowances WHERE ISNULL(IsDeleted,0)=0;",
             command => { },
             reader => new
             {
                 EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                SalaryItemId = HrmsDatabase.GetInt(reader, "SalaryItemId"),
                 ItemName = HrmsDatabase.GetString(reader, "ItemName"),
                 Amount = reader["Amount"] is decimal a ? a : 0,
                 From = HrmsDatabase.GetDateOnly(reader, "FromDate"),
@@ -586,6 +606,9 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
         // وتُضاف بنوداً للقسيمة (استحقاق يدخل الإجمالي/الوعاء الخاضع، أو اقتطاع). عناصر
         // النظام (الأساسي/الضريبة/الضمان) مستثناة — يعالجها المحرك مباشرةً.
         var salaryItems = await SalaryItemStore.ListAsync(dbContext);
+        var salaryItemsById = salaryItems
+            .GroupBy(x => x.Id)
+            .ToDictionary(g => g.Key, g => g.First());
         var formulaItems = salaryItems
             .Where(x => x.IsActive && !x.IsSystem && x.ValueKind == "Formula" && !string.IsNullOrWhiteSpace(x.Formula))
             .OrderBy(x => x.SortOrder).ToList();
@@ -594,32 +617,16 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
         // الراتب المطابق اسماً — نموذج المشاركة على مستوى عنصر الراتب. العلَم
         // Prorated موجودٌ سلفاً على SalaryItem لكن المحرك لم يكن يستهلكه للعلاوات،
         // فكانت كلّها تُضاف كاملةً مهما كان الغياب. الافتراض false ⟹ كامل (سلوك سابق).
-        var attendanceSensitiveByName = salaryItems
-            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().Prorated, StringComparer.OrdinalIgnoreCase);
+        // Allowance policy is resolved by immutable database identity, never by the
+        // editable display name. ItemName remains only a payslip/history snapshot.
 
         // أهلية العلاوة لوعاءَي الأوفرتايم والإجازة غير المدفوعة — بالاسم كذلك.
-        var overtimeEligibleByName = salaryItems
-            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().OvertimeEligible, StringComparer.OrdinalIgnoreCase);
-        var unpaidLeaveEligibleByName = salaryItems
-            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().UnpaidLeaveEligible, StringComparer.OrdinalIgnoreCase);
 
         // دخول العلاوة بالإجمالي (Issue 14): علَم InGross كان معروضاً بلا أثر. علاوةٌ
         // بـInGross=false لا تُدفع بالإجمالي (فلا تدخل أي وعاء). الافتراض true ⟹ الكل
         // يدخل كسلوك اليوم.
-        var allowanceInGrossByName = salaryItems
-            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().InGross, StringComparer.OrdinalIgnoreCase);
 
         // خضوع العلاوة للضريبة/الضمان لكل علاوة (Phase 2) — Taxable موجودٌ، GosiEligible مضاف.
-        var allowanceTaxableByName = salaryItems
-            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().Taxable, StringComparer.OrdinalIgnoreCase);
-        var allowanceGosiByName = salaryItems
-            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().GosiEligible, StringComparer.OrdinalIgnoreCase);
 
         // سياسة الأوعية والمقام تُقرأ مرّة للتشغيل كلّه. الافتراضات (Basic · Fixed30 · 8)
         // تعيد أرقام المحرك القائم حرفياً — يُفعَّل الجديد بإعدادٍ صريح.
@@ -716,19 +723,20 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                     var active = (al.From == null || al.From <= periodEnd)
                         && (al.To == null || !al.EndAfter || al.To >= periodStart);
                     if (!active || al.Amount == 0) continue;
+                    var policy = ResolveAllowancePolicy(salaryItemsById, al.SalaryItemId);
 
                     // InGross=false ⟹ العلاوة لا تُدفع بالإجمالي ولا تدخل أي وعاء (Issue 14).
-                    if (allowanceInGrossByName.TryGetValue(al.ItemName, out var inGross) && !inGross) continue;
+                    if (!policy.InGross) continue;
 
-                    if (overtimeEligibleByName.TryGetValue(al.ItemName, out var ot) && ot)
+                    if (policy.OvertimeEligible)
                         overtimeEligibleAllow += al.Amount;
-                    if (unpaidLeaveEligibleByName.TryGetValue(al.ItemName, out var ul) && ul)
+                    if (policy.UnpaidLeaveEligible)
                         unpaidLeaveEligibleAllow += al.Amount;
 
                     // العلاوة الحسّاسة للحضور تُنسَّب بالمعامل (وعاء الحضور = أساسي +
                     // علاوات مستحقّة)، والثابتة تبقى كاملة. الافتراض غير حسّاس ⟹ كامل
                     // كسلوك المحرك السابق، فلا ينحرف رقم من لم يُفعِّل السياسة.
-                    var sensitive = attendanceSensitiveByName.TryGetValue(al.ItemName, out var pr) && pr;
+                    var sensitive = policy.Prorated;
                     if (sensitive) attendanceSensitiveAllow += al.Amount;
                     var amount = AttendanceSalaryBase.AdjustComponent(
                         new AttendanceSalaryBase.EarningComponent(al.Amount, sensitive), factor);
@@ -738,9 +746,9 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                     // خضوع العلاوة للضريبة/الضمان **لكل علاوة** بسياسة عنصر الراتب
                     // (Taxable موجودٌ سلفاً، GosiEligible مضاف). الافتراض true للاثنين ⟹
                     // كل العلاوات خاضعة كسلوك اليوم (وعاء الضريبة يضمّ كل العلاوات).
-                    if (!allowanceTaxableByName.TryGetValue(al.ItemName, out var taxable) || taxable)
+                    if (policy.Taxable)
                         taxableAllowancesAdjusted += amount;
-                    if (!allowanceGosiByName.TryGetValue(al.ItemName, out var gosiElig) || gosiElig)
+                    if (policy.GosiEligible)
                         gosiAllowancesAdjusted += amount;
 
                     comps.Add(new Component { ItemName = al.ItemName, Amount = amount, IsAddition = true, Kind = "Allowance" });
