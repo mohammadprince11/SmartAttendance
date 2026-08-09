@@ -531,9 +531,18 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
         // عناصر الراتب ذات الصيغة (غير النظامية النشطة) — تُقيَّم لكل موظف بمحرك الصيغ
         // وتُضاف بنوداً للقسيمة (استحقاق يدخل الإجمالي/الوعاء الخاضع، أو اقتطاع). عناصر
         // النظام (الأساسي/الضريبة/الضمان) مستثناة — يعالجها المحرك مباشرةً.
-        var formulaItems = (await SalaryItemStore.ListAsync(dbContext))
+        var salaryItems = await SalaryItemStore.ListAsync(dbContext);
+        var formulaItems = salaryItems
             .Where(x => x.IsActive && !x.IsSystem && x.ValueKind == "Formula" && !string.IsNullOrWhiteSpace(x.Formula))
             .OrderBy(x => x.SortOrder).ToList();
+
+        // خريطة «حسّاسية الحضور» بالاسم: علاوة الموظف (اسمٌ حرّ) ترث سياسة عنصر
+        // الراتب المطابق اسماً — نموذج المشاركة على مستوى عنصر الراتب. العلَم
+        // Prorated موجودٌ سلفاً على SalaryItem لكن المحرك لم يكن يستهلكه للعلاوات،
+        // فكانت كلّها تُضاف كاملةً مهما كان الغياب. الافتراض false ⟹ كامل (سلوك سابق).
+        var attendanceSensitiveByName = salaryItems
+            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().Prorated, StringComparer.OrdinalIgnoreCase);
 
         // القيم الثابتة المسمّاة تُقرأ مرّة للدفعة كلّها لا لكل موظف.
         var salaryConstants = formulaItems.Count > 0
@@ -615,8 +624,16 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                     var active = (al.From == null || al.From <= periodEnd)
                         && (al.To == null || !al.EndAfter || al.To >= periodStart);
                     if (!active || al.Amount == 0) continue;
-                    allowancesTotal += al.Amount;
-                    comps.Add(new Component { ItemName = al.ItemName, Amount = al.Amount, IsAddition = true, Kind = "Allowance" });
+
+                    // العلاوة الحسّاسة للحضور تُنسَّب بالمعامل (وعاء الحضور = أساسي +
+                    // علاوات مستحقّة)، والثابتة تبقى كاملة. الافتراض غير حسّاس ⟹ كامل
+                    // كسلوك المحرك السابق، فلا ينحرف رقم من لم يُفعِّل السياسة.
+                    var sensitive = attendanceSensitiveByName.TryGetValue(al.ItemName, out var pr) && pr;
+                    var amount = AttendanceSalaryBase.AdjustComponent(
+                        new AttendanceSalaryBase.EarningComponent(al.Amount, sensitive), factor);
+                    if (amount == 0) continue;
+                    allowancesTotal += amount;
+                    comps.Add(new Component { ItemName = al.ItemName, Amount = amount, IsAddition = true, Kind = "Allowance" });
                 }
             }
 
