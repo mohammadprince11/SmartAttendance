@@ -365,7 +365,7 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
             case Reimbursement:
             {
                 var outSalary = detail.Kind == Reimbursement;
-                var txId = await PayrollTransactionStore.SaveAsync(db, new PayrollTransactionStore.Transaction
+                var txId = await PayrollTransactionStore.SaveAsync(db, Security.CompanyScope.Unrestricted(), new PayrollTransactionStore.Transaction
                 {
                     EmployeeId = employeeId,
                     Year = detail.StartYear,

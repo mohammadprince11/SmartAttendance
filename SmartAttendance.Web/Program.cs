@@ -460,6 +460,7 @@ using (var migrationScope = app.Services.CreateScope())
     // at startup so the SalaryItemId migration also covers a clean database.
     await SmartAttendance.Web.Infrastructure.Hrms.SalaryItemStore.EnsureAsync(migrationDb);
     await SmartAttendance.Web.Infrastructure.Hrms.EmployeeAllowanceSchema.EnsureAsync(migrationDb);
+    await SmartAttendance.Web.Infrastructure.Hrms.PayrollTransactionStore.EnsureAsync(migrationDb);
     await SmartAttendance.Web.Infrastructure.Hrms.SqlSchemaMigrator.ApplyAsync(migrationDb);
 
     // مخطط توكنات الـAPI يُضمَن هنا مرّة واحدة عند الإقلاع — لا بمسار التحقّق الساخن.

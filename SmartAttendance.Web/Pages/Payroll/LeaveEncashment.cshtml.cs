@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Domain.Enums;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Payroll;
 
@@ -16,11 +17,16 @@ namespace SmartAttendance.Web.Pages.Payroll;
 public class LeaveEncashmentModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly Infrastructure.Security.ICompanyScopeProvider _companyScope;
 
-    public LeaveEncashmentModel(ApplicationDbContext db)
+    public LeaveEncashmentModel(ApplicationDbContext db, Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
     }
+
+    private Task<Infrastructure.Security.CompanyScope> ScopeAsync() =>
+        _companyScope.GetAsync(HttpContext.RequestAborted);
 
     [BindProperty(SupportsGet = true)]
     public int Year { get; set; } = DateTime.Today.Year;
@@ -58,17 +64,18 @@ public class LeaveEncashmentModel : PageModel
 
     public async Task OnGetAsync()
     {
+        var scope = await ScopeAsync();
         if (Month is < 1 or > 12) Month = DateTime.Today.Month;
         if (Lock != "Locked") Lock = "Open";
 
         Items = await PayrollTransactionStore.ListAsync(
-            _db, Year, Month, PayrollTransactionStore.LeaveEncashment, Search, locked: Lock == "Locked");
+            _db, scope, Year, Month, PayrollTransactionStore.LeaveEncashment, Search, locked: Lock == "Locked");
 
         var all = await SalaryItemStore.ListAsync(_db);
         Catalog = all.Where(x => x.IsActive && x.ItemType == "LeaveEncashment").ToList();
 
         Employees = await HrmsDatabase.QueryAsync(_db,
-            "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo, ISNULL(FullName, N'') AS FullName FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1 ORDER BY FullName;",
+            $"SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo, ISNULL(FullName, N'') AS FullName FROM Employees e WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1 AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")} ORDER BY FullName;",
             command => { },
             reader => new EmployeeOption
             {
@@ -77,7 +84,7 @@ public class LeaveEncashmentModel : PageModel
                 Name = HrmsDatabase.GetString(reader, "FullName")
             });
 
-        (AllDepartments, AllBranches, AllJobTitles) = await MassScopeResolver.OrgListsAsync(_db);
+        (AllDepartments, AllBranches, AllJobTitles) = await MassScopeResolver.OrgListsAsync(_db, authorizationScope: scope);
 
         TotalCount = Items.Count;
         TotalDays = Items.Sum(x => x.Days ?? 0);
@@ -136,27 +143,27 @@ public class LeaveEncashmentModel : PageModel
         if (tx.EmployeeId <= 0) { TempData["PayrollMessage"] = "اختر الموظف."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
         if (days <= 0) { TempData["PayrollMessage"] = "عدد أيام الصرف يجب أن يكون أكبر من صفر."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
 
-        if (tx.Id > 0 && await PayrollTransactionStore.IsLockedAsync(_db, tx.Id))
+        if (tx.Id > 0 && await PayrollTransactionStore.IsLockedAsync(_db, await ScopeAsync(), tx.Id))
         {
             TempData["PayrollMessage"] = "الحركة مقفلة (دخلت مسيراً مقفلاً) — لا يمكن تعديلها.";
             TempData["PayrollOk"] = false;
             return RedirectToPage(new { Year = tx.Year, Month = tx.Month, Lock = "Locked" });
         }
 
-        await PayrollTransactionStore.SaveAsync(_db, tx, User?.Identity?.Name ?? "system");
+        await PayrollTransactionStore.SaveAsync(_db, await ScopeAsync(), tx, User?.Identity?.Name ?? "system");
         TempData["PayrollMessage"] = tx.Id > 0 ? "تم تحديث بدل الإجازة." : "تمت إضافة بدل الإجازة.";
         return RedirectToPage(back);
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
-        if (await PayrollTransactionStore.IsLockedAsync(_db, id))
+        if (await PayrollTransactionStore.IsLockedAsync(_db, await ScopeAsync(), id))
         {
             TempData["PayrollMessage"] = "الحركة مقفلة — لا يمكن حذفها.";
             TempData["PayrollOk"] = false;
             return RedirectToPage(new { Year, Month, Lock = "Locked" });
         }
-        await PayrollTransactionStore.DeleteAsync(_db, id);
+        await PayrollTransactionStore.DeleteAsync(_db, await ScopeAsync(), id);
         TempData["PayrollMessage"] = "تم حذف الحركة.";
         return RedirectToPage(new { Year, Month });
     }
@@ -166,7 +173,7 @@ public class LeaveEncashmentModel : PageModel
         var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
         if (ids.Count > 0)
         {
-            await PayrollTransactionStore.DeleteManyAsync(_db, ids);
+            await PayrollTransactionStore.DeleteManyAsync(_db, await ScopeAsync(), ids);
             TempData["PayrollMessage"] = $"تم حذف {ids.Count} حركة.";
         }
         else TempData["PayrollMessage"] = "حدد حركات أولاً.";
@@ -185,7 +192,7 @@ public class LeaveEncashmentModel : PageModel
         var days = decimal.TryParse(f["MassDays"], out var dd) ? Math.Abs(dd) : 0;
         if (days <= 0) { TempData["PayrollMessage"] = "عدد أيام الصرف يجب أن يكون أكبر من صفر."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
 
-        var (empIds, skipped, scopeLabel, err) = await MassScopeResolver.ResolveAsync(_db, f, massFile);
+        var (empIds, skipped, scopeLabel, err) = await MassScopeResolver.ResolveAsync(_db, f, massFile, authorizationScope: await ScopeAsync());
         if (err != null) { TempData["PayrollMessage"] = err; TempData["PayrollOk"] = false; return RedirectToPage(back); }
         if (empIds.Count == 0) { TempData["PayrollMessage"] = "لم يُحدَّد أي موظف مطابق."; TempData["PayrollOk"] = false; return RedirectToPage(back); }
 
@@ -206,7 +213,7 @@ public class LeaveEncashmentModel : PageModel
             Source = "إدخال جماعي"
         };
 
-        var count = await PayrollTransactionStore.SaveManyAsync(_db, empIds, template, User?.Identity?.Name ?? "system");
+        var count = await PayrollTransactionStore.SaveManyAsync(_db, await ScopeAsync(), empIds, template, User?.Identity?.Name ?? "system");
         TempData["PayrollMessage"] = $"تمت إضافة {count} بدل إجازة (النطاق: {scopeLabel})"
             + (skipped > 0 ? $"، وتُخطّي {skipped} كوداً غير مطابق." : ".");
         TempData["PayrollOk"] = true;
@@ -229,7 +236,7 @@ public class LeaveEncashmentModel : PageModel
         catch (Exception ex) { TempData["PayrollMessage"] = "تعذّر قراءة الملف: " + ex.Message; TempData["PayrollOk"] = false; return RedirectToPage(back); }
 
         var emps = await HrmsDatabase.QueryAsync(_db,
-            "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1;",
+            $"SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo FROM Employees e WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1 AND {EmployeeCompanyGuard.ListFilter(await ScopeAsync(), "e.CompanyId")};",
             command => { },
             reader => new { Id = HrmsDatabase.GetInt(reader, "Id"), No = HrmsDatabase.GetString(reader, "EmployeeNo") });
         var byCode = new Dictionary<string, int>();
@@ -247,7 +254,7 @@ public class LeaveEncashmentModel : PageModel
 
             var itemName = row.Length > 2 && !string.IsNullOrWhiteSpace(row[2]) ? row[2].Trim() : "بدل إجازة";
 
-            await PayrollTransactionStore.SaveAsync(_db, new PayrollTransactionStore.Transaction
+            await PayrollTransactionStore.SaveAsync(_db, await ScopeAsync(), new PayrollTransactionStore.Transaction
             {
                 EmployeeId = empId, Year = y, Month = m, TxType = PayrollTransactionStore.LeaveEncashment,
                 ItemName = itemName, Days = Math.Abs(days), Amount = 0, Taxable = true,
@@ -265,7 +272,7 @@ public class LeaveEncashmentModel : PageModel
     public async Task<IActionResult> OnPostLockSelectedAsync()
     {
         var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
-        if (ids.Count > 0) { await PayrollTransactionStore.SetLockedAsync(_db, ids, true); TempData["PayrollMessage"] = $"أُقفلت {ids.Count} حركة."; }
+        if (ids.Count > 0) { await PayrollTransactionStore.SetLockedAsync(_db, await ScopeAsync(), ids, true); TempData["PayrollMessage"] = $"أُقفلت {ids.Count} حركة."; }
         else TempData["PayrollMessage"] = "حدد حركات أولاً.";
         return RedirectToPage(new { Year, Month, Lock = "Locked" });
     }
@@ -273,7 +280,7 @@ public class LeaveEncashmentModel : PageModel
     public async Task<IActionResult> OnPostUnlockSelectedAsync()
     {
         var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
-        if (ids.Count > 0) { await PayrollTransactionStore.SetLockedAsync(_db, ids, false); TempData["PayrollMessage"] = $"فُتح قفل {ids.Count} حركة."; }
+        if (ids.Count > 0) { await PayrollTransactionStore.SetLockedAsync(_db, await ScopeAsync(), ids, false); TempData["PayrollMessage"] = $"فُتح قفل {ids.Count} حركة."; }
         else TempData["PayrollMessage"] = "حدد حركات أولاً.";
         return RedirectToPage(new { Year, Month, Lock = "Open" });
     }

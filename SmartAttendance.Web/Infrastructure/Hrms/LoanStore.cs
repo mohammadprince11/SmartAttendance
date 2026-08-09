@@ -416,7 +416,7 @@ ORDER BY i.DueYear, i.DueMonth, i.SeqNo;
                 Status = "Approved",
                 Note = $"خصم آلي لقسط القرض {d.ReferenceNo}"
             };
-            var txId = await PayrollTransactionStore.SaveAsync(dbContext, tx, userName);
+            var txId = await PayrollTransactionStore.SaveAsync(dbContext, scope, tx, userName);
 
             await HrmsDatabase.ExecuteAsync(dbContext,
                 "UPDATE EmployeeLoanInstallments SET IsPosted = 1, PostedTransactionId = @Tx, PostedAt = SYSUTCDATETIME() WHERE Id = @Id;",

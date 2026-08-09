@@ -591,15 +591,15 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
             out var parsedCap) ? parsedCap : 0m;
 
         // حركات الدخل/الاقتطاع للفترة (شاشة «الحركات») — بنود إضافية/خصم بالقسيمة
-        var income = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.Income))
+        var income = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.Income))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
-        var deductionTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.Deduction))
+        var deductionTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.Deduction))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
-        var overtimeTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.Overtime))
+        var overtimeTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.Overtime))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
-        var salaryDaysTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.SalaryDays))
+        var salaryDaysTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.SalaryDays))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
-        var leaveEncashTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.LeaveEncashment))
+        var leaveEncashTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.LeaveEncashment))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
         // عناصر الراتب ذات الصيغة (غير النظامية النشطة) — تُقيَّم لكل موظف بمحرك الصيغ

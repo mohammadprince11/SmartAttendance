@@ -280,8 +280,9 @@ public class IndexModel : PageModel
     /// <summary>ترحيل الحركات المحددة لوحدة الرواتب (نمط كيان «انقل إلى وحدة الرواتب»).</summary>
     public async Task<IActionResult> OnPostTransferAsync(int[] selectedIds)
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         var (done, skipped) = await AttendanceTransactionStore.TransferToPayrollAsync(
-            _dbContext, selectedIds ?? Array.Empty<int>(), User.Identity?.Name ?? "HR");
+            _dbContext, scope, selectedIds ?? Array.Empty<int>(), User.Identity?.Name ?? "HR");
 
         TempData["SuccessMessage"] = done == 0
             ? "لم تُرحَّل أي حركة — المحدد مُرحَّل سابقاً أو نوعه غير قابل للترحيل (مغادرة/إجازة)."
@@ -292,8 +293,9 @@ public class IndexModel : PageModel
     /// <summary>إلغاء ترحيل الحركات المحددة (نظير «إزالة» بكيان).</summary>
     public async Task<IActionResult> OnPostUndoTransferAsync(int[] selectedIds)
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         var (done, skipped) = await AttendanceTransactionStore.UndoTransferAsync(
-            _dbContext, selectedIds ?? Array.Empty<int>());
+            _dbContext, scope, selectedIds ?? Array.Empty<int>());
 
         TempData["SuccessMessage"] = done == 0
             ? "لم يُلغَ ترحيل أي حركة — المحدد غير مُرحَّل أو دخل مسيراً مقفلاً."

@@ -1248,6 +1248,49 @@ BEGIN
         CREATE UNIQUE INDEX UX_SalaryItems_Name ON SalaryItems (Name);
 END;
 """),
+
+        new(
+            "20260809-07-payroll-transaction-reference-invariant",
+            """
+IF OBJECT_ID('PayrollTransactions', 'U') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT ReferenceNo FROM PayrollTransactions
+        WHERE ReferenceNo IS NOT NULL
+        GROUP BY ReferenceNo HAVING COUNT(*) > 1)
+        THROW 51003, 'Duplicate PayrollTransactions.ReferenceNo values must be remediated before enabling the unique invariant.', 1;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('PayrollTransactions') AND name = 'UX_PayrollTransactions_ReferenceNo')
+        CREATE UNIQUE INDEX UX_PayrollTransactions_ReferenceNo
+            ON PayrollTransactions (ReferenceNo) WHERE ReferenceNo IS NOT NULL;
+
+    IF OBJECT_ID('PayrollTransactionSequences', 'U') IS NULL
+    BEGIN
+        CREATE TABLE PayrollTransactionSequences
+        (
+            Prefix nvarchar(16) NOT NULL CONSTRAINT PK_PayrollTransactionSequences PRIMARY KEY,
+            NextValue int NOT NULL,
+            CONSTRAINT CK_PayrollTransactionSequences_NextValue CHECK (NextValue > 0)
+        );
+    END;
+
+    ;WITH Parsed AS
+    (
+        SELECT LEFT(ReferenceNo, LEN(ReferenceNo) - CHARINDEX('-', REVERSE(ReferenceNo)) + 1) AS Prefix,
+               TRY_CONVERT(int, RIGHT(ReferenceNo, CHARINDEX('-', REVERSE(ReferenceNo)) - 1)) AS Seq
+        FROM PayrollTransactions
+        WHERE ReferenceNo IS NOT NULL AND CHARINDEX('-', REVERSE(ReferenceNo)) > 1
+    ), ExistingMax AS
+    (
+        SELECT Prefix, ISNULL(MAX(Seq), 0) + 1 AS NextValue
+        FROM Parsed WHERE Seq IS NOT NULL GROUP BY Prefix
+    )
+    MERGE PayrollTransactionSequences AS target
+    USING ExistingMax AS source ON target.Prefix = source.Prefix
+    WHEN MATCHED AND target.NextValue < source.NextValue THEN UPDATE SET NextValue = source.NextValue
+    WHEN NOT MATCHED THEN INSERT (Prefix, NextValue) VALUES (source.Prefix, source.NextValue);
+END;
+"""),
     };
 
     /// <summary>
