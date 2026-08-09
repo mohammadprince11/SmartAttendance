@@ -55,6 +55,11 @@
     .pr-table th, .pr-table td { text-align:start; }
     .pr-num { font-weight:900; text-align:start; unicode-bidi:plaintext; }
     .pr-net { color:#4ade80; }
+    /* أعمدة حالة نعم/لا (نموذج كيان) */
+    .pr-yn { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:900; padding:3px 11px; border-radius:999px; white-space:nowrap; }
+    .pr-yn::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
+    .pr-yn.yes { color:#16a34a; background:rgba(74,222,128,.15); }
+    .pr-yn.no { color:#e0555f; background:rgba(248,113,113,.13); }
 
     .pr-steps { display:flex; align-items:center; gap:3px; }
     .pr-steps i { width:16px; height:5px; border-radius:3px; background:rgba(143,168,188,.25); }
@@ -152,7 +157,7 @@
                 <thead>
                     <tr>
                         <th>رقم الدفعة</th><th>الفترة</th><th>الموظفون</th>
-                        <th>الإجمالي</th><th>الاستقطاعات</th><th>الصافي</th><th>محتسب بواسطة</th>
+                        <th>الإجمالي</th><th>الاستقطاعات</th><th>الصافي</th><th>محتسب بواسطة</th><th>مقفل</th><th>تم إصدارها</th><th>تم إرسال القسيمة</th>
                         <th style="text-align:end">إجراءات</th>
                     </tr>
                 </thead>
@@ -160,6 +165,11 @@
                     @foreach (var run in Model.Runs)
                     {
                         var deductions = run.TotalGross - run.TotalNet;
+                        // موضع الحالة في دورة الحياة ⟹ أعلام تراكمية (مقفل ⊇ مُصدَر ⊇ قسائم).
+                        var stageIdx = Array.IndexOf(PayrollRunStore.Lifecycle, run.Status);
+                        var isLocked = stageIdx >= Array.IndexOf(PayrollRunStore.Lifecycle, "Locked");
+                        var isIssued = stageIdx >= Array.IndexOf(PayrollRunStore.Lifecycle, "Issued");
+                        var isSent = stageIdx >= Array.IndexOf(PayrollRunStore.Lifecycle, "PayslipSent");
                         <tr>
                             <td class="pr-num">@run.BatchNo</td>
                             <td class="pr-num">@run.PeriodText</td>
@@ -168,6 +178,9 @@
                             <td class="pr-num">@deductions.ToString("#,0.##")</td>
                             <td class="pr-num pr-net">@run.TotalNet.ToString("#,0.##")</td>
                             <td style="font-size:12px">@(run.CalculatedBy ?? "—")<br /><span style="color:var(--sa-muted,#8FA8BC)">@(run.CalculatedAt?.ToString("yyyy-MM-dd") ?? "")</span></td>
+                            <td><span class="pr-yn @(isLocked ? "yes" : "no")">@(isLocked ? "نعم" : "لا")</span></td>
+                            <td><span class="pr-yn @(isIssued ? "yes" : "no")">@(isIssued ? "نعم" : "لا")</span></td>
+                            <td><span class="pr-yn @(isSent ? "yes" : "no")">@(isSent ? "نعم" : "لا")</span></td>
                             <td class="pr-actions-cell">
                                 <div class="pr-menu">
                                     <button type="button" class="pr-kebab" onclick="prMenuToggle(event, this)" aria-haspopup="true" aria-label="إجراءات">⋯</button>
