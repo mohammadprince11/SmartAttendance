@@ -1,6 +1,6 @@
 # ZYNORA PAYROLL ENGINE CORRECTION REPORT
 
-_2026-08-09. Study-first architecture correction. Scope this session (per decision): **core salary-base engine + golden tests first**. All seven golden scenarios are now implemented and tested; the Settings/FinancialInfo UI that lets the org select the new modes/flags is still deferred. No merge, no deploy, no force-push._
+_2026-08-09. Study-first architecture correction, then full dynamic configuration. All seven golden scenarios implemented and tested; every new base/flag is now user-editable from the UI; double-deduction is guarded. No merge, no deploy, no force-push._
 
 ## 1. Baseline
 
@@ -8,8 +8,8 @@ _2026-08-09. Study-first architecture correction. Scope this session (per decisi
 |---|---|
 | Branch | `claude/smartattendance-local-rebuild-wftwb3` |
 | Starting SHA | `42b1549` (People acceptance report) |
-| Ending SHA | `f3a0ea7` |
-| Commits added | `2940d4a` (attendance base), `0291391` (gosi/tax employee-defined), `dc769f2` (report), `f3a0ea7` (unpaid-leave/overtime/divisor) |
+| Ending SHA | `a5790db` |
+| Commits added | `2940d4a` (attendance base), `0291391` (gosi/tax employee-defined), `dc769f2`+`56e645d` (report), `f3a0ea7` (unpaid-leave/overtime/divisor), `031b02d` (config UI), `a5790db` (double-deduction guard) |
 | Main SHA (`origin/main`) | `73169433` (not modified) |
 
 Working HEAD was `beee200` at task start; only my People report `42b1549` sat above it (preserved). No reset/rebase/merge.
@@ -103,8 +103,8 @@ Full end-to-end line integration test (all effects combined) requires a SQL-back
 | Metric | Value |
 |---|---|
 | Release build | **0 errors** |
-| Total tests | **1468** |
-| Passed | 1468 |
+| Total tests | **1470** |
+| Passed | 1470 |
 | Failed | 0 |
 | Skipped | 0 |
 | `git diff --check` | clean |
@@ -114,14 +114,23 @@ Full end-to-end line integration test (all effects combined) requires a SQL-back
 - No new full-table scans. The attendance-sensitivity map is built once per run from the already-loaded `SalaryItems` list (no per-employee query). Employee-defined base columns ride the existing single `EmployeeFinancialInfos` read.
 - Existing company scoping on the run (employees SQL-filtered by `run.CompanyId`) is unchanged.
 
-## 14. Remaining Risks
+## 14. Dynamic configuration (all user-editable)
 
-- **HIGH** — The new policies (`TaxBaseMode`, `GosiBaseMode`, `OvertimeBaseMode`, `UnpaidLeaveBaseMode`, `SalaryDaysBasis`, `StandardDailyHours`) and the SalaryItem flags (`Prorated`, `OvertimeEligible`, `UnpaidLeaveEligible`) have **no UI writer yet** (Settings/FinancialInfo reorg deferred). The engine reads them correctly; until screens set them, the org can only opt in via direct settings/DB writes. Columns default to the legacy composed/Basic behavior, so this is safe but not yet operator-usable.
-- **MEDIUM** — Double-deduction audit (Phase 18: late → factor + violation + manual deduction) not yet done; no regression test proving a single event isn't deducted twice.
-- **LOW** — Per-allowance tax/GOSI eligibility (Phase 2 full model) not implemented; tax/GOSI still use aggregate base membership.
-- **LOW** — Payslip calculation trace (Phase 15) not yet surfaced; components already carry `Kind`, so the trace is derivable without new tables.
+Every new policy and flag is now editable from the UI, matching the no-code ethos:
 
-`No known payroll release blocker introduced; all changes are backward-compatible and opt-in.`
+- **Salary Items** (`/Payroll/SalaryItems`): `Prorated` (attendance), `OvertimeEligible`, `UnpaidLeaveEligible` checkboxes.
+- **Payroll Settings** (`/Payroll/Settings` → "أوعية الراتب والمقام"): Overtime base mode, Unpaid-leave base mode, Salary-days basis, Standard daily hours.
+- **Employee Financial Info**: `GosiBaseMode`, `TaxBaseMode` selectors + current tax-salary field.
+
+All default to legacy behavior; nothing changes until an operator opts in.
+
+## 15. Remaining Risks
+
+- **LOW** — Per-allowance tax/GOSI eligibility (Phase 2 full model) not implemented; tax/GOSI still compose via aggregate base membership (already per-profile editable).
+- **LOW** — Payslip trace (Phase 15): the per-line component breakdown already exists via each component's `Kind` (earnings/deductions with amounts). A *persisted* base+factor header (AttendanceBase, factor, TaxBase source, GOSI source per line) would need new line columns + RunDetail rework — documented as an enhancement, not a blocker.
+- **LOW** — Live two-company end-to-end payroll run not executed here (the dev server shares the production DB; running migrations/calcs there needs deploy authorization). Compile + 1470 unit tests cover the logic; a real run is part of acceptance testing itself.
+
+`No known payroll release blocker remains; all changes are backward-compatible, opt-in, and now operator-configurable.`
 
 ## 15. Data Safety
 
@@ -134,6 +143,6 @@ Full end-to-end line integration test (all effects combined) requires a SQL-back
 
 ## RELEASE DECISION
 
-`PAYROLL ENGINE NOT READY — BLOCKERS REMAIN`
+`PAYROLL ENGINE READY FOR ACCEPTANCE TESTING`
 
-The **engine correctness core is complete**: all six configurable salary bases (Attendance, Tax, GOSI, Overtime, UnpaidLeave, Penalty) now compose from explicit, configurable sources, all seven golden scenarios pass with exact decimals, and everything is backward-compatible (1468/1468 green, defaults reproduce old numbers). It is **NOT READY for acceptance testing** because the operator cannot yet configure the new policies — the Settings/FinancialInfo UI is deferred (HIGH risk above) — and the double-deduction audit (Phase 18) and payslip trace (Phase 15) remain. Acceptance testing should wait until the configuration UI lands so HR can actually select and verify these bases end-to-end. Do **not** merge to main.
+All six salary bases (Attendance, Tax, GOSI, Overtime, UnpaidLeave, Penalty) compose from explicit, **user-configurable** sources; all seven golden scenarios pass with exact decimals; the three deduction channels are guarded against double-counting; and everything is backward-compatible (**1470/1470 green**, defaults reproduce the old numbers). Every new policy and flag is editable from the UI, so HR can select and verify each base end-to-end. Remaining items (§15) are LOW enhancements, not blockers. Acceptance testing should now be run against a controlled non-production two-company database. Do **not** merge to main, and do **not** deploy — the additive migrations (`20260809-01/02`) apply on the next authorized deploy.
