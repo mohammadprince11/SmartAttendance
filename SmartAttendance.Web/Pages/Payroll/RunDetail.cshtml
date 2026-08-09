@@ -10,6 +10,7 @@
         l.BasicSalary, l.TotalAllowances, l.GrossSalary,
         l.TaxAmount, l.GosiEmployee, l.GosiCompany, l.OtherDeductions,
         l.TotalDeductions, l.NetSalary, l.EmployerCost, l.WorkDays, l.AbsentDays,
+        l.AttendanceBase, l.AttendanceFactor, l.TaxBase, l.TaxBaseSource, l.GosiBase, l.GosiBaseSource,
         Earnings = l.Earnings.Select(c => new { c.ItemName, c.Amount }),
         Deductions = l.Deductions.Select(c => new { c.ItemName, c.Amount })
     }));
@@ -65,6 +66,10 @@
     .pd-slip-net span { font-size:13px; font-weight:900; } .pd-slip-net b { font-size:22px; font-weight:1000; direction:ltr; color:#12D9E3; }
     .pd-slip-emp2 { display:flex; gap:18px; margin-top:12px; font-size:12px; color:#5b7085; font-weight:800; }
     .pd-slip-emp2 b { color:#0b1d31; direction:ltr; }
+    .pd-slip-trace { margin-top:12px; border:1px solid #dbe6f0; border-radius:10px; overflow:hidden; }
+    .pd-slip-trace h4 { margin:0; padding:8px 12px; font-size:12px; background:#eef4fa; color:#0b1d31; }
+    .pd-slip-trace .row { display:flex; justify-content:space-between; padding:6px 12px; border-top:1px dashed #e3ebf3; font-size:12px; }
+    .pd-slip-trace .row b { direction:ltr; font-weight:900; } .pd-slip-trace small { color:#5b7085; font-weight:700; }
     .pd-slip-sign { display:flex; justify-content:space-between; margin-top:26px; font-size:12px; color:#5b7085; }
     .pd-slip-sign div { text-align:center; } .pd-slip-sign .line { border-top:1.5px solid #0b1d31; width:150px; margin-bottom:4px; }
 
@@ -211,6 +216,11 @@
         var PD_CO = @Html.Raw(JsonSerializer.Serialize(Model.CompanyName));
 
         function fmt(n) { return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function traceSrc(s) {
+            if (s === 'Employee') return 'راتب مُدخَل بالملف المالي';
+            if (s === 'EmployeeMissing') return '⚠ مُعرَّف بلا قيمة — من المكوّنات مؤقتاً';
+            return 'مُركَّب من المكوّنات';
+        }
 
         function pdSlip(empId) {
             var l = PD_DATA.find(function (x) { return x.EmployeeId === empId; });
@@ -248,6 +258,13 @@
                     '<div class="sum"><span>إجمالي الاستقطاعات</span><b>' + fmt(l.TotalDeductions) + '</b></div></div>' +
                 '</div>' +
                 '<div class="pd-slip-net"><span>صافي الراتب المستحق</span><b>' + fmt(l.NetSalary) + ' د.ع</b></div>' +
+                // أثر الاحتساب (Phase 15): من أين جاء كل وعاء ولماذا — للموارد البشرية.
+                '<div class="pd-slip-trace">' +
+                  '<h4>أثر الاحتساب</h4>' +
+                  '<div class="row"><span>وعاء الحضور</span><b>' + fmt(l.AttendanceBase) + ' × معامل ' + Number(l.AttendanceFactor || 1).toFixed(4) + '</b></div>' +
+                  '<div class="row"><span>وعاء الضريبة</span><b>' + fmt(l.TaxBase) + ' <small>(' + traceSrc(l.TaxBaseSource) + ')</small></b></div>' +
+                  '<div class="row"><span>وعاء الضمان</span><b>' + fmt(l.GosiBase) + ' <small>(' + traceSrc(l.GosiBaseSource) + ')</small></b></div>' +
+                '</div>' +
                 '<div class="pd-slip-emp2">' +
                   '<div>مساهمة الشركة (ضمان): <b>' + fmt(l.GosiCompany) + '</b></div>' +
                   '<div>التكلفة الكلية على صاحب العمل: <b>' + fmt(l.EmployerCost) + '</b></div>' +

@@ -1123,6 +1123,40 @@ BEGIN
             CONSTRAINT DF_SalaryItems_UnpaidLeaveEligible DEFAULT(0);
 END;
 """),
+
+        // أثر احتساب القسيمة (Phase 15): وعاء الحضور ومعامله، ووعاءا الضريبة/الضمان
+        // ومصدر كلٍّ — تُخزَّن على السطر ليُجيب «من أين جاء كل دينار؟» بلا إعادة حساب.
+        // ⚠️ إضافيّ محض: أعمدة بقيمة صفر/فارغة افتراضاً، تُملأ عند الاحتساب القادم.
+        new(
+            "20260809-03-payroll-line-trace",
+            """
+IF OBJECT_ID('PayrollRunLines', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('PayrollRunLines', 'AttendanceBase') IS NULL
+        ALTER TABLE PayrollRunLines ADD AttendanceBase decimal(18,2) NOT NULL CONSTRAINT DF_PRL_AttBase DEFAULT(0);
+    IF COL_LENGTH('PayrollRunLines', 'AttendanceFactor') IS NULL
+        ALTER TABLE PayrollRunLines ADD AttendanceFactor decimal(9,6) NOT NULL CONSTRAINT DF_PRL_AttFactor DEFAULT(1);
+    IF COL_LENGTH('PayrollRunLines', 'TaxBase') IS NULL
+        ALTER TABLE PayrollRunLines ADD TaxBase decimal(18,2) NOT NULL CONSTRAINT DF_PRL_TaxBase DEFAULT(0);
+    IF COL_LENGTH('PayrollRunLines', 'TaxBaseSource') IS NULL
+        ALTER TABLE PayrollRunLines ADD TaxBaseSource nvarchar(20) NULL;
+    IF COL_LENGTH('PayrollRunLines', 'GosiBase') IS NULL
+        ALTER TABLE PayrollRunLines ADD GosiBase decimal(18,2) NOT NULL CONSTRAINT DF_PRL_GosiBase DEFAULT(0);
+    IF COL_LENGTH('PayrollRunLines', 'GosiBaseSource') IS NULL
+        ALTER TABLE PayrollRunLines ADD GosiBaseSource nvarchar(20) NULL;
+END;
+"""),
+
+        // خضوع العلاوة للضمان لكل علاوة (Phase 2) — نظير Taxable للضريبة. الافتراض 1
+        // (كل العلاوات مؤهَّلة) كي يبقى وعاء الضمان المهيَّأ على «كل العلاوات» كما هو.
+        new(
+            "20260809-04-salary-item-gosi-eligible",
+            """
+IF OBJECT_ID('SalaryItems', 'U') IS NOT NULL
+   AND COL_LENGTH('SalaryItems', 'GosiEligible') IS NULL
+    ALTER TABLE SalaryItems ADD GosiEligible bit NOT NULL
+        CONSTRAINT DF_SalaryItems_GosiEligible DEFAULT(1);
+"""),
     };
 
     /// <summary>
