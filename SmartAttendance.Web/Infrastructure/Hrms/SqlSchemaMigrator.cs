@@ -1073,6 +1073,34 @@ BEGIN
         ALTER TABLE PunchSemantics ADD WindowTo time(0) NULL;
 END;
 """),
+
+        // أوعية الاحتساب المعرّفة بالموظف — الضريبة والضمان قد يكون وعاؤهما رقماً
+        // يُدخله المستخدم بالملف المالي (SocialSecuritySalary موجودٌ سلفاً لكن المسير
+        // لم يكن يقرؤه، وراتب الضريبة الحالي لم يكن له حقلٌ أصلاً — PreviousTaxSalary
+        // رصيدٌ افتتاحيّ لا وعاءٌ راهن). ثلاثة أعمدة:
+        //  - CurrentTaxSalary: راتب الضريبة الراهن (يختلف عن PreviousTaxSalary التاريخيّ).
+        //  - TaxBaseMode / GosiBaseMode: 'SalaryComponents' (تركيب من المكوّنات، السلوك
+        //    القائم) أو 'EmployeeDefined' (الرقم المُدخَل).
+        //
+        // ⚠️ **إضافيّ محض وبلا أثر افتراضاً**: كل الأعمدة nullable. النمط الفارغ يُقرأ
+        // 'SalaryComponents' بالكود، فوعاء اليوم (تركيبٌ من المكوّنات) يبقى حرفياً حتى
+        // يختار المستخدم النمط المُعرَّف بالموظف صراحةً — فلا تتغيّر قسيمة قائمة ولا
+        // ينكسر اختبار انحدار. PreviousTaxSalary يبقى بلا مساس.
+        new(
+            "20260809-01-employee-defined-tax-gosi-base",
+            """
+IF OBJECT_ID('EmployeeFinancialInfos', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeFinancialInfos', 'CurrentTaxSalary') IS NULL
+        ALTER TABLE EmployeeFinancialInfos ADD CurrentTaxSalary decimal(18,4) NULL;
+
+    IF COL_LENGTH('EmployeeFinancialInfos', 'TaxBaseMode') IS NULL
+        ALTER TABLE EmployeeFinancialInfos ADD TaxBaseMode nvarchar(20) NULL;
+
+    IF COL_LENGTH('EmployeeFinancialInfos', 'GosiBaseMode') IS NULL
+        ALTER TABLE EmployeeFinancialInfos ADD GosiBaseMode nvarchar(20) NULL;
+END;
+"""),
     };
 
     /// <summary>

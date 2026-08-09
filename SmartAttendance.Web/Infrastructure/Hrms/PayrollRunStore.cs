@@ -428,7 +428,7 @@ WHERE r.Id = @Id;
 
         var financial = (await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT EmployeeId, ISNULL(BasicSalary,0) AS BasicSalary, ISNULL(StopSalaryCalc,0) AS StopSalaryCalc, TaxProfileId, GosiProfileId FROM EmployeeFinancialInfos WHERE ISNULL(IsDeleted,0)=0;",
+            "SELECT EmployeeId, ISNULL(BasicSalary,0) AS BasicSalary, ISNULL(StopSalaryCalc,0) AS StopSalaryCalc, TaxProfileId, GosiProfileId, SocialSecuritySalary, CurrentTaxSalary, TaxBaseMode, GosiBaseMode FROM EmployeeFinancialInfos WHERE ISNULL(IsDeleted,0)=0;",
             command => { },
             reader => new
             {
@@ -436,7 +436,12 @@ WHERE r.Id = @Id;
                 Basic = reader["BasicSalary"] is decimal b ? b : 0,
                 Stop = HrmsDatabase.GetBool(reader, "StopSalaryCalc"),
                 TaxProfileId = HrmsDatabase.GetNullableInt(reader, "TaxProfileId"),
-                GosiProfileId = HrmsDatabase.GetNullableInt(reader, "GosiProfileId")
+                GosiProfileId = HrmsDatabase.GetNullableInt(reader, "GosiProfileId"),
+                // وعاءان مُعرَّفان بالموظف — كانا يُدخَلان ولا يُقرآن (الضمان) أو بلا حقل (الضريبة).
+                SocialSecuritySalary = reader["SocialSecuritySalary"] is decimal ss ? ss : (decimal?)null,
+                CurrentTaxSalary = reader["CurrentTaxSalary"] is decimal ct ? ct : (decimal?)null,
+                TaxBaseMode = HrmsDatabase.GetString(reader, "TaxBaseMode"),
+                GosiBaseMode = HrmsDatabase.GetString(reader, "GosiBaseMode")
             }))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.First());
 
@@ -795,10 +800,26 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
             var gosiMembers = SalaryBaseStore.Resolve(
                 baseMembers, SalaryBaseComposer.GosiBaseKey, gosiProfile?.Id ?? 0);
 
-            var taxableBase = SalaryBaseComposer.Compose(baseAmounts, taxMembers);
-            var tax = PayrollConfigStore.ComputeTax(taxableBase, taxProfile);
-            var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(
-                SalaryBaseComposer.Compose(baseAmounts, gosiMembers), gosiProfile);
+            // وعاء الضريبة: مُركَّبٌ من المكوّنات (السلوك القائم) أو راتب الضريبة المُدخَل
+            // حين يختار المستخدم «مُعرَّف بالموظف». النمط الفارغ ⟹ مُركَّب، فلا تتغيّر قسيمة.
+            var composedTax = SalaryBaseComposer.Compose(baseAmounts, taxMembers);
+            var taxBase = EmployeeDefinedSalaryBase.Resolve(fin?.TaxBaseMode, fin?.CurrentTaxSalary, composedTax);
+            var tax = PayrollConfigStore.ComputeTax(taxBase.Base, taxProfile);
+
+            // وعاء الضمان: مُركَّب (افتراضاً الإجمالي) أو راتب الضمان المُدخَل
+            // (SocialSecuritySalary) حين «مُعرَّف بالموظف» — الرقم الذي كان يُدخَل ويُهمَل.
+            var composedGosi = SalaryBaseComposer.Compose(baseAmounts, gosiMembers);
+            var gosiBase = EmployeeDefinedSalaryBase.Resolve(fin?.GosiBaseMode, fin?.SocialSecuritySalary, composedGosi);
+            var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(gosiBase.Base, gosiProfile);
+
+            // «مُعرَّف بالموظف» بلا رقم: لا رجوع صامت — يُسجَّل تحذيراً بسجلّ المستبعَدين
+            // فيبقى «لماذا حُسب وعاؤه من المكوّنات لا من رقمه؟» مُجاباً (Phase 26/27).
+            if (taxBase.Source == EmployeeDefinedSalaryBase.Source.EmployeeMissing)
+                exclusions.Add((emp.Id, "MissingTaxSalary",
+                    "اختير «راتب ضريبة مُعرَّف بالموظف» بلا قيمة — احتُسب من المكوّنات مؤقتاً. أدخل راتب الضريبة بالملف المالي."));
+            if (gosiBase.Source == EmployeeDefinedSalaryBase.Source.EmployeeMissing)
+                exclusions.Add((emp.Id, "MissingGosiSalary",
+                    "اختير «راتب ضمان مُعرَّف بالموظف» بلا قيمة — احتُسب من الإجمالي مؤقتاً. أدخل راتب الضمان بالملف المالي."));
 
             // خصومات المخالفات: مباشر بالدينار + أيام×يومي + ساعات×ساعي.
             //
@@ -1031,6 +1052,9 @@ WHERE Id = @Id;
             "Stopped" => "موقوف الاحتساب",
             "NoSalary" => "بلا راتب أو حركات",
             "NoAttendance" => "لا يستوفي ربط الحضور",
+            // تحذيرات (احتُسب الموظف فعلاً) لا استبعاد — وعاءٌ مُعرَّفٌ بالموظف بلا قيمة.
+            "MissingTaxSalary" => "تحذير: راتب ضريبة مُعرَّف بلا قيمة",
+            "MissingGosiSalary" => "تحذير: راتب ضمان مُعرَّف بلا قيمة",
             _ => "استبعاد"
         };
     }
