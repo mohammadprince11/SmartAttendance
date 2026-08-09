@@ -202,13 +202,15 @@ ORDER BY e.EmployeeNo;
     /// </summary>
     /// <returns>عدد المعتمَد فعلاً، وعدد المحجوب لنقص التحليل.</returns>
     public static async Task<(int Approved, int Blocked)> ApproveWithGateAsync(
-        ApplicationDbContext dbContext, IReadOnlyCollection<int> ids)
+        ApplicationDbContext dbContext, CompanyScope scope, IReadOnlyCollection<int> ids)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
-        if (ids.Count == 0) return (0, 0);
+        if (ids.Count == 0 || scope.IsDeniedAll) return (0, 0);
 
-        var eligible = await EligibleForApprovalAsync(dbContext, ids);
-        var approved = await Transition(dbContext, eligible, from: "UnderReview", to: "Approved",
+        // النطاق أوّلاً: المعرّفات خارج شركات المستخدم تُصفّى قبل الأهلية والكتابة معاً.
+        var eligible = await EligibleForApprovalAsync(dbContext, scope, ids);
+        var approved = await Transition(dbContext, scope, eligible, from: "UnderReview", to: "Approved",
             "ApprovedAt = SYSUTCDATETIME()");
 
         return (approved, ids.Count - eligible.Count);
@@ -219,11 +221,14 @@ ORDER BY e.EmployeeNo;
     /// يساوي أيام الشهر المنقضية (الشهر الجاري يُقاس حتى اليوم، لا حتى آخره).
     /// </summary>
     private static async Task<List<int>> EligibleForApprovalAsync(
-        ApplicationDbContext dbContext, IReadOnlyCollection<int> ids)
+        ApplicationDbContext dbContext, CompanyScope scope, IReadOnlyCollection<int> ids)
     {
         await DayAttendanceStore.EnsureAsync(dbContext);
         var today = DateOnly.FromDateTime(DateTime.Today);
         var eligible = new List<int>();
+        // 🛡️ عزل الشركات (Issue 4): صفٌّ لموظف خارج نطاق المستخدم لا يُعدّ مؤهّلاً
+        // أصلاً، فلا يُعتمَد بمعرّفٍ مزوَّر من شركةٍ أخرى.
+        var scopeFilter = scope.IsUnrestricted ? "1 = 1" : scope.ToSqlPredicate("e.CompanyId");
 
         foreach (var chunk in ids.Chunk(500))
         {
@@ -240,7 +245,8 @@ SELECT m.Id,
           AND d.WorkDate >= DATEFROMPARTS(m.[Year], m.[Month], 1)
           AND d.WorkDate <= EOMONTH(DATEFROMPARTS(m.[Year], m.[Month], 1))) AS AnalyzedDays
 FROM EmployeeMonthAttendance m
-WHERE m.Id IN ({inList});
+INNER JOIN Employees e ON e.Id = m.EmployeeId
+WHERE m.Id IN ({inList}) AND {scopeFilter};
 """,
                 command =>
                 {
@@ -264,20 +270,25 @@ WHERE m.Id IN ({inList});
     }
 
     /// <summary>إرجاع للمراجعة: معتمد ← تحت المراجعة (المقفل لا يُرجع).</summary>
-    public static Task<int> ReopenAsync(ApplicationDbContext dbContext, IReadOnlyCollection<int> ids) =>
-        Transition(dbContext, ids, from: "Approved", to: "UnderReview",
+    public static Task<int> ReopenAsync(ApplicationDbContext dbContext, CompanyScope scope, IReadOnlyCollection<int> ids) =>
+        Transition(dbContext, scope, ids, from: "Approved", to: "UnderReview",
             "ApprovedAt = NULL");
 
     /// <summary>قفل للرواتب: معتمد ← مقفل (نهائي).</summary>
-    public static Task<int> LockAsync(ApplicationDbContext dbContext, IReadOnlyCollection<int> ids) =>
-        Transition(dbContext, ids, from: "Approved", to: "Locked",
+    public static Task<int> LockAsync(ApplicationDbContext dbContext, CompanyScope scope, IReadOnlyCollection<int> ids) =>
+        Transition(dbContext, scope, ids, from: "Approved", to: "Locked",
             "LockedAt = SYSUTCDATETIME()");
 
     private static async Task<int> Transition(ApplicationDbContext dbContext,
-        IReadOnlyCollection<int> ids, string from, string to, string extraSet)
+        CompanyScope scope, IReadOnlyCollection<int> ids, string from, string to, string extraSet)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
-        if (ids.Count == 0) return 0;
+        if (ids.Count == 0 || scope.IsDeniedAll) return 0;
+
+        // 🛡️ عزل الشركات (Issue 4): الانتقال يمسّ فقط صفوف موظفي نطاق المستخدم — join
+        // على Employees وحصرٌ بشركاته، فلا يُعتمَد/يُرجَع/يُقفَل صفُّ شركةٍ أخرى بمعرّف مزوَّر.
+        var scopeFilter = scope.IsUnrestricted ? "1 = 1" : scope.ToSqlPredicate("e.CompanyId");
 
         var total = 0;
         foreach (var chunk in ids.Chunk(500))
@@ -286,8 +297,10 @@ WHERE m.Id IN ({inList});
             total += await HrmsDatabase.ScalarAsync<int>(
                 dbContext,
                 $"""
-UPDATE EmployeeMonthAttendance SET Status = @To, {extraSet}
-WHERE Id IN ({inList}) AND Status = @FromStatus;
+UPDATE m SET m.Status = @To, {extraSet}
+FROM EmployeeMonthAttendance m
+INNER JOIN Employees e ON e.Id = m.EmployeeId
+WHERE m.Id IN ({inList}) AND m.Status = @FromStatus AND {scopeFilter};
 SELECT @@ROWCOUNT;
 """,
                 command =>
