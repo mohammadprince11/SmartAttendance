@@ -64,7 +64,7 @@ GitHub Actions `ci.yml` (build + unit tests + NuGet audit) runs on `pull_request
 ## 16. Remaining Risks
 
 - **BLOCKER** — Attendance manual-edit scope (Issue 1) and MonthAttendance approve/reopen/lock IDOR (Issue 4): a restricted user may mutate another company's attendance via crafted `EmployeeNo`/`SelectedIds`.
-- **HIGH** — Attendance import scope (2), MonthAttendance build scope (3), WeekAttendance (5), org attendance-base not configured (8), salary-item `ItemName` fragility (9), daily-hours split (11), `InGross` non-functional (14), GOSI/Tax preview mismatch (16).
+- **HIGH** — Attendance import scope (2), MonthAttendance build scope (3), WeekAttendance (5), org attendance-base not configured (8), salary-item `ItemName` fragility (9). _(11 daily-hours, 14 InGross, 16 GOSI preview — now FIXED.)_
 - **MEDIUM** — Transaction read scope (7), batch-number race (19), CreateRun atomicity (20/21), payroll SQL candidate-scoping (22–25).
 - **LOW** — Config parse/mode silent fallback (26/27), policy snapshot (28).
 
