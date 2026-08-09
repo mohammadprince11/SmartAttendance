@@ -1157,6 +1157,51 @@ IF OBJECT_ID('SalaryItems', 'U') IS NOT NULL
     ALTER TABLE SalaryItems ADD GosiEligible bit NOT NULL
         CONSTRAINT DF_SalaryItems_GosiEligible DEFAULT(1);
 """),
+
+        // Monotonic payroll-run allocation. Existing duplicate BatchNo values are a
+        // hard migration blocker: silently choosing one would corrupt a financial key.
+        new(
+            "20260809-05-payroll-run-sequence-invariant",
+            """
+IF OBJECT_ID('PayrollRuns', 'U') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT BatchNo FROM PayrollRuns GROUP BY BatchNo HAVING COUNT(*) > 1)
+        THROW 51000, 'Duplicate PayrollRuns.BatchNo values must be remediated before enabling the unique invariant.', 1;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('PayrollRuns') AND name = 'UX_PayrollRuns_BatchNo')
+        CREATE UNIQUE INDEX UX_PayrollRuns_BatchNo ON PayrollRuns (BatchNo);
+
+    IF OBJECT_ID('PayrollRunSequences', 'U') IS NULL
+    BEGIN
+        CREATE TABLE PayrollRunSequences
+        (
+            [Year] int NOT NULL,
+            [Month] int NOT NULL,
+            NextValue int NOT NULL,
+            CONSTRAINT PK_PayrollRunSequences PRIMARY KEY ([Year], [Month]),
+            CONSTRAINT CK_PayrollRunSequences_NextValue CHECK (NextValue > 0)
+        );
+    END;
+
+    ;WITH ExistingMax AS
+    (
+        SELECT [Year], [Month],
+               ISNULL(MAX(TRY_CONVERT(int, RIGHT(BatchNo, CHARINDEX('-', REVERSE(BatchNo)) - 1))), 0) + 1 AS NextValue
+        FROM PayrollRuns
+        WHERE CHARINDEX('-', REVERSE(BatchNo)) > 1
+        GROUP BY [Year], [Month]
+    )
+    MERGE PayrollRunSequences AS target
+    USING ExistingMax AS source
+       ON target.[Year] = source.[Year] AND target.[Month] = source.[Month]
+    WHEN MATCHED AND target.NextValue < source.NextValue THEN
+        UPDATE SET NextValue = source.NextValue
+    WHEN NOT MATCHED THEN
+        INSERT ([Year], [Month], NextValue)
+        VALUES (source.[Year], source.[Month], source.NextValue);
+END;
+"""),
     };
 
     /// <summary>

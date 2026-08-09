@@ -80,12 +80,13 @@ ORDER BY e.EmployeeNo;
     /// هذا هو الفارق عن كيان/ZenHR — هناك تُكتشف الأكواد الخاطئة بعد الاحتساب.
     /// </summary>
     public static async Task<(List<(int Id, string No, string Name)> Matched, List<string> Missing)>
-        PreviewCodesAsync(ApplicationDbContext dbContext, string? raw)
+        PreviewCodesAsync(ApplicationDbContext dbContext, string? raw, int? companyId = null)
     {
         var employees = await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo, ISNULL(FullName, N'') AS FullName FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1;",
-            command => { },
+            "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo, ISNULL(FullName, N'') AS FullName FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1 AND (@Company IS NULL OR CompanyId=@Company);",
+            command => HrmsDatabase.AddParameter(
+                command, "@Company", (object?)companyId ?? DBNull.Value),
             reader => (
                 Id: HrmsDatabase.GetInt(reader, "Id"),
                 No: HrmsDatabase.GetString(reader, "EmployeeNo"),

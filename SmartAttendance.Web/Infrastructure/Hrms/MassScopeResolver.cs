@@ -20,9 +20,11 @@ public static class MassScopeResolver
     }
 
     /// <summary>القوائم الكاملة للمؤسسة لمعايير النطاق (كل الموظفين النشطين).</summary>
-    public static async Task<(List<string> Departments, List<string> Branches, List<string> JobTitles)> OrgListsAsync(ApplicationDbContext db)
+    public static async Task<(List<string> Departments, List<string> Branches, List<string> JobTitles)> OrgListsAsync(
+        ApplicationDbContext db,
+        int? companyId = null)
     {
-        var attrs = await LoadAsync(db);
+        var attrs = await LoadAsync(db, companyId);
         return (
             attrs.Select(x => x.Dept).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList(),
             attrs.Select(x => x.Branch).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList(),
@@ -31,9 +33,9 @@ public static class MassScopeResolver
 
     /// <summary>يحلّ الموظفين المستهدفين حسب ScopeMode. Error != null ⇒ توقف بعرض الرسالة.</summary>
     public static async Task<(List<int> Ids, int Skipped, string Label, string? Error)> ResolveAsync(
-        ApplicationDbContext db, IFormCollection f, IFormFile? file)
+        ApplicationDbContext db, IFormCollection f, IFormFile? file, int? companyId = null)
     {
-        var r = await ResolveDetailedAsync(db, f, file);
+        var r = await ResolveDetailedAsync(db, f, file, companyId);
         return (r.Ids, r.Skipped, r.Label, r.Error);
     }
 
@@ -42,9 +44,13 @@ public static class MassScopeResolver
     /// موظفاً يغيب بصمت، وعرض «12 تُخطّي» بلا معرفة أيّها لا يمكّن من التصحيح.
     /// </summary>
     public static async Task<(List<int> Ids, int Skipped, List<string> Missing, string Label, string? Error)>
-        ResolveDetailedAsync(ApplicationDbContext db, IFormCollection f, IFormFile? file)
+        ResolveDetailedAsync(
+            ApplicationDbContext db,
+            IFormCollection f,
+            IFormFile? file,
+            int? companyId = null)
     {
-        var emps = await LoadAsync(db);
+        var emps = await LoadAsync(db, companyId);
         var byCode = PayrollRunScope.BuildCodeMap(emps.Select(e => (e.No, e.Id)));
 
         var mode = f["ScopeMode"].ToString();
@@ -96,10 +102,11 @@ public static class MassScopeResolver
         return (ids.Distinct().ToList(), skipped, missing, label, null);
     }
 
-    private static Task<List<EmpRow>> LoadAsync(ApplicationDbContext db) =>
+    private static Task<List<EmpRow>> LoadAsync(ApplicationDbContext db, int? companyId) =>
         HrmsDatabase.QueryAsync(db,
-            "SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(d.Name, N'') AS Dept, ISNULL(b.Name, N'') AS Branch, ISNULL(e.Position, N'') AS Position FROM Employees e LEFT JOIN Departments d ON d.Id = e.DepartmentId LEFT JOIN Branches b ON b.Id = e.BranchId WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1;",
-            command => { },
+            "SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(d.Name, N'') AS Dept, ISNULL(b.Name, N'') AS Branch, ISNULL(e.Position, N'') AS Position FROM Employees e LEFT JOIN Departments d ON d.Id = e.DepartmentId LEFT JOIN Branches b ON b.Id = e.BranchId WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1 AND (@Company IS NULL OR e.CompanyId=@Company);",
+            command => HrmsDatabase.AddParameter(
+                command, "@Company", (object?)companyId ?? DBNull.Value),
             reader => new EmpRow
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),

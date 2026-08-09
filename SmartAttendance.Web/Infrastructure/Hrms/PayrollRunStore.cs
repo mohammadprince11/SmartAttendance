@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Security;
 using SmartAttendance.Web.Infrastructure.HrSettings;
@@ -310,27 +311,53 @@ WHERE r.Id = @Id;
     /// <paramref name="scopeEmployeeIds"/> فارغة/null ⟹ الدفعة تشمل كل النشطين.
     /// </summary>
     public static async Task<(bool Ok, string Message, int RunId)> CreateRunAsync(
-        ApplicationDbContext dbContext, int year, int month,
+        ApplicationDbContext dbContext, CompanyScope callerScope, int companyId,
+        int year, int month,
         string? scopeMode = null, IEnumerable<int>? scopeEmployeeIds = null,
-        int? companyId = null)
+        CancellationToken cancellationToken = default)
     {
         await EnsureAsync(dbContext);
         if (year < 2000 || month is < 1 or > 12) return (false, "شهر غير صالح.", 0);
 
+        if (companyId <= 0 || !callerScope.Allows(companyId))
+            return (false, "The selected payroll company is outside your scope.", 0);
+        if (!await dbContext.Companies.AsNoTracking().AnyAsync(
+                company => company.Id == companyId && company.IsActive && !company.IsDeleted,
+                cancellationToken))
+            return (false, "The selected payroll company is unavailable.", 0);
+
         var ids = (scopeEmployeeIds ?? Enumerable.Empty<int>()).Distinct().ToList();
         var mode = PayrollRunScope.NormalizeMode(scopeMode);
         if (ids.Count == 0) mode = PayrollRunScope.ModeAll;   // نطاق بلا أعضاء = الكل
+        if (!await ValidateEmployeeScopeAsync(
+                dbContext, companyId, ids, cancellationToken))
+            return (false, "Payroll scope contains an unavailable or cross-company employee.", 0);
 
         // إنشاء الدفعة وأعضاء نطاقها معاملةٌ واحدة (Phase 8): إن فشل حفظ الأعضاء تُلغى
         // الدفعة كاملةً فلا يبقى Draft يتيمٌ بلا أعضاء يُفسَّر لاحقاً «كل الموظفين».
         // وتخصيص الرقم يقفل مدى (السنة،الشهر) بـUPDLOCK/HOLDLOCK فيتسلسل المُنشئون
         // المتزامنون ويستحيل رقمان متطابقان — كان COUNT+1 بلا قفلٍ سباقاً صريحاً.
-        await using var tx = await dbContext.Database.BeginTransactionAsync();
+        await using var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
         var seq = await HrmsDatabase.ScalarAsync<int>(
             dbContext,
-            "SELECT COUNT(1) FROM PayrollRuns WITH (UPDLOCK, HOLDLOCK) WHERE [Year] = @Y AND [Month] = @M;",
-            command => { HrmsDatabase.AddParameter(command, "@Y", year); HrmsDatabase.AddParameter(command, "@M", month); }) + 1;
+            """
+DECLARE @allocated TABLE (SequenceNo int NOT NULL);
+MERGE PayrollRunSequences WITH (UPDLOCK, HOLDLOCK) AS target
+USING (SELECT @Y AS [Year], @M AS [Month]) AS source
+   ON target.[Year] = source.[Year] AND target.[Month] = source.[Month]
+WHEN MATCHED THEN
+    UPDATE SET NextValue = target.NextValue + 1
+WHEN NOT MATCHED THEN
+    INSERT ([Year], [Month], NextValue) VALUES (source.[Year], source.[Month], 2)
+OUTPUT inserted.NextValue - 1 INTO @allocated;
+SELECT SequenceNo FROM @allocated;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Y", year);
+                HrmsDatabase.AddParameter(command, "@M", month);
+            });
 
         var batchNo = $"{year}-{month}-{seq}";
         var id = await HrmsDatabase.ScalarAsync<int>(
@@ -342,12 +369,12 @@ WHERE r.Id = @Id;
                 HrmsDatabase.AddParameter(command, "@Y", year);
                 HrmsDatabase.AddParameter(command, "@M", month);
                 HrmsDatabase.AddParameter(command, "@Scope", mode);
-                HrmsDatabase.AddParameter(command, "@Company", (object?)companyId ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Company", companyId);
             });
 
         if (ids.Count > 0) await PayrollRunScopeStore.ReplaceAsync(dbContext, id, ids);
 
-        await tx.CommitAsync();
+        await tx.CommitAsync(cancellationToken);
 
         var scopeText = ids.Count > 0
             ? $" — النطاق: {PayrollRunScope.Describe(mode, ids.Count)}"
@@ -1361,16 +1388,26 @@ ORDER BY e.EmployeeNo;
     /// قائمة فارغة ⟹ عودة لـ«كل الموظفين».
     /// </summary>
     public static async Task<(bool Ok, string Message)> SetScopeAsync(
-        ApplicationDbContext dbContext, int runId, string? scopeMode, IEnumerable<int> employeeIds)
+        ApplicationDbContext dbContext,
+        CompanyScope callerScope,
+        int runId,
+        string? scopeMode,
+        IEnumerable<int> employeeIds,
+        CancellationToken cancellationToken = default)
     {
         var run = await GetRunAsync(dbContext, runId);
         if (run == null) return (false, "الدفعة غير موجودة.");
         if (run.Status is not ("Draft" or "Calculated"))
             return (false, "لا يُعدَّل نطاق دفعة مقفلة/معتمدة.");
+        if (run.CompanyId is not { } companyId || !callerScope.Allows(companyId))
+            return (false, "Payroll run has no accessible company boundary.");
 
         var ids = employeeIds.Distinct().ToList();
         var mode = ids.Count == 0 ? PayrollRunScope.ModeAll : PayrollRunScope.NormalizeMode(scopeMode);
+        if (!await ValidateEmployeeScopeAsync(dbContext, companyId, ids, cancellationToken))
+            return (false, "Payroll scope contains an unavailable or cross-company employee.");
 
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         await PayrollRunScopeStore.ReplaceAsync(dbContext, runId, ids);
         await HrmsDatabase.ExecuteAsync(
             dbContext,
@@ -1380,6 +1417,7 @@ ORDER BY e.EmployeeNo;
                 HrmsDatabase.AddParameter(command, "@Id", runId);
                 HrmsDatabase.AddParameter(command, "@Scope", mode);
             });
+        await transaction.CommitAsync(cancellationToken);
 
         return (true, run.Status == "Calculated"
             ? $"حُدِّث النطاق: {PayrollRunScope.Describe(mode, ids.Count)} — أعد «الاحتساب» ليأخذ أثره."
@@ -1401,6 +1439,31 @@ ORDER BY e.EmployeeNo;
                 HrmsDatabase.AddParameter(command, "@From", from);
             });
         return affected > 0 ? (true, okMessage) : (false, "الحالة الحالية لا تسمح بهذا الانتقال.");
+    }
+
+    private static async Task<bool> ValidateEmployeeScopeAsync(
+        ApplicationDbContext dbContext,
+        int companyId,
+        IReadOnlyCollection<int> employeeIds,
+        CancellationToken cancellationToken)
+    {
+        if (employeeIds.Count == 0) return true;
+
+        var valid = new HashSet<int>();
+        foreach (var chunk in employeeIds.Chunk(1000))
+        {
+            var part = await dbContext.Employees.AsNoTracking()
+                .Where(employee => chunk.Contains(employee.Id)
+                    && employee.IsActive
+                    && !employee.IsDeleted
+                    && (employee.CompanyId == companyId ||
+                        (employee.CompanyId == null && employee.Branch.CompanyId == companyId)))
+                .Select(employee => employee.Id)
+                .ToListAsync(cancellationToken);
+            valid.UnionWith(part);
+        }
+
+        return valid.Count == employeeIds.Count;
     }
 
     private static PayrollRun ReadRun(System.Data.Common.DbDataReader reader) => new()
