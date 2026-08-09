@@ -9,7 +9,6 @@
     var months = new[] { "يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر" };
     string[] stages = { "Draft","Calculated","Locked","Issued","PayslipSent" };
     string[] stageLabels = { "مسودة","محتسب","مقفل","معتمد","قسائم" };
-    int StageIndex(string s) => Array.IndexOf(stages, s);
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
@@ -144,7 +143,7 @@
             <table class="pr-table">
                 <thead>
                     <tr>
-                        <th>رقم الدفعة</th><th>الفترة</th><th>الحالة والتقدّم</th><th>النطاق</th><th>الموظفون</th>
+                        <th>رقم الدفعة</th><th>الفترة</th><th>الموظفون</th>
                         <th>الإجمالي</th><th>الاستقطاعات</th><th>الصافي</th><th>حصة الشركة</th><th>محتسب بواسطة</th>
                         <th style="text-align:end">إجراءات</th>
                     </tr>
@@ -152,21 +151,10 @@
                 <tbody>
                     @foreach (var run in Model.Runs)
                     {
-                        var idx = StageIndex(run.Status);
                         var deductions = run.TotalGross - run.TotalNet;
                         <tr>
                             <td class="pr-num">@run.BatchNo</td>
                             <td class="pr-num">@run.PeriodText</td>
-                            <td>
-                                <div class="pr-steps">
-                                    @for (var i = 0; i < stages.Length; i++)
-                                    {
-                                        <i class="@(i <= idx ? "on" : "")@(run.Status is "Issued" or "PayslipSent" ? " done" : "")"></i>
-                                    }
-                                    <b class="st-@run.Status">@run.StatusLabelText</b>
-                                </div>
-                            </td>
-                            <td><span class="pr-scope @(run.ScopeCount > 0 ? "narrow" : "")">@run.ScopeText</span></td>
                             <td class="pr-num">@run.EmployeeCount</td>
                             <td class="pr-num">@run.TotalGross.ToString("#,0.##")</td>
                             <td class="pr-num">@deductions.ToString("#,0.##")</td>
