@@ -478,10 +478,11 @@ WHERE r.Id = @Id;
         // فيقرأ المسير جدولاً فارغاً/متقادماً ⟹ معامل الحضور = 1 فلا يُخصم الغياب ولا
         // الإجازة بلا راتب بصمت (استحقاق زائد). النداء idempotent وآمن للبوابة: MERGE
         // يحدّث صفوف UnderReview فقط ويُدرج الناقصين، ولا يدوس الأشهر المعتمدة/المقفلة.
-        await MonthAttendanceStore.BuildMonthAsync(dbContext, run.Year, run.Month);
-        var months = (await MonthAttendanceStore.ListAsync(dbContext,
-            runCompanyId is > 0 ? CompanyScope.ForCompanies(new[] { runCompanyId.Value }) : CompanyScope.Unrestricted(),
-            run.Year, run.Month))
+        var runScope = runCompanyId is > 0
+            ? CompanyScope.ForCompanies(new[] { runCompanyId.Value })
+            : CompanyScope.Unrestricted();
+        await MonthAttendanceStore.BuildMonthAsync(dbContext, runScope, run.Year, run.Month);
+        var months = (await MonthAttendanceStore.ListAsync(dbContext, runScope, run.Year, run.Month))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.First());
 
         // المخالفات مع **قاعدة جزائها**: الوعاء والمقام صارا بياناتٍ على القاعدة لا

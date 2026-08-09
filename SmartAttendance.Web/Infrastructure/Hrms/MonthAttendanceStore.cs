@@ -80,9 +80,18 @@ IF COL_LENGTH('EmployeeMonthAttendance', 'UnpaidLeaveDays') IS NULL
     /// «بناء الشهر»: تجميع اليوميات المحللة لكل موظف — SQL واحد بـMERGE-نمط:
     /// إدراج الجديد، تحديث أرقام «تحت المراجعة»، وترك المعتمد/المقفل بلا مساس.
     /// </summary>
-    /// <returns>عدد صفوف الموظفين بعد البناء.</returns>
-    public static async Task<int> BuildMonthAsync(ApplicationDbContext dbContext, int year, int month)
+    /// <remarks>
+    /// <b>عزل الشركات إلزامي</b>: <paramref name="scope"/> يقيّد مصدر التجميع بموظفي
+    /// نطاق المستدعي <em>قبل</em> الـMERGE، فلا يُدرَج ولا يُحدَّث صفٌّ لموظف خارج
+    /// النطاق. المسير يمرّر نطاق شركة المسير، والشاشة تمرّر نطاق المستخدم الفعّال.
+    /// المخاطرة قبل هذا: كان يجمّع ويُدمج يوميات كل الشركات (والمسير يستدعيه تلقائياً).
+    /// </remarks>
+    /// <returns>عدد صفوف الموظفين ضمن النطاق بعد البناء.</returns>
+    public static async Task<int> BuildMonthAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int year, int month)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return 0;
         await EnsureAsync(dbContext);
         await DayAttendanceStore.EnsureAsync(dbContext);
         await ShiftTypeStore.EnsureAsync(dbContext); // عمود TotalDurationMode مطلوب بالتجميع
@@ -92,7 +101,7 @@ IF COL_LENGTH('EmployeeMonthAttendance', 'UnpaidLeaveDays') IS NULL
 
         await HrmsDatabase.ExecuteAsync(
             dbContext,
-            """
+            $"""
 WITH Aggregated AS
 (
     -- «أيام العمل» تشمل العمل من المنزل ورحلة العمل: هي أيام دوامٍ اختلف مكانها لا
@@ -114,8 +123,10 @@ WITH Aggregated AS
                       OR ISNULL(st.TotalDurationMode, N'WorkOnly') <> N'WorkOnly'
                     THEN d.WorkedHours ELSE 0 END) AS WorkedHours
     FROM DayAttendances d
+    INNER JOIN Employees e ON e.Id = d.EmployeeId
     LEFT JOIN ShiftTypes st ON st.Id = d.ShiftTypeId
     WHERE d.WorkDate >= @From AND d.WorkDate <= @To AND d.IsAnalyzed = 1
+      AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
     GROUP BY d.EmployeeId
 )
 MERGE EmployeeMonthAttendance AS target
@@ -144,7 +155,13 @@ WHEN NOT MATCHED THEN
 
         return await HrmsDatabase.ScalarAsync<int>(
             dbContext,
-            "SELECT COUNT(1) FROM EmployeeMonthAttendance WHERE [Year] = @Year AND [Month] = @Month;",
+            $"""
+SELECT COUNT(1)
+FROM EmployeeMonthAttendance m
+INNER JOIN Employees e ON e.Id = m.EmployeeId
+WHERE m.[Year] = @Year AND m.[Month] = @Month
+  AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};
+""",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Year", year);

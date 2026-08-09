@@ -84,7 +84,7 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostBuildAsync()
     {
         var (year, month) = Period;
-        var count = await MonthAttendanceStore.BuildMonthAsync(_dbContext, year, month);
+        var count = await MonthAttendanceStore.BuildMonthAsync(_dbContext, await _companyScope.GetAsync(), year, month);
 
         // التجميع صار طازجاً ⟹ قيّم القواعد الفترية الشهرية عليه فوراً. الاقتراحات
         // تُحفظ معلّقة بشاشة «الإجراءات المقترحة» (لا تنفيذ تلقائي — راجع AnalyzePeriodAsync).
