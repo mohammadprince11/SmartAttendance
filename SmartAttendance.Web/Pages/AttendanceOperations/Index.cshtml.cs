@@ -221,6 +221,25 @@ public class IndexModel : PageModel
         return Page();
     }
 
+    /// <summary>
+    /// 🛡️ عزل الشركات (Issue 1): يحسم معرّف الموظف من رقمه **ضمن نطاق شركات المستخدم**.
+    /// خارج النطاق ⟹ 0، فيُعامَل كـ«غير موجود» (مغلق الفشل، لا يُستدلّ على وجوده).
+    /// كل تعديل حضور يدويّ (تصحيح · حفظ بصمات · بصمة أخرى) يمرّ به قبل أي مسّ.
+    /// </summary>
+    private async Task<int> ResolveScopedEmployeeIdAsync(string? employeeNo)
+    {
+        if (string.IsNullOrWhiteSpace(employeeNo)) return 0;
+        var id = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            "SELECT TOP 1 Id FROM Employees WHERE EmployeeNo = @EmployeeNo",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeNo", employeeNo));
+        if (id <= 0) return 0;
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        return await SmartAttendance.Web.Infrastructure.Security.EmployeeCompanyGuard
+            .CanAccessEmployeeAsync(_dbContext, id, scope, HttpContext.RequestAborted)
+            ? id : 0;
+    }
+
     public async Task<IActionResult> OnPostUpsertAsync()
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
@@ -242,10 +261,7 @@ public class IndexModel : PageModel
             return Page();
         }
 
-        var employeeId = await HrmsDatabase.ScalarAsync<int>(
-            _dbContext,
-            "SELECT TOP 1 Id FROM Employees WHERE EmployeeNo = @EmployeeNo",
-            command => HrmsDatabase.AddParameter(command, "@EmployeeNo", Correction.EmployeeNo));
+        var employeeId = await ResolveScopedEmployeeIdAsync(Correction.EmployeeNo);
 
         if (employeeId <= 0)
         {
@@ -497,10 +513,7 @@ ORDER BY ar.AttendanceDate, e.EmployeeNo, ar.CheckIn;
             return RedirectToPage("./Index", redirect);
         }
 
-        var employeeId = await HrmsDatabase.ScalarAsync<int>(
-            _dbContext,
-            "SELECT TOP 1 Id FROM Employees WHERE EmployeeNo = @EmployeeNo",
-            command => HrmsDatabase.AddParameter(command, "@EmployeeNo", Correction.EmployeeNo));
+        var employeeId = await ResolveScopedEmployeeIdAsync(Correction.EmployeeNo);
 
         if (employeeId <= 0)
         {
@@ -689,10 +702,7 @@ END;
             return RedirectToPage("./Index", redirect);
         }
 
-        var employeeId = await HrmsDatabase.ScalarAsync<int>(
-            _dbContext,
-            "SELECT TOP 1 Id FROM Employees WHERE EmployeeNo = @EmployeeNo",
-            command => HrmsDatabase.AddParameter(command, "@EmployeeNo", OtherPunch.EmployeeNo));
+        var employeeId = await ResolveScopedEmployeeIdAsync(OtherPunch.EmployeeNo);
 
         if (employeeId <= 0)
         {
@@ -731,16 +741,27 @@ VALUES
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
-        // حذف مقيّد بالبصمات غير-الحضورية حتى لا يمسّ سجلات الحضور
-        var affected = await HrmsDatabase.ScalarAsync<int>(
-            _dbContext,
-            """
-DELETE FROM AttendanceRecords WHERE Id = @Id AND PunchSemanticId IS NOT NULL;
+        // 🛡️ عزل الشركات (Issue 1 — حذف بمعرّف): كان الحذف بمعرّف البصمة بلا فحص شركة،
+        // فمستخدم شركة A يحذف بصمة موظف شركة B بمعرّفٍ مزوَّر. الآن الحذف مربوطٌ بشركة
+        // الموظف عبر النطاق. مغلق الفشل: نطاقٌ محروم كلياً لا يحذف شيئاً.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var affected = 0;
+        if (!scope.IsDeniedAll)
+        {
+            var predicate = scope.IsUnrestricted ? "1 = 1" : scope.ToSqlPredicate("e.CompanyId");
+            // حذف مقيّد بالبصمات غير-الحضورية حتى لا يمسّ سجلات الحضور، وبموظفي النطاق.
+            affected = await HrmsDatabase.ScalarAsync<int>(
+                _dbContext,
+                $"""
+DELETE r FROM AttendanceRecords r
+INNER JOIN Employees e ON e.Id = r.EmployeeId
+WHERE r.Id = @Id AND r.PunchSemanticId IS NOT NULL AND {predicate};
 SELECT @@ROWCOUNT;
 """,
-            command => HrmsDatabase.AddParameter(command, "@Id", id));
+                command => HrmsDatabase.AddParameter(command, "@Id", id));
+        }
 
-        SuccessMessage = affected > 0 ? "حُذفت البصمة." : "لم تُحذف — ليست بصمة غير-حضورية.";
+        SuccessMessage = affected > 0 ? "حُذفت البصمة." : "لم تُحذف — ليست بصمة غير-حضورية أو خارج نطاقك.";
 
         return RedirectToPage("./Index", new
         {
