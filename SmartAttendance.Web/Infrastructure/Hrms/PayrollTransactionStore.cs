@@ -272,7 +272,8 @@ WHERE t.[Year] = @Y AND t.[Month] = @M
 
     /// <summary>حركات فترة/نوع للاحتساب بالمسير — المعتمدة داخل الراتب فقط.</summary>
     public static async Task<List<Transaction>> ForPeriodAsync(
-        ApplicationDbContext dbContext, CompanyScope scope, int year, int month, string txType)
+        ApplicationDbContext dbContext, CompanyScope scope, int year, int month, string txType,
+        int? runId = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         if (scope.IsDeniedAll) return new List<Transaction>();
@@ -285,13 +286,17 @@ INNER JOIN Employees e ON e.Id = t.EmployeeId
 WHERE t.[Year] = @Y AND t.[Month] = @M AND t.TxType = @Type
   AND ISNULL(PaymentType, N'InSalary') = N'InSalary'
   AND ISNULL(Status, N'Approved') = N'Approved'
-  AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};
+  AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
+  AND (@RunId IS NULL
+       OR NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId)
+       OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId AND s.EmployeeId=t.EmployeeId));
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Y", year);
                 HrmsDatabase.AddParameter(command, "@M", month);
                 HrmsDatabase.AddParameter(command, "@Type", txType);
+                HrmsDatabase.AddParameter(command, "@RunId", (object?)runId ?? DBNull.Value);
             },
             reader => new Transaction
             {
