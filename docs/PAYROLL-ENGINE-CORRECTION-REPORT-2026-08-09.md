@@ -1,6 +1,6 @@
 # ZYNORA PAYROLL ENGINE CORRECTION REPORT
 
-_2026-08-09. Study-first architecture correction. Scope this session (per decision): **core salary-base engine + golden tests first**; Settings/FinancialInfo UI reorg and the remaining two golden scenarios (unpaid-leave, overtime) are planned, not yet implemented. No merge, no deploy, no force-push._
+_2026-08-09. Study-first architecture correction. Scope this session (per decision): **core salary-base engine + golden tests first**. All seven golden scenarios are now implemented and tested; the Settings/FinancialInfo UI that lets the org select the new modes/flags is still deferred. No merge, no deploy, no force-push._
 
 ## 1. Baseline
 
@@ -8,8 +8,8 @@ _2026-08-09. Study-first architecture correction. Scope this session (per decisi
 |---|---|
 | Branch | `claude/smartattendance-local-rebuild-wftwb3` |
 | Starting SHA | `42b1549` (People acceptance report) |
-| Ending SHA | `0291391` |
-| Commits added | `2940d4a` (attendance base), `0291391` (gosi/tax employee-defined) |
+| Ending SHA | `f3a0ea7` |
+| Commits added | `2940d4a` (attendance base), `0291391` (gosi/tax employee-defined), `dc769f2` (report), `f3a0ea7` (unpaid-leave/overtime/divisor) |
 | Main SHA (`origin/main`) | `73169433` (not modified) |
 
 Working HEAD was `beee200` at task start; only my People report `42b1549` sat above it (preserved). No reset/rebase/merge.
@@ -33,7 +33,10 @@ Working HEAD was `beee200` at task start; only my People report `42b1549` sat ab
 | **AttendanceBase** | **new (this session)** | per-component: Basic (always sensitive) + allowances sensitive iff `SalaryItem.Prorated` |
 | **Employee-defined Tax/GOSI base** | **new (this session)** | `EmployeeDefinedSalaryBase`: `EmployeeDefined` mode → employee value; else composed |
 | `PenaltyBase` | existed | `BasePoolJson` + `WorkDaysBasis` |
-| `OvertimeBase`, `UnpaidLeaveBase` | **planned** | to reuse the same per-component model + central divisor |
+| **OvertimeBase, UnpaidLeaveBase** | **new (this session)** | `PayrollEarningBase` (Basic vs Basic+eligible allowances) ÷ `PayrollDivisorPolicy` |
+| **Divisor policy** | **new (this session)** | `PayrollDivisorPolicy` owns `Payroll.SalaryDaysBasis` (Fixed30) + `Payroll.StandardDailyHours` (8) |
+
+New pure, tested units total: `AttendanceSalaryBase`, `EmployeeDefinedSalaryBase`, `PayrollEarningBase`, `PayrollRateBasis`, `PayrollDivisorPolicy`.
 
 New pure, tested units: `AttendanceSalaryBase`, `EmployeeDefinedSalaryBase`. Both live in infrastructure payroll logic (no duplicated calculation in pages).
 
@@ -74,7 +77,7 @@ Migration `20260809-01-employee-defined-tax-gosi-base`: three nullable columns, 
 
 ## 9. Overtime
 
-Unchanged this session. Current: `hours × (basic/30/8) × rateFactor`; rate factors by day context already configurable. `OvertimeBase` + central divisor/daily-hours planned.
+`hours × hourlyRate × rateFactor`, where `hourlyRate` now derives from `OvertimeBase ÷ divisor ÷ dailyHours` via `PayrollEarningBase` + `PayrollDivisorPolicy`. Default (`OvertimeBaseMode = Basic`, Fixed30, 8h) reproduces `basic/30/8` exactly; day-context rate factors unchanged. Divisor and daily-hours are now owned by an explicit policy, not inline literals.
 
 ## 10. Golden Employee Results (`TEST-PAY-001`: Basic 400,000 + Allowances 1,600,000)
 
@@ -85,14 +88,14 @@ Unchanged this session. Current: `hours × (basic/30/8) × rateFactor`; rate fac
 | 3 — Housing (prorate) 1.5M + Phone (fixed) 100k | **1,853,846.15** (Housing 1,384,615.38 + Phone full) | ✅ tested |
 | 4 — GOSI EmployeeDefined 400,000 | employee **20,000**, company **48,000** | ✅ tested |
 | 5 — Tax EmployeeDefined 400,000 | tax **4,500** (test profile), ≠ tax on 2M | ✅ tested |
-| 6 — Unpaid leave 1 day, base 2M/30 = 66,666.67 | — | ⏳ planned |
-| 7 — Overtime base variants | — | ⏳ planned |
+| 6 — Unpaid leave 1 day, Basic+allowances base 2M/30 | **66,666.67** (default Basic-only = 13,333.33) | ✅ tested |
+| 7 — Overtime 8h × 1.5 | Basic base **20,000**; Basic+allowances base **100,000** | ✅ tested |
 
 Full end-to-end line integration test (all effects combined) requires a SQL-backed fixture; existing payroll tests are pure, so golden scenarios are asserted at the pure-helper level with exact decimals.
 
 ## 11. Regression Tests
 
-- Payroll-related suites present and passing, including new `AttendanceSalaryBaseTests` (6) and `EmployeeDefinedSalaryBaseTests` (5), alongside existing `SalaryBaseComposerTests`, `AttendanceSalaryLinkTests`, `PayrollProfileResolverTests`, `PayrollFormulaVariablesTests`, `PayrollCompanyIsolationTests`.
+- Payroll-related suites present and passing, including new `AttendanceSalaryBaseTests` (6), `EmployeeDefinedSalaryBaseTests` (5) and `PayrollBasePolicyTests` (6), alongside existing `SalaryBaseComposerTests`, `AttendanceSalaryLinkTests`, `PayrollProfileResolverTests`, `PayrollFormulaVariablesTests`, `PayrollCompanyIsolationTests`.
 - No existing test was removed or weakened; the 1451 prior tests remain green (defaults reproduce old numbers).
 
 ## 12. Full Build/Test
@@ -100,8 +103,8 @@ Full end-to-end line integration test (all effects combined) requires a SQL-back
 | Metric | Value |
 |---|---|
 | Release build | **0 errors** |
-| Total tests | **1462** |
-| Passed | 1462 |
+| Total tests | **1468** |
+| Passed | 1468 |
 | Failed | 0 |
 | Skipped | 0 |
 | `git diff --check` | clean |
@@ -113,10 +116,10 @@ Full end-to-end line integration test (all effects combined) requires a SQL-back
 
 ## 14. Remaining Risks
 
-- **MEDIUM** — Unpaid-leave and overtime bases still Basic-only with hidden `/30`,`/8`. Not a regression (unchanged), but the architecture goal is incomplete until they and a central divisor policy land.
-- **MEDIUM** — New base modes (`TaxBaseMode`/`GosiBaseMode`) have **no UI writer yet** (FinancialInfo/Settings reorg deferred). The engine reads them; until a screen sets them, the org cannot opt in through the UI (columns default to composed = safe).
+- **HIGH** — The new policies (`TaxBaseMode`, `GosiBaseMode`, `OvertimeBaseMode`, `UnpaidLeaveBaseMode`, `SalaryDaysBasis`, `StandardDailyHours`) and the SalaryItem flags (`Prorated`, `OvertimeEligible`, `UnpaidLeaveEligible`) have **no UI writer yet** (Settings/FinancialInfo reorg deferred). The engine reads them correctly; until screens set them, the org can only opt in via direct settings/DB writes. Columns default to the legacy composed/Basic behavior, so this is safe but not yet operator-usable.
+- **MEDIUM** — Double-deduction audit (Phase 18: late → factor + violation + manual deduction) not yet done; no regression test proving a single event isn't deducted twice.
 - **LOW** — Per-allowance tax/GOSI eligibility (Phase 2 full model) not implemented; tax/GOSI still use aggregate base membership.
-- **LOW** — Double-deduction audit (Phase 18) and payslip calculation trace (Phase 15) not yet done.
+- **LOW** — Payslip calculation trace (Phase 15) not yet surfaced; components already carry `Kind`, so the trace is derivable without new tables.
 
 `No known payroll release blocker introduced; all changes are backward-compatible and opt-in.`
 
@@ -133,4 +136,4 @@ Full end-to-end line integration test (all effects combined) requires a SQL-back
 
 `PAYROLL ENGINE NOT READY — BLOCKERS REMAIN`
 
-Not because anything shipped is unsafe — the two delivered corrections are backward-compatible, tested (1462/1462), and opt-in — but because the **architecture correction is intentionally incomplete** for this session's agreed scope: unpaid-leave and overtime bases, the central divisor policy, the Settings/FinancialInfo UI that lets the org actually select the new modes, and golden scenarios 6–7 remain. Acceptance testing of the full engine should wait until those land. Do **not** merge to main.
+The **engine correctness core is complete**: all six configurable salary bases (Attendance, Tax, GOSI, Overtime, UnpaidLeave, Penalty) now compose from explicit, configurable sources, all seven golden scenarios pass with exact decimals, and everything is backward-compatible (1468/1468 green, defaults reproduce old numbers). It is **NOT READY for acceptance testing** because the operator cannot yet configure the new policies — the Settings/FinancialInfo UI is deferred (HIGH risk above) — and the double-deduction audit (Phase 18) and payslip trace (Phase 15) remain. Acceptance testing should wait until the configuration UI lands so HR can actually select and verify these bases end-to-end. Do **not** merge to main.
