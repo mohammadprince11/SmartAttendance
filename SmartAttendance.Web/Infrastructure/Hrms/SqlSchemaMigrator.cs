@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
+using System.Collections.Concurrent;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -20,7 +21,7 @@ public static class SqlSchemaMigrator
     public sealed record Migration(string Id, string Sql);
 
     private static readonly SemaphoreSlim Gate = new(1, 1);
-    private static volatile bool _applied;
+    private static readonly ConcurrentDictionary<string, byte> AppliedDatabases = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>الهجرات بترتيب التطبيق. لا تُعدَّل هجرة منشورة — أضف واحدة جديدة.</summary>
     public static readonly IReadOnlyList<Migration> Migrations = new List<Migration>
@@ -105,6 +106,9 @@ BEGIN
     -- «تصل إليه كائنات أخرى» (Msg 5074). فيُسقَط ثم يُعاد بناؤه بعد التشديد.
     IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Employees_CompanyId')
         DROP INDEX IX_Employees_CompanyId ON Employees;
+
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Employees_CompanyId_EmployeeNo' AND object_id = OBJECT_ID('Employees'))
+        DROP INDEX UX_Employees_CompanyId_EmployeeNo ON Employees;
 
     ALTER TABLE Employees ALTER COLUMN CompanyId int NOT NULL;
 
@@ -1291,6 +1295,25 @@ BEGIN
     WHEN NOT MATCHED THEN INSERT (Prefix, NextValue) VALUES (source.Prefix, source.NextValue);
 END;
 """),
+
+        new(
+            "20260809-08-employee-number-company-unique",
+            """
+IF OBJECT_ID('Employees', 'U') IS NOT NULL
+   AND COL_LENGTH('Employees', 'CompanyId') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT CompanyId, EmployeeNo FROM Employees
+        GROUP BY CompanyId, EmployeeNo HAVING COUNT(*) > 1)
+        THROW 51004, 'Duplicate EmployeeNo values within one company must be remediated before enabling company uniqueness.', 1;
+
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('Employees') AND name='IX_Employees_EmployeeNo')
+        DROP INDEX IX_Employees_EmployeeNo ON Employees;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('Employees') AND name='UX_Employees_CompanyId_EmployeeNo')
+        CREATE UNIQUE INDEX UX_Employees_CompanyId_EmployeeNo ON Employees (CompanyId, EmployeeNo);
+END;
+"""),
     };
 
     /// <summary>
@@ -1298,7 +1321,9 @@ END;
     /// </summary>
     public static async Task ApplyAsync(ApplicationDbContext dbContext)
     {
-        if (_applied)
+        var connection = dbContext.Database.GetDbConnection();
+        var databaseKey = $"{connection.DataSource}|{connection.Database}";
+        if (AppliedDatabases.ContainsKey(databaseKey))
         {
             return;
         }
@@ -1307,7 +1332,7 @@ END;
 
         try
         {
-            if (_applied)
+            if (AppliedDatabases.ContainsKey(databaseKey))
             {
                 return;
             }
@@ -1403,7 +1428,7 @@ END;
                     command => HrmsDatabase.AddParameter(command, "@Id", migration.Id));
             }
 
-            _applied = true;
+            AppliedDatabases.TryAdd(databaseKey, 0);
 
             }
             finally
