@@ -41,6 +41,16 @@ public class SettingsModel : PageModel
 
     public string AttendanceLinkMode => LinkPolicy.Mode;
 
+    // ── سياسات الأوعية والمقام (كلّها بيانات يحرّرها المستخدم) ──
+    /// <summary>وعاء الأوفرتايم: الأساسي وحده أو الأساسي + علاوات مؤهَّلة.</summary>
+    public string OvertimeBaseMode { get; set; } = PayrollEarningBase.ModeBasic;
+    /// <summary>وعاء الإجازة غير المدفوعة: الأساسي وحده أو الأساسي + علاوات مؤهَّلة.</summary>
+    public string UnpaidLeaveBaseMode { get; set; } = PayrollEarningBase.ModeBasic;
+    /// <summary>مقام أيام الراتب: ثابت 30 أو أيام الفترة الفعلية.</summary>
+    public string SalaryDaysBasis { get; set; } = PayrollDivisorPolicy.BasisFixed30;
+    /// <summary>الساعات المعيارية لليوم (مقام الأجر الساعي).</summary>
+    public decimal StandardDailyHours { get; set; } = PayrollDivisorPolicy.DefaultDailyHours;
+
     public async Task OnGetAsync()
     {
         TaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_db);
@@ -48,6 +58,43 @@ public class SettingsModel : PageModel
         BaseMembers = await SalaryBaseStore.AllAsync(_db);
         CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_db);
         LinkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(_db);
+
+        OvertimeBaseMode = PayrollEarningBase.NormalizeMode(
+            await HrSettingsStore.GetAsync(_db, "Payroll.OvertimeBaseMode", PayrollEarningBase.ModeBasic));
+        UnpaidLeaveBaseMode = PayrollEarningBase.NormalizeMode(
+            await HrSettingsStore.GetAsync(_db, "Payroll.UnpaidLeaveBaseMode", PayrollEarningBase.ModeBasic));
+        SalaryDaysBasis = PayrollDivisorPolicy.NormalizeBasis(
+            await HrSettingsStore.GetAsync(_db, PayrollDivisorPolicy.SalaryDaysBasisKey, PayrollDivisorPolicy.BasisFixed30));
+        StandardDailyHours = PayrollDivisorPolicy.DailyHours(
+            await HrSettingsStore.GetAsync(_db, PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
+    }
+
+    /// <summary>
+    /// حفظ سياسات الأوعية والمقام — كلّها إعداداتٌ تغيّر المسير القادم. الافتراضات
+    /// (الأساسي · ثابت 30 · 8 ساعات) تُبقي أرقام اليوم؛ التغيير يُصرَّح أثره بالرسالة.
+    /// </summary>
+    public async Task<IActionResult> OnPostSaveBasePolicyAsync(
+        string overtimeBaseMode, string unpaidLeaveBaseMode, string salaryDaysBasis, string standardDailyHours)
+    {
+        var otMode = PayrollEarningBase.NormalizeMode(overtimeBaseMode);
+        var ulMode = PayrollEarningBase.NormalizeMode(unpaidLeaveBaseMode);
+        var basis = PayrollDivisorPolicy.NormalizeBasis(salaryDaysBasis);
+        var hours = PayrollDivisorPolicy.DailyHours(standardDailyHours);
+
+        await HrSettingsStore.SetAsync(_db, "Payroll.OvertimeBaseMode", otMode);
+        await HrSettingsStore.SetAsync(_db, "Payroll.UnpaidLeaveBaseMode", ulMode);
+        await HrSettingsStore.SetAsync(_db, PayrollDivisorPolicy.SalaryDaysBasisKey, basis);
+        await HrSettingsStore.SetAsync(_db, PayrollDivisorPolicy.StandardDailyHoursKey,
+            hours.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+        string ModeLabel(string m) => m == PayrollEarningBase.ModeBasicPlusAllowances
+            ? "الأساسي + علاوات مؤهَّلة" : "الأساسي وحده";
+        var basisLabel = basis == PayrollDivisorPolicy.BasisPeriodDays ? "أيام الفترة" : "ثابت 30";
+
+        TempData["PayrollMessage"] =
+            $"سياسات الأوعية: أوفرتايم = {ModeLabel(otMode)} · إجازة غير مدفوعة = {ModeLabel(ulMode)} · "
+            + $"مقام الأيام = {basisLabel} · ساعات اليوم = {hours:0.##}. تُطبَّق بالمسير القادم.";
+        return RedirectToPage();
     }
 
     /// <summary>

@@ -37,6 +37,8 @@ public class SalaryItemsModel : PageModel
             Taxable = form["Taxable"] == "true",
             InGross = form["InGross"] == "true",
             Prorated = form["Prorated"] == "true",
+            OvertimeEligible = form["OvertimeEligible"] == "true",
+            UnpaidLeaveEligible = form["UnpaidLeaveEligible"] == "true",
             IsActive = form["IsActive"] == "true",
             SortOrder = int.TryParse(form["SortOrder"], out var so) ? so : 0
         };

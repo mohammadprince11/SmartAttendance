@@ -122,6 +122,47 @@
         </form>
     </div>
 
+    @* ----- أوعية الراتب والمقام ----- *@
+    <div class="ps-sec">
+        <h2>أوعية الراتب والمقام</h2>
+        <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin:0 0 8px">
+            وعاء الأوفرتايم/الإجازة غير المدفوعة يُركَّب من الأساسي وحده أو الأساسي + العلاوات
+            <b>المؤهَّلة لكل وعاء</b> (تُعلَّم العلاوة من «عناصر الراتب»). المقام والساعات
+            المعيارية بدل الثابتين المخفيّين ÷ 30 و÷ 8. <b>الافتراضات تُبقي أرقام اليوم حرفياً.</b>
+        </p>
+        <form method="post" asp-page-handler="SaveBasePolicy" style="display:flex;flex-direction:column;gap:10px">
+            <label style="display:flex;align-items:center;gap:8px;margin:0">
+                <b style="min-width:230px">وعاء الأوفرتايم</b>
+                <select name="overtimeBaseMode" style="min-width:260px">
+                    <option value="@PayrollEarningBase.ModeBasic" selected="@(Model.OvertimeBaseMode == PayrollEarningBase.ModeBasic)">الأساسي وحده (الافتراضي)</option>
+                    <option value="@PayrollEarningBase.ModeBasicPlusAllowances" selected="@(Model.OvertimeBaseMode == PayrollEarningBase.ModeBasicPlusAllowances)">الأساسي + العلاوات المؤهَّلة للأوفرتايم</option>
+                </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;margin:0">
+                <b style="min-width:230px">وعاء الإجازة غير المدفوعة</b>
+                <select name="unpaidLeaveBaseMode" style="min-width:260px">
+                    <option value="@PayrollEarningBase.ModeBasic" selected="@(Model.UnpaidLeaveBaseMode == PayrollEarningBase.ModeBasic)">الأساسي وحده (الافتراضي)</option>
+                    <option value="@PayrollEarningBase.ModeBasicPlusAllowances" selected="@(Model.UnpaidLeaveBaseMode == PayrollEarningBase.ModeBasicPlusAllowances)">الأساسي + العلاوات المؤهَّلة للإجازة</option>
+                </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;margin:0">
+                <b style="min-width:230px">مقام أيام الراتب</b>
+                <select name="salaryDaysBasis" style="min-width:260px">
+                    <option value="@PayrollDivisorPolicy.BasisFixed30" selected="@(Model.SalaryDaysBasis == PayrollDivisorPolicy.BasisFixed30)">ثابت 30 (الافتراضي)</option>
+                    <option value="@PayrollDivisorPolicy.BasisPeriodDays" selected="@(Model.SalaryDaysBasis == PayrollDivisorPolicy.BasisPeriodDays)">أيام الفترة الفعلية (28/29/30/31)</option>
+                </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;margin:0">
+                <b style="min-width:230px">الساعات المعيارية لليوم</b>
+                <input type="number" name="standardDailyHours" step="0.25" min="1" max="24"
+                       value="@Model.StandardDailyHours.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                       style="width:110px" />
+                <span style="font-size:12px;font-weight:900">ساعة (مقام الأجر الساعي)</span>
+            </label>
+            <button type="submit" class="ps-btn" style="align-self:flex-start">حفظ سياسات الأوعية</button>
+        </form>
+    </div>
+
     <div class="ps-grid">
         @* ----- الضريبة ----- *@
         <div class="ps-sec">

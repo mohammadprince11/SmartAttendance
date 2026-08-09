@@ -133,7 +133,8 @@ IF COL_LENGTH('SalaryItems','Formula') IS NULL ALTER TABLE SalaryItems ADD Formu
 UPDATE SalaryItems
 SET Name = @Name, NameEn = @NameEn, ItemType = @ItemType, ValueKind = @ValueKind,
     DefaultValue = @DefaultValue, Formula = @Formula, Taxable = @Taxable, InGross = @InGross,
-    Prorated = @Prorated, IsActive = @IsActive, SortOrder = @SortOrder
+    Prorated = @Prorated, OvertimeEligible = @OvertimeEligible, UnpaidLeaveEligible = @UnpaidLeaveEligible,
+    IsActive = @IsActive, SortOrder = @SortOrder
 WHERE Id = @Id;
 """,
                 command =>
@@ -147,8 +148,8 @@ WHERE Id = @Id;
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
                 """
-INSERT INTO SalaryItems (Name, NameEn, ItemType, ValueKind, DefaultValue, Formula, Taxable, InGross, Prorated, IsSystem, IsActive, SortOrder)
-VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable, @InGross, @Prorated, 0, @IsActive, @SortOrder);
+INSERT INTO SalaryItems (Name, NameEn, ItemType, ValueKind, DefaultValue, Formula, Taxable, InGross, Prorated, OvertimeEligible, UnpaidLeaveEligible, IsSystem, IsActive, SortOrder)
+VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable, @InGross, @Prorated, @OvertimeEligible, @UnpaidLeaveEligible, 0, @IsActive, @SortOrder);
 """,
                 command => AddParameters(command, item));
         }
@@ -194,6 +195,8 @@ VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable
         HrmsDatabase.AddParameter(command, "@Taxable", item.Taxable ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@InGross", item.InGross ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@Prorated", item.Prorated ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@OvertimeEligible", item.OvertimeEligible ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@UnpaidLeaveEligible", item.UnpaidLeaveEligible ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@IsActive", item.IsActive ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@SortOrder", item.SortOrder);
     }

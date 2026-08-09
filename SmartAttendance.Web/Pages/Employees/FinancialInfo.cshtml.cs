@@ -213,6 +213,8 @@ public class FinancialInfoModel : PageModel
         // Social security
         entity.SocialSecurityType = Clean(Input.SocialSecurityType);
         entity.SocialSecuritySalary = Input.SocialSecuritySalary;
+        // نمط وعاء الضمان — «مُعرَّف بالموظف» يجعل المسير يحسب على الراتب أعلاه لا الإجمالي.
+        entity.GosiBaseMode = EmployeeDefinedSalaryBase.NormalizeMode(Input.GosiBaseMode);
         entity.SocialSecurityNo = Clean(Input.SocialSecurityNo);
         entity.SocialSecurityJoinDate = Input.SocialSecurityJoinDate;
         entity.SocialSecurityPreviousMonths = Input.SocialSecurityPreviousMonths;
@@ -221,6 +223,9 @@ public class FinancialInfoModel : PageModel
         entity.TaxFile = Clean(Input.TaxFile);
         entity.TaxNo = Clean(Input.TaxNo);
         entity.TaxYear = Input.TaxYear;
+        // راتب الضريبة الراهن ونمطه — «مُعرَّف بالموظف» يُحتسب عليه لا على المكوّنات.
+        entity.CurrentTaxSalary = Input.CurrentTaxSalary;
+        entity.TaxBaseMode = EmployeeDefinedSalaryBase.NormalizeMode(Input.TaxBaseMode);
         entity.PreviousTaxSalary = Input.PreviousTaxSalary;
         entity.PreviousTaxExemption = Input.PreviousTaxExemption;
         entity.PreviousTaxAmount = Input.PreviousTaxAmount;

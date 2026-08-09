@@ -34,6 +34,8 @@ BEGIN
 
         SocialSecurityType nvarchar(100) NULL,
         SocialSecuritySalary decimal(18,4) NULL,
+        -- نمط وعاء الضمان (هجرة …-01)؛ فارغ ⟹ مكوّنات (سلوك اليوم).
+        GosiBaseMode nvarchar(20) NULL,
         SocialSecurityNo nvarchar(50) NULL,
         SocialSecurityJoinDate date NULL,
         SocialSecurityPreviousMonths int NULL,
@@ -42,6 +44,9 @@ BEGIN
         TaxFile nvarchar(150) NULL,
         TaxNo nvarchar(50) NULL,
         TaxYear int NULL,
+        -- راتب الضريبة الراهن ونمط الوعاء (هجرة …-01)؛ فارغ ⟹ مكوّنات.
+        CurrentTaxSalary decimal(18,4) NULL,
+        TaxBaseMode nvarchar(20) NULL,
         PreviousTaxSalary decimal(18,4) NULL,
         PreviousTaxExemption decimal(18,4) NULL,
         PreviousTaxAmount decimal(18,4) NULL,
