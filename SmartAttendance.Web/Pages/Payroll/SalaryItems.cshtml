@@ -8,7 +8,8 @@
     var itemsJson = JsonSerializer.Serialize(Model.Items.Select(i => new
     {
         i.Id, i.Name, i.NameEn, i.ItemType, i.ValueKind, i.DefaultValue, i.Formula,
-        i.Taxable, i.InGross, i.Prorated, i.IsActive, i.SortOrder, i.IsSystem
+        i.Taxable, i.GosiEligible, i.InGross, i.Prorated, i.OvertimeEligible, i.UnpaidLeaveEligible,
+        i.IsActive, i.SortOrder, i.IsSystem
     }));
 }
 
@@ -209,8 +210,11 @@
                 </div>
                 <div class="si-checks">
                     <label><input type="checkbox" name="Taxable" value="true" id="si-Taxable" checked /> خاضع للضريبة</label>
+                    <label><input type="checkbox" name="GosiEligible" value="true" id="si-GosiEligible" checked /> مؤهَّل للضمان</label>
                     <label><input type="checkbox" name="InGross" value="true" id="si-InGross" checked /> ضمن الإجمالي</label>
-                    <label><input type="checkbox" name="Prorated" value="true" id="si-Prorated" /> نسبي بالحضور</label>
+                    <label><input type="checkbox" name="Prorated" value="true" id="si-Prorated" /> نسبي بالحضور (وعاء الحضور)</label>
+                    <label><input type="checkbox" name="OvertimeEligible" value="true" id="si-OvertimeEligible" /> ضمن وعاء الأوفرتايم</label>
+                    <label><input type="checkbox" name="UnpaidLeaveEligible" value="true" id="si-UnpaidLeaveEligible" /> ضمن وعاء الإجازة غير المدفوعة</label>
                     <label><input type="checkbox" name="IsActive" value="true" id="si-IsActive" checked /> نشط</label>
                 </div>
                 <button type="submit" class="si-btn">حفظ العنصر</button>
@@ -239,8 +243,11 @@
                     document.getElementById('si-DefaultValue').value = i.DefaultValue;
                     document.getElementById('si-SortOrder').value = i.SortOrder;
                     document.getElementById('si-Taxable').checked = !!i.Taxable;
+                    document.getElementById('si-GosiEligible').checked = !!i.GosiEligible;
                     document.getElementById('si-InGross').checked = !!i.InGross;
                     document.getElementById('si-Prorated').checked = !!i.Prorated;
+                    document.getElementById('si-OvertimeEligible').checked = !!i.OvertimeEligible;
+                    document.getElementById('si-UnpaidLeaveEligible').checked = !!i.UnpaidLeaveEligible;
                     document.getElementById('si-IsActive').checked = !!i.IsActive;
                     document.getElementById('si-fxExpr').value = i.Formula || '';
                     document.getElementById('si-Formula').value = i.Formula || '';

@@ -23,17 +23,20 @@ public sealed class EmployeeFilesController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
     private readonly IPermissionAuthorizationService _permissions;
+    private readonly IEffectiveScopeService _effectiveScopeService;
     private readonly IWebHostEnvironment _environment;
     private readonly ProtectedFileService _protectedFiles;
 
     public EmployeeFilesController(
         ApplicationDbContext db,
         IPermissionAuthorizationService permissions,
+        IEffectiveScopeService effectiveScopeService,
         IWebHostEnvironment environment,
         IProtectedFileService protectedFiles)
     {
         _db = db;
         _permissions = permissions;
+        _effectiveScopeService = effectiveScopeService;
         _environment = environment;
         _protectedFiles = (ProtectedFileService)protectedFiles;
     }
@@ -195,13 +198,61 @@ WHERE Id = @Id;
                    ownEmployeeId == employeeId;
         }
 
-        return await _permissions.CanAccessEmployeeAsync(
+        // نطاق القواعد (ViewProfile) — يفرض الشركة/الفرع/القسم والاستثناءات.
+        var rulesAllows = await _permissions.CanAccessEmployeeAsync(
             systemUserId,
             PeoplePermissionCodes.ViewProfile,
             employeeId,
             isAdmin,
             HttpContext.RequestAborted);
+
+        if (!rulesAllows)
+        {
+            return false;
+        }
+
+        // تقاطع نطاق «موظفي أدوار الوصول» (AND) — نفس النموذج الموحّد المطبَّق على
+        // قائمة الأشخاص والمنتقي (P0-1): من نطاق أدواره أضيق لا ينزّل ملف من لا يراه.
+        // أدمن/«All» يُحسَم غير مقيَّد فلا يضيّق.
+        var accessRoleScope = await _effectiveScopeService.GetEmployeesAccessScopeAsync(
+            systemUserId, isAdmin, HttpContext.RequestAborted);
+
+        if (accessRoleScope.IsUnrestricted && !accessRoleScope.HasAnyDenial)
+        {
+            return true;
+        }
+
+        var location = await LoadEmployeeLocationAsync(employeeId);
+
+        return location is not null &&
+               accessRoleScope.AllowsEmployee(
+                   employeeId, location.CompanyId, location.BranchId, location.DepartmentId);
     }
+
+    /// <summary>موقع الموظف التنظيميّ (شركة عبر الفرع/فرع/قسم) لتقييم نطاق أدوار الوصول.</summary>
+    private async Task<EmployeeLocation?> LoadEmployeeLocationAsync(int employeeId)
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            _db,
+            """
+SELECT TOP 1
+    ISNULL(b.CompanyId, 0)    AS CompanyId,
+    ISNULL(e.BranchId, 0)     AS BranchId,
+    ISNULL(e.DepartmentId, 0) AS DepartmentId
+FROM Employees e
+LEFT JOIN Branches b ON b.Id = e.BranchId
+WHERE e.Id = @Id AND ISNULL(e.IsDeleted, 0) = 0;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", employeeId),
+            reader => new EmployeeLocation(
+                HrmsDatabase.GetInt(reader, "CompanyId"),
+                HrmsDatabase.GetInt(reader, "BranchId"),
+                HrmsDatabase.GetInt(reader, "DepartmentId")));
+
+        return rows.FirstOrDefault();
+    }
+
+    private sealed record EmployeeLocation(int CompanyId, int BranchId, int DepartmentId);
 
     private async Task WriteAuditAsync(string action, int employeeId, int fileId)
     {

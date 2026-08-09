@@ -44,6 +44,13 @@ public class EmployeeFinancialInfo : AuditableEntity
 
     public decimal? SocialSecuritySalary { get; set; }
 
+    /// <summary>
+    /// نمط وعاء الضمان لهذا الموظف: <c>SalaryComponents</c> (تركيبٌ من المكوّنات — الافتراض)
+    /// أو <c>EmployeeDefined</c> (يُحتسب على <see cref="SocialSecuritySalary"/> المُدخَل).
+    /// فارغٌ ⟹ مكوّنات، فلا يتغيّر احتساب قائم.
+    /// </summary>
+    public string? GosiBaseMode { get; set; }
+
     public string? SocialSecurityNo { get; set; }
 
     public DateOnly? SocialSecurityJoinDate { get; set; }
@@ -61,6 +68,18 @@ public class EmployeeFinancialInfo : AuditableEntity
 
     /// <summary>Opening tax year for the previous-balance figures below.</summary>
     public int? TaxYear { get; set; }
+
+    /// <summary>
+    /// راتب الضريبة <b>الراهن</b> — وعاء الضريبة حين <see cref="TaxBaseMode"/> = EmployeeDefined.
+    /// يختلف عن <see cref="PreviousTaxSalary"/> (رصيدٌ افتتاحيّ تاريخيّ لا وعاءٌ راهن).
+    /// </summary>
+    public decimal? CurrentTaxSalary { get; set; }
+
+    /// <summary>
+    /// نمط وعاء الضريبة: <c>SalaryComponents</c> (تركيبٌ — الافتراض) أو <c>EmployeeDefined</c>
+    /// (يُحتسب على <see cref="CurrentTaxSalary"/>). فارغٌ ⟹ مكوّنات.
+    /// </summary>
+    public string? TaxBaseMode { get; set; }
 
     public decimal? PreviousTaxSalary { get; set; }
 

@@ -26,7 +26,7 @@
     <div class="zxd-kpis">
         <a class="zxd-kpi" href="/Employees"><span class="ic">👥</span><div><b>@Model.TotalEmployees.ToString("N0")</b><span>الموظفون</span><small>فعال @Model.ActiveEmployees</small></div></a>
         <a class="zxd-kpi green" href="/Employees"><span class="ic">🆕</span><div><b>@Model.NewThisMonth</b><span>جديد هذا الشهر</span></div></a>
-        <a class="zxd-kpi amber" href="/HrSettings/ProbationPeriod"><span class="ic">⏳</span><div><b>@Model.InProbation</b><span>في فترة التجربة</span><small>90 يوماً من المباشرة</small></div></a>
+        <a class="zxd-kpi amber" href="/HrSettings/ProbationPeriod"><span class="ic">⏳</span><div><b>@Model.InProbation</b><span>في فترة التجربة</span><small>@Model.ProbationDays يوماً من المباشرة</small></div></a>
         <a class="zxd-kpi red" href="/Employees?Status=inactive"><span class="ic">⏸️</span><div><b>@Model.Suspended</b><span>موقوف عن العمل</span></div></a>
         <a class="zxd-kpi red" href="/Employees/EndServiceList"><span class="ic">🚪</span><div><b>@Model.EndedThisMonth</b><span>أُنهي هذا الشهر</span></div></a>
     </div>

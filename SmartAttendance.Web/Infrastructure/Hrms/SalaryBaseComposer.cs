@@ -18,7 +18,9 @@ public static class SalaryBaseComposer
     public static readonly (string Key, string Label)[] Components =
     {
         ("Basic", "الراتب الأساسي (منسَّب بالحضور)"),
-        ("Allowances", "العلاوات"),
+        ("Allowances", "العلاوات (الكل)"),
+        ("TaxableAllowances", "العلاوات الخاضعة للضريبة فقط"),
+        ("GosiAllowances", "العلاوات المؤهَّلة للضمان فقط"),
         ("TaxableIncome", "بنود الدخل الخاضعة"),
         ("TaxableOvertime", "العمل الإضافي الخاضع"),
         ("SalaryDays", "تسوية أيام الراتب"),
@@ -48,6 +50,8 @@ public static class SalaryBaseComposer
     {
         public decimal Basic { get; set; }
         public decimal Allowances { get; set; }
+        public decimal TaxableAllowances { get; set; }
+        public decimal GosiAllowances { get; set; }
         public decimal TaxableIncome { get; set; }
         public decimal TaxableOvertime { get; set; }
         public decimal SalaryDays { get; set; }
@@ -59,6 +63,8 @@ public static class SalaryBaseComposer
         {
             "Basic" => Basic,
             "Allowances" => Allowances,
+            "TaxableAllowances" => TaxableAllowances,
+            "GosiAllowances" => GosiAllowances,
             "TaxableIncome" => TaxableIncome,
             "TaxableOvertime" => TaxableOvertime,
             "SalaryDays" => SalaryDays,

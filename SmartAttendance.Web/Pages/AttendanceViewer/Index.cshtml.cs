@@ -128,13 +128,13 @@ public class IndexModel : PageModel
             await AttendancePeriodPolicy.ResolveFromPolicyAsync(_dbContext, year, month);
         DaysInMonth = CutoffPeriod.DayCount;
 
-        await LoadLookupsAsync();
+        var scope = await _companyScope.GetAsync();
+        await LoadLookupsAsync(scope);
 
         // الموجة 4 (P1-2): صفحة الموظفين تُحسم بالـSQL أولاً، ثم تُقرأ يوميات
         // موظفي الصفحة وحدهم — ‎20 × 30 ≈ 600 صفّ بدل تحميل المدى كاملاً
         // وتجميعه بالذاكرة. فلاتر السمات صارت شروطاً بنفس الاستعلام لا مصفوفة
         // معرّفات تُطبَّق بعد التحميل.
-        var scope = await _companyScope.GetAsync();
         if (PageNumber < 1) PageNumber = 1;
 
         var (pageIds, totalEmployees) = await DayAttendanceStore.PageViewerEmployeesAsync(
@@ -176,21 +176,36 @@ public class IndexModel : PageModel
             if (positions.TryGetValue(row.EmployeeId, out var pos)) row.Position = pos;
     }
 
-    private async Task LoadLookupsAsync()
+    private async Task LoadLookupsAsync(SmartAttendance.Web.Infrastructure.Security.CompanyScope scope)
     {
-        Departments = await _dbContext.Departments.AsNoTracking()
+        // 🛡️ عزل الشركات: قوائم الفلاتر تُقصَر على شركات النطاق حتى لا تُسرَّب أسماء
+        // فروع/أقسام/وظائف/موظفي شركاتٍ أخرى في المنسدلات. غير المقيَّد (allowed=null)
+        // يرى الكل؛ والنطاق المقيَّد بمصفوفة فارغة (DeniedAll) يُنتج قوائم فارغة تلقائياً
+        // لأنّ Contains على مصفوفةٍ فارغة يعيد false — فلا حاجة لفرعٍ خاصّ بالحرمان الكليّ.
+        var allowed = scope.IsUnrestricted ? null : scope.AllowedCompanyIds.ToArray();
+
+        var deptQ = _dbContext.Departments.AsNoTracking();
+        Departments = await (allowed == null ? deptQ : deptQ.Where(d => allowed.Contains(d.CompanyId)))
             .OrderBy(d => d.Name).Select(d => new Lookup(d.Id.ToString(), d.Name)).ToListAsync();
-        Branches = await _dbContext.Branches.AsNoTracking()
+
+        var brQ = _dbContext.Branches.AsNoTracking();
+        Branches = await (allowed == null ? brQ : brQ.Where(b => allowed.Contains(b.CompanyId)))
             .OrderBy(b => b.Name).Select(b => new Lookup(b.Id.ToString(), b.Name)).ToListAsync();
-        Positions = await _dbContext.HrJobPositions.AsNoTracking()
+
+        var posQ = _dbContext.HrJobPositions.AsNoTracking();
+        Positions = await (allowed == null ? posQ : posQ.Where(p => allowed.Contains(p.CompanyId)))
             .OrderBy(p => p.ArabicName).Select(p => new Lookup(p.Id.ToString(), p.ArabicName)).ToListAsync();
-        ContractTypes = await _dbContext.Employees.AsNoTracking()
+
+        var empQ = _dbContext.Employees.AsNoTracking();
+        var empScoped = allowed == null ? empQ
+            : empQ.Where(e => e.CompanyId != null && allowed.Contains(e.CompanyId.Value));
+        ContractTypes = await empScoped
             .Where(e => e.ContractType != null && e.ContractType != "")
             .Select(e => e.ContractType!).Distinct().OrderBy(x => x).ToListAsync();
-        Nationalities = await _dbContext.Employees.AsNoTracking()
+        Nationalities = await empScoped
             .Where(e => e.Nationality != null && e.Nationality != "")
             .Select(e => e.Nationality!).Distinct().OrderBy(x => x).ToListAsync();
-        AllEmployees = await _dbContext.Employees.AsNoTracking().Where(e => e.IsActive)
+        AllEmployees = await empScoped.Where(e => e.IsActive)
             .OrderBy(e => e.EmployeeNo).Select(e => new EmpLite(e.Id, e.EmployeeNo, e.FullName)).ToListAsync();
     }
 

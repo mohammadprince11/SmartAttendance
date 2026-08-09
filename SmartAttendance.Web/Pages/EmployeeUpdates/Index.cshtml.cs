@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Infrastructure.Security;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.EmployeeUpdates;
 
@@ -13,11 +16,22 @@ namespace SmartAttendance.Web.Pages.EmployeeUpdates;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IPermissionAuthorizationService _permissions;
+    private readonly IEffectiveScopeService _effectiveScopeService;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        IPermissionAuthorizationService permissions,
+        IEffectiveScopeService effectiveScopeService)
     {
         _dbContext = dbContext;
+        _permissions = permissions;
+        _effectiveScopeService = effectiveScopeService;
     }
+
+    /// <summary>حقول الإسناد الوظيفيّ — تغييرها يتطلّب ChangeAssignment (نظير P0-7).</summary>
+    private static readonly HashSet<string> AssignmentFieldKeys =
+        new(StringComparer.OrdinalIgnoreCase) { "DepartmentId", "DirectManagerId", "Position" };
 
     public string Tab { get; private set; } = "stage";
     public string ActiveSectionKey { get; private set; } = "employee-info";
@@ -41,8 +55,124 @@ public class IndexModel : PageModel
 
     public string Initials => GetInitials(SelectedEmployee.FullName);
 
+    private ActorScope? _actor;
+
+    /// <summary>هوية الفاعل ونطاقه (قواعد ViewDirectory ∩ أدوار الوصول).</summary>
+    private sealed record ActorScope(
+        int SystemUserId,
+        string Role,
+        bool IsAdmin,
+        PeopleDataScope DirectoryScope,
+        PeopleDataScope AccessRoleScope,
+        bool Unrestricted);
+
+    private async Task<ActorScope> ResolveActorScopeAsync()
+    {
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        var role = PeopleAccessContext.GetRole(HttpContext);
+        var isAdmin = role.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+
+        var directoryScope = await _permissions.GetPeopleDataScopeAsync(
+            systemUserId,
+            PeoplePermissionCodes.ViewDirectory,
+            PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.ViewDirectory),
+            HttpContext.RequestAborted);
+
+        var accessRoleScope = await _effectiveScopeService.GetEmployeesAccessScopeAsync(
+            systemUserId, isAdmin, HttpContext.RequestAborted);
+
+        var unrestricted =
+            directoryScope.IsUnrestricted && !directoryScope.HasAnyDenial &&
+            accessRoleScope.IsUnrestricted && !accessRoleScope.HasAnyDenial;
+
+        return _actor = new ActorScope(
+            systemUserId, role, isAdmin, directoryScope, accessRoleScope, unrestricted);
+    }
+
+    private Task<bool> CanViewAsync(ActorScope actor) =>
+        _permissions.HasPermissionAsync(
+            actor.SystemUserId,
+            PeoplePermissionCodes.ViewDirectory,
+            PeopleCompatibilityAccess.IsAllowed(actor.Role, PeoplePermissionCodes.ViewDirectory),
+            HttpContext.RequestAborted);
+
+    /// <summary>النطاق الفعّال على موظفٍ بعينه: قواعد (ViewProfile) ∩ أدوار الوصول.</summary>
+    private async Task<bool> CanAccessEmployeeAsync(ActorScope actor, int employeeId)
+    {
+        if (employeeId <= 0)
+        {
+            return false;
+        }
+
+        var rulesAllows = await _permissions.CanAccessEmployeeAsync(
+            actor.SystemUserId,
+            PeoplePermissionCodes.ViewProfile,
+            employeeId,
+            PeopleCompatibilityAccess.IsAllowed(actor.Role, PeoplePermissionCodes.ViewProfile),
+            HttpContext.RequestAborted);
+
+        if (!rulesAllows)
+        {
+            return false;
+        }
+
+        if (actor.AccessRoleScope.IsUnrestricted && !actor.AccessRoleScope.HasAnyDenial)
+        {
+            return true;
+        }
+
+        var location = await LoadEmployeeLocationAsync(employeeId);
+        return location is not null &&
+               actor.AccessRoleScope.AllowsEmployee(
+                   employeeId, location.Value.CompanyId, location.Value.BranchId, location.Value.DepartmentId);
+    }
+
+    private Task<bool> CanEditCompensationAsync(ActorScope actor, int employeeId) =>
+        _permissions.CanAccessEmployeeAsync(
+            actor.SystemUserId,
+            PeoplePermissionCodes.EditCompensation,
+            employeeId,
+            PeopleCompatibilityAccess.IsAllowed(actor.Role, PeoplePermissionCodes.EditCompensation),
+            HttpContext.RequestAborted);
+
+    private Task<bool> CanChangeAssignmentAsync(ActorScope actor, int employeeId) =>
+        _permissions.CanAccessEmployeeAsync(
+            actor.SystemUserId,
+            PeoplePermissionCodes.ChangeAssignment,
+            employeeId,
+            PeopleCompatibilityAccess.IsAllowed(actor.Role, PeoplePermissionCodes.ChangeAssignment),
+            HttpContext.RequestAborted);
+
+    private async Task<(int CompanyId, int BranchId, int DepartmentId)?> LoadEmployeeLocationAsync(int employeeId)
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT TOP 1
+    ISNULL(b.CompanyId, 0)    AS CompanyId,
+    ISNULL(e.BranchId, 0)     AS BranchId,
+    ISNULL(e.DepartmentId, 0) AS DepartmentId
+FROM Employees e
+LEFT JOIN Branches b ON b.Id = e.BranchId
+WHERE e.Id = @Id AND ISNULL(e.IsDeleted, 0) = 0;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", employeeId),
+            reader => (
+                CompanyId: HrmsDatabase.GetInt(reader, "CompanyId"),
+                BranchId: HrmsDatabase.GetInt(reader, "BranchId"),
+                DepartmentId: HrmsDatabase.GetInt(reader, "DepartmentId")));
+
+        return rows.Count > 0 ? rows[0] : null;
+    }
+
     public async Task<IActionResult> OnGetAsync(int? employeeId, string? tab, string? section)
     {
+        var actor = await ResolveActorScopeAsync();
+        if (!await CanViewAsync(actor))
+        {
+            return Forbid();
+        }
+
         await LoadPageAsync(employeeId, tab, section);
         return Page();
     }
@@ -51,6 +181,19 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostStageAsync(
         int employeeId, string sectionKey, DateTime? effectiveDate, string? note, bool isRetroactive = false)
     {
+        // تخويل: عرضٌ + الموظف المستهدَف ضمن النطاق. بلا هذا كان أي واصلٍ للصفحة
+        // يُنشئ حركةً لأي موظفٍ بأي شركة (تُطبَّق عند القفل).
+        var actor = await ResolveActorScopeAsync();
+        if (!await CanViewAsync(actor) || !await CanAccessEmployeeAsync(actor, employeeId))
+        {
+            return Forbid();
+        }
+
+        // قدرتان تُفلتِران الحقول الحسّاسة عند الترحيل فلا تدخل الحركة أصلاً: الراتب
+        // يتطلّب EditCompensation، والإسناد الوظيفيّ يتطلّب ChangeAssignment (نظير P0-7).
+        var canEditCompensation = await CanEditCompensationAsync(actor, employeeId);
+        var canChangeAssignment = await CanChangeAssignmentAsync(actor, employeeId);
+
         await EmployeeUpdateSchema.EnsureAsync(_dbContext);
         await EnsureMovementColumnsAsync();
 
@@ -67,6 +210,17 @@ public class IndexModel : PageModel
         var changes = new List<UpdateChange>();
         foreach (var field in stagedFields)
         {
+            // إسقاط الحقول التي لا يملك المستخدم صلاحية تطبيقها — فلا تُرحَّل مضلِّلةً.
+            if (field.Target == "compensation" && !canEditCompensation)
+            {
+                continue;
+            }
+
+            if (AssignmentFieldKeys.Contains(field.Key) && !canChangeAssignment)
+            {
+                continue;
+            }
+
             var oldValue = NormalizeValue(current.GetValueOrDefault(field.Key, string.Empty));
             var newValue = NormalizeValue(Request.Form[field.Key].FirstOrDefault() ?? string.Empty);
 
@@ -155,9 +309,27 @@ VALUES
             return RedirectToPage(new { employeeId, tab = "confirm" });
         }
 
+        // تخويل عند **الكتابة** (الحاسم): الموظف الحقيقيّ للحركة ضمن النطاق. القفل هو
+        // اللحظة التي تُطبَّق فيها التغييرات على ملف الموظف — فيُفحص هنا لا عند العرض.
+        var actor = await ResolveActorScopeAsync();
+        if (!await CanViewAsync(actor) || !await CanAccessEmployeeAsync(actor, batch.EmployeeId))
+        {
+            return Forbid();
+        }
+
+        var canEditCompensation = await CanEditCompensationAsync(actor, batch.EmployeeId);
+        var canChangeAssignment = await CanChangeAssignmentAsync(actor, batch.EmployeeId);
+
         var definitions = BuildFieldDictionary();
         foreach (var change in batch.Changes)
         {
+            // حارسٌ ثانٍ عند التطبيق: حتى لو دخلت حركةٌ حقلاً حسّاساً (بيانات قديمة أو
+            // مسارٌ آخر)، لا يُكتب راتبٌ بلا EditCompensation ولا إسنادٌ بلا ChangeAssignment.
+            if (AssignmentFieldKeys.Contains(change.FieldKey) && !canChangeAssignment)
+            {
+                continue;
+            }
+
             if (!definitions.TryGetValue(change.FieldKey, out var field))
             {
                 await ApplyCustomFieldAsync(batch.EmployeeId, change.FieldKey, change.FieldLabel, change.NewValue);
@@ -170,6 +342,11 @@ VALUES
             }
             else if (field.Target == "compensation")
             {
+                if (!canEditCompensation)
+                {
+                    continue;
+                }
+
                 await ApplyCompensationFieldAsync(batch.EmployeeId, change.FieldKey, change.NewValue);
             }
             else
@@ -203,6 +380,18 @@ WHERE Id = @BatchId AND Status = 'Open';
     {
         await EmployeeUpdateSchema.EnsureAsync(_dbContext);
         await EnsureMovementColumnsAsync();
+
+        // حتى حذف حركةٍ غير مقفلة يُقيَّد بموظفٍ ضمن نطاق المستخدم — لا عبث بحركات
+        // موظفي شركاتٍ أخرى. الحركة غير الموجودة تُعامَل بصمت (لا كشف وجود).
+        var actor = await ResolveActorScopeAsync();
+        var target = await LoadSingleBatchAsync(batchId);
+        if (target is null ||
+            !await CanViewAsync(actor) ||
+            !await CanAccessEmployeeAsync(actor, target.EmployeeId))
+        {
+            StatusMessage = "الحركة غير موجودة أو خارج نطاق صلاحياتك.";
+            return RedirectToPage(new { employeeId, tab = "confirm" });
+        }
 
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
@@ -261,31 +450,34 @@ Tab = NormalizeTab(tab);
 
     private async Task<List<UpdateEmployee>> LoadEmployeesAsync()
     {
-        return await HrmsDatabase.QueryAsync(
-            _dbContext,
-            """
-SELECT TOP 500
-    e.Id,
-    ISNULL(e.EmployeeNo, '') AS EmployeeNo,
-    ISNULL(e.FullName, '') AS FullName,
-    ISNULL(e.Position, '') AS Position,
-    ISNULL(d.Name, '') AS DepartmentName,
-    ISNULL(b.Name, '') AS BranchName
-FROM Employees e
-LEFT JOIN Departments d ON e.DepartmentId = d.Id
-LEFT JOIN Branches b ON d.BranchId = b.Id
-ORDER BY e.FullName;
-""",
-            null,
-            reader => new UpdateEmployee
+        // النطاق (قواعد ∩ أدوار الوصول) يُطبَّق **داخل SQL قبل الحدّ** لا صفّاً-صفّاً
+        // بعده — نفس مسار قائمة الأشخاص/المنتقي (P0-1 · Task 3). قبل ذلك كان الحدّ
+        // يسبق النطاق ثمّ يُرشَّح بالذاكرة، فالمقيَّد قد يخسر مخوّلين خلف أوّل خمسمئة،
+        // ويُحمَّل خمسمئة صفٍّ لترشيحها بالذاكرة على 10k+ موظف.
+        var query = _dbContext.Employees
+            .AsNoTracking()
+            .Where(e => !e.IsDeleted);
+
+        if (_actor is not null && !_actor.Unrestricted)
+        {
+            query = query
+                .ApplyPeopleDataScope(_actor.DirectoryScope)
+                .ApplyPeopleDataScope(_actor.AccessRoleScope);
+        }
+
+        return await query
+            .OrderBy(e => e.FullName)
+            .Take(500)
+            .Select(e => new UpdateEmployee
             {
-                Id = HrmsDatabase.GetInt(reader, "Id"),
-                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
-                FullName = HrmsDatabase.GetString(reader, "FullName"),
-                Position = HrmsDatabase.GetString(reader, "Position"),
-                DepartmentName = HrmsDatabase.GetString(reader, "DepartmentName"),
-                BranchName = HrmsDatabase.GetString(reader, "BranchName")
-            });
+                Id = e.Id,
+                EmployeeNo = e.EmployeeNo ?? string.Empty,
+                FullName = e.FullName ?? string.Empty,
+                Position = e.Position ?? string.Empty,
+                DepartmentName = e.Department.Name ?? string.Empty,
+                BranchName = e.Department.Branch.Name ?? string.Empty
+            })
+            .ToListAsync(HttpContext.RequestAborted);
     }
 
     private async Task<UpdateEmployee?> LoadEmployeeAsync(int employeeId)
@@ -457,6 +649,9 @@ DROP TABLE #NationalityOptions;
 
     private async Task<List<EmployeeLookupOption>> LoadActiveManagersAsync(int currentEmployeeId)
     {
+        // المدراء المرشَّحون محصورون بشركة الموظف المُحدَّد (نظير Edit.LoadManagersAsync) —
+        // منتقٍ عامّ يكشف أسماء/أرقام موظفي شركةٍ أخرى للمستخدم المقيَّد. بلا موظفٍ محدَّد
+        // (@EmployeeId=0) لا شركة تُطابَق فتعود القائمة فارغة (المدير يُنتقى بعد اختيار الموظف).
         return await HrmsDatabase.QueryAsync(
             _dbContext,
             """
@@ -464,8 +659,14 @@ SELECT TOP 500
     e.Id,
     CONCAT(ISNULL(e.FullName, ''), N' - ', ISNULL(e.EmployeeNo, '')) AS Name
 FROM Employees e
-WHERE ISNULL(e.IsActive, 0) = 1
+INNER JOIN Branches b ON e.BranchId = b.Id
+WHERE e.IsActive = 1
+  AND ISNULL(e.IsDeleted, 0) = 0
   AND e.Id <> @EmployeeId
+  AND b.CompanyId = (
+      SELECT b2.CompanyId FROM Employees e2
+      INNER JOIN Branches b2 ON e2.BranchId = b2.Id
+      WHERE e2.Id = @EmployeeId)
 ORDER BY e.FullName, e.EmployeeNo;
 """,
             command => HrmsDatabase.AddParameter(command, "@EmployeeId", currentEmployeeId),

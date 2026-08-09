@@ -35,8 +35,11 @@ public class SalaryItemsModel : PageModel
             DefaultValue = decimal.TryParse(form["DefaultValue"], out var dv) ? dv : 0,
             Formula = form["ValueKind"].ToString() == "Formula" && !string.IsNullOrWhiteSpace(form["Formula"]) ? form["Formula"].ToString().Trim() : null,
             Taxable = form["Taxable"] == "true",
+            GosiEligible = form["GosiEligible"] == "true",
             InGross = form["InGross"] == "true",
             Prorated = form["Prorated"] == "true",
+            OvertimeEligible = form["OvertimeEligible"] == "true",
+            UnpaidLeaveEligible = form["UnpaidLeaveEligible"] == "true",
             IsActive = form["IsActive"] == "true",
             SortOrder = int.TryParse(form["SortOrder"], out var so) ? so : 0
         };

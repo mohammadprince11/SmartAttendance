@@ -161,7 +161,9 @@ ORDER BY SortOrder, Id;
         string? movementKind,
         DateOnly? effectiveDate,
         string? note,
-        string? createdBy)
+        string? createdBy,
+        string? attachmentName = null,
+        string? attachmentPath = null)
     {
         await using var transaction = await db.Database.BeginTransactionAsync();
 
@@ -178,10 +180,10 @@ ORDER BY SortOrder, Id;
             """
 INSERT INTO EmployeeContracts
     (EmployeeId, ContractNo, ContractType, FromDate, ToDate, IsCurrent,
-     PreviousContractId, MovementKind, EffectiveDate, Note, CreatedBy)
+     PreviousContractId, MovementKind, EffectiveDate, Note, AttachmentName, AttachmentPath, CreatedBy)
 OUTPUT INSERTED.Id
 VALUES (@EmployeeId, @ContractNo, @ContractType, @FromDate, @ToDate, @IsCurrent,
-        @PreviousContractId, @MovementKind, @EffectiveDate, @Note, @CreatedBy);
+        @PreviousContractId, @MovementKind, @EffectiveDate, @Note, @AttachmentName, @AttachmentPath, @CreatedBy);
 """,
             command =>
             {
@@ -195,6 +197,8 @@ VALUES (@EmployeeId, @ContractNo, @ContractType, @FromDate, @ToDate, @IsCurrent,
                 HrmsDatabase.AddParameter(command, "@MovementKind", movementKind);
                 HrmsDatabase.AddParameter(command, "@EffectiveDate", effectiveDate?.ToDateTime(TimeOnly.MinValue));
                 HrmsDatabase.AddParameter(command, "@Note", note);
+                HrmsDatabase.AddParameter(command, "@AttachmentName", attachmentName);
+                HrmsDatabase.AddParameter(command, "@AttachmentPath", attachmentPath);
                 HrmsDatabase.AddParameter(command, "@CreatedBy", createdBy);
             });
 
@@ -202,6 +206,14 @@ VALUES (@EmployeeId, @ContractNo, @ContractType, @FromDate, @ToDate, @IsCurrent,
         return id;
     }
 
+    /// <summary>
+    /// يعدّل بنود عقدٍ قائم. <paramref name="makeCurrent"/>:
+    /// <c>null</c> يُبقي صفة «الحالي» كما هي (سلوك سجلّ العقود)، و<c>true</c> يرقّيه
+    /// للحالي وينزع الصفة عن بقية عقود نفس الموظف بنفس المعاملة (نفس ثابت
+    /// <see cref="AddContractAsync"/>)، و<c>false</c> ينزعها عنه.
+    /// المرفق يُكتب فقط حين يُمرَّر <paramref name="attachmentPath"/> — فتعديلٌ بلا
+    /// رفعٍ جديد لا يمحو مرفقاً قائماً.
+    /// </summary>
     public static async Task UpdateContractAsync(
         ApplicationDbContext db,
         int id,
@@ -210,13 +222,36 @@ VALUES (@EmployeeId, @ContractNo, @ContractType, @FromDate, @ToDate, @IsCurrent,
         DateOnly fromDate,
         DateOnly? toDate,
         string? note,
-        string? updatedBy) =>
+        string? updatedBy,
+        bool? makeCurrent = null,
+        string? attachmentName = null,
+        string? attachmentPath = null)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync();
+
+        // عقد حاليّ واحد: عند الترقية للحالي، انزع الصفة عن بقية عقود الموظف بنفس المعاملة.
+        if (makeCurrent == true)
+        {
+            await HrmsDatabase.ExecuteAsync(
+                db,
+                """
+UPDATE EmployeeContracts SET IsCurrent = 0
+WHERE Id <> @Id
+  AND EmployeeId = (SELECT EmployeeId FROM EmployeeContracts WHERE Id = @Id);
+""",
+                command => HrmsDatabase.AddParameter(command, "@Id", id));
+        }
+
         await HrmsDatabase.ExecuteAsync(
             db,
             """
 UPDATE EmployeeContracts
 SET ContractNo = @ContractNo, ContractType = @ContractType, FromDate = @FromDate,
-    ToDate = @ToDate, Note = @Note, UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @UpdatedBy
+    ToDate = @ToDate, Note = @Note,
+    IsCurrent = CASE WHEN @SetCurrent = 1 THEN @IsCurrent ELSE IsCurrent END,
+    AttachmentName = CASE WHEN @HasAttachment = 1 THEN @AttachmentName ELSE AttachmentName END,
+    AttachmentPath = CASE WHEN @HasAttachment = 1 THEN @AttachmentPath ELSE AttachmentPath END,
+    UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @UpdatedBy
 WHERE Id = @Id;
 """,
             command =>
@@ -228,14 +263,130 @@ WHERE Id = @Id;
                 HrmsDatabase.AddParameter(command, "@ToDate", toDate?.ToDateTime(TimeOnly.MinValue));
                 HrmsDatabase.AddParameter(command, "@Note", note);
                 HrmsDatabase.AddParameter(command, "@UpdatedBy", updatedBy);
+                HrmsDatabase.AddParameter(command, "@SetCurrent", makeCurrent.HasValue);
+                HrmsDatabase.AddParameter(command, "@IsCurrent", makeCurrent ?? false);
+                HrmsDatabase.AddParameter(command, "@HasAttachment", attachmentPath is not null);
+                HrmsDatabase.AddParameter(command, "@AttachmentName", attachmentName);
+                HrmsDatabase.AddParameter(command, "@AttachmentPath", attachmentPath);
             });
 
-    /// <summary>حذف منطقي — عقدٌ يُمحى فعلياً يمحو معه تاريخ خدمةٍ قد يُحتاج مالياً.</summary>
-    public static async Task DeleteContractAsync(ApplicationDbContext db, int id) =>
+        await transaction.CommitAsync();
+    }
+
+    /// <summary>
+    /// حذفٌ منطقيٌّ **قانونيّ** للعقد — المسار الوحيد لحذف العقود (شاشة السجلّ وملف
+    /// الموظف كلاهما يمرّ به). عقدٌ يُمحى فعلياً يمحو معه تاريخ خدمةٍ قد يُحتاج مالياً،
+    /// فالحذف ناعمٌ دائماً (<c>IsDeleted=1</c>) والصفّ يبقى تاريخاً.
+    ///
+    /// <para>يفرض النطاق قبل الكتابة (الموظف المالك ضمن شركات المستخدم)، ويتحقّق أن
+    /// العقد يخصّ <paramref name="expectedEmployeeId"/> حين يُمرَّر (منعُ حذفٍ بمعرّفٍ
+    /// مزوَّر لعقد موظفٍ آخر). <b>ثابت العقد الحاليّ الواحد</b>: إن كان المحذوف هو
+    /// الحاليّ، يُرقَّى أحدثُ عقدٍ باقٍ ليكون الحاليّ وتُزامَن حقول الموظف المسطّحة
+    /// (<c>ContractType</c>/<c>ContractEndDate</c>)؛ وإن لم يبقَ عقدٌ تُصفَّر تلك الحقول.
+    /// كل ذلك بمعاملةٍ واحدة، و<b>idempotent</b>: تكرار الحذف على عقدٍ محذوفٍ لا يُعيد
+    /// الترقية ولا يُفسد الحالة.</para>
+    /// </summary>
+    /// <returns><c>true</c> إن حُذف أو كان محذوفاً سلفاً؛ <c>false</c> إن لم يوجد أو خارج النطاق أو لموظفٍ آخر.</returns>
+    public static async Task<bool> DeleteContractAsync(
+        ApplicationDbContext db,
+        Security.CompanyScope scope,
+        int id,
+        string? deletedBy,
+        int expectedEmployeeId = 0)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (id <= 0) return false;
+
+        // النطاق أوّلاً: الموظف المالك للعقد يجب أن يكون ضمن شركات المستخدم. مغلق الفشل.
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                db, Security.EmployeeCompanyGuard.Tables.EmployeeContracts, "Id", id, scope))
+            return false;
+
+        var info = (await HrmsDatabase.QueryAsync(
+            db,
+            "SELECT EmployeeId, IsCurrent, ISNULL(IsDeleted, 0) AS IsDeleted FROM EmployeeContracts WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", id),
+            reader => new
+            {
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                IsCurrent = HrmsDatabase.GetBool(reader, "IsCurrent"),
+                IsDeleted = HrmsDatabase.GetBool(reader, "IsDeleted")
+            })).FirstOrDefault();
+
+        if (info is null) return false;                                              // لا يوجد
+        if (expectedEmployeeId > 0 && info.EmployeeId != expectedEmployeeId) return false; // ليس لهذا الموظف
+        if (info.IsDeleted) return true;                                             // idempotent: محذوفٌ سلفاً
+
+        await using var transaction = await db.Database.BeginTransactionAsync();
+
         await HrmsDatabase.ExecuteAsync(
             db,
-            "UPDATE EmployeeContracts SET IsDeleted = 1, UpdatedAt = SYSUTCDATETIME() WHERE Id = @Id;",
-            command => HrmsDatabase.AddParameter(command, "@Id", id));
+            """
+UPDATE EmployeeContracts SET IsDeleted = 1, UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @By
+WHERE Id = @Id AND ISNULL(IsDeleted, 0) = 0;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", id);
+                HrmsDatabase.AddParameter(command, "@By", deletedBy);
+            });
+
+        // ثابت العقد الحاليّ الواحد + مزامنة الحقول المسطّحة عند حذف الحاليّ.
+        if (info.IsCurrent)
+        {
+            var next = (await HrmsDatabase.QueryAsync(
+                db,
+                """
+SELECT TOP (1) Id, ContractType, ToDate FROM EmployeeContracts
+WHERE EmployeeId = @EmployeeId AND ISNULL(IsDeleted, 0) = 0 AND Id <> @Id
+ORDER BY FromDate DESC, Id DESC;
+""",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@EmployeeId", info.EmployeeId);
+                    HrmsDatabase.AddParameter(command, "@Id", id);
+                },
+                reader => new
+                {
+                    Id = HrmsDatabase.GetInt(reader, "Id"),
+                    ContractType = HrmsDatabase.GetString(reader, "ContractType"),
+                    ToDate = HrmsDatabase.GetDateOnly(reader, "ToDate")
+                })).FirstOrDefault();
+
+            if (next is not null)
+            {
+                await HrmsDatabase.ExecuteAsync(
+                    db,
+                    "UPDATE EmployeeContracts SET IsCurrent = 1, UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @By WHERE Id = @NextId;",
+                    command =>
+                    {
+                        HrmsDatabase.AddParameter(command, "@NextId", next.Id);
+                        HrmsDatabase.AddParameter(command, "@By", deletedBy);
+                    });
+
+                await HrmsDatabase.ExecuteAsync(
+                    db,
+                    "UPDATE Employees SET ContractType = @ContractType, ContractEndDate = @ContractEndDate WHERE Id = @EmployeeId;",
+                    command =>
+                    {
+                        HrmsDatabase.AddParameter(command, "@ContractType", next.ContractType);
+                        HrmsDatabase.AddParameter(command, "@ContractEndDate", next.ToDate?.ToDateTime(TimeOnly.MinValue));
+                        HrmsDatabase.AddParameter(command, "@EmployeeId", info.EmployeeId);
+                    });
+            }
+            else
+            {
+                // لا عقد باقٍ ⟹ صفّر مرآة العقد الحاليّ بكيان الموظف بدل ترك قيمةٍ بائتة.
+                await HrmsDatabase.ExecuteAsync(
+                    db,
+                    "UPDATE Employees SET ContractType = NULL, ContractEndDate = NULL WHERE Id = @EmployeeId;",
+                    command => HrmsDatabase.AddParameter(command, "@EmployeeId", info.EmployeeId));
+            }
+        }
+
+        await transaction.CommitAsync();
+        return true;
+    }
 
     // ── الحركات ────────────────────────────────────────────────────────────────
 

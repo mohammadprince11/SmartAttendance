@@ -55,6 +55,15 @@ public sealed class AuthController : ControllerBase
             return Unauthorized(new { message = generic });
         }
 
+        // ترقية شفّافة للتجزئة القديمة (SHA256 بلا تمديد مفتاح) بعد نجاح التحقق —
+        // نفس ما يفعله مسار الباك-أوفيس (Login.cshtml.cs). بدونها تبقى تجزئةٌ ضعيفة
+        // لمستخدمٍ يصادق عبر الـAPI/الموبايل وحده. لا تمسّ SecurityStamp فالتوكن
+        // الذي سيُصدَر أدناه يبقى صالحاً.
+        if (SimplePasswordHasher.NeedsRehash(user.PasswordHash))
+        {
+            await LoginDatabase.UpgradePasswordHashAsync(_db, user, body.Password, ip);
+        }
+
         var displayName = string.IsNullOrWhiteSpace(user.EmployeeName) ? user.Username : user.EmployeeName;
 
         int? systemUserId;

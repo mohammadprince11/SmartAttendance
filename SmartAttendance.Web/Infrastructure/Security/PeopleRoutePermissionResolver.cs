@@ -80,7 +80,9 @@ public static class PeopleRoutePermissionResolver
 
         if (normalizedPath.StartsWith("/employees/delete", StringComparison.Ordinal))
         {
-            return Employee(PeoplePermissionCodes.Delete);
+            // حذفٌ إداريٌّ لا «حذف» عامّ: صلاحيةٌ مخصّصة لا يمنحها تفويض الإنهاء العاديّ،
+            // والصفحة نفسها ترفض التنفيذ إن وُجد أثرٌ تشغيليّ (تُوجّه لإنهاء الخدمة).
+            return Employee(PeoplePermissionCodes.AdministrativeDelete);
         }
 
         if (normalizedPath.StartsWith("/employees/import", StringComparison.Ordinal))
@@ -123,6 +125,15 @@ public static class PeopleRoutePermissionResolver
                 if (handler.Equals("UploadProfileAreaFile", StringComparison.OrdinalIgnoreCase))
                 {
                     return Employee(PeoplePermissionCodes.UploadDocument);
+                }
+
+                // التعويض (الراتب/البدلات) بيانٌ ماليّ حسّاس: تعديلُه يتطلّب صلاحية
+                // EditCompensation لا مجرّد People.Edit — فـPOST مُلفَّق لا يتخطّى إخفاء
+                // الواجهة (CanViewSalary). راجع تقرير أمان People (P0).
+                if (handler.Equals("SaveAllowance", StringComparison.OrdinalIgnoreCase) ||
+                    handler.Equals("DeleteAllowance", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Employee(PeoplePermissionCodes.EditCompensation);
                 }
 
                 if (handler.Equals("DeleteProfileAreaFile", StringComparison.OrdinalIgnoreCase))

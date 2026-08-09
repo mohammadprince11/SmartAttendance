@@ -116,7 +116,8 @@ public class IndexModel : PageModel
             ?.FindProperty("Position") != null;
 
         await ApplyDefaultDateWindowAsync();
-        await LoadFilterListsAsync();
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        await LoadFilterListsAsync(scope);
         await LoadRecordsAsync();
     }
 
@@ -166,18 +167,23 @@ public class IndexModel : PageModel
         }
     }
 
-    private async Task LoadFilterListsAsync()
+    private async Task LoadFilterListsAsync(CompanyScope scope)
     {
-        Branches = await _dbContext.Branches
-            .AsNoTracking()
+        // 🛡️ عزل الشركات: قوائم فلاتر الفروع/الأقسام/الوظائف تُقصَر على شركات النطاق
+        // حتى لا تُسرَّب أسماء وحدات شركاتٍ أخرى. غير المقيَّد (allowed=null) يرى الكل؛
+        // والنطاق المقيَّد بمصفوفة فارغة (DeniedAll) يُنتج قوائم فارغة تلقائياً.
+        var allowed = scope.IsUnrestricted ? null : scope.AllowedCompanyIds.ToArray();
+
+        var brQ = _dbContext.Branches.AsNoTracking();
+        Branches = await (allowed == null ? brQ : brQ.Where(x => allowed.Contains(x.CompanyId)))
             .Select(x => x.Name)
             .Where(x => x != "")
             .Distinct()
             .OrderBy(x => x)
             .ToListAsync();
 
-        Departments = await _dbContext.Departments
-            .AsNoTracking()
+        var depQ = _dbContext.Departments.AsNoTracking();
+        Departments = await (allowed == null ? depQ : depQ.Where(x => allowed.Contains(x.CompanyId)))
             .Select(x => x.Name)
             .Where(x => x != "")
             .Distinct()
@@ -186,8 +192,10 @@ public class IndexModel : PageModel
 
         if (HasPositionField)
         {
-            Positions = await _dbContext.Employees
-                .AsNoTracking()
+            var empQ = _dbContext.Employees.AsNoTracking();
+            var empScoped = allowed == null ? empQ
+                : empQ.Where(e => e.CompanyId != null && allowed.Contains(e.CompanyId.Value));
+            Positions = await empScoped
                 .Select(x => EF.Property<string?>(x, "Position"))
                 .Where(x => x != null && x != "")
                 .Distinct()

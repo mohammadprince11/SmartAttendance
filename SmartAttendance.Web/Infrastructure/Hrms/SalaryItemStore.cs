@@ -48,9 +48,12 @@ public static class SalaryItemStore
         public string ValueKind { get; set; } = "Fixed";        // Fixed | Formula | PerEmployee
         public decimal DefaultValue { get; set; }               // مبلغ ثابت حسب ValueKind
         public string? Formula { get; set; }                    // تعبير المعادلة (عند ValueKind=Formula) مثل: Basic / 30 / 8 * Hours
-        public bool Taxable { get; set; } = true;               // يدخل بوعاء الضريبة؟
+        public bool Taxable { get; set; } = true;               // يدخل بوعاء الضريبة؟ (خضوع لكل علاوة)
+        public bool GosiEligible { get; set; } = true;          // يدخل بوعاء الضمان؟ (خضوع لكل علاوة)
         public bool InGross { get; set; } = true;               // يدخل بالراتب الإجمالي؟
-        public bool Prorated { get; set; }                      // يُنسّب حسب أيام الحضور؟
+        public bool Prorated { get; set; }                      // يُنسّب حسب أيام الحضور؟ (= حسّاس لوعاء الحضور)
+        public bool OvertimeEligible { get; set; }              // يدخل وعاء الأوفرتايم؟
+        public bool UnpaidLeaveEligible { get; set; }           // يدخل وعاء الإجازة غير المدفوعة؟
         public bool IsSystem { get; set; }                      // عنصر نظام محمي من الحذف
         public bool IsActive { get; set; } = true;
         public int SortOrder { get; set; }
@@ -76,8 +79,11 @@ BEGIN
         ValueKind nvarchar(20) NOT NULL DEFAULT(N'Fixed'),
         DefaultValue decimal(18,4) NOT NULL DEFAULT(0),
         Taxable bit NOT NULL DEFAULT(1),
+        GosiEligible bit NOT NULL DEFAULT(1),
         InGross bit NOT NULL DEFAULT(1),
         Prorated bit NOT NULL DEFAULT(0),
+        OvertimeEligible bit NOT NULL DEFAULT(0),
+        UnpaidLeaveEligible bit NOT NULL DEFAULT(0),
         IsSystem bit NOT NULL DEFAULT(0),
         IsActive bit NOT NULL DEFAULT(1),
         SortOrder int NOT NULL DEFAULT(0),
@@ -128,8 +134,9 @@ IF COL_LENGTH('SalaryItems','Formula') IS NULL ALTER TABLE SalaryItems ADD Formu
                 """
 UPDATE SalaryItems
 SET Name = @Name, NameEn = @NameEn, ItemType = @ItemType, ValueKind = @ValueKind,
-    DefaultValue = @DefaultValue, Formula = @Formula, Taxable = @Taxable, InGross = @InGross,
-    Prorated = @Prorated, IsActive = @IsActive, SortOrder = @SortOrder
+    DefaultValue = @DefaultValue, Formula = @Formula, Taxable = @Taxable, GosiEligible = @GosiEligible, InGross = @InGross,
+    Prorated = @Prorated, OvertimeEligible = @OvertimeEligible, UnpaidLeaveEligible = @UnpaidLeaveEligible,
+    IsActive = @IsActive, SortOrder = @SortOrder
 WHERE Id = @Id;
 """,
                 command =>
@@ -143,8 +150,8 @@ WHERE Id = @Id;
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
                 """
-INSERT INTO SalaryItems (Name, NameEn, ItemType, ValueKind, DefaultValue, Formula, Taxable, InGross, Prorated, IsSystem, IsActive, SortOrder)
-VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable, @InGross, @Prorated, 0, @IsActive, @SortOrder);
+INSERT INTO SalaryItems (Name, NameEn, ItemType, ValueKind, DefaultValue, Formula, Taxable, GosiEligible, InGross, Prorated, OvertimeEligible, UnpaidLeaveEligible, IsSystem, IsActive, SortOrder)
+VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable, @GosiEligible, @InGross, @Prorated, @OvertimeEligible, @UnpaidLeaveEligible, 0, @IsActive, @SortOrder);
 """,
                 command => AddParameters(command, item));
         }
@@ -170,8 +177,11 @@ VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable
         DefaultValue = reader["DefaultValue"] is decimal d ? d : 0,
         Formula = HrmsDatabase.GetString(reader, "Formula") is { Length: > 0 } fx ? fx : null,
         Taxable = HrmsDatabase.GetBool(reader, "Taxable"),
+        GosiEligible = HrmsDatabase.GetBool(reader, "GosiEligible"),
         InGross = HrmsDatabase.GetBool(reader, "InGross"),
         Prorated = HrmsDatabase.GetBool(reader, "Prorated"),
+        OvertimeEligible = HrmsDatabase.GetBool(reader, "OvertimeEligible"),
+        UnpaidLeaveEligible = HrmsDatabase.GetBool(reader, "UnpaidLeaveEligible"),
         IsSystem = HrmsDatabase.GetBool(reader, "IsSystem"),
         IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
         SortOrder = HrmsDatabase.GetInt(reader, "SortOrder")
@@ -186,8 +196,11 @@ VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable
         HrmsDatabase.AddParameter(command, "@DefaultValue", item.DefaultValue);
         HrmsDatabase.AddParameter(command, "@Formula", (object?)item.Formula ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@Taxable", item.Taxable ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@GosiEligible", item.GosiEligible ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@InGross", item.InGross ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@Prorated", item.Prorated ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@OvertimeEligible", item.OvertimeEligible ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@UnpaidLeaveEligible", item.UnpaidLeaveEligible ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@IsActive", item.IsActive ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@SortOrder", item.SortOrder);
     }

@@ -79,6 +79,39 @@ public sealed class PeopleDataScope
                (AllowSelf && SelfEmployeeId == employeeId);
     }
 
+    /// <summary>
+    /// هل يشمل النطاق موقعاً تنظيميّاً (شركة/فرع/قسم) بصرف النظر عن موظفٍ بعينه؟
+    /// يُستعمل لفحص «الوجهة» — أين يُسمح بإنشاء/نقل موظف — حيث لا معرّف موظفٍ بعد
+    /// (بخلاف <see cref="AllowsEmployee"/> الذي يرفض المعرّف الصفريّ). يتجاهل بُعدَي
+    /// الموظف والذات، ويحترم الحرمان الموقعيّ وسبقه على السماح.
+    /// </summary>
+    public bool AllowsLocation(int companyId, int branchId, int departmentId)
+    {
+        if (IsDeniedAll)
+        {
+            return false;
+        }
+
+        var denied =
+            DeniedCompanyIds.Contains(companyId) ||
+            DeniedBranchIds.Contains(branchId) ||
+            DeniedDepartmentIds.Contains(departmentId);
+
+        if (denied)
+        {
+            return false;
+        }
+
+        if (IsUnrestricted)
+        {
+            return true;
+        }
+
+        return AllowedCompanyIds.Contains(companyId) ||
+               AllowedBranchIds.Contains(branchId) ||
+               AllowedDepartmentIds.Contains(departmentId);
+    }
+
     public static PeopleDataScope Empty(int? selfEmployeeId = null) => new()
     {
         SelfEmployeeId = selfEmployeeId

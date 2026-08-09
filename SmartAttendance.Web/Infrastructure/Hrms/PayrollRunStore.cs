@@ -79,6 +79,13 @@ public static class PayrollRunStore
         public decimal NetSalary { get; set; }
         public int WorkDays { get; set; }
         public int AbsentDays { get; set; }
+        // أثر الاحتساب (Phase 15) — «من أين جاء كل دينار؟».
+        public decimal AttendanceBase { get; set; }
+        public decimal AttendanceFactor { get; set; } = 1m;
+        public decimal TaxBase { get; set; }
+        public string? TaxBaseSource { get; set; }
+        public decimal GosiBase { get; set; }
+        public string? GosiBaseSource { get; set; }
         public List<Component> Components { get; set; } = new();
 
         public decimal TotalDeductions => TaxAmount + GosiEmployee + OtherDeductions;
@@ -140,7 +147,13 @@ BEGIN
         OtherDeductions decimal(18,2) NOT NULL DEFAULT(0),
         NetSalary decimal(18,2) NOT NULL DEFAULT(0),
         WorkDays int NOT NULL DEFAULT(0),
-        AbsentDays int NOT NULL DEFAULT(0)
+        AbsentDays int NOT NULL DEFAULT(0),
+        AttendanceBase decimal(18,2) NOT NULL DEFAULT(0),
+        AttendanceFactor decimal(9,6) NOT NULL DEFAULT(1),
+        TaxBase decimal(18,2) NOT NULL DEFAULT(0),
+        TaxBaseSource nvarchar(20) NULL,
+        GosiBase decimal(18,2) NOT NULL DEFAULT(0),
+        GosiBaseSource nvarchar(20) NULL
     );
     CREATE INDEX IX_PayrollRunLines_Run ON PayrollRunLines (RunId);
 END;
@@ -428,7 +441,7 @@ WHERE r.Id = @Id;
 
         var financial = (await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT EmployeeId, ISNULL(BasicSalary,0) AS BasicSalary, ISNULL(StopSalaryCalc,0) AS StopSalaryCalc, TaxProfileId, GosiProfileId FROM EmployeeFinancialInfos WHERE ISNULL(IsDeleted,0)=0;",
+            "SELECT EmployeeId, ISNULL(BasicSalary,0) AS BasicSalary, ISNULL(StopSalaryCalc,0) AS StopSalaryCalc, TaxProfileId, GosiProfileId, SocialSecuritySalary, CurrentTaxSalary, TaxBaseMode, GosiBaseMode FROM EmployeeFinancialInfos WHERE ISNULL(IsDeleted,0)=0;",
             command => { },
             reader => new
             {
@@ -436,7 +449,12 @@ WHERE r.Id = @Id;
                 Basic = reader["BasicSalary"] is decimal b ? b : 0,
                 Stop = HrmsDatabase.GetBool(reader, "StopSalaryCalc"),
                 TaxProfileId = HrmsDatabase.GetNullableInt(reader, "TaxProfileId"),
-                GosiProfileId = HrmsDatabase.GetNullableInt(reader, "GosiProfileId")
+                GosiProfileId = HrmsDatabase.GetNullableInt(reader, "GosiProfileId"),
+                // وعاءان مُعرَّفان بالموظف — كانا يُدخَلان ولا يُقرآن (الضمان) أو بلا حقل (الضريبة).
+                SocialSecuritySalary = reader["SocialSecuritySalary"] is decimal ss ? ss : (decimal?)null,
+                CurrentTaxSalary = reader["CurrentTaxSalary"] is decimal ct ? ct : (decimal?)null,
+                TaxBaseMode = HrmsDatabase.GetString(reader, "TaxBaseMode"),
+                GosiBaseMode = HrmsDatabase.GetString(reader, "GosiBaseMode")
             }))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.First());
 
@@ -531,9 +549,42 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
         // عناصر الراتب ذات الصيغة (غير النظامية النشطة) — تُقيَّم لكل موظف بمحرك الصيغ
         // وتُضاف بنوداً للقسيمة (استحقاق يدخل الإجمالي/الوعاء الخاضع، أو اقتطاع). عناصر
         // النظام (الأساسي/الضريبة/الضمان) مستثناة — يعالجها المحرك مباشرةً.
-        var formulaItems = (await SalaryItemStore.ListAsync(dbContext))
+        var salaryItems = await SalaryItemStore.ListAsync(dbContext);
+        var formulaItems = salaryItems
             .Where(x => x.IsActive && !x.IsSystem && x.ValueKind == "Formula" && !string.IsNullOrWhiteSpace(x.Formula))
             .OrderBy(x => x.SortOrder).ToList();
+
+        // خريطة «حسّاسية الحضور» بالاسم: علاوة الموظف (اسمٌ حرّ) ترث سياسة عنصر
+        // الراتب المطابق اسماً — نموذج المشاركة على مستوى عنصر الراتب. العلَم
+        // Prorated موجودٌ سلفاً على SalaryItem لكن المحرك لم يكن يستهلكه للعلاوات،
+        // فكانت كلّها تُضاف كاملةً مهما كان الغياب. الافتراض false ⟹ كامل (سلوك سابق).
+        var attendanceSensitiveByName = salaryItems
+            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().Prorated, StringComparer.OrdinalIgnoreCase);
+
+        // أهلية العلاوة لوعاءَي الأوفرتايم والإجازة غير المدفوعة — بالاسم كذلك.
+        var overtimeEligibleByName = salaryItems
+            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().OvertimeEligible, StringComparer.OrdinalIgnoreCase);
+        var unpaidLeaveEligibleByName = salaryItems
+            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().UnpaidLeaveEligible, StringComparer.OrdinalIgnoreCase);
+
+        // خضوع العلاوة للضريبة/الضمان لكل علاوة (Phase 2) — Taxable موجودٌ، GosiEligible مضاف.
+        var allowanceTaxableByName = salaryItems
+            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().Taxable, StringComparer.OrdinalIgnoreCase);
+        var allowanceGosiByName = salaryItems
+            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().GosiEligible, StringComparer.OrdinalIgnoreCase);
+
+        // سياسة الأوعية والمقام تُقرأ مرّة للتشغيل كلّه. الافتراضات (Basic · Fixed30 · 8)
+        // تعيد أرقام المحرك القائم حرفياً — يُفعَّل الجديد بإعدادٍ صريح.
+        var overtimeBaseMode = await HrSettingsStore.GetAsync(dbContext, "Payroll.OvertimeBaseMode", PayrollEarningBase.ModeBasic);
+        var unpaidLeaveBaseMode = await HrSettingsStore.GetAsync(dbContext, "Payroll.UnpaidLeaveBaseMode", PayrollEarningBase.ModeBasic);
+        var salaryDaysBasis = await HrSettingsStore.GetAsync(dbContext, PayrollDivisorPolicy.SalaryDaysBasisKey, PayrollDivisorPolicy.BasisFixed30);
+        var standardDailyHours = PayrollDivisorPolicy.DailyHours(
+            await HrSettingsStore.GetAsync(dbContext, PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
 
         // القيم الثابتة المسمّاة تُقرأ مرّة للدفعة كلّها لا لكل موظف.
         var salaryConstants = formulaItems.Count > 0
@@ -608,6 +659,13 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                 comps.Add(new Component { ItemName = "الراتب الأساسي", Amount = proratedBasic, IsAddition = true, Kind = "Basic" });
 
             decimal allowancesTotal = 0;
+            // مجاميع العلاوات المؤهَّلة لوعاءَي الأوفرتايم/الإجازة **بمبالغها الكاملة**
+            // (قبل أثر الحضور) — الأجر اليوميّ مرجعُه الراتب الشهريّ لا المنسَّب.
+            decimal overtimeEligibleAllow = 0, unpaidLeaveEligibleAllow = 0;
+            // وعاء الحضور (قبل المعامل) = الأساسي + العلاوات الحسّاسة بمبالغها الكاملة.
+            decimal attendanceSensitiveAllow = 0;
+            // العلاوات الخاضعة للضريبة/المؤهَّلة للضمان بعد أثر الحضور (Phase 2 — لكل علاوة).
+            decimal taxableAllowancesAdjusted = 0, gosiAllowancesAdjusted = 0;
             if (allowances.TryGetValue(emp.Id, out var empAllow))
             {
                 foreach (var al in empAllow)
@@ -615,10 +673,46 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                     var active = (al.From == null || al.From <= periodEnd)
                         && (al.To == null || !al.EndAfter || al.To >= periodStart);
                     if (!active || al.Amount == 0) continue;
-                    allowancesTotal += al.Amount;
-                    comps.Add(new Component { ItemName = al.ItemName, Amount = al.Amount, IsAddition = true, Kind = "Allowance" });
+
+                    if (overtimeEligibleByName.TryGetValue(al.ItemName, out var ot) && ot)
+                        overtimeEligibleAllow += al.Amount;
+                    if (unpaidLeaveEligibleByName.TryGetValue(al.ItemName, out var ul) && ul)
+                        unpaidLeaveEligibleAllow += al.Amount;
+
+                    // العلاوة الحسّاسة للحضور تُنسَّب بالمعامل (وعاء الحضور = أساسي +
+                    // علاوات مستحقّة)، والثابتة تبقى كاملة. الافتراض غير حسّاس ⟹ كامل
+                    // كسلوك المحرك السابق، فلا ينحرف رقم من لم يُفعِّل السياسة.
+                    var sensitive = attendanceSensitiveByName.TryGetValue(al.ItemName, out var pr) && pr;
+                    if (sensitive) attendanceSensitiveAllow += al.Amount;
+                    var amount = AttendanceSalaryBase.AdjustComponent(
+                        new AttendanceSalaryBase.EarningComponent(al.Amount, sensitive), factor);
+                    if (amount == 0) continue;
+                    allowancesTotal += amount;
+
+                    // خضوع العلاوة للضريبة/الضمان **لكل علاوة** بسياسة عنصر الراتب
+                    // (Taxable موجودٌ سلفاً، GosiEligible مضاف). الافتراض true للاثنين ⟹
+                    // كل العلاوات خاضعة كسلوك اليوم (وعاء الضريبة يضمّ كل العلاوات).
+                    if (!allowanceTaxableByName.TryGetValue(al.ItemName, out var taxable) || taxable)
+                        taxableAllowancesAdjusted += amount;
+                    if (!allowanceGosiByName.TryGetValue(al.ItemName, out var gosiElig) || gosiElig)
+                        gosiAllowancesAdjusted += amount;
+
+                    comps.Add(new Component { ItemName = al.ItemName, Amount = amount, IsAddition = true, Kind = "Allowance" });
                 }
             }
+
+            // وعاء الحضور المُخزَّن بالأثر: الأساسي + العلاوات الحسّاسة (قبل المعامل).
+            var attendanceBaseAmount = basic + attendanceSensitiveAllow;
+
+            // مقام أيام الراتب + أجرا الأوفرتايم والإجازة اليوميّان بوعاءيهما المهيَّأين.
+            // الافتراضات تجعلهما = الأساسي ÷ 30 (÷ 8) حرفياً كسلوك المحرك القائم.
+            var salaryDivisor = PayrollDivisorPolicy.Divisor(salaryDaysBasis, daysInPeriod);
+            var overtimeHourlyRate = PayrollRateBasis.HourlyRate(
+                PayrollRateBasis.DailyRate(
+                    PayrollEarningBase.Compose(overtimeBaseMode, basic, overtimeEligibleAllow), salaryDivisor),
+                standardDailyHours);
+            var unpaidLeaveDaily = PayrollRateBasis.DailyRate(
+                PayrollEarningBase.Compose(unpaidLeaveBaseMode, basic, unpaidLeaveEligibleAllow), salaryDivisor);
 
             // حركات الدخل (مكافآت/حوافز/بدلات لمرة) — بنود إضافية، بعضها غير خاضع للضريبة
             decimal incomeTotal = 0, taxableIncome = 0;
@@ -641,7 +735,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                 foreach (var t in empOt)
                 {
                     var amt = t.Hours is > 0
-                        ? Math.Round(t.Hours.Value * hourlyRate * (t.RateFactor ?? PayrollTransactionStore.DefaultRateFactor), 2)
+                        ? Math.Round(t.Hours.Value * overtimeHourlyRate * (t.RateFactor ?? PayrollTransactionStore.DefaultRateFactor), 2)
                         : t.Amount;
                     if (amt == 0) continue;
                     overtimeTotal += amt;
@@ -755,6 +849,10 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
             {
                 Basic = proratedBasic,
                 Allowances = allowancesTotal,
+                // مكوّنان اختياريّان بالوعاء: العلاوات الخاضعة للضريبة/المؤهَّلة للضمان فقط.
+                // الملف الذي يبدّل عضويته من «العلاوات (الكل)» إليهما يفعّل الخضوع لكل علاوة.
+                TaxableAllowances = taxableAllowancesAdjusted,
+                GosiAllowances = gosiAllowancesAdjusted,
                 TaxableIncome = taxableIncome,
                 TaxableOvertime = taxableOvertime,
                 SalaryDays = salaryDaysAdd,
@@ -778,10 +876,26 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
             var gosiMembers = SalaryBaseStore.Resolve(
                 baseMembers, SalaryBaseComposer.GosiBaseKey, gosiProfile?.Id ?? 0);
 
-            var taxableBase = SalaryBaseComposer.Compose(baseAmounts, taxMembers);
-            var tax = PayrollConfigStore.ComputeTax(taxableBase, taxProfile);
-            var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(
-                SalaryBaseComposer.Compose(baseAmounts, gosiMembers), gosiProfile);
+            // وعاء الضريبة: مُركَّبٌ من المكوّنات (السلوك القائم) أو راتب الضريبة المُدخَل
+            // حين يختار المستخدم «مُعرَّف بالموظف». النمط الفارغ ⟹ مُركَّب، فلا تتغيّر قسيمة.
+            var composedTax = SalaryBaseComposer.Compose(baseAmounts, taxMembers);
+            var taxBase = EmployeeDefinedSalaryBase.Resolve(fin?.TaxBaseMode, fin?.CurrentTaxSalary, composedTax);
+            var tax = PayrollConfigStore.ComputeTax(taxBase.Base, taxProfile);
+
+            // وعاء الضمان: مُركَّب (افتراضاً الإجمالي) أو راتب الضمان المُدخَل
+            // (SocialSecuritySalary) حين «مُعرَّف بالموظف» — الرقم الذي كان يُدخَل ويُهمَل.
+            var composedGosi = SalaryBaseComposer.Compose(baseAmounts, gosiMembers);
+            var gosiBase = EmployeeDefinedSalaryBase.Resolve(fin?.GosiBaseMode, fin?.SocialSecuritySalary, composedGosi);
+            var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(gosiBase.Base, gosiProfile);
+
+            // «مُعرَّف بالموظف» بلا رقم: لا رجوع صامت — يُسجَّل تحذيراً بسجلّ المستبعَدين
+            // فيبقى «لماذا حُسب وعاؤه من المكوّنات لا من رقمه؟» مُجاباً (Phase 26/27).
+            if (taxBase.Source == EmployeeDefinedSalaryBase.Source.EmployeeMissing)
+                exclusions.Add((emp.Id, "MissingTaxSalary",
+                    "اختير «راتب ضريبة مُعرَّف بالموظف» بلا قيمة — احتُسب من المكوّنات مؤقتاً. أدخل راتب الضريبة بالملف المالي."));
+            if (gosiBase.Source == EmployeeDefinedSalaryBase.Source.EmployeeMissing)
+                exclusions.Add((emp.Id, "MissingGosiSalary",
+                    "اختير «راتب ضمان مُعرَّف بالموظف» بلا قيمة — احتُسب من الإجمالي مؤقتاً. أدخل راتب الضمان بالملف المالي."));
 
             // خصومات المخالفات: مباشر بالدينار + أيام×يومي + ساعات×ساعي.
             //
@@ -879,9 +993,9 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
             // يوم عمل بالحضور (فيُدفع ضمن الأساسي) فنخصمه هنا يوماً×الأجر اليومي (أساسي÷30)
             // كخصم post-gross — نفس نمط تعديل الأيام والمخالفات. الوعاء الخاضع لا يتأثر.
             decimal unpaidLeaveDeduct = 0;
-            if (unpaidLeaveDays > 0 && dailyRate > 0)
+            if (unpaidLeaveDays > 0 && unpaidLeaveDaily > 0)
             {
-                unpaidLeaveDeduct = Math.Round(unpaidLeaveDays * dailyRate, 2);
+                unpaidLeaveDeduct = Math.Round(unpaidLeaveDays * unpaidLeaveDaily, 2);
                 comps.Add(new Component
                 {
                     ItemName = $"إجازة بدون راتب ({unpaidLeaveDays} يوم)",
@@ -898,9 +1012,11 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                 dbContext,
                 """
 INSERT INTO PayrollRunLines
-  (RunId, EmployeeId, BasicSalary, TotalAllowances, GrossSalary, TaxAmount, GosiEmployee, GosiCompany, OtherDeductions, NetSalary, WorkDays, AbsentDays)
+  (RunId, EmployeeId, BasicSalary, TotalAllowances, GrossSalary, TaxAmount, GosiEmployee, GosiCompany, OtherDeductions, NetSalary, WorkDays, AbsentDays,
+   AttendanceBase, AttendanceFactor, TaxBase, TaxBaseSource, GosiBase, GosiBaseSource)
 VALUES
-  (@RunId, @Emp, @Basic, @Allow, @Gross, @Tax, @GosiEmp, @GosiCo, @Other, @Net, @WorkDays, @AbsentDays);
+  (@RunId, @Emp, @Basic, @Allow, @Gross, @Tax, @GosiEmp, @GosiCo, @Other, @Net, @WorkDays, @AbsentDays,
+   @AttBase, @AttFactor, @TaxBase, @TaxSrc, @GosiBase, @GosiSrc);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
                 command =>
@@ -917,6 +1033,13 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                     HrmsDatabase.AddParameter(command, "@Net", net);
                     HrmsDatabase.AddParameter(command, "@WorkDays", workDays);
                     HrmsDatabase.AddParameter(command, "@AbsentDays", absentDays);
+                    // أثر الاحتساب (Phase 15).
+                    HrmsDatabase.AddParameter(command, "@AttBase", attendanceBaseAmount);
+                    HrmsDatabase.AddParameter(command, "@AttFactor", factor);
+                    HrmsDatabase.AddParameter(command, "@TaxBase", taxBase.Base);
+                    HrmsDatabase.AddParameter(command, "@TaxSrc", taxBase.Source.ToString());
+                    HrmsDatabase.AddParameter(command, "@GosiBase", gosiBase.Base);
+                    HrmsDatabase.AddParameter(command, "@GosiSrc", gosiBase.Source.ToString());
                 });
 
             foreach (var c in comps)
@@ -1014,6 +1137,9 @@ WHERE Id = @Id;
             "Stopped" => "موقوف الاحتساب",
             "NoSalary" => "بلا راتب أو حركات",
             "NoAttendance" => "لا يستوفي ربط الحضور",
+            // تحذيرات (احتُسب الموظف فعلاً) لا استبعاد — وعاءٌ مُعرَّفٌ بالموظف بلا قيمة.
+            "MissingTaxSalary" => "تحذير: راتب ضريبة مُعرَّف بلا قيمة",
+            "MissingGosiSalary" => "تحذير: راتب ضمان مُعرَّف بلا قيمة",
             _ => "استبعاد"
         };
     }
@@ -1079,7 +1205,13 @@ ORDER BY e.EmployeeNo;
                 OtherDeductions = reader["OtherDeductions"] is decimal o ? o : 0,
                 NetSalary = reader["NetSalary"] is decimal n ? n : 0,
                 WorkDays = HrmsDatabase.GetInt(reader, "WorkDays"),
-                AbsentDays = HrmsDatabase.GetInt(reader, "AbsentDays")
+                AbsentDays = HrmsDatabase.GetInt(reader, "AbsentDays"),
+                AttendanceBase = reader["AttendanceBase"] is decimal ab ? ab : 0,
+                AttendanceFactor = reader["AttendanceFactor"] is decimal af ? af : 1m,
+                TaxBase = reader["TaxBase"] is decimal tb ? tb : 0,
+                TaxBaseSource = HrmsDatabase.GetString(reader, "TaxBaseSource"),
+                GosiBase = reader["GosiBase"] is decimal gb ? gb : 0,
+                GosiBaseSource = HrmsDatabase.GetString(reader, "GosiBaseSource")
             });
 
         if (lines.Count > 0)

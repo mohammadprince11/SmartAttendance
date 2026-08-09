@@ -65,20 +65,46 @@ public class FinancialInfoModel : PageModel
     public static readonly string[] Currencies = { "IQD", "USD", "EUR", "SAR", "AED", "JOD", "EGP", "KWD", "BHD", "QAR", "OMR" };
     public static readonly string[] PaymentMethods = { "نقداً", "شيك", "تحويل بنكي" };
 
-    /// <summary>الحقول الحساسة: الصفحة كاملة راتب — تُحجب عن الأدوار غير المخوّلة.</summary>
-    private async Task<bool> CanViewSalaryAsync()
+    /// <summary>
+    /// الحقول الحساسة: الصفحة كاملة راتب — تُحجب عن غير المخوّلين. الرؤية = قائمة
+    /// الأدوار القديمة (Sensitive.SalaryRoles، توافقية) **أو** منح People.ViewCompensation
+    /// صريحاً بأدوار الوصول ضمن نطاق هذا الموظف.
+    /// </summary>
+    private async Task<bool> CanViewSalaryAsync(int employeeId)
     {
         var allowedRoles = await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetAsync(
             _dbContext, "Sensitive.SalaryRoles", "Admin,HR Manager");
-        var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? string.Empty;
-        return allowedRoles
+        var role = PeopleAccessContext.GetRole(HttpContext);
+        var roleAllowed = allowedRoles
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Contains(role, StringComparer.OrdinalIgnoreCase);
+
+        if (roleAllowed) return true;
+
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        return await _permissionAuthorizationService.CanAccessEmployeeAsync(
+            systemUserId, PeoplePermissionCodes.ViewCompensation, employeeId,
+            PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.ViewCompensation),
+            HttpContext.RequestAborted);
+    }
+
+    /// <summary>
+    /// كتابة الراتب/الإعداد المالي تتطلّب People.EditCompensation لا مجرّد الرؤية —
+    /// نفس مسار الرؤية لكن برمز التعديل، والتوافقية تمنعه لغير (Admin · HR Manager).
+    /// </summary>
+    private async Task<bool> CanEditCompensationAsync(int employeeId)
+    {
+        var role = PeopleAccessContext.GetRole(HttpContext);
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        return await _permissionAuthorizationService.CanAccessEmployeeAsync(
+            systemUserId, PeoplePermissionCodes.EditCompensation, employeeId,
+            PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.EditCompensation),
+            HttpContext.RequestAborted);
     }
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
-        if (!await CanViewSalaryAsync()) return Forbid();
+        if (!await CanViewSalaryAsync(id)) return Forbid();
         if (!await CanEditAsync(id)) return Forbid();
         await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);
 
@@ -148,7 +174,7 @@ public class FinancialInfoModel : PageModel
 
     public async Task<IActionResult> OnPostAsync(int id)
     {
-        if (!await CanViewSalaryAsync()) return Forbid();
+        if (!await CanEditCompensationAsync(id)) return Forbid();
         if (!await CanEditAsync(id)) return Forbid();
         await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);
 
@@ -159,6 +185,16 @@ public class FinancialInfoModel : PageModel
         EmployeeId = employee.Id;
         EmployeeName = employee.FullName;
         EmployeeNo = employee.EmployeeNo;
+
+        // حرّاس Phase 24: الرواتب المُدخَلة غير سالبة — تُرفض لا تُنتج راتباً خاطئاً.
+        var salaryErrors = PayrollConfigValidation.ValidateEmployeeSalaries(
+            Input.BasicSalary, Input.CurrentTaxSalary, Input.SocialSecuritySalary);
+        if (salaryErrors.Count > 0)
+        {
+            ErrorMessage = string.Join(" · ", salaryErrors);
+            await LoadProfilesAsync(id, DateOnly.FromDateTime(DateTime.Today));
+            return Page();
+        }
 
         var user = User.Identity?.Name ?? "System";
         var now = DateTime.UtcNow;
@@ -187,6 +223,8 @@ public class FinancialInfoModel : PageModel
         // Social security
         entity.SocialSecurityType = Clean(Input.SocialSecurityType);
         entity.SocialSecuritySalary = Input.SocialSecuritySalary;
+        // نمط وعاء الضمان — «مُعرَّف بالموظف» يجعل المسير يحسب على الراتب أعلاه لا الإجمالي.
+        entity.GosiBaseMode = EmployeeDefinedSalaryBase.NormalizeMode(Input.GosiBaseMode);
         entity.SocialSecurityNo = Clean(Input.SocialSecurityNo);
         entity.SocialSecurityJoinDate = Input.SocialSecurityJoinDate;
         entity.SocialSecurityPreviousMonths = Input.SocialSecurityPreviousMonths;
@@ -195,6 +233,9 @@ public class FinancialInfoModel : PageModel
         entity.TaxFile = Clean(Input.TaxFile);
         entity.TaxNo = Clean(Input.TaxNo);
         entity.TaxYear = Input.TaxYear;
+        // راتب الضريبة الراهن ونمطه — «مُعرَّف بالموظف» يُحتسب عليه لا على المكوّنات.
+        entity.CurrentTaxSalary = Input.CurrentTaxSalary;
+        entity.TaxBaseMode = EmployeeDefinedSalaryBase.NormalizeMode(Input.TaxBaseMode);
         entity.PreviousTaxSalary = Input.PreviousTaxSalary;
         entity.PreviousTaxExemption = Input.PreviousTaxExemption;
         entity.PreviousTaxAmount = Input.PreviousTaxAmount;

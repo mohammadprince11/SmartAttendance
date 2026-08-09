@@ -1073,6 +1073,90 @@ BEGIN
         ALTER TABLE PunchSemantics ADD WindowTo time(0) NULL;
 END;
 """),
+
+        // أوعية الاحتساب المعرّفة بالموظف — الضريبة والضمان قد يكون وعاؤهما رقماً
+        // يُدخله المستخدم بالملف المالي (SocialSecuritySalary موجودٌ سلفاً لكن المسير
+        // لم يكن يقرؤه، وراتب الضريبة الحالي لم يكن له حقلٌ أصلاً — PreviousTaxSalary
+        // رصيدٌ افتتاحيّ لا وعاءٌ راهن). ثلاثة أعمدة:
+        //  - CurrentTaxSalary: راتب الضريبة الراهن (يختلف عن PreviousTaxSalary التاريخيّ).
+        //  - TaxBaseMode / GosiBaseMode: 'SalaryComponents' (تركيب من المكوّنات، السلوك
+        //    القائم) أو 'EmployeeDefined' (الرقم المُدخَل).
+        //
+        // ⚠️ **إضافيّ محض وبلا أثر افتراضاً**: كل الأعمدة nullable. النمط الفارغ يُقرأ
+        // 'SalaryComponents' بالكود، فوعاء اليوم (تركيبٌ من المكوّنات) يبقى حرفياً حتى
+        // يختار المستخدم النمط المُعرَّف بالموظف صراحةً — فلا تتغيّر قسيمة قائمة ولا
+        // ينكسر اختبار انحدار. PreviousTaxSalary يبقى بلا مساس.
+        new(
+            "20260809-01-employee-defined-tax-gosi-base",
+            """
+IF OBJECT_ID('EmployeeFinancialInfos', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeFinancialInfos', 'CurrentTaxSalary') IS NULL
+        ALTER TABLE EmployeeFinancialInfos ADD CurrentTaxSalary decimal(18,4) NULL;
+
+    IF COL_LENGTH('EmployeeFinancialInfos', 'TaxBaseMode') IS NULL
+        ALTER TABLE EmployeeFinancialInfos ADD TaxBaseMode nvarchar(20) NULL;
+
+    IF COL_LENGTH('EmployeeFinancialInfos', 'GosiBaseMode') IS NULL
+        ALTER TABLE EmployeeFinancialInfos ADD GosiBaseMode nvarchar(20) NULL;
+END;
+"""),
+
+        // أهلية عنصر الراتب لوعاءَي الأوفرتايم والإجازة غير المدفوعة — نموذج المشاركة
+        // على مستوى SalaryItem (كعلَم Prorated للحضور). حين تختار المنظّمة وعاء
+        // «الأساسي + علاوات مؤهَّلة» تُجمَع العلاوات المعلَّمة هنا.
+        //
+        // ⚠️ إضافيّ محض: عمودان bit بقيمة 0 افتراضاً ⟹ لا علاوة مؤهَّلة، فالوعاء
+        // الافتراضي «الأساسي» يبقى، وأرقام اليوم لا تتغيّر. (الوعاء يُفعَّل بإعداد
+        // النمط + تعليم العلاوات معاً.)
+        new(
+            "20260809-02-salary-item-ot-unpaid-eligibility",
+            """
+IF OBJECT_ID('SalaryItems', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('SalaryItems', 'OvertimeEligible') IS NULL
+        ALTER TABLE SalaryItems ADD OvertimeEligible bit NOT NULL
+            CONSTRAINT DF_SalaryItems_OvertimeEligible DEFAULT(0);
+
+    IF COL_LENGTH('SalaryItems', 'UnpaidLeaveEligible') IS NULL
+        ALTER TABLE SalaryItems ADD UnpaidLeaveEligible bit NOT NULL
+            CONSTRAINT DF_SalaryItems_UnpaidLeaveEligible DEFAULT(0);
+END;
+"""),
+
+        // أثر احتساب القسيمة (Phase 15): وعاء الحضور ومعامله، ووعاءا الضريبة/الضمان
+        // ومصدر كلٍّ — تُخزَّن على السطر ليُجيب «من أين جاء كل دينار؟» بلا إعادة حساب.
+        // ⚠️ إضافيّ محض: أعمدة بقيمة صفر/فارغة افتراضاً، تُملأ عند الاحتساب القادم.
+        new(
+            "20260809-03-payroll-line-trace",
+            """
+IF OBJECT_ID('PayrollRunLines', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('PayrollRunLines', 'AttendanceBase') IS NULL
+        ALTER TABLE PayrollRunLines ADD AttendanceBase decimal(18,2) NOT NULL CONSTRAINT DF_PRL_AttBase DEFAULT(0);
+    IF COL_LENGTH('PayrollRunLines', 'AttendanceFactor') IS NULL
+        ALTER TABLE PayrollRunLines ADD AttendanceFactor decimal(9,6) NOT NULL CONSTRAINT DF_PRL_AttFactor DEFAULT(1);
+    IF COL_LENGTH('PayrollRunLines', 'TaxBase') IS NULL
+        ALTER TABLE PayrollRunLines ADD TaxBase decimal(18,2) NOT NULL CONSTRAINT DF_PRL_TaxBase DEFAULT(0);
+    IF COL_LENGTH('PayrollRunLines', 'TaxBaseSource') IS NULL
+        ALTER TABLE PayrollRunLines ADD TaxBaseSource nvarchar(20) NULL;
+    IF COL_LENGTH('PayrollRunLines', 'GosiBase') IS NULL
+        ALTER TABLE PayrollRunLines ADD GosiBase decimal(18,2) NOT NULL CONSTRAINT DF_PRL_GosiBase DEFAULT(0);
+    IF COL_LENGTH('PayrollRunLines', 'GosiBaseSource') IS NULL
+        ALTER TABLE PayrollRunLines ADD GosiBaseSource nvarchar(20) NULL;
+END;
+"""),
+
+        // خضوع العلاوة للضمان لكل علاوة (Phase 2) — نظير Taxable للضريبة. الافتراض 1
+        // (كل العلاوات مؤهَّلة) كي يبقى وعاء الضمان المهيَّأ على «كل العلاوات» كما هو.
+        new(
+            "20260809-04-salary-item-gosi-eligible",
+            """
+IF OBJECT_ID('SalaryItems', 'U') IS NOT NULL
+   AND COL_LENGTH('SalaryItems', 'GosiEligible') IS NULL
+    ALTER TABLE SalaryItems ADD GosiEligible bit NOT NULL
+        CONSTRAINT DF_SalaryItems_GosiEligible DEFAULT(1);
+"""),
     };
 
     /// <summary>

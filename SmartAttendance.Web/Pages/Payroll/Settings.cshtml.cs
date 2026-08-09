@@ -41,6 +41,16 @@ public class SettingsModel : PageModel
 
     public string AttendanceLinkMode => LinkPolicy.Mode;
 
+    // ── سياسات الأوعية والمقام (كلّها بيانات يحرّرها المستخدم) ──
+    /// <summary>وعاء الأوفرتايم: الأساسي وحده أو الأساسي + علاوات مؤهَّلة.</summary>
+    public string OvertimeBaseMode { get; set; } = PayrollEarningBase.ModeBasic;
+    /// <summary>وعاء الإجازة غير المدفوعة: الأساسي وحده أو الأساسي + علاوات مؤهَّلة.</summary>
+    public string UnpaidLeaveBaseMode { get; set; } = PayrollEarningBase.ModeBasic;
+    /// <summary>مقام أيام الراتب: ثابت 30 أو أيام الفترة الفعلية.</summary>
+    public string SalaryDaysBasis { get; set; } = PayrollDivisorPolicy.BasisFixed30;
+    /// <summary>الساعات المعيارية لليوم (مقام الأجر الساعي).</summary>
+    public decimal StandardDailyHours { get; set; } = PayrollDivisorPolicy.DefaultDailyHours;
+
     public async Task OnGetAsync()
     {
         TaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_db);
@@ -48,6 +58,56 @@ public class SettingsModel : PageModel
         BaseMembers = await SalaryBaseStore.AllAsync(_db);
         CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_db);
         LinkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(_db);
+
+        OvertimeBaseMode = PayrollEarningBase.NormalizeMode(
+            await HrSettingsStore.GetAsync(_db, "Payroll.OvertimeBaseMode", PayrollEarningBase.ModeBasic));
+        UnpaidLeaveBaseMode = PayrollEarningBase.NormalizeMode(
+            await HrSettingsStore.GetAsync(_db, "Payroll.UnpaidLeaveBaseMode", PayrollEarningBase.ModeBasic));
+        SalaryDaysBasis = PayrollDivisorPolicy.NormalizeBasis(
+            await HrSettingsStore.GetAsync(_db, PayrollDivisorPolicy.SalaryDaysBasisKey, PayrollDivisorPolicy.BasisFixed30));
+        StandardDailyHours = PayrollDivisorPolicy.DailyHours(
+            await HrSettingsStore.GetAsync(_db, PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
+    }
+
+    /// <summary>
+    /// حفظ سياسات الأوعية والمقام — كلّها إعداداتٌ تغيّر المسير القادم. الافتراضات
+    /// (الأساسي · ثابت 30 · 8 ساعات) تُبقي أرقام اليوم؛ التغيير يُصرَّح أثره بالرسالة.
+    /// </summary>
+    public async Task<IActionResult> OnPostSaveBasePolicyAsync(
+        string overtimeBaseMode, string unpaidLeaveBaseMode, string salaryDaysBasis, string standardDailyHours)
+    {
+        var otMode = PayrollEarningBase.NormalizeMode(overtimeBaseMode);
+        var ulMode = PayrollEarningBase.NormalizeMode(unpaidLeaveBaseMode);
+        var basis = PayrollDivisorPolicy.NormalizeBasis(salaryDaysBasis);
+
+        // الساعات تُتحقَّق من مدخلٍ خام قبل التطبيع كي يُرفض «0» أو السالب برسالة
+        // بدل أن يُصحَّح صامتاً لـ8، فيعرف المستخدم أن قيمته لم تُقبَل.
+        if (decimal.TryParse(standardDailyHours, System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture, out var rawHours))
+        {
+            var hourErrors = PayrollConfigValidation.ValidateStandardDailyHours(rawHours);
+            if (hourErrors.Count > 0)
+            {
+                TempData["PayrollMessage"] = "لم تُحفظ السياسات: " + string.Join(" · ", hourErrors);
+                return RedirectToPage();
+            }
+        }
+        var hours = PayrollDivisorPolicy.DailyHours(standardDailyHours);
+
+        await HrSettingsStore.SetAsync(_db, "Payroll.OvertimeBaseMode", otMode);
+        await HrSettingsStore.SetAsync(_db, "Payroll.UnpaidLeaveBaseMode", ulMode);
+        await HrSettingsStore.SetAsync(_db, PayrollDivisorPolicy.SalaryDaysBasisKey, basis);
+        await HrSettingsStore.SetAsync(_db, PayrollDivisorPolicy.StandardDailyHoursKey,
+            hours.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+        string ModeLabel(string m) => m == PayrollEarningBase.ModeBasicPlusAllowances
+            ? "الأساسي + علاوات مؤهَّلة" : "الأساسي وحده";
+        var basisLabel = basis == PayrollDivisorPolicy.BasisPeriodDays ? "أيام الفترة" : "ثابت 30";
+
+        TempData["PayrollMessage"] =
+            $"سياسات الأوعية: أوفرتايم = {ModeLabel(otMode)} · إجازة غير مدفوعة = {ModeLabel(ulMode)} · "
+            + $"مقام الأيام = {basisLabel} · ساعات اليوم = {hours:0.##}. تُطبَّق بالمسير القادم.";
+        return RedirectToPage();
     }
 
     /// <summary>
@@ -122,6 +182,12 @@ public class SettingsModel : PageModel
             TempData["PayrollMessage"] = "اسم ملف الضمان مطلوب.";
             return RedirectToPage();
         }
+        var gosiErrors = PayrollConfigValidation.ValidateGosi(profile.EmployeeRate, profile.CompanyRate, profile.Ceiling);
+        if (gosiErrors.Count > 0)
+        {
+            TempData["PayrollMessage"] = "لم يُحفظ ملف الضمان: " + string.Join(" · ", gosiErrors);
+            return RedirectToPage();
+        }
         var gosiId = await PayrollConfigStore.SaveGosiProfileAsync(_db, profile);
         var gosiNote = await SaveBaseFromFormAsync(SalaryBaseComposer.GosiBaseKey, gosiId);
         TempData["PayrollMessage"] = "تم حفظ ملف الضمان." + ConditionNote(profile.ConditionsJson) + gosiNote;
@@ -162,6 +228,15 @@ public class SettingsModel : PageModel
             if (!decimal.TryParse(rates[i], out var rate)) continue;
             decimal? to = decimal.TryParse(tos[i], out var t) && t > 0 ? t : null;
             profile.Brackets.Add(new PayrollConfigStore.TaxBracket { FromAmount = from, ToAmount = to, Rate = rate });
+        }
+
+        var taxErrors = PayrollConfigValidation.ValidateTax(
+            profile.ExemptionAmount,
+            profile.Brackets.Select(b => (b.FromAmount, b.ToAmount, b.Rate)).ToList());
+        if (taxErrors.Count > 0)
+        {
+            TempData["PayrollMessage"] = "لم يُحفظ ملف الضريبة: " + string.Join(" · ", taxErrors);
+            return RedirectToPage();
         }
 
         var taxId = await PayrollConfigStore.SaveTaxProfileAsync(_db, profile);
