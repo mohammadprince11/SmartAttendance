@@ -79,6 +79,19 @@ public class SettingsModel : PageModel
         var otMode = PayrollEarningBase.NormalizeMode(overtimeBaseMode);
         var ulMode = PayrollEarningBase.NormalizeMode(unpaidLeaveBaseMode);
         var basis = PayrollDivisorPolicy.NormalizeBasis(salaryDaysBasis);
+
+        // الساعات تُتحقَّق من مدخلٍ خام قبل التطبيع كي يُرفض «0» أو السالب برسالة
+        // بدل أن يُصحَّح صامتاً لـ8، فيعرف المستخدم أن قيمته لم تُقبَل.
+        if (decimal.TryParse(standardDailyHours, System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture, out var rawHours))
+        {
+            var hourErrors = PayrollConfigValidation.ValidateStandardDailyHours(rawHours);
+            if (hourErrors.Count > 0)
+            {
+                TempData["PayrollMessage"] = "لم تُحفظ السياسات: " + string.Join(" · ", hourErrors);
+                return RedirectToPage();
+            }
+        }
         var hours = PayrollDivisorPolicy.DailyHours(standardDailyHours);
 
         await HrSettingsStore.SetAsync(_db, "Payroll.OvertimeBaseMode", otMode);
@@ -169,6 +182,12 @@ public class SettingsModel : PageModel
             TempData["PayrollMessage"] = "اسم ملف الضمان مطلوب.";
             return RedirectToPage();
         }
+        var gosiErrors = PayrollConfigValidation.ValidateGosi(profile.EmployeeRate, profile.CompanyRate, profile.Ceiling);
+        if (gosiErrors.Count > 0)
+        {
+            TempData["PayrollMessage"] = "لم يُحفظ ملف الضمان: " + string.Join(" · ", gosiErrors);
+            return RedirectToPage();
+        }
         var gosiId = await PayrollConfigStore.SaveGosiProfileAsync(_db, profile);
         var gosiNote = await SaveBaseFromFormAsync(SalaryBaseComposer.GosiBaseKey, gosiId);
         TempData["PayrollMessage"] = "تم حفظ ملف الضمان." + ConditionNote(profile.ConditionsJson) + gosiNote;
@@ -209,6 +228,15 @@ public class SettingsModel : PageModel
             if (!decimal.TryParse(rates[i], out var rate)) continue;
             decimal? to = decimal.TryParse(tos[i], out var t) && t > 0 ? t : null;
             profile.Brackets.Add(new PayrollConfigStore.TaxBracket { FromAmount = from, ToAmount = to, Rate = rate });
+        }
+
+        var taxErrors = PayrollConfigValidation.ValidateTax(
+            profile.ExemptionAmount,
+            profile.Brackets.Select(b => (b.FromAmount, b.ToAmount, b.Rate)).ToList());
+        if (taxErrors.Count > 0)
+        {
+            TempData["PayrollMessage"] = "لم يُحفظ ملف الضريبة: " + string.Join(" · ", taxErrors);
+            return RedirectToPage();
         }
 
         var taxId = await PayrollConfigStore.SaveTaxProfileAsync(_db, profile);

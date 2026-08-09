@@ -186,6 +186,16 @@ public class FinancialInfoModel : PageModel
         EmployeeName = employee.FullName;
         EmployeeNo = employee.EmployeeNo;
 
+        // حرّاس Phase 24: الرواتب المُدخَلة غير سالبة — تُرفض لا تُنتج راتباً خاطئاً.
+        var salaryErrors = PayrollConfigValidation.ValidateEmployeeSalaries(
+            Input.BasicSalary, Input.CurrentTaxSalary, Input.SocialSecuritySalary);
+        if (salaryErrors.Count > 0)
+        {
+            ErrorMessage = string.Join(" · ", salaryErrors);
+            await LoadProfilesAsync(id, DateOnly.FromDateTime(DateTime.Today));
+            return Page();
+        }
+
         var user = User.Identity?.Name ?? "System";
         var now = DateTime.UtcNow;
 
