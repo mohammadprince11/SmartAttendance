@@ -1225,6 +1225,10 @@ BEGIN
     IF COL_LENGTH('EmployeeAllowances', 'SalaryItemId') IS NULL
         ALTER TABLE EmployeeAllowances ADD SalaryItemId int NULL;
 
+    -- كل ما يلي يشير للعمود SalaryItemId المُضاف للتوّ. SQL Server يربط أعمدة الدفعة
+    -- وقت التحليل لا التنفيذ، فلو كان العمود غائباً وقت تحليل هذه الدفعة (قاعدة لم تُهاجَر
+    -- بعد) فشلت بـ«Invalid column name». نؤجّل الربط بـEXEC ديناميكيّ يُحلَّل بعد ADD.
+    EXEC('
     UPDATE a
        SET SalaryItemId = s.Id
     FROM EmployeeAllowances a
@@ -1233,20 +1237,20 @@ BEGIN
     WHERE a.SalaryItemId IS NULL;
 
     IF EXISTS (SELECT 1 FROM EmployeeAllowances WHERE SalaryItemId IS NULL)
-        THROW 51002, 'Unmatched EmployeeAllowance.ItemName values must be remediated before enabling SalaryItemId.', 1;
+        THROW 51002, ''Unmatched EmployeeAllowance.ItemName values must be remediated before enabling SalaryItemId.'', 1;
 
     IF EXISTS (
         SELECT 1 FROM sys.columns
-        WHERE object_id = OBJECT_ID('EmployeeAllowances')
-          AND name = 'SalaryItemId' AND is_nullable = 1)
+        WHERE object_id = OBJECT_ID(''EmployeeAllowances'')
+          AND name = ''SalaryItemId'' AND is_nullable = 1)
         ALTER TABLE EmployeeAllowances ALTER COLUMN SalaryItemId int NOT NULL;
 
-    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('EmployeeAllowances') AND name = 'IX_EmployeeAllowances_SalaryItemId')
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(''EmployeeAllowances'') AND name = ''IX_EmployeeAllowances_SalaryItemId'')
         CREATE INDEX IX_EmployeeAllowances_SalaryItemId ON EmployeeAllowances (SalaryItemId);
 
-    IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_EmployeeAllowances_SalaryItems_SalaryItemId')
+    IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = ''FK_EmployeeAllowances_SalaryItems_SalaryItemId'')
         ALTER TABLE EmployeeAllowances ADD CONSTRAINT FK_EmployeeAllowances_SalaryItems_SalaryItemId
-            FOREIGN KEY (SalaryItemId) REFERENCES SalaryItems (Id);
+            FOREIGN KEY (SalaryItemId) REFERENCES SalaryItems (Id);');
 
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('SalaryItems') AND name = 'UX_SalaryItems_Name')
         CREATE UNIQUE INDEX UX_SalaryItems_Name ON SalaryItems (Name);

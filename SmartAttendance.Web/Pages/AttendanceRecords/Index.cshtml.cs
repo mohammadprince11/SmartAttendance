@@ -299,11 +299,23 @@ public class IndexModel : PageModel
             .ThenByDescending(x => x.CheckIn)
             .ThenBy(x => x.EmployeeId);
 
-        TotalRows = await query.CountAsync();
-
         // عدّادا الأونلاين المنقولان: دخولٌ مفتوح (بلا خروج) مقابل بصمة مكتملة —
         // على كامل الفلاتر لا على الصفحة الظاهرة، كما كانت صفحة الأونلاين تعدّ.
-        OpenPunches = await query.CountAsync(x => x.CheckOut == null);
+        //
+        // ⚡ كانا عدّتين منفصلتين (مسحان كاملان على ~414 ألف صف قبل عرض أي صفّ).
+        // دُمجا في استعلام تجميع واحد ⟹ SELECT COUNT(*), SUM(CASE WHEN CheckOut
+        // IS NULL…) بمسحٍ واحد. سلوكٌ مطابق.
+        var counts = await query
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                Open = g.Count(x => x.CheckOut == null),
+            })
+            .FirstOrDefaultAsync();
+
+        TotalRows = counts?.Total ?? 0;
+        OpenPunches = counts?.Open ?? 0;
         CompletePunches = TotalRows - OpenPunches;
 
         TotalPages = TotalRows <= 0

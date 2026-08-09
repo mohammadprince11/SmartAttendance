@@ -9,7 +9,31 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 
 public static class HrmsDatabase
 {
+    // حارس تشغيل-مرّة-واحدة لسكربت الشفاء الذاتي (DDL).
+    // كان يُنفَّذ كامل السكربت (226 سطراً) في كل طلب عبر 57 موضع استدعاء —
+    // هدرٌ على مسار القراءة وخرقٌ لقاعدة «لا شفاء ذاتي على الطلب». السكربت
+    // idempotent (كل جملة محروسة بـIF)، فتشغيله مرّة واحدة لكل عملية آمن.
+    // يُضبط العَلَم بعد النجاح فقط ⟹ فشلٌ جزئي يُعاد عند الطلب التالي.
+    private static volatile bool _schemaEnsured;
+    private static readonly SemaphoreSlim _ensureGate = new(1, 1);
+
     public static async Task EnsureCreatedAsync(ApplicationDbContext dbContext)
+    {
+        if (_schemaEnsured) return;
+        await _ensureGate.WaitAsync();
+        try
+        {
+            if (_schemaEnsured) return;
+            await RunSchemaScriptAsync(dbContext);
+            _schemaEnsured = true;
+        }
+        finally
+        {
+            _ensureGate.Release();
+        }
+    }
+
+    private static async Task RunSchemaScriptAsync(ApplicationDbContext dbContext)
     {
         var sql = """
 IF COL_LENGTH('Employees', 'Position') IS NULL

@@ -91,11 +91,17 @@ public class RunsModel : PageModel
         LatestRun = all.OrderByDescending(r => r.Year).ThenByDescending(r => r.Month).ThenByDescending(r => r.Id).FirstOrDefault();
         LatestEmployees = LatestRun?.EmployeeCount ?? 0;
 
-        var filterYear = Year ?? AvailableYears.First();
-        YearNet = all.Where(r => r.Year == filterYear).Sum(r => r.TotalNet);
-        YearGross = all.Where(r => r.Year == filterYear).Sum(r => r.TotalGross);
+        // السنة: أول تحميل (null) ⟹ السنة الحالية افتراضاً؛ 0 ⟹ الكل؛ غير ذلك ⟹ سنة محدَّدة.
+        var currentYear = DateTime.Today.Year;
+        var showAllYears = Year == 0;
+        var filterYear = (Year is null or 0) ? currentYear : Year.Value;
+        // فلتر الشركة (متعدّد الشركات): 0/غير محدَّد ⟹ كل الشركات المسموحة بنطاق المستخدم.
+        Func<PayrollRunStore.PayrollRun, bool> byCompany =
+            CompanyId is > 0 ? r => r.CompanyId == CompanyId.Value : _ => true;
+        YearNet = all.Where(r => r.Year == filterYear && byCompany(r)).Sum(r => r.TotalNet);
+        YearGross = all.Where(r => r.Year == filterYear && byCompany(r)).Sum(r => r.TotalGross);
 
-        Runs = (Year.HasValue ? all.Where(r => r.Year == Year.Value) : all).ToList();
+        Runs = (showAllYears ? all.Where(byCompany) : all.Where(r => r.Year == filterYear && byCompany(r))).ToList();
 
         if (CompanyId is > 0)
         {
@@ -114,6 +120,29 @@ public class RunsModel : PageModel
         }
     }
 
+    /// <summary>
+    /// موظفو/أقسام/فروع/مسميات شركةٍ بعينها (JSON) — لتحميل بيانات النطاق عند اختيار
+    /// الشركة بنافذة الإنشاء <b>دون إعادة تحميل الصفحة</b>. نفس استعلامات <see cref="OnGetAsync"/>.
+    /// </summary>
+    public async Task<IActionResult> OnGetCompanyScopeAsync(int companyId)
+    {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (companyId <= 0 || !scope.Allows(companyId)) return Forbid();
+
+        var employees = await HrmsDatabase.QueryAsync(_db,
+            "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo, ISNULL(FullName, N'') AS FullName FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1 AND CompanyId=@Company ORDER BY EmployeeNo;",
+            command => HrmsDatabase.AddParameter(command, "@Company", companyId),
+            reader => new
+            {
+                id = HrmsDatabase.GetInt(reader, "Id"),
+                no = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                name = HrmsDatabase.GetString(reader, "FullName")
+            });
+
+        var (departments, branches, jobTitles) = await MassScopeResolver.OrgListsAsync(_db, companyId);
+        return new JsonResult(new { employees, departments, branches, jobTitles });
+    }
+
     public async Task<IActionResult> OnPostCreateAsync(
         int companyId, int year, int month, IFormFile? massFile)
     {
@@ -128,13 +157,40 @@ public class RunsModel : PageModel
             return RedirectToPage();
         }
 
+        // قاعدة (١) منع الازدواج: دفعة غير مقفلة بنفس (الشركة+الفترة) ونفس الأشخاص ⟹ هذه
+        // إعادة احتساب لا دفعة جديدة. نمنع الإنشاء المكرّر ونوجّه لإعادة احتساب القائمة.
+        var duplicateBatch = await PayrollRunStore.FindDuplicateUnlockedBatchAsync(
+            _db, companyId, year, month, ids);
+        if (duplicateBatch != null)
+        {
+            TempData["PayrollMessage"] =
+                $"توجد دفعة غير مقفلة بنفس الفترة والأشخاص (الدفعة {duplicateBatch}) — أعد احتسابها بدلاً من إنشاء دفعة مكرّرة.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+
         // شركة الدفعة من نطاق مُنشئها حين يكون قاطعاً (شركة واحدة مسموحة). المقيَّد
         // بشركةٍ لا يستطيع إنشاء دفعة لغيرها، وغير المقيَّد تبقى دفعته بلا نسبة حتى
         // الاحتساب فتُشتقّ من أعضاء نطاقها.
-        var (ok, message, _) = await PayrollRunStore.CreateRunAsync(
+        var (ok, message, newId) = await PayrollRunStore.CreateRunAsync(
             _db, scope, companyId, year, month, scopeMode, ids, HttpContext.RequestAborted);
+        if (ok && newId > 0)
+        {
+            // احتساب فوري عند الإنشاء حتى تظهر بيانات الدفعة مباشرةً بدل أصفار — عبر الحارس
+            // الذي يمنع ازدواج صرف موظف بأكثر من دفعة/فترة. فشل الاحتساب لا يُسقط الإنشاء.
+            var (calcOk, calcMsg) = await PayrollRunStore.CalculateWithGuardAsync(
+                _db, newId, User?.Identity?.Name ?? "system");
+            // أُزيل التوجيه «شغّل الاحتساب» عند نجاح الاحتساب التلقائي حتى لا تتناقض الرسالة.
+            message = calcOk
+                ? $"{message.Replace("شغّل «الاحتساب».", "").TrimEnd()} — {calcMsg}"
+                : $"{message} (تعذّر الاحتساب التلقائي: {calcMsg})";
+            TempData["PayrollOk"] = calcOk;
+        }
+        else
+        {
+            TempData["PayrollOk"] = ok;
+        }
         TempData["PayrollMessage"] = message;
-        TempData["PayrollOk"] = ok;
         return RedirectToPage();
     }
 
@@ -204,12 +260,13 @@ public class RunsModel : PageModel
     }
 
     public async Task<IActionResult> OnPostCalculateAsync(int id) =>
-        await ActAsync(id, () => PayrollRunStore.CalculateAsync(_db, id, User?.Identity?.Name ?? "system"));
+        await ActAsync(id, () => PayrollRunStore.CalculateWithGuardAsync(_db, id, User?.Identity?.Name ?? "system"));
 
     public async Task<IActionResult> OnPostLockAsync(int id) => await ActAsync(id, () => PayrollRunStore.LockAsync(_db, id));
     public async Task<IActionResult> OnPostIssueAsync(int id) => await ActAsync(id, () => PayrollRunStore.IssueAsync(_db, id));
     public async Task<IActionResult> OnPostSendAsync(int id) => await ActAsync(id, () => PayrollRunStore.SendPayslipsAsync(_db, id));
     public async Task<IActionResult> OnPostReopenAsync(int id) => await ActAsync(id, () => PayrollRunStore.ReopenAsync(_db, id));
+    public async Task<IActionResult> OnPostUnlockAsync(int id) => await ActAsync(id, () => PayrollRunStore.UnlockAsync(_db, id));
     public async Task<IActionResult> OnPostDeleteAsync(int id) => await ActAsync(id, () => PayrollRunStore.DeleteRunAsync(_db, id));
 
     /// <summary>

@@ -7,9 +7,6 @@
     ViewData["Title"] = "المسير";
     var empJson = JsonSerializer.Serialize(Model.Employees.Select(e => new { e.Id, e.No, e.Name }));
     var months = new[] { "يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر" };
-    string[] stages = { "Draft","Calculated","Locked","Issued","PayslipSent" };
-    string[] stageLabels = { "مسودة","محتسب","مقفل","معتمد","قسائم" };
-    int StageIndex(string s) => Array.IndexOf(stages, s);
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
@@ -54,8 +51,15 @@
     html[data-theme="light"] .pr-table th { background:#f2f7fb; }
     .pr-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
     .pr-table tbody tr:hover td { background:rgba(18,217,227,.04); }
-    .pr-num { direction:ltr; font-weight:900; text-align:start; }
+    /* الأرقام والرؤوس تُحاذى معاً لبداية الخليّة (يمين RTL) لتصطفّ الأعمدة مع بياناتها */
+    .pr-table th, .pr-table td { text-align:start; white-space:nowrap; }
+    .pr-num { font-weight:900; text-align:start; unicode-bidi:plaintext; }
     .pr-net { color:#4ade80; }
+    /* أعمدة حالة نعم/لا (نموذج كيان) */
+    .pr-yn { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:900; padding:3px 11px; border-radius:999px; white-space:nowrap; }
+    .pr-yn::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
+    .pr-yn.yes { color:#16a34a; background:rgba(74,222,128,.15); }
+    .pr-yn.no { color:#e0555f; background:rgba(248,113,113,.13); }
 
     .pr-steps { display:flex; align-items:center; gap:3px; }
     .pr-steps i { width:16px; height:5px; border-radius:3px; background:rgba(143,168,188,.25); }
@@ -71,7 +75,34 @@
     .pr-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
     .pr-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
     .pr-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
-    .pr-actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+    .pr-actions { display:flex; gap:6px; flex-wrap:nowrap; justify-content:flex-end; white-space:nowrap; }
+    .pr-actions .pr-btn { white-space:nowrap; flex:0 0 auto; }
+    td.pr-actions-cell { white-space:nowrap; text-align:end; }
+    /* قائمة الإجراءات (⋯) بنمط كيان */
+    .pr-menu { position:relative; display:inline-block; }
+    .pr-kebab { width:34px; height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.3);
+        background:transparent; color:inherit; font-size:20px; line-height:1; font-weight:900; cursor:pointer;
+        display:inline-flex; align-items:center; justify-content:center; }
+    .pr-kebab:hover { background:rgba(73,111,151,.16); }
+    .pr-menu.open .pr-kebab { background:rgba(18,217,227,.16); border-color:rgba(18,217,227,.5); color:#12D9E3; }
+    .pr-menu-panel { position:fixed; z-index:1000; display:none; min-width:190px; padding:6px;
+        background:#0d1a2b; border:1px solid rgba(73,111,151,.35); border-radius:14px;
+        box-shadow:0 16px 40px rgba(0,0,0,.5); animation:prMenuIn .12s ease; }
+    html[data-theme="light"] .pr-menu-panel { background:#fff; border-color:rgba(73,111,151,.22); box-shadow:0 16px 40px rgba(30,50,80,.16); }
+    @@keyframes prMenuIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+    .pr-menu.open .pr-menu-panel { display:block; }
+    .pr-menu-panel form { display:block; margin:0; }
+    .pr-menu-panel > *:not(:first-child) { border-top:1px solid rgba(255,255,255,.06); }
+    html[data-theme="light"] .pr-menu-panel > *:not(:first-child) { border-top-color:rgba(0,0,0,.06); }
+    /* عناصر القائمة: نصّ فقط بلا شكل أزرار (نموذج كيان). صنف مستقلّ لا يصادم .pr-btn */
+    .pr-menu-panel .pr-mi { display:flex; align-items:center; width:100%; justify-content:flex-start;
+        text-align:start; padding:11px 16px; border:0; border-radius:6px; background:transparent;
+        color:#eef3f8; font-family:inherit; font-weight:600; font-size:13.5px; cursor:pointer;
+        text-decoration:none; box-sizing:border-box; }
+    .pr-menu-panel .pr-mi:hover { background:rgba(255,255,255,.08); color:#fff; }
+    .pr-menu-panel .pr-mi.danger:hover { background:rgba(248,113,113,.14); color:#f87171; }
+    html[data-theme="light"] .pr-menu-panel .pr-mi { color:#1e2a38; }
+    html[data-theme="light"] .pr-menu-panel .pr-mi:hover { background:rgba(0,0,0,.05); color:#000; }
     .pr-actions form { display:inline; }
     .pr-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
     .pr-form select, .pr-form input { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; }
@@ -85,8 +116,6 @@
             <p>احتساب الرواتب من الأساسي والعلاوات والحضور المعتمد وخصومات المخالفات، بدورة اعتماد وقسائم.</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <a class="pr-btn ghost" href="/Payroll/SalaryItems">عناصر الراتب</a>
-            <a class="pr-btn ghost" href="/Payroll/Settings">الضريبة والضمان</a>
             <button type="button" class="pr-btn" onclick="prOpen()">+ دفعة مسير جديدة</button>
         </div>
     </header>
@@ -103,24 +132,27 @@
     <div class="pr-bar">
         <form method="get" class="pr-filter">
             <span>السنة:</span>
+            @{ var selectedYear = Model.Year ?? DateTime.Today.Year; }
             <select name="Year" onchange="this.form.submit()">
-                <option value="">الكل</option>
+                <option value="0" selected="@(Model.Year == 0)">الكل</option>
                 @foreach (var y in Model.AvailableYears)
                 {
-                    <option value="@y" selected="@(Model.Year == y)">@y</option>
+                    <option value="@y" selected="@(Model.Year != 0 && selectedYear == y)">@y</option>
                 }
             </select>
+            @if (Model.Companies.Count > 1)
+            {
+                <span>الشركة:</span>
+                <select name="CompanyId" onchange="this.form.submit()" style="max-width:220px">
+
+                    <option value="0" selected="@(!(Model.CompanyId > 0))">كل الشركات</option>
+                    @foreach (var c in Model.Companies)
+                    {
+                        <option value="@c.Id" selected="@(Model.CompanyId == c.Id)">@c.Name</option>
+                    }
+                </select>
+            }
         </form>
-        <div class="pr-filter">
-            <span>المسار:</span>
-            <span class="pr-steps">
-                @for (var i = 0; i < stages.Length; i++)
-                {
-                    <i class="on"></i>
-                }
-                <span style="color:var(--sa-muted,#8FA8BC);font-weight:900">مسودة ← محتسب ← مقفل ← معتمد ← قسائم</span>
-            </span>
-        </div>
     </div>
 
     @if (TempData["PayrollMessage"] != null)
@@ -142,63 +174,62 @@
             <table class="pr-table">
                 <thead>
                     <tr>
-                        <th>رقم الدفعة</th><th>الفترة</th><th>الحالة والتقدّم</th><th>النطاق</th><th>الموظفون</th>
-                        <th>الإجمالي</th><th>الاستقطاعات</th><th>الصافي</th><th>حصة الشركة</th><th>محتسب بواسطة</th>
+                        <th>رقم الدفعة</th><th>الفترة</th><th>الموظفون</th>
+                        <th>الإجمالي</th><th>الاستقطاعات</th><th>الصافي</th><th>محتسب بواسطة</th><th>مقفل</th><th>تم إصدارها</th><th>تم إرسال القسيمة</th>
                         <th style="text-align:end">إجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var run in Model.Runs)
                     {
-                        var idx = StageIndex(run.Status);
                         var deductions = run.TotalGross - run.TotalNet;
+                        // موضع الحالة في دورة الحياة ⟹ أعلام تراكمية (مقفل ⊇ مُصدَر ⊇ قسائم).
+                        var stageIdx = Array.IndexOf(PayrollRunStore.Lifecycle, run.Status);
+                        var isLocked = stageIdx >= Array.IndexOf(PayrollRunStore.Lifecycle, "Locked");
+                        var isIssued = stageIdx >= Array.IndexOf(PayrollRunStore.Lifecycle, "Issued");
+                        var isSent = stageIdx >= Array.IndexOf(PayrollRunStore.Lifecycle, "PayslipSent");
                         <tr>
                             <td class="pr-num">@run.BatchNo</td>
                             <td class="pr-num">@run.PeriodText</td>
-                            <td>
-                                <div class="pr-steps">
-                                    @for (var i = 0; i < stages.Length; i++)
-                                    {
-                                        <i class="@(i <= idx ? "on" : "")@(run.Status is "Issued" or "PayslipSent" ? " done" : "")"></i>
-                                    }
-                                    <b class="st-@run.Status">@run.StatusLabelText</b>
-                                </div>
-                            </td>
-                            <td><span class="pr-scope @(run.ScopeCount > 0 ? "narrow" : "")">@run.ScopeText</span></td>
                             <td class="pr-num">@run.EmployeeCount</td>
                             <td class="pr-num">@run.TotalGross.ToString("#,0.##")</td>
                             <td class="pr-num">@deductions.ToString("#,0.##")</td>
                             <td class="pr-num pr-net">@run.TotalNet.ToString("#,0.##")</td>
-                            <td class="pr-num">@run.TotalGosiCompany.ToString("#,0.##")</td>
-                            <td style="font-size:12px">@(run.CalculatedBy ?? "—")<br /><span style="color:var(--sa-muted,#8FA8BC)">@(run.CalculatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</span></td>
-                            <td>
-                                <div class="pr-actions">
+                            <td style="font-size:12px">@(run.CalculatedBy ?? "—")<br /><span style="color:var(--sa-muted,#8FA8BC)">@(run.CalculatedAt?.ToString("yyyy-MM-dd") ?? "")</span></td>
+                            <td><span class="pr-yn @(isLocked ? "yes" : "no")">@(isLocked ? "نعم" : "لا")</span></td>
+                            <td><span class="pr-yn @(isIssued ? "yes" : "no")">@(isIssued ? "نعم" : "لا")</span></td>
+                            <td><span class="pr-yn @(isSent ? "yes" : "no")">@(isSent ? "نعم" : "لا")</span></td>
+                            <td class="pr-actions-cell">
+                                <div class="pr-menu">
+                                    <button type="button" class="pr-kebab" onclick="prMenuToggle(event, this)" aria-haspopup="true" aria-label="إجراءات">⋯</button>
+                                    <div class="pr-menu-panel" role="menu">
                                     @if (run.EmployeeCount > 0)
                                     {
-                                        <a class="pr-btn ghost sm" href="/Payroll/RunDetail?id=@run.Id">تفاصيل</a>
+                                        <a class="pr-mi" href="/Payroll/RunDetail?id=@run.Id">تفاصيل</a>
                                     }
                                     @if (run.Status is "Draft" or "Calculated")
                                     {
-                                        <button type="button" class="pr-btn ghost sm" onclick="prScopeEdit(@run.Id, '@run.ScopeMode')">النطاق</button>
-                                        <form method="post" asp-page-handler="Calculate"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit">@(run.Status == "Draft" ? "احتساب" : "إعادة")</button></form>
+                                        <button type="button" class="pr-mi" onclick="prScopeEdit(@run.Id, '@run.ScopeMode')">النطاق</button>
+                                        <form method="post" asp-page-handler="Calculate"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit">@(run.Status == "Draft" ? "احتساب" : "إعادة")</button></form>
                                     }
                                     @if (run.Status == "Calculated")
                                     {
-                                        <form method="post" asp-page-handler="Lock"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit" data-zyconfirm="قفل الدفعة؟">قفل</button></form>
-                                        <form method="post" asp-page-handler="Reopen"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn ghost sm" type="submit">↩</button></form>
+                                        <form method="post" asp-page-handler="Lock"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" data-zyconfirm="قفل الدفعة؟">قفل</button></form>
                                     }
                                     @if (run.Status == "Locked")
                                     {
-                                        <form method="post" asp-page-handler="Issue"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit" data-zyconfirm="اعتماد للصرف؟">اعتماد</button></form>
+                                        <form method="post" asp-page-handler="Issue"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" data-zyconfirm="اعتماد للصرف؟">اعتماد</button></form>
+                                        <form method="post" asp-page-handler="Unlock"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" data-zyconfirm="إلغاء قفل الدفعة؟ ستعود قابلة للتعديل والاحتساب.">إلغاء القفل</button></form>
                                     }
                                     @if (run.Status == "Issued")
                                     {
-                                        <form method="post" asp-page-handler="Send"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit" data-zyconfirm="إرسال القسائم؟">قسائم</button></form>
+                                        <form method="post" asp-page-handler="Send"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" data-zyconfirm="إرسال القسائم؟">قسائم</button></form>
                                     }
                                     @if (run.Status is "Draft" or "Calculated")
                                     {
-                                        <form method="post" asp-page-handler="Delete"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn ghost sm" type="submit" style="color:#f87171" data-zyconfirm="حذف الدفعة؟">حذف</button></form>
+                                        <form method="post" asp-page-handler="Delete"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi danger" type="submit" data-zyconfirm="حذف الدفعة؟">حذف</button></form>
                                     }
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -222,7 +253,7 @@
                 <div id="pr-period-block" style="display:flex;flex-direction:column;gap:12px">
                     <label>الشركة
                         <select name="companyId" id="pr-company" required
-                                onchange="if(this.value){window.location.search='?CompanyId='+encodeURIComponent(this.value)}">
+                                onchange="prLoadCompany(this.value)">
                             @if (Model.Companies.Count != 1)
                             {
                                 <option value="">اختر الشركة</option>
@@ -370,6 +401,60 @@
             document.getElementById('pr-slide').classList.add('open');
             document.getElementById('pr-backdrop').classList.add('open');
         }
+
+        // اختيار الشركة يحمّل موظفيها وأقسامها عبر AJAX ويحدّث منتقيات النطاق **دون إعادة
+        // تحميل الصفحة** — النافذة تبقى مفتوحة كما هي. النطاق يُعاد لـ«الكل» لأن التحديد
+        // السابق قد يخصّ شركة أخرى.
+        function prFillSelect(name, items, allLabel) {
+            var sel = document.querySelector('#pr-slide select[name="' + name + '"]');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">' + allLabel + '</option>' +
+                (items || []).map(function (s) { return '<option value="' + prEsc(s) + '">' + prEsc(s) + '</option>'; }).join('');
+        }
+        function prLoadCompany(id) {
+            prScope('All');
+            if (!id) { window.MASS_EMP = []; massBuildEmps(); massCount(); return; }
+            fetch(window.location.pathname + '?handler=CompanyScope&companyId=' + encodeURIComponent(id),
+                  { headers: { 'X-Requested-With': 'fetch' } })
+                .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+                .then(function (d) {
+                    window.MASS_EMP = (d.employees || []).map(function (e) { return { Id: e.id, No: e.no, Name: e.name }; });
+                    massBuildEmps(); massCount();
+                    prFillSelect('MassDept', d.departments, 'كل الأقسام');
+                    prFillSelect('MassBranch', d.branches, 'كل الفروع');
+                    prFillSelect('MassJobTitle', d.jobTitles, 'كل المسميات');
+                })
+                .catch(function () { /* تجاهُل صامت — يبقى التحديد السابق */ });
+        }
+
+        // قائمة الإجراءات (⋯) بنمط كيان: زرّ واحد يفتح لوحة الخيارات.
+        // اللوحة position:fixed فتُموضَع يدوياً تحت الزرّ لتفادي قصّ الجدول المُمرَّر.
+        function prCloseMenus() {
+            document.querySelectorAll('.pr-menu.open').forEach(function (m) { m.classList.remove('open'); });
+        }
+        function prMenuToggle(ev, btn) {
+            ev.stopPropagation();
+            var menu = btn.closest('.pr-menu');
+            var isOpen = menu.classList.contains('open');
+            prCloseMenus();
+            if (isOpen) return;
+            menu.classList.add('open');
+            var panel = menu.querySelector('.pr-menu-panel');
+            var r = btn.getBoundingClientRect();
+            panel.style.top = (r.bottom + 4) + 'px';
+            // محاذاة يمين اللوحة مع يمين الزرّ (RTL)
+            var pw = panel.offsetWidth;
+            var left = r.right - pw;
+            if (left < 8) left = 8;
+            panel.style.left = left + 'px';
+            // لو تجاوزت أسفل الشاشة، افتحها للأعلى.
+            if (r.bottom + 4 + panel.offsetHeight > window.innerHeight - 8) {
+                panel.style.top = (r.top - 4 - panel.offsetHeight) + 'px';
+            }
+        }
+        document.addEventListener('click', prCloseMenus);
+        window.addEventListener('resize', prCloseMenus);
+        window.addEventListener('scroll', prCloseMenus, true);
 
         // تعديل نطاق دفعة قائمة قبل قفلها — نفس النموذج بلا حقول الفترة.
         function prScopeEdit(runId, mode) {

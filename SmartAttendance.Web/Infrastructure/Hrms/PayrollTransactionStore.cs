@@ -257,6 +257,20 @@ WHERE t.[Year] = @Y AND t.[Month] = @M
             });
     }
 
+    /// <summary>
+    /// فكّ قفل حركات دفعةٍ عند إلغاء قفلها (Locked ← Calculated). يُحصر بالحركات التي
+    /// قفلتها هذه الدفعة تحديداً عبر <c>LockedRunId</c> — فلا يمسّ حركات دفعات أخرى ولا
+    /// حركات دخلت النطاق بعد القفل. عكسٌ دقيق لـ<see cref="LockForRunAsync"/> وآمن للعزل.
+    /// </summary>
+    public static async Task UnlockForRunAsync(ApplicationDbContext dbContext, int runId)
+    {
+        await EnsureAsync(dbContext);
+        await HrmsDatabase.ExecuteAsync(
+            dbContext,
+            "UPDATE PayrollTransactions SET IsLocked = 0, LockedRunId = NULL WHERE LockedRunId = @Run;",
+            command => HrmsDatabase.AddParameter(command, "@Run", runId));
+    }
+
     /// <summary>هل حركة بعينها مقفلة؟ (دخلت مسيراً مقفلاً) — لحماية التعديل/الحذف.</summary>
     public static async Task<bool> IsLockedAsync(ApplicationDbContext dbContext, CompanyScope scope, int id)
     {

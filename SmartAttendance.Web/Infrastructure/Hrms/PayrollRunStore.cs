@@ -1393,6 +1393,149 @@ ORDER BY e.EmployeeNo;
     public static Task<(bool, string)> ReopenAsync(ApplicationDbContext dbContext, int runId) =>
         TransitionAsync(dbContext, runId, from: "Calculated", to: "Draft", null, "أُعيدت للمسودة.");
 
+    /// <summary>
+    /// إلغاء قفل دفعة مقفلة (Locked ← Calculated) لتعود قابلةً للتعديل والاحتساب. لا يُتاح
+    /// لدفعة معتمدة/مُرسَلة (الحارس <c>WHERE Status='Locked'</c> يمنعه). عند نجاح النقل يُفكّ
+    /// قفل حركات الدفعة التي قفلها <see cref="LockAsync"/> حتى تُحتسب من جديد.
+    /// </summary>
+    public static async Task<(bool, string)> UnlockAsync(ApplicationDbContext dbContext, int runId)
+    {
+        var res = await TransitionAsync(dbContext, runId, from: "Locked", to: "Calculated", null, "أُلغي القفل — عادت الدفعة قابلة للتعديل.");
+        if (res.Item1)
+            await PayrollTransactionStore.UnlockForRunAsync(dbContext, runId);
+        return res;
+    }
+
+    // ═══════ حارس منع ازدواج الصرف — موظفٌ واحد لا يظهر بأكثر من دفعة غير مقفلة/فترة ═══════
+
+    /// <summary>معرّفات كل الموظفين النشطين (اختيارياً بشركة) — لتجسيد دفعة «الكل».</summary>
+    private static Task<List<int>> ActiveEmployeeIdsAsync(ApplicationDbContext dbContext, int? company) =>
+        HrmsDatabase.QueryAsync(
+            dbContext,
+            "SELECT Id FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1 AND (@Company IS NULL OR CompanyId=@Company);",
+            command => HrmsDatabase.AddParameter(command, "@Company", (object?)company ?? DBNull.Value),
+            reader => HrmsDatabase.GetInt(reader, "Id"));
+
+    /// <summary>دفعات نفس الفترة والشركة (عدا واحدة) — لكشف التداخل. excludeRunId=0 يشمل الكل.</summary>
+    private static Task<List<(int Id, string BatchNo, string Status)>> SiblingRunsAsync(
+        ApplicationDbContext dbContext, int excludeRunId, int year, int month, int? company) =>
+        HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+SELECT Id, ISNULL(BatchNo, N'') AS BatchNo, ISNULL(Status, N'Draft') AS Status
+FROM PayrollRuns
+WHERE [Year] = @Y AND [Month] = @M AND Id <> @X
+  AND ((@Company IS NULL AND CompanyId IS NULL) OR CompanyId = @Company);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Y", year);
+                HrmsDatabase.AddParameter(command, "@M", month);
+                HrmsDatabase.AddParameter(command, "@X", excludeRunId);
+                HrmsDatabase.AddParameter(command, "@Company", (object?)company ?? DBNull.Value);
+            },
+            reader => (
+                Id: HrmsDatabase.GetInt(reader, "Id"),
+                BatchNo: HrmsDatabase.GetString(reader, "BatchNo"),
+                Status: HrmsDatabase.GetString(reader, "Status")));
+
+    /// <summary>مجموعة موظفي دفعةٍ فعلياً: أعضاؤها، أو كل النشطين إن كانت «الكل».</summary>
+    private static async Task<HashSet<int>> MaterializeScopeAsync(
+        ApplicationDbContext dbContext, int runId, List<int> activeInCompany)
+    {
+        var ids = await PayrollRunScopeStore.IdsAsync(dbContext, runId);
+        return ids.Count == 0
+            ? new HashSet<int>(activeInCompany)
+            : new HashSet<int>(ids.Where(activeInCompany.Contains));
+    }
+
+    /// <summary>
+    /// قاعدة (١): هل توجد دفعة غير مقفلة بنفس (الشركة+الفترة) و<b>نفس مجموعة الأشخاص</b>؟
+    /// تُعيد رقم دفعتها لعرض «هذه إعادة احتساب» بدل إنشاء دفعة مكرّرة. requestedIds فارغة ⟹ «الكل».
+    /// </summary>
+    public static async Task<string?> FindDuplicateUnlockedBatchAsync(
+        ApplicationDbContext dbContext, int? company, int year, int month, IReadOnlyCollection<int> requestedIds)
+    {
+        var active = await ActiveEmployeeIdsAsync(dbContext, company);
+        var requested = requestedIds.Count == 0
+            ? new HashSet<int>(active)
+            : new HashSet<int>(requestedIds.Where(active.Contains));
+        foreach (var s in await SiblingRunsAsync(dbContext, 0, year, month, company))
+        {
+            if (s.Status is not ("Draft" or "Calculated")) continue;
+            if ((await MaterializeScopeAsync(dbContext, s.Id, active)).SetEquals(requested))
+                return s.BatchNo;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// حارس التعارض قبل احتساب دفعة: يضمن ألّا يظهر موظف في أكثر من دفعة غير مقفلة ضمن
+    /// (الشركة+الفترة). المحجوزون في دفعة مقفلة/معتمدة/مُرسَلة يُستبعدون من هذه الدفعة؛
+    /// والمتداخلون مع دفعات غير مقفلة أخرى يُنقلون إليها: يُزالون من القديمة (تُجسَّد «الكل»
+    /// لقائمة صريحة أولاً) وتُعاد احتساباً، ودفعةٌ تُفرَّغ بالكامل تُحذف. <c>NothingToCalculate</c>
+    /// يعني أن كل موظفي هذه الدفعة محجوزون بدفعات مقفلة فلا يُحتسب أحد.
+    /// </summary>
+    public static async Task<(string? Note, bool NothingToCalculate)> ResolvePeriodConflictsAsync(
+        ApplicationDbContext dbContext, int runId, string userName)
+    {
+        var run = await GetRunAsync(dbContext, runId);
+        if (run == null || run.Status is "Locked" or "Issued" or "PayslipSent")
+            return (null, false);
+
+        var company = run.CompanyId ?? await ResolveRunCompanyAsync(dbContext, runId);
+        var active = await ActiveEmployeeIdsAsync(dbContext, company);
+        var xSet = await MaterializeScopeAsync(dbContext, runId, active);
+        var siblings = await SiblingRunsAsync(dbContext, runId, run.Year, run.Month, company);
+        var notes = new List<string>();
+
+        // (١) المحجوزون في دفعات مقفلة/معتمدة/مُرسَلة ⟹ استبعادهم من هذه الدفعة.
+        var lockedClaimed = new HashSet<int>();
+        foreach (var s in siblings.Where(s => s.Status is "Locked" or "Issued" or "PayslipSent"))
+            lockedClaimed.UnionWith(xSet.Intersect(await MaterializeScopeAsync(dbContext, s.Id, active)));
+        if (lockedClaimed.Count > 0)
+        {
+            xSet.ExceptWith(lockedClaimed);
+            if (xSet.Count == 0)
+                return ($"كل الموظفين المحددين ({lockedClaimed.Count}) محجوزون بدفعات مقفلة — لا يوجد من يُحتسب", true);
+            // تجسيد صريح (لن يكون فارغاً هنا) لاستبعاد المحجوزين حتى لو كانت «الكل».
+            await PayrollRunScopeStore.ReplaceAsync(dbContext, runId, xSet);
+            notes.Add($"{lockedClaimed.Count} موظفاً محجوزون بدفعة مقفلة — استُبعدوا من هذا الاحتساب");
+        }
+
+        // (٢) المتداخلون مع دفعات غير مقفلة أخرى ⟹ نُقلوا لهذه الدفعة (أُزيلوا من القديمة + إعادة احتسابها).
+        foreach (var s in siblings.Where(s => s.Status is "Draft" or "Calculated"))
+        {
+            var m = await MaterializeScopeAsync(dbContext, s.Id, active);
+            var overlap = m.Where(xSet.Contains).ToList();
+            if (overlap.Count == 0) continue;
+            var remaining = m.Where(id => !xSet.Contains(id)).ToList();
+            if (remaining.Count == 0)
+            {
+                await DeleteRunAsync(dbContext, s.Id);
+                notes.Add($"نُقل {overlap.Count} موظفاً من الدفعة {s.BatchNo} (حُذفت لخلوّها)");
+            }
+            else
+            {
+                await PayrollRunScopeStore.ReplaceAsync(dbContext, s.Id, remaining);
+                await CalculateAsync(dbContext, s.Id, userName);
+                notes.Add($"نُقل {overlap.Count} موظفاً من الدفعة {s.BatchNo} (أُعيد احتسابها)");
+            }
+        }
+
+        return (notes.Count > 0 ? string.Join("؛ ", notes) : null, false);
+    }
+
+    /// <summary>الاحتساب مع حارس منع الازدواج — المسار المعتمد للاحتساب من الواجهة.</summary>
+    public static async Task<(bool Ok, string Message)> CalculateWithGuardAsync(
+        ApplicationDbContext dbContext, int runId, string userName)
+    {
+        var (note, nothing) = await ResolvePeriodConflictsAsync(dbContext, runId, userName);
+        if (nothing) return (false, note ?? "لا يوجد موظفون قابلون للاحتساب.");
+        var (ok, msg) = await CalculateAsync(dbContext, runId, userName);
+        return (ok, note == null ? msg : $"{msg} — {note}");
+    }
+
     public static async Task<(bool, string)> DeleteRunAsync(ApplicationDbContext dbContext, int runId)
     {
         var run = await GetRunAsync(dbContext, runId);
