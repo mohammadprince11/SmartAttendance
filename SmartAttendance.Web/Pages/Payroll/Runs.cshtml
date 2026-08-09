@@ -71,7 +71,9 @@
     .pr-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
     .pr-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
     .pr-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
-    .pr-actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+    .pr-actions { display:flex; gap:6px; flex-wrap:nowrap; justify-content:flex-end; white-space:nowrap; }
+    .pr-actions .pr-btn { white-space:nowrap; flex:0 0 auto; }
+    td.pr-actions-cell { white-space:nowrap; }
     .pr-actions form { display:inline; }
     .pr-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
     .pr-form select, .pr-form input { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; }
@@ -171,7 +173,7 @@
                             <td class="pr-num pr-net">@run.TotalNet.ToString("#,0.##")</td>
                             <td class="pr-num">@run.TotalGosiCompany.ToString("#,0.##")</td>
                             <td style="font-size:12px">@(run.CalculatedBy ?? "—")<br /><span style="color:var(--sa-muted,#8FA8BC)">@(run.CalculatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</span></td>
-                            <td>
+                            <td class="pr-actions-cell">
                                 <div class="pr-actions">
                                     @if (run.EmployeeCount > 0)
                                     {
@@ -185,7 +187,7 @@
                                     @if (run.Status == "Calculated")
                                     {
                                         <form method="post" asp-page-handler="Lock"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn sm" type="submit" data-zyconfirm="قفل الدفعة؟">قفل</button></form>
-                                        <form method="post" asp-page-handler="Reopen"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn ghost sm" type="submit">↩</button></form>
+                                        <form method="post" asp-page-handler="Reopen"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn ghost sm" type="submit" title="إعادة فتح الدفعة للتعديل">↩ فتح</button></form>
                                     }
                                     @if (run.Status == "Locked")
                                     {
