@@ -222,15 +222,27 @@ ORDER BY t.CreatedAt DESC;
     public static async Task LockForRunAsync(ApplicationDbContext dbContext, int runId, int year, int month)
     {
         await EnsureAsync(dbContext);
+        // ⚠️ **عزل الشركات**: كان القفل يشمل حركات **كل الشركات** للشهر (WHERE Year+Month
+        // فقط)، فقفلُ مسير شركة A يقفل حركات شركة B بنفس الشهر. الآن يُحصر بموظفي الدفعة
+        // نفسها: شركةُ الدفعة (join Employees ↔ PayrollRuns.CompanyId) وأعضاء نطاقها إن
+        // وُجدوا (PayrollRunScopeMembers). دفعةٌ بلا شركة (تاريخية أحادية الشركة) وبلا
+        // أعضاء نطاق تبقى على السلوك القديم للتوافق. النطاق مشتقٌّ من الدفعة داخل المتجر
+        // فيتعذّر إغفاله من المستدعي.
         await HrmsDatabase.ExecuteAsync(
             dbContext,
             """
-UPDATE PayrollTransactions
-SET IsLocked = 1, LockedRunId = @Run
-WHERE [Year] = @Y AND [Month] = @M
-  AND ISNULL(PaymentType, N'InSalary') = N'InSalary'
-  AND ISNULL(Status, N'Approved') = N'Approved'
-  AND ISNULL(IsLocked, 0) = 0;
+UPDATE t
+SET t.IsLocked = 1, t.LockedRunId = @Run
+FROM PayrollTransactions t
+INNER JOIN Employees e ON e.Id = t.EmployeeId
+INNER JOIN PayrollRuns r ON r.Id = @Run
+WHERE t.[Year] = @Y AND t.[Month] = @M
+  AND ISNULL(t.PaymentType, N'InSalary') = N'InSalary'
+  AND ISNULL(t.Status, N'Approved') = N'Approved'
+  AND ISNULL(t.IsLocked, 0) = 0
+  AND (r.CompanyId IS NULL OR e.CompanyId = r.CompanyId)
+  AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId = @Run)
+       OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId = @Run AND s.EmployeeId = t.EmployeeId));
 """,
             command =>
             {
