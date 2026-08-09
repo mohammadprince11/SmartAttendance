@@ -90,14 +90,14 @@
                                     ? "المعامل = أيام الحضور الفعلية ÷ أيام العمل. من داوَم 10 من 26 يأخذ راتب 10 أيام."
                                     : m == AttendanceSalaryLink.Strict
                                         ? "⚠️ لا يُحتسب راتب من لا يوجد له اعتماد شهري بأيام عمل. المعامل = (أيام العمل − الغياب) ÷ أيام العمل."
-                                        : "المعامل = ساعات العمل الفعلية ÷ (أيام العمل × 8)، مقصوصاً إلى 100% (الزائد أوفرتايم ببند مستقل).")
+                                        : $"المعامل = ساعات العمل الفعلية ÷ (أيام العمل × {Model.StandardDailyHours.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} ساعة)، مقصوصاً إلى 100% (الزائد أوفرتايم ببند مستقل).")
                         </span>
                     </span>
                 </label>
             }
 
             <div class="ps-item" style="display:flex;flex-direction:column;gap:8px">
-                <label style="display:flex;align-items:center;gap:8px;margin:0">
+                <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
                     <b style="min-width:190px">خصم يوم الغياب يساوي</b>
                     <input type="number" name="absenceDays" step="0.25" min="0" max="10"
                            value="@Model.LinkPolicy.AbsenceDeductionDays.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
@@ -108,7 +108,7 @@
                     1 = يوم بيوم (الافتراضي). 2 = يوم الغياب يُخصم بيومين نمط لوائح الجزاءات.
                     الخصم الزائد يُطبَّق فوق التنسيب مهما كان النمط.
                 </span>
-                <label style="display:flex;align-items:center;gap:8px;margin:0">
+                <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
                     <input type="checkbox" name="allowNegative" value="true" checked="@Model.LinkPolicy.AllowNegative" />
                     <b>اسمح بأن يكون الراتب سالباً</b>
                 </label>
@@ -131,28 +131,28 @@
             المعيارية بدل الثابتين المخفيّين ÷ 30 و÷ 8. <b>الافتراضات تُبقي أرقام اليوم حرفياً.</b>
         </p>
         <form method="post" asp-page-handler="SaveBasePolicy" style="display:flex;flex-direction:column;gap:10px">
-            <label style="display:flex;align-items:center;gap:8px;margin:0">
+            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
                 <b style="min-width:230px">وعاء الأوفرتايم</b>
                 <select name="overtimeBaseMode" style="min-width:260px">
                     <option value="@PayrollEarningBase.ModeBasic" selected="@(Model.OvertimeBaseMode == PayrollEarningBase.ModeBasic)">الأساسي وحده (الافتراضي)</option>
                     <option value="@PayrollEarningBase.ModeBasicPlusAllowances" selected="@(Model.OvertimeBaseMode == PayrollEarningBase.ModeBasicPlusAllowances)">الأساسي + العلاوات المؤهَّلة للأوفرتايم</option>
                 </select>
             </label>
-            <label style="display:flex;align-items:center;gap:8px;margin:0">
+            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
                 <b style="min-width:230px">وعاء الإجازة غير المدفوعة</b>
                 <select name="unpaidLeaveBaseMode" style="min-width:260px">
                     <option value="@PayrollEarningBase.ModeBasic" selected="@(Model.UnpaidLeaveBaseMode == PayrollEarningBase.ModeBasic)">الأساسي وحده (الافتراضي)</option>
                     <option value="@PayrollEarningBase.ModeBasicPlusAllowances" selected="@(Model.UnpaidLeaveBaseMode == PayrollEarningBase.ModeBasicPlusAllowances)">الأساسي + العلاوات المؤهَّلة للإجازة</option>
                 </select>
             </label>
-            <label style="display:flex;align-items:center;gap:8px;margin:0">
+            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
                 <b style="min-width:230px">مقام أيام الراتب</b>
                 <select name="salaryDaysBasis" style="min-width:260px">
                     <option value="@PayrollDivisorPolicy.BasisFixed30" selected="@(Model.SalaryDaysBasis == PayrollDivisorPolicy.BasisFixed30)">ثابت 30 (الافتراضي)</option>
                     <option value="@PayrollDivisorPolicy.BasisPeriodDays" selected="@(Model.SalaryDaysBasis == PayrollDivisorPolicy.BasisPeriodDays)">أيام الفترة الفعلية (28/29/30/31)</option>
                 </select>
             </label>
-            <label style="display:flex;align-items:center;gap:8px;margin:0">
+            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
                 <b style="min-width:230px">الساعات المعيارية لليوم</b>
                 <input type="number" name="standardDailyHours" step="0.25" min="1" max="24"
                        value="@Model.StandardDailyHours.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
