@@ -755,3 +755,55 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
 span[data-valmsg-for]:empty {
     display: none !important;
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   مكوّنات قانونية مُضافة (Design QA 2026-08-09) — كلّها من التوكنز، متوافقة مع
+   الوضعين تلقائياً، بلا ألوان مباشرة. إضافيّة محضة: لا تلمس أي صفحة حتى تتبنّاها.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* التنبيهات (المرحلة 28) — أيقونة/علامة + نصّ مقروء + تباين كافٍ، لا لونٌ وحده. */
+.zy-alert {
+    display: flex;
+    gap: var(--zy-control-gap, 8px);
+    align-items: flex-start;
+    padding: 10px 12px;
+    border-radius: var(--zy-card-radius, 10px);
+    border-inline-start: 3px solid var(--status-info, #2F76C9);
+    background: var(--status-info-soft, rgba(47, 118, 201, .12));
+    color: var(--zy-text, inherit);
+    font-size: var(--zy-body-font, 13px);
+    font-weight: 700;
+    text-align: start;
+}
+.zy-alert > .zy-alert-mark { flex: 0 0 auto; line-height: 1.4; }
+.zy-alert-title { font-weight: 900; display: block; margin-bottom: 2px; }
+.zy-alert-success { border-inline-start-color: var(--status-success, #238C63); background: var(--status-success-soft, rgba(35, 140, 99, .12)); }
+.zy-alert-warning { border-inline-start-color: var(--status-warning, #B77A14); background: var(--status-warning-soft, rgba(183, 122, 20, .12)); }
+.zy-alert-danger  { border-inline-start-color: var(--status-danger, #D94F5C); background: var(--status-danger-soft, rgba(217, 79, 92, .12)); }
+.zy-alert-info    { border-inline-start-color: var(--status-info, #2F76C9); background: var(--status-info-soft, rgba(47, 118, 201, .12)); }
+
+/* صفّ إعداد (المرحلة 4) — عمودان بالسطح الواسع، عمودٌ واحد على الجوال بلا تجاوز. */
+.zy-setting-row {
+    display: grid;
+    grid-template-columns: minmax(180px, .8fr) minmax(0, 1.2fr);
+    gap: var(--zy-control-gap, 10px);
+    align-items: center;
+    margin: 0;
+}
+.zy-setting-row > .zy-setting-label { font-weight: 800; text-align: start; }
+.zy-setting-row > .zy-select,
+.zy-setting-row > .zy-input,
+.zy-setting-row > select,
+.zy-setting-row > input { width: 100%; max-width: 100%; min-width: 0; }
+@media (max-width: 640px) {
+    .zy-setting-row { grid-template-columns: 1fr; }
+}
+
+/* صفّ إجراءات (المرحلة 19) — يلتفّ على الجوال، الإجراء الأساسي أوّلاً منطقياً. */
+.zy-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--zy-control-gap, 8px);
+    align-items: center;
+}
+.zy-actions--end { justify-content: flex-end; }
