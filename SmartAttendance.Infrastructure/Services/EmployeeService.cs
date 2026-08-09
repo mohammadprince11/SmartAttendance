@@ -93,17 +93,29 @@ public class EmployeeService : IEmployeeService
 
         var filteredQuery = employeesQuery;
 
-        // 🚀 هذا هو التعديل السحري الذي سيجعل البحث طلقة!
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            // نستخدم StartsWith للكود والهوية لتمكين الـ Index في قاعدة البيانات
-            // ركزنا البحث على أهم الحقول لتقليل الضغط على الـ SQL Server
-            filteredQuery = filteredQuery.Where(x =>
-                x.EmployeeNo.StartsWith(searchTerm) ||
-                x.FullName.Contains(searchTerm) ||
-                (x.Phone != null && x.Phone.Contains(searchTerm)) ||
-                (x.NationalId != null && x.NationalId.StartsWith(searchTerm))
-            );
+            // كود تام أولاً: إن وُجد موظف ضمن النطاق كودُه يطابق المُدخل حرفياً،
+            // يُعرض وحده — فكتابة «10000» تُظهر صاحب الكود لا كلَّ من يبدأ كودُه به
+            // أو يحوي هاتفُه ذلك الرقم. فحصٌ رخيص على الكود المفهرس (== لا LIKE).
+            // غياب التطابق التام يُبقي البحث الفضفاض على بقية الحقول.
+            var hasExactCode = await filteredQuery
+                .AnyAsync(x => x.EmployeeNo == searchTerm);
+
+            if (hasExactCode)
+            {
+                filteredQuery = filteredQuery.Where(x => x.EmployeeNo == searchTerm);
+            }
+            else
+            {
+                // StartsWith للكود/الهوية يُمكّن الفهرس؛ الاسم Contains للبحث الجزئي.
+                filteredQuery = filteredQuery.Where(x =>
+                    x.EmployeeNo.StartsWith(searchTerm) ||
+                    x.FullName.Contains(searchTerm) ||
+                    (x.Phone != null && x.Phone.Contains(searchTerm)) ||
+                    (x.NationalId != null && x.NationalId.StartsWith(searchTerm))
+                );
+            }
         }
 
         if (query.BranchId.HasValue && query.BranchId.Value > 0)
