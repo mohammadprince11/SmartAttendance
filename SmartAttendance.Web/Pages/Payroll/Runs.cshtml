@@ -72,7 +72,21 @@
     .pr-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
     .pr-actions { display:flex; gap:6px; flex-wrap:nowrap; justify-content:flex-end; white-space:nowrap; }
     .pr-actions .pr-btn { white-space:nowrap; flex:0 0 auto; }
-    td.pr-actions-cell { white-space:nowrap; }
+    td.pr-actions-cell { white-space:nowrap; text-align:end; }
+    /* قائمة الإجراءات (⋯) بنمط كيان */
+    .pr-menu { position:relative; display:inline-block; }
+    .pr-kebab { width:34px; height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.3);
+        background:transparent; color:inherit; font-size:20px; line-height:1; font-weight:900; cursor:pointer;
+        display:inline-flex; align-items:center; justify-content:center; }
+    .pr-kebab:hover { background:rgba(73,111,151,.16); }
+    .pr-menu-panel { position:fixed; z-index:1000; display:none; min-width:180px; padding:6px;
+        background:var(--sa-panel,#111c2b); border:1px solid rgba(73,111,151,.32); border-radius:12px;
+        box-shadow:0 12px 32px rgba(0,0,0,.45); }
+    .pr-menu.open .pr-menu-panel { display:block; }
+    .pr-menu-panel form { display:block; margin:0; }
+    .pr-menu-panel .pr-btn { display:block; width:100%; text-align:start; min-height:0; padding:9px 12px;
+        border-radius:8px; background:transparent; color:inherit; font-weight:800; font-size:13px; }
+    .pr-menu-panel .pr-btn:hover { background:rgba(73,111,151,.18); }
     .pr-actions form { display:inline; }
     .pr-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
     .pr-form select, .pr-form input { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; }
@@ -144,7 +158,7 @@
                 <thead>
                     <tr>
                         <th>رقم الدفعة</th><th>الفترة</th><th>الموظفون</th>
-                        <th>الإجمالي</th><th>الاستقطاعات</th><th>الصافي</th><th>حصة الشركة</th><th>محتسب بواسطة</th>
+                        <th>الإجمالي</th><th>الاستقطاعات</th><th>الصافي</th><th>محتسب بواسطة</th>
                         <th style="text-align:end">إجراءات</th>
                     </tr>
                 </thead>
@@ -159,10 +173,11 @@
                             <td class="pr-num">@run.TotalGross.ToString("#,0.##")</td>
                             <td class="pr-num">@deductions.ToString("#,0.##")</td>
                             <td class="pr-num pr-net">@run.TotalNet.ToString("#,0.##")</td>
-                            <td class="pr-num">@run.TotalGosiCompany.ToString("#,0.##")</td>
                             <td style="font-size:12px">@(run.CalculatedBy ?? "—")<br /><span style="color:var(--sa-muted,#8FA8BC)">@(run.CalculatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</span></td>
                             <td class="pr-actions-cell">
-                                <div class="pr-actions">
+                                <div class="pr-menu">
+                                    <button type="button" class="pr-kebab" onclick="prMenuToggle(event, this)" aria-haspopup="true" aria-label="إجراءات">⋯</button>
+                                    <div class="pr-menu-panel" role="menu">
                                     @if (run.EmployeeCount > 0)
                                     {
                                         <a class="pr-btn ghost sm" href="/Payroll/RunDetail?id=@run.Id">تفاصيل</a>
@@ -189,6 +204,7 @@
                                     {
                                         <form method="post" asp-page-handler="Delete"><input type="hidden" name="id" value="@run.Id" /><button class="pr-btn ghost sm" type="submit" style="color:#f87171" data-zyconfirm="حذف الدفعة؟">حذف</button></form>
                                     }
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -347,6 +363,35 @@
             document.getElementById('pr-slide').classList.add('open');
             document.getElementById('pr-backdrop').classList.add('open');
         }
+
+        // قائمة الإجراءات (⋯) بنمط كيان: زرّ واحد يفتح لوحة الخيارات.
+        // اللوحة position:fixed فتُموضَع يدوياً تحت الزرّ لتفادي قصّ الجدول المُمرَّر.
+        function prCloseMenus() {
+            document.querySelectorAll('.pr-menu.open').forEach(function (m) { m.classList.remove('open'); });
+        }
+        function prMenuToggle(ev, btn) {
+            ev.stopPropagation();
+            var menu = btn.closest('.pr-menu');
+            var isOpen = menu.classList.contains('open');
+            prCloseMenus();
+            if (isOpen) return;
+            menu.classList.add('open');
+            var panel = menu.querySelector('.pr-menu-panel');
+            var r = btn.getBoundingClientRect();
+            panel.style.top = (r.bottom + 4) + 'px';
+            // محاذاة يمين اللوحة مع يمين الزرّ (RTL)
+            var pw = panel.offsetWidth;
+            var left = r.right - pw;
+            if (left < 8) left = 8;
+            panel.style.left = left + 'px';
+            // لو تجاوزت أسفل الشاشة، افتحها للأعلى.
+            if (r.bottom + 4 + panel.offsetHeight > window.innerHeight - 8) {
+                panel.style.top = (r.top - 4 - panel.offsetHeight) + 'px';
+            }
+        }
+        document.addEventListener('click', prCloseMenus);
+        window.addEventListener('resize', prCloseMenus);
+        window.addEventListener('scroll', prCloseMenus, true);
 
         // تعديل نطاق دفعة قائمة قبل قفلها — نفس النموذج بلا حقول الفترة.
         function prScopeEdit(runId, mode) {
