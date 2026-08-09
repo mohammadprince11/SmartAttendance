@@ -549,6 +549,22 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
             .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First().Prorated, StringComparer.OrdinalIgnoreCase);
 
+        // أهلية العلاوة لوعاءَي الأوفرتايم والإجازة غير المدفوعة — بالاسم كذلك.
+        var overtimeEligibleByName = salaryItems
+            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().OvertimeEligible, StringComparer.OrdinalIgnoreCase);
+        var unpaidLeaveEligibleByName = salaryItems
+            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().UnpaidLeaveEligible, StringComparer.OrdinalIgnoreCase);
+
+        // سياسة الأوعية والمقام تُقرأ مرّة للتشغيل كلّه. الافتراضات (Basic · Fixed30 · 8)
+        // تعيد أرقام المحرك القائم حرفياً — يُفعَّل الجديد بإعدادٍ صريح.
+        var overtimeBaseMode = await HrSettingsStore.GetAsync(dbContext, "Payroll.OvertimeBaseMode", PayrollEarningBase.ModeBasic);
+        var unpaidLeaveBaseMode = await HrSettingsStore.GetAsync(dbContext, "Payroll.UnpaidLeaveBaseMode", PayrollEarningBase.ModeBasic);
+        var salaryDaysBasis = await HrSettingsStore.GetAsync(dbContext, PayrollDivisorPolicy.SalaryDaysBasisKey, PayrollDivisorPolicy.BasisFixed30);
+        var standardDailyHours = PayrollDivisorPolicy.DailyHours(
+            await HrSettingsStore.GetAsync(dbContext, PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
+
         // القيم الثابتة المسمّاة تُقرأ مرّة للدفعة كلّها لا لكل موظف.
         var salaryConstants = formulaItems.Count > 0
             ? await SalaryConstantStore.ActiveMapAsync(dbContext)
@@ -622,6 +638,9 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                 comps.Add(new Component { ItemName = "الراتب الأساسي", Amount = proratedBasic, IsAddition = true, Kind = "Basic" });
 
             decimal allowancesTotal = 0;
+            // مجاميع العلاوات المؤهَّلة لوعاءَي الأوفرتايم/الإجازة **بمبالغها الكاملة**
+            // (قبل أثر الحضور) — الأجر اليوميّ مرجعُه الراتب الشهريّ لا المنسَّب.
+            decimal overtimeEligibleAllow = 0, unpaidLeaveEligibleAllow = 0;
             if (allowances.TryGetValue(emp.Id, out var empAllow))
             {
                 foreach (var al in empAllow)
@@ -629,6 +648,11 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                     var active = (al.From == null || al.From <= periodEnd)
                         && (al.To == null || !al.EndAfter || al.To >= periodStart);
                     if (!active || al.Amount == 0) continue;
+
+                    if (overtimeEligibleByName.TryGetValue(al.ItemName, out var ot) && ot)
+                        overtimeEligibleAllow += al.Amount;
+                    if (unpaidLeaveEligibleByName.TryGetValue(al.ItemName, out var ul) && ul)
+                        unpaidLeaveEligibleAllow += al.Amount;
 
                     // العلاوة الحسّاسة للحضور تُنسَّب بالمعامل (وعاء الحضور = أساسي +
                     // علاوات مستحقّة)، والثابتة تبقى كاملة. الافتراض غير حسّاس ⟹ كامل
@@ -641,6 +665,16 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                     comps.Add(new Component { ItemName = al.ItemName, Amount = amount, IsAddition = true, Kind = "Allowance" });
                 }
             }
+
+            // مقام أيام الراتب + أجرا الأوفرتايم والإجازة اليوميّان بوعاءيهما المهيَّأين.
+            // الافتراضات تجعلهما = الأساسي ÷ 30 (÷ 8) حرفياً كسلوك المحرك القائم.
+            var salaryDivisor = PayrollDivisorPolicy.Divisor(salaryDaysBasis, daysInPeriod);
+            var overtimeHourlyRate = PayrollRateBasis.HourlyRate(
+                PayrollRateBasis.DailyRate(
+                    PayrollEarningBase.Compose(overtimeBaseMode, basic, overtimeEligibleAllow), salaryDivisor),
+                standardDailyHours);
+            var unpaidLeaveDaily = PayrollRateBasis.DailyRate(
+                PayrollEarningBase.Compose(unpaidLeaveBaseMode, basic, unpaidLeaveEligibleAllow), salaryDivisor);
 
             // حركات الدخل (مكافآت/حوافز/بدلات لمرة) — بنود إضافية، بعضها غير خاضع للضريبة
             decimal incomeTotal = 0, taxableIncome = 0;
@@ -663,7 +697,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                 foreach (var t in empOt)
                 {
                     var amt = t.Hours is > 0
-                        ? Math.Round(t.Hours.Value * hourlyRate * (t.RateFactor ?? PayrollTransactionStore.DefaultRateFactor), 2)
+                        ? Math.Round(t.Hours.Value * overtimeHourlyRate * (t.RateFactor ?? PayrollTransactionStore.DefaultRateFactor), 2)
                         : t.Amount;
                     if (amt == 0) continue;
                     overtimeTotal += amt;
@@ -917,9 +951,9 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
             // يوم عمل بالحضور (فيُدفع ضمن الأساسي) فنخصمه هنا يوماً×الأجر اليومي (أساسي÷30)
             // كخصم post-gross — نفس نمط تعديل الأيام والمخالفات. الوعاء الخاضع لا يتأثر.
             decimal unpaidLeaveDeduct = 0;
-            if (unpaidLeaveDays > 0 && dailyRate > 0)
+            if (unpaidLeaveDays > 0 && unpaidLeaveDaily > 0)
             {
-                unpaidLeaveDeduct = Math.Round(unpaidLeaveDays * dailyRate, 2);
+                unpaidLeaveDeduct = Math.Round(unpaidLeaveDays * unpaidLeaveDaily, 2);
                 comps.Add(new Component
                 {
                     ItemName = $"إجازة بدون راتب ({unpaidLeaveDays} يوم)",

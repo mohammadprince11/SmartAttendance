@@ -50,7 +50,9 @@ public static class SalaryItemStore
         public string? Formula { get; set; }                    // تعبير المعادلة (عند ValueKind=Formula) مثل: Basic / 30 / 8 * Hours
         public bool Taxable { get; set; } = true;               // يدخل بوعاء الضريبة؟
         public bool InGross { get; set; } = true;               // يدخل بالراتب الإجمالي؟
-        public bool Prorated { get; set; }                      // يُنسّب حسب أيام الحضور؟
+        public bool Prorated { get; set; }                      // يُنسّب حسب أيام الحضور؟ (= حسّاس لوعاء الحضور)
+        public bool OvertimeEligible { get; set; }              // يدخل وعاء الأوفرتايم؟
+        public bool UnpaidLeaveEligible { get; set; }           // يدخل وعاء الإجازة غير المدفوعة؟
         public bool IsSystem { get; set; }                      // عنصر نظام محمي من الحذف
         public bool IsActive { get; set; } = true;
         public int SortOrder { get; set; }
@@ -78,6 +80,8 @@ BEGIN
         Taxable bit NOT NULL DEFAULT(1),
         InGross bit NOT NULL DEFAULT(1),
         Prorated bit NOT NULL DEFAULT(0),
+        OvertimeEligible bit NOT NULL DEFAULT(0),
+        UnpaidLeaveEligible bit NOT NULL DEFAULT(0),
         IsSystem bit NOT NULL DEFAULT(0),
         IsActive bit NOT NULL DEFAULT(1),
         SortOrder int NOT NULL DEFAULT(0),
@@ -172,6 +176,8 @@ VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable
         Taxable = HrmsDatabase.GetBool(reader, "Taxable"),
         InGross = HrmsDatabase.GetBool(reader, "InGross"),
         Prorated = HrmsDatabase.GetBool(reader, "Prorated"),
+        OvertimeEligible = HrmsDatabase.GetBool(reader, "OvertimeEligible"),
+        UnpaidLeaveEligible = HrmsDatabase.GetBool(reader, "UnpaidLeaveEligible"),
         IsSystem = HrmsDatabase.GetBool(reader, "IsSystem"),
         IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
         SortOrder = HrmsDatabase.GetInt(reader, "SortOrder")

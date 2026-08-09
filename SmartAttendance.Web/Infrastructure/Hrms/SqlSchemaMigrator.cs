@@ -1101,6 +1101,28 @@ BEGIN
         ALTER TABLE EmployeeFinancialInfos ADD GosiBaseMode nvarchar(20) NULL;
 END;
 """),
+
+        // أهلية عنصر الراتب لوعاءَي الأوفرتايم والإجازة غير المدفوعة — نموذج المشاركة
+        // على مستوى SalaryItem (كعلَم Prorated للحضور). حين تختار المنظّمة وعاء
+        // «الأساسي + علاوات مؤهَّلة» تُجمَع العلاوات المعلَّمة هنا.
+        //
+        // ⚠️ إضافيّ محض: عمودان bit بقيمة 0 افتراضاً ⟹ لا علاوة مؤهَّلة، فالوعاء
+        // الافتراضي «الأساسي» يبقى، وأرقام اليوم لا تتغيّر. (الوعاء يُفعَّل بإعداد
+        // النمط + تعليم العلاوات معاً.)
+        new(
+            "20260809-02-salary-item-ot-unpaid-eligibility",
+            """
+IF OBJECT_ID('SalaryItems', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('SalaryItems', 'OvertimeEligible') IS NULL
+        ALTER TABLE SalaryItems ADD OvertimeEligible bit NOT NULL
+            CONSTRAINT DF_SalaryItems_OvertimeEligible DEFAULT(0);
+
+    IF COL_LENGTH('SalaryItems', 'UnpaidLeaveEligible') IS NULL
+        ALTER TABLE SalaryItems ADD UnpaidLeaveEligible bit NOT NULL
+            CONSTRAINT DF_SalaryItems_UnpaidLeaveEligible DEFAULT(0);
+END;
+"""),
     };
 
     /// <summary>
