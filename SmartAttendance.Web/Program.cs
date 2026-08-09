@@ -364,6 +364,7 @@ builder.Services.AddScoped<IEmployeePermissionService, EmployeePermissionService
 builder.Services.AddScoped<ILoginIdentityService, LoginIdentityService>();
 builder.Services.AddScoped<IPermissionAuthorizationService, PermissionAuthorizationService>();
 builder.Services.AddScoped<IAttendanceImportService, AttendanceImportService>();
+builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Imports.AttendanceImportStagingStore>();
 builder.Services.AddScoped<IMasterDataImportService, MasterDataImportService>();
 builder.Services.AddScoped<ISetupService, SetupService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
@@ -454,8 +455,18 @@ if (SmartAttendance.Web.Infrastructure.Hrms.EnvironmentDatabaseGuard.Validate(
 // الإقلاع — لا بكل طلب — وأي فشل يظهر فوراً بدل عطل صامت لاحق.
 using (var migrationScope = app.Services.CreateScope())
 {
-    await SmartAttendance.Web.Infrastructure.Hrms.SqlSchemaMigrator.ApplyAsync(
-        migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>());
+    var migrationDb = migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    // These legacy tables pre-date the controlled migrator. Ensure their base shape
+    // at startup so the SalaryItemId migration also covers a clean database.
+    await SmartAttendance.Web.Infrastructure.Hrms.SalaryItemStore.EnsureAsync(migrationDb);
+    await SmartAttendance.Web.Infrastructure.Hrms.EmployeeAllowanceSchema.EnsureAsync(migrationDb);
+    await SmartAttendance.Web.Infrastructure.Hrms.PayrollTransactionStore.EnsureAsync(migrationDb);
+    await SmartAttendance.Web.Infrastructure.Hrms.SqlSchemaMigrator.ApplyAsync(migrationDb);
+
+    // مخطط توكنات الـAPI يُضمَن هنا مرّة واحدة عند الإقلاع — لا بمسار التحقّق الساخن.
+    // كان ValidateAsync يفحص/ينشئ الجدول (DDL) بكل طلب Bearer؛ نقلُه للإقلاع يجعل
+    // التحقّق بحثاً مفهرساً محدوداً (بذرة فريدة على TokenHash).
+    await SmartAttendance.Web.Infrastructure.Api.ApiTokenStore.EnsureAsync(migrationDb);
 }
 
 await DefaultShiftSeeder.SeedAsync(app.Services);

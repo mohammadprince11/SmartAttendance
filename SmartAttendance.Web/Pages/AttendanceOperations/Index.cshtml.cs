@@ -1,10 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.AttendanceImports.Services;
 using SmartAttendance.Application.AttendanceImports.ViewModels;
 using SmartAttendance.Application.AttendanceProcessing.ViewModels;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Imports;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.AttendanceOperations;
 
@@ -22,19 +26,19 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IAttendanceImportService _attendanceImportService;
-    private readonly IWebHostEnvironment _environment;
+    private readonly AttendanceImportStagingStore _attendanceImportStaging;
 
-    private readonly SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider _companyScope;
+    private readonly ICompanyScopeProvider _companyScope;
 
     public IndexModel(
         ApplicationDbContext dbContext,
         IAttendanceImportService attendanceImportService,
-        IWebHostEnvironment environment,
-        SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider companyScope)
+        AttendanceImportStagingStore attendanceImportStaging,
+        ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
         _attendanceImportService = attendanceImportService;
-        _environment = environment;
+        _attendanceImportStaging = attendanceImportStaging;
         _companyScope = companyScope;
     }
 
@@ -55,6 +59,11 @@ public class IndexModel : PageModel
 
     [BindProperty]
     public IFormFile? AttendanceFile { get; set; }
+
+    [BindProperty]
+    public int ImportCompanyId { get; set; }
+
+    public List<SelectListItem> ImportCompanies { get; set; } = new();
 
     [BindProperty]
     public CorrectionInput Correction { get; set; } = new();
@@ -122,6 +131,7 @@ public class IndexModel : PageModel
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         NormalizeDefaults();
+        await LoadImportCompanyOptionsAsync();
         await LoadCurrentTabAsync();
     }
 
@@ -129,10 +139,11 @@ public class IndexModel : PageModel
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Tab = "import";
+        await LoadImportCompanyOptionsAsync();
 
         if (AttendanceFile == null || AttendanceFile.Length == 0)
         {
-            ErrorMessage = "ÙŠØ±Ø¬Ù‰ Ø§Ø®ØªÙŠØ§Ø± Ù…Ù„Ù Excel Ø£Ùˆ CSV.";
+            ErrorMessage = "يرجى اختيار ملف Excel أو CSV.";
             NormalizeDefaults();
             await LoadProcessingAsync();
             return Page();
@@ -142,34 +153,43 @@ public class IndexModel : PageModel
 
         if (extension is not ".xlsx" and not ".csv")
         {
-            ErrorMessage = "Ù†ÙˆØ¹ Ø§Ù„Ù…Ù„Ù ØºÙŠØ± Ù…Ø¯Ø¹ÙˆÙ…. Ø§Ø³ØªØ®Ø¯Ù… xlsx Ø£Ùˆ csv ÙÙ‚Ø·.";
+            ErrorMessage = "نوع الملف غير مدعوم. استخدم xlsx أو csv فقط.";
             NormalizeDefaults();
             await LoadProcessingAsync();
             return Page();
         }
 
+        var importScope = await ResolveImportScopeAsync();
+        if (importScope is null)
+        {
+            NormalizeDefaults();
+            await LoadProcessingAsync();
+            return Page();
+        }
+
+        AttendanceStagedUpload? staged = null;
         try
         {
-            var token = Guid.NewGuid().ToString("N");
-            var safeFileName = MakeSafeFileName(Path.GetFileName(AttendanceFile.FileName));
-            var storedFileName = $"{token}_{safeFileName}";
-            var filePath = Path.Combine(GetImportFolder(), storedFileName);
-
-            Directory.CreateDirectory(GetImportFolder());
-
-            await using (var stream = System.IO.File.Create(filePath))
-            {
-                await AttendanceFile.CopyToAsync(stream);
-            }
+            staged = await _attendanceImportStaging.SaveAsync(
+                AttendanceFile,
+                CurrentActorKey(),
+                importScope.SelectedCompanyId,
+                HttpContext.RequestAborted);
 
             Preview = await _attendanceImportService.PreviewAsync(
-                filePath,
-                token,
-                AttendanceFile.FileName,
-                previewLimit: 500);
+                staged.FilePath,
+                staged.Token,
+                staged.OriginalFileName,
+                importScope,
+                previewLimit: 500,
+                HttpContext.RequestAborted);
         }
         catch (Exception ex)
         {
+            if (staged is not null)
+            {
+                _attendanceImportStaging.Delete(staged);
+            }
             ErrorMessage = ex.Message;
         }
 
@@ -182,32 +202,37 @@ public class IndexModel : PageModel
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Tab = "import";
+        await LoadImportCompanyOptionsAsync();
 
         if (string.IsNullOrWhiteSpace(token))
         {
-            ErrorMessage = "Ø±Ù…Ø² Ø§Ù„Ø§Ø³ØªÙŠØ±Ø§Ø¯ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯.";
+            ErrorMessage = "رمز الاستيراد غير موجود.";
             NormalizeDefaults();
             await LoadCurrentTabAsync();
             return Page();
         }
 
-        var filePath = FindFileByToken(token);
-
-        if (filePath == null)
+        var importScope = await ResolveImportScopeAsync();
+        if (importScope is null)
         {
-            ErrorMessage = "Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ Ø§Ù„Ù…Ù„Ù Ø§Ù„Ù…Ø±ÙÙˆØ¹. Ø§Ø±ÙØ¹ Ø§Ù„Ù…Ù„Ù Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.";
             NormalizeDefaults();
             await LoadCurrentTabAsync();
             return Page();
         }
 
+        AttendanceStagedUpload? staged = null;
         try
         {
-            var originalFileName = GetOriginalFileNameFromStoredPath(filePath, token);
+            staged = _attendanceImportStaging.Claim(
+                token,
+                CurrentActorKey(),
+                importScope.SelectedCompanyId);
 
             ImportResult = await _attendanceImportService.ImportAsync(
-                filePath,
-                originalFileName);
+                staged.FilePath,
+                staged.OriginalFileName,
+                importScope,
+                HttpContext.RequestAborted);
 
             SuccessMessage = ImportResult.Message;
         }
@@ -215,10 +240,36 @@ public class IndexModel : PageModel
         {
             ErrorMessage = ex.Message;
         }
+        finally
+        {
+            if (staged is not null)
+            {
+                _attendanceImportStaging.Delete(staged);
+            }
+        }
 
         NormalizeDefaults();
         await LoadProcessingAsync();
         return Page();
+    }
+
+    /// <summary>
+    /// 🛡️ عزل الشركات (Issue 1): يحسم معرّف الموظف من رقمه **ضمن نطاق شركات المستخدم**.
+    /// خارج النطاق ⟹ 0، فيُعامَل كـ«غير موجود» (مغلق الفشل، لا يُستدلّ على وجوده).
+    /// كل تعديل حضور يدويّ (تصحيح · حفظ بصمات · بصمة أخرى) يمرّ به قبل أي مسّ.
+    /// </summary>
+    private async Task<int> ResolveScopedEmployeeIdAsync(string? employeeNo)
+    {
+        if (string.IsNullOrWhiteSpace(employeeNo)) return 0;
+        var id = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            "SELECT TOP 1 Id FROM Employees WHERE EmployeeNo = @EmployeeNo",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeNo", employeeNo));
+        if (id <= 0) return 0;
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        return await SmartAttendance.Web.Infrastructure.Security.EmployeeCompanyGuard
+            .CanAccessEmployeeAsync(_dbContext, id, scope, HttpContext.RequestAborted)
+            ? id : 0;
     }
 
     public async Task<IActionResult> OnPostUpsertAsync()
@@ -242,10 +293,7 @@ public class IndexModel : PageModel
             return Page();
         }
 
-        var employeeId = await HrmsDatabase.ScalarAsync<int>(
-            _dbContext,
-            "SELECT TOP 1 Id FROM Employees WHERE EmployeeNo = @EmployeeNo",
-            command => HrmsDatabase.AddParameter(command, "@EmployeeNo", Correction.EmployeeNo));
+        var employeeId = await ResolveScopedEmployeeIdAsync(Correction.EmployeeNo);
 
         if (employeeId <= 0)
         {
@@ -497,10 +545,7 @@ ORDER BY ar.AttendanceDate, e.EmployeeNo, ar.CheckIn;
             return RedirectToPage("./Index", redirect);
         }
 
-        var employeeId = await HrmsDatabase.ScalarAsync<int>(
-            _dbContext,
-            "SELECT TOP 1 Id FROM Employees WHERE EmployeeNo = @EmployeeNo",
-            command => HrmsDatabase.AddParameter(command, "@EmployeeNo", Correction.EmployeeNo));
+        var employeeId = await ResolveScopedEmployeeIdAsync(Correction.EmployeeNo);
 
         if (employeeId <= 0)
         {
@@ -689,10 +734,7 @@ END;
             return RedirectToPage("./Index", redirect);
         }
 
-        var employeeId = await HrmsDatabase.ScalarAsync<int>(
-            _dbContext,
-            "SELECT TOP 1 Id FROM Employees WHERE EmployeeNo = @EmployeeNo",
-            command => HrmsDatabase.AddParameter(command, "@EmployeeNo", OtherPunch.EmployeeNo));
+        var employeeId = await ResolveScopedEmployeeIdAsync(OtherPunch.EmployeeNo);
 
         if (employeeId <= 0)
         {
@@ -731,16 +773,27 @@ VALUES
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
-        // حذف مقيّد بالبصمات غير-الحضورية حتى لا يمسّ سجلات الحضور
-        var affected = await HrmsDatabase.ScalarAsync<int>(
-            _dbContext,
-            """
-DELETE FROM AttendanceRecords WHERE Id = @Id AND PunchSemanticId IS NOT NULL;
+        // 🛡️ عزل الشركات (Issue 1 — حذف بمعرّف): كان الحذف بمعرّف البصمة بلا فحص شركة،
+        // فمستخدم شركة A يحذف بصمة موظف شركة B بمعرّفٍ مزوَّر. الآن الحذف مربوطٌ بشركة
+        // الموظف عبر النطاق. مغلق الفشل: نطاقٌ محروم كلياً لا يحذف شيئاً.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var affected = 0;
+        if (!scope.IsDeniedAll)
+        {
+            var predicate = scope.IsUnrestricted ? "1 = 1" : scope.ToSqlPredicate("e.CompanyId");
+            // حذف مقيّد بالبصمات غير-الحضورية حتى لا يمسّ سجلات الحضور، وبموظفي النطاق.
+            affected = await HrmsDatabase.ScalarAsync<int>(
+                _dbContext,
+                $"""
+DELETE r FROM AttendanceRecords r
+INNER JOIN Employees e ON e.Id = r.EmployeeId
+WHERE r.Id = @Id AND r.PunchSemanticId IS NOT NULL AND {predicate};
 SELECT @@ROWCOUNT;
 """,
-            command => HrmsDatabase.AddParameter(command, "@Id", id));
+                command => HrmsDatabase.AddParameter(command, "@Id", id));
+        }
 
-        SuccessMessage = affected > 0 ? "حُذفت البصمة." : "لم تُحذف — ليست بصمة غير-حضورية.";
+        SuccessMessage = affected > 0 ? "حُذفت البصمة." : "لم تُحذف — ليست بصمة غير-حضورية أو خارج نطاقك.";
 
         return RedirectToPage("./Index", new
         {
@@ -1062,46 +1115,62 @@ WHERE ar.AttendanceDate >= @FromDate
         MaxRows = NormalizeMaxRows(MaxRows);
     }
 
-    private string GetImportFolder()
+    private async Task LoadImportCompanyOptionsAsync()
     {
-        return Path.Combine(_environment.ContentRootPath, "App_Data", "AttendanceImports");
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var query = _dbContext.Companies.AsNoTracking().Where(company => company.IsActive);
+
+        if (!scope.IsUnrestricted)
+        {
+            var allowed = scope.AllowedCompanyIds.ToArray();
+            query = query.Where(company => allowed.Contains(company.Id));
+        }
+
+        ImportCompanies = await query
+            .OrderBy(company => company.Name)
+            .Select(company => new SelectListItem(company.Name, company.Id.ToString()))
+            .ToListAsync(HttpContext.RequestAborted);
+
+        if (ImportCompanyId <= 0 && ImportCompanies.Count == 1)
+        {
+            ImportCompanyId = int.Parse(ImportCompanies[0].Value!);
+        }
     }
 
-    private string? FindFileByToken(string token)
+    private async Task<AttendanceImportScope?> ResolveImportScopeAsync()
     {
-        var folder = GetImportFolder();
-
-        if (!Directory.Exists(folder))
+        var selectedIsOffered = ImportCompanyId > 0 &&
+            ImportCompanies.Any(option => option.Value == ImportCompanyId.ToString());
+        if (!selectedIsOffered)
         {
+            ErrorMessage = ImportCompanies.Count > 1
+                ? "اختر الشركة التي يخصها ملف الحضور."
+                : "لا توجد شركة مسموحة لهذا الاستيراد.";
             return null;
         }
 
-        return Directory
-            .GetFiles(folder, $"{token}_*")
-            .FirstOrDefault();
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        return scope.IsUnrestricted
+            ? AttendanceImportScope.Unrestricted(ImportCompanyId)
+            : AttendanceImportScope.Restricted(scope.AllowedCompanyIds, ImportCompanyId);
     }
 
-    private static string GetOriginalFileNameFromStoredPath(string filePath, string token)
+    private string CurrentActorKey()
     {
-        var storedFileName = Path.GetFileName(filePath);
-        var prefix = $"{token}_";
-
-        if (storedFileName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext);
+        if (systemUserId is > 0)
         {
-            return storedFileName[prefix.Length..];
+            return $"system-user:{systemUserId.Value}";
         }
 
-        return storedFileName;
-    }
-
-    private static string MakeSafeFileName(string fileName)
-    {
-        foreach (var invalidChar in Path.GetInvalidFileNameChars())
+        var identityName = User.Identity?.Name?.Trim();
+        if (string.IsNullOrWhiteSpace(identityName))
         {
-            fileName = fileName.Replace(invalidChar, '_');
+            throw new UnauthorizedAccessException(
+                "An authenticated user is required for attendance import.");
         }
 
-        return fileName;
+        return $"identity:{identityName}";
     }
 
     private static DateTime BuildDateTime(DateOnly date, string? time)

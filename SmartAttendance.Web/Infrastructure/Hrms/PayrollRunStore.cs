@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Security;
 using SmartAttendance.Web.Infrastructure.HrSettings;
@@ -100,6 +101,25 @@ public static class PayrollRunStore
         public decimal Amount { get; set; }
         public bool IsAddition { get; set; }
         public string Kind { get; set; } = string.Empty;   // Basic|Allowance|Income|Overtime|SalaryDays|LeaveEncashment|Formula|Deduction|Leave|Tax|Gosi|Penalty
+    }
+
+    public sealed record AllowancePolicy(
+        bool InGross,
+        bool Prorated,
+        bool OvertimeEligible,
+        bool UnpaidLeaveEligible,
+        bool Taxable,
+        bool GosiEligible);
+
+    public static AllowancePolicy ResolveAllowancePolicy(
+        IReadOnlyDictionary<int, SalaryItemStore.SalaryItem> salaryItemsById,
+        int salaryItemId)
+    {
+        if (!salaryItemsById.TryGetValue(salaryItemId, out var item))
+            return new(true, false, false, false, true, true);
+
+        return new(item.InGross, item.Prorated, item.OvertimeEligible,
+            item.UnpaidLeaveEligible, item.Taxable, item.GosiEligible);
     }
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
@@ -310,21 +330,53 @@ WHERE r.Id = @Id;
     /// <paramref name="scopeEmployeeIds"/> فارغة/null ⟹ الدفعة تشمل كل النشطين.
     /// </summary>
     public static async Task<(bool Ok, string Message, int RunId)> CreateRunAsync(
-        ApplicationDbContext dbContext, int year, int month,
+        ApplicationDbContext dbContext, CompanyScope callerScope, int companyId,
+        int year, int month,
         string? scopeMode = null, IEnumerable<int>? scopeEmployeeIds = null,
-        int? companyId = null)
+        CancellationToken cancellationToken = default)
     {
         await EnsureAsync(dbContext);
         if (year < 2000 || month is < 1 or > 12) return (false, "شهر غير صالح.", 0);
 
-        var seq = await HrmsDatabase.ScalarAsync<int>(
-            dbContext,
-            "SELECT COUNT(1) FROM PayrollRuns WHERE [Year] = @Y AND [Month] = @M;",
-            command => { HrmsDatabase.AddParameter(command, "@Y", year); HrmsDatabase.AddParameter(command, "@M", month); }) + 1;
+        if (companyId <= 0 || !callerScope.Allows(companyId))
+            return (false, "The selected payroll company is outside your scope.", 0);
+        if (!await dbContext.Companies.AsNoTracking().AnyAsync(
+                company => company.Id == companyId && company.IsActive && !company.IsDeleted,
+                cancellationToken))
+            return (false, "The selected payroll company is unavailable.", 0);
 
         var ids = (scopeEmployeeIds ?? Enumerable.Empty<int>()).Distinct().ToList();
         var mode = PayrollRunScope.NormalizeMode(scopeMode);
         if (ids.Count == 0) mode = PayrollRunScope.ModeAll;   // نطاق بلا أعضاء = الكل
+        if (!await ValidateEmployeeScopeAsync(
+                dbContext, companyId, ids, cancellationToken))
+            return (false, "Payroll scope contains an unavailable or cross-company employee.", 0);
+
+        // إنشاء الدفعة وأعضاء نطاقها معاملةٌ واحدة (Phase 8): إن فشل حفظ الأعضاء تُلغى
+        // الدفعة كاملةً فلا يبقى Draft يتيمٌ بلا أعضاء يُفسَّر لاحقاً «كل الموظفين».
+        // وتخصيص الرقم يقفل مدى (السنة،الشهر) بـUPDLOCK/HOLDLOCK فيتسلسل المُنشئون
+        // المتزامنون ويستحيل رقمان متطابقان — كان COUNT+1 بلا قفلٍ سباقاً صريحاً.
+        await using var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        var seq = await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            """
+DECLARE @allocated TABLE (SequenceNo int NOT NULL);
+MERGE PayrollRunSequences WITH (UPDLOCK, HOLDLOCK) AS target
+USING (SELECT @Y AS [Year], @M AS [Month]) AS source
+   ON target.[Year] = source.[Year] AND target.[Month] = source.[Month]
+WHEN MATCHED THEN
+    UPDATE SET NextValue = target.NextValue + 1
+WHEN NOT MATCHED THEN
+    INSERT ([Year], [Month], NextValue) VALUES (source.[Year], source.[Month], 2)
+OUTPUT inserted.NextValue - 1 INTO @allocated;
+SELECT SequenceNo FROM @allocated;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Y", year);
+                HrmsDatabase.AddParameter(command, "@M", month);
+            });
 
         var batchNo = $"{year}-{month}-{seq}";
         var id = await HrmsDatabase.ScalarAsync<int>(
@@ -336,10 +388,12 @@ WHERE r.Id = @Id;
                 HrmsDatabase.AddParameter(command, "@Y", year);
                 HrmsDatabase.AddParameter(command, "@M", month);
                 HrmsDatabase.AddParameter(command, "@Scope", mode);
-                HrmsDatabase.AddParameter(command, "@Company", (object?)companyId ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Company", companyId);
             });
 
         if (ids.Count > 0) await PayrollRunScopeStore.ReplaceAsync(dbContext, id, ids);
+
+        await tx.CommitAsync(cancellationToken);
 
         var scopeText = ids.Count > 0
             ? $" — النطاق: {PayrollRunScope.Describe(mode, ids.Count)}"
@@ -438,11 +492,18 @@ WHERE r.Id = @Id;
         var scopeSet = new HashSet<int>(scope);
         var outsideScope = PayrollRunScope.OutsideCandidates(scope, employees.Select(e => e.Id).ToList()).Count;
         var candidates = employees.Where(e => PayrollRunScope.Includes(scopeSet, e.Id)).ToList();
+        var runScope = runCompanyId is > 0
+            ? CompanyScope.ForCompanies(new[] { runCompanyId.Value })
+            : CompanyScope.Unrestricted();
 
         var financial = (await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT EmployeeId, ISNULL(BasicSalary,0) AS BasicSalary, ISNULL(StopSalaryCalc,0) AS StopSalaryCalc, TaxProfileId, GosiProfileId, SocialSecuritySalary, CurrentTaxSalary, TaxBaseMode, GosiBaseMode FROM EmployeeFinancialInfos WHERE ISNULL(IsDeleted,0)=0;",
-            command => { },
+            "SELECT f.EmployeeId, ISNULL(f.BasicSalary,0) AS BasicSalary, ISNULL(f.StopSalaryCalc,0) AS StopSalaryCalc, f.TaxProfileId, f.GosiProfileId, f.SocialSecuritySalary, f.CurrentTaxSalary, f.TaxBaseMode, f.GosiBaseMode FROM EmployeeFinancialInfos f INNER JOIN Employees e ON e.Id=f.EmployeeId WHERE ISNULL(f.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1 AND (@Company IS NULL OR e.CompanyId=@Company) AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId) OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId AND s.EmployeeId=f.EmployeeId));",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Company", (object?)runCompanyId ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@RunId", runId);
+            },
             reader => new
             {
                 EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
@@ -460,11 +521,16 @@ WHERE r.Id = @Id;
 
         var allowances = (await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT EmployeeId, ItemName, ISNULL(Amount,0) AS Amount, FromDate, ToDate, ISNULL(EndAfterDate,0) AS EndAfterDate FROM EmployeeAllowances WHERE ISNULL(IsDeleted,0)=0;",
-            command => { },
+            "SELECT a.EmployeeId, a.SalaryItemId, a.ItemName, ISNULL(a.Amount,0) AS Amount, a.FromDate, a.ToDate, ISNULL(a.EndAfterDate,0) AS EndAfterDate FROM EmployeeAllowances a INNER JOIN Employees e ON e.Id=a.EmployeeId WHERE ISNULL(a.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1 AND (@Company IS NULL OR e.CompanyId=@Company) AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId) OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId AND s.EmployeeId=a.EmployeeId));",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Company", (object?)runCompanyId ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@RunId", runId);
+            },
             reader => new
             {
                 EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                SalaryItemId = HrmsDatabase.GetInt(reader, "SalaryItemId"),
                 ItemName = HrmsDatabase.GetString(reader, "ItemName"),
                 Amount = reader["Amount"] is decimal a ? a : 0,
                 From = HrmsDatabase.GetDateOnly(reader, "FromDate"),
@@ -478,10 +544,8 @@ WHERE r.Id = @Id;
         // فيقرأ المسير جدولاً فارغاً/متقادماً ⟹ معامل الحضور = 1 فلا يُخصم الغياب ولا
         // الإجازة بلا راتب بصمت (استحقاق زائد). النداء idempotent وآمن للبوابة: MERGE
         // يحدّث صفوف UnderReview فقط ويُدرج الناقصين، ولا يدوس الأشهر المعتمدة/المقفلة.
-        await MonthAttendanceStore.BuildMonthAsync(dbContext, run.Year, run.Month);
-        var months = (await MonthAttendanceStore.ListAsync(dbContext,
-            runCompanyId is > 0 ? CompanyScope.ForCompanies(new[] { runCompanyId.Value }) : CompanyScope.Unrestricted(),
-            run.Year, run.Month))
+        await MonthAttendanceStore.BuildMonthAsync(dbContext, runScope, run.Year, run.Month);
+        var months = (await MonthAttendanceStore.ListAsync(dbContext, runScope, run.Year, run.Month))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.First());
 
         // المخالفات مع **قاعدة جزائها**: الوعاء والمقام صارا بياناتٍ على القاعدة لا
@@ -500,14 +564,21 @@ SELECT v.EmployeeId,
        ISNULL(r.ExcludeHolidays, N'None') AS ExcludeHolidays,
        ISNULL(s.Name, N'') AS SalaryItemName
 FROM EmployeeViolationCases v
+INNER JOIN Employees e ON e.Id = v.EmployeeId
 LEFT JOIN DisciplinaryPenaltyRules r ON r.Id = v.PenaltyRuleId
 LEFT JOIN SalaryItems s ON s.Id = r.SalaryItemId
-WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
+WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1
+  AND v.EventDate >= @From AND v.EventDate <= @To
+  AND (@Company IS NULL OR e.CompanyId=@Company)
+  AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers rs WHERE rs.RunId=@RunId)
+       OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers rs WHERE rs.RunId=@RunId AND rs.EmployeeId=v.EmployeeId));
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@From", periodStart.ToDateTime(TimeOnly.MinValue));
                 HrmsDatabase.AddParameter(command, "@To", periodEnd.ToDateTime(TimeOnly.MaxValue));
+                HrmsDatabase.AddParameter(command, "@Company", (object?)runCompanyId ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@RunId", runId);
             },
             reader => new
             {
@@ -535,21 +606,24 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
             out var parsedCap) ? parsedCap : 0m;
 
         // حركات الدخل/الاقتطاع للفترة (شاشة «الحركات») — بنود إضافية/خصم بالقسيمة
-        var income = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.Income))
+        var income = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.Income, runId))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
-        var deductionTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.Deduction))
+        var deductionTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.Deduction, runId))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
-        var overtimeTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.Overtime))
+        var overtimeTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.Overtime, runId))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
-        var salaryDaysTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.SalaryDays))
+        var salaryDaysTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.SalaryDays, runId))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
-        var leaveEncashTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, run.Year, run.Month, PayrollTransactionStore.LeaveEncashment))
+        var leaveEncashTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.LeaveEncashment, runId))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
         // عناصر الراتب ذات الصيغة (غير النظامية النشطة) — تُقيَّم لكل موظف بمحرك الصيغ
         // وتُضاف بنوداً للقسيمة (استحقاق يدخل الإجمالي/الوعاء الخاضع، أو اقتطاع). عناصر
         // النظام (الأساسي/الضريبة/الضمان) مستثناة — يعالجها المحرك مباشرةً.
         var salaryItems = await SalaryItemStore.ListAsync(dbContext);
+        var salaryItemsById = salaryItems
+            .GroupBy(x => x.Id)
+            .ToDictionary(g => g.Key, g => g.First());
         var formulaItems = salaryItems
             .Where(x => x.IsActive && !x.IsSystem && x.ValueKind == "Formula" && !string.IsNullOrWhiteSpace(x.Formula))
             .OrderBy(x => x.SortOrder).ToList();
@@ -558,25 +632,16 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
         // الراتب المطابق اسماً — نموذج المشاركة على مستوى عنصر الراتب. العلَم
         // Prorated موجودٌ سلفاً على SalaryItem لكن المحرك لم يكن يستهلكه للعلاوات،
         // فكانت كلّها تُضاف كاملةً مهما كان الغياب. الافتراض false ⟹ كامل (سلوك سابق).
-        var attendanceSensitiveByName = salaryItems
-            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().Prorated, StringComparer.OrdinalIgnoreCase);
+        // Allowance policy is resolved by immutable database identity, never by the
+        // editable display name. ItemName remains only a payslip/history snapshot.
 
         // أهلية العلاوة لوعاءَي الأوفرتايم والإجازة غير المدفوعة — بالاسم كذلك.
-        var overtimeEligibleByName = salaryItems
-            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().OvertimeEligible, StringComparer.OrdinalIgnoreCase);
-        var unpaidLeaveEligibleByName = salaryItems
-            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().UnpaidLeaveEligible, StringComparer.OrdinalIgnoreCase);
+
+        // دخول العلاوة بالإجمالي (Issue 14): علَم InGross كان معروضاً بلا أثر. علاوةٌ
+        // بـInGross=false لا تُدفع بالإجمالي (فلا تدخل أي وعاء). الافتراض true ⟹ الكل
+        // يدخل كسلوك اليوم.
 
         // خضوع العلاوة للضريبة/الضمان لكل علاوة (Phase 2) — Taxable موجودٌ، GosiEligible مضاف.
-        var allowanceTaxableByName = salaryItems
-            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().Taxable, StringComparer.OrdinalIgnoreCase);
-        var allowanceGosiByName = salaryItems
-            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().GosiEligible, StringComparer.OrdinalIgnoreCase);
 
         // سياسة الأوعية والمقام تُقرأ مرّة للتشغيل كلّه. الافتراضات (Basic · Fixed30 · 8)
         // تعيد أرقام المحرك القائم حرفياً — يُفعَّل الجديد بإعدادٍ صريح.
@@ -673,16 +738,20 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                     var active = (al.From == null || al.From <= periodEnd)
                         && (al.To == null || !al.EndAfter || al.To >= periodStart);
                     if (!active || al.Amount == 0) continue;
+                    var policy = ResolveAllowancePolicy(salaryItemsById, al.SalaryItemId);
 
-                    if (overtimeEligibleByName.TryGetValue(al.ItemName, out var ot) && ot)
+                    // InGross=false ⟹ العلاوة لا تُدفع بالإجمالي ولا تدخل أي وعاء (Issue 14).
+                    if (!policy.InGross) continue;
+
+                    if (policy.OvertimeEligible)
                         overtimeEligibleAllow += al.Amount;
-                    if (unpaidLeaveEligibleByName.TryGetValue(al.ItemName, out var ul) && ul)
+                    if (policy.UnpaidLeaveEligible)
                         unpaidLeaveEligibleAllow += al.Amount;
 
                     // العلاوة الحسّاسة للحضور تُنسَّب بالمعامل (وعاء الحضور = أساسي +
                     // علاوات مستحقّة)، والثابتة تبقى كاملة. الافتراض غير حسّاس ⟹ كامل
                     // كسلوك المحرك السابق، فلا ينحرف رقم من لم يُفعِّل السياسة.
-                    var sensitive = attendanceSensitiveByName.TryGetValue(al.ItemName, out var pr) && pr;
+                    var sensitive = policy.Prorated;
                     if (sensitive) attendanceSensitiveAllow += al.Amount;
                     var amount = AttendanceSalaryBase.AdjustComponent(
                         new AttendanceSalaryBase.EarningComponent(al.Amount, sensitive), factor);
@@ -692,9 +761,9 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                     // خضوع العلاوة للضريبة/الضمان **لكل علاوة** بسياسة عنصر الراتب
                     // (Taxable موجودٌ سلفاً، GosiEligible مضاف). الافتراض true للاثنين ⟹
                     // كل العلاوات خاضعة كسلوك اليوم (وعاء الضريبة يضمّ كل العلاوات).
-                    if (!allowanceTaxableByName.TryGetValue(al.ItemName, out var taxable) || taxable)
+                    if (policy.Taxable)
                         taxableAllowancesAdjusted += amount;
-                    if (!allowanceGosiByName.TryGetValue(al.ItemName, out var gosiElig) || gosiElig)
+                    if (policy.GosiEligible)
                         gosiAllowancesAdjusted += amount;
 
                     comps.Add(new Component { ItemName = al.ItemName, Amount = amount, IsAddition = true, Kind = "Allowance" });
@@ -1342,16 +1411,26 @@ ORDER BY e.EmployeeNo;
     /// قائمة فارغة ⟹ عودة لـ«كل الموظفين».
     /// </summary>
     public static async Task<(bool Ok, string Message)> SetScopeAsync(
-        ApplicationDbContext dbContext, int runId, string? scopeMode, IEnumerable<int> employeeIds)
+        ApplicationDbContext dbContext,
+        CompanyScope callerScope,
+        int runId,
+        string? scopeMode,
+        IEnumerable<int> employeeIds,
+        CancellationToken cancellationToken = default)
     {
         var run = await GetRunAsync(dbContext, runId);
         if (run == null) return (false, "الدفعة غير موجودة.");
         if (run.Status is not ("Draft" or "Calculated"))
             return (false, "لا يُعدَّل نطاق دفعة مقفلة/معتمدة.");
+        if (run.CompanyId is not { } companyId || !callerScope.Allows(companyId))
+            return (false, "Payroll run has no accessible company boundary.");
 
         var ids = employeeIds.Distinct().ToList();
         var mode = ids.Count == 0 ? PayrollRunScope.ModeAll : PayrollRunScope.NormalizeMode(scopeMode);
+        if (!await ValidateEmployeeScopeAsync(dbContext, companyId, ids, cancellationToken))
+            return (false, "Payroll scope contains an unavailable or cross-company employee.");
 
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         await PayrollRunScopeStore.ReplaceAsync(dbContext, runId, ids);
         await HrmsDatabase.ExecuteAsync(
             dbContext,
@@ -1361,6 +1440,7 @@ ORDER BY e.EmployeeNo;
                 HrmsDatabase.AddParameter(command, "@Id", runId);
                 HrmsDatabase.AddParameter(command, "@Scope", mode);
             });
+        await transaction.CommitAsync(cancellationToken);
 
         return (true, run.Status == "Calculated"
             ? $"حُدِّث النطاق: {PayrollRunScope.Describe(mode, ids.Count)} — أعد «الاحتساب» ليأخذ أثره."
@@ -1382,6 +1462,31 @@ ORDER BY e.EmployeeNo;
                 HrmsDatabase.AddParameter(command, "@From", from);
             });
         return affected > 0 ? (true, okMessage) : (false, "الحالة الحالية لا تسمح بهذا الانتقال.");
+    }
+
+    private static async Task<bool> ValidateEmployeeScopeAsync(
+        ApplicationDbContext dbContext,
+        int companyId,
+        IReadOnlyCollection<int> employeeIds,
+        CancellationToken cancellationToken)
+    {
+        if (employeeIds.Count == 0) return true;
+
+        var valid = new HashSet<int>();
+        foreach (var chunk in employeeIds.Chunk(1000))
+        {
+            var part = await dbContext.Employees.AsNoTracking()
+                .Where(employee => chunk.Contains(employee.Id)
+                    && employee.IsActive
+                    && !employee.IsDeleted
+                    && (employee.CompanyId == companyId ||
+                        (employee.CompanyId == null && employee.Branch.CompanyId == companyId)))
+                .Select(employee => employee.Id)
+                .ToListAsync(cancellationToken);
+            valid.UnionWith(part);
+        }
+
+        return valid.Count == employeeIds.Count;
     }
 
     private static PayrollRun ReadRun(System.Data.Common.DbDataReader reader) => new()

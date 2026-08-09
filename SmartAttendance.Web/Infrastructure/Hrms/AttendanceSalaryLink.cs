@@ -44,9 +44,11 @@ public static class AttendanceSalaryLink
     public const string AllowNegativeKey = "Payroll.AllowNegativeSalary";
 
     /// <summary>
-    /// الساعات المعيارية لليوم. نفس الرقم المستعمل باشتقاق الأجر الساعي
-    /// (<c>يومي ÷ 8</c>) بـ<see cref="PayrollRunStore"/> — لو صار قابلاً للتهيئة
-    /// يوماً ما فليتغيّر بالموضعين معاً وإلا اختلف الأوفرتايم عن التنسيب.
+    /// الساعات المعيارية الافتراضية لليوم. القيمة الفعلية صارت **حقلاً على السياسة**
+    /// تُحمَّل من نفس الإعداد <c>Payroll.StandardDailyHours</c>
+    /// (<see cref="PayrollDivisorPolicy.StandardDailyHoursKey"/>) الذي يستعمله
+    /// الأوفرتايم — مصدرٌ واحد كي لا يختلف نمطُ الحضور بالساعات عن الأوفرتايم.
+    /// يبقى الثابت مصدرَ الافتراض (8) فلا ينحرف أي اختبار/سلوك قائم.
     /// </summary>
     public const decimal StandardDailyHours = 8m;
 
@@ -60,7 +62,8 @@ public static class AttendanceSalaryLink
     /// سياسة التنسيب كاملةً. <paramref name="AbsenceDeductionDays"/> = 1 و
     /// <paramref name="AllowNegative"/> = false يعيدان سلوك ما قبل هذا الملف حرفياً.
     /// </summary>
-    public sealed record Policy(string Mode, decimal AbsenceDeductionDays, bool AllowNegative)
+    public sealed record Policy(
+        string Mode, decimal AbsenceDeductionDays, bool AllowNegative, decimal StandardDailyHours = 8m)
     {
         public static Policy Default { get; } = new(Lenient, 1m, false);
 
@@ -68,7 +71,9 @@ public static class AttendanceSalaryLink
         {
             Mode = NormalizeMode(Mode),
             // معامل سالب يقلب الخصم مكافأةً — يعود ليوم-بيوم لا لصفر.
-            AbsenceDeductionDays = AbsenceDeductionDays < 0m ? 1m : AbsenceDeductionDays
+            AbsenceDeductionDays = AbsenceDeductionDays < 0m ? 1m : AbsenceDeductionDays,
+            // ساعات غير موجبة تجعل القسمة على المتوقّع مستحيلة — تعود لـ8.
+            StandardDailyHours = StandardDailyHours > 0m ? StandardDailyHours : 8m
         };
     }
 
@@ -118,7 +123,7 @@ public static class AttendanceSalaryLink
         // الخصم الزائد عن يوم-بيوم: (المعامل − 1) × أيام الغياب. المعامل 1 ⟹ صفر،
         // فيبقى الأساس القديم كما هو تماماً.
         var extraPenaltyDays = absentDays * (p.AbsenceDeductionDays - 1m);
-        var expectedHours = workDays * StandardDailyHours;
+        var expectedHours = workDays * p.StandardDailyHours;
 
         decimal earnedRatio;
         string? note;

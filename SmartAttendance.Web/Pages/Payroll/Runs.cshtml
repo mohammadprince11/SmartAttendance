@@ -220,6 +220,19 @@
                 <input type="hidden" name="ScopeMode" id="mass-ScopeMode" value="All" />
 
                 <div id="pr-period-block" style="display:flex;flex-direction:column;gap:12px">
+                    <label>الشركة
+                        <select name="companyId" id="pr-company" required
+                                onchange="if(this.value){window.location.search='?CompanyId='+encodeURIComponent(this.value)}">
+                            @if (Model.Companies.Count != 1)
+                            {
+                                <option value="">اختر الشركة</option>
+                            }
+                            @foreach (var company in Model.Companies)
+                            {
+                                <option value="@company.Id" selected="@(Model.CompanyId == company.Id)">@company.Name</option>
+                            }
+                        </select>
+                    </label>
                     <label>السنة<input type="number" name="year" min="2000" max="2100" value="@Model.NewYear" /></label>
                     <label>الشهر
                         <select name="month">
@@ -383,6 +396,7 @@
             var token = document.querySelector('#pr-form input[name="__RequestVerificationToken"]');
             var body = new FormData();
             body.append('codes', codes);
+            body.append('companyId', document.getElementById('pr-company').value || '0');
             fetch(window.location.pathname + '?handler=PreviewCodes', {
                 method: 'POST',
                 headers: token ? { 'RequestVerificationToken': token.value } : {},

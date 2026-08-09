@@ -16,12 +16,16 @@ public static class AttendanceSalaryLinkSettings
         var mode = await HrSettingsStore.GetAsync(db, AttendanceSalaryLink.ModeKey, AttendanceSalaryLink.Lenient);
         var absence = await HrSettingsStore.GetAsync(db, AttendanceSalaryLink.AbsenceFactorKey, "1");
         var negative = await HrSettingsStore.GetAsync(db, AttendanceSalaryLink.AllowNegativeKey, "0");
+        // نفس مفتاح الأوفرتايم — مصدر واحد للساعات المعيارية (Issue 11).
+        var hoursRaw = await HrSettingsStore.GetAsync(db, PayrollDivisorPolicy.StandardDailyHoursKey, "8");
 
         // قيمة تالفة بالإعداد لا يجوز أن تُغيّر رواتب: الرجوع لـ«يوم بيوم».
         if (!decimal.TryParse(absence, NumberStyles.Number, CultureInfo.InvariantCulture, out var factor) || factor < 0m)
             factor = 1m;
 
-        return new AttendanceSalaryLink.Policy(mode, factor, negative == "1").Normalized();
+        var hours = PayrollDivisorPolicy.DailyHours(hoursRaw);
+
+        return new AttendanceSalaryLink.Policy(mode, factor, negative == "1", hours).Normalized();
     }
 
     public static async Task SaveAsync(ApplicationDbContext db, AttendanceSalaryLink.Policy policy)

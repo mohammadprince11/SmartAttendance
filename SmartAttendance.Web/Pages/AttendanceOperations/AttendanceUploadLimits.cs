@@ -12,6 +12,7 @@ namespace SmartAttendance.Web.Pages.AttendanceOperations;
 /// </summary>
 internal static class AttendanceUploadLimits
 {
-    /// <summary>512 ميغابايت — ثابت وقت ترجمة ليصلح داخل وسم.</summary>
-    public const long MaxUploadBytes = 512L * 1024 * 1024;
+    /// <summary>256 ميغابايت — ثابت وقت ترجمة ليصلح داخل وسم.</summary>
+    public const long MaxUploadBytes =
+        SmartAttendance.Application.AttendanceImports.Services.AttendanceImportLimits.MaxCompressedBytes;
 }

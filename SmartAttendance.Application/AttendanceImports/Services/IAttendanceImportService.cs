@@ -8,9 +8,13 @@ public interface IAttendanceImportService
         string filePath,
         string token,
         string originalFileName,
-        int previewLimit = 500);
+        AttendanceImportScope scope,
+        int previewLimit = 500,
+        CancellationToken cancellationToken = default);
 
     Task<AttendanceImportResultViewModel> ImportAsync(
         string filePath,
-        string originalFileName);
+        string originalFileName,
+        AttendanceImportScope scope,
+        CancellationToken cancellationToken = default);
 }

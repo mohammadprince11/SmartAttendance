@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
@@ -29,8 +30,18 @@ public class RunsModel : PageModel
         public string Name { get; set; } = string.Empty;
     }
 
+    public sealed class CompanyOption
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
     public List<PayrollRunStore.PayrollRun> Runs { get; set; } = new();
     public List<int> AvailableYears { get; set; } = new();
+    public List<CompanyOption> Companies { get; set; } = new();
+
+    [BindProperty(SupportsGet = true)]
+    public int? CompanyId { get; set; }
 
     /// <summary>الموظفون النشطون لمنتقي النطاق (اختيار يدوي) — نفس قائمة الاحتساب.</summary>
     public List<EmployeeOption> Employees { get; set; } = new();
@@ -54,7 +65,24 @@ public class RunsModel : PageModel
 
     public async Task OnGetAsync()
     {
-        var all = await PayrollRunStore.ListRunsAsync(_db, await _companyScope.GetAsync(HttpContext.RequestAborted));
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var all = await PayrollRunStore.ListRunsAsync(_db, scope);
+
+        var companyQuery = _db.Companies.AsNoTracking()
+            .Where(company => company.IsActive && !company.IsDeleted);
+        if (!scope.IsUnrestricted)
+        {
+            var allowed = scope.AllowedCompanyIds.ToArray();
+            companyQuery = companyQuery.Where(company => allowed.Contains(company.Id));
+        }
+        Companies = await companyQuery
+            .OrderBy(company => company.Name)
+            .Select(company => new CompanyOption { Id = company.Id, Name = company.Name })
+            .ToListAsync(HttpContext.RequestAborted);
+        if (CompanyId.HasValue && !Companies.Any(company => company.Id == CompanyId.Value))
+            CompanyId = null;
+        if (!CompanyId.HasValue && Companies.Count == 1)
+            CompanyId = Companies[0].Id;
         AvailableYears = all.Select(r => r.Year).Distinct().OrderByDescending(y => y).ToList();
         if (AvailableYears.Count == 0) AvailableYears.Add(DateTime.Today.Year);
 
@@ -69,22 +97,30 @@ public class RunsModel : PageModel
 
         Runs = (Year.HasValue ? all.Where(r => r.Year == Year.Value) : all).ToList();
 
-        Employees = await HrmsDatabase.QueryAsync(_db,
-            "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo, ISNULL(FullName, N'') AS FullName FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1 ORDER BY EmployeeNo;",
-            command => { },
-            reader => new EmployeeOption
-            {
-                Id = HrmsDatabase.GetInt(reader, "Id"),
-                No = HrmsDatabase.GetString(reader, "EmployeeNo"),
-                Name = HrmsDatabase.GetString(reader, "FullName")
-            });
+        if (CompanyId is > 0)
+        {
+            Employees = await HrmsDatabase.QueryAsync(_db,
+                "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo, ISNULL(FullName, N'') AS FullName FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1 AND CompanyId=@Company ORDER BY EmployeeNo;",
+                command => HrmsDatabase.AddParameter(command, "@Company", CompanyId.Value),
+                reader => new EmployeeOption
+                {
+                    Id = HrmsDatabase.GetInt(reader, "Id"),
+                    No = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                    Name = HrmsDatabase.GetString(reader, "FullName")
+                });
 
-        (AllDepartments, AllBranches, AllJobTitles) = await MassScopeResolver.OrgListsAsync(_db);
+            (AllDepartments, AllBranches, AllJobTitles) =
+                await MassScopeResolver.OrgListsAsync(_db, CompanyId.Value);
+        }
     }
 
-    public async Task<IActionResult> OnPostCreateAsync(int year, int month, IFormFile? massFile)
+    public async Task<IActionResult> OnPostCreateAsync(
+        int companyId, int year, int month, IFormFile? massFile)
     {
-        var (scopeMode, ids, error) = await ResolveScopeAsync(massFile);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (companyId <= 0 || !scope.Allows(companyId)) return Forbid();
+
+        var (scopeMode, ids, error) = await ResolveScopeAsync(massFile, companyId);
         if (error != null)
         {
             TempData["PayrollMessage"] = error;
@@ -95,38 +131,45 @@ public class RunsModel : PageModel
         // شركة الدفعة من نطاق مُنشئها حين يكون قاطعاً (شركة واحدة مسموحة). المقيَّد
         // بشركةٍ لا يستطيع إنشاء دفعة لغيرها، وغير المقيَّد تبقى دفعته بلا نسبة حتى
         // الاحتساب فتُشتقّ من أعضاء نطاقها.
-        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
-        var creatorCompanyId = !scope.IsUnrestricted && scope.AllowedCompanyIds.Count == 1
-            ? scope.AllowedCompanyIds.Single()
-            : (int?)null;
-
         var (ok, message, _) = await PayrollRunStore.CreateRunAsync(
-            _db, year, month, scopeMode, ids, creatorCompanyId);
+            _db, scope, companyId, year, month, scopeMode, ids, HttpContext.RequestAborted);
         TempData["PayrollMessage"] = message;
         TempData["PayrollOk"] = ok;
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostSetScopeAsync(int id, IFormFile? massFile)
+    public async Task<IActionResult> OnPostSetScopeAsync(int id, IFormFile? massFile) =>
+        await ActAsync(id, () => SetScopeAsync(id, massFile));
+
+    private async Task<(bool Ok, string Message)> SetScopeAsync(int id, IFormFile? massFile)
     {
-        var (scopeMode, ids, error) = await ResolveScopeAsync(massFile);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var run = await PayrollRunStore.GetRunAsync(_db, id);
+        if (run?.CompanyId is not { } companyId || !scope.Allows(companyId))
+            return (false, "الدُفعة غير موجودة أو خارج نطاق صلاحيتك.");
+
+        var (scopeMode, ids, error) = await ResolveScopeAsync(massFile, companyId);
         if (error != null)
         {
             TempData["PayrollMessage"] = error;
             TempData["PayrollOk"] = false;
-            return RedirectToPage();
+            return (false, error);
         }
 
-        return await ActAsync(id, () => PayrollRunStore.SetScopeAsync(_db, id, scopeMode, ids));
+        return await PayrollRunStore.SetScopeAsync(
+            _db, scope, id, scopeMode, ids, HttpContext.RequestAborted);
     }
 
     /// <summary>
     /// معاينة الأكواد الملصوقة قبل التشغيل (JSON): الموجود مقابل المفقود.
     /// الغرض ألا يُكتشف كودٌ مخطئ بعد الاحتساب — حينها يكون موظفٌ غاب عن راتبه.
     /// </summary>
-    public async Task<IActionResult> OnPostPreviewCodesAsync(string? codes)
+    public async Task<IActionResult> OnPostPreviewCodesAsync(string? codes, int companyId)
     {
-        var (matched, missing) = await PayrollRunScopeStore.PreviewCodesAsync(_db, codes);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (companyId <= 0 || !scope.Allows(companyId)) return Forbid();
+        var (matched, missing) = await PayrollRunScopeStore.PreviewCodesAsync(
+            _db, codes, companyId);
         return new JsonResult(new
         {
             matched = matched.Select(m => new { id = m.Id, no = m.No, name = m.Name }),
@@ -138,12 +181,15 @@ public class RunsModel : PageModel
     /// يحلّ نطاق النموذج. الوضع «الكل» يعيد قائمة فارغة عمداً — لا صفوف نطاق
     /// بالقاعدة لتشغيل يشمل الجميع (الافتراض بالكود لا بالبيانات).
     /// </summary>
-    private async Task<(string Mode, List<int> Ids, string? Error)> ResolveScopeAsync(IFormFile? massFile)
+    private async Task<(string Mode, List<int> Ids, string? Error)> ResolveScopeAsync(
+        IFormFile? massFile,
+        int companyId)
     {
         var mode = PayrollRunScope.NormalizeMode(Request.Form["ScopeMode"].ToString());
         if (mode == PayrollRunScope.ModeAll) return (mode, new List<int>(), null);
 
-        var (ids, _, missing, label, error) = await MassScopeResolver.ResolveDetailedAsync(_db, Request.Form, massFile);
+        var (ids, _, missing, label, error) = await MassScopeResolver.ResolveDetailedAsync(
+            _db, Request.Form, massFile, companyId);
         if (error != null) return (mode, ids, error);
         if (ids.Count == 0)
             return (mode, ids, missing.Count > 0

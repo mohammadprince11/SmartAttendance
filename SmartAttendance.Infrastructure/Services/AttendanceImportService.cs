@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Globalization;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
 using System.Xml.Linq;
@@ -24,7 +25,7 @@ public class AttendanceImportService : IAttendanceImportService
     private readonly ApplicationDbContext _dbContext;
 
     /// <summary>سقف أخطاء القراءة المحفوظة للعرض — تجميعها كلها يعيد الانفجار.</summary>
-    private const int MaxReportedParseErrors = 200;
+    private const int MaxReportedParseErrors = AttendanceImportLimits.MaxReportedErrors;
 
     /// <summary>حجم دفعة SqlBulkCopy.</summary>
     private const int BulkBatchSize = 10000;
@@ -42,9 +43,11 @@ public class AttendanceImportService : IAttendanceImportService
         string filePath,
         string token,
         string originalFileName,
-        int previewLimit = 500)
+        AttendanceImportScope scope,
+        int previewLimit = 500,
+        CancellationToken cancellationToken = default)
     {
-        var build = await BuildAsync(filePath, previewLimit);
+        var build = await BuildAsync(filePath, scope, previewLimit, cancellationToken);
 
         return new AttendanceImportPreviewViewModel
         {
@@ -63,12 +66,14 @@ public class AttendanceImportService : IAttendanceImportService
 
     public async Task<AttendanceImportResultViewModel> ImportAsync(
         string filePath,
-        string originalFileName)
+        string originalFileName,
+        AttendanceImportScope scope,
+        CancellationToken cancellationToken = default)
     {
         // لا نبني صفوف العرض عند الاستيراد — يكفي التجميع نفسه.
-        var build = await BuildAsync(filePath, previewLimit: 0);
+        var build = await BuildAsync(filePath, scope, previewLimit: 0, cancellationToken);
 
-        var importedCount = await BulkInsertAsync(build, originalFileName);
+        var importedCount = await BulkInsertAsync(build, originalFileName, cancellationToken);
         var skippedCount = build.TotalGroups - importedCount;
 
         return new AttendanceImportResultViewModel
@@ -86,14 +91,43 @@ public class AttendanceImportService : IAttendanceImportService
     /// واحد. لا يُبنى كائن عرضٍ إلا لأعلى <paramref name="previewLimit"/> صفّاً —
     /// وهذا جوهر الإصلاح: النسخة السابقة كانت تبني مليونَي كائن ثم تقتطع 500.
     /// </summary>
-    private async Task<AttendanceBuild> BuildAsync(string filePath, int previewLimit)
+    private async Task<AttendanceBuild> BuildAsync(
+        string filePath,
+        AttendanceImportScope scope,
+        int previewLimit,
+        CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (!scope.AllowsSelectedCompany())
+        {
+            throw new UnauthorizedAccessException("The selected company is outside the attendance import scope.");
+        }
+
+        var fileInfo = new FileInfo(filePath);
+        if (!fileInfo.Exists || fileInfo.Length <= 0 ||
+            fileInfo.Length > AttendanceImportLimits.MaxCompressedBytes)
+        {
+            throw new InvalidOperationException(
+                "Attendance import file is missing or exceeds the configured size limit.");
+        }
+
         var build = new AttendanceBuild();
         var aggregator = new AttendancePunchAggregator();
+        var elapsed = Stopwatch.StartNew();
 
         foreach (var line in StreamPunchLines(filePath))
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (elapsed.Elapsed > TimeSpan.FromSeconds(AttendanceImportLimits.MaxProcessingSeconds))
+            {
+                throw new TimeoutException("Attendance import exceeded the processing time limit.");
+            }
             build.TotalRawRows++;
+            if (build.TotalRawRows > AttendanceImportLimits.MaxWorksheetRows)
+            {
+                throw new InvalidOperationException(
+                    "Attendance import exceeds the maximum worksheet row count.");
+            }
 
             if (!line.Ok)
             {
@@ -118,12 +152,22 @@ public class AttendanceImportService : IAttendanceImportService
                 line.PunchTime,
                 line.FunctionType,
                 line.MachineName);
+            if (aggregator.DayCount > AttendanceImportLimits.MaxEmployeeDayGroups)
+            {
+                throw new InvalidOperationException(
+                    "Attendance import exceeds the maximum employee-day group count.");
+            }
         }
 
         build.TotalGroups = aggregator.DayCount;
 
-        var employeeLookup = await LoadEmployeeLookupAsync();
-        var existingKeys = await LoadExistingKeysAsync(aggregator);
+        var employeeLookup = await LoadEmployeeLookupAsync(
+            scope.SelectedCompanyId,
+            cancellationToken);
+        var existingKeys = await LoadExistingKeysAsync(
+            aggregator,
+            scope.SelectedCompanyId,
+            cancellationToken);
 
         var top = previewLimit > 0
             ? new SortedSet<PreviewCandidate>(PreviewCandidateComparer.Instance)
@@ -131,6 +175,7 @@ public class AttendanceImportService : IAttendanceImportService
 
         foreach (var pair in aggregator.Days)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var employeeNo = aggregator.EmployeeNumberAt(
                 AttendancePunchAggregator.EmployeeIndexOf(pair.Key));
             var date = AttendancePunchAggregator.DateOf(pair.Key);
@@ -253,12 +298,16 @@ public class AttendanceImportService : IAttendanceImportService
     private static long ExistingKey(int employeeId, DateOnly date) =>
         ((long)employeeId << 32) | (uint)date.DayNumber;
 
-    private async Task<Dictionary<string, Employee>> LoadEmployeeLookupAsync()
+    private async Task<Dictionary<string, Employee>> LoadEmployeeLookupAsync(
+        int selectedCompanyId,
+        CancellationToken cancellationToken)
     {
         var employees = await _dbContext.Employees
             .AsNoTracking()
             .Where(x => x.EmployeeNo != null && x.EmployeeNo != string.Empty)
-            .ToListAsync();
+            .Where(x => x.CompanyId == selectedCompanyId ||
+                (x.CompanyId == null && x.Branch.CompanyId == selectedCompanyId))
+            .ToListAsync(cancellationToken);
 
         var lookup = new Dictionary<string, Employee>(StringComparer.Ordinal);
 
@@ -274,7 +323,10 @@ public class AttendanceImportService : IAttendanceImportService
     /// مفاتيح السجلات القائمة **بنطاق تواريخ الملف فقط**. النسخة السابقة كانت
     /// تسحب جدول الحضور كلّه للذاكرة لتفحص التكرار.
     /// </summary>
-    private async Task<HashSet<long>> LoadExistingKeysAsync(AttendancePunchAggregator aggregator)
+    private async Task<HashSet<long>> LoadExistingKeysAsync(
+        AttendancePunchAggregator aggregator,
+        int selectedCompanyId,
+        CancellationToken cancellationToken)
     {
         var keys = new HashSet<long>();
 
@@ -299,8 +351,10 @@ public class AttendanceImportService : IAttendanceImportService
         var existing = await _dbContext.AttendanceRecords
             .AsNoTracking()
             .Where(x => x.AttendanceDate >= from && x.AttendanceDate <= to)
+            .Where(x => x.Employee.CompanyId == selectedCompanyId ||
+                (x.Employee.CompanyId == null && x.Employee.Branch.CompanyId == selectedCompanyId))
             .Select(x => new { x.EmployeeId, x.AttendanceDate })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         foreach (var record in existing)
         {
@@ -338,6 +392,7 @@ public class AttendanceImportService : IAttendanceImportService
         var result = new RawReadResult();
 
         using var archive = ZipFile.OpenRead(filePath);
+        ValidateArchiveLimits(archive);
 
         var sharedStrings = ReadSharedStrings(archive);
         var worksheetPath = GetFirstWorksheetPath(archive);
@@ -354,6 +409,11 @@ public class AttendanceImportService : IAttendanceImportService
             .Descendants(ns + "sheetData")
             .Elements(ns + "row")
             .ToList();
+
+        if (rows.Count > AttendanceImportLimits.MaxWorksheetRows + 1)
+        {
+            throw new InvalidOperationException("Excel worksheet exceeds the maximum row count.");
+        }
 
         if (!rows.Any())
             return result;
@@ -490,9 +550,42 @@ public class AttendanceImportService : IAttendanceImportService
         {
             var text = string.Concat(si.Descendants(ns + "t").Select(x => x.Value));
             sharedStrings.Add(text);
+            if (sharedStrings.Count > AttendanceImportLimits.MaxSharedStrings)
+            {
+                throw new InvalidOperationException(
+                    "Excel file exceeds the maximum shared-string count.");
+            }
         }
 
         return sharedStrings;
+    }
+
+    private static void ValidateArchiveLimits(ZipArchive archive)
+    {
+        long decompressedTotal = 0;
+        foreach (var entry in archive.Entries)
+        {
+            if (entry.Length > AttendanceImportLimits.MaxZipEntryBytes)
+            {
+                throw new InvalidOperationException("Excel archive contains an oversized entry.");
+            }
+
+            decompressedTotal = checked(decompressedTotal + entry.Length);
+            if (decompressedTotal > AttendanceImportLimits.MaxDecompressedBytes)
+            {
+                throw new InvalidOperationException(
+                    "Excel archive exceeds the decompressed-size limit.");
+            }
+
+            if (entry.Length > 0 &&
+                (entry.CompressedLength <= 0 ||
+                 entry.Length / (double)entry.CompressedLength >
+                 AttendanceImportLimits.MaxCompressionRatio))
+            {
+                throw new InvalidOperationException(
+                    "Excel archive exceeds the allowed compression ratio.");
+            }
+        }
     }
 
     private static string GetFirstWorksheetPath(ZipArchive archive)
@@ -777,7 +870,10 @@ public class AttendanceImportService : IAttendanceImportService
     /// إدراج دفعي بـ<c>SqlBulkCopy</c>. النسخة السابقة كانت تضيف كل سجلّ
     /// لمتتبِّع EF ثم تستدعي SaveChanges مرة واحدة — مليونا كيان بالذاكرة.
     /// </summary>
-    private async Task<int> BulkInsertAsync(AttendanceBuild build, string originalFileName)
+    private async Task<int> BulkInsertAsync(
+        AttendanceBuild build,
+        string originalFileName,
+        CancellationToken cancellationToken)
     {
         if (build.Importable.Count == 0)
         {
@@ -794,6 +890,10 @@ public class AttendanceImportService : IAttendanceImportService
         table.Columns.Add("Source", typeof(int));
         table.Columns.Add("Status", typeof(int));
         table.Columns.Add("Notes", typeof(string));
+        table.Columns.Add("CreatedAt", typeof(DateTime));
+        table.Columns.Add("IsDeleted", typeof(bool));
+
+        var createdAt = DateTime.UtcNow;
 
         foreach (var day in build.Importable)
         {
@@ -807,7 +907,9 @@ public class AttendanceImportService : IAttendanceImportService
                 (object?)day.CheckOut ?? DBNull.Value,
                 (int)AttendanceSource.Device,
                 (int)AttendanceStatus.Present,
-                notes);
+                notes,
+                createdAt,
+                false);
         }
 
         var connection = _dbContext.Database.GetDbConnection();
@@ -819,7 +921,7 @@ public class AttendanceImportService : IAttendanceImportService
         }
 
         var opened = sqlConnection.State != ConnectionState.Open;
-        if (opened) await sqlConnection.OpenAsync();
+        if (opened) await sqlConnection.OpenAsync(cancellationToken);
 
         try
         {
@@ -827,7 +929,8 @@ public class AttendanceImportService : IAttendanceImportService
             {
                 DestinationTableName = "AttendanceRecords",
                 BatchSize = BulkBatchSize,
-                BulkCopyTimeout = 0
+                BulkCopyTimeout = AttendanceImportLimits.BulkCopyTimeoutSeconds,
+                EnableStreaming = true
             };
 
             foreach (DataColumn column in table.Columns)
@@ -835,7 +938,7 @@ public class AttendanceImportService : IAttendanceImportService
                 bulk.ColumnMappings.Add(column.ColumnName, column.ColumnName);
             }
 
-            await bulk.WriteToServerAsync(table);
+            await bulk.WriteToServerAsync(table, cancellationToken);
         }
         finally
         {

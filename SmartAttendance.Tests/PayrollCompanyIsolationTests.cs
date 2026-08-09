@@ -196,4 +196,29 @@ public class PayrollCompanyIsolationTests
 
         Assert.Contains("CanAccessAsync()", body);
     }
+
+    private static string ReadStore(string file) =>
+        File.ReadAllText(Path.Combine(
+            RepoRoot(), "SmartAttendance.Web", "Infrastructure", "Hrms", file));
+
+    /// <summary>
+    /// 🛡️ عزل الشركات بقفل الحركات (Issue 6): كان `LockForRunAsync` يقفل حركات كل
+    /// الشركات للشهر (WHERE Year+Month فقط). الحارس النصّي يفشل إن عاد القفل بلا
+    /// حصرٍ بموظفي الدفعة: يجب أن يربط الحركة بالموظف وبشركة الدفعة وأعضاء نطاقها.
+    /// </summary>
+    [Fact]
+    public void LockForRun_IsScopedToRunEmployees_NotWholeMonth()
+    {
+        var source = ReadStore("PayrollTransactionStore.cs");
+        var start = source.IndexOf("LockForRunAsync", StringComparison.Ordinal);
+        Assert.True(start > 0, "LockForRunAsync غير موجود — حُذف أو أُعيدت تسميته.");
+
+        // جسم الدالة حتى القوس المغلق التالي تقريباً.
+        var body = source[start..Math.Min(source.Length, start + 1400)];
+
+        Assert.Contains("INNER JOIN Employees", body);
+        Assert.Contains("PayrollRuns r", body);
+        Assert.Contains("e.CompanyId = r.CompanyId", body);
+        Assert.Contains("PayrollRunScopeMembers", body);
+    }
 }

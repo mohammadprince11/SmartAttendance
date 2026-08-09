@@ -17,6 +17,7 @@ public class EmployeeAllowanceConfiguration : IEntityTypeConfiguration<EmployeeA
         builder.Property(x => x.AttachmentPath).HasMaxLength(500);
         builder.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(x => x.EmployeeId);
+        builder.HasIndex(x => x.SalaryItemId);
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

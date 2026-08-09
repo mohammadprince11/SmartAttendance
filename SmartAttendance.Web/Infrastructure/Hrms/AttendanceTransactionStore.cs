@@ -339,7 +339,7 @@ WHERE WorkDate >= @From AND WorkDate <= @To;
     /// لكل حركة لا للفترة، فالحركة الجديدة تبقى غير مقفلة وتدخل مسيراً لاحقاً.
     /// </summary>
     public static async Task<(int Transferred, int Skipped)> TransferToPayrollAsync(
-        ApplicationDbContext dbContext, IReadOnlyCollection<int> ids, string userName)
+        ApplicationDbContext dbContext, Security.CompanyScope scope, IReadOnlyCollection<int> ids, string userName)
     {
         await EnsureAsync(dbContext);
         var rows = await ByIdsAsync(dbContext, ids);
@@ -354,7 +354,7 @@ WHERE WorkDate >= @From AND WorkDate <= @To;
             if (!row.CanTransfer) { skipped++; continue; }
 
             var isOvertime = row.ActionType == "Overtime";
-            var payrollId = await PayrollTransactionStore.SaveAsync(dbContext, new PayrollTransactionStore.Transaction
+            var payrollId = await PayrollTransactionStore.SaveAsync(dbContext, scope, new PayrollTransactionStore.Transaction
             {
                 EmployeeId = row.EmployeeId,
                 Year = row.WorkDate.Year,
@@ -404,7 +404,7 @@ WHERE Id = @Id;
     /// الحركة التي دخلت مسيراً مقفلاً لا تُلغى — تُتخطّى وتبقى مُرحَّلة.
     /// </summary>
     public static async Task<(int Undone, int Skipped)> UndoTransferAsync(
-        ApplicationDbContext dbContext, IReadOnlyCollection<int> ids)
+        ApplicationDbContext dbContext, Security.CompanyScope scope, IReadOnlyCollection<int> ids)
     {
         await EnsureAsync(dbContext);
         var rows = await ByIdsAsync(dbContext, ids);
@@ -417,13 +417,13 @@ WHERE Id = @Id;
 
             if (row.PayrollTransactionId is > 0)
             {
-                if (await PayrollTransactionStore.IsLockedAsync(dbContext, row.PayrollTransactionId.Value))
+                if (await PayrollTransactionStore.IsLockedAsync(dbContext, scope, row.PayrollTransactionId.Value))
                 {
                     skipped++;
                     continue;
                 }
 
-                await PayrollTransactionStore.DeleteAsync(dbContext, row.PayrollTransactionId.Value);
+                await PayrollTransactionStore.DeleteAsync(dbContext, scope, row.PayrollTransactionId.Value);
             }
 
             await HrmsDatabase.ExecuteAsync(
