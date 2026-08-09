@@ -84,11 +84,15 @@ VALUES (@Hash, @Sys, @Emp, @User, @Role, @Name, @Exp, @Stamp);
         return token;
     }
 
-    /// <summary>يتحقق من توكن ويرجع هويته، أو null إن كان غير صالح/منتهٍ/ملغى.</summary>
+    /// <summary>
+    /// يتحقق من توكن ويرجع هويته، أو null إن كان غير صالح/منتهٍ/ملغى.
+    /// <b>مسار ساخن</b>: يُنادى بكل طلب Bearer، فلا DDL هنا — مخطط <c>ApiTokens</c>
+    /// مضمونٌ عند الإقلاع (<see cref="EnsureAsync"/> بـ<c>Program</c>). التحقّق بذرةٌ
+    /// مفهرسة على <c>UX_ApiTokens_Hash</c> ثم فلترة <c>RevokedAt/ExpiresAt</c> على صفٍّ واحد.
+    /// </summary>
     public static async Task<TokenIdentity?> ValidateAsync(ApplicationDbContext db, string token)
     {
         if (string.IsNullOrWhiteSpace(token)) return null;
-        await EnsureAsync(db);
         var hash = Hash(token);
 
         return (await HrmsDatabase.QueryAsync(

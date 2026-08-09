@@ -454,8 +454,13 @@ if (SmartAttendance.Web.Infrastructure.Hrms.EnvironmentDatabaseGuard.Validate(
 // الإقلاع — لا بكل طلب — وأي فشل يظهر فوراً بدل عطل صامت لاحق.
 using (var migrationScope = app.Services.CreateScope())
 {
-    await SmartAttendance.Web.Infrastructure.Hrms.SqlSchemaMigrator.ApplyAsync(
-        migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>());
+    var migrationDb = migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await SmartAttendance.Web.Infrastructure.Hrms.SqlSchemaMigrator.ApplyAsync(migrationDb);
+
+    // مخطط توكنات الـAPI يُضمَن هنا مرّة واحدة عند الإقلاع — لا بمسار التحقّق الساخن.
+    // كان ValidateAsync يفحص/ينشئ الجدول (DDL) بكل طلب Bearer؛ نقلُه للإقلاع يجعل
+    // التحقّق بحثاً مفهرساً محدوداً (بذرة فريدة على TokenHash).
+    await SmartAttendance.Web.Infrastructure.Api.ApiTokenStore.EnsureAsync(migrationDb);
 }
 
 await DefaultShiftSeeder.SeedAsync(app.Services);
