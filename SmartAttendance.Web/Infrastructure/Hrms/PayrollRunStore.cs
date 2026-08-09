@@ -1343,6 +1343,19 @@ ORDER BY e.EmployeeNo;
     public static Task<(bool, string)> ReopenAsync(ApplicationDbContext dbContext, int runId) =>
         TransitionAsync(dbContext, runId, from: "Calculated", to: "Draft", null, "أُعيدت للمسودة.");
 
+    /// <summary>
+    /// إلغاء قفل دفعة مقفلة (Locked ← Calculated) لتعود قابلةً للتعديل والاحتساب. لا يُتاح
+    /// لدفعة معتمدة/مُرسَلة (الحارس <c>WHERE Status='Locked'</c> يمنعه). عند نجاح النقل يُفكّ
+    /// قفل حركات الدفعة التي قفلها <see cref="LockAsync"/> حتى تُحتسب من جديد.
+    /// </summary>
+    public static async Task<(bool, string)> UnlockAsync(ApplicationDbContext dbContext, int runId)
+    {
+        var res = await TransitionAsync(dbContext, runId, from: "Locked", to: "Calculated", null, "أُلغي القفل — عادت الدفعة قابلة للتعديل.");
+        if (res.Item1)
+            await PayrollTransactionStore.UnlockForRunAsync(dbContext, runId);
+        return res;
+    }
+
     public static async Task<(bool, string)> DeleteRunAsync(ApplicationDbContext dbContext, int runId)
     {
         var run = await GetRunAsync(dbContext, runId);

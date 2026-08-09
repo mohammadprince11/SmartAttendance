@@ -167,6 +167,7 @@ public class RunsModel : PageModel
     public async Task<IActionResult> OnPostIssueAsync(int id) => await ActAsync(id, () => PayrollRunStore.IssueAsync(_db, id));
     public async Task<IActionResult> OnPostSendAsync(int id) => await ActAsync(id, () => PayrollRunStore.SendPayslipsAsync(_db, id));
     public async Task<IActionResult> OnPostReopenAsync(int id) => await ActAsync(id, () => PayrollRunStore.ReopenAsync(_db, id));
+    public async Task<IActionResult> OnPostUnlockAsync(int id) => await ActAsync(id, () => PayrollRunStore.UnlockAsync(_db, id));
     public async Task<IActionResult> OnPostDeleteAsync(int id) => await ActAsync(id, () => PayrollRunStore.DeleteRunAsync(_db, id));
 
     /// <summary>

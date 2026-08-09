@@ -208,6 +208,7 @@
                                     @if (run.Status == "Locked")
                                     {
                                         <form method="post" asp-page-handler="Issue"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" data-zyconfirm="اعتماد للصرف؟">اعتماد</button></form>
+                                        <form method="post" asp-page-handler="Unlock"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" data-zyconfirm="إلغاء قفل الدفعة؟ ستعود قابلة للتعديل والاحتساب.">إلغاء القفل</button></form>
                                     }
                                     @if (run.Status == "Issued")
                                     {
