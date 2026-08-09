@@ -364,6 +364,7 @@ builder.Services.AddScoped<IEmployeePermissionService, EmployeePermissionService
 builder.Services.AddScoped<ILoginIdentityService, LoginIdentityService>();
 builder.Services.AddScoped<IPermissionAuthorizationService, PermissionAuthorizationService>();
 builder.Services.AddScoped<IAttendanceImportService, AttendanceImportService>();
+builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Imports.AttendanceImportStagingStore>();
 builder.Services.AddScoped<IMasterDataImportService, MasterDataImportService>();
 builder.Services.AddScoped<ISetupService, SetupService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
