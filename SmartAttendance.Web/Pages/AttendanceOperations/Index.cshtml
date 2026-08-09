@@ -360,6 +360,17 @@
 
                 <div class="modal-grid">
                     <div class="hrms-field">
+                        <label asp-for="ImportCompanyId">الشركة</label>
+                        <select asp-for="ImportCompanyId" asp-items="Model.ImportCompanies" required>
+                            @if (Model.ImportCompanies.Count != 1)
+                            {
+                                <option value="">اختر الشركة</option>
+                            }
+                        </select>
+                        <small>كل ملف حضور يُستورد لشركة واحدة فقط.</small>
+                    </div>
+
+                    <div class="hrms-field">
                         <label>ملف الحضور</label>
                         <input asp-for="AttendanceFile" type="file" accept=".xlsx,.csv" />
                     </div>
@@ -388,6 +399,7 @@
                         <form method="post" asp-page-handler="Import">
                             <input type="hidden" name="Tab" value="import" />
                             <input type="hidden" name="token" value="@Model.Preview.Token" />
+                            <input type="hidden" name="ImportCompanyId" value="@Model.ImportCompanyId" />
                             <button type="submit" class="hrms-btn-primary">استيراد السجلات الصالحة</button>
                         </form>
                     }

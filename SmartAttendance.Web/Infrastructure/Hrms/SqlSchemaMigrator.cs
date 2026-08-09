@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
+using System.Collections.Concurrent;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -20,7 +21,7 @@ public static class SqlSchemaMigrator
     public sealed record Migration(string Id, string Sql);
 
     private static readonly SemaphoreSlim Gate = new(1, 1);
-    private static volatile bool _applied;
+    private static readonly ConcurrentDictionary<string, byte> AppliedDatabases = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>الهجرات بترتيب التطبيق. لا تُعدَّل هجرة منشورة — أضف واحدة جديدة.</summary>
     public static readonly IReadOnlyList<Migration> Migrations = new List<Migration>
@@ -105,6 +106,9 @@ BEGIN
     -- «تصل إليه كائنات أخرى» (Msg 5074). فيُسقَط ثم يُعاد بناؤه بعد التشديد.
     IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Employees_CompanyId')
         DROP INDEX IX_Employees_CompanyId ON Employees;
+
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Employees_CompanyId_EmployeeNo' AND object_id = OBJECT_ID('Employees'))
+        DROP INDEX UX_Employees_CompanyId_EmployeeNo ON Employees;
 
     ALTER TABLE Employees ALTER COLUMN CompanyId int NOT NULL;
 
@@ -1157,6 +1161,159 @@ IF OBJECT_ID('SalaryItems', 'U') IS NOT NULL
     ALTER TABLE SalaryItems ADD GosiEligible bit NOT NULL
         CONSTRAINT DF_SalaryItems_GosiEligible DEFAULT(1);
 """),
+
+        // Monotonic payroll-run allocation. Existing duplicate BatchNo values are a
+        // hard migration blocker: silently choosing one would corrupt a financial key.
+        new(
+            "20260809-05-payroll-run-sequence-invariant",
+            """
+IF OBJECT_ID('PayrollRuns', 'U') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT BatchNo FROM PayrollRuns GROUP BY BatchNo HAVING COUNT(*) > 1)
+        THROW 51000, 'Duplicate PayrollRuns.BatchNo values must be remediated before enabling the unique invariant.', 1;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('PayrollRuns') AND name = 'UX_PayrollRuns_BatchNo')
+        CREATE UNIQUE INDEX UX_PayrollRuns_BatchNo ON PayrollRuns (BatchNo);
+
+    IF OBJECT_ID('PayrollRunSequences', 'U') IS NULL
+    BEGIN
+        CREATE TABLE PayrollRunSequences
+        (
+            [Year] int NOT NULL,
+            [Month] int NOT NULL,
+            NextValue int NOT NULL,
+            CONSTRAINT PK_PayrollRunSequences PRIMARY KEY ([Year], [Month]),
+            CONSTRAINT CK_PayrollRunSequences_NextValue CHECK (NextValue > 0)
+        );
+    END;
+
+    ;WITH ExistingMax AS
+    (
+        SELECT [Year], [Month],
+               ISNULL(MAX(TRY_CONVERT(int, RIGHT(BatchNo, CHARINDEX('-', REVERSE(BatchNo)) - 1))), 0) + 1 AS NextValue
+        FROM PayrollRuns
+        WHERE CHARINDEX('-', REVERSE(BatchNo)) > 1
+        GROUP BY [Year], [Month]
+    )
+MERGE PayrollRunSequences AS target
+    USING ExistingMax AS source
+       ON target.[Year] = source.[Year] AND target.[Month] = source.[Month]
+    WHEN MATCHED AND target.NextValue < source.NextValue THEN
+        UPDATE SET NextValue = source.NextValue
+    WHEN NOT MATCHED THEN
+        INSERT ([Year], [Month], NextValue)
+        VALUES (source.[Year], source.[Month], source.NextValue);
+END;
+"""),
+
+        // Employee allowance identity is a real FK. ItemName remains a snapshot only;
+        // ambiguous or unmatched historic names are a hard migration blocker.
+        new(
+            "20260809-06-employee-allowance-salary-item-id",
+            """
+IF OBJECT_ID('EmployeeAllowances', 'U') IS NOT NULL
+   AND OBJECT_ID('SalaryItems', 'U') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT LTRIM(RTRIM(Name))
+        FROM SalaryItems
+        GROUP BY LTRIM(RTRIM(Name))
+        HAVING COUNT(*) > 1)
+        THROW 51001, 'Duplicate SalaryItems.Name values make EmployeeAllowance backfill ambiguous.', 1;
+
+    IF COL_LENGTH('EmployeeAllowances', 'SalaryItemId') IS NULL
+        ALTER TABLE EmployeeAllowances ADD SalaryItemId int NULL;
+
+    UPDATE a
+       SET SalaryItemId = s.Id
+    FROM EmployeeAllowances a
+    INNER JOIN SalaryItems s
+      ON LTRIM(RTRIM(s.Name)) = LTRIM(RTRIM(a.ItemName))
+    WHERE a.SalaryItemId IS NULL;
+
+    IF EXISTS (SELECT 1 FROM EmployeeAllowances WHERE SalaryItemId IS NULL)
+        THROW 51002, 'Unmatched EmployeeAllowance.ItemName values must be remediated before enabling SalaryItemId.', 1;
+
+    IF EXISTS (
+        SELECT 1 FROM sys.columns
+        WHERE object_id = OBJECT_ID('EmployeeAllowances')
+          AND name = 'SalaryItemId' AND is_nullable = 1)
+        ALTER TABLE EmployeeAllowances ALTER COLUMN SalaryItemId int NOT NULL;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('EmployeeAllowances') AND name = 'IX_EmployeeAllowances_SalaryItemId')
+        CREATE INDEX IX_EmployeeAllowances_SalaryItemId ON EmployeeAllowances (SalaryItemId);
+
+    IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_EmployeeAllowances_SalaryItems_SalaryItemId')
+        ALTER TABLE EmployeeAllowances ADD CONSTRAINT FK_EmployeeAllowances_SalaryItems_SalaryItemId
+            FOREIGN KEY (SalaryItemId) REFERENCES SalaryItems (Id);
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('SalaryItems') AND name = 'UX_SalaryItems_Name')
+        CREATE UNIQUE INDEX UX_SalaryItems_Name ON SalaryItems (Name);
+END;
+"""),
+
+        new(
+            "20260809-07-payroll-transaction-reference-invariant",
+            """
+IF OBJECT_ID('PayrollTransactions', 'U') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT ReferenceNo FROM PayrollTransactions
+        WHERE ReferenceNo IS NOT NULL
+        GROUP BY ReferenceNo HAVING COUNT(*) > 1)
+        THROW 51003, 'Duplicate PayrollTransactions.ReferenceNo values must be remediated before enabling the unique invariant.', 1;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('PayrollTransactions') AND name = 'UX_PayrollTransactions_ReferenceNo')
+        CREATE UNIQUE INDEX UX_PayrollTransactions_ReferenceNo
+            ON PayrollTransactions (ReferenceNo) WHERE ReferenceNo IS NOT NULL;
+
+    IF OBJECT_ID('PayrollTransactionSequences', 'U') IS NULL
+    BEGIN
+        CREATE TABLE PayrollTransactionSequences
+        (
+            Prefix nvarchar(16) NOT NULL CONSTRAINT PK_PayrollTransactionSequences PRIMARY KEY,
+            NextValue int NOT NULL,
+            CONSTRAINT CK_PayrollTransactionSequences_NextValue CHECK (NextValue > 0)
+        );
+    END;
+
+    ;WITH Parsed AS
+    (
+        SELECT LEFT(ReferenceNo, LEN(ReferenceNo) - CHARINDEX('-', REVERSE(ReferenceNo)) + 1) AS Prefix,
+               TRY_CONVERT(int, RIGHT(ReferenceNo, CHARINDEX('-', REVERSE(ReferenceNo)) - 1)) AS Seq
+        FROM PayrollTransactions
+        WHERE ReferenceNo IS NOT NULL AND CHARINDEX('-', REVERSE(ReferenceNo)) > 1
+    ), ExistingMax AS
+    (
+        SELECT Prefix, ISNULL(MAX(Seq), 0) + 1 AS NextValue
+        FROM Parsed WHERE Seq IS NOT NULL GROUP BY Prefix
+    )
+    MERGE PayrollTransactionSequences AS target
+    USING ExistingMax AS source ON target.Prefix = source.Prefix
+    WHEN MATCHED AND target.NextValue < source.NextValue THEN UPDATE SET NextValue = source.NextValue
+    WHEN NOT MATCHED THEN INSERT (Prefix, NextValue) VALUES (source.Prefix, source.NextValue);
+END;
+"""),
+
+        new(
+            "20260809-08-employee-number-company-unique",
+            """
+IF OBJECT_ID('Employees', 'U') IS NOT NULL
+   AND COL_LENGTH('Employees', 'CompanyId') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT CompanyId, EmployeeNo FROM Employees
+        GROUP BY CompanyId, EmployeeNo HAVING COUNT(*) > 1)
+        THROW 51004, 'Duplicate EmployeeNo values within one company must be remediated before enabling company uniqueness.', 1;
+
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('Employees') AND name='IX_Employees_EmployeeNo')
+        DROP INDEX IX_Employees_EmployeeNo ON Employees;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('Employees') AND name='UX_Employees_CompanyId_EmployeeNo')
+        CREATE UNIQUE INDEX UX_Employees_CompanyId_EmployeeNo ON Employees (CompanyId, EmployeeNo);
+END;
+"""),
     };
 
     /// <summary>
@@ -1164,7 +1321,9 @@ IF OBJECT_ID('SalaryItems', 'U') IS NOT NULL
     /// </summary>
     public static async Task ApplyAsync(ApplicationDbContext dbContext)
     {
-        if (_applied)
+        var connection = dbContext.Database.GetDbConnection();
+        var databaseKey = $"{connection.DataSource}|{connection.Database}";
+        if (AppliedDatabases.ContainsKey(databaseKey))
         {
             return;
         }
@@ -1173,7 +1332,7 @@ IF OBJECT_ID('SalaryItems', 'U') IS NOT NULL
 
         try
         {
-            if (_applied)
+            if (AppliedDatabases.ContainsKey(databaseKey))
             {
                 return;
             }
@@ -1269,7 +1428,7 @@ END;
                     command => HrmsDatabase.AddParameter(command, "@Id", migration.Id));
             }
 
-            _applied = true;
+            AppliedDatabases.TryAdd(databaseKey, 0);
 
             }
             finally

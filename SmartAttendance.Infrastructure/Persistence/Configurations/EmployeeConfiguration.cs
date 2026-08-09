@@ -78,8 +78,9 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.Property(x => x.RehireCount)
             .HasDefaultValue(0);
 
-        builder.HasIndex(x => x.EmployeeNo)
-            .IsUnique();
+        builder.HasIndex(x => new { x.CompanyId, x.EmployeeNo })
+            .IsUnique()
+            .HasDatabaseName("UX_Employees_CompanyId_EmployeeNo");
 
         builder.HasIndex(x => x.PositionId);
 

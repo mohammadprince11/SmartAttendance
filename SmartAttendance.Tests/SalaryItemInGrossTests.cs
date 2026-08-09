@@ -1,4 +1,5 @@
 using System.IO;
+using SmartAttendance.Web.Infrastructure.Hrms;
 using Xunit;
 
 namespace SmartAttendance.Tests;
@@ -26,9 +27,33 @@ public class SalaryItemInGrossTests
         var source = File.ReadAllText(Path.Combine(
             RepoRoot(), "SmartAttendance.Web", "Infrastructure", "Hrms", "PayrollRunStore.cs"));
 
-        Assert.Contains("allowanceInGrossByName", source);
-        Assert.Contains(".First().InGross", source);
+        Assert.Contains("ResolveAllowancePolicy(salaryItemsById, al.SalaryItemId)", source);
+        Assert.Contains("if (!policy.InGross) continue", source);
         // العلاوة غير الداخلة بالإجمالي تُتخطّى قبل تجميعها بأي وعاء.
-        Assert.Contains("!inGross) continue", source);
+        Assert.DoesNotContain("allowanceInGrossByName", source);
+    }
+
+    [Fact]
+    public void Rename_DoesNotChangeAllowancePolicy()
+    {
+        var before = new SalaryItemStore.SalaryItem
+        {
+            Id = 42, Name = "Housing", InGross = true, Prorated = true,
+            Taxable = false, GosiEligible = true, OvertimeEligible = true,
+            UnpaidLeaveEligible = false
+        };
+        var after = new SalaryItemStore.SalaryItem
+        {
+            Id = 42, Name = "Housing Allowance", InGross = true, Prorated = true,
+            Taxable = false, GosiEligible = true, OvertimeEligible = true,
+            UnpaidLeaveEligible = false
+        };
+
+        var oldPolicy = PayrollRunStore.ResolveAllowancePolicy(
+            new Dictionary<int, SalaryItemStore.SalaryItem> { [before.Id] = before }, 42);
+        var renamedPolicy = PayrollRunStore.ResolveAllowancePolicy(
+            new Dictionary<int, SalaryItemStore.SalaryItem> { [after.Id] = after }, 42);
+
+        Assert.Equal(oldPolicy, renamedPolicy);
     }
 }

@@ -364,6 +364,7 @@ builder.Services.AddScoped<IEmployeePermissionService, EmployeePermissionService
 builder.Services.AddScoped<ILoginIdentityService, LoginIdentityService>();
 builder.Services.AddScoped<IPermissionAuthorizationService, PermissionAuthorizationService>();
 builder.Services.AddScoped<IAttendanceImportService, AttendanceImportService>();
+builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Imports.AttendanceImportStagingStore>();
 builder.Services.AddScoped<IMasterDataImportService, MasterDataImportService>();
 builder.Services.AddScoped<ISetupService, SetupService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
@@ -455,6 +456,11 @@ if (SmartAttendance.Web.Infrastructure.Hrms.EnvironmentDatabaseGuard.Validate(
 using (var migrationScope = app.Services.CreateScope())
 {
     var migrationDb = migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    // These legacy tables pre-date the controlled migrator. Ensure their base shape
+    // at startup so the SalaryItemId migration also covers a clean database.
+    await SmartAttendance.Web.Infrastructure.Hrms.SalaryItemStore.EnsureAsync(migrationDb);
+    await SmartAttendance.Web.Infrastructure.Hrms.EmployeeAllowanceSchema.EnsureAsync(migrationDb);
+    await SmartAttendance.Web.Infrastructure.Hrms.PayrollTransactionStore.EnsureAsync(migrationDb);
     await SmartAttendance.Web.Infrastructure.Hrms.SqlSchemaMigrator.ApplyAsync(migrationDb);
 
     // مخطط توكنات الـAPI يُضمَن هنا مرّة واحدة عند الإقلاع — لا بمسار التحقّق الساخن.

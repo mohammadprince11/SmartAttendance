@@ -3,6 +3,7 @@ using SmartAttendance.Domain.Entities;
 using SmartAttendance.Domain.Enums;
 using SmartAttendance.Domain.Leave;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -27,12 +28,20 @@ public static class LeaveCarryoverService
     /// </summary>
     public static async Task<CarryoverResult> CarryOverAsync(
         ApplicationDbContext db,
+        CompanyScope scope,
         int companyId,
         int fromYear,
         IReadOnlyCollection<LeaveType> types,
         decimal? cap,
-        string userName)
+        string userName,
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (companyId <= 0 || !scope.Allows(companyId))
+        {
+            throw new UnauthorizedAccessException("The selected company is outside the leave carry-over scope.");
+        }
+
         await LeaveBalanceSchema.EnsureAsync(db);
 
         var toYear = fromYear + 1;
@@ -44,16 +53,53 @@ public static class LeaveCarryoverService
         var result = new CarryoverResult();
         if (trackedTypes.Count == 0) return result;
 
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         var employeeIds = await db.Employees.AsNoTracking()
-            .Where(e => e.IsActive && !e.IsDeleted && e.Branch.CompanyId == companyId)
+            .Where(e => e.IsActive && !e.IsDeleted)
+            .Where(e => e.CompanyId == companyId ||
+                (e.CompanyId == null && e.Branch.CompanyId == companyId))
             .Select(e => e.Id)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
         if (employeeIds.Count == 0) return result;
+
+        var yearStart = new DateOnly(fromYear, 1, 1);
+        var yearEnd = new DateOnly(fromYear, 12, 31);
+
+        // Set-based source load: one balance query and one approved-request query.
+        var sourceRows = await db.LeaveBalances.AsNoTracking()
+            .Where(b => b.Year == fromYear && employeeIds.Contains(b.EmployeeId))
+            .ToListAsync(cancellationToken);
+        var sourceLookup = sourceRows
+            .GroupBy(b => b.EmployeeId)
+            .ToDictionary(g => g.Key, g => g.ToDictionary(b => b.LeaveType, b => b));
+
+        var requests = await db.LeaveRequests.AsNoTracking()
+            .Where(r => r.Status == LeaveStatus.Approved
+                     && employeeIds.Contains(r.EmployeeId)
+                     && trackedTypes.Contains(r.LeaveType)
+                     && r.FromDate <= yearEnd
+                     && r.ToDate >= yearStart)
+            .Select(r => new { r.EmployeeId, r.LeaveType, r.FromDate, r.ToDate })
+            .ToListAsync(cancellationToken);
+
+        var usedLookup = new Dictionary<(int EmployeeId, LeaveType Type), decimal>();
+        foreach (var request in requests)
+        {
+            var start = request.FromDate > yearStart ? request.FromDate : yearStart;
+            var end = request.ToDate < yearEnd ? request.ToDate : yearEnd;
+            var days = end.DayNumber - start.DayNumber + 1;
+            if (days > 0)
+            {
+                var key = (request.EmployeeId, request.LeaveType);
+                usedLookup[key] = usedLookup.GetValueOrDefault(key) + days;
+            }
+        }
 
         // صفوف سنة الوجهة الحالية (للحفاظ على تجاوز المستحق اليدوي إن وُجد).
         var targetRows = await db.LeaveBalances
             .Where(b => b.Year == toYear && employeeIds.Contains(b.EmployeeId))
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
         var targetLookup = targetRows
             .GroupBy(b => b.EmployeeId)
             .ToDictionary(g => g.Key, g => g.ToDictionary(b => b.LeaveType, b => b));
@@ -63,13 +109,20 @@ public static class LeaveCarryoverService
 
         foreach (var employeeId in employeeIds)
         {
-            var balances = await LeaveBalanceCalculator.ForEmployeeAsync(db, employeeId, fromYear);
             var carriedForEmployee = 0m;
+            sourceLookup.TryGetValue(employeeId, out var bySourceType);
 
             foreach (var type in trackedTypes)
             {
-                var source = balances.FirstOrDefault(b => b.Type == type);
-                var remaining = source?.Remaining ?? 0;
+                LeaveBalance? source = null;
+                var hasSource = bySourceType is not null &&
+                    bySourceType.TryGetValue(type, out source);
+                var entitled = hasSource
+                    ? source!.EntitledDays
+                    : IraqiLeavePolicy.GetDefaultEntitlement(type) ?? 0;
+                var priorCarry = hasSource ? source!.CarriedOverDays : 0;
+                var used = usedLookup.GetValueOrDefault((employeeId, type));
+                var remaining = entitled + priorCarry - used;
                 var carried = remaining > 0 ? remaining : 0;
                 if (cap.HasValue && carried > cap.Value) carried = cap.Value;
 
@@ -108,7 +161,8 @@ public static class LeaveCarryoverService
             result.TotalCarriedDays += carriedForEmployee;
         }
 
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return result;
     }
 }

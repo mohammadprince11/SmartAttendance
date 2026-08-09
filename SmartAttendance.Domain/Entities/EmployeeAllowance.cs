@@ -16,6 +16,10 @@ public class EmployeeAllowance : AuditableEntity
     public Employee Employee { get; set; } = null!;
 
     /// <summary>Salary item name from the "salaryitems" lookup (بدل سكن، بدل مواصلات…).</summary>
+    /// <summary>Authoritative salary-item identity. The database FK is managed by the controlled SQL migrator.</summary>
+    public int SalaryItemId { get; set; }
+
+    /// <summary>Historical/display snapshot; payroll policy is never resolved by this value.</summary>
     public string ItemName { get; set; } = string.Empty;
 
     public decimal Amount { get; set; }

@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -174,13 +176,15 @@ IF COL_LENGTH('PayrollTransactions','Days') IS NULL ALTER TABLE PayrollTransacti
     }
 
     public static async Task<List<Transaction>> ListAsync(
-        ApplicationDbContext dbContext, int year, int month, string txType, string? search,
+        ApplicationDbContext dbContext, CompanyScope scope, int year, int month, string txType, string? search,
         int? salaryItemId = null, string? status = null, string? source = null, bool? locked = null)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<Transaction>();
         await EnsureAsync(dbContext);
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,
-            """
+            $"""
 SELECT t.*, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
        ISNULL(d.Name, N'') AS DepartmentName, ISNULL(b.Name, N'') AS BranchName, ISNULL(e.Position, N'') AS Position
 FROM PayrollTransactions t
@@ -188,6 +192,7 @@ INNER JOIN Employees e ON e.Id = t.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
 LEFT JOIN Branches b ON b.Id = e.BranchId
 WHERE t.[Year] = @Y AND t.[Month] = @M AND t.TxType = @Type
+  AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
 ORDER BY t.CreatedAt DESC;
 """,
             command =>
@@ -267,34 +272,45 @@ WHERE t.[Year] = @Y AND t.[Month] = @M
     }
 
     /// <summary>هل حركة بعينها مقفلة؟ (دخلت مسيراً مقفلاً) — لحماية التعديل/الحذف.</summary>
-    public static async Task<bool> IsLockedAsync(ApplicationDbContext dbContext, int id)
+    public static async Task<bool> IsLockedAsync(ApplicationDbContext dbContext, CompanyScope scope, int id)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return false;
         await EnsureAsync(dbContext);
         var v = await HrmsDatabase.ScalarAsync<int>(
             dbContext,
-            "SELECT CAST(ISNULL(IsLocked,0) AS int) FROM PayrollTransactions WHERE Id = @Id;",
+            $"SELECT CAST(ISNULL(t.IsLocked,0) AS int) FROM PayrollTransactions t INNER JOIN Employees e ON e.Id=t.EmployeeId WHERE t.Id = @Id AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};",
             command => HrmsDatabase.AddParameter(command, "@Id", id));
         return v == 1;
     }
 
     /// <summary>حركات فترة/نوع للاحتساب بالمسير — المعتمدة داخل الراتب فقط.</summary>
     public static async Task<List<Transaction>> ForPeriodAsync(
-        ApplicationDbContext dbContext, int year, int month, string txType)
+        ApplicationDbContext dbContext, CompanyScope scope, int year, int month, string txType,
+        int? runId = null)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<Transaction>();
         await EnsureAsync(dbContext);
         return await HrmsDatabase.QueryAsync(
             dbContext,
-            """
-SELECT * FROM PayrollTransactions
-WHERE [Year] = @Y AND [Month] = @M AND TxType = @Type
+            $"""
+SELECT t.* FROM PayrollTransactions t
+INNER JOIN Employees e ON e.Id = t.EmployeeId
+WHERE t.[Year] = @Y AND t.[Month] = @M AND t.TxType = @Type
   AND ISNULL(PaymentType, N'InSalary') = N'InSalary'
-  AND ISNULL(Status, N'Approved') = N'Approved';
+  AND ISNULL(Status, N'Approved') = N'Approved'
+  AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
+  AND (@RunId IS NULL
+       OR NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId)
+       OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId AND s.EmployeeId=t.EmployeeId));
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Y", year);
                 HrmsDatabase.AddParameter(command, "@M", month);
                 HrmsDatabase.AddParameter(command, "@Type", txType);
+                HrmsDatabase.AddParameter(command, "@RunId", (object?)runId ?? DBNull.Value);
             },
             reader => new Transaction
             {
@@ -309,37 +325,58 @@ WHERE [Year] = @Y AND [Month] = @M AND TxType = @Type
             });
     }
 
-    public static async Task<int> SaveAsync(ApplicationDbContext dbContext, Transaction tx, string userName)
+    public static async Task<int> SaveAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, Transaction tx, string userName)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
-        if (tx.Id > 0)
+        var ownTransaction = dbContext.Database.CurrentTransaction is null
+            ? await dbContext.Database.BeginTransactionAsync()
+            : null;
+        try
         {
-            await HrmsDatabase.ExecuteAsync(dbContext, UpdateSql, command =>
+            await ValidateEmployeeIdsAsync(dbContext, scope, new[] { tx.EmployeeId });
+            if (tx.Id > 0)
             {
-                HrmsDatabase.AddParameter(command, "@Id", tx.Id);
+                await ValidateTransactionIdsAsync(dbContext, scope, new[] { tx.Id }, requireUnlocked: true);
+                await HrmsDatabase.ExecuteAsync(dbContext, UpdateSql, command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@Id", tx.Id);
+                    Add(command, tx);
+                });
+                if (ownTransaction != null) await ownTransaction.CommitAsync();
+                return tx.Id;
+            }
+
+            if (string.IsNullOrWhiteSpace(tx.ReferenceNo))
+                tx.ReferenceNo = await GenerateReferenceNoAsync(dbContext, tx.TxType);
+
+            var id = await HrmsDatabase.ScalarAsync<int>(dbContext, InsertSql + " SELECT CAST(SCOPE_IDENTITY() AS int);", command =>
+            {
                 Add(command, tx);
+                HrmsDatabase.AddParameter(command, "@Ref", tx.ReferenceNo);
+                HrmsDatabase.AddParameter(command, "@By", userName);
             });
-            return tx.Id;
+            if (ownTransaction != null) await ownTransaction.CommitAsync();
+            return id;
         }
-
-        if (string.IsNullOrWhiteSpace(tx.ReferenceNo))
-            tx.ReferenceNo = await GenerateReferenceNoAsync(dbContext, tx.TxType);
-
-        return await HrmsDatabase.ScalarAsync<int>(dbContext, InsertSql + " SELECT CAST(SCOPE_IDENTITY() AS int);", command =>
+        finally
         {
-            Add(command, tx);
-            HrmsDatabase.AddParameter(command, "@Ref", tx.ReferenceNo);
-            HrmsDatabase.AddParameter(command, "@By", userName);
-        });
+            if (ownTransaction != null) await ownTransaction.DisposeAsync();
+        }
     }
 
     /// <summary>دخل جماعي (نمط كيان): إنشاء نفس الحركة لعدة موظفين دفعة واحدة.</summary>
     public static async Task<int> SaveManyAsync(
-        ApplicationDbContext dbContext, IReadOnlyCollection<int> employeeIds, Transaction template, string userName)
+        ApplicationDbContext dbContext, CompanyScope scope, IReadOnlyCollection<int> employeeIds, Transaction template, string userName)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+        var distinctIds = employeeIds.Distinct().ToArray();
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        await ValidateEmployeeIdsAsync(dbContext, scope, distinctIds);
         int n = 0;
-        foreach (var empId in employeeIds.Distinct())
+        foreach (var empId in distinctIds)
         {
             template.Id = 0;
             template.EmployeeId = empId;
@@ -352,51 +389,126 @@ WHERE [Year] = @Y AND [Month] = @M AND TxType = @Type
             });
             n++;
         }
+        await transaction.CommitAsync();
         return n;
     }
 
-    public static async Task DeleteAsync(ApplicationDbContext dbContext, int id)
+    public static async Task DeleteAsync(ApplicationDbContext dbContext, CompanyScope scope, int id)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        await ValidateTransactionIdsAsync(dbContext, scope, new[] { id }, requireUnlocked: true);
         await HrmsDatabase.ExecuteAsync(dbContext,
-            "DELETE FROM PayrollTransactions WHERE Id = @Id;",
+            $"DELETE t FROM PayrollTransactions t INNER JOIN Employees e ON e.Id=t.EmployeeId WHERE t.Id = @Id AND ISNULL(t.IsLocked,0)=0 AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};",
             command => HrmsDatabase.AddParameter(command, "@Id", id));
+        await transaction.CommitAsync();
     }
 
     /// <summary>إقفال/إلغاء قفل يدوي لحركات محددة (نمط كيان «إقفال العناصر المختارة»).</summary>
-    public static async Task SetLockedAsync(ApplicationDbContext dbContext, IReadOnlyCollection<int> ids, bool locked)
+    public static async Task SetLockedAsync(ApplicationDbContext dbContext, CompanyScope scope, IReadOnlyCollection<int> ids, bool locked)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        await ValidateTransactionIdsAsync(dbContext, scope, ids, requireUnlocked: false);
         foreach (var chunk in ids.Chunk(200))
         {
             var inList = string.Join(",", chunk.Select((_, i) => $"@P{i}"));
             var setClause = locked ? "IsLocked = 1" : "IsLocked = 0, LockedRunId = NULL";
             await HrmsDatabase.ExecuteAsync(dbContext,
-                $"UPDATE PayrollTransactions SET {setClause} WHERE Id IN ({inList});",
+                $"UPDATE t SET {setClause} FROM PayrollTransactions t INNER JOIN Employees e ON e.Id=t.EmployeeId WHERE t.Id IN ({inList}) AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};",
                 command => { for (var i = 0; i < chunk.Length; i++) HrmsDatabase.AddParameter(command, $"@P{i}", chunk[i]); });
         }
+        await transaction.CommitAsync();
     }
 
-    public static async Task DeleteManyAsync(ApplicationDbContext dbContext, IReadOnlyCollection<int> ids)
+    public static async Task DeleteManyAsync(ApplicationDbContext dbContext, CompanyScope scope, IReadOnlyCollection<int> ids)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        await ValidateTransactionIdsAsync(dbContext, scope, ids, requireUnlocked: true);
         foreach (var chunk in ids.Chunk(200))
         {
             var inList = string.Join(",", chunk.Select((_, i) => $"@P{i}"));
             await HrmsDatabase.ExecuteAsync(dbContext,
-                $"DELETE FROM PayrollTransactions WHERE Id IN ({inList});",
+                $"DELETE t FROM PayrollTransactions t INNER JOIN Employees e ON e.Id=t.EmployeeId WHERE t.Id IN ({inList}) AND ISNULL(t.IsLocked,0)=0 AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};",
                 command => { for (var i = 0; i < chunk.Length; i++) HrmsDatabase.AddParameter(command, $"@P{i}", chunk[i]); });
         }
+        await transaction.CommitAsync();
+    }
+
+    private static async Task ValidateEmployeeIdsAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, IReadOnlyCollection<int> employeeIds)
+    {
+        var requested = employeeIds.Where(x => x > 0).Distinct().ToArray();
+        if (requested.Length != employeeIds.Distinct().Count() || requested.Length == 0)
+            throw new InvalidOperationException("Payroll transaction employee scope is invalid.");
+
+        var valid = new HashSet<int>();
+        foreach (var chunk in requested.Chunk(500))
+        {
+            var inList = string.Join(",", chunk.Select((_, i) => $"@P{i}"));
+            var rows = await HrmsDatabase.QueryAsync(dbContext,
+                $"SELECT e.Id FROM Employees e WITH (UPDLOCK, HOLDLOCK) WHERE e.Id IN ({inList}) AND ISNULL(e.IsDeleted,0)=0 AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};",
+                command =>
+                {
+                    for (var i = 0; i < chunk.Length; i++)
+                        HrmsDatabase.AddParameter(command, $"@P{i}", chunk[i]);
+                },
+                reader => HrmsDatabase.GetInt(reader, "Id"));
+            valid.UnionWith(rows);
+        }
+
+        if (valid.Count != requested.Length)
+            throw new InvalidOperationException("One or more payroll transaction employees are missing or outside company scope.");
+    }
+
+    private static async Task ValidateTransactionIdsAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, IReadOnlyCollection<int> transactionIds, bool requireUnlocked)
+    {
+        var requested = transactionIds.Where(x => x > 0).Distinct().ToArray();
+        if (requested.Length != transactionIds.Distinct().Count() || requested.Length == 0)
+            throw new InvalidOperationException("Payroll transaction selection is invalid.");
+
+        var valid = new HashSet<int>();
+        foreach (var chunk in requested.Chunk(500))
+        {
+            var inList = string.Join(",", chunk.Select((_, i) => $"@P{i}"));
+            var unlocked = requireUnlocked ? " AND ISNULL(t.IsLocked,0)=0" : string.Empty;
+            var rows = await HrmsDatabase.QueryAsync(dbContext,
+                $"SELECT t.Id FROM PayrollTransactions t WITH (UPDLOCK, HOLDLOCK) INNER JOIN Employees e ON e.Id=t.EmployeeId WHERE t.Id IN ({inList}){unlocked} AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};",
+                command =>
+                {
+                    for (var i = 0; i < chunk.Length; i++)
+                        HrmsDatabase.AddParameter(command, $"@P{i}", chunk[i]);
+                },
+                reader => HrmsDatabase.GetInt(reader, "Id"));
+            valid.UnionWith(rows);
+        }
+
+        if (valid.Count != requested.Length)
+            throw new InvalidOperationException("One or more payroll transactions are locked, missing, or outside company scope.");
     }
 
     private static async Task<string> GenerateReferenceNoAsync(ApplicationDbContext dbContext, string txType)
     {
         var prefix = txType switch { "Deduction" => "DD", "Overtime" => "OT", "SalaryDays" => "SD", "LeaveEncashment" => "LV", _ => "IN" };
         prefix += $"{DateTime.Today:yy}-";
-        var count = await HrmsDatabase.ScalarAsync<int>(dbContext,
-            "SELECT COUNT(1) FROM PayrollTransactions WHERE ReferenceNo LIKE @P;",
-            command => HrmsDatabase.AddParameter(command, "@P", prefix + "%"));
-        return $"{prefix}{count + 1:0000}";
+        var next = await HrmsDatabase.ScalarAsync<int>(dbContext,
+            """
+DECLARE @allocated TABLE ([Value] int NOT NULL);
+MERGE PayrollTransactionSequences WITH (UPDLOCK, HOLDLOCK) AS target
+USING (SELECT @Prefix AS Prefix) AS source
+   ON target.Prefix = source.Prefix
+WHEN MATCHED THEN UPDATE SET NextValue = target.NextValue + 1
+WHEN NOT MATCHED THEN INSERT (Prefix, NextValue) VALUES (source.Prefix, 2)
+OUTPUT CASE WHEN $action = 'INSERT' THEN 1 ELSE inserted.NextValue - 1 END INTO @allocated;
+SELECT [Value] FROM @allocated;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Prefix", prefix));
+        return $"{prefix}{next:0000}";
     }
 
     private const string InsertSql = """
