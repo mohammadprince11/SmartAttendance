@@ -63,11 +63,14 @@ public class RunsModel : PageModel
         LatestRun = all.OrderByDescending(r => r.Year).ThenByDescending(r => r.Month).ThenByDescending(r => r.Id).FirstOrDefault();
         LatestEmployees = LatestRun?.EmployeeCount ?? 0;
 
-        var filterYear = Year ?? AvailableYears.First();
+        // السنة: أول تحميل (null) ⟹ السنة الحالية افتراضاً؛ 0 ⟹ الكل؛ غير ذلك ⟹ سنة محدَّدة.
+        var currentYear = DateTime.Today.Year;
+        var showAllYears = Year == 0;
+        var filterYear = (Year is null or 0) ? currentYear : Year.Value;
         YearNet = all.Where(r => r.Year == filterYear).Sum(r => r.TotalNet);
         YearGross = all.Where(r => r.Year == filterYear).Sum(r => r.TotalGross);
 
-        Runs = (Year.HasValue ? all.Where(r => r.Year == Year.Value) : all).ToList();
+        Runs = (showAllYears ? all : all.Where(r => r.Year == filterYear)).ToList();
 
         Employees = await HrmsDatabase.QueryAsync(_db,
             "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo, ISNULL(FullName, N'') AS FullName FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1 ORDER BY EmployeeNo;",

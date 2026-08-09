@@ -7,8 +7,6 @@
     ViewData["Title"] = "المسير";
     var empJson = JsonSerializer.Serialize(Model.Employees.Select(e => new { e.Id, e.No, e.Name }));
     var months = new[] { "يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر" };
-    string[] stages = { "Draft","Calculated","Locked","Issued","PayslipSent" };
-    string[] stageLabels = { "مسودة","محتسب","مقفل","معتمد","قسائم" };
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
@@ -53,7 +51,9 @@
     html[data-theme="light"] .pr-table th { background:#f2f7fb; }
     .pr-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
     .pr-table tbody tr:hover td { background:rgba(18,217,227,.04); }
-    .pr-num { direction:ltr; font-weight:900; text-align:start; }
+    /* الأرقام والرؤوس تُحاذى معاً لبداية الخليّة (يمين RTL) لتصطفّ الأعمدة مع بياناتها */
+    .pr-table th, .pr-table td { text-align:start; }
+    .pr-num { font-weight:900; text-align:start; unicode-bidi:plaintext; }
     .pr-net { color:#4ade80; }
 
     .pr-steps { display:flex; align-items:center; gap:3px; }
@@ -79,14 +79,19 @@
         background:transparent; color:inherit; font-size:20px; line-height:1; font-weight:900; cursor:pointer;
         display:inline-flex; align-items:center; justify-content:center; }
     .pr-kebab:hover { background:rgba(73,111,151,.16); }
-    .pr-menu-panel { position:fixed; z-index:1000; display:none; min-width:180px; padding:6px;
-        background:var(--sa-panel,#111c2b); border:1px solid rgba(73,111,151,.32); border-radius:12px;
-        box-shadow:0 12px 32px rgba(0,0,0,.45); }
+    .pr-menu.open .pr-kebab { background:rgba(18,217,227,.16); border-color:rgba(18,217,227,.5); color:#12D9E3; }
+    .pr-menu-panel { position:fixed; z-index:1000; display:none; min-width:190px; padding:6px;
+        background:#0d1a2b; border:1px solid rgba(73,111,151,.35); border-radius:14px;
+        box-shadow:0 16px 40px rgba(0,0,0,.5); animation:prMenuIn .12s ease; }
+    html[data-theme="light"] .pr-menu-panel { background:#fff; border-color:rgba(73,111,151,.22); box-shadow:0 16px 40px rgba(30,50,80,.16); }
+    @@keyframes prMenuIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
     .pr-menu.open .pr-menu-panel { display:block; }
     .pr-menu-panel form { display:block; margin:0; }
-    .pr-menu-panel .pr-btn { display:block; width:100%; text-align:start; min-height:0; padding:9px 12px;
-        border-radius:8px; background:transparent; color:inherit; font-weight:800; font-size:13px; }
-    .pr-menu-panel .pr-btn:hover { background:rgba(73,111,151,.18); }
+    .pr-menu-panel form + form, .pr-menu-panel form:not(:first-child) { border-top:1px solid rgba(73,111,151,.14); }
+    .pr-menu-panel .pr-btn { display:flex; align-items:center; gap:8px; width:100%; text-align:start; min-height:0;
+        padding:10px 12px; border:0; border-radius:9px; background:transparent; color:inherit; font-weight:800; font-size:13px; }
+    .pr-menu-panel .pr-btn:hover { background:rgba(18,217,227,.12); color:#12D9E3; }
+    html[data-theme="light"] .pr-menu-panel .pr-btn:hover { background:rgba(18,150,160,.1); color:#0c7c86; }
     .pr-actions form { display:inline; }
     .pr-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
     .pr-form select, .pr-form input { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; }
@@ -100,8 +105,6 @@
             <p>احتساب الرواتب من الأساسي والعلاوات والحضور المعتمد وخصومات المخالفات، بدورة اعتماد وقسائم.</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <a class="pr-btn ghost" href="/Payroll/SalaryItems">عناصر الراتب</a>
-            <a class="pr-btn ghost" href="/Payroll/Settings">الضريبة والضمان</a>
             <button type="button" class="pr-btn" onclick="prOpen()">+ دفعة مسير جديدة</button>
         </div>
     </header>
@@ -118,24 +121,15 @@
     <div class="pr-bar">
         <form method="get" class="pr-filter">
             <span>السنة:</span>
+            @{ var selectedYear = Model.Year ?? DateTime.Today.Year; }
             <select name="Year" onchange="this.form.submit()">
-                <option value="">الكل</option>
+                <option value="0" selected="@(Model.Year == 0)">الكل</option>
                 @foreach (var y in Model.AvailableYears)
                 {
-                    <option value="@y" selected="@(Model.Year == y)">@y</option>
+                    <option value="@y" selected="@(Model.Year != 0 && selectedYear == y)">@y</option>
                 }
             </select>
         </form>
-        <div class="pr-filter">
-            <span>المسار:</span>
-            <span class="pr-steps">
-                @for (var i = 0; i < stages.Length; i++)
-                {
-                    <i class="on"></i>
-                }
-                <span style="color:var(--sa-muted,#8FA8BC);font-weight:900">مسودة ← محتسب ← مقفل ← معتمد ← قسائم</span>
-            </span>
-        </div>
     </div>
 
     @if (TempData["PayrollMessage"] != null)
@@ -173,7 +167,7 @@
                             <td class="pr-num">@run.TotalGross.ToString("#,0.##")</td>
                             <td class="pr-num">@deductions.ToString("#,0.##")</td>
                             <td class="pr-num pr-net">@run.TotalNet.ToString("#,0.##")</td>
-                            <td style="font-size:12px">@(run.CalculatedBy ?? "—")<br /><span style="color:var(--sa-muted,#8FA8BC)">@(run.CalculatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</span></td>
+                            <td style="font-size:12px">@(run.CalculatedBy ?? "—")<br /><span style="color:var(--sa-muted,#8FA8BC)">@(run.CalculatedAt?.ToString("yyyy-MM-dd") ?? "")</span></td>
                             <td class="pr-actions-cell">
                                 <div class="pr-menu">
                                     <button type="button" class="pr-kebab" onclick="prMenuToggle(event, this)" aria-haspopup="true" aria-label="إجراءات">⋯</button>
