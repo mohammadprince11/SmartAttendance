@@ -131,6 +131,18 @@ public class RunsModel : PageModel
             return RedirectToPage();
         }
 
+        // قاعدة (١) منع الازدواج: دفعة غير مقفلة بنفس (الشركة+الفترة) ونفس الأشخاص ⟹ هذه
+        // إعادة احتساب لا دفعة جديدة. نمنع الإنشاء المكرّر ونوجّه لإعادة احتساب القائمة.
+        var duplicateBatch = await PayrollRunStore.FindDuplicateUnlockedBatchAsync(
+            _db, companyId, year, month, ids);
+        if (duplicateBatch != null)
+        {
+            TempData["PayrollMessage"] =
+                $"توجد دفعة غير مقفلة بنفس الفترة والأشخاص (الدفعة {duplicateBatch}) — أعد احتسابها بدلاً من إنشاء دفعة مكرّرة.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+
         // شركة الدفعة من نطاق مُنشئها حين يكون قاطعاً (شركة واحدة مسموحة). المقيَّد
         // بشركةٍ لا يستطيع إنشاء دفعة لغيرها، وغير المقيَّد تبقى دفعته بلا نسبة حتى
         // الاحتساب فتُشتقّ من أعضاء نطاقها.
@@ -138,9 +150,9 @@ public class RunsModel : PageModel
             _db, scope, companyId, year, month, scopeMode, ids, HttpContext.RequestAborted);
         if (ok && newId > 0)
         {
-            // احتساب فوري عند الإنشاء حتى تظهر بيانات الدفعة مباشرةً بدل أصفار — الدفعة
-            // تبقى بحالة «محتسب» قابلة للمراجعة/القفل. فشل الاحتساب لا يُسقط الإنشاء.
-            var (calcOk, calcMsg) = await PayrollRunStore.CalculateAsync(
+            // احتساب فوري عند الإنشاء حتى تظهر بيانات الدفعة مباشرةً بدل أصفار — عبر الحارس
+            // الذي يمنع ازدواج صرف موظف بأكثر من دفعة/فترة. فشل الاحتساب لا يُسقط الإنشاء.
+            var (calcOk, calcMsg) = await PayrollRunStore.CalculateWithGuardAsync(
                 _db, newId, User?.Identity?.Name ?? "system");
             // أُزيل التوجيه «شغّل الاحتساب» عند نجاح الاحتساب التلقائي حتى لا تتناقض الرسالة.
             message = calcOk
@@ -222,7 +234,7 @@ public class RunsModel : PageModel
     }
 
     public async Task<IActionResult> OnPostCalculateAsync(int id) =>
-        await ActAsync(id, () => PayrollRunStore.CalculateAsync(_db, id, User?.Identity?.Name ?? "system"));
+        await ActAsync(id, () => PayrollRunStore.CalculateWithGuardAsync(_db, id, User?.Identity?.Name ?? "system"));
 
     public async Task<IActionResult> OnPostLockAsync(int id) => await ActAsync(id, () => PayrollRunStore.LockAsync(_db, id));
     public async Task<IActionResult> OnPostIssueAsync(int id) => await ActAsync(id, () => PayrollRunStore.IssueAsync(_db, id));
