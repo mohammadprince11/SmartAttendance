@@ -570,6 +570,13 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
             .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First().UnpaidLeaveEligible, StringComparer.OrdinalIgnoreCase);
 
+        // دخول العلاوة بالإجمالي (Issue 14): علَم InGross كان معروضاً بلا أثر. علاوةٌ
+        // بـInGross=false لا تُدفع بالإجمالي (فلا تدخل أي وعاء). الافتراض true ⟹ الكل
+        // يدخل كسلوك اليوم.
+        var allowanceInGrossByName = salaryItems
+            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().InGross, StringComparer.OrdinalIgnoreCase);
+
         // خضوع العلاوة للضريبة/الضمان لكل علاوة (Phase 2) — Taxable موجودٌ، GosiEligible مضاف.
         var allowanceTaxableByName = salaryItems
             .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
@@ -673,6 +680,9 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND v.EventDate >= @From AND v.EventDate <= @To;
                     var active = (al.From == null || al.From <= periodEnd)
                         && (al.To == null || !al.EndAfter || al.To >= periodStart);
                     if (!active || al.Amount == 0) continue;
+
+                    // InGross=false ⟹ العلاوة لا تُدفع بالإجمالي ولا تدخل أي وعاء (Issue 14).
+                    if (allowanceInGrossByName.TryGetValue(al.ItemName, out var inGross) && !inGross) continue;
 
                     if (overtimeEligibleByName.TryGetValue(al.ItemName, out var ot) && ot)
                         overtimeEligibleAllow += al.Amount;
