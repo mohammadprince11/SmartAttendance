@@ -890,6 +890,10 @@ public class AttendanceImportService : IAttendanceImportService
         table.Columns.Add("Source", typeof(int));
         table.Columns.Add("Status", typeof(int));
         table.Columns.Add("Notes", typeof(string));
+        table.Columns.Add("CreatedAt", typeof(DateTime));
+        table.Columns.Add("IsDeleted", typeof(bool));
+
+        var createdAt = DateTime.UtcNow;
 
         foreach (var day in build.Importable)
         {
@@ -903,7 +907,9 @@ public class AttendanceImportService : IAttendanceImportService
                 (object?)day.CheckOut ?? DBNull.Value,
                 (int)AttendanceSource.Device,
                 (int)AttendanceStatus.Present,
-                notes);
+                notes,
+                createdAt,
+                false);
         }
 
         var connection = _dbContext.Database.GetDbConnection();
