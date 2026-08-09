@@ -203,7 +203,6 @@
                                     @if (run.Status == "Calculated")
                                     {
                                         <form method="post" asp-page-handler="Lock"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" data-zyconfirm="قفل الدفعة؟">قفل</button></form>
-                                        <form method="post" asp-page-handler="Reopen"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" title="إعادة فتح الدفعة للتعديل">↩ فتح</button></form>
                                     }
                                     @if (run.Status == "Locked")
                                     {

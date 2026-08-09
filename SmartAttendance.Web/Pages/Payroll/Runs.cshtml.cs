@@ -103,10 +103,25 @@ public class RunsModel : PageModel
             ? scope.AllowedCompanyIds.Single()
             : (int?)null;
 
-        var (ok, message, _) = await PayrollRunStore.CreateRunAsync(
+        var (ok, message, newId) = await PayrollRunStore.CreateRunAsync(
             _db, year, month, scopeMode, ids, creatorCompanyId);
+        if (ok && newId > 0)
+        {
+            // احتساب فوري عند الإنشاء حتى تظهر بيانات الدفعة مباشرةً بدل أصفار — الدفعة
+            // تبقى بحالة «محتسب» قابلة للمراجعة/القفل. فشل الاحتساب لا يُسقط الإنشاء.
+            var (calcOk, calcMsg) = await PayrollRunStore.CalculateAsync(
+                _db, newId, User?.Identity?.Name ?? "system");
+            // أُزيل التوجيه «شغّل الاحتساب» عند نجاح الاحتساب التلقائي حتى لا تتناقض الرسالة.
+            message = calcOk
+                ? $"{message.Replace("شغّل «الاحتساب».", "").TrimEnd()} — {calcMsg}"
+                : $"{message} (تعذّر الاحتساب التلقائي: {calcMsg})";
+            TempData["PayrollOk"] = calcOk;
+        }
+        else
+        {
+            TempData["PayrollOk"] = ok;
+        }
         TempData["PayrollMessage"] = message;
-        TempData["PayrollOk"] = ok;
         return RedirectToPage();
     }
 
