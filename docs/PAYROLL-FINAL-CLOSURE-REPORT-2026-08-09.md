@@ -6,7 +6,7 @@ _2026-08-09. Closure/correctness/security pass. Phase 0 verified against the act
 
 `NOT READY — BLOCKERS REMAIN`
 
-**Fixed and tested this session:** Issue 6 (payroll-transaction lock crossing companies — the top P0), Issue 11 (daily-hours unified across attendance/overtime), Issue 14 (InGross now consumed), Issue 16 (GOSI preview aligned to engine). **Still open:** attendance write-scope holes (Issues 1, 3, 4, 5), transaction read scope (7), org attendance-base config (8), salary-item identity (9), batch race (19), and the required SQL-backed golden + Company A/B acceptance tests (need a controlled test DB). Build 0 errors; **1503 tests green**.
+**Fixed and tested this session (8 issues):** the cross-company write BLOCKERs — Issue 1 (attendance manual-edit + delete scope), Issue 4 (MonthAttendance transition IDOR), Issue 5 (WeekAttendance transition IDOR), Issue 6 (payroll-transaction lock crossing companies) — plus HIGH correctness items Issue 11 (daily-hours unified), Issue 14 (InGross consumed), Issue 16 (GOSI preview aligned). **Still open:** attendance import scope (2), MonthAttendance build scope (3), transaction read scope (7), org attendance-base config (8), salary-item identity (9), batch race (19), and the required SQL-backed golden + Company A/B acceptance tests (need a controlled test DB). Build 0 errors; **1509 tests green**.
 
 ## 2. Baseline
 
@@ -14,7 +14,7 @@ _2026-08-09. Closure/correctness/security pass. Phase 0 verified against the act
 |---|---|
 | Branch | `claude/smartattendance-local-rebuild-wftwb3` |
 | Starting SHA | `dc91128` |
-| Ending SHA | `9874f28` |
+| Ending SHA | `f9a882e` |
 | Main SHA (`origin/main`) | `73169433` (untouched) |
 | Merge base | `d4085b3` |
 | Ahead / behind `origin/main` | 42 ahead / 2 behind |
@@ -23,11 +23,11 @@ _2026-08-09. Closure/correctness/security pass. Phase 0 verified against the act
 
 | # | Issue | File / method | Still exists? | Severity | Status |
 |---|---|---|---|---|---|
-| 1 | AttendanceOperations raw `EmployeeNo` lookup unscoped | `Pages/AttendanceOperations/Index.cshtml.cs` L247/502/694 | **Yes** (some paths scope at L632/900, the ID resolves are not) | BLOCKER | Open |
+| 1 | AttendanceOperations raw `EmployeeNo` lookup + delete-by-id unscoped | `Pages/AttendanceOperations/Index.cshtml.cs` | **Was yes** | BLOCKER | **FIXED (`66770ce`)** |
 | 2 | Attendance import lacks `CompanyScope` | `Infrastructure/Services/AttendanceImportService.cs` | Needs deeper read (signature has no scope) | HIGH | Open |
 | 3 | `BuildMonthAsync(db, year, month)` unscoped | `MonthAttendanceStore.cs:84` | **Yes** | HIGH | Open |
-| 4 | MonthAttendance Approve/Reopen/Lock IDOR on `SelectedIds` | `MonthAttendanceStore` / page | Needs confirm | BLOCKER | Open |
-| 5 | WeekAttendance same audit | WeekAttendance | Not audited this session | HIGH | Open |
+| 4 | MonthAttendance Approve/Reopen/Lock IDOR on `SelectedIds` | `MonthAttendanceStore` / page | **Was yes** | BLOCKER | **FIXED (`b346dee`)** |
+| 5 | WeekAttendance same transition IDOR | `WeekAttendanceStore` / page | **Was yes** | HIGH | **FIXED (`f9a882e`)** |
 | 6 | `LockForRunAsync` locks all companies (WHERE Year+Month) | `PayrollTransactionStore.cs:222` | **Was yes** | BLOCKER | **FIXED (`bee05f0`)** |
 | 7 | PayrollTransaction reads (`ListAsync`/`ForPeriodAsync`) unscoped | `PayrollTransactionStore.cs:255` | **Yes** (engine consumes only candidates, but reads are broad) | MEDIUM | Open |
 | 8 | Org default not actually Basic+allowances (Prorated=false) | config/migration | **Yes** — capability present, not configured | HIGH | Open |
@@ -63,8 +63,8 @@ GitHub Actions `ci.yml` (build + unit tests + NuGet audit) runs on `pull_request
 
 ## 16. Remaining Risks
 
-- **BLOCKER** — Attendance manual-edit scope (Issue 1) and MonthAttendance approve/reopen/lock IDOR (Issue 4): a restricted user may mutate another company's attendance via crafted `EmployeeNo`/`SelectedIds`.
-- **HIGH** — Attendance import scope (2), MonthAttendance build scope (3), WeekAttendance (5), org attendance-base not configured (8), salary-item `ItemName` fragility (9). _(11 daily-hours, 14 InGross, 16 GOSI preview — now FIXED.)_
+- **BLOCKER** — none of the confirmed cross-company write holes remain: Issues 1, 4, 5, 6 are FIXED.
+- **HIGH** — Attendance import scope (2), MonthAttendance build scope (3), org attendance-base not configured (8), salary-item `ItemName` fragility (9). _(1, 4, 5, 6, 11, 14, 16 — now FIXED.)_
 - **MEDIUM** — Transaction read scope (7), batch-number race (19), CreateRun atomicity (20/21), payroll SQL candidate-scoping (22–25).
 - **LOW** — Config parse/mode silent fallback (26/27), policy snapshot (28).
 
@@ -76,4 +76,4 @@ No production test employee inserted · no production payroll recalculated · no
 
 ## Final acceptance rule
 
-Of the 12 gating conditions, only **#2 (transaction lock scoped)**, **#11 (release build)**, and **#12 (tests pass)** are met. Conditions 1, 3, 4, 5, 6, 7, 8, 9, 10 remain. Verdict: **`NOT READY — BLOCKERS REMAIN`**.
+Met: **#1** (cross-company attendance writes closed — Issues 1/4/5), **#2** (transaction lock scoped — Issue 6), **#4** (attendance daily-hours unified — Issue 11; the salary-days divisor for salary-days/leave-encashment, Issues 12/13, is not yet unified), **#5** (InGross correct — Issue 14), **#6** (GOSI preview matches — Issue 16; Tax preview not yet), **#11** (build), **#12** (tests). **Remaining:** #3 (salary-item `SalaryItemId` identity — Issue 9), #7 (real SQL-backed double-deduction test), #8 (CreateRun atomicity — Issues 19/20), #9 (SQL-backed golden payroll), #10 (Company A/B acceptance). Conditions 7, 9, 10 require a controlled test database. Verdict: **`NOT READY — BLOCKERS REMAIN`**.
