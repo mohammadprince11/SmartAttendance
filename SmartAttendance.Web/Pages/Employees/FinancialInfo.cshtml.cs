@@ -59,6 +59,13 @@ public class FinancialInfoModel : PageModel
 
     /// <summary>وعاء الضمان المحسوب (أساسي + علاوات نشطة بحسب عضوية وعاء الملف الفائز) وحصّتاه.</summary>
     public decimal GosiBase { get; set; }
+    public EmployeeDefinedSalaryBase.Source GosiBaseSource { get; set; }
+    public string GosiBaseSourceLabel => GosiBaseSource switch
+    {
+        EmployeeDefinedSalaryBase.Source.Employee => "مصدر الوعاء: راتب الضمان المُدخَل",
+        EmployeeDefinedSalaryBase.Source.EmployeeMissing => "⚠ اختير «مُعرَّف بالموظف» بلا قيمة — احتُسب من المكوّنات",
+        _ => "مصدر الوعاء: مُركَّب من المكوّنات"
+    };
     public decimal GosiEmployeeShare { get; set; }
     public decimal GosiCompanyShare { get; set; }
 
@@ -160,7 +167,7 @@ public class FinancialInfoModel : PageModel
             _dbContext, SalaryBaseComposer.GosiBaseKey, winner?.Id ?? 0);
 
         var basic = Input.BasicSalary ?? 0;
-        GosiBase = SalaryBaseComposer.Compose(
+        var composedGosi = SalaryBaseComposer.Compose(
             new SalaryBaseComposer.Amounts
             {
                 Basic = basic,
@@ -168,6 +175,14 @@ public class FinancialInfoModel : PageModel
                 Gross = basic + ActiveAllowancesTotal
             },
             members);
+
+        // Issue 16: المعاينة تحسم الوعاء بنفس منطق المسير (EmployeeDefinedSalaryBase)
+        // فلا تعرض المُركَّب حين يكون النمط «مُعرَّف بالموظف» — وإلا اختلف رقم الشاشة
+        // عن القسيمة (2,000,000 بالمعاينة و400,000 بالاحتساب).
+        var gosiResolved = EmployeeDefinedSalaryBase.Resolve(
+            Input.GosiBaseMode, Input.SocialSecuritySalary, composedGosi);
+        GosiBase = gosiResolved.Base;
+        GosiBaseSource = gosiResolved.Source;
 
         (GosiEmployeeShare, GosiCompanyShare) = PayrollConfigStore.ComputeGosi(GosiBase, winner);
     }

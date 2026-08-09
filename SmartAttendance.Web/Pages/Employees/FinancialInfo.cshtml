@@ -105,7 +105,7 @@
                 <label>راتب الضمان المحتسَب</label>
                 <input type="text" readonly tabindex="-1" value="@Model.GosiBase.ToString("N2")"
                        style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.35);font-weight:1000" />
-                <span class="fin-note">حصة الموظف @Model.GosiEmployeeShare.ToString("N2") · حصة الشركة @Model.GosiCompanyShare.ToString("N2") — تقدير باليوم بوعاء الملف المطبَّق</span>
+                <span class="fin-note">حصة الموظف @Model.GosiEmployeeShare.ToString("N2") · حصة الشركة @Model.GosiCompanyShare.ToString("N2") — @Model.GosiBaseSourceLabel</span>
             </div>
             <div class="fin-field"><label>رقم الضمان</label><input asp-for="Input.SocialSecurityNo" /></div>
             <div class="fin-field"><label>تاريخ الانضمام</label><input name="Input.SocialSecurityJoinDate" value="@d(Model.Input.SocialSecurityJoinDate)" type="date" /></div>
