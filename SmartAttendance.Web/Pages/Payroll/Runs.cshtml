@@ -241,7 +241,7 @@
                 <div id="pr-period-block" style="display:flex;flex-direction:column;gap:12px">
                     <label>الشركة
                         <select name="companyId" id="pr-company" required
-                                onchange="if(this.value){window.location.search='?CompanyId='+encodeURIComponent(this.value)}">
+                                onchange="if(this.value){window.location.search='?CompanyId='+encodeURIComponent(this.value)+'&openrun=1'}">
                             @if (Model.Companies.Count != 1)
                             {
                                 <option value="">اختر الشركة</option>
@@ -389,6 +389,16 @@
             document.getElementById('pr-slide').classList.add('open');
             document.getElementById('pr-backdrop').classList.add('open');
         }
+
+        // اختيار الشركة يعيد تحميل الصفحة لجلب موظفي/أقسام تلك الشركة للنطاق؛ نعيد فتح
+        // نافذة «دفعة جديدة» تلقائياً بعدها (الشركة مختارة والبيانات محمّلة) فلا ينقطع العمل.
+        (function () {
+            if (!new URLSearchParams(window.location.search).has('openrun')) return;
+            if (document.readyState === 'loading')
+                document.addEventListener('DOMContentLoaded', prOpen);
+            else
+                prOpen();
+        })();
 
         // قائمة الإجراءات (⋯) بنمط كيان: زرّ واحد يفتح لوحة الخيارات.
         // اللوحة position:fixed فتُموضَع يدوياً تحت الزرّ لتفادي قصّ الجدول المُمرَّر.
