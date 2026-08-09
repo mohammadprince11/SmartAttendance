@@ -140,6 +140,18 @@
                     <option value="@y" selected="@(Model.Year != 0 && selectedYear == y)">@y</option>
                 }
             </select>
+            @if (Model.Companies.Count > 1)
+            {
+                <span>الشركة:</span>
+                <select name="CompanyId" onchange="this.form.submit()" style="max-width:220px">
+
+                    <option value="0" selected="@(!(Model.CompanyId > 0))">كل الشركات</option>
+                    @foreach (var c in Model.Companies)
+                    {
+                        <option value="@c.Id" selected="@(Model.CompanyId == c.Id)">@c.Name</option>
+                    }
+                </select>
+            }
         </form>
     </div>
 

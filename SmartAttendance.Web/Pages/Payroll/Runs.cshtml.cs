@@ -95,10 +95,13 @@ public class RunsModel : PageModel
         var currentYear = DateTime.Today.Year;
         var showAllYears = Year == 0;
         var filterYear = (Year is null or 0) ? currentYear : Year.Value;
-        YearNet = all.Where(r => r.Year == filterYear).Sum(r => r.TotalNet);
-        YearGross = all.Where(r => r.Year == filterYear).Sum(r => r.TotalGross);
+        // فلتر الشركة (متعدّد الشركات): 0/غير محدَّد ⟹ كل الشركات المسموحة بنطاق المستخدم.
+        Func<PayrollRunStore.PayrollRun, bool> byCompany =
+            CompanyId is > 0 ? r => r.CompanyId == CompanyId.Value : _ => true;
+        YearNet = all.Where(r => r.Year == filterYear && byCompany(r)).Sum(r => r.TotalNet);
+        YearGross = all.Where(r => r.Year == filterYear && byCompany(r)).Sum(r => r.TotalGross);
 
-        Runs = (showAllYears ? all : all.Where(r => r.Year == filterYear)).ToList();
+        Runs = (showAllYears ? all.Where(byCompany) : all.Where(r => r.Year == filterYear && byCompany(r))).ToList();
 
         if (CompanyId is > 0)
         {
