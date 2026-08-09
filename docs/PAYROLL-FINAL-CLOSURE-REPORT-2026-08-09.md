@@ -6,7 +6,7 @@ _2026-08-09. Closure/correctness/security pass. Phase 0 verified against the act
 
 `NOT READY — BLOCKERS REMAIN`
 
-Confirmed cross-company and integrity gaps remain open (Issues 1, 3, 4, 5, 7 attendance/transaction scope; 9 salary-item identity; 11 daily-hours; 14 InGross; 16 GOSI preview; 19 batch race), and the required SQL-backed golden + A/B acceptance tests are not yet in place. The single most dangerous confirmed hole — payroll-transaction lock crossing companies (Issue 6) — is **fixed and tested** this session.
+**Fixed and tested this session:** Issue 6 (payroll-transaction lock crossing companies — the top P0), Issue 11 (daily-hours unified across attendance/overtime), Issue 14 (InGross now consumed), Issue 16 (GOSI preview aligned to engine). **Still open:** attendance write-scope holes (Issues 1, 3, 4, 5), transaction read scope (7), org attendance-base config (8), salary-item identity (9), batch race (19), and the required SQL-backed golden + Company A/B acceptance tests (need a controlled test DB). Build 0 errors; **1503 tests green**.
 
 ## 2. Baseline
 
@@ -14,7 +14,7 @@ Confirmed cross-company and integrity gaps remain open (Issues 1, 3, 4, 5, 7 att
 |---|---|
 | Branch | `claude/smartattendance-local-rebuild-wftwb3` |
 | Starting SHA | `dc91128` |
-| Ending SHA | `bee05f0` |
+| Ending SHA | `9874f28` |
 | Main SHA (`origin/main`) | `73169433` (untouched) |
 | Merge base | `d4085b3` |
 | Ahead / behind `origin/main` | 42 ahead / 2 behind |
@@ -32,9 +32,9 @@ Confirmed cross-company and integrity gaps remain open (Issues 1, 3, 4, 5, 7 att
 | 7 | PayrollTransaction reads (`ListAsync`/`ForPeriodAsync`) unscoped | `PayrollTransactionStore.cs:255` | **Yes** (engine consumes only candidates, but reads are broad) | MEDIUM | Open |
 | 8 | Org default not actually Basic+allowances (Prorated=false) | config/migration | **Yes** — capability present, not configured | HIGH | Open |
 | 9 | EmployeeAllowance keyed by `ItemName`, no `SalaryItemId` | `EmployeeAllowanceSchema.cs` | **Yes** | HIGH | Open |
-| 11 | `AttendanceSalaryLink.StandardDailyHours = 8m` hardcoded vs configurable OT hours | `AttendanceSalaryLink.cs:51/121` | **Yes** | HIGH | Open |
-| 14 | `SalaryItem.InGross` never consumed by engine | `PayrollRunStore.cs` (no `InGross` ref) | **Yes** | HIGH | Open |
-| 16 | GOSI preview uses `SalaryBaseComposer.Compose`, not `EmployeeDefinedSalaryBase.Resolve` | `FinancialInfo.cshtml.cs:163` | **Yes** — preview ≠ engine when EmployeeDefined | HIGH | Open |
+| 11 | `AttendanceSalaryLink.StandardDailyHours = 8m` hardcoded vs configurable OT hours | `AttendanceSalaryLink.cs:51/121` | **Was yes** | HIGH | **FIXED (`8f5b8c4`)** |
+| 14 | `SalaryItem.InGross` never consumed by engine | `PayrollRunStore.cs` (no `InGross` ref) | **Was yes** | HIGH | **FIXED (`9874f28`)** |
+| 16 | GOSI preview uses `SalaryBaseComposer.Compose`, not `EmployeeDefinedSalaryBase.Resolve` | `FinancialInfo.cshtml.cs:163` | **Was yes** | HIGH | **FIXED (`957b3d4`)** |
 | 19 | Batch number `COUNT(*)+1` then INSERT — race | `PayrollRunStore.cs:320` | **Yes** | MEDIUM | Open |
 | 20/21 | CreateRun atomicity + scope-member validation | `PayrollRunStore.CreateRunAsync` | Not audited | MEDIUM | Open |
 | 22–25 | SQL scoping of financial/allowance/violation/transaction loads | `PayrollRunStore.CalculateAsync` | Partial (employees scoped by run company; some lookups load all then dictionary) | MEDIUM | Open |
@@ -54,7 +54,7 @@ Not addressed this session — see the matrix (§3). The organization attendance
 ## 14. Build / Tests
 
 - Release build: **0 errors**.
-- Tests: **1497 passed, 0 failed, 0 skipped**.
+- Tests: **1503 passed, 0 failed, 0 skipped**.
 - `git diff --check`: clean.
 
 ## 15. CI
