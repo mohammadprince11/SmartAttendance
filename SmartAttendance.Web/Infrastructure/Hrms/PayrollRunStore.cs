@@ -1499,7 +1499,12 @@ WHERE [Year] = @Y AND [Month] = @M AND Id <> @X
             if (xSet.Count == 0)
                 return ($"كل الموظفين المحددين ({lockedClaimed.Count}) محجوزون بدفعات مقفلة — لا يوجد من يُحتسب", true);
             // تجسيد صريح (لن يكون فارغاً هنا) لاستبعاد المحجوزين حتى لو كانت «الكل».
+            // أمانٌ ضدّ الازدواج: نُرجعها Draft قبل تغيير نطاقها، فلو فشل احتسابها التالي
+            // (يُجريه CalculateWithGuardAsync بعد هذا) تبقى Draft غير قابلة للقفل/الصرف بدل
+            // أن تُقفل بأسطر بائتة تحوي المحجوزين. وScopeMode لم يعد «الكل».
+            await ForceDraftAsync(dbContext, runId);
             await PayrollRunScopeStore.ReplaceAsync(dbContext, runId, xSet);
+            await SetScopeModeAsync(dbContext, runId, PayrollRunScope.ModeManual);
             notes.Add($"{lockedClaimed.Count} موظفاً محجوزون بدفعة مقفلة — استُبعدوا من هذا الاحتساب");
         }
 
@@ -1517,7 +1522,12 @@ WHERE [Year] = @Y AND [Month] = @M AND Id <> @X
             }
             else
             {
+                // أمانٌ ضدّ الازدواج (مراجعة): اقلب الشقيقة إلى Draft **قبل** تعديل نطاقها.
+                // لو فشل إعادة احتسابها (خطأ SQL/شبكة) تبقى Draft — غير قابلة للقفل — بدل أن
+                // تبقى «محتسبة» بأسطرها البائتة التي تحوي المنقول فتُقفل لاحقاً ⟹ صرف مزدوج.
+                await ForceDraftAsync(dbContext, s.Id);
                 await PayrollRunScopeStore.ReplaceAsync(dbContext, s.Id, remaining);
+                await SetScopeModeAsync(dbContext, s.Id, PayrollRunScope.ModeManual);
                 await CalculateAsync(dbContext, s.Id, userName);
                 notes.Add($"نُقل {overlap.Count} موظفاً من الدفعة {s.BatchNo} (أُعيد احتسابها)");
             }
@@ -1535,6 +1545,28 @@ WHERE [Year] = @Y AND [Month] = @M AND Id <> @X
         var (ok, msg) = await CalculateAsync(dbContext, runId, userName);
         return (ok, note == null ? msg : $"{msg} — {note}");
     }
+
+    /// <summary>
+    /// يُرجع دفعةً غير مقفلة إلى «مسودة» — يُستدعى قبل أن يعدّل الحارس نطاقها، فلو فشل
+    /// إعادة احتسابها تبقى Draft (لا تُقفل ولا تُصرف) بدل بقائها «محتسبة» بأسطر بائتة
+    /// تحوي موظفين نُقلوا لدفعة أخرى ⟹ حماية ضدّ ازدواج الصرف.
+    /// </summary>
+    private static Task ForceDraftAsync(ApplicationDbContext dbContext, int runId) =>
+        HrmsDatabase.ExecuteAsync(
+            dbContext,
+            "UPDATE PayrollRuns SET Status = N'Draft' WHERE Id = @Id AND Status IN (N'Draft', N'Calculated');",
+            command => HrmsDatabase.AddParameter(command, "@Id", runId));
+
+    /// <summary>يضبط ScopeMode بعد أن يُجسِّد الحارس «الكل» لقائمة صريحة، فلا يبقى عرض النطاق كاذباً.</summary>
+    private static Task SetScopeModeAsync(ApplicationDbContext dbContext, int runId, string mode) =>
+        HrmsDatabase.ExecuteAsync(
+            dbContext,
+            "UPDATE PayrollRuns SET ScopeMode = @Mode WHERE Id = @Id;",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", runId);
+                HrmsDatabase.AddParameter(command, "@Mode", mode);
+            });
 
     public static async Task<(bool, string)> DeleteRunAsync(ApplicationDbContext dbContext, int runId)
     {
