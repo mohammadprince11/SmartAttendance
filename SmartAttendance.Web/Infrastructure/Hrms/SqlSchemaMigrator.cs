@@ -1148,11 +1148,18 @@ BEGIN
         ALTER TABLE PayrollRunLines ADD GosiBase decimal(18,2) NOT NULL CONSTRAINT DF_PRL_GosiBase DEFAULT(0);
     IF COL_LENGTH('PayrollRunLines', 'GosiBaseSource') IS NULL
         ALTER TABLE PayrollRunLines ADD GosiBaseSource nvarchar(20) NULL;
-    -- أساس أيام الاستحقاق المدفوعة (المقام). 0 ⟹ استعمل WorkDays (السلوك القديم).
-    -- موجب (30 أو أيام الفترة) ⟹ القسيمة تعرض أيام الاستحقاق لا أيام الحضور.
-    IF COL_LENGTH('PayrollRunLines', 'DaysBasis') IS NULL
-        ALTER TABLE PayrollRunLines ADD DaysBasis int NOT NULL CONSTRAINT DF_PRL_DaysBasis DEFAULT(0);
 END;
+"""),
+
+        // أساس أيام الاستحقاق المدفوعة (المقام) على السطر — هجرة مستقلّة بمفتاح جديد،
+        // لأن إضافة ALTER لهجرةٍ مطبَّقة سابقاً لا يُعاد تشغيلها. 0 ⟹ استعمل WorkDays
+        // (السلوك القديم)؛ موجب ⟹ القسيمة تعرض أيام الاستحقاق (30/الفترة) لا الحضور.
+        new(
+            "20260810-01-payroll-line-daysbasis",
+            """
+IF OBJECT_ID('PayrollRunLines', 'U') IS NOT NULL
+   AND COL_LENGTH('PayrollRunLines', 'DaysBasis') IS NULL
+    ALTER TABLE PayrollRunLines ADD DaysBasis int NOT NULL CONSTRAINT DF_PRL_DaysBasis DEFAULT(0);
 """),
 
         // خضوع العلاوة للضمان لكل علاوة (Phase 2) — نظير Taxable للضريبة. الافتراض 1
