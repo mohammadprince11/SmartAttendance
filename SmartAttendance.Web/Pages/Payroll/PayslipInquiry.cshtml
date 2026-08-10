@@ -10,32 +10,29 @@
     .pq-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
 
     /* شريط الفلترة الأفقي — نمط كيان */
-    .pq-bar { display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; padding:16px 18px;
+    .pq-bar { display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; padding:16px 18px;
         border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .pq-bar .zyep { min-width:280px; }
     .pq-field { display:flex; flex-direction:column; gap:5px; }
     .pq-field > span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
-    .pq-bar select, .pq-bar input { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.28);
+    .pq-bar select { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.28);
         background:rgba(0,0,0,.16); color:inherit; padding:6px 12px; font-weight:900; font-size:13px; }
-    html[data-theme="light"] .pq-bar select, html[data-theme="light"] .pq-bar input { background:#fff; }
-    .pq-emp { min-width:240px; }
-    .pq-sm { max-width:130px; }
-    .pq-search { position:relative; }
-    .pq-view { min-height:38px; align-self:flex-end; padding:8px 26px; border:0; border-radius:10px; cursor:pointer;
+    html[data-theme="light"] .pq-bar select { background:#fff; }
+    .pq-sm { max-width:150px; }
+    .pq-view { min-height:38px; align-self:flex-end; padding:8px 30px; border:0; border-radius:10px; cursor:pointer;
         background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; font-size:14px; font-weight:1000; }
     .pq-view:hover { filter:brightness(1.06); }
     .pq-spacer { flex:1 1 auto; }
 
     .pq-card { border:1px solid rgba(73,111,151,.22); border-radius:16px; overflow:hidden; background:var(--sa-surface,rgba(8,25,43,.9)); }
-
-    /* حالة فارغة بأيقونة — نمط كيان */
     .pq-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:70px 20px; text-align:center; }
     .pq-empty svg { width:78px; height:78px; opacity:.4; }
     .pq-empty p { margin:0; font-size:16px; font-weight:1000; color:var(--sa-muted,#8FA8BC); }
 
     .pq-sum { display:flex; gap:10px; flex-wrap:wrap; padding:14px 16px 0; }
     .pq-sum .chip { font-size:12px; font-weight:900; padding:6px 12px; border-radius:999px; background:rgba(18,217,227,.1); color:#12D9E3; }
-    .pq-table { width:100%; border-collapse:collapse; font-size:13px; min-width:820px; }
     .pq-wrap { overflow-x:auto; }
+    .pq-table { width:100%; border-collapse:collapse; font-size:13px; min-width:820px; }
     .pq-table th { text-align:start; white-space:nowrap; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
     html[data-theme="light"] .pq-table th { background:#f2f7fb; }
     .pq-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); white-space:nowrap; }
@@ -54,29 +51,13 @@
 
 <section class="pq-page" dir="rtl">
     <form method="get" class="pq-bar">
-        @if (Model.Companies.Count > 1)
-        {
-            <label class="pq-field">
-                <span>الشركة</span>
-                <select name="CompanyId" onchange="this.form.submit()">
-                    <option value="0" selected="@(!(Model.CompanyId > 0))">اختر الشركة</option>
-                    @foreach (var c in Model.Companies)
-                    {
-                        <option value="@c.Id" selected="@(Model.CompanyId == c.Id)">@c.Name</option>
-                    }
-                </select>
-            </label>
-        }
-        <label class="pq-field pq-search">
-            <span>اسم الموظف</span>
-            <select name="EmployeeId" class="pq-emp" @(Model.CompanyId > 0 ? "" : "disabled")>
-                <option value="">🔎 ابحث/اختر موظفاً</option>
-                @foreach (var e in Model.Employees)
-                {
-                    <option value="@e.Id" selected="@(Model.EmployeeId == e.Id)">@e.No — @e.Name</option>
-                }
-            </select>
-        </label>
+        <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
+            Name = "EmployeeId",
+            Label = "اسم الموظف",
+            SelectedId = Model.EmployeeId ?? 0,
+            SelectedCode = Model.SelectedEmployeeCode,
+            SelectedName = Model.SelectedEmployeeName
+        })" />
         <label class="pq-field">
             <span>الفترة</span>
             <select name="Month" class="pq-sm">
@@ -98,14 +79,14 @@
             </select>
         </label>
         <div class="pq-spacer"></div>
-        <button type="submit" class="pq-view" @(Model.CompanyId > 0 ? "" : "disabled")>عرض</button>
+        <button type="submit" class="pq-view">عرض</button>
     </form>
 
     <div class="pq-card">
         @if (Model.EmployeeId is > 0 && Model.Payslips.Count > 0)
         {
             <div class="pq-sum">
-                <span class="chip">@Model.SelectedEmployeeName</span>
+                <span class="chip">@Model.SelectedEmployeeCode — @Model.SelectedEmployeeName</span>
                 <span class="chip">@Model.Payslips.Count قسيمة</span>
                 <span class="chip">صافي تراكمي: @Model.Payslips.Sum(p => p.Net).ToString("#,0.##")</span>
             </div>
@@ -130,7 +111,7 @@
                                 <td class="pq-num">@p.Tax.ToString("#,0.##")</td>
                                 <td class="pq-num">@p.GosiEmployee.ToString("#,0.##")</td>
                                 <td class="pq-num pq-net">@p.Net.ToString("#,0.##")</td>
-                                <td style="text-align:end"><a class="pq-viewbtn" href="/Payroll/RunDetail?id=@p.RunId">عرض القسيمة</a></td>
+                                <td style="text-align:end"><a class="pq-viewbtn" href="/Payroll/RunDetail?id=@p.RunId&emp=@Model.EmployeeId">عرض القسيمة</a></td>
                             </tr>
                         }
                     </tbody>
