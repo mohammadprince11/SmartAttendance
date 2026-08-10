@@ -87,12 +87,19 @@
         * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
         /* اطبع القسيمة وحدها: أخفِ كل شيء ثم أظهر شجرة .ps فقط — مستقلّ تماماً عن
            أسماء أصناف القوقعة (الشريط الجانبي/العلوي/الأزرار) مهما تغيّرت. */
+        /* 1) أخفِ كل شيء بصرياً ثم أظهر شجرة .ps فقط (مستقلّ عن أسماء القوقعة). */
         body * { visibility:hidden !important; }
         .ps, .ps * { visibility:visible !important; }
-        body, html { background:#fff !important; color:#111 !important; margin:0 !important; }
-        .ps { position:absolute !important; top:0 !important; inset-inline:0 !important;
-            width:100% !important; padding:0 !important; margin:0 !important;
-            font-size:11pt; background:#fff !important; color:#111 !important; }
+        /* 2) اطوِ ارتفاع القوقعة فعلياً كي لا تدفع صفحة بيضاء ثانية. */
+        .nexora-sidebar, .nexora-topbar, .pq-bar, .ps-actions { display:none !important; }
+        html, body { height:auto !important; min-height:0 !important; overflow:visible !important;
+            margin:0 !important; background:#fff !important; color:#111 !important; }
+        .nexora-shell, .nexora-main, .nexora-content, .pq-page, .pq-card {
+            display:block !important; height:auto !important; min-height:0 !important;
+            overflow:visible !important; margin:0 !important; padding:0 !important;
+            border:none !important; background:#fff !important; box-shadow:none !important; }
+        .ps { padding:0 !important; margin:0 !important; font-size:11pt;
+            background:#fff !important; color:#111 !important; }
 
         /* ترويسة الطباعة: العلامة + عنوان القسيمة + الفترة */
         .ps-print-head { display:flex !important; align-items:flex-end; justify-content:space-between;
