@@ -80,6 +80,9 @@ public static class PayrollRunStore
         public decimal NetSalary { get; set; }
         public int WorkDays { get; set; }
         public int AbsentDays { get; set; }
+        // أساس أيام الاستحقاق المدفوعة (المقام). 0 ⟹ = WorkDays (سلوك قديم). موجب ⟹
+        // أيام الشهر المدفوعة (30/الفترة): القسيمة تعرض العطل/الإجازات مدفوعةً لا غياباً.
+        public int DaysBasis { get; set; }
         // أثر الاحتساب (Phase 15) — «من أين جاء كل دينار؟».
         public decimal AttendanceBase { get; set; }
         public decimal AttendanceFactor { get; set; } = 1m;
@@ -173,7 +176,8 @@ BEGIN
         TaxBase decimal(18,2) NOT NULL DEFAULT(0),
         TaxBaseSource nvarchar(20) NULL,
         GosiBase decimal(18,2) NOT NULL DEFAULT(0),
-        GosiBaseSource nvarchar(20) NULL
+        GosiBaseSource nvarchar(20) NULL,
+        DaysBasis int NOT NULL DEFAULT(0)
     );
     CREATE INDEX IX_PayrollRunLines_Run ON PayrollRunLines (RunId);
 END;
@@ -1184,10 +1188,10 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
                 """
 INSERT INTO PayrollRunLines
   (RunId, EmployeeId, BasicSalary, TotalAllowances, GrossSalary, TaxAmount, GosiEmployee, GosiCompany, OtherDeductions, NetSalary, WorkDays, AbsentDays,
-   AttendanceBase, AttendanceFactor, TaxBase, TaxBaseSource, GosiBase, GosiBaseSource)
+   AttendanceBase, AttendanceFactor, TaxBase, TaxBaseSource, GosiBase, GosiBaseSource, DaysBasis)
 VALUES
   (@RunId, @Emp, @Basic, @Allow, @Gross, @Tax, @GosiEmp, @GosiCo, @Other, @Net, @WorkDays, @AbsentDays,
-   @AttBase, @AttFactor, @TaxBase, @TaxSrc, @GosiBase, @GosiSrc);
+   @AttBase, @AttFactor, @TaxBase, @TaxSrc, @GosiBase, @GosiSrc, @DaysBasis);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
                 command =>
@@ -1211,6 +1215,10 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                     HrmsDatabase.AddParameter(command, "@TaxSrc", taxBase.Source.ToString());
                     HrmsDatabase.AddParameter(command, "@GosiBase", gosiBase.Base);
                     HrmsDatabase.AddParameter(command, "@GosiSrc", gosiBase.Source.ToString());
+                    // أساس أيام الاستحقاق: مقام التنسيب نفسه — موجب ⟹ 30/الفترة (العطل مدفوعة)،
+                    // وإلا WorkDays (السلوك القديم). القسيمة تعرضه بدل أيام الحضور.
+                    HrmsDatabase.AddParameter(command, "@DaysBasis",
+                        linkPolicy.MonthlyDivisorDays > 0 ? linkPolicy.MonthlyDivisorDays : workDays);
                 });
 
             foreach (var c in comps)
@@ -1378,6 +1386,7 @@ ORDER BY e.EmployeeNo;
                 NetSalary = reader["NetSalary"] is decimal n ? n : 0,
                 WorkDays = HrmsDatabase.GetInt(reader, "WorkDays"),
                 AbsentDays = HrmsDatabase.GetInt(reader, "AbsentDays"),
+                DaysBasis = HrmsDatabase.GetInt(reader, "DaysBasis"),
                 AttendanceBase = reader["AttendanceBase"] is decimal ab ? ab : 0,
                 AttendanceFactor = reader["AttendanceFactor"] is decimal af ? af : 1m,
                 TaxBase = reader["TaxBase"] is decimal tb ? tb : 0,

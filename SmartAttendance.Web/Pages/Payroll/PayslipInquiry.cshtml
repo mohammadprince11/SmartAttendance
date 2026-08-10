@@ -134,7 +134,15 @@
                     <div class="f"><span>الراتب الأساسي</span><b>@c.BasicSalary.ToString("#,0.##")</b></div>
                     <div class="f"><span>العلاوات</span><b>@c.TotalAllowances.ToString("#,0.##")</b></div>
                     <div class="f"><span>الراتب الكلي</span><b>@c.GrossSalary.ToString("#,0.##")</b></div>
-                    <div class="f"><span>أيام العمل / الغياب</span><b>@c.WorkDays / @c.AbsentDays</b></div>
+                    @{
+                        // أساس أيام الاستحقاق: 30/الفترة حين توجد سياسة WorkingDays (العطل مدفوعة)،
+                        // وإلا أيام الحضور (السلوك القديم). القسيمة تعرض أيام الاستحقاق لا الحضور.
+                        var psBasis = c.DaysBasis > 0 ? c.DaysBasis : c.WorkDays;
+                        var psPaid = psBasis > 0
+                            ? (int)Math.Round(psBasis * (c.AttendanceFactor == 0 ? 1m : c.AttendanceFactor), MidpointRounding.AwayFromZero)
+                            : 0;
+                    }
+                    <div class="f"><span>أيام العمل / الغياب</span><b>@psBasis / @c.AbsentDays</b></div>
                 </div>
 
                 <div class="ps-mon">
@@ -144,7 +152,7 @@
                             <table>
                                 <thead><tr><th>الدخل</th><th style="width:56px">أيام</th><th style="text-align:end">المبلغ</th></tr></thead>
                                 <tbody>
-                                    <tr><td>الراتب المستحق</td><td class="days">@c.WorkDays</td><td class="amt" style="text-align:end">@c.BasicSalary.ToString("#,0.##")</td></tr>
+                                    <tr><td>الراتب المستحق</td><td class="days">@psPaid</td><td class="amt" style="text-align:end">@c.BasicSalary.ToString("#,0.##")</td></tr>
                                     @foreach (var e in c.Earnings)
                                     {
                                         <tr><td>@e.ItemName</td><td class="days"></td><td class="amt" style="text-align:end">@e.Amount.ToString("#,0.##")</td></tr>

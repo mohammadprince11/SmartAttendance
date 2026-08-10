@@ -1148,6 +1148,10 @@ BEGIN
         ALTER TABLE PayrollRunLines ADD GosiBase decimal(18,2) NOT NULL CONSTRAINT DF_PRL_GosiBase DEFAULT(0);
     IF COL_LENGTH('PayrollRunLines', 'GosiBaseSource') IS NULL
         ALTER TABLE PayrollRunLines ADD GosiBaseSource nvarchar(20) NULL;
+    -- أساس أيام الاستحقاق المدفوعة (المقام). 0 ⟹ استعمل WorkDays (السلوك القديم).
+    -- موجب (30 أو أيام الفترة) ⟹ القسيمة تعرض أيام الاستحقاق لا أيام الحضور.
+    IF COL_LENGTH('PayrollRunLines', 'DaysBasis') IS NULL
+        ALTER TABLE PayrollRunLines ADD DaysBasis int NOT NULL CONSTRAINT DF_PRL_DaysBasis DEFAULT(0);
 END;
 """),
 
