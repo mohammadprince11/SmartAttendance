@@ -78,11 +78,63 @@
     .ps-prev b { color:var(--sa-text,#DCEAF4); direction:ltr; unicode-bidi:plaintext; }
     .ps-actions { display:flex; justify-content:center; padding:16px; border-top:1px solid rgba(73,111,151,.18); }
     .ps-print { min-height:38px; padding:8px 30px; border-radius:10px; border:0; cursor:pointer; background:linear-gradient(135deg,#3b5b7c,#274056); color:#fff; font-size:14px; font-weight:1000; }
+    /* عناصر تظهر بالطباعة فقط — مخفيّة على الشاشة */
+    .ps-print-head, .ps-sign { display:none; }
+
     @@media print {
-        .pq-bar, .nexora-nav, .nexora-topbar, header, nav, aside, .ps-actions { display:none !important; }
-        .pq-card, .ps-box { border:none !important; }
-        body, .pq-page, .ps { background:#fff !important; color:#000 !important; }
-        .ps-hdr .f span, .ps-prev { color:#555 !important; }
+        @@page { size:A4 portrait; margin:12mm 14mm; }
+        /* إجبار المتصفّح على طباعة ألوان الخلفية (رؤوس الجداول الخضراء/الحمراء) */
+        * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+        .pq-bar, .nexora-nav, .nexora-topbar, header, nav, aside, .ps-actions,
+        .zy-topbar, .zy-sidebar, .sa-topbar, .sa-sidebar { display:none !important; }
+        body, .pq-page, .ps { background:#fff !important; color:#111 !important; }
+        .pq-page { gap:0 !important; display:block !important; }
+        .pq-card { border:none !important; border-radius:0 !important; overflow:visible !important;
+            background:#fff !important; box-shadow:none !important; }
+        .ps { padding:0 !important; font-size:11pt; }
+
+        /* ترويسة الطباعة: العلامة + عنوان القسيمة + الفترة */
+        .ps-print-head { display:flex !important; align-items:flex-end; justify-content:space-between;
+            border-bottom:2.5pt solid #0b2a45; padding-bottom:8pt; margin-bottom:14pt; }
+        .pph-brand { font-size:20pt; font-weight:900; color:#0b2a45; letter-spacing:.3px; }
+        .pph-brand span { color:#12A6B0; }
+        .pph-mid { text-align:center; }
+        .pph-title { font-size:15pt; font-weight:900; color:#0b2a45; }
+        .pph-period { font-size:10.5pt; font-weight:800; color:#444; margin-top:2pt; }
+        .pph-net { text-align:end; font-size:10pt; color:#444; }
+        .pph-net b { display:block; font-size:14pt; color:#15803d; direction:ltr; unicode-bidi:plaintext; }
+
+        /* بطاقة معلومات الموظف */
+        .ps-hdr { grid-template-columns:repeat(3,1fr) !important; gap:7pt 20pt !important;
+            border:1pt solid #b9c6d2 !important; border-radius:6pt; background:#f7fafc !important;
+            padding:11pt 13pt !important; margin-bottom:13pt !important; }
+        .ps-hdr .f { font-size:9.5pt !important; }
+        .ps-hdr .f span { color:#5a6672 !important; margin-bottom:1pt !important; }
+        .ps-hdr .f b { color:#111 !important; }
+
+        .ps-mon { margin-top:0 !important; }
+        .ps-mon > h3 { color:#0b2a45 !important; background:#e7f6f7 !important; border:1pt solid #cfe6e8 !important;
+            font-size:11pt !important; padding:6pt 10pt !important; }
+        .ps-cols { grid-template-columns:1fr 1fr !important; gap:12pt !important; break-inside:avoid; }
+        .ps-box { border:1pt solid #b9c6d2 !important; border-radius:6pt !important;
+            overflow:visible !important; break-inside:avoid; }
+        .ps-box table { font-size:10pt !important; }
+        .ps-box th { color:#fff !important; padding:6pt 10pt !important; }
+        .ps-box.inc th { background:#15803d !important; }
+        .ps-box.ded th { background:#b91c1c !important; }
+        .ps-box td { padding:5pt 10pt !important; border-bottom:1pt solid #e2e8ee !important; color:#111 !important; }
+        .ps-box .days { color:#5a6672 !important; }
+        .ps-box tr.sum td { background:#eef2f6 !important; font-weight:1000; }
+        .ps-box tr.net td { background:#e6f7ec !important; color:#15803d !important; }
+        .ps-words { background:#f2fbfc !important; border:1pt solid #cfe6e8 !important; color:#111 !important;
+            font-size:10.5pt !important; margin-top:12pt !important; break-inside:avoid; }
+        .ps-prev { color:#333 !important; border-top:1pt solid #b9c6d2 !important; margin-top:12pt !important; }
+        .ps-prev b { color:#111 !important; }
+
+        /* تذييل التوقيعات */
+        .ps-sign { display:flex !important; justify-content:space-between; gap:20pt; margin-top:30pt; }
+        .ps-sign div { flex:1; font-size:9.5pt; color:#333; text-align:center;
+            border-top:1pt solid #99a7b3; padding-top:5pt; }
     }
 </style>
 
@@ -125,6 +177,14 @@
         {
             var c = Model.Current;
             <div class="ps">
+                <div class="ps-print-head">
+                    <div class="pph-brand">ZYNORA <span>HR</span></div>
+                    <div class="pph-mid">
+                        <div class="pph-title">قسيمة راتب</div>
+                        <div class="pph-period">@Model.CurrentPeriodText</div>
+                    </div>
+                    <div class="pph-net">صافي الراتب<b>@c.NetSalary.ToString("#,0.##")</b></div>
+                </div>
                 <div class="ps-hdr">
                     <div class="f"><span>رمز الموظف</span><b>@Model.SelectedEmployeeCode</b></div>
                     <div class="f"><span>الاسم الكامل</span><b>@Model.SelectedEmployeeName</b></div>
@@ -196,6 +256,12 @@
                         <span>الصافي <b>@Model.Previous.Net.ToString("#,0.##")</b></span>
                     </div>
                 }
+
+                <div class="ps-sign">
+                    <div>توقيع الموظف</div>
+                    <div>المحاسب / الموارد البشرية</div>
+                    <div>الاعتماد</div>
+                </div>
             </div>
             <div class="ps-actions"><button type="button" class="ps-print" onclick="window.print()">🖨 طباعة</button></div>
         }
