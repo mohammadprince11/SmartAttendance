@@ -1644,6 +1644,75 @@ WHERE [Year] = @Y AND [Month] = @M AND Id <> @X
         };
     }
 
+    // ═══════ استعلام القسائم (نظير «استعلام القسائم» بكيان) ═══════
+
+    public sealed class PayslipSummary
+    {
+        public int RunId { get; set; }
+        public int LineId { get; set; }
+        public int Year { get; set; }
+        public int Month { get; set; }
+        public string BatchNo { get; set; } = string.Empty;
+        public string Status { get; set; } = "Draft";
+        public decimal Basic { get; set; }
+        public decimal Allowances { get; set; }
+        public decimal Gross { get; set; }
+        public decimal Tax { get; set; }
+        public decimal GosiEmployee { get; set; }
+        public decimal OtherDeductions { get; set; }
+        public decimal Net { get; set; }
+        public string PeriodText => $"{Month:00}/{Year}";
+        public string StatusLabelText => StatusLabel(Status);
+    }
+
+    /// <summary>
+    /// قسائم موظفٍ عبر كل الدورات (الأحدث أولاً) — لصفحة «استعلام القسائم». مُقيَّدة بنطاق
+    /// الشركات المسموح به للمستخدم (لا تسريب عبر الشركات)، واختيارياً بسنة.
+    /// </summary>
+    public static async Task<List<PayslipSummary>> PayslipHistoryAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int employeeId, int? year)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (employeeId <= 0 || scope.IsDeniedAll) return new List<PayslipSummary>();
+        await EnsureAsync(dbContext);
+
+        var scopePredicate = scope.IsUnrestricted ? "1=1" : scope.ToSqlPredicate("r.CompanyId");
+        var sql = $"""
+SELECT r.Id AS RunId, l.Id AS LineId, r.[Year] AS Yr, r.[Month] AS Mo,
+       ISNULL(r.BatchNo, N'') AS BatchNo, ISNULL(r.Status, N'Draft') AS Status,
+       l.BasicSalary, l.TotalAllowances, l.GrossSalary, l.TaxAmount,
+       l.GosiEmployee, l.OtherDeductions, l.NetSalary
+FROM PayrollRunLines l
+INNER JOIN PayrollRuns r ON r.Id = l.RunId
+WHERE l.EmployeeId = @Emp AND ({scopePredicate}) AND (@Year IS NULL OR r.[Year] = @Year)
+ORDER BY r.[Year] DESC, r.[Month] DESC, r.Id DESC;
+""";
+        return await HrmsDatabase.QueryAsync(
+            dbContext,
+            sql,
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Emp", employeeId);
+                HrmsDatabase.AddParameter(command, "@Year", (object?)year ?? DBNull.Value);
+            },
+            reader => new PayslipSummary
+            {
+                RunId = HrmsDatabase.GetInt(reader, "RunId"),
+                LineId = HrmsDatabase.GetInt(reader, "LineId"),
+                Year = HrmsDatabase.GetInt(reader, "Yr"),
+                Month = HrmsDatabase.GetInt(reader, "Mo"),
+                BatchNo = HrmsDatabase.GetString(reader, "BatchNo"),
+                Status = HrmsDatabase.GetString(reader, "Status"),
+                Basic = reader["BasicSalary"] is decimal b ? b : 0,
+                Allowances = reader["TotalAllowances"] is decimal a ? a : 0,
+                Gross = reader["GrossSalary"] is decimal g ? g : 0,
+                Tax = reader["TaxAmount"] is decimal t ? t : 0,
+                GosiEmployee = reader["GosiEmployee"] is decimal ge ? ge : 0,
+                OtherDeductions = reader["OtherDeductions"] is decimal o ? o : 0,
+                Net = reader["NetSalary"] is decimal n ? n : 0
+            });
+    }
+
     public static async Task<(bool, string)> DeleteRunAsync(ApplicationDbContext dbContext, int runId)
     {
         var run = await GetRunAsync(dbContext, runId);
