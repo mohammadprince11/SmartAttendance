@@ -79,7 +79,7 @@
     .ps-actions { display:flex; justify-content:center; padding:16px; border-top:1px solid rgba(73,111,151,.18); }
     .ps-print { min-height:38px; padding:8px 30px; border-radius:10px; border:0; cursor:pointer; background:linear-gradient(135deg,#3b5b7c,#274056); color:#fff; font-size:14px; font-weight:1000; }
     /* عناصر تظهر بالطباعة فقط — مخفيّة على الشاشة */
-    .ps-print-head, .ps-sign { display:none; }
+    .ps-print-head, .ps-sign, .ps-print-bg { display:none; }
 
     @@media print {
         @@page { size:A4 portrait; margin:12mm 14mm; }
@@ -107,7 +107,13 @@
         .ps { margin:0 !important; font-size:11pt; background:#fff !important; color:#111 !important;
             border:1pt solid #c4ced8 !important; border-radius:8pt !important;
             padding:16pt 18pt !important; min-height:250mm !important;
-            display:flex !important; flex-direction:column !important; }
+            display:flex !important; flex-direction:column !important;
+            position:relative !important; z-index:0 !important; }
+        /* طبقة بيضاء تغطّي الصفحة كلها خلف محتوى القسيمة — تحجب خلفية الثيم الداكنة
+           (.nexora-main داخل layer) التي يستحيل تبييضها من ورقة أنماط غير مُطبَّقة. */
+        .ps-print-bg { display:block !important; visibility:visible !important;
+            position:fixed !important; inset:0 !important; z-index:-1 !important;
+            background:#fff !important; }
 
         /* ترويسة الطباعة: العلامة + عنوان القسيمة + الفترة */
         .ps-print-head { display:flex !important; align-items:flex-end; justify-content:space-between;
@@ -194,6 +200,7 @@
         {
             var c = Model.Current;
             <div class="ps">
+                <div class="ps-print-bg" aria-hidden="true"></div>
                 <div class="ps-print-head">
                     <div class="pph-brand">ZYNORA <span>HR</span></div>
                     <div class="pph-mid">
