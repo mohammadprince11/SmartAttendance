@@ -159,21 +159,26 @@ public static class AttendanceSalaryLink
         // المقام: 0 ⟹ أيام الدوام (السلوك القديم حرفياً)؛ قيمةٌ موجبة ⟹ ثابت 30 أو
         // أيام الفترة — فأيام الراحة/العطل تصير مدفوعة والغياب يُخصم بنسبتها للمقام.
         var divisor = p.MonthlyDivisorDays > 0 ? (decimal)p.MonthlyDivisorDays : workDays;
-        // أيام قبل التعيين تُضاف لغير المدفوع (المُعيَّن يوم 5 ⟹ 4 أيام قبل التعيين ⟹ 26/30).
-        var preHire = preEmploymentUnpaidDays > 0 ? preEmploymentUnpaidDays : 0;
-        var factor = 1m - ((unpaidDays + extraPenaltyDays + preHire) / divisor);
+        // preEmploymentUnpaidDays موجب ⟹ أيام قبل التعيين غير مدفوعة (المُعيَّن يوم 5 ⟹
+        // 4 أيام ⟹ 26/30). سالب ⟹ **أثر رجعي**: أيام دورةٍ مُرحَّلة تُدفع الآن، فالمعامل
+        // يتجاوز 1 (مثلاً 26/7 مُرحَّل ⟹ سبتمبر يدفع يوليو المتبقّي + أغسطس).
+        var factor = 1m - ((unpaidDays + extraPenaltyDays + preEmploymentUnpaidDays) / divisor);
 
-        if (preHire > 0)
+        if (preEmploymentUnpaidDays > 0)
             note = (note == null ? "" : note + " · ") +
-                   $"تنسيب تعيين: {preHire} يوم قبل المباشرة غير مدفوع";
+                   $"تنسيب تعيين: {preEmploymentUnpaidDays} يوم قبل المباشرة غير مدفوع";
+        else if (preEmploymentUnpaidDays < 0)
+            note = (note == null ? "" : note + " · ") +
+                   $"أثر رجعي (تعيين مُرحَّل): {-preEmploymentUnpaidDays} يوم إضافيّة";
 
         if (extraPenaltyDays > 0m)
             note = (note == null ? "" : note + " · ") +
                    $"خصم غياب مضاعف: {absentDays} يوم × {p.AbsenceDeductionDays:0.##}";
 
-        return new Decision(true, Clamp(factor, p.AllowNegative), note);
+        // السقف 1 يُرفع فقط للأثر الرجعي (preEmploymentUnpaidDays < 0)، وإلا يبقى ≤ 1.
+        return new Decision(true, Clamp(factor, p.AllowNegative, allowAboveOne: preEmploymentUnpaidDays < 0), note);
     }
 
-    private static decimal Clamp(decimal value, bool allowNegative) =>
-        value > 1m ? 1m : value < 0m && !allowNegative ? 0m : value;
+    private static decimal Clamp(decimal value, bool allowNegative, bool allowAboveOne = false) =>
+        value > 1m && !allowAboveOne ? 1m : value < 0m && !allowNegative ? 0m : value;
 }

@@ -261,4 +261,26 @@ public class AttendanceSalaryLinkTests
         Assert.Equal(29m / 30m, d.Factor);
         Assert.Null(d.Note);
     }
+
+    [Fact]
+    public void Retroactive_DeferredHire_FactorExceedsOne_NotClamped()
+    {
+        // مُرحَّل (عُيّن 26/7): 6 أيام دورة يوليو المُرحَّلة تُدفع الآن مع أغسطس كاملاً
+        // ⟹ 1 + 6/30 = 1.2 — لا يُقصّ عند 1 (أثر رجعي).
+        var d = AttendanceSalaryLink.Evaluate(
+            new AttendanceSalaryLink.Policy(AttendanceSalaryLink.Lenient, 1m, false, 8m, 30),
+            workDays: 22, presentDays: 22, absentDays: 0, workedHours: 0m, preEmploymentUnpaidDays: -6);
+        Assert.Equal(36m / 30m, d.Factor);
+        Assert.Contains("أثر رجعي", d.Note);
+    }
+
+    [Fact]
+    public void PositivePreHire_StillClampedAndUnpaid()
+    {
+        // موجب يبقى ضمن السقف 1 (لا يُرفع إلا للسالب/الرجعي).
+        var d = AttendanceSalaryLink.Evaluate(
+            new AttendanceSalaryLink.Policy(AttendanceSalaryLink.Lenient, 1m, false, 8m, 30),
+            workDays: 22, presentDays: 22, absentDays: 0, workedHours: 0m, preEmploymentUnpaidDays: 4);
+        Assert.Equal(26m / 30m, d.Factor);
+    }
 }

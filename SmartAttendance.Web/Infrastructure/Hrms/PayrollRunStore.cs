@@ -443,6 +443,21 @@ SELECT SequenceNo FROM @allocated;
         };
         var linkMode = linkPolicy.Mode;
 
+        // يوم قطع التعيين من سياسة الغلق «Hiring»: من يُعيَّن بعده يُرحَّل راتبه الأول
+        // شهراً ويُحتسب بأثر رجعي من تاريخ مباشرته. null ⟹ بلا سياسة ⟹ بلا ترحيل (آمن).
+        // يُطبَّق فقط مع مقامٍ تقويميّ (سياسة WorkingDays نشطة).
+        int? hiringCutoffDay = linkPolicy.MonthlyDivisorDays > 0
+            ? await (
+                from p in dbContext.PayrollCutoffPolicies.AsNoTracking()
+                join t in dbContext.PayrollCutoffPolicyTypes.AsNoTracking()
+                    on p.Id equals t.PayrollCutoffPolicyId
+                where p.IsActive && !p.IsDeleted && !t.IsDeleted
+                      && t.PolicyType == SmartAttendance.Domain.Enums.PayrollCutoffType.Hiring
+                      && p.DayOfMonth != null
+                orderby p.Id
+                select p.DayOfMonth).FirstOrDefaultAsync()
+            : null;
+
         // إعداد ديناميكيّ يتحكّم به المستخدم: هل يُحتسب وعاء الضمان/الضريبة على الأساسي
         // **الكامل** (قبل تنسيب الحضور)؟ الافتراض «Prorated» = السلوك القديم (على المُنقَّص)
         // فلا تتغيّر قسيمة قائمة. «FullBasic» ⟹ الضمان/الضريبة على الأساسي الكامل، والحضور
@@ -687,7 +702,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             "DELETE c FROM PayrollRunLineComponents c INNER JOIN PayrollRunLines l ON l.Id = c.LineId WHERE l.RunId = @RunId; DELETE FROM PayrollRunLines WHERE RunId = @RunId;",
             command => HrmsDatabase.AddParameter(command, "@RunId", runId));
 
-        int count = 0, skippedStopped = 0, skippedNoSalary = 0, skippedNoAttendance = 0, paidWithoutAttendance = 0;
+        int count = 0, skippedStopped = 0, skippedNoSalary = 0, skippedNoAttendance = 0, paidWithoutAttendance = 0, skippedDeferred = 0;
         decimal totalGross = 0, totalNet = 0, totalTax = 0, totalGosiCo = 0;
 
         // سجلّ المستبعَدين لهذه الدفعة — يُجمع بالذاكرة ويُكتب دفعةً واحدة داخل
@@ -723,14 +738,33 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             var absentDays = month?.AbsentDays ?? 0;
             var unpaidLeaveDays = month?.UnpaidLeaveDays ?? 0;
 
-            // تنسيب المُعيَّن منتصف الشهر: أيام تقويمية قبل تاريخه (تعيّن يوم 5 ⟹ 4)
-            // غير مدفوعة. يُطبَّق فقط مع المقام التقويمي (Fixed30/PeriodDays) كي يبقى
-            // نمط «أيام الدوام» القديم بلا تغيير. الكامل الشهر ⟹ 0 ⟹ بلا أثر.
-            var preHireUnpaidDays =
-                linkPolicy.MonthlyDivisorDays > 0 && emp.Start is { } start
-                    && start > periodStart && start <= periodEnd
-                    ? start.DayNumber - periodStart.DayNumber
-                    : 0;
+            // تنسيب التعيين: يُطبَّق فقط مع مقامٍ تقويميّ (سياسة WorkingDays). موجب ⟹
+            // أيام قبل المباشرة غير مدفوعة (مُعيَّن يوم 5 ⟹ 4). سالب ⟹ أثر رجعي لمُرحَّل.
+            var preHireUnpaidDays = 0;
+            if (linkPolicy.MonthlyDivisorDays > 0 && emp.Start is { } start)
+            {
+                var priorStart = periodStart.AddMonths(-1);
+                var deferred = hiringCutoffDay is { } cut && start.Day > cut;
+                if (start > periodStart && start <= periodEnd)
+                {
+                    if (deferred)
+                    {
+                        // مُعيَّن بعد يوم القطع بدورة هذا المسير ⟹ يُرحَّل للمسير التالي.
+                        skippedDeferred++;
+                        exclusions.Add((emp.Id, "HiringDeferred",
+                            $"التعيين ({start:yyyy-MM-dd}) بعد يوم قطع التعيين ({hiringCutoffDay}) — "
+                            + "يُرحَّل راتبه الأول للمسير التالي ويُحتسب بأثر رجعي."));
+                        continue;
+                    }
+                    preHireUnpaidDays = start.DayNumber - periodStart.DayNumber;   // مُعيَّن هذا الشهر (قبل القطع)
+                }
+                else if (deferred && start >= priorStart && start < periodStart)
+                {
+                    // مُرحَّلٌ من الشهر السابق ⟹ يظهر الآن ويُدفع بأثر رجعي من تاريخه
+                    // (أيام الدورة السابقة المُرحَّلة تُضاف ⟹ معامل > 1).
+                    preHireUnpaidDays = -(periodStart.DayNumber - start.DayNumber);
+                }
+            }
 
             var link = AttendanceSalaryLink.Evaluate(
                 linkPolicy, workDays, month?.PresentDays ?? 0, absentDays, month?.WorkedHours ?? 0m,
@@ -1247,6 +1281,7 @@ WHERE Id = @Id;
         if (skippedNoSalary > 0) skips.Add($"{skippedNoSalary} بلا راتب أساسي أو حركات");
         if (skippedStopped > 0) skips.Add($"{skippedStopped} موقوف الاحتساب بالملف المالي");
         if (skippedNoAttendance > 0) skips.Add($"{skippedNoAttendance} بلا بيانات حضور ({AttendanceSalaryLink.ModeLabel(linkMode)})");
+        if (skippedDeferred > 0) skips.Add($"{skippedDeferred} مُرحَّل (تعيين بعد يوم القطع) — يُحتسب بأثر رجعي بالمسير التالي");
         if (outsideScope > 0) skips.Add($"{outsideScope} من النطاق خارج قائمة النشطين");
         var skipText = skips.Count > 0 ? $" · تُخطّي: {string.Join(" · ", skips)}" : string.Empty;
 
