@@ -6,7 +6,7 @@
     var years = Enumerable.Range(DateTime.Today.Year - 5, 7).Reverse().ToList();
 }
 
-<style>
+<style id="payslip-page-styles">
     .pq-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
 
     /* شريط الفلترة الأفقي — نمط كيان */
@@ -79,7 +79,7 @@
     .ps-actions { display:flex; justify-content:center; padding:16px; border-top:1px solid rgba(73,111,151,.18); }
     .ps-print { min-height:38px; padding:8px 30px; border-radius:10px; border:0; cursor:pointer; background:linear-gradient(135deg,#3b5b7c,#274056); color:#fff; font-size:14px; font-weight:1000; }
     /* عناصر تظهر بالطباعة فقط — مخفيّة على الشاشة */
-    .ps-print-head, .ps-sign, .ps-print-bg { display:none; }
+    .ps-print-head, .ps-sign { display:none; }
 
     @@media print {
         @@page { size:A4 portrait; margin:12mm 14mm; }
@@ -102,18 +102,13 @@
             overflow:visible !important; margin:0 !important; padding:0 !important;
             border:none !important; box-shadow:none !important;
             background:#fff !important; background-image:none !important; }
-        /* إطار مستند يملأ الصفحة: ارتفاع آمن (250mm < الحدّ القابل للطباعة ~273mm)
-           يضمن صفحةً واحدة، وflex عمودي يدفع التوقيعات لأسفل الإطار فيختفي الفراغ. */
+        /* القسيمة نفسها بلا إطار خارجي؛ مستند الطباعة المعزول يوفّر الورقة البيضاء.
+           ارتفاع 250mm آمن ضمن المساحة القابلة للطباعة، وflex يدفع التوقيعات للأسفل. */
         .ps { margin:0 !important; font-size:11pt; background:#fff !important; color:#111 !important;
-            border:1pt solid #c4ced8 !important; border-radius:8pt !important;
+            border:0 !important; border-radius:0 !important;
             padding:16pt 18pt !important; min-height:250mm !important;
             display:flex !important; flex-direction:column !important;
             position:relative !important; z-index:0 !important; }
-        /* طبقة بيضاء تغطّي الصفحة كلها خلف محتوى القسيمة — تحجب خلفية الثيم الداكنة
-           (.nexora-main داخل layer) التي يستحيل تبييضها من ورقة أنماط غير مُطبَّقة. */
-        .ps-print-bg { display:block !important; visibility:visible !important;
-            position:fixed !important; inset:0 !important; z-index:-1 !important;
-            background:#fff !important; }
 
         /* ترويسة الطباعة: العلامة + عنوان القسيمة + الفترة */
         .ps-print-head { display:flex !important; align-items:flex-end; justify-content:space-between;
@@ -200,7 +195,6 @@
         {
             var c = Model.Current;
             <div class="ps">
-                <div class="ps-print-bg" aria-hidden="true"></div>
                 <div class="ps-print-head">
                     <div class="pph-brand">ZYNORA <span>HR</span></div>
                     <div class="pph-mid">
@@ -287,7 +281,7 @@
                     <div>الاعتماد</div>
                 </div>
             </div>
-            <div class="ps-actions"><button type="button" class="ps-print" onclick="window.print()">🖨 طباعة</button></div>
+            <div class="ps-actions"><button type="button" class="ps-print" onclick="printPayslip()">🖨 طباعة</button></div>
         }
         else if (Model.EmployeeId is > 0 && Model.Payslips.Count > 0)
         {
@@ -361,34 +355,50 @@
             sync();
         })();
 
-        // خلفية ثيم الموقع الداكنة على .nexora-main معرَّفة داخل @@layer بـ!important،
-        // ولا يمكن تجاوزها من ورقة الأنماط (طبقة !important تغلب غير المُطبَّق). الحلّ
-        // الوحيد المضمون: نمط مضمَّن (inline !important يغلب layered !important) يُطبَّق
-        // لحظة الطباعة فقط ويُزال بعدها — فلا يتأثّر مظهر الشاشة.
+        // نطبع القسيمة في مستند iframe مستقلّ لا يحتوي قوقعة الموقع أصلاً. هذا يمنع
+        // خلفيات وثيمات .nexora-main من الوصول إلى الورقة بدلاً من محاولة تغطيتها.
         (function () {
-            var sels = ['html', 'body', '.nexora-shell', '.nexora-main', '.nexora-content', '.pq-page', '.pq-card'];
-            var saved = [];
-            function whiten() {
-                saved = [];
-                sels.forEach(function (s) {
-                    document.querySelectorAll(s).forEach(function (el) {
-                        saved.push([el, el.getAttribute('style')]);
-                        // transition:none إلزاميّ: بدونه ينطلق انتقال 0.18s على background-color
-                        // فتلتقط الطباعة منتصفه الداكن. صفّره أولاً كي يُطبَّق الأبيض لحظياً.
-                        el.style.setProperty('transition', 'none', 'important');
-                        el.style.setProperty('background', '#fff', 'important');
-                        el.style.setProperty('background-image', 'none', 'important');
-                    });
-                });
-            }
-            function restore() {
-                saved.forEach(function (p) {
-                    if (p[1] === null) p[0].removeAttribute('style'); else p[0].setAttribute('style', p[1]);
-                });
-                saved = [];
-            }
-            window.addEventListener('beforeprint', whiten);
-            window.addEventListener('afterprint', restore);
+            window.printPayslip = function () {
+                var slip = document.querySelector('.ps');
+                var pageStyles = document.getElementById('payslip-page-styles');
+                if (!slip || !pageStyles) return;
+
+                var frame = document.createElement('iframe');
+                frame.setAttribute('title', 'قسيمة الراتب للطباعة');
+                frame.setAttribute('aria-hidden', 'true');
+                frame.style.cssText = 'position:fixed;top:0;left:-10000px;width:210mm;height:297mm;border:0;';
+                document.body.appendChild(frame);
+
+                var frameDoc = frame.contentDocument;
+                var frameWindow = frame.contentWindow;
+                if (!frameDoc || !frameWindow) {
+                    frame.remove();
+                    return;
+                }
+
+                frameDoc.open();
+                frameDoc.write('<!doctype html><html lang="ar" dir="rtl" data-theme="light"><head>' +
+                    '<meta charset="utf-8"><title>قسيمة راتب</title><style>' +
+                    'html,body{margin:0!important;min-height:0!important;background:#fff!important;color:#111!important;' +
+                    'font-family:"Tajawal","Segoe UI",Tahoma,Arial,sans-serif!important;}' +
+                    pageStyles.textContent + '</style></head><body>' + slip.outerHTML + '</body></html>');
+                frameDoc.close();
+
+                var cleaned = false;
+                function cleanup() {
+                    if (cleaned) return;
+                    cleaned = true;
+                    window.setTimeout(function () { frame.remove(); }, 0);
+                }
+
+                frameWindow.addEventListener('afterprint', cleanup, { once: true });
+                window.setTimeout(function () {
+                    frameWindow.focus();
+                    frameWindow.print();
+                }, 50);
+                // مخرج أمان إذا لم يطلق المتصفح afterprint بعد إلغاء المعاينة.
+                window.setTimeout(cleanup, 60000);
+            };
         })();
     </script>
 }
