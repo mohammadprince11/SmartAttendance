@@ -32,8 +32,10 @@ E2E matrix · مراجعة كل write handler · لوحة/إعدادات/إجا�
 | 0 | Coverage Manifest (`SECURITY-CLOSURE-MANIFEST.md`) | `da85292` |
 | 1 | primitives مركزية: `FilterEmployeesInScopeAsync` · `FilterOwnedRowsInScopeAsync` | `f2ff30c` |
 | 7 · 8A · 8B · 8C · 9 | إغلاق ٦ ثغرات عبور شركات + `TenantIsolationGuardTests` (7 اختبارات) | `369781a` |
+| 10 | إصلاح DOM/Stored XSS بمنتقيي الموظفين + معاينة الاستطلاع + `DomXssGuardTests` (3) | `d648a89` |
+| 17 | إزالة تجاوز TLS بأندرويد (MITM) + توقيع إصدار من سرٍّ خارجيّ | `eb9b8da` |
 
-**البناء:** أخضر (0 أخطاء). **الاختبارات:** **1561/1561** (1554 + 7 جديدة، صفر انحدار).
+**البناء:** أخضر (0 أخطاء). **الاختبارات:** **1564/1564** (1554 + 10 جديدة، صفر انحدار).
 
 ### الثغرات المُغلَقة (كلها: دورٌ غير أدمن يقرأ/يكتب مورد شركةٍ أخرى بمعرّفٍ مباشر)
 1. **`BiometricKeys`** — اعتماد/رفض/إلغاء مفاتيح بصمة أي شركة (P0). حُرِس بالملكية + حصر السرد.
@@ -68,9 +70,9 @@ E2E matrix · مراجعة كل write handler · لوحة/إعدادات/إجا�
 | 3 | Organization/Setup — تتبّع `CompanySelectionContext` | يستخدم منتقياً؛ يلزم إثبات حصره بالنطاق |
 | 4·5·6 | Employee create/edit/reassign · Leave/self-service · Permissions/Identity | مراجعة عميقة لكل مسار |
 | 8D–8M | ShiftTypes/AttendanceSettings/Rules/Recommendations/MissingPunch/Roster/Devices/Holidays | كثيرٌ منها تهيئة عالمية (§5 بالمانيفست) — قرار متعدّد المُلّاك |
-| 10·11 | Stored/DOM XSS (`emp-picker.js`/`mass-scope.js` + مسح شامل) · CSP `unsafe-inline` | Gate 4 — لم يُفحص بعد هذه الجلسة |
+| ~~10~~ · 11 | ✅ XSS أُغلق (منتقيان + استطلاع) · **باقٍ:** CSP `unsafe-inline` + مسح `Html.Raw` بالخادم | Gate 4 (XSS) مُغلق؛ CSP لم يُبدأ |
 | 12·13·14·15·16 | وثائق/Verify PIN/MyProfile/Polls/Notifications | — |
-| 17 | Android: `handler.proceed()` TLS · `MIXED_CONTENT` · debug signing | تطبيق `SmartAttendance.MobileApp/` بالمستودع؛ لم يُفحص |
+| ~~17~~ | ✅ TLS bypass أُزيل + توقيع خارجيّ · **باقٍ (مالك):** إعادة بناء APK بالرابط العامّ + release keystore، وSTART_URL لا يزال IP محلّيّ | كودياً مُغلق؛ إعادة البناء/الرابط قرار المالك |
 | 18 | Runtime schema (`EnsureCreatedAsync`/`SqlSchemaMigrator` DDL بالطلب) | قرار معماريّ — نقل للـpipeline |
 | 19·20·21 | Transactions · EmployeeNo/tenant resolution · مسح كل write handler | — |
 | 22·23 | E2E tenant matrix + جعلها إلزامية بالـCI | يحتاج بيئة تشغيل |
@@ -82,10 +84,12 @@ E2E matrix · مراجعة كل write handler · لوحة/إعدادات/إجا�
 
 ### ❌ NOT READY (بعد)
 
-**السبب القابل للإثبات:** أُغلقت طبقةٌ حقيقية من P0 (عبور شركات بالباك-أوفيس) بحرّاس
-واختبارات، لكن **Gates 4/6/7/8/14/15** (XSS · Android TLS · debug signing · E2E
-إلزاميّ · مسح كل write handler · مسح شامل نهائيّ) **لم تُنفَّذ**. القرار النهائي `READY`
-مشروطٌ بإغلاقها.
+**السبب القابل للإثبات:** أُغلقت طبقةٌ حقيقية من P0 (عبور شركات بالباك-أوفيس — Gate
+13) + **Gate 4** (XSS) + **Gate 6/7** كودياً (TLS bypass أُزيل، توقيع خارجيّ). لكن
+**Gates 8/14/15** (E2E إلزاميّ · مسح كل write handler · مسح شامل نهائيّ) و**Phases
+2–6, 8D–8M, 11–16, 18–26** **لم تُنفَّذ**. القرار النهائي `READY` مشروطٌ بإغلاقها،
+وبقرارات المالك (تهيئة عالمية متعدّدة المُلّاك · إعادة بناء APK · نموذج اللوحة).
 
-**التالي الموصى به (مرتّب):** Phase 10 (XSS — Gate 4، محدود وعالي القيمة) ← Phase 3/6
-(تتبّع Organization/UserAccess) ← Phase 17 (Android) ← Phase 22 (E2E matrix عند توفّر بيئة).
+**التالي الموصى به (مرتّب):** Phase 3/6 (تتبّع Organization/UserAccess — محدود) ←
+Phase 18 (نقل DDL وقت الطلب للـpipeline) ← Phase 21 (مسح كل write handler بالمنهج
+نفسه) ← Phase 22/23 (E2E matrix + بوابة CI عند توفّر بيئة تشغيل وقاعدة اختبار).
