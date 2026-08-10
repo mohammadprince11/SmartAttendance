@@ -1568,6 +1568,82 @@ WHERE [Year] = @Y AND [Month] = @M AND Id <> @X
                 HrmsDatabase.AddParameter(command, "@Mode", mode);
             });
 
+    // ═══════ تجميعات لوحة رسوم الرواتب (نظير «رسومات بيانية» بكيان) ═══════
+
+    public sealed class MonthlyPoint
+    {
+        public int Year { get; set; }
+        public int Month { get; set; }
+        public decimal Gross { get; set; }
+        public decimal Net { get; set; }
+        public decimal Tax { get; set; }
+        public decimal GosiCompany { get; set; }
+        public int Employees { get; set; }
+        public string Label => $"{Month:00}/{Year}";
+    }
+
+    public sealed class PayrollBreakdown
+    {
+        public decimal Basic { get; set; }
+        public decimal Allowances { get; set; }
+        public decimal Tax { get; set; }
+        public decimal GosiEmployee { get; set; }
+        public decimal OtherDeductions { get; set; }
+        public decimal Net { get; set; }
+        public decimal GosiCompany { get; set; }
+        public int Employees { get; set; }
+        public string PeriodLabel { get; set; } = "—";
+        public decimal Gross => Basic + Allowances;
+    }
+
+    /// <summary>سلسلة شهرية مجمّعة (إجمالي/صافي/ضريبة/حصة الشركة) لآخر N شهراً — للوحة الرسوم.</summary>
+    public static async Task<List<MonthlyPoint>> MonthlySeriesAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int? companyId, int months)
+    {
+        var all = await ListRunsAsync(dbContext, scope);
+        var filtered = companyId is > 0 ? all.Where(r => r.CompanyId == companyId) : all;
+        return filtered
+            .GroupBy(r => new { r.Year, r.Month })
+            .Select(g => new MonthlyPoint
+            {
+                Year = g.Key.Year,
+                Month = g.Key.Month,
+                Gross = g.Sum(x => x.TotalGross),
+                Net = g.Sum(x => x.TotalNet),
+                Tax = g.Sum(x => x.TotalTax),
+                GosiCompany = g.Sum(x => x.TotalGosiCompany),
+                Employees = g.Sum(x => x.EmployeeCount)
+            })
+            .OrderBy(p => p.Year).ThenBy(p => p.Month)
+            .TakeLast(months)
+            .ToList();
+    }
+
+    /// <summary>تفكيك آخر مسير محتسب (أساسي/علاوات/ضريبة/ضمان/صافي) — لرسم التركيب.</summary>
+    public static async Task<PayrollBreakdown> LatestBreakdownAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int? companyId)
+    {
+        var all = await ListRunsAsync(dbContext, scope);
+        var latest = (companyId is > 0 ? all.Where(r => r.CompanyId == companyId) : all)
+            .Where(r => r.EmployeeCount > 0)
+            .OrderByDescending(r => r.Year).ThenByDescending(r => r.Month).ThenByDescending(r => r.Id)
+            .FirstOrDefault();
+        if (latest == null) return new PayrollBreakdown();
+        var lines = await ListLinesAsync(dbContext, latest.Id);
+        return new PayrollBreakdown
+        {
+            Basic = lines.Sum(l => l.BasicSalary),
+            Allowances = lines.Sum(l => l.TotalAllowances),
+            Tax = lines.Sum(l => l.TaxAmount),
+            GosiEmployee = lines.Sum(l => l.GosiEmployee),
+            OtherDeductions = lines.Sum(l => l.OtherDeductions),
+            Net = lines.Sum(l => l.NetSalary),
+            GosiCompany = lines.Sum(l => l.GosiCompany),
+            Employees = lines.Count,
+            PeriodLabel = latest.PeriodText
+        };
+    }
+
     public static async Task<(bool, string)> DeleteRunAsync(ApplicationDbContext dbContext, int runId)
     {
         var run = await GetRunAsync(dbContext, runId);
