@@ -84,21 +84,43 @@
             return ((e.No || '').toLowerCase().indexOf(q) >= 0) || ((e.Name || '').toLowerCase().indexOf(q) >= 0);
         }) : emps;
         countEl.textContent = 'مجموع النتائج (' + list.length + ')';
-        listEl.innerHTML = list.length
-            ? list.slice(0, 400).map(function (e) {
-                var initial = (e.Name || '؟').trim().charAt(0) || '؟';
-                return '<div class="empk-row" data-id="' + e.Id + '">' +
-                    '<span class="empk-av">' + initial + '</span>' +
-                    '<span class="empk-nm">' + (e.Name || '') + '</span>' +
-                    '<span class="empk-cd">' + (e.No || '') + '</span></div>';
-            }).join('')
-            : '<div class="empk-empty">لا نتائج مطابقة</div>';
-        Array.prototype.forEach.call(listEl.querySelectorAll('.empk-row'), function (row) {
+        // بناء DOM آمن (createElement + textContent) لا innerHTML: اسم/رقم الموظف
+        // بياناتٌ يتحكّم بها المستخدم، فحقنها نصّاً بـinnerHTML كان DOM XSS
+        // (اسمٌ مثل <img src=x onerror=...> يُنفَّذ). textContent يعرضها نصّاً فقط.
+        listEl.textContent = '';
+        if (!list.length) {
+            var empty = document.createElement('div');
+            empty.className = 'empk-empty';
+            empty.textContent = 'لا نتائج مطابقة';
+            listEl.appendChild(empty);
+            return;
+        }
+        list.slice(0, 400).forEach(function (e) {
+            var row = document.createElement('div');
+            row.className = 'empk-row';
+            row.setAttribute('data-id', e.Id);
+
+            var av = document.createElement('span');
+            av.className = 'empk-av';
+            av.textContent = (e.Name || '؟').trim().charAt(0) || '؟';
+
+            var nm = document.createElement('span');
+            nm.className = 'empk-nm';
+            nm.textContent = e.Name || '';
+
+            var cd = document.createElement('span');
+            cd.className = 'empk-cd';
+            cd.textContent = e.No || '';
+
+            row.appendChild(av);
+            row.appendChild(nm);
+            row.appendChild(cd);
             row.onclick = function () {
-                var e = current.employees.find(function (x) { return String(x.Id) === row.getAttribute('data-id'); });
-                if (current.onSelect) current.onSelect(e);
+                var sel = current.employees.find(function (x) { return String(x.Id) === row.getAttribute('data-id'); });
+                if (current.onSelect) current.onSelect(sel);
                 close();
             };
+            listEl.appendChild(row);
         });
     }
 

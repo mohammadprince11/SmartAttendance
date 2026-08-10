@@ -440,7 +440,14 @@
         options.slice(0, 5).forEach((opt, i) => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.innerHTML = `<strong>${iconFor(i, options.length)}</strong><small>${opt}</small>`;
+            // نصّ الخيار يكتبه مُنشئ الإعلان ويُعرَض للمصوّتين — textContent لا innerHTML
+            // كي لا يصير خيارٌ مثل <img onerror> XSS مخزَّناً.
+            const icon = document.createElement('strong');
+            icon.textContent = iconFor(i, options.length);
+            const label = document.createElement('small');
+            label.textContent = opt;
+            btn.appendChild(icon);
+            btn.appendChild(label);
             faces.appendChild(btn);
         });
 
