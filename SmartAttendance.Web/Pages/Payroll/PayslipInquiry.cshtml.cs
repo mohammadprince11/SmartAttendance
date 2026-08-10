@@ -35,6 +35,13 @@ public class PayslipInquiryModel : PageModel
     public string SelectedEmployeeCode { get; set; } = string.Empty;
     public string SelectedEmployeeName { get; set; } = string.Empty;
 
+    // القسيمة الكاملة (عند اختيار فترة محدَّدة) — نظير فورمة كيان.
+    public PayrollRunStore.PayrollLine? Current { get; set; }
+    public string CurrentPeriodText { get; set; } = string.Empty;
+    public string NetInWords { get; set; } = string.Empty;
+    public PayrollRunStore.PayslipSummary? Previous { get; set; }
+    public string PreviousPeriodText { get; set; } = string.Empty;
+
     public async Task OnGetAsync()
     {
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
@@ -53,5 +60,23 @@ public class PayslipInquiryModel : PageModel
         SelectedEmployeeCode = emp.Code;
         SelectedEmployeeName = emp.Name;
         Payslips = await PayrollRunStore.PayslipHistoryAsync(_db, scope, EmployeeId.Value, Year, Month);
+
+        // فترة محدَّدة (شهر+سنة) ⟹ القسيمة الكاملة، مع ملخّص الشهر السابق (نظير كيان).
+        if (Month is > 0 && Year is > 0)
+        {
+            var s = Payslips.FirstOrDefault();
+            if (s != null)
+            {
+                var lines = await PayrollRunStore.ListLinesAsync(_db, s.RunId);
+                Current = lines.FirstOrDefault(l => l.EmployeeId == EmployeeId.Value);
+                CurrentPeriodText = s.PeriodText;
+                if (Current != null)
+                    NetInWords = TerminationSettlementPolicy.AmountInWords(Current.NetSalary, "دينار أردني", "فلس");
+
+                var (py, pm) = Month.Value == 1 ? (Year.Value - 1, 12) : (Year.Value, Month.Value - 1);
+                Previous = (await PayrollRunStore.PayslipHistoryAsync(_db, scope, EmployeeId.Value, py, pm)).FirstOrDefault();
+                PreviousPeriodText = $"{pm}/{py}";
+            }
+        }
     }
 }

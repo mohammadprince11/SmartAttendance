@@ -47,6 +47,37 @@
     .st-PayslipSent { background:rgba(167,139,250,.16); color:#a78bfa; }
     .pq-viewbtn { min-height:29px; padding:4px 14px; border-radius:9px; border:1px solid rgba(73,111,151,.3); background:transparent; color:inherit; font-size:12px; font-weight:900; text-decoration:none; }
     .pq-viewbtn:hover { background:rgba(18,217,227,.12); color:#12D9E3; }
+
+    /* القسيمة الكاملة (فورمة الراتب) — نظير كيان */
+    .ps { padding:20px; }
+    .ps-hdr { display:grid; grid-template-columns:repeat(3,1fr); gap:8px 22px; padding-bottom:16px; margin-bottom:16px; border-bottom:2px solid rgba(18,217,227,.4); }
+    .ps-hdr .f { font-size:12px; }
+    .ps-hdr .f span { color:var(--sa-muted,#8FA8BC); font-weight:800; display:block; margin-bottom:2px; }
+    .ps-hdr .f b { font-weight:1000; direction:ltr; unicode-bidi:plaintext; }
+    .ps-mon { margin-top:14px; }
+    .ps-mon > h3 { margin:0 0 8px; font-size:13px; font-weight:1000; color:#12D9E3; padding:8px 12px; background:rgba(18,217,227,.08); border-radius:8px; }
+    .ps-cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @@media (max-width:760px){ .ps-cols { grid-template-columns:1fr; } .ps-hdr { grid-template-columns:1fr 1fr; } }
+    .ps-box { border:1px solid rgba(73,111,151,.25); border-radius:10px; overflow:hidden; }
+    .ps-box table { width:100%; border-collapse:collapse; font-size:12px; }
+    .ps-box th { text-align:start; padding:8px 12px; font-weight:1000; color:#fff; }
+    .ps-box.inc th { background:#16a34a; } .ps-box.ded th { background:#dc2626; }
+    .ps-box td { padding:7px 12px; border-bottom:1px dashed rgba(143,168,188,.18); }
+    .ps-box .amt { direction:ltr; unicode-bidi:plaintext; font-weight:900; text-align:start; white-space:nowrap; }
+    .ps-box .days { color:var(--sa-muted,#8FA8BC); font-weight:900; text-align:center; width:56px; }
+    .ps-box tr.sum td { background:rgba(73,111,151,.1); font-weight:1000; }
+    .ps-box tr.net td { background:rgba(74,222,128,.12); color:#4ade80; font-weight:1000; }
+    .ps-words { margin-top:14px; padding:12px 16px; border-radius:10px; background:rgba(18,217,227,.06); font-size:13px; font-weight:900; }
+    .ps-prev { margin-top:16px; padding-top:12px; border-top:1px solid rgba(73,111,151,.2); font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:900; display:flex; gap:16px; flex-wrap:wrap; }
+    .ps-prev b { color:var(--sa-text,#DCEAF4); direction:ltr; unicode-bidi:plaintext; }
+    .ps-actions { display:flex; justify-content:center; padding:16px; border-top:1px solid rgba(73,111,151,.18); }
+    .ps-print { min-height:38px; padding:8px 30px; border-radius:10px; border:0; cursor:pointer; background:linear-gradient(135deg,#3b5b7c,#274056); color:#fff; font-size:14px; font-weight:1000; }
+    @@media print {
+        .pq-bar, .nexora-nav, .nexora-topbar, header, nav, aside, .ps-actions { display:none !important; }
+        .pq-card, .ps-box { border:none !important; }
+        body, .pq-page, .ps { background:#fff !important; color:#000 !important; }
+        .ps-hdr .f span, .ps-prev { color:#555 !important; }
+    }
 </style>
 
 <section class="pq-page" dir="rtl">
@@ -83,7 +114,75 @@
     </form>
 
     <div class="pq-card">
-        @if (Model.EmployeeId is > 0 && Model.Payslips.Count > 0)
+        @if (Model.Current != null)
+        {
+            var c = Model.Current;
+            <div class="ps">
+                <div class="ps-hdr">
+                    <div class="f"><span>رمز الموظف</span><b>@Model.SelectedEmployeeCode</b></div>
+                    <div class="f"><span>الاسم الكامل</span><b>@Model.SelectedEmployeeName</b></div>
+                    <div class="f"><span>المسمى الوظيفي</span><b>@(string.IsNullOrWhiteSpace(c.Position) ? "—" : c.Position)</b></div>
+                    <div class="f"><span>وحدة العمل</span><b>@(string.IsNullOrWhiteSpace(c.Department) ? "—" : c.Department)</b></div>
+                    <div class="f"><span>فترة الراتب</span><b>@Model.CurrentPeriodText</b></div>
+                    <div class="f"><span>الراتب الأساسي</span><b>@c.BasicSalary.ToString("#,0.##")</b></div>
+                    <div class="f"><span>العلاوات</span><b>@c.TotalAllowances.ToString("#,0.##")</b></div>
+                    <div class="f"><span>الراتب الكلي</span><b>@c.GrossSalary.ToString("#,0.##")</b></div>
+                    <div class="f"><span>أيام العمل / الغياب</span><b>@c.WorkDays / @c.AbsentDays</b></div>
+                </div>
+
+                <div class="ps-mon">
+                    <h3>الشهر الحالي — @Model.CurrentPeriodText</h3>
+                    <div class="ps-cols">
+                        <div class="ps-box inc">
+                            <table>
+                                <thead><tr><th>الدخل</th><th style="width:56px">أيام</th><th style="text-align:end">المبلغ</th></tr></thead>
+                                <tbody>
+                                    <tr><td>الراتب المستحق</td><td class="days">@c.WorkDays</td><td class="amt" style="text-align:end">@c.BasicSalary.ToString("#,0.##")</td></tr>
+                                    @foreach (var e in c.Earnings)
+                                    {
+                                        <tr><td>@e.ItemName</td><td class="days"></td><td class="amt" style="text-align:end">@e.Amount.ToString("#,0.##")</td></tr>
+                                    }
+                                    <tr class="sum"><td>مجموع الدخل</td><td class="days"></td><td class="amt" style="text-align:end">@c.GrossSalary.ToString("#,0.##")</td></tr>
+                                    <tr class="net"><td>صافي الراتب</td><td class="days"></td><td class="amt" style="text-align:end">@c.NetSalary.ToString("#,0.##")</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="ps-box ded">
+                            <table>
+                                <thead><tr><th>الإقتطاعات</th><th style="width:56px">أيام</th><th style="text-align:end">المبلغ</th></tr></thead>
+                                <tbody>
+                                    @if (c.TaxAmount > 0)
+                                    {
+                                        <tr><td>ضريبة الدخل</td><td class="days"></td><td class="amt" style="text-align:end">@c.TaxAmount.ToString("#,0.##")</td></tr>
+                                    }
+                                    @if (c.GosiEmployee > 0)
+                                    {
+                                        <tr><td>الضمان الاجتماعي</td><td class="days"></td><td class="amt" style="text-align:end">@c.GosiEmployee.ToString("#,0.##")</td></tr>
+                                    }
+                                    @foreach (var d in c.Deductions)
+                                    {
+                                        <tr><td>@d.ItemName</td><td class="days">@(d.Kind == "Leave" && c.AbsentDays > 0 ? c.AbsentDays.ToString() : "")</td><td class="amt" style="text-align:end">@d.Amount.ToString("#,0.##")</td></tr>
+                                    }
+                                    <tr class="sum"><td>مجموع الاقتطاعات</td><td class="days"></td><td class="amt" style="text-align:end">@c.TotalDeductions.ToString("#,0.##")</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="ps-words">@Model.NetInWords فقط لا غير.</div>
+                </div>
+
+                @if (Model.Previous != null)
+                {
+                    <div class="ps-prev">
+                        <span>الشهر السابق (@Model.PreviousPeriodText):</span>
+                        <span>الإجمالي <b>@Model.Previous.Gross.ToString("#,0.##")</b></span>
+                        <span>الصافي <b>@Model.Previous.Net.ToString("#,0.##")</b></span>
+                    </div>
+                }
+            </div>
+            <div class="ps-actions"><button type="button" class="ps-print" onclick="window.print()">🖨 طباعة</button></div>
+        }
+        else if (Model.EmployeeId is > 0 && Model.Payslips.Count > 0)
         {
             <div class="pq-sum">
                 <span class="chip">@Model.SelectedEmployeeCode — @Model.SelectedEmployeeName</span>
