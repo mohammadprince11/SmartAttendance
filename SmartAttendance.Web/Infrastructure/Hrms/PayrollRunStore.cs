@@ -1670,7 +1670,7 @@ WHERE [Year] = @Y AND [Month] = @M AND Id <> @X
     /// الشركات المسموح به للمستخدم (لا تسريب عبر الشركات)، واختيارياً بسنة.
     /// </summary>
     public static async Task<List<PayslipSummary>> PayslipHistoryAsync(
-        ApplicationDbContext dbContext, CompanyScope scope, int employeeId, int? year)
+        ApplicationDbContext dbContext, CompanyScope scope, int employeeId, int? year, int? month = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         if (employeeId <= 0 || scope.IsDeniedAll) return new List<PayslipSummary>();
@@ -1684,7 +1684,8 @@ SELECT r.Id AS RunId, l.Id AS LineId, r.[Year] AS Yr, r.[Month] AS Mo,
        l.GosiEmployee, l.OtherDeductions, l.NetSalary
 FROM PayrollRunLines l
 INNER JOIN PayrollRuns r ON r.Id = l.RunId
-WHERE l.EmployeeId = @Emp AND ({scopePredicate}) AND (@Year IS NULL OR r.[Year] = @Year)
+WHERE l.EmployeeId = @Emp AND ({scopePredicate})
+  AND (@Year IS NULL OR r.[Year] = @Year) AND (@Month IS NULL OR r.[Month] = @Month)
 ORDER BY r.[Year] DESC, r.[Month] DESC, r.Id DESC;
 """;
         return await HrmsDatabase.QueryAsync(
@@ -1694,6 +1695,7 @@ ORDER BY r.[Year] DESC, r.[Month] DESC, r.Id DESC;
             {
                 HrmsDatabase.AddParameter(command, "@Emp", employeeId);
                 HrmsDatabase.AddParameter(command, "@Year", (object?)year ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Month", (object?)month ?? DBNull.Value);
             },
             reader => new PayslipSummary
             {

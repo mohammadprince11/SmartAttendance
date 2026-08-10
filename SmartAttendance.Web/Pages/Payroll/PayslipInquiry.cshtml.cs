@@ -50,6 +50,9 @@ public class PayslipInquiryModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int? Year { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public int? Month { get; set; }
+
     public string SelectedEmployeeName { get; set; } = string.Empty;
 
     public async Task OnGetAsync()
@@ -90,7 +93,7 @@ public class PayslipInquiryModel : PageModel
 
         if (EmployeeId is > 0)
         {
-            Payslips = await PayrollRunStore.PayslipHistoryAsync(_db, scope, EmployeeId.Value, Year);
+            Payslips = await PayrollRunStore.PayslipHistoryAsync(_db, scope, EmployeeId.Value, Year, Month);
             AvailableYears = Payslips.Select(p => p.Year).Distinct().OrderByDescending(y => y).ToList();
             SelectedEmployeeName = Employees.FirstOrDefault(e => e.Id == EmployeeId.Value) is { } emp
                 ? $"{emp.No} — {emp.Name}"
