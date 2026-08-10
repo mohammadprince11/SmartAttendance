@@ -123,14 +123,16 @@ public partial class ProfileModel : PageModel
         await EmployeeLifecycleSchema.EnsureAsync(_dbContext);
         await EnsureProfileFilesTableAsync();
 
-        if (!FromDate.HasValue)
+        // نافذة الحضور الافتراضية تتبع **سياسة فترة الحضور** (نفس اعتماد الحضور
+        // واليوميات والمسير) بدل «آخر 30 يوماً» — فلا يعرض الملفّ غياباً من أيام
+        // تخصّ دورةً أخرى. التواريخ الصريحة بالرابط تُحترَم كما هي.
+        if (!FromDate.HasValue || !ToDate.HasValue)
         {
-            FromDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-30));
-        }
-
-        if (!ToDate.HasValue)
-        {
-            ToDate = DateOnly.FromDateTime(DateTime.Today);
+            var today = DateTime.Today;
+            var (period, _) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(
+                _dbContext, today.Year, today.Month);
+            FromDate ??= period.From;
+            ToDate ??= period.To;
         }
 
         Employee = await LoadEmployeeAsync();
