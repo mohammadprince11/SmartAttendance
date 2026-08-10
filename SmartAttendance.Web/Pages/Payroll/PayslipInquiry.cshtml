@@ -360,5 +360,32 @@
             setInterval(sync, 300);
             sync();
         })();
+
+        // خلفية ثيم الموقع الداكنة على .nexora-main معرَّفة داخل @@layer بـ!important،
+        // ولا يمكن تجاوزها من ورقة الأنماط (طبقة !important تغلب غير المُطبَّق). الحلّ
+        // الوحيد المضمون: نمط مضمَّن (inline !important يغلب layered !important) يُطبَّق
+        // لحظة الطباعة فقط ويُزال بعدها — فلا يتأثّر مظهر الشاشة.
+        (function () {
+            var sels = ['html', 'body', '.nexora-shell', '.nexora-main', '.nexora-content', '.pq-page', '.pq-card'];
+            var saved = [];
+            function whiten() {
+                saved = [];
+                sels.forEach(function (s) {
+                    document.querySelectorAll(s).forEach(function (el) {
+                        saved.push([el, el.getAttribute('style')]);
+                        el.style.setProperty('background', '#fff', 'important');
+                        el.style.setProperty('background-image', 'none', 'important');
+                    });
+                });
+            }
+            function restore() {
+                saved.forEach(function (p) {
+                    if (p[1] === null) p[0].removeAttribute('style'); else p[0].setAttribute('style', p[1]);
+                });
+                saved = [];
+            }
+            window.addEventListener('beforeprint', whiten);
+            window.addEventListener('afterprint', restore);
+        })();
     </script>
 }
