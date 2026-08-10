@@ -51,6 +51,9 @@ public class SettingsModel : PageModel
     /// <summary>الساعات المعيارية لليوم (مقام الأجر الساعي).</summary>
     public decimal StandardDailyHours { get; set; } = PayrollDivisorPolicy.DefaultDailyHours;
 
+    /// <summary>وعاء الضمان/الضريبة: "Prorated" (القديم) أو "FullBasic" (على الأساسي الكامل).</summary>
+    public string GosiTaxBaseMode { get; set; } = "Prorated";
+
     public async Task OnGetAsync()
     {
         TaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_db);
@@ -67,6 +70,22 @@ public class SettingsModel : PageModel
             await HrSettingsStore.GetAsync(_db, PayrollDivisorPolicy.SalaryDaysBasisKey, PayrollDivisorPolicy.BasisFixed30));
         StandardDailyHours = PayrollDivisorPolicy.DailyHours(
             await HrSettingsStore.GetAsync(_db, PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
+        GosiTaxBaseMode = (await HrSettingsStore.GetAsync(_db, "Payroll.GosiTaxBase", "Prorated")) == "FullBasic"
+            ? "FullBasic" : "Prorated";
+    }
+
+    /// <summary>
+    /// حفظ وعاء الضمان/الضريبة: على الأساسي المُنقَّص بالحضور (القديم) أو الأساسي الكامل.
+    /// «الكامل» ⟹ لا يتأثر استقطاع الضمان/الضريبة بالغياب؛ الحضور يمسّ الصافي فقط.
+    /// </summary>
+    public async Task<IActionResult> OnPostSaveGosiTaxBaseAsync(string gosiTaxBase)
+    {
+        var mode = gosiTaxBase == "FullBasic" ? "FullBasic" : "Prorated";
+        await HrSettingsStore.SetAsync(_db, "Payroll.GosiTaxBase", mode);
+        TempData["PayrollMessage"] = mode == "FullBasic"
+            ? "حُفظ: وعاء الضمان/الضريبة على الأساسي الكامل — يسري على الاحتساب القادم."
+            : "حُفظ: وعاء الضمان/الضريبة على الأساسي بعد الحضور (السلوك القديم).";
+        return RedirectToPage();
     }
 
     /// <summary>

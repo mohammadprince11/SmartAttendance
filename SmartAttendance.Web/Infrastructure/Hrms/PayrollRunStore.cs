@@ -434,6 +434,13 @@ SELECT SequenceNo FROM @allocated;
         var linkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(dbContext);
         var linkMode = linkPolicy.Mode;
 
+        // إعداد ديناميكيّ يتحكّم به المستخدم: هل يُحتسب وعاء الضمان/الضريبة على الأساسي
+        // **الكامل** (قبل تنسيب الحضور)؟ الافتراض «Prorated» = السلوك القديم (على المُنقَّص)
+        // فلا تتغيّر قسيمة قائمة. «FullBasic» ⟹ الضمان/الضريبة على الأساسي الكامل، والحضور
+        // يُخصم من الصافي فقط (وعاء الضمان لا يتأثر بالحضور — القاعدة القانونية المعتادة).
+        var gosiTaxOnFullBasic =
+            (await HrSettingsStore.GetAsync(dbContext, "Payroll.GosiTaxBase", "Prorated")) == "FullBasic";
+
         // ملفات الضريبة/الضمان **كلّها** لا الملف النشط وحده: الملف صار خاصيةً لكل
         // موظف (إسناد صريح أو شرط) ⟵ PayrollProfileResolver. من لا إسناد له ولا شرط
         // ينطبق عليه يأخذ الملف النشط تماماً كما قبل هذا التغيير.
@@ -945,15 +952,36 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             var gosiMembers = SalaryBaseStore.Resolve(
                 baseMembers, SalaryBaseComposer.GosiBaseKey, gosiProfile?.Id ?? 0);
 
+            // إعداد «الأساسي الكامل» (يتحكّم به المستخدم): يُركَّب وعاء الضمان/الضريبة من
+            // الأساسي **الكامل** بدل المُنقَّص بالحضور (والإجمالي يُعدَّل تبعاً)، فلا يتأثر
+            // استقطاع الضمان/الضريبة بالغياب. المدفوع والإجمالي والصافي تبقى على الحضور.
+            var contribBase = baseAmounts;
+            if (gosiTaxOnFullBasic && basic != proratedBasic)
+            {
+                contribBase = new SalaryBaseComposer.Amounts
+                {
+                    Basic = basic,
+                    Allowances = baseAmounts.Allowances,
+                    TaxableAllowances = baseAmounts.TaxableAllowances,
+                    GosiAllowances = baseAmounts.GosiAllowances,
+                    TaxableIncome = baseAmounts.TaxableIncome,
+                    TaxableOvertime = baseAmounts.TaxableOvertime,
+                    SalaryDays = baseAmounts.SalaryDays,
+                    LeaveEncashment = baseAmounts.LeaveEncashment,
+                    FormulaAdd = baseAmounts.FormulaAdd,
+                    Gross = baseAmounts.Gross - proratedBasic + basic
+                };
+            }
+
             // وعاء الضريبة: مُركَّبٌ من المكوّنات (السلوك القائم) أو راتب الضريبة المُدخَل
             // حين يختار المستخدم «مُعرَّف بالموظف». النمط الفارغ ⟹ مُركَّب، فلا تتغيّر قسيمة.
-            var composedTax = SalaryBaseComposer.Compose(baseAmounts, taxMembers);
+            var composedTax = SalaryBaseComposer.Compose(contribBase, taxMembers);
             var taxBase = EmployeeDefinedSalaryBase.Resolve(fin?.TaxBaseMode, fin?.CurrentTaxSalary, composedTax);
             var tax = PayrollConfigStore.ComputeTax(taxBase.Base, taxProfile);
 
             // وعاء الضمان: مُركَّب (افتراضاً الإجمالي) أو راتب الضمان المُدخَل
             // (SocialSecuritySalary) حين «مُعرَّف بالموظف» — الرقم الذي كان يُدخَل ويُهمَل.
-            var composedGosi = SalaryBaseComposer.Compose(baseAmounts, gosiMembers);
+            var composedGosi = SalaryBaseComposer.Compose(contribBase, gosiMembers);
             var gosiBase = EmployeeDefinedSalaryBase.Resolve(fin?.GosiBaseMode, fin?.SocialSecuritySalary, composedGosi);
             var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(gosiBase.Base, gosiProfile);
 
