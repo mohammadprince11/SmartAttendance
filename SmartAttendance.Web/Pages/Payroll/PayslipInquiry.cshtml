@@ -85,13 +85,14 @@
         @@page { size:A4 portrait; margin:12mm 14mm; }
         /* إجبار المتصفّح على طباعة ألوان الخلفية (رؤوس الجداول الخضراء/الحمراء) */
         * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
-        .pq-bar, .nexora-nav, .nexora-topbar, header, nav, aside, .ps-actions,
-        .zy-topbar, .zy-sidebar, .sa-topbar, .sa-sidebar { display:none !important; }
-        body, .pq-page, .ps { background:#fff !important; color:#111 !important; }
-        .pq-page { gap:0 !important; display:block !important; }
-        .pq-card { border:none !important; border-radius:0 !important; overflow:visible !important;
-            background:#fff !important; box-shadow:none !important; }
-        .ps { padding:0 !important; font-size:11pt; }
+        /* اطبع القسيمة وحدها: أخفِ كل شيء ثم أظهر شجرة .ps فقط — مستقلّ تماماً عن
+           أسماء أصناف القوقعة (الشريط الجانبي/العلوي/الأزرار) مهما تغيّرت. */
+        body * { visibility:hidden !important; }
+        .ps, .ps * { visibility:visible !important; }
+        body, html { background:#fff !important; color:#111 !important; margin:0 !important; }
+        .ps { position:absolute !important; top:0 !important; inset-inline:0 !important;
+            width:100% !important; padding:0 !important; margin:0 !important;
+            font-size:11pt; background:#fff !important; color:#111 !important; }
 
         /* ترويسة الطباعة: العلامة + عنوان القسيمة + الفترة */
         .ps-print-head { display:flex !important; align-items:flex-end; justify-content:space-between;
