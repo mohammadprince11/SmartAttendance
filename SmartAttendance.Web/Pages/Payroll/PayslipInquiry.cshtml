@@ -91,8 +91,8 @@
         })" />
         <label class="pq-field">
             <span>الفترة</span>
-            <select name="Month" class="pq-sm">
-                <option value="" selected="@(!Model.Month.HasValue)">كل الأشهر</option>
+            <select name="Month" class="pq-sm" required>
+                <option value="" disabled hidden selected="@(!Model.Month.HasValue)">— اختر الشهر —</option>
                 @for (var m = 1; m <= 12; m++)
                 {
                     <option value="@m" selected="@(Model.Month == m)">@months[m - 1] (@m)</option>
@@ -101,11 +101,11 @@
         </label>
         <label class="pq-field">
             <span>سنة</span>
+            @{ var selYear = Model.Year ?? DateTime.Today.Year; }
             <select name="Year" class="pq-sm">
-                <option value="" selected="@(!Model.Year.HasValue)">كل السنوات</option>
                 @foreach (var y in years)
                 {
-                    <option value="@y" selected="@(Model.Year == y)">@y</option>
+                    <option value="@y" selected="@(selYear == y)">@y</option>
                 }
             </select>
         </label>
