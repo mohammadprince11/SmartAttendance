@@ -87,33 +87,6 @@ IF COL_LENGTH('EmployeeMonthAttendance', 'UnpaidLeaveDays') IS NULL
     /// المخاطرة قبل هذا: كان يجمّع ويُدمج يوميات كل الشركات (والمسير يستدعيه تلقائياً).
     /// </remarks>
     /// <returns>عدد صفوف الموظفين ضمن النطاق بعد البناء.</returns>
-    /// <summary>مفتاح «يوم بداية دورة الرواتب» بـ<c>NexoraHrSettings</c> (1 = تقويمي).</summary>
-    public const string CycleStartDayKey = "Attendance.PayCycleStartDay";
-
-    /// <summary>يوم بداية الدورة (1..28). قيمة تالفة/خارج المدى ⟹ 1 (تقويمي، سلوك قديم).</summary>
-    public static async Task<int> CycleStartDayAsync(ApplicationDbContext dbContext)
-    {
-        var raw = await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetAsync(
-            dbContext, CycleStartDayKey, "1");
-        return int.TryParse(raw, out var d) && d is >= 1 and <= 28 ? d : 1;
-    }
-
-    /// <summary>
-    /// نافذة الدورة المنتهية بالشهر (year, month). startDay=1 ⟹ الشهر التقويمي.
-    /// startDay=21 ⟹ [21 من الشهر السابق .. 20 من هذا الشهر]. دالة نقيّة قابلة للاختبار.
-    /// </summary>
-    public static (DateOnly From, DateOnly To) CycleWindow(int year, int month, int startDay)
-    {
-        if (startDay <= 1)
-        {
-            var first = new DateOnly(year, month, 1);
-            return (first, first.AddMonths(1).AddDays(-1));
-        }
-        var clamped = Math.Min(startDay, DateTime.DaysInMonth(year, month));
-        var start = new DateOnly(year, month, clamped);
-        return (start.AddMonths(-1), start.AddDays(-1));
-    }
-
     public static async Task<int> BuildMonthAsync(
         ApplicationDbContext dbContext, CompanyScope scope, int year, int month)
     {
@@ -123,11 +96,12 @@ IF COL_LENGTH('EmployeeMonthAttendance', 'UnpaidLeaveDays') IS NULL
         await DayAttendanceStore.EnsureAsync(dbContext);
         await ShiftTypeStore.EnsureAsync(dbContext); // عمود TotalDurationMode مطلوب بالتجميع
 
-        // نافذة التجميع تتبع «دورة الرواتب»: يوم بدايةٍ قابل للضبط. الافتراض 1 ⟹
-        // الشهر التقويمي (1→آخر الشهر) = السلوك القديم حرفياً. قيمةٌ >1 (مثل 21) ⟹
-        // الدورة المنتهية بهذا الشهر: [يوم البداية من الشهر السابق .. يوم البداية−1 منه]
-        // — فلا تُبتلع أيام تخصّ دورة الشهر التالي (بلاغ محمد: غياب 21/7→31/7 بتموز).
-        var (from, to) = CycleWindow(year, month, await CycleStartDayAsync(dbContext));
+        // نافذة التجميع تتبع **سياسة فترة الحضور** (المصدر الوحيد الذي تستخدمه اليوميات
+        // وبقية الشاشات) لا الشهر التقويمي — بلا سياسة نشطة ترجع الشهر التقويمي كما كان.
+        // بلاغ محمد: التقويمي كان يبتلع غياب 21/7→31/7 (يخصّ دورة آب) براتب تموز.
+        var (period, _) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(dbContext, year, month);
+        var from = period.From;
+        var to = period.To;
 
         await HrmsDatabase.ExecuteAsync(
             dbContext,

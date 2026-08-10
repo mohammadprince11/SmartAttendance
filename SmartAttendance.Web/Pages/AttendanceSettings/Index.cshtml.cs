@@ -44,9 +44,6 @@ public class IndexModel : PageModel
     public int MissingPunchWindowDays { get; set; }
     public bool MissingPunchReasonRequired { get; set; }
 
-    /// <summary>يوم بداية دورة الرواتب (1 = الشهر التقويمي · 21 = دورة 21→20).</summary>
-    public int PayCycleStartDay { get; set; } = 1;
-
     public async Task OnGetAsync()
     {
         Semantics = await PunchSemanticStore.ListAsync(_dbContext);
@@ -63,19 +60,6 @@ public class IndexModel : PageModel
         MissingPunchMonthlyLimit = await MissingPunchPolicy.GetMonthlyLimitAsync(_dbContext);
         MissingPunchWindowDays = await MissingPunchPolicy.GetWindowDaysAsync(_dbContext);
         MissingPunchReasonRequired = await MissingPunchPolicy.GetReasonRequiredAsync(_dbContext);
-        PayCycleStartDay = await MonthAttendanceStore.CycleStartDayAsync(_dbContext);
-    }
-
-    /// <summary>حفظ «يوم بداية دورة الرواتب» — نافذة تجميع الحضور تتبعه (21 ⟹ 21→20).</summary>
-    public async Task<IActionResult> OnPostSavePayCycleAsync()
-    {
-        var day = int.TryParse(Request.Form["PayCycleStartDay"], out var d) && d is >= 1 and <= 28 ? d : 1;
-        await Web.Infrastructure.HrSettings.HrSettingsStore.SetAsync(
-            _dbContext, MonthAttendanceStore.CycleStartDayKey, day.ToString());
-        TempData["SuccessMessage"] = day == 1
-            ? "دورة الرواتب: الشهر التقويمي (1 → آخر الشهر)."
-            : $"دورة الرواتب: {day} من الشهر السابق → {day - 1} من الشهر. أعِد بناء الحضور والاحتساب.";
-        return RedirectToPage();
     }
 
     /// <summary>حفظ استثناءي النطاق الجغرافي بحسب اتجاه البصمة.</summary>

@@ -143,20 +143,6 @@
                 <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ حدود البصمة المفقودة</button>
             </form>
 
-            <form method="post" asp-page-handler="SavePayCycle" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
-                <label>يوم بداية دورة الرواتب
-                    <input type="number" name="PayCycleStartDay" value="@Model.PayCycleStartDay"
-                           min="1" max="28" step="1" style="max-width:160px" />
-                    <span class="ats-hint">
-                        <b>1</b> = الشهر التقويمي (1 → آخر الشهر). <b>21</b> = دورة تجميع الحضور من
-                        <b>21 من الشهر السابق حتى 20 من الشهر</b> — فلا تُحتسب أيام تخصّ دورة الشهر التالي.
-                        <b>لا يمسّ استحقاق أيام العمل التقويمي</b> (مقام 30 وتنسيب التعيين يبقيان على الشهر).
-                    </span>
-                </label>
-                <span class="ats-hint">بعد التغيير: أعِد <b>بناء الحضور من اليوميات</b> للشهر ثم <b>احتساب المسير</b> ليأخذ النافذة الجديدة.</span>
-                <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ دورة الرواتب</button>
-            </form>
-
             <form method="post" asp-page-handler="SaveReanalysisRule" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
                 <label style="flex-direction:row;align-items:center;gap:8px">
                     <input type="checkbox" name="AutoReanalyze" value="true" checked="@Model.AutoReanalyze" />
