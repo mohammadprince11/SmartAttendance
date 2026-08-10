@@ -373,6 +373,9 @@
                 sels.forEach(function (s) {
                     document.querySelectorAll(s).forEach(function (el) {
                         saved.push([el, el.getAttribute('style')]);
+                        // transition:none إلزاميّ: بدونه ينطلق انتقال 0.18s على background-color
+                        // فتلتقط الطباعة منتصفه الداكن. صفّره أولاً كي يُطبَّق الأبيض لحظياً.
+                        el.style.setProperty('transition', 'none', 'important');
                         el.style.setProperty('background', '#fff', 'important');
                         el.style.setProperty('background-image', 'none', 'important');
                     });
