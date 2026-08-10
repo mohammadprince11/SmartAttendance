@@ -34,8 +34,13 @@ E2E matrix · مراجعة كل write handler · لوحة/إعدادات/إجا�
 | 7 · 8A · 8B · 8C · 9 | إغلاق ٦ ثغرات عبور شركات + `TenantIsolationGuardTests` (7 اختبارات) | `369781a` |
 | 10 | إصلاح DOM/Stored XSS بمنتقيي الموظفين + معاينة الاستطلاع + `DomXssGuardTests` (3) | `d648a89` |
 | 17 | إزالة تجاوز TLS بأندرويد (MITM) + توقيع إصدار من سرٍّ خارجيّ | `eb9b8da` |
+| 3 | حصر مُنتقي الشركة بالنطاق: Organization/Index + Chart + OrgStructures (تسرّب هيكل/مدراء/أسماء شركةٍ أخرى) + حرّاس كتابة الهيكل + 3 اختبارات | `495d64b` |
 
-**البناء:** أخضر (0 أخطاء). **الاختبارات:** **1564/1564** (1554 + 10 جديدة، صفر انحدار).
+**البناء:** أخضر (0 أخطاء). **الاختبارات:** **1567/1567** (1554 + 13 حارساً جديداً، صفر انحدار).
+
+**Phase 6 (UserAccess) — تحقّقٌ لا إصلاح:** كل معالِجات `/UserAccess` (Get/Save/Toggle)
+تفرض `IsAdministrator()` ⟹ Forbid؛ والأدمن دائماً `Unrestricted` (EffectiveScopeService)،
+والحارس المركزيّ default-deny لغير المُدرَج ⟹ **`/Setup` أيضاً أدمن-فقط**. فليستا ثغرتَي عبور.
 
 ### الثغرات المُغلَقة (كلها: دورٌ غير أدمن يقرأ/يكتب مورد شركةٍ أخرى بمعرّفٍ مباشر)
 1. **`BiometricKeys`** — اعتماد/رفض/إلغاء مفاتيح بصمة أي شركة (P0). حُرِس بالملكية + حصر السرد.
@@ -67,8 +72,8 @@ E2E matrix · مراجعة كل write handler · لوحة/إعدادات/إجا�
 | Phase | البند | لماذا مؤجَّل |
 |---|---|---|
 | 2 | Dashboard `/` — CompanyOptions/Widgets/POST handlers | يحتاج قرار نموذج اللوحة (per-user/company/global) |
-| 3 | Organization/Setup — تتبّع `CompanySelectionContext` | يستخدم منتقياً؛ يلزم إثبات حصره بالنطاق |
-| 4·5·6 | Employee create/edit/reassign · Leave/self-service · Permissions/Identity | مراجعة عميقة لكل مسار |
+| ~~3~~ | ✅ Organization/Index+Chart · OrgStructures — مُنتقي الشركة محصورٌ بالنطاق + حرّاس الكتابة | مُغلق (`495d64b`) |
+| 4·5·~~6~~ | Employee create/edit/reassign · Leave/self-service · ✅ **UserAccess/Setup أدمن-فقط (تحقّق)** | 6 مُغلق؛ 4/5 مراجعة عميقة |
 | 8D–8M | ShiftTypes/AttendanceSettings/Rules/Recommendations/MissingPunch/Roster/Devices/Holidays | كثيرٌ منها تهيئة عالمية (§5 بالمانيفست) — قرار متعدّد المُلّاك |
 | ~~10~~ · 11 | ✅ XSS أُغلق (منتقيان + استطلاع) · **باقٍ:** CSP `unsafe-inline` + مسح `Html.Raw` بالخادم | Gate 4 (XSS) مُغلق؛ CSP لم يُبدأ |
 | 12·13·14·15·16 | وثائق/Verify PIN/MyProfile/Polls/Notifications | — |
@@ -90,6 +95,6 @@ E2E matrix · مراجعة كل write handler · لوحة/إعدادات/إجا�
 2–6, 8D–8M, 11–16, 18–26** **لم تُنفَّذ**. القرار النهائي `READY` مشروطٌ بإغلاقها،
 وبقرارات المالك (تهيئة عالمية متعدّدة المُلّاك · إعادة بناء APK · نموذج اللوحة).
 
-**التالي الموصى به (مرتّب):** Phase 3/6 (تتبّع Organization/UserAccess — محدود) ←
-Phase 18 (نقل DDL وقت الطلب للـpipeline) ← Phase 21 (مسح كل write handler بالمنهج
-نفسه) ← Phase 22/23 (E2E matrix + بوابة CI عند توفّر بيئة تشغيل وقاعدة اختبار).
+**التالي الموصى به (مرتّب):** Phase 2 (Dashboard — بعد قرار نموذج اللوحة) ← Phase 18
+(نقل DDL وقت الطلب للـpipeline) ← Phase 21 (مسح كل write handler بالمنهج نفسه) ←
+Phase 22/23 (E2E matrix + بوابة CI عند توفّر بيئة تشغيل وقاعدة اختبار).
