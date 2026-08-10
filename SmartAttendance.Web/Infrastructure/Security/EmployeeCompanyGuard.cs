@@ -81,6 +81,94 @@ public static class EmployeeCompanyGuard
         return companyId.Count == 1 && scope.Allows(companyId[0]);
     }
 
+    /// <summary>
+    /// من مجموعة معرّفات موظفين واردة من الطلب، يُعيد **المسموح منها فقط** ضمن نطاق
+    /// شركات المستخدم — الأساس لعمليات التحديد الجماعي (تعيين مناوبة/موقع/مهمة لعدّة
+    /// موظفين دفعةً).
+    ///
+    /// <para><b>لماذا مركزيّة:</b> شاشات «التحديد الجماعي» تستقبل قائمة
+    /// <c>SelectedIds</c> من النموذج وتكتب لكلٍّ بلا فحص — نفس الثغرة مكرّرةً. فحصٌ
+    /// فرديّ لكل معرّف = استعلامٌ لكل موظف؛ وهذا الحصر يتمّ باستعلامٍ واحد.</para>
+    ///
+    /// <para><b>مغلق الفشل:</b> نطاق مرفوض ⟹ فارغ؛ ومعرّفات غير صالحة تُسقَط. الأدمن
+    /// (غير المقيَّد) يُعيد كل المعرّفات الموجبة كما هي بلا استعلام. المتّصل يقارن حجم
+    /// المُعاد بالمطلوب: أي نقصٍ يعني معرّفاً خارج النطاق ⟹ يرفض الدفعة كلها.</para>
+    ///
+    /// <para><b>لا سطح حقن:</b> المعرّفات أعدادٌ صحيحة تُرشَّح <c>&gt; 0</c> قبل الحقن،
+    /// وشرط النطاق يُبنى من أعداد <see cref="CompanyScope"/> المتحقَّق منها — لا مدخل نصّيّ.</para>
+    /// </summary>
+    public static async Task<HashSet<int>> FilterEmployeesInScopeAsync(
+        ApplicationDbContext dbContext,
+        IEnumerable<int> employeeIds,
+        CompanyScope scope,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(scope);
+
+        var ids = (employeeIds ?? Array.Empty<int>())
+            .Where(id => id > 0)
+            .Distinct()
+            .ToList();
+
+        if (ids.Count == 0 || scope.IsDeniedAll) return new HashSet<int>();
+        if (scope.IsUnrestricted) return ids.ToHashSet();
+
+        // المعرّفات أعدادٌ صحيحة مُرشَّحة (> 0) وشرط النطاق من أعداد متحقَّق منها.
+        var idList = string.Join(", ", ids);
+        var predicate = scope.ToSqlPredicate("e.CompanyId");
+
+        var allowed = await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"SELECT e.Id FROM Employees e WHERE e.Id IN ({idList}) AND ISNULL(e.IsDeleted, 0) = 0 AND {predicate};",
+            configure: null,
+            reader => HrmsDatabase.GetInt(reader, "Id"));
+
+        return allowed.ToHashSet();
+    }
+
+    /// <summary>
+    /// نظير <see cref="FilterEmployeesInScopeAsync"/> لكيانات تملكها صفوفٌ عبر
+    /// <c>EmployeeId</c> (تعديل مناوبة · عهدة · مهمة): من مجموعة معرّفات صفوفٍ واردة
+    /// من الطلب، يُعيد المسموح منها فقط ضمن نطاق شركاتي — لحذفٍ/تعديلٍ جماعيّ آمن.
+    ///
+    /// <para>اسما الجدول والعمود ثابتان بالكود ويمرّان بـ<see cref="GuardIdentifier"/>،
+    /// والمعرّفات أعداد صحيحة مُرشَّحة — لا سطح حقن. مغلق الفشل كنظيره.</para>
+    /// </summary>
+    public static async Task<HashSet<int>> FilterOwnedRowsInScopeAsync(
+        ApplicationDbContext dbContext,
+        string table,
+        string idColumn,
+        IEnumerable<int> ids,
+        CompanyScope scope,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(scope);
+
+        var rowIds = (ids ?? Array.Empty<int>())
+            .Where(id => id > 0)
+            .Distinct()
+            .ToList();
+
+        if (rowIds.Count == 0 || scope.IsDeniedAll) return new HashSet<int>();
+        if (scope.IsUnrestricted) return rowIds.ToHashSet();
+
+        GuardIdentifier(table);
+        GuardIdentifier(idColumn);
+
+        var idList = string.Join(", ", rowIds);
+        var predicate = scope.ToSqlPredicate("e.CompanyId");
+
+        var allowed = await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"SELECT t.{idColumn} FROM {table} t INNER JOIN Employees e ON e.Id = t.EmployeeId WHERE t.{idColumn} IN ({idList}) AND {predicate};",
+            configure: null,
+            reader => HrmsDatabase.GetInt(reader, idColumn));
+
+        return allowed.ToHashSet();
+    }
+
     /// <summary>معرّف SQL صالح فقط — حرفٌ أو شرطة سفلية ثم حروف/أرقام/شرطات سفلية.</summary>
     public static void GuardIdentifier(string identifier)
     {
@@ -103,6 +191,10 @@ public static class EmployeeCompanyGuard
         public const string EmployeeEndOfService = "EmployeeEndOfService";
         public const string EmployeeSalaryRaises = "EmployeeSalaryRaises";
         public const string AttendanceRecords = "AttendanceRecords";
+        public const string ShiftOverrides = "ShiftOverrides";
+        public const string EmployeeWebAuthnCredentials = "EmployeeWebAuthnCredentials";
+        public const string EmployeeFileRecords = "EmployeeFileRecords";
+        public const string EmployeeTasks = "EmployeeTasks";
     }
 
     /// <summary>
