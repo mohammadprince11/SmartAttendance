@@ -41,9 +41,6 @@ public class SettingsModel : PageModel
 
     public string AttendanceLinkMode => LinkPolicy.Mode;
 
-    /// <summary>أساس مقام التنسيب: أيام الدوام (قديم) / ثابت 30 / أيام الفترة.</summary>
-    public string AttendanceProrationBasis { get; set; } = AttendanceSalaryLink.BasisWorkDays;
-
     // ── سياسات الأوعية والمقام (كلّها بيانات يحرّرها المستخدم) ──
     /// <summary>وعاء الأوفرتايم: الأساسي وحده أو الأساسي + علاوات مؤهَّلة.</summary>
     public string OvertimeBaseMode { get; set; } = PayrollEarningBase.ModeBasic;
@@ -64,9 +61,6 @@ public class SettingsModel : PageModel
         BaseMembers = await SalaryBaseStore.AllAsync(_db);
         CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_db);
         LinkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(_db);
-        AttendanceProrationBasis = AttendanceSalaryLink.NormalizeBasis(
-            await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetAsync(
-                _db, AttendanceSalaryLink.ProrationBasisKey, AttendanceSalaryLink.BasisWorkDays));
 
         OvertimeBaseMode = PayrollEarningBase.NormalizeMode(
             await HrSettingsStore.GetAsync(_db, "Payroll.OvertimeBaseMode", PayrollEarningBase.ModeBasic));
@@ -140,19 +134,13 @@ public class SettingsModel : PageModel
     /// بدل أن تكتفي بـ«حُفظ».
     /// </summary>
     public async Task<IActionResult> OnPostSaveAttendanceLinkAsync(
-        string mode, decimal absenceDays, bool allowNegative, string? prorationBasis = null)
+        string mode, decimal absenceDays, bool allowNegative)
     {
-        var basis = AttendanceSalaryLink.NormalizeBasis(prorationBasis);
-        var divisor = basis == AttendanceSalaryLink.BasisFixed30 ? 30 : 0;
-        var policy = new AttendanceSalaryLink.Policy(mode, absenceDays, allowNegative, 8m, divisor).Normalized();
+        // المقام لم يعد يُحفظ هنا — يأتي من سياسة الغلق «أيام العمل» بالمسير.
+        var policy = new AttendanceSalaryLink.Policy(mode, absenceDays, allowNegative).Normalized();
         await AttendanceSalaryLinkSettings.SaveAsync(_db, policy);
-        // الأساس صراحةً (يغطّي PeriodDays الذي مقامه صفر عند الحفظ).
-        await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.SetAsync(
-            _db, AttendanceSalaryLink.ProrationBasisKey, basis);
 
         var notes = new List<string> { AttendanceSalaryLink.ModeLabel(policy.Mode) };
-        if (basis != AttendanceSalaryLink.BasisWorkDays)
-            notes.Add(basis == AttendanceSalaryLink.BasisFixed30 ? "مقام ثابت 30" : "مقام أيام الفترة");
         if (policy.Mode != AttendanceSalaryLink.Lenient)
             notes.Add("⚠️ من لا بيانات حضور له لن يُحتسب بالمسير القادم");
         if (policy.AbsenceDeductionDays != 1m)

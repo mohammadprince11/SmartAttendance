@@ -432,6 +432,15 @@ SELECT SequenceNo FROM @allocated;
 
         // سياسة ربط الراتب بالحضور تُقرأ مرّة للتشغيل كلّه.
         var linkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(dbContext);
+        // مقام تنسيب الأساسي = **سياسة WorkingDays** (مثلاً 1→30 = 30 يوماً) لا رقم مثبَّت.
+        // بلا سياسة WorkingDays نشطة ⟹ 0 = المقام القديم (أيام الدوام) بلا تغيير.
+        // «ماكو شي ثابت، كلها سياسة» — والحضور نفسه يقرأ سياسة Attendance (21→20).
+        var (workDaysPeriod, workDaysPolicyName) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(
+            dbContext, run.Year, run.Month, SmartAttendance.Domain.Enums.PayrollCutoffType.WorkingDays);
+        linkPolicy = linkPolicy with
+        {
+            MonthlyDivisorDays = workDaysPolicyName is not null ? workDaysPeriod.DayCount : 0
+        };
         var linkMode = linkPolicy.Mode;
 
         // إعداد ديناميكيّ يتحكّم به المستخدم: هل يُحتسب وعاء الضمان/الضريبة على الأساسي
@@ -608,17 +617,8 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             }))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
-        // أيام الفترة الفعلية — مقامٌ للخيار «أيام فترة الراتب».
+        // أيام الفترة الفعلية.
         var daysInPeriod = periodEnd.DayNumber - periodStart.DayNumber + 1;
-
-        // أساس «أيام الفترة» لا يُعرَف مقامه إلا هنا (يحتاج طول الفترة) — فيُحسَم الآن.
-        // Fixed30/WorkDays مقامهما محسوم بالتحميل. الافتراض WorkDays ⟹ بلا تغيير.
-        if (AttendanceSalaryLink.NormalizeBasis(
-                await HrSettingsStore.GetAsync(dbContext, AttendanceSalaryLink.ProrationBasisKey, AttendanceSalaryLink.BasisWorkDays))
-            == AttendanceSalaryLink.BasisPeriodDays)
-        {
-            linkPolicy = linkPolicy with { MonthlyDivisorDays = daysInPeriod };
-        }
 
         // سقف اقتطاع المخالفات الشهري من تهيئة اللائحة (صفر = بلا سقف).
         var maxDeductionPercent = decimal.TryParse(

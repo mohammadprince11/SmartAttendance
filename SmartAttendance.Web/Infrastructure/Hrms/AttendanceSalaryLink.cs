@@ -62,25 +62,8 @@ public static class AttendanceSalaryLink
     /// سياسة التنسيب كاملةً. <paramref name="AbsenceDeductionDays"/> = 1 و
     /// <paramref name="AllowNegative"/> = false يعيدان سلوك ما قبل هذا الملف حرفياً.
     /// </summary>
-    /// <summary>مفتاح إعداد أساس مقام التنسيب بـ<c>NexoraHrSettings</c>.</summary>
-    public const string ProrationBasisKey = "Payroll.AttendanceProrationBasis";
-
-    /// <summary>المقام = أيام الدوام (Work/Remote/BusinessTrip) — <b>السلوك القديم</b>.</summary>
-    public const string BasisWorkDays = "WorkDays";
-
-    /// <summary>المقام = 30 ثابتة — الشهري: أيام الراحة/العطل مدفوعة، والغياب ÷30.</summary>
-    public const string BasisFixed30 = "Fixed30";
-
-    /// <summary>المقام = أيام الفترة الفعلية (28/29/30/31).</summary>
-    public const string BasisPeriodDays = "PeriodDays";
-
-    public static string NormalizeBasis(string? basis) => basis switch
-    {
-        BasisFixed30 => BasisFixed30,
-        BasisPeriodDays => BasisPeriodDays,
-        _ => BasisWorkDays
-    };
-
+    // مقام التنسيب (MonthlyDivisorDays) لم يعد إعداداً منفصلاً: يأتي من سياسة الغلق
+    // من نوع WorkingDays (PayrollCutoffType.WorkingDays) — «ماكو شي ثابت، كلها سياسة».
     public sealed record Policy(
         string Mode, decimal AbsenceDeductionDays, bool AllowNegative, decimal StandardDailyHours = 8m,
         // مقام التنسيب الشهري. 0 ⟹ استعمل أيام الدوام (السلوك القديم حرفياً).

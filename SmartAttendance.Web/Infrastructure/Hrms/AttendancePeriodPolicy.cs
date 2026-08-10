@@ -25,14 +25,18 @@ public static class AttendancePeriodPolicy
     /// </summary>
     /// <returns>الفترة، واسم السياسة (فارغ إن لم توجد سياسة نشطة).</returns>
     public static async Task<(Period Period, string? PolicyName)> ResolveFromPolicyAsync(
-        ApplicationDbContext dbContext, int labelYear, int labelMonth)
+        ApplicationDbContext dbContext, int labelYear, int labelMonth,
+        // نوع السياسة: Attendance (الافتراض · 21→20) · WorkingDays (1→30) · Hiring …
+        // فكل نوعٍ فترته الخاصة — «ماكو شي ثابت، كلها سياسة».
+        SmartAttendance.Domain.Enums.PayrollCutoffType policyType =
+            SmartAttendance.Domain.Enums.PayrollCutoffType.Attendance)
     {
         var policy = await (
             from p in dbContext.PayrollCutoffPolicies.AsNoTracking()
             join t in dbContext.PayrollCutoffPolicyTypes.AsNoTracking()
                 on p.Id equals t.PayrollCutoffPolicyId
             where p.IsActive && !p.IsDeleted && !t.IsDeleted
-                  && t.PolicyType == SmartAttendance.Domain.Enums.PayrollCutoffType.Attendance
+                  && t.PolicyType == policyType
             orderby p.Id
             select new { p.Name, p.FromDay, p.ToDay }).FirstOrDefaultAsync();
 
