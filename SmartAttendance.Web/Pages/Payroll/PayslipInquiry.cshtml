@@ -12,9 +12,14 @@
     /* شريط الفلترة الأفقي — نمط كيان */
     .pq-bar { display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; padding:16px 18px;
         border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); }
-    .pq-bar .zyep { min-width:280px; }
+    /* توحيد المنتقي المشترك مع حقول الشهر/السنة: تسمية أعلى الحقل بنفس النمط والارتفاع */
+    .pq-bar .zyep { display:flex; flex-direction:column; gap:5px; min-width:300px; margin:0; }
+    .pq-bar .zyep .zyep-label { font-size:11px !important; font-weight:900 !important; color:var(--sa-muted,#8FA8BC) !important; margin:0 !important; padding:0 !important; }
+    .pq-bar .zyep .zyep-box { min-height:38px; margin:0; }
+    .pq-bar .zyep .zyep-box input { min-height:38px; box-sizing:border-box; }
     .pq-field { display:flex; flex-direction:column; gap:5px; }
-    .pq-field > span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .pq-field > span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); height:15px; line-height:15px; }
+    .pq-bar .zyep .zyep-label { height:15px; line-height:15px; }
     .pq-bar select { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.28);
         background:rgba(0,0,0,.16); color:inherit; padding:6px 12px; font-weight:900; font-size:13px; }
     html[data-theme="light"] .pq-bar select { background:#fff; }
@@ -91,7 +96,8 @@
         })" />
         <label class="pq-field">
             <span>الفترة</span>
-            <select name="Month" class="pq-sm" required>
+            <select name="Month" class="pq-sm" required
+                    oninvalid="this.setCustomValidity('يرجى اختيار الفترة (الشهر) أولاً')" oninput="this.setCustomValidity('')">
                 <option value="" disabled hidden selected="@(!Model.Month.HasValue)">— اختر الشهر —</option>
                 @for (var m = 1; m <= 12; m++)
                 {
