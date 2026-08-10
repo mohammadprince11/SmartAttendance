@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.ShiftOverrides;
 
@@ -14,10 +15,12 @@ namespace SmartAttendance.Web.Pages.ShiftOverrides;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(ApplicationDbContext dbContext, ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -33,11 +36,27 @@ public class IndexModel : PageModel
     public async Task OnGetAsync()
     {
         Shifts = (await ShiftTypeStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
+
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+
         Employees = await _dbContext.Employees.AsNoTracking().Where(e => e.IsActive)
             .OrderBy(e => e.EmployeeNo)
             .Select(e => new EmpLookup(e.Id, e.EmployeeNo, e.FullName)).ToListAsync();
 
         var all = await ShiftOverrideStore.ListAsync(_dbContext);
+
+        // حصر منتقي الموظفين وسجلّات التجاوز على شركاتي — كلاهما كان يسرد كل الشركات.
+        if (!scope.IsUnrestricted)
+        {
+            var empAllowed = await EmployeeCompanyGuard.FilterEmployeesInScopeAsync(
+                _dbContext, Employees.Select(e => e.Id), scope, HttpContext.RequestAborted);
+            Employees = Employees.Where(e => empAllowed.Contains(e.Id)).ToList();
+
+            var rowAllowed = await EmployeeCompanyGuard.FilterEmployeesInScopeAsync(
+                _dbContext, all.Select(r => r.EmployeeId), scope, HttpContext.RequestAborted);
+            all = all.Where(r => rowAllowed.Contains(r.EmployeeId)).ToList();
+        }
+
         if (!string.IsNullOrWhiteSpace(Search))
         {
             var v = Search.Trim();
@@ -64,11 +83,21 @@ public class IndexModel : PageModel
             return RedirectToPage(new { Search });
         }
 
+        var companyScope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+
         List<int> employeeIds;
         if (scope == "All")
         {
+            // «الكل» = كل النشطين ضمن **نطاق شركاتي** لا كل قاعدة البيانات — وإلا أنشأ
+            // مستخدم شركة A تعديلاً على موظفي B. للأدمن (غير مقيَّد) تبقى الكلّ فعلاً.
             employeeIds = await _dbContext.Employees.AsNoTracking()
                 .Where(e => e.IsActive).Select(e => e.Id).ToListAsync();
+            if (!companyScope.IsUnrestricted)
+            {
+                var allowed = await EmployeeCompanyGuard.FilterEmployeesInScopeAsync(
+                    _dbContext, employeeIds, companyScope, HttpContext.RequestAborted);
+                employeeIds = employeeIds.Where(allowed.Contains).ToList();
+            }
         }
         else
         {
@@ -76,6 +105,11 @@ public class IndexModel : PageModel
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .Select(x => int.TryParse(x, out var id) ? id : 0)
                 .Where(id => id > 0).Distinct().ToList();
+
+            // تحديد صريح: أي معرّف خارج نطاقي (نموذج معدَّل) يرفض الطلب كلّه.
+            var allowed = await EmployeeCompanyGuard.FilterEmployeesInScopeAsync(
+                _dbContext, employeeIds, companyScope, HttpContext.RequestAborted);
+            if (allowed.Count != employeeIds.Count) return NotFound();
         }
 
         if (employeeIds.Count == 0)
@@ -102,6 +136,13 @@ public class IndexModel : PageModel
         }
         else
         {
+            // المعرّفات هنا صفوف تجاوز (لا موظفين): حارس ملكية عبر الموظف ← الشركة.
+            var companyScope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+            var allowed = await EmployeeCompanyGuard.FilterOwnedRowsInScopeAsync(
+                _dbContext, EmployeeCompanyGuard.Tables.ShiftOverrides, "Id", ids,
+                companyScope, HttpContext.RequestAborted);
+            if (allowed.Count != ids.Count) return NotFound();
+
             await ShiftOverrideStore.DeleteAsync(_dbContext, ids);
             TempData["SuccessMessage"] = $"حُذف {ids.Count} تعديل مؤقت.";
         }
