@@ -94,10 +94,14 @@
         .nexora-sidebar, .nexora-topbar, .pq-bar, .ps-actions { display:none !important; }
         html, body { height:auto !important; min-height:0 !important; overflow:visible !important;
             margin:0 !important; background:#fff !important; color:#111 !important; }
-        .nexora-shell, .nexora-main, .nexora-content, .pq-page, .pq-card {
+        /* أسبقية أعلى (html body …) لتجاوز خلفية ثيم الموقع الداكنة على .nexora-main
+           (radial-gradient + var(--zy-bg))؛ إلغاء صورة التدرّج صراحةً كي لا تُطبع سوداء. */
+        html body .nexora-shell, html body .nexora-main, html body .nexora-content,
+        html body .pq-page, html body .pq-card {
             display:block !important; height:auto !important; min-height:0 !important;
             overflow:visible !important; margin:0 !important; padding:0 !important;
-            border:none !important; background:#fff !important; box-shadow:none !important; }
+            border:none !important; box-shadow:none !important;
+            background:#fff !important; background-image:none !important; }
         /* إطار مستند يملأ الصفحة: ارتفاع آمن (250mm < الحدّ القابل للطباعة ~273mm)
            يضمن صفحةً واحدة، وflex عمودي يدفع التوقيعات لأسفل الإطار فيختفي الفراغ. */
         .ps { margin:0 !important; font-size:11pt; background:#fff !important; color:#111 !important;
