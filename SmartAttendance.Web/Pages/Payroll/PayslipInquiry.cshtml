@@ -98,8 +98,12 @@
             display:block !important; height:auto !important; min-height:0 !important;
             overflow:visible !important; margin:0 !important; padding:0 !important;
             border:none !important; background:#fff !important; box-shadow:none !important; }
-        .ps { padding:0 !important; margin:0 !important; font-size:11pt;
-            background:#fff !important; color:#111 !important; }
+        /* إطار مستند يملأ الصفحة: ارتفاع آمن (250mm < الحدّ القابل للطباعة ~273mm)
+           يضمن صفحةً واحدة، وflex عمودي يدفع التوقيعات لأسفل الإطار فيختفي الفراغ. */
+        .ps { margin:0 !important; font-size:11pt; background:#fff !important; color:#111 !important;
+            border:1.5pt solid #0b2a45 !important; border-radius:8pt !important;
+            padding:16pt 18pt !important; min-height:250mm !important;
+            display:flex !important; flex-direction:column !important; }
 
         /* ترويسة الطباعة: العلامة + عنوان القسيمة + الفترة */
         .ps-print-head { display:flex !important; align-items:flex-end; justify-content:space-between;
@@ -140,7 +144,8 @@
         .ps-prev b { color:#111 !important; }
 
         /* تذييل التوقيعات */
-        .ps-sign { display:flex !important; justify-content:space-between; gap:20pt; margin-top:30pt; }
+        /* margin-top:auto يدفع سطر التوقيعات إلى قاع الإطار (يملأ ارتفاع الصفحة). */
+        .ps-sign { display:flex !important; justify-content:space-between; gap:20pt; margin-top:auto !important; padding-top:36pt; }
         .ps-sign div { flex:1; font-size:9.5pt; color:#333; text-align:center;
             border-top:1pt solid #99a7b3; padding-top:5pt; }
     }
