@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Organization;
 
@@ -14,10 +15,14 @@ namespace SmartAttendance.Web.Pages.Organization;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -67,28 +72,37 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await LoadAsync();
-        await LoadChartAsync();
-        await LoadPositionsAsync();
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        await LoadAsync(scope);
+        await LoadChartAsync(scope);
+        await LoadPositionsAsync(scope);
     }
 
-    private async Task LoadChartAsync()
+    private async Task LoadChartAsync(CompanyScope scope)
     {
-        ChartCompanies = await _dbContext.Companies
+        // المُنتقي محصورٌ بشركات المستخدم؛ ودورٌ مقيَّد لا يرى إلا شركاته. لذا
+        // `Resolve` أدناه يرفض أي ChartCompanyId مُمرَّر بالرابط خارج النطاق، فلا
+        // يُبنى هيكل شركةٍ أجنبية (أسماء الموظفين وسلسلة المدراء).
+        ChartCompanies = (await _dbContext.Companies
             .AsNoTracking()
             .Where(x => !x.IsDeleted && x.IsActive)
             .OrderBy(x => x.Name)
             .ThenBy(x => x.Code)
             .Select(x => new ChartCompanyOption { Id = x.Id, Name = x.Name })
-            .ToListAsync();
+            .ToListAsync())
+            .Where(x => scope.Allows(x.Id))
+            .ToList();
 
         ChartCompanyId = CompanySelectionContext.Resolve(
             HttpContext,
             ChartCompanyId,
             ChartCompanies.Select(x => x.Id).ToArray());
 
-        if (!ChartCompanyId.HasValue)
+        // حارس دفاعيّ صريح: لا نبني هيكلاً إلا لشركةٍ يسمح بها النطاق (Resolve يضمنها
+        // أصلاً بحصر القائمة، وهذا يجعل الخاصّية الأمنية محلّيةً واضحة).
+        if (!ChartCompanyId.HasValue || !scope.Allows(ChartCompanyId.Value))
         {
+            ChartCompanyId = null;
             return;
         }
 
@@ -98,11 +112,16 @@ public class IndexModel : PageModel
         Chart = await OrgChartBuilder.BuildAsync(_dbContext, ChartCompanyId.Value);
     }
 
-    private async Task LoadPositionsAsync()
+    private async Task LoadPositionsAsync(CompanyScope scope)
     {
-        var counts = await _dbContext.Employees
+        // عدّ الموظفين لكل منصب محصورٌ بالشركات المسموحة حتى لا تتسرّب أعداد شركةٍ أخرى.
+        var employeesQuery = _dbContext.Employees
             .AsNoTracking()
-            .Where(e => e.IsActive && !e.IsDeleted && e.PositionId != null)
+            .Where(e => e.IsActive && !e.IsDeleted && e.PositionId != null);
+
+        employeesQuery = ApplyCompanyScope(employeesQuery, scope);
+
+        var counts = await employeesQuery
             .GroupBy(e => e.PositionId!.Value)
             .Select(g => new { PositionId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.PositionId, x => x.Count);
@@ -132,6 +151,14 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostCreateCompanyAsync()
     {
+        // إنشاء شركةٍ جديدة = إنشاء حدّ استئجارٍ جديد؛ لا يُسمح به إلا لغير المقيَّد
+        // (الأدمن). دورٌ مقيَّد بشركات لا يخلق كياناً خارج نطاقه.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (!scope.IsUnrestricted)
+        {
+            return NotFound();
+        }
+
         if (string.IsNullOrWhiteSpace(CompanyInput.Name))
         {
             ErrorMessage = "اسم الشركة مطلوب.";
@@ -169,6 +196,14 @@ public class IndexModel : PageModel
         {
             ErrorMessage = "بيانات الفرع غير مكتملة.";
             return RedirectToPage();
+        }
+
+        // لا نعتمد CompanyId القادم من النموذج بلا فحص: الفرع لا يُضاف إلا لشركةٍ
+        // ضمن نطاق المستخدم، وإلا كان كتابةً عابرة للشركات.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (!scope.Allows(BranchInput.CompanyId))
+        {
+            return NotFound();
         }
 
         var companyExists = await _dbContext.Companies
@@ -215,13 +250,23 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        var branchExists = await _dbContext.Branches
-            .AnyAsync(x => x.Id == DepartmentInput.BranchId);
+        // القسم يُعلَّق على فرع؛ ونطاق الكتابة يُحسم من شركة ذلك الفرع لا من مدخل
+        // النموذج — فلا يُضاف قسمٌ لفرع شركةٍ خارج نطاق المستخدم.
+        var branchCompanyId = await _dbContext.Branches
+            .Where(x => x.Id == DepartmentInput.BranchId)
+            .Select(x => (int?)x.CompanyId)
+            .FirstOrDefaultAsync();
 
-        if (!branchExists)
+        if (branchCompanyId is null)
         {
             ErrorMessage = "الفرع المحدد غير موجود.";
             return RedirectToPage();
+        }
+
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (!scope.Allows(branchCompanyId.Value))
+        {
+            return NotFound();
         }
 
         var code = NormalizeCode(DepartmentInput.Code, DepartmentInput.Name);
@@ -250,16 +295,20 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 
-    private async Task LoadAsync()
+    private async Task LoadAsync(CompanyScope scope)
     {
-        TotalCompanies = await _dbContext.Companies.CountAsync();
-        TotalBranches = await _dbContext.Branches.CountAsync();
-        TotalDepartments = await _dbContext.Departments.CountAsync();
-        TotalEmployees = await _dbContext.Employees.CountAsync();
-        ActiveEmployees = await _dbContext.Employees.CountAsync(x => x.IsActive);
+        // كل عدّ موظفين يمرّ بمرشّح النطاق: لغير المقيَّد يعيده كما هو (سلوك الأدمن
+        // ثابت)، وللمقيَّد يقصره على شركاته فلا تتسرّب أعداد شركةٍ أخرى.
+        var scopedEmployees = ApplyCompanyScope(
+            _dbContext.Employees.AsNoTracking(),
+            scope);
+
+        TotalEmployees = await scopedEmployees.CountAsync();
+        ActiveEmployees = await scopedEmployees.CountAsync(x => x.IsActive);
         InactiveEmployees = TotalEmployees - ActiveEmployees;
 
-        var companyRows = await _dbContext.Companies
+        // الشركات والفروع المعروضة محصورةٌ بنطاق المستخدم؛ فلا هيكل شركةٍ أجنبية.
+        var companyRows = (await _dbContext.Companies
             .AsNoTracking()
             .Select(x => new CompanyViewModel
             {
@@ -269,9 +318,11 @@ public class IndexModel : PageModel
                 IsActive = x.IsActive
             })
             .OrderBy(x => x.Name)
-            .ToListAsync();
+            .ToListAsync())
+            .Where(x => scope.Allows(x.Id))
+            .ToList();
 
-        var branchRows = await _dbContext.Branches
+        var branchRows = (await _dbContext.Branches
             .AsNoTracking()
             .Select(x => new BranchViewModel
             {
@@ -283,8 +334,12 @@ public class IndexModel : PageModel
                 IsActive = x.IsActive
             })
             .OrderBy(x => x.Name)
-            .ToListAsync();
+            .ToListAsync())
+            .Where(x => scope.Allows(x.CompanyId))
+            .ToList();
 
+        // الأقسام كيانٌ مرجعيّ مشترك (بلا CompanyId)؛ تُستخدم قائمةً للأسماء فقط،
+        // والانتماء الشركويّ يُشتقّ من فرع الموظف داخل النطاق أدناه.
         var departmentRows = await _dbContext.Departments
             .AsNoTracking()
             .Select(x => new DepartmentViewModel
@@ -300,9 +355,10 @@ public class IndexModel : PageModel
 
         // الموظف مرتبط بالفرع (موقع العمل) مباشرةً عبر BranchId، وبالقسم مستقلاً؛ والأقسام
         // مشتركة بين الفروع (Departments.BranchId فارغ) فلا يصح اشتقاق فرع الموظف من قسمه.
-        // نحسب الموظفين لكل (فرع، قسم) من فرع الموظف المباشر.
-        var branchDeptCounts = await _dbContext.Employees
-            .AsNoTracking()
+        // نحسب الموظفين لكل (فرع، قسم) من فرع الموظف المباشر — ضمن النطاق.
+        var branchDeptCounts = await ApplyCompanyScope(
+                _dbContext.Employees.AsNoTracking(),
+                scope)
             .GroupBy(x => new { x.BranchId, x.DepartmentId })
             .Select(g => new { g.Key.BranchId, g.Key.DepartmentId, Count = g.Count() })
             .ToListAsync();
@@ -311,8 +367,9 @@ public class IndexModel : PageModel
             .GroupBy(x => x.BranchId)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.Count));
 
-        var employeeCountsByDepartment = await _dbContext.Employees
-            .AsNoTracking()
+        var employeeCountsByDepartment = await ApplyCompanyScope(
+                _dbContext.Employees.AsNoTracking(),
+                scope)
             .GroupBy(x => x.DepartmentId)
             .Select(x => new
             {
@@ -320,6 +377,24 @@ public class IndexModel : PageModel
                 Count = x.Count()
             })
             .ToDictionaryAsync(x => x.DepartmentId, x => x.Count);
+
+        // البطاقات الإجمالية: لغير المقيَّد أعدادٌ عامّة كما كانت؛ وللمقيَّد أعدادٌ من
+        // شركاته وحدها (الأقسام = المتميّزة الظاهرة لموظفيه ضمن النطاق).
+        if (scope.IsUnrestricted)
+        {
+            TotalCompanies = await _dbContext.Companies.CountAsync();
+            TotalBranches = await _dbContext.Branches.CountAsync();
+            TotalDepartments = await _dbContext.Departments.CountAsync();
+        }
+        else
+        {
+            TotalCompanies = companyRows.Count;
+            TotalBranches = branchRows.Count;
+            TotalDepartments = branchDeptCounts
+                .Select(x => x.DepartmentId)
+                .Distinct()
+                .Count();
+        }
 
         foreach (var department in departmentRows)
         {
@@ -387,6 +462,29 @@ public class IndexModel : PageModel
         }
 
         Companies = companyRows;
+    }
+
+    /// <summary>
+    /// يقصر استعلام الموظفين على شركات النطاق: غير المقيَّد كما هو، والمرفوض كلّياً
+    /// لا شيء، وإلا الشركات المسموحة فقط (الموظف بلا شركة يُستبعَد للمقيَّد).
+    /// </summary>
+    private static IQueryable<Employee> ApplyCompanyScope(
+        IQueryable<Employee> query,
+        CompanyScope scope)
+    {
+        if (scope.IsUnrestricted)
+        {
+            return query;
+        }
+
+        if (scope.IsDeniedAll)
+        {
+            return query.Where(_ => false);
+        }
+
+        var allowed = scope.AllowedCompanyIds.ToList();
+        return query.Where(e =>
+            e.CompanyId != null && allowed.Contains(e.CompanyId.Value));
     }
 
     private static string NormalizeCode(string? code, string fallback)

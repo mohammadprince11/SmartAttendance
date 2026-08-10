@@ -98,4 +98,35 @@ public sealed class TenantIsolationGuardTests
         Assert.Contains("CanAccessEmployeeAsync", page);
         Assert.Contains("CanAccessTaskAsync", page);
     }
+
+    // ---- Phase 3: صفحات الهياكل التنظيمية (مُنتقي شركةٍ غير محصور بالنطاق) ----
+    // كانت تعرض كل الشركات للمُنتقي وتمرّرها جميعاً لـ Resolve، فيختار دورٌ مقيَّد أي
+    // شركة (أو يمرّرها بالرابط) ⟹ تسرّب هيكل/أسماء/سلسلة مدراء شركةٍ أخرى.
+
+    [Fact]
+    public void OrganizationIndex_ScopesCompanyPickerAndGuardsStructureWrites()
+    {
+        var page = Page("Organization", "Index.cshtml.cs");
+        Assert.Contains("ICompanyScopeProvider", page);
+        // المُنتقيان (البطاقات + شجرة الهيكل) محصوران بالنطاق.
+        Assert.Contains("scope.Allows", page);
+        // كتابات الهيكل لا تعتمد CompanyId النموذج بلا فحص نطاق.
+        Assert.Contains("ApplyCompanyScope", page);
+    }
+
+    [Fact]
+    public void OrganizationChart_ScopesCompanyPicker()
+    {
+        var page = Page("Organization", "Chart.cshtml.cs");
+        Assert.Contains("ICompanyScopeProvider", page);
+        Assert.Contains("scope.Allows", page);
+    }
+
+    [Fact]
+    public void OrgStructures_ScopesCompanyPicker()
+    {
+        var page = Page("OrgStructures", "Index.cshtml.cs");
+        Assert.Contains("ICompanyScopeProvider", page);
+        Assert.Contains("scope.Allows", page);
+    }
 }
