@@ -174,7 +174,9 @@
                                     {
                                         <tr><td>الضمان الاجتماعي</td><td class="days"></td><td class="amt" style="text-align:end">@c.GosiEmployee.ToString("#,0.##")</td></tr>
                                     }
-                                    @foreach (var d in c.Deductions)
+                                    @* الضريبة والضمان يُعرَضان أعلاه من الحقول الصريحة — نستثني
+                                       مكوّنيهما هنا كي لا يتكرّرا (المجموع أصلاً لا يضاعفهما). *@
+                                    @foreach (var d in c.Deductions.Where(d => d.Kind != "Tax" && d.Kind != "Gosi"))
                                     {
                                         <tr><td>@d.ItemName</td><td class="days">@(d.Kind == "Leave" && c.AbsentDays > 0 ? c.AbsentDays.ToString() : "")</td><td class="amt" style="text-align:end">@d.Amount.ToString("#,0.##")</td></tr>
                                     }
