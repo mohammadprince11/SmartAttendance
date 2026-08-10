@@ -62,8 +62,30 @@ public static class AttendanceSalaryLink
     /// سياسة التنسيب كاملةً. <paramref name="AbsenceDeductionDays"/> = 1 و
     /// <paramref name="AllowNegative"/> = false يعيدان سلوك ما قبل هذا الملف حرفياً.
     /// </summary>
+    /// <summary>مفتاح إعداد أساس مقام التنسيب بـ<c>NexoraHrSettings</c>.</summary>
+    public const string ProrationBasisKey = "Payroll.AttendanceProrationBasis";
+
+    /// <summary>المقام = أيام الدوام (Work/Remote/BusinessTrip) — <b>السلوك القديم</b>.</summary>
+    public const string BasisWorkDays = "WorkDays";
+
+    /// <summary>المقام = 30 ثابتة — الشهري: أيام الراحة/العطل مدفوعة، والغياب ÷30.</summary>
+    public const string BasisFixed30 = "Fixed30";
+
+    /// <summary>المقام = أيام الفترة الفعلية (28/29/30/31).</summary>
+    public const string BasisPeriodDays = "PeriodDays";
+
+    public static string NormalizeBasis(string? basis) => basis switch
+    {
+        BasisFixed30 => BasisFixed30,
+        BasisPeriodDays => BasisPeriodDays,
+        _ => BasisWorkDays
+    };
+
     public sealed record Policy(
-        string Mode, decimal AbsenceDeductionDays, bool AllowNegative, decimal StandardDailyHours = 8m)
+        string Mode, decimal AbsenceDeductionDays, bool AllowNegative, decimal StandardDailyHours = 8m,
+        // مقام التنسيب الشهري. 0 ⟹ استعمل أيام الدوام (السلوك القديم حرفياً).
+        // القيمة الموجبة (30 أو أيام الفترة) تجعل أيام الراحة/العطل مدفوعةً والغياب ÷ المقام.
+        int MonthlyDivisorDays = 0)
     {
         public static Policy Default { get; } = new(Lenient, 1m, false);
 
@@ -73,7 +95,8 @@ public static class AttendanceSalaryLink
             // معامل سالب يقلب الخصم مكافأةً — يعود ليوم-بيوم لا لصفر.
             AbsenceDeductionDays = AbsenceDeductionDays < 0m ? 1m : AbsenceDeductionDays,
             // ساعات غير موجبة تجعل القسمة على المتوقّع مستحيلة — تعود لـ8.
-            StandardDailyHours = StandardDailyHours > 0m ? StandardDailyHours : 8m
+            StandardDailyHours = StandardDailyHours > 0m ? StandardDailyHours : 8m,
+            MonthlyDivisorDays = MonthlyDivisorDays < 0 ? 0 : MonthlyDivisorDays
         };
     }
 
@@ -109,7 +132,10 @@ public static class AttendanceSalaryLink
     /// كلّه فيصير الصافي سالباً، وهو **سلوك مقصود** حين يُفعَّل لا خطأ حسابي.
     /// </summary>
     public static Decision Evaluate(
-        Policy policy, int workDays, int presentDays, int absentDays, decimal workedHours)
+        Policy policy, int workDays, int presentDays, int absentDays, decimal workedHours,
+        // أيام تقويمية قبل تاريخ التعيين/إعادة التعيين ضمن الشهر — غير مدفوعة.
+        // 0 ⟹ موظفٌ كامل الشهر (السلوك القديم). تُطبَّق مع المقام التقويمي فقط.
+        int preEmploymentUnpaidDays = 0)
     {
         var p = policy.Normalized();
 
@@ -125,26 +151,38 @@ public static class AttendanceSalaryLink
         var extraPenaltyDays = absentDays * (p.AbsenceDeductionDays - 1m);
         var expectedHours = workDays * p.StandardDailyHours;
 
-        decimal earnedRatio;
+        // أيام غير المدفوعة حسب النمط — مُوحَّدة كي يصير المقام قابلاً للتبديل:
+        //   بالساعات   ⟶ نقص الساعات معبَّراً عنه بأيام (المتوقّع − الفعلي) ÷ ساعات اليوم
+        //   أيام الحضور ⟶ أيام الدوام التي لم يُحضَر فيها
+        //   متساهل/صارم ⟶ أيام الغياب المسجّلة
+        decimal unpaidDays;
         string? note;
-
         if (p.Mode == Hours)
         {
-            earnedRatio = workedHours / expectedHours;
+            unpaidDays = workDays - (expectedHours > 0m ? workedHours / p.StandardDailyHours : 0m);
             note = $"تنسيب بالساعات: {workedHours:0.##} من {expectedHours:0.##} ساعة";
         }
         else if (p.Mode == PresentDays)
         {
-            earnedRatio = (decimal)presentDays / workDays;
+            unpaidDays = workDays - presentDays;
             note = $"تنسيب بأيام الحضور: {presentDays} من {workDays} يوم";
         }
         else
         {
-            earnedRatio = (decimal)(workDays - absentDays) / workDays;
+            unpaidDays = absentDays;
             note = null;
         }
 
-        var factor = earnedRatio - (extraPenaltyDays / workDays);
+        // المقام: 0 ⟹ أيام الدوام (السلوك القديم حرفياً)؛ قيمةٌ موجبة ⟹ ثابت 30 أو
+        // أيام الفترة — فأيام الراحة/العطل تصير مدفوعة والغياب يُخصم بنسبتها للمقام.
+        var divisor = p.MonthlyDivisorDays > 0 ? (decimal)p.MonthlyDivisorDays : workDays;
+        // أيام قبل التعيين تُضاف لغير المدفوع (المُعيَّن يوم 5 ⟹ 4 أيام قبل التعيين ⟹ 26/30).
+        var preHire = preEmploymentUnpaidDays > 0 ? preEmploymentUnpaidDays : 0;
+        var factor = 1m - ((unpaidDays + extraPenaltyDays + preHire) / divisor);
+
+        if (preHire > 0)
+            note = (note == null ? "" : note + " · ") +
+                   $"تنسيب تعيين: {preHire} يوم قبل المباشرة غير مدفوع";
 
         if (extraPenaltyDays > 0m)
             note = (note == null ? "" : note + " · ") +

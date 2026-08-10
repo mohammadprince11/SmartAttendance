@@ -141,7 +141,7 @@
                         <td class="pd-n">@l.GosiEmployee.ToString("#,0.##")</td>
                         <td class="pd-n">@l.OtherDeductions.ToString("#,0.##")</td>
                         <td class="pd-n pd-net">@l.NetSalary.ToString("#,0.##")</td>
-                        <td class="pd-n">@(l.WorkDays - l.AbsentDays)/@l.WorkDays</td>
+                        <td class="pd-n">@(l.WorkDays > 0 ? (int)Math.Round(l.WorkDays * (l.AttendanceFactor == 0 ? 1m : l.AttendanceFactor), MidpointRounding.AwayFromZero) : 0)/@l.WorkDays</td>
                         <td><button type="button" class="pd-btn ghost" onclick="event.stopPropagation();pdSlip(@l.EmployeeId)">قسيمة</button></td>
                     </tr>
                 }
@@ -247,7 +247,7 @@
                   // «0 / 0» كانت تعني «لا بيانات حضور» وتُدفع كاملاً بلا تمييز عن الدوام
                   // الكامل. الحالة تُعلَن الآن نصّاً بالقسيمة نفسها لا تُترك للتخمين.
                   (l.WorkDays > 0
-                    ? '<div><span>أيام العمل</span> <b>' + (l.WorkDays - l.AbsentDays) + ' / ' + l.WorkDays + '</b></div>' +
+                    ? '<div><span>أيام مدفوعة (مكافئة)</span> <b>' + Math.round(l.WorkDays * (Number(l.AttendanceFactor) || 1)) + ' / ' + l.WorkDays + '</b></div>' +
                       '<div><span>أيام الغياب</span> <b>' + l.AbsentDays + '</b></div>'
                     : '<div style="grid-column:1/-1"><span>الحضور</span> <b style="color:#f59e0b">بلا بيانات حضور لهذا الشهر — دُفع الأساسي كاملاً</b></div>') +
                 '</div>' +

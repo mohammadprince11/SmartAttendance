@@ -9,8 +9,15 @@
     {
         i.Id, i.Name, i.NameEn, i.ItemType, i.ValueKind, i.DefaultValue, i.Formula,
         i.Taxable, i.GosiEligible, i.InGross, i.Prorated, i.OvertimeEligible, i.UnpaidLeaveEligible,
-        i.IsActive, i.SortOrder, i.IsSystem
+        i.IsActive, i.SortOrder, i.IsSystem,
+        i.MinValue, i.MaxValue,
+        ValidFrom = i.ValidFrom?.ToString("yyyy-MM-dd"), ValidTo = i.ValidTo?.ToString("yyyy-MM-dd"),
+        i.EligibilityJson, EligibilityText = HrConditions.Describe(i.Eligibility)
     }));
+    var critJson = JsonSerializer.Serialize(
+        HrConditionCatalog.Fixed.Select(c => new { c.Key, c.Label, Kind = c.Kind.ToString() }));
+    var opJson = JsonSerializer.Serialize(
+        HrConditions.Operators.Select(o => new { Op = o.Op.ToString(), o.Label }));
 }
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
@@ -217,6 +224,28 @@
                     <label><input type="checkbox" name="UnpaidLeaveEligible" value="true" id="si-UnpaidLeaveEligible" /> ضمن وعاء الإجازة غير المدفوعة</label>
                     <label><input type="checkbox" name="IsActive" value="true" id="si-IsActive" checked /> نشط</label>
                 </div>
+
+                @* ===== تبويب «القواعد» (نمط كيان) — كلها اختيارية، فارغ ⟹ بلا أثر ===== *@
+                <fieldset class="si-rules">
+                    <legend>القواعد <span class="si-fx-hint">— حدودٌ وفترة صلاحية اختيارية</span></legend>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <label>القيمة الدنيا<input type="number" name="MinValue" id="si-MinValue" step="0.01" placeholder="بلا حدّ" /></label>
+                        <label>القيمة القصوى<input type="number" name="MaxValue" id="si-MaxValue" step="0.01" placeholder="بلا حدّ" /></label>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <label>ساري من<input type="date" name="ValidFrom" id="si-ValidFrom" /></label>
+                        <label>ساري إلى<input type="date" name="ValidTo" id="si-ValidTo" /></label>
+                    </div>
+                </fieldset>
+
+                @* ===== تبويب «معايير الاستحقاق» — مجموعة شروط (AND) على سمات الموظف ===== *@
+                <fieldset class="si-rules">
+                    <legend>معايير الاستحقاق <span class="si-fx-hint">— بلا شروط ⟹ مؤهّل للجميع</span></legend>
+                    <input type="hidden" name="EligibilityJson" id="si-EligibilityJson" />
+                    <div id="si-elig-rows" style="display:flex;flex-direction:column;gap:6px"></div>
+                    <button type="button" class="si-btn ghost sm" onclick="eligAdd()">+ شرط</button>
+                </fieldset>
+
                 <button type="submit" class="si-btn">حفظ العنصر</button>
             </form>
         </div>
@@ -251,9 +280,14 @@
                     document.getElementById('si-IsActive').checked = !!i.IsActive;
                     document.getElementById('si-fxExpr').value = i.Formula || '';
                     document.getElementById('si-Formula').value = i.Formula || '';
+                    document.getElementById('si-MinValue').value = (i.MinValue ?? '');
+                    document.getElementById('si-MaxValue').value = (i.MaxValue ?? '');
+                    document.getElementById('si-ValidFrom').value = i.ValidFrom || '';
+                    document.getElementById('si-ValidTo').value = i.ValidTo || '';
+                    eligLoad(i.EligibilityJson);
                     kind = i.ValueKind || 'Fixed';
-                }
-            }
+                } else { eligLoad(null); }
+            } else { eligLoad(null); }
             siKind(kind);
             document.getElementById('si-slide').classList.add('open');
             document.getElementById('si-backdrop').classList.add('open');
@@ -266,6 +300,40 @@
             document.getElementById('si-fixedWrap').style.display = (kind==='Fixed') ? '' : 'none';
             document.getElementById('si-formulaWrap').style.display = (kind==='Formula') ? 'flex' : 'none';
             if(kind==='Formula') fxTest();
+        }
+
+        // ===== معايير الاستحقاق (مجموعة شروط واحدة — AND) =====
+        var SI_CRIT = @Html.Raw(critJson);
+        var SI_OPS = @Html.Raw(opJson);
+        function eligLoad(json){
+            var rows = document.getElementById('si-elig-rows'); rows.innerHTML='';
+            var set=null; try { set = json ? JSON.parse(json) : null; } catch(e){ set=null; }
+            var rules = (set && set.groups && set.groups[0] && set.groups[0].rules) ? set.groups[0].rules : [];
+            rules.forEach(function(r){ eligAdd(r.criterion, r.op, r.value); });
+            eligSync();
+        }
+        function eligAdd(crit, op, val){
+            var rows = document.getElementById('si-elig-rows');
+            var row = document.createElement('div');
+            row.className='si-elig-row';
+            row.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;align-items:center';
+            var cs='<select class="e-crit">'+SI_CRIT.map(function(c){return '<option value="'+c.Key+'"'+(c.Key===crit?' selected':'')+'>'+c.Label+'</option>';}).join('')+'</select>';
+            var os='<select class="e-op">'+SI_OPS.map(function(o){return '<option value="'+o.Op+'"'+(o.Op===op?' selected':'')+'>'+o.Label+'</option>';}).join('')+'</select>';
+            var vv = (val==null) ? '' : String(val).replace(/"/g,'&quot;');
+            var vs='<input class="e-val" type="text" value="'+vv+'" placeholder="القيمة" />';
+            var rm='<button type="button" class="si-btn ghost sm" title="حذف الشرط" onclick="this.closest(\'.si-elig-row\').remove();eligSync()">×</button>';
+            row.innerHTML=cs+os+vs+rm;
+            rows.appendChild(row);
+            row.querySelectorAll('select,input').forEach(function(el){ el.addEventListener('change', eligSync); el.addEventListener('input', eligSync); });
+            eligSync();
+        }
+        function eligSync(){
+            var rules=[];
+            document.querySelectorAll('#si-elig-rows .si-elig-row').forEach(function(row){
+                var c=row.querySelector('.e-crit').value, o=row.querySelector('.e-op').value, v=row.querySelector('.e-val').value.trim();
+                if(c && o) rules.push({criterion:c, op:o, value:v});
+            });
+            document.getElementById('si-EligibilityJson').value = rules.length ? JSON.stringify({groups:[{rules:rules}]}) : '';
         }
 
         // ===== بوابة المعادلة =====

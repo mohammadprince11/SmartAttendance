@@ -489,9 +489,16 @@ SELECT SequenceNo FROM @allocated;
 
         var employees = await HrmsDatabase.QueryAsync(
             dbContext,
-            $"SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName FROM Employees e WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1{companyFilter} ORDER BY e.EmployeeNo;",
+            $"SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName, e.HireDate, e.LastRehireDate FROM Employees e WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1{companyFilter} ORDER BY e.EmployeeNo;",
             command => { if (runCompanyId is > 0) HrmsDatabase.AddParameter(command, "@Company", runCompanyId.Value); },
-            reader => new { Id = HrmsDatabase.GetInt(reader, "Id"), No = HrmsDatabase.GetString(reader, "EmployeeNo"), Name = HrmsDatabase.GetString(reader, "FullName") });
+            reader => new
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                No = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                Name = HrmsDatabase.GetString(reader, "FullName"),
+                // البداية الفعّالة للاستحقاق: إعادة التعيين تسبق التعيين الأصلي إن وُجدت.
+                Start = HrmsDatabase.GetDateOnly(reader, "LastRehireDate") ?? HrmsDatabase.GetDateOnly(reader, "HireDate")
+            });
 
         // نطاق التشغيل محفوظ مع الدفعة: إعادة الاحتساب بعد شهر تلتزم بنفس النطاق.
         // لا صفوف ⟹ كل النشطين — القرار بالكود (PayrollRunScope) لا بصفٍّ افتراضي.
@@ -604,6 +611,15 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
         // أيام الفترة الفعلية — مقامٌ للخيار «أيام فترة الراتب».
         var daysInPeriod = periodEnd.DayNumber - periodStart.DayNumber + 1;
 
+        // أساس «أيام الفترة» لا يُعرَف مقامه إلا هنا (يحتاج طول الفترة) — فيُحسَم الآن.
+        // Fixed30/WorkDays مقامهما محسوم بالتحميل. الافتراض WorkDays ⟹ بلا تغيير.
+        if (AttendanceSalaryLink.NormalizeBasis(
+                await HrSettingsStore.GetAsync(dbContext, AttendanceSalaryLink.ProrationBasisKey, AttendanceSalaryLink.BasisWorkDays))
+            == AttendanceSalaryLink.BasisPeriodDays)
+        {
+            linkPolicy = linkPolicy with { MonthlyDivisorDays = daysInPeriod };
+        }
+
         // سقف اقتطاع المخالفات الشهري من تهيئة اللائحة (صفر = بلا سقف).
         var maxDeductionPercent = decimal.TryParse(
             await HrmsDatabase.ScalarAsync<string>(
@@ -707,8 +723,18 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             var absentDays = month?.AbsentDays ?? 0;
             var unpaidLeaveDays = month?.UnpaidLeaveDays ?? 0;
 
+            // تنسيب المُعيَّن منتصف الشهر: أيام تقويمية قبل تاريخه (تعيّن يوم 5 ⟹ 4)
+            // غير مدفوعة. يُطبَّق فقط مع المقام التقويمي (Fixed30/PeriodDays) كي يبقى
+            // نمط «أيام الدوام» القديم بلا تغيير. الكامل الشهر ⟹ 0 ⟹ بلا أثر.
+            var preHireUnpaidDays =
+                linkPolicy.MonthlyDivisorDays > 0 && emp.Start is { } start
+                    && start > periodStart && start <= periodEnd
+                    ? start.DayNumber - periodStart.DayNumber
+                    : 0;
+
             var link = AttendanceSalaryLink.Evaluate(
-                linkPolicy, workDays, month?.PresentDays ?? 0, absentDays, month?.WorkedHours ?? 0m);
+                linkPolicy, workDays, month?.PresentDays ?? 0, absentDays, month?.WorkedHours ?? 0m,
+                preHireUnpaidDays);
             if (!link.Include)
             {
                 skippedNoAttendance++;
@@ -725,6 +751,10 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
 
             var dailyRate = basic > 0 ? Math.Round(basic / 30m, 4) : 0;
             var hourlyRate = dailyRate > 0 ? Math.Round(dailyRate / 8m, 4) : 0;
+
+            // سمات الموظف — تُقرأ مرّةً هنا لأنّ إنفاذ «معايير الاستحقاق» على عناصر
+            // الراتب (العلاوات والصيغ) يسبق حسم ملفَّي الضريبة/الضمان لاحقاً.
+            var facts = factsByEmployee.TryGetValue(emp.Id, out var empFacts) ? empFacts : noFacts;
 
             var comps = new List<Component>();
             if (proratedBasic != 0)
@@ -750,18 +780,27 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
                     // InGross=false ⟹ العلاوة لا تُدفع بالإجمالي ولا تدخل أي وعاء (Issue 14).
                     if (!policy.InGross) continue;
 
+                    // القسم 1 (قواعد + استحقاق عنصر الراتب): عنصرٌ خارج فترة صلاحيته أو
+                    // غير مؤهّل للموظف ⟹ لا يُضاف. حدّ القيمة الدنيا/القصوى يحصر مبلغ
+                    // العلاوة قبل أثر الحضور. كلها اختيارية ⟹ null/فارغ = السلوك القديم.
+                    var sItem = salaryItemsById.GetValueOrDefault(al.SalaryItemId);
+                    if (sItem is not null &&
+                        (!sItem.WithinValidity(periodStart, periodEnd) || !sItem.EligibleFor(facts)))
+                        continue;
+                    var alAmount = sItem?.Clamp(al.Amount) ?? al.Amount;
+
                     if (policy.OvertimeEligible)
-                        overtimeEligibleAllow += al.Amount;
+                        overtimeEligibleAllow += alAmount;
                     if (policy.UnpaidLeaveEligible)
-                        unpaidLeaveEligibleAllow += al.Amount;
+                        unpaidLeaveEligibleAllow += alAmount;
 
                     // العلاوة الحسّاسة للحضور تُنسَّب بالمعامل (وعاء الحضور = أساسي +
                     // علاوات مستحقّة)، والثابتة تبقى كاملة. الافتراض غير حسّاس ⟹ كامل
                     // كسلوك المحرك السابق، فلا ينحرف رقم من لم يُفعِّل السياسة.
                     var sensitive = policy.Prorated;
-                    if (sensitive) attendanceSensitiveAllow += al.Amount;
+                    if (sensitive) attendanceSensitiveAllow += alAmount;
                     var amount = AttendanceSalaryBase.AdjustComponent(
-                        new AttendanceSalaryBase.EarningComponent(al.Amount, sensitive), factor);
+                        new AttendanceSalaryBase.EarningComponent(alAmount, sensitive), factor);
                     if (amount == 0) continue;
                     allowancesTotal += amount;
 
@@ -899,8 +938,10 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
                 salaryConstants);
                 foreach (var item in formulaItems)
                 {
+                    // القسم 1: عنصرٌ خارج صلاحيته أو غير مؤهّل للموظف لا يُحتسب أصلاً.
+                    if (!item.WithinValidity(periodStart, periodEnd) || !item.EligibleFor(facts)) continue;
                     if (!SalaryFormulaEvaluator.TryEvaluate(item.Formula, formulaVars, out var raw, out _)) continue;
-                    var value = Math.Round(item.Prorated ? raw * factor : raw, 2);
+                    var value = item.Clamp(Math.Round(item.Prorated ? raw * factor : raw, 2));
                     if (value == 0) continue;
                     if (item.IsAddition)
                     {
@@ -939,8 +980,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
 
             // حسم ملفَّي الضريبة والضمان لهذا الموظف: إسناده الصريح ⟵ فملفٌ تنطبق
             // شروطه ⟵ فالملف النشط. ووعاء الاحتساب يتبع الملف الفائز لا ملفاً ثابتاً.
-            var facts = factsByEmployee.TryGetValue(emp.Id, out var empFacts) ? empFacts : noFacts;
-
+            // (facts محسوبةٌ أعلى الحلقة لإنفاذ استحقاق عناصر الراتب أيضاً.)
             var taxChoice = PayrollProfileResolver.Resolve(fin?.TaxProfileId, taxCandidates, facts);
             var gosiChoice = PayrollProfileResolver.Resolve(fin?.GosiProfileId, gosiCandidates, facts);
 
