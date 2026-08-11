@@ -158,6 +158,30 @@ public sealed class TenantIsolationGuardTests
         Assert.DoesNotContain("IgnoreAsync(_dbContext, id)", page);
     }
 
+    [Fact]
+    public void SelfServices_GuardsCreateByEmployeeScope()
+    {
+        var page = Page("SelfServices", "Index.cshtml.cs");
+        Assert.Contains("ICompanyScopeProvider", page);
+        // لا يُنشأ طلبٌ لموظفٍ من النموذج قبل فحص شركته.
+        Assert.Contains("CanAccessEmployeeAsync", page);
+    }
+
+    [Fact]
+    public void Roster_GuardsBulkFillAndCopyByScope()
+    {
+        var store = Collapse(File.ReadAllText(Path.Combine(
+            RepoRoot(), "SmartAttendance.Web", "Infrastructure", "Hrms", "RosterStore.cs")));
+        // التعبئة/النسخ الجماعيّان يأخذان النطاق ويحقنانه بمصدر النسخ.
+        Assert.Contains("FillMonthFromFirstWeekAsync( ApplicationDbContext dbContext, Security.CompanyScope scope", store);
+        Assert.Contains("CopyFromPreviousMonthAsync( ApplicationDbContext dbContext, Security.CompanyScope scope", store);
+        Assert.Contains("CopyDayAsync( ApplicationDbContext dbContext, Security.CompanyScope scope", store);
+
+        var page = Page("Roster", "Index.cshtml.cs");
+        Assert.DoesNotContain("FillMonthFromFirstWeekAsync(_dbContext, year, month)", page);
+        Assert.DoesNotContain("CopyFromPreviousMonthAsync(_dbContext, year, month)", page);
+    }
+
     /// <summary>يطوي كل تتابع فراغات (بينها الأسطر) إلى مسافة واحدة — تأكيدٌ لا يتعلّق بالتنسيق.</summary>
     private static string Collapse(string s) =>
         System.Text.RegularExpressions.Regex.Replace(s, "\\s+", " ");

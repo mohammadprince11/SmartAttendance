@@ -95,7 +95,8 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostFillFromFirstWeekAsync()
     {
         var (year, month) = Period;
-        var written = await RosterStore.FillMonthFromFirstWeekAsync(_dbContext, year, month);
+        var written = await RosterStore.FillMonthFromFirstWeekAsync(
+            _dbContext, await _companyScope.GetAsync(), year, month);
         TempData["SuccessMessage"] = written > 0
             ? $"تمت تعبئة بقية الشهر من نمط الأسبوع الأول ({written} خلية) — راجع ثم انشر."
             : "لا خلايا بالأسبوع الأول لتكرارها — ارسم الأسبوع الأول أولاً (واحفظه) ثم أعد المحاولة.";
@@ -106,7 +107,8 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostCopyPrevMonthAsync()
     {
         var (year, month) = Period;
-        var written = await RosterStore.CopyFromPreviousMonthAsync(_dbContext, year, month);
+        var written = await RosterStore.CopyFromPreviousMonthAsync(
+            _dbContext, await _companyScope.GetAsync(), year, month);
         TempData["SuccessMessage"] = written > 0
             ? $"تم نسخ جدول الشهر الماضي بمحاذاة أيام الأسبوع ({written} خلية) — عدّل الاستثناءات ثم انشر."
             : "الشهر الماضي بلا خلايا روستر — لا شيء يُنسخ.";
