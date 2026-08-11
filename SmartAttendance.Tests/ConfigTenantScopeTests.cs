@@ -101,6 +101,33 @@ public sealed class ConfigTenantScopeTests
     }
 
     [Fact]
+    public void Polls_ScopeListingAndGuardTogglePlusDelete()
+    {
+        var polls = System.IO.File.ReadAllText(System.IO.Path.Combine(
+            RepoRoot(), "SmartAttendance.Web", "Pages", "Engagement", "Polls.cshtml.cs"));
+
+        // نشر/سحب وحذف استطلاع شركة أخرى كانا ممكنَين بمعرّف من المتصفّح.
+        Assert.Contains("ConfigTenantScope.IsInScopeAsync", polls);
+        Assert.Contains("ConfigTenantScope.AssignCompanyAsync", polls);
+        Assert.Contains("NotFound()", polls);
+
+        var basePage = System.IO.File.ReadAllText(System.IO.Path.Combine(
+            RepoRoot(), "SmartAttendance.Web", "Pages", "Engagement", "EngagementPageModel.cs"));
+        Assert.Contains("ToSharedConfigSqlPredicate(\"p.CompanyId\")", basePage);
+    }
+
+    [Fact]
+    public void PollSearch_IsParenthesised_SoScopeCannotBeOrOutOfEffect()
+    {
+        // 🔴 `WHERE scope AND a LIKE .. OR b LIKE ..` — الـOR أضعف ارتباطاً فينفكّ
+        // حصر النطاق عند أي بحث ويُسرّب استطلاعات الشركات الأخرى.
+        var basePage = System.IO.File.ReadAllText(System.IO.Path.Combine(
+            RepoRoot(), "SmartAttendance.Web", "Pages", "Engagement", "EngagementPageModel.cs"));
+
+        Assert.Contains("AND (p.Title LIKE @Search OR p.Question LIKE @Search OR p.Category LIKE @Search)", basePage);
+    }
+
+    [Fact]
     public void SaveMethods_ReturnNewId_SoAttributionCannotFailSilently()
     {
         // 🔴 العطل الذي كشفه التنفيذ: الإدراج لم يكن يُرجع المعرّف، فـ rule.Id يبقى 0
