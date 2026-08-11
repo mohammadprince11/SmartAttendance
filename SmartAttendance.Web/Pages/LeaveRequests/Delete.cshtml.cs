@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Application.LeaveRequests.Services;
 using SmartAttendance.Application.LeaveRequests.ViewModels;
+using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.LeaveRequests;
@@ -10,13 +11,16 @@ public class DeleteModel : PageModel
 {
     private readonly ILeaveRequestService _leaveRequestService;
     private readonly ICompanyScopeProvider _companyScope;
+    private readonly ApplicationDbContext _dbContext;
 
     public DeleteModel(
         ILeaveRequestService leaveRequestService,
-        ICompanyScopeProvider companyScope)
+        ICompanyScopeProvider companyScope,
+        ApplicationDbContext dbContext)
     {
         _leaveRequestService = leaveRequestService;
         _companyScope = companyScope;
+        _dbContext = dbContext;
     }
 
     public LeaveRequestDetailsViewModel LeaveRequest { get; set; } = new();
@@ -53,6 +57,14 @@ public class DeleteModel : PageModel
 
             return Page();
         }
+
+        // AUDIT-001: حذفٌ حسّاس يُسجَّل — من حذف، أي طلب، من أين. فحص استغلال
+        // AUTHZ-003 كشف أن الحذف لم يكن يُسجَّل إطلاقاً، فلو استُغلّت ثغرةٌ لَما
+        // أمكن كشفها. الفشل هنا لا يُسقط الحذف (تمّ) — أثرٌ لا شرطُ صحّة.
+        await SecurityAuditLog.WriteDeletionAsync(
+            _dbContext, "LeaveRequest", id,
+            User.Identity?.Name,
+            HttpContext.Connection.RemoteIpAddress?.ToString());
 
         TempData["SuccessMessage"] = "Leave request deleted successfully.";
 
