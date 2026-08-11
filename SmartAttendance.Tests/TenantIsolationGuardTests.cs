@@ -129,4 +129,36 @@ public sealed class TenantIsolationGuardTests
         Assert.Contains("ICompanyScopeProvider", page);
         Assert.Contains("scope.Allows", page);
     }
+
+    // ---- Phase 2: لوحة التحكم (المُنتقي يصله كل دور) ----
+    [Fact]
+    public void Dashboard_ScopesCompanyPickerAndMetricExecution()
+    {
+        var page = Page("Index.cshtml.cs");
+        Assert.Contains("ICompanyScopeProvider", page);
+        Assert.Contains("scope.Allows", page);
+    }
+
+    // ---- Phase 21: اعتماد/تجاهل/تعديل الاقتراحات = أثرٌ حقيقيّ (قضية مخالفة) ----
+    // كان الاعتماد بمعرّفٍ بلا نطاق ⟹ دورٌ مقيَّد يعتمد اقتراح موظف شركةٍ أخرى.
+    [Fact]
+    public void AttendanceRecommendations_GuardsApproveIgnoreEditByScope()
+    {
+        var store = Collapse(File.ReadAllText(Path.Combine(
+            RepoRoot(), "SmartAttendance.Web", "Infrastructure", "Hrms", "RecommendationStore.cs")));
+        // المتجر يفرض النطاق: كل معالج بتٍّ يأخذ CompanyScope ويحقنه بشرط SQL على شركة الموظف.
+        Assert.Contains("ApproveAsync( ApplicationDbContext dbContext, Security.CompanyScope scope, int id)", store);
+        Assert.Contains("IgnoreAsync( ApplicationDbContext dbContext, Security.CompanyScope scope, int id)", store);
+        Assert.Contains("UpdateActionAsync( ApplicationDbContext dbContext, Security.CompanyScope scope,", store);
+        Assert.Contains("scope.ToSqlPredicate(\"e.CompanyId\")", store);
+
+        var page = Page("AttendanceRecommendations", "Index.cshtml.cs");
+        // لم تبقَ أي مناداة بلا نطاق (النمط القديم).
+        Assert.DoesNotContain("ApproveAsync(_dbContext, id)", page);
+        Assert.DoesNotContain("IgnoreAsync(_dbContext, id)", page);
+    }
+
+    /// <summary>يطوي كل تتابع فراغات (بينها الأسطر) إلى مسافة واحدة — تأكيدٌ لا يتعلّق بالتنسيق.</summary>
+    private static string Collapse(string s) =>
+        System.Text.RegularExpressions.Regex.Replace(s, "\\s+", " ");
 }

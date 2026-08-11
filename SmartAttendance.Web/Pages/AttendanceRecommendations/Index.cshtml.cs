@@ -187,7 +187,8 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostEditActionAsync(int id, string actionText, decimal actionValue)
     {
         var (ok, message) = await RecommendationStore.UpdateActionAsync(
-            _dbContext, id, actionText ?? string.Empty, actionValue);
+            _dbContext, await _companyScope.GetAsync(HttpContext.RequestAborted),
+            id, actionText ?? string.Empty, actionValue);
         TempData[ok ? "SuccessMessage" : "ErrorMessage"] = message;
         return RedirectToPage(new { Month, Tab, SubTab, PageNumber });
     }
@@ -223,7 +224,8 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostApproveAsync(int id)
     {
-        var approved = await RecommendationStore.ApproveAsync(_dbContext, id);
+        var approved = await RecommendationStore.ApproveAsync(
+            _dbContext, await _companyScope.GetAsync(HttpContext.RequestAborted), id);
         TempData["SuccessMessage"] = approved
             ? "تم الاعتماد — أُنشئت قضية مخالفة مرتبطة (إن كان الأثر مخالفة)."
             : "الاقتراح غير معلق أو غير موجود.";
@@ -232,7 +234,8 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostIgnoreAsync(int id)
     {
-        await RecommendationStore.IgnoreAsync(_dbContext, id);
+        await RecommendationStore.IgnoreAsync(
+            _dbContext, await _companyScope.GetAsync(HttpContext.RequestAborted), id);
         TempData["SuccessMessage"] = "تم تجاهل الاقتراح.";
         return RedirectToPage(new { Month, Tab });
     }
@@ -246,10 +249,11 @@ public class IndexModel : PageModel
     {
         var ids = (selectedIds ?? Array.Empty<int>()).Distinct().ToList();
         var done = 0;
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
 
         foreach (var id in ids)
         {
-            if (await RecommendationStore.ApproveAsync(_dbContext, id)) done++;
+            if (await RecommendationStore.ApproveAsync(_dbContext, scope, id)) done++;
         }
 
         TempData[done == 0 ? "ErrorMessage" : "SuccessMessage"] = done == 0
@@ -264,10 +268,11 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostBulkIgnoreAsync(int[] selectedIds)
     {
         var ids = (selectedIds ?? Array.Empty<int>()).Distinct().ToList();
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
 
         foreach (var id in ids)
         {
-            await RecommendationStore.IgnoreAsync(_dbContext, id);
+            await RecommendationStore.IgnoreAsync(_dbContext, scope, id);
         }
 
         TempData["SuccessMessage"] = ids.Count == 0

@@ -459,13 +459,16 @@ ORDER BY r.WorkDate DESC, e.EmployeeNo;
     /// اعتماد اقتراح معلق أو متعارض (تجاوز يدوي): ينفّذ الأثر — مخالفة ← قضية مرتبطة،
     /// إجازة/مغادرة/أوفرتايم/دخل/اقتطاع ← حركة AttendanceTransaction، ملاحظة ← بلا أثر.
     /// </summary>
-    public static async Task<bool> ApproveAsync(ApplicationDbContext dbContext, int id)
+    public static async Task<bool> ApproveAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int id)
     {
         await EnsureAsync(dbContext);
 
+        // فحص النطاق داخل نفس الاستعلام: اقتراحُ موظفٍ خارج شركات المستخدم لا يُرجَع
+        // صفّاً ⟹ لا اعتماد ولا أثر (قضية مخالفة/حركة مالية) عبر الشركات. غير المقيَّد = 1=1.
         var rec = (await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT TOP 1 r.*, e.EmployeeNo, e.FullName FROM AttendanceRecommendations r INNER JOIN Employees e ON e.Id = r.EmployeeId WHERE r.Id = @Id AND r.Status IN (N'Pending', N'Conflicted');",
+            $"SELECT TOP 1 r.*, e.EmployeeNo, e.FullName FROM AttendanceRecommendations r INNER JOIN Employees e ON e.Id = r.EmployeeId WHERE r.Id = @Id AND r.Status IN (N'Pending', N'Conflicted') AND {scope.ToSqlPredicate("e.CompanyId")};",
             command => HrmsDatabase.AddParameter(command, "@Id", id),
             reader => new Recommendation
             {
@@ -767,12 +770,14 @@ WHERE EmployeeId = @Employee AND RuleId = @Rule
         return prior + 1;
     }
 
-    public static async Task IgnoreAsync(ApplicationDbContext dbContext, int id)
+    public static async Task IgnoreAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int id)
     {
         await EnsureAsync(dbContext);
+        // النطاق يُحقَن عبر EXISTS على الموظف: اقتراحُ شركةٍ أخرى لا يُلمَس. غير المقيَّد = 1=1.
         await HrmsDatabase.ExecuteAsync(
             dbContext,
-            "UPDATE AttendanceRecommendations SET Status = N'Ignored', DecidedAt = SYSUTCDATETIME() WHERE Id = @Id AND Status IN (N'Pending', N'Conflicted');",
+            $"UPDATE r SET r.Status = N'Ignored', r.DecidedAt = SYSUTCDATETIME() FROM AttendanceRecommendations r INNER JOIN Employees e ON e.Id = r.EmployeeId WHERE r.Id = @Id AND r.Status IN (N'Pending', N'Conflicted') AND {scope.ToSqlPredicate("e.CompanyId")};",
             command => HrmsDatabase.AddParameter(command, "@Id", id));
     }
 
@@ -784,17 +789,23 @@ WHERE EmployeeId = @Employee AND RuleId = @Rule
     /// فعلاً)، أو القاعدة لا تسمح، أو كانت القاعدة فترية أو حارس تعارض (لا راية لها).</para>
     /// </summary>
     public static async Task<(bool Ok, string Message)> UpdateActionAsync(
-        ApplicationDbContext dbContext, int id, string actionText, decimal actionValue)
+        ApplicationDbContext dbContext, Security.CompanyScope scope,
+        int id, string actionText, decimal actionValue)
     {
         await EnsureAsync(dbContext);
 
+        // فحص النطاق ضمن نفس القراءة: اقتراحُ موظفٍ خارج شركات المستخدم لا يُرجَع ⟹
+        // يُعامَل كغير موجود فلا يُعدَّل عبر الشركات. غير المقيَّد = 1=1.
         var row = (await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT TOP 1 RuleId, Status FROM AttendanceRecommendations WHERE Id = @Id;",
+            $"SELECT TOP 1 r.RuleId, r.Status FROM AttendanceRecommendations r INNER JOIN Employees e ON e.Id = r.EmployeeId WHERE r.Id = @Id AND {scope.ToSqlPredicate("e.CompanyId")};",
             command => HrmsDatabase.AddParameter(command, "@Id", id),
             reader => (
                 RuleId: HrmsDatabase.GetInt(reader, "RuleId"),
                 Status: HrmsDatabase.GetString(reader, "Status")))).FirstOrDefault();
+
+        if (row.Status is null)
+            return (false, "لا يُعدَّل إلا اقتراح معلّق أو متعارض — المعتمَد نفّذ أثره.");
 
         if (row.Status is not ("Pending" or "Conflicted"))
             return (false, "لا يُعدَّل إلا اقتراح معلّق أو متعارض — المعتمَد نفّذ أثره.");

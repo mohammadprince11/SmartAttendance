@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages;
 
@@ -15,10 +16,14 @@ namespace SmartAttendance.Web.Pages;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -69,7 +74,13 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        CompanyOptions = await _dbContext.Companies
+        // اللوحة يصلها كل دور؛ فالمُنتقي محصورٌ بشركات المستخدم كي لا يرى دورٌ مقيَّد
+        // أسماء/أعداد شركةٍ أخرى، ولا يُنفَّذ أي مقياس لشركةٍ خارج نطاقه. و`Resolve`
+        // يرفض أيضاً CompanyId مُمرَّراً بالرابط خارج النطاق (الويدجتات تعريفاتٌ عامّة
+        // لا بياناتُ مستأجر، فتبقى كما هي).
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+
+        CompanyOptions = (await _dbContext.Companies
             .AsNoTracking()
             .Where(x => !x.IsDeleted && x.IsActive)
             .Select(x => new CompanyOption
@@ -81,7 +92,9 @@ public class IndexModel : PageModel
             })
             .OrderByDescending(x => x.EmployeeCount)
             .ThenBy(x => x.Name)
-            .ToListAsync();
+            .ToListAsync())
+            .Where(x => scope.Allows(x.Id))
+            .ToList();
 
         CompanyId = CompanySelectionContext.Resolve(
             HttpContext,
@@ -90,8 +103,10 @@ public class IndexModel : PageModel
 
         AllWidgets = await DashboardWidgetStore.ListAsync(_dbContext);
 
-        if (!CompanyId.HasValue)
+        // حارس دفاعيّ صريح: لا يُنفَّذ أي مقياس إلا لشركةٍ يسمح بها النطاق.
+        if (!CompanyId.HasValue || !scope.Allows(CompanyId.Value))
         {
+            CompanyId = null;
             return;
         }
 
