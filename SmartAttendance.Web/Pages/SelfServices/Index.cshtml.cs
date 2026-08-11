@@ -99,9 +99,31 @@ SELECT @RequestId;
         SelectedEmployeeCode = identity?.Code;
         SelectedEmployeeName = identity?.Name;
 
+        // AUTHZ-005: كان هذا السرد **بلا أي فلتر** — آخر 100 طلبٍ من كل الشركات
+        // بأسماء أصحابها وأسباب طلباتهم، ويبلغه أدنى دور (الحارس يمرّر كل GET
+        // على /selfservices). الكتابة كانت محروسة أعلاه؛ القراءة وحدها مكشوفة.
+        //
+        // بُعدان يُفرضان معاً كنمط LeaveRequestAccessScope:
+        //   (١) الشركة — بالشرط الذي يبنيه EmployeeCompanyGuard نفسه.
+        //   (٢) الموظّف — دور «موظف» لا يرى إلا طلباته هو.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var companyPredicate = EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId");
+
+        var ownEmployeeId = ResolveOwnEmployeeIdForEmployeeRole();
+
+        // مغلق الفشل: دور «موظف» بلا مطالبة EmployeeId صالحة لا يرى شيئاً —
+        // هويةٌ ناقصة لا تُترجَم إلى سردٍ أوسع.
+        if (ownEmployeeId == DeniedEmployeeId)
+        {
+            Requests = new List<RequestRow>();
+            return;
+        }
+
+        var ownClause = ownEmployeeId.HasValue ? " AND r.EmployeeId = @OwnEmployeeId" : string.Empty;
+
         Requests = await HrmsDatabase.QueryAsync(
             _dbContext,
-            """
+            $"""
 SELECT TOP 100
     r.Id,
     e.EmployeeNo,
@@ -118,9 +140,16 @@ SELECT TOP 100
     r.CreatedAt
 FROM SelfServiceRequests r
 INNER JOIN Employees e ON r.EmployeeId = e.Id
+WHERE {companyPredicate}{ownClause}
 ORDER BY r.CreatedAt DESC;
 """,
-            null,
+            command =>
+            {
+                if (ownEmployeeId.HasValue)
+                {
+                    HrmsDatabase.AddParameter(command, "@OwnEmployeeId", ownEmployeeId.Value);
+                }
+            },
             reader => new RequestRow
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
@@ -137,6 +166,27 @@ ORDER BY r.CreatedAt DESC;
                 Reason = HrmsDatabase.GetString(reader, "Reason"),
                 CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt")
             });
+    }
+
+    /// <summary>قيمةٌ حارسة تعني «دور موظف بهوية ناقصة» ⟹ لا يُسرد شيء.</summary>
+    private static readonly int? DeniedEmployeeId = -1;
+
+    /// <summary>
+    /// معرّف الموظّف حين يكون الدور «موظف» — وإلا <c>null</c> (بلا قيدٍ إضافي فوق
+    /// قيد الشركة). <see cref="DeniedEmployeeId"/> حين يكون الدور موظفاً بلا هوية.
+    /// </summary>
+    private int? ResolveOwnEmployeeIdForEmployeeRole()
+    {
+        var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+
+        if (!string.Equals(role, "Employee", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return int.TryParse(User.FindFirst("EmployeeId")?.Value, out var id) && id > 0
+            ? id
+            : DeniedEmployeeId;
     }
 
     public class RequestInput
