@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 namespace SmartAttendance.Web.Infrastructure.Security;
 
 /// <summary>
@@ -40,19 +42,31 @@ public static class SecurityHeaderPolicy
         "manifest-src 'self'"
     };
 
-    public static string BuildContentSecurityPolicy()
+    public static string BuildContentSecurityPolicy() => BuildContentSecurityPolicy(null);
+
+    /// <summary>
+    /// يبني CSP المُنفَّذة. <paramref name="nonce"/> فارغ ⟹ السياسة المتساهلة الحالية
+    /// (<c>'unsafe-inline'</c>) — السلوك الحيّ الافتراضي. قيمةٌ ⟹ السياسة الصارمة:
+    /// <c>'nonce-…'</c> بدل <c>'unsafe-inline'</c>، فلا يُشغّل المتصفّح إلا الوسوم
+    /// المضمّنة الحاملة لهذا الـnonce (وتُعطَّل معالِجات الأحداث المضمّنة تلقائيّاً).
+    /// تُفعَّل بالراية <c>Security:StrictCsp</c> بعد ترحيل الوسوم لبيئة يمكن اختبارها.
+    /// </summary>
+    public static string BuildContentSecurityPolicy(string? nonce)
     {
+        var inline = string.IsNullOrEmpty(nonce) ? "'unsafe-inline'" : $"'nonce-{nonce}'";
         var directives = new List<string>
         {
             SharedDirectives[0],
-            // Razor + جافاسكربت محلي؛ 'unsafe-inline' مطلوب للسكربتات المضمّنة الحالية.
-            "script-src 'self' 'unsafe-inline'",
-            "style-src 'self' 'unsafe-inline'"
+            $"script-src 'self' {inline}",
+            $"style-src 'self' {inline}"
         };
         directives.AddRange(SharedDirectives[1..]);
 
         return string.Join("; ", directives);
     }
+
+    /// <summary>nonce عشوائيّ آمن تشفيريّاً لكل طلب (128 بت، Base64).</summary>
+    public static string NewNonce() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
 
     /// <summary>
     /// السياسة الصارمة الهدف (بلا <c>'unsafe-inline'</c>) تُبَثّ كـ

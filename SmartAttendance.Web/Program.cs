@@ -496,12 +496,24 @@ if (forceHttps)
 
 // ترويسات الأمان + سياسة المحتوى (CSP) — مصدرها SecurityHeaderPolicy النقي.
 var securityHeaders = SecurityHeaderPolicy.BuildStaticHeaders();
+// راية معطّلة افتراضيّاً: السلوك الحيّ يبقى 'unsafe-inline' حتى يكتمل ترحيل الوسوم
+// المضمّنة (nonce) وتُفعَّل في بيئة يمكن اختبارها بصريّاً. تفعيلها بلا ترحيل يكسر
+// كل معالِجات onclick المضمّنة عمداً — فهذا هو غرض CSP الصارمة.
+var strictCsp = app.Configuration.GetValue<bool>("Security:StrictCsp");
 
 app.Use(async (context, next) =>
 {
     foreach (var header in securityHeaders)
     {
         context.Response.Headers[header.Key] = header.Value;
+    }
+
+    if (strictCsp)
+    {
+        var nonce = SecurityHeaderPolicy.NewNonce();
+        context.SetCspNonce(nonce);
+        context.Response.Headers["Content-Security-Policy"] =
+            SecurityHeaderPolicy.BuildContentSecurityPolicy(nonce);
     }
 
     await next();
