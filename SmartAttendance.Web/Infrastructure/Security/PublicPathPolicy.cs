@@ -65,6 +65,15 @@ public static class PublicPathPolicy
             return PathAccessClass.Public;
         }
 
+        // مجمّع مخالفات CSP: المتصفّح يرسل التقرير من صفحة الدخول ومن جلسةٍ منتهية،
+        // فحجبه بالحارس يُفرغ القياس. لا يقرأ شيئاً ولا يردّ محتوى (204)، والمساران
+        // **غير مُخرَّطَين أصلاً** ما لم ترتفع راية Security:CspReportCollector
+        // (والملخّص فوقها بالتطوير وحده) — فبالإنتاج 404 لا نقطة عامّة.
+        if (path == "/csp-report" || path == "/csp-report/summary")
+        {
+            return PathAccessClass.Public;
+        }
+
         // نقاط Web-Push (كنترولر بمصادقة كوكي [Authorize]) خارج كتالوج الأدوار.
         if (path.StartsWith("/push/"))
         {

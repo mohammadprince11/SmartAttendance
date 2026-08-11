@@ -78,7 +78,15 @@ public static class SecurityHeaderPolicy
     /// السياسة المُنفَّذة أعلاه كما هي حرفيّاً حتى يكتمل الترحيل (nonce + refactor
     /// معالِجات الأحداث المضمّنة).</para>
     /// </summary>
-    public static string BuildReportOnlyContentSecurityPolicy()
+    public static string BuildReportOnlyContentSecurityPolicy() =>
+        BuildReportOnlyContentSecurityPolicy(null);
+
+    /// <summary>
+    /// <paramref name="reportUri"/> بقيمة ⟹ تُلحَق <c>report-uri</c>/<c>report-to</c>
+    /// فتصل المخالفات لمجمّعٍ يُقاس به الترحيل بدل تخمينه. فارغة ⟹ الترويسة كما هي
+    /// حرفيّاً (لا وجهة، لا نقطة نهاية بالإنتاج) — الافتراضي.
+    /// </summary>
+    public static string BuildReportOnlyContentSecurityPolicy(string? reportUri)
     {
         var directives = new List<string>
         {
@@ -88,12 +96,24 @@ public static class SecurityHeaderPolicy
         };
         directives.AddRange(SharedDirectives[1..]);
 
+        if (!string.IsNullOrWhiteSpace(reportUri))
+        {
+            // الاثنان معاً: report-uri مهجورة بالمعيار لكنها المدعومة عمليّاً بأوسع
+            // انتشار، وreport-to هي الخلف المعاصر — فلا تضيع تقارير متصفّحٍ ما.
+            directives.Add($"report-uri {reportUri}");
+            directives.Add("report-to csp-endpoint");
+        }
+
         return string.Join("; ", directives);
     }
 
     /// <summary>الترويسات الثابتة المطبَّقة على كل استجابة.</summary>
     public static IReadOnlyDictionary<string, string> BuildStaticHeaders() =>
-        new Dictionary<string, string>
+        BuildStaticHeaders(null);
+
+    public static IReadOnlyDictionary<string, string> BuildStaticHeaders(string? cspReportUri)
+    {
+        var headers = new Dictionary<string, string>
         {
             ["X-Content-Type-Options"] = "nosniff",
             // SAMEORIGIN لا DENY: تسمح لبوابة الموظف بتضمين صفحات طلباتها بمكانها
@@ -106,6 +126,14 @@ public static class SecurityHeaderPolicy
                 "camera=(), microphone=(), geolocation=(self), publickey-credentials-get=(self)",
             ["Content-Security-Policy"] = BuildContentSecurityPolicy(),
             // بثّ الهدف الصارم بلا إنفاذ — يكشف سطح الترحيل بلا كسر الواجهة (#8).
-            ["Content-Security-Policy-Report-Only"] = BuildReportOnlyContentSecurityPolicy()
+            ["Content-Security-Policy-Report-Only"] = BuildReportOnlyContentSecurityPolicy(cspReportUri)
         };
+
+        if (!string.IsNullOrWhiteSpace(cspReportUri))
+        {
+            headers["Reporting-Endpoints"] = $"csp-endpoint=\"{cspReportUri}\"";
+        }
+
+        return headers;
+    }
 }
