@@ -92,8 +92,9 @@ public sealed class TenantGuardRatchetTests
         "Positions/Index.cshtml.cs",
         "Setup/Index.cshtml.cs",
         // Phase 6 تحقّقت أنها أدمن-فقط بكتالوج الأدوار — لا حارس داخلها مع ذلك.
-        "UserAccess/Index.cshtml.cs",
-        "Violations/Index.cshtml.cs"
+        "UserAccess/Index.cshtml.cs"
+        // Violations/Index.cshtml.cs — سُدِّد (AUTHZ-006 · FIX-001): فلتر شركةٍ على
+        // القوائم الثلاث. أُزيل من خط الأساس فلا يعود دَيناً مقبولاً.
     };
 
     [Fact]
