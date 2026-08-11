@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 // اسمٌ مستعار لازم: صنف `ViolationTypePickerItem` فيه خاصية `PenaltyAction`
 // تحجب الصنفَ العامّ ذا الاسم نفسه.
@@ -15,10 +16,26 @@ namespace SmartAttendance.Web.Pages.Violations;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext db)
+    public IndexModel(ApplicationDbContext db, ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
+    }
+
+    /// <summary>
+    /// شرط SQL يحصر السرد على موظفي شركات المستخدم (AUTHZ-006 · FIX-001).
+    ///
+    /// <para>للأدمن غير المقيَّد يُرجع <c>1 = 1</c> ⟹ <b>سلوكٌ مطابقٌ تماماً</b>
+    /// للسابق. لأي دورٍ مقيَّد (لو أُضيف <c>/violations</c> لكتالوجه مستقبلاً) يُفلتر
+    /// حتماً — فتُغلَق الثغرة الكامنة بنيويّاً لا عرضيّاً. <b>فلتر قراءةٍ فقط:</b>
+    /// لا صيغة ولا كتابة ولا حساب — الصحّة المالية للاقتطاعات لا تُمسّ.</para>
+    /// </summary>
+    private async Task<string> CompanyPredicateAsync(string employeeCompanyColumn)
+    {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        return EmployeeCompanyGuard.ListFilter(scope, employeeCompanyColumn);
     }
 
     public List<ViolationCaseRow> Items { get; private set; } = new();
@@ -114,9 +131,10 @@ public class IndexModel : PageModel
         ObjectionDays = int.TryParse(await DisciplinarySettingAsync(ViolationConfigPolicy.KeyObjectionDays), out var days) ? days : 0;
         DropMonths = int.TryParse(await DisciplinarySettingAsync(ViolationConfigPolicy.KeyDropMonths), out var months) ? months : 0;
 
+        var companyPredicate = await CompanyPredicateAsync("e.CompanyId");
         var all = await HrmsDatabase.QueryAsync(
             _db,
-            """
+            $"""
 SELECT c.Id, ISNULL(c.ReferenceNo, N'') AS ReferenceNo,
        ISNULL(e.FullName, N'') AS EmployeeName, ISNULL(e.EmployeeNo, N'') AS EmployeeNo,
        ISNULL(c.ViolationTitle, N'') AS ViolationTitle, c.FinalPenaltyAction,
@@ -126,6 +144,7 @@ SELECT c.Id, ISNULL(c.ReferenceNo, N'') AS ReferenceNo,
 FROM EmployeeViolationCases c
 LEFT JOIN Employees e ON e.Id = c.EmployeeId
 WHERE ISNULL(c.IsDeleted, 0) = 0
+  AND {companyPredicate}
   AND (c.FinalPenaltyAction IS NOT NULL AND LTRIM(RTRIM(c.FinalPenaltyAction)) <> N'')
 ORDER BY c.EventDate DESC, c.Id DESC;
 """,
@@ -503,11 +522,12 @@ VALUES
     {
         await ViolationCaseSchema.EnsureAsync(_db);
 
+        var pickerPredicate = await CompanyPredicateAsync("CompanyId");
         EmployeeOptions = await QueryAsync(
-            """
+            $"""
 SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo, ISNULL(FullName, N'') AS FullName
 FROM Employees
-WHERE ISNULL(IsDeleted, 0) = 0 AND ISNULL(IsActive, 1) = 1
+WHERE ISNULL(IsDeleted, 0) = 0 AND ISNULL(IsActive, 1) = 1 AND {pickerPredicate}
 ORDER BY FullName;
 """,
             reader => new EmployeePickerItem
@@ -634,8 +654,9 @@ ORDER BY ISNULL(c.DisplayOrder, 999), c.Name, t.Name;
 
     private async Task<List<ViolationCaseRow>> LoadViolationRowsAsync()
     {
+        var companyPredicate = await CompanyPredicateAsync("e.CompanyId");
         return await QueryAsync(
-            """
+            $"""
 SELECT
     v.Id,
     v.ReferenceNo,
@@ -665,6 +686,7 @@ LEFT JOIN Employees e ON e.Id = v.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
 LEFT JOIN Branches b ON b.Id = d.BranchId
 WHERE ISNULL(v.IsDeleted, 0) = 0
+  AND {companyPredicate}
   AND (@Reply = 'all'
        OR (@Reply = 'pending' AND ISNULL(v.EmployeeReplyStatus, N'NotRequested') = N'Pending')
        OR (@Reply = 'replied' AND ISNULL(v.EmployeeReplyStatus, N'NotRequested') = N'Replied'))
