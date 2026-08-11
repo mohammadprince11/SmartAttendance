@@ -194,10 +194,23 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                             .GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),
                         username);
                 }
-                catch
+                catch (Exception ex)
                 {
                     // تعذّر الوصول للقاعدة لا يطرد الجلسات القائمة (توفّر قبل تشدّد).
+                    //
+                    // ⚠️ AUTHN-002: هذا **فشلٌ مفتوح** مقصود — تعذّر التحقّق يعني أن
+                    // حساباً عُطِّل أو تغيّرت كلمة مروره تبقى جلسته حيّة حتى 8 ساعات.
+                    // (ومسار الموبايل يفشل **مغلقاً** بنفس الضابط — سلوكان متناقضان.)
+                    // كان يُبتلع صامتاً فلا أثر يُراجَع؛ صار يُسجَّل ليُرى بالسجلّ
+                    // ويُقاس تكراره قبل حسم أي السلوكين هو المقصود.
                     accountState = null;
+
+                    context.HttpContext.RequestServices
+                        .GetRequiredService<ILoggerFactory>()
+                        .CreateLogger("Security.SessionRevocation")
+                        .LogWarning(ex,
+                            "تعذّر التحقّق من حالة الحساب — استمرّت الجلسة (فشلٌ مفتوح). المسار: {Path}",
+                            context.HttpContext.Request.Path);
                 }
 
                 if (accountState is not null)
