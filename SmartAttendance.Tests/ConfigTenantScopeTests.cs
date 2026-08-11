@@ -72,6 +72,32 @@ public sealed class ConfigTenantScopeTests
         Assert.Contains("20260811-02-config-tables-company-id-indexes", migrator);
     }
 
+    [Fact]
+    public void ShiftTypesPage_ScopesListAndGuardsWrites()
+    {
+        var page = System.IO.File.ReadAllText(System.IO.Path.Combine(
+            RepoRoot(), "SmartAttendance.Web", "Pages", "ShiftTypes", "Index.cshtml.cs"));
+
+        Assert.Contains("ICompanyScopeProvider", page);
+        Assert.Contains("ListInScopeAsync", page);
+        // كلا مساري الكتابة (تعديل + حذف) يمرّان بحارس الملكية قبل المتجر.
+        Assert.Contains("IsInScopeAsync", page);
+        Assert.Contains("AssignCompanyAsync", page);
+        Assert.DoesNotContain("ShiftTypeStore.ListAsync(_dbContext)", page);
+    }
+
+    [Fact]
+    public void EngineListPath_StaysUnscoped_SoPayrollIsNotBroken()
+    {
+        // ⚠️ حارس عكسيّ مقصود: ListAsync يخدم محرّك الحضور/الرواتب الذي يحتسب لكل
+        // موظف؛ حصرُه بنطاق المتصفّح يُسقط مناوبات من الاحتساب ويُفسد المسير.
+        var store = System.IO.File.ReadAllText(System.IO.Path.Combine(
+            RepoRoot(), "SmartAttendance.Web", "Infrastructure", "Hrms", "ShiftTypeStore.cs"));
+
+        Assert.Contains("public static async Task<List<ShiftType>> ListAsync(ApplicationDbContext dbContext)", store);
+        Assert.Contains("ListInScopeAsync", store);
+    }
+
     private static string RepoRoot()
     {
         var dir = new System.IO.DirectoryInfo(System.IO.Directory.GetCurrentDirectory());
