@@ -66,6 +66,9 @@ SmartAttendance.Web/wwwroot/uploads/company-logos/
 SmartAttendance.Web/wwwroot/tenant-assets/
 SmartAttendance.Web/App_Data/PageImports/
 SmartAttendance.Web/App_Data/PositionImports/
+# ملفات استيراد الحضور — بيانات موظفين حقيقية (بطاقات + أوقات). قاعدة حمراء:
+# ممنوع أي بيانات موظف حقيقية بالمستودع. كان ملفٌّ منها متتبَّعاً بالخطأ (FIX-014).
+SmartAttendance.Web/App_Data/AttendanceImports/
 
 # Claude Code: keep shared launch.json, ignore local session data
 .claude/*
