@@ -335,3 +335,43 @@ Status:     OPEN
 | مسار الصلاحيات الديناميكي بلا هوية | ✅ **fail-closed**: `systemUserId` غائب + متطلَّب ديناميكي ⟹ `return false` (`:172-175`) |
 | صنف المسار `BackOfficeOnly` | ✅ يردّ **404** لدور Employee لا 403 — لا يكشف وجود الصفحة |
 | مزلاج `EnsureLoginDatabaseCreatedAsync` | ✅ فحص مزدوج + `SemaphoreSlim` — بلا DDL بكل طلب |
+
+---
+
+# PHASE 3 — MODULE 5 (جزئيّ): هل AUTHZ-003 حالةٌ فردية أم نمط؟
+
+## ROOT-SEC-01 (نتيجة نظاميّة)
+
+```text
+Severity:   MEDIUM (هشاشة تصميم — لا ثغرة حيّة مؤكَّدة خارج AUTHZ-003)
+Confidence: CONFIRMED
+Category:   Systemic — Authorization Placement
+Status:     OPEN
+```
+
+**Title:** إنفاذ النطاق يعيش **بالصفحة** لا بالخدمة، فالحماية تعتمد على تذكُّر كاتب
+كل صفحة — وكل صفحة جديدة تبدأ مكشوفة افتراضاً.
+
+**Evidence — مسحٌ لكل خدمات `Infrastructure/Services` بمنهج AUTHZ-003:**
+
+| الخدمة | دوالّ بالمعرّف وحده | ذكرٌ للنطاق بالخدمة | حال صفحاتها |
+|---|---|---|---|
+| `AttendanceRecordService` | 3 | **0** | ✅ 4/4 صفحات تحرس — **مُعوَّض** |
+| `EmployeeService` | 3 | 43 | ✅ محروس بالخدمة |
+| `DepartmentService` | 3 | 15 | أدمن فقط بالمسارات |
+| `CompanyService` | 3 | 1 | أدمن فقط |
+| `HolidayService` | 3 | **0** | ⚠️ 0/5 صفحات — يبلغه HR Manager/Officer |
+| `DeviceService` | 3 | 1 | ⚠️ 0/5 صفحات — يبلغه HR Manager |
+| `ShiftService` · `PermissionService` · `EmployeeShiftService` | 3 لكلٍّ | 0 | لم يُتحقَّق |
+
+**الاستنتاج المُثبَت:** النمط عامّ، لكنه **ليس ثغرةً عامّة**. `AttendanceRecords`
+مكشوفة بالخدمة و**محميّة بالصفحة** — ولهذا لم أُعلنها ثغرة (تحقّق متقاطع، §59).
+الفارق أن الحماية هناك موجودة **بالصدفة التنظيمية** لا بالبنية.
+
+**POTENTIAL ISSUE — REQUIRES VERIFICATION:** `Holidays` و`Devices` — خدمةٌ بلا نطاق
+وصفحاتٌ بلا حارس، ويبلغهما دورٌ **مقيَّد بشركة** (HR Manager/Officer). لم أُثبت
+بعدُ هل الكيانان مرتبطان بشركة أصلاً (قد يكونان تهيئةً مشتركة كـ`ShiftTypes`).
+**لا يُعلَن ثغرةً قبل قراءة الخدمتين.**
+
+**Recommended direction:** تعميم نمط AUTHZ-003 — النطاق معطىً إلزاميّاً بعقد كل
+خدمة تلمس بيانات شركة، فيصير المُصرِّف هو الحارس بدل الذاكرة البشرية.

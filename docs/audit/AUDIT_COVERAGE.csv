@@ -95,7 +95,7 @@ SmartAttendance.Application/Holidays/ViewModels/HolidayDetailsViewModel.cs,Smart
 SmartAttendance.Application/Holidays/ViewModels/HolidayEditViewModel.cs,SmartAttendance.Application,cs,SOURCE,NOT REVIEWED,
 SmartAttendance.Application/Holidays/ViewModels/HolidayListViewModel.cs,SmartAttendance.Application,cs,SOURCE,NOT REVIEWED,
 SmartAttendance.Application/LeaveRequests/Mappings/LeaveRequestProfile.cs,SmartAttendance.Application,cs,SOURCE,NOT REVIEWED,
-SmartAttendance.Application/LeaveRequests/Services/ILeaveRequestService.cs,SmartAttendance.Application,cs,SOURCE,NOT REVIEWED,
+SmartAttendance.Application/LeaveRequests/Services/ILeaveRequestService.cs,SmartAttendance.Application,cs,SOURCE,REVIEWED,Phase 3 Module 4-5 + AUTHZ-003 fix
 SmartAttendance.Application/LeaveRequests/ViewModels/LeaveRequestCreateViewModel.cs,SmartAttendance.Application,cs,SOURCE,NOT REVIEWED,
 SmartAttendance.Application/LeaveRequests/ViewModels/LeaveRequestDetailsViewModel.cs,SmartAttendance.Application,cs,SOURCE,NOT REVIEWED,
 SmartAttendance.Application/LeaveRequests/ViewModels/LeaveRequestEditViewModel.cs,SmartAttendance.Application,cs,SOURCE,NOT REVIEWED,
@@ -289,7 +289,7 @@ SmartAttendance.Infrastructure/Services/EmployeePermissionService.cs,SmartAttend
 SmartAttendance.Infrastructure/Services/EmployeeService.cs,SmartAttendance.Infrastructure,cs,SOURCE,NOT REVIEWED,
 SmartAttendance.Infrastructure/Services/EmployeeShiftService.cs,SmartAttendance.Infrastructure,cs,SOURCE,NOT REVIEWED,
 SmartAttendance.Infrastructure/Services/HolidayService.cs,SmartAttendance.Infrastructure,cs,SOURCE,NOT REVIEWED,
-SmartAttendance.Infrastructure/Services/LeaveRequestService.cs,SmartAttendance.Infrastructure,cs,SOURCE,NOT REVIEWED,
+SmartAttendance.Infrastructure/Services/LeaveRequestService.cs,SmartAttendance.Infrastructure,cs,SOURCE,REVIEWED,Phase 3 Module 4-5 + AUTHZ-003 fix
 SmartAttendance.Infrastructure/Services/LoginIdentityService.cs,SmartAttendance.Infrastructure,cs,SOURCE,NOT REVIEWED,
 SmartAttendance.Infrastructure/Services/MasterDataImportService.cs,SmartAttendance.Infrastructure,cs,SOURCE,NOT REVIEWED,
 SmartAttendance.Infrastructure/Services/PermissionAuthorizationService.cs,SmartAttendance.Infrastructure,cs,SOURCE,NOT REVIEWED,
@@ -899,15 +899,15 @@ SmartAttendance.Web/Pages/LeaveBalances/Adjust.cshtml.cs,SmartAttendance.Web,cs,
 SmartAttendance.Web/Pages/LeaveBalances/Index.cshtml,SmartAttendance.Web,cshtml,SOURCE,NOT REVIEWED,
 SmartAttendance.Web/Pages/LeaveBalances/Index.cshtml.cs,SmartAttendance.Web,cs,SOURCE,NOT REVIEWED,
 SmartAttendance.Web/Pages/LeaveRequests/Create.cshtml,SmartAttendance.Web,cshtml,SOURCE,NOT REVIEWED,
-SmartAttendance.Web/Pages/LeaveRequests/Create.cshtml.cs,SmartAttendance.Web,cs,SOURCE,NOT REVIEWED,
+SmartAttendance.Web/Pages/LeaveRequests/Create.cshtml.cs,SmartAttendance.Web,cs,SOURCE,REVIEWED,Phase 3 Module 4-5 + AUTHZ-003 fix
 SmartAttendance.Web/Pages/LeaveRequests/Delete.cshtml,SmartAttendance.Web,cshtml,SOURCE,NOT REVIEWED,
-SmartAttendance.Web/Pages/LeaveRequests/Delete.cshtml.cs,SmartAttendance.Web,cs,SOURCE,REVIEWED,Phase 3 Module 4
+SmartAttendance.Web/Pages/LeaveRequests/Delete.cshtml.cs,SmartAttendance.Web,cs,SOURCE,REVIEWED,Phase 3 Module 4-5 + AUTHZ-003 fix
 SmartAttendance.Web/Pages/LeaveRequests/Edit.cshtml,SmartAttendance.Web,cshtml,SOURCE,NOT REVIEWED,
-SmartAttendance.Web/Pages/LeaveRequests/Edit.cshtml.cs,SmartAttendance.Web,cs,SOURCE,NOT REVIEWED,
+SmartAttendance.Web/Pages/LeaveRequests/Edit.cshtml.cs,SmartAttendance.Web,cs,SOURCE,REVIEWED,Phase 3 Module 4-5 + AUTHZ-003 fix
 SmartAttendance.Web/Pages/LeaveRequests/Import.cshtml,SmartAttendance.Web,cshtml,SOURCE,NOT REVIEWED,
 SmartAttendance.Web/Pages/LeaveRequests/Import.cshtml.cs,SmartAttendance.Web,cs,SOURCE,NOT REVIEWED,
 SmartAttendance.Web/Pages/LeaveRequests/Index.cshtml,SmartAttendance.Web,cshtml,SOURCE,NOT REVIEWED,
-SmartAttendance.Web/Pages/LeaveRequests/Index.cshtml.cs,SmartAttendance.Web,cs,SOURCE,NOT REVIEWED,
+SmartAttendance.Web/Pages/LeaveRequests/Index.cshtml.cs,SmartAttendance.Web,cs,SOURCE,REVIEWED,Phase 3 Module 4-5 + AUTHZ-003 fix
 SmartAttendance.Web/Pages/MissingPunchRequests/Index.cshtml,SmartAttendance.Web,cshtml,SOURCE,NOT REVIEWED,
 SmartAttendance.Web/Pages/MissingPunchRequests/Index.cshtml.cs,SmartAttendance.Web,cs,SOURCE,NOT REVIEWED,
 SmartAttendance.Web/Pages/MonthAttendance/Index.cshtml,SmartAttendance.Web,cshtml,SOURCE,NOT REVIEWED,
