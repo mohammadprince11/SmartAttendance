@@ -23,6 +23,20 @@
       "url": "http://localhost:5092"
     },
     {
+      "name": "CspMeasure",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "run", "--project", "SmartAttendance.Web", "-c", "Release", "--no-build",
+        "--urls", "http://localhost:5093",
+        "--",
+        "--environment=Development",
+        "--Security:CspReportCollector=true",
+        "--ConnectionStrings:DefaultConnection=Server=localhost;Database=SmartAttendance_Test;Trusted_Connection=True;TrustServerCertificate=True"
+      ],
+      "port": 5093,
+      "url": "http://localhost:5093"
+    },
+    {
       "name": "API",
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "SmartAttendance.API", "--urls", "http://localhost:5226"],
