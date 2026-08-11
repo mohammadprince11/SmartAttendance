@@ -486,7 +486,9 @@ VALUES
 
         var notices = new List<string>();
 
-        var escalation = await BuildEscalationNoticeAsync(Input.EmployeeId, selectedRule.CategoryName);
+        // selectedRule مضمونٌ غير null بعد بوّابة ModelState (السطر 318 يرفض ViolationTypeId<=0
+        // والسطر 341 يرفض قاعدةً غير موجودة) — نفس ما تفترضه الأسطر 433/454-456 بـ`!`.
+        var escalation = await BuildEscalationNoticeAsync(Input.EmployeeId, selectedRule!.CategoryName);
         if (!string.IsNullOrWhiteSpace(escalation))
         {
             notices.Add(escalation);
