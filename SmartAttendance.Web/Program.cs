@@ -207,14 +207,21 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                     // (ومسار الموبايل يفشل **مغلقاً** بنفس الضابط — سلوكان متناقضان.)
                     // كان يُبتلع صامتاً فلا أثر يُراجَع؛ صار يُسجَّل ليُرى بالسجلّ
                     // ويُقاس تكراره قبل حسم أي السلوكين هو المقصود.
-                    accountState = null;
-
+                    // AUTHN-002 — **فشلٌ مغلق** (قرار المالك 2026-08-12: «نقطع الجلسة»):
+                    // لا نعرف هل عُطّل الحساب أو تغيّرت كلمته — فنرفض بدل أن نثق.
+                    // يوحّد السلوك مع مسار الموبايل. الأثر على التوفّر محدود: كاش
+                    // 60 ثانية يمتصّ الأعطال العابرة، والتطبيق يلزمه القاعدة لكل عملٍ أصلاً.
                     context.HttpContext.RequestServices
                         .GetRequiredService<ILoggerFactory>()
                         .CreateLogger("Security.SessionRevocation")
                         .LogWarning(ex,
-                            "تعذّر التحقّق من حالة الحساب — استمرّت الجلسة (فشلٌ مفتوح). المسار: {Path}",
+                            "تعذّر التحقّق من حالة الحساب — قُطعت الجلسة (فشلٌ مغلق). المسار: {Path}",
                             context.HttpContext.Request.Path);
+
+                    context.RejectPrincipal();
+                    await context.HttpContext.SignOutAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme);
+                    return;
                 }
 
                 if (accountState is not null)
