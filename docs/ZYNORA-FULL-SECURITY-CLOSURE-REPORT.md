@@ -39,7 +39,7 @@ E2E matrix · مراجعة كل write handler · لوحة/إعدادات/إجا�
 | 21-أ | AttendanceRecommendations: اعتماد/تجاهل/تعديل بمعرّفٍ بلا نطاق ⟹ أثرٌ عابر للشركات (قضية مخالفة). حُقن النطاق بالمتجر | `b816372` |
 | 21-ب | SelfServices: إنشاء طلبٍ لـEmployeeId من النموذج بلا فحص · Roster: تعبئة/نسخ جماعيّ يطال كل الشركات. حُرِسا | `2cf8763` |
 
-**البناء:** أخضر (0 أخطاء). **الاختبارات:** **1579/1579** (1554 + 25 حارساً جديداً، صفر انحدار).
+**البناء:** أخضر (0 أخطاء). **الاختبارات:** **1582/1582** (1554 + 28 حارساً جديداً، صفر انحدار).
 
 **تحقّقٌ أن هذه مُغلَقة أصلاً (لا إصلاح):** Approvals (يمرّر النطاق للمحرّك) ·
 MissingPunchRequests (Approve/Reject/Cancel/Delete كلها بالنطاق) · Roster Save/Publish ·
@@ -82,8 +82,8 @@ WorkFromHome · LeaveBalances (dynamic-guard + نطاق) · LeaveRequests/Alerts
 | ~~3~~ | ✅ Organization/Index+Chart · OrgStructures — مُنتقي الشركة + حرّاس الكتابة | مُغلق (`495d64b`) |
 | ~~6~~ | ✅ UserAccess/Setup أدمن-فقط (تحقّق) | مُغلق |
 | 4·5 | Employee create/edit/reassign · مراجعة الحقول العميقة (الكتابات عالية الخطر مُغطّاة: employees/* بالحارس الديناميكيّ، self-service مُحرَّس) | جزئيّ — مراجعة عميقة باقية |
-| 8D–8M | ShiftTypes/AttendanceSettings/Rules/MissingPunch/Devices/Holidays | **قرار المالك:** تهيئة عالمية — أهي per-tenant؟ (§5 بالمانيفست) |
-| ~~10~~ · 11 | ✅ XSS أُغلق · **مسح `Html.Raw` بالخادم مُنجز** (68 استخدام: 61 آمن، E حقن onclick + F تنقية القوالب مُصلَحان، G مؤكَّد آمن) `5b3adb5` · **باقٍ:** CSP `unsafe-inline` (قرار مالك — refactor واسع) | جزئيّ |
+| 8D–8M | ShiftTypes/AttendanceSettings/Rules/MissingPunch/Devices/Holidays | **قرار المالك: per-tenant** (محسوم). أُثبت أنّ ShiftTypes/ShiftRules/PeriodRules **بلا CompanyId** ⟹ الإصلاح = DDL+ترحيل على قاعدة مشتركة بالإنتاج. **محجوب بيئةً** (قاعدة اختبار) بطلب المالك — لا DDL أعمى |
+| ~~10~~ · 11 | ✅ XSS أُغلق · **مسح `Html.Raw` بالخادم مُنجز** (68 استخدام: 61 آمن، E حقن onclick + F تنقية القوالب مُصلَحان، G مؤكَّد آمن) `5b3adb5` · ✅ بنية CSP nonce خلف راية `Security:StrictCsp` (معطّلة) `376e6e1` · **باقٍ:** قلب `unsafe-inline` (تحويل كل onclick + تحقّق بصريّ) محجوب بيئةً | جزئيّ |
 | 12·13·14·15·16 | ✅ MyProfile + Notifications مؤكَّدان آمنين (نطاق بالمطالبة/WHERE scope) · Verify: رقم وطني ثابت الزمن `4480855` · **باقٍ:** Polls target بلا حصر شركة (صنف 4/5/8/21) | جزئيّ |
 | ~~17~~ | ✅ TLS bypass أُزيل + توقيع خارجيّ · **باقٍ (مالك):** إعادة بناء APK بالرابط العامّ + release keystore، وSTART_URL لا يزال IP محلّيّ | كودياً مُغلق |
 | 18 | Runtime schema (`EnsureCreatedAsync`/DDL بالطلب) → pipeline | **محجوب بيئةً:** refactor لبدء التشغيل على قاعدةٍ مشتركة مع الإنتاج، يلزمه تشغيل الخادم وخطة نشر — لا يُنفَّذ أعمى |
