@@ -1200,7 +1200,7 @@
                                                         <td><span class="z360-badge @(isActive ? "z360-badge-ok" : "z360-badge-warn")">@(isActive ? "نشطة" : "توقفت")</span></td>
                                                         <td style="white-space:nowrap">
                                                             <button type="button" class="z360-card-tool" title="تعديل" data-hrms-open="allowance-form"
-                                                                    onclick="allowanceOpen(@allowance.Id,@allowance.SalaryItemId,@allowance.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture),this,'@allowance.FromDate.ToString("yyyy-MM-dd")','@(allowance.ToDate?.ToString("yyyy-MM-dd") ?? "")',@(allowance.EndAfterDate ? "true" : "false"),'@Html.Raw((allowance.Note ?? "").Replace("'", "\\'"))')">✎</button>
+                                                                    onclick="allowanceOpen(@allowance.Id,@allowance.SalaryItemId,@allowance.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture),this,'@allowance.FromDate.ToString("yyyy-MM-dd")','@(allowance.ToDate?.ToString("yyyy-MM-dd") ?? "")',@(allowance.EndAfterDate ? "true" : "false"),'@ScriptSafe.Js(allowance.Note)')">✎</button>
                                                             <form method="post" asp-page-handler="DeleteAllowance" asp-route-id="@Model.Id" style="display:inline" data-zyconfirm="حذف العلاوة؟">
                                                                 <input type="hidden" name="recordId" value="@allowance.Id" />
                                                                 <button type="submit" class="z360-card-tool" title="حذف">🗑</button>
@@ -1247,7 +1247,7 @@
                                                                 <a class="z360-card-tool" href="@contract.AttachmentPath" target="_blank" title="العقد الموقع">📄</a>
                                                             }
                                                             <button type="button" class="z360-card-tool" title="تعديل" data-hrms-open="contract-form"
-                                                                    onclick="contractOpen(@contract.Id,'@Html.Raw((contract.ContractNo ?? "").Replace("'", "\\'"))','@Html.Raw(contract.ContractType.Replace("'", "\\'"))','@contract.FromDate.ToString("yyyy-MM-dd")','@(contract.ToDate?.ToString("yyyy-MM-dd") ?? "")',@(contract.IsCurrent ? "true" : "false"),'@Html.Raw((contract.Note ?? "").Replace("'", "\\'"))')">✎</button>
+                                                                    onclick="contractOpen(@contract.Id,'@ScriptSafe.Js(contract.ContractNo)','@ScriptSafe.Js(contract.ContractType)','@contract.FromDate.ToString("yyyy-MM-dd")','@(contract.ToDate?.ToString("yyyy-MM-dd") ?? "")',@(contract.IsCurrent ? "true" : "false"),'@ScriptSafe.Js(contract.Note)')">✎</button>
                                                             <form method="post" asp-page-handler="DeleteContract" asp-route-id="@Model.Id" style="display:inline" data-zyconfirm="حذف العقد؟">
                                                                 <input type="hidden" name="recordId" value="@contract.Id" />
                                                                 <button type="submit" class="z360-card-tool" title="حذف">🗑</button>

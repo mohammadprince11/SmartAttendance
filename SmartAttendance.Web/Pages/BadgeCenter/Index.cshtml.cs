@@ -99,7 +99,8 @@ public class IndexModel : PageModel
             }
 
             var label = Candidates.FirstOrDefault(c => c.Id == employeeId).Label ?? employeeId.ToString();
-            Cards.Add((label, html, unresolved));
+            // تنقية نفس ناتج محرّك القوالب قبل عرضه خاماً بـ Html.Raw (كطريق View).
+            Cards.Add((label, DocumentHtmlSanitizer.Sanitize(html), unresolved));
         }
     }
 

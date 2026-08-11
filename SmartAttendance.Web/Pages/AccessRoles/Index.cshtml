@@ -78,7 +78,7 @@
                             </td>
                             <td class="ar-row-actions">
                                 <button type="button" class="ar-btn ar-btn-mini"
-                                        onclick="arEditRole(@role.Id, '@Html.Raw(role.NameAr.Replace("'", "\\'"))', '@Html.Raw((role.NameEn ?? "").Replace("'", "\\'"))', '@Html.Raw((role.Note ?? "").Replace("'", "\\'"))', @(role.IsActive ? "true" : "false"))">
+                                        onclick="arEditRole(@role.Id, '@ScriptSafe.Js(role.NameAr)', '@ScriptSafe.Js(role.NameEn)', '@ScriptSafe.Js(role.Note)', @(role.IsActive ? "true" : "false"))">
                                     تعديل
                                 </button>
                                 <form method="post" asp-page-handler="Delete" class="ar-inline">
