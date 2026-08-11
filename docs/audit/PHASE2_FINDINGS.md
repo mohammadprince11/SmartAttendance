@@ -403,3 +403,45 @@ HTTPS حقيقيّ (سياستها الافتراضية `None`، لا `SameAsReq
 (المحتوى ليس سرّاً والكوكي `httponly`+`samesite=strict`)، لكنه يستحقّ الضبط
 صراحةً. **ولا تستعملها مؤشّراً على عمل الترويسات المُمرَّرة — استعملتُها فأعطت
 نتيجةً كاذبة.**
+
+---
+
+# PHASE 7 — نتائج جديدة أثناء التنفيذ
+
+## AUTHZ-005 ✅ (أُصلحت ونُشرت — PR #30)
+سرد `/SelfServices` كان يعرض آخر 100 طلبٍ من كل الشركات بأسماء أصحابها لأدنى دور.
+الكتابة محروسة والقراءة مكشوفة. ثالث تجسيدٍ لـROOT-SEC-01. الإصلاح ببُعدَي شركة+موظّف.
+
+## AUTHZ-006 🟡 (كامنة — موثَّقة لا مُصلَحة)
+
+```text
+Severity:   MEDIUM (لو أصبحت حيّة: HIGH)
+Confidence: CONFIRMED (كنمط) · LATENT (غير قابلة للوصول حالياً)
+Category:   Missing Company Scope — Latent (ROOT-SEC-01)
+Status:     OPEN — DOCUMENTED
+```
+
+**Title:** `Violations/Index` يسرد `EmployeeViolationCases` (بأسماء الموظفين
+واقتطاعاتهم المالية) **بلا فلتر شركة** — عبر ثلاث قوائم.
+
+**Evidence:** `Pages/Violations/Index.cshtml.cs`:
+- `:117` `LoadDisciplinaryActionsAsync` — `FROM EmployeeViolationCases ... WHERE IsDeleted=0` بلا شركة.
+- `:506` منتقي الموظفين — كل النشطين بلا شركة.
+- `:522` `LoadViolationRowsAsync` — القائمة الرئيسة.
+
+**لماذا كامنة لا حيّة (تحقّق مسار §59):** `/violations` **غير مذكور بأي كتالوج
+دورٍ** في `RoleRouteCatalog` ولا بـ`PeopleRoutePermissionResolver`. فـ
+`RoleSecurityMiddleware` يمنع كل دورٍ مقيَّد (الأدمن وحده يعبر عبر `IsAdmin`،
+وهو غير مقيَّد يرى كل الشركات شرعاً). ⟹ **لا تسريب حاليّ.**
+
+**متى تصبح حيّة:** لحظة إضافة `/violations` لكتالوج دورٍ مقيَّد (HR Manager مثلاً)
+— وهو ما حدث لصفحاتٍ أخرى فعلاً (تعليقات `RoleRouteCatalog` تشهد: «صفحات أُضيفت
+للمودل لاحقاً»). الحماية **عرضيّة** (المسار خارج الكتالوج) لا **بنيويّة**.
+
+**لماذا لم تُصلَح بهذه الجلسة:** الملفّ 978 سطراً ويحمل `DeductionAmount`
+(مجاورٌ للرواتب — §24 يفرض تحقّقاً مالياً مستقلاً · §97 يفرض مراجعة تصميم).
+تعديلٌ ماليّ عالي الخطر لا يُبدأ بساعةٍ متأخّرة من جلسةٍ مستهلَكة على ثغرةٍ
+**كامنة**. يدخل FIX-001 بجلسةٍ مخصَّصة.
+
+**Recommended direction:** حقن `ICompanyScopeProvider` + `EmployeeCompanyGuard.ListFilter`
+على القوائم الثلاث (للأدمن `1=1` ⟹ سلوكٌ مطابق · لأي دورٍ مقيَّد مستقبلاً يُفلتر).
