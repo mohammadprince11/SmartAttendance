@@ -35,9 +35,10 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        Shifts = (await ShiftTypeStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
-
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+
+        // منتقي المناوبات معروضٌ ومُختار منه ⟹ محصورٌ بالنطاق، لا بالاحتساب.
+        Shifts = (await ShiftTypeStore.ListInScopeAsync(_dbContext, scope)).Where(s => s.IsActive).ToList();
 
         Employees = await _dbContext.Employees.AsNoTracking().Where(e => e.IsActive)
             .OrderBy(e => e.EmployeeNo)
@@ -84,6 +85,13 @@ public class IndexModel : PageModel
         }
 
         var companyScope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+
+        // المناوبة مرجعٌ من النموذج لا من المنتقي المحصور: تُتحقَّق قبل أي كتابة.
+        if (!await ConfigTenantScope.AreAllInScopeAsync(
+                _dbContext, ConfigTenantScope.ShiftTypes, new[] { shiftTypeId }, companyScope))
+        {
+            return NotFound();
+        }
 
         List<int> employeeIds;
         if (scope == "All")

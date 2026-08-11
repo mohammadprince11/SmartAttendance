@@ -88,7 +88,12 @@ BEGIN
         IsPublished bit NOT NULL DEFAULT(1),
         PublishDate datetime2 NOT NULL DEFAULT(SYSUTCDATETIME()),
         CreatedBy nvarchar(150) NULL,
-        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
+        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME()),
+        -- مطابقة لهجرة 20260811-01 لا عموداً جديداً بالشفاء الذاتي: تلك الهجرة
+        -- تُضيف العمود للجداول **القائمة** فقط. لو أنشأ هذا التعريف الجدول بعدها
+        -- (قاعدة بلا استطلاعات) لخرج بلا CompanyId وانهار كل استعلام محصور بـ
+        -- «Invalid column name». التعريفان يجب أن يتطابقا.
+        CompanyId int NULL
     );
 END;
 

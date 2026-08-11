@@ -274,7 +274,9 @@ BEGIN
         UseEscalation bit NOT NULL DEFAULT(0),
         IsAutomatic bit NOT NULL DEFAULT(0),
         IsActive bit NOT NULL DEFAULT(1),
-        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
+        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME()),
+        -- مطابقة لهجرة 20260811-01 (تُضيف العمود للقائم فقط) — لا عمود جديد بالشفاء.
+        CompanyId int NULL
     );
 END;
 

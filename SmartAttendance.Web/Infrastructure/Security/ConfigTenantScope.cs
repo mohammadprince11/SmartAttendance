@@ -66,6 +66,41 @@ public static class ConfigTenantScope
     }
 
     /// <summary>
+    /// حارس جماعي مغلق الفشل: <c>true</c> فقط إن كان **كل** معرّف داخل النطاق.
+    /// يُستعمل حيث يحمل الطلب مرجعاً لتهيئة (مناوبة) لا لصفٍّ يُعدَّل: إسناد المناوبات
+    /// والتعديلات المؤقتة والروستر — فبلا هذا الحارس يُلصق مستخدمُ شركةٍ نوعَ مناوبة
+    /// شركةٍ أخرى بموظفيه، فيرتبط احتساب حضورهم بتهيئة لا يملكها أحدٌ في شركته.
+    /// </summary>
+    public static async Task<bool> AreAllInScopeAsync(
+        ApplicationDbContext dbContext,
+        string table,
+        IEnumerable<int> ids,
+        CompanyScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        ArgumentNullException.ThrowIfNull(ids);
+
+        var requested = ids.Distinct().ToList();
+        if (requested.Count == 0)
+        {
+            return true;
+        }
+
+        if (requested.Any(id => id <= 0))
+        {
+            return false;
+        }
+
+        if (scope.IsUnrestricted)
+        {
+            return true;
+        }
+
+        var allowed = await AllowedIdsAsync(dbContext, table, scope);
+        return requested.All(allowed.Contains);
+    }
+
+    /// <summary>
     /// ينسب صفّاً جديداً لشركة منشئه. الشرط <c>CompanyId IS NULL</c> يمنع إعادة نسبة
     /// صفٍّ منسوبٍ أصلاً (سرقة تهيئة شركة أخرى بمعرّفٍ مُمرَّر).
     /// </summary>

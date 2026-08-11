@@ -75,6 +75,16 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
+        // ⚠️ مسار كتابة كامل الأثر: يؤرشف نوعاً ويرحّل خلايا روستر وإسنادات. المعرّفان
+        // من نموذج المتصفّح — بلا هذا الحارس يؤرشف مستخدم شركةٍ مناوبةَ شركةٍ أخرى
+        // ويعيد توجيه جداولها. NotFound لا Forbid كي لا تُكشف وجوديّة الصفّ.
+        var replaceScope = await _scopeProvider.GetAsync();
+        if (!await ConfigTenantScope.AreAllInScopeAsync(
+                _dbContext, ConfigTenantScope.ShiftTypes, new[] { oldId, newId }, replaceScope))
+        {
+            return NotFound();
+        }
+
         var (cells, assignments) = await ShiftTypeStore.ReplaceAndArchiveAsync(
             _dbContext, oldId, newId, from, migrate);
         TempData["SuccessMessage"] =

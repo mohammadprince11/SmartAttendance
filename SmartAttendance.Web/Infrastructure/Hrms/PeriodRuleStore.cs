@@ -131,7 +131,9 @@ BEGIN
         PeriodType nvarchar(10) NOT NULL DEFAULT(N'Month'),
         Metric nvarchar(30) NOT NULL DEFAULT(N'LateHours'),
         IsActive bit NOT NULL DEFAULT(1),
-        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
+        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME()),
+        -- مطابقة لهجرة 20260811-01 (تُضيف العمود للقائم فقط) — لا عمود جديد بالشفاء.
+        CompanyId int NULL
     );
 END;
 

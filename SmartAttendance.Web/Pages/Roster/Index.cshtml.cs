@@ -64,7 +64,8 @@ public class IndexModel : PageModel
 
         // الفرشاة تعرض النشطة «المتاحة بالروستر» فقط — تعطيل AvailableInRoster يؤرشف
         // المناوبة من شاشة الجدولة بلا مساس بالتاريخ المالي (لا حذف أبداً).
-        Shifts = (await ShiftTypeStore.ListAsync(_dbContext))
+        // الفرشاة منتقٍ معروض ⟹ محصورة بالنطاق (المشترك + شركاتي)، لا بالاحتساب.
+        Shifts = (await ShiftTypeStore.ListInScopeAsync(_dbContext, await _companyScope.GetAsync()))
             .Where(s => s.IsActive && s.AvailableInRoster).ToList();
 
         var from = new DateOnly(year, month, 1);
@@ -119,16 +120,36 @@ public class IndexModel : PageModel
     {
         var (year, month) = Period;
         var cells = ParseCells(year, month);
-        await RosterStore.SaveCellsAsync(_dbContext, await _companyScope.GetAsync(), cells);
+        var scope = await _companyScope.GetAsync();
+        if (!await CellShiftsInScopeAsync(cells, scope)) return NotFound();
+
+        await RosterStore.SaveCellsAsync(_dbContext, scope, cells);
         TempData["SuccessMessage"] = $"تم حفظ الجدول ({cells.Count} خلية).";
         return RedirectToPage(new { Month, Search, PageNumber });
     }
+
+    /// <summary>
+    /// كل معرّفات المناوبات بالخلايا داخل النطاق؟ الخلايا تُملَك بموظفها (يحرسه المتجر)،
+    /// لكن **نوع المناوبة** مرجعٌ منفصل يأتي من قيمة الحقل — بلا هذا الحارس تُرسم
+    /// مناوبة شركةٍ أخرى على جدول موظفيّ بطلبٍ معدَّل يدوياً.
+    /// </summary>
+    private Task<bool> CellShiftsInScopeAsync(
+        List<RosterStore.Cell> cells, SmartAttendance.Web.Infrastructure.Security.CompanyScope scope) =>
+        SmartAttendance.Web.Infrastructure.Security.ConfigTenantScope.AreAllInScopeAsync(
+            _dbContext,
+            SmartAttendance.Web.Infrastructure.Security.ConfigTenantScope.ShiftTypes,
+            cells.Where(c => c.CellType == RosterStore.CellShift && c.ShiftTypeId is > 0)
+                 .Select(c => c.ShiftTypeId!.Value),
+            scope);
 
     public async Task<IActionResult> OnPostPublishAsync()
     {
         var (year, month) = Period;
         var cells = ParseCells(year, month);
-        await RosterStore.SaveCellsAsync(_dbContext, await _companyScope.GetAsync(), cells);
+        var scope = await _companyScope.GetAsync();
+        if (!await CellShiftsInScopeAsync(cells, scope)) return NotFound();
+
+        await RosterStore.SaveCellsAsync(_dbContext, scope, cells);
         await RosterStore.PublishAsync(_dbContext, year, month);
         TempData["SuccessMessage"] = $"تم نشر جدول {month:00}/{year}.";
         return RedirectToPage(new { Month, Search, PageNumber });

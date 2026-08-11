@@ -183,6 +183,34 @@ VALUES
             return RedirectToPage(new { tab = returnTab ?? "pulse" });
         }
 
+        // حارس التصويت المغلق: المعرّفان يأتيان من النموذج. يتحقّق أمرين معاً —
+        // (١) الاستطلاع منشورٌ ومن شركة الموظف أو مشترك، فلا يُصوَّت على استطلاع
+        // شركةٍ أخرى، و(٢) الخيار يخصّ هذا الاستطلاع بعينه، وإلا سُجّل صوتٌ لخيارٍ
+        // من استطلاعٍ آخر فأفسد نتيجتيهما.
+        var votable = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            """
+SELECT COUNT(1)
+FROM EmployeePolls p
+INNER JOIN EmployeePollOptions o ON o.PollId = p.Id AND o.Id = @OptionId
+WHERE p.Id = @PollId
+  AND p.IsPublished = 1
+  AND (p.CompanyId IS NULL
+       OR p.CompanyId = (SELECT e.CompanyId FROM Employees e WHERE e.Id = @EmployeeId));
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@PollId", PollVote.PollId);
+                HrmsDatabase.AddParameter(command, "@OptionId", PollVote.OptionId);
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+            });
+
+        if (votable == 0)
+        {
+            StatusMessage = "الاستطلاع غير متاح.";
+            return RedirectToPage(new { tab = returnTab ?? "pulse" });
+        }
+
         var exists = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
             "SELECT COUNT(1) FROM EmployeePollVotes WHERE PollId = @PollId AND EmployeeId = @EmployeeId",
@@ -1226,6 +1254,11 @@ SELECT TOP 10
     CASE WHEN EXISTS (SELECT 1 FROM EmployeePollVotes v WHERE v.PollId = p.Id AND v.EmployeeId = @EmployeeId) THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS HasVoted
 FROM EmployeePolls p
 WHERE p.IsPublished = 1
+  -- عزل الشركة (8D–8M): استطلاع شركةٍ أخرى موجَّه لـ«الكل» كان يظهر لموظفي كل
+  -- الشركات ويقبل أصواتهم فيلوّث نتائجه. NULL = مشترك (السلوك القديم)، وموظفٌ
+  -- بلا شركة يرى المشترك وحده — مغلق الفشل.
+  AND (p.CompanyId IS NULL
+       OR p.CompanyId = (SELECT e.CompanyId FROM Employees e WHERE e.Id = @EmployeeId))
   AND
   (
       p.TargetType IS NULL

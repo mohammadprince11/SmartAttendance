@@ -36,13 +36,16 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        Shifts = (await ShiftTypeStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+
+        // منتقي المناوبات معروضٌ ومُختار منه ⟹ يُحصر بالنطاق (المشترك + شركاتي).
+        // الاحتساب لا يمرّ من هنا، فلا يتأثّر المسير.
+        Shifts = (await ShiftTypeStore.ListInScopeAsync(_dbContext, scope)).Where(s => s.IsActive).ToList();
 
         var all = await EmployeeShiftTypeStore.ListAsync(_dbContext);
 
         // حصر السرد على موظفي شركات المستخدم: المتجر يسرد كل الشركات، فبلا هذا الحصر
         // يقرأ مستخدم شركة A أسماء وأرقام موظفي B ويعيّن لهم مناوبات.
-        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         if (!scope.IsUnrestricted)
         {
             var allowedIds = await EmployeeCompanyGuard.FilterEmployeesInScopeAsync(
@@ -108,6 +111,17 @@ public class IndexModel : PageModel
             // حارس التحديد الجماعي: أي معرّف موظف خارج نطاق شركاتي (نموذج معدَّل يدوياً)
             // يرفض الدفعة كلها — لا كتابة عابرة للشركات.
             if (!await AllInScopeAsync(employeeIds)) return NotFound();
+
+            // المناوبة نفسها مرجعٌ من النموذج: بلا حارسها يُسند مستخدمُ شركةٍ نوعَ
+            // مناوبة شركةٍ أخرى لموظفيه — ولا يراه أحدٌ بشاشة تلك الشركة.
+            if (!await ConfigTenantScope.AreAllInScopeAsync(
+                    _dbContext,
+                    ConfigTenantScope.ShiftTypes,
+                    new[] { shiftTypeId },
+                    await _companyScope.GetAsync(HttpContext.RequestAborted)))
+            {
+                return NotFound();
+            }
 
             var count = await EmployeeShiftTypeStore.AssignAsync(_dbContext, employeeIds, shiftTypeId);
             TempData["SuccessMessage"] = $"تم تعيين المناوبة لـ{count} موظفاً.";

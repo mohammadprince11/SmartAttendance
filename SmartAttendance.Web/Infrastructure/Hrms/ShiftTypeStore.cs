@@ -218,7 +218,11 @@ BEGIN
         IsFlexible bit NOT NULL DEFAULT(0),
         FlexDailyHours decimal(5,2) NOT NULL DEFAULT(0),
         IsActive bit NOT NULL DEFAULT(1),
-        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
+        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME()),
+        -- مطابقة لهجرة 20260811-01 لا عموداً جديداً بالشفاء الذاتي: الهجرة تُضيف
+        -- العمود للجدول **القائم** فقط، فلو أنشأه هذا التعريف بعدها لخرج بلا
+        -- CompanyId وانهار كل استعلام محصور بـ«Invalid column name».
+        CompanyId int NULL
     );
 END;
 
