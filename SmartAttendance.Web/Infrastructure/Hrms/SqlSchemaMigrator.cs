@@ -1329,6 +1329,56 @@ BEGIN
         CREATE UNIQUE INDEX UX_Employees_CompanyId_EmployeeNo ON Employees (CompanyId, EmployeeNo);
 END;
 """),
+
+        // ── 8D–8M: نسبة جداول التهيئة لشركة ─────────────────────────────────────
+        //
+        // ⚠️ قبلها: `ShiftTypes`/`ShiftRules`/`PeriodRules`/`EmployeePolls` **بلا أي
+        // عمود شركة**، واستعلاماتها عامّة (`SELECT * FROM ShiftTypes ORDER BY Name`)
+        // ⟹ الشركات الثلاث المأهولة تتشارك التهيئة، ولا يمكن حتى *سؤال* «لمن هذا
+        // النوع». قرار المالك (2026-08-11): **per-tenant**.
+        //
+        // <b>لماذا NULL لا NOT NULL:</b> الصفوف القائمة أُنشئت قبل وجود مفهوم الملكية،
+        // ونسبتها لشركةٍ بالتخمين تُخفي المشكلة وقد **تحجب تهيئةً تعتمد عليها شركة
+        // أخرى فعلاً** (كسرٌ حيّ لمناوبات/قواعد مستعملة). فالدلالة المعتمَدة:
+        // <c>NULL = مشتركة/عالمية</c> (مرئية للكل — السلوك القديم حرفيّاً)، والصفوف
+        // **الجديدة** تأخذ شركة منشئها فتُعزَل. عزلٌ تدريجيّ يفشل مغلقاً للجديد
+        // ومفتوحاً للقديم — بلا ترحيلٍ تخمينيّ خطر.
+        new(
+            "20260811-01-config-tables-company-id",
+            """
+IF OBJECT_ID('ShiftTypes', 'U') IS NOT NULL AND COL_LENGTH('ShiftTypes', 'CompanyId') IS NULL
+    ALTER TABLE ShiftTypes ADD CompanyId int NULL;
+
+IF OBJECT_ID('ShiftRules', 'U') IS NOT NULL AND COL_LENGTH('ShiftRules', 'CompanyId') IS NULL
+    ALTER TABLE ShiftRules ADD CompanyId int NULL;
+
+IF OBJECT_ID('PeriodRules', 'U') IS NOT NULL AND COL_LENGTH('PeriodRules', 'CompanyId') IS NULL
+    ALTER TABLE PeriodRules ADD CompanyId int NULL;
+
+IF OBJECT_ID('EmployeePolls', 'U') IS NOT NULL AND COL_LENGTH('EmployeePolls', 'CompanyId') IS NULL
+    ALTER TABLE EmployeePolls ADD CompanyId int NULL;
+"""),
+
+        // الفهارس منفصلة عن الإضافة: SQL Server لا يرى عموداً أُضيف بنفس الدفعة.
+        new(
+            "20260811-02-config-tables-company-id-indexes",
+            """
+IF COL_LENGTH('ShiftTypes', 'CompanyId') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('ShiftTypes') AND name='IX_ShiftTypes_CompanyId')
+    CREATE INDEX IX_ShiftTypes_CompanyId ON ShiftTypes (CompanyId);
+
+IF COL_LENGTH('ShiftRules', 'CompanyId') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('ShiftRules') AND name='IX_ShiftRules_CompanyId')
+    CREATE INDEX IX_ShiftRules_CompanyId ON ShiftRules (CompanyId);
+
+IF COL_LENGTH('PeriodRules', 'CompanyId') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('PeriodRules') AND name='IX_PeriodRules_CompanyId')
+    CREATE INDEX IX_PeriodRules_CompanyId ON PeriodRules (CompanyId);
+
+IF COL_LENGTH('EmployeePolls', 'CompanyId') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('EmployeePolls') AND name='IX_EmployeePolls_CompanyId')
+    CREATE INDEX IX_EmployeePolls_CompanyId ON EmployeePolls (CompanyId);
+"""),
     };
 
     /// <summary>

@@ -74,6 +74,26 @@ public sealed class CompanyScope
 
         return $"{columnExpression} IN ({string.Join(", ", _allowed.OrderBy(id => id))})";
     }
+
+    /// <summary>
+    /// نظير <see cref="ToSqlPredicate"/> لجداول <b>التهيئة</b> (أنواع المناوبات ·
+    /// القواعد · الاستطلاعات) حيث <c>CompanyId IS NULL</c> تعني «مشتركة/عالمية».
+    ///
+    /// <para><b>لماذا يلزم شرطٌ ثانٍ:</b> هذه الجداول سبقت وجود عمود الشركة، فصفوفها
+    /// القديمة كلها <c>NULL</c>. لو طبّقنا <c>ToSqlPredicate</c> عليها لاختفت التهيئة
+    /// القائمة عن **كل** دورٍ مقيَّد دفعةً واحدة — تعطيلٌ حيّ لمناوبات وقواعد مستعملة.
+    /// فالمشترك يبقى مرئياً (السلوك القديم)، والصفوف الجديدة المنسوبة لشركة تُعزَل.</para>
+    /// </summary>
+    public string ToSharedConfigSqlPredicate(string columnExpression)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(columnExpression);
+
+        if (IsUnrestricted) return "1 = 1";
+        // المحروم من كل الشركات يرى المشترك فقط — لا صفّاً منسوباً لأي شركة.
+        if (IsDeniedAll) return $"{columnExpression} IS NULL";
+
+        return $"({columnExpression} IS NULL OR {columnExpression} IN ({string.Join(", ", _allowed.OrderBy(id => id))}))";
+    }
 }
 
 /// <summary>يستخرج نطاق شركات الطلب الحالي من محرك الصلاحيات القائم.</summary>
