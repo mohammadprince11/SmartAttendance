@@ -5,6 +5,7 @@ using SmartAttendance.Application.LeaveRequests.Services;
 using SmartAttendance.Application.LeaveRequests.ViewModels;
 using SmartAttendance.Domain.Enums;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 using SmartAttendance.Web.Pages.Shared;
 
 namespace SmartAttendance.Web.Pages.LeaveRequests;
@@ -13,11 +14,16 @@ public class CreateModel : PageModel
 {
     private readonly ILeaveRequestService _leaveRequestService;
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public CreateModel(ILeaveRequestService leaveRequestService, ApplicationDbContext db)
+    public CreateModel(
+        ILeaveRequestService leaveRequestService,
+        ApplicationDbContext db,
+        ICompanyScopeProvider companyScope)
     {
         _leaveRequestService = leaveRequestService;
         _db = db;
+        _companyScope = companyScope;
     }
 
     [BindProperty]
@@ -44,7 +50,11 @@ public class CreateModel : PageModel
         if (!ModelState.IsValid)
             return Page();
 
-        var created = await _leaveRequestService.CreateAsync(LeaveRequest);
+        // الموظّف المستهدَف يأتي من النموذج — النطاق يُفحص داخل الخدمة قبل الكتابة.
+        var scope = await LeaveRequestScopeFactory.BuildAsync(
+            _companyScope, User, HttpContext.RequestAborted);
+
+        var created = await _leaveRequestService.CreateAsync(LeaveRequest, scope);
 
         if (!created)
         {

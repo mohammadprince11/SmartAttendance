@@ -5,6 +5,7 @@ using SmartAttendance.Application.LeaveRequests.Services;
 using SmartAttendance.Application.LeaveRequests.ViewModels;
 using SmartAttendance.Domain.Enums;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 using SmartAttendance.Web.Pages.Shared;
 
 namespace SmartAttendance.Web.Pages.LeaveRequests;
@@ -13,11 +14,16 @@ public class EditModel : PageModel
 {
     private readonly ILeaveRequestService _leaveRequestService;
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public EditModel(ILeaveRequestService leaveRequestService, ApplicationDbContext db)
+    public EditModel(
+        ILeaveRequestService leaveRequestService,
+        ApplicationDbContext db,
+        ICompanyScopeProvider companyScope)
     {
         _leaveRequestService = leaveRequestService;
         _db = db;
+        _companyScope = companyScope;
     }
 
     [BindProperty]
@@ -38,7 +44,7 @@ public class EditModel : PageModel
     {
         await LoadDropdownsAsync();
 
-        var leaveRequest = await _leaveRequestService.GetEditByIdAsync(id);
+        var leaveRequest = await _leaveRequestService.GetEditByIdAsync(id, await BuildScopeAsync());
 
         if (leaveRequest == null)
             return NotFound();
@@ -60,7 +66,9 @@ public class EditModel : PageModel
         if (!ModelState.IsValid)
             return Page();
 
-        var updated = await _leaveRequestService.UpdateAsync(LeaveRequest);
+        // النطاق يُفحص مرّتين داخل الخدمة: المالك الحالي (منع تعديل طلب شركةٍ أخرى)
+        // والمالك الجديد (منع نقل الطلب لشركةٍ أخرى بتغيير EmployeeId).
+        var updated = await _leaveRequestService.UpdateAsync(LeaveRequest, await BuildScopeAsync());
 
         if (!updated)
         {
@@ -72,6 +80,9 @@ public class EditModel : PageModel
 
         return RedirectToPage("./Index");
     }
+
+    private Task<LeaveRequestAccessScope> BuildScopeAsync() =>
+        LeaveRequestScopeFactory.BuildAsync(_companyScope, User, HttpContext.RequestAborted);
 
     /// <summary>صفٌّ واحد للموظف المحسوم — المنتقي لا يحمّل قائمة.</summary>
     private async Task LoadPickerIdentityAsync()
