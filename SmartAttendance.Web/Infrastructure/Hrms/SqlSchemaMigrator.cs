@@ -1379,6 +1379,31 @@ IF COL_LENGTH('EmployeePolls', 'CompanyId') IS NOT NULL
    AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('EmployeePolls') AND name='IX_EmployeePolls_CompanyId')
     CREATE INDEX IX_EmployeePolls_CompanyId ON EmployeePolls (CompanyId);
 """),
+
+        // DBPERF-001 — شاشة /DayAttendance ترشّح بـWorkDate وحده
+        // (DayAttendanceStore.cs:1225)، والفهرس الوحيد كان يبدأ بـEmployeeId ⟹
+        // العمود القائد غير مذكور ⟹ **لا seek** بل مسحُ الجدول كلّه بكل فتحة.
+        //
+        // المقايضة **مقيسة** على SmartAttendance_Test (177,060 صفّاً):
+        //   قراءة (نطاق شهر): 1,290 ⟶ 181 قراءة منطقيّة   (7.1× أفضل)
+        //   كتابة (2,000 صفّ):   146 ⟶ 223 ملّي ثانية       (+53%)
+        //   حجم الفهرس: 3.0 ميغابايت
+        // قُبِلت لأن الشاشة تفاعليّة وتُفتح كثيراً، بينما الكتابة دفعيّة بمحرّك
+        // التحليل (+~7 ثوانٍ لإعادة تحليل الجدول كاملاً) — وهي كلفة مقبولة مرّةً
+        // كل تحليل مقابل مكسبٍ بكل فتحة شاشة.
+        //
+        // ⚠️ القراءة لا تصير 3 قراءات: الاستعلام نطاقٌ لا نقطة، فالمكسب 7×
+        // لا 430× (رقمٌ سابق كان يقارن بنطاقٍ خاطئ — صُحِّح).
+        new(
+            "20260811-03-dayattendances-workdate-index",
+            """
+IF OBJECT_ID('DayAttendances', 'U') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM sys.indexes
+                   WHERE object_id=OBJECT_ID('DayAttendances')
+                     AND name='IX_DayAttendances_WorkDate_Employee')
+    CREATE NONCLUSTERED INDEX IX_DayAttendances_WorkDate_Employee
+        ON DayAttendances (WorkDate, EmployeeId);
+"""),
     };
 
     /// <summary>
