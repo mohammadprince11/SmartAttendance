@@ -57,6 +57,10 @@ builder.Services.AddScoped<IThemeContextService, ThemeContextService>();
 // مرفقات الموظفين الحسّاسة: حفظ خارج wwwroot + روابط تنزيل موقّعة (المرحلة 6).
 builder.Services.AddSingleton<IProtectedFileService, ProtectedFileService>();
 
+// مقاييس الطلبات بالذاكرة (FIX-004 · OBS-006): خطُّ الأساس الذي كان مفقوداً —
+// زمن الطلب وP95 ومعدّل الأخطاء لكل مسار. Singleton لأن الحالة مشتركة عبر الطلبات.
+builder.Services.AddSingleton<SmartAttendance.Web.Infrastructure.Observability.RequestMetricsSink>();
+
 // إجبار HTTPS مفصول عن «البيئة»: النشر خلف Cloudflare Tunnel (ينهي TLS عند الحافة
 // ويمرّر HTTP محلياً) وعلى LAN يحتاج HTTP لبوت‑ستراب شهادة الـCA. لذا نفصل إنفاذ TLS
 // في راية مستقلة (افتراضها false) فيبقى الإنتاج بمعالج أخطاء آمن بلا كسر التنفيل/الدخول.
@@ -538,6 +542,10 @@ app.Use(async (context, next) =>
 });
 
 app.UseRouting();
+
+// قياس الطلبات بعد UseRouting كي يتوفّر قالب المسار المُطابَق، وقبل المصادقة/التحديد
+// كي يلتقط ردود 401/429 أيضاً — فيقيس الطلب كاملاً بلا استثناء (FIX-004).
+app.UseMiddleware<SmartAttendance.Web.Infrastructure.Observability.RequestMetricsMiddleware>();
 
 // بعد UseForwardedHeaders (أعلاه) فيكون عنوان الطالب مُطبَّعاً من وسيطٍ موثوق —
 // وقبل المصادقة فلا تُستهلك دورات تجزئة كلمة المرور على طلبٍ سيُرفض أصلاً.

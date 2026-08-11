@@ -1,0 +1,77 @@
+@page
+@model SmartAttendance.Web.Pages.SystemPerformance.IndexModel
+@{
+    ViewData["Title"] = "أداء النظام";
+    var uptime = DateTime.UtcNow - Model.StartedUtc;
+}
+
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<div class="hrms-page">
+    <div class="page-header">
+        <div>
+            <h1>أداء النظام</h1>
+            <p>زمن الاستجابة ومعدّل الأخطاء لكل مسار — منذ آخر إقلاع فقط (بلا تخزين).</p>
+        </div>
+        <form method="post" asp-page-handler="Reset" data-zyconfirm="تصفير كل المقاييس المجموعة؟">
+            <button class="hrms-btn-secondary" type="submit">تصفير</button>
+        </form>
+    </div>
+
+    <div class="hrms-grid-3" style="margin-bottom:1rem;">
+        <div class="hrms-stat-card">
+            <span class="hrms-stat-label">إجمالي الطلبات</span>
+            <span class="hrms-stat-value">@Model.TotalRequests.ToString("N0")</span>
+        </div>
+        <div class="hrms-stat-card">
+            <span class="hrms-stat-label">أخطاء الخادم (5xx)</span>
+            <span class="hrms-stat-value">@Model.TotalServerErrors.ToString("N0") (@Model.ServerErrorRate%)</span>
+        </div>
+        <div class="hrms-stat-card">
+            <span class="hrms-stat-label">مدّة التشغيل</span>
+            <span class="hrms-stat-value">@($"{(int)uptime.TotalHours}س {uptime.Minutes}د")</span>
+        </div>
+    </div>
+
+    @if (Model.Routes.Count == 0)
+    {
+        <p>لا مقاييس بعد — تصل البيانات مع أوّل طلبات بعد الإقلاع.</p>
+    }
+    else
+    {
+        <div style="overflow-x:auto;">
+            <table class="hrms-table">
+                <thead>
+                    <tr>
+                        <th>المسار</th>
+                        <th>العدد</th>
+                        <th>الأخطاء</th>
+                        <th>متوسط</th>
+                        <th>P50</th>
+                        <th>P95</th>
+                        <th>P99</th>
+                        <th>أقصى</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var route in Model.Routes)
+                    {
+                        <tr>
+                            <td>@route.Route</td>
+                            <td>@route.Count.ToString("N0")</td>
+                            <td>@(route.Errors > 0 ? $"{route.Errors} ({route.ErrorRate}%)" : "—")</td>
+                            <td>@route.AvgMs ms</td>
+                            <td>@route.P50Ms ms</td>
+                            <td>@route.P95Ms ms</td>
+                            <td>@route.P99Ms ms</td>
+                            <td>@route.MaxMs ms</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p style="margin-top:0.5rem;font-size:0.85rem;opacity:0.7;">
+            المئينات تقديريّة من دلاء زمنٍ (حدود عليا: 5·10·25·50·100·250·500·1000·2500·5000 ms) — للرصد لا للفوترة.
+        </p>
+    }
+</div>
