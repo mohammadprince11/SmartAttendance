@@ -39,13 +39,18 @@ public static class RosterStore
     /// </summary>
     public static DateOnly PreviousMonthAlignedSource(DateOnly day) => day.AddDays(-28);
 
-    /// <summary>نسخ خلايا كل الموظفين من يوم مصدر إلى يوم هدف (upsert).</summary>
-    private static Task<int> CopyDayAsync(ApplicationDbContext dbContext, DateOnly source, DateOnly target) =>
+    /// <summary>
+    /// نسخ خلايا موظفي النطاق من يوم مصدر إلى يوم هدف (upsert). المصدر مقصورٌ على
+    /// شركات المستخدم بالربط على الموظف؛ فالـMATCHED لا يطال إلا صفوفاً بالنطاق (لأن
+    /// الهدف يُطابَق على موظف المصدر). غير المقيَّد = 1=1، بلا تغيير سلوك.
+    /// </summary>
+    private static Task<int> CopyDayAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope, DateOnly source, DateOnly target) =>
         HrmsDatabase.ScalarAsync<int>(
             dbContext,
-            """
+            $"""
 MERGE RosterCells AS t
-USING (SELECT EmployeeId, CellType, ShiftTypeId FROM RosterCells WHERE WorkDate = @Src) AS s
+USING (SELECT c.EmployeeId, c.CellType, c.ShiftTypeId FROM RosterCells c INNER JOIN Employees e ON e.Id = c.EmployeeId WHERE c.WorkDate = @Src AND {scope.ToSqlPredicate("e.CompanyId")}) AS s
 ON t.EmployeeId = s.EmployeeId AND t.WorkDate = @Dst
 WHEN MATCHED THEN
     UPDATE SET CellType = s.CellType, ShiftTypeId = s.ShiftTypeId, UpdatedAt = SYSUTCDATETIME()
@@ -64,14 +69,17 @@ SELECT @@ROWCOUNT;
     /// «ارسم أسبوعاً واحداً والباقي علينا»: يكرر أول 7 أيام من الشهر على بقية أيامه
     /// لكل الموظفين الذين لهم خلايا بالأسبوع الأول. يرجع عدد الخلايا المكتوبة.
     /// </summary>
-    public static async Task<int> FillMonthFromFirstWeekAsync(ApplicationDbContext dbContext, int year, int month)
+    public static async Task<int> FillMonthFromFirstWeekAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int year, int month)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+        if (scope.IsDeniedAll) return 0;
         var start = new DateOnly(year, month, 1);
         var end = start.AddMonths(1).AddDays(-1);
         var total = 0;
         for (var day = start.AddDays(7); day <= end; day = day.AddDays(1))
-            total += await CopyDayAsync(dbContext, FirstWeekSource(start, day), day);
+            total += await CopyDayAsync(dbContext, scope, FirstWeekSource(start, day), day);
         return total;
     }
 
@@ -79,14 +87,17 @@ SELECT @@ROWCOUNT;
     /// «نسخ الشهر الماضي» بمحاذاة أيام الأسبوع (كل يوم يأخذ خلية اليوم قبل 4 أسابيع)
     /// لكل الموظفين. يرجع عدد الخلايا المكتوبة.
     /// </summary>
-    public static async Task<int> CopyFromPreviousMonthAsync(ApplicationDbContext dbContext, int year, int month)
+    public static async Task<int> CopyFromPreviousMonthAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int year, int month)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+        if (scope.IsDeniedAll) return 0;
         var start = new DateOnly(year, month, 1);
         var end = start.AddMonths(1).AddDays(-1);
         var total = 0;
         for (var day = start; day <= end; day = day.AddDays(1))
-            total += await CopyDayAsync(dbContext, PreviousMonthAlignedSource(day), day);
+            total += await CopyDayAsync(dbContext, scope, PreviousMonthAlignedSource(day), day);
         return total;
     }
 

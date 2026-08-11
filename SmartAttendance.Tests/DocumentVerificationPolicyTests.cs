@@ -112,6 +112,9 @@ public class DocumentVerificationPolicyTests
         Assert.False(DocumentVerificationPolicy.NationalIdMatches("199012346", "199012345"));
         Assert.False(DocumentVerificationPolicy.NationalIdMatches(null, "199012345"));
         Assert.False(DocumentVerificationPolicy.NationalIdMatches("199012345", null));
+        // فشل مغلق: الفراغ لا يطابق فراغاً (المقارنة ثابتة الزمن الآن كالـPIN).
+        Assert.False(DocumentVerificationPolicy.NationalIdMatches("   ", "199012345"));
+        Assert.False(DocumentVerificationPolicy.NationalIdMatches("", ""));
     }
 
     // ── الصلاحية والحكم ────────────────────────────────────────────────────────

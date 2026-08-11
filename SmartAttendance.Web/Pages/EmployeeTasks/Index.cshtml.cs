@@ -5,16 +5,19 @@ using SmartAttendance.Domain.Entities;
 using SmartAttendance.Domain.Enums;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.EmployeeTasks;
 
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(ApplicationDbContext dbContext, ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -51,12 +54,21 @@ public class IndexModel : PageModel
         var today = DateOnly.FromDateTime(DateTime.Today);
         var monthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
 
-        OpenOnboarding = await _dbContext.EmployeeTasks.CountAsync(t => !t.IsDone && t.ProcessType == HrProcessType.Onboarding);
-        OpenOffboarding = await _dbContext.EmployeeTasks.CountAsync(t => !t.IsDone && t.ProcessType == HrProcessType.Offboarding);
-        OverdueCount = await _dbContext.EmployeeTasks.CountAsync(t => !t.IsDone && t.DueDate != null && t.DueDate < today);
-        DoneThisMonth = await _dbContext.EmployeeTasks.CountAsync(t => t.IsDone && t.CompletedAt >= monthStart);
+        // كل الإحصاءات والقوائم كانت تشمل موظفي كل الشركات. نحصرها بشركاتي عبر
+        // Employee.CompanyId — الأدمن (غير مقيَّد) يبقى شاملاً.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var allowedCompanies = scope.IsUnrestricted ? null : scope.AllowedCompanyIds.ToHashSet();
 
-        var query = _dbContext.EmployeeTasks.AsNoTracking().Where(t => !t.Employee.IsDeleted);
+        var scoped = _dbContext.EmployeeTasks.AsNoTracking().Where(t => !t.Employee.IsDeleted);
+        if (allowedCompanies is not null)
+            scoped = scoped.Where(t => t.Employee.CompanyId != null && allowedCompanies.Contains(t.Employee.CompanyId.Value));
+
+        OpenOnboarding = await scoped.CountAsync(t => !t.IsDone && t.ProcessType == HrProcessType.Onboarding);
+        OpenOffboarding = await scoped.CountAsync(t => !t.IsDone && t.ProcessType == HrProcessType.Offboarding);
+        OverdueCount = await scoped.CountAsync(t => !t.IsDone && t.DueDate != null && t.DueDate < today);
+        DoneThisMonth = await scoped.CountAsync(t => t.IsDone && t.CompletedAt >= monthStart);
+
+        var query = scoped;
 
         query = StatusFilter switch
         {
@@ -99,8 +111,12 @@ public class IndexModel : PageModel
             .OrderBy(t => t.ProcessType).ThenBy(t => t.SortOrder).ThenBy(t => t.Id)
             .ToListAsync();
 
-        EmployeeOptions = await _dbContext.Employees.AsNoTracking()
-            .Where(e => !e.IsDeleted && e.IsActive)
+        var employeeQuery = _dbContext.Employees.AsNoTracking()
+            .Where(e => !e.IsDeleted && e.IsActive);
+        if (allowedCompanies is not null)
+            employeeQuery = employeeQuery.Where(e => e.CompanyId != null && allowedCompanies.Contains(e.CompanyId.Value));
+
+        EmployeeOptions = await employeeQuery
             .OrderBy(e => e.FullName)
             .Select(e => new EmployeeOption { Id = e.Id, EmployeeNo = e.EmployeeNo, FullName = e.FullName })
             .ToListAsync();
@@ -115,6 +131,14 @@ public class IndexModel : PageModel
         {
             Message = "اختر الموظف ونوع العملية.";
             return RedirectToPage();
+        }
+
+        // حارس الملكية: لا إطلاق عملية تعيين/إنهاء لموظف خارج نطاق شركاتي.
+        if (!await EmployeeCompanyGuard.CanAccessEmployeeAsync(
+                _dbContext, employeeId, await _companyScope.GetAsync(HttpContext.RequestAborted),
+                HttpContext.RequestAborted))
+        {
+            return NotFound();
         }
 
         // المنتقي المشترك يرسل معرّف الموظف مباشرةً. سابقاً كان حقلاً حرّاً بـ
@@ -176,8 +200,17 @@ public class IndexModel : PageModel
     }
 
     // ---- Task actions ----
+
+    /// <summary>هل مهمة الموظف (<paramref name="id"/>) ضمن نطاق شركاتي؟ الإجراءات
+    /// إنجاز/إعادة فتح/حذف تأخذ معرّف المهمة مباشرةً — بلا الحارس تُعدَّل مهامّ شركة أخرى.</summary>
+    private async Task<bool> CanAccessTaskAsync(int id) =>
+        await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+            _dbContext, EmployeeCompanyGuard.Tables.EmployeeTasks, "Id", id,
+            await _companyScope.GetAsync(HttpContext.RequestAborted), HttpContext.RequestAborted);
+
     public async Task<IActionResult> OnPostCompleteAsync(int id)
     {
+        if (!await CanAccessTaskAsync(id)) return NotFound();
         var task = await _dbContext.EmployeeTasks.FirstOrDefaultAsync(t => t.Id == id);
         if (task != null && !task.IsDone)
         {
@@ -193,6 +226,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostReopenAsync(int id)
     {
+        if (!await CanAccessTaskAsync(id)) return NotFound();
         var task = await _dbContext.EmployeeTasks.FirstOrDefaultAsync(t => t.Id == id);
         if (task != null && task.IsDone)
         {
@@ -208,6 +242,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteTaskAsync(int id)
     {
+        if (!await CanAccessTaskAsync(id)) return NotFound();
         var task = await _dbContext.EmployeeTasks.FirstOrDefaultAsync(t => t.Id == id);
         if (task != null)
         {

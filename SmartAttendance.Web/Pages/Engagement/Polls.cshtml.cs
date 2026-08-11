@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using SmartAttendance.Application.Announcements.Services;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Engagement;
 
@@ -107,6 +108,13 @@ VALUES ('EmployeePoll', CAST(@PollId AS nvarchar(80)), 'Create Poll', @NewValues
                 HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
             });
 
+        // الاستطلاع الجديد يُنسب لشركة منشئه فينعزل؛ غير المقيَّد يُنشئ مشتركاً كالسابق.
+        await ConfigTenantScope.AssignCompanyAsync(
+            DbContext,
+            ConfigTenantScope.EmployeePolls,
+            pollId,
+            ConfigTenantScope.OwningCompany(await GetCompanyScopeAsync()));
+
         StatusMessage = isPublished ? "تم نشر الاستطلاع وسيظهر للموظفين حسب الجهة المستهدفة." : "تم حفظ الاستطلاع كمسودة.";
         return RedirectToPage("/Engagement/Index", new { tab = "polls" });
     }
@@ -114,6 +122,14 @@ VALUES ('EmployeePoll', CAST(@PollId AS nvarchar(80)), 'Create Poll', @NewValues
     public async Task<IActionResult> OnPostToggleAsync(int id, bool publish)
     {
         await EmployeeEngagementSchema.EnsureAsync(DbContext);
+
+        // نشر/سحب استطلاع شركة أخرى بمعرّفٍ من المتصفّح — حارس ملكية مغلق الفشل.
+        if (!await ConfigTenantScope.IsInScopeAsync(
+                DbContext, ConfigTenantScope.EmployeePolls, id, await GetCompanyScopeAsync()))
+        {
+            return NotFound();
+        }
+
         var user = User.Identity?.Name ?? "HR";
 
         await HrmsDatabase.ExecuteAsync(
@@ -143,6 +159,14 @@ VALUES ('EmployeePoll', CAST(@Id AS nvarchar(80)), 'Toggle Poll Publish', @NewVa
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
         await EmployeeEngagementSchema.EnsureAsync(DbContext);
+
+        // الحذف يطال الأصوات والخيارات أيضاً — أثرٌ لا رجعة فيه على شركة أخرى.
+        if (!await ConfigTenantScope.IsInScopeAsync(
+                DbContext, ConfigTenantScope.EmployeePolls, id, await GetCompanyScopeAsync()))
+        {
+            return NotFound();
+        }
+
         var user = User.Identity?.Name ?? "HR";
 
         await HrmsDatabase.ExecuteAsync(

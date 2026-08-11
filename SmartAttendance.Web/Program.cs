@@ -495,13 +495,30 @@ if (forceHttps)
 }
 
 // ترويسات الأمان + سياسة المحتوى (CSP) — مصدرها SecurityHeaderPolicy النقي.
-var securityHeaders = SecurityHeaderPolicy.BuildStaticHeaders();
+// مجمّع مخالفات CSP: **أداة قياس** لترحيل #8، مطفأة افتراضيّاً. مطفأةً لا تُضاف
+// نقطة نهاية ولا تتغيّر ترويسة واحدة — سلوك الإنتاج كما هو حرفيّاً. مُشعَلةً تصل
+// المخالفات لمجمّع بالذاكرة فنرحّل بقياسٍ لا بتخمينٍ على 181 صفحة.
+var cspCollector = app.Configuration.GetValue<bool>("Security:CspReportCollector");
+var cspReportPath = cspCollector ? CspReportEndpoint.ReportPath : null;
+var securityHeaders = SecurityHeaderPolicy.BuildStaticHeaders(cspReportPath);
+// راية معطّلة افتراضيّاً: السلوك الحيّ يبقى 'unsafe-inline' حتى يكتمل ترحيل الوسوم
+// المضمّنة (nonce) وتُفعَّل في بيئة يمكن اختبارها بصريّاً. تفعيلها بلا ترحيل يكسر
+// كل معالِجات onclick المضمّنة عمداً — فهذا هو غرض CSP الصارمة.
+var strictCsp = app.Configuration.GetValue<bool>("Security:StrictCsp");
 
 app.Use(async (context, next) =>
 {
     foreach (var header in securityHeaders)
     {
         context.Response.Headers[header.Key] = header.Value;
+    }
+
+    if (strictCsp)
+    {
+        var nonce = SecurityHeaderPolicy.NewNonce();
+        context.SetCspNonce(nonce);
+        context.Response.Headers["Content-Security-Policy"] =
+            SecurityHeaderPolicy.BuildContentSecurityPolicy(nonce);
     }
 
     await next();
@@ -526,6 +543,11 @@ app.MapRazorPages()
    .WithStaticAssets();
 
 app.MapControllers();
+
+if (cspCollector)
+{
+    app.MapCspReportCollector();
+}
 
 // المسباران عامّان بلا مصادقة: المنصّة تستدعيهما قبل وجود أي جلسة، ولا يكشفان
 // تفاصيل — `live` يردّ بلا أي فحص، و`ready` يردّ نجاحاً/فشلاً بلا رسالة استثناء.

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.ShiftAssignments;
 
@@ -13,10 +14,12 @@ namespace SmartAttendance.Web.Pages.ShiftAssignments;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(ApplicationDbContext dbContext, ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -33,9 +36,23 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        Shifts = (await ShiftTypeStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+
+        // منتقي المناوبات معروضٌ ومُختار منه ⟹ يُحصر بالنطاق (المشترك + شركاتي).
+        // الاحتساب لا يمرّ من هنا، فلا يتأثّر المسير.
+        Shifts = (await ShiftTypeStore.ListInScopeAsync(_dbContext, scope)).Where(s => s.IsActive).ToList();
 
         var all = await EmployeeShiftTypeStore.ListAsync(_dbContext);
+
+        // حصر السرد على موظفي شركات المستخدم: المتجر يسرد كل الشركات، فبلا هذا الحصر
+        // يقرأ مستخدم شركة A أسماء وأرقام موظفي B ويعيّن لهم مناوبات.
+        if (!scope.IsUnrestricted)
+        {
+            var allowedIds = await EmployeeCompanyGuard.FilterEmployeesInScopeAsync(
+                _dbContext, all.Select(r => r.EmployeeId), scope, HttpContext.RequestAborted);
+            all = all.Where(r => allowedIds.Contains(r.EmployeeId)).ToList();
+        }
+
         AssignedCount = all.Count(r => r.ShiftTypeId != null);
         UnassignedCount = all.Count - AssignedCount;
 
@@ -91,6 +108,21 @@ public class IndexModel : PageModel
         }
         else
         {
+            // حارس التحديد الجماعي: أي معرّف موظف خارج نطاق شركاتي (نموذج معدَّل يدوياً)
+            // يرفض الدفعة كلها — لا كتابة عابرة للشركات.
+            if (!await AllInScopeAsync(employeeIds)) return NotFound();
+
+            // المناوبة نفسها مرجعٌ من النموذج: بلا حارسها يُسند مستخدمُ شركةٍ نوعَ
+            // مناوبة شركةٍ أخرى لموظفيه — ولا يراه أحدٌ بشاشة تلك الشركة.
+            if (!await ConfigTenantScope.AreAllInScopeAsync(
+                    _dbContext,
+                    ConfigTenantScope.ShiftTypes,
+                    new[] { shiftTypeId },
+                    await _companyScope.GetAsync(HttpContext.RequestAborted)))
+            {
+                return NotFound();
+            }
+
             var count = await EmployeeShiftTypeStore.AssignAsync(_dbContext, employeeIds, shiftTypeId);
             TempData["SuccessMessage"] = $"تم تعيين المناوبة لـ{count} موظفاً.";
         }
@@ -106,10 +138,21 @@ public class IndexModel : PageModel
         }
         else
         {
+            if (!await AllInScopeAsync(employeeIds)) return NotFound();
+
             await EmployeeShiftTypeStore.UnassignAsync(_dbContext, employeeIds);
             TempData["SuccessMessage"] = $"أُلغي تعيين {employeeIds.Count} موظفاً (يرجعون للمناوبة الافتراضية).";
         }
         return RedirectToPage(new { Search, Filter });
+    }
+
+    /// <summary>كل المعرّفات المطلوبة ضمن نطاق شركاتي؟ (مغلق الفشل — أي نقصٍ ⟹ false).</summary>
+    private async Task<bool> AllInScopeAsync(List<int> employeeIds)
+    {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var allowed = await EmployeeCompanyGuard.FilterEmployeesInScopeAsync(
+            _dbContext, employeeIds, scope, HttpContext.RequestAborted);
+        return allowed.Count == employeeIds.Count;
     }
 
     private List<int> ParseSelected() =>

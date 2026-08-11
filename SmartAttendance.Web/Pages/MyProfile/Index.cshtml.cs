@@ -189,14 +189,15 @@ END",
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
-        if (!FromDate.HasValue)
+        // نافذة الحضور الافتراضية تتبع سياسة فترة الحضور (نفس اعتماد الحضور واليوميات
+        // والمسير) بدل «آخر 30 يوماً». التواريخ الصريحة تُحترَم.
+        if (!FromDate.HasValue || !ToDate.HasValue)
         {
-            FromDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-30));
-        }
-
-        if (!ToDate.HasValue)
-        {
-            ToDate = DateOnly.FromDateTime(DateTime.Today);
+            var today = DateTime.Today;
+            var (period, _) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(
+                _dbContext, today.Year, today.Month);
+            FromDate ??= period.From;
+            ToDate ??= period.To;
         }
 
         var employees = await HrmsDatabase.QueryAsync(

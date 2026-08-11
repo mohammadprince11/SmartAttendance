@@ -80,6 +80,9 @@ public static class PayrollRunStore
         public decimal NetSalary { get; set; }
         public int WorkDays { get; set; }
         public int AbsentDays { get; set; }
+        // أساس أيام الاستحقاق المدفوعة (المقام). 0 ⟹ = WorkDays (سلوك قديم). موجب ⟹
+        // أيام الشهر المدفوعة (30/الفترة): القسيمة تعرض العطل/الإجازات مدفوعةً لا غياباً.
+        public int DaysBasis { get; set; }
         // أثر الاحتساب (Phase 15) — «من أين جاء كل دينار؟».
         public decimal AttendanceBase { get; set; }
         public decimal AttendanceFactor { get; set; } = 1m;
@@ -173,7 +176,8 @@ BEGIN
         TaxBase decimal(18,2) NOT NULL DEFAULT(0),
         TaxBaseSource nvarchar(20) NULL,
         GosiBase decimal(18,2) NOT NULL DEFAULT(0),
-        GosiBaseSource nvarchar(20) NULL
+        GosiBaseSource nvarchar(20) NULL,
+        DaysBasis int NOT NULL DEFAULT(0)
     );
     CREATE INDEX IX_PayrollRunLines_Run ON PayrollRunLines (RunId);
 END;
@@ -432,7 +436,38 @@ SELECT SequenceNo FROM @allocated;
 
         // سياسة ربط الراتب بالحضور تُقرأ مرّة للتشغيل كلّه.
         var linkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(dbContext);
+        // مقام تنسيب الأساسي = **سياسة WorkingDays** (مثلاً 1→30 = 30 يوماً) لا رقم مثبَّت.
+        // بلا سياسة WorkingDays نشطة ⟹ 0 = المقام القديم (أيام الدوام) بلا تغيير.
+        // «ماكو شي ثابت، كلها سياسة» — والحضور نفسه يقرأ سياسة Attendance (21→20).
+        var (workDaysPeriod, workDaysPolicyName) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(
+            dbContext, run.Year, run.Month, SmartAttendance.Domain.Enums.PayrollCutoffType.WorkingDays);
+        linkPolicy = linkPolicy with
+        {
+            MonthlyDivisorDays = workDaysPolicyName is not null ? workDaysPeriod.DayCount : 0
+        };
         var linkMode = linkPolicy.Mode;
+
+        // يوم قطع التعيين من سياسة الغلق «Hiring»: من يُعيَّن بعده يُرحَّل راتبه الأول
+        // شهراً ويُحتسب بأثر رجعي من تاريخ مباشرته. null ⟹ بلا سياسة ⟹ بلا ترحيل (آمن).
+        // يُطبَّق فقط مع مقامٍ تقويميّ (سياسة WorkingDays نشطة).
+        int? hiringCutoffDay = linkPolicy.MonthlyDivisorDays > 0
+            ? await (
+                from p in dbContext.PayrollCutoffPolicies.AsNoTracking()
+                join t in dbContext.PayrollCutoffPolicyTypes.AsNoTracking()
+                    on p.Id equals t.PayrollCutoffPolicyId
+                where p.IsActive && !p.IsDeleted && !t.IsDeleted
+                      && t.PolicyType == SmartAttendance.Domain.Enums.PayrollCutoffType.Hiring
+                      && p.DayOfMonth != null
+                orderby p.Id
+                select p.DayOfMonth).FirstOrDefaultAsync()
+            : null;
+
+        // إعداد ديناميكيّ يتحكّم به المستخدم: هل يُحتسب وعاء الضمان/الضريبة على الأساسي
+        // **الكامل** (قبل تنسيب الحضور)؟ الافتراض «Prorated» = السلوك القديم (على المُنقَّص)
+        // فلا تتغيّر قسيمة قائمة. «FullBasic» ⟹ الضمان/الضريبة على الأساسي الكامل، والحضور
+        // يُخصم من الصافي فقط (وعاء الضمان لا يتأثر بالحضور — القاعدة القانونية المعتادة).
+        var gosiTaxOnFullBasic =
+            (await HrSettingsStore.GetAsync(dbContext, "Payroll.GosiTaxBase", "Prorated")) == "FullBasic";
 
         // ملفات الضريبة/الضمان **كلّها** لا الملف النشط وحده: الملف صار خاصيةً لكل
         // موظف (إسناد صريح أو شرط) ⟵ PayrollProfileResolver. من لا إسناد له ولا شرط
@@ -482,9 +517,16 @@ SELECT SequenceNo FROM @allocated;
 
         var employees = await HrmsDatabase.QueryAsync(
             dbContext,
-            $"SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName FROM Employees e WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1{companyFilter} ORDER BY e.EmployeeNo;",
+            $"SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName, e.HireDate, e.LastRehireDate FROM Employees e WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1{companyFilter} ORDER BY e.EmployeeNo;",
             command => { if (runCompanyId is > 0) HrmsDatabase.AddParameter(command, "@Company", runCompanyId.Value); },
-            reader => new { Id = HrmsDatabase.GetInt(reader, "Id"), No = HrmsDatabase.GetString(reader, "EmployeeNo"), Name = HrmsDatabase.GetString(reader, "FullName") });
+            reader => new
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                No = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                Name = HrmsDatabase.GetString(reader, "FullName"),
+                // البداية الفعّالة للاستحقاق: إعادة التعيين تسبق التعيين الأصلي إن وُجدت.
+                Start = HrmsDatabase.GetDateOnly(reader, "LastRehireDate") ?? HrmsDatabase.GetDateOnly(reader, "HireDate")
+            });
 
         // نطاق التشغيل محفوظ مع الدفعة: إعادة الاحتساب بعد شهر تلتزم بنفس النطاق.
         // لا صفوف ⟹ كل النشطين — القرار بالكود (PayrollRunScope) لا بصفٍّ افتراضي.
@@ -594,7 +636,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             }))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
-        // أيام الفترة الفعلية — مقامٌ للخيار «أيام فترة الراتب».
+        // أيام الفترة الفعلية.
         var daysInPeriod = periodEnd.DayNumber - periodStart.DayNumber + 1;
 
         // سقف اقتطاع المخالفات الشهري من تهيئة اللائحة (صفر = بلا سقف).
@@ -664,7 +706,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             "DELETE c FROM PayrollRunLineComponents c INNER JOIN PayrollRunLines l ON l.Id = c.LineId WHERE l.RunId = @RunId; DELETE FROM PayrollRunLines WHERE RunId = @RunId;",
             command => HrmsDatabase.AddParameter(command, "@RunId", runId));
 
-        int count = 0, skippedStopped = 0, skippedNoSalary = 0, skippedNoAttendance = 0, paidWithoutAttendance = 0;
+        int count = 0, skippedStopped = 0, skippedNoSalary = 0, skippedNoAttendance = 0, paidWithoutAttendance = 0, skippedDeferred = 0;
         decimal totalGross = 0, totalNet = 0, totalTax = 0, totalGosiCo = 0;
 
         // سجلّ المستبعَدين لهذه الدفعة — يُجمع بالذاكرة ويُكتب دفعةً واحدة داخل
@@ -700,8 +742,37 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             var absentDays = month?.AbsentDays ?? 0;
             var unpaidLeaveDays = month?.UnpaidLeaveDays ?? 0;
 
+            // تنسيب التعيين: يُطبَّق فقط مع مقامٍ تقويميّ (سياسة WorkingDays). موجب ⟹
+            // أيام قبل المباشرة غير مدفوعة (مُعيَّن يوم 5 ⟹ 4). سالب ⟹ أثر رجعي لمُرحَّل.
+            var preHireUnpaidDays = 0;
+            if (linkPolicy.MonthlyDivisorDays > 0 && emp.Start is { } start)
+            {
+                var priorStart = periodStart.AddMonths(-1);
+                var deferred = hiringCutoffDay is { } cut && start.Day > cut;
+                if (start > periodStart && start <= periodEnd)
+                {
+                    if (deferred)
+                    {
+                        // مُعيَّن بعد يوم القطع بدورة هذا المسير ⟹ يُرحَّل للمسير التالي.
+                        skippedDeferred++;
+                        exclusions.Add((emp.Id, "HiringDeferred",
+                            $"التعيين ({start:yyyy-MM-dd}) بعد يوم قطع التعيين ({hiringCutoffDay}) — "
+                            + "يُرحَّل راتبه الأول للمسير التالي ويُحتسب بأثر رجعي."));
+                        continue;
+                    }
+                    preHireUnpaidDays = start.DayNumber - periodStart.DayNumber;   // مُعيَّن هذا الشهر (قبل القطع)
+                }
+                else if (deferred && start >= priorStart && start < periodStart)
+                {
+                    // مُرحَّلٌ من الشهر السابق ⟹ يظهر الآن ويُدفع بأثر رجعي من تاريخه
+                    // (أيام الدورة السابقة المُرحَّلة تُضاف ⟹ معامل > 1).
+                    preHireUnpaidDays = -(periodStart.DayNumber - start.DayNumber);
+                }
+            }
+
             var link = AttendanceSalaryLink.Evaluate(
-                linkPolicy, workDays, month?.PresentDays ?? 0, absentDays, month?.WorkedHours ?? 0m);
+                linkPolicy, workDays, month?.PresentDays ?? 0, absentDays, month?.WorkedHours ?? 0m,
+                preHireUnpaidDays);
             if (!link.Include)
             {
                 skippedNoAttendance++;
@@ -718,6 +789,10 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
 
             var dailyRate = basic > 0 ? Math.Round(basic / 30m, 4) : 0;
             var hourlyRate = dailyRate > 0 ? Math.Round(dailyRate / 8m, 4) : 0;
+
+            // سمات الموظف — تُقرأ مرّةً هنا لأنّ إنفاذ «معايير الاستحقاق» على عناصر
+            // الراتب (العلاوات والصيغ) يسبق حسم ملفَّي الضريبة/الضمان لاحقاً.
+            var facts = factsByEmployee.TryGetValue(emp.Id, out var empFacts) ? empFacts : noFacts;
 
             var comps = new List<Component>();
             if (proratedBasic != 0)
@@ -743,18 +818,27 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
                     // InGross=false ⟹ العلاوة لا تُدفع بالإجمالي ولا تدخل أي وعاء (Issue 14).
                     if (!policy.InGross) continue;
 
+                    // القسم 1 (قواعد + استحقاق عنصر الراتب): عنصرٌ خارج فترة صلاحيته أو
+                    // غير مؤهّل للموظف ⟹ لا يُضاف. حدّ القيمة الدنيا/القصوى يحصر مبلغ
+                    // العلاوة قبل أثر الحضور. كلها اختيارية ⟹ null/فارغ = السلوك القديم.
+                    var sItem = salaryItemsById.GetValueOrDefault(al.SalaryItemId);
+                    if (sItem is not null &&
+                        (!sItem.WithinValidity(periodStart, periodEnd) || !sItem.EligibleFor(facts)))
+                        continue;
+                    var alAmount = sItem?.Clamp(al.Amount) ?? al.Amount;
+
                     if (policy.OvertimeEligible)
-                        overtimeEligibleAllow += al.Amount;
+                        overtimeEligibleAllow += alAmount;
                     if (policy.UnpaidLeaveEligible)
-                        unpaidLeaveEligibleAllow += al.Amount;
+                        unpaidLeaveEligibleAllow += alAmount;
 
                     // العلاوة الحسّاسة للحضور تُنسَّب بالمعامل (وعاء الحضور = أساسي +
                     // علاوات مستحقّة)، والثابتة تبقى كاملة. الافتراض غير حسّاس ⟹ كامل
                     // كسلوك المحرك السابق، فلا ينحرف رقم من لم يُفعِّل السياسة.
                     var sensitive = policy.Prorated;
-                    if (sensitive) attendanceSensitiveAllow += al.Amount;
+                    if (sensitive) attendanceSensitiveAllow += alAmount;
                     var amount = AttendanceSalaryBase.AdjustComponent(
-                        new AttendanceSalaryBase.EarningComponent(al.Amount, sensitive), factor);
+                        new AttendanceSalaryBase.EarningComponent(alAmount, sensitive), factor);
                     if (amount == 0) continue;
                     allowancesTotal += amount;
 
@@ -892,8 +976,10 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
                 salaryConstants);
                 foreach (var item in formulaItems)
                 {
+                    // القسم 1: عنصرٌ خارج صلاحيته أو غير مؤهّل للموظف لا يُحتسب أصلاً.
+                    if (!item.WithinValidity(periodStart, periodEnd) || !item.EligibleFor(facts)) continue;
                     if (!SalaryFormulaEvaluator.TryEvaluate(item.Formula, formulaVars, out var raw, out _)) continue;
-                    var value = Math.Round(item.Prorated ? raw * factor : raw, 2);
+                    var value = item.Clamp(Math.Round(item.Prorated ? raw * factor : raw, 2));
                     if (value == 0) continue;
                     if (item.IsAddition)
                     {
@@ -932,8 +1018,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
 
             // حسم ملفَّي الضريبة والضمان لهذا الموظف: إسناده الصريح ⟵ فملفٌ تنطبق
             // شروطه ⟵ فالملف النشط. ووعاء الاحتساب يتبع الملف الفائز لا ملفاً ثابتاً.
-            var facts = factsByEmployee.TryGetValue(emp.Id, out var empFacts) ? empFacts : noFacts;
-
+            // (facts محسوبةٌ أعلى الحلقة لإنفاذ استحقاق عناصر الراتب أيضاً.)
             var taxChoice = PayrollProfileResolver.Resolve(fin?.TaxProfileId, taxCandidates, facts);
             var gosiChoice = PayrollProfileResolver.Resolve(fin?.GosiProfileId, gosiCandidates, facts);
 
@@ -945,15 +1030,36 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             var gosiMembers = SalaryBaseStore.Resolve(
                 baseMembers, SalaryBaseComposer.GosiBaseKey, gosiProfile?.Id ?? 0);
 
+            // إعداد «الأساسي الكامل» (يتحكّم به المستخدم): يُركَّب وعاء الضمان/الضريبة من
+            // الأساسي **الكامل** بدل المُنقَّص بالحضور (والإجمالي يُعدَّل تبعاً)، فلا يتأثر
+            // استقطاع الضمان/الضريبة بالغياب. المدفوع والإجمالي والصافي تبقى على الحضور.
+            var contribBase = baseAmounts;
+            if (gosiTaxOnFullBasic && basic != proratedBasic)
+            {
+                contribBase = new SalaryBaseComposer.Amounts
+                {
+                    Basic = basic,
+                    Allowances = baseAmounts.Allowances,
+                    TaxableAllowances = baseAmounts.TaxableAllowances,
+                    GosiAllowances = baseAmounts.GosiAllowances,
+                    TaxableIncome = baseAmounts.TaxableIncome,
+                    TaxableOvertime = baseAmounts.TaxableOvertime,
+                    SalaryDays = baseAmounts.SalaryDays,
+                    LeaveEncashment = baseAmounts.LeaveEncashment,
+                    FormulaAdd = baseAmounts.FormulaAdd,
+                    Gross = baseAmounts.Gross - proratedBasic + basic
+                };
+            }
+
             // وعاء الضريبة: مُركَّبٌ من المكوّنات (السلوك القائم) أو راتب الضريبة المُدخَل
             // حين يختار المستخدم «مُعرَّف بالموظف». النمط الفارغ ⟹ مُركَّب، فلا تتغيّر قسيمة.
-            var composedTax = SalaryBaseComposer.Compose(baseAmounts, taxMembers);
+            var composedTax = SalaryBaseComposer.Compose(contribBase, taxMembers);
             var taxBase = EmployeeDefinedSalaryBase.Resolve(fin?.TaxBaseMode, fin?.CurrentTaxSalary, composedTax);
             var tax = PayrollConfigStore.ComputeTax(taxBase.Base, taxProfile);
 
             // وعاء الضمان: مُركَّب (افتراضاً الإجمالي) أو راتب الضمان المُدخَل
             // (SocialSecuritySalary) حين «مُعرَّف بالموظف» — الرقم الذي كان يُدخَل ويُهمَل.
-            var composedGosi = SalaryBaseComposer.Compose(baseAmounts, gosiMembers);
+            var composedGosi = SalaryBaseComposer.Compose(contribBase, gosiMembers);
             var gosiBase = EmployeeDefinedSalaryBase.Resolve(fin?.GosiBaseMode, fin?.SocialSecuritySalary, composedGosi);
             var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(gosiBase.Base, gosiProfile);
 
@@ -1082,10 +1188,10 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
                 """
 INSERT INTO PayrollRunLines
   (RunId, EmployeeId, BasicSalary, TotalAllowances, GrossSalary, TaxAmount, GosiEmployee, GosiCompany, OtherDeductions, NetSalary, WorkDays, AbsentDays,
-   AttendanceBase, AttendanceFactor, TaxBase, TaxBaseSource, GosiBase, GosiBaseSource)
+   AttendanceBase, AttendanceFactor, TaxBase, TaxBaseSource, GosiBase, GosiBaseSource, DaysBasis)
 VALUES
   (@RunId, @Emp, @Basic, @Allow, @Gross, @Tax, @GosiEmp, @GosiCo, @Other, @Net, @WorkDays, @AbsentDays,
-   @AttBase, @AttFactor, @TaxBase, @TaxSrc, @GosiBase, @GosiSrc);
+   @AttBase, @AttFactor, @TaxBase, @TaxSrc, @GosiBase, @GosiSrc, @DaysBasis);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
                 command =>
@@ -1109,6 +1215,10 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                     HrmsDatabase.AddParameter(command, "@TaxSrc", taxBase.Source.ToString());
                     HrmsDatabase.AddParameter(command, "@GosiBase", gosiBase.Base);
                     HrmsDatabase.AddParameter(command, "@GosiSrc", gosiBase.Source.ToString());
+                    // أساس أيام الاستحقاق: مقام التنسيب نفسه — موجب ⟹ 30/الفترة (العطل مدفوعة)،
+                    // وإلا WorkDays (السلوك القديم). القسيمة تعرضه بدل أيام الحضور.
+                    HrmsDatabase.AddParameter(command, "@DaysBasis",
+                        linkPolicy.MonthlyDivisorDays > 0 ? linkPolicy.MonthlyDivisorDays : workDays);
                 });
 
             foreach (var c in comps)
@@ -1179,6 +1289,7 @@ WHERE Id = @Id;
         if (skippedNoSalary > 0) skips.Add($"{skippedNoSalary} بلا راتب أساسي أو حركات");
         if (skippedStopped > 0) skips.Add($"{skippedStopped} موقوف الاحتساب بالملف المالي");
         if (skippedNoAttendance > 0) skips.Add($"{skippedNoAttendance} بلا بيانات حضور ({AttendanceSalaryLink.ModeLabel(linkMode)})");
+        if (skippedDeferred > 0) skips.Add($"{skippedDeferred} مُرحَّل (تعيين بعد يوم القطع) — يُحتسب بأثر رجعي بالمسير التالي");
         if (outsideScope > 0) skips.Add($"{outsideScope} من النطاق خارج قائمة النشطين");
         var skipText = skips.Count > 0 ? $" · تُخطّي: {string.Join(" · ", skips)}" : string.Empty;
 
@@ -1275,6 +1386,7 @@ ORDER BY e.EmployeeNo;
                 NetSalary = reader["NetSalary"] is decimal n ? n : 0,
                 WorkDays = HrmsDatabase.GetInt(reader, "WorkDays"),
                 AbsentDays = HrmsDatabase.GetInt(reader, "AbsentDays"),
+                DaysBasis = HrmsDatabase.GetInt(reader, "DaysBasis"),
                 AttendanceBase = reader["AttendanceBase"] is decimal ab ? ab : 0,
                 AttendanceFactor = reader["AttendanceFactor"] is decimal af ? af : 1m,
                 TaxBase = reader["TaxBase"] is decimal tb ? tb : 0,
@@ -1499,7 +1611,12 @@ WHERE [Year] = @Y AND [Month] = @M AND Id <> @X
             if (xSet.Count == 0)
                 return ($"كل الموظفين المحددين ({lockedClaimed.Count}) محجوزون بدفعات مقفلة — لا يوجد من يُحتسب", true);
             // تجسيد صريح (لن يكون فارغاً هنا) لاستبعاد المحجوزين حتى لو كانت «الكل».
+            // أمانٌ ضدّ الازدواج: نُرجعها Draft قبل تغيير نطاقها، فلو فشل احتسابها التالي
+            // (يُجريه CalculateWithGuardAsync بعد هذا) تبقى Draft غير قابلة للقفل/الصرف بدل
+            // أن تُقفل بأسطر بائتة تحوي المحجوزين. وScopeMode لم يعد «الكل».
+            await ForceDraftAsync(dbContext, runId);
             await PayrollRunScopeStore.ReplaceAsync(dbContext, runId, xSet);
+            await SetScopeModeAsync(dbContext, runId, PayrollRunScope.ModeManual);
             notes.Add($"{lockedClaimed.Count} موظفاً محجوزون بدفعة مقفلة — استُبعدوا من هذا الاحتساب");
         }
 
@@ -1517,7 +1634,12 @@ WHERE [Year] = @Y AND [Month] = @M AND Id <> @X
             }
             else
             {
+                // أمانٌ ضدّ الازدواج (مراجعة): اقلب الشقيقة إلى Draft **قبل** تعديل نطاقها.
+                // لو فشل إعادة احتسابها (خطأ SQL/شبكة) تبقى Draft — غير قابلة للقفل — بدل أن
+                // تبقى «محتسبة» بأسطرها البائتة التي تحوي المنقول فتُقفل لاحقاً ⟹ صرف مزدوج.
+                await ForceDraftAsync(dbContext, s.Id);
                 await PayrollRunScopeStore.ReplaceAsync(dbContext, s.Id, remaining);
+                await SetScopeModeAsync(dbContext, s.Id, PayrollRunScope.ModeManual);
                 await CalculateAsync(dbContext, s.Id, userName);
                 notes.Add($"نُقل {overlap.Count} موظفاً من الدفعة {s.BatchNo} (أُعيد احتسابها)");
             }
@@ -1534,6 +1656,175 @@ WHERE [Year] = @Y AND [Month] = @M AND Id <> @X
         if (nothing) return (false, note ?? "لا يوجد موظفون قابلون للاحتساب.");
         var (ok, msg) = await CalculateAsync(dbContext, runId, userName);
         return (ok, note == null ? msg : $"{msg} — {note}");
+    }
+
+    /// <summary>
+    /// يُرجع دفعةً غير مقفلة إلى «مسودة» — يُستدعى قبل أن يعدّل الحارس نطاقها، فلو فشل
+    /// إعادة احتسابها تبقى Draft (لا تُقفل ولا تُصرف) بدل بقائها «محتسبة» بأسطر بائتة
+    /// تحوي موظفين نُقلوا لدفعة أخرى ⟹ حماية ضدّ ازدواج الصرف.
+    /// </summary>
+    private static Task ForceDraftAsync(ApplicationDbContext dbContext, int runId) =>
+        HrmsDatabase.ExecuteAsync(
+            dbContext,
+            "UPDATE PayrollRuns SET Status = N'Draft' WHERE Id = @Id AND Status IN (N'Draft', N'Calculated');",
+            command => HrmsDatabase.AddParameter(command, "@Id", runId));
+
+    /// <summary>يضبط ScopeMode بعد أن يُجسِّد الحارس «الكل» لقائمة صريحة، فلا يبقى عرض النطاق كاذباً.</summary>
+    private static Task SetScopeModeAsync(ApplicationDbContext dbContext, int runId, string mode) =>
+        HrmsDatabase.ExecuteAsync(
+            dbContext,
+            "UPDATE PayrollRuns SET ScopeMode = @Mode WHERE Id = @Id;",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", runId);
+                HrmsDatabase.AddParameter(command, "@Mode", mode);
+            });
+
+    // ═══════ تجميعات لوحة رسوم الرواتب (نظير «رسومات بيانية» بكيان) ═══════
+
+    public sealed class MonthlyPoint
+    {
+        public int Year { get; set; }
+        public int Month { get; set; }
+        public decimal Gross { get; set; }
+        public decimal Net { get; set; }
+        public decimal Tax { get; set; }
+        public decimal GosiCompany { get; set; }
+        public int Employees { get; set; }
+        public string Label => $"{Month:00}/{Year}";
+    }
+
+    public sealed class PayrollBreakdown
+    {
+        public decimal Basic { get; set; }
+        public decimal Allowances { get; set; }
+        public decimal Tax { get; set; }
+        public decimal GosiEmployee { get; set; }
+        public decimal OtherDeductions { get; set; }
+        public decimal Net { get; set; }
+        public decimal GosiCompany { get; set; }
+        public int Employees { get; set; }
+        public string PeriodLabel { get; set; } = "—";
+        public decimal Gross => Basic + Allowances;
+    }
+
+    /// <summary>سلسلة شهرية مجمّعة (إجمالي/صافي/ضريبة/حصة الشركة) لآخر N شهراً — للوحة الرسوم.</summary>
+    public static async Task<List<MonthlyPoint>> MonthlySeriesAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int? companyId, int months)
+    {
+        var all = await ListRunsAsync(dbContext, scope);
+        var filtered = companyId is > 0 ? all.Where(r => r.CompanyId == companyId) : all;
+        return filtered
+            .GroupBy(r => new { r.Year, r.Month })
+            .Select(g => new MonthlyPoint
+            {
+                Year = g.Key.Year,
+                Month = g.Key.Month,
+                Gross = g.Sum(x => x.TotalGross),
+                Net = g.Sum(x => x.TotalNet),
+                Tax = g.Sum(x => x.TotalTax),
+                GosiCompany = g.Sum(x => x.TotalGosiCompany),
+                Employees = g.Sum(x => x.EmployeeCount)
+            })
+            .OrderBy(p => p.Year).ThenBy(p => p.Month)
+            .TakeLast(months)
+            .ToList();
+    }
+
+    /// <summary>تفكيك آخر مسير محتسب (أساسي/علاوات/ضريبة/ضمان/صافي) — لرسم التركيب.</summary>
+    public static async Task<PayrollBreakdown> LatestBreakdownAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int? companyId)
+    {
+        var all = await ListRunsAsync(dbContext, scope);
+        var latest = (companyId is > 0 ? all.Where(r => r.CompanyId == companyId) : all)
+            .Where(r => r.EmployeeCount > 0)
+            .OrderByDescending(r => r.Year).ThenByDescending(r => r.Month).ThenByDescending(r => r.Id)
+            .FirstOrDefault();
+        if (latest == null) return new PayrollBreakdown();
+        var lines = await ListLinesAsync(dbContext, latest.Id);
+        return new PayrollBreakdown
+        {
+            Basic = lines.Sum(l => l.BasicSalary),
+            Allowances = lines.Sum(l => l.TotalAllowances),
+            Tax = lines.Sum(l => l.TaxAmount),
+            GosiEmployee = lines.Sum(l => l.GosiEmployee),
+            OtherDeductions = lines.Sum(l => l.OtherDeductions),
+            Net = lines.Sum(l => l.NetSalary),
+            GosiCompany = lines.Sum(l => l.GosiCompany),
+            Employees = lines.Count,
+            PeriodLabel = latest.PeriodText
+        };
+    }
+
+    // ═══════ استعلام القسائم (نظير «استعلام القسائم» بكيان) ═══════
+
+    public sealed class PayslipSummary
+    {
+        public int RunId { get; set; }
+        public int LineId { get; set; }
+        public int Year { get; set; }
+        public int Month { get; set; }
+        public string BatchNo { get; set; } = string.Empty;
+        public string Status { get; set; } = "Draft";
+        public decimal Basic { get; set; }
+        public decimal Allowances { get; set; }
+        public decimal Gross { get; set; }
+        public decimal Tax { get; set; }
+        public decimal GosiEmployee { get; set; }
+        public decimal OtherDeductions { get; set; }
+        public decimal Net { get; set; }
+        public string PeriodText => $"{Month:00}/{Year}";
+        public string StatusLabelText => StatusLabel(Status);
+    }
+
+    /// <summary>
+    /// قسائم موظفٍ عبر كل الدورات (الأحدث أولاً) — لصفحة «استعلام القسائم». مُقيَّدة بنطاق
+    /// الشركات المسموح به للمستخدم (لا تسريب عبر الشركات)، واختيارياً بسنة.
+    /// </summary>
+    public static async Task<List<PayslipSummary>> PayslipHistoryAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int employeeId, int? year, int? month = null)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (employeeId <= 0 || scope.IsDeniedAll) return new List<PayslipSummary>();
+        await EnsureAsync(dbContext);
+
+        var scopePredicate = scope.IsUnrestricted ? "1=1" : scope.ToSqlPredicate("r.CompanyId");
+        var sql = $"""
+SELECT r.Id AS RunId, l.Id AS LineId, r.[Year] AS Yr, r.[Month] AS Mo,
+       ISNULL(r.BatchNo, N'') AS BatchNo, ISNULL(r.Status, N'Draft') AS Status,
+       l.BasicSalary, l.TotalAllowances, l.GrossSalary, l.TaxAmount,
+       l.GosiEmployee, l.OtherDeductions, l.NetSalary
+FROM PayrollRunLines l
+INNER JOIN PayrollRuns r ON r.Id = l.RunId
+WHERE l.EmployeeId = @Emp AND ({scopePredicate})
+  AND (@Year IS NULL OR r.[Year] = @Year) AND (@Month IS NULL OR r.[Month] = @Month)
+ORDER BY r.[Year] DESC, r.[Month] DESC, r.Id DESC;
+""";
+        return await HrmsDatabase.QueryAsync(
+            dbContext,
+            sql,
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Emp", employeeId);
+                HrmsDatabase.AddParameter(command, "@Year", (object?)year ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Month", (object?)month ?? DBNull.Value);
+            },
+            reader => new PayslipSummary
+            {
+                RunId = HrmsDatabase.GetInt(reader, "RunId"),
+                LineId = HrmsDatabase.GetInt(reader, "LineId"),
+                Year = HrmsDatabase.GetInt(reader, "Yr"),
+                Month = HrmsDatabase.GetInt(reader, "Mo"),
+                BatchNo = HrmsDatabase.GetString(reader, "BatchNo"),
+                Status = HrmsDatabase.GetString(reader, "Status"),
+                Basic = reader["BasicSalary"] is decimal b ? b : 0,
+                Allowances = reader["TotalAllowances"] is decimal a ? a : 0,
+                Gross = reader["GrossSalary"] is decimal g ? g : 0,
+                Tax = reader["TaxAmount"] is decimal t ? t : 0,
+                GosiEmployee = reader["GosiEmployee"] is decimal ge ? ge : 0,
+                OtherDeductions = reader["OtherDeductions"] is decimal o ? o : 0,
+                Net = reader["NetSalary"] is decimal n ? n : 0
+            });
     }
 
     public static async Task<(bool, string)> DeleteRunAsync(ApplicationDbContext dbContext, int runId)

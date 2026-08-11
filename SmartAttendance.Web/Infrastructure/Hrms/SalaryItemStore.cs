@@ -58,9 +58,38 @@ public static class SalaryItemStore
         public bool IsActive { get; set; } = true;
         public int SortOrder { get; set; }
 
+        // ── تبويب «القواعد» (نمط كيان): كلها اختيارية · null ⟹ السلوك القديم بلا أثر ──
+        public decimal? MinValue { get; set; }                  // القيمة الدنيا (حدّ سفليّ للقيمة المحتسبة)
+        public decimal? MaxValue { get; set; }                  // القيمة القصوى (حدّ علويّ)
+        public DateOnly? ValidFrom { get; set; }                // فترة الصلاحية — البداية (شامل)
+        public DateOnly? ValidTo { get; set; }                  // فترة الصلاحية — النهاية (شامل)
+
+        // ── تبويب «معايير الاستحقاق»: شروطٌ على سمات الموظف · فارغ ⟹ مؤهّل للجميع ──
+        public string? EligibilityJson { get; set; }            // HrConditions.ConditionSet مُسلسَل
+
         public string ItemTypeLabel => LabelOf(ItemTypes, ItemType);
         public string ValueKindLabel => LabelOf(ValueKinds, ValueKind);
         public bool IsAddition => ItemType is "Income" or "Overtime";
+
+        /// <summary>الشروط المؤهِّلة (مُفكَّكة من <see cref="EligibilityJson"/>).</summary>
+        public HrConditions.ConditionSet Eligibility => HrConditions.Deserialize(EligibilityJson);
+
+        /// <summary>هل العنصر ساري المفعول ضمن فترة المسير؟ null ⟹ دائماً (سلوك قديم).</summary>
+        public bool WithinValidity(DateOnly periodStart, DateOnly periodEnd) =>
+            (ValidFrom is null || ValidFrom.Value <= periodEnd) &&
+            (ValidTo is null || ValidTo.Value >= periodStart);
+
+        /// <summary>هل الموظف مؤهّل لهذا العنصر؟ شروط فارغة ⟹ الكل (سلوك قديم).</summary>
+        public bool EligibleFor(IReadOnlyDictionary<string, HrConditions.Fact> facts) =>
+            HrConditions.Matches(Eligibility, facts, matchWhenEmpty: true);
+
+        /// <summary>حصر القيمة بين الحدّ الأدنى والأقصى إن وُجدا (بلا حدّ ⟹ بلا أثر).</summary>
+        public decimal Clamp(decimal value)
+        {
+            if (MinValue is { } lo && value < lo) value = lo;
+            if (MaxValue is { } hi && value > hi) value = hi;
+            return value;
+        }
     }
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
@@ -103,6 +132,13 @@ END;
 
 -- بوابة المعادلة (idempotent)
 IF COL_LENGTH('SalaryItems','Formula') IS NULL ALTER TABLE SalaryItems ADD Formula nvarchar(500) NULL;
+
+-- تبويب «القواعد» + «معايير الاستحقاق» (idempotent · كلها اختيارية بلا افتراض يغيّر السلوك)
+IF COL_LENGTH('SalaryItems','MinValue')        IS NULL ALTER TABLE SalaryItems ADD MinValue decimal(18,4) NULL;
+IF COL_LENGTH('SalaryItems','MaxValue')        IS NULL ALTER TABLE SalaryItems ADD MaxValue decimal(18,4) NULL;
+IF COL_LENGTH('SalaryItems','ValidFrom')       IS NULL ALTER TABLE SalaryItems ADD ValidFrom date NULL;
+IF COL_LENGTH('SalaryItems','ValidTo')         IS NULL ALTER TABLE SalaryItems ADD ValidTo date NULL;
+IF COL_LENGTH('SalaryItems','EligibilityJson') IS NULL ALTER TABLE SalaryItems ADD EligibilityJson nvarchar(max) NULL;
 """);
     }
 
@@ -136,7 +172,8 @@ UPDATE SalaryItems
 SET Name = @Name, NameEn = @NameEn, ItemType = @ItemType, ValueKind = @ValueKind,
     DefaultValue = @DefaultValue, Formula = @Formula, Taxable = @Taxable, GosiEligible = @GosiEligible, InGross = @InGross,
     Prorated = @Prorated, OvertimeEligible = @OvertimeEligible, UnpaidLeaveEligible = @UnpaidLeaveEligible,
-    IsActive = @IsActive, SortOrder = @SortOrder
+    IsActive = @IsActive, SortOrder = @SortOrder,
+    MinValue = @MinValue, MaxValue = @MaxValue, ValidFrom = @ValidFrom, ValidTo = @ValidTo, EligibilityJson = @EligibilityJson
 WHERE Id = @Id;
 """,
                 command =>
@@ -150,8 +187,8 @@ WHERE Id = @Id;
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
                 """
-INSERT INTO SalaryItems (Name, NameEn, ItemType, ValueKind, DefaultValue, Formula, Taxable, GosiEligible, InGross, Prorated, OvertimeEligible, UnpaidLeaveEligible, IsSystem, IsActive, SortOrder)
-VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable, @GosiEligible, @InGross, @Prorated, @OvertimeEligible, @UnpaidLeaveEligible, 0, @IsActive, @SortOrder);
+INSERT INTO SalaryItems (Name, NameEn, ItemType, ValueKind, DefaultValue, Formula, Taxable, GosiEligible, InGross, Prorated, OvertimeEligible, UnpaidLeaveEligible, IsSystem, IsActive, SortOrder, MinValue, MaxValue, ValidFrom, ValidTo, EligibilityJson)
+VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable, @GosiEligible, @InGross, @Prorated, @OvertimeEligible, @UnpaidLeaveEligible, 0, @IsActive, @SortOrder, @MinValue, @MaxValue, @ValidFrom, @ValidTo, @EligibilityJson);
 """,
                 command => AddParameters(command, item));
         }
@@ -184,7 +221,12 @@ VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable
         UnpaidLeaveEligible = HrmsDatabase.GetBool(reader, "UnpaidLeaveEligible"),
         IsSystem = HrmsDatabase.GetBool(reader, "IsSystem"),
         IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
-        SortOrder = HrmsDatabase.GetInt(reader, "SortOrder")
+        SortOrder = HrmsDatabase.GetInt(reader, "SortOrder"),
+        MinValue = reader["MinValue"] is decimal mn ? mn : null,
+        MaxValue = reader["MaxValue"] is decimal mx ? mx : null,
+        ValidFrom = HrmsDatabase.GetDateOnly(reader, "ValidFrom"),
+        ValidTo = HrmsDatabase.GetDateOnly(reader, "ValidTo"),
+        EligibilityJson = HrmsDatabase.GetString(reader, "EligibilityJson") is { Length: > 0 } ej ? ej : null
     };
 
     private static void AddParameters(System.Data.Common.DbCommand command, SalaryItem item)
@@ -203,5 +245,10 @@ VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable
         HrmsDatabase.AddParameter(command, "@UnpaidLeaveEligible", item.UnpaidLeaveEligible ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@IsActive", item.IsActive ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@SortOrder", item.SortOrder);
+        HrmsDatabase.AddParameter(command, "@MinValue", (object?)item.MinValue ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@MaxValue", (object?)item.MaxValue ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@ValidFrom", item.ValidFrom is { } vf ? vf.ToDateTime(TimeOnly.MinValue) : (object)DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@ValidTo", item.ValidTo is { } vt ? vt.ToDateTime(TimeOnly.MinValue) : (object)DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@EligibilityJson", (object?)item.EligibilityJson ?? DBNull.Value);
     }
 }

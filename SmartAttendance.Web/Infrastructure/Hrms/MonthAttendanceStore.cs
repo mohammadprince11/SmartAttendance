@@ -96,8 +96,12 @@ IF COL_LENGTH('EmployeeMonthAttendance', 'UnpaidLeaveDays') IS NULL
         await DayAttendanceStore.EnsureAsync(dbContext);
         await ShiftTypeStore.EnsureAsync(dbContext); // عمود TotalDurationMode مطلوب بالتجميع
 
-        var from = new DateOnly(year, month, 1);
-        var to = from.AddMonths(1).AddDays(-1);
+        // نافذة التجميع تتبع **سياسة فترة الحضور** (المصدر الوحيد الذي تستخدمه اليوميات
+        // وبقية الشاشات) لا الشهر التقويمي — بلا سياسة نشطة ترجع الشهر التقويمي كما كان.
+        // بلاغ محمد: التقويمي كان يبتلع غياب 21/7→31/7 (يخصّ دورة آب) براتب تموز.
+        var (period, _) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(dbContext, year, month);
+        var from = period.From;
+        var to = period.To;
 
         await HrmsDatabase.ExecuteAsync(
             dbContext,

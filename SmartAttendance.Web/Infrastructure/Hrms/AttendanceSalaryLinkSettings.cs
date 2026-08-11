@@ -25,6 +25,7 @@ public static class AttendanceSalaryLinkSettings
 
         var hours = PayrollDivisorPolicy.DailyHours(hoursRaw);
 
+        // المقام (MonthlyDivisorDays) يُحسَم بالمسير من سياسة WorkingDays لا هنا.
         return new AttendanceSalaryLink.Policy(mode, factor, negative == "1", hours).Normalized();
     }
 

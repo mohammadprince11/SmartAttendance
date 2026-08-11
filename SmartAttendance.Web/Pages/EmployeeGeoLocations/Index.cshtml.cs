@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.EmployeeGeoLocations;
 
@@ -13,10 +14,12 @@ namespace SmartAttendance.Web.Pages.EmployeeGeoLocations;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(ApplicationDbContext dbContext, ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -36,6 +39,16 @@ public class IndexModel : PageModel
         Locations = (await GeoLocationStore.ListLocationsAsync(_dbContext)).Where(l => l.IsActive).ToList();
 
         var all = await GeoLocationStore.ListEmployeesAsync(_dbContext);
+
+        // حصر السرد على موظفي شركاتي — المتجر يسرد كل الشركات.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (!scope.IsUnrestricted)
+        {
+            var allowedIds = await EmployeeCompanyGuard.FilterEmployeesInScopeAsync(
+                _dbContext, all.Select(r => r.EmployeeId), scope, HttpContext.RequestAborted);
+            all = all.Where(r => allowedIds.Contains(r.EmployeeId)).ToList();
+        }
+
         AssignedCount = all.Count(r => r.GeoLocationId != null);
         UnassignedCount = all.Count - AssignedCount;
 
@@ -72,6 +85,8 @@ public class IndexModel : PageModel
         }
         else
         {
+            if (!await AllInScopeAsync(ids)) return NotFound();
+
             var count = await GeoLocationStore.AssignAsync(_dbContext, ids, geoId);
             TempData["SuccessMessage"] = $"تم تعيين الموقع لـ{count} موظفاً.";
         }
@@ -87,10 +102,21 @@ public class IndexModel : PageModel
         }
         else
         {
+            if (!await AllInScopeAsync(ids)) return NotFound();
+
             await GeoLocationStore.UnassignAsync(_dbContext, ids);
             TempData["SuccessMessage"] = $"أُلغي تعيين الموقع لـ{ids.Count} موظفاً.";
         }
         return RedirectToPage(new { Search, Filter });
+    }
+
+    /// <summary>كل المعرّفات المطلوبة ضمن نطاق شركاتي؟ (مغلق الفشل).</summary>
+    private async Task<bool> AllInScopeAsync(List<int> employeeIds)
+    {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var allowed = await EmployeeCompanyGuard.FilterEmployeesInScopeAsync(
+            _dbContext, employeeIds, scope, HttpContext.RequestAborted);
+        return allowed.Count == employeeIds.Count;
     }
 
     public async Task<IActionResult> OnPostSaveLocationAsync()

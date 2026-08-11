@@ -5,6 +5,7 @@ using SmartAttendance.Application.Announcements.Services;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Engagement;
 
@@ -98,9 +99,24 @@ public abstract class EngagementPageModel : PageModel
             .ToList();
     }
 
+    /// <summary>
+    /// نطاق شركات الطلب. يُحلّ من <c>RequestServices</c> لا بالحقن بالمُنشئ كي لا
+    /// تتغيّر تواقيع الصفحات الخمس الوارثة لأجل حاجةٍ يخصّ الاستطلاعات وحدها.
+    /// </summary>
+    protected Task<CompanyScope> GetCompanyScopeAsync() =>
+        HttpContext.RequestServices.GetRequiredService<ICompanyScopeProvider>().GetAsync();
+
     protected async Task LoadPollsAsync()
     {
-        var where = string.IsNullOrWhiteSpace(Search) ? string.Empty : "WHERE p.Title LIKE @Search OR p.Question LIKE @Search OR p.Category LIKE @Search";
+        // العرض محصورٌ بالنطاق: المشترك (CompanyId NULL) + ما يخصّ شركات المستخدم.
+        //
+        // ⚠️ الأقواس حول شرط البحث ليست تجميلاً: بدونها يصير الشرط
+        // `WHERE scope AND Title LIKE .. OR Question LIKE ..` — و`OR` أضعف ارتباطاً
+        // من `AND` فينفكّ حصر النطاق ويُسرّب استطلاعات الشركات الأخرى عند أي بحث.
+        var scopeClause = (await GetCompanyScopeAsync()).ToSharedConfigSqlPredicate("p.CompanyId");
+        var where = string.IsNullOrWhiteSpace(Search)
+            ? $"WHERE {scopeClause}"
+            : $"WHERE {scopeClause} AND (p.Title LIKE @Search OR p.Question LIKE @Search OR p.Category LIKE @Search)";
         Polls = await HrmsDatabase.QueryAsync(
             DbContext,
             $"""

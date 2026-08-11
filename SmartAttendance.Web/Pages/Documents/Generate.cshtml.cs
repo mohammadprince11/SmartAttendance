@@ -66,7 +66,9 @@ public class GenerateModel : PageModel
         var (_, html, unresolved) = await DocumentTemplateStore.GenerateAsync(
             _db, template, employeeId, User.Identity?.Name, Notes, IssuedOn, persist: false, fileUrl: _protectedFiles.BuildUrl);
 
-        PreviewHtml = html;
+        // نفس تنقية طريق العرض (View.SafeBody): المعاينة تعرض ناتج القالب خاماً،
+        // ونصّ القالب يكتبه HR وقيَم الرموز من بيانات الموظف — فبلا تنقية تصبح XSS.
+        PreviewHtml = DocumentHtmlSanitizer.Sanitize(html);
         PreviewUnresolved = unresolved;
         PreviewEmployeeName = SelectedEmployeeName;
 

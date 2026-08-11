@@ -9,7 +9,7 @@
         l.EmployeeId, l.EmployeeNo, l.EmployeeName, l.Department, l.Position,
         l.BasicSalary, l.TotalAllowances, l.GrossSalary,
         l.TaxAmount, l.GosiEmployee, l.GosiCompany, l.OtherDeductions,
-        l.TotalDeductions, l.NetSalary, l.EmployerCost, l.WorkDays, l.AbsentDays,
+        l.TotalDeductions, l.NetSalary, l.EmployerCost, l.WorkDays, l.AbsentDays, l.DaysBasis,
         l.AttendanceBase, l.AttendanceFactor, l.TaxBase, l.TaxBaseSource, l.GosiBase, l.GosiBaseSource,
         Earnings = l.Earnings.Select(c => new { c.ItemName, c.Amount }),
         Deductions = l.Deductions.Select(c => new { c.ItemName, c.Amount })
@@ -141,7 +141,8 @@
                         <td class="pd-n">@l.GosiEmployee.ToString("#,0.##")</td>
                         <td class="pd-n">@l.OtherDeductions.ToString("#,0.##")</td>
                         <td class="pd-n pd-net">@l.NetSalary.ToString("#,0.##")</td>
-                        <td class="pd-n">@(l.WorkDays - l.AbsentDays)/@l.WorkDays</td>
+                        @{ var basis = l.DaysBasis > 0 ? l.DaysBasis : l.WorkDays; }
+                        <td class="pd-n">@(basis > 0 ? (int)Math.Round(basis * (l.AttendanceFactor == 0 ? 1m : l.AttendanceFactor), MidpointRounding.AwayFromZero) : 0)/@basis</td>
                         <td><button type="button" class="pd-btn ghost" onclick="event.stopPropagation();pdSlip(@l.EmployeeId)">قسيمة</button></td>
                     </tr>
                 }
@@ -247,8 +248,9 @@
                   // «0 / 0» كانت تعني «لا بيانات حضور» وتُدفع كاملاً بلا تمييز عن الدوام
                   // الكامل. الحالة تُعلَن الآن نصّاً بالقسيمة نفسها لا تُترك للتخمين.
                   (l.WorkDays > 0
-                    ? '<div><span>أيام العمل</span> <b>' + (l.WorkDays - l.AbsentDays) + ' / ' + l.WorkDays + '</b></div>' +
-                      '<div><span>أيام الغياب</span> <b>' + l.AbsentDays + '</b></div>'
+                    ? (function(){ var basis = l.DaysBasis > 0 ? l.DaysBasis : l.WorkDays;
+                        return '<div><span>أيام مدفوعة (مكافئة)</span> <b>' + Math.round(basis * (Number(l.AttendanceFactor) || 1)) + ' / ' + basis + '</b></div>' +
+                      '<div><span>أيام الغياب</span> <b>' + l.AbsentDays + '</b></div>'; })()
                     : '<div style="grid-column:1/-1"><span>الحضور</span> <b style="color:#f59e0b">بلا بيانات حضور لهذا الشهر — دُفع الأساسي كاملاً</b></div>') +
                 '</div>' +
                 '<div class="pd-slip-cols">' +
@@ -284,5 +286,11 @@
             document.getElementById('pd-backdrop').classList.remove('open');
         }
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') pdClose(); });
+
+        // القدوم من «استعلام القسائم» (?emp=): افتح قسيمة ذلك الموظف تحديداً تلقائياً.
+        (function () {
+            var emp = parseInt(new URLSearchParams(location.search).get('emp') || '0', 10);
+            if (emp > 0 && typeof pdSlip === 'function') pdSlip(emp);
+        })();
     </script>
 }

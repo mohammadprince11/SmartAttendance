@@ -1,13 +1,11 @@
 package com.zynora.portal;
 
 import android.app.Activity;
-import android.net.http.SslError;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
-import android.webkit.SslErrorHandler;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -41,18 +39,18 @@ public class MainActivity extends Activity {
         s.setUseWideViewPort(true);
         s.setSupportZoom(false);
         s.setMediaPlaybackRequiresUserGesture(false);
-        s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        // الأصل HTTPS بالكامل — لا نسمح بأي محتوى مختلط (HTTP داخل HTTPS).
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
 
         web.setWebChromeClient(new WebChromeClient());
         web.setWebViewClient(new WebViewClient() {
-            // شهادة الخادم المحلي موقّعة ذاتياً — نتابع (استخدام داخلي على الشبكة المحلية).
-            @Override
-            public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-                handler.proceed();
-            }
+            // ملاحظة أمنية: أُزيل تجاوز onReceivedSslError الذي كان يستدعي
+            // handler.proceed() — فقد كان يقبل **أي** شهادة فاسدة على أي نطاق (MITM
+            // مفتوح). التحقق الآن افتراضيّ. الشهادة المحلية الموقّعة ذاتياً — إن لزمت —
+            // تُوثَّق عبر network_security_config (trust-anchor للمستخدم) لا بتجاوز عامّ.
 
             // أبقِ التنقّل داخل التطبيق (لا يفتح متصفحاً خارجياً).
             @Override

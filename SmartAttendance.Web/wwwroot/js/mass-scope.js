@@ -21,15 +21,37 @@ function massEmpToggle(cb) { var l = cb.closest('.mass-emp'); if (l) l.classList
 function massBuildEmps() {
     var list = document.getElementById('mass-emplist'); if (!list) return;
     var emps = window.MASS_EMP || [];
-    list.innerHTML = emps.map(function (e) {
-        var key = ((e.No || '') + ' ' + (e.Name || '')).toLowerCase();
-        var initial = ((e.Name || '؟').trim().charAt(0)) || '؟';
-        return '<label class="mass-emp" data-s="' + key + '">'
-            + '<input type="checkbox" name="MassEmployeeIds" value="' + e.Id + '" onchange="massEmpToggle(this)" />'
-            + '<span class="av">' + initial + '</span>'
-            + '<span class="nm">' + (e.Name || '') + '</span>'
-            + '<span class="cd">' + (e.No || '') + '</span></label>';
-    }).join('');
+    // بناء DOM آمن: اسم/رقم الموظف بيانات مستخدم — حقنها بـinnerHTML كان DOM XSS.
+    list.textContent = '';
+    emps.forEach(function (e) {
+        var label = document.createElement('label');
+        label.className = 'mass-emp';
+        label.setAttribute('data-s', ((e.No || '') + ' ' + (e.Name || '')).toLowerCase());
+
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.name = 'MassEmployeeIds';
+        cb.value = e.Id;
+        cb.addEventListener('change', function () { massEmpToggle(cb); });
+
+        var av = document.createElement('span');
+        av.className = 'av';
+        av.textContent = ((e.Name || '؟').trim().charAt(0)) || '؟';
+
+        var nm = document.createElement('span');
+        nm.className = 'nm';
+        nm.textContent = e.Name || '';
+
+        var cd = document.createElement('span');
+        cd.className = 'cd';
+        cd.textContent = e.No || '';
+
+        label.appendChild(cb);
+        label.appendChild(av);
+        label.appendChild(nm);
+        label.appendChild(cd);
+        list.appendChild(label);
+    });
 }
 function massRenderEmps() {
     var box = document.getElementById('mass-empsearch');

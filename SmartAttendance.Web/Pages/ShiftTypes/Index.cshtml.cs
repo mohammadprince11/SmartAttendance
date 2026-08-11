@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.ShiftTypes;
 
@@ -14,10 +15,12 @@ namespace SmartAttendance.Web.Pages.ShiftTypes;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _scopeProvider;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(ApplicationDbContext dbContext, ICompanyScopeProvider scopeProvider)
     {
         _dbContext = dbContext;
+        _scopeProvider = scopeProvider;
     }
 
     public List<ShiftTypeStore.ShiftType> Shifts { get; set; } = new();
@@ -31,7 +34,8 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        Shifts = await ShiftTypeStore.ListAsync(_dbContext);
+        // العرض محصورٌ بنطاق المستخدم: المشترك (CompanyId NULL) + ما يخصّ شركاته.
+        Shifts = await ShiftTypeStore.ListInScopeAsync(_dbContext, await _scopeProvider.GetAsync());
         await LoadLookupsAsync();
     }
 
@@ -69,6 +73,16 @@ public class IndexModel : PageModel
         {
             TempData["SuccessMessage"] = "المناوبة البديلة يجب أن تختلف عن القديمة.";
             return RedirectToPage();
+        }
+
+        // ⚠️ مسار كتابة كامل الأثر: يؤرشف نوعاً ويرحّل خلايا روستر وإسنادات. المعرّفان
+        // من نموذج المتصفّح — بلا هذا الحارس يؤرشف مستخدم شركةٍ مناوبةَ شركةٍ أخرى
+        // ويعيد توجيه جداولها. NotFound لا Forbid كي لا تُكشف وجوديّة الصفّ.
+        var replaceScope = await _scopeProvider.GetAsync();
+        if (!await ConfigTenantScope.AreAllInScopeAsync(
+                _dbContext, ConfigTenantScope.ShiftTypes, new[] { oldId, newId }, replaceScope))
+        {
+            return NotFound();
         }
 
         var (cells, assignments) = await ShiftTypeStore.ReplaceAndArchiveAsync(
@@ -182,13 +196,37 @@ public class IndexModel : PageModel
             });
         }
 
-        await ShiftTypeStore.SaveAsync(_dbContext, shift);
-        TempData["SuccessMessage"] = shift.Id > 0 ? "تم تحديث المناوبة." : "تمت إضافة المناوبة.";
+        var scope = await _scopeProvider.GetAsync();
+
+        // تعديل نوعٍ قائم: يجب أن يكون داخل النطاق — وإلا فمعرّفٌ من متصفّح يعدّل
+        // تهيئة شركة أخرى. NotFound لا Forbid كي لا تُكشف وجوديّة الصفّ.
+        var isUpdate = shift.Id > 0;
+        if (isUpdate && !await ShiftTypeStore.IsInScopeAsync(_dbContext, shift.Id, scope))
+        {
+            return NotFound();
+        }
+
+        // المعرّف من المتجر لا من النموذج: `shift.Id` يبقى 0 للجديد، فتفشل النسبة بصمت.
+        var savedId = await ShiftTypeStore.SaveAsync(_dbContext, shift);
+
+        // الجديد يُنسب لشركة منشئه فينعزل؛ غير المقيَّد يُنشئ تهيئةً مشتركة كالسابق.
+        if (!isUpdate)
+        {
+            await ShiftTypeStore.AssignCompanyAsync(
+                _dbContext, savedId, ConfigTenantScope.OwningCompany(scope));
+        }
+
+        TempData["SuccessMessage"] = isUpdate ? "تم تحديث المناوبة." : "تمت إضافة المناوبة.";
         return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
+        if (!await ShiftTypeStore.IsInScopeAsync(_dbContext, id, await _scopeProvider.GetAsync()))
+        {
+            return NotFound();
+        }
+
         await ShiftTypeStore.DeleteAsync(_dbContext, id);
         TempData["SuccessMessage"] = "تم حذف المناوبة.";
         return RedirectToPage();

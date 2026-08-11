@@ -158,9 +158,13 @@ public class IndexModel : PageModel
         var (year, month) = Period;
         Month ??= $"{year:0000}-{month:00}";
 
+        // القاموس يبقى **كاملاً**: أسماء المناوبات تُعرض لصفوفٍ محتسبة سلفاً، وحصره
+        // يُظهر «—» مكان اسم مناوبة موظفٍ يخصّني. المنتقي وحده يُحصر بالنطاق.
         var shifts = await ShiftTypeStore.ListAsync(_dbContext);
         _allShifts = shifts.ToDictionary(shift => shift.Id);
-        Shifts = shifts.Where(s => s.IsActive).ToList();
+        Shifts = (await ShiftTypeStore.ListInScopeAsync(
+                _dbContext, await _companyScope.GetAsync(HttpContext.RequestAborted)))
+            .Where(s => s.IsActive).ToList();
 
         await LoadRequestCatalogAsync();
 
@@ -252,6 +256,13 @@ public class IndexModel : PageModel
             ToTime: Request.Form["ReqToTime"].ToString(),
             Reason: Request.Form["ReqReason"].ToString());
 
+        // مناوبة الطلب مرجعٌ من النموذج: تُتحقَّق قبل الكتابة (0 = لا مناوبة بالطلب).
+        if (options.ShiftTypeId > 0 && !await ShiftTypeStore.IsInScopeAsync(
+                _dbContext, options.ShiftTypeId, await _companyScope.GetAsync(HttpContext.RequestAborted)))
+        {
+            return NotFound();
+        }
+
         var outcome = await BulkRequestStore.SubmitAsync(
             _dbContext, options, targets, User.Identity?.Name ?? "hr");
 
@@ -308,6 +319,15 @@ public class IndexModel : PageModel
         // وحدهم. إجبار الاختيار كان يوهم أن التحليل يجري «على مناوبة» واحدة — وهو
         // لا يفعل: يقرأ التجاوز ثم الروستر ثم التعيين ثم الاستحقاق قبلها.
         var autoShift = shiftTypeId <= 0;
+
+        // المناوبة المختارة تدخل الاحتساب كاحتياطٍ لغير المسنَدين — فمن نطاقي وحده.
+        // الافتراضية المحسومة بالخادم لا تُحرَس: ليست مدخلاً من المتصفّح.
+        if (!autoShift && !await ShiftTypeStore.IsInScopeAsync(
+                _dbContext, shiftTypeId, await _companyScope.GetAsync()))
+        {
+            return NotFound();
+        }
+
         if (autoShift) shiftTypeId = await DayAttendanceStore.ResolveDefaultShiftAsync(_dbContext);
 
         // الفحص المسبق يقول **لماذا** لم يُحلَّل شيء. بدونه كان المحرّك يعيد صفراً

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.ShiftRules;
 
@@ -13,10 +14,12 @@ namespace SmartAttendance.Web.Pages.ShiftRules;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _scopeProvider;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(ApplicationDbContext dbContext, ICompanyScopeProvider scopeProvider)
     {
         _dbContext = dbContext;
+        _scopeProvider = scopeProvider;
     }
 
     public List<ShiftRuleStore.ShiftRule> Rules { get; set; } = new();
@@ -28,8 +31,15 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        Rules = await ShiftRuleStore.ListAsync(_dbContext);
-        Shifts = (await ShiftTypeStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
+        // العرض محصورٌ بالنطاق (المشترك + شركات المستخدم) — لا الاحتساب.
+        var scope = await _scopeProvider.GetAsync();
+        var allowedRuleIds = await ConfigTenantScope.AllowedIdsAsync(
+            _dbContext, ConfigTenantScope.ShiftRules, scope);
+
+        Rules = (await ShiftRuleStore.ListAsync(_dbContext))
+            .Where(rule => scope.IsUnrestricted || allowedRuleIds.Contains(rule.Id))
+            .ToList();
+        Shifts = (await ShiftTypeStore.ListInScopeAsync(_dbContext, scope)).Where(s => s.IsActive).ToList();
         Semantics = (await PunchSemanticStore.ListAsync(_dbContext)).Where(s => s.IsActive).ToList();
         CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_dbContext);
     }
@@ -71,13 +81,37 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        await ShiftRuleStore.SaveAsync(_dbContext, rule);
-        TempData["SuccessMessage"] = rule.Id > 0 ? "تم تحديث القاعدة." : "تمت إضافة القاعدة.";
+        var scope = await _scopeProvider.GetAsync();
+        var isUpdate = rule.Id > 0;
+
+        // معرّفٌ من المتصفّح لا يُوثَق: تعديل قاعدة خارج النطاق = تهيئة شركة أخرى.
+        if (isUpdate && !await ConfigTenantScope.IsInScopeAsync(
+                _dbContext, ConfigTenantScope.ShiftRules, rule.Id, scope))
+        {
+            return NotFound();
+        }
+
+        // المعرّف من المتجر لا من النموذج: الإدراج يولّده، وبدونه تفشل النسبة بصمت.
+        var savedId = await ShiftRuleStore.SaveAsync(_dbContext, rule);
+
+        if (!isUpdate)
+        {
+            await ConfigTenantScope.AssignCompanyAsync(
+                _dbContext, ConfigTenantScope.ShiftRules, savedId, ConfigTenantScope.OwningCompany(scope));
+        }
+
+        TempData["SuccessMessage"] = isUpdate ? "تم تحديث القاعدة." : "تمت إضافة القاعدة.";
         return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
+        if (!await ConfigTenantScope.IsInScopeAsync(
+                _dbContext, ConfigTenantScope.ShiftRules, id, await _scopeProvider.GetAsync()))
+        {
+            return NotFound();
+        }
+
         await ShiftRuleStore.DeleteAsync(_dbContext, id);
         TempData["SuccessMessage"] = "تم حذف القاعدة.";
         return RedirectToPage();

@@ -2,16 +2,21 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.SelfServices;
 
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(
+        ApplicationDbContext dbContext,
+        ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty]
@@ -35,6 +40,15 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostCreateAsync()
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
+
+        // لا نعتمد EmployeeId القادم من النموذج بلا فحص: لا يُنشأ طلبٌ إلا لموظفٍ ضمن
+        // شركات المستخدم، وإلا كان حقنَ بياناتٍ (وسريان موافقات) على موظف شركةٍ أخرى.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (!await EmployeeCompanyGuard.CanAccessEmployeeAsync(
+                _dbContext, Input.EmployeeId, scope, HttpContext.RequestAborted))
+        {
+            return NotFound();
+        }
 
         var requestId = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,

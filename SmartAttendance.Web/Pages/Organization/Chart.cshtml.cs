@@ -3,16 +3,21 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Organization;
 
 public class ChartModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public ChartModel(ApplicationDbContext dbContext)
+    public ChartModel(
+        ApplicationDbContext dbContext,
+        ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -33,13 +38,20 @@ public class ChartModel : PageModel
 
     public async Task OnGetAsync()
     {
-        CompanyOptions = await _dbContext.Companies
+        // النطاق يُطبَّق قبل بناء أي مُنتقٍ: القائمة المعروضة هي المسموحة فقط، فلا
+        // يستطيع دورٌ مقيَّد اختيار شركة أخرى — و`Resolve` يرفض أيضاً أي CompanyId
+        // مُمرَّر بالرابط ليس ضمنها فيسقط لأول شركةٍ مسموحة لا لهيكل شركةٍ أجنبية.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+
+        CompanyOptions = (await _dbContext.Companies
             .AsNoTracking()
             .Where(x => !x.IsDeleted && x.IsActive)
             .OrderBy(x => x.Name)
             .ThenBy(x => x.Code)
             .Select(x => new CompanyOption { Id = x.Id, Name = x.Name })
-            .ToListAsync();
+            .ToListAsync())
+            .Where(x => scope.Allows(x.Id))
+            .ToList();
 
         CompanyId = CompanySelectionContext.Resolve(
             HttpContext,

@@ -45,16 +45,36 @@ cp build/base.apk build/app-unsigned.apk
 echo "== 6) zipalign =="
 "$ZIPALIGN" -f -p 4 build/app-unsigned.apk build/app-aligned.apk
 
-echo "== 7) keystore (debug) =="
-if [ ! -f build/debug.keystore ]; then
-  "$KEYTOOL" -genkeypair -keystore build/debug.keystore -alias key -keyalg RSA \
-    -keysize 2048 -validity 10000 -storepass android -keypass android \
-    -dname "CN=Zynora Portal, O=Zynora, C=IQ" >/dev/null 2>&1
+echo "== 7) signing config =="
+# توقيع الإصدار من سرٍّ خارجيّ فقط — لا keystore ولا كلمات مرور بالمستودع.
+# اضبط هذه المتغيّرات (بيئة/CI secret) لبناء إصدارٍ موقَّع للنشر:
+#   ZYNORA_ANDROID_KEYSTORE    مسار ملف .keystore/.jks (خارج الشجرة)
+#   ZYNORA_ANDROID_KS_PASS     كلمة مرور المخزن
+#   ZYNORA_ANDROID_KEY_ALIAS   اسم المفتاح
+#   ZYNORA_ANDROID_KEY_PASS    كلمة مرور المفتاح
+if [ -n "$ZYNORA_ANDROID_KEYSTORE" ]; then
+  if [ ! -f "$ZYNORA_ANDROID_KEYSTORE" ]; then
+    echo "خطأ: ZYNORA_ANDROID_KEYSTORE مضبوط لكن الملف غير موجود: $ZYNORA_ANDROID_KEYSTORE" >&2
+    exit 1
+  fi
+  echo "   توقيع إصدار بمخزن خارجيّ."
+  "$APKSIGNER" sign \
+    --ks "$ZYNORA_ANDROID_KEYSTORE" \
+    --ks-pass "env:ZYNORA_ANDROID_KS_PASS" \
+    --key-pass "env:ZYNORA_ANDROID_KEY_PASS" \
+    --ks-key-alias "$ZYNORA_ANDROID_KEY_ALIAS" \
+    --out build/ZynoraPortal.apk build/app-aligned.apk
+else
+  # لا سرّ إصدار ⟹ بناء تطوير محلّيّ فقط بمخزن debug مؤقّت (لا يُنشَر أبداً).
+  echo "   ⚠️  تحذير: لا ZYNORA_ANDROID_KEYSTORE — توقيع DEBUG (تطوير فقط، **لا تنشر**)." >&2
+  if [ ! -f build/debug.keystore ]; then
+    "$KEYTOOL" -genkeypair -keystore build/debug.keystore -alias key -keyalg RSA \
+      -keysize 2048 -validity 10000 -storepass android -keypass android \
+      -dname "CN=Zynora Portal (DEBUG), O=Zynora, C=IQ" >/dev/null 2>&1
+  fi
+  "$APKSIGNER" sign --ks build/debug.keystore --ks-pass pass:android --key-pass pass:android \
+    --out build/ZynoraPortal.apk build/app-aligned.apk
 fi
-
-echo "== 8) apksigner sign =="
-"$APKSIGNER" sign --ks build/debug.keystore --ks-pass pass:android --key-pass pass:android \
-  --out build/ZynoraPortal.apk build/app-aligned.apk
 
 echo "== DONE =="
 ls -la build/ZynoraPortal.apk

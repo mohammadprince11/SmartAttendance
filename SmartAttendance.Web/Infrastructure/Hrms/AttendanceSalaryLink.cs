@@ -62,8 +62,13 @@ public static class AttendanceSalaryLink
     /// سياسة التنسيب كاملةً. <paramref name="AbsenceDeductionDays"/> = 1 و
     /// <paramref name="AllowNegative"/> = false يعيدان سلوك ما قبل هذا الملف حرفياً.
     /// </summary>
+    // مقام التنسيب (MonthlyDivisorDays) لم يعد إعداداً منفصلاً: يأتي من سياسة الغلق
+    // من نوع WorkingDays (PayrollCutoffType.WorkingDays) — «ماكو شي ثابت، كلها سياسة».
     public sealed record Policy(
-        string Mode, decimal AbsenceDeductionDays, bool AllowNegative, decimal StandardDailyHours = 8m)
+        string Mode, decimal AbsenceDeductionDays, bool AllowNegative, decimal StandardDailyHours = 8m,
+        // مقام التنسيب الشهري. 0 ⟹ استعمل أيام الدوام (السلوك القديم حرفياً).
+        // القيمة الموجبة (30 أو أيام الفترة) تجعل أيام الراحة/العطل مدفوعةً والغياب ÷ المقام.
+        int MonthlyDivisorDays = 0)
     {
         public static Policy Default { get; } = new(Lenient, 1m, false);
 
@@ -73,7 +78,8 @@ public static class AttendanceSalaryLink
             // معامل سالب يقلب الخصم مكافأةً — يعود ليوم-بيوم لا لصفر.
             AbsenceDeductionDays = AbsenceDeductionDays < 0m ? 1m : AbsenceDeductionDays,
             // ساعات غير موجبة تجعل القسمة على المتوقّع مستحيلة — تعود لـ8.
-            StandardDailyHours = StandardDailyHours > 0m ? StandardDailyHours : 8m
+            StandardDailyHours = StandardDailyHours > 0m ? StandardDailyHours : 8m,
+            MonthlyDivisorDays = MonthlyDivisorDays < 0 ? 0 : MonthlyDivisorDays
         };
     }
 
@@ -109,7 +115,10 @@ public static class AttendanceSalaryLink
     /// كلّه فيصير الصافي سالباً، وهو **سلوك مقصود** حين يُفعَّل لا خطأ حسابي.
     /// </summary>
     public static Decision Evaluate(
-        Policy policy, int workDays, int presentDays, int absentDays, decimal workedHours)
+        Policy policy, int workDays, int presentDays, int absentDays, decimal workedHours,
+        // أيام تقويمية قبل تاريخ التعيين/إعادة التعيين ضمن الشهر — غير مدفوعة.
+        // 0 ⟹ موظفٌ كامل الشهر (السلوك القديم). تُطبَّق مع المقام التقويمي فقط.
+        int preEmploymentUnpaidDays = 0)
     {
         var p = policy.Normalized();
 
@@ -125,34 +134,51 @@ public static class AttendanceSalaryLink
         var extraPenaltyDays = absentDays * (p.AbsenceDeductionDays - 1m);
         var expectedHours = workDays * p.StandardDailyHours;
 
-        decimal earnedRatio;
+        // أيام غير المدفوعة حسب النمط — مُوحَّدة كي يصير المقام قابلاً للتبديل:
+        //   بالساعات   ⟶ نقص الساعات معبَّراً عنه بأيام (المتوقّع − الفعلي) ÷ ساعات اليوم
+        //   أيام الحضور ⟶ أيام الدوام التي لم يُحضَر فيها
+        //   متساهل/صارم ⟶ أيام الغياب المسجّلة
+        decimal unpaidDays;
         string? note;
-
         if (p.Mode == Hours)
         {
-            earnedRatio = workedHours / expectedHours;
+            unpaidDays = workDays - (expectedHours > 0m ? workedHours / p.StandardDailyHours : 0m);
             note = $"تنسيب بالساعات: {workedHours:0.##} من {expectedHours:0.##} ساعة";
         }
         else if (p.Mode == PresentDays)
         {
-            earnedRatio = (decimal)presentDays / workDays;
+            unpaidDays = workDays - presentDays;
             note = $"تنسيب بأيام الحضور: {presentDays} من {workDays} يوم";
         }
         else
         {
-            earnedRatio = (decimal)(workDays - absentDays) / workDays;
+            unpaidDays = absentDays;
             note = null;
         }
 
-        var factor = earnedRatio - (extraPenaltyDays / workDays);
+        // المقام: 0 ⟹ أيام الدوام (السلوك القديم حرفياً)؛ قيمةٌ موجبة ⟹ ثابت 30 أو
+        // أيام الفترة — فأيام الراحة/العطل تصير مدفوعة والغياب يُخصم بنسبتها للمقام.
+        var divisor = p.MonthlyDivisorDays > 0 ? (decimal)p.MonthlyDivisorDays : workDays;
+        // preEmploymentUnpaidDays موجب ⟹ أيام قبل التعيين غير مدفوعة (المُعيَّن يوم 5 ⟹
+        // 4 أيام ⟹ 26/30). سالب ⟹ **أثر رجعي**: أيام دورةٍ مُرحَّلة تُدفع الآن، فالمعامل
+        // يتجاوز 1 (مثلاً 26/7 مُرحَّل ⟹ سبتمبر يدفع يوليو المتبقّي + أغسطس).
+        var factor = 1m - ((unpaidDays + extraPenaltyDays + preEmploymentUnpaidDays) / divisor);
+
+        if (preEmploymentUnpaidDays > 0)
+            note = (note == null ? "" : note + " · ") +
+                   $"تنسيب تعيين: {preEmploymentUnpaidDays} يوم قبل المباشرة غير مدفوع";
+        else if (preEmploymentUnpaidDays < 0)
+            note = (note == null ? "" : note + " · ") +
+                   $"أثر رجعي (تعيين مُرحَّل): {-preEmploymentUnpaidDays} يوم إضافيّة";
 
         if (extraPenaltyDays > 0m)
             note = (note == null ? "" : note + " · ") +
                    $"خصم غياب مضاعف: {absentDays} يوم × {p.AbsenceDeductionDays:0.##}";
 
-        return new Decision(true, Clamp(factor, p.AllowNegative), note);
+        // السقف 1 يُرفع فقط للأثر الرجعي (preEmploymentUnpaidDays < 0)، وإلا يبقى ≤ 1.
+        return new Decision(true, Clamp(factor, p.AllowNegative, allowAboveOne: preEmploymentUnpaidDays < 0), note);
     }
 
-    private static decimal Clamp(decimal value, bool allowNegative) =>
-        value > 1m ? 1m : value < 0m && !allowNegative ? 0m : value;
+    private static decimal Clamp(decimal value, bool allowNegative, bool allowAboveOne = false) =>
+        value > 1m && !allowAboveOne ? 1m : value < 0m && !allowNegative ? 0m : value;
 }

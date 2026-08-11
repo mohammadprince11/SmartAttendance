@@ -1,0 +1,404 @@
+@page "/Payroll/PayslipInquiry"
+@model SmartAttendance.Web.Pages.Payroll.PayslipInquiryModel
+@{
+    ViewData["Title"] = "استعلام قسائم الراتب";
+    var months = new[] { "يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر" };
+    var years = Enumerable.Range(DateTime.Today.Year - 5, 7).Reverse().ToList();
+}
+
+<style id="payslip-page-styles">
+    .pq-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
+
+    /* شريط الفلترة الأفقي — نمط كيان */
+    .pq-bar { display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; padding:16px 18px;
+        border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    /* توحيد المنتقي المشترك مع حقول الشهر/السنة: تسمية أعلى الحقل بنفس النمط والارتفاع */
+    .pq-bar .zyep { display:flex; flex-direction:column; gap:5px; min-width:300px; margin:0; }
+    .pq-bar .zyep .zyep-label { font-size:11px !important; font-weight:900 !important; color:var(--sa-muted,#8FA8BC) !important; margin:0 !important; padding:0 !important; }
+    .pq-bar .zyep .zyep-box { min-height:38px; margin:0; }
+    .pq-bar .zyep .zyep-box input { min-height:38px; box-sizing:border-box; }
+    .pq-field { display:flex; flex-direction:column; gap:5px; }
+    .pq-field > span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); height:15px; line-height:15px; }
+    .pq-bar .zyep .zyep-label { height:15px; line-height:15px; }
+    .pq-bar select { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.28);
+        background:rgba(0,0,0,.16); color:inherit; padding:6px 12px; font-weight:900; font-size:13px; }
+    html[data-theme="light"] .pq-bar select { background:#fff; }
+    .pq-sm { max-width:150px; }
+    .pq-view { min-height:38px; align-self:flex-end; padding:8px 30px; border:0; border-radius:10px; cursor:pointer;
+        background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; font-size:14px; font-weight:1000; }
+    .pq-view:hover:not(:disabled) { filter:brightness(1.06); }
+    .pq-view:disabled { opacity:.45; cursor:not-allowed; background:linear-gradient(135deg,#6b7785,#565f6b); }
+    .pq-spacer { flex:1 1 auto; }
+
+    .pq-card { border:1px solid rgba(73,111,151,.22); border-radius:16px; overflow:hidden; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .pq-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:70px 20px; text-align:center; }
+    .pq-empty svg { width:78px; height:78px; opacity:.4; }
+    .pq-empty p { margin:0; font-size:16px; font-weight:1000; color:var(--sa-muted,#8FA8BC); }
+
+    .pq-sum { display:flex; gap:10px; flex-wrap:wrap; padding:14px 16px 0; }
+    .pq-sum .chip { font-size:12px; font-weight:900; padding:6px 12px; border-radius:999px; background:rgba(18,217,227,.1); color:#12D9E3; }
+    .pq-wrap { overflow-x:auto; }
+    .pq-table { width:100%; border-collapse:collapse; font-size:13px; min-width:820px; }
+    .pq-table th { text-align:start; white-space:nowrap; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .pq-table th { background:#f2f7fb; }
+    .pq-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); white-space:nowrap; }
+    .pq-table tbody tr:hover td { background:rgba(18,217,227,.04); }
+    .pq-num { direction:ltr; font-weight:900; text-align:start; unicode-bidi:plaintext; }
+    .pq-net { color:#4ade80; }
+    .pq-st { display:inline-block; font-size:11px; font-weight:900; padding:2px 9px; border-radius:999px; }
+    .st-Draft { background:rgba(143,168,188,.16); color:#8FA8BC; }
+    .st-Calculated { background:rgba(18,217,227,.14); color:#12D9E3; }
+    .st-Locked { background:rgba(250,204,21,.14); color:#facc15; }
+    .st-Issued { background:rgba(74,222,128,.14); color:#4ade80; }
+    .st-PayslipSent { background:rgba(167,139,250,.16); color:#a78bfa; }
+    .pq-viewbtn { min-height:29px; padding:4px 14px; border-radius:9px; border:1px solid rgba(73,111,151,.3); background:transparent; color:inherit; font-size:12px; font-weight:900; text-decoration:none; }
+    .pq-viewbtn:hover { background:rgba(18,217,227,.12); color:#12D9E3; }
+
+    /* القسيمة الكاملة (فورمة الراتب) — نظير كيان */
+    .ps { padding:20px; }
+    .ps-hdr { display:grid; grid-template-columns:repeat(3,1fr); gap:8px 22px; padding-bottom:16px; margin-bottom:16px; border-bottom:2px solid rgba(18,217,227,.4); }
+    .ps-hdr .f { font-size:12px; }
+    .ps-hdr .f span { color:var(--sa-muted,#8FA8BC); font-weight:800; display:block; margin-bottom:2px; }
+    .ps-hdr .f b { font-weight:1000; direction:ltr; unicode-bidi:plaintext; }
+    .ps-mon { margin-top:14px; }
+    .ps-mon > h3 { margin:0 0 8px; font-size:13px; font-weight:1000; color:#12D9E3; padding:8px 12px; background:rgba(18,217,227,.08); border-radius:8px; }
+    .ps-cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @@media (max-width:760px){ .ps-cols { grid-template-columns:1fr; } .ps-hdr { grid-template-columns:1fr 1fr; } }
+    .ps-box { border:1px solid rgba(73,111,151,.25); border-radius:10px; overflow:hidden; }
+    .ps-box table { width:100%; border-collapse:collapse; font-size:12px; }
+    .ps-box th { text-align:start; padding:8px 12px; font-weight:1000; color:#fff; }
+    .ps-box.inc th { background:#16a34a; } .ps-box.ded th { background:#dc2626; }
+    .ps-box td { padding:7px 12px; border-bottom:1px dashed rgba(143,168,188,.18); }
+    .ps-box .amt { direction:ltr; unicode-bidi:plaintext; font-weight:900; text-align:start; white-space:nowrap; }
+    .ps-box .days { color:var(--sa-muted,#8FA8BC); font-weight:900; text-align:center; width:56px; }
+    .ps-box tr.sum td { background:rgba(73,111,151,.1); font-weight:1000; }
+    .ps-box tr.net td { background:rgba(74,222,128,.12); color:#4ade80; font-weight:1000; }
+    .ps-words { margin-top:14px; padding:12px 16px; border-radius:10px; background:rgba(18,217,227,.06); font-size:13px; font-weight:900; }
+    .ps-prev { margin-top:16px; padding-top:12px; border-top:1px solid rgba(73,111,151,.2); font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:900; display:flex; gap:16px; flex-wrap:wrap; }
+    .ps-prev b { color:var(--sa-text,#DCEAF4); direction:ltr; unicode-bidi:plaintext; }
+    .ps-actions { display:flex; justify-content:center; padding:16px; border-top:1px solid rgba(73,111,151,.18); }
+    .ps-print { min-height:38px; padding:8px 30px; border-radius:10px; border:0; cursor:pointer; background:linear-gradient(135deg,#3b5b7c,#274056); color:#fff; font-size:14px; font-weight:1000; }
+    /* عناصر تظهر بالطباعة فقط — مخفيّة على الشاشة */
+    .ps-print-head, .ps-sign { display:none; }
+
+    @@media print {
+        @@page { size:A4 portrait; margin:12mm 14mm; }
+        /* إجبار المتصفّح على طباعة ألوان الخلفية (رؤوس الجداول الخضراء/الحمراء) */
+        * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+        /* اطبع القسيمة وحدها: أخفِ كل شيء ثم أظهر شجرة .ps فقط — مستقلّ تماماً عن
+           أسماء أصناف القوقعة (الشريط الجانبي/العلوي/الأزرار) مهما تغيّرت. */
+        /* 1) أخفِ كل شيء بصرياً ثم أظهر شجرة .ps فقط (مستقلّ عن أسماء القوقعة). */
+        body * { visibility:hidden !important; }
+        .ps, .ps * { visibility:visible !important; }
+        /* 2) اطوِ ارتفاع القوقعة فعلياً كي لا تدفع صفحة بيضاء ثانية. */
+        .nexora-sidebar, .nexora-topbar, .pq-bar, .ps-actions { display:none !important; }
+        html, body { height:auto !important; min-height:0 !important; overflow:visible !important;
+            margin:0 !important; background:#fff !important; color:#111 !important; }
+        /* أسبقية أعلى (html body …) لتجاوز خلفية ثيم الموقع الداكنة على .nexora-main
+           (radial-gradient + var(--zy-bg))؛ إلغاء صورة التدرّج صراحةً كي لا تُطبع سوداء. */
+        html body .nexora-shell, html body .nexora-main, html body .nexora-content,
+        html body .pq-page, html body .pq-card {
+            display:block !important; height:auto !important; min-height:0 !important;
+            overflow:visible !important; margin:0 !important; padding:0 !important;
+            border:none !important; box-shadow:none !important;
+            background:#fff !important; background-image:none !important; }
+        /* القسيمة نفسها بلا إطار خارجي؛ مستند الطباعة المعزول يوفّر الورقة البيضاء.
+           ارتفاع 250mm آمن ضمن المساحة القابلة للطباعة، وflex يدفع التوقيعات للأسفل. */
+        .ps { margin:0 !important; font-size:11pt; background:#fff !important; color:#111 !important;
+            border:0 !important; border-radius:0 !important;
+            padding:16pt 18pt !important; min-height:250mm !important;
+            display:flex !important; flex-direction:column !important;
+            position:relative !important; z-index:0 !important; }
+
+        /* ترويسة الطباعة: العلامة + عنوان القسيمة + الفترة */
+        .ps-print-head { display:flex !important; align-items:flex-end; justify-content:space-between;
+            border-bottom:2.5pt solid #0b2a45; padding-bottom:8pt; margin-bottom:14pt; }
+        .pph-brand { font-size:20pt; font-weight:900; color:#0b2a45; letter-spacing:.3px; }
+        .pph-brand span { color:#12A6B0; }
+        .pph-mid { text-align:center; }
+        .pph-title { font-size:15pt; font-weight:900; color:#0b2a45; }
+        .pph-period { font-size:10.5pt; font-weight:800; color:#444; margin-top:2pt; }
+        .pph-net { text-align:end; font-size:10pt; color:#444; }
+        .pph-net b { display:block; font-size:14pt; color:#15803d; direction:ltr; unicode-bidi:plaintext; }
+
+        /* بطاقة معلومات الموظف */
+        .ps-hdr { grid-template-columns:repeat(3,1fr) !important; gap:7pt 20pt !important;
+            border:1pt solid #b9c6d2 !important; border-radius:6pt; background:#f7fafc !important;
+            padding:11pt 13pt !important; margin-bottom:13pt !important; }
+        .ps-hdr .f { font-size:9.5pt !important; }
+        .ps-hdr .f span { color:#5a6672 !important; margin-bottom:1pt !important; }
+        .ps-hdr .f b { color:#111 !important; }
+
+        .ps-mon { margin-top:0 !important; }
+        .ps-mon > h3 { color:#0b2a45 !important; background:#e7f6f7 !important; border:1pt solid #cfe6e8 !important;
+            font-size:11pt !important; padding:6pt 10pt !important; }
+        .ps-cols { grid-template-columns:1fr 1fr !important; gap:12pt !important; break-inside:avoid; }
+        .ps-box { border:1pt solid #b9c6d2 !important; border-radius:6pt !important;
+            overflow:visible !important; break-inside:avoid; }
+        .ps-box table { font-size:10pt !important; }
+        .ps-box th { color:#fff !important; padding:6pt 10pt !important; }
+        .ps-box.inc th { background:#15803d !important; }
+        .ps-box.ded th { background:#b91c1c !important; }
+        .ps-box td { padding:5pt 10pt !important; border-bottom:1pt solid #e2e8ee !important; color:#111 !important; }
+        .ps-box .days { color:#5a6672 !important; }
+        .ps-box tr.sum td { background:#eef2f6 !important; font-weight:1000; }
+        .ps-box tr.net td { background:#e6f7ec !important; color:#15803d !important; }
+        .ps-words { background:#f2fbfc !important; border:1pt solid #cfe6e8 !important; color:#111 !important;
+            font-size:10.5pt !important; margin-top:12pt !important; break-inside:avoid; }
+        .ps-prev { color:#333 !important; border-top:1pt solid #b9c6d2 !important; margin-top:12pt !important; }
+        .ps-prev b { color:#111 !important; }
+
+        /* تذييل التوقيعات */
+        /* margin-top:auto يدفع سطر التوقيعات إلى قاع الإطار (يملأ ارتفاع الصفحة). */
+        .ps-sign { display:flex !important; justify-content:space-between; gap:20pt; margin-top:auto !important; padding-top:36pt; }
+        .ps-sign div { flex:1; font-size:9.5pt; color:#333; text-align:center;
+            border-top:1pt solid #99a7b3; padding-top:5pt; }
+    }
+</style>
+
+<section class="pq-page" dir="rtl">
+    <form method="get" class="pq-bar">
+        <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
+            Name = "EmployeeId",
+            Label = "اسم الموظف",
+            SelectedId = Model.EmployeeId ?? 0,
+            SelectedCode = Model.SelectedEmployeeCode,
+            SelectedName = Model.SelectedEmployeeName
+        })" />
+        <label class="pq-field">
+            <span>الفترة</span>
+            <select name="Month" class="pq-sm" required
+                    oninvalid="this.setCustomValidity('يرجى اختيار الفترة (الشهر) أولاً')" oninput="this.setCustomValidity('')">
+                <option value="" disabled hidden selected="@(!Model.Month.HasValue)">— اختر الشهر —</option>
+                @for (var m = 1; m <= 12; m++)
+                {
+                    <option value="@m" selected="@(Model.Month == m)">@months[m - 1] (@m)</option>
+                }
+            </select>
+        </label>
+        <label class="pq-field">
+            <span>سنة</span>
+            @{ var selYear = Model.Year ?? DateTime.Today.Year; }
+            <select name="Year" class="pq-sm">
+                @foreach (var y in years)
+                {
+                    <option value="@y" selected="@(selYear == y)">@y</option>
+                }
+            </select>
+        </label>
+        <div class="pq-spacer"></div>
+        <button type="submit" class="pq-view">عرض</button>
+    </form>
+
+    <div class="pq-card">
+        @if (Model.Current != null)
+        {
+            var c = Model.Current;
+            <div class="ps">
+                <div class="ps-print-head">
+                    <div class="pph-brand">ZYNORA <span>HR</span></div>
+                    <div class="pph-mid">
+                        <div class="pph-title">قسيمة راتب</div>
+                        <div class="pph-period">@Model.CurrentPeriodText</div>
+                    </div>
+                    <div class="pph-net">صافي الراتب<b>@c.NetSalary.ToString("#,0.##")</b></div>
+                </div>
+                <div class="ps-hdr">
+                    <div class="f"><span>رمز الموظف</span><b>@Model.SelectedEmployeeCode</b></div>
+                    <div class="f"><span>الاسم الكامل</span><b>@Model.SelectedEmployeeName</b></div>
+                    <div class="f"><span>المسمى الوظيفي</span><b>@(string.IsNullOrWhiteSpace(c.Position) ? "—" : c.Position)</b></div>
+                    <div class="f"><span>وحدة العمل</span><b>@(string.IsNullOrWhiteSpace(c.Department) ? "—" : c.Department)</b></div>
+                    <div class="f"><span>فترة الراتب</span><b>@Model.CurrentPeriodText</b></div>
+                    <div class="f"><span>الراتب الأساسي</span><b>@c.BasicSalary.ToString("#,0.##")</b></div>
+                    <div class="f"><span>العلاوات</span><b>@c.TotalAllowances.ToString("#,0.##")</b></div>
+                    <div class="f"><span>الراتب الكلي</span><b>@c.GrossSalary.ToString("#,0.##")</b></div>
+                    @{
+                        // أساس أيام الاستحقاق: 30/الفترة حين توجد سياسة WorkingDays (العطل مدفوعة)،
+                        // وإلا أيام الحضور (السلوك القديم). القسيمة تعرض أيام الاستحقاق لا الحضور.
+                        var psBasis = c.DaysBasis > 0 ? c.DaysBasis : c.WorkDays;
+                        var psPaid = psBasis > 0
+                            ? (int)Math.Round(psBasis * (c.AttendanceFactor == 0 ? 1m : c.AttendanceFactor), MidpointRounding.AwayFromZero)
+                            : 0;
+                    }
+                    <div class="f"><span>أيام العمل / الغياب</span><b>@psBasis / @c.AbsentDays</b></div>
+                </div>
+
+                <div class="ps-mon">
+                    <h3>الشهر الحالي — @Model.CurrentPeriodText</h3>
+                    <div class="ps-cols">
+                        <div class="ps-box inc">
+                            <table>
+                                <thead><tr><th>الدخل</th><th style="width:56px">أيام</th><th style="text-align:end">المبلغ</th></tr></thead>
+                                <tbody>
+                                    <tr><td>الراتب المستحق</td><td class="days">@psPaid</td><td class="amt" style="text-align:end">@c.BasicSalary.ToString("#,0.##")</td></tr>
+                                    @foreach (var e in c.Earnings)
+                                    {
+                                        <tr><td>@e.ItemName</td><td class="days"></td><td class="amt" style="text-align:end">@e.Amount.ToString("#,0.##")</td></tr>
+                                    }
+                                    <tr class="sum"><td>مجموع الدخل</td><td class="days"></td><td class="amt" style="text-align:end">@c.GrossSalary.ToString("#,0.##")</td></tr>
+                                    <tr class="net"><td>صافي الراتب</td><td class="days"></td><td class="amt" style="text-align:end">@c.NetSalary.ToString("#,0.##")</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="ps-box ded">
+                            <table>
+                                <thead><tr><th>الإقتطاعات</th><th style="width:56px">أيام</th><th style="text-align:end">المبلغ</th></tr></thead>
+                                <tbody>
+                                    @if (c.TaxAmount > 0)
+                                    {
+                                        <tr><td>ضريبة الدخل</td><td class="days"></td><td class="amt" style="text-align:end">@c.TaxAmount.ToString("#,0.##")</td></tr>
+                                    }
+                                    @if (c.GosiEmployee > 0)
+                                    {
+                                        <tr><td>الضمان الاجتماعي</td><td class="days"></td><td class="amt" style="text-align:end">@c.GosiEmployee.ToString("#,0.##")</td></tr>
+                                    }
+                                    @* الضريبة والضمان يُعرَضان أعلاه من الحقول الصريحة — نستثني
+                                       مكوّنيهما هنا كي لا يتكرّرا (المجموع أصلاً لا يضاعفهما). *@
+                                    @foreach (var d in c.Deductions.Where(d => d.Kind != "Tax" && d.Kind != "Gosi"))
+                                    {
+                                        <tr><td>@d.ItemName</td><td class="days">@(d.Kind == "Leave" && c.AbsentDays > 0 ? c.AbsentDays.ToString() : "")</td><td class="amt" style="text-align:end">@d.Amount.ToString("#,0.##")</td></tr>
+                                    }
+                                    <tr class="sum"><td>مجموع الاقتطاعات</td><td class="days"></td><td class="amt" style="text-align:end">@c.TotalDeductions.ToString("#,0.##")</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="ps-words">@Model.NetInWords فقط لا غير.</div>
+                </div>
+
+                @if (Model.Previous != null)
+                {
+                    <div class="ps-prev">
+                        <span>الشهر السابق (@Model.PreviousPeriodText):</span>
+                        <span>الإجمالي <b>@Model.Previous.Gross.ToString("#,0.##")</b></span>
+                        <span>الصافي <b>@Model.Previous.Net.ToString("#,0.##")</b></span>
+                    </div>
+                }
+
+                <div class="ps-sign">
+                    <div>توقيع الموظف</div>
+                    <div>المحاسب / الموارد البشرية</div>
+                    <div>الاعتماد</div>
+                </div>
+            </div>
+            <div class="ps-actions"><button type="button" class="ps-print" onclick="printPayslip()">🖨 طباعة</button></div>
+        }
+        else if (Model.EmployeeId is > 0 && Model.Payslips.Count > 0)
+        {
+            <div class="pq-sum">
+                <span class="chip">@Model.SelectedEmployeeCode — @Model.SelectedEmployeeName</span>
+                <span class="chip">@Model.Payslips.Count قسيمة</span>
+                <span class="chip">صافي تراكمي: @Model.Payslips.Sum(p => p.Net).ToString("#,0.##")</span>
+            </div>
+            <div class="pq-wrap">
+                <table class="pq-table">
+                    <thead>
+                        <tr>
+                            <th>الفترة</th><th>الدفعة</th><th>الحالة</th><th>الأساسي</th><th>العلاوات</th>
+                            <th>الإجمالي</th><th>الضريبة</th><th>الضمان</th><th>الصافي</th><th style="text-align:end">القسيمة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model.Payslips)
+                        {
+                            <tr>
+                                <td class="pq-num">@p.PeriodText</td>
+                                <td class="pq-num">@p.BatchNo</td>
+                                <td><span class="pq-st st-@p.Status">@p.StatusLabelText</span></td>
+                                <td class="pq-num">@p.Basic.ToString("#,0.##")</td>
+                                <td class="pq-num">@p.Allowances.ToString("#,0.##")</td>
+                                <td class="pq-num">@p.Gross.ToString("#,0.##")</td>
+                                <td class="pq-num">@p.Tax.ToString("#,0.##")</td>
+                                <td class="pq-num">@p.GosiEmployee.ToString("#,0.##")</td>
+                                <td class="pq-num pq-net">@p.Net.ToString("#,0.##")</td>
+                                <td style="text-align:end"><a class="pq-viewbtn" href="/Payroll/RunDetail?id=@p.RunId&emp=@Model.EmployeeId">عرض القسيمة</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="pq-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sa-muted,#8FA8BC)">
+                    <rect x="4" y="2.5" width="16" height="19" rx="2"></rect>
+                    <path d="M8 7h8M8 11h8M8 15h5"></path>
+                    <path d="M15.5 18.5l1.5 1.5 2.5-2.5"></path>
+                </svg>
+                <p>
+                    @(Model.EmployeeId is > 0
+                        ? $"لا قسائم لهذا الموظف {(Model.Month.HasValue ? months[Model.Month.Value - 1] + " " : "")}{(Model.Year.HasValue ? Model.Year.ToString() : "")}"
+                        : "حدد الموظف للإستعلام عن قسيمة الراتب")
+                </p>
+            </div>
+        }
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        // زرّ «عرض» مُعطَّل حتى يُختار الموظف **و** الشهر معاً.
+        (function () {
+            var bar = document.querySelector('.pq-bar');
+            if (!bar) return;
+            var btn = bar.querySelector('.pq-view');
+            var month = bar.querySelector('select[name="Month"]');
+            var empId = bar.querySelector('.zyep-id'); // الحقل المخفيّ لمعرّف الموظف
+            function sync() {
+                var ok = !!(empId && empId.value && month && month.value);
+                btn.disabled = !ok;
+            }
+            if (month) month.addEventListener('change', sync);
+            // المنتقي يضبط معرّف الموظف برمجياً (بلا حدث) ⟹ نفحص دورياً أيضاً.
+            setInterval(sync, 300);
+            sync();
+        })();
+
+        // نطبع القسيمة في مستند iframe مستقلّ لا يحتوي قوقعة الموقع أصلاً. هذا يمنع
+        // خلفيات وثيمات .nexora-main من الوصول إلى الورقة بدلاً من محاولة تغطيتها.
+        (function () {
+            window.printPayslip = function () {
+                var slip = document.querySelector('.ps');
+                var pageStyles = document.getElementById('payslip-page-styles');
+                if (!slip || !pageStyles) return;
+
+                var frame = document.createElement('iframe');
+                frame.setAttribute('title', 'قسيمة الراتب للطباعة');
+                frame.setAttribute('aria-hidden', 'true');
+                frame.style.cssText = 'position:fixed;top:0;left:-10000px;width:210mm;height:297mm;border:0;';
+                document.body.appendChild(frame);
+
+                var frameDoc = frame.contentDocument;
+                var frameWindow = frame.contentWindow;
+                if (!frameDoc || !frameWindow) {
+                    frame.remove();
+                    return;
+                }
+
+                frameDoc.open();
+                frameDoc.write('<!doctype html><html lang="ar" dir="rtl" data-theme="light"><head>' +
+                    '<meta charset="utf-8"><title>قسيمة راتب</title><style>' +
+                    'html,body{margin:0!important;min-height:0!important;background:#fff!important;color:#111!important;' +
+                    'font-family:"Tajawal","Segoe UI",Tahoma,Arial,sans-serif!important;}' +
+                    pageStyles.textContent + '</style></head><body>' + slip.outerHTML + '</body></html>');
+                frameDoc.close();
+
+                var cleaned = false;
+                function cleanup() {
+                    if (cleaned) return;
+                    cleaned = true;
+                    window.setTimeout(function () { frame.remove(); }, 0);
+                }
+
+                frameWindow.addEventListener('afterprint', cleanup, { once: true });
+                window.setTimeout(function () {
+                    frameWindow.focus();
+                    frameWindow.print();
+                }, 50);
+                // مخرج أمان إذا لم يطلق المتصفح afterprint بعد إلغاء المعاينة.
+                window.setTimeout(cleanup, 60000);
+            };
+        })();
+    </script>
+}

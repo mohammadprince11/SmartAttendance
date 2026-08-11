@@ -182,4 +182,105 @@ public class AttendanceSalaryLinkTests
         Assert.False(AttendanceSalaryLink.HasAttendanceData(0));
         Assert.True(AttendanceSalaryLink.HasAttendanceData(1));
     }
+
+    // ── مقام التنسيب الشهري (Fixed30 / أيام الفترة) — أيام الراحة/العطل مدفوعة ──
+
+    private static AttendanceSalaryLink.Decision EvalDiv(
+        string mode, int workDays, int presentDays, int absentDays, int divisor,
+        decimal workedHours = 0m, decimal absenceDays = 1m) =>
+        AttendanceSalaryLink.Evaluate(
+            new AttendanceSalaryLink.Policy(mode, absenceDays, false, 8m, divisor),
+            workDays, presentDays, absentDays, workedHours);
+
+    [Fact]
+    public void Fixed30_DeductsAbsenceOverThirty_NotOverWorkDays()
+    {
+        // بلاغ محمد: أساسي 400,000 نزل 369,230.77 لأن المقام كان 26. الشهري: غياب
+        // يومٍ يُخصم ÷30 لا ÷26، وأيام الراحة (30−26) مدفوعة.
+        var d = EvalDiv(AttendanceSalaryLink.Lenient, workDays: 26, presentDays: 25, absentDays: 1, divisor: 30);
+        Assert.Equal(29m / 30m, d.Factor);            // 400000×29/30 = 386,666.67 لا 369,230.77
+    }
+
+    [Fact]
+    public void Fixed30_ZeroAbsence_PaysFull_IncludingRestDays()
+    {
+        var d = EvalDiv(AttendanceSalaryLink.Lenient, workDays: 26, presentDays: 26, absentDays: 0, divisor: 30);
+        Assert.Equal(1m, d.Factor);                   // بلا غياب ⟹ الأساسي كاملاً رغم أيام الراحة
+    }
+
+    [Fact]
+    public void Divisor0_IsExactlyOldWorkDaysBehaviour()
+    {
+        // المقام الافتراضي (0) يجب أن يطابق المعادلة القديمة حرفياً لكل نمط.
+        Assert.Equal(24m / 26m,
+            EvalDiv(AttendanceSalaryLink.Lenient, 26, 24, 2, divisor: 0).Factor);
+        Assert.Equal(20m / 26m,
+            EvalDiv(AttendanceSalaryLink.PresentDays, 26, 20, 0, divisor: 0).Factor);
+        Assert.Equal(192m / 208m,
+            EvalDiv(AttendanceSalaryLink.Hours, 26, 0, 0, divisor: 0, workedHours: 192m).Factor);
+    }
+
+    [Fact]
+    public void Fixed30_PresentDaysMode_UnworkedWorkDaysOverThirty()
+    {
+        // نمط أيام الحضور بمقام 30: أيام الدوام غير المحضورة (26−24=2) تُخصم ÷30.
+        var d = EvalDiv(AttendanceSalaryLink.PresentDays, workDays: 26, presentDays: 24, absentDays: 0, divisor: 30);
+        Assert.Equal(28m / 30m, d.Factor);
+    }
+
+    // ── تنسيب المُعيَّن منتصف الشهر (أيام قبل التعيين غير مدفوعة) ──
+
+    [Fact]
+    public void MidMonthHire_Day5_Pays26Of30_WhenNoAbsence()
+    {
+        // تعيّن يوم 5 ⟹ 4 أيام قبل المباشرة (1..4) غير مدفوعة ⟹ 26/30 (اصطلاح «26 شاملاً»).
+        var d = AttendanceSalaryLink.Evaluate(
+            new AttendanceSalaryLink.Policy(AttendanceSalaryLink.Lenient, 1m, false, 8m, 30),
+            workDays: 22, presentDays: 22, absentDays: 0, workedHours: 0m, preEmploymentUnpaidDays: 4);
+        Assert.Equal(26m / 30m, d.Factor);           // 400000×26/30 = 346,666.67
+        Assert.Contains("تعيين", d.Note);
+    }
+
+    [Fact]
+    public void MidMonthHire_CombinesWithAbsence()
+    {
+        // 4 أيام قبل التعيين + غياب يوم ⟹ (4+1) غير مدفوع ⟹ 25/30.
+        var d = AttendanceSalaryLink.Evaluate(
+            new AttendanceSalaryLink.Policy(AttendanceSalaryLink.Lenient, 1m, false, 8m, 30),
+            workDays: 22, presentDays: 21, absentDays: 1, workedHours: 0m, preEmploymentUnpaidDays: 4);
+        Assert.Equal(25m / 30m, d.Factor);
+    }
+
+    [Fact]
+    public void NoPreEmploymentDays_IsUnchanged()
+    {
+        // موظف كامل الشهر (0 أيام قبل التعيين) ⟹ لا أثر — السلوك القديم.
+        var d = AttendanceSalaryLink.Evaluate(
+            new AttendanceSalaryLink.Policy(AttendanceSalaryLink.Lenient, 1m, false, 8m, 30),
+            workDays: 26, presentDays: 25, absentDays: 1, workedHours: 0m, preEmploymentUnpaidDays: 0);
+        Assert.Equal(29m / 30m, d.Factor);
+        Assert.Null(d.Note);
+    }
+
+    [Fact]
+    public void Retroactive_DeferredHire_FactorExceedsOne_NotClamped()
+    {
+        // مُرحَّل (عُيّن 26/7): 6 أيام دورة يوليو المُرحَّلة تُدفع الآن مع أغسطس كاملاً
+        // ⟹ 1 + 6/30 = 1.2 — لا يُقصّ عند 1 (أثر رجعي).
+        var d = AttendanceSalaryLink.Evaluate(
+            new AttendanceSalaryLink.Policy(AttendanceSalaryLink.Lenient, 1m, false, 8m, 30),
+            workDays: 22, presentDays: 22, absentDays: 0, workedHours: 0m, preEmploymentUnpaidDays: -6);
+        Assert.Equal(36m / 30m, d.Factor);
+        Assert.Contains("أثر رجعي", d.Note);
+    }
+
+    [Fact]
+    public void PositivePreHire_StillClampedAndUnpaid()
+    {
+        // موجب يبقى ضمن السقف 1 (لا يُرفع إلا للسالب/الرجعي).
+        var d = AttendanceSalaryLink.Evaluate(
+            new AttendanceSalaryLink.Policy(AttendanceSalaryLink.Lenient, 1m, false, 8m, 30),
+            workDays: 22, presentDays: 22, absentDays: 0, workedHours: 0m, preEmploymentUnpaidDays: 4);
+        Assert.Equal(26m / 30m, d.Factor);
+    }
 }

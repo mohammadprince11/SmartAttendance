@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.OrgStructures;
 
@@ -14,10 +15,14 @@ namespace SmartAttendance.Web.Pages.OrgStructures;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext db)
+    public IndexModel(
+        ApplicationDbContext db,
+        ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)] public int? CompanyId { get; set; }
@@ -40,11 +45,17 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        Companies = await _db.Companies.AsNoTracking()
+        // حصر المُنتقي بنطاق شركات المستخدم: دورٌ مقيَّد لا يرى إلا شركاته، و`Resolve`
+        // يرفض أي CompanyId مُمرَّر بالرابط خارجها فلا تُبنى هياكل شركةٍ أجنبية.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+
+        Companies = (await _db.Companies.AsNoTracking()
             .Where(c => !c.IsDeleted && c.IsActive)
             .OrderBy(c => c.Name)
             .Select(c => new CompanyOption { Id = c.Id, Name = c.Name })
-            .ToListAsync();
+            .ToListAsync())
+            .Where(x => scope.Allows(x.Id))
+            .ToList();
 
         CompanyId = CompanySelectionContext.Resolve(HttpContext, CompanyId, Companies.Select(x => x.Id).ToArray());
         if (CompanyId is not > 0) return;

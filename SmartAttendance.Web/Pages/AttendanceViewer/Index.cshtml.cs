@@ -259,8 +259,13 @@ public class IndexModel : PageModel
         {
             DateOnly.TryParse(form["FromDate"], out from);
             DateOnly.TryParse(form["ToDate"], out to);
-            if (from == default) from = new DateOnly(year, month, 1);
-            if (to == default) to = from.AddMonths(1).AddDays(-1);
+            // احتياط الشهر يتبع سياسة فترة الحضور (لا التقويم) للاتساق مع بقية الشاشات.
+            if (from == default || to == default)
+            {
+                var (period, _) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(_dbContext, year, month);
+                if (from == default) from = period.From;
+                if (to == default) to = period.To;
+            }
         }
 
         // النطاق: حقول المؤلّف المستقلة (تسبق فلتر المستعرض إن حُدّدت)

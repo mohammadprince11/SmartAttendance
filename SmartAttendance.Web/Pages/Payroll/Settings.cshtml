@@ -72,6 +72,28 @@
         <div class="ps-alert">@TempData["PayrollMessage"]</div>
     }
 
+    @* ----- وعاء الضمان/الضريبة مقابل الحضور ----- *@
+    <div class="ps-sec">
+        <h2>وعاء الضمان والضريبة مقابل الحضور</h2>
+        <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin:0 0 8px">
+            هل يُحتسب الضمان والضريبة على الراتب الأساسي <b>الكامل</b> أم على المُنقَّص بأيام الحضور؟
+            (لا يؤثّر على من له «راتب ضمان/ضريبة مُعرَّف بالموظف» — ذاك يبقى ثابتاً.)
+        </p>
+        <form method="post" asp-page-handler="SaveGosiTaxBase" style="display:flex;flex-direction:column;gap:8px">
+            @foreach (var opt in new[] { ("Prorated", "على الأساسي بعد الحضور", "السلوك الحالي — يُنقَّص الأساسي بالحضور أولاً ثم يُحتسب الضمان/الضريبة عليه (يقلّ الاستقطاع بالغياب)."), ("FullBasic", "على الأساسي الكامل", "الضمان/الضريبة على الأساسي الكامل قبل الحضور — لا يتأثران بالغياب، والحضور يُخصم من الصافي فقط. (القاعدة القانونية المعتادة.)") })
+            {
+                <label class="ps-item @(Model.GosiTaxBaseMode == opt.Item1 ? "active" : "")" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:0">
+                    <input type="radio" name="gosiTaxBase" value="@opt.Item1" checked="@(Model.GosiTaxBaseMode == opt.Item1)" style="margin-top:3px" />
+                    <span>
+                        <b>@opt.Item2</b>
+                        <span style="display:block;font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin-top:2px">@opt.Item3</span>
+                    </span>
+                </label>
+            }
+            <button type="submit" style="align-self:flex-start;min-height:36px;padding:7px 24px;border:0;border-radius:10px;background:linear-gradient(135deg,#12D9E3,#0ea5b5);color:#04141d;font-weight:1000;cursor:pointer">حفظ</button>
+        </form>
+    </div>
+
     @* ----- ربط الراتب بالحضور ----- *@
     <div class="ps-sec">
         <h2>ربط الراتب بالحضور</h2>
@@ -121,6 +143,11 @@
                     عند صفر (لا راتب، ولا مديونية)؛ ومعه يظهر الصافي سالباً ويُرحَّل كما هو.
                 </span>
             </div>
+
+            <span style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800">
+                مقام تنسيب الأساسي يتبع <b>سياسة الغلق من نوع «أيام العمل»</b> (إعداد الشركة ← سياسات الغلق)
+                لا إعداداً هنا — «ماكو شي ثابت، كلها سياسة».
+            </span>
 
             <button type="submit" class="zy-btn zy-btn--primary ps-btn" style="align-self:flex-start">حفظ السياسة</button>
         </form>

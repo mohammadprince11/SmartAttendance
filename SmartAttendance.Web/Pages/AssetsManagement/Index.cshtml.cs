@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Domain.Enums;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.AssetsManagement;
 
@@ -15,10 +16,12 @@ namespace SmartAttendance.Web.Pages.AssetsManagement;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(ApplicationDbContext dbContext, ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     public sealed class AssetRow
@@ -90,6 +93,15 @@ public class IndexModel : PageModel
             })
             .ToListAsync();
 
+        // حصر سجل العهد على موظفي شركاتي — الاستعلام يشمل كل الشركات.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (!scope.IsUnrestricted)
+        {
+            var allowed = await EmployeeCompanyGuard.FilterEmployeesInScopeAsync(
+                _dbContext, all.Select(r => r.EmployeeId), scope, HttpContext.RequestAborted);
+            all = all.Where(r => allowed.Contains(r.EmployeeId)).ToList();
+        }
+
         HeldCount = all.Count(r => !r.IsReturned);
         ReturnedCount = all.Count(r => r.IsReturned);
         HeldValueTotal = all.Where(r => !r.IsReturned).Sum(r => r.Amount ?? 0);
@@ -105,6 +117,14 @@ public class IndexModel : PageModel
     /// <summary>إجراء سريع: تعليم العهدة مُرجَعة بتاريخ اليوم.</summary>
     public async Task<IActionResult> OnPostMarkReturnedAsync(int recordId)
     {
+        // حارس الملكية: العهدة تخصّ موظفاً بشركة — بلا هذا يعلّم مستخدم شركة A عهدة B مُرجَعة.
+        if (!await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                _dbContext, EmployeeCompanyGuard.Tables.EmployeeFileRecords, "Id", recordId,
+                await _companyScope.GetAsync(HttpContext.RequestAborted), HttpContext.RequestAborted))
+        {
+            return NotFound();
+        }
+
         var record = await _dbContext.EmployeeFileRecords
             .FirstOrDefaultAsync(r => r.Id == recordId && r.RecordType == EmployeeRecordType.Asset);
         if (record != null)

@@ -1,0 +1,136 @@
+@page "/Payroll/SalarySheet"
+@model SmartAttendance.Web.Pages.Payroll.SalarySheetModel
+@{
+    ViewData["Title"] = "كشف الرواتب";
+    var groups = Model.Lines
+        .GroupBy(l => string.IsNullOrWhiteSpace(l.Department) ? "بدون قسم" : l.Department)
+        .OrderBy(g => g.Key);
+}
+
+<style>
+    .ss-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
+    .ss-bar { display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; padding:16px 18px;
+        border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .ss-field { display:flex; flex-direction:column; gap:5px; }
+    .ss-field > span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
+    .ss-bar select { min-height:38px; min-width:280px; border-radius:10px; border:1px solid rgba(73,111,151,.28);
+        background:rgba(0,0,0,.16); color:inherit; padding:6px 12px; font-weight:900; font-size:13px; }
+    html[data-theme="light"] .ss-bar select { background:#fff; }
+    .ss-spacer { flex:1 1 auto; }
+    .ss-btn { min-height:38px; align-self:flex-end; padding:8px 20px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:1000; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+    .ss-btn.exp { border:0; background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; }
+    .ss-btn.prn { border:1px solid rgba(73,111,151,.3); background:transparent; color:inherit; }
+    .ss-btn.prn:hover { background:rgba(18,217,227,.12); color:#12D9E3; }
+
+    .ss-card { border:1px solid rgba(73,111,151,.22); border-radius:16px; overflow:hidden; background:var(--sa-surface,rgba(8,25,43,.9)); }
+    .ss-head { padding:16px 18px; border-bottom:1px solid rgba(73,111,151,.18); }
+    .ss-head h2 { margin:0; font-size:16px; font-weight:1000; }
+    .ss-head p { margin:3px 0 0; font-size:12px; font-weight:800; color:var(--sa-muted,#8FA8BC); }
+    .ss-wrap { overflow-x:auto; }
+    .ss-table { width:100%; border-collapse:collapse; font-size:12.5px; min-width:900px; }
+    .ss-table th { text-align:start; white-space:nowrap; padding:10px 12px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
+    html[data-theme="light"] .ss-table th { background:#f2f7fb; }
+    .ss-table td { padding:8px 12px; border-bottom:1px solid rgba(143,168,188,.08); white-space:nowrap; }
+    .ss-num { direction:ltr; font-weight:900; text-align:start; unicode-bidi:plaintext; }
+    .ss-net { color:#4ade80; }
+    .ss-grp td { background:rgba(18,217,227,.06); font-weight:1000; }
+    .ss-sub td { background:rgba(73,111,151,.1); font-weight:1000; }
+    .ss-total td { background:rgba(18,217,227,.14); font-weight:1000; font-size:13px; border-top:2px solid rgba(18,217,227,.4); }
+    .ss-empty { padding:60px 20px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:900; font-size:15px; }
+
+    @@media print {
+        .ss-bar, .nexora-nav, .nexora-topbar, header, nav, aside { display:none !important; }
+        .ss-card { border:none; }
+        body, .ss-page { background:#fff !important; color:#000 !important; }
+    }
+</style>
+
+<section class="ss-page" dir="rtl">
+    <form method="get" class="ss-bar">
+        <label class="ss-field">
+            <span>دفعة المسير</span>
+            <select name="RunId" onchange="this.form.submit()">
+                <option value="">— اختر دفعة —</option>
+                @foreach (var r in Model.Runs)
+                {
+                    <option value="@r.Id" selected="@(Model.RunId == r.Id)">@r.BatchNo — @r.PeriodText (@r.EmployeeCount موظفاً · @r.StatusLabelText)</option>
+                }
+            </select>
+        </label>
+        <div class="ss-spacer"></div>
+        @if (Model.Run != null && Model.Lines.Count > 0)
+        {
+            <a class="ss-btn exp" href="/Payroll/SalarySheet?handler=Export&RunId=@Model.Run.Id">⬇ تصدير CSV</a>
+            <button type="button" class="ss-btn prn" onclick="window.print()">🖨 طباعة</button>
+        }
+    </form>
+
+    <div class="ss-card">
+        @if (Model.Run == null)
+        {
+            <div class="ss-empty">اختر دفعة مسير لعرض كشف رواتبها.</div>
+        }
+        else if (Model.Lines.Count == 0)
+        {
+            <div class="ss-empty">لا سطور محتسبة في هذه الدفعة.</div>
+        }
+        else
+        {
+            <div class="ss-head">
+                <h2>كشف الرواتب — الدفعة @Model.Run.BatchNo</h2>
+                <p>الفترة @Model.Run.PeriodText · @Model.Lines.Count موظفاً · الحالة: @Model.Run.StatusLabelText</p>
+            </div>
+            <div class="ss-wrap">
+                <table class="ss-table">
+                    <thead>
+                        <tr>
+                            <th>الرقم</th><th>الاسم</th><th>القسم</th><th>الأساسي</th><th>العلاوات</th>
+                            <th>الإجمالي</th><th>الضريبة</th><th>الضمان</th><th>أخرى</th><th>الصافي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var g in groups)
+                        {
+                            <tr class="ss-grp"><td colspan="10">@g.Key — @g.Count() موظفاً</td></tr>
+                            @foreach (var l in g.OrderBy(l => l.EmployeeNo))
+                            {
+                                <tr>
+                                    <td class="ss-num">@l.EmployeeNo</td>
+                                    <td>@l.EmployeeName</td>
+                                    <td>@(string.IsNullOrWhiteSpace(l.Department) ? "—" : l.Department)</td>
+                                    <td class="ss-num">@l.BasicSalary.ToString("#,0.##")</td>
+                                    <td class="ss-num">@l.TotalAllowances.ToString("#,0.##")</td>
+                                    <td class="ss-num">@l.GrossSalary.ToString("#,0.##")</td>
+                                    <td class="ss-num">@l.TaxAmount.ToString("#,0.##")</td>
+                                    <td class="ss-num">@l.GosiEmployee.ToString("#,0.##")</td>
+                                    <td class="ss-num">@l.OtherDeductions.ToString("#,0.##")</td>
+                                    <td class="ss-num ss-net">@l.NetSalary.ToString("#,0.##")</td>
+                                </tr>
+                            }
+                            <tr class="ss-sub">
+                                <td colspan="3">مجموع @g.Key</td>
+                                <td class="ss-num">@g.Sum(l => l.BasicSalary).ToString("#,0.##")</td>
+                                <td class="ss-num">@g.Sum(l => l.TotalAllowances).ToString("#,0.##")</td>
+                                <td class="ss-num">@g.Sum(l => l.GrossSalary).ToString("#,0.##")</td>
+                                <td class="ss-num">@g.Sum(l => l.TaxAmount).ToString("#,0.##")</td>
+                                <td class="ss-num">@g.Sum(l => l.GosiEmployee).ToString("#,0.##")</td>
+                                <td class="ss-num">@g.Sum(l => l.OtherDeductions).ToString("#,0.##")</td>
+                                <td class="ss-num ss-net">@g.Sum(l => l.NetSalary).ToString("#,0.##")</td>
+                            </tr>
+                        }
+                        <tr class="ss-total">
+                            <td colspan="3">الإجمالي الكلّي</td>
+                            <td class="ss-num">@Model.Lines.Sum(l => l.BasicSalary).ToString("#,0.##")</td>
+                            <td class="ss-num">@Model.Lines.Sum(l => l.TotalAllowances).ToString("#,0.##")</td>
+                            <td class="ss-num">@Model.Lines.Sum(l => l.GrossSalary).ToString("#,0.##")</td>
+                            <td class="ss-num">@Model.Lines.Sum(l => l.TaxAmount).ToString("#,0.##")</td>
+                            <td class="ss-num">@Model.Lines.Sum(l => l.GosiEmployee).ToString("#,0.##")</td>
+                            <td class="ss-num">@Model.Lines.Sum(l => l.OtherDeductions).ToString("#,0.##")</td>
+                            <td class="ss-num ss-net">@Model.Lines.Sum(l => l.NetSalary).ToString("#,0.##")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</section>
