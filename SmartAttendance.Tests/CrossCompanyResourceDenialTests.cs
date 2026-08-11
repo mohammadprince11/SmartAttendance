@@ -7,42 +7,52 @@ using Xunit;
 namespace SmartAttendance.Tests;
 
 /// <summary>
-/// GAP-01 — «مستخدم شركة A يُرفض على مورد شركة B»، **بالتنفيذ على بيانات حقيقية**
-/// لا بمسحٍ نصّيّ.
+/// GAP-01 / FIX-005 — «مستخدم شركة A يُرفض على مورد شركة B»، **بالتنفيذ على كل
+/// جداول كتالوج الحارس**، ببياناتٍ اصطناعية يبذرها الاختبار بنفسه.
 ///
-/// <para><b>لماذا وُجد هذا الملف:</b> تدقيق 2026-08-11 أثبت أن منظومةً من 1,624
-/// اختباراً خضراء بالكامل لم تمنع AUTHZ-003 — حذفَ أي طلب إجازة بأي شركة من أدنى
-/// دور. السبب أن أغلب اختبارات العزل تفحص **نصّ** الكود (تبحث عن كلمة
-/// <c>CompanyScope</c> بملفّ) لا **سلوكه**. سقّاطةٌ نصّيّة تنجح حتى لو مُرِّر
-/// النطاق خطأً.</para>
+/// <para><b>لماذا وُجد:</b> تدقيق 2026-08-11 أثبت أن 1,624 اختباراً خضراء لم تمنع
+/// AUTHZ-003 — لأن أغلب اختبارات العزل تفحص <b>نصّ</b> الكود لا <b>سلوكه</b>. هذا
+/// ينفّذ <see cref="EmployeeCompanyGuard.FilterOwnedRowsInScopeAsync"/> — كود
+/// الإنتاج نفسه — ويثبت أن نطاق شركةٍ لا يُعيد ولا صفّاً من أخرى.</para>
 ///
-/// <para><b>المنهج:</b> يُنفَّذ <see cref="EmployeeCompanyGuard.FilterOwnedRowsInScopeAsync"/>
-/// — وهو كود الإنتاج نفسه الذي تستعمله الشاشات — على صفوفٍ حقيقية من **شركتين**،
-/// ويُتحقَّق أن نطاق الشركة الأولى **لا يُعيد ولا صفّاً واحداً** من الثانية.</para>
+/// <para><b>FIX-005:</b> النسخة الأولى كانت تتخطّى 11 من 12 جدولاً لغياب بيانات
+/// شركتين. الآن يبذر <see cref="SyntheticTenantSeeder"/> صفّين (شركتين) بكل جدولٍ
+/// حتماً — فالتغطية 12/12 لا تعتمد على المحيط (§69 استقلال بيانات الاختبار).</para>
 ///
-/// <para><b>خاصيّة السقّاطة:</b> الاختبار مقاد بالبيانات عبر انعكاسٍ على
-/// <see cref="EmployeeCompanyGuard.Tables"/>. أي جدولٍ يُضاف للكتالوج مستقبلاً
-/// **يدخل التغطية تلقائياً** بلا كتابة اختبارٍ جديد. ويحرس اختبارٌ ثانٍ ألّا
-/// ينكمش الكتالوج بصمت.</para>
+/// <para><b>خاصيّة السقّاطة:</b> مقادٌ بالانعكاس على <see cref="EmployeeCompanyGuard.Tables"/>
+/// — أي جدولٍ يُضاف للكتالوج يدخل التغطية والبذر تلقائياً.</para>
 ///
-/// <para>⚠️ يعمل على <c>SmartAttendance_Test</c> حصراً، و<b>قراءةً فقط</b> (SELECT
-/// وحده) — فلا يُبقي أثراً ولا يحتاج معاملة. غياب القاعدة ⟹ تخطٍّ لا فشل.</para>
+/// <para>⚠️ <c>SmartAttendance_Test</c> حصراً. يبذر ويحذف بياناته الاصطناعية
+/// (معرّفات ملتقَطة) — لا يُبقي أثراً. غياب القاعدة ⟹ تخطٍّ لا فشل.</para>
 /// </summary>
 public sealed class CrossCompanyResourceDenialTests : IAsyncLifetime
 {
-    // قاعدة الاختبار حصراً — القاعدة الحمراء: ممنوع لمس الإنتاج.
     private const string ConnectionString =
         "Server=localhost;Database=SmartAttendance_Test;Trusted_Connection=True;" +
         "TrustServerCertificate=True;MultipleActiveResultSets=True";
 
     private ApplicationDbContext _db = null!;
+    private SyntheticTenantSeeder _seeder = null!;
     private bool _dbAvailable;
+    private int _companyA;
+    private int _companyB;
+    private int _employeeA;
+    private int _employeeB;
+
+    // table -> (rowInA, rowInB)
+    private readonly Dictionary<string, (int InA, int InB)> _rows = new(StringComparer.Ordinal);
+
+    public static IEnumerable<object[]> GuardedTables() =>
+        typeof(EmployeeCompanyGuard.Tables)
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+            .Where(f => f.IsLiteral && f.FieldType == typeof(string))
+            .Select(f => new object[] { (string)f.GetRawConstantValue()! })
+            .OrderBy(x => (string)x[0]);
 
     public async Task InitializeAsync()
     {
         _db = new ApplicationDbContext(
-            new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseSqlServer(ConnectionString).Options);
+            new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(ConnectionString).Options);
 
         try
         {
@@ -52,84 +62,90 @@ public sealed class CrossCompanyResourceDenialTests : IAsyncLifetime
         catch
         {
             _dbAvailable = false;
+            return;
+        }
+
+        var connection = _db.Database.GetDbConnection();
+        _seeder = new SyntheticTenantSeeder(connection);
+
+        // نعيد استخدام موظفَين **حقيقيّين** من شركتين موجودتين بدل إنشائهما: كيان
+        // Employees يحمل مفاتيح أجنبيّة (شركة/فرع/قسم) تفرض رسمَ رسمٍ كامل، بينما
+        // جداول الحارس الأحد عشر بلا FK — فالبذر يقتصر عليها بمعرّف موظّفٍ حقيقيّ.
+        if (!await PickTwoRealEmployeesAsync(connection))
+        {
+            return; // أقلّ من شركتين مأهولتين — الاختبارات ستتخطّى.
+        }
+
+        foreach (var row in GuardedTables())
+        {
+            var table = (string)row[0];
+            if (!await TableExistsAsync(connection, table))
+            {
+                continue;
+            }
+
+            try
+            {
+                var inA = await _seeder.InsertAsync(table, new Dictionary<string, object> { ["EmployeeId"] = _employeeA });
+                var inB = await _seeder.InsertAsync(table, new Dictionary<string, object> { ["EmployeeId"] = _employeeB });
+                _rows[table] = (inA, inB);
+            }
+            catch
+            {
+                // جدولٌ بمخطّطٍ يتعذّر بذرُه أدنى — يبقى خارج التغطية بلا إسقاط الطاقم.
+            }
         }
     }
 
     public async Task DisposeAsync()
     {
-        try { await _db.Database.CloseConnectionAsync(); } catch { /* best-effort */ }
-        await _db.DisposeAsync();
-    }
+        if (_seeder is not null)
+        {
+            await _seeder.CleanupAsync();
+        }
 
-    /// <summary>كل أسماء الجداول بكتالوج الحارس — مصدر الحقيقة، بالانعكاس.</summary>
-    public static IEnumerable<object[]> GuardedTables() =>
-        typeof(EmployeeCompanyGuard.Tables)
-            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-            .Where(f => f.IsLiteral && f.FieldType == typeof(string))
-            .Select(f => new object[] { (string)f.GetRawConstantValue()! })
-            .OrderBy(x => (string)x[0]);
+        if (_db is not null)
+        {
+            try { await _db.Database.CloseConnectionAsync(); } catch { /* best-effort */ }
+            await _db.DisposeAsync();
+        }
+    }
 
     [SkippableTheory]
     [MemberData(nameof(GuardedTables))]
     public async Task ScopedUser_ReceivesNoRowFromAnotherCompany(string table)
     {
         Skip.IfNot(_dbAvailable, "SmartAttendance_Test غير متاحة محلياً.");
-        var connection = _db.Database.GetDbConnection();
+        Skip.IfNot(_rows.TryGetValue(table, out var pair), $"{table}: تعذّر بذرُ صفٍّ اصطناعيّ.");
 
-        // الجدول قد لا يكون موجوداً بهذه القاعدة (شفاء ذاتي عند أول استعمال).
-        if (!await TableExistsAsync(connection, table))
-        {
-            Skip.If(true, $"الجدول {table} غير موجود بقاعدة الاختبار.");
-        }
-
-        // نلتقط صفّاً حقيقياً من شركتين **مختلفتين** بنفس الجدول.
-        var rows = await PickRowsFromTwoCompaniesAsync(connection, table);
-
-        Skip.If(rows.Count < 2, $"{table}: لا توجد صفوف من شركتين مختلفتين بالبيانات المتاحة.");
-
-        var mine = rows[0];
-        var other = rows[1];
-
-        Assert.NotEqual(mine.CompanyId, other.CompanyId);
-
-        var scope = CompanyScope.ForCompanies(new[] { mine.CompanyId });
+        var scope = CompanyScope.ForCompanies(new[] { _companyA });
 
         var allowed = await EmployeeCompanyGuard.FilterOwnedRowsInScopeAsync(
-            _db, table, "Id", new[] { mine.RowId, other.RowId }, scope);
+            _db, table, "Id", new[] { pair.InA, pair.InB }, scope);
 
-        // الجوهر: صفّي يمرّ، وصفّ الشركة الأخرى **لا يمرّ**.
-        Assert.Contains(mine.RowId, allowed);
-        Assert.DoesNotContain(other.RowId, allowed);
+        Assert.Contains(pair.InA, allowed);          // صفّي يمرّ
+        Assert.DoesNotContain(pair.InB, allowed);    // صفّ الشركة الأخرى لا يمرّ
     }
 
     [SkippableFact]
     public async Task UnrestrictedAdmin_StillReachesBothCompanies()
     {
-        // الضدّ الضروريّ: لو أرجع الحارس مجموعةً فارغة دائماً لنجح الاختبار الأول
-        // زوراً. هذا يُثبت أن الحارس يميّز ولا يمنع الجميع.
+        // الضدّ الضروريّ: لولاه لنجح الأول زوراً لو أرجع الحارس مجموعةً فارغة دائماً.
         Skip.IfNot(_dbAvailable, "SmartAttendance_Test غير متاحة محلياً.");
-        var connection = _db.Database.GetDbConnection();
-
-        const string table = EmployeeCompanyGuard.Tables.AttendanceRecords;
-        Skip.IfNot(await TableExistsAsync(connection, table), $"{table} غير موجود.");
-
-        var rows = await PickRowsFromTwoCompaniesAsync(connection, table);
-        Skip.If(rows.Count < 2, "لا توجد صفوف من شركتين مختلفتين.");
+        Skip.IfNot(_rows.TryGetValue(EmployeeCompanyGuard.Tables.AttendanceRecords, out var pair),
+            "تعذّر بذرُ AttendanceRecords.");
 
         var allowed = await EmployeeCompanyGuard.FilterOwnedRowsInScopeAsync(
-            _db, table, "Id",
-            new[] { rows[0].RowId, rows[1].RowId },
-            CompanyScope.Unrestricted());
+            _db, EmployeeCompanyGuard.Tables.AttendanceRecords, "Id",
+            new[] { pair.InA, pair.InB }, CompanyScope.Unrestricted());
 
-        Assert.Contains(rows[0].RowId, allowed);
-        Assert.Contains(rows[1].RowId, allowed);
+        Assert.Contains(pair.InA, allowed);
+        Assert.Contains(pair.InB, allowed);
     }
 
     [Fact]
     public void GuardCatalog_DoesNotShrinkSilently()
     {
-        // خطّ أساسٍ يمنع حذف جدولٍ من الكتالوج (فيخرج من التغطية بصمت).
-        // زيادة العدد مقبولة ومرغوبة — النقصان يجب أن يكون قراراً واعياً.
         var count = GuardedTables().Count();
 
         Assert.True(
@@ -138,52 +154,48 @@ public sealed class CrossCompanyResourceDenialTests : IAsyncLifetime
             "حذف جدولٍ منه يُخرجه من اختبار العزل التنفيذيّ — راجع القرار.");
     }
 
-    // ─────────────────────────────── أدوات ───────────────────────────────
+    /// <summary>يختار موظّفَين حقيقيّين من شركتين مختلفتين — أقدم موظّفٍ لكل شركة.</summary>
+    private async Task<bool> PickTwoRealEmployeesAsync(System.Data.Common.DbConnection connection)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+SELECT TOP 2 MIN(Id) AS EmpId, CompanyId
+FROM Employees
+WHERE CompanyId IS NOT NULL AND ISNULL(IsDeleted, 0) = 0
+GROUP BY CompanyId
+ORDER BY CompanyId;
+""";
 
-    private sealed record OwnedRow(int RowId, int CompanyId);
+        var picks = new List<(int Emp, int Company)>();
+        await using (var reader = await command.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                picks.Add((reader.GetInt32(0), reader.GetInt32(1)));
+            }
+        }
 
-    private static async Task<bool> TableExistsAsync(
-        System.Data.Common.DbConnection connection,
-        string table)
+        if (picks.Count < 2)
+        {
+            return false;
+        }
+
+        (_employeeA, _companyA) = picks[0];
+        (_employeeB, _companyB) = picks[1];
+        return true;
+    }
+
+    private static async Task<bool> TableExistsAsync(System.Data.Common.DbConnection connection, string table)
     {
         EmployeeCompanyGuard.GuardIdentifier(table);
 
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT CASE WHEN OBJECT_ID(@t, 'U') IS NULL THEN 0 ELSE 1 END;";
-
         var parameter = command.CreateParameter();
         parameter.ParameterName = "@t";
         parameter.Value = table;
         command.Parameters.Add(parameter);
 
         return Convert.ToInt32(await command.ExecuteScalarAsync()) == 1;
-    }
-
-    /// <summary>صفٌّ واحد من كل شركة — أقدم صفٍّ لكل شركة، ليكون الاختيار حتمياً.</summary>
-    private static async Task<List<OwnedRow>> PickRowsFromTwoCompaniesAsync(
-        System.Data.Common.DbConnection connection,
-        string table)
-    {
-        EmployeeCompanyGuard.GuardIdentifier(table);
-
-        await using var command = connection.CreateCommand();
-        command.CommandText = $"""
-SELECT TOP 2 MIN(t.Id) AS RowId, e.CompanyId
-FROM {table} t
-INNER JOIN Employees e ON e.Id = t.EmployeeId
-WHERE e.CompanyId IS NOT NULL
-GROUP BY e.CompanyId
-ORDER BY e.CompanyId;
-""";
-
-        var rows = new List<OwnedRow>();
-        await using var reader = await command.ExecuteReaderAsync();
-
-        while (await reader.ReadAsync())
-        {
-            rows.Add(new OwnedRow(reader.GetInt32(0), reader.GetInt32(1)));
-        }
-
-        return rows;
     }
 }
