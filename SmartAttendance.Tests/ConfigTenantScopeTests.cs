@@ -86,6 +86,45 @@ public sealed class ConfigTenantScopeTests
         Assert.DoesNotContain("ShiftTypeStore.ListAsync(_dbContext)", page);
     }
 
+    [Theory]
+    [InlineData("ShiftRules")]
+    [InlineData("PeriodRules")]
+    public void RulePages_ScopeListingAndGuardBothWritePaths(string page)
+    {
+        var text = System.IO.File.ReadAllText(System.IO.Path.Combine(
+            RepoRoot(), "SmartAttendance.Web", "Pages", page, "Index.cshtml.cs"));
+
+        Assert.Contains("ConfigTenantScope.AllowedIdsAsync", text);
+        Assert.Contains("ConfigTenantScope.IsInScopeAsync", text);
+        Assert.Contains("ConfigTenantScope.AssignCompanyAsync", text);
+        Assert.Contains("NotFound()", text);
+    }
+
+    [Fact]
+    public void SaveMethods_ReturnNewId_SoAttributionCannotFailSilently()
+    {
+        // 🔴 العطل الذي كشفه التنفيذ: الإدراج لم يكن يُرجع المعرّف، فـ rule.Id يبقى 0
+        // ⟹ AssignCompanyAsync تُنفَّذ على 0 فلا تُصيب شيئاً، وتبقى القاعدة الجديدة
+        // مشتركة بين كل الشركات — فشلٌ صامت يُبطل العزل كلّه.
+        var shiftRules = System.IO.File.ReadAllText(System.IO.Path.Combine(
+            RepoRoot(), "SmartAttendance.Web", "Infrastructure", "Hrms", "ShiftRuleStore.cs"));
+        Assert.Contains("public static async Task<int> SaveAsync", shiftRules);
+        Assert.Contains("SELECT CAST(SCOPE_IDENTITY() AS int);", shiftRules);
+
+        var periodRules = System.IO.File.ReadAllText(System.IO.Path.Combine(
+            RepoRoot(), "SmartAttendance.Web", "Infrastructure", "Hrms", "PeriodRuleStore.cs"));
+        Assert.Contains("string Message, int RuleId)> SaveRuleAsync", periodRules);
+    }
+
+    [Fact]
+    public void AssignCompany_NeverRelabelsAnAlreadyOwnedRow()
+    {
+        // شرط CompanyId IS NULL بالتحديث يمنع «سرقة» تهيئة شركة أخرى بمعرّفٍ مُمرَّر.
+        var helper = System.IO.File.ReadAllText(System.IO.Path.Combine(
+            RepoRoot(), "SmartAttendance.Web", "Infrastructure", "Security", "ConfigTenantScope.cs"));
+        Assert.Contains("WHERE Id = @Id AND CompanyId IS NULL", helper);
+    }
+
     [Fact]
     public void EngineListPath_StaysUnscoped_SoPayrollIsNotBroken()
     {

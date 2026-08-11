@@ -327,7 +327,12 @@ IF COL_LENGTH('ShiftRules', 'ConditionsJson') IS NULL ALTER TABLE ShiftRules ADD
             });
     }
 
-    public static async Task SaveAsync(ApplicationDbContext dbContext, ShiftRule rule)
+    /// <summary>
+    /// يحفظ القاعدة ويُرجع معرّفها. <b>الإرجاع لازم لا تجميليّ:</b> نسبة القاعدة
+    /// الجديدة لشركة منشئها (عزل التهيئة — 8D–8M) تحتاج المعرّف، وبدونه تفشل النسبة
+    /// **بصمت** فتبقى القاعدة مشتركة بين كل الشركات.
+    /// </summary>
+    public static async Task<int> SaveAsync(ApplicationDbContext dbContext, ShiftRule rule)
     {
         await EnsureAsync(dbContext);
 
@@ -351,10 +356,12 @@ WHERE Id = @Id;
                     HrmsDatabase.AddParameter(command, "@Id", rule.Id);
                     AddParameters(command, rule);
                 });
+
+            return rule.Id;
         }
         else
         {
-            await HrmsDatabase.ExecuteAsync(
+            return await HrmsDatabase.ScalarAsync<int>(
                 dbContext,
                 """
 INSERT INTO ShiftRules
@@ -367,6 +374,7 @@ VALUES
      @Time, @Anchor, @Time2, @Anchor2, @Offset, @Hours, @Hours2,
      @ActionType, @ActionText, @ActionValue, @AllowEdit, @Escalation, @Auto, @Active,
      @Conditions);
+SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
                 command => AddParameters(command, rule));
         }

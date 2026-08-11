@@ -196,12 +196,14 @@ public class IndexModel : PageModel
             return NotFound();
         }
 
-        await ShiftTypeStore.SaveAsync(_dbContext, shift);
+        // المعرّف من المتجر لا من النموذج: `shift.Id` يبقى 0 للجديد، فتفشل النسبة بصمت.
+        var savedId = await ShiftTypeStore.SaveAsync(_dbContext, shift);
 
         // الجديد يُنسب لشركة منشئه فينعزل؛ غير المقيَّد يُنشئ تهيئةً مشتركة كالسابق.
-        if (!isUpdate && scope.AllowedCompanyIds.Count == 1)
+        if (!isUpdate)
         {
-            await ShiftTypeStore.AssignCompanyAsync(_dbContext, shift.Id, scope.AllowedCompanyIds.Single());
+            await ShiftTypeStore.AssignCompanyAsync(
+                _dbContext, savedId, ConfigTenantScope.OwningCompany(scope));
         }
 
         TempData["SuccessMessage"] = isUpdate ? "تم تحديث المناوبة." : "تمت إضافة المناوبة.";

@@ -193,11 +193,16 @@ END;
     }
 
     /// <summary>حفظ قاعدة مع شرائحها (استبدال كامل للشرائح).</summary>
-    public static async Task<(bool Ok, string Message)> SaveRuleAsync(ApplicationDbContext db, PeriodRule rule)
+    /// <summary>
+    /// يحفظ القاعدة ويُرجع معرّفها مع النتيجة. <b>المعرّف لازم لا تجميليّ:</b> نسبة
+    /// القاعدة الجديدة لشركة منشئها (عزل التهيئة — 8D–8M) بدونه تفشل **بصمت**
+    /// فتبقى القاعدة مشتركة بين كل الشركات.
+    /// </summary>
+    public static async Task<(bool Ok, string Message, int RuleId)> SaveRuleAsync(ApplicationDbContext db, PeriodRule rule)
     {
         await EnsureAsync(db);
-        if (string.IsNullOrWhiteSpace(rule.Name)) return (false, "اسم القاعدة مطلوب.");
-        if (rule.Slices.Count == 0) return (false, "أضف شريحة واحدة على الأقل.");
+        if (string.IsNullOrWhiteSpace(rule.Name)) return (false, "اسم القاعدة مطلوب.", 0);
+        if (rule.Slices.Count == 0) return (false, "أضف شريحة واحدة على الأقل.", 0);
 
         int ruleId;
         if (rule.Id > 0)
@@ -253,7 +258,7 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
                     HrmsDatabase.AddParameter(command, "@Sort", idx);
                 });
         }
-        return (true, rule.Id > 0 ? "تم تحديث القاعدة." : "أُنشئت القاعدة.");
+        return (true, rule.Id > 0 ? "تم تحديث القاعدة." : "أُنشئت القاعدة.", ruleId);
     }
 
     public static async Task DeleteRuleAsync(ApplicationDbContext db, int id)

@@ -317,11 +317,8 @@ END;
             return all;
         }
 
-        var allowedIds = new HashSet<int>(await HrmsDatabase.QueryAsync(
-            dbContext,
-            $"SELECT Id FROM ShiftTypes WHERE {scope.ToSharedConfigSqlPredicate("CompanyId")};",
-            command => { },
-            reader => reader.GetInt32(0)));
+        var allowedIds = await Security.ConfigTenantScope.AllowedIdsAsync(
+            dbContext, Security.ConfigTenantScope.ShiftTypes, scope);
 
         return all.Where(shift => allowedIds.Contains(shift.Id)).ToList();
     }
@@ -330,46 +327,20 @@ END;
     /// حارس ملكية: أنوعُ المناوبة هذا داخل نطاق المستخدم؟ مغلق الفشل — المعرّف
     /// المجهول أو التابع لشركة أخرى يعيد <c>false</c> فيردّ المستدعي NotFound.
     /// </summary>
-    public static async Task<bool> IsInScopeAsync(
+    public static Task<bool> IsInScopeAsync(
         ApplicationDbContext dbContext,
         int id,
-        Security.CompanyScope scope)
-    {
-        ArgumentNullException.ThrowIfNull(scope);
-
-        if (id <= 0)
-        {
-            return false;
-        }
-
-        var found = await HrmsDatabase.ScalarAsync<int?>(
-            dbContext,
-            $"SELECT TOP 1 1 FROM ShiftTypes WHERE Id = @Id AND {scope.ToSharedConfigSqlPredicate("CompanyId")};",
-            command => HrmsDatabase.AddParameter(command, "@Id", id));
-
-        return found is not null;
-    }
+        Security.CompanyScope scope) =>
+        Security.ConfigTenantScope.IsInScopeAsync(
+            dbContext, Security.ConfigTenantScope.ShiftTypes, id, scope);
 
     /// <summary>
     /// ينسب نوع مناوبة لشركة — يُستدعى بعد الإنشاء فينعزل الجديد، بينما يبقى القديم
     /// (<c>NULL</c>) مشتركاً. مفصولٌ عن <c>INSERT</c> كي لا تتغيّر قائمة أعمدته.
     /// </summary>
-    public static async Task AssignCompanyAsync(ApplicationDbContext dbContext, int id, int? companyId)
-    {
-        if (companyId is null)
-        {
-            return;
-        }
-
-        await HrmsDatabase.ExecuteAsync(
-            dbContext,
-            "UPDATE ShiftTypes SET CompanyId = @Company WHERE Id = @Id AND CompanyId IS NULL;",
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@Company", companyId.Value);
-                HrmsDatabase.AddParameter(command, "@Id", id);
-            });
-    }
+    public static Task AssignCompanyAsync(ApplicationDbContext dbContext, int id, int? companyId) =>
+        Security.ConfigTenantScope.AssignCompanyAsync(
+            dbContext, Security.ConfigTenantScope.ShiftTypes, id, companyId);
 
     public static async Task<List<ShiftType>> ListAsync(ApplicationDbContext dbContext)
     {

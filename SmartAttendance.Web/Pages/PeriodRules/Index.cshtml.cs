@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.PeriodRules;
 
@@ -57,7 +58,14 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        Rules = await PeriodRuleStore.ListRulesAsync(_db);
+        // العرض محصورٌ بالنطاق: المشترك (CompanyId NULL) + ما يخصّ شركات المستخدم.
+        var scope = await _companyScope.GetAsync();
+        var allowedIds = await ConfigTenantScope.AllowedIdsAsync(
+            _db, ConfigTenantScope.PeriodRules, scope);
+
+        Rules = (await PeriodRuleStore.ListRulesAsync(_db))
+            .Where(rule => scope.IsUnrestricted || allowedIds.Contains(rule.Id))
+            .ToList();
 
         var (year, period) = EvalResolved;
         EvalYear = year;
@@ -103,7 +111,24 @@ public class IndexModel : PageModel
             });
         }
 
-        var (ok, message) = await PeriodRuleStore.SaveRuleAsync(_db, rule);
+        var saveScope = await _companyScope.GetAsync();
+        var isUpdate = rule.Id > 0;
+
+        // معرّفٌ من المتصفّح لا يُوثَق: تعديل قاعدة خارج النطاق = تهيئة شركة أخرى.
+        if (isUpdate && !await ConfigTenantScope.IsInScopeAsync(
+                _db, ConfigTenantScope.PeriodRules, rule.Id, saveScope))
+        {
+            return NotFound();
+        }
+
+        var (ok, message, savedId) = await PeriodRuleStore.SaveRuleAsync(_db, rule);
+
+        if (ok && !isUpdate)
+        {
+            await ConfigTenantScope.AssignCompanyAsync(
+                _db, ConfigTenantScope.PeriodRules, savedId, ConfigTenantScope.OwningCompany(saveScope));
+        }
+
         TempData["PrMessage"] = message;
         TempData["PrOk"] = ok;
         return RedirectToPage();
@@ -111,6 +136,12 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteRuleAsync(int id)
     {
+        if (!await ConfigTenantScope.IsInScopeAsync(
+                _db, ConfigTenantScope.PeriodRules, id, await _companyScope.GetAsync()))
+        {
+            return NotFound();
+        }
+
         await PeriodRuleStore.DeleteRuleAsync(_db, id);
         TempData["PrMessage"] = "حُذفت القاعدة.";
         TempData["PrOk"] = true;
