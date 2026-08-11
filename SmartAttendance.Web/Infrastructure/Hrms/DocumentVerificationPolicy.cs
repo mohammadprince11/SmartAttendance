@@ -114,11 +114,21 @@ public static class DocumentVerificationPolicy
     /// <summary>
     /// الرقم الوطني يُقارَن **مطبَّعاً** (بلا فواصل ولا مسافات): الفاحص ينسخه من
     /// هوية ورقية بتنسيقات مختلفة.
+    ///
+    /// المقارنة ثابتة الزمن كنظيرتها بالـPIN: <c>==</c> النصّية تسرّب طول البادئة
+    /// المطابقة، ومقارنة تجزئتين بطول ثابت تمنع ذلك وتمنع تسريب طول الرقم نفسه.
     /// </summary>
-    public static bool NationalIdMatches(string? entered, string? stored) =>
-        !string.IsNullOrWhiteSpace(entered)
-        && !string.IsNullOrWhiteSpace(stored)
-        && NormalizeToken(entered) == NormalizeToken(stored);
+    public static bool NationalIdMatches(string? entered, string? stored)
+    {
+        if (string.IsNullOrWhiteSpace(entered) || string.IsNullOrWhiteSpace(stored))
+        {
+            return false;
+        }
+
+        var enteredHash = SHA256.HashData(Encoding.UTF8.GetBytes(NormalizeToken(entered)));
+        var storedHash = SHA256.HashData(Encoding.UTF8.GetBytes(NormalizeToken(stored)));
+        return CryptographicOperations.FixedTimeEquals(enteredHash, storedHash);
+    }
 
     /// <summary>تاريخ انتهاء التحقق. مدّة غير موجبة ⟹ بلا انتهاء.</summary>
     public static DateOnly? ValidUntil(DateOnly issuedOn, int? validDays) =>
