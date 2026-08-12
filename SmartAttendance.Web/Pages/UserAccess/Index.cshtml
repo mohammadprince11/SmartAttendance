@@ -15,6 +15,17 @@
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-user-access.css" asp-append-version="true" />
 
+<style>
+    .zua-bulk-bar { border:1px solid var(--zua-line,#e5e7eb); border-radius:14px; padding:14px 16px; margin:0 0 14px; background:var(--zua-card,#fff); }
+    .zua-bulk-title { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+    .zua-bulk-title #zua-bulk-count { color:var(--zua-muted,#6b7280); font-size:13px; }
+    .zua-bulk-fields { display:flex; flex-wrap:wrap; align-items:end; gap:12px; }
+    .zua-bulk-fields label { display:flex; flex-direction:column; gap:5px; font-size:13px; font-weight:700; }
+    .zua-bulk-fields input[type=password] { padding:9px 11px; border:1px solid var(--zua-line,#d1d5db); border-radius:9px; min-width:180px; }
+    .zua-bulk-check { flex-direction:row !important; align-items:center; gap:7px; }
+    .zua-bulk-check input { min-height:auto; }
+</style>
+
 <section class="zua-page" dir="rtl">
 
     @* ---------- العنوان + العدادات ---------- *@
@@ -54,6 +65,42 @@
         <button type="button" class="zua-btn" onclick="zuaOpenCreate()">+ مستخدم جديد</button>
     </form>
 
+    @* ---------- شريط الإجراء الجماعيّ: إعادة تعيين كلمة المرور ---------- *@
+    @{
+        var selectableCount = Model.Identities.Count(x =>
+            x.LoginId > 0 && x.LoginId != Model.CurrentLoginId);
+    }
+    @if (selectableCount > 0)
+    {
+        <form method="post" asp-page-handler="BulkResetPassword" id="zua-bulk"
+              class="zua-bulk-bar" onsubmit="return zuaBulkConfirm()">
+            <input type="hidden" name="Search" value="@Model.Search" />
+            <input type="hidden" name="Status" value="@Model.Status" />
+            <div class="zua-bulk-title">
+                <b>إعادة تعيين كلمة المرور جماعيّاً</b>
+                <span id="zua-bulk-count">لم تُحدَّد حسابات</span>
+            </div>
+            <div class="zua-bulk-fields">
+                <label>كلمة مرور مؤقّتة
+                    <input type="password" name="BulkPassword" dir="ltr" minlength="8"
+                           autocomplete="new-password" placeholder="8 أحرف على الأقل" />
+                </label>
+                <label>تأكيد الكلمة
+                    <input type="password" name="BulkConfirmPassword" dir="ltr"
+                           autocomplete="new-password" />
+                </label>
+                <label class="zua-bulk-check">
+                    <input type="checkbox" name="BulkKickSessions" value="true" />
+                    طرد جلساتهم الحاليّة فوراً
+                </label>
+                <button type="submit" class="zua-btn">تطبيق على المحدَّدين</button>
+            </div>
+            <p class="hint" style="margin:6px 0 0">
+                يُطبَّق على الحسابات المحدَّدة في الجدول، ويُطلب من كلٍّ تغييرها عند الدخول التالي. حسابك الشخصي مُستثنى.
+            </p>
+        </form>
+    }
+
     @* ---------- الجدول ---------- *@
     <div class="zua-table-card">
         @if (Model.Identities.Count == 0)
@@ -65,6 +112,10 @@
             <table class="zua-table">
                 <thead>
                     <tr>
+                        <th style="width:34px">
+                            <input type="checkbox" id="zua-select-all" title="تحديد الكل"
+                                   onclick="zuaToggleAll(this)" />
+                        </th>
                         <th>المستخدم</th>
                         <th>الموظف المرتبط</th>
                         <th>الدور</th>
@@ -78,6 +129,14 @@
                     @foreach (var row in Model.Identities)
                     {
                         <tr>
+                            <td>
+                                @if (row.LoginId > 0 && row.LoginId != Model.CurrentLoginId)
+                                {
+                                    <input type="checkbox" class="zua-row-check" form="zua-bulk"
+                                           name="SelectedLoginIds" value="@row.LoginId"
+                                           onchange="zuaBulkCount()" />
+                                }
+                            </td>
                             <td>
                                 <div class="zua-user">
                                     <span class="zua-avatar">@(string.IsNullOrWhiteSpace(row.DisplayName) ? "؟" : row.DisplayName.Trim()[..1])</span>
@@ -222,6 +281,34 @@
             zuaOpen();
         }
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') zuaClose(); });
+
+        // ---- التحديد الجماعيّ لإعادة تعيين كلمة المرور ----
+        function zuaRowChecks() {
+            return Array.prototype.slice.call(document.querySelectorAll('.zua-row-check'));
+        }
+        function zuaToggleAll(master) {
+            zuaRowChecks().forEach(function (c) { c.checked = master.checked; });
+            zuaBulkCount();
+        }
+        function zuaBulkCount() {
+            var n = zuaRowChecks().filter(function (c) { return c.checked; }).length;
+            var label = document.getElementById('zua-bulk-count');
+            if (label) { label.textContent = n > 0 ? ('المحدَّدون: ' + n) : 'لم تُحدَّد حسابات'; }
+            var master = document.getElementById('zua-select-all');
+            if (master) {
+                var all = zuaRowChecks();
+                master.checked = all.length > 0 && n === all.length;
+                master.indeterminate = n > 0 && n < all.length;
+            }
+        }
+        function zuaBulkConfirm() {
+            var n = zuaRowChecks().filter(function (c) { return c.checked; }).length;
+            if (n === 0) {
+                alert('حدِّد حساباً واحداً على الأقل من الجدول.');
+                return false;
+            }
+            return confirm('إعادة تعيين كلمة المرور المؤقّتة لـ' + n + ' حساب؟ سيُطلب منهم تغييرها عند الدخول التالي.');
+        }
 
         @if (Model.Input.IsEditing)
         {

@@ -1404,6 +1404,19 @@ IF OBJECT_ID('DayAttendances', 'U') IS NOT NULL
     CREATE NONCLUSTERED INDEX IX_DayAttendances_WorkDate_Employee
         ON DayAttendances (WorkDate, EmployeeId);
 """),
+
+        // إجبار تغيير كلمة المرور عند الدخول التالي: علامة على هوية الدخول تُرفع
+        // بإعادة التعيين الجماعيّة (/UserAccess) وتُصفَّر لحظة تغيير المستخدم كلمته.
+        // NOT NULL بافتراض 0 كي لا يُجبَر أحدٌ قائمٌ عرضاً على التغيير بعد النشر.
+        new(
+            "20260812-01-login-must-change-password",
+            """
+IF OBJECT_ID('AppLoginUsers', 'U') IS NOT NULL
+   AND COL_LENGTH('AppLoginUsers', 'MustChangePassword') IS NULL
+    ALTER TABLE AppLoginUsers
+        ADD MustChangePassword bit NOT NULL
+            CONSTRAINT DF_AppLoginUsers_MustChangePassword DEFAULT(0);
+"""),
     };
 
     /// <summary>

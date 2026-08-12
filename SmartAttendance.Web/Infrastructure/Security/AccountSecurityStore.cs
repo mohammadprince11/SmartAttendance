@@ -66,7 +66,8 @@ SELECT TOP 1
     u.Role,
     u.IsActive,
     u.LockoutEndUtc,
-    ISNULL(u.SecurityStamp, '') AS SecurityStamp
+    ISNULL(u.SecurityStamp, '') AS SecurityStamp,
+    ISNULL(u.MustChangePassword, 0) AS MustChangePassword
 FROM AppLoginUsers u
 WHERE u.Username = @Username;
 """,
@@ -76,7 +77,8 @@ WHERE u.Username = @Username;
                 Role = HrmsDatabase.GetString(reader, "Role"),
                 IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
                 LockoutEndUtc = HrmsDatabase.GetDateTime(reader, "LockoutEndUtc"),
-                SecurityStamp = HrmsDatabase.GetString(reader, "SecurityStamp")
+                SecurityStamp = HrmsDatabase.GetString(reader, "SecurityStamp"),
+                MustChangePassword = HrmsDatabase.GetBool(reader, "MustChangePassword")
             });
 
         var row = rows.FirstOrDefault();
@@ -94,7 +96,8 @@ WHERE u.Username = @Username;
             IsActive: row.IsActive,
             IsLockedOut: lockedOut,
             Role: row.Role,
-            SecurityStamp: string.IsNullOrWhiteSpace(row.SecurityStamp) ? null : row.SecurityStamp);
+            SecurityStamp: string.IsNullOrWhiteSpace(row.SecurityStamp) ? null : row.SecurityStamp,
+            MustChangePassword: row.MustChangePassword);
     }
 
     /// <summary>

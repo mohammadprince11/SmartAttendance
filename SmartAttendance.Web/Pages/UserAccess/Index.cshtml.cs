@@ -43,6 +43,21 @@ public class IndexModel : PageModel
     [BindProperty]
     public IdentityInputModel Input { get; set; } = new();
 
+    [BindProperty]
+    public int[] SelectedLoginIds { get; set; } = Array.Empty<int>();
+
+    [BindProperty]
+    public string? BulkPassword { get; set; }
+
+    [BindProperty]
+    public string? BulkConfirmPassword { get; set; }
+
+    [BindProperty]
+    public bool BulkKickSessions { get; set; }
+
+    /// <summary>هوية الدخول الحاليّة — يخفي الجدول خانتها من التحديد الجماعيّ.</summary>
+    public int CurrentLoginId { get; set; }
+
     public List<IdentityRow> Identities { get; set; } = new();
 
     public List<EmployeeOption> Employees { get; set; } = new();
@@ -527,8 +542,181 @@ WHERE Id = @SystemUserId;
             });
     }
 
+    /// <summary>
+    /// إعادة تعيينٍ جماعيّة لكلمة المرور: كلمةٌ مؤقّتةٌ واحدة تُهاش لكلّ حسابٍ بملحٍ
+    /// مستقلّ، مع رفع وسم «إجبار التغيير» فيُجبَر كلٌّ على تعيين كلمته عند أوّل دخول.
+    /// طرد الجلسات الحاليّة اختياريّ (BulkKickSessions). كلٌّ بمعاملةٍ واحدة، وسطرُ
+    /// تدقيقٍ لكلّ حساب. الحساب الشخصيّ للأدمن مُستثنى (لا يُعاد تعيينه أثناء الاستخدام).
+    /// </summary>
+    public async Task<IActionResult> OnPostBulkResetPasswordAsync()
+    {
+        await LoginDatabase.EnsureCreatedAsync(_dbContext);
+
+        if (!IsAdministrator())
+        {
+            return Forbid();
+        }
+
+        var password = BulkPassword ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            return await FailAsync("كلمة المرور المؤقّتة مطلوبة.");
+        }
+
+        if (password.Length < 8)
+        {
+            return await FailAsync("كلمة المرور المؤقّتة يجب ألا تقل عن 8 أحرف.");
+        }
+
+        if (!string.Equals(password, BulkConfirmPassword, StringComparison.Ordinal))
+        {
+            return await FailAsync("كلمة المرور المؤقّتة وتأكيدها غير متطابقين.");
+        }
+
+        var plan = BulkPasswordResetPlanner.Build(
+            SelectedLoginIds,
+            GetCurrentLoginId());
+
+        if (plan.Apply.Count == 0)
+        {
+            return await FailAsync(
+                plan.SkippedSelf.Count > 0
+                    ? "لا يمكن إعادة تعيين كلمة مرور حسابك الشخصي أثناء استخدامه. اختر حسابات أخرى."
+                    : "لم تُحدَّد أي حسابات لإعادة التعيين.");
+        }
+
+        await EnsureSqlSetOptionsAsync();
+
+        var actor = User.Identity?.Name ?? "System";
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        await using var transaction =
+            await _dbContext.Database.BeginTransactionAsync(
+                HttpContext.RequestAborted);
+
+        try
+        {
+            var applied = 0;
+
+            foreach (var loginId in plan.Apply)
+            {
+                var username = await GetLoginUsernameAsync(loginId);
+
+                if (string.IsNullOrWhiteSpace(username))
+                {
+                    continue;
+                }
+
+                var salt = SimplePasswordHasher.CreateSalt();
+                var hash = SimplePasswordHasher.HashPassword(password, salt);
+
+                await HrmsDatabase.ExecuteAsync(
+                    _dbContext,
+                    """
+UPDATE AppLoginUsers
+SET PasswordHash = @PasswordHash,
+    PasswordSalt = @PasswordSalt,
+    PasswordChangedAt = SYSUTCDATETIME(),
+    MustChangePassword = 1,
+    UpdatedAt = SYSUTCDATETIME()
+WHERE Id = @LoginId;
+""",
+                    command =>
+                    {
+                        HrmsDatabase.AddParameter(command, "@PasswordHash", hash);
+                        HrmsDatabase.AddParameter(command, "@PasswordSalt", salt);
+                        HrmsDatabase.AddParameter(command, "@LoginId", loginId);
+                    });
+
+                await HrmsDatabase.ExecuteAsync(
+                    _dbContext,
+                    """
+INSERT INTO AuditLogs
+(EntityName, EntityId, Action, NewValues, UserName, IpAddress)
+VALUES
+('UnifiedIdentity', @EntityId, 'Bulk Reset Password', @NewValues, @Actor, @IpAddress);
+""",
+                    command =>
+                    {
+                        HrmsDatabase.AddParameter(command, "@EntityId", $"{loginId}:0");
+                        HrmsDatabase.AddParameter(
+                            command,
+                            "@NewValues",
+                            HrmsDatabase.JsonLine(
+                                ("LoginId", loginId),
+                                ("TargetUserName", username),
+                                ("PasswordChanged", true),
+                                ("MustChangePassword", true),
+                                ("SessionsKicked", BulkKickSessions)));
+                        HrmsDatabase.AddParameter(command, "@Actor", actor);
+                        HrmsDatabase.AddParameter(command, "@IpAddress", ipAddress);
+                    });
+
+                if (BulkKickSessions)
+                {
+                    // تبديل الختم يطرد الجلسات/التوكنات الحاليّة، ويُبطل الكاش ضمناً.
+                    await AccountSecurityStore.BumpStampAsync(
+                        _dbContext,
+                        _cache,
+                        loginId,
+                        "Password reset in bulk by an administrator",
+                        actor);
+                }
+                else
+                {
+                    // بلا طرد: نُبطل الكاش فقط كي يُرى وسم الإجبار فوراً عند دخولهم.
+                    AccountSecurityStore.InvalidateCache(_cache, username);
+                }
+
+                applied++;
+            }
+
+            await transaction.CommitAsync(HttpContext.RequestAborted);
+
+            var kickNote = BulkKickSessions
+                ? " وطُردت جلساتهم الحاليّة"
+                : string.Empty;
+            var skipNote = plan.SkippedSelf.Count > 0
+                ? " (استُثني حسابك الشخصي)"
+                : string.Empty;
+
+            SuccessMessage =
+                $"تمت إعادة تعيين كلمة المرور المؤقّتة لـ{applied} حساب، " +
+                $"وسيُطلب منهم تغييرها عند الدخول التالي{kickNote}.{skipNote}";
+
+            return RedirectToPage(
+                "./Index",
+                new
+                {
+                    Search,
+                    Status
+                });
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync(HttpContext.RequestAborted);
+
+            return await FailAsync(
+                "تعذر إتمام إعادة التعيين الجماعيّة بسبب تعارض في البيانات.");
+        }
+    }
+
+    private async Task<string?> GetLoginUsernameAsync(int loginId)
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            "SELECT TOP 1 Username FROM AppLoginUsers WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", loginId),
+            reader => HrmsDatabase.GetString(reader, "Username"));
+
+        return rows.FirstOrDefault();
+    }
+
     private async Task LoadAsync()
     {
+        CurrentLoginId = GetCurrentLoginId();
+
         Employees = await LoadEmployeesAsync();
 
         // المنتقي لا يحمّل قائمة — صفٌّ واحد للموظف المرتبط إن وُجد.
@@ -736,6 +924,8 @@ WHERE Id = @SystemUserId;
         PageError = message;
         Input.Password = null;
         Input.ConfirmPassword = null;
+        BulkPassword = null;
+        BulkConfirmPassword = null;
         await LoadAsync();
         return Page();
     }
