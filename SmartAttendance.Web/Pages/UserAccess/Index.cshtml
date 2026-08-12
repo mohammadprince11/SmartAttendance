@@ -70,7 +70,7 @@
 
     @* ---------- شريط الإجراء الجماعيّ: إعادة تعيين كلمة المرور ---------- *@
     <form method="post" asp-page-handler="BulkResetPassword" id="zua-bulk"
-          class="zua-bulk-bar" onsubmit="return zuaBulkConfirm()">
+          class="zua-bulk-bar" data-zyconfirm="تأكيد؟ اضغط «تطبيق» مرّة أخرى">
         <input type="hidden" name="Search" value="@Model.Search" />
         <input type="hidden" name="Status" value="@Model.Status" />
         <div class="zua-bulk-title">
