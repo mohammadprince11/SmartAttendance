@@ -95,8 +95,16 @@
                     <input type="checkbox" name="BulkKickSessions" value="true" />
                     طرد جلساتهم الحاليّة فوراً
                 </label>
-                <button type="submit" class="zua-btn">تطبيق على المحدَّدين</button>
+                <label class="zua-bulk-check">
+                    <input type="checkbox" name="BulkForceChange" value="true" checked />
+                    إجبار تغييرها عند أول دخول
+                </label>
+                <button type="submit" class="zua-btn">تطبيق</button>
             </div>
+            <label class="zua-bulk-check" style="margin-top:10px;color:var(--zua-amber);font-weight:800">
+                <input type="checkbox" name="BulkAllNoAccount" value="true" onchange="zuaBulkCount()" />
+                إنشاء حساب «موظف» لكل الموظّفين الفعّالين بلا حساب (اسم المستخدم = كود الموظّف)
+            </label>
             <p class="hint" style="margin:6px 0 0">
                 يُطبَّق على الحسابات المحدَّدة في الجدول أو المُلصقة بالأكواد، ويُطلب من كلٍّ تغييرها عند الدخول التالي. حسابك الشخصي مُستثنى.
             </p>
@@ -333,15 +341,23 @@
                 master.indeterminate = n > 0 && n < all.length;
             }
         }
+        function zuaAllNoAccount() {
+            var c = document.querySelector('#zua-bulk input[name=BulkAllNoAccount]');
+            return !!(c && c.checked);
+        }
         function zuaBulkConfirm() {
             var n = zuaRowChecks().filter(function (c) { return c.checked; }).length;
             var codes = zuaCodeCount();
-            if (n === 0 && codes === 0) {
-                alert('حدِّد حساباً من الجدول أو الصق أكواد موظفين.');
+            var all = zuaAllNoAccount();
+            if (n === 0 && codes === 0 && !all) {
+                alert('حدِّد حساباً من الجدول، أو الصق أكواد، أو فعّل «إنشاء حساب للجميع».');
                 return false;
             }
+            if (all) {
+                return confirm('سيتم إنشاء حساب «موظف» لكل الموظّفين الفعّالين بلا حساب (اسم المستخدم = كود كلٍّ) بكلمة المرور المُدخلة. متابعة؟');
+            }
             var total = n + codes;
-            return confirm('إعادة تعيين كلمة المرور المؤقّتة لـ' + total + ' حساب (المحدَّد + الملصوق)؟ من لا حساب له من الأكواد سيُنشأ له حساب «موظف». سيُطلب من الجميع تغييرها عند الدخول التالي.');
+            return confirm('إعادة تعيين كلمة المرور لـ' + total + ' حساب (المحدَّد + الملصوق)؟ من لا حساب له من الأكواد سيُنشأ له حساب «موظف».');
         }
 
         @if (Model.Input.IsEditing || Model.OpenCreate)

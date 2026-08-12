@@ -70,6 +70,14 @@ public class IndexModel : PageModel
     [BindProperty]
     public string[] SelectedEmployeeCodes { get; set; } = Array.Empty<string>();
 
+    /// <summary>إنشاء حساب «Employee» لكل موظف فعّال بلا حساب (اسم المستخدم = كوده).</summary>
+    [BindProperty]
+    public bool BulkAllNoAccount { get; set; }
+
+    /// <summary>إجبار تغيير كلمة المرور عند أول دخول (افتراضي: نعم).</summary>
+    [BindProperty]
+    public bool BulkForceChange { get; set; } = true;
+
     /// <summary>هوية الدخول الحاليّة — يخفي الجدول خانتها من التحديد الجماعيّ.</summary>
     public int CurrentLoginId { get; set; }
 
@@ -635,6 +643,19 @@ WHERE Id = @SystemUserId;
             .Select(m => (m.EmployeeId, m.Code))
             .ToList();
 
+        // «إنشاء حساب للجميع»: نضمّ كل موظف فعّال بلا حساب (بلا تكرار مع الملصوق).
+        if (BulkAllNoAccount)
+        {
+            var seen = new HashSet<int>(toCreate.Select(t => t.EmployeeId));
+            foreach (var (empId, code) in await LoadAllNoAccountEmployeesAsync())
+            {
+                if (seen.Add(empId))
+                {
+                    toCreate.Add((empId, code));
+                }
+            }
+        }
+
         var loginIdsFromCodes = matched
             .Where(m => m.LoginId.HasValue)
             .Select(m => m.LoginId!.Value);
@@ -692,7 +713,7 @@ UPDATE AppLoginUsers
 SET PasswordHash = @PasswordHash,
     PasswordSalt = @PasswordSalt,
     PasswordChangedAt = SYSUTCDATETIME(),
-    MustChangePassword = 1,
+    MustChangePassword = @MustChange,
     UpdatedAt = SYSUTCDATETIME()
 WHERE Id = @LoginId;
 """,
@@ -700,6 +721,7 @@ WHERE Id = @LoginId;
                     {
                         HrmsDatabase.AddParameter(command, "@PasswordHash", hash);
                         HrmsDatabase.AddParameter(command, "@PasswordSalt", salt);
+                        HrmsDatabase.AddParameter(command, "@MustChange", BulkForceChange);
                         HrmsDatabase.AddParameter(command, "@LoginId", loginId);
                     });
 
@@ -721,7 +743,7 @@ VALUES
                                 ("LoginId", loginId),
                                 ("TargetUserName", username),
                                 ("PasswordChanged", true),
-                                ("MustChangePassword", true),
+                                ("MustChangePassword", BulkForceChange),
                                 ("SessionsKicked", BulkKickSessions)));
                         HrmsDatabase.AddParameter(command, "@Actor", actor);
                         HrmsDatabase.AddParameter(command, "@IpAddress", ipAddress);
@@ -747,6 +769,14 @@ VALUES
             }
 
             // إنشاء حسابات «Employee» للأكواد التي لا حساب لها (اسم المستخدم = الكود).
+            //
+            // ⚠️ أداء: PBKDF2 بـ210 آلاف تكرار = ~65ms للهاش الواحد. آلاف الموظفين
+            // × ذلك = دقائق تتجاوز مهلة البروكسي (~100 ثانية) فتنهار العملية. الكلمة
+            // المؤقّتة واحدة للجميع، فنهاشها مرّة ونعيد استخدامها — والملح المستقلّ
+            // يعود لكلٍّ لحظة تغييره كلمته أول دخول (لذا يبقى «إجبار التغيير» مهمّاً).
+            var createSalt = SimplePasswordHasher.CreateSalt();
+            var createHash = SimplePasswordHasher.HashPassword(password, createSalt);
+
             foreach (var (employeeId, code) in toCreate)
             {
                 // اسم المستخدم = الكود؛ إن كان مأخوذاً مسبقاً لحسابٍ آخر نتخطّاه بأمان.
@@ -756,14 +786,11 @@ VALUES
                     continue;
                 }
 
-                var salt = SimplePasswordHasher.CreateSalt();
-                var hash = SimplePasswordHasher.HashPassword(password, salt);
-
                 await CreateEmployeeLoginAsync(
                     code,
                     employeeId,
-                    hash,
-                    salt,
+                    createHash,
+                    createSalt,
                     actor,
                     ipAddress);
 
@@ -930,7 +957,7 @@ INSERT INTO AppLoginUsers
  PasswordChangedAt, MustChangePassword, CreatedAt)
 VALUES
 (@EmployeeId, @Username, @PasswordHash, @PasswordSalt, 'Employee', 1,
- SYSUTCDATETIME(), 1, SYSUTCDATETIME());
+ SYSUTCDATETIME(), @MustChange, SYSUTCDATETIME());
 
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
@@ -940,6 +967,7 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                 HrmsDatabase.AddParameter(command, "@Username", code);
                 HrmsDatabase.AddParameter(command, "@PasswordHash", hash);
                 HrmsDatabase.AddParameter(command, "@PasswordSalt", salt);
+                HrmsDatabase.AddParameter(command, "@MustChange", BulkForceChange);
             });
 
         await HrmsDatabase.ExecuteAsync(
@@ -961,12 +989,46 @@ VALUES
                         ("EmployeeId", employeeId),
                         ("UserName", code),
                         ("Role", "Employee"),
-                        ("MustChangePassword", true)));
+                        ("MustChangePassword", BulkForceChange)));
                 HrmsDatabase.AddParameter(command, "@Actor", actor);
                 HrmsDatabase.AddParameter(command, "@IpAddress", ipAddress);
             });
 
         return loginId;
+    }
+
+    /// <summary>كل موظف فعّال غير محذوف بلا أي حساب دخول أو هوية صلاحيات (بلا حدّ).</summary>
+    private async Task<List<(int EmployeeId, string Code)>> LoadAllNoAccountEmployeesAsync()
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT e.Id AS EmployeeId, e.EmployeeNo
+FROM Employees e
+WHERE e.IsDeleted = 0
+  AND e.IsActive = 1
+  AND NULLIF(LTRIM(RTRIM(e.EmployeeNo)), '') IS NOT NULL
+  AND NOT EXISTS
+  (
+      SELECT 1 FROM AppLoginUsers u WHERE u.EmployeeId = e.Id
+  )
+  AND NOT EXISTS
+  (
+      SELECT 1 FROM SystemUsers su
+      WHERE su.EmployeeId = e.Id AND su.IsDeleted = 0
+  )
+ORDER BY e.EmployeeNo;
+""",
+            null,
+            reader => new
+            {
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                Code = HrmsDatabase.GetString(reader, "EmployeeNo")
+            });
+
+        return rows
+            .Select(r => (r.EmployeeId, r.Code))
+            .ToList();
     }
 
     private async Task LoadAsync()
