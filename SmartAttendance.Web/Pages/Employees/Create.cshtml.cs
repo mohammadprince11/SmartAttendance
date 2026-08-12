@@ -164,7 +164,9 @@ public class CreateModel : PageModel
         if (!ModelState.IsValid)
             return Page();
 
-        // حساب الدخول (اختياري): نتحقّق قبل إنشاء الموظف كي لا نُنشئ موظفاً ثم نفشل.
+        // حساب الدخول إجباريّ لكل موظف جديد: نتحقّق قبل إنشاء الموظف كي لا نُنشئ
+        // موظفاً ثم نفشل. اسم الدخول اختياري (افتراضياً = كود الموظف)؛ الكلمة مطلوبة.
+        CreateLoginAccount = true;
         string? loginUsername = null;
         if (CreateLoginAccount)
         {

@@ -517,25 +517,21 @@
 
         <section class="nxr-card" style="margin-top:18px">
             <header class="nxr-card-head">
-                <h2>حساب الدخول (اختياري)</h2>
-                <p>أنشئ للموظف حساب دخولٍ بدور «موظف» في نفس الخطوة. اتركه فارغاً لإضافة الموظف بلا حساب.</p>
+                <h2>حساب الدخول</h2>
+                <p>يُنشأ للموظف حساب دخولٍ بدور «موظف» تلقائياً مع إضافته. كلمة المرور مطلوبة؛ اسم الدخول اختياري (افتراضياً = كود الموظف).</p>
             </header>
             <div class="nxr-card-body">
-                <label style="display:flex;align-items:center;gap:8px;font-weight:800;margin-bottom:12px">
-                    <input type="checkbox" asp-for="CreateLoginAccount" style="width:auto;min-height:auto" />
-                    إنشاء حساب دخول لهذا الموظف
-                </label>
                 <div class="nxr-form-grid">
                     <div class="nxr-field">
-                        <label asp-for="LoginUsername">اسم الدخول</label>
+                        <label asp-for="LoginUsername">اسم الدخول (اختياري)</label>
                         <input asp-for="LoginUsername" dir="ltr" autocomplete="off"
                                placeholder="افتراضياً = كود الموظف" />
                         <small>إن تُرك فارغاً يُستخدم كود الموظف اسماً للدخول.</small>
                     </div>
                     <div class="nxr-field">
-                        <label asp-for="LoginPassword">كلمة المرور المؤقّتة</label>
-                        <input asp-for="LoginPassword" type="password" dir="ltr"
-                               autocomplete="new-password" placeholder="8 أحرف على الأقل" />
+                        <label asp-for="LoginPassword">كلمة المرور المؤقّتة *</label>
+                        <input asp-for="LoginPassword" type="text" dir="ltr"
+                               autocomplete="off" placeholder="8 أحرف على الأقل" />
                     </div>
                 </div>
                 <label style="display:flex;align-items:center;gap:8px;font-weight:700;margin-top:10px">
