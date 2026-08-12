@@ -267,6 +267,98 @@ DELETE FROM AccessRoles WHERE Id = @Id;
         }
     }
 
+    /// <summary>كل الأدوار الفعّالة (أيّ نوع) — لملء منتقي «الأدوار المخصّصة» بـUserAccess.</summary>
+    public static async Task<List<AccessRole>> ListActiveAsync(ApplicationDbContext dbContext)
+    {
+        await EnsureAsync(dbContext);
+        return await HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+SELECT r.*, (SELECT COUNT(*) FROM UserAccessRoles u WHERE u.RoleId = r.Id) AS AffectedUsers
+FROM AccessRoles r
+WHERE r.IsActive = 1
+ORDER BY r.RoleType, r.NameAr;
+""",
+            command => { },
+            ReadRole);
+    }
+
+    /// <summary>معرّفات الأدوار المُسنَدة لمستخدمٍ واحد (عكس GetAssignedUserIdsAsync).</summary>
+    public static async Task<List<int>> GetUserRoleIdsAsync(ApplicationDbContext dbContext, int systemUserId)
+    {
+        await EnsureAsync(dbContext);
+        return await HrmsDatabase.QueryAsync(
+            dbContext,
+            "SELECT RoleId FROM UserAccessRoles WHERE SystemUserId = @UserId;",
+            command => HrmsDatabase.AddParameter(command, "@UserId", systemUserId),
+            reader => HrmsDatabase.GetInt(reader, "RoleId"));
+    }
+
+    /// <summary>خريطة SystemUserId ← قائمة RoleIds لمجموعة مستخدمين (لتعبئة صفوف الجدول دفعةً).</summary>
+    public static async Task<Dictionary<int, List<int>>> GetRolesForUsersAsync(
+        ApplicationDbContext dbContext, IReadOnlyList<int> systemUserIds)
+    {
+        await EnsureAsync(dbContext);
+        var map = new Dictionary<int, List<int>>();
+        var ids = systemUserIds.Where(i => i > 0).Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return map;
+        }
+
+        var names = ids.Select((_, i) => $"@u{i}").ToList();
+        var rows = await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"SELECT SystemUserId, RoleId FROM UserAccessRoles WHERE SystemUserId IN ({string.Join(", ", names)});",
+            command =>
+            {
+                for (var i = 0; i < ids.Count; i++)
+                {
+                    HrmsDatabase.AddParameter(command, names[i], ids[i]);
+                }
+            },
+            reader => new
+            {
+                UserId = HrmsDatabase.GetInt(reader, "SystemUserId"),
+                RoleId = HrmsDatabase.GetInt(reader, "RoleId"),
+            });
+
+        foreach (var row in rows)
+        {
+            if (!map.TryGetValue(row.UserId, out var list))
+            {
+                list = new List<int>();
+                map[row.UserId] = list;
+            }
+            list.Add(row.RoleId);
+        }
+
+        return map;
+    }
+
+    /// <summary>يضبط أدوار مستخدمٍ واحد على المجموعة المعطاة (حذفٌ ثم إدراج).</summary>
+    public static async Task ReplaceUserRolesAsync(
+        ApplicationDbContext dbContext, int systemUserId, IEnumerable<int> roleIds)
+    {
+        await EnsureAsync(dbContext);
+        await HrmsDatabase.ExecuteAsync(
+            dbContext,
+            "DELETE FROM UserAccessRoles WHERE SystemUserId = @UserId;",
+            command => HrmsDatabase.AddParameter(command, "@UserId", systemUserId));
+
+        foreach (var roleId in roleIds.Where(r => r > 0).Distinct())
+        {
+            await HrmsDatabase.ExecuteAsync(
+                dbContext,
+                "INSERT INTO UserAccessRoles (SystemUserId, RoleId) VALUES (@UserId, @RoleId);",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@UserId", systemUserId);
+                    HrmsDatabase.AddParameter(command, "@RoleId", roleId);
+                });
+        }
+    }
+
     /// <summary>Number of a user's active roles of a type (0 = user is unrestricted for that type).</summary>
     public static async Task<int> CountUserRolesAsync(
         ApplicationDbContext dbContext, int systemUserId, string roleType)

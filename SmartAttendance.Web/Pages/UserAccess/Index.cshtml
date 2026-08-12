@@ -28,6 +28,12 @@
     .zua-pager { display:flex; flex-wrap:wrap; align-items:center; gap:8px; justify-content:center; margin:14px 0; }
     .zua-pager .disabled { pointer-events:none; opacity:.45; }
     .zua-pager-info { font-weight:800; font-size:13px; color:var(--zua-muted); padding:0 8px; }
+    .zua-accessroles { border:1px solid var(--zua-line); border-radius:12px; padding:10px 12px; }
+    .zua-ar-title { display:block; font-weight:800; font-size:12px; color:var(--zua-muted); margin-bottom:8px; }
+    .zua-ar-grid { display:flex; flex-direction:column; gap:6px; max-height:180px; overflow:auto; }
+    .zua-ar-item { display:flex !important; flex-direction:row !important; align-items:center; gap:8px; font-weight:700; }
+    .zua-ar-item input { min-height:auto; width:auto; }
+    .zua-ar-item small { color:var(--zua-muted); font-weight:600; }
     .zua-bulk-check { flex-direction:row !important; align-items:center; gap:8px; color:var(--zua-muted); }
     .zua-bulk-check input { min-height:auto; }
 </style>
@@ -201,7 +207,8 @@
                                                 data-empname="@row.EmployeeName" data-fullname="@row.DisplayName"
                                                 data-username="@row.UserName" data-email="@row.Email"
                                                 data-role="@row.CompatibilityRole" data-active="@(row.IsActive ? "1" : "0")"
-                                                data-notes="@row.Notes">تعديل</button>
+                                                data-notes="@row.Notes"
+                                                data-roleids="@(Model.AssignedRolesByUser.TryGetValue(row.SystemUserId, out var rids) ? string.Join(",", rids) : "")">تعديل</button>
                                     }
                                     @if (row.LinkStatus == SmartAttendance.Web.Pages.UserAccess.IndexModel.IdentityLinkStatus.NoAccount && row.EmployeeId.HasValue)
                                     {
@@ -210,7 +217,7 @@
                                                 data-empid="@row.EmployeeId" data-code="@row.EmployeeNo"
                                                 data-empname="@row.EmployeeName" data-fullname="@row.DisplayName"
                                                 data-username="@row.EmployeeNo" data-email=""
-                                                data-role="Employee" data-active="1" data-notes="">إنشاء حساب</button>
+                                                data-role="Employee" data-active="1" data-notes="" data-roleids="">إنشاء حساب</button>
                                     }
                                     @if (row.CanToggle)
                                     {
@@ -308,6 +315,23 @@
                     <textarea asp-for="Input.Notes" rows="2"></textarea>
                 </label>
 
+                @if (Model.AccessRoleOptions.Count > 0)
+                {
+                    <div class="zua-accessroles">
+                        <span class="zua-ar-title">الأدوار المخصّصة (من «أدوار الوصول»)</span>
+                        <div class="zua-ar-grid">
+                            @foreach (var r in Model.AccessRoleOptions)
+                            {
+                                <label class="zua-ar-item">
+                                    <input type="checkbox" class="zua-accessrole"
+                                           name="SelectedAccessRoleIds" value="@r.Id" data-roleid="@r.Id" />
+                                    <span>@r.NameAr <small>· @r.RoleType</small></span>
+                                </label>
+                            }
+                        </div>
+                    </div>
+                }
+
                 <label style="flex-direction:row;align-items:center;gap:8px">
                     <input asp-for="Input.IsActive" type="checkbox" style="min-height:auto" /> الحساب فعال
                 </label>
@@ -356,6 +380,11 @@
             if (pid) pid.value = empId;
             if (pcode) pcode.value = empId ? (d.code || '') : '';
             if (pname) pname.value = empId ? (d.empname || '') : '';
+            // الأدوار المخصّصة: علّم المُسنَدة وأزل الباقي.
+            var ids = (d.roleids || '').split(',').filter(function (x) { return x.length; });
+            document.querySelectorAll('.zua-accessrole').forEach(function (c) {
+                c.checked = ids.indexOf(c.value) !== -1;
+            });
             var isNew = (d.loginid === '0' && d.systemuserid === '0');
             document.getElementById('zua-slide-title').textContent = isNew ? 'حساب جديد' : 'تعديل الحساب';
             zuaOpen();
