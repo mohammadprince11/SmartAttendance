@@ -41,6 +41,19 @@
         }
     </div>
 
+    @{
+        var arEnforcedType = Model.Type == AccessRoleStore.TypePages
+            || Model.Type == AccessRoleStore.TypeData;
+    }
+    @if (!arEnforcedType)
+    {
+        <div class="ar-toast" role="alert"
+             style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.5);color:#b45309;font-weight:800">
+            ⚠️ هذا النوع (@Model.TypeLabel) قيد التطوير: الإعدادات تُحفَظ لكنها <b>لا تُطبَّق بعد</b> على النظام.
+            لا تعتمد عليها كحمايةٍ فعليّة حتى تُفعَّل. (المطبَّق حاليّاً: «الصفحات» و«البيانات».)
+        </div>
+    }
+
     <div class="ar-panel">
         <div class="ar-panel-title">أدوار الوصول — @Model.TypeLabel</div>
 
