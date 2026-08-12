@@ -15,9 +15,14 @@ public static class SensitiveFieldCatalog
 
     public sealed record SensitiveField(string Code, string Label);
 
+    // ملاحظة: الإنفاذ عندنا على مستوى البطاقة لا الحقل المفرد — منح «الراتب» يكشف
+    // بطاقة الراتب وبطاقة البيانات المالية (البنك · الآيبان · الضمان · الضريبة) معاً،
+    // إذ كلتاهما محجوبتان بنفس CanViewSalary. لذا مدخلٌ واحدٌ دقيق بدل حقولٍ توحي
+    // بمنحٍ مستقلٍّ لا يدعمه الإنفاذ الحاليّ. الفصل حقلاً-بحقل (نمط كيان) يتطلّب
+    // تقسيم البطاقة المالية أولاً — مرحلةٌ لاحقة.
     public static readonly IReadOnlyList<SensitiveField> Fields = new List<SensitiveField>
     {
-        new(Salary, "الراتب والتعويضات"),
+        new(Salary, "الراتب والبيانات المالية (البنك · الآيبان · الضمان · الضريبة)"),
     };
 
     public static bool IsValid(string code) =>
