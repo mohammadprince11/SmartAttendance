@@ -99,8 +99,9 @@
                     <input type="checkbox" name="BulkForceChange" value="true" checked />
                     إجبار تغييرها عند أول دخول
                 </label>
-                <button type="submit" class="zua-btn">تطبيق</button>
+                <button type="submit" class="zua-btn" onclick="return zuaValidateBulk(event)">تطبيق</button>
             </div>
+            <div id="zua-bulk-msg" class="zua-alert error" style="display:none;margin-top:10px"></div>
             <label class="zua-bulk-check" style="margin-top:10px;color:var(--zua-amber);font-weight:800">
                 <input type="checkbox" name="BulkAllNoAccount" value="true" onchange="zuaBulkCount()" />
                 إنشاء حساب «موظف» لكل الموظّفين الفعّالين بلا حساب (اسم المستخدم = كود الموظّف)
@@ -388,6 +389,31 @@
                 master.checked = all.length > 0 && n === all.length;
                 master.indeterminate = n > 0 && n < all.length;
             }
+        }
+        function zuaBulkMsg(msg) {
+            var box = document.getElementById('zua-bulk-msg');
+            if (!box) { alert(msg); return; }
+            box.textContent = msg;
+            box.style.display = msg ? 'block' : 'none';
+        }
+        // تحقّق فوريّ قبل الإرسال: يمنع «تطبيق» بلا بيانات (لا ذهاب للخادم).
+        function zuaValidateBulk(e) {
+            var pass = document.querySelector('#zua-bulk input[name=BulkPassword]');
+            var conf = document.querySelector('#zua-bulk input[name=BulkConfirmPassword]');
+            var n = zuaRowChecks().filter(function (c) { return c.checked; }).length;
+            var codes = zuaCodeCount();
+            var all = zuaAllNoAccount();
+            var msg = '';
+            if (n === 0 && codes === 0 && !all) {
+                msg = 'حدِّد حساباً من الجدول، أو الصق أكواد موظفين، أو فعّل «إنشاء حساب للجميع».';
+            } else if (!pass || pass.value.length < 8) {
+                msg = 'اكتب كلمة مرورٍ مؤقّتة (8 أحرف على الأقل).';
+            } else if (!conf || conf.value !== pass.value) {
+                msg = 'كلمة المرور المؤقّتة وتأكيدها غير متطابقين.';
+            }
+            if (msg) { e.preventDefault(); zuaBulkMsg(msg); return false; }
+            zuaBulkMsg('');
+            return true;
         }
         function zuaAllNoAccount() {
             var c = document.querySelector('#zua-bulk input[name=BulkAllNoAccount]');
