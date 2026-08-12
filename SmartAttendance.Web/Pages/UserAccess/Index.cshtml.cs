@@ -55,6 +55,10 @@ public class IndexModel : PageModel
     [BindProperty]
     public bool BulkKickSessions { get; set; }
 
+    /// <summary>أكواد موظفين ملصوقة (مسافة/سطر/فاصلة) — من لا حساب له يُنشأ له «Employee».</summary>
+    [BindProperty]
+    public string? BulkEmployeeCodes { get; set; }
+
     /// <summary>هوية الدخول الحاليّة — يخفي الجدول خانتها من التحديد الجماعيّ.</summary>
     public int CurrentLoginId { get; set; }
 
@@ -574,22 +578,44 @@ WHERE Id = @SystemUserId;
             return await FailAsync("كلمة المرور المؤقّتة وتأكيدها غير متطابقين.");
         }
 
+        // أكواد ملصوقة: نحلّها إلى موظفين، فمن له حساب يُضاف لمجموعة إعادة التعيين
+        // ومن لا حساب له يُنشأ له «Employee» (اسم المستخدم = كوده).
+        var pastedCodes = ParseEmployeeCodes(BulkEmployeeCodes);
+        var (matched, unknownCodes) = await ResolvePastedCodesAsync(pastedCodes);
+
+        var toCreate = matched
+            .Where(m => !m.LoginId.HasValue)
+            .Select(m => (m.EmployeeId, m.Code))
+            .ToList();
+
+        var loginIdsFromCodes = matched
+            .Where(m => m.LoginId.HasValue)
+            .Select(m => m.LoginId!.Value);
+
         var plan = BulkPasswordResetPlanner.Build(
-            SelectedLoginIds,
+            SelectedLoginIds.Concat(loginIdsFromCodes),
             GetCurrentLoginId());
 
-        if (plan.Apply.Count == 0)
+        if (plan.Apply.Count == 0 && toCreate.Count == 0)
         {
+            if (unknownCodes.Count > 0)
+            {
+                return await FailAsync(
+                    "لم يُطابَق أيٌّ من الأكواد الملصوقة موظفاً له حساب أو قابلاً للإنشاء: "
+                    + string.Join("، ", unknownCodes.Take(20)));
+            }
+
             return await FailAsync(
                 plan.SkippedSelf.Count > 0
                     ? "لا يمكن إعادة تعيين كلمة مرور حسابك الشخصي أثناء استخدامه. اختر حسابات أخرى."
-                    : "لم تُحدَّد أي حسابات لإعادة التعيين.");
+                    : "لم تُحدَّد أي حسابات ولم تُلصق أكواد صالحة.");
         }
 
         await EnsureSqlSetOptionsAsync();
 
         var actor = User.Identity?.Name ?? "System";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var conflictCodes = new List<string>();
 
         await using var transaction =
             await _dbContext.Database.BeginTransactionAsync(
@@ -598,6 +624,7 @@ WHERE Id = @SystemUserId;
         try
         {
             var applied = 0;
+            var created = 0;
 
             foreach (var loginId in plan.Apply)
             {
@@ -672,18 +699,54 @@ VALUES
                 applied++;
             }
 
+            // إنشاء حسابات «Employee» للأكواد التي لا حساب لها (اسم المستخدم = الكود).
+            foreach (var (employeeId, code) in toCreate)
+            {
+                // اسم المستخدم = الكود؛ إن كان مأخوذاً مسبقاً لحسابٍ آخر نتخطّاه بأمان.
+                if (await UsernameExistsAsync(code))
+                {
+                    conflictCodes.Add(code);
+                    continue;
+                }
+
+                var salt = SimplePasswordHasher.CreateSalt();
+                var hash = SimplePasswordHasher.HashPassword(password, salt);
+
+                await CreateEmployeeLoginAsync(
+                    code,
+                    employeeId,
+                    hash,
+                    salt,
+                    actor,
+                    ipAddress);
+
+                // حسابٌ جديد بلا جلسة قائمة؛ إبطال الكاش احتياطاً باسمه (الكود).
+                AccountSecurityStore.InvalidateCache(_cache, code);
+
+                created++;
+            }
+
             await transaction.CommitAsync(HttpContext.RequestAborted);
 
-            var kickNote = BulkKickSessions
+            var kickNote = BulkKickSessions && applied > 0
                 ? " وطُردت جلساتهم الحاليّة"
+                : string.Empty;
+            var createdNote = created > 0
+                ? $"، وأُنشئ {created} حساب «موظف» جديد"
                 : string.Empty;
             var skipNote = plan.SkippedSelf.Count > 0
                 ? " (استُثني حسابك الشخصي)"
                 : string.Empty;
+            var unknownNote = unknownCodes.Count > 0
+                ? $" · أكواد غير مطابقة ({unknownCodes.Count}): {string.Join("، ", unknownCodes.Take(20))}"
+                : string.Empty;
+            var conflictNote = conflictCodes.Count > 0
+                ? $" · أكواد اسمها مأخوذ مسبقاً ({conflictCodes.Count}): {string.Join("، ", conflictCodes.Take(20))}"
+                : string.Empty;
 
             SuccessMessage =
-                $"تمت إعادة تعيين كلمة المرور المؤقّتة لـ{applied} حساب، " +
-                $"وسيُطلب منهم تغييرها عند الدخول التالي{kickNote}.{skipNote}";
+                $"تمت إعادة تعيين كلمة المرور المؤقّتة لـ{applied} حساب{createdNote}، " +
+                $"وسيُطلب منهم تغييرها عند الدخول التالي{kickNote}.{skipNote}{unknownNote}{conflictNote}";
 
             return RedirectToPage(
                 "./Index",
@@ -711,6 +774,152 @@ VALUES
             reader => HrmsDatabase.GetString(reader, "Username"));
 
         return rows.FirstOrDefault();
+    }
+
+    /// <summary>يفصل الأكواد الملصوقة على المسافات والأسطر والفواصل، منزوعة المكرّر.</summary>
+    private static List<string> ParseEmployeeCodes(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return new List<string>();
+        }
+
+        return raw
+            .Split(new[] { ' ', '\t', '\r', '\n', ',', ';', '،' },
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(2000)
+            .ToList();
+    }
+
+    /// <summary>
+    /// يحلّ الأكواد الملصوقة إلى موظفين وحساب الدخول المرتبط بكلٍّ إن وُجد. الأكواد
+    /// تُمرَّر كمعاملات (لا حقن)، ويُعاد ما لم يُطابَق موظفاً كـ«غير معروف».
+    /// </summary>
+    private async Task<(List<(int EmployeeId, string Code, int? LoginId)> Matched,
+        List<string> Unknown)> ResolvePastedCodesAsync(List<string> codes)
+    {
+        var matched = new List<(int, string, int?)>();
+
+        if (codes.Count == 0)
+        {
+            return (matched, new List<string>());
+        }
+
+        var paramNames = codes.Select((_, i) => $"@c{i}").ToList();
+
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            $"""
+SELECT e.EmployeeNo AS Code, e.Id AS EmployeeId,
+       ISNULL(lu.Id, 0) AS LoginId
+FROM Employees e
+OUTER APPLY
+(
+    SELECT TOP 1 Id
+    FROM AppLoginUsers
+    WHERE EmployeeId = e.Id
+    ORDER BY Id
+) lu
+WHERE e.IsDeleted = 0
+  AND e.EmployeeNo IN ({string.Join(", ", paramNames)});
+""",
+            command =>
+            {
+                for (var i = 0; i < codes.Count; i++)
+                {
+                    HrmsDatabase.AddParameter(command, paramNames[i], codes[i]);
+                }
+            },
+            reader => new
+            {
+                Code = HrmsDatabase.GetString(reader, "Code"),
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                LoginId = HrmsDatabase.GetInt(reader, "LoginId")
+            });
+
+        foreach (var row in rows)
+        {
+            matched.Add((
+                row.EmployeeId,
+                row.Code,
+                row.LoginId > 0 ? row.LoginId : null));
+        }
+
+        var foundCodes = new HashSet<string>(
+            rows.Select(r => r.Code),
+            StringComparer.OrdinalIgnoreCase);
+
+        var unknown = codes
+            .Where(c => !foundCodes.Contains(c))
+            .ToList();
+
+        return (matched, unknown);
+    }
+
+    private async Task<bool> UsernameExistsAsync(string username)
+    {
+        var count = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            "SELECT COUNT(*) FROM AppLoginUsers WHERE Username = @Username;",
+            command => HrmsDatabase.AddParameter(command, "@Username", username));
+
+        return count > 0;
+    }
+
+    private async Task<int> CreateEmployeeLoginAsync(
+        string code,
+        int employeeId,
+        string hash,
+        string salt,
+        string actor,
+        string? ipAddress)
+    {
+        var loginId = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            """
+INSERT INTO AppLoginUsers
+(EmployeeId, Username, PasswordHash, PasswordSalt, Role, IsActive,
+ PasswordChangedAt, MustChangePassword, CreatedAt)
+VALUES
+(@EmployeeId, @Username, @PasswordHash, @PasswordSalt, 'Employee', 1,
+ SYSUTCDATETIME(), 1, SYSUTCDATETIME());
+
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                HrmsDatabase.AddParameter(command, "@Username", code);
+                HrmsDatabase.AddParameter(command, "@PasswordHash", hash);
+                HrmsDatabase.AddParameter(command, "@PasswordSalt", salt);
+            });
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+INSERT INTO AuditLogs
+(EntityName, EntityId, Action, NewValues, UserName, IpAddress)
+VALUES
+('UnifiedIdentity', @EntityId, 'Bulk Create Employee Login', @NewValues, @Actor, @IpAddress);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EntityId", $"{loginId}:0");
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@NewValues",
+                    HrmsDatabase.JsonLine(
+                        ("LoginId", loginId),
+                        ("EmployeeId", employeeId),
+                        ("UserName", code),
+                        ("Role", "Employee"),
+                        ("MustChangePassword", true)));
+                HrmsDatabase.AddParameter(command, "@Actor", actor);
+                HrmsDatabase.AddParameter(command, "@IpAddress", ipAddress);
+            });
+
+        return loginId;
     }
 
     private async Task LoadAsync()

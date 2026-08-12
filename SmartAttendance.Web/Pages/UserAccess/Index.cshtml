@@ -23,6 +23,8 @@
     .zua-bulk-fields { display:flex; flex-wrap:wrap; align-items:end; gap:12px; }
     .zua-bulk-fields label { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:800; color:var(--zua-muted); }
     .zua-bulk-fields input[type=password] { min-height:38px; padding:0 12px; border:1px solid var(--zua-line); border-radius:12px; background:transparent; color:inherit; min-width:190px; }
+    .zua-bulk-codes { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:800; color:var(--zua-muted); margin-bottom:8px; }
+    .zua-bulk-codes textarea { border:1px solid var(--zua-line); border-radius:12px; background:transparent; color:inherit; padding:10px 12px; resize:vertical; font-family:inherit; }
     .zua-bulk-check { flex-direction:row !important; align-items:center; gap:8px; color:var(--zua-muted); }
     .zua-bulk-check input { min-height:auto; }
 </style>
@@ -67,21 +69,20 @@
     </form>
 
     @* ---------- شريط الإجراء الجماعيّ: إعادة تعيين كلمة المرور ---------- *@
-    @{
-        var selectableCount = Model.Identities.Count(x =>
-            x.LoginId > 0 && x.LoginId != Model.CurrentLoginId);
-    }
-    @if (selectableCount > 0)
-    {
-        <form method="post" asp-page-handler="BulkResetPassword" id="zua-bulk"
-              class="zua-bulk-bar" onsubmit="return zuaBulkConfirm()">
-            <input type="hidden" name="Search" value="@Model.Search" />
-            <input type="hidden" name="Status" value="@Model.Status" />
-            <div class="zua-bulk-title">
-                <b>إعادة تعيين كلمة المرور جماعيّاً</b>
-                <span id="zua-bulk-count">لم تُحدَّد حسابات</span>
-            </div>
-            <div class="zua-bulk-fields">
+    <form method="post" asp-page-handler="BulkResetPassword" id="zua-bulk"
+          class="zua-bulk-bar" onsubmit="return zuaBulkConfirm()">
+        <input type="hidden" name="Search" value="@Model.Search" />
+        <input type="hidden" name="Status" value="@Model.Status" />
+        <div class="zua-bulk-title">
+            <b>إعادة تعيين كلمة المرور جماعيّاً</b>
+            <span id="zua-bulk-count">لم تُحدَّد حسابات</span>
+        </div>
+        <label class="zua-bulk-codes">أكواد الموظفين (اختياري — الصقها مفصولةً بمسافة أو سطر أو فاصلة)
+            <textarea name="BulkEmployeeCodes" rows="2" dir="ltr"
+                      placeholder="11230 10000 10521 ..." oninput="zuaBulkCount()"></textarea>
+        </label>
+        <span class="hint" style="display:block;margin:-4px 0 8px">من لا حساب دخول له من هذه الأكواد يُنشأ له حساب «موظف» تلقائيّاً (اسم المستخدم = كوده).</span>
+        <div class="zua-bulk-fields">
                 <label>كلمة مرور مؤقّتة
                     <input type="password" name="BulkPassword" dir="ltr" minlength="8"
                            autocomplete="new-password" placeholder="8 أحرف على الأقل" />
@@ -97,10 +98,9 @@
                 <button type="submit" class="zua-btn">تطبيق على المحدَّدين</button>
             </div>
             <p class="hint" style="margin:6px 0 0">
-                يُطبَّق على الحسابات المحدَّدة في الجدول، ويُطلب من كلٍّ تغييرها عند الدخول التالي. حسابك الشخصي مُستثنى.
+                يُطبَّق على الحسابات المحدَّدة في الجدول أو المُلصقة بالأكواد، ويُطلب من كلٍّ تغييرها عند الدخول التالي. حسابك الشخصي مُستثنى.
             </p>
         </form>
-    }
 
     @* ---------- الجدول ---------- *@
     <div class="zua-table-card">
@@ -291,10 +291,21 @@
             zuaRowChecks().forEach(function (c) { c.checked = master.checked; });
             zuaBulkCount();
         }
+        function zuaCodeCount() {
+            var ta = document.querySelector('#zua-bulk textarea[name=BulkEmployeeCodes]');
+            if (!ta || !ta.value.trim()) { return 0; }
+            return ta.value.split(/[\s,;،]+/).filter(function (s) { return s.trim().length; }).length;
+        }
         function zuaBulkCount() {
             var n = zuaRowChecks().filter(function (c) { return c.checked; }).length;
+            var codes = zuaCodeCount();
             var label = document.getElementById('zua-bulk-count');
-            if (label) { label.textContent = n > 0 ? ('المحدَّدون: ' + n) : 'لم تُحدَّد حسابات'; }
+            if (label) {
+                var parts = [];
+                if (n > 0) { parts.push('محدَّدون: ' + n); }
+                if (codes > 0) { parts.push('أكواد ملصوقة: ' + codes); }
+                label.textContent = parts.length ? parts.join(' · ') : 'لم تُحدَّد حسابات';
+            }
             var master = document.getElementById('zua-select-all');
             if (master) {
                 var all = zuaRowChecks();
@@ -304,11 +315,13 @@
         }
         function zuaBulkConfirm() {
             var n = zuaRowChecks().filter(function (c) { return c.checked; }).length;
-            if (n === 0) {
-                alert('حدِّد حساباً واحداً على الأقل من الجدول.');
+            var codes = zuaCodeCount();
+            if (n === 0 && codes === 0) {
+                alert('حدِّد حساباً من الجدول أو الصق أكواد موظفين.');
                 return false;
             }
-            return confirm('إعادة تعيين كلمة المرور المؤقّتة لـ' + n + ' حساب؟ سيُطلب منهم تغييرها عند الدخول التالي.');
+            var total = n + codes;
+            return confirm('إعادة تعيين كلمة المرور المؤقّتة لـ' + total + ' حساب (المحدَّد + الملصوق)؟ من لا حساب له من الأكواد سيُنشأ له حساب «موظف». سيُطلب من الجميع تغييرها عند الدخول التالي.');
         }
 
         @if (Model.Input.IsEditing)
