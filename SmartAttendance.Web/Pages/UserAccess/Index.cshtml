@@ -25,6 +25,9 @@
     .zua-bulk-fields input[type=password] { min-height:38px; padding:0 12px; border:1px solid var(--zua-line); border-radius:12px; background:transparent; color:inherit; min-width:190px; }
     .zua-bulk-codes { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:800; color:var(--zua-muted); margin-bottom:8px; }
     .zua-bulk-codes textarea { border:1px solid var(--zua-line); border-radius:12px; background:transparent; color:inherit; padding:10px 12px; resize:vertical; font-family:inherit; }
+    .zua-pager { display:flex; flex-wrap:wrap; align-items:center; gap:8px; justify-content:center; margin:14px 0; }
+    .zua-pager .disabled { pointer-events:none; opacity:.45; }
+    .zua-pager-info { font-weight:800; font-size:13px; color:var(--zua-muted); padding:0 8px; }
     .zua-bulk-check { flex-direction:row !important; align-items:center; gap:8px; color:var(--zua-muted); }
     .zua-bulk-check input { min-height:auto; }
 </style>
@@ -111,15 +114,7 @@
             </p>
         </form>
 
-    @if (Model.AccountsTotal > Model.AccountsShown)
-    {
-        <div class="zua-alert" style="background:rgba(18,217,227,.08)">
-            يوجد @Model.AccountsTotal حساب دخول — يُعرض منها @Model.AccountsShown فقط لأداء أفضل.
-            ابحث بالاسم أو اسم المستخدم أو الكود بالأعلى لإيجاد حسابٍ بعينه.
-        </div>
-    }
-
-    @if (Model.NoAccountTotal > Model.NoAccountShown)
+    @if (Model.NoAccountTotal > Model.NoAccountShown && Model.Page <= 1)
     {
         <div class="zua-alert" style="background:rgba(18,217,227,.08)">
             يوجد @Model.NoAccountTotal موظّف بلا حساب دخول — يُعرض منهم @Model.NoAccountShown فقط لأداء أفضل.
@@ -234,6 +229,21 @@
             </table>
         }
     </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="zua-pager" aria-label="ترقيم الصفحات">
+            <a class="zua-btn ghost @(Model.Page <= 1 ? "disabled" : "")"
+               href="?Page=1&Search=@Model.Search">« الأولى</a>
+            <a class="zua-btn ghost @(Model.Page <= 1 ? "disabled" : "")"
+               href="?Page=@(Model.Page - 1)&Search=@Model.Search">‹ السابقة</a>
+            <span class="zua-pager-info">صفحة @Model.Page من @Model.TotalPages · @Model.AccountsTotal حساب</span>
+            <a class="zua-btn ghost @(Model.Page >= Model.TotalPages ? "disabled" : "")"
+               href="?Page=@(Model.Page + 1)&Search=@Model.Search">التالية ›</a>
+            <a class="zua-btn ghost @(Model.Page >= Model.TotalPages ? "disabled" : "")"
+               href="?Page=@Model.TotalPages&Search=@Model.Search">الأخيرة »</a>
+        </nav>
+    }
 
     @* ---------- سلايد الإنشاء/التعديل (نفس نمط سلايدات الملف 360°) ---------- *@
     <div class="hrms-slideover-backdrop" id="zua-backdrop" onclick="zuaClose()"></div>

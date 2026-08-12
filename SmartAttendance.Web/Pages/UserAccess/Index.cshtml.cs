@@ -81,11 +81,20 @@ public class IndexModel : PageModel
     /// <summary>هوية الدخول الحاليّة — يخفي الجدول خانتها من التحديد الجماعيّ.</summary>
     public int CurrentLoginId { get; set; }
 
-    /// <summary>إجمالي حسابات الدخول (لعرض «يوجد المزيد — ابحث»).</summary>
+    /// <summary>إجمالي حسابات الدخول المطابقة للبحث (لحساب عدد الصفحات).</summary>
     public int AccountsTotal { get; set; }
 
-    /// <summary>عدد صفوف الحسابات المعروضة فعلاً (محدودة بـ300).</summary>
+    /// <summary>عدد صفوف الحسابات المعروضة فعلاً في هذه الصفحة.</summary>
     public int AccountsShown { get; set; }
+
+    public const int PageSize = 25;
+
+    /// <summary>رقم الصفحة الحاليّة (1‑based)، يُضبَط ضمن [1، TotalPages].</summary>
+    [BindProperty(SupportsGet = true)]
+    public int Page { get; set; } = 1;
+
+    /// <summary>إجمالي الصفحات = سقف(AccountsTotal / 25)، بحدٍّ أدنى 1.</summary>
+    public int TotalPages { get; set; } = 1;
 
     /// <summary>إجمالي الموظفين الفعّالين بلا حساب دخول (لعرض «يوجد المزيد»).</summary>
     public int NoAccountTotal { get; set; }
@@ -1050,45 +1059,9 @@ ORDER BY e.EmployeeNo;
         SelectedEmployeeCode = identity?.Code;
         SelectedEmployeeName = identity?.Name;
 
+        // البحث والترقيم يتمّان داخل SQL (LoadIdentityRowsAsync) فلا فلترة بالذاكرة
+        // هنا — وإلا لَقصّت الصفحةَ الحاليّة (25 صفّاً) فظهر أقلّ من المتوقّع.
         Identities = await LoadIdentityRowsAsync();
-
-        if (!string.IsNullOrWhiteSpace(Search))
-        {
-            var normalizedSearch = Search.Trim();
-
-            Identities = Identities
-                .Where(x =>
-                    x.UserName.Contains(
-                        normalizedSearch,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    x.DisplayName.Contains(
-                        normalizedSearch,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    x.EmployeeNo.Contains(
-                        normalizedSearch,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    x.EmployeeName.Contains(
-                        normalizedSearch,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    x.CompatibilityRole.Contains(
-                        normalizedSearch,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    x.SystemRoleLabel.Contains(
-                        normalizedSearch,
-                        StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
-
-        if (!string.IsNullOrWhiteSpace(Status) &&
-            Enum.TryParse<IdentityLinkStatus>(
-                Status,
-                true,
-                out var parsedStatus))
-        {
-            Identities = Identities
-                .Where(x => x.LinkStatus == parsedStatus)
-                .ToList();
-        }
     }
 
     private async Task<bool> LoadEditorAsync(
@@ -1633,11 +1606,28 @@ VALUES
 
         AccountsTotal = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
-            "SELECT COUNT(*) FROM AppLoginUsers;");
+            "SELECT COUNT(*) FROM AppLoginUsers u " +
+            "LEFT JOIN Employees e ON e.Id = u.EmployeeId" +
+            (hasSearch
+                ? " WHERE (u.Username LIKE @Term OR e.FullName LIKE @Term " +
+                  "OR e.EmployeeNo LIKE @Term OR u.Role LIKE @Term)"
+                : string.Empty) + ";",
+            command =>
+            {
+                if (hasSearch)
+                {
+                    HrmsDatabase.AddParameter(command, "@Term", searchTerm);
+                }
+            });
+
+        TotalPages = Math.Max(1, (AccountsTotal + PageSize - 1) / PageSize);
+        if (Page < 1) Page = 1;
+        if (Page > TotalPages) Page = TotalPages;
+        var skip = (Page - 1) * PageSize;
 
         var loginSql =
             """
-SELECT TOP (25)
+SELECT
     u.Id AS LoginId,
     ISNULL(u.EmployeeId, 0) AS LoginEmployeeId,
     u.Username AS LoginUserName,
@@ -1706,7 +1696,8 @@ OUTER APPLY
                 ? "\nWHERE (u.Username LIKE @Term OR e.FullName LIKE @Term " +
                   "OR e.EmployeeNo LIKE @Term OR u.Role LIKE @Term)"
                 : string.Empty) +
-            "\nORDER BY u.IsActive DESC, u.Username;";
+            "\nORDER BY u.IsActive DESC, u.Username" +
+            "\nOFFSET @Skip ROWS FETCH NEXT 25 ROWS ONLY;";
 
         var rows = await HrmsDatabase.QueryAsync(
             _dbContext,
@@ -1717,6 +1708,7 @@ OUTER APPLY
                 {
                     HrmsDatabase.AddParameter(command, "@Term", searchTerm);
                 }
+                HrmsDatabase.AddParameter(command, "@Skip", skip);
             },
             reader => new IdentityRow
             {
@@ -1800,6 +1792,10 @@ OUTER APPLY
 
         AccountsShown = rows.Count;
 
+        // صفوف «هويّة صلاحيات فقط» و«بلا حساب» تظهر بالصفحة الأولى فقط كي تبقى بقيّة
+        // الصفحات ترقيماً نقيّاً لحسابات الدخول (25 لكلّ صفحة).
+        if (Page <= 1)
+        {
         var systemOnlyRows = await HrmsDatabase.QueryAsync(
             _dbContext,
             """
@@ -1971,6 +1967,7 @@ WHERE e.IsDeleted = 0
 
         NoAccountShown = noAccountRows.Count;
         rows.AddRange(noAccountRows);
+        }
 
         return rows
             .OrderBy(x => StatusOrder(x.LinkStatus))
