@@ -211,6 +211,20 @@ public class IndexModel : PageModel
 
         NormalizeInput();
 
+        // منسدلة «الدور» قد تحمل دوراً مخصّصاً بصيغة "access:{id}": نفكّه فيصير الدور
+        // الخشِن «موظف» (افتراض آمن) ويُسنَد الدور المخصّص لهوية SystemUser.
+        if (Input.CompatibilityRole.StartsWith("access:", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(Input.CompatibilityRole["access:".Length..], out var accessRoleId) &&
+            accessRoleId > 0)
+        {
+            SelectedAccessRoleIds = new[] { accessRoleId };
+            Input.CompatibilityRole = "Employee";
+        }
+        else
+        {
+            SelectedAccessRoleIds = Array.Empty<int>();
+        }
+
         var validationError = await ValidateInputAsync();
 
         if (!string.IsNullOrWhiteSpace(validationError))

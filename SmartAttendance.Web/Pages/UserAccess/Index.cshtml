@@ -294,9 +294,20 @@
                     </label>
                     <label>الدور
                         <select asp-for="Input.CompatibilityRole">
-                            @foreach (var role in Model.Roles)
+                            <optgroup label="أدوار النظام">
+                                @foreach (var role in Model.Roles)
+                                {
+                                    <option value="@role.Value">@role.Label</option>
+                                }
+                            </optgroup>
+                            @if (Model.AccessRoleOptions.Count > 0)
                             {
-                                <option value="@role.Value">@role.Label</option>
+                                <optgroup label="أدوار مخصّصة (أدوار الوصول)">
+                                    @foreach (var r in Model.AccessRoleOptions)
+                                    {
+                                        <option value="access:@r.Id">@r.NameAr · @r.RoleType</option>
+                                    }
+                                </optgroup>
                             }
                         </select>
                     </label>
@@ -314,23 +325,6 @@
                 <label>ملاحظات
                     <textarea asp-for="Input.Notes" rows="2"></textarea>
                 </label>
-
-                @if (Model.AccessRoleOptions.Count > 0)
-                {
-                    <div class="zua-accessroles">
-                        <span class="zua-ar-title">الأدوار المخصّصة (من «أدوار الوصول»)</span>
-                        <div class="zua-ar-grid">
-                            @foreach (var r in Model.AccessRoleOptions)
-                            {
-                                <label class="zua-ar-item">
-                                    <input type="checkbox" class="zua-accessrole"
-                                           name="SelectedAccessRoleIds" value="@r.Id" data-roleid="@r.Id" />
-                                    <span>@r.NameAr <small>· @r.RoleType</small></span>
-                                </label>
-                            }
-                        </div>
-                    </div>
-                }
 
                 <label style="flex-direction:row;align-items:center;gap:8px">
                     <input asp-for="Input.IsActive" type="checkbox" style="min-height:auto" /> الحساب فعال
@@ -364,7 +358,11 @@
             zuaSet('Input_Email', d.email);
             zuaSet('Input_Notes', d.notes);
             var role = document.getElementById('Input_CompatibilityRole');
-            if (role) role.value = d.role || 'Employee';
+            if (role) {
+                var rids = (d.roleids || '').split(',').filter(function (x) { return x.length; });
+                role.value = rids.length > 0 ? ('access:' + rids[0]) : (d.role || 'Employee');
+                if (role.selectedIndex < 0) role.value = d.role || 'Employee';
+            }
             var active = document.getElementById('Input_IsActive');
             if (active) active.checked = (d.active === '1');
             var pass = document.getElementById('Input_Password');
@@ -380,11 +378,6 @@
             if (pid) pid.value = empId;
             if (pcode) pcode.value = empId ? (d.code || '') : '';
             if (pname) pname.value = empId ? (d.empname || '') : '';
-            // الأدوار المخصّصة: علّم المُسنَدة وأزل الباقي.
-            var ids = (d.roleids || '').split(',').filter(function (x) { return x.length; });
-            document.querySelectorAll('.zua-accessrole').forEach(function (c) {
-                c.checked = ids.indexOf(c.value) !== -1;
-            });
             var isNew = (d.loginid === '0' && d.systemuserid === '0');
             document.getElementById('zua-slide-title').textContent = isNew ? 'حساب جديد' : 'تعديل الحساب';
             zuaOpen();
