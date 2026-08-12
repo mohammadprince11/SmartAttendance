@@ -199,13 +199,22 @@
                                 <div class="zua-actions">
                                     @if (row.CanEdit)
                                     {
-                                        <a class="zua-btn ghost" style="display:inline-flex;align-items:center;text-decoration:none"
-                                           href="?EditLoginId=@row.LoginId&EditSystemUserId=@row.SystemUserId&Search=@Model.Search&Status=@Model.Status">تعديل</a>
+                                        <button type="button" class="zua-btn ghost" onclick="zuaEditRow(this)"
+                                                data-loginid="@row.LoginId" data-systemuserid="@row.SystemUserId"
+                                                data-empid="@(row.EmployeeId ?? 0)" data-code="@row.EmployeeNo"
+                                                data-empname="@row.EmployeeName" data-fullname="@row.DisplayName"
+                                                data-username="@row.UserName" data-email="@row.Email"
+                                                data-role="@row.CompatibilityRole" data-active="@(row.IsActive ? "1" : "0")"
+                                                data-notes="@row.Notes">تعديل</button>
                                     }
                                     @if (row.LinkStatus == SmartAttendance.Web.Pages.UserAccess.IndexModel.IdentityLinkStatus.NoAccount && row.EmployeeId.HasValue)
                                     {
-                                        <a class="zua-btn" style="display:inline-flex;align-items:center;text-decoration:none"
-                                           href="?CreateEmployeeId=@row.EmployeeId&Search=@Model.Search&Status=@Model.Status">إنشاء حساب</a>
+                                        <button type="button" class="zua-btn" onclick="zuaEditRow(this)"
+                                                data-loginid="0" data-systemuserid="0"
+                                                data-empid="@row.EmployeeId" data-code="@row.EmployeeNo"
+                                                data-empname="@row.EmployeeName" data-fullname="@row.DisplayName"
+                                                data-username="@row.EmployeeNo" data-email=""
+                                                data-role="Employee" data-active="1" data-notes="">إنشاء حساب</button>
                                     }
                                     @if (row.CanToggle)
                                     {
@@ -308,6 +317,37 @@
         function zuaClose() {
             document.getElementById('zua-slide').classList.remove('open');
             document.getElementById('zua-backdrop').classList.remove('open');
+        }
+        // تعديل/إنشاء بلا رفرش: نملأ النموذج من بيانات الصفّ ونفتح السلايد مباشرة.
+        function zuaSet(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; }
+        function zuaEditRow(btn) {
+            var d = btn.dataset;
+            zuaSet('Input_LoginId', d.loginid || '0');
+            zuaSet('Input_SystemUserId', d.systemuserid || '0');
+            zuaSet('Input_FullName', d.fullname);
+            zuaSet('Input_UserName', d.username);
+            zuaSet('Input_Email', d.email);
+            zuaSet('Input_Notes', d.notes);
+            var role = document.getElementById('Input_CompatibilityRole');
+            if (role) role.value = d.role || 'Employee';
+            var active = document.getElementById('Input_IsActive');
+            if (active) active.checked = (d.active === '1');
+            var pass = document.getElementById('Input_Password');
+            if (pass) pass.value = '';
+            var conf = document.getElementById('Input_ConfirmPassword');
+            if (conf) conf.value = '';
+            // منتقي الموظف داخل السلايد
+            var slide = document.getElementById('zua-slide');
+            var pid = slide ? slide.querySelector('.zyep-id') : null;
+            var pcode = slide ? slide.querySelector('.zyep-code') : null;
+            var pname = slide ? slide.querySelector('.zyep-name') : null;
+            var empId = (d.empid && d.empid !== '0') ? d.empid : '';
+            if (pid) pid.value = empId;
+            if (pcode) pcode.value = empId ? (d.code || '') : '';
+            if (pname) pname.value = empId ? (d.empname || '') : '';
+            var isNew = (d.loginid === '0' && d.systemuserid === '0');
+            document.getElementById('zua-slide-title').textContent = isNew ? 'حساب جديد' : 'تعديل الحساب';
+            zuaOpen();
         }
         function zuaOpenCreate() {
             var form = document.querySelector('#zua-slide form');

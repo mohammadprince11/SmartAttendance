@@ -1761,6 +1761,9 @@ OUTER APPLY
                 Email = HrmsDatabase.GetString(
                     reader,
                     "SystemEmail"),
+                Notes = HrmsDatabase.GetString(
+                    reader,
+                    "SystemNotes"),
                 CompatibilityRole = HrmsDatabase.GetString(
                     reader,
                     "CompatibilityRole"),
@@ -1864,6 +1867,9 @@ ORDER BY su.IsActive DESC, su.FullName;
                 Email = HrmsDatabase.GetString(
                     reader,
                     "Email"),
+                Notes = HrmsDatabase.GetString(
+                    reader,
+                    "Notes"),
                 CompatibilityRole = MapCompatibilityRole(
                     HrmsDatabase.GetInt(
                         reader,
@@ -2509,6 +2515,9 @@ WHERE Id <> @ExcludedLoginId
             string.Empty;
 
         public string Email { get; set; } =
+            string.Empty;
+
+        public string Notes { get; set; } =
             string.Empty;
 
         public string CompatibilityRole { get; set; } =
