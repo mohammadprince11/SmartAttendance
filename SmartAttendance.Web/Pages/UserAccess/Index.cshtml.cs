@@ -73,6 +73,12 @@ public class IndexModel : PageModel
     /// <summary>هوية الدخول الحاليّة — يخفي الجدول خانتها من التحديد الجماعيّ.</summary>
     public int CurrentLoginId { get; set; }
 
+    /// <summary>إجمالي الموظفين الفعّالين بلا حساب دخول (لعرض «يوجد المزيد»).</summary>
+    public int NoAccountTotal { get; set; }
+
+    /// <summary>عدد صفوف «بلا حساب» المعروضة فعلاً (محدودة بـ200).</summary>
+    public int NoAccountShown { get; set; }
+
     public List<IdentityRow> Identities { get; set; } = new();
 
     public List<EmployeeOption> Employees { get; set; } = new();
@@ -1790,10 +1796,14 @@ ORDER BY su.IsActive DESC, su.FullName;
 
         // موظفون فعّالون بلا أي حساب دخول أو هوية صلاحيات — يظهرون كصفوف «بلا حساب»
         // قابلة للتحديد، فتحديدها + كلمة مؤقّتة يُنشئ لكلٍّ حساب «Employee» (اسم=الكود).
-        var noAccountRows = await HrmsDatabase.QueryAsync(
-            _dbContext,
+        //
+        // ⚠️ أداء: القائمة قد تحوي آلاف الموظفين بلا حساب — عرضهم كلهم يُنشئ DOM
+        // بميغابايتات ويُجمّد الصفحة. لذا نحدّها بـ TOP 200 ونفلترها بالبحث في SQL،
+        // فالعيّنة تظهر افتراضياً والبحث بالاسم/الكود يجد البقية، واللصق للدفعات.
+        var hasSearch = !string.IsNullOrWhiteSpace(Search);
+        var noAccountSql =
             """
-SELECT
+SELECT TOP (200)
     e.Id AS EmployeeId,
     e.EmployeeNo,
     e.FullName,
@@ -1810,9 +1820,40 @@ WHERE e.IsDeleted = 0
       SELECT 1 FROM SystemUsers su
       WHERE su.EmployeeId = e.Id AND su.IsDeleted = 0
   )
-ORDER BY e.EmployeeNo, e.FullName;
-""",
-            null,
+""" +
+            (hasSearch
+                ? "  AND (e.EmployeeNo LIKE @Term OR e.FullName LIKE @Term)\n"
+                : string.Empty) +
+            "ORDER BY e.EmployeeNo, e.FullName;";
+
+        NoAccountTotal = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            """
+SELECT COUNT(*)
+FROM Employees e
+WHERE e.IsDeleted = 0
+  AND e.IsActive = 1
+  AND NOT EXISTS
+  (
+      SELECT 1 FROM AppLoginUsers u WHERE u.EmployeeId = e.Id
+  )
+  AND NOT EXISTS
+  (
+      SELECT 1 FROM SystemUsers su
+      WHERE su.EmployeeId = e.Id AND su.IsDeleted = 0
+  );
+""");
+
+        var noAccountRows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            noAccountSql,
+            command =>
+            {
+                if (hasSearch)
+                {
+                    HrmsDatabase.AddParameter(command, "@Term", "%" + Search!.Trim() + "%");
+                }
+            },
             reader => new IdentityRow
             {
                 LoginId = 0,
@@ -1829,6 +1870,7 @@ ORDER BY e.EmployeeNo, e.FullName;
                 LinkStatus = IdentityLinkStatus.NoAccount
             });
 
+        NoAccountShown = noAccountRows.Count;
         rows.AddRange(noAccountRows);
 
         return rows

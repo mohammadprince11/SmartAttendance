@@ -102,6 +102,14 @@
             </p>
         </form>
 
+    @if (Model.NoAccountTotal > Model.NoAccountShown)
+    {
+        <div class="zua-alert" style="background:rgba(18,217,227,.08)">
+            يوجد @Model.NoAccountTotal موظّف بلا حساب دخول — يُعرض منهم @Model.NoAccountShown فقط لأداء أفضل.
+            ابحث بالاسم أو الكود بالأعلى لإيجاد موظّفٍ بعينه، أو الصق أكواد الموظّفين في أداة كلمة المرور لإنشاء حساباتهم دفعةً واحدة.
+        </div>
+    }
+
     @* ---------- الجدول ---------- *@
     <div class="zua-table-card">
         @if (Model.Identities.Count == 0)
