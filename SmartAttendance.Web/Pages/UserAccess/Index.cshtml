@@ -178,6 +178,11 @@
                                         <a class="zua-btn ghost" style="display:inline-flex;align-items:center;text-decoration:none"
                                            href="?EditLoginId=@row.LoginId&EditSystemUserId=@row.SystemUserId&Search=@Model.Search&Status=@Model.Status">تعديل</a>
                                     }
+                                    @if (row.LinkStatus == SmartAttendance.Web.Pages.UserAccess.IndexModel.IdentityLinkStatus.NoAccount && row.EmployeeId.HasValue)
+                                    {
+                                        <a class="zua-btn" style="display:inline-flex;align-items:center;text-decoration:none"
+                                           href="?CreateEmployeeId=@row.EmployeeId&Search=@Model.Search&Status=@Model.Status">إنشاء حساب</a>
+                                    }
                                     @if (row.CanToggle)
                                     {
                                         <form method="post" asp-page-handler="Toggle" style="display:inline">
@@ -331,7 +336,7 @@
             return confirm('إعادة تعيين كلمة المرور المؤقّتة لـ' + total + ' حساب (المحدَّد + الملصوق)؟ من لا حساب له من الأكواد سيُنشأ له حساب «موظف». سيُطلب من الجميع تغييرها عند الدخول التالي.');
         }
 
-        @if (Model.Input.IsEditing)
+        @if (Model.Input.IsEditing || Model.OpenCreate)
         {
             @:zuaOpen();
         }

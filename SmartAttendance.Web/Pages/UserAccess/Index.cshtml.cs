@@ -40,6 +40,13 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int? EditSystemUserId { get; set; }
 
+    /// <summary>يفتح نموذج الإنشاء معبّأً بموظفٍ بلا حساب (اسم المستخدم = كوده).</summary>
+    [BindProperty(SupportsGet = true)]
+    public int? CreateEmployeeId { get; set; }
+
+    /// <summary>يأمر الواجهة بفتح سلايد الإنشاء (لصفوف «بلا حساب»).</summary>
+    public bool OpenCreate { get; set; }
+
     [BindProperty]
     public IdentityInputModel Input { get; set; } = new();
 
@@ -121,6 +128,29 @@ public class IndexModel : PageModel
             if (!loaded)
             {
                 PageError = "تعذر العثور على الحساب المطلوب.";
+            }
+        }
+        else if (CreateEmployeeId.HasValue && CreateEmployeeId.Value > 0)
+        {
+            var employee = await GetEmployeeAsync(CreateEmployeeId.Value);
+
+            if (employee != null)
+            {
+                Input = new IdentityInputModel
+                {
+                    EmployeeId = employee.Id,
+                    FullName = employee.FullName,
+                    UserName = employee.EmployeeNo,
+                    CompatibilityRole = "Employee",
+                    IsActive = true
+                };
+                SelectedEmployeeCode = employee.EmployeeNo;
+                SelectedEmployeeName = employee.FullName;
+                OpenCreate = true;
+            }
+            else
+            {
+                PageError = "تعذر العثور على الموظف المطلوب.";
             }
         }
 
