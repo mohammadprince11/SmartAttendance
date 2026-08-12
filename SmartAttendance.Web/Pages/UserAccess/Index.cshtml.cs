@@ -1703,10 +1703,10 @@ OUTER APPLY
 ) su
 """ +
             (hasSearch
-                ? "WHERE (u.Username LIKE @Term OR e.FullName LIKE @Term " +
-                  "OR e.EmployeeNo LIKE @Term OR u.Role LIKE @Term)\n"
+                ? "\nWHERE (u.Username LIKE @Term OR e.FullName LIKE @Term " +
+                  "OR e.EmployeeNo LIKE @Term OR u.Role LIKE @Term)"
                 : string.Empty) +
-            "ORDER BY u.IsActive DESC, u.Username;";
+            "\nORDER BY u.IsActive DESC, u.Username;";
 
         var rows = await HrmsDatabase.QueryAsync(
             _dbContext,
