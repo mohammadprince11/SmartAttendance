@@ -16,13 +16,22 @@
     try { dataScopes = JSON.parse(wrap.getAttribute("data-datascopes") || "{}"); } catch (e) { dataScopes = {}; }
     var sensitive = {};
     try { sensitive = JSON.parse(wrap.getAttribute("data-sensitive") || "{}"); } catch (e) { sensitive = {}; }
+    var selfservice = {};
+    try { selfservice = JSON.parse(wrap.getAttribute("data-selfservice") || "{}"); } catch (e) { selfservice = {}; }
+    var reports = {};
+    try { reports = JSON.parse(wrap.getAttribute("data-reports") || "{}"); } catch (e) { reports = {}; }
+
+    // Pre-check checkboxes carrying a given data attribute from a role's stored keys.
+    function applyKeyChecks(attr, keys) {
+        var list = keys || [];
+        document.querySelectorAll("input[type=checkbox][" + attr + "]").forEach(function (cb) {
+            cb.checked = list.indexOf(cb.getAttribute(attr)) > -1;
+        });
+    }
 
     // Pre-check the sensitive-field boxes from a role's stored grants.
     function applySensitive(fieldCodes) {
-        var codes = fieldCodes || [];
-        document.querySelectorAll("input[type=checkbox][data-field]").forEach(function (cb) {
-            cb.checked = codes.indexOf(cb.getAttribute("data-field")) > -1;
-        });
+        applyKeyChecks("data-field", fieldCodes);
     }
 
     var modal = document.getElementById("ar-modal");
@@ -80,6 +89,8 @@
         applyGrants({});
         applyScopes({});
         applySensitive([]);
+        applyKeyChecks("data-ss", []);
+        applyKeyChecks("data-rep", []);
         modal.hidden = false;
     };
 
@@ -94,6 +105,8 @@
         applyGrants(grants[id] || {});
         applyScopes(dataScopes[id] || {});
         applySensitive(sensitive[id] || []);
+        applyKeyChecks("data-ss", selfservice[id] || []);
+        applyKeyChecks("data-rep", reports[id] || []);
         modal.hidden = false;
     };
 

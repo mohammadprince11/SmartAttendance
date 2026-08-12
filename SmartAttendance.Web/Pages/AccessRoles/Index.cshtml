@@ -15,7 +15,9 @@
      data-assigned='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AssignedByRole))'
      data-grants='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.GrantsByRole))'
      data-datascopes='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DataScopesByRole))'
-     data-sensitive='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SensitiveByRole))'>
+     data-sensitive='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SensitiveByRole))'
+     data-selfservice='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SelfServiceByRole))'
+     data-reports='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ReportsByRole))'>
 
     @if (TempData["AccessRoleMessage"] is string msg)
     {
@@ -203,9 +205,37 @@
                         </div>
                     </div>
                 }
-                else
+                else if (Model.Type == SmartAttendance.Web.Infrastructure.Security.AccessRoleStore.TypeSelfService)
                 {
-                    <p class="ar-hint">تهيئة الصلاحيات التفصيلية لهذا النوع تُضاف في دفعة لاحقة.</p>
+                    <div class="ar-field">
+                        <label>إجراءات الخدمة الذاتية المتاحة</label>
+                        <p class="ar-hint">ما يتيحه هذا الدور للموظّف في بوابته. (الإنفاذ يُربَط تدريجيّاً بمودل البوابة.)</p>
+                        <div class="ar-scope">
+                            @foreach (var a in Model.SelfServiceActions)
+                            {
+                                <label class="ar-user-row">
+                                    <input type="checkbox" name="ss_@(a.Code)" data-ss="@(a.Code)" value="on" />
+                                    <span>@a.Label</span>
+                                </label>
+                            }
+                        </div>
+                    </div>
+                }
+                else if (Model.Type == SmartAttendance.Web.Infrastructure.Security.AccessRoleStore.TypeReports)
+                {
+                    <div class="ar-field">
+                        <label>مجموعات التقارير المسموح بها</label>
+                        <p class="ar-hint">أي مجموعات تقارير يصلها هذا الدور. (الإنفاذ يُربَط تدريجيّاً بمركز التقارير.)</p>
+                        <div class="ar-scope">
+                            @foreach (var g in Model.ReportGroups)
+                            {
+                                <label class="ar-user-row">
+                                    <input type="checkbox" name="rep_@(g.Code)" data-rep="@(g.Code)" value="on" />
+                                    <span>@g.Label</span>
+                                </label>
+                            }
+                        </div>
+                    </div>
                 }
 
                 <div class="ar-modal-actions">

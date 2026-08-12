@@ -268,13 +268,13 @@ DELETE FROM AccessRoles WHERE Id = @Id;
     }
 
     /// <summary>
-    /// هل يملك المستخدم دور «حقول حساسة» فعّالاً يمنح الحقل المحدّد؟ حارسٌ إضافيّ
-    /// يُستدعى بجانب الآليّات القائمة (لا يبدّلها).
+    /// هل يملك المستخدم دوراً فعّالاً من النوع المحدَّد يمنح المفتاح المحدَّد؟ حارسٌ
+    /// إضافيّ عامّ يُستدعى بجانب الآليّات القائمة (لا يبدّلها) — نقطة الإنفاذ لكل بُعد.
     /// </summary>
-    public static async Task<bool> HasSensitiveFieldAsync(
-        ApplicationDbContext dbContext, int systemUserId, string fieldCode)
+    public static async Task<bool> HasGrantAsync(
+        ApplicationDbContext dbContext, int systemUserId, string roleType, string grantKey)
     {
-        if (systemUserId <= 0 || string.IsNullOrWhiteSpace(fieldCode))
+        if (systemUserId <= 0 || string.IsNullOrWhiteSpace(grantKey))
         {
             return false;
         }
@@ -287,17 +287,23 @@ SELECT COUNT(*) FROM AccessRoleGrants g
 JOIN AccessRoles r ON r.Id = g.RoleId
 JOIN UserAccessRoles u ON u.RoleId = r.Id
 WHERE u.SystemUserId = @UserId
-  AND r.RoleType = 'SensitiveFields'
+  AND r.RoleType = @RoleType
   AND r.IsActive = 1
-  AND g.GrantKey = @Field;
+  AND g.GrantKey = @Key;
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@UserId", systemUserId);
-                HrmsDatabase.AddParameter(command, "@Field", fieldCode);
+                HrmsDatabase.AddParameter(command, "@RoleType", roleType);
+                HrmsDatabase.AddParameter(command, "@Key", grantKey);
             });
         return count > 0;
     }
+
+    /// <summary>حارس «الحقول الحساسة» (يوسّع HasGrantAsync — نقطة الاستدعاء الحاليّة بالملف).</summary>
+    public static Task<bool> HasSensitiveFieldAsync(
+        ApplicationDbContext dbContext, int systemUserId, string fieldCode) =>
+        HasGrantAsync(dbContext, systemUserId, TypeSensitiveFields, fieldCode);
 
     /// <summary>Number of a user's active roles of a type (0 = user is unrestricted for that type).</summary>
     public static async Task<int> CountUserRolesAsync(

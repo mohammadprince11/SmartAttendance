@@ -61,6 +61,12 @@ public class IndexModel : PageModel
     /// <summary>Per role: granted sensitive-field codes (for pre-checking on edit).</summary>
     public Dictionary<int, List<string>> SensitiveByRole { get; set; } = new();
 
+    public IReadOnlyList<SelfServiceCatalog.SelfServiceAction> SelfServiceActions => SelfServiceCatalog.Actions;
+    public Dictionary<int, List<string>> SelfServiceByRole { get; set; } = new();
+
+    public IReadOnlyList<ReportsCatalog.ReportGroup> ReportGroups => ReportsCatalog.Groups;
+    public Dictionary<int, List<string>> ReportsByRole { get; set; } = new();
+
     private bool IsAdmin =>
         (User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty)
         .Equals("Admin", StringComparison.OrdinalIgnoreCase);
@@ -124,6 +130,16 @@ public class IndexModel : PageModel
         else if (Type == AccessRoleStore.TypeSensitiveFields)
         {
             await AccessRoleStore.ReplaceGrantsAsync(_dbContext, savedId, BuildSensitiveGrants(form));
+        }
+        else if (Type == AccessRoleStore.TypeSelfService)
+        {
+            await AccessRoleStore.ReplaceGrantsAsync(_dbContext, savedId,
+                BuildKeyGrants(form, "ss_", SelfServiceCatalog.Actions.Select(a => a.Code)));
+        }
+        else if (Type == AccessRoleStore.TypeReports)
+        {
+            await AccessRoleStore.ReplaceGrantsAsync(_dbContext, savedId,
+                BuildKeyGrants(form, "rep_", ReportsCatalog.Groups.Select(g => g.Code)));
         }
 
         TempData["AccessRoleMessage"] = role.Id > 0 ? "تم تحديث الدور." : "تم إنشاء الدور.";
@@ -189,6 +205,16 @@ public class IndexModel : PageModel
                 var grants = await AccessRoleStore.GetGrantsAsync(_dbContext, role.Id);
                 SensitiveByRole[role.Id] = grants.Select(g => g.GrantKey).ToList();
             }
+            else if (Type == AccessRoleStore.TypeSelfService)
+            {
+                var grants = await AccessRoleStore.GetGrantsAsync(_dbContext, role.Id);
+                SelfServiceByRole[role.Id] = grants.Select(g => g.GrantKey).ToList();
+            }
+            else if (Type == AccessRoleStore.TypeReports)
+            {
+                var grants = await AccessRoleStore.GetGrantsAsync(_dbContext, role.Id);
+                ReportsByRole[role.Id] = grants.Select(g => g.GrantKey).ToList();
+            }
         }
     }
 
@@ -198,6 +224,16 @@ public class IndexModel : PageModel
         return SensitiveFieldCatalog.Fields
             .Where(f => form[$"sensitive_{f.Code}"] == "on")
             .Select(f => new AccessRoleStore.AccessRoleGrant { GrantKey = f.Code, Payload = null })
+            .ToList();
+    }
+
+    /// <summary>Reads &lt;prefix&gt;&lt;Code&gt; checkboxes into grants (GrantKey = code). Generic for SS/Reports.</summary>
+    private static List<AccessRoleStore.AccessRoleGrant> BuildKeyGrants(
+        IFormCollection form, string prefix, IEnumerable<string> codes)
+    {
+        return codes
+            .Where(code => form[$"{prefix}{code}"] == "on")
+            .Select(code => new AccessRoleStore.AccessRoleGrant { GrantKey = code, Payload = null })
             .ToList();
     }
 
