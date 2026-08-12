@@ -81,6 +81,12 @@ public class IndexModel : PageModel
     /// <summary>هوية الدخول الحاليّة — يخفي الجدول خانتها من التحديد الجماعيّ.</summary>
     public int CurrentLoginId { get; set; }
 
+    /// <summary>إجمالي حسابات الدخول (لعرض «يوجد المزيد — ابحث»).</summary>
+    public int AccountsTotal { get; set; }
+
+    /// <summary>عدد صفوف الحسابات المعروضة فعلاً (محدودة بـ300).</summary>
+    public int AccountsShown { get; set; }
+
     /// <summary>إجمالي الموظفين الفعّالين بلا حساب دخول (لعرض «يوجد المزيد»).</summary>
     public int NoAccountTotal { get; set; }
 
@@ -1618,10 +1624,20 @@ VALUES
 
     private async Task<List<IdentityRow>> LoadIdentityRowsAsync()
     {
-        var rows = await HrmsDatabase.QueryAsync(
+        // ⚠️ أداء: بعد إنشاء آلاف حسابات «موظف» صارت القائمة تُصيّر آلاف الصفوف
+        // (رد بميغابايتات يُجمّد كل فتحة، بما فيها التعديل). نحدّها بـTOP 300 وندفع
+        // البحث إلى SQL؛ ومحرّر التعديل يُحمَّل مستقلّاً بالمعرّف فيفتح ولو لم يكن
+        // الصفّ ضمن المعروضين.
+        var hasSearch = !string.IsNullOrWhiteSpace(Search);
+        var searchTerm = hasSearch ? "%" + Search!.Trim() + "%" : null;
+
+        AccountsTotal = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
+            "SELECT COUNT(*) FROM AppLoginUsers;");
+
+        var loginSql =
             """
-SELECT
+SELECT TOP (300)
     u.Id AS LoginId,
     ISNULL(u.EmployeeId, 0) AS LoginEmployeeId,
     u.Username AS LoginUserName,
@@ -1685,9 +1701,23 @@ OUTER APPLY
         END,
         sx.Id
 ) su
-ORDER BY u.IsActive DESC, u.Username;
-""",
-            null,
+""" +
+            (hasSearch
+                ? "WHERE (u.Username LIKE @Term OR e.FullName LIKE @Term " +
+                  "OR e.EmployeeNo LIKE @Term OR u.Role LIKE @Term)\n"
+                : string.Empty) +
+            "ORDER BY u.IsActive DESC, u.Username;";
+
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            loginSql,
+            command =>
+            {
+                if (hasSearch)
+                {
+                    HrmsDatabase.AddParameter(command, "@Term", searchTerm);
+                }
+            },
             reader => new IdentityRow
             {
                 LoginId = HrmsDatabase.GetInt(
@@ -1765,10 +1795,12 @@ ORDER BY u.IsActive DESC, u.Username;
             row.LinkStatus = ResolveLoginRowStatus(row);
         }
 
+        AccountsShown = rows.Count;
+
         var systemOnlyRows = await HrmsDatabase.QueryAsync(
             _dbContext,
             """
-SELECT
+SELECT TOP (200)
     su.Id AS SystemUserId,
     ISNULL(su.EmployeeId, 0) AS EmployeeId,
     su.FullName,
@@ -1862,7 +1894,6 @@ ORDER BY su.IsActive DESC, su.FullName;
         // ⚠️ أداء: القائمة قد تحوي آلاف الموظفين بلا حساب — عرضهم كلهم يُنشئ DOM
         // بميغابايتات ويُجمّد الصفحة. لذا نحدّها بـ TOP 200 ونفلترها بالبحث في SQL،
         // فالعيّنة تظهر افتراضياً والبحث بالاسم/الكود يجد البقية، واللصق للدفعات.
-        var hasSearch = !string.IsNullOrWhiteSpace(Search);
         var noAccountSql =
             """
 SELECT TOP (200)

@@ -110,6 +110,14 @@
             </p>
         </form>
 
+    @if (Model.AccountsTotal > Model.AccountsShown)
+    {
+        <div class="zua-alert" style="background:rgba(18,217,227,.08)">
+            يوجد @Model.AccountsTotal حساب دخول — يُعرض منها @Model.AccountsShown فقط لأداء أفضل.
+            ابحث بالاسم أو اسم المستخدم أو الكود بالأعلى لإيجاد حسابٍ بعينه.
+        </div>
+    }
+
     @if (Model.NoAccountTotal > Model.NoAccountShown)
     {
         <div class="zua-alert" style="background:rgba(18,217,227,.08)">
