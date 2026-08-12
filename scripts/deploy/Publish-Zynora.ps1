@@ -348,6 +348,23 @@ if (-not $ready) {
 }
 Write-Ok 'الموقع مستجيب و/health/ready أخضر'
 
+# ٦.٥) إحماء المسار الحقيقيّ قبل فتح الباب للمستخدمين.
+# `/health/ready` نقطةٌ خفيفة لا توقظ خطّ Razor/EF/MVC، فأوّل **طلب صفحةٍ حقيقيّ**
+# بعد إعادة التشغيل يدفع ~٨ ثوانٍ تهيئة (JIT + بناء نموذج EF + ترجمة العروض). بلا
+# هذا الإحماء يبتلعها أوّل مستخدمٍ فيشكو «الموقع ثقيل». نطلب صفحة الدخول بضع مرّات
+# هنا فيدفعها السكربت بدلاً منه — الطلب الأوّل بطيءٌ عمداً، والبقيّة تؤكّد الدفء.
+Write-Step 'إحماء المسار الحقيقيّ'
+foreach ($i in 1..3) {
+    try {
+        $ms = (Measure-Command {
+            Invoke-WebRequest "http://localhost:$Port/Account/Login" -UseBasicParsing -TimeoutSec 90 | Out-Null
+        }).TotalMilliseconds
+        '  إحماء {0}: {1,7:N0} ms' -f $i, $ms | Write-Host
+    } catch {
+        Write-Warn "إحماء $i — $($_.Exception.Message)"
+    }
+}
+
 # القياس لا الافتراض — لكن على ما يصحّ قياسه بلا جلسة.
 # `/AttendanceRecords` و`/DayAttendance` خلف المصادقة: نداؤهما هنا يقيس تحويلة
 # الدخول لا الصفحة، فرقمٌ جميلٌ كاذب. قياسهما مكانه المتصفّح بجلسة حقيقية.
