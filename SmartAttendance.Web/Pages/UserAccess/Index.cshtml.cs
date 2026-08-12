@@ -89,9 +89,13 @@ public class IndexModel : PageModel
 
     public const int PageSize = 25;
 
-    /// <summary>رقم الصفحة الحاليّة (1‑based)، يُضبَط ضمن [1، TotalPages].</summary>
-    [BindProperty(SupportsGet = true)]
-    public int Page { get; set; } = 1;
+    /// <summary>
+    /// رقم الصفحة الحاليّة (1‑based)، يُضبَط ضمن [1، TotalPages]. الاسم <c>PageIndex</c>
+    /// عمداً: <c>Page</c> محجوزٌ لدالّة <c>PageModel.Page()</c> فتسميته هكذا تكسر الربط.
+    /// معامل الرابط <c>pg</c>.
+    /// </summary>
+    [BindProperty(SupportsGet = true, Name = "pg")]
+    public int PageIndex { get; set; } = 1;
 
     /// <summary>إجمالي الصفحات = سقف(AccountsTotal / 25)، بحدٍّ أدنى 1.</summary>
     public int TotalPages { get; set; } = 1;
@@ -1621,9 +1625,9 @@ VALUES
             });
 
         TotalPages = Math.Max(1, (AccountsTotal + PageSize - 1) / PageSize);
-        if (Page < 1) Page = 1;
-        if (Page > TotalPages) Page = TotalPages;
-        var skip = (Page - 1) * PageSize;
+        if (PageIndex < 1) PageIndex = 1;
+        if (PageIndex > TotalPages) PageIndex = TotalPages;
+        var skip = (PageIndex - 1) * PageSize;
 
         var loginSql =
             """
@@ -1794,7 +1798,7 @@ OUTER APPLY
 
         // صفوف «هويّة صلاحيات فقط» و«بلا حساب» تظهر بالصفحة الأولى فقط كي تبقى بقيّة
         // الصفحات ترقيماً نقيّاً لحسابات الدخول (25 لكلّ صفحة).
-        if (Page <= 1)
+        if (PageIndex <= 1)
         {
         var systemOnlyRows = await HrmsDatabase.QueryAsync(
             _dbContext,

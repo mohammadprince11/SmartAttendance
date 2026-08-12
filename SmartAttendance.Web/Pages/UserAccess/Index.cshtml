@@ -114,7 +114,7 @@
             </p>
         </form>
 
-    @if (Model.NoAccountTotal > Model.NoAccountShown && Model.Page <= 1)
+    @if (Model.NoAccountTotal > Model.NoAccountShown && Model.PageIndex <= 1)
     {
         <div class="zua-alert" style="background:rgba(18,217,227,.08)">
             يوجد @Model.NoAccountTotal موظّف بلا حساب دخول — يُعرض منهم @Model.NoAccountShown فقط لأداء أفضل.
@@ -233,15 +233,15 @@
     @if (Model.TotalPages > 1)
     {
         <nav class="zua-pager" aria-label="ترقيم الصفحات">
-            <a class="zua-btn ghost @(Model.Page <= 1 ? "disabled" : "")"
-               href="?Page=1&Search=@Model.Search">« الأولى</a>
-            <a class="zua-btn ghost @(Model.Page <= 1 ? "disabled" : "")"
-               href="?Page=@(Model.Page - 1)&Search=@Model.Search">‹ السابقة</a>
-            <span class="zua-pager-info">صفحة @Model.Page من @Model.TotalPages · @Model.AccountsTotal حساب</span>
-            <a class="zua-btn ghost @(Model.Page >= Model.TotalPages ? "disabled" : "")"
-               href="?Page=@(Model.Page + 1)&Search=@Model.Search">التالية ›</a>
-            <a class="zua-btn ghost @(Model.Page >= Model.TotalPages ? "disabled" : "")"
-               href="?Page=@Model.TotalPages&Search=@Model.Search">الأخيرة »</a>
+            <a class="zua-btn ghost @(Model.PageIndex <= 1 ? "disabled" : "")"
+               href="?pg=1&Search=@Model.Search">« الأولى</a>
+            <a class="zua-btn ghost @(Model.PageIndex <= 1 ? "disabled" : "")"
+               href="?pg=@(Model.PageIndex - 1)&Search=@Model.Search">‹ السابقة</a>
+            <span class="zua-pager-info">صفحة @Model.PageIndex من @Model.TotalPages · @Model.AccountsTotal حساب</span>
+            <a class="zua-btn ghost @(Model.PageIndex >= Model.TotalPages ? "disabled" : "")"
+               href="?pg=@(Model.PageIndex + 1)&Search=@Model.Search">التالية ›</a>
+            <a class="zua-btn ghost @(Model.PageIndex >= Model.TotalPages ? "disabled" : "")"
+               href="?pg=@Model.TotalPages&Search=@Model.Search">الأخيرة »</a>
         </nav>
     }
 
