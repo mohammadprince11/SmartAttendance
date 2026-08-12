@@ -137,6 +137,13 @@
                                            name="SelectedLoginIds" value="@row.LoginId"
                                            onchange="zuaBulkCount()" />
                                 }
+                                else if (row.LinkStatus == SmartAttendance.Web.Pages.UserAccess.IndexModel.IdentityLinkStatus.NoAccount
+                                         && !string.IsNullOrWhiteSpace(row.EmployeeNo))
+                                {
+                                    <input type="checkbox" class="zua-row-check" form="zua-bulk"
+                                           name="SelectedEmployeeCodes" value="@row.EmployeeNo"
+                                           onchange="zuaBulkCount()" title="سيُنشأ حساب موظف عند التطبيق" />
+                                }
                             </td>
                             <td>
                                 <div class="zua-user">

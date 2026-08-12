@@ -59,6 +59,10 @@ public class IndexModel : PageModel
     [BindProperty]
     public string? BulkEmployeeCodes { get; set; }
 
+    /// <summary>أكواد موظفين مُحدَّدين من صفوف «بلا حساب» — تُعامَل كالأكواد الملصوقة.</summary>
+    [BindProperty]
+    public string[] SelectedEmployeeCodes { get; set; } = Array.Empty<string>();
+
     /// <summary>هوية الدخول الحاليّة — يخفي الجدول خانتها من التحديد الجماعيّ.</summary>
     public int CurrentLoginId { get; set; }
 
@@ -581,7 +585,14 @@ WHERE Id = @SystemUserId;
         // أكواد ملصوقة: نحلّها إلى موظفين، فمن له حساب يُضاف لمجموعة إعادة التعيين
         // ومن لا حساب له يُنشأ له «Employee» (اسم المستخدم = كوده).
         var pastedCodes = ParseEmployeeCodes(BulkEmployeeCodes);
-        var (matched, unknownCodes) = await ResolvePastedCodesAsync(pastedCodes);
+        var checkedCodes = (SelectedEmployeeCodes ?? Array.Empty<string>())
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c.Trim());
+        var allCodes = pastedCodes
+            .Concat(checkedCodes)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var (matched, unknownCodes) = await ResolvePastedCodesAsync(allCodes);
 
         var toCreate = matched
             .Where(m => !m.LoginId.HasValue)
@@ -1747,6 +1758,49 @@ ORDER BY su.IsActive DESC, su.FullName;
 
         rows.AddRange(systemOnlyRows);
 
+        // موظفون فعّالون بلا أي حساب دخول أو هوية صلاحيات — يظهرون كصفوف «بلا حساب»
+        // قابلة للتحديد، فتحديدها + كلمة مؤقّتة يُنشئ لكلٍّ حساب «Employee» (اسم=الكود).
+        var noAccountRows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT
+    e.Id AS EmployeeId,
+    e.EmployeeNo,
+    e.FullName,
+    e.IsActive
+FROM Employees e
+WHERE e.IsDeleted = 0
+  AND e.IsActive = 1
+  AND NOT EXISTS
+  (
+      SELECT 1 FROM AppLoginUsers u WHERE u.EmployeeId = e.Id
+  )
+  AND NOT EXISTS
+  (
+      SELECT 1 FROM SystemUsers su
+      WHERE su.EmployeeId = e.Id AND su.IsDeleted = 0
+  )
+ORDER BY e.EmployeeNo, e.FullName;
+""",
+            null,
+            reader => new IdentityRow
+            {
+                LoginId = 0,
+                SystemUserId = 0,
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                UserName = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                DisplayName = HrmsDatabase.GetString(reader, "FullName"),
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+                CompatibilityRole = "Employee",
+                SystemRole = 3,
+                IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
+                SystemIsActive = false,
+                LinkStatus = IdentityLinkStatus.NoAccount
+            });
+
+        rows.AddRange(noAccountRows);
+
         return rows
             .OrderBy(x => StatusOrder(x.LinkStatus))
             .ThenByDescending(x => x.IsActive)
@@ -2233,6 +2287,7 @@ WHERE Id <> @ExcludedLoginId
             IdentityLinkStatus.LoginOnly => 1,
             IdentityLinkStatus.SystemOnly => 2,
             IdentityLinkStatus.NeedsSync => 3,
+            IdentityLinkStatus.NoAccount => 5,
             _ => 4
         };
     }
@@ -2326,6 +2381,8 @@ WHERE Id <> @ExcludedLoginId
                     "هوية صلاحيات فقط",
                 IdentityLinkStatus.Conflict =>
                     "تعارض في الربط",
+                IdentityLinkStatus.NoAccount =>
+                    "بلا حساب دخول",
                 _ => "غير معروف"
             };
 
@@ -2337,11 +2394,13 @@ WHERE Id <> @ExcludedLoginId
                 IdentityLinkStatus.LoginOnly => "login-only",
                 IdentityLinkStatus.SystemOnly => "system-only",
                 IdentityLinkStatus.Conflict => "conflict",
+                IdentityLinkStatus.NoAccount => "login-only",
                 _ => "unknown"
             };
 
         public bool CanEdit =>
-            LinkStatus != IdentityLinkStatus.Conflict;
+            LinkStatus != IdentityLinkStatus.Conflict &&
+            (LoginId > 0 || SystemUserId > 0);
 
         public bool CanToggle =>
             LoginId > 0 &&
@@ -2354,7 +2413,8 @@ WHERE Id <> @ExcludedLoginId
         NeedsSync,
         LoginOnly,
         SystemOnly,
-        Conflict
+        Conflict,
+        NoAccount
     }
 
     public record RoleOption(
