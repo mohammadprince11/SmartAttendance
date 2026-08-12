@@ -267,6 +267,38 @@ DELETE FROM AccessRoles WHERE Id = @Id;
         }
     }
 
+    /// <summary>
+    /// هل يملك المستخدم دور «حقول حساسة» فعّالاً يمنح الحقل المحدّد؟ حارسٌ إضافيّ
+    /// يُستدعى بجانب الآليّات القائمة (لا يبدّلها).
+    /// </summary>
+    public static async Task<bool> HasSensitiveFieldAsync(
+        ApplicationDbContext dbContext, int systemUserId, string fieldCode)
+    {
+        if (systemUserId <= 0 || string.IsNullOrWhiteSpace(fieldCode))
+        {
+            return false;
+        }
+
+        await EnsureAsync(dbContext);
+        var count = await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            """
+SELECT COUNT(*) FROM AccessRoleGrants g
+JOIN AccessRoles r ON r.Id = g.RoleId
+JOIN UserAccessRoles u ON u.RoleId = r.Id
+WHERE u.SystemUserId = @UserId
+  AND r.RoleType = 'SensitiveFields'
+  AND r.IsActive = 1
+  AND g.GrantKey = @Field;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@UserId", systemUserId);
+                HrmsDatabase.AddParameter(command, "@Field", fieldCode);
+            });
+        return count > 0;
+    }
+
     /// <summary>Number of a user's active roles of a type (0 = user is unrestricted for that type).</summary>
     public static async Task<int> CountUserRolesAsync(
         ApplicationDbContext dbContext, int systemUserId, string roleType)

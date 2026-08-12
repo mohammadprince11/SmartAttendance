@@ -56,6 +56,11 @@ public class IndexModel : PageModel
     /// <summary>Per role: entity code → scope key (for pre-selecting on edit).</summary>
     public Dictionary<int, Dictionary<string, string>> DataScopesByRole { get; set; } = new();
 
+    public IReadOnlyList<SensitiveFieldCatalog.SensitiveField> SensitiveFields => SensitiveFieldCatalog.Fields;
+
+    /// <summary>Per role: granted sensitive-field codes (for pre-checking on edit).</summary>
+    public Dictionary<int, List<string>> SensitiveByRole { get; set; } = new();
+
     private bool IsAdmin =>
         (User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty)
         .Equals("Admin", StringComparison.OrdinalIgnoreCase);
@@ -116,6 +121,10 @@ public class IndexModel : PageModel
         {
             await AccessRoleStore.ReplaceGrantsAsync(_dbContext, savedId, BuildDataGrants(form));
         }
+        else if (Type == AccessRoleStore.TypeSensitiveFields)
+        {
+            await AccessRoleStore.ReplaceGrantsAsync(_dbContext, savedId, BuildSensitiveGrants(form));
+        }
 
         TempData["AccessRoleMessage"] = role.Id > 0 ? "تم تحديث الدور." : "تم إنشاء الدور.";
         return RedirectToPage(new { Type });
@@ -175,7 +184,21 @@ public class IndexModel : PageModel
                     g => DeserializeScope(g.Payload),
                     StringComparer.OrdinalIgnoreCase);
             }
+            else if (Type == AccessRoleStore.TypeSensitiveFields)
+            {
+                var grants = await AccessRoleStore.GetGrantsAsync(_dbContext, role.Id);
+                SensitiveByRole[role.Id] = grants.Select(g => g.GrantKey).ToList();
+            }
         }
+    }
+
+    /// <summary>Reads sensitive_&lt;FieldCode&gt; checkboxes into grants (GrantKey = field code).</summary>
+    private static List<AccessRoleStore.AccessRoleGrant> BuildSensitiveGrants(IFormCollection form)
+    {
+        return SensitiveFieldCatalog.Fields
+            .Where(f => form[$"sensitive_{f.Code}"] == "on")
+            .Select(f => new AccessRoleStore.AccessRoleGrant { GrantKey = f.Code, Payload = null })
+            .ToList();
     }
 
     /// <summary>Reads grant_&lt;PageCode&gt;_&lt;Action&gt; checkboxes into typed grants.</summary>

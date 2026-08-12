@@ -14,6 +14,16 @@
     try { grants = JSON.parse(wrap.getAttribute("data-grants") || "{}"); } catch (e) { grants = {}; }
     var dataScopes = {};
     try { dataScopes = JSON.parse(wrap.getAttribute("data-datascopes") || "{}"); } catch (e) { dataScopes = {}; }
+    var sensitive = {};
+    try { sensitive = JSON.parse(wrap.getAttribute("data-sensitive") || "{}"); } catch (e) { sensitive = {}; }
+
+    // Pre-check the sensitive-field boxes from a role's stored grants.
+    function applySensitive(fieldCodes) {
+        var codes = fieldCodes || [];
+        document.querySelectorAll("input[type=checkbox][data-field]").forEach(function (cb) {
+            cb.checked = codes.indexOf(cb.getAttribute("data-field")) > -1;
+        });
+    }
 
     var modal = document.getElementById("ar-modal");
     var usersBox = document.getElementById("ar-users");
@@ -69,6 +79,7 @@
         renderUsers([]);
         applyGrants({});
         applyScopes({});
+        applySensitive([]);
         modal.hidden = false;
     };
 
@@ -82,6 +93,7 @@
         renderUsers(assigned[id] || []);
         applyGrants(grants[id] || {});
         applyScopes(dataScopes[id] || {});
+        applySensitive(sensitive[id] || []);
         modal.hidden = false;
     };
 

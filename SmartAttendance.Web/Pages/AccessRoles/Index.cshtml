@@ -14,7 +14,8 @@
      data-users='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Users))'
      data-assigned='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AssignedByRole))'
      data-grants='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.GrantsByRole))'
-     data-datascopes='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DataScopesByRole))'>
+     data-datascopes='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DataScopesByRole))'
+     data-sensitive='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SensitiveByRole))'>
 
     @if (TempData["AccessRoleMessage"] is string msg)
     {
@@ -182,6 +183,22 @@
                                         }
                                     </select>
                                 </div>
+                            }
+                        </div>
+                    </div>
+                }
+                else if (Model.Type == SmartAttendance.Web.Infrastructure.Security.AccessRoleStore.TypeSensitiveFields)
+                {
+                    <div class="ar-field">
+                        <label>الحقول الحساسة المسموح برؤيتها</label>
+                        <p class="ar-hint">من يحمل هذا الدور يرى الحقول المؤشَّرة (إضافةً لمن يراها اليوم — لا يُسحب من أحد).</p>
+                        <div class="ar-scope">
+                            @foreach (var f in Model.SensitiveFields)
+                            {
+                                <label class="ar-user-row">
+                                    <input type="checkbox" name="sensitive_@(f.Code)" data-field="@(f.Code)" value="on" />
+                                    <span>@f.Label</span>
+                                </label>
                             }
                         </div>
                     </div>
