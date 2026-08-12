@@ -1637,7 +1637,7 @@ VALUES
 
         var loginSql =
             """
-SELECT TOP (300)
+SELECT TOP (25)
     u.Id AS LoginId,
     ISNULL(u.EmployeeId, 0) AS LoginEmployeeId,
     u.Username AS LoginUserName,
@@ -1803,7 +1803,7 @@ OUTER APPLY
         var systemOnlyRows = await HrmsDatabase.QueryAsync(
             _dbContext,
             """
-SELECT TOP (200)
+SELECT TOP (25)
     su.Id AS SystemUserId,
     ISNULL(su.EmployeeId, 0) AS EmployeeId,
     su.FullName,
@@ -1902,7 +1902,7 @@ ORDER BY su.IsActive DESC, su.FullName;
         // فالعيّنة تظهر افتراضياً والبحث بالاسم/الكود يجد البقية، واللصق للدفعات.
         var noAccountSql =
             """
-SELECT TOP (200)
+SELECT TOP (25)
     e.Id AS EmployeeId,
     e.EmployeeNo,
     e.FullName,
