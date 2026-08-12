@@ -16,13 +16,14 @@
 <link rel="stylesheet" href="~/css/zynora-user-access.css" asp-append-version="true" />
 
 <style>
-    .zua-bulk-bar { border:1px solid var(--zua-line,#e5e7eb); border-radius:14px; padding:14px 16px; margin:0 0 14px; background:var(--zua-card,#fff); }
-    .zua-bulk-title { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
-    .zua-bulk-title #zua-bulk-count { color:var(--zua-muted,#6b7280); font-size:13px; }
+    .zua-bulk-bar { border:1px solid var(--zua-line); border-radius:18px; padding:14px 18px; margin:0 0 14px; }
+    .zua-bulk-title { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+    .zua-bulk-title b { font-size:14px; }
+    .zua-bulk-title #zua-bulk-count { color:var(--zua-muted); font-size:12px; font-weight:800; }
     .zua-bulk-fields { display:flex; flex-wrap:wrap; align-items:end; gap:12px; }
-    .zua-bulk-fields label { display:flex; flex-direction:column; gap:5px; font-size:13px; font-weight:700; }
-    .zua-bulk-fields input[type=password] { padding:9px 11px; border:1px solid var(--zua-line,#d1d5db); border-radius:9px; min-width:180px; }
-    .zua-bulk-check { flex-direction:row !important; align-items:center; gap:7px; }
+    .zua-bulk-fields label { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:800; color:var(--zua-muted); }
+    .zua-bulk-fields input[type=password] { min-height:38px; padding:0 12px; border:1px solid var(--zua-line); border-radius:12px; background:transparent; color:inherit; min-width:190px; }
+    .zua-bulk-check { flex-direction:row !important; align-items:center; gap:8px; color:var(--zua-muted); }
     .zua-bulk-check input { min-height:auto; }
 </style>
 
