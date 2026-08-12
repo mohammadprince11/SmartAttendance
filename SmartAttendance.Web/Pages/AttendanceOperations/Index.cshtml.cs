@@ -969,17 +969,28 @@ WHERE ar.AttendanceDate >= @FromDate
         // AttendanceRecords (مقيَّداً بنطاق الشركة)، لا من IAttendanceProcessingService.
         // اليوم المحلَّل يأتي من official (مصدر المسير)؛ ويومٌ له بصمة بلا يومية يُعرَض
         // «غير محلَّل» بلا احتساب حتى «تحديث الحضور». محرّكٌ واحدٌ للحقيقة، لا محرّكان.
+        // حدٌّ عند المصدر لا بالذاكرة (إصلاح التجمُّد عند مدىً واسع): نجلب أعلى MaxRows
+        // صفّاً خاماً مرتّبةً «الأحدث فالاسم» — عين ما يُعرَض — بدل مئات الآلاف. البحث
+        // مدفوعٌ للـSQL كي يبقى صحيحاً مع الحدّ. العدّ الكلّيّ رخيصٌ من دالّة عدٍّ منفصلة.
         var rawRows = await DayAttendanceStore.ListUnanalyzedPunchRowsAsync(
-            _dbContext, scope, ProcessFromDate.Value, ProcessToDate.Value);
+            _dbContext, scope, ProcessFromDate.Value, ProcessToDate.Value,
+            take: MaxRows, search: ProcessSearchTerm);
 
-        var processedRecords = new List<AttendanceProcessingResultViewModel>(official.Values);
-        var unanalyzedCount = 0;
+        var unanalyzedTotal = await DayAttendanceStore.CountUnanalyzedPunchGroupsAsync(
+            _dbContext, scope, ProcessFromDate.Value, ProcessToDate.Value, ProcessSearchTerm);
+
+        // المحلَّل يبقى بالذاكرة (عدده صغير) ويُرشَّح بالبحث كما كان — بحثه يشمل المناوبة
+        // والحالة، وهما فارغتان بصفوف «غير محلَّل» فبحثها = رقم/اسم دُفِع للـSQL.
+        var officialFiltered = CleanProcessFilter(official.Values.ToList());
+
+        var processedRecords = new List<AttendanceProcessingResultViewModel>(officialFiltered);
 
         foreach (var raw in rawRows)
         {
             var key = BuildAttendanceNoteKey(raw.EmployeeNo, raw.AttendanceDate);
 
-            // يومية محلَّلة موجودة ⟹ حكمها الرسمي أُضيف أصلاً من official؛ نتخطّى الخام.
+            // يومية محلَّلة موجودة ⟹ حكمها الرسمي هو الممثِّل (وإن رُشِّح بالبحث)؛ لا نُظهر
+            // نسخةً خاماً له. نتخطّى ضدّ كلّ المحلَّل لا المُرشَّح فقط.
             if (official.ContainsKey(key))
             {
                 continue;
@@ -987,12 +998,12 @@ WHERE ar.AttendanceDate >= @FromDate
 
             // لا يومية محلَّلة ⟹ «غير محلَّل»: هُويّة الصف وأوقاته الخام تُحفَظ ويُطلَب
             // «تحديث الحضور» ليُحلَّل بالمحرّك الرسمي وحده. لا حكمَ قديماً مشتقّاً.
-            unanalyzedCount++;
             processedRecords.Add(BuildNotAnalyzedRow(raw));
         }
 
-        UnanalyzedRows = unanalyzedCount;
-        HasUnanalyzedRows = unanalyzedCount > 0;
+        // العدّ الكلّيّ (لا المُجسَّد المحدود): المحلَّل المُرشَّح + مجموعات الخام غير المحلَّلة.
+        UnanalyzedRows = unanalyzedTotal;
+        HasUnanalyzedRows = unanalyzedTotal > 0;
 
         // ترتيب عرضٍ حتميّ: الأحدث أولاً ثم اسم الموظف (نظير ترتيب المحرّك القديم).
         processedRecords = processedRecords
@@ -1000,12 +1011,10 @@ WHERE ar.AttendanceDate >= @FromDate
             .ThenBy(r => r.EmployeeName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var materialized = CleanProcessFilter(processedRecords);
-
-        ProcessTotalResults = materialized.Count;
+        ProcessTotalResults = officialFiltered.Count + unanalyzedTotal;
         ProcessIsLimited = ProcessTotalResults > MaxRows;
 
-        ProcessedRecords = materialized
+        ProcessedRecords = processedRecords
             .Take(MaxRows)
             .ToList();
 

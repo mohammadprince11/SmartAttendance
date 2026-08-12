@@ -1646,7 +1646,8 @@ ORDER BY e.EmployeeNo, d.WorkDate;
     /// أول دخول = MIN(CheckIn) وآخر خروج = MAX(CheckOut) مطابقةً للاشتقاق القديم.
     /// </summary>
     public static async Task<List<RawPunchRow>> ListUnanalyzedPunchRowsAsync(
-        ApplicationDbContext dbContext, CompanyScope scope, DateOnly from, DateOnly to)
+        ApplicationDbContext dbContext, CompanyScope scope, DateOnly from, DateOnly to,
+        int? take = null, string? search = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         if (scope.IsDeniedAll) return new List<RawPunchRow>();
@@ -1659,6 +1660,21 @@ ORDER BY e.EmployeeNo, d.WorkDate;
         var companyClause = scope.IsUnrestricted
             ? string.Empty
             : $" AND {scope.ToSqlPredicate("e.CompanyId")}";
+
+        // البحث يُدفَع للـSQL كي يبقى صحيحاً مع الحدّ (take): صفوف «غير محلَّل» بلا
+        // مناوبةٍ ولا حالة، فبحثها = رقم/اسم الموظف — عين ما يفعله CleanProcessFilter.
+        var trimmed = search?.Trim();
+        var searchClause = string.IsNullOrWhiteSpace(trimmed)
+            ? string.Empty
+            : " AND (e.FullName LIKE @Q OR e.EmployeeNo LIKE @Q)";
+
+        // حدٌّ عند المصدر لا بالذاكرة: كل البصمات هنا «غير محلَّلة» (مئات الآلاف)، وكانت
+        // الدالّة تُعيدها كاملةً فتُجسِّد الصفحة ~400 ألف صفٍّ لتعرض 25 ⟹ تجمُّد عند مدىً
+        // واسع. الترتيب «الأحدث فالاسم» يطابق ترتيب العرض، فأعلى `take` صفوفاً هي عين ما
+        // يُعرَض. العدّ الكلّيّ يأتي من <see cref="CountUnanalyzedPunchGroupsAsync"/> رخيصاً.
+        var fetchClause = take is > 0
+            ? $"\nOFFSET 0 ROWS FETCH NEXT {take.Value} ROWS ONLY"
+            : string.Empty;
 
         return await HrmsDatabase.QueryAsync(
             dbContext,
@@ -1684,15 +1700,65 @@ FROM Agg g
 INNER JOIN Employees e ON e.Id = g.EmployeeId
 INNER JOIN Ranked f ON f.EmployeeId = g.EmployeeId
     AND f.AttendanceDate = g.AttendanceDate AND f.rn = 1
-WHERE e.IsActive = 1{companyClause}
-ORDER BY e.EmployeeNo, g.AttendanceDate;
+WHERE e.IsActive = 1{companyClause}{searchClause}
+ORDER BY g.AttendanceDate DESC, e.FullName, e.EmployeeNo{fetchClause};
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
                 HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
+                if (!string.IsNullOrWhiteSpace(trimmed))
+                {
+                    HrmsDatabase.AddParameter(command, "@Q", "%" + trimmed + "%");
+                }
             },
             ReadRawPunchRow);
+    }
+
+    /// <summary>
+    /// عددُ مجموعات (موظف×يوم) التي لها بصماتٌ خام غير محلَّلة بالمدى — للعدّاد «عرض N
+    /// من الكلّ» دون تجسيد الصفوف. رخيصٌ: تجميعٌ داخل SQL لا نقلَ صفوفٍ للذاكرة.
+    /// </summary>
+    public static async Task<int> CountUnanalyzedPunchGroupsAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, DateOnly from, DateOnly to, string? search = null)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return 0;
+        if (to < from) return 0;
+
+        await EnsureAsync(dbContext);
+
+        var companyClause = scope.IsUnrestricted
+            ? string.Empty
+            : $" AND {scope.ToSqlPredicate("e.CompanyId")}";
+
+        var trimmed = search?.Trim();
+        var searchClause = string.IsNullOrWhiteSpace(trimmed)
+            ? string.Empty
+            : " AND (e.FullName LIKE @Q OR e.EmployeeNo LIKE @Q)";
+
+        return await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            $"""
+SELECT COUNT(*) FROM (
+    SELECT a.EmployeeId, a.AttendanceDate
+    FROM AttendanceRecords a
+    INNER JOIN Employees e ON e.Id = a.EmployeeId
+    WHERE a.PunchSemanticId IS NULL
+      AND a.AttendanceDate >= @From AND a.AttendanceDate <= @To
+      AND e.IsActive = 1{companyClause}{searchClause}
+    GROUP BY a.EmployeeId, a.AttendanceDate
+) g;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
+                if (!string.IsNullOrWhiteSpace(trimmed))
+                {
+                    HrmsDatabase.AddParameter(command, "@Q", "%" + trimmed + "%");
+                }
+            });
     }
 
     private static RawPunchRow ReadRawPunchRow(System.Data.Common.DbDataReader reader) => new()
