@@ -36,6 +36,19 @@
       "url": "http://localhost:5093"
     },
     {
+      "name": "TrialCustomRoles",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "run", "--project", "SmartAttendance.Web", "-c", "Release", "--no-build",
+        "--urls", "http://localhost:5094",
+        "--",
+        "--environment=Development",
+        "--ConnectionStrings:DefaultConnection=Server=localhost;Database=SmartAttendance_Test;Trusted_Connection=True;TrustServerCertificate=True"
+      ],
+      "port": 5094,
+      "url": "http://localhost:5094"
+    },
+    {
       "name": "API",
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "SmartAttendance.API", "--urls", "http://localhost:5226"],

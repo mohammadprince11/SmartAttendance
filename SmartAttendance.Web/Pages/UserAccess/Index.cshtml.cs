@@ -108,6 +108,16 @@ public class IndexModel : PageModel
 
     public List<IdentityRow> Identities { get; set; } = new();
 
+    /// <summary>الأدوار المخصّصة الفعّالة (من AccessRoles) — تُعرَض كاختيارٍ متعدّد بالمحرّر.</summary>
+    public List<AccessRoleStore.AccessRole> AccessRoleOptions { get; set; } = new();
+
+    /// <summary>الأدوار المخصّصة المختارة عند الحفظ (تُسنَد لهوية SystemUser).</summary>
+    [BindProperty]
+    public int[] SelectedAccessRoleIds { get; set; } = Array.Empty<int>();
+
+    /// <summary>SystemUserId ← قائمة معرّفات أدواره المخصّصة (لتعليم الصفّ عند التعديل).</summary>
+    public Dictionary<int, List<int>> AssignedRolesByUser { get; set; } = new();
+
     public List<EmployeeOption> Employees { get; set; } = new();
 
     /// <summary>رمز الموظف المرتبط واسمه — يبدأ بهما <c>_EmployeePicker</c> معبَّأً.</summary>
@@ -200,6 +210,20 @@ public class IndexModel : PageModel
         }
 
         NormalizeInput();
+
+        // منسدلة «الدور» قد تحمل دوراً مخصّصاً بصيغة "access:{id}": نفكّه فيصير الدور
+        // الخشِن «موظف» (افتراض آمن) ويُسنَد الدور المخصّص لهوية SystemUser.
+        if (Input.CompatibilityRole.StartsWith("access:", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(Input.CompatibilityRole["access:".Length..], out var accessRoleId) &&
+            accessRoleId > 0)
+        {
+            SelectedAccessRoleIds = new[] { accessRoleId };
+            Input.CompatibilityRole = "Employee";
+        }
+        else
+        {
+            SelectedAccessRoleIds = Array.Empty<int>();
+        }
 
         var validationError = await ValidateInputAsync();
 
@@ -377,6 +401,15 @@ public class IndexModel : PageModel
                     displayName,
                     systemRole,
                     actor);
+            }
+
+            // الأدوار المخصّصة (AccessRoles): نضبط أدوار هذه الهوية على المختار.
+            if (systemUserId > 0)
+            {
+                await AccessRoleStore.ReplaceUserRolesAsync(
+                    _dbContext,
+                    systemUserId,
+                    SelectedAccessRoleIds ?? Array.Empty<int>());
             }
 
             await WriteAuditAsync(
@@ -1066,6 +1099,16 @@ ORDER BY e.EmployeeNo;
         // البحث والترقيم يتمّان داخل SQL (LoadIdentityRowsAsync) فلا فلترة بالذاكرة
         // هنا — وإلا لَقصّت الصفحةَ الحاليّة (25 صفّاً) فظهر أقلّ من المتوقّع.
         Identities = await LoadIdentityRowsAsync();
+
+        // الأدوار المخصّصة (تجربة): قائمة الاختيار + الأدوار المُسنَدة لكل صفٍّ ظاهر.
+        AccessRoleOptions = await AccessRoleStore.ListActiveAsync(_dbContext);
+        var systemUserIds = Identities
+            .Where(x => x.SystemUserId > 0)
+            .Select(x => x.SystemUserId)
+            .ToList();
+        AssignedRolesByUser = await AccessRoleStore.GetRolesForUsersAsync(
+            _dbContext,
+            systemUserIds);
     }
 
     private async Task<bool> LoadEditorAsync(
