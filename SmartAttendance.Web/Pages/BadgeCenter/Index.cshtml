@@ -78,6 +78,16 @@
                     </select>
                 </div>
                 <div class="bc-field">
+                    <label>قالب الوجه الخلفي — اختياري</label>
+                    <select name="BackTemplateId">
+                        <option value="">بلا وجه خلفي</option>
+                        @foreach (var template in Model.Templates)
+                        {
+                            <option value="@template.Id" selected="@(Model.BackTemplateId == template.Id ? "selected" : null)">@template.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="bc-field">
                     <label>بحث بالموظفين</label>
                     <input type="search" name="Search" value="@Model.Search" placeholder="الاسم أو الرقم الوظيفي" />
                 </div>
@@ -122,7 +132,7 @@
             @foreach (var card in Model.Cards)
             {
                 <div>
-                    <div class="bc-badge-name">@card.Employee</div>
+                    <div class="bc-badge-name">@card.Employee@(string.IsNullOrEmpty(card.Side) ? "" : $" — {card.Side}")</div>
                     <div class="bc-badge">@Html.Raw(card.Html)</div>
                 </div>
             }

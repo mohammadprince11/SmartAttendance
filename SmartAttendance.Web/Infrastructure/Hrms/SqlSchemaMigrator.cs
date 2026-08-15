@@ -1417,6 +1417,34 @@ IF OBJECT_ID('AppLoginUsers', 'U') IS NOT NULL
         ADD MustChangePassword bit NOT NULL
             CONSTRAINT DF_AppLoginUsers_MustChangePassword DEFAULT(0);
 """),
+
+        // متابعة تقييمات الأشخاص (نظير /Employees/EvaluationsScreening بكيان):
+        // نتيجة سنوية لكل موظف — نسبة + تقدير + وصف، بمصدر «مباشر» يدوي الآن
+        // ومصدر «إدارة الأداء» حين يُبنى التكامل. الفرادة على (الموظف، السنة، الفترة).
+        new(
+            "20260815-01-employee-evaluation-results",
+            """
+IF OBJECT_ID('EmployeeEvaluationResults', 'U') IS NULL
+BEGIN
+    CREATE TABLE EmployeeEvaluationResults
+    (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        EmployeeId int NOT NULL,
+        EvalYear int NOT NULL,
+        FromDate date NOT NULL,
+        ToDate date NOT NULL,
+        ScorePercent decimal(6,2) NOT NULL,
+        Grade nvarchar(40) NULL,
+        GradeText nvarchar(200) NULL,
+        Source nvarchar(40) NOT NULL CONSTRAINT DF_EmpEvalResults_Source DEFAULT(N'مباشر'),
+        CreatedBy nvarchar(150) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_EmpEvalResults_CreatedAt DEFAULT(SYSUTCDATETIME()),
+        CONSTRAINT UQ_EmpEvalResults UNIQUE (EmployeeId, EvalYear, FromDate, ToDate)
+    );
+
+    CREATE INDEX IX_EmpEvalResults_Employee ON EmployeeEvaluationResults (EmployeeId, EvalYear DESC);
+END;
+"""),
     };
 
     /// <summary>
