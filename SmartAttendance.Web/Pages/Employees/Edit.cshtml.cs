@@ -179,6 +179,18 @@ public class EditModel : PageModel
             }
         }
 
+        // اشتقاق المواطنة من الجنسية إن كانت القاعدة مفعّلة (تهيئة الأشخاص) —
+        // نفس قاعدة صفحة الإنشاء كي لا يفترق السلوكان.
+        if (!string.IsNullOrWhiteSpace(Employee.Nationality) &&
+            bool.TryParse(await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetAsync(
+                _dbContext, CitizenshipPolicy.KeyEnabled, "False"), out var citizenshipRule) &&
+            citizenshipRule)
+        {
+            var citizenList = await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetAsync(
+                _dbContext, CitizenshipPolicy.KeyNationalities, CitizenshipPolicy.DefaultNationalities);
+            Employee.IsCitizen = CitizenshipPolicy.IsCitizen(Employee.Nationality, citizenList);
+        }
+
         // بيانات الموظف والمدير المباشر والحقول الديناميكية تُحفظ ضمن معاملة واحدة؛
         // حفظ الصورة (عملية ملفات) يبقى خارجها حتى لا يؤثر فشله على البيانات.
         await using (var transaction = await _dbContext.Database.BeginTransactionAsync())

@@ -52,6 +52,8 @@
                             <th>النوع</th>
                             <th>من – إلى</th>
                             <th>القيمة</th>
+                            <th>متناقص</th>
+                            <th>المتبقي</th>
                             <th>الحالة</th>
                             <th>موافقة الموظف</th>
                             <th></th>
@@ -68,6 +70,10 @@
                                 <td>@(string.IsNullOrWhiteSpace(row.Subtitle) ? "—" : row.Subtitle)</td>
                                 <td>@(row.FromDate?.ToString("yyyy-MM-dd") ?? "—") @(row.ToDate.HasValue ? "– " + row.ToDate.Value.ToString("yyyy-MM-dd") : "")</td>
                                 <td>@(row.Amount?.ToString("#,0.##") ?? "—")</td>
+                                <td>@(row.IsDeclining ? "نعم" : "لا")</td>
+                                <td title="القيمة المتبقية بذمة الموظف — المتناقصة تُستهلك خطياً عبر فترتها">
+                                    @(row.Amount is null ? "—" : row.RemainingValue.ToString("#,0.##"))
+                                </td>
                                 <td>
                                     @if (row.IsReturned)
                                     {

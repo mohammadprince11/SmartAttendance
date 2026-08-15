@@ -293,7 +293,7 @@ VALUES
                 });
         }
 
-        StatusMessage = $"\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u062D\u0631\u0643\u0629 \u063A\u064A\u0631 \u0645\u0642\u0641\u0644\u0629 \u0631\u0642\u0645 {batchId}. \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0633\u0631\u064A\u0627\u0646: {resolvedEffectiveDate:dd/MM/yyyy}.";
+        StatusMessage = $"\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u062D\u0631\u0643\u0629 \u063A\u064A\u0631 \u0645\u0642\u0641\u0644\u0629 EU{DateTime.UtcNow:yy}-{batchId}. \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0633\u0631\u064A\u0627\u0646: {resolvedEffectiveDate:dd/MM/yyyy}.";
         return RedirectToPage(new { employeeId, tab = "confirm", section = "employee-master" });
     }
     // NEXORA_FIX14B_STAGE_METHOD_END
@@ -1513,6 +1513,13 @@ END
     public class UpdateBatch
     {
         public int Id { get; set; }
+
+        /// <summary>
+        /// رقم مرجعي مقروء بنمط كيان (EU26-147): البادئة + سنة الطلب + المعرّف.
+        /// مشتق للعرض لا مخزَّن — المعرّف يضمن الثبات والفرادة بلا عمود جديد.
+        /// </summary>
+        public string RefNo => $"EU{RequestedAt:yy}-{Id}";
+
         public int EmployeeId { get; set; }
         public string SectionKey { get; set; } = string.Empty;
         public string SectionName { get; set; } = string.Empty;
