@@ -76,6 +76,9 @@ public class SettingsModel : PageModel
         RequireCommitteeApproval = bool.TryParse(
             await HrSettingsStore.GetAsync(_db, PayrollRunStore.KeyRequireCommitteeApproval, "False"), out var rca) && rca;
 
+        FiscalYearStartMonth = int.TryParse(await HrSettingsStore.GetAsync(_db, KeyFiscalYearStartMonth, "1"), out var fy) && fy is >= 1 and <= 12 ? fy : 1;
+        ExtraSalariesPerYear = int.TryParse(await HrSettingsStore.GetAsync(_db, KeyExtraSalariesPerYear, "0"), out var es) && es >= 0 ? es : 0;
+
         ConfigMonitorEnabled = bool.TryParse(
             await HrSettingsStore.GetAsync(_db, PayrollConfigChangeMonitor.KeyEnabled, "False"), out var cme) && cme;
         ConfigMonitorRole = await HrSettingsStore.GetAsync(_db, PayrollConfigChangeMonitor.KeyTargetRole, PayrollConfigChangeMonitor.DefaultTargetRole);
@@ -94,6 +97,38 @@ public class SettingsModel : PageModel
     private Task<bool> TrackAsync(string key, string? value) =>
         PayrollConfigChangeMonitor.SetAndTrackAsync(
             _db, key, value, User?.Identity?.Name ?? "system", HttpContext.Connection.RemoteIpAddress?.ToString());
+
+    // ── السنة المالية (نظير «السنة المالية» بكيان: بداية السنة · عدد الرواتب الإضافية · ساعات الدوام) ──
+    public const string KeyFiscalYearStartMonth = "Payroll.FiscalYear.StartMonth";
+    public const string KeyExtraSalariesPerYear = "Payroll.FiscalYear.ExtraSalaries";
+
+    /// <summary>شهر بداية السنة المالية (1–12) — يحكم الاحتساب التراكمي/التقارير السنوية.</summary>
+    public int FiscalYearStartMonth { get; set; } = 1;
+
+    /// <summary>
+    /// عدد الرواتب الإضافية بالسنة (نظير كيان «2»). تهيئةٌ توثيقية الآن: مسير الرواتب
+    /// الإضافية كمسير موازٍ يمسّ محرّك الاحتساب فيحتاج طلباً صريحاً (قاعدة الرواتب الحمراء).
+    /// </summary>
+    public int ExtraSalariesPerYear { get; set; }
+
+    public async Task<IActionResult> OnPostSaveFiscalYearAsync(int fiscalYearStartMonth, int extraSalariesPerYear)
+    {
+        if (fiscalYearStartMonth is < 1 or > 12)
+        {
+            TempData["PayrollMessage"] = "شهر بداية السنة المالية بين 1 و12."; TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+        if (extraSalariesPerYear is < 0 or > 12)
+        {
+            TempData["PayrollMessage"] = "عدد الرواتب الإضافية بين 0 و12."; TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+
+        await TrackAsync(KeyFiscalYearStartMonth, fiscalYearStartMonth.ToString());
+        await TrackAsync(KeyExtraSalariesPerYear, extraSalariesPerYear.ToString());
+        TempData["PayrollMessage"] = "حُفظت إعدادات السنة المالية.";
+        return RedirectToPage();
+    }
 
     /// <summary>حالة مراقبة تغيير الإعدادات (إشعار مفعَّل؟ + الجهة).</summary>
     public bool ConfigMonitorEnabled { get; set; }

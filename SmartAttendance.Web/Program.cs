@@ -46,7 +46,11 @@ builder.Services.AddRazorPages()
     // محرك تقارير واحد يخدم مسارين: الأشخاص (/PeopleReports) والحضور
     // (/AttendanceReports). الصفحة تستنتج الموديول من المسار وتعرض مصادره فقط.
     .AddRazorPagesOptions(options =>
-        options.Conventions.AddPageRoute("/PeopleReports/Index", "/AttendanceReports"));
+    {
+        options.Conventions.AddPageRoute("/PeopleReports/Index", "/AttendanceReports");
+        // تقارير الرواتب (نظير «التقارير» بمودل رواتب كيان) — نفس الصفحة بمصادر pay_*.
+        options.Conventions.AddPageRoute("/PeopleReports/Index", "/PayrollReports");
+    });
 
 // Branding & Theme Engine runtime (P4): in-memory theme cache + request-scoped
 // resolver. No company theme is persisted yet, so this serves the ZYNORA Default.

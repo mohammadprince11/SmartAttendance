@@ -792,6 +792,10 @@
                         <a asp-page="/Payroll/TransactionsAuditor" class="nexora-nav-link @(IsUnder("/Payroll/TransactionsAuditor") ? "active nexora-active" : "")">
                             <span>مدقق الحركات</span>
                         </a>
+                        @* رابط صريح لا asp-page: AddPageRoute لمسار /PayrollReports (نفس صفحة PeopleReports بمصادر الرواتب) *@
+                        <a href="/PayrollReports" class="nexora-nav-link @(IsUnder("/PayrollReports") ? "active nexora-active" : "")">
+                            <span>تقارير الرواتب</span>
+                        </a>
                         <a asp-page="/Payroll/SalarySheet" class="nexora-nav-link @(IsUnder("/Payroll/SalarySheet") ? "active nexora-active" : "")">
                             <span>كشف الرواتب</span>
                         </a>
@@ -827,12 +831,13 @@
                            ولا يقرأهما أحد، بينما المحرّك يقرأ TaxProfiles/GosiProfiles من
                            «الضريبة والضمان» أدناه — فكان الأدمن يعدّل بلا أثر وبلا تحذير.
                            الجدولان اليتيمان يبقيان بالقاعدة حتى تُسقطهما هجرة محكومة. *@
-                        <details class="ky-acc" @(IsUnder("/Payroll/SalaryItems") || IsUnder("/Payroll/Settings") || IsUnder("/Payroll/BankTemplates") ? "open" : "")>
+                        <details class="ky-acc" @(IsUnder("/Payroll/SalaryItems") || IsUnder("/Payroll/Settings") || IsUnder("/Payroll/BankTemplates") || IsUnder("/Payroll/SalaryScale") ? "open" : "")>
                             <summary><span>إعدادات الرواتب</span><span class="ky-acc-chev"></span></summary>
                             <div class="ky-acc-body">
                                 <a asp-page="/Payroll/SalaryItems" class="nexora-nav-link @(IsUnder("/Payroll/SalaryItems") ? "active nexora-active" : "")"><span>عناصر الراتب</span></a>
                                 <a asp-page="/Payroll/Settings" class="nexora-nav-link @(IsUnder("/Payroll/Settings") ? "active nexora-active" : "")"><span>الضريبة والضمان</span></a>
                                 <a asp-page="/Payroll/BankTemplates" class="nexora-nav-link @(IsUnder("/Payroll/BankTemplates") ? "active nexora-active" : "")"><span>قوالب ملفات البنوك</span></a>
+                                <a asp-page="/Payroll/SalaryScale" class="nexora-nav-link @(IsUnder("/Payroll/SalaryScale") ? "active nexora-active" : "")"><span>سلم الرواتب</span></a>
                             </div>
                         </details>
                     </div>

@@ -24,6 +24,7 @@ public static class ConfigTenantScope
     public const string ShiftRules = "ShiftRules";
     public const string PeriodRules = "PeriodRules";
     public const string EmployeePolls = "EmployeePolls";
+    public const string SalaryScaleGrades = "SalaryScaleGrades";
 
     /// <summary>معرّفات الصفوف التي يراها هذا النطاق (المشترك + ما يخصّ شركاته).</summary>
     public static async Task<HashSet<int>> AllowedIdsAsync(

@@ -50,16 +50,27 @@ public class IndexModel : PageModel
     /// الموديول المستنتج من المسار: نفس الصفحة تخدم «/PeopleReports» (أشخاص) و
     /// «/AttendanceReports» (حضور) عبر AddPageRoute، فتعرض كلٌّ مصادرها وتقاريرها فقط.
     /// </summary>
-    public string Module =>
-        (HttpContext?.Request?.Path.Value ?? "").Contains("attendancereports", StringComparison.OrdinalIgnoreCase)
-            ? "attendance" : "people";
+    public string Module
+    {
+        get
+        {
+            var path = HttpContext?.Request?.Path.Value ?? "";
+            if (path.Contains("attendancereports", StringComparison.OrdinalIgnoreCase)) return "attendance";
+            if (path.Contains("payrollreports", StringComparison.OrdinalIgnoreCase)) return "payroll";
+            return "people";
+        }
+    }
 
     public bool IsAttendance => Module == "attendance";
+    public bool IsPayroll => Module == "payroll";
+
+    /// <summary>الموديولات ذات بارامتر مدى تاريخ عند التشغيل (الحضور والرواتب).</summary>
+    public bool UsesDateRange => IsAttendance || IsPayroll;
 
     /// <summary>المسار الأساس للصفحة الحالية — لروابط GET وإجراءات POST وإعادة التوجيه.</summary>
-    public string SelfPath => IsAttendance ? "/AttendanceReports" : "/PeopleReports";
+    public string SelfPath => IsAttendance ? "/AttendanceReports" : IsPayroll ? "/PayrollReports" : "/PeopleReports";
 
-    public string PageTitle => IsAttendance ? "تقارير الحضور" : "التقارير";
+    public string PageTitle => IsAttendance ? "تقارير الحضور" : IsPayroll ? "تقارير الرواتب" : "التقارير";
 
     public IReadOnlyList<PeopleReportCatalog.ReportDataset> Datasets => PeopleReportCatalog.DatasetsFor(Module);
 
