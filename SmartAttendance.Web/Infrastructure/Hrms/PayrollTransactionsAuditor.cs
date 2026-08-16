@@ -81,12 +81,13 @@ public static class PayrollTransactionsAuditor
             db,
             $"""
 SELECT t.Id, t.EmployeeId, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS EmployeeName,
-       ISNULL(e.BasicSalary, 0) AS Basic, t.TxType, ISNULL(t.ItemName, N'') AS ItemName, t.Amount, t.Hours, t.Days,
+       ISNULL(fi.BasicSalary, 0) AS Basic, t.TxType, ISNULL(t.ItemName, N'') AS ItemName, t.Amount, t.Hours, t.Days,
        t.[Year], t.[Month], ISNULL(t.Status, N'Approved') AS Status, ISNULL(t.ReferenceNo, N'') AS ReferenceNo,
        CASE WHEN EXISTS (SELECT 1 FROM PayrollRuns r WHERE r.[Year] = t.[Year] AND r.[Month] = t.[Month]
                           AND r.Status IN (N'Locked', N'Issued', N'PayslipSent')) THEN 1 ELSE 0 END AS PeriodLocked
 FROM PayrollTransactions t
 INNER JOIN Employees e ON e.Id = t.EmployeeId
+LEFT JOIN EmployeeFinancialInfos fi ON fi.EmployeeId = e.Id
 WHERE ISNULL(e.IsDeleted, 0) = 0
   AND (@Y IS NULL OR t.[Year] = @Y) AND (@M IS NULL OR t.[Month] = @M)
   AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};
