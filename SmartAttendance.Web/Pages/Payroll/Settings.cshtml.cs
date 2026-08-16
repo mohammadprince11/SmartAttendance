@@ -76,11 +76,38 @@ public class SettingsModel : PageModel
         RequireCommitteeApproval = bool.TryParse(
             await HrSettingsStore.GetAsync(_db, PayrollRunStore.KeyRequireCommitteeApproval, "False"), out var rca) && rca;
 
+        ConfigMonitorEnabled = bool.TryParse(
+            await HrSettingsStore.GetAsync(_db, PayrollConfigChangeMonitor.KeyEnabled, "False"), out var cme) && cme;
+        ConfigMonitorRole = await HrSettingsStore.GetAsync(_db, PayrollConfigChangeMonitor.KeyTargetRole, PayrollConfigChangeMonitor.DefaultTargetRole);
+
         Caps = PayrollCapsPolicy.Parse(
             await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyDeductionCapAmount, "0"),
             await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyDeductionCapPercent, "0"),
             await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyOvertimeCapAmount, "0"),
             await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyOvertimeCapHours, "0"));
+    }
+
+    /// <summary>
+    /// كل كتابة إعداد رواتب من هذه الشاشة تمرّ من مراقب التغيير: تسجيل قبل/بعد بالتدقيق
+    /// دائماً، وإشعار للجهة المستهدفة إن فُعّل (نظير «الخيارات الأمنية» بكيان).
+    /// </summary>
+    private Task<bool> TrackAsync(string key, string? value) =>
+        PayrollConfigChangeMonitor.SetAndTrackAsync(
+            _db, key, value, User?.Identity?.Name ?? "system", HttpContext.Connection.RemoteIpAddress?.ToString());
+
+    /// <summary>حالة مراقبة تغيير الإعدادات (إشعار مفعَّل؟ + الجهة).</summary>
+    public bool ConfigMonitorEnabled { get; set; }
+    public string ConfigMonitorRole { get; set; } = PayrollConfigChangeMonitor.DefaultTargetRole;
+
+    public async Task<IActionResult> OnPostSaveMonitorAsync(bool monitorEnabled, string? monitorRole)
+    {
+        await TrackAsync(PayrollConfigChangeMonitor.KeyEnabled, monitorEnabled.ToString());
+        await TrackAsync(PayrollConfigChangeMonitor.KeyTargetRole,
+            string.IsNullOrWhiteSpace(monitorRole) ? PayrollConfigChangeMonitor.DefaultTargetRole : monitorRole.Trim());
+        TempData["PayrollMessage"] = monitorEnabled
+            ? "حُفظ: كل تغيير بإعدادات الرواتب يُسجَّل بالتدقيق ويُشعَر به الدور المستهدف فوراً."
+            : "حُفظ: التغييرات تُسجَّل بالتدقيق فقط بلا إشعار.";
+        return RedirectToPage();
     }
 
     /// <summary>الحدود القصوى الشهرية الحالية (نظير «التحقق من المبالغ القصوى» بكيان).</summary>
@@ -91,7 +118,7 @@ public class SettingsModel : PageModel
 
     public async Task<IActionResult> OnPostSaveApprovalAsync(bool requireCommitteeApproval)
     {
-        await HrSettingsStore.SetAsync(_db, PayrollRunStore.KeyRequireCommitteeApproval, requireCommitteeApproval.ToString());
+        await TrackAsync(PayrollRunStore.KeyRequireCommitteeApproval, requireCommitteeApproval.ToString());
         TempData["PayrollMessage"] = requireCommitteeApproval
             ? "حُفظ: إصدار الرواتب يتطلب اعتماد اللجنة على الدفعة المقفلة أولاً."
             : "حُفظ: الإصدار بلا اشتراط اعتماد لجنة (السلوك القائم).";
@@ -114,10 +141,10 @@ public class SettingsModel : PageModel
         }
 
         var inv = System.Globalization.CultureInfo.InvariantCulture;
-        await HrSettingsStore.SetAsync(_db, PayrollCapsPolicy.KeyDeductionCapAmount, caps.DeductionCapAmount.ToString(inv));
-        await HrSettingsStore.SetAsync(_db, PayrollCapsPolicy.KeyDeductionCapPercent, caps.DeductionCapPercentOfGross.ToString(inv));
-        await HrSettingsStore.SetAsync(_db, PayrollCapsPolicy.KeyOvertimeCapAmount, caps.OvertimeCapAmount.ToString(inv));
-        await HrSettingsStore.SetAsync(_db, PayrollCapsPolicy.KeyOvertimeCapHours, caps.OvertimeCapHours.ToString(inv));
+        await TrackAsync(PayrollCapsPolicy.KeyDeductionCapAmount, caps.DeductionCapAmount.ToString(inv));
+        await TrackAsync(PayrollCapsPolicy.KeyDeductionCapPercent, caps.DeductionCapPercentOfGross.ToString(inv));
+        await TrackAsync(PayrollCapsPolicy.KeyOvertimeCapAmount, caps.OvertimeCapAmount.ToString(inv));
+        await TrackAsync(PayrollCapsPolicy.KeyOvertimeCapHours, caps.OvertimeCapHours.ToString(inv));
 
         TempData["PayrollMessage"] = caps.HasDeductionCap || caps.HasOvertimeCap
             ? "حُفظت الحدود القصوى — تسري على الاحتساب القادم، والمتجاوز يُعلَن بسطر بالقسيمة."
@@ -132,7 +159,7 @@ public class SettingsModel : PageModel
     public async Task<IActionResult> OnPostSaveGosiTaxBaseAsync(string gosiTaxBase)
     {
         var mode = gosiTaxBase == "FullBasic" ? "FullBasic" : "Prorated";
-        await HrSettingsStore.SetAsync(_db, "Payroll.GosiTaxBase", mode);
+        await TrackAsync("Payroll.GosiTaxBase", mode);
         TempData["PayrollMessage"] = mode == "FullBasic"
             ? "حُفظ: وعاء الضمان/الضريبة على الأساسي الكامل — يسري على الاحتساب القادم."
             : "حُفظ: وعاء الضمان/الضريبة على الأساسي بعد الحضور (السلوك القديم).";
@@ -164,10 +191,10 @@ public class SettingsModel : PageModel
         }
         var hours = PayrollDivisorPolicy.DailyHours(standardDailyHours);
 
-        await HrSettingsStore.SetAsync(_db, "Payroll.OvertimeBaseMode", otMode);
-        await HrSettingsStore.SetAsync(_db, "Payroll.UnpaidLeaveBaseMode", ulMode);
-        await HrSettingsStore.SetAsync(_db, PayrollDivisorPolicy.SalaryDaysBasisKey, basis);
-        await HrSettingsStore.SetAsync(_db, PayrollDivisorPolicy.StandardDailyHoursKey,
+        await TrackAsync("Payroll.OvertimeBaseMode", otMode);
+        await TrackAsync("Payroll.UnpaidLeaveBaseMode", ulMode);
+        await TrackAsync(PayrollDivisorPolicy.SalaryDaysBasisKey, basis);
+        await TrackAsync(PayrollDivisorPolicy.StandardDailyHoursKey,
             hours.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
         string ModeLabel(string m) => m == PayrollEarningBase.ModeBasicPlusAllowances

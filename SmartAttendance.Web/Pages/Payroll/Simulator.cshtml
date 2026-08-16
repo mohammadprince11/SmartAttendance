@@ -1,0 +1,108 @@
+@page
+@model SmartAttendance.Web.Pages.Payroll.SimulatorModel
+
+@{
+    ViewData["Title"] = "نظام المحاكاة";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<style>
+    .sim-verdict { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:800; }
+    .sim-verdict.gap  { background:rgba(217,119,6,.15);  color:#b45309; }
+    .sim-verdict.over { background:rgba(220,38,38,.12);  color:#b91c1c; }
+    .sim-verdict.ok   { background:rgba(22,163,74,.12);  color:#15803d; }
+    .sim-verdict.none { background:rgba(100,116,139,.12); color:#475569; }
+    .sim-kpi { display:flex; gap:12px; flex-wrap:wrap; margin:10px 0; }
+    .sim-kpi div { border:1px solid var(--zy-border,#e2e8f0); border-radius:10px; padding:8px 14px; min-width:140px; }
+    .sim-kpi b { display:block; font-size:20px; }
+    .sim-items { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:6px; margin:8px 0; }
+    .sim-items label { display:flex; gap:6px; align-items:center; font-size:13px; }
+</style>
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a href="/Payroll/Runs">الرواتب</a>
+        <h1>نظام المحاكاة</h1>
+    </header>
+
+    <form method="get" class="nxhs-panel zyp-editor">
+        <h3>ما هي عناصر الراتب التي ترغب في محاكاتها؟</h3>
+        <p class="zyp-hint">
+            قم بإجراء تحليل ومطابقة عناصر الراتب المحددة لموظفيك قبل اتخاذ القرار النهائي —
+            لكل موظف: <b>مؤهل</b> وفق شروط العنصر؟ · <b>مُسند</b> بملفه؟ · القيمة أو الصيغة.
+            <b>قراءة فقط</b> — لا يمسّ أي بيانات ولا يحتسب مسيراً.
+        </p>
+
+        <div class="sim-items">
+            @foreach (var item in Model.Items)
+            {
+                <label>
+                    <input type="checkbox" name="ItemIds" value="@item.Id" checked="@(Model.ItemIds.Contains(item.Id) ? "checked" : null)" />
+                    @item.Name
+                    <small style="color:#64748b">(@(item.ValueKind == "Formula" ? "معادلة" : item.ValueKind == "Fixed" ? "ثابت" : "لكل موظف"))</small>
+                </label>
+            }
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+            <input type="search" name="Search" value="@Model.Search" placeholder="بحث بالاسم أو الرقم (اختياري)" />
+            <input type="number" name="CompanyId" value="@Model.CompanyId" placeholder="معرّف الشركة (اختياري)" style="width:160px" />
+            <label style="display:flex;gap:4px;align-items:center;margin:0">
+                <input type="checkbox" name="GapsOnly" value="true" checked="@(Model.GapsOnly ? "checked" : null)" /> الفجوات فقط
+            </label>
+            <button type="submit">محاكاة</button>
+        </div>
+    </form>
+
+    @if (Model.Ran)
+    {
+        <div class="nxhs-panel">
+            <h3>ملخص نتائج المحاكاة</h3>
+            <p>تم إجراء المحاكاة على <b>@Model.EmployeesCount</b> موظف.</p>
+            <div class="sim-kpi">
+                <div><span>مؤهل وليس بملفه</span><b style="color:#b45309">@Model.GapCount</b></div>
+                <div><span>بملفه وغير مؤهل</span><b style="color:#b91c1c">@Model.OverCount</b></div>
+                <div><span>مطابق</span><b style="color:#15803d">@Model.MatchCount</b></div>
+            </div>
+            @if (Model.GapCount > 0)
+            {
+                <p class="zyp-hint">@Model.GapCount ليس لديهم عنصر الراتب ويجب أن يكون موجوداً في ملفهم لأنهم مؤهلون للحصول عليه.</p>
+            }
+
+            <div class="zhr-table-responsive">
+                <table class="zyp-table" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>الرمز</th><th>الموظف</th><th>الأساسي</th><th>عنصر الراتب</th>
+                            <th>الحكم</th><th>القيمة المحاكاة</th><th>الصيغة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Rows.Count == 0)
+                        {
+                            <tr><td colspan="7">لا نتائج ضمن هذا النطاق/المرشح.</td></tr>
+                        }
+                        @foreach (var r in Model.Rows.Take(500))
+                        {
+                            <tr>
+                                <td>@r.EmployeeNo</td>
+                                <td><a href="/Employees/Profile?id=@r.EmployeeId">@r.EmployeeName</a></td>
+                                <td>@r.Basic.ToString("#,0.##")</td>
+                                <td>@r.ItemName</td>
+                                <td><span class="sim-verdict @r.VerdictClass">@r.Verdict</span></td>
+                                <td>@(r.Error != null ? "⚠ " + r.Error : r.SimulatedValue?.ToString("#,0.##") ?? "—")</td>
+                                <td><code style="font-size:11px">@(r.Formula ?? "—")</code></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (Model.Rows.Count > 500)
+            {
+                <p class="zyp-hint">يُعرض أول 500 من @Model.Rows.Count — ضيّق النطاق أو فعّل «الفجوات فقط».</p>
+            }
+        </div>
+    }
+</section>

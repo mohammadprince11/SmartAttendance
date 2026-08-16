@@ -194,6 +194,27 @@
         </form>
     </div>
 
+    @* ----- الخيارات الأمنية: مراقبة تغيير إعدادات الرواتب (نظير كيان) ----- *@
+    <div class="ps-sec">
+        <h2>الخيارات الأمنية — مراقبة تغيير الإعدادات</h2>
+        <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin:0 0 8px">
+            كل تغيير بإعدادات الرواتب من هذه الشاشة <b>يُسجَّل دائماً</b> بسجل التدقيق (القيمة قبل/بعد،
+            الفاعل، العنوان). عند التفعيل يُطلق أيضاً <b>إشعار جرس فوري</b> للدور المستهدف —
+            خفض نسبة ضمان أو تغيير مقام الأيام قبل مسير واحد لا يمرّ بصمت.
+        </p>
+        <form method="post" asp-page-handler="SaveMonitor" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+            <select name="monitorEnabled" style="min-width:220px">
+                <option value="false" selected="@(!Model.ConfigMonitorEnabled)">تسجيل بالتدقيق فقط (الافتراضي)</option>
+                <option value="true" selected="@(Model.ConfigMonitorEnabled)">تسجيل + إشعار فوري</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:6px;margin:0">
+                <b>أبلغ الدور</b>
+                <input type="text" name="monitorRole" value="@Model.ConfigMonitorRole" style="width:140px" placeholder="Admin" />
+            </label>
+            <button type="submit" class="zy-btn zy-btn--primary ps-btn">حفظ</button>
+        </form>
+    </div>
+
     @* ----- موافقات اللجنة (نظير «خيارات الموافقات بين المشرفين» بتهيئة كيان) ----- *@
     <div class="ps-sec">
         <h2>موافقات اللجنة</h2>
