@@ -72,6 +72,57 @@ public class SettingsModel : PageModel
             await HrSettingsStore.GetAsync(_db, PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
         GosiTaxBaseMode = (await HrSettingsStore.GetAsync(_db, "Payroll.GosiTaxBase", "Prorated")) == "FullBasic"
             ? "FullBasic" : "Prorated";
+
+        RequireCommitteeApproval = bool.TryParse(
+            await HrSettingsStore.GetAsync(_db, PayrollRunStore.KeyRequireCommitteeApproval, "False"), out var rca) && rca;
+
+        Caps = PayrollCapsPolicy.Parse(
+            await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyDeductionCapAmount, "0"),
+            await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyDeductionCapPercent, "0"),
+            await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyOvertimeCapAmount, "0"),
+            await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyOvertimeCapHours, "0"));
+    }
+
+    /// <summary>الحدود القصوى الشهرية الحالية (نظير «التحقق من المبالغ القصوى» بكيان).</summary>
+    public PayrollCapsPolicy.Caps Caps { get; set; } = PayrollCapsPolicy.Caps.None;
+
+    /// <summary>هل يتطلب إصدار الرواتب اعتماد لجنة؟ (نظير «خيارات الموافقات» بتهيئة كيان).</summary>
+    public bool RequireCommitteeApproval { get; set; }
+
+    public async Task<IActionResult> OnPostSaveApprovalAsync(bool requireCommitteeApproval)
+    {
+        await HrSettingsStore.SetAsync(_db, PayrollRunStore.KeyRequireCommitteeApproval, requireCommitteeApproval.ToString());
+        TempData["PayrollMessage"] = requireCommitteeApproval
+            ? "حُفظ: إصدار الرواتب يتطلب اعتماد اللجنة على الدفعة المقفلة أولاً."
+            : "حُفظ: الإصدار بلا اشتراط اعتماد لجنة (السلوك القائم).";
+        return RedirectToPage();
+    }
+
+    /// <summary>
+    /// حفظ الحدود القصوى: صفر أو فارغ = بلا سقف (السلوك القائم). النسبة تُحصر 0–100.
+    /// السقف يمسّ الاقتطاعات الاختيارية والإضافي فقط — لا الضريبة ولا الضمان.
+    /// </summary>
+    public async Task<IActionResult> OnPostSaveCapsAsync(
+        string? deductionCapAmount, string? deductionCapPercent, string? overtimeCapAmount, string? overtimeCapHours)
+    {
+        var caps = PayrollCapsPolicy.Parse(deductionCapAmount, deductionCapPercent, overtimeCapAmount, overtimeCapHours);
+        if (caps.DeductionCapPercentOfGross > 100)
+        {
+            TempData["PayrollMessage"] = "نسبة سقف الاقتطاع لا تتجاوز 100% من الإجمالي.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        await HrSettingsStore.SetAsync(_db, PayrollCapsPolicy.KeyDeductionCapAmount, caps.DeductionCapAmount.ToString(inv));
+        await HrSettingsStore.SetAsync(_db, PayrollCapsPolicy.KeyDeductionCapPercent, caps.DeductionCapPercentOfGross.ToString(inv));
+        await HrSettingsStore.SetAsync(_db, PayrollCapsPolicy.KeyOvertimeCapAmount, caps.OvertimeCapAmount.ToString(inv));
+        await HrSettingsStore.SetAsync(_db, PayrollCapsPolicy.KeyOvertimeCapHours, caps.OvertimeCapHours.ToString(inv));
+
+        TempData["PayrollMessage"] = caps.HasDeductionCap || caps.HasOvertimeCap
+            ? "حُفظت الحدود القصوى — تسري على الاحتساب القادم، والمتجاوز يُعلَن بسطر بالقسيمة."
+            : "حُفظ: بلا حدود قصوى (السلوك القائم).";
+        return RedirectToPage();
     }
 
     /// <summary>

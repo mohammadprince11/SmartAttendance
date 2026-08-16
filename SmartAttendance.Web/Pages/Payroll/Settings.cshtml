@@ -194,6 +194,56 @@
         </form>
     </div>
 
+    @* ----- موافقات اللجنة (نظير «خيارات الموافقات بين المشرفين» بتهيئة كيان) ----- *@
+    <div class="ps-sec">
+        <h2>موافقات اللجنة</h2>
+        <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin:0 0 8px">
+            عند التفعيل لا تُصدَر دفعة إلا بعد «اعتماد اللجنة» عليها وهي مقفلة — يُسجَّل المعتمِد
+            والوقت والملاحظة على الدفعة، وإلغاء القفل يُسقط الاعتماد لأن الأرقام تتغيّر.
+        </p>
+        <form method="post" asp-page-handler="SaveApproval" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+            <select name="requireCommitteeApproval" style="min-width:260px">
+                <option value="false" selected="@(!Model.RequireCommitteeApproval)">الإصدار مباشرة (الافتراضي)</option>
+                <option value="true" selected="@(Model.RequireCommitteeApproval)">يتطلب إصدار الرواتب اعتماد اللجنة</option>
+            </select>
+            <button type="submit" class="zy-btn zy-btn--primary ps-btn">حفظ</button>
+        </form>
+    </div>
+
+    @* ----- الحدود القصوى الشهرية (نظير «التحقق من المبالغ القصوى» بكيان) ----- *@
+    <div class="ps-sec">
+        <h2>الحدود القصوى الشهرية</h2>
+        <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin:0 0 8px">
+            سقفٌ للاقتطاعات <b>الاختيارية</b> (جزاءات/حركات/أيام/إجازة بلا راتب/صيغ) وللعمل الإضافي بالشهر —
+            الضريبة والضمان القانونيان لا يُسقَّفان. <b>صفر = بلا سقف (السلوك القائم).</b>
+            المتجاوز لا يُبتلَع: يُعلَن بسطرٍ بالقسيمة (اقتطاع مُرحَّل · إضافي فوق الحد).
+        </p>
+        <form method="post" asp-page-handler="SaveCaps" style="display:flex;flex-direction:column;gap:10px">
+            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
+                <b style="min-width:230px">سقف الاقتطاع الشهري — مبلغ</b>
+                <input type="number" name="deductionCapAmount" step="0.01" min="0" style="width:140px"
+                       value="@(Model.Caps.DeductionCapAmount > 0 ? Model.Caps.DeductionCapAmount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")" placeholder="0 = بلا" />
+            </label>
+            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
+                <b style="min-width:230px">سقف الاقتطاع الشهري — % من الإجمالي</b>
+                <input type="number" name="deductionCapPercent" step="0.5" min="0" max="100" style="width:140px"
+                       value="@(Model.Caps.DeductionCapPercentOfGross > 0 ? Model.Caps.DeductionCapPercentOfGross.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")" placeholder="0 = بلا" />
+                <span style="font-size:12px;font-weight:900">الأضيق بين المبلغ والنسبة يفوز</span>
+            </label>
+            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
+                <b style="min-width:230px">سقف الإضافي الشهري — ساعات</b>
+                <input type="number" name="overtimeCapHours" step="0.5" min="0" style="width:140px"
+                       value="@(Model.Caps.OvertimeCapHours > 0 ? Model.Caps.OvertimeCapHours.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")" placeholder="0 = بلا" />
+            </label>
+            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
+                <b style="min-width:230px">سقف الإضافي الشهري — مبلغ</b>
+                <input type="number" name="overtimeCapAmount" step="0.01" min="0" style="width:140px"
+                       value="@(Model.Caps.OvertimeCapAmount > 0 ? Model.Caps.OvertimeCapAmount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")" placeholder="0 = بلا" />
+            </label>
+            <button type="submit" class="zy-btn zy-btn--primary ps-btn" style="align-self:flex-start">حفظ الحدود القصوى</button>
+        </form>
+    </div>
+
     <div class="ps-grid">
         @* ----- الضريبة ----- *@
         <div class="ps-sec">

@@ -1445,6 +1445,23 @@ BEGIN
     CREATE INDEX IX_EmpEvalResults_Employee ON EmployeeEvaluationResults (EmployeeId, EvalYear DESC);
 END;
 """),
+
+        // موافقة لجنة على إصدار الرواتب (نظير «يتطلب حساب الرواتب موافقة اللجنة» بكيان):
+        // من اعتمد الدفعة ومتى — الحارس بـPayrollRunStore.IssueAsync يرفض الإصدار بلا
+        // اعتماد حين تكون التهيئة تشترطه. NULL = لم تُعتمد؛ الافتراضي لا يشترط شيئاً.
+        new(
+            "20260816-01-payroll-run-committee-approval",
+            """
+IF OBJECT_ID('PayrollRuns', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('PayrollRuns', 'ApprovedBy') IS NULL
+        ALTER TABLE PayrollRuns ADD ApprovedBy nvarchar(150) NULL;
+    IF COL_LENGTH('PayrollRuns', 'ApprovedAt') IS NULL
+        ALTER TABLE PayrollRuns ADD ApprovedAt datetime2 NULL;
+    IF COL_LENGTH('PayrollRuns', 'ApprovalNote') IS NULL
+        ALTER TABLE PayrollRuns ADD ApprovalNote nvarchar(400) NULL;
+END;
+"""),
     };
 
     /// <summary>
